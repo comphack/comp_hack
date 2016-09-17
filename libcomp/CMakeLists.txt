@@ -176,7 +176,11 @@ ADD_LIBRARY(comp STATIC ${${PROJECT_NAME}_SRCS} ${${PROJECT_NAME}_HDRS}
 
 TARGET_LINK_LIBRARIES(comp ${OPENSSL_LIBRARIES} ${ZLIB_LIBRARIES}
     ${SYSTEM_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT}
-    squirrel sqstdlib ttvfs ttvfs_zip tinyxml2 cassandra ${LIBUV_LIBRARIES})
+    squirrel sqstdlib ttvfs ttvfs_zip tinyxml2 cassandra uv)
+
+IF(WIN32)
+    TARGET_LINK_LIBRARIES(comp advapi32 iphlpapi psapi shell32 userenv ws2_32)
+ENDIF(WIN32)
 
 # List of unit tests to add to CTest.
 SET(${PROJECT_NAME}_TEST_SRCS

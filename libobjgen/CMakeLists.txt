@@ -67,7 +67,11 @@ SET(${PROJECT_NAME}_HDRS
 ADD_LIBRARY(objgen STATIC ${${PROJECT_NAME}_SRCS} ${${PROJECT_NAME}_HDRS})
 
 TARGET_LINK_LIBRARIES(objgen ${OPENSSL_LIBRARIES} ${ZLIB_LIBRARIES} tinyxml2
-    cassandra ${LIBUV_LIBRARIES})
+    cassandra uv)
+
+IF(WIN32)
+    TARGET_LINK_LIBRARIES(objgen advapi32 iphlpapi psapi shell32 userenv ws2_32)
+ENDIF(WIN32)
 
 # List of unit tests to add to CTest.
 SET(${PROJECT_NAME}_TEST_SRCS
@@ -77,5 +81,5 @@ SET(${PROJECT_NAME}_TEST_SRCS
 IF(NOT BSD)
     # Add the unit tests.
     CREATE_GTESTS(LIBS objgen ${CMAKE_THREAD_LIBS_INIT} cassandra
-        ${LIBUV_LIBRARIES} SRCS ${${PROJECT_NAME}_TEST_SRCS})
+        uv SRCS ${${PROJECT_NAME}_TEST_SRCS})
 ENDIF(NOT BSD)

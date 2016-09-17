@@ -106,20 +106,19 @@ INITIALIZER(InitDecrypt)
  */
 #ifdef _WIN32
 #pragma pack(push, 1)
-#else
-#endif // _WIN32
 typedef struct
+#else
+typedef struct __attribute__((packed))
+#endif // _WIN32
 {
     /// Magic to identify the file type.
     char magic[4];
 
     /// Size (in bytes) of the file after decryption.
     uint32_t originalSize;
-#ifdef _WIN32
 } EncryptedFileHeader_t;
+#ifdef _WIN32
 #pragma pack(pop)
-#else
-} EncryptedFileHeader_t __attribute__((packed));
 #endif // _WIN32
 
 std::vector<char> Decrypt::DecryptFile(const std::string& path)

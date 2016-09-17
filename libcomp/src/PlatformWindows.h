@@ -42,7 +42,7 @@ namespace Platform
  * @returns String for the last WIndows error.
  * @ingroup Platform
  */
-String GetLastErrorString();
+libcomp::String GetLastErrorString();
 
 } // namespace Platform
 

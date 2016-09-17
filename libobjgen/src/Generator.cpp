@@ -97,7 +97,7 @@ std::string Generator::Escape(const std::string& str)
 
     for(auto c : str)
     {
-        if(::isprint(c))
+        if(::isprint(static_cast<uint8_t>(c)))
         {
             switch(c)
             {

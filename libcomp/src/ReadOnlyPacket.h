@@ -39,9 +39,9 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
-#ifndef Q_OS_WIN32
+#ifndef _WIN32
 #include <unistd.h>
-#endif // Q_OS_WIN32
+#endif // _WIN32
 
 namespace libcomp
 {

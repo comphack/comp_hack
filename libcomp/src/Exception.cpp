@@ -29,14 +29,14 @@
 #include "Constants.h"
 #include "Log.h"
 
-#ifdef Q_OS_WIN32
+#ifdef _WIN32
 #include <windows.h>
 //#include <dbghelp.h>
-#else // Q_OS_WIN32
+#else // _WIN32
 #include <regex_ext>
 #include <execinfo.h>
 #include <cxxabi.h>
-#endif // Q_OS_WIN32
+#endif // _WIN32
 
 #include <sstream>
 #include <cstdlib>
@@ -62,9 +62,9 @@ static size_t baseLen = strlen(__FILE__) - strlen("libcomp/src/Exception.cpp");
 Exception::Exception(const String& msg, const String& f, int l) :
     mLine(l), mFile(f), mMessage(msg)
 {
-#ifdef Q_OS_WIN32
+#ifdef _WIN32
     /// @todo Implement backtraces on Windows.
-#else // Q_OS_WIN32
+#else // _WIN32
     // Array to store each backtrace address.
     void *backtraceAddresses[MAX_BACKTRACE_DEPTH];
 
@@ -142,7 +142,7 @@ Exception::Exception(const String& msg, const String& f, int l) :
             free(backtraceSymbols);
         }
     }
-#endif // Q_OS_WIN32
+#endif // _WIN32
 }
 
 int Exception::Line() const

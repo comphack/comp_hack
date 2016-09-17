@@ -26,12 +26,12 @@
 
 #include "PlatformWindows.h"
 
-#ifdef WIN32
+#ifdef _WIN32
 #include <windows.h>
 
-String getLastErrorString()
+libcomp::String libcomp::Platform::GetLastErrorString()
 {
-    String error; // String to return.
+    libcomp::String error; // String to return.
     LPTSTR errorText = NULL; // Temporary Windows string.
     DWORD errorCode = GetLastError(); // Error code of the last error.
 
@@ -45,9 +45,9 @@ String getLastErrorString()
     {
         // Convert the Windows string to a QString.
 #ifdef UNICODE
-        error = String::FromUtf16(errorText);
+        error = libcomp::String::FromUtf16(errorText);
 #else
-        error = String(errorText);
+        error = libcomp::String(errorText);
 #endif // UNICODE
 
         // Free the Windows string.
@@ -57,7 +57,9 @@ String getLastErrorString()
     {
         // The error message didn't format right so just return a string
         // with the error code.
-        error = String("0x%1").arg(errorCode, 8, 16, '0');
+        error = libcomp::String("0x%1").Arg((uint32_t)errorCode, 8, 16, '0');
     }
+
+    return error;
 }
-#endif // WIN32
+#endif // _WIN32

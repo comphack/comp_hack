@@ -35,13 +35,11 @@
 #include <regex>
 #include <sstream>
 
-using namespace libobjgen;
-
-UUID::UUID() : mTimeAndVersion(0), mClockSequenceAndNode(0)
+libobjgen::UUID::UUID() : mTimeAndVersion(0), mClockSequenceAndNode(0)
 {
 }
 
-UUID::UUID(const std::string& other)
+libobjgen::UUID::UUID(const std::string& other)
 {
     std::string s = other;
 
@@ -75,7 +73,7 @@ UUID::UUID(const std::string& other)
     }
 }
 
-UUID::UUID(const std::vector<char>& data)
+libobjgen::UUID::UUID(const std::vector<char>& data)
 {
     if((sizeof(mTimeAndVersion) + sizeof(mClockSequenceAndNode))
         <= data.size())
@@ -107,9 +105,9 @@ UUID::UUID(const std::vector<char>& data)
     }
 }
 
-UUID UUID::Random()
+libobjgen::UUID libobjgen::UUID::Random()
 {
-    UUID uuid;
+    libobjgen::UUID uuid;
 
     if(1 == RAND_bytes((unsigned char*)&uuid.mTimeAndVersion,
         sizeof(uuid.mTimeAndVersion)) &&
@@ -130,12 +128,12 @@ UUID UUID::Random()
     return uuid;
 }
 
-UUID::UUID(CassUuid other) : mTimeAndVersion(other.time_and_version),
+libobjgen::UUID::UUID(CassUuid other) : mTimeAndVersion(other.time_and_version),
     mClockSequenceAndNode(other.clock_seq_and_node)
 {
 }
 
-CassUuid UUID::ToCassandra() const
+CassUuid libobjgen::UUID::ToCassandra() const
 {
     CassUuid other;
     other.time_and_version = mTimeAndVersion;
@@ -144,7 +142,7 @@ CassUuid UUID::ToCassandra() const
     return other;
 }
 
-std::string UUID::ToString() const
+std::string libobjgen::UUID::ToString() const
 {
     std::stringstream ss;
 
@@ -162,7 +160,7 @@ std::string UUID::ToString() const
     return ss.str();
 }
 
-std::vector<char> UUID::ToData() const
+std::vector<char> libobjgen::UUID::ToData() const
 {
     std::vector<char> data(16);
 
@@ -187,30 +185,30 @@ std::vector<char> UUID::ToData() const
     return data;
 }
 
-bool UUID::IsNull() const
+bool libobjgen::UUID::IsNull() const
 {
     return 0 == mTimeAndVersion && 0 == mClockSequenceAndNode;
 }
 
-bool UUID::operator==(UUID other) const
+bool libobjgen::UUID::operator==(UUID other) const
 {
     return mTimeAndVersion == other.mTimeAndVersion &&
         mClockSequenceAndNode == other.mClockSequenceAndNode;
 }
 
-bool UUID::operator!=(UUID other) const
+bool libobjgen::UUID::operator!=(UUID other) const
 {
     return mTimeAndVersion != other.mTimeAndVersion ||
         mClockSequenceAndNode != other.mClockSequenceAndNode;
 }
 
-bool UUID::operator==(CassUuid other) const
+bool libobjgen::UUID::operator==(CassUuid other) const
 {
     return mTimeAndVersion == other.time_and_version &&
         mClockSequenceAndNode == other.clock_seq_and_node;
 }
 
-bool UUID::operator!=(CassUuid other) const
+bool libobjgen::UUID::operator!=(CassUuid other) const
 {
     return mTimeAndVersion != other.time_and_version ||
         mClockSequenceAndNode != other.clock_seq_and_node;

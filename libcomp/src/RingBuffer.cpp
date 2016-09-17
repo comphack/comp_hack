@@ -32,6 +32,10 @@
 #include <unistd.h>
 #endif // !WIN32
 
+#ifdef _WIN32
+#undef min
+#endif // _WIN32
+
 #include <cstring>
 #include <algorithm>
 

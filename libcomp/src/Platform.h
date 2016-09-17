@@ -32,11 +32,11 @@
  * @ingroup libcomp
  */
 
-#ifdef Q_OS_WIN32
+#ifdef _WIN32
 #include "PlatformWindows.h"
-#else // Q_OS_LINUX
+#else
 #include "PlatformLinux.h"
-#endif // Q_OS_WINDOWS
+#endif // _WIN32
 
 
 #endif // LIBCOMP_SRC_PLATFORM_H

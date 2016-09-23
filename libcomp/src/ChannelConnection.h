@@ -37,23 +37,23 @@ namespace libcomp
 class ChannelConnection : public libcomp::TcpConnection
 {
 public:
-	ChannelConnection(asio::io_service& io_service);
-	ChannelConnection(asio::ip::tcp::socket& socket, DH *pDiffieHellman);
-	virtual ~ChannelConnection();
+    ChannelConnection(asio::io_service& io_service);
+    ChannelConnection(asio::ip::tcp::socket& socket, DH *pDiffieHellman);
+    virtual ~ChannelConnection();
 
-	virtual void ConnectionSuccess();
+    virtual void ConnectionSuccess();
 
 protected:
-	typedef void (ChannelConnection::*PacketParser_t)(libcomp::Packet& packet);
+    typedef void (ChannelConnection::*PacketParser_t)(libcomp::Packet& packet);
 
-	virtual void SocketError(const libcomp::String& errorMessage =
-		libcomp::String());
+    virtual void SocketError(const libcomp::String& errorMessage =
+        libcomp::String());
 
-	virtual void ConnectionEncrypted();
+    virtual void ConnectionEncrypted();
 
-	virtual void PacketReceived(libcomp::Packet& packet);
+    virtual void PacketReceived(libcomp::Packet& packet);
 
-	PacketParser_t mPacketParser;
+    PacketParser_t mPacketParser;
 };
 
 } // namespace libcomp

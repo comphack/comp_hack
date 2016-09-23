@@ -15,6 +15,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#ADD_SUBDIRECTORY(channel)
+ADD_SUBDIRECTORY(channel)
 ADD_SUBDIRECTORY(lobby)
-#ADD_SUBDIRECTORY(world)
+ADD_SUBDIRECTORY(world)

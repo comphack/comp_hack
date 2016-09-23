@@ -55,6 +55,8 @@ SET(SYSTEM_LIBRARIES ${SYSTEM_LIBRARIES} ${EXECINFO_LIBRARY})
 ENDIF(BSD)
 
 SET(${PROJECT_NAME}_SRCS
+
+    src/ChannelConnection.cpp
     src/Compress.cpp
     src/Convert.cpp
     src/CString.cpp
@@ -83,6 +85,7 @@ SET(${PROJECT_NAME}_SRCS
     src/TcpConnection.cpp
     src/TcpServer.cpp
     #src/ThreadManager.cpp
+    src/WorldConnection.cpp
     #src/XmlUtils.cpp
 )
 
@@ -95,6 +98,7 @@ ENDIF()
 # This is a list of all header files. Adding the header files here ensures they
 # are listed in the source files for IDE projects.
 SET(${PROJECT_NAME}_HDRS
+    src/ChannelConnection.h
     src/Compress.h
     src/Constants.h
     src/Convert.h
@@ -130,6 +134,7 @@ SET(${PROJECT_NAME}_HDRS
     src/TcpConnection.h
     src/TcpServer.h
     #src/ThreadManager.h
+    src/WorldConnection.h
     #src/XmlUtils.h
 
     # These were generated and are not worth reading.

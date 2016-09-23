@@ -62,7 +62,7 @@ TcpConnection::~TcpConnection()
     }
 }
 
-bool TcpConnection::Connect(const String& host, bool async, int port)
+bool TcpConnection::Connect(const String& host, int port, bool async)
 {
     bool result = false;
 

@@ -4,7 +4,7 @@
  *
  * @author HACKfrost
  *
- * @brief Civet world event handler.
+ * @brief World event handler.
  *
  * This file is part of the World Server (world).
  *
@@ -27,50 +27,17 @@
 #ifndef SERVER_WORLD_SRC_WORLDHANDLER_H
 #define SERVER_WORLD_SRC_WORLDHANDLER_H
 
-// Civet Includes
-#include <CivetServer.h>
-
 // libcomp Includes
 #include <CString.h>
-
-// Standard C++11 Includes
-#include <vector>
-
-// VFS Includes
-#include "PushIgnore.h"
-#include <ttvfs/ttvfs.h>
-#include <ttvfs/ttvfs_zip.h>
-#include "PopIgnore.h"
 
 namespace world
 {
 
-class WorldHandler : public CivetHandler
+class WorldHandler
 {
 public:
     WorldHandler();
     virtual ~WorldHandler();
-
-    virtual bool handleGet(CivetServer *pServer,
-        struct mg_connection *pConnection);
-
-    virtual bool handlePost(CivetServer *pServer,
-        struct mg_connection *pConnection);
-
-private:
-    class ReplacementVariables
-    {
-    public:
-        ReplacementVariables();
-
-        bool connecting;
-    };
-
-    void ParsePost(CivetServer *pServer, struct mg_connection *pConnection,
-        ReplacementVariables& postVars);
-
-    bool HandleResponse(CivetServer *pServer, struct mg_connection *pConnection,
-        ReplacementVariables& postVars);
 };
 
 } // namespace world

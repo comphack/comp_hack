@@ -32,9 +32,6 @@
 #include <Log.h>
 #include <LobbyConnection.h>
 
-// Civet Includes
-#include <CivetServer.h>
-
 int main(int argc, const char *argv[])
 {
     (void)argc;
@@ -42,40 +39,33 @@ int main(int argc, const char *argv[])
 
     libcomp::Log::GetSingletonPtr()->AddStandardOutputHook();
 
-    std::vector<std::string> options;
-    options.push_back("listening_ports");
-    options.push_back("11000");
-
-    CivetServer webServer(options);
-    webServer.addHandler("/", new world::WorldHandler);
-
     LOG_INFO("COMP_hack World Server v0.0.1 build 1\n");
     LOG_INFO("Copyright (C) 2010-2016 COMP_hack Team\n\n");
 
-	LOG_INFO("Connecting to the Lobby Server...\n");
+    LOG_INFO("Connecting to the Lobby Server...\n");
 
-	asio::io_service service;
+    asio::io_service service;
 
-	std::thread serviceThread([&service]()
-	{
-		service.run();
-	});
+    std::thread serviceThread([&service]()
+    {
+        service.run();
+    });
 
-	libcomp::LobbyConnection connection(service);
-	connection.Connect("127.0.0.1", false, 10666);
+    libcomp::LobbyConnection connection(service);
+    connection.Connect("127.0.0.1", 10666, false);
 
-	auto worldStatus = connection.GetStatus();
-	if (worldStatus == libcomp::TcpConnection::STATUS_CONNECTED)
-	{
-		LOG_INFO("Lobby Server connection successful\n");
+    auto worldStatus = connection.GetStatus();
+    if (worldStatus == libcomp::TcpConnection::STATUS_CONNECTED)
+    {
+        LOG_INFO("Lobby Server connection successful\n");
 
-		world::WorldServer server("any", 10667);
-		return server.Start();
-	}
-	else
-	{
-		LOG_INFO("LObby Server connection failed\n");
-		service.stop();
-		return -1;
-	}
+        world::WorldServer server("any", 10667);
+        return server.Start();
+    }
+    else
+    {
+        LOG_INFO("LObby Server connection failed\n");
+        service.stop();
+        return -1;
+    }
 }

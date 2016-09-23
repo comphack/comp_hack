@@ -4,7 +4,7 @@
  *
  * @author HACKfrost
  *
- * @brief Civet channel event handler.
+ * @brief Channel event handler.
  *
  * This file is part of the Channel Server (channel).
  *
@@ -27,50 +27,18 @@
 #ifndef SERVER_CHANNEL_SRC_CHANNELHANDLER_H
 #define SERVER_CHANNEL_SRC_CHANNELHANDLER_H
 
-// Civet Includes
-#include <CivetServer.h>
-
 // libcomp Includes
 #include <CString.h>
-
-// Standard C++11 Includes
-#include <vector>
-
-// VFS Includes
-#include "PushIgnore.h"
-#include <ttvfs/ttvfs.h>
-#include <ttvfs/ttvfs_zip.h>
-#include "PopIgnore.h"
 
 namespace channel
 {
 
-class ChannelHandler : public CivetHandler
+class ChannelHandler
 {
 public:
     ChannelHandler();
     virtual ~ChannelHandler();
 
-    virtual bool handleGet(CivetServer *pServer,
-        struct mg_connection *pConnection);
-
-    virtual bool handlePost(CivetServer *pServer,
-        struct mg_connection *pConnection);
-
-private:
-    class ReplacementVariables
-    {
-    public:
-        ReplacementVariables();
-
-        bool connecting;
-    };
-
-    void ParsePost(CivetServer *pServer, struct mg_connection *pConnection,
-        ReplacementVariables& postVars);
-
-    bool HandleResponse(CivetServer *pServer, struct mg_connection *pConnection,
-        ReplacementVariables& postVars);
 };
 
 } // namespace channel

@@ -62,7 +62,7 @@ TcpConnection::~TcpConnection()
     }
 }
 
-bool TcpConnection::Connect(const String& host, int port)
+bool TcpConnection::Connect(const String& host, bool async, int port)
 {
     bool result = false;
 
@@ -79,7 +79,7 @@ bool TcpConnection::Connect(const String& host, int port)
     // If the hostname resolved, connect to it.
     if(asio::ip::tcp::resolver::iterator() != it)
     {
-        Connect(*it);
+        Connect(*it, async);
         result = true;
     }
 
@@ -190,38 +190,51 @@ void TcpConnection::SetSelf(const std::weak_ptr<libcomp::TcpConnection>& self)
     mSelf = self;
 }
 
-void TcpConnection::Connect(const asio::ip::tcp::endpoint& endpoint)
+void TcpConnection::Connect(const asio::ip::tcp::endpoint& endpoint, bool async)
 {
     mStatus = STATUS_CONNECTING;
 
     // Make sure we remove any remote address cache.
     mRemoteAddress = "0.0.0.0";
 
-    mSocket.async_connect(endpoint, [this](const asio::error_code errorCode){
-        if(errorCode)
-        {
-            mStatus = STATUS_NOT_CONNECTED;
+	if (async)
+	{
+		mSocket.async_connect(endpoint, [this](const asio::error_code errorCode) {
+			HandleConnection(errorCode);
+		});
+	}
+	else
+	{
+		asio::error_code errorCode;
+		HandleConnection(mSocket.connect(endpoint, errorCode));
+	}
+}
 
-            ConnectionFailed();
-        }
-        else
-        {
-            mStatus = STATUS_CONNECTED;
+void TcpConnection::HandleConnection(asio::error_code errorCode)
+{
+	if (errorCode)
+	{
+		mStatus = STATUS_NOT_CONNECTED;
 
-            // Cache the remote address.
-            try
-            {
-                mRemoteAddress = mSocket.remote_endpoint().address(
-                    ).to_string();
-            }
-            catch(...)
-            {
-                // Just use the cache.
-            }
+		ConnectionFailed();
+	}
+	else
+	{
+		mStatus = STATUS_CONNECTED;
 
-            ConnectionSuccess();
-        }
-    });
+		// Cache the remote address.
+		try
+		{
+			mRemoteAddress = mSocket.remote_endpoint().address(
+				).to_string();
+		}
+		catch (...)
+		{
+			// Just use the cache.
+		}
+
+		ConnectionSuccess();
+	}
 }
 
 void TcpConnection::SendNextPacket()

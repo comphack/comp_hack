@@ -31,13 +31,13 @@ INCLUDE_DIRECTORIES(${CMAKE_CURRENT_BINARY_DIR}/res/login)
 
 SET(${PROJECT_NAME}_SRCS
     src/WorldServer.cpp
-    src/WorldHandler.cpp
+    src/WorldWorker.cpp
     src/main.cpp
 )
 
 SET(${PROJECT_NAME}_HDRS
     src/WorldServer.h
-    src/WorldHandler.h
+    src/WorldWorker.h
 )
 
 SET(${PROJECT_NAME}_PACKETS

@@ -1,10 +1,10 @@
 /**
- * @file libcomp/src/ChannelConnection.h
+ * @file libcomp/src/InternalServer.h
  * @ingroup libcomp
  *
  * @author HACKfrost
  *
- * @brief Channel connection class.
+ * @brief Internal server class.
  *
  * This file is part of the COMP_hack Library (libcomp).
  *
@@ -24,38 +24,39 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef LIBCOMP_SRC_CHANNELCONNECTION_H
-#define LIBCOMP_SRC_CHANNELCONNECTION_H
+#ifndef LIBCOMP_SRC_INTERNALSERVER_H
+#define LIBCOMP_SRC_INTERNALSERVER_H
 
 // libcomp Includes
-#include "MessageQueue.h"
-#include "TcpConnection.h"
+#include "InternalServerWorker.h"
+#include "TcpServer.h"
+
+// C++ Includes
+#include <vector>
 
 namespace libcomp
 {
 
-class ChannelConnection : public libcomp::TcpConnection
+class InternalServer : public libcomp::TcpServer
 {
 public:
-    ChannelConnection(asio::io_service& io_service);
-    ChannelConnection(asio::ip::tcp::socket& socket, DH *pDiffieHellman);
-    virtual ~ChannelConnection();
+    InternalServer(String listenAddress, uint16_t port);
+    virtual ~InternalServer();
 
-    virtual void ConnectionSuccess();
+    //todo: override Start and add main loop
+
+    bool ConnectToHostServer(asio::io_service& service, const String& host, int port);
 
 protected:
-    typedef void (ChannelConnection::*PacketParser_t)(libcomp::Packet& packet);
+    virtual std::shared_ptr<libcomp::TcpConnection> CreateConnection(
+        asio::ip::tcp::socket& socket);
 
-    virtual void SocketError(const libcomp::String& errorMessage =
-        libcomp::String());
+    virtual void DoWork();
 
-    virtual void ConnectionEncrypted();
-
-    virtual void PacketReceived(libcomp::Packet& packet);
-
-    PacketParser_t mPacketParser;
+    std::vector<std::shared_ptr<InternalServerWorker>> mWorkers;
+    std::shared_ptr<libcomp::InternalConnection> hostConnection;
 };
 
 } // namespace libcomp
 
-#endif // LIBCOMP_SRC_CHANNELCONNECTION_H
+#endif // LIBCOMP_SRC_INTERNALSERVER_H

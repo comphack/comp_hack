@@ -25,12 +25,11 @@
  */
 
 // world Includes
-#include "WorldHandler.h"
 #include "WorldServer.h"
 
 // libcomp Includes
 #include <Log.h>
-#include <LobbyConnection.h>
+#include <InternalConnection.h>
 
 int main(int argc, const char *argv[])
 {
@@ -51,20 +50,15 @@ int main(int argc, const char *argv[])
         service.run();
     });
 
-    libcomp::LobbyConnection connection(service);
-    connection.Connect("127.0.0.1", 10666, false);
-
-    auto worldStatus = connection.GetStatus();
-    if (worldStatus == libcomp::TcpConnection::STATUS_CONNECTED)
+    world::WorldServer server("any", 10667);
+    if (server.ConnectToHostServer(service, "127.0.0.1", 10666))
     {
         LOG_INFO("Lobby Server connection successful\n");
-
-        world::WorldServer server("any", 10667);
         return server.Start();
     }
     else
     {
-        LOG_INFO("LObby Server connection failed\n");
+        LOG_INFO("Lobby Server connection failed\n");
         service.stop();
         return -1;
     }

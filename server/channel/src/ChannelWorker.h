@@ -1,12 +1,12 @@
 /**
- * @file server/world/src/WorldHandler.cpp
- * @ingroup world
+ * @file server/channel/src/ChannelWorker.h
+ * @ingroup channel
  *
  * @author HACKfrost
  *
- * @brief World event handler.
+ * @brief Channel worker class.
  *
- * This file is part of the World Server (world).
+ * This file is part of the COMP_hack Library (channel).
  *
  * Copyright (C) 2012-2016 COMP_hack Team <compomega@tutanota.com>
  *
@@ -24,17 +24,21 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "WorldHandler.h"
+#ifndef SERVER_CHANNEL_SRC_CHANNELWORKER_H
+#define SERVER_CHANNEL_SRC_CHANNELWORKER_H
 
 // libcomp Includes
-#include <Log.h>
+#include "InternalServerWorker.h"
 
-using namespace world;
-
-WorldHandler::WorldHandler()
+namespace channel
 {
-}
 
-WorldHandler::~WorldHandler()
+class ChannelWorker : public libcomp::InternalServerWorker
 {
-}
+public:
+    ChannelWorker();
+};
+
+} // namespace channel
+
+#endif // SERVER_CHANNEL_SRC_CHANNELWORKER_H

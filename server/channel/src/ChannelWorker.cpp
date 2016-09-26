@@ -1,12 +1,12 @@
 /**
- * @file server/channel/src/ChannelHandler.h
+ * @file server/channel/src/ChannelWorker.cpp
  * @ingroup channel
  *
  * @author HACKfrost
  *
- * @brief Channel event handler.
+ * @brief Channel worker class.
  *
- * This file is part of the Channel Server (channel).
+ * This file is part of the COMP_hack Library (channel).
  *
  * Copyright (C) 2012-2016 COMP_hack Team <compomega@tutanota.com>
  *
@@ -24,23 +24,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef SERVER_CHANNEL_SRC_CHANNELHANDLER_H
-#define SERVER_CHANNEL_SRC_CHANNELHANDLER_H
+#include "ChannelWorker.h"
 
-// libcomp Includes
-#include <CString.h>
+using namespace channel;
 
-namespace channel
+ChannelWorker::ChannelWorker()
 {
-
-class ChannelHandler
-{
-public:
-    ChannelHandler();
-    virtual ~ChannelHandler();
-
-};
-
-} // namespace channel
-
-#endif // SERVER_CHANNEL_SRC_CHANNELHANDLER_H
+}

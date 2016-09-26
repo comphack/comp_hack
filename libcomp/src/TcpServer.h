@@ -66,6 +66,8 @@ protected:
     virtual std::shared_ptr<TcpConnection> CreateConnection(
         asio::ip::tcp::socket& socket);
 
+    virtual void DoWork();
+
     const DH* GetDiffieHellman() const;
     void SetDiffieHellman(DH *pDiffieHellman);
 

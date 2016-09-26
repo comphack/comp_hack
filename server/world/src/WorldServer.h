@@ -28,20 +28,16 @@
 #define SERVER_WORLD_SRC_WORLDSERVER_H
 
 // libcomp Includes
-#include <TcpServer.h>
+#include <InternalServer.h>
 
 namespace world
 {
 
-class WorldServer : public libcomp::TcpServer
+class WorldServer : public libcomp::InternalServer
 {
 public:
-    WorldServer(libcomp::String listenAddress, int16_t port);
+    WorldServer(libcomp::String listenAddress, uint16_t port);
     virtual ~WorldServer();
-
-protected:
-    virtual std::shared_ptr<libcomp::TcpConnection> CreateConnection(
-        asio::ip::tcp::socket& socket);
 };
 
 } // namespace world

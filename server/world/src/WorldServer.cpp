@@ -27,33 +27,20 @@
 #include "WorldServer.h"
 
 // world Includes
-#include "WorldConnection.h"
-
-#include "Log.h"
+#include "InternalConnection.h"
+#include "WorldWorker.h"
 
 using namespace world;
 
-WorldServer::WorldServer(libcomp::String listenAddress, int16_t port) :
-    libcomp::TcpServer(listenAddress, port)
+WorldServer::WorldServer(libcomp::String listenAddress, uint16_t port) :
+    libcomp::InternalServer(listenAddress, port)
 {
+    //todo: maximize workers per core
+    auto w = std::shared_ptr<WorldWorker>(new WorldWorker());
+    mWorkers.push_back(w);
+    w->Start();
 }
 
 WorldServer::~WorldServer()
 {
-}
-
-std::shared_ptr<libcomp::TcpConnection> WorldServer::CreateConnection(
-    asio::ip::tcp::socket& socket)
-{
-    auto connection = std::shared_ptr<libcomp::TcpConnection>(
-        new libcomp::WorldConnection(socket, CopyDiffieHellman(
-            GetDiffieHellman())
-        )
-    );
-
-    // Make sure this is called after connecting.
-    connection->SetSelf(connection);
-    connection->ConnectionSuccess();
-
-    return connection;
 }

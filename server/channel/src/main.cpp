@@ -25,12 +25,11 @@
  */
 
 // channel Includes
-#include "ChannelHandler.h"
 #include "ChannelServer.h"
 
 // libcomp Includes
 #include <Log.h>
-#include <WorldConnection.h>
+#include <InternalConnection.h>
 
 int main(int argc, const char *argv[])
 {
@@ -51,15 +50,10 @@ int main(int argc, const char *argv[])
         service.run();
     });
 
-    libcomp::WorldConnection connection(service);
-    connection.Connect("127.0.0.1", 10667, false);
-
-    auto worldStatus = connection.GetStatus();
-    if (worldStatus == libcomp::TcpConnection::STATUS_CONNECTED)
+    channel::ChannelServer server("any", 10665);
+    if (server.ConnectToHostServer(service, "127.0.0.1", 10667))
     {
         LOG_INFO("World Server connection successful\n");
-
-        channel::ChannelServer server("any", 10665);
         return server.Start();
     }
     else
@@ -68,8 +62,4 @@ int main(int argc, const char *argv[])
         service.stop();
         return -1;
     }
-
-    channel::ChannelServer server("any", 10665);
-
-    return server.Start();
 }

@@ -27,31 +27,20 @@
 #include "ChannelServer.h"
 
 // channel Includes
-#include "ChannelConnection.h"
+#include "InternalConnection.h"
+#include "ChannelWorker.h"
 
 using namespace channel;
 
-ChannelServer::ChannelServer(libcomp::String listenAddress, int16_t port) :
-    libcomp::TcpServer(listenAddress, port)
+ChannelServer::ChannelServer(libcomp::String listenAddress, uint16_t port) :
+    libcomp::InternalServer(listenAddress, port)
 {
+    //todo: maximize workers per core
+    auto w = std::shared_ptr<ChannelWorker>(new ChannelWorker());
+    mWorkers.push_back(w);
+    w->Start();
 }
 
 ChannelServer::~ChannelServer()
 {
-}
-
-std::shared_ptr<libcomp::TcpConnection> ChannelServer::CreateConnection(
-    asio::ip::tcp::socket& socket)
-{
-    auto connection = std::shared_ptr<libcomp::TcpConnection>(
-        new libcomp::ChannelConnection(socket, CopyDiffieHellman(
-            GetDiffieHellman())
-        )
-    );
-
-    // Make sure this is called after connecting.
-    connection->SetSelf(connection);
-    connection->ConnectionSuccess();
-
-    return connection;
 }

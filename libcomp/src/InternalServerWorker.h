@@ -1,10 +1,10 @@
 /**
- * @file libcomp/src/WorldConnection.h
+ * @file libcomp/src/InternalServerWorker.h
  * @ingroup libcomp
  *
  * @author HACKfrost
  *
- * @brief World connection class.
+ * @brief Internal server worker class.
  *
  * This file is part of the COMP_hack Library (libcomp).
  *
@@ -24,38 +24,42 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef LIBCOMP_SRC_WORLDCONNECTION_H
-#define LIBCOMP_SRC_WORLDCONNECTION_H
+#ifndef LIBCOMP_SRC_INTERNALSERVERWORKER_H
+#define LIBCOMP_SRC_INTERNALSERVERWORKER_H
 
-// libcomp Includes
-#include "MessageQueue.h"
-#include "TcpConnection.h"
+ // libcomp Includes
+#include "InternalConnection.h"
+
+ // C++ Includes
+#include <mutex>
+#include <thread>
+#include <vector>
 
 namespace libcomp
 {
 
-class WorldConnection : public libcomp::TcpConnection
+class InternalServerWorker
 {
 public:
-    WorldConnection(asio::io_service& io_service);
-    WorldConnection(asio::ip::tcp::socket& socket, DH *pDiffieHellman);
-    virtual ~WorldConnection();
+    InternalServerWorker();
 
-    virtual void ConnectionSuccess();
+    void Start();
+    void Stop();
 
-protected:
-    typedef void (WorldConnection::*PacketParser_t)(libcomp::Packet& packet);
+    void AddConnection(std::shared_ptr<TcpConnection> connection);
 
-    virtual void SocketError(const libcomp::String& errorMessage =
-        libcomp::String());
+private:
+    void doWork();
+    bool executing();
 
-    virtual void ConnectionEncrypted();
+    std::mutex mtx;
+    bool stop = false;
 
-    virtual void PacketReceived(libcomp::Packet& packet);
-
-    PacketParser_t mPacketParser;
+    std::thread mThread;
+    std::vector<std::shared_ptr<TcpConnection>> mConnections;
+    std::vector<std::shared_ptr<TcpConnection>> mPendingConnections;
 };
 
 } // namespace libcomp
 
-#endif // LIBCOMP_SRC_WORLDCONNECTION_H
+#endif // LIBCOMP_SRC_INTERNALSERVERWORKER_H

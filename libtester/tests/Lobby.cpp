@@ -41,13 +41,13 @@ TEST(Lobby, Connection)
 
     asio::io_service service;
 
+    libcomp::LobbyConnection connection(service);
+    connection.Connect("127.0.0.1", 10666);
+
     std::thread serviceThread([&service]()
     {
         service.run();
     });
-
-    libcomp::LobbyConnection connection(service);
-    connection.Connect("127.0.0.1", 10666);
 
     asio::steady_timer timer(service);
     timer.expires_from_now(std::chrono::seconds(30));

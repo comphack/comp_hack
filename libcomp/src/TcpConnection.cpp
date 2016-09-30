@@ -34,14 +34,15 @@ using namespace libcomp;
 TcpConnection::TcpConnection(asio::io_service& io_service) :
     mSocket(io_service), mDiffieHellman(nullptr), mStatus(
     TcpConnection::STATUS_NOT_CONNECTED), mRole(TcpConnection::ROLE_CLIENT),
-    mRemoteAddress("0.0.0.0")
+    mRemoteAddress("0.0.0.0"), mSendingPacket(false)
 {
 }
 
 TcpConnection::TcpConnection(asio::ip::tcp::socket& socket,
     DH *pDiffieHellman) : mSocket(std::move(socket)),
     mDiffieHellman(pDiffieHellman), mStatus(TcpConnection::STATUS_CONNECTED),
-    mRole(TcpConnection::ROLE_SERVER), mRemoteAddress("0.0.0.0")
+    mRole(TcpConnection::ROLE_SERVER), mRemoteAddress("0.0.0.0"),
+    mSendingPacket(false)
 {
     // Cache the remote address.
     try
@@ -92,15 +93,19 @@ void TcpConnection::SendPacket(Packet& packet)
 
     SendPacket(copy);
 }
+
 void TcpConnection::SendPacket(ReadOnlyPacket& packet)
 {
     bool firstPacket;
+
+    ReadOnlyPacket finalPacket;
+    PreparePacket(packet, finalPacket);
 
     {
         std::lock_guard<std::mutex> guard(mOutgoingMutex);
 
         firstPacket = mOutgoingPackets.empty();
-        mOutgoingPackets.push_back(std::move(packet));
+        mOutgoingPackets.push_back(std::move(finalPacket));
     }
 
     if(firstPacket)
@@ -139,6 +144,11 @@ bool TcpConnection::RequestPacket(size_t size)
             {
                 if(errorCode)
                 {
+#ifdef COMP_HACK_DEBUG
+                    LOG_ERROR(String("ASIO Error: %1\n").Arg(
+                        errorCode.message()));
+#endif // COMP_HACK_DEBUG
+
                     SocketError();
                 }
                 else
@@ -241,9 +251,11 @@ void TcpConnection::SendNextPacket()
 {
     std::lock_guard<std::mutex> guard(mOutgoingMutex);
 
-    if(!mOutgoingPackets.empty())
+    if(!mOutgoingPackets.empty() && !mSendingPacket)
     {
         ReadOnlyPacket& packet = mOutgoingPackets.front();
+
+        mSendingPacket = true;
 
         mSocket.async_send(asio::buffer(packet.ConstData(), packet.Size()), 0,
             [this](asio::error_code errorCode, std::size_t length)
@@ -255,6 +267,11 @@ void TcpConnection::SendNextPacket()
 
                 if(errorCode)
                 {
+                    std::lock_guard<std::mutex> outgoingGuard(
+                        mOutgoingMutex);
+
+                    mSendingPacket = false;
+
                     SocketError();
                 }
                 else
@@ -275,6 +292,8 @@ void TcpConnection::SendNextPacket()
                         sendAnother = !mOutgoingPackets.empty();
                         packetOk = true;
                     }
+
+                    mSendingPacket = false;
                 }
 
                 if(packetOk)
@@ -432,4 +451,12 @@ void TcpConnection::BroadcastPacket(const std::list<std::shared_ptr<
             connection->SendPacket(packet);
         }
     }
+}
+
+void TcpConnection::PreparePacket(const ReadOnlyPacket& in,
+    ReadOnlyPacket& out)
+{
+    ReadOnlyPacket finalPacket(in);
+
+    out = finalPacket;
 }

@@ -413,6 +413,12 @@ void LobbyConnection::ParsePacket(libcomp::Packet& packet)
 
                 // Get ready for the next packet.
                 packet.Clear();
+
+                // Ask for another packet now.
+                if(!RequestPacket(2 * sizeof(uint32_t)))
+                {
+                    SocketError("Failed to request more data.");
+                }
             }
         }
     }
@@ -477,7 +483,6 @@ void LobbyConnection::ParsePacket(libcomp::Packet& packet,
             if(!errorFound && copy.Left() < (uint32_t)(commandSize -
                 2 * sizeof(uint16_t)))
             {
-                copy.HexDump();
                 SocketError("Corrupt packet (not enough data for "
                     "command data).");
 
@@ -557,4 +562,30 @@ void LobbyConnection::SetMessageQueue(const std::shared_ptr<
     MessageQueue<libcomp::Message::Message*>>& messageQueue)
 {
     mMessageQueue = messageQueue;
+}
+
+void LobbyConnection::PreparePacket(const ReadOnlyPacket& in,
+    ReadOnlyPacket& out)
+{
+    if(STATUS_ENCRYPTED == mStatus)
+    {
+        Packet finalPacket;
+
+        // Reserve space for the sizes.
+        finalPacket.WriteBlank(2 * sizeof(uint32_t));
+
+        // Now add the packet data.
+        finalPacket.WriteArray(in.ConstData(), in.Size());
+
+        // Encrypt the packet
+        Decrypt::EncryptPacket(mEncryptionKey, finalPacket);
+
+        out = finalPacket;
+    }
+    else
+    {
+        ReadOnlyPacket finalPacket(in);
+
+        out = finalPacket;
+    }
 }

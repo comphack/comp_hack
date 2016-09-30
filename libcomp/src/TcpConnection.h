@@ -75,8 +75,8 @@ public:
 
     bool Connect(const String& host, int port = 0, bool async = true);
 
-    void SendPacket(Packet& packet);
-    void SendPacket(ReadOnlyPacket& packet);
+    virtual void SendPacket(Packet& packet);
+    virtual void SendPacket(ReadOnlyPacket& packet);
 
     bool RequestPacket(size_t size);
 
@@ -104,6 +104,9 @@ protected:
     virtual void PacketSent(ReadOnlyPacket& packet);
     virtual void PacketReceived(Packet& packet);
 
+    virtual void PreparePacket(const ReadOnlyPacket& in,
+        ReadOnlyPacket& out);
+
     void SetEncryptionKey(const std::vector<char>& data);
     void SetEncryptionKey(const void *pData, size_t dataSize);
 
@@ -130,6 +133,8 @@ private:
     std::list<ReadOnlyPacket> mOutgoingPackets;
 
     String mRemoteAddress;
+
+    bool mSendingPacket;
 };
 
 } // namespace libcomp

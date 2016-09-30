@@ -47,6 +47,7 @@ class Packet : public Message
 public:
     Packet(const std::shared_ptr<TcpConnection>& connection,
         uint16_t commandCode, ReadOnlyPacket& packet);
+    virtual ~Packet();
 
     ReadOnlyPacket& GetPacket();
 

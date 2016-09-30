@@ -29,8 +29,12 @@
 using namespace libcomp;
 
 Message::Packet::Packet(const std::shared_ptr<TcpConnection>& connection,
-    uint16_t commandCode, ReadOnlyPacket& packet) : mPacket(std::move(packet)),
+    uint16_t commandCode, ReadOnlyPacket& packet) : mPacket(packet),
     mCommandCode(commandCode), mConnection(connection)
+{
+}
+
+Message::Packet::~Packet()
 {
 }
 

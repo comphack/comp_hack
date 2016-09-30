@@ -35,6 +35,8 @@ namespace Message
 
 class Message
 {
+public:
+    virtual ~Message() { }
 };
 
 } // namespace Message

@@ -564,8 +564,7 @@ void LobbyConnection::SetMessageQueue(const std::shared_ptr<
     mMessageQueue = messageQueue;
 }
 
-void LobbyConnection::PreparePacket(const ReadOnlyPacket& in,
-    ReadOnlyPacket& out)
+void LobbyConnection::PreparePackets(std::list<ReadOnlyPacket>& packets)
 {
     if(STATUS_ENCRYPTED == mStatus)
     {
@@ -575,17 +574,57 @@ void LobbyConnection::PreparePacket(const ReadOnlyPacket& in,
         finalPacket.WriteBlank(2 * sizeof(uint32_t));
 
         // Now add the packet data.
-        finalPacket.WriteArray(in.ConstData(), in.Size());
+        for(auto& packet : packets)
+        {
+            finalPacket.WriteU16Big((uint16_t)(packet.Size() + 2));
+            finalPacket.WriteU16Little((uint16_t)(packet.Size() + 2));
+            finalPacket.WriteArray(packet.ConstData(), packet.Size());
+        }
 
         // Encrypt the packet
         Decrypt::EncryptPacket(mEncryptionKey, finalPacket);
 
-        out = finalPacket;
+        mOutgoing = finalPacket;
     }
     else
     {
-        ReadOnlyPacket finalPacket(in);
+        // There should only be one!
+        if(packets.size() != 1)
+        {
+            LOG_CRITICAL("Critical packet error.\n");
+        }
 
-        out = finalPacket;
+        ReadOnlyPacket finalPacket(packets.front());
+
+        mOutgoing = finalPacket;
     }
+}
+
+std::list<ReadOnlyPacket> LobbyConnection::GetCombinedPackets()
+{
+    std::list<ReadOnlyPacket> packets;
+
+    std::lock_guard<std::mutex> guard(mOutgoingMutex);
+
+    if(!mSendingPacket)
+    {
+        uint32_t totalSize = 2 * sizeof(uint32_t);
+
+        while(!mOutgoingPackets.empty() && totalSize < MAX_PACKET_SIZE)
+        {
+            ReadOnlyPacket& nextPacket = mOutgoingPackets.front();
+
+            uint32_t packetSize = nextPacket.Size() + 2 *
+                static_cast<uint32_t>(sizeof(uint16_t));
+
+            if((totalSize + packetSize) < MAX_PACKET_SIZE)
+            {
+                totalSize += packetSize;
+                packets.push_back(mOutgoingPackets.front());
+                mOutgoingPackets.pop_front();
+            }
+        }
+    }
+
+    return packets;
 }

@@ -73,6 +73,7 @@ SET(${PROJECT_NAME}_SRCS
     src/LobbyConnection.cpp
     src/Log.cpp
     #src/MemoryFile.cpp
+    src/MessageEncrypted.cpp
     src/MessagePacket.cpp
     src/Object.cpp
     src/Packet.cpp
@@ -119,6 +120,7 @@ SET(${PROJECT_NAME}_HDRS
     src/Log.h
     #src/MemoryFile.h
     src/Message.h
+    src/MessageEncrypted.h
     src/MessagePacket.h
     src/MessageQueue.h
     src/Object.h
@@ -184,6 +186,8 @@ ADD_LIBRARY(comp STATIC ${${PROJECT_NAME}_SRCS} ${${PROJECT_NAME}_HDRS}
 TARGET_LINK_LIBRARIES(comp ${OPENSSL_LIBRARIES} ${ZLIB_LIBRARIES}
     ${SYSTEM_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} sqlite3
     squirrel sqstdlib ttvfs ttvfs_zip tinyxml2 cassandra uv)
+
+ADD_DEPENDENCIES(comp asio)
 
 IF(WIN32)
     TARGET_LINK_LIBRARIES(comp advapi32 iphlpapi psapi shell32 userenv ws2_32)

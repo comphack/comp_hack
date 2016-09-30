@@ -30,6 +30,7 @@
 
 #include <LobbyConnection.h>
 #include <Log.h>
+#include <MessageEncrypted.h>
 
 #include <thread>
 
@@ -41,8 +42,15 @@ TEST(Lobby, Connection)
 
     asio::io_service service;
 
-    libcomp::LobbyConnection connection(service);
-    connection.Connect("127.0.0.1", 10666);
+    std::shared_ptr<libcomp::LobbyConnection> connection(
+        new libcomp::LobbyConnection(service));
+
+    std::shared_ptr<libcomp::MessageQueue<libcomp::Message::Message*>>
+        messageQueue(new libcomp::MessageQueue<libcomp::Message::Message*>());
+
+    connection->SetSelf(connection);
+    connection->SetMessageQueue(messageQueue);
+    connection->Connect("127.0.0.1", 10666);
 
     std::thread serviceThread([&service]()
     {
@@ -50,13 +58,51 @@ TEST(Lobby, Connection)
     });
 
     asio::steady_timer timer(service);
-    timer.expires_from_now(std::chrono::seconds(30));
+    timer.expires_from_now(std::chrono::seconds(10));
     timer.async_wait([&service](asio::error_code)
     {
         service.stop();
     });
 
+    std::mutex resultLock;
+    int goodEventCount = 0;
+    int badEventCount = 0;
+
+    new std::thread([&](std::shared_ptr<libcomp::MessageQueue<
+        libcomp::Message::Message*>> queue)
+    {
+        while(1)
+        {
+            std::list<libcomp::Message::Message*> msgs;
+            queue->DequeueAll(msgs);
+
+            for(auto msg : msgs)
+            {
+                libcomp::Message::Encrypted *pMessage = dynamic_cast<
+                    libcomp::Message::Encrypted*>(msg);
+
+                std::lock_guard<std::mutex> guard(resultLock);
+
+                if(0 != pMessage)
+                {
+                    goodEventCount++;
+                }
+                else
+                {
+                    badEventCount++;
+                    service.stop();
+                }
+                delete msg;
+            }
+        }
+    }, messageQueue);
+
     serviceThread.join();
+
+    std::lock_guard<std::mutex> guard(resultLock);
+
+    EXPECT_EQ(badEventCount, 0);
+    EXPECT_EQ(goodEventCount, 1);
 }
 
 int main(int argc, char *argv[])

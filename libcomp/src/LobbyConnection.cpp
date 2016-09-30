@@ -31,6 +31,7 @@
 #include "Decrypt.h"
 #include "Exception.h"
 #include "Log.h"
+#include "MessageEncrypted.h"
 #include "MessagePacket.h"
 #include "TcpServer.h"
 
@@ -102,8 +103,33 @@ void LobbyConnection::ConnectionSuccess()
 
 void LobbyConnection::ConnectionEncrypted()
 {
-    /// @todo Implement (send an event to the queue).
     LOG_DEBUG("Connection encrypted!\n");
+
+    bool errorFound = false;
+
+    // Check for the message queue.
+    if(!errorFound && nullptr == mMessageQueue)
+    {
+        SocketError("No message queue for packet.");
+
+        errorFound = true;
+    }
+
+    // Promote to a shared pointer.
+    std::shared_ptr<libcomp::TcpConnection> self = mSelf.lock();
+
+    if(!errorFound && this != self.get())
+    {
+        SocketError("Failed to obtain a shared pointer.");
+
+        errorFound = true;
+    }
+
+    // Notify the task about the encryption.
+    if(!errorFound)
+    {
+        mMessageQueue->Enqueue(new libcomp::Message::Encrypted(self));
+    }
 
     // Start reading until we have the packet sizes.
     if(!RequestPacket(2 * sizeof(uint32_t)))
@@ -489,6 +515,7 @@ void LobbyConnection::ParsePacket(libcomp::Packet& packet,
                 errorFound = true;
             }
 
+            // Check for the message queue.
             if(!errorFound && nullptr == mMessageQueue)
             {
                 SocketError("No message queue for packet.");

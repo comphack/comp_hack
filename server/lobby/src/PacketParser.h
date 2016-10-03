@@ -1,10 +1,10 @@
 /**
- * @file server/lobby/src/LobbyServer.h
+ * @file server/lobby/src/PacketParser.h
  * @ingroup lobby
  *
  * @author COMP Omega <compomega@tutanota.com>
  *
- * @brief Lobby server class.
+ * @brief Base class used to parse a client lobby packet.
  *
  * This file is part of the Lobby Server (lobby).
  *
@@ -24,29 +24,42 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef SERVER_LOBBY_SRC_LOBBYSERVER_H
-#define SERVER_LOBBY_SRC_LOBBYSERVER_H
+#ifndef LIBCOMP_SRC_PACKETPARSER_H
+#define LIBCOMP_SRC_PACKETPARSER_H
 
-// libcomp Includes
-#include <TcpServer.h>
-#include <Worker.h>
+namespace libcomp
+{
+
+class ReadOnlyPacket;
+
+} // namespace libcomp
 
 namespace lobby
 {
 
-class LobbyServer : public libcomp::TcpServer
+class ManagerPacket;
+
+class PacketParser
 {
 public:
-    LobbyServer(libcomp::String listenAddress, uint16_t port);
-    virtual ~LobbyServer();
+    PacketParser() { }
+    virtual ~PacketParser() { }
 
-protected:
-    virtual std::shared_ptr<libcomp::TcpConnection> CreateConnection(
-        asio::ip::tcp::socket& socket);
-
-    libcomp::Worker mWorker;
+    virtual bool Parse(ManagerPacket *pPacketManager,
+        libcomp::ReadOnlyPacket& p) const = 0;
 };
 
-} // namespace lobby
+} // namespace libcomp
 
-#endif // SERVER_LOBBY_SRC_LOBBYSERVER_H
+#define PACKET_PARSER_DECL(name) \
+    class name : public PacketParser \
+    { \
+    public: \
+        name() : PacketParser() { } \
+        virtual ~name() { } \
+        \
+        virtual bool Parse(ManagerPacket *pPacketManager, \
+            libcomp::ReadOnlyPacket& p) const; \
+    }
+
+#endif // LIBCOMP_SRC_PACKETPARSER_H

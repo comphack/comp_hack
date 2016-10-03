@@ -1,10 +1,10 @@
 /**
- * @file libcomp/src/MessagePacket.cpp
+ * @file libcomp/src/EnumMap.h
  * @ingroup libcomp
  *
  * @author COMP Omega <compomega@tutanota.com>
  *
- * @brief Packet received message.
+ * @brief Base worker class to process messages for a thread.
  *
  * This file is part of the COMP_hack Library (libcomp).
  *
@@ -24,36 +24,33 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "MessagePacket.h"
+#ifndef LIBCOMP_SRC_ENUMMAP_H
+#define LIBCOMP_SRC_ENUMMAP_H
 
-using namespace libcomp;
+// Standard C++11 Includes
+#include <unordered_map>
 
-Message::Packet::Packet(const std::shared_ptr<TcpConnection>& connection,
-    uint16_t commandCode, ReadOnlyPacket& packet) : mPacket(packet),
-    mCommandCode(commandCode), mConnection(connection)
+namespace libcomp
 {
-}
 
-Message::Packet::~Packet()
+// Source: http://stackoverflow.com/questions/18837857/
+class EnumClassHash
 {
-}
+public:
+    template<typename T>
+    std::size_t operator()(T t) const
+    {
+        return static_cast<std::size_t>(t);
+    }
+};
 
-const ReadOnlyPacket& Message::Packet::GetPacket() const
-{
-    return mPacket;
-}
+template<typename Key>
+using HashType = typename std::conditional<std::is_enum<Key>::value,
+    EnumClassHash, std::hash<Key>>::type;
 
-uint16_t Message::Packet::GetCommandCode() const
-{
-    return mCommandCode;
-}
+template<typename Key, typename T>
+using EnumMap = std::unordered_map<Key, T, HashType<Key>>;
 
-std::shared_ptr<TcpConnection> Message::Packet::GetConnection() const
-{
-    return mConnection;
-}
+} // namespace libcomp
 
-Message::MessageType Message::Packet::GetType() const
-{
-    return MessageType::MESSAGE_TYPE_PACKET;
-}
+#endif // LIBCOMP_SRC_ENUMMAP_H

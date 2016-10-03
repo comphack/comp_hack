@@ -1,12 +1,12 @@
 /**
- * @file libcomp/src/MessagePacket.cpp
- * @ingroup libcomp
+ * @file server/lobby/src/Packets.h
+ * @ingroup lobby
  *
  * @author COMP Omega <compomega@tutanota.com>
  *
- * @brief Packet received message.
+ * @brief Classes used to parse client lobby packets.
  *
- * This file is part of the COMP_hack Library (libcomp).
+ * This file is part of the Lobby Server (lobby).
  *
  * Copyright (C) 2012-2016 COMP_hack Team <compomega@tutanota.com>
  *
@@ -24,36 +24,22 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "MessagePacket.h"
+#ifndef LIBCOMP_SRC_PACKETS_H
+#define LIBCOMP_SRC_PACKETS_H
 
-using namespace libcomp;
+// lobby Includes
+#include "PacketParser.h"
 
-Message::Packet::Packet(const std::shared_ptr<TcpConnection>& connection,
-    uint16_t commandCode, ReadOnlyPacket& packet) : mPacket(packet),
-    mCommandCode(commandCode), mConnection(connection)
+namespace lobby
 {
-}
 
-Message::Packet::~Packet()
+namespace Parsers
 {
-}
 
-const ReadOnlyPacket& Message::Packet::GetPacket() const
-{
-    return mPacket;
-}
+PACKET_PARSER_DECL(Login);
 
-uint16_t Message::Packet::GetCommandCode() const
-{
-    return mCommandCode;
-}
+} // namespace Parsers
 
-std::shared_ptr<TcpConnection> Message::Packet::GetConnection() const
-{
-    return mConnection;
-}
+} // namespace libcomp
 
-Message::MessageType Message::Packet::GetType() const
-{
-    return MessageType::MESSAGE_TYPE_PACKET;
-}
+#endif // LIBCOMP_SRC_PACKETS_H

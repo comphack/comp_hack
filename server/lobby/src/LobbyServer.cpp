@@ -28,7 +28,10 @@
 
 // lobby Includes
 #include "LobbyConnection.h"
-#include "Log.h"
+
+// libcomp Includes
+#include <Log.h>
+#include <ManagerPacket.h>
 
 // Object Includes
 #include "LobbyConfig.h"
@@ -79,6 +82,12 @@ LobbyServer::LobbyServer(libcomp::String listenAddress, uint16_t port) :
             }
         }
     }
+
+    // Add the managers to the worker.
+    mWorker.AddManager(std::shared_ptr<libcomp::Manager>(new ManagerPacket()));
+
+    // Start the worker.
+    mWorker.Start();
 }
 
 LobbyServer::~LobbyServer()
@@ -93,6 +102,10 @@ std::shared_ptr<libcomp::TcpConnection> LobbyServer::CreateConnection(
             GetDiffieHellman())
         )
     );
+
+    // Assign this to the only worker available.
+    std::dynamic_pointer_cast<libcomp::LobbyConnection>(
+        connection)->SetMessageQueue(mWorker.GetMessageQueue());
 
     // Make sure this is called after connecting.
     connection->SetSelf(connection);

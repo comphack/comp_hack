@@ -33,10 +33,18 @@ namespace libcomp
 namespace Message
 {
 
+enum class MessageType
+{
+    MESSAGE_TYPE_PACKET,
+    MESSAGE_TYPE_CONNECTION,
+};
+
 class Message
 {
 public:
     virtual ~Message() { }
+
+    virtual MessageType GetType() const = 0;
 };
 
 } // namespace Message

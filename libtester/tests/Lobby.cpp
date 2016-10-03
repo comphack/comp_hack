@@ -92,6 +92,7 @@ TEST(Lobby, Connection)
                     badEventCount++;
                     service.stop();
                 }
+
                 delete msg;
             }
         }

@@ -49,6 +49,8 @@ public:
 
     std::shared_ptr<TcpConnection> GetConnection() const;
 
+    virtual MessageType GetType() const;
+
 private:
     std::shared_ptr<TcpConnection> mConnection;
 };

@@ -33,6 +33,7 @@ INCLUDE_DIRECTORIES(${CMAKE_CURRENT_BINARY_DIR}/res/login)
 SET(${PROJECT_NAME}_SRCS
     src/LobbyServer.cpp
     src/LoginWebHandler.cpp
+    src/ManagerPacket.cpp
     src/main.cpp
 
     ${CMAKE_CURRENT_BINARY_DIR}/res/login/ResourceLogin.c
@@ -41,11 +42,14 @@ SET(${PROJECT_NAME}_SRCS
 SET(${PROJECT_NAME}_HDRS
     src/LobbyServer.h
     src/LoginWebHandler.h
+    src/ManagerPacket.h
+    src/PacketParser.h
 
     ${CMAKE_CURRENT_BINARY_DIR}/res/login/ResourceLogin.h
 )
 
 SET(${PROJECT_NAME}_PACKETS
+    src/packets/Login.cpp
 )
 
 ADD_CUSTOM_COMMAND(

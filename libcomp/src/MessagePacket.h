@@ -49,11 +49,13 @@ public:
         uint16_t commandCode, ReadOnlyPacket& packet);
     virtual ~Packet();
 
-    ReadOnlyPacket& GetPacket();
+    const ReadOnlyPacket& GetPacket() const;
 
     uint16_t GetCommandCode() const;
 
     std::shared_ptr<TcpConnection> GetConnection() const;
+
+    virtual MessageType GetType() const;
 
 private:
     ReadOnlyPacket mPacket;

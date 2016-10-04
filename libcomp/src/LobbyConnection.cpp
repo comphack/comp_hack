@@ -31,6 +31,7 @@
 #include "Decrypt.h"
 #include "Exception.h"
 #include "Log.h"
+#include "MessageEncrypted.h"
 #include "MessagePacket.h"
 #include "TcpServer.h"
 
@@ -102,8 +103,33 @@ void LobbyConnection::ConnectionSuccess()
 
 void LobbyConnection::ConnectionEncrypted()
 {
-    /// @todo Implement (send an event to the queue).
     LOG_DEBUG("Connection encrypted!\n");
+
+    bool errorFound = false;
+
+    // Check for the message queue.
+    if(!errorFound && nullptr == mMessageQueue)
+    {
+        SocketError("No message queue for packet.");
+
+        errorFound = true;
+    }
+
+    // Promote to a shared pointer.
+    std::shared_ptr<libcomp::TcpConnection> self = mSelf.lock();
+
+    if(!errorFound && this != self.get())
+    {
+        SocketError("Failed to obtain a shared pointer.");
+
+        errorFound = true;
+    }
+
+    // Notify the task about the encryption.
+    if(!errorFound)
+    {
+        mMessageQueue->Enqueue(new libcomp::Message::Encrypted(self));
+    }
 
     // Start reading until we have the packet sizes.
     if(!RequestPacket(2 * sizeof(uint32_t)))
@@ -413,6 +439,12 @@ void LobbyConnection::ParsePacket(libcomp::Packet& packet)
 
                 // Get ready for the next packet.
                 packet.Clear();
+
+                // Ask for another packet now.
+                if(!RequestPacket(2 * sizeof(uint32_t)))
+                {
+                    SocketError("Failed to request more data.");
+                }
             }
         }
     }
@@ -477,13 +509,13 @@ void LobbyConnection::ParsePacket(libcomp::Packet& packet,
             if(!errorFound && copy.Left() < (uint32_t)(commandSize -
                 2 * sizeof(uint16_t)))
             {
-                copy.HexDump();
                 SocketError("Corrupt packet (not enough data for "
                     "command data).");
 
                 errorFound = true;
             }
 
+            // Check for the message queue.
             if(!errorFound && nullptr == mMessageQueue)
             {
                 SocketError("No message queue for packet.");
@@ -511,7 +543,7 @@ void LobbyConnection::ParsePacket(libcomp::Packet& packet,
 
                 // Notify the task about the new packet.
                 mMessageQueue->Enqueue(new libcomp::Message::Packet(self,
-                    commandCode, copy));
+                    commandCode, command));
             }
 
             // Move to the next command.
@@ -557,4 +589,69 @@ void LobbyConnection::SetMessageQueue(const std::shared_ptr<
     MessageQueue<libcomp::Message::Message*>>& messageQueue)
 {
     mMessageQueue = messageQueue;
+}
+
+void LobbyConnection::PreparePackets(std::list<ReadOnlyPacket>& packets)
+{
+    if(STATUS_ENCRYPTED == mStatus)
+    {
+        Packet finalPacket;
+
+        // Reserve space for the sizes.
+        finalPacket.WriteBlank(2 * sizeof(uint32_t));
+
+        // Now add the packet data.
+        for(auto& packet : packets)
+        {
+            finalPacket.WriteU16Big((uint16_t)(packet.Size() + 2));
+            finalPacket.WriteU16Little((uint16_t)(packet.Size() + 2));
+            finalPacket.WriteArray(packet.ConstData(), packet.Size());
+        }
+
+        // Encrypt the packet
+        Decrypt::EncryptPacket(mEncryptionKey, finalPacket);
+
+        mOutgoing = finalPacket;
+    }
+    else
+    {
+        // There should only be one!
+        if(packets.size() != 1)
+        {
+            LOG_CRITICAL("Critical packet error.\n");
+        }
+
+        ReadOnlyPacket finalPacket(packets.front());
+
+        mOutgoing = finalPacket;
+    }
+}
+
+std::list<ReadOnlyPacket> LobbyConnection::GetCombinedPackets()
+{
+    std::list<ReadOnlyPacket> packets;
+
+    std::lock_guard<std::mutex> guard(mOutgoingMutex);
+
+    if(!mSendingPacket)
+    {
+        uint32_t totalSize = 2 * sizeof(uint32_t);
+
+        while(!mOutgoingPackets.empty() && totalSize < MAX_PACKET_SIZE)
+        {
+            ReadOnlyPacket& nextPacket = mOutgoingPackets.front();
+
+            uint32_t packetSize = nextPacket.Size() + 2 *
+                static_cast<uint32_t>(sizeof(uint16_t));
+
+            if((totalSize + packetSize) < MAX_PACKET_SIZE)
+            {
+                totalSize += packetSize;
+                packets.push_back(mOutgoingPackets.front());
+                mOutgoingPackets.pop_front();
+            }
+        }
+    }
+
+    return packets;
 }

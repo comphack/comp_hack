@@ -103,4 +103,9 @@ script:
   - sleep 10
   - nodetool status
   - cqlsh -e "SHOW HOST; SHOW VERSION;"
-  - mkdir -p build && cd build && cmake -G "${GENERATOR}" .. && cmake --build . && cmake --build . --target Experimental
+  - sudo mkdir /etc/comp_hack
+  - sudo cp contrib/testing/lobby.xml /etc/comp_hack/
+  - mkdir -p build && cd build && cmake -G "${GENERATOR}" .. && cmake --build .
+  - bin/comp_lobby --testing &
+  - sleep 10
+  - cmake --build . --target Experimental

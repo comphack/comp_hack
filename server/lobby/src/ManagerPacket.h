@@ -1,10 +1,10 @@
 /**
- * @file server/lobby/src/LobbyServer.h
+ * @file server/lobby/src/ManagerPacket.h
  * @ingroup lobby
  *
  * @author COMP Omega <compomega@tutanota.com>
  *
- * @brief Lobby server class.
+ * @brief Manager to handle lobby packets.
  *
  * This file is part of the Lobby Server (lobby).
  *
@@ -24,29 +24,45 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef SERVER_LOBBY_SRC_LOBBYSERVER_H
-#define SERVER_LOBBY_SRC_LOBBYSERVER_H
+#ifndef LIBCOMP_SRC_MANAGERPACKET_H
+#define LIBCOMP_SRC_MANAGERPACKET_H
 
 // libcomp Includes
-#include <TcpServer.h>
-#include <Worker.h>
+#include "Manager.h"
+
+// Standard C++11 Includes
+#include <stdint.h>
+#include <memory>
+#include <unordered_map>
 
 namespace lobby
 {
 
-class LobbyServer : public libcomp::TcpServer
+typedef uint16_t CommandCode_t;
+
+class PacketParser;
+
+class ManagerPacket : public libcomp::Manager
 {
 public:
-    LobbyServer(libcomp::String listenAddress, uint16_t port);
-    virtual ~LobbyServer();
+    ManagerPacket();
+    virtual ~ManagerPacket();
 
-protected:
-    virtual std::shared_ptr<libcomp::TcpConnection> CreateConnection(
-        asio::ip::tcp::socket& socket);
+    /**
+     * @brief Get the different types of messages handles by this manager.
+     */
+    virtual std::list<libcomp::Message::MessageType> GetSupportedTypes() const;
 
-    libcomp::Worker mWorker;
+    /**
+     * Process a message from the queue.
+     */
+    virtual bool ProcessMessage(const libcomp::Message::Message *pMessage);
+
+private:
+    std::unordered_map<CommandCode_t,
+        std::shared_ptr<PacketParser>> mPacketParsers;
 };
 
 } // namespace lobby
 
-#endif // SERVER_LOBBY_SRC_LOBBYSERVER_H
+#endif // LIBCOMP_SRC_MANAGERPACKET_H

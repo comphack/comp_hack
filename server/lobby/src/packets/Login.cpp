@@ -1,12 +1,12 @@
 /**
- * @file libcomp/src/MessagePacket.cpp
- * @ingroup libcomp
+ * @file server/lobby/src/packets/Login.cpp
+ * @ingroup lobby
  *
  * @author COMP Omega <compomega@tutanota.com>
  *
- * @brief Packet received message.
+ * @brief Manager to handle lobby packets.
  *
- * This file is part of the COMP_hack Library (libcomp).
+ * This file is part of the Lobby Server (lobby).
  *
  * Copyright (C) 2012-2016 COMP_hack Team <compomega@tutanota.com>
  *
@@ -24,36 +24,20 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "MessagePacket.h"
+#include "Packets.h"
 
-using namespace libcomp;
+// libcomp Includes
+#include "Log.h"
 
-Message::Packet::Packet(const std::shared_ptr<TcpConnection>& connection,
-    uint16_t commandCode, ReadOnlyPacket& packet) : mPacket(packet),
-    mCommandCode(commandCode), mConnection(connection)
+using namespace lobby;
+
+bool Parsers::Login::Parse(ManagerPacket *pPacketManager,
+    libcomp::ReadOnlyPacket& p) const
 {
-}
+    (void)pPacketManager;
+    (void)p;
 
-Message::Packet::~Packet()
-{
-}
+    LOG_DEBUG("Got a login packet!\n");
 
-const ReadOnlyPacket& Message::Packet::GetPacket() const
-{
-    return mPacket;
-}
-
-uint16_t Message::Packet::GetCommandCode() const
-{
-    return mCommandCode;
-}
-
-std::shared_ptr<TcpConnection> Message::Packet::GetConnection() const
-{
-    return mConnection;
-}
-
-Message::MessageType Message::Packet::GetType() const
-{
-    return MessageType::MESSAGE_TYPE_PACKET;
+    return true;
 }

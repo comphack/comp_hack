@@ -1,10 +1,10 @@
 /**
- * @file libcomp/src/MessagePacket.cpp
+ * @file libcomp/src/Manager.h
  * @ingroup libcomp
  *
  * @author COMP Omega <compomega@tutanota.com>
  *
- * @brief Packet received message.
+ * @brief Base manager class to process messages of a specific type.
  *
  * This file is part of the COMP_hack Library (libcomp).
  *
@@ -24,36 +24,34 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "MessagePacket.h"
+#ifndef LIBCOMP_SRC_MANAGER_H
+#define LIBCOMP_SRC_MANAGER_H
 
-using namespace libcomp;
+// libcomp Includes
+#include "Message.h"
 
-Message::Packet::Packet(const std::shared_ptr<TcpConnection>& connection,
-    uint16_t commandCode, ReadOnlyPacket& packet) : mPacket(packet),
-    mCommandCode(commandCode), mConnection(connection)
+// Standard C++11 Includes
+#include <list>
+
+namespace libcomp
 {
-}
 
-Message::Packet::~Packet()
+class Manager
 {
-}
+public:
+    virtual ~Manager() { }
 
-const ReadOnlyPacket& Message::Packet::GetPacket() const
-{
-    return mPacket;
-}
+    /**
+     * @brief Get the different types of messages handles by this manager.
+     */
+    virtual std::list<Message::MessageType> GetSupportedTypes() const = 0;
 
-uint16_t Message::Packet::GetCommandCode() const
-{
-    return mCommandCode;
-}
+    /**
+     * Process a message from the queue.
+     */
+    virtual bool ProcessMessage(const libcomp::Message::Message *pMessage) = 0;
+};
 
-std::shared_ptr<TcpConnection> Message::Packet::GetConnection() const
-{
-    return mConnection;
-}
+} // namespace libcomp
 
-Message::MessageType Message::Packet::GetType() const
-{
-    return MessageType::MESSAGE_TYPE_PACKET;
-}
+#endif // LIBCOMP_SRC_MANAGER_H

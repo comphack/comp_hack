@@ -70,6 +70,10 @@ protected:
 
     virtual void PacketReceived(libcomp::Packet& packet);
 
+    virtual void PreparePackets(std::list<ReadOnlyPacket>& packets);
+
+    virtual std::list<ReadOnlyPacket> GetCombinedPackets();
+
     PacketParser_t mPacketParser;
 
     std::shared_ptr<MessageQueue<libcomp::Message::Message*>> mMessageQueue;

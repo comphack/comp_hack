@@ -671,13 +671,11 @@ void Decrypt::EncryptPacket(const BF_KEY& key, Packet& packet)
         static_cast<uint32_t>(sizeof(uint32_t));
 
     // Write the real size.
-    packet.Seek(4);
+    packet.Seek(sizeof(uint32_t));
     packet.WriteU32Big(realSize);
 
     // Round up the size of the packet to a multiple of BLOWFISH_BLOCK_SIZE.
-    uint32_t paddedSize = packet.Size() - 2 *
-        static_cast<uint32_t>(sizeof(uint32_t));
-    paddedSize = static_cast<uint32_t>(((paddedSize +
+    uint32_t paddedSize = static_cast<uint32_t>(((realSize +
         BLOWFISH_BLOCK_SIZE - 1) / BLOWFISH_BLOCK_SIZE) *
         BLOWFISH_BLOCK_SIZE);
 

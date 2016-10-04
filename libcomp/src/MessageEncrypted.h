@@ -1,10 +1,10 @@
 /**
- * @file libcomp/src/MessagePacket.cpp
+ * @file libcomp/src/MessageEncrypted.h
  * @ingroup libcomp
  *
  * @author COMP Omega <compomega@tutanota.com>
  *
- * @brief Packet received message.
+ * @brief Connection encrypted message.
  *
  * This file is part of the COMP_hack Library (libcomp).
  *
@@ -24,36 +24,39 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "MessagePacket.h"
+#ifndef LIBCOMP_SRC_MESSAGEENCRYPTED_H
+#define LIBCOMP_SRC_MESSAGEENCRYPTED_H
 
-using namespace libcomp;
+// libcomp Includes
+#include "Message.h"
 
-Message::Packet::Packet(const std::shared_ptr<TcpConnection>& connection,
-    uint16_t commandCode, ReadOnlyPacket& packet) : mPacket(packet),
-    mCommandCode(commandCode), mConnection(connection)
+// Standard C++11 Includes
+#include <memory>
+
+namespace libcomp
 {
-}
 
-Message::Packet::~Packet()
-{
-}
+class TcpConnection;
 
-const ReadOnlyPacket& Message::Packet::GetPacket() const
+namespace Message
 {
-    return mPacket;
-}
 
-uint16_t Message::Packet::GetCommandCode() const
+class Encrypted : public Message
 {
-    return mCommandCode;
-}
+public:
+    Encrypted(const std::shared_ptr<TcpConnection>& connection);
+    virtual ~Encrypted();
 
-std::shared_ptr<TcpConnection> Message::Packet::GetConnection() const
-{
-    return mConnection;
-}
+    std::shared_ptr<TcpConnection> GetConnection() const;
 
-Message::MessageType Message::Packet::GetType() const
-{
-    return MessageType::MESSAGE_TYPE_PACKET;
-}
+    virtual MessageType GetType() const;
+
+private:
+    std::shared_ptr<TcpConnection> mConnection;
+};
+
+} // namespace Message
+
+} // namespace libcomp
+
+#endif // LIBCOMP_SRC_MESSAGEENCRYPTED_H

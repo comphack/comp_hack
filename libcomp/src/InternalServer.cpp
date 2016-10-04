@@ -39,11 +39,7 @@ InternalServer::InternalServer(String listenAddress, uint16_t port) :
 
 InternalServer::~InternalServer()
 {
-    for(std::vector<std::shared_ptr<libcomp::InternalServerWorker>>::iterator iter = mWorkers.begin(); iter != mWorkers.end(); iter++)
-    {
-        iter->get()->Stop();
-        delete iter->get();
-    }
+    //todo: stop workers
 
     if (hostConnection != nullptr)
     {
@@ -61,31 +57,53 @@ bool InternalServer::ConnectToHostServer(asio::io_service& service, const String
 std::shared_ptr<libcomp::TcpConnection> InternalServer::CreateConnection(
     asio::ip::tcp::socket& socket)
 {
-    auto connection = std::shared_ptr<libcomp::TcpConnection>(
-        new InternalConnection(socket, CopyDiffieHellman(
-            GetDiffieHellman())
-            )
-        );
+    auto iConnection = new InternalConnection(socket, CopyDiffieHellman(
+                                                GetDiffieHellman())
+                                            );
 
+    iConnection->SetMessageQueue(mMessageQueue);
+
+    auto connection = std::shared_ptr<libcomp::TcpConnection>(iConnection);
     // Make sure this is called after connecting.
     connection->SetSelf(connection);
     connection->ConnectionSuccess();
 
-    //todo: divvy out work
-    if (mWorkers.size() > 0)
-    {
-        mWorkers[0]->AddConnection(connection);
-    }
-
     return connection;
 }
 
-void InternalServer::DoWork()
+void InternalServer::Run()
 {
+    std::list<libcomp::Message::Message*> mQueue;
+
     //Loop until the program shuts down
     while (true)
     {
-        //todo: handle server side messages
+        //Pull new messages
+        //todo: make sure messages that need to be processed together are either one message or are in the queue at the same time
+        mMessageQueue->DequeueAll(mQueue);
+        if (mQueue.size() > 0)
+        {
+            //todo: handle server side messages
+
+            //Process messages
+            for (auto iter = mQueue.begin(); iter != mQueue.end(); iter++)
+            {
+                auto handler = GetMessageHandler(**iter);
+                if (handler != nullptr)
+                {
+                    //todo: add worker message handling
+                }
+                else
+                {
+                    //todo: display unrecognized message error
+                }
+            }
+
+            //Clear queue and move on
+            mQueue.clear();
+        }
+
+        //todo: clean up connections
 
         //todo: replace with?
         std::this_thread::sleep_for(std::chrono::seconds(1));

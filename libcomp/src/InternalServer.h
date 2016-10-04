@@ -28,8 +28,9 @@
 #define LIBCOMP_SRC_INTERNALSERVER_H
 
 // libcomp Includes
-#include "InternalServerWorker.h"
+#include "InternalConnection.h"
 #include "TcpServer.h"
+#include "Worker.h"
 
 // C++ Includes
 #include <vector>
@@ -51,10 +52,15 @@ protected:
     virtual std::shared_ptr<libcomp::TcpConnection> CreateConnection(
         asio::ip::tcp::socket& socket);
 
-    virtual void DoWork();
+    virtual void Run();
 
-    std::vector<std::shared_ptr<InternalServerWorker>> mWorkers;
+    virtual std::shared_ptr<libcomp::Manager> GetMessageHandler(libcomp::Message::Message& msg) = 0;
+
+    //todo: replace with multiple workers for multi-threading
+    libcomp::Worker mWorker;
+
     std::shared_ptr<libcomp::InternalConnection> hostConnection;
+    std::shared_ptr<MessageQueue<libcomp::Message::Message*>> mMessageQueue;
 };
 
 } // namespace libcomp

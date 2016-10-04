@@ -69,7 +69,6 @@ SET(${PROJECT_NAME}_SRCS
     src/Exception.cpp
     src/InternalConnection.cpp
     src/InternalServer.cpp
-    src/InternalServerWorker.cpp
     src/LobbyConnection.cpp
     src/Log.cpp
     #src/MemoryFile.cpp
@@ -117,7 +116,6 @@ SET(${PROJECT_NAME}_HDRS
     src/Exception.h
     src/InternalConnection.h
     src/InternalServer.h
-    src/InternalServerWorker.h
     src/LobbyConnection.h
     src/Log.h
     src/Manager.h
@@ -142,7 +140,7 @@ SET(${PROJECT_NAME}_HDRS
     src/TcpConnection.h
     src/TcpServer.h
     #src/ThreadManager.h
-    src/Worker.cpp
+    src/Worker.h
     #src/XmlUtils.h
 
     # These were generated and are not worth reading.

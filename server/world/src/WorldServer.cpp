@@ -28,19 +28,20 @@
 
 // world Includes
 #include "InternalConnection.h"
-#include "WorldWorker.h"
 
 using namespace world;
 
 WorldServer::WorldServer(libcomp::String listenAddress, uint16_t port) :
     libcomp::InternalServer(listenAddress, port)
 {
-    //todo: maximize workers per core
-    auto w = std::shared_ptr<WorldWorker>(new WorldWorker());
-    mWorkers.push_back(w);
-    w->Start();
 }
 
 WorldServer::~WorldServer()
 {
+}
+
+std::shared_ptr<libcomp::Manager> WorldServer::GetMessageHandler(libcomp::Message::Message& msg)
+{
+    //todo
+    return nullptr;
 }

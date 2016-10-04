@@ -31,6 +31,7 @@
 #include "Decrypt.h"
 #include "Exception.h"
 #include "Log.h"
+#include "MessageEncrypted.h"
 #include "MessagePacket.h"
 #include "TcpServer.h"
 
@@ -55,16 +56,8 @@ void InternalConnection::SocketError(const libcomp::String& errorMessage)
 {
     if(STATUS_NOT_CONNECTED != GetStatus())
     {
-        if (GetRole() == ROLE_CLIENT)
-        {
-            LOG_DEBUG(libcomp::String("Server connection lost: %1\n").Arg(
-                GetRemoteAddress()));
-        }
-        else
-        {
-            LOG_DEBUG(libcomp::String("Client disconnect: %1\n").Arg(
-                GetRemoteAddress()));
-        }
+        LOG_DEBUG(libcomp::String("Client disconnect: %1\n").Arg(
+            GetRemoteAddress()));
     }
 
     TcpConnection::SocketError(errorMessage);
@@ -78,12 +71,9 @@ void InternalConnection::ConnectionSuccess()
     LOG_DEBUG(libcomp::String(role == ROLE_CLIENT ? "Server connection: %1\n" : "Client connection: %1\n").Arg(
         GetRemoteAddress()));
 
-    //todo: properly handle initial communication, this is just a test
-    if (role == ROLE_CLIENT)
+    if(ROLE_CLIENT == role)
     {
         mPacketParser = &InternalConnection::ParseClientEncryptionStart;
-
-        //Send ping, receive pong
 
         libcomp::Packet packet;
 
@@ -93,7 +83,8 @@ void InternalConnection::ConnectionSuccess()
         // Send a packet after connecting.
         SendPacket(packet);
 
-        if (!RequestPacket(strlen(DH_BASE_STRING) + 2 * DH_KEY_HEX_SIZE +
+        // Now read the first reply.
+        if(!RequestPacket(strlen(DH_BASE_STRING) + 2 * DH_KEY_HEX_SIZE +
             4 * sizeof(uint32_t)))
         {
             SocketError("Failed to request more data.");
@@ -103,21 +94,49 @@ void InternalConnection::ConnectionSuccess()
     {
         mPacketParser = &InternalConnection::ParseServerEncryptionStart;
 
-        //Receive ping, Send pong
-
-        if (!RequestPacket(strlen(DH_BASE_STRING) + 2 * DH_KEY_HEX_SIZE +
-            4 * sizeof(uint32_t)))
+        // Read the first packet.
+        if(!RequestPacket(2 * sizeof(uint32_t)))
         {
             SocketError("Failed to request more data.");
         }
+    }
+}
 
-        libcomp::Packet packet;
+//Copied from LobbyConnection
+void InternalConnection::ConnectionEncrypted()
+{
+    LOG_DEBUG("Connection encrypted!\n");
 
-        packet.WriteU32Big(1);
-        packet.WriteU32Big(8);
+    bool errorFound = false;
 
-        // Send a packet after connecting.
-        SendPacket(packet);
+    // Check for the message queue.
+    if(!errorFound && nullptr == mMessageQueue)
+    {
+        SocketError("No message queue for packet.");
+
+        errorFound = true;
+    }
+
+    // Promote to a shared pointer.
+    std::shared_ptr<libcomp::TcpConnection> self = mSelf.lock();
+
+    if(!errorFound && this != self.get())
+    {
+        SocketError("Failed to obtain a shared pointer.");
+
+        errorFound = true;
+    }
+
+    // Notify the task about the encryption.
+    if(!errorFound)
+    {
+        mMessageQueue->Enqueue(new libcomp::Message::Encrypted(self));
+    }
+
+    // Start reading until we have the packet sizes.
+    if(!RequestPacket(2 * sizeof(uint32_t)))
+    {
+        SocketError("Failed to request more data.");
     }
 }
 
@@ -125,11 +144,11 @@ void InternalConnection::ConnectionSuccess()
 void InternalConnection::ParseClientEncryptionStart(libcomp::Packet& packet)
 {
     // Check if we have all the data.
-    if ((strlen(DH_BASE_STRING) + 2 * DH_KEY_HEX_SIZE +
+    if((strlen(DH_BASE_STRING) + 2 * DH_KEY_HEX_SIZE +
         4 * sizeof(uint32_t)) > packet.Size())
     {
         // Keep reading the first reply.
-        if (!RequestPacket(strlen(DH_BASE_STRING) + 2 * DH_KEY_HEX_SIZE +
+        if(!RequestPacket(strlen(DH_BASE_STRING) + 2 * DH_KEY_HEX_SIZE +
             4 * sizeof(uint32_t) - packet.Size()))
         {
             SocketError("Failed to request more data.");
@@ -141,14 +160,14 @@ void InternalConnection::ParseClientEncryptionStart(libcomp::Packet& packet)
         bool status = true;
 
         // Sanity check the packet contents.
-        if (0 != packet.ReadU32Big())
+        if(0 != packet.ReadU32Big())
         {
             SocketError("Failed to parse encryption data.");
             status = false;
         }
 
         // Check the size of the base.
-        if (status && strlen(DH_BASE_STRING) != packet.PeekU32Big())
+        if(status && strlen(DH_BASE_STRING) != packet.PeekU32Big())
         {
             SocketError("Failed to parse encryption base.");
             status = false;
@@ -156,13 +175,13 @@ void InternalConnection::ParseClientEncryptionStart(libcomp::Packet& packet)
 
         libcomp::String base;
 
-        if (status)
+        if(status)
         {
             base = packet.ReadString32Big(libcomp::Convert::ENCODING_UTF8);
         }
 
         // Check the base matches what is expected.
-        if (status && DH_BASE_STRING != base)
+        if(status && DH_BASE_STRING != base)
         {
             SocketError("Failed to parse encryption base (not "
                 DH_BASE_STRING ").");
@@ -170,7 +189,7 @@ void InternalConnection::ParseClientEncryptionStart(libcomp::Packet& packet)
         }
 
         // Check the size of the prime.
-        if (status && DH_KEY_HEX_SIZE != packet.PeekU32Big())
+        if(status && DH_KEY_HEX_SIZE != packet.PeekU32Big())
         {
             SocketError("Failed to parse encryption prime.");
             status = false;
@@ -178,13 +197,13 @@ void InternalConnection::ParseClientEncryptionStart(libcomp::Packet& packet)
 
         libcomp::String prime;
 
-        if (status)
+        if(status)
         {
             prime = packet.ReadString32Big(libcomp::Convert::ENCODING_UTF8);
         }
 
         // Check the size of the server public.
-        if (status && DH_KEY_HEX_SIZE != packet.PeekU32Big())
+        if(status && DH_KEY_HEX_SIZE != packet.PeekU32Big())
         {
             SocketError("Failed to parse encryption server public.");
             status = false;
@@ -192,14 +211,14 @@ void InternalConnection::ParseClientEncryptionStart(libcomp::Packet& packet)
 
         libcomp::String serverPublic;
 
-        if (status)
+        if(status)
         {
             serverPublic = packet.ReadString32Big(
                 libcomp::Convert::ENCODING_UTF8);
         }
 
         // Make sure we read the entire packet.
-        if (status && 0 == packet.Left())
+        if(status && 0 == packet.Left())
         {
             mStatus = STATUS_WAITING_ENCRYPTION;
 
@@ -214,7 +233,7 @@ void InternalConnection::ParseClientEncryptionStart(libcomp::Packet& packet)
             std::vector<char> sharedData = GenerateDiffieHellmanSharedData(
                 mDiffieHellman, serverPublic);
 
-            if (DH_KEY_HEX_SIZE != clientPublic.Length() ||
+            if(DH_KEY_HEX_SIZE != clientPublic.Length() ||
                 DH_SHARED_DATA_SIZE != sharedData.size())
             {
                 // Get ready for the next packet.
@@ -264,10 +283,10 @@ void InternalConnection::ParseClientEncryptionStart(libcomp::Packet& packet)
 void InternalConnection::ParseServerEncryptionStart(libcomp::Packet& packet)
 {
     // Check if we have all the data.
-    if ((2 * sizeof(uint32_t)) > packet.Size())
+    if((2 * sizeof(uint32_t)) > packet.Size())
     {
         // Keep reading the first packet.
-        if (!RequestPacket(2 * sizeof(uint32_t) - packet.Size()))
+        if(!RequestPacket(2 * sizeof(uint32_t) - packet.Size()))
         {
             SocketError("Failed to request more data.");
         }
@@ -277,7 +296,7 @@ void InternalConnection::ParseServerEncryptionStart(libcomp::Packet& packet)
         uint32_t first = packet.ReadU32Big();
         uint32_t second = packet.ReadU32Big();
 
-        if (0 == packet.Left() && 1 == first && 8 == second)
+        if(0 == packet.Left() && 1 == first && 8 == second)
         {
             mStatus = STATUS_WAITING_ENCRYPTION;
 
@@ -299,7 +318,7 @@ void InternalConnection::ParseServerEncryptionStart(libcomp::Packet& packet)
             packet.Clear();
 
             // Wait for the client public.
-            if (!RequestPacket(DH_KEY_HEX_SIZE + sizeof(uint32_t)))
+            if(!RequestPacket(DH_KEY_HEX_SIZE + sizeof(uint32_t)))
             {
                 SocketError("Failed to request more data.");
             }
@@ -318,10 +337,10 @@ void InternalConnection::ParseServerEncryptionStart(libcomp::Packet& packet)
 void InternalConnection::ParseServerEncryptionFinish(libcomp::Packet& packet)
 {
     // Check if we have all the data.
-    if ((DH_KEY_HEX_SIZE + sizeof(uint32_t)) > packet.Size())
+    if((DH_KEY_HEX_SIZE + sizeof(uint32_t)) > packet.Size())
     {
         // Keep reading the packet.
-        if (!RequestPacket(DH_KEY_HEX_SIZE + sizeof(uint32_t) - packet.Size()))
+        if(!RequestPacket(DH_KEY_HEX_SIZE + sizeof(uint32_t) - packet.Size()))
         {
             SocketError("Failed to request more data.");
         }
@@ -332,7 +351,7 @@ void InternalConnection::ParseServerEncryptionFinish(libcomp::Packet& packet)
         bool status = true;
 
         // Check the size of the client public.
-        if (status && DH_KEY_HEX_SIZE != packet.PeekU32Big())
+        if(status && DH_KEY_HEX_SIZE != packet.PeekU32Big())
         {
             SocketError("Failed to parse encryption client public.");
             status = false;
@@ -340,19 +359,19 @@ void InternalConnection::ParseServerEncryptionFinish(libcomp::Packet& packet)
 
         libcomp::String clientPublic;
 
-        if (status)
+        if(status)
         {
             clientPublic = packet.ReadString32Big(
                 libcomp::Convert::ENCODING_UTF8);
         }
 
         // Make sure we read the entire packet.
-        if (status && 0 == packet.Left())
+        if(status && 0 == packet.Left())
         {
             std::vector<char> sharedData = GenerateDiffieHellmanSharedData(
                 mDiffieHellman, clientPublic);
 
-            if (DH_SHARED_DATA_SIZE != sharedData.size())
+            if(DH_SHARED_DATA_SIZE != sharedData.size())
             {
                 // Get ready for the next packet.
                 packet.Clear();
@@ -392,13 +411,13 @@ void InternalConnection::ParsePacket(libcomp::Packet& packet)
 {
     (void)packet;
 
-    if (STATUS_ENCRYPTED == GetStatus())
+    if(STATUS_ENCRYPTED == GetStatus())
     {
         // Check if we have all the data.
-        if ((2 * sizeof(uint32_t)) > packet.Size())
+        if((2 * sizeof(uint32_t)) > packet.Size())
         {
             // Keep reading until we have the packet sizes.
-            if (!RequestPacket(2 * sizeof(uint32_t) - packet.Size()))
+            if(!RequestPacket(2 * sizeof(uint32_t) - packet.Size()))
             {
                 SocketError("Failed to request more data.");
             }
@@ -410,10 +429,10 @@ void InternalConnection::ParsePacket(libcomp::Packet& packet)
             uint32_t realSize = packet.ReadU32Big();
 
             // Check for enough packet data (the sizes are not included).
-            if ((paddedSize + 2 * sizeof(uint32_t)) > packet.Size())
+            if((paddedSize + 2 * sizeof(uint32_t)) > packet.Size())
             {
                 // Keep reading until we have the packet.
-                if (!RequestPacket(paddedSize + 2 * sizeof(uint32_t) -
+                if(!RequestPacket(paddedSize + 2 * sizeof(uint32_t) -
                     packet.Size()))
                 {
                     SocketError("Failed to request more data.");
@@ -426,6 +445,12 @@ void InternalConnection::ParsePacket(libcomp::Packet& packet)
 
                 // Get ready for the next packet.
                 packet.Clear();
+
+                // Ask for another packet now.
+                if(!RequestPacket(2 * sizeof(uint32_t)))
+                {
+                    SocketError("Failed to request more data.");
+                }
             }
         }
     }
@@ -459,10 +484,10 @@ void InternalConnection::ParsePacket(libcomp::Packet& packet,
 
     // Keep reading each command (sometimes called a packet) inside the
     // decrypted packet from the network socket.
-    while (!errorFound && copy.Left() > padding)
+    while(!errorFound && copy.Left() > padding)
     {
         // Make sure there is enough data
-        if (copy.Left() < 3 * sizeof(uint16_t))
+        if(copy.Left() < 3 * sizeof(uint16_t))
         {
             SocketError("Corrupt packet (not enough data for command header).");
 
@@ -480,7 +505,7 @@ void InternalConnection::ParsePacket(libcomp::Packet& packet,
             uint16_t commandCode = copy.ReadU16Little();
 
             // With no data, the command size is 4 bytes (code + a size).
-            if (commandSize < 2 * sizeof(uint16_t))
+            if(commandSize < 2 * sizeof(uint16_t))
             {
                 SocketError("Corrupt packet (not enough data for command).");
 
@@ -488,17 +513,16 @@ void InternalConnection::ParsePacket(libcomp::Packet& packet,
             }
 
             // Check there is enough packet left for the command data.
-            if (!errorFound && copy.Left() < (uint32_t)(commandSize -
+            if(!errorFound && copy.Left() < (uint32_t)(commandSize -
                 2 * sizeof(uint16_t)))
             {
-                copy.HexDump();
                 SocketError("Corrupt packet (not enough data for "
                     "command data).");
 
                 errorFound = true;
             }
 
-            if (!errorFound && nullptr == mMessageQueue)
+            if(!errorFound && nullptr == mMessageQueue)
             {
                 SocketError("No message queue for packet.");
 
@@ -508,60 +532,47 @@ void InternalConnection::ParsePacket(libcomp::Packet& packet,
             // Promote to a shared pointer.
             std::shared_ptr<libcomp::TcpConnection> self = mSelf.lock();
 
-            if (!errorFound && this != self.get())
+            if(!errorFound && this != self.get())
             {
                 SocketError("Failed to obtain a shared pointer.");
 
                 errorFound = true;
             }
 
-            if (!errorFound)
+            if(!errorFound)
             {
                 // This is a shallow copy of the command data.
                 ReadOnlyPacket command(copy, commandStart +
                     2 * static_cast<uint32_t>(sizeof(uint16_t)),
                     commandSize - 2 * static_cast<uint32_t>(
-                        sizeof(uint16_t)));
-
-                //todo: split between seperate worker/server queues
+                    sizeof(uint16_t)));
 
                 // Notify the task about the new packet.
                 mMessageQueue->Enqueue(new libcomp::Message::Packet(self,
-                    commandCode, copy));
+                    commandCode, command));
             }
 
             // Move to the next command.
-            if (!errorFound)
+            if(!errorFound)
             {
                 copy.Seek(commandStart + commandSize);
             }
         }
     } // while(!errorFound && packet.Left() > padding)
 
-    if (!errorFound)
+    if(!errorFound)
     {
         // Skip the padding
         copy.Skip(padding);
     }
 
-    if (!errorFound && copy.Left() != 0)
+    if(!errorFound && copy.Left() != 0)
     {
         SocketError("Corrupt packet has extra data.");
     }
 }
 
-void InternalConnection::ConnectionEncrypted()
-{
-    /// @todo Implement (send an event to the queue).
-    LOG_DEBUG("Connection encrypted!\n");
-
-    // Start reading until we have the packet sizes.
-    if(!RequestPacket(2 * sizeof(uint32_t)))
-    {
-        SocketError("Failed to request more data.");
-    }
-}
-
+//Copied from LobbyConnection
 void InternalConnection::PacketReceived(libcomp::Packet& packet)
 {
     // Pass the packet along to the parser.

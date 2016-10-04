@@ -43,9 +43,3 @@ WorldServer::WorldServer(libcomp::String listenAddress, uint16_t port) :
 WorldServer::~WorldServer()
 {
 }
-
-std::shared_ptr<libcomp::Manager> WorldServer::GetMessageHandler(libcomp::Message::Message& msg)
-{
-    //todo
-    return nullptr;
-}

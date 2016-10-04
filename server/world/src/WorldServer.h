@@ -38,9 +38,6 @@ class WorldServer : public libcomp::InternalServer
 public:
     WorldServer(libcomp::String listenAddress, uint16_t port);
     virtual ~WorldServer();
-
-protected:
-    virtual std::shared_ptr<libcomp::Manager> GetMessageHandler(libcomp::Message::Message& msg);
 };
 
 } // namespace world

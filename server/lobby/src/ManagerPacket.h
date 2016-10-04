@@ -44,6 +44,7 @@ class PacketParser;
 class ManagerPacket : public libcomp::Manager
 {
 public:
+    ManagerPacket();
     virtual ~ManagerPacket();
 
     /**

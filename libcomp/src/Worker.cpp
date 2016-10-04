@@ -48,6 +48,9 @@ void Worker::AddManager(const std::shared_ptr<Manager>& manager)
 {
     for(auto messageType : manager->GetSupportedTypes())
     {
+        LOG_DEBUG(libcomp::String("Message type: %1\n").Arg(
+            static_cast<std::size_t>(messageType)));
+
         mManagers[messageType] = manager;
     }
 }
@@ -81,7 +84,8 @@ void Worker::Run(MessageQueue<Message::Message*> *pMessageQueue)
         // Process the message if the manager is valid.
         if(it == mManagers.end())
         {
-            LOG_ERROR("Unhandled message type!\n");
+            LOG_ERROR(libcomp::String("Unhandled message type: %1\n").Arg(
+                static_cast<std::size_t>(pMessage->GetType())));
         }
         else
         {

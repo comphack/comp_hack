@@ -36,9 +36,14 @@
 
 using namespace lobby;
 
+ManagerPacket::ManagerPacket()
+{
+    mPacketParsers[0x0005] = std::shared_ptr<PacketParser>(
+        new Parsers::Login());
+}
+
 ManagerPacket::~ManagerPacket()
 {
-    mPacketParsers[0x0001] = std::shared_ptr<PacketParser>(new Parsers::Login());
 }
 
 std::list<libcomp::Message::MessageType>
@@ -70,7 +75,7 @@ bool ManagerPacket::ProcessMessage(const libcomp::Message::Message *pMessage)
         if(it == mPacketParsers.end())
         {
             LOG_ERROR(libcomp::String("Unknown packet with command code "
-                "0x%1.\n").Arg(code, 8, 16, '0'));
+                "0x%1.\n").Arg(code, 4, 16, '0'));
 
             return false;
         }

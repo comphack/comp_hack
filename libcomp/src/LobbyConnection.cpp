@@ -543,7 +543,7 @@ void LobbyConnection::ParsePacket(libcomp::Packet& packet,
 
                 // Notify the task about the new packet.
                 mMessageQueue->Enqueue(new libcomp::Message::Packet(self,
-                    commandCode, copy));
+                    commandCode, command));
             }
 
             // Move to the next command.

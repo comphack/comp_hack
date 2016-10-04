@@ -32,6 +32,7 @@
 
 // Standard C++11 Includes
 #include <stdint.h>
+#include <memory>
 #include <unordered_map>
 
 namespace lobby

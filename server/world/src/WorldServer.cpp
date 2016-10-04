@@ -34,6 +34,10 @@ using namespace world;
 WorldServer::WorldServer(libcomp::String listenAddress, uint16_t port) :
     libcomp::InternalServer(listenAddress, port)
 {
+    //todo: add worker managers
+
+    //Start the workers
+    mWorker.Start();
 }
 
 WorldServer::~WorldServer()

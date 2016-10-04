@@ -38,9 +38,6 @@ class ChannelServer : public libcomp::InternalServer
 public:
     ChannelServer(libcomp::String listenAddress, uint16_t port);
     virtual ~ChannelServer();
-
-protected:
-    virtual std::shared_ptr<libcomp::Manager> GetMessageHandler(libcomp::Message::Message& msg);
 };
 
 } // namespace channel

@@ -55,7 +55,6 @@ SET(SYSTEM_LIBRARIES ${SYSTEM_LIBRARIES} ${EXECINFO_LIBRARY})
 ENDIF(BSD)
 
 SET(${PROJECT_NAME}_SRCS
-
     src/Compress.cpp
     src/Convert.cpp
     src/CString.cpp

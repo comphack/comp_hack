@@ -34,14 +34,12 @@ using namespace channel;
 ChannelServer::ChannelServer(libcomp::String listenAddress, uint16_t port) :
     libcomp::InternalServer(listenAddress, port)
 {
+    //todo: add worker managers
+
+    //Start the workers
+    mWorker.Start();
 }
 
 ChannelServer::~ChannelServer()
 {
-}
-
-std::shared_ptr<libcomp::Manager> ChannelServer::GetMessageHandler(libcomp::Message::Message& msg)
-{
-    //todo
-    return nullptr;
 }

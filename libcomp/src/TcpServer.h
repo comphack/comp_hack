@@ -73,12 +73,13 @@ protected:
 
     void AcceptHandler(asio::error_code errorCode,
         asio::ip::tcp::socket& socket);
+
+    std::list<std::shared_ptr<TcpConnection>> mConnections;
 private:
     asio::io_service mService;
     asio::ip::tcp::acceptor mAcceptor;
 
     std::thread mServiceThread;
-    std::list<std::shared_ptr<TcpConnection>> mConnections;
 
     DH *mDiffieHellman;
 

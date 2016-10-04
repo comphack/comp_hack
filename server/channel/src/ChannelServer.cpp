@@ -28,19 +28,20 @@
 
 // channel Includes
 #include "InternalConnection.h"
-#include "ChannelWorker.h"
 
 using namespace channel;
 
 ChannelServer::ChannelServer(libcomp::String listenAddress, uint16_t port) :
     libcomp::InternalServer(listenAddress, port)
 {
-    //todo: maximize workers per core
-    auto w = std::shared_ptr<ChannelWorker>(new ChannelWorker());
-    mWorkers.push_back(w);
-    w->Start();
 }
 
 ChannelServer::~ChannelServer()
 {
+}
+
+std::shared_ptr<libcomp::Manager> ChannelServer::GetMessageHandler(libcomp::Message::Message& msg)
+{
+    //todo
+    return nullptr;
 }

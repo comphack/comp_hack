@@ -207,44 +207,44 @@ void TcpConnection::Connect(const asio::ip::tcp::endpoint& endpoint, bool async)
     // Make sure we remove any remote address cache.
     mRemoteAddress = "0.0.0.0";
 
-	if (async)
-	{
-		mSocket.async_connect(endpoint, [this](const asio::error_code errorCode) {
-			HandleConnection(errorCode);
-		});
-	}
-	else
-	{
-		asio::error_code errorCode;
-		HandleConnection(mSocket.connect(endpoint, errorCode));
-	}
+    if (async)
+    {
+        mSocket.async_connect(endpoint, [this](const asio::error_code errorCode) {
+            HandleConnection(errorCode);
+        });
+    }
+    else
+    {
+        asio::error_code errorCode;
+        HandleConnection(mSocket.connect(endpoint, errorCode));
+    }
 }
 
 void TcpConnection::HandleConnection(asio::error_code errorCode)
 {
-	if (errorCode)
-	{
-		mStatus = STATUS_NOT_CONNECTED;
+    if (errorCode)
+    {
+        mStatus = STATUS_NOT_CONNECTED;
 
-		ConnectionFailed();
-	}
-	else
-	{
-		mStatus = STATUS_CONNECTED;
+        ConnectionFailed();
+    }
+    else
+    {
+        mStatus = STATUS_CONNECTED;
 
-		// Cache the remote address.
-		try
-		{
-			mRemoteAddress = mSocket.remote_endpoint().address(
-				).to_string();
-		}
-		catch (...)
-		{
-			// Just use the cache.
-		}
+        // Cache the remote address.
+        try
+        {
+            mRemoteAddress = mSocket.remote_endpoint().address(
+                ).to_string();
+        }
+        catch (...)
+        {
+            // Just use the cache.
+        }
 
-		ConnectionSuccess();
-	}
+        ConnectionSuccess();
+    }
 }
 
 void TcpConnection::FlushOutgoing()

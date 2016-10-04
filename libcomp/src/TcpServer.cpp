@@ -102,15 +102,9 @@ int TcpServer::Start()
         mService.run();
     });
 
-    DoWork();
-
     mServiceThread.join();
 
     return 0;
-}
-
-void TcpServer::DoWork()
-{
 }
 
 std::shared_ptr<TcpConnection> TcpServer::CreateConnection(

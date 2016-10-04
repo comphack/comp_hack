@@ -47,6 +47,7 @@ int main(int argc, const char *argv[])
 
     std::thread serviceThread([&service]()
     {
+        LOG_DEBUG("Start service thread...\n");
         service.run();
     });
 

@@ -117,7 +117,7 @@ protected:
     void SetEncryptionKey(const void *pData, size_t dataSize);
 
 private:
-	void HandleConnection(asio::error_code errorCode);
+    void HandleConnection(asio::error_code errorCode);
     void SendNextPacket();
 
     asio::ip::tcp::socket mSocket;

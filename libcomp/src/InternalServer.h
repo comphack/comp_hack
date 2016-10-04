@@ -32,9 +32,6 @@
 #include "TcpServer.h"
 #include "Worker.h"
 
-// C++ Includes
-#include <vector>
-
 namespace libcomp
 {
 
@@ -51,10 +48,6 @@ public:
 protected:
     virtual std::shared_ptr<libcomp::TcpConnection> CreateConnection(
         asio::ip::tcp::socket& socket);
-
-    virtual void Run();
-
-    virtual std::shared_ptr<libcomp::Manager> GetMessageHandler(libcomp::Message::Message& msg) = 0;
 
     //todo: replace with multiple workers for multi-threading
     libcomp::Worker mWorker;

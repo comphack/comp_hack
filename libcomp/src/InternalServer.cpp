@@ -57,55 +57,15 @@ bool InternalServer::ConnectToHostServer(asio::io_service& service, const String
 std::shared_ptr<libcomp::TcpConnection> InternalServer::CreateConnection(
     asio::ip::tcp::socket& socket)
 {
-    auto iConnection = new InternalConnection(socket, CopyDiffieHellman(
+    auto connection = std::shared_ptr<libcomp::TcpConnection>(new InternalConnection(socket, CopyDiffieHellman(
                                                 GetDiffieHellman())
-                                            );
+                                            ));
 
-    iConnection->SetMessageQueue(mMessageQueue);
+    std::dynamic_pointer_cast<libcomp::InternalConnection>(connection)->SetMessageQueue(mWorker.GetMessageQueue());
 
-    auto connection = std::shared_ptr<libcomp::TcpConnection>(iConnection);
     // Make sure this is called after connecting.
     connection->SetSelf(connection);
     connection->ConnectionSuccess();
 
     return connection;
-}
-
-void InternalServer::Run()
-{
-    std::list<libcomp::Message::Message*> mQueue;
-
-    //Loop until the program shuts down
-    while (true)
-    {
-        //Pull new messages
-        //todo: make sure messages that need to be processed together are either one message or are in the queue at the same time
-        mMessageQueue->DequeueAll(mQueue);
-        if (mQueue.size() > 0)
-        {
-            //todo: handle server side messages
-
-            //Process messages
-            for (auto iter = mQueue.begin(); iter != mQueue.end(); iter++)
-            {
-                auto handler = GetMessageHandler(**iter);
-                if (handler != nullptr)
-                {
-                    //todo: add worker message handling
-                }
-                else
-                {
-                    //todo: display unrecognized message error
-                }
-            }
-
-            //Clear queue and move on
-            mQueue.clear();
-        }
-
-        //todo: clean up connections
-
-        //todo: replace with?
-        std::this_thread::sleep_for(std::chrono::seconds(1));
-    }
 }

@@ -51,7 +51,13 @@ bool InternalServer::ConnectToHostServer(asio::io_service& service, const String
 {
     hostConnection = std::shared_ptr<libcomp::InternalConnection>(new libcomp::InternalConnection(service));
     hostConnection->Connect(host, port, false);
-    return hostConnection->GetStatus() == libcomp::TcpConnection::STATUS_CONNECTED;
+
+    bool connected = hostConnection->GetStatus() == libcomp::TcpConnection::STATUS_CONNECTED;
+    if (connected)
+    {
+        hostConnection->SetMessageQueue(mWorker.GetMessageQueue());
+    }
+    return connected;
 }
 
 std::shared_ptr<libcomp::TcpConnection> InternalServer::CreateConnection(

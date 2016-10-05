@@ -37,6 +37,9 @@ class GeneratorSource : public Generator
 {
 public:
     virtual std::string Generate(const MetaObject& obj);
+
+private:
+    std::string GetBaseBooleanReturnValue(const MetaObject& obj, std::string function, std::string defaultValue = "true");
 };
 
 } // namespace libobjgen

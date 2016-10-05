@@ -54,6 +54,11 @@ std::string MetaObject::GetName() const
     return mName;
 }
 
+std::string MetaObject::GetBaseObject() const
+{
+    return mBaseObject;
+}
+
 std::string MetaObject::GetError() const
 {
     return mError;
@@ -65,6 +70,15 @@ bool MetaObject::SetName(const std::string& name)
 
     /// @todo Validate the name.
     mName = name;
+
+    return result;
+}
+
+bool MetaObject::SetBaseObject(const std::string& baseObject)
+{
+    bool result = true;
+
+    mBaseObject = baseObject;
 
     return result;
 }
@@ -173,9 +187,18 @@ bool MetaObject::Load(const tinyxml2::XMLDocument& doc,
     if(nullptr != szTagName && "object" == std::string(szTagName))
     {
         const char *szName = root.Attribute("name");
+        const char *szBaseObject = root.Attribute("baseobject");
 
         if(nullptr != szName && SetName(szName))
         {
+            if (szBaseObject != nullptr)
+            {
+                SetBaseObject(szBaseObject);
+
+                //Base objects override the need for member variables
+                result = true;
+            }
+            
             const tinyxml2::XMLElement *pMember = root.FirstChildElement();
 
             while(!error && nullptr != pMember)
@@ -217,7 +240,7 @@ bool MetaObject::Load(const tinyxml2::XMLDocument& doc,
         mError = ss.str();
     }
 
-    if(!error && mVariables.empty())
+    if(!error && mVariables.empty() && mBaseObject.empty())
     {
         std::stringstream ss;
         ss << "Object '" << GetName() << "' has no member variables.";

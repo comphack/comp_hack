@@ -57,6 +57,9 @@ public:
     std::string GetName() const;
     bool SetName(const std::string& name);
 
+    std::string GetBaseObject() const;
+    bool SetBaseObject(const std::string& name);
+
     std::string GetError() const;
 
     bool AddVariable(const std::string& name,
@@ -97,6 +100,7 @@ private:
     bool HasCircularReference(const std::set<std::string>& references) const;
 
     std::string mName;
+    std::string mBaseObject;
     std::string mError;
     VariableList mVariables;
     VariableMap mVariableMapping;

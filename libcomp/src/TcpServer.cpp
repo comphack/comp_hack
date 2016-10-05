@@ -30,16 +30,11 @@
 #include "Log.h"
 #include "TcpConnection.h"
 
+#ifdef _WIN32
  // Standard C++ Includes
 #include <algorithm>
 #include <stdio.h>  /* defines FILENAME_MAX */
-
-#ifdef _WIN32
 #include <direct.h>
-#define GetExecutingDirectory _getcwd
-#else
-#include <unistd.h>
-#define GetExecutingDirectory getcwd
 #endif
 
 using namespace libcomp;
@@ -123,17 +118,16 @@ bool TcpServer::ReadConfig(objects::ServerConfig* config, std::string filename)
 {
     tinyxml2::XMLDocument doc;
 
+#ifdef _WIN32
     char buff[FILENAME_MAX];
-    GetExecutingDirectory(buff, FILENAME_MAX);
+    auto result = _getcwd(buff, FILENAME_MAX);
     std::string executingDirectory(buff);
 
-#ifdef _WIN32
-    std::string subpath = "\\config\\";
+    libcomp::String filePath = executingDirectory + "\\config\\" + filename;
 #else
-    std::string subpath = "/config/";
+    std::string filePath = "/etc/comp_hack/" + filename;
 #endif
 
-    libcomp::String filePath = executingDirectory + subpath + filename;
     if (tinyxml2::XML_SUCCESS != doc.LoadFile(filePath.C()))
     {
         LOG_WARNING(libcomp::String("Failed to parse config file: %1\n").Arg(

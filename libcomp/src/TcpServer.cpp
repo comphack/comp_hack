@@ -125,7 +125,7 @@ bool TcpServer::ReadConfig(objects::ServerConfig* config, std::string filename)
 
     libcomp::String filePath = executingDirectory + "\\config\\" + filename;
 #else
-    std::string filePath = "/etc/comp_hack/" + filename;
+    libcomp::String filePath = "/etc/comp_hack/" + filename;
 #endif
 
     if (tinyxml2::XML_SUCCESS != doc.LoadFile(filePath.C()))

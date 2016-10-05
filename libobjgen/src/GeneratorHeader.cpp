@@ -39,7 +39,7 @@ using namespace libobjgen;
 std::string GeneratorHeader::GenerateClass(const MetaObject& obj)
 {
     std::stringstream ss;
-    ss << "class " << obj.GetName() << " : public libcomp::Object" << std::endl;
+    ss << "class " << obj.GetName() << " : public " + (!obj.GetBaseObject().empty() ? ("objects::"  + obj.GetBaseObject()) : "libcomp::Object") << std::endl;
     ss << "{" << std::endl;
     ss << "public:" << std::endl;
 
@@ -116,7 +116,7 @@ std::string GeneratorHeader::Generate(const MetaObject& obj)
     ss << "// libcomp Includes" << std::endl;
     ss << "#include <Convert.h>" << std::endl;
     ss << "#include <CString.h>" << std::endl;
-    ss << "#include <Object.h>" << std::endl;
+    ss << (!obj.GetBaseObject().empty() ? ("#include <" + obj.GetBaseObject() + ".h>") : "#include <Object.h>") << std::endl;
     ss << std::endl;
 
     ss << "// Standard C++11 Includes" << std::endl;

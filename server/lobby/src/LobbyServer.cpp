@@ -42,46 +42,7 @@ LobbyServer::LobbyServer(libcomp::String listenAddress, uint16_t port) :
     libcomp::TcpServer(listenAddress, port)
 {
     objects::LobbyConfig config;
-
-    tinyxml2::XMLDocument doc;
-
-    libcomp::String configPath = "/etc/comp_hack/lobby.xml";
-
-    if(tinyxml2::XML_SUCCESS != doc.LoadFile(configPath.C()))
-    {
-        LOG_WARNING(libcomp::String("Failed to parse log file: %1\n").Arg(
-            configPath));
-    }
-    else
-    {
-        const tinyxml2::XMLElement *pRoot = doc.RootElement();
-        const tinyxml2::XMLElement *pObject = nullptr;
-
-        if(nullptr != pRoot)
-        {
-            pObject = pRoot->FirstChildElement("object");
-        }
-
-        if(nullptr == pObject || !config.Load(doc, *pObject))
-        {
-            LOG_WARNING(libcomp::String("Failed to load log file: %1\n").Arg(
-                configPath));
-        }
-        else
-        {
-            LOG_DEBUG(libcomp::String("DH Pair: %1\n").Arg(
-                config.GetDiffieHellmanKeyPair()));
-
-            SetDiffieHellman(LoadDiffieHellman(
-                config.GetDiffieHellmanKeyPair()));
-
-            if(nullptr == GetDiffieHellman())
-            {
-                LOG_WARNING(libcomp::String("Failed to load DH key pair from "
-                    "config: %1\n").Arg(configPath));
-            }
-        }
-    }
+    ReadConfig(&config, "lobby.xml");
 
     // Add the managers to the worker.
     mWorker.AddManager(std::shared_ptr<libcomp::Manager>(new ManagerPacket()));

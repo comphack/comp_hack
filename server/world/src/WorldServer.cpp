@@ -29,11 +29,17 @@
 // world Includes
 #include "InternalConnection.h"
 
+// Object Includes
+#include "WorldConfig.h"
+
 using namespace world;
 
 WorldServer::WorldServer(libcomp::String listenAddress, uint16_t port) :
     libcomp::InternalServer(listenAddress, port)
 {
+    objects::WorldConfig config;
+    ReadConfig(&config, "world.xml");
+
     //todo: add worker managers
 
     //Start the workers

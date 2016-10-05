@@ -29,11 +29,17 @@
 // channel Includes
 #include "InternalConnection.h"
 
+// Object Includes
+#include "ChannelConfig.h"
+
 using namespace channel;
 
 ChannelServer::ChannelServer(libcomp::String listenAddress, uint16_t port) :
     libcomp::InternalServer(listenAddress, port)
 {
+    objects::ChannelConfig config;
+    ReadConfig(&config, "channel.xml");
+
     //todo: add worker managers
 
     //Start the workers

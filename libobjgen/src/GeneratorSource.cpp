@@ -64,7 +64,7 @@ std::string GeneratorSource::Generate(const MetaObject& obj)
     ss << std::endl;
 
     // Constructor
-    ss << obj.GetName() << "::" << obj.GetName() << "() : libcomp::Object()"
+    ss << obj.GetName() << "::" << obj.GetName() << "() : " + (!obj.GetBaseObject().empty() ? ("objects::" + obj.GetBaseObject() + "()") : "libcomp::Object()")
         << std::endl;
     ss << "{" << std::endl;
 
@@ -135,7 +135,7 @@ std::string GeneratorSource::Generate(const MetaObject& obj)
         ss << std::endl;
     }
 
-    ss << Tab() << "bool status = true;" << std::endl;
+    ss << Tab() << "bool status = " + GetBaseBooleanReturnValue(obj, "IsValid(recursive)") + ";" << std::endl;
 
     for(auto it = obj.VariablesBegin(); it != obj.VariablesEnd(); ++it)
     {
@@ -163,7 +163,7 @@ std::string GeneratorSource::Generate(const MetaObject& obj)
     ss << "bool " << obj.GetName()
         << "::Load(libcomp::ObjectInStream& stream)" << std::endl;
     ss << "{" << std::endl;
-    ss << Tab() << "bool status = true;" << std::endl;
+    ss << Tab() << "bool status = " + GetBaseBooleanReturnValue(obj, "Load(stream)") + ";" << std::endl;
 
     for(auto it = obj.VariablesBegin(); it != obj.VariablesEnd(); ++it)
     {
@@ -222,7 +222,7 @@ std::string GeneratorSource::Generate(const MetaObject& obj)
     ss << "{" << std::endl;
     ss << Tab() << "(void)doc;" << std::endl;
     ss << std::endl;
-    ss << Tab() << "bool status = true;" << std::endl;
+    ss << Tab() << "bool status = " + GetBaseBooleanReturnValue(obj, "Load(doc, root)") + ";" << std::endl;
     ss << std::endl;
     ss << Tab() << "std::unordered_map<std::string, const "
         "tinyxml2::XMLElement*> members = GetXmlMembers(root);" << std::endl;
@@ -296,4 +296,9 @@ std::string GeneratorSource::Generate(const MetaObject& obj)
     }
 
     return ss.str();
+}
+
+std::string GeneratorSource::GetBaseBooleanReturnValue(const MetaObject& obj, std::string function, std::string defaultValue)
+{
+    return !obj.GetBaseObject().empty() ? ("objects::" + obj.GetBaseObject() + "::" + function) : defaultValue;
 }

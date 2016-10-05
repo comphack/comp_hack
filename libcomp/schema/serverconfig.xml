@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="ServerConfig">
+        <member type="string" name="DiffieHellmanKeyPair"
+            regex="^[a-fA-F0-9]{256}|$"/>
+    </object>
+</objgen>

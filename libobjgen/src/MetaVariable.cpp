@@ -120,6 +120,12 @@ std::string MetaVariable::GetGetterCode(const Generator& generator,
     return ss.str();
 }
 
+std::string MetaVariable::GetInternalGetterCode(const Generator& generator,
+    const std::string& name) const
+{
+    return IsInherited() ? ("Get" + generator.GetCapitalName(*this) + "()") : name;
+}
+
 std::string MetaVariable::GetSetterCode(const Generator& generator,
     const std::string& name, const std::string argument, size_t tabLevel) const
 {
@@ -205,8 +211,18 @@ std::string MetaVariable::GetConstructorCode(const Generator& generator,
     else
     {
         std::stringstream ss;
-        ss << generator.Tab(tabLevel) << name << " = " << code
-            << ";" << std::endl;
+        if(IsInherited())
+        {
+            ss << generator.Tab(tabLevel) << "Set"
+                << generator.GetCapitalName(*this) << "(" << code << ")"
+                << ";" << std::endl;
+            
+        }
+        else
+        {
+            ss << generator.Tab(tabLevel) << name << " = " << code
+                << ";" << std::endl;
+        }
 
         code = ss.str();
     }

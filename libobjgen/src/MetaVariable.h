@@ -103,6 +103,8 @@ public:
     virtual std::string GetArgument(const std::string& name) const;
     virtual std::string GetGetterCode(const Generator& generator,
         const std::string& name, size_t tabLevel = 1) const;
+    virtual std::string GetInternalGetterCode(const Generator& generator,
+        const std::string& name) const;
     virtual std::string GetSetterCode(const Generator& generator,
         const std::string& name, const std::string argument,
         size_t tabLevel = 1) const;

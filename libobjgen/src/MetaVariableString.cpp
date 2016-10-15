@@ -659,7 +659,7 @@ std::string MetaVariableString::GetXmlSaveCode(const Generator& generator,
     ss << generator.Tab(tabLevel + 1) << "pMember->SetAttribute(\"name\", "
             << generator.Escape(GetName()) <<  ");" << std::endl;
     ss << generator.Tab(tabLevel + 1) << "tinyxml2::XMLText *pText = "
-        "doc.NewText(" << name << ".C());" << std::endl;
+        "doc.NewText(" << GetInternalGetterCode(generator, name) << ".C());" << std::endl;
     ss << generator.Tab(tabLevel + 1) << "pText->SetCData(true);" << std::endl;
     ss << generator.Tab(tabLevel + 1) << "pMember->InsertEndChild(pText);"
         << std::endl;

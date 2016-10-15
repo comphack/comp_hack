@@ -75,8 +75,7 @@ std::string GeneratorHeader::GenerateClass(const MetaObject& obj)
         ss << std::endl;
     }
 
-    // Must be protected instead of private in case a variabel is inherited
-    ss << "protected:" << std::endl;
+    ss << "private:" << std::endl;
 
     for(auto it = obj.VariablesBegin(); it != obj.VariablesEnd(); ++it)
     {

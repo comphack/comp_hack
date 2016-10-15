@@ -610,7 +610,7 @@ public:
             << generator.Escape(GetName()) <<  ");" << std::endl;
         ss << generator.Tab(tabLevel + 1) << "tinyxml2::XMLText *pText = "
             "doc.NewText(libcomp::String(\"%1\").Arg("
-            << name << ").C());" << std::endl;
+            << GetInternalGetterCode(generator, name) << ").C());" << std::endl;
         ss << generator.Tab(tabLevel + 1) << "pMember->InsertEndChild(pText);"
             << std::endl;
         ss << generator.Tab(tabLevel + 1) << root

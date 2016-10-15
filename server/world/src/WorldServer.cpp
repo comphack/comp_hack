@@ -26,8 +26,11 @@
 
 #include "WorldServer.h"
 
-// world Includes
-#include "InternalConnection.h"
+// libcomp Includes
+#include <InternalConnection.h>
+#include <LobbyConnection.h>
+#include <Log.h>
+#include <MessageWorldNotification.h>
 
 // Object Includes
 #include "WorldConfig.h"
@@ -35,17 +38,78 @@
 using namespace world;
 
 WorldServer::WorldServer(libcomp::String listenAddress, uint16_t port) :
-    libcomp::InternalServer(listenAddress, port)
+    libcomp::BaseServer(listenAddress, port)
 {
+    asio::io_service service;
+
+    // Connect to the world server.
+    std::shared_ptr<libcomp::LobbyConnection> lobbyConnection(
+        new libcomp::LobbyConnection(service,
+            libcomp::LobbyConnection::ConnectionMode_t::MODE_WORLD_UP));
+
+    std::shared_ptr<libcomp::MessageQueue<libcomp::Message::Message*>>
+        messageQueue(new libcomp::MessageQueue<libcomp::Message::Message*>());
+
+    lobbyConnection->SetSelf(lobbyConnection);
+    lobbyConnection->SetMessageQueue(messageQueue);
+
+    /// @todo Load this from the configuration.
+    lobbyConnection->Connect("127.0.0.1", 10666, false);
+
+    std::thread serviceThread([&service]()
+    {
+        service.run();
+    });
+
+    bool connected = libcomp::TcpConnection::STATUS_CONNECTED ==
+        lobbyConnection->GetStatus();
+
+    if(!connected)
+    {
+        LOG_CRITICAL("Failed to connect to the lobby server!\n");
+    }
+
+    libcomp::Message::Message *pMessage = messageQueue->Dequeue();
+
+    if(nullptr == dynamic_cast<libcomp::Message::WorldNotification*>(pMessage))
+    {
+        LOG_CRITICAL("Lobby server did not accept the world server "
+            "notification.\n");
+    }
+
+    delete pMessage;
+
+    lobbyConnection->Close();
+    serviceThread.join();
+    lobbyConnection.reset();
+    messageQueue.reset();
+
     objects::WorldConfig config;
     ReadConfig(&config, "world.xml");
 
     //todo: add worker managers
-
-    //Start the workers
-    mWorker.Start();
 }
 
 WorldServer::~WorldServer()
 {
+}
+
+std::shared_ptr<libcomp::TcpConnection> WorldServer::CreateConnection(
+    asio::ip::tcp::socket& socket)
+{
+    auto connection = std::shared_ptr<libcomp::TcpConnection>(
+        new libcomp::InternalConnection(socket, CopyDiffieHellman(
+            GetDiffieHellman())
+        )
+    );
+
+    // Assign this to the only worker available.
+    std::dynamic_pointer_cast<libcomp::InternalConnection>(
+        connection)->SetMessageQueue(mMainWorker.GetMessageQueue());
+
+    // Make sure this is called after connecting.
+    connection->SetSelf(connection);
+    connection->ConnectionSuccess();
+
+    return connection;
 }

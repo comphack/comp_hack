@@ -1,12 +1,12 @@
 /**
- * @file server/world/src/WorldServer.h
- * @ingroup world
+ * @file libcomp/src/BaseServer.h
+ * @ingroup libcomp
  *
- * @author HACKfrost
+ * @author COMP Omega <compomega@tutanota.com>
  *
- * @brief World server class.
+ * @brief Base server class.
  *
- * This file is part of the World Server (world).
+ * This file is part of the COMP_hack Library (libcomp).
  *
  * Copyright (C) 2012-2016 COMP_hack Team <compomega@tutanota.com>
  *
@@ -24,28 +24,31 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef SERVER_WORLD_SRC_WORLDSERVER_H
-#define SERVER_WORLD_SRC_WORLDSERVER_H
+#ifndef LIBCOMP_SRC_BASESERVER_H
+#define LIBCOMP_SRC_BASESERVER_H
 
 // libcomp Includes
-#include <InternalConnection.h>
-#include <BaseServer.h>
-#include <Worker.h>
+#include "TcpServer.h"
+#include "Worker.h"
 
-namespace world
+namespace libcomp
 {
 
-class WorldServer : public libcomp::BaseServer
+class BaseServer : public TcpServer
 {
 public:
-    WorldServer(libcomp::String listenAddress, uint16_t port);
-    virtual ~WorldServer();
+    BaseServer(const String& listenAddress, uint16_t port);
+    virtual ~BaseServer();
+
+    virtual void Shutdown();
 
 protected:
-    virtual std::shared_ptr<libcomp::TcpConnection> CreateConnection(
-        asio::ip::tcp::socket& socket);
+    virtual int Run();
+
+    /// Worker that blocks and runs in the main thread.
+    libcomp::Worker mMainWorker;
 };
 
-} // namespace world
+} // namespace libcomp
 
-#endif // SERVER_WORLD_SRC_WORLDSERVER_H
+#endif // LIBCOMP_SRC_BASESERVER_H

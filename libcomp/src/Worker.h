@@ -56,7 +56,7 @@ public:
     /**
      * @brief Start the worker thread.
      */
-    void Start();
+    void Start(bool blocking = false);
 
     /**
      * @brief Main loop of the worker thread.
@@ -64,10 +64,16 @@ public:
     virtual void Run(libcomp::MessageQueue<
         libcomp::Message::Message*> *pMessageQueue);
 
+    virtual void Shutdown();
+    virtual void Join();
+
     bool IsRunning() const;
 
     std::shared_ptr<libcomp::MessageQueue<
         libcomp::Message::Message*>> GetMessageQueue() const;
+
+protected:
+    virtual void Cleanup();
 
 private:
     bool mRunning;

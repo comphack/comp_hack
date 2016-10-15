@@ -30,6 +30,7 @@
 
 // libcomp Includes
 #include <Log.h>
+#include <Shutdown.h>
 
 // Civet Includes
 #include <CivetServer.h>
@@ -53,5 +54,16 @@ int main(int argc, const char *argv[])
 
     lobby::LobbyServer server("any", 10666);
 
-    return server.Start();
+    // Set this for the signal handler.
+    libcomp::Shutdown::Configure(&server);
+
+    // Start the main server loop (blocks until done).
+    int returnCode = server.Start();
+
+    // Complete the shutdown process.
+    libcomp::Shutdown::Complete();
+
+    LOG_INFO("Bye!\n");
+
+    return returnCode;
 }

@@ -1,12 +1,12 @@
 /**
- * @file server/world/src/WorldServer.h
- * @ingroup world
+ * @file libcomp/src/Shutdown.h
+ * @ingroup libcomp
  *
- * @author HACKfrost
+ * @author COMP Omega <compomega@tutanota.com>
  *
- * @brief World server class.
+ * @brief Shutdown signal handler.
  *
- * This file is part of the World Server (world).
+ * This file is part of the COMP_hack Library (libcomp).
  *
  * Copyright (C) 2012-2016 COMP_hack Team <compomega@tutanota.com>
  *
@@ -24,28 +24,23 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef SERVER_WORLD_SRC_WORLDSERVER_H
-#define SERVER_WORLD_SRC_WORLDSERVER_H
+#ifndef LIBCOMP_SRC_SHUTDOWN_H
+#define LIBCOMP_SRC_SHUTDOWN_H
 
-// libcomp Includes
-#include <InternalConnection.h>
-#include <BaseServer.h>
-#include <Worker.h>
-
-namespace world
+namespace libcomp
 {
 
-class WorldServer : public libcomp::BaseServer
+class BaseServer;
+
+namespace Shutdown
 {
-public:
-    WorldServer(libcomp::String listenAddress, uint16_t port);
-    virtual ~WorldServer();
 
-protected:
-    virtual std::shared_ptr<libcomp::TcpConnection> CreateConnection(
-        asio::ip::tcp::socket& socket);
-};
+void Configure(libcomp::BaseServer *pServer);
 
-} // namespace world
+void Complete();
 
-#endif // SERVER_WORLD_SRC_WORLDSERVER_H
+} // namespace Shutdown
+
+} // namespace libcomp
+
+#endif // LIBCOMP_SRC_SHUTDOWN_H

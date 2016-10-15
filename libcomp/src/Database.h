@@ -44,6 +44,8 @@ public:
 
     virtual DatabaseQuery Prepare(const String& query) = 0;
     virtual bool Execute(const String& query);
+    virtual bool Setup() = 0;
+    virtual bool Use() = 0;
 
     String GetLastError() const;
 

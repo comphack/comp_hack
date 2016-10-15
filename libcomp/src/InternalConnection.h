@@ -28,52 +28,17 @@
 #define LIBCOMP_SRC_INTERNALCONNECTION_H
 
 // libcomp Includes
-#include "MessageQueue.h"
-#include "TcpConnection.h"
+#include "EncryptedConnection.h"
 
 namespace libcomp
 {
 
-//todo
-namespace Message
-{
-
-class Message;
-
-} // namespace Message
-
-class InternalConnection : public libcomp::TcpConnection
+class InternalConnection : public libcomp::EncryptedConnection
 {
 public:
     InternalConnection(asio::io_service& io_service);
     InternalConnection(asio::ip::tcp::socket& socket, DH *pDiffieHellman);
     virtual ~InternalConnection();
-
-    virtual void ConnectionSuccess();
-
-    void SetMessageQueue(const std::shared_ptr<MessageQueue<
-        libcomp::Message::Message* >> &messageQueue);
-
-protected:
-    typedef void (InternalConnection::*PacketParser_t)(libcomp::Packet& packet);
-
-    void ParseClientEncryptionStart(libcomp::Packet& packet);
-    void ParseServerEncryptionStart(libcomp::Packet& packet);
-    void ParseServerEncryptionFinish(libcomp::Packet& packet);
-    void ParsePacket(libcomp::Packet& packet);
-    void ParsePacket(libcomp::Packet& packet,
-        uint32_t paddedSize, uint32_t realSize);
-
-    virtual void SocketError(const libcomp::String& errorMessage =
-        libcomp::String());
-
-    virtual void ConnectionEncrypted();
-
-    virtual void PacketReceived(libcomp::Packet& packet);
-
-    PacketParser_t mPacketParser;
-
-    std::shared_ptr<MessageQueue<libcomp::Message::Message*>> mMessageQueue;
 };
 
 } // namespace libcomp

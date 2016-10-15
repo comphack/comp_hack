@@ -43,7 +43,8 @@
 #include "MetaVariableInt.h"
 #include "MetaVariableString.h"
 
-std::unordered_map<std::string, std::shared_ptr<libobjgen::MetaObject>> gObjects;
+std::unordered_map<std::string, std::shared_ptr<
+    libobjgen::MetaObject>> gObjects;
 
 bool LoadObjects(const std::list<std::string>& searchPath,
     const std::string& xmlFile)
@@ -278,19 +279,19 @@ int main(int argc, char *argv[])
         }
     }
 
+    if(LAST_OPTION_NONE != lastOption)
+    {
+        std::cerr << "Argument expected after: " << argv[argc - 1] << std::endl;
+
+        return EXIT_FAILURE;
+    }
+
     for(auto xmlFile : xmlFiles)
     {
         if(!LoadObjects(searchPath, xmlFile))
         {
             return EXIT_FAILURE;
         }
-    }
-
-    if(LAST_OPTION_NONE != lastOption)
-    {
-        std::cerr << "Argument expected after: " << argv[argc - 1] << std::endl;
-
-        return EXIT_FAILURE;
     }
 
     for(auto outputFile : outputFiles)
@@ -300,7 +301,8 @@ int main(int argc, char *argv[])
         std::string extension;
         std::string object;
 
-        if(std::regex_match(outputFile, match, std::regex("^(.*\\/)?([^\\/]+)[.]([^.=]+)(?:[=](.+))?$")))
+        if(std::regex_match(outputFile, match, std::regex(
+            "^(.*\\/)?([^\\/]+)[.]([^.=]+)(?:[=](.+))?$")))
         {
             object = match[4];
 

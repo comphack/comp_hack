@@ -1,0 +1,68 @@
+/**
+ * @file server/channel/src/ManagerPacket.h
+ * @ingroup channel
+ *
+ * @author COMP Omega <compomega@tutanota.com>
+ *
+ * @brief Manager to handle channel packets.
+ *
+ * This file is part of the channel Server (channel).
+ *
+ * Copyright (C) 2012-2016 COMP_hack Team <compomega@tutanota.com>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as
+ * published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#ifndef LIBCOMP_SRC_MANAGERPACKET_H
+#define LIBCOMP_SRC_MANAGERPACKET_H
+
+// libcomp Includes
+#include "Manager.h"
+
+// Standard C++11 Includes
+#include <stdint.h>
+#include <memory>
+#include <unordered_map>
+
+namespace channel
+{
+
+typedef uint16_t CommandCode_t;
+
+class PacketParser;
+
+class ManagerPacket : public libcomp::Manager
+{
+public:
+    ManagerPacket();
+    virtual ~ManagerPacket();
+
+    /**
+     * @brief Get the different types of messages handles by this manager.
+     */
+    virtual std::list<libcomp::Message::MessageType> GetSupportedTypes() const;
+
+    /**
+     * Process a message from the queue.
+     */
+    virtual bool ProcessMessage(const libcomp::Message::Message *pMessage);
+
+private:
+    std::unordered_map<CommandCode_t,
+        std::shared_ptr<PacketParser>> mPacketParsers;
+};
+
+} // namespace channel
+
+#endif // LIBCOMP_SRC_MANAGERPACKET_H

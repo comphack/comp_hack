@@ -1,12 +1,12 @@
 /**
- * @file server/lobby/src/PacketParser.h
- * @ingroup lobby
+ * @file server/channel/src/PacketParser.h
+ * @ingroup channel
  *
  * @author COMP Omega <compomega@tutanota.com>
  *
- * @brief Base class used to parse a client lobby packet.
+ * @brief Base class used to parse a client channel packet.
  *
- * This file is part of the Lobby Server (lobby).
+ * This file is part of the channel Server (channel).
  *
  * Copyright (C) 2012-2016 COMP_hack Team <compomega@tutanota.com>
  *
@@ -38,7 +38,7 @@ class TcpConnection;
 
 } // namespace libcomp
 
-namespace lobby
+namespace channel
 {
 
 class ManagerPacket;

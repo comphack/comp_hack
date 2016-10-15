@@ -105,6 +105,66 @@ DatabaseQuery DatabaseCassandra::Prepare(const String& query)
     return DatabaseQuery(new DatabaseQueryCassandra(this), query);
 }
 
+bool DatabaseCassandra::Setup()
+{
+    if(!IsOpen())
+    {
+        LOG_ERROR("Trying to setup a database that is not open!\n");
+
+        return false;
+    }
+
+    /// @todo Make the keyspace a config option.
+    // Delete the old keyspace if it exists.
+    if(!Execute("DROP KEYSPACE IF EXISTS comp_hack;"))
+    {
+        LOG_ERROR("Failed to delete old keyspace.\n");
+
+        return false;
+    }
+
+    // Now re-create the keyspace.
+    if(!Execute("CREATE KEYSPACE comp_hack WITH REPLICATION = {"
+        " 'class' : 'NetworkTopologyStrategy', 'datacenter1' : 1 };"))
+    {
+        LOG_ERROR("Failed to create keyspace.\n");
+
+        return false;
+    }
+
+    // Use the keyspace.
+    if(!Use())
+    {
+        LOG_ERROR("Failed to use the keyspace.\n");
+
+        return false;
+    }
+
+    if(!Execute("CREATE TABLE objects ( uid uuid PRIMARY KEY, "
+        "member_vars map<ascii, blob> );"))
+    {
+        LOG_ERROR("Failed to create the objects table.\n");
+
+        return false;
+    }
+
+    return true;
+}
+
+bool DatabaseCassandra::Use()
+{
+    // Use the keyspace.
+    /// @todo Make the keyspace a config option.
+    if(!Execute("USE comp_hack;"))
+    {
+        LOG_ERROR("Failed to use the keyspace.\n");
+
+        return false;
+    }
+
+    return true;
+}
+
 bool DatabaseCassandra::WaitForFuture(CassFuture *pFuture)
 {
     bool result = true;

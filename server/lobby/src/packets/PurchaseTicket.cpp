@@ -1,12 +1,12 @@
 /**
- * @file server/world/src/WorldServer.h
- * @ingroup world
+ * @file server/lobby/src/packets/Login.cpp
+ * @ingroup lobby
  *
- * @author HACKfrost
+ * @author COMP Omega <compomega@tutanota.com>
  *
- * @brief World server class.
+ * @brief Manager to handle lobby packets.
  *
- * This file is part of the World Server (world).
+ * This file is part of the Lobby Server (lobby).
  *
  * Copyright (C) 2012-2016 COMP_hack Team <compomega@tutanota.com>
  *
@@ -24,28 +24,32 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef SERVER_WORLD_SRC_WORLDSERVER_H
-#define SERVER_WORLD_SRC_WORLDSERVER_H
+#include "Packets.h"
 
 // libcomp Includes
-#include <InternalConnection.h>
-#include <BaseServer.h>
-#include <Worker.h>
+#include "Decrypt.h"
+#include "Log.h"
+#include "Packet.h"
+#include "ReadOnlyPacket.h"
+#include "TcpConnection.h"
 
-namespace world
+using namespace lobby;
+
+bool Parsers::PurchaseTicket::Parse(ManagerPacket *pPacketManager,
+    const std::shared_ptr<libcomp::TcpConnection>& connection,
+    libcomp::ReadOnlyPacket& p) const
 {
+    (void)pPacketManager;
 
-class WorldServer : public libcomp::BaseServer
-{
-public:
-    WorldServer(libcomp::String listenAddress, uint16_t port);
-    virtual ~WorldServer();
+    if(p.Size() != 0)
+    {
+        return false;
+    }
 
-protected:
-    virtual std::shared_ptr<libcomp::TcpConnection> CreateConnection(
-        asio::ip::tcp::socket& socket);
-};
+    libcomp::Packet reply;
+    reply.WriteU16Little(0x0014);
 
-} // namespace world
+    connection->SendPacket(reply);
 
-#endif // SERVER_WORLD_SRC_WORLDSERVER_H
+    return true;
+}

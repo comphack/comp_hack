@@ -1,10 +1,10 @@
 /**
- * @file server/lobby/src/Packets.h
+ * @file server/lobby/src/packets/Login.cpp
  * @ingroup lobby
  *
  * @author COMP Omega <compomega@tutanota.com>
  *
- * @brief Classes used to parse client lobby packets.
+ * @brief Manager to handle lobby packets.
  *
  * This file is part of the Lobby Server (lobby).
  *
@@ -24,30 +24,37 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef LIBCOMP_SRC_PACKETS_H
-#define LIBCOMP_SRC_PACKETS_H
+#include "Packets.h"
 
-// lobby Includes
-#include "PacketParser.h"
+// libcomp Includes
+#include "Decrypt.h"
+#include "Log.h"
+#include "Packet.h"
+#include "ReadOnlyPacket.h"
+#include "TcpConnection.h"
 
-namespace lobby
+using namespace lobby;
+
+bool Parsers::DeleteCharacter::Parse(ManagerPacket *pPacketManager,
+    const std::shared_ptr<libcomp::TcpConnection>& connection,
+    libcomp::ReadOnlyPacket& p) const
 {
+    (void)pPacketManager;
 
-namespace Parsers
-{
+    if(p.Size() != 1)
+    {
+        return false;
+    }
 
-PACKET_PARSER_DECL(Login);               // 0x0003
-PACKET_PARSER_DECL(Auth);                // 0x0005
-PACKET_PARSER_DECL(StartGame);           // 0x0007
-PACKET_PARSER_DECL(CharacterList);       // 0x0009
-PACKET_PARSER_DECL(WorldList);           // 0x000B
-PACKET_PARSER_DECL(CreateCharacter);     // 0x000D
-PACKET_PARSER_DECL(DeleteCharacter);     // 0x000F
-PACKET_PARSER_DECL(QueryPurchaseTicket); // 0x0011
-PACKET_PARSER_DECL(PurchaseTicket);      // 0x0013
+    uint8_t cid = p.ReadU8();
 
-} // namespace Parsers
+    LOG_DEBUG(libcomp::String("Character ID: %1\n").Arg(cid));
 
-} // namespace libcomp
+    libcomp::Packet reply;
+    reply.WriteU16Little(0x0010);
+    reply.WriteU8(cid);
 
-#endif // LIBCOMP_SRC_PACKETS_H
+    connection->SendPacket(reply);
+
+    return true;
+}

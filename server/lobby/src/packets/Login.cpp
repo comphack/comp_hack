@@ -28,16 +28,72 @@
 
 // libcomp Includes
 #include "Log.h"
+#include "Packet.h"
+#include "ReadOnlyPacket.h"
+#include "TcpConnection.h"
 
 using namespace lobby;
 
 bool Parsers::Login::Parse(ManagerPacket *pPacketManager,
+    const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {
     (void)pPacketManager;
-    (void)p;
 
-    LOG_DEBUG("Got a login packet!\n");
+    if((uint32_t)(p.PeekU16Little() + 7) != p.Left())
+    {
+        return false;
+    }
+
+    // Read the username.
+    libcomp::String username = p.ReadString16Little(
+        libcomp::Convert::ENCODING_UTF8);
+
+    // Read the client version.
+    uint32_t clientVer = p.ReadU32Little();
+    uint32_t major = clientVer / 1000;
+    uint32_t minor = clientVer % 1000;
+
+    // This value is unknown.
+    // p.ReadU8();
+
+    LOG_DEBUG(libcomp::String("Username: %1\n").Arg(username));
+    LOG_DEBUG(libcomp::String("Client Version: %1.%2\n").Arg(major).Arg(minor));
+
+    libcomp::Packet reply;
+    reply.WriteU16Little(0x0004);
+
+    /*
+     *  0   No error
+     * -1   System error
+     * -2   Protocol error
+     * -3   Parameter error
+     * -4   Unsupported feature
+     * -5   Incorrect username or password
+     * -6   Account still logged in
+     * -7   Insufficient cash shop points
+     * -8   Server currently down
+     * -9   Not authorized to perform action
+     * -10  Do not have character creation ticket
+     * -11  No empty character slots
+     * -12  You have already done that
+     * -13  Server is currently full
+     * -14  Feature can't be used yet
+     * -15  You have too many characters
+     * -16  Can't use that character name
+     * -17  Server crowded (with popup)
+     * -18  Wrong client version (and any gap)
+     * -26  Currently can't use this account
+     * -28  To log in you must re-cert (pops up login window)
+     * -101 Account locked by antitheft function
+     * -102 Account locked by antitheft function
+     * -103 Connection has timed out
+     */
+
+    // Password salt (or error code).
+    reply.WriteS32Little(0x3F5E2FB5);
+
+    connection->SendPacket(reply);
 
     return true;
 }

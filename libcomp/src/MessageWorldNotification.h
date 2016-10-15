@@ -1,10 +1,10 @@
 /**
- * @file libcomp/src/Message.h
+ * @file libcomp/src/MessageWorldNotification.h
  * @ingroup libcomp
  *
  * @author COMP Omega <compomega@tutanota.com>
  *
- * @brief Base message class.
+ * @brief Indicates that a world server has been started.
  *
  * This file is part of the COMP_hack Library (libcomp).
  *
@@ -24,8 +24,15 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef LIBCOMP_SRC_MESSAGE_H
-#define LIBCOMP_SRC_MESSAGE_H
+#ifndef LIBCOMP_SRC_MESSAGEWORLDNOTIFICATION_H
+#define LIBCOMP_SRC_MESSAGEWORLDNOTIFICATION_H
+
+// libcomp Includes
+#include "CString.h"
+#include "Message.h"
+
+// Standard C++11 Includes
+#include <memory>
 
 namespace libcomp
 {
@@ -33,23 +40,25 @@ namespace libcomp
 namespace Message
 {
 
-enum class MessageType
-{
-    MESSAGE_TYPE_SYSTEM,
-    MESSAGE_TYPE_PACKET,
-    MESSAGE_TYPE_CONNECTION,
-};
-
-class Message
+class WorldNotification : public Message
 {
 public:
-    virtual ~Message() { }
+    WorldNotification(const String& address, uint16_t port);
+    virtual ~WorldNotification();
 
-    virtual MessageType GetType() const = 0;
+    String GetAddress() const;
+
+    uint16_t GetPort() const;
+
+    virtual MessageType GetType() const;
+
+private:
+    String mAddress;
+    uint16_t mPort;
 };
 
 } // namespace Message
 
 } // namespace libcomp
 
-#endif // LIBCOMP_SRC_MESSAGE_H
+#endif // LIBCOMP_SRC_MESSAGEWORLDNOTIFICATION_H

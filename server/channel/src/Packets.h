@@ -1,12 +1,12 @@
 /**
- * @file server/world/src/WorldServer.h
- * @ingroup world
+ * @file server/channel/src/Packets.h
+ * @ingroup channel
  *
- * @author HACKfrost
+ * @author COMP Omega <compomega@tutanota.com>
  *
- * @brief World server class.
+ * @brief Classes used to parse client channel packets.
  *
- * This file is part of the World Server (world).
+ * This file is part of the channel Server (channel).
  *
  * Copyright (C) 2012-2016 COMP_hack Team <compomega@tutanota.com>
  *
@@ -24,28 +24,22 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef SERVER_WORLD_SRC_WORLDSERVER_H
-#define SERVER_WORLD_SRC_WORLDSERVER_H
+#ifndef LIBCOMP_SRC_PACKETS_H
+#define LIBCOMP_SRC_PACKETS_H
 
-// libcomp Includes
-#include <InternalConnection.h>
-#include <BaseServer.h>
-#include <Worker.h>
+// channel Includes
+#include "PacketParser.h"
 
-namespace world
+namespace channel
 {
 
-class WorldServer : public libcomp::BaseServer
+namespace Parsers
 {
-public:
-    WorldServer(libcomp::String listenAddress, uint16_t port);
-    virtual ~WorldServer();
 
-protected:
-    virtual std::shared_ptr<libcomp::TcpConnection> CreateConnection(
-        asio::ip::tcp::socket& socket);
-};
+//PACKET_PARSER_DECL(Login);               // 0x0003
 
-} // namespace world
+} // namespace Parsers
 
-#endif // SERVER_WORLD_SRC_WORLDSERVER_H
+} // namespace libcomp
+
+#endif // LIBCOMP_SRC_PACKETS_H

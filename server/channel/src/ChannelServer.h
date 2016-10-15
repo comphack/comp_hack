@@ -28,16 +28,28 @@
 #define SERVER_CHANNEL_SRC_CHANNELSERVER_H
 
 // libcomp Includes
-#include <InternalServer.h>
+#include <InternalConnection.h>
+#include <BaseServer.h>
+#include <Worker.h>
 
 namespace channel
 {
 
-class ChannelServer : public libcomp::InternalServer
+class ChannelServer : public libcomp::BaseServer
 {
 public:
-    ChannelServer(libcomp::String listenAddress, uint16_t port);
+    ChannelServer(const libcomp::String& listenAddress, uint16_t port);
     virtual ~ChannelServer();
+
+    virtual void Shutdown();
+
+protected:
+    virtual std::shared_ptr<libcomp::TcpConnection> CreateConnection(
+        asio::ip::tcp::socket& socket);
+
+    /// @todo Make a bunch of these.
+    libcomp::Worker mWorker;
+    std::shared_ptr<libcomp::InternalConnection> mWorldConnection;
 };
 
 } // namespace channel

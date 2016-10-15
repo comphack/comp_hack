@@ -30,6 +30,11 @@ INCLUDE_DIRECTORIES(${TINYXML2_INCLUDE_DIRS})
 INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/src)
 INCLUDE_DIRECTORIES(${CMAKE_CURRENT_BINARY_DIR}/res/login)
 
+# Database includes.
+INCLUDE_DIRECTORIES(${SQLITE3_INCLUDE_DIRS})
+INCLUDE_DIRECTORIES(${LIBUV_INCLUDE_DIRS})
+INCLUDE_DIRECTORIES(${CASSANDRA_INCLUDE_DIRS})
+
 SET(${PROJECT_NAME}_SRCS
     src/LobbyServer.cpp
     src/LoginWebHandler.cpp
@@ -49,7 +54,15 @@ SET(${PROJECT_NAME}_HDRS
 )
 
 SET(${PROJECT_NAME}_PACKETS
-    src/packets/Login.cpp
+    src/packets/Login.cpp               # 0x0003
+    src/packets/Auth.cpp                # 0x0005
+    src/packets/StartGame.cpp           # 0x0007
+    src/packets/CharacterList.cpp       # 0x0009
+    src/packets/WorldList.cpp           # 0x000B
+    src/packets/CreateCharacter.cpp     # 0x000D
+    src/packets/DeleteCharacter.cpp     # 0x000F
+    src/packets/QueryPurchaseTicket.cpp # 0x0011
+    src/packets/PurchaseTicket.cpp      # 0x0013
 )
 
 ADD_CUSTOM_COMMAND(

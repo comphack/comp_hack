@@ -1,12 +1,12 @@
 /**
- * @file server/lobby/src/ManagerPacket.cpp
- * @ingroup lobby
+ * @file server/channel/src/ManagerPacket.cpp
+ * @ingroup channel
  *
  * @author COMP Omega <compomega@tutanota.com>
  *
- * @brief Manager to handle lobby packets.
+ * @brief Manager to handle channel packets.
  *
- * This file is part of the Lobby Server (lobby).
+ * This file is part of the channel Server (channel).
  *
  * Copyright (C) 2012-2016 COMP_hack Team <compomega@tutanota.com>
  *
@@ -30,32 +30,16 @@
 #include "Log.h"
 #include "MessagePacket.h"
 
-// lobby Includes
+// channel Includes
 #include "PacketParser.h"
 #include "Packets.h"
 
-using namespace lobby;
+using namespace channel;
 
 ManagerPacket::ManagerPacket()
 {
-    mPacketParsers[0x0003] = std::shared_ptr<PacketParser>(
-        new Parsers::Login());
-    mPacketParsers[0x0005] = std::shared_ptr<PacketParser>(
-        new Parsers::Auth());
-    mPacketParsers[0x0007] = std::shared_ptr<PacketParser>(
-        new Parsers::StartGame());
-    mPacketParsers[0x0009] = std::shared_ptr<PacketParser>(
-        new Parsers::CharacterList());
-    mPacketParsers[0x000B] = std::shared_ptr<PacketParser>(
-        new Parsers::WorldList());
-    mPacketParsers[0x000D] = std::shared_ptr<PacketParser>(
-        new Parsers::CreateCharacter());
-    mPacketParsers[0x000F] = std::shared_ptr<PacketParser>(
-        new Parsers::DeleteCharacter());
-    mPacketParsers[0x0011] = std::shared_ptr<PacketParser>(
-        new Parsers::QueryPurchaseTicket());
-    mPacketParsers[0x0013] = std::shared_ptr<PacketParser>(
-        new Parsers::PurchaseTicket());
+    //mPacketParsers[0x0003] = std::shared_ptr<PacketParser>(
+        //new Parsers::Login());
 }
 
 ManagerPacket::~ManagerPacket()

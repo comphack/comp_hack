@@ -57,6 +57,8 @@ TcpConnection::TcpConnection(asio::ip::tcp::socket& socket,
 
 TcpConnection::~TcpConnection()
 {
+    mSocket.close();
+
     if(nullptr != mDiffieHellman)
     {
         DH_free(mDiffieHellman);
@@ -87,6 +89,11 @@ bool TcpConnection::Connect(const String& host, int port, bool async)
     return result;
 }
 
+void TcpConnection::Close()
+{
+    mSocket.close();
+}
+
 void TcpConnection::QueuePacket(Packet& packet)
 {
     ReadOnlyPacket copy(packet);
@@ -101,17 +108,17 @@ void TcpConnection::QueuePacket(ReadOnlyPacket& packet)
     mOutgoingPackets.push_back(std::move(packet));
 }
 
-void TcpConnection::SendPacket(Packet& packet)
+void TcpConnection::SendPacket(Packet& packet, bool closeConnection)
 {
     ReadOnlyPacket copy(packet);
 
-    SendPacket(copy);
+    SendPacket(copy, closeConnection);
 }
 
-void TcpConnection::SendPacket(ReadOnlyPacket& packet)
+void TcpConnection::SendPacket(ReadOnlyPacket& packet, bool closeConnection)
 {
     QueuePacket(packet);
-    FlushOutgoing();
+    FlushOutgoing(closeConnection);
 }
 
 bool TcpConnection::RequestPacket(size_t size)
@@ -145,8 +152,8 @@ bool TcpConnection::RequestPacket(size_t size)
                 if(errorCode)
                 {
 #ifdef COMP_HACK_DEBUG
-                    LOG_ERROR(String("ASIO Error: %1\n").Arg(
-                        errorCode.message()));
+                    // LOG_ERROR(String("ASIO Error: %1\n").Arg(
+                    //     errorCode.message()));
 #endif // COMP_HACK_DEBUG
 
                     SocketError();
@@ -247,7 +254,7 @@ void TcpConnection::HandleConnection(asio::error_code errorCode)
     }
 }
 
-void TcpConnection::FlushOutgoing()
+void TcpConnection::FlushOutgoing(bool closeConnection)
 {
     std::list<ReadOnlyPacket> packets = GetCombinedPackets();
 
@@ -258,13 +265,22 @@ void TcpConnection::FlushOutgoing()
         mSendingPacket = true;
 
         mSocket.async_send(asio::buffer(
-            mOutgoing.ConstData(), mOutgoing.Size()), 0,
-            [this](asio::error_code errorCode, std::size_t length)
+            mOutgoing.ConstData(), mOutgoing.Size()), 0, [closeConnection,
+                this](asio::error_code errorCode, std::size_t length)
             {
                 bool sendAnother = false;
                 bool packetOk = false;
 
                 ReadOnlyPacket readOnlyPacket;
+
+                // Ignore errors and everything else, just close the connection.
+                if(closeConnection)
+                {
+                    LOG_DEBUG("Closing connection after sending packet.\n");
+
+                    SocketError();
+                    return;
+                }
 
                 if(errorCode)
                 {

@@ -1,12 +1,12 @@
 /**
- * @file server/world/src/WorldServer.h
- * @ingroup world
+ * @file libcomp/src/BaseServer.cpp
+ * @ingroup libcomp
  *
- * @author HACKfrost
+ * @author COMP Omega <compomega@tutanota.com>
  *
- * @brief World server class.
+ * @brief Base server class.
  *
- * This file is part of the World Server (world).
+ * This file is part of the COMP_hack Library (libcomp).
  *
  * Copyright (C) 2012-2016 COMP_hack Team <compomega@tutanota.com>
  *
@@ -24,28 +24,31 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef SERVER_WORLD_SRC_WORLDSERVER_H
-#define SERVER_WORLD_SRC_WORLDSERVER_H
+#include "BaseServer.h"
 
-// libcomp Includes
-#include <InternalConnection.h>
-#include <BaseServer.h>
-#include <Worker.h>
+using namespace libcomp;
 
-namespace world
+BaseServer::BaseServer(const String& listenAddress, uint16_t port) :
+    TcpServer(listenAddress, port)
 {
+}
 
-class WorldServer : public libcomp::BaseServer
+BaseServer::~BaseServer()
 {
-public:
-    WorldServer(libcomp::String listenAddress, uint16_t port);
-    virtual ~WorldServer();
+}
 
-protected:
-    virtual std::shared_ptr<libcomp::TcpConnection> CreateConnection(
-        asio::ip::tcp::socket& socket);
-};
+int BaseServer::Run()
+{
+    // Run the main worker in this thread, blocking until done.
+    mMainWorker.Start(true);
 
-} // namespace world
+    // Stop the network service (this will kill any existing connections).
+    mService.stop();
 
-#endif // SERVER_WORLD_SRC_WORLDSERVER_H
+    return 0;
+}
+
+void BaseServer::Shutdown()
+{
+    mMainWorker.Shutdown();
+}

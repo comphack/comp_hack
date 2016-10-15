@@ -51,7 +51,7 @@ class TcpConnection;
 class TcpServer
 {
 public:
-    TcpServer(String listenAddress, uint16_t port);
+    TcpServer(const String& listenAddress, uint16_t port);
     virtual ~TcpServer();
 
     virtual int Start();
@@ -67,6 +67,8 @@ public:
     static DH* CopyDiffieHellman(const DH *pDiffieHellman);
 
 protected:
+    virtual int Run();
+
     virtual std::shared_ptr<TcpConnection> CreateConnection(
         asio::ip::tcp::socket& socket);
 
@@ -77,8 +79,10 @@ protected:
         asio::ip::tcp::socket& socket);
 
     std::list<std::shared_ptr<TcpConnection>> mConnections;
-private:
+
     asio::io_service mService;
+
+private:
     asio::ip::tcp::acceptor mAcceptor;
 
     std::thread mServiceThread;

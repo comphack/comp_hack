@@ -55,6 +55,8 @@ SET(SYSTEM_LIBRARIES ${SYSTEM_LIBRARIES} ${EXECINFO_LIBRARY})
 ENDIF(BSD)
 
 SET(${PROJECT_NAME}_SRCS
+    src/BaseServer.cpp
+    src/ChannelConnection.cpp
     src/Compress.cpp
     src/Convert.cpp
     src/CString.cpp
@@ -64,15 +66,18 @@ SET(${PROJECT_NAME}_SRCS
     src/DatabaseQueryCassandra.cpp
     src/DatabaseSQLite3.cpp
     src/Decrypt.cpp
+    src/EncryptedConnection.cpp
     #src/EngineLocker.cpp
     src/Exception.cpp
     src/InternalConnection.cpp
-    src/InternalServer.cpp
     src/LobbyConnection.cpp
     src/Log.cpp
     #src/MemoryFile.cpp
     src/MessageEncrypted.cpp
     src/MessagePacket.cpp
+    src/MessagePong.cpp
+    src/MessageShutdown.cpp
+    src/MessageWorldNotification.cpp
     src/Object.cpp
     src/Packet.cpp
     src/PacketException.cpp
@@ -82,6 +87,7 @@ SET(${PROJECT_NAME}_SRCS
     src/ReadOnlyPacket.cpp
     src/RingBuffer.cpp
     src/ScriptEngine.cpp
+    src/Shutdown.cpp
     #src/Structgen.cpp
     src/TcpConnection.cpp
     src/TcpServer.cpp
@@ -99,6 +105,8 @@ ENDIF()
 # This is a list of all header files. Adding the header files here ensures they
 # are listed in the source files for IDE projects.
 SET(${PROJECT_NAME}_HDRS
+    src/BaseServer.h
+    src/ChannelConnection.h
     src/Compress.h
     src/Constants.h
     src/Convert.h
@@ -109,12 +117,12 @@ SET(${PROJECT_NAME}_HDRS
     src/DatabaseQueryCassandra.h
     src/DatabaseSQLite3.h
     src/Decrypt.h
+    src/EncryptedConnection.h
     src/Endian.h
     src/EnumMap.h
     #src/EngineLocker.h
     src/Exception.h
     src/InternalConnection.h
-    src/InternalServer.h
     src/LobbyConnection.h
     src/Log.h
     src/Manager.h
@@ -122,7 +130,10 @@ SET(${PROJECT_NAME}_HDRS
     src/Message.h
     src/MessageEncrypted.h
     src/MessagePacket.h
+    src/MessagePong.h
     src/MessageQueue.h
+    src/MessageShutdown.h
+    src/MessageWorldNotification.h
     src/Object.h
     src/Packet.h
     src/PacketException.h
@@ -135,6 +146,7 @@ SET(${PROJECT_NAME}_HDRS
     src/ReadOnlyPacket.h
     src/RingBuffer.h
     src/ScriptEngine.h
+    src/Shutdown.h
     #src/Structgen.h
     src/TcpConnection.h
     src/TcpServer.h
@@ -197,7 +209,7 @@ TARGET_LINK_LIBRARIES(comp ${OPENSSL_LIBRARIES} ${ZLIB_LIBRARIES}
     ${SYSTEM_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} sqlite3
     squirrel sqstdlib ttvfs ttvfs_zip tinyxml2 cassandra uv)
 
-ADD_DEPENDENCIES(comp asio)
+ADD_DEPENDENCIES(comp asio sqrat)
 
 IF(WIN32)
     TARGET_LINK_LIBRARIES(comp advapi32 iphlpapi psapi shell32 userenv ws2_32)
@@ -213,6 +225,7 @@ SET(${PROJECT_NAME}_TEST_SRCS
     Packet
     ScriptEngine
     String
+    VectorStream
     #XmlUtils
 )
 

@@ -78,8 +78,10 @@ public:
             mQueueLock.lock();
         }
 
-        T item = mQueue.pop_front();
+        T item = mQueue.front();
+        mQueue.pop_front();
         mQueueLock.unlock();
+
         return item;
     }
 
@@ -97,6 +99,17 @@ public:
             mQueueLock.lock();
         }
 
+        mQueue.swap(tempQueue);
+        mQueueLock.unlock();
+
+        destinationQueue.splice(destinationQueue.end(), tempQueue);
+    }
+
+    void DequeueAny(std::list<T>& destinationQueue)
+    {
+        std::list<T> tempQueue;
+
+        mQueueLock.lock();
         mQueue.swap(tempQueue);
         mQueueLock.unlock();
 

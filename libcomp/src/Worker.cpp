@@ -28,6 +28,7 @@
 
 // libcomp Includes
 #include "Log.h"
+#include "MessageShutdown.h"
 
 // Standard C++11 Includes
 #include <thread>
@@ -35,13 +36,13 @@
 using namespace libcomp;
 
 Worker::Worker() : mRunning(false), mMessageQueue(new MessageQueue<
-    Message::Message*>()), mThread(0)
+    Message::Message*>()), mThread(nullptr)
 {
 }
 
 Worker::~Worker()
 {
-    delete mThread;
+    Cleanup();
 }
 
 void Worker::AddManager(const std::shared_ptr<Manager>& manager)
@@ -55,20 +56,34 @@ void Worker::AddManager(const std::shared_ptr<Manager>& manager)
     }
 }
 
-void Worker::Start()
+void Worker::Start(bool blocking)
 {
-    mThread = new std::thread([this](std::shared_ptr<MessageQueue<
-        Message::Message*>> messageQueue)
+    if(blocking)
     {
         mRunning = true;
 
         while(mRunning)
         {
-            Run(messageQueue.get());
+            Run(mMessageQueue.get());
         }
 
         mRunning = false;
-    }, mMessageQueue);
+    }
+    else
+    {
+        mThread = new std::thread([this](std::shared_ptr<MessageQueue<
+            Message::Message*>> messageQueue)
+        {
+            mRunning = true;
+
+            while(mRunning)
+            {
+                Run(messageQueue.get());
+            }
+
+            mRunning = false;
+        }, mMessageQueue);
+    }
 }
 
 void Worker::Run(MessageQueue<Message::Message*> *pMessageQueue)
@@ -78,30 +93,70 @@ void Worker::Run(MessageQueue<Message::Message*> *pMessageQueue)
 
     for(auto pMessage : msgs)
     {
-        // Attempt to find a manager to process this message.
-        auto it = mManagers.find(pMessage->GetType());
+        // Check for a shutdown message.
+        libcomp::Message::Shutdown *pShutdown = dynamic_cast<
+            libcomp::Message::Shutdown*>(pMessage);
 
-        // Process the message if the manager is valid.
-        if(it == mManagers.end())
+        // Do not handle any more messages if a shutdown was sent.
+        if(nullptr != pShutdown || !mRunning)
         {
-            LOG_ERROR(libcomp::String("Unhandled message type: %1\n").Arg(
-                static_cast<std::size_t>(pMessage->GetType())));
+            mRunning = false;
         }
         else
         {
-            auto manager = it->second;
+            // Attempt to find a manager to process this message.
+            auto it = mManagers.find(pMessage->GetType());
 
-            if(!manager)
+            // Process the message if the manager is valid.
+            if(it == mManagers.end())
             {
-                LOG_ERROR("Manager is null!\n");
+                LOG_ERROR(libcomp::String("Unhandled message type: %1\n").Arg(
+                    static_cast<std::size_t>(pMessage->GetType())));
             }
-            else if(!manager->ProcessMessage(pMessage))
+            else
             {
-                LOG_ERROR("Failed to process message!\n");
+                auto manager = it->second;
+
+                if(!manager)
+                {
+                    LOG_ERROR("Manager is null!\n");
+                }
+                else if(!manager->ProcessMessage(pMessage))
+                {
+                    LOG_ERROR("Failed to process message!\n");
+                }
             }
         }
 
         // Free the message now.
+        delete pMessage;
+    }
+}
+
+void Worker::Shutdown()
+{
+    mMessageQueue->Enqueue(new libcomp::Message::Shutdown());
+}
+
+void Worker::Join()
+{
+    if(nullptr != mThread)
+    {
+        mThread->join();
+    }
+}
+
+void Worker::Cleanup()
+{
+    // Delete the main thread (if it exists).
+    delete mThread;
+
+    // Empty the message queue.
+    std::list<libcomp::Message::Message*> msgs;
+    mMessageQueue->DequeueAny(msgs);
+
+    for(auto pMessage : msgs)
+    {
         delete pMessage;
     }
 }

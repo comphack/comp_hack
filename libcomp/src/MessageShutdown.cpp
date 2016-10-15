@@ -1,12 +1,12 @@
 /**
- * @file server/world/src/WorldServer.h
- * @ingroup world
+ * @file libcomp/src/MessageShutdown.cpp
+ * @ingroup libcomp
  *
- * @author HACKfrost
+ * @author COMP Omega <compomega@tutanota.com>
  *
- * @brief World server class.
+ * @brief Indicates that the server should shutdown cleanly.
  *
- * This file is part of the World Server (world).
+ * This file is part of the COMP_hack Library (libcomp).
  *
  * Copyright (C) 2012-2016 COMP_hack Team <compomega@tutanota.com>
  *
@@ -24,28 +24,19 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef SERVER_WORLD_SRC_WORLDSERVER_H
-#define SERVER_WORLD_SRC_WORLDSERVER_H
+#include "MessageShutdown.h"
 
-// libcomp Includes
-#include <InternalConnection.h>
-#include <BaseServer.h>
-#include <Worker.h>
+using namespace libcomp;
 
-namespace world
+Message::Shutdown::Shutdown()
 {
+}
 
-class WorldServer : public libcomp::BaseServer
+Message::Shutdown::~Shutdown()
 {
-public:
-    WorldServer(libcomp::String listenAddress, uint16_t port);
-    virtual ~WorldServer();
+}
 
-protected:
-    virtual std::shared_ptr<libcomp::TcpConnection> CreateConnection(
-        asio::ip::tcp::socket& socket);
-};
-
-} // namespace world
-
-#endif // SERVER_WORLD_SRC_WORLDSERVER_H
+Message::MessageType Message::Shutdown::GetType() const
+{
+    return MessageType::MESSAGE_TYPE_SYSTEM;
+}

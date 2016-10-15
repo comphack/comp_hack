@@ -31,8 +31,15 @@ INCLUDE(${CMAKE_MODULE_PATH}/flags.cmake)
 # Utilities for building with MSVC.
 INCLUDE(${CMAKE_MODULE_PATH}/msvc.cmake)
 
+# Option for the static runtime on Windows.
+OPTION(USE_STATIC_RUNTIME "Use the static MSVC runtime." OFF)
+
 # Make sure MSVC uses the right runtime.
-MSVC_RUNTIME(STATIC)
+IF(USE_STATIC_RUNTIME)
+    MSVC_RUNTIME(STATIC)
+ELSE()
+    MSVC_RUNTIME(DYNAMIC)
+ENDIF()
 
 # http://stackoverflow.com/questions/14933172/
 IF("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")

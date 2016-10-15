@@ -29,13 +29,22 @@ INCLUDE_DIRECTORIES(${TINYXML2_INCLUDE_DIRS})
 INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/src)
 INCLUDE_DIRECTORIES(${CMAKE_CURRENT_BINARY_DIR}/res/login)
 
+# Database includes.
+INCLUDE_DIRECTORIES(${SQLITE3_INCLUDE_DIRS})
+INCLUDE_DIRECTORIES(${LIBUV_INCLUDE_DIRS})
+INCLUDE_DIRECTORIES(${CASSANDRA_INCLUDE_DIRS})
+
 SET(${PROJECT_NAME}_SRCS
     src/ChannelServer.cpp
+    src/ManagerPacket.cpp
     src/main.cpp
 )
 
 SET(${PROJECT_NAME}_HDRS
     src/ChannelServer.h
+    src/ManagerPacket.h
+    src/PacketParser.h
+    src/Packets.h
 )
 
 SET(${PROJECT_NAME}_PACKETS

@@ -50,6 +50,8 @@ public:
     virtual bool IsOpen() const;
 
     virtual DatabaseQuery Prepare(const String& query);
+    virtual bool Setup();
+    virtual bool Use();
 
 protected:
     bool WaitForFuture(CassFuture *pFuture);

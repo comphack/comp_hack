@@ -1,10 +1,10 @@
 /**
- * @file libcomp/src/Message.h
+ * @file libcomp/src/ChannelConnection.h
  * @ingroup libcomp
  *
  * @author COMP Omega <compomega@tutanota.com>
  *
- * @brief Base message class.
+ * @brief Channel connection class.
  *
  * This file is part of the COMP_hack Library (libcomp).
  *
@@ -24,32 +24,29 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef LIBCOMP_SRC_MESSAGE_H
-#define LIBCOMP_SRC_MESSAGE_H
+#ifndef LIBCOMP_SRC_CHANNELCONNECTION_H
+#define LIBCOMP_SRC_CHANNELCONNECTION_H
+
+// libcomp Includes
+#include "EncryptedConnection.h"
 
 namespace libcomp
 {
 
-namespace Message
-{
-
-enum class MessageType
-{
-    MESSAGE_TYPE_SYSTEM,
-    MESSAGE_TYPE_PACKET,
-    MESSAGE_TYPE_CONNECTION,
-};
-
-class Message
+class ChannelConnection : public libcomp::EncryptedConnection
 {
 public:
-    virtual ~Message() { }
+    ChannelConnection(asio::io_service& io_service);
+    ChannelConnection(asio::ip::tcp::socket& socket, DH *pDiffieHellman);
+    virtual ~ChannelConnection();
 
-    virtual MessageType GetType() const = 0;
+protected:
+    virtual void PreparePackets(std::list<ReadOnlyPacket>& packets);
+
+    virtual bool DecompressPacket(libcomp::Packet& packet,
+        uint32_t& paddedSize, uint32_t& realSize, uint32_t& dataStart);
 };
-
-} // namespace Message
 
 } // namespace libcomp
 
-#endif // LIBCOMP_SRC_MESSAGE_H
+#endif // LIBCOMP_SRC_CHANNELCONNECTION_H

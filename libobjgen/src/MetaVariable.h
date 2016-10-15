@@ -70,6 +70,9 @@ public:
     virtual bool IsCaps() const;
     virtual void SetCaps(bool caps);
 
+    virtual bool IsInherited() const;
+    virtual void SetInherited(const bool inherited);
+
     virtual bool IsValid(const std::vector<char>& data) const;
     virtual bool IsValid(const void *pData, size_t dataSize) const = 0;
 
@@ -125,6 +128,7 @@ private:
     UUID mUUID;
     bool mCaps;
     std::string mName;
+    bool mInherited;
 };
 
 } // namespace libobjgen

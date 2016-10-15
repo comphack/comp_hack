@@ -21,14 +21,19 @@ PROJECT(comp_lobby)
 
 MESSAGE("** Configuring ${PROJECT_NAME} **")
 
+# Add a directory to put the objgen output into.
+FILE(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/objgen)
+
 INCLUDE_DIRECTORIES(${LIBCOMP_INCLUDES})
 INCLUDE_DIRECTORIES(${ASIO_INCLUDE_DIRS})
 INCLUDE_DIRECTORIES(${TTVFS_INCLUDE_DIRS})
 INCLUDE_DIRECTORIES(${OPENSSL_INCLUDE_DIR})
 INCLUDE_DIRECTORIES(${CIVETWEB_INCLUDE_DIRS})
 INCLUDE_DIRECTORIES(${TINYXML2_INCLUDE_DIRS})
+INCLUDE_DIRECTORIES(${CMAKE_CURRENT_BINARY_DIR}/objgen)
 INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/src)
 INCLUDE_DIRECTORIES(${CMAKE_CURRENT_BINARY_DIR}/res/login)
+
 
 # Database includes.
 INCLUDE_DIRECTORIES(${SQLITE3_INCLUDE_DIRS})
@@ -52,6 +57,35 @@ SET(${PROJECT_NAME}_HDRS
 
     ${CMAKE_CURRENT_BINARY_DIR}/res/login/ResourceLogin.h
 )
+
+SET(${PROJECT_NAME}_SCHEMA
+    schema/lobbyconfig.xml
+)
+
+# Make an absolute path version of the schema list for the channel server to use as depends
+FOREACH(schema ${${PROJECT_NAME}_SCHEMA})
+    SET(LIBFROST_SCHEMA ${LIBFROST_SCHEMA} ${CMAKE_CURRENT_SOURCE_DIR}/${schema})
+ENDFOREACH(schema ${${PROJECT_NAME}_SCHEMA})
+
+# Make it available to the parent scope
+SET(LIBFROST_SCHEMA ${LIBFROST_SCHEMA} PARENT_SCOPE)
+
+OBJGEN_XML(${PROJECT_NAME}_STRUCTS
+    # Main schema
+    schema/master.xml
+
+    # Included schemas
+    ${${PROJECT_NAME}_SCHEMA}
+
+    # Include paths
+    schema
+
+    # Output files
+    LobbyConfig.h
+    LobbyConfig.cpp
+)
+
+SOURCE_GROUP("Source Files\\Packets" src/packets/*)
 
 SET(${PROJECT_NAME}_PACKETS
     src/packets/Login.cpp               # 0x0003
@@ -80,7 +114,8 @@ ADD_CUSTOM_COMMAND(
 )
 
 ADD_EXECUTABLE(${PROJECT_NAME} ${${PROJECT_NAME}_SRCS}
-    ${${PROJECT_NAME}_HDRS} ${${PROJECT_NAME}_PACKETS})
+    ${${PROJECT_NAME}_HDRS} ${${PROJECT_NAME}_PACKETS}
+    ${${PROJECT_NAME}_STRUCTS})
 
 ADD_DEPENDENCIES(${PROJECT_NAME} asio)
 

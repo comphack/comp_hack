@@ -496,7 +496,7 @@ void EncryptedConnection::ParsePacket(libcomp::Packet& packet,
     }
 
     // Move the packet into a read only copy.
-    ReadOnlyPacket copy(packet);
+    ReadOnlyPacket copy(std::move(packet));
 
     // Make sure we are at the right spot (right after the sizes).
     copy.Seek(dataStart);

@@ -65,7 +65,7 @@ TcpConnection::~TcpConnection()
     }
 }
 
-bool TcpConnection::Connect(const String& host, int port, bool async)
+bool TcpConnection::Connect(const String& host, uint16_t port, bool async)
 {
     bool result = false;
 
@@ -96,7 +96,7 @@ void TcpConnection::Close()
 
 void TcpConnection::QueuePacket(Packet& packet)
 {
-    ReadOnlyPacket copy(packet);
+    ReadOnlyPacket copy(std::move(packet));
 
     QueuePacket(copy);
 }
@@ -110,7 +110,7 @@ void TcpConnection::QueuePacket(ReadOnlyPacket& packet)
 
 void TcpConnection::SendPacket(Packet& packet, bool closeConnection)
 {
-    ReadOnlyPacket copy(packet);
+    ReadOnlyPacket copy(std::move(packet));
 
     SendPacket(copy, closeConnection);
 }
@@ -451,7 +451,7 @@ std::vector<char> TcpConnection::GenerateDiffieHellmanSharedData(
 void TcpConnection::BroadcastPacket(const std::list<std::shared_ptr<
     TcpConnection>>& connections, Packet& packet)
 {
-    ReadOnlyPacket copy(packet);
+    ReadOnlyPacket copy(std::move(packet));
 
     BroadcastPacket(connections, copy);
 }

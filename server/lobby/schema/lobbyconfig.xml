@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="LobbyConfig" baseobject="ServerConfig">
+        <member type="string" name="DatabaseIP" default="127.0.0.1"/>
+        <member type="u16" name="Port" inherited="true" default="10666"/>
+        <member type="u16" name="WebListeningPort" default="10999"/>
+    </object>
+</objgen>

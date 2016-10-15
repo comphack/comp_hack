@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="WorldConfig" baseobject="ServerConfig">
+        <member type="string" name="Name"/>
+        <member type="u16" name="Port" inherited="true" default="18666"/>
+        <member type="string" name="LobbyIP" default="127.0.0.1"/>
+        <member type="u16" name="LobbyPort" default="10666"/>
+    </object>
+</objgen>

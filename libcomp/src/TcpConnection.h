@@ -73,7 +73,7 @@ public:
     static std::vector<char> GenerateDiffieHellmanSharedData(
         DH *pDiffieHellman, const String& otherPublic);
 
-    bool Connect(const String& host, int port = 0, bool async = true);
+    bool Connect(const String& host, uint16_t port = 0, bool async = true);
 
     void Close();
 

@@ -69,15 +69,20 @@ std::string GeneratorHeader::GenerateClass(const MetaObject& obj)
     {
         auto var = *it;
 
+        if(var->IsInherited()) continue;
+
         ss << var->GetAccessDeclarations(*this, obj, var->GetName());
         ss << std::endl;
     }
 
-    ss << "private:" << std::endl;
+    // Must be protected instead of private in case a variabel is inherited
+    ss << "protected:" << std::endl;
 
     for(auto it = obj.VariablesBegin(); it != obj.VariablesEnd(); ++it)
     {
         auto var = *it;
+
+        if(var->IsInherited()) continue;
 
         ss << Tab() << var->GetDeclaration(GetMemberName(var)) << std::endl;
     }

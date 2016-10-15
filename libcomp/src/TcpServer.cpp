@@ -45,6 +45,14 @@ TcpServer::TcpServer(const String& listenAddress, uint16_t port) :
 {
 }
 
+TcpServer::TcpServer(objects::ServerConfig* config, const String& configPath) :
+    mAcceptor(mService), mDiffieHellman(nullptr),
+    mListenAddress("any")
+{
+    ReadConfig(config, configPath);
+    mPort = config->GetPort();
+}
+
 TcpServer::~TcpServer()
 {
     if(nullptr != mDiffieHellman)
@@ -121,20 +129,24 @@ int TcpServer::Run()
     return 0;
 }
 
-bool TcpServer::ReadConfig(objects::ServerConfig* config, std::string filename)
+std::string TcpServer::GetDefaultConfigPath()
 {
-    tinyxml2::XMLDocument doc;
-
 #ifdef _WIN32
     char buff[FILENAME_MAX];
     auto result = _getcwd(buff, FILENAME_MAX);
     std::string executingDirectory(buff);
 
-    libcomp::String filePath = executingDirectory + "\\config\\" + filename;
+    std::string filePath = executingDirectory + "\\config\\";
 #else
-    libcomp::String filePath = "/etc/comp_hack/" + filename;
+    std::string filePath = "/etc/comp_hack/";
 #endif
 
+    return filePath;
+}
+
+bool TcpServer::ReadConfig(objects::ServerConfig* config, libcomp::String filePath)
+{
+    tinyxml2::XMLDocument doc;
     if (tinyxml2::XML_SUCCESS != doc.LoadFile(filePath.C()))
     {
         LOG_WARNING(libcomp::String("Failed to parse config file: %1\n").Arg(
@@ -178,6 +190,15 @@ bool TcpServer::ReadConfig(objects::ServerConfig* config, tinyxml2::XMLDocument&
             LOG_WARNING("Failed to load DH key pair from config file\n");
             return false;
         }
+
+        if(config->GetPort() == 0)
+        {
+            LOG_WARNING("No port specified\n");
+            return false;
+        }
+
+        LOG_DEBUG(libcomp::String("Port: %1\n").Arg(
+            config->GetPort()));
     }
 
     return true;

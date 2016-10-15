@@ -52,11 +52,13 @@ class TcpServer
 {
 public:
     TcpServer(const String& listenAddress, uint16_t port);
+    TcpServer(objects::ServerConfig* config, const String& configPath);
     virtual ~TcpServer();
 
     virtual int Start();
 
-    bool ReadConfig(objects::ServerConfig* config, std::string filename);
+    static std::string GetDefaultConfigPath();
+    bool ReadConfig(objects::ServerConfig* config, libcomp::String filePath);
     virtual bool ReadConfig(objects::ServerConfig* config, tinyxml2::XMLDocument& doc);
 
     static DH* GenerateDiffieHellman();

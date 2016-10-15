@@ -33,15 +33,25 @@
 
 int main(int argc, const char *argv[])
 {
-    (void)argc;
-    (void)argv;
-
     libcomp::Log::GetSingletonPtr()->AddStandardOutputHook();
 
     LOG_INFO("COMP_hack World Server v0.0.1 build 1\n");
     LOG_INFO("Copyright (C) 2010-2016 COMP_hack Team\n\n");
 
-    world::WorldServer server("any", 18666);
+    std::string configPath = libcomp::TcpServer::GetDefaultConfigPath() + "world.xml";
+
+    if(argc == 2)
+    {
+        configPath = argv[1];
+        LOG_DEBUG(libcomp::String("Using custom config path "
+            "%1\n").Arg(configPath));
+    }
+
+    (void)argc;
+    (void)argv;
+
+    auto config = std::shared_ptr<objects::WorldConfig>(new objects::WorldConfig());
+    world::WorldServer server(config, configPath);
 
     // Set this for the signal handler.
     libcomp::Shutdown::Configure(&server);

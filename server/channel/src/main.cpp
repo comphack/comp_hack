@@ -33,15 +33,25 @@
 
 int main(int argc, const char *argv[])
 {
-    (void)argc;
-    (void)argv;
-
     libcomp::Log::GetSingletonPtr()->AddStandardOutputHook();
 
     LOG_INFO("COMP_hack Channel Server v0.0.1 build 1\n");
     LOG_INFO("Copyright (C) 2010-2016 COMP_hack Team\n\n");
 
-    channel::ChannelServer server("any", 14666);
+    std::string configPath = libcomp::TcpServer::GetDefaultConfigPath() + "channel.xml";
+
+    if(argc == 2)
+    {
+        configPath = argv[1];
+        LOG_DEBUG(libcomp::String("Using custom config path "
+            "%1\n").Arg(configPath));
+    }
+
+    (void)argc;
+    (void)argv;
+
+    auto config = std::shared_ptr<objects::ChannelConfig>(new objects::ChannelConfig());
+    channel::ChannelServer server(config, configPath);
 
     // Set this for the signal handler.
     libcomp::Shutdown::Configure(&server);

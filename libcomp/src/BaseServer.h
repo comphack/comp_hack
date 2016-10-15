@@ -37,7 +37,7 @@ namespace libcomp
 class BaseServer : public TcpServer
 {
 public:
-    BaseServer(const String& listenAddress, uint16_t port);
+    BaseServer(objects::ServerConfig* config, const String& configPath);
     virtual ~BaseServer();
 
     virtual void Shutdown();

@@ -28,8 +28,8 @@
 
 using namespace libcomp;
 
-BaseServer::BaseServer(const String& listenAddress, uint16_t port) :
-    TcpServer(listenAddress, port)
+BaseServer::BaseServer(objects::ServerConfig* config, const String& configPath) :
+    TcpServer(config, configPath)
 {
 }
 

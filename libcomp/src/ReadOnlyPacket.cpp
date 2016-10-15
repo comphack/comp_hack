@@ -38,7 +38,7 @@
 #ifdef _MSC_VER
 /// Macro to add data to the working buffer for the current hex dump line being
 /// generated. Use the safe sprintf to avoid warnings with MSVC.
-#define dump_print(...) sprintf_s(bufferp, 75, __VA_ARGS__)
+#define dump_print(...) sprintf(bufferp, __VA_ARGS__)    //todo: figure out why this causes a run-time error: sprintf_s(bufferp, 75, __VA_ARGS__)
 #else // _MSC_VER
 /// Macro to add data to the working buffer for the current hex dump line being
 /// generated.

@@ -117,6 +117,11 @@ public:
      */
     explicit ReadOnlyPacket(Packet&& other);
 
+    /*
+     * Never copy a writable Packet
+    */
+    explicit ReadOnlyPacket(const Packet& other) = delete;
+
     /**
      * Destructor to clean-up the object (free the data).
      */

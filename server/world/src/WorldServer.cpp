@@ -37,8 +37,8 @@
 
 using namespace world;
 
-WorldServer::WorldServer(libcomp::String listenAddress, uint16_t port) :
-    libcomp::BaseServer(listenAddress, port)
+WorldServer::WorldServer(std::shared_ptr<objects::WorldConfig> config, const libcomp::String& configPath) :
+    libcomp::BaseServer(&*config, configPath), mConfig(config)
 {
     asio::io_service service;
 
@@ -53,8 +53,7 @@ WorldServer::WorldServer(libcomp::String listenAddress, uint16_t port) :
     lobbyConnection->SetSelf(lobbyConnection);
     lobbyConnection->SetMessageQueue(messageQueue);
 
-    /// @todo Load this from the configuration.
-    lobbyConnection->Connect("127.0.0.1", 10666, false);
+    lobbyConnection->Connect(mConfig->GetLobbyIP(), mConfig->GetLobbyPort(), false);
 
     std::thread serviceThread([&service]()
     {
@@ -83,9 +82,6 @@ WorldServer::WorldServer(libcomp::String listenAddress, uint16_t port) :
     serviceThread.join();
     lobbyConnection.reset();
     messageQueue.reset();
-
-    objects::WorldConfig config;
-    ReadConfig(&config, "world.xml");
 
     //todo: add worker managers
 }

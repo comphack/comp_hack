@@ -25,6 +25,7 @@
  */
 
 // channel Includes
+#include "ChannelConfig.h"
 #include "ChannelServer.h"
 
 // libcomp Includes
@@ -38,7 +39,7 @@ int main(int argc, const char *argv[])
     LOG_INFO("COMP_hack Channel Server v0.0.1 build 1\n");
     LOG_INFO("Copyright (C) 2010-2016 COMP_hack Team\n\n");
 
-    std::string configPath = libcomp::TcpServer::GetDefaultConfigPath() + "channel.xml";
+    std::string configPath = libcomp::BaseServer::GetDefaultConfigPath() + "channel.xml";
 
     if(argc == 2)
     {
@@ -50,7 +51,7 @@ int main(int argc, const char *argv[])
     (void)argc;
     (void)argv;
 
-    auto config = std::shared_ptr<objects::ChannelConfig>(new objects::ChannelConfig());
+    auto config = std::shared_ptr<objects::ServerConfig>(new objects::ChannelConfig());
     channel::ChannelServer server(config, configPath);
 
     // Set this for the signal handler.

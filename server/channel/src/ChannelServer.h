@@ -32,16 +32,13 @@
 #include <BaseServer.h>
 #include <Worker.h>
 
-// channel Includes
-#include "ChannelConfig.h"
-
 namespace channel
 {
 
 class ChannelServer : public libcomp::BaseServer
 {
 public:
-    ChannelServer(std::shared_ptr<objects::ChannelConfig> config, const libcomp::String& configPath);
+    ChannelServer(std::shared_ptr<objects::ServerConfig> config, const libcomp::String& configPath);
     virtual ~ChannelServer();
 
     virtual void Shutdown();
@@ -51,8 +48,6 @@ public:
 protected:
     virtual std::shared_ptr<libcomp::TcpConnection> CreateConnection(
         asio::ip::tcp::socket& socket);
-
-    std::shared_ptr<objects::ChannelConfig> mConfig;
 
     /// @todo Make a bunch of these.
     libcomp::Worker mWorker;

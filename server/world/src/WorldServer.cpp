@@ -37,8 +37,8 @@
 
 using namespace world;
 
-WorldServer::WorldServer(std::shared_ptr<objects::WorldConfig> config, const libcomp::String& configPath) :
-    libcomp::BaseServer(&*config, configPath), mConfig(config)
+WorldServer::WorldServer(std::shared_ptr<objects::ServerConfig> config, const libcomp::String& configPath) :
+    libcomp::BaseServer(config, configPath)
 {
     asio::io_service service;
 
@@ -53,7 +53,9 @@ WorldServer::WorldServer(std::shared_ptr<objects::WorldConfig> config, const lib
     lobbyConnection->SetSelf(lobbyConnection);
     lobbyConnection->SetMessageQueue(messageQueue);
 
-    lobbyConnection->Connect(mConfig->GetLobbyIP(), mConfig->GetLobbyPort(), false);
+    auto conf = std::dynamic_pointer_cast<objects::WorldConfig>(mConfig);
+
+    lobbyConnection->Connect(conf->GetLobbyIP(), conf->GetLobbyPort(), false);
 
     std::thread serviceThread([&service]()
     {

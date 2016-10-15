@@ -38,8 +38,8 @@
 
 using namespace channel;
 
-ChannelServer::ChannelServer(std::shared_ptr<objects::ChannelConfig> config, const libcomp::String& configPath) :
-    libcomp::BaseServer(&*config, configPath), mConfig(config)
+ChannelServer::ChannelServer(std::shared_ptr<objects::ServerConfig> config, const libcomp::String& configPath) :
+    libcomp::BaseServer(config, configPath)
 {
     // Connect to the world server.
     mWorldConnection = std::shared_ptr<libcomp::InternalConnection>(
@@ -47,7 +47,9 @@ ChannelServer::ChannelServer(std::shared_ptr<objects::ChannelConfig> config, con
     mWorldConnection->SetSelf(mWorldConnection);
     mWorldConnection->SetMessageQueue(mMainWorker.GetMessageQueue());
 
-    mWorldConnection->Connect(mConfig->GetWorldIP(), mConfig->GetWorldPort(), false);
+    auto conf = std::dynamic_pointer_cast<objects::ChannelConfig>(mConfig);
+
+    mWorldConnection->Connect(conf->GetWorldIP(), conf->GetWorldPort(), false);
 
     bool connected = libcomp::TcpConnection::STATUS_CONNECTED ==
         mWorldConnection->GetStatus();

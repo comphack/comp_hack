@@ -39,16 +39,18 @@
 
 using namespace lobby;
 
-LobbyServer::LobbyServer(std::shared_ptr<objects::LobbyConfig> config, const libcomp::String& configPath) :
-    libcomp::BaseServer(&*config, configPath), mConfig(config)
+LobbyServer::LobbyServer(std::shared_ptr<objects::ServerConfig> config, const libcomp::String& configPath) :
+    libcomp::BaseServer(config, configPath)
 {
     /// @todo Setup the database type based on the config.
     /// @todo Consider moving this into the base server.
     mDatabase = std::shared_ptr<libcomp::Database>(
         new libcomp::DatabaseCassandra);
 
+    auto conf = std::dynamic_pointer_cast<objects::LobbyConfig>(mConfig);
+
     // Open the database.
-    if(!mDatabase->Open(mConfig->GetDatabaseIP()) || !mDatabase->IsOpen())
+    if(!mDatabase->Open(conf->GetDatabaseIP()) || !mDatabase->IsOpen())
     {
         LOG_CRITICAL("Failed to open database.\n");
 

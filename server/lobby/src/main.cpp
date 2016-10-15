@@ -26,6 +26,7 @@
 
 // lobby Includes
 #include "LoginWebHandler.h"
+#include "LobbyConfig.h"
 #include "LobbyServer.h"
 
 // libcomp Includes
@@ -42,7 +43,7 @@ int main(int argc, const char *argv[])
     LOG_INFO("COMP_hack Lobby Server v0.0.1 build 1\n");
     LOG_INFO("Copyright (C) 2010-2016 COMP_hack Team\n\n");
 
-    std::string configPath = libcomp::TcpServer::GetDefaultConfigPath() + "lobby.xml";
+    std::string configPath = libcomp::BaseServer::GetDefaultConfigPath() + "lobby.xml";
 
     if(argc == 2)
     {
@@ -54,12 +55,12 @@ int main(int argc, const char *argv[])
     (void)argc;
     (void)argv;
 
-    auto config = std::shared_ptr<objects::LobbyConfig>(new objects::LobbyConfig());
+    auto config = std::shared_ptr<objects::ServerConfig>(new objects::LobbyConfig());
     lobby::LobbyServer server(config, configPath);
 
     std::vector<std::string> options;
     options.push_back("listening_ports");
-    options.push_back(std::to_string(config->GetWebListeningPort()));
+    options.push_back(std::to_string(std::dynamic_pointer_cast<objects::LobbyConfig>(config)->GetWebListeningPort()));
 
     CivetServer webServer(options);
     webServer.addHandler("/", new lobby::LoginHandler);

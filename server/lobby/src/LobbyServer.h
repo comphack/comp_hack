@@ -32,16 +32,13 @@
 #include <Database.h>
 #include <Worker.h>
 
-// channel Includes
-#include "LobbyConfig.h"
-
 namespace lobby
 {
 
 class LobbyServer : public libcomp::BaseServer
 {
 public:
-    LobbyServer(std::shared_ptr<objects::LobbyConfig> config, const libcomp::String& configPath);
+    LobbyServer(std::shared_ptr<objects::ServerConfig> config, const libcomp::String& configPath);
     virtual ~LobbyServer();
 
     virtual void Shutdown();
@@ -49,8 +46,6 @@ public:
 protected:
     virtual std::shared_ptr<libcomp::TcpConnection> CreateConnection(
         asio::ip::tcp::socket& socket);
-
-    std::shared_ptr<objects::LobbyConfig> mConfig;
 
     /// @todo Replace this with many worker threads.
     libcomp::Worker mWorker;

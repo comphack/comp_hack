@@ -32,23 +32,18 @@
 #include <BaseServer.h>
 #include <Worker.h>
 
-// world Includes
-#include "WorldConfig.h"
-
 namespace world
 {
 
 class WorldServer : public libcomp::BaseServer
 {
 public:
-    WorldServer(std::shared_ptr<objects::WorldConfig> config, const libcomp::String& configPath);
+    WorldServer(std::shared_ptr<objects::ServerConfig> config, const libcomp::String& configPath);
     virtual ~WorldServer();
 
 protected:
     virtual std::shared_ptr<libcomp::TcpConnection> CreateConnection(
         asio::ip::tcp::socket& socket);
-
-    std::shared_ptr<objects::WorldConfig> mConfig;
 };
 
 } // namespace world

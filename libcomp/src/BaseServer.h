@@ -28,6 +28,7 @@
 #define LIBCOMP_SRC_BASESERVER_H
 
 // libcomp Includes
+#include "ServerConfig.h"
 #include "TcpServer.h"
 #include "Worker.h"
 
@@ -37,13 +38,19 @@ namespace libcomp
 class BaseServer : public TcpServer
 {
 public:
-    BaseServer(objects::ServerConfig* config, const String& configPath);
+    BaseServer(std::shared_ptr<objects::ServerConfig> config, const String& configPath);
     virtual ~BaseServer();
 
     virtual void Shutdown();
 
+    static std::string GetDefaultConfigPath();
+    bool ReadConfig(std::shared_ptr<objects::ServerConfig> config, libcomp::String filePath);
+    virtual bool ReadConfig(std::shared_ptr<objects::ServerConfig> config, tinyxml2::XMLDocument& doc);
+
 protected:
     virtual int Run();
+
+    std::shared_ptr<objects::ServerConfig> mConfig;
 
     /// Worker that blocks and runs in the main thread.
     libcomp::Worker mMainWorker;

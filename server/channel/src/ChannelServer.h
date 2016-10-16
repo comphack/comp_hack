@@ -43,8 +43,6 @@ public:
 
     virtual void Shutdown();
 
-    objects::ChannelConfig& GetConfig();
-
 protected:
     virtual std::shared_ptr<libcomp::TcpConnection> CreateConnection(
         asio::ip::tcp::socket& socket);

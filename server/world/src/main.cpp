@@ -48,9 +48,6 @@ int main(int argc, const char *argv[])
             "%1\n").Arg(configPath));
     }
 
-    (void)argc;
-    (void)argv;
-
     auto config = std::shared_ptr<objects::ServerConfig>(new objects::WorldConfig());
     world::WorldServer server(config, configPath);
 

@@ -49,7 +49,7 @@
 #include <QTcpSocket>
 #include <PopIgnore.h>
 
-// libfrost
+// libcomp
 #include <Endian.h>
 #include <Convert.h>
 

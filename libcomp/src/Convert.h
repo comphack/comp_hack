@@ -56,8 +56,8 @@ typedef enum
  *   it is assumed that the string is null terminated.
  * @returns The converted string or an empty string if there was a conversion
  *   error.
- * @sa libfrost::Convert::ToEncoding
- * @sa libfrost::Convert::SizeEncoded
+ * @sa libcomp::Convert::ToEncoding
+ * @sa libcomp::Convert::SizeEncoded
  */
 String FromEncoding(Encoding_t encoding, const char *szString, int size = -1);
 
@@ -72,8 +72,8 @@ String FromEncoding(Encoding_t encoding, const char *szString, int size = -1);
  *   it is assumed that the string is null terminated.
  * @returns The converted string or an empty string if there was a conversion
  *   error.
- * @sa libfrost::Convert::ToEncoding
- * @sa libfrost::Convert::SizeEncoded
+ * @sa libcomp::Convert::ToEncoding
+ * @sa libcomp::Convert::SizeEncoded
  */
 String FromEncoding(Encoding_t encoding, const std::vector<char>& str);
 
@@ -87,8 +87,8 @@ String FromEncoding(Encoding_t encoding, const std::vector<char>& str);
  * @param nullTerminator Indicates if a null terminator should be added.
  * @returns The converted string or an empty string if there was a conversion
  *   error.
- * @sa libfrost::Convert::FromEncoding
- * @sa libfrost::Convert::SizeEncoded
+ * @sa libcomp::Convert::FromEncoding
+ * @sa libcomp::Convert::SizeEncoded
  */
 std::vector<char> ToEncoding(Encoding_t encoding, const String& str,
     bool nullTerminator = true);

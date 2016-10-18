@@ -1,0 +1,805 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1000</width>
+    <height>700</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>COMP_hack Capture Grep</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QVBoxLayout" name="verticalLayout_2">
+    <item>
+     <widget class="QSplitter" name="splitter">
+      <property name="orientation">
+       <enum>Qt::Horizontal</enum>
+      </property>
+      <widget class="QListView" name="packetList"/>
+      <widget class="QGroupBox" name="packetBox">
+       <property name="title">
+        <string>Selected Packet</string>
+       </property>
+       <property name="flat">
+        <bool>false</bool>
+       </property>
+       <layout class="QVBoxLayout" name="verticalLayout">
+        <item>
+         <widget class="QLabel" name="packetDetails">
+          <property name="alignment">
+           <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+          </property>
+          <property name="wordWrap">
+           <bool>true</bool>
+          </property>
+          <property name="textInteractionFlags">
+           <set>Qt::LinksAccessibleByMouse|Qt::TextSelectableByMouse</set>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QFrame" name="frame">
+          <property name="frameShape">
+           <enum>QFrame::StyledPanel</enum>
+          </property>
+          <property name="frameShadow">
+           <enum>QFrame::Sunken</enum>
+          </property>
+          <property name="lineWidth">
+           <number>1</number>
+          </property>
+          <layout class="QVBoxLayout" name="verticalLayout_4">
+           <property name="margin">
+            <number>0</number>
+           </property>
+           <item>
+            <widget class="QScrollArea" name="scrollArea">
+             <property name="frameShape">
+              <enum>QFrame::NoFrame</enum>
+             </property>
+             <property name="widgetResizable">
+              <bool>true</bool>
+             </property>
+             <widget class="QWidget" name="scrollAreaWidgetContents">
+              <property name="geometry">
+               <rect>
+                <x>0</x>
+                <y>0</y>
+                <width>693</width>
+                <height>436</height>
+               </rect>
+              </property>
+              <layout class="QVBoxLayout" name="verticalLayout_3">
+               <property name="margin">
+                <number>0</number>
+               </property>
+               <item>
+                <widget class="HexView" name="packetData" native="true">
+                 <property name="sizePolicy">
+                  <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
+                   <horstretch>0</horstretch>
+                   <verstretch>0</verstretch>
+                  </sizepolicy>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </widget>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="statusLabel">
+          <property name="textInteractionFlags">
+           <set>Qt::LinksAccessibleByMouse|Qt::TextSelectableByMouse</set>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="Line" name="line">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <layout class="QVBoxLayout" name="verticalLayout_5">
+          <item>
+           <layout class="QGridLayout" name="gridLayout_2">
+            <item row="0" column="2">
+             <widget class="QLabel" name="s32Label">
+              <property name="text">
+               <string>&lt;b&gt;int32_t:&lt;/b&gt;</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="5">
+             <widget class="QLabel" name="f64">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="toolTip">
+               <string>A 64-bit floating point number starting at offset.</string>
+              </property>
+              <property name="textInteractionFlags">
+               <set>Qt::LinksAccessibleByMouse|Qt::TextSelectableByMouse</set>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="0">
+             <widget class="QLabel" name="s8Label">
+              <property name="text">
+               <string>&lt;b&gt;int8_t:&lt;/b&gt;</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="0">
+             <widget class="QLabel" name="u8Label">
+              <property name="text">
+               <string>&lt;b&gt;uint8_t:&lt;/b&gt;</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+              </property>
+             </widget>
+            </item>
+            <item row="2" column="0">
+             <widget class="QLabel" name="s16Label">
+              <property name="text">
+               <string>&lt;b&gt;int16_t:&lt;/b&gt;</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="1">
+             <widget class="QLabel" name="u8">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="toolTip">
+               <string>A 8-bit unsigned number starting at offset.</string>
+              </property>
+              <property name="textInteractionFlags">
+               <set>Qt::LinksAccessibleByMouse|Qt::TextSelectableByMouse</set>
+              </property>
+             </widget>
+            </item>
+            <item row="3" column="0">
+             <widget class="QLabel" name="u16Label">
+              <property name="text">
+               <string>&lt;b&gt;uint16_t:&lt;/b&gt;</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="1">
+             <widget class="QLabel" name="s8">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="toolTip">
+               <string>A 8-bit signed number starting at offset.</string>
+              </property>
+              <property name="textInteractionFlags">
+               <set>Qt::LinksAccessibleByMouse|Qt::TextSelectableByMouse</set>
+              </property>
+             </widget>
+            </item>
+            <item row="2" column="1">
+             <widget class="QLabel" name="s16">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="toolTip">
+               <string>A 16-bit signed number starting at offset.</string>
+              </property>
+              <property name="textInteractionFlags">
+               <set>Qt::LinksAccessibleByMouse|Qt::TextSelectableByMouse</set>
+              </property>
+             </widget>
+            </item>
+            <item row="3" column="1">
+             <widget class="QLabel" name="u16">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="toolTip">
+               <string>A 16-bit unsigned number starting at offset.</string>
+              </property>
+              <property name="textInteractionFlags">
+               <set>Qt::LinksAccessibleByMouse|Qt::TextSelectableByMouse</set>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="2">
+             <widget class="QLabel" name="u32Label">
+              <property name="text">
+               <string>&lt;b&gt;uint32_t:&lt;/b&gt;</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="3">
+             <widget class="QLabel" name="s32">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="toolTip">
+               <string>A 32-bit signed number starting at offset.</string>
+              </property>
+              <property name="textInteractionFlags">
+               <set>Qt::LinksAccessibleByMouse|Qt::TextSelectableByMouse</set>
+              </property>
+             </widget>
+            </item>
+            <item row="2" column="2">
+             <widget class="QLabel" name="s64Label">
+              <property name="text">
+               <string>&lt;b&gt;int64_t:&lt;/B&gt;</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="3">
+             <widget class="QLabel" name="u32">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="toolTip">
+               <string>A 32-bit unsigned number starting at offset.</string>
+              </property>
+              <property name="textInteractionFlags">
+               <set>Qt::LinksAccessibleByMouse|Qt::TextSelectableByMouse</set>
+              </property>
+             </widget>
+            </item>
+            <item row="2" column="3">
+             <widget class="QLabel" name="s64">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="toolTip">
+               <string>A 64-bit signed number starting at offset.</string>
+              </property>
+              <property name="textInteractionFlags">
+               <set>Qt::LinksAccessibleByMouse|Qt::TextSelectableByMouse</set>
+              </property>
+             </widget>
+            </item>
+            <item row="3" column="3">
+             <widget class="QLabel" name="u64">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="toolTip">
+               <string>A 64-bit signed number starting at offset.</string>
+              </property>
+              <property name="textInteractionFlags">
+               <set>Qt::LinksAccessibleByMouse|Qt::TextSelectableByMouse</set>
+              </property>
+             </widget>
+            </item>
+            <item row="3" column="2">
+             <widget class="QLabel" name="u64Label">
+              <property name="text">
+               <string>&lt;b&gt;uint64_t:&lt;/b&gt;</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="5">
+             <widget class="QLabel" name="f32">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="toolTip">
+               <string>A 32-bit floating point number starting at offset.</string>
+              </property>
+              <property name="textInteractionFlags">
+               <set>Qt::LinksAccessibleByMouse|Qt::TextSelectableByMouse</set>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="4">
+             <widget class="QLabel" name="f32Label">
+              <property name="text">
+               <string>&lt;b&gt;float:&lt;/b&gt;</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="4">
+             <widget class="QLabel" name="f64Label">
+              <property name="text">
+               <string>&lt;b&gt;double:&lt;/b&gt;</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+              </property>
+             </widget>
+            </item>
+            <item row="2" column="5">
+             <widget class="QLabel" name="time">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="toolTip">
+               <string>A 32-bit time value starting at offset.</string>
+              </property>
+              <property name="textInteractionFlags">
+               <set>Qt::LinksAccessibleByMouse|Qt::TextSelectableByMouse</set>
+              </property>
+             </widget>
+            </item>
+            <item row="2" column="4">
+             <widget class="QLabel" name="timeLabel">
+              <property name="text">
+               <string>&lt;b&gt;time_t:&lt;/b&gt;</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+              </property>
+             </widget>
+            </item>
+            <item row="3" column="5">
+             <widget class="QLabel" name="binary">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="toolTip">
+               <string>A 8-bit binary sequence starting at offset.</string>
+              </property>
+              <property name="textInteractionFlags">
+               <set>Qt::LinksAccessibleByMouse|Qt::TextSelectableByMouse</set>
+              </property>
+             </widget>
+            </item>
+            <item row="3" column="4">
+             <widget class="QLabel" name="binaryLabel">
+              <property name="text">
+               <string>&lt;b&gt;binary:&lt;/b&gt;</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item>
+           <layout class="QHBoxLayout" name="horizontalLayout_2">
+            <item>
+             <widget class="QCheckBox" name="hexButton">
+              <property name="toolTip">
+               <string>Show values in hex instead of decimal.</string>
+              </property>
+              <property name="text">
+               <string>Show Hexadecimal Values</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QRadioButton" name="littleEndian">
+              <property name="toolTip">
+               <string>Interpret values in little endian byte order.</string>
+              </property>
+              <property name="text">
+               <string>Little Endian (System Order)</string>
+              </property>
+              <property name="checked">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QRadioButton" name="bigEndian">
+              <property name="toolTip">
+               <string>Interpret values in big endian byte order.</string>
+              </property>
+              <property name="text">
+               <string>Big Endian (Network Order)</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+         </layout>
+        </item>
+       </layout>
+      </widget>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QMenuBar" name="menubar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>1000</width>
+     <height>20</height>
+    </rect>
+   </property>
+   <widget class="QMenu" name="menu_Edit">
+    <property name="title">
+     <string>&amp;Edit</string>
+    </property>
+    <addaction name="action_Find"/>
+    <addaction name="actionFindSelected"/>
+    <addaction name="separator"/>
+    <addaction name="actionClipboardCP1252"/>
+    <addaction name="actionClipboardCP932"/>
+    <addaction name="actionClipboardUTF8"/>
+    <addaction name="separator"/>
+    <addaction name="actionClipboardCArray"/>
+    <addaction name="actionClipboardHexDump"/>
+    <addaction name="actionClipboardRawData"/>
+    <addaction name="actionClipboardU32Array"/>
+   </widget>
+   <widget class="QMenu" name="menu_View">
+    <property name="title">
+     <string>&amp;View</string>
+    </property>
+    <addaction name="actionPacketFilter"/>
+    <addaction name="separator"/>
+    <addaction name="actionStringEncoding"/>
+    <addaction name="actionStringCP1252"/>
+    <addaction name="actionStringCP932"/>
+    <addaction name="actionStringUTF8"/>
+    <addaction name="separator"/>
+    <addaction name="actionScrollCommandList"/>
+   </widget>
+   <widget class="QMenu" name="menu_File">
+    <property name="title">
+     <string>&amp;File</string>
+    </property>
+    <addaction name="action_Open"/>
+    <addaction name="action_OpenMulti"/>
+    <addaction name="separator"/>
+    <addaction name="action_Live_mode"/>
+    <addaction name="separator"/>
+    <addaction name="actionSettings"/>
+    <addaction name="separator"/>
+    <addaction name="actionFile1"/>
+    <addaction name="actionFile2"/>
+    <addaction name="actionFile3"/>
+    <addaction name="actionFile4"/>
+    <addaction name="actionFile5"/>
+    <addaction name="separator"/>
+    <addaction name="action_Quit"/>
+   </widget>
+   <widget class="QMenu" name="menu_Help">
+    <property name="title">
+     <string>&amp;Help</string>
+    </property>
+    <addaction name="actionAbout"/>
+   </widget>
+   <addaction name="menu_File"/>
+   <addaction name="menu_Edit"/>
+   <addaction name="menu_View"/>
+   <addaction name="menu_Help"/>
+  </widget>
+  <widget class="QStatusBar" name="statusbar"/>
+  <action name="action_Quit">
+   <property name="text">
+    <string>&amp;Quit</string>
+   </property>
+   <property name="toolTip">
+    <string>Quit the application.</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Q</string>
+   </property>
+  </action>
+  <action name="action_Find">
+   <property name="text">
+    <string>&amp;Find</string>
+   </property>
+   <property name="toolTip">
+    <string>Find a value in the packets.</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+F</string>
+   </property>
+  </action>
+  <action name="action_Open">
+   <property name="text">
+    <string>&amp;Open...</string>
+   </property>
+   <property name="toolTip">
+    <string>Open a different capture file.</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+O</string>
+   </property>
+  </action>
+  <action name="action_OpenMulti">
+   <property name="text">
+    <string>Open &amp;multiple...</string>
+   </property>
+   <property name="toolTip">
+    <string>Open multiple capture files.</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+M</string>
+   </property>
+  </action>
+  <action name="action_Live_mode">
+   <property name="text">
+    <string>Enter &amp;Live Mode</string>
+   </property>
+   <property name="toolTip">
+    <string>Capture packets as they arrive from the logger,</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+L</string>
+   </property>
+  </action>
+  <action name="actionFindSelected">
+   <property name="text">
+    <string>Find selected bytes</string>
+   </property>
+   <property name="toolTip">
+    <string>Find selected bytes.</string>
+   </property>
+  </action>
+  <action name="actionClipboardCP1252">
+   <property name="text">
+    <string>Copy selected to clipboard as CP1252</string>
+   </property>
+   <property name="toolTip">
+    <string>Copy selected to clipboard as CP1252.</string>
+   </property>
+  </action>
+  <action name="actionClipboardCP932">
+   <property name="text">
+    <string>Copy selected to clipboard as CP932</string>
+   </property>
+   <property name="toolTip">
+    <string>Copy selected to clipboard as CP932.</string>
+   </property>
+  </action>
+  <action name="actionClipboardUTF8">
+   <property name="text">
+    <string>Copy selected to clipboard as UTF-8</string>
+   </property>
+   <property name="toolTip">
+    <string>Copy selected to clipboard as UTF-8.</string>
+   </property>
+  </action>
+  <action name="actionClipboardCArray">
+   <property name="text">
+    <string>Copy selected to clipboard as C array</string>
+   </property>
+   <property name="toolTip">
+    <string>Copy selected to clipboard as C array.</string>
+   </property>
+  </action>
+  <action name="actionClipboardHexDump">
+   <property name="text">
+    <string>Copy selected to clipboard as hex dump</string>
+   </property>
+   <property name="toolTip">
+    <string>Copy selected to clipboard as hex dump.</string>
+   </property>
+  </action>
+  <action name="actionClipboardRawData">
+   <property name="text">
+    <string>Copy selected to clipboard as raw data</string>
+   </property>
+   <property name="toolTip">
+    <string>Copy selected to clipboard as raw data.</string>
+   </property>
+  </action>
+  <action name="actionStringEncoding">
+   <property name="text">
+    <string>String Encoding</string>
+   </property>
+   <property name="toolTip">
+    <string>Select the string encoding to display text with.</string>
+   </property>
+  </action>
+  <action name="actionStringCP932">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>CP932 (Windows - Japanese)</string>
+   </property>
+   <property name="toolTip">
+    <string>Show text as CP932 (Windows - Japanese).</string>
+   </property>
+  </action>
+  <action name="actionStringUTF8">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>UTF-8 (Unicode)</string>
+   </property>
+   <property name="toolTip">
+    <string>Show text as UTF-8 (Unicode).</string>
+   </property>
+  </action>
+  <action name="actionStringCP1252">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>CP1252 (Windows - English)</string>
+   </property>
+   <property name="toolTip">
+    <string>Show text as CP1252 (Windows - English).</string>
+   </property>
+  </action>
+  <action name="actionAddToBlackList">
+   <property name="text">
+    <string>Add to Black List</string>
+   </property>
+   <property name="toolTip">
+    <string>Add to current command to the black list.</string>
+   </property>
+  </action>
+  <action name="actionAddToWhiteList">
+   <property name="text">
+    <string>Add to White List</string>
+   </property>
+   <property name="toolTip">
+    <string>Add to current command to the white list.</string>
+   </property>
+  </action>
+  <action name="actionCopyToClipboard">
+   <property name="text">
+    <string>Copy XML data to clipboard</string>
+   </property>
+   <property name="toolTip">
+    <string>Copy XML data to clipboard.</string>
+   </property>
+  </action>
+  <action name="actionClipboardU32Array">
+   <property name="text">
+    <string>Copy selected to clipboard as uint32_t array</string>
+   </property>
+   <property name="toolTip">
+    <string>Copy selected to clipboard as uint32_t array.</string>
+   </property>
+  </action>
+  <action name="actionPacketFilter">
+   <property name="text">
+    <string>Packet Filter...</string>
+   </property>
+   <property name="toolTip">
+    <string>Configure the packet filter.</string>
+   </property>
+  </action>
+  <action name="actionFile1">
+   <property name="text">
+    <string>file1</string>
+   </property>
+  </action>
+  <action name="actionFile2">
+   <property name="text">
+    <string>file2</string>
+   </property>
+  </action>
+  <action name="actionFile3">
+   <property name="text">
+    <string>file3</string>
+   </property>
+  </action>
+  <action name="actionFile4">
+   <property name="text">
+    <string>file4</string>
+   </property>
+  </action>
+  <action name="actionFile5">
+   <property name="text">
+    <string>file5</string>
+   </property>
+  </action>
+  <action name="actionSettings">
+   <property name="text">
+    <string>&amp;Settings...</string>
+   </property>
+   <property name="toolTip">
+    <string>Display the settings dialog.</string>
+   </property>
+  </action>
+  <action name="actionScrollCommandList">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Scroll Command List</string>
+   </property>
+   <property name="toolTip">
+    <string>Scroll the command list as new packets are added.</string>
+   </property>
+  </action>
+  <action name="actionAbout">
+   <property name="text">
+    <string>&amp;About...</string>
+   </property>
+   <property name="toolTip">
+    <string>Show the about dialog.</string>
+   </property>
+  </action>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>HexView</class>
+   <extends>QWidget</extends>
+   <header>HexView.h</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
+ <resources/>
+ <connections/>
+</ui>

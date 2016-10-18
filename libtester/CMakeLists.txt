@@ -41,6 +41,8 @@ ADD_LIBRARY(tester STATIC ${${PROJECT_NAME}_SRCS}
 
 ADD_DEPENDENCIES(tester asio)
 
+SET_TARGET_PROPERTIES(tester PROPERTIES FOLDER "Libraries")
+
 TARGET_LINK_LIBRARIES(tester ${CMAKE_THREAD_LIBS_INIT} comp tinyxml2)
 
 # List of unit tests to add to CTest.

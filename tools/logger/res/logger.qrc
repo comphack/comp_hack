@@ -1,0 +1,6 @@
+<!DOCTYPE RCC><RCC version="1.0">
+<qresource>
+    <file>logger.png</file>
+    <file alias="LICENSE">../../../LICENSE.AGPL</file>
+</qresource>
+</RCC>

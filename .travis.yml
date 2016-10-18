@@ -58,7 +58,7 @@ matrix:
 
 before_install:
   - sudo apt-get update -q
-  - sudo apt-get install libssl-dev doxygen libsqlite3-dev sqlite3 libuv-dev unzip -y
+  - sudo apt-get install libssl-dev doxygen libsqlite3-dev sqlite3 libuv-dev libqt5webkit5-dev unzip -y
   - export cwd="`pwd`"
   - sudo mkdir -p /opt/ninja/bin
   - cd /opt/ninja/bin

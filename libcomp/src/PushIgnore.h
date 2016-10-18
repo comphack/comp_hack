@@ -55,4 +55,6 @@
 #if defined(_MSC_VER)
 #pragma warning(push)
 #pragma warning(disable: 4244) // possible loss of data
+#pragma warning(disable: 4251) // class A needs to have dll-interface to be used by clients of class B
+#pragma warning(disable: 4800) // forcing value to bool 'true' or 'false' (performance warning)
 #endif // defined(_MSC_VER)

@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+ADD_SUBDIRECTORY(capgrep)
 ADD_SUBDIRECTORY(decrypt)
 ADD_SUBDIRECTORY(encrypt)
+ADD_SUBDIRECTORY(logger)
 ADD_SUBDIRECTORY(objgen)

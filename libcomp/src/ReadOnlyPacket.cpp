@@ -34,23 +34,8 @@
 
 #ifdef _WIN32
 #include <windows.h>
-
-#ifdef _MSC_VER
-/// Macro to add data to the working buffer for the current hex dump line being
-/// generated. Use the safe sprintf to avoid warnings with MSVC.
-#define dump_print(...) sprintf(bufferp, __VA_ARGS__)    //todo: figure out why this causes a run-time error: sprintf_s(bufferp, 75, __VA_ARGS__)
-#else // _MSC_VER
-/// Macro to add data to the working buffer for the current hex dump line being
-/// generated.
-#define dump_print(...) sprintf(bufferp, __VA_ARGS__)
-#endif // _MSC_VER
-
 #else // _WIN32
 #include <sys/socket.h>
-
-/// Macro to add data to the working buffer for the current hex dump line being
-/// generated.
-#define dump_print(...) sprintf(bufferp, __VA_ARGS__)
 #endif // _WIN32
 
 #include <cstring>
@@ -690,20 +675,19 @@ String ReadOnlyPacket::Dump() const
     }
 
     uint32_t line = 0;
-    char buffer[75];
 
     std::list<String> final;
 
     // Loop for each line of the hex dump.
     while(line < mSize)
     {
-        // Reset the buffer pointer to the beginning of the working buffer.
-        char *bufferp = buffer;
+        libcomp::String buffer;
 
         // Print line number (add it to the working buffer). If the current
         // position is on the first byte of this line, print the left side of
         // the position marker.
-        bufferp += dump_print(mPosition == line ? "%04X {" : "%04X  ", line);
+        buffer += libcomp::String(mPosition == line ? "%1 {" : "%1  ").Arg(
+            line, 4, 16, '0');
 
         // Loop and print 8 bytes of the ReadOnlypacket. If the current byte is past
         // the end of the ReadOnlypacket, blank spaces will be written. If the current
@@ -715,26 +699,26 @@ String ReadOnlyPacket::Dump() const
         {
             if(i >= mSize)
             {
-                bufferp += dump_print(mPosition == i ? "  }" : "   ");
+                buffer += mPosition == i ? "  }" : "   ";
             }
             else if(mPosition == i)
             {
-                bufferp += dump_print("%02X}", mData[i]);
+                buffer += libcomp::String("%1}").Arg(mData[i], 2, 16, '0');
             }
-            else if(mPosition == (i + 1))
+            else if(mPosition == (i + 1) && (i + 1) != (line + 8))
             {
-                bufferp += dump_print("%02X{", mData[i]);
+                buffer += libcomp::String("%1{").Arg(mData[i], 2, 16, '0');
             }
             else
             {
-                bufferp += dump_print("%02X ", mData[i]);
+                buffer += libcomp::String("%1 ").Arg(mData[i], 2, 16, '0');
             }
         }
 
-        // Place a gap between the two sets of 8 bytes. Also place the right
-        // size of the current position marker if the current position is the
-        // last byte in this set of 8 bytes.
-        bufferp += dump_print(mPosition == (line + 8) ? "}" : " ");
+        // Place a gap between the two sets of 8 bytes. Also place the left
+        // side of the current position marker if the current position is the
+        // first byte in the next set of 8 bytes.
+        buffer += mPosition == (line + 8) ? "{" : " ";
 
         // Loop and print 8 bytes of the ReadOnlypacket. If the current byte is past
         // the end of the ReadOnlypacket, blank spaces will be written. If the current
@@ -745,44 +729,61 @@ String ReadOnlyPacket::Dump() const
         for(uint32_t i = (line + 8); i < (line + 16); ++i)
         {
             if(i >= mSize)
-                bufferp += dump_print(mPosition == i ? "  }" : "   ");
+            {
+                buffer += mPosition == i ? "  }" : "   ";
+            }
             else if(mPosition == i)
-                bufferp += dump_print("%02X}", mData[i]);
-            else if(mPosition == (i + 1))
-                bufferp += dump_print("%02X{", mData[i]);
+            {
+                buffer += libcomp::String("%1}").Arg(mData[i], 2, 16, '0');
+            }
+            else if(mPosition == (i + 1) && (i + 1) != (line + 16))
+            {
+                buffer += libcomp::String("%1{").Arg(mData[i], 2, 16, '0');
+            }
             else
-                bufferp += dump_print("%02X ", mData[i]);
+            {
+                buffer += libcomp::String("%1 ").Arg(mData[i], 2, 16, '0');
+            }
         }
 
         // Print a space between the hex dump and the ASCII representation.
-        bufferp += dump_print(" ");
+        buffer += " ";
 
         // Print the ASCII character the the byte represents. Only printable
         // ASCII is included; all other characters are printed as a dot.
         for(uint32_t i = line; i < (line + 8) && i < mSize; ++i)
         {
             uint8_t val = mData[i];
-            bufferp += dump_print("%c",
-                (val >= 0x20 && val < 0x7f) ? val : '.');
+
+            buffer += libcomp::String(1, (val >= 0x20 && val < 0x7f) ?
+                static_cast<char>(val) : '.');
         }
 
         // Print a space between the two sets of 8 ASCII characters.
-        bufferp += dump_print(" ");
+        buffer += " ";
 
         // Print the ASCII character the the byte represents. Only printable
         // ASCII is included; all other characters are printed as a dot.
         for(uint32_t i = (line + 8); i < (line + 16) && i < mSize; ++i)
         {
             uint8_t val = mData[i];
-            bufferp += dump_print("%c",
-                (val >= 0x20 && val < 0x7f) ? val : '.');
+
+            buffer += libcomp::String(1, (val >= 0x20 && val < 0x7f) ?
+                static_cast<char>(val) : '.');
         }
 
         // Advance the line by 16 bytes
         line += 16;
 
         // Append the generated line to the output string.
-        final.push_back(String(buffer, (size_t)(bufferp - buffer)));
+        final.push_back(buffer);
+    }
+
+    // If the cursor is at the end and there is a multiple of 16 bytes in the
+    // packet, make another line for the cursor position.
+    if(mPosition == mSize && 0 == (mSize % 16))
+    {
+        final.push_back(libcomp::String("%1 {  }").Arg(line, 4, 16, '0'));
     }
 
     // Join all the lines of the hex dump together and return the final string.

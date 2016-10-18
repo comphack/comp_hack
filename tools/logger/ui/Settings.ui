@@ -1,0 +1,210 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>Settings</class>
+ <widget class="QWidget" name="Settings">
+  <property name="windowModality">
+   <enum>Qt::WindowModal</enum>
+  </property>
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>324</width>
+    <height>391</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>COMP_hack Logger Settings</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <widget class="QLabel" name="usLabel">
+     <property name="text">
+      <string>&lt;b&gt;US Version&lt;/b&gt;</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayout_5">
+     <item>
+      <layout class="QHBoxLayout" name="horizontalLayout_6">
+       <property name="spacing">
+        <number>0</number>
+       </property>
+       <item>
+        <widget class="QLabel" name="oneA">
+         <property name="text">
+          <string>1.</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QSpinBox" name="usVersion">
+         <property name="minimum">
+          <number>270</number>
+         </property>
+         <property name="maximum">
+          <number>999</number>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="postLabel">
+         <property name="text">
+          <string>U</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </item>
+     <item>
+      <widget class="QLineEdit" name="usAddress"/>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="QLabel" name="jpLabel">
+     <property name="text">
+      <string>&lt;b&gt;JP Version&lt;/b&gt;</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayout_2">
+     <item>
+      <layout class="QHBoxLayout" name="horizontalLayout_4">
+       <property name="spacing">
+        <number>0</number>
+       </property>
+       <item>
+        <widget class="QLabel" name="oneB">
+         <property name="text">
+          <string>1.</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QSpinBox" name="jpVersion">
+         <property name="minimum">
+          <number>301</number>
+         </property>
+         <property name="maximum">
+          <number>999</number>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </item>
+     <item>
+      <widget class="QLineEdit" name="jpAddress"/>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayout_3">
+     <item>
+      <widget class="QLabel" name="jpWebAuthLabel">
+       <property name="text">
+        <string>WebAuth:</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLineEdit" name="jpWebAuth"/>
+     </item>
+     <item>
+      <widget class="QCheckBox" name="jpWebAuthEnabled"/>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="QGroupBox" name="clientBox">
+     <property name="title">
+      <string>Clients</string>
+     </property>
+     <layout class="QVBoxLayout" name="verticalLayout_4">
+      <item>
+       <widget class="QListWidget" name="clientList"/>
+      </item>
+      <item>
+       <layout class="QHBoxLayout" name="horizontalLayout_9">
+        <item>
+         <widget class="QPushButton" name="addClientButton">
+          <property name="text">
+           <string>&amp;Add</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="removeClientButton">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
+          <property name="text">
+           <string>&amp;Remove</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QCheckBox" name="lobbyCheckbox">
+     <property name="text">
+      <string>Save lobby captures (*.comp)</string>
+     </property>
+     <property name="checked">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QCheckBox" name="channelCheckbox">
+     <property name="text">
+      <string>Save channel captures (*.hack)</string>
+     </property>
+     <property name="checked">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QCheckBox" name="closeWarning">
+     <property name="text">
+      <string>Display the shutdown warning.</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QDialogButtonBox" name="buttonBox">
+     <property name="standardButtons">
+      <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
+     </property>
+    </widget>
+   </item>
+  </layout>
+  <zorder>buttonBox</zorder>
+  <zorder>jpLabel</zorder>
+  <zorder>clientBox</zorder>
+  <zorder>usLabel</zorder>
+  <zorder>closeWarning</zorder>
+  <zorder>lobbyCheckbox</zorder>
+  <zorder>channelCheckbox</zorder>
+ </widget>
+ <tabstops>
+  <tabstop>usVersion</tabstop>
+  <tabstop>usAddress</tabstop>
+  <tabstop>jpVersion</tabstop>
+  <tabstop>jpAddress</tabstop>
+  <tabstop>jpWebAuth</tabstop>
+  <tabstop>jpWebAuthEnabled</tabstop>
+  <tabstop>clientList</tabstop>
+  <tabstop>addClientButton</tabstop>
+  <tabstop>removeClientButton</tabstop>
+  <tabstop>buttonBox</tabstop>
+ </tabstops>
+ <resources/>
+ <connections/>
+</ui>

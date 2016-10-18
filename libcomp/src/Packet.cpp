@@ -35,23 +35,8 @@
 
 #ifdef _WIN32
 #include <windows.h>
-
-#ifdef _MSC_VER
-/// Macro to add data to the working buffer for the current hex dump line being
-/// generated. Use the safe sprintf to avoid warnings with MSVC.
-#define dump_print(...) sprintf_s(bufferp, 75, __VA_ARGS__)
-#else // _MSC_VER
-/// Macro to add data to the working buffer for the current hex dump line being
-/// generated.
-#define dump_print(...) sprintf(bufferp, __VA_ARGS__)
-#endif // _MSC_VER
-
 #else // _WIN32
 #include <sys/socket.h>
-
-/// Macro to add data to the working buffer for the current hex dump line being
-/// generated.
-#define dump_print(...) sprintf(bufferp, __VA_ARGS__)
 #endif // _WIN32
 
 #include <cstring>

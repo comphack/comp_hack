@@ -83,7 +83,7 @@ SET(${PROJECT_NAME}_SRCS
     src/PacketException.cpp
     #src/PacketScript.cpp
     src/PlatformWindows.cpp
-    #src/PEFile.cpp
+    src/PEFile.cpp
     src/ReadOnlyPacket.cpp
     src/RingBuffer.cpp
     src/ScriptEngine.cpp
@@ -138,8 +138,8 @@ SET(${PROJECT_NAME}_HDRS
     src/Packet.h
     src/PacketException.h
     #src/PacketScript.h
-    #src/PEFile.h
-    #src/PEFormat.h
+    src/PEFile.h
+    src/PEFormat.h
     #src/Platform.h
     #src/PlatformLinux.h
     #src/PlatformWindows.h
@@ -196,6 +196,8 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
 ADD_LIBRARY(comp STATIC ${${PROJECT_NAME}_SRCS} ${${PROJECT_NAME}_HDRS}
     ${${PROJECT_NAME}_MOC_SRCS} ${${PROJECT_NAME}_STRUCTS})
 
+SET_TARGET_PROPERTIES(comp PROPERTIES FOLDER "Libraries")
+
 TARGET_LINK_LIBRARIES(comp ${OPENSSL_LIBRARIES} ${ZLIB_LIBRARIES}
     ${SYSTEM_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} sqlite3
     squirrel sqstdlib ttvfs ttvfs_zip tinyxml2 cassandra uv)
@@ -211,7 +213,10 @@ SET(${PROJECT_NAME}_TEST_SRCS
     Cassandra
     Convert
     Decrypt
-    DiffieHellman
+
+    # This test can take too long so disable it for now.
+    # DiffieHellman
+
     GeneratedObjects
     Packet
     ScriptEngine

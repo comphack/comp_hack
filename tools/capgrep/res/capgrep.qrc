@@ -1,0 +1,14 @@
+<!DOCTYPE RCC><RCC version="1.0">
+<qresource>
+    <file>packets.xml</file>
+    <file>document-open.png</file>
+    <file>a.png</file>
+    <file>b.png</file>
+    <file>c.png</file>
+    <file>d.png</file>
+    <file>e.png</file>
+    <file>f.png</file>
+    <file>capgrep.png</file>
+    <file alias="LICENSE">../../../LICENSE.AGPL</file>
+</qresource>
+</RCC>

@@ -1,0 +1,272 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>OpenMulti</class>
+ <widget class="QDialog" name="OpenMulti">
+  <property name="windowModality">
+   <enum>Qt::WindowModal</enum>
+  </property>
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>400</width>
+    <height>100</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Open Multiple Captures</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <layout class="QGridLayout" name="gridLayout">
+     <item row="0" column="0">
+      <widget class="QLabel" name="iconA">
+       <property name="pixmap">
+        <pixmap resource="../res/capgrep.qrc">:/a.png</pixmap>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignCenter</set>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="1">
+      <widget class="QComboBox" name="pathA">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="toolTip">
+        <string>Path to the capture file.
+Use the drop-down to see recent files.</string>
+       </property>
+       <property name="editable">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="2">
+      <widget class="QPushButton" name="browseA">
+       <property name="toolTip">
+        <string>Browse for a capture file.</string>
+       </property>
+       <property name="icon">
+        <iconset resource="../res/capgrep.qrc">
+         <normaloff>:/document-open.png</normaloff>:/document-open.png</iconset>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="0">
+      <widget class="QLabel" name="iconB">
+       <property name="pixmap">
+        <pixmap resource="../res/capgrep.qrc">:/b.png</pixmap>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignCenter</set>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="1">
+      <widget class="QComboBox" name="pathB">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="toolTip">
+        <string>Path to the capture file.
+Use the drop-down to see recent files.</string>
+       </property>
+       <property name="editable">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="2">
+      <widget class="QPushButton" name="browseB">
+       <property name="toolTip">
+        <string>Browse for a capture file.</string>
+       </property>
+       <property name="icon">
+        <iconset resource="../res/capgrep.qrc">
+         <normaloff>:/document-open.png</normaloff>:/document-open.png</iconset>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="0">
+      <widget class="QLabel" name="iconC">
+       <property name="pixmap">
+        <pixmap resource="../res/capgrep.qrc">:/c.png</pixmap>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignCenter</set>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="1">
+      <widget class="QComboBox" name="pathC">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="toolTip">
+        <string>Path to the capture file.
+Use the drop-down to see recent files.</string>
+       </property>
+       <property name="editable">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="2">
+      <widget class="QPushButton" name="browseC">
+       <property name="toolTip">
+        <string>Browse for a capture file.</string>
+       </property>
+       <property name="icon">
+        <iconset resource="../res/capgrep.qrc">
+         <normaloff>:/document-open.png</normaloff>:/document-open.png</iconset>
+       </property>
+      </widget>
+     </item>
+     <item row="3" column="0">
+      <widget class="QLabel" name="iconD">
+       <property name="pixmap">
+        <pixmap resource="../res/capgrep.qrc">:/d.png</pixmap>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignCenter</set>
+       </property>
+      </widget>
+     </item>
+     <item row="3" column="1">
+      <widget class="QComboBox" name="pathD">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="toolTip">
+        <string>Path to the capture file.
+Use the drop-down to see recent files.</string>
+       </property>
+       <property name="editable">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+     <item row="3" column="2">
+      <widget class="QPushButton" name="browseD">
+       <property name="toolTip">
+        <string>Browse for a capture file.</string>
+       </property>
+       <property name="icon">
+        <iconset resource="../res/capgrep.qrc">
+         <normaloff>:/document-open.png</normaloff>:/document-open.png</iconset>
+       </property>
+      </widget>
+     </item>
+     <item row="4" column="0">
+      <widget class="QLabel" name="iconE">
+       <property name="pixmap">
+        <pixmap resource="../res/capgrep.qrc">:/e.png</pixmap>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignCenter</set>
+       </property>
+      </widget>
+     </item>
+     <item row="4" column="1">
+      <widget class="QComboBox" name="pathE">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="toolTip">
+        <string>Path to the capture file.
+Use the drop-down to see recent files.</string>
+       </property>
+       <property name="editable">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+     <item row="4" column="2">
+      <widget class="QPushButton" name="browseE">
+       <property name="toolTip">
+        <string>Browse for a capture file.</string>
+       </property>
+       <property name="icon">
+        <iconset resource="../res/capgrep.qrc">
+         <normaloff>:/document-open.png</normaloff>:/document-open.png</iconset>
+       </property>
+      </widget>
+     </item>
+     <item row="5" column="0">
+      <widget class="QLabel" name="iconF">
+       <property name="pixmap">
+        <pixmap resource="../res/capgrep.qrc">:/f.png</pixmap>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignCenter</set>
+       </property>
+      </widget>
+     </item>
+     <item row="5" column="1">
+      <widget class="QComboBox" name="pathF">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="toolTip">
+        <string>Path to the capture file.
+Use the drop-down to see recent files.</string>
+       </property>
+       <property name="editable">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+     <item row="5" column="2">
+      <widget class="QPushButton" name="browseF">
+       <property name="toolTip">
+        <string>Browse for a capture file.</string>
+       </property>
+       <property name="icon">
+        <iconset resource="../res/capgrep.qrc">
+         <normaloff>:/document-open.png</normaloff>:/document-open.png</iconset>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="Line" name="line">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QDialogButtonBox" name="buttonBox">
+     <property name="standardButtons">
+      <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources>
+  <include location="../res/capgrep.qrc"/>
+ </resources>
+ <connections/>
+</ui>

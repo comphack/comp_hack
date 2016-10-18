@@ -1,0 +1,16 @@
+[Desktop Entry]
+Name=COMP_hack Logger
+Name[en_US]=COMP_hack Logger
+GenericName=COMP_hack Logger
+GenericName[en_US]=COMP_hack Logger
+X-GNOME-FullName=COMP_hack Logger
+X-GNOME-FullName[en_US]=COMP_hack Logger
+Comment=Megaten Capture Tool
+Comment[en_US]=Megaten Capture Tool
+Exec=comp_logger
+StartupNotify=true
+Terminal=false
+Type=Application
+Icon=comp_hack
+Categories=GNOME;GTK;Game;
+MimeType=text/xml;

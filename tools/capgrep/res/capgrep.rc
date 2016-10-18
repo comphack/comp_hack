@@ -1,0 +1,25 @@
+IDI_ICON1               ICON    DISCARDABLE     "capgrep.ico"
+1 VERSIONINFO
+FILEVERSION     0,0,1,1
+PRODUCTVERSION  0,0,1,1
+BEGIN
+  BLOCK "StringFileInfo"
+  BEGIN
+    BLOCK "040904E4"
+    BEGIN
+      VALUE "CompanyName", "COMP_hack"
+      VALUE "FileDescription", "Packet capture analysis tool"
+      VALUE "FileVersion", "0.0.1.1"
+      VALUE "InternalName", "comp_capgrep"
+      VALUE "LegalCopyright", "Copyright (C) 2010-2016 COMP_hack Team"
+      VALUE "OriginalFilename", "comp_capgrep.exe"
+      VALUE "ProductName", "COMP_hack Capture Grep"
+      VALUE "ProductVersion", "0.0.1 build 1"
+    END
+  END
+
+  BLOCK "VarFileInfo"
+  BEGIN
+    VALUE "Translation", 0x409, 1252
+  END
+END

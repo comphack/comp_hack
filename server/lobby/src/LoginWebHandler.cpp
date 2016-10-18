@@ -55,7 +55,7 @@ LoginHandler::~LoginHandler()
 LoginHandler::ReplacementVariables::ReplacementVariables() : birthday("1"),
     cv("Unknown"), idsave("checked"), auth(false), quit(false)
 {
-    msg = "<span style=\"font-size:12px;color:#4b4;"
+    msg = "<span style=\"font-size:12px;color:#c3c3c3;"
         "font-weight:bold;\"><br>&nbsp;Please enter your "
         "username and password.</span>";
 

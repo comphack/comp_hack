@@ -1,0 +1,16 @@
+[Desktop Entry]
+Name=COMP_hack Capture Grep (Capgrep)
+Name[en_US]=COMP_hack Capture Grep (Capgrep)
+GenericName=COMP_hack Capture Grep (Capgrep)
+GenericName[en_US]=COMP_hack Capture Grep (Capgrep)
+X-GNOME-FullName=COMP_hack Capture Grep (Capgrep)
+X-GNOME-FullName[en_US]=COMP_hack Capture Grep (Capgrep)
+Comment=COMP_hack Capture Analysis Tool
+Comment[en_US]=COMP_hack Capture Analysis Tool
+Exec=comp_capgrep
+StartupNotify=true
+Terminal=false
+Type=Application
+Icon=comp_hack
+Categories=GNOME;GTK;Game;
+MimeType=text/xml;

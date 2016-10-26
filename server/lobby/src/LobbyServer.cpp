@@ -32,6 +32,7 @@
 // libcomp Includes
 #include <DatabaseCassandra.h>
 #include <Log.h>
+#include <ManagerConnection.h>
 #include <ManagerPacket.h>
 
 // Object Includes
@@ -68,6 +69,7 @@ LobbyServer::LobbyServer(std::shared_ptr<objects::ServerConfig> config, const li
 
     // Add the managers to the worker.
     mWorker.AddManager(std::shared_ptr<libcomp::Manager>(new ManagerPacket()));
+    mWorker.AddManager(std::shared_ptr<libcomp::Manager>(new ManagerConnection(std::shared_ptr<asio::io_service>(&mService))));
 
     // Start the worker.
     mWorker.Start();

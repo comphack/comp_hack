@@ -43,7 +43,9 @@ INCLUDE_DIRECTORIES(${CASSANDRA_INCLUDE_DIRS})
 SET(${PROJECT_NAME}_SRCS
     src/LobbyServer.cpp
     src/LoginWebHandler.cpp
+    src/ManagerConnection.cpp
     src/ManagerPacket.cpp
+    src/World.cpp
     src/main.cpp
 
     ${CMAKE_CURRENT_BINARY_DIR}/res/login/ResourceLogin.c
@@ -52,8 +54,10 @@ SET(${PROJECT_NAME}_SRCS
 SET(${PROJECT_NAME}_HDRS
     src/LobbyServer.h
     src/LoginWebHandler.h
+    src/ManagerConnection.h
     src/ManagerPacket.h
     src/PacketParser.h
+    src/World.h
 
     ${CMAKE_CURRENT_BINARY_DIR}/res/login/ResourceLogin.h
 )

@@ -608,6 +608,12 @@ public:
     uint32_t Left() const;
 
     /**
+     * Return the number of bytes that may be added to the end of the packet.
+     * @returns Number of bytes that may be added to the end of the packet.
+     */
+    uint32_t Free() const;
+
+    /**
      * Returns the number of bytes in the packet.
      * @returns Number of bytes in the packet.
      */

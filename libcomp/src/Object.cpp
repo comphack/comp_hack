@@ -26,14 +26,35 @@
 
 #include "Object.h"
 
+// libcomp Includes
+#include <Packet.h>
+#include <PacketStream.h>
+#include <ReadOnlyPacket.h>
+
 using namespace libcomp;
 
-Object::Object()
+Object::Object() : mUUID()
 {
 }
 
 Object::~Object()
 {
+}
+
+bool Object::LoadPacket(libcomp::ReadOnlyPacket& p)
+{
+    ReadOnlyPacketStream buffer(p);
+    std::istream in(&buffer);
+
+    return Load(in, true);
+}
+
+bool Object::SavePacket(libcomp::Packet& p) const
+{
+    PacketStream buffer(p);
+    std::ostream out(&buffer);
+
+    return Save(out, true);
 }
 
 std::unordered_map<std::string, const tinyxml2::XMLElement*>
@@ -80,4 +101,70 @@ std::string Object::GetXmlText(const tinyxml2::XMLElement& root) const
     }
 
     return value;
+}
+
+std::list<std::shared_ptr<Object>> Object::LoadBinaryData(
+    std::istream& stream,
+    const std::function<std::shared_ptr<Object>()>& objectAllocator)
+{
+    std::list<std::shared_ptr<Object>> objects;
+
+    uint16_t objectCount;
+    uint16_t dynamicSizeCount;
+
+    stream.read(reinterpret_cast<char*>(&objectCount),
+        sizeof(objectCount));
+
+    if(!stream.good())
+    {
+        return {};
+    }
+
+    stream.read(reinterpret_cast<char*>(&dynamicSizeCount),
+        sizeof(dynamicSizeCount));
+
+
+    if(!stream.good())
+    {
+        return {};
+    }
+
+    ObjectInStream objectStream(stream);
+
+    for(uint16_t i = 0; i < objectCount; ++i)
+    {
+        for(uint16_t j = 0; j < dynamicSizeCount; ++j)
+        {
+            uint16_t dyanmicSize;
+
+            stream.read(reinterpret_cast<char*>(&dyanmicSize),
+                sizeof(dyanmicSize));
+
+            if(!stream.good())
+            {
+                return {};
+            }
+
+            objectStream.dynamicSizes.push_back(dyanmicSize);
+        }
+    }
+
+    for(uint16_t i = 0; i < objectCount; ++i)
+    {
+        std::shared_ptr<Object> obj(objectAllocator());
+
+        if(!obj->Load(objectStream) || !stream.good())
+        {
+            return {};
+        }
+
+        objects.push_back(obj);
+    }
+
+    return objects;
+}
+
+libobjgen::UUID Object::GetUUID() const
+{
+    return mUUID;
 }

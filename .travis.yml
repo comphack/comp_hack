@@ -100,14 +100,13 @@ script:
   - export CASSANDRA_HOME="/opt/cassandra"
   - export PATH="$PATH:$CASSANDRA_HOME/bin"
   - sudo sh "$CASSANDRA_HOME/bin/cassandra" -R
-  - sleep 10
-  - nodetool status
-  - cqlsh -e "SHOW HOST; SHOW VERSION;"
   - sudo mkdir /etc/comp_hack
   - sudo cp contrib/testing/lobby.xml /etc/comp_hack/
   - mkdir -p build && cd build && cmake -G "${GENERATOR}" .. && cmake --build .
+  - cmake --build . --target doc
+  - cmake --build . --target guide
   - bin/comp_lobby &
   - sleep 10
+  - nodetool status
+  - cqlsh -e "SHOW HOST; SHOW VERSION;"
   - cmake --build . --target Experimental
-  - make doc
-  - make guide

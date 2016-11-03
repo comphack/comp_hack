@@ -70,6 +70,8 @@ public:
     void SetSize(size_t size);
     virtual size_t GetSize() const;
 
+    virtual MetaVariableType_t GetMetaType() const;
+
     virtual std::string GetType() const;
 
     virtual bool IsCoreType() const;
@@ -92,6 +94,10 @@ public:
     virtual std::string GetLoadCode(const Generator& generator,
         const std::string& name, const std::string& stream) const;
     virtual std::string GetSaveCode(const Generator& generator,
+        const std::string& name, const std::string& stream) const;
+    virtual std::string GetLoadRawCode(const Generator& generator,
+        const std::string& name, const std::string& stream) const;
+    virtual std::string GetSaveRawCode(const Generator& generator,
         const std::string& name, const std::string& stream) const;
     virtual std::string GetXmlLoadCode(const Generator& generator,
         const std::string& name, const std::string& doc,

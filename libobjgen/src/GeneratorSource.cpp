@@ -225,6 +225,71 @@ std::string GeneratorSource::Generate(const MetaObject& obj)
     ss << "}" << std::endl;
     ss << std::endl;
 
+    // Load (raw binary)
+    ss << "bool " << obj.GetName()
+        << "::Load(std::istream& stream, bool flat)" << std::endl;
+    ss << "{" << std::endl;
+    ss << Tab() << "(void)flat;" << std::endl;
+    ss << std::endl;
+    ss << Tab() << "bool status = " + GetBaseBooleanReturnValue(obj, "Load(stream, flat)") + ";" << std::endl;
+
+    for(auto it = obj.VariablesBegin(); it != obj.VariablesEnd(); ++it)
+    {
+        auto var = *it;
+
+        if(var->IsInherited()) continue;
+
+        std::string code = var->GetLoadRawCode(*this, GetMemberName(var),
+            "stream");
+
+        if(!code.empty())
+        {
+            ss << std::endl;
+            ss << Tab() << "if(status && !(" << code << "))" << std::endl;
+            ss << Tab() << "{" << std::endl;
+            ss << Tab(2) << "status = false;" << std::endl;
+            ss << Tab() << "}" << std::endl;
+        }
+    }
+
+    ss << std::endl;
+    ss << Tab() << "return status;" << std::endl;
+    ss << "}" << std::endl;
+    ss << std::endl;
+
+    // Save (raw binary)
+    ss << "bool " << obj.GetName()
+        << "::Save(std::ostream& stream, bool flat) const" << std::endl;
+    ss << "{" << std::endl;
+    ss << Tab() << "(void)flat;" << std::endl;
+    ss << Tab() << "(void)stream;" << std::endl; /// @todo fix
+    ss << std::endl;
+    ss << Tab() << "bool status = " + GetBaseBooleanReturnValue(obj, "Save(stream, flat)") + "; " << std::endl;
+
+    for(auto it = obj.VariablesBegin(); it != obj.VariablesEnd(); ++it)
+    {
+        auto var = *it;
+
+        if(var->IsInherited()) continue;
+
+        std::string code = var->GetSaveRawCode(*this, GetMemberName(var),
+            "stream");
+
+        if(!code.empty())
+        {
+            ss << std::endl;
+            ss << Tab() << "if(status && !(" << code << "))" << std::endl;
+            ss << Tab() << "{" << std::endl;
+            ss << Tab(2) << "status = false;" << std::endl;
+            ss << Tab() << "}" << std::endl;
+        }
+    }
+
+    ss << std::endl;
+    ss << Tab() << "return status;" << std::endl;
+    ss << "}" << std::endl;
+    ss << std::endl;
+
     // Load (XML)
     ss << "bool " << obj.GetName()
         << "::Load(const tinyxml2::XMLDocument& doc, " << std::endl;
@@ -295,6 +360,13 @@ std::string GeneratorSource::Generate(const MetaObject& obj)
     ss << Tab() << "}" << std::endl;
     ss << std::endl;
     ss << Tab() << "return status;" << std::endl;
+    ss << "}" << std::endl;
+    ss << std::endl;
+
+    ss << "uint16_t " << obj.GetName()
+        << "::GetDynamicSizeCount() const" << std::endl;
+    ss << "{" << std::endl;
+    ss << Tab() << "return " << obj.GetDynamicSizeCount() << ";" << std::endl;
     ss << "}" << std::endl;
     ss << std::endl;
 

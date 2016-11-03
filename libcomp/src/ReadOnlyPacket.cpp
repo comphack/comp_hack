@@ -638,6 +638,11 @@ uint32_t ReadOnlyPacket::Left() const
     return mSize - mPosition;
 }
 
+uint32_t ReadOnlyPacket::Free() const
+{
+    return MAX_PACKET_SIZE - mSize;
+}
+
 uint32_t ReadOnlyPacket::Size() const
 {
     // Return the size of the data in the ReadOnlypacket.

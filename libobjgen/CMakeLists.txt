@@ -45,6 +45,7 @@ SET(${PROJECT_NAME}_SRCS
     src/MetaObject.cpp
     src/MetaVariable.cpp
     src/MetaVariableArray.cpp
+    src/MetaVariableInt.cpp
     src/MetaVariableList.cpp
     src/MetaVariableReference.cpp
     src/MetaVariableString.cpp

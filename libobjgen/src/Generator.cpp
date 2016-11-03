@@ -46,7 +46,10 @@ Generator::Generator()
         "templates.zip", ResourceTemplate, static_cast<uint32_t>(
         ResourceTemplateSize));
 
-    assert(mVfs.AddArchive(pMemoryFile, ""));
+    if(nullptr == mVfs.AddArchive(pMemoryFile, ""))
+    {
+        assert(false && "Archive did not load!");
+    }
 }
 
 std::vector<char> Generator::GetTemplate(const std::string& name) const

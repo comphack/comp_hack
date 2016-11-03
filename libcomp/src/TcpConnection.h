@@ -46,6 +46,8 @@
 namespace libcomp
 {
 
+class Object;
+
 class TcpConnection
 {
 public:
@@ -80,9 +82,13 @@ public:
     virtual void QueuePacket(Packet& packet);
     virtual void QueuePacket(ReadOnlyPacket& packet);
 
+    virtual bool QueueObject(const Object& obj);
+
     virtual void SendPacket(Packet& packet, bool closeConnection = false);
     virtual void SendPacket(ReadOnlyPacket& packet,
         bool closeConnection = false);
+
+    virtual bool SendObject(const Object& obj, bool closeConnection = false);
 
     void FlushOutgoing(bool closeConnection = false);
 

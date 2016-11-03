@@ -52,6 +52,24 @@ class MetaObject;
 class MetaVariable
 {
 public:
+    enum class MetaVariableType_t
+    {
+        TYPE_S8,
+        TYPE_U8,
+        TYPE_S16,
+        TYPE_U16,
+        TYPE_S32,
+        TYPE_U32,
+        TYPE_S64,
+        TYPE_U64,
+        TYPE_FLOAT,
+        TYPE_DOUBLE,
+        TYPE_STRING,
+        TYPE_ARRAY,
+        TYPE_LIST,
+        TYPE_REF,
+    };
+
     MetaVariable();
     virtual ~MetaVariable() { }
 
@@ -61,6 +79,8 @@ public:
     std::string GetError() const;
 
     virtual size_t GetSize() const = 0;
+
+    virtual MetaVariableType_t GetMetaType() const = 0;
 
     virtual std::string GetType() const = 0;
 
@@ -84,6 +104,8 @@ public:
     virtual bool Save(tinyxml2::XMLDocument& doc,
         tinyxml2::XMLElement& root) const = 0;
 
+    virtual uint16_t GetDynamicSizeCount() const;
+
     virtual std::string GetCodeType() const = 0;
     virtual std::string GetConstructValue() const = 0;
     virtual std::string GetValidCondition(const Generator& generator,
@@ -91,6 +113,10 @@ public:
     virtual std::string GetLoadCode(const Generator& generator,
         const std::string& name, const std::string& stream) const = 0;
     virtual std::string GetSaveCode(const Generator& generator,
+        const std::string& name, const std::string& stream) const = 0;
+    virtual std::string GetLoadRawCode(const Generator& generator,
+        const std::string& name, const std::string& stream) const = 0;
+    virtual std::string GetSaveRawCode(const Generator& generator,
         const std::string& name, const std::string& stream) const = 0;
     virtual std::string GetXmlLoadCode(const Generator& generator,
         const std::string& name, const std::string& doc,
@@ -119,6 +145,8 @@ public:
     virtual std::string GetDestructorCode(const Generator& generator,
         const MetaObject& object, const std::string& name,
         size_t tabLevel = 1) const;
+    virtual std::string GetDynamicSizeCountCode(const Generator& generator,
+        const std::string& name) const;
 
 protected:
     virtual bool BaseLoad(const tinyxml2::XMLElement& element);

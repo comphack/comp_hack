@@ -73,6 +73,8 @@ public:
 
     bool IsValid() const;
 
+    uint16_t GetDynamicSizeCount() const;
+
     bool Load(std::istream& stream);
     bool Save(std::ostream& stream) const;
 

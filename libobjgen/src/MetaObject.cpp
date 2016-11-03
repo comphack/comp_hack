@@ -133,6 +133,18 @@ MetaObject::VariableList::const_iterator MetaObject::VariablesEnd() const
     return mVariables.end();
 }
 
+uint16_t MetaObject::GetDynamicSizeCount() const
+{
+    uint16_t count = 0;
+
+    for(auto var : mVariables)
+    {
+        count = static_cast<uint16_t>(count + var->GetDynamicSizeCount());
+    }
+
+    return count;
+}
+
 bool MetaObject::IsValidIdentifier(const std::string& ident)
 {
     static const std::string keywordStrings[] = {

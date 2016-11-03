@@ -27,12 +27,16 @@
 #ifndef LIBCOMP_SRC_OBJECT_H
 #define LIBCOMP_SRC_OBJECT_H
 
+// libobjgen Includes
+#include <UUID.h>
+
 // Standard C++11 Includes
 #include <stdint.h>
 #include <istream>
 #include <ostream>
 #include <unordered_map>
 #include <list>
+#include <memory>
 
 // tinyxml2 Includes
 #include <PushIgnore.h>
@@ -41,6 +45,9 @@
 
 namespace libcomp
 {
+
+class Packet;
+class ReadOnlyPacket;
 
 class ObjectInStream
 {
@@ -71,10 +78,31 @@ public:
     virtual bool Load(ObjectInStream& stream) = 0;
     virtual bool Save(ObjectOutStream& stream) const  = 0;
 
+    virtual bool Load(std::istream& stream, bool flat = false) = 0;
+    virtual bool Save(std::ostream& stream, bool flat = false) const  = 0;
+
+    virtual bool Load(const tinyxml2::XMLDocument& doc,
+        const tinyxml2::XMLElement& root) = 0;
+    virtual bool Save(tinyxml2::XMLDocument& doc,
+        tinyxml2::XMLElement& root) const = 0;
+
+    virtual bool LoadPacket(libcomp::ReadOnlyPacket& p);
+    virtual bool SavePacket(libcomp::Packet& p) const;
+
+    virtual uint16_t GetDynamicSizeCount() const = 0;
+
+    static std::list<std::shared_ptr<Object>> LoadBinaryData(
+        std::istream& stream, const std::function<
+        std::shared_ptr<Object>()>& objectAllocator);
+
+    libobjgen::UUID GetUUID() const;
+
 protected:
     virtual std::unordered_map<std::string, const tinyxml2::XMLElement*>
         GetXmlMembers(const tinyxml2::XMLElement& root) const;
     virtual std::string GetXmlText(const tinyxml2::XMLElement& root) const;
+
+    libobjgen::UUID mUUID;
 };
 
 } // namespace libcomp

@@ -46,6 +46,8 @@ public:
     size_t GetElementCount() const;
     void SetElementCount(size_t elementCount);
 
+    virtual MetaVariableType_t GetMetaType() const;
+
     virtual std::string GetType() const;
 
     virtual bool IsCoreType() const;
@@ -61,6 +63,8 @@ public:
     virtual bool Save(tinyxml2::XMLDocument& doc,
         tinyxml2::XMLElement& root) const;
 
+    virtual uint16_t GetDynamicSizeCount() const;
+
     virtual std::string GetCodeType() const;
     virtual std::string GetConstructValue() const;
     virtual std::string GetValidCondition(const Generator& generator,
@@ -68,6 +72,10 @@ public:
     virtual std::string GetLoadCode(const Generator& generator,
         const std::string& name, const std::string& stream) const;
     virtual std::string GetSaveCode(const Generator& generator,
+        const std::string& name, const std::string& stream) const;
+    virtual std::string GetLoadRawCode(const Generator& generator,
+        const std::string& name, const std::string& stream) const;
+    virtual std::string GetSaveRawCode(const Generator& generator,
         const std::string& name, const std::string& stream) const;
     virtual std::string GetXmlLoadCode(const Generator& generator,
         const std::string& name, const std::string& doc,

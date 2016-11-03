@@ -28,6 +28,7 @@
 
 #include "Constants.h"
 #include "Log.h"
+#include "Object.h"
 
 using namespace libcomp;
 
@@ -108,6 +109,20 @@ void TcpConnection::QueuePacket(ReadOnlyPacket& packet)
     mOutgoingPackets.push_back(std::move(packet));
 }
 
+bool TcpConnection::QueueObject(const Object& obj)
+{
+    Packet p;
+
+    if(!obj.SavePacket(p))
+    {
+        return false;
+    }
+
+    QueuePacket(p);
+
+    return true;
+}
+
 void TcpConnection::SendPacket(Packet& packet, bool closeConnection)
 {
     ReadOnlyPacket copy(std::move(packet));
@@ -119,6 +134,18 @@ void TcpConnection::SendPacket(ReadOnlyPacket& packet, bool closeConnection)
 {
     QueuePacket(packet);
     FlushOutgoing(closeConnection);
+}
+
+bool TcpConnection::SendObject(const Object& obj, bool closeConnection)
+{
+    if(!QueueObject(obj))
+    {
+        return false;
+    }
+
+    FlushOutgoing(closeConnection);
+
+    return true;
 }
 
 bool TcpConnection::RequestPacket(size_t size)

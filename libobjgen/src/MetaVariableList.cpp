@@ -55,6 +55,11 @@ std::shared_ptr<MetaVariable> MetaVariableList::GetElementType() const
     return mElementType;
 }
 
+MetaVariable::MetaVariableType_t MetaVariableList::GetMetaType() const
+{
+    return MetaVariable::MetaVariableType_t::TYPE_LIST;
+}
+
 std::string MetaVariableList::GetType() const
 {
     return "list";
@@ -112,6 +117,11 @@ bool MetaVariableList::Save(tinyxml2::XMLDocument& doc,
 
     /// @todo Fix
     return true;
+}
+
+uint16_t MetaVariableList::GetDynamicSizeCount() const
+{
+    return 1;
 }
 
 std::string MetaVariableList::GetCodeType() const
@@ -207,6 +217,61 @@ std::string MetaVariableList::GetSaveCode(const Generator& generator,
             replacements["@STREAM@"] = stream;
 
             code = generator.ParseTemplate(0, "VariableListSave",
+                replacements);
+        }
+    }
+
+    return code;
+}
+
+std::string MetaVariableList::GetLoadRawCode(const Generator& generator,
+    const std::string& name, const std::string& stream) const
+{
+    (void)generator;
+
+    std::string code;
+
+    if(mElementType && MetaObject::IsValidIdentifier(name) &&
+        MetaObject::IsValidIdentifier(stream))
+    {
+        code = mElementType->GetLoadRawCode(generator, "element", stream);
+
+        if(!code.empty())
+        {
+            std::map<std::string, std::string> replacements;
+            replacements["@VAR_NAME@"] = name;
+            replacements["@VAR_TYPE@"] = mElementType->GetCodeType();
+            replacements["@VAR_LOAD_CODE@"] = code;
+            replacements["@STREAM@"] = stream;
+
+            code = generator.ParseTemplate(0, "VariableListLoadRaw",
+                replacements);
+        }
+    }
+
+    return code;
+}
+
+std::string MetaVariableList::GetSaveRawCode(const Generator& generator,
+    const std::string& name, const std::string& stream) const
+{
+    (void)generator;
+
+    std::string code;
+
+    if(mElementType && MetaObject::IsValidIdentifier(name) &&
+        MetaObject::IsValidIdentifier(stream))
+    {
+        code = mElementType->GetSaveRawCode(generator, "element", stream);
+
+        if(!code.empty())
+        {
+            std::map<std::string, std::string> replacements;
+            replacements["@VAR_NAME@"] = name;
+            replacements["@VAR_SAVE_CODE@"] = code;
+            replacements["@STREAM@"] = stream;
+
+            code = generator.ParseTemplate(0, "VariableListSaveRaw",
                 replacements);
         }
     }

@@ -48,6 +48,11 @@ size_t MetaVariableReference::GetSize() const
     return 16u; // Size of a UUID.
 }
 
+MetaVariable::MetaVariableType_t MetaVariableReference::GetMetaType() const
+{
+    return MetaVariable::MetaVariableType_t::TYPE_REF;
+}
+
 std::string MetaVariableReference::GetType() const
 {
     return mReferenceType + "*";
@@ -126,6 +131,12 @@ bool MetaVariableReference::Save(tinyxml2::XMLDocument& doc,
     return BaseSave(root);
 }
 
+uint16_t MetaVariableReference::GetDynamicSizeCount() const
+{
+    /// @todo Lookup the reference type and call this for that type!
+    return 0;
+}
+
 std::string MetaVariableReference::GetCodeType() const
 {
     std::string code;
@@ -188,6 +199,28 @@ std::string MetaVariableReference::GetSaveCode(const Generator& generator,
     replacements["@STREAM@"] = stream;
 
     return generator.ParseTemplate(0, "VariableReferenceSave",
+        replacements);
+}
+
+std::string MetaVariableReference::GetLoadRawCode(const Generator& generator,
+    const std::string& name, const std::string& stream) const
+{
+    std::map<std::string, std::string> replacements;
+    replacements["@VAR_NAME@"] = name;
+    replacements["@STREAM@"] = stream;
+
+    return generator.ParseTemplate(0, "VariableReferenceLoadRaw",
+        replacements);
+}
+
+std::string MetaVariableReference::GetSaveRawCode(const Generator& generator,
+    const std::string& name, const std::string& stream) const
+{
+    std::map<std::string, std::string> replacements;
+    replacements["@VAR_NAME@"] = name;
+    replacements["@STREAM@"] = stream;
+
+    return generator.ParseTemplate(0, "VariableReferenceSaveRaw",
         replacements);
 }
 

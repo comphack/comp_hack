@@ -24,6 +24,7 @@ MESSAGE("** Configuring ${PROJECT_NAME} **")
 # Add a directory to put the objgen output into.
 FILE(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/objgen)
 
+INCLUDE_DIRECTORIES(${LIBOBJGEN_INCLUDES})
 INCLUDE_DIRECTORIES(${LIBCOMP_INCLUDES})
 INCLUDE_DIRECTORIES(${ASIO_INCLUDE_DIRS})
 INCLUDE_DIRECTORIES(${TTVFS_INCLUDE_DIRS})
@@ -79,6 +80,10 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     # Output files
     LobbyConfig.h
     LobbyConfig.cpp
+    PacketLogin.h
+    PacketLogin.cpp
+    PacketResponseCode.h
+    PacketResponseCode.cpp
 )
 
 SOURCE_GROUP("Source Files\\Packets" src/packets/*)

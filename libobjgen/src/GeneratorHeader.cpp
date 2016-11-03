@@ -56,6 +56,11 @@ std::string GeneratorHeader::GenerateClass(const MetaObject& obj)
     ss << Tab() << "virtual bool Save(libcomp::ObjectOutStream& stream) const;"
         << std::endl << std::endl;
 
+    ss << Tab() << "virtual bool Load(std::istream& stream, bool flat = false);"
+        << std::endl << std::endl;
+    ss << Tab() << "virtual bool Save(std::ostream& stream, bool flat = false) const;"
+        << std::endl << std::endl;
+
     ss << Tab() << "virtual bool Load("
         "const tinyxml2::XMLDocument& doc, " << std::endl;
     ss << Tab(2) << "const tinyxml2::XMLElement& root);"
@@ -64,6 +69,9 @@ std::string GeneratorHeader::GenerateClass(const MetaObject& obj)
         "tinyxml2::XMLDocument& doc, " << std::endl;
     ss << Tab(2) << "tinyxml2::XMLElement& root) const;"
         << std::endl << std::endl;
+
+    ss << Tab() << "virtual uint16_t GetDynamicSizeCount() const;" << std::endl;
+    ss << std::endl;
 
     for(auto it = obj.VariablesBegin(); it != obj.VariablesEnd(); ++it)
     {

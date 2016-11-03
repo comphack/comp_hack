@@ -8,5 +8,5 @@
         }
     }
 
-    return @STREAM@.stream.good();
+    return @STREAM@.good();
 })()

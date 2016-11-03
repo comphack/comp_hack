@@ -34,6 +34,7 @@ ADD_DEFINITIONS(${SQRAT_DEFINES})
 
 INCLUDE_DIRECTORIES(${ZLIB_INCLUDES})
 INCLUDE_DIRECTORIES(${LIBCOMP_INCLUDES})
+INCLUDE_DIRECTORIES(${LIBOBJGEN_INCLUDES})
 INCLUDE_DIRECTORIES(${ASIO_INCLUDE_DIRS})
 INCLUDE_DIRECTORIES(${GTEST_INCLUDE_DIRS})
 INCLUDE_DIRECTORIES(${SQUIRREL_INCLUDE_DIRS})
@@ -66,6 +67,9 @@ SET(${PROJECT_NAME}_SRCS
     src/DatabaseQueryCassandra.cpp
     src/DatabaseSQLite3.cpp
     src/Decrypt.cpp
+    src/DynamicObject.cpp
+    src/DynamicVariable.cpp
+    src/DynamicVariableFactory.cpp
     src/EncryptedConnection.cpp
     #src/EngineLocker.cpp
     src/Exception.cpp
@@ -117,6 +121,10 @@ SET(${PROJECT_NAME}_HDRS
     src/DatabaseQueryCassandra.h
     src/DatabaseSQLite3.h
     src/Decrypt.h
+    src/DynamicObject.h
+    src/DynamicVariable.h
+    src/DynamicVariableFactory.h
+    src/DynamicVariableInt.h
     src/EncryptedConnection.h
     src/Endian.h
     src/EnumMap.h
@@ -138,6 +146,7 @@ SET(${PROJECT_NAME}_HDRS
     src/Packet.h
     src/PacketException.h
     #src/PacketScript.h
+    src/PacketStream.h
     src/PEFile.h
     src/PEFormat.h
     #src/Platform.h
@@ -191,7 +200,7 @@ ADD_LIBRARY(comp STATIC ${${PROJECT_NAME}_SRCS} ${${PROJECT_NAME}_HDRS}
 SET_TARGET_PROPERTIES(comp PROPERTIES FOLDER "Libraries")
 
 TARGET_LINK_LIBRARIES(comp ${OPENSSL_LIBRARIES} ${ZLIB_LIBRARIES}
-    ${SYSTEM_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} sqlite3
+    ${SYSTEM_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} objgen sqlite3
     squirrel sqstdlib ttvfs ttvfs_zip tinyxml2 cassandra uv)
 
 ADD_DEPENDENCIES(comp asio sqrat)

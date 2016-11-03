@@ -79,6 +79,11 @@ bool MetaVariable::IsValid(const std::vector<char>& data) const
     return IsValid(&data[0], data.size());
 }
 
+uint16_t MetaVariable::GetDynamicSizeCount() const
+{
+    return 0;
+}
+
 std::string MetaVariable::GetDeclaration(const std::string& name) const
 {
     std::string decl;
@@ -237,6 +242,15 @@ std::string MetaVariable::GetDestructorCode(const Generator& generator,
     (void)object;
     (void)name;
     (void)tabLevel;
+
+    return std::string();
+}
+
+std::string MetaVariable::GetDynamicSizeCountCode(const Generator& generator,
+    const std::string& name) const
+{
+    (void)generator;
+    (void)name;
 
     return std::string();
 }

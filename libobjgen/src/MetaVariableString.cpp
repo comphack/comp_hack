@@ -129,6 +129,11 @@ void MetaVariableString::SetSize(size_t size)
     mSize = size;
 }
 
+MetaVariable::MetaVariableType_t MetaVariableString::GetMetaType() const
+{
+    return MetaVariable::MetaVariableType_t::TYPE_STRING;
+}
+
 std::string MetaVariableString::GetType() const
 {
     return "string";
@@ -522,6 +527,75 @@ std::string MetaVariableString::GetSaveCode(const Generator& generator,
             }
 
             code = generator.ParseTemplate(0, "VariableStringSaveFixed",
+                replacements);
+        }
+    }
+
+    return code;
+}
+
+std::string MetaVariableString::GetLoadRawCode(const Generator& generator,
+    const std::string& name, const std::string& stream) const
+{
+    (void)generator;
+
+    std::string code;
+
+    if(MetaObject::IsValidIdentifier(name) &&
+        MetaObject::IsValidIdentifier(stream))
+    {
+        if(Encoding_t::ENCODING_UTF8 != mEncoding)
+        {
+            std::stringstream ss;
+            ss << name << " = libcomp::Convert::FromEncoding("
+                << EncodingToComp(mEncoding) << ", szValue); ";
+            code = ss.str();
+        }
+        else
+        {
+            std::stringstream ss;
+            ss << name << " = szValue; ";
+            code = ss.str();
+        }
+
+        std::map<std::string, std::string> replacements;
+        replacements["@LENGTH_TYPE@"] = LengthSizeType();
+        replacements["@FIXED_LENGTH@"] = std::to_string(mSize + 1);
+        replacements["@SET_CODE@"] = code;
+        replacements["@STREAM@"] = stream;
+
+        code = generator.ParseTemplate(0, "VariableStringLoadRaw",
+            replacements);
+    }
+
+    return code;
+}
+
+std::string MetaVariableString::GetSaveRawCode(const Generator& generator,
+    const std::string& name, const std::string& stream) const
+{
+    (void)generator;
+
+    std::string code;
+
+    if(MetaObject::IsValidIdentifier(name) &&
+        MetaObject::IsValidIdentifier(stream))
+    {
+        std::map<std::string, std::string> replacements;
+        replacements["@LENGTH_TYPE@"] = LengthSizeType();
+        replacements["@FIXED_LENGTH@"] = std::to_string(mSize);
+        replacements["@ENCODING@"] = EncodingToComp(mEncoding);
+        replacements["@VAR_NAME@"] = name;
+        replacements["@STREAM@"] = stream;
+
+        if(Encoding_t::ENCODING_UTF8 != mEncoding)
+        {
+            code = generator.ParseTemplate(0, "VariableStringSaveRaw",
+                replacements);
+        }
+        else
+        {
+            code = generator.ParseTemplate(0, "VariableStringSaveRawUnicode",
                 replacements);
         }
     }

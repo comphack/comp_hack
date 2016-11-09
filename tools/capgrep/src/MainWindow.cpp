@@ -690,7 +690,7 @@ bool MainWindow::loadCapturePacket(CaptureLoadData *d)
     if( d->file->atEnd() )
         return false;
 
-    if(d->file->read((char*)&d->source, sizeof(d->source)) != sizeof(d->source))
+    if(d->file->read((char*)&d->source, sizeof(d->source)) != (qint64) sizeof(d->source))
         return false;
 
     if(d->ver == FORMAT_VER1)
@@ -707,7 +707,7 @@ bool MainWindow::loadCapturePacket(CaptureLoadData *d)
             return false;
     }
 
-    if(d->file->read((char*)&d->sz, sizeof(d->sz)) != sizeof(d->sz))
+    if(d->file->read((char*)&d->sz, sizeof(d->sz)) != (qint64) sizeof(d->sz))
         return false;
 
     if(d->file->read((char*)d->buffer, d->sz) != d->sz)

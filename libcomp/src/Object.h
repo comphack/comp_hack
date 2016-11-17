@@ -37,6 +37,7 @@
 #include <unordered_map>
 #include <list>
 #include <memory>
+#include <functional>
 
 // tinyxml2 Includes
 #include <PushIgnore.h>

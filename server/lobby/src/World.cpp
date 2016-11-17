@@ -26,9 +26,12 @@
 
 #include "World.h"
 
+// libcomp includes
+#include <Packet.h>
+
 using namespace lobby;
 
-World::World(std::shared_ptr<libcomp::TcpConnection> connection)
+World::World(std::shared_ptr<libcomp::InternalConnection> connection)
     : mConnection(connection)
 {
 }
@@ -39,7 +42,12 @@ World::~World()
 
 bool World::Initialize()
 {
-    //todo: implement
+    //Request world information
+    libcomp::Packet packet;
+    packet.WriteU16Little(0x1001);
+
+    mConnection->SendPacket(std::move(packet));
+
     return true;
 }
 

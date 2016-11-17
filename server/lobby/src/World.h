@@ -28,7 +28,7 @@
 #define SERVER_LOBBY_SRC_WORLD_H
 
 // libcomp Includes
-#include "TcpConnection.h"
+#include "InternalConnection.h"
 
 namespace lobby
 {
@@ -36,7 +36,7 @@ namespace lobby
 class World
 {
 public:
-    World(std::shared_ptr<libcomp::TcpConnection> connection);
+    World(std::shared_ptr<libcomp::InternalConnection> connection);
     virtual ~World();
 
     /**
@@ -47,7 +47,7 @@ public:
     libcomp::String GetName();
 
 private:
-    std::shared_ptr<libcomp::TcpConnection> mConnection;
+    std::shared_ptr<libcomp::InternalConnection> mConnection;
 
     libcomp::String mName;
 };

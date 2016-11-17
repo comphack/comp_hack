@@ -67,9 +67,14 @@ LobbyServer::LobbyServer(std::shared_ptr<objects::ServerConfig> config, const li
         return;
     }
 
-    // Add the managers to the worker.
+    auto connectionManager = std::shared_ptr<libcomp::Manager>(new ManagerConnection(std::shared_ptr<asio::io_service>(&mService), mMainWorker.GetMessageQueue()));
+
+    //Add the managers to the main worker.
+    mMainWorker.AddManager(connectionManager);
+
+    // Add the managers to the generic workers.
     mWorker.AddManager(std::shared_ptr<libcomp::Manager>(new ManagerPacket()));
-    mWorker.AddManager(std::shared_ptr<libcomp::Manager>(new ManagerConnection(std::shared_ptr<asio::io_service>(&mService))));
+    mWorker.AddManager(connectionManager);
 
     // Start the worker.
     mWorker.Start();

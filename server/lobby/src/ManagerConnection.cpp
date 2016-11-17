@@ -34,9 +34,11 @@
 
 using namespace lobby;
 
-ManagerConnection::ManagerConnection(std::shared_ptr<asio::io_service> service)
+ManagerConnection::ManagerConnection(std::shared_ptr<asio::io_service> service,
+    std::shared_ptr<libcomp::MessageQueue<libcomp::Message::Message*>> messageQueue)
 {
     mService = service;
+    mMessageQueue = messageQueue;
 }
 
 ManagerConnection::~ManagerConnection()
@@ -67,10 +69,11 @@ bool ManagerConnection::ProcessMessage(const libcomp::Message::Message *pMessage
 
         LOG_DEBUG(libcomp::String("Attempting to connect back to World: %1:%2\n").Arg(address).Arg(port));
 
-        std::shared_ptr<libcomp::TcpConnection> worldConnection(
-            new libcomp::TcpConnection(*mService));
+        std::shared_ptr<libcomp::InternalConnection> worldConnection(
+            new libcomp::InternalConnection(*mService));
 
         worldConnection->SetSelf(worldConnection);
+        worldConnection->SetMessageQueue(mMessageQueue);
 
         // Connect and stay connected until either of us shutdown
         if(worldConnection->Connect(address, port, false))

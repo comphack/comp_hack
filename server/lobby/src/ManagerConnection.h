@@ -40,7 +40,8 @@ namespace lobby
 class ManagerConnection : public libcomp::Manager
 {
 public:
-    ManagerConnection(std::shared_ptr<asio::io_service> service);
+    ManagerConnection(std::shared_ptr<asio::io_service> service,
+        std::shared_ptr<libcomp::MessageQueue<libcomp::Message::Message*>> messageQueue);
     virtual ~ManagerConnection();
 
     /**
@@ -57,6 +58,8 @@ private:
     std::list<std::shared_ptr<lobby::World>> mWorlds;
 
     std::shared_ptr<asio::io_service> mService;
+    std::shared_ptr<libcomp::MessageQueue<
+        libcomp::Message::Message*>> mMessageQueue;
 };
 
 } // namespace lobby

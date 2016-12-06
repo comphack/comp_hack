@@ -63,17 +63,9 @@ MACRO(XMLTO_XHTML imgdir fragment out mode in)
 	ENDIF(XMLTO_FOUND)
 ENDMACRO(XMLTO_XHTML fragment out mode in)
 
+FILE(GLOB_RECURSE GUIDE_XML_SRCS *.xml)
+
 XMLTO_XHTML(
 	static config.xsl guide xhtml book.xml
-	binarydata/main.xml
-	binarydata/mitamaunionbonus.xml
-	components/devilforce.xml
-	components/main.xml
-	components/shortcuts.xml
-	intro/main.xml
-	setup/config/channel.xml
-	setup/config/login.xml
-	setup/config/main.xml
-	setup/main.xml
-	setup/require/main.xml
+	${GUIDE_XML_SRCS}
 )

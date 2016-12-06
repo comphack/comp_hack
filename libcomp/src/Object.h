@@ -32,12 +32,12 @@
 
 // Standard C++11 Includes
 #include <stdint.h>
+#include <functional>
 #include <istream>
-#include <ostream>
-#include <unordered_map>
 #include <list>
 #include <memory>
-#include <functional>
+#include <ostream>
+#include <unordered_map>
 
 // tinyxml2 Includes
 #include <PushIgnore.h>

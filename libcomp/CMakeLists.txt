@@ -188,6 +188,8 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     schema
 
     # Output files
+    PacketWorldDescription.h
+    PacketWorldDescription.cpp
     ServerConfig.h
     ServerConfig.cpp
     TestObject.h

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="PacketWorldDescription">
+        <member type="string" name="Name" lensz="2"/>
+    </object>
+</objgen>

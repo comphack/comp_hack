@@ -30,6 +30,7 @@
 #include "Decrypt.h"
 #include "Log.h"
 #include "Packet.h"
+#include "PacketWorldDescription.h"
 #include "ReadOnlyPacket.h"
 #include "TcpConnection.h"
 
@@ -49,9 +50,9 @@ bool Parsers::DescribeWorld::Parse(ManagerPacket *pPacketManager,
 
     reply.WriteU16Little(0x1001);
 
-    //todo: replace with objgen out stream/vector
-    libcomp::String name = server->GetName();
-    reply.WriteString16Little(libcomp::Convert::ENCODING_UTF8, name, true);
+    objects::PacketWorldDescription desc;
+    desc.SetName(server->GetName());
+    desc.SavePacket(reply);
 
     connection->SendPacket(reply);
 

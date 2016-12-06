@@ -30,6 +30,7 @@
 #include "Decrypt.h"
 #include "Log.h"
 #include "Packet.h"
+#include "PacketWorldDescription.h"
 #include "ReadOnlyPacket.h"
 #include "TcpConnection.h"
 
@@ -43,14 +44,14 @@ bool Parsers::WorldDescription::Parse(ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {
-    auto sz = (uint32_t)p.PeekU16Little();
-    if(p.Size()-2 != sz)
+    objects::PacketWorldDescription obj;
+
+    if (!obj.LoadPacket(p))
     {
         return false;
     }
 
-    auto name = p.ReadString16Little(
-        libcomp::Convert::ENCODING_CP932);
+    auto name = obj.GetName();
 
     LOG_DEBUG(libcomp::String("Setting World Server name: %1\n").Arg(name));
 

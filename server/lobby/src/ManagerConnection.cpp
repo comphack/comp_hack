@@ -30,6 +30,7 @@
 #include "Log.h"
 
 // lobby Includes
+#include "MessageEncrypted.h"
 #include "MessageWorldNotification.h"
 
 using namespace lobby;
@@ -58,7 +59,7 @@ ManagerConnection::GetSupportedTypes() const
 
 bool ManagerConnection::ProcessMessage(const libcomp::Message::Message *pMessage)
 {
-    // Only one type of message passes through here (for the time being) so no need for dedicated handlers
+    // Only two types of messages pass through here (for the time being) so no need for dedicated handlers
     const libcomp::Message::WorldNotification *notification = dynamic_cast<
         const libcomp::Message::WorldNotification*>(pMessage);
 
@@ -76,21 +77,49 @@ bool ManagerConnection::ProcessMessage(const libcomp::Message::Message *pMessage
         worldConnection->SetMessageQueue(mMessageQueue);
 
         // Connect and stay connected until either of us shutdown
-        if(worldConnection->Connect(address, port, false))
+        if(worldConnection->Connect(address, port, true))
         {
             auto world = std::shared_ptr<lobby::World>(new lobby::World(worldConnection));
-
-            if (world->Initialize())
-            {
-                LOG_INFO(libcomp::String("New World connection established: %1:%2\n").Arg(address).Arg(port));
-                mWorlds.push_back(world);
-            }
-
+            LOG_INFO(libcomp::String("New World connection established: %1:%2\n").Arg(address).Arg(port));
+            mWorlds.push_back(world);
             return true;
         }
         
         LOG_ERROR(libcomp::String("World connection failed: %1:%2\n").Arg(address).Arg(port));
     }
+
+    const libcomp::Message::Encrypted *encrypted = dynamic_cast<
+        const libcomp::Message::Encrypted*>(pMessage);
+
+    if(nullptr != encrypted)
+    {
+        auto connection = encrypted->GetConnection();
+        for(auto world : mWorlds)
+        {
+            if (world->GetConnection() == connection)
+            {
+                return world->Initialize();
+            }
+        }
+    }
     
     return false;
+}
+
+std::list<std::shared_ptr<lobby::World>> ManagerConnection::GetWorlds()
+{
+    return mWorlds;
+}
+
+std::shared_ptr<lobby::World> ManagerConnection::GetWorldByConnection(std::shared_ptr<libcomp::InternalConnection> connection)
+{
+    for (auto world : mWorlds)
+    {
+        if (world->GetConnection() == connection)
+        {
+            return world;
+        }
+    }
+
+    return nullptr;
 }

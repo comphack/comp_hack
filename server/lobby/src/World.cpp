@@ -51,8 +51,18 @@ bool World::Initialize()
     return true;
 }
 
+std::shared_ptr<libcomp::InternalConnection> World::GetConnection() const
+{
+    return mConnection;
+}
 
 libcomp::String World::GetName()
 {
     return mName;
+}
+
+
+void World::SetName(libcomp::String name)
+{
+    mName = name;
 }

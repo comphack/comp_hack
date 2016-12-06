@@ -1,12 +1,12 @@
 /**
- * @file server/lobby/src/ManagerPacket.h
- * @ingroup lobby
+ * @file server/world/src/ManagerPacket.h
+ * @ingroup world
  *
- * @author COMP Omega <compomega@tutanota.com>
+ * @author HACKfrost
  *
- * @brief Manager to handle lobby packets.
+ * @brief Manager to handle world packets.
  *
- * This file is part of the Lobby Server (lobby).
+ * This file is part of the World Server (world).
  *
  * Copyright (C) 2012-2016 COMP_hack Team <compomega@tutanota.com>
  *
@@ -24,8 +24,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef LIBCOMP_SRC_MANAGERPACKET_H
-#define LIBCOMP_SRC_MANAGERPACKET_H
+#ifndef SERVER_WORLD_SRC_MANAGERPACKET_H
+#define SERVER_WORLD_SRC_MANAGERPACKET_H
 
 // libcomp Includes
 #include "BaseServer.h"
@@ -36,7 +36,7 @@
 #include <memory>
 #include <unordered_map>
 
-namespace lobby
+namespace world
 {
 
 typedef uint16_t CommandCode_t;
@@ -73,4 +73,4 @@ private:
 
 } // namespace lobby
 
-#endif // LIBCOMP_SRC_MANAGERPACKET_H
+#endif // SERVER_WORLD_SRC_MANAGERPACKET_H

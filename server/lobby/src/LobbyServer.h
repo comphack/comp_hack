@@ -32,6 +32,10 @@
 #include <Database.h>
 #include <Worker.h>
 
+// lobby Includes
+#include "ManagerConnection.h"
+#include "World.h"
+
 namespace lobby
 {
 
@@ -43,6 +47,10 @@ public:
 
     virtual void Shutdown();
 
+    std::list<std::shared_ptr<lobby::World>> GetWorlds();
+
+    std::shared_ptr<lobby::World> GetWorldByConnection(std::shared_ptr<libcomp::InternalConnection> connection);
+
 protected:
     virtual std::shared_ptr<libcomp::TcpConnection> CreateConnection(
         asio::ip::tcp::socket& socket);
@@ -51,6 +59,8 @@ protected:
     libcomp::Worker mWorker;
 
     std::shared_ptr<libcomp::Database> mDatabase;
+
+    std::shared_ptr<ManagerConnection> mManagerConnection;
 };
 
 } // namespace lobby

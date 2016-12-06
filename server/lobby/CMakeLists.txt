@@ -98,6 +98,9 @@ SET(${PROJECT_NAME}_PACKETS
     src/packets/DeleteCharacter.cpp     # 0x000F
     src/packets/QueryPurchaseTicket.cpp # 0x0011
     src/packets/PurchaseTicket.cpp      # 0x0013
+	
+	#Internal packets
+    src/packets/WorldDescription.cpp      # 0x1001
 )
 
 ADD_CUSTOM_COMMAND(

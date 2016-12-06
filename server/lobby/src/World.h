@@ -44,7 +44,11 @@ public:
     */
     bool Initialize();
 
+    std::shared_ptr<libcomp::InternalConnection> GetConnection() const;
+
     libcomp::String GetName();
+
+    void SetName(libcomp::String name);
 
 private:
     std::shared_ptr<libcomp::InternalConnection> mConnection;

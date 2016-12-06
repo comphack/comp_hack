@@ -33,14 +33,16 @@
 #include "ReadOnlyPacket.h"
 #include "TcpConnection.h"
 
+// lobby Includes
+#include "ManagerPacket.h"
+#include "LobbyServer.h"
+
 using namespace lobby;
 
 bool Parsers::WorldList::Parse(ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {
-    (void)pPacketManager;
-
     if(p.Size() != 0)
     {
         return false;
@@ -49,17 +51,22 @@ bool Parsers::WorldList::Parse(ManagerPacket *pPacketManager,
     libcomp::Packet reply;
     reply.WriteU16Little(0x000C);
 
+    auto server = std::dynamic_pointer_cast<LobbyServer>(pPacketManager->GetServer());
+
+    auto worlds = server->GetWorlds();
+
     // World count.
-    reply.WriteU8(1);
+    reply.WriteU8(worlds.size());
 
     // Add each world to the list.
+    for(auto world : worlds)
     {
         // ID for this world.
         reply.WriteU8(0);
 
         // Name of the world.
         reply.WriteString16Little(libcomp::Convert::ENCODING_UTF8,
-            "COMP_hack", true);
+            world->GetName(), true);
 
         // Number of channels on this world.
         reply.WriteU8(1);

@@ -46,6 +46,9 @@ PACKET_PARSER_DECL(DeleteCharacter);     // 0x000F
 PACKET_PARSER_DECL(QueryPurchaseTicket); // 0x0011
 PACKET_PARSER_DECL(PurchaseTicket);      // 0x0013
 
+//Internal Packets
+PACKET_PARSER_DECL(WorldDescription);      // 0x1001
+
 } // namespace Parsers
 
 } // namespace libcomp

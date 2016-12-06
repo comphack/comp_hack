@@ -54,6 +54,10 @@ public:
      */
     virtual bool ProcessMessage(const libcomp::Message::Message *pMessage);
 
+    std::list<std::shared_ptr<lobby::World>> GetWorlds();
+
+    std::shared_ptr<lobby::World> GetWorldByConnection(std::shared_ptr<libcomp::InternalConnection> connection);
+
 private:
     std::list<std::shared_ptr<lobby::World>> mWorlds;
 

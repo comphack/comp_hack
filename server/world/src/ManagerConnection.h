@@ -1,12 +1,12 @@
 /**
- * @file server/lobby/src/ManagerPacket.h
- * @ingroup lobby
+ * @file server/world/src/ManagerConnection.h
+ * @ingroup world
  *
- * @author COMP Omega <compomega@tutanota.com>
+ * @author HACKfrost
  *
- * @brief Manager to handle lobby packets.
+ * @brief Manager to handle world connections to lobby and channel servers.
  *
- * This file is part of the Lobby Server (lobby).
+ * This file is part of the World Server (world).
  *
  * Copyright (C) 2012-2016 COMP_hack Team <compomega@tutanota.com>
  *
@@ -24,30 +24,25 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef LIBCOMP_SRC_MANAGERPACKET_H
-#define LIBCOMP_SRC_MANAGERPACKET_H
+#ifndef SERVER_WORLD_SRC_MANAGERCONNECTION_H
+#define SERVER_WORLD_SRC_MANAGERCONNECTION_H
 
 // libcomp Includes
-#include "BaseServer.h"
+#include "InternalConnection.h"
 #include "Manager.h"
 
-// Standard C++11 Includes
-#include <stdint.h>
-#include <memory>
-#include <unordered_map>
+// Boost ASIO Includes
+#include <asio.hpp>
 
-namespace lobby
+namespace world
 {
 
-typedef uint16_t CommandCode_t;
-
-class PacketParser;
-
-class ManagerPacket : public libcomp::Manager
+class ManagerConnection : public libcomp::Manager
 {
 public:
-    ManagerPacket(std::shared_ptr<libcomp::BaseServer> server);
-    virtual ~ManagerPacket();
+    ManagerConnection(std::shared_ptr<asio::io_service> service,
+        std::shared_ptr<libcomp::MessageQueue<libcomp::Message::Message*>> messageQueue);
+    virtual ~ManagerConnection();
 
     /**
      * @brief Get the different types of messages handles by this manager.
@@ -60,17 +55,18 @@ public:
     virtual bool ProcessMessage(const libcomp::Message::Message *pMessage);
 
     /**
-    * Get the server this manager belongs to.
+    * Returns true if the lobby connection is currently active.
     */
-    std::shared_ptr<libcomp::BaseServer> GetServer();
+    bool LobbyConnected();
 
 private:
-    std::unordered_map<CommandCode_t,
-        std::shared_ptr<PacketParser>> mPacketParsers;
+    std::shared_ptr<libcomp::InternalConnection> mLobbyConnection;
 
-    std::shared_ptr<libcomp::BaseServer> mServer;
+    std::shared_ptr<asio::io_service> mService;
+    std::shared_ptr<libcomp::MessageQueue<
+        libcomp::Message::Message*>> mMessageQueue;
 };
 
-} // namespace lobby
+} // namespace world
 
-#endif // LIBCOMP_SRC_MANAGERPACKET_H
+#endif // SERVER_WORLD_SRC_MANAGERCONNECTION_H

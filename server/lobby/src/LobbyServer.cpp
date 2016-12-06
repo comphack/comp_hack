@@ -67,13 +67,17 @@ LobbyServer::LobbyServer(std::shared_ptr<objects::ServerConfig> config, const li
         return;
     }
 
-    auto connectionManager = std::shared_ptr<libcomp::Manager>(new ManagerConnection(std::shared_ptr<asio::io_service>(&mService), mMainWorker.GetMessageQueue()));
+    mManagerConnection = std::shared_ptr<ManagerConnection>(new ManagerConnection(std::shared_ptr<asio::io_service>(&mService), mMainWorker.GetMessageQueue()));
+
+    auto connectionManager = std::shared_ptr<libcomp::Manager>(mManagerConnection);
+    auto packetManager = std::shared_ptr<libcomp::Manager>(new ManagerPacket(std::shared_ptr<libcomp::BaseServer>(this)));
 
     //Add the managers to the main worker.
+    mMainWorker.AddManager(packetManager);
     mMainWorker.AddManager(connectionManager);
 
     // Add the managers to the generic workers.
-    mWorker.AddManager(std::shared_ptr<libcomp::Manager>(new ManagerPacket()));
+    mWorker.AddManager(packetManager);
     mWorker.AddManager(connectionManager);
 
     // Start the worker.
@@ -92,6 +96,16 @@ void LobbyServer::Shutdown()
 
     /// @todo Add more workers.
     mWorker.Shutdown();
+}
+
+std::list<std::shared_ptr<lobby::World>> LobbyServer::GetWorlds()
+{
+    return mManagerConnection->GetWorlds();
+}
+
+std::shared_ptr<lobby::World> LobbyServer::GetWorldByConnection(std::shared_ptr<libcomp::InternalConnection> connection)
+{
+    return mManagerConnection->GetWorldByConnection(connection);
 }
 
 std::shared_ptr<libcomp::TcpConnection> LobbyServer::CreateConnection(

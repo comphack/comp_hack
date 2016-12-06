@@ -1,10 +1,10 @@
 /**
- * @file server/world/src/WorldServer.h
+ * @file server/world/src/Packets.h
  * @ingroup world
  *
  * @author HACKfrost
  *
- * @brief World server class.
+ * @brief Classes used to parse internal world packets.
  *
  * This file is part of the World Server (world).
  *
@@ -24,36 +24,22 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef SERVER_WORLD_SRC_WORLDSERVER_H
-#define SERVER_WORLD_SRC_WORLDSERVER_H
+#ifndef SERVER_WORLD_SRC_PACKETS_H
+#define SERVER_WORLD_SRC_PACKETS_H
 
-// libcomp Includes
-#include <BaseServer.h>
-#include <InternalConnection.h>
-#include <ManagerConnection.h>
-#include <Worker.h>
+// world Includes
+#include "PacketParser.h"
 
 namespace world
 {
 
-class WorldServer : public libcomp::BaseServer
+namespace Parsers
 {
-public:
-    WorldServer(std::shared_ptr<objects::ServerConfig> config, const libcomp::String& configPath);
-    virtual ~WorldServer();
 
-    libcomp::String GetName();
+PACKET_PARSER_DECL(DescribeWorld);               // 0x1001
 
-protected:
-    virtual std::shared_ptr<libcomp::TcpConnection> CreateConnection(
-        asio::ip::tcp::socket& socket);
-
-    /// @todo Replace this with many worker threads.
-    libcomp::Worker mWorker;
-
-    std::shared_ptr<ManagerConnection> mManagerConnection;
-};
+} // namespace Parsers
 
 } // namespace world
 
-#endif // SERVER_WORLD_SRC_WORLDSERVER_H
+#endif // SERVER_WORLD_SRC_PACKETS_H

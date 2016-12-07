@@ -173,12 +173,14 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     schema
 
     # Output files
-    PacketWorldDescription.h
-    PacketWorldDescription.cpp
+    ChannelDescription.h
+    ChannelDescription.cpp
     ServerConfig.h
     ServerConfig.cpp
     TestObject.h
     TestObject.cpp
+    WorldDescription.h
+    WorldDescription.cpp
 )
 
 ADD_LIBRARY(comp STATIC ${${PROJECT_NAME}_SRCS} ${${PROJECT_NAME}_HDRS}

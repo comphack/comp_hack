@@ -56,13 +56,63 @@ std::shared_ptr<libcomp::InternalConnection> World::GetConnection() const
     return mConnection;
 }
 
-libcomp::String World::GetName()
+objects::WorldDescription World::GetWorldDescription()
 {
-    return mName;
+    return mWorldDescription;
 }
 
-
-void World::SetName(libcomp::String name)
+std::list<objects::ChannelDescription> World::GetChannelDescriptions()
 {
-    mName = name;
+    std::list<objects::ChannelDescription> channels;
+    for(auto channel : mChannelDescriptions)
+    {
+        channels.push_back(channel);
+    }
+    return channels;
+}
+
+bool World::GetChannelDescriptionByID(uint8_t id, objects::ChannelDescription& outChannel)
+{
+    for(auto channel : mChannelDescriptions)
+    {
+        if(channel.GetID() == id)
+        {
+            outChannel = channel;
+            return true;
+        }
+    }
+
+    return false;
+}
+
+bool World::RemoveChannelDescriptionByID(uint8_t id)
+{
+    for(auto channel : mChannelDescriptions)
+    {
+        if(channel.GetID() == id)
+        {
+            //mChannelDescriptions.remove(channel);
+            return true;
+        }
+    }
+
+    return false;
+}
+
+void World::SetWorldDescription(objects::WorldDescription& worldDescription)
+{
+    mWorldDescription = worldDescription;
+}
+
+void World::SetChannelDescription(objects::ChannelDescription& channelDescription)
+{
+    objects::ChannelDescription outChannel;
+    if (!GetChannelDescriptionByID(channelDescription.GetID(), outChannel))
+    {
+        mChannelDescriptions.push_back(channelDescription);
+    }
+    else
+    {
+        outChannel.SetName(channelDescription.GetName());
+    }
 }

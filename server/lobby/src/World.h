@@ -28,7 +28,9 @@
 #define SERVER_LOBBY_SRC_WORLD_H
 
 // libcomp Includes
+#include "ChannelDescription.h"
 #include "InternalConnection.h"
+#include "WorldDescription.h"
 
 namespace lobby
 {
@@ -46,14 +48,23 @@ public:
 
     std::shared_ptr<libcomp::InternalConnection> GetConnection() const;
 
-    libcomp::String GetName();
+    objects::WorldDescription GetWorldDescription();
 
-    void SetName(libcomp::String name);
+    std::list<objects::ChannelDescription> GetChannelDescriptions();
+
+    bool GetChannelDescriptionByID(uint8_t id, objects::ChannelDescription& outChannel);
+
+    bool RemoveChannelDescriptionByID(uint8_t id);
+
+    void SetWorldDescription(objects::WorldDescription& worldDescription);
+
+    void SetChannelDescription(objects::ChannelDescription& channelDescription);
 
 private:
     std::shared_ptr<libcomp::InternalConnection> mConnection;
 
-    libcomp::String mName;
+    objects::WorldDescription mWorldDescription;
+    std::list<objects::ChannelDescription> mChannelDescriptions;
 };
 
 } // namespace lobby

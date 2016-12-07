@@ -1,12 +1,12 @@
 /**
- * @file server/world/src/ManagerConnection.cpp
- * @ingroup world
+ * @file server/channel/src/ManagerConnection.cpp
+ * @ingroup channel
  *
  * @author HACKfrost
  *
- * @brief Manager to handle world connections to lobby and channel servers.
+ * @brief Manager to handle channel connections to the world server.
  *
- * This file is part of the World Server (world).
+ * This file is part of the Channel Server (channel).
  *
  * Copyright (C) 2012-2016 COMP_hack Team <compomega@tutanota.com>
  *
@@ -30,10 +30,13 @@
 #include "Log.h"
 #include "MessageEncrypted.h"
 
-using namespace world;
+#include "ChannelServer.h"
 
-ManagerConnection::ManagerConnection()
+using namespace channel;
+
+ManagerConnection::ManagerConnection(std::shared_ptr<libcomp::BaseServer> server)
 {
+    mServer = server;
 }
 
 ManagerConnection::~ManagerConnection()
@@ -59,17 +62,16 @@ bool ManagerConnection::ProcessMessage(const libcomp::Message::Message *pMessage
 
     if (nullptr != encrypted)
     {
-        if(!LobbyConnected())
-        {
-            auto connection = encrypted->GetConnection();
+        auto connection = encrypted->GetConnection();
+        auto server = std::dynamic_pointer_cast<ChannelServer>(mServer);
 
-            //todo: verify this is in fact the lobby
-
-            mLobbyConnection = std::dynamic_pointer_cast<libcomp::InternalConnection>(connection);
-        }
-        else
+        if(mWorldConnection == connection)
         {
-            //Nothing to do upon encrypting a channel connection (for now)
+            //Request world information
+            libcomp::Packet packet;
+            packet.WriteU16Little(0x1001);
+
+            connection->SendPacket(std::move(packet));
         }
         
         return true;
@@ -78,12 +80,7 @@ bool ManagerConnection::ProcessMessage(const libcomp::Message::Message *pMessage
     return false;
 }
 
-std::shared_ptr<libcomp::InternalConnection> ManagerConnection::GetLobbyConnection()
+void ManagerConnection::SetWorldConnection(std::shared_ptr<libcomp::InternalConnection> worldConnection)
 {
-    return mLobbyConnection;
-}
-
-bool ManagerConnection::LobbyConnected()
-{
-    return nullptr != mLobbyConnection;
+    mWorldConnection = worldConnection;
 }

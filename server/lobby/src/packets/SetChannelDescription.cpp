@@ -1,12 +1,12 @@
 /**
- * @file server/world/src/packets/DescribeWorld.cpp
- * @ingroup world
+ * @file server/lobby/src/packets/SetChannelDescription.cpp
+ * @ingroup lobby
  *
  * @author HACKfrost
  *
- * @brief Parser to handle describing the world for the lobby.
+ * @brief Parser to handle describing a channel for the lobby.
  *
- * This file is part of the World Server (world).
+ * This file is part of the Lobby Server (lobby).
  *
  * Copyright (C) 2012-2016 COMP_hack Team <compomega@tutanota.com>
  *
@@ -27,31 +27,37 @@
 #include "Packets.h"
 
 // libcomp Includes
+#include "ChannelDescription.h"
 #include "Decrypt.h"
+#include "InternalConnection.h"
 #include "Log.h"
 #include "Packet.h"
 #include "ReadOnlyPacket.h"
-#include "TcpConnection.h"
-#include "WorldDescription.h"
 
-// world Includes
+// lobby Includes
 #include "ManagerPacket.h"
-#include "WorldServer.h"
+#include "LobbyServer.h"
 
-using namespace world;
+using namespace lobby;
 
-bool Parsers::DescribeWorld::Parse(ManagerPacket *pPacketManager,
+bool Parsers::SetChannelDescription::Parse(ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {
-    auto server = std::dynamic_pointer_cast<WorldServer>(pPacketManager->GetServer());
+    objects::ChannelDescription obj;
 
-    libcomp::Packet reply;
+    if (!obj.LoadPacket(p))
+    {
+        return false;
+    }
 
-    reply.WriteU16Little(0x1001);
-    server->GetDescription().SavePacket(reply);
+    LOG_DEBUG(libcomp::String("Updating Channel Server description: (%1) %2\n").Arg(obj.GetID()).Arg(obj.GetName()));
 
-    connection->SendPacket(reply);
+    auto server = std::dynamic_pointer_cast<LobbyServer>(pPacketManager->GetServer());
+    auto conn = std::dynamic_pointer_cast<libcomp::InternalConnection>(connection);
+
+    auto world = server->GetWorldByConnection(conn);
+    world->SetChannelDescription(obj);
 
     return true;
 }

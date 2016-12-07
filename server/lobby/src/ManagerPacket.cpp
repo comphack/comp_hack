@@ -61,7 +61,9 @@ ManagerPacket::ManagerPacket(std::shared_ptr<libcomp::BaseServer> server)
 
     //Internal Packets
     mPacketParsers[0x1001] = std::shared_ptr<PacketParser>(
-        new Parsers::WorldDescription());
+        new Parsers::SetWorldDescription());
+    mPacketParsers[0x1002] = std::shared_ptr<PacketParser>(
+        new Parsers::SetChannelDescription());
 }
 
 ManagerPacket::~ManagerPacket()

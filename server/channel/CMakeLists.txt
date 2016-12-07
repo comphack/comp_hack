@@ -26,12 +26,14 @@ FILE(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/objgen)
 
 SET(${PROJECT_NAME}_SRCS
     src/ChannelServer.cpp
+    src/ManagerConnection.cpp
     src/ManagerPacket.cpp
     src/main.cpp
 )
 
 SET(${PROJECT_NAME}_HDRS
     src/ChannelServer.h
+    src/ManagerConnection.h
     src/ManagerPacket.h
     src/PacketParser.h
     src/Packets.h
@@ -56,7 +58,11 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     ChannelConfig.cpp
 )
 
+SOURCE_GROUP("Source Files\\Packets" src/packets/*)
+
 SET(${PROJECT_NAME}_PACKETS
+	#Internal packets
+    src/packets/SetWorldDescription.cpp      # 0x1001
 )
 
 ADD_EXECUTABLE(${PROJECT_NAME} ${${PROJECT_NAME}_SRCS}

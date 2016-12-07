@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <objgen>
+    <include path="channeldescription.xml"/>
     <include path="test.xml"/>
-    <include path="packet_world_description.xml"/>
     <include path="serverconfig.xml"/>
+    <include path="worlddescription.xml"/>
 </objgen>

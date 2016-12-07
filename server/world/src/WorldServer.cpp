@@ -55,6 +55,8 @@ WorldServer::WorldServer(std::shared_ptr<objects::ServerConfig> config, const li
     lobbyConnection->SetMessageQueue(messageQueue);
 
     auto conf = std::dynamic_pointer_cast<objects::WorldConfig>(mConfig);
+    mDescription.SetID(conf->GetID());
+    mDescription.SetName(conf->GetName());
 
     lobbyConnection->Connect(conf->GetLobbyIP(), conf->GetLobbyPort(), false);
 
@@ -81,7 +83,7 @@ WorldServer::WorldServer(std::shared_ptr<objects::ServerConfig> config, const li
 
     delete pMessage;
 
-    mManagerConnection = std::shared_ptr<ManagerConnection>(new ManagerConnection(std::shared_ptr<asio::io_service>(&mService), mMainWorker.GetMessageQueue()));
+    mManagerConnection = std::shared_ptr<ManagerConnection>(new ManagerConnection());
 
     lobbyConnection->Close();
     serviceThread.join();
@@ -107,10 +109,30 @@ WorldServer::~WorldServer()
 {
 }
 
-libcomp::String WorldServer::GetName()
+objects::WorldDescription WorldServer::GetDescription()
 {
-    auto conf = std::dynamic_pointer_cast<objects::WorldConfig>(mConfig);
-    return conf->GetName();
+    return mDescription;
+}
+
+bool WorldServer::GetChannelDescriptionByConnection(std::shared_ptr<libcomp::InternalConnection> connection, objects::ChannelDescription& outChannel)
+{
+    if (mChannelDescriptions.find(connection) != mChannelDescriptions.end())
+    {
+        outChannel = mChannelDescriptions[connection];
+        return true;
+    }
+
+    return false;
+}
+
+std::shared_ptr<libcomp::InternalConnection> WorldServer::GetLobbyConnection()
+{
+    return mManagerConnection->GetLobbyConnection();
+}
+
+void WorldServer::SetChannelDescription(objects::ChannelDescription channel, std::shared_ptr<libcomp::InternalConnection> connection)
+{
+    mChannelDescriptions[connection] = channel;
 }
 
 std::shared_ptr<libcomp::TcpConnection> WorldServer::CreateConnection(

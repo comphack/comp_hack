@@ -83,7 +83,8 @@ SET(${PROJECT_NAME}_PACKETS
     src/packets/PurchaseTicket.cpp      # 0x0013
 	
 	#Internal packets
-    src/packets/WorldDescription.cpp      # 0x1001
+    src/packets/SetWorldDescription.cpp      # 0x1001
+    src/packets/SetChannelDescription.cpp    # 0x1002
 )
 
 ADD_CUSTOM_COMMAND(

@@ -1,12 +1,12 @@
 /**
- * @file server/world/src/ManagerConnection.h
- * @ingroup world
+ * @file server/channel/src/ManagerConnection.cpp
+ * @ingroup channel
  *
  * @author HACKfrost
  *
- * @brief Manager to handle world connections to lobby and channel servers.
+ * @brief Manager to handle channel connections to the world server.
  *
- * This file is part of the World Server (world).
+ * This file is part of the Channel Server (channel).
  *
  * Copyright (C) 2012-2016 COMP_hack Team <compomega@tutanota.com>
  *
@@ -24,23 +24,25 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef SERVER_WORLD_SRC_MANAGERCONNECTION_H
-#define SERVER_WORLD_SRC_MANAGERCONNECTION_H
+#ifndef SERVER_CHANNEL_SRC_MANAGERCONNECTION_H
+#define SERVER_CHANNEL_SRC_MANAGERCONNECTION_H
 
 // libcomp Includes
+#include "BaseServer.h"
 #include "InternalConnection.h"
 #include "Manager.h"
+#include "WorldDescription.h"
 
 // Boost ASIO Includes
 #include <asio.hpp>
 
-namespace world
+namespace channel
 {
 
 class ManagerConnection : public libcomp::Manager
 {
 public:
-    ManagerConnection();
+    ManagerConnection(std::shared_ptr<libcomp::BaseServer> server);
     virtual ~ManagerConnection();
 
     /**
@@ -53,17 +55,14 @@ public:
      */
     virtual bool ProcessMessage(const libcomp::Message::Message *pMessage);
 
-    std::shared_ptr<libcomp::InternalConnection> GetLobbyConnection();
-
-    /**
-    * Returns true if the lobby connection is currently active.
-    */
-    bool LobbyConnected();
+    void SetWorldConnection(std::shared_ptr<libcomp::InternalConnection> worldConnection);
 
 private:
-    std::shared_ptr<libcomp::InternalConnection> mLobbyConnection;
+    std::shared_ptr<libcomp::InternalConnection> mWorldConnection;
+
+    std::shared_ptr<libcomp::BaseServer> mServer;
 };
 
 } // namespace world
 
-#endif // SERVER_WORLD_SRC_MANAGERCONNECTION_H
+#endif // SERVER_CHANNEL_SRC_MANAGERCONNECTION_H

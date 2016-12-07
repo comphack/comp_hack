@@ -61,6 +61,7 @@ SOURCE_GROUP("Source Files\\Packets" src/packets/*)
 
 SET(${PROJECT_NAME}_PACKETS
     src/packets/DescribeWorld.cpp               # 0x1001
+    src/packets/SetChannelDescription.cpp               # 0x1002
 )
 
 ADD_EXECUTABLE(${PROJECT_NAME} ${${PROJECT_NAME}_SRCS}

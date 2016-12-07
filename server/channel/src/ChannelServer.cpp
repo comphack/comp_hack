@@ -42,12 +42,17 @@ ChannelServer::ChannelServer(std::shared_ptr<objects::ServerConfig> config, cons
     libcomp::BaseServer(config, configPath)
 {
     // Connect to the world server.
-    mWorldConnection = std::shared_ptr<libcomp::InternalConnection>(
+    auto mWorldConnection = std::shared_ptr<libcomp::InternalConnection>(
         new libcomp::InternalConnection(mService));
     mWorldConnection->SetSelf(mWorldConnection);
     mWorldConnection->SetMessageQueue(mMainWorker.GetMessageQueue());
 
+    mManagerConnection = std::shared_ptr<ManagerConnection>(new ManagerConnection(std::shared_ptr<libcomp::BaseServer>(this)));
+    mManagerConnection->SetWorldConnection(mWorldConnection);
+
     auto conf = std::dynamic_pointer_cast<objects::ChannelConfig>(mConfig);
+    mDescription.SetID(conf->GetID());
+    mDescription.SetName(conf->GetName());
 
     mWorldConnection->Connect(conf->GetWorldIP(), conf->GetWorldPort(), false);
 
@@ -59,8 +64,14 @@ ChannelServer::ChannelServer(std::shared_ptr<objects::ServerConfig> config, cons
         LOG_CRITICAL("Failed to connect to the world server!\n");
     }
 
-    // Add the managers to the worker.
-    mWorker.AddManager(std::shared_ptr<libcomp::Manager>(new ManagerPacket()));
+    auto packetManager = std::shared_ptr<libcomp::Manager>(new ManagerPacket(std::shared_ptr<libcomp::BaseServer>(this)));
+
+    //Add the managers to the main worker.
+    mMainWorker.AddManager(packetManager);
+    mMainWorker.AddManager(mManagerConnection);
+
+    // Add the managers to the generic workers.
+    mWorker.AddManager(packetManager);
 
     // Start the workers.
     mWorker.Start();
@@ -78,6 +89,21 @@ void ChannelServer::Shutdown()
 
     /// @todo Add more workers.
     mWorker.Shutdown();
+}
+
+objects::ChannelDescription ChannelServer::GetDescription()
+{
+    return mDescription;
+}
+
+objects::WorldDescription ChannelServer::GetWorldDescription()
+{
+    return mWorldDescription;
+}
+
+void ChannelServer::SetWorldDescription(objects::WorldDescription& worldDescription)
+{
+    mWorldDescription = worldDescription;
 }
 
 std::shared_ptr<libcomp::TcpConnection> ChannelServer::CreateConnection(

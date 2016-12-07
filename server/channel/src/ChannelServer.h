@@ -30,6 +30,8 @@
 // libcomp Includes
 #include <InternalConnection.h>
 #include <BaseServer.h>
+#include <ChannelDescription.h>
+#include <ManagerConnection.h>
 #include <Worker.h>
 
 namespace channel
@@ -43,13 +45,24 @@ public:
 
     virtual void Shutdown();
 
+    objects::ChannelDescription GetDescription();
+
+    objects::WorldDescription GetWorldDescription();
+
+    void SetWorldDescription(objects::WorldDescription& worldDescription);
+
 protected:
     virtual std::shared_ptr<libcomp::TcpConnection> CreateConnection(
         asio::ip::tcp::socket& socket);
 
     /// @todo Make a bunch of these.
     libcomp::Worker mWorker;
-    std::shared_ptr<libcomp::InternalConnection> mWorldConnection;
+
+    std::shared_ptr<ManagerConnection> mManagerConnection;
+
+    objects::WorldDescription mWorldDescription;
+
+    objects::ChannelDescription mDescription;
 };
 
 } // namespace channel

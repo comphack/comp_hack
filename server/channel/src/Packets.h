@@ -36,7 +36,7 @@ namespace channel
 namespace Parsers
 {
 
-//PACKET_PARSER_DECL(Login);               // 0x0003
+PACKET_PARSER_DECL(SetWorldDescription);               // 0x1001
 
 } // namespace Parsers
 

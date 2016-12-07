@@ -1,12 +1,12 @@
 /**
- * @file server/world/src/packets/DescribeWorld.cpp
- * @ingroup world
+ * @file server/lobby/src/packets/WorldDescription.cpp
+ * @ingroup lobby
  *
  * @author HACKfrost
  *
- * @brief Parser to handle describing the world for the lobby.
+ * @brief Response packet from the world describing base information.
  *
- * This file is part of the World Server (world).
+ * This file is part of the Lobby Server (lobby).
  *
  * Copyright (C) 2012-2016 COMP_hack Team <compomega@tutanota.com>
  *
@@ -34,24 +34,29 @@
 #include "TcpConnection.h"
 #include "WorldDescription.h"
 
-// world Includes
+// lobby Includes
 #include "ManagerPacket.h"
-#include "WorldServer.h"
+#include "LobbyServer.h"
 
-using namespace world;
+using namespace lobby;
 
-bool Parsers::DescribeWorld::Parse(ManagerPacket *pPacketManager,
+bool Parsers::SetWorldDescription::Parse(ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {
-    auto server = std::dynamic_pointer_cast<WorldServer>(pPacketManager->GetServer());
+    objects::WorldDescription obj;
 
-    libcomp::Packet reply;
+    if (!obj.LoadPacket(p))
+    {
+        return false;
+    }
 
-    reply.WriteU16Little(0x1001);
-    server->GetDescription().SavePacket(reply);
+    LOG_DEBUG(libcomp::String("Updating World Server description: (%1) %2\n").Arg(obj.GetID()).Arg(obj.GetName()));
 
-    connection->SendPacket(reply);
+    auto server = std::dynamic_pointer_cast<LobbyServer>(pPacketManager->GetServer());
+
+    auto world = server->GetWorldByConnection(std::shared_ptr<libcomp::InternalConnection>(std::dynamic_pointer_cast<libcomp::InternalConnection>(connection)));
+    world->SetWorldDescription(obj);
 
     return true;
 }

@@ -1,5 +1,5 @@
 /**
- * @file server/lobby/src/packets/Login.cpp
+ * @file server/lobby/src/packets/WorldList.cpp
  * @ingroup lobby
  *
  * @author COMP Omega <compomega@tutanota.com>
@@ -56,27 +56,32 @@ bool Parsers::WorldList::Parse(ManagerPacket *pPacketManager,
     auto worlds = server->GetWorlds();
 
     // World count.
-    reply.WriteU8(worlds.size());
+    reply.WriteU8((uint8_t)worlds.size());
 
     // Add each world to the list.
     for(auto world : worlds)
     {
+        auto worldDesc = world->GetWorldDescription();
+
         // ID for this world.
-        reply.WriteU8(0);
+        reply.WriteU8(worldDesc.GetID());
 
         // Name of the world.
         reply.WriteString16Little(libcomp::Convert::ENCODING_UTF8,
-            world->GetName(), true);
+            worldDesc.GetName(), true);
+
+        auto channels = world->GetChannelDescriptions();
 
         // Number of channels on this world.
-        reply.WriteU8(1);
+        reply.WriteU8((uint8_t)channels.size());
 
         // Add each channel for this world.
+        for(auto channel : channels)
         {
             // Name of the channel. This used to be displayed in the channel
             // list that was hidden from the user.
             reply.WriteString16Little(libcomp::Convert::ENCODING_UTF8,
-                "Channel 1", true);
+                channel.GetName(), true);
 
             // Ping time??? Again, something that used to be in the list.
             reply.WriteU16Little(1);

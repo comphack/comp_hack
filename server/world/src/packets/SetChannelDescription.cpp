@@ -1,5 +1,5 @@
 /**
- * @file server/world/src/packets/DescribeWorld.cpp
+ * @file server/world/src/packets/SetChannelDescription.cpp
  * @ingroup world
  *
  * @author HACKfrost
@@ -27,12 +27,12 @@
 #include "Packets.h"
 
 // libcomp Includes
+#include "ChannelDescription.h"
 #include "Decrypt.h"
+#include "InternalConnection.h"
 #include "Log.h"
 #include "Packet.h"
 #include "ReadOnlyPacket.h"
-#include "TcpConnection.h"
-#include "WorldDescription.h"
 
 // world Includes
 #include "ManagerPacket.h"
@@ -40,18 +40,31 @@
 
 using namespace world;
 
-bool Parsers::DescribeWorld::Parse(ManagerPacket *pPacketManager,
+bool Parsers::SetChannelDescription::Parse(ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {
+    objects::ChannelDescription obj;
+
+    if (!obj.LoadPacket(p))
+    {
+        return false;
+    }
+
+    LOG_DEBUG(libcomp::String("Updating Channel Server description: (%1) %2\n").Arg(obj.GetID()).Arg(obj.GetName()));
+
     auto server = std::dynamic_pointer_cast<WorldServer>(pPacketManager->GetServer());
+    auto conn = std::dynamic_pointer_cast<libcomp::InternalConnection>(connection);
 
-    libcomp::Packet reply;
+    server->SetChannelDescription(obj, conn);
 
-    reply.WriteU16Little(0x1001);
-    server->GetDescription().SavePacket(reply);
+    //Forward the information to the lobby
+    auto lobbyConnection = server->GetLobbyConnection();
 
-    connection->SendPacket(reply);
+    libcomp::Packet packet;
+    packet.WriteU16Little(0x1002);
+    obj.SavePacket(packet);
+    lobbyConnection->SendPacket(packet);
 
     return true;
 }

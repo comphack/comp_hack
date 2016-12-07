@@ -1,12 +1,12 @@
 /**
- * @file server/lobby/src/packets/WorldDescription.cpp
- * @ingroup lobby
+ * @file server/channel/src/packets/WorldDescription.cpp
+ * @ingroup channel
  *
  * @author HACKfrost
  *
  * @brief Response packet from the world describing base information.
  *
- * This file is part of the Lobby Server (lobby).
+ * This file is part of the Channel Server (channel).
  *
  * Copyright (C) 2012-2016 COMP_hack Team <compomega@tutanota.com>
  *
@@ -30,35 +30,39 @@
 #include "Decrypt.h"
 #include "Log.h"
 #include "Packet.h"
-#include "PacketWorldDescription.h"
 #include "ReadOnlyPacket.h"
 #include "TcpConnection.h"
+#include "WorldDescription.h"
 
-// lobby Includes
+// channel Includes
+#include "ChannelServer.h"
 #include "ManagerPacket.h"
-#include "LobbyServer.h"
 
-using namespace lobby;
+using namespace channel;
 
-bool Parsers::WorldDescription::Parse(ManagerPacket *pPacketManager,
+bool Parsers::SetWorldDescription::Parse(ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {
-    objects::PacketWorldDescription obj;
+    objects::WorldDescription obj;
 
     if (!obj.LoadPacket(p))
     {
         return false;
     }
 
-    auto name = obj.GetName();
+    LOG_DEBUG(libcomp::String("Updating World Server description: (%1) %2\n").Arg(obj.GetID()).Arg(obj.GetName()));
 
-    LOG_DEBUG(libcomp::String("Setting World Server name: %1\n").Arg(name));
+    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+    server->SetWorldDescription(obj);
 
-    auto server = std::dynamic_pointer_cast<LobbyServer>(pPacketManager->GetServer());
+    //Reply with the channel information
+    libcomp::Packet reply;
 
-    auto world = server->GetWorldByConnection(std::shared_ptr<libcomp::InternalConnection>(std::dynamic_pointer_cast<libcomp::InternalConnection>(connection)));
-    world->SetName(name);
+    reply.WriteU16Little(0x1002);
+    server->GetDescription().SavePacket(reply);
+
+    connection->SendPacket(reply);
 
     return true;
 }

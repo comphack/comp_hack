@@ -36,10 +36,12 @@
 
 using namespace channel;
 
-ManagerPacket::ManagerPacket()
+ManagerPacket::ManagerPacket(std::shared_ptr<libcomp::BaseServer> server)
 {
-    //mPacketParsers[0x0003] = std::shared_ptr<PacketParser>(
-        //new Parsers::Login());
+    mServer = server;
+
+    mPacketParsers[0x1001] = std::shared_ptr<PacketParser>(
+        new Parsers::SetWorldDescription());
 }
 
 ManagerPacket::~ManagerPacket()
@@ -86,4 +88,9 @@ bool ManagerPacket::ProcessMessage(const libcomp::Message::Message *pMessage)
     {
         return false;
     }
+}
+
+std::shared_ptr<libcomp::BaseServer> ManagerPacket::GetServer()
+{
+    return mServer;
 }

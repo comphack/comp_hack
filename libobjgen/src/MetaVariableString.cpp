@@ -169,18 +169,49 @@ bool MetaVariableString::IsValid(const void *pData, size_t dataSize) const
 
 bool MetaVariableString::Load(std::istream& stream)
 {
-    (void)stream;
+    stream.read(reinterpret_cast<char*>(&mDefaultValue),
+        sizeof(mDefaultValue));
+    stream.read(reinterpret_cast<char*>(&mAllowEmpty),
+        sizeof(mAllowEmpty));
+    stream.read(reinterpret_cast<char*>(&mEncoding),
+        sizeof(mEncoding));
+    stream.read(reinterpret_cast<char*>(&mLengthSize),
+        sizeof(mLengthSize));
+    stream.read(reinterpret_cast<char*>(&mRegularExpression),
+        sizeof(mRegularExpression));
+    stream.read(reinterpret_cast<char*>(&mRounding),
+        sizeof(mRounding));
+    stream.read(reinterpret_cast<char*>(&mSize),
+        sizeof(mSize));
 
-    /// @todo Fix
-    return true;
+    return stream.good() && IsValid();
 }
 
 bool MetaVariableString::Save(std::ostream& stream) const
 {
-    (void)stream;
+    bool result = false;
 
-    /// @todo Fix
-    return true;
+    if(IsValid())
+    {
+        stream.write(reinterpret_cast<const char*>(&mDefaultValue),
+            sizeof(mDefaultValue));
+        stream.write(reinterpret_cast<const char*>(&mAllowEmpty),
+            sizeof(mAllowEmpty));
+        stream.write(reinterpret_cast<const char*>(&mEncoding),
+            sizeof(mEncoding));
+        stream.write(reinterpret_cast<const char*>(&mLengthSize),
+            sizeof(mLengthSize));
+        stream.write(reinterpret_cast<const char*>(&mRegularExpression),
+            sizeof(mRegularExpression));
+        stream.write(reinterpret_cast<const char*>(&mRounding),
+            sizeof(mRounding));
+        stream.write(reinterpret_cast<const char*>(&mSize),
+            sizeof(mSize));
+
+        result = stream.good();
+    }
+
+    return result;
 }
 
 bool MetaVariableString::Load(const tinyxml2::XMLDocument& doc,
@@ -224,7 +255,7 @@ bool MetaVariableString::Load(const tinyxml2::XMLDocument& doc,
     {
         if(nullptr != szAllowEmpty)
         {
-            mError = "Attributes 'regex' and 'empty' and mutually "
+            mError = "Attributes 'regex' and 'empty' are mutually "
                 "exclusive.";
 
             status = false;
@@ -373,11 +404,58 @@ bool MetaVariableString::Load(const tinyxml2::XMLDocument& doc,
 bool MetaVariableString::Save(tinyxml2::XMLDocument& doc,
     tinyxml2::XMLElement& root) const
 {
-    (void)doc;
-    (void)root;
+    tinyxml2::XMLElement *pVariableElement = doc.NewElement("member");
+    pVariableElement->SetAttribute("type", GetType().c_str());
+    pVariableElement->SetAttribute("name", GetName().c_str());
 
-    /// @todo Fix
-    return true;
+    if("" != GetDefaultValue())
+    {
+        pVariableElement->SetAttribute("default", GetDefaultValue().c_str());
+    }
+
+    if(!GetAllowEmpty())
+    {
+        pVariableElement->SetAttribute("empty", "false");
+    }
+
+    if("" != GetRegularExpression())
+    {
+        pVariableElement->SetAttribute("regex", GetRegularExpression().c_str());
+    }
+
+    if(0 != GetRounding() && (2 == GetRounding() || 4 == GetRounding()))
+    {
+        pVariableElement->SetAttribute("round", std::to_string(
+            GetRounding()).c_str());
+    }
+
+    if(4 != GetLengthSize() && (0 == GetLengthSize() || 1 == GetLengthSize() || 2 == GetLengthSize()))
+    {
+        pVariableElement->SetAttribute("lensz", std::to_string(
+            GetLengthSize()).c_str());
+    }
+
+    if(0 != GetSize())
+    {
+        pVariableElement->SetAttribute("length", std::to_string(
+            GetSize()).c_str());
+    }
+
+    if(Encoding_t::ENCODING_UTF8 != GetEncoding())
+    {
+        if(Encoding_t::ENCODING_CP932 == GetEncoding())
+        {
+            pVariableElement->SetAttribute("encoding", "cp932");
+        }
+        else if(Encoding_t::ENCODING_CP1252 == GetEncoding())
+        {
+            pVariableElement->SetAttribute("encoding", "cp1252");
+        }
+    }
+
+    root.InsertEndChild(pVariableElement);
+
+    return BaseSave(*pVariableElement);
 }
 
 std::string MetaVariableString::GetCodeType() const

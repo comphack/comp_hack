@@ -605,15 +605,16 @@ public:
         const std::string& root, const std::string& members,
         size_t tabLevel = 1) const
     {
-        (void)generator;
-        (void)name;
         (void)doc;
-        (void)root;
-        (void)members;
-        (void)tabLevel;
 
-        /// @todo Fix
-        return std::string();
+        std::map<std::string, std::string> replacements;
+        replacements["@VAR_NAME@"] = generator.Escape(GetName());
+        replacements["@VAR_CAMELCASE_NAME@"] = generator.GetCapitalName(*this);
+        replacements["@VAR_CODE_TYPE@"] = GetCodeType();
+        replacements["@MEMBERS@"] = members;
+
+        return generator.ParseTemplate(tabLevel, "VariableIntXmlLoad",
+            replacements);
     }
 
     virtual std::string GetXmlSaveCode(const Generator& generator,

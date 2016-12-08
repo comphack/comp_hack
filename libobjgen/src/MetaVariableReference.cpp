@@ -99,18 +99,25 @@ bool MetaVariableReference::IsValid(const void *pData, size_t dataSize) const
 
 bool MetaVariableReference::Load(std::istream& stream)
 {
-    (void)stream;
+    stream.read(reinterpret_cast<char*>(&mReferenceType),
+        sizeof(mReferenceType));
 
-    /// @todo Fix
-    return true;
+    return stream.good() && IsValid();
 }
 
 bool MetaVariableReference::Save(std::ostream& stream) const
 {
-    (void)stream;
+    bool result = false;
 
-    /// @todo Fix
-    return true;
+    if(IsValid())
+    {
+        stream.write(reinterpret_cast<const char*>(&mReferenceType),
+            sizeof(mReferenceType));
+
+        result = stream.good();
+    }
+
+    return result;
 }
 
 bool MetaVariableReference::Load(const tinyxml2::XMLDocument& doc,
@@ -118,17 +125,38 @@ bool MetaVariableReference::Load(const tinyxml2::XMLDocument& doc,
 {
     (void)doc;
 
-    /// @todo Fix
-    return BaseLoad(root);
+    bool status = true;
+
+    const char *szRType = root.Attribute("rtype");
+
+    if(nullptr != szRType)
+    {
+        SetReferenceType(std::string(szRType));
+    }
+    else
+    {
+        mError = "Reference type is required.";
+        status = false;
+    }
+
+    return status && BaseLoad(root) && IsValid();
 }
 
 bool MetaVariableReference::Save(tinyxml2::XMLDocument& doc,
     tinyxml2::XMLElement& root) const
 {
-    (void)doc;
+    tinyxml2::XMLElement *pVariableElement = doc.NewElement("member");
+    pVariableElement->SetAttribute("type", GetType().c_str());
+    pVariableElement->SetAttribute("name", GetName().c_str());
 
-    /// @todo Fix
-    return BaseSave(root);
+    if("" != GetReferenceType())
+    {
+        pVariableElement->SetAttribute("rtype", GetReferenceType().c_str());
+    }
+
+    root.InsertEndChild(pVariableElement);
+
+    return BaseSave(*pVariableElement);
 }
 
 uint16_t MetaVariableReference::GetDynamicSizeCount() const

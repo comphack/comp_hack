@@ -109,6 +109,15 @@ int TcpServer::Start()
     return returnCode;
 }
 
+void TcpServer::RemoveConnection(std::shared_ptr<TcpConnection>& connection)
+{
+    auto iter = std::find(mConnections.begin(), mConnections.end(), connection);
+    if(iter != mConnections.end())
+    {
+        mConnections.remove(connection);
+    }
+}
+
 int TcpServer::Run()
 {
     return 0;

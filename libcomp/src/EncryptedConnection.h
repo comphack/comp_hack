@@ -51,6 +51,8 @@ public:
     EncryptedConnection(asio::ip::tcp::socket& socket, DH *pDiffieHellman);
     virtual ~EncryptedConnection();
 
+    virtual void Close();
+
     virtual void ConnectionSuccess();
 
     void SetMessageQueue(const std::shared_ptr<MessageQueue<

@@ -359,8 +359,11 @@ void TcpConnection::SocketError(const String& errorMessage)
             GetRemoteAddress()).Arg(errorMessage));
     }
 
-    mSocket.close();
-    mStatus = STATUS_NOT_CONNECTED;
+    if(mStatus != STATUS_NOT_CONNECTED)
+    {
+        mStatus = STATUS_NOT_CONNECTED;
+        Close();
+    }
 }
 
 void TcpConnection::ConnectionFailed()

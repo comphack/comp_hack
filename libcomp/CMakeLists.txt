@@ -62,6 +62,7 @@ SET(${PROJECT_NAME}_SRCS
     src/LobbyConnection.cpp
     src/Log.cpp
     #src/MemoryFile.cpp
+    src/MessageConnectionClosed.cpp
     src/MessageEncrypted.cpp
     src/MessagePacket.cpp
     src/MessagePong.cpp
@@ -121,6 +122,7 @@ SET(${PROJECT_NAME}_HDRS
     src/Manager.h
     #src/MemoryFile.h
     src/Message.h
+    src/MessageConnectionClosed.h
     src/MessageEncrypted.h
     src/MessagePacket.h
     src/MessagePong.h

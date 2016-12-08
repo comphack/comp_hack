@@ -49,11 +49,13 @@ public:
 
     objects::WorldDescription GetDescription();
 
-    bool GetChannelDescriptionByConnection(std::shared_ptr<libcomp::InternalConnection> connection, objects::ChannelDescription& outChannel);
+    bool GetChannelDescriptionByConnection(std::shared_ptr<libcomp::InternalConnection>& connection, objects::ChannelDescription& outChannel);
 
     std::shared_ptr<libcomp::InternalConnection> GetLobbyConnection();
 
-    void SetChannelDescription(objects::ChannelDescription channel, std::shared_ptr<libcomp::InternalConnection> connection);
+    void SetChannelDescription(objects::ChannelDescription channel, std::shared_ptr<libcomp::InternalConnection>& connection);
+
+    bool RemoveChannelDescription(std::shared_ptr<libcomp::InternalConnection>& connection);
 
 protected:
     virtual std::shared_ptr<libcomp::TcpConnection> CreateConnection(

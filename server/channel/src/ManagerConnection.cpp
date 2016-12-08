@@ -28,8 +28,10 @@
 
 // libcomp Includes
 #include "Log.h"
+#include "MessageConnectionClosed.h"
 #include "MessageEncrypted.h"
 
+// channel Includes
 #include "ChannelServer.h"
 
 using namespace channel;
@@ -56,7 +58,6 @@ ManagerConnection::GetSupportedTypes() const
 
 bool ManagerConnection::ProcessMessage(const libcomp::Message::Message *pMessage)
 {
-    // Only one type of message passes through here (for the time being) so no need for dedicated handlers
     const libcomp::Message::Encrypted *encrypted = dynamic_cast<
         const libcomp::Message::Encrypted*>(pMessage);
 
@@ -74,6 +75,24 @@ bool ManagerConnection::ProcessMessage(const libcomp::Message::Message *pMessage
             connection->SendPacket(std::move(packet));
         }
         
+        return true;
+    }
+
+    const libcomp::Message::ConnectionClosed *closed = dynamic_cast<
+        const libcomp::Message::ConnectionClosed*>(pMessage);
+
+    if(nullptr != closed)
+    {
+        auto connection = std::shared_ptr<libcomp::TcpConnection>(closed->GetConnection());
+
+        mServer->RemoveConnection(connection);
+
+        if(mWorldConnection == connection)
+        {
+            LOG_INFO(libcomp::String("World connection closed. Shutting down."));
+            mServer->Shutdown();
+        }
+
         return true;
     }
     

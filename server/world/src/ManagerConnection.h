@@ -28,6 +28,7 @@
 #define SERVER_WORLD_SRC_MANAGERCONNECTION_H
 
 // libcomp Includes
+#include "BaseServer.h"
 #include "InternalConnection.h"
 #include "Manager.h"
 
@@ -40,7 +41,7 @@ namespace world
 class ManagerConnection : public libcomp::Manager
 {
 public:
-    ManagerConnection();
+    ManagerConnection(std::shared_ptr<libcomp::BaseServer> server);
     virtual ~ManagerConnection();
 
     /**
@@ -61,6 +62,8 @@ public:
     bool LobbyConnected();
 
 private:
+    std::shared_ptr<libcomp::BaseServer> mServer;
+
     std::shared_ptr<libcomp::InternalConnection> mLobbyConnection;
 };
 

@@ -77,7 +77,7 @@ public:
 
     bool Connect(const String& host, uint16_t port = 0, bool async = true);
 
-    void Close();
+    virtual void Close();
 
     virtual void QueuePacket(Packet& packet);
     virtual void QueuePacket(ReadOnlyPacket& packet);

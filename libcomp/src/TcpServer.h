@@ -55,6 +55,8 @@ public:
 
     virtual int Start();
 
+    void RemoveConnection(std::shared_ptr<TcpConnection>& connection);
+
     static DH* GenerateDiffieHellman();
     static DH* LoadDiffieHellman(const String& prime);
     static DH* LoadDiffieHellman(const std::vector<char>& data);

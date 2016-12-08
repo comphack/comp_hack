@@ -44,9 +44,16 @@ bool Parsers::SetChannelDescription::Parse(ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {
+    if(p.Size() == 0)
+    {
+        return false;
+    }
+
+    auto action = p.ReadU8();   //1: Update, 0: Delete
+
     objects::ChannelDescription obj;
 
-    if (!obj.LoadPacket(p))
+    if(!obj.LoadPacket(p))
     {
         return false;
     }
@@ -57,7 +64,15 @@ bool Parsers::SetChannelDescription::Parse(ManagerPacket *pPacketManager,
     auto conn = std::dynamic_pointer_cast<libcomp::InternalConnection>(connection);
 
     auto world = server->GetWorldByConnection(conn);
-    world->SetChannelDescription(obj);
+
+    if(action == 0)
+    {
+        world->RemoveChannelDescriptionByID(obj.GetID());
+    }
+    else
+    {
+        world->SetChannelDescription(obj);
+    }
 
     return true;
 }

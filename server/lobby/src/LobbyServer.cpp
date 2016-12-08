@@ -67,7 +67,7 @@ LobbyServer::LobbyServer(std::shared_ptr<objects::ServerConfig> config, const li
         return;
     }
 
-    mManagerConnection = std::shared_ptr<ManagerConnection>(new ManagerConnection(std::shared_ptr<asio::io_service>(&mService), mMainWorker.GetMessageQueue()));
+    mManagerConnection = std::shared_ptr<ManagerConnection>(new ManagerConnection(std::shared_ptr<libcomp::BaseServer>(this), std::shared_ptr<asio::io_service>(&mService), mMainWorker.GetMessageQueue()));
 
     auto connectionManager = std::shared_ptr<libcomp::Manager>(mManagerConnection);
     auto packetManager = std::shared_ptr<libcomp::Manager>(new ManagerPacket(std::shared_ptr<libcomp::BaseServer>(this)));

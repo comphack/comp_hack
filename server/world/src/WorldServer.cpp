@@ -83,7 +83,7 @@ WorldServer::WorldServer(std::shared_ptr<objects::ServerConfig> config, const li
 
     delete pMessage;
 
-    mManagerConnection = std::shared_ptr<ManagerConnection>(new ManagerConnection());
+    mManagerConnection = std::shared_ptr<ManagerConnection>(new ManagerConnection(std::shared_ptr<libcomp::BaseServer>(this)));
 
     lobbyConnection->Close();
     serviceThread.join();
@@ -114,9 +114,9 @@ objects::WorldDescription WorldServer::GetDescription()
     return mDescription;
 }
 
-bool WorldServer::GetChannelDescriptionByConnection(std::shared_ptr<libcomp::InternalConnection> connection, objects::ChannelDescription& outChannel)
+bool WorldServer::GetChannelDescriptionByConnection(std::shared_ptr<libcomp::InternalConnection>& connection, objects::ChannelDescription& outChannel)
 {
-    if (mChannelDescriptions.find(connection) != mChannelDescriptions.end())
+    if(mChannelDescriptions.find(connection) != mChannelDescriptions.end())
     {
         outChannel = mChannelDescriptions[connection];
         return true;
@@ -130,9 +130,21 @@ std::shared_ptr<libcomp::InternalConnection> WorldServer::GetLobbyConnection()
     return mManagerConnection->GetLobbyConnection();
 }
 
-void WorldServer::SetChannelDescription(objects::ChannelDescription channel, std::shared_ptr<libcomp::InternalConnection> connection)
+void WorldServer::SetChannelDescription(objects::ChannelDescription channel, std::shared_ptr<libcomp::InternalConnection>& connection)
 {
     mChannelDescriptions[connection] = channel;
+}
+
+bool WorldServer::RemoveChannelDescription(std::shared_ptr<libcomp::InternalConnection>& connection)
+{
+    auto iter = mChannelDescriptions.find(connection);
+    if(iter != mChannelDescriptions.end())
+    {
+        mChannelDescriptions.erase(iter);
+        return true;
+    }
+
+    return false;
 }
 
 std::shared_ptr<libcomp::TcpConnection> WorldServer::CreateConnection(

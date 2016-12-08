@@ -87,11 +87,11 @@ bool World::GetChannelDescriptionByID(uint8_t id, objects::ChannelDescription& o
 
 bool World::RemoveChannelDescriptionByID(uint8_t id)
 {
-    for(auto channel : mChannelDescriptions)
+    for(auto iter = mChannelDescriptions.begin(); iter != mChannelDescriptions.end(); iter++)
     {
-        if(channel.GetID() == id)
+        if(iter->GetID() == id)
         {
-            //mChannelDescriptions.remove(channel);
+            mChannelDescriptions.erase(iter);
             return true;
         }
     }
@@ -107,7 +107,7 @@ void World::SetWorldDescription(objects::WorldDescription& worldDescription)
 void World::SetChannelDescription(objects::ChannelDescription& channelDescription)
 {
     objects::ChannelDescription outChannel;
-    if (!GetChannelDescriptionByID(channelDescription.GetID(), outChannel))
+    if(!GetChannelDescriptionByID(channelDescription.GetID(), outChannel))
     {
         mChannelDescriptions.push_back(channelDescription);
     }

@@ -46,7 +46,7 @@ bool Parsers::SetChannelDescription::Parse(ManagerPacket *pPacketManager,
 {
     objects::ChannelDescription obj;
 
-    if (!obj.LoadPacket(p))
+    if(!obj.LoadPacket(p))
     {
         return false;
     }
@@ -63,6 +63,7 @@ bool Parsers::SetChannelDescription::Parse(ManagerPacket *pPacketManager,
 
     libcomp::Packet packet;
     packet.WriteU16Little(0x1002);
+    packet.WriteU8(1);  //1: Update
     obj.SavePacket(packet);
     lobbyConnection->SendPacket(packet);
 

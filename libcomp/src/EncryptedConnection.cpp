@@ -31,6 +31,7 @@
 #include "Decrypt.h"
 #include "Exception.h"
 #include "Log.h"
+#include "MessageConnectionClosed.h"
 #include "MessageEncrypted.h"
 #include "MessagePacket.h"
 #include "TcpServer.h"
@@ -52,12 +53,22 @@ EncryptedConnection::~EncryptedConnection()
 {
 }
 
+void EncryptedConnection::Close()
+{
+    TcpConnection::Close();
+    /*//todo: Fix shared_ptr desctructor issue
+    if(nullptr != mMessageQueue)
+    {
+        mMessageQueue->Enqueue(new Message::ConnectionClosed(this));
+    }*/
+}
+
 void EncryptedConnection::SocketError(const libcomp::String& errorMessage)
 {
     if(STATUS_NOT_CONNECTED != GetStatus())
     {
-        LOG_DEBUG(libcomp::String("Client disconnect: %1\n").Arg(
-            GetRemoteAddress()));
+        LOG_DEBUG(libcomp::String("%1 disconnect: %2\n").Arg(
+            ROLE_CLIENT == GetRole() ? "Server" : "Client").Arg(GetRemoteAddress()));
     }
 
     TcpConnection::SocketError(errorMessage);
@@ -67,8 +78,8 @@ void EncryptedConnection::SocketError(const libcomp::String& errorMessage)
 
 void EncryptedConnection::ConnectionSuccess()
 {
-    LOG_DEBUG(libcomp::String("Client connection: %1\n").Arg(
-        GetRemoteAddress()));
+    LOG_DEBUG(libcomp::String("%1 connection: %2\n").Arg(
+        ROLE_CLIENT == GetRole() ? "Server" : "Client").Arg(GetRemoteAddress()));
 
     if(ROLE_CLIENT == GetRole())
     {

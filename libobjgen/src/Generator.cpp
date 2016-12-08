@@ -92,7 +92,10 @@ std::string Generator::ParseTemplate(size_t tabLevel, const std::string& name,
 
     std::string code(templ.begin(), templ.end());
 
-    for(auto pair : replacements)
+    std::map<std::string, std::string> replaceMap(replacements);
+    replaceMap["\r\n"] = "\n";
+
+    for(auto pair : replaceMap)
     {
         size_t pos = 0;
 

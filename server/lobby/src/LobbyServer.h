@@ -29,7 +29,6 @@
 
 // libcomp Includes
 #include <BaseServer.h>
-#include <Database.h>
 #include <Worker.h>
 
 // lobby Includes
@@ -57,8 +56,6 @@ protected:
 
     /// @todo Replace this with many worker threads.
     libcomp::Worker mWorker;
-
-    std::shared_ptr<libcomp::Database> mDatabase;
 
     std::shared_ptr<ManagerConnection> mManagerConnection;
 };

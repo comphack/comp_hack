@@ -30,7 +30,6 @@
 #include "LobbyConnection.h"
 
 // libcomp Includes
-#include <DatabaseCassandra.h>
 #include <Log.h>
 #include <ManagerConnection.h>
 #include <ManagerPacket.h>
@@ -43,29 +42,7 @@ using namespace lobby;
 LobbyServer::LobbyServer(std::shared_ptr<objects::ServerConfig> config, const libcomp::String& configPath) :
     libcomp::BaseServer(config, configPath)
 {
-    /// @todo Setup the database type based on the config.
-    /// @todo Consider moving this into the base server.
-    mDatabase = std::shared_ptr<libcomp::Database>(
-        new libcomp::DatabaseCassandra);
-
     auto conf = std::dynamic_pointer_cast<objects::LobbyConfig>(mConfig);
-
-    // Open the database.
-    if(!mDatabase->Open(conf->GetDatabaseIP()) || !mDatabase->IsOpen())
-    {
-        LOG_CRITICAL("Failed to open database.\n");
-
-        return;
-    }
-
-    // Setup the database.
-    /// @todo Only if the database does not exist and call Use() instead!
-    if(!mDatabase->Setup())
-    {
-        LOG_CRITICAL("Failed to init database.\n");
-
-        return;
-    }
 
     mManagerConnection = std::shared_ptr<ManagerConnection>(new ManagerConnection(std::shared_ptr<libcomp::BaseServer>(this), std::shared_ptr<asio::io_service>(&mService), mMainWorker.GetMessageQueue()));
 

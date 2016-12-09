@@ -38,7 +38,7 @@ using namespace libcomp;
 
 TEST(Cassandra, Connection)
 {
-    DatabaseCassandra db;
+    DatabaseCassandra db("comp_hack_test");
 
     EXPECT_FALSE(db.IsOpen());
     EXPECT_TRUE(db.Open("127.0.0.1"));
@@ -51,7 +51,7 @@ TEST(Cassandra, Connection)
 
 TEST(Cassandra, BadPrepare)
 {
-    DatabaseCassandra db;
+    DatabaseCassandra db("comp_hack_test");
 
     EXPECT_FALSE(db.IsOpen());
     EXPECT_TRUE(db.Open("127.0.0.1"));
@@ -87,16 +87,16 @@ TEST(Cassandra, ObjectBindIndex)
     std::unordered_map<std::string, std::vector<char>> values2;
     values2["test_short"] = testValueData3;
 
-    DatabaseCassandra db;
+    DatabaseCassandra db("comp_hack_test");
 
     EXPECT_FALSE(db.IsOpen());
     EXPECT_TRUE(db.Open("127.0.0.1"));
     EXPECT_TRUE(db.IsOpen());
 
-    EXPECT_TRUE(db.Execute("DROP KEYSPACE IF EXISTS comp_hack;"));
-    EXPECT_TRUE(db.Execute("CREATE KEYSPACE comp_hack WITH REPLICATION = {"
+    EXPECT_TRUE(db.Execute("DROP KEYSPACE IF EXISTS comp_hack_test;"));
+    EXPECT_TRUE(db.Execute("CREATE KEYSPACE comp_hack_test WITH REPLICATION = {"
         " 'class' : 'NetworkTopologyStrategy', 'datacenter1' : 1 };"));
-    EXPECT_TRUE(db.Execute("USE comp_hack;"));
+    EXPECT_TRUE(db.Execute("USE comp_hack_test;"));
     EXPECT_TRUE(db.Execute("CREATE TABLE objects ( uid uuid PRIMARY KEY, "
         "member_vars map<ascii, blob> );"));
 
@@ -194,16 +194,16 @@ TEST(Cassandra, ObjectBindName)
     std::unordered_map<std::string, std::vector<char>> values2;
     values2["test_short"] = testValueData3;
 
-    DatabaseCassandra db;
+    DatabaseCassandra db("comp_hack_test");
 
     EXPECT_FALSE(db.IsOpen());
     EXPECT_TRUE(db.Open("127.0.0.1"));
     EXPECT_TRUE(db.IsOpen());
 
-    EXPECT_TRUE(db.Execute("DROP KEYSPACE IF EXISTS comp_hack;"));
-    EXPECT_TRUE(db.Execute("CREATE KEYSPACE comp_hack WITH REPLICATION = {"
+    EXPECT_TRUE(db.Execute("DROP KEYSPACE IF EXISTS comp_hack_test;"));
+    EXPECT_TRUE(db.Execute("CREATE KEYSPACE comp_hack_test WITH REPLICATION = {"
         " 'class' : 'NetworkTopologyStrategy', 'datacenter1' : 1 };"));
-    EXPECT_TRUE(db.Execute("USE comp_hack;"));
+    EXPECT_TRUE(db.Execute("USE comp_hack_test;"));
     EXPECT_TRUE(db.Execute("CREATE TABLE objects ( uid uuid PRIMARY KEY, "
         "member_vars map<ascii, blob> );"));
 
@@ -301,16 +301,16 @@ TEST(Cassandra, ObjectBatch)
     std::unordered_map<std::string, std::vector<char>> values2;
     values2["test_short"] = testValueData3;
 
-    DatabaseCassandra db;
+    DatabaseCassandra db("comp_hack_test");
 
     EXPECT_FALSE(db.IsOpen());
     EXPECT_TRUE(db.Open("127.0.0.1"));
     EXPECT_TRUE(db.IsOpen());
 
-    EXPECT_TRUE(db.Execute("DROP KEYSPACE IF EXISTS comp_hack;"));
-    EXPECT_TRUE(db.Execute("CREATE KEYSPACE comp_hack WITH REPLICATION = {"
+    EXPECT_TRUE(db.Execute("DROP KEYSPACE IF EXISTS comp_hack_test;"));
+    EXPECT_TRUE(db.Execute("CREATE KEYSPACE comp_hack_test WITH REPLICATION = {"
         " 'class' : 'NetworkTopologyStrategy', 'datacenter1' : 1 };"));
-    EXPECT_TRUE(db.Execute("USE comp_hack;"));
+    EXPECT_TRUE(db.Execute("USE comp_hack_test;"));
     EXPECT_TRUE(db.Execute("CREATE TABLE objects ( uid uuid PRIMARY KEY, "
         "member_vars map<ascii, blob> );"));
 

@@ -44,6 +44,7 @@ public:
 
     virtual DatabaseQuery Prepare(const String& query) = 0;
     virtual bool Execute(const String& query);
+    virtual bool Exists() = 0;
     virtual bool Setup() = 0;
     virtual bool Use() = 0;
 

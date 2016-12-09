@@ -41,7 +41,7 @@ class DatabaseCassandra : public Database
 public:
     friend class DatabaseQueryCassandra;
 
-    DatabaseCassandra();
+    DatabaseCassandra(std::string keyspace);
     virtual ~DatabaseCassandra();
 
     virtual bool Open(const String& address, const String& username = String(),
@@ -50,6 +50,7 @@ public:
     virtual bool IsOpen() const;
 
     virtual DatabaseQuery Prepare(const String& query);
+    virtual bool Exists();
     virtual bool Setup();
     virtual bool Use();
 
@@ -61,6 +62,8 @@ protected:
 private:
     CassCluster *mCluster;
     CassSession *mSession;
+
+    std::string mKeyspace;
 };
 
 } // namespace libcomp

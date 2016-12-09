@@ -35,7 +35,7 @@
 
 using namespace libcomp;
 
-DatabaseCassandra::DatabaseCassandra() : mCluster(nullptr), mSession(nullptr)
+DatabaseCassandra::DatabaseCassandra(std::string keyspace) : mKeyspace(keyspace), mCluster(nullptr), mSession(nullptr)
 {
 }
 
@@ -105,6 +105,22 @@ DatabaseQuery DatabaseCassandra::Prepare(const String& query)
     return DatabaseQuery(new DatabaseQueryCassandra(this), query);
 }
 
+bool DatabaseCassandra::Exists()
+{
+    DatabaseQuery q = Prepare(libcomp::String("SELECT keyspace_name FROM system_schema.keyspaces WHERE keyspace_name = '%1';").Arg(mKeyspace));
+    if(!q.Execute())
+    {
+        LOG_CRITICAL("Failed to query for keyspace.\n");
+
+        return false;
+    }
+
+    std::vector<std::vector<std::vector<char>>> results;
+    q.Next();
+
+    return q.GetRowValues(results) && results.size() > 0;
+}
+
 bool DatabaseCassandra::Setup()
 {
     if(!IsOpen())
@@ -114,9 +130,8 @@ bool DatabaseCassandra::Setup()
         return false;
     }
 
-    /// @todo Make the keyspace a config option.
     // Delete the old keyspace if it exists.
-    if(!Execute("DROP KEYSPACE IF EXISTS comp_hack;"))
+    if(!Execute(libcomp::String("DROP KEYSPACE IF EXISTS %1;").Arg(mKeyspace)))
     {
         LOG_ERROR("Failed to delete old keyspace.\n");
 
@@ -124,8 +139,8 @@ bool DatabaseCassandra::Setup()
     }
 
     // Now re-create the keyspace.
-    if(!Execute("CREATE KEYSPACE comp_hack WITH REPLICATION = {"
-        " 'class' : 'NetworkTopologyStrategy', 'datacenter1' : 1 };"))
+    if(!Execute(libcomp::String("CREATE KEYSPACE %1 WITH REPLICATION = {"
+        " 'class' : 'NetworkTopologyStrategy', 'datacenter1' : 1 };").Arg(mKeyspace)))
     {
         LOG_ERROR("Failed to create keyspace.\n");
 
@@ -154,8 +169,7 @@ bool DatabaseCassandra::Setup()
 bool DatabaseCassandra::Use()
 {
     // Use the keyspace.
-    /// @todo Make the keyspace a config option.
-    if(!Execute("USE comp_hack;"))
+    if(!Execute(libcomp::String("USE %1;").Arg(mKeyspace)))
     {
         LOG_ERROR("Failed to use the keyspace.\n");
 

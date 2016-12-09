@@ -33,6 +33,7 @@
 #include <direct.h>
 #endif
 
+#include <DatabaseCassandra.h>
 #include "Log.h"
 
 using namespace libcomp;
@@ -41,6 +42,33 @@ BaseServer::BaseServer(std::shared_ptr<objects::ServerConfig> config, const Stri
     TcpServer("any", config->GetPort()), mConfig(config)
 {
     ReadConfig(config, configPath);
+
+    /// @todo Setup the database type based on the config.
+    mDatabase = std::shared_ptr<libcomp::Database>(
+        new libcomp::DatabaseCassandra(config->GetCassandraKeyspace().ToUtf8()));
+
+    // Open the database.
+    if(!mDatabase->Open(config->GetDatabaseIP()) || !mDatabase->IsOpen())
+    {
+        LOG_CRITICAL("Failed to open database.\n");
+
+        return;
+    }
+
+    // Use the database if it exists, else setup the database.
+    if(mDatabase->Exists())
+    {
+        mDatabase->Use();
+    }
+    else
+    {
+        if(!mDatabase->Setup())
+        {
+            LOG_CRITICAL("Failed to init database.\n");
+
+            return;
+        }
+    }
 }
 
 BaseServer::~BaseServer()

@@ -28,6 +28,7 @@
 #define LIBCOMP_SRC_BASESERVER_H
 
 // libcomp Includes
+#include "Database.h"
 #include "ServerConfig.h"
 #include "TcpServer.h"
 #include "Worker.h"
@@ -51,6 +52,8 @@ protected:
     virtual int Run();
 
     std::shared_ptr<objects::ServerConfig> mConfig;
+
+    std::shared_ptr<libcomp::Database> mDatabase;
 
     /// Worker that blocks and runs in the main thread.
     libcomp::Worker mMainWorker;

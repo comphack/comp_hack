@@ -513,6 +513,48 @@ bool DatabaseQueryCassandra::GetMap(const String& name,
     return result;
 }
 
+bool DatabaseQueryCassandra::GetRowValues(std::vector<std::vector<std::vector<char>>>& rowValues)
+{
+    bool result = true;
+
+    if(nullptr != mResult)
+    {
+        size_t rowCount = cass_result_row_count(mResult);
+        size_t colCount = cass_result_column_count(mResult);
+
+        CassIterator* rowIter = cass_iterator_from_result(mResult);
+
+        while(cass_iterator_next(rowIter)) {
+            const CassRow* pRow = cass_iterator_get_row(rowIter);
+            std::vector<std::vector<char>> r;
+            for (int k = 0; k < colCount; k++)
+            {
+                const CassValue* pValue = cass_row_get_column(pRow, k);
+
+                const cass_byte_t *pValueData;
+                size_t valueSize;
+
+                if(CASS_OK == cass_value_get_bytes(pValue, &pValueData, &valueSize))
+                {
+                    std::vector<char> value;
+                    value.insert(value.begin(),
+                        reinterpret_cast<const char*>(pValueData),
+                        reinterpret_cast<const char*>(pValueData) +
+                        valueSize);
+                    r.push_back(value);
+                }
+                else
+                {
+                    result = false;
+                }
+            }
+            rowValues.push_back(r);
+        }
+    }
+
+    return result;
+}
+
 bool DatabaseQueryCassandra::BatchNext()
 {
     bool result = false;

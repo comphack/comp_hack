@@ -56,6 +56,7 @@ public:
         std::string, std::vector<char>>& values);
     virtual bool GetMap(const String& name, std::unordered_map<
         std::string, std::vector<char>>& values);
+    virtual bool GetRowValues(std::vector<std::vector<std::vector<char>>>& rowValues);
 
     virtual bool BatchNext() = 0;
 
@@ -85,6 +86,7 @@ public:
         std::string, std::vector<char>>& values);
     bool GetMap(const String& name, std::unordered_map<
         std::string, std::vector<char>>& values);
+    virtual bool GetRowValues(std::vector<std::vector<std::vector<char>>>& rowValues);
 
     bool BatchNext();
 

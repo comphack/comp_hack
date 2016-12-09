@@ -83,7 +83,7 @@ bool ManagerConnection::ProcessMessage(const libcomp::Message::Message *pMessage
 
     if(nullptr != closed)
     {
-        auto connection = std::shared_ptr<libcomp::TcpConnection>(closed->GetConnection());
+        auto connection = closed->GetConnection();
 
         mServer->RemoveConnection(connection);
 

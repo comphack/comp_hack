@@ -58,8 +58,6 @@ bool Parsers::SetChannelDescription::Parse(ManagerPacket *pPacketManager,
         return false;
     }
 
-    LOG_DEBUG(libcomp::String("Updating Channel Server description: (%1) %2\n").Arg(obj.GetID()).Arg(obj.GetName()));
-
     auto server = std::dynamic_pointer_cast<LobbyServer>(pPacketManager->GetServer());
     auto conn = std::dynamic_pointer_cast<libcomp::InternalConnection>(connection);
 
@@ -71,6 +69,7 @@ bool Parsers::SetChannelDescription::Parse(ManagerPacket *pPacketManager,
     }
     else
     {
+        LOG_DEBUG(libcomp::String("Updating Channel Server description: (%1) %2\n").Arg(obj.GetID()).Arg(obj.GetName()));
         world->SetChannelDescription(obj);
     }
 

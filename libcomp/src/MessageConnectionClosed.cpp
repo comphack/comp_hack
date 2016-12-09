@@ -28,7 +28,7 @@
 
 using namespace libcomp;
 
-Message::ConnectionClosed::ConnectionClosed(TcpConnection* connection) :
+Message::ConnectionClosed::ConnectionClosed(std::shared_ptr<TcpConnection> connection) :
     mConnection(connection)
 {
 }
@@ -37,7 +37,7 @@ Message::ConnectionClosed::~ConnectionClosed()
 {
 }
 
-TcpConnection* Message::ConnectionClosed::GetConnection() const
+std::shared_ptr<TcpConnection> Message::ConnectionClosed::GetConnection() const
 {
     return mConnection;
 }

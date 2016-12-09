@@ -41,15 +41,15 @@ namespace Message
 class ConnectionClosed : public Message
 {
 public:
-    ConnectionClosed(TcpConnection* connection);
+    ConnectionClosed(std::shared_ptr<TcpConnection> connection);
     virtual ~ConnectionClosed();
 
-    TcpConnection* GetConnection() const;
+    std::shared_ptr<TcpConnection> GetConnection() const;
 
     virtual MessageType GetType() const;
 
 private:
-    TcpConnection* mConnection;
+    std::shared_ptr<TcpConnection> mConnection;
 };
 
 } // namespace Message

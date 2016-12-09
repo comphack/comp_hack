@@ -96,12 +96,15 @@ bool ManagerConnection::ProcessMessage(const libcomp::Message::Message *pMessage
     if(nullptr != encrypted)
     {
         auto connection = encrypted->GetConnection();
-        for(auto world : mWorlds)
+        auto world = GetWorldByConnection(std::dynamic_pointer_cast<libcomp::InternalConnection>(connection));
+        if (nullptr != world)
         {
-            if (world->GetConnection() == connection)
-            {
-                return world->Initialize();
-            }
+            return world->Initialize();
+        }
+        else
+        {
+            //Nothing special to do
+            return true;
         }
     }
 
@@ -110,7 +113,7 @@ bool ManagerConnection::ProcessMessage(const libcomp::Message::Message *pMessage
 
     if(nullptr != closed)
     {
-        auto connection = std::shared_ptr<libcomp::TcpConnection>(closed->GetConnection());
+        auto connection = closed->GetConnection();
 
         mServer->RemoveConnection(connection);
 

@@ -56,11 +56,10 @@ EncryptedConnection::~EncryptedConnection()
 void EncryptedConnection::Close()
 {
     TcpConnection::Close();
-    /*//todo: Fix shared_ptr desctructor issue
     if(nullptr != mMessageQueue)
     {
-        mMessageQueue->Enqueue(new Message::ConnectionClosed(this));
-    }*/
+        mMessageQueue->Enqueue(new Message::ConnectionClosed(mSelf.lock()));
+    }
 }
 
 void EncryptedConnection::SocketError(const libcomp::String& errorMessage)

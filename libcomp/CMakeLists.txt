@@ -98,6 +98,7 @@ SET(${PROJECT_NAME}_HDRS
     src/BaseServer.h
     src/ChannelConnection.h
     src/Compress.h
+    src/ConnectionMessage.h
     src/Constants.h
     src/Convert.h
     src/CString.h

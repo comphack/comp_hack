@@ -42,7 +42,7 @@ std::shared_ptr<TcpConnection> Message::ConnectionClosed::GetConnection() const
     return mConnection;
 }
 
-Message::MessageType Message::ConnectionClosed::GetType() const
+Message::ConnectionMessageType Message::ConnectionClosed::GetConnectionMessageType() const
 {
-    return MessageType::MESSAGE_TYPE_CONNECTION;
+    return ConnectionMessageType::CONNECTION_MESSAGE_CONNECTION_CLOSED;
 }

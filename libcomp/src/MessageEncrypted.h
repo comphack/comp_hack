@@ -28,7 +28,7 @@
 #define LIBCOMP_SRC_MESSAGEENCRYPTED_H
 
 // libcomp Includes
-#include "Message.h"
+#include "ConnectionMessage.h"
 
 // Standard C++11 Includes
 #include <memory>
@@ -41,7 +41,7 @@ class TcpConnection;
 namespace Message
 {
 
-class Encrypted : public Message
+class Encrypted : public ConnectionMessage
 {
 public:
     Encrypted(const std::shared_ptr<TcpConnection>& connection);
@@ -49,7 +49,7 @@ public:
 
     std::shared_ptr<TcpConnection> GetConnection() const;
 
-    virtual MessageType GetType() const;
+    virtual ConnectionMessageType GetConnectionMessageType() const;
 
 private:
     std::shared_ptr<TcpConnection> mConnection;

@@ -29,7 +29,7 @@
 
 // libcomp Includes
 #include "CString.h"
-#include "Message.h"
+#include "ConnectionMessage.h"
 
 // Standard C++11 Includes
 #include <memory>
@@ -40,7 +40,7 @@ namespace libcomp
 namespace Message
 {
 
-class WorldNotification : public Message
+class WorldNotification : public ConnectionMessage
 {
 public:
     WorldNotification(const String& address, uint16_t port);
@@ -50,7 +50,7 @@ public:
 
     uint16_t GetPort() const;
 
-    virtual MessageType GetType() const;
+    virtual ConnectionMessageType GetConnectionMessageType() const;
 
 private:
     String mAddress;

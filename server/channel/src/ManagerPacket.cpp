@@ -36,12 +36,19 @@
 
 using namespace channel;
 
-ManagerPacket::ManagerPacket(std::shared_ptr<libcomp::BaseServer> server)
+ManagerPacket::ManagerPacket(PacketManagerMode mode, std::shared_ptr<libcomp::BaseServer> server)
 {
     mServer = server;
 
-    mPacketParsers[0x1001] = std::shared_ptr<PacketParser>(
-        new Parsers::SetWorldDescription());
+    if(mode == PacketManagerMode::MANAGER_CLIENT_FACING)
+    {
+        //todo
+    }
+    else
+    {
+        mPacketParsers[0x1001] = std::shared_ptr<PacketParser>(
+            new Parsers::SetWorldDescription());
+    }
 }
 
 ManagerPacket::~ManagerPacket()

@@ -47,7 +47,8 @@ ChannelServer::ChannelServer(std::shared_ptr<objects::ServerConfig> config, cons
     mWorldConnection->SetSelf(mWorldConnection);
     mWorldConnection->SetMessageQueue(mMainWorker.GetMessageQueue());
 
-    mManagerConnection = std::shared_ptr<ManagerConnection>(new ManagerConnection(std::shared_ptr<libcomp::BaseServer>(this)));
+    auto self = std::shared_ptr<libcomp::BaseServer>(this);
+    mManagerConnection = std::shared_ptr<ManagerConnection>(new ManagerConnection(self));
     mManagerConnection->SetWorldConnection(mWorldConnection);
 
     auto conf = std::dynamic_pointer_cast<objects::ChannelConfig>(mConfig);
@@ -64,14 +65,12 @@ ChannelServer::ChannelServer(std::shared_ptr<objects::ServerConfig> config, cons
         LOG_CRITICAL("Failed to connect to the world server!\n");
     }
 
-    auto packetManager = std::shared_ptr<libcomp::Manager>(new ManagerPacket(std::shared_ptr<libcomp::BaseServer>(this)));
-
     //Add the managers to the main worker.
-    mMainWorker.AddManager(packetManager);
+    mMainWorker.AddManager(std::shared_ptr<libcomp::Manager>(new ManagerPacket(PacketManagerMode::MANAGER_INTERNAL, self)));
     mMainWorker.AddManager(mManagerConnection);
 
     // Add the managers to the generic workers.
-    mWorker.AddManager(packetManager);
+    mWorker.AddManager(std::shared_ptr<libcomp::Manager>(new ManagerPacket(PacketManagerMode::MANAGER_CLIENT_FACING, self)));
 
     // Start the workers.
     mWorker.Start();

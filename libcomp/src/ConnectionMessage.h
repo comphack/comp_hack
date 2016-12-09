@@ -1,10 +1,10 @@
 /**
- * @file libcomp/src/MessageConnectionClosed.h
+ * @file libcomp/src/ConnectionMessage.h
  * @ingroup libcomp
  *
  * @author HACKfrost
  *
- * @brief Indicates that a connection has closed and should be cleaned up.
+ * @brief Base message class for connection based messages.
  *
  * This file is part of the COMP_hack Library (libcomp).
  *
@@ -24,13 +24,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef LIBCOMP_SRC_MESSAGECONNECTIONCLOSED_H
-#define LIBCOMP_SRC_MESSAGECONNECTIONCLOSED_H
+#include "Message.h"
 
-// libcomp Includes
-#include "CString.h"
-#include "ConnectionMessage.h"
-#include "TcpConnection.h"
+#ifndef LIBCOMP_SRC_CONNECTIONMESSAGE_H
+#define LIBCOMP_SRC_CONNECTIONMESSAGE_H
 
 namespace libcomp
 {
@@ -38,22 +35,24 @@ namespace libcomp
 namespace Message
 {
 
-class ConnectionClosed : public ConnectionMessage
+enum class ConnectionMessageType
+{
+    CONNECTION_MESSAGE_ENCRYPTED,
+    CONNECTION_MESSAGE_CONNECTION_CLOSED,
+    CONNECTION_MESSAGE_WORLD_NOTIFICATION,
+};
+
+class ConnectionMessage : public Message
 {
 public:
-    ConnectionClosed(std::shared_ptr<TcpConnection> connection);
-    virtual ~ConnectionClosed();
+    virtual ~ConnectionMessage() { }
 
-    std::shared_ptr<TcpConnection> GetConnection() const;
-
-    virtual ConnectionMessageType GetConnectionMessageType() const;
-
-private:
-    std::shared_ptr<TcpConnection> mConnection;
+    virtual MessageType GetType() const { return MessageType::MESSAGE_TYPE_CONNECTION; }
+    virtual ConnectionMessageType GetConnectionMessageType() const = 0;
 };
 
 } // namespace Message
 
 } // namespace libcomp
 
-#endif // LIBCOMP_SRC_MESSAGECONNECTIONCLOSED_H
+#endif // LIBCOMP_SRC_CONNECTIONMESSAGE_H

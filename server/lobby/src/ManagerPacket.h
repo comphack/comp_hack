@@ -39,6 +39,12 @@
 namespace lobby
 {
 
+enum class PacketManagerMode
+{
+    MANAGER_INTERNAL,
+    MANAGER_CLIENT_FACING,
+};
+
 typedef uint16_t CommandCode_t;
 
 class PacketParser;
@@ -46,7 +52,7 @@ class PacketParser;
 class ManagerPacket : public libcomp::Manager
 {
 public:
-    ManagerPacket(std::shared_ptr<libcomp::BaseServer> server);
+    ManagerPacket(PacketManagerMode mode, std::shared_ptr<libcomp::BaseServer> server);
     virtual ~ManagerPacket();
 
     /**

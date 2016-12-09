@@ -62,73 +62,80 @@ ManagerConnection::GetSupportedTypes() const
 
 bool ManagerConnection::ProcessMessage(const libcomp::Message::Message *pMessage)
 {
-    const libcomp::Message::WorldNotification *notification = dynamic_cast<
-        const libcomp::Message::WorldNotification*>(pMessage);
+    const libcomp::Message::ConnectionMessage *cMessage = dynamic_cast<
+        const libcomp::Message::ConnectionMessage*>(pMessage);
 
-    if(nullptr != notification)
+    switch(cMessage->GetConnectionMessageType())
     {
-        uint16_t port = notification->GetPort();
-        libcomp::String address = notification->GetAddress();
-
-        LOG_DEBUG(libcomp::String("Attempting to connect back to World: %1:%2\n").Arg(address).Arg(port));
-
-        std::shared_ptr<libcomp::InternalConnection> worldConnection(
-            new libcomp::InternalConnection(*mService));
-
-        worldConnection->SetSelf(worldConnection);
-        worldConnection->SetMessageQueue(mMessageQueue);
-
-        // Connect and stay connected until either of us shutdown
-        if(worldConnection->Connect(address, port, true))
-        {
-            auto world = std::shared_ptr<lobby::World>(new lobby::World(worldConnection));
-            LOG_INFO(libcomp::String("New World connection established: %1:%2\n").Arg(address).Arg(port));
-            mWorlds.push_back(world);
-            return true;
-        }
-        
-        LOG_ERROR(libcomp::String("World connection failed: %1:%2\n").Arg(address).Arg(port));
-    }
-
-    const libcomp::Message::Encrypted *encrypted = dynamic_cast<
-        const libcomp::Message::Encrypted*>(pMessage);
-
-    if(nullptr != encrypted)
-    {
-        auto connection = encrypted->GetConnection();
-        auto world = GetWorldByConnection(std::dynamic_pointer_cast<libcomp::InternalConnection>(connection));
-        if (nullptr != world)
-        {
-            return world->Initialize();
-        }
-        else
-        {
-            //Nothing special to do
-            return true;
-        }
-    }
-
-    const libcomp::Message::ConnectionClosed *closed = dynamic_cast<
-        const libcomp::Message::ConnectionClosed*>(pMessage);
-
-    if(nullptr != closed)
-    {
-        auto connection = closed->GetConnection();
-
-        mServer->RemoveConnection(connection);
-
-        //If this is from an internal connection, it is a world connection, else it is a client connection
-        auto iConnection = std::dynamic_pointer_cast<libcomp::InternalConnection>(connection);
-        if(nullptr != iConnection)
-        {
-            auto world = GetWorldByConnection(std::shared_ptr<libcomp::InternalConnection>(iConnection));
-            if(nullptr != world)
+        case libcomp::Message::ConnectionMessageType::CONNECTION_MESSAGE_WORLD_NOTIFICATION:
             {
-                RemoveWorld(world);
-            }
-        }
+                const libcomp::Message::WorldNotification *notification = dynamic_cast<
+                    const libcomp::Message::WorldNotification*>(cMessage);
 
-        return true;
+                uint16_t port = notification->GetPort();
+                libcomp::String address = notification->GetAddress();
+
+                LOG_DEBUG(libcomp::String("Attempting to connect back to World: %1:%2\n").Arg(address).Arg(port));
+
+                std::shared_ptr<libcomp::InternalConnection> worldConnection(
+                    new libcomp::InternalConnection(*mService));
+
+                worldConnection->SetSelf(worldConnection);
+                worldConnection->SetMessageQueue(mMessageQueue);
+
+                // Connect and stay connected until either of us shutdown
+                if(worldConnection->Connect(address, port, true))
+                {
+                    auto world = std::shared_ptr<lobby::World>(new lobby::World(worldConnection));
+                    LOG_INFO(libcomp::String("New World connection established: %1:%2\n").Arg(address).Arg(port));
+                    mWorlds.push_back(world);
+                    return true;
+                }
+        
+                LOG_ERROR(libcomp::String("World connection failed: %1:%2\n").Arg(address).Arg(port));
+            }
+            break;
+        case libcomp::Message::ConnectionMessageType::CONNECTION_MESSAGE_ENCRYPTED:
+            {
+                const libcomp::Message::Encrypted *encrypted = dynamic_cast<
+                    const libcomp::Message::Encrypted*>(cMessage);
+
+                auto connection = encrypted->GetConnection();
+                auto world = GetWorldByConnection(std::dynamic_pointer_cast<libcomp::InternalConnection>(connection));
+                if (nullptr != world)
+                {
+                    return world->Initialize();
+                }
+                else
+                {
+                    //Nothing special to do
+                    return true;
+                }
+            }
+            break;
+        case libcomp::Message::ConnectionMessageType::CONNECTION_MESSAGE_CONNECTION_CLOSED:
+            {
+                const libcomp::Message::ConnectionClosed *closed = dynamic_cast<
+                    const libcomp::Message::ConnectionClosed*>(cMessage);
+
+                auto connection = closed->GetConnection();
+
+                mServer->RemoveConnection(connection);
+
+                //If this is from an internal connection, it is a world connection, else it is a client connection
+                auto iConnection = std::dynamic_pointer_cast<libcomp::InternalConnection>(connection);
+                if(nullptr != iConnection)
+                {
+                    auto world = GetWorldByConnection(std::shared_ptr<libcomp::InternalConnection>(iConnection));
+                    if(nullptr != world)
+                    {
+                        RemoveWorld(world);
+                    }
+                }
+
+                return true;
+            }
+            break;
     }
     
     return false;

@@ -58,60 +58,67 @@ ManagerConnection::GetSupportedTypes() const
 
 bool ManagerConnection::ProcessMessage(const libcomp::Message::Message *pMessage)
 {
-    const libcomp::Message::Encrypted *encrypted = dynamic_cast<
-        const libcomp::Message::Encrypted*>(pMessage);
+    const libcomp::Message::ConnectionMessage *cMessage = dynamic_cast<
+        const libcomp::Message::ConnectionMessage*>(pMessage);
 
-    if(nullptr != encrypted)
+    switch (cMessage->GetConnectionMessageType())
     {
-        if(!LobbyConnected())
-        {
-            auto connection = encrypted->GetConnection();
-
-            //todo: verify this is in fact the lobby
-
-            mLobbyConnection = std::dynamic_pointer_cast<libcomp::InternalConnection>(connection);
-        }
-        else
-        {
-            //Nothing to do upon encrypting a channel connection (for now)
-        }
-        
-        return true;
-    }
-
-    const libcomp::Message::ConnectionClosed *closed = dynamic_cast<
-        const libcomp::Message::ConnectionClosed*>(pMessage);
-
-    if(nullptr != closed)
-    {
-        auto connection = closed->GetConnection();
-
-        mServer->RemoveConnection(connection);
-
-        if(mLobbyConnection == connection)
-        {
-            LOG_INFO(libcomp::String("Lobby connection closed. Shutting down."));
-            mServer->Shutdown();
-        }
-        else
-        {
-            objects::ChannelDescription channelDesc;
-            auto server = std::dynamic_pointer_cast<WorldServer>(mServer);
-            auto iConnection = std::dynamic_pointer_cast<libcomp::InternalConnection>(connection);
-            if(server->GetChannelDescriptionByConnection(iConnection, channelDesc))
+        case libcomp::Message::ConnectionMessageType::CONNECTION_MESSAGE_ENCRYPTED:
             {
-                server->RemoveChannelDescription(iConnection);
+                const libcomp::Message::Encrypted *encrypted = dynamic_cast<
+                    const libcomp::Message::Encrypted*>(cMessage);
 
-                //Channel disconnected
-                libcomp::Packet packet;
-                packet.WriteU16Little(0x1002);
-                packet.WriteU8(0);  //0: Remove
-                channelDesc.SavePacket(packet);
-                mLobbyConnection->SendPacket(packet);
+                if(!LobbyConnected())
+                {
+                    auto connection = encrypted->GetConnection();
+
+                    //todo: verify this is in fact the lobby
+
+                    mLobbyConnection = std::dynamic_pointer_cast<libcomp::InternalConnection>(connection);
+                }
+                else
+                {
+                    //Nothing to do upon encrypting a channel connection (for now)
+                }
+        
+                return true;
             }
-        }
+            break;
+        case libcomp::Message::ConnectionMessageType::CONNECTION_MESSAGE_CONNECTION_CLOSED:
+            {
+                const libcomp::Message::ConnectionClosed *closed = dynamic_cast<
+                    const libcomp::Message::ConnectionClosed*>(cMessage);
 
-        return true;
+                auto connection = closed->GetConnection();
+
+                mServer->RemoveConnection(connection);
+
+                if(mLobbyConnection == connection)
+                {
+                    LOG_INFO(libcomp::String("Lobby connection closed. Shutting down."));
+                    mServer->Shutdown();
+                }
+                else
+                {
+                    objects::ChannelDescription channelDesc;
+                    auto server = std::dynamic_pointer_cast<WorldServer>(mServer);
+                    auto iConnection = std::dynamic_pointer_cast<libcomp::InternalConnection>(connection);
+                    if(server->GetChannelDescriptionByConnection(iConnection, channelDesc))
+                    {
+                        server->RemoveChannelDescription(iConnection);
+
+                        //Channel disconnected
+                        libcomp::Packet packet;
+                        packet.WriteU16Little(0x1002);
+                        packet.WriteU8(0);  //0: Remove
+                        channelDesc.SavePacket(packet);
+                        mLobbyConnection->SendPacket(packet);
+                    }
+                }
+
+                return true;
+            }
+            break;
     }
     
     return false;

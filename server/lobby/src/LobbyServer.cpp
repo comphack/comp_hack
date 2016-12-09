@@ -44,17 +44,17 @@ LobbyServer::LobbyServer(std::shared_ptr<objects::ServerConfig> config, const li
 {
     auto conf = std::dynamic_pointer_cast<objects::LobbyConfig>(mConfig);
 
-    mManagerConnection = std::shared_ptr<ManagerConnection>(new ManagerConnection(std::shared_ptr<libcomp::BaseServer>(this), std::shared_ptr<asio::io_service>(&mService), mMainWorker.GetMessageQueue()));
+    auto self = std::shared_ptr<libcomp::BaseServer>(this);
+    mManagerConnection = std::shared_ptr<ManagerConnection>(new ManagerConnection(self, std::shared_ptr<asio::io_service>(&mService), mMainWorker.GetMessageQueue()));
 
     auto connectionManager = std::shared_ptr<libcomp::Manager>(mManagerConnection);
-    auto packetManager = std::shared_ptr<libcomp::Manager>(new ManagerPacket(std::shared_ptr<libcomp::BaseServer>(this)));
 
     //Add the managers to the main worker.
-    mMainWorker.AddManager(packetManager);
+    mMainWorker.AddManager(std::shared_ptr<libcomp::Manager>(new ManagerPacket(PacketManagerMode::MANAGER_INTERNAL, self)));
     mMainWorker.AddManager(connectionManager);
 
     // Add the managers to the generic workers.
-    mWorker.AddManager(packetManager);
+    mWorker.AddManager(std::shared_ptr<libcomp::Manager>(new ManagerPacket(PacketManagerMode::MANAGER_CLIENT_FACING, self)));
     mWorker.AddManager(connectionManager);
 
     // Start the worker.

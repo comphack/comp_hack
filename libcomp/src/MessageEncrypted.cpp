@@ -42,7 +42,7 @@ std::shared_ptr<TcpConnection> Message::Encrypted::GetConnection() const
     return mConnection;
 }
 
-Message::MessageType Message::Encrypted::GetType() const
+Message::ConnectionMessageType Message::Encrypted::GetConnectionMessageType() const
 {
-    return MessageType::MESSAGE_TYPE_CONNECTION;
+    return ConnectionMessageType::CONNECTION_MESSAGE_ENCRYPTED;
 }

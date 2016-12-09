@@ -58,42 +58,49 @@ ManagerConnection::GetSupportedTypes() const
 
 bool ManagerConnection::ProcessMessage(const libcomp::Message::Message *pMessage)
 {
-    const libcomp::Message::Encrypted *encrypted = dynamic_cast<
-        const libcomp::Message::Encrypted*>(pMessage);
-
-    if (nullptr != encrypted)
+    const libcomp::Message::ConnectionMessage *cMessage = dynamic_cast<
+        const libcomp::Message::ConnectionMessage*>(pMessage);
+    
+    switch(cMessage->GetConnectionMessageType())
     {
-        auto connection = encrypted->GetConnection();
-        auto server = std::dynamic_pointer_cast<ChannelServer>(mServer);
+        case libcomp::Message::ConnectionMessageType::CONNECTION_MESSAGE_ENCRYPTED:
+            {
+                const libcomp::Message::Encrypted *encrypted = dynamic_cast<
+                    const libcomp::Message::Encrypted*>(cMessage);
 
-        if(mWorldConnection == connection)
-        {
-            //Request world information
-            libcomp::Packet packet;
-            packet.WriteU16Little(0x1001);
+                auto connection = encrypted->GetConnection();
+                auto server = std::dynamic_pointer_cast<ChannelServer>(mServer);
 
-            connection->SendPacket(std::move(packet));
-        }
+                if(mWorldConnection == connection)
+                {
+                    //Request world information
+                    libcomp::Packet packet;
+                    packet.WriteU16Little(0x1001);
+
+                    connection->SendPacket(std::move(packet));
+                }
         
-        return true;
-    }
+                return true;
+            }
+            break;
+        case libcomp::Message::ConnectionMessageType::CONNECTION_MESSAGE_CONNECTION_CLOSED:
+            {
+                const libcomp::Message::ConnectionClosed *closed = dynamic_cast<
+                    const libcomp::Message::ConnectionClosed*>(cMessage);
 
-    const libcomp::Message::ConnectionClosed *closed = dynamic_cast<
-        const libcomp::Message::ConnectionClosed*>(pMessage);
+                auto connection = closed->GetConnection();
 
-    if(nullptr != closed)
-    {
-        auto connection = closed->GetConnection();
+                mServer->RemoveConnection(connection);
 
-        mServer->RemoveConnection(connection);
+                if(mWorldConnection == connection)
+                {
+                    LOG_INFO(libcomp::String("World connection closed. Shutting down."));
+                    mServer->Shutdown();
+                }
 
-        if(mWorldConnection == connection)
-        {
-            LOG_INFO(libcomp::String("World connection closed. Shutting down."));
-            mServer->Shutdown();
-        }
-
-        return true;
+                return true;
+            }
+            break;
     }
     
     return false;

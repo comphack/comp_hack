@@ -47,7 +47,7 @@ uint16_t Message::WorldNotification::GetPort() const
     return mPort;
 }
 
-Message::MessageType Message::WorldNotification::GetType() const
+Message::ConnectionMessageType Message::WorldNotification::GetConnectionMessageType() const
 {
-    return MessageType::MESSAGE_TYPE_CONNECTION;
+    return ConnectionMessageType::CONNECTION_MESSAGE_WORLD_NOTIFICATION;
 }

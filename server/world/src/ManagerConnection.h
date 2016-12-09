@@ -29,6 +29,7 @@
 
 // libcomp Includes
 #include "BaseServer.h"
+#include "ConnectionMessage.h"
 #include "InternalConnection.h"
 #include "Manager.h"
 

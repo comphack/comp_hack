@@ -36,7 +36,7 @@
 
 using namespace world;
 
-ManagerPacket::ManagerPacket(std::shared_ptr<libcomp::BaseServer> server)
+ManagerPacket::ManagerPacket(PacketManagerMode mode, std::shared_ptr<libcomp::BaseServer> server)
 {
     mServer = server;
 

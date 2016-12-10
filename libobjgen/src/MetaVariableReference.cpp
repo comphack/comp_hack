@@ -84,8 +84,7 @@ bool MetaVariableReference::IsCoreType() const
 bool MetaVariableReference::IsValid() const
 {
     /// @todo Fix
-    return MetaObject::IsValidIdentifier(mReferenceType) &&
-        MetaObject::IsValidIdentifier(GetName());
+    return MetaObject::IsValidIdentifier(mReferenceType);
 }
 
 bool MetaVariableReference::IsValid(const void *pData, size_t dataSize) const
@@ -143,9 +142,9 @@ bool MetaVariableReference::Load(const tinyxml2::XMLDocument& doc,
 }
 
 bool MetaVariableReference::Save(tinyxml2::XMLDocument& doc,
-    tinyxml2::XMLElement& root) const
+    tinyxml2::XMLElement& parent, const char* elementName) const
 {
-    tinyxml2::XMLElement *pVariableElement = doc.NewElement("member");
+    tinyxml2::XMLElement *pVariableElement = doc.NewElement(elementName);
     pVariableElement->SetAttribute("type", GetType().c_str());
     pVariableElement->SetAttribute("name", GetName().c_str());
 
@@ -154,7 +153,7 @@ bool MetaVariableReference::Save(tinyxml2::XMLDocument& doc,
         pVariableElement->SetAttribute("rtype", GetReferenceType().c_str());
     }
 
-    root.InsertEndChild(pVariableElement);
+    parent.InsertEndChild(pVariableElement);
 
     return BaseSave(*pVariableElement);
 }
@@ -262,7 +261,7 @@ std::string MetaVariableReference::GetXmlLoadCode(const Generator& generator,
     std::map<std::string, std::string> replacements;
     replacements["@VAR_NAME@"] = name;
     replacements["@DOC@"] = doc;
-    replacements["@ROOT@"] = root;
+    replacements["@PARENT@"] = root;
 
     return generator.ParseTemplate(tabLevel, "VariableReferenceXmlLoad",
         replacements);
@@ -270,12 +269,13 @@ std::string MetaVariableReference::GetXmlLoadCode(const Generator& generator,
 
 std::string MetaVariableReference::GetXmlSaveCode(const Generator& generator,
     const std::string& name, const std::string& doc,
-    const std::string& root, size_t tabLevel) const
+    const std::string& parent, size_t tabLevel, const std::string elemName) const
 {
     std::map<std::string, std::string> replacements;
     replacements["@VAR_NAME@"] = name;
+    replacements["@ELEMENT_NAME@"] = elemName;
     replacements["@DOC@"] = doc;
-    replacements["@ROOT@"] = root;
+    replacements["@PARENT@"] = parent;
 
     return generator.ParseTemplate(tabLevel, "VariableReferenceXmlSave",
         replacements);

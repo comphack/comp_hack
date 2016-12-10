@@ -214,8 +214,7 @@ public:
 
     virtual bool IsValid() const
     {
-        return MetaObject::IsValidIdentifier(GetName()) &&
-            mMinimumValue <= mMaximumValue &&
+        return mMinimumValue <= mMaximumValue &&
             mMinimumValue <= mDefaultValue &&
             mMaximumValue >= mDefaultValue;
     }
@@ -359,9 +358,9 @@ public:
     }
 
     virtual bool Save(tinyxml2::XMLDocument& doc,
-        tinyxml2::XMLElement& root) const
+        tinyxml2::XMLElement& parent, const char* elementName) const
     {
-        tinyxml2::XMLElement *pVariableElement = doc.NewElement("member");
+        tinyxml2::XMLElement *pVariableElement = doc.NewElement(elementName);
         pVariableElement->SetAttribute("type", GetType().c_str());
         pVariableElement->SetAttribute("name", GetName().c_str());
 
@@ -413,7 +412,7 @@ public:
             }
         }
 
-        root.InsertEndChild(pVariableElement);
+        parent.InsertEndChild(pVariableElement);
 
         return BaseSave(*pVariableElement);
     }
@@ -608,7 +607,7 @@ public:
         (void)doc;
 
         std::map<std::string, std::string> replacements;
-        replacements["@VAR_NAME@"] = generator.Escape(GetName());
+        replacements["@VAR_NAME@"] = GetName();
         replacements["@VAR_CAMELCASE_NAME@"] = generator.GetCapitalName(*this);
         replacements["@VAR_CODE_TYPE@"] = GetCodeType();
         replacements["@MEMBERS@"] = members;
@@ -619,14 +618,15 @@ public:
 
     virtual std::string GetXmlSaveCode(const Generator& generator,
         const std::string& name, const std::string& doc,
-        const std::string& root, size_t tabLevel = 1) const
+        const std::string& parent, size_t tabLevel = 1, const std::string elemName = "member") const
     {
         (void)doc;
 
         std::map<std::string, std::string> replacements;
-        replacements["@VAR_NAME@"] = generator.Escape(GetName());
-        replacements["@VAR_GETTER@"] = GetInternalGetterCode(generator, name);
-        replacements["@ROOT@"] = root;
+        replacements["@VAR_NAME@"] = GetName();
+        replacements["@ELEMENT_NAME@"] = elemName;
+        replacements["@GETTER@"] = GetInternalGetterCode(generator, name);
+        replacements["@PARENT@"] = parent;
 
         return generator.ParseTemplate(tabLevel, "VariableIntXmlSave",
             replacements);

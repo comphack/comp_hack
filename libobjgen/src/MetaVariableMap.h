@@ -1,10 +1,10 @@
 /**
- * @file libobjgen/src/MetaVariableArray.h
+ * @file libobjgen/src/MetaVariableMap.h
  * @ingroup libobjgen
  *
- * @author COMP Omega <compomega@tutanota.com>
+ * @author HACKfrost
  *
- * @brief Meta data for a member variable that is an array of variables.
+ * @brief Meta data for a member variable that is a map of variables.
  *
  * This file is part of the COMP_hack Object Generator Library (libobjgen).
  *
@@ -24,8 +24,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef LIBOBJGEN_SRC_METAVARIABLEARRAY_H
-#define LIBOBJGEN_SRC_METAVARIABLEARRAY_H
+#ifndef LIBOBJGEN_SRC_METAVARIABLEMAP_H
+#define LIBOBJGEN_SRC_METAVARIABLEMAP_H
 
 // libobjgen Includes
 #include "MetaVariable.h"
@@ -33,18 +33,17 @@
 namespace libobjgen
 {
 
-class MetaVariableArray : public MetaVariable
+class MetaVariableMap : public MetaVariable
 {
 public:
-    MetaVariableArray(const std::shared_ptr<MetaVariable>& elementType);
-    virtual ~MetaVariableArray();
+    MetaVariableMap(const std::shared_ptr<MetaVariable>& keyElementType,
+                    const std::shared_ptr<MetaVariable>& valueElementType);
+    virtual ~MetaVariableMap();
 
     virtual size_t GetSize() const;
 
-    std::shared_ptr<MetaVariable> GetElementType() const;
-
-    size_t GetElementCount() const;
-    void SetElementCount(size_t elementCount);
+    std::shared_ptr<MetaVariable> GetKeyElementType() const;
+    std::shared_ptr<MetaVariable> GetValueElementType() const;
 
     virtual MetaVariableType_t GetMetaType() const;
 
@@ -92,10 +91,11 @@ public:
         const MetaObject& object, const std::string& name) const;
 
 private:
-    size_t mElementCount;
-    std::shared_ptr<MetaVariable> mElementType;
+    std::shared_ptr<MetaVariable> mKeyElementType;
+
+    std::shared_ptr<MetaVariable> mValueElementType;
 };
 
 } // namespace libobjgen
 
-#endif // LIBOBJGEN_SRC_METAVARIABLEARRAY_H
+#endif // LIBOBJGEN_SRC_METAVARIABLEMAP_H

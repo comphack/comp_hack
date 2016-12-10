@@ -197,7 +197,6 @@ std::string GeneratorSource::Generate(const MetaObject& obj)
     ss << "bool " << obj.GetName()
         << "::Save(libcomp::ObjectOutStream& stream) const" << std::endl;
     ss << "{" << std::endl;
-    ss << Tab() << "(void)stream;" << std::endl; /// @todo fix
     ss << std::endl;
     ss << Tab() << "bool status = " + GetBaseBooleanReturnValue(obj, "Save(stream)") + "; " << std::endl;
 
@@ -262,7 +261,6 @@ std::string GeneratorSource::Generate(const MetaObject& obj)
         << "::Save(std::ostream& stream, bool flat) const" << std::endl;
     ss << "{" << std::endl;
     ss << Tab() << "(void)flat;" << std::endl;
-    ss << Tab() << "(void)stream;" << std::endl; /// @todo fix
     ss << std::endl;
     ss << Tab() << "bool status = " + GetBaseBooleanReturnValue(obj, "Save(stream, flat)") + "; " << std::endl;
 
@@ -340,7 +338,7 @@ std::string GeneratorSource::Generate(const MetaObject& obj)
         auto var = *it;
 
         std::string code = var->GetXmlSaveCode(*this, GetMemberName(var),
-            "doc", "(*pElement)");
+            "doc", "pElement");
 
         if(!code.empty())
         {

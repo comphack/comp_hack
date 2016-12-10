@@ -85,7 +85,7 @@ public:
     virtual bool Load(const tinyxml2::XMLDocument& doc,
         const tinyxml2::XMLElement& root);
     virtual bool Save(tinyxml2::XMLDocument& doc,
-        tinyxml2::XMLElement& root) const;
+        tinyxml2::XMLElement& parent, const char* elementName) const;
 
     virtual std::string GetCodeType() const;
     virtual std::string GetConstructValue() const;
@@ -105,7 +105,7 @@ public:
         size_t tabLevel = 1) const;
     virtual std::string GetXmlSaveCode(const Generator& generator,
         const std::string& name, const std::string& doc,
-        const std::string& root, size_t tabLevel = 1) const;
+        const std::string& parent, size_t tabLevel = 1, const std::string elemName = "member") const;
 
     static std::string EncodingToString(Encoding_t encoding);
     static std::string EncodingToComp(Encoding_t encoding);

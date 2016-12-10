@@ -94,8 +94,7 @@ bool MetaVariableArray::IsCoreType() const
 
 bool MetaVariableArray::IsValid() const
 {
-    return 0 != mElementCount && MetaObject::IsValidIdentifier(GetName()) &&
-        mElementType && mElementType->IsValid();
+    return 0 != mElementCount && mElementType && mElementType->IsValid();
 }
 
 bool MetaVariableArray::IsValid(const void *pData, size_t dataSize) const
@@ -159,13 +158,27 @@ bool MetaVariableArray::Load(const tinyxml2::XMLDocument& doc,
 }
 
 bool MetaVariableArray::Save(tinyxml2::XMLDocument& doc,
-    tinyxml2::XMLElement& root) const
+    tinyxml2::XMLElement& parent, const char* elementName) const
 {
-    (void)doc;
-    (void)root;
+    tinyxml2::XMLElement *pVariableElement = doc.NewElement(elementName);
+    pVariableElement->SetAttribute("type", GetType().c_str());
+    pVariableElement->SetAttribute("name", GetName().c_str());
 
-    /// @todo Fix
-    return true;
+    if(GetElementCount() != 0)
+    {
+        pVariableElement->SetAttribute("size", std::to_string(GetElementCount()).c_str());
+    }
+    
+    if(!mElementType)
+    {
+        return false;
+    }
+
+    mElementType->Save(doc, *pVariableElement, "element");
+
+    parent.InsertEndChild(pVariableElement);
+
+    return BaseSave(*pVariableElement);
 }
 
 std::string MetaVariableArray::GetCodeType() const
@@ -362,16 +375,25 @@ std::string MetaVariableArray::GetXmlLoadCode(const Generator& generator,
 
 std::string MetaVariableArray::GetXmlSaveCode(const Generator& generator,
     const std::string& name, const std::string& doc,
-    const std::string& root, size_t tabLevel) const
+    const std::string& parent, size_t tabLevel, const std::string elemName) const
 {
-    (void)generator;
-    (void)name;
-    (void)doc;
-    (void)root;
-    (void)tabLevel;
+    std::string code;
 
-    /// @todo Fix
-    return std::string();
+    if(mElementType)
+    {
+        std::map<std::string, std::string> replacements;
+        replacements["@GETTER@"] = GetInternalGetterCode(generator, name);
+        replacements["@VAR_NAME@"] = GetName();
+        replacements["@ELEMENT_NAME@"] = elemName;
+        replacements["@VAR_XML_SAVE_CODE@"] = mElementType->GetXmlSaveCode(
+            generator, "element", doc, parent, tabLevel + 1, "element");
+        replacements["@PARENT@"] = parent;
+
+        code = generator.ParseTemplate(0, "VariableListXmlSave",
+            replacements);
+    }
+
+    return code;
 }
 
 std::string MetaVariableArray::GetAccessDeclarations(const Generator& generator,
@@ -384,12 +406,12 @@ std::string MetaVariableArray::GetAccessDeclarations(const Generator& generator,
     if(mElementType)
     {
         std::map<std::string, std::string> replacements;
+        replacements["@VAR_NAME@"] = name;
         replacements["@VAR_TYPE@"] = mElementType->GetCodeType();
         replacements["@VAR_CAMELCASE_NAME@"] = generator.GetCapitalName(*this);
-        replacements["@VAR_ARGUMENT@"] = mElementType->GetArgument(name);
 
         ss << generator.ParseTemplate(tabLevel,
-            "VariableArrayAccessDeclarations", replacements);
+            "VariableArrayAccessDeclarations", replacements) << std::endl;
     }
 
     return ss.str();
@@ -404,18 +426,14 @@ std::string MetaVariableArray::GetAccessFunctions(const Generator& generator,
     if(mElementType)
     {
         std::map<std::string, std::string> replacements;
+        replacements["@VAR_NAME@"] = name;
         replacements["@VAR_TYPE@"] = mElementType->GetCodeType();
         replacements["@OBJECT_NAME@"] = object.GetName();
         replacements["@VAR_CAMELCASE_NAME@"] = generator.GetCapitalName(*this);
-        replacements["@VAR_ARGUMENT@"] = mElementType->GetArgument(GetName());
         replacements["@ELEMENT_COUNT@"] = std::to_string(mElementCount);
-        replacements["@VAR_GETTER_CODE@"] = mElementType->GetGetterCode(
-            generator, name + "[index]");
-        replacements["@VAR_SETTER_CODE@"] = mElementType->GetSetterCode(
-            generator, name + "[index]", GetName());
 
-        ss << generator.ParseTemplate(0, "VariableArrayAccessFunctions",
-            replacements);
+        ss << std::endl << generator.ParseTemplate(0, "VariableArrayAccessFunctions",
+            replacements) << std::endl;
     }
 
     return ss.str();

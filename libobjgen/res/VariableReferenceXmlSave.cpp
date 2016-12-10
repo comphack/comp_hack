@@ -1,4 +1,4 @@
 if(@VAR_NAME@)
 {
-    status = @VAR_NAME@->Save(@DOC@, @ROOT@);
+    status = @VAR_NAME@->Save(@DOC@, *@PARENT@);
 }

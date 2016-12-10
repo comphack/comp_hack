@@ -72,8 +72,7 @@ bool MetaVariableList::IsCoreType() const
 
 bool MetaVariableList::IsValid() const
 {
-    return MetaObject::IsValidIdentifier(GetName()) &&
-        mElementType && mElementType->IsValid();
+    return mElementType && mElementType->IsValid();
 }
 
 bool MetaVariableList::IsValid(const void *pData, size_t dataSize) const
@@ -110,13 +109,22 @@ bool MetaVariableList::Load(const tinyxml2::XMLDocument& doc,
 }
 
 bool MetaVariableList::Save(tinyxml2::XMLDocument& doc,
-    tinyxml2::XMLElement& root) const
+    tinyxml2::XMLElement& parent, const char* elementName) const
 {
-    (void)doc;
-    (void)root;
+    tinyxml2::XMLElement *pVariableElement = doc.NewElement(elementName);
+    pVariableElement->SetAttribute("type", GetType().c_str());
+    pVariableElement->SetAttribute("name", GetName().c_str());
+    
+    if(!mElementType)
+    {
+        return false;
+    }
 
-    /// @todo Fix
-    return true;
+    mElementType->Save(doc, *pVariableElement, "element");
+
+    parent.InsertEndChild(pVariableElement);
+
+    return BaseSave(*pVariableElement);
 }
 
 uint16_t MetaVariableList::GetDynamicSizeCount() const
@@ -297,16 +305,19 @@ std::string MetaVariableList::GetXmlLoadCode(const Generator& generator,
 
 std::string MetaVariableList::GetXmlSaveCode(const Generator& generator,
     const std::string& name, const std::string& doc,
-    const std::string& root, size_t tabLevel) const
+    const std::string& parent, size_t tabLevel, const std::string elemName) const
 {
     std::string code;
 
     if(mElementType)
     {
         std::map<std::string, std::string> replacements;
-        replacements["@VAR_NAME@"] = name;
+        replacements["@GETTER@"] = GetInternalGetterCode(generator, name);
+        replacements["@VAR_NAME@"] = GetName();
+        replacements["@ELEMENT_NAME@"] = elemName;
         replacements["@VAR_XML_SAVE_CODE@"] = mElementType->GetXmlSaveCode(
-            generator, "element", doc, root, tabLevel + 1);
+            generator, "element", doc, parent, tabLevel + 1, "element");
+        replacements["@PARENT@"] = parent;
 
         code = generator.ParseTemplate(0, "VariableListXmlSave",
             replacements);
@@ -324,7 +335,13 @@ std::string MetaVariableList::GetAccessDeclarations(const Generator& generator,
 
     if(mElementType)
     {
-        /// @todo Fix (add append, prepend, insert, remove, clear, iterator)
+        std::map<std::string, std::string> replacements;
+        replacements["@VAR_NAME@"] = name;
+        replacements["@VAR_TYPE@"] = mElementType->GetCodeType();
+        replacements["@VAR_CAMELCASE_NAME@"] = generator.GetCapitalName(*this);
+
+        ss << generator.ParseTemplate(tabLevel,
+            "VariableListAccessDeclarations", replacements) << std::endl;
     }
 
     return ss.str();
@@ -338,7 +355,14 @@ std::string MetaVariableList::GetAccessFunctions(const Generator& generator,
 
     if(mElementType)
     {
-        /// @todo Fix (add append, prepend, insert, remove, clear, iterator)
+        std::map<std::string, std::string> replacements;
+        replacements["@VAR_NAME@"] = name;
+        replacements["@VAR_TYPE@"] = mElementType->GetCodeType();
+        replacements["@OBJECT_NAME@"] = object.GetName();
+        replacements["@VAR_CAMELCASE_NAME@"] = generator.GetCapitalName(*this);
+
+        ss << std::endl << generator.ParseTemplate(0, "VariableListAccessFunctions",
+            replacements) << std::endl;
     }
 
     return ss.str();

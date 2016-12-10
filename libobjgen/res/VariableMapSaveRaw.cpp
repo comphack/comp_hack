@@ -10,12 +10,23 @@
         return false;
     }
 
-    for(auto& element : @VAR_NAME@)
+    for(auto& kv : @VAR_NAME@)
     {
-        if(!(@VAR_SAVE_CODE@))
-        {
-            return false;
-        }
+		{
+			auto element = kv.first;
+			if(!(@VAR_KEY_SAVE_CODE@))
+			{
+				return false;
+			}
+		}
+		
+		{
+			auto element = kv.second;
+			if(!(@VAR_VALUE_SAVE_CODE@))
+			{
+				return false;
+			}
+		}
     }
 
     return @STREAM@.good();

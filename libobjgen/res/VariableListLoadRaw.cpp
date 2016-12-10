@@ -2,7 +2,7 @@
 {
     uint32_t elementCount = 0;
 
-    @STREAM@.read(reinterperet_cast<char*>(&elementCount),
+    @STREAM@.read(reinterpret_cast<char*>(&elementCount),
         sizeof(elementCount));
 
     if(!@STREAM@.good())

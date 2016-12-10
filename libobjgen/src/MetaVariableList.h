@@ -58,7 +58,7 @@ public:
     virtual bool Load(const tinyxml2::XMLDocument& doc,
         const tinyxml2::XMLElement& root);
     virtual bool Save(tinyxml2::XMLDocument& doc,
-        tinyxml2::XMLElement& root) const;
+        tinyxml2::XMLElement& parent, const char* elementName) const;
 
     virtual uint16_t GetDynamicSizeCount() const;
 
@@ -80,7 +80,7 @@ public:
         size_t tabLevel = 1) const;
     virtual std::string GetXmlSaveCode(const Generator& generator,
         const std::string& name, const std::string& doc,
-        const std::string& root, size_t tabLevel = 1) const;
+        const std::string& parent, size_t tabLevel = 1, const std::string elemName = "member") const;
 
     virtual std::string GetAccessDeclarations(const Generator& generator,
         const MetaObject& object, const std::string& name,

@@ -2,7 +2,7 @@ if(status)
 {
     std::unordered_map<std::string,
         const tinyxml2::XMLElement*>::const_iterator memberIterator =
-            @MEMBERS@.find(@VAR_NAME@);
+            @MEMBERS@.find("@VAR_NAME@");
 
     if(memberIterator != @MEMBERS@.end())
     {

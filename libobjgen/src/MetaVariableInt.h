@@ -601,7 +601,7 @@ public:
 
     virtual std::string GetXmlLoadCode(const Generator& generator,
         const std::string& name, const std::string& doc,
-        const std::string& root, const std::string& members,
+        const std::string& root, const std::string& node,
         size_t tabLevel = 1) const
     {
         (void)doc;
@@ -610,7 +610,7 @@ public:
         replacements["@VAR_NAME@"] = GetName();
         replacements["@VAR_CAMELCASE_NAME@"] = generator.GetCapitalName(*this);
         replacements["@VAR_CODE_TYPE@"] = GetCodeType();
-        replacements["@MEMBERS@"] = members;
+        replacements["@NODE@"] = node;
 
         return generator.ParseTemplate(tabLevel, "VariableIntXmlLoad",
             replacements);

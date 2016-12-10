@@ -297,8 +297,7 @@ std::string GeneratorSource::Generate(const MetaObject& obj)
     ss << std::endl;
     ss << Tab() << "bool status = " + GetBaseBooleanReturnValue(obj, "Load(doc, root)") + ";" << std::endl;
     ss << std::endl;
-    ss << Tab() << "std::unordered_map<std::string, const "
-        "tinyxml2::XMLElement*> members = GetXmlMembers(root);" << std::endl;
+    ss << Tab() << "auto members = GetXmlMembers(root);" << std::endl;
 
     for(auto it = obj.VariablesBegin(); it != obj.VariablesEnd(); ++it)
     {
@@ -307,10 +306,22 @@ std::string GeneratorSource::Generate(const MetaObject& obj)
         if(var->IsInherited()) continue;
 
         std::string code = var->GetXmlLoadCode(*this, GetMemberName(var),
-            "doc", "root", "members");
+            "doc", "root", "pMember");
 
         if(!code.empty())
         {
+            //ref loading code is self contained
+            if(var->GetMetaType() != MetaVariable::MetaVariableType_t::TYPE_REF)
+            {
+                std::map<std::string, std::string> replacements;
+                replacements["@VAR_NAME@"] = var->GetName();
+                replacements["@VAR_CAMELCASE_NAME@"] = GetCapitalName(*var);
+                replacements["@ACCESS_CODE@"] = code;
+                replacements["@NODE@"] = "pMember";
+
+                code = ParseTemplate(1, "VariableMemberXmlLoad", replacements);
+            }
+
             ss << std::endl;
             ss << code;
         }

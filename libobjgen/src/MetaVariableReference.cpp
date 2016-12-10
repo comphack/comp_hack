@@ -253,10 +253,10 @@ std::string MetaVariableReference::GetSaveRawCode(const Generator& generator,
 
 std::string MetaVariableReference::GetXmlLoadCode(const Generator& generator,
     const std::string& name, const std::string& doc,
-    const std::string& root, const std::string& members,
+    const std::string& root, const std::string& node,
     size_t tabLevel) const
 {
-    (void)members;
+    (void)node;
 
     std::map<std::string, std::string> replacements;
     replacements["@VAR_NAME@"] = name;

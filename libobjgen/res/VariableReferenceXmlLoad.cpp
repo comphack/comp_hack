@@ -1,4 +1,8 @@
 if(@VAR_NAME@)
 {
-    status = @VAR_NAME@->Load(@DOC@, *@PARENT@);
+    status = status && @VAR_NAME@->Load(@DOC@, *@PARENT@);
+}
+else
+{
+	status = false;
 }

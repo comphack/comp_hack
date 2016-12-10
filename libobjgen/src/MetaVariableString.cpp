@@ -682,7 +682,7 @@ std::string MetaVariableString::GetSaveRawCode(const Generator& generator,
 
 std::string MetaVariableString::GetXmlLoadCode(const Generator& generator,
     const std::string& name, const std::string& doc,
-    const std::string& root, const std::string& members,
+    const std::string& root, const std::string& node,
     size_t tabLevel) const
 {
     (void)name;
@@ -692,7 +692,7 @@ std::string MetaVariableString::GetXmlLoadCode(const Generator& generator,
     std::map<std::string, std::string> replacements;
     replacements["@VAR_CAMELCASE_NAME@"] = generator.GetCapitalName(*this);
     replacements["@VAR_NAME@"] = GetName();
-    replacements["@MEMBERS@"] = members;
+    replacements["@NODE@"] = node;
 
     return generator.ParseTemplate(tabLevel, "VariableStringXmlLoad",
         replacements);

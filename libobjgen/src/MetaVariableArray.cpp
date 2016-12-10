@@ -108,18 +108,12 @@ bool MetaVariableArray::IsValid(const void *pData, size_t dataSize) const
 
 bool MetaVariableArray::Load(std::istream& stream)
 {
-    (void)stream;
-
-    /// @todo Fix
-    return true;
+    return IsValid() && mElementType->Load(stream);
 }
 
 bool MetaVariableArray::Save(std::ostream& stream) const
 {
-    (void)stream;
-
-    /// @todo Fix
-    return true;
+    return IsValid() && mElementType->Save(stream);
 }
 
 bool MetaVariableArray::Load(const tinyxml2::XMLDocument& doc,
@@ -359,18 +353,27 @@ std::string MetaVariableArray::GetSaveRawCode(const Generator& generator,
 
 std::string MetaVariableArray::GetXmlLoadCode(const Generator& generator,
     const std::string& name, const std::string& doc,
-    const std::string& root, const std::string& members,
+    const std::string& root, const std::string& node,
     size_t tabLevel) const
 {
-    (void)generator;
-    (void)name;
-    (void)doc;
-    (void)root;
-    (void)members;
-    (void)tabLevel;
+    std::string code;
 
-    /// @todo Fix
-    return std::string();
+    if(mElementType)
+    {
+        std::string elemCode = mElementType->GetXmlLoadCode(generator,
+            generator.GetMemberName(mElementType), doc, root, "element", tabLevel + 1);
+
+        std::map<std::string, std::string> replacements;
+        replacements["@VAR_CODE_TYPE@"] = GetCodeType();
+        replacements["@NODE@"] = node;
+        replacements["@ELEMENT_ACCESS_CODE@"] = elemCode;
+        replacements["@ELEMENT_COUNT@"] = std::to_string(mElementCount);
+
+        code = generator.ParseTemplate(tabLevel, "VariableArrayXmlLoad",
+            replacements);
+    }
+
+    return code;
 }
 
 std::string MetaVariableArray::GetXmlSaveCode(const Generator& generator,
@@ -389,7 +392,7 @@ std::string MetaVariableArray::GetXmlSaveCode(const Generator& generator,
             generator, "element", doc, parent, tabLevel + 1, "element");
         replacements["@PARENT@"] = parent;
 
-        code = generator.ParseTemplate(0, "VariableListXmlSave",
+        code = generator.ParseTemplate(0, "VariableArrayXmlSave",
             replacements);
     }
 

@@ -99,6 +99,8 @@ public:
     libobjgen::UUID GetUUID() const;
 
 protected:
+    const tinyxml2::XMLElement* GetXmlChild(const tinyxml2::XMLElement& root, const std::string name) const;
+    const std::vector<const tinyxml2::XMLElement*> GetXmlChildren(const tinyxml2::XMLElement& root, const std::string name) const;
     virtual std::unordered_map<std::string, const tinyxml2::XMLElement*>
         GetXmlMembers(const tinyxml2::XMLElement& root) const;
     virtual std::string GetXmlText(const tinyxml2::XMLElement& root) const;

@@ -86,18 +86,12 @@ bool MetaVariableList::IsValid(const void *pData, size_t dataSize) const
 
 bool MetaVariableList::Load(std::istream& stream)
 {
-    (void)stream;
-
-    /// @todo Fix
-    return true;
+    return IsValid() && mElementType->Load(stream);
 }
 
 bool MetaVariableList::Save(std::ostream& stream) const
 {
-    (void)stream;
-
-    /// @todo Fix
-    return true;
+    return IsValid() && mElementType->Save(stream);
 }
 
 bool MetaVariableList::Load(const tinyxml2::XMLDocument& doc,
@@ -289,18 +283,26 @@ std::string MetaVariableList::GetSaveRawCode(const Generator& generator,
 
 std::string MetaVariableList::GetXmlLoadCode(const Generator& generator,
     const std::string& name, const std::string& doc,
-    const std::string& root, const std::string& members,
+    const std::string& root, const std::string& node,
     size_t tabLevel) const
 {
-    (void)generator;
-    (void)name;
-    (void)doc;
-    (void)root;
-    (void)members;
-    (void)tabLevel;
+    std::string code;
 
-    /// @todo Fix
-    return std::string();
+    if(mElementType)
+    {
+        std::string elemCode = mElementType->GetXmlLoadCode(generator,
+            generator.GetMemberName(mElementType), doc, root, "element", tabLevel + 1);
+
+        std::map<std::string, std::string> replacements;
+        replacements["@VAR_CODE_TYPE@"] = GetCodeType();
+        replacements["@NODE@"] = node;
+        replacements["@ELEMENT_ACCESS_CODE@"] = elemCode;
+
+        code = generator.ParseTemplate(tabLevel, "VariableListXmlLoad",
+            replacements);
+    }
+
+    return code;
 }
 
 std::string MetaVariableList::GetXmlSaveCode(const Generator& generator,

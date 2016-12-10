@@ -92,18 +92,12 @@ bool MetaVariableMap::IsValid(const void *pData, size_t dataSize) const
 
 bool MetaVariableMap::Load(std::istream& stream)
 {
-    (void)stream;
-
-    /// @todo Fix
-    return true;
+    return IsValid() && mKeyElementType->Load(stream) && mValueElementType->Load(stream);
 }
 
 bool MetaVariableMap::Save(std::ostream& stream) const
 {
-    (void)stream;
-
-    /// @todo Fix
-    return true;
+    return IsValid() && mKeyElementType->Save(stream) && mValueElementType->Save(stream);
 }
 
 bool MetaVariableMap::Load(const tinyxml2::XMLDocument& doc,
@@ -308,18 +302,31 @@ std::string MetaVariableMap::GetSaveRawCode(const Generator& generator,
 
 std::string MetaVariableMap::GetXmlLoadCode(const Generator& generator,
     const std::string& name, const std::string& doc,
-    const std::string& root, const std::string& members,
+    const std::string& root, const std::string& node,
     size_t tabLevel) const
 {
-    (void)generator;
-    (void)name;
-    (void)doc;
-    (void)root;
-    (void)members;
-    (void)tabLevel;
+    std::string code;
 
-    /// @todo Fix
-    return std::string();
+    if(mKeyElementType && mValueElementType)
+    {
+        std::string keyCode = mKeyElementType->GetXmlLoadCode(generator,
+            generator.GetMemberName(mKeyElementType), doc, root, "keyNode", tabLevel + 1);
+        std::string valueCode = mValueElementType->GetXmlLoadCode(generator,
+            generator.GetMemberName(mValueElementType), doc, root, "valueNode", tabLevel + 1);
+
+        std::map<std::string, std::string> replacements;
+        replacements["@VAR_CODE_TYPE@"] = GetCodeType();
+        replacements["@NODE@"] = node;
+        replacements["@KEY_NODE@"] = "keyNode";
+        replacements["@VALUE_NODE@"] = "valueNode";
+        replacements["@KEY_ACCESS_CODE@"] = keyCode;
+        replacements["@VALUE_ACCESS_CODE@"] = valueCode;
+
+        code = generator.ParseTemplate(tabLevel, "VariableMapXmlLoad",
+            replacements);
+    }
+
+    return code;
 }
 
 std::string MetaVariableMap::GetXmlSaveCode(const Generator& generator,

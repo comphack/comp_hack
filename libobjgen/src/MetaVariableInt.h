@@ -454,10 +454,7 @@ public:
         }
         else
         {
-            std::stringstream ss;
-            ss << mDefaultValue;
-
-            value = ss.str();
+            value = GetDefaultValueCode();
         }
 
         return value;
@@ -477,6 +474,13 @@ public:
         }
 
         return arg;
+    }
+
+    virtual std::string GetDefaultValueCode() const
+    {
+        std::stringstream ss;
+        ss << mDefaultValue;
+        return ss.str();
     }
 
     virtual std::string GetValidCondition(const Generator& generator,

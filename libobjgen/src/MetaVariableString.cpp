@@ -476,6 +476,11 @@ std::string MetaVariableString::GetConstructValue() const
     return code;
 }
 
+std::string MetaVariableString::GetDefaultValueCode() const
+{
+    return "\"" +  mDefaultValue + "\"";
+}
+
 std::string MetaVariableString::GetValidCondition(const Generator& generator,
     const std::string& name, bool recursive) const
 {

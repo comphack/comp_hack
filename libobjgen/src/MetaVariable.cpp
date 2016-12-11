@@ -116,6 +116,11 @@ std::string MetaVariable::GetArgument(const std::string& name) const
     return arg;
 }
 
+std::string MetaVariable::GetDefaultValueCode() const
+{
+    return GetCodeType() + "{}";
+}
+
 std::string MetaVariable::GetGetterCode(const Generator& generator,
     const std::string& name, size_t tabLevel) const
 {

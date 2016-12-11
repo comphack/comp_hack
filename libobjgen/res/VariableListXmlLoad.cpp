@@ -2,7 +2,7 @@
 {
 	@VAR_CODE_TYPE@ l;
 	
-	for(auto element : GetXmlChildren(*@NODE@, "elements"))
+	for(auto element : GetXmlChildren(*@NODE@, "element"))
 	{
 		auto elem = @ELEMENT_ACCESS_CODE@;
 		if(status)

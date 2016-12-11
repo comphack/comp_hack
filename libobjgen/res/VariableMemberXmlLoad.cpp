@@ -8,8 +8,4 @@ if(status)
 		auto v = @ACCESS_CODE@;
 		status = status && Set@VAR_CAMELCASE_NAME@(v);
 	}
-	else
-	{
-		status = false;
-	}
 }

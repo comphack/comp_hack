@@ -89,6 +89,7 @@ public:
 
     virtual std::string GetCodeType() const;
     virtual std::string GetConstructValue() const;
+    virtual std::string GetDefaultValueCode() const;
     virtual std::string GetValidCondition(const Generator& generator,
         const std::string& name, bool recursive = false) const;
     virtual std::string GetLoadCode(const Generator& generator,

@@ -368,6 +368,7 @@ std::string MetaVariableArray::GetXmlLoadCode(const Generator& generator,
         replacements["@NODE@"] = node;
         replacements["@ELEMENT_ACCESS_CODE@"] = elemCode;
         replacements["@ELEMENT_COUNT@"] = std::to_string(mElementCount);
+        replacements["@DEFAULT_VALUE@"] = mElementType->GetDefaultValueCode();
 
         code = generator.ParseTemplate(tabLevel, "VariableArrayXmlLoad",
             replacements);

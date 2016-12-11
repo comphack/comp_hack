@@ -8,7 +8,7 @@
 		auto @KEY_NODE@ = GetXmlChild(*pair, "key");
 		auto @VALUE_NODE@ = GetXmlChild(*pair, "value");
 		
-		if(nullptr == @KEY_NODE@ || nullptr == @VALUE_NODE@)
+		if(nullptr != @KEY_NODE@ && nullptr != @VALUE_NODE@)
 		{
 			auto key = @KEY_ACCESS_CODE@;
 			auto val = @VALUE_ACCESS_CODE@;

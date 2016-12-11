@@ -408,7 +408,7 @@ bool MetaVariableString::Save(tinyxml2::XMLDocument& doc,
     pVariableElement->SetAttribute("type", GetType().c_str());
     pVariableElement->SetAttribute("name", GetName().c_str());
 
-    if("" != GetDefaultValue())
+    if(!GetDefaultValue().empty())
     {
         pVariableElement->SetAttribute("default", GetDefaultValue().c_str());
     }
@@ -418,7 +418,7 @@ bool MetaVariableString::Save(tinyxml2::XMLDocument& doc,
         pVariableElement->SetAttribute("empty", "false");
     }
 
-    if("" != GetRegularExpression())
+    if(!GetRegularExpression().empty())
     {
         pVariableElement->SetAttribute("regex", GetRegularExpression().c_str());
     }
@@ -441,16 +441,14 @@ bool MetaVariableString::Save(tinyxml2::XMLDocument& doc,
             GetSize()).c_str());
     }
 
-    if(Encoding_t::ENCODING_UTF8 != GetEncoding())
+    switch(GetEncoding())
     {
-        if(Encoding_t::ENCODING_CP932 == GetEncoding())
-        {
+        case Encoding_t::ENCODING_CP932:
             pVariableElement->SetAttribute("encoding", "cp932");
-        }
-        else if(Encoding_t::ENCODING_CP1252 == GetEncoding())
-        {
+            break;
+        case Encoding_t::ENCODING_CP1252:
             pVariableElement->SetAttribute("encoding", "cp1252");
-        }
+            break;
     }
 
     root.InsertEndChild(pVariableElement);

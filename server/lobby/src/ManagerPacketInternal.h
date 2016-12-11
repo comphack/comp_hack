@@ -1,12 +1,12 @@
 /**
- * @file server/channel/src/Packets.h
- * @ingroup channel
+ * @file server/lobby/src/ManagerPacketInternal.cpp
+ * @ingroup lobby
  *
- * @author COMP Omega <compomega@tutanota.com>
+ * @author HACKfrost
  *
- * @brief Classes used to parse client channel packets.
+ * @brief Manager to handle internal lobby packets.
  *
- * This file is part of the channel Server (channel).
+ * This file is part of the lobby Server (lobby).
  *
  * Copyright (C) 2012-2016 COMP_hack Team <compomega@tutanota.com>
  *
@@ -24,22 +24,21 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef LIBCOMP_SRC_PACKETS_H
-#define LIBCOMP_SRC_PACKETS_H
+#ifndef LIBCOMP_SRC_MANAGERPACKETINTERNAL_H
+#define LIBCOMP_SRC_MANAGERPACKETINTERNAL_H
 
 // channel Includes
-#include "PacketParser.h"
+#include "ManagerPacket.h"
 
-namespace channel
+namespace lobby
 {
-
-namespace Parsers
+class ManagerPacketInternal : public ManagerPacket
 {
+public:
+    ManagerPacketInternal(const std::shared_ptr<libcomp::BaseServer>& server);
+    virtual ~ManagerPacketInternal();
+};
 
-PACKET_PARSER_DECL(SetWorldDescription);               // 0x1002
+} // namespace channel
 
-} // namespace Parsers
-
-} // namespace libcomp
-
-#endif // LIBCOMP_SRC_PACKETS_H
+#endif // LIBCOMP_SRC_MANAGERPACKETINTERNAL_H

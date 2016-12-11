@@ -27,12 +27,13 @@
 #include "Packets.h"
 
 // libcomp Includes
-#include "Decrypt.h"
-#include "Log.h"
-#include "Packet.h"
-#include "ReadOnlyPacket.h"
-#include "TcpConnection.h"
-#include "WorldDescription.h"
+#include <Decrypt.h>
+#include <Log.h>
+#include <Packet.h>
+#include <PacketCodes.h>
+#include <ReadOnlyPacket.h>
+#include <TcpConnection.h>
+#include <WorldDescription.h>
 
 // channel Includes
 #include "ChannelServer.h"
@@ -59,7 +60,7 @@ bool Parsers::SetWorldDescription::Parse(ManagerPacket *pPacketManager,
     //Reply with the channel information
     libcomp::Packet reply;
 
-    reply.WriteU16Little(0x1002);
+    reply.WriteU16Little(PACKET_SET_CHANNEL_DESCRIPTION);
     server->GetDescription().SavePacket(reply);
 
     connection->SendPacket(reply);

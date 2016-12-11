@@ -35,7 +35,8 @@
 
 using namespace libcomp;
 
-DatabaseCassandra::DatabaseCassandra(std::string keyspace) : mKeyspace(keyspace), mCluster(nullptr), mSession(nullptr)
+DatabaseCassandra::DatabaseCassandra(const String& keyspace)
+    : mCluster(nullptr), mSession(nullptr), mKeyspace(keyspace.ToUtf8())
 {
 }
 

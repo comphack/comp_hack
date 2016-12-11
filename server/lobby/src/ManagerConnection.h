@@ -28,9 +28,9 @@
 #define SERVER_LOBBY_SRC_MANAGERCONNECTION_H
 
 // libcomp Includes
-#include "BaseServer.h"
-#include "Manager.h"
-#include "World.h"
+#include <BaseServer.h>
+#include <Manager.h>
+#include <World.h>
 
 // Boost ASIO Includes
 #include <asio.hpp>
@@ -41,7 +41,7 @@ namespace lobby
 class ManagerConnection : public libcomp::Manager
 {
 public:
-    ManagerConnection(std::shared_ptr<libcomp::BaseServer> server,
+    ManagerConnection(const std::shared_ptr<libcomp::BaseServer>& server,
         std::shared_ptr<asio::io_service> service,
         std::shared_ptr<libcomp::MessageQueue<libcomp::Message::Message*>> messageQueue);
     virtual ~ManagerConnection();
@@ -56,9 +56,9 @@ public:
      */
     virtual bool ProcessMessage(const libcomp::Message::Message *pMessage);
 
-    std::list<std::shared_ptr<lobby::World>> GetWorlds();
+    std::list<std::shared_ptr<lobby::World>> GetWorlds() const;
 
-    std::shared_ptr<lobby::World> GetWorldByConnection(const std::shared_ptr<libcomp::InternalConnection>& connection);
+    std::shared_ptr<lobby::World> GetWorldByConnection(const std::shared_ptr<libcomp::InternalConnection>& connection) const;
 
     void RemoveWorld(std::shared_ptr<lobby::World>& world);
 

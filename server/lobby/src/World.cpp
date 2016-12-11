@@ -28,6 +28,7 @@
 
 // libcomp includes
 #include <Packet.h>
+#include <PacketCodes.h>
 
 using namespace lobby;
 
@@ -44,7 +45,7 @@ bool World::Initialize()
 {
     //Request world information
     libcomp::Packet packet;
-    packet.WriteU16Little(0x1001);
+    packet.WriteU16Little(PACKET_DESCRIBE_WORLD);
 
     mConnection->SendPacket(std::move(packet));
 
@@ -63,12 +64,7 @@ objects::WorldDescription World::GetWorldDescription()
 
 std::list<objects::ChannelDescription> World::GetChannelDescriptions()
 {
-    std::list<objects::ChannelDescription> channels;
-    for(auto channel : mChannelDescriptions)
-    {
-        channels.push_back(channel);
-    }
-    return channels;
+    return mChannelDescriptions;
 }
 
 bool World::GetChannelDescriptionByID(uint8_t id, objects::ChannelDescription& outChannel)

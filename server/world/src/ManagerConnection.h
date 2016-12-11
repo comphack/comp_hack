@@ -28,10 +28,10 @@
 #define SERVER_WORLD_SRC_MANAGERCONNECTION_H
 
 // libcomp Includes
-#include "BaseServer.h"
-#include "ConnectionMessage.h"
-#include "InternalConnection.h"
-#include "Manager.h"
+#include <BaseServer.h>
+#include <ConnectionMessage.h>
+#include <InternalConnection.h>
+#include <Manager.h>
 
 // Boost ASIO Includes
 #include <asio.hpp>
@@ -42,7 +42,7 @@ namespace world
 class ManagerConnection : public libcomp::Manager
 {
 public:
-    ManagerConnection(std::shared_ptr<libcomp::BaseServer> server);
+    ManagerConnection(const std::shared_ptr<libcomp::BaseServer>& server);
     virtual ~ManagerConnection();
 
     /**
@@ -61,6 +61,8 @@ public:
     * Returns true if the lobby connection is currently active.
     */
     bool LobbyConnected();
+
+    void RemoveConnection(std::shared_ptr<libcomp::InternalConnection>& connection);
 
 private:
     std::shared_ptr<libcomp::BaseServer> mServer;

@@ -31,7 +31,8 @@
 
 // channel Includes
 #include "ChannelConnection.h"
-#include "ManagerPacket.h"
+#include "ManagerPacketClient.h"
+#include "ManagerPacketInternal.h"
 
 // Object Includes
 #include "ChannelConfig.h"
@@ -42,23 +43,22 @@ ChannelServer::ChannelServer(std::shared_ptr<objects::ServerConfig> config, cons
     libcomp::BaseServer(config, configPath)
 {
     // Connect to the world server.
-    auto mWorldConnection = std::shared_ptr<libcomp::InternalConnection>(
+    auto worldConnection = std::shared_ptr<libcomp::InternalConnection>(
         new libcomp::InternalConnection(mService));
-    mWorldConnection->SetSelf(mWorldConnection);
-    mWorldConnection->SetMessageQueue(mMainWorker.GetMessageQueue());
+    worldConnection->SetSelf(worldConnection);
+    worldConnection->SetMessageQueue(mMainWorker.GetMessageQueue());
 
-    auto self = std::shared_ptr<libcomp::BaseServer>(this);
-    mManagerConnection = std::shared_ptr<ManagerConnection>(new ManagerConnection(self));
-    mManagerConnection->SetWorldConnection(mWorldConnection);
+    mManagerConnection = std::shared_ptr<ManagerConnection>(new ManagerConnection(mSelf));
+    mManagerConnection->SetWorldConnection(worldConnection);
 
     auto conf = std::dynamic_pointer_cast<objects::ChannelConfig>(mConfig);
     mDescription.SetID(conf->GetID());
     mDescription.SetName(conf->GetName());
 
-    mWorldConnection->Connect(conf->GetWorldIP(), conf->GetWorldPort(), false);
+    worldConnection->Connect(conf->GetWorldIP(), conf->GetWorldPort(), false);
 
     bool connected = libcomp::TcpConnection::STATUS_CONNECTED ==
-        mWorldConnection->GetStatus();
+        worldConnection->GetStatus();
 
     if(!connected)
     {
@@ -66,11 +66,11 @@ ChannelServer::ChannelServer(std::shared_ptr<objects::ServerConfig> config, cons
     }
 
     //Add the managers to the main worker.
-    mMainWorker.AddManager(std::shared_ptr<libcomp::Manager>(new ManagerPacket(PacketManagerMode::MANAGER_INTERNAL, self)));
+    mMainWorker.AddManager(std::shared_ptr<libcomp::Manager>(new ManagerPacketInternal(mSelf)));
     mMainWorker.AddManager(mManagerConnection);
 
     // Add the managers to the generic workers.
-    mWorker.AddManager(std::shared_ptr<libcomp::Manager>(new ManagerPacket(PacketManagerMode::MANAGER_CLIENT_FACING, self)));
+    mWorker.AddManager(std::shared_ptr<libcomp::Manager>(new ManagerPacketClient(mSelf)));
 
     // Start the workers.
     mWorker.Start();

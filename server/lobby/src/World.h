@@ -28,9 +28,9 @@
 #define SERVER_LOBBY_SRC_WORLD_H
 
 // libcomp Includes
-#include "ChannelDescription.h"
-#include "InternalConnection.h"
-#include "WorldDescription.h"
+#include <ChannelDescription.h>
+#include <InternalConnection.h>
+#include <WorldDescription.h>
 
 namespace lobby
 {

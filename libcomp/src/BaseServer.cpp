@@ -41,6 +41,7 @@ using namespace libcomp;
 BaseServer::BaseServer(std::shared_ptr<objects::ServerConfig> config, const String& configPath) :
     TcpServer("any", config->GetPort()), mConfig(config)
 {
+    mSelf = std::shared_ptr<libcomp::BaseServer>(this);
     ReadConfig(config, configPath);
 
     /// @todo Setup the database type based on the config.

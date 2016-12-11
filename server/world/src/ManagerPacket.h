@@ -28,8 +28,8 @@
 #define SERVER_WORLD_SRC_MANAGERPACKET_H
 
 // libcomp Includes
-#include "BaseServer.h"
-#include "Manager.h"
+#include <BaseServer.h>
+#include <Manager.h>
 
 // Standard C++11 Includes
 #include <stdint.h>
@@ -39,12 +39,6 @@
 namespace world
 {
 
-enum class PacketManagerMode
-{
-    MANAGER_LOBBY,
-    MANAGER_CHANNEL,
-};
-
 typedef uint16_t CommandCode_t;
 
 class PacketParser;
@@ -52,7 +46,7 @@ class PacketParser;
 class ManagerPacket : public libcomp::Manager
 {
 public:
-    ManagerPacket(PacketManagerMode mode, std::shared_ptr<libcomp::BaseServer> server);
+    ManagerPacket(const std::shared_ptr<libcomp::BaseServer>& server);
     virtual ~ManagerPacket();
 
     /**

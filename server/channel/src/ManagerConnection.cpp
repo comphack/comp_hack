@@ -27,18 +27,19 @@
 #include "ManagerConnection.h"
 
 // libcomp Includes
-#include "Log.h"
-#include "MessageConnectionClosed.h"
-#include "MessageEncrypted.h"
+#include <Log.h>
+#include <MessageConnectionClosed.h>
+#include <MessageEncrypted.h>
+#include <PacketCodes.h>
 
 // channel Includes
 #include "ChannelServer.h"
 
 using namespace channel;
 
-ManagerConnection::ManagerConnection(std::shared_ptr<libcomp::BaseServer> server)
+ManagerConnection::ManagerConnection(const std::shared_ptr<libcomp::BaseServer>& server)
+    : mServer(server)
 {
-    mServer = server;
 }
 
 ManagerConnection::~ManagerConnection()
@@ -69,15 +70,10 @@ bool ManagerConnection::ProcessMessage(const libcomp::Message::Message *pMessage
                     const libcomp::Message::Encrypted*>(cMessage);
 
                 auto connection = encrypted->GetConnection();
-                auto server = std::dynamic_pointer_cast<ChannelServer>(mServer);
 
                 if(mWorldConnection == connection)
                 {
-                    //Request world information
-                    libcomp::Packet packet;
-                    packet.WriteU16Little(0x1001);
-
-                    connection->SendPacket(std::move(packet));
+                    RequestWorldDescription();
                 }
         
                 return true;
@@ -106,7 +102,19 @@ bool ManagerConnection::ProcessMessage(const libcomp::Message::Message *pMessage
     return false;
 }
 
-void ManagerConnection::SetWorldConnection(std::shared_ptr<libcomp::InternalConnection> worldConnection)
+void ManagerConnection::RequestWorldDescription()
+{
+    if(nullptr != mWorldConnection)
+    {
+        //Request world information
+        libcomp::Packet packet;
+        packet.WriteU16Little(PACKET_DESCRIBE_WORLD);
+
+        mWorldConnection->SendPacket(std::move(packet));
+    }
+}
+
+void ManagerConnection::SetWorldConnection(const std::shared_ptr<libcomp::InternalConnection>& worldConnection)
 {
     mWorldConnection = worldConnection;
 }

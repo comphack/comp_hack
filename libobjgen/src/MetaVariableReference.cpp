@@ -149,7 +149,7 @@ bool MetaVariableReference::Save(tinyxml2::XMLDocument& doc,
     pVariableElement->SetAttribute("type", GetType().c_str());
     pVariableElement->SetAttribute("name", GetName().c_str());
 
-    if("" != GetReferenceType())
+    if(!GetReferenceType().empty())
     {
         pVariableElement->SetAttribute("rtype", GetReferenceType().c_str());
     }

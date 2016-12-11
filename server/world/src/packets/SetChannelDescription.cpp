@@ -27,12 +27,13 @@
 #include "Packets.h"
 
 // libcomp Includes
-#include "ChannelDescription.h"
-#include "Decrypt.h"
-#include "InternalConnection.h"
-#include "Log.h"
-#include "Packet.h"
-#include "ReadOnlyPacket.h"
+#include <ChannelDescription.h>
+#include <Decrypt.h>
+#include <InternalConnection.h>
+#include <Log.h>
+#include <Packet.h>
+#include <PacketCodes.h>
+#include <ReadOnlyPacket.h>
 
 // world Includes
 #include "ManagerPacket.h"
@@ -51,10 +52,16 @@ bool Parsers::SetChannelDescription::Parse(ManagerPacket *pPacketManager,
         return false;
     }
 
+    auto conn = std::dynamic_pointer_cast<libcomp::InternalConnection>(connection);
+
+    if(nullptr == conn)
+    {
+        return false;
+    }
+
     LOG_DEBUG(libcomp::String("Updating Channel Server description: (%1) %2\n").Arg(obj.GetID()).Arg(obj.GetName()));
 
     auto server = std::dynamic_pointer_cast<WorldServer>(pPacketManager->GetServer());
-    auto conn = std::dynamic_pointer_cast<libcomp::InternalConnection>(connection);
 
     server->SetChannelDescription(obj, conn);
 
@@ -62,8 +69,8 @@ bool Parsers::SetChannelDescription::Parse(ManagerPacket *pPacketManager,
     auto lobbyConnection = server->GetLobbyConnection();
 
     libcomp::Packet packet;
-    packet.WriteU16Little(0x1002);
-    packet.WriteU8(1);  //1: Update
+    packet.WriteU16Little(PACKET_SET_CHANNEL_DESCRIPTION);
+    packet.WriteU8(PACKET_ACTION_UPDATE);
     obj.SavePacket(packet);
     lobbyConnection->SendPacket(packet);
 

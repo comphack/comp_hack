@@ -27,8 +27,9 @@
 #include "ManagerPacket.h"
 
 // libcomp Includes
-#include "Log.h"
-#include "MessagePacket.h"
+#include <Log.h>
+#include <MessagePacket.h>
+#include <PacketCodes.h>
 
 // world Includes
 #include "PacketParser.h"
@@ -36,13 +37,13 @@
 
 using namespace world;
 
-ManagerPacket::ManagerPacket(PacketManagerMode mode, std::shared_ptr<libcomp::BaseServer> server)
+ManagerPacket::ManagerPacket(const std::shared_ptr<libcomp::BaseServer>& server)
 {
     mServer = server;
 
-    mPacketParsers[0x1001] = std::shared_ptr<PacketParser>(
+    mPacketParsers[PACKET_DESCRIBE_WORLD] = std::shared_ptr<PacketParser>(
         new Parsers::DescribeWorld());
-    mPacketParsers[0x1002] = std::shared_ptr<PacketParser>(
+    mPacketParsers[PACKET_SET_CHANNEL_DESCRIPTION] = std::shared_ptr<PacketParser>(
         new Parsers::SetChannelDescription());
 }
 

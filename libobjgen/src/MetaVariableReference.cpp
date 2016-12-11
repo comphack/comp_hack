@@ -99,8 +99,7 @@ bool MetaVariableReference::IsValid(const void *pData, size_t dataSize) const
 
 bool MetaVariableReference::Load(std::istream& stream)
 {
-    stream.read(reinterpret_cast<char*>(&mReferenceType),
-        sizeof(mReferenceType));
+    LoadString(stream, mReferenceType);
 
     return stream.good() && IsValid();
 }
@@ -111,8 +110,7 @@ bool MetaVariableReference::Save(std::ostream& stream) const
 
     if(IsValid())
     {
-        stream.write(reinterpret_cast<const char*>(&mReferenceType),
-            sizeof(mReferenceType));
+        SaveString(stream, mReferenceType);
 
         result = stream.good();
     }

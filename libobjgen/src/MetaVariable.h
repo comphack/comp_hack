@@ -97,7 +97,9 @@ public:
     virtual bool IsValid(const void *pData, size_t dataSize) const = 0;
 
     virtual bool Load(std::istream& stream) = 0;
+    bool LoadString(std::istream& stream, std::string& s);
     virtual bool Save(std::ostream& stream) const = 0;
+    bool SaveString(std::ostream& stream, const std::string& s) const;
 
     virtual bool Load(const tinyxml2::XMLDocument& doc,
         const tinyxml2::XMLElement& root) = 0;

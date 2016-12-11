@@ -169,16 +169,14 @@ bool MetaVariableString::IsValid(const void *pData, size_t dataSize) const
 
 bool MetaVariableString::Load(std::istream& stream)
 {
-    stream.read(reinterpret_cast<char*>(&mDefaultValue),
-        sizeof(mDefaultValue));
+    LoadString(stream, mDefaultValue);
+    LoadString(stream, mRegularExpression);
     stream.read(reinterpret_cast<char*>(&mAllowEmpty),
         sizeof(mAllowEmpty));
     stream.read(reinterpret_cast<char*>(&mEncoding),
         sizeof(mEncoding));
     stream.read(reinterpret_cast<char*>(&mLengthSize),
         sizeof(mLengthSize));
-    stream.read(reinterpret_cast<char*>(&mRegularExpression),
-        sizeof(mRegularExpression));
     stream.read(reinterpret_cast<char*>(&mRounding),
         sizeof(mRounding));
     stream.read(reinterpret_cast<char*>(&mSize),
@@ -193,16 +191,14 @@ bool MetaVariableString::Save(std::ostream& stream) const
 
     if(IsValid())
     {
-        stream.write(reinterpret_cast<const char*>(&mDefaultValue),
-            sizeof(mDefaultValue));
+        SaveString(stream, mDefaultValue);
+        SaveString(stream, mRegularExpression);
         stream.write(reinterpret_cast<const char*>(&mAllowEmpty),
             sizeof(mAllowEmpty));
         stream.write(reinterpret_cast<const char*>(&mEncoding),
             sizeof(mEncoding));
         stream.write(reinterpret_cast<const char*>(&mLengthSize),
             sizeof(mLengthSize));
-        stream.write(reinterpret_cast<const char*>(&mRegularExpression),
-            sizeof(mRegularExpression));
         stream.write(reinterpret_cast<const char*>(&mRounding),
             sizeof(mRounding));
         stream.write(reinterpret_cast<const char*>(&mSize),

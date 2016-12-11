@@ -90,9 +90,18 @@ bool TcpConnection::Connect(const String& host, uint16_t port, bool async)
     return result;
 }
 
-void TcpConnection::Close()
+bool TcpConnection::Close()
 {
-    mSocket.close();
+    if(mStatus != STATUS_NOT_CONNECTED)
+    {
+        mStatus = STATUS_NOT_CONNECTED;
+        mSocket.close();
+        return true;
+    }
+    else
+    {
+        return false;
+    }
 }
 
 void TcpConnection::QueuePacket(Packet& packet)
@@ -359,11 +368,7 @@ void TcpConnection::SocketError(const String& errorMessage)
             GetRemoteAddress()).Arg(errorMessage));
     }
 
-    if(mStatus != STATUS_NOT_CONNECTED)
-    {
-        mStatus = STATUS_NOT_CONNECTED;
-        Close();
-    }
+    Close();
 }
 
 void TcpConnection::ConnectionFailed()

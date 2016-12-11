@@ -27,12 +27,12 @@
 #include "Packets.h"
 
 // libcomp Includes
-#include "Decrypt.h"
-#include "Log.h"
-#include "Packet.h"
-#include "ReadOnlyPacket.h"
-#include "TcpConnection.h"
-#include "WorldDescription.h"
+#include <Decrypt.h>
+#include <Log.h>
+#include <Packet.h>
+#include <ReadOnlyPacket.h>
+#include <TcpConnection.h>
+#include <WorldDescription.h>
 
 // lobby Includes
 #include "ManagerPacket.h"
@@ -46,7 +46,14 @@ bool Parsers::SetWorldDescription::Parse(ManagerPacket *pPacketManager,
 {
     objects::WorldDescription obj;
 
-    if (!obj.LoadPacket(p))
+    if(!obj.LoadPacket(p))
+    {
+        return false;
+    }
+
+    auto iConnection = std::dynamic_pointer_cast<libcomp::InternalConnection>(connection);
+
+    if(nullptr == iConnection)
     {
         return false;
     }
@@ -55,7 +62,7 @@ bool Parsers::SetWorldDescription::Parse(ManagerPacket *pPacketManager,
 
     auto server = std::dynamic_pointer_cast<LobbyServer>(pPacketManager->GetServer());
 
-    auto world = server->GetWorldByConnection(std::shared_ptr<libcomp::InternalConnection>(std::dynamic_pointer_cast<libcomp::InternalConnection>(connection)));
+    auto world = server->GetWorldByConnection(iConnection);
     world->SetWorldDescription(obj);
 
     return true;

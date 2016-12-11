@@ -27,16 +27,17 @@
 #include "ManagerConnection.h"
 
 // libcomp Includes
-#include "Log.h"
-#include "MessageConnectionClosed.h"
-#include "MessageEncrypted.h"
-#include "MessageWorldNotification.h"
+#include <Log.h>
+#include <MessageConnectionClosed.h>
+#include <MessageEncrypted.h>
+#include <MessageWorldNotification.h>
 
+// Standard C++ 11 Includes
 #include <thread>
 
 using namespace lobby;
 
-ManagerConnection::ManagerConnection(std::shared_ptr<libcomp::BaseServer> server,
+ManagerConnection::ManagerConnection(const std::shared_ptr<libcomp::BaseServer>& server,
     std::shared_ptr<asio::io_service> service,
     std::shared_ptr<libcomp::MessageQueue<libcomp::Message::Message*>> messageQueue)
 {
@@ -119,19 +120,8 @@ bool ManagerConnection::ProcessMessage(const libcomp::Message::Message *pMessage
                     const libcomp::Message::ConnectionClosed*>(cMessage);
 
                 auto connection = closed->GetConnection();
-
                 mServer->RemoveConnection(connection);
-
-                //If this is from an internal connection, it is a world connection, else it is a client connection
-                auto iConnection = std::dynamic_pointer_cast<libcomp::InternalConnection>(connection);
-                if(nullptr != iConnection)
-                {
-                    auto world = GetWorldByConnection(std::shared_ptr<libcomp::InternalConnection>(iConnection));
-                    if(nullptr != world)
-                    {
-                        RemoveWorld(world);
-                    }
-                }
+                RemoveWorld(GetWorldByConnection(std::dynamic_pointer_cast<libcomp::InternalConnection>(connection)));
 
                 return true;
             }
@@ -141,16 +131,16 @@ bool ManagerConnection::ProcessMessage(const libcomp::Message::Message *pMessage
     return false;
 }
 
-std::list<std::shared_ptr<lobby::World>> ManagerConnection::GetWorlds()
+std::list<std::shared_ptr<lobby::World>> ManagerConnection::GetWorlds() const
 {
     return mWorlds;
 }
 
-std::shared_ptr<lobby::World> ManagerConnection::GetWorldByConnection(const std::shared_ptr<libcomp::InternalConnection>& connection)
+std::shared_ptr<lobby::World> ManagerConnection::GetWorldByConnection(const std::shared_ptr<libcomp::InternalConnection>& connection) const
 {
-    for (auto world : mWorlds)
+    for(auto world : mWorlds)
     {
-        if (world->GetConnection() == connection)
+        if(world->GetConnection() == connection)
         {
             return world;
         }
@@ -161,12 +151,15 @@ std::shared_ptr<lobby::World> ManagerConnection::GetWorldByConnection(const std:
 
 void ManagerConnection::RemoveWorld(std::shared_ptr<lobby::World>& world)
 {
-    auto desc = world->GetWorldDescription();
-    LOG_INFO(libcomp::String("World connection removed: (%1) %2\n").Arg(desc.GetID()).Arg(desc.GetName()));
-
-    auto iter = std::find(mWorlds.begin(), mWorlds.end(), world);
-    if(iter != mWorlds.end())
+    if(nullptr != world)
     {
-        mWorlds.erase(iter);
+        auto desc = world->GetWorldDescription();
+
+        auto iter = std::find(mWorlds.begin(), mWorlds.end(), world);
+        if(iter != mWorlds.end())
+        {
+            mWorlds.erase(iter);
+            LOG_INFO(libcomp::String("World connection removed: (%1) %2\n").Arg(desc.GetID()).Arg(desc.GetName()));
+        }
     }
 }

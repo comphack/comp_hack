@@ -37,7 +37,7 @@ namespace Parsers
 {
 
 PACKET_PARSER_DECL(DescribeWorld);               // 0x1001
-PACKET_PARSER_DECL(SetChannelDescription);               // 0x1002
+PACKET_PARSER_DECL(SetChannelDescription);               // 0x1003
 
 } // namespace Parsers
 

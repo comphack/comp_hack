@@ -51,6 +51,8 @@ public:
 protected:
     virtual int Run();
 
+    std::shared_ptr<BaseServer> mSelf;
+
     std::shared_ptr<objects::ServerConfig> mConfig;
 
     std::shared_ptr<libcomp::Database> mDatabase;

@@ -83,8 +83,7 @@ WorldServer::WorldServer(std::shared_ptr<objects::ServerConfig> config, const li
 
     delete pMessage;
 
-    auto self = std::shared_ptr<libcomp::BaseServer>(this);
-    mManagerConnection = std::shared_ptr<ManagerConnection>(new ManagerConnection(self));
+    mManagerConnection = std::shared_ptr<ManagerConnection>(new ManagerConnection(mSelf));
 
     lobbyConnection->Close();
     serviceThread.join();
@@ -92,13 +91,14 @@ WorldServer::WorldServer(std::shared_ptr<objects::ServerConfig> config, const li
     messageQueue.reset();
 
     auto connectionManager = std::shared_ptr<libcomp::Manager>(mManagerConnection);
+    auto packetManager = std::shared_ptr<libcomp::Manager>(new ManagerPacket(mSelf));
 
     //Add the managers to the main worker.
-    mMainWorker.AddManager(std::shared_ptr<libcomp::Manager>(new ManagerPacket(PacketManagerMode::MANAGER_LOBBY, self)));
+    mMainWorker.AddManager(packetManager);
     mMainWorker.AddManager(connectionManager);
 
     // Add the managers to the generic workers.
-    mWorker.AddManager(std::shared_ptr<libcomp::Manager>(new ManagerPacket(PacketManagerMode::MANAGER_CHANNEL, self)));
+    mWorker.AddManager(packetManager);
     mWorker.AddManager(connectionManager);
 
     // Start the worker.
@@ -116,9 +116,10 @@ objects::WorldDescription WorldServer::GetDescription()
 
 bool WorldServer::GetChannelDescriptionByConnection(std::shared_ptr<libcomp::InternalConnection>& connection, objects::ChannelDescription& outChannel)
 {
-    if(mChannelDescriptions.find(connection) != mChannelDescriptions.end())
+    auto iter = mChannelDescriptions.find(connection);
+    if(iter != mChannelDescriptions.end())
     {
-        outChannel = mChannelDescriptions[connection];
+        outChannel = iter->second;
         return true;
     }
 
@@ -167,7 +168,7 @@ std::shared_ptr<libcomp::TcpConnection> WorldServer::CreateConnection(
 
         connection->ConnectionSuccess();
     }
-    else if(true)  //todo: ensure that channels can start connecting
+    else if(true)  /// @todo: ensure that channels can start connecting
     {
         // Assign this to the only worker available.
         std::dynamic_pointer_cast<libcomp::InternalConnection>(
@@ -177,7 +178,7 @@ std::shared_ptr<libcomp::TcpConnection> WorldServer::CreateConnection(
     }
     else
     {
-        //todo: print an error message
+        /// @todo: send a "connection refused" error message to the client
         connection->Close();
     }
 

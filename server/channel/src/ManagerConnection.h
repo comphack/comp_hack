@@ -28,10 +28,10 @@
 #define SERVER_CHANNEL_SRC_MANAGERCONNECTION_H
 
 // libcomp Includes
-#include "BaseServer.h"
-#include "InternalConnection.h"
-#include "Manager.h"
-#include "WorldDescription.h"
+#include <BaseServer.h>
+#include <InternalConnection.h>
+#include <Manager.h>
+#include <WorldDescription.h>
 
 // Boost ASIO Includes
 #include <asio.hpp>
@@ -42,7 +42,7 @@ namespace channel
 class ManagerConnection : public libcomp::Manager
 {
 public:
-    ManagerConnection(std::shared_ptr<libcomp::BaseServer> server);
+    ManagerConnection(const std::shared_ptr<libcomp::BaseServer>& server);
     virtual ~ManagerConnection();
 
     /**
@@ -55,7 +55,9 @@ public:
      */
     virtual bool ProcessMessage(const libcomp::Message::Message *pMessage);
 
-    void SetWorldConnection(std::shared_ptr<libcomp::InternalConnection> worldConnection);
+    void RequestWorldDescription();
+
+    void SetWorldConnection(const std::shared_ptr<libcomp::InternalConnection>& worldConnection);
 
 private:
     std::shared_ptr<libcomp::InternalConnection> mWorldConnection;

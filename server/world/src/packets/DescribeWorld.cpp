@@ -27,12 +27,13 @@
 #include "Packets.h"
 
 // libcomp Includes
-#include "Decrypt.h"
-#include "Log.h"
-#include "Packet.h"
-#include "ReadOnlyPacket.h"
-#include "TcpConnection.h"
-#include "WorldDescription.h"
+#include <Decrypt.h>
+#include <Log.h>
+#include <Packet.h>
+#include <PacketCodes.h>
+#include <ReadOnlyPacket.h>
+#include <TcpConnection.h>
+#include <WorldDescription.h>
 
 // world Includes
 #include "ManagerPacket.h"
@@ -48,7 +49,7 @@ bool Parsers::DescribeWorld::Parse(ManagerPacket *pPacketManager,
 
     libcomp::Packet reply;
 
-    reply.WriteU16Little(0x1001);
+    reply.WriteU16Little(PACKET_SET_WORLD_DESCRIPTION);
     server->GetDescription().SavePacket(reply);
 
     connection->SendPacket(reply);

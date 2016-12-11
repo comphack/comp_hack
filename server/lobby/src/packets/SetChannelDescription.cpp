@@ -27,12 +27,13 @@
 #include "Packets.h"
 
 // libcomp Includes
-#include "ChannelDescription.h"
-#include "Decrypt.h"
-#include "InternalConnection.h"
-#include "Log.h"
-#include "Packet.h"
-#include "ReadOnlyPacket.h"
+#include <ChannelDescription.h>
+#include <Decrypt.h>
+#include <InternalConnection.h>
+#include <Log.h>
+#include <Packet.h>
+#include <PacketCodes.h>
+#include <ReadOnlyPacket.h>
 
 // lobby Includes
 #include "ManagerPacket.h"
@@ -49,7 +50,7 @@ bool Parsers::SetChannelDescription::Parse(ManagerPacket *pPacketManager,
         return false;
     }
 
-    auto action = p.ReadU8();   //1: Update, 0: Delete
+    auto action = (InternalPacketAction_t)p.ReadU8();
 
     objects::ChannelDescription obj;
 
@@ -63,7 +64,7 @@ bool Parsers::SetChannelDescription::Parse(ManagerPacket *pPacketManager,
 
     auto world = server->GetWorldByConnection(conn);
 
-    if(action == 0)
+    if(action == PACKET_ACTION_REMOVE)
     {
         world->RemoveChannelDescriptionByID(obj.GetID());
     }

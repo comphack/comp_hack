@@ -29,6 +29,8 @@ SET(${PROJECT_NAME}_SRCS
     src/LoginWebHandler.cpp
     src/ManagerConnection.cpp
     src/ManagerPacket.cpp
+    src/ManagerPacketClient.cpp
+    src/ManagerPacketInternal.cpp
     src/World.cpp
     src/main.cpp
 
@@ -40,6 +42,8 @@ SET(${PROJECT_NAME}_HDRS
     src/LoginWebHandler.h
     src/ManagerConnection.h
     src/ManagerPacket.h
+    src/ManagerPacketClient.h
+    src/ManagerPacketInternal.h
     src/PacketParser.h
     src/World.h
 
@@ -81,10 +85,10 @@ SET(${PROJECT_NAME}_PACKETS
     src/packets/DeleteCharacter.cpp     # 0x000F
     src/packets/QueryPurchaseTicket.cpp # 0x0011
     src/packets/PurchaseTicket.cpp      # 0x0013
-	
-	#Internal packets
-    src/packets/SetWorldDescription.cpp      # 0x1001
-    src/packets/SetChannelDescription.cpp    # 0x1002
+    
+    #Internal packets
+    src/packets/SetWorldDescription.cpp      # 0x1002
+    src/packets/SetChannelDescription.cpp    # 0x1003
 )
 
 ADD_CUSTOM_COMMAND(

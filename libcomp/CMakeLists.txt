@@ -132,6 +132,7 @@ SET(${PROJECT_NAME}_HDRS
     src/MessageWorldNotification.h
     src/Object.h
     src/Packet.h
+    src/PacketCodes.h
     src/PacketException.h
     #src/PacketScript.h
     src/PacketStream.h

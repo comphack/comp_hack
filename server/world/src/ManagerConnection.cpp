@@ -27,16 +27,17 @@
 #include "ManagerConnection.h"
 
 // libcomp Includes
-#include "Log.h"
-#include "MessageConnectionClosed.h"
-#include "MessageEncrypted.h"
+#include <Log.h>
+#include <MessageConnectionClosed.h>
+#include <MessageEncrypted.h>
+#include <PacketCodes.h>
 
 // world Includes
 #include "WorldServer.h"
 
 using namespace world;
 
-ManagerConnection::ManagerConnection(std::shared_ptr<libcomp::BaseServer> server)
+ManagerConnection::ManagerConnection(const std::shared_ptr<libcomp::BaseServer>& server)
     : mServer(server)
 {
 }
@@ -72,7 +73,7 @@ bool ManagerConnection::ProcessMessage(const libcomp::Message::Message *pMessage
                 {
                     auto connection = encrypted->GetConnection();
 
-                    //todo: verify this is in fact the lobby
+                    /// @todo: verify this is in fact the lobby
 
                     mLobbyConnection = std::dynamic_pointer_cast<libcomp::InternalConnection>(connection);
                 }
@@ -100,20 +101,7 @@ bool ManagerConnection::ProcessMessage(const libcomp::Message::Message *pMessage
                 }
                 else
                 {
-                    objects::ChannelDescription channelDesc;
-                    auto server = std::dynamic_pointer_cast<WorldServer>(mServer);
-                    auto iConnection = std::dynamic_pointer_cast<libcomp::InternalConnection>(connection);
-                    if(server->GetChannelDescriptionByConnection(iConnection, channelDesc))
-                    {
-                        server->RemoveChannelDescription(iConnection);
-
-                        //Channel disconnected
-                        libcomp::Packet packet;
-                        packet.WriteU16Little(0x1002);
-                        packet.WriteU8(0);  //0: Remove
-                        channelDesc.SavePacket(packet);
-                        mLobbyConnection->SendPacket(packet);
-                    }
+                    RemoveConnection(std::dynamic_pointer_cast<libcomp::InternalConnection>(connection));
                 }
 
                 return true;
@@ -132,4 +120,21 @@ std::shared_ptr<libcomp::InternalConnection> ManagerConnection::GetLobbyConnecti
 bool ManagerConnection::LobbyConnected()
 {
     return nullptr != mLobbyConnection;
+}
+
+void ManagerConnection::RemoveConnection(std::shared_ptr<libcomp::InternalConnection>& connection)
+{
+    objects::ChannelDescription channelDesc;
+    auto server = std::dynamic_pointer_cast<WorldServer>(mServer);
+    if(server->GetChannelDescriptionByConnection(connection, channelDesc))
+    {
+        server->RemoveChannelDescription(connection);
+
+        //Channel disconnected
+        libcomp::Packet packet;
+        packet.WriteU16Little(PACKET_SET_CHANNEL_DESCRIPTION);
+        packet.WriteU8(PACKET_ACTION_REMOVE);
+        channelDesc.SavePacket(packet);
+        mLobbyConnection->SendPacket(packet);
+    }
 }

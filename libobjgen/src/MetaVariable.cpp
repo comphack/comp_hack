@@ -79,6 +79,40 @@ bool MetaVariable::IsValid(const std::vector<char>& data) const
     return IsValid(&data[0], data.size());
 }
 
+bool MetaVariable::LoadString(std::istream& stream, std::string& s)
+{
+    size_t strLength;
+    stream.read(reinterpret_cast<char*>(&strLength),
+        sizeof(strLength));
+
+    if(strLength == 0)
+    {
+        s = "";
+    }
+    else
+    {
+        char* cStr = new char[strLength + 1];
+        stream.read(cStr, strLength);
+        s = std::string(cStr, strLength);
+
+        delete[] cStr;
+    }
+
+    return stream.good();
+}
+
+bool MetaVariable::SaveString(std::ostream& stream, const std::string& s) const
+{
+    size_t strLength = s.length();
+    stream.write(reinterpret_cast<char*>(&strLength),
+        sizeof(strLength));
+
+    char* cStr = const_cast<char*>(s.c_str());
+    stream.write(cStr, strLength);
+
+    return stream.good();
+}
+
 uint16_t MetaVariable::GetDynamicSizeCount() const
 {
     return 0;

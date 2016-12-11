@@ -47,8 +47,8 @@ PACKET_PARSER_DECL(QueryPurchaseTicket); // 0x0011
 PACKET_PARSER_DECL(PurchaseTicket);      // 0x0013
 
 //Internal Packets
-PACKET_PARSER_DECL(SetWorldDescription);      // 0x1001
-PACKET_PARSER_DECL(SetChannelDescription);    // 0x1002
+PACKET_PARSER_DECL(SetWorldDescription);      // 0x1002
+PACKET_PARSER_DECL(SetChannelDescription);    // 0x1003
 
 } // namespace Parsers
 

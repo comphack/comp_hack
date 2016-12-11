@@ -27,10 +27,10 @@
 #include "Packets.h"
 
 // libcomp Includes
-#include "Log.h"
-#include "Packet.h"
-#include "ReadOnlyPacket.h"
-#include "TcpConnection.h"
+#include <Log.h>
+#include <Packet.h>
+#include <ReadOnlyPacket.h>
+#include <TcpConnection.h>
 
 // object Includes
 #include <PacketLogin.h>

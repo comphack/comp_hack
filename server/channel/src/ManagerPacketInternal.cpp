@@ -1,10 +1,10 @@
 /**
- * @file server/channel/src/Packets.h
+ * @file server/channel/src/ManagerPacketInternal.cpp
  * @ingroup channel
  *
- * @author COMP Omega <compomega@tutanota.com>
+ * @author HACKfrost
  *
- * @brief Classes used to parse client channel packets.
+ * @brief Manager to handle internal channel packets.
  *
  * This file is part of the channel Server (channel).
  *
@@ -24,22 +24,24 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef LIBCOMP_SRC_PACKETS_H
-#define LIBCOMP_SRC_PACKETS_H
+#include "ManagerPacketInternal.h"
+
+// libcomp includes
+#include <PacketCodes.h>
 
 // channel Includes
 #include "PacketParser.h"
+#include "Packets.h"
 
-namespace channel
+using namespace channel;
+
+ManagerPacketInternal::ManagerPacketInternal(const std::shared_ptr<libcomp::BaseServer>& server)
+    : ManagerPacket(server)
 {
+    mPacketParsers[PACKET_SET_WORLD_DESCRIPTION] = std::shared_ptr<PacketParser>(
+        new Parsers::SetWorldDescription());
+}
 
-namespace Parsers
+ManagerPacketInternal::~ManagerPacketInternal()
 {
-
-PACKET_PARSER_DECL(SetWorldDescription);               // 0x1002
-
-} // namespace Parsers
-
-} // namespace libcomp
-
-#endif // LIBCOMP_SRC_PACKETS_H
+}

@@ -168,16 +168,14 @@ bool MetaVariableString::IsValid(const void *pData, size_t dataSize) const
 
 bool MetaVariableString::Load(std::istream& stream)
 {
-    stream.read(reinterpret_cast<char*>(&mDefaultValue),
-        sizeof(mDefaultValue));
+    LoadString(stream, mDefaultValue);
+    LoadString(stream, mRegularExpression);
     stream.read(reinterpret_cast<char*>(&mAllowEmpty),
         sizeof(mAllowEmpty));
     stream.read(reinterpret_cast<char*>(&mEncoding),
         sizeof(mEncoding));
     stream.read(reinterpret_cast<char*>(&mLengthSize),
         sizeof(mLengthSize));
-    stream.read(reinterpret_cast<char*>(&mRegularExpression),
-        sizeof(mRegularExpression));
     stream.read(reinterpret_cast<char*>(&mRounding),
         sizeof(mRounding));
     stream.read(reinterpret_cast<char*>(&mSize),
@@ -192,16 +190,14 @@ bool MetaVariableString::Save(std::ostream& stream) const
 
     if(IsValid())
     {
-        stream.write(reinterpret_cast<const char*>(&mDefaultValue),
-            sizeof(mDefaultValue));
+        SaveString(stream, mDefaultValue);
+        SaveString(stream, mRegularExpression);
         stream.write(reinterpret_cast<const char*>(&mAllowEmpty),
             sizeof(mAllowEmpty));
         stream.write(reinterpret_cast<const char*>(&mEncoding),
             sizeof(mEncoding));
         stream.write(reinterpret_cast<const char*>(&mLengthSize),
             sizeof(mLengthSize));
-        stream.write(reinterpret_cast<const char*>(&mRegularExpression),
-            sizeof(mRegularExpression));
         stream.write(reinterpret_cast<const char*>(&mRounding),
             sizeof(mRounding));
         stream.write(reinterpret_cast<const char*>(&mSize),
@@ -407,7 +403,7 @@ bool MetaVariableString::Save(tinyxml2::XMLDocument& doc,
     pVariableElement->SetAttribute("type", GetType().c_str());
     pVariableElement->SetAttribute("name", GetName().c_str());
 
-    if("" != GetDefaultValue())
+    if(!GetDefaultValue().empty())
     {
         pVariableElement->SetAttribute("default", GetDefaultValue().c_str());
     }
@@ -417,7 +413,7 @@ bool MetaVariableString::Save(tinyxml2::XMLDocument& doc,
         pVariableElement->SetAttribute("empty", "false");
     }
 
-    if("" != GetRegularExpression())
+    if(!GetRegularExpression().empty())
     {
         pVariableElement->SetAttribute("regex", GetRegularExpression().c_str());
     }
@@ -440,16 +436,14 @@ bool MetaVariableString::Save(tinyxml2::XMLDocument& doc,
             GetSize()).c_str());
     }
 
-    if(Encoding_t::ENCODING_UTF8 != GetEncoding())
+    switch(GetEncoding())
     {
-        if(Encoding_t::ENCODING_CP932 == GetEncoding())
-        {
+        case Encoding_t::ENCODING_CP932:
             pVariableElement->SetAttribute("encoding", "cp932");
-        }
-        else if(Encoding_t::ENCODING_CP1252 == GetEncoding())
-        {
+            break;
+        case Encoding_t::ENCODING_CP1252:
             pVariableElement->SetAttribute("encoding", "cp1252");
-        }
+            break;
     }
 
     parent.InsertEndChild(pVariableElement);

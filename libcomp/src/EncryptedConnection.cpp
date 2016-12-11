@@ -53,13 +53,20 @@ EncryptedConnection::~EncryptedConnection()
 {
 }
 
-void EncryptedConnection::Close()
+bool EncryptedConnection::Close()
 {
-    TcpConnection::Close();
-    if(nullptr != mMessageQueue)
+    if(TcpConnection::Close() && nullptr != mMessageQueue)
     {
-        mMessageQueue->Enqueue(new Message::ConnectionClosed(mSelf.lock()));
+        auto self = mSelf.lock();
+        if(nullptr != self)
+        {
+            mMessageQueue->Enqueue(new Message::ConnectionClosed(self));
+        }
+
+        return true;
     }
+
+    return false;
 }
 
 void EncryptedConnection::SocketError(const libcomp::String& errorMessage)

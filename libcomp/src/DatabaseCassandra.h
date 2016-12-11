@@ -41,7 +41,7 @@ class DatabaseCassandra : public Database
 public:
     friend class DatabaseQueryCassandra;
 
-    DatabaseCassandra(std::string keyspace);
+    DatabaseCassandra(const String& keyspace);
     virtual ~DatabaseCassandra();
 
     virtual bool Open(const String& address, const String& username = String(),

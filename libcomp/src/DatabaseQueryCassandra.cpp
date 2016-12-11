@@ -513,7 +513,8 @@ bool DatabaseQueryCassandra::GetMap(const String& name,
     return result;
 }
 
-bool DatabaseQueryCassandra::GetRowValues(std::vector<std::vector<std::vector<char>>>& rowValues)
+bool DatabaseQueryCassandra::GetRows(std::list<std::unordered_map<
+    std::string, std::vector<char>> >& rows)
 {
     bool result = true;
 
@@ -522,12 +523,22 @@ bool DatabaseQueryCassandra::GetRowValues(std::vector<std::vector<std::vector<ch
         size_t rowCount = cass_result_row_count(mResult);
         size_t colCount = cass_result_column_count(mResult);
 
+        std::vector<std::string> colNames;
+        for(int i = 0; i < colCount; i++)
+        {
+            const char* colName;
+            size_t nameLength;
+            cass_result_column_name(mResult, i, &colName, &nameLength);
+            colNames.push_back(std::string(colName, nameLength));
+        }
+
         CassIterator* rowIter = cass_iterator_from_result(mResult);
 
-        while(cass_iterator_next(rowIter)) {
+        while(cass_iterator_next(rowIter))
+        {
             const CassRow* pRow = cass_iterator_get_row(rowIter);
-            std::vector<std::vector<char>> r;
-            for (int k = 0; k < colCount; k++)
+            std::unordered_map<std::string, std::vector<char>> m;
+            for(int k = 0; k < colCount; k++)
             {
                 const CassValue* pValue = cass_row_get_column(pRow, k);
 
@@ -541,14 +552,14 @@ bool DatabaseQueryCassandra::GetRowValues(std::vector<std::vector<std::vector<ch
                         reinterpret_cast<const char*>(pValueData),
                         reinterpret_cast<const char*>(pValueData) +
                         valueSize);
-                    r.push_back(value);
+                    m[colNames[k]] = value;
                 }
                 else
                 {
                     result = false;
                 }
             }
-            rowValues.push_back(r);
+            rows.push_back(m);
         }
     }
 

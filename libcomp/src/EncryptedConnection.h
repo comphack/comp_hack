@@ -51,7 +51,7 @@ public:
     EncryptedConnection(asio::ip::tcp::socket& socket, DH *pDiffieHellman);
     virtual ~EncryptedConnection();
 
-    virtual void Close();
+    virtual bool Close();
 
     virtual void ConnectionSuccess();
 

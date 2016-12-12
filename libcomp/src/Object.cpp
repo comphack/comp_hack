@@ -46,13 +46,6 @@ bool Object::LoadPacket(libcomp::ReadOnlyPacket& p)
     ReadOnlyPacketStream buffer(p);
     std::istream in(&buffer);
 
-    //Skip what we've already read
-    auto skip = p.Tell();
-    if(skip > 0)
-    {
-        in.ignore(skip);
-    }
-
     return Load(in, true);
 }
 

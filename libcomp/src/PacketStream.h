@@ -45,7 +45,9 @@ private:
 public:
     PacketStream(Packet& p) : mPacket(p)
     {
-        this->setg(p.Data(), p.Data(), p.Data() + p.Size());
+        this->setg(p.Data(),
+            p.Data() + p.Tell(),
+            p.Data() + p.Size());
     }
 
 protected:
@@ -73,7 +75,7 @@ public:
     ReadOnlyPacketStream(const ReadOnlyPacket& p)
     {
         this->setg(const_cast<char*>(p.ConstData()),
-            const_cast<char*>(p.ConstData()),
+            const_cast<char*>(p.ConstData() + p.Tell()),
             const_cast<char*>(p.ConstData() + p.Size()));
     }
 };

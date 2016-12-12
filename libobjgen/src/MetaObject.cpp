@@ -67,12 +67,13 @@ std::string MetaObject::GetError() const
 
 bool MetaObject::SetName(const std::string& name)
 {
-    bool result = true;
+    if(IsValidIdentifier(name))
+    {
+        mName = name;
+        return true;
+    }
 
-    /// @todo Validate the name.
-    mName = name;
-
-    return result;
+    return false;
 }
 
 bool MetaObject::SetBaseObject(const std::string& baseObject)
@@ -265,8 +266,6 @@ bool MetaObject::Load(const tinyxml2::XMLDocument& doc,
 bool MetaObject::LoadMember(const tinyxml2::XMLDocument& doc,
     const char *szName, const tinyxml2::XMLElement *pMember, bool& result)
 {
-    bool error = false;
-
     const char *szMemberName = pMember->Attribute("name");
 
     if(nullptr != szMemberName && IsValidIdentifier(szMemberName))
@@ -291,7 +290,6 @@ bool MetaObject::LoadMember(const tinyxml2::XMLDocument& doc,
                     << "already exist.";
 
                 mError = ss.str();
-                error = true;
             }
         }
     }
@@ -302,14 +300,13 @@ bool MetaObject::LoadMember(const tinyxml2::XMLDocument& doc,
             << "' does not have a valid name attribute.";
 
         mError = ss.str();
-        error = true;
     }
 
-    return error;
+    return mError.length() > 0;
 }
 
-std::shared_ptr<MetaVariable> MetaObject::GetVariable(const tinyxml2::XMLDocument& doc, const char *szName,
-    const char *szMemberName, const tinyxml2::XMLElement *pMember)
+std::shared_ptr<MetaVariable> MetaObject::GetVariable(const tinyxml2::XMLDocument& doc,
+    const char *szName, const char *szMemberName, const tinyxml2::XMLElement *pMember)
 {
     std::shared_ptr<MetaVariable> retval = nullptr;
 
@@ -387,13 +384,48 @@ std::shared_ptr<MetaVariable> MetaObject::GetVariable(const tinyxml2::XMLDocumen
             {
                 if(nullptr != subElems["key"] && nullptr != subElems["value"])
                 {
-                    var = std::shared_ptr<MetaVariable>(new MetaVariableMap(subElems["key"], subElems["value"]));
+                    auto key = subElems["key"];
+                    auto value = subElems["value"];
+
+                    auto keyMetaType = key->GetMetaType();
+                    auto valueMetaType = value->GetMetaType();
+
+                    if(keyMetaType == MetaVariable::MetaVariableType_t::TYPE_ARRAY ||
+                        keyMetaType == MetaVariable::MetaVariableType_t::TYPE_LIST ||
+                        keyMetaType == MetaVariable::MetaVariableType_t::TYPE_MAP ||
+                        keyMetaType == MetaVariable::MetaVariableType_t::TYPE_REF)
+                    {
+                        std::stringstream ss;
+                        ss << "Invalid map key type of '" << key->GetType()
+                            << "' specified for member '" << szMemberName
+                            << "' on object '"
+                            << szName << "'";
+
+                        mError = ss.str();
+                    }
+                    else if(valueMetaType == MetaVariable::MetaVariableType_t::TYPE_ARRAY ||
+                        valueMetaType == MetaVariable::MetaVariableType_t::TYPE_LIST ||
+                        valueMetaType == MetaVariable::MetaVariableType_t::TYPE_MAP)
+                    {
+                        std::stringstream ss;
+                        ss << "Invalid map key type of '" << value->GetType()
+                            << "' specified for member '" << szMemberName
+                            << "' on object '"
+                            << szName << "'";
+
+                        mError = ss.str();
+                    }
+                    else
+                    {
+                        var = std::shared_ptr<MetaVariable>(
+                            new MetaVariableMap(subElems["key"], subElems["value"]));
+                    }
                 }
                 else
                 {
                     std::stringstream ss;
                     ss << "Failed to parse map member '" << szMemberName
-                        << "' key and value in object '"
+                        << "' key and value on object '"
                         << szName << "'";
 
                     mError = ss.str();
@@ -500,13 +532,8 @@ std::shared_ptr<MetaVariable> MetaObject::CreateType(
     {
         var = std::shared_ptr<MetaVariable>(new MetaVariableReference());
 
-        if(var && std::dynamic_pointer_cast<MetaVariableReference>(
+        if(!var || !std::dynamic_pointer_cast<MetaVariableReference>(
             var)->SetReferenceType(match[1]))
-        {
-            /// @todo Add this type to the MetaObject cache that must be
-            /// resolved by the time the load completes.
-        }
-        else
         {
             // The type isn't valid, free the object.
             var.reset();
@@ -561,7 +588,8 @@ bool MetaObject::HasCircularReference(
 }
 
 
-const tinyxml2::XMLElement *MetaObject::GetChild(const tinyxml2::XMLElement *pMember, const std::string name) const
+const tinyxml2::XMLElement *MetaObject::GetChild(const tinyxml2::XMLElement *pMember,
+    const std::string name) const
 {
     const tinyxml2::XMLElement *cMember = pMember->FirstChildElement();
     while(nullptr != cMember)
@@ -582,30 +610,47 @@ std::set<std::string> MetaObject::GetReferences() const
 
     for(auto var : mVariables)
     {
-        std::shared_ptr<MetaVariableReference> ref =
-            std::dynamic_pointer_cast<MetaVariableReference>(var);
-
-        if(ref)
-        {
-            references.insert(ref->GetReferenceType());
-        }
-        else
-        {
-            std::shared_ptr<MetaVariableArray> array =
-                std::dynamic_pointer_cast<MetaVariableArray>(var);
-
-            if(array)
-            {
-                ref = std::dynamic_pointer_cast<MetaVariableReference>(
-                    array->GetElementType());
-
-                if(ref)
-                {
-                    references.insert(ref->GetReferenceType());
-                }
-            }
-        }
+        GetReferences(var, references);
     }
 
     return references;
+}
+
+void MetaObject::GetReferences(std::shared_ptr<MetaVariable>& var,
+    std::set<std::string>& references) const
+{
+    std::shared_ptr<MetaVariableReference> ref =
+        std::dynamic_pointer_cast<MetaVariableReference>(var);
+
+    if(ref)
+    {
+        references.insert(ref->GetReferenceType());
+    }
+    else
+    {
+        std::shared_ptr<MetaVariableArray> array =
+            std::dynamic_pointer_cast<MetaVariableArray>(var);
+
+        if(array)
+        {
+            GetReferences(array->GetElementType(), references);
+        }
+    
+        std::shared_ptr<MetaVariableList> list =
+            std::dynamic_pointer_cast<MetaVariableList>(var);
+
+        if(list)
+        {
+            GetReferences(list->GetElementType(), references);
+        }
+    
+        std::shared_ptr<MetaVariableMap> map =
+            std::dynamic_pointer_cast<MetaVariableMap>(var);
+
+        if(map)
+        {
+            GetReferences(map->GetKeyElementType(), references);
+            GetReferences(map->GetValueElementType(), references);
+        }
+    }
 }

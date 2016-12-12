@@ -93,13 +93,18 @@ protected:
 
     bool LoadMember(const tinyxml2::XMLDocument& doc, const char *szName,
         const tinyxml2::XMLElement *pMember, bool& result);
-    std::shared_ptr<MetaVariable> GetVariable(const tinyxml2::XMLDocument& doc, const char *szName,
-        const char *szMemberName, const tinyxml2::XMLElement *pMember);
+    std::shared_ptr<MetaVariable> GetVariable(const tinyxml2::XMLDocument& doc,
+        const char *szName, const char *szMemberName,
+        const tinyxml2::XMLElement *pMember);
 
 private:
+    void GetReferences(std::shared_ptr<MetaVariable>& var,
+        std::set<std::string>& references) const;
+
     bool HasCircularReference(const std::set<std::string>& references) const;
 
-    const tinyxml2::XMLElement *GetChild(const tinyxml2::XMLElement *pMember, const std::string name) const;
+    const tinyxml2::XMLElement *GetChild(const tinyxml2::XMLElement *pMember,
+        const std::string name) const;
 
     std::string mName;
     std::string mBaseObject;

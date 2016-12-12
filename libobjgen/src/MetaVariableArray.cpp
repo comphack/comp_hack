@@ -353,15 +353,14 @@ std::string MetaVariableArray::GetSaveRawCode(const Generator& generator,
 
 std::string MetaVariableArray::GetXmlLoadCode(const Generator& generator,
     const std::string& name, const std::string& doc,
-    const std::string& root, const std::string& node,
-    size_t tabLevel) const
+    const std::string& node, size_t tabLevel) const
 {
     std::string code;
 
     if(mElementType)
     {
         std::string elemCode = mElementType->GetXmlLoadCode(generator,
-            generator.GetMemberName(mElementType), doc, root, "element", tabLevel + 1);
+            generator.GetMemberName(mElementType), doc, "element", tabLevel + 1);
 
         std::map<std::string, std::string> replacements;
         replacements["@VAR_CODE_TYPE@"] = GetCodeType();

@@ -1,4 +1,5 @@
-if(@VAR_NAME@)
+([&]() -> @VAR_CODE_TYPE@
 {
-    status = status && @VAR_NAME@->Load(@DOC@, *@PARENT@);
-}
+    //todo: replace with cache retrieval via UUID
+    return nullptr;
+})()

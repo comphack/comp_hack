@@ -305,22 +305,28 @@ std::string GeneratorSource::Generate(const MetaObject& obj)
 
         if(var->IsInherited()) continue;
 
-        std::string code = var->GetXmlLoadCode(*this, GetMemberName(var),
-            "doc", "root", "pMember");
+        std::string code;
+        if(var->GetMetaType() == MetaVariable::MetaVariableType_t::TYPE_REF)
+        {
+            // Reference loading always expects an XmlNode pointer
+            code = var->GetXmlLoadCode(*this, GetMemberName(var),
+                "doc", "&root");
+        }
+        else
+        {
+            code = var->GetXmlLoadCode(*this, GetMemberName(var),
+                "doc", "pMember");
+        }
 
         if(!code.empty())
         {
-            //ref loading code is self contained
-            if(var->GetMetaType() != MetaVariable::MetaVariableType_t::TYPE_REF)
-            {
-                std::map<std::string, std::string> replacements;
-                replacements["@VAR_NAME@"] = var->GetName();
-                replacements["@VAR_CAMELCASE_NAME@"] = GetCapitalName(*var);
-                replacements["@ACCESS_CODE@"] = code;
-                replacements["@NODE@"] = "pMember";
+            std::map<std::string, std::string> replacements;
+            replacements["@VAR_NAME@"] = var->GetName();
+            replacements["@VAR_CAMELCASE_NAME@"] = GetCapitalName(*var);
+            replacements["@ACCESS_CODE@"] = code;
+            replacements["@NODE@"] = "pMember";
 
-                code = ParseTemplate(1, "VariableMemberXmlLoad", replacements);
-            }
+            code = ParseTemplate(1, "VariableMemberXmlLoad", replacements);
 
             ss << std::endl;
             ss << code;

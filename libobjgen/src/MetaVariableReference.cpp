@@ -83,7 +83,7 @@ bool MetaVariableReference::IsCoreType() const
 
 bool MetaVariableReference::IsValid() const
 {
-    /// @todo Fix
+    // Validating that the object exists happens elsewhere
     return MetaObject::IsValidIdentifier(mReferenceType);
 }
 
@@ -124,17 +124,7 @@ bool MetaVariableReference::Load(const tinyxml2::XMLDocument& doc,
 
     bool status = true;
 
-    const char *szRType = root.Attribute("rtype");
-
-    if(nullptr != szRType)
-    {
-        SetReferenceType(std::string(szRType));
-    }
-    else
-    {
-        mError = "Reference type is required.";
-        status = false;
-    }
+    //Reference type should already be set
 
     return status && BaseLoad(root) && IsValid();
 }
@@ -143,13 +133,8 @@ bool MetaVariableReference::Save(tinyxml2::XMLDocument& doc,
     tinyxml2::XMLElement& parent, const char* elementName) const
 {
     tinyxml2::XMLElement *pVariableElement = doc.NewElement(elementName);
-    pVariableElement->SetAttribute("type", GetType().c_str());
+    pVariableElement->SetAttribute("type", (GetReferenceType() + "*").c_str());
     pVariableElement->SetAttribute("name", GetName().c_str());
-
-    if(!GetReferenceType().empty())
-    {
-        pVariableElement->SetAttribute("rtype", GetReferenceType().c_str());
-    }
 
     parent.InsertEndChild(pVariableElement);
 
@@ -251,15 +236,15 @@ std::string MetaVariableReference::GetSaveRawCode(const Generator& generator,
 
 std::string MetaVariableReference::GetXmlLoadCode(const Generator& generator,
     const std::string& name, const std::string& doc,
-    const std::string& root, const std::string& node,
-    size_t tabLevel) const
+    const std::string& node, size_t tabLevel) const
 {
     (void)node;
 
     std::map<std::string, std::string> replacements;
     replacements["@VAR_NAME@"] = name;
+    replacements["@VAR_CODE_TYPE@"] = GetCodeType();
     replacements["@DOC@"] = doc;
-    replacements["@PARENT@"] = root;
+    replacements["@PARENT@"] = node;
 
     return generator.ParseTemplate(tabLevel, "VariableReferenceXmlLoad",
         replacements);
@@ -271,6 +256,7 @@ std::string MetaVariableReference::GetXmlSaveCode(const Generator& generator,
 {
     std::map<std::string, std::string> replacements;
     replacements["@VAR_NAME@"] = name;
+    replacements["@VAR_XML_NAME@"] = GetName();
     replacements["@ELEMENT_NAME@"] = elemName;
     replacements["@DOC@"] = doc;
     replacements["@PARENT@"] = parent;

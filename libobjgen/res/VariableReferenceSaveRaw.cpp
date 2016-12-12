@@ -1,4 +1,4 @@
-[&]()
+([&]() -> bool
 {
     if(flat)
     {
@@ -17,4 +17,4 @@
     {
         return @VAR_NAME@ && @VAR_NAME@->Save(@STREAM@);
     }
-}
+})()

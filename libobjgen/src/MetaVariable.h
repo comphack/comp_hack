@@ -123,11 +123,11 @@ public:
         const std::string& name, const std::string& stream) const = 0;
     virtual std::string GetXmlLoadCode(const Generator& generator,
         const std::string& name, const std::string& doc,
-        const std::string& root, const std::string& node,
-        size_t tabLevel = 1) const = 0;
+        const std::string& node, size_t tabLevel = 1) const = 0;
     virtual std::string GetXmlSaveCode(const Generator& generator,
         const std::string& name, const std::string& doc,
-        const std::string& parent, size_t tabLevel = 1,  const std::string elemName = "member") const = 0;
+        const std::string& parent, size_t tabLevel = 1,
+        const std::string elemName = "member") const = 0;
     virtual std::string GetDeclaration(const std::string& name) const;
     virtual std::string GetArgument(const std::string& name) const;
     virtual std::string GetDefaultValueCode() const;

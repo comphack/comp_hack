@@ -47,6 +47,8 @@
 std::unordered_map<std::string, std::shared_ptr<
     libobjgen::MetaObject>> gObjects;
 
+std::set<std::string> gReferences;
+
 bool LoadObjects(const std::list<std::string>& searchPath,
     const std::string& xmlFile)
 {
@@ -135,6 +137,11 @@ bool LoadObjects(const std::list<std::string>& searchPath,
         }
 
         gObjects[obj->GetName()] = obj;
+
+        for(auto ref : obj->GetReferences())
+        {
+            gReferences.insert(ref);
+        }
 
         pObjectXml = pObjectXml->NextSiblingElement("object");
     }
@@ -291,6 +298,17 @@ int main(int argc, char *argv[])
     {
         if(!LoadObjects(searchPath, xmlFile))
         {
+            return EXIT_FAILURE;
+        }
+    }
+
+    for(auto ref : gReferences)
+    {
+        if(gObjects.find(ref) == gObjects.end())
+        {
+            std::cerr << "Failed to find referenced object '" << ref
+                << "'" << std::endl;
+
             return EXIT_FAILURE;
         }
     }

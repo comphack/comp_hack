@@ -16,6 +16,6 @@ bool @OBJECT_NAME@::Set@VAR_CAMELCASE_NAME@(size_t index, @VAR_TYPE@ val)
     }
 
     @VAR_NAME@[index] = val;
-	
-	return true;
+    
+    return true;
 }

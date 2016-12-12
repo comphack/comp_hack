@@ -302,17 +302,16 @@ std::string MetaVariableMap::GetSaveRawCode(const Generator& generator,
 
 std::string MetaVariableMap::GetXmlLoadCode(const Generator& generator,
     const std::string& name, const std::string& doc,
-    const std::string& root, const std::string& node,
-    size_t tabLevel) const
+    const std::string& node, size_t tabLevel) const
 {
     std::string code;
 
     if(mKeyElementType && mValueElementType)
     {
         std::string keyCode = mKeyElementType->GetXmlLoadCode(generator,
-            generator.GetMemberName(mKeyElementType), doc, root, "keyNode", tabLevel + 1);
+            generator.GetMemberName(mKeyElementType), doc, "keyNode", tabLevel + 1);
         std::string valueCode = mValueElementType->GetXmlLoadCode(generator,
-            generator.GetMemberName(mValueElementType), doc, root, "valueNode", tabLevel + 1);
+            generator.GetMemberName(mValueElementType), doc, "valueNode", tabLevel + 1);
 
         std::map<std::string, std::string> replacements;
         replacements["@VAR_CODE_TYPE@"] = GetCodeType();

@@ -605,8 +605,7 @@ public:
 
     virtual std::string GetXmlLoadCode(const Generator& generator,
         const std::string& name, const std::string& doc,
-        const std::string& root, const std::string& node,
-        size_t tabLevel = 1) const
+        const std::string& node, size_t tabLevel = 1) const
     {
         (void)doc;
 
@@ -622,7 +621,8 @@ public:
 
     virtual std::string GetXmlSaveCode(const Generator& generator,
         const std::string& name, const std::string& doc,
-        const std::string& parent, size_t tabLevel = 1, const std::string elemName = "member") const
+        const std::string& parent, size_t tabLevel = 1,
+        const std::string elemName = "member") const
     {
         (void)doc;
 

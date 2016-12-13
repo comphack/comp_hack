@@ -116,10 +116,10 @@ bool DatabaseCassandra::Exists()
         return false;
     }
 
-    std::vector<std::vector<std::vector<char>>> results;
+    std::list<std::unordered_map<std::string, std::vector<char>>> results;
     q.Next();
 
-    return q.GetRowValues(results) && results.size() > 0;
+    return q.GetRows(results) && results.size() > 0;
 }
 
 bool DatabaseCassandra::Setup()

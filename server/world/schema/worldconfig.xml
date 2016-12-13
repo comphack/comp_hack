@@ -6,5 +6,6 @@
         <member type="u16" name="Port" inherited="true" default="18666"/>
         <member type="string" name="LobbyIP" default="127.0.0.1"/>
         <member type="u16" name="LobbyPort" default="10666"/>
+        <member type="string" name="CassandraKeyspace" inherited="true" default="world"/>
     </object>
 </objgen>

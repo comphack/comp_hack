@@ -48,6 +48,8 @@ BaseServer::BaseServer(std::shared_ptr<objects::ServerConfig> config, const Stri
     mDatabase = std::shared_ptr<libcomp::Database>(
         new libcomp::DatabaseCassandra(config->GetCassandraKeyspace().ToUtf8()));
 
+    mDatabase->SetMainDatabase(mDatabase);
+
     // Open the database.
     if(!mDatabase->Open(config->GetDatabaseIP()) || !mDatabase->IsOpen())
     {
@@ -56,19 +58,11 @@ BaseServer::BaseServer(std::shared_ptr<objects::ServerConfig> config, const Stri
         return;
     }
 
-    // Use the database if it exists, else setup the database.
-    if(mDatabase->Exists())
+    if(!mDatabase->Setup())
     {
-        mDatabase->Use();
-    }
-    else
-    {
-        if(!mDatabase->Setup())
-        {
-            LOG_CRITICAL("Failed to init database.\n");
+        LOG_CRITICAL("Failed to init database.\n");
 
-            return;
-        }
+        return;
     }
 }
 

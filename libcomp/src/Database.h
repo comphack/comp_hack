@@ -37,6 +37,8 @@ namespace libcomp
 class Database
 {
 public:
+    ~Database();
+
     virtual bool Open(const String& address, const String& username = String(),
         const String& password = String()) = 0;
     virtual bool Close() = 0;
@@ -50,8 +52,13 @@ public:
 
     String GetLastError() const;
 
+    static const std::shared_ptr<Database> GetMainDatabase();
+    static const void SetMainDatabase(std::shared_ptr<Database> database);
+
 protected:
     String mError;
+
+    static std::shared_ptr<Database> sMain;
 };
 
 } // namespace libcomp

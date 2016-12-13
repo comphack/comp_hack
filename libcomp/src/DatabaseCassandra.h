@@ -30,6 +30,9 @@
 // libcomp Includes
 #include "Database.h"
 
+// libobjgen Includes
+#include <MetaVariable.h>
+
 // Cassandra Includes
 #include <cassandra.h>
 
@@ -54,8 +57,13 @@ public:
     virtual bool Setup();
     virtual bool Use();
 
+    bool VerifyAndSetupSchema();
+    bool UsingDefaultKeyspace();
+
 protected:
     bool WaitForFuture(CassFuture *pFuture);
+    std::string GetVariableType(const std::shared_ptr
+        <libobjgen::MetaVariable> var);
 
     CassSession* GetSession() const;
 

@@ -28,6 +28,16 @@
 
 using namespace libcomp;
 
+std::shared_ptr<Database> Database::sMain = nullptr;
+
+Database::~Database()
+{
+    if(sMain.get() == this)
+    {
+        sMain = nullptr;
+    }
+}
+
 bool Database::Execute(const String& query)
 {
     return Prepare(query).Execute();
@@ -36,4 +46,14 @@ bool Database::Execute(const String& query)
 String Database::GetLastError() const
 {
     return mError;
+}
+
+const std::shared_ptr<Database> Database::GetMainDatabase()
+{
+    return sMain;
+}
+
+const void Database::SetMainDatabase(std::shared_ptr<Database> database)
+{
+    sMain = database;
 }

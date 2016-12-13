@@ -39,7 +39,19 @@ using namespace libobjgen;
 std::string GeneratorHeader::GenerateClass(const MetaObject& obj)
 {
     std::stringstream ss;
-    ss << "class " << obj.GetName() << " : public " + (!obj.GetBaseObject().empty() ? ("objects::"  + obj.GetBaseObject()) : "libcomp::Object") << std::endl;
+    ss << "class " << obj.GetName() << " : public ";
+    if(!obj.GetBaseObject().empty())
+    {
+        ss << "objects::" + obj.GetBaseObject() << std::endl;
+    }
+    else if(obj.GetPersistent())
+    {
+        ss << "libcomp::PersistentObject" << std::endl;
+    }
+    else
+    {
+        ss << "libcomp::Object" << std::endl;
+    }
     ss << "{" << std::endl;
     ss << "public:" << std::endl;
 
@@ -80,6 +92,12 @@ std::string GeneratorHeader::GenerateClass(const MetaObject& obj)
         if(var->IsInherited()) continue;
 
         ss << var->GetAccessDeclarations(*this, obj, var->GetName());
+        ss << std::endl;
+    }
+
+    if(obj.GetPersistent())
+    {
+        ss << Tab() << "static std::shared_ptr<libobjgen::MetaObject> GetMetadata();" << std::endl;
         ss << std::endl;
     }
 
@@ -128,7 +146,22 @@ std::string GeneratorHeader::Generate(const MetaObject& obj)
     ss << "// libcomp Includes" << std::endl;
     ss << "#include <Convert.h>" << std::endl;
     ss << "#include <CString.h>" << std::endl;
-    ss << (!obj.GetBaseObject().empty() ? ("#include <" + obj.GetBaseObject() + ".h>") : "#include <Object.h>") << std::endl;
+    if(!obj.GetBaseObject().empty())
+    {
+        ss << "#include <" + obj.GetBaseObject() + ".h>" << std::endl;
+    }
+    else if(obj.GetPersistent())
+    {
+        ss << "#include <PersistentObject.h>" << std::endl;
+
+        ss << std::endl;
+        ss << "// libobjgen Includes" << std::endl;
+        ss << "#include <MetaObject.h>" << std::endl;
+    }
+    else
+    {
+        ss << "#include <Object.h>" << std::endl;
+    }
     ss << std::endl;
 
     ss << "// Standard C++11 Includes" << std::endl;

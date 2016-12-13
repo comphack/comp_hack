@@ -60,6 +60,15 @@ public:
     std::string GetBaseObject() const;
     bool SetBaseObject(const std::string& name);
 
+    bool GetPersistent() const;
+
+    std::string GetSourceLocation() const;
+    void SetSourceLocation(const std::string& location);
+
+    std::string GetXMLDefinition() const;
+    void SetXMLDefinition(const std::string& xmlDefinition);
+    void SetXMLDefinition(const tinyxml2::XMLElement& root);
+
     std::string GetError() const;
 
     bool AddVariable(const std::string& name,
@@ -108,6 +117,10 @@ private:
 
     std::string mName;
     std::string mBaseObject;
+    bool mPersistent;
+    std::string mSourceLocation;
+    std::string mXmlDefinition;
+
     std::string mError;
     VariableList mVariables;
     VariableMap mVariableMapping;

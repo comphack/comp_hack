@@ -74,6 +74,7 @@ SET(${PROJECT_NAME}_SRCS
     #src/PacketScript.cpp
     src/PlatformWindows.cpp
     src/PEFile.cpp
+    src/PersistentObject.cpp
     src/ReadOnlyPacket.cpp
     src/RingBuffer.cpp
     src/ScriptEngine.cpp
@@ -138,6 +139,7 @@ SET(${PROJECT_NAME}_HDRS
     src/PacketStream.h
     src/PEFile.h
     src/PEFormat.h
+    src/PersistentObject.h
     #src/Platform.h
     #src/PlatformLinux.h
     #src/PlatformWindows.h
@@ -162,8 +164,11 @@ SET(${PROJECT_NAME}_HDRS
 )
 
 SET(${PROJECT_NAME}_SCHEMA
-    schema/test.xml
+    schema/account.xml
+    schema/channeldescription.xml
     schema/serverconfig.xml
+    schema/test.xml
+    schema/worlddescription.xml
 )
 
 OBJGEN_XML(${PROJECT_NAME}_STRUCTS
@@ -177,6 +182,8 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     schema
 
     # Output files
+    Account.h
+    Account.cpp
     ChannelDescription.h
     ChannelDescription.cpp
     ServerConfig.h

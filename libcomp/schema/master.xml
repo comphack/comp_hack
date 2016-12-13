@@ -1,7 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <objgen>
-    <include path="channeldescription.xml"/>
+    <!-- test classes -->
     <include path="test.xml"/>
+    
+    <!-- config classes -->
     <include path="serverconfig.xml"/>
+    
+    <!-- common classes -->
+    <include path="account.xml"/>
+    <include path="channeldescription.xml"/>
     <include path="worlddescription.xml"/>
 </objgen>

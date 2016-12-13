@@ -30,6 +30,7 @@
 
 // libcomp Includes
 #include <Log.h>
+#include <PersistentObject.h>
 #include <Shutdown.h>
 
 int main(int argc, const char *argv[])
@@ -47,6 +48,8 @@ int main(int argc, const char *argv[])
         LOG_DEBUG(libcomp::String("Using custom config path "
             "%1\n").Arg(configPath));
     }
+
+    libcomp::PersistentObject::Initialize();
 
     auto config = std::shared_ptr<objects::ServerConfig>(new objects::WorldConfig());
     world::WorldServer server(config, configPath);

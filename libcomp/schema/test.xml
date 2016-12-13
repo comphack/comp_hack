@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <objgen>
-    <object name="TestObject">
+    <object name="TestObject" persistent="false">
         <member type="u8" name="unsigned8" min="2" max="135" default="42"/>
         <member type="s8" name="signed8" min="-108" max="123"/>
         <member type="u16" name="uint16" caps="true" default="1337"/>
         <member type="s32" name="signed32" default="90210"/>
         <member type="string" name="string" default="日本語"
             regex="^日本.*$" length="16" encoding="cp932"/>
-		<member type="array" name="xyz" size="3" caps="on">
-			<element type="float" default="-1" min="-9999" max="9999"/>
-		</member>
+        <member type="array" name="xyz" size="3" caps="on">
+            <element type="float" default="-1" min="-9999" max="9999"/>
+        </member>
     </object>
 </objgen>

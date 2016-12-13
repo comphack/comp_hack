@@ -44,6 +44,7 @@ using namespace libobjgen;
 
 MetaObject::MetaObject()
 {
+    mError = "Not initialized";
 }
 
 MetaObject::~MetaObject()
@@ -58,6 +59,21 @@ std::string MetaObject::GetName() const
 std::string MetaObject::GetBaseObject() const
 {
     return mBaseObject;
+}
+
+bool MetaObject::GetPersistent() const
+{
+    return mPersistent;
+}
+
+std::string MetaObject::GetSourceLocation() const
+{
+    return mSourceLocation;
+}
+
+std::string MetaObject::GetXMLDefinition() const
+{
+    return mXmlDefinition;
 }
 
 std::string MetaObject::GetError() const
@@ -83,6 +99,26 @@ bool MetaObject::SetBaseObject(const std::string& baseObject)
     mBaseObject = baseObject;
 
     return result;
+}
+
+void MetaObject::SetSourceLocation(const std::string& location)
+{
+    mSourceLocation = location;
+}
+
+void MetaObject::SetXMLDefinition(const std::string& xmlDefinition)
+{
+    mXmlDefinition = xmlDefinition;
+}
+
+void MetaObject::SetXMLDefinition(const tinyxml2::XMLElement& root)
+{
+    tinyxml2::XMLPrinter printer;
+    root.Accept(&printer);
+
+    std::stringstream ss;
+    ss << printer.CStr();
+    SetXMLDefinition(ss.str());
 }
 
 bool MetaObject::AddVariable(const std::string& name,
@@ -196,21 +232,44 @@ bool MetaObject::Load(const tinyxml2::XMLDocument& doc,
     bool result = false;
     bool error = false;
 
+    mError.clear();
+    SetXMLDefinition(root);
+
     const char *szTagName = root.Name();
 
     if(nullptr != szTagName && "object" == std::string(szTagName))
     {
         const char *szName = root.Attribute("name");
         const char *szBaseObject = root.Attribute("baseobject");
+        const char *szPersistent = root.Attribute("persistent");
 
         if(nullptr != szName && SetName(szName))
         {
-            if (szBaseObject != nullptr)
+            if(nullptr != szBaseObject)
             {
                 SetBaseObject(szBaseObject);
 
                 //Base objects override the need for member variables
                 result = true;
+            }
+
+            if(nullptr != szPersistent && nullptr == szBaseObject)
+            {
+                std::string attr(szPersistent);
+                mPersistent = "1" == attr || "true" == attr || "on" == attr || "yes" == attr;
+            }
+            else
+            {
+                mPersistent = nullptr == szBaseObject;
+            }
+
+            if(mPersistent)
+            {
+                const char *szLocation = root.Attribute("location");
+                if(nullptr != szLocation)
+                {
+                    SetSourceLocation(szLocation);
+                }
             }
             
             const tinyxml2::XMLElement *pMember = root.FirstChildElement();

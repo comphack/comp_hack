@@ -46,6 +46,10 @@ std::string GeneratorSource::Generate(const MetaObject& obj)
     ss << "#include \"" << obj.GetName() << ".h\"" << std::endl;
     ss << std::endl;
 
+    ss << "// libcomp Includes" << std::endl;
+    ss << "#include \"Log.h\"" << std::endl;
+    ss << std::endl;
+
     std::set<std::string> references = obj.GetReferences();
 
     if(!references.empty())
@@ -64,8 +68,19 @@ std::string GeneratorSource::Generate(const MetaObject& obj)
     ss << std::endl;
 
     // Constructor
-    ss << obj.GetName() << "::" << obj.GetName() << "() : " + (!obj.GetBaseObject().empty() ? ("objects::" + obj.GetBaseObject() + "()") : "libcomp::Object()")
-        << std::endl;
+    ss << obj.GetName() << "::" << obj.GetName() << "() : ";
+    if(!obj.GetBaseObject().empty())
+    {
+        ss << "objects::" + obj.GetBaseObject() + "()" << std::endl;
+    }
+    else if(obj.GetPersistent())
+    {
+        ss << "libcomp::PersistentObject()" << std::endl;
+    }
+    else
+    {
+        ss << "libcomp::Object()" << std::endl;
+    }
     ss << "{" << std::endl;
 
     int constructorCount = 0;
@@ -393,6 +408,47 @@ std::string GeneratorSource::Generate(const MetaObject& obj)
         if(var->IsInherited()) continue;
 
         ss << var->GetAccessFunctions(*this, obj, GetMemberName(var));
+        ss << std::endl;
+    }
+
+    if(obj.GetPersistent())
+    {
+        ss << "std::shared_ptr<libobjgen::MetaObject> " << obj.GetName() << "::GetMetadata()" << std::endl;
+        ss << "{" << std::endl;
+        ss << Tab() << "auto m = libcomp::PersistentObject::GetRegisteredMetadata(typeid(" << obj.GetName()
+            << "));" << std::endl;
+        ss << Tab() << "if(nullptr == m)" << std::endl;
+        ss << Tab() << "{" << std::endl;
+        ss << Tab() << Tab() << "std::stringstream ss;" << std::endl << Tab() << Tab() << "ss ";
+
+        bool first = true;
+        std::string xml = Escape(obj.GetXMLDefinition());
+        while(xml.find("\\n") != xml.npos)
+        {
+            auto pos = xml.find("\\n");
+            ss << std::endl << Tab() << Tab() << "<< " << (!first ? "\"" : "") << xml.substr(0, pos) << "\"";
+            xml = xml.substr(pos + 2);
+            first = false;
+        }
+
+        //Ignore the added quote from Escape
+        if(xml.length() > 1)
+        {
+            ss << std::endl << Tab() << Tab() << "<< " << (!first ? "\"" : "") << xml;
+        }
+        ss << ";" << std::endl;
+
+        ss << Tab() << Tab() << "m = libcomp::PersistentObject::GetMetadataFromXml(ss.str());" << std::endl;
+        ss << Tab() << "}" << std::endl;
+        ss << std::endl;
+        ss << Tab() << "if(nullptr == m)" << std::endl;
+        ss << Tab() << "{" << std::endl;
+        ss << Tab() << Tab() << "LOG_CRITICAL(\"Metadata for object '" << obj.GetName()
+            << "' could not be generated.\");" << std::endl;
+        ss << Tab() << "}" << std::endl;
+        ss << std::endl;
+        ss << Tab() << "return m;" << std::endl;
+        ss << "}" << std::endl;
         ss << std::endl;
     }
 

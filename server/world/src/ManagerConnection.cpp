@@ -101,11 +101,14 @@ bool ManagerConnection::ProcessMessage(const libcomp::Message::Message *pMessage
                 }
                 else
                 {
-                    RemoveConnection(std::dynamic_pointer_cast<libcomp::InternalConnection>(connection));
+                    auto iConnection = std::dynamic_pointer_cast<libcomp::InternalConnection>(connection);
+                    RemoveConnection(iConnection);
                 }
 
                 return true;
             }
+            break;
+        default:
             break;
     }
     

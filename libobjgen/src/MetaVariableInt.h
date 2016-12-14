@@ -607,7 +607,9 @@ public:
         const std::string& name, const std::string& doc,
         const std::string& node, size_t tabLevel = 1) const
     {
+        (void)name;
         (void)doc;
+        (void)root;
 
         std::map<std::string, std::string> replacements;
         replacements["@VAR_NAME@"] = GetName();

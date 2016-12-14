@@ -45,6 +45,8 @@ bool Parsers::DescribeWorld::Parse(ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {
+    (void)p;
+
     auto server = std::dynamic_pointer_cast<WorldServer>(pPacketManager->GetServer());
 
     libcomp::Packet reply;

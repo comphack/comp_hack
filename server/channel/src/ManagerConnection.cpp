@@ -97,6 +97,8 @@ bool ManagerConnection::ProcessMessage(const libcomp::Message::Message *pMessage
                 return true;
             }
             break;
+        default:
+            break;
     }
     
     return false;
@@ -110,7 +112,7 @@ void ManagerConnection::RequestWorldDescription()
         libcomp::Packet packet;
         packet.WriteU16Little(PACKET_DESCRIBE_WORLD);
 
-        mWorldConnection->SendPacket(std::move(packet));
+        mWorldConnection->SendPacket(packet);
     }
 }
 

@@ -47,7 +47,7 @@ bool World::Initialize()
     libcomp::Packet packet;
     packet.WriteU16Little(PACKET_DESCRIBE_WORLD);
 
-    mConnection->SendPacket(std::move(packet));
+    mConnection->SendPacket(packet);
 
     return true;
 }

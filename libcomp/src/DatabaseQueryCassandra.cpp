@@ -520,11 +520,10 @@ bool DatabaseQueryCassandra::GetRows(std::list<std::unordered_map<
 
     if(nullptr != mResult)
     {
-        size_t rowCount = cass_result_row_count(mResult);
         size_t colCount = cass_result_column_count(mResult);
 
         std::vector<std::string> colNames;
-        for(int i = 0; i < colCount; i++)
+        for(size_t i = 0; i < colCount; i++)
         {
             const char* colName;
             size_t nameLength;
@@ -538,7 +537,7 @@ bool DatabaseQueryCassandra::GetRows(std::list<std::unordered_map<
         {
             const CassRow* pRow = cass_iterator_get_row(rowIter);
             std::unordered_map<std::string, std::vector<char>> m;
-            for(int k = 0; k < colCount; k++)
+            for(size_t k = 0; k < colCount; k++)
             {
                 const CassValue* pValue = cass_row_get_column(pRow, k);
 
@@ -552,7 +551,9 @@ bool DatabaseQueryCassandra::GetRows(std::list<std::unordered_map<
                         reinterpret_cast<const char*>(pValueData),
                         reinterpret_cast<const char*>(pValueData) +
                         valueSize);
-                    m[colNames[k]] = value;
+
+                    auto colName = colNames[k];
+                    m[colName] = value;
                 }
                 else
                 {

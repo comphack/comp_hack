@@ -81,7 +81,7 @@ bool MetaVariable::IsValid(const std::vector<char>& data) const
 
 bool MetaVariable::LoadString(std::istream& stream, std::string& s)
 {
-    size_t strLength;
+    std::streamsize strLength;
     stream.read(reinterpret_cast<char*>(&strLength),
         sizeof(strLength));
 
@@ -93,7 +93,7 @@ bool MetaVariable::LoadString(std::istream& stream, std::string& s)
     {
         char* cStr = new char[strLength + 1];
         stream.read(cStr, strLength);
-        s = std::string(cStr, strLength);
+        s = std::string(cStr, (size_t)strLength);
 
         delete[] cStr;
     }
@@ -103,7 +103,7 @@ bool MetaVariable::LoadString(std::istream& stream, std::string& s)
 
 bool MetaVariable::SaveString(std::ostream& stream, const std::string& s) const
 {
-    size_t strLength = s.length();
+    auto strLength = (std::streamsize)s.length();
     stream.write(reinterpret_cast<char*>(&strLength),
         sizeof(strLength));
 

@@ -444,6 +444,8 @@ bool MetaVariableString::Save(tinyxml2::XMLDocument& doc,
         case Encoding_t::ENCODING_CP1252:
             pVariableElement->SetAttribute("encoding", "cp1252");
             break;
+        default:
+            break;
     }
 
     parent.InsertEndChild(pVariableElement);

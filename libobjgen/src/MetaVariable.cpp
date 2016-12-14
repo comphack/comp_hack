@@ -93,7 +93,7 @@ bool MetaVariable::LoadString(std::istream& stream, std::string& s)
     {
         char* cStr = new char[strLength + 1];
         stream.read(cStr, strLength);
-        s = std::string(cStr, strLength);
+        s = std::string(cStr, (size_t)strLength);
 
         delete[] cStr;
     }

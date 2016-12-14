@@ -121,7 +121,10 @@ bool ManagerConnection::ProcessMessage(const libcomp::Message::Message *pMessage
 
                 auto connection = closed->GetConnection();
                 mServer->RemoveConnection(connection);
-                RemoveWorld(GetWorldByConnection(std::dynamic_pointer_cast<libcomp::InternalConnection>(connection)));
+
+                auto iConnection = std::dynamic_pointer_cast<libcomp::InternalConnection>(connection);
+                auto world = GetWorldByConnection(iConnection);
+                RemoveWorld(world);
 
                 return true;
             }

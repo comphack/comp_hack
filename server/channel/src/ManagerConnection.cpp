@@ -97,6 +97,8 @@ bool ManagerConnection::ProcessMessage(const libcomp::Message::Message *pMessage
                 return true;
             }
             break;
+        default:
+            break;
     }
     
     return false;

@@ -112,7 +112,7 @@ void ManagerConnection::RequestWorldDescription()
         libcomp::Packet packet;
         packet.WriteU16Little(PACKET_DESCRIBE_WORLD);
 
-        mWorldConnection->SendPacket(std::move(packet));
+        mWorldConnection->SendPacket(packet);
     }
 }
 

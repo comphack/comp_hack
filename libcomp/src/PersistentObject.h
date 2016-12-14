@@ -67,18 +67,39 @@ public:
     static std::shared_ptr<PersistentObject> GetObjectByUUID(const libobjgen::UUID& uuid);
 
     /*
-    *   Retrieve an object by its UUID and load from the database and cache if needed
+    *   Retrieve an object by its UUID
     */
-    static std::shared_ptr<PersistentObject> LoadObjectByUUID(const libobjgen::UUID& uuid);
+    template<class T> static std::shared_ptr<T> LoadObjectByUUID(const libobjgen::UUID& uuid)
+    {
+        if(std::is_base_of<PersistentObject, T>::value)
+        {
+            return std::dynamic_pointer_cast<T>(LoadObjectByUUID(typeid(T), uuid));
+        }
+
+        return nullptr;
+    }
+
+    static std::shared_ptr<PersistentObject> LoadObjectByUUID(std::type_index type,
+        const libobjgen::UUID& uuid);
 
     /*
-    *   Returns all generated PersistentObject derived classes
+    *   Returns all generated PersistentObject derived class metadata
     */
     static TypeMap& GetRegistry();
 
     /*
-    *   Returns all generated PersistentObject derived classes
+    *   Returns metadata for a PersistentObject derived class
     */
+    template<class T> static const std::shared_ptr<T> GetRegisteredMetadata()
+    {
+        if(std::is_base_of<PersistentObject, T>::value)
+        {
+            return std::dynamic_pointer_cast<T>(GetRegisteredMetadata(typeid(T)));
+        }
+
+        return nullptr;
+    }
+
     static const std::shared_ptr<libobjgen::MetaObject> GetRegisteredMetadata(std::type_index type);
 
     /*
@@ -99,9 +120,6 @@ public:
         return nullptr;
     }
 
-    /*
-    *   Returns a new instance of a PersistentObject derived type by type index
-    */
     static std::shared_ptr<PersistentObject> New(std::type_index type);
 
 protected:
@@ -111,6 +129,12 @@ protected:
     static void RegisterType(std::type_index type,
         const std::shared_ptr<libobjgen::MetaObject>& obj,
         const std::function<PersistentObject*()>& f);
+
+    /*
+    *   Retrieve an object from the database from a field and value (as text)
+    */
+    static std::shared_ptr<PersistentObject> LoadObject(std::type_index type,
+        const std::string& fieldName, const std::string& value);
 
 private:
     static std::unordered_map<std::string, std::weak_ptr<PersistentObject>> sCached;

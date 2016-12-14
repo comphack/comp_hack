@@ -27,7 +27,9 @@
 #include "PersistentObject.h"
 
 // libcomp Includes
+#include "Database.h"
 #include "Log.h"
+#include "MetaVariable.h"
 
 // All libcomp PersistentObject Includes
 #include "Account.h"
@@ -69,6 +71,10 @@ bool PersistentObject::Register(std::shared_ptr<PersistentObject>& self, const l
             mSelf = self;
             sCached[mUUID.ToString()] = mSelf;
         }
+        else
+        {
+            /// @todo: update the cache?
+        }
     }
 
     return false;
@@ -101,16 +107,29 @@ std::shared_ptr<PersistentObject> PersistentObject::GetObjectByUUID(const libobj
     return nullptr;
 }
 
-std::shared_ptr<PersistentObject> PersistentObject::LoadObjectByUUID(const libobjgen::UUID& uuid)
+std::shared_ptr<PersistentObject> PersistentObject::LoadObjectByUUID(std::type_index type,
+    const libobjgen::UUID& uuid)
 {
     auto obj = GetObjectByUUID(uuid);
 
     if(nullptr == obj)
     {
-        /// @todo: load and cache
+        obj = LoadObject(type, "UID", uuid.ToString());
+
+        if(nullptr == obj)
+        {
+            LOG_ERROR(libcomp::String("Unknown UUID '%1' for '%2' failed to load")
+                .Arg(uuid.ToString()).Arg(sTypeMap[type]->GetName()));
+        }
     }
 
     return obj;
+}
+
+std::shared_ptr<PersistentObject> PersistentObject::LoadObject(std::type_index type,
+    const std::string& fieldName, const std::string& value)
+{
+    return Database::GetMainDatabase()->LoadSingleObject(type, fieldName, value);
 }
 
 void PersistentObject::RegisterType(std::type_index type,
@@ -142,7 +161,7 @@ std::shared_ptr<libobjgen::MetaObject> PersistentObject::GetMetadataFromXml(cons
     {
         if(!obj->Load(doc, *doc.FirstChildElement()))
         {
-            //Should never happen
+            //Should never happen to generated objects
             obj = nullptr;
         }
     }

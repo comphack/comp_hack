@@ -67,6 +67,7 @@ public:
 class DatabaseQuery
 {
 public:
+    DatabaseQuery(DatabaseQueryImpl *pImpl);
     DatabaseQuery(DatabaseQueryImpl *pImpl, const String& query);
     DatabaseQuery(const DatabaseQuery& other) = delete;
     DatabaseQuery(DatabaseQuery&& other);

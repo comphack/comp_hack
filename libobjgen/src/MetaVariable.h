@@ -94,6 +94,9 @@ public:
     virtual bool IsInherited() const;
     virtual void SetInherited(const bool inherited);
 
+    virtual bool IsLookupKey() const;
+    virtual void SetLookupKey(const bool lookupKey);
+
     virtual bool IsValid(const std::vector<char>& data) const;
     virtual bool IsValid(const void *pData, size_t dataSize) const = 0;
 
@@ -163,6 +166,7 @@ private:
     bool mCaps;
     std::string mName;
     bool mInherited;
+    bool mLookupKey;
 };
 
 } // namespace libobjgen

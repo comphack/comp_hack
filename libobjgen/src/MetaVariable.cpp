@@ -35,7 +35,8 @@
 
 using namespace libobjgen;
 
-MetaVariable::MetaVariable() : mCaps(false), mInherited(false)
+MetaVariable::MetaVariable() : mCaps(false),
+    mInherited(false), mLookupKey(false)
 {
 }
 
@@ -57,6 +58,16 @@ bool MetaVariable::IsInherited() const
 void MetaVariable::SetInherited(const bool inherited)
 {
     mInherited = inherited;
+}
+
+bool MetaVariable::IsLookupKey() const
+{
+    return mLookupKey;
+}
+
+void MetaVariable::SetLookupKey(const bool lookupKey)
+{
+    mLookupKey = lookupKey;
 }
 
 std::string MetaVariable::GetError() const
@@ -212,6 +223,14 @@ std::string MetaVariable::GetAccessDeclarations(const Generator& generator,
         << generator.GetCapitalName(*this) << "("
         << GetArgument(name) << ");" << std::endl;
 
+    if(IsLookupKey())
+    {
+        ss << generator.Tab(tabLevel) << "static std::shared_ptr<" << object.GetName()
+            << "> Load" << object.GetName() << "By"
+            << generator.GetCapitalName(*this) << "("
+            << GetCodeType() << "& val);" << std::endl;
+    }
+
     return ss.str();
 }
 
@@ -233,6 +252,21 @@ std::string MetaVariable::GetAccessFunctions(const Generator& generator,
     ss << "{" << std::endl;
     ss << GetSetterCode(generator, name, GetName());
     ss << "}" << std::endl;
+    
+    if(IsLookupKey())
+    {
+        ss << std::endl;
+        ss << "std::shared_ptr<" << object.GetName() << "> " << object.GetName()
+            << "::Load" << object.GetName() << "By" << generator.GetCapitalName(*this)
+            << "(" << GetCodeType() << "& val)" << std::endl;
+        ss << "{" << std::endl;
+        ss << generator.Tab() << "return " << "std::dynamic_pointer_cast<"
+            << object.GetName() << ">(LoadObject(typeid(" << object.GetName()
+            << "), \"" << generator.GetCapitalName(*this) << "\", "
+            << "libcomp::String(val).ToUtf8()));" << std::endl;
+        ss << "}" << std::endl;
+        ss << std::endl;
+    }
 
     return ss.str();
 }
@@ -296,7 +330,7 @@ std::string MetaVariable::GetDynamicSizeCountCode(const Generator& generator,
 
 bool MetaVariable::BaseLoad(const tinyxml2::XMLElement& element)
 {
-    for(const char *a : { "caps", "inherited" })
+    for(const char *a : { "caps", "inherited", "key" })
     {
         std::string aName(a);
         const char *szAttr = element.Attribute(a);
@@ -317,6 +351,10 @@ bool MetaVariable::BaseLoad(const tinyxml2::XMLElement& element)
             {
                 SetInherited(value);
             }
+            else if(aName == "key")
+            {
+                SetLookupKey(value);
+            }
         }
     }
 
@@ -333,6 +371,11 @@ bool MetaVariable::BaseSave(tinyxml2::XMLElement& element) const
     if(IsInherited())
     {
         element.SetAttribute("inherited", "true");
+    }
+
+    if(IsLookupKey())
+    {
+        element.SetAttribute("key", "true");
     }
 
     return true;

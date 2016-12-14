@@ -30,6 +30,7 @@
 // libcomp Includes
 #include "CString.h"
 #include "DatabaseQuery.h"
+#include "PersistentObject.h"
 
 namespace libcomp
 {
@@ -49,6 +50,18 @@ public:
     virtual bool Exists() = 0;
     virtual bool Setup() = 0;
     virtual bool Use() = 0;
+
+    virtual DatabaseQuery PrepareLoadObjectsQuery(bool& success,
+        std::type_index type, const std::string& fieldName, const std::string& value) = 0;
+
+    virtual std::list<std::shared_ptr<PersistentObject>> LoadObjects(
+        std::type_index type, const std::string& fieldName, const std::string& value) = 0;
+
+    virtual std::shared_ptr<PersistentObject> LoadSingleObject(
+        std::type_index type, const std::string& fieldName, const std::string& value) = 0;
+
+    virtual std::shared_ptr<PersistentObject> LoadSingleObjectFromRow(
+        std::type_index type, const std::unordered_map<std::string, std::vector<char>>& row) = 0;
 
     String GetLastError() const;
 

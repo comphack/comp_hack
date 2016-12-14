@@ -609,7 +609,6 @@ public:
     {
         (void)name;
         (void)doc;
-        (void)root;
 
         std::map<std::string, std::string> replacements;
         replacements["@VAR_NAME@"] = GetName();

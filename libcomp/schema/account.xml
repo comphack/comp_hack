@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <objgen>
     <object name="Account">
-        <member type="string" name="Email"/>
+        <member type="string" name="UserName" key="true"/>
+        <member type="string" name="Email" key="true"/>
         <member type="string" name="Password"/>
     </object>
 </objgen>

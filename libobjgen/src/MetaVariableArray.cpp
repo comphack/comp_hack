@@ -94,7 +94,8 @@ bool MetaVariableArray::IsCoreType() const
 
 bool MetaVariableArray::IsValid() const
 {
-    return 0 != mElementCount && mElementType && mElementType->IsValid();
+    return 0 != mElementCount && mElementType && mElementType->IsValid() &&
+        !IsLookupKey();
 }
 
 bool MetaVariableArray::IsValid(const void *pData, size_t dataSize) const

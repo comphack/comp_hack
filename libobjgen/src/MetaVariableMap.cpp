@@ -78,7 +78,8 @@ bool MetaVariableMap::IsCoreType() const
 bool MetaVariableMap::IsValid() const
 {
     return mKeyElementType && mKeyElementType->IsValid() &&
-        mValueElementType && mValueElementType->IsValid();
+        mValueElementType && mValueElementType->IsValid() &&
+        !IsLookupKey();
 }
 
 bool MetaVariableMap::IsValid(const void *pData, size_t dataSize) const

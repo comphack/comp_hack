@@ -203,6 +203,146 @@ bool DatabaseCassandra::Use()
     return true;
 }
 
+DatabaseQuery DatabaseCassandra::PrepareLoadObjectsQuery(bool& success,
+    std::type_index type, const std::string& fieldName, const std::string& value)
+{
+    DatabaseQuery result(new DatabaseQueryCassandra(this));
+    success = false;
+
+    std::string fieldNameLower = libcomp::String(fieldName).ToLower().ToUtf8();
+    bool loadByUUID = fieldNameLower == "uid";
+
+    std::shared_ptr<libobjgen::MetaVariable> var;
+    auto metaObject = PersistentObject::GetRegisteredMetadata(type);
+    if(!loadByUUID)
+    {
+        for(auto iter = metaObject->VariablesBegin();
+            iter != metaObject->VariablesEnd(); iter++)
+        {
+            if((*iter)->GetName() == fieldName)
+            {
+                var = (*iter);
+                break;
+            }
+        }
+
+        if(nullptr == var)
+        {
+            return result;
+        }
+    }
+
+    std::string f = fieldNameLower;
+    std::string v = value;
+    if(nullptr != var)
+    {
+        f = libcomp::String(var->GetName()).ToLower().ToUtf8();
+        if(var->GetMetaType() == libobjgen::MetaVariable::MetaVariableType_t::TYPE_STRING)
+        {
+            v = libcomp::String("'%1'").Arg(value).ToUtf8();
+        }
+    }
+
+    //Build the query, if not loading by UUID filtering needs to b enabled
+    std::stringstream ss;
+    ss << "SELECT * FROM " << libcomp::String(metaObject->GetName()) .ToLower().ToUtf8()
+        << " " << libcomp::String("WHERE %1 = %2%3")
+                        .Arg(f).Arg(v).Arg(loadByUUID ? "" : " ALLOW FILTERING").ToUtf8();
+
+    success = true;
+    result.Prepare(ss.str());
+
+    return result;
+}
+
+std::list<std::shared_ptr<PersistentObject>> DatabaseCassandra::LoadObjects(
+    std::type_index type, const std::string& fieldName, const std::string& value)
+{
+    std::list<std::shared_ptr<PersistentObject>> objects;
+    
+    bool success;
+    DatabaseQuery q = PrepareLoadObjectsQuery(success, type, fieldName, value);
+    if(success && q.Execute())
+    {
+        auto metaObject = PersistentObject::GetRegisteredMetadata(type);
+
+        std::list<std::unordered_map<std::string, std::vector<char>>> rows;
+        q.Next();
+        q.GetRows(rows);
+
+        int failures = 0;
+        if(rows.size() > 0)
+        {
+            for(auto row : rows)
+            {
+                auto obj = LoadSingleObjectFromRow(type, row);
+                if(nullptr != obj)
+                {
+                    objects.push_back(obj);
+                }
+                else
+                {
+                    failures++;
+                }
+            }
+        }
+
+        if(failures > 0)
+        {
+            LOG_ERROR(libcomp::String("%1 '%2' row%3 failed to load.\n")
+                .Arg(failures).Arg(metaObject->GetName()).Arg(failures != 1 ? "s" : ""));
+        }
+    }
+
+    return objects;
+}
+
+std::shared_ptr<PersistentObject> DatabaseCassandra::LoadSingleObject(std::type_index type,
+    const std::string& fieldName, const std::string& value)
+{
+    auto objects = LoadObjects(type, fieldName, value);
+
+    return objects.size() > 0 ? objects.front() : nullptr;
+}
+
+std::shared_ptr<PersistentObject> DatabaseCassandra::LoadSingleObjectFromRow(
+    std::type_index type, const std::unordered_map<std::string, std::vector<char>>& row)
+{
+    std::stringstream objstream(std::stringstream::out |
+        std::stringstream::binary);
+
+    libobjgen::UUID uuid;
+    for(auto rowColumn : row)
+    {
+        std::vector<char>& value = rowColumn.second;
+        if(rowColumn.first == "uid")
+        {
+            uuid = libobjgen::UUID(value);
+        }
+        else
+        {
+            /// @todo: get this to work for non-strings
+            size_t strLength = value.size();
+            objstream.write(reinterpret_cast<char*>(&strLength),
+                sizeof(uint32_t));
+
+            objstream.write(&value[0], (std::streamsize)strLength);
+        }
+    }
+
+    auto obj = PersistentObject::New(type);
+    if(!uuid.IsNull() && obj->Load(std::stringstream(objstream.str())))
+    {
+        obj->Register(obj, uuid);
+    }
+    else
+    {
+        obj = nullptr;
+    }
+
+    return obj;
+}
+
 bool DatabaseCassandra::VerifyAndSetupSchema()
 {
     std::vector<std::shared_ptr<libobjgen::MetaObject>> metaObjectTables;
@@ -340,19 +480,31 @@ bool DatabaseCassandra::VerifyAndSetupSchema()
 
             std::stringstream ss;
             ss << "CREATE TABLE " << objName
-                << " (uid uuid PRIMARY KEY," << std::endl;
+                << " (uid uuid," << std::endl;
+            std::vector<std::string> keys;
+            keys.push_back("uid");
             for(int i = 0; i < vars.size(); i++)
             {
                 auto var = vars[i];
                 std::string type = GetVariableType(var);
 
-                ss << var->GetName() << " " << type;
-                if(i + 1 != vars.size())
+                ss << var->GetName() << " " << type << "," << std::endl;
+                if(var->IsLookupKey())
                 {
-                    ss << "," << std::endl;
+                    keys.push_back(var->GetName());
                 }
             }
-            ss << ");";
+
+            ss << "PRIMARY KEY(";
+            for(int i = 0; i < keys.size(); i++)
+            {
+                if(i > 0)
+                {
+                    ss << ",";
+                }
+                ss << keys[i];
+            }
+            ss << "));";
 
             success = Execute(ss.str());
 

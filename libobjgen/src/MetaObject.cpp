@@ -245,14 +245,6 @@ bool MetaObject::Load(const tinyxml2::XMLDocument& doc,
 
         if(nullptr != szName && SetName(szName))
         {
-            if(nullptr != szBaseObject)
-            {
-                SetBaseObject(szBaseObject);
-
-                //Base objects override the need for member variables
-                result = true;
-            }
-
             if(nullptr != szPersistent && nullptr == szBaseObject)
             {
                 std::string attr(szPersistent);
@@ -270,6 +262,14 @@ bool MetaObject::Load(const tinyxml2::XMLDocument& doc,
                 {
                     SetSourceLocation(szLocation);
                 }
+            }
+            else if(nullptr != szBaseObject)
+            {
+                //Objects cannot be both derived and persistent
+                SetBaseObject(szBaseObject);
+
+                //Base objects override the need for member variables
+                result = true;
             }
             
             const tinyxml2::XMLElement *pMember = root.FirstChildElement();
@@ -334,7 +334,16 @@ bool MetaObject::LoadMember(const tinyxml2::XMLDocument& doc,
         {
             var->SetName(szMemberName);
 
-            if(AddVariable(szMemberName, var))
+            if(var->IsLookupKey() && !GetPersistent())
+            {
+                std::stringstream ss;
+                ss << "Non-persistent object member variable '"
+                    << szMemberName << "' on object '" << szName
+                    << "' marked as a lookup key.";
+
+                mError = ss.str();
+            }
+            else if(AddVariable(szMemberName, var))
             {
                 // At least one variable is added now. The result
                 // is OK unless an error causes a problem.

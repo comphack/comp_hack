@@ -72,7 +72,7 @@ bool MetaVariableList::IsCoreType() const
 
 bool MetaVariableList::IsValid() const
 {
-    return mElementType && mElementType->IsValid();
+    return mElementType && mElementType->IsValid() && !IsLookupKey();
 }
 
 bool MetaVariableList::IsValid(const void *pData, size_t dataSize) const

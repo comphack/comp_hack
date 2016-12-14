@@ -76,6 +76,10 @@ bool DatabaseQueryImpl::GetRows(std::list<std::unordered_map<
     return false;
 }
 
+DatabaseQuery::DatabaseQuery(DatabaseQueryImpl *pImpl) : mImpl(pImpl)
+{
+}
+
 DatabaseQuery::DatabaseQuery(DatabaseQueryImpl *pImpl, const String& query) :
     mImpl(pImpl)
 {

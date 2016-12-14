@@ -57,6 +57,18 @@ public:
     virtual bool Setup();
     virtual bool Use();
 
+    virtual DatabaseQuery PrepareLoadObjectsQuery(bool& success,
+        std::type_index type, const std::string& fieldName, const std::string& value);
+
+    virtual std::list<std::shared_ptr<PersistentObject>> LoadObjects(
+        std::type_index type, const std::string& fieldName, const std::string& value);
+
+    virtual std::shared_ptr<PersistentObject> LoadSingleObject(
+        std::type_index type, const std::string& fieldName, const std::string& value);
+
+    virtual std::shared_ptr<PersistentObject> LoadSingleObjectFromRow(
+        std::type_index type, const std::unordered_map<std::string, std::vector<char>>& row);
+
     bool VerifyAndSetupSchema();
     bool UsingDefaultKeyspace();
 

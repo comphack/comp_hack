@@ -84,7 +84,7 @@ bool MetaVariableReference::IsCoreType() const
 bool MetaVariableReference::IsValid() const
 {
     // Validating that the object exists happens elsewhere
-    return MetaObject::IsValidIdentifier(mReferenceType);
+    return MetaObject::IsValidIdentifier(mReferenceType) && !IsLookupKey();
 }
 
 bool MetaVariableReference::IsValid(const void *pData, size_t dataSize) const

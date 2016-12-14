@@ -605,7 +605,9 @@ public:
         const std::string& root, const std::string& members,
         size_t tabLevel = 1) const
     {
+        (void)name;
         (void)doc;
+        (void)root;
 
         std::map<std::string, std::string> replacements;
         replacements["@VAR_NAME@"] = generator.Escape(GetName());

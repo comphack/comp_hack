@@ -10,19 +10,31 @@
     return *it;
 }
 
-void @OBJECT_NAME@::Append@VAR_CAMELCASE_NAME@(@VAR_TYPE@ val)
+bool @OBJECT_NAME@::Append@VAR_CAMELCASE_NAME@(@VAR_TYPE@ val)
 {
+    if(!Validate@VAR_CAMELCASE_NAME@Entry(val))
+    {
+        return false;
+    }
+    
     @VAR_NAME@.push_back(val);
+    return true;
 }
 
-void @OBJECT_NAME@::Prepend@VAR_CAMELCASE_NAME@(@VAR_TYPE@ val)
+bool @OBJECT_NAME@::Prepend@VAR_CAMELCASE_NAME@(@VAR_TYPE@ val)
 {
-    @VAR_NAME@.push_front(val);
+    if(!Validate@VAR_CAMELCASE_NAME@Entry(val))
+    {
+        return false;
+    }
+    
+    @VAR_NAME@.push_back(val);
+    return true;
 }
 
 bool @OBJECT_NAME@::Insert@VAR_CAMELCASE_NAME@(size_t index, @VAR_TYPE@ val)
 {
-    if(@VAR_NAME@.size() <= index)
+    if(@VAR_NAME@.size() <= index || !Validate@VAR_CAMELCASE_NAME@Entry(val))
     {
         return false;
     }
@@ -61,4 +73,9 @@ std::list<@VAR_TYPE@>::iterator @OBJECT_NAME@::@VAR_CAMELCASE_NAME@Begin()
 std::list<@VAR_TYPE@>::iterator @OBJECT_NAME@::@VAR_CAMELCASE_NAME@End()
 {
     return @VAR_NAME@.end();
+}
+
+bool @OBJECT_NAME@::Validate@VAR_CAMELCASE_NAME@Entry(@VAR_TYPE@ val)
+{
+    return (@ELEMENT_VALIDATION_CODE@);
 }

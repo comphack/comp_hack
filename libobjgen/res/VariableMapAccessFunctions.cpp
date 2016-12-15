@@ -11,12 +11,17 @@
 
 bool @OBJECT_NAME@::Set@VAR_CAMELCASE_NAME@(@VAR_KEY_TYPE@ key, @VAR_VALUE_TYPE@ val)
 {
+    if(!Validate@VAR_CAMELCASE_NAME@Entry(key, val))
+    {
+        return false;
+    }
+
     auto iter = @VAR_NAME@.find(key);
     bool exists = iter != @VAR_NAME@.end();
     
     @VAR_NAME@[key] = val;
     
-    return exists;
+    return true;
 }
 
 bool @OBJECT_NAME@::Remove@VAR_CAMELCASE_NAME@(@VAR_KEY_TYPE@ key)
@@ -44,4 +49,13 @@ std::unordered_map<@VAR_KEY_TYPE@, @VAR_VALUE_TYPE@>::iterator @OBJECT_NAME@::@V
 std::unordered_map<@VAR_KEY_TYPE@, @VAR_VALUE_TYPE@>::iterator @OBJECT_NAME@::@VAR_CAMELCASE_NAME@End()
 {
     return @VAR_NAME@.end();
+}
+
+bool @OBJECT_NAME@::Validate@VAR_CAMELCASE_NAME@Entry(@VAR_KEY_TYPE@ key, @VAR_VALUE_TYPE@ val)
+{
+    bool keyValid = (@KEY_VALIDATION_CODE@);
+    
+    bool valueValid = (@VALUE_VALIDATION_CODE@);
+    
+    return keyValid && valueValid;
 }

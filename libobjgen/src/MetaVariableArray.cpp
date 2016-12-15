@@ -355,6 +355,8 @@ std::string MetaVariableArray::GetXmlLoadCode(const Generator& generator,
     const std::string& name, const std::string& doc,
     const std::string& node, size_t tabLevel) const
 {
+    (void)name;
+
     std::string code;
 
     if(mElementType)
@@ -434,6 +436,8 @@ std::string MetaVariableArray::GetAccessFunctions(const Generator& generator,
         replacements["@OBJECT_NAME@"] = object.GetName();
         replacements["@VAR_CAMELCASE_NAME@"] = generator.GetCapitalName(*this);
         replacements["@ELEMENT_COUNT@"] = std::to_string(mElementCount);
+        replacements["@ELEMENT_VALIDATION_CODE@"] = mElementType->GetValidCondition(
+            generator, "val", true);
 
         ss << std::endl << generator.ParseTemplate(0, "VariableArrayAccessFunctions",
             replacements) << std::endl;

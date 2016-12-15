@@ -305,6 +305,8 @@ std::string MetaVariableMap::GetXmlLoadCode(const Generator& generator,
     const std::string& name, const std::string& doc,
     const std::string& node, size_t tabLevel) const
 {
+    (void)name;
+
     std::string code;
 
     if(mKeyElementType && mValueElementType)
@@ -390,6 +392,10 @@ std::string MetaVariableMap::GetAccessFunctions(const Generator& generator,
         replacements["@VAR_VALUE_TYPE@"] = mValueElementType->GetCodeType();
         replacements["@OBJECT_NAME@"] = object.GetName();
         replacements["@VAR_CAMELCASE_NAME@"] = generator.GetCapitalName(*this);
+        replacements["@KEY_VALIDATION_CODE@"] = mKeyElementType->GetValidCondition(
+            generator, "key", true);
+        replacements["@VALUE_VALIDATION_CODE@"] = mValueElementType->GetValidCondition(
+            generator, "val", true);
 
         ss << std::endl << generator.ParseTemplate(0, "VariableMapAccessFunctions",
             replacements) << std::endl;

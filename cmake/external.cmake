@@ -18,11 +18,24 @@
 # Enable the ExternalProject CMake module.
 INCLUDE(ExternalProject)
 
+OPTION(GIT_DEPENDENCIES "Download dependencies from Git instead." OFF)
+
+IF(GIT_DEPENDENCIES)
+    SET(ZLIB_URL
+        GIT_REPOSITORY https://github.com/comphack/zlib.git
+        GIT_TAG comp_hack
+    )
+ELSE()
+    SET(ZLIB_URL
+        URL https://github.com/comphack/zlib/archive/comp_hack-20161214.zip
+        URL_HASH SHA1=d9d21531283e83adb8ca7a18b92fa590fe813689
+    )
+ENDIF()
+
 ExternalProject_Add(
     zlib-lib
 
-    GIT_REPOSITORY https://github.com/comphack/zlib.git
-    GIT_TAG comp_hack
+    ${ZLIB_URL}
 
     PREFIX ${CMAKE_CURRENT_BINARY_DIR}/zlib
     CMAKE_ARGS -DCMAKE_INSTALL_PREFIX:PATH=<INSTALL_DIR> -DSKIP_INSTALL_FILES=ON -DUSE_STATIC_RUNTIME=${USE_STATIC_RUNTIME}
@@ -62,11 +75,22 @@ ENDIF()
 SET_TARGET_PROPERTIES(zlib PROPERTIES
     INTERFACE_INCLUDE_DIRECTORIES "${ZLIB_INCLUDES}")
 
+IF(GIT_DEPENDENCIES)
+    SET(OPENSSL_URL
+        GIT_REPOSITORY https://github.com/comphack/openssl.git
+        GIT_TAG comp_hack
+    )
+ELSE()
+    SET(OPENSSL_URL
+        URL https://github.com/comphack/openssl/archive/comp_hack-20161214.zip
+        URL_HASH SHA1=118a4e12da86f4cb9eeca735a74669a17dec12bd
+    )
+ENDIF()
+
 ExternalProject_Add(
     openssl
 
-    GIT_REPOSITORY https://github.com/comphack/openssl.git
-    GIT_TAG comp_hack
+    ${OPENSSL_URL}
 
     PREFIX ${CMAKE_CURRENT_BINARY_DIR}/openssl
     CMAKE_ARGS -DCMAKE_INSTALL_PREFIX:PATH=<INSTALL_DIR> -DUSE_STATIC_RUNTIME=${USE_STATIC_RUNTIME} -DCMAKE_DEBUG_POSTFIX=d
@@ -138,11 +162,22 @@ ELSE()
         INTERFACE_INCLUDE_DIRECTORIES "${OPENSSL_INCLUDE_DIR}")
 ENDIF()
 
+IF(GIT_DEPENDENCIES)
+    SET(LIBUV_URL
+        GIT_REPOSITORY https://github.com/comphack/libuv.git
+        GIT_TAG comp_hack
+    )
+ELSE()
+    SET(LIBUV_URL
+        URL https://github.com/comphack/libuv/archive/comp_hack-20161214.zip
+        URL_HASH SHA1=3599b5ae443bd525af45b3246e2ad2a7e654b82b
+    )
+ENDIF()
+
 ExternalProject_Add(
     libuv
 
-    GIT_REPOSITORY https://github.com/comphack/libuv.git
-    GIT_TAG comp_hack
+    ${LIBUV_URL}
 
     PREFIX ${CMAKE_CURRENT_BINARY_DIR}/libuv
     CMAKE_ARGS -DCMAKE_INSTALL_PREFIX:PATH=<INSTALL_DIR> -DUSE_STATIC_RUNTIME=${USE_STATIC_RUNTIME} -DCMAKE_DEBUG_POSTFIX=d
@@ -181,11 +216,22 @@ ENDIF()
 SET_TARGET_PROPERTIES(uv PROPERTIES
     INTERFACE_INCLUDE_DIRECTORIES "${LIBUV_INCLUDE_DIRS}")
 
+IF(GIT_DEPENDENCIES)
+    SET(CASSANDRA_URL
+        GIT_REPOSITORY https://github.com/comphack/cpp-driver.git
+        GIT_TAG comp_hack
+    )
+ELSE()
+    SET(CASSANDRA_URL
+        URL https://github.com/comphack/cpp-driver/archive/comp_hack-20161214.zip
+        URL_HASH SHA1=c1e15a7fa5b711e146100668fa2be199bf997230
+    )
+ENDIF()
+
 ExternalProject_Add(
     cassandra-cpp
 
-    GIT_REPOSITORY https://github.com/comphack/cpp-driver.git
-    GIT_TAG comp_hack
+    ${CASSANDRA_URL}
 
     DEPENDS libuv openssl zlib-lib
 
@@ -225,11 +271,22 @@ ENDIF()
 SET_TARGET_PROPERTIES(cassandra PROPERTIES
     INTERFACE_INCLUDE_DIRECTORIES "${CASSANDRA_INCLUDE_DIRS}")
 
+IF(GIT_DEPENDENCIES)
+    SET(TTVFS_URL
+        GIT_REPOSITORY https://github.com/comphack/ttvfs.git
+        GIT_TAG comp_hack
+    )
+ELSE()
+    SET(TTVFS_URL
+        URL https://github.com/comphack/ttvfs/archive/comp_hack-20161214.zip
+        URL_HASH SHA1=929de4c4ec33e21b8d97c4582ec62761e1e5d8f7
+    )
+ENDIF()
+
 ExternalProject_Add(
     ttvfs-ex
 
-    GIT_REPOSITORY https://github.com/comphack/ttvfs.git
-    GIT_TAG comp_hack
+    ${TTVFS_URL}
 
     PREFIX ${CMAKE_CURRENT_BINARY_DIR}/ttvfs
     CMAKE_ARGS -DCMAKE_INSTALL_PREFIX:PATH=<INSTALL_DIR> "-DCMAKE_CXX_FLAGS=-std=c++11 ${SPECIAL_COMPILER_FLAGS}" -DUSE_STATIC_RUNTIME=${USE_STATIC_RUNTIME} -DCMAKE_DEBUG_POSTFIX=d
@@ -304,11 +361,22 @@ SET_TARGET_PROPERTIES(ttvfs_zip PROPERTIES
 
 SET(TTVFS_GEN_PATH "${INSTALL_DIR}/bin/ttvfs_gen")
 
+IF(GIT_DEPENDENCIES)
+    SET(SQRAT_URL
+        GIT_REPOSITORY https://github.com/comphack/sqrat.git
+        GIT_TAG comp_hack
+    )
+ELSE()
+    SET(SQRAT_URL
+        URL https://github.com/comphack/sqrat/archive/comp_hack-20161214.zip
+        URL_HASH SHA1=48eb686586fae8656c25bfe8237235f64997491f
+    )
+ENDIF()
+
 ExternalProject_Add(
     sqrat
 
-    GIT_REPOSITORY https://github.com/comphack/sqrat.git
-    GIT_TAG comp_hack
+    ${SQRAT_URL}
 
     PREFIX ${CMAKE_CURRENT_BINARY_DIR}/sqrat
     CMAKE_ARGS -DCMAKE_INSTALL_PREFIX:PATH=<INSTALL_DIR> "-DCMAKE_CXX_FLAGS=-std=c++11 ${SPECIAL_COMPILER_FLAGS}" -DUSE_STATIC_RUNTIME=${USE_STATIC_RUNTIME} -DCMAKE_DEBUG_POSTFIX=d
@@ -329,11 +397,22 @@ SET(SQRAT_DEFINES "-DSCRAT_USE_CXX11_OPTIMIZATIONS=1")
 
 FILE(MAKE_DIRECTORY "${SQRAT_INCLUDE_DIRS}")
 
+IF(GIT_DEPENDENCIES)
+    SET(CIVET_URL
+        GIT_REPOSITORY https://github.com/comphack/civetweb.git
+        GIT_TAG comp_hack
+    )
+ELSE()
+    SET(CIVET_URL
+        URL https://github.com/comphack/civetweb/archive/comp_hack-20161214.zip
+        URL_HASH SHA1=b16a0fe301faa117ceaca8221bd3a0e1f0c0ead8
+    )
+ENDIF()
+
 ExternalProject_Add(
     civet
 
-    GIT_REPOSITORY https://github.com/comphack/civetweb.git
-    GIT_TAG comp_hack
+    ${CIVET_URL}
 
     DEPENDS openssl
 
@@ -391,11 +470,22 @@ ENDIF()
 SET_TARGET_PROPERTIES(civetweb-cxx PROPERTIES
     INTERFACE_INCLUDE_DIRECTORIES "${CIVETWEB_INCLUDE_DIRS}")
 
+IF(GIT_DEPENDENCIES)
+    SET(SQUIRREL_URL
+        GIT_REPOSITORY https://github.com/comphack/squirrel3.git
+        GIT_TAG comp_hack
+    )
+ELSE()
+    SET(SQUIRREL_URL
+        URL https://github.com/comphack/squirrel3/archive/comp_hack-20161214.zip
+        URL_HASH SHA1=f70e9ec5eb6781d95689f69e999ce6142f3e2594
+    )
+ENDIF()
+
 ExternalProject_Add(
     squirrel3
 
-    GIT_REPOSITORY https://github.com/comphack/squirrel3.git
-    GIT_TAG comp_hack
+    ${SQUIRREL_URL}
 
     PREFIX ${CMAKE_CURRENT_BINARY_DIR}/squirrel3
     CMAKE_ARGS -DCMAKE_INSTALL_PREFIX:PATH=<INSTALL_DIR> "-DCMAKE_CXX_FLAGS=-std=c++11 ${SPECIAL_COMPILER_FLAGS}" -DUSE_STATIC_RUNTIME=${USE_STATIC_RUNTIME} -DCMAKE_DEBUG_POSTFIX=d
@@ -451,11 +541,22 @@ ENDIF()
 SET_TARGET_PROPERTIES(sqstdlib PROPERTIES INTERFACE_INCLUDE_DIRECTORIES
     "${SQUIRREL_INCLUDE_DIRS};${SQRAT_INCLUDE_DIRS}")
 
+IF(GIT_DEPENDENCIES)
+    SET(ASIO_URL
+        GIT_REPOSITORY https://github.com/comphack/asio.git
+        GIT_TAG comp_hack
+    )
+ELSE()
+    SET(ASIO_URL
+        URL https://github.com/comphack/asio/archive/comp_hack-20161214.zip
+        URL_HASH SHA1=454d619fca0f4bf68fb5b346a05e905e1054ea01
+    )
+ENDIF()
+
 ExternalProject_Add(
     asio
 
-    GIT_REPOSITORY https://github.com/comphack/asio.git
-    GIT_TAG comp_hack
+    ${ASIO_URL}
 
     PREFIX ${CMAKE_CURRENT_BINARY_DIR}/asio
     CMAKE_ARGS -DCMAKE_INSTALL_PREFIX:PATH=<INSTALL_DIR> "-DCMAKE_CXX_FLAGS=-std=c++11 ${SPECIAL_COMPILER_FLAGS}" -DUSE_STATIC_RUNTIME=${USE_STATIC_RUNTIME} -DCMAKE_DEBUG_POSTFIX=d
@@ -479,11 +580,22 @@ SET(ASIO_INCLUDE_DIRS "${INSTALL_DIR}/src/asio/asio/include")
 
 FILE(MAKE_DIRECTORY "${ASIO_INCLUDE_DIRS}")
 
+IF(GIT_DEPENDENCIES)
+    SET(TINYXML2_URL
+        GIT_REPOSITORY https://github.com/comphack/tinyxml2.git
+        GIT_TAG comp_hack
+    )
+ELSE()
+    SET(TINYXML2_URL
+        URL https://github.com/comphack/tinyxml2/archive/comp_hack-20161214.zip
+        URL_HASH SHA1=421b3b41bd1928180e4b91f4afc3b84b752ec237
+    )
+ENDIF()
+
 ExternalProject_Add(
     tinyxml2-ex
 
-    GIT_REPOSITORY https://github.com/comphack/tinyxml2.git
-    GIT_TAG comp_hack
+    ${TINYXML2_URL}
 
     PREFIX ${CMAKE_CURRENT_BINARY_DIR}/tinyxml2
     CMAKE_ARGS -DCMAKE_INSTALL_PREFIX:PATH=<INSTALL_DIR> -DBUILD_SHARED_LIBS=OFF "-DCMAKE_CXX_FLAGS=-std=c++11 ${SPECIAL_COMPILER_FLAGS}" -DUSE_STATIC_RUNTIME=${USE_STATIC_RUNTIME} -DCMAKE_DEBUG_POSTFIX=d
@@ -521,11 +633,22 @@ ENDIF()
 SET_TARGET_PROPERTIES(tinyxml2 PROPERTIES
     INTERFACE_INCLUDE_DIRECTORIES "${TINYXML2_INCLUDE_DIRS}")
 
+IF(GIT_DEPENDENCIES)
+    SET(GOOGLETEST_URL
+        GIT_REPOSITORY https://github.com/comphack/googletest.git
+        GIT_TAG comp_hack
+    )
+ELSE()
+    SET(GOOGLETEST_URL
+        URL https://github.com/comphack/googletest/archive/comp_hack-20161214.zip
+        URL_HASH SHA1=e2493c39bb60c380e394ca6a391630376cfdaeac
+    )
+ENDIF()
+
 ExternalProject_Add(
     googletest
 
-    GIT_REPOSITORY https://github.com/comphack/googletest.git
-    GIT_TAG comp_hack
+    ${GOOGLETEST_URL}
 
     PREFIX ${CMAKE_CURRENT_BINARY_DIR}/googletest
     CMAKE_ARGS -DCMAKE_INSTALL_PREFIX:PATH=<INSTALL_DIR> "-DCMAKE_CXX_FLAGS=-std=c++11 ${SPECIAL_COMPILER_FLAGS}" -DUSE_STATIC_RUNTIME=${USE_STATIC_RUNTIME} -DCMAKE_DEBUG_POSTFIX=d

@@ -715,29 +715,39 @@ void MetaObject::GetReferences(std::shared_ptr<MetaVariable>& var,
     }
     else
     {
-        std::shared_ptr<MetaVariableArray> array =
-            std::dynamic_pointer_cast<MetaVariableArray>(var);
-
-        if(array)
+        switch(var->GetMetaType())
         {
-            GetReferences(array->GetElementType(), references);
-        }
-    
-        std::shared_ptr<MetaVariableList> list =
-            std::dynamic_pointer_cast<MetaVariableList>(var);
+            case MetaVariable::MetaVariableType_t::TYPE_ARRAY:
+                {
+                    std::shared_ptr<MetaVariableArray> array =
+                        std::dynamic_pointer_cast<MetaVariableArray>(var);
 
-        if(list)
-        {
-            GetReferences(list->GetElementType(), references);
-        }
-    
-        std::shared_ptr<MetaVariableMap> map =
-            std::dynamic_pointer_cast<MetaVariableMap>(var);
+                    auto elementType = array->GetElementType();
+                    GetReferences(elementType, references);
+                }
+                break;
+            case MetaVariable::MetaVariableType_t::TYPE_LIST:
+                {
+                    std::shared_ptr<MetaVariableList> list =
+                        std::dynamic_pointer_cast<MetaVariableList>(var);
 
-        if(map)
-        {
-            GetReferences(map->GetKeyElementType(), references);
-            GetReferences(map->GetValueElementType(), references);
+                    auto elementType = list->GetElementType();
+                    GetReferences(elementType, references);
+                }
+                break;
+            case MetaVariable::MetaVariableType_t::TYPE_MAP:
+                {
+                    std::shared_ptr<MetaVariableMap> map =
+                        std::dynamic_pointer_cast<MetaVariableMap>(var);
+
+                    auto elementType = map->GetKeyElementType();
+                    GetReferences(elementType, references);
+                    elementType = map->GetValueElementType();
+                    GetReferences(elementType, references);
+                }
+                break;
+            default:
+                break;
         }
     }
 }

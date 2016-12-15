@@ -51,17 +51,15 @@ public:
     virtual bool Setup() = 0;
     virtual bool Use() = 0;
 
-    virtual DatabaseQuery PrepareLoadObjectsQuery(bool& success,
-        std::type_index type, const std::string& fieldName, const std::string& value) = 0;
-
     virtual std::list<std::shared_ptr<PersistentObject>> LoadObjects(
-        std::type_index type, const std::string& fieldName, const std::string& value) = 0;
+        std::type_index type, const std::string& fieldName, const libcomp::String& value) = 0;
 
     virtual std::shared_ptr<PersistentObject> LoadSingleObject(
-        std::type_index type, const std::string& fieldName, const std::string& value) = 0;
+        std::type_index type, const std::string& fieldName, const libcomp::String& value) = 0;
 
-    virtual std::shared_ptr<PersistentObject> LoadSingleObjectFromRow(
-        std::type_index type, const std::unordered_map<std::string, std::vector<char>>& row) = 0;
+    virtual bool InsertSingleObject(std::shared_ptr<PersistentObject>& obj) = 0;
+    virtual bool UpdateSingleObject(std::shared_ptr<PersistentObject>& obj) = 0;
+    virtual bool DeleteSingleObject(std::shared_ptr<PersistentObject>& obj) = 0;
 
     String GetLastError() const;
 

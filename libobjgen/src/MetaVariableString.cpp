@@ -712,6 +712,11 @@ std::string MetaVariableString::GetXmlSaveCode(const Generator& generator,
         replacements);
 }
 
+std::string MetaVariableString::GetStringValueCode(const std::string& name) const
+{
+    return name;
+}
+
 std::string MetaVariableString::EncodingToString(Encoding_t encoding)
 {
     std::string str;

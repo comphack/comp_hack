@@ -71,9 +71,9 @@ public:
 
     std::string GetError() const;
 
-    bool AddVariable(const std::string& name,
-        const std::shared_ptr<MetaVariable>& var);
+    bool AddVariable(const std::shared_ptr<MetaVariable>& var);
     bool RemoveVariable(const std::string& name);
+    std::shared_ptr<MetaVariable> GetVariable(const std::string& name);
 
     VariableList::const_iterator VariablesBegin() const;
     VariableList::const_iterator VariablesEnd() const;

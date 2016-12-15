@@ -28,6 +28,7 @@
 #define LIBCOMP_SRC_PERSISTENTOBJECT_H
 
 // libcomp Includes
+#include <CString.h>
 #include <Object.h>
 
 // libobjgen Includes
@@ -46,13 +47,33 @@ public:
 
     PersistentObject();
     PersistentObject(const PersistentObject& other);
-    virtual ~PersistentObject();
+    ~PersistentObject();
+
+    /*
+    *   Get the metadata associated to an instantiated persistent object
+    */
+    virtual std::shared_ptr<libobjgen::MetaObject> GetObjectMetadata() = 0;
+
+    /*
+    *   Get the metadata associated to an instantiated persistent object
+    */
+    virtual std::unordered_map<std::string, libcomp::String> GetMemberStringValues() = 0;
 
     /*
     *   Register a derived class object to the cache and get a new UUID if not specified.
     */
     bool Register(std::shared_ptr<PersistentObject>& self,
         const libobjgen::UUID& uuid = libobjgen::UUID());
+
+    /*
+    *   Unregisters a record from the cache and marks it as deleted.
+    */
+    void Unregister();
+
+    /*
+    *   Returns true if the record has been deleted from the database.
+    */
+    bool IsDeleted();
 
     /*
     *   Register all derived types in libcomp to the TypeMap.
@@ -122,6 +143,24 @@ public:
 
     static std::shared_ptr<PersistentObject> New(std::type_index type);
 
+    /*
+    *   Save a new record to the database
+    */
+    bool Insert();
+    static bool Insert(std::shared_ptr<PersistentObject>& obj);
+
+    /*
+    *   Update record in the database
+    */
+    bool Update();
+    static bool Update(std::shared_ptr<PersistentObject>& obj);
+
+    /*
+    *   Deletes record from the database
+    */
+    bool Delete();
+    static bool Delete(std::shared_ptr<PersistentObject>& obj);
+
 protected:
     /*
     *   Register a derived class type with a function to describe it to the database
@@ -134,7 +173,7 @@ protected:
     *   Retrieve an object from the database from a field and value (as text)
     */
     static std::shared_ptr<PersistentObject> LoadObject(std::type_index type,
-        const std::string& fieldName, const std::string& value);
+        const std::string& fieldName, const libcomp::String& value);
 
 private:
     static std::unordered_map<std::string, std::weak_ptr<PersistentObject>> sCached;
@@ -144,6 +183,8 @@ private:
     static std::unordered_map<std::type_index, std::function<PersistentObject*()>> sFactory;
 
     std::weak_ptr<PersistentObject> mSelf;
+
+    bool mDeleted;
 };
 
 } // namespace libcomp

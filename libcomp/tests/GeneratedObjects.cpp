@@ -125,9 +125,8 @@ TEST(Object, TestObject)
 
     std::stringstream streamOutStream(std::stringstream::out |
         std::stringstream::binary);
-    libcomp::ObjectOutStream streamOut(streamOutStream);
 
-    EXPECT_TRUE(data.Save(streamOut));
+    EXPECT_TRUE(data.Save(streamOutStream));
 
     std::string stringData = streamOutStream.str();
 
@@ -171,12 +170,11 @@ TEST(Object, TestObject)
 
     std::stringstream streamInStream(std::stringstream::in |
         std::stringstream::binary);
-    libcomp::ObjectInStream streamIn(streamInStream);
 
     streamInStream.str(std::string(reinterpret_cast<char*>(&testData),
         reinterpret_cast<char*>(&testData) + sizeof(testData)));
 
-    EXPECT_TRUE(data.Load(streamIn));
+    EXPECT_TRUE(data.Load(streamInStream));
 
     EXPECT_EQ(23, data.GetUnsigned8());
     EXPECT_EQ(-77, data.GetSigned8());

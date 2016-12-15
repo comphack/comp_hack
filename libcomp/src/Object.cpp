@@ -128,7 +128,7 @@ std::string Object::GetXmlText(const tinyxml2::XMLElement& root) const
     return value;
 }
 
-std::list<std::shared_ptr<Object>> Object::LoadBinaryData(
+/*std::list<std::shared_ptr<Object>> Object::LoadBinaryData(
     std::istream& stream,
     const std::function<std::shared_ptr<Object>()>& objectAllocator)
 {
@@ -187,7 +187,7 @@ std::list<std::shared_ptr<Object>> Object::LoadBinaryData(
     }
 
     return objects;
-}
+}*/
 
 libobjgen::UUID Object::GetUUID() const
 {

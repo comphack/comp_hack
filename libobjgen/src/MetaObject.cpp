@@ -121,16 +121,17 @@ void MetaObject::SetXMLDefinition(const tinyxml2::XMLElement& root)
     SetXMLDefinition(ss.str());
 }
 
-bool MetaObject::AddVariable(const std::string& name,
-    const std::shared_ptr<MetaVariable>& var)
+bool MetaObject::AddVariable(const std::shared_ptr<MetaVariable>& var)
 {
     bool result = false;
+
+    std::string name = var->GetName();
+    std::transform(name.begin(), name.end(), name.begin(), ::tolower);
 
     if(IsValidIdentifier(name) && mVariableMapping.end() == mVariableMapping.find(name))
     {
         mVariables.push_back(var);
         mVariableMapping[name] = var;
-        var->SetName(name);
 
         result = true;
     }
@@ -142,7 +143,10 @@ bool MetaObject::RemoveVariable(const std::string& name)
 {
     bool result = false;
 
-    auto entry = mVariableMapping.find(name);
+    std::string lowerName = name;
+    std::transform(lowerName.begin(), lowerName.end(), lowerName.begin(), ::tolower);
+
+    auto entry = mVariableMapping.find(lowerName);
 
     if(mVariableMapping.end() != entry)
     {
@@ -159,6 +163,21 @@ bool MetaObject::RemoveVariable(const std::string& name)
     }
 
     return result;
+}
+
+std::shared_ptr<MetaVariable> MetaObject::GetVariable(const std::string& name)
+{
+    std::string lowerName = name;
+    std::transform(lowerName.begin(), lowerName.end(), lowerName.begin(), ::tolower);
+
+    auto entry = mVariableMapping.find(lowerName);
+
+    if(mVariableMapping.end() != entry)
+    {
+        return entry->second;
+    }
+
+    return nullptr;
 }
 
 MetaObject::VariableList::const_iterator MetaObject::VariablesBegin() const
@@ -343,7 +362,7 @@ bool MetaObject::LoadMember(const tinyxml2::XMLDocument& doc,
 
                 mError = ss.str();
             }
-            else if(AddVariable(szMemberName, var))
+            else if(AddVariable(var))
             {
                 // At least one variable is added now. The result
                 // is OK unless an error causes a problem.

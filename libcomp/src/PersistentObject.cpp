@@ -40,19 +40,35 @@ std::unordered_map<std::string, std::weak_ptr<PersistentObject>> PersistentObjec
 PersistentObject::TypeMap PersistentObject::sTypeMap;
 std::unordered_map<std::type_index, std::function<PersistentObject*()>> PersistentObject::sFactory;
 
-PersistentObject::PersistentObject() : Object()
+PersistentObject::PersistentObject() : Object(), mDeleted(false)
 {
 }
 
-PersistentObject::PersistentObject(const PersistentObject& other) : Object()
+PersistentObject::PersistentObject(const PersistentObject& other) : Object(), mDeleted(false)
 {
     mUUID = libobjgen::UUID();
     mSelf = std::weak_ptr<PersistentObject>();
 }
 
+PersistentObject::~PersistentObject()
+{
+    if(!mUUID.IsNull() && !IsDeleted())
+    {
+        std::string strUUID = mUUID.ToString();
+        if(sCached.find(strUUID) != sCached.end())
+        {
+            sCached.erase(strUUID);
+        }
+        else
+        {
+            LOG_ERROR(libcomp::String("Uncached UUID detected during cleanup: %1").Arg(strUUID));
+        }
+    }
+}
+
 bool PersistentObject::Register(std::shared_ptr<PersistentObject>& self, const libobjgen::UUID& uuid)
 {
-    if(mUUID.IsNull())
+    if(mUUID.IsNull() && !IsDeleted())
     {
         bool registered = false;
         if(uuid.IsNull())
@@ -70,6 +86,7 @@ bool PersistentObject::Register(std::shared_ptr<PersistentObject>& self, const l
         {
             mSelf = self;
             sCached[mUUID.ToString()] = mSelf;
+            return true;
         }
         else
         {
@@ -80,20 +97,19 @@ bool PersistentObject::Register(std::shared_ptr<PersistentObject>& self, const l
     return false;
 }
 
-PersistentObject::~PersistentObject()
+void PersistentObject::Unregister()
 {
-    if(!mUUID.IsNull())
+    mDeleted = true;
+    auto iter = sCached.find(mUUID.ToString());
+    if(iter != sCached.end())
     {
-        std::string strUUID = mUUID.ToString();
-        if(sCached.find(strUUID) != sCached.end())
-        {
-            sCached.erase(strUUID);
-        }
-        else
-        {
-            LOG_ERROR(libcomp::String("Uncached UUID detected during cleanup: %1").Arg(strUUID));
-        }
+        sCached.erase(iter);
     }
+}
+
+bool PersistentObject::IsDeleted()
+{
+    return mDeleted;
 }
 
 std::shared_ptr<PersistentObject> PersistentObject::GetObjectByUUID(const libobjgen::UUID& uuid)
@@ -127,9 +143,10 @@ std::shared_ptr<PersistentObject> PersistentObject::LoadObjectByUUID(std::type_i
 }
 
 std::shared_ptr<PersistentObject> PersistentObject::LoadObject(std::type_index type,
-    const std::string& fieldName, const std::string& value)
+    const std::string& fieldName, const libcomp::String& value)
 {
-    return Database::GetMainDatabase()->LoadSingleObject(type, fieldName, value);
+    auto db = Database::GetMainDatabase();
+    return nullptr != db ? db->LoadSingleObject(type, fieldName, value) : nullptr;
 }
 
 void PersistentObject::RegisterType(std::type_index type,
@@ -173,6 +190,46 @@ std::shared_ptr<PersistentObject> PersistentObject::New(std::type_index type)
 {
     auto iter = sFactory.find(type);
     return iter != sFactory.end() ? std::shared_ptr<PersistentObject>(iter->second()) : nullptr;
+}
+
+bool PersistentObject::Insert()
+{
+    return mSelf.use_count() > 0 && Insert(mSelf.lock());
+}
+
+bool PersistentObject::Insert(std::shared_ptr<PersistentObject>& obj)
+{
+    auto db = Database::GetMainDatabase();
+    return nullptr != db ? db->InsertSingleObject(obj) : false;
+}
+
+bool PersistentObject::Update()
+{
+    return mSelf.use_count() > 0 && Update(mSelf.lock());
+}
+
+bool PersistentObject::Update(std::shared_ptr<PersistentObject>& obj)
+{
+    auto db = Database::GetMainDatabase();
+    return nullptr != db ? db->UpdateSingleObject(obj) : false;
+}
+
+bool PersistentObject::Delete()
+{
+    return mSelf.use_count() > 0 && Delete(mSelf.lock());
+}
+
+bool PersistentObject::Delete(std::shared_ptr<PersistentObject>& obj)
+{
+    auto db = Database::GetMainDatabase();
+    if(nullptr == db || db->DeleteSingleObject(obj))
+    {
+        // The database should have already handled this but call again
+        // just in case
+        obj->Unregister();
+        return true;
+    }
+    return false;
 }
 
 void PersistentObject::Initialize()

@@ -175,6 +175,14 @@ std::string MetaVariable::GetGetterCode(const Generator& generator,
     return ss.str();
 }
 
+std::string MetaVariable::GetStringValueCode(const std::string& name) const
+{
+    std::stringstream ss;
+    ss << "libcomp::String(" << name << ")";
+
+    return ss.str();
+}
+
 std::string MetaVariable::GetInternalGetterCode(const Generator& generator,
     const std::string& name) const
 {
@@ -255,15 +263,22 @@ std::string MetaVariable::GetAccessFunctions(const Generator& generator,
     
     if(IsLookupKey())
     {
+        bool convert = GetCodeType() != "libcomp::String";
         ss << std::endl;
         ss << "std::shared_ptr<" << object.GetName() << "> " << object.GetName()
             << "::Load" << object.GetName() << "By" << generator.GetCapitalName(*this)
             << "(" << GetCodeType() << "& val)" << std::endl;
         ss << "{" << std::endl;
+
+        if(convert)
+        {
+            ss << generator.Tab() << "libcomp::String converted(val);";
+        }
+
         ss << generator.Tab() << "return " << "std::dynamic_pointer_cast<"
             << object.GetName() << ">(LoadObject(typeid(" << object.GetName()
             << "), \"" << generator.GetCapitalName(*this) << "\", "
-            << "libcomp::String(val).ToUtf8()));" << std::endl;
+            << (convert ? "converted" : "val")  << "));" << std::endl;
         ss << "}" << std::endl;
         ss << std::endl;
     }

@@ -57,25 +57,29 @@ public:
     virtual bool Setup();
     virtual bool Use();
 
-    virtual DatabaseQuery PrepareLoadObjectsQuery(bool& success,
-        std::type_index type, const std::string& fieldName, const std::string& value);
-
     virtual std::list<std::shared_ptr<PersistentObject>> LoadObjects(
-        std::type_index type, const std::string& fieldName, const std::string& value);
+        std::type_index type, const std::string& fieldName, const libcomp::String& value);
 
     virtual std::shared_ptr<PersistentObject> LoadSingleObject(
-        std::type_index type, const std::string& fieldName, const std::string& value);
+        std::type_index type, const std::string& fieldName, const libcomp::String& value);
 
-    virtual std::shared_ptr<PersistentObject> LoadSingleObjectFromRow(
-        std::type_index type, const std::unordered_map<std::string, std::vector<char>>& row);
+    virtual bool InsertSingleObject(std::shared_ptr<PersistentObject>& obj);
+    virtual bool UpdateSingleObject(std::shared_ptr<PersistentObject>& obj);
+    virtual bool DeleteSingleObject(std::shared_ptr<PersistentObject>& obj);
 
     bool VerifyAndSetupSchema();
     bool UsingDefaultKeyspace();
 
 protected:
     bool WaitForFuture(CassFuture *pFuture);
-    std::string GetVariableType(const std::shared_ptr
-        <libobjgen::MetaVariable> var);
+    std::string GetVariableType(const std::shared_ptr<libobjgen::MetaVariable> var);
+
+    std::shared_ptr<PersistentObject> LoadSingleObjectFromRow(
+        std::type_index type, const std::unordered_map<std::string, std::vector<char>>& row);
+
+    std::vector<char> ConvertToRawByteStream(const std::shared_ptr<libobjgen::MetaVariable>& var,
+        const std::vector<char>& columnData);
+    std::vector<char> ConvertStringToRawByteStream(const std::vector<char>& columnData);
 
     CassSession* GetSession() const;
 

@@ -63,10 +63,10 @@ std::string GeneratorHeader::GenerateClass(const MetaObject& obj)
         << std::endl;
     ss << std::endl;
 
-    ss << Tab() << "virtual bool Load(libcomp::ObjectInStream& stream);"
+    /*ss << Tab() << "virtual bool Load(libcomp::ObjectInStream& stream);"
         << std::endl << std::endl;
     ss << Tab() << "virtual bool Save(libcomp::ObjectOutStream& stream) const;"
-        << std::endl << std::endl;
+        << std::endl << std::endl;*/
 
     ss << Tab() << "virtual bool Load(std::istream& stream, bool flat = false);"
         << std::endl << std::endl;
@@ -97,6 +97,8 @@ std::string GeneratorHeader::GenerateClass(const MetaObject& obj)
 
     if(obj.GetPersistent())
     {
+        ss << Tab() << "virtual std::unordered_map<std::string, libcomp::String> GetMemberStringValues();" << std::endl;
+        ss << Tab() << "virtual std::shared_ptr<libobjgen::MetaObject> GetObjectMetadata();" << std::endl;
         ss << Tab() << "static std::shared_ptr<libobjgen::MetaObject> GetMetadata();" << std::endl;
         ss << std::endl;
     }

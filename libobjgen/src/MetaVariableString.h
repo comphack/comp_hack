@@ -107,6 +107,7 @@ public:
         const std::string& name, const std::string& doc,
         const std::string& parent, size_t tabLevel = 1,
         const std::string elemName = "member") const;
+    virtual std::string GetStringValueCode(const std::string& name) const;
 
     static std::string EncodingToString(Encoding_t encoding);
     static std::string EncodingToComp(Encoding_t encoding);

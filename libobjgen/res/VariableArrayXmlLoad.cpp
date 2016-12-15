@@ -5,7 +5,7 @@
     auto elements = GetXmlChildren(*@NODE@, "element");
     if(elements.size() < @ELEMENT_COUNT@)
     {
-        for(int i = 0; i < @ELEMENT_COUNT@; i++)
+        for(size_t i = 0; i < @ELEMENT_COUNT@; i++)
         {
             if(i >= elements.size())
             {

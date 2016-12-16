@@ -238,10 +238,9 @@ std::string MetaVariable::GetAccessFunctions(const Generator& generator,
 }
 
 std::string MetaVariable::GetUtilityDeclarations(const Generator& generator,
-    const MetaObject& object, const std::string& name, size_t tabLevel) const
+    const std::string& name, size_t tabLevel) const
 {
     (void)generator;
-    (void)object;
     (void)name;
     (void)tabLevel;
 

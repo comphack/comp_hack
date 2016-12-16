@@ -445,7 +445,7 @@ std::string MetaVariableArray::GetAccessFunctions(const Generator& generator,
 }
 
 std::string MetaVariableArray::GetUtilityDeclarations(const Generator& generator,
-    const MetaObject& object, const std::string& name, size_t tabLevel) const
+    const std::string& name, size_t tabLevel) const
 {
     std::stringstream ss;
 

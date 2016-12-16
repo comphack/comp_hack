@@ -90,7 +90,7 @@ std::string GeneratorHeader::GenerateClass(const MetaObject& obj)
 
         if(var->IsInherited()) continue;
 
-        auto util = var->GetUtilityDeclarations(*this, obj, var->GetName());
+        auto util = var->GetUtilityDeclarations(*this, var->GetName());
         if(util.length() > 0)
         {
             utilStream << util;

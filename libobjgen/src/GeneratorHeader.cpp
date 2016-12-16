@@ -83,6 +83,26 @@ std::string GeneratorHeader::GenerateClass(const MetaObject& obj)
         ss << std::endl;
     }
 
+    std::stringstream utilStream;
+    for(auto it = obj.VariablesBegin(); it != obj.VariablesEnd(); ++it)
+    {
+        auto var = *it;
+
+        if(var->IsInherited()) continue;
+
+        auto util = var->GetUtilityDeclarations(*this, obj, var->GetName());
+        if(util.length() > 0)
+        {
+            utilStream << util;
+        }
+    }
+
+    std::string utilDeclarations = utilStream.str();
+    if(utilDeclarations.length() > 0)
+    {
+        ss << "protected:" << utilDeclarations << std::endl;
+    }
+
     ss << "private:" << std::endl;
 
     for(auto it = obj.VariablesBegin(); it != obj.VariablesEnd(); ++it)

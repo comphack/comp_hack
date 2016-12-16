@@ -5,6 +5,7 @@
     auto elements = GetXmlChildren(*@NODE@, "element");
     if(elements.size() < @ELEMENT_COUNT@)
     {
+        auto elemIter = elements.begin();
         for(size_t i = 0; i < @ELEMENT_COUNT@; i++)
         {
             if(i >= elements.size())
@@ -13,7 +14,8 @@
             }
             else
             {
-                auto element = elements[i];
+                auto element = *elemIter;
+                elemIter++;
                 arr[i] = @ELEMENT_ACCESS_CODE@;
             }
         }

@@ -2,7 +2,8 @@
 {
     try
     {
-        return libcomp::String(GetXmlText(*@NODE@)).ToInteger<@VAR_CODE_TYPE@>();
+        auto retval = libcomp::String(GetXmlText(*@NODE@)).ToInteger<@VAR_CODE_TYPE@>(&status);
+        return status ? retval : @VAR_CODE_TYPE@{};
     }
     catch (...)
     {

@@ -321,7 +321,7 @@ std::string GeneratorSource::Generate(const MetaObject& obj)
         if(!code.empty())
         {
             std::map<std::string, std::string> replacements;
-            replacements["@VAR_NAME@"] = var->GetName();
+            replacements["@VAR_NAME@"] = Escape(var->GetName());
             replacements["@VAR_CAMELCASE_NAME@"] = GetCapitalName(*var);
             replacements["@ACCESS_CODE@"] = code;
             replacements["@NODE@"] = "pMember";
@@ -394,6 +394,12 @@ std::string GeneratorSource::Generate(const MetaObject& obj)
 
         ss << var->GetAccessFunctions(*this, obj, GetMemberName(var));
         ss << std::endl;
+
+        auto util = var->GetUtilityFunctions(*this, obj, var->GetName());
+        if (util.length() > 0)
+        {
+            ss << util << std::endl;
+        }
     }
 
     return ss.str();

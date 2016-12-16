@@ -340,8 +340,8 @@ std::string MetaVariableMap::GetXmlSaveCode(const Generator& generator,
     {
         std::map<std::string, std::string> replacements;
         replacements["@GETTER@"] = GetInternalGetterCode(generator, name);
-        replacements["@VAR_NAME@"] = GetName();
-        replacements["@ELEMENT_NAME@"] = elemName;
+        replacements["@VAR_NAME@"] = generator.Escape(GetName());
+        replacements["@ELEMENT_NAME@"] = generator.Escape(elemName);
         replacements["@VAR_XML_KEY_SAVE_CODE@"] = mKeyElementType->GetXmlSaveCode(
             generator, "element", doc, parent, tabLevel + 1, "key");
         replacements["@VAR_XML_VALUE_SAVE_CODE@"] = mValueElementType->GetXmlSaveCode(
@@ -391,12 +391,53 @@ std::string MetaVariableMap::GetAccessFunctions(const Generator& generator,
         replacements["@VAR_VALUE_TYPE@"] = mValueElementType->GetCodeType();
         replacements["@OBJECT_NAME@"] = object.GetName();
         replacements["@VAR_CAMELCASE_NAME@"] = generator.GetCapitalName(*this);
+
+        ss << std::endl << generator.ParseTemplate(0, "VariableMapAccessFunctions",
+            replacements) << std::endl;
+    }
+
+    return ss.str();
+}
+
+std::string MetaVariableMap::GetUtilityDeclarations(const Generator& generator,
+    const MetaObject& object, const std::string& name, size_t tabLevel) const
+{
+    std::stringstream ss;
+
+    if(mKeyElementType && mValueElementType)
+    {
+        std::map<std::string, std::string> replacements;
+        replacements["@VAR_NAME@"] = name;
+        replacements["@VAR_KEY_TYPE@"] = mKeyElementType->GetCodeType();
+        replacements["@VAR_VALUE_TYPE@"] = mValueElementType->GetCodeType();
+        replacements["@VAR_CAMELCASE_NAME@"] = generator.GetCapitalName(*this);
+
+        ss << generator.ParseTemplate(tabLevel,
+            "VariableMapUtilityDeclarations", replacements) << std::endl;
+    }
+
+    return ss.str();
+}
+
+std::string MetaVariableMap::GetUtilityFunctions(const Generator& generator,
+    const MetaObject& object, const std::string& name) const
+{
+    std::stringstream ss;
+
+    if(mKeyElementType && mValueElementType)
+    {
+        std::map<std::string, std::string> replacements;
+        replacements["@VAR_NAME@"] = name;
+        replacements["@VAR_KEY_TYPE@"] = mKeyElementType->GetCodeType();
+        replacements["@VAR_VALUE_TYPE@"] = mValueElementType->GetCodeType();
+        replacements["@OBJECT_NAME@"] = object.GetName();
+        replacements["@VAR_CAMELCASE_NAME@"] = generator.GetCapitalName(*this);
         replacements["@KEY_VALIDATION_CODE@"] = mKeyElementType->GetValidCondition(
             generator, "key", true);
         replacements["@VALUE_VALIDATION_CODE@"] = mValueElementType->GetValidCondition(
             generator, "val", true);
 
-        ss << std::endl << generator.ParseTemplate(0, "VariableMapAccessFunctions",
+        ss << std::endl << generator.ParseTemplate(0, "VariableMapUtilityFunctions",
             replacements) << std::endl;
     }
 

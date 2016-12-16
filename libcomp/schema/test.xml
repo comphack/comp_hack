@@ -7,8 +7,8 @@
         <member type="s32" name="signed32" default="90210"/>
         <member type="string" name="string" default="日本語"
             regex="^日本.*$" length="16" encoding="cp932"/>
-		<member type="array" name="xyz" size="3" caps="on">
-			<element type="float" default="-1" min="-9999" max="9999"/>
-		</member>
+        <member type="array" name="xyz" size="3" caps="on">
+            <element type="float" default="-1" min="-9999" max="9999"/>
+        </member>
     </object>
 </objgen>

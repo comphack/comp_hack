@@ -20,7 +20,7 @@ bool @OBJECT_NAME@::Set@VAR_CAMELCASE_NAME@(size_t index, @VAR_TYPE@ val)
     return true;
 }
 
-bool @OBJECT_NAME@::Validate@VAR_CAMELCASE_NAME@Entry(@VAR_TYPE@ val)
+size_t @OBJECT_NAME@::@VAR_CAMELCASE_NAME@Count() const
 {
-    return (@ELEMENT_VALIDATION_CODE@);
+    return @VAR_NAME@.size();
 }

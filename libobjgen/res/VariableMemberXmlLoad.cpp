@@ -1,6 +1,6 @@
 if(status)
 {
-    auto memberIterator = members.find("@VAR_NAME@");
+    auto memberIterator = members.find(@VAR_NAME@);
     if(memberIterator != members.end())
     {
         const tinyxml2::XMLElement *@NODE@ = memberIterator->second;

@@ -474,7 +474,7 @@ std::string MetaVariableString::GetConstructValue() const
 
 std::string MetaVariableString::GetDefaultValueCode() const
 {
-    return "\"" +  mDefaultValue + "\"";
+    return Generator::Escape(mDefaultValue);
 }
 
 std::string MetaVariableString::GetValidCondition(const Generator& generator,
@@ -703,8 +703,8 @@ std::string MetaVariableString::GetXmlSaveCode(const Generator& generator,
 {
     std::map<std::string, std::string> replacements;
     replacements["@GETTER@"] = GetInternalGetterCode(generator, name);
-    replacements["@VAR_NAME@"] = GetName();
-    replacements["@ELEMENT_NAME@"] = elemName;
+    replacements["@VAR_NAME@"] = generator.Escape(GetName());
+    replacements["@ELEMENT_NAME@"] = generator.Escape(elemName);
     replacements["@PARENT@"] = parent;
     replacements["@DOC@"] = doc;
 

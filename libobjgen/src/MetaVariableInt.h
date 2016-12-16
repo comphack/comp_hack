@@ -611,7 +611,6 @@ public:
         (void)doc;
 
         std::map<std::string, std::string> replacements;
-        replacements["@VAR_NAME@"] = GetName();
         replacements["@VAR_CAMELCASE_NAME@"] = generator.GetCapitalName(*this);
         replacements["@VAR_CODE_TYPE@"] = GetCodeType();
         replacements["@NODE@"] = node;
@@ -628,8 +627,8 @@ public:
         (void)doc;
 
         std::map<std::string, std::string> replacements;
-        replacements["@VAR_NAME@"] = GetName();
-        replacements["@ELEMENT_NAME@"] = elemName;
+        replacements["@VAR_NAME@"] = generator.Escape(GetName());
+        replacements["@ELEMENT_NAME@"] = generator.Escape(elemName);
         replacements["@GETTER@"] = GetInternalGetterCode(generator, name);
         replacements["@PARENT@"] = parent;
 

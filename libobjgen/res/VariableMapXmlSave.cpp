@@ -1,8 +1,8 @@
 {
     tinyxml2::XMLElement *temp = @PARENT@;
     {
-        tinyxml2::XMLElement *pMember = doc.NewElement("@ELEMENT_NAME@");
-        pMember->SetAttribute("name", "@VAR_NAME@");
+        tinyxml2::XMLElement *pMember = doc.NewElement(@ELEMENT_NAME@);
+        pMember->SetAttribute("name", @VAR_NAME@);
         
         @PARENT@->InsertEndChild(pMember);
         

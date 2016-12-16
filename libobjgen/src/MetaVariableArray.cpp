@@ -388,8 +388,8 @@ std::string MetaVariableArray::GetXmlSaveCode(const Generator& generator,
     {
         std::map<std::string, std::string> replacements;
         replacements["@GETTER@"] = GetInternalGetterCode(generator, name);
-        replacements["@VAR_NAME@"] = GetName();
-        replacements["@ELEMENT_NAME@"] = elemName;
+        replacements["@VAR_NAME@"] = generator.Escape(GetName());
+        replacements["@ELEMENT_NAME@"] = generator.Escape(elemName);
         replacements["@VAR_XML_SAVE_CODE@"] = mElementType->GetXmlSaveCode(
             generator, "element", doc, parent, tabLevel + 1, "element");
         replacements["@PARENT@"] = parent;
@@ -436,10 +436,50 @@ std::string MetaVariableArray::GetAccessFunctions(const Generator& generator,
         replacements["@OBJECT_NAME@"] = object.GetName();
         replacements["@VAR_CAMELCASE_NAME@"] = generator.GetCapitalName(*this);
         replacements["@ELEMENT_COUNT@"] = std::to_string(mElementCount);
+
+        ss << std::endl << generator.ParseTemplate(0, "VariableArrayAccessFunctions",
+            replacements) << std::endl;
+    }
+
+    return ss.str();
+}
+
+std::string MetaVariableArray::GetUtilityDeclarations(const Generator& generator,
+    const MetaObject& object, const std::string& name, size_t tabLevel) const
+{
+    std::stringstream ss;
+
+    if(mElementType)
+    {
+        std::map<std::string, std::string> replacements;
+        replacements["@VAR_NAME@"] = name;
+        replacements["@VAR_TYPE@"] = mElementType->GetCodeType();
+        replacements["@VAR_CAMELCASE_NAME@"] = generator.GetCapitalName(*this);
+
+        ss << generator.ParseTemplate(tabLevel,
+            "VariableArrayUtilityDeclarations", replacements) << std::endl;
+    }
+
+    return ss.str();
+}
+
+std::string MetaVariableArray::GetUtilityFunctions(const Generator& generator,
+    const MetaObject& object, const std::string& name) const
+{
+    std::stringstream ss;
+
+    if(mElementType)
+    {
+        std::map<std::string, std::string> replacements;
+        replacements["@VAR_NAME@"] = name;
+        replacements["@VAR_TYPE@"] = mElementType->GetCodeType();
+        replacements["@OBJECT_NAME@"] = object.GetName();
+        replacements["@VAR_CAMELCASE_NAME@"] = generator.GetCapitalName(*this);
+        replacements["@ELEMENT_COUNT@"] = std::to_string(mElementCount);
         replacements["@ELEMENT_VALIDATION_CODE@"] = mElementType->GetValidCondition(
             generator, "val", true);
 
-        ss << std::endl << generator.ParseTemplate(0, "VariableArrayAccessFunctions",
+        ss << std::endl << generator.ParseTemplate(0, "VariableArrayUtilityFunctions",
             replacements) << std::endl;
     }
 

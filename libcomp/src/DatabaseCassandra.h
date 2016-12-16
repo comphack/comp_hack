@@ -29,6 +29,7 @@
 
 // libcomp Includes
 #include "Database.h"
+#include "DatabaseConfigCassandra.h"
 
 // libobjgen Includes
 #include <MetaVariable.h>
@@ -44,7 +45,7 @@ class DatabaseCassandra : public Database
 public:
     friend class DatabaseQueryCassandra;
 
-    DatabaseCassandra(const String& keyspace);
+    DatabaseCassandra(const std::shared_ptr<objects::DatabaseConfigCassandra>& config);
     virtual ~DatabaseCassandra();
 
     virtual bool Open(const String& address, const String& username = String(),
@@ -79,7 +80,6 @@ protected:
 
     std::vector<char> ConvertToRawByteStream(const std::shared_ptr<libobjgen::MetaVariable>& var,
         const std::vector<char>& columnData);
-    std::vector<char> ConvertStringToRawByteStream(const std::vector<char>& columnData);
 
     CassSession* GetSession() const;
 
@@ -87,7 +87,7 @@ private:
     CassCluster *mCluster;
     CassSession *mSession;
 
-    std::string mKeyspace;
+    std::shared_ptr<objects::DatabaseConfigCassandra> mConfig;
 };
 
 } // namespace libcomp

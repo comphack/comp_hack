@@ -36,8 +36,9 @@
 
 using namespace libcomp;
 
-DatabaseCassandra::DatabaseCassandra(const String& keyspace)
-    : mCluster(nullptr), mSession(nullptr), mKeyspace(keyspace.ToUtf8())
+DatabaseCassandra::DatabaseCassandra(const std::shared_ptr<
+    objects::DatabaseConfigCassandra>& config) : mCluster(nullptr), mSession(nullptr),
+    mConfig(config)
 {
 }
 
@@ -111,7 +112,7 @@ bool DatabaseCassandra::Exists()
 {
     DatabaseQuery q = Prepare(libcomp::String(
         "SELECT keyspace_name FROM system_schema.keyspaces WHERE keyspace_name = '%1';")
-        .Arg(mKeyspace));
+        .Arg(mConfig->GetKeyspace()));
     if(!q.Execute())
     {
         LOG_CRITICAL("Failed to query for keyspace.\n");
@@ -134,10 +135,11 @@ bool DatabaseCassandra::Setup()
         return false;
     }
 
+    auto keyspace = mConfig->GetKeyspace();
     if(!Exists())
     {
         // Delete the old keyspace if it exists.
-        if(!Execute(libcomp::String("DROP KEYSPACE IF EXISTS %1;").Arg(mKeyspace)))
+        if(!Execute(libcomp::String("DROP KEYSPACE IF EXISTS %1;").Arg(keyspace)))
         {
             LOG_ERROR("Failed to delete old keyspace.\n");
 
@@ -146,7 +148,7 @@ bool DatabaseCassandra::Setup()
 
         // Now re-create the keyspace.
         if(!Execute(libcomp::String("CREATE KEYSPACE %1 WITH REPLICATION = {"
-            " 'class' : 'NetworkTopologyStrategy', 'datacenter1' : 1 };").Arg(mKeyspace)))
+            " 'class' : 'NetworkTopologyStrategy', 'datacenter1' : 1 };").Arg(keyspace)))
         {
             LOG_ERROR("Failed to create keyspace.\n");
 
@@ -178,7 +180,7 @@ bool DatabaseCassandra::Setup()
     }
 
     LOG_DEBUG(libcomp::String("Database connection established to '%1' keyspace.\n")
-        .Arg(mKeyspace));
+        .Arg(keyspace));
 
     if(!VerifyAndSetupSchema())
     {
@@ -193,7 +195,8 @@ bool DatabaseCassandra::Setup()
 bool DatabaseCassandra::Use()
 {
     // Use the keyspace.
-    if(!Execute(libcomp::String("USE %1;").Arg(mKeyspace)))
+    auto keyspace = mConfig->GetKeyspace();
+    if(!Execute(libcomp::String("USE %1;").Arg(keyspace)))
     {
         LOG_ERROR("Failed to use the keyspace.\n");
 
@@ -492,11 +495,12 @@ bool DatabaseCassandra::DeleteSingleObject(std::shared_ptr<PersistentObject>& ob
 
 bool DatabaseCassandra::VerifyAndSetupSchema()
 {
+    auto keyspace = mConfig->GetKeyspace();
     std::vector<std::shared_ptr<libobjgen::MetaObject>> metaObjectTables;
     for(auto registrar : PersistentObject::GetRegistry())
     {
         std::string source = registrar.second->GetSourceLocation();
-        if(source == mKeyspace || (source.length() == 0 && UsingDefaultKeyspace()))
+        if(source == keyspace || (source.length() == 0 && UsingDefaultKeyspace()))
         {
             metaObjectTables.push_back(registrar.second);
         }
@@ -516,7 +520,7 @@ bool DatabaseCassandra::VerifyAndSetupSchema()
         ss << "SELECT table_name, column_name, type"
             << " FROM system_schema.columns"
             " WHERE keyspace_name = '"
-            << mKeyspace << "';";
+            << keyspace << "';";
 
         DatabaseQuery q = Prepare(ss.str());
         std::list<std::unordered_map<std::string, std::vector<char>>> results;
@@ -661,7 +665,7 @@ bool DatabaseCassandra::VerifyAndSetupSchema()
 
 bool DatabaseCassandra::UsingDefaultKeyspace()
 {
-    return mKeyspace == "comp_hack";
+    return mConfig->GetKeyspace() == mConfig->GetDefaultKeyspace();
 }
 
 bool DatabaseCassandra::WaitForFuture(CassFuture *pFuture)
@@ -735,24 +739,21 @@ std::vector<char> DatabaseCassandra::ConvertToRawByteStream(
     {
         case libobjgen::MetaVariable::MetaVariableType_t::TYPE_STRING:
         case libobjgen::MetaVariable::MetaVariableType_t::TYPE_REF:
-            return ConvertStringToRawByteStream(columnData);
+            {
+                size_t strLength = columnData.size();
+
+                char* arr = reinterpret_cast<char*>(&strLength);
+
+                std::vector<char> data(arr, arr + sizeof(uint32_t));
+                data.insert(data.end(), columnData.begin(), columnData.end());
+
+                return data;
+            }
             break;
         default:
             return columnData;
             break;
     }
-}
-
-std::vector<char> DatabaseCassandra::ConvertStringToRawByteStream(const std::vector<char>& columnData)
-{
-    size_t strLength = columnData.size();
-
-    char* arr = reinterpret_cast<char*>(&strLength);
-
-    std::vector<char> data(arr, arr + sizeof(uint32_t));
-    data.insert(data.end(), columnData.begin(), columnData.end());
-
-    return data;
 }
 
 CassSession* DatabaseCassandra::GetSession() const

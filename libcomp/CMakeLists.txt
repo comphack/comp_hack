@@ -166,6 +166,9 @@ SET(${PROJECT_NAME}_HDRS
 SET(${PROJECT_NAME}_SCHEMA
     schema/account.xml
     schema/channeldescription.xml
+    schema/databaseconfig.xml
+    schema/databaseconfig_cassandra.xml
+    schema/databaseconfig_sqlite3.xml
     schema/serverconfig.xml
     schema/test.xml
     schema/worlddescription.xml
@@ -186,6 +189,12 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     Account.cpp
     ChannelDescription.h
     ChannelDescription.cpp
+    DatabaseConfig.h
+    DatabaseConfig.cpp
+    DatabaseConfigCassandra.h
+    DatabaseConfigCassandra.cpp
+    DatabaseConfigSQLite3.h
+    DatabaseConfigSQLite3.cpp
     ServerConfig.h
     ServerConfig.cpp
     TestObject.h

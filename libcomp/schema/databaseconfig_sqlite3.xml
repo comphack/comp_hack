@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="DatabaseConfigSQLite3" baseobject="DatabaseConfig" persistent="false">
+        <member type="string" name="DatabaseName" default="comp_hack"/>
+        <member type="string" name="DefaultDatabaseName" default="comp_hack"/>
+    </object>
+</objgen>

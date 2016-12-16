@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="DatabaseConfigCassandra" baseobject="DatabaseConfig" persistent="false">
+        <member type="string" name="Keyspace" default="comp_hack"/>
+        <member type="string" name="DefaultKeyspace" default="comp_hack"/>
+    </object>
+</objgen>

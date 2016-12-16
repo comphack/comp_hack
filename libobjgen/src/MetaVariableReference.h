@@ -48,6 +48,9 @@ public:
     std::string GetReferenceType() const;
     bool SetReferenceType(const std::string& referenceType);
 
+    void AddDefaultedVariable(std::shared_ptr<MetaVariable>& var);
+    const std::list<std::shared_ptr<MetaVariable>> GetDefaultedVariables() const;
+
     virtual bool IsCoreType() const;
     virtual bool IsValid() const;
 
@@ -65,6 +68,12 @@ public:
 
     virtual std::string GetCodeType() const;
     virtual std::string GetConstructValue() const;
+    virtual std::string GetConstructorCode(const Generator& generator,
+        const MetaObject& object, const std::string& name,
+        size_t tabLevel = 1) const;
+    std::string GetConstructorCode(const Generator& generator,
+        const std::string& varName, const std::string& parentRef,
+        size_t tabLevel) const;
     virtual std::string GetValidCondition(const Generator& generator,
         const std::string& name, bool recursive = false) const;
     virtual std::string GetLoadCode(const Generator& generator,
@@ -85,6 +94,8 @@ public:
 
 private:
     std::string mReferenceType;
+
+    std::list<std::shared_ptr<MetaVariable>> mDefaultedVariables;
 };
 
 } // namespace libobjgen

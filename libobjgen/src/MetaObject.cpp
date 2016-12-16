@@ -519,6 +519,54 @@ std::shared_ptr<MetaVariable> MetaObject::GetVariable(const tinyxml2::XMLDocumen
                 }
             }
         }
+        else if(var && var->GetMetaType() == MetaVariable::MetaVariableType_t::TYPE_REF)
+        {
+            auto ref = std::dynamic_pointer_cast<MetaVariableReference>(var);
+
+            const tinyxml2::XMLElement *cMember = pMember->FirstChildElement();
+            while (nullptr != cMember)
+            {
+                std::string cMemberName = cMember->Name();
+                if("member" == cMemberName)
+                {
+                    std::string cName = cMember->Attribute("name");
+                    if(!DefaultsSpecified(cMember))
+                    {
+                        std::stringstream ss;
+                        ss << "Non-defaulted member in reference '" << szMemberName
+                            << "' in object '" << szName << "'.";
+
+                        mError = ss.str();
+                    }
+                    else if(cName.length() == 0)
+                    {
+                        std::stringstream ss;
+                        ss << "Non-defaulted member in reference '" << szMemberName
+                            << "' in object '" << szName << "' does not have a name specified.";
+
+                        mError = ss.str();
+                    }
+                    else
+                    {
+                        auto subVariable = GetVariable(doc, szName, szMemberName, cMember);
+                        subVariable->SetName(cName);
+                        if(subVariable && subVariable->Load(doc, *cMember))
+                        {
+                            ref->AddDefaultedVariable(subVariable);
+                        }
+                        else
+                        {
+                            std::stringstream ss;
+                            ss << "Failed to parse defaulted member in reference '" << szMemberName
+                                << "' in object '" << szName << "': " << var->GetError();
+
+                            mError = ss.str();
+                        }
+                    }
+                }
+                cMember = cMember->NextSiblingElement();
+            }
+        }
 
         if(var && var->Load(doc, *pMember))
         {
@@ -674,7 +722,6 @@ bool MetaObject::HasCircularReference(
     return status;
 }
 
-
 const tinyxml2::XMLElement *MetaObject::GetChild(const tinyxml2::XMLElement *pMember,
     const std::string name) const
 {
@@ -689,6 +736,55 @@ const tinyxml2::XMLElement *MetaObject::GetChild(const tinyxml2::XMLElement *pMe
         cMember = cMember->NextSiblingElement();
     }
     return nullptr;
+}
+
+bool MetaObject::DefaultsSpecified(const tinyxml2::XMLElement *pMember) const
+{
+    const char *szMemberType = pMember->Attribute("type");
+    if(nullptr == szMemberType)
+    {
+        return false;
+    }
+
+    const std::string memberType(szMemberType);
+    auto subVar = CreateType(memberType);
+    if(subVar && subVar->GetMetaType() != MetaVariable::MetaVariableType_t::TYPE_REF)
+    {
+        return nullptr != pMember->Attribute("default");
+    }
+
+    std::set<std::string> subMembers;
+    if(subVar)
+    {
+        //Ref
+        subMembers.insert("member");
+    }
+    else if(memberType == "array" || memberType == "list")
+    {
+        subMembers.insert("entry");
+    }
+    else if(memberType == "map")
+    {
+        subMembers.insert("key");
+        subMembers.insert("value");
+    }
+    else
+    {
+        return false;
+    }
+    
+    const tinyxml2::XMLElement *cMember = pMember->FirstChildElement();
+    while(nullptr != cMember)
+    {
+        if(subMembers.find(cMember->Name()) != subMembers.end() && !DefaultsSpecified(cMember))
+        {
+            return false;
+        }
+
+        cMember = cMember->NextSiblingElement();
+    }
+
+    return true;
 }
 
 std::set<std::string> MetaObject::GetReferences() const

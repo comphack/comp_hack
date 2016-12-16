@@ -34,6 +34,7 @@
 #endif
 
 #include <DatabaseCassandra.h>
+#include <DatabaseSQLite3.h>
 #include "Log.h"
 
 using namespace libcomp;
@@ -44,14 +45,36 @@ BaseServer::BaseServer(std::shared_ptr<objects::ServerConfig> config, const Stri
     mSelf = std::shared_ptr<libcomp::BaseServer>(this);
     ReadConfig(config, configPath);
 
-    /// @todo Setup the database type based on the config.
-    mDatabase = std::shared_ptr<libcomp::Database>(
-        new libcomp::DatabaseCassandra(config->GetCassandraKeyspace().ToUtf8()));
+    /// @todo: make this an enum
+    std::shared_ptr<objects::DatabaseConfig> dbConfig;
+    switch(config->GetDatabaseType())
+    {
+        case 0:
+            {
+                auto sqlConfig = config->GetSQLite3Config();
+                mDatabase = std::shared_ptr<libcomp::Database>(
+                    new libcomp::DatabaseSQLite3(sqlConfig));
+                dbConfig = sqlConfig;
+            }
+            break;
+        case 1:
+            {
+                auto cassandraConfig = config->GetCassandraConfig();
+                mDatabase = std::shared_ptr<libcomp::Database>(
+                    new libcomp::DatabaseCassandra(cassandraConfig));
+                dbConfig = cassandraConfig;
+            }
+            break;
+        default:
+            LOG_CRITICAL("Invalid database type specified.\n");
+            return;
+            break;
+    }
 
     mDatabase->SetMainDatabase(mDatabase);
 
     // Open the database.
-    if(!mDatabase->Open(config->GetDatabaseIP()) || !mDatabase->IsOpen())
+    if(!mDatabase->Open(dbConfig->GetIP()) || !mDatabase->IsOpen())
     {
         LOG_CRITICAL("Failed to open database.\n");
 

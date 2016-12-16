@@ -27,7 +27,9 @@
 #ifndef LIBCOMP_SRC_DATABASESQLITE3_H
 #define LIBCOMP_SRC_DATABASESQLITE3_H
 
+ // libcomp Includes
 #include "Database.h"
+#include "DatabaseConfigSQLite3.h"
 
 typedef struct sqlite3 sqlite3;
 
@@ -37,7 +39,7 @@ namespace libcomp
 class DatabaseSQLite3 : public Database
 {
 public:
-    DatabaseSQLite3();
+    DatabaseSQLite3(const std::shared_ptr<objects::DatabaseConfigSQLite3>& config);
     virtual ~DatabaseSQLite3();
 
     virtual bool Open(const String& address, const String& username = String(),
@@ -45,8 +47,25 @@ public:
     virtual bool Close();
     virtual bool IsOpen() const;
 
+    virtual DatabaseQuery Prepare(const String& query);
+    virtual bool Exists();
+    virtual bool Setup();
+    virtual bool Use();
+
+    virtual std::list<std::shared_ptr<PersistentObject>> LoadObjects(
+        std::type_index type, const std::string& fieldName, const libcomp::String& value);
+
+    virtual std::shared_ptr<PersistentObject> LoadSingleObject(
+        std::type_index type, const std::string& fieldName, const libcomp::String& value);
+
+    virtual bool InsertSingleObject(std::shared_ptr<PersistentObject>& obj);
+    virtual bool UpdateSingleObject(std::shared_ptr<PersistentObject>& obj);
+    virtual bool DeleteSingleObject(std::shared_ptr<PersistentObject>& obj);
+
 private:
     sqlite3 *mDatabase;
+
+    std::shared_ptr<objects::DatabaseConfigSQLite3> mConfig;
 };
 
 } // namespace libcomp

@@ -349,7 +349,12 @@ std::string GeneratorSource::Generate(const MetaObject& obj)
     }
 
     ss << std::endl;
-    ss << Tab() << "return status;" << std::endl;
+    ss << Tab() << "return status";
+    if(obj.GetBaseObject().length() > 0)
+    {
+        ss << " && " << obj.GetBaseObject() << "::Load(doc, root)";
+    }
+    ss << ";" << std::endl;
     ss << "}" << std::endl;
     ss << std::endl;
 
@@ -369,6 +374,8 @@ std::string GeneratorSource::Generate(const MetaObject& obj)
     {
         auto var = *it;
 
+        if(var->IsInherited()) continue;
+
         std::string code = var->GetXmlSaveCode(*this, GetMemberName(var),
             "doc", "pElement");
 
@@ -377,6 +384,13 @@ std::string GeneratorSource::Generate(const MetaObject& obj)
             ss << std::endl;
             ss << code;
         }
+    }
+    ss << std::endl;
+
+    if(obj.GetBaseObject().length() > 0)
+    {
+        ss << std::endl;
+        ss <<  Tab() << "status &= " << obj.GetBaseObject() << "::Save(doc, root);" << std::endl;
     }
 
     ss << std::endl;

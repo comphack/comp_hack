@@ -302,6 +302,8 @@ int main(int argc, char *argv[])
         }
     }
 
+    /// @todo: fix for objects in other projects
+    /*
     for(auto ref : gReferences)
     {
         if(gObjects.find(ref) == gObjects.end())
@@ -311,7 +313,7 @@ int main(int argc, char *argv[])
 
             return EXIT_FAILURE;
         }
-    }
+    }*/
 
     for(auto outputFile : outputFiles)
     {

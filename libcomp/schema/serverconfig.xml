@@ -4,7 +4,8 @@
         <member type="string" name="DiffieHellmanKeyPair"
             regex="^[a-fA-F0-9]{256}|$"/>
         <member type="u16" name="Port"/>
-        <member type="string" name="DatabaseIP" default="127.0.0.1"/>
-        <member type="string" name="CassandraKeyspace" default="comp_hack"/>
+        <member type="u8" name="DatabaseType" min="0" max="1" default="0"/>
+        <member type="DatabaseConfigSQLite3*" name="SQLite3Config"/>
+        <member type="DatabaseConfigCassandra*" name="CassandraConfig"/>
     </object>
 </objgen>

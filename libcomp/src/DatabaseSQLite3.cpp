@@ -34,7 +34,8 @@
 
 using namespace libcomp;
 
-DatabaseSQLite3::DatabaseSQLite3() : mDatabase(nullptr)
+DatabaseSQLite3::DatabaseSQLite3(const std::shared_ptr<
+    objects::DatabaseConfigSQLite3>& config) : mDatabase(nullptr), mConfig(config)
 {
 }
 
@@ -55,7 +56,7 @@ bool DatabaseSQLite3::Open(const String& address, const String& username,
     {
         result = false;
 
-        LOG_ERROR(String("Failed to open database: %1\n").Arg(
+        LOG_ERROR(String("Failed to open database connection: %1\n").Arg(
             sqlite3_errmsg(mDatabase)));
 
         (void)Close();
@@ -74,7 +75,7 @@ bool DatabaseSQLite3::Close()
         {
             result = false;
 
-            LOG_ERROR("Failed to close database.\n");
+            LOG_ERROR("Failed to close database connection.\n");
         }
 
         mDatabase = nullptr;
@@ -86,4 +87,62 @@ bool DatabaseSQLite3::Close()
 bool DatabaseSQLite3::IsOpen() const
 {
     return nullptr != mDatabase;
+}
+
+DatabaseQuery DatabaseSQLite3::Prepare(const String& query)
+{
+    /// @todo
+    return DatabaseQuery(nullptr);
+}
+
+bool DatabaseSQLite3::Exists()
+{
+    /// @todo
+    return false;
+}
+
+bool DatabaseSQLite3::Setup()
+{
+    /// @todo
+    return false;
+}
+
+bool DatabaseSQLite3::Use()
+{
+    /// @todo
+    return false;
+}
+
+
+std::list<std::shared_ptr<PersistentObject>> DatabaseSQLite3::LoadObjects(
+    std::type_index type, const std::string& fieldName, const libcomp::String& value)
+{
+    std::list<std::shared_ptr<PersistentObject>> retval;
+    /// @todo
+    return retval;
+}
+
+std::shared_ptr<PersistentObject> DatabaseSQLite3::LoadSingleObject(
+    std::type_index type, const std::string& fieldName, const libcomp::String& value)
+{
+    /// @todo
+    return nullptr;
+}
+
+bool DatabaseSQLite3::InsertSingleObject(std::shared_ptr<PersistentObject>& obj)
+{
+    /// @todo
+    return false;
+}
+
+bool DatabaseSQLite3::UpdateSingleObject(std::shared_ptr<PersistentObject>& obj)
+{
+    /// @todo
+    return false;
+}
+
+bool DatabaseSQLite3::DeleteSingleObject(std::shared_ptr<PersistentObject>& obj)
+{
+    /// @todo
+    return false;
 }

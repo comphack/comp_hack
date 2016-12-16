@@ -76,6 +76,16 @@ bool MetaVariableReference::SetReferenceType(const std::string& referenceType)
     return status;
 }
 
+void MetaVariableReference::AddDefaultedVariable(std::shared_ptr<MetaVariable>& var)
+{
+    mDefaultedVariables.push_back(var);
+}
+
+const std::list<std::shared_ptr<MetaVariable>> MetaVariableReference::GetDefaultedVariables() const
+{
+    return mDefaultedVariables;
+}
+
 bool MetaVariableReference::IsCoreType() const
 {
     return false;
@@ -166,6 +176,63 @@ std::string MetaVariableReference::GetConstructValue() const
 {
     std::stringstream ss;
     ss << GetCodeType() << "(new " << GetReferenceType() << ")";
+
+    return ss.str();
+}
+
+std::string MetaVariableReference::GetConstructorCode(const Generator& generator,
+    const MetaObject& object, const std::string& name, size_t tabLevel) const
+{
+    (void)object;
+
+    std::stringstream ss;
+    ss << generator.Tab(tabLevel) << "{" << std::endl;
+    ss << GetConstructorCode(generator, "ref", "", tabLevel + 1);
+    ss << generator.Tab(tabLevel) << "}" << std::endl;
+    return ss.str();
+}
+
+std::string MetaVariableReference::GetConstructorCode(const Generator& generator,
+    const std::string& varName, const std::string& parentRef, size_t tabLevel) const
+{
+    std::string code = GetConstructValue();
+
+    std::stringstream ss;
+    ss << generator.Tab(tabLevel) << "auto " << varName << " = " << code << ";" << std::endl;
+    if(mDefaultedVariables.size() > 0)
+    {
+        ss << generator.Tab(tabLevel) << "{" << std::endl;
+        for(auto var : mDefaultedVariables)
+        {
+            std::stringstream ssVar;
+            ssVar << var->GetName() << "Value";
+            std::string localVarName = ssVar.str();
+
+            if(var->GetMetaType() == MetaVariableType_t::TYPE_REF)
+            {
+                ss << generator.Tab(tabLevel + 1) << "{" << std::endl;
+                ss << GetConstructorCode(generator, parentRef + "_ref",
+                    localVarName, tabLevel + 1);
+                ss << generator.Tab(tabLevel + 1) << "}" << std::endl;
+            }
+            else
+            {
+                ss << generator.Tab(tabLevel + 1) << "auto " << localVarName
+                    << " = " << var->GetConstructValue() << ";" << std::endl;
+            }
+
+            ss << generator.Tab(tabLevel + 1) << varName << "->Set"
+                << generator.GetCapitalName(var) << "(" << localVarName <<
+                ");" << std::endl;
+        }
+        ss << generator.Tab(tabLevel) << "}" << std::endl;
+    }
+    ss << generator.Tab(tabLevel);
+    if(parentRef.length() > 0)
+    {
+        ss << parentRef << "->";
+    }
+    ss << "Set" << generator.GetCapitalName(*this) << "(ref);" << std::endl;
 
     return ss.str();
 }

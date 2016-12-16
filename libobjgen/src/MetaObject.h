@@ -115,6 +115,8 @@ private:
     const tinyxml2::XMLElement *GetChild(const tinyxml2::XMLElement *pMember,
         const std::string name) const;
 
+    bool DefaultsSpecified(const tinyxml2::XMLElement *pMember) const;
+
     std::string mName;
     std::string mBaseObject;
     bool mPersistent;

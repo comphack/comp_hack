@@ -45,20 +45,23 @@ BaseServer::BaseServer(std::shared_ptr<objects::ServerConfig> config, const Stri
     mSelf = std::shared_ptr<libcomp::BaseServer>(this);
     ReadConfig(config, configPath);
 
-    /// @todo: make this an enum
     std::shared_ptr<objects::DatabaseConfig> dbConfig;
     switch(config->GetDatabaseType())
     {
-        case 0:
+        case objects::ServerConfig::DatabaseType_t::SQLITE3:
             {
+                LOG_DEBUG("Using SQLite3 Database.\n");
+
                 auto sqlConfig = config->GetSQLite3Config();
                 mDatabase = std::shared_ptr<libcomp::Database>(
                     new libcomp::DatabaseSQLite3(sqlConfig));
                 dbConfig = sqlConfig;
             }
             break;
-        case 1:
+        case objects::ServerConfig::DatabaseType_t::CASSANDRA:
             {
+                LOG_DEBUG("Using Cassandra Database.\n");
+
                 auto cassandraConfig = config->GetCassandraConfig();
                 mDatabase = std::shared_ptr<libcomp::Database>(
                     new libcomp::DatabaseCassandra(cassandraConfig));

@@ -709,6 +709,7 @@ std::string DatabaseCassandra::GetVariableType(const std::shared_ptr
         case libobjgen::MetaVariable::MetaVariableType_t::TYPE_S32:
         case libobjgen::MetaVariable::MetaVariableType_t::TYPE_U8:
         case libobjgen::MetaVariable::MetaVariableType_t::TYPE_U16:
+        case libobjgen::MetaVariable::MetaVariableType_t::TYPE_ENUM:
             return "int";
             break;
         case libobjgen::MetaVariable::MetaVariableType_t::TYPE_S64:

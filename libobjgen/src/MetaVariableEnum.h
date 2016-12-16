@@ -1,10 +1,10 @@
 /**
- * @file libobjgen/src/MetaVariableMap.h
+ * @file libobjgen/src/MetaVariableEnum.h
  * @ingroup libobjgen
  *
  * @author HACKfrost
  *
- * @brief Meta data for a member variable that is a map of variables.
+ * @brief Meta data for an enum based object member variable.
  *
  * This file is part of the COMP_hack Object Generator Library (libobjgen).
  *
@@ -24,8 +24,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef LIBOBJGEN_SRC_METAVARIABLEMAP_H
-#define LIBOBJGEN_SRC_METAVARIABLEMAP_H
+#ifndef LIBOBJGEN_SRC_METAVARIABLEENUM_H
+#define LIBOBJGEN_SRC_METAVARIABLEENUM_H
 
 // libobjgen Includes
 #include "MetaVariable.h"
@@ -33,17 +33,18 @@
 namespace libobjgen
 {
 
-class MetaVariableMap : public MetaVariable
+class MetaVariableEnum : public MetaVariable
 {
 public:
-    MetaVariableMap(const std::shared_ptr<MetaVariable>& keyElementType,
-                    const std::shared_ptr<MetaVariable>& valueElementType);
-    virtual ~MetaVariableMap();
+    MetaVariableEnum();
+    virtual ~MetaVariableEnum();
+
+    uint32_t GetDefaultValue() const;
+    void SetDefaultValue(const uint32_t value);
+
+    const std::vector<std::string> GetValues() const;
 
     virtual size_t GetSize() const;
-
-    std::shared_ptr<MetaVariable> GetKeyElementType() const;
-    std::shared_ptr<MetaVariable> GetValueElementType() const;
 
     virtual MetaVariableType_t GetMetaType() const;
 
@@ -62,10 +63,9 @@ public:
     virtual bool Save(tinyxml2::XMLDocument& doc,
         tinyxml2::XMLElement& parent, const char* elementName) const;
 
-    virtual uint16_t GetDynamicSizeCount() const;
-
     virtual std::string GetCodeType() const;
     virtual std::string GetConstructValue() const;
+    virtual std::string GetDefaultValueCode() const;
     virtual std::string GetValidCondition(const Generator& generator,
         const std::string& name, bool recursive = false) const;
     virtual std::string GetLoadCode(const Generator& generator,
@@ -83,23 +83,20 @@ public:
         const std::string& name, const std::string& doc,
         const std::string& parent, size_t tabLevel = 1,
         const std::string elemName = "member") const;
+    virtual std::string GetStringValueCode(const std::string& name) const;
 
-    virtual std::string GetAccessDeclarations(const Generator& generator,
-        const MetaObject& object, const std::string& name,
-        size_t tabLevel = 1) const;
-    virtual std::string GetAccessFunctions(const Generator& generator,
-        const MetaObject& object, const std::string& name) const;
     virtual std::string GetUtilityDeclarations(const Generator& generator,
         const std::string& name, size_t tabLevel = 1) const;
     virtual std::string GetUtilityFunctions(const Generator& generator,
         const MetaObject& object, const std::string& name) const;
 
-private:
-    std::shared_ptr<MetaVariable> mKeyElementType;
+    bool ValueExists(const std::string& val);
 
-    std::shared_ptr<MetaVariable> mValueElementType;
+private:
+    std::vector<std::string> mValues;
+    uint32_t mDefaultValue;
 };
 
 } // namespace libobjgen
 
-#endif // LIBOBJGEN_SRC_METAVARIABLEMAP_H
+#endif // LIBOBJGEN_SRC_METAVARIABLEENUM_H

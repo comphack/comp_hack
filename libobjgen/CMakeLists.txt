@@ -35,6 +35,7 @@ SET(${PROJECT_NAME}_SRCS
     src/MetaObject.cpp
     src/MetaVariable.cpp
     src/MetaVariableArray.cpp
+    src/MetaVariableEnum.cpp
     src/MetaVariableInt.cpp
     src/MetaVariableList.cpp
     src/MetaVariableMap.cpp
@@ -53,6 +54,7 @@ SET(${PROJECT_NAME}_HDRS
     src/MetaObject.h
     src/MetaVariable.h
     src/MetaVariableArray.h
+    src/MetaVariableEnum.h
     src/MetaVariableInt.h
     src/MetaVariableList.h
     src/MetaVariableMap.h

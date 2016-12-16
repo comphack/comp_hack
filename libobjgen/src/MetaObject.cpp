@@ -29,6 +29,7 @@
 // MetaVariable Types
 #include "MetaVariable.h"
 #include "MetaVariableArray.h"
+#include "MetaVariableEnum.h"
 #include "MetaVariableInt.h"
 #include "MetaVariableList.h"
 #include "MetaVariableMap.h"
@@ -654,6 +655,9 @@ std::shared_ptr<MetaVariable> MetaObject::CreateType(
             MetaVariable>(new MetaVariableInt<double>()); };
         objectCreatorFunctions["double"] = []() { return std::shared_ptr<
             MetaVariable>(new MetaVariableInt<double>()); };
+
+        objectCreatorFunctions["enum"] = []() { return std::shared_ptr<
+            MetaVariable>(new MetaVariableEnum()); };
 
         objectCreatorFunctions["string"] = []() { return std::shared_ptr<
             MetaVariable>(new MetaVariableString()); };

@@ -29,6 +29,7 @@
 // libobjgen Includes
 #include "MetaObject.h"
 #include "MetaVariable.h"
+#include "MetaVariableEnum.h"
 
 // Standard C++11 Includes
 #include <algorithm>
@@ -54,6 +55,26 @@ std::string GeneratorHeader::GenerateClass(const MetaObject& obj)
     }
     ss << "{" << std::endl;
     ss << "public:" << std::endl;
+    
+    // Print defitions for any enums we have
+    for(auto it = obj.VariablesBegin(); it != obj.VariablesEnd(); ++it)
+    {
+        auto var = *it;
+
+        if(var->IsInherited()) continue;
+
+        if(var->GetMetaType() == MetaVariable::MetaVariableType_t::TYPE_ENUM)
+        {
+            ss << Tab() << "enum class " << var->GetName() << "_t" << std::endl;
+            ss << Tab() << "{" << std::endl;
+            auto values = std::dynamic_pointer_cast<MetaVariableEnum>(var)->GetValues();
+            for(auto value : values)
+            {
+                ss << Tab(2) << value << "," << std::endl;
+            }
+            ss << Tab() << "};" << std::endl << std::endl;
+        }
+    }
 
     ss << Tab() << obj.GetName() << "();" << std::endl;
     ss << Tab() << "virtual ~" << obj.GetName() << "();" << std::endl;
@@ -101,6 +122,26 @@ std::string GeneratorHeader::GenerateClass(const MetaObject& obj)
         ss << Tab() << "virtual std::shared_ptr<libobjgen::MetaObject> GetObjectMetadata();" << std::endl;
         ss << Tab() << "static std::shared_ptr<libobjgen::MetaObject> GetMetadata();" << std::endl;
         ss << std::endl;
+    }
+
+    std::stringstream utilStream;
+    for(auto it = obj.VariablesBegin(); it != obj.VariablesEnd(); ++it)
+    {
+        auto var = *it;
+
+        if(var->IsInherited()) continue;
+
+        auto util = var->GetUtilityDeclarations(*this, var->GetName());
+        if(util.length() > 0)
+        {
+            utilStream << util;
+        }
+    }
+
+    std::string utilDeclarations = utilStream.str();
+    if(utilDeclarations.length() > 0)
+    {
+        ss << "protected:" << utilDeclarations << std::endl;
     }
 
     ss << "private:" << std::endl;

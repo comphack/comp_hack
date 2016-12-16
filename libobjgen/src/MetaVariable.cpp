@@ -247,6 +247,11 @@ std::string MetaVariable::GetAccessFunctions(const Generator& generator,
 {
     std::stringstream ss;
 
+    if(GetMetaType() == MetaVariableType_t::TYPE_ENUM)
+    {
+        ss << object.GetName() << "::";
+    }
+
     ss << GetCodeType() << " " << object.GetName() << "::" << "Get"
         << generator.GetCapitalName(*this) << "() const" << std::endl;
     ss << "{" << std::endl;
@@ -284,6 +289,26 @@ std::string MetaVariable::GetAccessFunctions(const Generator& generator,
     }
 
     return ss.str();
+}
+
+std::string MetaVariable::GetUtilityDeclarations(const Generator& generator,
+    const std::string& name, size_t tabLevel) const
+{
+    (void)generator;
+    (void)name;
+    (void)tabLevel;
+
+    return "";
+}
+
+std::string MetaVariable::GetUtilityFunctions(const Generator& generator,
+    const MetaObject& object, const std::string& name) const
+{
+    (void)generator;
+    (void)object;
+    (void)name;
+
+    return "";
 }
 
 std::string MetaVariable::GetConstructorCode(const Generator& generator,

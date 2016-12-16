@@ -28,7 +28,7 @@ bool @OBJECT_NAME@::Prepend@VAR_CAMELCASE_NAME@(@VAR_TYPE@ val)
         return false;
     }
     
-    @VAR_NAME@.push_back(val);
+    @VAR_NAME@.push_front(val);
     return true;
 }
 
@@ -65,17 +65,17 @@ void @OBJECT_NAME@::Clear@VAR_CAMELCASE_NAME@()
     @VAR_NAME@.clear();
 }
 
-std::list<@VAR_TYPE@>::iterator @OBJECT_NAME@::@VAR_CAMELCASE_NAME@Begin()
+size_t @OBJECT_NAME@::@VAR_CAMELCASE_NAME@Count() const
+{
+    return @VAR_NAME@.size();
+}
+
+std::list<@VAR_TYPE@>::const_iterator @OBJECT_NAME@::@VAR_CAMELCASE_NAME@Begin() const
 {
     return @VAR_NAME@.begin();
 }
 
-std::list<@VAR_TYPE@>::iterator @OBJECT_NAME@::@VAR_CAMELCASE_NAME@End()
+std::list<@VAR_TYPE@>::const_iterator @OBJECT_NAME@::@VAR_CAMELCASE_NAME@End() const
 {
     return @VAR_NAME@.end();
-}
-
-bool @OBJECT_NAME@::Validate@VAR_CAMELCASE_NAME@Entry(@VAR_TYPE@ val)
-{
-    return (@ELEMENT_VALIDATION_CODE@);
 }

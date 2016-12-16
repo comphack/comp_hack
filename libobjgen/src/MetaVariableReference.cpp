@@ -254,6 +254,8 @@ std::string MetaVariableReference::GetXmlSaveCode(const Generator& generator,
     const std::string& name, const std::string& doc,
     const std::string& parent, size_t tabLevel, const std::string elemName) const
 {
+    (void)name;
+
     std::map<std::string, std::string> replacements;
     replacements["@VAR_NAME@"] = generator.Escape(GetName());
     replacements["@VAR_XML_NAME@"] = GetName();

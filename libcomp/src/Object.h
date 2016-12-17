@@ -76,8 +76,8 @@ public:
 
     virtual bool IsValid(bool recursive = true) const = 0;
 
-    //virtual bool Load(ObjectInStream& stream) = 0;
-    //virtual bool Save(ObjectOutStream& stream) const  = 0;
+    virtual bool Load(ObjectInStream& stream) = 0;
+    virtual bool Save(ObjectOutStream& stream) const  = 0;
 
     virtual bool Load(std::istream& stream, bool flat = false) = 0;
     virtual bool Save(std::ostream& stream, bool flat = false) const  = 0;
@@ -92,9 +92,9 @@ public:
 
     virtual uint16_t GetDynamicSizeCount() const = 0;
 
-    /*static std::list<std::shared_ptr<Object>> LoadBinaryData(
+    static std::list<std::shared_ptr<Object>> LoadBinaryData(
         std::istream& stream, const std::function<
-        std::shared_ptr<Object>()>& objectAllocator);*/
+        std::shared_ptr<Object>()>& objectAllocator);
 
     libobjgen::UUID GetUUID() const;
 

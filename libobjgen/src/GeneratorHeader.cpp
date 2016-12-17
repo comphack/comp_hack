@@ -84,10 +84,10 @@ std::string GeneratorHeader::GenerateClass(const MetaObject& obj)
         << std::endl;
     ss << std::endl;
 
-    /*ss << Tab() << "virtual bool Load(libcomp::ObjectInStream& stream);"
+    ss << Tab() << "virtual bool Load(libcomp::ObjectInStream& stream);"
         << std::endl << std::endl;
     ss << Tab() << "virtual bool Save(libcomp::ObjectOutStream& stream) const;"
-        << std::endl << std::endl;*/
+        << std::endl << std::endl;
 
     ss << Tab() << "virtual bool Load(std::istream& stream, bool flat = false);"
         << std::endl << std::endl;

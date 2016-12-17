@@ -157,6 +157,30 @@ bool DatabaseQuery::Bind(const String& name, const String& value)
     return result;
 }
 
+bool DatabaseQuery::Bind(size_t index, const std::vector<char>& value)
+{
+    bool result = false;
+
+    if(nullptr != mImpl)
+    {
+        result = mImpl->Bind(index, value);
+    }
+
+    return result;
+}
+
+bool DatabaseQuery::Bind(const String& name, const std::vector<char>& value)
+{
+    bool result = false;
+
+    if(nullptr != mImpl)
+    {
+        result = mImpl->Bind(name, value);
+    }
+
+    return result;
+}
+
 bool DatabaseQuery::IsValid() const
 {
     bool result = false;

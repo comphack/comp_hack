@@ -27,6 +27,7 @@
 #include "DatabaseCassandra.h"
 
  // libcomp Includes
+#include "DatabaseBind.h"
 #include "DatabaseQueryCassandra.h"
 #include "Log.h"
 #include "PersistentObject.h"
@@ -376,43 +377,58 @@ bool DatabaseCassandra::InsertSingleObject(std::shared_ptr<PersistentObject>& ob
         return false;
     }
 
-    std::string uuidStr = obj->GetUUID().ToString();
+    std::list<libcomp::String> columnNames;
+    columnNames.push_back("uid");
 
-    std::stringstream ss;
-    ss << "INSERT INTO " << libcomp::String(metaObject->GetName()).ToLower().ToUtf8()
-        << " (uid";
+    std::list<libcomp::String> columnBinds;
+    columnBinds.push_back(obj->GetUUID().ToString());
 
-    std::stringstream ssVals;
+    auto values = obj->GetMemberBindValues();
 
-    auto valueMap = obj->GetMemberStringValues();
-    for(auto varIter = metaObject->VariablesBegin();
-        varIter != metaObject->VariablesEnd(); varIter++)
+    for(auto value : values)
     {
-        auto var = *varIter;
-
-        auto valueIter = valueMap.find(var->GetName());
-        if(valueIter != valueMap.end())
-        {
-            ss << ", " << libcomp::String(var->GetName()).ToLower().ToUtf8();
-            ssVals << ", ";
-
-            switch(var->GetMetaType())
-            {
-                case libobjgen::MetaVariable::MetaVariableType_t::TYPE_STRING:
-                case libobjgen::MetaVariable::MetaVariableType_t::TYPE_REF:
-                    /// @todo: escape
-                    ssVals << "'" << valueIter->second << "'";
-                    break;
-                default:
-                    ssVals << valueIter->second;
-                    break;
-            }
-        }
+        columnNames.push_back(value->GetColumn());
+        columnBinds.push_back("?");
     }
 
-    ss << libcomp::String(") VALUES (%1%2);").Arg(uuidStr).Arg(ssVals.str());
+    String cql = String("INSERT INTO %1 (%2) VALUES (%3)").Arg(
+        String(metaObject->GetName()).ToLower()).Arg(
+        String::Join(columnNames, ", ")).Arg(
+        String::Join(columnBinds, ", "));
 
-    return !Execute(ss.str());
+    DatabaseQuery query = Prepare(cql);
+
+    if(!query.IsValid())
+    {
+        LOG_ERROR(String("Failed to prepare CQL query: %1\n").Arg(cql));
+        LOG_ERROR(String("Database said: %1\n").Arg(GetLastError()));
+
+        return false;
+    }
+
+    for(auto value : values)
+    {
+        if(!value->Bind(query))
+        {
+            LOG_ERROR(String("Failed to bind value: %1\n").Arg(
+                value->GetColumn()));
+            LOG_ERROR(String("Database said: %1\n").Arg(GetLastError()));
+
+            return false;
+        }
+
+        delete value;
+    }
+
+    if(!query.Execute())
+    {
+        LOG_ERROR(String("Failed to execute query: %1\n").Arg(cql));
+        LOG_ERROR(String("Database said: %1\n").Arg(GetLastError()));
+
+        return false;
+    }
+
+    return true;
 }
 
 bool DatabaseCassandra::UpdateSingleObject(std::shared_ptr<PersistentObject>& obj)
@@ -430,47 +446,53 @@ bool DatabaseCassandra::UpdateSingleObject(std::shared_ptr<PersistentObject>& ob
         return false;
     }
 
-    std::string uuidStr = obj->GetUUID().ToString();
+    auto values = obj->GetMemberBindValues();
 
-    std::stringstream ss;
-    ss << "UPDATE " << libcomp::String(metaObject->GetName()).ToLower().ToUtf8()
-        << " SET ";
+    std::list<libcomp::String> columnNames;
 
-    bool first = true;
-    auto valueMap = obj->GetMemberStringValues();
-    for(auto varIter = metaObject->VariablesBegin();
-        varIter != metaObject->VariablesEnd(); varIter++)
+    for(auto value : values)
     {
-        auto var = *varIter;
-
-        auto valueIter = valueMap.find(var->GetName());
-        if(valueIter != valueMap.end())
-        {
-            if(!first)
-            {
-                ss << ", ";
-            }
-
-            ss << libcomp::String(var->GetName()).ToLower().ToUtf8() << " = ";
-            switch(var->GetMetaType())
-            {
-                case libobjgen::MetaVariable::MetaVariableType_t::TYPE_STRING:
-                case libobjgen::MetaVariable::MetaVariableType_t::TYPE_REF:
-                    /// @todo: escape
-                    ss << "'" << valueIter->second << "'";
-                    break;
-                default:
-                    ss << valueIter->second;
-                    break;
-            }
-
-            first = false;
-        }
+        columnNames.push_back(String("%1 = ?").Arg(value->GetColumn()));
     }
 
-    ss << libcomp::String(" WHERE uid = %1;").Arg(uuidStr);
+    String cql = String("UPDATE %1 SET %2 WHERE uid = %3").Arg(
+        String(metaObject->GetName()).ToLower()).Arg(
+        String::Join(columnNames, ", ")).Arg(
+        obj->GetUUID().ToString());
 
-    return !Execute(ss.str());
+    DatabaseQuery query = Prepare(cql);
+
+    if(!query.IsValid())
+    {
+        LOG_ERROR(String("Failed to prepare CQL query: %1\n").Arg(cql));
+        LOG_ERROR(String("Database said: %1\n").Arg(GetLastError()));
+
+        return false;
+    }
+
+    for(auto value : values)
+    {
+        if(!value->Bind(query))
+        {
+            LOG_ERROR(String("Failed to bind value: %1\n").Arg(
+                value->GetColumn()));
+            LOG_ERROR(String("Database said: %1\n").Arg(GetLastError()));
+
+            return false;
+        }
+
+        delete value;
+    }
+
+    if(!query.Execute())
+    {
+        LOG_ERROR(String("Failed to execute query: %1\n").Arg(cql));
+        LOG_ERROR(String("Database said: %1\n").Arg(GetLastError()));
+
+        return false;
+    }
+
+    return true;
 }
 
 bool DatabaseCassandra::DeleteSingleObject(std::shared_ptr<PersistentObject>& obj)
@@ -719,13 +741,10 @@ std::string DatabaseCassandra::GetVariableType(const std::shared_ptr
         case libobjgen::MetaVariable::MetaVariableType_t::TYPE_U32:
             return "bigint";
             break;
-        case libobjgen::MetaVariable::MetaVariableType_t::TYPE_U64:
-            /// @todo: Should this be a bigint too with conversion?
-            return "bigint";
-            break;
         case libobjgen::MetaVariable::MetaVariableType_t::TYPE_REF:
             return "uuid";
             break;
+        case libobjgen::MetaVariable::MetaVariableType_t::TYPE_U64:
         case libobjgen::MetaVariable::MetaVariableType_t::TYPE_ARRAY:
         case libobjgen::MetaVariable::MetaVariableType_t::TYPE_LIST:
         case libobjgen::MetaVariable::MetaVariableType_t::TYPE_MAP:
@@ -733,7 +752,7 @@ std::string DatabaseCassandra::GetVariableType(const std::shared_ptr
             break;
     }
 
-    return "";
+    return "blob";
 }
 
 std::vector<char> DatabaseCassandra::ConvertToRawByteStream(

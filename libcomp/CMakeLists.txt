@@ -47,6 +47,7 @@ SET(${PROJECT_NAME}_SRCS
     src/Convert.cpp
     src/CString.cpp
     src/Database.cpp
+    src/DatabaseBind.cpp
     src/DatabaseCassandra.cpp
     src/DatabaseQuery.cpp
     src/DatabaseQueryCassandra.cpp
@@ -105,6 +106,7 @@ SET(${PROJECT_NAME}_HDRS
     src/Convert.h
     src/CString.h
     src/Database.h
+    src/DatabaseBind.h
     src/DatabaseCassandra.h
     src/DatabaseQuery.h
     src/DatabaseQueryCassandra.h

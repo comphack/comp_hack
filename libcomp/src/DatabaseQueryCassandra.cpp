@@ -261,6 +261,34 @@ bool DatabaseQueryCassandra::Bind(const String& name, const String& value)
     return result;
 }
 
+bool DatabaseQueryCassandra::Bind(size_t index, const std::vector<char>& value)
+{
+    bool result = false;
+
+    if(nullptr != mStatement)
+    {
+        result = CASS_OK == cass_statement_bind_bytes(mStatement, index,
+            reinterpret_cast<const cass_byte_t*>(&value[0]), value.size());
+    }
+
+    return result;
+}
+
+bool DatabaseQueryCassandra::Bind(const String& name,
+    const std::vector<char>& value)
+{
+    bool result = false;
+
+    if(nullptr != mStatement)
+    {
+        result = CASS_OK == cass_statement_bind_bytes_by_name_n(mStatement,
+            name.C(), name.Size(), reinterpret_cast<const cass_byte_t*>(
+                &value[0]), value.size());
+    }
+
+    return result;
+}
+
 bool DatabaseQueryCassandra::Bind(size_t index, const std::unordered_map<
     std::string, std::vector<char>>& values)
 {

@@ -77,7 +77,7 @@ BaseServer::BaseServer(std::shared_ptr<objects::ServerConfig> config, const Stri
     mDatabase->SetMainDatabase(mDatabase);
 
     // Open the database.
-    if(!mDatabase->Open(dbConfig->GetIP()) || !mDatabase->IsOpen())
+    if(!mDatabase->Open() || !mDatabase->IsOpen())
     {
         LOG_CRITICAL("Failed to open database.\n");
 

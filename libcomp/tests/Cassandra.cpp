@@ -44,7 +44,7 @@ TEST(Cassandra, Connection)
     DatabaseCassandra db(config);
 
     EXPECT_FALSE(db.IsOpen());
-    EXPECT_TRUE(db.Open("127.0.0.1"));
+    EXPECT_TRUE(db.Open());
     EXPECT_TRUE(db.IsOpen());
     EXPECT_TRUE(db.Close());
     EXPECT_FALSE(db.IsOpen());
@@ -60,7 +60,7 @@ TEST(Cassandra, BadPrepare)
     DatabaseCassandra db(config);
 
     EXPECT_FALSE(db.IsOpen());
-    EXPECT_TRUE(db.Open("127.0.0.1"));
+    EXPECT_TRUE(db.Open());
     EXPECT_TRUE(db.IsOpen());
 
     EXPECT_FALSE(db.Execute("SELECT"));
@@ -99,7 +99,7 @@ TEST(Cassandra, ObjectBindIndex)
     DatabaseCassandra db(config);
 
     EXPECT_FALSE(db.IsOpen());
-    EXPECT_TRUE(db.Open("127.0.0.1"));
+    EXPECT_TRUE(db.Open());
     EXPECT_TRUE(db.IsOpen());
 
     EXPECT_TRUE(db.Execute("DROP KEYSPACE IF EXISTS comp_hack_test;"));
@@ -209,7 +209,7 @@ TEST(Cassandra, ObjectBindName)
     DatabaseCassandra db(config);
 
     EXPECT_FALSE(db.IsOpen());
-    EXPECT_TRUE(db.Open("127.0.0.1"));
+    EXPECT_TRUE(db.Open());
     EXPECT_TRUE(db.IsOpen());
 
     EXPECT_TRUE(db.Execute("DROP KEYSPACE IF EXISTS comp_hack_test;"));
@@ -319,7 +319,7 @@ TEST(Cassandra, ObjectBatch)
     DatabaseCassandra db(config);
 
     EXPECT_FALSE(db.IsOpen());
-    EXPECT_TRUE(db.Open("127.0.0.1"));
+    EXPECT_TRUE(db.Open());
     EXPECT_TRUE(db.IsOpen());
 
     EXPECT_TRUE(db.Execute("DROP KEYSPACE IF EXISTS comp_hack_test;"));

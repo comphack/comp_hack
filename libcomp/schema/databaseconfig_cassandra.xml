@@ -3,5 +3,7 @@
     <object name="DatabaseConfigCassandra" baseobject="DatabaseConfig" persistent="false">
         <member type="string" name="Keyspace" default="comp_hack"/>
         <member type="string" name="DefaultKeyspace" default="comp_hack"/>
+        <member type="string" name="Username"/>
+        <member type="string" name="Password"/>
     </object>
 </objgen>

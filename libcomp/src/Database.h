@@ -40,8 +40,7 @@ class Database
 public:
     ~Database();
 
-    virtual bool Open(const String& address, const String& username = String(),
-        const String& password = String()) = 0;
+    virtual bool Open() = 0;
     virtual bool Close() = 0;
     virtual bool IsOpen() const = 0;
 

@@ -18,9 +18,6 @@ init:
   - echo "Platform      = %platform%"
   - echo "MS Platform   = %msplatform%"
   - echo "Configuration = %configuration%"
- 
-build:
-  parallel: true
 
 before_build:
   - md build

@@ -48,8 +48,7 @@ public:
     DatabaseCassandra(const std::shared_ptr<objects::DatabaseConfigCassandra>& config);
     virtual ~DatabaseCassandra();
 
-    virtual bool Open(const String& address, const String& username = String(),
-        const String& password = String());
+    virtual bool Open();
     virtual bool Close();
     virtual bool IsOpen() const;
 

@@ -92,8 +92,7 @@ bool MetaVariableEnum::IsValid() const
         }
     }
 
-    return mValues.size() > 0 && mDefaultValue >= 0 &&
-        mDefaultValue <= mValues.size();
+    return mValues.size() > 0 && mDefaultValue <= mValues.size();
 }
 
 bool MetaVariableEnum::IsValid(const void *pData, size_t dataSize) const

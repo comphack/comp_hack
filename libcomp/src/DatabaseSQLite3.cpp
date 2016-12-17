@@ -27,6 +27,7 @@
 #include "DatabaseSQLite3.h"
 
 // libcomp Includes
+#include "DatabaseQuerySQLite3.h"
 #include "Log.h"
 
 // SQLite3 Includes
@@ -44,15 +45,13 @@ DatabaseSQLite3::~DatabaseSQLite3()
     Close();
 }
 
-bool DatabaseSQLite3::Open(const String& address, const String& username,
-    const String& password)
+bool DatabaseSQLite3::Open()
 {
-    (void)username;
-    (void)password;
+    auto filename = mConfig->GetDatabaseName();
 
     bool result = true;
 
-    if(SQLITE_OK != sqlite3_open(address.C(), &mDatabase))
+    if(SQLITE_OK != sqlite3_open(filename.C(), &mDatabase))
     {
         result = false;
 
@@ -91,26 +90,64 @@ bool DatabaseSQLite3::IsOpen() const
 
 DatabaseQuery DatabaseSQLite3::Prepare(const String& query)
 {
-    /// @todo
-    return DatabaseQuery(nullptr);
+    return DatabaseQuery(new DatabaseQuerySQLite3(mDatabase), query);
 }
 
 bool DatabaseSQLite3::Exists()
 {
-    /// @todo
-    return false;
+    auto filename = mConfig->GetDatabaseName();
+
+    // Check if the database file exists
+    if(FILE *file = fopen(filename.C(), "r"))
+    {
+        fclose(file);
+        return true;
+    }
+    else
+    {
+        return false;
+    }
 }
 
 bool DatabaseSQLite3::Setup()
 {
-    /// @todo
-    return false;
+    if(!IsOpen())
+    {
+        LOG_ERROR("Trying to setup a database that is not open!\n");
+
+        return false;
+    }
+
+    auto filename = mConfig->GetDatabaseName();
+    if(!Exists())
+    {
+        if(UsingDefaultDatabaseFile() &&
+            !Execute("CREATE TABLE objects ( uid uuid PRIMARY KEY, "
+            "member_vars map<ascii, blob> );"))
+        {
+            LOG_ERROR("Failed to create the objects table.\n");
+
+            return false;
+        }
+    }
+
+    LOG_DEBUG(libcomp::String("Database connection established to '%1' file.\n")
+        .Arg(filename));
+
+    if(!VerifyAndSetupSchema())
+    {
+        LOG_ERROR("Schema verification and setup failed.\n");
+
+        return false;
+    }
+
+    return true;
 }
 
 bool DatabaseSQLite3::Use()
 {
-    /// @todo
-    return false;
+    // Since each database is its own file there is nothing to do here.
+    return true;
 }
 
 
@@ -145,4 +182,27 @@ bool DatabaseSQLite3::DeleteSingleObject(std::shared_ptr<PersistentObject>& obj)
 {
     /// @todo
     return false;
+}
+
+bool DatabaseSQLite3::VerifyAndSetupSchema()
+{
+    auto databaseName = mConfig->GetDatabaseName();
+    std::vector<std::shared_ptr<libobjgen::MetaObject>> metaObjectTables;
+    for(auto registrar : PersistentObject::GetRegistry())
+    {
+        std::string source = registrar.second->GetSourceLocation();
+        if(source == databaseName || (source.length() == 0 && UsingDefaultDatabaseFile()))
+        {
+            metaObjectTables.push_back(registrar.second);
+        }
+    }
+
+    /// @todo: finish
+
+    return true;
+}
+
+bool DatabaseSQLite3::UsingDefaultDatabaseFile()
+{
+    return mConfig->GetDatabaseName() == mConfig->GetDefaultDatabaseName();
 }

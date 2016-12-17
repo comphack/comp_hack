@@ -47,11 +47,15 @@ DatabaseCassandra::~DatabaseCassandra()
     Close();
 }
 
-bool DatabaseCassandra::Open(const String& address, const String& username,
-    const String& password)
+bool DatabaseCassandra::Open()
 {
-    // Make sure any previous connection is closed.
-    bool result = Close();
+    auto address = mConfig->GetIP();
+    auto username = mConfig->GetUsername();
+    auto password = mConfig->GetPassword();
+
+    // Make sure any previous connection is closed an that we have the base
+    // necessary configuration to connect.
+    bool result = Close() && address.Length() > 0;
 
     // Now make a new connection.
     if(result)

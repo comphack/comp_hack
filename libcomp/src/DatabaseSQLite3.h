@@ -42,8 +42,7 @@ public:
     DatabaseSQLite3(const std::shared_ptr<objects::DatabaseConfigSQLite3>& config);
     virtual ~DatabaseSQLite3();
 
-    virtual bool Open(const String& address, const String& username = String(),
-        const String& password = String());
+    virtual bool Open();
     virtual bool Close();
     virtual bool IsOpen() const;
 
@@ -61,6 +60,9 @@ public:
     virtual bool InsertSingleObject(std::shared_ptr<PersistentObject>& obj);
     virtual bool UpdateSingleObject(std::shared_ptr<PersistentObject>& obj);
     virtual bool DeleteSingleObject(std::shared_ptr<PersistentObject>& obj);
+
+    bool VerifyAndSetupSchema();
+    bool UsingDefaultDatabaseFile();
 
 private:
     sqlite3 *mDatabase;

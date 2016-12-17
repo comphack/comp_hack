@@ -5,7 +5,8 @@
         std::vector<char> data;
         data.reserve(sizeof(uint64_t) * 2);
 
-        bool good = @STREAM@.read(&data[0], data.size()).good();
+        bool good = @STREAM@.read(&data[0], static_cast<std::streamsize>(
+            data.size())).good();
 
         if(good)
         {

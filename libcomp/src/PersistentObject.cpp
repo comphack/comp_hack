@@ -46,6 +46,8 @@ PersistentObject::PersistentObject() : Object(), mDeleted(false)
 
 PersistentObject::PersistentObject(const PersistentObject& other) : Object(), mDeleted(false)
 {
+    (void)other;
+
     mUUID = libobjgen::UUID();
     mSelf = std::weak_ptr<PersistentObject>();
 }

@@ -215,6 +215,8 @@ std::string GeneratorSource::Generate(const MetaObject& obj)
     ss << std::endl;
     ss << Tab() << "bool status = " + GetBaseBooleanReturnValue(obj, "Save(stream)") + "; " << std::endl;
 
+    int saveCount = 0;
+
     for(auto it = obj.VariablesBegin(); it != obj.VariablesEnd(); ++it)
     {
         auto var = *it;
@@ -226,12 +228,22 @@ std::string GeneratorSource::Generate(const MetaObject& obj)
 
         if(!code.empty())
         {
+            saveCount++;
+
             ss << std::endl;
             ss << Tab() << "if(status && !(" << code << "))" << std::endl;
             ss << Tab() << "{" << std::endl;
             ss << Tab(2) << "status = false;" << std::endl;
             ss << Tab() << "}" << std::endl;
         }
+    }
+
+    /// @todo FIX If this is being put there the object has not implemented
+    /// these!!!
+    if(0 == saveCount)
+    {
+        ss << std::endl;
+        ss << Tab() << "(void)stream;" << std::endl;
     }
 
     ss << std::endl;

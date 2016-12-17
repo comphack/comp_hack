@@ -412,7 +412,7 @@ bool DatabaseCassandra::InsertSingleObject(std::shared_ptr<PersistentObject>& ob
 
     ss << libcomp::String(") VALUES (%1%2);").Arg(uuidStr).Arg(ssVals.str());
 
-    return !Execute(ss.str());
+    return Execute(ss.str());
 }
 
 bool DatabaseCassandra::UpdateSingleObject(std::shared_ptr<PersistentObject>& obj)
@@ -470,7 +470,7 @@ bool DatabaseCassandra::UpdateSingleObject(std::shared_ptr<PersistentObject>& ob
 
     ss << libcomp::String(" WHERE uid = %1;").Arg(uuidStr);
 
-    return !Execute(ss.str());
+    return Execute(ss.str());
 }
 
 bool DatabaseCassandra::DeleteSingleObject(std::shared_ptr<PersistentObject>& obj)

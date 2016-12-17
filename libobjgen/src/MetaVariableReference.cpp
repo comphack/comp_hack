@@ -265,7 +265,7 @@ std::string MetaVariableReference::GetLoadCode(const Generator& generator,
     replacements["@VAR_NAME@"] = name;
     replacements["@STREAM@"] = stream;
 
-    return generator.ParseTemplate(0, "VariableReferenceLoad",
+    return generator.ParseTemplate(1, "VariableReferenceLoad",
         replacements);
 }
 
@@ -276,7 +276,7 @@ std::string MetaVariableReference::GetSaveCode(const Generator& generator,
     replacements["@VAR_NAME@"] = name;
     replacements["@STREAM@"] = stream;
 
-    return generator.ParseTemplate(0, "VariableReferenceSave",
+    return generator.ParseTemplate(1, "VariableReferenceSave",
         replacements);
 }
 
@@ -287,7 +287,7 @@ std::string MetaVariableReference::GetLoadRawCode(const Generator& generator,
     replacements["@VAR_NAME@"] = name;
     replacements["@STREAM@"] = stream;
 
-    return generator.ParseTemplate(0, "VariableReferenceLoadRaw",
+    return generator.ParseTemplate(1, "VariableReferenceLoadRaw",
         replacements);
 }
 
@@ -298,7 +298,7 @@ std::string MetaVariableReference::GetSaveRawCode(const Generator& generator,
     replacements["@VAR_NAME@"] = name;
     replacements["@STREAM@"] = stream;
 
-    return generator.ParseTemplate(0, "VariableReferenceSaveRaw",
+    return generator.ParseTemplate(1, "VariableReferenceSaveRaw",
         replacements);
 }
 

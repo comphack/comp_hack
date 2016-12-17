@@ -38,7 +38,8 @@ using namespace libcomp;
 
 TEST(Cassandra, Connection)
 {
-    auto config = std::shared_ptr<objects::DatabaseConfigCassandra>();
+    auto config = std::shared_ptr<objects::DatabaseConfigCassandra>(
+        new objects::DatabaseConfigCassandra);
     config->SetKeyspace("comp_hack_test");
 
     DatabaseCassandra db(config);
@@ -54,7 +55,8 @@ TEST(Cassandra, Connection)
 
 TEST(Cassandra, BadPrepare)
 {
-    auto config = std::shared_ptr<objects::DatabaseConfigCassandra>();
+    auto config = std::shared_ptr<objects::DatabaseConfigCassandra>(
+        new objects::DatabaseConfigCassandra);
     config->SetKeyspace("comp_hack_test");
 
     DatabaseCassandra db(config);
@@ -93,7 +95,8 @@ TEST(Cassandra, ObjectBindIndex)
     std::unordered_map<std::string, std::vector<char>> values2;
     values2["test_short"] = testValueData3;
 
-    auto config = std::shared_ptr<objects::DatabaseConfigCassandra>();
+    auto config = std::shared_ptr<objects::DatabaseConfigCassandra>(
+        new objects::DatabaseConfigCassandra);
     config->SetKeyspace("comp_hack_test");
 
     DatabaseCassandra db(config);
@@ -203,7 +206,8 @@ TEST(Cassandra, ObjectBindName)
     std::unordered_map<std::string, std::vector<char>> values2;
     values2["test_short"] = testValueData3;
 
-    auto config = std::shared_ptr<objects::DatabaseConfigCassandra>();
+    auto config = std::shared_ptr<objects::DatabaseConfigCassandra>(
+        new objects::DatabaseConfigCassandra);
     config->SetKeyspace("comp_hack_test");
 
     DatabaseCassandra db(config);
@@ -313,7 +317,8 @@ TEST(Cassandra, ObjectBatch)
     std::unordered_map<std::string, std::vector<char>> values2;
     values2["test_short"] = testValueData3;
 
-    auto config = std::shared_ptr<objects::DatabaseConfigCassandra>();
+    auto config = std::shared_ptr<objects::DatabaseConfigCassandra>(
+        new objects::DatabaseConfigCassandra);
     config->SetKeyspace("comp_hack_test");
 
     DatabaseCassandra db(config);

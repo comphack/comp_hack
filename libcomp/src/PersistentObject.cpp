@@ -194,7 +194,13 @@ std::shared_ptr<PersistentObject> PersistentObject::New(std::type_index type)
 
 bool PersistentObject::Insert()
 {
-    return mSelf.use_count() > 0 && Insert(mSelf.lock());
+    if(mSelf.use_count() > 0)
+    {
+        auto self = mSelf.lock();
+        return Insert(self);
+    }
+
+    return false;
 }
 
 bool PersistentObject::Insert(std::shared_ptr<PersistentObject>& obj)
@@ -205,7 +211,13 @@ bool PersistentObject::Insert(std::shared_ptr<PersistentObject>& obj)
 
 bool PersistentObject::Update()
 {
-    return mSelf.use_count() > 0 && Update(mSelf.lock());
+    if(mSelf.use_count() > 0)
+    {
+        auto self = mSelf.lock();
+        return Update(self);
+    }
+
+    return false;
 }
 
 bool PersistentObject::Update(std::shared_ptr<PersistentObject>& obj)
@@ -216,7 +228,13 @@ bool PersistentObject::Update(std::shared_ptr<PersistentObject>& obj)
 
 bool PersistentObject::Delete()
 {
-    return mSelf.use_count() > 0 && Delete(mSelf.lock());
+    if(mSelf.use_count() > 0)
+    {
+        auto self = mSelf.lock();
+        return Delete(self);
+    }
+
+    return false;
 }
 
 bool PersistentObject::Delete(std::shared_ptr<PersistentObject>& obj)

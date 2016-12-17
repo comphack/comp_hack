@@ -259,8 +259,6 @@ std::list<std::shared_ptr<PersistentObject>> DatabaseCassandra::LoadObjects(
     DatabaseQuery q = Prepare(ss.str());
     if(q.Execute())
     {
-        auto metaObject = PersistentObject::GetRegisteredMetadata(type);
-
         std::list<std::unordered_map<std::string, std::vector<char>>> rows;
         q.Next();
         q.GetRows(rows);
@@ -353,7 +351,8 @@ std::shared_ptr<PersistentObject> DatabaseCassandra::LoadSingleObjectFromRow(
     }
 
     auto obj = PersistentObject::New(type);
-    if(!obj->Load(std::stringstream(objstream.str())))
+    std::stringstream iobjstream(objstream.str());
+    if(!obj->Load(iobjstream))
     {
         return nullptr;
     }
@@ -636,7 +635,7 @@ bool DatabaseCassandra::VerifyAndSetupSchema()
             std::stringstream ss;
             ss << "CREATE TABLE " << objName
                 << " (uid uuid PRIMARY KEY" << std::endl;
-            for(int i = 0; i < vars.size(); i++)
+            for(size_t i = 0; i < vars.size(); i++)
             {
                 auto var = vars[i];
                 std::string type = GetVariableType(var);

@@ -178,7 +178,7 @@ std::string GeneratorSource::Generate(const MetaObject& obj)
     ss << "}" << std::endl;
     ss << std::endl;
 
-    /*// Load (binary)
+    // Load (binary)
     ss << "bool " << obj.GetName()
         << "::Load(libcomp::ObjectInStream& stream)" << std::endl;
     ss << "{" << std::endl;
@@ -249,7 +249,7 @@ std::string GeneratorSource::Generate(const MetaObject& obj)
     ss << std::endl;
     ss << Tab() << "return status;" << std::endl;
     ss << "}" << std::endl;
-    ss << std::endl;*/
+    ss << std::endl;
 
     // Load (raw binary)
     ss << "bool " << obj.GetName()

@@ -55,7 +55,7 @@ bool DynamicObject::IsValid(bool recursive) const
     return false;
 }
 
-bool DynamicObject::Load(ObjectInStream& stream)
+/*bool DynamicObject::Load(ObjectInStream& stream)
 {
     for(auto var : mVariables)
     {
@@ -79,7 +79,7 @@ bool DynamicObject::Save(ObjectOutStream& stream) const
     }
 
     return true;
-}
+}*/
 
 uint16_t DynamicObject::GetDynamicSizeCount() const
 {

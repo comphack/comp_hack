@@ -85,7 +85,7 @@ bool DatabaseQuerySQLite3::Bind(size_t index, const String& value)
 bool DatabaseQuerySQLite3::Bind(const String& name, const String& value)
 {
     /// @todo: verify and test
-    int index = sqlite3_bind_parameter_index(mStatement, name.C());
+    size_t index = (size_t)sqlite3_bind_parameter_index(mStatement, name.C());
 
     if(index == 0)
     {
@@ -98,6 +98,9 @@ bool DatabaseQuerySQLite3::Bind(const String& name, const String& value)
 bool DatabaseQuerySQLite3::Bind(size_t index, const std::unordered_map<
     std::string, std::vector<char>>& values)
 {
+    (void)index;
+    (void)values;
+
     /// @todo
     return false;
 }
@@ -105,6 +108,9 @@ bool DatabaseQuerySQLite3::Bind(size_t index, const std::unordered_map<
 bool DatabaseQuerySQLite3::Bind(const String& name, const std::unordered_map<
     std::string, std::vector<char>>& values)
 {
+    (void)name;
+    (void)values;
+
     /// @todo
     return false;
 }
@@ -112,6 +118,9 @@ bool DatabaseQuerySQLite3::Bind(const String& name, const std::unordered_map<
 bool DatabaseQuerySQLite3::GetMap(size_t index,
     std::unordered_map<std::string, std::vector<char>>& values)
 {
+    (void)index;
+    (void)values;
+
     /// @todo
     return false;
 }
@@ -119,6 +128,9 @@ bool DatabaseQuerySQLite3::GetMap(size_t index,
 bool DatabaseQuerySQLite3::GetMap(const String& name,
     std::unordered_map<std::string, std::vector<char>>& values)
 {
+    (void)name;
+    (void)values;
+
     /// @todo
     return false;
 }
@@ -126,6 +138,8 @@ bool DatabaseQuerySQLite3::GetMap(const String& name,
 bool DatabaseQuerySQLite3::GetRows(std::list<std::unordered_map<
     std::string, std::vector<char>> >& rows)
 {
+    (void)rows;
+
     /// @todo
     return false;
 }

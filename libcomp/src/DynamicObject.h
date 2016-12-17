@@ -47,8 +47,8 @@ public:
 
     virtual bool IsValid(bool recursive = true) const;
 
-    virtual bool Load(ObjectInStream& stream);
-    virtual bool Save(ObjectOutStream& stream) const;
+    //virtual bool Load(ObjectInStream& stream);
+    //virtual bool Save(ObjectOutStream& stream) const;
 
     virtual uint16_t GetDynamicSizeCount() const;
 

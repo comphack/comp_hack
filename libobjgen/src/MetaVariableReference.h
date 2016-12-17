@@ -30,6 +30,9 @@
 // libobjgen Includes
 #include "MetaVariable.h"
 
+// Standard C++11 Includes
+#include <list>
+
 namespace libobjgen
 {
 

@@ -5,9 +5,9 @@
             regex="^[a-fA-F0-9]{256}|$"/>
         <member type="u16" name="Port"/>
         <member type="enum" name="DatabaseType" default="CASSANDRA">
-			<value>CASSANDRA</value>
-			<value>SQLITE3</value>
-		</member>
+            <value>CASSANDRA</value>
+            <value>SQLITE3</value>
+        </member>
         <member type="DatabaseConfigSQLite3*" name="SQLite3Config"/>
         <member type="DatabaseConfigCassandra*" name="CassandraConfig"/>
     </object>

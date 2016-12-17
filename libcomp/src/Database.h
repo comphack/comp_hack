@@ -63,7 +63,7 @@ public:
     String GetLastError() const;
 
     static const std::shared_ptr<Database> GetMainDatabase();
-    static const void SetMainDatabase(std::shared_ptr<Database> database);
+    static void SetMainDatabase(std::shared_ptr<Database> database);
 
 protected:
     String mError;

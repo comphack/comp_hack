@@ -53,7 +53,7 @@ const std::shared_ptr<Database> Database::GetMainDatabase()
     return sMain;
 }
 
-const void Database::SetMainDatabase(std::shared_ptr<Database> database)
+void Database::SetMainDatabase(std::shared_ptr<Database> database)
 {
     sMain = database;
 }

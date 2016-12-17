@@ -184,6 +184,7 @@ std::string MetaVariableReference::GetConstructorCode(const Generator& generator
     const MetaObject& object, const std::string& name, size_t tabLevel) const
 {
     (void)object;
+    (void)name;
 
     std::stringstream ss;
     ss << generator.Tab(tabLevel) << "{" << std::endl;

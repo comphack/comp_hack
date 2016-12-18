@@ -175,18 +175,27 @@ std::string MetaVariable::GetGetterCode(const Generator& generator,
     return ss.str();
 }
 
-std::string MetaVariable::GetStringValueCode(const std::string& name) const
+std::string MetaVariable::GetBindValueCode(const Generator& generator,
+    const std::string& name, size_t tabLevel) const
 {
-    std::stringstream ss;
-    ss << "libcomp::String(" << name << ")";
+    std::string columnName = GetName();
 
-    return ss.str();
+    std::transform(columnName.begin(), columnName.end(),
+        columnName.begin(), ::tolower);
+
+    std::map<std::string, std::string> replacements;
+    replacements["@COLUMN_NAME@"] = generator.Escape(columnName);
+    replacements["@SAVE_CODE@"] = GetSaveRawCode(generator, name, "stream");
+
+    return generator.ParseTemplate(tabLevel, "VariableGetBind",
+        replacements);
 }
 
 std::string MetaVariable::GetInternalGetterCode(const Generator& generator,
     const std::string& name) const
 {
-    return IsInherited() ? ("Get" + generator.GetCapitalName(*this) + "()") : name;
+    return IsInherited() ? ("Get" + generator.GetCapitalName(*this) +
+        "()") : name;
 }
 
 std::string MetaVariable::GetSetterCode(const Generator& generator,

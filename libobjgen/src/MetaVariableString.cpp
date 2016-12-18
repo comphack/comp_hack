@@ -717,6 +717,22 @@ std::string MetaVariableString::GetStringValueCode(const std::string& name) cons
     return name;
 }
 
+std::string MetaVariableString::GetBindValueCode(const Generator& generator,
+    const std::string& name, size_t tabLevel) const
+{
+    std::string columnName = GetName();
+
+    std::transform(columnName.begin(), columnName.end(),
+        columnName.begin(), ::tolower);
+
+    std::map<std::string, std::string> replacements;
+    replacements["@COLUMN_NAME@"] = generator.Escape(columnName);
+    replacements["@VAR_NAME@"] = name;
+
+    return generator.ParseTemplate(tabLevel, "VariableStringGetBind",
+        replacements);
+}
+
 std::string MetaVariableString::EncodingToString(Encoding_t encoding)
 {
     std::string str;

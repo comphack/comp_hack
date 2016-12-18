@@ -57,7 +57,7 @@ public:
     /*
     *   Get the metadata associated to an instantiated persistent object
     */
-    virtual std::unordered_map<std::string, libcomp::String> GetMemberStringValues() = 0;
+    virtual std::list<libcomp::DatabaseBind*> GetMemberBindValues() = 0;
 
     /*
     *   Register a derived class object to the cache and get a new UUID if not specified.

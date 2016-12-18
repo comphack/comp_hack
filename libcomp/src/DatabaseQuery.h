@@ -47,6 +47,8 @@ public:
 
     virtual bool Bind(size_t index, const String& value) = 0;
     virtual bool Bind(const String& name, const String& value) = 0;
+    virtual bool Bind(size_t index, const std::vector<char>& value) = 0;
+    virtual bool Bind(const String& name, const std::vector<char>& value) = 0;
     virtual bool Bind(size_t index, const std::unordered_map<
         std::string, std::vector<char>>& values);
     virtual bool Bind(const String& name, const std::unordered_map<
@@ -79,6 +81,8 @@ public:
 
     bool Bind(size_t index, const String& value);
     bool Bind(const String& name, const String& value);
+    bool Bind(size_t index, const std::vector<char>& value);
+    bool Bind(const String& name, const std::vector<char>& value);
     bool Bind(size_t index, const std::unordered_map<std::string,
         std::vector<char>>& values);
     bool Bind(const String& name, const std::unordered_map<

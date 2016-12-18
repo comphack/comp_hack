@@ -137,7 +137,8 @@ public:
     virtual std::string GetDefaultValueCode() const;
     virtual std::string GetGetterCode(const Generator& generator,
         const std::string& name, size_t tabLevel = 1) const;
-    virtual std::string GetStringValueCode(const std::string& name) const;
+    virtual std::string GetBindValueCode(const Generator& generator,
+        const std::string& name, size_t tabLevel = 1) const;
     virtual std::string GetInternalGetterCode(const Generator& generator,
         const std::string& name) const;
     virtual std::string GetSetterCode(const Generator& generator,

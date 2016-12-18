@@ -50,6 +50,8 @@ public:
 
     virtual bool Bind(size_t index, const String& value);
     virtual bool Bind(const String& name, const String& value);
+    virtual bool Bind(size_t index, const std::vector<char>& value);
+    virtual bool Bind(const String& name, const std::vector<char>& value);
     virtual bool Bind(size_t index, const std::unordered_map<
         std::string, std::vector<char>>& values);
     virtual bool Bind(const String& name, const std::unordered_map<

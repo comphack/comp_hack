@@ -95,6 +95,25 @@ bool DatabaseQuerySQLite3::Bind(const String& name, const String& value)
     return Bind(index, value);
 }
 
+bool DatabaseQuerySQLite3::Bind(size_t index, const std::vector<char>& value)
+{
+    (void)index;
+    (void)value;
+
+    /// @todo
+    return false;
+}
+
+bool DatabaseQuerySQLite3::Bind(const String& name,
+    const std::vector<char>& value)
+{
+    (void)name;
+    (void)value;
+
+    /// @todo
+    return false;
+}
+
 bool DatabaseQuerySQLite3::Bind(size_t index, const std::unordered_map<
     std::string, std::vector<char>>& values)
 {

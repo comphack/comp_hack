@@ -47,6 +47,7 @@ std::string GeneratorSource::Generate(const MetaObject& obj)
     ss << std::endl;
 
     ss << "// libcomp Includes" << std::endl;
+    ss << "#include \"DatabaseBind.h\"" << std::endl;
     ss << "#include \"Log.h\"" << std::endl;
     ss << std::endl;
 
@@ -451,66 +452,51 @@ std::string GeneratorSource::Generate(const MetaObject& obj)
     return ss.str();
 }
 
-void GeneratorSource::GeneratePersistentObjectFunctions(const MetaObject& obj, std::stringstream& ss)
+void GeneratorSource::GeneratePersistentObjectFunctions(const MetaObject& obj,
+    std::stringstream& ss)
 {
-    ss << "std::unordered_map<std::string, libcomp::String> " << obj.GetName()
-        << "::GetMemberStringValues()" << std::endl;
+    /// @todo Might be better to use the template system for this since it is a
+    /// bit long.
+
+    ss << "std::list<libcomp::DatabaseBind*> " << obj.GetName()
+        << "::GetMemberBindValues()" << std::endl;
     ss << "{" << std::endl;
-    ss << Tab() << "std::unordered_map<std::string, libcomp::String> values;" << std::endl;
+    ss << Tab() << "std::list<libcomp::DatabaseBind*> values;" << std::endl;
     for(auto it = obj.VariablesBegin(); it != obj.VariablesEnd(); ++it)
     {
         auto var = *it;
 
-        if(var->GetMetaType() == MetaVariable::MetaVariableType_t::TYPE_ARRAY
-            || var->GetMetaType() == MetaVariable::MetaVariableType_t::TYPE_LIST
-            || var->GetMetaType() == MetaVariable::MetaVariableType_t::TYPE_MAP)
-            continue;
-
-        ss << Tab() << "values[\"" << var->GetName() << "\"] = "
-            << var->GetStringValueCode(GetMemberName(var)) << ";";
+        ss << Tab() << "values.push_back((" << var->GetBindValueCode(
+            *this, GetMemberName(var)) << ")());";
         ss << std::endl;
     }
+
     ss << Tab() << "return values;" << std::endl;
     ss << "}" << std::endl;
     ss << std::endl;
 
-    ss << "std::shared_ptr<libobjgen::MetaObject> " << obj.GetName() << "::GetObjectMetadata()" << std::endl;
+    ss << "std::shared_ptr<libobjgen::MetaObject> " << obj.GetName()
+        << "::GetObjectMetadata()" << std::endl;
     ss << "{" << std::endl;
-    ss << Tab() << "return " << obj.GetName() << "::GetMetadata();" << std::endl;
+    ss << Tab() << "return " << obj.GetName() << "::GetMetadata();"
+        << std::endl;
     ss << "}" << std::endl;
     ss << std::endl;
 
-    ss << "std::shared_ptr<libobjgen::MetaObject> " << obj.GetName() << "::GetMetadata()" << std::endl;
+    ss << "std::shared_ptr<libobjgen::MetaObject> " << obj.GetName()
+        << "::GetMetadata()" << std::endl;
     ss << "{" << std::endl;
-    ss << Tab() << "auto m = libcomp::PersistentObject::GetRegisteredMetadata(typeid(" << obj.GetName()
-        << "));" << std::endl;
+    ss << Tab() << "auto m = libcomp::PersistentObject::GetRegisteredMetadata("
+        << "typeid(" << obj.GetName() << "));" << std::endl;
     ss << Tab() << "if(nullptr == m)" << std::endl;
     ss << Tab() << "{" << std::endl;
-    ss << Tab() << Tab() << "std::stringstream ss;" << std::endl << Tab() << Tab() << "ss ";
-
-    bool first = true;
-    std::string xml = Escape(obj.GetXMLDefinition());
-    while(xml.find("\\n") != xml.npos)
-    {
-        auto pos = xml.find("\\n");
-        ss << std::endl << Tab() << Tab() << "<< " << (!first ? "\"" : "") << xml.substr(0, pos) << "\"";
-        xml = xml.substr(pos + 2);
-        first = false;
-    }
-
-    //Ignore the added quote from Escape
-    if(xml.length() > 1)
-    {
-        ss << std::endl << Tab() << Tab() << "<< " << (!first ? "\"" : "") << xml;
-    }
-    ss << ";" << std::endl;
-
-    ss << Tab() << Tab() << "m = libcomp::PersistentObject::GetMetadataFromXml(ss.str());" << std::endl;
+    ss << Tab(2) << "m = libcomp::PersistentObject::GetMetadataFromXml("
+        << Escape(obj.GetXMLDefinition()) << ");" << std::endl;
     ss << Tab() << "}" << std::endl;
     ss << std::endl;
     ss << Tab() << "if(nullptr == m)" << std::endl;
     ss << Tab() << "{" << std::endl;
-    ss << Tab() << Tab() << "LOG_CRITICAL(\"Metadata for object '" << obj.GetName()
+    ss << Tab(2) << "LOG_CRITICAL(\"Metadata for object '" << obj.GetName()
         << "' could not be generated.\");" << std::endl;
     ss << Tab() << "}" << std::endl;
     ss << std::endl;
@@ -519,7 +505,9 @@ void GeneratorSource::GeneratePersistentObjectFunctions(const MetaObject& obj, s
     ss << std::endl;
 }
 
-std::string GeneratorSource::GetBaseBooleanReturnValue(const MetaObject& obj, std::string function, std::string defaultValue)
+std::string GeneratorSource::GetBaseBooleanReturnValue(const MetaObject& obj,
+    std::string function, std::string defaultValue)
 {
-    return !obj.GetBaseObject().empty() ? ("objects::" + obj.GetBaseObject() + "::" + function) : defaultValue;
+    return !obj.GetBaseObject().empty() ? ("objects::" + obj.GetBaseObject() +
+        "::" + function) : defaultValue;
 }

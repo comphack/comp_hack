@@ -30,6 +30,7 @@
 #include <Decrypt.h>
 #include <Log.h>
 #include <Packet.h>
+#include <PacketCodes.h>
 #include <ReadOnlyPacket.h>
 #include <TcpConnection.h>
 
@@ -49,7 +50,7 @@ bool Parsers::WorldList::Parse(ManagerPacket *pPacketManager,
     }
 
     libcomp::Packet reply;
-    reply.WriteU16Little(0x000C);
+    reply.WriteU16Little(ClientPacketCode_t::PACKET_WORLD_LIST_RESPONSE);
 
     auto server = std::dynamic_pointer_cast<LobbyServer>(pPacketManager->GetServer());
 

@@ -29,6 +29,7 @@
 // libcomp Includes
 #include <Log.h>
 #include <Packet.h>
+#include <PacketCodes.h>
 #include <ReadOnlyPacket.h>
 #include <TcpConnection.h>
 
@@ -60,7 +61,7 @@ bool Parsers::Login::Parse(ManagerPacket *pPacketManager,
     LOG_DEBUG(libcomp::String("Client Version: %1.%2\n").Arg(major).Arg(minor));
 
     objects::PacketResponseCode reply;
-    reply.SetCommandCode(0x0004);
+    reply.SetCommandCode(ClientPacketCode_t::PACKET_LOGIN_RESPONSE);
 
     /*
      *  0   No error

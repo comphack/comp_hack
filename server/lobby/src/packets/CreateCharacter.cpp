@@ -30,6 +30,7 @@
 #include <Decrypt.h>
 #include <Log.h>
 #include <Packet.h>
+#include <PacketCodes.h>
 #include <ReadOnlyPacket.h>
 #include <TcpConnection.h>
 
@@ -77,7 +78,7 @@ bool Parsers::CreateCharacter::Parse(ManagerPacket *pPacketManager,
     */
 
     libcomp::Packet reply;
-    reply.WriteU16Little(0x000E);
+    reply.WriteU16Little(ClientPacketCode_t::PACKET_CREATE_CHARACTER_RESPONSE);
     reply.WriteU32Little(0);
 
     connection->SendPacket(reply);

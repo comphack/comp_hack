@@ -30,6 +30,7 @@
 #include <Decrypt.h>
 #include <Log.h>
 #include <Packet.h>
+#include <PacketCodes.h>
 #include <ReadOnlyPacket.h>
 #include <TcpConnection.h>
 
@@ -47,7 +48,7 @@ bool Parsers::QueryPurchaseTicket::Parse(ManagerPacket *pPacketManager,
     }
 
     libcomp::Packet reply;
-    reply.WriteU16Little(0x0012);
+    reply.WriteU16Little(ClientPacketCode_t::PACKET_QUERY_PURCHASE_TICKET_RESPONSE);
     reply.WriteU32Little(0);
     reply.WriteU8(1);
 

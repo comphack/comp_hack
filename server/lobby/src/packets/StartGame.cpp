@@ -30,6 +30,7 @@
 #include <Decrypt.h>
 #include <Log.h>
 #include <Packet.h>
+#include <PacketCodes.h>
 #include <ReadOnlyPacket.h>
 #include <TcpConnection.h>
 
@@ -53,7 +54,7 @@ bool Parsers::StartGame::Parse(ManagerPacket *pPacketManager,
         ).Arg(cid).Arg(channel));
 
     libcomp::Packet reply;
-    reply.WriteU16Little(0x0008);
+    reply.WriteU16Little(ClientPacketCode_t::PACKET_START_GAME_RESPONSE);
 
     // Some session key.
     reply.WriteU32Little(0);

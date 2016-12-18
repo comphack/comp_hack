@@ -30,6 +30,7 @@
 #include <Decrypt.h>
 #include <Log.h>
 #include <Packet.h>
+#include <PacketCodes.h>
 #include <ReadOnlyPacket.h>
 #include <TcpConnection.h>
 
@@ -53,7 +54,7 @@ bool Parsers::Auth::Parse(ManagerPacket *pPacketManager,
     LOG_DEBUG(libcomp::String("SID: %1\n").Arg(sid));
 
     libcomp::Packet reply;
-    reply.WriteU16Little(0x0006);
+    reply.WriteU16Little(ClientPacketCode_t::PACKET_AUTH_RESPONSE);
 
     // Status code (see the Login handler for a list).
     reply.WriteS32Little(0);

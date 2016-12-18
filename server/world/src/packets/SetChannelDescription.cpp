@@ -31,17 +31,17 @@
 #include <Decrypt.h>
 #include <InternalConnection.h>
 #include <Log.h>
+#include <ManagerPacket.h>
 #include <Packet.h>
 #include <PacketCodes.h>
 #include <ReadOnlyPacket.h>
 
 // world Includes
-#include "ManagerPacket.h"
 #include "WorldServer.h"
 
 using namespace world;
 
-bool Parsers::SetChannelDescription::Parse(ManagerPacket *pPacketManager,
+bool Parsers::SetChannelDescription::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {

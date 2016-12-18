@@ -39,7 +39,7 @@
 
 using namespace lobby;
 
-bool Parsers::Login::Parse(ManagerPacket *pPacketManager,
+bool Parsers::Login::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {

@@ -62,6 +62,7 @@ SET(${PROJECT_NAME}_SRCS
     src/InternalConnection.cpp
     src/LobbyConnection.cpp
     src/Log.cpp
+    src/ManagerPacket.cpp
     #src/MemoryFile.cpp
     src/MessageConnectionClosed.cpp
     src/MessageEncrypted.cpp
@@ -124,6 +125,7 @@ SET(${PROJECT_NAME}_HDRS
     src/LobbyConnection.h
     src/Log.h
     src/Manager.h
+    src/ManagerPacket.h
     #src/MemoryFile.h
     src/Message.h
     src/MessageConnectionClosed.h
@@ -137,6 +139,7 @@ SET(${PROJECT_NAME}_HDRS
     src/Packet.h
     src/PacketCodes.h
     src/PacketException.h
+    src/PacketParser.h
     #src/PacketScript.h
     src/PacketStream.h
     src/PEFile.h

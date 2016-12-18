@@ -1,12 +1,12 @@
 /**
- * @file server/world/src/ManagerPacket.h
- * @ingroup world
+ * @file libcomp/src/ManagerPacket.cpp
+ * @ingroup libcomp
  *
- * @author HACKfrost
+ * @author COMP Omega <compomega@tutanota.com>
  *
- * @brief Manager to handle world packets.
+ * @brief Manager to handle packets.
  *
- * This file is part of the World Server (world).
+ * This file is part of the COMP_hack Library (libcomp).
  *
  * Copyright (C) 2012-2016 COMP_hack Team <compomega@tutanota.com>
  *
@@ -27,24 +27,16 @@
 #include "ManagerPacket.h"
 
 // libcomp Includes
-#include <Log.h>
-#include <MessagePacket.h>
-#include <PacketCodes.h>
-
-// world Includes
+#include "Log.h"
+#include "MessagePacket.h"
 #include "PacketParser.h"
 #include "Packets.h"
 
-using namespace world;
+using namespace libcomp;
 
 ManagerPacket::ManagerPacket(const std::shared_ptr<libcomp::BaseServer>& server)
+    : mServer(server)
 {
-    mServer = server;
-
-    mPacketParsers[PACKET_DESCRIBE_WORLD] = std::shared_ptr<PacketParser>(
-        new Parsers::DescribeWorld());
-    mPacketParsers[PACKET_SET_CHANNEL_DESCRIPTION] = std::shared_ptr<PacketParser>(
-        new Parsers::SetChannelDescription());
 }
 
 ManagerPacket::~ManagerPacket()
@@ -91,9 +83,21 @@ bool ManagerPacket::ProcessMessage(const libcomp::Message::Message *pMessage)
     {
         return false;
     }
+
+    return false;
 }
 
 std::shared_ptr<libcomp::BaseServer> ManagerPacket::GetServer()
 {
     return mServer;
+}
+
+bool Parsers::Placeholder::Parse(ManagerPacket *pPacketManager,
+    const std::shared_ptr<libcomp::TcpConnection>& connection,
+    libcomp::ReadOnlyPacket& p) const
+{
+    // DO NOT ACTUALLY USE
+    // This is required so the packet parser class is not seen
+    // as incomplete within libcomp.
+    return true;
 }

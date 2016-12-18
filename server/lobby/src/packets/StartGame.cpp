@@ -36,7 +36,7 @@
 
 using namespace lobby;
 
-bool Parsers::StartGame::Parse(ManagerPacket *pPacketManager,
+bool Parsers::StartGame::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {

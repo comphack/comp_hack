@@ -27,8 +27,8 @@
 #ifndef LIBCOMP_SRC_PACKETS_H
 #define LIBCOMP_SRC_PACKETS_H
 
-// channel Includes
-#include "PacketParser.h"
+// libcomp Includes
+#include <PacketParser.h>
 
 namespace channel
 {
@@ -40,6 +40,6 @@ PACKET_PARSER_DECL(SetWorldDescription);               // 0x1002
 
 } // namespace Parsers
 
-} // namespace libcomp
+} // namespace channel
 
 #endif // LIBCOMP_SRC_PACKETS_H

@@ -27,19 +27,12 @@ FILE(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/objgen)
 SET(${PROJECT_NAME}_SRCS
     src/ChannelServer.cpp
     src/ManagerConnection.cpp
-    src/ManagerPacket.cpp
-    src/ManagerPacketClient.cpp
-    src/ManagerPacketInternal.cpp
     src/main.cpp
 )
 
 SET(${PROJECT_NAME}_HDRS
     src/ChannelServer.h
     src/ManagerConnection.h
-    src/ManagerPacket.h
-    src/ManagerPacketClient.h
-    src/ManagerPacketInternal.h
-    src/PacketParser.h
 )
 
 SET(${PROJECT_NAME}_SCHEMA

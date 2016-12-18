@@ -29,6 +29,7 @@
 // libcomp Includes
 #include <Decrypt.h>
 #include <Log.h>
+#include <ManagerPacket.h>
 #include <Packet.h>
 #include <PacketCodes.h>
 #include <ReadOnlyPacket.h>
@@ -36,12 +37,11 @@
 #include <WorldDescription.h>
 
 // world Includes
-#include "ManagerPacket.h"
 #include "WorldServer.h"
 
 using namespace world;
 
-bool Parsers::DescribeWorld::Parse(ManagerPacket *pPacketManager,
+bool Parsers::DescribeWorld::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {

@@ -27,8 +27,8 @@
 #ifndef LIBCOMP_SRC_PACKETS_H
 #define LIBCOMP_SRC_PACKETS_H
 
-// lobby Includes
-#include "PacketParser.h"
+// libcomp Includes
+#include <PacketParser.h>
 
 namespace lobby
 {
@@ -52,6 +52,6 @@ PACKET_PARSER_DECL(SetChannelDescription);    // 0x1003
 
 } // namespace Parsers
 
-} // namespace libcomp
+} // namespace lobby
 
 #endif // LIBCOMP_SRC_PACKETS_H

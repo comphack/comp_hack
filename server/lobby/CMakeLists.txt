@@ -28,9 +28,6 @@ SET(${PROJECT_NAME}_SRCS
     src/LobbyServer.cpp
     src/LoginWebHandler.cpp
     src/ManagerConnection.cpp
-    src/ManagerPacket.cpp
-    src/ManagerPacketClient.cpp
-    src/ManagerPacketInternal.cpp
     src/World.cpp
     src/main.cpp
 
@@ -41,10 +38,6 @@ SET(${PROJECT_NAME}_HDRS
     src/LobbyServer.h
     src/LoginWebHandler.h
     src/ManagerConnection.h
-    src/ManagerPacket.h
-    src/ManagerPacketClient.h
-    src/ManagerPacketInternal.h
-    src/PacketParser.h
     src/World.h
 
     ${CMAKE_CURRENT_BINARY_DIR}/res/login/ResourceLogin.h

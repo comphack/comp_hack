@@ -26,15 +26,12 @@ FILE(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/objgen)
 
 SET(${PROJECT_NAME}_SRCS
     src/ManagerConnection.cpp
-    src/ManagerPacket.cpp
     src/WorldServer.cpp
     src/main.cpp
 )
 
 SET(${PROJECT_NAME}_HDRS
     src/ManagerConnection.h
-    src/ManagerPacket.h
-    src/PacketParser.h
     src/WorldServer.h
 )
 

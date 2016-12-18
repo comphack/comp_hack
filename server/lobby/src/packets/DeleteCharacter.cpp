@@ -36,7 +36,7 @@
 
 using namespace lobby;
 
-bool Parsers::DeleteCharacter::Parse(ManagerPacket *pPacketManager,
+bool Parsers::DeleteCharacter::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {

@@ -29,18 +29,18 @@
 // libcomp Includes
 #include <Decrypt.h>
 #include <Log.h>
+#include <ManagerPacket.h>
 #include <Packet.h>
 #include <PacketCodes.h>
 #include <ReadOnlyPacket.h>
 #include <TcpConnection.h>
 
 // lobby Includes
-#include "ManagerPacket.h"
 #include "LobbyServer.h"
 
 using namespace lobby;
 
-bool Parsers::WorldList::Parse(ManagerPacket *pPacketManager,
+bool Parsers::WorldList::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {

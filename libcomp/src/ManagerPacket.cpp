@@ -34,6 +34,9 @@
 
 using namespace libcomp;
 
+std::list<libcomp::Message::MessageType> ManagerPacket::sSupportedTypes =
+    { libcomp::Message::MessageType::MESSAGE_TYPE_PACKET };
+
 ManagerPacket::ManagerPacket(const std::shared_ptr<libcomp::BaseServer>& server)
     : mServer(server)
 {
@@ -46,12 +49,7 @@ ManagerPacket::~ManagerPacket()
 std::list<libcomp::Message::MessageType>
     ManagerPacket::GetSupportedTypes() const
 {
-    std::list<libcomp::Message::MessageType> supportedTypes;
-
-    supportedTypes.push_back(
-        libcomp::Message::MessageType::MESSAGE_TYPE_PACKET);
-
-    return supportedTypes;
+    return sSupportedTypes;
 }
 
 bool ManagerPacket::ProcessMessage(const libcomp::Message::Message *pMessage)

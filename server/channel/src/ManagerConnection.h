@@ -60,6 +60,8 @@ public:
     void SetWorldConnection(const std::shared_ptr<libcomp::InternalConnection>& worldConnection);
 
 private:
+    static std::list<libcomp::Message::MessageType> sSupportedTypes;
+
     std::shared_ptr<libcomp::InternalConnection> mWorldConnection;
 
     std::shared_ptr<libcomp::BaseServer> mServer;

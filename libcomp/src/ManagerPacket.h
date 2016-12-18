@@ -81,6 +81,8 @@ public:
     std::shared_ptr<libcomp::BaseServer> GetServer();
 
 protected:
+    static std::list<libcomp::Message::MessageType> sSupportedTypes;
+
     std::unordered_map<CommandCode_t,
         std::shared_ptr<PacketParser>> mPacketParsers;
 

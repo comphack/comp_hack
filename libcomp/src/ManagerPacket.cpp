@@ -97,5 +97,9 @@ bool Parsers::Placeholder::Parse(ManagerPacket *pPacketManager,
     // DO NOT ACTUALLY USE
     // This is required so the packet parser class is not seen
     // as incomplete within libcomp.
-    return true;
+    (void)pPacketManager;
+    (void)connection;
+    (void)p;
+
+    return false;
 }

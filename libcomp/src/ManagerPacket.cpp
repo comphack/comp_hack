@@ -81,8 +81,6 @@ bool ManagerPacket::ProcessMessage(const libcomp::Message::Message *pMessage)
     {
         return false;
     }
-
-    return false;
 }
 
 std::shared_ptr<libcomp::BaseServer> ManagerPacket::GetServer()

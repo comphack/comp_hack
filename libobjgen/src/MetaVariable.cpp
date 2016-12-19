@@ -277,7 +277,6 @@ std::string MetaVariable::GetAccessFunctions(const Generator& generator,
 
     if(IsLookupKey())
     {
-        bool convert = GetCodeType() != "libcomp::String";
         ss << std::endl;
         ss << "std::shared_ptr<" << object.GetName() << "> " << object.GetName()
             << "::Load" << object.GetName() << "By"

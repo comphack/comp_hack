@@ -212,89 +212,95 @@ bool DatabaseCassandra::Use()
 }
 
 std::list<std::shared_ptr<PersistentObject>> DatabaseCassandra::LoadObjects(
-    std::type_index type, const std::string& fieldName, const libcomp::String& value)
+    std::type_index type, DatabaseBind *pValue)
 {
     std::list<std::shared_ptr<PersistentObject>> objects;
-    
-    std::string fieldNameLower = libcomp::String(fieldName).ToLower().ToUtf8();
-    bool loadByUUID = fieldNameLower == "uid";
 
-    std::shared_ptr<libobjgen::MetaVariable> var;
     auto metaObject = PersistentObject::GetRegisteredMetadata(type);
-    if(!loadByUUID)
-    {
-        for(auto iter = metaObject->VariablesBegin();
-            iter != metaObject->VariablesEnd(); iter++)
-        {
-            if((*iter)->GetName() == fieldName)
-            {
-                var = (*iter);
-                break;
-            }
-        }
 
-        if(nullptr == var)
+    if(nullptr == metaObject)
+    {
+        LOG_ERROR("Failed to lookup MetaObject.\n");
+
+        return {};
+    }
+
+    String cql = String("SELECT * FROM %1 WHERE %2 = ?").Arg(
+        String(metaObject->GetName()).ToLower()).Arg(
+        pValue->GetColumn().ToLower());
+
+        DatabaseQuery query = Prepare(cql);
+
+    if(!query.IsValid())
+    {
+        LOG_ERROR(String("Failed to prepare CQL query: %1\n").Arg(cql));
+        LOG_ERROR(String("Database said: %1\n").Arg(GetLastError()));
+
+        return {};
+    }
+
+    if(!pValue->Bind(query))
+    {
+        LOG_ERROR(String("Failed to bind value: %1\n").Arg(
+            pValue->GetColumn()));
+        LOG_ERROR(String("Database said: %1\n").Arg(GetLastError()));
+
+        return {};
+    }
+
+    if(!query.Execute())
+    {
+        LOG_ERROR(String("Failed to execute query: %1\n").Arg(cql));
+        LOG_ERROR(String("Database said: %1\n").Arg(GetLastError()));
+
+        return {};
+    }
+
+    std::list<std::unordered_map<std::string, std::vector<char>>> rows;
+
+    if(!query.Next() || !query.GetRows(rows))
+    {
+        LOG_ERROR(String("Failed to execute query: %1\n").Arg(cql));
+        LOG_ERROR("Failed to retrieve rows.\n");
+        LOG_ERROR(String("Database said: %1\n").Arg(GetLastError()));
+
+        return {};
+    }
+
+    LOG_DEBUG(String("Row count: %1\n").Arg(rows.size()));
+
+    int failures = 0;
+
+    if(0 < rows.size())
+    {
+        for(auto row : rows)
         {
-            return objects;
+            auto obj = LoadSingleObjectFromRow(type, row);
+
+            if(nullptr != obj)
+            {
+                objects.push_back(obj);
+            }
+            else
+            {
+                failures++;
+            }
         }
     }
 
-    std::string f = fieldNameLower;
-    std::string v = value.ToUtf8();
-    if(nullptr != var)
+    if(failures > 0)
     {
-        f = libcomp::String(var->GetName()).ToLower().ToUtf8();
-        if(var->GetMetaType() == libobjgen::MetaVariable::MetaVariableType_t::TYPE_STRING
-            || var->GetMetaType() == libobjgen::MetaVariable::MetaVariableType_t::TYPE_REF)
-        {
-            v = libcomp::String("'%1'").Arg(v).ToUtf8();
-        }
-    }
-
-    //Build the query, if not loading by UUID filtering needs to b enabled
-    std::stringstream ss;
-    ss << "SELECT * FROM " << libcomp::String(metaObject->GetName()).ToLower().ToUtf8()
-        << " " << libcomp::String("WHERE %1 = %2%3;")
-                        .Arg(f).Arg(v).Arg(loadByUUID ? "" : " ALLOW FILTERING").ToUtf8();
-
-    DatabaseQuery q = Prepare(ss.str());
-    if(q.Execute())
-    {
-        std::list<std::unordered_map<std::string, std::vector<char>>> rows;
-        q.Next();
-        q.GetRows(rows);
-
-        int failures = 0;
-        if(rows.size() > 0)
-        {
-            for(auto row : rows)
-            {
-                auto obj = LoadSingleObjectFromRow(type, row);
-                if(nullptr != obj)
-                {
-                    objects.push_back(obj);
-                }
-                else
-                {
-                    failures++;
-                }
-            }
-        }
-
-        if(failures > 0)
-        {
-            LOG_ERROR(libcomp::String("%1 '%2' row%3 failed to load.\n")
-                .Arg(failures).Arg(metaObject->GetName()).Arg(failures != 1 ? "s" : ""));
-        }
+        LOG_ERROR(String("%1 '%2' row%3 failed to load.\n").Arg(failures).Arg(
+            metaObject->GetName()).Arg(failures != 1 ? "s" : ""));
     }
 
     return objects;
 }
 
-std::shared_ptr<PersistentObject> DatabaseCassandra::LoadSingleObject(std::type_index type,
-    const std::string& fieldName, const libcomp::String& value)
+std::shared_ptr<PersistentObject> DatabaseCassandra::LoadSingleObject(
+    std::type_index type, DatabaseBind *pValue)
 {
-    auto objects = LoadObjects(type, fieldName, value);
+    auto objects = LoadObjects(type, pValue);
 
     return objects.size() > 0 ? objects.front() : nullptr;
 }

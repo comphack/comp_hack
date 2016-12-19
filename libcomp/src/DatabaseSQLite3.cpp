@@ -152,11 +152,10 @@ bool DatabaseSQLite3::Use()
 
 
 std::list<std::shared_ptr<PersistentObject>> DatabaseSQLite3::LoadObjects(
-    std::type_index type, const std::string& fieldName, const libcomp::String& value)
+    std::type_index type, DatabaseBind *pValue)
 {
     (void)type;
-    (void)fieldName;
-    (void)value;
+    (void)pValue;
 
     std::list<std::shared_ptr<PersistentObject>> retval;
     /// @todo
@@ -164,11 +163,10 @@ std::list<std::shared_ptr<PersistentObject>> DatabaseSQLite3::LoadObjects(
 }
 
 std::shared_ptr<PersistentObject> DatabaseSQLite3::LoadSingleObject(
-    std::type_index type, const std::string& fieldName, const libcomp::String& value)
+    std::type_index type, DatabaseBind *pValue)
 {
     (void)type;
-    (void)fieldName;
-    (void)value;
+    (void)pValue;
 
     /// @todo
     return nullptr;

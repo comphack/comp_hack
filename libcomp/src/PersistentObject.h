@@ -43,7 +43,8 @@ namespace libcomp
 class PersistentObject : public Object
 {
 public:
-    typedef std::unordered_map<std::type_index, std::shared_ptr<libobjgen::MetaObject>> TypeMap;
+    typedef std::unordered_map<std::type_index,
+        std::shared_ptr<libobjgen::MetaObject>> TypeMap;
 
     PersistentObject();
     PersistentObject(const PersistentObject& other);
@@ -60,7 +61,8 @@ public:
     virtual std::list<libcomp::DatabaseBind*> GetMemberBindValues() = 0;
 
     /*
-    *   Register a derived class object to the cache and get a new UUID if not specified.
+    *   Register a derived class object to the cache and get a new UUID if not
+    *   specified.
     */
     bool Register(std::shared_ptr<PersistentObject>& self,
         const libobjgen::UUID& uuid = libobjgen::UUID());
@@ -77,31 +79,34 @@ public:
 
     /*
     *   Register all derived types in libcomp to the TypeMap.
-    *   Persisted types needed in other databases should derive from this class to
-    *   register their own as well.
+    *   Persisted types needed in other databases should derive from this class
+    *   to register their own as well.
     */
     static void Initialize();
 
     /*
     *   Retrieve an object by its UUID but do not load from the database
     */
-    static std::shared_ptr<PersistentObject> GetObjectByUUID(const libobjgen::UUID& uuid);
+    static std::shared_ptr<PersistentObject> GetObjectByUUID(
+        const libobjgen::UUID& uuid);
 
     /*
     *   Retrieve an object by its UUID
     */
-    template<class T> static std::shared_ptr<T> LoadObjectByUUID(const libobjgen::UUID& uuid)
+    template<class T> static std::shared_ptr<T> LoadObjectByUUID(
+    const libobjgen::UUID& uuid)
     {
         if(std::is_base_of<PersistentObject, T>::value)
         {
-            return std::dynamic_pointer_cast<T>(LoadObjectByUUID(typeid(T), uuid));
+            return std::dynamic_pointer_cast<T>(LoadObjectByUUID(
+                typeid(T), uuid));
         }
 
         return nullptr;
     }
 
-    static std::shared_ptr<PersistentObject> LoadObjectByUUID(std::type_index type,
-        const libobjgen::UUID& uuid);
+    static std::shared_ptr<PersistentObject> LoadObjectByUUID(
+        std::type_index type, const libobjgen::UUID& uuid);
 
     /*
     *   Returns all generated PersistentObject derived class metadata
@@ -115,18 +120,21 @@ public:
     {
         if(std::is_base_of<PersistentObject, T>::value)
         {
-            return std::dynamic_pointer_cast<T>(GetRegisteredMetadata(typeid(T)));
+            return std::dynamic_pointer_cast<T>(GetRegisteredMetadata(
+                typeid(T)));
         }
 
         return nullptr;
     }
 
-    static const std::shared_ptr<libobjgen::MetaObject> GetRegisteredMetadata(std::type_index type);
+    static const std::shared_ptr<libobjgen::MetaObject> GetRegisteredMetadata(
+        std::type_index type);
 
     /*
     *   Returns the result of parsing metadata XML
     */
-    static std::shared_ptr<libobjgen::MetaObject> GetMetadataFromXml(const std::string& xml);
+    static std::shared_ptr<libobjgen::MetaObject> GetMetadataFromXml(
+        const std::string& xml);
 
     /*
     *   Returns a new instance of a PersistentObject derived type
@@ -163,7 +171,8 @@ public:
 
 protected:
     /*
-    *   Register a derived class type with a function to describe it to the database
+    *   Register a derived class type with a function to describe it to the
+    *   database
     */
     static void RegisterType(std::type_index type,
         const std::shared_ptr<libobjgen::MetaObject>& obj,
@@ -173,14 +182,16 @@ protected:
     *   Retrieve an object from the database from a field and value (as text)
     */
     static std::shared_ptr<PersistentObject> LoadObject(std::type_index type,
-        const std::string& fieldName, const libcomp::String& value);
+        DatabaseBind *pValue);
 
 private:
-    static std::unordered_map<std::string, std::weak_ptr<PersistentObject>> sCached;
+    static std::unordered_map<std::string,
+        std::weak_ptr<PersistentObject>> sCached;
 
     static TypeMap sTypeMap;
 
-    static std::unordered_map<std::type_index, std::function<PersistentObject*()>> sFactory;
+    static std::unordered_map<std::type_index,
+        std::function<PersistentObject*()>> sFactory;
 
     std::weak_ptr<PersistentObject> mSelf;
 

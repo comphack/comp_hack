@@ -275,25 +275,24 @@ std::string MetaVariable::GetAccessFunctions(const Generator& generator,
     ss << GetSetterCode(generator, name, GetName());
     ss << "}" << std::endl;
 
-    /// @todo This may need some work...
     if(IsLookupKey())
     {
-        bool convert = GetCodeType() != "libcomp::String";
         ss << std::endl;
         ss << "std::shared_ptr<" << object.GetName() << "> " << object.GetName()
-            << "::Load" << object.GetName() << "By" << generator.GetCapitalName(*this)
+            << "::Load" << object.GetName() << "By"
+            << generator.GetCapitalName(*this)
             << "(" << GetArgument("val") << ")" << std::endl;
         ss << "{" << std::endl;
-
-        if(convert)
-        {
-            ss << generator.Tab() << "libcomp::String converted(val);";
-        }
-
-        ss << generator.Tab() << "return " << "std::dynamic_pointer_cast<"
+        ss << generator.Tab() << "auto bind = (" << GetBindValueCode(
+            generator, "val") << "());" << std::endl;
+        ss << std::endl;
+        ss << generator.Tab() << "auto obj = std::dynamic_pointer_cast<"
             << object.GetName() << ">(LoadObject(typeid(" << object.GetName()
-            << "), \"" << generator.GetCapitalName(*this) << "\", "
-            << (convert ? "converted" : "val")  << "));" << std::endl;
+            << "), bind));" << std::endl;
+        ss << std::endl;
+        ss << generator.Tab() << "delete bind;" << std::endl;
+        ss << std::endl;
+        ss << generator.Tab() << "return obj;" << std::endl;
         ss << "}" << std::endl;
         ss << std::endl;
     }

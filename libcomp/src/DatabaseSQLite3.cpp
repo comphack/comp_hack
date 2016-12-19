@@ -168,85 +168,95 @@ bool DatabaseSQLite3::Use()
 }
 
 std::list<std::shared_ptr<PersistentObject>> DatabaseSQLite3::LoadObjects(
-    std::type_index type, const std::string& fieldName, const libcomp::String& value)
+    std::type_index type, DatabaseBind *pValue)
 {
     std::list<std::shared_ptr<PersistentObject>> objects;
-    
-    bool loadByUUID = libcomp::String(fieldName).ToLower().ToUtf8() == "uid";
 
-    std::shared_ptr<libobjgen::MetaVariable> var;
     auto metaObject = PersistentObject::GetRegisteredMetadata(type);
-    if(!loadByUUID)
-    {
-        for(auto iter = metaObject->VariablesBegin();
-            iter != metaObject->VariablesEnd(); iter++)
-        {
-            if((*iter)->GetName() == fieldName)
-            {
-                var = (*iter);
-                break;
-            }
-        }
 
-        if(nullptr == var)
+    if(nullptr == metaObject)
+    {
+        LOG_ERROR("Failed to lookup MetaObject.\n");
+
+        return {};
+    }
+
+    String sql = String("SELECT * FROM %1 WHERE %2 = :%2").Arg(
+        metaObject->GetName()).Arg(
+        pValue->GetColumn());
+
+    DatabaseQuery query = Prepare(sql);
+
+    if(!query.IsValid())
+    {
+        LOG_ERROR(String("Failed to prepare SQL query: %1\n").Arg(sql));
+        LOG_ERROR(String("Database said: %1\n").Arg(GetLastError()));
+
+        return {};
+    }
+
+    if(!pValue->Bind(query))
+    {
+        LOG_ERROR(String("Failed to bind value: %1\n").Arg(
+            pValue->GetColumn()));
+        LOG_ERROR(String("Database said: %1\n").Arg(GetLastError()));
+
+        return {};
+    }
+
+    if(!query.Execute())
+    {
+        LOG_ERROR(String("Failed to execute query: %1\n").Arg(sql));
+        LOG_ERROR(String("Database said: %1\n").Arg(GetLastError()));
+
+        return {};
+    }
+
+    std::list<std::unordered_map<std::string, std::vector<char>>> rows;
+
+    if(!query.Next() || !query.GetRows(rows))
+    {
+        LOG_ERROR(String("Failed to execute query: %1\n").Arg(sql));
+        LOG_ERROR("Failed to retrieve rows.\n");
+        LOG_ERROR(String("Database said: %1\n").Arg(GetLastError()));
+
+        return {};
+    }
+
+    LOG_DEBUG(String("Row count: %1\n").Arg(rows.size()));
+
+    int failures = 0;
+
+    if(0 < rows.size())
+    {
+        for(auto row : rows)
         {
-            return objects;
+            auto obj = LoadSingleObjectFromRow(type, row);
+
+            if(nullptr != obj)
+            {
+                objects.push_back(obj);
+            }
+            else
+            {
+                failures++;
+            }
         }
     }
 
-    std::string v = value.ToUtf8();
-    if(nullptr != var)
+    if(failures > 0)
     {
-        if(var->GetMetaType() == libobjgen::MetaVariable::MetaVariableType_t::TYPE_STRING
-            || var->GetMetaType() == libobjgen::MetaVariable::MetaVariableType_t::TYPE_REF)
-        {
-            v = libcomp::String("'%1'").Arg(v).ToUtf8();
-        }
-    }
-
-    //Build the query
-    std::stringstream ss;
-    ss << "SELECT * FROM " << metaObject->GetName()
-        << " " << libcomp::String("WHERE %1 = %2;")
-                        .Arg(fieldName).Arg(v).ToUtf8();
-
-    DatabaseQuery q = Prepare(ss.str());
-    if(q.Execute())
-    {
-        std::list<std::unordered_map<std::string, std::vector<char>>> rows;
-        q.GetRows(rows);
-
-        int failures = 0;
-        if(rows.size() > 0)
-        {
-            for(auto row : rows)
-            {
-                auto obj = LoadSingleObjectFromRow(type, row);
-                if(nullptr != obj)
-                {
-                    objects.push_back(obj);
-                }
-                else
-                {
-                    failures++;
-                }
-            }
-        }
-
-        if(failures > 0)
-        {
-            LOG_ERROR(libcomp::String("%1 '%2' row%3 failed to load.\n")
-                .Arg(failures).Arg(metaObject->GetName()).Arg(failures != 1 ? "s" : ""));
-        }
+        LOG_ERROR(String("%1 '%2' row%3 failed to load.\n").Arg(failures).Arg(
+            metaObject->GetName()).Arg(failures != 1 ? "s" : ""));
     }
 
     return objects;
 }
 
 std::shared_ptr<PersistentObject> DatabaseSQLite3::LoadSingleObject(std::type_index type,
-    const std::string& fieldName, const libcomp::String& value)
+    DatabaseBind *pValue)
 {
-    auto objects = LoadObjects(type, fieldName, value);
+    auto objects = LoadObjects(type, pValue);
 
     return objects.size() > 0 ? objects.front() : nullptr;
 }
@@ -498,7 +508,7 @@ bool DatabaseSQLite3::VerifyAndSetupSchema()
         DatabaseQuery q = Prepare("SELECT name FROM sqlite_master where type = 'table' and name <> 'objects';");
 
         std::list<std::unordered_map<std::string, std::vector<char>>> tableResults;
-        if(!q.Execute() || !q.GetRows(tableResults))
+        if(!q.Execute() || !q.Next() || !q.GetRows(tableResults))
         {
             LOG_CRITICAL("Failed to query for existing columns.\n");
 
@@ -668,17 +678,20 @@ std::string DatabaseSQLite3::GetVariableType(const std::shared_ptr
         case libobjgen::MetaVariable::MetaVariableType_t::TYPE_STRING:
         case libobjgen::MetaVariable::MetaVariableType_t::TYPE_REF:
             return "string";
-            break;
         case libobjgen::MetaVariable::MetaVariableType_t::TYPE_S8:
         case libobjgen::MetaVariable::MetaVariableType_t::TYPE_S16:
         case libobjgen::MetaVariable::MetaVariableType_t::TYPE_S32:
         case libobjgen::MetaVariable::MetaVariableType_t::TYPE_U8:
         case libobjgen::MetaVariable::MetaVariableType_t::TYPE_U16:
-        case libobjgen::MetaVariable::MetaVariableType_t::TYPE_U32:
         case libobjgen::MetaVariable::MetaVariableType_t::TYPE_ENUM:
             return "int";
-            break;
+        case libobjgen::MetaVariable::MetaVariableType_t::TYPE_U32:
         case libobjgen::MetaVariable::MetaVariableType_t::TYPE_S64:
+            return "bigint";
+        case libobjgen::MetaVariable::MetaVariableType_t::TYPE_FLOAT:
+            return "float";
+        case libobjgen::MetaVariable::MetaVariableType_t::TYPE_DOUBLE:
+            return "double";
         case libobjgen::MetaVariable::MetaVariableType_t::TYPE_U64:
         case libobjgen::MetaVariable::MetaVariableType_t::TYPE_ARRAY:
         case libobjgen::MetaVariable::MetaVariableType_t::TYPE_LIST:
@@ -709,7 +722,17 @@ std::vector<char> DatabaseSQLite3::ConvertToRawByteStream(
             }
             break;
         default:
-            return columnData;
+            {
+                // Data returned from the DB is "minified" for number of bytes returned.
+                // ex: unsigned 32 and signed 8 are both INTEGER type and the same value
+                // as bytes equal to the value 1 which will fail to load in an object
+                std::vector<char> data(columnData);
+                while(data.size() < var->GetSize())
+                {
+                    data.push_back(0);
+                }
+                return data;
+            }
             break;
     }
 }

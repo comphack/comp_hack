@@ -28,6 +28,7 @@
 
 // libcomp Includes
 #include "Database.h"
+#include "DatabaseBind.h"
 #include "Log.h"
 #include "MetaVariable.h"
 
@@ -132,11 +133,15 @@ std::shared_ptr<PersistentObject> PersistentObject::LoadObjectByUUID(std::type_i
 
     if(nullptr == obj)
     {
-        obj = LoadObject(type, "UID", uuid.ToString());
+        auto bind = new DatabaseBindUUID("uid", uuid);
+
+        obj = LoadObject(type, bind);
+
+        delete bind;
 
         if(nullptr == obj)
         {
-            LOG_ERROR(libcomp::String("Unknown UUID '%1' for '%2' failed to load")
+            LOG_ERROR(String("Unknown UUID '%1' for '%2' failed to load")
                 .Arg(uuid.ToString()).Arg(sTypeMap[type]->GetName()));
         }
     }
@@ -144,11 +149,19 @@ std::shared_ptr<PersistentObject> PersistentObject::LoadObjectByUUID(std::type_i
     return obj;
 }
 
-std::shared_ptr<PersistentObject> PersistentObject::LoadObject(std::type_index type,
-    const std::string& fieldName, const libcomp::String& value)
+std::shared_ptr<PersistentObject> PersistentObject::LoadObject(
+    std::type_index type, DatabaseBind *pValue)
 {
     auto db = Database::GetMainDatabase();
-    return nullptr != db ? db->LoadSingleObject(type, fieldName, value) : nullptr;
+
+    std::shared_ptr<PersistentObject> obj;
+
+    if(nullptr != db)
+    {
+        obj = db->LoadSingleObject(type, pValue);
+    }
+
+    return obj;
 }
 
 void PersistentObject::RegisterType(std::type_index type,

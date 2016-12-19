@@ -90,6 +90,10 @@ private:
     sqlite3_stmt *mStatement;
 
     int mStatus;
+
+    // SQLite3 must call step (aka: Next) to execute so skip the first call
+    // to it after execution
+    bool mDidJustExecute;
 };
 
 } // namespace libcomp

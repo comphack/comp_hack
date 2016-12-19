@@ -47,8 +47,9 @@ DatabaseQuerySQLite3::~DatabaseQuerySQLite3()
 
 bool DatabaseQuerySQLite3::Prepare(const String& query)
 {
+    int len = (int)query.Length();
     mStatus = sqlite3_prepare_v2(mDatabase, query.C(),
-        (int)query.Length(), &mStatement, nullptr);
+        len, &mStatement, nullptr);
 
     return IsValid();
 }
@@ -61,20 +62,28 @@ bool DatabaseQuerySQLite3::Execute()
     }
 
     mStatus = sqlite3_step(mStatement);
+    mDidJustExecute = true;
 
     return IsValid();
 }
 
 bool DatabaseQuerySQLite3::Next()
 {
-    mStatus = sqlite3_step(mStatement);
+    if(!mDidJustExecute)
+    {
+        mStatus = sqlite3_step(mStatement);
+    }
+    mDidJustExecute = false;
+
     return IsValid();
 }
 
 bool DatabaseQuerySQLite3::Bind(size_t index, const String& value)
 {
-    mStatus = sqlite3_bind_text(mStatement, (int)index,
-        value.C(), (int)value.Length(), 0);
+    int idx = (int)index;
+    int len = (int)value.Length();
+    mStatus = sqlite3_bind_text(mStatement, idx,
+        value.C(), len, 0);
     return IsValid();
 }
 
@@ -95,8 +104,8 @@ bool DatabaseQuerySQLite3::Bind(size_t index, const std::vector<char>& value)
 {
     if(nullptr != mStatement)
     {
-        mStatus = sqlite3_bind_blob(mStatement, index, &value[0],
-            (int)value.size(), 0);
+        int size = (int)value.size();
+        mStatus = sqlite3_bind_blob(mStatement, index, &value[0], size, 0);
     }
     else
     {
@@ -122,111 +131,117 @@ bool DatabaseQuerySQLite3::Bind(const String& name,
 
 bool DatabaseQuerySQLite3::Bind(size_t index, const libobjgen::UUID& value)
 {
-    (void)index;
-    (void)value;
-
-    /// @todo
-    return false;
+    auto uuidStr = libcomp::String(value.ToString());
+    return Bind(index, uuidStr);
 }
 
 bool DatabaseQuerySQLite3::Bind(const String& name,
     const libobjgen::UUID& value)
 {
-    (void)name;
-    (void)value;
-
-    /// @todo
-    return false;
+    auto uuidStr = libcomp::String(value.ToString());
+    return Bind(name, uuidStr);
 }
 
 bool DatabaseQuerySQLite3::Bind(size_t index, int32_t value)
 {
-    (void)index;
-    (void)value;
-
-    /// @todo
-    return false;
+    int idx = (int)index;
+    mStatus = sqlite3_bind_int(mStatement, idx, value);
+    return IsValid();
 }
 
 bool DatabaseQuerySQLite3::Bind(const String& name, int32_t value)
 {
-    (void)name;
-    (void)value;
+    auto binding = GetNamedBinding(name);
+    size_t index = (size_t)sqlite3_bind_parameter_index(mStatement, binding.c_str());
 
-    /// @todo
-    return false;
+    if(index == 0)
+    {
+        mStatus = SQLITE_ERROR;
+    }
+
+    return IsValid() && Bind(index, value);
 }
 
 bool DatabaseQuerySQLite3::Bind(size_t index, int64_t value)
 {
-    (void)index;
-    (void)value;
-
-    /// @todo
-    return false;
+    int idx = (int)index;
+    mStatus = sqlite3_bind_int64(mStatement, idx, value);
+    return IsValid();
 }
 
 bool DatabaseQuerySQLite3::Bind(const String& name, int64_t value)
 {
-    (void)name;
-    (void)value;
+    auto binding = GetNamedBinding(name);
+    size_t index = (size_t)sqlite3_bind_parameter_index(mStatement, binding.c_str());
 
-    /// @todo
-    return false;
+    if(index == 0)
+    {
+        mStatus = SQLITE_ERROR;
+    }
+
+    return IsValid() && Bind(index, value);
 }
 
 bool DatabaseQuerySQLite3::Bind(size_t index, float value)
 {
-    (void)index;
-    (void)value;
-
-    /// @todo
-    return false;
+    int idx = (int)index;
+    double doubleValue = (double)value;
+    mStatus = sqlite3_bind_double(mStatement, idx, doubleValue);
+    return IsValid();
 }
 
 bool DatabaseQuerySQLite3::Bind(const String& name, float value)
 {
-    (void)name;
-    (void)value;
+    auto binding = GetNamedBinding(name);
+    size_t index = (size_t)sqlite3_bind_parameter_index(mStatement, binding.c_str());
 
-    /// @todo
-    return false;
+    if(index == 0)
+    {
+        mStatus = SQLITE_ERROR;
+    }
+
+    return IsValid() && Bind(index, value);
 }
 
 bool DatabaseQuerySQLite3::Bind(size_t index, double value)
 {
-    (void)index;
-    (void)value;
-
-    /// @todo
-    return false;
+    int idx = (int)index;
+    mStatus = sqlite3_bind_double(mStatement, idx, value);
+    return IsValid();
 }
 
 bool DatabaseQuerySQLite3::Bind(const String& name, double value)
 {
-    (void)name;
-    (void)value;
+    auto binding = GetNamedBinding(name);
+    size_t index = (size_t)sqlite3_bind_parameter_index(mStatement, binding.c_str());
 
-    /// @todo
-    return false;
+    if(index == 0)
+    {
+        mStatus = SQLITE_ERROR;
+    }
+
+    return IsValid() && Bind(index, value);
 }
 
 bool DatabaseQuerySQLite3::Bind(size_t index, bool value)
 {
-    (void)index;
-    (void)value;
-
-    /// @todo
-    return false;
+    int idx = (int)index;
+    int boolValue = (int)value;
+    mStatus = sqlite3_bind_int(mStatement, idx, boolValue);
+    return IsValid();
 }
 
 bool DatabaseQuerySQLite3::Bind(const String& name, bool value)
 {
-    (void)name;
-    (void)value;
+    auto binding = GetNamedBinding(name);
+    size_t index = (size_t)sqlite3_bind_parameter_index(mStatement, binding.c_str());
 
-    /// @todo
-    return false;
+    if(index == 0)
+    {
+        mStatus = SQLITE_ERROR;
+    }
+
+    return IsValid() && Bind(index, value);
 }
 
 bool DatabaseQuerySQLite3::Bind(size_t index, const std::unordered_map<

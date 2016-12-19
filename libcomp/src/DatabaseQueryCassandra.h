@@ -69,6 +69,22 @@ public:
     virtual bool Bind(const String& name, const std::unordered_map<
         std::string, std::vector<char>>& values);
 
+    virtual bool GetValue(size_t index, String& value);
+    virtual bool GetValue(const String& name, String& value);
+    virtual bool GetValue(size_t index, std::vector<char>& value);
+    virtual bool GetValue(const String& name, std::vector<char>& value);
+    virtual bool GetValue(size_t index, libobjgen::UUID& value);
+    virtual bool GetValue(const String& name, libobjgen::UUID& value);
+    virtual bool GetValue(size_t index, int32_t& value);
+    virtual bool GetValue(const String& name, int32_t& value);
+    virtual bool GetValue(size_t index, int64_t& value);
+    virtual bool GetValue(const String& name, int64_t& value);
+    virtual bool GetValue(size_t index, float& value);
+    virtual bool GetValue(const String& name, float& value);
+    virtual bool GetValue(size_t index, double& value);
+    virtual bool GetValue(const String& name, double& value);
+    virtual bool GetValue(size_t index, bool& value);
+    virtual bool GetValue(const String& name, bool& value);
     virtual bool GetMap(size_t index, std::unordered_map<
         std::string, std::vector<char>>& values);
     virtual bool GetMap(const String& name, std::unordered_map<
@@ -81,6 +97,18 @@ public:
     virtual bool IsValid() const;
 
 private:
+    const CassValue* GetValue(size_t index);
+    const CassValue* GetValue(const String& name);
+
+    bool GetTextValue(const CassValue *pValue, String& value);
+    bool GetBlobValue(const CassValue *pValue, std::vector<char>& value);
+    bool GetUuidValue(const CassValue *pValue, libobjgen::UUID& value);
+    bool GetIntValue(const CassValue *pValue, int32_t& value);
+    bool GetBigIntValue(const CassValue *pValue, int64_t& value);
+    bool GetFloatValue(const CassValue *pValue, float& value);
+    bool GetDoubleValue(const CassValue *pValue, double& value);
+    bool GetBoolValue(const CassValue *pValue, bool& value);
+
     DatabaseCassandra *mDatabase;
     const CassPrepared *mPrepared;
     CassStatement *mStatement;

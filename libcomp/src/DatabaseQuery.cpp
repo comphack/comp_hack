@@ -363,6 +363,198 @@ bool DatabaseQuery::Bind(const String& name, const std::unordered_map<
     return result;
 }
 
+bool DatabaseQuery::GetValue(size_t index, String& value)
+{
+    bool result = false;
+
+    if(nullptr != mImpl)
+    {
+        result = mImpl->GetValue(index, value);
+    }
+
+    return result;
+}
+
+bool DatabaseQuery::GetValue(const String& name, String& value)
+{
+    bool result = false;
+
+    if(nullptr != mImpl)
+    {
+        result = mImpl->GetValue(name, value);
+    }
+
+    return result;
+}
+
+bool DatabaseQuery::GetValue(size_t index, std::vector<char>& value)
+{
+    bool result = false;
+
+    if(nullptr != mImpl)
+    {
+        result = mImpl->GetValue(index, value);
+    }
+
+    return result;
+}
+
+bool DatabaseQuery::GetValue(const String& name, std::vector<char>& value)
+{
+    bool result = false;
+
+    if(nullptr != mImpl)
+    {
+        result = mImpl->GetValue(name, value);
+    }
+
+    return result;
+}
+
+bool DatabaseQuery::GetValue(size_t index, libobjgen::UUID& value)
+{
+    bool result = false;
+
+    if(nullptr != mImpl)
+    {
+        result = mImpl->GetValue(index, value);
+    }
+
+    return result;
+}
+
+bool DatabaseQuery::GetValue(const String& name, libobjgen::UUID& value)
+{
+    bool result = false;
+
+    if(nullptr != mImpl)
+    {
+        result = mImpl->GetValue(name, value);
+    }
+
+    return result;
+}
+
+bool DatabaseQuery::GetValue(size_t index, int32_t& value)
+{
+    bool result = false;
+
+    if(nullptr != mImpl)
+    {
+        result = mImpl->GetValue(index, value);
+    }
+
+    return result;
+}
+
+bool DatabaseQuery::GetValue(const String& name, int32_t& value)
+{
+    bool result = false;
+
+    if(nullptr != mImpl)
+    {
+        result = mImpl->GetValue(name, value);
+    }
+
+    return result;
+}
+
+bool DatabaseQuery::GetValue(size_t index, int64_t& value)
+{
+    bool result = false;
+
+    if(nullptr != mImpl)
+    {
+        result = mImpl->GetValue(index, value);
+    }
+
+    return result;
+}
+
+bool DatabaseQuery::GetValue(const String& name, int64_t& value)
+{
+    bool result = false;
+
+    if(nullptr != mImpl)
+    {
+        result = mImpl->GetValue(name, value);
+    }
+
+    return result;
+}
+
+bool DatabaseQuery::GetValue(size_t index, float& value)
+{
+    bool result = false;
+
+    if(nullptr != mImpl)
+    {
+        result = mImpl->GetValue(index, value);
+    }
+
+    return result;
+}
+
+bool DatabaseQuery::GetValue(const String& name, float& value)
+{
+    bool result = false;
+
+    if(nullptr != mImpl)
+    {
+        result = mImpl->GetValue(name, value);
+    }
+
+    return result;
+}
+
+bool DatabaseQuery::GetValue(size_t index, double& value)
+{
+    bool result = false;
+
+    if(nullptr != mImpl)
+    {
+        result = mImpl->GetValue(index, value);
+    }
+
+    return result;
+}
+
+bool DatabaseQuery::GetValue(const String& name, double& value)
+{
+    bool result = false;
+
+    if(nullptr != mImpl)
+    {
+        result = mImpl->GetValue(name, value);
+    }
+
+    return result;
+}
+
+bool DatabaseQuery::GetValue(size_t index, bool& value)
+{
+    bool result = false;
+
+    if(nullptr != mImpl)
+    {
+        result = mImpl->GetValue(index, value);
+    }
+
+    return result;
+}
+
+bool DatabaseQuery::GetValue(const String& name, bool& value)
+{
+    bool result = false;
+
+    if(nullptr != mImpl)
+    {
+        result = mImpl->GetValue(name, value);
+    }
+
+    return result;
+}
+
 bool DatabaseQuery::GetMap(size_t index, std::unordered_map<
     std::string, std::vector<char>>& values)
 {

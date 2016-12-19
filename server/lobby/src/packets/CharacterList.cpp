@@ -30,12 +30,13 @@
 #include <Decrypt.h>
 #include <Log.h>
 #include <Packet.h>
+#include <PacketCodes.h>
 #include <ReadOnlyPacket.h>
 #include <TcpConnection.h>
 
 using namespace lobby;
 
-bool Parsers::CharacterList::Parse(ManagerPacket *pPacketManager,
+bool Parsers::CharacterList::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {
@@ -47,7 +48,7 @@ bool Parsers::CharacterList::Parse(ManagerPacket *pPacketManager,
     }
 
     libcomp::Packet reply;
-    reply.WriteU16Little(0x000A);
+    reply.WriteU16Little(ClientPacketCode_t::PACKET_CHARACTER_LIST_RESPONSE);
 
     // Time of last login (time_t).
     reply.WriteU32Little((uint32_t)time(0));

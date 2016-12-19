@@ -28,11 +28,12 @@
 
 // libcomp Includes
 #include <Log.h>
+#include <ManagerPacket.h>
+#include <PacketCodes.h>
 
 // channel Includes
 #include "ChannelConnection.h"
-#include "ManagerPacketClient.h"
-#include "ManagerPacketInternal.h"
+#include "Packets.h"
 
 // Object Includes
 #include "ChannelConfig.h"
@@ -65,12 +66,18 @@ ChannelServer::ChannelServer(std::shared_ptr<objects::ServerConfig> config, cons
         LOG_CRITICAL("Failed to connect to the world server!\n");
     }
 
+    auto internalPacketManager = std::shared_ptr<libcomp::ManagerPacket>(new libcomp::ManagerPacket(mSelf));
+    internalPacketManager->AddParser<Parsers::SetWorldDescription>(PACKET_SET_WORLD_DESCRIPTION);
+
     //Add the managers to the main worker.
-    mMainWorker.AddManager(std::shared_ptr<libcomp::Manager>(new ManagerPacketInternal(mSelf)));
+    mMainWorker.AddManager(internalPacketManager);
     mMainWorker.AddManager(mManagerConnection);
 
+    auto clientPacketManager = std::shared_ptr<libcomp::ManagerPacket>(new libcomp::ManagerPacket(mSelf));
+    /// @todo: Add client side packet parsers
+
     // Add the managers to the generic workers.
-    mWorker.AddManager(std::shared_ptr<libcomp::Manager>(new ManagerPacketClient(mSelf)));
+    mWorker.AddManager(clientPacketManager);
 
     // Start the workers.
     mWorker.Start();

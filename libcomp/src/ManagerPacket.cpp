@@ -1,12 +1,12 @@
 /**
- * @file server/world/src/ManagerPacket.h
- * @ingroup world
+ * @file libcomp/src/ManagerPacket.cpp
+ * @ingroup libcomp
  *
- * @author HACKfrost
+ * @author COMP Omega <compomega@tutanota.com>
  *
- * @brief Manager to handle world packets.
+ * @brief Manager to handle packets.
  *
- * This file is part of the World Server (world).
+ * This file is part of the COMP_hack Library (libcomp).
  *
  * Copyright (C) 2012-2016 COMP_hack Team <compomega@tutanota.com>
  *
@@ -27,24 +27,19 @@
 #include "ManagerPacket.h"
 
 // libcomp Includes
-#include <Log.h>
-#include <MessagePacket.h>
-#include <PacketCodes.h>
-
-// world Includes
+#include "Log.h"
+#include "MessagePacket.h"
 #include "PacketParser.h"
 #include "Packets.h"
 
-using namespace world;
+using namespace libcomp;
+
+std::list<libcomp::Message::MessageType> ManagerPacket::sSupportedTypes =
+    { libcomp::Message::MessageType::MESSAGE_TYPE_PACKET };
 
 ManagerPacket::ManagerPacket(const std::shared_ptr<libcomp::BaseServer>& server)
+    : mServer(server)
 {
-    mServer = server;
-
-    mPacketParsers[PACKET_DESCRIBE_WORLD] = std::shared_ptr<PacketParser>(
-        new Parsers::DescribeWorld());
-    mPacketParsers[PACKET_SET_CHANNEL_DESCRIPTION] = std::shared_ptr<PacketParser>(
-        new Parsers::SetChannelDescription());
 }
 
 ManagerPacket::~ManagerPacket()
@@ -54,12 +49,7 @@ ManagerPacket::~ManagerPacket()
 std::list<libcomp::Message::MessageType>
     ManagerPacket::GetSupportedTypes() const
 {
-    std::list<libcomp::Message::MessageType> supportedTypes;
-
-    supportedTypes.push_back(
-        libcomp::Message::MessageType::MESSAGE_TYPE_PACKET);
-
-    return supportedTypes;
+    return sSupportedTypes;
 }
 
 bool ManagerPacket::ProcessMessage(const libcomp::Message::Message *pMessage)
@@ -96,4 +86,18 @@ bool ManagerPacket::ProcessMessage(const libcomp::Message::Message *pMessage)
 std::shared_ptr<libcomp::BaseServer> ManagerPacket::GetServer()
 {
     return mServer;
+}
+
+bool Parsers::Placeholder::Parse(ManagerPacket *pPacketManager,
+    const std::shared_ptr<libcomp::TcpConnection>& connection,
+    libcomp::ReadOnlyPacket& p) const
+{
+    // DO NOT ACTUALLY USE
+    // This is required so the packet parser class is not seen
+    // as incomplete within libcomp.
+    (void)pPacketManager;
+    (void)connection;
+    (void)p;
+
+    return false;
 }

@@ -30,12 +30,13 @@
 #include <Decrypt.h>
 #include <Log.h>
 #include <Packet.h>
+#include <PacketCodes.h>
 #include <ReadOnlyPacket.h>
 #include <TcpConnection.h>
 
 using namespace lobby;
 
-bool Parsers::DeleteCharacter::Parse(ManagerPacket *pPacketManager,
+bool Parsers::DeleteCharacter::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {
@@ -51,7 +52,7 @@ bool Parsers::DeleteCharacter::Parse(ManagerPacket *pPacketManager,
     LOG_DEBUG(libcomp::String("Character ID: %1\n").Arg(cid));
 
     libcomp::Packet reply;
-    reply.WriteU16Little(0x0010);
+    reply.WriteU16Little(ClientPacketCode_t::PACKET_DELETE_CHARACTER_RESPONSE);
     reply.WriteU8(cid);
 
     connection->SendPacket(reply);

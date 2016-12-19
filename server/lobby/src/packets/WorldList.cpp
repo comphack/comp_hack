@@ -29,17 +29,18 @@
 // libcomp Includes
 #include <Decrypt.h>
 #include <Log.h>
+#include <ManagerPacket.h>
 #include <Packet.h>
+#include <PacketCodes.h>
 #include <ReadOnlyPacket.h>
 #include <TcpConnection.h>
 
 // lobby Includes
-#include "ManagerPacket.h"
 #include "LobbyServer.h"
 
 using namespace lobby;
 
-bool Parsers::WorldList::Parse(ManagerPacket *pPacketManager,
+bool Parsers::WorldList::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {
@@ -49,7 +50,7 @@ bool Parsers::WorldList::Parse(ManagerPacket *pPacketManager,
     }
 
     libcomp::Packet reply;
-    reply.WriteU16Little(0x000C);
+    reply.WriteU16Little(ClientPacketCode_t::PACKET_WORLD_LIST_RESPONSE);
 
     auto server = std::dynamic_pointer_cast<LobbyServer>(pPacketManager->GetServer());
 

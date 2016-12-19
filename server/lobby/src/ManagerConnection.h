@@ -63,6 +63,8 @@ public:
     void RemoveWorld(std::shared_ptr<lobby::World>& world);
 
 private:
+    static std::list<libcomp::Message::MessageType> sSupportedTypes;
+
     std::shared_ptr<libcomp::BaseServer> mServer;
 
     std::list<std::shared_ptr<lobby::World>> mWorlds;

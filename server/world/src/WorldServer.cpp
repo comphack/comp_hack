@@ -32,8 +32,10 @@
 #include <Log.h>
 #include <ManagerPacket.h>
 #include <MessageWorldNotification.h>
+#include <PacketCodes.h>
 
 // Object Includes
+#include "Packets.h"
 #include "WorldConfig.h"
 
 using namespace world;
@@ -91,7 +93,10 @@ WorldServer::WorldServer(std::shared_ptr<objects::ServerConfig> config, const li
     messageQueue.reset();
 
     auto connectionManager = std::shared_ptr<libcomp::Manager>(mManagerConnection);
-    auto packetManager = std::shared_ptr<libcomp::Manager>(new ManagerPacket(mSelf));
+
+    auto packetManager = std::shared_ptr<libcomp::ManagerPacket>(new libcomp::ManagerPacket(mSelf));
+    packetManager->AddParser<Parsers::DescribeWorld>(PACKET_DESCRIBE_WORLD);
+    packetManager->AddParser<Parsers::SetChannelDescription>(PACKET_SET_CHANNEL_DESCRIPTION);
 
     //Add the managers to the main worker.
     mMainWorker.AddManager(packetManager);

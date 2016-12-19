@@ -1,12 +1,12 @@
 /**
- * @file server/lobby/src/ManagerPacketClient.cpp
- * @ingroup lobby
+ * @file libcomp/src/Packets.h
+ * @ingroup libcomp
  *
- * @author HACKfrost
+ * @author COMP Omega <compomega@tutanota.com>
  *
- * @brief Manager to handle client lobby packets.
+ * @brief Placeholder packet parser class to be fully implemented server side.
  *
- * This file is part of the lobby Server (lobby).
+ * This file is part of the COMP_hack Library (libcomp).
  *
  * Copyright (C) 2012-2016 COMP_hack Team <compomega@tutanota.com>
  *
@@ -24,21 +24,22 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef LIBCOMP_SRC_MANAGERPACKETCLIENT_H
-#define LIBCOMP_SRC_MANAGERPACKETCLIENT_H
+#ifndef LIBCOMP_SRC_PACKETS_H
+#define LIBCOMP_SRC_PACKETS_H
 
-// channel Includes
-#include "ManagerPacket.h"
+// libcomp Includes
+#include "PacketParser.h"
 
-namespace lobby
+namespace libcomp
 {
-class ManagerPacketClient : public ManagerPacket
+
+namespace Parsers
 {
-public:
-    ManagerPacketClient(const std::shared_ptr<libcomp::BaseServer>& server);
-    virtual ~ManagerPacketClient();
-};
 
-} // namespace channel
+PACKET_PARSER_DECL(Placeholder);
 
-#endif // LIBCOMP_SRC_MANAGERPACKETCLIENT_H
+} // namespace Parsers
+
+} // namespace libcomp
+
+#endif // LIBCOMP_SRC_PACKETS_H

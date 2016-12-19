@@ -37,6 +37,9 @@
 
 using namespace world;
 
+std::list<libcomp::Message::MessageType> ManagerConnection::sSupportedTypes =
+    { libcomp::Message::MessageType::MESSAGE_TYPE_CONNECTION };
+
 ManagerConnection::ManagerConnection(const std::shared_ptr<libcomp::BaseServer>& server)
     : mServer(server)
 {
@@ -49,12 +52,7 @@ ManagerConnection::~ManagerConnection()
 std::list<libcomp::Message::MessageType>
 ManagerConnection::GetSupportedTypes() const
 {
-    std::list<libcomp::Message::MessageType> supportedTypes;
-
-    supportedTypes.push_back(
-        libcomp::Message::MessageType::MESSAGE_TYPE_CONNECTION);
-
-    return supportedTypes;
+    return sSupportedTypes;
 }
 
 bool ManagerConnection::ProcessMessage(const libcomp::Message::Message *pMessage)

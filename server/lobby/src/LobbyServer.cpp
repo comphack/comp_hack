@@ -28,11 +28,12 @@
 
 // lobby Includes
 #include "LobbyConnection.h"
+#include "Packets.h"
 
 // libcomp Includes
 #include <Log.h>
-#include <ManagerPacketClient.h>
-#include <ManagerPacketInternal.h>
+#include <ManagerPacket.h>
+#include <PacketCodes.h>
 
 // Object Includes
 #include "LobbyConfig.h"
@@ -48,12 +49,27 @@ LobbyServer::LobbyServer(std::shared_ptr<objects::ServerConfig> config, const li
 
     auto connectionManager = std::shared_ptr<libcomp::Manager>(mManagerConnection);
 
+    auto internalPacketManager = std::shared_ptr<libcomp::ManagerPacket>(new libcomp::ManagerPacket(mSelf));
+    internalPacketManager->AddParser<Parsers::SetWorldDescription>(PACKET_SET_WORLD_DESCRIPTION);
+    internalPacketManager->AddParser<Parsers::SetChannelDescription>(PACKET_SET_CHANNEL_DESCRIPTION);
+
     //Add the managers to the main worker.
-    mMainWorker.AddManager(std::shared_ptr<libcomp::Manager>(new ManagerPacketInternal(mSelf)));
+    mMainWorker.AddManager(internalPacketManager);
     mMainWorker.AddManager(connectionManager);
 
+    auto clientPacketManager = std::shared_ptr<libcomp::ManagerPacket>(new libcomp::ManagerPacket(mSelf));
+    clientPacketManager->AddParser<Parsers::Login>(PACKET_LOGIN);
+    clientPacketManager->AddParser<Parsers::Auth>(PACKET_AUTH);
+    clientPacketManager->AddParser<Parsers::StartGame>(PACKET_START_GAME);
+    clientPacketManager->AddParser<Parsers::CharacterList>(PACKET_CHARACTER_LIST);
+    clientPacketManager->AddParser<Parsers::WorldList>(PACKET_WORLD_LIST);
+    clientPacketManager->AddParser<Parsers::CreateCharacter>(PACKET_CREATE_CHARACTER);
+    clientPacketManager->AddParser<Parsers::DeleteCharacter>(PACKET_DELETE_CHARACTER);
+    clientPacketManager->AddParser<Parsers::QueryPurchaseTicket>(PACKET_QUERY_PURCHASE_TICKET);
+    clientPacketManager->AddParser<Parsers::PurchaseTicket>(PACKET_PURCHASE_TICKET);
+
     // Add the managers to the generic workers.
-    mWorker.AddManager(std::shared_ptr<libcomp::Manager>(new ManagerPacketClient(mSelf)));
+    mWorker.AddManager(clientPacketManager);
     mWorker.AddManager(connectionManager);
 
     // Start the worker.

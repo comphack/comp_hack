@@ -1,12 +1,12 @@
 /**
- * @file server/channel/src/ManagerPacket.h
- * @ingroup channel
+ * @file libcomp/src/ManagerPacket.h
+ * @ingroup libcomp
  *
  * @author COMP Omega <compomega@tutanota.com>
  *
- * @brief Manager to handle channel packets.
+ * @brief Manager to handle packets.
  *
- * This file is part of the channel Server (channel).
+ * This file is part of the COMP_hack Library (libcomp).
  *
  * Copyright (C) 2012-2016 COMP_hack Team <compomega@tutanota.com>
  *
@@ -36,7 +36,7 @@
 #include <memory>
 #include <unordered_map>
 
-namespace channel
+namespace libcomp
 {
 
 typedef uint16_t CommandCode_t;
@@ -48,6 +48,22 @@ class ManagerPacket : public libcomp::Manager
 public:
     ManagerPacket(const std::shared_ptr<libcomp::BaseServer>& server);
     virtual ~ManagerPacket();
+
+    /**
+     * @brief Addes a packet parser to this manager.
+     */
+    template <class T> bool AddParser(CommandCode_t commandCode)
+    {
+        if(mPacketParsers.find(commandCode) == mPacketParsers.end() &&
+            std::is_base_of<PacketParser, T>::value)
+        {
+            mPacketParsers[commandCode] = std::dynamic_pointer_cast<PacketParser>(
+                std::shared_ptr<T>(new T()));
+            return true;
+        }
+
+        return false;
+    }
 
     /**
      * @brief Get the different types of messages handles by this manager.
@@ -65,12 +81,14 @@ public:
     std::shared_ptr<libcomp::BaseServer> GetServer();
 
 protected:
+    static std::list<libcomp::Message::MessageType> sSupportedTypes;
+
     std::unordered_map<CommandCode_t,
         std::shared_ptr<PacketParser>> mPacketParsers;
 
     std::shared_ptr<libcomp::BaseServer> mServer;
 };
 
-} // namespace channel
+} // namespace libcomp
 
 #endif // LIBCOMP_SRC_MANAGERPACKET_H

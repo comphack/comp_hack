@@ -65,6 +65,8 @@ public:
     void RemoveConnection(std::shared_ptr<libcomp::InternalConnection>& connection);
 
 private:
+    static std::list<libcomp::Message::MessageType> sSupportedTypes;
+
     std::shared_ptr<libcomp::BaseServer> mServer;
 
     std::shared_ptr<libcomp::InternalConnection> mLobbyConnection;

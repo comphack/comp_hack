@@ -114,6 +114,115 @@ bool DatabaseQuerySQLite3::Bind(const String& name,
     return false;
 }
 
+bool DatabaseQuerySQLite3::Bind(size_t index, const libobjgen::UUID& value)
+{
+    (void)index;
+    (void)value;
+
+    /// @todo
+    return false;
+}
+
+bool DatabaseQuerySQLite3::Bind(const String& name,
+    const libobjgen::UUID& value)
+{
+    (void)name;
+    (void)value;
+
+    /// @todo
+    return false;
+}
+
+bool DatabaseQuerySQLite3::Bind(size_t index, int32_t value)
+{
+    (void)index;
+    (void)value;
+
+    /// @todo
+    return false;
+}
+
+bool DatabaseQuerySQLite3::Bind(const String& name, int32_t value)
+{
+    (void)name;
+    (void)value;
+
+    /// @todo
+    return false;
+}
+
+bool DatabaseQuerySQLite3::Bind(size_t index, int64_t value)
+{
+    (void)index;
+    (void)value;
+
+    /// @todo
+    return false;
+}
+
+bool DatabaseQuerySQLite3::Bind(const String& name, int64_t value)
+{
+    (void)name;
+    (void)value;
+
+    /// @todo
+    return false;
+}
+
+bool DatabaseQuerySQLite3::Bind(size_t index, float value)
+{
+    (void)index;
+    (void)value;
+
+    /// @todo
+    return false;
+}
+
+bool DatabaseQuerySQLite3::Bind(const String& name, float value)
+{
+    (void)name;
+    (void)value;
+
+    /// @todo
+    return false;
+}
+
+bool DatabaseQuerySQLite3::Bind(size_t index, double value)
+{
+    (void)index;
+    (void)value;
+
+    /// @todo
+    return false;
+}
+
+bool DatabaseQuerySQLite3::Bind(const String& name, double value)
+{
+    (void)name;
+    (void)value;
+
+    /// @todo
+    return false;
+}
+
+bool DatabaseQuerySQLite3::Bind(size_t index, bool value)
+{
+    (void)index;
+    (void)value;
+
+    /// @todo
+    return false;
+}
+
+bool DatabaseQuerySQLite3::Bind(const String& name, bool value)
+{
+    (void)name;
+    (void)value;
+
+    /// @todo
+    return false;
+}
+
 bool DatabaseQuerySQLite3::Bind(size_t index, const std::unordered_map<
     std::string, std::vector<char>>& values)
 {

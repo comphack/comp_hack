@@ -27,6 +27,9 @@
 #ifndef LIBCOMP_SRC_DATABASEQUERY_H
 #define LIBCOMP_SRC_DATABASEQUERY_H
 
+// libobjgen Includes
+#include "UUID.h"
+
 // libcomp Includes
 #include "CString.h"
 
@@ -49,6 +52,18 @@ public:
     virtual bool Bind(const String& name, const String& value) = 0;
     virtual bool Bind(size_t index, const std::vector<char>& value) = 0;
     virtual bool Bind(const String& name, const std::vector<char>& value) = 0;
+    virtual bool Bind(size_t index, const libobjgen::UUID& value) = 0;
+    virtual bool Bind(const String& name, const libobjgen::UUID& value) = 0;
+    virtual bool Bind(size_t index, int32_t value) = 0;
+    virtual bool Bind(const String& name, int32_t value) = 0;
+    virtual bool Bind(size_t index, int64_t value) = 0;
+    virtual bool Bind(const String& name, int64_t value) = 0;
+    virtual bool Bind(size_t index, float value) = 0;
+    virtual bool Bind(const String& name, float value) = 0;
+    virtual bool Bind(size_t index, double value) = 0;
+    virtual bool Bind(const String& name, double value) = 0;
+    virtual bool Bind(size_t index, bool value) = 0;
+    virtual bool Bind(const String& name, bool value) = 0;
     virtual bool Bind(size_t index, const std::unordered_map<
         std::string, std::vector<char>>& values);
     virtual bool Bind(const String& name, const std::unordered_map<
@@ -83,6 +98,18 @@ public:
     bool Bind(const String& name, const String& value);
     bool Bind(size_t index, const std::vector<char>& value);
     bool Bind(const String& name, const std::vector<char>& value);
+    bool Bind(size_t index, const libobjgen::UUID& value);
+    bool Bind(const String& name, const libobjgen::UUID& value);
+    bool Bind(size_t index, int32_t value);
+    bool Bind(const String& name, int32_t value);
+    bool Bind(size_t index, int64_t value);
+    bool Bind(const String& name, int64_t value);
+    bool Bind(size_t index, float value);
+    bool Bind(const String& name, float value);
+    bool Bind(size_t index, double value);
+    bool Bind(const String& name, double value);
+    bool Bind(size_t index, bool value);
+    bool Bind(const String& name, bool value);
     bool Bind(size_t index, const std::unordered_map<std::string,
         std::vector<char>>& values);
     bool Bind(const String& name, const std::unordered_map<

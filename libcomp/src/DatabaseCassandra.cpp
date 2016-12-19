@@ -381,7 +381,7 @@ bool DatabaseCassandra::InsertSingleObject(std::shared_ptr<PersistentObject>& ob
     columnNames.push_back("uid");
 
     std::list<libcomp::String> columnBinds;
-    columnBinds.push_back(obj->GetUUID().ToString());
+    columnBinds.push_back("?");
 
     auto values = obj->GetMemberBindValues();
 
@@ -401,6 +401,14 @@ bool DatabaseCassandra::InsertSingleObject(std::shared_ptr<PersistentObject>& ob
     if(!query.IsValid())
     {
         LOG_ERROR(String("Failed to prepare CQL query: %1\n").Arg(cql));
+        LOG_ERROR(String("Database said: %1\n").Arg(GetLastError()));
+
+        return false;
+    }
+
+    if(!query.Bind("uid", obj->GetUUID()))
+    {
+        LOG_ERROR("Failed to bind value: uid\n");
         LOG_ERROR(String("Database said: %1\n").Arg(GetLastError()));
 
         return false;
@@ -455,10 +463,9 @@ bool DatabaseCassandra::UpdateSingleObject(std::shared_ptr<PersistentObject>& ob
         columnNames.push_back(String("%1 = ?").Arg(value->GetColumn()));
     }
 
-    String cql = String("UPDATE %1 SET %2 WHERE uid = %3").Arg(
+    String cql = String("UPDATE %1 SET %2 WHERE uid = ?").Arg(
         String(metaObject->GetName()).ToLower()).Arg(
-        String::Join(columnNames, ", ")).Arg(
-        obj->GetUUID().ToString());
+        String::Join(columnNames, ", "));
 
     DatabaseQuery query = Prepare(cql);
 
@@ -484,6 +491,14 @@ bool DatabaseCassandra::UpdateSingleObject(std::shared_ptr<PersistentObject>& ob
         delete value;
     }
 
+    if(!query.Bind("uid", obj->GetUUID()))
+    {
+        LOG_ERROR("Failed to bind value: uid\n");
+        LOG_ERROR(String("Database said: %1\n").Arg(GetLastError()));
+
+        return false;
+    }
+
     if(!query.Execute())
     {
         LOG_ERROR(String("Failed to execute query: %1\n").Arg(cql));
@@ -498,24 +513,46 @@ bool DatabaseCassandra::UpdateSingleObject(std::shared_ptr<PersistentObject>& ob
 bool DatabaseCassandra::DeleteSingleObject(std::shared_ptr<PersistentObject>& obj)
 {
     auto uuid = obj->GetUUID();
+
     if(uuid.IsNull())
     {
         return false;
     }
 
-    std::string uuidStr = obj->GetUUID().ToString();
-
     auto metaObject = obj->GetObjectMetadata();
 
-    if(Execute(libcomp::String("DELETE FROM %1 WHERE uid = %2;")
-        .Arg(libcomp::String(metaObject->GetName()).ToLower().ToUtf8())
-        .Arg(uuidStr)))
+    String cql = String("DELETE FROM %1 WHERE uid = ?").Arg(
+        String(metaObject->GetName()).ToLower());
+
+    DatabaseQuery query = Prepare(cql);
+
+    if(!query.IsValid())
     {
-        obj->Unregister();
-        return true;
+        LOG_ERROR(String("Failed to prepare CQL query: %1\n").Arg(cql));
+        LOG_ERROR(String("Database said: %1\n").Arg(GetLastError()));
+
+        return false;
     }
 
-    return false;
+    if(!query.Bind("uid", obj->GetUUID()))
+    {
+        LOG_ERROR("Failed to bind value: uid\n");
+        LOG_ERROR(String("Database said: %1\n").Arg(GetLastError()));
+
+        return false;
+    }
+
+    if(!query.Execute())
+    {
+        LOG_ERROR(String("Failed to execute query: %1\n").Arg(cql));
+        LOG_ERROR(String("Database said: %1\n").Arg(GetLastError()));
+
+        return false;
+    }
+
+    obj->Unregister();
+
+    return true;
 }
 
 bool DatabaseCassandra::VerifyAndSetupSchema()
@@ -741,6 +778,10 @@ std::string DatabaseCassandra::GetVariableType(const std::shared_ptr
         case libobjgen::MetaVariable::MetaVariableType_t::TYPE_U32:
             return "bigint";
             break;
+        case libobjgen::MetaVariable::MetaVariableType_t::TYPE_FLOAT:
+            return "float";
+        case libobjgen::MetaVariable::MetaVariableType_t::TYPE_DOUBLE:
+            return "double";
         case libobjgen::MetaVariable::MetaVariableType_t::TYPE_REF:
             return "uuid";
             break;

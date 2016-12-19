@@ -52,6 +52,18 @@ public:
     virtual bool Bind(const String& name, const String& value);
     virtual bool Bind(size_t index, const std::vector<char>& value);
     virtual bool Bind(const String& name, const std::vector<char>& value);
+    virtual bool Bind(size_t index, const libobjgen::UUID& value);
+    virtual bool Bind(const String& name, const libobjgen::UUID& value);
+    virtual bool Bind(size_t index, int32_t value);
+    virtual bool Bind(const String& name, int32_t value);
+    virtual bool Bind(size_t index, int64_t value);
+    virtual bool Bind(const String& name, int64_t value);
+    virtual bool Bind(size_t index, float value);
+    virtual bool Bind(const String& name, float value);
+    virtual bool Bind(size_t index, double value);
+    virtual bool Bind(const String& name, double value);
+    virtual bool Bind(size_t index, bool value);
+    virtual bool Bind(const String& name, bool value);
     virtual bool Bind(size_t index, const std::unordered_map<
         std::string, std::vector<char>>& values);
     virtual bool Bind(const String& name, const std::unordered_map<

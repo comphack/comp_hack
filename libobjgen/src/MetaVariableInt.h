@@ -635,6 +635,66 @@ public:
         return generator.ParseTemplate(tabLevel, "VariableIntXmlSave",
             replacements);
     }
+
+    virtual std::string GetBindValueCode(const Generator& generator,
+        const std::string& name, size_t tabLevel = 1) const
+    {
+        std::string columnName = GetName();
+
+        std::transform(columnName.begin(), columnName.end(),
+            columnName.begin(), ::tolower);
+
+        std::string bindType;
+        std::string castType;
+        bool cast = false;
+
+        if(std::numeric_limits<T>::is_integer)
+        {
+            if(sizeof(T) < sizeof(int32_t) || (sizeof(T) == sizeof(int32_t) &&
+                std::numeric_limits<T>::is_signed))
+            {
+                bindType = "Int";
+                castType = "int32_t";
+                cast = sizeof(T) != sizeof(int32_t);
+            }
+            else
+            {
+                bindType = "BigInt";
+                castType = "int64_t";
+                cast = sizeof(T) != sizeof(int64_t);
+            }
+        }
+        else if(typeid(float) == typeid(T))
+        {
+            bindType = "Float";
+        }
+        else if(typeid(double) == typeid(T))
+        {
+            bindType = "Double";
+        }
+        else
+        {
+            // Use the default binary blob.
+            return MetaVariable::GetBindValueCode(generator, name, tabLevel);
+        }
+
+        std::map<std::string, std::string> replacements;
+        replacements["@COLUMN_NAME@"] = generator.Escape(columnName);
+        replacements["@VAR_NAME@"] = name;
+        replacements["@TYPE@"] = bindType;
+        replacements["@CAST@"] = castType;
+
+        if(cast)
+        {
+            return generator.ParseTemplate(tabLevel, "VariableGetCastBind",
+                replacements);
+        }
+        else
+        {
+            return generator.ParseTemplate(tabLevel, "VariableGetTypeBind",
+                replacements);
+        }
+    }
 };
 
 } // namespace libobjgen

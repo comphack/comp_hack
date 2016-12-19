@@ -94,6 +94,8 @@ public:
         const std::string& name, const std::string& doc,
         const std::string& parent, size_t tabLevel = 1,
         const std::string elemName = "member") const;
+    virtual std::string GetBindValueCode(const Generator& generator,
+        const std::string& name, size_t tabLevel = 1) const;
 
 private:
     std::string mReferenceType;

@@ -104,8 +104,9 @@ bool DatabaseQuerySQLite3::Bind(size_t index, const std::vector<char>& value)
 {
     if(nullptr != mStatement)
     {
+        int idx = (int)index;
         int size = (int)value.size();
-        mStatus = sqlite3_bind_blob(mStatement, index, &value[0], size, 0);
+        mStatus = sqlite3_bind_blob(mStatement, idx, &value[0], size, 0);
     }
     else
     {

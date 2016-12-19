@@ -335,6 +335,23 @@ std::string MetaVariableEnum::GetStringValueCode(const std::string& name) const
     return ss.str();
 }
 
+std::string MetaVariableEnum::GetBindValueCode(const Generator& generator,
+    const std::string& name, size_t tabLevel) const
+{
+    std::string columnName = GetName();
+
+    std::transform(columnName.begin(), columnName.end(),
+        columnName.begin(), ::tolower);
+
+    std::map<std::string, std::string> replacements;
+    replacements["@COLUMN_NAME@"] = generator.Escape(columnName);
+    replacements["@VAR_NAME@"] = name;
+    replacements["@TYPE@"] = "Int";
+
+    return generator.ParseTemplate(tabLevel, "VariableGetTypeBind",
+        replacements);
+}
+
 std::string MetaVariableEnum::GetUtilityDeclarations(const Generator& generator,
     const std::string& name, size_t tabLevel) const
 {

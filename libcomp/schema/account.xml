@@ -4,5 +4,9 @@
         <member type="string" name="UserName" key="true"/>
         <member type="string" name="Email" key="true"/>
         <member type="string" name="Password"/>
+        <member type="string" name="Salt"/>
+        <member type="u32" name="CP" caps="true"/>
+        <member type="u8" name="TicketCount"/>
+        <member type="u8" name="Admin"/>
     </object>
 </objgen>

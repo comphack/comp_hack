@@ -27,6 +27,9 @@
 #ifndef LIBCOMP_SRC_DATABASEBIND_H
 #define LIBCOMP_SRC_DATABASEBIND_H
 
+// libobjgen Includes
+#include "UUID.h"
+
 // libcomp Includes
 #include "CString.h"
 
@@ -72,6 +75,78 @@ public:
 
 private:
     std::vector<char> mValue;
+};
+
+class DatabaseBindUUID : public DatabaseBind
+{
+public:
+    DatabaseBindUUID(const String& column, const libobjgen::UUID& value);
+    virtual ~DatabaseBindUUID();
+
+    virtual bool Bind(DatabaseQuery& db);
+
+private:
+    libobjgen::UUID mValue;
+};
+
+class DatabaseBindInt : public DatabaseBind
+{
+public:
+    DatabaseBindInt(const String& column, int32_t value);
+    virtual ~DatabaseBindInt();
+
+    virtual bool Bind(DatabaseQuery& db);
+
+private:
+    int32_t mValue;
+};
+
+class DatabaseBindBigInt : public DatabaseBind
+{
+public:
+    DatabaseBindBigInt(const String& column, int64_t value);
+    virtual ~DatabaseBindBigInt();
+
+    virtual bool Bind(DatabaseQuery& db);
+
+private:
+    int64_t mValue;
+};
+
+class DatabaseBindFloat : public DatabaseBind
+{
+public:
+    DatabaseBindFloat(const String& column, float value);
+    virtual ~DatabaseBindFloat();
+
+    virtual bool Bind(DatabaseQuery& db);
+
+private:
+    float mValue;
+};
+
+class DatabaseBindDouble : public DatabaseBind
+{
+public:
+    DatabaseBindDouble(const String& column, double value);
+    virtual ~DatabaseBindDouble();
+
+    virtual bool Bind(DatabaseQuery& db);
+
+private:
+    double mValue;
+};
+
+class DatabaseBindBool : public DatabaseBind
+{
+public:
+    DatabaseBindBool(const String& column, bool value);
+    virtual ~DatabaseBindBool();
+
+    virtual bool Bind(DatabaseQuery& db);
+
+private:
+    bool mValue;
 };
 
 } // namespace libcomp

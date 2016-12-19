@@ -728,8 +728,9 @@ std::string MetaVariableString::GetBindValueCode(const Generator& generator,
     std::map<std::string, std::string> replacements;
     replacements["@COLUMN_NAME@"] = generator.Escape(columnName);
     replacements["@VAR_NAME@"] = name;
+    replacements["@TYPE@"] = "Text";
 
-    return generator.ParseTemplate(tabLevel, "VariableStringGetBind",
+    return generator.ParseTemplate(tabLevel, "VariableGetTypeBind",
         replacements);
 }
 

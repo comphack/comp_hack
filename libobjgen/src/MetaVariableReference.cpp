@@ -334,3 +334,20 @@ std::string MetaVariableReference::GetXmlSaveCode(const Generator& generator,
     return generator.ParseTemplate(tabLevel, "VariableReferenceXmlSave",
         replacements);
 }
+
+std::string MetaVariableReference::GetBindValueCode(const Generator& generator,
+    const std::string& name, size_t tabLevel) const
+{
+    std::string columnName = GetName();
+
+    std::transform(columnName.begin(), columnName.end(),
+        columnName.begin(), ::tolower);
+
+    std::map<std::string, std::string> replacements;
+    replacements["@COLUMN_NAME@"] = generator.Escape(columnName);
+    replacements["@VAR_NAME@"] = name;
+    replacements["@TYPE@"] = "UUID";
+
+    return generator.ParseTemplate(tabLevel, "VariableGetTypeBind",
+        replacements);
+}

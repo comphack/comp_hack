@@ -289,6 +289,160 @@ bool DatabaseQueryCassandra::Bind(const String& name,
     return result;
 }
 
+bool DatabaseQueryCassandra::Bind(size_t index, const libobjgen::UUID& value)
+{
+    bool result = false;
+
+    if(nullptr != mStatement)
+    {
+        result = CASS_OK == cass_statement_bind_uuid(mStatement, index,
+            value.ToCassandra());
+    }
+
+    return result;
+}
+
+bool DatabaseQueryCassandra::Bind(const String& name,
+    const libobjgen::UUID& value)
+{
+    bool result = false;
+
+    if(nullptr != mStatement)
+    {
+        result = CASS_OK == cass_statement_bind_uuid_by_name_n(mStatement,
+            name.C(), name.Size(), value.ToCassandra());
+    }
+
+    return result;
+}
+
+bool DatabaseQueryCassandra::Bind(size_t index, int32_t value)
+{
+    bool result = false;
+
+    if(nullptr != mStatement)
+    {
+        result = CASS_OK == cass_statement_bind_int32(mStatement, index, value);
+    }
+
+    return result;
+}
+
+bool DatabaseQueryCassandra::Bind(const String& name, int32_t value)
+{
+    bool result = false;
+
+    if(nullptr != mStatement)
+    {
+        result = CASS_OK == cass_statement_bind_int32_by_name_n(mStatement,
+            name.C(), name.Size(), value);
+    }
+
+    return result;
+}
+
+bool DatabaseQueryCassandra::Bind(size_t index, int64_t value)
+{
+    bool result = false;
+
+    if(nullptr != mStatement)
+    {
+        result = CASS_OK == cass_statement_bind_int64(mStatement, index, value);
+    }
+
+    return result;
+}
+
+bool DatabaseQueryCassandra::Bind(const String& name, int64_t value)
+{
+    bool result = false;
+
+    if(nullptr != mStatement)
+    {
+        result = CASS_OK == cass_statement_bind_int64_by_name_n(mStatement,
+            name.C(), name.Size(), value);
+    }
+
+    return result;
+}
+
+bool DatabaseQueryCassandra::Bind(size_t index, float value)
+{
+    bool result = false;
+
+    if(nullptr != mStatement)
+    {
+        result = CASS_OK == cass_statement_bind_float(mStatement, index, value);
+    }
+
+    return result;
+}
+
+bool DatabaseQueryCassandra::Bind(const String& name, float value)
+{
+    bool result = false;
+
+    if(nullptr != mStatement)
+    {
+        result = CASS_OK == cass_statement_bind_float_by_name_n(mStatement,
+            name.C(), name.Size(), value);
+    }
+
+    return result;
+}
+
+bool DatabaseQueryCassandra::Bind(size_t index, double value)
+{
+    bool result = false;
+
+    if(nullptr != mStatement)
+    {
+        result = CASS_OK == cass_statement_bind_double(mStatement, index,
+            value);
+    }
+
+    return result;
+}
+
+bool DatabaseQueryCassandra::Bind(const String& name, double value)
+{
+    bool result = false;
+
+    if(nullptr != mStatement)
+    {
+        result = CASS_OK == cass_statement_bind_double_by_name_n(mStatement,
+            name.C(), name.Size(), value);
+    }
+
+    return result;
+}
+
+bool DatabaseQueryCassandra::Bind(size_t index, bool value)
+{
+    bool result = false;
+
+    if(nullptr != mStatement)
+    {
+        result = CASS_OK == cass_statement_bind_bool(mStatement, index,
+            value ? cass_true : cass_false);
+    }
+
+    return result;
+}
+
+bool DatabaseQueryCassandra::Bind(const String& name, bool value)
+{
+    bool result = false;
+
+    if(nullptr != mStatement)
+    {
+        result = CASS_OK == cass_statement_bind_bool_by_name_n(mStatement,
+            name.C(), name.Size(), value ? cass_true : cass_false);
+    }
+
+    return result;
+}
+
 bool DatabaseQueryCassandra::Bind(size_t index, const std::unordered_map<
     std::string, std::vector<char>>& values)
 {

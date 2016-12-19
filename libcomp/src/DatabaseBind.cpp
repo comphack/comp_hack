@@ -76,3 +76,87 @@ bool DatabaseBindBlob::Bind(DatabaseQuery& db)
 {
     return db.Bind(mColumn, mValue);
 }
+
+DatabaseBindUUID::DatabaseBindUUID(const String& column,
+    const libobjgen::UUID& value) : DatabaseBind(column), mValue(value)
+{
+}
+
+DatabaseBindUUID::~DatabaseBindUUID()
+{
+}
+
+bool DatabaseBindUUID::Bind(DatabaseQuery& db)
+{
+    return db.Bind(mColumn, mValue);
+}
+
+DatabaseBindInt::DatabaseBindInt(const String& column, int32_t value) :
+    DatabaseBind(column), mValue(value)
+{
+}
+
+DatabaseBindInt::~DatabaseBindInt()
+{
+}
+
+bool DatabaseBindInt::Bind(DatabaseQuery& db)
+{
+    return db.Bind(mColumn, mValue);
+}
+
+DatabaseBindBigInt::DatabaseBindBigInt(const String& column, int64_t value) :
+    DatabaseBind(column), mValue(value)
+{
+}
+
+DatabaseBindBigInt::~DatabaseBindBigInt()
+{
+}
+
+bool DatabaseBindBigInt::Bind(DatabaseQuery& db)
+{
+    return db.Bind(mColumn, mValue);
+}
+
+DatabaseBindFloat::DatabaseBindFloat(const String& column, float value) :
+    DatabaseBind(column), mValue(value)
+{
+}
+
+DatabaseBindFloat::~DatabaseBindFloat()
+{
+}
+
+bool DatabaseBindFloat::Bind(DatabaseQuery& db)
+{
+    return db.Bind(mColumn, mValue);
+}
+
+DatabaseBindDouble::DatabaseBindDouble(const String& column, double value) :
+    DatabaseBind(column), mValue(value)
+{
+}
+
+DatabaseBindDouble::~DatabaseBindDouble()
+{
+}
+
+bool DatabaseBindDouble::Bind(DatabaseQuery& db)
+{
+    return db.Bind(mColumn, mValue);
+}
+
+DatabaseBindBool::DatabaseBindBool(const String& column, bool value) :
+    DatabaseBind(column), mValue(value)
+{
+}
+
+DatabaseBindBool::~DatabaseBindBool()
+{
+}
+
+bool DatabaseBindBool::Bind(DatabaseQuery& db)
+{
+    return db.Bind(mColumn, mValue);
+}

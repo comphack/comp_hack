@@ -181,6 +181,150 @@ bool DatabaseQuery::Bind(const String& name, const std::vector<char>& value)
     return result;
 }
 
+bool DatabaseQuery::Bind(size_t index, const libobjgen::UUID& value)
+{
+    bool result = false;
+
+    if(nullptr != mImpl)
+    {
+        result = mImpl->Bind(index, value);
+    }
+
+    return result;
+}
+
+bool DatabaseQuery::Bind(const String& name, const libobjgen::UUID& value)
+{
+    bool result = false;
+
+    if(nullptr != mImpl)
+    {
+        result = mImpl->Bind(name, value);
+    }
+
+    return result;
+}
+
+bool DatabaseQuery::Bind(size_t index, int32_t value)
+{
+    bool result = false;
+
+    if(nullptr != mImpl)
+    {
+        result = mImpl->Bind(index, value);
+    }
+
+    return result;
+}
+
+bool DatabaseQuery::Bind(const String& name, int32_t value)
+{
+    bool result = false;
+
+    if(nullptr != mImpl)
+    {
+        result = mImpl->Bind(name, value);
+    }
+
+    return result;
+}
+
+bool DatabaseQuery::Bind(size_t index, int64_t value)
+{
+    bool result = false;
+
+    if(nullptr != mImpl)
+    {
+        result = mImpl->Bind(index, value);
+    }
+
+    return result;
+}
+
+bool DatabaseQuery::Bind(const String& name, int64_t value)
+{
+    bool result = false;
+
+    if(nullptr != mImpl)
+    {
+        result = mImpl->Bind(name, value);
+    }
+
+    return result;
+}
+
+bool DatabaseQuery::Bind(size_t index, float value)
+{
+    bool result = false;
+
+    if(nullptr != mImpl)
+    {
+        result = mImpl->Bind(index, value);
+    }
+
+    return result;
+}
+
+bool DatabaseQuery::Bind(const String& name, float value)
+{
+    bool result = false;
+
+    if(nullptr != mImpl)
+    {
+        result = mImpl->Bind(name, value);
+    }
+
+    return result;
+}
+
+bool DatabaseQuery::Bind(size_t index, double value)
+{
+    bool result = false;
+
+    if(nullptr != mImpl)
+    {
+        result = mImpl->Bind(index, value);
+    }
+
+    return result;
+}
+
+bool DatabaseQuery::Bind(const String& name, double value)
+{
+    bool result = false;
+
+    if(nullptr != mImpl)
+    {
+        result = mImpl->Bind(name, value);
+    }
+
+    return result;
+}
+
+bool DatabaseQuery::Bind(size_t index, bool value)
+{
+    bool result = false;
+
+    if(nullptr != mImpl)
+    {
+        result = mImpl->Bind(index, value);
+    }
+
+    return result;
+}
+
+bool DatabaseQuery::Bind(const String& name, bool value)
+{
+    bool result = false;
+
+    if(nullptr != mImpl)
+    {
+        result = mImpl->Bind(name, value);
+    }
+
+    return result;
+}
+
 bool DatabaseQuery::IsValid() const
 {
     bool result = false;

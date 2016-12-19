@@ -225,6 +225,14 @@ void EncryptPacket(const BF_KEY& key, Packet& p);
  */
 void DecryptPacket(const BF_KEY& key, Packet& p);
 
+/**
+ * Generate a password hash.
+ * @param password Clear text password to hash.
+ * @param salt Salt to append to the password before hashing.
+ * @returns Hash for the given password.
+ */
+String HashPassword(const String& password, const String& salt);
+
 } // namespace Decrypt
 
 } // namespace libcomp

@@ -229,7 +229,7 @@ std::list<std::shared_ptr<PersistentObject>> DatabaseCassandra::LoadObjects(
         String(metaObject->GetName()).ToLower()).Arg(
         pValue->GetColumn().ToLower());
 
-        DatabaseQuery query = Prepare(cql);
+    DatabaseQuery query = Prepare(cql);
 
     if(!query.IsValid())
     {
@@ -669,15 +669,11 @@ bool DatabaseCassandra::VerifyAndSetupSchema()
         {
             LOG_DEBUG(libcomp::String("Archiving table '%1'...\n")
                 .Arg(metaObject.GetName()));
-                
-            bool success = false;
-
+            
             /// @todo: do this properly
             std::stringstream ss;
-            ss << "DROP TABLE " << objName;
-            success = Execute(ss.str());
-
-            if(success)
+            ss << "DROP TABLE " << objName << ";";
+            if(Execute(ss.str()))
             {
                 LOG_DEBUG("Archiving complete\n");
             }
@@ -699,7 +695,7 @@ bool DatabaseCassandra::VerifyAndSetupSchema()
 
             std::stringstream ss;
             ss << "CREATE TABLE " << objName
-                << " (uid uuid PRIMARY KEY" << std::endl;
+                << " (uid uuid PRIMARY KEY";
             for(size_t i = 0; i < vars.size(); i++)
             {
                 auto var = vars[i];
@@ -771,7 +767,6 @@ std::string DatabaseCassandra::GetVariableType(const std::shared_ptr
     {
         case libobjgen::MetaVariable::MetaVariableType_t::TYPE_STRING:
             return "text";
-            break;
         case libobjgen::MetaVariable::MetaVariableType_t::TYPE_S8:
         case libobjgen::MetaVariable::MetaVariableType_t::TYPE_S16:
         case libobjgen::MetaVariable::MetaVariableType_t::TYPE_S32:
@@ -779,18 +774,15 @@ std::string DatabaseCassandra::GetVariableType(const std::shared_ptr
         case libobjgen::MetaVariable::MetaVariableType_t::TYPE_U16:
         case libobjgen::MetaVariable::MetaVariableType_t::TYPE_ENUM:
             return "int";
-            break;
         case libobjgen::MetaVariable::MetaVariableType_t::TYPE_S64:
         case libobjgen::MetaVariable::MetaVariableType_t::TYPE_U32:
             return "bigint";
-            break;
         case libobjgen::MetaVariable::MetaVariableType_t::TYPE_FLOAT:
             return "float";
         case libobjgen::MetaVariable::MetaVariableType_t::TYPE_DOUBLE:
             return "double";
         case libobjgen::MetaVariable::MetaVariableType_t::TYPE_REF:
             return "uuid";
-            break;
         case libobjgen::MetaVariable::MetaVariableType_t::TYPE_U64:
         case libobjgen::MetaVariable::MetaVariableType_t::TYPE_ARRAY:
         case libobjgen::MetaVariable::MetaVariableType_t::TYPE_LIST:

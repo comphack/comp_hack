@@ -3,5 +3,6 @@
     <object name="DatabaseConfigSQLite3" baseobject="DatabaseConfig" persistent="false">
         <member type="string" name="DatabaseName" default="comp_hack"/>
         <member type="string" name="DefaultDatabaseName" default="comp_hack"/>
+        <member type="string" name="FileDirectory"/>
     </object>
 </objgen>

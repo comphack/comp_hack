@@ -31,6 +31,9 @@
 #include "Database.h"
 #include "DatabaseConfigSQLite3.h"
 
+// libobjgen Includes
+#include <MetaVariable.h>
+
 typedef struct sqlite3 sqlite3;
 
 namespace libcomp
@@ -65,6 +68,16 @@ public:
     bool UsingDefaultDatabaseFile();
 
 private:
+    std::string GetFilepath() const;
+
+    std::string GetVariableType(const std::shared_ptr<libobjgen::MetaVariable> var);
+
+    std::shared_ptr<PersistentObject> LoadSingleObjectFromRow(
+        std::type_index type, const std::unordered_map<std::string, std::vector<char>>& row);
+
+    std::vector<char> ConvertToRawByteStream(const std::shared_ptr<libobjgen::MetaVariable>& var,
+        const std::vector<char>& columnData);
+
     sqlite3 *mDatabase;
 
     std::shared_ptr<objects::DatabaseConfigSQLite3> mConfig;

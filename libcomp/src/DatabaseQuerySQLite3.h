@@ -96,10 +96,20 @@ public:
 
     virtual bool IsValid() const;
 
+    int GetStatus() const;
+
 private:
+    std::string GetNamedBinding(const String& name) const;
+
     sqlite3 *mDatabase;
 
     sqlite3_stmt *mStatement;
+
+    int mStatus;
+
+    // SQLite3 must call step (aka: Next) to execute so skip the first call
+    // to it after execution
+    bool mDidJustExecute;
 };
 
 } // namespace libcomp

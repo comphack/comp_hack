@@ -251,7 +251,7 @@ std::list<std::shared_ptr<PersistentObject>> DatabaseCassandra::LoadObjects(
         }
     }
 
-    //Build the query, if not loading by UUID filtering needs to b enabled
+    //Build the query, if not loading by UUID filtering needs to be enabled
     std::stringstream ss;
     ss << "SELECT * FROM " << libcomp::String(metaObject->GetName()).ToLower().ToUtf8()
         << " " << libcomp::String("WHERE %1 = %2%3;")
@@ -626,15 +626,11 @@ bool DatabaseCassandra::VerifyAndSetupSchema()
         {
             LOG_DEBUG(libcomp::String("Archiving table '%1'...\n")
                 .Arg(metaObject.GetName()));
-                
-            bool success = false;
-
+            
             /// @todo: do this properly
             std::stringstream ss;
-            ss << "DROP TABLE " << objName;
-            success = Execute(ss.str());
-
-            if(success)
+            ss << "DROP TABLE " << objName << ";";
+            if(Execute(ss.str()))
             {
                 LOG_DEBUG("Archiving complete\n");
             }
@@ -656,7 +652,7 @@ bool DatabaseCassandra::VerifyAndSetupSchema()
 
             std::stringstream ss;
             ss << "CREATE TABLE " << objName
-                << " (uid uuid PRIMARY KEY" << std::endl;
+                << " (uid uuid PRIMARY KEY";
             for(size_t i = 0; i < vars.size(); i++)
             {
                 auto var = vars[i];

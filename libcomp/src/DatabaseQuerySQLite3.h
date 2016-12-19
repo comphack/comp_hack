@@ -68,10 +68,16 @@ public:
 
     virtual bool IsValid() const;
 
+    int GetStatus() const;
+
 private:
+    std::string GetNamedBinding(const String& name) const;
+
     sqlite3 *mDatabase;
 
     sqlite3_stmt *mStatement;
+
+    int mStatus;
 };
 
 } // namespace libcomp

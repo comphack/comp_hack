@@ -245,7 +245,7 @@ std::string MetaVariable::GetAccessDeclarations(const Generator& generator,
         ss << generator.Tab(tabLevel) << "static std::shared_ptr<" << object.GetName()
             << "> Load" << object.GetName() << "By"
             << generator.GetCapitalName(*this) << "("
-            << GetCodeType() << "& val);" << std::endl;
+            << GetArgument("val") << ");" << std::endl;
     }
 
     return ss.str();
@@ -274,14 +274,15 @@ std::string MetaVariable::GetAccessFunctions(const Generator& generator,
     ss << "{" << std::endl;
     ss << GetSetterCode(generator, name, GetName());
     ss << "}" << std::endl;
-    
+
+    /// @todo This may need some work...
     if(IsLookupKey())
     {
         bool convert = GetCodeType() != "libcomp::String";
         ss << std::endl;
         ss << "std::shared_ptr<" << object.GetName() << "> " << object.GetName()
             << "::Load" << object.GetName() << "By" << generator.GetCapitalName(*this)
-            << "(" << GetCodeType() << "& val)" << std::endl;
+            << "(" << GetArgument("val") << ")" << std::endl;
         ss << "{" << std::endl;
 
         if(convert)

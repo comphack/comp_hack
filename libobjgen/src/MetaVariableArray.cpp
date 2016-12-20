@@ -98,15 +98,6 @@ bool MetaVariableArray::IsValid() const
         !IsLookupKey();
 }
 
-bool MetaVariableArray::IsValid(const void *pData, size_t dataSize) const
-{
-    (void)pData;
-    (void)dataSize;
-
-    /// @todo Fix
-    return true;
-}
-
 bool MetaVariableArray::Load(std::istream& stream)
 {
     return IsValid() && mElementType->Load(stream);

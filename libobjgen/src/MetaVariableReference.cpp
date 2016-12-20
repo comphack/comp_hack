@@ -110,15 +110,6 @@ bool MetaVariableReference::IsValid() const
     return MetaObject::IsValidIdentifier(mReferenceType) && !IsLookupKey();
 }
 
-bool MetaVariableReference::IsValid(const void *pData, size_t dataSize) const
-{
-    (void)pData;
-    (void)dataSize;
-
-    /// @todo Fix
-    return true;
-}
-
 bool MetaVariableReference::Load(std::istream& stream)
 {
     LoadString(stream, mReferenceType);

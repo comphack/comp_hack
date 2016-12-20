@@ -157,15 +157,6 @@ bool MetaVariableString::IsValid() const
     return regexOk && (0 == mSize || mSize > mDefaultValue.size());
 }
 
-bool MetaVariableString::IsValid(const void *pData, size_t dataSize) const
-{
-    (void)pData;
-    (void)dataSize;
-
-    /// @todo Fix
-    return true;
-}
-
 bool MetaVariableString::Load(std::istream& stream)
 {
     LoadString(stream, mDefaultValue);

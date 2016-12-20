@@ -85,11 +85,6 @@ void MetaVariable::SetCaps(bool caps)
     mCaps = caps;
 }
 
-bool MetaVariable::IsValid(const std::vector<char>& data) const
-{
-    return IsValid(&data[0], data.size());
-}
-
 bool MetaVariable::LoadString(std::istream& stream, std::string& s)
 {
     std::streamsize strLength;

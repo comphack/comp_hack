@@ -82,15 +82,6 @@ bool MetaVariableMap::IsValid() const
         !IsLookupKey();
 }
 
-bool MetaVariableMap::IsValid(const void *pData, size_t dataSize) const
-{
-    (void)pData;
-    (void)dataSize;
-
-    /// @todo Fix
-    return true;
-}
-
 bool MetaVariableMap::Load(std::istream& stream)
 {
     return IsValid() && mKeyElementType->Load(stream) && mValueElementType->Load(stream);

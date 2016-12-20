@@ -50,8 +50,6 @@ public:
     virtual bool IsCoreType() const;
     virtual bool IsValid() const;
 
-    virtual bool IsValid(const void *pData, size_t dataSize) const;
-
     virtual bool Load(std::istream& stream);
     virtual bool Save(std::ostream& stream) const;
 

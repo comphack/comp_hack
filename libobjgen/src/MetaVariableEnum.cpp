@@ -95,15 +95,6 @@ bool MetaVariableEnum::IsValid() const
     return mValues.size() > 0 && mDefaultValue <= mValues.size();
 }
 
-bool MetaVariableEnum::IsValid(const void *pData, size_t dataSize) const
-{
-    (void)pData;
-    (void)dataSize;
-
-    /// @todo Fix
-    return true;
-}
-
 bool MetaVariableEnum::Load(std::istream& stream)
 {
     stream.read(reinterpret_cast<char*>(&mDefaultValue),

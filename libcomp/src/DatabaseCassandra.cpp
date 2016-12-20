@@ -281,29 +281,6 @@ std::list<std::shared_ptr<PersistentObject>> DatabaseCassandra::LoadObjects(
     return objects;
 }
 
-std::shared_ptr<PersistentObject> DatabaseCassandra::LoadSingleObject(
-    std::type_index type, DatabaseBind *pValue)
-{
-    auto objects = LoadObjects(type, pValue);
-
-    return objects.size() > 0 ? objects.front() : nullptr;
-}
-
-std::shared_ptr<PersistentObject> DatabaseCassandra::LoadSingleObjectFromRow(
-    std::type_index type, DatabaseQuery& query)
-{
-    auto obj = PersistentObject::New(type);
-
-    if(!obj->LoadDatabaseValues(query))
-    {
-        return nullptr;
-    }
-
-    PersistentObject::Register(obj);
-
-    return obj;
-}
-
 bool DatabaseCassandra::InsertSingleObject(std::shared_ptr<PersistentObject>& obj)
 {
     auto metaObject = obj->GetObjectMetadata();

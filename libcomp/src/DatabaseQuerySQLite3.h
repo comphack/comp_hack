@@ -99,7 +99,11 @@ public:
     int GetStatus() const;
 
 private:
+    size_t GetNamedBindingIndex(const String& name) const;
+
     std::string GetNamedBinding(const String& name) const;
+
+    bool GetResultColumnIndex(const String& name, size_t& index) const;
 
     sqlite3 *mDatabase;
 
@@ -110,6 +114,9 @@ private:
     // SQLite3 must call step (aka: Next) to execute so skip the first call
     // to it after execution
     bool mDidJustExecute;
+
+    std::vector<std::string> mResultColumnNames;
+    std::vector<int> mResultColumnTypes;
 };
 
 } // namespace libcomp

@@ -87,3 +87,26 @@ bool Database::TableHasRows(const String& table)
 
     return 0 < count;
 }
+
+std::shared_ptr<PersistentObject> Database::LoadSingleObject(std::type_index type,
+    DatabaseBind *pValue)
+{
+    auto objects = LoadObjects(type, pValue);
+
+    return objects.size() > 0 ? objects.front() : nullptr;
+}
+
+std::shared_ptr<PersistentObject> Database::LoadSingleObjectFromRow(
+    std::type_index type, DatabaseQuery& query)
+{
+    auto obj = PersistentObject::New(type);
+
+    if(!obj->LoadDatabaseValues(query))
+    {
+        return nullptr;
+    }
+
+    PersistentObject::Register(obj);
+
+    return obj;
+}

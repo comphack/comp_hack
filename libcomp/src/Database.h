@@ -58,7 +58,7 @@ public:
         std::type_index type, DatabaseBind *pValue) = 0;
 
     virtual std::shared_ptr<PersistentObject> LoadSingleObject(
-        std::type_index type, DatabaseBind *pValue) = 0;
+        std::type_index type, DatabaseBind *pValue);
 
     virtual bool InsertSingleObject(std::shared_ptr<PersistentObject>& obj) = 0;
     virtual bool UpdateSingleObject(std::shared_ptr<PersistentObject>& obj) = 0;
@@ -70,6 +70,9 @@ public:
     static void SetMainDatabase(std::shared_ptr<Database> database);
 
 protected:
+    std::shared_ptr<PersistentObject> LoadSingleObjectFromRow(
+        std::type_index type, DatabaseQuery& query);
+
     String mError;
 
     static std::shared_ptr<Database> sMain;

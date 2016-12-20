@@ -35,10 +35,10 @@
 
 using namespace libobjgen;
 
-MetaVariableReference::MetaVariableReference(const std::string& parentObjectType)
+MetaVariableReference::MetaVariableReference()
     : MetaVariable()
 {
-    mParentObjectType = parentObjectType;
+    mPersistentParent = false;
 }
 
 MetaVariableReference::~MetaVariableReference()
@@ -78,6 +78,17 @@ bool MetaVariableReference::SetReferenceType(const std::string& referenceType)
     return status;
 }
 
+bool MetaVariableReference::GetPersistentParent() const
+{
+    return mPersistentParent;
+}
+
+bool MetaVariableReference::SetPersistentParent(bool persistentParent)
+{
+    mPersistentParent = persistentParent;
+    return true;
+}
+
 void MetaVariableReference::AddDefaultedVariable(std::shared_ptr<MetaVariable>& var)
 {
     mDefaultedVariables.push_back(var);
@@ -110,8 +121,9 @@ bool MetaVariableReference::IsValid(const void *pData, size_t dataSize) const
 
 bool MetaVariableReference::Load(std::istream& stream)
 {
-    LoadString(stream, mParentObjectType);
     LoadString(stream, mReferenceType);
+    stream.read(reinterpret_cast<char*>(&mPersistentParent),
+        sizeof(mPersistentParent));
 
     return stream.good() && IsValid();
 }
@@ -122,8 +134,9 @@ bool MetaVariableReference::Save(std::ostream& stream) const
 
     if(IsValid())
     {
-        SaveString(stream, mParentObjectType);
         SaveString(stream, mReferenceType);
+        stream.write(reinterpret_cast<const char*>(&mPersistentParent),
+            sizeof(mPersistentParent));
 
         result = stream.good();
     }
@@ -179,7 +192,7 @@ std::string MetaVariableReference::GetCodeType() const
 std::string MetaVariableReference::GetConstructValue() const
 {
     std::stringstream ss;
-    if(IsPersistentReference())
+    if(mPersistentParent)
     {
         ss << GetCodeType() << "()";
     }
@@ -211,7 +224,7 @@ std::string MetaVariableReference::GetConstructorCode(const Generator& generator
 
     std::stringstream ss;
     bool topLevel = parentRef.length() == 0;
-    if(IsPersistentReference())
+    if(mPersistentParent)
     {
         ss << GetName() << " = " << code << ";" << std::endl;
         //Should always be the case
@@ -276,19 +289,17 @@ std::string MetaVariableReference::GetValidCondition(const Generator& generator,
 {
     (void)generator;
 
-    std::stringstream ss;
-
     if(recursive)
     {
+        std::stringstream ss;
         ss << "nullptr != " << name  << ".GetCurrentReference() && (!recursive || "
             << name << ".GetCurrentReference()->IsValid(recursive))";
+        return ss.str();
     }
     else
     {
-        ss << "true";
+        return "";
     }
-
-    return ss.str();
 }
 
 std::string MetaVariableReference::GetLoadCode(const Generator& generator,
@@ -298,7 +309,7 @@ std::string MetaVariableReference::GetLoadCode(const Generator& generator,
     replacements["@VAR_NAME@"] = name;
     replacements["@STREAM@"] = stream;
 
-    if(IsPersistentReference())
+    if(mPersistentParent)
     {
         return generator.ParseTemplate(1, "VariablePersistentReferenceLoad",
             replacements);
@@ -317,7 +328,7 @@ std::string MetaVariableReference::GetSaveCode(const Generator& generator,
     replacements["@VAR_NAME@"] = name;
     replacements["@STREAM@"] = stream;
 
-    if(IsPersistentReference())
+    if(mPersistentParent)
     {
         return generator.ParseTemplate(1, "VariablePersistentReferenceSave",
             replacements);
@@ -336,7 +347,7 @@ std::string MetaVariableReference::GetLoadRawCode(const Generator& generator,
     replacements["@VAR_NAME@"] = name;
     replacements["@STREAM@"] = stream;
 
-    if(IsPersistentReference())
+    if(mPersistentParent)
     {
         return generator.ParseTemplate(1, "VariablePersistentReferenceLoadRaw",
             replacements);
@@ -355,7 +366,7 @@ std::string MetaVariableReference::GetSaveRawCode(const Generator& generator,
     replacements["@VAR_NAME@"] = name;
     replacements["@STREAM@"] = stream;
 
-    if(IsPersistentReference())
+    if(mPersistentParent)
     {
         return generator.ParseTemplate(1, "VariablePersistentReferenceSaveRaw",
             replacements);
@@ -379,7 +390,7 @@ std::string MetaVariableReference::GetXmlLoadCode(const Generator& generator,
     replacements["@DOC@"] = doc;
     replacements["@NODE@"] = node;
 
-    if(IsPersistentReference())
+    if(mPersistentParent)
     {
         return generator.ParseTemplate(tabLevel, "VariablePersistentReferenceXmlLoad",
             replacements);
@@ -404,7 +415,7 @@ std::string MetaVariableReference::GetXmlSaveCode(const Generator& generator,
     replacements["@DOC@"] = doc;
     replacements["@PARENT@"] = parent;
 
-    if(IsPersistentReference())
+    if(mPersistentParent)
     {
         return generator.ParseTemplate(tabLevel, "VariablePersistentReferenceXmlSave",
             replacements);
@@ -442,9 +453,4 @@ std::string MetaVariableReference::GetDatabaseLoadCode(
 
     return generator.ParseTemplate(tabLevel, "VariableDatabaseRefLoad",
         replacements);
-}
-
-bool MetaVariableReference::IsPersistentReference() const
-{
-    return MetaObject::GetKnownObjects()[mParentObjectType]->GetPersistent();
 }

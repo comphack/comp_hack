@@ -104,7 +104,7 @@ public:
 
 protected:
     static std::shared_ptr<MetaVariable> CreateType(
-        const std::string& typeName, const std::string& parentObjectType);
+        const std::string& typeName);
 
     bool LoadMember(const tinyxml2::XMLDocument& doc, const char *szName,
         const tinyxml2::XMLElement *pMember, bool& result);

@@ -447,7 +447,7 @@ std::shared_ptr<MetaVariable> MetaObject::GetVariable(const tinyxml2::XMLDocumen
     else
     {
         const std::string memberType(szMemberType);
-        std::shared_ptr<MetaVariable> var = CreateType(memberType, szName);
+        std::shared_ptr<MetaVariable> var = CreateType(memberType);
 
         if(!var && (memberType == "list" || memberType == "array" || memberType == "map"))
         {
@@ -562,24 +562,29 @@ std::shared_ptr<MetaVariable> MetaObject::GetVariable(const tinyxml2::XMLDocumen
 
             auto refType = ref->GetReferenceType();
             auto persistentRefType = mReferencesVerified && sKnownObjects[szName]->GetPersistent();
-            if(mReferencesVerified && sKnownObjects.find(refType) == sKnownObjects.end())
-            {
-                std::stringstream ss;
-                ss << "Unknown reference type '" << refType << "' on field  '"
-                    << szMemberName << "' in object '" << szName << "'.";
 
-                mError = ss.str();
-            }
-            else if(mReferencesVerified && !sKnownObjects[refType]->GetPersistent() &&
-                persistentRefType)
+            ref->SetPersistentParent(persistentRefType);
+            if(mReferencesVerified)
             {
-                std::stringstream ss;
-                ss << "Non-peristent reference type '" << refType << "' on field  '"
-                    << szMemberName << "' in persistent object '" << szName << "'.";
+                if(sKnownObjects.find(refType) == sKnownObjects.end())
+                {
+                    std::stringstream ss;
+                    ss << "Unknown reference type '" << refType << "' on field  '"
+                        << szMemberName << "' in object '" << szName << "'.";
 
-                mError = ss.str();
+                    mError = ss.str();
+                }
+                else if(!sKnownObjects[refType]->GetPersistent() && persistentRefType)
+                {
+                    std::stringstream ss;
+                    ss << "Non-peristent reference type '" << refType << "' on field  '"
+                        << szMemberName << "' in persistent object '" << szName << "'.";
+
+                    mError = ss.str();
+                }
             }
-            else
+
+            if(mError.length() == 0)
             {
                 const tinyxml2::XMLElement *cMember = pMember->FirstChildElement();
                 while (nullptr != cMember)
@@ -685,7 +690,7 @@ bool MetaObject::Save(tinyxml2::XMLDocument& doc,
 }
 
 std::shared_ptr<MetaVariable> MetaObject::CreateType(
-    const std::string& typeName, const std::string& parentObjectType)
+    const std::string& typeName)
 {
     std::shared_ptr<MetaVariable> var;
 
@@ -739,7 +744,7 @@ std::shared_ptr<MetaVariable> MetaObject::CreateType(
 
     if(std::regex_match(typeName, match, re))
     {
-        var = std::shared_ptr<MetaVariable>(new MetaVariableReference(parentObjectType));
+        var = std::shared_ptr<MetaVariable>(new MetaVariableReference());
 
         if(!var || !std::dynamic_pointer_cast<MetaVariableReference>(
             var)->SetReferenceType(match[1]))
@@ -823,7 +828,7 @@ bool MetaObject::DefaultsSpecified(const tinyxml2::XMLElement *pMember) const
     }
 
     const std::string memberType(szMemberType);
-    auto subVar = CreateType(memberType, "");
+    auto subVar = CreateType(memberType);
     if(subVar && subVar->GetMetaType() != MetaVariable::MetaVariableType_t::TYPE_REF)
     {
         return nullptr != pMember->Attribute("default");

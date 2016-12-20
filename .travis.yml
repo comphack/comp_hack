@@ -105,8 +105,9 @@ script:
   - mkdir -p build && cd build && cmake -G "${GENERATOR}" .. && cmake --build .
   - cmake --build . --target doc
   - cmake --build . --target guide
-  - bin/comp_lobby &
-  - sleep 10
+  # Commenting out execution of comp_lobby since it requires user interaction when there is no data in the DB
+  #- bin/comp_lobby &
+  #- sleep 10
   - nodetool status
   - cqlsh -e "SHOW HOST; SHOW VERSION;"
   - cmake --build . --target Experimental

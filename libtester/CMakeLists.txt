@@ -40,12 +40,13 @@ TARGET_INCLUDE_DIRECTORIES(tester PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 TARGET_LINK_LIBRARIES(tester ${CMAKE_THREAD_LIBS_INIT} comp tinyxml2)
 
+# Commenting out the Lobby test until it does something useful
 # List of unit tests to add to CTest.
 SET(${PROJECT_NAME}_TEST_SRCS
-    Lobby
+    #Lobby
 )
 
 IF(NOT BSD)
     # Add the unit tests.
-    CREATE_GTESTS(LIBS comp tester SRCS ${${PROJECT_NAME}_TEST_SRCS})
+    #CREATE_GTESTS(LIBS comp tester SRCS ${${PROJECT_NAME}_TEST_SRCS})
 ENDIF(NOT BSD)

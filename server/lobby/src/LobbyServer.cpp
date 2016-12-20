@@ -57,7 +57,7 @@ bool LobbyServer::Initialize(std::weak_ptr<BaseServer>& self)
         return false;
     }
 
-    if(true||!mDatabase->TableHasRows("Account"))
+    if(!mDatabase->TableHasRows("Account"))
     {
         CreateFirstAccount();
     }

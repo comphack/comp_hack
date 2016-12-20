@@ -53,8 +53,9 @@ int main(int argc, const char *argv[])
 
     auto config = std::shared_ptr<objects::ServerConfig>(new objects::WorldConfig());
     auto server = std::shared_ptr<world::WorldServer>(new world::WorldServer(config, configPath));
-
-    if(!server->Initialize(std::weak_ptr<libcomp::BaseServer>(server)))
+    
+    auto wkServer = std::weak_ptr<libcomp::BaseServer>(server);
+    if(!server->Initialize(wkServer))
     {
         LOG_DEBUG("The server could not be initialized.\n");
         return EXIT_FAILURE;

@@ -36,7 +36,7 @@ SET(${PROJECT_NAME}_HDRS
 )
 
 SET(${PROJECT_NAME}_SCHEMA
-    ../../libcomp/schema/master.xml
+    schema/worldconfig.xml
 )
 
 OBJGEN_XML(${PROJECT_NAME}_STRUCTS

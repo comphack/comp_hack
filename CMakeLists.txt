@@ -399,7 +399,7 @@ MACRO(OBJGEN_XML outfiles xml)
     # or the objgen application change.
     FOREACH(out ${outs})
         ADD_CUSTOM_COMMAND(OUTPUT ${out}
-            COMMAND comp_objgen ${incs} -o ${out} ${deps}
+            COMMAND comp_objgen ${incs} -o ${out} ${xml_abs}
             COMMAND cmake -E touch ${out}
             DEPENDS comp_objgen ${deps})
     ENDFOREACH(out ${outs})

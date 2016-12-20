@@ -350,6 +350,8 @@ std::string MetaVariableReference::GetBindValueCode(const Generator& generator,
 std::string MetaVariableReference::GetDatabaseLoadCode(
     const Generator& generator, const std::string& name, size_t tabLevel) const
 {
+    (void)name;
+
     std::map<std::string, std::string> replacements;
     replacements["@VAR_TYPE@"] = GetReferenceType();
     replacements["@COLUMN_NAME@"] = generator.Escape(GetName());

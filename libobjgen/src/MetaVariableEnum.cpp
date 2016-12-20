@@ -350,6 +350,8 @@ std::string MetaVariableEnum::GetBindValueCode(const Generator& generator,
 std::string MetaVariableEnum::GetDatabaseLoadCode(const Generator& generator,
     const std::string& name, size_t tabLevel) const
 {
+    (void)name;
+
     std::map<std::string, std::string> replacements;
     replacements["@DATABASE_TYPE@"] = "int32_t";
     replacements["@COLUMN_NAME@"] = generator.Escape(GetName());

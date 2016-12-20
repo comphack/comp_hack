@@ -732,6 +732,8 @@ std::string MetaVariableString::GetBindValueCode(const Generator& generator,
 std::string MetaVariableString::GetDatabaseLoadCode(const Generator& generator,
     const std::string& name, size_t tabLevel) const
 {
+    (void)name;
+
     std::map<std::string, std::string> replacements;
     replacements["@DATABASE_TYPE@"] = GetCodeType();
     replacements["@COLUMN_NAME@"] = generator.Escape(GetName());

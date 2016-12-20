@@ -47,7 +47,6 @@
 namespace libcomp
 {
 
-class DatabaseBind;
 class Packet;
 class ReadOnlyPacket;
 

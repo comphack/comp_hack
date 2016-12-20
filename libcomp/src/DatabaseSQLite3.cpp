@@ -321,7 +321,8 @@ std::shared_ptr<PersistentObject> DatabaseSQLite3::LoadSingleObjectFromRow(
         return nullptr;
     }
 
-    obj->Register(obj, uuid);
+    PersistentObject::Register(obj);
+
     return obj;
 }
 

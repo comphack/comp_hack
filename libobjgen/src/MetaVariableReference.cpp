@@ -338,16 +338,26 @@ std::string MetaVariableReference::GetXmlSaveCode(const Generator& generator,
 std::string MetaVariableReference::GetBindValueCode(const Generator& generator,
     const std::string& name, size_t tabLevel) const
 {
-    std::string columnName = GetName();
-
-    std::transform(columnName.begin(), columnName.end(),
-        columnName.begin(), ::tolower);
-
     std::map<std::string, std::string> replacements;
-    replacements["@COLUMN_NAME@"] = generator.Escape(columnName);
+    replacements["@COLUMN_NAME@"] = generator.Escape(GetName());
     replacements["@VAR_NAME@"] = name;
     replacements["@TYPE@"] = "UUID";
 
     return generator.ParseTemplate(tabLevel, "VariableGetTypeBind",
+        replacements);
+}
+
+std::string MetaVariableReference::GetDatabaseLoadCode(
+    const Generator& generator, const std::string& name, size_t tabLevel) const
+{
+    (void)name;
+
+    std::map<std::string, std::string> replacements;
+    replacements["@VAR_TYPE@"] = GetReferenceType();
+    replacements["@COLUMN_NAME@"] = generator.Escape(GetName());
+    replacements["@SET_FUNCTION@"] = std::string("Set") +
+        generator.GetCapitalName(*this);
+
+    return generator.ParseTemplate(tabLevel, "VariableDatabaseRefLoad",
         replacements);
 }

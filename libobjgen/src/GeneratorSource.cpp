@@ -48,7 +48,9 @@ std::string GeneratorSource::Generate(const MetaObject& obj)
 
     ss << "// libcomp Includes" << std::endl;
     ss << "#include \"DatabaseBind.h\"" << std::endl;
+    ss << "#include \"DatabaseQuery.h\"" << std::endl;
     ss << "#include \"Log.h\"" << std::endl;
+    ss << "#include \"VectorStream.h\"" << std::endl;
     ss << std::endl;
 
     std::set<std::string> references = obj.GetReferences();
@@ -472,6 +474,32 @@ void GeneratorSource::GeneratePersistentObjectFunctions(const MetaObject& obj,
     }
 
     ss << Tab() << "return values;" << std::endl;
+    ss << "}" << std::endl;
+    ss << std::endl;
+
+    ss << "bool " << obj.GetName()
+        << "::LoadDatabaseValues(libcomp::DatabaseQuery& query)" << std::endl;
+    ss << "{" << std::endl;
+
+    for(auto it = obj.VariablesBegin(); it != obj.VariablesEnd(); ++it)
+    {
+        auto var = *it;
+
+        ss << Tab() << "if(!" << var->GetDatabaseLoadCode(
+            *this, GetMemberName(var)) << ")" << std::endl;
+        ss << Tab() << "{" << std::endl;
+        ss << Tab(2) << "return false;" << std::endl;
+        ss << Tab() << "}" << std::endl;
+        ss << std::endl;
+    }
+
+    ss << Tab() << "if(!query.GetValue(\"uid\", mUUID))" << std::endl;
+    ss << Tab() << "{" << std::endl;
+    ss << Tab(2) << "return false;" << std::endl;
+    ss << Tab() << "}" << std::endl;
+    ss << std::endl;
+
+    ss << Tab() << "return true;" << std::endl;
     ss << "}" << std::endl;
     ss << std::endl;
 

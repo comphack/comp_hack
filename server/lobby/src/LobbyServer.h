@@ -53,6 +53,9 @@ public:
     std::shared_ptr<lobby::World> GetWorldByConnection(std::shared_ptr<libcomp::InternalConnection> connection);
 
 protected:
+    void CreateFirstAccount();
+    void PromptCreateAccount();
+
     virtual std::shared_ptr<libcomp::TcpConnection> CreateConnection(
         asio::ip::tcp::socket& socket);
 

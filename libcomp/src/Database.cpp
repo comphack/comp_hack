@@ -57,3 +57,33 @@ void Database::SetMainDatabase(std::shared_ptr<Database> database)
 {
     sMain = database;
 }
+
+bool Database::TableHasRows(const String& table)
+{
+    libcomp::DatabaseQuery query = Prepare(String(
+        "SELECT COUNT(1) FROM %1").Arg(table.ToLower()));
+
+    if(!query.IsValid())
+    {
+        return false;
+    }
+
+    if(!query.Execute())
+    {
+        return false;
+    }
+
+    if(!query.Next())
+    {
+        return false;
+    }
+
+    int64_t count;
+
+    if(!query.GetValue(0, count))
+    {
+        return false;
+    }
+
+    return 0 < count;
+}

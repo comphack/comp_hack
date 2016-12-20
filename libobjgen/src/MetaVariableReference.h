@@ -79,6 +79,8 @@ public:
         size_t tabLevel) const;
     virtual std::string GetValidCondition(const Generator& generator,
         const std::string& name, bool recursive = false) const;
+    virtual std::string GetDatabaseLoadCode(const Generator& generator,
+        const std::string& name, size_t tabLevel = 1) const;
     virtual std::string GetLoadCode(const Generator& generator,
         const std::string& name, const std::string& stream) const;
     virtual std::string GetSaveCode(const Generator& generator,

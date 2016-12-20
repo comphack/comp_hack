@@ -119,6 +119,7 @@ std::string GeneratorHeader::GenerateClass(const MetaObject& obj)
     if(obj.GetPersistent())
     {
         ss << Tab() << "virtual std::list<libcomp::DatabaseBind*> GetMemberBindValues();" << std::endl;
+        ss << Tab() << "virtual bool LoadDatabaseValues(libcomp::DatabaseQuery& query);" << std::endl;
         ss << Tab() << "virtual std::shared_ptr<libobjgen::MetaObject> GetObjectMetadata();" << std::endl;
         ss << Tab() << "static std::shared_ptr<libobjgen::MetaObject> GetMetadata();" << std::endl;
         ss << std::endl;

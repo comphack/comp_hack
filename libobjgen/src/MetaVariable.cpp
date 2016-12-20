@@ -178,16 +178,22 @@ std::string MetaVariable::GetGetterCode(const Generator& generator,
 std::string MetaVariable::GetBindValueCode(const Generator& generator,
     const std::string& name, size_t tabLevel) const
 {
-    std::string columnName = GetName();
-
-    std::transform(columnName.begin(), columnName.end(),
-        columnName.begin(), ::tolower);
-
     std::map<std::string, std::string> replacements;
-    replacements["@COLUMN_NAME@"] = generator.Escape(columnName);
+    replacements["@COLUMN_NAME@"] = generator.Escape(GetName());
     replacements["@SAVE_CODE@"] = GetSaveRawCode(generator, name, "stream");
 
     return generator.ParseTemplate(tabLevel, "VariableGetBind",
+        replacements);
+}
+
+std::string MetaVariable::GetDatabaseLoadCode(const Generator& generator,
+    const std::string& name, size_t tabLevel) const
+{
+    std::map<std::string, std::string> replacements;
+    replacements["@COLUMN_NAME@"] = generator.Escape(GetName());
+    replacements["@LOAD_CODE@"] = GetLoadRawCode(generator, name, "stream");
+
+    return generator.ParseTemplate(tabLevel, "VariableDatabaseBlobLoad",
         replacements);
 }
 

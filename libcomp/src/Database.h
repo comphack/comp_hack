@@ -52,6 +52,8 @@ public:
     virtual bool Setup() = 0;
     virtual bool Use() = 0;
 
+    virtual bool TableHasRows(const String& table);
+
     virtual std::list<std::shared_ptr<PersistentObject>> LoadObjects(
         std::type_index type, DatabaseBind *pValue) = 0;
 

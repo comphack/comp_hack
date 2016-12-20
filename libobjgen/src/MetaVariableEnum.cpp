@@ -338,17 +338,28 @@ std::string MetaVariableEnum::GetStringValueCode(const std::string& name) const
 std::string MetaVariableEnum::GetBindValueCode(const Generator& generator,
     const std::string& name, size_t tabLevel) const
 {
-    std::string columnName = GetName();
-
-    std::transform(columnName.begin(), columnName.end(),
-        columnName.begin(), ::tolower);
-
     std::map<std::string, std::string> replacements;
-    replacements["@COLUMN_NAME@"] = generator.Escape(columnName);
+    replacements["@COLUMN_NAME@"] = generator.Escape(GetName());
     replacements["@VAR_NAME@"] = name;
     replacements["@TYPE@"] = "Int";
 
     return generator.ParseTemplate(tabLevel, "VariableGetTypeBind",
+        replacements);
+}
+
+std::string MetaVariableEnum::GetDatabaseLoadCode(const Generator& generator,
+    const std::string& name, size_t tabLevel) const
+{
+    (void)name;
+
+    std::map<std::string, std::string> replacements;
+    replacements["@DATABASE_TYPE@"] = "int32_t";
+    replacements["@COLUMN_NAME@"] = generator.Escape(GetName());
+    replacements["@SET_FUNCTION@"] = std::string("Set") +
+        generator.GetCapitalName(*this);
+    replacements["@VAR_TYPE@"] = GetCodeType();
+
+    return generator.ParseTemplate(tabLevel, "VariableDatabaseCastLoad",
         replacements);
 }
 

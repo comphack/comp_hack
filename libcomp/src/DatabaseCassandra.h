@@ -75,7 +75,7 @@ protected:
     std::string GetVariableType(const std::shared_ptr<libobjgen::MetaVariable> var);
 
     std::shared_ptr<PersistentObject> LoadSingleObjectFromRow(
-        std::type_index type, const std::unordered_map<std::string, std::vector<char>>& row);
+        std::type_index type, DatabaseQuery& query);
 
     std::vector<char> ConvertToRawByteStream(const std::shared_ptr<libobjgen::MetaVariable>& var,
         const std::vector<char>& columnData);

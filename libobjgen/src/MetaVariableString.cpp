@@ -720,17 +720,27 @@ std::string MetaVariableString::GetStringValueCode(const std::string& name) cons
 std::string MetaVariableString::GetBindValueCode(const Generator& generator,
     const std::string& name, size_t tabLevel) const
 {
-    std::string columnName = GetName();
-
-    std::transform(columnName.begin(), columnName.end(),
-        columnName.begin(), ::tolower);
-
     std::map<std::string, std::string> replacements;
-    replacements["@COLUMN_NAME@"] = generator.Escape(columnName);
+    replacements["@COLUMN_NAME@"] = generator.Escape(GetName());
     replacements["@VAR_NAME@"] = name;
     replacements["@TYPE@"] = "Text";
 
     return generator.ParseTemplate(tabLevel, "VariableGetTypeBind",
+        replacements);
+}
+
+std::string MetaVariableString::GetDatabaseLoadCode(const Generator& generator,
+    const std::string& name, size_t tabLevel) const
+{
+    (void)name;
+
+    std::map<std::string, std::string> replacements;
+    replacements["@DATABASE_TYPE@"] = GetCodeType();
+    replacements["@COLUMN_NAME@"] = generator.Escape(GetName());
+    replacements["@SET_FUNCTION@"] = std::string("Set") +
+        generator.GetCapitalName(*this);
+
+    return generator.ParseTemplate(tabLevel, "VariableDatabaseLoad",
         replacements);
 }
 

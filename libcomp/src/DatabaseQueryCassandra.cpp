@@ -544,6 +544,269 @@ bool DatabaseQueryCassandra::Bind(const String& name, const std::unordered_map<
     return result;
 }
 
+const CassValue* DatabaseQueryCassandra::GetValue(size_t index)
+{
+    const CassValue *pValue = nullptr;
+    const CassRow *pRow;
+
+    if(nullptr != mRowIterator && nullptr != (pRow = cass_iterator_get_row(
+        mRowIterator)))
+    {
+        pValue = cass_row_get_column(pRow, index);
+    }
+
+    return pValue;
+}
+
+const CassValue* DatabaseQueryCassandra::GetValue(const String& name)
+{
+    const CassValue *pValue = nullptr;
+    const CassRow *pRow;
+
+    if(nullptr != mRowIterator && nullptr != (pRow = cass_iterator_get_row(
+        mRowIterator)))
+    {
+        pValue = cass_row_get_column_by_name_n(pRow,
+            name.C(), name.Size());
+    }
+
+    return pValue;
+}
+
+bool DatabaseQueryCassandra::GetTextValue(const CassValue *pValue,
+    String& value)
+{
+    bool result = false;
+
+    if(nullptr != pValue)
+    {
+        const char *szValueData = nullptr;
+        size_t valueSize = 0;
+
+        if(CASS_OK == cass_value_get_string(pValue, &szValueData,
+            &valueSize) && nullptr != szValueData && 0 != valueSize)
+        {
+            value = String(szValueData, valueSize);
+
+            result = true;
+        }
+    }
+
+    return result;
+}
+
+bool DatabaseQueryCassandra::GetValue(size_t index, String& value)
+{
+    return GetTextValue(GetValue(index), value);
+}
+
+bool DatabaseQueryCassandra::GetValue(const String& name, String& value)
+{
+    return GetTextValue(GetValue(name), value);
+}
+
+bool DatabaseQueryCassandra::GetBlobValue(const CassValue *pValue,
+    std::vector<char>& value)
+{
+    bool result = false;
+
+    if(nullptr != pValue)
+    {
+        const cass_byte_t *pValueData = nullptr;
+        size_t valueSize = 0;
+
+        if(CASS_OK == cass_value_get_bytes(pValue, &pValueData,
+            &valueSize) && nullptr != pValueData && 0 != valueSize)
+        {
+            value.clear();
+            value.insert(value.begin(),
+                reinterpret_cast<const char*>(pValueData),
+                reinterpret_cast<const char*>(pValueData + valueSize));
+
+            result = true;
+        }
+    }
+
+    return result;
+}
+
+bool DatabaseQueryCassandra::GetValue(size_t index, std::vector<char>& value)
+{
+    return GetBlobValue(GetValue(index), value);
+}
+
+bool DatabaseQueryCassandra::GetValue(const String& name,
+    std::vector<char>& value)
+{
+    return GetBlobValue(GetValue(name), value);
+}
+
+bool DatabaseQueryCassandra::GetUuidValue(const CassValue *pValue,
+    libobjgen::UUID& value)
+{
+    bool result = false;
+
+    if(nullptr != pValue)
+    {
+        CassUuid uuid;
+
+        if(CASS_OK == cass_value_get_uuid(pValue, &uuid))
+        {
+            value = libobjgen::UUID(uuid);
+
+            result = true;
+        }
+    }
+
+    return result;
+}
+
+bool DatabaseQueryCassandra::GetValue(size_t index, libobjgen::UUID& value)
+{
+    return GetUuidValue(GetValue(index), value);
+}
+
+bool DatabaseQueryCassandra::GetValue(const String& name,
+    libobjgen::UUID& value)
+{
+    return GetUuidValue(GetValue(name), value);
+}
+
+bool DatabaseQueryCassandra::GetIntValue(const CassValue *pValue,
+    int32_t& value)
+{
+    bool result = false;
+
+    if(nullptr != pValue)
+    {
+        if(CASS_OK == cass_value_get_int32(pValue, &value))
+        {
+            result = true;
+        }
+    }
+
+    return result;
+}
+
+bool DatabaseQueryCassandra::GetValue(size_t index, int32_t& value)
+{
+    return GetIntValue(GetValue(index), value);
+}
+
+bool DatabaseQueryCassandra::GetValue(const String& name, int32_t& value)
+{
+    return GetIntValue(GetValue(name), value);
+}
+
+bool DatabaseQueryCassandra::GetBigIntValue(const CassValue *pValue,
+    int64_t& value)
+{
+    bool result = false;
+
+    if(nullptr != pValue)
+    {
+        if(CASS_OK == cass_value_get_int64(pValue, &value))
+        {
+            result = true;
+        }
+    }
+
+    return result;
+}
+
+bool DatabaseQueryCassandra::GetValue(size_t index, int64_t& value)
+{
+    return GetBigIntValue(GetValue(index), value);
+}
+
+bool DatabaseQueryCassandra::GetValue(const String& name, int64_t& value)
+{
+    return GetBigIntValue(GetValue(name), value);
+}
+
+bool DatabaseQueryCassandra::GetFloatValue(const CassValue *pValue,
+    float& value)
+{
+    bool result = false;
+
+    if(nullptr != pValue)
+    {
+        if(CASS_OK == cass_value_get_float(pValue, &value))
+        {
+            result = true;
+        }
+    }
+
+    return result;
+}
+
+bool DatabaseQueryCassandra::GetValue(size_t index, float& value)
+{
+    return GetFloatValue(GetValue(index), value);
+}
+
+bool DatabaseQueryCassandra::GetValue(const String& name, float& value)
+{
+    return GetFloatValue(GetValue(name), value);
+}
+
+bool DatabaseQueryCassandra::GetDoubleValue(const CassValue *pValue,
+    double& value)
+{
+    bool result = false;
+
+    if(nullptr != pValue)
+    {
+        if(CASS_OK == cass_value_get_double(pValue, &value))
+        {
+            result = true;
+        }
+    }
+
+    return result;
+}
+
+bool DatabaseQueryCassandra::GetValue(size_t index, double& value)
+{
+    return GetDoubleValue(GetValue(index), value);
+}
+
+bool DatabaseQueryCassandra::GetValue(const String& name, double& value)
+{
+    return GetDoubleValue(GetValue(name), value);
+}
+
+bool DatabaseQueryCassandra::GetBoolValue(const CassValue *pValue,
+    bool& value)
+{
+    bool result = false;
+
+    if(nullptr != pValue)
+    {
+        cass_bool_t val;
+
+        if(CASS_OK == cass_value_get_bool(pValue, &val))
+        {
+            value = (cass_true == val);
+
+            result = true;
+        }
+    }
+
+    return result;
+}
+
+bool DatabaseQueryCassandra::GetValue(size_t index, bool& value)
+{
+    return GetBoolValue(GetValue(index), value);
+}
+
+bool DatabaseQueryCassandra::GetValue(const String& name, bool& value)
+{
+    return GetBoolValue(GetValue(name), value);
+}
+
+
 bool DatabaseQueryCassandra::GetMap(size_t index,
     std::unordered_map<std::string, std::vector<char>>& values)
 {

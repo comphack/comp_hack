@@ -265,6 +265,136 @@ bool DatabaseQuerySQLite3::Bind(const String& name, const std::unordered_map<
     return false;
 }
 
+bool DatabaseQuerySQLite3::GetValue(size_t index, String& value)
+{
+    (void)index;
+    (void)value;
+
+    return false;
+}
+
+bool DatabaseQuerySQLite3::GetValue(const String& name, String& value)
+{
+    (void)name;
+    (void)value;
+
+    return false;
+}
+
+bool DatabaseQuerySQLite3::GetValue(size_t index, std::vector<char>& value)
+{
+    (void)index;
+    (void)value;
+
+    return false;
+}
+
+bool DatabaseQuerySQLite3::GetValue(const String& name,
+    std::vector<char>& value)
+{
+    (void)name;
+    (void)value;
+
+    return false;
+}
+
+bool DatabaseQuerySQLite3::GetValue(size_t index, libobjgen::UUID& value)
+{
+    (void)index;
+    (void)value;
+
+    return false;
+}
+
+bool DatabaseQuerySQLite3::GetValue(const String& name,
+    libobjgen::UUID& value)
+{
+    (void)name;
+    (void)value;
+
+    return false;
+}
+
+bool DatabaseQuerySQLite3::GetValue(size_t index, int32_t& value)
+{
+    (void)index;
+    (void)value;
+
+    return false;
+}
+
+bool DatabaseQuerySQLite3::GetValue(const String& name, int32_t& value)
+{
+    (void)name;
+    (void)value;
+
+    return false;
+}
+
+bool DatabaseQuerySQLite3::GetValue(size_t index, int64_t& value)
+{
+    (void)index;
+    (void)value;
+
+    return false;
+}
+
+bool DatabaseQuerySQLite3::GetValue(const String& name, int64_t& value)
+{
+    (void)name;
+    (void)value;
+
+    return false;
+}
+
+bool DatabaseQuerySQLite3::GetValue(size_t index, float& value)
+{
+    (void)index;
+    (void)value;
+
+    return false;
+}
+
+bool DatabaseQuerySQLite3::GetValue(const String& name, float& value)
+{
+    (void)name;
+    (void)value;
+
+    return false;
+}
+
+bool DatabaseQuerySQLite3::GetValue(size_t index, double& value)
+{
+    (void)index;
+    (void)value;
+
+    return false;
+}
+
+bool DatabaseQuerySQLite3::GetValue(const String& name, double& value)
+{
+    (void)name;
+    (void)value;
+
+    return false;
+}
+
+bool DatabaseQuerySQLite3::GetValue(size_t index, bool& value)
+{
+    (void)index;
+    (void)value;
+
+    return false;
+}
+
+bool DatabaseQuerySQLite3::GetValue(const String& name, bool& value)
+{
+    (void)name;
+    (void)value;
+
+    return false;
+}
+
 bool DatabaseQuerySQLite3::GetMap(size_t index,
     std::unordered_map<std::string, std::vector<char>>& values)
 {

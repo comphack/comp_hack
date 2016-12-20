@@ -69,6 +69,22 @@ public:
     virtual bool Bind(const String& name, const std::unordered_map<
         std::string, std::vector<char>>& values);
 
+    virtual bool GetValue(size_t index, String& value);
+    virtual bool GetValue(const String& name, String& value);
+    virtual bool GetValue(size_t index, std::vector<char>& value);
+    virtual bool GetValue(const String& name, std::vector<char>& value);
+    virtual bool GetValue(size_t index, libobjgen::UUID& value);
+    virtual bool GetValue(const String& name, libobjgen::UUID& value);
+    virtual bool GetValue(size_t index, int32_t& value);
+    virtual bool GetValue(const String& name, int32_t& value);
+    virtual bool GetValue(size_t index, int64_t& value);
+    virtual bool GetValue(const String& name, int64_t& value);
+    virtual bool GetValue(size_t index, float& value);
+    virtual bool GetValue(const String& name, float& value);
+    virtual bool GetValue(size_t index, double& value);
+    virtual bool GetValue(const String& name, double& value);
+    virtual bool GetValue(size_t index, bool& value);
+    virtual bool GetValue(const String& name, bool& value);
     virtual bool GetMap(size_t index, std::unordered_map<
         std::string, std::vector<char>>& values);
     virtual bool GetMap(const String& name, std::unordered_map<

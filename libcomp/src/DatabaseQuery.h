@@ -69,6 +69,22 @@ public:
     virtual bool Bind(const String& name, const std::unordered_map<
         std::string, std::vector<char>>& values);
 
+    virtual bool GetValue(size_t index, String& value) = 0;
+    virtual bool GetValue(const String& name, String& value) = 0;
+    virtual bool GetValue(size_t index, std::vector<char>& value) = 0;
+    virtual bool GetValue(const String& name, std::vector<char>& value) = 0;
+    virtual bool GetValue(size_t index, libobjgen::UUID& value) = 0;
+    virtual bool GetValue(const String& name, libobjgen::UUID& value) = 0;
+    virtual bool GetValue(size_t index, int32_t& value) = 0;
+    virtual bool GetValue(const String& name, int32_t& value) = 0;
+    virtual bool GetValue(size_t index, int64_t& value) = 0;
+    virtual bool GetValue(const String& name, int64_t& value) = 0;
+    virtual bool GetValue(size_t index, float& value) = 0;
+    virtual bool GetValue(const String& name, float& value) = 0;
+    virtual bool GetValue(size_t index, double& value) = 0;
+    virtual bool GetValue(const String& name, double& value) = 0;
+    virtual bool GetValue(size_t index, bool& value) = 0;
+    virtual bool GetValue(const String& name, bool& value) = 0;
     virtual bool GetMap(size_t index, std::unordered_map<
         std::string, std::vector<char>>& values);
     virtual bool GetMap(const String& name, std::unordered_map<
@@ -115,6 +131,22 @@ public:
     bool Bind(const String& name, const std::unordered_map<
         std::string, std::vector<char>>& values);
 
+    bool GetValue(size_t index, String& value);
+    bool GetValue(const String& name, String& value);
+    bool GetValue(size_t index, std::vector<char>& value);
+    bool GetValue(const String& name, std::vector<char>& value);
+    bool GetValue(size_t index, libobjgen::UUID& value);
+    bool GetValue(const String& name, libobjgen::UUID& value);
+    bool GetValue(size_t index, int32_t& value);
+    bool GetValue(const String& name, int32_t& value);
+    bool GetValue(size_t index, int64_t& value);
+    bool GetValue(const String& name, int64_t& value);
+    bool GetValue(size_t index, float& value);
+    bool GetValue(const String& name, float& value);
+    bool GetValue(size_t index, double& value);
+    bool GetValue(const String& name, double& value);
+    bool GetValue(size_t index, bool& value);
+    bool GetValue(const String& name, bool& value);
     bool GetMap(size_t index, std::unordered_map<
         std::string, std::vector<char>>& values);
     bool GetMap(const String& name, std::unordered_map<

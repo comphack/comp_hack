@@ -269,7 +269,7 @@ void LobbyServer::PromptCreateAccount()
             }
         }
 
-        while(0 > enteredTicketCount || 20 < enteredTicketCount)
+        while(1 > enteredTicketCount || 20 < enteredTicketCount)
         {
             LOG_INFO("Character ticket count: ");
 
@@ -280,7 +280,7 @@ void LobbyServer::PromptCreateAccount()
 
             enteredTicketCount = libcomp::String(val).ToInteger<uint8_t>(&ok);
 
-            if(!ok || 0 > enteredTicketCount || 20 < enteredTicketCount)
+            if(!ok || 1 > enteredTicketCount || 20 < enteredTicketCount)
             {
                 LOG_ERROR("You must enter a value between 0 and 20.\n");
             }

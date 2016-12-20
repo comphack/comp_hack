@@ -72,7 +72,7 @@ public:
     *   Register a derived class object to the cache and get a new UUID if not
     *   specified.
     */
-    static bool Register(std::shared_ptr<PersistentObject>& self);
+    static bool Register(const std::shared_ptr<PersistentObject>& self);
 
     /*
     *   Unregisters a record from the cache and marks it as deleted.

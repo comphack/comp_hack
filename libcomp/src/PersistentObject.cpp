@@ -70,7 +70,7 @@ PersistentObject::~PersistentObject()
     }
 }
 
-bool PersistentObject::Register(std::shared_ptr<PersistentObject>& self)
+bool PersistentObject::Register(const std::shared_ptr<PersistentObject>& self)
 {
     if(!self->IsDeleted())
     {

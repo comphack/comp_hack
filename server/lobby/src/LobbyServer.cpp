@@ -31,18 +31,28 @@
 #include "Packets.h"
 
 // libcomp Includes
+#include <Decrypt.h>
 #include <Log.h>
 #include <ManagerPacket.h>
 #include <PacketCodes.h>
 
 // Object Includes
+#include "Account.h"
 #include "LobbyConfig.h"
+
+// Standard C++11 Includes
+#include <iostream>
 
 using namespace lobby;
 
-LobbyServer::LobbyServer(std::shared_ptr<objects::ServerConfig> config, const libcomp::String& configPath) :
-    libcomp::BaseServer(config, configPath)
+LobbyServer::LobbyServer(std::shared_ptr<objects::ServerConfig> config,
+    const libcomp::String& configPath) : libcomp::BaseServer(config, configPath)
 {
+    if(true||!mDatabase->TableHasRows("Account"))
+    {
+        CreateFirstAccount();
+    }
+
     auto conf = std::dynamic_pointer_cast<objects::LobbyConfig>(mConfig);
 
     mManagerConnection = std::shared_ptr<ManagerConnection>(new ManagerConnection(mSelf, std::shared_ptr<asio::io_service>(&mService), mMainWorker.GetMessageQueue()));
@@ -118,4 +128,231 @@ std::shared_ptr<libcomp::TcpConnection> LobbyServer::CreateConnection(
     connection->ConnectionSuccess();
 
     return connection;
+}
+
+void LobbyServer::CreateFirstAccount()
+{
+    bool again = true;
+
+    do
+    {
+        PromptCreateAccount();
+
+        LOG_INFO("Create another account? [y/N] ");
+
+        std::string val;
+        std::cin >> val;
+
+        again = val.length() >= 1 && tolower(val.at(0)) == 'y';
+    } while(again);
+}
+
+void LobbyServer::PromptCreateAccount()
+{
+    libcomp::String username;
+    libcomp::String password;
+    libcomp::String email = "no.thanks@bother_me_not.net";
+    libcomp::String displayName = "AnonymousCoward";
+    libcomp::String salt = libcomp::Decrypt::GenerateRandom(10);
+    uint32_t cp = 1000000;
+    uint8_t ticketCount = 1;
+    int32_t userLevel = 1000;
+    uint8_t enabled = 1; /// @todo Make this a boolean.
+
+    do
+    {
+        LOG_INFO("Username: ");
+
+        std::string uname;
+        std::cin >> uname;
+
+        username = libcomp::String(uname).ToLower();
+
+        /// @todo Use a regular expression.
+        if(3 > username.Length())
+        {
+            LOG_ERROR("Username is not valid.\n");
+        }
+    } while(3 > username.Length());
+
+    while(true)
+    {
+#ifdef WIN32
+        LOG_INFO("Password: ");
+
+        std::string pass;
+        std::cin >> pass;
+
+        libcomp::String password1 = libcomp::String(pass);
+#else // !WIN32
+        libcomp::String password1 = libcomp::String(getpass("Password: "));
+#endif // WIN32
+
+        while(8 > password1.Length())
+        {
+            LOG_ERROR("Account password must be at "
+                "least 8 characters.\n");
+
+#ifdef WIN32
+            LOG_INFO("Password: ");
+
+            std::cin >> pass;
+
+            password1 = libcomp::String(pass);
+#else // !WIN32
+            password1 = libcomp::String(getpass("Password: "));
+#endif // WIN32
+        }
+
+#ifdef WIN32
+        LOG_INFO("Verify Password: ");
+
+        std::cin >> pass;
+
+        libcomp::String password2 = libcomp::String(pass);
+#else // !WIN32
+        libcomp::String password2 = libcomp::String(
+            getpass("Verify Password: "));
+#endif // WIN32
+
+        if(password1 == password2)
+        {
+            password = libcomp::Decrypt::HashPassword(password1, salt);
+            break;
+        }
+
+        LOG_ERROR("Account password did not match.\n");
+    }
+
+    LOG_INFO("Default values will be used for this account unless you "
+        "enter\nmore details. Would you like to enter more details? [y/N] ");
+
+    std::string details;
+    std::cin >> details;
+
+    if(details.length() >= 1 && tolower(details.at(0)) == 'y')
+    {
+        libcomp::String enteredDisplayName;
+        libcomp::String enteredEmail;
+        uint8_t enteredTicketCount = 0;
+        uint32_t enteredCP = static_cast<uint32_t>(-1);
+        int32_t enteredUserLevel = -1;
+
+        while(3 > enteredDisplayName.Length())
+        {
+            LOG_INFO("Display name: ");
+
+            std::string val;
+            std::cin >> val;
+
+            enteredDisplayName = val;
+
+            if(3 > enteredDisplayName.Length())
+            {
+                LOG_ERROR("You must enter a longer display name.\n");
+            }
+        }
+
+        /// @todo Make this a better check for a valid email.
+        while(!enteredEmail.Contains("@"))
+        {
+            LOG_INFO("Email: ");
+
+            std::string val;
+            std::cin >> val;
+
+            enteredEmail = val;
+
+            if(!enteredEmail.Contains("@"))
+            {
+                LOG_ERROR("You must enter a valid email address.\n");
+            }
+        }
+
+        while(0 > enteredTicketCount || 20 < enteredTicketCount)
+        {
+            LOG_INFO("Character ticket count: ");
+
+            std::string val;
+            std::cin >> val;
+
+            bool ok = false;
+
+            enteredTicketCount = libcomp::String(val).ToInteger<uint8_t>(&ok);
+
+            if(!ok || 0 > enteredTicketCount || 20 < enteredTicketCount)
+            {
+                LOG_ERROR("You must enter a value between 0 and 20.\n");
+            }
+        }
+
+        while(1000000 < enteredCP)
+        {
+            LOG_INFO("CP (Cash Points): ");
+
+            std::string val;
+            std::cin >> val;
+
+            bool ok = false;
+
+            enteredCP = libcomp::String(val).ToInteger<uint32_t>(&ok);
+
+            if(!ok || 1000000 < enteredCP)
+            {
+                LOG_ERROR("You must enter a value between 1 and 1,000,000.\n");
+            }
+        }
+
+        while(0 > enteredUserLevel || 1000 < enteredUserLevel)
+        {
+            LOG_INFO("User level (0=normal user; 1,000=full GM): ");
+
+            std::string val;
+            std::cin >> val;
+
+            bool ok = false;
+
+            enteredUserLevel = libcomp::String(val).ToInteger<int32_t>(&ok);
+
+            if(!ok || 0 > enteredUserLevel || 1000 < enteredUserLevel)
+            {
+                LOG_ERROR("You must enter a value between 0 and 1,000.\n");
+            }
+        }
+
+        {
+            LOG_INFO("Enable this account? [Y/n] ");
+
+            std::string val;
+            std::cin >> val;
+
+            enabled = (val.size() < 1 || tolower(val.at(0)) != 'n');
+        }
+
+        // Save the input.
+        displayName = enteredDisplayName;
+        email = enteredEmail;
+        ticketCount = enteredTicketCount;
+        cp = enteredCP;
+        userLevel = enteredUserLevel;
+    }
+
+    std::shared_ptr<objects::Account> account(new objects::Account);
+
+    account->SetUserName(username);
+    account->SetDisplayName(displayName);
+    account->SetEmail(email);
+    account->SetPassword(password);
+    account->SetSalt(salt);
+    account->SetCP(cp);
+    account->SetTicketCount(ticketCount);
+    account->SetUserLevel(userLevel);
+    account->SetEnabled(enabled);
+    account->Register(std::dynamic_pointer_cast<
+        libcomp::PersistentObject>(account));
+
+    if(!account->Insert())
+    {
+        LOG_ERROR("Failed to create account!\n");
+    }
 }

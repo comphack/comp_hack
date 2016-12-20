@@ -262,6 +262,8 @@ bool MetaObject::Load(const tinyxml2::XMLDocument& doc,
 bool MetaObject::LoadTypeInformation(const tinyxml2::XMLDocument& doc,
     const tinyxml2::XMLElement& root)
 {
+    (void)doc;
+
     mError.clear();
     SetXMLDefinition(root);
 

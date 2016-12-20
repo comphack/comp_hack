@@ -1,1 +1,1 @@
-flat || !@VAR_NAME@.IsNull() && @VAR_NAME@.Get()->Load(@STREAM@)
+flat || (!@VAR_NAME@.IsNull() && @VAR_NAME@.Get()->Load(@STREAM@))

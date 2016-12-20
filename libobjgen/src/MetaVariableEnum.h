@@ -86,6 +86,8 @@ public:
     virtual std::string GetStringValueCode(const std::string& name) const;
     virtual std::string GetBindValueCode(const Generator& generator,
         const std::string& name, size_t tabLevel = 1) const;
+    virtual std::string GetDatabaseLoadCode(const Generator& generator,
+        const std::string& name, size_t tabLevel = 1) const;
 
     virtual std::string GetUtilityDeclarations(const Generator& generator,
         const std::string& name, size_t tabLevel = 1) const;

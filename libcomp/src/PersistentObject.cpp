@@ -69,31 +69,37 @@ PersistentObject::~PersistentObject()
     }
 }
 
-bool PersistentObject::Register(std::shared_ptr<PersistentObject>& self, const libobjgen::UUID& uuid)
+bool PersistentObject::Register(std::shared_ptr<PersistentObject>& self)
 {
-    if(mUUID.IsNull() && !IsDeleted())
+    if(!self->IsDeleted())
     {
         bool registered = false;
+
+        libobjgen::UUID& uuid = self->mUUID;
+        std::string uuidString = self->mUUID.ToString();
+
         if(uuid.IsNull())
         {
-            mUUID = libobjgen::UUID::Random();
+            uuid = libobjgen::UUID::Random();
+
             registered = true;
         }
-        else if(sCached.find(uuid.ToString()) == sCached.end())
+        else if(sCached.find(uuidString) == sCached.end())
         {
-            mUUID = uuid;
             registered = true;
         }
 
         if(registered)
         {
-            mSelf = self;
-            sCached[mUUID.ToString()] = mSelf;
+            self->mSelf = self;
+            sCached[uuidString] = self;
+
             return true;
         }
         else
         {
-            /// @todo: update the cache?
+            LOG_ERROR(String("Duplicate object detected: %1\n").Arg(
+                uuidString));
         }
     }
 

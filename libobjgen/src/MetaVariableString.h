@@ -110,6 +110,8 @@ public:
     virtual std::string GetStringValueCode(const std::string& name) const;
     virtual std::string GetBindValueCode(const Generator& generator,
         const std::string& name, size_t tabLevel = 1) const;
+    virtual std::string GetDatabaseLoadCode(const Generator& generator,
+        const std::string& name, size_t tabLevel = 1) const;
 
     static std::string EncodingToString(Encoding_t encoding);
     static std::string EncodingToComp(Encoding_t encoding);

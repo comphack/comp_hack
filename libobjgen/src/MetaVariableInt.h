@@ -639,11 +639,6 @@ public:
     virtual std::string GetBindValueCode(const Generator& generator,
         const std::string& name, size_t tabLevel = 1) const
     {
-        std::string columnName = GetName();
-
-        std::transform(columnName.begin(), columnName.end(),
-            columnName.begin(), ::tolower);
-
         std::string bindType;
         std::string castType;
         bool cast = false;
@@ -679,7 +674,7 @@ public:
         }
 
         std::map<std::string, std::string> replacements;
-        replacements["@COLUMN_NAME@"] = generator.Escape(columnName);
+        replacements["@COLUMN_NAME@"] = generator.Escape(GetName());
         replacements["@VAR_NAME@"] = name;
         replacements["@TYPE@"] = bindType;
         replacements["@CAST@"] = castType;
@@ -692,6 +687,59 @@ public:
         else
         {
             return generator.ParseTemplate(tabLevel, "VariableGetTypeBind",
+                replacements);
+        }
+    }
+
+    std::string GetDatabaseLoadCode(const Generator& generator,
+        const std::string& name, size_t tabLevel) const
+    {
+        std::string castType = GetCodeType();
+        std::string bindType;
+
+        if(std::numeric_limits<T>::is_integer)
+        {
+            if(sizeof(T) < sizeof(int32_t) || (sizeof(T) == sizeof(int32_t) &&
+                std::numeric_limits<T>::is_signed))
+            {
+                bindType = "int32_t";
+            }
+            else
+            {
+                bindType = "int64_t";
+            }
+        }
+        else if(typeid(float) == typeid(T))
+        {
+            bindType = "float";
+        }
+        else if(typeid(double) == typeid(T))
+        {
+            bindType = "double";
+        }
+        else
+        {
+            // Use the default binary blob.
+            return MetaVariable::GetDatabaseLoadCode(generator, name, tabLevel);
+        }
+
+        std::map<std::string, std::string> replacements;
+        replacements["@DATABASE_TYPE@"] = bindType;
+        replacements["@COLUMN_NAME@"] = generator.Escape(GetName());
+        replacements["@SET_FUNCTION@"] = std::string("Set") +
+            generator.GetCapitalName(*this);
+        replacements["@VAR_TYPE@"] = castType;
+
+        bool cast = (bindType != castType);
+
+        if(cast)
+        {
+            return generator.ParseTemplate(tabLevel, "VariableDatabaseCastLoad",
+                replacements);
+        }
+        else
+        {
+            return generator.ParseTemplate(tabLevel, "VariableDatabaseLoad",
                 replacements);
         }
     }

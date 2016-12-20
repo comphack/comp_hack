@@ -40,6 +40,9 @@
 namespace libcomp
 {
 
+class DatabaseBind;
+class DatabaseQuery;
+
 class PersistentObject : public Object
 {
 public:
@@ -61,11 +64,15 @@ public:
     virtual std::list<libcomp::DatabaseBind*> GetMemberBindValues() = 0;
 
     /*
+    *   Load the object from the database query
+    */
+    virtual bool LoadDatabaseValues(DatabaseQuery& query) = 0;
+
+    /*
     *   Register a derived class object to the cache and get a new UUID if not
     *   specified.
     */
-    bool Register(std::shared_ptr<PersistentObject>& self,
-        const libobjgen::UUID& uuid = libobjgen::UUID());
+    static bool Register(std::shared_ptr<PersistentObject>& self);
 
     /*
     *   Unregisters a record from the cache and marks it as deleted.

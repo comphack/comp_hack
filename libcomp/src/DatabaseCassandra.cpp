@@ -256,35 +256,19 @@ std::list<std::shared_ptr<PersistentObject>> DatabaseCassandra::LoadObjects(
         return {};
     }
 
-    std::list<std::unordered_map<std::string, std::vector<char>>> rows;
-
-    if(!query.Next() || !query.GetRows(rows))
-    {
-        LOG_ERROR(String("Failed to execute query: %1\n").Arg(cql));
-        LOG_ERROR("Failed to retrieve rows.\n");
-        LOG_ERROR(String("Database said: %1\n").Arg(GetLastError()));
-
-        return {};
-    }
-
-    LOG_DEBUG(String("Row count: %1\n").Arg(rows.size()));
-
     int failures = 0;
 
-    if(0 < rows.size())
+    while(query.Next())
     {
-        for(auto row : rows)
-        {
-            auto obj = LoadSingleObjectFromRow(type, row);
+        auto obj = LoadSingleObjectFromRow(type, query);
 
-            if(nullptr != obj)
-            {
-                objects.push_back(obj);
-            }
-            else
-            {
-                failures++;
-            }
+        if(nullptr != obj)
+        {
+            objects.push_back(obj);
+        }
+        else
+        {
+            failures++;
         }
     }
 
@@ -306,65 +290,17 @@ std::shared_ptr<PersistentObject> DatabaseCassandra::LoadSingleObject(
 }
 
 std::shared_ptr<PersistentObject> DatabaseCassandra::LoadSingleObjectFromRow(
-    std::type_index type, const std::unordered_map<std::string, std::vector<char>>& row)
+    std::type_index type, DatabaseQuery& query)
 {
-    auto metaObject = PersistentObject::GetRegisteredMetadata(type);
-
-    std::stringstream objstream(std::stringstream::out |
-        std::stringstream::binary);
-
-    libobjgen::UUID uuid;
-    auto rowIter = row.find("uid");
-    if(rowIter != row.end())
-    {
-        std::vector<char> value = rowIter->second;
-        uuid = libobjgen::UUID(value);
-    }
-
-    if(uuid.IsNull())
-    {
-        return nullptr;
-    }
-
-    // Traverse the variables in the order the stream expects
-    for(auto varIter = metaObject->VariablesBegin();
-        varIter != metaObject->VariablesEnd(); varIter++)
-    {
-        auto var = *varIter;
-        std::string fieldNameLower = libcomp::String(var->GetName())
-            .ToLower().ToUtf8();
-
-        rowIter = row.find(fieldNameLower);
-
-        std::vector<char> data;
-        if(rowIter != row.end())
-        {
-            std::vector<char> value = rowIter->second;
-            data = ConvertToRawByteStream(var, value);
-
-            if(data.size() == 0)
-            {
-                return nullptr;
-            }
-
-            objstream.write(&data[0], (std::streamsize)data.size());
-        }
-        else
-        {
-            // Field exists in current metadata but not in the loaded record
-            /// @todo: add GetDefaultBinaryValue to MetaVariable and use that
-            data = ConvertToRawByteStream(var, std::vector<char>());
-        }
-    }
-
     auto obj = PersistentObject::New(type);
-    std::stringstream iobjstream(objstream.str());
-    if(!obj->Load(iobjstream))
+
+    if(!obj->LoadDatabaseValues(query))
     {
         return nullptr;
     }
 
-    obj->Register(obj, uuid);
+    PersistentObject::Register(obj);
+
     return obj;
 }
 

@@ -39,7 +39,7 @@ namespace libobjgen
 class MetaVariableReference : public MetaVariable
 {
 public:
-    MetaVariableReference();
+    MetaVariableReference(const std::string& parentObjectType);
     virtual ~MetaVariableReference();
 
     virtual size_t GetSize() const;
@@ -100,6 +100,9 @@ public:
         const std::string& name, size_t tabLevel = 1) const;
 
 private:
+    bool IsPersistentReference() const;
+
+    std::string mParentObjectType;
     std::string mReferenceType;
 
     std::list<std::shared_ptr<MetaVariable>> mDefaultedVariables;

@@ -47,12 +47,16 @@
 std::unordered_map<std::string, std::shared_ptr<
     libobjgen::MetaObject>> gObjects;
 
-std::set<std::string> gReferences;
+// Keep all XML documents referenced stored until we're done
+std::unordered_map<std::string, tinyxml2::XMLDocument> gDocuments;
 
-bool LoadObjects(const std::list<std::string>& searchPath,
+// As object definitions are found, cache them until exit
+std::unordered_map<std::string, const tinyxml2::XMLElement*> gDefintions;
+
+bool LoadObjectTypeInformation(const std::list<std::string>& searchPath,
     const std::string& xmlFile)
 {
-    tinyxml2::XMLDocument doc;
+    tinyxml2::XMLDocument& doc = gDocuments[xmlFile];
 
     bool loaded = tinyxml2::XML_NO_ERROR == doc.LoadFile(xmlFile.c_str());
 
@@ -114,7 +118,7 @@ bool LoadObjects(const std::list<std::string>& searchPath,
 
         std::string includePath = szPath;
 
-        if(!LoadObjects(searchPath, includePath))
+        if(!LoadObjectTypeInformation(searchPath, includePath))
         {
             return false;
         }
@@ -128,22 +132,42 @@ bool LoadObjects(const std::list<std::string>& searchPath,
     {
         std::shared_ptr<libobjgen::MetaObject> obj(new libobjgen::MetaObject);
 
-        if(!obj->Load(doc, *pObjectXml))
+        if(!obj->LoadTypeInformation(doc, *pObjectXml))
         {
-            std::cerr << "Failed to read object: " << obj->GetName()
-                << ":  " << obj->GetError() << std::endl;
+            std::cerr << "Failed to read type information for object: "
+                << obj->GetName() << ":  " << obj->GetError() << std::endl;
 
             return false;
         }
 
         gObjects[obj->GetName()] = obj;
-
-        for(auto ref : obj->GetReferences())
-        {
-            gReferences.insert(ref);
-        }
+        gDefintions[obj->GetName()] = pObjectXml;
 
         pObjectXml = pObjectXml->NextSiblingElement("object");
+    }
+
+    return true;
+}
+
+bool LoadDataMembers(const std::string& object)
+{
+    if(gObjects.find(object) == gObjects.end())
+    {
+        std::cerr << "Unknown object referenced: "
+            << object << std::endl;
+        return false;
+    }
+
+    auto obj = gObjects[object];
+    auto pObjectXml = gDefintions[object];
+    auto doc = pObjectXml->GetDocument();
+
+    if(!obj->LoadMembers(*doc, *pObjectXml, true))
+    {
+        std::cerr << "Failed to read data members for object: "
+            << obj->GetName() << ":  " << obj->GetError() << std::endl;
+
+        return false;
     }
 
     return true;
@@ -294,27 +318,16 @@ int main(int argc, char *argv[])
         return EXIT_FAILURE;
     }
 
+    //Load the type infomration for all included objects
     for(auto xmlFile : xmlFiles)
     {
-        if(!LoadObjects(searchPath, xmlFile))
+        if(!LoadObjectTypeInformation(searchPath, xmlFile))
         {
             return EXIT_FAILURE;
         }
     }
 
-    /// @todo: fix for objects in other projects
-    /*
-    for(auto ref : gReferences)
-    {
-        if(gObjects.find(ref) == gObjects.end())
-        {
-            std::cerr << "Failed to find referenced object '" << ref
-                << "'" << std::endl;
-
-            return EXIT_FAILURE;
-        }
-    }*/
-
+    std::list<std::string> loaded;
     for(auto outputFile : outputFiles)
     {
         std::smatch match;
@@ -330,6 +343,35 @@ int main(int argc, char *argv[])
             if(object.empty())
             {
                 object = match[2];
+            }
+
+            std::list<std::string> requiresLoad;
+            if(std::find(loaded.begin(), loaded.end(), object) == loaded.end())
+            {
+                requiresLoad.push_back(object);
+            }
+
+            //Load the remaining information for only objects we currently care to define
+            while(requiresLoad.size() > 0)
+            {
+                auto objectName = requiresLoad.front();
+                if(!LoadDataMembers(objectName))
+                {
+                    return EXIT_FAILURE;
+                }
+
+                auto obj = gObjects[objectName];
+                for(auto ref : obj->GetReferences())
+                {
+                    if(std::find(loaded.begin(), loaded.end(), ref) == loaded.end()
+                        && std::find(requiresLoad.begin(), requiresLoad.end(), ref)
+                        == requiresLoad.end())
+                    {
+                        requiresLoad.push_back(ref);
+                    }
+                }
+                requiresLoad.remove(objectName);
+                loaded.push_back(objectName);
             }
 
             extension = std::string(match[3]);

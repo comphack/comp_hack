@@ -84,7 +84,11 @@ bool DatabaseQuerySQLite3::Next()
     {
         mStatus = sqlite3_step(mStatement);
     }
-    mDidJustExecute = false;
+    else
+    {
+        mDidJustExecute = false;
+        return true;
+    }
 
     return IsValid() && SQLITE_DONE != mStatus;
 }

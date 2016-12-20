@@ -33,6 +33,7 @@
 
 // libobjgen Includes
 #include <MetaObject.h>
+#include <UUID.h>
 
 // Standard C++ 11 Includes
 #include <typeindex>
@@ -52,6 +53,8 @@ public:
     PersistentObject();
     PersistentObject(const PersistentObject& other);
     ~PersistentObject();
+
+    libobjgen::UUID GetUUID() const;
 
     /*
     *   Get the metadata associated to an instantiated persistent object
@@ -190,6 +193,8 @@ protected:
     */
     static std::shared_ptr<PersistentObject> LoadObject(std::type_index type,
         DatabaseBind *pValue);
+
+    libobjgen::UUID mUUID;
 
 private:
     static std::unordered_map<std::string,

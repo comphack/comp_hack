@@ -190,6 +190,13 @@ std::string GeneratorHeader::Generate(const MetaObject& obj)
     ss << "// libcomp Includes" << std::endl;
     ss << "#include <Convert.h>" << std::endl;
     ss << "#include <CString.h>" << std::endl;
+
+    std::set<std::string> references = obj.GetReferences();
+    if(references.size() > 0)
+    {
+        ss << "#include <ObjectReference.h>" << std::endl;
+    }
+
     if(!obj.GetBaseObject().empty())
     {
         ss << "#include <" + obj.GetBaseObject() + ".h>" << std::endl;
@@ -217,8 +224,6 @@ std::string GeneratorHeader::Generate(const MetaObject& obj)
     ss << "#include <tinyxml2.h>" << std::endl;
     ss << "#include <PopIgnore.h>" << std::endl;
     ss << std::endl;
-
-    std::set<std::string> references = obj.GetReferences();
 
     if(!references.empty())
     {

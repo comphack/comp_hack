@@ -1,1 +1,1 @@
-@VAR_NAME@ && @VAR_NAME@->Load(@STREAM@)
+!@VAR_NAME@.IsNull() && @VAR_NAME@.Get()->Load(@STREAM@.stream)

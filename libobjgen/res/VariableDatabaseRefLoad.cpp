@@ -6,9 +6,6 @@
     {
         return false;
     }
-
-    std::shared_ptr<@VAR_TYPE@> obj = PersistentObject::LoadObjectByUUID<
-        @VAR_TYPE@>(value);
-
-    return nullptr != obj && @SET_FUNCTION@(obj);
+	
+	return @VAR_NAME@.SetUUID(value);
 }())

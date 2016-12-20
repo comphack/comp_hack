@@ -56,7 +56,7 @@ bool BaseServer::Initialize(std::weak_ptr<BaseServer>& self)
             {
                 LOG_DEBUG("Using SQLite3 Database.\n");
 
-                auto sqlConfig = mConfig->GetSQLite3Config();
+                auto sqlConfig = mConfig->GetSQLite3Config().Get();
                 mDatabase = std::shared_ptr<libcomp::Database>(
                     new libcomp::DatabaseSQLite3(sqlConfig));
                 dbConfig = sqlConfig;
@@ -66,7 +66,7 @@ bool BaseServer::Initialize(std::weak_ptr<BaseServer>& self)
             {
                 LOG_DEBUG("Using Cassandra Database.\n");
 
-                auto cassandraConfig = mConfig->GetCassandraConfig();
+                auto cassandraConfig = mConfig->GetCassandraConfig().Get();
                 mDatabase = std::shared_ptr<libcomp::Database>(
                     new libcomp::DatabaseCassandra(cassandraConfig));
                 dbConfig = cassandraConfig;

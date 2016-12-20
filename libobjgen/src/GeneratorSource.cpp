@@ -335,18 +335,8 @@ std::string GeneratorSource::Generate(const MetaObject& obj)
 
         if(var->IsInherited()) continue;
 
-        std::string code;
-        if(var->GetMetaType() == MetaVariable::MetaVariableType_t::TYPE_REF)
-        {
-            // Reference loading always expects an XmlNode pointer
-            code = var->GetXmlLoadCode(*this, GetMemberName(var),
-                "doc", "&root");
-        }
-        else
-        {
-            code = var->GetXmlLoadCode(*this, GetMemberName(var),
+        std::string code = var->GetXmlLoadCode(*this, GetMemberName(var),
                 "doc", "pMember");
-        }
 
         if(!code.empty())
         {

@@ -1,7 +1,9 @@
 ([&]() -> @VAR_CODE_TYPE@
 {
-    (void)pMember;
+    if(!@VAR_NAME@.IsNull())
+    {
+        @VAR_NAME@.Get()->Load(@DOC@, *@NODE@);
+    }
 
-    //todo: replace with cache retrieval via UUID
-    return nullptr;
+    return @VAR_NAME@;
 })()

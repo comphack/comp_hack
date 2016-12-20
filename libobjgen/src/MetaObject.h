@@ -88,7 +88,11 @@ public:
     bool Save(std::ostream& stream) const;
 
     bool Load(const tinyxml2::XMLDocument& doc,
+        const tinyxml2::XMLElement& root, bool verifyReferences = true);
+    bool LoadTypeInformation(const tinyxml2::XMLDocument& doc,
         const tinyxml2::XMLElement& root);
+    bool LoadMembers(const tinyxml2::XMLDocument& doc,
+        const tinyxml2::XMLElement& root, bool verifyReferences);
     bool Save(tinyxml2::XMLDocument& doc,
         tinyxml2::XMLElement& root) const;
 
@@ -96,9 +100,11 @@ public:
 
     std::set<std::string> GetReferences() const;
 
+    static std::unordered_map<std::string, MetaObject*> GetKnownObjects();
+
 protected:
     static std::shared_ptr<MetaVariable> CreateType(
-        const std::string& typeName);
+        const std::string& typeName, const std::string& parentObjectType);
 
     bool LoadMember(const tinyxml2::XMLDocument& doc, const char *szName,
         const tinyxml2::XMLElement *pMember, bool& result);
@@ -117,6 +123,8 @@ private:
 
     bool DefaultsSpecified(const tinyxml2::XMLElement *pMember) const;
 
+    static std::unordered_map<std::string, MetaObject*> sKnownObjects;
+
     std::string mName;
     std::string mBaseObject;
     bool mPersistent;
@@ -124,6 +132,7 @@ private:
     std::string mXmlDefinition;
 
     std::string mError;
+    bool mReferencesVerified;
     VariableList mVariables;
     VariableMap mVariableMapping;
 };

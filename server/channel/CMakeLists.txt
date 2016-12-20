@@ -36,7 +36,7 @@ SET(${PROJECT_NAME}_HDRS
 )
 
 SET(${PROJECT_NAME}_SCHEMA
-    schema/channelconfig.xml
+    ../../libcomp/schema/master.xml
 )
 
 OBJGEN_XML(${PROJECT_NAME}_STRUCTS
@@ -48,6 +48,7 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
 
     # Include paths
     schema
+    ../../libcomp/schema
 
     # Output files
     ChannelConfig.h

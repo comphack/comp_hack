@@ -42,6 +42,8 @@ public:
     BaseServer(std::shared_ptr<objects::ServerConfig> config, const String& configPath);
     virtual ~BaseServer();
 
+    virtual bool Initialize(std::weak_ptr<BaseServer>& self);
+
     virtual void Shutdown();
 
     static std::string GetDefaultConfigPath();
@@ -51,7 +53,7 @@ public:
 protected:
     virtual int Run();
 
-    std::shared_ptr<BaseServer> mSelf;
+    std::weak_ptr<BaseServer> mSelf;
 
     std::shared_ptr<objects::ServerConfig> mConfig;
 

@@ -43,13 +43,22 @@ using namespace channel;
 ChannelServer::ChannelServer(std::shared_ptr<objects::ServerConfig> config, const libcomp::String& configPath) :
     libcomp::BaseServer(config, configPath)
 {
+}
+
+bool ChannelServer::Initialize(std::weak_ptr<BaseServer>& self)
+{
+    if(!BaseServer::Initialize(self))
+    {
+        return false;
+    }
+
     // Connect to the world server.
     auto worldConnection = std::shared_ptr<libcomp::InternalConnection>(
         new libcomp::InternalConnection(mService));
     worldConnection->SetSelf(worldConnection);
     worldConnection->SetMessageQueue(mMainWorker.GetMessageQueue());
 
-    mManagerConnection = std::shared_ptr<ManagerConnection>(new ManagerConnection(mSelf));
+    mManagerConnection = std::shared_ptr<ManagerConnection>(new ManagerConnection(self));
     mManagerConnection->SetWorldConnection(worldConnection);
 
     auto conf = std::dynamic_pointer_cast<objects::ChannelConfig>(mConfig);
@@ -64,16 +73,17 @@ ChannelServer::ChannelServer(std::shared_ptr<objects::ServerConfig> config, cons
     if(!connected)
     {
         LOG_CRITICAL("Failed to connect to the world server!\n");
+        return false;
     }
 
-    auto internalPacketManager = std::shared_ptr<libcomp::ManagerPacket>(new libcomp::ManagerPacket(mSelf));
+    auto internalPacketManager = std::shared_ptr<libcomp::ManagerPacket>(new libcomp::ManagerPacket(self));
     internalPacketManager->AddParser<Parsers::SetWorldDescription>(PACKET_SET_WORLD_DESCRIPTION);
 
     //Add the managers to the main worker.
     mMainWorker.AddManager(internalPacketManager);
     mMainWorker.AddManager(mManagerConnection);
 
-    auto clientPacketManager = std::shared_ptr<libcomp::ManagerPacket>(new libcomp::ManagerPacket(mSelf));
+    auto clientPacketManager = std::shared_ptr<libcomp::ManagerPacket>(new libcomp::ManagerPacket(self));
     /// @todo: Add client side packet parsers
 
     // Add the managers to the generic workers.
@@ -81,6 +91,8 @@ ChannelServer::ChannelServer(std::shared_ptr<objects::ServerConfig> config, cons
 
     // Start the workers.
     mWorker.Start();
+
+    return true;
 }
 
 ChannelServer::~ChannelServer()

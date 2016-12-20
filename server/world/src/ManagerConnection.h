@@ -42,7 +42,7 @@ namespace world
 class ManagerConnection : public libcomp::Manager
 {
 public:
-    ManagerConnection(const std::shared_ptr<libcomp::BaseServer>& server);
+    ManagerConnection(std::weak_ptr<libcomp::BaseServer> server);
     virtual ~ManagerConnection();
 
     /**
@@ -67,7 +67,7 @@ public:
 private:
     static std::list<libcomp::Message::MessageType> sSupportedTypes;
 
-    std::shared_ptr<libcomp::BaseServer> mServer;
+    std::weak_ptr<libcomp::BaseServer> mServer;
 
     std::shared_ptr<libcomp::InternalConnection> mLobbyConnection;
 };

@@ -149,15 +149,24 @@ void Worker::Join()
 void Worker::Cleanup()
 {
     // Delete the main thread (if it exists).
-    delete mThread;
-
-    // Empty the message queue.
-    std::list<libcomp::Message::Message*> msgs;
-    mMessageQueue->DequeueAny(msgs);
-
-    for(auto pMessage : msgs)
+    if(nullptr != mThread)
     {
-        delete pMessage;
+        delete mThread;
+        mThread = nullptr;
+    }
+
+    if(nullptr != mMessageQueue)
+    {
+        // Empty the message queue.
+        std::list<libcomp::Message::Message*> msgs;
+        mMessageQueue->DequeueAny(msgs);
+
+        for(auto pMessage : msgs)
+        {
+            delete pMessage;
+        }
+
+        mMessageQueue.reset();
     }
 }
 

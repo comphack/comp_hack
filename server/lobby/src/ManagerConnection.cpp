@@ -40,8 +40,8 @@ using namespace lobby;
 std::list<libcomp::Message::MessageType> ManagerConnection::sSupportedTypes =
     { libcomp::Message::MessageType::MESSAGE_TYPE_CONNECTION };
 
-ManagerConnection::ManagerConnection(const std::shared_ptr<libcomp::BaseServer>& server,
-    std::shared_ptr<asio::io_service> service,
+ManagerConnection::ManagerConnection(std::weak_ptr<libcomp::BaseServer> server,
+    asio::io_service* service,
     std::shared_ptr<libcomp::MessageQueue<libcomp::Message::Message*>> messageQueue)
 {
     mServer = server;
@@ -118,7 +118,8 @@ bool ManagerConnection::ProcessMessage(const libcomp::Message::Message *pMessage
                     const libcomp::Message::ConnectionClosed*>(cMessage);
 
                 auto connection = closed->GetConnection();
-                mServer->RemoveConnection(connection);
+                auto server = mServer.lock();
+                server->RemoveConnection(connection);
 
                 auto iConnection = std::dynamic_pointer_cast<libcomp::InternalConnection>(connection);
                 auto world = GetWorldByConnection(iConnection);

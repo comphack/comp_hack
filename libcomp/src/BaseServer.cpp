@@ -42,17 +42,21 @@ using namespace libcomp;
 BaseServer::BaseServer(std::shared_ptr<objects::ServerConfig> config, const String& configPath) :
     TcpServer("any", config->GetPort()), mConfig(config)
 {
-    mSelf = std::shared_ptr<libcomp::BaseServer>(this);
     ReadConfig(config, configPath);
+}
 
+bool BaseServer::Initialize(std::weak_ptr<BaseServer>& self)
+{
+    mSelf = self;
+    
     std::shared_ptr<objects::DatabaseConfig> dbConfig;
-    switch(config->GetDatabaseType())
+    switch(mConfig->GetDatabaseType())
     {
         case objects::ServerConfig::DatabaseType_t::SQLITE3:
             {
                 LOG_DEBUG("Using SQLite3 Database.\n");
 
-                auto sqlConfig = config->GetSQLite3Config();
+                auto sqlConfig = mConfig->GetSQLite3Config();
                 mDatabase = std::shared_ptr<libcomp::Database>(
                     new libcomp::DatabaseSQLite3(sqlConfig));
                 dbConfig = sqlConfig;
@@ -62,7 +66,7 @@ BaseServer::BaseServer(std::shared_ptr<objects::ServerConfig> config, const Stri
             {
                 LOG_DEBUG("Using Cassandra Database.\n");
 
-                auto cassandraConfig = config->GetCassandraConfig();
+                auto cassandraConfig = mConfig->GetCassandraConfig();
                 mDatabase = std::shared_ptr<libcomp::Database>(
                     new libcomp::DatabaseCassandra(cassandraConfig));
                 dbConfig = cassandraConfig;
@@ -70,7 +74,7 @@ BaseServer::BaseServer(std::shared_ptr<objects::ServerConfig> config, const Stri
             break;
         default:
             LOG_CRITICAL("Invalid database type specified.\n");
-            return;
+            return false;
             break;
     }
 
@@ -80,16 +84,16 @@ BaseServer::BaseServer(std::shared_ptr<objects::ServerConfig> config, const Stri
     if(!mDatabase->Open() || !mDatabase->IsOpen())
     {
         LOG_CRITICAL("Failed to open database.\n");
-
-        return;
+        return false;
     }
 
     if(!mDatabase->Setup())
     {
         LOG_CRITICAL("Failed to init database.\n");
-
-        return;
+        return false;
     }
+
+    return true;
 }
 
 BaseServer::~BaseServer()

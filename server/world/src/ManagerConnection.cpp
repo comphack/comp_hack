@@ -40,7 +40,7 @@ using namespace world;
 std::list<libcomp::Message::MessageType> ManagerConnection::sSupportedTypes =
     { libcomp::Message::MessageType::MESSAGE_TYPE_CONNECTION };
 
-ManagerConnection::ManagerConnection(const std::shared_ptr<libcomp::BaseServer>& server)
+ManagerConnection::ManagerConnection(std::weak_ptr<libcomp::BaseServer> server)
     : mServer(server)
 {
 }
@@ -90,12 +90,13 @@ bool ManagerConnection::ProcessMessage(const libcomp::Message::Message *pMessage
 
                 auto connection = closed->GetConnection();
 
-                mServer->RemoveConnection(connection);
+                auto server = mServer.lock();
+                server->RemoveConnection(connection);
 
                 if(mLobbyConnection == connection)
                 {
                     LOG_INFO(libcomp::String("Lobby connection closed. Shutting down."));
-                    mServer->Shutdown();
+                    server->Shutdown();
                 }
                 else
                 {
@@ -126,7 +127,7 @@ bool ManagerConnection::LobbyConnected()
 void ManagerConnection::RemoveConnection(std::shared_ptr<libcomp::InternalConnection>& connection)
 {
     objects::ChannelDescription channelDesc;
-    auto server = std::dynamic_pointer_cast<WorldServer>(mServer);
+    auto server = std::dynamic_pointer_cast<WorldServer>(mServer.lock());
     if(server->GetChannelDescriptionByConnection(connection, channelDesc))
     {
         server->RemoveChannelDescription(connection);

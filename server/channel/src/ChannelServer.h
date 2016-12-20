@@ -43,6 +43,8 @@ public:
     ChannelServer(std::shared_ptr<objects::ServerConfig> config, const libcomp::String& configPath);
     virtual ~ChannelServer();
 
+    virtual bool Initialize(std::weak_ptr<BaseServer>& self);
+
     virtual void Shutdown();
 
     objects::ChannelDescription GetDescription();

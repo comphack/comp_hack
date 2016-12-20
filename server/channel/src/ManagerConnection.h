@@ -42,7 +42,7 @@ namespace channel
 class ManagerConnection : public libcomp::Manager
 {
 public:
-    ManagerConnection(const std::shared_ptr<libcomp::BaseServer>& server);
+    ManagerConnection(std::weak_ptr<libcomp::BaseServer> server);
     virtual ~ManagerConnection();
 
     /**
@@ -64,7 +64,7 @@ private:
 
     std::shared_ptr<libcomp::InternalConnection> mWorldConnection;
 
-    std::shared_ptr<libcomp::BaseServer> mServer;
+    std::weak_ptr<libcomp::BaseServer> mServer;
 };
 
 } // namespace world

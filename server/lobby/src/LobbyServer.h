@@ -44,6 +44,8 @@ public:
     LobbyServer(std::shared_ptr<objects::ServerConfig> config, const libcomp::String& configPath);
     virtual ~LobbyServer();
 
+    virtual bool Initialize(std::weak_ptr<BaseServer>& self);
+
     virtual void Shutdown();
 
     std::list<std::shared_ptr<lobby::World>> GetWorlds();

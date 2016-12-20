@@ -43,13 +43,22 @@ using namespace lobby;
 LobbyServer::LobbyServer(std::shared_ptr<objects::ServerConfig> config, const libcomp::String& configPath) :
     libcomp::BaseServer(config, configPath)
 {
+}
+
+bool LobbyServer::Initialize(std::weak_ptr<BaseServer>& self)
+{
+    if(!BaseServer::Initialize(self))
+    {
+        return false;
+    }
+
     auto conf = std::dynamic_pointer_cast<objects::LobbyConfig>(mConfig);
 
-    mManagerConnection = std::shared_ptr<ManagerConnection>(new ManagerConnection(mSelf, std::shared_ptr<asio::io_service>(&mService), mMainWorker.GetMessageQueue()));
+    mManagerConnection = std::shared_ptr<ManagerConnection>(new ManagerConnection(self, &mService, mMainWorker.GetMessageQueue()));
 
-    auto connectionManager = std::shared_ptr<libcomp::Manager>(mManagerConnection);
+    auto connectionManager = std::dynamic_pointer_cast<libcomp::Manager>(mManagerConnection);
 
-    auto internalPacketManager = std::shared_ptr<libcomp::ManagerPacket>(new libcomp::ManagerPacket(mSelf));
+    auto internalPacketManager = std::shared_ptr<libcomp::ManagerPacket>(new libcomp::ManagerPacket(self));
     internalPacketManager->AddParser<Parsers::SetWorldDescription>(PACKET_SET_WORLD_DESCRIPTION);
     internalPacketManager->AddParser<Parsers::SetChannelDescription>(PACKET_SET_CHANNEL_DESCRIPTION);
 
@@ -57,7 +66,7 @@ LobbyServer::LobbyServer(std::shared_ptr<objects::ServerConfig> config, const li
     mMainWorker.AddManager(internalPacketManager);
     mMainWorker.AddManager(connectionManager);
 
-    auto clientPacketManager = std::shared_ptr<libcomp::ManagerPacket>(new libcomp::ManagerPacket(mSelf));
+    auto clientPacketManager = std::shared_ptr<libcomp::ManagerPacket>(new libcomp::ManagerPacket(self));
     clientPacketManager->AddParser<Parsers::Login>(PACKET_LOGIN);
     clientPacketManager->AddParser<Parsers::Auth>(PACKET_AUTH);
     clientPacketManager->AddParser<Parsers::StartGame>(PACKET_START_GAME);
@@ -74,6 +83,8 @@ LobbyServer::LobbyServer(std::shared_ptr<objects::ServerConfig> config, const li
 
     // Start the worker.
     mWorker.Start();
+
+    return true;
 }
 
 LobbyServer::~LobbyServer()

@@ -43,6 +43,15 @@ using namespace world;
 WorldServer::WorldServer(std::shared_ptr<objects::ServerConfig> config, const libcomp::String& configPath) :
     libcomp::BaseServer(config, configPath)
 {
+}
+
+bool WorldServer::Initialize(std::weak_ptr<BaseServer>& self)
+{
+    if(!BaseServer::Initialize(self))
+    {
+        return false;
+    }
+
     asio::io_service service;
 
     // Connect to the world server.
@@ -73,6 +82,7 @@ WorldServer::WorldServer(std::shared_ptr<objects::ServerConfig> config, const li
     if(!connected)
     {
         LOG_CRITICAL("Failed to connect to the lobby server!\n");
+        return false;
     }
 
     libcomp::Message::Message *pMessage = messageQueue->Dequeue();
@@ -81,20 +91,21 @@ WorldServer::WorldServer(std::shared_ptr<objects::ServerConfig> config, const li
     {
         LOG_CRITICAL("Lobby server did not accept the world server "
             "notification.\n");
+        return false;
     }
 
     delete pMessage;
 
-    mManagerConnection = std::shared_ptr<ManagerConnection>(new ManagerConnection(mSelf));
+    mManagerConnection = std::shared_ptr<ManagerConnection>(new ManagerConnection(self));
 
     lobbyConnection->Close();
     serviceThread.join();
     lobbyConnection.reset();
     messageQueue.reset();
 
-    auto connectionManager = std::shared_ptr<libcomp::Manager>(mManagerConnection);
+    auto connectionManager = std::dynamic_pointer_cast<libcomp::Manager>(mManagerConnection);
 
-    auto packetManager = std::shared_ptr<libcomp::ManagerPacket>(new libcomp::ManagerPacket(mSelf));
+    auto packetManager = std::shared_ptr<libcomp::ManagerPacket>(new libcomp::ManagerPacket(self));
     packetManager->AddParser<Parsers::DescribeWorld>(PACKET_DESCRIBE_WORLD);
     packetManager->AddParser<Parsers::SetChannelDescription>(PACKET_SET_CHANNEL_DESCRIPTION);
 
@@ -108,10 +119,22 @@ WorldServer::WorldServer(std::shared_ptr<objects::ServerConfig> config, const li
 
     // Start the worker.
     mWorker.Start();
+
+    return true;
 }
 
 WorldServer::~WorldServer()
 {
+    // Make sure the worker threads stop.
+    mWorker.Join();
+}
+
+void WorldServer::Shutdown()
+{
+    BaseServer::Shutdown();
+
+    /// @todo Add more workers.
+    mWorker.Shutdown();
 }
 
 objects::WorldDescription WorldServer::GetDescription()

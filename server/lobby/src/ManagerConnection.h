@@ -41,8 +41,8 @@ namespace lobby
 class ManagerConnection : public libcomp::Manager
 {
 public:
-    ManagerConnection(const std::shared_ptr<libcomp::BaseServer>& server,
-        std::shared_ptr<asio::io_service> service,
+    ManagerConnection(std::weak_ptr<libcomp::BaseServer> server,
+        asio::io_service* service,
         std::shared_ptr<libcomp::MessageQueue<libcomp::Message::Message*>> messageQueue);
     virtual ~ManagerConnection();
 
@@ -65,11 +65,11 @@ public:
 private:
     static std::list<libcomp::Message::MessageType> sSupportedTypes;
 
-    std::shared_ptr<libcomp::BaseServer> mServer;
+    std::weak_ptr<libcomp::BaseServer> mServer;
 
     std::list<std::shared_ptr<lobby::World>> mWorlds;
 
-    std::shared_ptr<asio::io_service> mService;
+    asio::io_service *mService;
     std::shared_ptr<libcomp::MessageQueue<
         libcomp::Message::Message*>> mMessageQueue;
 };

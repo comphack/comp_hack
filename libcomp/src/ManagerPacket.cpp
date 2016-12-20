@@ -37,7 +37,7 @@ using namespace libcomp;
 std::list<libcomp::Message::MessageType> ManagerPacket::sSupportedTypes =
     { libcomp::Message::MessageType::MESSAGE_TYPE_PACKET };
 
-ManagerPacket::ManagerPacket(const std::shared_ptr<libcomp::BaseServer>& server)
+ManagerPacket::ManagerPacket(std::weak_ptr<libcomp::BaseServer> server)
     : mServer(server)
 {
 }
@@ -85,7 +85,7 @@ bool ManagerPacket::ProcessMessage(const libcomp::Message::Message *pMessage)
 
 std::shared_ptr<libcomp::BaseServer> ManagerPacket::GetServer()
 {
-    return mServer;
+    return mServer.lock();
 }
 
 bool Parsers::Placeholder::Parse(ManagerPacket *pPacketManager,

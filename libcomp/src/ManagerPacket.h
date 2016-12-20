@@ -46,7 +46,7 @@ class PacketParser;
 class ManagerPacket : public libcomp::Manager
 {
 public:
-    ManagerPacket(const std::shared_ptr<libcomp::BaseServer>& server);
+    ManagerPacket(std::weak_ptr<libcomp::BaseServer> server);
     virtual ~ManagerPacket();
 
     /**
@@ -86,7 +86,7 @@ protected:
     std::unordered_map<CommandCode_t,
         std::shared_ptr<PacketParser>> mPacketParsers;
 
-    std::shared_ptr<libcomp::BaseServer> mServer;
+    std::weak_ptr<libcomp::BaseServer> mServer;
 };
 
 } // namespace libcomp

@@ -47,6 +47,10 @@ public:
     WorldServer(std::shared_ptr<objects::ServerConfig> config, const libcomp::String& configPath);
     virtual ~WorldServer();
 
+    virtual bool Initialize(std::weak_ptr<BaseServer>& self);
+
+    virtual void Shutdown();
+
     objects::WorldDescription GetDescription();
 
     bool GetChannelDescriptionByConnection(std::shared_ptr<libcomp::InternalConnection>& connection, objects::ChannelDescription& outChannel);

@@ -42,6 +42,7 @@
 #include "MetaObject.h"
 #include "MetaVariable.h"
 #include "MetaVariableInt.h"
+#include "MetaVariableReference.h"
 #include "MetaVariableString.h"
 
 std::unordered_map<std::string, std::shared_ptr<
@@ -247,6 +248,61 @@ bool GenerateFile(const std::string& path, const std::string& extension,
     return true;
 }
 
+bool SetReferenceFieldDynamicSizes(
+    const std::list<std::shared_ptr<libobjgen::MetaVariableReference>>& refs)
+{
+    if(refs.size() == 0)
+    {
+        return true;
+    }
+
+    std::vector<std::shared_ptr<libobjgen::MetaVariableReference>> remaining
+        { std::begin(refs), std::end(refs) };
+
+    int updated;
+    do
+    {
+        updated = 0;
+        for(int i = (int)remaining.size() - 1; i >= 0; i--)
+        {
+            auto ref = remaining[(size_t)i];
+
+            if(ref->GetDynamicSizeCount() > 0)
+            {
+                remaining.erase(remaining.begin() + i);
+                updated++;
+                continue;
+            }
+
+            auto refType = ref->GetReferenceType();
+            auto refObject = gObjects[refType];
+
+            bool allRefSizesSet = true;
+            for(auto var : refObject->GetReferences())
+            {
+                auto objRef = std::dynamic_pointer_cast<
+                    libobjgen::MetaVariableReference>(var);
+                auto objRefObject = gObjects[objRef->GetReferenceType()];
+                if(!objRefObject->GetPersistent() &&
+                    objRef->GetDynamicSizeCount() == 0)
+                {
+                    allRefSizesSet = false;
+                }
+            }
+
+            if(allRefSizesSet)
+            {
+                ref->SetDynamicSizeCount(refObject->GetDynamicSizeCount());
+                remaining.erase(remaining.begin() + i);
+                updated++;
+                continue;
+            }
+        }
+    } while(updated > 0);
+
+    return remaining.size() == 0;
+}
+
 int main(int argc, char *argv[])
 {
     typedef enum
@@ -345,33 +401,58 @@ int main(int argc, char *argv[])
                 object = match[2];
             }
 
-            std::list<std::string> requiresLoad;
             if(std::find(loaded.begin(), loaded.end(), object) == loaded.end())
             {
-                requiresLoad.push_back(object);
-            }
+                //We're loading the object for the first time
+                std::list<std::string> requiresLoad = { object };
+                std::list<std::shared_ptr<libobjgen::MetaVariableReference>> refs;
 
-            //Load the remaining information for only objects we currently care to define
-            while(requiresLoad.size() > 0)
-            {
-                auto objectName = requiresLoad.front();
-                if(!LoadDataMembers(objectName))
+                //Load the remaining information for only objects we currently care to define
+                while(requiresLoad.size() > 0)
                 {
+                    auto objectName = requiresLoad.front();
+                    if(!LoadDataMembers(objectName))
+                    {
+                        std::cerr << gObjects[objectName]->GetError() << std::endl;
+
+                        return EXIT_FAILURE;
+                    }
+
+                    auto obj = gObjects[objectName];
+                    for(auto var : obj->GetReferences())
+                    {
+                        auto ref = std::dynamic_pointer_cast<libobjgen::MetaVariableReference>(var);
+                        auto refType = ref->GetReferenceType();
+
+                        refs.push_back(ref);
+                        if(std::find(loaded.begin(), loaded.end(), refType) == loaded.end()
+                            && std::find(requiresLoad.begin(), requiresLoad.end(), refType)
+                            == requiresLoad.end())
+                        {
+                            requiresLoad.push_back(refType);
+                        }
+                    }
+                    requiresLoad.remove(objectName);
+                    loaded.push_back(objectName);
+                }
+
+                if(gObjects[object]->HasCircularReference())
+                {
+                    std::cerr << "Object contains circular reference: "
+                        << object << std::endl;
+
                     return EXIT_FAILURE;
                 }
 
-                auto obj = gObjects[objectName];
-                for(auto ref : obj->GetReferences())
+                // Now that everything in the chain is loaded up and we know there are no
+                // circular refs, set the reference field dynamic sizes
+                if(!SetReferenceFieldDynamicSizes(refs))
                 {
-                    if(std::find(loaded.begin(), loaded.end(), ref) == loaded.end()
-                        && std::find(requiresLoad.begin(), requiresLoad.end(), ref)
-                        == requiresLoad.end())
-                    {
-                        requiresLoad.push_back(ref);
-                    }
+                    std::cerr << "Failed to calculate reference field dynamic sizes on object: "
+                        << object << std::endl;
+
+                    return EXIT_FAILURE;
                 }
-                requiresLoad.remove(objectName);
-                loaded.push_back(objectName);
             }
 
             extension = std::string(match[3]);

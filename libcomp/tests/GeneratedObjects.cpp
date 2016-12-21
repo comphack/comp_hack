@@ -164,9 +164,6 @@ TEST(Object, TestObject)
 
     auto listIter = data.ListBegin();
     EXPECT_EQ(1, *(listIter));
-    listIter = data.ListEnd();
-    listIter--;
-    EXPECT_EQ(4, *(listIter));
 
     //
     // Map of int16_t and string
@@ -185,9 +182,6 @@ TEST(Object, TestObject)
 
     auto mapIter = data.MapBegin();
     EXPECT_EQ(1, mapIter->first);
-    mapIter = data.MapEnd();
-    mapIter--;
-    EXPECT_EQ("4", mapIter->second);
 
     std::stringstream streamOutStream(std::stringstream::out |
         std::stringstream::binary);

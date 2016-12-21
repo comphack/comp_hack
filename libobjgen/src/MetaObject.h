@@ -98,7 +98,8 @@ public:
 
     bool HasCircularReference() const;
 
-    std::set<std::string> GetReferences() const;
+    std::set<std::string> GetReferencesTypes() const;
+    std::list<std::shared_ptr<MetaVariable>> GetReferences() const;
 
     static std::unordered_map<std::string, MetaObject*> GetKnownObjects();
 
@@ -114,7 +115,7 @@ protected:
 
 private:
     void GetReferences(std::shared_ptr<MetaVariable>& var,
-        std::set<std::string>& references) const;
+        std::list<std::shared_ptr<MetaVariable>>& references) const;
 
     bool HasCircularReference(const std::set<std::string>& references) const;
 

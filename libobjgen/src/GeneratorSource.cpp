@@ -53,7 +53,7 @@ std::string GeneratorSource::Generate(const MetaObject& obj)
     ss << "#include \"VectorStream.h\"" << std::endl;
     ss << std::endl;
 
-    std::set<std::string> references = obj.GetReferences();
+    std::set<std::string> references = obj.GetReferencesTypes();
 
     if(!references.empty())
     {

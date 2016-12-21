@@ -39,6 +39,7 @@ MetaVariableReference::MetaVariableReference()
     : MetaVariable()
 {
     mPersistentParent = false;
+    mDynamicSizeCount = 0;
 }
 
 MetaVariableReference::~MetaVariableReference()
@@ -113,6 +114,8 @@ bool MetaVariableReference::IsValid() const
 bool MetaVariableReference::Load(std::istream& stream)
 {
     LoadString(stream, mReferenceType);
+    stream.read(reinterpret_cast<char*>(&mDynamicSizeCount),
+        sizeof(mDynamicSizeCount));
     stream.read(reinterpret_cast<char*>(&mPersistentParent),
         sizeof(mPersistentParent));
 
@@ -126,6 +129,8 @@ bool MetaVariableReference::Save(std::ostream& stream) const
     if(IsValid())
     {
         SaveString(stream, mReferenceType);
+        stream.write(reinterpret_cast<const char*>(&mDynamicSizeCount),
+            sizeof(mDynamicSizeCount));
         stream.write(reinterpret_cast<const char*>(&mPersistentParent),
             sizeof(mPersistentParent));
 
@@ -161,8 +166,13 @@ bool MetaVariableReference::Save(tinyxml2::XMLDocument& doc,
 
 uint16_t MetaVariableReference::GetDynamicSizeCount() const
 {
-    /// @todo Lookup the reference type and call this for that type!
-    return 0;
+    return mDynamicSizeCount;
+}
+
+bool MetaVariableReference::SetDynamicSizeCount(uint16_t dynamicSizeCount)
+{
+    mDynamicSizeCount = dynamicSizeCount;
+    return true;
 }
 
 std::string MetaVariableReference::GetCodeType() const

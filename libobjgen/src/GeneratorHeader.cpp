@@ -188,7 +188,7 @@ std::string GeneratorHeader::Generate(const MetaObject& obj)
     ss << "#include <Convert.h>" << std::endl;
     ss << "#include <CString.h>" << std::endl;
 
-    std::set<std::string> references = obj.GetReferences();
+    std::set<std::string> references = obj.GetReferencesTypes();
     if(references.size() > 0)
     {
         ss << "#include <ObjectReference.h>" << std::endl;

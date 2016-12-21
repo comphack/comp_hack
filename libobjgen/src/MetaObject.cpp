@@ -781,17 +781,15 @@ bool MetaObject::HasCircularReference(
         std::set<std::string> referencesCopy;
         referencesCopy.insert(mName);
 
-        for(auto var : mVariables)
+        for(auto var : GetReferences())
         {
             std::shared_ptr<MetaVariableReference> ref =
                 std::dynamic_pointer_cast<MetaVariableReference>(var);
 
-            if(ref)
-            {
-                auto refObject = sKnownObjects.find(ref->GetReferenceType());
-                status = refObject != sKnownObjects.end() &&
-                    refObject->second->HasCircularReference(referencesCopy);
-            }
+            auto refObject = sKnownObjects.find(ref->GetReferenceType());
+            status = refObject != sKnownObjects.end() &&
+                !refObject->second->GetPersistent() &&
+                refObject->second->HasCircularReference(referencesCopy);
 
             if(status)
             {
@@ -868,11 +866,24 @@ bool MetaObject::DefaultsSpecified(const tinyxml2::XMLElement *pMember) const
     return true;
 }
 
-std::set<std::string> MetaObject::GetReferences() const
+std::set<std::string> MetaObject::GetReferencesTypes() const
 {
     std::set<std::string> references;
 
-    for(auto var : mVariables)
+    for(auto var : GetReferences())
+    {
+        references.insert(
+            std::dynamic_pointer_cast<MetaVariableReference>(var)->GetReferenceType());
+    }
+
+    return references;
+}
+
+std::list<std::shared_ptr<MetaVariable>> MetaObject::GetReferences() const
+{
+    std::list<std::shared_ptr<MetaVariable>> references;
+
+    for (auto var : mVariables)
     {
         GetReferences(var, references);
     }
@@ -881,14 +892,14 @@ std::set<std::string> MetaObject::GetReferences() const
 }
 
 void MetaObject::GetReferences(std::shared_ptr<MetaVariable>& var,
-    std::set<std::string>& references) const
+    std::list<std::shared_ptr<MetaVariable>>& references) const
 {
     std::shared_ptr<MetaVariableReference> ref =
         std::dynamic_pointer_cast<MetaVariableReference>(var);
 
     if(ref)
     {
-        references.insert(ref->GetReferenceType());
+        references.push_back(ref);
     }
     else
     {

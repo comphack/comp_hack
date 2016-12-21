@@ -69,6 +69,7 @@ public:
         tinyxml2::XMLElement& parent, const char* elementName) const;
 
     virtual uint16_t GetDynamicSizeCount() const;
+    bool SetDynamicSizeCount(uint16_t dynamicSizeCount);
 
     virtual std::string GetCodeType() const;
     virtual std::string GetConstructValue() const;
@@ -102,6 +103,7 @@ public:
 
 private:
     std::string mReferenceType;
+    uint16_t mDynamicSizeCount;
     bool mPersistentParent;
 
     std::list<std::shared_ptr<MetaVariable>> mDefaultedVariables;

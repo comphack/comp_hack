@@ -579,27 +579,38 @@ std::string MetaVariableString::GetSaveCode(const Generator& generator,
         replacements["@VAR_NAME@"] = name;
         replacements["@STREAM@"] = stream;
 
+        bool dynamicString = (0 == mSize) && (mLengthSize > 0);
+        if(dynamicString)
+        {
+            //We need to get the encoded value first BUT write the length before it
+            replacements["@ENCODESTREAM@"] = "encodestream";
+        }
+        else
+        {
+            replacements["@ENCODESTREAM@"] = stream + ".stream";
+        }
+
         if(Encoding_t::ENCODING_UTF8 != mEncoding)
         {
-            replacements["@ENCODE_CODE@"] = generator.ParseTemplate(0,
+            replacements["@ENCODE_CODE@"] = generator.ParseTemplate(1,
                 "VariableStringToEncoding", replacements);
         }
         else
         {
-            replacements["@ENCODE_CODE@"] = generator.ParseTemplate(0,
+            replacements["@ENCODE_CODE@"] = generator.ParseTemplate(1,
                 "VariableStringToUnicode", replacements);
         }
 
         if(0 == mSize)
         {
-            if(0 == mLengthSize)
+            if(dynamicString)
             {
-                code = generator.ParseTemplate(0, "VariableStringSaveNull",
+                code = generator.ParseTemplate(0, "VariableStringSaveDynamic",
                     replacements);
             }
             else
             {
-                code = generator.ParseTemplate(0, "VariableStringSaveDynamic",
+                code = generator.ParseTemplate(0, "VariableStringSaveNull",
                     replacements);
             }
         }

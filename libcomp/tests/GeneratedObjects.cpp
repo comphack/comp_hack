@@ -163,7 +163,15 @@ TEST(Object, TestObject)
     EXPECT_EQ(4, data.GetList(3));
 
     auto listIter = data.ListBegin();
-    EXPECT_EQ(1, *(listIter));
+    EXPECT_EQ(1, *listIter);
+
+    int elementCount = 0;
+    while(listIter != data.ListEnd())
+    {
+        elementCount++;
+        listIter++;
+    }
+    EXPECT_EQ(4, elementCount);
 
     //
     // Map of int16_t and string
@@ -180,8 +188,16 @@ TEST(Object, TestObject)
     EXPECT_TRUE(data.MapKeyExists(2));
     EXPECT_EQ("2", data.GetMap(2));
 
+    elementCount = 0;
     auto mapIter = data.MapBegin();
-    EXPECT_EQ(1, mapIter->first);
+    //The underlying map is unordered
+    //EXPECT_EQ(1, mapIter->first);
+    while(mapIter != data.MapEnd())
+    {
+        elementCount++;
+        mapIter++;
+    }
+    EXPECT_EQ(4, elementCount);
 
     std::stringstream streamOutStream(std::stringstream::out |
         std::stringstream::binary);

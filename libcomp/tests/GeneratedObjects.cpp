@@ -242,8 +242,10 @@ TEST(Object, TestObject)
     testData.XYZ[1] = 1.5f;
     testData.XYZ[2] = 3.14159f;
 
-    strcpy(testData.stringNull, data.GetStringNull().C());
-    strcpy(testData.stringFixed, data.GetStringFixed().C());
+    size_t len = data.GetStringNull().Length();
+    strncpy(testData.stringNull, data.GetStringNull().C(), len);
+    len = data.GetStringFixed().Length();
+    strncpy(testData.stringFixed, data.GetStringFixed().C(), len);
 
     testData.listContents[0] = 1;
     testData.listContents[1] = 2;

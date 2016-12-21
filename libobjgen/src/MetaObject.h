@@ -35,9 +35,7 @@
 #include <unordered_map>
 
 // tinyxml2 Includes
-#include "PushIgnore.h"
 #include <tinyxml2.h>
-#include "PopIgnore.h"
 
 namespace libobjgen
 {
@@ -46,6 +44,8 @@ class MetaVariable;
 
 class MetaObject
 {
+friend class MetaObjectXmlParser;
+
 public:
     typedef std::list<std::shared_ptr<MetaVariable>> VariableList;
     typedef std::unordered_map<std::string, std::shared_ptr<MetaVariable>>
@@ -67,9 +67,6 @@ public:
 
     std::string GetXMLDefinition() const;
     void SetXMLDefinition(const std::string& xmlDefinition);
-    void SetXMLDefinition(const tinyxml2::XMLElement& root);
-
-    std::string GetError() const;
 
     bool AddVariable(const std::shared_ptr<MetaVariable>& var);
     bool RemoveVariable(const std::string& name);
@@ -86,13 +83,6 @@ public:
 
     bool Load(std::istream& stream);
     bool Save(std::ostream& stream) const;
-
-    bool Load(const tinyxml2::XMLDocument& doc,
-        const tinyxml2::XMLElement& root, bool verifyReferences = true);
-    bool LoadTypeInformation(const tinyxml2::XMLDocument& doc,
-        const tinyxml2::XMLElement& root);
-    bool LoadMembers(const tinyxml2::XMLDocument& doc,
-        const tinyxml2::XMLElement& root, bool verifyReferences);
     bool Save(tinyxml2::XMLDocument& doc,
         tinyxml2::XMLElement& root) const;
 
@@ -101,28 +91,15 @@ public:
     std::set<std::string> GetReferencesTypes() const;
     std::list<std::shared_ptr<MetaVariable>> GetReferences() const;
 
-    static std::unordered_map<std::string, MetaObject*> GetKnownObjects();
-
 protected:
     static std::shared_ptr<MetaVariable> CreateType(
         const std::string& typeName);
-
-    bool LoadMember(const tinyxml2::XMLDocument& doc, const char *szName,
-        const tinyxml2::XMLElement *pMember, bool& result);
-    std::shared_ptr<MetaVariable> GetVariable(const tinyxml2::XMLDocument& doc,
-        const char *szName, const char *szMemberName,
-        const tinyxml2::XMLElement *pMember);
 
 private:
     void GetReferences(std::shared_ptr<MetaVariable>& var,
         std::list<std::shared_ptr<MetaVariable>>& references) const;
 
     bool HasCircularReference(const std::set<std::string>& references) const;
-
-    const tinyxml2::XMLElement *GetChild(const tinyxml2::XMLElement *pMember,
-        const std::string name) const;
-
-    bool DefaultsSpecified(const tinyxml2::XMLElement *pMember) const;
 
     static std::unordered_map<std::string, MetaObject*> sKnownObjects;
 
@@ -132,8 +109,6 @@ private:
     std::string mSourceLocation;
     std::string mXmlDefinition;
 
-    std::string mError;
-    bool mReferencesVerified;
     VariableList mVariables;
     VariableMap mVariableMapping;
 };

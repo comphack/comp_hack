@@ -30,6 +30,7 @@
 #include "Database.h"
 #include "DatabaseBind.h"
 #include "Log.h"
+#include "MetaObjectXmlParser.h"
 #include "MetaVariable.h"
 
 // All libcomp PersistentObject Includes
@@ -197,20 +198,19 @@ const std::shared_ptr<libobjgen::MetaObject> PersistentObject::GetRegisteredMeta
 
 std::shared_ptr<libobjgen::MetaObject> PersistentObject::GetMetadataFromXml(const std::string& xml)
 {
-    auto obj = std::shared_ptr<libobjgen::MetaObject>(new libobjgen::MetaObject());
-
     tinyxml2::XMLDocument doc;
     auto err = doc.Parse(xml.c_str(), xml.length());
     if(err == tinyxml2::XML_NO_ERROR)
     {
-        if(!obj->Load(doc, *doc.FirstChildElement(), false))
+        libobjgen::MetaObjectXmlParser parser;
+        if(parser.Load(doc, *doc.FirstChildElement(), false))
         {
-            //Should never happen to generated objects
-            obj = nullptr;
+            return parser.GetCurrentObject();
         }
     }
-    
-    return obj;
+
+    //Should never happen to generated objects
+    return nullptr;
 }
 
 std::shared_ptr<PersistentObject> PersistentObject::New(std::type_index type)

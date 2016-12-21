@@ -41,6 +41,7 @@ SET(${PROJECT_NAME}_SRCS
     src/MetaVariableMap.cpp
     src/MetaVariableReference.cpp
     src/MetaVariableString.cpp
+    src/MetaObjectXmlParser.cpp
     src/UUID.cpp
 
     ${CMAKE_CURRENT_BINARY_DIR}/res/ResourceTemplate.c
@@ -60,6 +61,7 @@ SET(${PROJECT_NAME}_HDRS
     src/MetaVariableMap.h
     src/MetaVariableReference.h
     src/MetaVariableString.h
+    src/MetaObjectXmlParser.h
     src/UUID.h
 
     ${CMAKE_CURRENT_BINARY_DIR}/res/ResourceTemplate.h

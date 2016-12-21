@@ -40,24 +40,18 @@
 #include "Generator.h"
 #include "GeneratorFactory.h"
 #include "MetaObject.h"
+#include "MetaObjectXmlParser.h"
 #include "MetaVariable.h"
 #include "MetaVariableInt.h"
 #include "MetaVariableReference.h"
 #include "MetaVariableString.h"
 
-std::unordered_map<std::string, std::shared_ptr<
-    libobjgen::MetaObject>> gObjects;
-
-// Keep all XML documents referenced stored until we're done
-std::unordered_map<std::string, tinyxml2::XMLDocument> gDocuments;
-
-// As object definitions are found, cache them until exit
-std::unordered_map<std::string, const tinyxml2::XMLElement*> gDefintions;
+libobjgen::MetaObjectXmlParser gParser;
 
 bool LoadObjectTypeInformation(const std::list<std::string>& searchPath,
     const std::string& xmlFile)
 {
-    tinyxml2::XMLDocument& doc = gDocuments[xmlFile];
+    tinyxml2::XMLDocument doc;
 
     bool loaded = tinyxml2::XML_NO_ERROR == doc.LoadFile(xmlFile.c_str());
 
@@ -131,44 +125,19 @@ bool LoadObjectTypeInformation(const std::list<std::string>& searchPath,
 
     while(nullptr != pObjectXml)
     {
-        std::shared_ptr<libobjgen::MetaObject> obj(new libobjgen::MetaObject);
-
-        if(!obj->LoadTypeInformation(doc, *pObjectXml))
+        bool success = gParser.LoadTypeInformation(doc, *pObjectXml);
+        auto obj = gParser.GetCurrentObject();
+        if(success)
+        {
+            pObjectXml = pObjectXml->NextSiblingElement("object");
+        }
+        else
         {
             std::cerr << "Failed to read type information for object: "
-                << obj->GetName() << ":  " << obj->GetError() << std::endl;
+                << (nullptr != obj ?  obj->GetName() : "unnamed") << ":  " << gParser.GetError() << std::endl;
 
             return false;
         }
-
-        gObjects[obj->GetName()] = obj;
-        gDefintions[obj->GetName()] = pObjectXml;
-
-        pObjectXml = pObjectXml->NextSiblingElement("object");
-    }
-
-    return true;
-}
-
-bool LoadDataMembers(const std::string& object)
-{
-    if(gObjects.find(object) == gObjects.end())
-    {
-        std::cerr << "Unknown object referenced: "
-            << object << std::endl;
-        return false;
-    }
-
-    auto obj = gObjects[object];
-    auto pObjectXml = gDefintions[object];
-    auto doc = pObjectXml->GetDocument();
-
-    if(!obj->LoadMembers(*doc, *pObjectXml, true))
-    {
-        std::cerr << "Failed to read data members for object: "
-            << obj->GetName() << ":  " << obj->GetError() << std::endl;
-
-        return false;
     }
 
     return true;
@@ -177,9 +146,8 @@ bool LoadDataMembers(const std::string& object)
 bool GenerateFile(const std::string& path, const std::string& extension,
     const std::string& object)
 {
-    auto objectPair = gObjects.find(object);
-
-    if(gObjects.end() == objectPair)
+    auto obj = gParser.GetKnownObject(object);
+    if(nullptr == obj)
     {
         std::cerr << "Failed to find object '" << object
             << "' for output file: " << path << std::endl;
@@ -197,7 +165,7 @@ bool GenerateFile(const std::string& path, const std::string& extension,
         return false;
     }
 
-    std::string code = generator->Generate(*objectPair->second.get());
+    std::string code = generator->Generate(*obj);
 
     if(code.empty())
     {
@@ -246,61 +214,6 @@ bool GenerateFile(const std::string& path, const std::string& extension,
     }
 
     return true;
-}
-
-bool SetReferenceFieldDynamicSizes(
-    const std::list<std::shared_ptr<libobjgen::MetaVariableReference>>& refs)
-{
-    if(refs.size() == 0)
-    {
-        return true;
-    }
-
-    std::vector<std::shared_ptr<libobjgen::MetaVariableReference>> remaining
-        { std::begin(refs), std::end(refs) };
-
-    int updated;
-    do
-    {
-        updated = 0;
-        for(int i = (int)remaining.size() - 1; i >= 0; i--)
-        {
-            auto ref = remaining[(size_t)i];
-
-            if(ref->GetDynamicSizeCount() > 0)
-            {
-                remaining.erase(remaining.begin() + i);
-                updated++;
-                continue;
-            }
-
-            auto refType = ref->GetReferenceType();
-            auto refObject = gObjects[refType];
-
-            bool allRefSizesSet = true;
-            for(auto var : refObject->GetReferences())
-            {
-                auto objRef = std::dynamic_pointer_cast<
-                    libobjgen::MetaVariableReference>(var);
-                auto objRefObject = gObjects[objRef->GetReferenceType()];
-                if(!objRefObject->GetPersistent() &&
-                    objRef->GetDynamicSizeCount() == 0)
-                {
-                    allRefSizesSet = false;
-                }
-            }
-
-            if(allRefSizesSet)
-            {
-                ref->SetDynamicSizeCount(refObject->GetDynamicSizeCount());
-                remaining.erase(remaining.begin() + i);
-                updated++;
-                continue;
-            }
-        }
-    } while(updated > 0);
-
-    return remaining.size() == 0;
 }
 
 int main(int argc, char *argv[])
@@ -383,7 +296,6 @@ int main(int argc, char *argv[])
         }
     }
 
-    std::list<std::string> loaded;
     for(auto outputFile : outputFiles)
     {
         std::smatch match;
@@ -401,58 +313,11 @@ int main(int argc, char *argv[])
                 object = match[2];
             }
 
-            if(std::find(loaded.begin(), loaded.end(), object) == loaded.end())
+            if(!gParser.FinalizeObjectAndReferences(object))
             {
-                //We're loading the object for the first time
-                std::list<std::string> requiresLoad = { object };
-                std::list<std::shared_ptr<libobjgen::MetaVariableReference>> refs;
+                std::cerr << gParser.GetError() << std::endl;
 
-                //Load the remaining information for only objects we currently care to define
-                while(requiresLoad.size() > 0)
-                {
-                    auto objectName = requiresLoad.front();
-                    if(!LoadDataMembers(objectName))
-                    {
-                        std::cerr << gObjects[objectName]->GetError() << std::endl;
-
-                        return EXIT_FAILURE;
-                    }
-
-                    auto obj = gObjects[objectName];
-                    for(auto var : obj->GetReferences())
-                    {
-                        auto ref = std::dynamic_pointer_cast<libobjgen::MetaVariableReference>(var);
-                        auto refType = ref->GetReferenceType();
-
-                        refs.push_back(ref);
-                        if(std::find(loaded.begin(), loaded.end(), refType) == loaded.end()
-                            && std::find(requiresLoad.begin(), requiresLoad.end(), refType)
-                            == requiresLoad.end())
-                        {
-                            requiresLoad.push_back(refType);
-                        }
-                    }
-                    requiresLoad.remove(objectName);
-                    loaded.push_back(objectName);
-                }
-
-                if(gObjects[object]->HasCircularReference())
-                {
-                    std::cerr << "Object contains circular reference: "
-                        << object << std::endl;
-
-                    return EXIT_FAILURE;
-                }
-
-                // Now that everything in the chain is loaded up and we know there are no
-                // circular refs, set the reference field dynamic sizes
-                if(!SetReferenceFieldDynamicSizes(refs))
-                {
-                    std::cerr << "Failed to calculate reference field dynamic sizes on object: "
-                        << object << std::endl;
-
-                    return EXIT_FAILURE;
-                }
+                return EXIT_FAILURE;
             }
 
             extension = std::string(match[3]);

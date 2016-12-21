@@ -286,8 +286,6 @@ TEST(Object, TestObject)
     streamInStream.str(std::string(reinterpret_cast<char*>(&testData),
         reinterpret_cast<char*>(&testData) + sizeof(testData)));
 
-    std::string str = streamInStream.str();
-
     EXPECT_TRUE(data.Load(streamIn));
 
     EXPECT_EQ(23, data.GetUnsigned8());

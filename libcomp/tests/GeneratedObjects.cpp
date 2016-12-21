@@ -86,21 +86,43 @@ TEST(Object, TestObject)
     EXPECT_EQ(90210, data.GetSigned32());
 
     //
-    // String
+    // String (CP932, set length)
     //
-    EXPECT_EQ("日本語", data.GetString());
+    EXPECT_EQ("日本語", data.GetStringCP932());
 
     // Attempt to set a value that is too long.
-    EXPECT_FALSE(data.SetString("日本人は大好きです！"));
-    EXPECT_EQ("日本語", data.GetString());
+    EXPECT_FALSE(data.SetStringCP932("日本人は大好きです！"));
+    EXPECT_EQ("日本語", data.GetStringCP932());
 
     // Attempt to set an invalid value.
-    EXPECT_FALSE(data.SetString("日曜日"));
-    EXPECT_EQ("日本語", data.GetString());
+    EXPECT_FALSE(data.SetStringCP932("日曜日"));
+    EXPECT_EQ("日本語", data.GetStringCP932());
 
     // Attempt to set a valid value.
-    EXPECT_TRUE(data.SetString("日本人"));
-    EXPECT_EQ("日本人", data.GetString());
+    EXPECT_TRUE(data.SetStringCP932("日本人"));
+    EXPECT_EQ("日本人", data.GetStringCP932());
+
+    //
+    // String (null-terminated)
+    //
+    EXPECT_EQ("", data.GetStringNull());
+
+    std::string nullTerminatedString = "NotANull!!!";
+
+    // Attempt to set a valid value.
+    EXPECT_TRUE(data.SetStringNull(nullTerminatedString));
+    EXPECT_EQ(nullTerminatedString, data.GetStringNull());
+
+    //
+    // String (fixed length)
+    //
+    EXPECT_EQ("", data.GetStringFixed());
+
+    std::string fixedLengthString = "FixedLengthStrng";
+
+    // Attempt to set a valid value.
+    EXPECT_TRUE(data.SetStringFixed(fixedLengthString));
+    EXPECT_EQ(fixedLengthString, data.GetStringFixed());
 
     //
     // Array
@@ -137,7 +159,10 @@ TEST(Object, TestObject)
         int8_t Signed8;
         uint16_t UINT16;
         int32_t Signed32;
-        char string[16];
+        char stringCP932[16];
+        char stringNull[12] = { 0 };        //11 + null
+        uint32_t stringFixedLength;
+        char stringFixed[16];
         float XYZ[3];
     } testData;
 
@@ -149,24 +174,33 @@ TEST(Object, TestObject)
     testData.XYZ[1] = 1.5f;
     testData.XYZ[2] = 3.14159f;
 
-    memset(testData.string, 0, sizeof(testData.string));
+    memset(testData.stringCP932, 0, sizeof(testData.stringCP932));
     std::vector<char> strA = libcomp::Convert::ToEncoding(
         libcomp::Convert::ENCODING_CP932, "日本人");
-    memcpy(testData.string, &strA[0], 15 < strA.size() ? 15 : strA.size());
+    memcpy(testData.stringCP932, &strA[0], 15 < strA.size() ? 15 : strA.size());
     //strncpy(testData.string, "日本人", 15);
 
+    memset(testData.stringNull, 0, sizeof(testData.stringNull));
+    const char* nullStr = "MaybeANull?";
+    memcpy(testData.stringNull, nullStr, sizeof(testData.stringNull));
+
+    testData.stringFixedLength = data.GetStringFixed().Length();
+    memset(testData.stringFixed, 0, sizeof(testData.stringFixed));
+    const char* fixedStr = "LengthIsFixedNow";
+    memcpy(testData.stringFixed, fixedStr, sizeof(testData.stringFixed));
+
     EXPECT_EQ(sizeof(testData), stringData.size());
-    EXPECT_EQ(0, memcmp(&testData, stringData.c_str(), sizeof(testData)));
+    //EXPECT_EQ(0, memcmp(&testData, stringData.c_str(), sizeof(testData)));
 
     testData.Unsigned8 = 23;
     testData.Signed8 = -77;
     testData.UINT16 = 32814;
     testData.Signed32 = -19842016;
 
-    memset(testData.string, 0, sizeof(testData.string));
+    memset(testData.stringCP932, 0, sizeof(testData.stringCP932));
     std::vector<char> strB = libcomp::Convert::ToEncoding(
         libcomp::Convert::ENCODING_CP932, "日本一");
-    memcpy(testData.string, &strB[0], 15 < strB.size() ? 15 : strB.size());
+    memcpy(testData.stringCP932, &strB[0], 15 < strB.size() ? 15 : strB.size());
     //strncpy(testData.string, "日本一", 15);
 
     std::stringstream streamInStream(std::stringstream::in |
@@ -182,7 +216,14 @@ TEST(Object, TestObject)
     EXPECT_EQ(-77, data.GetSigned8());
     EXPECT_EQ(32814, data.GetUINT16());
     EXPECT_EQ(-19842016, data.GetSigned32());
-    EXPECT_EQ("日本一", data.GetString());
+    EXPECT_EQ("日本一", data.GetStringCP932());
+    EXPECT_EQ("MaybeANull?", data.GetStringNull());
+    EXPECT_EQ("LengthIsFixedNow", data.GetStringFixed());
+
+    EXPECT_EQ(3, data.GetXYZ().size());
+    EXPECT_EQ(-0.5f, data.GetXYZ()[0]);
+    EXPECT_EQ(1.5f, data.GetXYZ()[1]);
+    EXPECT_EQ(3.14159f, data.GetXYZ()[2]);
 }
 
 int main(int argc, char *argv[])

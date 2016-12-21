@@ -573,28 +573,38 @@ std::string MetaVariableString::GetSaveCode(const Generator& generator,
         MetaObject::IsValidIdentifier(stream))
     {
         std::map<std::string, std::string> replacements;
+        replacements["@LENGTH_TYPE@"] = LengthSizeType();
         replacements["@FIXED_LENGTH@"] = std::to_string(mSize);
         replacements["@ENCODING@"] = EncodingToComp(mEncoding);
         replacements["@VAR_NAME@"] = name;
         replacements["@STREAM@"] = stream;
 
-        if(0 == mSize)
+        if(Encoding_t::ENCODING_UTF8 != mEncoding)
         {
-            /// @todo Fix
+            replacements["@ENCODE_CODE@"] = generator.ParseTemplate(0,
+                "VariableStringToEncoding", replacements);
         }
         else
         {
-            if(Encoding_t::ENCODING_UTF8 != mEncoding)
+            replacements["@ENCODE_CODE@"] = generator.ParseTemplate(0,
+                "VariableStringToUnicode", replacements);
+        }
+
+        if(0 == mSize)
+        {
+            if(0 == mLengthSize)
             {
-                replacements["@ENCODE_CODE@"] = generator.ParseTemplate(0,
-                    "VariableStringToEncoding", replacements);
+                code = generator.ParseTemplate(0, "VariableStringSaveNull",
+                    replacements);
             }
             else
             {
-                replacements["@ENCODE_CODE@"] = generator.ParseTemplate(0,
-                    "VariableStringToUnicode", replacements);
+                code = generator.ParseTemplate(0, "VariableStringSaveDynamic",
+                    replacements);
             }
-
+        }
+        else
+        {
             code = generator.ParseTemplate(0, "VariableStringSaveFixed",
                 replacements);
         }

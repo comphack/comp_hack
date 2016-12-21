@@ -6,6 +6,6 @@
     {
         return false;
     }
-	
-	return @VAR_NAME@.SetUUID(value);
+    
+    return @VAR_NAME@.SetUUID(value);
 }())

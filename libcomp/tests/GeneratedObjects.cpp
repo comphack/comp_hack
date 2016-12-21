@@ -145,6 +145,43 @@ TEST(Object, TestObject)
     EXPECT_TRUE(data.SetXYZ(1, 1.5f));
     EXPECT_TRUE(data.SetXYZ(2, 3.14159f));
 
+    //
+    // List of int8_t
+    //
+    EXPECT_EQ(0, data.GetList().size());
+
+    // Attempt to set some valid values.
+    EXPECT_TRUE(data.AppendList(3));
+    EXPECT_TRUE(data.PrependList(1));
+    EXPECT_TRUE(data.InsertList(1, 2));
+    EXPECT_TRUE(data.AppendList(4));
+
+    EXPECT_EQ(4, data.ListCount());
+    EXPECT_EQ(1, data.GetList(0));
+    EXPECT_EQ(2, data.GetList(1));
+    EXPECT_EQ(3, data.GetList(2));
+    EXPECT_EQ(4, data.GetList(3));
+
+    EXPECT_EQ(1, *(data.ListBegin()));
+    EXPECT_EQ(4, *(--data.ListEnd()));
+
+    //
+    // Map of int16_t and string
+    //
+    EXPECT_EQ(0, data.GetMap().size());
+
+    // Attempt to set some valid values.
+    EXPECT_TRUE(data.SetMap(1, "1"));
+    EXPECT_TRUE(data.SetMap(2, "2"));
+    EXPECT_TRUE(data.SetMap(3, "3"));
+    EXPECT_TRUE(data.SetMap(4, "4"));
+
+    EXPECT_EQ(4, data.MapCount());
+    EXPECT_TRUE(data.MapKeyExists(2));
+    EXPECT_EQ("2", data.GetMap(2));
+    EXPECT_EQ(1, data.MapBegin()->first);
+    EXPECT_EQ("4", (--data.MapEnd())->second);
+
     std::stringstream streamOutStream(std::stringstream::out |
         std::stringstream::binary);
     libcomp::ObjectOutStream streamOut(streamOutStream);
@@ -164,6 +201,8 @@ TEST(Object, TestObject)
         uint32_t stringFixedLength;
         char stringFixed[16];
         float XYZ[3];
+        char listContents[4];              //uint8_t x 4
+        char mapContents[28];              //(uint16_t[2] + string length[4] + 1 char) x 4
     } testData;
 
     testData.Unsigned8 = 135;
@@ -184,7 +223,7 @@ TEST(Object, TestObject)
     const char* nullStr = "MaybeANull?";
     memcpy(testData.stringNull, nullStr, sizeof(testData.stringNull));
 
-    testData.stringFixedLength = data.GetStringFixed().Length();
+    testData.stringFixedLength = (uint32_t)data.GetStringFixed().Length();
     memset(testData.stringFixed, 0, sizeof(testData.stringFixed));
     const char* fixedStr = "LengthIsFixedNow";
     memcpy(testData.stringFixed, fixedStr, sizeof(testData.stringFixed));
@@ -203,12 +242,50 @@ TEST(Object, TestObject)
     memcpy(testData.stringCP932, &strB[0], 15 < strB.size() ? 15 : strB.size());
     //strncpy(testData.string, "日本一", 15);
 
+    testData.listContents[0] = 5;
+    testData.listContents[1] = 6;
+    testData.listContents[2] = 7;
+    testData.listContents[3] = 8;
+
+    uint32_t stringLength = 1;
+
+    //Write map 5 => '5'
+    uint16_t idx = 5;
+    char val = '5';
+    memcpy(&testData.mapContents[0], &idx, sizeof(idx));
+    memcpy(&testData.mapContents[2], &stringLength, sizeof(stringLength));
+    memcpy(&testData.mapContents[6], &val, sizeof(val));
+
+    //Write map 6 => '6'
+    idx = 6;
+    val = '6';
+    memcpy(&testData.mapContents[7], &idx, sizeof(idx));
+    memcpy(&testData.mapContents[9], &stringLength, sizeof(stringLength));
+    memcpy(&testData.mapContents[13], &val, sizeof(val));
+
+    //Write map 7 => '7'
+    idx = 7;
+    val = '7';
+    memcpy(&testData.mapContents[14], &idx, sizeof(idx));
+    memcpy(&testData.mapContents[16], &stringLength, sizeof(stringLength));
+    memcpy(&testData.mapContents[20], &val, sizeof(val));
+
+    //Write map 8 => '8'
+    idx = 8;
+    val = '8';
+    memcpy(&testData.mapContents[21], &idx, sizeof(idx));
+    memcpy(&testData.mapContents[23], &stringLength, sizeof(stringLength));
+    memcpy(&testData.mapContents[27], &val, sizeof(val));
+
     std::stringstream streamInStream(std::stringstream::in |
         std::stringstream::binary);
     libcomp::ObjectInStream streamIn(streamInStream);
+    streamIn.dynamicSizes = streamOut.dynamicSizes;
 
     streamInStream.str(std::string(reinterpret_cast<char*>(&testData),
         reinterpret_cast<char*>(&testData) + sizeof(testData)));
+
+    std::string str = streamInStream.str();
 
     EXPECT_TRUE(data.Load(streamIn));
 
@@ -221,9 +298,25 @@ TEST(Object, TestObject)
     EXPECT_EQ("LengthIsFixedNow", data.GetStringFixed());
 
     EXPECT_EQ(3, data.GetXYZ().size());
-    EXPECT_EQ(-0.5f, data.GetXYZ()[0]);
-    EXPECT_EQ(1.5f, data.GetXYZ()[1]);
-    EXPECT_EQ(3.14159f, data.GetXYZ()[2]);
+    EXPECT_EQ(-0.5f, data.GetXYZ(0));
+    EXPECT_EQ(1.5f, data.GetXYZ(1));
+    EXPECT_EQ(3.14159f, data.GetXYZ(2));
+
+    EXPECT_EQ(4, data.ListCount());
+    EXPECT_EQ(5, data.GetList(0));
+    EXPECT_EQ(6, data.GetList(1));
+    EXPECT_EQ(7, data.GetList(2));
+    EXPECT_EQ(8, data.GetList(3));
+    data.ClearList();
+    EXPECT_EQ(0, data.ListCount());
+
+    EXPECT_EQ(4, data.MapCount());
+    EXPECT_EQ("5", data.GetMap(5));
+    EXPECT_EQ("6", data.GetMap(6));
+    EXPECT_EQ("7", data.GetMap(7));
+    EXPECT_EQ("8", data.GetMap(8));
+    data.ClearMap();
+    EXPECT_EQ(0, data.MapCount());
 }
 
 int main(int argc, char *argv[])

@@ -1,5 +1,5 @@
 ([&]() -> bool
-{
+{    
     if(flat)
     {
         libobjgen::UUID uuid;

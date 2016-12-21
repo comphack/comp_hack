@@ -424,10 +424,14 @@ std::string MetaVariableMap::GetUtilityFunctions(const Generator& generator,
         replacements["@VAR_VALUE_TYPE@"] = mValueElementType->GetCodeType();
         replacements["@OBJECT_NAME@"] = object.GetName();
         replacements["@VAR_CAMELCASE_NAME@"] = generator.GetCapitalName(*this);
-        replacements["@KEY_VALIDATION_CODE@"] = mKeyElementType->GetValidCondition(
-            generator, "key", true);
-        replacements["@VALUE_VALIDATION_CODE@"] = mValueElementType->GetValidCondition(
-            generator, "val", true);
+
+        auto keyValidation = mKeyElementType->GetValidCondition(generator, "key", true);
+        auto valueValidation = mValueElementType->GetValidCondition(generator, "val", true);
+
+        replacements["@KEY_VALIDATION_CODE@"] = keyValidation.length() > 0
+            ? keyValidation : "true";
+        replacements["@VALUE_VALIDATION_CODE@"] = valueValidation.length() > 0
+            ? valueValidation : "true";
 
         ss << std::endl << generator.ParseTemplate(0, "VariableMapUtilityFunctions",
             replacements) << std::endl;

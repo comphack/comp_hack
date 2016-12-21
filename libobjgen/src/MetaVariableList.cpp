@@ -393,8 +393,11 @@ std::string MetaVariableList::GetUtilityFunctions(const Generator& generator,
         replacements["@VAR_TYPE@"] = mElementType->GetCodeType();
         replacements["@OBJECT_NAME@"] = object.GetName();
         replacements["@VAR_CAMELCASE_NAME@"] = generator.GetCapitalName(*this);
-        replacements["@ELEMENT_VALIDATION_CODE@"] = mElementType->GetValidCondition(
-            generator, "val", true);
+
+        auto entryValidation = mElementType->GetValidCondition(generator, "val", true);
+
+        replacements["@ELEMENT_VALIDATION_CODE@"] = entryValidation.length() > 0
+            ? entryValidation : "true";
 
         ss << std::endl << generator.ParseTemplate(0, "VariableListUtilityFunctions",
             replacements) << std::endl;

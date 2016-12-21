@@ -12,5 +12,12 @@
         <member type="array" name="xyz" size="3" caps="on">
             <element type="float" default="-1" min="-9999" max="9999"/>
         </member>
+        <member type="list" name="list">
+            <element type="u8"/>
+        </member>
+        <member type="map" name="map">
+            <key type="u16"/>
+            <value type="string"/>
+        </member>
     </object>
 </objgen>

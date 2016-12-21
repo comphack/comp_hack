@@ -5,10 +5,10 @@
     @STREAM@.stream.write(reinterpret_cast<const char*>(&len),
         sizeof(len));
 
-	if(@STREAM@.stream.good())
-	{
-		@ENCODE_CODE@
-	}
+    if(@STREAM@.stream.good())
+    {
+        @ENCODE_CODE@
+    }
 
     return @STREAM@.stream.good();
 })()

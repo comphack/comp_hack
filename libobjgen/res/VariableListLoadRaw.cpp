@@ -10,6 +10,7 @@
         return false;
     }
 
+    @VAR_NAME@.clear();
     for(uint32_t i = 0; i < elementCount; ++i)
     {
         @VAR_TYPE@ element;

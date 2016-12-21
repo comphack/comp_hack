@@ -468,8 +468,11 @@ std::string MetaVariableArray::GetUtilityFunctions(const Generator& generator,
         replacements["@OBJECT_NAME@"] = object.GetName();
         replacements["@VAR_CAMELCASE_NAME@"] = generator.GetCapitalName(*this);
         replacements["@ELEMENT_COUNT@"] = std::to_string(mElementCount);
-        replacements["@ELEMENT_VALIDATION_CODE@"] = mElementType->GetValidCondition(
-            generator, "val", true);
+
+        auto entryValidation = mElementType->GetValidCondition(generator, "val", true);
+
+        replacements["@ELEMENT_VALIDATION_CODE@"] = entryValidation.length() > 0
+            ? entryValidation : "true";
 
         ss << std::endl << generator.ParseTemplate(0, "VariableArrayUtilityFunctions",
             replacements) << std::endl;

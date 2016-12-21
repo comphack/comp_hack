@@ -397,7 +397,7 @@ std::string MetaVariableList::GetUtilityFunctions(const Generator& generator,
         auto entryValidation = mElementType->GetValidCondition(generator, "val", true);
 
         replacements["@ELEMENT_VALIDATION_CODE@"] = entryValidation.length() > 0
-            ? entryValidation : "true";
+            ? entryValidation : "([&]() { (void)val; return true; })()";
 
         ss << std::endl << generator.ParseTemplate(0, "VariableListUtilityFunctions",
             replacements) << std::endl;

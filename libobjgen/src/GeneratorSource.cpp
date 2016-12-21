@@ -218,8 +218,6 @@ std::string GeneratorSource::Generate(const MetaObject& obj)
     ss << std::endl;
     ss << Tab() << "bool status = " + GetBaseBooleanReturnValue(obj, "Save(stream)") + "; " << std::endl;
 
-    int saveCount = 0;
-
     for(auto it = obj.VariablesBegin(); it != obj.VariablesEnd(); ++it)
     {
         auto var = *it;
@@ -231,22 +229,12 @@ std::string GeneratorSource::Generate(const MetaObject& obj)
 
         if(!code.empty())
         {
-            saveCount++;
-
             ss << std::endl;
             ss << Tab() << "if(status && !(" << code << "))" << std::endl;
             ss << Tab() << "{" << std::endl;
             ss << Tab(2) << "status = false;" << std::endl;
             ss << Tab() << "}" << std::endl;
         }
-    }
-
-    /// @todo FIX If this is being put there the object has not implemented
-    /// these!!!
-    if(0 == saveCount)
-    {
-        ss << std::endl;
-        ss << Tab() << "(void)stream;" << std::endl;
     }
 
     ss << std::endl;
@@ -447,80 +435,36 @@ std::string GeneratorSource::Generate(const MetaObject& obj)
 void GeneratorSource::GeneratePersistentObjectFunctions(const MetaObject& obj,
     std::stringstream& ss)
 {
-    /// @todo Might be better to use the template system for this since it is a
-    /// bit long.
-
-    ss << "std::list<libcomp::DatabaseBind*> " << obj.GetName()
-        << "::GetMemberBindValues()" << std::endl;
-    ss << "{" << std::endl;
-    ss << Tab() << "std::list<libcomp::DatabaseBind*> values;" << std::endl;
+    std::stringstream binds;
     for(auto it = obj.VariablesBegin(); it != obj.VariablesEnd(); ++it)
     {
         auto var = *it;
 
-        ss << Tab() << "values.push_back((" << var->GetBindValueCode(
+        binds << Tab() << "values.push_back((" << var->GetBindValueCode(
             *this, GetMemberName(var)) << ")());";
-        ss << std::endl;
+        binds << std::endl;
     }
 
-    ss << Tab() << "return values;" << std::endl;
-    ss << "}" << std::endl;
-    ss << std::endl;
-
-    ss << "bool " << obj.GetName()
-        << "::LoadDatabaseValues(libcomp::DatabaseQuery& query)" << std::endl;
-    ss << "{" << std::endl;
-
+    std::stringstream dbValues;
     for(auto it = obj.VariablesBegin(); it != obj.VariablesEnd(); ++it)
     {
         auto var = *it;
 
-        ss << Tab() << "if(!" << var->GetDatabaseLoadCode(
+        dbValues << Tab() << "if(!" << var->GetDatabaseLoadCode(
             *this, GetMemberName(var)) << ")" << std::endl;
-        ss << Tab() << "{" << std::endl;
-        ss << Tab(2) << "return false;" << std::endl;
-        ss << Tab() << "}" << std::endl;
-        ss << std::endl;
+        dbValues << Tab() << "{" << std::endl;
+        dbValues << Tab(2) << "return false;" << std::endl;
+        dbValues << Tab() << "}" << std::endl;
+        dbValues << std::endl;
     }
 
-    ss << Tab() << "if(!query.GetValue(\"uid\", mUUID))" << std::endl;
-    ss << Tab() << "{" << std::endl;
-    ss << Tab(2) << "return false;" << std::endl;
-    ss << Tab() << "}" << std::endl;
-    ss << std::endl;
+    std::map<std::string, std::string> replacements;
+    replacements["@OBJECT_NAME@"] = obj.GetName();
+    replacements["@BINDS@"] = binds.str();
+    replacements["@GET_DATABASE_VALUES@"] = dbValues.str();
+    replacements["@XML_DEFINITION@"] = Escape(obj.GetXMLDefinition());
 
-    ss << Tab() << "return true;" << std::endl;
-    ss << "}" << std::endl;
-    ss << std::endl;
-
-    ss << "std::shared_ptr<libobjgen::MetaObject> " << obj.GetName()
-        << "::GetObjectMetadata()" << std::endl;
-    ss << "{" << std::endl;
-    ss << Tab() << "return " << obj.GetName() << "::GetMetadata();"
-        << std::endl;
-    ss << "}" << std::endl;
-    ss << std::endl;
-
-    ss << "std::shared_ptr<libobjgen::MetaObject> " << obj.GetName()
-        << "::GetMetadata()" << std::endl;
-    ss << "{" << std::endl;
-    ss << Tab() << "auto m = libcomp::PersistentObject::GetRegisteredMetadata("
-        << "typeid(" << obj.GetName() << "));" << std::endl;
-    ss << Tab() << "if(nullptr == m)" << std::endl;
-    ss << Tab() << "{" << std::endl;
-    ss << Tab(2) << "m = libcomp::PersistentObject::GetMetadataFromXml("
-        << Escape(obj.GetXMLDefinition()) << ");" << std::endl;
-    ss << Tab() << "}" << std::endl;
-    ss << std::endl;
-    ss << Tab() << "if(nullptr == m)" << std::endl;
-    ss << Tab() << "{" << std::endl;
-    ss << Tab(2) << "LOG_CRITICAL(\"Metadata for object '" << obj.GetName()
-        << "' could not be generated.\");" << std::endl;
-    ss << Tab() << "}" << std::endl;
-    ss << std::endl;
-    ss << Tab() << "return m;" << std::endl;
-    ss << "}" << std::endl;
-    ss << std::endl;
+    ss << ParseTemplate(0, "VariablePersistentFunctions", replacements);
 }
 
 std::string GeneratorSource::GetBaseBooleanReturnValue(const MetaObject& obj,

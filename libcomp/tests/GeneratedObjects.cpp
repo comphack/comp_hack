@@ -162,8 +162,11 @@ TEST(Object, TestObject)
     EXPECT_EQ(3, data.GetList(2));
     EXPECT_EQ(4, data.GetList(3));
 
-    EXPECT_EQ(1, *(data.ListBegin()));
-    EXPECT_EQ(4, *(--data.ListEnd()));
+    auto listIter = data.ListBegin();
+    EXPECT_EQ(1, *(listIter));
+    listIter = data.ListEnd();
+    listIter--;
+    EXPECT_EQ(4, *(listIter));
 
     //
     // Map of int16_t and string
@@ -179,8 +182,12 @@ TEST(Object, TestObject)
     EXPECT_EQ(4, data.MapCount());
     EXPECT_TRUE(data.MapKeyExists(2));
     EXPECT_EQ("2", data.GetMap(2));
-    EXPECT_EQ(1, data.MapBegin()->first);
-    EXPECT_EQ("4", (--data.MapEnd())->second);
+
+    auto mapIter = data.MapBegin();
+    EXPECT_EQ(1, mapIter->first);
+    mapIter = data.MapEnd();
+    mapIter--;
+    EXPECT_EQ("4", mapIter->second);
 
     std::stringstream streamOutStream(std::stringstream::out |
         std::stringstream::binary);

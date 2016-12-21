@@ -429,9 +429,9 @@ std::string MetaVariableMap::GetUtilityFunctions(const Generator& generator,
         auto valueValidation = mValueElementType->GetValidCondition(generator, "val", true);
 
         replacements["@KEY_VALIDATION_CODE@"] = keyValidation.length() > 0
-            ? keyValidation : "true";
+            ? keyValidation : "([&]() { (void)key; return true; })()";
         replacements["@VALUE_VALIDATION_CODE@"] = valueValidation.length() > 0
-            ? valueValidation : "true";
+            ? valueValidation : "([&]() { (void)val; return true; })()";
 
         ss << std::endl << generator.ParseTemplate(0, "VariableMapUtilityFunctions",
             replacements) << std::endl;

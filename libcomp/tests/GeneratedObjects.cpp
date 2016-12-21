@@ -33,6 +33,18 @@
 using namespace libcomp;
 using namespace objects;
 
+void WriteMapU16Char(char* map, uint16_t idx, char val)
+{
+    uint32_t stringLength = 1;
+
+    size_t offset1 = sizeof(idx);
+    size_t offset2 = offset1 + sizeof(stringLength);
+
+    memcpy(map, &idx, sizeof(idx));
+    memcpy(map + offset1, &stringLength, sizeof(stringLength));
+    memcpy(map + offset2, &val, sizeof(val));
+}
+
 TEST(Object, TestObject)
 {
     TestObject data;
@@ -215,7 +227,7 @@ TEST(Object, TestObject)
         int32_t Signed32;
         char stringCP932[16];
         char stringNull[12] = { 0 };        //11 + null
-        uint32_t stringFixedLength;
+        uint32_t stringFixedLength = 16;
         char stringFixed[16];
         float XYZ[3];
         char listContents[4];              //uint8_t x 4
@@ -230,23 +242,34 @@ TEST(Object, TestObject)
     testData.XYZ[1] = 1.5f;
     testData.XYZ[2] = 3.14159f;
 
+    strcpy(testData.stringNull, data.GetStringNull().C());
+    strcpy(testData.stringFixed, data.GetStringFixed().C());
+
+    testData.listContents[0] = 1;
+    testData.listContents[1] = 2;
+    testData.listContents[2] = 3;
+    testData.listContents[3] = 4;
+
+    //Make sure to use an iterator here since the order can change per implementation
+    mapIter = data.MapBegin();
+    WriteMapU16Char(&testData.mapContents[0], mapIter->first, mapIter->second.ToUtf8()[0]);
+    mapIter++;
+    WriteMapU16Char(&testData.mapContents[7], mapIter->first, mapIter->second.ToUtf8()[0]);
+    mapIter++;
+    WriteMapU16Char(&testData.mapContents[14], mapIter->first, mapIter->second.ToUtf8()[0]);
+    mapIter++;
+    WriteMapU16Char(&testData.mapContents[21], mapIter->first, mapIter->second.ToUtf8()[0]);
+
     memset(testData.stringCP932, 0, sizeof(testData.stringCP932));
     std::vector<char> strA = libcomp::Convert::ToEncoding(
         libcomp::Convert::ENCODING_CP932, "日本人");
     memcpy(testData.stringCP932, &strA[0], 15 < strA.size() ? 15 : strA.size());
     //strncpy(testData.string, "日本人", 15);
 
-    memset(testData.stringNull, 0, sizeof(testData.stringNull));
-    const char* nullStr = "MaybeANull?";
-    memcpy(testData.stringNull, nullStr, sizeof(testData.stringNull));
-
-    testData.stringFixedLength = (uint32_t)data.GetStringFixed().Length();
-    memset(testData.stringFixed, 0, sizeof(testData.stringFixed));
-    const char* fixedStr = "LengthIsFixedNow";
-    memcpy(testData.stringFixed, fixedStr, sizeof(testData.stringFixed));
-
-    EXPECT_EQ(sizeof(testData), stringData.size());
-    //EXPECT_EQ(0, memcmp(&testData, stringData.c_str(), sizeof(testData)));
+    EXPECT_EQ(sizeof(testData), stringData.size())
+        << "Check the object save data size against the test data structure size.";
+    EXPECT_EQ(0, memcmp(&testData, stringData.c_str(), sizeof(testData)))
+        << "Check the object save data against the test data.";
 
     testData.Unsigned8 = 23;
     testData.Signed8 = -77;
@@ -259,40 +282,23 @@ TEST(Object, TestObject)
     memcpy(testData.stringCP932, &strB[0], 15 < strB.size() ? 15 : strB.size());
     //strncpy(testData.string, "日本一", 15);
 
+    memset(testData.stringNull, 0, sizeof(testData.stringNull));
+    const char* nullStr = "MaybeANull?";
+    memcpy(testData.stringNull, nullStr, sizeof(testData.stringNull));
+
+    memset(testData.stringFixed, 0, sizeof(testData.stringFixed));
+    const char* fixedStr = "LengthIsFixedNow";
+    memcpy(testData.stringFixed, fixedStr, sizeof(testData.stringFixed));
+
     testData.listContents[0] = 5;
     testData.listContents[1] = 6;
     testData.listContents[2] = 7;
     testData.listContents[3] = 8;
 
-    uint32_t stringLength = 1;
-
-    //Write map 5 => '5'
-    uint16_t idx = 5;
-    char val = '5';
-    memcpy(&testData.mapContents[0], &idx, sizeof(idx));
-    memcpy(&testData.mapContents[2], &stringLength, sizeof(stringLength));
-    memcpy(&testData.mapContents[6], &val, sizeof(val));
-
-    //Write map 6 => '6'
-    idx = 6;
-    val = '6';
-    memcpy(&testData.mapContents[7], &idx, sizeof(idx));
-    memcpy(&testData.mapContents[9], &stringLength, sizeof(stringLength));
-    memcpy(&testData.mapContents[13], &val, sizeof(val));
-
-    //Write map 7 => '7'
-    idx = 7;
-    val = '7';
-    memcpy(&testData.mapContents[14], &idx, sizeof(idx));
-    memcpy(&testData.mapContents[16], &stringLength, sizeof(stringLength));
-    memcpy(&testData.mapContents[20], &val, sizeof(val));
-
-    //Write map 8 => '8'
-    idx = 8;
-    val = '8';
-    memcpy(&testData.mapContents[21], &idx, sizeof(idx));
-    memcpy(&testData.mapContents[23], &stringLength, sizeof(stringLength));
-    memcpy(&testData.mapContents[27], &val, sizeof(val));
+    WriteMapU16Char(&testData.mapContents[0], 5, '5');
+    WriteMapU16Char(&testData.mapContents[7], 6, '6');
+    WriteMapU16Char(&testData.mapContents[14], 7, '7');
+    WriteMapU16Char(&testData.mapContents[21], 8, '8');
 
     std::stringstream streamInStream(std::stringstream::in |
         std::stringstream::binary);
@@ -302,7 +308,7 @@ TEST(Object, TestObject)
     streamInStream.str(std::string(reinterpret_cast<char*>(&testData),
         reinterpret_cast<char*>(&testData) + sizeof(testData)));
 
-    EXPECT_TRUE(data.Load(streamIn));
+    EXPECT_TRUE(data.Load(streamIn)) << "Loading from instream";
 
     EXPECT_EQ(23, data.GetUnsigned8());
     EXPECT_EQ(-77, data.GetSigned8());
@@ -323,7 +329,7 @@ TEST(Object, TestObject)
     EXPECT_EQ(7, data.GetList(2));
     EXPECT_EQ(8, data.GetList(3));
     data.ClearList();
-    EXPECT_EQ(0, data.ListCount());
+    EXPECT_EQ(0, data.ListCount()) << "Verifying List cleared";
 
     EXPECT_EQ(4, data.MapCount());
     EXPECT_EQ("5", data.GetMap(5));
@@ -331,7 +337,7 @@ TEST(Object, TestObject)
     EXPECT_EQ("7", data.GetMap(7));
     EXPECT_EQ("8", data.GetMap(8));
     data.ClearMap();
-    EXPECT_EQ(0, data.MapCount());
+    EXPECT_EQ(0, data.MapCount()) << "Verifying Map cleared";
 }
 
 int main(int argc, char *argv[])

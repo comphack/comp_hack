@@ -179,6 +179,8 @@ SET(${PROJECT_NAME}_SCHEMA
     schema/databaseconfig.xml
     schema/databaseconfig_cassandra.xml
     schema/databaseconfig_sqlite3.xml
+    schema/packet_login.xml
+    schema/packet_response_code.xml
     schema/serverconfig.xml
     schema/test.xml
     schema/worlddescription.xml

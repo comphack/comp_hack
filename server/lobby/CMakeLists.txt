@@ -45,8 +45,6 @@ SET(${PROJECT_NAME}_HDRS
 
 SET(${PROJECT_NAME}_SCHEMA
     schema/lobbyconfig.xml
-    schema/packet_login.xml
-    schema/packet_response_code.xml
 )
 
 OBJGEN_XML(${PROJECT_NAME}_STRUCTS

@@ -5,10 +5,19 @@
         <member type="s8" name="signed8" min="-108" max="123"/>
         <member type="u16" name="uint16" caps="true" default="1337"/>
         <member type="s32" name="signed32" default="90210"/>
-        <member type="string" name="string" default="日本語"
+        <member type="string" name="stringCP932" default="日本語"
             regex="^日本.*$" length="16" encoding="cp932"/>
+        <member type="string" name="stringNull" lensz="0"/>
+        <member type="string" name="stringFixed" lensz="4"/>
         <member type="array" name="xyz" size="3" caps="on">
             <element type="float" default="-1" min="-9999" max="9999"/>
+        </member>
+        <member type="list" name="list">
+            <element type="u8"/>
+        </member>
+        <member type="map" name="map">
+            <key type="u16"/>
+            <value type="string"/>
         </member>
     </object>
 </objgen>

@@ -88,13 +88,20 @@ public:
     bool Save(std::ostream& stream) const;
 
     bool Load(const tinyxml2::XMLDocument& doc,
+        const tinyxml2::XMLElement& root, bool verifyReferences = true);
+    bool LoadTypeInformation(const tinyxml2::XMLDocument& doc,
         const tinyxml2::XMLElement& root);
+    bool LoadMembers(const tinyxml2::XMLDocument& doc,
+        const tinyxml2::XMLElement& root, bool verifyReferences);
     bool Save(tinyxml2::XMLDocument& doc,
         tinyxml2::XMLElement& root) const;
 
     bool HasCircularReference() const;
 
-    std::set<std::string> GetReferences() const;
+    std::set<std::string> GetReferencesTypes() const;
+    std::list<std::shared_ptr<MetaVariable>> GetReferences() const;
+
+    static std::unordered_map<std::string, MetaObject*> GetKnownObjects();
 
 protected:
     static std::shared_ptr<MetaVariable> CreateType(
@@ -108,7 +115,7 @@ protected:
 
 private:
     void GetReferences(std::shared_ptr<MetaVariable>& var,
-        std::set<std::string>& references) const;
+        std::list<std::shared_ptr<MetaVariable>>& references) const;
 
     bool HasCircularReference(const std::set<std::string>& references) const;
 
@@ -117,6 +124,8 @@ private:
 
     bool DefaultsSpecified(const tinyxml2::XMLElement *pMember) const;
 
+    static std::unordered_map<std::string, MetaObject*> sKnownObjects;
+
     std::string mName;
     std::string mBaseObject;
     bool mPersistent;
@@ -124,6 +133,7 @@ private:
     std::string mXmlDefinition;
 
     std::string mError;
+    bool mReferencesVerified;
     VariableList mVariables;
     VariableMap mVariableMapping;
 };

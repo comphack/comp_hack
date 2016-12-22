@@ -33,7 +33,7 @@
 
 using namespace libcomp;
 
-Object::Object() : mUUID()
+Object::Object()
 {
 }
 
@@ -187,9 +187,4 @@ std::list<std::shared_ptr<Object>> Object::LoadBinaryData(
     }
 
     return objects;
-}
-
-libobjgen::UUID Object::GetUUID() const
-{
-    return mUUID;
 }

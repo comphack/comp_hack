@@ -42,17 +42,22 @@
 #include "MetaObject.h"
 #include "MetaVariable.h"
 #include "MetaVariableInt.h"
+#include "MetaVariableReference.h"
 #include "MetaVariableString.h"
 
 std::unordered_map<std::string, std::shared_ptr<
     libobjgen::MetaObject>> gObjects;
 
-std::set<std::string> gReferences;
+// Keep all XML documents referenced stored until we're done
+std::unordered_map<std::string, tinyxml2::XMLDocument> gDocuments;
 
-bool LoadObjects(const std::list<std::string>& searchPath,
+// As object definitions are found, cache them until exit
+std::unordered_map<std::string, const tinyxml2::XMLElement*> gDefintions;
+
+bool LoadObjectTypeInformation(const std::list<std::string>& searchPath,
     const std::string& xmlFile)
 {
-    tinyxml2::XMLDocument doc;
+    tinyxml2::XMLDocument& doc = gDocuments[xmlFile];
 
     bool loaded = tinyxml2::XML_NO_ERROR == doc.LoadFile(xmlFile.c_str());
 
@@ -114,7 +119,7 @@ bool LoadObjects(const std::list<std::string>& searchPath,
 
         std::string includePath = szPath;
 
-        if(!LoadObjects(searchPath, includePath))
+        if(!LoadObjectTypeInformation(searchPath, includePath))
         {
             return false;
         }
@@ -128,22 +133,42 @@ bool LoadObjects(const std::list<std::string>& searchPath,
     {
         std::shared_ptr<libobjgen::MetaObject> obj(new libobjgen::MetaObject);
 
-        if(!obj->Load(doc, *pObjectXml))
+        if(!obj->LoadTypeInformation(doc, *pObjectXml))
         {
-            std::cerr << "Failed to read object: " << obj->GetName()
-                << ":  " << obj->GetError() << std::endl;
+            std::cerr << "Failed to read type information for object: "
+                << obj->GetName() << ":  " << obj->GetError() << std::endl;
 
             return false;
         }
 
         gObjects[obj->GetName()] = obj;
-
-        for(auto ref : obj->GetReferences())
-        {
-            gReferences.insert(ref);
-        }
+        gDefintions[obj->GetName()] = pObjectXml;
 
         pObjectXml = pObjectXml->NextSiblingElement("object");
+    }
+
+    return true;
+}
+
+bool LoadDataMembers(const std::string& object)
+{
+    if(gObjects.find(object) == gObjects.end())
+    {
+        std::cerr << "Unknown object referenced: "
+            << object << std::endl;
+        return false;
+    }
+
+    auto obj = gObjects[object];
+    auto pObjectXml = gDefintions[object];
+    auto doc = pObjectXml->GetDocument();
+
+    if(!obj->LoadMembers(*doc, *pObjectXml, true))
+    {
+        std::cerr << "Failed to read data members for object: "
+            << obj->GetName() << ":  " << obj->GetError() << std::endl;
+
+        return false;
     }
 
     return true;
@@ -223,6 +248,61 @@ bool GenerateFile(const std::string& path, const std::string& extension,
     return true;
 }
 
+bool SetReferenceFieldDynamicSizes(
+    const std::list<std::shared_ptr<libobjgen::MetaVariableReference>>& refs)
+{
+    if(refs.size() == 0)
+    {
+        return true;
+    }
+
+    std::vector<std::shared_ptr<libobjgen::MetaVariableReference>> remaining
+        { std::begin(refs), std::end(refs) };
+
+    int updated;
+    do
+    {
+        updated = 0;
+        for(int i = (int)remaining.size() - 1; i >= 0; i--)
+        {
+            auto ref = remaining[(size_t)i];
+
+            if(ref->GetDynamicSizeCount() > 0)
+            {
+                remaining.erase(remaining.begin() + i);
+                updated++;
+                continue;
+            }
+
+            auto refType = ref->GetReferenceType();
+            auto refObject = gObjects[refType];
+
+            bool allRefSizesSet = true;
+            for(auto var : refObject->GetReferences())
+            {
+                auto objRef = std::dynamic_pointer_cast<
+                    libobjgen::MetaVariableReference>(var);
+                auto objRefObject = gObjects[objRef->GetReferenceType()];
+                if(!objRefObject->GetPersistent() &&
+                    objRef->GetDynamicSizeCount() == 0)
+                {
+                    allRefSizesSet = false;
+                }
+            }
+
+            if(allRefSizesSet)
+            {
+                ref->SetDynamicSizeCount(refObject->GetDynamicSizeCount());
+                remaining.erase(remaining.begin() + i);
+                updated++;
+                continue;
+            }
+        }
+    } while(updated > 0);
+
+    return remaining.size() == 0;
+}
+
 int main(int argc, char *argv[])
 {
     typedef enum
@@ -294,27 +374,16 @@ int main(int argc, char *argv[])
         return EXIT_FAILURE;
     }
 
+    //Load the type infomration for all included objects
     for(auto xmlFile : xmlFiles)
     {
-        if(!LoadObjects(searchPath, xmlFile))
+        if(!LoadObjectTypeInformation(searchPath, xmlFile))
         {
             return EXIT_FAILURE;
         }
     }
 
-    /// @todo: fix for objects in other projects
-    /*
-    for(auto ref : gReferences)
-    {
-        if(gObjects.find(ref) == gObjects.end())
-        {
-            std::cerr << "Failed to find referenced object '" << ref
-                << "'" << std::endl;
-
-            return EXIT_FAILURE;
-        }
-    }*/
-
+    std::list<std::string> loaded;
     for(auto outputFile : outputFiles)
     {
         std::smatch match;
@@ -330,6 +399,60 @@ int main(int argc, char *argv[])
             if(object.empty())
             {
                 object = match[2];
+            }
+
+            if(std::find(loaded.begin(), loaded.end(), object) == loaded.end())
+            {
+                //We're loading the object for the first time
+                std::list<std::string> requiresLoad = { object };
+                std::list<std::shared_ptr<libobjgen::MetaVariableReference>> refs;
+
+                //Load the remaining information for only objects we currently care to define
+                while(requiresLoad.size() > 0)
+                {
+                    auto objectName = requiresLoad.front();
+                    if(!LoadDataMembers(objectName))
+                    {
+                        std::cerr << gObjects[objectName]->GetError() << std::endl;
+
+                        return EXIT_FAILURE;
+                    }
+
+                    auto obj = gObjects[objectName];
+                    for(auto var : obj->GetReferences())
+                    {
+                        auto ref = std::dynamic_pointer_cast<libobjgen::MetaVariableReference>(var);
+                        auto refType = ref->GetReferenceType();
+
+                        refs.push_back(ref);
+                        if(std::find(loaded.begin(), loaded.end(), refType) == loaded.end()
+                            && std::find(requiresLoad.begin(), requiresLoad.end(), refType)
+                            == requiresLoad.end())
+                        {
+                            requiresLoad.push_back(refType);
+                        }
+                    }
+                    requiresLoad.remove(objectName);
+                    loaded.push_back(objectName);
+                }
+
+                if(gObjects[object]->HasCircularReference())
+                {
+                    std::cerr << "Object contains circular reference: "
+                        << object << std::endl;
+
+                    return EXIT_FAILURE;
+                }
+
+                // Now that everything in the chain is loaded up and we know there are no
+                // circular refs, set the reference field dynamic sizes
+                if(!SetReferenceFieldDynamicSizes(refs))
+                {
+                    std::cerr << "Failed to calculate reference field dynamic sizes on object: "
+                        << object << std::endl;
+
+                    return EXIT_FAILURE;
+                }
             }
 
             extension = std::string(match[3]);

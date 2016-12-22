@@ -157,15 +157,6 @@ bool MetaVariableString::IsValid() const
     return regexOk && (0 == mSize || mSize > mDefaultValue.size());
 }
 
-bool MetaVariableString::IsValid(const void *pData, size_t dataSize) const
-{
-    (void)pData;
-    (void)dataSize;
-
-    /// @todo Fix
-    return true;
-}
-
 bool MetaVariableString::Load(std::istream& stream)
 {
     LoadString(stream, mDefaultValue);
@@ -582,28 +573,49 @@ std::string MetaVariableString::GetSaveCode(const Generator& generator,
         MetaObject::IsValidIdentifier(stream))
     {
         std::map<std::string, std::string> replacements;
+        replacements["@LENGTH_TYPE@"] = LengthSizeType();
         replacements["@FIXED_LENGTH@"] = std::to_string(mSize);
         replacements["@ENCODING@"] = EncodingToComp(mEncoding);
         replacements["@VAR_NAME@"] = name;
         replacements["@STREAM@"] = stream;
 
-        if(0 == mSize)
+        bool dynamicString = (0 == mSize) && (mLengthSize > 0);
+        if(dynamicString)
         {
-            /// @todo Fix
+            //We need to get the encoded value first BUT write the length before it
+            replacements["@ENCODESTREAM@"] = "encodestream";
         }
         else
         {
-            if(Encoding_t::ENCODING_UTF8 != mEncoding)
+            replacements["@ENCODESTREAM@"] = stream + ".stream";
+        }
+
+        if(Encoding_t::ENCODING_UTF8 != mEncoding)
+        {
+            replacements["@ENCODE_CODE@"] = generator.ParseTemplate(1,
+                "VariableStringToEncoding", replacements);
+        }
+        else
+        {
+            replacements["@ENCODE_CODE@"] = generator.ParseTemplate(1,
+                "VariableStringToUnicode", replacements);
+        }
+
+        if(0 == mSize)
+        {
+            if(dynamicString)
             {
-                replacements["@ENCODE_CODE@"] = generator.ParseTemplate(0,
-                    "VariableStringToEncoding", replacements);
+                code = generator.ParseTemplate(0, "VariableStringSaveDynamic",
+                    replacements);
             }
             else
             {
-                replacements["@ENCODE_CODE@"] = generator.ParseTemplate(0,
-                    "VariableStringToUnicode", replacements);
+                code = generator.ParseTemplate(0, "VariableStringSaveNull",
+                    replacements);
             }
-
+        }
+        else
+        {
             code = generator.ParseTemplate(0, "VariableStringSaveFixed",
                 replacements);
         }

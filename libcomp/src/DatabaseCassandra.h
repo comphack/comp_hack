@@ -60,9 +60,6 @@ public:
     virtual std::list<std::shared_ptr<PersistentObject>> LoadObjects(
         std::type_index type, DatabaseBind *pValue);
 
-    virtual std::shared_ptr<PersistentObject> LoadSingleObject(
-        std::type_index type, DatabaseBind *pValue);
-
     virtual bool InsertSingleObject(std::shared_ptr<PersistentObject>& obj);
     virtual bool UpdateSingleObject(std::shared_ptr<PersistentObject>& obj);
     virtual bool DeleteSingleObject(std::shared_ptr<PersistentObject>& obj);
@@ -73,9 +70,6 @@ public:
 protected:
     bool WaitForFuture(CassFuture *pFuture);
     std::string GetVariableType(const std::shared_ptr<libobjgen::MetaVariable> var);
-
-    std::shared_ptr<PersistentObject> LoadSingleObjectFromRow(
-        std::type_index type, DatabaseQuery& query);
 
     std::vector<char> ConvertToRawByteStream(const std::shared_ptr<libobjgen::MetaVariable>& var,
         const std::vector<char>& columnData);

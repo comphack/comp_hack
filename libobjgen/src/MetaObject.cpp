@@ -43,6 +43,8 @@
 
 using namespace libobjgen;
 
+std::unordered_map<std::string, MetaObject*> MetaObject::sKnownObjects;
+
 MetaObject::MetaObject()
 {
     mError = "Not initialized";
@@ -247,10 +249,20 @@ bool MetaObject::IsValidIdentifier(const std::string& ident)
 }
 
 bool MetaObject::Load(const tinyxml2::XMLDocument& doc,
+    const tinyxml2::XMLElement& root, bool verifyReferences)
+{
+    if(!LoadTypeInformation(doc, root))
+    {
+        return false;
+    }
+
+    return LoadMembers(doc, root, verifyReferences);
+}
+
+bool MetaObject::LoadTypeInformation(const tinyxml2::XMLDocument& doc,
     const tinyxml2::XMLElement& root)
 {
-    bool result = false;
-    bool error = false;
+    (void)doc;
 
     mError.clear();
     SetXMLDefinition(root);
@@ -287,21 +299,6 @@ bool MetaObject::Load(const tinyxml2::XMLDocument& doc,
             {
                 //Objects cannot be both derived and persistent
                 SetBaseObject(szBaseObject);
-
-                //Base objects override the need for member variables
-                result = true;
-            }
-            
-            const tinyxml2::XMLElement *pMember = root.FirstChildElement();
-
-            while(!error && nullptr != pMember)
-            {
-                if(std::string("member") == pMember->Name())
-                {
-                    error = error || LoadMember(doc, szName, pMember, result);
-                }
-
-                pMember = pMember->NextSiblingElement();
             }
         }
         else
@@ -325,13 +322,45 @@ bool MetaObject::Load(const tinyxml2::XMLDocument& doc,
         mError = ss.str();
     }
 
+    bool error = !mError.empty();
+    mError = "Member variables not parsed";
+
+    if(!error)
+    {
+        sKnownObjects[GetName()] = this;
+    }
+
+    return !error;
+}
+
+bool MetaObject::LoadMembers(const tinyxml2::XMLDocument& doc,
+    const tinyxml2::XMLElement& root, bool verifyReferences)
+{
+    mError.clear();
+    mReferencesVerified = verifyReferences;
+
+    //Base objects override the need for member variables
+    bool result = mBaseObject.length() > 0;
+    bool error = false;
+            
+    const tinyxml2::XMLElement *pMember = root.FirstChildElement();
+
+    while(!error && nullptr != pMember)
+    {
+        if(std::string("member") == pMember->Name())
+        {
+            error = error || LoadMember(doc, mName.c_str(), pMember, result);
+        }
+
+        pMember = pMember->NextSiblingElement();
+    }
+
     if(!error && mVariables.empty() && mBaseObject.empty())
     {
         std::stringstream ss;
         ss << "Object '" << GetName() << "' has no member variables.";
 
         mError = ss.str();
-        error = true;
     }
     else if(error)
     {
@@ -339,7 +368,14 @@ bool MetaObject::Load(const tinyxml2::XMLDocument& doc,
         mVariables.clear();
     }
 
-    return result && !error;
+    error |= mError.length() > 0;
+    if(!result || error)
+    {
+        return false;
+    }
+
+    mError.clear();
+    return true;
 }
 
 bool MetaObject::LoadMember(const tinyxml2::XMLDocument& doc,
@@ -524,48 +560,87 @@ std::shared_ptr<MetaVariable> MetaObject::GetVariable(const tinyxml2::XMLDocumen
         {
             auto ref = std::dynamic_pointer_cast<MetaVariableReference>(var);
 
-            const tinyxml2::XMLElement *cMember = pMember->FirstChildElement();
-            while (nullptr != cMember)
+            auto refType = ref->GetReferenceType();
+            auto persistentRefType = mReferencesVerified && sKnownObjects[szName]->GetPersistent();
+
+            ref->SetPersistentParent(persistentRefType);
+            if(mReferencesVerified)
             {
-                std::string cMemberName = cMember->Name();
-                if("member" == cMemberName)
+                if(sKnownObjects.find(refType) == sKnownObjects.end())
                 {
-                    std::string cName = cMember->Attribute("name");
-                    if(!DefaultsSpecified(cMember))
-                    {
-                        std::stringstream ss;
-                        ss << "Non-defaulted member in reference '" << szMemberName
-                            << "' in object '" << szName << "'.";
+                    std::stringstream ss;
+                    ss << "Unknown reference type '" << refType << "' on field  '"
+                        << szMemberName << "' in object '" << szName << "'.";
 
-                        mError = ss.str();
-                    }
-                    else if(cName.length() == 0)
-                    {
-                        std::stringstream ss;
-                        ss << "Non-defaulted member in reference '" << szMemberName
-                            << "' in object '" << szName << "' does not have a name specified.";
+                    mError = ss.str();
+                }
+                else if(!sKnownObjects[refType]->GetPersistent() && persistentRefType)
+                {
+                    std::stringstream ss;
+                    ss << "Non-peristent reference type '" << refType << "' on field  '"
+                        << szMemberName << "' in persistent object '" << szName << "'.";
 
-                        mError = ss.str();
-                    }
-                    else
+                    mError = ss.str();
+                }
+            }
+
+            if(mError.length() == 0)
+            {
+                const tinyxml2::XMLElement *cMember = pMember->FirstChildElement();
+                while (nullptr != cMember)
+                {
+                    std::string cMemberName = cMember->Name();
+                    if("member" == cMemberName)
                     {
-                        auto subVariable = GetVariable(doc, szName, szMemberName, cMember);
-                        subVariable->SetName(cName);
-                        if(subVariable && subVariable->Load(doc, *cMember))
-                        {
-                            ref->AddDefaultedVariable(subVariable);
-                        }
-                        else
+                        std::string cName = cMember->Attribute("name");
+                        if(persistentRefType && cName != "UID")
                         {
                             std::stringstream ss;
-                            ss << "Failed to parse defaulted member in reference '" << szMemberName
-                                << "' in object '" << szName << "': " << var->GetError();
+                            ss << "Persistent reference type '" << refType
+                                << "' on field '" << szMemberName
+                                << "' in object '" << szName
+                                << "' defaulted with a field other than UID.";
+
+                            mError = ss.str();
+                            break;
+                        }
+
+                        if(!DefaultsSpecified(cMember))
+                        {
+                            std::stringstream ss;
+                            ss << "Non-defaulted member in reference '" << szMemberName
+                                << "' in object '" << szName << "'.";
 
                             mError = ss.str();
                         }
+                        else if(cName.length() == 0)
+                        {
+                            std::stringstream ss;
+                            ss << "Non-defaulted member in reference '" << szMemberName
+                                << "' in object '" << szName << "' does not have a name specified.";
+
+                            mError = ss.str();
+                        }
+                        else
+                        {
+                            auto subVariable = GetVariable(doc, szName, szMemberName, cMember);
+                            subVariable->SetName(cName);
+                            if(subVariable && subVariable->Load(doc, *cMember))
+                            {
+                                ref->AddDefaultedVariable(subVariable);
+                            }
+                            else
+                            {
+                                std::stringstream ss;
+                                ss << "Failed to parse defaulted member in reference '" << szMemberName
+                                    << "' in object '" << szName << "': " << var->GetError();
+
+                                mError = ss.str();
+                            }
+                        }
                     }
+                    cMember = cMember->NextSiblingElement();
                 }
-                cMember = cMember->NextSiblingElement();
             }
         }
 
@@ -706,15 +781,15 @@ bool MetaObject::HasCircularReference(
         std::set<std::string> referencesCopy;
         referencesCopy.insert(mName);
 
-        for(auto var : mVariables)
+        for(auto var : GetReferences())
         {
             std::shared_ptr<MetaVariableReference> ref =
                 std::dynamic_pointer_cast<MetaVariableReference>(var);
 
-            // @todo Lookup the type for the next reference type and call
-            // HasCircularReference(referencesCopy) on it.
-            //status = Lookup(ref->GetReferenceType())->HasCircularReference(
-                //referencesCopy))
+            auto refObject = sKnownObjects.find(ref->GetReferenceType());
+            status = refObject != sKnownObjects.end() &&
+                !refObject->second->GetPersistent() &&
+                refObject->second->HasCircularReference(referencesCopy);
 
             if(status)
             {
@@ -791,11 +866,24 @@ bool MetaObject::DefaultsSpecified(const tinyxml2::XMLElement *pMember) const
     return true;
 }
 
-std::set<std::string> MetaObject::GetReferences() const
+std::set<std::string> MetaObject::GetReferencesTypes() const
 {
     std::set<std::string> references;
 
-    for(auto var : mVariables)
+    for(auto var : GetReferences())
+    {
+        references.insert(
+            std::dynamic_pointer_cast<MetaVariableReference>(var)->GetReferenceType());
+    }
+
+    return references;
+}
+
+std::list<std::shared_ptr<MetaVariable>> MetaObject::GetReferences() const
+{
+    std::list<std::shared_ptr<MetaVariable>> references;
+
+    for (auto var : mVariables)
     {
         GetReferences(var, references);
     }
@@ -804,14 +892,14 @@ std::set<std::string> MetaObject::GetReferences() const
 }
 
 void MetaObject::GetReferences(std::shared_ptr<MetaVariable>& var,
-    std::set<std::string>& references) const
+    std::list<std::shared_ptr<MetaVariable>>& references) const
 {
     std::shared_ptr<MetaVariableReference> ref =
         std::dynamic_pointer_cast<MetaVariableReference>(var);
 
     if(ref)
     {
-        references.insert(ref->GetReferenceType());
+        references.push_back(ref);
     }
     else
     {
@@ -850,4 +938,9 @@ void MetaObject::GetReferences(std::shared_ptr<MetaVariable>& var,
                 break;
         }
     }
+}
+
+std::unordered_map<std::string, MetaObject*> MetaObject::GetKnownObjects()
+{
+    return sKnownObjects;
 }

@@ -1,11 +1,16 @@
-if(@VAR_NAME@)
+if(!@VAR_NAME@.IsNull())
 {
-    tinyxml2::XMLElement *pMember = doc.NewElement(@ELEMENT_NAME@);
-    pMember->SetAttribute("name", @VAR_XML_NAME@);
+    tinyxml2::XMLElement *temp = @PARENT@;
+    {
+        tinyxml2::XMLElement *pMember = doc.NewElement(@ELEMENT_NAME@);
+        pMember->SetAttribute("name", @VAR_XML_NAME@);
+        
+        @PARENT@->InsertEndChild(pMember);
+        
+        @PARENT@ = pMember;
+    }
 
-    tinyxml2::XMLText *pText = doc.NewText(@VAR_NAME@->GetUUID()
-        .ToString().c_str());
-    pMember->InsertEndChild(pText);
+    @VAR_NAME@.GetCurrentReference()->Save(@DOC@, *@PARENT@);
 
-    @PARENT@->InsertEndChild(pMember);
+    @PARENT@ = temp;
 }

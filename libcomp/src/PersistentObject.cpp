@@ -41,15 +41,14 @@ std::unordered_map<std::string, std::weak_ptr<PersistentObject>> PersistentObjec
 PersistentObject::TypeMap PersistentObject::sTypeMap;
 std::unordered_map<std::type_index, std::function<PersistentObject*()>> PersistentObject::sFactory;
 
-PersistentObject::PersistentObject() : Object(), mDeleted(false)
+PersistentObject::PersistentObject() : Object(), mUUID(), mDeleted(false)
 {
 }
 
-PersistentObject::PersistentObject(const PersistentObject& other) : Object(), mDeleted(false)
+PersistentObject::PersistentObject(const PersistentObject& other) : Object(), mUUID(), mDeleted(false)
 {
     (void)other;
 
-    mUUID = libobjgen::UUID();
     mSelf = std::weak_ptr<PersistentObject>();
 }
 
@@ -68,6 +67,11 @@ PersistentObject::~PersistentObject()
                 strUUID));
         }
     }
+}
+
+libobjgen::UUID PersistentObject::GetUUID() const
+{
+    return mUUID;
 }
 
 bool PersistentObject::Register(const std::shared_ptr<PersistentObject>& self)
@@ -199,7 +203,7 @@ std::shared_ptr<libobjgen::MetaObject> PersistentObject::GetMetadataFromXml(cons
     auto err = doc.Parse(xml.c_str(), xml.length());
     if(err == tinyxml2::XML_NO_ERROR)
     {
-        if(!obj->Load(doc, *doc.FirstChildElement()))
+        if(!obj->Load(doc, *doc.FirstChildElement(), false))
         {
             //Should never happen to generated objects
             obj = nullptr;

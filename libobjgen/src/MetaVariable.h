@@ -98,9 +98,6 @@ public:
     virtual bool IsLookupKey() const;
     virtual void SetLookupKey(const bool lookupKey);
 
-    virtual bool IsValid(const std::vector<char>& data) const;
-    virtual bool IsValid(const void *pData, size_t dataSize) const = 0;
-
     virtual bool Load(std::istream& stream) = 0;
     bool LoadString(std::istream& stream, std::string& s);
     virtual bool Save(std::ostream& stream) const = 0;

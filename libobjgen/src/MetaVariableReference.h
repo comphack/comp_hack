@@ -51,13 +51,14 @@ public:
     std::string GetReferenceType() const;
     bool SetReferenceType(const std::string& referenceType);
 
+    bool GetPersistentParent() const;
+    bool SetPersistentParent(bool persistentParent);
+
     void AddDefaultedVariable(std::shared_ptr<MetaVariable>& var);
     const std::list<std::shared_ptr<MetaVariable>> GetDefaultedVariables() const;
 
     virtual bool IsCoreType() const;
     virtual bool IsValid() const;
-
-    virtual bool IsValid(const void *pData, size_t dataSize) const;
 
     virtual bool Load(std::istream& stream);
     virtual bool Save(std::ostream& stream) const;
@@ -68,6 +69,7 @@ public:
         tinyxml2::XMLElement& parent, const char* elementName) const;
 
     virtual uint16_t GetDynamicSizeCount() const;
+    bool SetDynamicSizeCount(uint16_t dynamicSizeCount);
 
     virtual std::string GetCodeType() const;
     virtual std::string GetConstructValue() const;
@@ -101,6 +103,8 @@ public:
 
 private:
     std::string mReferenceType;
+    uint16_t mDynamicSizeCount;
+    bool mPersistentParent;
 
     std::list<std::shared_ptr<MetaVariable>> mDefaultedVariables;
 };

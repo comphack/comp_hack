@@ -48,6 +48,7 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
 
     # Include paths
     schema
+    ../../libcomp/schema
 
     # Output files
     ChannelConfig.h

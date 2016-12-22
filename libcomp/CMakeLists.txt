@@ -140,6 +140,7 @@ SET(${PROJECT_NAME}_HDRS
     src/MessageTimeout.h
     src/MessageWorldNotification.h
     src/Object.h
+    src/ObjectReference.h
     src/Packet.h
     src/PacketCodes.h
     src/PacketException.h

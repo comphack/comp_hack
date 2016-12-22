@@ -63,6 +63,17 @@ bool DatabaseQuerySQLite3::Execute()
 
     mStatus = sqlite3_step(mStatement);
     mDidJustExecute = true;
+    
+    int colCount = sqlite3_column_count(mStatement);
+
+    if(colCount > 0)
+    {
+        for(int i = 0; i < colCount; i++)
+        {
+            mResultColumnNames.push_back(std::string(sqlite3_column_name(mStatement, i)));
+            mResultColumnTypes.push_back(sqlite3_column_type(mStatement, i));
+        }
+    }
 
     return IsValid();
 }
@@ -73,9 +84,13 @@ bool DatabaseQuerySQLite3::Next()
     {
         mStatus = sqlite3_step(mStatement);
     }
-    mDidJustExecute = false;
+    else
+    {
+        mDidJustExecute = false;
+        return true;
+    }
 
-    return IsValid();
+    return IsValid() && SQLITE_DONE != mStatus;
 }
 
 bool DatabaseQuerySQLite3::Bind(size_t index, const String& value)
@@ -89,8 +104,7 @@ bool DatabaseQuerySQLite3::Bind(size_t index, const String& value)
 
 bool DatabaseQuerySQLite3::Bind(const String& name, const String& value)
 {
-    auto binding = GetNamedBinding(name);
-    size_t index = (size_t)sqlite3_bind_parameter_index(mStatement, binding.c_str());
+    size_t index = GetNamedBindingIndex(name);
 
     if(index == 0)
     {
@@ -119,8 +133,7 @@ bool DatabaseQuerySQLite3::Bind(size_t index, const std::vector<char>& value)
 bool DatabaseQuerySQLite3::Bind(const String& name,
     const std::vector<char>& value)
 {
-    auto binding = GetNamedBinding(name);
-    size_t index = (size_t)sqlite3_bind_parameter_index(mStatement, binding.c_str());
+    size_t index = GetNamedBindingIndex(name);
 
     if(index == 0)
     {
@@ -152,8 +165,7 @@ bool DatabaseQuerySQLite3::Bind(size_t index, int32_t value)
 
 bool DatabaseQuerySQLite3::Bind(const String& name, int32_t value)
 {
-    auto binding = GetNamedBinding(name);
-    size_t index = (size_t)sqlite3_bind_parameter_index(mStatement, binding.c_str());
+    size_t index = GetNamedBindingIndex(name);
 
     if(index == 0)
     {
@@ -172,8 +184,7 @@ bool DatabaseQuerySQLite3::Bind(size_t index, int64_t value)
 
 bool DatabaseQuerySQLite3::Bind(const String& name, int64_t value)
 {
-    auto binding = GetNamedBinding(name);
-    size_t index = (size_t)sqlite3_bind_parameter_index(mStatement, binding.c_str());
+    size_t index = GetNamedBindingIndex(name);
 
     if(index == 0)
     {
@@ -193,8 +204,7 @@ bool DatabaseQuerySQLite3::Bind(size_t index, float value)
 
 bool DatabaseQuerySQLite3::Bind(const String& name, float value)
 {
-    auto binding = GetNamedBinding(name);
-    size_t index = (size_t)sqlite3_bind_parameter_index(mStatement, binding.c_str());
+    size_t index = GetNamedBindingIndex(name);
 
     if(index == 0)
     {
@@ -213,8 +223,7 @@ bool DatabaseQuerySQLite3::Bind(size_t index, double value)
 
 bool DatabaseQuerySQLite3::Bind(const String& name, double value)
 {
-    auto binding = GetNamedBinding(name);
-    size_t index = (size_t)sqlite3_bind_parameter_index(mStatement, binding.c_str());
+    size_t index = GetNamedBindingIndex(name);
 
     if(index == 0)
     {
@@ -234,8 +243,7 @@ bool DatabaseQuerySQLite3::Bind(size_t index, bool value)
 
 bool DatabaseQuerySQLite3::Bind(const String& name, bool value)
 {
-    auto binding = GetNamedBinding(name);
-    size_t index = (size_t)sqlite3_bind_parameter_index(mStatement, binding.c_str());
+    size_t index = GetNamedBindingIndex(name);
 
     if(index == 0)
     {
@@ -267,132 +275,208 @@ bool DatabaseQuerySQLite3::Bind(const String& name, const std::unordered_map<
 
 bool DatabaseQuerySQLite3::GetValue(size_t index, String& value)
 {
-    (void)index;
-    (void)value;
+    if(mResultColumnTypes.size() <= index
+        || mResultColumnTypes[index] != SQLITE_TEXT)
+    {
+        return false;
+    }
 
-    return false;
+    int idx = (int)index;
+
+    size_t bytes = (size_t)sqlite3_column_bytes(mStatement, idx);
+
+    auto val = sqlite3_column_text(mStatement, idx);
+
+    std::string str(val, val + bytes);
+    value = libcomp::String(str);
+
+    return true;
 }
 
 bool DatabaseQuerySQLite3::GetValue(const String& name, String& value)
 {
-    (void)name;
-    (void)value;
+    size_t index;
+    if(!GetResultColumnIndex(name, index))
+    {
+        return false;
+    }
 
-    return false;
+    return GetValue(index, value);
 }
 
 bool DatabaseQuerySQLite3::GetValue(size_t index, std::vector<char>& value)
 {
-    (void)index;
-    (void)value;
+    if(mResultColumnTypes.size() <= index
+        || mResultColumnTypes[index] != SQLITE_BLOB)
+    {
+        return false;
+    }
 
-    return false;
+    int idx = (int)index;
+
+    size_t bytes = (size_t)sqlite3_column_bytes(mStatement, idx);
+
+    auto val = (const char*)sqlite3_column_blob(mStatement, idx);
+
+    value.clear();
+    value.insert(value.begin(), val, val + bytes);
+
+    return true;
 }
 
 bool DatabaseQuerySQLite3::GetValue(const String& name,
     std::vector<char>& value)
 {
-    (void)name;
-    (void)value;
+    size_t index;
+    if(!GetResultColumnIndex(name, index))
+    {
+        return false;
+    }
 
-    return false;
+    return GetValue(index, value);
 }
 
 bool DatabaseQuerySQLite3::GetValue(size_t index, libobjgen::UUID& value)
 {
-    (void)index;
-    (void)value;
-
+    libcomp::String uuidStr;
+    if(GetValue(index, uuidStr))
+    {
+        value = libobjgen::UUID(uuidStr.ToUtf8());
+        return true;
+    }
     return false;
 }
 
 bool DatabaseQuerySQLite3::GetValue(const String& name,
     libobjgen::UUID& value)
 {
-    (void)name;
-    (void)value;
+    size_t index;
+    if(!GetResultColumnIndex(name, index))
+    {
+        return false;
+    }
 
-    return false;
+    return GetValue(index, value);
 }
 
 bool DatabaseQuerySQLite3::GetValue(size_t index, int32_t& value)
 {
-    (void)index;
-    (void)value;
+    if(mResultColumnTypes.size() <= index
+        || mResultColumnTypes[index] != SQLITE_INTEGER)
+    {
+        return false;
+    }
 
-    return false;
+    int idx = (int)index;
+    value = (int32_t)sqlite3_column_int(mStatement, idx);
+    return true;
 }
 
 bool DatabaseQuerySQLite3::GetValue(const String& name, int32_t& value)
 {
-    (void)name;
-    (void)value;
+    size_t index;
+    if(!GetResultColumnIndex(name, index))
+    {
+        return false;
+    }
 
-    return false;
+    return GetValue(index, value);
 }
 
 bool DatabaseQuerySQLite3::GetValue(size_t index, int64_t& value)
 {
-    (void)index;
-    (void)value;
+    if(mResultColumnTypes.size() <= index
+        || mResultColumnTypes[index] != SQLITE_INTEGER)
+    {
+        return false;
+    }
 
-    return false;
+    int idx = (int)index;
+    value = (int64_t)sqlite3_column_int64(mStatement, idx);
+    return true;
 }
 
 bool DatabaseQuerySQLite3::GetValue(const String& name, int64_t& value)
 {
-    (void)name;
-    (void)value;
+    size_t index;
+    if(!GetResultColumnIndex(name, index))
+    {
+        return false;
+    }
 
-    return false;
+    return GetValue(index, value);
 }
 
 bool DatabaseQuerySQLite3::GetValue(size_t index, float& value)
 {
-    (void)index;
-    (void)value;
+    if(mResultColumnTypes.size() <= index
+        || mResultColumnTypes[index] != SQLITE_FLOAT)
+    {
+        return false;
+    }
 
-    return false;
+    int idx = (int)index;
+    value = (float)sqlite3_column_double(mStatement, idx);
+    return true;
 }
 
 bool DatabaseQuerySQLite3::GetValue(const String& name, float& value)
 {
-    (void)name;
-    (void)value;
+    size_t index = GetNamedBindingIndex(name);
+    if(!GetResultColumnIndex(name, index))
+    {
+        return false;
+    }
 
-    return false;
+    return GetValue(index, value);
 }
 
 bool DatabaseQuerySQLite3::GetValue(size_t index, double& value)
 {
-    (void)index;
-    (void)value;
+    if(mResultColumnTypes.size() <= index
+        || mResultColumnTypes[index] != SQLITE_FLOAT)
+    {
+        return false;
+    }
 
-    return false;
+    int idx = (int)index;
+    value = sqlite3_column_double(mStatement, idx);
+    return true;
 }
 
 bool DatabaseQuerySQLite3::GetValue(const String& name, double& value)
 {
-    (void)name;
-    (void)value;
+    size_t index = GetNamedBindingIndex(name);
+    if(!GetResultColumnIndex(name, index))
+    {
+        return false;
+    }
 
-    return false;
+    return GetValue(index, value);
 }
 
 bool DatabaseQuerySQLite3::GetValue(size_t index, bool& value)
 {
-    (void)index;
-    (void)value;
+    if(mResultColumnTypes.size() <= index
+        || mResultColumnTypes[index] != SQLITE_INTEGER)
+    {
+        return false;
+    }
 
-    return false;
+    int idx = (int)index;
+    value = sqlite3_column_int(mStatement, idx) != 0;
+    return true;
 }
 
 bool DatabaseQuerySQLite3::GetValue(const String& name, bool& value)
 {
-    (void)name;
-    (void)value;
+    size_t index = GetNamedBindingIndex(name);
+    if(!GetResultColumnIndex(name, index))
+    {
+        return false;
+    }
 
-    return false;
+    return GetValue(index, value);
 }
 
 bool DatabaseQuerySQLite3::GetMap(size_t index,
@@ -520,7 +604,25 @@ int DatabaseQuerySQLite3::GetStatus() const
     return mStatus;
 }
 
+size_t DatabaseQuerySQLite3::GetNamedBindingIndex(const String& name) const
+{
+    auto binding = GetNamedBinding(name);
+    return (size_t)sqlite3_bind_parameter_index(mStatement, binding.c_str());
+}
+
 std::string DatabaseQuerySQLite3::GetNamedBinding(const String& name) const
 {
     return libcomp::String(":%1").Arg(name).ToUtf8();
+}
+
+bool DatabaseQuerySQLite3::GetResultColumnIndex(const String& name, size_t& index) const
+{
+    auto iter = std::find(mResultColumnNames.begin(), mResultColumnNames.end(), name);
+    if(iter == mResultColumnNames.end())
+    {
+        return false;
+    }
+
+    index = (size_t)(iter - mResultColumnNames.begin());
+    return true;
 }

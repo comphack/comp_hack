@@ -227,20 +227,17 @@ std::list<std::shared_ptr<PersistentObject>> DatabaseSQLite3::LoadObjects(
 
     int failures = 0;
 
-    if(0 < rows.size())
+    while(query.Next())
     {
-        for(auto row : rows)
-        {
-            auto obj = LoadSingleObjectFromRow(type, row);
+        auto obj = LoadSingleObjectFromRow(type, query);
 
-            if(nullptr != obj)
-            {
-                objects.push_back(obj);
-            }
-            else
-            {
-                failures++;
-            }
+        if(nullptr != obj)
+        {
+            objects.push_back(obj);
+        }
+        else
+        {
+            failures++;
         }
     }
 
@@ -251,79 +248,6 @@ std::list<std::shared_ptr<PersistentObject>> DatabaseSQLite3::LoadObjects(
     }
 
     return objects;
-}
-
-std::shared_ptr<PersistentObject> DatabaseSQLite3::LoadSingleObject(std::type_index type,
-    DatabaseBind *pValue)
-{
-    auto objects = LoadObjects(type, pValue);
-
-    return objects.size() > 0 ? objects.front() : nullptr;
-}
-
-std::shared_ptr<PersistentObject> DatabaseSQLite3::LoadSingleObjectFromRow(
-    std::type_index type, const std::unordered_map<std::string, std::vector<char>>& row)
-{
-    auto metaObject = PersistentObject::GetRegisteredMetadata(type);
-
-    std::stringstream objstream(std::stringstream::out |
-        std::stringstream::binary);
-
-    libobjgen::UUID uuid;
-    auto rowIter = row.find("uid");
-    if(rowIter != row.end())
-    {
-        std::vector<char> value = rowIter->second;
-        std::string uuidStr(&value[0], &value[0] + value.size());
-
-        uuid = libobjgen::UUID(uuidStr);
-    }
-
-    if(uuid.IsNull())
-    {
-        return nullptr;
-    }
-
-    // Traverse the variables in the order the stream expects
-    for(auto varIter = metaObject->VariablesBegin();
-        varIter != metaObject->VariablesEnd(); varIter++)
-    {
-        auto var = *varIter;
-        std::string fieldName = var->GetName();
-
-        rowIter = row.find(fieldName);
-
-        std::vector<char> data;
-        if(rowIter != row.end())
-        {
-            std::vector<char> value = rowIter->second;
-            data = ConvertToRawByteStream(var, value);
-
-            if(data.size() == 0)
-            {
-                return nullptr;
-            }
-
-            objstream.write(&data[0], (std::streamsize)data.size());
-        }
-        else
-        {
-            // Field exists in current metadata but not in the loaded record
-            /// @todo: add GetDefaultBinaryValue to MetaVariable and use that
-            data = ConvertToRawByteStream(var, std::vector<char>());
-        }
-    }
-
-    auto obj = PersistentObject::New(type);
-    std::stringstream iobjstream(objstream.str());
-    if(!obj->Load(iobjstream))
-    {
-        return nullptr;
-    }
-
-    PersistentObject::Register(obj);
-
-    return obj;
 }
 
 bool DatabaseSQLite3::InsertSingleObject(std::shared_ptr<PersistentObject>& obj)

@@ -25,4 +25,4 @@
     @SET_CODE@
 
     return @STREAM@.stream.good();
-})();
+})()

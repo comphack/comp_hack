@@ -2,7 +2,8 @@
 {
     if(!@VAR_NAME@.IsNull())
     {
-        @VAR_NAME@.Get()->Load(@DOC@, *@NODE@);
+        auto uuid = GetXmlText(*@NODE@);
+        @VAR_NAME@.SetUUID(uuid);
     }
 
     return @VAR_NAME@;

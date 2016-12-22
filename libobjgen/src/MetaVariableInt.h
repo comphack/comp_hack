@@ -219,25 +219,6 @@ public:
             mMaximumValue >= mDefaultValue;
     }
 
-    virtual bool IsValid(const void *pData, size_t dataSize) const
-    {
-        bool status = false;
-
-        if(sizeof(T) == dataSize)
-        {
-            T value;
-
-            memcpy(&value, pData, dataSize);
-
-            if(GetMinimumValue() <= value && GetMaximumValue() >= value)
-            {
-                status = true;
-            }
-        }
-
-        return status;
-    }
-
     virtual bool Load(std::istream& stream)
     {
         stream.read(reinterpret_cast<char*>(&mDefaultValue),

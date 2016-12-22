@@ -118,11 +118,8 @@ std::string GeneratorHeader::GenerateClass(const MetaObject& obj)
 
     if(obj.GetPersistent())
     {
-        ss << Tab() << "virtual std::list<libcomp::DatabaseBind*> GetMemberBindValues();" << std::endl;
-        ss << Tab() << "virtual bool LoadDatabaseValues(libcomp::DatabaseQuery& query);" << std::endl;
-        ss << Tab() << "virtual std::shared_ptr<libobjgen::MetaObject> GetObjectMetadata();" << std::endl;
-        ss << Tab() << "static std::shared_ptr<libobjgen::MetaObject> GetMetadata();" << std::endl;
-        ss << std::endl;
+        std::map<std::string, std::string> replacements;
+        ss << ParseTemplate(1, "VariablePersistentDeclarations", replacements);
     }
 
     std::stringstream utilStream;
@@ -190,6 +187,13 @@ std::string GeneratorHeader::Generate(const MetaObject& obj)
     ss << "// libcomp Includes" << std::endl;
     ss << "#include <Convert.h>" << std::endl;
     ss << "#include <CString.h>" << std::endl;
+
+    std::set<std::string> references = obj.GetReferencesTypes();
+    if(references.size() > 0)
+    {
+        ss << "#include <ObjectReference.h>" << std::endl;
+    }
+
     if(!obj.GetBaseObject().empty())
     {
         ss << "#include <" + obj.GetBaseObject() + ".h>" << std::endl;
@@ -217,8 +221,6 @@ std::string GeneratorHeader::Generate(const MetaObject& obj)
     ss << "#include <tinyxml2.h>" << std::endl;
     ss << "#include <PopIgnore.h>" << std::endl;
     ss << std::endl;
-
-    std::set<std::string> references = obj.GetReferences();
 
     if(!references.empty())
     {

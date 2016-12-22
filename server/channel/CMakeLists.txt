@@ -55,11 +55,12 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     ChannelConfig.cpp
 )
 
-SOURCE_GROUP("Source Files\\Packets" src/packets/*)
+SOURCE_GROUP("Source Files\\Packets\\Game" src/packets/game/*)
+SOURCE_GROUP("Source Files\\Packets\\Internal" src/packets/internal/*)
 
 SET(${PROJECT_NAME}_PACKETS
     #Internal packets
-    src/packets/SetWorldDescription.cpp      # 0x1002
+    src/packets/internal/SetWorldDescription.cpp      # 0x1002
 )
 
 ADD_EXECUTABLE(${PROJECT_NAME} ${${PROJECT_NAME}_SRCS}

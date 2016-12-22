@@ -63,22 +63,23 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     LobbyConfig.cpp
 )
 
-SOURCE_GROUP("Source Files\\Packets" src/packets/*)
+SOURCE_GROUP("Source Files\\Packets\\Game" src/packets/game/*)
+SOURCE_GROUP("Source Files\\Packets\\Internal" src/packets/internal/*)
 
 SET(${PROJECT_NAME}_PACKETS
-    src/packets/Login.cpp               # 0x0003
-    src/packets/Auth.cpp                # 0x0005
-    src/packets/StartGame.cpp           # 0x0007
-    src/packets/CharacterList.cpp       # 0x0009
-    src/packets/WorldList.cpp           # 0x000B
-    src/packets/CreateCharacter.cpp     # 0x000D
-    src/packets/DeleteCharacter.cpp     # 0x000F
-    src/packets/QueryPurchaseTicket.cpp # 0x0011
-    src/packets/PurchaseTicket.cpp      # 0x0013
+    src/packets/game/Login.cpp               # 0x0003
+    src/packets/game/Auth.cpp                # 0x0005
+    src/packets/game/StartGame.cpp           # 0x0007
+    src/packets/game/CharacterList.cpp       # 0x0009
+    src/packets/game/WorldList.cpp           # 0x000B
+    src/packets/game/CreateCharacter.cpp     # 0x000D
+    src/packets/game/DeleteCharacter.cpp     # 0x000F
+    src/packets/game/QueryPurchaseTicket.cpp # 0x0011
+    src/packets/game/PurchaseTicket.cpp      # 0x0013
     
     #Internal packets
-    src/packets/SetWorldDescription.cpp      # 0x1002
-    src/packets/SetChannelDescription.cpp    # 0x1003
+    src/packets/internal/SetWorldDescription.cpp      # 0x1002
+    src/packets/internal/SetChannelDescription.cpp    # 0x1003
 )
 
 ADD_CUSTOM_COMMAND(

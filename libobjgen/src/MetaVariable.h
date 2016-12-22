@@ -29,6 +29,7 @@
 
 // Standard C++11 Includes
 #include <istream>
+#include <list>
 #include <memory>
 #include <ostream>
 #include <string>

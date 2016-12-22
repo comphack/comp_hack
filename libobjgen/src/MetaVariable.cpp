@@ -158,7 +158,7 @@ bool MetaVariable::LoadVariableList(std::istream& stream,
             }
 
             std::vector<MetaVariableType_t> subTypes;
-            for(short i = 0; i < subTypeCount; i++)
+            for(short k = 0; k < subTypeCount; k++)
             {
                 MetaVariableType_t subMetaType;
                 stream.read(reinterpret_cast<char*>(&subMetaType),

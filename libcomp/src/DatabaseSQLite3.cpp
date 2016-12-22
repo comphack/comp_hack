@@ -55,7 +55,7 @@ bool DatabaseSQLite3::Open()
 
     bool result = true;
 
-    if(SQLITE_OK != sqlite3_open(filepath.c_str(), &mDatabase))
+    if(SQLITE_OK != sqlite3_open(filepath.C(), &mDatabase))
     {
         result = false;
 
@@ -102,7 +102,7 @@ bool DatabaseSQLite3::Exists()
     auto filepath = GetFilepath();
 
     // Check if the database file exists
-    if(FILE *file = fopen(filepath.c_str(), "r"))
+    if(FILE *file = fopen(filepath.C(), "r"))
     {
         fclose(file);
         return true;
@@ -148,7 +148,7 @@ bool DatabaseSQLite3::Setup()
         }
     }
 
-    LOG_DEBUG(libcomp::String("Database connection established to '%1' file.\n")
+    LOG_DEBUG(String("Database connection established to '%1' file.\n")
         .Arg(filename));
 
     if(!VerifyAndSetupSchema())
@@ -212,19 +212,6 @@ std::list<std::shared_ptr<PersistentObject>> DatabaseSQLite3::LoadObjects(
         return {};
     }
 
-    std::list<std::unordered_map<std::string, std::vector<char>>> rows;
-
-    if(!query.Next() || !query.GetRows(rows))
-    {
-        LOG_ERROR(String("Failed to execute query: %1\n").Arg(sql));
-        LOG_ERROR("Failed to retrieve rows.\n");
-        LOG_ERROR(String("Database said: %1\n").Arg(GetLastError()));
-
-        return {};
-    }
-
-    LOG_DEBUG(String("Row count: %1\n").Arg(rows.size()));
-
     int failures = 0;
 
     while(query.Next())
@@ -265,11 +252,11 @@ bool DatabaseSQLite3::InsertSingleObject(std::shared_ptr<PersistentObject>& obj)
         return false;
     }
 
-    std::list<libcomp::String> columnNames;
+    std::list<String> columnNames;
     columnNames.push_back("uid");
 
-    std::list<libcomp::String> columnBinds;
-    columnBinds.push_back(libcomp::String("'%1'").Arg(obj->GetUUID().ToString()));
+    std::list<String> columnBinds;
+    columnBinds.push_back(String("'%1'").Arg(obj->GetUUID().ToString()));
 
     auto values = obj->GetMemberBindValues();
 
@@ -277,7 +264,7 @@ bool DatabaseSQLite3::InsertSingleObject(std::shared_ptr<PersistentObject>& obj)
     {
         auto columnName = value->GetColumn();
         columnNames.push_back(columnName);
-        columnBinds.push_back(libcomp::String(":%1").Arg(columnName));
+        columnBinds.push_back(String(":%1").Arg(columnName));
     }
 
     String sql = String("INSERT INTO %1 (%2) VALUES (%3);").Arg(
@@ -337,7 +324,7 @@ bool DatabaseSQLite3::UpdateSingleObject(std::shared_ptr<PersistentObject>& obj)
 
     auto values = obj->GetMemberBindValues();
 
-    std::list<libcomp::String> columnNames;
+    std::list<String> columnNames;
 
     for(auto value : values)
     {
@@ -396,7 +383,7 @@ bool DatabaseSQLite3::DeleteSingleObject(std::shared_ptr<PersistentObject>& obj)
 
     auto metaObject = obj->GetObjectMetadata();
 
-    if (Execute(libcomp::String("DELETE FROM %1 WHERE uid = '%2';")
+    if (Execute(String("DELETE FROM %1 WHERE uid = '%2';")
         .Arg(metaObject->GetName())
         .Arg(uuidStr)))
     {
@@ -420,52 +407,72 @@ bool DatabaseSQLite3::VerifyAndSetupSchema()
         }
     }
 
-    std::unordered_map<std::string,
-        std::unordered_map<std::string, std::string>> fieldMap;
     if(metaObjectTables.size() == 0)
     {
         return true;
     }
-    else
+
+    LOG_DEBUG("Verifying database table structure.\n");
+
+    DatabaseQuery q = Prepare("SELECT name, type, tbl_name FROM sqlite_master"
+        " where type in ('table', 'index') and name <> 'objects';");
+    if(!q.Execute() || !q.Next())
     {
-        LOG_DEBUG("Verifying database table structure.\n");
+        LOG_CRITICAL("Failed to query for existing columns.\n");
 
-        DatabaseQuery q = Prepare("SELECT name FROM sqlite_master where type = 'table' and name <> 'objects';");
+        return false;
+    }
 
-        std::list<std::unordered_map<std::string, std::vector<char>>> tableResults;
-        if(!q.Execute() || !q.Next() || !q.GetRows(tableResults))
+    std::unordered_map<std::string,
+        std::unordered_map<std::string, String>> fieldMap;
+    std::unordered_map<std::string, std::set<std::string>> indexedFields;
+    do
+    {
+        String name;
+        String type;
+
+        if(!q.GetValue("name", name) || !q.GetValue("type", type))
         {
-            LOG_CRITICAL("Failed to query for existing columns.\n");
+            LOG_CRITICAL(String("Invalid query results returned from sqlite_master table.\n")
+                .Arg(name));
 
             return false;
         }
 
-        for(auto table : tableResults)
+        if(type == "table")
         {
-            std::string tableName(&table["name"][0], table["name"].size());
-            std::unordered_map<std::string, std::string>& m = fieldMap[tableName];
+            std::unordered_map<std::string, String>& m = fieldMap[name.ToUtf8()];
 
-            std::stringstream ss;
-            ss << "PRAGMA table_info('" << tableName << "');";
-            q = Prepare(ss.str());
-
-            std::list<std::unordered_map<std::string, std::vector<char>>> colResults;
-            if(!q.Execute() || !q.GetRows(colResults))
+            DatabaseQuery sq = Prepare(String("PRAGMA table_info('%1');").Arg(name));
+            if(!sq.Execute() || !sq.Next())
             {
-                LOG_CRITICAL(libcomp::String("Failed to query for '%1' columns.\n").Arg(tableName));
+                LOG_CRITICAL(String("Failed to query for '%1' columns.\n").Arg(name));
 
                 return false;
             }
 
-            for(auto col : colResults)
+            do
             {
-                std::string colName(&col["name"][0], col["name"].size());
-                std::string dataType(&col["type"][0], col["type"].size());
+                String colName;
+                String dataType;
 
-                m[colName] = dataType;
+                if(sq.GetValue("name", colName) && sq.GetValue("type", dataType))
+                {
+                    m[colName.ToUtf8()] = dataType;
+                }
+            } while (sq.Next());
+        }
+        else if(type == "index")
+        {
+            String tableName;
+
+            if(q.GetValue("tbl_name", tableName))
+            {
+                std::set<std::string>& s = indexedFields[tableName.ToUtf8()];
+                s.insert(name.ToUtf8());
             }
         }
-    }
+    } while(q.Next());
     
     for(auto metaObjectTable : metaObjectTables)
     {
@@ -476,10 +483,10 @@ bool DatabaseSQLite3::VerifyAndSetupSchema()
         for(auto iter = metaObject.VariablesBegin();
             iter != metaObject.VariablesEnd(); iter++)
         {
-            std::string type = GetVariableType(*iter);
-            if(type.empty())
+            String type = GetVariableType(*iter);
+            if(type.IsEmpty())
             {
-                LOG_ERROR(libcomp::String(
+                LOG_ERROR(String(
                     "Unsupported field type encountered: %1\n")
                     .Arg((*iter)->GetCodeType()));
                 return false;
@@ -489,6 +496,7 @@ bool DatabaseSQLite3::VerifyAndSetupSchema()
 
         bool creating = false;
         bool archiving = false;
+        std::set<std::string> needsIndex;
         auto tableIter = fieldMap.find(objName);
         if(tableIter == fieldMap.end())
         {
@@ -497,7 +505,7 @@ bool DatabaseSQLite3::VerifyAndSetupSchema()
         else
         {
             std::unordered_map<std::string,
-                std::string> columns = tableIter->second;
+                String> columns = tableIter->second;
             if(columns.size() - 1 != vars.size()
                 || columns.find("uid") == columns.end())
             {
@@ -505,6 +513,7 @@ bool DatabaseSQLite3::VerifyAndSetupSchema()
             }
             else
             {
+                auto indexes = indexedFields[objName];
                 columns.erase("uid");
                 for(auto var : vars)
                 {
@@ -516,19 +525,25 @@ bool DatabaseSQLite3::VerifyAndSetupSchema()
                     {
                         archiving = true;
                     }
+
+                    auto indexName = String("idx_%1_%2")
+                        .Arg(objName).Arg(name).ToUtf8();
+                    if(var->IsLookupKey() &&
+                        indexes.find(indexName) == indexes.end())
+                    {
+                        needsIndex.insert(name);
+                    }
                 }
             }
         }
 
         if(archiving)
         {
-            LOG_DEBUG(libcomp::String("Archiving table '%1'...\n")
+            LOG_DEBUG(String("Archiving table '%1'...\n")
                 .Arg(metaObject.GetName()));
             
             /// @todo: do this properly
-            std::stringstream ss;
-            ss << "DROP TABLE " << objName << ";";
-            if(Execute(ss.str()))
+            if(Execute(String("DROP TABLE %1;").Arg(objName)))
             {
                 LOG_DEBUG("Archiving complete\n");
             }
@@ -543,7 +558,7 @@ bool DatabaseSQLite3::VerifyAndSetupSchema()
             
         if(creating)
         {
-            LOG_DEBUG(libcomp::String("Creating table '%1'...\n")
+            LOG_DEBUG(String("Creating table '%1'...\n")
                 .Arg(metaObject.GetName()));
 
             bool success = false;
@@ -554,7 +569,7 @@ bool DatabaseSQLite3::VerifyAndSetupSchema()
             for(size_t i = 0; i < vars.size(); i++)
             {
                 auto var = vars[i];
-                std::string type = GetVariableType(var);
+                String type = GetVariableType(var);
 
                 ss << "," << std::endl << var->GetName() << " " << type;
             }
@@ -572,12 +587,48 @@ bool DatabaseSQLite3::VerifyAndSetupSchema()
                 return false;
             }
         }
-        else
+        
+        //If we made the table or are missing an index, make them now
+        if(needsIndex.size() > 0 || creating)
         {
-            LOG_DEBUG(libcomp::String("'%1': Verified\n")
+            for(size_t i = 0; i < vars.size(); i++)
+            {
+                auto var = vars[i];
+
+                if(!var->IsLookupKey() ||
+                    (!creating && needsIndex.find(var->GetName()) == needsIndex.end()))
+                {
+                    continue;
+                }
+
+                auto indexStr = String("idx_%1_%2")
+                    .Arg(objName).Arg(var->GetName());
+
+                auto cmd = String("CREATE INDEX %1 ON %2(%3);")
+                    .Arg(indexStr).Arg(objName).Arg(var->GetName());
+
+                if(Execute(cmd))
+                {
+                    LOG_DEBUG(String("Created '%1' column index.\n")
+                        .Arg(indexStr));
+                }
+                else
+                {
+                    LOG_ERROR(String("Creation of '%1' column index failed.\n")
+                        .Arg(indexStr));
+                    return false;
+                }
+            }
+        }
+
+        if(!creating && !archiving && needsIndex.size() == 0)
+        {
+            LOG_DEBUG(String("'%1': Verified\n")
                 .Arg(metaObject.GetName()));
         }
     }
+
+    LOG_DEBUG("Database verification complete.\n");
 
     return true;
 }
@@ -587,15 +638,15 @@ bool DatabaseSQLite3::UsingDefaultDatabaseFile()
     return mConfig->GetDatabaseName() == mConfig->GetDefaultDatabaseName();
 }
 
-std::string DatabaseSQLite3::GetFilepath() const
+String DatabaseSQLite3::GetFilepath() const
 {
     auto directory = mConfig->GetFileDirectory();
     auto filename = mConfig->GetDatabaseName();
 
-    return libcomp::String("%1%2.sqlite3").Arg(directory).Arg(filename).ToUtf8();
+    return String("%1%2.sqlite3").Arg(directory).Arg(filename);
 }
 
-std::string DatabaseSQLite3::GetVariableType(const std::shared_ptr
+String DatabaseSQLite3::GetVariableType(const std::shared_ptr
     <libobjgen::MetaVariable> var)
 {
     switch(var->GetMetaType())

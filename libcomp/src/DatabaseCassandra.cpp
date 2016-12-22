@@ -115,7 +115,7 @@ DatabaseQuery DatabaseCassandra::Prepare(const String& query)
 
 bool DatabaseCassandra::Exists()
 {
-    DatabaseQuery q = Prepare(libcomp::String(
+    DatabaseQuery q = Prepare(String(
         "SELECT keyspace_name FROM system_schema.keyspaces WHERE keyspace_name = '%1';")
         .Arg(mConfig->GetKeyspace()));
     if(!q.Execute())
@@ -144,7 +144,7 @@ bool DatabaseCassandra::Setup()
     if(!Exists())
     {
         // Delete the old keyspace if it exists.
-        if(!Execute(libcomp::String("DROP KEYSPACE IF EXISTS %1;").Arg(keyspace)))
+        if(!Execute(String("DROP KEYSPACE IF EXISTS %1;").Arg(keyspace)))
         {
             LOG_ERROR("Failed to delete old keyspace.\n");
 
@@ -152,7 +152,7 @@ bool DatabaseCassandra::Setup()
         }
 
         // Now re-create the keyspace.
-        if(!Execute(libcomp::String("CREATE KEYSPACE %1 WITH REPLICATION = {"
+        if(!Execute(String("CREATE KEYSPACE %1 WITH REPLICATION = {"
             " 'class' : 'NetworkTopologyStrategy', 'datacenter1' : 1 };").Arg(keyspace)))
         {
             LOG_ERROR("Failed to create keyspace.\n");
@@ -184,7 +184,7 @@ bool DatabaseCassandra::Setup()
         return false;
     }
 
-    LOG_DEBUG(libcomp::String("Database connection established to '%1' keyspace.\n")
+    LOG_DEBUG(String("Database connection established to '%1' keyspace.\n")
         .Arg(keyspace));
 
     if(!VerifyAndSetupSchema())
@@ -201,7 +201,7 @@ bool DatabaseCassandra::Use()
 {
     // Use the keyspace.
     auto keyspace = mConfig->GetKeyspace();
-    if(!Execute(libcomp::String("USE %1;").Arg(keyspace)))
+    if(!Execute(String("USE %1;").Arg(keyspace)))
     {
         LOG_ERROR("Failed to use the keyspace.\n");
 
@@ -296,10 +296,10 @@ bool DatabaseCassandra::InsertSingleObject(std::shared_ptr<PersistentObject>& ob
         return false;
     }
 
-    std::list<libcomp::String> columnNames;
+    std::list<String> columnNames;
     columnNames.push_back("uid");
 
-    std::list<libcomp::String> columnBinds;
+    std::list<String> columnBinds;
     columnBinds.push_back("?");
 
     auto values = obj->GetMemberBindValues();
@@ -375,7 +375,7 @@ bool DatabaseCassandra::UpdateSingleObject(std::shared_ptr<PersistentObject>& ob
 
     auto values = obj->GetMemberBindValues();
 
-    std::list<libcomp::String> columnNames;
+    std::list<String> columnNames;
 
     for(auto value : values)
     {
@@ -494,33 +494,35 @@ bool DatabaseCassandra::VerifyAndSetupSchema()
 
     LOG_DEBUG("Verifying database table structure.\n");
 
-    auto cmd = libcomp::String("SELECT table_name, column_name, type"
+    auto cmd = String("SELECT table_name, column_name, type"
                             " FROM system_schema.columns"
                             " WHERE keyspace_name = '%1';").Arg(keyspace);
 
     DatabaseQuery q = Prepare(cmd);
-    std::list<std::unordered_map<std::string, std::vector<char>>> results;
-    if(!q.Execute() || !q.Next() || !q.GetRows(results))
+    if(!q.Execute() || !q.Next())
     {
         LOG_CRITICAL("Failed to query for column schema.\n");
 
         return false;
     }
 
-    std::unordered_map<std::string,
-        std::unordered_map<std::string, std::string >> fieldMap;
-    for(auto row : results)
+    std::unordered_map<std::string, std::unordered_map<std::string, String>> fieldMap;
+    do
     {
-        std::string tableName(&row["table_name"][0], row["table_name"].size());
-        std::string colName(&row["column_name"][0], row["column_name"].size());
-        std::string dataType(&row["type"][0], row["type"].size());
+        String tableName;
+        String colName;
+        String dataType;
 
-        std::unordered_map<std::string, std::string>& m = fieldMap[tableName];
-        m[colName] = dataType;
-    }
+        if(q.GetValue("table_name", tableName) &&
+            q.GetValue("column_name", colName) &&
+            q.GetValue("type", dataType))
+        {
+            std::unordered_map<std::string, String>& m = fieldMap[tableName.ToUtf8()];
+            m[colName.ToUtf8()] = dataType;
+        }
+    } while (q.Next());
 
-    results.clear();
-    cmd = libcomp::String("SELECT table_name, index_name"
+    cmd = String("SELECT table_name, index_name"
         " FROM system_schema.indexes"
         " WHERE keyspace_name = '%1';").Arg(keyspace);
 
@@ -533,35 +535,33 @@ bool DatabaseCassandra::VerifyAndSetupSchema()
     }
 
     //If we get zero rows, keep going anyway because execution didn't fail
-    if(q.Next())
-    {
-        q.GetRows(results);
-    }
-
     std::unordered_map<std::string, std::set<std::string>> indexedFields;
-    for(auto row : results)
+    while(q.Next())
     {
-        std::string tableName(&row["table_name"][0], row["table_name"].size());
-        std::string indexName(&row["index_name"][0], row["index_name"].size());
+        String tableName;
+        String indexName;
 
-        std::set<std::string>& s = indexedFields[tableName];
-        s.insert(indexName);
+        if(q.GetValue("table_name", tableName) && q.GetValue("index_name", indexName))
+        {
+            std::set<std::string>& s = indexedFields[tableName.ToUtf8()];
+            s.insert(indexName.ToUtf8());
+        }
     }
 
     for(auto metaObjectTable : metaObjectTables)
     {
         auto metaObject = *metaObjectTable.get();
-        auto objName = libcomp::String(metaObject.GetName())
+        auto objName = String(metaObject.GetName())
                             .ToLower().ToUtf8();
 
         std::vector<std::shared_ptr<libobjgen::MetaVariable>> vars;
         for(auto iter = metaObject.VariablesBegin();
             iter != metaObject.VariablesEnd(); iter++)
         {
-            std::string type = GetVariableType(*iter);
-            if(type.empty())
+            String type = GetVariableType(*iter);
+            if(type.IsEmpty())
             {
-                LOG_ERROR(libcomp::String(
+                LOG_ERROR(String(
                     "Unsupported field type encountered: %1\n")
                     .Arg((*iter)->GetCodeType()));
                 return false;
@@ -580,7 +580,7 @@ bool DatabaseCassandra::VerifyAndSetupSchema()
         else
         {
             std::unordered_map<std::string,
-                std::string> columns = tableIter->second;
+                String> columns = tableIter->second;
             if(columns.size() - 1 != vars.size()
                 || columns.find("uid") == columns.end())
             {
@@ -592,7 +592,7 @@ bool DatabaseCassandra::VerifyAndSetupSchema()
                 columns.erase("uid");
                 for(auto var : vars)
                 {
-                    auto name = libcomp::String(
+                    auto name = String(
                         var->GetName()).ToLower().ToUtf8();
                     auto type = GetVariableType(var);
 
@@ -602,8 +602,8 @@ bool DatabaseCassandra::VerifyAndSetupSchema()
                         archiving = true;
                     }
 
-                    auto indexName = libcomp::String("idx_%1")
-                        .Arg(name).ToUtf8();
+                    auto indexName = String("idx_%1_%2")
+                        .Arg(objName).Arg(name).ToUtf8();
                     if(var->IsLookupKey() &&
                         indexes.find(indexName) == indexes.end())
                     {
@@ -615,13 +615,11 @@ bool DatabaseCassandra::VerifyAndSetupSchema()
 
         if(archiving)
         {
-            LOG_DEBUG(libcomp::String("Archiving table '%1'...\n")
+            LOG_DEBUG(String("Archiving table '%1'...\n")
                 .Arg(metaObject.GetName()));
             
             /// @todo: do this properly
-            std::stringstream ss;
-            ss << "DROP TABLE " << objName << ";";
-            if(Execute(ss.str()))
+            if(Execute(String("DROP TABLE %1;").Arg(objName)))
             {
                 LOG_DEBUG("Archiving complete\n");
             }
@@ -636,7 +634,7 @@ bool DatabaseCassandra::VerifyAndSetupSchema()
             
         if(creating)
         {
-            LOG_DEBUG(libcomp::String("Creating table '%1'...\n")
+            LOG_DEBUG(String("Creating table '%1'...\n")
                 .Arg(metaObject.GetName()));
 
             bool success = false;
@@ -644,16 +642,10 @@ bool DatabaseCassandra::VerifyAndSetupSchema()
             std::stringstream ss;
             ss << "CREATE TABLE " << objName
                 << " (uid uuid PRIMARY KEY";
-            std::set<std::string> lookupKeys;
             for(size_t i = 0; i < vars.size(); i++)
             {
                 auto var = vars[i];
-                std::string type = GetVariableType(var);
-
-                if(var->IsLookupKey())
-                {
-                    lookupKeys.insert(var->GetName());
-                }
+                String type = GetVariableType(var);
 
                 ss << "," << std::endl << var->GetName() << " " << type;
             }
@@ -685,19 +677,24 @@ bool DatabaseCassandra::VerifyAndSetupSchema()
                 {
                     continue;
                 }
+                
+                auto name = String("%1").Arg(var->GetName()).ToLower();
 
-                auto indexStr = libcomp::String("CREATE INDEX idx_%1 ON %2.%3(%1);")
-                    .Arg(var->GetName()).Arg(keyspace).Arg(objName);
+                auto indexStr = String("idx_%1_%2")
+                    .Arg(objName).Arg(name);
 
-                if(Execute(indexStr.ToUtf8()))
+                auto cmd = String("CREATE INDEX %1 ON %2(%3);")
+                    .Arg(indexStr).Arg(objName).Arg(name);
+
+                if(Execute(cmd))
                 {
-                    LOG_DEBUG(libcomp::String("Created '%1' column index.\n")
-                        .Arg(var->GetName()));
+                    LOG_DEBUG(String("Created '%1' column index.\n")
+                        .Arg(indexStr));
                 }
                 else
                 {
-                    LOG_ERROR(libcomp::String("Creation of '%1' column index failed.\n")
-                        .Arg(var->GetName()));
+                    LOG_ERROR(String("Creation of '%1' column index failed.\n")
+                        .Arg(indexStr));
                     return false;
                 }
             }
@@ -705,10 +702,12 @@ bool DatabaseCassandra::VerifyAndSetupSchema()
 
         if(!creating && !archiving && needsIndex.size() == 0)
         {
-            LOG_DEBUG(libcomp::String("'%1': Verified\n")
+            LOG_DEBUG(String("'%1': Verified\n")
                 .Arg(metaObject.GetName()));
         }
     }
+
+    LOG_DEBUG("Database verification complete.\n");
 
     return true;
 }
@@ -746,7 +745,7 @@ bool DatabaseCassandra::WaitForFuture(CassFuture *pFuture)
     return result;
 }
 
-std::string DatabaseCassandra::GetVariableType(const std::shared_ptr
+String DatabaseCassandra::GetVariableType(const std::shared_ptr
     <libobjgen::MetaVariable> var)
 {
     switch(var->GetMetaType())

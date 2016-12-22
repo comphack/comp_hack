@@ -69,7 +69,7 @@ public:
 
 protected:
     bool WaitForFuture(CassFuture *pFuture);
-    std::string GetVariableType(const std::shared_ptr<libobjgen::MetaVariable> var);
+    String GetVariableType(const std::shared_ptr<libobjgen::MetaVariable> var);
 
     std::vector<char> ConvertToRawByteStream(const std::shared_ptr<libobjgen::MetaVariable>& var,
         const std::vector<char>& columnData);

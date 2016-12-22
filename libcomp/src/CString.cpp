@@ -578,7 +578,7 @@ String String::Arg(const String& a) const
         }
     };
 
-    std::regex re("\\%([0-9]{1,2})\\b");
+    std::regex re("\\%([0-9]+)");
     std::string s = std::regex_replace(d->mString.cbegin(),
         d->mString.cend(), re, callback);
 

@@ -233,21 +233,21 @@ TEST(String, Arguments)
         "b2").Arg("a1").Arg("c3"));
 
     std::stringstream ss, ss2;
-    ss << "Arguments: %100";
-    ss2 << "Arguments: %100";
+    ss << "Arguments: ";
+    ss2 << "Arguments: ";
 
-    for(int i = 1; i <= 99; ++i)
+    for(int i = 1; i <= 100; ++i)
     {
         ss << " %" << i;
-        ss2 << " " << (100 - i);
+        ss2 << " " << (101 - i);
     }
 
     String s(ss.str());
 
-    for(int i = 1; i <= 99; ++i)
+    for(int i = 1; i <= 100; ++i)
     {
         std::stringstream a;
-        a << (100 - i);
+        a << (101 - i);
 
         s = s.Arg(a.str());
     }
@@ -411,6 +411,17 @@ TEST(String, ToInteger)
     EXPECT_TRUE(ok);
     EXPECT_EQ(-28, String("-0x1c").ToInteger<int8_t>(&ok));
     EXPECT_TRUE(ok);
+}
+
+TEST(String, ArgUnderscoreBug)
+{
+    std::string objName = "a";
+    std::string name = "b";
+
+    auto indexName = libcomp::String("idx_%1_%2")
+        .Arg(objName).Arg(name).ToUtf8();
+
+    EXPECT_EQ("idx_a_b", indexName);
 }
 
 int main(int argc, char *argv[])

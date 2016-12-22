@@ -55,7 +55,7 @@ public:
 
     bool FinalizeObjectAndReferences(const std::string& object);
 
-    bool MetaObjectXmlParser::SetReferenceFieldDynamicSizes(
+    bool SetReferenceFieldDynamicSizes(
         const std::list<std::shared_ptr<libobjgen::MetaVariableReference>>& refs);
 
     std::shared_ptr<MetaObject> GetCurrentObject() const;

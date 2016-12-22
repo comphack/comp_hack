@@ -487,40 +487,65 @@ bool DatabaseCassandra::VerifyAndSetupSchema()
         }
     }
 
-    std::unordered_map<std::string,
-        std::unordered_map<std::string, std::string>> fieldMap;
     if(metaObjectTables.size() == 0)
     {
         return true;
     }
-    else
+
+    LOG_DEBUG("Verifying database table structure.\n");
+
+    auto cmd = libcomp::String("SELECT table_name, column_name, type"
+                            " FROM system_schema.columns"
+                            " WHERE keyspace_name = '%1';").Arg(keyspace);
+
+    DatabaseQuery q = Prepare(cmd);
+    std::list<std::unordered_map<std::string, std::vector<char>>> results;
+    if(!q.Execute() || !q.Next() || !q.GetRows(results))
     {
-        LOG_DEBUG("Verifying database table structure.\n");
+        LOG_CRITICAL("Failed to query for column schema.\n");
 
-        std::stringstream ss;
-        ss << "SELECT table_name, column_name, type"
-            << " FROM system_schema.columns"
-            " WHERE keyspace_name = '"
-            << keyspace << "';";
+        return false;
+    }
 
-        DatabaseQuery q = Prepare(ss.str());
-        std::list<std::unordered_map<std::string, std::vector<char>>> results;
-        if(!q.Execute() || !q.Next() || !q.GetRows(results))
-        {
-            LOG_CRITICAL("Failed to query for column schema.\n");
+    std::unordered_map<std::string,
+        std::unordered_map<std::string, std::string >> fieldMap;
+    for(auto row : results)
+    {
+        std::string tableName(&row["table_name"][0], row["table_name"].size());
+        std::string colName(&row["column_name"][0], row["column_name"].size());
+        std::string dataType(&row["type"][0], row["type"].size());
 
-            return false;
-        }
+        std::unordered_map<std::string, std::string>& m = fieldMap[tableName];
+        m[colName] = dataType;
+    }
 
-        for(auto row : results)
-        {
-            std::string tableName(&row["table_name"][0], row["table_name"].size());
-            std::string colName(&row["column_name"][0], row["column_name"].size());
-            std::string dataType(&row["type"][0], row["type"].size());
+    results.clear();
+    cmd = libcomp::String("SELECT table_name, index_name"
+        " FROM system_schema.indexes"
+        " WHERE keyspace_name = '%1';").Arg(keyspace);
 
-            std::unordered_map<std::string, std::string>& m = fieldMap[tableName];
-            m[colName] = dataType;
-        }
+    q = Prepare(cmd);
+    if(!q.Execute())
+    {
+        LOG_CRITICAL("Failed to query for column indexes.\n");
+
+        return false;
+    }
+
+    //If we get zero rows, keep going anyway because execution didn't fail
+    if(q.Next())
+    {
+        q.GetRows(results);
+    }
+
+    std::unordered_map<std::string, std::set<std::string>> indexedFields;
+    for(auto row : results)
+    {
+        std::string tableName(&row["table_name"][0], row["table_name"].size());
+        std::string indexName(&row["index_name"][0], row["index_name"].size());
+
+        std::set<std::string>& s = indexedFields[tableName];
+        s.insert(indexName);
     }
 
     for(auto metaObjectTable : metaObjectTables)
@@ -546,6 +571,7 @@ bool DatabaseCassandra::VerifyAndSetupSchema()
 
         bool creating = false;
         bool archiving = false;
+        std::set<std::string> needsIndex;
         auto tableIter = fieldMap.find(objName);
         if(tableIter == fieldMap.end())
         {
@@ -562,6 +588,7 @@ bool DatabaseCassandra::VerifyAndSetupSchema()
             }
             else
             {
+                auto indexes = indexedFields[objName];
                 columns.erase("uid");
                 for(auto var : vars)
                 {
@@ -573,6 +600,14 @@ bool DatabaseCassandra::VerifyAndSetupSchema()
                         || columns[name] != type)
                     {
                         archiving = true;
+                    }
+
+                    auto indexName = libcomp::String("idx_%1")
+                        .Arg(name).ToUtf8();
+                    if(var->IsLookupKey() &&
+                        indexes.find(indexName) == indexes.end())
+                    {
+                        needsIndex.insert(var->GetName());
                     }
                 }
             }
@@ -609,10 +644,16 @@ bool DatabaseCassandra::VerifyAndSetupSchema()
             std::stringstream ss;
             ss << "CREATE TABLE " << objName
                 << " (uid uuid PRIMARY KEY";
+            std::set<std::string> lookupKeys;
             for(size_t i = 0; i < vars.size(); i++)
             {
                 auto var = vars[i];
                 std::string type = GetVariableType(var);
+
+                if(var->IsLookupKey())
+                {
+                    lookupKeys.insert(var->GetName());
+                }
 
                 ss << "," << std::endl << var->GetName() << " " << type;
             }
@@ -629,8 +670,40 @@ bool DatabaseCassandra::VerifyAndSetupSchema()
                 LOG_ERROR("Creation failed\n");
                 return false;
             }
+
         }
-        else
+
+        //If we made the table or are missing an index, make them now
+        if(needsIndex.size() > 0 || creating)
+        {
+            for(size_t i = 0; i < vars.size(); i++)
+            {
+                auto var = vars[i];
+
+                if(!var->IsLookupKey() ||
+                    (!creating && needsIndex.find(var->GetName()) == needsIndex.end()))
+                {
+                    continue;
+                }
+
+                auto indexStr = libcomp::String("CREATE INDEX idx_%1 ON %2.%3(%1);")
+                    .Arg(var->GetName()).Arg(keyspace).Arg(objName);
+
+                if(Execute(indexStr.ToUtf8()))
+                {
+                    LOG_DEBUG(libcomp::String("Created '%1' column index.\n")
+                        .Arg(var->GetName()));
+                }
+                else
+                {
+                    LOG_ERROR(libcomp::String("Creation of '%1' column index failed.\n")
+                        .Arg(var->GetName()));
+                    return false;
+                }
+            }
+        }
+
+        if(!creating && !archiving && needsIndex.size() == 0)
         {
             LOG_DEBUG(libcomp::String("'%1': Verified\n")
                 .Arg(metaObject.GetName()));

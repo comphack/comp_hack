@@ -70,6 +70,7 @@ SET(${PROJECT_NAME}_SRCS
     src/MessagePacket.cpp
     src/MessagePong.cpp
     src/MessageShutdown.cpp
+    src/MessageTimeout.cpp
     src/MessageWorldNotification.cpp
     src/Object.cpp
     src/Packet.cpp
@@ -136,6 +137,7 @@ SET(${PROJECT_NAME}_HDRS
     src/MessagePong.h
     src/MessageQueue.h
     src/MessageShutdown.h
+    src/MessageTimeout.h
     src/MessageWorldNotification.h
     src/Object.h
     src/Packet.h
@@ -202,6 +204,10 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     DatabaseConfigCassandra.cpp
     DatabaseConfigSQLite3.h
     DatabaseConfigSQLite3.cpp
+    PacketLogin.h
+    PacketLogin.cpp
+    PacketResponseCode.h
+    PacketResponseCode.cpp
     ServerConfig.h
     ServerConfig.cpp
     TestObject.h

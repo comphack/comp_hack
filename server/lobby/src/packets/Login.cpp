@@ -61,7 +61,8 @@ bool Parsers::Login::Parse(libcomp::ManagerPacket *pPacketManager,
     LOG_DEBUG(libcomp::String("Client Version: %1.%2\n").Arg(major).Arg(minor));
 
     objects::PacketResponseCode reply;
-    reply.SetCommandCode(ClientPacketCode_t::PACKET_LOGIN_RESPONSE);
+    reply.SetCommandCode(to_underlying(
+        LobbyClientPacketCode_t::PACKET_LOGIN_RESPONSE));
 
     /*
      *  0   No error

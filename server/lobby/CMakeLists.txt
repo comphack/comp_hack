@@ -60,10 +60,6 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     # Output files
     LobbyConfig.h
     LobbyConfig.cpp
-    PacketLogin.h
-    PacketLogin.cpp
-    PacketResponseCode.h
-    PacketResponseCode.cpp
 )
 
 SOURCE_GROUP("Source Files\\Packets" src/packets/*)

@@ -48,7 +48,8 @@ bool Parsers::QueryPurchaseTicket::Parse(libcomp::ManagerPacket *pPacketManager,
     }
 
     libcomp::Packet reply;
-    reply.WriteU16Little(ClientPacketCode_t::PACKET_QUERY_PURCHASE_TICKET_RESPONSE);
+    reply.WritePacketCode(
+        LobbyClientPacketCode_t::PACKET_QUERY_PURCHASE_TICKET_RESPONSE);
     reply.WriteU32Little(0);
     reply.WriteU8(1);
 

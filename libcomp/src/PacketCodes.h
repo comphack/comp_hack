@@ -27,7 +27,11 @@
 #ifndef LIBCOMP_SRC_PACKETCODES_H
 #define LIBCOMP_SRC_PACKETCODES_H
 
-typedef enum
+// Standard C++11 Includes
+#include <stdint.h>
+#include <type_traits>
+
+enum class LobbyClientPacketCode_t : uint16_t
 {
     PACKET_LOGIN = 0x0003,
     PACKET_LOGIN_RESPONSE = 0x0004,
@@ -47,20 +51,26 @@ typedef enum
     PACKET_QUERY_PURCHASE_TICKET_RESPONSE = 0x0012,
     PACKET_PURCHASE_TICKET = 0x0013,
     PACKET_PURCHASE_TICKET_RESPONSE = 0x0014,
-} ClientPacketCode_t;
+};
 
-typedef enum
+enum class InternalPacketCode_t : uint16_t
 {
     PACKET_DESCRIBE_WORLD = 0x1001,
     PACKET_SET_WORLD_DESCRIPTION = 0x1002,
     PACKET_SET_CHANNEL_DESCRIPTION = 0x1003,
-} InternalPacketCode_t;
+};
 
-typedef enum
+enum class InternalPacketAction_t : uint8_t
 {
     PACKET_ACTION_ADD = 1,
     PACKET_ACTION_UPDATE,
     PACKET_ACTION_REMOVE,
-} InternalPacketAction_t;
+};
+
+template<typename T>
+constexpr typename std::underlying_type<T>::type to_underlying(T val)
+{
+    return static_cast<typename std::underlying_type<T>::type>(val);
+}
 
 #endif // LIBCOMP_SRC_PACKETCODES_H

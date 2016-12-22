@@ -27,13 +27,64 @@
 #ifndef LIBTESTER_SRC_LOBBYCLIENT_H
 #define LIBTESTER_SRC_LOBBYCLIENT_H
 
+// libcomp Includes
+#include <LobbyConnection.h>
+#include <PacketCodes.h>
+
+// Standard C++11 Includes
+#include <functional>
+#include <thread>
+
 namespace libtester
 {
+
+typedef std::list<libcomp::Message::Message*> MessageList;
 
 class LobbyClient
 {
 public:
+    static constexpr asio::steady_timer::duration DEFAULT_TIMEOUT =
+        std::chrono::seconds(10);
+
+    enum class WaitStatus
+    {
+        Success,
+        Failure,
+        Wait,
+    };
+
     LobbyClient();
+    ~LobbyClient();
+
+    bool Connect();
+
+    bool WaitEncrypted(double& waitTime, asio::steady_timer::duration timeout =
+        DEFAULT_TIMEOUT);
+
+    bool WaitForPacket(LobbyClientPacketCode_t code,
+        libcomp::ReadOnlyPacket& p, double& waitTime,
+        asio::steady_timer::duration timeout = DEFAULT_TIMEOUT);
+
+    bool WaitForMessage(std::function<WaitStatus(
+        const MessageList&)> eventFilter, double& waitTime,
+        asio::steady_timer::duration timeout = DEFAULT_TIMEOUT);
+    MessageList TakeMessages();
+    void ClearMessages();
+
+    std::shared_ptr<libcomp::LobbyConnection> GetConnection();
+
+private:
+    bool HasDisconnectOrTimeout();
+
+    asio::io_service mService;
+    std::thread mServiceThread;
+    asio::steady_timer mTimer;
+
+    std::shared_ptr<libcomp::LobbyConnection> mConnection;
+    std::shared_ptr<libcomp::MessageQueue<
+        libcomp::Message::Message*>> mMessageQueue;
+
+    MessageList mReceivedMessages;
 };
 
 } // namespace libtester

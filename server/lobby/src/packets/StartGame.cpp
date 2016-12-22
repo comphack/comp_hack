@@ -54,7 +54,7 @@ bool Parsers::StartGame::Parse(libcomp::ManagerPacket *pPacketManager,
         ).Arg(cid).Arg(channel));
 
     libcomp::Packet reply;
-    reply.WriteU16Little(ClientPacketCode_t::PACKET_START_GAME_RESPONSE);
+    reply.WritePacketCode(LobbyClientPacketCode_t::PACKET_START_GAME_RESPONSE);
 
     // Some session key.
     reply.WriteU32Little(0);

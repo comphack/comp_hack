@@ -1,12 +1,12 @@
 /**
- * @file server/lobby/src/packets/Login.cpp
- * @ingroup lobby
+ * @file libtester/src/Login.h
+ * @ingroup libtester
  *
  * @author COMP Omega <compomega@tutanota.com>
  *
- * @brief Manager to handle lobby packets.
+ * @brief Test functions to aid in login.
  *
- * This file is part of the Lobby Server (lobby).
+ * This file is part of the COMP_hack Tester Library (libtester).
  *
  * Copyright (C) 2012-2016 COMP_hack Team <compomega@tutanota.com>
  *
@@ -24,34 +24,24 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "Packets.h"
+#ifndef LIBTESTER_SRC_LOGIN_H
+#define LIBTESTER_SRC_LOGIN_H
 
 // libcomp Includes
-#include <Decrypt.h>
-#include <Log.h>
-#include <Packet.h>
-#include <PacketCodes.h>
-#include <ReadOnlyPacket.h>
-#include <TcpConnection.h>
+#include <HttpConnection.h>
 
-using namespace lobby;
-
-bool Parsers::PurchaseTicket::Parse(libcomp::ManagerPacket *pPacketManager,
-    const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
+namespace libtester
 {
-    (void)pPacketManager;
 
-    if(p.Size() != 0)
-    {
-        return false;
-    }
+namespace Login
+{
 
-    libcomp::Packet reply;
-    reply.WritePacketCode(
-        LobbyClientPacketCode_t::PACKET_PURCHASE_TICKET_RESPONSE);
+bool WebLogin(const libcomp::String& username,
+    const libcomp::String& password, const libcomp::String& clientVersion,
+    libcomp::String& sid1, libcomp::String& sid2);
 
-    connection->SendPacket(reply);
+} // namespace Login
 
-    return true;
-}
+} // namespace libtester
+
+#endif // LIBTESTER_SRC_LOGIN_H

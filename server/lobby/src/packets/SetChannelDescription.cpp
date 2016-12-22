@@ -50,7 +50,7 @@ bool Parsers::SetChannelDescription::Parse(libcomp::ManagerPacket *pPacketManage
         return false;
     }
 
-    auto action = (InternalPacketAction_t)p.ReadU8();
+    auto action = static_cast<InternalPacketAction_t>(p.ReadU8());
 
     objects::ChannelDescription obj;
 
@@ -64,7 +64,7 @@ bool Parsers::SetChannelDescription::Parse(libcomp::ManagerPacket *pPacketManage
 
     auto world = server->GetWorldByConnection(conn);
 
-    if(action == PACKET_ACTION_REMOVE)
+    if(InternalPacketAction_t::PACKET_ACTION_REMOVE == action)
     {
         world->RemoveChannelDescriptionByID(obj.GetID());
     }

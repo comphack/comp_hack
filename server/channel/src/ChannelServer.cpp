@@ -40,8 +40,8 @@
 
 using namespace channel;
 
-ChannelServer::ChannelServer(std::shared_ptr<objects::ServerConfig> config, const libcomp::String& configPath) :
-    libcomp::BaseServer(config, configPath)
+ChannelServer::ChannelServer(std::shared_ptr<objects::ServerConfig> config,
+    const libcomp::String& configPath) : libcomp::BaseServer(config, configPath)
 {
 }
 
@@ -58,7 +58,8 @@ bool ChannelServer::Initialize(std::weak_ptr<BaseServer>& self)
     worldConnection->SetSelf(worldConnection);
     worldConnection->SetMessageQueue(mMainWorker.GetMessageQueue());
 
-    mManagerConnection = std::shared_ptr<ManagerConnection>(new ManagerConnection(self));
+    mManagerConnection = std::shared_ptr<ManagerConnection>(
+        new ManagerConnection(self));
     mManagerConnection->SetWorldConnection(worldConnection);
 
     auto conf = std::dynamic_pointer_cast<objects::ChannelConfig>(mConfig);
@@ -76,14 +77,17 @@ bool ChannelServer::Initialize(std::weak_ptr<BaseServer>& self)
         return false;
     }
 
-    auto internalPacketManager = std::shared_ptr<libcomp::ManagerPacket>(new libcomp::ManagerPacket(self));
-    internalPacketManager->AddParser<Parsers::SetWorldDescription>(PACKET_SET_WORLD_DESCRIPTION);
+    auto internalPacketManager = std::shared_ptr<libcomp::ManagerPacket>(
+        new libcomp::ManagerPacket(self));
+    internalPacketManager->AddParser<Parsers::SetWorldDescription>(
+        to_underlying(InternalPacketCode_t::PACKET_SET_WORLD_DESCRIPTION));
 
     //Add the managers to the main worker.
     mMainWorker.AddManager(internalPacketManager);
     mMainWorker.AddManager(mManagerConnection);
 
-    auto clientPacketManager = std::shared_ptr<libcomp::ManagerPacket>(new libcomp::ManagerPacket(self));
+    auto clientPacketManager = std::shared_ptr<libcomp::ManagerPacket>(
+        new libcomp::ManagerPacket(self));
     /// @todo: Add client side packet parsers
 
     // Add the managers to the generic workers.
@@ -119,7 +123,8 @@ objects::WorldDescription ChannelServer::GetWorldDescription()
     return mWorldDescription;
 }
 
-void ChannelServer::SetWorldDescription(objects::WorldDescription& worldDescription)
+void ChannelServer::SetWorldDescription(
+    objects::WorldDescription& worldDescription)
 {
     mWorldDescription = worldDescription;
 }

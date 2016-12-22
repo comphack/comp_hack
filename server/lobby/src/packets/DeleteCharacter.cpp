@@ -52,7 +52,8 @@ bool Parsers::DeleteCharacter::Parse(libcomp::ManagerPacket *pPacketManager,
     LOG_DEBUG(libcomp::String("Character ID: %1\n").Arg(cid));
 
     libcomp::Packet reply;
-    reply.WriteU16Little(ClientPacketCode_t::PACKET_DELETE_CHARACTER_RESPONSE);
+    reply.WritePacketCode(
+        LobbyClientPacketCode_t::PACKET_DELETE_CHARACTER_RESPONSE);
     reply.WriteU8(cid);
 
     connection->SendPacket(reply);

@@ -60,7 +60,8 @@ bool Parsers::SetWorldDescription::Parse(libcomp::ManagerPacket *pPacketManager,
     //Reply with the channel information
     libcomp::Packet reply;
 
-    reply.WriteU16Little(PACKET_SET_CHANNEL_DESCRIPTION);
+    reply.WritePacketCode(
+        InternalPacketCode_t::PACKET_SET_CHANNEL_DESCRIPTION);
     server->GetDescription().SavePacket(reply);
 
     connection->SendPacket(reply);

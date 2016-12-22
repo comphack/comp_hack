@@ -69,8 +69,10 @@ bool Parsers::SetChannelDescription::Parse(libcomp::ManagerPacket *pPacketManage
     auto lobbyConnection = server->GetLobbyConnection();
 
     libcomp::Packet packet;
-    packet.WriteU16Little(PACKET_SET_CHANNEL_DESCRIPTION);
-    packet.WriteU8(PACKET_ACTION_UPDATE);
+    packet.WritePacketCode(
+        InternalPacketCode_t::PACKET_SET_CHANNEL_DESCRIPTION);
+    packet.WriteU8(to_underlying(
+        InternalPacketAction_t::PACKET_ACTION_UPDATE));
     obj.SavePacket(packet);
     lobbyConnection->SendPacket(packet);
 

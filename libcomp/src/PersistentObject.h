@@ -92,7 +92,7 @@ public:
     *   Persisted types needed in other databases should derive from this class
     *   to register their own as well.
     */
-    static void Initialize();
+    static bool Initialize();
 
     /*
     *   Retrieve an object by its UUID but do not load from the database
@@ -143,8 +143,8 @@ public:
     /*
     *   Returns the result of parsing metadata XML
     */
-    static std::shared_ptr<libobjgen::MetaObject> GetMetadataFromXml(
-        const std::string& xml);
+    static std::shared_ptr<libobjgen::MetaObject> GetMetadataFromBytes(
+        const char* bytes, size_t length);
 
     /*
     *   Returns a new instance of a PersistentObject derived type
@@ -193,6 +193,8 @@ protected:
     */
     static std::shared_ptr<PersistentObject> LoadObject(std::type_index type,
         DatabaseBind *pValue);
+
+    static bool sInitializationFailed;
 
     libobjgen::UUID mUUID;
 

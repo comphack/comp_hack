@@ -47,12 +47,11 @@ public:
     std::string GetError() const;
 
     bool Load(const tinyxml2::XMLDocument& doc,
-        const tinyxml2::XMLElement& root, bool verifyReferences = true);
+        const tinyxml2::XMLElement& root);
     bool LoadTypeInformation(const tinyxml2::XMLDocument& doc,
         const tinyxml2::XMLElement& root);
     bool LoadMembers(const std::string& object,
-        const tinyxml2::XMLDocument& doc, const tinyxml2::XMLElement& root,
-        bool verifyReferences);
+        const tinyxml2::XMLDocument& doc, const tinyxml2::XMLElement& root);
 
     bool FinalizeObjectAndReferences(const std::string& object);
 
@@ -79,13 +78,16 @@ private:
 
     bool DefaultsSpecified(const tinyxml2::XMLElement *pMember) const;
 
+    bool HasCircularReference(const std::shared_ptr<MetaObject> obj,
+        const std::set<std::string>& references) const;
+
     std::unordered_map<std::string, std::shared_ptr<MetaObject>> mKnownObjects;
+    std::unordered_map<std::string, std::string> mObjectXml;
 
     std::shared_ptr<MetaObject> mObject;
     std::set<std::string> mMemberLoadedObjects;
     std::set<std::string> mFinalizedObjects;
     std::string mError;
-    bool mReferencesVerified;
 };
 
 } // namespace libobjgen

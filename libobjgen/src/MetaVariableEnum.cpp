@@ -97,6 +97,8 @@ bool MetaVariableEnum::IsValid() const
 
 bool MetaVariableEnum::Load(std::istream& stream)
 {
+    MetaVariable::Load(stream);
+
     stream.read(reinterpret_cast<char*>(&mDefaultValue),
         sizeof(mDefaultValue));
 
@@ -108,7 +110,7 @@ bool MetaVariableEnum::Load(std::istream& stream)
     for(size_t i = 0; i < len; i++)
     {
         std::string val;
-        LoadString(stream, val);
+        Generator::LoadString(stream, val);
         mValues.push_back(val);
     }
 
@@ -119,7 +121,7 @@ bool MetaVariableEnum::Save(std::ostream& stream) const
 {
     bool result = false;
 
-    if(IsValid())
+    if(IsValid() && MetaVariable::Save(stream))
     {
         stream.write(reinterpret_cast<const char*>(&mDefaultValue),
             sizeof(mDefaultValue));
@@ -130,7 +132,7 @@ bool MetaVariableEnum::Save(std::ostream& stream) const
 
         for(auto val : mValues)
         {
-            SaveString(stream, val);
+            Generator::SaveString(stream, val);
         }
 
         result = stream.good();

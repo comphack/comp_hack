@@ -69,6 +69,9 @@ public:
 
     static std::string Escape(const std::string& str);
 
+    static bool LoadString(std::istream& stream, std::string& s);
+    static bool SaveString(std::ostream& stream, const std::string& s);
+
 private:
     mutable ttvfs::Root mVfs;
 };

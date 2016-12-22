@@ -43,8 +43,6 @@
 
 using namespace libobjgen;
 
-std::unordered_map<std::string, MetaObject*> MetaObject::sKnownObjects;
-
 MetaObject::MetaObject()
 {
 }
@@ -73,11 +71,6 @@ std::string MetaObject::GetSourceLocation() const
     return mSourceLocation;
 }
 
-std::string MetaObject::GetXMLDefinition() const
-{
-    return mXmlDefinition;
-}
-
 bool MetaObject::SetName(const std::string& name)
 {
     if(IsValidIdentifier(name))
@@ -101,11 +94,6 @@ bool MetaObject::SetBaseObject(const std::string& baseObject)
 void MetaObject::SetSourceLocation(const std::string& location)
 {
     mSourceLocation = location;
-}
-
-void MetaObject::SetXMLDefinition(const std::string& xmlDefinition)
-{
-    mXmlDefinition = xmlDefinition;
 }
 
 bool MetaObject::AddVariable(const std::shared_ptr<MetaVariable>& var)
@@ -232,6 +220,58 @@ bool MetaObject::IsValidIdentifier(const std::string& ident)
     return result;
 }
 
+bool MetaObject::IsValid() const
+{
+    for(auto var : mVariables)
+    {
+        if(!var->IsValid())
+        {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+bool MetaObject::Load(std::istream& stream)
+{
+    Generator::LoadString(stream, mName);
+    Generator::LoadString(stream, mBaseObject);
+    stream.read(reinterpret_cast<char*>(&mPersistent),
+        sizeof(mPersistent));
+    Generator::LoadString(stream, mSourceLocation);
+
+    VariableList vars;
+    if(MetaVariable::LoadVariableList(stream, vars))
+    {
+        mVariables.clear();
+        mVariableMapping.clear();
+        for(auto var : vars)
+        {
+            AddVariable(var);
+        }
+    }
+
+    return stream.good();
+}
+
+bool MetaObject::Save(std::ostream& stream) const
+{
+    if(!IsValid())
+    {
+        return false;
+    }
+
+    Generator::SaveString(stream, mName);
+    Generator::SaveString(stream, mBaseObject);
+    stream.write(reinterpret_cast<const char*>(&mPersistent),
+        sizeof(mPersistent));
+    Generator::SaveString(stream, mSourceLocation);
+
+    return stream.good() &&
+        MetaVariable::SaveVariableList(stream, mVariables);
+}
+
 bool MetaObject::Save(tinyxml2::XMLDocument& doc,
     tinyxml2::XMLElement& root) const
 {
@@ -249,118 +289,6 @@ bool MetaObject::Save(tinyxml2::XMLDocument& doc,
     }
 
     return true;
-}
-
-std::shared_ptr<MetaVariable> MetaObject::CreateType(
-    const std::string& typeName)
-{
-    std::shared_ptr<MetaVariable> var;
-
-    static std::regex re("^([a-zA-Z_](?:[a-zA-Z0-9][a-zA-Z0-9_]*)?)[*]$");
-
-    static std::unordered_map<std::string,
-        std::shared_ptr<MetaVariable> (*)()> objectCreatorFunctions;
-
-    if(objectCreatorFunctions.empty())
-    {
-        objectCreatorFunctions["u8"]  = []() { return std::shared_ptr<
-            MetaVariable>(new MetaVariableInt<uint8_t>()); };
-        objectCreatorFunctions["u16"] = []() { return std::shared_ptr<
-            MetaVariable>(new MetaVariableInt<uint16_t>()); };
-        objectCreatorFunctions["u32"] = []() { return std::shared_ptr<
-            MetaVariable>(new MetaVariableInt<uint32_t>()); };
-        objectCreatorFunctions["u64"] = []() { return std::shared_ptr<
-            MetaVariable>(new MetaVariableInt<uint64_t>()); };
-
-        objectCreatorFunctions["s8"]  = []() { return std::shared_ptr<
-            MetaVariable>(new MetaVariableInt<int8_t>()); };
-        objectCreatorFunctions["s16"] = []() { return std::shared_ptr<
-            MetaVariable>(new MetaVariableInt<int16_t>()); };
-        objectCreatorFunctions["s32"] = []() { return std::shared_ptr<
-            MetaVariable>(new MetaVariableInt<int32_t>()); };
-        objectCreatorFunctions["s64"] = []() { return std::shared_ptr<
-            MetaVariable>(new MetaVariableInt<int64_t>()); };
-
-        objectCreatorFunctions["f32"] = []() { return std::shared_ptr<
-            MetaVariable>(new MetaVariableInt<float>()); };
-        objectCreatorFunctions["float"] = []() { return std::shared_ptr<
-            MetaVariable>(new MetaVariableInt<float>()); };
-        objectCreatorFunctions["single"] = []() { return std::shared_ptr<
-            MetaVariable>(new MetaVariableInt<float>()); };
-
-        objectCreatorFunctions["f64"] = []() { return std::shared_ptr<
-            MetaVariable>(new MetaVariableInt<double>()); };
-        objectCreatorFunctions["double"] = []() { return std::shared_ptr<
-            MetaVariable>(new MetaVariableInt<double>()); };
-
-        objectCreatorFunctions["enum"] = []() { return std::shared_ptr<
-            MetaVariable>(new MetaVariableEnum()); };
-
-        objectCreatorFunctions["string"] = []() { return std::shared_ptr<
-            MetaVariable>(new MetaVariableString()); };
-    }
-
-    auto creatorFunctionPair = objectCreatorFunctions.find(typeName);
-
-    std::smatch match;
-
-    if(std::regex_match(typeName, match, re))
-    {
-        var = std::shared_ptr<MetaVariable>(new MetaVariableReference());
-
-        if(!var || !std::dynamic_pointer_cast<MetaVariableReference>(
-            var)->SetReferenceType(match[1]))
-        {
-            // The type isn't valid, free the object.
-            var.reset();
-        }
-    }
-    else if(objectCreatorFunctions.end() != creatorFunctionPair)
-    {
-        // Create the object of the desired type.
-        var = (*creatorFunctionPair->second)();
-    }
-
-    return var;
-}
-
-bool MetaObject::HasCircularReference() const
-{
-    return HasCircularReference(std::set<std::string>());
-}
-
-bool MetaObject::HasCircularReference(
-    const std::set<std::string>& references) const
-{
-    bool status = false;
-
-    if(references.end() != references.find(mName))
-    {
-        status = true;
-    }
-    else
-    {
-        std::set<std::string> referencesCopy;
-        referencesCopy.insert(mName);
-
-        for(auto var : GetReferences())
-        {
-            std::shared_ptr<MetaVariableReference> ref =
-                std::dynamic_pointer_cast<MetaVariableReference>(var);
-
-            auto refObject = sKnownObjects.find(ref->GetReferenceType());
-            status = refObject != sKnownObjects.end() &&
-                !refObject->second->GetPersistent() &&
-                refObject->second->HasCircularReference(referencesCopy);
-
-            if(status)
-            {
-                break;
-            }
-        }
-    }
-
-    return status;
 }
 
 std::set<std::string> MetaObject::GetReferencesTypes() const

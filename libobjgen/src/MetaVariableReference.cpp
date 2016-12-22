@@ -113,11 +113,19 @@ bool MetaVariableReference::IsValid() const
 
 bool MetaVariableReference::Load(std::istream& stream)
 {
-    LoadString(stream, mReferenceType);
+    MetaVariable::Load(stream);
+
+    Generator::LoadString(stream, mReferenceType);
     stream.read(reinterpret_cast<char*>(&mDynamicSizeCount),
         sizeof(mDynamicSizeCount));
     stream.read(reinterpret_cast<char*>(&mPersistentParent),
         sizeof(mPersistentParent));
+
+    if(stream.good())
+    {
+        mDefaultedVariables.clear();
+        MetaVariable::LoadVariableList(stream, mDefaultedVariables);
+    }
 
     return stream.good() && IsValid();
 }
@@ -126,13 +134,15 @@ bool MetaVariableReference::Save(std::ostream& stream) const
 {
     bool result = false;
 
-    if(IsValid())
+    if(IsValid() && MetaVariable::Save(stream))
     {
-        SaveString(stream, mReferenceType);
+        Generator::SaveString(stream, mReferenceType);
         stream.write(reinterpret_cast<const char*>(&mDynamicSizeCount),
             sizeof(mDynamicSizeCount));
         stream.write(reinterpret_cast<const char*>(&mPersistentParent),
             sizeof(mPersistentParent));
+
+        MetaVariable::SaveVariableList(stream, mDefaultedVariables);
 
         result = stream.good();
     }

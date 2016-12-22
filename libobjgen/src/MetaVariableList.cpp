@@ -77,11 +77,15 @@ bool MetaVariableList::IsValid() const
 
 bool MetaVariableList::Load(std::istream& stream)
 {
+    MetaVariable::Load(stream);
+
     return IsValid() && mElementType->Load(stream);
 }
 
 bool MetaVariableList::Save(std::ostream& stream) const
 {
+    MetaVariable::Save(stream);
+
     return IsValid() && mElementType->Save(stream);
 }
 

@@ -39,7 +39,7 @@ public:
     virtual std::string Generate(const MetaObject& obj);
 
 private:
-    void GeneratePersistentObjectFunctions(const MetaObject& obj, std::stringstream& ss);
+    bool GeneratePersistentObjectFunctions(const MetaObject& obj, std::stringstream& ss);
     std::string GetBaseBooleanReturnValue(const MetaObject& obj, std::string function, std::string defaultValue = "true");
 };
 

@@ -221,6 +221,8 @@ public:
 
     virtual bool Load(std::istream& stream)
     {
+        MetaVariable::Load(stream);
+
         stream.read(reinterpret_cast<char*>(&mDefaultValue),
             sizeof(mDefaultValue));
         stream.read(reinterpret_cast<char*>(&mMinimumValue),
@@ -235,7 +237,7 @@ public:
     {
         bool result = false;
 
-        if(IsValid())
+        if(IsValid() && MetaVariable::Save(stream))
         {
             stream.write(reinterpret_cast<const char*>(&mDefaultValue),
                 sizeof(mDefaultValue));

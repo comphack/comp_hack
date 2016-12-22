@@ -230,3 +230,42 @@ std::string Generator::Escape(const std::string& str)
 
     return s;
 }
+
+bool Generator::LoadString(std::istream& stream, std::string& s)
+{
+    std::streamsize strLength;
+    stream.read(reinterpret_cast<char*>(&strLength),
+        sizeof(strLength));
+
+    if(!stream.good())
+    {
+        return false;
+    }
+
+    if(strLength == 0)
+    {
+        s = "";
+    }
+    else
+    {
+        char* cStr = new char[strLength + 1];
+        stream.read(cStr, strLength);
+        s = std::string(cStr, (size_t)strLength);
+
+        delete[] cStr;
+    }
+
+    return stream.good();
+}
+
+bool Generator::SaveString(std::ostream& stream, const std::string& s)
+{
+    auto strLength = (std::streamsize)s.length();
+    stream.write(reinterpret_cast<char*>(&strLength),
+        sizeof(strLength));
+
+    char* cStr = const_cast<char*>(s.c_str());
+    stream.write(cStr, strLength);
+
+    return stream.good();
+}

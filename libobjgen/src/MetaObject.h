@@ -65,9 +65,6 @@ public:
     std::string GetSourceLocation() const;
     void SetSourceLocation(const std::string& location);
 
-    std::string GetXMLDefinition() const;
-    void SetXMLDefinition(const std::string& xmlDefinition);
-
     bool AddVariable(const std::shared_ptr<MetaVariable>& var);
     bool RemoveVariable(const std::string& name);
     std::shared_ptr<MetaVariable> GetVariable(const std::string& name);
@@ -86,28 +83,17 @@ public:
     bool Save(tinyxml2::XMLDocument& doc,
         tinyxml2::XMLElement& root) const;
 
-    bool HasCircularReference() const;
-
     std::set<std::string> GetReferencesTypes() const;
     std::list<std::shared_ptr<MetaVariable>> GetReferences() const;
-
-protected:
-    static std::shared_ptr<MetaVariable> CreateType(
-        const std::string& typeName);
 
 private:
     void GetReferences(std::shared_ptr<MetaVariable>& var,
         std::list<std::shared_ptr<MetaVariable>>& references) const;
 
-    bool HasCircularReference(const std::set<std::string>& references) const;
-
-    static std::unordered_map<std::string, MetaObject*> sKnownObjects;
-
     std::string mName;
     std::string mBaseObject;
     bool mPersistent;
     std::string mSourceLocation;
-    std::string mXmlDefinition;
 
     VariableList mVariables;
     VariableMap mVariableMapping;

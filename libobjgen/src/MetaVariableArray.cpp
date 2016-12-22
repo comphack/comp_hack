@@ -100,12 +100,27 @@ bool MetaVariableArray::IsValid() const
 
 bool MetaVariableArray::Load(std::istream& stream)
 {
-    return IsValid() && mElementType->Load(stream);
+    MetaVariable::Load(stream);
+
+    stream.read(reinterpret_cast<char*>(&mElementCount),
+        sizeof(mElementCount));
+
+    return stream.good() && IsValid() && mElementType->Load(stream);
 }
 
 bool MetaVariableArray::Save(std::ostream& stream) const
 {
-    return IsValid() && mElementType->Save(stream);
+    bool result = false;
+
+    if(IsValid() && MetaVariable::Save(stream))
+    {
+        stream.write(reinterpret_cast<const char*>(&mElementCount),
+            sizeof(mElementCount));
+
+        result = stream.good();
+    }
+
+    return result && mElementType->Save(stream);
 }
 
 bool MetaVariableArray::Load(const tinyxml2::XMLDocument& doc,

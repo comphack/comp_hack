@@ -27,9 +27,6 @@
 #ifndef LIBOBJGEN_SRC_METAVARIABLE_H
 #define LIBOBJGEN_SRC_METAVARIABLE_H
 
-// libobjgen Includes
-#include "UUID.h"
-
 // Standard C++11 Includes
 #include <istream>
 #include <memory>
@@ -98,10 +95,13 @@ public:
     virtual bool IsLookupKey() const;
     virtual void SetLookupKey(const bool lookupKey);
 
-    virtual bool Load(std::istream& stream) = 0;
-    bool LoadString(std::istream& stream, std::string& s);
-    virtual bool Save(std::ostream& stream) const = 0;
-    bool SaveString(std::ostream& stream, const std::string& s) const;
+    virtual bool Load(std::istream& stream);
+    virtual bool Save(std::ostream& stream) const;
+
+    static bool LoadVariableList(std::istream& stream,
+        std::list<std::shared_ptr<MetaVariable>>& vars);
+    static bool SaveVariableList(std::ostream& stream,
+        const std::list<std::shared_ptr<MetaVariable>>& vars);
 
     virtual bool Load(const tinyxml2::XMLDocument& doc,
         const tinyxml2::XMLElement& root) = 0;
@@ -161,14 +161,20 @@ public:
     virtual std::string GetDynamicSizeCountCode(const Generator& generator,
         const std::string& name) const;
 
+    static std::shared_ptr<MetaVariable> CreateType(
+        const std::string& typeName);
+
 protected:
+    static std::shared_ptr<MetaVariable> CreateType(
+        const MetaVariable::MetaVariableType_t type,
+        std::vector<MetaVariable::MetaVariableType_t> subtypes = {});
+
     virtual bool BaseLoad(const tinyxml2::XMLElement& element);
     virtual bool BaseSave(tinyxml2::XMLElement& element) const;
 
     std::string mError;
 
 private:
-    UUID mUUID;
     bool mCaps;
     std::string mName;
     bool mInherited;

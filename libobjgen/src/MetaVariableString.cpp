@@ -159,8 +159,10 @@ bool MetaVariableString::IsValid() const
 
 bool MetaVariableString::Load(std::istream& stream)
 {
-    LoadString(stream, mDefaultValue);
-    LoadString(stream, mRegularExpression);
+    MetaVariable::Load(stream);
+
+    Generator::LoadString(stream, mDefaultValue);
+    Generator::LoadString(stream, mRegularExpression);
     stream.read(reinterpret_cast<char*>(&mAllowEmpty),
         sizeof(mAllowEmpty));
     stream.read(reinterpret_cast<char*>(&mEncoding),
@@ -179,10 +181,10 @@ bool MetaVariableString::Save(std::ostream& stream) const
 {
     bool result = false;
 
-    if(IsValid())
+    if(IsValid() && MetaVariable::Save(stream))
     {
-        SaveString(stream, mDefaultValue);
-        SaveString(stream, mRegularExpression);
+        Generator::SaveString(stream, mDefaultValue);
+        Generator::SaveString(stream, mRegularExpression);
         stream.write(reinterpret_cast<const char*>(&mAllowEmpty),
             sizeof(mAllowEmpty));
         stream.write(reinterpret_cast<const char*>(&mEncoding),

@@ -29,6 +29,16 @@
 #include "MetaVariable.h"
 #include "MetaObject.h"
 
+// MetaVariable Types
+#include "MetaVariable.h"
+#include "MetaVariableArray.h"
+#include "MetaVariableEnum.h"
+#include "MetaVariableInt.h"
+#include "MetaVariableList.h"
+#include "MetaVariableMap.h"
+#include "MetaVariableReference.h"
+#include "MetaVariableString.h"
+
 // Standard C++11 Includes
 #include <algorithm>
 #include <sstream>
@@ -85,43 +95,285 @@ void MetaVariable::SetCaps(bool caps)
     mCaps = caps;
 }
 
-bool MetaVariable::LoadString(std::istream& stream, std::string& s)
-{
-    std::streamsize strLength;
-    stream.read(reinterpret_cast<char*>(&strLength),
-        sizeof(strLength));
-
-    if(strLength == 0)
-    {
-        s = "";
-    }
-    else
-    {
-        char* cStr = new char[strLength + 1];
-        stream.read(cStr, strLength);
-        s = std::string(cStr, (size_t)strLength);
-
-        delete[] cStr;
-    }
-
-    return stream.good();
-}
-
-bool MetaVariable::SaveString(std::ostream& stream, const std::string& s) const
-{
-    auto strLength = (std::streamsize)s.length();
-    stream.write(reinterpret_cast<char*>(&strLength),
-        sizeof(strLength));
-
-    char* cStr = const_cast<char*>(s.c_str());
-    stream.write(cStr, strLength);
-
-    return stream.good();
-}
-
 uint16_t MetaVariable::GetDynamicSizeCount() const
 {
     return 0;
+}
+
+bool MetaVariable::Load(std::istream& stream)
+{
+    Generator::LoadString(stream, mName);
+    stream.read(reinterpret_cast<char*>(&mCaps),
+        sizeof(mCaps));
+    stream.read(reinterpret_cast<char*>(&mInherited),
+        sizeof(mInherited));
+    stream.read(reinterpret_cast<char*>(&mLookupKey),
+        sizeof(mLookupKey));
+
+    return stream.good();
+}
+
+bool MetaVariable::Save(std::ostream& stream) const
+{
+    bool result = false;
+
+    if(IsValid())
+    {
+        Generator::SaveString(stream, mName);
+        stream.write(reinterpret_cast<const char*>(&mCaps),
+            sizeof(mCaps));
+        stream.write(reinterpret_cast<const char*>(&mInherited),
+            sizeof(mInherited));
+        stream.write(reinterpret_cast<const char*>(&mLookupKey),
+            sizeof(mLookupKey));
+
+        result = stream.good();
+    }
+
+    return result;
+}
+
+bool MetaVariable::LoadVariableList(std::istream& stream,
+    std::list<std::shared_ptr<MetaVariable>>& vars)
+{
+    size_t varCount;
+    stream.read(reinterpret_cast<char*>(&varCount),
+        sizeof(varCount));
+
+    if(stream.good())
+    {
+        for(size_t i = 0; i < varCount; i++)
+        {
+            MetaVariableType_t metaType;
+            stream.read(reinterpret_cast<char*>(&metaType),
+                sizeof(metaType));
+
+            short subTypeCount;
+            stream.read(reinterpret_cast<char*>(&subTypeCount),
+                sizeof(subTypeCount));
+
+            if(!stream.good())
+            {
+                return false;
+            }
+
+            std::vector<MetaVariableType_t> subTypes;
+            for(short i = 0; i < subTypeCount; i++)
+            {
+                MetaVariableType_t subMetaType;
+                stream.read(reinterpret_cast<char*>(&subMetaType),
+                    sizeof(subMetaType));
+                subTypes.push_back(subMetaType);
+            }
+
+            if(!stream.good())
+            {
+                return false;
+            }
+
+            auto var = CreateType(metaType, subTypes);
+            if(!var || !var->Load(stream))
+            {
+                return false;
+            }
+            vars.push_back(var);
+        }
+    }
+
+    return stream.good() && varCount == vars.size();
+}
+
+bool MetaVariable::SaveVariableList(std::ostream& stream,
+    const std::list<std::shared_ptr<MetaVariable>>& vars)
+{
+    size_t varCount = vars.size();
+    stream.write(reinterpret_cast<const char*>(&varCount),
+        sizeof(varCount));
+    
+    if(stream.good())
+    {
+        for(auto var : vars)
+        {
+            auto metaType = var->GetMetaType();
+            stream.write(reinterpret_cast<const char*>(&metaType),
+                sizeof(metaType));
+
+            std::list<std::shared_ptr<MetaVariable>> subTypes;
+            switch(metaType)
+            {
+                case MetaVariableType_t::TYPE_ARRAY:
+                    {
+                        auto arr = std::dynamic_pointer_cast<
+                            MetaVariableArray>(var);
+
+                        subTypes.push_back(arr->GetElementType());
+                    }
+                    break;
+                case MetaVariableType_t::TYPE_LIST:
+                    {
+                        auto l = std::dynamic_pointer_cast<
+                            MetaVariableList>(var);
+
+                        subTypes.push_back(l->GetElementType());
+                    }
+                    break;
+                case MetaVariableType_t::TYPE_MAP:
+                    {
+                        auto m = std::dynamic_pointer_cast<
+                            MetaVariableMap>(var);
+
+                        subTypes.push_back(m->GetKeyElementType());
+                        subTypes.push_back(m->GetValueElementType());
+                    }
+                    break;
+                default:
+                    break;
+            }
+
+            short subTypeCount = (short)subTypes.size();
+            stream.write(reinterpret_cast<const char*>(&subTypeCount),
+                sizeof(subTypeCount));
+
+            for(auto subType : subTypes)
+            {
+                auto subMetaType = subType->GetMetaType();
+                stream.write(reinterpret_cast<const char*>(&subMetaType),
+                    sizeof(subMetaType));
+            }
+
+            if(!var->Save(stream))
+            {
+                return false;
+            }
+        }
+    }
+
+    return stream.good();
+}
+
+std::shared_ptr<MetaVariable> MetaVariable::CreateType(
+    const std::string& typeName)
+{
+    std::smatch match;
+    static std::regex re("^([a-zA-Z_](?:[a-zA-Z0-9][a-zA-Z0-9_]*)?)[*]$");
+
+    if(std::regex_match(typeName, match, re))
+    {
+        auto var = CreateType(MetaVariableType_t::TYPE_REF);
+
+        if(!var || !std::dynamic_pointer_cast<MetaVariableReference>(
+            var)->SetReferenceType(match[1]))
+        {
+            // The type isn't valid, free the object.
+            var.reset();
+        }
+
+        return var;
+    }
+
+    static std::unordered_map<std::string, MetaVariableType_t> nameToMetaType;
+
+    if(nameToMetaType.empty())
+    {
+        nameToMetaType["u8"] = MetaVariableType_t::TYPE_U8;
+        nameToMetaType["u16"] = MetaVariableType_t::TYPE_U16;
+        nameToMetaType["u32"] = MetaVariableType_t::TYPE_U32;
+        nameToMetaType["u64"] = MetaVariableType_t::TYPE_U64;
+
+        nameToMetaType["s8"] = MetaVariableType_t::TYPE_S8;
+        nameToMetaType["s16"] = MetaVariableType_t::TYPE_S16;
+        nameToMetaType["s32"] = MetaVariableType_t::TYPE_S32;
+        nameToMetaType["s64"] = MetaVariableType_t::TYPE_S64;
+
+        nameToMetaType["f32"] = MetaVariableType_t::TYPE_FLOAT;
+        nameToMetaType["float"] = MetaVariableType_t::TYPE_FLOAT;
+        nameToMetaType["single"] = MetaVariableType_t::TYPE_FLOAT;
+
+        nameToMetaType["f64"] = MetaVariableType_t::TYPE_DOUBLE;
+        nameToMetaType["double"] = MetaVariableType_t::TYPE_DOUBLE;
+
+        nameToMetaType["enum"] = MetaVariableType_t::TYPE_ENUM;
+
+        nameToMetaType["string"] = MetaVariableType_t::TYPE_STRING;
+    }
+
+    auto iter = nameToMetaType.find(typeName);
+    return iter != nameToMetaType.end() ? CreateType(iter->second) : nullptr;
+}
+
+
+std::shared_ptr<MetaVariable> MetaVariable::CreateType(
+    const MetaVariableType_t type,
+    std::vector<MetaVariableType_t> subtypes)
+{
+    switch(type)
+    {
+        case MetaVariableType_t::TYPE_S8:
+            return std::shared_ptr<MetaVariable>(new MetaVariableInt<int8_t>());
+        case MetaVariableType_t::TYPE_U8:
+            return std::shared_ptr<MetaVariable>(new MetaVariableInt<uint8_t>());
+        case MetaVariableType_t::TYPE_S16:
+            return std::shared_ptr<MetaVariable>(new MetaVariableInt<int16_t>());
+        case MetaVariableType_t::TYPE_U16:
+            return std::shared_ptr<MetaVariable>(new MetaVariableInt<uint16_t>());
+        case MetaVariableType_t::TYPE_S32:
+            return std::shared_ptr<MetaVariable>(new MetaVariableInt<int32_t>());
+        case MetaVariableType_t::TYPE_U32:
+            return std::shared_ptr<MetaVariable>(new MetaVariableInt<uint32_t>());
+        case MetaVariableType_t::TYPE_S64:
+            return std::shared_ptr<MetaVariable>(new MetaVariableInt<int64_t>());
+        case MetaVariableType_t::TYPE_U64:
+            return std::shared_ptr<MetaVariable>(new MetaVariableInt<uint64_t>());
+        case MetaVariableType_t::TYPE_FLOAT:
+            return std::shared_ptr<MetaVariable>(new MetaVariableInt<float>());
+        case MetaVariableType_t::TYPE_DOUBLE:
+            return std::shared_ptr<MetaVariable>(new MetaVariableInt<double>());
+        case MetaVariableType_t::TYPE_ENUM:
+            return std::shared_ptr<MetaVariable>(new MetaVariableEnum());
+        case MetaVariableType_t::TYPE_STRING:
+            return std::shared_ptr<MetaVariable>(new MetaVariableString());
+        case MetaVariableType_t::TYPE_ARRAY:
+            if(subtypes.size() == 1)
+            {
+                auto elementType = CreateType(subtypes[0]);
+                if(nullptr != elementType)
+                {
+                    return std::shared_ptr<MetaVariable>(
+                        new MetaVariableArray(elementType));
+                }
+            }
+            break;
+        case MetaVariableType_t::TYPE_LIST:
+            if(subtypes.size() == 1)
+            {
+                auto elementType = CreateType(subtypes[0]);
+                if(nullptr != elementType)
+                {
+                    return std::shared_ptr<MetaVariable>(
+                        new MetaVariableList(elementType));
+                }
+            }
+            break;
+        case MetaVariableType_t::TYPE_MAP:
+            if(subtypes.size() == 2)
+            {
+                auto keyType = CreateType(subtypes[0]);
+                auto valueType = CreateType(subtypes[1]);
+                if(nullptr != keyType && nullptr != valueType)
+                {
+                    return std::shared_ptr<MetaVariable>(
+                        new MetaVariableMap(keyType, valueType));
+                }
+            }
+            break;
+        case MetaVariableType_t::TYPE_REF:
+            return std::shared_ptr<MetaVariable>(new MetaVariableReference());
+            break;
+        default:
+            break;
+    }
+
+    return nullptr;
 }
 
 std::string MetaVariable::GetDeclaration(const std::string& name) const

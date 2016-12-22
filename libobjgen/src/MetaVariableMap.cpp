@@ -84,11 +84,15 @@ bool MetaVariableMap::IsValid() const
 
 bool MetaVariableMap::Load(std::istream& stream)
 {
+    MetaVariable::Load(stream);
+
     return IsValid() && mKeyElementType->Load(stream) && mValueElementType->Load(stream);
 }
 
 bool MetaVariableMap::Save(std::ostream& stream) const
 {
+    MetaVariable::Save(stream);
+
     return IsValid() && mKeyElementType->Save(stream) && mValueElementType->Save(stream);
 }
 

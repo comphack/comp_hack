@@ -49,7 +49,7 @@ std::string MetaObjectXmlParser::GetError() const
 }
 
 bool MetaObjectXmlParser::Load(const tinyxml2::XMLDocument& doc,
-    const tinyxml2::XMLElement& root, bool verifyReferences)
+    const tinyxml2::XMLElement& root)
 {
     if(!LoadTypeInformation(doc, root))
     {
@@ -57,7 +57,7 @@ bool MetaObjectXmlParser::Load(const tinyxml2::XMLDocument& doc,
     }
 
     auto objectName = mObject->GetName();
-    return LoadMembers(objectName, doc, root, verifyReferences);
+    return LoadMembers(objectName, doc, root);
 }
 
 bool MetaObjectXmlParser::LoadTypeInformation(const tinyxml2::XMLDocument& doc,
@@ -141,8 +141,7 @@ bool MetaObjectXmlParser::LoadTypeInformation(const tinyxml2::XMLDocument& doc,
 }
 
 bool MetaObjectXmlParser::LoadMembers(const std::string& object,
-    const tinyxml2::XMLDocument& doc, const tinyxml2::XMLElement& root,
-    bool verifyReferences)
+    const tinyxml2::XMLDocument& doc, const tinyxml2::XMLElement& root)
 {
     mObject = GetKnownObject(object);
     if(nullptr == mObject)
@@ -169,7 +168,6 @@ bool MetaObjectXmlParser::LoadMembers(const std::string& object,
 
     mError.clear();
     mMemberLoadedObjects.insert(object);
-    mReferencesVerified = verifyReferences;
 
     //Base objects override the need for member variables
     bool result = mObject->mBaseObject.length() > 0;
@@ -239,7 +237,7 @@ bool MetaObjectXmlParser::FinalizeObjectAndReferences(const std::string& object)
         if(mMemberLoadedObjects.find(objectName) == mMemberLoadedObjects.end())
         {
             tinyxml2::XMLDocument doc;
-            auto xml = obj->GetXMLDefinition();
+            auto xml = mObjectXml[objectName];
             auto err = doc.Parse(xml.c_str(), xml.length());
             if(err != tinyxml2::XML_NO_ERROR)
             {
@@ -252,7 +250,7 @@ bool MetaObjectXmlParser::FinalizeObjectAndReferences(const std::string& object)
                 return false;
             }
 
-            if(!LoadMembers(objectName, doc, *doc.FirstChildElement(), true))
+            if(!LoadMembers(objectName, doc, *doc.FirstChildElement()))
             {
                 return false;
             }
@@ -275,7 +273,7 @@ bool MetaObjectXmlParser::FinalizeObjectAndReferences(const std::string& object)
     }
 
     mObject = GetKnownObject(object);
-    if(mObject->HasCircularReference())
+    if(HasCircularReference(mObject, std::set<std::string>()))
     {
         std::stringstream ss;
         ss << "Object contains circular reference: "
@@ -364,7 +362,7 @@ void MetaObjectXmlParser::SetXMLDefinition(const tinyxml2::XMLElement& root)
 
     std::stringstream ss;
     ss << printer.CStr();
-    mObject->SetXMLDefinition(ss.str());
+    mObjectXml[mObject->GetName()] = ss.str();
 }
 
 bool MetaObjectXmlParser::LoadMember(const tinyxml2::XMLDocument& doc,
@@ -436,7 +434,7 @@ std::shared_ptr<MetaVariable> MetaObjectXmlParser::GetVariable(const tinyxml2::X
     else
     {
         const std::string memberType(szMemberType);
-        std::shared_ptr<MetaVariable> var = MetaObject::CreateType(memberType);
+        std::shared_ptr<MetaVariable> var = MetaVariable::CreateType(memberType);
 
         if(!var && (memberType == "list" || memberType == "array" || memberType == "map"))
         {
@@ -550,27 +548,24 @@ std::shared_ptr<MetaVariable> MetaObjectXmlParser::GetVariable(const tinyxml2::X
             auto ref = std::dynamic_pointer_cast<MetaVariableReference>(var);
 
             auto refType = ref->GetReferenceType();
-            auto persistentRefType = mReferencesVerified && mKnownObjects[szName]->GetPersistent();
+            auto persistentRefType = mKnownObjects[szName]->GetPersistent();
 
             ref->SetPersistentParent(persistentRefType);
-            if(mReferencesVerified)
+            if(mKnownObjects.find(refType) == mKnownObjects.end())
             {
-                if(mKnownObjects.find(refType) == mKnownObjects.end())
-                {
-                    std::stringstream ss;
-                    ss << "Unknown reference type '" << refType << "' on field  '"
-                        << szMemberName << "' in object '" << szName << "'.";
+                std::stringstream ss;
+                ss << "Unknown reference type '" << refType << "' on field  '"
+                    << szMemberName << "' in object '" << szName << "'.";
 
-                    mError = ss.str();
-                }
-                else if(!mKnownObjects[refType]->GetPersistent() && persistentRefType)
-                {
-                    std::stringstream ss;
-                    ss << "Non-peristent reference type '" << refType << "' on field  '"
-                        << szMemberName << "' in persistent object '" << szName << "'.";
+                mError = ss.str();
+            }
+            else if(!mKnownObjects[refType]->GetPersistent() && persistentRefType)
+            {
+                std::stringstream ss;
+                ss << "Non-peristent reference type '" << refType << "' on field  '"
+                    << szMemberName << "' in persistent object '" << szName << "'.";
 
-                    mError = ss.str();
-                }
+                mError = ss.str();
             }
 
             if(mError.length() == 0)
@@ -684,7 +679,7 @@ bool MetaObjectXmlParser::DefaultsSpecified(const tinyxml2::XMLElement *pMember)
     }
 
     const std::string memberType(szMemberType);
-    auto subVar = MetaObject::CreateType(memberType);
+    auto subVar = MetaVariable::CreateType(memberType);
     if(subVar && subVar->GetMetaType() != MetaVariable::MetaVariableType_t::TYPE_REF)
     {
         return nullptr != pMember->Attribute("default");
@@ -722,6 +717,40 @@ bool MetaObjectXmlParser::DefaultsSpecified(const tinyxml2::XMLElement *pMember)
     }
 
     return true;
+}
+
+bool MetaObjectXmlParser::HasCircularReference(const std::shared_ptr<MetaObject> obj,
+    const std::set<std::string>& references) const
+{
+    bool status = false;
+
+    if(references.end() != references.find(obj->mName))
+    {
+        status = true;
+    }
+    else
+    {
+        std::set<std::string> referencesCopy;
+        referencesCopy.insert(obj->mName);
+
+        for(auto var : obj->GetReferences())
+        {
+            std::shared_ptr<MetaVariableReference> ref =
+                std::dynamic_pointer_cast<MetaVariableReference>(var);
+
+            auto refObject = mKnownObjects.find(ref->GetReferenceType());
+            status = refObject != mKnownObjects.end() &&
+                !refObject->second->GetPersistent() &&
+                HasCircularReference(refObject->second, referencesCopy);
+
+            if(status)
+            {
+                break;
+            }
+        }
+    }
+
+    return status;
 }
 
 std::shared_ptr<MetaObject> MetaObjectXmlParser::GetCurrentObject() const

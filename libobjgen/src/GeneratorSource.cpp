@@ -424,15 +424,15 @@ std::string GeneratorSource::Generate(const MetaObject& obj)
         }
     }
 
-    if(obj.GetPersistent())
+    if(obj.GetPersistent() && !GeneratePersistentObjectFunctions(obj, ss))
     {
-        GeneratePersistentObjectFunctions(obj, ss);
+        return "";
     }
 
     return ss.str();
 }
 
-void GeneratorSource::GeneratePersistentObjectFunctions(const MetaObject& obj,
+bool GeneratorSource::GeneratePersistentObjectFunctions(const MetaObject& obj,
     std::stringstream& ss)
 {
     std::stringstream binds;
@@ -462,9 +462,36 @@ void GeneratorSource::GeneratePersistentObjectFunctions(const MetaObject& obj,
     replacements["@OBJECT_NAME@"] = obj.GetName();
     replacements["@BINDS@"] = binds.str();
     replacements["@GET_DATABASE_VALUES@"] = dbValues.str();
-    replacements["@XML_DEFINITION@"] = Escape(obj.GetXMLDefinition());
+
+    std::stringstream savedBytes;
+    if(!obj.Save(savedBytes))
+    {
+        return false;
+    }
+
+    std::string byteStr(savedBytes.str());
+    replacements["@BYTE_COUNT@"] = std::to_string(byteStr.length());
+
+    std::stringstream outBytes;
+    for(size_t i = 0; i < byteStr.length(); i++)
+    {
+        if(i > 0)
+        {
+            outBytes << ", ";
+            if(i % 10 == 0)
+            {
+                outBytes << std::endl;
+            }
+        }
+
+        outBytes << std::to_string(byteStr[i]);
+    }
+
+    replacements["@BYTES@"] = outBytes.str();
 
     ss << ParseTemplate(0, "VariablePersistentFunctions", replacements);
+
+    return true;
 }
 
 std::string GeneratorSource::GetBaseBooleanReturnValue(const MetaObject& obj,

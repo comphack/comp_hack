@@ -70,6 +70,7 @@ SET(${PROJECT_NAME}_SRCS
     src/MessagePacket.cpp
     src/MessagePong.cpp
     src/MessageShutdown.cpp
+    src/MessageTimeout.cpp
     src/MessageWorldNotification.cpp
     src/Object.cpp
     src/Packet.cpp
@@ -136,6 +137,7 @@ SET(${PROJECT_NAME}_HDRS
     src/MessagePong.h
     src/MessageQueue.h
     src/MessageShutdown.h
+    src/MessageTimeout.h
     src/MessageWorldNotification.h
     src/Object.h
     src/ObjectReference.h
@@ -177,6 +179,8 @@ SET(${PROJECT_NAME}_SCHEMA
     schema/databaseconfig.xml
     schema/databaseconfig_cassandra.xml
     schema/databaseconfig_sqlite3.xml
+    schema/packet_login.xml
+    schema/packet_response_code.xml
     schema/serverconfig.xml
     schema/test.xml
     schema/worlddescription.xml
@@ -203,6 +207,10 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     DatabaseConfigCassandra.cpp
     DatabaseConfigSQLite3.h
     DatabaseConfigSQLite3.cpp
+    PacketLogin.h
+    PacketLogin.cpp
+    PacketResponseCode.h
+    PacketResponseCode.cpp
     ServerConfig.h
     ServerConfig.cpp
     TestObject.h

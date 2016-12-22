@@ -78,7 +78,8 @@ bool Parsers::CreateCharacter::Parse(libcomp::ManagerPacket *pPacketManager,
     */
 
     libcomp::Packet reply;
-    reply.WriteU16Little(ClientPacketCode_t::PACKET_CREATE_CHARACTER_RESPONSE);
+    reply.WritePacketCode(
+        LobbyClientPacketCode_t::PACKET_CREATE_CHARACTER_RESPONSE);
     reply.WriteU32Little(0);
 
     connection->SendPacket(reply);

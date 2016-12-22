@@ -33,6 +33,9 @@
 #include <Decrypt.h>
 #include <Log.h>
 
+// libobjgen Includes
+#include <Account.h>
+
 using namespace lobby;
 
 LoginHandler::LoginHandler()
@@ -144,7 +147,19 @@ void LoginHandler::ParsePost(CivetServer *pServer,
     /// @todo Do proper authentication.
     if(pServer->getParam(szPostData, "login", postValue))
     {
-        postVars.auth = true;
+        auto account = objects::Account::LoadAccountByUserName(postVars.id);
+
+        if(nullptr != account && account->GetPassword() ==
+            libcomp::Decrypt::HashPassword(postVars.pass, account->GetSalt()))
+        {
+            postVars.auth = true;
+        }
+        else
+        {
+            postVars.msg = "<span style=\"font-size:12px;color:#edb81e;"
+                "font-weight:bold;\"><br>&nbsp;Invalid username "
+                "or password.</span>";
+        }
     }
 
     // Do some extra things if the user has been authenticated.

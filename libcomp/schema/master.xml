@@ -13,4 +13,8 @@
     <include path="account.xml"/>
     <include path="channeldescription.xml"/>
     <include path="worlddescription.xml"/>
+
+    <!-- Lobby Packets -->
+    <include path="packet_login.xml"/>
+    <include path="packet_response_code.xml"/>
 </objgen>

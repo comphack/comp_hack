@@ -46,7 +46,8 @@
 using namespace lobby;
 
 LobbyServer::LobbyServer(std::shared_ptr<objects::ServerConfig> config,
-    const libcomp::String& configPath) : libcomp::BaseServer(config, configPath)
+    const libcomp::String& configPath, bool unitTestMode) :
+    libcomp::BaseServer(config, configPath), mUnitTestMode(unitTestMode)
 {
 }
 
@@ -57,35 +58,57 @@ bool LobbyServer::Initialize(std::weak_ptr<BaseServer>& self)
         return false;
     }
 
-    if(!mDatabase->TableHasRows("Account"))
+    if(mUnitTestMode)
+    {
+        if(!InitializeTestMode())
+        {
+            return false;
+        }
+    }
+    else if(!mDatabase->TableHasRows("Account"))
     {
         CreateFirstAccount();
     }
 
     auto conf = std::dynamic_pointer_cast<objects::LobbyConfig>(mConfig);
 
-    mManagerConnection = std::shared_ptr<ManagerConnection>(new ManagerConnection(self, &mService, mMainWorker.GetMessageQueue()));
+    mManagerConnection = std::shared_ptr<ManagerConnection>(
+        new ManagerConnection(self, &mService, mMainWorker.GetMessageQueue()));
 
-    auto connectionManager = std::dynamic_pointer_cast<libcomp::Manager>(mManagerConnection);
+    auto connectionManager = std::dynamic_pointer_cast<libcomp::Manager>(
+        mManagerConnection);
 
-    auto internalPacketManager = std::shared_ptr<libcomp::ManagerPacket>(new libcomp::ManagerPacket(self));
-    internalPacketManager->AddParser<Parsers::SetWorldDescription>(PACKET_SET_WORLD_DESCRIPTION);
-    internalPacketManager->AddParser<Parsers::SetChannelDescription>(PACKET_SET_CHANNEL_DESCRIPTION);
+    auto internalPacketManager = std::shared_ptr<libcomp::ManagerPacket>(
+        new libcomp::ManagerPacket(self));
+    internalPacketManager->AddParser<Parsers::SetWorldDescription>(
+        to_underlying(InternalPacketCode_t::PACKET_SET_WORLD_DESCRIPTION));
+    internalPacketManager->AddParser<Parsers::SetChannelDescription>(
+        to_underlying(InternalPacketCode_t::PACKET_SET_CHANNEL_DESCRIPTION));
 
     //Add the managers to the main worker.
     mMainWorker.AddManager(internalPacketManager);
     mMainWorker.AddManager(connectionManager);
 
-    auto clientPacketManager = std::shared_ptr<libcomp::ManagerPacket>(new libcomp::ManagerPacket(self));
-    clientPacketManager->AddParser<Parsers::Login>(PACKET_LOGIN);
-    clientPacketManager->AddParser<Parsers::Auth>(PACKET_AUTH);
-    clientPacketManager->AddParser<Parsers::StartGame>(PACKET_START_GAME);
-    clientPacketManager->AddParser<Parsers::CharacterList>(PACKET_CHARACTER_LIST);
-    clientPacketManager->AddParser<Parsers::WorldList>(PACKET_WORLD_LIST);
-    clientPacketManager->AddParser<Parsers::CreateCharacter>(PACKET_CREATE_CHARACTER);
-    clientPacketManager->AddParser<Parsers::DeleteCharacter>(PACKET_DELETE_CHARACTER);
-    clientPacketManager->AddParser<Parsers::QueryPurchaseTicket>(PACKET_QUERY_PURCHASE_TICKET);
-    clientPacketManager->AddParser<Parsers::PurchaseTicket>(PACKET_PURCHASE_TICKET);
+    auto clientPacketManager = std::shared_ptr<libcomp::ManagerPacket>(
+        new libcomp::ManagerPacket(self));
+    clientPacketManager->AddParser<Parsers::Login>(to_underlying(
+        LobbyClientPacketCode_t::PACKET_LOGIN));
+    clientPacketManager->AddParser<Parsers::Auth>(to_underlying(
+        LobbyClientPacketCode_t::PACKET_AUTH));
+    clientPacketManager->AddParser<Parsers::StartGame>(to_underlying(
+        LobbyClientPacketCode_t::PACKET_START_GAME));
+    clientPacketManager->AddParser<Parsers::CharacterList>(to_underlying(
+        LobbyClientPacketCode_t::PACKET_CHARACTER_LIST));
+    clientPacketManager->AddParser<Parsers::WorldList>(to_underlying(
+        LobbyClientPacketCode_t::PACKET_WORLD_LIST));
+    clientPacketManager->AddParser<Parsers::CreateCharacter>(to_underlying(
+        LobbyClientPacketCode_t::PACKET_CREATE_CHARACTER));
+    clientPacketManager->AddParser<Parsers::DeleteCharacter>(to_underlying(
+        LobbyClientPacketCode_t::PACKET_DELETE_CHARACTER));
+    clientPacketManager->AddParser<Parsers::QueryPurchaseTicket>(to_underlying(
+        LobbyClientPacketCode_t::PACKET_QUERY_PURCHASE_TICKET));
+    clientPacketManager->AddParser<Parsers::PurchaseTicket>(to_underlying(
+        LobbyClientPacketCode_t::PACKET_PURCHASE_TICKET));
 
     // Add the managers to the generic workers.
     mWorker.AddManager(clientPacketManager);
@@ -116,7 +139,8 @@ std::list<std::shared_ptr<lobby::World>> LobbyServer::GetWorlds()
     return mManagerConnection->GetWorlds();
 }
 
-std::shared_ptr<lobby::World> LobbyServer::GetWorldByConnection(std::shared_ptr<libcomp::InternalConnection> connection)
+std::shared_ptr<lobby::World> LobbyServer::GetWorldByConnection(
+    std::shared_ptr<libcomp::InternalConnection> connection)
 {
     return mManagerConnection->GetWorldByConnection(connection);
 }
@@ -139,6 +163,41 @@ std::shared_ptr<libcomp::TcpConnection> LobbyServer::CreateConnection(
     connection->ConnectionSuccess();
 
     return connection;
+}
+
+bool LobbyServer::InitializeTestMode()
+{
+    // Remove all accounts first.
+    if(!mDatabase->Execute(libcomp::String("TRUNCATE account")))
+    {
+        LOG_ERROR("Failed to truncate account table.\n");
+
+        return false;
+    }
+
+    std::shared_ptr<objects::Account> account(new objects::Account);
+
+    libcomp::String password = "same_as_my_luggage"; // 12345
+    libcomp::String salt = libcomp::Decrypt::GenerateRandom(10);
+
+    account->SetUserName("testalpha");
+    account->SetDisplayName("Test Account Alpha");
+    account->SetEmail("alpha@test.account");
+    account->SetPassword(libcomp::Decrypt::HashPassword(password, salt));
+    account->SetSalt(salt);
+    account->SetCP(1000000);
+    account->SetTicketCount(1);
+    account->SetUserLevel(1000);
+    account->SetEnabled(1);
+    account->Register(std::dynamic_pointer_cast<
+        libcomp::PersistentObject>(account));
+
+    if(!account->Insert())
+    {
+        LOG_ERROR("Failed to create test account.\n");
+    }
+
+    return true;
 }
 
 void LobbyServer::CreateFirstAccount()

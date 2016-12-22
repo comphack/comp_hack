@@ -54,7 +54,7 @@ bool Parsers::Auth::Parse(libcomp::ManagerPacket *pPacketManager,
     LOG_DEBUG(libcomp::String("SID: %1\n").Arg(sid));
 
     libcomp::Packet reply;
-    reply.WriteU16Little(ClientPacketCode_t::PACKET_AUTH_RESPONSE);
+    reply.WritePacketCode(LobbyClientPacketCode_t::PACKET_AUTH_RESPONSE);
 
     // Status code (see the Login handler for a list).
     reply.WriteS32Little(0);

@@ -134,8 +134,10 @@ void ManagerConnection::RemoveConnection(std::shared_ptr<libcomp::InternalConnec
 
         //Channel disconnected
         libcomp::Packet packet;
-        packet.WriteU16Little(PACKET_SET_CHANNEL_DESCRIPTION);
-        packet.WriteU8(PACKET_ACTION_REMOVE);
+        packet.WritePacketCode(
+            InternalPacketCode_t::PACKET_SET_CHANNEL_DESCRIPTION);
+        packet.WriteU8(to_underlying(
+            InternalPacketAction_t::PACKET_ACTION_REMOVE));
         channelDesc.SavePacket(packet);
         mLobbyConnection->SendPacket(packet);
     }

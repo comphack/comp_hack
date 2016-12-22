@@ -29,6 +29,9 @@
 
 #include "ReadOnlyPacket.h"
 
+/// Standard C++11 Includes
+#include <type_traits>
+
 namespace libcomp
 {
 
@@ -439,6 +442,19 @@ public:
      * @param value 32-bit floating point value to write.
      */
     void WriteFloat(float value);
+
+    /**
+     * Write the enumeration @em value to the packet as an unsigned 16-bit
+     * integer in little endian byte order.
+     * @param Enumeration to write into the packet.
+     * @sa WriteU16Little
+     */
+    template<typename T>
+    inline void WritePacketCode(T value)
+    {
+        WriteU16Little(static_cast<typename std::underlying_type<T>::type>(
+            value));
+    }
 
 #ifdef COMP_HACK_PACKETEXT
 

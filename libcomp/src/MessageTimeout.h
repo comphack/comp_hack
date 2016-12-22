@@ -1,12 +1,12 @@
 /**
- * @file server/lobby/src/packets/Login.cpp
- * @ingroup lobby
+ * @file libcomp/src/MessageTimeout.h
+ * @ingroup libcomp
  *
  * @author COMP Omega <compomega@tutanota.com>
  *
- * @brief Manager to handle lobby packets.
+ * @brief Indicates that a timeout has occurred.
  *
- * This file is part of the Lobby Server (lobby).
+ * This file is part of the COMP_hack Library (libcomp).
  *
  * Copyright (C) 2012-2016 COMP_hack Team <compomega@tutanota.com>
  *
@@ -24,34 +24,33 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "Packets.h"
+#ifndef LIBCOMP_SRC_MESSAGETIMEOUT_H
+#define LIBCOMP_SRC_MESSAGETIMEOUT_H
 
 // libcomp Includes
-#include <Decrypt.h>
-#include <Log.h>
-#include <Packet.h>
-#include <PacketCodes.h>
-#include <ReadOnlyPacket.h>
-#include <TcpConnection.h>
+#include "CString.h"
+#include "Message.h"
 
-using namespace lobby;
+// Standard C++11 Includes
+#include <memory>
 
-bool Parsers::PurchaseTicket::Parse(libcomp::ManagerPacket *pPacketManager,
-    const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
+namespace libcomp
 {
-    (void)pPacketManager;
 
-    if(p.Size() != 0)
-    {
-        return false;
-    }
+namespace Message
+{
 
-    libcomp::Packet reply;
-    reply.WritePacketCode(
-        LobbyClientPacketCode_t::PACKET_PURCHASE_TICKET_RESPONSE);
+class Timeout : public Message
+{
+public:
+    Timeout();
+    virtual ~Timeout();
 
-    connection->SendPacket(reply);
+    virtual MessageType GetType() const;
+};
 
-    return true;
-}
+} // namespace Message
+
+} // namespace libcomp
+
+#endif // LIBCOMP_SRC_MESSAGETIMEOUT_H

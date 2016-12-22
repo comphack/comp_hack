@@ -44,13 +44,27 @@ int main(int argc, const char *argv[])
     LOG_INFO("COMP_hack Lobby Server v0.0.1 build 1\n");
     LOG_INFO("Copyright (C) 2010-2016 COMP_hack Team\n\n");
 
-    std::string configPath = libcomp::BaseServer::GetDefaultConfigPath() + "lobby.xml";
+    std::string configPath = libcomp::BaseServer::GetDefaultConfigPath() +
+        "lobby.xml";
 
-    if(argc == 2)
+    bool unitTestMode = false;
+
+    if(2 <= argc && std::string("--test") == argv[1])
+    {
+        argc--;
+        argv++;
+
+        LOG_DEBUG("Starting the lobby in unit test mode.\n");
+
+        unitTestMode = true;
+    }
+
+    if(2 == argc)
     {
         configPath = argv[1];
-        LOG_DEBUG(libcomp::String("Using custom config path "
-            "%1\n").Arg(configPath));
+
+        LOG_DEBUG(libcomp::String("Using custom config path %1\n").Arg(
+            configPath));
     }
 
     if(!libcomp::PersistentObject::Initialize())
@@ -59,19 +73,24 @@ int main(int argc, const char *argv[])
         return EXIT_FAILURE;
     }
 
-    auto config = std::shared_ptr<objects::ServerConfig>(new objects::LobbyConfig());
-    auto server = std::shared_ptr<lobby::LobbyServer>(new lobby::LobbyServer(config, configPath));
-    
+    auto config = std::shared_ptr<objects::ServerConfig>(
+        new objects::LobbyConfig());
+    auto server = std::shared_ptr<lobby::LobbyServer>(
+        new lobby::LobbyServer(config, configPath, unitTestMode));
     auto wkServer = std::weak_ptr<libcomp::BaseServer>(server);
+
     if(!server->Initialize(wkServer))
     {
         LOG_CRITICAL("The server could not be initialized.\n");
+
         return EXIT_FAILURE;
     }
 
+    /// @todo Consider moving the web server.
     std::vector<std::string> options;
     options.push_back("listening_ports");
-    options.push_back(std::to_string(std::dynamic_pointer_cast<objects::LobbyConfig>(config)->GetWebListeningPort()));
+    options.push_back(std::to_string(std::dynamic_pointer_cast<
+        objects::LobbyConfig>(config)->GetWebListeningPort()));
 
     CivetServer webServer(options);
     webServer.addHandler("/", new lobby::LoginHandler);
@@ -85,7 +104,7 @@ int main(int argc, const char *argv[])
     // Complete the shutdown process.
     libcomp::Shutdown::Complete();
 
-    LOG_INFO("Bye!\n");
+    LOG_INFO("\rBye!\n");
 
     return returnCode;
 }

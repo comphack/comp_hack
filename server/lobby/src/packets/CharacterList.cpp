@@ -48,7 +48,8 @@ bool Parsers::CharacterList::Parse(libcomp::ManagerPacket *pPacketManager,
     }
 
     libcomp::Packet reply;
-    reply.WriteU16Little(ClientPacketCode_t::PACKET_CHARACTER_LIST_RESPONSE);
+    reply.WritePacketCode(
+        LobbyClientPacketCode_t::PACKET_CHARACTER_LIST_RESPONSE);
 
     // Time of last login (time_t).
     reply.WriteU32Little((uint32_t)time(0));

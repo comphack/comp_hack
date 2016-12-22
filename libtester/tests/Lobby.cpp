@@ -28,83 +28,64 @@
 #include <gtest/gtest.h>
 #include <PopIgnore.h>
 
-#include <LobbyConnection.h>
-#include <Log.h>
-#include <MessageEncrypted.h>
+// libtester Includes
+#include <HttpConnection.h>
+#include <LobbyClient.h>
+#include <Login.h>
 
-#include <thread>
+// libcomp Includes
+#include <Log.h>
+#include <PacketCodes.h>
+
+// object Includes
+#include <PacketLogin.h>
 
 using namespace libcomp;
+
+static const libcomp::String LOGIN_USERNAME = "testalpha";
+static const libcomp::String LOGIN_PASSWORD = "same_as_my_luggage"; // 12345
+static const libcomp::String LOGIN_CLIENT_VERSION = "1.666";
+static const uint32_t CLIENT_VERSION = 1666;
 
 TEST(Lobby, Connection)
 {
     libcomp::Log::GetSingletonPtr()->AddStandardOutputHook();
 
-    asio::io_service service;
+    libcomp::String sid1;
+    libcomp::String sid2;
 
-    std::shared_ptr<libcomp::LobbyConnection> connection(
-        new libcomp::LobbyConnection(service));
+    EXPECT_FALSE(libtester::Login::WebLogin(LOGIN_USERNAME, "12345",
+        LOGIN_CLIENT_VERSION, sid1, sid2))
+        << "Was able to authenticate with the website using bad credentials.";
 
-    std::shared_ptr<libcomp::MessageQueue<libcomp::Message::Message*>>
-        messageQueue(new libcomp::MessageQueue<libcomp::Message::Message*>());
+    ASSERT_TRUE(libtester::Login::WebLogin(LOGIN_USERNAME, LOGIN_PASSWORD,
+        LOGIN_CLIENT_VERSION, sid1, sid2))
+        << "Failed to authenticate with the website.";
 
-    connection->SetSelf(connection);
-    connection->SetMessageQueue(messageQueue);
-    connection->Connect("127.0.0.1", 10666);
+    double waitTime;
 
-    std::thread serviceThread([&service]()
-    {
-        LOG_DEBUG("Start service thread...\n");
-        service.run();
-    });
+    std::shared_ptr<libtester::LobbyClient> client(new libtester::LobbyClient);
 
-    asio::steady_timer timer(service);
-    timer.expires_from_now(std::chrono::seconds(10));
-    timer.async_wait([&service](asio::error_code)
-    {
-        service.stop();
-    });
+    ASSERT_TRUE(client->Connect());
+    ASSERT_TRUE(client->WaitEncrypted(waitTime));
 
-    std::mutex resultLock;
-    int goodEventCount = 0;
-    int badEventCount = 0;
+    objects::PacketLogin obj;
+    obj.SetClientVersion(CLIENT_VERSION);
+    obj.SetUsername(LOGIN_USERNAME);
 
-    new std::thread([&](std::shared_ptr<libcomp::MessageQueue<
-        libcomp::Message::Message*>> queue)
-    {
-        while(1)
-        {
-            std::list<libcomp::Message::Message*> msgs;
-            queue->DequeueAll(msgs);
+    libcomp::Packet p;
+    p.WritePacketCode(LobbyClientPacketCode_t::PACKET_LOGIN);
 
-            for(auto msg : msgs)
-            {
-                libcomp::Message::Encrypted *pMessage = dynamic_cast<
-                    libcomp::Message::Encrypted*>(msg);
+    ASSERT_TRUE(obj.SavePacket(p));
 
-                std::lock_guard<std::mutex> guard(resultLock);
+    libcomp::ReadOnlyPacket reply;
 
-                if(0 != pMessage)
-                {
-                    goodEventCount++;
-                }
-                else
-                {
-                    badEventCount++;
-                    service.stop();
-                }
+    client->ClearMessages();
+    client->GetConnection()->SendPacket(p);
 
-                delete msg;
-            }
-        }
-    }, messageQueue);
-
-    serviceThread.join();
-
-    std::lock_guard<std::mutex> guard(resultLock);
-
-    EXPECT_EQ(badEventCount, 0);
-    EXPECT_EQ(goodEventCount, 1);
+    ASSERT_TRUE(client->WaitForPacket(
+        LobbyClientPacketCode_t::PACKET_LOGIN_RESPONSE, reply, waitTime));
+    ASSERT_EQ(reply.ReadU32Little(), 0x3F5E2FB5);
 }
 
 int main(int argc, char *argv[])

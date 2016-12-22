@@ -2,6 +2,4 @@
 <objgen>
     <include path="../../libcomp/schema/master.xml"/>
     <include path="lobbyconfig.xml"/>
-    <include path="packet_login.xml"/>
-    <include path="packet_response_code.xml"/>
 </objgen>

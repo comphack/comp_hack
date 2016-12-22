@@ -41,7 +41,8 @@ namespace lobby
 class LobbyServer : public libcomp::BaseServer
 {
 public:
-    LobbyServer(std::shared_ptr<objects::ServerConfig> config, const libcomp::String& configPath);
+    LobbyServer(std::shared_ptr<objects::ServerConfig> config,
+        const libcomp::String& configPath, bool unitTestMode);
     virtual ~LobbyServer();
 
     virtual bool Initialize(std::weak_ptr<BaseServer>& self);
@@ -53,6 +54,8 @@ public:
     std::shared_ptr<lobby::World> GetWorldByConnection(std::shared_ptr<libcomp::InternalConnection> connection);
 
 protected:
+    bool InitializeTestMode();
+
     void CreateFirstAccount();
     void PromptCreateAccount();
 
@@ -63,6 +66,9 @@ protected:
     libcomp::Worker mWorker;
 
     std::shared_ptr<ManagerConnection> mManagerConnection;
+
+    /// Indicates the unit test database should be used.
+    bool mUnitTestMode;
 };
 
 } // namespace lobby

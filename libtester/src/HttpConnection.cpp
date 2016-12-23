@@ -84,7 +84,7 @@ void HttpConnection::PacketReceived(libcomp::Packet& packet)
                 // Determine how much more needs to be read.
                 if(mRequest.size() < actualSize)
                 {
-                    requestSize = mRequest.size() - actualSize;
+                    requestSize = actualSize - mRequest.size();
                 }
                 else
                 {

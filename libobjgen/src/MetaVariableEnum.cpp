@@ -53,6 +53,44 @@ void MetaVariableEnum::SetDefaultValue(const uint32_t value)
     mDefaultValue = value;
 }
 
+short MetaVariableEnum::GetSizeType() const
+{
+    return mSizeType;
+}
+
+std::string MetaVariableEnum::GetSizeTypeString() const
+{
+    switch(mSizeType)
+    {
+        case 8:
+            return "uint8_t";
+        case 16:
+            return "uint16_t";
+        case 32:
+            return "uint32_t";
+        default:
+            break;
+    }
+
+    return "";
+}
+
+bool MetaVariableEnum::SetSizeType(const short sizeType)
+{
+    switch(sizeType)
+    {
+        case 8:
+        case 16:
+        case 32:
+            break;
+        default:
+            return false;
+    }
+
+    mSizeType = sizeType;
+    return true;
+}
+
 const std::vector<std::string> MetaVariableEnum::GetValues() const
 {
     return mValues;
@@ -60,7 +98,16 @@ const std::vector<std::string> MetaVariableEnum::GetValues() const
 
 size_t MetaVariableEnum::GetSize() const
 {
-    return sizeof(uint32_t);
+    switch(mSizeType)
+    {
+        case 8:
+            return sizeof(uint8_t);
+        case 16:
+            return sizeof(uint16_t);
+        case 32:
+        default:
+            return sizeof(uint32_t);
+    }
 }
 
 MetaVariable::MetaVariableType_t MetaVariableEnum::GetMetaType() const
@@ -92,6 +139,16 @@ bool MetaVariableEnum::IsValid() const
         }
     }
 
+    switch(mSizeType)
+    {
+        case 8:
+        case 16:
+        case 32:
+            break;
+        default:
+            return false;
+    }
+
     return mValues.size() > 0 && mDefaultValue <= mValues.size();
 }
 
@@ -101,6 +158,9 @@ bool MetaVariableEnum::Load(std::istream& stream)
 
     stream.read(reinterpret_cast<char*>(&mDefaultValue),
         sizeof(mDefaultValue));
+
+    stream.read(reinterpret_cast<char*>(&mSizeType),
+        sizeof(mSizeType));
 
     size_t len;
     stream.read(reinterpret_cast<char*>(&len),
@@ -125,6 +185,9 @@ bool MetaVariableEnum::Save(std::ostream& stream) const
     {
         stream.write(reinterpret_cast<const char*>(&mDefaultValue),
             sizeof(mDefaultValue));
+
+        stream.write(reinterpret_cast<const char*>(&mSizeType),
+            sizeof(mSizeType));
 
         size_t len = mValues.size();
         stream.write(reinterpret_cast<const char*>(&len),
@@ -182,6 +245,36 @@ bool MetaVariableEnum::Load(const tinyxml2::XMLDocument& doc,
             }
         }
     }
+    
+    const char *szSize = root.Attribute("size");
+
+    if(nullptr != szSize)
+    {
+        std::string size(szSize);
+
+        if("8" == size)
+        {
+            SetSizeType(8);
+        }
+        else if("16" == size)
+        {
+            SetSizeType(16);
+        }
+        else if("32" == size)
+        {
+            SetSizeType(32);
+        }
+        else
+        {
+            mError = "The only valid size values are 8, 16 and 32.";
+
+            status = false;
+        }
+    }
+    else
+    {
+        SetSizeType(32);
+    }
 
     return status && BaseLoad(root) && IsValid();
 }
@@ -193,6 +286,11 @@ bool MetaVariableEnum::Save(tinyxml2::XMLDocument& doc,
     pVariableElement->SetAttribute("type", GetType().c_str());
     pVariableElement->SetAttribute("name", GetName().c_str());
     pVariableElement->SetAttribute("default", mValues[mDefaultValue].c_str());
+
+    if(8 != mSizeType && (16 == mSizeType || 32 == mSizeType))
+    {
+        pVariableElement->SetAttribute("size", std::to_string(mSizeType).c_str());
+    }
 
     for(auto val : mValues)
     {
@@ -228,15 +326,15 @@ std::string MetaVariableEnum::GetDefaultValueCode() const
 std::string MetaVariableEnum::GetValidCondition(const Generator& generator,
     const std::string& name, bool recursive) const
 {
-    (void)name;
+    (void)generator;
     (void)recursive;
 
     std::stringstream ss;
 
     if(mValues.size() > 0)
     {
-        ss << generator.GetMemberName(*this) << " >= " << GetCodeType()
-            << "::" << mValues[0] << "&& " << generator.GetMemberName(*this)
+        ss << name << " >= " << GetCodeType()
+            << "::" << mValues[0] << " && " << name
             << " <= " << GetCodeType() << "::" << mValues[mValues.size() - 1];
     }
 
@@ -297,6 +395,7 @@ std::string MetaVariableEnum::GetXmlLoadCode(const Generator& generator,
     (void)doc;
 
     std::map<std::string, std::string> replacements;
+    replacements["@VAR_NAME@"] = GetName();
     replacements["@VAR_CODE_TYPE@"] = GetCodeType();
     replacements["@DEFAULT@"] = GetDefaultValueCode();
     replacements["@NODE@"] = node;
@@ -312,20 +411,14 @@ std::string MetaVariableEnum::GetXmlSaveCode(const Generator& generator,
     (void)doc;
 
     std::map<std::string, std::string> replacements;
-    replacements["@VAR_NAME@"] = generator.Escape(GetName());
+    replacements["@VAR_NAME@"] = GetName();
+    replacements["@VAR_XML_NAME@"] = generator.Escape(GetName());
     replacements["@ELEMENT_NAME@"] = generator.Escape(elemName);
     replacements["@GETTER@"] = GetInternalGetterCode(generator, name);
     replacements["@PARENT@"] = parent;
 
     return generator.ParseTemplate(tabLevel, "VariableEnumXmlSave",
         replacements);
-}
-
-std::string MetaVariableEnum::GetStringValueCode(const std::string& name) const
-{
-    std::stringstream ss;
-    ss << "libcomp::String((uint32_t)" << name << ")";
-    return ss.str();
 }
 
 std::string MetaVariableEnum::GetBindValueCode(const Generator& generator,
@@ -346,7 +439,7 @@ std::string MetaVariableEnum::GetDatabaseLoadCode(const Generator& generator,
     (void)name;
 
     std::map<std::string, std::string> replacements;
-    replacements["@DATABASE_TYPE@"] = "int32_t";
+    replacements["@DATABASE_TYPE@"] = GetSizeTypeString();
     replacements["@COLUMN_NAME@"] = generator.Escape(GetName());
     replacements["@SET_FUNCTION@"] = std::string("Set") +
         generator.GetCapitalName(*this);
@@ -359,52 +452,50 @@ std::string MetaVariableEnum::GetDatabaseLoadCode(const Generator& generator,
 std::string MetaVariableEnum::GetUtilityDeclarations(const Generator& generator,
     const std::string& name, size_t tabLevel) const
 {
-    (void)generator;
     (void)name;
-    (void)tabLevel;
 
     std::stringstream ss;
-    ss << "std::string GetEnumString(" << GetCodeType() << " val) const;";
-    ss << GetCodeType() << " GetEnumValue(std::string& val, bool& success);";
+
+    std::map<std::string, std::string> replacements;
+    replacements["@VAR_TYPE@"] = GetCodeType();
+    replacements["@VAR_CAMELCASE_NAME@"] = generator.GetCapitalName(*this);
+
+    ss << generator.ParseTemplate(tabLevel,
+        "VariableEnumUtilityDeclarations", replacements) << std::endl;
+
     return ss.str();
 }
 
 std::string MetaVariableEnum::GetUtilityFunctions(const Generator& generator,
     const MetaObject& object, const std::string& name) const
 {
-    (void)generator;
     (void)name;
 
     std::stringstream ss;
-    ss << "std::string " << object.GetName() << "::GetEnumString("
-        << GetCodeType() << " val) const" << std::endl;
-    ss << "{" << std::endl;
-    ss << generator.Tab() << "switch(val)" << std::endl;
-    ss << generator.Tab() << "{" << std::endl;
-    for(auto val : mValues)
-    {
-        ss << generator.Tab(2) << "case " << GetCodeType() << "::" << val << ":" << std::endl;
-        ss << generator.Tab(3) << "return " << generator.Escape(val) << ";" << std::endl;
-        ss << generator.Tab(3) << "break;" << std::endl;
-    }
-    ss << generator.Tab(2) << "default:" << std::endl;
-    ss << generator.Tab(3) << "break;" << std::endl;
-    ss << generator.Tab() << "}" << std::endl;
-    ss << generator.Tab() << "return \"\";" << std::endl;
-    ss << "}" << std::endl << std::endl;
 
-    ss << object.GetName() << "::" << GetCodeType() << " " << object.GetName()
-        << "::GetEnumValue(std::string& val, bool& success)" << std::endl;
-    ss << "{" << std::endl;
-    ss << generator.Tab() << "success = true;" << std::endl;
+    std::stringstream cases;
     for(auto val : mValues)
     {
-        ss << generator.Tab() << "if(val == " << generator.Escape(val) << ") return "
+        cases << "case " << GetCodeType() << "::" << val << ": return "
+            << generator.Escape(val) << "; break;" << std::endl;
+    }
+
+    std::stringstream conditions;
+    for(auto val : mValues)
+    {
+        conditions << "if(val == " << generator.Escape(val) << ") return "
             << GetCodeType() << "::" << val << ";" << std::endl;
     }
-    ss << generator.Tab() << "success = false;" << std::endl;
-    ss << generator.Tab() << "return (" << GetCodeType() << ")0;" << std::endl;
-    ss << "}" << std::endl;
+
+    std::map<std::string, std::string> replacements;
+    replacements["@VAR_TYPE@"] = GetCodeType();
+    replacements["@OBJECT_NAME@"] = object.GetName();
+    replacements["@VAR_CAMELCASE_NAME@"] = generator.GetCapitalName(*this);
+    replacements["@CASES@"] = cases.str();
+    replacements["@CONDITIONS@"] = conditions.str();
+
+    ss << std::endl << generator.ParseTemplate(0, "VariableEnumUtilityFunctions",
+        replacements) << std::endl;
 
     return ss.str();
 }

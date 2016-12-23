@@ -50,6 +50,12 @@ TEST(Object, TestObject)
     TestObject data;
 
     //
+    // Boolean
+    //
+    EXPECT_EQ(true, data.GetBoolean());
+    EXPECT_TRUE(data.SetBoolean(false));
+
+    //
     // Unsigned 8-bit
     //
     EXPECT_EQ(42, data.GetUnsigned8());
@@ -211,6 +217,18 @@ TEST(Object, TestObject)
     }
     EXPECT_EQ(4, elementCount);
 
+    //
+    // Enum
+    //
+    EXPECT_EQ(TestObject::EnumYN_t::YES, data.GetEnumYN());
+
+    // Attempt to set an invalid value
+    auto invalidEnum = (TestObject::EnumYN_t)-1;
+    EXPECT_FALSE(data.SetEnumYN(invalidEnum));
+
+    // Attempt to set a valid value
+    EXPECT_TRUE(data.SetEnumYN(TestObject::EnumYN_t::NO));
+
     std::stringstream streamOutStream(std::stringstream::out |
         std::stringstream::binary);
     libcomp::ObjectOutStream streamOut(streamOutStream);
@@ -232,6 +250,8 @@ TEST(Object, TestObject)
         float XYZ[3];
         char listContents[4];              //uint8_t x 4
         char mapContents[28];              //(uint16_t[2] + string length[4] + 1 char) x 4
+        TestObject::EnumYN_t enumYesNo = TestObject::EnumYN_t::NO;
+        bool Boolean = false;
     } testData;
 
     testData.Unsigned8 = 135;
@@ -268,11 +288,14 @@ TEST(Object, TestObject)
     memcpy(testData.stringCP932, &strA[0], 15 < strA.size() ? 15 : strA.size());
     //strncpy(testData.string, "日本人", 15);
 
-    EXPECT_EQ(sizeof(testData), stringData.size())
+    //bool offsets it since size can only increase by increments of 4
+    int testDataSize = sizeof(testData) - 3;
+    EXPECT_EQ(testDataSize, stringData.size())
         << "Check the object save data size against the test data structure size.";
-    EXPECT_EQ(0, memcmp(&testData, stringData.c_str(), sizeof(testData)))
+    EXPECT_EQ(0, memcmp(&testData, stringData.c_str(), testDataSize))
         << "Check the object save data against the test data.";
 
+    testData.Boolean = true;
     testData.Unsigned8 = 23;
     testData.Signed8 = -77;
     testData.UINT16 = 32814;
@@ -302,6 +325,8 @@ TEST(Object, TestObject)
     WriteMapU16Char(&testData.mapContents[14], 7, '7');
     WriteMapU16Char(&testData.mapContents[21], 8, '8');
 
+    testData.enumYesNo = TestObject::EnumYN_t::YES;
+
     std::stringstream streamInStream(std::stringstream::in |
         std::stringstream::binary);
     libcomp::ObjectInStream streamIn(streamInStream);
@@ -312,6 +337,7 @@ TEST(Object, TestObject)
 
     EXPECT_TRUE(data.Load(streamIn)) << "Loading from instream";
 
+    EXPECT_EQ(true, data.GetBoolean());
     EXPECT_EQ(23, data.GetUnsigned8());
     EXPECT_EQ(-77, data.GetSigned8());
     EXPECT_EQ(32814, data.GetUINT16());
@@ -340,6 +366,8 @@ TEST(Object, TestObject)
     EXPECT_EQ("8", data.GetMap(8));
     data.ClearMap();
     EXPECT_EQ(0, data.MapCount()) << "Verifying Map cleared";
+
+    EXPECT_EQ(TestObject::EnumYN_t::YES, data.GetEnumYN());
 }
 
 int main(int argc, char *argv[])

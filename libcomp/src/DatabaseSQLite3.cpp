@@ -654,6 +654,8 @@ String DatabaseSQLite3::GetVariableType(const std::shared_ptr
         case libobjgen::MetaVariable::MetaVariableType_t::TYPE_STRING:
         case libobjgen::MetaVariable::MetaVariableType_t::TYPE_REF:
             return "string";
+        case libobjgen::MetaVariable::MetaVariableType_t::TYPE_BOOL:
+            return "bit";
         case libobjgen::MetaVariable::MetaVariableType_t::TYPE_S8:
         case libobjgen::MetaVariable::MetaVariableType_t::TYPE_S16:
         case libobjgen::MetaVariable::MetaVariableType_t::TYPE_S32:

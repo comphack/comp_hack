@@ -32,6 +32,7 @@
 // MetaVariable Types
 #include "MetaVariable.h"
 #include "MetaVariableArray.h"
+#include "MetaVariableBool.h"
 #include "MetaVariableEnum.h"
 #include "MetaVariableInt.h"
 #include "MetaVariableList.h"
@@ -275,6 +276,10 @@ std::shared_ptr<MetaVariable> MetaVariable::CreateType(
 
     if(nameToMetaType.empty())
     {
+        nameToMetaType["bit"] = MetaVariableType_t::TYPE_BOOL;
+        nameToMetaType["bool"] = MetaVariableType_t::TYPE_BOOL;
+        nameToMetaType["flag"] = MetaVariableType_t::TYPE_BOOL;
+
         nameToMetaType["u8"] = MetaVariableType_t::TYPE_U8;
         nameToMetaType["u16"] = MetaVariableType_t::TYPE_U16;
         nameToMetaType["u32"] = MetaVariableType_t::TYPE_U32;
@@ -308,6 +313,8 @@ std::shared_ptr<MetaVariable> MetaVariable::CreateType(
 {
     switch(type)
     {
+        case MetaVariableType_t::TYPE_BOOL:
+            return std::shared_ptr<MetaVariable>(new MetaVariableBool());
         case MetaVariableType_t::TYPE_S8:
             return std::shared_ptr<MetaVariable>(new MetaVariableInt<int8_t>());
         case MetaVariableType_t::TYPE_U8:

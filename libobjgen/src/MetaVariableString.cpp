@@ -726,11 +726,6 @@ std::string MetaVariableString::GetXmlSaveCode(const Generator& generator,
         replacements);
 }
 
-std::string MetaVariableString::GetStringValueCode(const std::string& name) const
-{
-    return name;
-}
-
 std::string MetaVariableString::GetBindValueCode(const Generator& generator,
     const std::string& name, size_t tabLevel) const
 {

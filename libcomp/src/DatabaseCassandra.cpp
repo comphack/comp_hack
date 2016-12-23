@@ -752,6 +752,8 @@ String DatabaseCassandra::GetVariableType(const std::shared_ptr
     {
         case libobjgen::MetaVariable::MetaVariableType_t::TYPE_STRING:
             return "text";
+        case libobjgen::MetaVariable::MetaVariableType_t::TYPE_BOOL:
+            return "boolean";
         case libobjgen::MetaVariable::MetaVariableType_t::TYPE_S8:
         case libobjgen::MetaVariable::MetaVariableType_t::TYPE_S16:
         case libobjgen::MetaVariable::MetaVariableType_t::TYPE_S32:

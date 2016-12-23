@@ -52,6 +52,7 @@ class MetaVariable
 public:
     enum class MetaVariableType_t
     {
+        TYPE_BOOL,
         TYPE_S8,
         TYPE_U8,
         TYPE_S16,

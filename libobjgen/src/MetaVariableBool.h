@@ -1,10 +1,10 @@
 /**
- * @file libobjgen/src/MetaVariableString.h
+ * @file libobjgen/src/MetaVariableBool.h
  * @ingroup libobjgen
  *
- * @author COMP Omega <compomega@tutanota.com>
+ * @author HACKfrost
  *
- * @brief Meta data for an string based object member variable.
+ * @brief Meta data for a boolean object member variable.
  *
  * This file is part of the COMP_hack Object Generator Library (libobjgen).
  *
@@ -24,8 +24,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef LIBOBJGEN_SRC_METAVARIABLESTRING_H
-#define LIBOBJGEN_SRC_METAVARIABLESTRING_H
+#ifndef LIBOBJGEN_SRC_METAVARIABLEBOOL_H
+#define LIBOBJGEN_SRC_METAVARIABLEBOOL_H
 
 // libobjgen Includes
 #include "MetaVariable.h"
@@ -33,41 +33,15 @@
 namespace libobjgen
 {
 
-class MetaVariableString : public MetaVariable
+class MetaVariableBool : public MetaVariable
 {
 public:
-    /**
-     * Valid string encodings.
-     */
-    enum class Encoding_t : int8_t
-    {
-        ENCODING_UTF8 = 0,
-        ENCODING_CP932,
-        ENCODING_CP1252,
-    };
+    MetaVariableBool();
+    virtual ~MetaVariableBool();
 
-    MetaVariableString();
-    virtual ~MetaVariableString();
+    bool GetDefaultValue() const;
+    void SetDefaultValue(const bool value);
 
-    size_t GetLengthSize() const;
-    void SetLengthSize(size_t lengthSize);
-
-    size_t GetRounding() const;
-    void SetRounding(size_t rounding);
-
-    bool GetAllowEmpty() const;
-    void SetAllowEmpty(bool allowEmpty);
-
-    Encoding_t GetEncoding() const;
-    void SetEncoding(Encoding_t encoding);
-
-    std::string GetRegularExpression() const;
-    bool SetRegularExpression(const std::string& regex);
-
-    std::string GetDefaultValue() const;
-    void SetDefaultValue(const std::string& value);
-
-    void SetSize(size_t size);
     virtual size_t GetSize() const;
 
     virtual MetaVariableType_t GetMetaType() const;
@@ -110,21 +84,10 @@ public:
     virtual std::string GetDatabaseLoadCode(const Generator& generator,
         const std::string& name, size_t tabLevel = 1) const;
 
-    static std::string EncodingToString(Encoding_t encoding);
-    static std::string EncodingToComp(Encoding_t encoding);
-
-    std::string LengthSizeType() const;
-
 private:
-    size_t mSize;
-    size_t mRounding;
-    size_t mLengthSize;
-    bool mAllowEmpty;
-    Encoding_t mEncoding;
-    std::string mDefaultValue;
-    std::string mRegularExpression;
+    bool mDefaultValue;
 };
 
 } // namespace libobjgen
 
-#endif // LIBOBJGEN_SRC_METAVARIABLESTRING_H
+#endif // LIBOBJGEN_SRC_METAVARIABLEBOOL_H

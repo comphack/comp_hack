@@ -227,7 +227,7 @@ void LobbyServer::PromptCreateAccount()
     uint32_t cp = 1000000;
     uint8_t ticketCount = 1;
     int32_t userLevel = 1000;
-    uint8_t enabled = 1; /// @todo Make this a boolean.
+    bool enabled = true;
 
     do
     {

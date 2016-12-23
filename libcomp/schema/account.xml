@@ -9,7 +9,7 @@
         <member type="u32" name="CP" caps="true"/>
         <member type="u8" name="TicketCount"/>
         <member type="s32" name="UserLevel"/>
-        <member type="u8" name="Enabled"/><!-- TODO: Make this a bool! -->
+        <member type="bool" name="Enabled"/>
         <member type="u32" name="LastLogin"/>
     </object>
 </objgen>

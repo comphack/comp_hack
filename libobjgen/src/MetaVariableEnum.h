@@ -42,6 +42,10 @@ public:
     uint32_t GetDefaultValue() const;
     void SetDefaultValue(const uint32_t value);
 
+    short GetSizeType() const;
+    std::string GetSizeTypeString() const;
+    bool SetSizeType(const short sizeType);
+
     const std::vector<std::string> GetValues() const;
 
     virtual size_t GetSize() const;
@@ -81,7 +85,6 @@ public:
         const std::string& name, const std::string& doc,
         const std::string& parent, size_t tabLevel = 1,
         const std::string elemName = "member") const;
-    virtual std::string GetStringValueCode(const std::string& name) const;
     virtual std::string GetBindValueCode(const Generator& generator,
         const std::string& name, size_t tabLevel = 1) const;
     virtual std::string GetDatabaseLoadCode(const Generator& generator,
@@ -97,6 +100,7 @@ public:
 private:
     std::vector<std::string> mValues;
     uint32_t mDefaultValue;
+    short mSizeType;
 };
 
 } // namespace libobjgen

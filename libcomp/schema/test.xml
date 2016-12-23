@@ -19,5 +19,10 @@
             <key type="u16"/>
             <value type="string"/>
         </member>
+        <member type="enum" name="EnumYN" default="YES">
+            <value>YES</value>
+            <value>NO</value>
+        </member>
+        <member type="bool" name="boolean" default="true"/>
     </object>
 </objgen>

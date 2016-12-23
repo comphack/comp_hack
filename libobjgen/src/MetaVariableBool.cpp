@@ -152,6 +152,7 @@ std::string MetaVariableBool::GetDefaultValueCode() const
 std::string MetaVariableBool::GetValidCondition(const Generator& generator,
     const std::string& name, bool recursive) const
 {
+    (void)generator;
     (void)name;
     (void)recursive;
 

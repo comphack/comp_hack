@@ -683,7 +683,7 @@ bool DatabaseCassandra::VerifyAndSetupSchema()
                 auto indexStr = String("idx_%1_%2")
                     .Arg(objName).Arg(name);
 
-                auto cmd = String("CREATE INDEX %1 ON %2(%3);")
+                cmd = String("CREATE INDEX %1 ON %2(%3);")
                     .Arg(indexStr).Arg(objName).Arg(name);
 
                 if(Execute(cmd))

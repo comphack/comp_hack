@@ -443,9 +443,8 @@ public:
         return value;
     }
 
-    virtual std::string GetArgumentType(std::string object) const
+    virtual std::string GetArgumentType() const
     {
-        (void)object;
         return GetCodeType();
     }
 

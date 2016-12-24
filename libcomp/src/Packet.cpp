@@ -616,22 +616,25 @@ Packet& Packet::operator=(Packet&& other)
     return *this;
 }
 
-template<>
-libcomp::ScriptEngine& libcomp::ScriptEngine::Using<Packet>()
+namespace libcomp
 {
-    // Include the base class
-    Using<ReadOnlyPacket>();
+    template<>
+    ScriptEngine& ScriptEngine::Using<Packet>()
+    {
+        // Include the base class
+        Using<ReadOnlyPacket>();
 
-    // Base class must be bound first.
-    Sqrat::DerivedClass<Packet, ReadOnlyPacket> binding(mVM, "Packet");
-    binding
-        .Func("WriteBlank", &Packet::WriteBlank)
-        .Func("WriteU16Little", &Packet::WriteU16Little)
-        .Func<void (Packet::*)(const std::vector<char>&)>(
-            "WriteArray", &Packet::WriteArray)
-        ; // Last call to binding
+        // Base class must be bound first.
+        Sqrat::DerivedClass<Packet, ReadOnlyPacket> binding(mVM, "Packet");
+        binding
+            .Func("WriteBlank", &Packet::WriteBlank)
+            .Func("WriteU16Little", &Packet::WriteU16Little)
+            .Func<void (Packet::*)(const std::vector<char>&)>(
+                "WriteArray", &Packet::WriteArray)
+            ; // Last call to binding
 
-    Sqrat::RootTable(mVM).Bind("Packet", binding);
+        Sqrat::RootTable(mVM).Bind("Packet", binding);
 
-    return *this;
+        return *this;
+    }
 }

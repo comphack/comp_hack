@@ -53,6 +53,16 @@ void MetaVariableEnum::SetDefaultValue(const uint32_t value)
     mDefaultValue = value;
 }
 
+std::string MetaVariableEnum::GetTypePrefix() const
+{
+    return mTypePrefix;
+}
+
+void MetaVariableEnum::SetTypePrefix(const std::string& prefix)
+{
+    mTypePrefix = prefix;
+}
+
 short MetaVariableEnum::GetSizeType() const
 {
     return mSizeType;
@@ -162,6 +172,8 @@ bool MetaVariableEnum::Load(std::istream& stream)
     stream.read(reinterpret_cast<char*>(&mSizeType),
         sizeof(mSizeType));
 
+    Generator::LoadString(stream, mTypePrefix);
+
     size_t len;
     stream.read(reinterpret_cast<char*>(&len),
         sizeof(len));
@@ -188,6 +200,8 @@ bool MetaVariableEnum::Save(std::ostream& stream) const
 
         stream.write(reinterpret_cast<const char*>(&mSizeType),
             sizeof(mSizeType));
+
+        Generator::SaveString(stream, mTypePrefix);
 
         size_t len = mValues.size();
         stream.write(reinterpret_cast<const char*>(&len),
@@ -304,9 +318,22 @@ bool MetaVariableEnum::Save(tinyxml2::XMLDocument& doc,
     return BaseSave(*pVariableElement);
 }
 
+std::string MetaVariableEnum::GetArgumentType() const
+{
+    std::stringstream ss;
+
+    ss << "const " << GetCodeType();
+
+    return ss.str();
+}
+
 std::string MetaVariableEnum::GetCodeType() const
 {
     std::stringstream ss;
+    if(mTypePrefix.length() > 0)
+    {
+        ss << mTypePrefix << "::";
+    }
     ss << GetName() << "_t";
     return ss.str();
 }

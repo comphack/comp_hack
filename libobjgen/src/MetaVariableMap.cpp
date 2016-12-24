@@ -134,7 +134,8 @@ std::string MetaVariableMap::GetCodeType() const
     if(mKeyElementType && mValueElementType)
     {
         std::stringstream ss;
-        ss << "std::unordered_map<" << mKeyElementType->GetCodeType() << ", " << mValueElementType->GetCodeType() << ">";
+        ss << "std::unordered_map<" << mKeyElementType->GetCodeType() << ", "
+            << mValueElementType->GetCodeType() << ">";
 
         return ss.str();
     }
@@ -363,7 +364,9 @@ std::string MetaVariableMap::GetAccessDeclarations(const Generator& generator,
         std::map<std::string, std::string> replacements;
         replacements["@VAR_NAME@"] = name;
         replacements["@VAR_KEY_TYPE@"] = mKeyElementType->GetCodeType();
+        replacements["@VAR_KEY_ARG_TYPE@"] = mKeyElementType->GetArgumentType();
         replacements["@VAR_VALUE_TYPE@"] = mValueElementType->GetCodeType();
+        replacements["@VAR_VALUE_ARG_TYPE@"] = mValueElementType->GetArgumentType();
         replacements["@VAR_CAMELCASE_NAME@"] = generator.GetCapitalName(*this);
 
         ss << generator.ParseTemplate(tabLevel,
@@ -384,7 +387,9 @@ std::string MetaVariableMap::GetAccessFunctions(const Generator& generator,
         std::map<std::string, std::string> replacements;
         replacements["@VAR_NAME@"] = name;
         replacements["@VAR_KEY_TYPE@"] = mKeyElementType->GetCodeType();
+        replacements["@VAR_KEY_ARG_TYPE@"] = mKeyElementType->GetArgumentType();
         replacements["@VAR_VALUE_TYPE@"] = mValueElementType->GetCodeType();
+        replacements["@VAR_VALUE_ARG_TYPE@"] = mValueElementType->GetArgumentType();
         replacements["@OBJECT_NAME@"] = object.GetName();
         replacements["@VAR_CAMELCASE_NAME@"] = generator.GetCapitalName(*this);
 
@@ -405,7 +410,9 @@ std::string MetaVariableMap::GetUtilityDeclarations(const Generator& generator,
         std::map<std::string, std::string> replacements;
         replacements["@VAR_NAME@"] = name;
         replacements["@VAR_KEY_TYPE@"] = mKeyElementType->GetCodeType();
+        replacements["@VAR_KEY_ARG_TYPE@"] = mKeyElementType->GetArgumentType();
         replacements["@VAR_VALUE_TYPE@"] = mValueElementType->GetCodeType();
+        replacements["@VAR_VALUE_ARG_TYPE@"] = mValueElementType->GetArgumentType();
         replacements["@VAR_CAMELCASE_NAME@"] = generator.GetCapitalName(*this);
 
         ss << generator.ParseTemplate(tabLevel,
@@ -425,7 +432,9 @@ std::string MetaVariableMap::GetUtilityFunctions(const Generator& generator,
         std::map<std::string, std::string> replacements;
         replacements["@VAR_NAME@"] = name;
         replacements["@VAR_KEY_TYPE@"] = mKeyElementType->GetCodeType();
+        replacements["@VAR_KEY_ARG_TYPE@"] = mKeyElementType->GetArgumentType();
         replacements["@VAR_VALUE_TYPE@"] = mValueElementType->GetCodeType();
+        replacements["@VAR_VALUE_ARG_TYPE@"] = mValueElementType->GetArgumentType();
         replacements["@OBJECT_NAME@"] = object.GetName();
         replacements["@VAR_CAMELCASE_NAME@"] = generator.GetCapitalName(*this);
 
@@ -439,6 +448,30 @@ std::string MetaVariableMap::GetUtilityFunctions(const Generator& generator,
 
         ss << std::endl << generator.ParseTemplate(0, "VariableMapUtilityFunctions",
             replacements) << std::endl;
+    }
+
+    return ss.str();
+}
+
+std::string MetaVariableMap::GetAccessScriptBindings(const Generator& generator,
+    const MetaObject& object, const std::string& name,
+    size_t tabLevel) const
+{
+    std::stringstream ss;
+    
+    if(mKeyElementType && mValueElementType)
+    {
+        std::map<std::string, std::string> replacements;
+        replacements["@VAR_NAME@"] = name;
+        replacements["@VAR_KEY_TYPE@"] = mKeyElementType->GetCodeType();
+        replacements["@VAR_KEY_ARG_TYPE@"] = mKeyElementType->GetArgumentType();
+        replacements["@VAR_VALUE_TYPE@"] = mValueElementType->GetCodeType();
+        replacements["@VAR_VALUE_ARG_TYPE@"] = mValueElementType->GetArgumentType();
+        replacements["@OBJECT_NAME@"] = object.GetName();
+        replacements["@VAR_CAMELCASE_NAME@"] = generator.GetCapitalName(*this);
+
+        ss << generator.ParseTemplate(tabLevel,
+            "VariableMapAccessScriptBindings", replacements) << std::endl;
     }
 
     return ss.str();

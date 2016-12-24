@@ -224,13 +224,7 @@ bool MetaVariableString::Load(const tinyxml2::XMLDocument& doc,
 
     if(nullptr != szAllowEmpty)
     {
-        std::string allowEmpty(szAllowEmpty);
-
-        std::transform(allowEmpty.begin(), allowEmpty.end(),
-            allowEmpty.begin(), ::tolower);
-
-        SetAllowEmpty("1" == allowEmpty || "true" == allowEmpty ||
-            "on" == allowEmpty || "yes" == allowEmpty);
+        SetAllowEmpty(Generator::GetXmlAttributeBoolean(szAllowEmpty));
     }
     else
     {

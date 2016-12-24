@@ -420,6 +420,7 @@ std::string MetaVariableArray::GetAccessDeclarations(const Generator& generator,
         std::map<std::string, std::string> replacements;
         replacements["@VAR_NAME@"] = name;
         replacements["@VAR_TYPE@"] = mElementType->GetCodeType();
+        replacements["@VAR_ARG_TYPE@"] = mElementType->GetArgumentType();
         replacements["@VAR_CAMELCASE_NAME@"] = generator.GetCapitalName(*this);
 
         ss << generator.ParseTemplate(tabLevel,
@@ -440,6 +441,7 @@ std::string MetaVariableArray::GetAccessFunctions(const Generator& generator,
         std::map<std::string, std::string> replacements;
         replacements["@VAR_NAME@"] = name;
         replacements["@VAR_TYPE@"] = mElementType->GetCodeType();
+        replacements["@VAR_ARG_TYPE@"] = mElementType->GetArgumentType();
         replacements["@OBJECT_NAME@"] = object.GetName();
         replacements["@VAR_CAMELCASE_NAME@"] = generator.GetCapitalName(*this);
         replacements["@ELEMENT_COUNT@"] = std::to_string(mElementCount);
@@ -461,6 +463,7 @@ std::string MetaVariableArray::GetUtilityDeclarations(const Generator& generator
         std::map<std::string, std::string> replacements;
         replacements["@VAR_NAME@"] = name;
         replacements["@VAR_TYPE@"] = mElementType->GetCodeType();
+        replacements["@VAR_ARG_TYPE@"] = mElementType->GetArgumentType();
         replacements["@VAR_CAMELCASE_NAME@"] = generator.GetCapitalName(*this);
 
         ss << generator.ParseTemplate(tabLevel,
@@ -480,6 +483,7 @@ std::string MetaVariableArray::GetUtilityFunctions(const Generator& generator,
         std::map<std::string, std::string> replacements;
         replacements["@VAR_NAME@"] = name;
         replacements["@VAR_TYPE@"] = mElementType->GetCodeType();
+        replacements["@VAR_ARG_TYPE@"] = mElementType->GetArgumentType();
         replacements["@OBJECT_NAME@"] = object.GetName();
         replacements["@VAR_CAMELCASE_NAME@"] = generator.GetCapitalName(*this);
         replacements["@ELEMENT_COUNT@"] = std::to_string(mElementCount);
@@ -491,6 +495,28 @@ std::string MetaVariableArray::GetUtilityFunctions(const Generator& generator,
 
         ss << std::endl << generator.ParseTemplate(0, "VariableArrayUtilityFunctions",
             replacements) << std::endl;
+    }
+
+    return ss.str();
+}
+
+std::string MetaVariableArray::GetAccessScriptBindings(const Generator& generator,
+    const MetaObject& object, const std::string& name,
+    size_t tabLevel) const
+{
+    std::stringstream ss;
+
+    if(mElementType)
+    {
+        std::map<std::string, std::string> replacements;
+        replacements["@VAR_NAME@"] = name;
+        replacements["@VAR_TYPE@"] = mElementType->GetCodeType();
+        replacements["@VAR_ARG_TYPE@"] = mElementType->GetArgumentType();
+        replacements["@OBJECT_NAME@"] = object.GetName();
+        replacements["@VAR_CAMELCASE_NAME@"] = generator.GetCapitalName(*this);
+
+        ss << generator.ParseTemplate(tabLevel,
+            "VariableArrayAccessScriptBindings", replacements) << std::endl;
     }
 
     return ss.str();

@@ -45,7 +45,7 @@ std::string GeneratorHeader::GenerateClass(const MetaObject& obj)
     {
         ss << "objects::" + obj.GetBaseObject() << std::endl;
     }
-    else if(obj.GetPersistent())
+    else if(obj.IsPersistent())
     {
         ss << "libcomp::PersistentObject" << std::endl;
     }
@@ -118,7 +118,7 @@ std::string GeneratorHeader::GenerateClass(const MetaObject& obj)
         ss << std::endl;
     }
 
-    if(obj.GetPersistent())
+    if(obj.IsPersistent())
     {
         std::map<std::string, std::string> replacements;
         ss << ParseTemplate(1, "VariablePersistentDeclarations", replacements);
@@ -200,7 +200,7 @@ std::string GeneratorHeader::Generate(const MetaObject& obj)
     {
         ss << "#include <" + obj.GetBaseObject() + ".h>" << std::endl;
     }
-    else if(obj.GetPersistent())
+    else if(obj.IsPersistent())
     {
         ss << "#include <PersistentObject.h>" << std::endl;
 

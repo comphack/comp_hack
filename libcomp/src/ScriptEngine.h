@@ -34,6 +34,11 @@
 #include <squirrel.h>
 #include <sqstdblob.h>
 
+// Sqrat includes
+#include "PushIgnore.h"
+#include <sqrat.h>
+#include "PopIgnore.h"
+
 namespace libcomp
 {
 
@@ -43,13 +48,11 @@ public:
     ScriptEngine();
     ~ScriptEngine();
 
+    template <class T> ScriptEngine& Using();
+
     HSQUIRRELVM GetVM();
 
     bool Eval(const String& source, const String& sourceName = String());
-
-private:
-    void BindReadOnlyPacket();
-    void BindPacket();
 
     HSQUIRRELVM mVM;
 };

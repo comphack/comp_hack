@@ -61,9 +61,14 @@ std::string MetaObject::GetBaseObject() const
     return mBaseObject;
 }
 
-bool MetaObject::GetPersistent() const
+bool MetaObject::IsPersistent() const
 {
     return mPersistent;
+}
+
+bool MetaObject::IsScriptEnabled() const
+{
+    return mScriptEnabled;
 }
 
 std::string MetaObject::GetSourceLocation() const
@@ -237,6 +242,8 @@ bool MetaObject::Load(std::istream& stream)
 {
     Generator::LoadString(stream, mName);
     Generator::LoadString(stream, mBaseObject);
+    stream.read(reinterpret_cast<char*>(&mScriptEnabled),
+        sizeof(mScriptEnabled));
     stream.read(reinterpret_cast<char*>(&mPersistent),
         sizeof(mPersistent));
     Generator::LoadString(stream, mSourceLocation);
@@ -264,6 +271,8 @@ bool MetaObject::Save(std::ostream& stream) const
 
     Generator::SaveString(stream, mName);
     Generator::SaveString(stream, mBaseObject);
+    stream.write(reinterpret_cast<const char*>(&mScriptEnabled),
+        sizeof(mScriptEnabled));
     stream.write(reinterpret_cast<const char*>(&mPersistent),
         sizeof(mPersistent));
     Generator::SaveString(stream, mSourceLocation);
@@ -277,6 +286,25 @@ bool MetaObject::Save(tinyxml2::XMLDocument& doc,
 {
     tinyxml2::XMLElement *pObjectElement = doc.NewElement("object");
     pObjectElement->SetAttribute("name", mName.c_str());
+
+    if(mBaseObject.length() > 0)
+    {
+        pObjectElement->SetAttribute("baseobject", mBaseObject.c_str());
+    }
+
+    if(!IsPersistent())
+    {
+        pObjectElement->SetAttribute("persistent", "false");
+    }
+    else if(mSourceLocation.length() > 0)
+    {
+        pObjectElement->SetAttribute("location", mSourceLocation.c_str());
+    }
+
+    if(IsScriptEnabled())
+    {
+        pObjectElement->SetAttribute("scriptenabled", "true");
+    }
 
     root.InsertEndChild(pObjectElement);
 

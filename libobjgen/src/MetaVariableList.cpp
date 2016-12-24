@@ -336,6 +336,7 @@ std::string MetaVariableList::GetAccessDeclarations(const Generator& generator,
         std::map<std::string, std::string> replacements;
         replacements["@VAR_NAME@"] = name;
         replacements["@VAR_TYPE@"] = mElementType->GetCodeType();
+        replacements["@VAR_ARG_TYPE@"] = mElementType->GetArgumentType();
         replacements["@VAR_CAMELCASE_NAME@"] = generator.GetCapitalName(*this);
 
         ss << generator.ParseTemplate(tabLevel,
@@ -356,6 +357,7 @@ std::string MetaVariableList::GetAccessFunctions(const Generator& generator,
         std::map<std::string, std::string> replacements;
         replacements["@VAR_NAME@"] = name;
         replacements["@VAR_TYPE@"] = mElementType->GetCodeType();
+        replacements["@VAR_ARG_TYPE@"] = mElementType->GetArgumentType();
         replacements["@OBJECT_NAME@"] = object.GetName();
         replacements["@VAR_CAMELCASE_NAME@"] = generator.GetCapitalName(*this);
 
@@ -376,6 +378,7 @@ std::string MetaVariableList::GetUtilityDeclarations(const Generator& generator,
         std::map<std::string, std::string> replacements;
         replacements["@VAR_NAME@"] = name;
         replacements["@VAR_TYPE@"] = mElementType->GetCodeType();
+        replacements["@VAR_ARG_TYPE@"] = mElementType->GetArgumentType();
         replacements["@VAR_CAMELCASE_NAME@"] = generator.GetCapitalName(*this);
 
         ss << generator.ParseTemplate(tabLevel,
@@ -395,6 +398,7 @@ std::string MetaVariableList::GetUtilityFunctions(const Generator& generator,
         std::map<std::string, std::string> replacements;
         replacements["@VAR_NAME@"] = name;
         replacements["@VAR_TYPE@"] = mElementType->GetCodeType();
+        replacements["@VAR_ARG_TYPE@"] = mElementType->GetArgumentType();
         replacements["@OBJECT_NAME@"] = object.GetName();
         replacements["@VAR_CAMELCASE_NAME@"] = generator.GetCapitalName(*this);
 
@@ -405,6 +409,28 @@ std::string MetaVariableList::GetUtilityFunctions(const Generator& generator,
 
         ss << std::endl << generator.ParseTemplate(0, "VariableListUtilityFunctions",
             replacements) << std::endl;
+    }
+
+    return ss.str();
+}
+
+std::string MetaVariableList::GetAccessScriptBindings(const Generator& generator,
+    const MetaObject& object, const std::string& name,
+    size_t tabLevel) const
+{
+    std::stringstream ss;
+
+    if(mElementType)
+    {
+        std::map<std::string, std::string> replacements;
+        replacements["@VAR_NAME@"] = name;
+        replacements["@VAR_TYPE@"] = mElementType->GetCodeType();
+        replacements["@VAR_ARG_TYPE@"] = mElementType->GetArgumentType();
+        replacements["@OBJECT_NAME@"] = object.GetName();
+        replacements["@VAR_CAMELCASE_NAME@"] = generator.GetCapitalName(*this);
+
+        ss << generator.ParseTemplate(tabLevel,
+            "VariableListAccessScriptBindings", replacements) << std::endl;
     }
 
     return ss.str();

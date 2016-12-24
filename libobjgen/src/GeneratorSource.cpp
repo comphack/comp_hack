@@ -51,6 +51,12 @@ std::string GeneratorSource::Generate(const MetaObject& obj)
     ss << "#include \"DatabaseQuery.h\"" << std::endl;
     ss << "#include \"Log.h\"" << std::endl;
     ss << "#include \"VectorStream.h\"" << std::endl;
+
+    bool scriptEnabled = obj.IsScriptEnabled();
+    if(scriptEnabled)
+    {
+        ss << "#include \"ScriptEngine.h\"" << std::endl;
+    }
     ss << std::endl;
 
     std::set<std::string> references = obj.GetReferencesTypes();
@@ -76,7 +82,7 @@ std::string GeneratorSource::Generate(const MetaObject& obj)
     {
         ss << "objects::" + obj.GetBaseObject() + "()" << std::endl;
     }
-    else if(obj.GetPersistent())
+    else if(obj.IsPersistent())
     {
         ss << "libcomp::PersistentObject()" << std::endl;
     }
@@ -407,6 +413,8 @@ std::string GeneratorSource::Generate(const MetaObject& obj)
     ss << "}" << std::endl;
     ss << std::endl;
 
+    std::stringstream scriptBindings;
+
     // Accessor Functions
     for(auto it = obj.VariablesBegin(); it != obj.VariablesEnd(); ++it)
     {
@@ -417,14 +425,35 @@ std::string GeneratorSource::Generate(const MetaObject& obj)
         ss << var->GetAccessFunctions(*this, obj, GetMemberName(var));
         ss << std::endl;
 
-        auto util = var->GetUtilityFunctions(*this, obj, var->GetName());
-        if (util.length() > 0)
+        auto util = var->GetUtilityFunctions(*this, obj, GetMemberName(var));
+        if(util.length() > 0)
         {
             ss << util << std::endl;
         }
+
+        if(scriptEnabled)
+        {
+            auto binding = var->GetAccessScriptBindings(*this, obj,
+                GetMemberName(var));
+            if(binding.length() > 0)
+            {
+                scriptBindings << binding;
+            }
+        }
     }
 
-    if(obj.GetPersistent() && !GeneratePersistentObjectFunctions(obj, ss))
+    if(scriptEnabled)
+    {
+        std::map<std::string, std::string> replacements;
+        replacements["@OBJECT_NAME@"] = obj.GetName();
+        replacements["@OBJECT_STRING_NAME@"] = Escape(obj.GetName());
+        replacements["@BINDINGS@"] = scriptBindings.str();
+
+        ss << ParseTemplate(0, "VariableAccessScriptBindings", replacements)
+            << std::endl;
+    }
+
+    if(obj.IsPersistent() && !GeneratePersistentObjectFunctions(obj, ss))
     {
         return "";
     }

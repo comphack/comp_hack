@@ -132,6 +132,7 @@ public:
         const std::string& parent, size_t tabLevel = 1,
         const std::string elemName = "member") const = 0;
     virtual std::string GetDeclaration(const std::string& name) const;
+    virtual std::string GetArgumentType() const;
     virtual std::string GetArgument(const std::string& name) const;
     virtual std::string GetDefaultValueCode() const;
     virtual std::string GetGetterCode(const Generator& generator,
@@ -154,6 +155,9 @@ public:
         const std::string& name, size_t tabLevel = 1) const;
     virtual std::string GetUtilityFunctions(const Generator& generator,
         const MetaObject& object, const std::string& name) const;
+    virtual std::string GetAccessScriptBindings(const Generator& generator,
+        const MetaObject& object, const std::string& name,
+        size_t tabLevel = 1) const;
     virtual std::string GetConstructorCode(const Generator& generator,
         const MetaObject& object, const std::string& name,
         size_t tabLevel = 1) const;

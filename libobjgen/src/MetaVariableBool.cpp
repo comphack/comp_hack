@@ -114,8 +114,7 @@ bool MetaVariableBool::Load(const tinyxml2::XMLDocument& doc,
 
     if(defaultVal)
     {
-        std::string val(defaultVal);
-        mDefaultValue = val == "1" || "true" == val || "on" == val || "yes" == val;
+        mDefaultValue = Generator::GetXmlAttributeBoolean(defaultVal);
     }
 
     return status && BaseLoad(root) && IsValid();

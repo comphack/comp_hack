@@ -10,7 +10,7 @@ std::string @OBJECT_NAME@::Get@VAR_CAMELCASE_NAME@String(@VAR_TYPE@ val) const
     return "";
 }
 
-@OBJECT_NAME@::@VAR_TYPE@ @OBJECT_NAME@::Get@VAR_CAMELCASE_NAME@Value(std::string& val, bool& success)
+@VAR_TYPE@ @OBJECT_NAME@::Get@VAR_CAMELCASE_NAME@Value(std::string& val, bool& success)
 {
     success = true;
     

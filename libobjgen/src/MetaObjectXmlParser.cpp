@@ -29,6 +29,7 @@
 // MetaVariable Types
 #include "MetaVariable.h"
 #include "MetaVariableArray.h"
+#include "MetaVariableEnum.h"
 #include "MetaVariableInt.h"
 #include "MetaVariableList.h"
 #include "MetaVariableMap.h"
@@ -76,13 +77,14 @@ bool MetaObjectXmlParser::LoadTypeInformation(const tinyxml2::XMLDocument& doc,
         const char *szName = root.Attribute("name");
         const char *szBaseObject = root.Attribute("baseobject");
         const char *szPersistent = root.Attribute("persistent");
+        const char *szScriptEnabled = root.Attribute("scriptenabled");
 
         if(nullptr != szName && mObject->SetName(szName))
         {
             if(nullptr != szPersistent && nullptr == szBaseObject)
             {
-                std::string attr(szPersistent);
-                mObject->mPersistent = "1" == attr || "true" == attr || "on" == attr || "yes" == attr;
+                mObject->mPersistent = Generator::GetXmlAttributeBoolean(
+                    szPersistent);
             }
             else
             {
@@ -101,6 +103,16 @@ bool MetaObjectXmlParser::LoadTypeInformation(const tinyxml2::XMLDocument& doc,
             {
                 //Objects cannot be both derived and persistent
                 mObject->SetBaseObject(szBaseObject);
+            }
+
+            if(nullptr != szScriptEnabled)
+            {
+                mObject->mScriptEnabled = Generator::GetXmlAttributeBoolean(
+                    szScriptEnabled);
+            }
+            else
+            {
+                mObject->mScriptEnabled = false;
             }
         }
         else
@@ -335,7 +347,7 @@ bool MetaObjectXmlParser::SetReferenceFieldDynamicSizes(
                 auto objRef = std::dynamic_pointer_cast<
                     libobjgen::MetaVariableReference>(var);
                 auto objRefObject = GetKnownObject(objRef->GetReferenceType());
-                if(!objRefObject->GetPersistent() &&
+                if(!objRefObject->IsPersistent() &&
                     objRef->GetDynamicSizeCount() == 0)
                 {
                     allRefSizesSet = false;
@@ -377,7 +389,7 @@ bool MetaObjectXmlParser::LoadMember(const tinyxml2::XMLDocument& doc,
         {
             var->SetName(szMemberName);
 
-            if(var->IsLookupKey() && !mObject->GetPersistent())
+            if(var->IsLookupKey() && !mObject->IsPersistent())
             {
                 std::stringstream ss;
                 ss << "Non-persistent object member variable '"
@@ -543,12 +555,16 @@ std::shared_ptr<MetaVariable> MetaObjectXmlParser::GetVariable(const tinyxml2::X
                 }
             }
         }
+        else if(var && var->GetMetaType() == MetaVariable::MetaVariableType_t::TYPE_ENUM)
+        {
+            std::dynamic_pointer_cast<MetaVariableEnum>(var)->SetTypePrefix(mObject->GetName());
+        }
         else if(var && var->GetMetaType() == MetaVariable::MetaVariableType_t::TYPE_REF)
         {
             auto ref = std::dynamic_pointer_cast<MetaVariableReference>(var);
 
             auto refType = ref->GetReferenceType();
-            auto persistentRefType = mKnownObjects[szName]->GetPersistent();
+            auto persistentRefType = mKnownObjects[szName]->IsPersistent();
 
             ref->SetPersistentParent(persistentRefType);
             if(mKnownObjects.find(refType) == mKnownObjects.end())
@@ -559,7 +575,7 @@ std::shared_ptr<MetaVariable> MetaObjectXmlParser::GetVariable(const tinyxml2::X
 
                 mError = ss.str();
             }
-            else if(!mKnownObjects[refType]->GetPersistent() && persistentRefType)
+            else if(!mKnownObjects[refType]->IsPersistent() && persistentRefType)
             {
                 std::stringstream ss;
                 ss << "Non-peristent reference type '" << refType << "' on field  '"
@@ -740,7 +756,7 @@ bool MetaObjectXmlParser::HasCircularReference(const std::shared_ptr<MetaObject>
 
             auto refObject = mKnownObjects.find(ref->GetReferenceType());
             status = refObject != mKnownObjects.end() &&
-                !refObject->second->GetPersistent() &&
+                !refObject->second->IsPersistent() &&
                 HasCircularReference(refObject->second, referencesCopy);
 
             if(status)

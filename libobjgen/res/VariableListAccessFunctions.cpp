@@ -10,7 +10,7 @@
     return *it;
 }
 
-bool @OBJECT_NAME@::Append@VAR_CAMELCASE_NAME@(@VAR_TYPE@ val)
+bool @OBJECT_NAME@::Append@VAR_CAMELCASE_NAME@(@VAR_ARG_TYPE@ val)
 {
     if(!Validate@VAR_CAMELCASE_NAME@Entry(val))
     {
@@ -21,7 +21,7 @@ bool @OBJECT_NAME@::Append@VAR_CAMELCASE_NAME@(@VAR_TYPE@ val)
     return true;
 }
 
-bool @OBJECT_NAME@::Prepend@VAR_CAMELCASE_NAME@(@VAR_TYPE@ val)
+bool @OBJECT_NAME@::Prepend@VAR_CAMELCASE_NAME@(@VAR_ARG_TYPE@ val)
 {
     if(!Validate@VAR_CAMELCASE_NAME@Entry(val))
     {
@@ -32,7 +32,7 @@ bool @OBJECT_NAME@::Prepend@VAR_CAMELCASE_NAME@(@VAR_TYPE@ val)
     return true;
 }
 
-bool @OBJECT_NAME@::Insert@VAR_CAMELCASE_NAME@(size_t index, @VAR_TYPE@ val)
+bool @OBJECT_NAME@::Insert@VAR_CAMELCASE_NAME@(size_t index, @VAR_ARG_TYPE@ val)
 {
     if(@VAR_NAME@.size() <= index || !Validate@VAR_CAMELCASE_NAME@Entry(val))
     {

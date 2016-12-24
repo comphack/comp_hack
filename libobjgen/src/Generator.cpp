@@ -181,6 +181,13 @@ std::string Generator::GetCapitalName(
     return s;
 }
 
+bool Generator::GetXmlAttributeBoolean(const std::string& attr)
+{
+    auto lower = attr;
+    std::transform(lower.begin(), lower.end(), lower.begin(), ::tolower);
+    return "1" == lower || "true" == lower || "on" == lower || "yes" == lower;
+}
+
 std::string Generator::Escape(const std::string& str)
 {
     std::string s = "\"";

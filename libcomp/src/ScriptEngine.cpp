@@ -34,14 +34,6 @@
 
 #include <sqstdaux.h>
 
-#include "PushIgnore.h"
-#include <sqrat.h>
-#include "PopIgnore.h"
-
-// Classes to Bind
-#include "Packet.h"
-#include "ReadOnlyPacket.h"
-
 using namespace libcomp;
 using namespace Sqrat;
 
@@ -122,10 +114,6 @@ ScriptEngine::ScriptEngine()
 
     sq_pushroottable(mVM);
     sqstd_register_bloblib(mVM);
-
-    // Bindings.
-    BindReadOnlyPacket();
-    BindPacket();
 }
 
 ScriptEngine::~ScriptEngine()
@@ -154,37 +142,6 @@ bool ScriptEngine::Eval(const String& source, const String& sourceName)
     sq_settop(mVM, top);
 
     return result;
-}
-
-void ScriptEngine::BindReadOnlyPacket()
-{
-    Class<ReadOnlyPacket> binding(mVM, "ReadOnlyPacket");
-    binding
-        .Func("Size", &ReadOnlyPacket::Size)
-        .Func<std::vector<char> (ReadOnlyPacket::*)(uint32_t)>(
-            "ReadArray", &Packet::ReadArray)
-        .Overload<void (ReadOnlyPacket::*)()>(
-            "Rewind", &ReadOnlyPacket::Rewind)
-        .Overload<void (ReadOnlyPacket::*)(uint32_t)>(
-            "Rewind", &ReadOnlyPacket::Rewind)
-        .Func("HexDump", &Packet::HexDump)
-    ; // Last call to binding
-
-    RootTable(mVM).Bind("ReadOnlyPacket", binding);
-}
-
-void ScriptEngine::BindPacket()
-{
-    // Base class must be bound first.
-    DerivedClass<Packet, ReadOnlyPacket> binding(mVM, "Packet");
-    binding
-        .Func("WriteBlank", &Packet::WriteBlank)
-        .Func("WriteU16Little", &Packet::WriteU16Little)
-        .Func<void (Packet::*)(const std::vector<char>&)>(
-            "WriteArray", &Packet::WriteArray)
-    ; // Last call to binding
-
-    RootTable(mVM).Bind("Packet", binding);
 }
 
 HSQUIRRELVM ScriptEngine::GetVM()

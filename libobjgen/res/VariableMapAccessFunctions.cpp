@@ -1,4 +1,4 @@
-@VAR_VALUE_TYPE@ @OBJECT_NAME@::Get@VAR_CAMELCASE_NAME@(@VAR_KEY_TYPE@ key) const
+@VAR_VALUE_TYPE@ @OBJECT_NAME@::Get@VAR_CAMELCASE_NAME@(@VAR_KEY_ARG_TYPE@ key) const
 {
     auto iter = @VAR_NAME@.find(key);
     if(iter != @VAR_NAME@.end())
@@ -9,12 +9,12 @@
     return @VAR_VALUE_TYPE@{};
 }
 
-bool @OBJECT_NAME@::@VAR_CAMELCASE_NAME@KeyExists(@VAR_KEY_TYPE@ key) const
+bool @OBJECT_NAME@::@VAR_CAMELCASE_NAME@KeyExists(@VAR_KEY_ARG_TYPE@ key) const
 {
     return @VAR_NAME@.find(key) != @VAR_NAME@.end();
 }
 
-bool @OBJECT_NAME@::Set@VAR_CAMELCASE_NAME@(@VAR_KEY_TYPE@ key, @VAR_VALUE_TYPE@ val)
+bool @OBJECT_NAME@::Set@VAR_CAMELCASE_NAME@(@VAR_KEY_ARG_TYPE@ key, @VAR_VALUE_ARG_TYPE@ val)
 {
     if(!Validate@VAR_CAMELCASE_NAME@Entry(key, val))
     {
@@ -26,7 +26,7 @@ bool @OBJECT_NAME@::Set@VAR_CAMELCASE_NAME@(@VAR_KEY_TYPE@ key, @VAR_VALUE_TYPE@
     return true;
 }
 
-bool @OBJECT_NAME@::Remove@VAR_CAMELCASE_NAME@(@VAR_KEY_TYPE@ key)
+bool @OBJECT_NAME@::Remove@VAR_CAMELCASE_NAME@(@VAR_KEY_ARG_TYPE@ key)
 {
     auto iter = @VAR_NAME@.find(key);
     if(iter != @VAR_NAME@.end())

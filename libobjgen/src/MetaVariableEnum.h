@@ -42,6 +42,9 @@ public:
     uint32_t GetDefaultValue() const;
     void SetDefaultValue(const uint32_t value);
 
+    std::string GetTypePrefix() const;
+    void SetTypePrefix(const std::string& prefix);
+
     short GetSizeType() const;
     std::string GetSizeTypeString() const;
     bool SetSizeType(const short sizeType);
@@ -65,6 +68,7 @@ public:
     virtual bool Save(tinyxml2::XMLDocument& doc,
         tinyxml2::XMLElement& parent, const char* elementName) const;
 
+    virtual std::string GetArgumentType() const;
     virtual std::string GetCodeType() const;
     virtual std::string GetConstructValue() const;
     virtual std::string GetDefaultValueCode() const;
@@ -99,6 +103,7 @@ public:
 
 private:
     std::vector<std::string> mValues;
+    std::string mTypePrefix;
     uint32_t mDefaultValue;
     short mSizeType;
 };

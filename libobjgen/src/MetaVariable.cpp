@@ -399,6 +399,13 @@ std::string MetaVariable::GetDeclaration(const std::string& name) const
     return decl;
 }
 
+std::string MetaVariable::GetArgumentType() const
+{
+    std::stringstream ss;
+    ss << "const " << GetCodeType() << "&";
+    return ss.str();
+}
+
 std::string MetaVariable::GetArgument(const std::string& name) const
 {
     std::string arg;
@@ -407,7 +414,7 @@ std::string MetaVariable::GetArgument(const std::string& name) const
     {
         std::stringstream ss;
 
-        ss << "const " << GetCodeType() << "& " << name;
+        ss << GetArgumentType() << " " << name;
 
         arg = ss.str();
     }
@@ -516,19 +523,16 @@ std::string MetaVariable::GetAccessFunctions(const Generator& generator,
 {
     std::stringstream ss;
 
-    if(GetMetaType() == MetaVariableType_t::TYPE_ENUM)
-    {
-        ss << object.GetName() << "::";
-    }
+    auto objName = object.GetName();
 
-    ss << GetCodeType() << " " << object.GetName() << "::" << "Get"
+    ss << GetCodeType() << " " << objName << "::" << "Get"
         << generator.GetCapitalName(*this) << "() const" << std::endl;
     ss << "{" << std::endl;
     ss << GetGetterCode(generator, name);
     ss << "}" << std::endl;
     ss << std::endl;
 
-    ss << "bool " << object.GetName() << "::" << "Set"
+    ss << "bool " << objName << "::" << "Set"
         << generator.GetCapitalName(*this) << "(" << GetArgument(GetName())
         << ")" << std::endl;
     ss << "{" << std::endl;
@@ -538,8 +542,8 @@ std::string MetaVariable::GetAccessFunctions(const Generator& generator,
     if(IsLookupKey())
     {
         ss << std::endl;
-        ss << "std::shared_ptr<" << object.GetName() << "> " << object.GetName()
-            << "::Load" << object.GetName() << "By"
+        ss << "std::shared_ptr<" << objName << "> " << objName
+            << "::Load" << objName << "By"
             << generator.GetCapitalName(*this)
             << "(" << GetArgument("val") << ")" << std::endl;
         ss << "{" << std::endl;
@@ -547,7 +551,7 @@ std::string MetaVariable::GetAccessFunctions(const Generator& generator,
             generator, "val") << "());" << std::endl;
         ss << std::endl;
         ss << generator.Tab() << "auto obj = std::dynamic_pointer_cast<"
-            << object.GetName() << ">(LoadObject(typeid(" << object.GetName()
+            << objName << ">(LoadObject(typeid(" << objName
             << "), bind));" << std::endl;
         ss << std::endl;
         ss << generator.Tab() << "delete bind;" << std::endl;
@@ -578,6 +582,38 @@ std::string MetaVariable::GetUtilityFunctions(const Generator& generator,
     (void)name;
 
     return "";
+}
+
+std::string MetaVariable::GetAccessScriptBindings(const Generator& generator,
+    const MetaObject& object, const std::string& name,
+    size_t tabLevel) const
+{
+    (void)name;
+    (void)tabLevel;
+
+    std::stringstream ss;
+
+    auto objName = object.GetName();
+    ss << ".Func<" << GetCodeType() << " (" << objName
+        << "::*)() const>(" << std::endl << generator.Tab() << "\"Get"
+        << generator.GetCapitalName(*this) << "\", &" << objName
+        << "::Get" << generator.GetCapitalName(*this) << ")" << std::endl;
+
+    ss << ".Func<bool (" << objName << "::*)(" << GetArgumentType()
+        << ")>(" << std::endl << generator.Tab() << "\"Set"
+        << generator.GetCapitalName(*this) << "\", &" << objName
+        << "::Set" << generator.GetCapitalName(*this)
+        << ")" << std::endl;
+
+    if(IsLookupKey())
+    {
+        ss << ".StaticFunc(\"Load" << objName << "By"
+            << generator.GetCapitalName(*this) << "\", "
+            << objName << "::Load" << objName << "By"
+            << generator.GetCapitalName(*this) << ")" << std::endl;
+    }
+    
+    return ss.str();
 }
 
 std::string MetaVariable::GetConstructorCode(const Generator& generator,
@@ -646,11 +682,7 @@ bool MetaVariable::BaseLoad(const tinyxml2::XMLElement& element)
 
         if(nullptr != szAttr)
         {
-            std::string attr(szAttr);
-
-            std::transform(attr.begin(), attr.end(), attr.begin(), ::tolower);
-
-            bool value = "1" == attr || "true" == attr || "on" == attr || "yes" == attr;
+            bool value = Generator::GetXmlAttributeBoolean(szAttr);
 
             if(aName == "caps")
             {

@@ -67,6 +67,8 @@ public:
     virtual std::string GetCapitalName(
         const std::shared_ptr<MetaVariable>& var) const;
 
+    static bool GetXmlAttributeBoolean(const std::string& attr);
+
     static std::string Escape(const std::string& str);
 
     static bool LoadString(std::istream& stream, std::string& s);

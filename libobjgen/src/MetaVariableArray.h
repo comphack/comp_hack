@@ -92,6 +92,9 @@ public:
         const std::string& name, size_t tabLevel = 1) const;
     virtual std::string GetUtilityFunctions(const Generator& generator,
         const MetaObject& object, const std::string& name) const;
+    virtual std::string GetAccessScriptBindings(const Generator& generator,
+        const MetaObject& object, const std::string& name,
+        size_t tabLevel = 1) const;
 
 private:
     size_t mElementCount;

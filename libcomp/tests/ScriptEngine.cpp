@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file libcomp/tests/ScriptEngine.cpp
  * @ingroup libcomp
  *
@@ -32,6 +32,7 @@
 #include <Log.h>
 #include <Packet.h>
 #include <ScriptEngine.h>
+#include <TestObject.h>
 
 using namespace libcomp;
 
@@ -116,6 +117,7 @@ TEST(ScriptEngine, ReadOnlyPacket)
         });
 
     ScriptEngine engine;
+    engine.Using<libcomp::Packet>();
 
     EXPECT_TRUE(engine.Eval(
         "p <- Packet();\n"
@@ -148,6 +150,7 @@ TEST(ScriptEngine, ReadWriteArray)
         });
 
     ScriptEngine engine;
+    engine.Using<libcomp::Packet>();
 
     EXPECT_TRUE(engine.Eval(
         "p <- Packet();\n"
@@ -180,6 +183,7 @@ TEST(ScriptEngine, FunctionCall)
         });
 
     ScriptEngine engine;
+    engine.Using<libcomp::Packet>();
 
     EXPECT_TRUE(engine.Eval(
         "function TestFunction(a)\n"
@@ -213,6 +217,39 @@ TEST(ScriptEngine, FunctionCall)
     EXPECT_EQ(a->ReadU16Little(), 0x1234);
     EXPECT_EQ(b->ReadU16Little(), 0x5678);
 
+    scriptMessages.Clear();
+
+    Log::GetSingletonPtr()->ClearHooks();
+}
+
+TEST(ScriptEngine, GeneratedObject)
+{
+    String scriptMessages;
+
+    Log::GetSingletonPtr()->AddLogHook(
+        [&scriptMessages](Log::Level_t level, const String& msg)
+    {
+        (void)level;
+
+        scriptMessages += msg;
+    });
+
+    ScriptEngine engine;
+    engine.Using<objects::TestObject>();
+
+    EXPECT_TRUE(engine.Eval(
+        "t <- TestObject();\n"
+        "if(t.GetUnsigned8() == 100)\n"
+        "{\n"
+        "   error(\"Test value already set!\");\n"
+        "}\n"
+        "if(!t.SetUnsigned8(256))\n"       //Should be out of bounds and fail
+        "{\n"
+        "   t.SetUnsigned8(100);\n"
+        "}\n"
+        "print(t.GetUnsigned8());\n"
+        ));
+    EXPECT_EQ(scriptMessages, "SQUIRREL: 100\n");
     scriptMessages.Clear();
 
     Log::GetSingletonPtr()->ClearHooks();

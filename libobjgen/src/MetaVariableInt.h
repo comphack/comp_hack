@@ -443,20 +443,10 @@ public:
         return value;
     }
 
-    virtual std::string GetArgument(const std::string& name) const
+    virtual std::string GetArgumentType(std::string object) const
     {
-        std::string arg;
-
-        if(MetaObject::IsValidIdentifier(name))
-        {
-            std::stringstream ss;
-
-            ss << GetCodeType() << " " << name;
-
-            arg = ss.str();
-        }
-
-        return arg;
+        (void)object;
+        return GetCodeType();
     }
 
     virtual std::string GetDefaultValueCode() const

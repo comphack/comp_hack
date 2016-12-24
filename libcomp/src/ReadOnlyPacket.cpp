@@ -29,6 +29,7 @@
 #include "Endian.h"
 #include "Log.h"
 #include "PacketException.h"
+#include "ScriptEngine.h"
 
 #include <array>
 
@@ -801,6 +802,26 @@ ReadOnlyPacket& ReadOnlyPacket::operator=(ReadOnlyPacket& other)
     mSize = other.mSize;
     mDataRef = other.mDataRef;
     mData = other.mData;
+
+    return *this;
+}
+
+template<>
+libcomp::ScriptEngine& libcomp::ScriptEngine::Using<ReadOnlyPacket>()
+{
+    Sqrat::Class<ReadOnlyPacket> binding(mVM, "ReadOnlyPacket");
+    binding
+        .Func("Size", &ReadOnlyPacket::Size)
+        .Func<std::vector<char>(ReadOnlyPacket::*)(uint32_t)>(
+            "ReadArray", &Packet::ReadArray)
+        .Overload<void (ReadOnlyPacket::*)()>(
+            "Rewind", &ReadOnlyPacket::Rewind)
+        .Overload<void (ReadOnlyPacket::*)(uint32_t)>(
+            "Rewind", &ReadOnlyPacket::Rewind)
+        .Func("HexDump", &Packet::HexDump)
+        ; // Last call to binding
+
+    Sqrat::RootTable(mVM).Bind("ReadOnlyPacket", binding);
 
     return *this;
 }

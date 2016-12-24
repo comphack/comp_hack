@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <objgen>
-    <object name="TestObject" persistent="false">
+    <object name="TestObject" persistent="false" scriptenabled="true">
         <member type="u8" name="unsigned8" min="2" max="135" default="42"/>
         <member type="s8" name="signed8" min="-108" max="123"/>
         <member type="u16" name="uint16" caps="true" default="1337"/>

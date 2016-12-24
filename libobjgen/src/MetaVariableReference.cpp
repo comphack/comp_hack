@@ -237,13 +237,13 @@ std::string MetaVariableReference::GetConstructorCode(const Generator& generator
     bool topLevel = parentRef.length() == 0;
     if(mPersistentParent)
     {
-        ss << GetName() << " = " << code << ";" << std::endl;
+        ss << generator.GetMemberName(*this) << " = " << code << ";" << std::endl;
         //Should always be the case
         if(topLevel)
         {
             //The only valid value at this point is a UUID for the persistent reference
             //however we should check regardless
-            auto var = mDefaultedVariables.front();
+            auto var = mDefaultedVariables.size() > 0 ? mDefaultedVariables.front() : nullptr;
             if(mDefaultedVariables.size() == 1 && var->GetName() == "UID" &&
                 var->GetMetaType() == MetaVariableType_t::TYPE_STRING)
             {

@@ -1,6 +1,6 @@
 ([&]()
 {
-    UUID value;
+    libobjgen::UUID value;
 
     if(!query.GetValue(@COLUMN_NAME@, value))
     {

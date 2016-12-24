@@ -59,6 +59,7 @@ public:
 protected:
     virtual void PacketReceived(libcomp::Packet& packet);
 
+    std::string mRequest;
     std::shared_ptr<libcomp::MessageQueue<
         libcomp::Message::Message*>> mMessageQueue;
 };

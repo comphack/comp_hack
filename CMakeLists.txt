@@ -86,6 +86,13 @@ ADD_COMPILER_FLAGS(WIN32 -DWINVER=0x601 -D_WIN32_WINNT=0x0601)
 # Don't use full boost, just asio.
 ADD_DEFINITIONS(-DASIO_STANDALONE)
 
+# Include more Sqrat types from libcomp.
+ADD_DEFINITIONS(
+    -DSQRAT_EXTRA_TYPES_INCLUDE=<SqratTypesInclude.h>
+    -DSQRAT_EXTRA_TYPES_SOURCE=<SqratTypesSource.h>
+    -DSQRAT_EXTRA_TYPES_NONREF=<SqratTypesNonRef.h>
+)
+
 # SQLite3 is included in the source repo.
 SET(SQLITE3_INCLUDE_DIRS "${CMAKE_SOURCE_DIR}/deps/sqlite3")
 

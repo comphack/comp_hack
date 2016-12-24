@@ -248,8 +248,13 @@ TEST(ScriptEngine, GeneratedObject)
         "   t.SetUnsigned8(100);\n"
         "}\n"
         "print(t.GetUnsigned8());\n"
+        "print(t.GetStringCP932());\n"
+        "t.SetStringCP932(\"日本人\");\n"
+        "print(t.GetStringCP932());\n"
         ));
-    EXPECT_EQ(scriptMessages, "SQUIRREL: 100\n");
+    EXPECT_EQ(scriptMessages, "SQUIRREL: 100\n"
+        "SQUIRREL: 日本語\n"
+        "SQUIRREL: 日本人\n");
     scriptMessages.Clear();
 
     Log::GetSingletonPtr()->ClearHooks();

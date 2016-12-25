@@ -43,12 +43,12 @@ MetaVariableEnum::~MetaVariableEnum()
 {
 }
 
-uint32_t MetaVariableEnum::GetDefaultValue() const
+std::string MetaVariableEnum::GetDefaultValue() const
 {
     return mDefaultValue;
 }
 
-void MetaVariableEnum::SetDefaultValue(const uint32_t value)
+void MetaVariableEnum::SetDefaultValue(const std::string& value)
 {
     mDefaultValue = value;
 }
@@ -164,7 +164,14 @@ bool MetaVariableEnum::IsValid() const
             return false;
     }
 
-    return mValues.size() > 0 && mDefaultValue <= mValues.size();
+    if(IsInherited())
+    {
+        return !mDefaultValue.empty() && mValues.size() == 0;
+    }
+    else
+    {
+        return mValues.size() > 0 && ValueExists(mDefaultValue);
+    }
 }
 
 bool MetaVariableEnum::Load(std::istream& stream)
@@ -252,17 +259,9 @@ bool MetaVariableEnum::Load(const tinyxml2::XMLDocument& doc,
 
     auto defaultVal = root.Attribute("default");
 
-    if(defaultVal && ValueExists(defaultVal))
+    if(defaultVal)
     {
-        std::string val(defaultVal);
-        for(size_t i = 0; i < mValues.size(); i++)
-        {
-            if(mValues[i] == val)
-            {
-                mDefaultValue = (uint32_t)i;
-                break;
-            }
-        }
+        mDefaultValue = std::string(defaultVal);
     }
     
     const char *szSize = root.Attribute("size");
@@ -304,7 +303,7 @@ bool MetaVariableEnum::Save(tinyxml2::XMLDocument& doc,
     tinyxml2::XMLElement *pVariableElement = doc.NewElement(elementName);
     pVariableElement->SetAttribute("type", GetType().c_str());
     pVariableElement->SetAttribute("name", GetName().c_str());
-    pVariableElement->SetAttribute("default", mValues[mDefaultValue].c_str());
+    pVariableElement->SetAttribute("default", mDefaultValue.c_str());
 
     if(8 != mSizeType && (16 == mSizeType || 32 == mSizeType))
     {
@@ -352,7 +351,7 @@ std::string MetaVariableEnum::GetConstructValue() const
 
 std::string MetaVariableEnum::GetDefaultValueCode() const
 {
-    return mValues[mDefaultValue];
+    return mDefaultValue;
 }
 
 std::string MetaVariableEnum::GetValidCondition(const Generator& generator,
@@ -532,7 +531,7 @@ std::string MetaVariableEnum::GetUtilityFunctions(const Generator& generator,
     return ss.str();
 }
 
-bool MetaVariableEnum::ValueExists(const std::string& val)
+bool MetaVariableEnum::ValueExists(const std::string& val) const
 {
     if(mValues.size() > 0)
     {

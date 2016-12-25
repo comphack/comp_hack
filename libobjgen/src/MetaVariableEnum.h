@@ -39,8 +39,8 @@ public:
     MetaVariableEnum();
     virtual ~MetaVariableEnum();
 
-    uint32_t GetDefaultValue() const;
-    void SetDefaultValue(const uint32_t value);
+    std::string GetDefaultValue() const;
+    void SetDefaultValue(const std::string& value);
 
     std::string GetTypePrefix() const;
     void SetTypePrefix(const std::string& prefix);
@@ -100,12 +100,12 @@ public:
     virtual std::string GetUtilityFunctions(const Generator& generator,
         const MetaObject& object, const std::string& name) const;
 
-    bool ValueExists(const std::string& val);
+    bool ValueExists(const std::string& val) const;
 
 private:
     std::vector<std::string> mValues;
     std::string mTypePrefix;
-    uint32_t mDefaultValue;
+    std::string mDefaultValue;
     short mSizeType;
 };
 

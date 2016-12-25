@@ -75,6 +75,12 @@ bool MetaVariableMap::IsCoreType() const
     return false;
 }
 
+bool MetaVariableMap::IsScriptAccessible() const
+{
+    return mKeyElementType && mKeyElementType->IsScriptAccessible()
+        && mValueElementType && mValueElementType->IsScriptAccessible();
+}
+
 bool MetaVariableMap::IsValid() const
 {
     return mKeyElementType && mKeyElementType->IsValid() &&

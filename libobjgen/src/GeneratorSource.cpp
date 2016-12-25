@@ -78,9 +78,11 @@ std::string GeneratorSource::Generate(const MetaObject& obj)
 
     // Constructor
     ss << obj.GetName() << "::" << obj.GetName() << "() : ";
-    if(!obj.GetBaseObject().empty())
+
+    auto baseObject = obj.GetBaseObject();
+    if(!baseObject.empty())
     {
-        ss << "objects::" + obj.GetBaseObject() + "()" << std::endl;
+        ss << "objects::" + baseObject + "()" << std::endl;
     }
     else if(obj.IsPersistent())
     {
@@ -349,9 +351,9 @@ std::string GeneratorSource::Generate(const MetaObject& obj)
 
     ss << std::endl;
     ss << Tab() << "return status";
-    if(obj.GetBaseObject().length() > 0)
+    if(!baseObject.empty())
     {
-        ss << " && " << obj.GetBaseObject() << "::Load(doc, root)";
+        ss << " && " << baseObject << "::Load(doc, root)";
     }
     ss << ";" << std::endl;
     ss << "}" << std::endl;
@@ -386,10 +388,10 @@ std::string GeneratorSource::Generate(const MetaObject& obj)
     }
     ss << std::endl;
 
-    if(obj.GetBaseObject().length() > 0)
+    if(!baseObject.empty())
     {
         ss << std::endl;
-        ss <<  Tab() << "status &= " << obj.GetBaseObject() << "::Save(doc, root);" << std::endl;
+        ss <<  Tab() << "status &= " << baseObject << "::Save(doc, root);" << std::endl;
     }
 
     ss << std::endl;
@@ -431,7 +433,7 @@ std::string GeneratorSource::Generate(const MetaObject& obj)
             ss << util << std::endl;
         }
 
-        if(scriptEnabled)
+        if(scriptEnabled && var->IsScriptAccessible())
         {
             auto binding = var->GetAccessScriptBindings(*this, obj,
                 GetMemberName(var));
@@ -444,10 +446,37 @@ std::string GeneratorSource::Generate(const MetaObject& obj)
 
     if(scriptEnabled)
     {
+        std::stringstream bindingType;
+        std::stringstream dependencies;
+        if(!baseObject.empty())
+        {
+            bindingType << "DerivedClass<" << obj.GetName() << ", "
+                << baseObject << ">";
+            dependencies << "Using<" << baseObject << ">();" << std::endl;
+        }
+        else
+        {
+            bindingType << "Class<" << obj.GetName() << ">";
+        }
+
+        if(references.size() > 0)
+        {
+            dependencies << "// Include references" << std::endl;
+            for(auto ref : references)
+            {
+                if(ref != obj.GetName())
+                {
+                    dependencies << "Using<" << ref << ">();" << std::endl;
+                }
+            }
+        }
+
         std::map<std::string, std::string> replacements;
+        replacements["@BINDING_TYPE@"] = bindingType.str();
         replacements["@OBJECT_NAME@"] = obj.GetName();
         replacements["@OBJECT_STRING_NAME@"] = Escape(obj.GetName());
         replacements["@BINDINGS@"] = scriptBindings.str();
+        replacements["@DEPENDENCIES@"] = dependencies.str();
 
         ss << ParseTemplate(0, "VariableAccessScriptBindings", replacements)
             << std::endl;

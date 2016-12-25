@@ -105,6 +105,11 @@ bool MetaVariableReference::IsCoreType() const
     return false;
 }
 
+bool MetaVariableReference::IsScriptAccessible() const
+{
+    return true;
+}
+
 bool MetaVariableReference::IsValid() const
 {
     // Validating that the object exists happens elsewhere

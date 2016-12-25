@@ -92,6 +92,11 @@ bool MetaVariableArray::IsCoreType() const
     return false;
 }
 
+bool MetaVariableArray::IsScriptAccessible() const
+{
+    return mElementType && mElementType->IsScriptAccessible();
+}
+
 bool MetaVariableArray::IsValid() const
 {
     return 0 != mElementCount && mElementType && mElementType->IsValid() &&

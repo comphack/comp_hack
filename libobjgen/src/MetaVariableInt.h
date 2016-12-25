@@ -212,6 +212,11 @@ public:
         return true;
     }
 
+    virtual bool IsScriptAccessible() const
+    {
+        return true;
+    }
+
     virtual bool IsValid() const
     {
         return mMinimumValue <= mMaximumValue &&

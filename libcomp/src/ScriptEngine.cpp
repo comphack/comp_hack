@@ -148,3 +148,8 @@ HSQUIRRELVM ScriptEngine::GetVM()
 {
     return mVM;
 }
+
+bool ScriptEngine::BindingExists(const std::string& name)
+{
+    return mBindings.find(name) != mBindings.end();
+}

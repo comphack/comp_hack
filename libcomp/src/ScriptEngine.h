@@ -39,6 +39,9 @@
 #include <sqrat.h>
 #include "PopIgnore.h"
 
+// Standard C++11 Includes
+#include <set>
+
 namespace libcomp
 {
 
@@ -54,7 +57,18 @@ public:
 
     bool Eval(const String& source, const String& sourceName = String());
 
+private:
+    template <class T> void Bind(const std::string& name,  Sqrat::Class<T>& binding)
+    {
+        mBindings.insert(name);
+        Sqrat::RootTable(mVM).Bind(name.c_str(), binding);
+    }
+
+    bool BindingExists(const std::string& name);
+
     HSQUIRRELVM mVM;
+
+    std::set<std::string> mBindings;
 };
 
 } // namespace libcomp

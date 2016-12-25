@@ -135,6 +135,11 @@ bool MetaVariableEnum::IsCoreType() const
     return false;
 }
 
+bool MetaVariableEnum::IsScriptAccessible() const
+{
+    return false;
+}
+
 bool MetaVariableEnum::IsValid() const
 {
     //Dupe check

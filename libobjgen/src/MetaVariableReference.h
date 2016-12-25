@@ -58,6 +58,7 @@ public:
     const std::list<std::shared_ptr<MetaVariable>> GetDefaultedVariables() const;
 
     virtual bool IsCoreType() const;
+    virtual bool IsScriptAccessible() const;
     virtual bool IsValid() const;
 
     virtual bool Load(std::istream& stream);

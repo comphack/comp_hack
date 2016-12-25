@@ -86,6 +86,7 @@ public:
     virtual std::string GetType() const = 0;
 
     virtual bool IsCoreType() const = 0;
+    virtual bool IsScriptAccessible() const = 0;
     virtual bool IsValid() const = 0;
 
     virtual bool IsCaps() const;

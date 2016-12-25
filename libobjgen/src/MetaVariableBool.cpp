@@ -73,6 +73,11 @@ bool MetaVariableBool::IsCoreType() const
     return true;
 }
 
+bool MetaVariableBool::IsScriptAccessible() const
+{
+    return true;
+}
+
 bool MetaVariableBool::IsValid() const
 {
     return true;

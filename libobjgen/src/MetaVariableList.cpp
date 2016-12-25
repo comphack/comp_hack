@@ -70,6 +70,11 @@ bool MetaVariableList::IsCoreType() const
     return false;
 }
 
+bool MetaVariableList::IsScriptAccessible() const
+{
+    return mElementType && mElementType->IsScriptAccessible();
+}
+
 bool MetaVariableList::IsValid() const
 {
     return mElementType && mElementType->IsValid() && !IsLookupKey();

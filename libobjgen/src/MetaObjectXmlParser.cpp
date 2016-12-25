@@ -244,7 +244,16 @@ bool MetaObjectXmlParser::FinalizeObjectAndReferences(const std::string& object)
     while(requiresLoad.size() > 0)
     {
         auto objectName = *requiresLoad.begin();
-        auto obj = GetKnownObject(objectName);
+        if(mObjectXml.find(objectName) == mObjectXml.end())
+        {
+            std::stringstream ss;
+            ss << "Object '" << objectName
+                << "' is not defined.";
+
+            mError = ss.str();
+
+            return false;
+        }
 
         if(mMemberLoadedObjects.find(objectName) == mMemberLoadedObjects.end())
         {
@@ -266,6 +275,15 @@ bool MetaObjectXmlParser::FinalizeObjectAndReferences(const std::string& object)
             {
                 return false;
             }
+        }
+
+        auto obj = GetKnownObject(objectName);
+        auto baseObject = obj->GetBaseObject();
+        if(!baseObject.empty() &&
+            mFinalizedObjects.find(baseObject) == mFinalizedObjects.end() &&
+            requiresLoad.find(baseObject) == requiresLoad.end())
+        {
+            requiresLoad.insert(baseObject);
         }
 
         for(auto var : obj->GetReferences())
@@ -294,6 +312,39 @@ bool MetaObjectXmlParser::FinalizeObjectAndReferences(const std::string& object)
         mError = ss.str();
 
         return false;
+    }
+
+    if(mObject->IsScriptEnabled())
+    {
+        auto baseObject = mObject->GetBaseObject();
+        if(!baseObject.empty() &&
+            !GetKnownObject(baseObject)->IsScriptEnabled())
+        {
+            std::stringstream ss;
+            ss << "Script enabled object is derived"
+                " from an object that is not script enabled: "
+                << object;
+
+            mError = ss.str();
+
+            return false;
+        }
+
+        for(auto ref : refs)
+        {
+            auto refType = ref->GetReferenceType();
+            if(!GetKnownObject(refType)->IsScriptEnabled())
+            {
+                std::stringstream ss;
+                ss << "Script enabled object references"
+                    " an object that is not script enabled: "
+                    << object;
+
+                mError = ss.str();
+
+                return false;
+            }
+        }
     }
 
     // Now that everything in the chain is loaded up and we know there are no

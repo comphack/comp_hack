@@ -144,6 +144,11 @@ bool MetaVariableString::IsCoreType() const
     return true;
 }
 
+bool MetaVariableString::IsScriptAccessible() const
+{
+    return true;
+}
+
 bool MetaVariableString::IsValid() const
 {
     bool regexOk = true;

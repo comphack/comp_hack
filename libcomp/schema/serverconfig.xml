@@ -10,5 +10,6 @@
         </member>
         <member type="DatabaseConfigSQLite3*" name="SQLite3Config"/>
         <member type="DatabaseConfigCassandra*" name="CassandraConfig"/>
+        <member type="bool" name="MultithreadMode" default="true"/>
     </object>
 </objgen>

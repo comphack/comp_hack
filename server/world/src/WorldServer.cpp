@@ -116,27 +116,17 @@ bool WorldServer::Initialize(std::weak_ptr<BaseServer>& self)
     mMainWorker.AddManager(connectionManager);
 
     // Add the managers to the generic workers.
-    mWorker.AddManager(packetManager);
-    mWorker.AddManager(connectionManager);
-
-    // Start the worker.
-    mWorker.Start();
+    for(auto worker : mWorkers)
+    {
+        worker->AddManager(packetManager);
+        worker->AddManager(connectionManager);
+    }
 
     return true;
 }
 
 WorldServer::~WorldServer()
 {
-    // Make sure the worker threads stop.
-    mWorker.Join();
-}
-
-void WorldServer::Shutdown()
-{
-    BaseServer::Shutdown();
-
-    /// @todo Add more workers.
-    mWorker.Shutdown();
 }
 
 objects::WorldDescription WorldServer::GetDescription()
@@ -200,11 +190,16 @@ std::shared_ptr<libcomp::TcpConnection> WorldServer::CreateConnection(
     }
     else if(true)  /// @todo: ensure that channels can start connecting
     {
-        // Assign this to the only worker available.
-        std::dynamic_pointer_cast<libcomp::InternalConnection>(
-            connection)->SetMessageQueue(mWorker.GetMessageQueue());
-
-        connection->ConnectionSuccess();
+        auto encrypted = std::dynamic_pointer_cast<
+            libcomp::EncryptedConnection>(connection);
+        if(AssignMessageQueue(encrypted))
+        {
+            connection->ConnectionSuccess();
+        }
+        else
+        {
+            connection->Close();
+        }
     }
     else
     {

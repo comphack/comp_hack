@@ -47,8 +47,6 @@ public:
 
     virtual bool Initialize(std::weak_ptr<BaseServer>& self);
 
-    virtual void Shutdown();
-
     std::list<std::shared_ptr<lobby::World>> GetWorlds();
 
     std::shared_ptr<lobby::World> GetWorldByConnection(std::shared_ptr<libcomp::InternalConnection> connection);
@@ -61,9 +59,6 @@ protected:
 
     virtual std::shared_ptr<libcomp::TcpConnection> CreateConnection(
         asio::ip::tcp::socket& socket);
-
-    /// @todo Replace this with many worker threads.
-    libcomp::Worker mWorker;
 
     std::shared_ptr<ManagerConnection> mManagerConnection;
 

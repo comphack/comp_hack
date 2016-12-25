@@ -45,8 +45,6 @@ public:
 
     virtual bool Initialize(std::weak_ptr<BaseServer>& self);
 
-    virtual void Shutdown();
-
     objects::ChannelDescription GetDescription();
 
     objects::WorldDescription GetWorldDescription();
@@ -56,9 +54,6 @@ public:
 protected:
     virtual std::shared_ptr<libcomp::TcpConnection> CreateConnection(
         asio::ip::tcp::socket& socket);
-
-    /// @todo Make a bunch of these.
-    libcomp::Worker mWorker;
 
     std::shared_ptr<ManagerConnection> mManagerConnection;
 

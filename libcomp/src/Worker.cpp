@@ -49,9 +49,6 @@ void Worker::AddManager(const std::shared_ptr<Manager>& manager)
 {
     for(auto messageType : manager->GetSupportedTypes())
     {
-        LOG_DEBUG(libcomp::String("Message type: %1\n").Arg(
-            static_cast<std::size_t>(messageType)));
-
         mManagers[messageType] = manager;
     }
 }

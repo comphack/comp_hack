@@ -102,6 +102,8 @@ int TcpServer::Start()
         mService.run();
     });
 
+    LOG_INFO("Server ready!\n");
+
     int returnCode = Run();
 
     mServiceThread.join();

@@ -49,8 +49,6 @@ public:
 
     virtual bool Initialize(std::weak_ptr<BaseServer>& self);
 
-    virtual void Shutdown();
-
     objects::WorldDescription GetDescription();
 
     bool GetChannelDescriptionByConnection(std::shared_ptr<libcomp::InternalConnection>& connection, objects::ChannelDescription& outChannel);
@@ -64,9 +62,6 @@ public:
 protected:
     virtual std::shared_ptr<libcomp::TcpConnection> CreateConnection(
         asio::ip::tcp::socket& socket);
-
-    /// @todo Replace this with many worker threads.
-    libcomp::Worker mWorker;
 
     objects::WorldDescription mDescription;
 

@@ -29,6 +29,7 @@
 
 // libcomp Includes
 #include "Database.h"
+#include "EncryptedConnection.h"
 #include "ServerConfig.h"
 #include "TcpServer.h"
 #include "Worker.h"
@@ -53,6 +54,12 @@ public:
 protected:
     virtual int Run();
 
+    void CreateWorkers();
+
+    bool AssignMessageQueue(std::shared_ptr<libcomp::EncryptedConnection>& connection);
+
+    virtual std::shared_ptr<libcomp::Worker> GetNextConnectionWorker();
+
     std::weak_ptr<BaseServer> mSelf;
 
     std::shared_ptr<objects::ServerConfig> mConfig;
@@ -61,6 +68,8 @@ protected:
 
     /// Worker that blocks and runs in the main thread.
     libcomp::Worker mMainWorker;
+
+    std::list<std::shared_ptr<libcomp::Worker>> mWorkers;
 };
 
 } // namespace libcomp

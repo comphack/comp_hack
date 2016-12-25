@@ -93,11 +93,20 @@ bool BaseServer::Initialize(std::weak_ptr<BaseServer>& self)
         return false;
     }
 
+    // Create the generic workers
+    CreateWorkers();
+
     return true;
 }
 
 BaseServer::~BaseServer()
 {
+    // Make sure the worker threads stop.
+    for(auto worker : mWorkers)
+    {
+        worker->Join();
+    }
+    mWorkers.clear();
 }
 
 int BaseServer::Run()
@@ -114,6 +123,11 @@ int BaseServer::Run()
 void BaseServer::Shutdown()
 {
     mMainWorker.Shutdown();
+
+    for(auto worker : mWorkers)
+    {
+        worker->Shutdown();
+    }
 }
 
 std::string BaseServer::GetDefaultConfigPath()
@@ -189,4 +203,77 @@ bool BaseServer::ReadConfig(std::shared_ptr<objects::ServerConfig> config, tinyx
     }
 
     return true;
+}
+
+void BaseServer::CreateWorkers()
+{
+    unsigned int numberOfWorkers = 1;
+    if(mConfig->GetMultithreadMode())
+    {
+        numberOfWorkers = std::thread::hardware_concurrency();
+        switch(numberOfWorkers)
+        {
+            case 0:
+                LOG_WARNING("The maximum hardware concurrency level of this"
+                    " machine could not be detected. Multi-threaded processing"
+                    " will be disabled.\n");
+                numberOfWorkers = 1;
+                break;
+            case 1:
+                break;
+            default:
+                // Leave one core for the main worker
+                numberOfWorkers = numberOfWorkers - 1;
+                break;
+        }
+    }
+
+    for(unsigned int i = 0; i < numberOfWorkers; i++)
+    {
+        mWorkers.push_back(std::shared_ptr<Worker>(new Worker));
+    }
+}
+
+bool BaseServer::AssignMessageQueue(std::shared_ptr<libcomp::EncryptedConnection>& connection)
+{
+    std::shared_ptr<libcomp::Worker> worker = GetNextConnectionWorker();
+
+    if(!worker)
+    {
+        LOG_CRITICAL("The server failed to assign a worker to an incoming connection.\n");
+        return false;
+    }
+    else if(!worker->IsRunning())
+    {
+        //Only spin up as needed
+        LOG_DEBUG("Starting a new connection worker.\n");
+        worker->Start();
+    }
+
+    connection->SetMessageQueue(worker->GetMessageQueue());
+    return true;
+}
+
+std::shared_ptr<libcomp::Worker> BaseServer::GetNextConnectionWorker()
+{
+    //By default return the least busy worker by checking shared_ptr message queue use count
+    long leastConnections = (long)mConnections.size() + 2;
+    std::shared_ptr<libcomp::Worker> leastBusy = nullptr;
+    for(auto worker : mWorkers)
+    {
+        long refCount = worker->GetMessageQueue().use_count() - 1;
+        if(refCount < leastConnections)
+        {
+            leastConnections = refCount;
+
+            leastBusy = worker;
+            if(refCount == 1)
+            {
+                //Only ref is within the worker
+                break;
+            }
+        }
+    }
+
+    return leastBusy;
 }

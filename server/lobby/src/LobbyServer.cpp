@@ -111,27 +111,17 @@ bool LobbyServer::Initialize(std::weak_ptr<BaseServer>& self)
         LobbyClientPacketCode_t::PACKET_PURCHASE_TICKET));
 
     // Add the managers to the generic workers.
-    mWorker.AddManager(clientPacketManager);
-    mWorker.AddManager(connectionManager);
-
-    // Start the worker.
-    mWorker.Start();
+    for(auto worker : mWorkers)
+    {
+        worker->AddManager(clientPacketManager);
+        worker->AddManager(connectionManager);
+    }
 
     return true;
 }
 
 LobbyServer::~LobbyServer()
 {
-    // Make sure the worker threads stop.
-    mWorker.Join();
-}
-
-void LobbyServer::Shutdown()
-{
-    BaseServer::Shutdown();
-
-    /// @todo Add more workers.
-    mWorker.Shutdown();
 }
 
 std::list<std::shared_ptr<lobby::World>> LobbyServer::GetWorlds()
@@ -154,13 +144,18 @@ std::shared_ptr<libcomp::TcpConnection> LobbyServer::CreateConnection(
         )
     );
 
-    // Assign this to the only worker available.
-    std::dynamic_pointer_cast<libcomp::LobbyConnection>(
-        connection)->SetMessageQueue(mWorker.GetMessageQueue());
-
-    // Make sure this is called after connecting.
-    connection->SetSelf(connection);
-    connection->ConnectionSuccess();
+    auto encrypted = std::dynamic_pointer_cast<
+        libcomp::EncryptedConnection>(connection);
+    if(AssignMessageQueue(encrypted))
+    {
+        // Make sure this is called after connecting.
+        connection->SetSelf(connection);
+        connection->ConnectionSuccess();
+    }
+    else
+    {
+        connection->Close();
+    }
 
     return connection;
 }

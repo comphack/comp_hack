@@ -155,6 +155,7 @@ std::shared_ptr<libcomp::TcpConnection> LobbyServer::CreateConnection(
     else
     {
         connection->Close();
+        return nullptr;
     }
 
     return connection;

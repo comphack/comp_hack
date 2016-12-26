@@ -147,7 +147,14 @@ void TcpServer::AcceptHandler(asio::error_code errorCode,
             LOG_DEBUG(String("New connection from %1\n").Arg(
                 socket.remote_endpoint().address().to_string()));
 
-            mConnections.push_back(CreateConnection(socket));
+            auto connection = CreateConnection(socket);
+            if(nullptr == connection)
+            {
+                LOG_CRITICAL("The connection could not be created\n");
+                return;
+            }
+
+            mConnections.push_back(connection);
 
             // This is actually using a different socket because the
             // CreateConnection() call will use std::move on the socket which

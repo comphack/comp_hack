@@ -200,12 +200,14 @@ std::shared_ptr<libcomp::TcpConnection> WorldServer::CreateConnection(
         else
         {
             connection->Close();
+            return nullptr;
         }
     }
     else
     {
         /// @todo: send a "connection refused" error message to the client
         connection->Close();
+        return nullptr;
     }
 
     return connection;

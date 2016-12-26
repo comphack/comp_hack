@@ -138,6 +138,7 @@ std::shared_ptr<libcomp::TcpConnection> ChannelServer::CreateConnection(
     else
     {
         connection->Close();
+        return nullptr;
     }
 
 

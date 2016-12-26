@@ -41,7 +41,9 @@
 using namespace channel;
 
 ChannelServer::ChannelServer(std::shared_ptr<objects::ServerConfig> config,
-    const libcomp::String& configPath) : libcomp::BaseServer(config, configPath)
+    const libcomp::String& configPath) : libcomp::BaseServer(config, configPath),
+    mWorldDescription(new objects::WorldDescription),
+    mDescription(new objects::ChannelDescription)
 {
 }
 
@@ -63,8 +65,11 @@ bool ChannelServer::Initialize(std::weak_ptr<BaseServer>& self)
     mManagerConnection->SetWorldConnection(worldConnection);
 
     auto conf = std::dynamic_pointer_cast<objects::ChannelConfig>(mConfig);
-    mDescription.SetID(conf->GetID());
-    mDescription.SetName(conf->GetName());
+
+    mDescription = std::shared_ptr<objects::ChannelDescription>(
+        new objects::ChannelDescription);
+    mDescription->SetID(conf->GetID());
+    mDescription->SetName(conf->GetName());
 
     worldConnection->Connect(conf->GetWorldIP(), conf->GetWorldPort(), false);
 
@@ -103,20 +108,14 @@ ChannelServer::~ChannelServer()
 {
 }
 
-objects::ChannelDescription ChannelServer::GetDescription()
+const std::shared_ptr<objects::ChannelDescription> ChannelServer::GetDescription()
 {
     return mDescription;
 }
 
-objects::WorldDescription ChannelServer::GetWorldDescription()
+std::shared_ptr<objects::WorldDescription> ChannelServer::GetWorldDescription()
 {
     return mWorldDescription;
-}
-
-void ChannelServer::SetWorldDescription(
-    objects::WorldDescription& worldDescription)
-{
-    mWorldDescription = worldDescription;
 }
 
 std::shared_ptr<libcomp::TcpConnection> ChannelServer::CreateConnection(

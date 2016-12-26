@@ -52,26 +52,28 @@ bool Parsers::SetChannelDescription::Parse(libcomp::ManagerPacket *pPacketManage
 
     auto action = static_cast<InternalPacketAction_t>(p.ReadU8());
 
-    objects::ChannelDescription obj;
+    auto server = std::dynamic_pointer_cast<LobbyServer>(pPacketManager->GetServer());
 
-    if(!obj.LoadPacket(p))
+    auto desc = std::shared_ptr<objects::ChannelDescription>(new objects::ChannelDescription);
+
+    if(!desc->LoadPacket(p))
     {
         return false;
     }
 
-    auto server = std::dynamic_pointer_cast<LobbyServer>(pPacketManager->GetServer());
     auto conn = std::dynamic_pointer_cast<libcomp::InternalConnection>(connection);
 
     auto world = server->GetWorldByConnection(conn);
 
     if(InternalPacketAction_t::PACKET_ACTION_REMOVE == action)
     {
-        world->RemoveChannelDescriptionByID(obj.GetID());
+        world->RemoveChannelDescriptionByID(desc->GetID());
     }
     else
     {
-        LOG_DEBUG(libcomp::String("Updating Channel Server description: (%1) %2\n").Arg(obj.GetID()).Arg(obj.GetName()));
-        world->SetChannelDescription(obj);
+        LOG_DEBUG(libcomp::String("Updating Channel Server description: (%1) %2\n")
+            .Arg(desc->GetID()).Arg(desc->GetName()));
+        world->SetChannelDescription(desc);
     }
 
     return true;

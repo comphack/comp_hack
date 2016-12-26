@@ -44,9 +44,9 @@ bool Parsers::SetWorldDescription::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {
-    objects::WorldDescription obj;
+    auto desc = std::shared_ptr<objects::WorldDescription>(new objects::WorldDescription);
 
-    if(!obj.LoadPacket(p))
+    if(!desc->LoadPacket(p))
     {
         return false;
     }
@@ -58,12 +58,13 @@ bool Parsers::SetWorldDescription::Parse(libcomp::ManagerPacket *pPacketManager,
         return false;
     }
 
-    LOG_DEBUG(libcomp::String("Updating World Server description: (%1) %2\n").Arg(obj.GetID()).Arg(obj.GetName()));
+    LOG_DEBUG(libcomp::String("Updating World Server description: (%1) %2\n")
+        .Arg(desc->GetID()).Arg(desc->GetName()));
 
     auto server = std::dynamic_pointer_cast<LobbyServer>(pPacketManager->GetServer());
 
     auto world = server->GetWorldByConnection(iConnection);
-    world->SetWorldDescription(obj);
+    world->SetWorldDescription(desc);
 
     return true;
 }

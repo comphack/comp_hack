@@ -52,7 +52,7 @@ bool Parsers::DescribeWorld::Parse(libcomp::ManagerPacket *pPacketManager,
     libcomp::Packet reply;
 
     reply.WritePacketCode(InternalPacketCode_t::PACKET_SET_WORLD_DESCRIPTION);
-    server->GetDescription().SavePacket(reply);
+    server->GetDescription()->SavePacket(reply);
 
     connection->SendPacket(reply);
 

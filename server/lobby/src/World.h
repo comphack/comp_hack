@@ -48,23 +48,23 @@ public:
 
     std::shared_ptr<libcomp::InternalConnection> GetConnection() const;
 
-    objects::WorldDescription GetWorldDescription();
+    std::shared_ptr<objects::WorldDescription> GetWorldDescription() const;
 
-    std::list<objects::ChannelDescription> GetChannelDescriptions();
+    const std::list<std::shared_ptr<objects::ChannelDescription>> GetChannelDescriptions() const;
 
-    bool GetChannelDescriptionByID(uint8_t id, objects::ChannelDescription& outChannel);
+    std::shared_ptr<objects::ChannelDescription> GetChannelDescriptionByID(uint8_t id) const;
 
     bool RemoveChannelDescriptionByID(uint8_t id);
 
-    void SetWorldDescription(objects::WorldDescription& worldDescription);
+    void SetWorldDescription(const std::shared_ptr<objects::WorldDescription>& worldDescription);
 
-    void SetChannelDescription(objects::ChannelDescription& channelDescription);
+    void SetChannelDescription(const std::shared_ptr<objects::ChannelDescription>& channelDescription);
 
 private:
     std::shared_ptr<libcomp::InternalConnection> mConnection;
 
-    objects::WorldDescription mWorldDescription;
-    std::list<objects::ChannelDescription> mChannelDescriptions;
+    std::shared_ptr<objects::WorldDescription> mWorldDescription;
+    std::list<std::shared_ptr<objects::ChannelDescription>> mChannelDescriptions;
 };
 
 } // namespace lobby

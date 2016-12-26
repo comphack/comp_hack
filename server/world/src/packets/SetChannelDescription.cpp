@@ -45,9 +45,9 @@ bool Parsers::SetChannelDescription::Parse(libcomp::ManagerPacket *pPacketManage
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {
-    objects::ChannelDescription obj;
+    auto desc = std::shared_ptr<objects::ChannelDescription>(new objects::ChannelDescription);
 
-    if(!obj.LoadPacket(p))
+    if(!desc->LoadPacket(p))
     {
         return false;
     }
@@ -59,11 +59,12 @@ bool Parsers::SetChannelDescription::Parse(libcomp::ManagerPacket *pPacketManage
         return false;
     }
 
-    LOG_DEBUG(libcomp::String("Updating Channel Server description: (%1) %2\n").Arg(obj.GetID()).Arg(obj.GetName()));
+    LOG_DEBUG(libcomp::String("Updating Channel Server description: (%1) %2\n").Arg(desc->GetID())
+        .Arg(desc->GetName()));
 
     auto server = std::dynamic_pointer_cast<WorldServer>(pPacketManager->GetServer());
 
-    server->SetChannelDescription(obj, conn);
+    server->SetChannelDescription(desc, conn);
 
     //Forward the information to the lobby
     auto lobbyConnection = server->GetLobbyConnection();
@@ -73,7 +74,7 @@ bool Parsers::SetChannelDescription::Parse(libcomp::ManagerPacket *pPacketManage
         InternalPacketCode_t::PACKET_SET_CHANNEL_DESCRIPTION);
     packet.WriteU8(to_underlying(
         InternalPacketAction_t::PACKET_ACTION_UPDATE));
-    obj.SavePacket(packet);
+    desc->SavePacket(packet);
     lobbyConnection->SendPacket(packet);
 
     return true;

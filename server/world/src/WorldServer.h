@@ -49,23 +49,26 @@ public:
 
     virtual bool Initialize(std::weak_ptr<BaseServer>& self);
 
-    objects::WorldDescription GetDescription();
+    const std::shared_ptr<objects::WorldDescription> GetDescription() const;
 
-    bool GetChannelDescriptionByConnection(std::shared_ptr<libcomp::InternalConnection>& connection, objects::ChannelDescription& outChannel);
+    std::shared_ptr<objects::ChannelDescription> GetChannelDescriptionByConnection(
+        const std::shared_ptr<libcomp::InternalConnection>& connection) const;
 
-    std::shared_ptr<libcomp::InternalConnection> GetLobbyConnection();
+    const std::shared_ptr<libcomp::InternalConnection> GetLobbyConnection() const;
 
-    void SetChannelDescription(objects::ChannelDescription channel, std::shared_ptr<libcomp::InternalConnection>& connection);
+    void SetChannelDescription(const std::shared_ptr<objects::ChannelDescription>& channel,
+        const std::shared_ptr<libcomp::InternalConnection>& connection);
 
-    bool RemoveChannelDescription(std::shared_ptr<libcomp::InternalConnection>& connection);
+    bool RemoveChannelDescription(const std::shared_ptr<libcomp::InternalConnection>& connection);
 
 protected:
     virtual std::shared_ptr<libcomp::TcpConnection> CreateConnection(
         asio::ip::tcp::socket& socket);
 
-    objects::WorldDescription mDescription;
+    std::shared_ptr<objects::WorldDescription> mDescription;
 
-    std::map<std::shared_ptr<libcomp::InternalConnection>, objects::ChannelDescription> mChannelDescriptions;
+    std::map<std::shared_ptr<libcomp::InternalConnection>,
+        std::shared_ptr<objects::ChannelDescription>> mChannelDescriptions;
 
     std::shared_ptr<ManagerConnection> mManagerConnection;
 };

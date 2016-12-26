@@ -45,11 +45,9 @@ public:
 
     virtual bool Initialize(std::weak_ptr<BaseServer>& self);
 
-    objects::ChannelDescription GetDescription();
+    const std::shared_ptr<objects::ChannelDescription> GetDescription();
 
-    objects::WorldDescription GetWorldDescription();
-
-    void SetWorldDescription(objects::WorldDescription& worldDescription);
+    std::shared_ptr<objects::WorldDescription> GetWorldDescription();
 
 protected:
     virtual std::shared_ptr<libcomp::TcpConnection> CreateConnection(
@@ -57,9 +55,9 @@ protected:
 
     std::shared_ptr<ManagerConnection> mManagerConnection;
 
-    objects::WorldDescription mWorldDescription;
+    std::shared_ptr<objects::WorldDescription> mWorldDescription;
 
-    objects::ChannelDescription mDescription;
+    std::shared_ptr<objects::ChannelDescription> mDescription;
 };
 
 } // namespace channel

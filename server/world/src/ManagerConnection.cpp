@@ -126,9 +126,10 @@ bool ManagerConnection::LobbyConnected()
 
 void ManagerConnection::RemoveConnection(std::shared_ptr<libcomp::InternalConnection>& connection)
 {
-    objects::ChannelDescription channelDesc;
     auto server = std::dynamic_pointer_cast<WorldServer>(mServer.lock());
-    if(server->GetChannelDescriptionByConnection(connection, channelDesc))
+    auto channelDesc = server->GetChannelDescriptionByConnection(connection);
+
+    if(nullptr != channelDesc)
     {
         server->RemoveChannelDescription(connection);
 
@@ -138,7 +139,7 @@ void ManagerConnection::RemoveConnection(std::shared_ptr<libcomp::InternalConnec
             InternalPacketCode_t::PACKET_SET_CHANNEL_DESCRIPTION);
         packet.WriteU8(to_underlying(
             InternalPacketAction_t::PACKET_ACTION_REMOVE));
-        channelDesc.SavePacket(packet);
+        channelDesc->SavePacket(packet);
         mLobbyConnection->SendPacket(packet);
     }
 }

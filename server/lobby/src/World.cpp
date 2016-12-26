@@ -57,35 +57,34 @@ std::shared_ptr<libcomp::InternalConnection> World::GetConnection() const
     return mConnection;
 }
 
-objects::WorldDescription World::GetWorldDescription()
+std::shared_ptr<objects::WorldDescription> World::GetWorldDescription() const
 {
     return mWorldDescription;
 }
 
-std::list<objects::ChannelDescription> World::GetChannelDescriptions()
+const std::list<std::shared_ptr<objects::ChannelDescription>> World::GetChannelDescriptions() const
 {
     return mChannelDescriptions;
 }
 
-bool World::GetChannelDescriptionByID(uint8_t id, objects::ChannelDescription& outChannel)
+std::shared_ptr<objects::ChannelDescription> World::GetChannelDescriptionByID(uint8_t id) const
 {
     for(auto channel : mChannelDescriptions)
     {
-        if(channel.GetID() == id)
+        if(channel->GetID() == id)
         {
-            outChannel = channel;
-            return true;
+            return channel;
         }
     }
 
-    return false;
+    return nullptr;
 }
 
 bool World::RemoveChannelDescriptionByID(uint8_t id)
 {
     for(auto iter = mChannelDescriptions.begin(); iter != mChannelDescriptions.end(); iter++)
     {
-        if(iter->GetID() == id)
+        if((*iter)->GetID() == id)
         {
             mChannelDescriptions.erase(iter);
             return true;
@@ -95,20 +94,21 @@ bool World::RemoveChannelDescriptionByID(uint8_t id)
     return false;
 }
 
-void World::SetWorldDescription(objects::WorldDescription& worldDescription)
+void World::SetWorldDescription(const std::shared_ptr<objects::WorldDescription>& worldDescription)
 {
     mWorldDescription = worldDescription;
 }
 
-void World::SetChannelDescription(objects::ChannelDescription& channelDescription)
+void World::SetChannelDescription(const std::shared_ptr<
+    objects::ChannelDescription>& channelDescription)
 {
-    objects::ChannelDescription outChannel;
-    if(!GetChannelDescriptionByID(channelDescription.GetID(), outChannel))
+    auto desc = GetChannelDescriptionByID(channelDescription->GetID());
+    if(nullptr == desc)
     {
         mChannelDescriptions.push_back(channelDescription);
     }
     else
     {
-        outChannel.SetName(channelDescription.GetName());
+        desc->SetName(channelDescription->GetName());
     }
 }

@@ -161,7 +161,8 @@ void ManagerConnection::RemoveWorld(std::shared_ptr<lobby::World>& world)
         if(iter != mWorlds.end())
         {
             mWorlds.erase(iter);
-            LOG_INFO(libcomp::String("World connection removed: (%1) %2\n").Arg(desc.GetID()).Arg(desc.GetName()));
+            LOG_INFO(libcomp::String("World connection removed: (%1) %2\n")
+                .Arg(desc->GetID()).Arg(desc->GetName()));
         }
     }
 }

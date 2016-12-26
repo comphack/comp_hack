@@ -45,24 +45,24 @@ bool Parsers::SetWorldDescription::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {
-    objects::WorldDescription obj;
+    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
 
-    if (!obj.LoadPacket(p))
+    auto desc = server->GetWorldDescription();
+
+    if(!desc->LoadPacket(p))
     {
         return false;
     }
 
-    LOG_DEBUG(libcomp::String("Updating World Server description: (%1) %2\n").Arg(obj.GetID()).Arg(obj.GetName()));
-
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-    server->SetWorldDescription(obj);
+    LOG_DEBUG(libcomp::String("Updating World Server description: (%1) %2\n")
+        .Arg(desc->GetID()).Arg(desc->GetName()));
 
     //Reply with the channel information
     libcomp::Packet reply;
 
     reply.WritePacketCode(
         InternalPacketCode_t::PACKET_SET_CHANNEL_DESCRIPTION);
-    server->GetDescription().SavePacket(reply);
+    server->GetDescription()->SavePacket(reply);
 
     connection->SendPacket(reply);
 

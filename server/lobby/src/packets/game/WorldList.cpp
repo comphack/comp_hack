@@ -65,11 +65,11 @@ bool Parsers::WorldList::Parse(libcomp::ManagerPacket *pPacketManager,
         auto worldDesc = world->GetWorldDescription();
 
         // ID for this world.
-        reply.WriteU8(worldDesc.GetID());
+        reply.WriteU8(worldDesc->GetID());
 
         // Name of the world.
         reply.WriteString16Little(libcomp::Convert::ENCODING_UTF8,
-            worldDesc.GetName(), true);
+            worldDesc->GetName(), true);
 
         auto channels = world->GetChannelDescriptions();
 
@@ -82,7 +82,7 @@ bool Parsers::WorldList::Parse(libcomp::ManagerPacket *pPacketManager,
             // Name of the channel. This used to be displayed in the channel
             // list that was hidden from the user.
             reply.WriteString16Little(libcomp::Convert::ENCODING_UTF8,
-                channel.GetName(), true);
+                channel->GetName(), true);
 
             // Ping time??? Again, something that used to be in the list.
             reply.WriteU16Little(1);

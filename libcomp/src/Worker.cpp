@@ -176,3 +176,8 @@ std::shared_ptr<MessageQueue<Message::Message*>> Worker::GetMessageQueue() const
 {
     return mMessageQueue;
 }
+
+unsigned long Worker::AssignmentCount() const
+{
+    return mMessageQueue.use_count();
+}

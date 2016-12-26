@@ -236,7 +236,8 @@ void BaseServer::CreateWorkers()
 
 bool BaseServer::AssignMessageQueue(std::shared_ptr<libcomp::EncryptedConnection>& connection)
 {
-    std::shared_ptr<libcomp::Worker> worker = GetNextConnectionWorker();
+    std::shared_ptr<libcomp::Worker> worker = mWorkers.size() != 1
+        ? GetNextConnectionWorker() : mWorkers.front();
 
     if(!worker)
     {
@@ -261,7 +262,7 @@ std::shared_ptr<libcomp::Worker> BaseServer::GetNextConnectionWorker()
     std::shared_ptr<libcomp::Worker> leastBusy = nullptr;
     for(auto worker : mWorkers)
     {
-        long refCount = worker->GetMessageQueue().use_count() - 1;
+        long refCount = worker->AssignmentCount();
         if(refCount < leastConnections)
         {
             leastConnections = refCount;

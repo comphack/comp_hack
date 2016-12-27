@@ -30,6 +30,8 @@
 // libcomp Includes
 #include <ChannelDescription.h>
 #include <InternalConnection.h>
+
+// object Includes
 #include <WorldDescription.h>
 
 namespace lobby

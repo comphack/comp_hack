@@ -31,7 +31,12 @@
 #include <BaseServer.h>
 #include <InternalConnection.h>
 #include <Manager.h>
+
+// object Includes
 #include <WorldDescription.h>
+
+// Internal Protocol Objects
+//#include <Protocol/Internal/x.h>
 
 // Boost ASIO Includes
 #include <asio.hpp>

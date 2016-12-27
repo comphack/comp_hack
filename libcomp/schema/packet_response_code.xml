@@ -2,6 +2,6 @@
 <objgen>
     <object name="PacketResponseCode" persistent="false">
         <member type="u16" name="CommandCode"/>
-        <member type="u32" name="ResponseCode"/>
+        <member type="s32" name="ResponseCode"/>
     </object>
 </objgen>

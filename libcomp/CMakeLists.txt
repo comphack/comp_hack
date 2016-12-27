@@ -58,7 +58,6 @@ SET(${PROJECT_NAME}_SRCS
     src/DynamicVariable.cpp
     src/DynamicVariableFactory.cpp
     src/EncryptedConnection.cpp
-    #src/EngineLocker.cpp
     src/Exception.cpp
     src/InternalConnection.cpp
     src/LobbyConnection.cpp
@@ -88,7 +87,6 @@ SET(${PROJECT_NAME}_SRCS
     src/TcpServer.cpp
     #src/ThreadManager.cpp
     src/Worker.cpp
-    #src/XmlUtils.cpp
 )
 
 IF(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/src/ConfigCustom.cpp)
@@ -122,7 +120,7 @@ SET(${PROJECT_NAME}_HDRS
     src/EncryptedConnection.h
     src/Endian.h
     src/EnumMap.h
-    #src/EngineLocker.h
+    src/ErrorCodes.h
     src/Exception.h
     src/InternalConnection.h
     src/LobbyConnection.h
@@ -157,12 +155,10 @@ SET(${PROJECT_NAME}_HDRS
     src/RingBuffer.h
     src/ScriptEngine.h
     src/Shutdown.h
-    #src/Structgen.h
     src/TcpConnection.h
     src/TcpServer.h
     #src/ThreadManager.h
     src/Worker.h
-    #src/XmlUtils.h
 
     # These were generated and are not worth reading.
     src/LookupTableCP1252.h

@@ -278,3 +278,8 @@ std::shared_ptr<libcomp::Worker> BaseServer::GetNextConnectionWorker()
 
     return leastBusy;
 }
+
+std::shared_ptr<objects::ServerConfig> BaseServer::GetConfig() const
+{
+    return mConfig;
+}

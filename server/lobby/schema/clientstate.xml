@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="ClientStateObject" persistent="false">
+        <member type="bool" name="Authenticated"/>
+        <member type="Account*" name="Account"/>
+    </object>
+</objgen>

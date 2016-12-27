@@ -34,6 +34,8 @@
 #include <PacketCodes.h>
 #include <ReadOnlyPacket.h>
 #include <TcpConnection.h>
+
+// object Includes
 #include <WorldDescription.h>
 
 // channel Includes

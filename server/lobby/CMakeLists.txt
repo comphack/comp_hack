@@ -25,6 +25,8 @@ MESSAGE("** Configuring ${PROJECT_NAME} **")
 FILE(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/objgen)
 
 SET(${PROJECT_NAME}_SRCS
+    src/ClientState.cpp
+    src/LobbyClientConnection.cpp
     src/LobbyServer.cpp
     src/LoginWebHandler.cpp
     src/ManagerConnection.cpp
@@ -35,6 +37,8 @@ SET(${PROJECT_NAME}_SRCS
 )
 
 SET(${PROJECT_NAME}_HDRS
+    src/ClientState.h
+    src/LobbyClientConnection.h
     src/LobbyServer.h
     src/LoginWebHandler.h
     src/ManagerConnection.h
@@ -44,6 +48,7 @@ SET(${PROJECT_NAME}_HDRS
 )
 
 SET(${PROJECT_NAME}_SCHEMA
+    schema/clientstate.xml
     schema/lobbyconfig.xml
 )
 
@@ -59,6 +64,8 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     ../../libcomp/schema
 
     # Output files
+    ClientStateObject.h
+    ClientStateObject.cpp
     LobbyConfig.h
     LobbyConfig.cpp
 )

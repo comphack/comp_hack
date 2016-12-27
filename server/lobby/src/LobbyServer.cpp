@@ -27,7 +27,7 @@
 #include "LobbyServer.h"
 
 // lobby Includes
-#include "LobbyConnection.h"
+#include "LobbyClientConnection.h"
 #include "Packets.h"
 
 // libcomp Includes
@@ -139,15 +139,23 @@ std::shared_ptr<libcomp::TcpConnection> LobbyServer::CreateConnection(
     asio::ip::tcp::socket& socket)
 {
     auto connection = std::shared_ptr<libcomp::TcpConnection>(
-        new libcomp::LobbyConnection(socket, CopyDiffieHellman(
+        new LobbyClientConnection(socket, CopyDiffieHellman(
             GetDiffieHellman())
         )
     );
 
     auto encrypted = std::dynamic_pointer_cast<
         libcomp::EncryptedConnection>(connection);
+
     if(AssignMessageQueue(encrypted))
     {
+        auto clientConnection = std::dynamic_pointer_cast<
+            LobbyClientConnection>(connection);
+
+        // Give the connection a new client state object.
+        clientConnection->SetClientState(std::shared_ptr<ClientState>(
+            new ClientState));
+
         // Make sure this is called after connecting.
         connection->SetSelf(connection);
         connection->ConnectionSuccess();
@@ -155,6 +163,7 @@ std::shared_ptr<libcomp::TcpConnection> LobbyServer::CreateConnection(
     else
     {
         connection->Close();
+
         return nullptr;
     }
 

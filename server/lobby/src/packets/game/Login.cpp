@@ -26,14 +26,18 @@
 
 #include "Packets.h"
 
+// lobby Includes
+#include "LobbyClientConnection.h"
+
 // libcomp Includes
+#include <ErrorCodes.h>
 #include <Log.h>
 #include <Packet.h>
 #include <PacketCodes.h>
 #include <ReadOnlyPacket.h>
-#include <TcpConnection.h>
 
 // object Includes
+#include <Account.h>
 #include <PacketLogin.h>
 #include <PacketResponseCode.h>
 
@@ -47,52 +51,40 @@ bool Parsers::Login::Parse(libcomp::ManagerPacket *pPacketManager,
 
     objects::PacketLogin obj;
 
-    if(!obj.LoadPacket(p))
+    auto conf = config(pPacketManager);
+
+    if(!obj.LoadPacket(p) || nullptr == conf)
     {
         return false;
     }
-
-    // Read the client version.
-    uint32_t clientVer = obj.GetClientVersion();
-    uint32_t major = clientVer / 1000;
-    uint32_t minor = clientVer % 1000;
-
-    LOG_DEBUG(libcomp::String("Username: %1\n").Arg(obj.GetUsername()));
-    LOG_DEBUG(libcomp::String("Client Version: %1.%2\n").Arg(major).Arg(minor));
 
     objects::PacketResponseCode reply;
     reply.SetCommandCode(to_underlying(
         LobbyClientPacketCode_t::PACKET_LOGIN_RESPONSE));
 
-    /*
-     *  0   No error
-     * -1   System error
-     * -2   Protocol error
-     * -3   Parameter error
-     * -4   Unsupported feature
-     * -5   Incorrect username or password
-     * -6   Account still logged in
-     * -7   Insufficient cash shop points
-     * -8   Server currently down
-     * -9   Not authorized to perform action
-     * -10  Do not have character creation ticket
-     * -11  No empty character slots
-     * -12  You have already done that
-     * -13  Server is currently full
-     * -14  Feature can't be used yet
-     * -15  You have too many characters
-     * -16  Can't use that character name
-     * -17  Server crowded (with popup)
-     * -18  Wrong client version (and any gap)
-     * -26  Currently can't use this account
-     * -28  To log in you must re-cert (pops up login window)
-     * -101 Account locked by antitheft function
-     * -102 Account locked by antitheft function
-     * -103 Connection has timed out
-     */
+    /// @todo Ask the world server is the user is already logged in.
+    auto account = objects::Account::LoadAccountByUserName(obj.GetUsername());
 
-    // Password salt (or error code).
-    reply.SetResponseCode(0x3F5E2FB5);
+    uint32_t clientVersion = static_cast<uint32_t>(
+        conf->GetClientVersion() * 1000.0f);
+
+    if(clientVersion != obj.GetClientVersion())
+    {
+        reply.SetResponseCode(to_underlying(
+            ErrorCodes_t::WRONG_CLIENT_VERSION));
+    }
+    else if(nullptr == account)
+    {
+        reply.SetResponseCode(to_underlying(
+            ErrorCodes_t::BAD_USERNAME_PASSWORD));
+    }
+    else
+    {
+        state(connection)->SetAccount(account);
+
+        reply.SetResponseCode(to_underlying(
+            ErrorCodes_t::SUCCESS));
+    }
 
     return connection->SendObject(reply);
 }

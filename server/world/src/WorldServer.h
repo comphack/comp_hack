@@ -35,8 +35,10 @@
 #include <ChannelDescription.h>
 #include <InternalConnection.h>
 #include <ManagerConnection.h>
-#include <WorldDescription.h>
 #include <Worker.h>
+
+// object Includes
+#include <WorldDescription.h>
 
 namespace world
 {

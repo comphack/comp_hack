@@ -461,6 +461,12 @@ public:
         if(std::numeric_limits<T>::is_integer)
         {
             value = std::to_string(mDefaultValue);
+
+            // float constants should end with an 'f'.
+            if(typeid(T) == typeid(float))
+            {
+                value += "f";
+            }
         }
         else
         {
@@ -479,6 +485,13 @@ public:
     {
         std::stringstream ss;
         ss << mDefaultValue;
+
+        // float constants should end with an 'f'.
+        if(typeid(T) == typeid(float))
+        {
+            ss << "f";
+        }
+
         return ss.str();
     }
 

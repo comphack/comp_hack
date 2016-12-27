@@ -85,7 +85,7 @@ TEST(Lobby, Connection)
 
     ASSERT_TRUE(client->WaitForPacket(
         LobbyClientPacketCode_t::PACKET_LOGIN_RESPONSE, reply, waitTime));
-    ASSERT_EQ(reply.ReadU32Little(), 0x3F5E2FB5);
+    ASSERT_EQ(reply.ReadU32Little(), 0);
 }
 
 int main(int argc, char *argv[])

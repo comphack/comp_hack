@@ -34,7 +34,6 @@
 #include <PacketCodes.h>
 #include <ReadOnlyPacket.h>
 #include <TcpConnection.h>
-#include <WorldDescription.h>
 
 // world Includes
 #include "WorldServer.h"

@@ -51,6 +51,8 @@ public:
     bool ReadConfig(std::shared_ptr<objects::ServerConfig> config, libcomp::String filePath);
     virtual bool ReadConfig(std::shared_ptr<objects::ServerConfig> config, tinyxml2::XMLDocument& doc);
 
+    std::shared_ptr<objects::ServerConfig> GetConfig() const;
+
 protected:
     virtual int Run();
 

@@ -44,7 +44,7 @@
 using namespace libobjgen;
 
 MetaObject::MetaObject()
-    : mPersistent(false), mScriptEnabled(false)
+    : mScriptEnabled(false), mPersistent(false)
 {
 }
 

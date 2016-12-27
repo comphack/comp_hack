@@ -146,9 +146,9 @@ TEST(Object, TestObject)
     // Array
     //
     std::array<float, 3> arrayValues = data.GetXYZ();
-    EXPECT_EQ(-1, arrayValues[0]);
-    EXPECT_EQ(-1, arrayValues[1]);
-    EXPECT_EQ(-1, arrayValues[2]);
+    EXPECT_EQ(-3.14159e2f, arrayValues[0]);
+    EXPECT_EQ(-3.14159e2f, arrayValues[1]);
+    EXPECT_EQ(-3.14159e2f, arrayValues[2]);
 
     // Try to get a value out of the range.
     EXPECT_EQ(0, data.GetXYZ(10));

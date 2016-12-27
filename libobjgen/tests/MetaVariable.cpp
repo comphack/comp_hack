@@ -899,6 +899,17 @@ TEST(MetaVariableType, String)
     ASSERT_EQ(var.GetDefaultValue(), copy.GetDefaultValue());
 }
 
+TEST(MetaVariableInt, StringToValue)
+{
+    bool ok = false;
+
+    double val = libobjgen::MetaVariableInt<double>::StringToValue(
+        "-3.14159e10", &ok);
+
+    ASSERT_TRUE(ok);
+    ASSERT_EQ(val, -3.14159e10);
+}
+
 int main(int argc, char *argv[])
 {
     try

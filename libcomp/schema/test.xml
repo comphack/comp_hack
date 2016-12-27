@@ -10,7 +10,7 @@
         <member type="string" name="stringNull" lensz="0"/>
         <member type="string" name="stringFixed" lensz="4"/>
         <member type="array" name="xyz" size="3" caps="on">
-            <element type="float" default="-1" min="-9999" max="9999"/>
+            <element type="float" default="-3.14159e2" min="-9999" max="9999"/>
         </member>
         <member type="list" name="list">
             <element type="u8"/>

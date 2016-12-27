@@ -134,12 +134,15 @@ public:
     {
         T value = 0;
         bool ok = true;
-        bool decimal = false;
         int base = 10;
         std::smatch match;
         std::string s = str;
 
-        if(std::regex_match(s, match, std::regex(
+        if(!std::numeric_limits<T>::is_integer)
+        {
+            s = str;
+        }
+        else if(std::regex_match(s, match, std::regex(
             "^([+-])?0x([0-9a-fA-F]+)$")))
         {
             base = 16;
@@ -151,12 +154,6 @@ public:
             base = 8;
             s = std::string(match[1]) + std::string(match[2]);
         }
-        else if(!std::numeric_limits<T>::is_integer &&
-            std::regex_match(s, match, std::regex(
-            "^[-+]?([0-9]*.[0-9]+|[0-9]+)")))
-        {
-            decimal = true;
-        }
         else if(!std::regex_match(s, match, std::regex(
             "^[+-]?(([1-9][0-9]*)|0)$")))
         {
@@ -165,14 +162,14 @@ public:
 
         if(ok)
         {
-            if(decimal)
+            if(!std::numeric_limits<T>::is_integer)
             {
                 double temp;
 
                 std::stringstream ss(s);
                 ss >> std::setbase(base) >> temp;
 
-                if (ss && static_cast<T>(temp) >=
+                if(ss && static_cast<T>(temp) >=
                     std::numeric_limits<T>::lowest() &&
                     static_cast<T>(temp) <=
                     std::numeric_limits<T>::max())
@@ -184,8 +181,7 @@ public:
                     ok = false;
                 }
             }
-            else if(!std::numeric_limits<T>::is_integer ||
-                std::numeric_limits<T>::is_signed)
+            else if(std::numeric_limits<T>::is_signed)
             {
                 int64_t temp;
 

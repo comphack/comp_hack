@@ -44,6 +44,7 @@
 using namespace libobjgen;
 
 MetaObject::MetaObject()
+    : mPersistent(false), mScriptEnabled(false)
 {
 }
 
@@ -66,9 +67,19 @@ bool MetaObject::IsPersistent() const
     return mPersistent;
 }
 
+void MetaObject::SetPersistent(bool persistent)
+{
+    mPersistent = persistent;
+}
+
 bool MetaObject::IsScriptEnabled() const
 {
     return mScriptEnabled;
+}
+
+void MetaObject::SetScriptEnabled(bool scriptEnabled)
+{
+    mScriptEnabled = scriptEnabled;
 }
 
 std::string MetaObject::GetSourceLocation() const
@@ -89,11 +100,13 @@ bool MetaObject::SetName(const std::string& name)
 
 bool MetaObject::SetBaseObject(const std::string& baseObject)
 {
-    bool result = true;
+    if(baseObject.empty() || IsValidIdentifier(baseObject))
+    {
+        mBaseObject = baseObject;
+        return true;
+    }
 
-    mBaseObject = baseObject;
-
-    return result;
+    return false;
 }
 
 void MetaObject::SetSourceLocation(const std::string& location)
@@ -235,7 +248,10 @@ bool MetaObject::IsValid() const
         }
     }
 
-    return true;
+    return !mName.empty() && IsValidIdentifier(mName) &&
+        (mVariables.size() > 0 || !mBaseObject.empty()) &&
+        (mPersistent || mSourceLocation.empty()) &&
+        (!mPersistent || mBaseObject.empty());
 }
 
 bool MetaObject::Load(std::istream& stream)

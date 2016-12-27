@@ -2,7 +2,7 @@
  * @file libobjgen/tests/MetaObject.cpp
  * @ingroup libobjgen
  *
- * @author COMP Omega <compomega@tutanota.com>
+ * @author HACKfrost
  *
  * @brief Test the MetaObject class.
  *
@@ -30,8 +30,307 @@
 
 // libobjgen Includes
 #include <MetaObject.h>
+#include <MetaObjectXmlParser.h>
+#include <MetaVariable.h>
 
 using namespace libobjgen;
+
+TEST(MetaObject, Validate)
+{
+    MetaObject obj;
+
+    ASSERT_FALSE(obj.IsValid())
+        << "Attempting to validate an object with nothing set on it.";
+
+    ASSERT_FALSE(obj.SetName("2Test"))
+        << "Attempting to set an invalid name.";
+
+    ASSERT_TRUE(obj.SetName("Test"))
+        << "Attempting to set a valid name.";
+
+    ASSERT_FALSE(obj.IsValid())
+        << "Attempting to validate an object with no variables or base object.";
+
+    ASSERT_FALSE(obj.SetBaseObject("2TestBase"))
+        << "Attempting to set an invalid base object name.";
+
+    ASSERT_TRUE(obj.SetBaseObject("TestBase"))
+        << "Attempting to set a valid base object name.";
+
+    ASSERT_TRUE(obj.IsValid())
+        << "Attempting to validate a derived object with no variables.";
+
+    //Clear the base object
+    obj.SetBaseObject("");
+
+    auto var = MetaVariable::CreateType("bool");
+    var->SetName("Boolean");
+    ASSERT_TRUE(obj.AddVariable(var));
+
+    ASSERT_TRUE(obj.IsValid());
+
+    obj.SetSourceLocation("somedb");
+
+    ASSERT_FALSE(obj.IsValid())
+        << "Attempting to validate a non-persistent object with a source location.";
+
+    obj.SetPersistent(true);
+
+    ASSERT_TRUE(obj.IsValid());
+}
+
+TEST(MetaObject, StreamCopy)
+{
+    MetaObject obj;
+    obj.SetName("Test");
+    obj.SetBaseObject("TestBase");
+
+    //Add a couple members that don't require much validation
+    auto var = MetaVariable::CreateType("bool");
+    var->SetName("Boolean");
+    ASSERT_TRUE(obj.AddVariable(var));
+
+    var = MetaVariable::CreateType("u8");
+    var->SetName("Unsigned8");
+    ASSERT_TRUE(obj.AddVariable(var));
+
+    var = MetaVariable::CreateType("s16");
+    var->SetName("Signed16");
+    ASSERT_TRUE(obj.AddVariable(var));
+    ASSERT_FALSE(obj.AddVariable(var))
+        << "Attempting to add the samve variable twice.";
+
+    var = MetaVariable::CreateType("s16");
+    var->SetName("SecondSigned16");
+    ASSERT_TRUE(obj.AddVariable(var));
+    ASSERT_TRUE(obj.RemoveVariable("SecondSigned16"));
+
+    MetaObject copy;
+
+    std::stringstream ss;
+    ASSERT_TRUE(obj.Save(ss));
+    ASSERT_TRUE(copy.Load(ss));
+
+    ASSERT_EQ(copy.GetName(), obj.GetName());
+    ASSERT_EQ(copy.GetBaseObject(), obj.GetBaseObject());
+    ASSERT_EQ(copy.IsPersistent(), obj.IsPersistent());
+    ASSERT_EQ(copy.IsScriptEnabled(), obj.IsScriptEnabled());
+
+    int varCount = 0;
+    auto objIter = obj.VariablesBegin();
+    auto copyIter = copy.VariablesBegin();
+    while(objIter != obj.VariablesEnd())
+    {
+        ASSERT_TRUE(copyIter != copy.VariablesEnd());
+        if(copyIter == copy.VariablesEnd())
+        {
+            break;
+        }
+
+        auto objVar = *objIter;
+        auto copyVar = *copyIter;
+
+        ASSERT_EQ(copyVar->GetName(), objVar->GetName());
+        ASSERT_EQ(copyVar->GetMetaType(), objVar->GetMetaType());
+
+        objIter++;
+        copyIter++;
+        varCount++;
+    }
+
+    ASSERT_EQ(3, varCount);
+}
+
+TEST(MetaObjectXmlParser, XmlCopy)
+{
+    MetaObject obj;
+    obj.SetName("Test");
+
+    auto var = MetaVariable::CreateType("bool");
+    var->SetName("Boolean");
+    ASSERT_TRUE(obj.AddVariable(var));
+
+    tinyxml2::XMLDocument doc;
+    doc.Parse("<def></def>");
+
+    auto root = doc.RootElement();
+    ASSERT_TRUE(obj.Save(doc, *root));
+
+    MetaObjectXmlParser parser;
+
+    ASSERT_TRUE(parser.Load(doc, *root->FirstChildElement()));
+
+    auto copy = parser.GetCurrentObject();
+    ASSERT_EQ(copy->GetName(), obj.GetName());
+    ASSERT_EQ(copy->GetBaseObject(), obj.GetBaseObject());
+    ASSERT_EQ(copy->IsPersistent(), obj.IsPersistent());
+    ASSERT_EQ(copy->IsScriptEnabled(), obj.IsScriptEnabled());
+
+    int varCount = 0;
+    auto objIter = obj.VariablesBegin();
+    auto copyIter = copy->VariablesBegin();
+    while (objIter != obj.VariablesEnd())
+    {
+        ASSERT_TRUE(copyIter != copy->VariablesEnd());
+        if (copyIter == copy->VariablesEnd())
+        {
+            break;
+        }
+
+        auto objVar = *objIter;
+        auto copyVar = *copyIter;
+
+        ASSERT_EQ(copyVar->GetName(), objVar->GetName());
+        ASSERT_EQ(copyVar->GetMetaType(), objVar->GetMetaType());
+
+        objIter++;
+        copyIter++;
+        varCount++;
+    }
+
+    ASSERT_EQ(1, varCount);
+}
+
+TEST(MetaObjectXmlParser, ValidReferenceCheck)
+{
+    auto xml = 
+        "<objects>"
+            "<object name='Object1' persistent='false'>"
+                "<member name='Unsigned8' type='u8'/>"
+            "</object>"
+            "<object name='Object2' persistent='false'>"
+                "<member name='Object1' type='Object1*'/>"
+            "</object>"
+        "</objects>";
+
+    MetaObjectXmlParser parser;
+
+    tinyxml2::XMLDocument doc;
+    doc.Parse(xml);
+
+    const tinyxml2::XMLElement *pObjectXml = doc.RootElement()->FirstChildElement("object");
+
+    while(nullptr != pObjectXml)
+    {
+        ASSERT_TRUE(parser.LoadTypeInformation(doc, *pObjectXml));
+        pObjectXml = pObjectXml->NextSiblingElement("object");
+    }
+
+    ASSERT_TRUE(parser.FinalizeObjectAndReferences("Object1"));
+}
+
+TEST(MetaObjectXmlParser, CircularReferenceCheck)
+{
+    auto xml = 
+        "<objects>"
+            "<object name='Object1' persistent='false'>"
+                "<member name='Object2' type='Object2*'/>"
+            "</object>"
+            "<object name='Object2' persistent='false'>"
+                "<member name='Object1' type='Object1*'/>"
+            "</object>"
+        "</objects>";
+
+    MetaObjectXmlParser parser;
+
+    tinyxml2::XMLDocument doc;
+    doc.Parse(xml);
+
+    const tinyxml2::XMLElement *pObjectXml = doc.RootElement()->FirstChildElement("object");
+
+    while(nullptr != pObjectXml)
+    {
+        ASSERT_TRUE(parser.LoadTypeInformation(doc, *pObjectXml));
+        pObjectXml = pObjectXml->NextSiblingElement("object");
+    }
+
+    ASSERT_FALSE(parser.FinalizeObjectAndReferences("Object1"));
+
+    //Reset and make them persistent
+    parser = MetaObjectXmlParser();
+
+    pObjectXml = doc.RootElement()->FirstChildElement("object");
+
+    while(nullptr != pObjectXml)
+    {
+        ASSERT_TRUE(parser.LoadTypeInformation(doc, *pObjectXml));
+        pObjectXml = pObjectXml->NextSiblingElement("object");
+    }
+
+    auto obj = parser.GetKnownObject("Object1");
+    obj->SetPersistent(true);
+
+    obj = parser.GetKnownObject("Object2");
+    obj->SetPersistent(true);
+
+    ASSERT_TRUE(parser.FinalizeObjectAndReferences("Object1"));
+}
+
+TEST(MetaObjectXmlParser, ScriptEnabledCheck)
+{
+    auto xml = 
+        "<objects>"
+            "<object name='Object1' scriptenabled='false'>"
+                "<member name='Field1' type='u8'/>"
+            "</object>"
+            "<object name='Object2' baseobject='Object1' scriptenabled='true'>"
+                "<member name='Object3' type='Object3*'/>"
+            "</object>"
+            "<object name='Object3' scriptenabled='false'>"
+                "<member name='Field2' type='u8'/>"
+            "</object>"
+        "</objects>";
+
+    MetaObjectXmlParser parser;
+
+    tinyxml2::XMLDocument doc;
+    doc.Parse(xml);
+
+    const tinyxml2::XMLElement *pObjectXml = doc.RootElement()->FirstChildElement("object");
+
+    while(nullptr != pObjectXml)
+    {
+        ASSERT_TRUE(parser.LoadTypeInformation(doc, *pObjectXml));
+        pObjectXml = pObjectXml->NextSiblingElement("object");
+    }
+
+    //Building Object1 or Object2 is not a problem until we try to build the derived object too
+    ASSERT_TRUE(parser.FinalizeObjectAndReferences("Object1"));
+    ASSERT_TRUE(parser.FinalizeObjectAndReferences("Object3"));
+    ASSERT_FALSE(parser.FinalizeObjectAndReferences("Object2"));
+
+    //Reset and make the base object script enabled
+    parser = MetaObjectXmlParser();
+
+    pObjectXml = doc.RootElement()->FirstChildElement("object");
+
+    while(nullptr != pObjectXml)
+    {
+        ASSERT_TRUE(parser.LoadTypeInformation(doc, *pObjectXml));
+        pObjectXml = pObjectXml->NextSiblingElement("object");
+    }
+
+    auto obj = parser.GetKnownObject("Object1");
+    obj->SetScriptEnabled(true);
+
+    ASSERT_FALSE(parser.FinalizeObjectAndReferences("Object2"));
+
+    //Reset and make the referenced object script enabled as well
+    parser = MetaObjectXmlParser();
+
+    pObjectXml = doc.RootElement()->FirstChildElement("object");
+
+    while (nullptr != pObjectXml)
+    {
+        ASSERT_TRUE(parser.LoadTypeInformation(doc, *pObjectXml));
+        pObjectXml = pObjectXml->NextSiblingElement("object");
+    }
+
+    obj = parser.GetKnownObject("Object3");
+    obj->SetScriptEnabled(true);
+
+    ASSERT_FALSE(parser.FinalizeObjectAndReferences("Object2"));
+}
 
 int main(int argc, char *argv[])
 {

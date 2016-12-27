@@ -797,7 +797,7 @@ bool MetaObjectXmlParser::HasCircularReference(const std::shared_ptr<MetaObject>
     }
     else
     {
-        std::set<std::string> referencesCopy;
+        std::set<std::string> referencesCopy = references;
         referencesCopy.insert(obj->mName);
 
         for(auto var : obj->GetReferences())

@@ -50,6 +50,7 @@ public:
     bool SetSizeType(const short sizeType);
 
     const std::vector<std::string> GetValues() const;
+    bool SetValues(const std::vector<std::string>& values);
 
     virtual size_t GetSize() const;
 
@@ -103,6 +104,8 @@ public:
     bool ValueExists(const std::string& val) const;
 
 private:
+    bool ContainsDupilicateValues(const std::vector<std::string>& values) const;
+
     std::vector<std::string> mValues;
     std::string mTypePrefix;
     std::string mDefaultValue;

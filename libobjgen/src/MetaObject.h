@@ -61,8 +61,10 @@ public:
     bool SetBaseObject(const std::string& name);
 
     bool IsPersistent() const;
+    void SetPersistent(bool persistent);
 
     bool IsScriptEnabled() const;
+    void SetScriptEnabled(bool scriptEnabled);
 
     std::string GetSourceLocation() const;
     void SetSourceLocation(const std::string& location);

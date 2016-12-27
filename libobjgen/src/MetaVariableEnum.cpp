@@ -106,6 +106,17 @@ const std::vector<std::string> MetaVariableEnum::GetValues() const
     return mValues;
 }
 
+bool MetaVariableEnum::SetValues(const std::vector<std::string>& values)
+{
+    if(ContainsDupilicateValues(values))
+    {
+        return false;
+    }
+
+    mValues = values;
+    return true;
+}
+
 size_t MetaVariableEnum::GetSize() const
 {
     switch(mSizeType)
@@ -142,16 +153,9 @@ bool MetaVariableEnum::IsScriptAccessible() const
 
 bool MetaVariableEnum::IsValid() const
 {
-    //Dupe check
-    if(mValues.size() > 0)
+    if(ContainsDupilicateValues(mValues))
     {
-        for(auto iter = mValues.begin(); iter <= mValues.end()-1; iter++)
-        {
-            if(std::find(iter + 1, mValues.end(), *iter) != mValues.end())
-            {
-                return false;
-            }
-        }
+        return false;
     }
 
     switch(mSizeType)
@@ -178,8 +182,7 @@ bool MetaVariableEnum::Load(std::istream& stream)
 {
     MetaVariable::Load(stream);
 
-    stream.read(reinterpret_cast<char*>(&mDefaultValue),
-        sizeof(mDefaultValue));
+    Generator::LoadString(stream, mDefaultValue);
 
     stream.read(reinterpret_cast<char*>(&mSizeType),
         sizeof(mSizeType));
@@ -207,8 +210,7 @@ bool MetaVariableEnum::Save(std::ostream& stream) const
 
     if(IsValid() && MetaVariable::Save(stream))
     {
-        stream.write(reinterpret_cast<const char*>(&mDefaultValue),
-            sizeof(mDefaultValue));
+        Generator::SaveString(stream, mDefaultValue);
 
         stream.write(reinterpret_cast<const char*>(&mSizeType),
             sizeof(mSizeType));
@@ -312,7 +314,7 @@ bool MetaVariableEnum::Save(tinyxml2::XMLDocument& doc,
 
     for(auto val : mValues)
     {
-        tinyxml2::XMLElement *pVariableValue = doc.NewElement(elementName);
+        tinyxml2::XMLElement *pVariableValue = doc.NewElement("value");
         pVariableValue->SetText(val.c_str());
         pVariableElement->InsertEndChild(pVariableValue);
     }
@@ -536,6 +538,22 @@ bool MetaVariableEnum::ValueExists(const std::string& val) const
     if(mValues.size() > 0)
     {
         return std::find(mValues.begin(), mValues.end(), val) != mValues.end();
+    }
+
+    return false;
+}
+
+bool MetaVariableEnum::ContainsDupilicateValues(const std::vector<std::string>& values) const
+{
+    if(values.size() > 0)
+    {
+        for(auto iter = values.begin(); iter <= values.end()-1; iter++)
+        {
+            if(std::find(iter + 1, values.end(), *iter) != values.end())
+            {
+                return true;
+            }
+        }
     }
 
     return false;

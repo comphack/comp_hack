@@ -106,6 +106,8 @@ ENDIF(WIN32)
 
 # List of unit tests to add to CTest.
 SET(${PROJECT_NAME}_TEST_SRCS
+    MetaObject
+    MetaVariable
     UUID
 )
 

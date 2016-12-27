@@ -803,11 +803,11 @@ TEST(MetaVariableType, Reference)
 
     var.SetPersistentParent(false);
 
-    auto defaultedVar = std::shared_ptr<MetaVariableInt<uint8_t>>(
+    auto defaultedVar = std::shared_ptr<MetaVariable>(
         new MetaVariableInt<uint8_t>);
-    defaultedVar->SetDefaultValue(5);
+    std::dynamic_pointer_cast<MetaVariableInt<uint8_t>>(defaultedVar)->SetDefaultValue(5);
 
-    var.AddDefaultedVariable(std::dynamic_pointer_cast<MetaVariable>(defaultedVar));
+    var.AddDefaultedVariable(defaultedVar);
 
     ASSERT_EQ(MetaVariable::MetaVariableType_t::TYPE_REF, var.GetMetaType());
     ASSERT_TRUE(var.IsValid());

@@ -56,9 +56,9 @@ class Object;
 class TcpConnection
 {
 public:
-	/**
-	 * Role the server is operating in.
-	 */
+    /**
+     * Role the server is operating in.
+     */
     typedef enum
     {
         ROLE_SERVER = 0, //!< Server role that can accept connections.
@@ -103,7 +103,7 @@ public:
     static String GetDiffieHellmanPrime(const DH *pDiffieHellman);
 
     /**
-      * Generate the public key for the Diffie-Hellman key exchange.
+     * Generate the public key for the Diffie-Hellman key exchange.
      * @param pDiffieHellman Object that stores the DH key.
      * @return Public key to be used in the DH key exchange.
      */

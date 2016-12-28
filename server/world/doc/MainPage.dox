@@ -1,0 +1,58 @@
+/*
+ * This file is part of the COMP_hack Library (world).
+ *
+ * Copyright (C) 2012-2016 COMP_hack Team <compomega@tutanota.com>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as
+ * published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+/**
+ * @mainpage server/world - A world server
+ * World servers manage account associated data (ex: characters)
+ * within a dedicated database instance.  A world contains an ID
+ * but also a friendly name that players use to create and select
+ * characters on the lobby screen.  Channel servers connect
+ * to the world server after it has secured a connection to the
+ * lobby and any important information related to the channels
+ * is relayed through the world as it changes.
+ * 
+ * @section setup Starting the server
+ * The world server, much like the other servers, must be instantiated with
+ * a specialized server config in the following manner:
+ * @code
+ * //std::string configPath = "C:\worldconfig.xml";
+ * //auto config = std::shared_ptr<objects::ServerConfig>(new objects::WorldConfig());
+ * //auto server = std::shared_ptr<world::WorldServer>(new world::WorldServer(config, configPath));
+ * @endcode
+ * Through use of different config files passed in through a command line
+ * argument, multiple different world servers can be started on the same
+ * machine.  Once the server has been created the following code should be
+ * called as well for the server execution to run and close properly:
+ * @code
+ * //auto wkServer = std::weak_ptr<libcomp::BaseServer>(server);
+ * //if(!server->Initialize(wkServer))
+ * //{
+ *     // Handle failed server startup
+ * //}
+ * 
+ * // Set this for the signal handler.
+ * //libcomp::Shutdown::Configure(server.get());
+ * 
+ * // Start the main server loop (blocks until done).
+ * //int returnCode = server->Start();
+ * 
+ * // Complete the shutdown process.
+ * //libcomp::Shutdown::Complete();
+ * @endcode
+ */

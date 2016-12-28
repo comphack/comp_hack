@@ -15,11 +15,27 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-ADD_SUBDIRECTORY(capgrep)
-ADD_SUBDIRECTORY(decrypt)
-ADD_SUBDIRECTORY(encrypt)
-ADD_SUBDIRECTORY(logger)
-ADD_SUBDIRECTORY(objgen)
-ADD_SUBDIRECTORY(patcher)
-ADD_SUBDIRECTORY(rehash)
-ADD_SUBDIRECTORY(updater)
+CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
+
+PROJECT(comp_patcher)
+
+MESSAGE("** Configuring ${PROJECT_NAME} **")
+
+SET(${PROJECT_NAME}_SRCS
+	src/main.cpp
+)
+
+SET(${PROJECT_NAME}_HDRS
+)
+
+ADD_EXECUTABLE(${PROJECT_NAME} ${${PROJECT_NAME}_SRCS} ${${PROJECT_NAME}_HDRS})
+
+SET_TARGET_PROPERTIES(${PROJECT_NAME} PROPERTIES FOLDER "Tools")
+
+TARGET_INCLUDE_DIRECTORIES(${PROJECT_NAME} PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+)
+
+TARGET_LINK_LIBRARIES(${PROJECT_NAME} comp objgen zlib)
+
+INSTALL(TARGETS ${PROJECT_NAME} DESTINATION bin)

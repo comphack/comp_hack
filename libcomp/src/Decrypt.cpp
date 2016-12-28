@@ -742,3 +742,26 @@ String Decrypt::HashPassword(const String& password, const String& salt)
 
     return hash;
 }
+
+String Decrypt::SHA1(const std::vector<char>& data)
+{
+    String hash;
+    unsigned char output[SHA512_DIGEST_LENGTH];
+
+    if(output == ::SHA1(reinterpret_cast<const unsigned char*>(&data[0]),
+        static_cast<size_t>(data.size()), output))
+    {
+        std::stringstream ss;
+
+        // Convert the bytes into a base-16 string.
+        for(int i = 0; i < SHA_DIGEST_LENGTH; ++i)
+        {
+            ss << std::hex << std::setw(2) << std::setfill('0')
+                << ((int)output[i] & 0xFF);
+        }
+
+        hash = ss.str();
+    }
+
+    return hash;
+}

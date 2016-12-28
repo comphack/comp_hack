@@ -233,6 +233,13 @@ void DecryptPacket(const BF_KEY& key, Packet& p);
  */
 String HashPassword(const String& password, const String& salt);
 
+/**
+ * Generate a SHA-1 hash of the given data.
+ * @param data Data to generate the hash of.
+ * @returns SHA-1 hash string of the given data.
+ */
+String SHA1(const std::vector<char>& data);
+
 } // namespace Decrypt
 
 } // namespace libcomp

@@ -146,7 +146,7 @@ bool SaveClient(const char *szOutPath, std::vector<char>& data)
     file.open(szOutPath, std::ofstream::binary);
 
     // Write to the file.
-    file.write(&data[0], data.size());
+    file.write(&data[0], static_cast<std::streamsize>(data.size()));
 
     // Make sure it wrote.
     return file.good();

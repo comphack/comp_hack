@@ -21,6 +21,10 @@ PROJECT(comp_channel)
 
 MESSAGE("** Configuring ${PROJECT_NAME} **")
 
+# Add a target to generate API documentation.
+FILE(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/api/server/channel)
+GENERATE_DOCS(doc/Doxyfile.in)
+
 # Add a directory to put the objgen output into.
 FILE(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/objgen)
 

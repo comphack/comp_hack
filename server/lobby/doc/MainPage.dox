@@ -1,0 +1,53 @@
+/*
+ * This file is part of the COMP_hack Library (lobby).
+ *
+ * Copyright (C) 2012-2016 COMP_hack Team <compomega@tutanota.com>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as
+ * published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+/**
+ * @mainpage server/lobby - The lobby server
+ * The lobby server handles game client authentication, login, character
+ * creation and tranfers players to a channel connected to a world.
+ * At runtime there should be only one lobby server active to handle all world servers
+ * and it must remain active so long as the other servers are running.
+ *
+ * @section setup Starting the server
+ * The lobby server, much like the other servers, must be instantiated with
+ * a specialized server config in the following manner:
+ * @code
+ * std::string configPath = "C:\lobbyconfig.xml";
+ * auto config = std::shared_ptr<objects::ServerConfig>(new objects::LobbyConfig());
+ * auto server = std::shared_ptr<lobby::LobbyServer>(new lobby::LobbyServer(config, configPath));
+ * @endcode
+ * Once the server has been created the following code should be
+ * called as well for the server execution to run and close properly:
+ * @code
+ * auto wkServer = std::weak_ptr<libcomp::BaseServer>(server);
+ * if(!server->Initialize(wkServer))
+ * {
+ *     // Handle failed server startup
+ * }
+ * 
+ * // Set this for the signal handler.
+ * libcomp::Shutdown::Configure(server.get());
+ * 
+ * // Start the main server loop (blocks until done).
+ * int returnCode = server->Start();
+ * 
+ * // Complete the shutdown process.
+ * libcomp::Shutdown::Complete();
+ * @endcode
+ */

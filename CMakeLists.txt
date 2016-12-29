@@ -169,7 +169,6 @@ SET(LIBOBJGEN_INCLUDES
 # List of common include paths for every project using libcomp.
 SET(LIBCOMP_INCLUDES
     ${OPENSSL_INCLUDE_DIR}
-    ${CMAKE_SOURCE_DIR}/eigen2
     ${CMAKE_SOURCE_DIR}/libcomp/src
     ${CMAKE_BINARY_DIR}/libcomp/objgen
 )

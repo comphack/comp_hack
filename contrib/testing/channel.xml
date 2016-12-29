@@ -4,7 +4,7 @@
         <!-- From ServerConfig -->
         <member name="DiffieHellmanKeyPair">9C4169BBE8F535F7A7404D4EB3AE22CF63C0450FC2C7B2A5A03794D4CFA9F290FF5774267885E60B848280E3A07468366E62F040DAC3CB67E95E8F3DC4D97F94AD1D3D98F0B066F72B65CB391643A95BB96CF048ED5D60FB7AF7A969F38ABD2301F6A7EC4DB7DAFC2CFD1F417E0B634033FEE8B102D62A28EC03D95266E2B0B3</member>
         <member name="Port">14666</member>
-        <member name="DatabaseType">CASSANDRA</member>	<!-- CASSANDRA/SQLITE3 -->
+        <member name="DatabaseType">CASSANDRA</member>    <!-- CASSANDRA/SQLITE3 -->
         <member name="SQLite3Config">
             <member name="IP">127.0.0.1</member>
             <member name="DatabaseName">world_test</member>
@@ -19,7 +19,7 @@
             <!--<member name="Password"/>-->
         </member>
         <member name="MultithreadMode">true</member>
-		
+        
         <!-- From ChannelConfig -->
         <member name="ID">0</member>
         <member name="Name">Test Channel</member>

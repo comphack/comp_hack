@@ -44,31 +44,57 @@
 namespace channel
 {
 
+/**
+ * Class to handle messages pertaining to connecting to
+ * the world or game clients.
+ */
 class ManagerConnection : public libcomp::Manager
 {
 public:
+    /**
+     * Create a new manager.
+     * @param server Pointer to the server that uses this manager
+     */
     ManagerConnection(std::weak_ptr<libcomp::BaseServer> server);
+    
+    /**
+     * Clean up the manager.
+     */
     virtual ~ManagerConnection();
 
     /**
-     * @brief Get the different types of messages handles by this manager.
+     * Get the different types of messages handled by this manager.
+     * @return List of supported message types
      */
     virtual std::list<libcomp::Message::MessageType> GetSupportedTypes() const;
 
     /**
      * Process a message from the queue.
+     * @param pMessage Message to be processed.
+     * @return true on success, false on failure
      */
     virtual bool ProcessMessage(const libcomp::Message::Message *pMessage);
-
+    
+    /**
+     * Send a request to the connected world for description information
+     *  to be handled once the response is received.
+     */
     void RequestWorldDescription();
-
+    
+    /**
+     * Set the world connection after establishing a connection.
+     * @param worldConnection Pointer to the world connection
+     */
     void SetWorldConnection(const std::shared_ptr<libcomp::InternalConnection>& worldConnection);
 
 private:
+    /// Static list of supported message types for the manager.
     static std::list<libcomp::Message::MessageType> sSupportedTypes;
 
+    /// Pointer to the world connection.
     std::shared_ptr<libcomp::InternalConnection> mWorldConnection;
 
+    /// Pointer to the server that uses this manager.
     std::weak_ptr<libcomp::BaseServer> mServer;
 };
 

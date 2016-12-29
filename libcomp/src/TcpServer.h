@@ -66,7 +66,12 @@ public:
 
 protected:
     virtual int Run();
-
+    
+    /**
+     * Create a connection to a newly active socket.
+     * @param socket A new socket connection.
+     * @return Pointer to the newly created connection
+     */
     virtual std::shared_ptr<TcpConnection> CreateConnection(
         asio::ip::tcp::socket& socket);
 

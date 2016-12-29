@@ -41,25 +41,76 @@ namespace lobby
 class LobbyServer : public libcomp::BaseServer
 {
 public:
+    /**
+     * Create a new lobby server.
+     * @param config Pointer to a casted LobbyConfig that will contain properties
+     *   every server has in addition to lobby specific ones.
+     * @param configPath File path to the location of the config to be loaded.
+     * @param unitTestMode Debug parameter to use in unit tests.  Set to true
+     *  to enable unit test mode.
+     */
     LobbyServer(std::shared_ptr<objects::ServerConfig> config,
         const libcomp::String& configPath, bool unitTestMode);
+    
+    /**
+     * Clean up the server.
+     */
     virtual ~LobbyServer();
-
+    
+    /**
+     * Initialize the database connection and do anything else that can fail
+     * to execute that needs to be handled outside of a constructor.  This
+     * calls the BaseServer version as well to perform shared init steps.
+     * @param self Pointer to this server to be used as a reference in
+     *   packet handling code.
+     * @return true on success, false on failure
+     */
     virtual bool Initialize(std::weak_ptr<BaseServer>& self);
-
+    
+    /**
+     * Get a list of pointers to the connected worlds.
+     * @return List of pointers to the connected worlds
+     */
     std::list<std::shared_ptr<lobby::World>> GetWorlds();
-
+    
+    /**
+     * Get information about a connected world by its connection.
+     * @param connection Pointer to the world's connection.
+     * @return Pointer to the connected world.
+     */
     std::shared_ptr<lobby::World> GetWorldByConnection(std::shared_ptr<libcomp::InternalConnection> connection);
 
 protected:
+    /**
+     * Set up required test data for unit testing, removing the
+     * need for human interaction via the usual prompt.
+     * @return true on success, false on failure
+     */
     bool InitializeTestMode();
-
+    
+    /**
+     * Create the first account when none currently exist
+     * in the connected database via PromptCreateAccount.
+     * The user will also be prompted to create more accounts
+     * should they want to here.
+     */
     void CreateFirstAccount();
+    
+    /**
+     * Prompt for and create an account via pre-populated or
+     * user entered values.
+     */
     void PromptCreateAccount();
-
+    
+    /**
+     * Create a connection to a newly active socket.
+     * @param socket A new socket connection.
+     * @return Pointer to the newly created connection
+     */
     virtual std::shared_ptr<libcomp::TcpConnection> CreateConnection(
         asio::ip::tcp::socket& socket);
 
+    /// Pointer to the manager in charge of connection messages.
     std::shared_ptr<ManagerConnection> mManagerConnection;
 
     /// Indicates the unit test database should be used.

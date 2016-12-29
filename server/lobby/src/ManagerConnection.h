@@ -37,39 +37,80 @@
 
 namespace lobby
 {
-
+    
+/**
+ * Class to handle messages pertaining to connecting to
+ * worlds or game clients.
+ */
 class ManagerConnection : public libcomp::Manager
 {
 public:
+    /**
+     * Create a new manager.
+     * @param server Pointer to the server that uses this manager
+     * @param service Pointer to the ASIO service to use to establish
+     *  connections to world servers
+     * @param messageQueue Pointer to the message queue to use
+     *  when connecting to world servers
+     */
     ManagerConnection(std::weak_ptr<libcomp::BaseServer> server,
         asio::io_service* service,
         std::shared_ptr<libcomp::MessageQueue<libcomp::Message::Message*>> messageQueue);
-    virtual ~ManagerConnection();
-
+    
     /**
-     * @brief Get the different types of messages handles by this manager.
+     * Clean up the manager.
+     */
+    virtual ~ManagerConnection();
+    
+    /**
+     * Get the different types of messages handled by this manager.
+     * @return List of supported message types
      */
     virtual std::list<libcomp::Message::MessageType> GetSupportedTypes() const;
-
+    
     /**
      * Process a message from the queue.
+     * @param pMessage Message to be processed
+     * @return true on success, false on failure
      */
     virtual bool ProcessMessage(const libcomp::Message::Message *pMessage);
-
+    
+    /**
+     * Get a list of connected worlds.
+     * @return List of pointers to connected worlds
+     */
     std::list<std::shared_ptr<lobby::World>> GetWorlds() const;
-
-    std::shared_ptr<lobby::World> GetWorldByConnection(const std::shared_ptr<libcomp::InternalConnection>& connection) const;
-
+    
+    /**
+     * Get a connected world via its connection.
+     * @param connection Pointer to the world's connection
+     * @return Pointer to a connected world
+     */
+    std::shared_ptr<lobby::World> GetWorldByConnection(
+        const std::shared_ptr<libcomp::InternalConnection>& connection) const;
+    
+    /**
+     * Remove a connected world when no longer needed.
+     * @param world Pointer to the world to remove
+     */
     void RemoveWorld(std::shared_ptr<lobby::World>& world);
 
 private:
+    /// Static list of supported message types for the manager.
     static std::list<libcomp::Message::MessageType> sSupportedTypes;
 
+    /// Pointer to the server that uses this manager.
     std::weak_ptr<libcomp::BaseServer> mServer;
 
+    /// Pointer to worlds after connecting.
     std::list<std::shared_ptr<lobby::World>> mWorlds;
 
+    /// Pointer to the ASIO service to use to establish connections
+    /// to world servers.
     asio::io_service *mService;
+
+    /// Pointer to the message queue to use when connecting to world
+    /// servers.
     std::shared_ptr<libcomp::MessageQueue<
         libcomp::Message::Message*>> mMessageQueue;
 };

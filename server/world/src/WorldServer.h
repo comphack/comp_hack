@@ -46,32 +46,84 @@ namespace world
 class WorldServer : public libcomp::BaseServer
 {
 public:
+    /**
+     * Create a new world server.
+     * @param config Pointer to a casted WorldConfig that will contain properties
+     *   every server has in addition to world specific ones.
+     * @param configPath File path to the location of the config to be loaded.
+     */
     WorldServer(std::shared_ptr<objects::ServerConfig> config, const libcomp::String& configPath);
+    
+    /**
+     * Clean up the server.
+     */
     virtual ~WorldServer();
-
+    
+    /**
+     * Initialize the database connection and do anything else that can fail
+     * to execute that needs to be handled outside of a constructor.  This
+     * calls the BaseServer version as well to perform shared init steps.
+     * @param self Pointer to this server to be used as a reference in
+     *   packet handling code.
+     * @return true on success, false on failure
+     */
     virtual bool Initialize(std::weak_ptr<BaseServer>& self);
-
+    
+    /**
+     * Get the description of the world read from the config.
+     * @return Pointer to the WorldDescription
+     */
     const std::shared_ptr<objects::WorldDescription> GetDescription() const;
-
+    
+    /**
+     * Get the description of a channel currently being connected to
+     * by its connection pointer.
+     * @param connection Pointer to the channel's connection.
+     * @return Pointer to the ChannelDescription
+     */
     std::shared_ptr<objects::ChannelDescription> GetChannelDescriptionByConnection(
         const std::shared_ptr<libcomp::InternalConnection>& connection) const;
-
+    
+    /**
+     * Get a pointer to the lobby connection.
+     * @return Pointer to the lobby connection
+     */
     const std::shared_ptr<libcomp::InternalConnection> GetLobbyConnection() const;
-
+    
+    /**
+     * Set the description of a channel currently being connected to
+     * via a connection.
+     * @param channel Pointer to the channel's description.
+     * @param connection Pointer to the channel's connection.
+     */
     void SetChannelDescription(const std::shared_ptr<objects::ChannelDescription>& channel,
         const std::shared_ptr<libcomp::InternalConnection>& connection);
-
+    
+    /**
+     * Remove the description of the channel for a connection
+     * that is no longer being used.
+     * @param connection Pointer to the channel's connection.
+     * @return true if the description existed, false if it did not
+     */
     bool RemoveChannelDescription(const std::shared_ptr<libcomp::InternalConnection>& connection);
 
 protected:
+    /**
+     * Create a connection to a newly active socket.
+     * @param socket A new socket connection.
+     * @return Pointer to the newly created connection
+     */
     virtual std::shared_ptr<libcomp::TcpConnection> CreateConnection(
         asio::ip::tcp::socket& socket);
 
+    /// Pointer to the description of the world.
     std::shared_ptr<objects::WorldDescription> mDescription;
 
+    /// Pointer to the descriptions of connected channels by their connections.
     std::map<std::shared_ptr<libcomp::InternalConnection>,
         std::shared_ptr<objects::ChannelDescription>> mChannelDescriptions;
 
+    /// Pointer to the manager in charge of connection messages. 
     std::shared_ptr<ManagerConnection> mManagerConnection;
 };
 

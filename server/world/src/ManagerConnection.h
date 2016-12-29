@@ -38,37 +38,66 @@
 
 namespace world
 {
-
+    
+/**
+ * Class to handle messages pertaining to connecting to
+ * the lobby or channels.
+ */
 class ManagerConnection : public libcomp::Manager
 {
 public:
-    ManagerConnection(std::weak_ptr<libcomp::BaseServer> server);
-    virtual ~ManagerConnection();
-
     /**
-     * @brief Get the different types of messages handles by this manager.
+     * Create a new manager.
+     * @param server Pointer to the server that uses this manager
+     */
+    ManagerConnection(std::weak_ptr<libcomp::BaseServer> server);
+    
+    /**
+     * Clean up the manager.
+     */
+    virtual ~ManagerConnection();
+    
+    /**
+     * Get the different types of messages handled by this manager.
+     * @return List of supported message types
      */
     virtual std::list<libcomp::Message::MessageType> GetSupportedTypes() const;
-
+    
     /**
      * Process a message from the queue.
+     * @param pMessage Message to be processed
+     * @return true on success, false on failure
      */
     virtual bool ProcessMessage(const libcomp::Message::Message *pMessage);
-
+    
+    /**
+     * Get a pointer to the lobby connection.
+     * @return Pointer to the lobby connection
+     */
     std::shared_ptr<libcomp::InternalConnection> GetLobbyConnection();
 
     /**
-    * Returns true if the lobby connection is currently active.
-    */
+     * Check if the lobby connection is currently active.
+     * @return true if connected, false if not connected
+     */
     bool LobbyConnected();
-
+    
+    /**
+     * Remove a connection and any associated channel description
+     * when no longer needed.  This should always be a channel
+     * connection but should be called regardless.
+     * @param connection Pointer to an internal connection
+     */
     void RemoveConnection(std::shared_ptr<libcomp::InternalConnection>& connection);
 
 private:
+    /// Static list of supported message types for the manager.
     static std::list<libcomp::Message::MessageType> sSupportedTypes;
 
+    /// Pointer to the server that uses this manager.
     std::weak_ptr<libcomp::BaseServer> mServer;
 
+    /// Pointer to the lobby connection after connecting.
     std::shared_ptr<libcomp::InternalConnection> mLobbyConnection;
 };
 

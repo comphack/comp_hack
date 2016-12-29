@@ -515,6 +515,36 @@ public:
     }
 
     /**
+     * @brief Convert the string to a decimal (float or double).
+     * @param pOK If not null, this will set the variable pointed by pOK to
+     *   true if the string was converted or false if it was not.
+     * @returns 0 if the conversion failed or the value is 0 or the value of
+     *   the string represented as an integer.
+     */
+    template<typename T>
+    T ToDecimal(bool *pOK = nullptr) const
+    {
+        T value = 0;
+
+        std::stringstream ss(ToUtf8());
+        ss >> value;
+
+        if(nullptr != pOK)
+        {
+            if(ss)
+            {
+                *pOK = true;
+            }
+            else
+            {
+                *pOK = false;
+            }
+        }
+
+        return value;
+    }
+
+    /**
      * Get if argument errors will be reported. This will report the
      * error over the standard error stream.
      * @returns true if argument errors will be reported.
@@ -636,5 +666,20 @@ bool operator!=(const std::string& str, const String& other);
 const String operator+(const String& a, const String& b);
 
 } // namespace libcomp
+
+namespace std
+{
+    template<>
+    struct hash<libcomp::String>
+    {
+        typedef libcomp::String argument_type;
+        typedef std::size_t result_type;
+
+        result_type operator()(const argument_type& s) const
+        {
+            return std::hash<std::string>{}(s.ToUtf8());
+        }
+    };
+} // namespace std
 
 #endif // LIBCOMP_SRC_STRING_H

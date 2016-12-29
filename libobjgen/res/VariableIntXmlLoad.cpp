@@ -2,7 +2,7 @@
 {
     try
     {
-        auto retval = libcomp::String(GetXmlText(*@NODE@)).ToInteger<@VAR_CODE_TYPE@>(&status);
+        auto retval = libcomp::String(GetXmlText(*@NODE@)).@CONVERT_FUNC@<@VAR_CODE_TYPE@>(&status);
         return status ? retval : @VAR_CODE_TYPE@{};
     }
     catch (...)

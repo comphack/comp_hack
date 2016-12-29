@@ -624,6 +624,8 @@ public:
 
         std::map<std::string, std::string> replacements;
         replacements["@VAR_CAMELCASE_NAME@"] = generator.GetCapitalName(*this);
+        replacements["@CONVERT_FUNC@"] = std::numeric_limits<T>::is_integer ?
+            "ToInteger" : "ToDecimal";
         replacements["@VAR_CODE_TYPE@"] = GetCodeType();
         replacements["@NODE@"] = node;
 

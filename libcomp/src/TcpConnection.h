@@ -256,7 +256,7 @@ protected:
         bool async = true);
 
     /**
-     * Report a socket eror. This should disconnect the connection.
+     * Report a socket error. This should disconnect the connection.
      * @param errorMessage Error message to report.
      */
     virtual void SocketError(const String& errorMessage = String());

@@ -49,7 +49,7 @@ public:
     {
         mLoadFailed = false;
     }
-    
+
     /**
      * Create a reference of the templated type with the pointer set.
      * @param ref Pointer to the referenced object
@@ -59,7 +59,7 @@ public:
         mLoadFailed = false;
         SetReference(ref);
     }
-    
+
     /**
      * Check if there is no UUID and no reference pointer.
      * @return true if both are null, false if one is not
@@ -68,7 +68,7 @@ public:
     {
         return mUUID.IsNull() && nullptr == mRef;
     }
-    
+
     /**
      * Get the pointer to the referenced object.  This will
      * cause the reference to load from the database if only
@@ -81,7 +81,7 @@ public:
 
         return mRef;
     }
-    
+
     /**
      * Get the pointer to the referenced object but do
      * not load from the databaseif it is not loaded already.
@@ -91,7 +91,7 @@ public:
     {
         return mRef;
     }
-    
+
     /**
      * Load the referenced object from the database by its UUID.
      * This will fail if the object is not persistent, the UUID
@@ -108,7 +108,7 @@ public:
         }
         return mUUID.IsNull() || nullptr != mRef;
     }
-    
+
     /**
      * Set the referenced object pointer and also the UUID if
      * the object is persistent.
@@ -123,7 +123,7 @@ public:
 
         mRef = ref;
     }
-    
+
     /**
      * Get the UUID of the persistent object reference.
      * @return UUID of the persistent object reference
@@ -132,7 +132,7 @@ public:
     {
         return mUUID;
     }
-    
+
     /**
      * Set the UUID of the persistent object reference and clear
      * the referenced object pointer to load later.  This will
@@ -152,7 +152,7 @@ public:
 
         return false;
     }
-    
+
     /**
      * Check if the object referenced is of type @ref PersistentObject.
      * @return true if it is persistent, false if it is not

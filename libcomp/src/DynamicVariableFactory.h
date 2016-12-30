@@ -48,7 +48,7 @@ public:
      * Create the factory and set up all of its allocator functions.
      */
     DynamicVariableFactory();
-    
+
     /**
      * Create a @ref DynamicVariable from a MetaVariable definition.
      * @param metaVariable Pointer to a MetaVariable definition

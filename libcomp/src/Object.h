@@ -100,7 +100,7 @@ public:
      * Create an object.
      */
     Object();
-    
+
     /**
      * Clean up the object.
      */
@@ -114,21 +114,21 @@ public:
      * @return true if valid, false if invalid
      */
     virtual bool IsValid(bool recursive = true) const = 0;
-    
+
     /**
      * Load the object's data members from an ObjectInStream.
      * @param stream Byte stream containing data member values
      * @return true if loading was successful, false if it was not
      */
     virtual bool Load(ObjectInStream& stream) = 0;
-    
+
     /**
      * Save the object's data members to an ObjectOutStream.
      * @param stream Byte stream to save data member values to
      * @return true if saving was successful, false if it was not
      */
     virtual bool Save(ObjectOutStream& stream) const  = 0;
-    
+
     /**
      * Load the object's data members from a standard input stream.
      * @param stream Byte stream containing data member values
@@ -138,7 +138,7 @@ public:
      * @return true if loading was successful, false if it was not
      */
     virtual bool Load(std::istream& stream, bool flat = false) = 0;
-    
+
     /**
      * Save the object's data members to a standard output stream.
      * @param stream Byte stream to save data member values to
@@ -148,7 +148,7 @@ public:
      * @return true if saving was successful, false if it was not
      */
     virtual bool Save(std::ostream& stream, bool flat = false) const  = 0;
-    
+
     /**
      * Load the object's data members from an XML file.
      * @param doc XML document containing the definition
@@ -157,7 +157,7 @@ public:
      */
     virtual bool Load(const tinyxml2::XMLDocument& doc,
         const tinyxml2::XMLElement& root) = 0;
-        
+
     /**
      * Save the object's data members to an XML file.
      * @param doc XML document to save the definition to
@@ -166,21 +166,21 @@ public:
      */
     virtual bool Save(tinyxml2::XMLDocument& doc,
         tinyxml2::XMLElement& root) const = 0;
-        
+
     /**
      * Load the object's data members from a data packet.
      * @param p Packet containing data member values
      * @return true if loading was successful, false if it was not
      */
     virtual bool LoadPacket(libcomp::ReadOnlyPacket& p);
-    
+
     /**
      * Save the object's data members to a data packet.
      * @param p Packet to save data member values to
      * @return true if saving was successful, false if it was not
      */
     virtual bool SavePacket(libcomp::Packet& p) const;
-    
+
     /**
      * Get the dynamic size count of the MetaObject definition.
      * An object's dynamic size count can be thought of as the
@@ -188,7 +188,7 @@ public:
      * @return MetaObject definition's dynamic size count
      */
     virtual uint16_t GetDynamicSizeCount() const = 0;
-    
+
     /**
      * Static utility function to build multiple objects from
      * an input stream and a factory function.
@@ -210,7 +210,7 @@ protected:
      * @sa Object::GetXmlChildren
      */
     const tinyxml2::XMLElement* GetXmlChild(const tinyxml2::XMLElement& root, const std::string name) const;
-    
+
     /**
      * Utility function to get child XML elements from a parent node
      * matching a specified name.
@@ -220,7 +220,7 @@ protected:
      * @sa Object::GetXmlChild
      */
     const std::list<const tinyxml2::XMLElement*> GetXmlChildren(const tinyxml2::XMLElement& root, const std::string name) const;
-    
+
     /**
      * Utility function to get child XML elements from a parent node.
      * @param root Parent XML node
@@ -228,7 +228,7 @@ protected:
      */
     virtual std::unordered_map<std::string, const tinyxml2::XMLElement*>
         GetXmlMembers(const tinyxml2::XMLElement& root) const;
-        
+
     /**
      * Utility function to get element text from an XML node.
      * @param root Parent XML node

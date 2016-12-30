@@ -61,7 +61,7 @@ public:
             mEmptyCondition.notify_one();
         }
     }
-    
+
     /**
      * Enqueue multiple messages.
      * @param Messages to add
@@ -79,7 +79,7 @@ public:
             mEmptyCondition.notify_one();
         }
     }
-    
+
     /**
      * Dequeue the first message added and wait if empty.
      * @return The first message added
@@ -102,7 +102,7 @@ public:
 
         return item;
     }
-    
+
     /**
      * Dequeue all the messages and wait if its empty.
      * @param List to add the messages to
@@ -126,7 +126,7 @@ public:
 
         destinationQueue.splice(destinationQueue.end(), tempQueue);
     }
-    
+
     /**
      * Dequeue all the current messages.
      * @param List to add the messages to

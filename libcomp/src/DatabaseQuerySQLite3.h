@@ -50,7 +50,7 @@ public:
      * @param pDatabase Pointer to the executing SQLite3 database
      */
     DatabaseQuerySQLite3(sqlite3 *pDatabase);
-    
+
     /**
      * Clean up the query.
      */
@@ -107,7 +107,7 @@ public:
     virtual bool BatchNext();
 
     virtual bool IsValid() const;
-    
+
     /**
      * Get the current status of the query as a SQLite3 defined integer
      * status code.
@@ -122,14 +122,14 @@ private:
      * @return Index of the binding
      */
     size_t GetNamedBindingIndex(const String& name) const;
-    
+
     /**
      * Helper function to format a named binding in the :NAME format.
      * @param name Name of the binding
      * @return Formatted binding
      */
     std::string GetNamedBinding(const String& name) const;
-    
+
     /**
      * Get the index of the current result set's column by name.
      * @param name Name of the column

@@ -80,7 +80,7 @@ public:
      * @return The default path to a config folder
      */
     static std::string GetDefaultConfigPath();
-    
+
     /**
      * Read the config file from the path and parse into an XML document
      * to be read in the virtual ReadConfig function.  Messages will print
@@ -103,7 +103,7 @@ public:
      * @return true on success, false on failure
      */
     virtual bool ReadConfig(std::shared_ptr<objects::ServerConfig> config, tinyxml2::XMLDocument& doc);
-    
+
     /**
      * Get the server config file read during the constructor steps.
      * @return Pointer to the server config
@@ -117,14 +117,14 @@ protected:
      * @return 0 on success, 1 on failure
      */
     virtual int Run();
-    
+
     /**
      * Create one or many workers to handle connection requests based upon
      * the server config allowing mutliple workers as well as how many cores
      * are available on the executing machine's CPU.
      */
     void CreateWorkers();
-    
+
     /**
      * Retrieve and assign a message queue to use for a new connection.
      * The method of deciding which worker to use is not contained in this
@@ -133,7 +133,7 @@ protected:
      * @return true on success, false on failure
      */
     bool AssignMessageQueue(std::shared_ptr<libcomp::EncryptedConnection>& connection);
-    
+
     /**
      * Get the next worker to use for new connections.  This implementation
      * uses a "least busy" method to decide which worker to assign but it is

@@ -50,12 +50,12 @@ public:
      * @param configPath File path to the location of the config to be loaded.
      */
     ChannelServer(std::shared_ptr<objects::ServerConfig> config, const libcomp::String& configPath);
-    
+
     /**
      * Clean up the server.
      */
     virtual ~ChannelServer();
-    
+
     /**
      * Initialize the database connection and do anything else that can fail
      * to execute that needs to be handled outside of a constructor.  This
@@ -65,13 +65,13 @@ public:
      * @return true on success, false on failure
      */
     virtual bool Initialize(std::weak_ptr<BaseServer>& self);
-    
+
     /**
      * Get the description of the channel read from the config.
      * @return Pointer to the ChannelDescription
      */
     const std::shared_ptr<objects::ChannelDescription> GetDescription();
-    
+
     /**
      * Get the description of the world the channel is connected to.
      * @return Pointer to the WorldDescription

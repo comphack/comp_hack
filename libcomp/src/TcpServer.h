@@ -136,7 +136,7 @@ protected:
      * @return Code indicating the exit status.
      */
     virtual int Run();
-    
+
     /**
      * Create a connection to a newly active socket.
      * @param socket A new socket connection.

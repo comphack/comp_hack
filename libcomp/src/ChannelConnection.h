@@ -52,7 +52,7 @@ public:
      * @param pDiffieHellman Asymmetric encryption information.
      */
     ChannelConnection(asio::ip::tcp::socket& socket, DH *pDiffieHellman);
-    
+
     /**
      * Cleanup the connection object.
      */

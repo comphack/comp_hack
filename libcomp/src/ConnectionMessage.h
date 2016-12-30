@@ -57,7 +57,7 @@ public:
     virtual ~ConnectionMessage() { }
 
     virtual MessageType GetType() const { return MessageType::MESSAGE_TYPE_CONNECTION; }
-    
+
     /**
      * Get the specific connection message type.
      * @return The message's connection message type

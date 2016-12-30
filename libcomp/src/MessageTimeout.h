@@ -50,7 +50,7 @@ public:
      * Create the message.
      */
     Timeout();
-    
+
     /**
      * Cleanup the message.
      */

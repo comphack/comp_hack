@@ -52,19 +52,19 @@ public:
      */
     DynamicVariable(const std::shared_ptr<libobjgen::MetaVariable>&
         metaVariable);
-        
+
     /**
      * Clean up the variable.
      */
     virtual ~DynamicVariable();
-    
+
     /**
      * Load the variable from an ObjectInStream.
      * @param stream Byte stream containing data member values
      * @return true if loading was successful, false if it was not
      */
     virtual bool Load(ObjectInStream& stream) = 0;
-    
+
     /**
      * Save the variable to an ObjectOutStream.
      * @param stream Byte stream to save data member values to

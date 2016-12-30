@@ -44,14 +44,14 @@ public:
      * @param io_service ASIO service to manage this connection.
      */
     InternalConnection(asio::io_service& io_service);
-    
+
     /**
      * Create a new internal connection.
      * @param socket Socket provided by the server for the new client.
      * @param pDiffieHellman Asymmetric encryption information.
      */
     InternalConnection(asio::ip::tcp::socket& socket, DH *pDiffieHellman);
-    
+
     /**
      * Cleanup the connection object.
      */

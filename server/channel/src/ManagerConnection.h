@@ -56,7 +56,7 @@ public:
      * @param server Pointer to the server that uses this manager
      */
     ManagerConnection(std::weak_ptr<libcomp::BaseServer> server);
-    
+
     /**
      * Clean up the manager.
      */
@@ -74,13 +74,13 @@ public:
      * @return true on success, false on failure
      */
     virtual bool ProcessMessage(const libcomp::Message::Message *pMessage);
-    
+
     /**
      * Send a request to the connected world for description information
      *  to be handled once the response is received.
      */
     void RequestWorldDescription();
-    
+
     /**
      * Set the world connection after establishing a connection.
      * @param worldConnection Pointer to the world connection

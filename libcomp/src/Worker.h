@@ -55,7 +55,7 @@ public:
      * Create a new worker.
      */
     Worker();
-    
+
     /**
      * Cleanup the worker.
      */
@@ -82,7 +82,7 @@ public:
      */
     virtual void Run(libcomp::MessageQueue<
         libcomp::Message::Message*> *pMessageQueue);
-    
+
     /**
      * Signal that the worker should shutdown by sending a
      * @ref Message::Shutdown.
@@ -93,20 +93,20 @@ public:
      * Join the thread used for asynchronous execution.
      */
     virtual void Join();
-    
+
     /**
      * Check if the worker is currently running.
      * @return true if it is running, false if it is not
      */
     bool IsRunning() const;
-    
+
     /**
      * Get the message queue assinged to the worker.
      * @return Assigned message queue
      */
     std::shared_ptr<libcomp::MessageQueue<
         libcomp::Message::Message*>> GetMessageQueue() const;
-        
+
     /**
      * Get the number of active references to the message queue
      * assigned to the worker.

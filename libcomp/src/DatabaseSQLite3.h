@@ -51,18 +51,18 @@ public:
      * @param config Pointer to a database configuration
      */
     DatabaseSQLite3(const std::shared_ptr<objects::DatabaseConfigSQLite3>& config);
-    
+
     /**
      * Close and clean up the database connection.
      */
     virtual ~DatabaseSQLite3();
-    
+
     /**
      * Open or create the database file for use.
      * @return true on success, false on failure
      */
     virtual bool Open();
-    
+
     /**
      * Close the database connection and file.
      * @return true on success, false on failure
@@ -71,7 +71,7 @@ public:
     virtual bool IsOpen() const;
 
     virtual DatabaseQuery Prepare(const String& query);
-    
+
     /**
      * Check if the database file exists.
      * @return true if it exists, false if it does not
@@ -86,7 +86,7 @@ public:
     virtual bool InsertSingleObject(std::shared_ptr<PersistentObject>& obj);
     virtual bool UpdateSingleObject(std::shared_ptr<PersistentObject>& obj);
     virtual bool DeleteSingleObject(std::shared_ptr<PersistentObject>& obj);
-    
+
     /**
      * Verify/create any missing tables based off of @ref PersistentObject
      * types used by the database as well as any utility tables needed.  Tables
@@ -97,7 +97,7 @@ public:
      * @return true on success, false on failure
      */
     bool VerifyAndSetupSchema();
-    
+
     /**
      * Check if this database is configured to use the default file
      * for the SQLite3 database.  Non-default file connections are
@@ -113,7 +113,7 @@ private:
      * @return Path to the database file to use
      */
     String GetFilepath() const;
-    
+
     /**
      * Get the SQLite3 type represented by a MetaVariable type.
      * @param var Metadata variable containing a type to conver to a SQLite3 type

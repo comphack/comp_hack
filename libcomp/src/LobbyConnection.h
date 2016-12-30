@@ -52,7 +52,7 @@ public:
         MODE_WORLD_UP,  //!< A world is communicating that wants
                         //!< to connect to the lobby
     };
-    
+
     /**
      * Create a new lobby connection.
      * @param io_service ASIO service to manage this connection.
@@ -67,7 +67,7 @@ public:
      * @param pDiffieHellman Asymmetric encryption information.
      */
     LobbyConnection(asio::ip::tcp::socket& socket, DH *pDiffieHellman);
-    
+
     /**
      * Cleanup the connection object.
      */
@@ -77,7 +77,7 @@ public:
 
 protected:
     virtual bool ParseExtensionConnection(libcomp::Packet& packet);
-    
+
     /**
      * Just parse the extension.
      */

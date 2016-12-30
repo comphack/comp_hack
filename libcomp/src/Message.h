@@ -54,7 +54,7 @@ public:
      * Cleanup the message.
      */
     virtual ~Message() { }
-    
+
     /**
      * Get the message's type.
      * @return The message's type.

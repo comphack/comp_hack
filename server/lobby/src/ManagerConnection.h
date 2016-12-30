@@ -37,7 +37,7 @@
 
 namespace lobby
 {
-    
+
 /**
  * Class to handle messages pertaining to connecting to
  * worlds or game clients.
@@ -56,31 +56,31 @@ public:
     ManagerConnection(std::weak_ptr<libcomp::BaseServer> server,
         asio::io_service* service,
         std::shared_ptr<libcomp::MessageQueue<libcomp::Message::Message*>> messageQueue);
-    
+
     /**
      * Clean up the manager.
      */
     virtual ~ManagerConnection();
-    
+
     /**
      * Get the different types of messages handled by this manager.
      * @return List of supported message types
      */
     virtual std::list<libcomp::Message::MessageType> GetSupportedTypes() const;
-    
+
     /**
      * Process a message from the queue.
      * @param pMessage Message to be processed
      * @return true on success, false on failure
      */
     virtual bool ProcessMessage(const libcomp::Message::Message *pMessage);
-    
+
     /**
      * Get a list of connected worlds.
      * @return List of pointers to connected worlds
      */
     std::list<std::shared_ptr<lobby::World>> GetWorlds() const;
-    
+
     /**
      * Get a connected world via its connection.
      * @param connection Pointer to the world's connection
@@ -88,7 +88,7 @@ public:
      */
     std::shared_ptr<lobby::World> GetWorldByConnection(
         const std::shared_ptr<libcomp::InternalConnection>& connection) const;
-    
+
     /**
      * Remove a connected world when no longer needed.
      * @param world Pointer to the world to remove

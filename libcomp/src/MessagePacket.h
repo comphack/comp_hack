@@ -60,18 +60,18 @@ public:
      */
     Packet(const std::shared_ptr<TcpConnection>& connection,
         uint16_t commandCode, ReadOnlyPacket& packet);
-        
+
     /**
      * Cleanup the message.
      */
     virtual ~Packet();
-    
+
     /**
      * Get the received packet.
      * @return The received packet
      */
     const ReadOnlyPacket& GetPacket() const;
-    
+
     /**
      * Get the received packet's command code.
      * @return The received packet's command code

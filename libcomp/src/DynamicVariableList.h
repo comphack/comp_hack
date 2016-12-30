@@ -45,7 +45,7 @@ public:
      */
     DynamicVariableList(const std::shared_ptr<libobjgen::MetaVariable>&
         metaVariable);
-        
+
     /**
      * Clean up the variable.
      */

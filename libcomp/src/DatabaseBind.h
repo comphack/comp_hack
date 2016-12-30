@@ -51,24 +51,24 @@ public:
      * @param column Database column to bind the actions to
      */
     DatabaseBind(const String& column);
-    
+
     /**
      * Clean up the binding.
      */
     virtual ~DatabaseBind();
-    
+
     /**
      * Get the column being bound.
      * @return Column being bound
      */
     String GetColumn() const;
-    
+
     /**
      * Set the column being bound.
      * @param column being bound
      */
     void SetColumn(const String& column);
-    
+
     /**
      * Set the binding based on a database specific query
      * implementation.
@@ -94,7 +94,7 @@ public:
      * @param value Value to bind to the column
      */
     DatabaseBindText(const String& column, const String& value);
-    
+
     /**
      * Clean up the binding.
      */
@@ -119,7 +119,7 @@ public:
      * @param value Value to bind to the column
      */
     DatabaseBindBlob(const String& column, const std::vector<char>& value);
-    
+
     /**
      * Clean up the binding.
      */
@@ -144,7 +144,7 @@ public:
      * @param value Value to bind to the column
      */
     DatabaseBindUUID(const String& column, const libobjgen::UUID& value);
-    
+
     /**
      * Clean up the binding.
      */
@@ -169,7 +169,7 @@ public:
      * @param value Value to bind to the column
      */
     DatabaseBindInt(const String& column, int32_t value);
-    
+
     /**
      * Clean up the binding.
      */
@@ -194,7 +194,7 @@ public:
      * @param value Value to bind to the column
      */
     DatabaseBindBigInt(const String& column, int64_t value);
-    
+
     /**
      * Clean up the binding.
      */
@@ -219,7 +219,7 @@ public:
      * @param value Value to bind to the column
      */
     DatabaseBindFloat(const String& column, float value);
-    
+
     /**
      * Clean up the binding.
      */
@@ -244,7 +244,7 @@ public:
      * @param value Value to bind to the column
      */
     DatabaseBindDouble(const String& column, double value);
-    
+
     /**
      * Clean up the binding.
      */
@@ -269,7 +269,7 @@ public:
      * @param value Value to bind to the column
      */
     DatabaseBindBool(const String& column, bool value);
-    
+
     /**
      * Clean up the binding.
      */

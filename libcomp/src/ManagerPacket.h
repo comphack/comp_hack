@@ -54,7 +54,7 @@ public:
      * @param server Pointer to the server that uses this manager
      */
     ManagerPacket(std::weak_ptr<libcomp::BaseServer> server);
-    
+
     /**
      * Cleanup the manager.
      */

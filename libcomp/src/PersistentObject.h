@@ -50,23 +50,23 @@ public:
     /// Map of MetaObject definitions by the source object's C++ type
     typedef std::unordered_map<std::type_index,
         std::shared_ptr<libobjgen::MetaObject>> TypeMap;
-        
+
     /**
      * Create a persistent object with no UUID.
      */
     PersistentObject();
-    
+
     /**
      * Override the copy constructor to still default the persistent members.
      * @param other The other object to copy
      */
     PersistentObject(const PersistentObject& other);
-    
+
     /**
      * Clean up the object and remove it from the UUID cache.
      */
     ~PersistentObject();
-    
+
     /**
      * Get the object's UUID.
      * @return The object's UUID
@@ -145,7 +145,7 @@ public:
 
         return nullptr;
     }
-    
+
     /*
      * Retrieve an object of the specified type ID by its UUID from the cache
      * or database.
@@ -176,7 +176,7 @@ public:
 
         return nullptr;
     }
-    
+
     /*
      * Get the PersistentObject of the specified type ID's MetaObject definition.
      * @param type C++ type representing the object type to load
@@ -207,7 +207,7 @@ public:
 
         return nullptr;
     }
-    
+
     /*
      * Create a new instance of a PersistentObject of the specified type ID.
      * @param type C++ type representing the object type to load
@@ -220,7 +220,7 @@ public:
      * @return true on success, false on failure
      */
     bool Insert();
-    
+
     /*
      * Save a new record to the database.
      * @param obj Pointer to the object to save
@@ -233,7 +233,7 @@ public:
      * @return true on success, false on failure
      */
     bool Update();
-    
+
     /*
      * Update an existing record in the database.
      * @param obj Pointer to the object to update
@@ -246,7 +246,7 @@ public:
      * @return true on success, false on failure
      */
     bool Delete();
-    
+
     /*
      * Deletes an existing record from the database.
      * @param obj Pointer to the object to delete
@@ -293,7 +293,7 @@ private:
     /// Static map of functions to create an object by their C++ type
     static std::unordered_map<std::type_index,
         std::function<PersistentObject*()>> sFactory;
-    
+
     /// Pointer to object itself
     std::weak_ptr<PersistentObject> mSelf;
 

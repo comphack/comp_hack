@@ -55,18 +55,18 @@ public:
      * @param port The port the connection is coming from
      */
     WorldNotification(const String& address, uint16_t port);
-    
+
     /**
      * Cleanup the message.
      */
     virtual ~WorldNotification();
-    
+
     /**
      * Get the address the connection is coming from.
      * @return The address the connection is coming from
      */
     String GetAddress() const;
-    
+
     /**
      * Get the port the connection is coming from.
      * @return The port the connection is coming from

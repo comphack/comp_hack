@@ -50,7 +50,7 @@ public:
         mValue = std::dynamic_pointer_cast<libobjgen::MetaVariableInt<T>>(
             metaVariable)->GetDefaultValue();
     }
-    
+
     /**
      * Clean up the variable.
      */

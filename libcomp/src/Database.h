@@ -52,32 +52,32 @@ public:
      * Close and clean up the database connection.
      */
     ~Database();
-    
+
     /**
      * Open the connection to the database.
      * @return true on success, false on failure
      */
     virtual bool Open() = 0;
-    
+
     /**
      * Close the connection to the database.
      * @return true on success, false on failure
      */
     virtual bool Close() = 0;
-    
+
     /**
      * Check if the connection to the database is open.
      * @return true if it is open, false if it is not
      */
     virtual bool IsOpen() const = 0;
-    
+
     /**
      * Prepare a database query for execution based upon query text.
      * @param query Query text to prepare
      * @return Prepared query
      */
     virtual DatabaseQuery Prepare(const String& query) = 0;
-    
+
     /**
      * Prepare and execute a database query for execution based upon
      * query text.  Queries that return results should not use this
@@ -87,19 +87,19 @@ public:
      * @return true on success, false on error
      */
     virtual bool Execute(const String& query);
-    
+
     /**
      * Check if the database is valid.
      * @return true if it exists, false if it does not
      */
     virtual bool Exists() = 0;
-    
+
     /**
      * Setup the database schema and perform all validation steps.
      * @return true if it could be set up, false if it could not
      */
     virtual bool Setup() = 0;
-    
+
     /**
      * Use the database schema, keyspace, namespace, etc.
      * @return true on success, false on failure
@@ -112,7 +112,7 @@ public:
      * @return true if a row exists, false if it does not
      */
     virtual bool TableHasRows(const String& table);
-    
+
     /**
      * Load multiple @ref PersistentObject instances from a single bound
      * database column and value to select upon.
@@ -122,7 +122,7 @@ public:
      */
     virtual std::list<std::shared_ptr<PersistentObject>> LoadObjects(
         std::type_index type, DatabaseBind *pValue) = 0;
-        
+
     /**
      * Load one @ref PersistentObject instance from a single bound
      * database column and value to select upon.  This simply filters
@@ -134,34 +134,34 @@ public:
      */
     virtual std::shared_ptr<PersistentObject> LoadSingleObject(
         std::type_index type, DatabaseBind *pValue);
-        
+
     /**
      * Insert one @ref PersistentObject instance into the database.
      * @param obj Pointer to the object to insert
      * @return true on success, false on failure
      */
     virtual bool InsertSingleObject(std::shared_ptr<PersistentObject>& obj) = 0;
-    
+
     /**
      * Update all fields on one @ref PersistentObject instance in the database.
      * @param obj Pointer to the object to insert
      * @return true on success, false on failure
      */
     virtual bool UpdateSingleObject(std::shared_ptr<PersistentObject>& obj) = 0;
-    
+
     /**
      * Delete one @ref PersistentObject instance from the database.
      * @param obj Pointer to the object to insert
      * @return true on success, false on failure
      */
     virtual bool DeleteSingleObject(std::shared_ptr<PersistentObject>& obj) = 0;
-    
+
     /**
      * Retrieve the last error raised by a database operation.
      * @return The last error that occurred
      */
     String GetLastError() const;
-    
+
     /**
      * Static accessor to get the current database configured as the
      * "main" database in a server config.
@@ -169,7 +169,7 @@ public:
      * @return Pointer to the main database
      */
     static const std::shared_ptr<Database> GetMainDatabase();
-    
+
     /**
      * Static modifier to set the current database configured as the
      * "main" database in a server config.

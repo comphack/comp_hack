@@ -50,7 +50,7 @@ public:
      * @param pDatabase Pointer to the executing Cassandra database
      */
     DatabaseQueryCassandra(DatabaseCassandra *pDatabase);
-    
+
     /**
      * Clean up the query.
      */
@@ -116,7 +116,7 @@ private:
      * @return Pointer to a Cassandra value
      */
     const CassValue* GetValue(size_t index);
-    
+
     /**
      * Get a Cassandra value pointer to the current row's column data.
      * via the column's name.
@@ -124,7 +124,7 @@ private:
      * @return Pointer to a Cassandra value
      */
     const CassValue* GetValue(const String& name);
-    
+
     /**
      * Get a string value represented by a pointer to a Cassandra value.
      * @param pValue Pointer to the data's Cassandra value
@@ -132,7 +132,7 @@ private:
      * @return true on success, false on failure
      */
     bool GetTextValue(const CassValue *pValue, String& value);
-    
+
     /**
      * Get a blob value represented by a pointer to a Cassandra value.
      * @param pValue Pointer to the data's Cassandra value
@@ -140,7 +140,7 @@ private:
      * @return true on success, false on failure
      */
     bool GetBlobValue(const CassValue *pValue, std::vector<char>& value);
-    
+
     /**
      * Get a UUID value represented by a pointer to a Cassandra value.
      * @param pValue Pointer to the data's Cassandra value
@@ -148,7 +148,7 @@ private:
      * @return true on success, false on failure
      */
     bool GetUuidValue(const CassValue *pValue, libobjgen::UUID& value);
-    
+
     /**
      * Get a 32-bit integer value represented by a pointer to a Cassandra value.
      * @param pValue Pointer to the data's Cassandra value
@@ -156,7 +156,7 @@ private:
      * @return true on success, false on failure
      */
     bool GetIntValue(const CassValue *pValue, int32_t& value);
-    
+
     /**
      * Get a 64-bit integer value represented by a pointer to a Cassandra value.
      * @param pValue Pointer to the data's Cassandra value
@@ -164,7 +164,7 @@ private:
      * @return true on success, false on failure
      */
     bool GetBigIntValue(const CassValue *pValue, int64_t& value);
-    
+
     /**
      * Get a float value represented by a pointer to a Cassandra value.
      * @param pValue Pointer to the data's Cassandra value
@@ -172,7 +172,7 @@ private:
      * @return true on success, false on failure
      */
     bool GetFloatValue(const CassValue *pValue, float& value);
-    
+
     /**
      * Get a double value represented by a pointer to a Cassandra value.
      * @param pValue Pointer to the data's Cassandra value
@@ -180,7 +180,7 @@ private:
      * @return true on success, false on failure
      */
     bool GetDoubleValue(const CassValue *pValue, double& value);
-    
+
     /**
      * Get a boolean value represented by a pointer to a Cassandra value.
      * @param pValue Pointer to the data's Cassandra value

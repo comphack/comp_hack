@@ -53,12 +53,12 @@ public:
      * @param connection The encrypted connection
      */
     Encrypted(const std::shared_ptr<TcpConnection>& connection);
-    
+
     /**
      * Cleanup the message.
      */
     virtual ~Encrypted();
-    
+
     /**
      * Get the encrypted connection.
      * @return The encrypted connection

@@ -48,13 +48,13 @@ class DatabaseCassandra : public Database
 {
 public:
     friend class DatabaseQueryCassandra;
-    
+
     /**
      * Create a new Cassandra Database connection.
      * @param config Pointer to a database configuration
      */
     DatabaseCassandra(const std::shared_ptr<objects::DatabaseConfigCassandra>& config);
-    
+
     /**
      * Close and clean up the database connection.
      */
@@ -75,7 +75,7 @@ public:
     virtual bool InsertSingleObject(std::shared_ptr<PersistentObject>& obj);
     virtual bool UpdateSingleObject(std::shared_ptr<PersistentObject>& obj);
     virtual bool DeleteSingleObject(std::shared_ptr<PersistentObject>& obj);
-    
+
     /**
      * Verify/create any missing tables based off of @ref PersistentObject
      * types used by the database as well as any utility tables needed.  Tables
@@ -86,7 +86,7 @@ public:
      * @return true on success, false on failure
      */
     bool VerifyAndSetupSchema();
-    
+
     /**
      * Check if this database is configured to use the default keyspace
      * for the Cassandra database.  Non-default keyspace connections are
@@ -103,14 +103,14 @@ protected:
      * @return true on success, false on error
      */
     bool WaitForFuture(CassFuture *pFuture);
-    
+
     /**
      * Get the Cassandra type represented by a MetaVariable type.
      * @param var Metadata variable containing a type to conver to a Cassandra type
      * @return Data type string representing a Cassandra type
      */
     String GetVariableType(const std::shared_ptr<libobjgen::MetaVariable> var);
-    
+
     /**
      * Get a pointer to the Cassandra representation of the connection's session.
      * @return Pointer to the Cassandra representation of the connection's session

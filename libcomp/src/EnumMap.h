@@ -61,7 +61,6 @@ template<typename Key>
 using HashType = typename std::conditional<std::is_enum<Key>::value,
     EnumClassHash, std::hash<Key>>::type;
 
-    
 /**
  * Replacement for map with a enum key type and a templated value.
  */

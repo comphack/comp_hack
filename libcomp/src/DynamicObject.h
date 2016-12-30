@@ -60,7 +60,7 @@ public:
 
     //virtual bool Load(ObjectInStream& stream);
     //virtual bool Save(ObjectOutStream& stream) const;
-    
+
     /**
      * Get the dynamic size count defined in the MetaObject definition.
      * @return The MetaObject definition's dynamic size count

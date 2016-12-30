@@ -53,12 +53,12 @@ public:
      * Create the parser.
      */
     PacketParser() { }
-    
+
     /**
      * Clean up the parser.
      */
     virtual ~PacketParser() { }
-    
+
     /**
      * Parse and handle a packet.  This should be implemented by
      * multiple different parser classes that are registerd using

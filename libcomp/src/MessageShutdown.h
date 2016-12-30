@@ -50,7 +50,7 @@ public:
      * Create the message.
      */
     Shutdown();
-    
+
     /**
      * Cleanup the message.
      */

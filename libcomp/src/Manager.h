@@ -36,18 +36,27 @@
 namespace libcomp
 {
 
+/**
+ * Abstract base class used to represent a @ref Message handler.
+ */
 class Manager
 {
 public:
+    /**
+     * Cleanup the manager.
+     */
     virtual ~Manager() { }
 
     /**
-     * @brief Get the different types of messages handles by this manager.
+     * Get the different types of messages handled by the manager.
+     * @return List of message types handled by the manager
      */
     virtual std::list<Message::MessageType> GetSupportedTypes() const = 0;
 
     /**
      * Process a message from the queue.
+     * @param pMessage Message to be processed
+     * @return true on success, false on failure
      */
     virtual bool ProcessMessage(const libcomp::Message::Message *pMessage) = 0;
 };

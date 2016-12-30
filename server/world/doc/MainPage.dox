@@ -31,28 +31,28 @@
  * The world server, much like the other servers, must be instantiated with
  * a specialized server config in the following manner:
  * @code
- * //std::string configPath = "C:\worldconfig.xml";
- * //auto config = std::shared_ptr<objects::ServerConfig>(new objects::WorldConfig());
- * //auto server = std::shared_ptr<world::WorldServer>(new world::WorldServer(config, configPath));
+ * std::string configPath = "C:\worldconfig.xml";
+ * auto config = std::shared_ptr<objects::ServerConfig>(new objects::WorldConfig());
+ * auto server = std::shared_ptr<world::WorldServer>(new world::WorldServer(config, configPath));
  * @endcode
  * Through use of different config files passed in through a command line
  * argument, multiple different world servers can be started on the same
  * machine.  Once the server has been created the following code should be
  * called as well for the server execution to run and close properly:
  * @code
- * //auto wkServer = std::weak_ptr<libcomp::BaseServer>(server);
- * //if(!server->Initialize(wkServer))
- * //{
+ * auto wkServer = std::weak_ptr<libcomp::BaseServer>(server);
+ * if(!server->Initialize(wkServer))
+ * {
  *     // Handle failed server startup
- * //}
+ * }
  * 
  * // Set this for the signal handler.
- * //libcomp::Shutdown::Configure(server.get());
+ * libcomp::Shutdown::Configure(server.get());
  * 
  * // Start the main server loop (blocks until done).
- * //int returnCode = server->Start();
+ * int returnCode = server->Start();
  * 
  * // Complete the shutdown process.
- * //libcomp::Shutdown::Complete();
+ * libcomp::Shutdown::Complete();
  * @endcode
  */

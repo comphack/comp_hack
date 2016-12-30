@@ -40,12 +40,24 @@
 namespace libcomp
 {
 
+/**
+ * Represents a Cassandra database connection associated to a specific
+ * keyspace via the supplied config.
+ */
 class DatabaseCassandra : public Database
 {
 public:
     friend class DatabaseQueryCassandra;
-
+    
+    /**
+     * Create a new Cassandra Database connection.
+     * @param config Pointer to a database configuration
+     */
     DatabaseCassandra(const std::shared_ptr<objects::DatabaseConfigCassandra>& config);
+    
+    /**
+     * Close and clean up the database connection.
+     */
     virtual ~DatabaseCassandra();
 
     virtual bool Open();
@@ -63,23 +75,56 @@ public:
     virtual bool InsertSingleObject(std::shared_ptr<PersistentObject>& obj);
     virtual bool UpdateSingleObject(std::shared_ptr<PersistentObject>& obj);
     virtual bool DeleteSingleObject(std::shared_ptr<PersistentObject>& obj);
-
+    
+    /**
+     * Verify/create any missing tables based off of @ref PersistentObject
+     * types used by the database as well as any utility tables needed.  Tables
+     * with invalid schemas will be archived in case data migration needs to
+     * take place and a replacement will be built instead and missing indexes
+     * will be created should they not exist based off of of fields marked
+     * as lookup keys in their objgen definitions.
+     * @return true on success, false on failure
+     */
     bool VerifyAndSetupSchema();
+    
+    /**
+     * Check if this database is configured to use the default keyspace
+     * for the Cassandra database.  Non-default keyspace connections are
+     * only responsible for verifying the schema of their own tables where-as
+     * default keyspace connections may also have additional tables to maintain.
+     * @return true if the default keyspace is configured, false if it is not
+     */
     bool UsingDefaultKeyspace();
 
 protected:
+    /**
+     * Wait for the completion of an async future execution.
+     * @param pFuture Pointer to a query's future operation
+     * @return true on success, false on error
+     */
     bool WaitForFuture(CassFuture *pFuture);
+    
+    /**
+     * Get the Cassandra type represented by a MetaVariable type.
+     * @param var Metadata variable containing a type to conver to a Cassandra type
+     * @return Data type string representing a Cassandra type
+     */
     String GetVariableType(const std::shared_ptr<libobjgen::MetaVariable> var);
-
-    std::vector<char> ConvertToRawByteStream(const std::shared_ptr<libobjgen::MetaVariable>& var,
-        const std::vector<char>& columnData);
-
+    
+    /**
+     * Get a pointer to the Cassandra representation of the connection's session.
+     * @return Pointer to the Cassandra representation of the connection's session
+     */
     CassSession* GetSession() const;
 
 private:
+    /// Pointer to the Cassandra representation of the connection's cluster
     CassCluster *mCluster;
+
+    /// Pointer to the Cassandra representation of the connection's session
     CassSession *mSession;
 
+    /// Pointer to the config file used to configure the database connection
     std::shared_ptr<objects::DatabaseConfigCassandra> mConfig;
 };
 

@@ -781,30 +781,6 @@ String DatabaseCassandra::GetVariableType(const std::shared_ptr
     return "blob";
 }
 
-std::vector<char> DatabaseCassandra::ConvertToRawByteStream(
-    const std::shared_ptr<libobjgen::MetaVariable>& var, const std::vector<char>& columnData)
-{
-    switch(var->GetMetaType())
-    {
-        case libobjgen::MetaVariable::MetaVariableType_t::TYPE_STRING:
-        case libobjgen::MetaVariable::MetaVariableType_t::TYPE_REF:
-            {
-                size_t strLength = columnData.size();
-
-                char* arr = reinterpret_cast<char*>(&strLength);
-
-                std::vector<char> data(arr, arr + sizeof(uint32_t));
-                data.insert(data.end(), columnData.begin(), columnData.end());
-
-                return data;
-            }
-            break;
-        default:
-            return columnData;
-            break;
-    }
-}
-
 CassSession* DatabaseCassandra::GetSession() const
 {
     return mSession;

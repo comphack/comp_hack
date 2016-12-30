@@ -680,37 +680,3 @@ String DatabaseSQLite3::GetVariableType(const std::shared_ptr
 
     return "blob";
 }
-
-std::vector<char> DatabaseSQLite3::ConvertToRawByteStream(
-    const std::shared_ptr<libobjgen::MetaVariable>& var, const std::vector<char>& columnData)
-{
-    switch(var->GetMetaType())
-    {
-        case libobjgen::MetaVariable::MetaVariableType_t::TYPE_STRING:
-        case libobjgen::MetaVariable::MetaVariableType_t::TYPE_REF:
-            {
-                size_t strLength = columnData.size();
-
-                char* arr = reinterpret_cast<char*>(&strLength);
-
-                std::vector<char> data(arr, arr + sizeof(uint32_t));
-                data.insert(data.end(), columnData.begin(), columnData.end());
-
-                return data;
-            }
-            break;
-        default:
-            {
-                // Data returned from the DB is "minified" for number of bytes returned.
-                // ex: unsigned 32 and signed 8 are both INTEGER type and the same value
-                // as bytes equal to the value 1 which will fail to load in an object
-                std::vector<char> data(columnData);
-                while(data.size() < var->GetSize())
-                {
-                    data.push_back(0);
-                }
-                return data;
-            }
-            break;
-    }
-}

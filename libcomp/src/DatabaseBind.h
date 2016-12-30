@@ -82,6 +82,9 @@ protected:
     String mColumn;
 };
 
+/**
+ * Text column database binding by column name and value.
+ */
 class DatabaseBindText : public DatabaseBind
 {
 public:
@@ -104,6 +107,9 @@ private:
     String mValue;
 };
 
+/**
+ * Blob column database binding by column name and value.
+ */
 class DatabaseBindBlob : public DatabaseBind
 {
 public:
@@ -126,6 +132,9 @@ private:
     std::vector<char> mValue;
 };
 
+/**
+ * UUID column database binding by column name and value.
+ */
 class DatabaseBindUUID : public DatabaseBind
 {
 public:
@@ -148,6 +157,9 @@ private:
     libobjgen::UUID mValue;
 };
 
+/**
+ * 32-bit integer column database binding by column name and value.
+ */
 class DatabaseBindInt : public DatabaseBind
 {
 public:
@@ -170,6 +182,9 @@ private:
     int32_t mValue;
 };
 
+/**
+ * 64-bit integer column database binding by column name and value.
+ */
 class DatabaseBindBigInt : public DatabaseBind
 {
 public:
@@ -192,6 +207,9 @@ private:
     int64_t mValue;
 };
 
+/**
+ * Float column database binding by column name and value.
+ */
 class DatabaseBindFloat : public DatabaseBind
 {
 public:
@@ -214,6 +232,9 @@ private:
     float mValue;
 };
 
+/**
+ * Double column database binding by column name and value.
+ */
 class DatabaseBindDouble : public DatabaseBind
 {
 public:
@@ -236,6 +257,9 @@ private:
     double mValue;
 };
 
+/**
+ * Boolean column database binding by column name and value.
+ */
 class DatabaseBindBool : public DatabaseBind
 {
 public:

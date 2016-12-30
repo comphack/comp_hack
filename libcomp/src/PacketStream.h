@@ -37,12 +37,20 @@
 namespace libcomp
 {
 
+/**
+ * Stream representing data written to a packet to be read.
+ */
 class PacketStream : public std::basic_streambuf<char>
 {
 private:
+    /// Packet that the data came from
     Packet& mPacket;
 
 public:
+    /**
+     * Create the stream and set its data from the packet.
+     * @param p Packet to read the data from.
+     */
     PacketStream(Packet& p) : mPacket(p)
     {
         this->setg(p.Data(),
@@ -69,9 +77,16 @@ protected:
     }
 };
 
+/**
+ * Stream representing data written to a read only packet to be read.
+ */
 class ReadOnlyPacketStream : public std::basic_streambuf<char>
 {
 public:
+    /**
+     * Create the stream and set its data from the packet.
+     * @param p Packet to read the data from.
+     */
     ReadOnlyPacketStream(const ReadOnlyPacket& p)
     {
         this->setg(const_cast<char*>(p.ConstData()),

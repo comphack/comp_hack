@@ -35,8 +35,17 @@ class BaseServer;
 namespace Shutdown
 {
 
+/**
+ * Configure a server at runtime to to handle any type of termination
+ * that should result in executing the @ref BaseServer::Shutdown.
+ * @param pServer The server to handle messages for
+ */
 void Configure(libcomp::BaseServer *pServer);
 
+/**
+ * Clean up the server reference and delete any threads used to handle
+ * program termination.
+ */
 void Complete();
 
 } // namespace Shutdown

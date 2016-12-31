@@ -60,34 +60,37 @@ protected:
     }
 
     virtual typename std::basic_streambuf<CharT, TraitsT>::pos_type
-        seekoff(off_type off, std::ios_base::seekdir dir,
-        std::ios_base::openmode which = std::ios_base::in | std::ios_base::out)
+        seekoff(typename std::basic_streambuf<CharT, TraitsT>::off_type off,
+            std::ios_base::seekdir dir,
+            std::ios_base::openmode which = std::ios_base::in | std::ios_base::out)
     {
         (void)which;
 
-        pos_type pos;
+        typename std::basic_streambuf<CharT, TraitsT>::pos_type pos;
 
         if(std::ios_base::beg == dir)
         {
-            pos = static_cast<pos_type>(off);
+            pos = static_cast<typename std::basic_streambuf<CharT, TraitsT>::pos_type>(off);
         }
         else if(std::ios_base::end == dir)
         {
-            pos = static_cast<pos_type>(
+            pos = static_cast<typename std::basic_streambuf<CharT, TraitsT>::pos_type>(
                 (std::basic_streambuf<CharT, TraitsT>::egptr() -
                     std::basic_streambuf<CharT, TraitsT>::eback()) + off);
         }
         else // std::ios_base::cur == dir
         {
-            pos = static_cast<pos_type>(
+            pos = static_cast<typename std::basic_streambuf<CharT, TraitsT>::pos_type>(
                 (std::basic_streambuf<CharT, TraitsT>::gptr() -
                     std::basic_streambuf<CharT, TraitsT>::eback()) + off);
         }
 
-        if(static_cast<pos_type>(std::basic_streambuf<CharT, TraitsT>::egptr() -
+        if(static_cast<typename std::basic_streambuf<CharT, TraitsT>::pos_type>(
+            std::basic_streambuf<CharT, TraitsT>::egptr() -
             std::basic_streambuf<CharT, TraitsT>::eback()) < pos)
         {
-            return pos_type(off_type(-1));
+            return typename std::basic_streambuf<CharT, TraitsT>::pos_type(
+                typename std::basic_streambuf<CharT, TraitsT>::off_type(-1));
         }
 
         setg(std::basic_streambuf<CharT, TraitsT>::eback(),
@@ -97,15 +100,18 @@ protected:
         return pos;
     }
 
-    virtual typename std::basic_streambuf<CharT, TraitsT>::pos_type seekpos(pos_type pos,
+    virtual typename std::basic_streambuf<CharT, TraitsT>::pos_type seekpos(
+        typename std::basic_streambuf<CharT, TraitsT>::pos_type pos,
         std::ios_base::openmode which = std::ios_base::in | std::ios_base::out)
     {
         (void)which;
 
-        if(static_cast<pos_type>(std::basic_streambuf<CharT, TraitsT>::egptr() -
+        if(static_cast<typename std::basic_streambuf<CharT, TraitsT>::pos_type>(
+            std::basic_streambuf<CharT, TraitsT>::egptr() -
             std::basic_streambuf<CharT, TraitsT>::eback()) < pos)
         {
-            return pos_type(off_type(-1));
+            return typename std::basic_streambuf<CharT, TraitsT>::pos_type(
+                typename std::basic_streambuf<CharT, TraitsT>::off_type(-1));
         }
 
         setg(std::basic_streambuf<CharT, TraitsT>::eback(),

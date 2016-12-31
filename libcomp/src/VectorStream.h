@@ -59,7 +59,8 @@ protected:
         return c;
     }
 
-    virtual pos_type seekoff(off_type off, std::ios_base::seekdir dir,
+    virtual typename std::basic_streambuf<CharT, TraitsT>::pos_type
+        seekoff(off_type off, std::ios_base::seekdir dir,
         std::ios_base::openmode which = std::ios_base::in | std::ios_base::out)
     {
         (void)which;
@@ -73,35 +74,43 @@ protected:
         else if(std::ios_base::end == dir)
         {
             pos = static_cast<pos_type>(
-                (egptr() - eback()) + off);
+                (std::basic_streambuf<CharT, TraitsT>::egptr() -
+                    std::basic_streambuf<CharT, TraitsT>::eback()) + off);
         }
         else // std::ios_base::cur == dir
         {
             pos = static_cast<pos_type>(
-                (gptr() - eback()) + off);
+                (std::basic_streambuf<CharT, TraitsT>::gptr() -
+                    std::basic_streambuf<CharT, TraitsT>::eback()) + off);
         }
 
-        if(static_cast<pos_type>(egptr() - eback()) < pos)
+        if(static_cast<pos_type>(std::basic_streambuf<CharT, TraitsT>::egptr() -
+            std::basic_streambuf<CharT, TraitsT>::eback()) < pos)
         {
             return pos_type(off_type(-1));
         }
 
-        setg(eback(), eback() + pos, egptr());
+        setg(std::basic_streambuf<CharT, TraitsT>::eback(),
+            std::basic_streambuf<CharT, TraitsT>::eback() + pos,
+            std::basic_streambuf<CharT, TraitsT>::egptr());
 
         return pos;
     }
 
-    virtual pos_type seekpos(pos_type pos,
+    virtual typename std::basic_streambuf<CharT, TraitsT>::pos_type seekpos(pos_type pos,
         std::ios_base::openmode which = std::ios_base::in | std::ios_base::out)
     {
         (void)which;
 
-        if(static_cast<pos_type>(egptr() - eback()) < pos)
+        if(static_cast<pos_type>(std::basic_streambuf<CharT, TraitsT>::egptr() -
+            std::basic_streambuf<CharT, TraitsT>::eback()) < pos)
         {
             return pos_type(off_type(-1));
         }
 
-        setg(eback(), eback() + pos, egptr());
+        setg(std::basic_streambuf<CharT, TraitsT>::eback(),
+            std::basic_streambuf<CharT, TraitsT>::eback() + pos,
+            std::basic_streambuf<CharT, TraitsT>::egptr());
 
         return pos;
     }

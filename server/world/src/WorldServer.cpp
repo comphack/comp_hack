@@ -126,10 +126,10 @@ bool WorldServer::Initialize(std::weak_ptr<BaseServer>& self)
     auto connectionManager = std::dynamic_pointer_cast<libcomp::Manager>(mManagerConnection);
 
     auto packetManager = std::shared_ptr<libcomp::ManagerPacket>(new libcomp::ManagerPacket(self));
-    packetManager->AddParser<Parsers::DescribeWorld>(to_underlying(
-        InternalPacketCode_t::PACKET_DESCRIBE_WORLD));
-    packetManager->AddParser<Parsers::SetChannelDescription>(to_underlying(
-        InternalPacketCode_t::PACKET_SET_CHANNEL_DESCRIPTION));
+    packetManager->AddParser<Parsers::GetWorldInfo>(to_underlying(
+        InternalPacketCode_t::PACKET_GET_WORLD_INFO));
+    packetManager->AddParser<Parsers::SetChannelInfo>(to_underlying(
+        InternalPacketCode_t::PACKET_SET_CHANNEL_INFO));
 
     //Add the managers to the main worker.
     mMainWorker.AddManager(packetManager);

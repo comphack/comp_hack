@@ -136,7 +136,7 @@ void ManagerConnection::RemoveConnection(std::shared_ptr<libcomp::InternalConnec
         //Channel disconnected
         libcomp::Packet packet;
         packet.WritePacketCode(
-            InternalPacketCode_t::PACKET_SET_CHANNEL_DESCRIPTION);
+            InternalPacketCode_t::PACKET_SET_CHANNEL_INFO);
         packet.WriteU8(to_underlying(
             InternalPacketAction_t::PACKET_ACTION_REMOVE));
         channelDesc->SavePacket(packet);

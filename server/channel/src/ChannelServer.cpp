@@ -84,8 +84,8 @@ bool ChannelServer::Initialize(std::weak_ptr<BaseServer>& self)
 
     auto internalPacketManager = std::shared_ptr<libcomp::ManagerPacket>(
         new libcomp::ManagerPacket(self));
-    internalPacketManager->AddParser<Parsers::SetWorldDescription>(
-        to_underlying(InternalPacketCode_t::PACKET_SET_WORLD_DESCRIPTION));
+    internalPacketManager->AddParser<Parsers::SetWorldInfo>(
+        to_underlying(InternalPacketCode_t::PACKET_SET_WORLD_INFO));
 
     //Add the managers to the main worker.
     mMainWorker.AddManager(internalPacketManager);

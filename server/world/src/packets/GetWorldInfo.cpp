@@ -1,10 +1,10 @@
 /**
- * @file server/world/src/packets/DescribeWorld.cpp
+ * @file server/world/src/packets/GetWorldInfo.cpp
  * @ingroup world
  *
  * @author HACKfrost
  *
- * @brief Parser to handle describing the world for the lobby.
+ * @brief Parser to handle detailing the world for the lobby.
  *
  * This file is part of the World Server (world).
  *
@@ -43,7 +43,7 @@
 
 using namespace world;
 
-bool Parsers::DescribeWorld::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::GetWorldInfo::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {
@@ -94,7 +94,7 @@ bool Parsers::DescribeWorld::Parse(libcomp::ManagerPacket *pPacketManager,
     // information as well.
     libcomp::Packet reply;
 
-    reply.WritePacketCode(InternalPacketCode_t::PACKET_SET_WORLD_DESCRIPTION);
+    reply.WritePacketCode(InternalPacketCode_t::PACKET_SET_WORLD_INFO);
     server->GetDescription()->SavePacket(reply);
     
     switch(databaseType)

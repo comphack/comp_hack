@@ -1,12 +1,12 @@
 /**
- * @file server/lobby/src/packets/WorldDescription.cpp
- * @ingroup lobby
+ * @file server/channel/src/packets/SetWorldInfo.cpp
+ * @ingroup channel
  *
  * @author HACKfrost
  *
- * @brief Response packet from the world describing base information.
+ * @brief Response packet from the world detailing itself to the channel.
  *
- * This file is part of the Lobby Server (lobby).
+ * This file is part of the Channel Server (channel).
  *
  * Copyright (C) 2012-2016 COMP_hack Team <compomega@tutanota.com>
  *
@@ -33,29 +33,21 @@
 #include <Log.h>
 #include <ManagerPacket.h>
 #include <Packet.h>
+#include <PacketCodes.h>
 #include <ReadOnlyPacket.h>
 #include <TcpConnection.h>
 
 // object Includes
 #include <WorldDescription.h>
 
-// lobby Includes
-#include "LobbyServer.h"
+// channel Includes
+#include "ChannelServer.h"
 
-using namespace lobby;
+using namespace channel;
 
-bool SetWorldDescriptionFromPacket(libcomp::ManagerPacket *pPacketManager,
-    const std::shared_ptr<libcomp::TcpConnection>& connection,
+std::shared_ptr<libcomp::Database> ParseDatabase(const std::shared_ptr<ChannelServer>& server,
     libcomp::ReadOnlyPacket& p)
 {
-    auto desc = std::shared_ptr<objects::WorldDescription>(new objects::WorldDescription);
-
-    if(!desc->LoadPacket(p))
-    {
-        return false;
-    }
-
-    auto server = std::dynamic_pointer_cast<LobbyServer>(pPacketManager->GetServer());
     auto databaseType = server->GetConfig()->GetDatabaseType();
 
     // Read the configuration for the world's database
@@ -74,51 +66,60 @@ bool SetWorldDescriptionFromPacket(libcomp::ManagerPacket *pPacketManager,
 
     if(!dbConfig->LoadPacket(p, false))
     {
-        LOG_CRITICAL("World Server did not supply a valid database connection configuration"
+        LOG_CRITICAL("No valid database connection configuration was found"
             " that matches the configured type.\n");
-        return false;
+        return nullptr;
     }
     
     libcomp::EnumMap<objects::ServerConfig::DatabaseType_t,
         std::shared_ptr<objects::DatabaseConfig>> configMap;
     configMap[databaseType] = dbConfig;
 
-    auto worldDatabase = server->GetDatabase(configMap, false);
+    return server->GetDatabase(configMap, false);
+}
+
+bool Parsers::SetWorldInfo::Parse(libcomp::ManagerPacket *pPacketManager,
+    const std::shared_ptr<libcomp::TcpConnection>& connection,
+    libcomp::ReadOnlyPacket& p) const
+{
+    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+
+    auto desc = server->GetWorldDescription();
+
+    if(!desc->LoadPacket(p))
+    {
+        return false;
+    }
+
+    auto worldDatabase = ParseDatabase(server, p);
     if(nullptr == worldDatabase)
     {
-        LOG_CRITICAL("World Server's database could not be initialized.\n");
+        LOG_CRITICAL("World Server supplied database configuration could not"
+            " be initialized as a valid database.\n");
         return false;
     }
-
-    auto iConnection = std::dynamic_pointer_cast<libcomp::InternalConnection>(connection);
-
-    if(nullptr == iConnection)
+    server->SetWorldDatabase(worldDatabase);
+    
+    auto lobbyDatabase = ParseDatabase(server, p);
+    if(nullptr == lobbyDatabase)
     {
+        LOG_CRITICAL("World Server supplied lobby database configuration could not"
+            " be initialized as a database.\n");
         return false;
     }
+    server->SetLobbyDatabase(lobbyDatabase);
 
     LOG_DEBUG(libcomp::String("Updating World Server description: (%1) %2\n")
         .Arg(desc->GetID()).Arg(desc->GetName()));
 
-    auto world = server->GetWorldByConnection(iConnection);
-    world->SetWorldDescription(desc);
-    world->SetWorldDatabase(worldDatabase);
+    //Reply with the channel information
+    libcomp::Packet reply;
 
-    return true;
-}
+    reply.WritePacketCode(
+        InternalPacketCode_t::PACKET_SET_CHANNEL_INFO);
+    server->GetDescription()->SavePacket(reply);
 
-bool Parsers::SetWorldDescription::Parse(libcomp::ManagerPacket *pPacketManager,
-    const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    // Since this is called excatly once per world conncetion, if at any point
-    // the packet does not parse properly, the world's connection needs to be
-    // closed as it is not valid.
-    if(!SetWorldDescriptionFromPacket(pPacketManager, connection, p))
-    {
-        connection->Close();
-        return false;
-    }
+    connection->SendPacket(reply);
 
     return true;
 }

@@ -1,12 +1,12 @@
 /**
- * @file server/lobby/src/packets/SetChannelDescription.cpp
- * @ingroup lobby
+ * @file server/world/src/packets/SetChannelInfo.cpp
+ * @ingroup world
  *
  * @author HACKfrost
  *
- * @brief Parser to handle describing a channel for the lobby.
+ * @brief Parser to handle detailing the world for the lobby.
  *
- * This file is part of the Lobby Server (lobby).
+ * This file is part of the World Server (world).
  *
  * Copyright (C) 2012-2016 COMP_hack Team <compomega@tutanota.com>
  *
@@ -36,24 +36,15 @@
 #include <PacketCodes.h>
 #include <ReadOnlyPacket.h>
 
-// lobby Includes
-#include "LobbyServer.h"
+// world Includes
+#include "WorldServer.h"
 
-using namespace lobby;
+using namespace world;
 
-bool Parsers::SetChannelDescription::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::SetChannelInfo::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {
-    if(p.Size() == 0)
-    {
-        return false;
-    }
-
-    auto action = static_cast<InternalPacketAction_t>(p.ReadU8());
-
-    auto server = std::dynamic_pointer_cast<LobbyServer>(pPacketManager->GetServer());
-
     auto desc = std::shared_ptr<objects::ChannelDescription>(new objects::ChannelDescription);
 
     if(!desc->LoadPacket(p))
@@ -63,18 +54,28 @@ bool Parsers::SetChannelDescription::Parse(libcomp::ManagerPacket *pPacketManage
 
     auto conn = std::dynamic_pointer_cast<libcomp::InternalConnection>(connection);
 
-    auto world = server->GetWorldByConnection(conn);
+    if(nullptr == conn)
+    {
+        return false;
+    }
 
-    if(InternalPacketAction_t::PACKET_ACTION_REMOVE == action)
-    {
-        world->RemoveChannelDescriptionByID(desc->GetID());
-    }
-    else
-    {
-        LOG_DEBUG(libcomp::String("Updating Channel Server description: (%1) %2\n")
-            .Arg(desc->GetID()).Arg(desc->GetName()));
-        world->SetChannelDescription(desc);
-    }
+    LOG_DEBUG(libcomp::String("Updating Channel Server description: (%1) %2\n").Arg(desc->GetID())
+        .Arg(desc->GetName()));
+
+    auto server = std::dynamic_pointer_cast<WorldServer>(pPacketManager->GetServer());
+
+    server->SetChannelDescription(desc, conn);
+
+    //Forward the information to the lobby
+    auto lobbyConnection = server->GetLobbyConnection();
+
+    libcomp::Packet packet;
+    packet.WritePacketCode(
+        InternalPacketCode_t::PACKET_SET_CHANNEL_INFO);
+    packet.WriteU8(to_underlying(
+        InternalPacketAction_t::PACKET_ACTION_UPDATE));
+    desc->SavePacket(packet);
+    lobbyConnection->SendPacket(packet);
 
     return true;
 }

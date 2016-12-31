@@ -144,19 +144,12 @@ bool ManagerConnection::ProcessMessage(const libcomp::Message::Message *pMessage
 bool ManagerConnection::InitializeWorld(const std::shared_ptr<lobby::World>& world)
 {
     libcomp::Packet packet;
-    packet.WritePacketCode(InternalPacketCode_t::PACKET_DESCRIBE_WORLD);
+    packet.WritePacketCode(InternalPacketCode_t::PACKET_GET_WORLD_INFO);
 
-    auto server = mServer.lock();
-    auto config = std::dynamic_pointer_cast<objects::LobbyConfig>(server->GetConfig());
-    
-    switch(config->GetDatabaseType())
+    auto server = std::dynamic_pointer_cast<LobbyServer>(mServer.lock());
+    if(!server->GetMainDatabase()->GetConfig()->SavePacket(packet, false))
     {
-        case objects::ServerConfig::DatabaseType_t::CASSANDRA:
-            config->GetCassandraConfig().Get()->SavePacket(packet, false);
-            break;
-        case objects::ServerConfig::DatabaseType_t::SQLITE3:
-            config->GetSQLite3Config().Get()->SavePacket(packet, false);
-            break;
+        return false;
     }
 
     world->GetConnection()->SendPacket(packet);

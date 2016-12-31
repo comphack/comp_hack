@@ -170,16 +170,18 @@ public:
     /**
      * Load the object's data members from a data packet.
      * @param p Packet containing data member values
+     * @param flat Specifies if the call to Load should be flat
      * @return true if loading was successful, false if it was not
      */
-    virtual bool LoadPacket(libcomp::ReadOnlyPacket& p);
+    virtual bool LoadPacket(libcomp::ReadOnlyPacket& p, bool flat = true);
 
     /**
      * Save the object's data members to a data packet.
      * @param p Packet to save data member values to
+     * @param flat Specifies if the call to Save should be flat
      * @return true if saving was successful, false if it was not
      */
-    virtual bool SavePacket(libcomp::Packet& p) const;
+    virtual bool SavePacket(libcomp::Packet& p, bool flat = true) const;
 
     /**
      * Get the dynamic size count of the MetaObject definition.

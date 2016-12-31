@@ -58,6 +58,53 @@ protected:
 
         return c;
     }
+
+    virtual pos_type seekoff(off_type off, std::ios_base::seekdir dir,
+        std::ios_base::openmode which = std::ios_base::in | std::ios_base::out)
+    {
+        (void)which;
+
+        pos_type pos;
+
+        if(std::ios_base::beg == dir)
+        {
+            pos = static_cast<pos_type>(off);
+        }
+        else if(std::ios_base::end == dir)
+        {
+            pos = static_cast<pos_type>(
+                (egptr() - eback()) + off);
+        }
+        else // std::ios_base::cur == dir
+        {
+            pos = static_cast<pos_type>(
+                (gptr() - eback()) + off);
+        }
+
+        if(static_cast<pos_type>(egptr() - eback()) < pos)
+        {
+            return pos_type(off_type(-1));
+        }
+
+        setg(eback(), eback() + pos, egptr());
+
+        return pos;
+    }
+
+    virtual pos_type seekpos(pos_type pos,
+        std::ios_base::openmode which = std::ios_base::in | std::ios_base::out)
+    {
+        (void)which;
+
+        if(static_cast<pos_type>(egptr() - eback()) < pos)
+        {
+            return pos_type(off_type(-1));
+        }
+
+        setg(eback(), eback() + pos, egptr());
+
+        return pos;
+    }
 };
 
 } // namespace libcomp

@@ -41,20 +41,28 @@ Object::~Object()
 {
 }
 
-bool Object::LoadPacket(libcomp::ReadOnlyPacket& p)
+bool Object::LoadPacket(libcomp::ReadOnlyPacket& p, bool flat)
 {
     ReadOnlyPacketStream buffer(p);
     std::istream in(&buffer);
 
-    return Load(in, true);
+    auto startingPos = in.tellg();
+    bool success = Load(in, flat);
+    if(success)
+    {
+        //Fast forward the packet
+        auto newPos = in.tellg();
+        p.Skip(static_cast<uint32_t>(newPos - startingPos));
+    }
+    return success;
 }
 
-bool Object::SavePacket(libcomp::Packet& p) const
+bool Object::SavePacket(libcomp::Packet& p, bool flat) const
 {
     PacketStream buffer(p);
     std::ostream out(&buffer);
 
-    return Save(out, true);
+    return Save(out, flat);
 }
 
 const tinyxml2::XMLElement*

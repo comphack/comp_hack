@@ -93,7 +93,7 @@ protected:
                 typename std::basic_streambuf<CharT, TraitsT>::off_type(-1));
         }
 
-        setg(std::basic_streambuf<CharT, TraitsT>::eback(),
+        this->setg(std::basic_streambuf<CharT, TraitsT>::eback(),
             std::basic_streambuf<CharT, TraitsT>::eback() + pos,
             std::basic_streambuf<CharT, TraitsT>::egptr());
 
@@ -114,7 +114,7 @@ protected:
                 typename std::basic_streambuf<CharT, TraitsT>::off_type(-1));
         }
 
-        setg(std::basic_streambuf<CharT, TraitsT>::eback(),
+        this->setg(std::basic_streambuf<CharT, TraitsT>::eback(),
             std::basic_streambuf<CharT, TraitsT>::eback() + pos,
             std::basic_streambuf<CharT, TraitsT>::egptr());
 

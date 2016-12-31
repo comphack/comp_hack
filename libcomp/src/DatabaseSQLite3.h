@@ -123,9 +123,6 @@ private:
 
     /// Pointer to the SQLite3 representation of the database file connection
     sqlite3 *mDatabase;
-
-    /// Pointer to the config file used to configure the database connection
-    std::shared_ptr<objects::DatabaseConfigSQLite3> mConfig;
 };
 
 } // namespace libcomp

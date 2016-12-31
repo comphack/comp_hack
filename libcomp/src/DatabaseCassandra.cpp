@@ -38,8 +38,9 @@
 using namespace libcomp;
 
 DatabaseCassandra::DatabaseCassandra(const std::shared_ptr<
-    objects::DatabaseConfigCassandra>& config) : mCluster(nullptr), mSession(nullptr),
-    mConfig(config)
+    objects::DatabaseConfigCassandra>& config) :
+    Database(std::dynamic_pointer_cast<objects::DatabaseConfig>(config)),
+    mCluster(nullptr), mSession(nullptr)
 {
 }
 
@@ -50,9 +51,10 @@ DatabaseCassandra::~DatabaseCassandra()
 
 bool DatabaseCassandra::Open()
 {
-    auto address = mConfig->GetIP();
-    auto username = mConfig->GetUsername();
-    auto password = mConfig->GetPassword();
+    auto config = std::dynamic_pointer_cast<objects::DatabaseConfigCassandra>(mConfig);
+    auto address = config->GetIP();
+    auto username = config->GetUsername();
+    auto password = config->GetPassword();
 
     // Make sure any previous connection is closed an that we have the base
     // necessary configuration to connect.
@@ -117,7 +119,8 @@ bool DatabaseCassandra::Exists()
 {
     DatabaseQuery q = Prepare(String(
         "SELECT keyspace_name FROM system_schema.keyspaces WHERE keyspace_name = '%1';")
-        .Arg(mConfig->GetKeyspace()));
+        .Arg(std::dynamic_pointer_cast<objects::DatabaseConfigCassandra>(
+            mConfig)->GetKeyspace()));
     if(!q.Execute())
     {
         LOG_CRITICAL("Failed to query for keyspace.\n");
@@ -140,7 +143,8 @@ bool DatabaseCassandra::Setup()
         return false;
     }
 
-    auto keyspace = mConfig->GetKeyspace();
+    auto keyspace = std::dynamic_pointer_cast<objects::DatabaseConfigCassandra>(
+        mConfig)->GetKeyspace();
     if(!Exists())
     {
         // Delete the old keyspace if it exists.
@@ -200,7 +204,8 @@ bool DatabaseCassandra::Setup()
 bool DatabaseCassandra::Use()
 {
     // Use the keyspace.
-    auto keyspace = mConfig->GetKeyspace();
+    auto keyspace = std::dynamic_pointer_cast<objects::DatabaseConfigCassandra>(
+        mConfig)->GetKeyspace();
     if(!Execute(String("USE %1;").Arg(keyspace)))
     {
         LOG_ERROR("Failed to use the keyspace.\n");
@@ -476,7 +481,8 @@ bool DatabaseCassandra::DeleteSingleObject(std::shared_ptr<PersistentObject>& ob
 
 bool DatabaseCassandra::VerifyAndSetupSchema()
 {
-    auto keyspace = mConfig->GetKeyspace();
+    auto keyspace = std::dynamic_pointer_cast<objects::DatabaseConfigCassandra>(
+        mConfig)->GetKeyspace();
     std::vector<std::shared_ptr<libobjgen::MetaObject>> metaObjectTables;
     for(auto registrar : PersistentObject::GetRegistry())
     {
@@ -499,7 +505,7 @@ bool DatabaseCassandra::VerifyAndSetupSchema()
                             " WHERE keyspace_name = '%1';").Arg(keyspace);
 
     DatabaseQuery q = Prepare(cmd);
-    if(!q.Execute() || !q.Next())
+    if(!q.Execute())
     {
         LOG_CRITICAL("Failed to query for column schema.\n");
 
@@ -507,7 +513,7 @@ bool DatabaseCassandra::VerifyAndSetupSchema()
     }
 
     std::unordered_map<std::string, std::unordered_map<std::string, String>> fieldMap;
-    do
+    while(q.Next())
     {
         String tableName;
         String colName;
@@ -520,7 +526,7 @@ bool DatabaseCassandra::VerifyAndSetupSchema()
             std::unordered_map<std::string, String>& m = fieldMap[tableName.ToUtf8()];
             m[colName.ToUtf8()] = dataType;
         }
-    } while (q.Next());
+    }
 
     cmd = String("SELECT table_name, index_name"
         " FROM system_schema.indexes"
@@ -714,7 +720,8 @@ bool DatabaseCassandra::VerifyAndSetupSchema()
 
 bool DatabaseCassandra::UsingDefaultKeyspace()
 {
-    return mConfig->GetKeyspace() == mConfig->GetDefaultKeyspace();
+    auto config = std::dynamic_pointer_cast<objects::DatabaseConfigCassandra>(mConfig);
+    return config->GetKeyspace() == config->GetDefaultKeyspace();
 }
 
 bool DatabaseCassandra::WaitForFuture(CassFuture *pFuture)

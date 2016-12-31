@@ -30,6 +30,11 @@ using namespace libcomp;
 
 std::shared_ptr<Database> Database::sMain = nullptr;
 
+Database::Database(const std::shared_ptr<objects::DatabaseConfig>& config)
+{
+    mConfig = config;
+}
+
 Database::~Database()
 {
     if(sMain.get() == this)
@@ -56,6 +61,11 @@ const std::shared_ptr<Database> Database::GetMainDatabase()
 void Database::SetMainDatabase(std::shared_ptr<Database> database)
 {
     sMain = database;
+}
+
+std::shared_ptr<objects::DatabaseConfig> Database::GetConfig() const
+{
+    return mConfig;
 }
 
 bool Database::TableHasRows(const String& table)

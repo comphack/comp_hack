@@ -29,6 +29,7 @@
 
 // libcomp Includes
 #include "CString.h"
+#include "DatabaseConfig.h"
 #include "DatabaseQuery.h"
 #include "PersistentObject.h"
 
@@ -48,6 +49,12 @@ class DatabaseBind;
 class Database
 {
 public:
+    /**
+     * Create a new Database connection.
+     * @param config Pointer to a database configuration
+     */
+    Database(const std::shared_ptr<objects::DatabaseConfig>& config);
+
     /**
      * Close and clean up the database connection.
      */
@@ -177,6 +184,12 @@ public:
      * @param database Pointer to the main database
      */
     static void SetMainDatabase(std::shared_ptr<Database> database);
+    
+    /**
+     * Get the database config.
+     * @return Pointer to the database config
+     */
+    std::shared_ptr<objects::DatabaseConfig> GetConfig() const;
 
 protected:
     /**
@@ -195,6 +208,9 @@ protected:
 
     /// Static pointer to the current main database
     static std::shared_ptr<Database> sMain;
+
+    /// Pointer to the config file used to configure the database connection
+    std::shared_ptr<objects::DatabaseConfig> mConfig;
 };
 
 } // namespace libcomp

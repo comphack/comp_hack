@@ -31,6 +31,8 @@
 #include "Packets.h"
 
 // libcomp Includes
+#include <DatabaseConfigCassandra.h>
+#include <DatabaseConfigSQLite3.h>
 #include <Decrypt.h>
 #include <Log.h>
 #include <ManagerPacket.h>
@@ -58,6 +60,26 @@ bool LobbyServer::Initialize(std::weak_ptr<BaseServer>& self)
         return false;
     }
 
+    auto conf = std::dynamic_pointer_cast<objects::LobbyConfig>(mConfig);
+    
+    libcomp::EnumMap<objects::ServerConfig::DatabaseType_t,
+        std::shared_ptr<objects::DatabaseConfig>> configMap;
+
+    configMap[objects::ServerConfig::DatabaseType_t::SQLITE3]
+        = conf->GetSQLite3Config().Get();
+
+    configMap[objects::ServerConfig::DatabaseType_t::CASSANDRA]
+        = conf->GetCassandraConfig().Get();
+
+    mDatabase = GetDatabase(configMap, true);
+
+    if(nullptr == mDatabase)
+    {
+        return false;
+    }
+
+    libcomp::Database::SetMainDatabase(mDatabase);
+
     if(mUnitTestMode)
     {
         if(!InitializeTestMode())
@@ -69,8 +91,6 @@ bool LobbyServer::Initialize(std::weak_ptr<BaseServer>& self)
     {
         CreateFirstAccount();
     }
-
-    auto conf = std::dynamic_pointer_cast<objects::LobbyConfig>(mConfig);
 
     mManagerConnection = std::shared_ptr<ManagerConnection>(
         new ManagerConnection(self, &mService, mMainWorker.GetMessageQueue()));
@@ -133,6 +153,11 @@ std::shared_ptr<lobby::World> LobbyServer::GetWorldByConnection(
     std::shared_ptr<libcomp::InternalConnection> connection)
 {
     return mManagerConnection->GetWorldByConnection(connection);
+}
+
+std::shared_ptr<libcomp::Database> LobbyServer::GetMainDatabase() const
+{
+    return mDatabase;
 }
 
 std::shared_ptr<libcomp::TcpConnection> LobbyServer::CreateConnection(

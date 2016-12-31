@@ -106,6 +106,24 @@ public:
      * @return true if the description existed, false if it did not
      */
     bool RemoveChannelDescription(const std::shared_ptr<libcomp::InternalConnection>& connection);
+    
+    /**
+     * Get the world database.
+     * @return Pointer to the world's database
+     */
+    std::shared_ptr<libcomp::Database> GetWorldDatabase() const;
+    
+    /**
+     * Get the lobby database.
+     * @return Pointer to the lobby's database
+     */
+    std::shared_ptr<libcomp::Database> GetLobbyDatabase() const;
+
+    /**
+     * Set the lobby database.
+     * @param database Pointer to the lobby's database
+     */
+    void SetLobbyDatabase(const std::shared_ptr<libcomp::Database>& database);
 
 protected:
     /**
@@ -115,6 +133,12 @@ protected:
      */
     virtual std::shared_ptr<libcomp::TcpConnection> CreateConnection(
         asio::ip::tcp::socket& socket);
+
+    /// A shared pointer to the world database used by the server.
+    std::shared_ptr<libcomp::Database> mDatabase;
+
+    /// A shared pointer to the world database used by the server.
+    std::shared_ptr<libcomp::Database> mLobbyDatabase;
 
     /// Pointer to the description of the world.
     std::shared_ptr<objects::WorldDescription> mDescription;

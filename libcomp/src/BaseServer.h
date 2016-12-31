@@ -29,6 +29,7 @@
 
 // libcomp Includes
 #include "Database.h"
+#include "DatabaseConfig.h"
 #include "EncryptedConnection.h"
 #include "ServerConfig.h"
 #include "TcpServer.h"
@@ -68,6 +69,17 @@ public:
      * @return true on success, false on failure
      */
     virtual bool Initialize(std::weak_ptr<BaseServer>& self);
+    
+    /**
+     * Get an open database connection of the database type associated to the
+     * server.
+     * @param configMap Map of the available database configs by type
+     * @param performSetup If true, @ref Database::Setup will be executed
+     * @return Pointer to the new database connection or nullptr on failure
+     */
+    std::shared_ptr<Database> GetDatabase(
+        const EnumMap<objects::ServerConfig::DatabaseType_t,
+            std::shared_ptr<objects::DatabaseConfig>>& configMap, bool performSetup);
 
     /**
      * Call the Shutdown function on each worker.  This should be called
@@ -148,9 +160,6 @@ protected:
 
     /// A shared pointer to the config used to set up the server.
     std::shared_ptr<objects::ServerConfig> mConfig;
-
-    /// A shared pointer to the database used by the server.
-    std::shared_ptr<libcomp::Database> mDatabase;
 
     /// Worker that blocks and runs in the main thread.
     libcomp::Worker mMainWorker;

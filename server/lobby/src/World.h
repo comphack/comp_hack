@@ -29,6 +29,7 @@
 
 // libcomp Includes
 #include <ChannelDescription.h>
+#include <Database.h>
 #include <InternalConnection.h>
 
 // object Includes
@@ -54,13 +55,6 @@ public:
      * Clean up the world.
      */
     virtual ~World();
-
-    /**
-     * Gather necessary information for the world by sending a
-     * request for the world description.
-     * @return true on success, false on failure
-     */
-    bool Initialize();
 
     /**
      * Get a pointer to the world's connection.
@@ -93,6 +87,18 @@ public:
      * @return true if the description existed, false if it did not exist
      */
     bool RemoveChannelDescriptionByID(uint8_t id);
+    
+    /**
+     * Get the world database.
+     * @return Pointer to the world's database
+     */
+    std::shared_ptr<libcomp::Database> GetWorldDatabase() const;
+
+    /**
+     * Set the world database.
+     * @param database Pointer to the world's database
+     */
+    void SetWorldDatabase(const std::shared_ptr<libcomp::Database>& database);
 
     /**
      * Set the world description.
@@ -112,6 +118,9 @@ private:
 
     /// Pointer to the world's description
     std::shared_ptr<objects::WorldDescription> mWorldDescription;
+
+    /// A shared pointer to the world database used by the server.
+    std::shared_ptr<libcomp::Database> mDatabase;
 
     /// List of pointers to the channel descriptions
     std::list<std::shared_ptr<objects::ChannelDescription>> mChannelDescriptions;

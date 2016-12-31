@@ -79,6 +79,12 @@ public:
      * @return Pointer to the connected world.
      */
     std::shared_ptr<lobby::World> GetWorldByConnection(std::shared_ptr<libcomp::InternalConnection> connection);
+    
+    /**
+     * Get the main database.
+     * @return Pointer to the main database
+     */
+    std::shared_ptr<libcomp::Database> GetMainDatabase() const;
 
 protected:
     /**
@@ -109,6 +115,9 @@ protected:
      */
     virtual std::shared_ptr<libcomp::TcpConnection> CreateConnection(
         asio::ip::tcp::socket& socket);
+
+    /// A shared pointer to the main database used by the server.
+    std::shared_ptr<libcomp::Database> mDatabase;
 
     /// Pointer to the manager in charge of connection messages.
     std::shared_ptr<ManagerConnection> mManagerConnection;

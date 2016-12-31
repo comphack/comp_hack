@@ -27,6 +27,8 @@
 #include "Packets.h"
 
 // libcomp Includes
+#include <DatabaseConfigCassandra.h>
+#include <DatabaseConfigSQLite3.h>
 #include <Decrypt.h>
 #include <Log.h>
 #include <ManagerPacket.h>
@@ -43,6 +45,39 @@
 
 using namespace channel;
 
+std::shared_ptr<libcomp::Database> ParseDatabase(const std::shared_ptr<ChannelServer>& server,
+    libcomp::ReadOnlyPacket& p)
+{
+    auto databaseType = server->GetConfig()->GetDatabaseType();
+
+    // Read the configuration for the world's database
+    std::shared_ptr<objects::DatabaseConfig> dbConfig;
+    switch(databaseType)
+    {
+        case objects::ServerConfig::DatabaseType_t::CASSANDRA:
+            dbConfig = std::shared_ptr<objects::DatabaseConfig>(
+                new objects::DatabaseConfigCassandra);
+            break;
+        case objects::ServerConfig::DatabaseType_t::SQLITE3:
+            dbConfig = std::shared_ptr<objects::DatabaseConfig>(
+                new objects::DatabaseConfigSQLite3);
+            break;
+    }
+
+    if(!dbConfig->LoadPacket(p, false))
+    {
+        LOG_CRITICAL("No valid database connection configuration was found"
+            " that matches the configured type.\n");
+        return nullptr;
+    }
+    
+    libcomp::EnumMap<objects::ServerConfig::DatabaseType_t,
+        std::shared_ptr<objects::DatabaseConfig>> configMap;
+    configMap[databaseType] = dbConfig;
+
+    return server->GetDatabase(configMap, false);
+}
+
 bool Parsers::SetWorldDescription::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
@@ -55,6 +90,24 @@ bool Parsers::SetWorldDescription::Parse(libcomp::ManagerPacket *pPacketManager,
     {
         return false;
     }
+
+    auto worldDatabase = ParseDatabase(server, p);
+    if(nullptr == worldDatabase)
+    {
+        LOG_CRITICAL("World Server supplied database configuration could not"
+            " be initialized as a valid database.\n");
+        return false;
+    }
+    server->SetWorldDatabase(worldDatabase);
+    
+    auto lobbyDatabase = ParseDatabase(server, p);
+    if(nullptr == lobbyDatabase)
+    {
+        LOG_CRITICAL("World Server supplied lobby database configuration could not"
+            " be initialized as a database.\n");
+        return false;
+    }
+    server->SetLobbyDatabase(lobbyDatabase);
 
     LOG_DEBUG(libcomp::String("Updating World Server description: (%1) %2\n")
         .Arg(desc->GetID()).Arg(desc->GetName()));

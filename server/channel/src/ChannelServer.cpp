@@ -118,6 +118,26 @@ std::shared_ptr<objects::WorldDescription> ChannelServer::GetWorldDescription()
     return mWorldDescription;
 }
 
+std::shared_ptr<libcomp::Database> ChannelServer::GetWorldDatabase() const
+{
+    return mWorldDatabase;
+}
+
+void ChannelServer::SetWorldDatabase(const std::shared_ptr<libcomp::Database>& database)
+{
+    mWorldDatabase = database;
+}
+   
+std::shared_ptr<libcomp::Database> ChannelServer::GetLobbyDatabase() const
+{
+    return mLobbyDatabase;
+}
+
+void ChannelServer::SetLobbyDatabase(const std::shared_ptr<libcomp::Database>& database)
+{
+    mLobbyDatabase = database;
+}
+
 std::shared_ptr<libcomp::TcpConnection> ChannelServer::CreateConnection(
     asio::ip::tcp::socket& socket)
 {

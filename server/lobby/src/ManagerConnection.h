@@ -76,6 +76,14 @@ public:
     virtual bool ProcessMessage(const libcomp::Message::Message *pMessage);
 
     /**
+     * Request information about the world and send database
+     * connection information to the main DB.
+     * @param world World to intialize
+     * @return true on success, false on failure
+     */
+    bool InitializeWorld(const std::shared_ptr<lobby::World>& world);
+
+    /**
      * Get a list of connected worlds.
      * @return List of pointers to connected worlds
      */

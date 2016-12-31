@@ -40,7 +40,9 @@
 using namespace libcomp;
 
 DatabaseSQLite3::DatabaseSQLite3(const std::shared_ptr<
-    objects::DatabaseConfigSQLite3>& config) : mDatabase(nullptr), mConfig(config)
+    objects::DatabaseConfigSQLite3>& config) :
+    Database(std::dynamic_pointer_cast<objects::DatabaseConfig>(config)),
+    mDatabase(nullptr)
 {
 }
 
@@ -122,7 +124,8 @@ bool DatabaseSQLite3::Setup()
         return false;
     }
 
-    auto filename = mConfig->GetDatabaseName();
+    auto filename = std::dynamic_pointer_cast<objects::DatabaseConfigSQLite3>(
+        mConfig)->GetDatabaseName();
     if(!Exists())
     {
         LOG_ERROR("Database file was not created!\n");
@@ -396,7 +399,8 @@ bool DatabaseSQLite3::DeleteSingleObject(std::shared_ptr<PersistentObject>& obj)
 
 bool DatabaseSQLite3::VerifyAndSetupSchema()
 {
-    auto databaseName = mConfig->GetDatabaseName();
+    auto databaseName = std::dynamic_pointer_cast<objects::DatabaseConfigSQLite3>(
+        mConfig)->GetDatabaseName();
     std::vector<std::shared_ptr<libobjgen::MetaObject>> metaObjectTables;
     for(auto registrar : PersistentObject::GetRegistry())
     {
@@ -416,7 +420,7 @@ bool DatabaseSQLite3::VerifyAndSetupSchema()
 
     DatabaseQuery q = Prepare("SELECT name, type, tbl_name FROM sqlite_master"
         " where type in ('table', 'index') and name <> 'objects';");
-    if(!q.Execute() || !q.Next())
+    if(!q.Execute())
     {
         LOG_CRITICAL("Failed to query for existing columns.\n");
 
@@ -426,7 +430,7 @@ bool DatabaseSQLite3::VerifyAndSetupSchema()
     std::unordered_map<std::string,
         std::unordered_map<std::string, String>> fieldMap;
     std::unordered_map<std::string, std::set<std::string>> indexedFields;
-    do
+    while(q.Next())
     {
         String name;
         String type;
@@ -472,7 +476,7 @@ bool DatabaseSQLite3::VerifyAndSetupSchema()
                 s.insert(name.ToUtf8());
             }
         }
-    } while(q.Next());
+    }
     
     for(auto metaObjectTable : metaObjectTables)
     {
@@ -635,13 +639,15 @@ bool DatabaseSQLite3::VerifyAndSetupSchema()
 
 bool DatabaseSQLite3::UsingDefaultDatabaseFile()
 {
-    return mConfig->GetDatabaseName() == mConfig->GetDefaultDatabaseName();
+    auto config = std::dynamic_pointer_cast<objects::DatabaseConfigSQLite3>(mConfig);
+    return config->GetDatabaseName() == config->GetDefaultDatabaseName();
 }
 
 String DatabaseSQLite3::GetFilepath() const
 {
-    auto directory = mConfig->GetFileDirectory();
-    auto filename = mConfig->GetDatabaseName();
+    auto config = std::dynamic_pointer_cast<objects::DatabaseConfigSQLite3>(mConfig);
+    auto directory = config->GetFileDirectory();
+    auto filename = config->GetDatabaseName();
 
     return String("%1%2.sqlite3").Arg(directory).Arg(filename);
 }

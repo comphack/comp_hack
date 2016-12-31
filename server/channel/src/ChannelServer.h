@@ -77,6 +77,30 @@ public:
      * @return Pointer to the WorldDescription
      */
     std::shared_ptr<objects::WorldDescription> GetWorldDescription();
+    
+    /**
+     * Get the world database.
+     * @return Pointer to the world's database
+     */
+    std::shared_ptr<libcomp::Database> GetWorldDatabase() const;
+
+    /**
+     * Set the world database.
+     * @param database Pointer to the world's database
+     */
+    void SetWorldDatabase(const std::shared_ptr<libcomp::Database>& database);
+    
+    /**
+     * Get the lobby database.
+     * @return Pointer to the lobby's database
+     */
+    std::shared_ptr<libcomp::Database> GetLobbyDatabase() const;
+
+    /**
+     * Set the lobby database.
+     * @param database Pointer to the lobby's database
+     */
+    void SetLobbyDatabase(const std::shared_ptr<libcomp::Database>& database);
 
 protected:
     /**
@@ -92,6 +116,12 @@ protected:
 
     /// Pointer to the description of the world.
     std::shared_ptr<objects::WorldDescription> mWorldDescription;
+
+    /// A shared pointer to the world database used by the server.
+    std::shared_ptr<libcomp::Database> mWorldDatabase;
+
+    /// A shared pointer to the main database used by the server.
+    std::shared_ptr<libcomp::Database> mLobbyDatabase;
 
     /// Pointer to the description of the channel.
     std::shared_ptr<objects::ChannelDescription> mDescription;

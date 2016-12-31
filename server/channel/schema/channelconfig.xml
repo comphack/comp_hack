@@ -6,11 +6,5 @@
         <member type="u16" name="Port" inherited="true" default="14666"/>
         <member type="string" name="WorldIP" default="127.0.0.1"/>
         <member type="u16" name="WorldPort" default="18666"/>
-        <member type="DatabaseConfigCassandra*" name="CassandraConfig" inherited="true">
-            <member type="string" name="Keyspace" default="world"/>
-        </member>
-        <member type="DatabaseConfigSQLite3*" name="SQLite3Config" inherited="true">
-            <member type="string" name="DatabaseName" default="world"/>
-        </member>
     </object>
 </objgen>

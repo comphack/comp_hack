@@ -123,9 +123,6 @@ private:
 
     /// Pointer to the Cassandra representation of the connection's session
     CassSession *mSession;
-
-    /// Pointer to the config file used to configure the database connection
-    std::shared_ptr<objects::DatabaseConfigCassandra> mConfig;
 };
 
 } // namespace libcomp

@@ -511,7 +511,8 @@ std::string MetaVariable::GetAccessDeclarations(const Generator& generator,
     {
         ss << generator.Tab(tabLevel) << "static std::shared_ptr<" << object.GetName()
             << "> Load" << object.GetName() << "By"
-            << generator.GetCapitalName(*this) << "("
+            << generator.GetCapitalName(*this)
+            << "(const std::shared_ptr<libcomp::Database>& db, "
             << GetArgument("val") << ");" << std::endl;
     }
 
@@ -545,14 +546,15 @@ std::string MetaVariable::GetAccessFunctions(const Generator& generator,
         ss << "std::shared_ptr<" << objName << "> " << objName
             << "::Load" << objName << "By"
             << generator.GetCapitalName(*this)
-            << "(" << GetArgument("val") << ")" << std::endl;
+            << "(const std::shared_ptr<libcomp::Database>& db, "
+            << GetArgument("val") << ")" << std::endl;
         ss << "{" << std::endl;
         ss << generator.Tab() << "auto bind = (" << GetBindValueCode(
             generator, "val") << "());" << std::endl;
         ss << std::endl;
         ss << generator.Tab() << "auto obj = std::dynamic_pointer_cast<"
             << objName << ">(LoadObject(typeid(" << objName
-            << "), bind));" << std::endl;
+            << "), db, bind));" << std::endl;
         ss << std::endl;
         ss << generator.Tab() << "delete bind;" << std::endl;
         ss << std::endl;

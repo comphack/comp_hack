@@ -47,15 +47,19 @@ std::string GeneratorSource::Generate(const MetaObject& obj)
     ss << std::endl;
 
     ss << "// libcomp Includes" << std::endl;
-    ss << "#include \"DatabaseBind.h\"" << std::endl;
-    ss << "#include \"DatabaseQuery.h\"" << std::endl;
-    ss << "#include \"Log.h\"" << std::endl;
-    ss << "#include \"VectorStream.h\"" << std::endl;
+    if(obj.IsPersistent())
+    {
+        ss << "#include <Database.h>" << std::endl;
+    }
+    ss << "#include <DatabaseBind.h>" << std::endl;
+    ss << "#include <DatabaseQuery.h>" << std::endl;
+    ss << "#include <Log.h>" << std::endl;
+    ss << "#include <VectorStream.h>" << std::endl;
 
     bool scriptEnabled = obj.IsScriptEnabled();
     if(scriptEnabled)
     {
-        ss << "#include \"ScriptEngine.h\"" << std::endl;
+        ss << "#include <ScriptEngine.h>" << std::endl;
     }
     ss << std::endl;
 

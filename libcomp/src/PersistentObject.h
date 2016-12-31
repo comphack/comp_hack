@@ -41,6 +41,7 @@
 namespace libcomp
 {
 
+class Database;
 class DatabaseBind;
 class DatabaseQuery;
 
@@ -131,16 +132,17 @@ public:
     /*
      * Retrieve an object of the specified type by its UUID from the cache
      * or database.
+     * @param db Database to load from
      * @param uuid UUID of the object to load
      * @return Pointer to the object or nullptr if it doesn't exist
      */
     template<class T> static std::shared_ptr<T> LoadObjectByUUID(
-    const libobjgen::UUID& uuid)
+        const std::shared_ptr<Database>& db, const libobjgen::UUID& uuid)
     {
         if(std::is_base_of<PersistentObject, T>::value)
         {
             return std::dynamic_pointer_cast<T>(LoadObjectByUUID(
-                typeid(T), uuid));
+                typeid(T), db, uuid));
         }
 
         return nullptr;
@@ -150,11 +152,13 @@ public:
      * Retrieve an object of the specified type ID by its UUID from the cache
      * or database.
      * @param type C++ type representing the object type to load
+     * @param db Database to load from
      * @param uuid UUID of the object to load
      * @return Pointer to the object or nullptr if it doesn't exist
      */
     static std::shared_ptr<PersistentObject> LoadObjectByUUID(
-        std::type_index type, const libobjgen::UUID& uuid);
+        std::type_index type, const std::shared_ptr<Database>& db,
+        const libobjgen::UUID& uuid);
 
     /*
      * Get all PersistentObject derived class MetaObject definitions.
@@ -217,42 +221,24 @@ public:
 
     /*
      * Save a new record to the database.
+     * @param db Database to load from
      * @return true on success, false on failure
      */
-    bool Insert();
-
-    /*
-     * Save a new record to the database.
-     * @param obj Pointer to the object to save
-     * @return true on success, false on failure
-     */
-    static bool Insert(std::shared_ptr<PersistentObject>& obj);
+    bool Insert(const std::shared_ptr<Database>& db);
 
     /*
      * Update an existing record in the database.
+     * @param db Database to load from
      * @return true on success, false on failure
      */
-    bool Update();
-
-    /*
-     * Update an existing record in the database.
-     * @param obj Pointer to the object to update
-     * @return true on success, false on failure
-     */
-    static bool Update(std::shared_ptr<PersistentObject>& obj);
+    bool Update(const std::shared_ptr<Database>& db);
 
     /*
      * Deletes an existing record from the database.
+     * @param db Database to load from
      * @return true on success, false on failure
      */
-    bool Delete();
-
-    /*
-     * Deletes an existing record from the database.
-     * @param obj Pointer to the object to delete
-     * @return true on success, false on failure
-     */
-    static bool Delete(std::shared_ptr<PersistentObject>& obj);
+    bool Delete(const std::shared_ptr<Database>& db);
 
 protected:
     /*
@@ -269,11 +255,12 @@ protected:
     /*
      * Load an object from the database from a field database binding.
      * @param type C++ type representing the object type to load
+     * @param db Database to load from
      * @param pValue Pointer to a field bound to a database column
      * @return Pointer to the object or nullptr if it doesn't exist
      */
     static std::shared_ptr<PersistentObject> LoadObject(std::type_index type,
-        DatabaseBind *pValue);
+        const std::shared_ptr<Database>& db, DatabaseBind *pValue);
 
     /// Static value to be set to true if any PersistentObject type fails
     /// to register itself at runtime

@@ -168,22 +168,6 @@ public:
      * @return The last error that occurred
      */
     String GetLastError() const;
-
-    /**
-     * Static accessor to get the current database configured as the
-     * "main" database in a server config.
-     * @sa Database::SetMainDatabase
-     * @return Pointer to the main database
-     */
-    static const std::shared_ptr<Database> GetMainDatabase();
-
-    /**
-     * Static modifier to set the current database configured as the
-     * "main" database in a server config.
-     * @sa Database::GetMainDatabase
-     * @param database Pointer to the main database
-     */
-    static void SetMainDatabase(std::shared_ptr<Database> database);
     
     /**
      * Get the database config.
@@ -205,9 +189,6 @@ protected:
 
     /// Last error raised by a database related action
     String mError;
-
-    /// Static pointer to the current main database
-    static std::shared_ptr<Database> sMain;
 
     /// Pointer to the config file used to configure the database connection
     std::shared_ptr<objects::DatabaseConfig> mConfig;

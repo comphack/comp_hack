@@ -28,6 +28,7 @@
 
 // lobby Includes
 #include "LobbyClientConnection.h"
+#include "LobbyServer.h"
 
 // libcomp Includes
 #include <ErrorCodes.h>
@@ -62,8 +63,11 @@ bool Parsers::Login::Parse(libcomp::ManagerPacket *pPacketManager,
     reply.SetCommandCode(to_underlying(
         LobbyClientPacketCode_t::PACKET_LOGIN_RESPONSE));
 
+    auto server = std::dynamic_pointer_cast<LobbyServer>(pPacketManager->GetServer());
+    auto mainDB = server->GetMainDatabase();
+
     /// @todo Ask the world server is the user is already logged in.
-    auto account = objects::Account::LoadAccountByUserName(obj.GetUsername());
+    auto account = objects::Account::LoadAccountByUserName(mainDB, obj.GetUsername());
 
     uint32_t clientVersion = static_cast<uint32_t>(
         conf->GetClientVersion() * 1000.0f);

@@ -78,8 +78,6 @@ bool LobbyServer::Initialize(std::weak_ptr<BaseServer>& self)
         return false;
     }
 
-    libcomp::Database::SetMainDatabase(mDatabase);
-
     if(mUnitTestMode)
     {
         if(!InitializeTestMode())
@@ -222,7 +220,7 @@ bool LobbyServer::InitializeTestMode()
     account->Register(std::dynamic_pointer_cast<
         libcomp::PersistentObject>(account));
 
-    if(!account->Insert())
+    if(!account->Insert(mDatabase))
     {
         LOG_ERROR("Failed to create test account.\n");
     }
@@ -451,7 +449,7 @@ void LobbyServer::PromptCreateAccount()
     account->Register(std::dynamic_pointer_cast<
         libcomp::PersistentObject>(account));
 
-    if(!account->Insert())
+    if(!account->Insert(mDatabase))
     {
         LOG_ERROR("Failed to create account!\n");
     }

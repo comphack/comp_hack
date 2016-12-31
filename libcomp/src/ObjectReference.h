@@ -28,6 +28,7 @@
 #define LIBCOMP_SRC_OBJECTREFERENCE_H
 
 // libcomp Includes
+#include "Database.h"
 #include "PersistentObject.h"
 
 namespace libcomp
@@ -73,11 +74,12 @@ public:
      * Get the pointer to the referenced object.  This will
      * cause the reference to load from the database if only
      * the UUID is set.
+     * @param db Database to load from if persistent
      * @return Pointer to the referenced object
      */
-    const std::shared_ptr<T> Get()
+    const std::shared_ptr<T> Get(const std::shared_ptr<Database>& db = nullptr)
     {
-        LoadReference();
+        LoadReference(db);
 
         return mRef;
     }
@@ -97,13 +99,17 @@ public:
      * This will fail if the object is not persistent, the UUID
      * is not set or the load was attempted already and failed
      * without having the UUID modified.
+     * @param db Database to load from if persistent
      * @return true on success, false on failure
      */
-    bool LoadReference()
+    bool LoadReference(const std::shared_ptr<Database>& db = nullptr)
     {
-        if(IsPersistentReference() && !mUUID.IsNull() && !mLoadFailed)
+        // Do not count an attempt to load without a DB as a
+        // load failure
+        if(IsPersistentReference() && nullptr != db
+            && !mUUID.IsNull() && !mLoadFailed)
         {
-            mRef = PersistentObject::LoadObjectByUUID<T>(mUUID);
+            mRef = PersistentObject::LoadObjectByUUID<T>(db, mUUID);
             mLoadFailed = nullptr == mRef;
         }
         return mUUID.IsNull() || nullptr != mRef;

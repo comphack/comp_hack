@@ -74,8 +74,6 @@ bool WorldServer::Initialize(std::weak_ptr<BaseServer>& self)
         return false;
     }
 
-    libcomp::Database::SetMainDatabase(mDatabase);
-
     asio::io_service service;
 
     // Connect to the world server.

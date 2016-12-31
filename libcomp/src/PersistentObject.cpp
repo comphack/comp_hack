@@ -140,7 +140,7 @@ std::shared_ptr<PersistentObject> PersistentObject::GetObjectByUUID(const libobj
 }
 
 std::shared_ptr<PersistentObject> PersistentObject::LoadObjectByUUID(std::type_index type,
-    const libobjgen::UUID& uuid)
+    const std::shared_ptr<Database>& db,  const libobjgen::UUID& uuid)
 {
     auto obj = GetObjectByUUID(uuid);
 
@@ -148,7 +148,7 @@ std::shared_ptr<PersistentObject> PersistentObject::LoadObjectByUUID(std::type_i
     {
         auto bind = new DatabaseBindUUID("uid", uuid);
 
-        obj = LoadObject(type, bind);
+        obj = LoadObject(type, db, bind);
 
         delete bind;
 
@@ -163,10 +163,9 @@ std::shared_ptr<PersistentObject> PersistentObject::LoadObjectByUUID(std::type_i
 }
 
 std::shared_ptr<PersistentObject> PersistentObject::LoadObject(
-    std::type_index type, DatabaseBind *pValue)
+    std::type_index type, const std::shared_ptr<Database>& db,
+    DatabaseBind *pValue)
 {
-    auto db = Database::GetMainDatabase();
-
     std::shared_ptr<PersistentObject> obj;
 
     if(nullptr != db)
@@ -222,61 +221,36 @@ std::shared_ptr<PersistentObject> PersistentObject::New(std::type_index type)
     return iter != sFactory.end() ? std::shared_ptr<PersistentObject>(iter->second()) : nullptr;
 }
 
-bool PersistentObject::Insert()
+bool PersistentObject::Insert(const std::shared_ptr<Database>& db)
 {
     if(mSelf.use_count() > 0)
     {
         auto self = mSelf.lock();
-        return Insert(self);
+        return nullptr != db ? db->InsertSingleObject(self) : false;
     }
 
     return false;
 }
 
-bool PersistentObject::Insert(std::shared_ptr<PersistentObject>& obj)
-{
-    auto db = Database::GetMainDatabase();
-    return nullptr != db ? db->InsertSingleObject(obj) : false;
-}
-
-bool PersistentObject::Update()
+bool PersistentObject::Update(const std::shared_ptr<Database>& db)
 {
     if(mSelf.use_count() > 0)
     {
         auto self = mSelf.lock();
-        return Update(self);
+        return nullptr != db ? db->UpdateSingleObject(self) : false;
     }
 
     return false;
 }
 
-bool PersistentObject::Update(std::shared_ptr<PersistentObject>& obj)
-{
-    auto db = Database::GetMainDatabase();
-    return nullptr != db ? db->UpdateSingleObject(obj) : false;
-}
-
-bool PersistentObject::Delete()
+bool PersistentObject::Delete(const std::shared_ptr<Database>& db)
 {
     if(mSelf.use_count() > 0)
     {
         auto self = mSelf.lock();
-        return Delete(self);
+        return nullptr == db || db->DeleteSingleObject(self);
     }
 
-    return false;
-}
-
-bool PersistentObject::Delete(std::shared_ptr<PersistentObject>& obj)
-{
-    auto db = Database::GetMainDatabase();
-    if(nullptr == db || db->DeleteSingleObject(obj))
-    {
-        // The database should have already handled this but call again
-        // just in case
-        obj->Unregister();
-        return true;
-    }
     return false;
 }
 

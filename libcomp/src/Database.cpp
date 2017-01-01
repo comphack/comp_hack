@@ -33,11 +33,6 @@ Database::Database(const std::shared_ptr<objects::DatabaseConfig>& config)
     mConfig = config;
 }
 
-Database::Database(const std::shared_ptr<objects::DatabaseConfig>& config)
-{
-    mConfig = config;
-}
-
 Database::~Database()
 {
 }
@@ -50,11 +45,6 @@ bool Database::Execute(const String& query)
 String Database::GetLastError() const
 {
     return mError;
-}
-
-std::shared_ptr<objects::DatabaseConfig> Database::GetConfig() const
-{
-    return mConfig;
 }
 
 std::shared_ptr<objects::DatabaseConfig> Database::GetConfig() const

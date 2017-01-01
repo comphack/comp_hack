@@ -121,7 +121,7 @@ protected:
      * user entered values.
      */
     void PromptCreateAccount();
-    
+
     /**
      * Reset the values in the RegisteredServer table, pulling
      * World information from it before servers connect and

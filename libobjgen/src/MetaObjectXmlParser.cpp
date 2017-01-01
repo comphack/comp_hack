@@ -480,6 +480,8 @@ void MetaObjectXmlParser::SetXMLDefinition(const tinyxml2::XMLElement& root)
 bool MetaObjectXmlParser::LoadComboKey(const tinyxml2::XMLDocument& doc,
     const tinyxml2::XMLElement *pKey, bool& result)
 {
+    (void)doc;
+
     const char *szKeyName = pKey->Attribute("name");
     const char *szMembers = pKey->Attribute("members");
 

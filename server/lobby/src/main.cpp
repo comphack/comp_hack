@@ -86,16 +86,20 @@ int main(int argc, const char *argv[])
         return EXIT_FAILURE;
     }
 
-    auto mainDB = server->GetMainDatabase();
-
     /// @todo Consider moving the web server.
     std::vector<std::string> options;
     options.push_back("listening_ports");
     options.push_back(std::to_string(std::dynamic_pointer_cast<
         objects::LobbyConfig>(config)->GetWebListeningPort()));
 
+    auto pLoginHandler = new lobby::LoginHandler(server->GetMainDatabase());
+    pLoginHandler->SetAccountManager(server->GetAccountManager());
+    pLoginHandler->SetSessionManager(server->GetSessionManager());
+    pLoginHandler->SetConfig(std::dynamic_pointer_cast<
+        objects::LobbyConfig>(config));
+
     CivetServer webServer(options);
-    webServer.addHandler("/", new lobby::LoginHandler(mainDB));
+    webServer.addHandler("/", pLoginHandler);
 
     // Set this for the signal handler.
     libcomp::Shutdown::Configure(server.get());

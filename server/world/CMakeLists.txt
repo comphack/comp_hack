@@ -29,12 +29,14 @@ GENERATE_DOCS(doc/Doxyfile.in)
 FILE(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/objgen)
 
 SET(${PROJECT_NAME}_SRCS
+    src/AccountManager.cpp
     src/ManagerConnection.cpp
     src/WorldServer.cpp
     src/main.cpp
 )
 
 SET(${PROJECT_NAME}_HDRS
+    src/AccountManager.h
     src/ManagerConnection.h
     src/WorldServer.h
 )

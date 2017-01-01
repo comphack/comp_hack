@@ -27,7 +27,9 @@
 #include "LoginWebHandler.h"
 
 // lobby Includes
+#include "AccountManager.h"
 #include "ResourceLogin.h"
+#include "SessionManager.h"
 
 // libcomp Includes
 #include <Decrypt.h>
@@ -39,7 +41,7 @@
 using namespace lobby;
 
 LoginHandler::LoginHandler(const std::shared_ptr<libcomp::Database>& database)
-    : mDatabase(database)
+    : mDatabase(database), mAccountManager(nullptr), mSessionManager(nullptr)
 {
     mVfs.AddArchiveLoader(new ttvfs::VFSZipArchiveLoader);
 
@@ -54,6 +56,12 @@ LoginHandler::LoginHandler(const std::shared_ptr<libcomp::Database>& database)
 
 LoginHandler::~LoginHandler()
 {
+}
+
+void LoginHandler::SetConfig(const std::shared_ptr<
+    objects::LobbyConfig>& config)
+{
+    mConfig = config;
 }
 
 LoginHandler::ReplacementVariables::ReplacementVariables() : birthday("1"),
@@ -92,7 +100,7 @@ void LoginHandler::ParsePost(CivetServer *pServer,
     const mg_request_info *pRequestInfo = mg_get_request_info(pConnection);
 
     // Sanity check the request info.
-    if(nullptr == pRequestInfo)
+    if(nullptr == pRequestInfo || nullptr == mConfig)
     {
         return;
     }
@@ -132,7 +140,7 @@ void LoginHandler::ParsePost(CivetServer *pServer,
         postVars.pass = postValue;
     }
 
-    if(pServer->getParam(szPostData, "cv", postValue) && "on" != postValue)
+    if(pServer->getParam(szPostData, "idsave", postValue) && "on" != postValue)
     {
         postVars.idsave.Clear();
     }
@@ -145,15 +153,60 @@ void LoginHandler::ParsePost(CivetServer *pServer,
     // Copy this POST variable.
     postVars.cvDisp = postVars.cv;
 
-    /// @todo Do proper authentication.
-    if(pServer->getParam(szPostData, "login", postValue))
+    // Get the required client version.
+    uint32_t clientVersion = static_cast<uint32_t>(
+        mConfig->GetClientVersion() * 1000.0f);
+
+    std::pair<libcomp::String, libcomp::String> sids;
+
+    if(postVars.cv != libcomp::String("%1.%2").Arg(clientVersion / 1000).Arg(
+        clientVersion % 1000))
     {
+        postVars.cvDisp += "&nbsp;<span style=\"font-weight:bold;color:#edb81e;\">"
+            "~ Client needs to be updated ~</span>";
+        postVars.msg = "<span style=\"font-size:12px;color:#edb81e;"
+        "font-weight:bold;\"><br>&nbsp;You must update the "
+        "client before you can login.</span>";
+        postVars.submit = "<input class=\"login_disabled\" type=\"submit\" "
+            "value=\"\" tabindex=\"4\" name=\"login\" height=\"60\" "
+            "width=\"67\" />";
+        postVars.idReadOnly = "readonly=\"readonly\" ";
+        postVars.passReadOnly = "readonly=\"readonly\" ";
+        postVars.idsaveReadOnly = "readonly=\"readonly\" ";
+
+        postVars.id.Clear();
+        postVars.pass.Clear();
+    }
+    else if(pServer->getParam(szPostData, "login", postValue))
+    {
+        // Get the information for this account.
         auto account = objects::Account::LoadAccountByUserName(mDatabase, postVars.id);
 
+        // Check the password.
         if(nullptr != account && account->GetPassword() ==
             libcomp::Decrypt::HashPassword(postVars.pass, account->GetSalt()))
         {
-            postVars.auth = true;
+            // Make sure the account is not logged in.
+            if(nullptr != mAccountManager && nullptr != mSessionManager &&
+                mAccountManager->LoginUser(postVars.id))
+            {
+                // Generate the session IDs.
+                sids = mSessionManager->GenerateSIDs(postVars.id);
+
+                // Make sure we logout and check the SIDs.
+                if(mAccountManager->LogoutUser(postVars.id) &&
+                    !sids.first.IsEmpty() && !sids.second.IsEmpty())
+                {
+                    postVars.auth = true;
+                }
+            }
+
+            if(!postVars.auth)
+            {
+                postVars.msg = "<span style=\"font-size:12px;color:#edb81e;"
+                    "font-weight:bold;\"><br>&nbsp;Account is already "
+                    "logged in.</span>";
+            }
         }
         else
         {
@@ -177,9 +230,8 @@ void LoginHandler::ParsePost(CivetServer *pServer,
         }
 
         // The session IDs need to be generated.
-        /// @todo Save these into the database.
-        postVars.sid1 = libcomp::Decrypt::GenerateRandom(300).ToLower();
-        postVars.sid2 = libcomp::Decrypt::GenerateRandom(300).ToLower();
+        postVars.sid1 = sids.first;
+        postVars.sid2 = sids.second;
     }
 
     // Free.
@@ -318,4 +370,14 @@ std::vector<char> LoginHandler::LoadVfsFile(const libcomp::String& path)
     }
 
     return data;
+}
+
+void LoginHandler::SetAccountManager(AccountManager *pManager)
+{
+    mAccountManager = pManager;
+}
+
+void LoginHandler::SetSessionManager(SessionManager *pManager)
+{
+    mSessionManager = pManager;
 }

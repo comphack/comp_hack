@@ -514,3 +514,13 @@ bool LobbyServer::ResetRegisteredServers()
 
     return true;
 }
+
+AccountManager* LobbyServer::GetAccountManager()
+{
+    return &mAccountManager;
+}
+
+SessionManager* LobbyServer::GetSessionManager()
+{
+    return &mSessionManager;
+}

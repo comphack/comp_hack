@@ -32,7 +32,9 @@
 #include <Worker.h>
 
 // lobby Includes
+#include "AccountManager.h"
 #include "ManagerConnection.h"
+#include "SessionManager.h"
 #include "World.h"
 
 namespace lobby
@@ -97,6 +99,18 @@ public:
      */
     std::shared_ptr<libcomp::Database> GetMainDatabase() const;
 
+    /**
+     * Get the account manager for the server.
+     * @return Account manager for the server.
+     */
+    AccountManager* GetAccountManager();
+
+    /**
+     * Get the session manager for the server.
+     * @return Session manager for the server.
+     */
+    SessionManager* GetSessionManager();
+
 protected:
     /**
      * Set up required test data for unit testing, removing the
@@ -143,6 +157,12 @@ protected:
 
     /// Indicates the unit test database should be used.
     bool mUnitTestMode;
+
+    /// Account manager for the server.
+    AccountManager mAccountManager;
+
+    /// Session manager for the server.
+    SessionManager mSessionManager;
 };
 
 } // namespace lobby

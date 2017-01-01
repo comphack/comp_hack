@@ -34,6 +34,9 @@
 #include <CString.h>
 #include <Database.h>
 
+// object Includes
+#include <LobbyConfig.h>
+
 // Standard C++11 Includes
 #include <vector>
 
@@ -46,6 +49,9 @@
 namespace lobby
 {
 
+class AccountManager;
+class SessionManager;
+
 class LoginHandler : public CivetHandler
 {
 public:
@@ -57,6 +63,12 @@ public:
 
     virtual bool handlePost(CivetServer *pServer,
         struct mg_connection *pConnection);
+
+    void SetConfig(const std::shared_ptr<objects::LobbyConfig>& config);
+
+    void SetAccountManager(AccountManager *pManager);
+
+    void SetSessionManager(SessionManager *pManager);
 
 private:
     class ReplacementVariables
@@ -92,6 +104,10 @@ private:
     ttvfs::Root mVfs;
 
     std::shared_ptr<libcomp::Database> mDatabase;
+    std::shared_ptr<objects::LobbyConfig> mConfig;
+
+    AccountManager *mAccountManager;
+    SessionManager *mSessionManager;
 };
 
 } // namespace lobby

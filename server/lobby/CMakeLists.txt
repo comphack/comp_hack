@@ -29,11 +29,13 @@ GENERATE_DOCS(doc/Doxyfile.in)
 FILE(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/objgen)
 
 SET(${PROJECT_NAME}_SRCS
+    src/AccountManager.cpp
     src/ClientState.cpp
     src/LobbyClientConnection.cpp
     src/LobbyServer.cpp
     src/LoginWebHandler.cpp
     src/ManagerConnection.cpp
+    src/SessionManager.cpp
     src/World.cpp
     src/main.cpp
 
@@ -41,11 +43,13 @@ SET(${PROJECT_NAME}_SRCS
 )
 
 SET(${PROJECT_NAME}_HDRS
+    src/AccountManager.h
     src/ClientState.h
     src/LobbyClientConnection.h
     src/LobbyServer.h
     src/LoginWebHandler.h
     src/ManagerConnection.h
+    src/SessionManager.h
     src/World.h
 
     ${CMAKE_CURRENT_BINARY_DIR}/res/login/ResourceLogin.h

@@ -479,10 +479,10 @@ bool LobbyServer::ResetRegisteredServers()
     {
         if(worldServer->GetStatus() == objects::RegisteredServer::Status_t::ACTIVE)
         {
-            LOG_DEBUG(libcomp::String("Resetting registered world '%1' (%2) which did not exit"
+            LOG_DEBUG(libcomp::String("Resetting registered world (%1) '%2' which did not exit"
                 " cleanly during the previous execution.\n")
-                .Arg(worldServer->GetName())
-                .Arg(worldServer->GetID()));
+                .Arg(worldServer->GetID())
+                .Arg(worldServer->GetName()));
             worldServer->SetStatus(objects::RegisteredServer::Status_t::INACTIVE);
             if(!worldServer->Update(mDatabase))
             {

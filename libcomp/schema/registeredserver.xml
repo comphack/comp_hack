@@ -13,7 +13,7 @@
             <value>INACTIVE</value>
             <value>ACTIVE</value>
         </member>
-		<combokey name="TypeAndID" unique="true" members="Type,ID"/>
-		<combokey name="ParentAndID" unique="true" members="Parent,ID"/>
+        <combokey name="TypeAndID" unique="true" members="Type,ID"/>
+        <combokey name="ParentAndID" unique="true" members="Parent,ID"/>
     </object>
 </objgen>

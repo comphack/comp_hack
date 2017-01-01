@@ -67,7 +67,7 @@ public:
      * @return true on success, false on failure
      */
     virtual bool Initialize(std::weak_ptr<BaseServer>& self);
-    
+
     /**
      * Get the channel's RegisteredServer.
      * @return Pointer to the RegisteredServer
@@ -79,14 +79,14 @@ public:
      * @return Pointer to the RegisteredServer
      */
     std::shared_ptr<objects::RegisteredServer> GetWorldRegisteredServer();
-    
+
     /**
      * Set the world's RegisteredServer.
      * @param registeredServer Pointer to the world's RegisteredServer
      */
     void SetWorldRegisteredServer(const std::shared_ptr<
         objects::RegisteredServer>& registeredServer);
-    
+
     /**
      * Get the world database.
      * @return Pointer to the world's database
@@ -98,7 +98,7 @@ public:
      * @param database Pointer to the world's database
      */
     void SetWorldDatabase(const std::shared_ptr<libcomp::Database>& database);
-    
+
     /**
      * Get the lobby database.
      * @return Pointer to the lobby's database

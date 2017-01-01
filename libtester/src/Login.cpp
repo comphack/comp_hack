@@ -137,7 +137,7 @@ bool Login::WebLogin(const libcomp::String& username,
                         }
                     }
 
-                    service.stop();
+                    connection.reset();
                 }
 
                 delete msg;

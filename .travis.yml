@@ -102,12 +102,15 @@ script:
   - export PATH="$PATH:$CASSANDRA_HOME/bin"
   - sudo sh "$CASSANDRA_HOME/bin/cassandra" -R
   - sudo mkdir /etc/comp_hack
-  - sudo cp contrib/testing/lobby.xml /etc/comp_hack/
+  - sudo cp contrib/testing/*.xml /etc/comp_hack/
   - mkdir -p build && cd build && cmake -G "${GENERATOR}" .. && cmake --build .
   - cmake --build . --target doc
   - cmake --build . --target guide
   - bin/comp_lobby --test &
   - sleep 10
+  - bin/comp_world &
+  - sleep 10
+  - bin/comp_channel &
   - nodetool status
   - cqlsh -e "SHOW HOST; SHOW VERSION;"
   - cmake --build . --target Experimental

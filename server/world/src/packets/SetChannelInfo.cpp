@@ -27,7 +27,6 @@
 #include "Packets.h"
 
 // libcomp Includes
-#include <ChannelDescription.h>
 #include <Decrypt.h>
 #include <InternalConnection.h>
 #include <Log.h>
@@ -45,26 +44,34 @@ bool Parsers::SetChannelInfo::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {
-    auto desc = std::shared_ptr<objects::ChannelDescription>(new objects::ChannelDescription);
-
-    if(!desc->LoadPacket(p))
+    if(p.Size() == 0)
     {
+        LOG_DEBUG("Channel Server connection sent an empty response."
+            "  The connection will be closed.\n");
+        connection->Close();
         return false;
     }
 
     auto conn = std::dynamic_pointer_cast<libcomp::InternalConnection>(connection);
-
     if(nullptr == conn)
     {
         return false;
     }
 
-    LOG_DEBUG(libcomp::String("Updating Channel Server description: (%1) %2\n").Arg(desc->GetID())
-        .Arg(desc->GetName()));
+    auto channelID = p.ReadU8();
 
     auto server = std::dynamic_pointer_cast<WorldServer>(pPacketManager->GetServer());
+    auto registeredServer = server->GetRegisteredServer();
+    auto lobbyDB = server->GetLobbyDatabase();
 
-    server->SetChannelDescription(desc, conn);
+    auto svr = objects::RegisteredServer::LoadRegisteredServerByParentAndID(lobbyDB,
+        registeredServer, channelID);
+
+    LOG_DEBUG(libcomp::String("Updating Channel Server: (%1) %2\n")
+        .Arg(svr->GetID())
+        .Arg(svr->GetName()));
+
+    server->RegisterChannel(svr, conn);
 
     //Forward the information to the lobby
     auto lobbyConnection = server->GetLobbyConnection();
@@ -74,7 +81,7 @@ bool Parsers::SetChannelInfo::Parse(libcomp::ManagerPacket *pPacketManager,
         InternalPacketCode_t::PACKET_SET_CHANNEL_INFO);
     packet.WriteU8(to_underlying(
         InternalPacketAction_t::PACKET_ACTION_UPDATE));
-    desc->SavePacket(packet);
+    packet.WriteU8(channelID);
     lobbyConnection->SendPacket(packet);
 
     return true;

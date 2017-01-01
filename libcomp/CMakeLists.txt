@@ -171,15 +171,14 @@ SET(${PROJECT_NAME}_HDRS
 
 SET(${PROJECT_NAME}_SCHEMA
     schema/account.xml
-    schema/channeldescription.xml
     schema/databaseconfig.xml
     schema/databaseconfig_cassandra.xml
     schema/databaseconfig_sqlite3.xml
     schema/packet_login.xml
     schema/packet_response_code.xml
+    schema/registeredserver.xml
     schema/serverconfig.xml
     schema/test.xml
-    schema/worlddescription.xml
 )
 
 OBJGEN_XML(${PROJECT_NAME}_STRUCTS
@@ -195,8 +194,6 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     # Output files
     Account.h
     Account.cpp
-    ChannelDescription.h
-    ChannelDescription.cpp
     DatabaseConfig.h
     DatabaseConfig.cpp
     DatabaseConfigCassandra.h
@@ -207,12 +204,12 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     PacketLogin.cpp
     PacketResponseCode.h
     PacketResponseCode.cpp
+    RegisteredServer.h
+    RegisteredServer.cpp
     ServerConfig.h
     ServerConfig.cpp
     TestObject.h
     TestObject.cpp
-    WorldDescription.h
-    WorldDescription.cpp
 )
 
 ADD_LIBRARY(comp STATIC ${${PROJECT_NAME}_SRCS} ${${PROJECT_NAME}_HDRS}

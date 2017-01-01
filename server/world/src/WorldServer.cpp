@@ -43,7 +43,7 @@
 using namespace world;
 
 WorldServer::WorldServer(std::shared_ptr<objects::ServerConfig> config, const libcomp::String& configPath) :
-    libcomp::BaseServer(config, configPath), mDescription(new objects::WorldDescription)
+    libcomp::BaseServer(config, configPath)
 {
 }
 
@@ -55,8 +55,6 @@ bool WorldServer::Initialize(std::weak_ptr<BaseServer>& self)
     }
 
     auto conf = std::dynamic_pointer_cast<objects::WorldConfig>(mConfig);
-    mDescription->SetID(conf->GetID());
-    mDescription->SetName(conf->GetName());
     
     libcomp::EnumMap<objects::ServerConfig::DatabaseType_t,
         std::shared_ptr<objects::DatabaseConfig>> configMap;
@@ -147,16 +145,16 @@ WorldServer::~WorldServer()
 {
 }
 
-const std::shared_ptr<objects::WorldDescription> WorldServer::GetDescription() const
+const std::shared_ptr<objects::RegisteredServer> WorldServer::GetRegisteredServer() const
 {
-    return mDescription;
+    return mRegisteredServer;
 }
 
-std::shared_ptr<objects::ChannelDescription> WorldServer::GetChannelDescriptionByConnection(
+std::shared_ptr<objects::RegisteredServer> WorldServer::GetChannel(
     const std::shared_ptr<libcomp::InternalConnection>& connection) const
 {
-    auto iter = mChannelDescriptions.find(connection);
-    if(iter != mChannelDescriptions.end())
+    auto iter = mChannels.find(connection);
+    if(iter != mChannels.end())
     {
         return iter->second;
     }
@@ -169,18 +167,18 @@ const std::shared_ptr<libcomp::InternalConnection> WorldServer::GetLobbyConnecti
     return mManagerConnection->GetLobbyConnection();
 }
 
-void WorldServer::SetChannelDescription(const std::shared_ptr<objects::ChannelDescription>& channel,
+void WorldServer::RegisterChannel(const std::shared_ptr<objects::RegisteredServer>& channel,
     const std::shared_ptr<libcomp::InternalConnection>& connection)
 {
-    mChannelDescriptions[connection] = channel;
+    mChannels[connection] = channel;
 }
 
-bool WorldServer::RemoveChannelDescription(const std::shared_ptr<libcomp::InternalConnection>& connection)
+bool WorldServer::RemoveChannel(const std::shared_ptr<libcomp::InternalConnection>& connection)
 {
-    auto iter = mChannelDescriptions.find(connection);
-    if(iter != mChannelDescriptions.end())
+    auto iter = mChannels.find(connection);
+    if(iter != mChannels.end())
     {
-        mChannelDescriptions.erase(iter);
+        mChannels.erase(iter);
         return true;
     }
 
@@ -200,6 +198,56 @@ std::shared_ptr<libcomp::Database> WorldServer::GetLobbyDatabase() const
 void WorldServer::SetLobbyDatabase(const std::shared_ptr<libcomp::Database>& database)
 {
     mLobbyDatabase = database;
+}
+
+bool WorldServer::RegisterServer()
+{
+    if(nullptr == mLobbyDatabase)
+    {
+        return false;
+    }
+
+    auto conf = std::dynamic_pointer_cast<objects::WorldConfig>(mConfig);
+
+    auto registeredServer = objects::RegisteredServer::LoadRegisteredServerByTypeAndID(
+        mLobbyDatabase, objects::RegisteredServer::Type_t::WORLD, conf->GetID());
+
+    if(nullptr == registeredServer)
+    {
+        auto name = conf->GetName().IsEmpty() ? libcomp::String("World %1").Arg(conf->GetID())
+            : conf->GetName();
+        registeredServer = std::shared_ptr<objects::RegisteredServer>(new objects::RegisteredServer);
+        registeredServer->SetID(conf->GetID());
+        registeredServer->SetName(name);
+        registeredServer->SetStatus(objects::RegisteredServer::Status_t::ACTIVE);
+        registeredServer->SetType(objects::RegisteredServer::Type_t::WORLD);
+        if(!registeredServer->Register(registeredServer) || !registeredServer->Insert(mLobbyDatabase))
+        {
+            return false;
+        }
+    }
+    else if(registeredServer->GetStatus() == objects::RegisteredServer::Status_t::ACTIVE)
+    {
+        //Some other server already connected as this ID, let it fail
+        return false;
+    }
+    else
+    {
+        auto name = conf->GetName();
+        if(!name.IsEmpty())
+        {
+            registeredServer->SetName(name);
+        }
+        registeredServer->SetStatus(objects::RegisteredServer::Status_t::ACTIVE);
+        if(!registeredServer->Update(mLobbyDatabase))
+        {
+            return false;
+        }
+    }
+
+    mRegisteredServer = registeredServer;
+
+    return true;
 }
 
 std::shared_ptr<libcomp::TcpConnection> WorldServer::CreateConnection(

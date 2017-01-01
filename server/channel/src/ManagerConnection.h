@@ -32,9 +32,6 @@
 #include <InternalConnection.h>
 #include <Manager.h>
 
-// object Includes
-#include <WorldDescription.h>
-
 // Internal Protocol Objects
 //#include <Protocol/Internal/x.h>
 
@@ -76,10 +73,10 @@ public:
     virtual bool ProcessMessage(const libcomp::Message::Message *pMessage);
 
     /**
-     * Send a request to the connected world for description information
+     * Send a request to the connected world for information
      *  to be handled once the response is received.
      */
-    void RequestWorldDescription();
+    void RequestWorldInfo();
 
     /**
      * Set the world connection after establishing a connection.

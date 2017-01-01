@@ -84,41 +84,61 @@ public:
     bool InitializeWorld(const std::shared_ptr<lobby::World>& world);
 
     /**
-     * Get a list of connected worlds.
-     * @return List of pointers to connected worlds
+     * Get a list of registered worlds.
+     * @return List of pointers to registered worlds
      */
     std::list<std::shared_ptr<lobby::World>> GetWorlds() const;
 
     /**
-     * Get a connected world via its connection.
+     * Get a registered world via its ID.
+     * @param id The world's ID
+     * @return Pointer to a registered world
+     */
+    std::shared_ptr<lobby::World> GetWorldByID(uint8_t id) const;
+
+    /**
+     * Get a registered world via its connection.
      * @param connection Pointer to the world's connection
-     * @return Pointer to a connected world
+     * @return Pointer to a registered world
      */
     std::shared_ptr<lobby::World> GetWorldByConnection(
         const std::shared_ptr<libcomp::InternalConnection>& connection) const;
 
     /**
-     * Remove a connected world when no longer needed.
+     * Register a world and remove previous entries.  This will
+     * fail if the world does not contain registered server information.
+     * @param world Pointer to the world to register
+     * @return Pointer to the new registered server or nullptr
+     *  on failure
+     */
+    const std::shared_ptr<lobby::World> RegisterWorld(
+        std::shared_ptr<lobby::World>& world);
+
+    /**
+     * Remove a registered world when no longer needed.
      * @param world Pointer to the world to remove
      */
     void RemoveWorld(std::shared_ptr<lobby::World>& world);
 
 private:
-    /// Static list of supported message types for the manager.
+    /// Static list of supported message types for the manager
     static std::list<libcomp::Message::MessageType> sSupportedTypes;
 
-    /// Pointer to the server that uses this manager.
+    /// Pointer to the server that uses this manager
     std::weak_ptr<libcomp::BaseServer> mServer;
 
-    /// Pointer to worlds after connecting.
+    /// List of pointers to registered worlds
     std::list<std::shared_ptr<lobby::World>> mWorlds;
 
+    /// List of pointers to unregistered worlds
+    std::list<std::shared_ptr<lobby::World>> mUnregisteredWorlds;
+
     /// Pointer to the ASIO service to use to establish connections
-    /// to world servers.
+    /// to world servers
     asio::io_service *mService;
 
     /// Pointer to the message queue to use when connecting to world
-    /// servers.
+    /// servers
     std::shared_ptr<libcomp::MessageQueue<
         libcomp::Message::Message*>> mMessageQueue;
 };

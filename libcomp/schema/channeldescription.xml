@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<objgen>
-    <object name="ChannelDescription" persistent="false">
-        <member type="u8" name="ID"/>
-        <member type="string" name="Name" lensz="2"/>
-    </object>
-</objgen>

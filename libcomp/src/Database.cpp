@@ -33,11 +33,6 @@ Database::Database(const std::shared_ptr<objects::DatabaseConfig>& config)
     mConfig = config;
 }
 
-Database::Database(const std::shared_ptr<objects::DatabaseConfig>& config)
-{
-    mConfig = config;
-}
-
 Database::~Database()
 {
 }
@@ -50,11 +45,6 @@ bool Database::Execute(const String& query)
 String Database::GetLastError() const
 {
     return mError;
-}
-
-std::shared_ptr<objects::DatabaseConfig> Database::GetConfig() const
-{
-    return mConfig;
 }
 
 std::shared_ptr<objects::DatabaseConfig> Database::GetConfig() const
@@ -93,9 +83,9 @@ bool Database::TableHasRows(const String& table)
 }
 
 std::shared_ptr<PersistentObject> Database::LoadSingleObject(std::type_index type,
-    DatabaseBind *pValue)
+    const std::list<DatabaseBind*>& pValues)
 {
-    auto objects = LoadObjects(type, pValue);
+    auto objects = LoadObjects(type, pValues);
 
     return objects.size() > 0 ? objects.front() : nullptr;
 }

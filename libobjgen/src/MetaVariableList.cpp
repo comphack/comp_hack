@@ -80,6 +80,11 @@ bool MetaVariableList::IsValid() const
     return mElementType && mElementType->IsValid() && !IsLookupKey();
 }
 
+bool MetaVariableList::IsValidLookupKey() const
+{
+    return false;
+}
+
 bool MetaVariableList::Load(std::istream& stream)
 {
     MetaVariable::Load(stream);

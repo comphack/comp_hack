@@ -32,6 +32,9 @@
 #include "Log.h"
 #include "PersistentObject.h"
 
+// libobjgen Includes
+#include "CombinationKey.h"
+
 // SQLite3 Includes
 #include <sqlite3.h>
 
@@ -217,7 +220,7 @@ bool DatabaseCassandra::Use()
 }
 
 std::list<std::shared_ptr<PersistentObject>> DatabaseCassandra::LoadObjects(
-    std::type_index type, DatabaseBind *pValue)
+    std::type_index type, const std::list<DatabaseBind*>& pValues)
 {
     std::list<std::shared_ptr<PersistentObject>> objects;
 
@@ -230,9 +233,16 @@ std::list<std::shared_ptr<PersistentObject>> DatabaseCassandra::LoadObjects(
         return {};
     }
 
-    String cql = String("SELECT * FROM %1 WHERE %2 = ?").Arg(
+    std::list<String> whereClauseColumns;
+    for(auto pValue : pValues)
+    {
+        auto columnName = pValue->GetColumn();
+        whereClauseColumns.push_back(String("%1 = ?").Arg(columnName));
+    }
+
+    String cql = String("SELECT * FROM %1 WHERE %2").Arg(
         String(metaObject->GetName()).ToLower()).Arg(
-        pValue->GetColumn().ToLower());
+        String::Join(whereClauseColumns, " AND "));
 
     DatabaseQuery query = Prepare(cql);
 
@@ -244,13 +254,16 @@ std::list<std::shared_ptr<PersistentObject>> DatabaseCassandra::LoadObjects(
         return {};
     }
 
-    if(!pValue->Bind(query))
+    for(auto pValue : pValues)
     {
-        LOG_ERROR(String("Failed to bind value: %1\n").Arg(
-            pValue->GetColumn()));
-        LOG_ERROR(String("Database said: %1\n").Arg(GetLastError()));
+        if(!pValue->Bind(query))
+        {
+            LOG_ERROR(String("Failed to bind value: %1\n").Arg(
+                pValue->GetColumn()));
+            LOG_ERROR(String("Database said: %1\n").Arg(GetLastError()));
 
-        return {};
+            return {};
+        }
     }
 
     if(!query.Execute())
@@ -577,7 +590,6 @@ bool DatabaseCassandra::VerifyAndSetupSchema()
 
         bool creating = false;
         bool archiving = false;
-        std::set<std::string> needsIndex;
         auto tableIter = fieldMap.find(objName);
         if(tableIter == fieldMap.end())
         {
@@ -594,7 +606,6 @@ bool DatabaseCassandra::VerifyAndSetupSchema()
             }
             else
             {
-                auto indexes = indexedFields[objName];
                 columns.erase("uid");
                 for(auto var : vars)
                 {
@@ -606,14 +617,6 @@ bool DatabaseCassandra::VerifyAndSetupSchema()
                         || columns[name] != type)
                     {
                         archiving = true;
-                    }
-
-                    auto indexName = String("idx_%1_%2")
-                        .Arg(objName).Arg(name).ToUtf8();
-                    if(var->IsLookupKey() &&
-                        indexes.find(indexName) == indexes.end())
-                    {
-                        needsIndex.insert(var->GetName());
                     }
                 }
             }
@@ -671,15 +674,44 @@ bool DatabaseCassandra::VerifyAndSetupSchema()
 
         }
 
-        //If we made the table or are missing an index, make them now
-        if(needsIndex.size() > 0 || creating)
+        auto indexes = indexedFields[objName];
+        std::set<std::string> checkIndexes;
+        std::set<std::string> needsIndex;
+        for(auto var : vars)
+        {
+            if(var->IsLookupKey())
+            {
+                checkIndexes.insert(var->GetName());
+            }
+        }
+
+        for(auto keyPair : metaObject.GetComboKeys())
+        {
+            auto key = keyPair.second;
+            for(auto varName : key->GetVariables())
+            {
+                checkIndexes.insert(varName);
+            }
+        }
+
+        for(auto varName : checkIndexes)
+        {
+            auto indexName = String("idx_%1_%2")
+                .Arg(objName)
+                .Arg(varName).ToLower().ToUtf8();
+            if(creating || indexes.find(indexName) == indexes.end())
+            {
+                needsIndex.insert(varName);
+            }
+        }
+
+        if(needsIndex.size() > 0)
         {
             for(size_t i = 0; i < vars.size(); i++)
             {
                 auto var = vars[i];
 
-                if(!var->IsLookupKey() ||
-                    (!creating && needsIndex.find(var->GetName()) == needsIndex.end()))
+                if(needsIndex.find(var->GetName()) == needsIndex.end())
                 {
                     continue;
                 }

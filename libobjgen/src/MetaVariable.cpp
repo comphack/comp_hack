@@ -47,7 +47,7 @@
 using namespace libobjgen;
 
 MetaVariable::MetaVariable() : mCaps(false),
-    mInherited(false), mLookupKey(false)
+    mInherited(false), mLookupKey(false), mUniqueKey(false)
 {
 }
 
@@ -79,6 +79,30 @@ bool MetaVariable::IsLookupKey() const
 void MetaVariable::SetLookupKey(const bool lookupKey)
 {
     mLookupKey = lookupKey;
+
+    //Always default to the same value when set
+    mUniqueKey = mLookupKey;
+}
+
+bool MetaVariable::IsUniqueKey() const
+{
+    return mUniqueKey;
+}
+
+bool MetaVariable::SetUniqueKey(const bool uniqueKey)
+{
+    if(!mLookupKey)
+    {
+        return false;
+    }
+
+    mUniqueKey = uniqueKey;
+    return true;
+}
+
+bool MetaVariable::IsValidLookupKey() const
+{
+    return true;
 }
 
 std::string MetaVariable::GetError() const
@@ -110,6 +134,8 @@ bool MetaVariable::Load(std::istream& stream)
         sizeof(mInherited));
     stream.read(reinterpret_cast<char*>(&mLookupKey),
         sizeof(mLookupKey));
+    stream.read(reinterpret_cast<char*>(&mUniqueKey),
+        sizeof(mUniqueKey));
 
     return stream.good();
 }
@@ -127,6 +153,8 @@ bool MetaVariable::Save(std::ostream& stream) const
             sizeof(mInherited));
         stream.write(reinterpret_cast<const char*>(&mLookupKey),
             sizeof(mLookupKey));
+        stream.write(reinterpret_cast<const char*>(&mUniqueKey),
+            sizeof(mUniqueKey));
 
         result = stream.good();
     }
@@ -507,15 +535,6 @@ std::string MetaVariable::GetAccessDeclarations(const Generator& generator,
         << generator.GetCapitalName(*this) << "("
         << GetArgument(name) << ");" << std::endl;
 
-    if(IsLookupKey())
-    {
-        ss << generator.Tab(tabLevel) << "static std::shared_ptr<" << object.GetName()
-            << "> Load" << object.GetName() << "By"
-            << generator.GetCapitalName(*this)
-            << "(const std::shared_ptr<libcomp::Database>& db, "
-            << GetArgument("val") << ");" << std::endl;
-    }
-
     return ss.str();
 }
 
@@ -539,29 +558,6 @@ std::string MetaVariable::GetAccessFunctions(const Generator& generator,
     ss << "{" << std::endl;
     ss << GetSetterCode(generator, name, GetName());
     ss << "}" << std::endl;
-
-    if(IsLookupKey())
-    {
-        ss << std::endl;
-        ss << "std::shared_ptr<" << objName << "> " << objName
-            << "::Load" << objName << "By"
-            << generator.GetCapitalName(*this)
-            << "(const std::shared_ptr<libcomp::Database>& db, "
-            << GetArgument("val") << ")" << std::endl;
-        ss << "{" << std::endl;
-        ss << generator.Tab() << "auto bind = (" << GetBindValueCode(
-            generator, "val") << "());" << std::endl;
-        ss << std::endl;
-        ss << generator.Tab() << "auto obj = std::dynamic_pointer_cast<"
-            << objName << ">(LoadObject(typeid(" << objName
-            << "), db, bind));" << std::endl;
-        ss << std::endl;
-        ss << generator.Tab() << "delete bind;" << std::endl;
-        ss << std::endl;
-        ss << generator.Tab() << "return obj;" << std::endl;
-        ss << "}" << std::endl;
-        ss << std::endl;
-    }
 
     return ss.str();
 }
@@ -609,9 +605,12 @@ std::string MetaVariable::GetAccessScriptBindings(const Generator& generator,
 
     if(IsLookupKey())
     {
-        ss << ".StaticFunc(\"Load" << objName << "By"
+        std::stringstream f;
+        f << "Load" << objName << (IsUniqueKey() ? "" : "List");
+
+        ss << ".StaticFunc(\"" << f.str() << "By"
             << generator.GetCapitalName(*this) << "\", "
-            << objName << "::Load" << objName << "By"
+            << objName << "::" << f.str() << "By"
             << generator.GetCapitalName(*this) << ")" << std::endl;
     }
     
@@ -677,7 +676,7 @@ std::string MetaVariable::GetDynamicSizeCountCode(const Generator& generator,
 
 bool MetaVariable::BaseLoad(const tinyxml2::XMLElement& element)
 {
-    for(const char *a : { "caps", "inherited", "key" })
+    for(const char *a : { "caps", "inherited", "key", "unique" })
     {
         std::string aName(a);
         const char *szAttr = element.Attribute(a);
@@ -697,6 +696,10 @@ bool MetaVariable::BaseLoad(const tinyxml2::XMLElement& element)
             else if(aName == "key")
             {
                 SetLookupKey(value);
+            }
+            else if(aName == "unique" && !SetUniqueKey(value))
+            {
+                return false;
             }
         }
     }
@@ -719,6 +722,11 @@ bool MetaVariable::BaseSave(tinyxml2::XMLElement& element) const
     if(IsLookupKey())
     {
         element.SetAttribute("key", "true");
+    }
+
+    if(IsUniqueKey())
+    {
+        element.SetAttribute("unique", "true");
     }
 
     return true;

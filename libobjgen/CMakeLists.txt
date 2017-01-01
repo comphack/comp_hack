@@ -28,6 +28,7 @@ FILE(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/api/${PROJECT_NAME})
 #GENERATE_DOCS(doc/Doxyfile.in)
 
 SET(${PROJECT_NAME}_SRCS
+    src/CombinationKey.cpp
     src/Generator.cpp
     src/GeneratorFactory.cpp
     src/GeneratorHeader.cpp
@@ -49,6 +50,7 @@ SET(${PROJECT_NAME}_SRCS
 )
 
 SET(${PROJECT_NAME}_HDRS
+    src/CombinationKey.h
     src/Generator.h
     src/GeneratorFactory.h
     src/GeneratorHeader.h

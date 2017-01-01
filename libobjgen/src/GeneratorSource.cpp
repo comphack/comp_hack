@@ -27,6 +27,7 @@
 #include "GeneratorSource.h"
 
 // libobjgen Includes
+#include "CombinationKey.h"
 #include "MetaObject.h"
 #include "MetaVariable.h"
 
@@ -431,6 +432,14 @@ std::string GeneratorSource::Generate(const MetaObject& obj)
         ss << var->GetAccessFunctions(*this, obj, GetMemberName(var));
         ss << std::endl;
 
+        if(var->IsLookupKey())
+        {
+            std::list<std::shared_ptr<MetaVariable>> vars;
+            vars.push_back(var);
+            ss << GetLookupKeyFunction(obj, vars, !var->IsUniqueKey(),
+                GetCapitalName(var));
+        }
+
         auto util = var->GetUtilityFunctions(*this, obj, GetMemberName(var));
         if(util.length() > 0)
         {
@@ -486,9 +495,24 @@ std::string GeneratorSource::Generate(const MetaObject& obj)
             << std::endl;
     }
 
-    if(obj.IsPersistent() && !GeneratePersistentObjectFunctions(obj, ss))
+    if(obj.IsPersistent())
     {
-        return "";
+        if(!GeneratePersistentObjectFunctions(obj, ss))
+        {
+            return "";
+        }
+        
+        for(auto comboKeyPair : obj.GetComboKeys())
+        {
+            auto key = comboKeyPair.second;
+            std::list<std::shared_ptr<MetaVariable>> vars;
+            for(auto varName : key->GetVariables())
+            {
+                vars.push_back(obj.GetVariable(varName));
+            }
+            ss << GetLookupKeyFunction(obj, vars, !key->IsUnique(),
+                key->GetName());
+        }
     }
 
     return ss.str();
@@ -554,6 +578,71 @@ bool GeneratorSource::GeneratePersistentObjectFunctions(const MetaObject& obj,
     ss << ParseTemplate(0, "VariablePersistentFunctions", replacements);
 
     return true;
+}
+
+std::string GeneratorSource::GetLookupKeyFunction(const MetaObject& obj,
+    const std::list<std::shared_ptr<MetaVariable>>& variables, bool returnList,
+    std::string lookupType)
+{
+    std::stringstream args;
+    std::stringstream bindings;
+
+    auto objName = obj.GetName();
+    std::map<std::string, std::string> replacements;
+    replacements["@OBJECT_NAME@"] = objName;
+    replacements["@RETURN_VAR@"] = "retval";
+    replacements["@LOOKUP_TYPE@"] = lookupType;
+
+    for(auto var : variables)
+    {
+        args << (!args.str().empty() ? ", " : "")
+            << var->GetArgument(var->GetName());
+
+        bindings << Tab() << "bindings.push_back("
+            << var->GetBindValueCode(*this, var->GetName()) << "());" << std::endl;
+    }
+
+    replacements["@ARGUMENTS@"] = args.str();
+    replacements["@BINDINGS@"] = bindings.str();
+
+    std::map<std::string, std::string> subReplacments;
+    subReplacments["@OBJECT_NAME@"] = objName;
+    subReplacments["@RETURN_VAR@"] = "retval";
+
+    if(!returnList)
+    {
+        std::stringstream ss;
+        ss << "std::shared_ptr<" << objName << ">";
+
+        replacements["@RETURN_TYPE@"] = ss.str();
+
+        replacements["@RETURN_NAME@"] = objName;
+
+        ss.str("");
+        ss << ParseTemplate(0, "VariableLookupKeySingleAssignment",
+            subReplacments);
+        replacements["@ASSIGNMENT_CODE@"] = ss.str();
+    }
+    else
+    {
+        std::stringstream ss;
+        ss << "std::list<std::shared_ptr<" << objName << ">>";
+
+        replacements["@RETURN_TYPE@"] = ss.str();
+
+        ss.str("");
+        ss << objName << "List";
+
+        replacements["@RETURN_NAME@"] = ss.str();
+
+        ss.str("");
+        ss << ParseTemplate(1, "VariableLookupKeyListAssignment",
+            subReplacments);
+        replacements["@ASSIGNMENT_CODE@"] = ss.str();
+    }
+
+    return ParseTemplate(0, "VariableLookupKeyFunctions",
+        replacements);
 }
 
 std::string GeneratorSource::GetBaseBooleanReturnValue(const MetaObject& obj,

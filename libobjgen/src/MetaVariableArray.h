@@ -53,6 +53,7 @@ public:
     virtual bool IsCoreType() const;
     virtual bool IsScriptAccessible() const;
     virtual bool IsValid() const;
+    virtual bool IsValidLookupKey() const;
 
     virtual bool Load(std::istream& stream);
     virtual bool Save(std::ostream& stream) const;

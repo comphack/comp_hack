@@ -66,6 +66,8 @@ public:
 protected:
     void SetXMLDefinition(const tinyxml2::XMLElement& root);
 
+    bool LoadComboKey(const tinyxml2::XMLDocument& doc,
+        const tinyxml2::XMLElement *pKey, bool& result);
     bool LoadMember(const tinyxml2::XMLDocument& doc, const char *szName,
         const tinyxml2::XMLElement *pMember, bool& result);
     std::shared_ptr<MetaVariable> GetVariable(const tinyxml2::XMLDocument& doc,

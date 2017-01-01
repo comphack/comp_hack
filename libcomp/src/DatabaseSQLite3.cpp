@@ -32,6 +32,7 @@
 #include "Log.h"
 
 // libobjgen Includes
+#include "CombinationKey.h"
 #include <MetaVariableString.h>
 
 // SQLite3 Includes
@@ -171,7 +172,7 @@ bool DatabaseSQLite3::Use()
 }
 
 std::list<std::shared_ptr<PersistentObject>> DatabaseSQLite3::LoadObjects(
-    std::type_index type, DatabaseBind *pValue)
+    std::type_index type, const std::list<DatabaseBind*>& pValues)
 {
     std::list<std::shared_ptr<PersistentObject>> objects;
 
@@ -183,10 +184,17 @@ std::list<std::shared_ptr<PersistentObject>> DatabaseSQLite3::LoadObjects(
 
         return {};
     }
+    
+    std::list<String> whereClauseColumns;
+    for(auto pValue : pValues)
+    {
+        auto columnName = pValue->GetColumn();
+        whereClauseColumns.push_back(String("%1 = :%1").Arg(columnName));
+    }
 
-    String sql = String("SELECT * FROM %1 WHERE %2 = :%2").Arg(
+    String sql = String("SELECT * FROM %1 WHERE %2").Arg(
         metaObject->GetName()).Arg(
-        pValue->GetColumn());
+        String::Join(whereClauseColumns, " AND "));
 
     DatabaseQuery query = Prepare(sql);
 
@@ -197,14 +205,17 @@ std::list<std::shared_ptr<PersistentObject>> DatabaseSQLite3::LoadObjects(
 
         return {};
     }
-
-    if(!pValue->Bind(query))
+    
+    for(auto pValue : pValues)
     {
-        LOG_ERROR(String("Failed to bind value: %1\n").Arg(
-            pValue->GetColumn()));
-        LOG_ERROR(String("Database said: %1\n").Arg(GetLastError()));
+        if(!pValue->Bind(query))
+        {
+            LOG_ERROR(String("Failed to bind value: %1\n").Arg(
+                pValue->GetColumn()));
+            LOG_ERROR(String("Database said: %1\n").Arg(GetLastError()));
 
-        return {};
+            return {};
+        }
     }
 
     if(!query.Execute())
@@ -256,7 +267,7 @@ bool DatabaseSQLite3::InsertSingleObject(std::shared_ptr<PersistentObject>& obj)
     }
 
     std::list<String> columnNames;
-    columnNames.push_back("uid");
+    columnNames.push_back("UID");
 
     std::list<String> columnBinds;
     columnBinds.push_back(String("'%1'").Arg(obj->GetUUID().ToString()));
@@ -334,7 +345,7 @@ bool DatabaseSQLite3::UpdateSingleObject(std::shared_ptr<PersistentObject>& obj)
         columnNames.push_back(String("%1 = :%1").Arg(value->GetColumn()));
     }
 
-    String sql = String("UPDATE %1 SET %2 WHERE uid = '%3';").Arg(
+    String sql = String("UPDATE %1 SET %2 WHERE UID = '%3';").Arg(
         metaObject->GetName()).Arg(
         String::Join(columnNames, ", ")).Arg(
         obj->GetUUID().ToString());
@@ -386,7 +397,7 @@ bool DatabaseSQLite3::DeleteSingleObject(std::shared_ptr<PersistentObject>& obj)
 
     auto metaObject = obj->GetObjectMetadata();
 
-    if (Execute(String("DELETE FROM %1 WHERE uid = '%2';")
+    if (Execute(String("DELETE FROM %1 WHERE UID = '%2';")
         .Arg(metaObject->GetName())
         .Arg(uuidStr)))
     {
@@ -500,7 +511,6 @@ bool DatabaseSQLite3::VerifyAndSetupSchema()
 
         bool creating = false;
         bool archiving = false;
-        std::set<std::string> needsIndex;
         auto tableIter = fieldMap.find(objName);
         if(tableIter == fieldMap.end())
         {
@@ -511,14 +521,13 @@ bool DatabaseSQLite3::VerifyAndSetupSchema()
             std::unordered_map<std::string,
                 String> columns = tableIter->second;
             if(columns.size() - 1 != vars.size()
-                || columns.find("uid") == columns.end())
+                || columns.find("UID") == columns.end())
             {
                 archiving = true;
             }
             else
             {
-                auto indexes = indexedFields[objName];
-                columns.erase("uid");
+                columns.erase("UID");
                 for(auto var : vars)
                 {
                     auto name = var->GetName();
@@ -528,14 +537,6 @@ bool DatabaseSQLite3::VerifyAndSetupSchema()
                         || columns[name] != type)
                     {
                         archiving = true;
-                    }
-
-                    auto indexName = String("idx_%1_%2")
-                        .Arg(objName).Arg(name).ToUtf8();
-                    if(var->IsLookupKey() &&
-                        indexes.find(indexName) == indexes.end())
-                    {
-                        needsIndex.insert(name);
                     }
                 }
             }
@@ -569,7 +570,7 @@ bool DatabaseSQLite3::VerifyAndSetupSchema()
 
             std::stringstream ss;
             ss << "CREATE TABLE " << objName
-                << " (uid blob PRIMARY KEY";
+                << " (UID string PRIMARY KEY";
             for(size_t i = 0; i < vars.size(); i++)
             {
                 auto var = vars[i];
@@ -591,16 +592,44 @@ bool DatabaseSQLite3::VerifyAndSetupSchema()
                 return false;
             }
         }
+
+        auto indexes = indexedFields[objName];
+        std::set<std::string> checkIndexes;
+        std::set<std::string> needsIndex;
+        for(auto var : vars)
+        {
+            if(var->IsLookupKey())
+            {
+                checkIndexes.insert(var->GetName());
+            }
+        }
+
+        for(auto keyPair : metaObject.GetComboKeys())
+        {
+            auto key = keyPair.second;
+            for(auto varName : key->GetVariables())
+            {
+                checkIndexes.insert(varName);
+            }
+        }
+
+        for(auto varName : checkIndexes)
+        {
+            auto indexName = String("idx_%1_%2")
+                .Arg(objName).Arg(varName).ToUtf8();
+            if(creating || indexes.find(indexName) == indexes.end())
+            {
+                needsIndex.insert(varName);
+            }
+        }
         
-        //If we made the table or are missing an index, make them now
-        if(needsIndex.size() > 0 || creating)
+        if(needsIndex.size() > 0)
         {
             for(size_t i = 0; i < vars.size(); i++)
             {
                 auto var = vars[i];
 
-                if(!var->IsLookupKey() ||
-                    (!creating && needsIndex.find(var->GetName()) == needsIndex.end()))
+                if(needsIndex.find(var->GetName()) == needsIndex.end())
                 {
                     continue;
                 }

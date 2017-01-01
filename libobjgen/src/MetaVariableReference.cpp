@@ -113,7 +113,7 @@ bool MetaVariableReference::IsScriptAccessible() const
 bool MetaVariableReference::IsValid() const
 {
     // Validating that the object exists happens elsewhere
-    return MetaObject::IsValidIdentifier(mReferenceType) && !IsLookupKey();
+    return MetaObject::IsValidIdentifier(mReferenceType);
 }
 
 bool MetaVariableReference::Load(std::istream& stream)

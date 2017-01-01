@@ -124,11 +124,11 @@ public:
      * Load multiple @ref PersistentObject instances from a single bound
      * database column and value to select upon.
      * @param type C++ type representing the object type to load
-     * @param pValue Database specific column binding
+     * @param pValues Database agnostic column bindings
      * @return List of pointers to loaded objects from the query results
      */
     virtual std::list<std::shared_ptr<PersistentObject>> LoadObjects(
-        std::type_index type, DatabaseBind *pValue) = 0;
+        std::type_index type, const std::list<DatabaseBind*>& pValues) = 0;
 
     /**
      * Load one @ref PersistentObject instance from a single bound
@@ -136,11 +136,11 @@ public:
      * down the results of @ref LoadObjects to the first record so
      * it should be used only when the value being bound to is unique.
      * @param type C++ type representing the object type to load
-     * @param pValue Database specific column binding
+     * @param pValues Database agnostic column bindings
      * @return Pointer to the first loaded object from the query results
      */
     virtual std::shared_ptr<PersistentObject> LoadSingleObject(
-        std::type_index type, DatabaseBind *pValue);
+        std::type_index type, const std::list<DatabaseBind*>& pValues);
 
     /**
      * Insert one @ref PersistentObject instance into the database.

@@ -256,11 +256,22 @@ protected:
      * Load an object from the database from a field database binding.
      * @param type C++ type representing the object type to load
      * @param db Database to load from
-     * @param pValue Pointer to a field bound to a database column
+     * @param pValues List of pointers to fields bound to database columns
      * @return Pointer to the object or nullptr if it doesn't exist
      */
     static std::shared_ptr<PersistentObject> LoadObject(std::type_index type,
-        const std::shared_ptr<Database>& db, DatabaseBind *pValue);
+        const std::shared_ptr<Database>& db, const std::list<DatabaseBind*>& pValues);
+
+    /*
+     * Load multiple objects from the database from a field database binding.
+     * @param type C++ type representing the object type to load
+     * @param db Database to load from
+     * @param pValues List of pointers to fields bound to database columns
+     * @return List of pointers objects
+     */
+    static std::list<std::shared_ptr<PersistentObject>> LoadObjects(
+        std::type_index type, const std::shared_ptr<Database>& db,
+        const std::list<DatabaseBind*>& pValues);
 
     /// Static value to be set to true if any PersistentObject type fails
     /// to register itself at runtime

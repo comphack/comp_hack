@@ -146,9 +146,12 @@ std::shared_ptr<PersistentObject> PersistentObject::LoadObjectByUUID(std::type_i
 
     if(nullptr == obj)
     {
-        auto bind = new DatabaseBindUUID("uid", uuid);
+        std::list<DatabaseBind*> bindings;
 
-        obj = LoadObject(type, db, bind);
+        auto bind = new DatabaseBindUUID("uid", uuid);
+        bindings.push_back(bind);
+
+        obj = LoadObject(type, db, bindings);
 
         delete bind;
 
@@ -164,16 +167,28 @@ std::shared_ptr<PersistentObject> PersistentObject::LoadObjectByUUID(std::type_i
 
 std::shared_ptr<PersistentObject> PersistentObject::LoadObject(
     std::type_index type, const std::shared_ptr<Database>& db,
-    DatabaseBind *pValue)
+    const std::list<DatabaseBind*>& pValues)
 {
     std::shared_ptr<PersistentObject> obj;
 
     if(nullptr != db)
     {
-        obj = db->LoadSingleObject(type, pValue);
+        obj = db->LoadSingleObject(type, pValues);
     }
 
     return obj;
+}
+
+std::list<std::shared_ptr<PersistentObject>> PersistentObject::LoadObjects(
+    std::type_index type, const std::shared_ptr<Database>& db,
+    const std::list<DatabaseBind*>& pValues)
+{
+    if(nullptr != db)
+    {
+        return db->LoadObjects(type, pValues);
+    }
+
+    return std::list<std::shared_ptr<PersistentObject>>();
 }
 
 void PersistentObject::RegisterType(std::type_index type,

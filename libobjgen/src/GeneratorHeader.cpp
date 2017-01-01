@@ -27,6 +27,7 @@
 #include "GeneratorHeader.h"
 
 // libobjgen Includes
+#include "CombinationKey.h"
 #include "MetaObject.h"
 #include "MetaVariable.h"
 #include "MetaVariableEnum.h"
@@ -116,12 +117,32 @@ std::string GeneratorHeader::GenerateClass(const MetaObject& obj)
 
         ss << var->GetAccessDeclarations(*this, obj, var->GetName());
         ss << std::endl;
+        
+        if(var->IsLookupKey())
+        {
+            std::list<std::shared_ptr<MetaVariable>> vars;
+            vars.push_back(var);
+            ss << GetLookupKeyDeclaration(obj, vars, !var->IsUniqueKey(),
+                GetCapitalName(var));
+        }
     }
 
     if(obj.IsPersistent())
     {
         std::map<std::string, std::string> replacements;
         ss << ParseTemplate(1, "VariablePersistentDeclarations", replacements);
+
+        for(auto comboKeyPair : obj.GetComboKeys())
+        {
+            auto key = comboKeyPair.second;
+            std::list<std::shared_ptr<MetaVariable>> vars;
+            for(auto varName : key->GetVariables())
+            {
+                vars.push_back(obj.GetVariable(varName));
+            }
+            ss << GetLookupKeyDeclaration(obj, vars, !key->IsUnique(),
+                key->GetName());
+        }
     }
 
     std::stringstream utilStream;
@@ -258,4 +279,48 @@ std::string GeneratorHeader::Generate(const MetaObject& obj)
     ss << "#endif // " << headerDefine << std::endl;
 
     return ss.str();
+}
+
+std::string GeneratorHeader::GetLookupKeyDeclaration(const MetaObject& obj,
+    const std::list<std::shared_ptr<MetaVariable>>& variables, bool returnList,
+    std::string lookupType)
+{
+    std::stringstream args;
+
+    auto objName = obj.GetName();
+    std::map<std::string, std::string> replacements;
+    replacements["@LOOKUP_TYPE@"] = lookupType;
+    
+    for(auto var : variables)
+    {
+        args << (!args.str().empty() ? ", " : "")
+            << var->GetArgument(var->GetName());
+    }
+
+    replacements["@ARGUMENTS@"] = args.str();
+        
+    if(!returnList)
+    {
+        std::stringstream ss2;
+        ss2 << "std::shared_ptr<" << objName << ">";
+
+        replacements["@RETURN_TYPE@"] = ss2.str();
+
+        replacements["@RETURN_NAME@"] = objName;
+    }
+    else
+    {
+        std::stringstream ss2;
+        ss2 << "std::list<std::shared_ptr<" << objName << ">>";
+
+        replacements["@RETURN_TYPE@"] = ss2.str();
+
+        ss2.str("");
+        ss2 << objName << "List";
+
+        replacements["@RETURN_NAME@"] = ss2.str();
+    }
+
+    return ParseTemplate(1, "VariableLookupKeyDeclarations",
+        replacements);
 }

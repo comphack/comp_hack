@@ -121,6 +121,14 @@ protected:
      * user entered values.
      */
     void PromptCreateAccount();
+    
+    /**
+     * Reset the values in the RegisteredServer table, pulling
+     * World information from it before servers connect and
+     * removing channel servers so they populate as they start.
+     * @return true on success, false on failure
+     */
+    bool ResetRegisteredServers();
 
     /**
      * Create a connection to a newly active socket.

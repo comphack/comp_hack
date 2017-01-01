@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="RegisteredServer">
+        <member type="u8" name="ID"/>
+        <member type="RegisteredServer*" name="Parent" key="true" unique="false"/>
+        <member type="string" name="Name" lensz="2"/>
+        <member type="enum" name="Type" size="8" default="WORLD"
+            key="true" unique="false">
+            <value>WORLD</value>
+            <value>CHANNEL</value>
+        </member>
+        <member type="enum" name="Status" size="8" default="INACTIVE">
+            <value>INACTIVE</value>
+            <value>ACTIVE</value>
+        </member>
+        <combokey name="TypeAndID" unique="true" members="Type,ID"/>
+        <combokey name="ParentAndID" unique="true" members="Parent,ID"/>
+    </object>
+</objgen>

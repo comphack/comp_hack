@@ -37,9 +37,6 @@
 #include <ReadOnlyPacket.h>
 #include <TcpConnection.h>
 
-// object Includes
-#include <WorldDescription.h>
-
 // channel Includes
 #include "ChannelServer.h"
 
@@ -78,19 +75,20 @@ std::shared_ptr<libcomp::Database> ParseDatabase(const std::shared_ptr<ChannelSe
     return server->GetDatabase(configMap, false);
 }
 
-bool Parsers::SetWorldInfo::Parse(libcomp::ManagerPacket *pPacketManager,
+bool SetWorldInfoFromPacket(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
+    libcomp::ReadOnlyPacket& p)
 {
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-
-    auto desc = server->GetWorldDescription();
-
-    if(!desc->LoadPacket(p))
+    if(p.Size() == 0)
     {
+        LOG_DEBUG("World Server connection sent an empty response."
+            "  The connection will be closed.\n");
         return false;
     }
 
+    auto worldID = p.ReadU8();
+
+    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
     auto worldDatabase = ParseDatabase(server, p);
     if(nullptr == worldDatabase)
     {
@@ -109,17 +107,49 @@ bool Parsers::SetWorldInfo::Parse(libcomp::ManagerPacket *pPacketManager,
     }
     server->SetLobbyDatabase(lobbyDatabase);
 
-    LOG_DEBUG(libcomp::String("Updating World Server description: (%1) %2\n")
-        .Arg(desc->GetID()).Arg(desc->GetName()));
+    auto svr = objects::RegisteredServer::LoadRegisteredServerByTypeAndID(lobbyDatabase,
+        objects::RegisteredServer::Type_t::WORLD, worldID);
+    if(nullptr == svr)
+    {
+        LOG_CRITICAL("World Server could not be loaded from the database.\n");
+        return false;
+    }
+
+    LOG_DEBUG(libcomp::String("Updating World Server: (%1) %2\n")
+        .Arg(svr->GetID()).Arg(svr->GetName()));
+
+    server->SetWorldRegisteredServer(svr);
+
+    if(!server->RegisterServer())
+    {
+        LOG_CRITICAL("The server failed to register with the lobby's database.\n");
+        return false;
+    }
 
     //Reply with the channel information
     libcomp::Packet reply;
 
     reply.WritePacketCode(
         InternalPacketCode_t::PACKET_SET_CHANNEL_INFO);
-    server->GetDescription()->SavePacket(reply);
+    reply.WriteU8(server->GetRegisteredServer()->GetID());
 
     connection->SendPacket(reply);
+
+    return true;
+}
+
+bool Parsers::SetWorldInfo::Parse(libcomp::ManagerPacket *pPacketManager,
+    const std::shared_ptr<libcomp::TcpConnection>& connection,
+    libcomp::ReadOnlyPacket& p) const
+{
+    // Since this is called exactly once, if at any point the packet does
+    // not parse properly, the channel cannot start and should be shutdown.
+    if(!SetWorldInfoFromPacket(pPacketManager, connection, p))
+    {
+        auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+        server->Shutdown();
+        return false;
+    }
 
     return true;
 }

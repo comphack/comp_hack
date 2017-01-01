@@ -145,14 +145,14 @@ bool DatabaseQuerySQLite3::Bind(const String& name,
 
 bool DatabaseQuerySQLite3::Bind(size_t index, const libobjgen::UUID& value)
 {
-    auto uuidStr = libcomp::String(value.ToString());
+    auto uuidStr = value.IsNull() ? "" : libcomp::String(value.ToString());
     return Bind(index, uuidStr);
 }
 
 bool DatabaseQuerySQLite3::Bind(const String& name,
     const libobjgen::UUID& value)
 {
-    auto uuidStr = libcomp::String(value.ToString());
+    auto uuidStr = value.IsNull() ? "" : libcomp::String(value.ToString());
     return Bind(name, uuidStr);
 }
 

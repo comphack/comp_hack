@@ -447,19 +447,37 @@ bool DatabaseCassandra::UpdateSingleObject(std::shared_ptr<PersistentObject>& ob
     return true;
 }
 
-bool DatabaseCassandra::DeleteSingleObject(std::shared_ptr<PersistentObject>& obj)
+bool DatabaseCassandra::DeleteObjects(std::list<std::shared_ptr<PersistentObject>>& objs)
 {
-    auto uuid = obj->GetUUID();
+    std::shared_ptr<libobjgen::MetaObject> metaObject;
 
-    if(uuid.IsNull())
+    std::list<String> uidBindings;
+    for(auto obj : objs)
     {
-        return false;
+        auto uuid = obj->GetUUID();
+
+        if(uuid.IsNull())
+        {
+            return false;
+        }
+
+        auto metaObj = obj->GetObjectMetadata();
+
+        if(nullptr == metaObject)
+        {
+            metaObject = metaObj;
+        }
+        else if(metaObject != metaObj)
+        {
+            return false;
+        }
+
+        uidBindings.push_back("?");
     }
 
-    auto metaObject = obj->GetObjectMetadata();
-
-    String cql = String("DELETE FROM %1 WHERE uid = ?").Arg(
-        String(metaObject->GetName()).ToLower());
+    String cql = String("DELETE FROM %1 WHERE uid in (%2)").Arg(
+        String(metaObject->GetName()).ToLower()).Arg(
+        String::Join(uidBindings, ", "));
 
     DatabaseQuery query = Prepare(cql);
 
@@ -471,12 +489,15 @@ bool DatabaseCassandra::DeleteSingleObject(std::shared_ptr<PersistentObject>& ob
         return false;
     }
 
-    if(!query.Bind("uid", obj->GetUUID()))
+    for(auto obj : objs)
     {
-        LOG_ERROR("Failed to bind value: uid\n");
-        LOG_ERROR(String("Database said: %1\n").Arg(GetLastError()));
+        if(!query.Bind("uid", obj->GetUUID()))
+        {
+            LOG_ERROR("Failed to bind value: uid\n");
+            LOG_ERROR(String("Database said: %1\n").Arg(GetLastError()));
 
-        return false;
+            return false;
+        }
     }
 
     if(!query.Execute())
@@ -487,7 +508,10 @@ bool DatabaseCassandra::DeleteSingleObject(std::shared_ptr<PersistentObject>& ob
         return false;
     }
 
-    obj->Unregister();
+    for(auto obj : objs)
+    {
+        obj->Unregister();
+    }
 
     return true;
 }

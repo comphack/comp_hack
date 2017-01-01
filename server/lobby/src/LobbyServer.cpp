@@ -41,6 +41,7 @@
 // Object Includes
 #include "Account.h"
 #include "LobbyConfig.h"
+#include "RegisteredServer.h"
 
 // Standard C++11 Includes
 #include <iostream>
@@ -92,6 +93,13 @@ bool LobbyServer::Initialize(std::weak_ptr<BaseServer>& self)
 
     mManagerConnection = std::shared_ptr<ManagerConnection>(
         new ManagerConnection(self, &mService, mMainWorker.GetMessageQueue()));
+
+    // Reset the registered server table and pull information from
+    // known worlds into the connection manager
+    if(!ResetRegisteredServers())
+    {
+        return false;
+    }
 
     auto connectionManager = std::dynamic_pointer_cast<libcomp::Manager>(
         mManagerConnection);
@@ -151,6 +159,12 @@ std::shared_ptr<lobby::World> LobbyServer::GetWorldByConnection(
     std::shared_ptr<libcomp::InternalConnection> connection)
 {
     return mManagerConnection->GetWorldByConnection(connection);
+}
+
+const std::shared_ptr<lobby::World> LobbyServer::RegisterWorld(
+    std::shared_ptr<lobby::World>& world)
+{
+    return mManagerConnection->RegisterWorld(world);
 }
 
 std::shared_ptr<libcomp::Database> LobbyServer::GetMainDatabase() const
@@ -453,4 +467,50 @@ void LobbyServer::PromptCreateAccount()
     {
         LOG_ERROR("Failed to create account!\n");
     }
+}
+
+bool LobbyServer::ResetRegisteredServers()
+{
+    //Set all the default World information
+    auto worldServers = objects::RegisteredServer::LoadRegisteredServerListByType(
+        mDatabase, objects::RegisteredServer::Type_t::WORLD);
+
+    for(auto worldServer : worldServers)
+    {
+        if(worldServer->GetStatus() == objects::RegisteredServer::Status_t::ACTIVE)
+        {
+            LOG_DEBUG(libcomp::String("Resetting registered world (%1) '%2' which did not exit"
+                " cleanly during the previous execution.\n")
+                .Arg(worldServer->GetID())
+                .Arg(worldServer->GetName()));
+            worldServer->SetStatus(objects::RegisteredServer::Status_t::INACTIVE);
+            if(!worldServer->Update(mDatabase))
+            {
+                LOG_CRITICAL("Registered world update failed.\n");
+                return false;
+            }
+        }
+
+        auto world = std::shared_ptr<World>(new World);
+        world->SetRegisteredServer(worldServer);
+        RegisterWorld(world);
+    }
+
+    //Delete all the channels currently registered
+    auto channelServers = objects::RegisteredServer::LoadRegisteredServerListByType(
+        mDatabase, objects::RegisteredServer::Type_t::CHANNEL);
+
+    if(channelServers.size() > 0)
+    {
+        LOG_DEBUG("Clearing the registered channels from the previous execution.\n");
+        auto objs = libcomp::PersistentObject::ToList<objects::RegisteredServer>(
+            channelServers);
+        if(!mDatabase->DeleteObjects(objs))
+        {
+            LOG_CRITICAL("Registered channel deletion failed.\n");
+            return false;
+        }
+    }
+
+    return true;
 }

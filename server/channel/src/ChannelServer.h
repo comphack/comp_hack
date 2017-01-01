@@ -30,9 +30,11 @@
 // libcomp Includes
 #include <InternalConnection.h>
 #include <BaseServer.h>
-#include <ChannelDescription.h>
 #include <ManagerConnection.h>
 #include <Worker.h>
+
+// object Includes
+#include <RegisteredServer.h>
 
 namespace channel
 {
@@ -67,17 +69,24 @@ public:
     virtual bool Initialize(std::weak_ptr<BaseServer>& self);
 
     /**
-     * Get the description of the channel read from the config.
-     * @return Pointer to the ChannelDescription
+     * Get the channel's RegisteredServer.
+     * @return Pointer to the RegisteredServer
      */
-    const std::shared_ptr<objects::ChannelDescription> GetDescription();
+    const std::shared_ptr<objects::RegisteredServer> GetRegisteredServer();
 
     /**
-     * Get the description of the world the channel is connected to.
-     * @return Pointer to the WorldDescription
+     * Get the world's RegisteredServer.
+     * @return Pointer to the RegisteredServer
      */
-    std::shared_ptr<objects::WorldDescription> GetWorldDescription();
-    
+    std::shared_ptr<objects::RegisteredServer> GetWorldRegisteredServer();
+
+    /**
+     * Set the world's RegisteredServer.
+     * @param registeredServer Pointer to the world's RegisteredServer
+     */
+    void SetWorldRegisteredServer(const std::shared_ptr<
+        objects::RegisteredServer>& registeredServer);
+
     /**
      * Get the world database.
      * @return Pointer to the world's database
@@ -89,7 +98,7 @@ public:
      * @param database Pointer to the world's database
      */
     void SetWorldDatabase(const std::shared_ptr<libcomp::Database>& database);
-    
+
     /**
      * Get the lobby database.
      * @return Pointer to the lobby's database
@@ -101,6 +110,12 @@ public:
      * @param database Pointer to the lobby's database
      */
     void SetLobbyDatabase(const std::shared_ptr<libcomp::Database>& database);
+
+    /**
+     * Register the channel with the lobby database.
+     * @return true on success, false on failure
+     */
+    bool RegisterServer();
 
 protected:
     /**
@@ -114,8 +129,8 @@ protected:
     /// Pointer to the manager in charge of connection messages.
     std::shared_ptr<ManagerConnection> mManagerConnection;
 
-    /// Pointer to the description of the world.
-    std::shared_ptr<objects::WorldDescription> mWorldDescription;
+    /// Pointer to the world's RegisteredServer.
+    std::shared_ptr<objects::RegisteredServer> mWorldRegisteredServer;
 
     /// A shared pointer to the world database used by the server.
     std::shared_ptr<libcomp::Database> mWorldDatabase;
@@ -123,8 +138,8 @@ protected:
     /// A shared pointer to the main database used by the server.
     std::shared_ptr<libcomp::Database> mLobbyDatabase;
 
-    /// Pointer to the description of the channel.
-    std::shared_ptr<objects::ChannelDescription> mDescription;
+    /// Pointer to the channel's RegisteredServer.
+    std::shared_ptr<objects::RegisteredServer> mRegisteredServer;
 };
 
 } // namespace channel

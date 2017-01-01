@@ -35,6 +35,7 @@
 
 // All libcomp PersistentObject Includes
 #include "Account.h"
+#include "RegisteredServer.h"
 
 using namespace libcomp;
 
@@ -274,6 +275,8 @@ bool PersistentObject::Initialize()
 {
     RegisterType(typeid(objects::Account), objects::Account::GetMetadata(),
         []() {  return (PersistentObject*)new objects::Account(); });
+    RegisterType(typeid(objects::RegisteredServer), objects::RegisteredServer::GetMetadata(),
+        []() {  return (PersistentObject*)new objects::RegisteredServer(); });
 
     return !sInitializationFailed;
 }

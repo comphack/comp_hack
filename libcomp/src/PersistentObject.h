@@ -220,6 +220,28 @@ public:
     static std::shared_ptr<PersistentObject> New(std::type_index type);
 
     /*
+     * Convert a list of PersistentObject derived object pointers into a
+     * list of PersistentObject pointers.
+     * @param objList List of PersistentObject derived object pointers
+     * @return List of PersistentObject pointers
+     */
+    template<class T> static std::list<std::shared_ptr<PersistentObject>>
+        ToList(std::list<std::shared_ptr<T>> objList)
+    {
+        std::list<std::shared_ptr<PersistentObject>> converted;
+        if(std::is_base_of<PersistentObject, T>::value)
+        {
+            for(auto obj : objList)
+            {
+                converted.push_back(std::dynamic_pointer_cast<
+                    PersistentObject>(obj));
+            }
+        }
+
+        return converted;
+    }
+
+    /*
      * Save a new record to the database.
      * @param db Database to load from
      * @return true on success, false on failure

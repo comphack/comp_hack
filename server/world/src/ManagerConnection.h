@@ -83,7 +83,7 @@ public:
     bool LobbyConnected();
 
     /**
-     * Remove a connection and any associated channel description
+     * Remove a connection and any associated channel
      * when no longer needed.  This should always be a channel
      * connection but should be called regardless.
      * @param connection Pointer to an internal connection

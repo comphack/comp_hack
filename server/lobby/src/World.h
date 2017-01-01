@@ -29,6 +29,7 @@
 
 // libcomp Includes
 #include <ChannelDescription.h>
+#include <Database.h>
 #include <InternalConnection.h>
 
 // object Includes
@@ -36,7 +37,7 @@
 
 namespace lobby
 {
-    
+
 /**
  * Associates a world connection to a description of the world
  * and its channels for the lobby.
@@ -49,44 +50,37 @@ public:
      * @param connection An active world connection
      */
     World(std::shared_ptr<libcomp::InternalConnection> connection);
-    
+
     /**
      * Clean up the world.
      */
     virtual ~World();
-    
-    /**
-     * Gather necessary information for the world by sending a
-     * request for the world description.
-     * @return true on success, false on failure
-     */
-    bool Initialize();
-    
+
     /**
      * Get a pointer to the world's connection.
      * @return Pointer to the world's connection
      */
     std::shared_ptr<libcomp::InternalConnection> GetConnection() const;
-    
+
     /**
      * Get a pointer to the world's description.
      * @return Pointer to the world's description
      */
     std::shared_ptr<objects::WorldDescription> GetWorldDescription() const;
-    
+
     /**
      * Get a list of pointers to the world's channel descriptions.
      * @return List of pointers to the world's channel descriptions
      */
     const std::list<std::shared_ptr<objects::ChannelDescription>> GetChannelDescriptions() const;
-    
+
     /**
      * Get a pointer to a channel description by its ID.
      * @param id ID of a channel associated to the world
      * @return Pointer to the matching channel description
      */
     std::shared_ptr<objects::ChannelDescription> GetChannelDescriptionByID(uint8_t id) const;
-    
+
     /**
      * Remove a channel description by its ID.
      * @param id ID of a channel associated to the world
@@ -95,11 +89,23 @@ public:
     bool RemoveChannelDescriptionByID(uint8_t id);
     
     /**
+     * Get the world database.
+     * @return Pointer to the world's database
+     */
+    std::shared_ptr<libcomp::Database> GetWorldDatabase() const;
+
+    /**
+     * Set the world database.
+     * @param database Pointer to the world's database
+     */
+    void SetWorldDatabase(const std::shared_ptr<libcomp::Database>& database);
+
+    /**
      * Set the world description.
      * @param worldDescription Pointer to the world's description
      */
     void SetWorldDescription(const std::shared_ptr<objects::WorldDescription>& worldDescription);
-    
+
     /**
      * Set a channel description.
      * @param channelDescription Pointer to a channel's description
@@ -112,6 +118,9 @@ private:
 
     /// Pointer to the world's description
     std::shared_ptr<objects::WorldDescription> mWorldDescription;
+
+    /// A shared pointer to the world database used by the server.
+    std::shared_ptr<libcomp::Database> mDatabase;
 
     /// List of pointers to the channel descriptions
     std::list<std::shared_ptr<objects::ChannelDescription>> mChannelDescriptions;

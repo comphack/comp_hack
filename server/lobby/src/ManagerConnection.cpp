@@ -26,11 +26,19 @@
 
 #include "ManagerConnection.h"
 
+// lobby Includes
+#include "LobbyConfig.h"
+#include "LobbyServer.h"
+
 // libcomp Includes
+#include <DatabaseConfigCassandra.h>
+#include <DatabaseConfigSQLite3.h>
 #include <Log.h>
 #include <MessageConnectionClosed.h>
 #include <MessageEncrypted.h>
 #include <MessageWorldNotification.h>
+#include <Packet.h>
+#include <PacketCodes.h>
 
 // Standard C++ 11 Includes
 #include <thread>
@@ -103,7 +111,7 @@ bool ManagerConnection::ProcessMessage(const libcomp::Message::Message *pMessage
                 auto world = GetWorldByConnection(std::dynamic_pointer_cast<libcomp::InternalConnection>(connection));
                 if (nullptr != world)
                 {
-                    return world->Initialize();
+                    return InitializeWorld(world);
                 }
                 else
                 {
@@ -131,6 +139,22 @@ bool ManagerConnection::ProcessMessage(const libcomp::Message::Message *pMessage
     }
     
     return false;
+}
+
+bool ManagerConnection::InitializeWorld(const std::shared_ptr<lobby::World>& world)
+{
+    libcomp::Packet packet;
+    packet.WritePacketCode(InternalPacketCode_t::PACKET_GET_WORLD_INFO);
+
+    auto server = std::dynamic_pointer_cast<LobbyServer>(mServer.lock());
+    if(!server->GetMainDatabase()->GetConfig()->SavePacket(packet, false))
+    {
+        return false;
+    }
+
+    world->GetConnection()->SendPacket(packet);
+
+    return true;
 }
 
 std::list<std::shared_ptr<lobby::World>> ManagerConnection::GetWorlds() const
@@ -161,8 +185,15 @@ void ManagerConnection::RemoveWorld(std::shared_ptr<lobby::World>& world)
         if(iter != mWorlds.end())
         {
             mWorlds.erase(iter);
-            LOG_INFO(libcomp::String("World connection removed: (%1) %2\n")
-                .Arg(desc->GetID()).Arg(desc->GetName()));
+            if(nullptr != desc)
+            {
+                LOG_INFO(libcomp::String("World connection removed: (%1) %2\n")
+                    .Arg(desc->GetID()).Arg(desc->GetName()));
+            }
+            else
+            {
+                LOG_WARNING("Uninitialized world connection closed.\n");
+            }
         }
     }
 }

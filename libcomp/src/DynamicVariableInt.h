@@ -33,10 +33,17 @@
 namespace libcomp
 {
 
+/**
+ * Represents a numeric variable that can be built dynamically at runtime.
+ */
 template<typename T>
 class DynamicVariableInt : public DynamicVariable
 {
 public:
+    /**
+     * Create a new dynamic variable of the templated numeric type.
+     * @param metaVariable Pointer to a MetaVariableInt<T> definition
+     */
     DynamicVariableInt(const std::shared_ptr<libobjgen::MetaVariable>&
         metaVariable) : DynamicVariable(metaVariable)
     {
@@ -44,6 +51,9 @@ public:
             metaVariable)->GetDefaultValue();
     }
 
+    /**
+     * Clean up the variable.
+     */
     virtual ~DynamicVariableInt()
     {
     }

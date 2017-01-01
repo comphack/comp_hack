@@ -33,11 +33,22 @@
 namespace libcomp
 {
 
+/**
+ * Represents a list variable that can be built dynamically at runtime.
+ */
 class DynamicVariableList : public DynamicVariable
 {
 public:
+    /**
+     * Create a new dynamic list variable.
+     * @param metaVariable Pointer to a MetaVariableList definition
+     */
     DynamicVariableList(const std::shared_ptr<libobjgen::MetaVariable>&
         metaVariable);
+
+    /**
+     * Clean up the variable.
+     */
     virtual ~DynamicVariableList();
 
     virtual bool Load(ObjectInStream& stream);

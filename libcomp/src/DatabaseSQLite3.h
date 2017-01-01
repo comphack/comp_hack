@@ -39,42 +39,90 @@ typedef struct sqlite3 sqlite3;
 namespace libcomp
 {
 
+/**
+ * Represents a SQLite3 database connection associated to a specific
+ * file via the supplied config.
+ */
 class DatabaseSQLite3 : public Database
 {
 public:
+    /**
+     * Create a new SQLite3 Database connection.
+     * @param config Pointer to a database configuration
+     */
     DatabaseSQLite3(const std::shared_ptr<objects::DatabaseConfigSQLite3>& config);
+
+    /**
+     * Close and clean up the database connection.
+     */
     virtual ~DatabaseSQLite3();
 
+    /**
+     * Open or create the database file for use.
+     * @return true on success, false on failure
+     */
     virtual bool Open();
+
+    /**
+     * Close the database connection and file.
+     * @return true on success, false on failure
+     */
     virtual bool Close();
     virtual bool IsOpen() const;
 
     virtual DatabaseQuery Prepare(const String& query);
+
+    /**
+     * Check if the database file exists.
+     * @return true if it exists, false if it does not
+     */
     virtual bool Exists();
     virtual bool Setup();
     virtual bool Use();
 
     virtual std::list<std::shared_ptr<PersistentObject>> LoadObjects(
-        std::type_index type, DatabaseBind *pValue);
+        std::type_index type, const std::list<DatabaseBind*>& pValues);
 
     virtual bool InsertSingleObject(std::shared_ptr<PersistentObject>& obj);
     virtual bool UpdateSingleObject(std::shared_ptr<PersistentObject>& obj);
     virtual bool DeleteSingleObject(std::shared_ptr<PersistentObject>& obj);
 
+    /**
+     * Verify/create any missing tables based off of @ref PersistentObject
+     * types used by the database as well as any utility tables needed.  Tables
+     * with invalid schemas will be archived in case data migration needs to
+     * take place and a replacement will be built instead and missing indexes
+     * will be created should they not exist based off of of fields marked
+     * as lookup keys in their objgen definitions.
+     * @return true on success, false on failure
+     */
     bool VerifyAndSetupSchema();
+
+    /**
+     * Check if this database is configured to use the default file
+     * for the SQLite3 database.  Non-default file connections are
+     * only responsible for verifying the schema of their own tables where-as
+     * default file connections may also have additional tables to maintain.
+     * @return true if the default file is configured, false if it is not
+     */
     bool UsingDefaultDatabaseFile();
 
 private:
+    /**
+     * Get the path to the database file to use.
+     * @return Path to the database file to use
+     */
     String GetFilepath() const;
 
+    /**
+     * Get the SQLite3 type represented by a MetaVariable type.
+     * @param var Metadata variable containing a type to conver to a SQLite3 type
+     * @return Data type string representing a SQLite3 type
+     */
     String GetVariableType(const std::shared_ptr<libobjgen::MetaVariable> var);
 
-    std::vector<char> ConvertToRawByteStream(const std::shared_ptr<libobjgen::MetaVariable>& var,
-        const std::vector<char>& columnData);
-
+    /// Pointer to the SQLite3 representation of the database file connection
     sqlite3 *mDatabase;
-
-    std::shared_ptr<objects::DatabaseConfigSQLite3> mConfig;
 };
 
 } // namespace libcomp

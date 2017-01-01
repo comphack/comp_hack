@@ -64,7 +64,7 @@ SOURCE_GROUP("Source Files\\Packets\\Internal" src/packets/internal/*)
 
 SET(${PROJECT_NAME}_PACKETS
     #Internal packets
-    src/packets/internal/SetWorldDescription.cpp      # 0x1002
+    src/packets/internal/SetWorldInfo.cpp      # 0x1002
 )
 
 ADD_EXECUTABLE(${PROJECT_NAME} ${${PROJECT_NAME}_SRCS}

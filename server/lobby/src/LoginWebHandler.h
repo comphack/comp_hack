@@ -32,6 +32,7 @@
 
 // libcomp Includes
 #include <CString.h>
+#include <Database.h>
 
 // Standard C++11 Includes
 #include <vector>
@@ -48,7 +49,7 @@ namespace lobby
 class LoginHandler : public CivetHandler
 {
 public:
-    LoginHandler();
+    LoginHandler(const std::shared_ptr<libcomp::Database>& database);
     virtual ~LoginHandler();
 
     virtual bool handleGet(CivetServer *pServer,
@@ -89,6 +90,8 @@ private:
     std::vector<char> LoadVfsFile(const libcomp::String& path);
 
     ttvfs::Root mVfs;
+
+    std::shared_ptr<libcomp::Database> mDatabase;
 };
 
 } // namespace lobby

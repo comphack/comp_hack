@@ -41,17 +41,6 @@ World::~World()
 {
 }
 
-bool World::Initialize()
-{
-    //Request world information
-    libcomp::Packet packet;
-    packet.WritePacketCode(InternalPacketCode_t::PACKET_DESCRIBE_WORLD);
-
-    mConnection->SendPacket(packet);
-
-    return true;
-}
-
 std::shared_ptr<libcomp::InternalConnection> World::GetConnection() const
 {
     return mConnection;
@@ -92,6 +81,16 @@ bool World::RemoveChannelDescriptionByID(uint8_t id)
     }
 
     return false;
+}
+
+std::shared_ptr<libcomp::Database> World::GetWorldDatabase() const
+{
+    return mDatabase;
+}
+
+void World::SetWorldDatabase(const std::shared_ptr<libcomp::Database>& database)
+{
+    mDatabase = database;
 }
 
 void World::SetWorldDescription(const std::shared_ptr<objects::WorldDescription>& worldDescription)

@@ -33,18 +33,32 @@ namespace libcomp
 namespace Message
 {
 
+/**
+ * Message type used to determine what type of @ref Manager should handle it.
+ */
 enum class MessageType
 {
-    MESSAGE_TYPE_SYSTEM,
-    MESSAGE_TYPE_PACKET,
-    MESSAGE_TYPE_CONNECTION,
+    MESSAGE_TYPE_SYSTEM,        //!< Message is a special system message type.
+    MESSAGE_TYPE_PACKET,        //!< Message is of type @ref MessagePacket.
+    MESSAGE_TYPE_CONNECTION,    //!< Message is of type @ref ConnectionMessage.
 };
 
+/**
+ * Abstract base class representing a message to be handled when received by
+ * a @ref MessageQueue.
+ */
 class Message
 {
 public:
+    /**
+     * Cleanup the message.
+     */
     virtual ~Message() { }
 
+    /**
+     * Get the message's type.
+     * @return The message's type.
+     */
     virtual MessageType GetType() const = 0;
 };
 

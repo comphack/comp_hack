@@ -28,14 +28,13 @@
 
 using namespace libcomp;
 
-std::shared_ptr<Database> Database::sMain = nullptr;
+Database::Database(const std::shared_ptr<objects::DatabaseConfig>& config)
+{
+    mConfig = config;
+}
 
 Database::~Database()
 {
-    if(sMain.get() == this)
-    {
-        sMain = nullptr;
-    }
 }
 
 bool Database::Execute(const String& query)
@@ -48,14 +47,9 @@ String Database::GetLastError() const
     return mError;
 }
 
-const std::shared_ptr<Database> Database::GetMainDatabase()
+std::shared_ptr<objects::DatabaseConfig> Database::GetConfig() const
 {
-    return sMain;
-}
-
-void Database::SetMainDatabase(std::shared_ptr<Database> database)
-{
-    sMain = database;
+    return mConfig;
 }
 
 bool Database::TableHasRows(const String& table)
@@ -89,9 +83,9 @@ bool Database::TableHasRows(const String& table)
 }
 
 std::shared_ptr<PersistentObject> Database::LoadSingleObject(std::type_index type,
-    DatabaseBind *pValue)
+    const std::list<DatabaseBind*>& pValues)
 {
-    auto objects = LoadObjects(type, pValue);
+    auto objects = LoadObjects(type, pValues);
 
     return objects.size() > 0 ? objects.front() : nullptr;
 }

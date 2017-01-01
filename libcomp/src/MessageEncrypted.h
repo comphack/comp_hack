@@ -41,17 +41,34 @@ class TcpConnection;
 namespace Message
 {
 
+/**
+ * Message signifying that a connection has been encrypted.  This
+ * acts as a signal to start sending messages between servers.
+ */
 class Encrypted : public ConnectionMessage
 {
 public:
+    /**
+     * Create the message.
+     * @param connection The encrypted connection
+     */
     Encrypted(const std::shared_ptr<TcpConnection>& connection);
+
+    /**
+     * Cleanup the message.
+     */
     virtual ~Encrypted();
 
+    /**
+     * Get the encrypted connection.
+     * @return The encrypted connection
+     */
     std::shared_ptr<TcpConnection> GetConnection() const;
 
     virtual ConnectionMessageType GetConnectionMessageType() const;
 
 private:
+    /// The encrypted connection
     std::shared_ptr<TcpConnection> mConnection;
 };
 

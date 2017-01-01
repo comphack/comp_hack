@@ -40,10 +40,20 @@ namespace libcomp
 namespace Message
 {
 
+/**
+ * Message that acts as a check to see if a server is responding.
+ */
 class Pong : public Message
 {
 public:
+    /**
+     * Create the message.
+     */
     Pong();
+
+    /**
+     * Cleanup the message.
+     */
     virtual ~Pong();
 
     virtual MessageType GetType() const;

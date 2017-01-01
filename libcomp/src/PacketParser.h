@@ -43,12 +43,31 @@ namespace libcomp
 
 class ManagerPacket;
 
+/**
+ * Class responsible for parsing and handling packet.
+ */
 class PacketParser
 {
 public:
+    /**
+     * Create the parser.
+     */
     PacketParser() { }
+
+    /**
+     * Clean up the parser.
+     */
     virtual ~PacketParser() { }
 
+    /**
+     * Parse and handle a packet.  This should be implemented by
+     * multiple different parser classes that are registerd using
+     * the PACKET_PARSER_DECL(name) command.
+     * @param pPacketManager Manager that received the packet
+     * @param connection Connection that sent the pacekt
+     * @param p Packet to parse and handle
+     * @return true on success, false on failure
+     */
     virtual bool Parse(ManagerPacket *pPacketManager,
         const std::shared_ptr<libcomp::TcpConnection>& connection,
         libcomp::ReadOnlyPacket& p) const = 0;

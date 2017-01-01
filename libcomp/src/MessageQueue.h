@@ -34,10 +34,20 @@
 namespace libcomp
 {
 
+/**
+ * A thread safe collection of @ref Message instances to be created and
+ * handled by a server. Messages queues are shared by both server
+ * @ref Worker instances as well as each @ref EncryptedConnection that
+ * connects to the server but is not limited to this usage.
+ */
 template<class T>
 class MessageQueue
 {
 public:
+    /**
+     * Enqueue a message.
+     * @param Message to add
+     */
     void Enqueue(T item)
     {
         mQueueLock.lock();
@@ -52,6 +62,10 @@ public:
         }
     }
 
+    /**
+     * Enqueue multiple messages.
+     * @param Messages to add
+     */
     void Enqueue(std::list<T>& items)
     {
         mQueueLock.lock();
@@ -66,6 +80,10 @@ public:
         }
     }
 
+    /**
+     * Dequeue the first message added and wait if empty.
+     * @return The first message added
+     */
     T Dequeue()
     {
         mQueueLock.lock();
@@ -85,6 +103,10 @@ public:
         return item;
     }
 
+    /**
+     * Dequeue all the messages and wait if its empty.
+     * @param List to add the messages to
+     */
     void DequeueAll(std::list<T>& destinationQueue)
     {
         std::list<T> tempQueue;
@@ -105,6 +127,10 @@ public:
         destinationQueue.splice(destinationQueue.end(), tempQueue);
     }
 
+    /**
+     * Dequeue all the current messages.
+     * @param List to add the messages to
+     */
     void DequeueAny(std::list<T>& destinationQueue)
     {
         std::list<T> tempQueue;
@@ -117,9 +143,16 @@ public:
     }
 
 private:
+    /// The list of messages
     std::list<T> mQueue;
+
+    /// Mutex lock to use when modifying the queue
     std::mutex mQueueLock;
+
+    /// Mutix lock to use when waiting for a message to be queued
     std::mutex mEmptyConditionLock;
+
+    /// Blocking condition to wait for when no messages are queued
     std::condition_variable mEmptyCondition;
 };
 

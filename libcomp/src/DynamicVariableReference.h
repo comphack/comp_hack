@@ -33,11 +33,22 @@
 namespace libcomp
 {
 
+/**
+ * Represents a reference variable that can be built dynamically at runtime.
+ */
 class DynamicVariableReference : public DynamicVariable
 {
 public:
+    /**
+     * Create a new dynamic reference variable.
+     * @param metaVariable Pointer to a MetaVariableReference definition
+     */
     DynamicVariableReference(const std::shared_ptr<libobjgen::MetaVariable>&
         metaVariable);
+
+    /**
+     * Clean up the variable.
+     */
     virtual ~DynamicVariableReference();
 
     virtual bool Load(ObjectInStream& stream);

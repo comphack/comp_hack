@@ -27,6 +27,7 @@
 #include "MetaObjectXmlParser.h"
 
 // MetaVariable Types
+#include "CombinationKey.h"
 #include "MetaVariable.h"
 #include "MetaVariableArray.h"
 #include "MetaVariableEnum.h"
@@ -184,7 +185,7 @@ bool MetaObjectXmlParser::LoadMembers(const std::string& object,
     //Base objects override the need for member variables
     bool result = mObject->mBaseObject.length() > 0;
     bool error = false;
-            
+    
     const tinyxml2::XMLElement *pMember = root.FirstChildElement();
 
     while(!error && nullptr != pMember)
@@ -195,6 +196,21 @@ bool MetaObjectXmlParser::LoadMembers(const std::string& object,
         }
 
         pMember = pMember->NextSiblingElement();
+    }
+    
+    if(mObject->IsPersistent())
+    {
+        const tinyxml2::XMLElement *comboKey = root.FirstChildElement();
+
+        while(!error && nullptr != comboKey)
+        {
+            if(std::string("combokey") == comboKey->Name())
+            {
+                error = error || LoadComboKey(doc, comboKey, result);
+            }
+
+            comboKey = comboKey->NextSiblingElement();
+        }
     }
 
     if(!error && mObject->mVariables.empty() && mObject->mBaseObject.empty())
@@ -217,7 +233,7 @@ bool MetaObjectXmlParser::LoadMembers(const std::string& object,
     }
 
     mError.clear();
-    return true;
+    return mObject->IsValid();
 }
 
 bool MetaObjectXmlParser::FinalizeObjectAndReferences(const std::string& object)
@@ -303,6 +319,39 @@ bool MetaObjectXmlParser::FinalizeObjectAndReferences(const std::string& object)
     }
 
     mObject = GetKnownObject(object);
+
+    //Validate the comination keys against the variables
+    for(auto comboKeyPair : mObject->GetComboKeys())
+    {
+        auto key = comboKeyPair.second;
+        for(auto varName : key->GetVariables())
+        {
+            auto var = mObject->GetVariable(varName);
+            if(nullptr == var)
+            {
+                std::stringstream ss;
+                ss << "Object combo key '" << key->GetName()
+                    << "' contains member name '" << varName
+                    << "' that is not valid: " << object;
+
+                mError = ss.str();
+
+                return false;
+            }
+            else if(!var->IsValidLookupKey())
+            {
+                std::stringstream ss;
+                ss << "Object combo key '" << key->GetName()
+                    << "' specifies member '" << varName
+                    << "' that is not valid as a lookup key: " << object;
+
+                mError = ss.str();
+
+                return false;
+            }
+        }
+    }
+
     if(HasCircularReference(mObject, std::set<std::string>()))
     {
         std::stringstream ss;
@@ -426,6 +475,71 @@ void MetaObjectXmlParser::SetXMLDefinition(const tinyxml2::XMLElement& root)
     std::stringstream ss;
     ss << printer.CStr();
     mObjectXml[mObject->GetName()] = ss.str();
+}
+
+bool MetaObjectXmlParser::LoadComboKey(const tinyxml2::XMLDocument& doc,
+    const tinyxml2::XMLElement *pKey, bool& result)
+{
+    (void)doc;
+
+    const char *szKeyName = pKey->Attribute("name");
+    const char *szMembers = pKey->Attribute("members");
+
+    if(nullptr == szKeyName || nullptr == szMembers)
+    {
+        std::stringstream ss;
+        ss << "Object '" << mObject->GetName()
+            << "' has a combo key with a missing name or member attribute.";
+
+        mError = ss.str();
+    }
+    else if(!mObject->IsValidIdentifier(szKeyName))
+    {
+        std::stringstream ss;
+        ss << "Combo key '" << szKeyName << "' on object '"
+            << mObject->GetName() << "' does not have a valid name.";
+
+        mError = ss.str();
+    }
+    else if(nullptr != mObject->GetComboKey(szKeyName))
+    {
+        std::stringstream ss;
+        ss << "Combo key '" << szKeyName << "' on object '"
+            << mObject->GetName() << "' is specified more than once.";
+
+        mError = ss.str();
+    }
+    else
+    {
+        auto key = std::shared_ptr<CombinationKey>(new CombinationKey);
+        key->SetName(szKeyName);
+
+        std::stringstream memberStream(szMembers);
+
+        std::string member;
+        while(std::getline(memberStream, member, ','))
+        {
+            result &= key->AddVariable(member);
+        }
+
+        const char *szUnique = pKey->Attribute("unique");
+        key->SetUnique(nullptr != szUnique && Generator::GetXmlAttributeBoolean(szUnique));
+
+        if(key->GetVariables().size() == 0)
+        {
+            std::stringstream ss;
+            ss << "Combo key '" << szKeyName << "' on object '"
+                << mObject->GetName() << "' does not specify any member variables.";
+
+            mError = ss.str();
+        }
+        else
+        {
+            mObject->SetComboKey(key);
+        }
+    }
+
+    return !mError.empty();
 }
 
 bool MetaObjectXmlParser::LoadMember(const tinyxml2::XMLDocument& doc,

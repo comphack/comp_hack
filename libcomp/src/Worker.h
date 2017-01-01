@@ -42,47 +42,99 @@
 namespace libcomp
 {
 
+/**
+ * Generic worker assigned to a message queue used to handle messages as
+ * they are received.  Workers can run syncronously or in their own thread
+ * and should be shutdown at the same time the executing server does.
+ * @sa BaseServer
+ */
 class Worker
 {
 public:
+    /**
+     * Create a new worker.
+     */
     Worker();
+
+    /**
+     * Cleanup the worker.
+     */
     virtual ~Worker();
 
     /**
      * Add a manager to process messages.
+     * @param manager A message manager
      */
     void AddManager(const std::shared_ptr<Manager>& manager);
 
     /**
-     * @brief Start the worker thread.
+     * Loop until stopped, making a call to @ref Worker::Run.
+     * @param blocking If false a new thread will be started
+     *  to run this function asynchronously
      */
     void Start(bool blocking = false);
 
     /**
-     * @brief Main loop of the worker thread.
+     * Wait for a message to enter the queue then handle it
+     * with the appropriate @ref Manager configured for the
+     * worker.
+     * @param pMessageQueue Queue to check for messages
      */
     virtual void Run(libcomp::MessageQueue<
         libcomp::Message::Message*> *pMessageQueue);
 
+    /**
+     * Signal that the worker should shutdown by sending a
+     * @ref Message::Shutdown.
+     */
     virtual void Shutdown();
+
+    /**
+     * Join the thread used for asynchronous execution.
+     */
     virtual void Join();
 
+    /**
+     * Check if the worker is currently running.
+     * @return true if it is running, false if it is not
+     */
     bool IsRunning() const;
 
+    /**
+     * Get the message queue assinged to the worker.
+     * @return Assigned message queue
+     */
     std::shared_ptr<libcomp::MessageQueue<
         libcomp::Message::Message*>> GetMessageQueue() const;
 
+    /**
+     * Get the number of active references to the message queue
+     * assigned to the worker.
+     * @sa BaseServer::GetNextConnectionWorker
+     * @return The number of active references to the message queue
+     */
     long AssignmentCount() const;
 
 protected:
+    /**
+     * Clean up the worker, deleting the thread if it exists and resetting
+     * the message queue.  This is called by the destructor.
+     */
     virtual void Cleanup();
 
 private:
+    /// Signifier that the worker should continue running
     bool mRunning;
+
+    /// Message queue to retrieve messages from
     std::shared_ptr<libcomp::MessageQueue<
         libcomp::Message::Message*>> mMessageQueue;
+
+    /// Map of pointers to message handlers mapped by message type
     EnumMap<Message::MessageType,
         std::shared_ptr<Manager>> mManagers;
+
+    /// Thread used to handle asynchronous execution
     std::thread *mThread;
 };
 

@@ -40,10 +40,20 @@ namespace libcomp
 namespace Message
 {
 
+/**
+ * Message that signifies that a @ref BaseServer is shutting down.
+ */
 class Shutdown : public Message
 {
 public:
+    /**
+     * Create the message.
+     */
     Shutdown();
+
+    /**
+     * Cleanup the message.
+     */
     virtual ~Shutdown();
 
     virtual MessageType GetType() const;

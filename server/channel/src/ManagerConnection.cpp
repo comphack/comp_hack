@@ -109,7 +109,7 @@ void ManagerConnection::RequestWorldDescription()
     {
         //Request world information
         libcomp::Packet packet;
-        packet.WritePacketCode(InternalPacketCode_t::PACKET_DESCRIBE_WORLD);
+        packet.WritePacketCode(InternalPacketCode_t::PACKET_GET_WORLD_INFO);
 
         mWorldConnection->SendPacket(packet);
     }

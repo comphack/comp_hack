@@ -33,19 +33,44 @@
 namespace libcomp
 {
 
+/**
+ * Represents a dedicated connection type for a lobby server in charge
+ * of game client authentication and communication prior to connecting
+ * to a world channel server.
+ */
 class LobbyConnection : public libcomp::EncryptedConnection
 {
 public:
+    /**
+     * Connection mode used to specify normal communications or
+     * special actions both servers understand.
+     */
     enum class ConnectionMode_t
     {
-        MODE_NORMAL,
-        MODE_PING,
-        MODE_WORLD_UP,
+        MODE_NORMAL,    //!< Normal communication
+        MODE_PING,      //!< Servers should send ping/pong messages
+        MODE_WORLD_UP,  //!< A world is communicating that wants
+                        //!< to connect to the lobby
     };
 
+    /**
+     * Create a new lobby connection.
+     * @param io_service ASIO service to manage this connection.
+     * @param mode What mode should the connection act in?
+     */
     LobbyConnection(asio::io_service& io_service,
         ConnectionMode_t mode = ConnectionMode_t::MODE_NORMAL);
+
+    /**
+     * Create a new lobby connection.
+     * @param socket Socket provided by the server for the new client.
+     * @param pDiffieHellman Asymmetric encryption information.
+     */
     LobbyConnection(asio::ip::tcp::socket& socket, DH *pDiffieHellman);
+
+    /**
+     * Cleanup the connection object.
+     */
     virtual ~LobbyConnection();
 
     virtual void ConnectionSuccess();
@@ -53,8 +78,12 @@ public:
 protected:
     virtual bool ParseExtensionConnection(libcomp::Packet& packet);
 
+    /**
+     * Just parse the extension.
+     */
     void ParseExtension(libcomp::Packet& packet);
 
+    /// The connection's connection mode.
     ConnectionMode_t mMode;
 };
 

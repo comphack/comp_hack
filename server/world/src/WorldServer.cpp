@@ -27,6 +27,8 @@
 #include "WorldServer.h"
 
 // libcomp Includes
+#include <DatabaseConfigCassandra.h>
+#include <DatabaseConfigSQLite3.h>
 #include <InternalConnection.h>
 #include <LobbyConnection.h>
 #include <Log.h>
@@ -52,6 +54,26 @@ bool WorldServer::Initialize(std::weak_ptr<BaseServer>& self)
         return false;
     }
 
+    auto conf = std::dynamic_pointer_cast<objects::WorldConfig>(mConfig);
+    mDescription->SetID(conf->GetID());
+    mDescription->SetName(conf->GetName());
+    
+    libcomp::EnumMap<objects::ServerConfig::DatabaseType_t,
+        std::shared_ptr<objects::DatabaseConfig>> configMap;
+
+    configMap[objects::ServerConfig::DatabaseType_t::SQLITE3]
+        = conf->GetSQLite3Config().Get();
+
+    configMap[objects::ServerConfig::DatabaseType_t::CASSANDRA]
+        = conf->GetCassandraConfig().Get();
+
+    mDatabase = GetDatabase(configMap, true);
+
+    if(nullptr == mDatabase)
+    {
+        return false;
+    }
+
     asio::io_service service;
 
     // Connect to the world server.
@@ -64,10 +86,6 @@ bool WorldServer::Initialize(std::weak_ptr<BaseServer>& self)
 
     lobbyConnection->SetSelf(lobbyConnection);
     lobbyConnection->SetMessageQueue(messageQueue);
-
-    auto conf = std::dynamic_pointer_cast<objects::WorldConfig>(mConfig);
-    mDescription->SetID(conf->GetID());
-    mDescription->SetName(conf->GetName());
 
     lobbyConnection->Connect(conf->GetLobbyIP(), conf->GetLobbyPort(), false);
 
@@ -106,10 +124,10 @@ bool WorldServer::Initialize(std::weak_ptr<BaseServer>& self)
     auto connectionManager = std::dynamic_pointer_cast<libcomp::Manager>(mManagerConnection);
 
     auto packetManager = std::shared_ptr<libcomp::ManagerPacket>(new libcomp::ManagerPacket(self));
-    packetManager->AddParser<Parsers::DescribeWorld>(to_underlying(
-        InternalPacketCode_t::PACKET_DESCRIBE_WORLD));
-    packetManager->AddParser<Parsers::SetChannelDescription>(to_underlying(
-        InternalPacketCode_t::PACKET_SET_CHANNEL_DESCRIPTION));
+    packetManager->AddParser<Parsers::GetWorldInfo>(to_underlying(
+        InternalPacketCode_t::PACKET_GET_WORLD_INFO));
+    packetManager->AddParser<Parsers::SetChannelInfo>(to_underlying(
+        InternalPacketCode_t::PACKET_SET_CHANNEL_INFO));
 
     //Add the managers to the main worker.
     mMainWorker.AddManager(packetManager);
@@ -167,6 +185,21 @@ bool WorldServer::RemoveChannelDescription(const std::shared_ptr<libcomp::Intern
     }
 
     return false;
+}
+
+std::shared_ptr<libcomp::Database> WorldServer::GetWorldDatabase() const
+{
+    return mDatabase;
+}
+   
+std::shared_ptr<libcomp::Database> WorldServer::GetLobbyDatabase() const
+{
+    return mLobbyDatabase;
+}
+
+void WorldServer::SetLobbyDatabase(const std::shared_ptr<libcomp::Database>& database)
+{
+    mLobbyDatabase = database;
 }
 
 std::shared_ptr<libcomp::TcpConnection> WorldServer::CreateConnection(

@@ -38,7 +38,7 @@
 
 namespace world
 {
-    
+
 /**
  * Class to handle messages pertaining to connecting to
  * the lobby or channels.
@@ -51,25 +51,25 @@ public:
      * @param server Pointer to the server that uses this manager
      */
     ManagerConnection(std::weak_ptr<libcomp::BaseServer> server);
-    
+
     /**
      * Clean up the manager.
      */
     virtual ~ManagerConnection();
-    
+
     /**
      * Get the different types of messages handled by this manager.
      * @return List of supported message types
      */
     virtual std::list<libcomp::Message::MessageType> GetSupportedTypes() const;
-    
+
     /**
      * Process a message from the queue.
      * @param pMessage Message to be processed
      * @return true on success, false on failure
      */
     virtual bool ProcessMessage(const libcomp::Message::Message *pMessage);
-    
+
     /**
      * Get a pointer to the lobby connection.
      * @return Pointer to the lobby connection
@@ -81,7 +81,7 @@ public:
      * @return true if connected, false if not connected
      */
     bool LobbyConnected();
-    
+
     /**
      * Remove a connection and any associated channel description
      * when no longer needed.  This should always be a channel

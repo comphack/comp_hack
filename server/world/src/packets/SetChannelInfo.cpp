@@ -1,10 +1,10 @@
 /**
- * @file server/world/src/packets/SetChannelDescription.cpp
+ * @file server/world/src/packets/SetChannelInfo.cpp
  * @ingroup world
  *
  * @author HACKfrost
  *
- * @brief Parser to handle describing the world for the lobby.
+ * @brief Parser to handle detailing the world for the lobby.
  *
  * This file is part of the World Server (world).
  *
@@ -41,7 +41,7 @@
 
 using namespace world;
 
-bool Parsers::SetChannelDescription::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::SetChannelInfo::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {
@@ -71,7 +71,7 @@ bool Parsers::SetChannelDescription::Parse(libcomp::ManagerPacket *pPacketManage
 
     libcomp::Packet packet;
     packet.WritePacketCode(
-        InternalPacketCode_t::PACKET_SET_CHANNEL_DESCRIPTION);
+        InternalPacketCode_t::PACKET_SET_CHANNEL_INFO);
     packet.WriteU8(to_underlying(
         InternalPacketAction_t::PACKET_ACTION_UPDATE));
     desc->SavePacket(packet);

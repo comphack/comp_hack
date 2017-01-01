@@ -36,7 +36,7 @@ namespace channel
 namespace Parsers
 {
 
-PACKET_PARSER_DECL(SetWorldDescription);               // 0x1002
+PACKET_PARSER_DECL(SetWorldInfo);               // 0x1002
 
 } // namespace Parsers
 

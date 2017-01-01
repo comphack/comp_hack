@@ -51,12 +51,12 @@ public:
      */
     LobbyServer(std::shared_ptr<objects::ServerConfig> config,
         const libcomp::String& configPath, bool unitTestMode);
-    
+
     /**
      * Clean up the server.
      */
     virtual ~LobbyServer();
-    
+
     /**
      * Initialize the database connection and do anything else that can fail
      * to execute that needs to be handled outside of a constructor.  This
@@ -66,19 +66,25 @@ public:
      * @return true on success, false on failure
      */
     virtual bool Initialize(std::weak_ptr<BaseServer>& self);
-    
+
     /**
      * Get a list of pointers to the connected worlds.
      * @return List of pointers to the connected worlds
      */
     std::list<std::shared_ptr<lobby::World>> GetWorlds();
-    
+
     /**
      * Get information about a connected world by its connection.
      * @param connection Pointer to the world's connection.
      * @return Pointer to the connected world.
      */
     std::shared_ptr<lobby::World> GetWorldByConnection(std::shared_ptr<libcomp::InternalConnection> connection);
+    
+    /**
+     * Get the main database.
+     * @return Pointer to the main database
+     */
+    std::shared_ptr<libcomp::Database> GetMainDatabase() const;
 
 protected:
     /**
@@ -87,7 +93,7 @@ protected:
      * @return true on success, false on failure
      */
     bool InitializeTestMode();
-    
+
     /**
      * Create the first account when none currently exist
      * in the connected database via PromptCreateAccount.
@@ -95,13 +101,13 @@ protected:
      * should they want to here.
      */
     void CreateFirstAccount();
-    
+
     /**
      * Prompt for and create an account via pre-populated or
      * user entered values.
      */
     void PromptCreateAccount();
-    
+
     /**
      * Create a connection to a newly active socket.
      * @param socket A new socket connection.
@@ -109,6 +115,9 @@ protected:
      */
     virtual std::shared_ptr<libcomp::TcpConnection> CreateConnection(
         asio::ip::tcp::socket& socket);
+
+    /// A shared pointer to the main database used by the server.
+    std::shared_ptr<libcomp::Database> mDatabase;
 
     /// Pointer to the manager in charge of connection messages.
     std::shared_ptr<ManagerConnection> mManagerConnection;

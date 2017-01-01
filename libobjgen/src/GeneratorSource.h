@@ -40,7 +40,11 @@ public:
 
 private:
     bool GeneratePersistentObjectFunctions(const MetaObject& obj, std::stringstream& ss);
-    std::string GetBaseBooleanReturnValue(const MetaObject& obj, std::string function, std::string defaultValue = "true");
+    std::string GetLookupKeyFunction(const MetaObject& obj,
+        const std::list<std::shared_ptr<MetaVariable>>& variables,
+        bool returnList, std::string lookupType);
+    std::string GetBaseBooleanReturnValue(const MetaObject& obj, std::string function,
+        std::string defaultValue = "true");
 };
 
 } // namespace libobjgen

@@ -48,29 +48,13 @@ BaseServer::BaseServer(std::shared_ptr<objects::ServerConfig> config, const Stri
 bool BaseServer::Initialize(std::weak_ptr<BaseServer>& self)
 {
     mSelf = self;
-    
-    std::shared_ptr<objects::DatabaseConfig> dbConfig;
     switch(mConfig->GetDatabaseType())
     {
         case objects::ServerConfig::DatabaseType_t::SQLITE3:
-            {
-                LOG_DEBUG("Using SQLite3 Database.\n");
-
-                auto sqlConfig = mConfig->GetSQLite3Config().Get();
-                mDatabase = std::shared_ptr<libcomp::Database>(
-                    new libcomp::DatabaseSQLite3(sqlConfig));
-                dbConfig = sqlConfig;
-            }
+            LOG_DEBUG("Using SQLite3 Database.\n");
             break;
         case objects::ServerConfig::DatabaseType_t::CASSANDRA:
-            {
-                LOG_DEBUG("Using Cassandra Database.\n");
-
-                auto cassandraConfig = mConfig->GetCassandraConfig().Get();
-                mDatabase = std::shared_ptr<libcomp::Database>(
-                    new libcomp::DatabaseCassandra(cassandraConfig));
-                dbConfig = cassandraConfig;
-            }
+            LOG_DEBUG("Using Cassandra Database.\n");
             break;
         default:
             LOG_CRITICAL("Invalid database type specified.\n");
@@ -78,25 +62,75 @@ bool BaseServer::Initialize(std::weak_ptr<BaseServer>& self)
             break;
     }
 
-    mDatabase->SetMainDatabase(mDatabase);
-
-    // Open the database.
-    if(!mDatabase->Open() || !mDatabase->IsOpen())
-    {
-        LOG_CRITICAL("Failed to open database.\n");
-        return false;
-    }
-
-    if(!mDatabase->Setup())
-    {
-        LOG_CRITICAL("Failed to init database.\n");
-        return false;
-    }
-
     // Create the generic workers
     CreateWorkers();
 
     return true;
+}
+
+std::shared_ptr<Database> BaseServer::GetDatabase(
+    const EnumMap<objects::ServerConfig::DatabaseType_t,
+    std::shared_ptr<objects::DatabaseConfig>>& configMap, bool performSetup)
+{
+    auto type = mConfig->GetDatabaseType();
+    
+    auto configIter = configMap.find(type);
+    bool configExists = configIter != configMap.end() &&
+        configIter->second != nullptr;
+
+    std::shared_ptr<Database> db;
+    switch(type)
+    {
+        case objects::ServerConfig::DatabaseType_t::SQLITE3:
+            if(configExists)
+            {
+                auto sqlConfig = std::dynamic_pointer_cast<
+                    objects::DatabaseConfigSQLite3>(configIter->second);
+                db = std::shared_ptr<libcomp::Database>(
+                    new libcomp::DatabaseSQLite3(sqlConfig));
+            }
+            else
+            {
+                LOG_CRITICAL("No SQLite3 Database configuration specified.\n");
+            }
+            break;
+        case objects::ServerConfig::DatabaseType_t::CASSANDRA:
+            if(configExists)
+            {
+                auto cassandraConfig = std::dynamic_pointer_cast<
+                    objects::DatabaseConfigCassandra>(configIter->second);
+                db = std::shared_ptr<libcomp::Database>(
+                    new libcomp::DatabaseCassandra(cassandraConfig));
+            }
+            else
+            {
+                LOG_CRITICAL("No Cassandra Database configuration specified.\n");
+            }
+            break;
+        default:
+            LOG_CRITICAL("Invalid database type specified.\n");
+            break;
+    }
+
+    if(!db)
+    {
+        return nullptr;
+    }
+
+    // Open the database.
+    if(!db->Open() || !db->IsOpen())
+    {
+        LOG_CRITICAL("Failed to open database.\n");
+        return nullptr;
+    }
+
+    if(performSetup && !db->Setup())
+    {
+        LOG_CRITICAL("Failed to init database.\n");
+        return nullptr;
+    }
+
+    return db;
 }
 
 BaseServer::~BaseServer()

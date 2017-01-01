@@ -33,11 +33,22 @@
 namespace libcomp
 {
 
+/**
+ * Represents a string variable that can be built dynamically at runtime.
+ */
 class DynamicVariableString : public DynamicVariable
 {
 public:
+    /**
+     * Create a new dynamic string variable.
+     * @param metaVariable Pointer to a MetaVariableString definition
+     */
     DynamicVariableString(const std::shared_ptr<libobjgen::MetaVariable>&
         metaVariable);
+
+    /**
+     * Clean up the variable.
+     */
     virtual ~DynamicVariableString();
 
     virtual bool Load(ObjectInStream& stream);

@@ -50,12 +50,12 @@ public:
      * @param configPath File path to the location of the config to be loaded.
      */
     ChannelServer(std::shared_ptr<objects::ServerConfig> config, const libcomp::String& configPath);
-    
+
     /**
      * Clean up the server.
      */
     virtual ~ChannelServer();
-    
+
     /**
      * Initialize the database connection and do anything else that can fail
      * to execute that needs to be handled outside of a constructor.  This
@@ -65,18 +65,42 @@ public:
      * @return true on success, false on failure
      */
     virtual bool Initialize(std::weak_ptr<BaseServer>& self);
-    
+
     /**
      * Get the description of the channel read from the config.
      * @return Pointer to the ChannelDescription
      */
     const std::shared_ptr<objects::ChannelDescription> GetDescription();
-    
+
     /**
      * Get the description of the world the channel is connected to.
      * @return Pointer to the WorldDescription
      */
     std::shared_ptr<objects::WorldDescription> GetWorldDescription();
+    
+    /**
+     * Get the world database.
+     * @return Pointer to the world's database
+     */
+    std::shared_ptr<libcomp::Database> GetWorldDatabase() const;
+
+    /**
+     * Set the world database.
+     * @param database Pointer to the world's database
+     */
+    void SetWorldDatabase(const std::shared_ptr<libcomp::Database>& database);
+    
+    /**
+     * Get the lobby database.
+     * @return Pointer to the lobby's database
+     */
+    std::shared_ptr<libcomp::Database> GetLobbyDatabase() const;
+
+    /**
+     * Set the lobby database.
+     * @param database Pointer to the lobby's database
+     */
+    void SetLobbyDatabase(const std::shared_ptr<libcomp::Database>& database);
 
 protected:
     /**
@@ -92,6 +116,12 @@ protected:
 
     /// Pointer to the description of the world.
     std::shared_ptr<objects::WorldDescription> mWorldDescription;
+
+    /// A shared pointer to the world database used by the server.
+    std::shared_ptr<libcomp::Database> mWorldDatabase;
+
+    /// A shared pointer to the main database used by the server.
+    std::shared_ptr<libcomp::Database> mLobbyDatabase;
 
     /// Pointer to the description of the channel.
     std::shared_ptr<objects::ChannelDescription> mDescription;

@@ -37,13 +37,88 @@
 namespace libcomp
 {
 
-class PacketStream : public std::basic_streambuf<char>
+/**
+ * Abstract stream representing a data to be read from a packet.
+ * The seekoff and seekpos overrides have been implemented so tellg
+ * works properly when used in an istream.
+ */
+class BasicPacketStream : public std::basic_streambuf<char>
+{
+public:
+    /**
+     * Create the basic stream.
+     */
+    BasicPacketStream() { };
+    
+    /**
+     * Clean up the basic stream.
+     */
+    virtual ~BasicPacketStream() { };
+
+protected:
+    virtual pos_type seekoff(off_type off, std::ios_base::seekdir dir,
+        std::ios_base::openmode which = std::ios_base::in | std::ios_base::out)
+    {
+        (void)which;
+
+        pos_type pos;
+
+        if(std::ios_base::beg == dir)
+        {
+            pos = static_cast<pos_type>(off);
+        }
+        else if(std::ios_base::end == dir)
+        {
+            pos = static_cast<pos_type>(
+                (egptr() - eback()) + off);
+        }
+        else // std::ios_base::cur == dir
+        {
+            pos = static_cast<pos_type>(
+                (gptr() - eback()) + off);
+        }
+
+        if(static_cast<pos_type>(egptr() - eback()) < pos)
+        {
+            return pos_type(off_type(-1));
+        }
+
+        setg(eback(), eback() + pos, egptr());
+
+        return pos;
+    }
+    
+    virtual pos_type seekpos(pos_type pos,
+        std::ios_base::openmode which = std::ios_base::in | std::ios_base::out)
+    {
+        (void)which;
+
+        if(static_cast<pos_type>(egptr() - eback()) < pos)
+        {
+            return pos_type(off_type(-1));
+        }
+
+        setg(eback(), eback() + pos, egptr());
+
+        return pos;
+    }
+};
+
+/**
+ * Stream representing data written to a packet to be read.
+ */
+class PacketStream : public BasicPacketStream
 {
 private:
+    /// Packet that the data came from
     Packet& mPacket;
 
 public:
-    PacketStream(Packet& p) : mPacket(p)
+    /**
+     * Create the stream and set its data from the packet.
+     * @param p Packet to read the data from.
+     */
+    PacketStream(Packet& p) : BasicPacketStream(), mPacket(p)
     {
         this->setg(p.Data(),
             p.Data() + p.Tell(),
@@ -69,10 +144,17 @@ protected:
     }
 };
 
-class ReadOnlyPacketStream : public std::basic_streambuf<char>
+/**
+ * Stream representing data written to a read only packet to be read.
+ */
+class ReadOnlyPacketStream : public BasicPacketStream
 {
 public:
-    ReadOnlyPacketStream(const ReadOnlyPacket& p)
+    /**
+     * Create the stream and set its data from the packet.
+     * @param p Packet to read the data from.
+     */
+    ReadOnlyPacketStream(const ReadOnlyPacket& p) : BasicPacketStream()
     {
         this->setg(const_cast<char*>(p.ConstData()),
             const_cast<char*>(p.ConstData() + p.Tell()),

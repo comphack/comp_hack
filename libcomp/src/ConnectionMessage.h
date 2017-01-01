@@ -35,19 +35,33 @@ namespace libcomp
 namespace Message
 {
 
+/**
+ * Specific connection message type.
+ */
 enum class ConnectionMessageType
 {
-    CONNECTION_MESSAGE_ENCRYPTED,
-    CONNECTION_MESSAGE_CONNECTION_CLOSED,
-    CONNECTION_MESSAGE_WORLD_NOTIFICATION,
+    CONNECTION_MESSAGE_ENCRYPTED,           //!< Message is of type @ref MessageEncrypted.
+    CONNECTION_MESSAGE_CONNECTION_CLOSED,   //!< Message is of type @ref MesssageConnectionClosed.
+    CONNECTION_MESSAGE_WORLD_NOTIFICATION,  //!< Message is of type @ref MessageWorldConnection.
 };
 
+/**
+ * Message signifying that a connection based action has occurred.
+ */
 class ConnectionMessage : public Message
 {
 public:
+    /**
+     * Cleanup the message.
+     */
     virtual ~ConnectionMessage() { }
 
     virtual MessageType GetType() const { return MessageType::MESSAGE_TYPE_CONNECTION; }
+
+    /**
+     * Get the specific connection message type.
+     * @return The message's connection message type
+     */
     virtual ConnectionMessageType GetConnectionMessageType() const = 0;
 };
 

@@ -39,17 +39,41 @@
 namespace libcomp
 {
 
+/**
+ * Represents a variable that can be built dynamically at runtime.
+ * @sa DynamicObject
+ */
 class DynamicVariable
 {
 public:
+    /**
+     * Create a new dynamic variable from a MetaVariable definition.
+     * @param metaVariable Pointer to a MetaVariable definition
+     */
     DynamicVariable(const std::shared_ptr<libobjgen::MetaVariable>&
         metaVariable);
+
+    /**
+     * Clean up the variable.
+     */
     virtual ~DynamicVariable();
 
+    /**
+     * Load the variable from an ObjectInStream.
+     * @param stream Byte stream containing data member values
+     * @return true if loading was successful, false if it was not
+     */
     virtual bool Load(ObjectInStream& stream) = 0;
+
+    /**
+     * Save the variable to an ObjectOutStream.
+     * @param stream Byte stream to save data member values to
+     * @return true if saving was successful, false if it was not
+     */
     virtual bool Save(ObjectOutStream& stream) const  = 0;
 
 private:
+    /// Pointer to the MetaVariable definition
     std::shared_ptr<libobjgen::MetaVariable> mMetaData;
 };
 

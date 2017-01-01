@@ -84,8 +84,8 @@ bool ChannelServer::Initialize(std::weak_ptr<BaseServer>& self)
 
     auto internalPacketManager = std::shared_ptr<libcomp::ManagerPacket>(
         new libcomp::ManagerPacket(self));
-    internalPacketManager->AddParser<Parsers::SetWorldDescription>(
-        to_underlying(InternalPacketCode_t::PACKET_SET_WORLD_DESCRIPTION));
+    internalPacketManager->AddParser<Parsers::SetWorldInfo>(
+        to_underlying(InternalPacketCode_t::PACKET_SET_WORLD_INFO));
 
     //Add the managers to the main worker.
     mMainWorker.AddManager(internalPacketManager);
@@ -116,6 +116,26 @@ const std::shared_ptr<objects::ChannelDescription> ChannelServer::GetDescription
 std::shared_ptr<objects::WorldDescription> ChannelServer::GetWorldDescription()
 {
     return mWorldDescription;
+}
+
+std::shared_ptr<libcomp::Database> ChannelServer::GetWorldDatabase() const
+{
+    return mWorldDatabase;
+}
+
+void ChannelServer::SetWorldDatabase(const std::shared_ptr<libcomp::Database>& database)
+{
+    mWorldDatabase = database;
+}
+   
+std::shared_ptr<libcomp::Database> ChannelServer::GetLobbyDatabase() const
+{
+    return mLobbyDatabase;
+}
+
+void ChannelServer::SetLobbyDatabase(const std::shared_ptr<libcomp::Database>& database)
+{
+    mLobbyDatabase = database;
 }
 
 std::shared_ptr<libcomp::TcpConnection> ChannelServer::CreateConnection(

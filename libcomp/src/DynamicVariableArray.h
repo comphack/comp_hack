@@ -33,11 +33,22 @@
 namespace libcomp
 {
 
+/**
+ * Represents an array variable that can be built dynamically at runtime.
+ */
 class DynamicVariableArray : public DynamicVariable
 {
 public:
+    /**
+     * Create a new dynamic array variable.
+     * @param metaVariable Pointer to a MetaVariableArray definition
+     */
     DynamicVariableArray(const std::shared_ptr<libobjgen::MetaVariable>&
         metaVariable);
+
+    /**
+     * Clean up the variable.
+     */
     virtual ~DynamicVariableArray();
 
     virtual bool Load(ObjectInStream& stream);

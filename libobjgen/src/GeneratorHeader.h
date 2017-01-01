@@ -41,6 +41,9 @@ public:
 private:
     std::string GenerateClass(const MetaObject& obj);
     std::string GenerateHeaderDefine(const std::string& objName);
+    std::string GetLookupKeyDeclaration(const MetaObject& obj,
+        const std::list<std::shared_ptr<MetaVariable>>& variables,
+        bool returnList, std::string lookupType);
 };
 
 } // namespace libobjgen

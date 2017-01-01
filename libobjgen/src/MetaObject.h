@@ -40,6 +40,7 @@
 namespace libobjgen
 {
 
+class CombinationKey;
 class MetaVariable;
 
 class MetaObject
@@ -50,6 +51,8 @@ public:
     typedef std::list<std::shared_ptr<MetaVariable>> VariableList;
     typedef std::unordered_map<std::string, std::shared_ptr<MetaVariable>>
         VariableMap;
+    typedef std::unordered_map<std::string, std::shared_ptr<CombinationKey>>
+        ComboKeys;
 
     MetaObject();
     ~MetaObject();
@@ -71,10 +74,14 @@ public:
 
     bool AddVariable(const std::shared_ptr<MetaVariable>& var);
     bool RemoveVariable(const std::string& name);
-    std::shared_ptr<MetaVariable> GetVariable(const std::string& name);
+    std::shared_ptr<MetaVariable> GetVariable(const std::string& name) const;
 
     VariableList::const_iterator VariablesBegin() const;
     VariableList::const_iterator VariablesEnd() const;
+
+    std::shared_ptr<CombinationKey> GetComboKey(const std::string& name) const;
+    const ComboKeys GetComboKeys() const;
+    bool SetComboKey(std::shared_ptr<CombinationKey>& comboKey);
 
     static bool IsValidIdentifier(const std::string& ident);
 
@@ -102,6 +109,8 @@ private:
 
     VariableList mVariables;
     VariableMap mVariableMapping;
+
+    ComboKeys mComboKeys;
 };
 
 } // namespace libobjgen

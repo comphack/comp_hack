@@ -43,14 +43,29 @@ typedef uint16_t CommandCode_t;
 
 class PacketParser;
 
+/**
+ * Manager dedicated to handling messages of type @ref libcomp::Message::Packet.
+ */
 class ManagerPacket : public libcomp::Manager
 {
 public:
+    /**
+     * Create a new manager.
+     * @param server Pointer to the server that uses this manager
+     */
     ManagerPacket(std::weak_ptr<libcomp::BaseServer> server);
+
+    /**
+     * Cleanup the manager.
+     */
     virtual ~ManagerPacket();
 
     /**
-     * @brief Addes a packet parser to this manager.
+     * Adds a packet parser of the specified type to this manager
+     * to handle a specific command code.
+     * @param commandCode Packet command code to handle
+     * @return true if its a valid type and the command code is not
+     *  already being handled, false otherwise
      */
     template <class T> bool AddParser(CommandCode_t commandCode)
     {
@@ -65,27 +80,25 @@ public:
         return false;
     }
 
-    /**
-     * @brief Get the different types of messages handles by this manager.
-     */
     virtual std::list<libcomp::Message::MessageType> GetSupportedTypes() const;
-
-    /**
-     * Process a message from the queue.
-     */
     virtual bool ProcessMessage(const libcomp::Message::Message *pMessage);
 
     /**
-    * Get the server this manager belongs to.
-    */
+     * Get the server that uses this manager.
+     * @return Pointer to the server that uses this manager
+     */
     std::shared_ptr<libcomp::BaseServer> GetServer();
 
 protected:
+    /// Static list containing the packet message type to return via
+    /// @ref ManagerPacket::GetSupportedTypes
     static std::list<libcomp::Message::MessageType> sSupportedTypes;
 
+    /// Packet parser map by command code used to process messages
     std::unordered_map<CommandCode_t,
         std::shared_ptr<PacketParser>> mPacketParsers;
 
+    /// Pointer to the server that uses this manager
     std::weak_ptr<libcomp::BaseServer> mServer;
 };
 

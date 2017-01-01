@@ -31,6 +31,8 @@
 #include "Packets.h"
 
 // libcomp Includes
+#include <DatabaseConfigCassandra.h>
+#include <DatabaseConfigSQLite3.h>
 #include <Decrypt.h>
 #include <Log.h>
 #include <ManagerPacket.h>
@@ -58,6 +60,24 @@ bool LobbyServer::Initialize(std::weak_ptr<BaseServer>& self)
         return false;
     }
 
+    auto conf = std::dynamic_pointer_cast<objects::LobbyConfig>(mConfig);
+    
+    libcomp::EnumMap<objects::ServerConfig::DatabaseType_t,
+        std::shared_ptr<objects::DatabaseConfig>> configMap;
+
+    configMap[objects::ServerConfig::DatabaseType_t::SQLITE3]
+        = conf->GetSQLite3Config().Get();
+
+    configMap[objects::ServerConfig::DatabaseType_t::CASSANDRA]
+        = conf->GetCassandraConfig().Get();
+
+    mDatabase = GetDatabase(configMap, true);
+
+    if(nullptr == mDatabase)
+    {
+        return false;
+    }
+
     if(mUnitTestMode)
     {
         if(!InitializeTestMode())
@@ -70,8 +90,6 @@ bool LobbyServer::Initialize(std::weak_ptr<BaseServer>& self)
         CreateFirstAccount();
     }
 
-    auto conf = std::dynamic_pointer_cast<objects::LobbyConfig>(mConfig);
-
     mManagerConnection = std::shared_ptr<ManagerConnection>(
         new ManagerConnection(self, &mService, mMainWorker.GetMessageQueue()));
 
@@ -80,10 +98,10 @@ bool LobbyServer::Initialize(std::weak_ptr<BaseServer>& self)
 
     auto internalPacketManager = std::shared_ptr<libcomp::ManagerPacket>(
         new libcomp::ManagerPacket(self));
-    internalPacketManager->AddParser<Parsers::SetWorldDescription>(
-        to_underlying(InternalPacketCode_t::PACKET_SET_WORLD_DESCRIPTION));
-    internalPacketManager->AddParser<Parsers::SetChannelDescription>(
-        to_underlying(InternalPacketCode_t::PACKET_SET_CHANNEL_DESCRIPTION));
+    internalPacketManager->AddParser<Parsers::SetWorldInfo>(
+        to_underlying(InternalPacketCode_t::PACKET_SET_WORLD_INFO));
+    internalPacketManager->AddParser<Parsers::SetChannelInfo>(
+        to_underlying(InternalPacketCode_t::PACKET_SET_CHANNEL_INFO));
 
     //Add the managers to the main worker.
     mMainWorker.AddManager(internalPacketManager);
@@ -133,6 +151,11 @@ std::shared_ptr<lobby::World> LobbyServer::GetWorldByConnection(
     std::shared_ptr<libcomp::InternalConnection> connection)
 {
     return mManagerConnection->GetWorldByConnection(connection);
+}
+
+std::shared_ptr<libcomp::Database> LobbyServer::GetMainDatabase() const
+{
+    return mDatabase;
 }
 
 std::shared_ptr<libcomp::TcpConnection> LobbyServer::CreateConnection(
@@ -197,7 +220,7 @@ bool LobbyServer::InitializeTestMode()
     account->Register(std::dynamic_pointer_cast<
         libcomp::PersistentObject>(account));
 
-    if(!account->Insert())
+    if(!account->Insert(mDatabase))
     {
         LOG_ERROR("Failed to create test account.\n");
     }
@@ -426,7 +449,7 @@ void LobbyServer::PromptCreateAccount()
     account->Register(std::dynamic_pointer_cast<
         libcomp::PersistentObject>(account));
 
-    if(!account->Insert())
+    if(!account->Insert(mDatabase))
     {
         LOG_ERROR("Failed to create account!\n");
     }

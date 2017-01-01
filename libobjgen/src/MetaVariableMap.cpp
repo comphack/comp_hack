@@ -88,6 +88,11 @@ bool MetaVariableMap::IsValid() const
         !IsLookupKey();
 }
 
+bool MetaVariableMap::IsValidLookupKey() const
+{
+    return false;
+}
+
 bool MetaVariableMap::Load(std::istream& stream)
 {
     MetaVariable::Load(stream);

@@ -32,14 +32,18 @@
 #include "Log.h"
 #include "PersistentObject.h"
 
+// libobjgen Includes
+#include "CombinationKey.h"
+
 // SQLite3 Includes
 #include <sqlite3.h>
 
 using namespace libcomp;
 
 DatabaseCassandra::DatabaseCassandra(const std::shared_ptr<
-    objects::DatabaseConfigCassandra>& config) : mCluster(nullptr), mSession(nullptr),
-    mConfig(config)
+    objects::DatabaseConfigCassandra>& config) :
+    Database(std::dynamic_pointer_cast<objects::DatabaseConfig>(config)),
+    mCluster(nullptr), mSession(nullptr)
 {
 }
 
@@ -50,9 +54,10 @@ DatabaseCassandra::~DatabaseCassandra()
 
 bool DatabaseCassandra::Open()
 {
-    auto address = mConfig->GetIP();
-    auto username = mConfig->GetUsername();
-    auto password = mConfig->GetPassword();
+    auto config = std::dynamic_pointer_cast<objects::DatabaseConfigCassandra>(mConfig);
+    auto address = config->GetIP();
+    auto username = config->GetUsername();
+    auto password = config->GetPassword();
 
     // Make sure any previous connection is closed an that we have the base
     // necessary configuration to connect.
@@ -117,7 +122,8 @@ bool DatabaseCassandra::Exists()
 {
     DatabaseQuery q = Prepare(String(
         "SELECT keyspace_name FROM system_schema.keyspaces WHERE keyspace_name = '%1';")
-        .Arg(mConfig->GetKeyspace()));
+        .Arg(std::dynamic_pointer_cast<objects::DatabaseConfigCassandra>(
+            mConfig)->GetKeyspace()));
     if(!q.Execute())
     {
         LOG_CRITICAL("Failed to query for keyspace.\n");
@@ -140,7 +146,8 @@ bool DatabaseCassandra::Setup()
         return false;
     }
 
-    auto keyspace = mConfig->GetKeyspace();
+    auto keyspace = std::dynamic_pointer_cast<objects::DatabaseConfigCassandra>(
+        mConfig)->GetKeyspace();
     if(!Exists())
     {
         // Delete the old keyspace if it exists.
@@ -200,7 +207,8 @@ bool DatabaseCassandra::Setup()
 bool DatabaseCassandra::Use()
 {
     // Use the keyspace.
-    auto keyspace = mConfig->GetKeyspace();
+    auto keyspace = std::dynamic_pointer_cast<objects::DatabaseConfigCassandra>(
+        mConfig)->GetKeyspace();
     if(!Execute(String("USE %1;").Arg(keyspace)))
     {
         LOG_ERROR("Failed to use the keyspace.\n");
@@ -212,7 +220,7 @@ bool DatabaseCassandra::Use()
 }
 
 std::list<std::shared_ptr<PersistentObject>> DatabaseCassandra::LoadObjects(
-    std::type_index type, DatabaseBind *pValue)
+    std::type_index type, const std::list<DatabaseBind*>& pValues)
 {
     std::list<std::shared_ptr<PersistentObject>> objects;
 
@@ -225,9 +233,16 @@ std::list<std::shared_ptr<PersistentObject>> DatabaseCassandra::LoadObjects(
         return {};
     }
 
-    String cql = String("SELECT * FROM %1 WHERE %2 = ?").Arg(
+    std::list<String> whereClauseColumns;
+    for(auto pValue : pValues)
+    {
+        auto columnName = pValue->GetColumn();
+        whereClauseColumns.push_back(String("%1 = ?").Arg(columnName));
+    }
+
+    String cql = String("SELECT * FROM %1 WHERE %2").Arg(
         String(metaObject->GetName()).ToLower()).Arg(
-        pValue->GetColumn().ToLower());
+        String::Join(whereClauseColumns, " AND "));
 
     DatabaseQuery query = Prepare(cql);
 
@@ -239,13 +254,16 @@ std::list<std::shared_ptr<PersistentObject>> DatabaseCassandra::LoadObjects(
         return {};
     }
 
-    if(!pValue->Bind(query))
+    for(auto pValue : pValues)
     {
-        LOG_ERROR(String("Failed to bind value: %1\n").Arg(
-            pValue->GetColumn()));
-        LOG_ERROR(String("Database said: %1\n").Arg(GetLastError()));
+        if(!pValue->Bind(query))
+        {
+            LOG_ERROR(String("Failed to bind value: %1\n").Arg(
+                pValue->GetColumn()));
+            LOG_ERROR(String("Database said: %1\n").Arg(GetLastError()));
 
-        return {};
+            return {};
+        }
     }
 
     if(!query.Execute())
@@ -476,7 +494,8 @@ bool DatabaseCassandra::DeleteSingleObject(std::shared_ptr<PersistentObject>& ob
 
 bool DatabaseCassandra::VerifyAndSetupSchema()
 {
-    auto keyspace = mConfig->GetKeyspace();
+    auto keyspace = std::dynamic_pointer_cast<objects::DatabaseConfigCassandra>(
+        mConfig)->GetKeyspace();
     std::vector<std::shared_ptr<libobjgen::MetaObject>> metaObjectTables;
     for(auto registrar : PersistentObject::GetRegistry())
     {
@@ -499,7 +518,7 @@ bool DatabaseCassandra::VerifyAndSetupSchema()
                             " WHERE keyspace_name = '%1';").Arg(keyspace);
 
     DatabaseQuery q = Prepare(cmd);
-    if(!q.Execute() || !q.Next())
+    if(!q.Execute())
     {
         LOG_CRITICAL("Failed to query for column schema.\n");
 
@@ -507,7 +526,7 @@ bool DatabaseCassandra::VerifyAndSetupSchema()
     }
 
     std::unordered_map<std::string, std::unordered_map<std::string, String>> fieldMap;
-    do
+    while(q.Next())
     {
         String tableName;
         String colName;
@@ -520,7 +539,7 @@ bool DatabaseCassandra::VerifyAndSetupSchema()
             std::unordered_map<std::string, String>& m = fieldMap[tableName.ToUtf8()];
             m[colName.ToUtf8()] = dataType;
         }
-    } while (q.Next());
+    }
 
     cmd = String("SELECT table_name, index_name"
         " FROM system_schema.indexes"
@@ -571,7 +590,6 @@ bool DatabaseCassandra::VerifyAndSetupSchema()
 
         bool creating = false;
         bool archiving = false;
-        std::set<std::string> needsIndex;
         auto tableIter = fieldMap.find(objName);
         if(tableIter == fieldMap.end())
         {
@@ -588,7 +606,6 @@ bool DatabaseCassandra::VerifyAndSetupSchema()
             }
             else
             {
-                auto indexes = indexedFields[objName];
                 columns.erase("uid");
                 for(auto var : vars)
                 {
@@ -600,14 +617,6 @@ bool DatabaseCassandra::VerifyAndSetupSchema()
                         || columns[name] != type)
                     {
                         archiving = true;
-                    }
-
-                    auto indexName = String("idx_%1_%2")
-                        .Arg(objName).Arg(name).ToUtf8();
-                    if(var->IsLookupKey() &&
-                        indexes.find(indexName) == indexes.end())
-                    {
-                        needsIndex.insert(var->GetName());
                     }
                 }
             }
@@ -665,15 +674,44 @@ bool DatabaseCassandra::VerifyAndSetupSchema()
 
         }
 
-        //If we made the table or are missing an index, make them now
-        if(needsIndex.size() > 0 || creating)
+        auto indexes = indexedFields[objName];
+        std::set<std::string> checkIndexes;
+        std::set<std::string> needsIndex;
+        for(auto var : vars)
+        {
+            if(var->IsLookupKey())
+            {
+                checkIndexes.insert(var->GetName());
+            }
+        }
+
+        for(auto keyPair : metaObject.GetComboKeys())
+        {
+            auto key = keyPair.second;
+            for(auto varName : key->GetVariables())
+            {
+                checkIndexes.insert(varName);
+            }
+        }
+
+        for(auto varName : checkIndexes)
+        {
+            auto indexName = String("idx_%1_%2")
+                .Arg(objName)
+                .Arg(varName).ToLower().ToUtf8();
+            if(creating || indexes.find(indexName) == indexes.end())
+            {
+                needsIndex.insert(varName);
+            }
+        }
+
+        if(needsIndex.size() > 0)
         {
             for(size_t i = 0; i < vars.size(); i++)
             {
                 auto var = vars[i];
 
-                if(!var->IsLookupKey() ||
-                    (!creating && needsIndex.find(var->GetName()) == needsIndex.end()))
+                if(needsIndex.find(var->GetName()) == needsIndex.end())
                 {
                     continue;
                 }
@@ -714,7 +752,8 @@ bool DatabaseCassandra::VerifyAndSetupSchema()
 
 bool DatabaseCassandra::UsingDefaultKeyspace()
 {
-    return mConfig->GetKeyspace() == mConfig->GetDefaultKeyspace();
+    auto config = std::dynamic_pointer_cast<objects::DatabaseConfigCassandra>(mConfig);
+    return config->GetKeyspace() == config->GetDefaultKeyspace();
 }
 
 bool DatabaseCassandra::WaitForFuture(CassFuture *pFuture)
@@ -779,30 +818,6 @@ String DatabaseCassandra::GetVariableType(const std::shared_ptr
     }
 
     return "blob";
-}
-
-std::vector<char> DatabaseCassandra::ConvertToRawByteStream(
-    const std::shared_ptr<libobjgen::MetaVariable>& var, const std::vector<char>& columnData)
-{
-    switch(var->GetMetaType())
-    {
-        case libobjgen::MetaVariable::MetaVariableType_t::TYPE_STRING:
-        case libobjgen::MetaVariable::MetaVariableType_t::TYPE_REF:
-            {
-                size_t strLength = columnData.size();
-
-                char* arr = reinterpret_cast<char*>(&strLength);
-
-                std::vector<char> data(arr, arr + sizeof(uint32_t));
-                data.insert(data.end(), columnData.begin(), columnData.end());
-
-                return data;
-            }
-            break;
-        default:
-            return columnData;
-            break;
-    }
 }
 
 CassSession* DatabaseCassandra::GetSession() const

@@ -32,6 +32,7 @@
 #include "Log.h"
 
 // libobjgen Includes
+#include "CombinationKey.h"
 #include <MetaVariableString.h>
 
 // SQLite3 Includes
@@ -40,7 +41,9 @@
 using namespace libcomp;
 
 DatabaseSQLite3::DatabaseSQLite3(const std::shared_ptr<
-    objects::DatabaseConfigSQLite3>& config) : mDatabase(nullptr), mConfig(config)
+    objects::DatabaseConfigSQLite3>& config) :
+    Database(std::dynamic_pointer_cast<objects::DatabaseConfig>(config)),
+    mDatabase(nullptr)
 {
 }
 
@@ -122,7 +125,8 @@ bool DatabaseSQLite3::Setup()
         return false;
     }
 
-    auto filename = mConfig->GetDatabaseName();
+    auto filename = std::dynamic_pointer_cast<objects::DatabaseConfigSQLite3>(
+        mConfig)->GetDatabaseName();
     if(!Exists())
     {
         LOG_ERROR("Database file was not created!\n");
@@ -168,7 +172,7 @@ bool DatabaseSQLite3::Use()
 }
 
 std::list<std::shared_ptr<PersistentObject>> DatabaseSQLite3::LoadObjects(
-    std::type_index type, DatabaseBind *pValue)
+    std::type_index type, const std::list<DatabaseBind*>& pValues)
 {
     std::list<std::shared_ptr<PersistentObject>> objects;
 
@@ -180,10 +184,17 @@ std::list<std::shared_ptr<PersistentObject>> DatabaseSQLite3::LoadObjects(
 
         return {};
     }
+    
+    std::list<String> whereClauseColumns;
+    for(auto pValue : pValues)
+    {
+        auto columnName = pValue->GetColumn();
+        whereClauseColumns.push_back(String("%1 = :%1").Arg(columnName));
+    }
 
-    String sql = String("SELECT * FROM %1 WHERE %2 = :%2").Arg(
+    String sql = String("SELECT * FROM %1 WHERE %2").Arg(
         metaObject->GetName()).Arg(
-        pValue->GetColumn());
+        String::Join(whereClauseColumns, " AND "));
 
     DatabaseQuery query = Prepare(sql);
 
@@ -194,14 +205,17 @@ std::list<std::shared_ptr<PersistentObject>> DatabaseSQLite3::LoadObjects(
 
         return {};
     }
-
-    if(!pValue->Bind(query))
+    
+    for(auto pValue : pValues)
     {
-        LOG_ERROR(String("Failed to bind value: %1\n").Arg(
-            pValue->GetColumn()));
-        LOG_ERROR(String("Database said: %1\n").Arg(GetLastError()));
+        if(!pValue->Bind(query))
+        {
+            LOG_ERROR(String("Failed to bind value: %1\n").Arg(
+                pValue->GetColumn()));
+            LOG_ERROR(String("Database said: %1\n").Arg(GetLastError()));
 
-        return {};
+            return {};
+        }
     }
 
     if(!query.Execute())
@@ -253,7 +267,7 @@ bool DatabaseSQLite3::InsertSingleObject(std::shared_ptr<PersistentObject>& obj)
     }
 
     std::list<String> columnNames;
-    columnNames.push_back("uid");
+    columnNames.push_back("UID");
 
     std::list<String> columnBinds;
     columnBinds.push_back(String("'%1'").Arg(obj->GetUUID().ToString()));
@@ -331,7 +345,7 @@ bool DatabaseSQLite3::UpdateSingleObject(std::shared_ptr<PersistentObject>& obj)
         columnNames.push_back(String("%1 = :%1").Arg(value->GetColumn()));
     }
 
-    String sql = String("UPDATE %1 SET %2 WHERE uid = '%3';").Arg(
+    String sql = String("UPDATE %1 SET %2 WHERE UID = '%3';").Arg(
         metaObject->GetName()).Arg(
         String::Join(columnNames, ", ")).Arg(
         obj->GetUUID().ToString());
@@ -383,7 +397,7 @@ bool DatabaseSQLite3::DeleteSingleObject(std::shared_ptr<PersistentObject>& obj)
 
     auto metaObject = obj->GetObjectMetadata();
 
-    if (Execute(String("DELETE FROM %1 WHERE uid = '%2';")
+    if (Execute(String("DELETE FROM %1 WHERE UID = '%2';")
         .Arg(metaObject->GetName())
         .Arg(uuidStr)))
     {
@@ -396,7 +410,8 @@ bool DatabaseSQLite3::DeleteSingleObject(std::shared_ptr<PersistentObject>& obj)
 
 bool DatabaseSQLite3::VerifyAndSetupSchema()
 {
-    auto databaseName = mConfig->GetDatabaseName();
+    auto databaseName = std::dynamic_pointer_cast<objects::DatabaseConfigSQLite3>(
+        mConfig)->GetDatabaseName();
     std::vector<std::shared_ptr<libobjgen::MetaObject>> metaObjectTables;
     for(auto registrar : PersistentObject::GetRegistry())
     {
@@ -416,7 +431,7 @@ bool DatabaseSQLite3::VerifyAndSetupSchema()
 
     DatabaseQuery q = Prepare("SELECT name, type, tbl_name FROM sqlite_master"
         " where type in ('table', 'index') and name <> 'objects';");
-    if(!q.Execute() || !q.Next())
+    if(!q.Execute())
     {
         LOG_CRITICAL("Failed to query for existing columns.\n");
 
@@ -426,7 +441,7 @@ bool DatabaseSQLite3::VerifyAndSetupSchema()
     std::unordered_map<std::string,
         std::unordered_map<std::string, String>> fieldMap;
     std::unordered_map<std::string, std::set<std::string>> indexedFields;
-    do
+    while(q.Next())
     {
         String name;
         String type;
@@ -472,7 +487,7 @@ bool DatabaseSQLite3::VerifyAndSetupSchema()
                 s.insert(name.ToUtf8());
             }
         }
-    } while(q.Next());
+    }
     
     for(auto metaObjectTable : metaObjectTables)
     {
@@ -496,7 +511,6 @@ bool DatabaseSQLite3::VerifyAndSetupSchema()
 
         bool creating = false;
         bool archiving = false;
-        std::set<std::string> needsIndex;
         auto tableIter = fieldMap.find(objName);
         if(tableIter == fieldMap.end())
         {
@@ -507,14 +521,13 @@ bool DatabaseSQLite3::VerifyAndSetupSchema()
             std::unordered_map<std::string,
                 String> columns = tableIter->second;
             if(columns.size() - 1 != vars.size()
-                || columns.find("uid") == columns.end())
+                || columns.find("UID") == columns.end())
             {
                 archiving = true;
             }
             else
             {
-                auto indexes = indexedFields[objName];
-                columns.erase("uid");
+                columns.erase("UID");
                 for(auto var : vars)
                 {
                     auto name = var->GetName();
@@ -524,14 +537,6 @@ bool DatabaseSQLite3::VerifyAndSetupSchema()
                         || columns[name] != type)
                     {
                         archiving = true;
-                    }
-
-                    auto indexName = String("idx_%1_%2")
-                        .Arg(objName).Arg(name).ToUtf8();
-                    if(var->IsLookupKey() &&
-                        indexes.find(indexName) == indexes.end())
-                    {
-                        needsIndex.insert(name);
                     }
                 }
             }
@@ -565,7 +570,7 @@ bool DatabaseSQLite3::VerifyAndSetupSchema()
 
             std::stringstream ss;
             ss << "CREATE TABLE " << objName
-                << " (uid blob PRIMARY KEY";
+                << " (UID string PRIMARY KEY";
             for(size_t i = 0; i < vars.size(); i++)
             {
                 auto var = vars[i];
@@ -587,16 +592,44 @@ bool DatabaseSQLite3::VerifyAndSetupSchema()
                 return false;
             }
         }
+
+        auto indexes = indexedFields[objName];
+        std::set<std::string> checkIndexes;
+        std::set<std::string> needsIndex;
+        for(auto var : vars)
+        {
+            if(var->IsLookupKey())
+            {
+                checkIndexes.insert(var->GetName());
+            }
+        }
+
+        for(auto keyPair : metaObject.GetComboKeys())
+        {
+            auto key = keyPair.second;
+            for(auto varName : key->GetVariables())
+            {
+                checkIndexes.insert(varName);
+            }
+        }
+
+        for(auto varName : checkIndexes)
+        {
+            auto indexName = String("idx_%1_%2")
+                .Arg(objName).Arg(varName).ToUtf8();
+            if(creating || indexes.find(indexName) == indexes.end())
+            {
+                needsIndex.insert(varName);
+            }
+        }
         
-        //If we made the table or are missing an index, make them now
-        if(needsIndex.size() > 0 || creating)
+        if(needsIndex.size() > 0)
         {
             for(size_t i = 0; i < vars.size(); i++)
             {
                 auto var = vars[i];
 
-                if(!var->IsLookupKey() ||
-                    (!creating && needsIndex.find(var->GetName()) == needsIndex.end()))
+                if(needsIndex.find(var->GetName()) == needsIndex.end())
                 {
                     continue;
                 }
@@ -635,13 +668,15 @@ bool DatabaseSQLite3::VerifyAndSetupSchema()
 
 bool DatabaseSQLite3::UsingDefaultDatabaseFile()
 {
-    return mConfig->GetDatabaseName() == mConfig->GetDefaultDatabaseName();
+    auto config = std::dynamic_pointer_cast<objects::DatabaseConfigSQLite3>(mConfig);
+    return config->GetDatabaseName() == config->GetDefaultDatabaseName();
 }
 
 String DatabaseSQLite3::GetFilepath() const
 {
-    auto directory = mConfig->GetFileDirectory();
-    auto filename = mConfig->GetDatabaseName();
+    auto config = std::dynamic_pointer_cast<objects::DatabaseConfigSQLite3>(mConfig);
+    auto directory = config->GetFileDirectory();
+    auto filename = config->GetDatabaseName();
 
     return String("%1%2.sqlite3").Arg(directory).Arg(filename);
 }
@@ -679,38 +714,4 @@ String DatabaseSQLite3::GetVariableType(const std::shared_ptr
     }
 
     return "blob";
-}
-
-std::vector<char> DatabaseSQLite3::ConvertToRawByteStream(
-    const std::shared_ptr<libobjgen::MetaVariable>& var, const std::vector<char>& columnData)
-{
-    switch(var->GetMetaType())
-    {
-        case libobjgen::MetaVariable::MetaVariableType_t::TYPE_STRING:
-        case libobjgen::MetaVariable::MetaVariableType_t::TYPE_REF:
-            {
-                size_t strLength = columnData.size();
-
-                char* arr = reinterpret_cast<char*>(&strLength);
-
-                std::vector<char> data(arr, arr + sizeof(uint32_t));
-                data.insert(data.end(), columnData.begin(), columnData.end());
-
-                return data;
-            }
-            break;
-        default:
-            {
-                // Data returned from the DB is "minified" for number of bytes returned.
-                // ex: unsigned 32 and signed 8 are both INTEGER type and the same value
-                // as bytes equal to the value 1 which will fail to load in an object
-                std::vector<char> data(columnData);
-                while(data.size() < var->GetSize())
-                {
-                    data.push_back(0);
-                }
-                return data;
-            }
-            break;
-    }
 }

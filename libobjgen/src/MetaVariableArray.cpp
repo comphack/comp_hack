@@ -103,6 +103,11 @@ bool MetaVariableArray::IsValid() const
         !IsLookupKey();
 }
 
+bool MetaVariableArray::IsValidLookupKey() const
+{
+    return false;
+}
+
 bool MetaVariableArray::Load(std::istream& stream)
 {
     MetaVariable::Load(stream);

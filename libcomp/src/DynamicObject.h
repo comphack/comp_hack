@@ -40,9 +40,20 @@
 namespace libcomp
 {
 
+/**
+ * Represents an object that can be built dynamically at runtime.
+ * While objgen generated code that derives from @ref Object
+ * must be predefined and also compiled in the same fashion as other source
+ * files, DynamicObject is intended to be used when an object definition
+ * can be built on the fly such as a definition stored in the database.
+ */
 class DynamicObject : Object
 {
 public:
+    /**
+     * Create a new dynamic object from a MetaObject definition.
+     * @param metaObject Pointer to a MetaObject definition
+     */
     DynamicObject(const std::shared_ptr<libobjgen::MetaObject>& metaObject);
 
     virtual bool IsValid(bool recursive = true) const;
@@ -50,11 +61,20 @@ public:
     //virtual bool Load(ObjectInStream& stream);
     //virtual bool Save(ObjectOutStream& stream) const;
 
+    /**
+     * Get the dynamic size count defined in the MetaObject definition.
+     * @return The MetaObject definition's dynamic size count
+     */
     virtual uint16_t GetDynamicSizeCount() const;
 
 private:
+    /// Pointer to the MetaObject definition
     std::shared_ptr<libobjgen::MetaObject> mMetaData;
+
+    /// List of pointers to the variables defined in the MetaObject
     std::list<std::shared_ptr<DynamicVariable>> mVariables;
+
+    /// Map of names to pointers to the variables defined in the MetaObject
     std::unordered_map<std::string, std::shared_ptr<
         DynamicVariable>> mVariableLookup;
 };

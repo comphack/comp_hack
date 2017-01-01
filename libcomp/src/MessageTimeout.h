@@ -40,10 +40,20 @@ namespace libcomp
 namespace Message
 {
 
+/**
+ * Message that signifies a connection has timed out.
+ */
 class Timeout : public Message
 {
 public:
+    /**
+     * Create the message.
+     */
     Timeout();
+
+    /**
+     * Cleanup the message.
+     */
     virtual ~Timeout();
 
     virtual MessageType GetType() const;

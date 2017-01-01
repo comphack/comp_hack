@@ -53,12 +53,12 @@ public:
      * @param configPath File path to the location of the config to be loaded.
      */
     WorldServer(std::shared_ptr<objects::ServerConfig> config, const libcomp::String& configPath);
-    
+
     /**
      * Clean up the server.
      */
     virtual ~WorldServer();
-    
+
     /**
      * Initialize the database connection and do anything else that can fail
      * to execute that needs to be handled outside of a constructor.  This
@@ -68,13 +68,13 @@ public:
      * @return true on success, false on failure
      */
     virtual bool Initialize(std::weak_ptr<BaseServer>& self);
-    
+
     /**
      * Get the description of the world read from the config.
      * @return Pointer to the WorldDescription
      */
     const std::shared_ptr<objects::WorldDescription> GetDescription() const;
-    
+
     /**
      * Get the description of a channel currently being connected to
      * by its connection pointer.
@@ -83,13 +83,13 @@ public:
      */
     std::shared_ptr<objects::ChannelDescription> GetChannelDescriptionByConnection(
         const std::shared_ptr<libcomp::InternalConnection>& connection) const;
-    
+
     /**
      * Get a pointer to the lobby connection.
      * @return Pointer to the lobby connection
      */
     const std::shared_ptr<libcomp::InternalConnection> GetLobbyConnection() const;
-    
+
     /**
      * Set the description of a channel currently being connected to
      * via a connection.
@@ -98,7 +98,7 @@ public:
      */
     void SetChannelDescription(const std::shared_ptr<objects::ChannelDescription>& channel,
         const std::shared_ptr<libcomp::InternalConnection>& connection);
-    
+
     /**
      * Remove the description of the channel for a connection
      * that is no longer being used.
@@ -106,6 +106,24 @@ public:
      * @return true if the description existed, false if it did not
      */
     bool RemoveChannelDescription(const std::shared_ptr<libcomp::InternalConnection>& connection);
+    
+    /**
+     * Get the world database.
+     * @return Pointer to the world's database
+     */
+    std::shared_ptr<libcomp::Database> GetWorldDatabase() const;
+    
+    /**
+     * Get the lobby database.
+     * @return Pointer to the lobby's database
+     */
+    std::shared_ptr<libcomp::Database> GetLobbyDatabase() const;
+
+    /**
+     * Set the lobby database.
+     * @param database Pointer to the lobby's database
+     */
+    void SetLobbyDatabase(const std::shared_ptr<libcomp::Database>& database);
 
 protected:
     /**
@@ -115,6 +133,12 @@ protected:
      */
     virtual std::shared_ptr<libcomp::TcpConnection> CreateConnection(
         asio::ip::tcp::socket& socket);
+
+    /// A shared pointer to the world database used by the server.
+    std::shared_ptr<libcomp::Database> mDatabase;
+
+    /// A shared pointer to the world database used by the server.
+    std::shared_ptr<libcomp::Database> mLobbyDatabase;
 
     /// Pointer to the description of the world.
     std::shared_ptr<objects::WorldDescription> mDescription;

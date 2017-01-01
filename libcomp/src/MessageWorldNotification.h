@@ -40,20 +40,46 @@ namespace libcomp
 namespace Message
 {
 
+/**
+ * Message that signifies that a world wants to connect to the
+ * lobby.  Upon successfully receiving this message the lobby
+ * will close the connection and "reverse it" so the lobby
+ * maintains the connections instead.
+ */
 class WorldNotification : public ConnectionMessage
 {
 public:
+    /**
+     * Create the message.
+     * @param address The address the connection is coming from
+     * @param port The port the connection is coming from
+     */
     WorldNotification(const String& address, uint16_t port);
+
+    /**
+     * Cleanup the message.
+     */
     virtual ~WorldNotification();
 
+    /**
+     * Get the address the connection is coming from.
+     * @return The address the connection is coming from
+     */
     String GetAddress() const;
 
+    /**
+     * Get the port the connection is coming from.
+     * @return The port the connection is coming from
+     */
     uint16_t GetPort() const;
 
     virtual ConnectionMessageType GetConnectionMessageType() const;
 
 private:
+    /// The address the connection is coming from
     String mAddress;
+
+    /// The port the connection is coming from
     uint16_t mPort;
 };
 

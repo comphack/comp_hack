@@ -29,6 +29,7 @@
 
 // libcomp Includes
 #include "Database.h"
+#include "DatabaseConfig.h"
 #include "EncryptedConnection.h"
 #include "ServerConfig.h"
 #include "TcpServer.h"
@@ -68,6 +69,17 @@ public:
      * @return true on success, false on failure
      */
     virtual bool Initialize(std::weak_ptr<BaseServer>& self);
+    
+    /**
+     * Get an open database connection of the database type associated to the
+     * server.
+     * @param configMap Map of the available database configs by type
+     * @param performSetup If true, @ref Database::Setup will be executed
+     * @return Pointer to the new database connection or nullptr on failure
+     */
+    std::shared_ptr<Database> GetDatabase(
+        const EnumMap<objects::ServerConfig::DatabaseType_t,
+            std::shared_ptr<objects::DatabaseConfig>>& configMap, bool performSetup);
 
     /**
      * Call the Shutdown function on each worker.  This should be called
@@ -80,7 +92,7 @@ public:
      * @return The default path to a config folder
      */
     static std::string GetDefaultConfigPath();
-    
+
     /**
      * Read the config file from the path and parse into an XML document
      * to be read in the virtual ReadConfig function.  Messages will print
@@ -103,7 +115,7 @@ public:
      * @return true on success, false on failure
      */
     virtual bool ReadConfig(std::shared_ptr<objects::ServerConfig> config, tinyxml2::XMLDocument& doc);
-    
+
     /**
      * Get the server config file read during the constructor steps.
      * @return Pointer to the server config
@@ -117,14 +129,14 @@ protected:
      * @return 0 on success, 1 on failure
      */
     virtual int Run();
-    
+
     /**
      * Create one or many workers to handle connection requests based upon
      * the server config allowing mutliple workers as well as how many cores
      * are available on the executing machine's CPU.
      */
     void CreateWorkers();
-    
+
     /**
      * Retrieve and assign a message queue to use for a new connection.
      * The method of deciding which worker to use is not contained in this
@@ -133,7 +145,7 @@ protected:
      * @return true on success, false on failure
      */
     bool AssignMessageQueue(std::shared_ptr<libcomp::EncryptedConnection>& connection);
-    
+
     /**
      * Get the next worker to use for new connections.  This implementation
      * uses a "least busy" method to decide which worker to assign but it is
@@ -148,9 +160,6 @@ protected:
 
     /// A shared pointer to the config used to set up the server.
     std::shared_ptr<objects::ServerConfig> mConfig;
-
-    /// A shared pointer to the database used by the server.
-    std::shared_ptr<libcomp::Database> mDatabase;
 
     /// Worker that blocks and runs in the main thread.
     libcomp::Worker mMainWorker;

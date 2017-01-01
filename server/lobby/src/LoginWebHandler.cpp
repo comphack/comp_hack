@@ -38,7 +38,8 @@
 
 using namespace lobby;
 
-LoginHandler::LoginHandler()
+LoginHandler::LoginHandler(const std::shared_ptr<libcomp::Database>& database)
+    : mDatabase(database)
 {
     mVfs.AddArchiveLoader(new ttvfs::VFSZipArchiveLoader);
 
@@ -147,7 +148,7 @@ void LoginHandler::ParsePost(CivetServer *pServer,
     /// @todo Do proper authentication.
     if(pServer->getParam(szPostData, "login", postValue))
     {
-        auto account = objects::Account::LoadAccountByUserName(postVars.id);
+        auto account = objects::Account::LoadAccountByUserName(mDatabase, postVars.id);
 
         if(nullptr != account && account->GetPassword() ==
             libcomp::Decrypt::HashPassword(postVars.pass, account->GetSalt()))

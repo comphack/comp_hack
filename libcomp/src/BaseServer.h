@@ -45,7 +45,7 @@ namespace libcomp
  * are responsible for choosing which of the workers it
  * manages will be assigned to each incoming connection.
  */
-class BaseServer : public TcpServer
+class BaseServer : public TcpServer, public Manager
 {
 public:
     /**
@@ -69,7 +69,26 @@ public:
      * @return true on success, false on failure
      */
     virtual bool Initialize(std::weak_ptr<BaseServer>& self);
+
+    /**
+     * Do any initialize that should happen after the server is listening and
+     * fully started.
+     */
+    virtual void FinishInitialize();
     
+    /**
+     * Get the different types of messages handled by this manager.
+     * @return List of supported message types
+     */
+    virtual std::list<libcomp::Message::MessageType> GetSupportedTypes() const;
+
+    /**
+     * Process a message from the queue.
+     * @param pMessage Message to be processed
+     * @return true on success, false on failure
+     */
+    virtual bool ProcessMessage(const libcomp::Message::Message *pMessage);
+
     /**
      * Get an open database connection of the database type associated to the
      * server.

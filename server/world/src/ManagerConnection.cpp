@@ -72,6 +72,8 @@ bool ManagerConnection::ProcessMessage(const libcomp::Message::Message *pMessage
                     auto connection = encrypted->GetConnection();
 
                     /// @todo: verify this is in fact the lobby
+                    /// @todo: if it's not this reacts horribly
+                    /// @todo: if the lobby pointer is not set before a channel it will crash the world
 
                     mLobbyConnection = std::dynamic_pointer_cast<libcomp::InternalConnection>(connection);
                 }

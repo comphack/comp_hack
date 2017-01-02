@@ -70,6 +70,12 @@ public:
     virtual bool Initialize(std::weak_ptr<BaseServer>& self);
 
     /**
+     * Do any initialize that should happen after the server is listening and
+     * fully started.
+     */
+    virtual void FinishInitialize();
+
+    /**
      * Get the description of the world read from the config.
      * @return Pointer to the WorldDescription
      */

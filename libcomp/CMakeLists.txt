@@ -66,6 +66,7 @@ SET(${PROJECT_NAME}_SRCS
     #src/MemoryFile.cpp
     src/MessageConnectionClosed.cpp
     src/MessageEncrypted.cpp
+    src/MessageInit.cpp
     src/MessagePacket.cpp
     src/MessagePong.cpp
     src/MessageShutdown.cpp
@@ -131,6 +132,7 @@ SET(${PROJECT_NAME}_HDRS
     src/Message.h
     src/MessageConnectionClosed.h
     src/MessageEncrypted.h
+    src/MessageInit.h
     src/MessagePacket.h
     src/MessagePong.h
     src/MessageQueue.h

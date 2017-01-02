@@ -26,16 +26,19 @@
 
 #include "BaseServer.h"
 
-#ifdef _WIN32
- // Standard C++ Includes
+// Standard C++11 Includes
 #include <algorithm>
-#include <stdio.h>  /* defines FILENAME_MAX */
-#include <direct.h>
-#endif
 
+#ifdef _WIN32
+#include <cstdio> // defines FILENAME_MAX
+#include <direct.h>
+#endif // _WIN32
+
+// libcomp Includes
 #include <DatabaseCassandra.h>
 #include <DatabaseSQLite3.h>
-#include "Log.h"
+#include <Log.h>
+#include <MessageInit.h>
 
 using namespace libcomp;
 
@@ -65,7 +68,28 @@ bool BaseServer::Initialize(std::weak_ptr<BaseServer>& self)
     // Create the generic workers
     CreateWorkers();
 
+    // Add the server as a system manager for libcomp::Message::Init.
+    mMainWorker.AddManager(std::dynamic_pointer_cast<Manager>(mSelf.lock()));
+
+    // Get the message queue.
+    auto msgQueue = mMainWorker.GetMessageQueue();
+
+    // The message queue better exist!
+    if(nullptr == msgQueue)
+    {
+        LOG_CRITICAL("Main message queue is missing.\n");
+
+        return false;
+    }
+
+    // Add the init message into the main worker queue.
+    msgQueue->Enqueue(new libcomp::Message::Init);
+
     return true;
+}
+
+void BaseServer::FinishInitialize()
+{
 }
 
 std::shared_ptr<Database> BaseServer::GetDatabase(
@@ -316,4 +340,28 @@ std::shared_ptr<libcomp::Worker> BaseServer::GetNextConnectionWorker()
 std::shared_ptr<objects::ServerConfig> BaseServer::GetConfig() const
 {
     return mConfig;
+}
+
+std::list<libcomp::Message::MessageType> BaseServer::GetSupportedTypes() const
+{
+    static std::list<libcomp::Message::MessageType> supportedTypes = {
+        libcomp::Message::MessageType::MESSAGE_TYPE_SYSTEM
+    };
+
+    return supportedTypes;
+}
+
+bool BaseServer::ProcessMessage(const libcomp::Message::Message *pMessage)
+{
+    auto msg = dynamic_cast<const libcomp::Message::Init*>(pMessage);
+
+    // Check if this is an init message.
+    if(nullptr != msg)
+    {
+        FinishInitialize();
+
+        return true;
+    }
+
+    return false;
 }

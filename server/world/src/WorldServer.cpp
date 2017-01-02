@@ -74,6 +74,13 @@ bool WorldServer::Initialize(std::weak_ptr<BaseServer>& self)
         return false;
     }
 
+    return true;
+}
+
+void WorldServer::FinishInitialize()
+{
+    auto conf = std::dynamic_pointer_cast<objects::WorldConfig>(mConfig);
+
     asio::io_service service;
 
     // Connect to the world server.
@@ -100,7 +107,8 @@ bool WorldServer::Initialize(std::weak_ptr<BaseServer>& self)
     if(!connected)
     {
         LOG_CRITICAL("Failed to connect to the lobby server!\n");
-        return false;
+
+        return;
     }
 
     libcomp::Message::Message *pMessage = messageQueue->Dequeue();
@@ -109,12 +117,13 @@ bool WorldServer::Initialize(std::weak_ptr<BaseServer>& self)
     {
         LOG_CRITICAL("Lobby server did not accept the world server "
             "notification.\n");
-        return false;
+
+        return;
     }
 
     delete pMessage;
 
-    mManagerConnection = std::shared_ptr<ManagerConnection>(new ManagerConnection(self));
+    mManagerConnection = std::shared_ptr<ManagerConnection>(new ManagerConnection(mSelf));
 
     lobbyConnection->Close();
     serviceThread.join();
@@ -123,7 +132,7 @@ bool WorldServer::Initialize(std::weak_ptr<BaseServer>& self)
 
     auto connectionManager = std::dynamic_pointer_cast<libcomp::Manager>(mManagerConnection);
 
-    auto packetManager = std::shared_ptr<libcomp::ManagerPacket>(new libcomp::ManagerPacket(self));
+    auto packetManager = std::shared_ptr<libcomp::ManagerPacket>(new libcomp::ManagerPacket(mSelf));
     packetManager->AddParser<Parsers::GetWorldInfo>(to_underlying(
         InternalPacketCode_t::PACKET_GET_WORLD_INFO));
     packetManager->AddParser<Parsers::SetChannelInfo>(to_underlying(
@@ -139,8 +148,6 @@ bool WorldServer::Initialize(std::weak_ptr<BaseServer>& self)
         worker->AddManager(packetManager);
         worker->AddManager(connectionManager);
     }
-
-    return true;
 }
 
 WorldServer::~WorldServer()

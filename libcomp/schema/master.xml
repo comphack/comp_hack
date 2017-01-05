@@ -11,8 +11,8 @@
     
     <!-- common classes -->
     <include path="account.xml"/>
-    <include path="channeldescription.xml"/>
-    <include path="worlddescription.xml"/>
+    <include path="registeredchannel.xml"/>
+    <include path="registeredworld.xml"/>
 
     <!-- Lobby Packets -->
     <include path="packet_login.xml"/>

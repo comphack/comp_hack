@@ -148,7 +148,8 @@ std::shared_ptr<Database> BaseServer::GetDatabase(
         return nullptr;
     }
 
-    if(performSetup && !db->Setup())
+    if((performSetup && !db->Setup())
+        || (!performSetup && !db->Use()))
     {
         LOG_CRITICAL("Failed to init database.\n");
         return nullptr;

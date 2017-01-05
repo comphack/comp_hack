@@ -93,9 +93,10 @@ bool ManagerConnection::ProcessMessage(const libcomp::Message::Message *pMessage
                 // Connect and stay connected until either of us shutdown
                 if(worldConnection->Connect(address, port, true))
                 {
-                    auto world = std::shared_ptr<lobby::World>(new lobby::World(worldConnection));
+                    auto world = std::shared_ptr<lobby::World>(new lobby::World);
+                    world->SetConnection(worldConnection);
                     LOG_INFO(libcomp::String("New World connection established: %1:%2\n").Arg(address).Arg(port));
-                    mWorlds.push_back(world);
+                    mUnregisteredWorlds.push_back(world);
                     return true;
                 }
         
@@ -162,38 +163,139 @@ std::list<std::shared_ptr<lobby::World>> ManagerConnection::GetWorlds() const
     return mWorlds;
 }
 
-std::shared_ptr<lobby::World> ManagerConnection::GetWorldByConnection(const std::shared_ptr<libcomp::InternalConnection>& connection) const
+std::shared_ptr<lobby::World> ManagerConnection::GetWorldByID(uint8_t id) const
 {
-    for(auto world : mWorlds)
+    //Return registered worlds first
+    for(auto worldList : { mWorlds, mUnregisteredWorlds })
     {
-        if(world->GetConnection() == connection)
+        for(auto world : worldList)
         {
-            return world;
+            if(world->GetRegisteredWorld()->GetID() == id)
+            {
+                return world;
+            }
         }
     }
 
     return nullptr;
 }
 
+std::shared_ptr<lobby::World> ManagerConnection::GetWorldByConnection(
+    const std::shared_ptr<libcomp::InternalConnection>& connection) const
+{
+    if(nullptr == connection)
+    {
+        return nullptr;
+    }
+
+    //Return registered worlds first
+    for(auto worldList : { mWorlds, mUnregisteredWorlds })
+    {
+        for(auto world : worldList)
+        {
+            if(world->GetConnection() == connection)
+            {
+                return world;
+            }
+        }
+    }
+
+    return nullptr;
+}
+
+const std::shared_ptr<lobby::World> ManagerConnection::RegisterWorld(
+    std::shared_ptr<lobby::World>& world)
+{
+    auto registeredWorld = world->GetRegisteredWorld();
+    if(nullptr == registeredWorld)
+    {
+        return nullptr;
+    }
+
+    if(std::find(mWorlds.begin(), mWorlds.end(), world) != mWorlds.end())
+    {
+        //Already registered, nothing to do
+        return world;
+    }
+
+    //Remove previous unregistered references
+    RemoveWorld(world);
+
+    auto id = registeredWorld->GetID();
+    auto connection = world->GetConnection();
+    auto db = world->GetWorldDatabase();
+
+    auto existing = GetWorldByID(id);
+    if(nullptr == existing && nullptr != connection)
+    {
+        existing = GetWorldByConnection(connection);
+    }
+
+    if(nullptr != existing)
+    {
+        //Update the existing world and return that
+        if(nullptr != connection)
+        {
+            if(nullptr == existing->GetConnection())
+            {
+                existing->SetConnection(connection);
+            }
+            else if(existing->GetConnection() != connection)
+            {
+                LOG_CRITICAL("Multiple world servers registered with"
+                    " the same information.\n");
+                return nullptr;
+            }
+        }
+
+        if(nullptr == existing->GetRegisteredWorld())
+        {
+            RemoveWorld(existing);
+            mWorlds.push_back(existing);
+        }
+        existing->RegisterWorld(registeredWorld);
+        existing->SetWorldDatabase(db);
+        return existing;
+    }
+    else
+    {
+        //New world registered
+        mWorlds.push_back(world);
+        return world;
+    }
+}
+
 void ManagerConnection::RemoveWorld(std::shared_ptr<lobby::World>& world)
 {
     if(nullptr != world)
     {
-        auto desc = world->GetWorldDescription();
-
         auto iter = std::find(mWorlds.begin(), mWorlds.end(), world);
         if(iter != mWorlds.end())
         {
+            auto svr = world->GetRegisteredWorld();
+
             mWorlds.erase(iter);
-            if(nullptr != desc)
+            if(nullptr != svr)
             {
                 LOG_INFO(libcomp::String("World connection removed: (%1) %2\n")
-                    .Arg(desc->GetID()).Arg(desc->GetName()));
+                    .Arg(svr->GetID()).Arg(svr->GetName()));
             }
             else
             {
                 LOG_WARNING("Uninitialized world connection closed.\n");
             }
+
+            auto server = std::dynamic_pointer_cast<LobbyServer>(mServer.lock());
+            auto db = server->GetMainDatabase();
+
+            svr->SetStatus(objects::RegisteredWorld::Status_t::INACTIVE);
+            svr->Update(db);
+        }
+        
+        iter = std::find(mUnregisteredWorlds.begin(), mUnregisteredWorlds.end(), world);
+        if(iter != mUnregisteredWorlds.end())
+        {
+            mUnregisteredWorlds.erase(iter);
         }
     }
 }

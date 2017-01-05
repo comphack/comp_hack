@@ -41,9 +41,7 @@
 using namespace channel;
 
 ChannelServer::ChannelServer(std::shared_ptr<objects::ServerConfig> config,
-    const libcomp::String& configPath) : libcomp::BaseServer(config, configPath),
-    mWorldDescription(new objects::WorldDescription),
-    mDescription(new objects::ChannelDescription)
+    const libcomp::String& configPath) : libcomp::BaseServer(config, configPath)
 {
 }
 
@@ -65,11 +63,6 @@ bool ChannelServer::Initialize(std::weak_ptr<BaseServer>& self)
     mManagerConnection->SetWorldConnection(worldConnection);
 
     auto conf = std::dynamic_pointer_cast<objects::ChannelConfig>(mConfig);
-
-    mDescription = std::shared_ptr<objects::ChannelDescription>(
-        new objects::ChannelDescription);
-    mDescription->SetID(conf->GetID());
-    mDescription->SetName(conf->GetName());
 
     worldConnection->Connect(conf->GetWorldIP(), conf->GetWorldPort(), false);
 
@@ -108,14 +101,20 @@ ChannelServer::~ChannelServer()
 {
 }
 
-const std::shared_ptr<objects::ChannelDescription> ChannelServer::GetDescription()
+const std::shared_ptr<objects::RegisteredChannel> ChannelServer::GetRegisteredChannel()
 {
-    return mDescription;
+    return mRegisteredChannel;
 }
 
-std::shared_ptr<objects::WorldDescription> ChannelServer::GetWorldDescription()
+std::shared_ptr<objects::RegisteredWorld> ChannelServer::GetRegisteredWorld()
 {
-    return mWorldDescription;
+    return mRegisteredWorld;
+}
+
+void ChannelServer::RegisterWorld(const std::shared_ptr<
+    objects::RegisteredWorld>& registeredWorld)
+{
+    mRegisteredWorld = registeredWorld;
 }
 
 std::shared_ptr<libcomp::Database> ChannelServer::GetWorldDatabase() const
@@ -136,6 +135,41 @@ std::shared_ptr<libcomp::Database> ChannelServer::GetLobbyDatabase() const
 void ChannelServer::SetLobbyDatabase(const std::shared_ptr<libcomp::Database>& database)
 {
     mLobbyDatabase = database;
+}
+
+bool ChannelServer::RegisterServer(uint8_t channelID)
+{
+    if(nullptr == mWorldDatabase)
+    {
+        return false;
+    }
+
+    auto conf = std::dynamic_pointer_cast<objects::ChannelConfig>(mConfig);
+
+    auto registeredChannel = objects::RegisteredChannel::LoadRegisteredChannelByID(
+        mWorldDatabase, channelID);
+
+    if(nullptr == registeredChannel)
+    {
+        auto name = conf->GetName().IsEmpty() ? libcomp::String("Channel %1").Arg(channelID)
+            : conf->GetName();
+        registeredChannel = std::shared_ptr<objects::RegisteredChannel>(new objects::RegisteredChannel);
+        registeredChannel->SetID(channelID);
+        registeredChannel->SetName(name);
+        if(!registeredChannel->Register(registeredChannel) || !registeredChannel->Insert(mWorldDatabase))
+        {
+            return false;
+        }
+    }
+    else
+    {
+        //Some other server already connected as this ID, let it fail
+        return false;
+    }
+
+    mRegisteredChannel = registeredChannel;
+
+    return true;
 }
 
 std::shared_ptr<libcomp::TcpConnection> ChannelServer::CreateConnection(

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <objgen>
-    <object name="WorldDescription" persistent="false">
-        <member type="u8" name="ID"/>
+    <object name="RegisteredChannel" location="world">
+        <member type="u8" name="ID" key="true" unique="true"/>
         <member type="string" name="Name" lensz="2"/>
     </object>
 </objgen>

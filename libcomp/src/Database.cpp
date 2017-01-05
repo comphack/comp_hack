@@ -90,17 +90,42 @@ std::shared_ptr<PersistentObject> Database::LoadSingleObject(std::type_index typ
     return objects.size() > 0 ? objects.front() : nullptr;
 }
 
+bool Database::DeleteSingleObject(std::shared_ptr<PersistentObject>& obj)
+{
+    std::list<std::shared_ptr<PersistentObject>> objs;
+    objs.push_back(obj);
+    return DeleteObjects(objs);
+}
+
 std::shared_ptr<PersistentObject> Database::LoadSingleObjectFromRow(
     std::type_index type, DatabaseQuery& query)
 {
-    auto obj = PersistentObject::New(type);
+    bool isNew = false;
+
+    std::shared_ptr<PersistentObject> obj;
+
+    libobjgen::UUID uid;
+    if(query.GetValue("UID", uid))
+    {
+        //If the object is already cached, refresh it
+        obj = PersistentObject::GetObjectByUUID(uid);
+    }
+
+    if(nullptr == obj)
+    {
+        obj = PersistentObject::New(type);
+        isNew = true;
+    }
 
     if(!obj->LoadDatabaseValues(query))
     {
         return nullptr;
     }
 
-    PersistentObject::Register(obj);
+    if(isNew)
+    {
+        PersistentObject::Register(obj);
+    }
 
     return obj;
 }

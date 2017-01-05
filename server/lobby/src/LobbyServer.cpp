@@ -41,6 +41,7 @@
 // Object Includes
 #include "Account.h"
 #include "LobbyConfig.h"
+#include "RegisteredWorld.h"
 
 // Standard C++11 Includes
 #include <iostream>
@@ -92,6 +93,13 @@ bool LobbyServer::Initialize(std::weak_ptr<BaseServer>& self)
 
     mManagerConnection = std::shared_ptr<ManagerConnection>(
         new ManagerConnection(self, &mService, mMainWorker.GetMessageQueue()));
+
+    // Reset the RegisteredWorld table and pull information from
+    // known worlds into the connection manager
+    if(!ResetRegisteredWorlds())
+    {
+        return false;
+    }
 
     auto connectionManager = std::dynamic_pointer_cast<libcomp::Manager>(
         mManagerConnection);
@@ -151,6 +159,12 @@ std::shared_ptr<lobby::World> LobbyServer::GetWorldByConnection(
     std::shared_ptr<libcomp::InternalConnection> connection)
 {
     return mManagerConnection->GetWorldByConnection(connection);
+}
+
+const std::shared_ptr<lobby::World> LobbyServer::RegisterWorld(
+    std::shared_ptr<lobby::World>& world)
+{
+    return mManagerConnection->RegisterWorld(world);
 }
 
 std::shared_ptr<libcomp::Database> LobbyServer::GetMainDatabase() const
@@ -463,4 +477,33 @@ AccountManager* LobbyServer::GetAccountManager()
 SessionManager* LobbyServer::GetSessionManager()
 {
     return &mSessionManager;
+}
+
+bool LobbyServer::ResetRegisteredWorlds()
+{
+    //Set all the default World information
+    auto worldServers = libcomp::PersistentObject::LoadAll<objects::RegisteredWorld>(mDatabase);
+
+    for(auto worldServer : worldServers)
+    {
+        if(worldServer->GetStatus() == objects::RegisteredWorld::Status_t::ACTIVE)
+        {
+            LOG_DEBUG(libcomp::String("Resetting registered world (%1) '%2' which did not exit"
+                " cleanly during the previous execution.\n")
+                .Arg(worldServer->GetID())
+                .Arg(worldServer->GetName()));
+            worldServer->SetStatus(objects::RegisteredWorld::Status_t::INACTIVE);
+            if(!worldServer->Update(mDatabase))
+            {
+                LOG_CRITICAL("Registered world update failed.\n");
+                return false;
+            }
+        }
+
+        auto world = std::shared_ptr<World>(new World);
+        world->RegisterWorld(worldServer);
+        RegisterWorld(world);
+    }
+
+    return true;
 }

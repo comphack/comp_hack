@@ -43,7 +43,7 @@
 using namespace world;
 
 WorldServer::WorldServer(std::shared_ptr<objects::ServerConfig> config, const libcomp::String& configPath) :
-    libcomp::BaseServer(config, configPath), mDescription(new objects::WorldDescription)
+    libcomp::BaseServer(config, configPath)
 {
 }
 
@@ -55,8 +55,6 @@ bool WorldServer::Initialize(std::weak_ptr<BaseServer>& self)
     }
 
     auto conf = std::dynamic_pointer_cast<objects::WorldConfig>(mConfig);
-    mDescription->SetID(conf->GetID());
-    mDescription->SetName(conf->GetName());
     
     libcomp::EnumMap<objects::ServerConfig::DatabaseType_t,
         std::shared_ptr<objects::DatabaseConfig>> configMap;
@@ -154,16 +152,16 @@ WorldServer::~WorldServer()
 {
 }
 
-const std::shared_ptr<objects::WorldDescription> WorldServer::GetDescription() const
+const std::shared_ptr<objects::RegisteredWorld> WorldServer::GetRegisteredWorld() const
 {
-    return mDescription;
+    return mRegisteredWorld;
 }
 
-std::shared_ptr<objects::ChannelDescription> WorldServer::GetChannelDescriptionByConnection(
+std::shared_ptr<objects::RegisteredChannel> WorldServer::GetChannel(
     const std::shared_ptr<libcomp::InternalConnection>& connection) const
 {
-    auto iter = mChannelDescriptions.find(connection);
-    if(iter != mChannelDescriptions.end())
+    auto iter = mRegisteredChannels.find(connection);
+    if(iter != mRegisteredChannels.end())
     {
         return iter->second;
     }
@@ -171,23 +169,30 @@ std::shared_ptr<objects::ChannelDescription> WorldServer::GetChannelDescriptionB
     return nullptr;
 }
 
+uint8_t WorldServer::GetNextChannelID() const
+{
+    // This does not take into account dropped connections,
+    // just return the next one by number of current connections
+    return static_cast<uint8_t>(mRegisteredChannels.size());
+}
+
 const std::shared_ptr<libcomp::InternalConnection> WorldServer::GetLobbyConnection() const
 {
     return mManagerConnection->GetLobbyConnection();
 }
 
-void WorldServer::SetChannelDescription(const std::shared_ptr<objects::ChannelDescription>& channel,
+void WorldServer::RegisterChannel(const std::shared_ptr<objects::RegisteredChannel>& channel,
     const std::shared_ptr<libcomp::InternalConnection>& connection)
 {
-    mChannelDescriptions[connection] = channel;
+    mRegisteredChannels[connection] = channel;
 }
 
-bool WorldServer::RemoveChannelDescription(const std::shared_ptr<libcomp::InternalConnection>& connection)
+bool WorldServer::RemoveChannel(const std::shared_ptr<libcomp::InternalConnection>& connection)
 {
-    auto iter = mChannelDescriptions.find(connection);
-    if(iter != mChannelDescriptions.end())
+    auto iter = mRegisteredChannels.find(connection);
+    if(iter != mRegisteredChannels.end())
     {
-        mChannelDescriptions.erase(iter);
+        mRegisteredChannels.erase(iter);
         return true;
     }
 
@@ -207,6 +212,71 @@ std::shared_ptr<libcomp::Database> WorldServer::GetLobbyDatabase() const
 void WorldServer::SetLobbyDatabase(const std::shared_ptr<libcomp::Database>& database)
 {
     mLobbyDatabase = database;
+}
+
+bool WorldServer::RegisterServer()
+{
+    if(nullptr == mLobbyDatabase)
+    {
+        return false;
+    }
+
+    //Delete all the channels currently registered
+    auto channelServers = libcomp::PersistentObject::LoadAll<
+        objects::RegisteredChannel>(mDatabase);
+
+    if(channelServers.size() > 0)
+    {
+        LOG_DEBUG("Clearing the registered channels from the previous execution.\n");
+        auto objs = libcomp::PersistentObject::ToList<objects::RegisteredChannel>(
+            channelServers);
+        if(!mDatabase->DeleteObjects(objs))
+        {
+            LOG_CRITICAL("Registered channel deletion failed.\n");
+            return false;
+        }
+    }
+
+    auto conf = std::dynamic_pointer_cast<objects::WorldConfig>(mConfig);
+
+    auto registeredWorld = objects::RegisteredWorld::LoadRegisteredWorldByID(
+        mLobbyDatabase, conf->GetID());
+
+    if(nullptr == registeredWorld)
+    {
+        auto name = conf->GetName().IsEmpty() ? libcomp::String("World %1").Arg(conf->GetID())
+            : conf->GetName();
+        registeredWorld = std::shared_ptr<objects::RegisteredWorld>(new objects::RegisteredWorld);
+        registeredWorld->SetID(conf->GetID());
+        registeredWorld->SetName(name);
+        registeredWorld->SetStatus(objects::RegisteredWorld::Status_t::ACTIVE);
+        if(!registeredWorld->Register(registeredWorld) || !registeredWorld->Insert(mLobbyDatabase))
+        {
+            return false;
+        }
+    }
+    else if(registeredWorld->GetStatus() == objects::RegisteredWorld::Status_t::ACTIVE)
+    {
+        //Some other server already connected as this ID, let it fail
+        return false;
+    }
+    else
+    {
+        auto name = conf->GetName();
+        if(!name.IsEmpty())
+        {
+            registeredWorld->SetName(name);
+        }
+        registeredWorld->SetStatus(objects::RegisteredWorld::Status_t::ACTIVE);
+        if(!registeredWorld->Update(mLobbyDatabase))
+        {
+            return false;
+        }
+    }
+
+    mRegisteredWorld = registeredWorld;
+
+    return true;
 }
 
 std::shared_ptr<libcomp::TcpConnection> WorldServer::CreateConnection(

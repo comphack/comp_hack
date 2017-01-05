@@ -184,9 +184,11 @@ std::list<std::shared_ptr<PersistentObject>> DatabaseSQLite3::LoadObjects(
         return {};
     }
 
-    String sql = String("SELECT * FROM %1 WHERE %2 = :%2").Arg(
+    String sql = String("SELECT * FROM %1%2").Arg(
         metaObject->GetName()).Arg(
-        pValue->GetColumn());
+        (nullptr != pValue
+            ? String(" WHERE %1 = :%1").Arg(pValue->GetColumn())
+            : ""));
 
     DatabaseQuery query = Prepare(sql);
 
@@ -198,7 +200,7 @@ std::list<std::shared_ptr<PersistentObject>> DatabaseSQLite3::LoadObjects(
         return {};
     }
 
-    if(!pValue->Bind(query))
+    if(nullptr != pValue && !pValue->Bind(query))
     {
         LOG_ERROR(String("Failed to bind value: %1\n").Arg(
             pValue->GetColumn()));
@@ -256,7 +258,7 @@ bool DatabaseSQLite3::InsertSingleObject(std::shared_ptr<PersistentObject>& obj)
     }
 
     std::list<String> columnNames;
-    columnNames.push_back("uid");
+    columnNames.push_back("UID");
 
     std::list<String> columnBinds;
     columnBinds.push_back(String("'%1'").Arg(obj->GetUUID().ToString()));
@@ -334,7 +336,7 @@ bool DatabaseSQLite3::UpdateSingleObject(std::shared_ptr<PersistentObject>& obj)
         columnNames.push_back(String("%1 = :%1").Arg(value->GetColumn()));
     }
 
-    String sql = String("UPDATE %1 SET %2 WHERE uid = '%3';").Arg(
+    String sql = String("UPDATE %1 SET %2 WHERE UID = '%3';").Arg(
         metaObject->GetName()).Arg(
         String::Join(columnNames, ", ")).Arg(
         obj->GetUUID().ToString());
@@ -374,23 +376,44 @@ bool DatabaseSQLite3::UpdateSingleObject(std::shared_ptr<PersistentObject>& obj)
     return true;
 }
 
-bool DatabaseSQLite3::DeleteSingleObject(std::shared_ptr<PersistentObject>& obj)
+bool DatabaseSQLite3::DeleteObjects(std::list<std::shared_ptr<PersistentObject>>& objs)
 {
-    auto uuid = obj->GetUUID();
-    if(uuid.IsNull())
+    std::shared_ptr<libobjgen::MetaObject> metaObject;
+
+    std::list<String> uidBindings;
+    for(auto obj : objs)
     {
-        return false;
+        auto uuid = obj->GetUUID();
+
+        if(uuid.IsNull())
+        {
+            return false;
+        }
+
+        auto metaObj = obj->GetObjectMetadata();
+
+        if(nullptr == metaObject)
+        {
+            metaObject = metaObj;
+        }
+        else if(metaObject != metaObj)
+        {
+            return false;
+        }
+
+        std::string uuidStr = obj->GetUUID().ToString();
+
+        uidBindings.push_back(String("'%1'").Arg(uuidStr));
     }
 
-    std::string uuidStr = obj->GetUUID().ToString();
-
-    auto metaObject = obj->GetObjectMetadata();
-
-    if (Execute(String("DELETE FROM %1 WHERE uid = '%2';")
+    if(Execute(String("DELETE FROM %1 WHERE UID in (%2);")
         .Arg(metaObject->GetName())
-        .Arg(uuidStr)))
+        .Arg(String::Join(uidBindings, ", "))))
     {
-        obj->Unregister();
+        for(auto obj : objs)
+        {
+            obj->Unregister();
+        }
         return true;
     }
 
@@ -511,14 +534,14 @@ bool DatabaseSQLite3::VerifyAndSetupSchema()
             std::unordered_map<std::string,
                 String> columns = tableIter->second;
             if(columns.size() - 1 != vars.size()
-                || columns.find("uid") == columns.end())
+                || columns.find("UID") == columns.end())
             {
                 archiving = true;
             }
             else
             {
                 auto indexes = indexedFields[objName];
-                columns.erase("uid");
+                columns.erase("UID");
                 for(auto var : vars)
                 {
                     auto name = var->GetName();
@@ -569,7 +592,7 @@ bool DatabaseSQLite3::VerifyAndSetupSchema()
 
             std::stringstream ss;
             ss << "CREATE TABLE " << objName
-                << " (uid blob PRIMARY KEY";
+                << " (UID string PRIMARY KEY";
             for(size_t i = 0; i < vars.size(); i++)
             {
                 auto var = vars[i];

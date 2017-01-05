@@ -28,18 +28,18 @@
 #define SERVER_LOBBY_SRC_WORLD_H
 
 // libcomp Includes
-#include <ChannelDescription.h>
 #include <Database.h>
 #include <InternalConnection.h>
 
 // object Includes
-#include <WorldDescription.h>
+#include <RegisteredChannel.h>
+#include <RegisteredWorld.h>
 
 namespace lobby
 {
 
 /**
- * Associates a world connection to a description of the world
+ * Associates a world connection to @ref RegisteredWorld
  * and its channels for the lobby.
  */
 class World
@@ -47,9 +47,8 @@ class World
 public:
     /**
      * Create a new world from a world connection.
-     * @param connection An active world connection
      */
-    World(std::shared_ptr<libcomp::InternalConnection> connection);
+    World();
 
     /**
      * Clean up the world.
@@ -63,31 +62,31 @@ public:
     std::shared_ptr<libcomp::InternalConnection> GetConnection() const;
 
     /**
-     * Get a pointer to the world's description.
-     * @return Pointer to the world's description
+     * Set the pointer to the world's connection.
+     * @param connection Pointer to the world's connection
      */
-    std::shared_ptr<objects::WorldDescription> GetWorldDescription() const;
+    void SetConnection(const std::shared_ptr<libcomp::InternalConnection>& connection);
 
     /**
-     * Get a list of pointers to the world's channel descriptions.
-     * @return List of pointers to the world's channel descriptions
+     * Get a list of pointers to the world's RegisteredChannels.
+     * @return List of pointers to the world's RegisteredChannels
      */
-    const std::list<std::shared_ptr<objects::ChannelDescription>> GetChannelDescriptions() const;
+    const std::list<std::shared_ptr<objects::RegisteredChannel>> GetChannels() const;
 
     /**
-     * Get a pointer to a channel description by its ID.
+     * Get a pointer to a RegisteredChannel by its ID.
+     * @param id ID of a RegisteredChannel to the world
+     * @return Pointer to the matching RegisteredChannel
+     */
+    std::shared_ptr<objects::RegisteredChannel> GetChannelByID(uint8_t id) const;
+
+    /**
+     * Remove a RegisteredChannel by its ID.
      * @param id ID of a channel associated to the world
-     * @return Pointer to the matching channel description
+     * @return true if the RegisteredChannel existed, false if it did not exist
      */
-    std::shared_ptr<objects::ChannelDescription> GetChannelDescriptionByID(uint8_t id) const;
+    bool RemoveChannelByID(uint8_t id);
 
-    /**
-     * Remove a channel description by its ID.
-     * @param id ID of a channel associated to the world
-     * @return true if the description existed, false if it did not exist
-     */
-    bool RemoveChannelDescriptionByID(uint8_t id);
-    
     /**
      * Get the world database.
      * @return Pointer to the world's database
@@ -101,29 +100,35 @@ public:
     void SetWorldDatabase(const std::shared_ptr<libcomp::Database>& database);
 
     /**
-     * Set the world description.
-     * @param worldDescription Pointer to the world's description
+     * Set a RegisteredChannel.
+     * @param channel Pointer to a RegisteredChannel
      */
-    void SetWorldDescription(const std::shared_ptr<objects::WorldDescription>& worldDescription);
+    void RegisterChannel(const std::shared_ptr<objects::RegisteredChannel>& channel);
 
     /**
-     * Set a channel description.
-     * @param channelDescription Pointer to a channel's description
+     * Get the RegisteredWorld.
+     * @return Pointer to the RegisteredWorld
      */
-    void SetChannelDescription(const std::shared_ptr<objects::ChannelDescription>& channelDescription);
+    const std::shared_ptr<objects::RegisteredWorld> GetRegisteredWorld() const;
+
+    /**
+     * Set the RegisteredWorld.
+     * @param registeredWorld Pointer to the RegisteredWorld
+     */
+    void RegisterWorld(const std::shared_ptr<objects::RegisteredWorld>& registeredWorld);
 
 private:
     /// Pointer to the world's connection
     std::shared_ptr<libcomp::InternalConnection> mConnection;
 
-    /// Pointer to the world's description
-    std::shared_ptr<objects::WorldDescription> mWorldDescription;
+    /// Pointer to the RegisteredWorld
+    std::shared_ptr<objects::RegisteredWorld> mRegisteredWorld;
 
-    /// A shared pointer to the world database used by the server.
+    /// A shared pointer to the world database used by the server
     std::shared_ptr<libcomp::Database> mDatabase;
 
-    /// List of pointers to the channel descriptions
-    std::list<std::shared_ptr<objects::ChannelDescription>> mChannelDescriptions;
+    /// List of pointers to the RegisteredChannels
+    std::list<std::shared_ptr<objects::RegisteredChannel>> mRegisteredChannels;
 };
 
 } // namespace lobby

@@ -130,6 +130,27 @@ public:
         const libobjgen::UUID& uuid);
 
     /*
+     * Retrieve all objects of the specified type by its UUID from the
+     * database.  Use sparingly.
+     * @param db Database to load from
+     * @return List of pointers to all objects of the specified type
+     */
+    template<class T> static std::list<std::shared_ptr<T>> LoadAll(
+        const std::shared_ptr<Database>& db)
+    {
+        std::list<std::shared_ptr<T>> retval;
+        if(std::is_base_of<PersistentObject, T>::value)
+        {
+            for(auto obj : LoadObjects(typeid(T), db, nullptr))
+            {
+                retval.push_back(std::dynamic_pointer_cast<T>(obj));
+            }
+        }
+
+        return retval;
+    }
+
+    /*
      * Retrieve an object of the specified type by its UUID from the cache
      * or database.
      * @param db Database to load from
@@ -220,6 +241,28 @@ public:
     static std::shared_ptr<PersistentObject> New(std::type_index type);
 
     /*
+     * Convert a list of PersistentObject derived object pointers into a
+     * list of PersistentObject pointers.
+     * @param objList List of PersistentObject derived object pointers
+     * @return List of PersistentObject pointers
+     */
+    template<class T> static std::list<std::shared_ptr<PersistentObject>>
+        ToList(std::list<std::shared_ptr<T>> objList)
+    {
+        std::list<std::shared_ptr<PersistentObject>> converted;
+        if(std::is_base_of<PersistentObject, T>::value)
+        {
+            for(auto obj : objList)
+            {
+                converted.push_back(std::dynamic_pointer_cast<
+                    PersistentObject>(obj));
+            }
+        }
+
+        return converted;
+    }
+
+    /*
      * Save a new record to the database.
      * @param db Database to load from
      * @return true on success, false on failure
@@ -261,6 +304,17 @@ protected:
      */
     static std::shared_ptr<PersistentObject> LoadObject(std::type_index type,
         const std::shared_ptr<Database>& db, DatabaseBind *pValue);
+
+    /*
+     * Load multiple objects from the database from a field database binding.
+     * @param type C++ type representing the object type to load
+     * @param db Database to load from
+     * @param pValue Pointer to a field bound to a database column
+     * @return List of pointers objects
+     */
+    static std::list<std::shared_ptr<PersistentObject>> LoadObjects(
+        std::type_index type, const std::shared_ptr<Database>& db,
+        DatabaseBind *pValue);
 
     /// Static value to be set to true if any PersistentObject type fails
     /// to register itself at runtime

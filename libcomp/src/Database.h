@@ -124,7 +124,7 @@ public:
      * Load multiple @ref PersistentObject instances from a single bound
      * database column and value to select upon.
      * @param type C++ type representing the object type to load
-     * @param pValue Database specific column binding
+     * @param pValue Database specific agnostic binding
      * @return List of pointers to loaded objects from the query results
      */
     virtual std::list<std::shared_ptr<PersistentObject>> LoadObjects(
@@ -136,7 +136,7 @@ public:
      * down the results of @ref LoadObjects to the first record so
      * it should be used only when the value being bound to is unique.
      * @param type C++ type representing the object type to load
-     * @param pValue Database specific column binding
+     * @param pValue Database agnostic column binding
      * @return Pointer to the first loaded object from the query results
      */
     virtual std::shared_ptr<PersistentObject> LoadSingleObject(
@@ -151,17 +151,25 @@ public:
 
     /**
      * Update all fields on one @ref PersistentObject instance in the database.
-     * @param obj Pointer to the object to insert
+     * @param obj Pointer to the object to update
      * @return true on success, false on failure
      */
     virtual bool UpdateSingleObject(std::shared_ptr<PersistentObject>& obj) = 0;
 
     /**
      * Delete one @ref PersistentObject instance from the database.
-     * @param obj Pointer to the object to insert
+     * @param obj Pointer to the object to delete
      * @return true on success, false on failure
      */
-    virtual bool DeleteSingleObject(std::shared_ptr<PersistentObject>& obj) = 0;
+    virtual bool DeleteSingleObject(std::shared_ptr<PersistentObject>& obj);
+
+    /**
+     * Delete multiple @ref PersistentObject instances from the database at
+     * once.
+     * @param objs List of ointers to the objects to delete
+     * @return true on success, false on failure
+     */
+    virtual bool DeleteObjects(std::list<std::shared_ptr<PersistentObject>>& objs) = 0;
 
     /**
      * Retrieve the last error raised by a database operation.

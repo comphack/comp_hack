@@ -86,30 +86,49 @@ bool Parsers::GetWorldInfo::Parse(libcomp::ManagerPacket *pPacketManager,
         }
 
         server->SetLobbyDatabase(lobbyDatabase);
+
+        if(!server->RegisterServer())
+        {
+            LOG_CRITICAL("The server failed to register with the lobby's database."
+                " Notifying the lobby of the failure.\n");
+        }
     }
 
-    // Reply with a packet containing the world description and the database
+    // Reply with a packet containing the world ID and the database
     // connection configuration for the world.  If the packet was received from
-    // a channel instead, the reply will contain the lobby database connection
-    // information as well.
+    // a channel instead, the reply will contain the channel ID to use and
+    // the lobby database connection information as well.  If the server failed
+    // to register with the lobby the packet will be blank to force a shutdown.
     libcomp::Packet reply;
 
     reply.WritePacketCode(InternalPacketCode_t::PACKET_SET_WORLD_INFO);
-    server->GetDescription()->SavePacket(reply);
-    
-    switch(databaseType)
-    {
-        case objects::ServerConfig::DatabaseType_t::CASSANDRA:
-            config->GetCassandraConfig().Get()->SavePacket(reply, false);
-            break;
-        case objects::ServerConfig::DatabaseType_t::SQLITE3:
-            config->GetSQLite3Config().Get()->SavePacket(reply, false);
-            break;
-    }
 
-    if(!fromLobby)
+    auto registeredWorld = server->GetRegisteredWorld();
+    if(nullptr != registeredWorld)
     {
-        server->GetLobbyDatabase()->GetConfig()->SavePacket(reply, false);
+        auto registeredWorldID = registeredWorld->GetID();
+        reply.WriteU8(registeredWorldID);
+
+        if(!fromLobby)
+        {
+            auto nextChannelID = server->GetNextChannelID();
+            reply.WriteU8(nextChannelID);
+        }
+    
+        switch(databaseType)
+        {
+            case objects::ServerConfig::DatabaseType_t::CASSANDRA:
+                config->GetCassandraConfig().Get()->SavePacket(reply, false);
+                break;
+            case objects::ServerConfig::DatabaseType_t::SQLITE3:
+                config->GetSQLite3Config().Get()->SavePacket(reply, false);
+                break;
+        }
+
+        if(!fromLobby)
+        {
+            server->GetLobbyDatabase()->GetConfig()->SavePacket(reply, false);
+        }
     }
 
     connection->SendPacket(reply);

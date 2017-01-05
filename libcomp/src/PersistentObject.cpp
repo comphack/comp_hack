@@ -35,6 +35,8 @@
 
 // All libcomp PersistentObject Includes
 #include "Account.h"
+#include "RegisteredChannel.h"
+#include "RegisteredWorld.h"
 
 using namespace libcomp;
 
@@ -146,7 +148,7 @@ std::shared_ptr<PersistentObject> PersistentObject::LoadObjectByUUID(std::type_i
 
     if(nullptr == obj)
     {
-        auto bind = new DatabaseBindUUID("uid", uuid);
+        auto bind = new DatabaseBindUUID("UID", uuid);
 
         obj = LoadObject(type, db, bind);
 
@@ -174,6 +176,18 @@ std::shared_ptr<PersistentObject> PersistentObject::LoadObject(
     }
 
     return obj;
+}
+
+std::list<std::shared_ptr<PersistentObject>> PersistentObject::LoadObjects(
+    std::type_index type, const std::shared_ptr<Database>& db,
+    DatabaseBind *pValue)
+{
+    if(nullptr != db)
+    {
+        return db->LoadObjects(type, pValue);
+    }
+
+    return std::list<std::shared_ptr<PersistentObject>>();
 }
 
 void PersistentObject::RegisterType(std::type_index type,
@@ -259,6 +273,10 @@ bool PersistentObject::Initialize()
 {
     RegisterType(typeid(objects::Account), objects::Account::GetMetadata(),
         []() {  return (PersistentObject*)new objects::Account(); });
+    RegisterType(typeid(objects::RegisteredChannel), objects::RegisteredChannel::GetMetadata(),
+        []() {  return (PersistentObject*)new objects::RegisteredChannel(); });
+    RegisterType(typeid(objects::RegisteredWorld), objects::RegisteredWorld::GetMetadata(),
+        []() {  return (PersistentObject*)new objects::RegisteredWorld(); });
 
     return !sInitializationFailed;
 }

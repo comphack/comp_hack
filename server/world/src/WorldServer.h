@@ -32,13 +32,13 @@
 
 // libcomp Includes
 #include <BaseServer.h>
-#include <ChannelDescription.h>
 #include <InternalConnection.h>
 #include <ManagerConnection.h>
 #include <Worker.h>
 
 // object Includes
-#include <WorldDescription.h>
+#include <RegisteredChannel.h>
+#include <RegisteredWorld.h>
 
 namespace world
 {
@@ -76,19 +76,25 @@ public:
     virtual void FinishInitialize();
 
     /**
-     * Get the description of the world read from the config.
-     * @return Pointer to the WorldDescription
+     * Get the RegisteredWorld.
+     * @return Pointer to the RegisteredWorld
      */
-    const std::shared_ptr<objects::WorldDescription> GetDescription() const;
+    const std::shared_ptr<objects::RegisteredWorld> GetRegisteredWorld() const;
 
     /**
-     * Get the description of a channel currently being connected to
+     * Get the RegisteredChannel of a channel currently connected to
      * by its connection pointer.
      * @param connection Pointer to the channel's connection.
-     * @return Pointer to the ChannelDescription
+     * @return Pointer to the RegisteredChannel
      */
-    std::shared_ptr<objects::ChannelDescription> GetChannelDescriptionByConnection(
+    std::shared_ptr<objects::RegisteredChannel> GetChannel(
         const std::shared_ptr<libcomp::InternalConnection>& connection) const;
+
+    /**
+     * Get the next channel ID to use for connecting channels.
+     * @return Next channel ID, starting at 0
+     */
+    uint8_t GetNextChannelID() const;
 
     /**
      * Get a pointer to the lobby connection.
@@ -97,28 +103,27 @@ public:
     const std::shared_ptr<libcomp::InternalConnection> GetLobbyConnection() const;
 
     /**
-     * Set the description of a channel currently being connected to
-     * via a connection.
-     * @param channel Pointer to the channel's description.
+     * Set the RegisteredChannel of a channel currently being connected to.
+     * @param channel Pointer to the RegisteredChannel.
      * @param connection Pointer to the channel's connection.
      */
-    void SetChannelDescription(const std::shared_ptr<objects::ChannelDescription>& channel,
+    void RegisterChannel(const std::shared_ptr<objects::RegisteredChannel>& channel,
         const std::shared_ptr<libcomp::InternalConnection>& connection);
 
     /**
-     * Remove the description of the channel for a connection
+     * Remove the RegisteredChannel for a connection
      * that is no longer being used.
      * @param connection Pointer to the channel's connection.
-     * @return true if the description existed, false if it did not
+     * @return true if the RegisteredChannel existed, false if it did not
      */
-    bool RemoveChannelDescription(const std::shared_ptr<libcomp::InternalConnection>& connection);
-    
+    bool RemoveChannel(const std::shared_ptr<libcomp::InternalConnection>& connection);
+
     /**
      * Get the world database.
      * @return Pointer to the world's database
      */
     std::shared_ptr<libcomp::Database> GetWorldDatabase() const;
-    
+
     /**
      * Get the lobby database.
      * @return Pointer to the lobby's database
@@ -130,6 +135,12 @@ public:
      * @param database Pointer to the lobby's database
      */
     void SetLobbyDatabase(const std::shared_ptr<libcomp::Database>& database);
+
+    /**
+     * Register the world with the lobby database.
+     * @return true on success, false on failure
+     */
+    bool RegisterServer();
 
 protected:
     /**
@@ -146,12 +157,12 @@ protected:
     /// A shared pointer to the world database used by the server.
     std::shared_ptr<libcomp::Database> mLobbyDatabase;
 
-    /// Pointer to the description of the world.
-    std::shared_ptr<objects::WorldDescription> mDescription;
+    /// Pointer to the RegisteredWorld.
+    std::shared_ptr<objects::RegisteredWorld> mRegisteredWorld;
 
-    /// Pointer to the descriptions of connected channels by their connections.
+    /// Pointer to the RegisteredChannels by their connections.
     std::map<std::shared_ptr<libcomp::InternalConnection>,
-        std::shared_ptr<objects::ChannelDescription>> mChannelDescriptions;
+        std::shared_ptr<objects::RegisteredChannel>> mRegisteredChannels;
 
     /// Pointer to the manager in charge of connection messages. 
     std::shared_ptr<ManagerConnection> mManagerConnection;

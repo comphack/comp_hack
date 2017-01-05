@@ -8,7 +8,6 @@
         <member name="MultithreadMode">true</member>
         
         <!-- From ChannelConfig -->
-        <member name="ID">0</member>
         <member name="Name">Test Channel</member>
         <member name="WorldIP">127.0.0.1</member>
         <member name="WorldPort">18666</member>

@@ -85,7 +85,7 @@ public:
 
     virtual bool InsertSingleObject(std::shared_ptr<PersistentObject>& obj);
     virtual bool UpdateSingleObject(std::shared_ptr<PersistentObject>& obj);
-    virtual bool DeleteSingleObject(std::shared_ptr<PersistentObject>& obj);
+    virtual bool DeleteObjects(std::list<std::shared_ptr<PersistentObject>>& objs);
 
     /**
      * Verify/create any missing tables based off of @ref PersistentObject

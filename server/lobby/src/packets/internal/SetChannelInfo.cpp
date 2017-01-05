@@ -27,7 +27,6 @@
 #include "Packets.h"
 
 // libcomp Includes
-#include <ChannelDescription.h>
 #include <Decrypt.h>
 #include <InternalConnection.h>
 #include <Log.h>
@@ -45,35 +44,35 @@ bool Parsers::SetChannelInfo::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {
-    if(p.Size() == 0)
+    if(p.Size() < 2)
     {
         return false;
     }
 
     auto action = static_cast<InternalPacketAction_t>(p.ReadU8());
+    auto channelID = p.ReadU8();
 
     auto server = std::dynamic_pointer_cast<LobbyServer>(pPacketManager->GetServer());
-
-    auto desc = std::shared_ptr<objects::ChannelDescription>(new objects::ChannelDescription);
-
-    if(!desc->LoadPacket(p))
-    {
-        return false;
-    }
-
     auto conn = std::dynamic_pointer_cast<libcomp::InternalConnection>(connection);
-
     auto world = server->GetWorldByConnection(conn);
+
+    auto svr = world->GetChannelByID(channelID);
+    if(nullptr == svr)
+    {
+        auto db = world->GetWorldDatabase();
+
+        svr = objects::RegisteredChannel::LoadRegisteredChannelByID(db, channelID);
+    }
 
     if(InternalPacketAction_t::PACKET_ACTION_REMOVE == action)
     {
-        world->RemoveChannelDescriptionByID(desc->GetID());
+        world->RemoveChannelByID(svr->GetID());
     }
     else
     {
-        LOG_DEBUG(libcomp::String("Updating Channel Server description: (%1) %2\n")
-            .Arg(desc->GetID()).Arg(desc->GetName()));
-        world->SetChannelDescription(desc);
+        LOG_DEBUG(libcomp::String("Updating Channel Server: (%1) %2\n")
+            .Arg(svr->GetID()).Arg(svr->GetName()));
+        world->RegisterChannel(svr);
     }
 
     return true;

@@ -171,8 +171,22 @@ std::shared_ptr<objects::RegisteredChannel> WorldServer::GetChannel(
 
 uint8_t WorldServer::GetNextChannelID() const
 {
-    // This does not take into account dropped connections,
-    // just return the next one by number of current connections
+    std::set<uint8_t> registeredIDs;
+    for(auto pair : mRegisteredChannels)
+    {
+        registeredIDs.insert(pair.second->GetID());
+    }
+
+    //If an ID drops, fill in the gap
+    for(uint8_t i = 0; i < (uint8_t)mRegisteredChannels.size(); i++)
+    {
+        if(registeredIDs.find(i) == registeredIDs.end())
+        {
+            return i;
+        }
+    }
+
+    //If there are no breaks in the numbering sequence, return max + 1 (or 0)
     return static_cast<uint8_t>(mRegisteredChannels.size());
 }
 

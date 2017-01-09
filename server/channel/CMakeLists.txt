@@ -29,18 +29,23 @@ GENERATE_DOCS(doc/Doxyfile.in)
 FILE(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/objgen)
 
 SET(${PROJECT_NAME}_SRCS
+    src/ChannelClientConnection.cpp
     src/ChannelServer.cpp
+    src/ClientState.cpp
     src/ManagerConnection.cpp
     src/main.cpp
 )
 
 SET(${PROJECT_NAME}_HDRS
+    src/ChannelClientConnection.h
     src/ChannelServer.h
+    src/ClientState.h
     src/ManagerConnection.h
 )
 
 SET(${PROJECT_NAME}_SCHEMA
     schema/channelconfig.xml
+    schema/clientstate.xml
 )
 
 OBJGEN_XML(${PROJECT_NAME}_STRUCTS
@@ -57,12 +62,21 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     # Output files
     ChannelConfig.h
     ChannelConfig.cpp
+    ClientStateObject.h
+    ClientStateObject.cpp
 )
 
 SOURCE_GROUP("Source Files\\Packets\\Game" src/packets/game/*)
 SOURCE_GROUP("Source Files\\Packets\\Internal" src/packets/internal/*)
 
 SET(${PROJECT_NAME}_PACKETS
+    src/packets/game/Login.cpp               # 0x0000
+    src/packets/game/Auth.cpp               # 0x0002
+    src/packets/game/SendData.cpp               # 0x0004
+    src/packets/game/KeepAlive.cpp               # 0x0056
+    src/packets/game/State.cpp               # 0x005A
+    src/packets/game/Sync.cpp               # 0x00F3
+
     #Internal packets
     src/packets/internal/SetWorldInfo.cpp      # 0x1002
 )

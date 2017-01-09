@@ -57,8 +57,32 @@ void ChannelConnection::PreparePackets(std::list<ReadOnlyPacket>& packets)
 
         Packet finalPacket;
 
+        /// @todo: fix the new compression code
+        if(packets.size() > 1)
+        {
+            LOG_ERROR("Multiple packets encountered in ChannelConnection::PreparePackets!\n");
+        }
+
+        ReadOnlyPacket& p = packets.front();
+        uint32_t packetSize = p.Size() + 4;
+        uint32_t realSize = packetSize + 16;
+        uint32_t paddedSize = realSize - (realSize % 8);
+        if (realSize != paddedSize)
+            paddedSize += 8;
+
+        finalPacket.WriteU32Big(paddedSize);
+        finalPacket.WriteU32Big(realSize);
+        finalPacket.WriteArray("gzip", 4);
+        finalPacket.WriteU32Little(packetSize); // Uncompressed
+        finalPacket.WriteU32Little(packetSize); // Compressed
+        finalPacket.WriteArray("lv6", 4);
+        finalPacket.WriteU16Big((uint16_t)(packetSize - 2));
+        finalPacket.WriteU16Little((uint16_t)(packetSize - 2));
+        finalPacket.WriteArray(p.ConstData(), packetSize - 4);
+        packetOK = true;
+
         // We will do this 1-2 times depending on if it compressed right.
-        while(!packetOK && 2 > retryCount++)
+        /*while(!packetOK && 2 > retryCount++)
         {
             // Reserve space for the sizes.
             finalPacket.WriteBlank(headerSize);
@@ -116,7 +140,7 @@ void ChannelConnection::PreparePackets(std::list<ReadOnlyPacket>& packets)
                 finalPacket.WriteS32Little(originalSize);
                 finalPacket.WriteS32Little(compressedSize);
             }
-        }
+        }*/
 
         // If the packet is OK, encrypt and complete the procedure.
         if(packetOK)

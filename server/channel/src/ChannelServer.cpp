@@ -32,7 +32,7 @@
 #include <PacketCodes.h>
 
 // channel Includes
-#include "ChannelConnection.h"
+#include "ChannelClientConnection.h"
 #include "Packets.h"
 
 // Object Includes
@@ -86,12 +86,24 @@ bool ChannelServer::Initialize(std::weak_ptr<BaseServer>& self)
 
     auto clientPacketManager = std::shared_ptr<libcomp::ManagerPacket>(
         new libcomp::ManagerPacket(self));
-    /// @todo: Add client side packet parsers
+    clientPacketManager->AddParser<Parsers::Login>(
+        to_underlying(ChannelClientPacketCode_t::PACKET_LOGIN));
+    clientPacketManager->AddParser<Parsers::Auth>(
+        to_underlying(ChannelClientPacketCode_t::PACKET_AUTH));
+    clientPacketManager->AddParser<Parsers::SendData>(
+        to_underlying(ChannelClientPacketCode_t::PACKET_SEND_DATA));
+    clientPacketManager->AddParser<Parsers::KeepAlive>(
+        to_underlying(ChannelClientPacketCode_t::PACKET_KEEP_ALIVE));
+    clientPacketManager->AddParser<Parsers::State>(
+        to_underlying(ChannelClientPacketCode_t::PACKET_STATE));
+    clientPacketManager->AddParser<Parsers::Sync>(
+        to_underlying(ChannelClientPacketCode_t::PACKET_SYNC));
 
     // Add the managers to the generic workers.
     for(auto worker : mWorkers)
     {
         worker->AddManager(clientPacketManager);
+        worker->AddManager(mManagerConnection);
     }
 
     return true;
@@ -178,7 +190,7 @@ std::shared_ptr<libcomp::TcpConnection> ChannelServer::CreateConnection(
     asio::ip::tcp::socket& socket)
 {
     auto connection = std::shared_ptr<libcomp::TcpConnection>(
-        new libcomp::ChannelConnection(socket, CopyDiffieHellman(
+        new channel::ChannelClientConnection(socket, CopyDiffieHellman(
             GetDiffieHellman())
         )
     );

@@ -32,7 +32,7 @@
 #include <type_traits>
 
 /**
- * Request or response packet code between the server and game client.
+ * Request or response packet code between the lobby server and game client.
  */
 enum class LobbyClientPacketCode_t : uint16_t
 {
@@ -54,6 +54,28 @@ enum class LobbyClientPacketCode_t : uint16_t
     PACKET_QUERY_PURCHASE_TICKET_RESPONSE = 0x0012, //!< Query purchase ticket response to the client.
     PACKET_PURCHASE_TICKET = 0x0013,    //!< Purchase ticket request from the client.
     PACKET_PURCHASE_TICKET_RESPONSE = 0x0014,   //!< Purchase ticket response to the client.
+};
+
+/**
+ * Request or response packet code between the channel server and game client.
+ */
+enum class ChannelClientPacketCode_t : uint16_t
+{
+    PACKET_LOGIN = 0x0000,  //!< Login request from the client.
+    PACKET_LOGIN_RESPONSE = 0x0001,  //!< Login response to the client.
+    PACKET_AUTH = 0x0002,   //!< Authorization request from the client.
+    PACKET_AUTH_RESPONSE = 0x0003,  //!< Authorization response to the client.
+    PACKET_SEND_DATA = 0x0004,  //!< The client is requesting data from the server.
+    PACKET_CHARACTER_DATA_RESPONSE = 0x000F,  //!< Response to the client containing all sorts of character data.
+    PACKET_ZONE_CHANGE = 0x0023,  //!< Information about a character's zone for the client.
+    PACKET_KEEP_ALIVE = 0x0056,  //!< Client request/check to keep the connection alive.
+    PACKET_KEEP_ALIVE_RESPONSE = 0x0057,  //!< Response to client to keep the connection alive.
+    PACKET_STATE = 0x005A,  //!< Client request for their character state.
+    PACKET_SYNC = 0x00F3,  //!< Client request to retrieve the server time.
+    PACKET_SYNC_RESPONSE = 0x00F4,  //!< Response to client containing the server time.
+    PACKET_STATUS_ICON_RESPONSE = 0x0195,  //!< Response to client containing the icon to show for the character.
+
+    PACKET_CONFIRMATION = 0x1FFF,  //!< Generic confirmation response to the client.
 };
 
 /**

@@ -1,12 +1,12 @@
 /**
- * @file server/channel/src/Packets.h
+ * @file server/channel/src/ChannelClientConnection.h
  * @ingroup channel
  *
- * @author COMP Omega <compomega@tutanota.com>
+ * @author HACKfrost
  *
- * @brief Classes used to parse client channel packets.
+ * @brief Channel client connection class.
  *
- * This file is part of the channel Server (channel).
+ * This file is part of the Channel Server (channel).
  *
  * Copyright (C) 2012-2016 COMP_hack Team <compomega@tutanota.com>
  *
@@ -24,31 +24,31 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef LIBCOMP_SRC_PACKETS_H
-#define LIBCOMP_SRC_PACKETS_H
+#ifndef SERVER_CHANNEL_SRC_CHANNELCLIENTCONNECTION_H
+#define SERVER_CHANNEL_SRC_CHANNELCLIENTCONNECTION_H
+
+// channel Includes
+#include "ClientState.h"
 
 // libcomp Includes
-#include <PacketParser.h>
+#include <ChannelConnection.h>
 
 namespace channel
 {
 
-namespace Parsers
+class ChannelClientConnection : public libcomp::ChannelConnection
 {
+public:
+    ChannelClientConnection(asio::ip::tcp::socket& socket, DH *pDiffieHellman);
+    virtual ~ChannelClientConnection();
 
-PACKET_PARSER_DECL(Login);               // 0x0000
-PACKET_PARSER_DECL(Auth);               // 0x0002
-PACKET_PARSER_DECL(SendData);               // 0x0004
-PACKET_PARSER_DECL(Move);               // 0x001C
-PACKET_PARSER_DECL(KeepAlive);               // 0x0056
-PACKET_PARSER_DECL(State);               // 0x005A
-PACKET_PARSER_DECL(WorldTime);               // 0x0072
-PACKET_PARSER_DECL(Sync);               // 0x00F3
+    ClientState* GetClientState() const;
+    void SetClientState(const std::shared_ptr<ClientState>& state);
 
-PACKET_PARSER_DECL(SetWorldInfo);               // 0x1002
-
-} // namespace Parsers
+private:
+    std::shared_ptr<ClientState> mClientState;
+};
 
 } // namespace channel
 
-#endif // LIBCOMP_SRC_PACKETS_H
+#endif // SERVER_CHANNEL_SRC_CHANNELCLIENTCONNECTION_H

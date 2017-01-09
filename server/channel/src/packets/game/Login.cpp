@@ -55,7 +55,7 @@ bool Parsers::Login::Parse(libcomp::ManagerPacket *pPacketManager,
 
 	// If the size of the login packet isn't right, this might be the new
 	// Atlus login method.
-	if(p.Size() < 6 || p.Size() != (uint16_t)(6 + p.PeekU16Little()))
+	if(p.Size() < 6 || p.Size() != (uint32_t)(6 + p.PeekU16Little()))
 	{
 		// Check if the authentication string is there
         if(p.Size() < (uint16_t)(2 + p.PeekU16Little()))
@@ -78,7 +78,7 @@ bool Parsers::Login::Parse(libcomp::ManagerPacket *pPacketManager,
 		sessionKey = p.ReadU32Little();
 
 		// Check if the username is there
-		if(p.Left() != (2 + p.PeekU16Little()))
+		if(p.Left() != (uint32_t)(2 + p.PeekU16Little()))
         {
             return false;
         }

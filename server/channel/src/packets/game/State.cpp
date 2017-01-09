@@ -207,8 +207,8 @@ bool Parsers::State::Parse(libcomp::ManagerPacket *pPacketManager,
     (void)p;
 
     auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-    if(nullptr == client->GetClientState() ||
-        client->GetClientState()->GetCharacter().IsNull())
+    auto state = client->GetClientState();
+    if(nullptr == state || state->GetCharacter().IsNull())
     {
         return false;
     }

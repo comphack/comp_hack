@@ -62,8 +62,8 @@ bool Parsers::StartGame::Parse(libcomp::ManagerPacket *pPacketManager,
     auto channelID = 0;
 
     auto server = std::dynamic_pointer_cast<LobbyServer>(pPacketManager->GetServer());
-    auto world = server->GetWorldByID(worldID);
-    auto channel = world->GetChannelByID(channelID);
+    auto world = server->GetWorldByID((uint8_t)worldID);
+    auto channel = world->GetChannelByID((uint8_t)channelID);
 
     LOG_DEBUG(libcomp::String("Login character with ID %1 into world %2, channel %3\n"
         ).Arg(cid).Arg(worldID).Arg(channelID));

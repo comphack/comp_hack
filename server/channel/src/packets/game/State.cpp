@@ -203,6 +203,9 @@ bool Parsers::State::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {
+    (void)pPacketManager;
+    (void)p;
+
     auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
     if(nullptr == client->GetClientState() ||
         client->GetClientState()->GetCharacter().IsNull())

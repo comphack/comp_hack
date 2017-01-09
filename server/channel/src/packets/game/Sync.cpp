@@ -44,6 +44,8 @@ bool Parsers::Sync::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {
+    (void)pPacketManager;
+
     libcomp::Packet reply;
     reply.WritePacketCode(ChannelClientPacketCode_t::PACKET_SYNC_RESPONSE);
     reply.WriteFloat(p.ReadFloat());

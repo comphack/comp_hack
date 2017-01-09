@@ -48,11 +48,11 @@ ChannelConnection::~ChannelConnection()
 
 void ChannelConnection::PreparePackets(std::list<ReadOnlyPacket>& packets)
 {
-    static const uint32_t headerSize = 6 * sizeof(uint32_t);
+    //static const uint32_t headerSize = 6 * sizeof(uint32_t);
 
     if(STATUS_ENCRYPTED == mStatus)
     {
-        int retryCount = 0;
+        //int retryCount = 0;
         bool packetOK = false;
 
         Packet finalPacket;

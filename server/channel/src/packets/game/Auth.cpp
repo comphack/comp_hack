@@ -43,6 +43,8 @@ bool Parsers::Auth::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {
+    (void)pPacketManager;
+
     if(p.Size() != 43 || p.PeekU16Little() != 41)
     {
         return false;

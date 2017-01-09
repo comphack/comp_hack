@@ -44,6 +44,8 @@ bool Parsers::KeepAlive::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {
+    (void)pPacketManager;
+
     if(p.Size() != 4)
     {
         return false;

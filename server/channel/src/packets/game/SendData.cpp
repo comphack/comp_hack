@@ -54,6 +54,9 @@ bool Parsers::SendData::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {
+    (void)pPacketManager;
+    (void)p;
+
     /// @todo: A bunch of stuff
 
     libcomp::Packet reply;

@@ -76,6 +76,13 @@ public:
     std::list<std::shared_ptr<lobby::World>> GetWorlds();
 
     /**
+     * Get a world by ID.
+     * @param worldID ID of the world to load
+     * @return Pointer to the matching world
+     */
+    std::shared_ptr<lobby::World> GetWorldByID(uint8_t worldID);
+
+    /**
      * Get information about a connected world by its connection.
      * @param connection Pointer to the world's connection.
      * @return Pointer to the connected world.

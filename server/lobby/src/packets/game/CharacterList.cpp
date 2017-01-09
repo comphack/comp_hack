@@ -28,11 +28,19 @@
 
 // libcomp Includes
 #include <Decrypt.h>
+#include <LobbyServer.h>
 #include <Log.h>
+#include <ManagerPacket.h>
 #include <Packet.h>
 #include <PacketCodes.h>
 #include <ReadOnlyPacket.h>
 #include <TcpConnection.h>
+
+// object Includes
+#include <Character.h>
+
+// Lobby Includes
+#include "LobbyClientConnection.h"
 
 using namespace lobby;
 
@@ -57,25 +65,41 @@ bool Parsers::CharacterList::Parse(libcomp::ManagerPacket *pPacketManager,
     // Number of character tickets.
     reply.WriteU8(1);
 
-    // Number of characters.
-    reply.WriteU8(1);
+    auto server = std::dynamic_pointer_cast<LobbyServer>(pPacketManager->GetServer());
+    auto lobbyConnection = std::dynamic_pointer_cast<LobbyClientConnection>(connection);
+    auto account = lobbyConnection->GetClientState()->GetAccount();
 
+    std::list<std::shared_ptr<objects::Character>> characters;
+    for(auto world : server->GetWorlds())
+    {
+        auto worldDB = world->GetWorldDatabase();
+        auto characterList = objects::Character::LoadCharacterListByAccount(worldDB, account);
+        for(auto character : characterList)
+        {
+            characters.push_back(character);
+        }
+    }
+
+    // Number of characters.
+    reply.WriteU8(static_cast<uint8_t>(characters.size()));
+
+    for(auto character : characters)
     {
         // Character ID.
-        reply.WriteU8(0);
+        reply.WriteU8(character->GetCID());
 
         // World ID.
-        reply.WriteU8(0);
+        reply.WriteU8(character->GetWorldID());
 
         // Name.
         reply.WriteString16Little(libcomp::Convert::ENCODING_CP932,
-            "テスト", true);
+            character->GetName(), true);
 
         // Gender.
-        reply.WriteU8(0);
+        reply.WriteU8((uint8_t)character->GetGender());
 
         // Time when the character will be deleted.
-        reply.WriteU32Little(0);
+        reply.WriteU32Little(character->GetKillTime());
 
         // Cutscene to play on login (0 for none).
         reply.WriteU32Little(0x001EFC77);
@@ -84,28 +108,28 @@ bool Parsers::CharacterList::Parse(libcomp::ManagerPacket *pPacketManager,
         reply.WriteS8(-1);
 
         // Level.
-        reply.WriteU8(1);
+        reply.WriteU8(character->GetLevel());
 
         // Skin type.
-        reply.WriteU8(0x65);
+        reply.WriteU8(character->GetSkinType());
 
         // Hair type.
-        reply.WriteU8(8);
+        reply.WriteU8(character->GetHairType());
 
         // Eye type.
-        reply.WriteU8(1);
+        reply.WriteU8(character->GetEyeType());
 
         // Face type.
-        reply.WriteU8(1);
+        reply.WriteU8(character->GetFaceType());
 
         // Hair color.
-        reply.WriteU8(8);
+        reply.WriteU8(character->GetHairColor());
 
         // Left eye color.
-        reply.WriteU8(0x64);
+        reply.WriteU8(character->GetLeftEyeColor());
 
         // Right eye color.
-        reply.WriteU8(0x3F);
+        reply.WriteU8(character->GetRightEyeColor());
 
         // Unkown values.
         reply.WriteU8(0);

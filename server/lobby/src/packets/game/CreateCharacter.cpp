@@ -34,6 +34,14 @@
 #include <ReadOnlyPacket.h>
 #include <TcpConnection.h>
 
+// object Includes
+#include <Character.h>
+
+// lobby Includes
+#include "LobbyClientConnection.h"
+#include "LobbyServer.h"
+#include "ManagerPacket.h"
+
 using namespace lobby;
 
 bool Parsers::CreateCharacter::Parse(libcomp::ManagerPacket *pPacketManager,
@@ -47,9 +55,9 @@ bool Parsers::CreateCharacter::Parse(libcomp::ManagerPacket *pPacketManager,
         return false;
     }
 
-    uint8_t world = p.ReadU8();
+    uint8_t worldID = p.ReadU8();
 
-    LOG_DEBUG(libcomp::String("World: %1\n").Arg(world));
+    LOG_DEBUG(libcomp::String("World: %1\n").Arg(worldID));
 
     if(p.Size() != (uint32_t)(p.PeekU16Little() + 44))
     {
@@ -61,8 +69,13 @@ bool Parsers::CreateCharacter::Parse(libcomp::ManagerPacket *pPacketManager,
 
     LOG_DEBUG(libcomp::String("Name: %1\n").Arg(name));
 
-    /*
-    uint8_t gender = p.ReadU8();
+    auto server = std::dynamic_pointer_cast<LobbyServer>(pPacketManager->GetServer());
+    auto lobbyConnection = std::dynamic_pointer_cast<LobbyClientConnection>(connection);
+    auto world = server->GetWorldByID(worldID);
+    auto worldDB = world->GetWorldDatabase();
+    auto account = lobbyConnection->GetClientState()->GetAccount();
+
+    auto gender = (objects::Character::Gender_t)p.ReadU8();
 
     uint32_t skinType  = p.ReadU32Little();
     uint32_t faceType  = p.ReadU32Little();
@@ -75,7 +88,26 @@ bool Parsers::CreateCharacter::Parse(libcomp::ManagerPacket *pPacketManager,
     uint32_t equipFeet   = p.ReadU32Little();
     uint32_t equipComp   = p.ReadU32Little();
     uint32_t equipWeapon = p.ReadU32Little();
-    */
+
+    uint8_t eyeType = (uint8_t)(gender == objects::Character::Gender_t::MALE ? 1 : 101);
+
+    auto character = libcomp::PersistentObject::New<objects::Character>();
+    character->SetName(name);
+    character->SetGender(gender);
+    character->SetSkinType(skinType);
+    character->SetFaceType(faceType);
+    character->SetHairType(hairType);
+    character->SetHairColor(hairColor);
+    character->SetEyeType(eyeType);
+    character->SetLeftEyeColor(eyeColor);
+    character->SetRightEyeColor(eyeColor);
+    character->SetAccount(account);
+
+    if(!character->Register(character) || !character->Insert(worldDB))
+    {
+        LOG_DEBUG("Character failed to save.\n");
+        return false;
+    }
 
     libcomp::Packet reply;
     reply.WritePacketCode(

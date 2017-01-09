@@ -173,6 +173,7 @@ SET(${PROJECT_NAME}_HDRS
 
 SET(${PROJECT_NAME}_SCHEMA
     schema/account.xml
+    schema/character.xml
     schema/databaseconfig.xml
     schema/databaseconfig_cassandra.xml
     schema/databaseconfig_sqlite3.xml
@@ -197,6 +198,8 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     # Output files
     Account.h
     Account.cpp
+    Character.h
+    Character.cpp
     DatabaseConfig.h
     DatabaseConfig.cpp
     DatabaseConfigCassandra.h

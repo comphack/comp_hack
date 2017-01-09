@@ -96,7 +96,7 @@ bool DatabaseQuerySQLite3::Next()
 bool DatabaseQuerySQLite3::Bind(size_t index, const String& value)
 {
     int idx = (int)index;
-    int len = (int)value.Length();
+    int len = (int)value.Size();
     mStatus = sqlite3_bind_text(mStatement, idx,
         value.C(), len, 0);
     return IsValid();

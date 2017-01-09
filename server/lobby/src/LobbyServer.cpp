@@ -155,6 +155,11 @@ std::list<std::shared_ptr<lobby::World>> LobbyServer::GetWorlds()
     return mManagerConnection->GetWorlds();
 }
 
+std::shared_ptr<lobby::World> LobbyServer::GetWorldByID(uint8_t worldID)
+{
+    return mManagerConnection->GetWorldByID(worldID);
+}
+
 std::shared_ptr<lobby::World> LobbyServer::GetWorldByConnection(
     std::shared_ptr<libcomp::InternalConnection> connection)
 {

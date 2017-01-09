@@ -34,6 +34,14 @@
 #include <ReadOnlyPacket.h>
 #include <TcpConnection.h>
 
+// object Includes
+#include <Character.h>
+
+// lobby Includes
+#include "LobbyClientConnection.h"
+#include "LobbyServer.h"
+#include "ManagerPacket.h"
+
 using namespace lobby;
 
 bool Parsers::StartGame::Parse(libcomp::ManagerPacket *pPacketManager,
@@ -48,10 +56,17 @@ bool Parsers::StartGame::Parse(libcomp::ManagerPacket *pPacketManager,
     }
 
     uint8_t cid = p.ReadU8();
-    int8_t channel = p.ReadS8();
+    int8_t worldID = p.ReadS8();
 
-    LOG_DEBUG(libcomp::String("Login character with ID %1 into world %2\n"
-        ).Arg(cid).Arg(channel));
+    /// @todo: get this ID from the world
+    auto channelID = 0;
+
+    auto server = std::dynamic_pointer_cast<LobbyServer>(pPacketManager->GetServer());
+    auto world = server->GetWorldByID(worldID);
+    auto channel = world->GetChannelByID(channelID);
+
+    LOG_DEBUG(libcomp::String("Login character with ID %1 into world %2, channel %3\n"
+        ).Arg(cid).Arg(worldID).Arg(channelID));
 
     libcomp::Packet reply;
     reply.WritePacketCode(LobbyClientPacketCode_t::PACKET_START_GAME_RESPONSE);
@@ -61,7 +76,7 @@ bool Parsers::StartGame::Parse(libcomp::ManagerPacket *pPacketManager,
 
     // Server address.
     reply.WriteString16Little(libcomp::Convert::ENCODING_UTF8,
-        "192.168.0.72:14666", true);
+        libcomp::String("%1:%2").Arg(channel->GetIP()).Arg(channel->GetPort()), true);
 
     // Character ID.
     reply.WriteU8(cid);

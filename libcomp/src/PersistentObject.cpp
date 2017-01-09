@@ -35,6 +35,7 @@
 
 // All libcomp PersistentObject Includes
 #include "Account.h"
+#include "Character.h"
 #include "RegisteredChannel.h"
 #include "RegisteredWorld.h"
 
@@ -273,6 +274,8 @@ bool PersistentObject::Initialize()
 {
     RegisterType(typeid(objects::Account), objects::Account::GetMetadata(),
         []() {  return (PersistentObject*)new objects::Account(); });
+    RegisterType(typeid(objects::Character), objects::Character::GetMetadata(),
+        []() {  return (PersistentObject*)new objects::Character(); });
     RegisterType(typeid(objects::RegisteredChannel), objects::RegisteredChannel::GetMetadata(),
         []() {  return (PersistentObject*)new objects::RegisteredChannel(); });
     RegisterType(typeid(objects::RegisteredWorld), objects::RegisteredWorld::GetMetadata(),

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="Character" location="world">
+        <member type="string" name="Name" size="32"/>
+        <member type="Account*" name="Account" key="true" unique="false"/>
+        <member type="u8" name="CID" caps="true"/>
+        <member type="u8" name="WorldID"/>
+        <member type="u32" name="KillTime"/>
+        <member type="u8" name="Level" default="1"/>
+        <member type="enum" name="Gender" size="8" default="MALE">
+            <value>MALE</value>
+            <value>FEMALE</value>
+        </member>
+        <member type="u8" name="SkinType"/>
+        <member type="u8" name="HairType"/>
+        <member type="u8" name="FaceType"/>
+        <member type="u8" name="EyeType"/>
+        <member type="u8" name="HairColor"/>
+        <member type="u8" name="LeftEyeColor"/>
+        <member type="u8" name="RightEyeColor"/>
+    </object>
+</objgen>

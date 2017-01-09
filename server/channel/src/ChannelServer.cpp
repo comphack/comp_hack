@@ -156,6 +156,8 @@ bool ChannelServer::RegisterServer(uint8_t channelID)
         registeredChannel = std::shared_ptr<objects::RegisteredChannel>(new objects::RegisteredChannel);
         registeredChannel->SetID(channelID);
         registeredChannel->SetName(name);
+        registeredChannel->SetIP(""); //Let the world set the externally visible IP
+        registeredChannel->SetPort(conf->GetPort());
         if(!registeredChannel->Register(registeredChannel) || !registeredChannel->Insert(mWorldDatabase))
         {
             return false;

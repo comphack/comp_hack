@@ -77,6 +77,13 @@ bool Parsers::SetChannelInfo::Parse(libcomp::ManagerPacket *pPacketManager,
         .Arg(svr->GetID())
         .Arg(svr->GetName()));
 
+    svr->SetIP(connection->GetRemoteAddress());
+    if(!svr->Update(worldDB))
+    {
+        LOG_DEBUG("Channel Server could not be updated with its address.\n");
+        return false;
+    }
+
     server->RegisterChannel(svr, conn);
 
     //Forward the information to the lobby

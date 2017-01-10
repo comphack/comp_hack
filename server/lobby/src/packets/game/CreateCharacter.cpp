@@ -94,14 +94,21 @@ bool Parsers::CreateCharacter::Parse(libcomp::ManagerPacket *pPacketManager,
     auto character = libcomp::PersistentObject::New<objects::Character>();
     character->SetName(name);
     character->SetGender(gender);
-    character->SetSkinType(skinType);
-    character->SetFaceType(faceType);
-    character->SetHairType(hairType);
-    character->SetHairColor(hairColor);
-    character->SetEyeType(eyeType);
-    character->SetLeftEyeColor(eyeColor);
-    character->SetRightEyeColor(eyeColor);
+    character->SetSkinType((uint8_t)skinType);
+    character->SetFaceType((uint8_t)faceType);
+    character->SetHairType((uint8_t)hairType);
+    character->SetHairColor((uint8_t)hairColor);
+    character->SetEyeType((uint8_t)eyeType);
+    character->SetLeftEyeColor((uint8_t)eyeColor);
+    character->SetRightEyeColor((uint8_t)eyeColor);
     character->SetAccount(account);
+
+    /// @todo
+    (void)equipTop;
+    (void)equipBottom;
+    (void)equipFeet;
+    (void)equipComp;
+    (void)equipWeapon;
 
     if(!character->Register(character) || !character->Insert(worldDB))
     {

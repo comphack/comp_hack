@@ -70,7 +70,7 @@ bool Parsers::Login::Parse(libcomp::ManagerPacket *pPacketManager,
     if(nullptr != account)
     {
         /// @todo: load the information the lobby retrieved
-        auto cid = sessionKey;
+        auto cid = (uint8_t)sessionKey;
         auto charactersByCID = account->GetCharactersByCID();
 
         auto character = charactersByCID.find(cid);

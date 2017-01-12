@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <objgen>
     <object name="Character" location="world">
+        <!-- Basic Information -->
         <member type="string" name="Name" size="32"/>
         <member type="Account*" name="Account" key="true" unique="false"/>
         <member type="u8" name="CID" caps="true"/>
         <member type="u8" name="WorldID"/>
         <member type="u32" name="KillTime"/>
-        <member type="u8" name="Level" default="1"/>
         <member type="enum" name="Gender" size="8" default="MALE">
             <value>MALE</value>
             <value>FEMALE</value>
@@ -18,5 +18,29 @@
         <member type="u8" name="HairColor"/>
         <member type="u8" name="LeftEyeColor"/>
         <member type="u8" name="RightEyeColor"/>
+        
+        <!-- Leveling/Alignment -->
+        <member type="u8" name="Level" default="1"/>
+        <member type="u64" name="XP" caps="true"/>
+        <member type="s16" name="LNC" caps="true"/>
+        <member type="u32" name="Points"/>
+        
+        <!-- Stats -->
+        <member type="u16" name="HP" caps="true" default="73"/>
+        <member type="u16" name="MP" caps="true" default="11"/>
+        <member type="u16" name="MaxHP" default="73"/>
+        <member type="u16" name="MaxMP" default="11"/>
+        <member type="u16" name="STR" caps="true" default="1"/>
+        <member type="u16" name="MAGIC" caps="true" default="1"/>
+        <member type="u16" name="VIT" caps="true" default="1"/>
+        <member type="u16" name="INTEL" caps="true" default="1"/>
+        <member type="u16" name="SPEED" caps="true" default="1"/>
+        <member type="u16" name="LUCK" caps="true" default="1"/>
+        <member type="u16" name="CLSR" caps="true"/>
+        <member type="u16" name="LNGR" caps="true"/>
+        <member type="u16" name="SPELL" caps="true"/>
+        <member type="u16" name="SUPPORT" caps="true"/>
+        <member type="u16" name="PDEF" caps="true"/>
+        <member type="u16" name="MDEF" caps="true"/>
     </object>
 </objgen>

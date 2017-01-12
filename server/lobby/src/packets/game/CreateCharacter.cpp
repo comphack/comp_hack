@@ -35,6 +35,7 @@
 #include <TcpConnection.h>
 
 // object Includes
+#include <Account.h>
 #include <Character.h>
 
 // lobby Includes
@@ -71,9 +72,22 @@ bool Parsers::CreateCharacter::Parse(libcomp::ManagerPacket *pPacketManager,
 
     auto server = std::dynamic_pointer_cast<LobbyServer>(pPacketManager->GetServer());
     auto lobbyConnection = std::dynamic_pointer_cast<LobbyClientConnection>(connection);
+    auto lobbyDB = server->GetMainDatabase();
     auto world = server->GetWorldByID(worldID);
     auto worldDB = world->GetWorldDatabase();
-    auto account = lobbyConnection->GetClientState()->GetAccount();
+    auto account = lobbyConnection->GetClientState()->GetAccount().Get();
+    auto charactersByCID = account->GetCharactersByCID();
+
+    uint8_t nextCID = 0;
+    for(size_t i = 0; i < charactersByCID.size(); i++)
+    {
+        if(charactersByCID.find(nextCID) == charactersByCID.end())
+        {
+            break;
+        }
+
+        nextCID++;
+    }
 
     auto gender = (objects::Character::Gender_t)p.ReadU8();
 
@@ -92,6 +106,7 @@ bool Parsers::CreateCharacter::Parse(libcomp::ManagerPacket *pPacketManager,
     uint8_t eyeType = (uint8_t)(gender == objects::Character::Gender_t::MALE ? 1 : 101);
 
     auto character = libcomp::PersistentObject::New<objects::Character>();
+    character->SetCID(nextCID);
     character->SetName(name);
     character->SetGender(gender);
     character->SetSkinType((uint8_t)skinType);
@@ -113,6 +128,15 @@ bool Parsers::CreateCharacter::Parse(libcomp::ManagerPacket *pPacketManager,
     if(!character->Register(character) || !character->Insert(worldDB))
     {
         LOG_DEBUG("Character failed to save.\n");
+        return false;
+    }
+
+    charactersByCID[character->GetCID()] = character;
+    account->SetCharactersByCID(charactersByCID);
+    if (!account->Update(lobbyDB))
+    {
+        LOG_ERROR(libcomp::String("Account character map failed to save for account %1\n")
+            .Arg(account->GetUUID().ToString()));
         return false;
     }
 

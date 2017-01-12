@@ -11,5 +11,9 @@
         <member type="s32" name="UserLevel"/>
         <member type="bool" name="Enabled"/>
         <member type="u32" name="LastLogin"/>
+        <member type="map" name="CharactersByCID">
+            <key type="u8"/>
+            <value type="Character*"/>
+        </member>
     </object>
 </objgen>

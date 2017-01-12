@@ -37,6 +37,7 @@
 #include <TcpConnection.h>
 
 // object Includes
+#include <Account.h>
 #include <Character.h>
 
 // Lobby Includes
@@ -66,8 +67,9 @@ bool Parsers::CharacterList::Parse(libcomp::ManagerPacket *pPacketManager,
     reply.WriteU8(1);
 
     auto server = std::dynamic_pointer_cast<LobbyServer>(pPacketManager->GetServer());
+    auto lobbyDB = server->GetMainDatabase();
     auto lobbyConnection = std::dynamic_pointer_cast<LobbyClientConnection>(connection);
-    auto account = lobbyConnection->GetClientState()->GetAccount();
+    auto account = lobbyConnection->GetClientState()->GetAccount().Get();
 
     std::list<std::shared_ptr<objects::Character>> characters;
     for(auto world : server->GetWorlds())
@@ -77,6 +79,46 @@ bool Parsers::CharacterList::Parse(libcomp::ManagerPacket *pPacketManager,
         for(auto character : characterList)
         {
             characters.push_back(character);
+        }
+    }
+
+    //Correct the character map if needed
+    if(characters.size() > 0)
+    {
+        auto charactersByCID = account->GetCharactersByCID();
+
+        bool updated = false;
+        for(auto character : characters)
+        {
+            auto cid = character->GetCID();
+            auto existing = charactersByCID.find(cid);
+            if(existing != charactersByCID.end())
+            {
+                if(existing->second.GetUUID() != character->GetUUID())
+                {
+                    LOG_ERROR(libcomp::String("Duplicate CID %1 encountered for account %2\n")
+                        .Arg(cid)
+                        .Arg(account->GetUUID().ToString()));
+                    return false;
+                }
+                else
+                {
+                    continue;
+                }
+            }
+            charactersByCID[cid] = character;
+            updated = true;
+        }
+
+        if(updated)
+        {
+            account->SetCharactersByCID(charactersByCID);
+            if(!account->Update(lobbyDB))
+            {
+                LOG_ERROR(libcomp::String("Account character map failed to save %1\n")
+                    .Arg(account->GetUUID().ToString()));
+                return false;
+            }
         }
     }
 

@@ -49,49 +49,9 @@ bool Parsers::Login::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {
-	// Where to store the username and session key
-	libcomp::String username;
-	uint32_t sessionKey;
-
-	// If the size of the login packet isn't right, this might be the new
-	// Atlus login method.
-	if(p.Size() < 6 || p.Size() != (uint32_t)(6 + p.PeekU16Little()))
-	{
-		// Check if the authentication string is there
-        if(p.Size() < (uint16_t)(2 + p.PeekU16Little()))
-        {
-            return false;
-        }
-
-		// Read the authentication string
-		/// @todo validate this key instead of ignoring it
-		libcomp::String authKey = p.ReadString16Little(
-            libcomp::Convert::ENCODING_UTF8);
-
-		// Check if the session key is there
-		if(p.Left() < 4)
-        {
-            return false;
-        }
-
-		// Read the session key
-		sessionKey = p.ReadU32Little();
-
-		// Check if the username is there
-		if(p.Left() != (uint32_t)(2 + p.PeekU16Little()))
-        {
-            return false;
-        }
-
-		// Read the username
-		username = p.ReadString16(libcomp::Convert::ENCODING_UTF8);
-	}
-	else
-	{
-		// Classic authentication method: username followed by the session key
-		username = p.ReadString16(libcomp::Convert::ENCODING_UTF8);
-		sessionKey = p.ReadU32Little();
-	}
+    // Classic authentication method: username followed by the session key
+    libcomp::String username = p.ReadString16(libcomp::Convert::ENCODING_UTF8);
+    uint32_t sessionKey = p.ReadU32Little();
 
     // Remove null terminator
     username = username.C();
@@ -111,25 +71,16 @@ bool Parsers::Login::Parse(libcomp::ManagerPacket *pPacketManager,
     {
         /// @todo: load the information the lobby retrieved
         auto cid = sessionKey;
+        auto charactersByCID = account->GetCharactersByCID();
 
-        std::shared_ptr<objects::Character> character;
-        /// @todo: load character by uid via account map keyed on cid
-        for(auto accountCharacter : objects::Character::LoadCharacterListByAccount(
-            worldDB, account))
-        {
-            if(accountCharacter->GetCID() == cid)
-            {
-                character = accountCharacter;
-                break;
-            }
-        }
+        auto character = charactersByCID.find(cid);
 
-        if(nullptr != character)
+        if(character != charactersByCID.end() && character->second.Get(worldDB))
         {
             auto state = std::shared_ptr<ClientState>(new ClientState);
             state->SetAccount(account);
             state->SetSessionKey(sessionKey);
-            state->SetCharacter(character);
+            state->SetCharacter(character->second.GetCurrentReference());
 
             client->SetClientState(state);
 

@@ -160,12 +160,8 @@ std::string GeneratorSource::Generate(const MetaObject& obj)
     ss << "bool " << obj.GetName() << "::IsValid(bool recursive) const"
         << std::endl;
     ss << "{" << std::endl;
-
-    if(references.empty())
-    {
-        ss << Tab() << "(void)recursive;" << std::endl;
-        ss << std::endl;
-    }
+    ss << Tab() << "(void)recursive;" << std::endl;
+    ss << std::endl;
 
     ss << Tab() << "bool status = " + GetBaseBooleanReturnValue(obj, "IsValid(recursive)") + ";" << std::endl;
 

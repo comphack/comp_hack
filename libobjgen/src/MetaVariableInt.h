@@ -670,7 +670,8 @@ public:
             {
                 bindType = "BigInt";
                 castType = "int64_t";
-                cast = sizeof(T) != sizeof(int64_t);
+                cast = sizeof(T) != sizeof(int64_t) ||
+                    !std::numeric_limits<T>::is_signed;
             }
         }
         else if(typeid(float) == typeid(T))

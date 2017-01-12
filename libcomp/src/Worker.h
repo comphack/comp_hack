@@ -31,6 +31,7 @@
 #include "EnumMap.h"
 #include "Manager.h"
 #include "Message.h"
+#include "MessageExecute.h"
 #include "MessageQueue.h"
 
 // Standard C++11 Includes
@@ -114,6 +115,28 @@ public:
      * @return The number of active references to the message queue
      */
     long AssignmentCount() const;
+
+    /**
+     * Executes code in the worker thread.
+     * @param f Function (lambda) to execute in the worker thread.
+     * @param args Arguments to pass to the function when it is executed.
+     */
+    template<typename Function, typename... Args>
+    bool ExecuteInWorker(Function&& f, Args&&... args) const
+    {
+        auto queue = GetMessageQueue();
+
+        if(nullptr != queue)
+        {
+            auto msg = new libcomp::Message::ExecuteImpl<Args...>(
+                std::forward<Function>(f), std::forward<Args>(args)...);
+            queue->Enqueue(msg);
+
+            return true;
+        }
+
+        return false;
+    }
 
 protected:
     /**

@@ -94,10 +94,19 @@ void Worker::Run(MessageQueue<Message::Message*> *pMessageQueue)
         libcomp::Message::Shutdown *pShutdown = dynamic_cast<
             libcomp::Message::Shutdown*>(pMessage);
 
+        // Check for an execute message.
+        libcomp::Message::Execute *pExecute = dynamic_cast<
+            libcomp::Message::Execute*>(pMessage);
+
         // Do not handle any more messages if a shutdown was sent.
         if(nullptr != pShutdown || !mRunning)
         {
             mRunning = false;
+        }
+        else if(nullptr != pExecute)
+        {
+            // Run the code now.
+            pExecute->Run();
         }
         else
         {

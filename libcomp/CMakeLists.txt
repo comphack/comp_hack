@@ -132,6 +132,7 @@ SET(${PROJECT_NAME}_HDRS
     src/Message.h
     src/MessageConnectionClosed.h
     src/MessageEncrypted.h
+    src/MessageExecute.h
     src/MessageInit.h
     src/MessagePacket.h
     src/MessagePong.h

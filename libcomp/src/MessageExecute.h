@@ -1,5 +1,5 @@
 /**
- * @file libcomp/src/MessageInit.h
+ * @file libcomp/src/MessageExecute.h
  * @ingroup libcomp
  *
  * @author COMP Omega <compomega@tutanota.com>

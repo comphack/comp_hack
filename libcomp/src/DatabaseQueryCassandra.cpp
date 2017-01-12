@@ -584,7 +584,7 @@ bool DatabaseQueryCassandra::GetTextValue(const CassValue *pValue,
         size_t valueSize = 0;
 
         if(CASS_OK == cass_value_get_string(pValue, &szValueData,
-            &valueSize) && nullptr != szValueData && 0 != valueSize)
+            &valueSize) && nullptr != szValueData)
         {
             value = String(szValueData, valueSize);
 

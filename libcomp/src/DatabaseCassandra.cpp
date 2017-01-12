@@ -796,6 +796,7 @@ String DatabaseCassandra::GetVariableType(const std::shared_ptr
             return "int";
         case libobjgen::MetaVariable::MetaVariableType_t::TYPE_S64:
         case libobjgen::MetaVariable::MetaVariableType_t::TYPE_U32:
+        case libobjgen::MetaVariable::MetaVariableType_t::TYPE_U64:
             return "bigint";
         case libobjgen::MetaVariable::MetaVariableType_t::TYPE_FLOAT:
             return "float";
@@ -803,7 +804,6 @@ String DatabaseCassandra::GetVariableType(const std::shared_ptr
             return "double";
         case libobjgen::MetaVariable::MetaVariableType_t::TYPE_REF:
             return "uuid";
-        case libobjgen::MetaVariable::MetaVariableType_t::TYPE_U64:
         case libobjgen::MetaVariable::MetaVariableType_t::TYPE_ARRAY:
         case libobjgen::MetaVariable::MetaVariableType_t::TYPE_LIST:
         case libobjgen::MetaVariable::MetaVariableType_t::TYPE_MAP:

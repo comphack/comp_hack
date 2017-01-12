@@ -110,7 +110,7 @@ bool MetaVariableArray::Load(std::istream& stream)
     stream.read(reinterpret_cast<char*>(&mElementCount),
         sizeof(mElementCount));
 
-    return stream.good() && IsValid() && mElementType->Load(stream);
+    return stream.good() && mElementType->Load(stream) && IsValid();
 }
 
 bool MetaVariableArray::Save(std::ostream& stream) const
@@ -493,7 +493,7 @@ std::string MetaVariableArray::GetUtilityFunctions(const Generator& generator,
         replacements["@VAR_CAMELCASE_NAME@"] = generator.GetCapitalName(*this);
         replacements["@ELEMENT_COUNT@"] = std::to_string(mElementCount);
 
-        auto entryValidation = mElementType->GetValidCondition(generator, "val", true);
+        auto entryValidation = mElementType->GetValidCondition(generator, "val", false);
 
         replacements["@ELEMENT_VALIDATION_CODE@"] = entryValidation.length() > 0
             ? entryValidation : "([&]() { (void)val; return true; })()";

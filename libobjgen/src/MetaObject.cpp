@@ -256,13 +256,15 @@ bool MetaObject::IsValid() const
 
 bool MetaObject::Load(std::istream& stream)
 {
-    Generator::LoadString(stream, mName);
-    Generator::LoadString(stream, mBaseObject);
+    bool result = true;
+
+    result &= Generator::LoadString(stream, mName);
+    result &= Generator::LoadString(stream, mBaseObject);
     stream.read(reinterpret_cast<char*>(&mScriptEnabled),
         sizeof(mScriptEnabled));
     stream.read(reinterpret_cast<char*>(&mPersistent),
         sizeof(mPersistent));
-    Generator::LoadString(stream, mSourceLocation);
+    result &= Generator::LoadString(stream, mSourceLocation);
 
     VariableList vars;
     if(MetaVariable::LoadVariableList(stream, vars))
@@ -271,11 +273,15 @@ bool MetaObject::Load(std::istream& stream)
         mVariableMapping.clear();
         for(auto var : vars)
         {
-            AddVariable(var);
+            result &= AddVariable(var);
         }
     }
+    else
+    {
+        result = false;
+    }
 
-    return stream.good();
+    return result && stream.good();
 }
 
 bool MetaObject::Save(std::ostream& stream) const
@@ -285,15 +291,17 @@ bool MetaObject::Save(std::ostream& stream) const
         return false;
     }
 
-    Generator::SaveString(stream, mName);
-    Generator::SaveString(stream, mBaseObject);
+    bool result = true;
+
+    result &= Generator::SaveString(stream, mName);
+    result &= Generator::SaveString(stream, mBaseObject);
     stream.write(reinterpret_cast<const char*>(&mScriptEnabled),
         sizeof(mScriptEnabled));
     stream.write(reinterpret_cast<const char*>(&mPersistent),
         sizeof(mPersistent));
-    Generator::SaveString(stream, mSourceLocation);
+    result &= Generator::SaveString(stream, mSourceLocation);
 
-    return stream.good() &&
+    return result && stream.good() &&
         MetaVariable::SaveVariableList(stream, mVariables);
 }
 

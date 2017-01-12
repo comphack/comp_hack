@@ -1,21 +1,21 @@
 ([&]() -> bool
 {
-    if(flat)
+    auto uidSize = sizeof(uint64_t) * 2;
+    char* buffer = new char[uidSize];
+
+    bool good = @STREAM@.read(buffer, static_cast<std::streamsize>(
+        uidSize)).good();
+
+    std::vector<char> data;
+    data.insert(data.begin(), buffer, buffer + uidSize);
+
+    if(good)
     {
-        std::vector<char> data;
-        data.reserve(sizeof(uint64_t) * 2);
-
-        bool good = @STREAM@.read(&data[0], static_cast<std::streamsize>(
-            data.size())).good();
-
-        if(good)
-        {
-            auto uuid = libobjgen::UUID(data);
-            good = @VAR_NAME@.SetUUID(uuid);
-        }
-
-        return good;
+        auto uuid = libobjgen::UUID(data);
+        good = @VAR_NAME@.SetUUID(uuid);
     }
-    
-    return true;
+
+    delete[] buffer;
+
+    return good;
 })()

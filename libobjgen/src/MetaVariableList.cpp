@@ -84,7 +84,7 @@ bool MetaVariableList::Load(std::istream& stream)
 {
     MetaVariable::Load(stream);
 
-    return IsValid() && mElementType->Load(stream);
+    return stream.good() && mElementType->Load(stream) && IsValid();
 }
 
 bool MetaVariableList::Save(std::ostream& stream) const
@@ -407,7 +407,7 @@ std::string MetaVariableList::GetUtilityFunctions(const Generator& generator,
         replacements["@OBJECT_NAME@"] = object.GetName();
         replacements["@VAR_CAMELCASE_NAME@"] = generator.GetCapitalName(*this);
 
-        auto entryValidation = mElementType->GetValidCondition(generator, "val", true);
+        auto entryValidation = mElementType->GetValidCondition(generator, "val", false);
 
         replacements["@ELEMENT_VALIDATION_CODE@"] = entryValidation.length() > 0
             ? entryValidation : "([&]() { (void)val; return true; })()";

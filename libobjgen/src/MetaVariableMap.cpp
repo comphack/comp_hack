@@ -92,7 +92,7 @@ bool MetaVariableMap::Load(std::istream& stream)
 {
     MetaVariable::Load(stream);
 
-    return IsValid() && mKeyElementType->Load(stream) && mValueElementType->Load(stream);
+    return mKeyElementType->Load(stream) && mValueElementType->Load(stream) && IsValid();
 }
 
 bool MetaVariableMap::Save(std::ostream& stream) const
@@ -444,8 +444,8 @@ std::string MetaVariableMap::GetUtilityFunctions(const Generator& generator,
         replacements["@OBJECT_NAME@"] = object.GetName();
         replacements["@VAR_CAMELCASE_NAME@"] = generator.GetCapitalName(*this);
 
-        auto keyValidation = mKeyElementType->GetValidCondition(generator, "key", true);
-        auto valueValidation = mValueElementType->GetValidCondition(generator, "val", true);
+        auto keyValidation = mKeyElementType->GetValidCondition(generator, "key", false);
+        auto valueValidation = mValueElementType->GetValidCondition(generator, "val", false);
 
         replacements["@KEY_VALIDATION_CODE@"] = keyValidation.length() > 0
             ? keyValidation : "([&]() { (void)key; return true; })()";

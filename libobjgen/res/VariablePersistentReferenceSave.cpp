@@ -4,7 +4,7 @@
 
     if(!@VAR_NAME@.IsNull())
     {
-        uuid = @VAR_NAME@.GetCurrentReference()->GetUUID();
+        uuid = @VAR_NAME@.GetUUID();
     }
 
     std::vector<char> data = uuid.ToData();

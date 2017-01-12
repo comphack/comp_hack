@@ -1,10 +1,8 @@
 ([&]() -> @VAR_CODE_TYPE@
 {
-    if(!@VAR_NAME@.IsNull())
-    {
-        auto uuid = GetXmlText(*@NODE@);
-        @VAR_NAME@.SetUUID(uuid);
-    }
+    @VAR_CODE_TYPE@ ref;
+    auto uuid = GetXmlText(*@NODE@);
+    ref.SetUUID(uuid);
 
-    return @VAR_NAME@;
+    return ref;
 })()

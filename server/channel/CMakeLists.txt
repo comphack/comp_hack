@@ -71,14 +71,14 @@ SOURCE_GROUP("Source Files\\Packets\\Internal" src/packets/internal/*)
 
 SET(${PROJECT_NAME}_PACKETS
     src/packets/game/Login.cpp               # 0x0000
-    src/packets/game/Auth.cpp               # 0x0002
-    src/packets/game/SendData.cpp               # 0x0004
-    src/packets/game/KeepAlive.cpp               # 0x0056
+    src/packets/game/Auth.cpp                # 0x0002
+    src/packets/game/SendData.cpp            # 0x0004
+    src/packets/game/KeepAlive.cpp           # 0x0056
     src/packets/game/State.cpp               # 0x005A
-    src/packets/game/Sync.cpp               # 0x00F3
+    src/packets/game/Sync.cpp                # 0x00F3
 
     #Internal packets
-    src/packets/internal/SetWorldInfo.cpp      # 0x1002
+    src/packets/internal/SetWorldInfo.cpp    # 0x1002
 )
 
 ADD_EXECUTABLE(${PROJECT_NAME} ${${PROJECT_NAME}_SRCS}

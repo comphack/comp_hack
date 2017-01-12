@@ -261,7 +261,7 @@ bool DatabaseSQLite3::InsertSingleObject(std::shared_ptr<PersistentObject>& obj)
     columnNames.push_back("UID");
 
     std::list<String> columnBinds;
-    columnBinds.push_back(String("'%1'").Arg(obj->GetUUID().ToString()));
+    columnBinds.push_back(":UID");
 
     auto values = obj->GetMemberBindValues();
 
@@ -282,6 +282,14 @@ bool DatabaseSQLite3::InsertSingleObject(std::shared_ptr<PersistentObject>& obj)
     if(!query.IsValid())
     {
         LOG_ERROR(String("Failed to prepare SQL query: %1\n").Arg(sql));
+        LOG_ERROR(String("Database said: %1\n").Arg(GetLastError()));
+
+        return false;
+    }
+
+    if(!query.Bind("UID", obj->GetUUID()))
+    {
+        LOG_ERROR("Failed to bind value: UID\n");
         LOG_ERROR(String("Database said: %1\n").Arg(GetLastError()));
 
         return false;
@@ -336,16 +344,23 @@ bool DatabaseSQLite3::UpdateSingleObject(std::shared_ptr<PersistentObject>& obj)
         columnNames.push_back(String("%1 = :%1").Arg(value->GetColumn()));
     }
 
-    String sql = String("UPDATE %1 SET %2 WHERE UID = '%3';").Arg(
+    String sql = String("UPDATE %1 SET %2 WHERE UID = :UID;").Arg(
         metaObject->GetName()).Arg(
-        String::Join(columnNames, ", ")).Arg(
-        obj->GetUUID().ToString());
+        String::Join(columnNames, ", "));
 
     DatabaseQuery query = Prepare(sql);
 
     if(!query.IsValid())
     {
         LOG_ERROR(String("Failed to prepare SQL query: %1\n").Arg(sql));
+        LOG_ERROR(String("Database said: %1\n").Arg(GetLastError()));
+
+        return false;
+    }
+
+    if(!query.Bind("UID", obj->GetUUID()))
+    {
+        LOG_ERROR("Failed to bind value: UID\n");
         LOG_ERROR(String("Database said: %1\n").Arg(GetLastError()));
 
         return false;

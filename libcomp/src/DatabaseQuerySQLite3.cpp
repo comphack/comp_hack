@@ -98,7 +98,7 @@ bool DatabaseQuerySQLite3::Bind(size_t index, const String& value)
     int idx = (int)index;
     int len = (int)value.Size();
     mStatus = sqlite3_bind_text(mStatement, idx,
-        value.C(), len, 0);
+        value.C(), len, SQLITE_TRANSIENT);
     return IsValid();
 }
 
@@ -120,7 +120,7 @@ bool DatabaseQuerySQLite3::Bind(size_t index, const std::vector<char>& value)
     {
         int idx = (int)index;
         int size = (int)value.size();
-        mStatus = sqlite3_bind_blob(mStatement, idx, &value[0], size, 0);
+        mStatus = sqlite3_bind_blob(mStatement, idx, &value[0], size, SQLITE_TRANSIENT);
     }
     else
     {

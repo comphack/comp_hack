@@ -157,7 +157,7 @@ std::shared_ptr<PersistentObject> PersistentObject::LoadObjectByUUID(std::type_i
 
         if(nullptr == obj)
         {
-            LOG_ERROR(String("Unknown UUID '%1' for '%2' failed to load")
+            LOG_ERROR(String("Unknown UUID '%1' for '%2' failed to load\n")
                 .Arg(uuid.ToString()).Arg(sTypeMap[type]->GetName()));
         }
     }

@@ -77,12 +77,13 @@ bool Parsers::Login::Parse(libcomp::ManagerPacket *pPacketManager,
 
         if(character != charactersByCID.end() && character->second.Get(worldDB))
         {
-            auto state = std::shared_ptr<ClientState>(new ClientState);
+            auto state = client->GetClientState();
             state->SetAccount(account);
             state->SetSessionKey(sessionKey);
-            state->SetCharacter(character->second.GetCurrentReference());
 
-            client->SetClientState(state);
+            auto charState = state->GetCharacterState();
+            charState->SetCharacter(character->second.GetCurrentReference());
+            charState->RecalculateStats();
 
             success = true;
         }

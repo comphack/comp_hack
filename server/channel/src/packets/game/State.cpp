@@ -45,7 +45,8 @@ using namespace channel;
 void SendCharacterData(const std::shared_ptr<channel::ChannelClientConnection>& client)
 {
     auto state = client->GetClientState();
-    auto c = state->GetCharacter().Get();
+    auto cState = state->GetCharacterState();
+    auto c = cState->GetCharacter().Get();
 
     libcomp::Packet reply;
     reply.WritePacketCode(ChannelClientPacketCode_t::PACKET_CHARACTER_DATA_RESPONSE);
@@ -87,29 +88,29 @@ void SendCharacterData(const std::shared_ptr<channel::ChannelClientConnection>& 
     reply.WriteU8(c->GetLevel());
     reply.WriteS16Little(c->GetLNC());
     reply.WriteU16Little(c->GetSTR());
-    reply.WriteU16Little(0);     /// @todo: calculated STR boost
+    reply.WriteU16Little(cState->GetSTR() - c->GetSTR());
     reply.WriteU16Little(c->GetMAGIC());
-    reply.WriteU16Little(0);     /// @todo: calculated MAGIC boost
+    reply.WriteU16Little(cState->GetMAGIC() - c->GetMAGIC());
     reply.WriteU16Little(c->GetVIT());
-    reply.WriteU16Little(0);     /// @todo: calculated VIT boost
+    reply.WriteU16Little(cState->GetVIT() - c->GetVIT());
     reply.WriteU16Little(c->GetINTEL());
-    reply.WriteU16Little(0);     /// @todo: calculated INTEL boost
+    reply.WriteU16Little(cState->GetINTEL() - c->GetINTEL());
     reply.WriteU16Little(c->GetSPEED());
-    reply.WriteU16Little(0);     /// @todo: calcualted SPEED boost
+    reply.WriteU16Little(cState->GetSPEED() - c->GetSPEED());
     reply.WriteU16Little(c->GetLUCK());
-    reply.WriteU16Little(0);     /// @todo: calculated LUCK boost
+    reply.WriteU16Little(cState->GetLUCK() - c->GetLUCK());
     reply.WriteU16Little(c->GetCLSR());
-    reply.WriteU16Little(0);     /// @todo: calculated CLSR boost
+    reply.WriteU16Little(cState->GetCLSR() - c->GetCLSR());
     reply.WriteU16Little(c->GetLNGR());
-    reply.WriteU16Little(0);     /// @todo: calcualted LNGR boost
+    reply.WriteU16Little(cState->GetLNGR() - c->GetLNGR());
     reply.WriteU16Little(c->GetSPELL());
-    reply.WriteU16Little(0);     /// @todo: calculated SPELL boost
+    reply.WriteU16Little(cState->GetSPELL() - c->GetSPELL());
     reply.WriteU16Little(c->GetSUPPORT());
-    reply.WriteU16Little(0);     /// @todo: calcualted SUPPORT boost
+    reply.WriteU16Little(cState->GetSUPPORT() - c->GetSUPPORT());
     reply.WriteU16Little(c->GetPDEF());
-    reply.WriteU16Little(0);     /// @todo: calculated PDEF boost
+    reply.WriteU16Little(cState->GetPDEF() - c->GetPDEF());
     reply.WriteU16Little(c->GetMDEF());
-    reply.WriteU16Little(0);     /// @todo: calculated MDEF boost
+    reply.WriteU16Little(cState->GetMDEF() - c->GetMDEF());
 
     reply.WriteU32Little(367061536); // Unknown
 
@@ -207,7 +208,7 @@ bool Parsers::State::Parse(libcomp::ManagerPacket *pPacketManager,
 
     auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
     auto state = client->GetClientState();
-    if(nullptr == state || state->GetCharacter().IsNull())
+    if(!state->Ready())
     {
         return false;
     }

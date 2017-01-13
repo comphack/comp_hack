@@ -31,6 +31,7 @@ FILE(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/objgen)
 SET(${PROJECT_NAME}_SRCS
     src/ChannelClientConnection.cpp
     src/ChannelServer.cpp
+    src/CharacterState.cpp
     src/ClientState.cpp
     src/ManagerConnection.cpp
     src/main.cpp
@@ -39,12 +40,14 @@ SET(${PROJECT_NAME}_SRCS
 SET(${PROJECT_NAME}_HDRS
     src/ChannelClientConnection.h
     src/ChannelServer.h
+    src/CharacterState.h
     src/ClientState.h
     src/ManagerConnection.h
 )
 
 SET(${PROJECT_NAME}_SCHEMA
     schema/channelconfig.xml
+    schema/characterstate.xml
     schema/clientstate.xml
 )
 
@@ -62,6 +65,8 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     # Output files
     ChannelConfig.h
     ChannelConfig.cpp
+    CharacterStateObject.h
+    CharacterStateObject.cpp
     ClientStateObject.h
     ClientStateObject.cpp
 )

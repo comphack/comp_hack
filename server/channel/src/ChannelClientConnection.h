@@ -36,16 +36,32 @@
 namespace channel
 {
 
+/**
+ * Represents a connection to the game client.
+ */
 class ChannelClientConnection : public libcomp::ChannelConnection
 {
 public:
+    /**
+     * Create a new connection.
+     * @param socket Socket provided by the server for the new client.
+     * @param pDiffieHellman Asymmetric encryption information.
+     */
     ChannelClientConnection(asio::ip::tcp::socket& socket, DH *pDiffieHellman);
+
+    /**
+     * Clean up the connection.
+     */
     virtual ~ChannelClientConnection();
 
+    /**
+     * Get the state of the client.
+     * @return Pointer to the ClientState
+     */
     ClientState* GetClientState() const;
-    void SetClientState(const std::shared_ptr<ClientState>& state);
 
 private:
+    /// State of the client
     std::shared_ptr<ClientState> mClientState;
 };
 

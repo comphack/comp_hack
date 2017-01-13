@@ -1,10 +1,10 @@
 /**
- * @file server/channel/src/ChannelClientConnection.cpp
+ * @file server/channel/src/CharacterState.cpp
  * @ingroup channel
  *
  * @author HACKfrost
  *
- * @brief Channel client connection class.
+ * @brief State of a character on the channel.
  *
  * This file is part of the Channel Server (channel).
  *
@@ -24,21 +24,49 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "ChannelClientConnection.h"
+#include "CharacterState.h"
+
+// objects Includes
+#include <Character.h>
 
 using namespace channel;
 
-ChannelClientConnection::ChannelClientConnection(asio::ip::tcp::socket& socket,
-    DH *pDiffieHellman) : ChannelConnection(socket, pDiffieHellman),
-    mClientState(std::shared_ptr<ClientState>(new ClientState))
+CharacterState::CharacterState() : objects::CharacterStateObject()
 {
 }
 
-ChannelClientConnection::~ChannelClientConnection()
+CharacterState::~CharacterState()
 {
 }
 
-ClientState* ChannelClientConnection::GetClientState() const
+bool CharacterState::RecalculateStats()
 {
-    return mClientState.get();
+    auto c = GetCharacter().Get();
+
+    if(nullptr == c)
+    {
+        return false;
+    }
+
+    SetSTR(c->GetSTR());
+    SetMAGIC(c->GetMAGIC());
+    SetVIT(c->GetVIT());
+    SetINTEL(c->GetINTEL());
+    SetSPEED(c->GetSPEED());
+    SetLUCK(c->GetLUCK());
+    SetCLSR(c->GetCLSR());
+    SetLNGR(c->GetLNGR());
+    SetSPELL(c->GetSPELL());
+    SetSUPPORT(c->GetSUPPORT());
+    SetPDEF(c->GetPDEF());
+    SetMDEF(c->GetMDEF());
+
+    /// @todo: transform stats
+
+    return true;
+}
+
+bool CharacterState::Ready()
+{
+    return !GetCharacter().IsNull();
 }

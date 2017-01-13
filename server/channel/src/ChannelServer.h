@@ -119,6 +119,12 @@ public:
      */
     bool RegisterServer(uint8_t channelID);
 
+    /**
+     * Get a pointer to the server that is currently running.
+     * @return Pointer to the ChannelServer that is currently running
+     */
+    static std::shared_ptr<ChannelServer> GetRunningServer();
+
 protected:
     /**
      * Create a connection to a newly active socket.
@@ -142,6 +148,9 @@ protected:
 
     /// Pointer to the RegisteredChannel.
     std::shared_ptr<objects::RegisteredChannel> mRegisteredChannel;
+
+    /// Static pointer to the ChannelServer that is currently running
+    static ChannelServer *sRunningServer;
 };
 
 } // namespace channel

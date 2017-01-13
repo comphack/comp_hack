@@ -120,6 +120,7 @@ public:
      * Executes code in the worker thread.
      * @param f Function (lambda) to execute in the worker thread.
      * @param args Arguments to pass to the function when it is executed.
+     * @return true on success, false on failure
      */
     template<typename Function, typename... Args>
     bool ExecuteInWorker(Function&& f, Args&&... args) const

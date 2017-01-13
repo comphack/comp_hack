@@ -141,6 +141,19 @@ public:
      */
     std::shared_ptr<objects::ServerConfig> GetConfig() const;
 
+    /**
+     * Queue up code to be executed in the main worker thread.
+     * @param f Function (lambda) to execute in the worker thread.
+     * @param args Arguments to pass to the function when it is executed.
+     * @return true on success, false on failure
+     */
+    template<typename Function, typename... Args>
+    bool QueueWork(Function&& f, Args&&... args) const
+    {
+        return mMainWorker.ExecuteInWorker(std::forward<Function>(f),
+            std::forward<Args>(args)...);
+    }
+
 protected:
     /**
      * Runs the server until a shutdown message is received or the program

@@ -29,8 +29,10 @@ GENERATE_DOCS(doc/Doxyfile.in)
 FILE(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/objgen)
 
 SET(${PROJECT_NAME}_SRCS
+    src/AccountManager.cpp
     src/ChannelClientConnection.cpp
     src/ChannelServer.cpp
+    src/CharacterManager.cpp
     src/CharacterState.cpp
     src/ClientState.cpp
     src/ManagerConnection.cpp
@@ -38,8 +40,10 @@ SET(${PROJECT_NAME}_SRCS
 )
 
 SET(${PROJECT_NAME}_HDRS
+    src/AccountManager.h
     src/ChannelClientConnection.h
     src/ChannelServer.h
+    src/CharacterManager.h
     src/CharacterState.h
     src/ClientState.h
     src/ManagerConnection.h

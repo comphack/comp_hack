@@ -27,15 +27,12 @@
 #include "Packets.h"
 
 // libcomp Includes
-#include <Decrypt.h>
-#include <Log.h>
+#include <ManagerPacket.h>
 #include <Packet.h>
-#include <PacketCodes.h>
-#include <ReadOnlyPacket.h>
-#include <TcpConnection.h>
 
 // channel Includes
-#include "ChannelClientConnection.h"
+#include "AccountManager.h"
+#include "ChannelServer.h"
 
 using namespace channel;
 
@@ -50,24 +47,9 @@ bool Parsers::Auth::Parse(libcomp::ManagerPacket *pPacketManager,
         return false;
     }
 
-    /// @todo Check the password hash
     auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-    auto state = client->GetClientState();
-
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelClientPacketCode_t::PACKET_AUTH_RESPONSE);
-
-    if(nullptr != state)
-    {
-        state->SetAuthenticated(true);
-        reply.WriteU32Little(0);
-    }
-    else
-    {
-        reply.WriteU32Little(1);
-    }
-
-    connection->SendPacket(reply);
+    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+    server->QueueWork(AccountManager::Authenticate, client);
 
     return true;
 }

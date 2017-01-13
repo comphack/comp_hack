@@ -81,29 +81,41 @@ void CharacterManager::SendCharacterData(const std::shared_ptr<
     reply.WriteU8(c->GetLevel());
     reply.WriteS16Little(c->GetLNC());
     reply.WriteU16Little(c->GetSTR());
-    reply.WriteU16Little(cState->GetSTR() - c->GetSTR());
+    reply.WriteU16Little(static_cast<uint16_t>(
+        cState->GetSTR() - c->GetSTR()));
     reply.WriteU16Little(c->GetMAGIC());
-    reply.WriteU16Little(cState->GetMAGIC() - c->GetMAGIC());
+    reply.WriteU16Little(static_cast<uint16_t>(
+        cState->GetMAGIC() - c->GetMAGIC()));
     reply.WriteU16Little(c->GetVIT());
-    reply.WriteU16Little(cState->GetVIT() - c->GetVIT());
+    reply.WriteU16Little(static_cast<uint16_t>(
+        cState->GetVIT() - c->GetVIT()));
     reply.WriteU16Little(c->GetINTEL());
-    reply.WriteU16Little(cState->GetINTEL() - c->GetINTEL());
+    reply.WriteU16Little(static_cast<uint16_t>(
+        cState->GetINTEL() - c->GetINTEL()));
     reply.WriteU16Little(c->GetSPEED());
-    reply.WriteU16Little(cState->GetSPEED() - c->GetSPEED());
+    reply.WriteU16Little(static_cast<uint16_t>(
+        cState->GetSPEED() - c->GetSPEED()));
     reply.WriteU16Little(c->GetLUCK());
-    reply.WriteU16Little(cState->GetLUCK() - c->GetLUCK());
+    reply.WriteU16Little(static_cast<uint16_t>(
+        cState->GetLUCK() - c->GetLUCK()));
     reply.WriteU16Little(c->GetCLSR());
-    reply.WriteU16Little(cState->GetCLSR() - c->GetCLSR());
+    reply.WriteU16Little(static_cast<uint16_t>(
+        cState->GetCLSR() - c->GetCLSR()));
     reply.WriteU16Little(c->GetLNGR());
-    reply.WriteU16Little(cState->GetLNGR() - c->GetLNGR());
+    reply.WriteU16Little(static_cast<uint16_t>(
+        cState->GetLNGR() - c->GetLNGR()));
     reply.WriteU16Little(c->GetSPELL());
-    reply.WriteU16Little(cState->GetSPELL() - c->GetSPELL());
+    reply.WriteU16Little(static_cast<uint16_t>(
+        cState->GetSPELL() - c->GetSPELL()));
     reply.WriteU16Little(c->GetSUPPORT());
-    reply.WriteU16Little(cState->GetSUPPORT() - c->GetSUPPORT());
+    reply.WriteU16Little(static_cast<uint16_t>(
+        cState->GetSUPPORT() - c->GetSUPPORT()));
     reply.WriteU16Little(c->GetPDEF());
-    reply.WriteU16Little(cState->GetPDEF() - c->GetPDEF());
+    reply.WriteU16Little(static_cast<uint16_t>(
+        cState->GetPDEF() - c->GetPDEF()));
     reply.WriteU16Little(c->GetMDEF());
-    reply.WriteU16Little(cState->GetMDEF() - c->GetMDEF());
+    reply.WriteU16Little(static_cast<uint16_t>(
+        cState->GetMDEF() - c->GetMDEF()));
 
     reply.WriteU32Little(367061536); // Unknown
 

@@ -401,7 +401,9 @@ bool MetaObjectXmlParser::SetReferenceFieldDynamicSizes(
                 if(!objRefObject->IsPersistent() &&
                     objRef->GetDynamicSizeCount() == 0)
                 {
-                    allRefSizesSet = false;
+                    /// @todo This is broken for objects that are not
+                    /// persistent and have no dynamic variables.
+                    //allRefSizesSet = false;
                 }
             }
 

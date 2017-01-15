@@ -18,4 +18,7 @@
     <!-- Lobby Packets -->
     <include path="packet_login.xml"/>
     <include path="packet_response_code.xml"/>
+
+    <!-- BinaryData Files -->
+    <include path="binarydata/zonedata.xml"/>
 </objgen>

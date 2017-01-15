@@ -95,6 +95,24 @@ public:
     }
 
     /**
+     * Get the pointer to the referenced object but do
+     * not load from the databaseif it is not loaded already.
+     * @return Pointer to the referenced object
+     */
+    T* operator->() const
+    {
+        return mRef.get();
+    }
+
+    /**
+     * Checks if the pointer is valid or a nullptr.
+     */
+    operator bool() const
+    {
+        return nullptr != mRef.get();
+    }
+
+    /**
      * Load the referenced object from the database by its UUID.
      * This will fail if the object is not persistent, the UUID
      * is not set or the load was attempted already and failed

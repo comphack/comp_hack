@@ -1,9 +1,7 @@
 ([&]() -> @VAR_CODE_TYPE@
 {
-    if(!@VAR_NAME@.IsNull())
-    {
-        @VAR_NAME@.Get()->Load(@DOC@, *@NODE@);
-    }
+    @VAR_CODE_TYPE@ ref(std::shared_ptr<@REF_TYPE@>(new @REF_TYPE@));
+    ref.Get()->Load(@DOC@, *@NODE@);
 
-    return @VAR_NAME@;
+    return ref;
 })()

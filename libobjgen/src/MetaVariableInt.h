@@ -465,7 +465,14 @@ public:
             // float constants should end with an 'f'.
             if(typeid(T) == typeid(float))
             {
-                value += "f";
+                if("0" == value)
+                {
+                    value += ".0f";
+                }
+                else
+                {
+                    value += "f";
+                }
             }
         }
         else
@@ -484,12 +491,27 @@ public:
     virtual std::string GetDefaultValueCode() const
     {
         std::stringstream ss;
-        ss << mDefaultValue;
+
+        if(1 == sizeof(T))
+        {
+            ss << static_cast<int16_t>(mDefaultValue);
+        }
+        else
+        {
+            ss << mDefaultValue;
+        }
 
         // float constants should end with an 'f'.
         if(typeid(T) == typeid(float))
         {
-            ss << "f";
+            if("0" == ss.str())
+            {
+                ss << ".0f";
+            }
+            else
+            {
+                ss << "f";
+            }
         }
 
         return ss.str();

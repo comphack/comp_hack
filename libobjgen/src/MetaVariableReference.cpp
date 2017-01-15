@@ -398,11 +398,12 @@ std::string MetaVariableReference::GetXmlLoadCode(const Generator& generator,
     const std::string& name, const std::string& doc,
     const std::string& node, size_t tabLevel) const
 {
+    (void)name;
     (void)node;
 
     std::map<std::string, std::string> replacements;
-    replacements["@VAR_NAME@"] = name;
     replacements["@VAR_CODE_TYPE@"] = GetCodeType();
+    replacements["@REF_TYPE@"] = mReferenceType;
     replacements["@DOC@"] = doc;
     replacements["@NODE@"] = node;
 

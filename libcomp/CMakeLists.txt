@@ -184,6 +184,9 @@ SET(${PROJECT_NAME}_SCHEMA
     schema/registeredworld.xml
     schema/serverconfig.xml
     schema/test.xml
+
+    # BinaryData Files
+    schema/binarydata/zonedata.xml
 )
 
 OBJGEN_XML(${PROJECT_NAME}_STRUCTS
@@ -219,6 +222,30 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     ServerConfig.cpp
     TestObject.h
     TestObject.cpp
+
+    # BinaryData Files
+    MiZoneBasicData.h
+    MiZoneBasicData.cpp
+    MiZoneFileData.h
+    MiZoneFileData.cpp
+    MiZoneFogData.h
+    MiZoneFogData.cpp
+    MiZoneCameraData.h
+    MiZoneCameraData.cpp
+    MiZoneSkyData.h
+    MiZoneSkyData.cpp
+    MiZoneGouraudData.h
+    MiZoneGouraudData.cpp
+    MiZoneLensFlareLayerData.h
+    MiZoneLensFlareLayerData.cpp
+    MiZoneLensFlareData.h
+    MiZoneLensFlareData.cpp
+    MiZoneBGMData.h
+    MiZoneBGMData.cpp
+    MiZoneOtherData.h
+    MiZoneOtherData.cpp
+    MiZoneData.h
+    MiZoneData.cpp
 )
 
 ADD_LIBRARY(comp STATIC ${${PROJECT_NAME}_SRCS} ${${PROJECT_NAME}_HDRS}

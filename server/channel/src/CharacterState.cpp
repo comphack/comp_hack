@@ -1,10 +1,10 @@
 /**
- * @file server/channel/src/packets/Auth.cpp
+ * @file server/channel/src/CharacterState.cpp
  * @ingroup channel
  *
  * @author HACKfrost
  *
- * @brief Request from the client to authenticate.
+ * @brief State of a character on the channel.
  *
  * This file is part of the Channel Server (channel).
  *
@@ -24,32 +24,49 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "Packets.h"
+#include "CharacterState.h"
 
-// libcomp Includes
-#include <ManagerPacket.h>
-#include <Packet.h>
-
-// channel Includes
-#include "AccountManager.h"
-#include "ChannelServer.h"
+// objects Includes
+#include <Character.h>
 
 using namespace channel;
 
-bool Parsers::Auth::Parse(libcomp::ManagerPacket *pPacketManager,
-    const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
+CharacterState::CharacterState() : objects::CharacterStateObject()
 {
-    (void)pPacketManager;
+}
 
-    if(p.Size() != 43 || p.PeekU16Little() != 41)
+CharacterState::~CharacterState()
+{
+}
+
+bool CharacterState::RecalculateStats()
+{
+    auto c = GetCharacter().Get();
+
+    if(nullptr == c)
     {
         return false;
     }
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-    server->QueueWork(AccountManager::Authenticate, client);
+    SetSTR(c->GetSTR());
+    SetMAGIC(c->GetMAGIC());
+    SetVIT(c->GetVIT());
+    SetINTEL(c->GetINTEL());
+    SetSPEED(c->GetSPEED());
+    SetLUCK(c->GetLUCK());
+    SetCLSR(c->GetCLSR());
+    SetLNGR(c->GetLNGR());
+    SetSPELL(c->GetSPELL());
+    SetSUPPORT(c->GetSUPPORT());
+    SetPDEF(c->GetPDEF());
+    SetMDEF(c->GetMDEF());
+
+    /// @todo: transform stats
 
     return true;
+}
+
+bool CharacterState::Ready()
+{
+    return !GetCharacter().IsNull();
 }

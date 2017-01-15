@@ -29,7 +29,8 @@
 using namespace channel;
 
 ChannelClientConnection::ChannelClientConnection(asio::ip::tcp::socket& socket,
-    DH *pDiffieHellman) : ChannelConnection(socket, pDiffieHellman)
+    DH *pDiffieHellman) : ChannelConnection(socket, pDiffieHellman),
+    mClientState(std::shared_ptr<ClientState>(new ClientState))
 {
 }
 
@@ -40,10 +41,4 @@ ChannelClientConnection::~ChannelClientConnection()
 ClientState* ChannelClientConnection::GetClientState() const
 {
     return mClientState.get();
-}
-
-void ChannelClientConnection::SetClientState(
-    const std::shared_ptr<ClientState>& state)
-{
-    mClientState = state;
 }

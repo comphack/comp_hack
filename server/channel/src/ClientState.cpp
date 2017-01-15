@@ -28,10 +28,21 @@
 
 using namespace channel;
 
-ClientState::ClientState() : objects::ClientStateObject()
+ClientState::ClientState() : objects::ClientStateObject(),
+    mCharacterState(std::shared_ptr<CharacterState>(new CharacterState))
 {
 }
 
 ClientState::~ClientState()
 {
+}
+
+std::shared_ptr<CharacterState> ClientState::GetCharacterState()
+{
+    return mCharacterState;
+}
+
+bool ClientState::Ready()
+{
+    return GetAuthenticated() && mCharacterState->Ready();
 }

@@ -1,5 +1,5 @@
 /**
- * @file libcomp/src/MessageInit.h
+ * @file libcomp/src/MessageExecute.h
  * @ingroup libcomp
  *
  * @author COMP Omega <compomega@tutanota.com>
@@ -70,7 +70,7 @@ public:
      */
     template<typename... Args>
     explicit ExecuteImpl(std::function<void(Function...)> f, Args&&... args) :
-        Execute(), mBind(f, std::forward<Args>(args)...)
+        Execute(), mBind(std::move(f), std::forward<Args>(args)...)
     {
     }
 

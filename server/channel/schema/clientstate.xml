@@ -3,7 +3,6 @@
     <object name="ClientStateObject" persistent="false">
         <member type="bool" name="Authenticated"/>
         <member type="Account*" name="Account"/>
-        <member type="Character*" name="Character"/>
         <member type="u32" name="SessionKey"/>
     </object>
 </objgen>

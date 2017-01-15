@@ -40,6 +40,8 @@
 
 using namespace channel;
 
+ChannelServer *ChannelServer::sRunningServer = nullptr;
+
 ChannelServer::ChannelServer(std::shared_ptr<objects::ServerConfig> config,
     const libcomp::String& configPath) : libcomp::BaseServer(config, configPath)
 {
@@ -106,11 +108,17 @@ bool ChannelServer::Initialize(std::weak_ptr<BaseServer>& self)
         worker->AddManager(mManagerConnection);
     }
 
+    sRunningServer = this;
+
     return true;
 }
 
 ChannelServer::~ChannelServer()
 {
+    if(this == sRunningServer)
+    {
+        sRunningServer = 0;
+    }
 }
 
 const std::shared_ptr<objects::RegisteredChannel> ChannelServer::GetRegisteredChannel()
@@ -184,6 +192,12 @@ bool ChannelServer::RegisterServer(uint8_t channelID)
     mRegisteredChannel = registeredChannel;
 
     return true;
+}
+
+std::shared_ptr<ChannelServer> ChannelServer::GetRunningServer()
+{
+    return nullptr != sRunningServer ?
+        std::dynamic_pointer_cast<ChannelServer>(sRunningServer->mSelf.lock()) : nullptr;
 }
 
 std::shared_ptr<libcomp::TcpConnection> ChannelServer::CreateConnection(

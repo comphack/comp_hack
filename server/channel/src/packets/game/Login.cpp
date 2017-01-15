@@ -27,19 +27,13 @@
 #include "Packets.h"
 
 // libcomp Includes
-#include <Decrypt.h>
-#include <Log.h>
 #include <ManagerPacket.h>
 #include <Packet.h>
-#include <PacketCodes.h>
 #include <ReadOnlyPacket.h>
 #include <TcpConnection.h>
 
-// object Includes
-#include <Account.h>
-#include <Character.h>
-
 // channel Includes
+#include "AccountManager.h"
 #include "ChannelClientConnection.h"
 #include "ChannelServer.h"
 
@@ -57,49 +51,9 @@ bool Parsers::Login::Parse(libcomp::ManagerPacket *pPacketManager,
     username = username.C();
 
     auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-    auto lobbyDB = server->GetLobbyDatabase();
-    auto worldDB = server->GetWorldDatabase();
-
-    auto account = objects::Account::LoadAccountByUserName(lobbyDB, username);
-
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelClientPacketCode_t::PACKET_LOGIN_RESPONSE);
-
-    bool success = false;
     auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-    if(nullptr != account)
-    {
-        /// @todo: load the information the lobby retrieved
-        auto cid = (uint8_t)sessionKey;
-        auto charactersByCID = account->GetCharactersByCID();
 
-        auto character = charactersByCID.find(cid);
-
-        if(character != charactersByCID.end() && character->second.Get(worldDB))
-        {
-            auto state = std::shared_ptr<ClientState>(new ClientState);
-            state->SetAccount(account);
-            state->SetSessionKey(sessionKey);
-            state->SetCharacter(character->second.GetCurrentReference());
-
-            client->SetClientState(state);
-
-            success = true;
-        }
-    }
-
-    if(success)
-    {
-        reply.WriteU32Little(1);
-    }
-    else
-    {
-        LOG_ERROR(libcomp::String("Invalid account username passed to the channel"
-            " from the lobby: %1\n").Arg(username));
-        reply.WriteU32Little(0);
-    }
-
-    connection->SendPacket(reply);
+    server->QueueWork(AccountManager::Login, client, username, sessionKey);
 
     return true;
 }

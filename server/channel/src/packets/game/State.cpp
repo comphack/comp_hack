@@ -27,193 +27,31 @@
 #include "Packets.h"
 
 // libcomp Includes
-#include <Decrypt.h>
-#include <Log.h>
-#include <Packet.h>
-#include <PacketCodes.h>
-#include <ReadOnlyPacket.h>
-#include <TcpConnection.h>
-
-// object Includes
-#include <Character.h>
+#include <ManagerPacket.h>
 
 // channel Includes
-#include "ChannelClientConnection.h"
+#include "ChannelServer.h"
+#include "CharacterManager.h"
 
 using namespace channel;
-
-void SendCharacterData(const std::shared_ptr<channel::ChannelClientConnection>& client)
-{
-    auto state = client->GetClientState();
-    auto c = state->GetCharacter().Get();
-
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelClientPacketCode_t::PACKET_CHARACTER_DATA_RESPONSE);
-    
-    reply.WriteU32Little((uint32_t)c->GetCID());    /// @todo: replace with unique entity ID
-    reply.WriteString16Little(libcomp::Convert::ENCODING_CP932,
-        c->GetName(), true);
-    reply.WriteU32Little(0); // Special Title
-    reply.WriteU8((uint8_t)c->GetGender());
-    reply.WriteU8(c->GetSkinType());
-    reply.WriteU8(c->GetHairType());
-    reply.WriteU8(c->GetHairColor());
-    reply.WriteU8(c->GetGender() == objects::Character::Gender_t::MALE
-        ? 0x03 : 0x65); // One of these is wrong
-    reply.WriteU8(c->GetRightEyeColor());
-    reply.WriteU8(c->GetFaceType());
-    reply.WriteU8(c->GetLeftEyeColor());
-    reply.WriteU8(0x00); // Unknown
-    reply.WriteU8(0x01); // Unknown
-
-    /// @todo: equipment
-    for(int z = 0; z < 15; z++)
-    {
-        /*uint32_t equip = c->equip(z);
-
-        if(equip != 0)
-            reply.WriteU32Little(equip);
-        else*/
-            reply.WriteU32Little(0xFFFFFFFF);
-    }
-
-    //Character status
-    reply.WriteU16Little(c->GetMaxHP());
-    reply.WriteU16Little(c->GetMaxMP());
-    reply.WriteU16Little(c->GetHP());
-    reply.WriteU16Little(c->GetMP());
-    reply.WriteU64Little(c->GetXP());
-    reply.WriteU32Little(c->GetPoints());
-    reply.WriteU8(c->GetLevel());
-    reply.WriteS16Little(c->GetLNC());
-    reply.WriteU16Little(c->GetSTR());
-    reply.WriteU16Little(0);     /// @todo: calculated STR boost
-    reply.WriteU16Little(c->GetMAGIC());
-    reply.WriteU16Little(0);     /// @todo: calculated MAGIC boost
-    reply.WriteU16Little(c->GetVIT());
-    reply.WriteU16Little(0);     /// @todo: calculated VIT boost
-    reply.WriteU16Little(c->GetINTEL());
-    reply.WriteU16Little(0);     /// @todo: calculated INTEL boost
-    reply.WriteU16Little(c->GetSPEED());
-    reply.WriteU16Little(0);     /// @todo: calcualted SPEED boost
-    reply.WriteU16Little(c->GetLUCK());
-    reply.WriteU16Little(0);     /// @todo: calculated LUCK boost
-    reply.WriteU16Little(c->GetCLSR());
-    reply.WriteU16Little(0);     /// @todo: calculated CLSR boost
-    reply.WriteU16Little(c->GetLNGR());
-    reply.WriteU16Little(0);     /// @todo: calcualted LNGR boost
-    reply.WriteU16Little(c->GetSPELL());
-    reply.WriteU16Little(0);     /// @todo: calculated SPELL boost
-    reply.WriteU16Little(c->GetSUPPORT());
-    reply.WriteU16Little(0);     /// @todo: calcualted SUPPORT boost
-    reply.WriteU16Little(c->GetPDEF());
-    reply.WriteU16Little(0);     /// @todo: calculated PDEF boost
-    reply.WriteU16Little(c->GetMDEF());
-    reply.WriteU16Little(0);     /// @todo: calculated MDEF boost
-
-    reply.WriteU32Little(367061536); // Unknown
-
-    /// @todo: status effects
-    uint32_t statusEffectCount = 0;
-
-    reply.WriteU32Little(statusEffectCount + 1);
-
-    for(uint32_t i = 0; i < statusEffectCount; i++)
-    {
-        /*BfStatusEffectDataPtr sfx = cs->statusEffect(i);
-
-        reply.WriteU32Little(sfx->effect());
-        reply.WriteFloat(state->clientTime(state->serverTicks() +
-            sfx->duration()));
-        reply.WriteU8(sfx->stack());*/
-    }
-
-    reply.WriteU32Little(1055); //Unknown
-    reply.WriteU32Little(1325025608);   //Unknown
-    reply.WriteU8(1);   //Unknown
-
-    /// @todo: skills
-    reply.WriteU32Little(0);
-
-    /*for(uint32_t skill : state->tempSkillCopy())
-        reply.WriteU32Little(skill);
-    for(uint32_t skill : c->learnedSkillCopy())
-        reply.WriteU32Little(skill);
-
-    reply.WriteArray(defSkills, 4 * defaultCount);*/
-
-    for(int i = 0; i < 38; i++)
-    {
-        //const BfExpertise& exp = c->expertise(i);
-
-        reply.WriteU32Little(0);
-        reply.WriteU8(0);
-        reply.WriteU8(0); // 0 - Raise | 1 - Capped
-    }
-
-    reply.WriteU32Little(0);
-
-    /// @todo: demons
-    /*if(nullptr != state->demon() && c->activeDemon() > 0)
-        reply.WriteU64Little(c->activeDemon());
-    else*/
-        reply.WriteS64Little(-1);
-
-    reply.WriteU32Little(0xFFFFFFFF);
-    reply.WriteU32Little(0xFFFFFFFF);
-    reply.WriteU32Little(0xFFFFFFFF);
-    reply.WriteU32Little(0xFFFFFFFF);
-
-    //BfZonePtr zone = state->zoneInst()->zone();
-    
-    /// @todo: zone position
-    reply.WriteU32Little(1);    //set
-    reply.WriteU32Little(0x00004E85); // Zone ID
-    reply.WriteFloat(0);    //x
-    reply.WriteFloat(0);    //y
-    reply.WriteFloat(0);    //rotation
-
-    reply.WriteU8(0);
-    reply.WriteU32Little(0); // Homepoint zone
-    reply.WriteU32Little(0x43FA8000); // Homepoint X
-    reply.WriteU32Little(0x3F800000); // Homepoint Y
-    reply.WriteU16Little(0);
-    reply.WriteU8(1);
-
-    client->SendPacket(reply);
-}
-
-void SendStatusIcon(const std::shared_ptr<channel::ChannelClientConnection>& client)
-{
-    /// @todo: implement icons
-    uint8_t icon = 0;
-
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelClientPacketCode_t::PACKET_STATUS_ICON_RESPONSE);
-    reply.WriteU8(0);
-    reply.WriteU8(icon);
-
-    client->SendPacket(reply);
-
-    /// @todo: broadcast to other players
-}
 
 bool Parsers::State::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {
-    (void)pPacketManager;
     (void)p;
 
     auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
     auto state = client->GetClientState();
-    if(nullptr == state || state->GetCharacter().IsNull())
+    if(!state->Ready())
     {
         return false;
     }
 
-    SendCharacterData(client);
-    SendStatusIcon(client);
+    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+
+    server->QueueWork(CharacterManager::SendCharacterData, client);
+    server->QueueWork(CharacterManager::SendStatusIcon, client);
 
     return true;
 }

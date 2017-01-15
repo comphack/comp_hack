@@ -2,5 +2,6 @@
 <objgen>
     <include path="../../libcomp/schema/master.xml"/>
     <include path="channelconfig.xml"/>
+    <include path="characterstate.xml"/>
     <include path="clientstate.xml"/>
 </objgen>

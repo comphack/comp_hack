@@ -1,10 +1,10 @@
 /**
- * @file server/channel/src/ClientState.h
+ * @file server/channel/src/CharacterState.h
  * @ingroup channel
  *
  * @author HACKfrost
  *
- * @brief State of a client connection.
+ * @brief State of a character on the channel.
  *
  * This file is part of the Channel Server (channel).
  *
@@ -24,53 +24,47 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef SERVER_CHANNEL_SRC_CLIENTSTATE_H
-#define SERVER_CHANNEL_SRC_CLIENTSTATE_H
-
-// channel Includes
-#include "CharacterState.h"
+#ifndef SERVER_CHANNEL_SRC_CHARACTERSTATE_H
+#define SERVER_CHANNEL_SRC_CHARACTERSTATE_H
 
 // objects Includes
-#include <ClientStateObject.h>
+#include <CharacterStateObject.h>
 
 namespace channel
 {
 
 /**
- * Contains the state of a game client currently connected to the
- * channel.
+ * Contains the state of a character from a game client currently connected
+ * to the channel.
  */
-class ClientState : public objects::ClientStateObject
+class CharacterState : public objects::CharacterStateObject
 {
 public:
     /**
-     * Create a new client state.
+     * Create a new character state.
      */
-    ClientState();
+    CharacterState();
 
     /**
-     * Clean up the client state.
+     * Clean up the character state.
      */
-    virtual ~ClientState();
+    virtual ~CharacterState();
 
     /**
-     * Get the state of the character associated to the client.
-     * @return Pointer to the CharacterState
+     * Recalculate the character's current stats, adjusted by equipment and
+     * effects.
+     * @return true if the calculation succeeded, false if it errored
      */
-    std::shared_ptr<CharacterState> GetCharacterState();
+    bool RecalculateStats();
 
     /**
-     * Check if the client state has everything needed to start
+     * Check if the character state has everything needed to start
      * being used.
      * @return true if the state is ready to use, otherwise false
      */
     bool Ready();
-
-private:
-    /// State of the character associated to the client
-    std::shared_ptr<CharacterState> mCharacterState;
 };
 
 } // namespace channel
 
-#endif // SERVER_CHANNEL_SRC_CLIENTSTATE_H
+#endif // SERVER_CHANNEL_SRC_CHARACTERSTATE_H

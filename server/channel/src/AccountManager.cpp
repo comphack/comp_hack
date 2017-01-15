@@ -39,11 +39,21 @@
 
 using namespace channel;
 
+AccountManager::AccountManager(const std::weak_ptr<ChannelServer>& server)
+    : mServer(server)
+{
+}
+
+AccountManager::~AccountManager()
+{
+}
+
 void AccountManager::Login(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const libcomp::String& username, uint32_t sessionKey)
 {
-    auto server = ChannelServer::GetRunningServer();
+    auto server = mServer.lock();
+
     auto lobbyDB = server->GetLobbyDatabase();
     auto worldDB = server->GetWorldDatabase();
 

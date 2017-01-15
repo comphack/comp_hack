@@ -33,17 +33,29 @@
 namespace channel
 {
 
+class ChannelServer;
+
 /**
- * Static manager to handle Character focused actions.
+ * Manager to handle Character focused actions.
  */
 class CharacterManager
 {
 public:
     /**
+     * Create a new CharacterManager.
+     */
+    CharacterManager();
+
+    /**
+     * Clean up the CharacterManager.
+     */
+    ~CharacterManager();
+
+    /**
      * Send updated character data to the game client.
      * @param client Pointer to the client connection
      */
-    static void SendCharacterData(const std::shared_ptr<
+    void SendCharacterData(const std::shared_ptr<
         channel::ChannelClientConnection>& client);
 
     /**
@@ -51,7 +63,7 @@ public:
      * @param client Pointer to the client connection containing
      *  the character
      */
-    static void SendStatusIcon(const std::shared_ptr<
+    void SendStatusIcon(const std::shared_ptr<
         channel::ChannelClientConnection>& client);
 };
 

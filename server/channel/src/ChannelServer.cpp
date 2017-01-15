@@ -40,10 +40,9 @@
 
 using namespace channel;
 
-ChannelServer *ChannelServer::sRunningServer = nullptr;
-
 ChannelServer::ChannelServer(std::shared_ptr<objects::ServerConfig> config,
-    const libcomp::String& configPath) : libcomp::BaseServer(config, configPath)
+    const libcomp::String& configPath) : libcomp::BaseServer(config, configPath),
+    mAccountManager(0), mCharacterManager(0)
 {
 }
 
@@ -108,17 +107,17 @@ bool ChannelServer::Initialize(std::weak_ptr<BaseServer>& self)
         worker->AddManager(mManagerConnection);
     }
 
-    sRunningServer = this;
+    auto weakPtr = std::dynamic_pointer_cast<ChannelServer>(mSelf.lock());
+    mAccountManager = new AccountManager(weakPtr);
+    mCharacterManager = new CharacterManager();
 
     return true;
 }
 
 ChannelServer::~ChannelServer()
 {
-    if(this == sRunningServer)
-    {
-        sRunningServer = 0;
-    }
+    delete[] mAccountManager;
+    delete[] mCharacterManager;
 }
 
 const std::shared_ptr<objects::RegisteredChannel> ChannelServer::GetRegisteredChannel()
@@ -194,10 +193,14 @@ bool ChannelServer::RegisterServer(uint8_t channelID)
     return true;
 }
 
-std::shared_ptr<ChannelServer> ChannelServer::GetRunningServer()
+AccountManager* ChannelServer::GetAccountManager() const
 {
-    return nullptr != sRunningServer ?
-        std::dynamic_pointer_cast<ChannelServer>(sRunningServer->mSelf.lock()) : nullptr;
+    return mAccountManager;
+}
+
+CharacterManager* ChannelServer::GetCharacterManager() const
+{
+    return mCharacterManager;
 }
 
 std::shared_ptr<libcomp::TcpConnection> ChannelServer::CreateConnection(

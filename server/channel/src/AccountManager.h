@@ -33,19 +33,31 @@
 namespace channel
 {
 
+class ChannelServer;
+
 /**
- * Static manager to handle Account focused actions.
+ * Manager to handle Account focused actions.
  */
 class AccountManager
 {
 public:
+    /**
+     * Create a new AccountManager.
+     */
+    AccountManager(const std::weak_ptr<ChannelServer>& server);
+
+    /**
+     * Clean up the AccountManager.
+     */
+    ~AccountManager();
+
     /**
      * Log an account in by their username.
      * @param client Pointer to the client connection
      * @param username Username to log in with
      * @param sessionKey Session key to validate
      */
-    static void Login(const std::shared_ptr<
+    void Login(const std::shared_ptr<
         channel::ChannelClientConnection>& client,
         const libcomp::String& username, uint32_t sessionKey);
 
@@ -53,8 +65,12 @@ public:
      * Authenticate an account by its connection.
      * @param client Pointer to the client connection
      */
-    static void Authenticate(const std::shared_ptr<
+    void Authenticate(const std::shared_ptr<
         channel::ChannelClientConnection>& client);
+
+private:
+    /// Pointer to the channel server
+    std::weak_ptr<ChannelServer> mServer;
 };
 
 } // namespace channel

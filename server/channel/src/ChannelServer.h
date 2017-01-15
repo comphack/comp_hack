@@ -37,6 +37,10 @@
 #include <RegisteredChannel.h>
 #include <RegisteredWorld.h>
 
+// channel Includes
+#include "AccountManager.h"
+#include "CharacterManager.h"
+
 namespace channel
 {
 
@@ -120,10 +124,16 @@ public:
     bool RegisterServer(uint8_t channelID);
 
     /**
-     * Get a pointer to the server that is currently running.
-     * @return Pointer to the ChannelServer that is currently running
+     * Get a pointer to the account manager.
+     * @return Pointer to the AccountManager
      */
-    static std::shared_ptr<ChannelServer> GetRunningServer();
+    AccountManager* GetAccountManager() const;
+
+    /**
+     * Get a pointer to the character manager.
+     * @return Pointer to the CharacterManager
+     */
+    CharacterManager* GetCharacterManager() const;
 
 protected:
     /**
@@ -149,8 +159,11 @@ protected:
     /// Pointer to the RegisteredChannel.
     std::shared_ptr<objects::RegisteredChannel> mRegisteredChannel;
 
-    /// Static pointer to the ChannelServer that is currently running
-    static ChannelServer *sRunningServer;
+    /// Pointer to the account manager.
+    AccountManager *mAccountManager;
+
+    /// Poiner to the character manager.
+    CharacterManager *mCharacterManager;
 };
 
 } // namespace channel

@@ -35,6 +35,18 @@
 
 using namespace channel;
 
+void SendCharacterData(CharacterManager* characterManager,
+    const std::shared_ptr<ChannelClientConnection> client)
+{
+    characterManager->SendCharacterData(client);
+}
+
+void SendStatusIcon(CharacterManager* characterManager,
+    const std::shared_ptr<ChannelClientConnection> client)
+{
+    characterManager->SendStatusIcon(client);
+}
+
 bool Parsers::State::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
@@ -50,8 +62,8 @@ bool Parsers::State::Parse(libcomp::ManagerPacket *pPacketManager,
 
     auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
 
-    server->QueueWork(CharacterManager::SendCharacterData, client);
-    server->QueueWork(CharacterManager::SendStatusIcon, client);
+    server->QueueWork(SendCharacterData, server->GetCharacterManager(), client);
+    server->QueueWork(SendStatusIcon, server->GetCharacterManager(), client);
 
     return true;
 }

@@ -34,6 +34,14 @@
 
 using namespace channel;
 
+CharacterManager::CharacterManager()
+{
+}
+
+CharacterManager::~CharacterManager()
+{
+}
+
 void CharacterManager::SendCharacterData(const std::shared_ptr<
     channel::ChannelClientConnection>& client)
 {

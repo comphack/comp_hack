@@ -36,6 +36,12 @@
 
 using namespace channel;
 
+void AuthenticateAccount(AccountManager* accountManager,
+    const std::shared_ptr<ChannelClientConnection> client)
+{
+    accountManager->Authenticate(client);
+}
+
 bool Parsers::Auth::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
@@ -49,7 +55,8 @@ bool Parsers::Auth::Parse(libcomp::ManagerPacket *pPacketManager,
 
     auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
     auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-    server->QueueWork(AccountManager::Authenticate, client);
+
+    server->QueueWork(AuthenticateAccount, server->GetAccountManager(), client);
 
     return true;
 }

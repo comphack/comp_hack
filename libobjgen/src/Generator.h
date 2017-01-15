@@ -55,17 +55,17 @@ public:
     std::string ParseTemplate(size_t tabLevel, const std::string& name,
         const std::map<std::string, std::string>& replacements) const;
 
-    virtual std::string Tab(size_t count = 1) const;
+    static std::string Tab(size_t count = 1);
 
     virtual std::string GetMemberName(
         const MetaVariable& var) const;
     virtual std::string GetMemberName(
         const std::shared_ptr<MetaVariable>& var) const;
 
-    virtual std::string GetCapitalName(
-        const MetaVariable& var) const;
-    virtual std::string GetCapitalName(
-        const std::shared_ptr<MetaVariable>& var) const;
+    static std::string GetCapitalName(
+        const MetaVariable& var);
+    static std::string GetCapitalName(
+        const std::shared_ptr<MetaVariable>& var);
 
     static bool GetXmlAttributeBoolean(const std::string& attr);
 

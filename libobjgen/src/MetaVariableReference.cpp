@@ -38,7 +38,7 @@ using namespace libobjgen;
 MetaVariableReference::MetaVariableReference()
     : MetaVariable()
 {
-    mPersistentParent = false;
+    mPersistentReference = false;
     mDynamicSizeCount = 0;
 }
 
@@ -79,14 +79,14 @@ bool MetaVariableReference::SetReferenceType(const std::string& referenceType)
     return status;
 }
 
-bool MetaVariableReference::GetPersistentParent() const
+bool MetaVariableReference::IsPersistentReference() const
 {
-    return mPersistentParent;
+    return mPersistentReference;
 }
 
-bool MetaVariableReference::SetPersistentParent(bool persistentParent)
+bool MetaVariableReference::SetPersistentReference(bool persistentReference)
 {
-    mPersistentParent = persistentParent;
+    mPersistentReference = persistentReference;
     return true;
 }
 
@@ -123,8 +123,8 @@ bool MetaVariableReference::Load(std::istream& stream)
     Generator::LoadString(stream, mReferenceType);
     stream.read(reinterpret_cast<char*>(&mDynamicSizeCount),
         sizeof(mDynamicSizeCount));
-    stream.read(reinterpret_cast<char*>(&mPersistentParent),
-        sizeof(mPersistentParent));
+    stream.read(reinterpret_cast<char*>(&mPersistentReference),
+        sizeof(mPersistentReference));
 
     if(stream.good())
     {
@@ -144,8 +144,8 @@ bool MetaVariableReference::Save(std::ostream& stream) const
         Generator::SaveString(stream, mReferenceType);
         stream.write(reinterpret_cast<const char*>(&mDynamicSizeCount),
             sizeof(mDynamicSizeCount));
-        stream.write(reinterpret_cast<const char*>(&mPersistentParent),
-            sizeof(mPersistentParent));
+        stream.write(reinterpret_cast<const char*>(&mPersistentReference),
+            sizeof(mPersistentReference));
 
         MetaVariable::SaveVariableList(stream, mDefaultedVariables);
 
@@ -207,42 +207,42 @@ std::string MetaVariableReference::GetCodeType() const
 
 std::string MetaVariableReference::GetConstructValue() const
 {
-    std::stringstream ss;
-    if(mPersistentParent)
+    std::stringstream defaultVal;
+    if(mPersistentReference)
     {
-        ss << GetCodeType() << "()";
+        defaultVal << GetCodeType() << "()";
     }
     else
     {
-        ss << GetCodeType() << "(std::shared_ptr<" << mReferenceType << ">(new " << mReferenceType << "))";
+        defaultVal << GetCodeType()
+            << "(std::shared_ptr<" << mReferenceType << ">(new " << mReferenceType << "))";
+    }
+
+    std::stringstream ss;
+    if(mDefaultedVariables.size() > 0)
+    {
+        ss << "([&]() -> " << GetCodeType() << std::endl
+            << "{" << std::endl;
+        ss << Generator::Tab(1) << "auto ref = " << defaultVal.str() << ";" << std::endl;
+        ss << GetConstructorCodeDefaults("ref", "", 1);
+        ss << Generator::Tab(1) << "return ref;" << std::endl
+            << "})()";
+    }
+    else
+    {
+        ss << defaultVal.str();
     }
 
     return ss.str();
 }
 
-std::string MetaVariableReference::GetConstructorCode(const Generator& generator,
-    const MetaObject& object, const std::string& name, size_t tabLevel) const
+std::string MetaVariableReference::GetConstructorCodeDefaults(const std::string& varName,
+    const std::string& parentRef, size_t tabLevel) const
 {
-    (void)object;
-    (void)name;
-
-    std::stringstream ss;
-    ss << generator.Tab(tabLevel) << "{" << std::endl;
-    ss << GetConstructorCode(generator, "ref", "", tabLevel + 1);
-    ss << generator.Tab(tabLevel) << "}" << std::endl;
-    return ss.str();
-}
-
-std::string MetaVariableReference::GetConstructorCode(const Generator& generator,
-    const std::string& varName, const std::string& parentRef, size_t tabLevel) const
-{
-    std::string code = GetConstructValue();
-
     std::stringstream ss;
     bool topLevel = parentRef.length() == 0;
-    if(mPersistentParent)
+    if(mPersistentReference)
     {
-        ss << generator.GetMemberName(*this) << " = " << code << ";" << std::endl;
         //Should always be the case
         if(topLevel)
         {
@@ -252,50 +252,39 @@ std::string MetaVariableReference::GetConstructorCode(const Generator& generator
             if(mDefaultedVariables.size() == 1 && var->GetName() == "UID" &&
                 var->GetMetaType() == MetaVariableType_t::TYPE_STRING)
             {
-                ss << "libobjgen::UUID uuid(" << var->GetDefaultValueCode()
+                ss << Generator::Tab(tabLevel) << "libobjgen::UUID uuid(" << var->GetDefaultValueCode()
                     << ");" << std::endl;
-                ss << GetName() << ".SetUUID(uuid)" << std::endl;
+                ss << Generator::Tab(tabLevel) << varName << ".SetUUID(uuid)" << std::endl;
             }
         }
     }
-    else
+    else if(mDefaultedVariables.size() > 0)
     {
-        ss << generator.Tab(tabLevel) << "auto " << varName << " = " << code << ";" << std::endl;
-
-        if(mDefaultedVariables.size() > 0)
+        ss << Generator::Tab(tabLevel) << "{" << std::endl;
+        for(auto var : mDefaultedVariables)
         {
-            ss << generator.Tab(tabLevel) << "{" << std::endl;
-            for(auto var : mDefaultedVariables)
+            std::stringstream ssVar;
+            ssVar << var->GetName() << "Value";
+            std::string localVarName = ssVar.str();
+
+            if(var->GetMetaType() == MetaVariableType_t::TYPE_REF)
             {
-                std::stringstream ssVar;
-                ssVar << var->GetName() << "Value";
-                std::string localVarName = ssVar.str();
-
-                if(var->GetMetaType() == MetaVariableType_t::TYPE_REF)
-                {
-                    ss << generator.Tab(tabLevel + 1) << "{" << std::endl;
-                    ss << GetConstructorCode(generator, parentRef + "_ref",
-                        localVarName, tabLevel + 1);
-                    ss << generator.Tab(tabLevel + 1) << "}" << std::endl;
-                }
-                else
-                {
-                    ss << generator.Tab(tabLevel + 1) << "auto " << localVarName
-                        << " = " << var->GetConstructValue() << ";" << std::endl;
-                }
-
-                ss << generator.Tab(tabLevel + 1) << varName << ".Get()->Set"
-                    << generator.GetCapitalName(var) << "(" << localVarName <<
-                    ");" << std::endl;
+                ss << Generator::Tab(tabLevel + 1) << "{" << std::endl;
+                ss << GetConstructorCodeDefaults(parentRef + "_ref",
+                    localVarName, tabLevel + 1);
+                ss << Generator::Tab(tabLevel + 1) << "}" << std::endl;
             }
-            ss << generator.Tab(tabLevel) << "}" << std::endl;
+            else
+            {
+                ss << Generator::Tab(tabLevel + 1) << "auto " << localVarName
+                    << " = " << var->GetConstructValue() << ";" << std::endl;
+            }
+
+            ss << Generator::Tab(tabLevel + 1) << varName << "->Set"
+                << Generator::GetCapitalName(var) << "(" << localVarName <<
+                ");" << std::endl;
         }
-        ss << generator.Tab(tabLevel);
-        if(!topLevel)
-        {
-            ss << parentRef << ".Get()->";
-        }
-        ss << "Set" << generator.GetCapitalName(*this) << "(ref);" << std::endl;
+        ss << Generator::Tab(tabLevel) << "}" << std::endl;
     }
     return ss.str();
 }
@@ -325,7 +314,7 @@ std::string MetaVariableReference::GetLoadCode(const Generator& generator,
     replacements["@VAR_NAME@"] = name;
     replacements["@STREAM@"] = stream;
 
-    if(mPersistentParent)
+    if(mPersistentReference)
     {
         return generator.ParseTemplate(1, "VariablePersistentReferenceLoad",
             replacements);
@@ -344,7 +333,7 @@ std::string MetaVariableReference::GetSaveCode(const Generator& generator,
     replacements["@VAR_NAME@"] = name;
     replacements["@STREAM@"] = stream;
 
-    if(mPersistentParent)
+    if(mPersistentReference)
     {
         return generator.ParseTemplate(1, "VariablePersistentReferenceSave",
             replacements);
@@ -363,7 +352,7 @@ std::string MetaVariableReference::GetLoadRawCode(const Generator& generator,
     replacements["@VAR_NAME@"] = name;
     replacements["@STREAM@"] = stream;
 
-    if(mPersistentParent)
+    if(mPersistentReference)
     {
         return generator.ParseTemplate(1, "VariablePersistentReferenceLoadRaw",
             replacements);
@@ -382,7 +371,7 @@ std::string MetaVariableReference::GetSaveRawCode(const Generator& generator,
     replacements["@VAR_NAME@"] = name;
     replacements["@STREAM@"] = stream;
 
-    if(mPersistentParent)
+    if(mPersistentReference)
     {
         return generator.ParseTemplate(1, "VariablePersistentReferenceSaveRaw",
             replacements);
@@ -403,11 +392,11 @@ std::string MetaVariableReference::GetXmlLoadCode(const Generator& generator,
 
     std::map<std::string, std::string> replacements;
     replacements["@VAR_CODE_TYPE@"] = GetCodeType();
-    replacements["@REF_TYPE@"] = mReferenceType;
     replacements["@DOC@"] = doc;
     replacements["@NODE@"] = node;
+    replacements["@CONSTRUCT_VALUE@"] = GetConstructValue();
 
-    if(mPersistentParent)
+    if(mPersistentReference)
     {
         return generator.ParseTemplate(tabLevel, "VariablePersistentReferenceXmlLoad",
             replacements);
@@ -432,7 +421,7 @@ std::string MetaVariableReference::GetXmlSaveCode(const Generator& generator,
     replacements["@DOC@"] = doc;
     replacements["@PARENT@"] = parent;
 
-    if(mPersistentParent)
+    if(mPersistentReference)
     {
         return generator.ParseTemplate(tabLevel, "VariablePersistentReferenceXmlSave",
             replacements);

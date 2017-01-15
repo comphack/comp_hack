@@ -126,7 +126,7 @@ std::string Generator::ParseTemplate(size_t tabLevel, const std::string& name,
     return code;
 }
 
-std::string Generator::Tab(size_t count) const
+std::string Generator::Tab(size_t count)
 {
     return std::string(count * 4, ' ');
 }
@@ -149,7 +149,7 @@ std::string Generator::GetMemberName(
     return s;
 }
 
-std::string Generator::GetCapitalName(const MetaVariable& var) const
+std::string Generator::GetCapitalName(const MetaVariable& var)
 {
     std::string name = var.GetName();
 
@@ -169,7 +169,7 @@ std::string Generator::GetCapitalName(const MetaVariable& var) const
 }
 
 std::string Generator::GetCapitalName(
-    const std::shared_ptr<MetaVariable>& var) const
+    const std::shared_ptr<MetaVariable>& var)
 {
     std::string s;
 

@@ -801,7 +801,7 @@ TEST(MetaVariableType, Reference)
     ASSERT_TRUE(var.SetReferenceType("ValidReference"))
         << "Setting a validly named reference type.";
 
-    var.SetPersistentParent(false);
+    var.SetPersistentReference(false);
 
     auto defaultedVar = std::shared_ptr<MetaVariable>(
         new MetaVariableInt<uint8_t>);
@@ -813,7 +813,7 @@ TEST(MetaVariableType, Reference)
     ASSERT_TRUE(var.IsValid());
     ASSERT_EQ("REF", var.GetName());
 
-    ASSERT_EQ(false, var.GetPersistentParent());
+    ASSERT_EQ(false, var.IsPersistentReference());
     ASSERT_EQ(1, var.GetDefaultedVariables().size());
 
     //Make a copy (via stream) and compare
@@ -824,7 +824,7 @@ TEST(MetaVariableType, Reference)
     ASSERT_TRUE(copy.Load(ss));
 
     ASSERT_EQ(var.GetName(), copy.GetName());
-    ASSERT_EQ(var.GetPersistentParent(), copy.GetPersistentParent());
+    ASSERT_EQ(var.IsPersistentReference(), copy.IsPersistentReference());
     ASSERT_EQ(var.GetDefaultedVariables().size(), copy.GetDefaultedVariables().size());
 
     //Make a copy (via XML) and compare
@@ -837,7 +837,7 @@ TEST(MetaVariableType, Reference)
     ASSERT_TRUE(copy.Load(doc, *root->FirstChildElement()));
 
     ASSERT_EQ(var.GetName(), copy.GetName());
-    ASSERT_EQ(var.GetPersistentParent(), copy.GetPersistentParent());
+    ASSERT_EQ(var.IsPersistentReference(), copy.IsPersistentReference());
     ASSERT_EQ(var.GetDefaultedVariables().size(), copy.GetDefaultedVariables().size());
 }
 

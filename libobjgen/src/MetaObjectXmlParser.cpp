@@ -617,9 +617,8 @@ std::shared_ptr<MetaVariable> MetaObjectXmlParser::GetVariable(const tinyxml2::X
             auto ref = std::dynamic_pointer_cast<MetaVariableReference>(var);
 
             auto refType = ref->GetReferenceType();
-            auto persistentRefType = mKnownObjects[szName]->IsPersistent();
+            bool persistentRefType = false;
 
-            ref->SetPersistentParent(persistentRefType);
             if(mKnownObjects.find(refType) == mKnownObjects.end())
             {
                 std::stringstream ss;
@@ -628,13 +627,18 @@ std::shared_ptr<MetaVariable> MetaObjectXmlParser::GetVariable(const tinyxml2::X
 
                 mError = ss.str();
             }
-            else if(!mKnownObjects[refType]->IsPersistent() && persistentRefType)
+            else
             {
-                std::stringstream ss;
-                ss << "Non-peristent reference type '" << refType << "' on field  '"
-                    << szMemberName << "' in persistent object '" << szName << "'.";
+                persistentRefType = mKnownObjects[refType]->IsPersistent();
+                ref->SetPersistentReference(persistentRefType);
+                if(!persistentRefType && mKnownObjects[szName]->IsPersistent())
+                {
+                    std::stringstream ss;
+                    ss << "Non-peristent reference type '" << refType << "' on field  '"
+                        << szMemberName << "' in persistent object '" << szName << "'.";
 
-                mError = ss.str();
+                    mError = ss.str();
+                }
             }
 
             if(mError.length() == 0)

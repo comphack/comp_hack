@@ -161,21 +161,19 @@ TEST(MetaVariableType, Enum)
 
     var.SetDefaultValue("VALUE_3");
     var.SetTypePrefix("Testing");
+    var.SetUnderlyingType("int128_t");
+    ASSERT_FALSE(var.IsValid());
 
-    ASSERT_FALSE(var.SetSizeType(128))
-        << "Setting an invalid size type.";
-
-    ASSERT_TRUE(var.SetSizeType(32))
-        << "Setting a valid size type.";
+    var.SetUnderlyingType("int32_t");
 
     ASSERT_EQ(MetaVariable::MetaVariableType_t::TYPE_ENUM, var.GetMetaType());
     ASSERT_TRUE(var.IsValid());
     ASSERT_EQ("ENUM", var.GetName());
-    ASSERT_EQ(sizeof(uint32_t), var.GetSize());
+    ASSERT_EQ("int32_t", var.GetUnderlyingType());
 
     ASSERT_EQ("VALUE_3", var.GetDefaultValue());
     ASSERT_EQ("Testing", var.GetTypePrefix());
-    ASSERT_EQ(32, var.GetSizeType());
+    ASSERT_EQ(4, var.GetSize());
 
     //Make a copy (via stream) and compare
     std::stringstream ss;
@@ -187,7 +185,7 @@ TEST(MetaVariableType, Enum)
     ASSERT_EQ(var.GetName(), copy.GetName());
     ASSERT_EQ(var.GetDefaultValue(), copy.GetDefaultValue());
     ASSERT_EQ(var.GetTypePrefix(), copy.GetTypePrefix());
-    ASSERT_EQ(var.GetSizeType(), copy.GetSizeType());
+    ASSERT_EQ(var.GetUnderlyingType(), copy.GetUnderlyingType());
 
     //Make a copy (via XML) and compare
     tinyxml2::XMLDocument doc;
@@ -201,7 +199,7 @@ TEST(MetaVariableType, Enum)
     ASSERT_EQ(var.GetName(), copy.GetName());
     ASSERT_EQ(var.GetDefaultValue(), copy.GetDefaultValue());
     ASSERT_EQ(var.GetTypePrefix(), copy.GetTypePrefix());
-    ASSERT_EQ(var.GetSizeType(), copy.GetSizeType());
+    ASSERT_EQ(var.GetUnderlyingType(), copy.GetUnderlyingType());
 }
 
 TEST(MetaVariableType, Int_s8)

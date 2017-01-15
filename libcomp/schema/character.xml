@@ -7,7 +7,7 @@
         <member type="u8" name="CID" caps="true"/>
         <member type="u8" name="WorldID"/>
         <member type="u32" name="KillTime"/>
-        <member type="enum" name="Gender" size="8" default="MALE">
+        <member type="enum" name="Gender" underlying="int8_t" default="MALE">
             <value>MALE</value>
             <value>FEMALE</value>
         </member>

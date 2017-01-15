@@ -66,7 +66,7 @@ std::string GeneratorHeader::GenerateClass(const MetaObject& obj)
         if(var->GetMetaType() == MetaVariable::MetaVariableType_t::TYPE_ENUM)
         {
             ss << Tab() << "enum class " << var->GetName() << "_t : "
-                << std::dynamic_pointer_cast<MetaVariableEnum>(var)->GetSizeTypeString()
+                << std::dynamic_pointer_cast<MetaVariableEnum>(var)->GetUnderlyingType()
                 << std::endl;
             ss << Tab() << "{" << std::endl;
             auto values = std::dynamic_pointer_cast<MetaVariableEnum>(var)->GetValues();

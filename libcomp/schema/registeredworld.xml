@@ -3,7 +3,7 @@
     <object name="RegisteredWorld">
         <member type="u8" name="ID" key="true" unique="true"/>
         <member type="string" name="Name" lensz="2"/>
-        <member type="enum" name="Status" size="8" default="INACTIVE">
+        <member type="enum" name="Status" underlying="int8_t" default="INACTIVE">
             <value>INACTIVE</value>
             <value>ACTIVE</value>
         </member>

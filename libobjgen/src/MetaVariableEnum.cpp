@@ -31,11 +31,13 @@
 #include "MetaObject.h"
 
 // Standard C++11 Libraries
+#include <regex>
 #include <sstream>
 
 using namespace libobjgen;
 
-MetaVariableEnum::MetaVariableEnum() : MetaVariable()
+MetaVariableEnum::MetaVariableEnum() : MetaVariable(),
+    mUnderlyingType("int32_t")
 {
 }
 
@@ -63,42 +65,14 @@ void MetaVariableEnum::SetTypePrefix(const std::string& prefix)
     mTypePrefix = prefix;
 }
 
-short MetaVariableEnum::GetSizeType() const
+std::string MetaVariableEnum::GetUnderlyingType() const
 {
-    return mSizeType;
+    return mUnderlyingType;
 }
 
-std::string MetaVariableEnum::GetSizeTypeString() const
+void MetaVariableEnum::SetUnderlyingType(const std::string& underlyingType)
 {
-    switch(mSizeType)
-    {
-        case 8:
-            return "int8_t";
-        case 16:
-            return "int16_t";
-        case 32:
-            return "int32_t";
-        default:
-            break;
-    }
-
-    return "";
-}
-
-bool MetaVariableEnum::SetSizeType(const short sizeType)
-{
-    switch(sizeType)
-    {
-        case 8:
-        case 16:
-        case 32:
-            break;
-        default:
-            return false;
-    }
-
-    mSizeType = sizeType;
-    return true;
+    mUnderlyingType = underlyingType;
 }
 
 const std::vector<std::string> MetaVariableEnum::GetValues() const
@@ -119,16 +93,22 @@ bool MetaVariableEnum::SetValues(const std::vector<std::string>& values)
 
 size_t MetaVariableEnum::GetSize() const
 {
-    switch(mSizeType)
+    size_t sz = 4;
+
+    if(std::string::npos != mUnderlyingType.find("8"))
     {
-        case 8:
-            return sizeof(uint8_t);
-        case 16:
-            return sizeof(uint16_t);
-        case 32:
-        default:
-            return sizeof(uint32_t);
+        sz = 1;
     }
+    else if(std::string::npos != mUnderlyingType.find("16"))
+    {
+        sz = 2;
+    }
+    else if(std::string::npos != mUnderlyingType.find("64"))
+    {
+        sz = 8;
+    }
+
+    return sz;
 }
 
 MetaVariable::MetaVariableType_t MetaVariableEnum::GetMetaType() const
@@ -158,14 +138,12 @@ bool MetaVariableEnum::IsValid() const
         return false;
     }
 
-    switch(mSizeType)
+    std::smatch match;
+
+    if(!std::regex_match(mUnderlyingType, match, std::regex(
+        "^u{0,1}int(8|16|32|64)_t$")))
     {
-        case 8:
-        case 16:
-        case 32:
-            break;
-        default:
-            return false;
+        return false;
     }
 
     if(IsInherited())
@@ -183,10 +161,7 @@ bool MetaVariableEnum::Load(std::istream& stream)
     MetaVariable::Load(stream);
 
     Generator::LoadString(stream, mDefaultValue);
-
-    stream.read(reinterpret_cast<char*>(&mSizeType),
-        sizeof(mSizeType));
-
+    Generator::LoadString(stream, mUnderlyingType);
     Generator::LoadString(stream, mTypePrefix);
 
     size_t len;
@@ -211,10 +186,7 @@ bool MetaVariableEnum::Save(std::ostream& stream) const
     if(IsValid() && MetaVariable::Save(stream))
     {
         Generator::SaveString(stream, mDefaultValue);
-
-        stream.write(reinterpret_cast<const char*>(&mSizeType),
-            sizeof(mSizeType));
-
+        Generator::SaveString(stream, mUnderlyingType);
         Generator::SaveString(stream, mTypePrefix);
 
         size_t len = mValues.size();
@@ -266,34 +238,11 @@ bool MetaVariableEnum::Load(const tinyxml2::XMLDocument& doc,
         mDefaultValue = std::string(defaultVal);
     }
     
-    const char *szSize = root.Attribute("size");
+    const char *szUnderlying = root.Attribute("underlying");
 
-    if(nullptr != szSize)
+    if(nullptr != szUnderlying)
     {
-        std::string size(szSize);
-
-        if("8" == size)
-        {
-            SetSizeType(8);
-        }
-        else if("16" == size)
-        {
-            SetSizeType(16);
-        }
-        else if("32" == size)
-        {
-            SetSizeType(32);
-        }
-        else
-        {
-            mError = "The only valid size values are 8, 16 and 32.";
-
-            status = false;
-        }
-    }
-    else
-    {
-        SetSizeType(32);
+        SetUnderlyingType(szUnderlying);
     }
 
     return status && BaseLoad(root) && IsValid();
@@ -306,11 +255,7 @@ bool MetaVariableEnum::Save(tinyxml2::XMLDocument& doc,
     pVariableElement->SetAttribute("type", GetType().c_str());
     pVariableElement->SetAttribute("name", GetName().c_str());
     pVariableElement->SetAttribute("default", mDefaultValue.c_str());
-
-    if(8 != mSizeType && (16 == mSizeType || 32 == mSizeType))
-    {
-        pVariableElement->SetAttribute("size", std::to_string(mSizeType).c_str());
-    }
+    pVariableElement->SetAttribute("underlying", mUnderlyingType.c_str());
 
     for(auto val : mValues)
     {

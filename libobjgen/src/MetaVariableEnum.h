@@ -45,9 +45,8 @@ public:
     std::string GetTypePrefix() const;
     void SetTypePrefix(const std::string& prefix);
 
-    short GetSizeType() const;
-    std::string GetSizeTypeString() const;
-    bool SetSizeType(const short sizeType);
+    std::string GetUnderlyingType() const;
+    void SetUnderlyingType(const std::string& underlyingType);
 
     const std::vector<std::string> GetValues() const;
     bool SetValues(const std::vector<std::string>& values);
@@ -109,7 +108,7 @@ private:
     std::vector<std::string> mValues;
     std::string mTypePrefix;
     std::string mDefaultValue;
-    short mSizeType;
+    std::string mUnderlyingType;
 };
 
 } // namespace libobjgen

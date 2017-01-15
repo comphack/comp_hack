@@ -150,7 +150,7 @@ public:
     template<typename Function, typename... Args>
     bool QueueWork(Function&& f, Args&&... args) const
     {
-        return mMainWorker.ExecuteInWorker(std::forward<Function>(f),
+        return mQueueWorker.ExecuteInWorker(std::forward<Function>(f),
             std::forward<Args>(args)...);
     }
 
@@ -195,6 +195,9 @@ protected:
 
     /// Worker that blocks and runs in the main thread.
     libcomp::Worker mMainWorker;
+
+    /// Worker used for async processing.
+    libcomp::Worker mQueueWorker;
 
     /// List of workers to handle incoming connection packet based work.
     std::list<std::shared_ptr<libcomp::Worker>> mWorkers;

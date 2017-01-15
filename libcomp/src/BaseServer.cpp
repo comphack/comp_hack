@@ -170,6 +170,9 @@ BaseServer::~BaseServer()
 
 int BaseServer::Run()
 {
+    // Run the asycn worker in its own thread.
+    mQueueWorker.Start();
+
     // Run the main worker in this thread, blocking until done.
     mMainWorker.Start(true);
 
@@ -182,6 +185,7 @@ int BaseServer::Run()
 void BaseServer::Shutdown()
 {
     mMainWorker.Shutdown();
+    mQueueWorker.Shutdown();
 
     for(auto worker : mWorkers)
     {
@@ -281,15 +285,17 @@ void BaseServer::CreateWorkers()
             case 1:
                 break;
             default:
-                // Leave one core for the main worker
-                numberOfWorkers = numberOfWorkers - 1;
+                // Leave one core for the main worker and one for the async worker
+                numberOfWorkers = (numberOfWorkers == 2) ? 1 : (numberOfWorkers - 2);
                 break;
         }
     }
 
     for(unsigned int i = 0; i < numberOfWorkers; i++)
     {
-        mWorkers.push_back(std::shared_ptr<Worker>(new Worker));
+        auto worker = std::shared_ptr<Worker>(new Worker);
+        worker->Start();
+        mWorkers.push_back(worker);
     }
 }
 
@@ -303,12 +309,6 @@ bool BaseServer::AssignMessageQueue(std::shared_ptr<libcomp::EncryptedConnection
         LOG_CRITICAL("The server failed to assign a worker to an incoming connection.\n");
         return false;
     }
-    else if(!worker->IsRunning())
-    {
-        //Only spin up as needed
-        LOG_DEBUG("Starting a new connection worker.\n");
-        worker->Start();
-    }
 
     connection->SetMessageQueue(worker->GetMessageQueue());
     return true;
@@ -317,19 +317,19 @@ bool BaseServer::AssignMessageQueue(std::shared_ptr<libcomp::EncryptedConnection
 std::shared_ptr<libcomp::Worker> BaseServer::GetNextConnectionWorker()
 {
     //By default return the least busy worker by checking shared_ptr message queue use count
-    long leastConnections = (long)mConnections.size() + 2;
+    long leastConnections = 0;
     std::shared_ptr<libcomp::Worker> leastBusy = nullptr;
     for(auto worker : mWorkers)
     {
         long refCount = worker->AssignmentCount();
-        if(refCount < leastConnections)
+        if(nullptr == leastBusy || refCount < leastConnections)
         {
             leastConnections = refCount;
 
             leastBusy = worker;
-            if(refCount == 1)
+            if(refCount <= 2)
             {
-                //Only ref is within the worker
+                //Only ref is within the worker and the thread
                 break;
             }
         }

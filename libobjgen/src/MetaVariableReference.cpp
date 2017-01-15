@@ -223,9 +223,9 @@ std::string MetaVariableReference::GetConstructValue() const
     {
         ss << "([&]() -> " << GetCodeType() << std::endl
             << "{" << std::endl;
-        ss << Generator::Tab(1) << "auto ref = " << defaultVal.str() << ";" << std::endl;
-        ss << GetConstructorCodeDefaults("ref", "", 1);
-        ss << Generator::Tab(1) << "return ref;" << std::endl
+        ss << Generator::Tab(1) << "auto refDefault = " << defaultVal.str() << ";" << std::endl;
+        ss << GetConstructorCodeDefaults("refDefault", "", 1);
+        ss << Generator::Tab(1) << "return refDefault;" << std::endl
             << "})()";
     }
     else

@@ -124,6 +124,12 @@ public:
     bool RegisterServer(uint8_t channelID);
 
     /**
+     * Get the connection manager for the server.
+     * @return Pointer to the connection manager.
+     */
+    std::shared_ptr<ManagerConnection> GetManagerConnection() const;
+
+    /**
      * Get a pointer to the account manager.
      * @return Pointer to the AccountManager
      */

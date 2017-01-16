@@ -55,6 +55,8 @@ SET(${PROJECT_NAME}_SCHEMA
     schema/clientstate.xml
 )
 
+SOURCE_GROUP("objgen" ${CMAKE_CURRENT_BINARY_DIR}/objgen/*)
+
 OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     # Main schema
     schema/master.xml
@@ -88,6 +90,7 @@ SET(${PROJECT_NAME}_PACKETS
 
     #Internal packets
     src/packets/internal/SetWorldInfo.cpp    # 0x1002
+    src/packets/internal/AccountLogin.cpp    # 0x1004
 )
 
 ADD_EXECUTABLE(${PROJECT_NAME} ${${PROJECT_NAME}_SRCS}

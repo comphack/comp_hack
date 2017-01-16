@@ -97,7 +97,7 @@ std::pair<libcomp::String, libcomp::String> SessionManager::GenerateSIDs(
 
     std::lock_guard<std::mutex> lock(mSessionLock);
 
-    auto entry = mSessionMap.find(username);
+    auto entry = mSessionMap.find(lookup);
 
     if(mSessionMap.end() != entry)
     {
@@ -117,7 +117,7 @@ std::pair<libcomp::String, libcomp::String> SessionManager::GenerateSIDs(
 }
 
 bool SessionManager::CheckSID(uint8_t sid, const libcomp::String& username,
-    const libcomp::String& value)
+    const libcomp::String& value, libcomp::String& otherSID)
 {
     bool result = false;
 
@@ -126,12 +126,11 @@ bool SessionManager::CheckSID(uint8_t sid, const libcomp::String& username,
         return result;
     }
 
-    libcomp::String nextSID = libcomp::Decrypt::GenerateRandom(300).ToLower();
     libcomp::String lookup = username.ToLower();
 
     std::lock_guard<std::mutex> lock(mSessionLock);
 
-    auto entry = mSessionMap.find(username);
+    auto entry = mSessionMap.find(lookup);
 
     if(mSessionMap.end() != entry)
     {
@@ -141,7 +140,7 @@ bool SessionManager::CheckSID(uint8_t sid, const libcomp::String& username,
 
             if(result)
             {
-                entry->second.first = nextSID;
+                otherSID = entry->second.second;
             }
         }
         else // 1 == sid
@@ -150,7 +149,7 @@ bool SessionManager::CheckSID(uint8_t sid, const libcomp::String& username,
 
             if(result)
             {
-                entry->second.second = nextSID;
+                otherSID = entry->second.first;
             }
         }
     }

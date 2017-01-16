@@ -44,6 +44,7 @@ PACKET_PARSER_DECL(State);              // 0x005A
 PACKET_PARSER_DECL(Sync);               // 0x00F3
 
 PACKET_PARSER_DECL(SetWorldInfo);       // 0x1002
+PACKET_PARSER_DECL(AccountLogin);       // 0x1004
 
 } // namespace Parsers
 

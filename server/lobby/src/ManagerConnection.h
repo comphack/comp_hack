@@ -35,6 +35,9 @@
 // Boost ASIO Includes
 #include <asio.hpp>
 
+// lobby Includes
+#include "LobbyClientConnection.h"
+
 namespace lobby
 {
 
@@ -120,6 +123,29 @@ public:
      */
     void RemoveWorld(std::shared_ptr<lobby::World>& world);
 
+    /**
+     * Get client connection by username.
+     * @param username Client account username
+     * @return Pointer to the client connection
+     */
+    const std::shared_ptr<LobbyClientConnection> GetClientConnection(
+        const libcomp::String& username) const;
+
+    /**
+     * Set an active client connection after its account has
+     * been detected.
+     * @param connection Pointer to the client connection
+     */
+    void SetClientConnection(const std::shared_ptr<
+        LobbyClientConnection>& connection);
+
+    /**
+     * Remove a client connection.
+     * @param connection Pointer to the client connection
+     */
+    void RemoveClientConnection(const std::shared_ptr<
+        LobbyClientConnection>& connection);
+
 private:
     /// Static list of supported message types for the manager
     static std::list<libcomp::Message::MessageType> sSupportedTypes;
@@ -132,6 +158,10 @@ private:
 
     /// List of pointers to unregistered worlds
     std::list<std::shared_ptr<lobby::World>> mUnregisteredWorlds;
+
+    /// Map of active client connections by account username
+    std::unordered_map<libcomp::String,
+        std::shared_ptr<LobbyClientConnection>> mClientConnections;
 
     /// Pointer to the ASIO service to use to establish connections
     /// to world servers

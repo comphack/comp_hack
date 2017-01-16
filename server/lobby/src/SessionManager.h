@@ -38,7 +38,7 @@ namespace lobby
 {
 
 /**
- * Manages session IDs for accounts.
+ * Manages session IDs for accounts connected to the lobby.
  */
 class SessionManager
 {
@@ -60,15 +60,15 @@ public:
         const libcomp::String& username);
 
     /**
-     * Check an SID for an account. If the SID matches it is removed from the
-     * account.
+     * Check an SID for an account.
      * @param sid Which SID to check.
      * @param username Username of the account.
      * @param value Value to check against the SID.
+     * @param otherSID Value of the other SID.
      * @return If the value matches what was recorded.
      */
     bool CheckSID(uint8_t sid, const libcomp::String& username,
-        const libcomp::String& value);
+        const libcomp::String& value, libcomp::String& otherSID);
 
 private:
     /// Lock for access to the session map.

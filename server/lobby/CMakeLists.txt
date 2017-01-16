@@ -60,6 +60,8 @@ SET(${PROJECT_NAME}_SCHEMA
     schema/lobbyconfig.xml
 )
 
+SOURCE_GROUP("objgen" ${CMAKE_CURRENT_BINARY_DIR}/objgen/*)
+
 OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     # Main schema
     schema/master.xml
@@ -95,6 +97,7 @@ SET(${PROJECT_NAME}_PACKETS
     #Internal packets
     src/packets/internal/SetWorldInfo.cpp      # 0x1002
     src/packets/internal/SetChannelInfo.cpp    # 0x1003
+    src/packets/internal/AccountLogin.cpp      # 0x1004
 )
 
 ADD_CUSTOM_COMMAND(

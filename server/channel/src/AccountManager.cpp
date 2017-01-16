@@ -32,6 +32,7 @@
 
 // object Includes
 #include <Account.h>
+#include <AccountLogin.h>
 #include <Character.h>
 
 // channel Includes
@@ -48,41 +49,61 @@ AccountManager::~AccountManager()
 {
 }
 
-void AccountManager::Login(const std::shared_ptr<
+void AccountManager::HandleLoginRequest(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const libcomp::String& username, uint32_t sessionKey)
 {
     auto server = mServer.lock();
+    auto worldConnection = server->GetManagerConnection()->GetWorldConnection();
 
     auto lobbyDB = server->GetLobbyDatabase();
     auto worldDB = server->GetWorldDatabase();
 
-    auto account = objects::Account::LoadAccountByUserName(lobbyDB, username);
+    auto account = objects::Account::LoadAccountByUsername(lobbyDB, username);
+
+    if(nullptr != account)
+    {
+        auto state = client->GetClientState();
+        auto login = state->GetAccountLogin();
+        login->SetAccount(account);
+        login->SetSessionKey(sessionKey);
+
+        server->GetManagerConnection()->SetClientConnection(client);
+
+        libcomp::Packet request;
+        request.WritePacketCode(InternalPacketCode_t::PACKET_ACCOUNT_LOGIN);
+        request.WriteU32(sessionKey);
+        request.WriteString16Little(libcomp::Convert::ENCODING_UTF8, username);
+
+        worldConnection->SendPacket(request);
+    }
+}
+
+void AccountManager::HandleLoginResponse(const std::shared_ptr<
+    channel::ChannelClientConnection>& client)
+{
+    auto server = mServer.lock();
+    auto worldDB = server->GetWorldDatabase();
+    auto state = client->GetClientState();
+    auto login = state->GetAccountLogin();
+    auto account = login->GetAccount();
 
     libcomp::Packet reply;
     reply.WritePacketCode(ChannelClientPacketCode_t::PACKET_LOGIN_RESPONSE);
+    
+    auto cid = login->GetCID();
+    auto charactersByCID = account->GetCharactersByCID();
+
+    auto character = charactersByCID.find(cid);
 
     bool success = false;
-    if(nullptr != account)
+    if(character != charactersByCID.end() && character->second.Get(worldDB))
     {
-        /// @todo: load the information the lobby retrieved
-        auto cid = (uint8_t)sessionKey;
-        auto charactersByCID = account->GetCharactersByCID();
+        auto charState = state->GetCharacterState();
+        charState->SetCharacter(character->second.GetCurrentReference());
+        charState->RecalculateStats();
 
-        auto character = charactersByCID.find(cid);
-
-        if(character != charactersByCID.end() && character->second.Get(worldDB))
-        {
-            auto state = client->GetClientState();
-            state->SetAccount(account);
-            state->SetSessionKey(sessionKey);
-
-            auto charState = state->GetCharacterState();
-            charState->SetCharacter(character->second.GetCurrentReference());
-            charState->RecalculateStats();
-
-            success = true;
-        }
+        success = true;
     }
 
     if(success)
@@ -91,8 +112,8 @@ void AccountManager::Login(const std::shared_ptr<
     }
     else
     {
-        LOG_ERROR(libcomp::String("Invalid account username passed to the channel"
-            " from the lobby: %1\n").Arg(username));
+        LOG_ERROR(libcomp::String("User account could not be logged in:"
+            " %1\n").Arg(account->GetUsername()));
         reply.WriteU32Little(0);
     }
 

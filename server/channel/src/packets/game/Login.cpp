@@ -43,7 +43,7 @@ void LoginAccount(AccountManager* accountManager,
     std::shared_ptr<ChannelClientConnection> client, const libcomp::String username,
     uint32_t sessionKey)
 {
-    accountManager->Login(client, username, sessionKey);
+    accountManager->HandleLoginRequest(client, username, sessionKey);
 }
 
 bool Parsers::Login::Parse(libcomp::ManagerPacket *pPacketManager,
@@ -51,11 +51,8 @@ bool Parsers::Login::Parse(libcomp::ManagerPacket *pPacketManager,
     libcomp::ReadOnlyPacket& p) const
 {
     // Classic authentication method: username followed by the session key
-    libcomp::String username = p.ReadString16(libcomp::Convert::ENCODING_UTF8);
+    libcomp::String username = p.ReadString16(libcomp::Convert::ENCODING_UTF8).C();
     uint32_t sessionKey = p.ReadU32Little();
-
-    // Remove null terminator
-    username = username.C();
 
     auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
     auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);

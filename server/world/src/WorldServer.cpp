@@ -135,6 +135,8 @@ void WorldServer::FinishInitialize()
         InternalPacketCode_t::PACKET_GET_WORLD_INFO));
     packetManager->AddParser<Parsers::SetChannelInfo>(to_underlying(
         InternalPacketCode_t::PACKET_SET_CHANNEL_INFO));
+    packetManager->AddParser<Parsers::AccountLogin>(to_underlying(
+        InternalPacketCode_t::PACKET_ACCOUNT_LOGIN));
 
     //Add the managers to the main worker.
     mMainWorker.AddManager(packetManager);
@@ -188,6 +190,12 @@ uint8_t WorldServer::GetNextChannelID() const
 
     //If there are no breaks in the numbering sequence, return max + 1 (or 0)
     return static_cast<uint8_t>(mRegisteredChannels.size());
+}
+
+std::shared_ptr<objects::RegisteredChannel> WorldServer::GetLoginChannel() const
+{
+    /// @todo: fix this once channels are registered with public/private zones
+    return mRegisteredChannels.size() > 0 ? mRegisteredChannels.begin()->second : nullptr;
 }
 
 const std::shared_ptr<libcomp::InternalConnection> WorldServer::GetLobbyConnection() const
@@ -291,6 +299,11 @@ bool WorldServer::RegisterServer()
     mRegisteredWorld = registeredWorld;
 
     return true;
+}
+
+AccountManager* WorldServer::GetAccountManager()
+{
+    return &mAccountManager;
 }
 
 std::shared_ptr<libcomp::TcpConnection> WorldServer::CreateConnection(

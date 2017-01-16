@@ -80,6 +80,8 @@ bool ChannelServer::Initialize(std::weak_ptr<BaseServer>& self)
         new libcomp::ManagerPacket(self));
     internalPacketManager->AddParser<Parsers::SetWorldInfo>(
         to_underlying(InternalPacketCode_t::PACKET_SET_WORLD_INFO));
+    internalPacketManager->AddParser<Parsers::AccountLogin>(
+        to_underlying(InternalPacketCode_t::PACKET_ACCOUNT_LOGIN));
 
     //Add the managers to the main worker.
     mMainWorker.AddManager(internalPacketManager);
@@ -191,6 +193,11 @@ bool ChannelServer::RegisterServer(uint8_t channelID)
     mRegisteredChannel = registeredChannel;
 
     return true;
+}
+
+std::shared_ptr<ManagerConnection> ChannelServer::GetManagerConnection() const
+{
+    return mManagerConnection;
 }
 
 AccountManager* ChannelServer::GetAccountManager() const

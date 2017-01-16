@@ -52,14 +52,25 @@ public:
     ~AccountManager();
 
     /**
-     * Log an account in by their username.
+     * Request information from the world to log an account
+     * in by their username.
      * @param client Pointer to the client connection
      * @param username Username to log in with
      * @param sessionKey Session key to validate
      */
-    void Login(const std::shared_ptr<
+    void HandleLoginRequest(const std::shared_ptr<
         channel::ChannelClientConnection>& client,
-        const libcomp::String& username, uint32_t sessionKey);
+        const libcomp::String& username, uint32_t sessionID);
+
+    /**
+     * Respond to the game client with the result of the login
+     * request.
+     * @param client Pointer to the client connection
+     * @param username Username to log in with
+     * @param sessionKey Session key to validate
+     */
+    void HandleLoginResponse(const std::shared_ptr<
+        channel::ChannelClientConnection>& client);
 
     /**
      * Authenticate an account by its connection.

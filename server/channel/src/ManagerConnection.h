@@ -38,6 +38,9 @@
 // Boost ASIO Includes
 #include <asio.hpp>
 
+// channel Includes
+#include "ChannelClientConnection.h"
+
 namespace channel
 {
 
@@ -79,10 +82,39 @@ public:
     void RequestWorldInfo();
 
     /**
+     * Get the world connection.
+     * @return Pointer to the world connection
+     */
+    const std::shared_ptr<libcomp::InternalConnection> GetWorldConnection() const;
+
+    /**
      * Set the world connection after establishing a connection.
      * @param worldConnection Pointer to the world connection
      */
     void SetWorldConnection(const std::shared_ptr<libcomp::InternalConnection>& worldConnection);
+
+    /**
+     * Get client connection by username.
+     * @param username Client account username
+     * @return Pointer to the client connection
+     */
+    const std::shared_ptr<ChannelClientConnection> GetClientConnection(
+        const libcomp::String& username) const;
+
+    /**
+     * Set an active client connection after its account has
+     * been detected.
+     * @param connection Pointer to the client connection
+     */
+    void SetClientConnection(const std::shared_ptr<
+        ChannelClientConnection>& connection);
+
+    /**
+     * Remove a client connection.
+     * @param connection Pointer to the client connection
+     */
+    void RemoveClientConnection(const std::shared_ptr<
+        ChannelClientConnection>& connection);
 
 private:
     /// Static list of supported message types for the manager.
@@ -90,6 +122,10 @@ private:
 
     /// Pointer to the world connection.
     std::shared_ptr<libcomp::InternalConnection> mWorldConnection;
+
+    /// Map of active client connections by account username
+    std::unordered_map<libcomp::String,
+        std::shared_ptr<ChannelClientConnection>> mClientConnections;
 
     /// Pointer to the server that uses this manager.
     std::weak_ptr<libcomp::BaseServer> mServer;

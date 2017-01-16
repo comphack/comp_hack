@@ -40,8 +40,8 @@
 #include <Packet.h>
 #include <PacketCodes.h>
 
-// Standard C++ 11 Includes
-#include <thread>
+// object Includes
+#include <Account.h>
 
 using namespace lobby;
 
@@ -129,6 +129,9 @@ bool ManagerConnection::ProcessMessage(const libcomp::Message::Message *pMessage
                 auto connection = closed->GetConnection();
                 auto server = mServer.lock();
                 server->RemoveConnection(connection);
+
+                auto clientConnection = std::dynamic_pointer_cast<lobby::LobbyClientConnection>(connection);
+                RemoveClientConnection(clientConnection);
 
                 auto iConnection = std::dynamic_pointer_cast<libcomp::InternalConnection>(connection);
                 auto world = GetWorldByConnection(iConnection);
@@ -297,5 +300,52 @@ void ManagerConnection::RemoveWorld(std::shared_ptr<lobby::World>& world)
         {
             mUnregisteredWorlds.erase(iter);
         }
+    }
+}
+
+const std::shared_ptr<LobbyClientConnection> ManagerConnection::GetClientConnection(
+    const libcomp::String& username) const
+{
+    auto iter = mClientConnections.find(username);
+    return iter != mClientConnections.end() ? iter->second : nullptr;
+}
+
+void ManagerConnection::SetClientConnection(const std::shared_ptr<
+    LobbyClientConnection>& connection)
+{
+    auto state = connection->GetClientState();
+    auto account = state->GetAccount().GetCurrentReference();
+    if(nullptr == account)
+    {
+        return;
+    }
+
+    auto username = account->GetUsername();
+    auto iter = mClientConnections.find(username);
+    if(iter == mClientConnections.end())
+    {
+        mClientConnections[username] = connection;
+    }
+}
+
+void ManagerConnection::RemoveClientConnection(const std::shared_ptr<
+    LobbyClientConnection>& connection)
+{
+    if(nullptr == connection)
+    {
+        return;
+    }
+
+    auto state = connection->GetClientState();
+    auto account = state->GetAccount().GetCurrentReference();
+    if(nullptr == account)
+    {
+        return;
+    }
+
+    auto iter = mClientConnections.find(account->GetUsername());
+    if(iter != mClientConnections.end())
+    {
+        mClientConnections.erase(iter);
     }
 }

@@ -61,13 +61,14 @@ bool AccountManager::IsLoggedIn(const libcomp::String& username,
     {
         result = true;
 
-        world = pair->second;
+        world = pair->second->GetWorldID();
     }
 
     return result;
 }
 
-bool AccountManager::LoginUser(const libcomp::String& username, int8_t world)
+bool AccountManager::LoginUser(const libcomp::String& username,
+    std::shared_ptr<objects::AccountLogin> login)
 {
     bool result = false;
 
@@ -79,7 +80,13 @@ bool AccountManager::LoginUser(const libcomp::String& username, int8_t world)
 
     if(mAccountMap.end() == pair)
     {
-        auto res = mAccountMap.insert(std::make_pair(username, world));
+        if(nullptr == login)
+        {
+            login = std::shared_ptr<objects::AccountLogin>(
+                new objects::AccountLogin);
+        }
+
+        auto res = mAccountMap.insert(std::make_pair(lookup, login));
 
         // This pair is the iterator (first) and a bool indicating it was
         // inserted into the map (second).
@@ -87,6 +94,37 @@ bool AccountManager::LoginUser(const libcomp::String& username, int8_t world)
     }
 
     return result;
+}
+
+bool AccountManager::UpdateSessionID(const libcomp::String& username,
+    const libcomp::String& sid)
+{
+    bool result = false;
+
+    libcomp::String lookup = username.ToLower();
+
+    std::lock_guard<std::mutex> lock(mAccountLock);
+
+    auto pair = mAccountMap.find(lookup);
+
+    if(mAccountMap.end() == pair)
+    {
+        pair->second->SetSessionID(sid);
+        result = true;
+    }
+
+    return result;
+}
+
+std::shared_ptr<objects::AccountLogin> AccountManager::GetUserLogin(
+    const libcomp::String& username)
+{
+    libcomp::String lookup = username.ToLower();
+
+    std::lock_guard<std::mutex> lock(mAccountLock);
+
+    auto pair = mAccountMap.find(lookup);
+    return pair != mAccountMap.end() ? pair->second : nullptr;
 }
 
 bool AccountManager::LogoutUser(const libcomp::String& username, int8_t world)
@@ -99,7 +137,7 @@ bool AccountManager::LogoutUser(const libcomp::String& username, int8_t world)
 
     auto pair = mAccountMap.find(lookup);
 
-    if(mAccountMap.end() != pair && world == pair->second)
+    if(mAccountMap.end() != pair && world == pair->second->GetWorldID())
     {
         (void)mAccountMap.erase(pair);
 

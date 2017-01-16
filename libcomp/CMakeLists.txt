@@ -174,6 +174,7 @@ SET(${PROJECT_NAME}_HDRS
 
 SET(${PROJECT_NAME}_SCHEMA
     schema/account.xml
+    schema/accountlogin.xml
     schema/character.xml
     schema/databaseconfig.xml
     schema/databaseconfig_cassandra.xml
@@ -193,6 +194,8 @@ SET(${PROJECT_NAME}_SCHEMA
     schema/binarydata/zonedata.xml
 )
 
+SOURCE_GROUP("objgen" ${CMAKE_CURRENT_BINARY_DIR}/objgen/*)
+
 OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     # Main schema
     schema/master.xml
@@ -206,6 +209,8 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     # Output files
     Account.h
     Account.cpp
+    AccountLogin.h
+    AccountLogin.cpp
     Character.h
     Character.cpp
     DatabaseConfig.h

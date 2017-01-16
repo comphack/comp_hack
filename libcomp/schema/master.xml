@@ -20,5 +20,9 @@
     <include path="packet_response_code.xml"/>
 
     <!-- BinaryData Files -->
+    <include path="binarydata/category.xml"/>
+    <include path="binarydata/correcttbl.xml"/>
+    <include path="binarydata/itemdata.xml"/>
+    <include path="binarydata/skillitemstatuscommon.xml"/>
     <include path="binarydata/zonedata.xml"/>
 </objgen>

@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+	<include path="binarydata/skillitemstatuscommon.xml"/>
+	<include path="binarydata/correcttbl.xml"/>
+
+	<object name="MiItemBasicData" persistent="false" scriptenabled="true">
+		<member type="u32" name="id2" caps="true"/>
+		<member type="s32" name="buyPrice"/>
+		<member type="s32" name="sellPrice"/>
+		<member type="s32" name="unk1"/>
+		<member type="s16" name="unk2"/>
+		<member type="u8" name="unk3"/>
+		<member type="s8" name="equipType"/>
+		<member type="u32" name="unk4"/>
+	</object>
+	<object name="MiPossessionData" persistent="false" scriptenabled="true">
+		<member type="u8" name="possess1"/>
+		<member type="u8" name="durability"/>
+		<member type="u16" name="stackSize"/>
+		<member type="u32" name="useSkill"/>
+	</object>
+	<object name="MiUseRestrictionsData" persistent="false" scriptenabled="true">
+		<member type="u8" name="gender"/>
+		<member type="u8" name="level"/>
+		<member type="u8" name="alignment"/>
+		<member type="u8" name="restriction1"/>
+		<member type="list" name="skillTbl">
+            <element type="MiSkillTbl*"/>
+        </member>
+		<member type="u8" name="modSlots"/>
+		<member type="u8" name="stock"/>
+		<member type="u16" name="restriction2"/>
+	</object>
+	<object name="MiItemPvPData" persistent="false" scriptenabled="true">
+		<member type="s16" name="pvp1"/>
+		<member type="u16" name="pvp2"/>
+	</object>
+	<object name="MiRentalData" persistent="false" scriptenabled="true">
+		<member type="s32" name="rental"/>
+	</object>
+	<object name="MiSkillTbl" persistent="false" scriptenabled="true">
+		<member type="u32" name="skill"/>
+	</object>
+	<object name="MiItemData" persistent="false" scriptenabled="true">
+		<member name="common" type="MiSkillItemStatusCommonData*"/>
+		<member name="basic" type="MiItemBasicData*"/>
+		<member name="possession" type="MiPossessionData*"/>
+		<member name="restriction" type="MiUseRestrictionsData*"/>
+		<member name="pvp" type="MiItemPvPData*"/>
+		<member name="rental" type="MiRentalData*"/>
+	</object>
+</objgen>

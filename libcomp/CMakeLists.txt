@@ -186,6 +186,10 @@ SET(${PROJECT_NAME}_SCHEMA
     schema/test.xml
 
     # BinaryData Files
+    schema/binarydata/category.xml
+    schema/binarydata/correcttbl.xml
+    schema/binarydata/itemdata.xml
+    schema/binarydata/skillitemstatuscommon.xml
     schema/binarydata/zonedata.xml
 )
 
@@ -224,6 +228,31 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     TestObject.cpp
 
     # BinaryData Files
+    # category.xml
+    MiCategoryData.h
+    MiCategoryData.cpp
+    # correcttbl.xml
+    MiCorrectTbl.h
+    MiCorrectTbl.cpp
+    # itemdata.xml
+    MiItemBasicData.h
+    MiItemBasicData.cpp
+    MiPossessionData.h
+    MiPossessionData.cpp
+    MiUseRestrictionsData.h
+    MiUseRestrictionsData.cpp
+    MiItemPvPData.h
+    MiItemPvPData.cpp
+    MiRentalData.h
+    MiRentalData.cpp
+    MiSkillTbl.h
+    MiSkillTbl.cpp
+    MiItemData.h
+    MiItemData.cpp
+    # skillitemstatuscommon.xml
+    MiSkillItemStatusCommonData.h
+    MiSkillItemStatusCommonData.cpp
+    # zonedata.xml
     MiZoneBasicData.h
     MiZoneBasicData.cpp
     MiZoneFileData.h

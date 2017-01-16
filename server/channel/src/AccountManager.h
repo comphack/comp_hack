@@ -60,17 +60,21 @@ public:
      */
     void HandleLoginRequest(const std::shared_ptr<
         channel::ChannelClientConnection>& client,
-        const libcomp::String& username, uint32_t sessionID);
+        const libcomp::String& username, uint32_t sessionKey);
 
     /**
      * Respond to the game client with the result of the login
      * request.
      * @param client Pointer to the client connection
-     * @param username Username to log in with
-     * @param sessionKey Session key to validate
      */
     void HandleLoginResponse(const std::shared_ptr<
         channel::ChannelClientConnection>& client);
+
+    /**
+     * Log out a user by username.
+     * @param username Username to log out
+     */
+    void Logout(const libcomp::String& username);
 
     /**
      * Authenticate an account by its connection.

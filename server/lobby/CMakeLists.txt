@@ -98,6 +98,7 @@ SET(${PROJECT_NAME}_PACKETS
     src/packets/internal/SetWorldInfo.cpp      # 0x1002
     src/packets/internal/SetChannelInfo.cpp    # 0x1003
     src/packets/internal/AccountLogin.cpp      # 0x1004
+    src/packets/internal/AccountLogout.cpp     # 0x1005
 )
 
 ADD_CUSTOM_COMMAND(

@@ -112,6 +112,8 @@ bool LobbyServer::Initialize(std::weak_ptr<BaseServer>& self)
         to_underlying(InternalPacketCode_t::PACKET_SET_CHANNEL_INFO));
     internalPacketManager->AddParser<Parsers::AccountLogin>(
         to_underlying(InternalPacketCode_t::PACKET_ACCOUNT_LOGIN));
+    internalPacketManager->AddParser<Parsers::AccountLogout>(
+        to_underlying(InternalPacketCode_t::PACKET_ACCOUNT_LOGOUT));
 
     //Add the managers to the main worker.
     mMainWorker.AddManager(internalPacketManager);

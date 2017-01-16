@@ -87,6 +87,7 @@ enum class InternalPacketCode_t : uint16_t
     PACKET_SET_WORLD_INFO = 0x1002,  //!< Request to update a non-world server's world information.
     PACKET_SET_CHANNEL_INFO = 0x1003,    //!< Request to update a non-channel server's channel information.
     PACKET_ACCOUNT_LOGIN = 0x1004,    //!< Pass login information between the servers.
+    PACKET_ACCOUNT_LOGOUT = 0x1005,    //!< Pass logout information between the servers.
 };
 
 /**

@@ -120,6 +120,25 @@ void AccountManager::HandleLoginResponse(const std::shared_ptr<
     client->SendPacket(reply);
 }
 
+void AccountManager::Logout(const libcomp::String& username)
+{
+    auto server = mServer.lock();
+    auto managerConnection = server->GetManagerConnection();
+
+    //Remove the connection if it hasn't been removed already.
+    auto connection = managerConnection->GetClientConnection(username);
+    if(nullptr != connection)
+    {
+        managerConnection->RemoveClientConnection(connection);
+    }
+
+    libcomp::Packet p;
+    p.WritePacketCode(InternalPacketCode_t::PACKET_ACCOUNT_LOGOUT);
+    p.WriteString16Little(
+        libcomp::Convert::Encoding_t::ENCODING_UTF8, username);
+    managerConnection->GetWorldConnection()->SendPacket(p);
+}
+
 void AccountManager::Authenticate(const std::shared_ptr<
     channel::ChannelClientConnection>& client)
 {

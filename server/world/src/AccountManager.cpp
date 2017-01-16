@@ -28,6 +28,11 @@
 
 using namespace world;
 
+AccountManager::AccountManager()
+{
+    mMaxSessionKey = 0;
+}
+
 bool AccountManager::IsLoggedIn(const libcomp::String& username) const
 {
     bool result = false;
@@ -80,6 +85,8 @@ bool AccountManager::LoginUser(const libcomp::String& username,
                 new objects::AccountLogin);
         }
 
+        login->SetSessionKey(mMaxSessionKey++);
+
         auto res = mAccountMap.insert(std::make_pair(lookup, login));
 
         // This pair is the iterator (first) and a bool indicating it was
@@ -115,4 +122,28 @@ bool AccountManager::LogoutUser(const libcomp::String& username, int8_t channel)
     }
 
     return result;
+}
+
+std::list<libcomp::String> AccountManager::LogoutUsersOnChannel(int8_t channel)
+{
+    if(0 > channel)
+    {
+        return std::list<libcomp::String>();
+    }
+
+    std::list<libcomp::String> usernames;
+    for(auto pair : mAccountMap)
+    {
+        if(pair.second->GetChannelID() == channel)
+        {
+            usernames.push_back(pair.first);
+        }
+    }
+
+    for(auto username : usernames)
+    {
+        mAccountMap.erase(username);
+    }
+
+    return usernames;
 }

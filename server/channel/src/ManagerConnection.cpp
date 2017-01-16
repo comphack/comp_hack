@@ -175,9 +175,15 @@ void ManagerConnection::RemoveClientConnection(const std::shared_ptr<
         return;
     }
 
-    auto iter = mClientConnections.find(account->GetUsername());
+    auto username = account->GetUsername();
+    auto iter = mClientConnections.find(username);
     if(iter != mClientConnections.end())
     {
         mClientConnections.erase(iter);
+
+        auto server = std::dynamic_pointer_cast<ChannelServer>(
+            mServer.lock());
+        auto accountManager = server->GetAccountManager();
+        accountManager->Logout(username);
     }
 }

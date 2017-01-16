@@ -146,3 +146,31 @@ bool AccountManager::LogoutUser(const libcomp::String& username, int8_t world)
 
     return result;
 }
+
+std::list<libcomp::String> AccountManager::LogoutUsersInWorld(int8_t world,
+    int8_t channel)
+{
+    if(0 > world)
+    {
+        return std::list<libcomp::String>();
+    }
+
+    std::lock_guard<std::mutex> lock(mAccountLock);
+
+    std::list<libcomp::String> usernames;
+    for(auto pair : mAccountMap)
+    {
+        if(pair.second->GetWorldID() == world &&
+            (channel < 0 || pair.second->GetChannelID() == channel))
+        {
+            usernames.push_back(pair.first);
+        }
+    }
+
+    for(auto username : usernames)
+    {
+        mAccountMap.erase(username);
+    }
+
+    return usernames;
+}

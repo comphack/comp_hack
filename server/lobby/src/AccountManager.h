@@ -100,6 +100,17 @@ public:
      */
     bool LogoutUser(const libcomp::String& username, int8_t world = -1);
 
+    /**
+     * Log out all users in a given world (and optionally on a specific
+     * channel). This should only be called when a world or channel disconnects.
+     * @param world World to log out all users from.
+     * @param channel Channel in the world to log out all users from. If
+     * this is empty, all users in the world will be logged out.
+     * @return List of usernames that were logged out.
+     */
+    std::list<libcomp::String> LogoutUsersInWorld(int8_t world,
+        int8_t channel = -1);
+
 private:
     /// Mutex to lock access to the account map.
     std::mutex mAccountLock;

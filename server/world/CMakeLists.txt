@@ -69,6 +69,7 @@ SET(${PROJECT_NAME}_PACKETS
     src/packets/GetWorldInfo.cpp               # 0x1001
     src/packets/SetChannelInfo.cpp             # 0x1003
     src/packets/AccountLogin.cpp               # 0x1004
+    src/packets/AccountLogout.cpp              # 0x1005
 )
 
 ADD_EXECUTABLE(${PROJECT_NAME} ${${PROJECT_NAME}_SRCS}

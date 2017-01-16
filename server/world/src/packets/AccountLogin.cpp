@@ -88,12 +88,15 @@ void LobbyLogin(std::shared_ptr<WorldServer> server,
             auto worldID = std::dynamic_pointer_cast<objects::WorldConfig>(
                 server->GetConfig())->GetID();
             auto channelID = channel->GetID();
+
             login->SetWorldID((int8_t)worldID);
             login->SetChannelID((int8_t)channelID);
-            /// @todo: set session key to a real value
-            login->SetSessionKey((uint32_t)0);
-            login->SavePacket(channelReply);
+
+            //Login now to get the session key
             accountManager->LoginUser(account->GetUsername(), login);
+            login->SetSessionKey(login->GetSessionKey());
+
+            login->SavePacket(channelReply);
 
             //Update the lobby with the new connection info
             auto lobbyConnection = server->GetLobbyConnection();

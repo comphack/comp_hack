@@ -47,6 +47,11 @@ class AccountManager
 {
 public:
     /**
+     * Create a new account manager
+     */
+    AccountManager();
+
+    /**
      * Check if a user is logged in.
      * @param username Username for the account to check.
      * @return true if the user is logged in; false otherwise.
@@ -71,7 +76,7 @@ public:
      * logged in to another channel.
      */
     bool LoginUser(const libcomp::String& username,
-        std::shared_ptr<objects::AccountLogin> login = nullptr);
+        std::shared_ptr<objects::AccountLogin> login);
 
     /**
      * Get the current user login state independent of world.
@@ -91,10 +96,22 @@ public:
      */
     bool LogoutUser(const libcomp::String& username, int8_t channel = -1);
 
+    /**
+     * Log out all users on a given channel. This should only be called
+     * when a channel disconnects.
+     * @param channel Channel to log out all users from.
+     * @return List of usernames that were logged out.
+     */
+    std::list<libcomp::String> LogoutUsersOnChannel(int8_t channel);
+
 private:
     /// Map of accounts with associated channel.
     std::unordered_map<libcomp::String,
         std::shared_ptr<objects::AccountLogin>> mAccountMap;
+
+    /// Highest session key divvied out. This can break if you log in
+    /// 2,147,483,649 times without restarting the server :P
+    uint32_t mMaxSessionKey;
 };
 
 } // namespace world

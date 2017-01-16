@@ -276,19 +276,32 @@ void ManagerConnection::RemoveWorld(std::shared_ptr<lobby::World>& world)
         if(iter != mWorlds.end())
         {
             auto svr = world->GetRegisteredWorld();
+            auto server = std::dynamic_pointer_cast<LobbyServer>(mServer.lock());
 
             mWorlds.erase(iter);
             if(nullptr != svr)
             {
                 LOG_INFO(libcomp::String("World connection removed: (%1) %2\n")
                     .Arg(svr->GetID()).Arg(svr->GetName()));
+
+                server->QueueWork([](std::shared_ptr<LobbyServer> server,
+                    int8_t worldID)
+                    {
+                        auto accountManager = server->GetAccountManager();
+                        auto usernames = accountManager->LogoutUsersInWorld(worldID);
+
+                        if(usernames.size() > 0)
+                        {
+                            LOG_WARNING(libcomp::String("%1 user(s) forcefully logged out"
+                                " from world %2.\n").Arg(usernames.size()).Arg(worldID));
+                        }
+                    }, server, svr->GetID());
             }
             else
             {
                 LOG_WARNING("Uninitialized world connection closed.\n");
             }
 
-            auto server = std::dynamic_pointer_cast<LobbyServer>(mServer.lock());
             auto db = server->GetMainDatabase();
 
             svr->SetStatus(objects::RegisteredWorld::Status_t::INACTIVE);
@@ -343,9 +356,20 @@ void ManagerConnection::RemoveClientConnection(const std::shared_ptr<
         return;
     }
 
-    auto iter = mClientConnections.find(account->GetUsername());
+    auto username = account->GetUsername();
+    auto iter = mClientConnections.find(username);
     if(iter != mClientConnections.end())
     {
         mClientConnections.erase(iter);
+
+        auto server = std::dynamic_pointer_cast<LobbyServer>(mServer.lock());
+        auto accountManager = server->GetAccountManager();
+
+        int8_t worldID;
+        if(accountManager->IsLoggedIn(username, worldID) && worldID == -1)
+        {
+            LOG_DEBUG(libcomp::String("Logging out user: '%1'\n").Arg(username));
+            accountManager->LogoutUser(username, worldID);
+        }
     }
 }

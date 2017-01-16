@@ -1,5 +1,5 @@
 {
-    tinyxml2::XMLElement *temp = @PARENT@;
+    tinyxml2::XMLElement *pTemp = @PARENT@;
     {
         tinyxml2::XMLElement *pMember = doc.NewElement(@ELEMENT_NAME@);
         pMember->SetAttribute("name", @VAR_NAME@);
@@ -14,5 +14,5 @@
         @VAR_XML_SAVE_CODE@
     }
 
-    @PARENT@ = temp;
+    @PARENT@ = pTemp;
 }

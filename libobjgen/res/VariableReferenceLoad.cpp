@@ -1,1 +1,1 @@
-!@VAR_NAME@.IsNull() && @VAR_NAME@.Get()->Load(@STREAM@)
+!(@VAR_NAME@ = @CONSTRUCT_VALUE@).IsNull() && @VAR_NAME@.Get()->Load(@STREAM@)

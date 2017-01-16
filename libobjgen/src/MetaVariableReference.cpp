@@ -313,6 +313,7 @@ std::string MetaVariableReference::GetLoadCode(const Generator& generator,
     std::map<std::string, std::string> replacements;
     replacements["@VAR_NAME@"] = name;
     replacements["@STREAM@"] = stream;
+    replacements["@CONSTRUCT_VALUE@"] = GetConstructValue();
 
     if(mPersistentReference)
     {
@@ -351,6 +352,7 @@ std::string MetaVariableReference::GetLoadRawCode(const Generator& generator,
     std::map<std::string, std::string> replacements;
     replacements["@VAR_NAME@"] = name;
     replacements["@STREAM@"] = stream;
+    replacements["@CONSTRUCT_VALUE@"] = GetConstructValue();
 
     if(mPersistentReference)
     {

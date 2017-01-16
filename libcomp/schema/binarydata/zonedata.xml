@@ -1,130 +1,130 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <objgen>
-	<object name="MiZoneBasicData" persistent="false" scriptenabled="true">
-		<member type="u32" name="id" caps="true"/>
-		<member type="string" name="name" encoding="cp932" length="36"/>
-		<member type="u8" name="unk1"/>
-		<member type="u8" name="unk2"/>
-		<member type="u16" name="flags"/>
-		<member type="u32" name="unk4"/>
-		<member type="u32" name="unk5"/>
-		<member type="u32" name="unk6"/>
-	</object>
-	<object name="MiZoneFileData" persistent="false" scriptenabled="true">
-		<member type="string" length="36" name="file1"/>
-		<member type="string" length="36" name="file2"/>
-		<member type="string" length="36" name="file3"/>
-		<member type="string" length="36" name="file4"/>
-		<member type="string" length="36" name="file5"/>
-		<member type="string" length="36" name="file6"/>
-		<member type="string" length="36" name="file7"/>
-		<member type="string" length="36" name="file8"/>
-		<member type="string" length="36" name="file9"/>
-		<member type="string" length="36" name="file10"/>
-		<member type="string" length="36" name="file11"/>
-		<member type="string" length="36" name="file12"/>
-		<member type="string" length="36" name="file13"/>
-		<member type="string" length="36" name="file14"/>
-		<member type="string" length="36" name="file15"/>
-		<member type="string" length="36" name="file16"/>
-		<member type="string" length="36" name="file17"/>
-		<member type="string" length="36" name="file18"/>
-		<member type="string" length="36" name="file19"/>
-	</object>
-	<object name="MiZoneFogData" persistent="false" scriptenabled="true">
-		<member type="u8" name="fog1"/>
-		<member type="array" name="fog2" size="3">
+    <object name="MiZoneBasicData" persistent="false" scriptenabled="true">
+        <member type="u32" name="id" caps="true"/>
+        <member type="string" name="name" encoding="cp932" length="36"/>
+        <member type="u8" name="unk1"/>
+        <member type="u8" name="unk2"/>
+        <member type="u16" name="flags"/>
+        <member type="u32" name="unk4"/>
+        <member type="u32" name="unk5"/>
+        <member type="u32" name="unk6"/>
+    </object>
+    <object name="MiZoneFileData" persistent="false" scriptenabled="true">
+        <member type="string" length="36" name="file1"/>
+        <member type="string" length="36" name="file2"/>
+        <member type="string" length="36" name="file3"/>
+        <member type="string" length="36" name="file4"/>
+        <member type="string" length="36" name="file5"/>
+        <member type="string" length="36" name="file6"/>
+        <member type="string" length="36" name="file7"/>
+        <member type="string" length="36" name="file8"/>
+        <member type="string" length="36" name="file9"/>
+        <member type="string" length="36" name="file10"/>
+        <member type="string" length="36" name="file11"/>
+        <member type="string" length="36" name="file12"/>
+        <member type="string" length="36" name="file13"/>
+        <member type="string" length="36" name="file14"/>
+        <member type="string" length="36" name="file15"/>
+        <member type="string" length="36" name="file16"/>
+        <member type="string" length="36" name="file17"/>
+        <member type="string" length="36" name="file18"/>
+        <member type="string" length="36" name="file19"/>
+    </object>
+    <object name="MiZoneFogData" persistent="false" scriptenabled="true">
+        <member type="u8" name="fog1"/>
+        <member type="array" name="fog2" size="3">
             <element type="u8"/>
         </member>
-		<member type="f32" name="fog3"/>
-		<member type="f32" name="fog4"/>
-		<member type="u8" name="fog5"/>
-		<member type="array" name="fog6" size="3">
+        <member type="f32" name="fog3"/>
+        <member type="f32" name="fog4"/>
+        <member type="u8" name="fog5"/>
+        <member type="array" name="fog6" size="3">
             <element type="u8"/>
         </member>
-		<member type="f32" name="fog7"/>
-		<member type="f32" name="fog8"/>
-	</object>
-	<object name="MiZoneCameraData" persistent="false" scriptenabled="true">
-		<member type="f32" name="camera1"/>
-	</object>
-	<object name="MiZoneSkyData" persistent="false" scriptenabled="true">
-		<member type="u8" name="sky1"/>
-		<member type="u8" name="sky2"/>
-		<member type="u16" name="sky3"/>
-		<member type="string" length="36" name="sky4"/>
-		<member type="string" length="36" name="sky5"/>
-		<member type="string" length="36" name="sky6"/>
-		<member type="string" length="36" name="sky7"/>
-		<member type="string" length="36" name="sky8"/>
-		<member type="string" length="36" name="sky9"/>
-		<member type="string" length="36" name="sky10"/>
-		<member type="string" length="36" name="sky11"/>
-	</object>
-	<object name="MiZoneGouraudData" persistent="false" scriptenabled="true">
-		<member type="u8" name="gouraud1"/>
-		<member type="u8" name="gouraud2"/>
-		<member type="u16" name="gouraud3"/>
-		<member type="f32" name="gouraud4"/>
-		<member type="f32" name="gouraud5"/>
-		<member type="f32" name="gouraud6"/>
-		<member type="f32" name="gouraud7"/>
-		<member type="f32" name="gouraud8"/>
-		<member type="f32" name="gouraud9"/>
-		<member type="f32" name="gouraud10"/>
-		<member type="f32" name="gouraud11"/>
-	</object>
-	<object name="MiZoneLensFlareLayerData" persistent="false" scriptenabled="true">
-		<member type="f32" name="unk1"/>
-		<member type="f32" name="unk2"/>
-		<member type="f32" name="unk3"/>
-		<member type="f32" name="unk4"/>
-		<member type="f32" name="unk5"/>
-	</object>
-	<object name="MiZoneLensFlareData" persistent="false" scriptenabled="true">
-		<member type="u8" name="flare1"/>
-		<member type="u8" name="flare2"/>
-		<member type="u16" name="flare3"/>
-		<member type="f32" name="flare4"/>
-		<member type="array" name="flare5" size="7">
+        <member type="f32" name="fog7"/>
+        <member type="f32" name="fog8"/>
+    </object>
+    <object name="MiZoneCameraData" persistent="false" scriptenabled="true">
+        <member type="f32" name="camera1"/>
+    </object>
+    <object name="MiZoneSkyData" persistent="false" scriptenabled="true">
+        <member type="u8" name="sky1"/>
+        <member type="u8" name="sky2"/>
+        <member type="u16" name="sky3"/>
+        <member type="string" length="36" name="sky4"/>
+        <member type="string" length="36" name="sky5"/>
+        <member type="string" length="36" name="sky6"/>
+        <member type="string" length="36" name="sky7"/>
+        <member type="string" length="36" name="sky8"/>
+        <member type="string" length="36" name="sky9"/>
+        <member type="string" length="36" name="sky10"/>
+        <member type="string" length="36" name="sky11"/>
+    </object>
+    <object name="MiZoneGouraudData" persistent="false" scriptenabled="true">
+        <member type="u8" name="gouraud1"/>
+        <member type="u8" name="gouraud2"/>
+        <member type="u16" name="gouraud3"/>
+        <member type="f32" name="gouraud4"/>
+        <member type="f32" name="gouraud5"/>
+        <member type="f32" name="gouraud6"/>
+        <member type="f32" name="gouraud7"/>
+        <member type="f32" name="gouraud8"/>
+        <member type="f32" name="gouraud9"/>
+        <member type="f32" name="gouraud10"/>
+        <member type="f32" name="gouraud11"/>
+    </object>
+    <object name="MiZoneLensFlareLayerData" persistent="false" scriptenabled="true">
+        <member type="f32" name="unk1"/>
+        <member type="f32" name="unk2"/>
+        <member type="f32" name="unk3"/>
+        <member type="f32" name="unk4"/>
+        <member type="f32" name="unk5"/>
+    </object>
+    <object name="MiZoneLensFlareData" persistent="false" scriptenabled="true">
+        <member type="u8" name="flare1"/>
+        <member type="u8" name="flare2"/>
+        <member type="u16" name="flare3"/>
+        <member type="f32" name="flare4"/>
+        <member type="array" name="flare5" size="7">
             <element type="MiZoneLensFlareLayerData*"/>
         </member>
-	</object>
-	<object name="MiZoneBGMData" persistent="false" scriptenabled="true">
-		<member type="u32" name="zoneSoundID"/>
-		<member type="u32" name="battleSoundID"/>
-	</object>
-	<object name="MiZoneOtherData" persistent="false" scriptenabled="true">
-		<member type="array" name="other1" size="2">
+    </object>
+    <object name="MiZoneBGMData" persistent="false" scriptenabled="true">
+        <member type="u32" name="zoneSoundID"/>
+        <member type="u32" name="battleSoundID"/>
+    </object>
+    <object name="MiZoneOtherData" persistent="false" scriptenabled="true">
+        <member type="array" name="other1" size="2">
             <element type="f32"/>
         </member>
-		<member type="array" name="other2" size="2">
+        <member type="array" name="other2" size="2">
             <element type="f32"/>
         </member>
-		<member type="f32" name="other3"/>
-		<member type="array" name="other4" size="3">
+        <member type="f32" name="other3"/>
+        <member type="array" name="other4" size="3">
             <element type="f32"/>
         </member>
-		<member type="array" name="other5" size="3">
+        <member type="array" name="other5" size="3">
             <element type="f32"/>
         </member>
-		<member type="f32" name="other6"/>
-		<member type="f32" name="other7"/>
-		<member type="f32" name="other8"/>
-		<member type="f32" name="other9"/>
-		<member type="f32" name="other10"/>
-		<member type="f32" name="other11"/>
-	</object>
-	<object name="MiZoneData" persistent="false" scriptenabled="true">
-		<member type="MiZoneBasicData*" name="basic"/>
-		<member type="MiZoneFileData*" name="file"/>
-		<!-- MiZoneClientData below -->
-		<member type="MiZoneFogData*" name="fog"/>
-		<member type="MiZoneCameraData*" name="camera"/>
-		<member type="MiZoneSkyData*" name="sky"/>
-		<member type="MiZoneGouraudData*" name="gouraud"/>
-		<member type="MiZoneLensFlareData*" name="flare"/>
-		<member type="MiZoneBGMData*" name="bgm" caps="true"/>
-		<member type="MiZoneOtherData*" name="other"/>
-	</object>
+        <member type="f32" name="other6"/>
+        <member type="f32" name="other7"/>
+        <member type="f32" name="other8"/>
+        <member type="f32" name="other9"/>
+        <member type="f32" name="other10"/>
+        <member type="f32" name="other11"/>
+    </object>
+    <object name="MiZoneData" persistent="false" scriptenabled="true">
+        <member type="MiZoneBasicData*" name="basic"/>
+        <member type="MiZoneFileData*" name="file"/>
+        <!-- MiZoneClientData below -->
+        <member type="MiZoneFogData*" name="fog"/>
+        <member type="MiZoneCameraData*" name="camera"/>
+        <member type="MiZoneSkyData*" name="sky"/>
+        <member type="MiZoneGouraudData*" name="gouraud"/>
+        <member type="MiZoneLensFlareData*" name="flare"/>
+        <member type="MiZoneBGMData*" name="bgm" caps="true"/>
+        <member type="MiZoneOtherData*" name="other"/>
+    </object>
 </objgen>

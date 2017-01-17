@@ -138,10 +138,10 @@ void ManagerConnection::RemoveConnection(std::shared_ptr<libcomp::InternalConnec
         auto db = server->GetWorldDatabase();
         svr->Delete(db);
 
-        server->QueueWork([](std::shared_ptr<WorldServer> server,
+        server->QueueWork([](std::shared_ptr<WorldServer> worldServer,
             int8_t channelID)
             {
-                auto accountManager = server->GetAccountManager();
+                auto accountManager = worldServer->GetAccountManager();
                 auto usernames = accountManager->LogoutUsersOnChannel(channelID);
 
                 if(usernames.size() > 0)

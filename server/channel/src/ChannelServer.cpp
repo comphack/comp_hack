@@ -95,6 +95,8 @@ bool ChannelServer::Initialize(std::weak_ptr<BaseServer>& self)
         to_underlying(ChannelClientPacketCode_t::PACKET_AUTH));
     clientPacketManager->AddParser<Parsers::SendData>(
         to_underlying(ChannelClientPacketCode_t::PACKET_SEND_DATA));
+    clientPacketManager->AddParser<Parsers::Logout>(
+        to_underlying(ChannelClientPacketCode_t::PACKET_LOGOUT));
     clientPacketManager->AddParser<Parsers::KeepAlive>(
         to_underlying(ChannelClientPacketCode_t::PACKET_KEEP_ALIVE));
     clientPacketManager->AddParser<Parsers::State>(

@@ -284,10 +284,10 @@ void ManagerConnection::RemoveWorld(std::shared_ptr<lobby::World>& world)
                 LOG_INFO(libcomp::String("World connection removed: (%1) %2\n")
                     .Arg(svr->GetID()).Arg(svr->GetName()));
 
-                server->QueueWork([](std::shared_ptr<LobbyServer> server,
+                server->QueueWork([](std::shared_ptr<LobbyServer> lobbyServer,
                     int8_t worldID)
                     {
-                        auto accountManager = server->GetAccountManager();
+                        auto accountManager = lobbyServer->GetAccountManager();
                         auto usernames = accountManager->LogoutUsersInWorld(worldID);
 
                         if(usernames.size() > 0)

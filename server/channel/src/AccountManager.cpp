@@ -120,22 +120,75 @@ void AccountManager::HandleLoginResponse(const std::shared_ptr<
     client->SendPacket(reply);
 }
 
-void AccountManager::Logout(const libcomp::String& username)
+void AccountManager::HandleLogoutRequest(const std::shared_ptr<
+    channel::ChannelClientConnection>& client,
+    LogoutCode_t code, uint8_t channel)
+{
+    std::list<libcomp::Packet> replies;
+    switch(code)
+    {
+        case LogoutCode_t::LOGOUT_CODE_QUIT:
+            {
+                libcomp::Packet reply;
+                reply.WritePacketCode(
+                    ChannelClientPacketCode_t::PACKET_LOGOUT_RESPONSE);
+                reply.WriteU32Little((uint32_t)10);
+                replies.push_back(reply);
+
+                reply = libcomp::Packet();
+                reply.WritePacketCode(
+                    ChannelClientPacketCode_t::PACKET_LOGOUT_RESPONSE);
+                reply.WriteU32Little((uint32_t)13);
+                replies.push_back(reply);
+            }
+            break;
+        case LogoutCode_t::LOGOUT_CODE_SWITCH:
+            (void)channel;
+            /// @todo: handle switching code
+            break;
+        default:
+            break;
+    }
+
+    for(libcomp::Packet& reply : replies)
+    {
+        client->SendPacket(reply);
+    }
+}
+
+void AccountManager::Logout(const std::shared_ptr<
+    channel::ChannelClientConnection>& client)
 {
     auto server = mServer.lock();
     auto managerConnection = server->GetManagerConnection();
+    auto state = client->GetClientState();
+    auto account = state->GetAccountLogin()->GetAccount().Get();
+    auto character = state->GetCharacterState()->GetCharacter().Get();
+
+    if(nullptr == account || nullptr == character)
+    {
+        return;
+    }
+    else
+    {
+        /// @todo: detach character from anything using it
+        /// @todo: set logout information
+
+        if(!character->Update(server->GetWorldDatabase()))
+        {
+            LOG_ERROR(libcomp::String("Character %1 failed to save on account"
+                " %2.\n").Arg(character->GetUUID().ToString())
+                .Arg(account->GetUUID().ToString()));
+        }
+    }
 
     //Remove the connection if it hasn't been removed already.
-    auto connection = managerConnection->GetClientConnection(username);
-    if(nullptr != connection)
-    {
-        managerConnection->RemoveClientConnection(connection);
-    }
+    managerConnection->RemoveClientConnection(client);
 
     libcomp::Packet p;
     p.WritePacketCode(InternalPacketCode_t::PACKET_ACCOUNT_LOGOUT);
     p.WriteString16Little(
-        libcomp::Convert::Encoding_t::ENCODING_UTF8, username);
+        libcomp::Convert::Encoding_t::ENCODING_UTF8, account->GetUsername());
     managerConnection->GetWorldConnection()->SendPacket(p);
 }
 

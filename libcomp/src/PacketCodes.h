@@ -66,6 +66,8 @@ enum class ChannelClientPacketCode_t : uint16_t
     PACKET_AUTH = 0x0002,   //!< Authorization request from the client.
     PACKET_AUTH_RESPONSE = 0x0003,  //!< Authorization response to the client.
     PACKET_SEND_DATA = 0x0004,  //!< The client is requesting data from the server.
+    PACKET_LOGOUT = 0x0005,  //!< Logout request from the client.
+    PACKET_LOGOUT_RESPONSE = 0x0009,  //!< Logout response to the client.
     PACKET_CHARACTER_DATA_RESPONSE = 0x000F,  //!< Response to the client containing all sorts of character data.
     PACKET_ZONE_CHANGE = 0x0023,  //!< Information about a character's zone for the client.
     PACKET_KEEP_ALIVE = 0x0056,  //!< Client request/check to keep the connection alive.

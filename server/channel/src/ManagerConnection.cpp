@@ -184,6 +184,6 @@ void ManagerConnection::RemoveClientConnection(const std::shared_ptr<
         auto server = std::dynamic_pointer_cast<ChannelServer>(
             mServer.lock());
         auto accountManager = server->GetAccountManager();
-        accountManager->Logout(username);
+        accountManager->Logout(connection);
     }
 }

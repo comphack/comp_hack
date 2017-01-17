@@ -39,6 +39,7 @@ namespace Parsers
 PACKET_PARSER_DECL(Login);              // 0x0000
 PACKET_PARSER_DECL(Auth);               // 0x0002
 PACKET_PARSER_DECL(SendData);           // 0x0004
+PACKET_PARSER_DECL(Logout);             // 0x0005
 PACKET_PARSER_DECL(KeepAlive);          // 0x0056
 PACKET_PARSER_DECL(State);              // 0x005A
 PACKET_PARSER_DECL(Sync);               // 0x00F3

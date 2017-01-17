@@ -84,6 +84,7 @@ SET(${PROJECT_NAME}_PACKETS
     src/packets/game/Login.cpp               # 0x0000
     src/packets/game/Auth.cpp                # 0x0002
     src/packets/game/SendData.cpp            # 0x0004
+    src/packets/game/Logout.cpp              # 0x0005
     src/packets/game/KeepAlive.cpp           # 0x0056
     src/packets/game/State.cpp               # 0x005A
     src/packets/game/Sync.cpp                # 0x00F3

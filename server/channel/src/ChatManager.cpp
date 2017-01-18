@@ -89,7 +89,7 @@ bool ChatManager::SendChatMessage(const std::shared_ptr<
     reply.WriteString16Little(client->GetClientState()
             ->GetClientStringEncoding(), sentFrom, true);
     reply.WriteU16Little((uint16_t)(message.Size() + 1));
-    reply.WriteArray(message.C(), (uint32_t)(81 - message.Size()));
+    reply.WriteArray(message.C(), (uint32_t)(message.Size()));
     reply.WriteBlank((uint32_t)(81 - message.Size()));
 
     switch(visibility)

@@ -37,12 +37,18 @@
 // Civet Includes
 #include <CivetServer.h>
 
+// PhysFS Includes
+#include <physfs.h>
+
 int main(int argc, const char *argv[])
 {
     libcomp::Log::GetSingletonPtr()->AddStandardOutputHook();
 
     LOG_INFO("COMP_hack Lobby Server v0.0.1 build 1\n");
     LOG_INFO("Copyright (C) 2010-2016 COMP_hack Team\n\n");
+
+    // Init PhysFS.
+    PHYSFS_init(argv[0]);
 
     std::string configPath = libcomp::BaseServer::GetDefaultConfigPath() +
         "lobby.xml";

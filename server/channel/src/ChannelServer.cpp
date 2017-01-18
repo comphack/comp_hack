@@ -42,7 +42,7 @@ using namespace channel;
 
 ChannelServer::ChannelServer(std::shared_ptr<objects::ServerConfig> config,
     const libcomp::String& configPath) : libcomp::BaseServer(config, configPath),
-    mAccountManager(0), mCharacterManager(0)
+    mAccountManager(0), mCharacterManager(0), mChatManager(0)
 {
 }
 
@@ -97,6 +97,8 @@ bool ChannelServer::Initialize(std::weak_ptr<BaseServer>& self)
         to_underlying(ChannelClientPacketCode_t::PACKET_SEND_DATA));
     clientPacketManager->AddParser<Parsers::Logout>(
         to_underlying(ChannelClientPacketCode_t::PACKET_LOGOUT));
+    clientPacketManager->AddParser<Parsers::Chat>(
+        to_underlying(ChannelClientPacketCode_t::PACKET_CHAT));
     clientPacketManager->AddParser<Parsers::KeepAlive>(
         to_underlying(ChannelClientPacketCode_t::PACKET_KEEP_ALIVE));
     clientPacketManager->AddParser<Parsers::State>(
@@ -114,6 +116,7 @@ bool ChannelServer::Initialize(std::weak_ptr<BaseServer>& self)
     auto weakPtr = std::dynamic_pointer_cast<ChannelServer>(mSelf.lock());
     mAccountManager = new AccountManager(weakPtr);
     mCharacterManager = new CharacterManager();
+    mChatManager = new ChatManager();
 
     return true;
 }
@@ -122,6 +125,7 @@ ChannelServer::~ChannelServer()
 {
     delete[] mAccountManager;
     delete[] mCharacterManager;
+    delete[] mChatManager;
 }
 
 const std::shared_ptr<objects::RegisteredChannel> ChannelServer::GetRegisteredChannel()
@@ -210,6 +214,11 @@ AccountManager* ChannelServer::GetAccountManager() const
 CharacterManager* ChannelServer::GetCharacterManager() const
 {
     return mCharacterManager;
+}
+
+ChatManager* ChannelServer::GetChatManager() const
+{
+    return mChatManager;
 }
 
 std::shared_ptr<libcomp::TcpConnection> ChannelServer::CreateConnection(

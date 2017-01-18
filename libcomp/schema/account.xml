@@ -10,6 +10,7 @@
         <member type="u8" name="TicketCount"/>
         <member type="s32" name="UserLevel"/>
         <member type="bool" name="Enabled"/>
+        <member type="bool" name="IsGM" key="false"/>
         <member type="u32" name="LastLogin"/>
         <member type="map" name="CharactersByCID">
             <key type="u8"/>

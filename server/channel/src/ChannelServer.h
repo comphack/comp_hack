@@ -40,6 +40,7 @@
 // channel Includes
 #include "AccountManager.h"
 #include "CharacterManager.h"
+#include "ChatManager.h"
 
 namespace channel
 {
@@ -141,6 +142,9 @@ public:
      */
     CharacterManager* GetCharacterManager() const;
 
+    //Get ChatManager
+    ChatManager* GetChatManager() const;
+
 protected:
     /**
      * Create a connection to a newly active socket.
@@ -170,6 +174,9 @@ protected:
 
     /// Poiner to the character manager.
     CharacterManager *mCharacterManager;
+
+    /// Pointer to the Chat Manager.
+    ChatManager *mChatManager;
 };
 
 } // namespace channel

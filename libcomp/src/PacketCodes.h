@@ -70,6 +70,8 @@ enum class ChannelClientPacketCode_t : uint16_t
     PACKET_LOGOUT_RESPONSE = 0x0009,  //!< Logout response to the client.
     PACKET_CHARACTER_DATA_RESPONSE = 0x000F,  //!< Response to the client containing all sorts of character data.
     PACKET_ZONE_CHANGE = 0x0023,  //!< Information about a character's zone for the client.
+    PACKET_CHAT = 0x0026, //!< Client request to add a message to the chat or process a GM command.
+    PACKET_CHAT_RESPONSE = 0x0028, //!< Client response from chat request.
     PACKET_KEEP_ALIVE = 0x0056,  //!< Client request/check to keep the connection alive.
     PACKET_KEEP_ALIVE_RESPONSE = 0x0057,  //!< Response to client to keep the connection alive.
     PACKET_STATE = 0x005A,  //!< Client request for their character state.

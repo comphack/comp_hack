@@ -90,10 +90,14 @@ SET(${PROJECT_NAME}_PACKETS
     src/packets/game/SendData.cpp            # 0x0004
     src/packets/game/Logout.cpp              # 0x0005
 <<<<<<< HEAD
+<<<<<<< HEAD
     src/packets/game/Chat.cpp                # 0x0026
 =======
     src/packets/game/Chat.cpp             # 0x0026
 >>>>>>> 	modified:   libcomp/schema/account.xml
+=======
+    src/packets/game/Chat.cpp                # 0x0026
+>>>>>>> 	modified:   server/channel/CMakeLists.txt
     src/packets/game/KeepAlive.cpp           # 0x0056
     src/packets/game/State.cpp               # 0x005A
     src/packets/game/Sync.cpp                # 0x00F3

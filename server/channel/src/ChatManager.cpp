@@ -90,12 +90,17 @@ bool ChatManager::SendChatMessage(const std::shared_ptr<
             ->GetClientStringEncoding(), sentFrom, true);
     reply.WriteU16Little((uint16_t)(message.Size() + 1));
 <<<<<<< HEAD
+<<<<<<< HEAD
     reply.WriteArray(message.C(), (uint32_t)(message.Size()));
     reply.WriteBlank((uint32_t)(81 - message.Size()));
 =======
     reply.WriteArray(message.C(), message.Size());
     reply.WriteBlank(81 - message.Size());
 >>>>>>> 	modified:   libcomp/schema/account.xml
+=======
+    reply.WriteArray(message.C(), (uint32_t)(81 - message.Size()));
+    reply.WriteBlank((uint32_t)(81 - message.Size()));
+>>>>>>> 	modified:   server/channel/CMakeLists.txt
 
     switch(visibility)
     {

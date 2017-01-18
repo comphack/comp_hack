@@ -368,10 +368,8 @@ IF(GIT_DEPENDENCIES)
     )
 ELSE()
     SET(PHYSFS_URL
-        GIT_REPOSITORY https://github.com/comphack/physfs.git
-        GIT_TAG comp_hack
-        #URL https://github.com/comphack/sqrat/archive/comp_hack-20161224.zip
-        #URL_HASH SHA1=54997f9678d8132d6175fed0d0ff8fab84e7ad9c
+        URL https://github.com/comphack/physfs/archive/comp_hack-20170117.zip
+        URL_HASH SHA1=df642b6c9cdb1e9ca2103f3747025c55fbdb7c02
     )
 ENDIF()
 

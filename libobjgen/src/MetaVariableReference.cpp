@@ -38,6 +38,7 @@ using namespace libobjgen;
 MetaVariableReference::MetaVariableReference()
     : MetaVariable()
 {
+    mNamespace = "objects";
     mPersistentReference = false;
     mDynamicSizeCount = 0;
 }
@@ -61,9 +62,9 @@ std::string MetaVariableReference::GetType() const
     return mReferenceType + "*";
 }
 
-std::string MetaVariableReference::GetReferenceType() const
+std::string MetaVariableReference::GetReferenceType(bool includeNamespace) const
 {
-    return mReferenceType;
+    return (includeNamespace ? (mNamespace + "::") : "") + mReferenceType;
 }
 
 bool MetaVariableReference::SetReferenceType(const std::string& referenceType)
@@ -77,6 +78,22 @@ bool MetaVariableReference::SetReferenceType(const std::string& referenceType)
     }
 
     return status;
+}
+
+std::string MetaVariableReference::GetNamespace() const
+{
+    return mNamespace;
+}
+
+bool MetaVariableReference::SetNamespace(const std::string& ns)
+{
+    if(!ns.empty() && MetaObject::IsValidIdentifier(ns))
+    {
+        mNamespace = ns;
+        return true;
+    }
+
+    return false;
 }
 
 bool MetaVariableReference::IsPersistentReference() const
@@ -113,7 +130,8 @@ bool MetaVariableReference::IsScriptAccessible() const
 bool MetaVariableReference::IsValid() const
 {
     // Validating that the object exists happens elsewhere
-    return MetaObject::IsValidIdentifier(mReferenceType);
+    return MetaObject::IsValidIdentifier(mReferenceType) &&
+        (mNamespace.empty() || MetaObject::IsValidIdentifier(mNamespace));
 }
 
 bool MetaVariableReference::Load(std::istream& stream)
@@ -121,6 +139,7 @@ bool MetaVariableReference::Load(std::istream& stream)
     MetaVariable::Load(stream);
 
     Generator::LoadString(stream, mReferenceType);
+    Generator::LoadString(stream, mNamespace);
     stream.read(reinterpret_cast<char*>(&mDynamicSizeCount),
         sizeof(mDynamicSizeCount));
     stream.read(reinterpret_cast<char*>(&mPersistentReference),
@@ -142,6 +161,7 @@ bool MetaVariableReference::Save(std::ostream& stream) const
     if(IsValid() && MetaVariable::Save(stream))
     {
         Generator::SaveString(stream, mReferenceType);
+        Generator::SaveString(stream, mNamespace);
         stream.write(reinterpret_cast<const char*>(&mDynamicSizeCount),
             sizeof(mDynamicSizeCount));
         stream.write(reinterpret_cast<const char*>(&mPersistentReference),
@@ -162,7 +182,8 @@ bool MetaVariableReference::Load(const tinyxml2::XMLDocument& doc,
 
     bool status = true;
 
-    //Reference type should already be set
+    // Reference type and namespace should be set and verified
+    // elsewhere
 
     return status && BaseLoad(root) && IsValid();
 }
@@ -173,6 +194,11 @@ bool MetaVariableReference::Save(tinyxml2::XMLDocument& doc,
     tinyxml2::XMLElement *pVariableElement = doc.NewElement(elementName);
     pVariableElement->SetAttribute("type", (GetReferenceType() + "*").c_str());
     pVariableElement->SetAttribute("name", GetName().c_str());
+
+    if(!mNamespace.empty() && mNamespace != "objects")
+    {
+        pVariableElement->SetAttribute("namespace", mNamespace.c_str());
+    }
 
     parent.InsertEndChild(pVariableElement);
 
@@ -197,8 +223,7 @@ std::string MetaVariableReference::GetCodeType() const
     if(!mReferenceType.empty())
     {
         std::stringstream ss;
-        ss << "libcomp::ObjectReference<" << mReferenceType << ">";
-
+        ss << "libcomp::ObjectReference<" << mNamespace << "::" << mReferenceType << ">";
         code = ss.str();
     }
 
@@ -214,8 +239,9 @@ std::string MetaVariableReference::GetConstructValue() const
     }
     else
     {
+        std::string fullName = mNamespace + "::" +  mReferenceType;
         defaultVal << GetCodeType()
-            << "(std::shared_ptr<" << mReferenceType << ">(new " << mReferenceType << "))";
+            << "(std::shared_ptr<" << fullName << ">(new " << fullName << "))";
     }
 
     std::stringstream ss;

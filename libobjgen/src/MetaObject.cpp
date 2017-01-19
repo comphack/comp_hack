@@ -44,7 +44,7 @@
 using namespace libobjgen;
 
 MetaObject::MetaObject()
-    : mScriptEnabled(false), mPersistent(false)
+    : mNamespace("objects"), mScriptEnabled(false), mPersistent(false)
 {
 }
 
@@ -55,6 +55,11 @@ MetaObject::~MetaObject()
 std::string MetaObject::GetName() const
 {
     return mName;
+}
+
+std::string MetaObject::GetNamespace() const
+{
+    return mNamespace;
 }
 
 std::string MetaObject::GetBaseObject() const
@@ -98,11 +103,30 @@ bool MetaObject::SetName(const std::string& name)
     return false;
 }
 
+bool MetaObject::SetNamespace(const std::string& ns)
+{
+    if(IsValidIdentifier(ns))
+    {
+        mNamespace = ns;
+        return true;
+    }
+
+    return false;
+}
+
 bool MetaObject::SetBaseObject(const std::string& baseObject)
 {
-    if(baseObject.empty() || IsValidIdentifier(baseObject))
+    if(baseObject.empty())
     {
-        mBaseObject = baseObject;
+        mBaseObject = "";
+        return true;
+    }
+
+    std::string ns = "objects";
+    std::string objName = Generator::GetObjectName(baseObject, ns);
+    if(IsValidIdentifier(objName))
+    {
+        mBaseObject = ns + "::" + objName;
         return true;
     }
 
@@ -249,6 +273,7 @@ bool MetaObject::IsValid() const
     }
 
     return !mName.empty() && IsValidIdentifier(mName) &&
+        (mNamespace.empty() || IsValidIdentifier(mNamespace)) &&
         (mVariables.size() > 0 || !mBaseObject.empty()) &&
         (mPersistent || mSourceLocation.empty()) &&
         (!mPersistent || mBaseObject.empty());
@@ -259,6 +284,7 @@ bool MetaObject::Load(std::istream& stream)
     bool result = true;
 
     result &= Generator::LoadString(stream, mName);
+    result &= Generator::LoadString(stream, mNamespace);
     result &= Generator::LoadString(stream, mBaseObject);
     stream.read(reinterpret_cast<char*>(&mScriptEnabled),
         sizeof(mScriptEnabled));
@@ -294,6 +320,7 @@ bool MetaObject::Save(std::ostream& stream) const
     bool result = true;
 
     result &= Generator::SaveString(stream, mName);
+    result &= Generator::SaveString(stream, mNamespace);
     result &= Generator::SaveString(stream, mBaseObject);
     stream.write(reinterpret_cast<const char*>(&mScriptEnabled),
         sizeof(mScriptEnabled));
@@ -311,7 +338,12 @@ bool MetaObject::Save(tinyxml2::XMLDocument& doc,
     tinyxml2::XMLElement *pObjectElement = doc.NewElement("object");
     pObjectElement->SetAttribute("name", mName.c_str());
 
-    if(mBaseObject.length() > 0)
+    if(!mNamespace.empty() && mNamespace != "objects")
+    {
+        pObjectElement->SetAttribute("namespace", mNamespace.c_str());
+    }
+
+    if(!mBaseObject.empty())
     {
         pObjectElement->SetAttribute("baseobject", mBaseObject.c_str());
     }
@@ -320,7 +352,7 @@ bool MetaObject::Save(tinyxml2::XMLDocument& doc,
     {
         pObjectElement->SetAttribute("persistent", "false");
     }
-    else if(mSourceLocation.length() > 0)
+    else if(!mSourceLocation.empty())
     {
         pObjectElement->SetAttribute("location", mSourceLocation.c_str());
     }
@@ -343,14 +375,14 @@ bool MetaObject::Save(tinyxml2::XMLDocument& doc,
     return true;
 }
 
-std::set<std::string> MetaObject::GetReferencesTypes() const
+std::set<std::string> MetaObject::GetReferencesTypes(bool includeNamespace) const
 {
     std::set<std::string> references;
 
     for(auto var : GetReferences())
     {
-        references.insert(
-            std::dynamic_pointer_cast<MetaVariableReference>(var)->GetReferenceType());
+        auto ref = std::dynamic_pointer_cast<MetaVariableReference>(var);
+        references.insert(ref->GetReferenceType(includeNamespace));
     }
 
     return references;

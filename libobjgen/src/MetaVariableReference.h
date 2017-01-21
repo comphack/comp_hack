@@ -100,6 +100,11 @@ public:
         const std::string elemName = "member") const;
     virtual std::string GetBindValueCode(const Generator& generator,
         const std::string& name, size_t tabLevel = 1) const;
+    virtual std::string GetAccessDeclarations(const Generator& generator,
+        const MetaObject& object, const std::string& name,
+        size_t tabLevel = 1) const;
+    virtual std::string GetAccessFunctions(const Generator& generator,
+        const MetaObject& object, const std::string& name) const;
 
 private:
     std::string mReferenceType;

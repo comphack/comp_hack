@@ -77,7 +77,7 @@ public:
      * @param db Database to load from if persistent
      * @return Pointer to the referenced object
      */
-    const std::shared_ptr<T> Get(const std::shared_ptr<Database>& db = nullptr)
+    const std::shared_ptr<T>& Get(const std::shared_ptr<Database>& db = nullptr)
     {
         LoadReference(db);
 
@@ -124,11 +124,19 @@ public:
     {
         // Do not count an attempt to load without a DB as a
         // load failure
-        if(IsPersistentReference() && nullptr != db
-            && !mUUID.IsNull() && !mLoadFailed)
+        if(IsPersistentReference() && nullptr == mRef &&
+            !mUUID.IsNull() && !mLoadFailed)
         {
-            mRef = PersistentObject::LoadObjectByUUID<T>(db, mUUID);
-            mLoadFailed = nullptr == mRef;
+            if(nullptr != db)
+            {
+                mRef = PersistentObject::LoadObjectByUUID<T>(db, mUUID);
+                mLoadFailed = nullptr == mRef;
+            }
+            else
+            {
+                mRef = std::dynamic_pointer_cast<T>(
+                    PersistentObject::GetObjectByUUID(mUUID));
+            }
         }
         return mUUID.IsNull() || nullptr != mRef;
     }

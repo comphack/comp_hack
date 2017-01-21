@@ -223,7 +223,7 @@ std::string MetaVariableReference::GetCodeType() const
     if(!mReferenceType.empty())
     {
         std::stringstream ss;
-        ss << "libcomp::ObjectReference<" << mNamespace << "::" << mReferenceType << ">";
+        ss << "libcomp::ObjectReference<" << GetReferenceType(true) << ">";
         code = ss.str();
     }
 
@@ -239,7 +239,7 @@ std::string MetaVariableReference::GetConstructValue() const
     }
     else
     {
-        std::string fullName = mNamespace + "::" +  mReferenceType;
+        std::string fullName = GetReferenceType(true);
         defaultVal << GetCodeType()
             << "(std::shared_ptr<" << fullName << ">(new " << fullName << "))";
     }
@@ -474,6 +474,43 @@ std::string MetaVariableReference::GetBindValueCode(const Generator& generator,
 
     return generator.ParseTemplate(tabLevel, "VariableGetTypeBind",
         replacements);
+}
+
+std::string MetaVariableReference::GetAccessDeclarations(const Generator& generator,
+    const MetaObject& object, const std::string& name, size_t tabLevel) const
+{
+    std::stringstream ss;
+    ss << MetaVariable::GetAccessDeclarations(generator,
+        object, name, tabLevel);
+
+    if(mPersistentReference)
+    {
+        ss << generator.Tab(tabLevel) << "const std::shared_ptr<"
+            << GetReferenceType(true) << ">& Load" << generator.GetCapitalName(*this)
+            << "(const std::shared_ptr<libcomp::Database>& db = nullptr);" << std::endl;
+    }
+
+    return ss.str();
+}
+
+std::string MetaVariableReference::GetAccessFunctions(const Generator& generator,
+    const MetaObject& object, const std::string& name) const
+{
+    std::stringstream ss;
+    ss << MetaVariable::GetAccessFunctions(generator, object, name);
+
+    if(mPersistentReference)
+    {
+        ss << "const std::shared_ptr<" << GetReferenceType(true) << ">& "
+            << object.GetName() << "::Load" << generator.GetCapitalName(*this)
+            << "(const std::shared_ptr<libcomp::Database>& db)" << std::endl;
+        ss << "{" << std::endl;
+        ss << generator.Tab(1) << "return " << generator.GetMemberName(*this)
+            << ".Get(db);" << std::endl;
+        ss << "}" << std::endl;
+    }
+
+    return ss.str();
 }
 
 std::string MetaVariableReference::GetDatabaseLoadCode(

@@ -46,21 +46,21 @@ ChannelServer::ChannelServer(std::shared_ptr<objects::ServerConfig> config,
 {
 }
 
-bool ChannelServer::Initialize(std::weak_ptr<BaseServer>& self)
+bool ChannelServer::Initialize()
 {
-    if(!BaseServer::Initialize(self))
+    auto self = shared_from_this();
+
+    if(!BaseServer::Initialize())
     {
         return false;
     }
 
     // Connect to the world server.
-    auto worldConnection = std::shared_ptr<libcomp::InternalConnection>(
-        new libcomp::InternalConnection(mService));
-    worldConnection->SetSelf(worldConnection);
+    auto worldConnection = std::make_shared<
+        libcomp::InternalConnection>(mService);
     worldConnection->SetMessageQueue(mMainWorker.GetMessageQueue());
 
-    mManagerConnection = std::shared_ptr<ManagerConnection>(
-        new ManagerConnection(self));
+    mManagerConnection = std::make_shared<ManagerConnection>(self);
     mManagerConnection->SetWorldConnection(worldConnection);
 
     auto conf = std::dynamic_pointer_cast<objects::ChannelConfig>(mConfig);
@@ -76,8 +76,7 @@ bool ChannelServer::Initialize(std::weak_ptr<BaseServer>& self)
         return false;
     }
 
-    auto internalPacketManager = std::shared_ptr<libcomp::ManagerPacket>(
-        new libcomp::ManagerPacket(self));
+    auto internalPacketManager = std::make_shared<libcomp::ManagerPacket>(self);
     internalPacketManager->AddParser<Parsers::SetWorldInfo>(
         to_underlying(InternalPacketCode_t::PACKET_SET_WORLD_INFO));
 
@@ -85,8 +84,7 @@ bool ChannelServer::Initialize(std::weak_ptr<BaseServer>& self)
     mMainWorker.AddManager(internalPacketManager);
     mMainWorker.AddManager(mManagerConnection);
 
-    auto clientPacketManager = std::shared_ptr<libcomp::ManagerPacket>(
-        new libcomp::ManagerPacket(self));
+    auto clientPacketManager = std::make_shared<libcomp::ManagerPacket>(self);
     clientPacketManager->AddParser<Parsers::Login>(
         to_underlying(ChannelClientPacketCode_t::PACKET_LOGIN));
     clientPacketManager->AddParser<Parsers::Auth>(
@@ -107,8 +105,8 @@ bool ChannelServer::Initialize(std::weak_ptr<BaseServer>& self)
         worker->AddManager(mManagerConnection);
     }
 
-    auto weakPtr = std::dynamic_pointer_cast<ChannelServer>(mSelf.lock());
-    mAccountManager = new AccountManager(weakPtr);
+    mAccountManager = new AccountManager(std::dynamic_pointer_cast<
+        ChannelServer>(shared_from_this()));
     mCharacterManager = new CharacterManager();
 
     return true;
@@ -206,18 +204,12 @@ CharacterManager* ChannelServer::GetCharacterManager() const
 std::shared_ptr<libcomp::TcpConnection> ChannelServer::CreateConnection(
     asio::ip::tcp::socket& socket)
 {
-    auto connection = std::shared_ptr<libcomp::TcpConnection>(
-        new channel::ChannelClientConnection(socket, CopyDiffieHellman(
-            GetDiffieHellman())
-        )
-    );
+    auto connection = std::make_shared<channel::ChannelClientConnection>(
+        socket, CopyDiffieHellman(GetDiffieHellman()));
 
-    auto encrypted = std::dynamic_pointer_cast<
-        libcomp::EncryptedConnection>(connection);
-    if(AssignMessageQueue(encrypted))
+    if(AssignMessageQueue(connection))
     {
         // Make sure this is called after connecting.
-        connection->SetSelf(connection);
         connection->ConnectionSuccess();
     }
     else

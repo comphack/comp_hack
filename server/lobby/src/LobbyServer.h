@@ -67,7 +67,7 @@ public:
      *   packet handling code.
      * @return true on success, false on failure
      */
-    virtual bool Initialize(std::weak_ptr<BaseServer>& self);
+    virtual bool Initialize();
 
     /**
      * Get a list of pointers to the connected worlds.

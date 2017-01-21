@@ -45,7 +45,8 @@ namespace libcomp
  * are responsible for choosing which of the workers it
  * manages will be assigned to each incoming connection.
  */
-class BaseServer : public TcpServer, public Manager
+class BaseServer : public TcpServer, public Manager,
+    public std::enable_shared_from_this<BaseServer>
 {
 public:
     /**
@@ -68,7 +69,7 @@ public:
      *   packet handling code.
      * @return true on success, false on failure
      */
-    virtual bool Initialize(std::weak_ptr<BaseServer>& self);
+    virtual bool Initialize();
 
     /**
      * Do any initialize that should happen after the server is listening and
@@ -176,7 +177,8 @@ protected:
      * running is handled.
      * @return true on success, false on failure
      */
-    bool AssignMessageQueue(std::shared_ptr<libcomp::EncryptedConnection>& connection);
+    bool AssignMessageQueue(const std::shared_ptr<
+        libcomp::EncryptedConnection>& connection);
 
     /**
      * Get the next worker to use for new connections.  This implementation
@@ -186,9 +188,6 @@ protected:
      *  to a new connection
      */
     virtual std::shared_ptr<libcomp::Worker> GetNextConnectionWorker();
-
-    /// A shared pointer to the server.
-    std::weak_ptr<BaseServer> mSelf;
 
     /// A shared pointer to the config used to set up the server.
     std::shared_ptr<objects::ServerConfig> mConfig;

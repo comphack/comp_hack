@@ -113,7 +113,7 @@ void HttpConnection::PacketReceived(libcomp::Packet& packet)
     requestPacket.Rewind();
 
     // Promote to a shared pointer.
-    std::shared_ptr<libcomp::TcpConnection> self = mSelf.lock();
+    auto self = shared_from_this();
 
     if(this == self.get() && nullptr != mMessageQueue)
     {

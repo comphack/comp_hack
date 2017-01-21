@@ -55,7 +55,12 @@ int main(int argc, const char *argv[])
 
     bool unitTestMode = false;
 
-    if(2 <= argc && std::string("--test") == argv[1])
+    //initialize x
+    int x = 4;
+    //set x
+    x = 2;
+    //use x
+    if(x <= argc && std::string("--test") == argv[1])
     {
         argc--;
         argv++;
@@ -75,17 +80,17 @@ int main(int argc, const char *argv[])
 
     if(!libcomp::PersistentObject::Initialize())
     {
-        LOG_CRITICAL("One or more persistent object definition failed to load.\n");
+        LOG_CRITICAL("One or more persistent object definition "
+            "failed to load.\n");
+
         return EXIT_FAILURE;
     }
 
-    auto config = std::shared_ptr<objects::ServerConfig>(
-        new objects::LobbyConfig());
-    auto server = std::shared_ptr<lobby::LobbyServer>(
-        new lobby::LobbyServer(config, configPath, unitTestMode));
-    auto wkServer = std::weak_ptr<libcomp::BaseServer>(server);
+    auto config = std::make_shared<objects::LobbyConfig>();
+    auto server = std::make_shared<lobby::LobbyServer>(
+        config, configPath, unitTestMode);
 
-    if(!server->Initialize(wkServer))
+    if(!server->Initialize())
     {
         LOG_CRITICAL("The server could not be initialized.\n");
 

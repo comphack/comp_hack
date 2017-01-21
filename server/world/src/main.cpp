@@ -55,11 +55,11 @@ int main(int argc, const char *argv[])
         return EXIT_FAILURE;
     }
 
-    auto config = std::shared_ptr<objects::ServerConfig>(new objects::WorldConfig());
-    auto server = std::shared_ptr<world::WorldServer>(new world::WorldServer(config, configPath));
-    
-    auto wkServer = std::weak_ptr<libcomp::BaseServer>(server);
-    if(!server->Initialize(wkServer))
+    auto config = std::make_shared<objects::WorldConfig>();
+    auto server = std::make_shared<world::WorldServer>(
+        config, configPath);
+
+    if(!server->Initialize())
     {
         LOG_CRITICAL("The server could not be initialized.\n");
         return EXIT_FAILURE;
@@ -74,7 +74,7 @@ int main(int argc, const char *argv[])
     // Complete the shutdown process.
     libcomp::Shutdown::Complete();
 
-    LOG_INFO("Bye!\n");
+    LOG_INFO("\rBye!\n");
 
     return returnCode;
 }

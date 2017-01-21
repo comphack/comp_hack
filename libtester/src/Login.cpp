@@ -78,7 +78,6 @@ bool Login::WebLogin(const libcomp::String& username,
     std::shared_ptr<libcomp::MessageQueue<libcomp::Message::Message*>>
         messageQueue(new libcomp::MessageQueue<libcomp::Message::Message*>());
 
-    connection->SetSelf(connection);
     connection->SetMessageQueue(messageQueue);
     connection->Connect("127.0.0.1", 10999);
 

@@ -37,6 +37,9 @@
 // Civet Includes
 #include <CivetServer.h>
 
+// PhysFS Includes
+#include <physfs.h>
+
 int main(int argc, const char *argv[])
 {
     libcomp::Log::GetSingletonPtr()->AddStandardOutputHook();
@@ -44,12 +47,20 @@ int main(int argc, const char *argv[])
     LOG_INFO("COMP_hack Lobby Server v0.0.1 build 1\n");
     LOG_INFO("Copyright (C) 2010-2016 COMP_hack Team\n\n");
 
+    // Init PhysFS.
+    PHYSFS_init(argv[0]);
+
     std::string configPath = libcomp::BaseServer::GetDefaultConfigPath() +
         "lobby.xml";
 
     bool unitTestMode = false;
 
-    if(2 <= argc && std::string("--test") == argv[1])
+    //initialize x
+    int x = 4;
+    //set x
+    x = 2;
+    //use x
+    if(x <= argc && std::string("--test") == argv[1])
     {
         argc--;
         argv++;
@@ -69,17 +80,17 @@ int main(int argc, const char *argv[])
 
     if(!libcomp::PersistentObject::Initialize())
     {
-        LOG_CRITICAL("One or more persistent object definition failed to load.\n");
+        LOG_CRITICAL("One or more persistent object definition "
+            "failed to load.\n");
+
         return EXIT_FAILURE;
     }
 
-    auto config = std::shared_ptr<objects::ServerConfig>(
-        new objects::LobbyConfig());
-    auto server = std::shared_ptr<lobby::LobbyServer>(
-        new lobby::LobbyServer(config, configPath, unitTestMode));
-    auto wkServer = std::weak_ptr<libcomp::BaseServer>(server);
+    auto config = std::make_shared<objects::LobbyConfig>();
+    auto server = std::make_shared<lobby::LobbyServer>(
+        config, configPath, unitTestMode);
 
-    if(!server->Initialize(wkServer))
+    if(!server->Initialize())
     {
         LOG_CRITICAL("The server could not be initialized.\n");
 

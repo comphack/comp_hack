@@ -32,6 +32,9 @@
 
 using namespace libcomp;
 
+// I don't care to see these anymore.
+#undef COMP_HACK_DEBUG
+
 TcpConnection::TcpConnection(asio::io_service& io_service) :
     mSocket(io_service), mDiffieHellman(nullptr), mStatus(
     TcpConnection::STATUS_NOT_CONNECTED), mRole(TcpConnection::ROLE_CLIENT),
@@ -58,8 +61,6 @@ TcpConnection::TcpConnection(asio::ip::tcp::socket& socket,
 
 TcpConnection::~TcpConnection()
 {
-    mSocket.close();
-
     if(nullptr != mDiffieHellman)
     {
         DH_free(mDiffieHellman);
@@ -181,9 +182,12 @@ bool TcpConnection::RequestPacket(size_t size)
         // Calculate where to write the data.
         pDestination += mReceivedPacket.Size();
 
+        // Get a shared pointer to the connection so it outlives the callback.
+        auto self = shared_from_this();
+
         // Request packet data from the socket.
         mSocket.async_receive(asio::buffer(pDestination, size), 0,
-            [this](asio::error_code errorCode, std::size_t length)
+            [self](asio::error_code errorCode, std::size_t length)
             {
                 if(errorCode)
                 {
@@ -192,25 +196,26 @@ bool TcpConnection::RequestPacket(size_t size)
                     //     errorCode.message()));
 #endif // COMP_HACK_DEBUG
 
-                    SocketError();
+                    self->SocketError();
                 }
                 else
                 {
                     // Adjust the size of the packet.
-                    (void)mReceivedPacket.Direct(mReceivedPacket.Size() +
+                    (void)self->mReceivedPacket.Direct(
+                        self->mReceivedPacket.Size() +
                         static_cast<uint32_t>(length));
-                    mReceivedPacket.Rewind();
+                    self->mReceivedPacket.Rewind();
 
                     // It's up to this callback to remove the data from the
                     // packet either by calling std::move() or packet.Clear().
-                    PacketReceived(mReceivedPacket);
+                    self->PacketReceived(self->mReceivedPacket);
 
 #ifdef COMP_HACK_DEBUG
-                    if(0 < mReceivedPacket.Size())
+                    if(0 < self->mReceivedPacket.Size())
                     {
                         LOG_DEBUG(String("TcpConnection::PacketReceived() "
                             "was called and it left %1 bytes in the buffer.\n"
-                            ).Arg(mReceivedPacket.Size()));
+                            ).Arg(self->mReceivedPacket.Size()));
                     }
 #endif // COMP_HACK_DEBUG
                 }
@@ -238,11 +243,6 @@ String TcpConnection::GetRemoteAddress() const
     return mRemoteAddress;
 }
 
-void TcpConnection::SetSelf(const std::weak_ptr<libcomp::TcpConnection>& self)
-{
-    mSelf = self;
-}
-
 void TcpConnection::Connect(const asio::ip::tcp::endpoint& endpoint, bool async)
 {
     mStatus = STATUS_CONNECTING;
@@ -252,8 +252,12 @@ void TcpConnection::Connect(const asio::ip::tcp::endpoint& endpoint, bool async)
 
     if (async)
     {
-        mSocket.async_connect(endpoint, [this](const asio::error_code errorCode) {
-            HandleConnection(errorCode);
+        // Get a shared pointer to the connection so it outlives the callback.
+        auto self = shared_from_this();
+
+        mSocket.async_connect(endpoint, [self](
+            const asio::error_code errorCode) {
+                self->HandleConnection(errorCode);
         });
     }
     else
@@ -312,7 +316,9 @@ void TcpConnection::FlushOutgoing(bool closeConnection)
                 // Ignore errors and everything else, just close the connection.
                 if(closeConnection)
                 {
+#ifdef COMP_HACK_DEBUG
                     LOG_DEBUG("Closing connection after sending packet.\n");
+#endif // COMP_HACK_DEBUG
 
                     SocketError();
                     return;

@@ -82,20 +82,25 @@ bool ManagerConnection::ProcessMessage(const libcomp::Message::Message *pMessage
                 uint16_t port = notification->GetPort();
                 libcomp::String address = notification->GetAddress();
 
-                LOG_DEBUG(libcomp::String("Attempting to connect back to World: %1:%2\n").Arg(address).Arg(port));
+                LOG_DEBUG(libcomp::String(
+                    "Attempting to connect back to World: %1:%2\n").Arg(
+                    address).Arg(port));
 
-                std::shared_ptr<libcomp::InternalConnection> worldConnection(
-                    new libcomp::InternalConnection(*mService));
+                auto worldConnection = std::make_shared<
+                    libcomp::InternalConnection>(*mService);
 
-                worldConnection->SetSelf(worldConnection);
                 worldConnection->SetMessageQueue(mMessageQueue);
 
                 // Connect and stay connected until either of us shutdown
                 if(worldConnection->Connect(address, port, true))
                 {
-                    auto world = std::shared_ptr<lobby::World>(new lobby::World);
+                    auto world = std::make_shared<lobby::World>();
                     world->SetConnection(worldConnection);
-                    LOG_INFO(libcomp::String("New World connection established: %1:%2\n").Arg(address).Arg(port));
+
+                    LOG_INFO(libcomp::String(
+                        "New World connection established: %1:%2\n").Arg(
+                        address).Arg(port));
+
                     mUnregisteredWorlds.push_back(world);
                     return true;
                 }

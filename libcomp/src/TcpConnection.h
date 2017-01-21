@@ -53,7 +53,7 @@ class Object;
  * @ref ROLE_SERVER and @ref ROLE_Client. The role is only used by derived
  * classes like @ref EncryptedConnection.
  */
-class TcpConnection
+class TcpConnection : public std::enable_shared_from_this<TcpConnection>
 {
 public:
     /**
@@ -220,12 +220,6 @@ public:
     String GetRemoteAddress() const;
 
     /**
-     * Set the shared pointer to the connection.
-     * @param self Shared pointer to the connection.
-     */
-    void SetSelf(const std::weak_ptr<libcomp::TcpConnection>& self);
-
-    /**
      * Called when a connection has been established.
      */
     virtual void ConnectionSuccess();
@@ -327,9 +321,6 @@ protected:
 
     /// Status of the connection.
     ConnectionStatus_t mStatus;
-
-    /// A shared pointer to the connection.
-    std::weak_ptr<libcomp::TcpConnection> mSelf;
 
 private:
     /// Role of the connection.

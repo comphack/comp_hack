@@ -54,9 +54,11 @@ LobbyServer::LobbyServer(std::shared_ptr<objects::ServerConfig> config,
 {
 }
 
-bool LobbyServer::Initialize(std::weak_ptr<BaseServer>& self)
+bool LobbyServer::Initialize()
 {
-    if(!BaseServer::Initialize(self))
+    auto self = shared_from_this();
+
+    if(!BaseServer::Initialize())
     {
         return false;
     }
@@ -91,8 +93,8 @@ bool LobbyServer::Initialize(std::weak_ptr<BaseServer>& self)
         CreateFirstAccount();
     }
 
-    mManagerConnection = std::shared_ptr<ManagerConnection>(
-        new ManagerConnection(self, &mService, mMainWorker.GetMessageQueue()));
+    mManagerConnection = std::make_shared<ManagerConnection>(
+        self, &mService, mMainWorker.GetMessageQueue());
 
     // Reset the RegisteredWorld table and pull information from
     // known worlds into the connection manager
@@ -104,8 +106,7 @@ bool LobbyServer::Initialize(std::weak_ptr<BaseServer>& self)
     auto connectionManager = std::dynamic_pointer_cast<libcomp::Manager>(
         mManagerConnection);
 
-    auto internalPacketManager = std::shared_ptr<libcomp::ManagerPacket>(
-        new libcomp::ManagerPacket(self));
+    auto internalPacketManager = std::make_shared<libcomp::ManagerPacket>(self);
     internalPacketManager->AddParser<Parsers::SetWorldInfo>(
         to_underlying(InternalPacketCode_t::PACKET_SET_WORLD_INFO));
     internalPacketManager->AddParser<Parsers::SetChannelInfo>(
@@ -119,8 +120,7 @@ bool LobbyServer::Initialize(std::weak_ptr<BaseServer>& self)
     mMainWorker.AddManager(internalPacketManager);
     mMainWorker.AddManager(connectionManager);
 
-    auto clientPacketManager = std::shared_ptr<libcomp::ManagerPacket>(
-        new libcomp::ManagerPacket(self));
+    auto clientPacketManager = std::make_shared<libcomp::ManagerPacket>(self);
     clientPacketManager->AddParser<Parsers::Login>(to_underlying(
         LobbyClientPacketCode_t::PACKET_LOGIN));
     clientPacketManager->AddParser<Parsers::Auth>(to_underlying(
@@ -189,26 +189,15 @@ std::shared_ptr<ManagerConnection> LobbyServer::GetManagerConnection() const
 std::shared_ptr<libcomp::TcpConnection> LobbyServer::CreateConnection(
     asio::ip::tcp::socket& socket)
 {
-    auto connection = std::shared_ptr<libcomp::TcpConnection>(
-        new LobbyClientConnection(socket, CopyDiffieHellman(
-            GetDiffieHellman())
-        )
-    );
+    auto connection = std::make_shared<LobbyClientConnection>(
+        socket, CopyDiffieHellman(GetDiffieHellman()));
 
-    auto encrypted = std::dynamic_pointer_cast<
-        libcomp::EncryptedConnection>(connection);
-
-    if(AssignMessageQueue(encrypted))
+    if(AssignMessageQueue(connection))
     {
-        auto clientConnection = std::dynamic_pointer_cast<
-            LobbyClientConnection>(connection);
-
         // Give the connection a new client state object.
-        clientConnection->SetClientState(std::shared_ptr<ClientState>(
-            new ClientState));
+        connection->SetClientState(std::make_shared<ClientState>());
 
         // Make sure this is called after connecting.
-        connection->SetSelf(connection);
         connection->ConnectionSuccess();
     }
     else

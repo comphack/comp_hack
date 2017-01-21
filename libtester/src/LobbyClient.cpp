@@ -53,7 +53,6 @@ LobbyClient::~LobbyClient()
 
 bool LobbyClient::Connect()
 {
-    mConnection->SetSelf(mConnection);
     mConnection->SetMessageQueue(mMessageQueue);
 
     bool result = mConnection->Connect("127.0.0.1", 10666);

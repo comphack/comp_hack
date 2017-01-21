@@ -47,9 +47,11 @@ WorldServer::WorldServer(std::shared_ptr<objects::ServerConfig> config, const li
 {
 }
 
-bool WorldServer::Initialize(std::weak_ptr<BaseServer>& self)
+bool WorldServer::Initialize()
 {
-    if(!BaseServer::Initialize(self))
+    auto self = shared_from_this();
+
+    if(!BaseServer::Initialize())
     {
         return false;
     }
@@ -82,14 +84,12 @@ void WorldServer::FinishInitialize()
     asio::io_service service;
 
     // Connect to the world server.
-    std::shared_ptr<libcomp::LobbyConnection> lobbyConnection(
-        new libcomp::LobbyConnection(service,
-            libcomp::LobbyConnection::ConnectionMode_t::MODE_WORLD_UP));
+    auto lobbyConnection = std::make_shared<libcomp::LobbyConnection>(service,
+            libcomp::LobbyConnection::ConnectionMode_t::MODE_WORLD_UP);
 
-    std::shared_ptr<libcomp::MessageQueue<libcomp::Message::Message*>>
-        messageQueue(new libcomp::MessageQueue<libcomp::Message::Message*>());
+    auto messageQueue = std::make_shared<libcomp::MessageQueue<
+        libcomp::Message::Message*>>();
 
-    lobbyConnection->SetSelf(lobbyConnection);
     lobbyConnection->SetMessageQueue(messageQueue);
 
     lobbyConnection->Connect(conf->GetLobbyIP(), conf->GetLobbyPort(), false);
@@ -121,7 +121,8 @@ void WorldServer::FinishInitialize()
 
     delete pMessage;
 
-    mManagerConnection = std::shared_ptr<ManagerConnection>(new ManagerConnection(mSelf));
+    mManagerConnection = std::make_shared<ManagerConnection>(
+        shared_from_this());
 
     lobbyConnection->Close();
     serviceThread.join();
@@ -130,7 +131,8 @@ void WorldServer::FinishInitialize()
 
     auto connectionManager = std::dynamic_pointer_cast<libcomp::Manager>(mManagerConnection);
 
-    auto packetManager = std::shared_ptr<libcomp::ManagerPacket>(new libcomp::ManagerPacket(mSelf));
+    auto packetManager = std::make_shared<libcomp::ManagerPacket>(
+        shared_from_this());
     packetManager->AddParser<Parsers::GetWorldInfo>(to_underlying(
         InternalPacketCode_t::PACKET_GET_WORLD_INFO));
     packetManager->AddParser<Parsers::SetChannelInfo>(to_underlying(
@@ -311,34 +313,25 @@ AccountManager* WorldServer::GetAccountManager()
 std::shared_ptr<libcomp::TcpConnection> WorldServer::CreateConnection(
     asio::ip::tcp::socket& socket)
 {
-    auto connection = std::shared_ptr<libcomp::TcpConnection>(
-        new libcomp::InternalConnection(socket, CopyDiffieHellman(
-            GetDiffieHellman())
-        )
-    );
-
-    // Make sure this is called after connecting.
-    connection->SetSelf(connection);
+    auto connection = std::make_shared<libcomp::InternalConnection>(
+        socket, CopyDiffieHellman(GetDiffieHellman()));
 
     if(!mManagerConnection->LobbyConnected())
     {
         // Assign this to the main worker.
-        std::dynamic_pointer_cast<libcomp::InternalConnection>(
-            connection)->SetMessageQueue(mMainWorker.GetMessageQueue());
-
+        connection->SetMessageQueue(mMainWorker.GetMessageQueue());
         connection->ConnectionSuccess();
     }
     else if(true)  /// @todo: ensure that channels can start connecting
     {
-        auto encrypted = std::dynamic_pointer_cast<
-            libcomp::EncryptedConnection>(connection);
-        if(AssignMessageQueue(encrypted))
+        if(AssignMessageQueue(connection))
         {
             connection->ConnectionSuccess();
         }
         else
         {
             connection->Close();
+
             return nullptr;
         }
     }
@@ -346,6 +339,7 @@ std::shared_ptr<libcomp::TcpConnection> WorldServer::CreateConnection(
     {
         /// @todo: send a "connection refused" error message to the client
         connection->Close();
+
         return nullptr;
     }
 

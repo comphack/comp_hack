@@ -132,6 +132,19 @@ bool PatchClient(std::vector<char>& data)
         return false;
     }
 
+    // Patch the character name check.
+    if(!NopRegion(data, 0x00B26CCF, 57))
+    {
+        return false;
+    }
+
+    // Patch the character creation screen to not switch the input method to
+    // hiragana mode when the name input box is selected.
+    if(!NopRegion(data, 0x00B2844C, 8) || !NopRegion(data, 0x00B2849E, 8))
+    {
+        return false;
+    }
+
     // Patch the DH prime.
     memcpy(&data[0x150AD68], DH_PRIME, 256);
 

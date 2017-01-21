@@ -48,9 +48,8 @@ BaseServer::BaseServer(std::shared_ptr<objects::ServerConfig> config, const Stri
     ReadConfig(config, configPath);
 }
 
-bool BaseServer::Initialize(std::weak_ptr<BaseServer>& self)
+bool BaseServer::Initialize()
 {
-    mSelf = self;
     switch(mConfig->GetDatabaseType())
     {
         case objects::ServerConfig::DatabaseType_t::SQLITE3:
@@ -69,7 +68,8 @@ bool BaseServer::Initialize(std::weak_ptr<BaseServer>& self)
     CreateWorkers();
 
     // Add the server as a system manager for libcomp::Message::Init.
-    mMainWorker.AddManager(std::dynamic_pointer_cast<Manager>(mSelf.lock()));
+    mMainWorker.AddManager(std::dynamic_pointer_cast<Manager>(
+        shared_from_this()));
 
     // Get the message queue.
     auto msgQueue = mMainWorker.GetMessageQueue();
@@ -299,7 +299,8 @@ void BaseServer::CreateWorkers()
     }
 }
 
-bool BaseServer::AssignMessageQueue(std::shared_ptr<libcomp::EncryptedConnection>& connection)
+bool BaseServer::AssignMessageQueue(const std::shared_ptr<
+    libcomp::EncryptedConnection>& connection)
 {
     std::shared_ptr<libcomp::Worker> worker = mWorkers.size() != 1
         ? GetNextConnectionWorker() : mWorkers.front();

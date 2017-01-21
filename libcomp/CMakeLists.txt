@@ -298,7 +298,7 @@ TARGET_INCLUDE_DIRECTORIES(comp PRIVATE
 
 TARGET_LINK_LIBRARIES(comp ${OPENSSL_LIBRARIES} ${ZLIB_LIBRARIES}
     ${SYSTEM_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} objgen sqlite3
-    squirrel sqstdlib ttvfs ttvfs_zip tinyxml2 cassandra uv)
+    squirrel sqstdlib ttvfs ttvfs_zip tinyxml2 cassandra uv physfs)
 
 ADD_DEPENDENCIES(comp asio sqrat)
 

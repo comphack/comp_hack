@@ -128,8 +128,8 @@ int TcpServer::Run()
 std::shared_ptr<TcpConnection> TcpServer::CreateConnection(
     asio::ip::tcp::socket& socket)
 {
-    return std::shared_ptr<TcpConnection>(new TcpConnection(socket,
-        CopyDiffieHellman(mDiffieHellman)));
+    return std::make_shared<TcpConnection>(socket,
+        CopyDiffieHellman(mDiffieHellman));
 }
 
 void TcpServer::AcceptHandler(asio::error_code errorCode,

@@ -57,7 +57,8 @@ bool EncryptedConnection::Close()
 {
     if(TcpConnection::Close() && nullptr != mMessageQueue)
     {
-        auto self = mSelf.lock();
+        auto self = shared_from_this();
+
         if(nullptr != self)
         {
             mMessageQueue->Enqueue(new Message::ConnectionClosed(self));
@@ -142,7 +143,7 @@ void EncryptedConnection::SendMessage(const std::function<
     }
 
     // Promote to a shared pointer.
-    std::shared_ptr<libcomp::TcpConnection> self = mSelf.lock();
+    auto self = shared_from_this();
 
     if(!errorFound && this != self.get())
     {
@@ -573,7 +574,7 @@ void EncryptedConnection::ParsePacket(libcomp::Packet& packet,
             }
 
             // Promote to a shared pointer.
-            std::shared_ptr<libcomp::TcpConnection> self = mSelf.lock();
+            auto self = shared_from_this();
 
             if(!errorFound && this != self.get())
             {

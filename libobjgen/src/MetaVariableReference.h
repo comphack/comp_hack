@@ -48,8 +48,11 @@ public:
 
     virtual std::string GetType() const;
 
-    std::string GetReferenceType() const;
+    std::string GetReferenceType(bool includeNamespace = false) const;
     bool SetReferenceType(const std::string& referenceType);
+
+    std::string GetNamespace() const;
+    bool SetNamespace(const std::string& ns);
 
     bool IsPersistentReference() const;
     bool SetPersistentReference(bool persistentReference);
@@ -100,6 +103,7 @@ public:
 
 private:
     std::string mReferenceType;
+    std::string mNamespace;
     uint16_t mDynamicSizeCount;
     bool mPersistentReference;
 

@@ -181,6 +181,26 @@ std::string Generator::GetCapitalName(
     return s;
 }
 
+std::string Generator::GetObjectName(const std::string& fullName)
+{
+    std::string ns;
+    return GetObjectName(fullName, ns);
+}
+
+std::string Generator::GetObjectName(const std::string& fullName,
+    std::string& outNamespace)
+{
+    auto pos = fullName.find_last_of("::");
+    if(pos != fullName.npos)
+    {
+        std::string name = fullName.substr(pos + 1);
+        outNamespace = fullName.substr(0,
+            fullName.length() - (name.length() + 2));
+        return name;
+    }
+    return fullName;
+}
+
 bool Generator::GetXmlAttributeBoolean(const std::string& attr)
 {
     auto lower = attr;

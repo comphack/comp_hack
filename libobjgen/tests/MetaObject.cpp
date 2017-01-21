@@ -57,6 +57,15 @@ TEST(MetaObject, Validate)
     ASSERT_TRUE(obj.SetBaseObject("TestBase"))
         << "Attempting to set a valid base object name.";
 
+    ASSERT_TRUE(obj.SetBaseObject("test::TestBase"))
+        << "Attempting to set a valid base object name with a namespace.";
+
+    ASSERT_FALSE(obj.SetNamespace("2test"))
+        << "Attempting to set an invalid namespace.";
+
+    ASSERT_TRUE(obj.SetNamespace("test2"))
+        << "Attempting to set a valid namespace.";
+
     ASSERT_TRUE(obj.IsValid())
         << "Attempting to validate a derived object with no variables.";
 
@@ -330,6 +339,58 @@ TEST(MetaObjectXmlParser, ScriptEnabledCheck)
     obj->SetScriptEnabled(true);
 
     ASSERT_FALSE(parser.FinalizeObjectAndReferences("Object2"));
+}
+
+TEST(MetaObjectXmlParser, ParseAllObjectAttributes)
+{
+    auto xml = 
+        "<objects>"
+            "<object name='Object1' namespace='ns1' persistent='true'"
+                    " location='test' scriptenabled='true'>"
+                "<member name='Unsigned8' type='u8'/>"
+            "</object>"
+            "<object name='Object2' baseobject='ns1::Object1' persistent='false'/>"
+            "<object name='Object3' namespace='ns2' baseobject='Object2' persistent='false'/>"
+        "</objects>";
+
+    MetaObjectXmlParser parser;
+
+    tinyxml2::XMLDocument doc;
+    doc.Parse(xml);
+
+    const tinyxml2::XMLElement *pObjectXml = doc.RootElement()->FirstChildElement("object");
+
+    while(nullptr != pObjectXml)
+    {
+        ASSERT_TRUE(parser.LoadTypeInformation(doc, *pObjectXml));
+        pObjectXml = pObjectXml->NextSiblingElement("object");
+    }
+
+    ASSERT_TRUE(parser.FinalizeObjectAndReferences("Object1"));
+
+    auto obj1 = parser.GetKnownObject("Object1");
+    auto obj2 = parser.GetKnownObject("Object2");
+    auto obj3 = parser.GetKnownObject("Object3");
+
+    ASSERT_EQ(obj1->GetNamespace(), "ns1");
+    ASSERT_EQ(obj2->GetNamespace(), "objects");
+    ASSERT_EQ(obj3->GetNamespace(), "ns2");
+
+    ASSERT_EQ(obj1->IsPersistent(), true);
+    ASSERT_EQ(obj2->IsPersistent(), false);
+    ASSERT_EQ(obj3->IsPersistent(), false);
+
+    ASSERT_EQ(obj1->GetSourceLocation(), "test");
+    ASSERT_EQ(obj2->GetSourceLocation(), "");
+    ASSERT_EQ(obj3->GetSourceLocation(), "");
+
+    ASSERT_EQ(obj1->IsScriptEnabled(), true);
+    ASSERT_EQ(obj2->IsScriptEnabled(), false);
+    ASSERT_EQ(obj3->IsScriptEnabled(), false);
+
+    ASSERT_EQ(obj1->GetBaseObject(), "");
+    ASSERT_EQ(obj2->GetBaseObject(), "ns1::Object1");
+    ASSERT_EQ(obj3->GetBaseObject(), "objects::Object2");
 }
 
 int main(int argc, char *argv[])

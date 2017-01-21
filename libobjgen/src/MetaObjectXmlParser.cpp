@@ -75,13 +75,19 @@ bool MetaObjectXmlParser::LoadTypeInformation(const tinyxml2::XMLDocument& doc,
     if(nullptr != szTagName && "object" == std::string(szTagName))
     {
         const char *szName = root.Attribute("name");
+        const char *szNamespace = root.Attribute("namespace");
         const char *szBaseObject = root.Attribute("baseobject");
         const char *szPersistent = root.Attribute("persistent");
         const char *szScriptEnabled = root.Attribute("scriptenabled");
 
         if(nullptr != szName && mObject->SetName(szName))
         {
-            if(nullptr != szPersistent && nullptr == szBaseObject)
+            if(nullptr != szNamespace)
+            {
+                mObject->mNamespace = szNamespace;
+            }
+
+            if(nullptr != szPersistent)
             {
                 mObject->mPersistent = Generator::GetXmlAttributeBoolean(
                     szPersistent);
@@ -91,17 +97,14 @@ bool MetaObjectXmlParser::LoadTypeInformation(const tinyxml2::XMLDocument& doc,
                 mObject->mPersistent = nullptr == szBaseObject;
             }
 
-            if(mObject->mPersistent)
+            const char *szLocation = root.Attribute("location");
+            if(nullptr != szLocation)
             {
-                const char *szLocation = root.Attribute("location");
-                if(nullptr != szLocation)
-                {
-                    mObject->SetSourceLocation(szLocation);
-                }
+                mObject->SetSourceLocation(szLocation);
             }
-            else if(nullptr != szBaseObject)
+
+            if(nullptr != szBaseObject)
             {
-                //Objects cannot be both derived and persistent
                 mObject->SetBaseObject(szBaseObject);
             }
 
@@ -114,6 +117,19 @@ bool MetaObjectXmlParser::LoadTypeInformation(const tinyxml2::XMLDocument& doc,
             {
                 mObject->mScriptEnabled = false;
             }
+
+            std::stringstream ss;
+            if(mObject->mPersistent && !mObject->mBaseObject.empty())
+            {
+                ss << "Persistent object has a base object set: " +mObject->mName;
+            }
+            else if(!mObject->mPersistent && !mObject->mSourceLocation.empty())
+            {
+                ss << "Non-persistent object has a source location"
+                    " set: " + mObject->mName;
+            }
+
+            mError = ss.str();
         }
         else
         {
@@ -137,7 +153,6 @@ bool MetaObjectXmlParser::LoadTypeInformation(const tinyxml2::XMLDocument& doc,
     }
 
     bool error = !mError.empty();
-    mError = "Member variables not parsed";
 
     if(error)
     {
@@ -145,6 +160,7 @@ bool MetaObjectXmlParser::LoadTypeInformation(const tinyxml2::XMLDocument& doc,
     }
     else
     {
+        mError = "Member variables not parsed";
         mKnownObjects[mObject->GetName()] = mObject;
         SetXMLDefinition(root);
     }
@@ -277,8 +293,9 @@ bool MetaObjectXmlParser::FinalizeObjectAndReferences(const std::string& object)
             }
         }
 
+        //Check if the base object needs to be loaded
         auto obj = GetKnownObject(objectName);
-        auto baseObject = obj->GetBaseObject();
+        auto baseObject = Generator::GetObjectName(obj->GetBaseObject());
         if(!baseObject.empty() &&
             mFinalizedObjects.find(baseObject) == mFinalizedObjects.end() &&
             requiresLoad.find(baseObject) == requiresLoad.end())
@@ -286,6 +303,7 @@ bool MetaObjectXmlParser::FinalizeObjectAndReferences(const std::string& object)
             requiresLoad.insert(baseObject);
         }
 
+        //Check if the referenced objects need to be loaded
         for(auto var : obj->GetReferences())
         {
             auto ref = std::dynamic_pointer_cast<libobjgen::MetaVariableReference>(var);
@@ -316,7 +334,7 @@ bool MetaObjectXmlParser::FinalizeObjectAndReferences(const std::string& object)
 
     if(mObject->IsScriptEnabled())
     {
-        auto baseObject = mObject->GetBaseObject();
+        auto baseObject = Generator::GetObjectName(mObject->GetBaseObject());
         if(!baseObject.empty() &&
             !GetKnownObject(baseObject)->IsScriptEnabled())
         {
@@ -374,6 +392,8 @@ bool MetaObjectXmlParser::SetReferenceFieldDynamicSizes(
     std::vector<std::shared_ptr<libobjgen::MetaVariableReference>> remaining
         { std::begin(refs), std::end(refs) };
 
+    // Loop through and keep updating until we remaining is empty or nothing
+    // more can be updated.
     int updated;
     do
     {
@@ -616,14 +636,29 @@ std::shared_ptr<MetaVariable> MetaObjectXmlParser::GetVariable(const tinyxml2::X
         {
             auto ref = std::dynamic_pointer_cast<MetaVariableReference>(var);
 
+            auto ns = pMember->Attribute("namespace");
+            if(ns)
+            {
+                ref->SetNamespace(ns);
+            }
+
             auto refType = ref->GetReferenceType();
             bool persistentRefType = false;
 
             if(mKnownObjects.find(refType) == mKnownObjects.end())
             {
                 std::stringstream ss;
-                ss << "Unknown reference type '" << refType << "' on field  '"
-                    << szMemberName << "' in object '" << szName << "'.";
+                ss << "Unknown reference type '" << refType << "' encountered"
+                    " on field '" << szMemberName << "' in object '" << szName << "'.";
+
+                mError = ss.str();
+            }
+            else if(mKnownObjects[refType]->GetNamespace() != ref->GetNamespace())
+            {
+                std::stringstream ss;
+                ss << "Reference type '" << refType << "' with invalid namespace "
+                    " encountered on field '" << szMemberName << "' in object '"
+                    << szName << "'.";
 
                 mError = ss.str();
             }
@@ -634,8 +669,9 @@ std::shared_ptr<MetaVariable> MetaObjectXmlParser::GetVariable(const tinyxml2::X
                 if(!persistentRefType && mKnownObjects[szName]->IsPersistent())
                 {
                     std::stringstream ss;
-                    ss << "Non-peristent reference type '" << refType << "' on field  '"
-                        << szMemberName << "' in persistent object '" << szName << "'.";
+                    ss << "Non-peristent reference type '" << refType << "' encountered"
+                        " on field '" << szMemberName << "' in persistent object '"
+                        << szName << "'.";
 
                     mError = ss.str();
                 }

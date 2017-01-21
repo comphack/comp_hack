@@ -799,6 +799,9 @@ TEST(MetaVariableType, Reference)
     ASSERT_TRUE(var.SetReferenceType("ValidReference"))
         << "Setting a validly named reference type.";
 
+    ASSERT_TRUE(var.SetNamespace("ValidNamespace"))
+        << "Setting a validly named namespace.";
+
     var.SetPersistentReference(false);
 
     auto defaultedVar = std::shared_ptr<MetaVariable>(
@@ -822,6 +825,8 @@ TEST(MetaVariableType, Reference)
     ASSERT_TRUE(copy.Load(ss));
 
     ASSERT_EQ(var.GetName(), copy.GetName());
+    ASSERT_EQ(var.GetReferenceType(), copy.GetReferenceType());
+    ASSERT_EQ(var.GetNamespace(), copy.GetNamespace());
     ASSERT_EQ(var.IsPersistentReference(), copy.IsPersistentReference());
     ASSERT_EQ(var.GetDefaultedVariables().size(), copy.GetDefaultedVariables().size());
 
@@ -835,6 +840,8 @@ TEST(MetaVariableType, Reference)
     ASSERT_TRUE(copy.Load(doc, *root->FirstChildElement()));
 
     ASSERT_EQ(var.GetName(), copy.GetName());
+    ASSERT_EQ(var.GetReferenceType(), copy.GetReferenceType());
+    ASSERT_EQ(var.GetNamespace(), copy.GetNamespace());
     ASSERT_EQ(var.IsPersistentReference(), copy.IsPersistentReference());
     ASSERT_EQ(var.GetDefaultedVariables().size(), copy.GetDefaultedVariables().size());
 }

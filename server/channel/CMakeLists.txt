@@ -99,6 +99,7 @@ SET(${PROJECT_NAME}_PACKETS
     src/packets/game/Move.cpp                # 0x001C
     src/packets/game/Chat.cpp                # 0x0026
     src/packets/game/ActivateSkill.cpp       # 0x0030
+    src/packets/game/Chat.cpp                # 0x0026
     src/packets/game/KeepAlive.cpp           # 0x0056
     src/packets/game/FixObjectPosition.cpp   # 0x0058
     src/packets/game/State.cpp               # 0x005A

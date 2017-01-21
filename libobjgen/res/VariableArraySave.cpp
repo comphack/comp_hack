@@ -1,6 +1,6 @@
 ([&]() -> bool
 {
-    for(auto& value : @VAR_NAME@)
+    for(auto& element : @VAR_NAME@)
     {
         if(!(@VAR_SAVE_CODE@))
         {

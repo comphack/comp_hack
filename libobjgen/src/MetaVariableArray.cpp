@@ -265,7 +265,7 @@ std::string MetaVariableArray::GetLoadCode(const Generator& generator,
     if(mElementType && MetaObject::IsValidIdentifier(name) &&
         MetaObject::IsValidIdentifier(stream))
     {
-        code = mElementType->GetLoadCode(generator, "value", stream);
+        code = mElementType->GetLoadCode(generator, "element", stream);
 
         if(!code.empty())
         {
@@ -292,7 +292,7 @@ std::string MetaVariableArray::GetSaveCode(const Generator& generator,
     if(mElementType && MetaObject::IsValidIdentifier(name) &&
         MetaObject::IsValidIdentifier(stream))
     {
-        code = mElementType->GetSaveCode(generator, "value", stream);
+        code = mElementType->GetSaveCode(generator, "element", stream);
 
         if(!code.empty())
         {
@@ -319,7 +319,7 @@ std::string MetaVariableArray::GetLoadRawCode(const Generator& generator,
     if(mElementType && MetaObject::IsValidIdentifier(name) &&
         MetaObject::IsValidIdentifier(stream))
     {
-        code = mElementType->GetLoadRawCode(generator, "value", stream);
+        code = mElementType->GetLoadRawCode(generator, "element", stream);
 
         if(!code.empty())
         {
@@ -346,7 +346,7 @@ std::string MetaVariableArray::GetSaveRawCode(const Generator& generator,
     if(mElementType && MetaObject::IsValidIdentifier(name) &&
         MetaObject::IsValidIdentifier(stream))
     {
-        code = mElementType->GetSaveRawCode(generator, "value", stream);
+        code = mElementType->GetSaveRawCode(generator, "element", stream);
 
         if(!code.empty())
         {

@@ -4,17 +4,17 @@
         <member type="Character*" name="Character"/>
         
         <!-- Calculated Stats -->
-        <member type="u16" name="STR"/>
-        <member type="u16" name="MAGIC"/>
-        <member type="u16" name="VIT"/>
-        <member type="u16" name="INTEL"/>
-        <member type="u16" name="SPEED"/>
-        <member type="u16" name="LUCK"/>
-        <member type="u16" name="CLSR"/>
-        <member type="u16" name="LNGR"/>
-        <member type="u16" name="SPELL"/>
-        <member type="u16" name="SUPPORT"/>
-        <member type="u16" name="PDEF"/>
-        <member type="u16" name="MDEF"/>
+        <member type="s16" name="STR"/>
+        <member type="s16" name="MAGIC"/>
+        <member type="s16" name="VIT"/>
+        <member type="s16" name="INTEL"/>
+        <member type="s16" name="SPEED"/>
+        <member type="s16" name="LUCK"/>
+        <member type="s16" name="CLSR"/>
+        <member type="s16" name="LNGR"/>
+        <member type="s16" name="SPELL"/>
+        <member type="s16" name="SUPPORT"/>
+        <member type="s16" name="PDEF"/>
+        <member type="s16" name="MDEF"/>
     </object>
 </objgen>

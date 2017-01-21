@@ -32,6 +32,9 @@
 
 using namespace libcomp;
 
+// I don't care to see these anymore.
+#undef COMP_HACK_DEBUG
+
 TcpConnection::TcpConnection(asio::io_service& io_service) :
     mSocket(io_service), mDiffieHellman(nullptr), mStatus(
     TcpConnection::STATUS_NOT_CONNECTED), mRole(TcpConnection::ROLE_CLIENT),
@@ -313,7 +316,9 @@ void TcpConnection::FlushOutgoing(bool closeConnection)
                 // Ignore errors and everything else, just close the connection.
                 if(closeConnection)
                 {
+#ifdef COMP_HACK_DEBUG
                     LOG_DEBUG("Closing connection after sending packet.\n");
+#endif // COMP_HACK_DEBUG
 
                     SocketError();
                     return;

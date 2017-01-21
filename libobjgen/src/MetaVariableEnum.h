@@ -48,8 +48,10 @@ public:
     std::string GetUnderlyingType() const;
     void SetUnderlyingType(const std::string& underlyingType);
 
-    const std::vector<std::string> GetValues() const;
-    bool SetValues(const std::vector<std::string>& values);
+    const std::vector<std::pair<std::string, std::string>>
+        GetValues() const;
+    bool SetValues(const std::vector<std::pair<std::string,
+        std::string>>& values);
 
     virtual size_t GetSize() const;
 
@@ -100,12 +102,13 @@ public:
     virtual std::string GetUtilityFunctions(const Generator& generator,
         const MetaObject& object, const std::string& name) const;
 
-    bool ValueExists(const std::string& val) const;
-
 private:
-    bool ContainsDupilicateValues(const std::vector<std::string>& values) const;
+    bool NumericValueIsValid(const std::string& num) const;
+    bool ValueExists(const std::string& val, bool first) const;
+    bool ContainsDuplicateValues(const std::vector<std::pair<std::string,
+        std::string>>& values) const;
 
-    std::vector<std::string> mValues;
+    std::vector<std::pair<std::string, std::string>> mValues;
     std::string mTypePrefix;
     std::string mDefaultValue;
     std::string mUnderlyingType;

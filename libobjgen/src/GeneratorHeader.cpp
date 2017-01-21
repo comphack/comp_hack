@@ -30,6 +30,7 @@
 #include "MetaObject.h"
 #include "MetaVariable.h"
 #include "MetaVariableEnum.h"
+#include "MetaVariableReference.h"
 
 // Standard C++11 Includes
 #include <algorithm>
@@ -41,9 +42,11 @@ std::string GeneratorHeader::GenerateClass(const MetaObject& obj)
 {
     std::stringstream ss;
     ss << "class " << obj.GetName() << " : public ";
-    if(!obj.GetBaseObject().empty())
+
+    auto baseObject = obj.GetBaseObject();
+    if(!baseObject.empty())
     {
-        ss << "objects::" + obj.GetBaseObject() << std::endl;
+        ss << baseObject << std::endl;
     }
     else if(obj.IsPersistent())
     {
@@ -190,7 +193,7 @@ std::string GeneratorHeader::Generate(const MetaObject& obj)
     ss << "#include <Convert.h>" << std::endl;
     ss << "#include <CString.h>" << std::endl;
 
-    std::set<std::string> references = obj.GetReferencesTypes();
+    auto references = obj.GetReferencesTypes(true);
     if(references.size() > 0)
     {
         ss << "#include <ObjectReference.h>" << std::endl;
@@ -198,7 +201,8 @@ std::string GeneratorHeader::Generate(const MetaObject& obj)
 
     if(!obj.GetBaseObject().empty())
     {
-        ss << "#include <" + obj.GetBaseObject() + ".h>" << std::endl;
+        ss << "#include <" + Generator::GetObjectName(obj.GetBaseObject())
+            + ".h>" << std::endl;
     }
     else if(obj.IsPersistent())
     {
@@ -224,35 +228,57 @@ std::string GeneratorHeader::Generate(const MetaObject& obj)
     ss << "#include <PopIgnore.h>" << std::endl;
     ss << std::endl;
 
-    if(!references.empty())
+    auto objNamespace = obj.GetNamespace();
+    if(references.size() > 0)
     {
-        ss << "namespace objects" << std::endl;
+        ss << "namespace " << objNamespace << std::endl;
         ss << "{" << std::endl;
         ss << std::endl;
 
         ss << "// Forward Declare the Object" << std::endl;
         ss << "class " << obj.GetName() << ";" << std::endl;
+
+        ss << std::endl;
+        ss << "} // namespace " << objNamespace << std::endl;
         ss << std::endl;
 
         ss << "// Referenced Objects" << std::endl;
 
+        std::unordered_map<std::string, std::set<std::string>> refsByNamespace;
         for(auto ref : references)
         {
-            ss << "class " << ref << ";" << std::endl;
+            std::string ns;
+            std::string refName = Generator::GetObjectName(ref, ns);
+            refsByNamespace[!ns.empty() ? ns : "objects"]
+                .insert(refName);
         }
 
-        ss << std::endl;
-        ss << "} // namespace objects" << std::endl;
-        ss << std::endl;
+        for(auto pair : refsByNamespace)
+        {
+            auto refNamespace = pair.first;
+
+            ss << "namespace " << refNamespace << std::endl;
+            ss << "{" << std::endl;
+            ss << std::endl;
+
+            for(auto ref : pair.second)
+            {
+                ss << "class " << ref << ";" << std::endl;
+            }
+
+            ss << std::endl;
+            ss << "} // namespace " << refNamespace << std::endl;
+            ss << std::endl << std::endl;
+        }
     }
 
-    ss << "namespace objects" << std::endl;
+    ss << "namespace " << objNamespace << std::endl;
     ss << "{" << std::endl;
     ss << std::endl;
 
     ss << GenerateClass(obj) << std::endl;
 
-    ss << "} // namespace objects" << std::endl;
+    ss << "} // namespace " << objNamespace << std::endl;
     ss << std::endl;
 
     ss << "#endif // " << headerDefine << std::endl;

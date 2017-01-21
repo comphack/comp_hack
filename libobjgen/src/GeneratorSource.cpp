@@ -63,7 +63,7 @@ std::string GeneratorSource::Generate(const MetaObject& obj)
     }
     ss << std::endl;
 
-    std::set<std::string> references = obj.GetReferencesTypes();
+    std::set<std::string> references = obj.GetReferencesTypes(true);
 
     if(!references.empty())
     {
@@ -71,13 +71,14 @@ std::string GeneratorSource::Generate(const MetaObject& obj)
 
         for(auto ref : references)
         {
-            ss << "#include <" << ref << ".h>" << std::endl;
+            ss << "#include <" << Generator::GetObjectName(ref) <<
+                ".h>" << std::endl;
         }
 
         ss << std::endl;
     }
 
-    ss << "using namespace objects;" << std::endl;
+    ss << "using namespace " << obj.GetNamespace() << ";" << std::endl;
     ss << std::endl;
 
     // Constructor
@@ -86,7 +87,7 @@ std::string GeneratorSource::Generate(const MetaObject& obj)
     auto baseObject = obj.GetBaseObject();
     if(!baseObject.empty())
     {
-        ss << "objects::" + baseObject + "()" << std::endl;
+        ss << baseObject + "()" << std::endl;
     }
     else if(obj.IsPersistent())
     {
@@ -555,6 +556,6 @@ bool GeneratorSource::GeneratePersistentObjectFunctions(const MetaObject& obj,
 std::string GeneratorSource::GetBaseBooleanReturnValue(const MetaObject& obj,
     std::string function, std::string defaultValue)
 {
-    return !obj.GetBaseObject().empty() ? ("objects::" + obj.GetBaseObject() +
-        "::" + function) : defaultValue;
+    std::string baseObject = obj.GetBaseObject();
+    return !baseObject.empty() ? (baseObject + "::" + function) : defaultValue;
 }

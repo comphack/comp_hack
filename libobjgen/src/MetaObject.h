@@ -57,6 +57,9 @@ public:
     std::string GetName() const;
     bool SetName(const std::string& name);
 
+    std::string GetNamespace() const;
+    bool SetNamespace(const std::string& ns);
+
     std::string GetBaseObject() const;
     bool SetBaseObject(const std::string& name);
 
@@ -87,7 +90,8 @@ public:
     bool Save(tinyxml2::XMLDocument& doc,
         tinyxml2::XMLElement& root) const;
 
-    std::set<std::string> GetReferencesTypes() const;
+    std::set<std::string> GetReferencesTypes(
+        bool includeNamespace = false) const;
     std::list<std::shared_ptr<MetaVariable>> GetReferences() const;
 
 private:
@@ -95,6 +99,7 @@ private:
         std::list<std::shared_ptr<MetaVariable>>& references) const;
 
     std::string mName;
+    std::string mNamespace;
     std::string mBaseObject;
     bool mScriptEnabled;
     bool mPersistent;

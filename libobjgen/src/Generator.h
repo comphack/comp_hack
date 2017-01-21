@@ -67,6 +67,11 @@ public:
     static std::string GetCapitalName(
         const std::shared_ptr<MetaVariable>& var);
 
+    static std::string GetObjectName(
+        const std::string& fullName);
+    static std::string GetObjectName(
+        const std::string& fullName, std::string& outNamespace);
+
     static bool GetXmlAttributeBoolean(const std::string& attr);
 
     static std::string Escape(const std::string& str);

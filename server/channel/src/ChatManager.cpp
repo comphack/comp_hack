@@ -91,8 +91,6 @@ bool ChatManager::SendChatMessage(const std::shared_ptr<
     reply.WriteU16Little((uint16_t)(message.Size() + 1));
     reply.WriteArray(message.C(), (uint32_t)(message.Size()));
     reply.WriteBlank((uint32_t)(81 - message.Size()));
-    reply.WriteArray(message.C(), message.Size());
-    reply.WriteBlank(81 - message.Size());
 
     switch(visibility)
     {

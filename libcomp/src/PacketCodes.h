@@ -68,7 +68,8 @@ enum class ChannelClientPacketCode_t : uint16_t
     PACKET_SEND_DATA = 0x0004,  //!< The client is requesting data from the server.
     PACKET_LOGOUT = 0x0005,  //!< Logout request from the client.
     PACKET_LOGOUT_RESPONSE = 0x0009,  //!< Logout response to the client.
-    PACKET_CHARACTER_DATA_RESPONSE = 0x000F,  //!< Response to the client containing all sorts of character data.
+    PACKET_CHARACTER_DATA = 0x000F,  //!< Message to the client containing all sorts of character data.
+    PACKET_SHOW_CHARACTER = 0x001A,  //!< Message to the client to display a character.
     PACKET_ZONE_CHANGE = 0x0023,  //!< Information about a character's zone for the client.
     PACKET_CHAT = 0x0026, //!< Client request to add a message to the chat or process a GM command.
     PACKET_CHAT_RESPONSE = 0x0028, //!< Client response from chat request.
@@ -77,7 +78,7 @@ enum class ChannelClientPacketCode_t : uint16_t
     PACKET_STATE = 0x005A,  //!< Client request for their character state.
     PACKET_SYNC = 0x00F3,  //!< Client request to retrieve the server time.
     PACKET_SYNC_RESPONSE = 0x00F4,  //!< Response to client containing the server time.
-    PACKET_STATUS_ICON_RESPONSE = 0x0195,  //!< Response to client containing the icon to show for the character.
+    PACKET_STATUS_ICON = 0x0195,  //!< Message to the client containing the icon to show for the character.
 
     PACKET_CONFIRMATION = 0x1FFF,  //!< Generic confirmation response to the client.
 };

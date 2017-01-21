@@ -213,12 +213,18 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     AccountLogin.cpp
     Character.h
     Character.cpp
+    CharacterProgress.h
+    CharacterProgress.cpp
     DatabaseConfig.h
     DatabaseConfig.cpp
     DatabaseConfigCassandra.h
     DatabaseConfigCassandra.cpp
     DatabaseConfigSQLite3.h
     DatabaseConfigSQLite3.cpp
+    Demon.h
+    Demon.cpp
+    EntityStats.h
+    EntityStats.cpp
     PacketLogin.h
     PacketLogin.cpp
     PacketResponseCode.h

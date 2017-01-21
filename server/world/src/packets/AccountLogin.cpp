@@ -66,9 +66,9 @@ void LobbyLogin(std::shared_ptr<WorldServer> server,
     else
     {
         auto cid = login->GetCID();
-        auto charactersByCID = account->GetCharactersByCID();
-        if(charactersByCID.find(cid) == charactersByCID.end() ||
-            nullptr == charactersByCID[cid].Get(worldDB))
+        auto characters = account->GetCharacters();
+        if(characters[cid].IsNull() ||
+            nullptr == characters[cid].Get(worldDB))
         {
             LOG_ERROR(libcomp::String("Character ID '%1' is not valid"
                 " for this world.\n").Arg(cid));

@@ -39,6 +39,7 @@
 // object Includes
 #include <Account.h>
 #include <Character.h>
+#include <EntityStats.h>
 
 // Lobby Includes
 #include "LobbyClientConnection.h"
@@ -74,27 +75,40 @@ bool Parsers::CharacterList::Parse(libcomp::ManagerPacket *pPacketManager,
     std::list<std::shared_ptr<objects::Character>> characters;
     for(auto world : server->GetWorlds())
     {
+        if(world->GetRegisteredWorld()->GetStatus()
+            == objects::RegisteredWorld::Status_t::INACTIVE) continue;
+
         auto worldDB = world->GetWorldDatabase();
         auto characterList = objects::Character::LoadCharacterListByAccount(worldDB, account);
         for(auto character : characterList)
         {
-            characters.push_back(character);
+            if(!character->LoadCoreStats(worldDB))
+            {
+                LOG_ERROR(libcomp::String("Character CID %1 could not be loaded fully.\n")
+                    .Arg(character->GetCID()));
+            }
+            else
+            {
+                characters.push_back(character);
+            }
         }
     }
+    characters.sort([](const std::shared_ptr<objects::Character>& a,
+        const std::shared_ptr<objects::Character>& b) { return a->GetCID() < b->GetCID(); });
 
-    //Correct the character map if needed
+    //Correct the character array if needed
     if(characters.size() > 0)
     {
-        auto charactersByCID = account->GetCharactersByCID();
+        auto accountCharacters = account->GetCharacters();
 
         bool updated = false;
         for(auto character : characters)
         {
             auto cid = character->GetCID();
-            auto existing = charactersByCID.find(cid);
-            if(existing != charactersByCID.end())
+            auto existing = accountCharacters[cid].Get();
+            if(existing != nullptr)
             {
-                if(existing->second.GetUUID() != character->GetUUID())
+                if(existing->GetUUID() != character->GetUUID())
                 {
                     LOG_ERROR(libcomp::String("Duplicate CID %1 encountered for account %2\n")
                         .Arg(cid)
@@ -106,13 +120,13 @@ bool Parsers::CharacterList::Parse(libcomp::ManagerPacket *pPacketManager,
                     continue;
                 }
             }
-            charactersByCID[cid] = character;
+            accountCharacters[cid] = character;
             updated = true;
         }
 
         if(updated)
         {
-            account->SetCharactersByCID(charactersByCID);
+            account->SetCharacters(accountCharacters);
             if(!account->Update(lobbyDB))
             {
                 LOG_ERROR(libcomp::String("Account character map failed to save %1\n")
@@ -127,6 +141,8 @@ bool Parsers::CharacterList::Parse(libcomp::ManagerPacket *pPacketManager,
 
     for(auto character : characters)
     {
+        auto stats = character->GetCoreStats();
+
         // Character ID.
         reply.WriteU8(character->GetCID());
 
@@ -150,7 +166,7 @@ bool Parsers::CharacterList::Parse(libcomp::ManagerPacket *pPacketManager,
         reply.WriteS8(-1);
 
         // Level.
-        reply.WriteU8(character->GetLevel());
+        reply.WriteU8(stats->GetLevel());
 
         // Skin type.
         reply.WriteU8(character->GetSkinType());
@@ -173,16 +189,28 @@ bool Parsers::CharacterList::Parse(libcomp::ManagerPacket *pPacketManager,
         // Right eye color.
         reply.WriteU8(character->GetRightEyeColor());
 
-        // Unkown values.
+        // Unknown values.
         reply.WriteU8(0);
         reply.WriteU8(1);
 
         // Equipment
-        for(int z = 0; z < 15; z++)
+        for(size_t i = 0; i < 15; i++)
         {
-            // None.
-            reply.WriteU32Little(0x7FFFFFFF);
+            uint32_t equip = character->GetEquippedItems(i);
+
+            if(equip != 0)
+            {
+                reply.WriteU32Little(equip);
+            }
+            else
+            {
+                // None.
+                reply.WriteU32Little(0x7FFFFFFF);
+            }
         }
+
+        // Unknown value
+        reply.WriteBlank(4);
     }
 
     connection->SendPacket(reply);

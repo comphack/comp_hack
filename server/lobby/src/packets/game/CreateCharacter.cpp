@@ -37,6 +37,9 @@
 // object Includes
 #include <Account.h>
 #include <Character.h>
+#include <CharacterProgress.h>
+#include <EntityStats.h>
+#include <MiItemBasicData.h>
 
 // lobby Includes
 #include "LobbyClientConnection.h"
@@ -76,12 +79,12 @@ bool Parsers::CreateCharacter::Parse(libcomp::ManagerPacket *pPacketManager,
     auto world = server->GetWorldByID(worldID);
     auto worldDB = world->GetWorldDatabase();
     auto account = lobbyConnection->GetClientState()->GetAccount().Get();
-    auto charactersByCID = account->GetCharactersByCID();
+    auto characters = account->GetCharacters();
 
     uint8_t nextCID = 0;
-    for(size_t i = 0; i < charactersByCID.size(); i++)
+    for(size_t i = 0; i < characters.size(); i++)
     {
-        if(charactersByCID.find(nextCID) == charactersByCID.end())
+        if(characters[nextCID].IsNull())
         {
             break;
         }
@@ -118,32 +121,49 @@ bool Parsers::CreateCharacter::Parse(libcomp::ManagerPacket *pPacketManager,
     character->SetRightEyeColor((uint8_t)eyeColor);
     character->SetAccount(account);
 
-    /// @todo
-    (void)equipTop;
-    (void)equipBottom;
-    (void)equipFeet;
-    (void)equipComp;
-    (void)equipWeapon;
+    character->SetEquippedItems(
+        (size_t)objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_TOP, equipTop);
+    character->SetEquippedItems(
+        (size_t)objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_BOTTOM, equipBottom);
+    character->SetEquippedItems(
+        (size_t)objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_FEET, equipFeet);
+    character->SetEquippedItems(
+        (size_t)objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_COMP, equipComp);
+    character->SetEquippedItems(
+        (size_t)objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_WEAPON, equipWeapon);
 
-    if(!character->Register(character) || !character->Insert(worldDB))
-    {
-        LOG_DEBUG("Character failed to save.\n");
-        return false;
-    }
-
-    charactersByCID[character->GetCID()] = character;
-    account->SetCharactersByCID(charactersByCID);
-    if (!account->Update(lobbyDB))
-    {
-        LOG_ERROR(libcomp::String("Account character map failed to save for account %1\n")
-            .Arg(account->GetUUID().ToString()));
-        return false;
-    }
+    //Set some defaults
+    auto stats = libcomp::PersistentObject::New<objects::EntityStats>();
+    auto progress = libcomp::PersistentObject::New<objects::CharacterProgress>();
 
     libcomp::Packet reply;
     reply.WritePacketCode(
         LobbyClientPacketCode_t::PACKET_CREATE_CHARACTER_RESPONSE);
-    reply.WriteU32Little(0);
+
+    if(!stats->Register(stats) || !stats->Insert(worldDB) || 
+        !progress->Register(progress) || !progress->Insert(worldDB) ||
+        !character->SetCoreStats(stats) || !character->SetProgress(progress) ||
+        !character->Register(character) || !character->Insert(worldDB))
+    {
+        LOG_DEBUG("Character failed to save.\n");
+        reply.WriteU32Little(1);
+    }
+    else
+    {
+        characters[character->GetCID()] = character;
+        account->SetCharacters(characters);
+
+        if(!account->Update(lobbyDB))
+        {
+            LOG_ERROR(libcomp::String("Account character array failed to save for account %1\n")
+                .Arg(account->GetUUID().ToString()));
+            reply.WriteU32Little(1);
+        }
+        else
+        {
+            reply.WriteU32Little(0);
+        }
+    }
 
     connection->SendPacket(reply);
 

@@ -28,6 +28,7 @@
 
 // objects Includes
 #include <Character.h>
+#include <EntityStats.h>
 
 using namespace channel;
 
@@ -42,24 +43,25 @@ CharacterState::~CharacterState()
 bool CharacterState::RecalculateStats()
 {
     auto c = GetCharacter().Get();
+    auto cs = c->GetCoreStats();
 
     if(nullptr == c)
     {
         return false;
     }
 
-    SetSTR(c->GetSTR());
-    SetMAGIC(c->GetMAGIC());
-    SetVIT(c->GetVIT());
-    SetINTEL(c->GetINTEL());
-    SetSPEED(c->GetSPEED());
-    SetLUCK(c->GetLUCK());
-    SetCLSR(c->GetCLSR());
-    SetLNGR(c->GetLNGR());
-    SetSPELL(c->GetSPELL());
-    SetSUPPORT(c->GetSUPPORT());
-    SetPDEF(c->GetPDEF());
-    SetMDEF(c->GetMDEF());
+    SetSTR(cs->GetSTR());
+    SetMAGIC(cs->GetMAGIC());
+    SetVIT(cs->GetVIT());
+    SetINTEL(cs->GetINTEL());
+    SetSPEED(cs->GetSPEED());
+    SetLUCK(cs->GetLUCK());
+    SetCLSR(cs->GetCLSR());
+    SetLNGR(cs->GetLNGR());
+    SetSPELL(cs->GetSPELL());
+    SetSUPPORT(cs->GetSUPPORT());
+    SetPDEF(cs->GetPDEF());
+    SetMDEF(cs->GetMDEF());
 
     /// @todo: transform stats
 

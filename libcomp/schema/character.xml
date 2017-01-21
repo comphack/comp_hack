@@ -1,13 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <objgen>
     <object name="Character" location="world">
-        <!-- Basic Information -->
         <member type="string" name="Name" size="32"/>
         <member type="Account*" name="Account" key="true" unique="false"/>
-        <member type="u8" name="CID" caps="true"/>
+        <member type="u8" name="CID" caps="true" max="19"/>
         <member type="u8" name="WorldID"/>
         <member type="u32" name="KillTime"/>
-        <member type="enum" name="Gender" underlying="int8_t" default="MALE">
+
+        <!-- Character Customization -->
+        <member type="enum" name="Gender" underlying="int8_t">
             <value>MALE</value>
             <value>FEMALE</value>
         </member>
@@ -19,13 +20,28 @@
         <member type="u8" name="LeftEyeColor"/>
         <member type="u8" name="RightEyeColor"/>
         
-        <!-- Leveling/Alignment -->
-        <member type="u8" name="Level" default="1"/>
-        <member type="u64" name="XP" caps="true"/>
+        <!-- Character specific attributes -->
         <member type="s16" name="LNC" caps="true"/>
         <member type="u32" name="Points"/>
-        
-        <!-- Stats -->
+
+        <!-- Collections -->
+        <member type="array" name="EquippedItems" size="15">
+            <element type="u32"/>
+        </member>
+        <member type="array" name="Materials" size="52">
+            <element type="u32"/>
+        </member>
+        <member type="array" name="COMP" caps="true" size="10">
+            <element type="Demon*"/>
+        </member>
+
+        <!-- Sub-sections -->
+        <member type="EntityStats*" name="CoreStats"/>
+        <member type="CharacterProgress*" name="Progress"/>
+    </object>
+    <object name="EntityStats" location="world">
+        <member type="u8" name="Level" default="1"/>
+        <member type="u64" name="XP" caps="true"/>
         <member type="u16" name="HP" caps="true" default="73"/>
         <member type="u16" name="MP" caps="true" default="11"/>
         <member type="u16" name="MaxHP" default="73"/>
@@ -42,5 +58,22 @@
         <member type="u16" name="SUPPORT" caps="true"/>
         <member type="u16" name="PDEF" caps="true"/>
         <member type="u16" name="MDEF" caps="true"/>
+    </object>
+    <object name="CharacterProgress" location="world">
+        <member type="array" name="Maps" size="32">
+            <element type="u8"/>
+        </member>
+        <member type="array" name="Plugins" size="32">
+            <element type="u8"/>
+        </member>
+        <member type="array" name="Valuables" size="64">
+            <element type="u8"/>
+        </member>
+        <member type="array" name="DevilBook" size="512">
+            <element type="u8"/>
+        </member>
+        <member type="array" name="CompletedQuests" size="512">
+            <element type="u8"/>
+        </member>
     </object>
 </objgen>

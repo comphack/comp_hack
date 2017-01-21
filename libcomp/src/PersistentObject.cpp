@@ -36,12 +36,16 @@
 // All libcomp PersistentObject Includes
 #include "Account.h"
 #include "Character.h"
+#include "CharacterProgress.h"
+#include "Demon.h"
+#include "EntityStats.h"
 #include "RegisteredChannel.h"
 #include "RegisteredWorld.h"
 
 using namespace libcomp;
 
 std::unordered_map<std::string, std::weak_ptr<PersistentObject>> PersistentObject::sCached;
+std::mutex PersistentObject::mCacheLock;
 PersistentObject::TypeMap PersistentObject::sTypeMap;
 std::unordered_map<std::type_index, std::function<PersistentObject*()>> PersistentObject::sFactory;
 
@@ -60,6 +64,8 @@ PersistentObject::~PersistentObject()
 {
     if(!mUUID.IsNull() && !IsDeleted())
     {
+        std::lock_guard<std::mutex> lock(mCacheLock);
+
         std::string strUUID = mUUID.ToString();
         if(sCached.find(strUUID) != sCached.end())
         {
@@ -86,6 +92,7 @@ bool PersistentObject::Register(const std::shared_ptr<PersistentObject>& self)
 
         libobjgen::UUID& uuid = self->mUUID;
 
+        std::lock_guard<std::mutex> lock(mCacheLock);
         if(uuid.IsNull())
         {
             uuid = libobjgen::UUID::Random();
@@ -119,6 +126,9 @@ bool PersistentObject::Register(const std::shared_ptr<PersistentObject>& self)
 void PersistentObject::Unregister()
 {
     mDeleted = true;
+
+    std::lock_guard<std::mutex> lock(mCacheLock);
+
     auto iter = sCached.find(mUUID.ToString());
     if(iter != sCached.end())
     {
@@ -133,6 +143,8 @@ bool PersistentObject::IsDeleted()
 
 std::shared_ptr<PersistentObject> PersistentObject::GetObjectByUUID(const libobjgen::UUID& uuid)
 {
+    std::lock_guard<std::mutex> lock(mCacheLock);
+
     auto iter = sCached.find(uuid.ToString());
     if(iter != sCached.end())
     {
@@ -276,6 +288,12 @@ bool PersistentObject::Initialize()
         []() {  return (PersistentObject*)new objects::Account(); });
     RegisterType(typeid(objects::Character), objects::Character::GetMetadata(),
         []() {  return (PersistentObject*)new objects::Character(); });
+    RegisterType(typeid(objects::CharacterProgress), objects::CharacterProgress::GetMetadata(),
+        []() {  return (PersistentObject*)new objects::CharacterProgress(); });
+    RegisterType(typeid(objects::Demon), objects::Demon::GetMetadata(),
+        []() {  return (PersistentObject*)new objects::Demon(); });
+    RegisterType(typeid(objects::EntityStats), objects::EntityStats::GetMetadata(),
+        []() {  return (PersistentObject*)new objects::EntityStats(); });
     RegisterType(typeid(objects::RegisteredChannel), objects::RegisteredChannel::GetMetadata(),
         []() {  return (PersistentObject*)new objects::RegisteredChannel(); });
     RegisterType(typeid(objects::RegisteredWorld), objects::RegisteredWorld::GetMetadata(),

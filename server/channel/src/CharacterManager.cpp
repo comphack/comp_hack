@@ -31,6 +31,7 @@
 
 // object Includes
 #include <Character.h>
+#include <EntityStats.h>
 
 using namespace channel;
 
@@ -48,9 +49,10 @@ void CharacterManager::SendCharacterData(const std::shared_ptr<
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
     auto c = cState->GetCharacter().Get();
+    auto cs = c->GetCoreStats().Get();
 
     libcomp::Packet reply;
-    reply.WritePacketCode(ChannelClientPacketCode_t::PACKET_CHARACTER_DATA_RESPONSE);
+    reply.WritePacketCode(ChannelClientPacketCode_t::PACKET_CHARACTER_DATA);
 
     reply.WriteU32Little((uint32_t)c->GetCID());    /// @todo: replace with unique entity ID
     reply.WriteString16Little(libcomp::Convert::ENCODING_CP932,
@@ -68,62 +70,65 @@ void CharacterManager::SendCharacterData(const std::shared_ptr<
     reply.WriteU8(0x00); // Unknown
     reply.WriteU8(0x01); // Unknown
 
-    /// @todo: equipment
-    for(int z = 0; z < 15; z++)
+    for(size_t i = 0; i < 15; i++)
     {
-        /*uint32_t equip = c->equip(z);
+        uint32_t equip = c->GetEquippedItems(i);
 
         if(equip != 0)
+        {
             reply.WriteU32Little(equip);
-        else*/
+        }
+        else
+        {
             reply.WriteU32Little(0xFFFFFFFF);
+        }
     }
 
     //Character status
-    reply.WriteU16Little(c->GetMaxHP());
-    reply.WriteU16Little(c->GetMaxMP());
-    reply.WriteU16Little(c->GetHP());
-    reply.WriteU16Little(c->GetMP());
-    reply.WriteU64Little(c->GetXP());
+    reply.WriteU16Little(cs->GetMaxHP());
+    reply.WriteU16Little(cs->GetMaxMP());
+    reply.WriteU16Little(cs->GetHP());
+    reply.WriteU16Little(cs->GetMP());
+    reply.WriteU64Little(cs->GetXP());
     reply.WriteU32Little(c->GetPoints());
-    reply.WriteU8(c->GetLevel());
+    reply.WriteU8(cs->GetLevel());
     reply.WriteS16Little(c->GetLNC());
-    reply.WriteU16Little(c->GetSTR());
+    reply.WriteU16Little(cs->GetSTR());
     reply.WriteU16Little(static_cast<uint16_t>(
-        cState->GetSTR() - c->GetSTR()));
-    reply.WriteU16Little(c->GetMAGIC());
+        cState->GetSTR() - cs->GetSTR()));
+    reply.WriteU16Little(cs->GetMAGIC());
     reply.WriteU16Little(static_cast<uint16_t>(
-        cState->GetMAGIC() - c->GetMAGIC()));
-    reply.WriteU16Little(c->GetVIT());
+        cState->GetMAGIC() - cs->GetMAGIC()));
+    reply.WriteU16Little(cs->GetVIT());
     reply.WriteU16Little(static_cast<uint16_t>(
-        cState->GetVIT() - c->GetVIT()));
-    reply.WriteU16Little(c->GetINTEL());
+        cState->GetVIT() - cs->GetVIT()));
+    reply.WriteU16Little(cs->GetINTEL());
     reply.WriteU16Little(static_cast<uint16_t>(
-        cState->GetINTEL() - c->GetINTEL()));
-    reply.WriteU16Little(c->GetSPEED());
+        cState->GetINTEL() - cs->GetINTEL()));
+    reply.WriteU16Little(cs->GetSPEED());
     reply.WriteU16Little(static_cast<uint16_t>(
-        cState->GetSPEED() - c->GetSPEED()));
-    reply.WriteU16Little(c->GetLUCK());
+        cState->GetSPEED() - cs->GetSPEED()));
+    reply.WriteU16Little(cs->GetLUCK());
     reply.WriteU16Little(static_cast<uint16_t>(
-        cState->GetLUCK() - c->GetLUCK()));
-    reply.WriteU16Little(c->GetCLSR());
+        cState->GetLUCK() - cs->GetLUCK()));
+    reply.WriteU16Little(cs->GetCLSR());
     reply.WriteU16Little(static_cast<uint16_t>(
-        cState->GetCLSR() - c->GetCLSR()));
-    reply.WriteU16Little(c->GetLNGR());
+        cState->GetCLSR() - cs->GetCLSR()));
+    reply.WriteU16Little(cs->GetLNGR());
     reply.WriteU16Little(static_cast<uint16_t>(
-        cState->GetLNGR() - c->GetLNGR()));
-    reply.WriteU16Little(c->GetSPELL());
+        cState->GetLNGR() - cs->GetLNGR()));
+    reply.WriteU16Little(cs->GetSPELL());
     reply.WriteU16Little(static_cast<uint16_t>(
-        cState->GetSPELL() - c->GetSPELL()));
-    reply.WriteU16Little(c->GetSUPPORT());
+        cState->GetSPELL() - cs->GetSPELL()));
+    reply.WriteU16Little(cs->GetSUPPORT());
     reply.WriteU16Little(static_cast<uint16_t>(
-        cState->GetSUPPORT() - c->GetSUPPORT()));
-    reply.WriteU16Little(c->GetPDEF());
+        cState->GetSUPPORT() - cs->GetSUPPORT()));
+    reply.WriteU16Little(cs->GetPDEF());
     reply.WriteU16Little(static_cast<uint16_t>(
-        cState->GetPDEF() - c->GetPDEF()));
-    reply.WriteU16Little(c->GetMDEF());
+        cState->GetPDEF() - cs->GetPDEF()));
+    reply.WriteU16Little(cs->GetMDEF());
     reply.WriteU16Little(static_cast<uint16_t>(
-        cState->GetMDEF() - c->GetMDEF()));
+        cState->GetMDEF() - cs->GetMDEF()));
 
     reply.WriteU32Little(367061536); // Unknown
 
@@ -195,6 +200,21 @@ void CharacterManager::SendCharacterData(const std::shared_ptr<
     reply.WriteU8(1);
 
     client->SendPacket(reply);
+
+    ShowCharacter(client);
+}
+
+void CharacterManager::ShowCharacter(const std::shared_ptr<channel::ChannelClientConnection>& client)
+{
+    auto state = client->GetClientState();
+    auto cState = state->GetCharacterState();
+    auto c = cState->GetCharacter().Get();
+
+    libcomp::Packet reply;
+    reply.WritePacketCode(ChannelClientPacketCode_t::PACKET_SHOW_CHARACTER);
+    reply.WriteU32Little((uint32_t)c->GetCID());
+
+    client->SendPacket(reply);
 }
 
 void CharacterManager::SendStatusIcon(const std::shared_ptr<channel::ChannelClientConnection>& client)
@@ -203,7 +223,7 @@ void CharacterManager::SendStatusIcon(const std::shared_ptr<channel::ChannelClie
     uint8_t icon = 0;
 
     libcomp::Packet reply;
-    reply.WritePacketCode(ChannelClientPacketCode_t::PACKET_STATUS_ICON_RESPONSE);
+    reply.WritePacketCode(ChannelClientPacketCode_t::PACKET_STATUS_ICON);
     reply.WriteU8(0);
     reply.WriteU8(icon);
 

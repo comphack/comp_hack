@@ -4,7 +4,7 @@
  *
  * @author COMP Omega <compomega@tutanota.com>
  *
- * @brief Manager to handle lobby packets.
+ * @brief Packet parser to return the lobby's world list.
  *
  * This file is part of the Lobby Server (lobby).
  *

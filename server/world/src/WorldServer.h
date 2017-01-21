@@ -40,6 +40,9 @@
 #include <RegisteredChannel.h>
 #include <RegisteredWorld.h>
 
+// world Includes
+#include "AccountManager.h"
+
 namespace world
 {
 
@@ -97,6 +100,12 @@ public:
     uint8_t GetNextChannelID() const;
 
     /**
+     * Get the preferred channel to log into for a client in the lobby.
+     * @return Pointer to the RegisteredChannel
+     */
+    std::shared_ptr<objects::RegisteredChannel> GetLoginChannel() const;
+
+    /**
      * Get a pointer to the lobby connection.
      * @return Pointer to the lobby connection
      */
@@ -142,6 +151,12 @@ public:
      */
     bool RegisterServer();
 
+    /**
+     * Get the account manager for the server.
+     * @return Account manager for the server.
+     */
+    AccountManager* GetAccountManager();
+
 protected:
     /**
      * Create a connection to a newly active socket.
@@ -166,6 +181,9 @@ protected:
 
     /// Pointer to the manager in charge of connection messages. 
     std::shared_ptr<ManagerConnection> mManagerConnection;
+
+    /// Account manager for the server.
+    AccountManager mAccountManager;
 };
 
 } // namespace world

@@ -32,8 +32,13 @@
 #include <MessageEncrypted.h>
 #include <PacketCodes.h>
 
+// object Includes
+#include <Account.h>
+#include <AccountLogin.h>
+
 // channel Includes
 #include "ChannelServer.h"
+#include "ClientState.h"
 
 using namespace channel;
 
@@ -87,6 +92,9 @@ bool ManagerConnection::ProcessMessage(const libcomp::Message::Message *pMessage
                 auto server = mServer.lock();
                 server->RemoveConnection(connection);
 
+                auto clientConnection = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+                RemoveClientConnection(clientConnection);
+
                 if(mWorldConnection == connection)
                 {
                     LOG_INFO(libcomp::String("World connection closed. Shutting down."));
@@ -115,7 +123,67 @@ void ManagerConnection::RequestWorldInfo()
     }
 }
 
+const std::shared_ptr<libcomp::InternalConnection> ManagerConnection::GetWorldConnection() const
+{
+    return mWorldConnection;
+}
+
 void ManagerConnection::SetWorldConnection(const std::shared_ptr<libcomp::InternalConnection>& worldConnection)
 {
     mWorldConnection = worldConnection;
+}
+
+const std::shared_ptr<ChannelClientConnection> ManagerConnection::GetClientConnection(
+    const libcomp::String& username) const
+{
+    auto iter = mClientConnections.find(username);
+    return iter != mClientConnections.end() ? iter->second : nullptr;
+}
+
+void ManagerConnection::SetClientConnection(const std::shared_ptr<
+    ChannelClientConnection>& connection)
+{
+    auto state = connection->GetClientState();
+    auto login = state->GetAccountLogin();
+    auto account = login->GetAccount().GetCurrentReference();
+    if(nullptr == account)
+    {
+        return;
+    }
+
+    auto username = account->GetUsername();
+    auto iter = mClientConnections.find(username);
+    if(iter == mClientConnections.end())
+    {
+        mClientConnections[username] = connection;
+    }
+}
+
+void ManagerConnection::RemoveClientConnection(const std::shared_ptr<
+    ChannelClientConnection>& connection)
+{
+    if(nullptr == connection)
+    {
+        return;
+    }
+
+    auto state = connection->GetClientState();
+    auto login = state->GetAccountLogin();
+    auto account = login->GetAccount().GetCurrentReference();
+    if(nullptr == account)
+    {
+        return;
+    }
+
+    auto username = account->GetUsername();
+    auto iter = mClientConnections.find(username);
+    if(iter != mClientConnections.end())
+    {
+        mClientConnections.erase(iter);
+
+        auto server = std::dynamic_pointer_cast<ChannelServer>(
+            mServer.lock());
+        auto accountManager = server->GetAccountManager();
+        accountManager->Logout(connection);
+    }
 }

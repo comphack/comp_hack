@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <objgen>
     <object name="Account">
-        <member type="string" name="UserName" key="true"/>
+        <member type="string" name="Username" key="true"/>
         <member type="string" name="DisplayName"/>
         <member type="string" name="Email" key="true"/>
         <member type="string" name="Password"/>
@@ -10,6 +10,7 @@
         <member type="u8" name="TicketCount"/>
         <member type="s32" name="UserLevel"/>
         <member type="bool" name="Enabled"/>
+        <member type="bool" name="IsGM" key="false"/>
         <member type="u32" name="LastLogin"/>
         <member type="map" name="CharactersByCID">
             <key type="u8"/>

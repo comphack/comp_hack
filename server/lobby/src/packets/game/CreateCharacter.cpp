@@ -1,10 +1,10 @@
 /**
- * @file server/lobby/src/packets/Login.cpp
+ * @file server/lobby/src/packets/CreateCharacter.cpp
  * @ingroup lobby
  *
  * @author COMP Omega <compomega@tutanota.com>
  *
- * @brief Manager to handle lobby packets.
+ * @brief Packet parser to handle the lobby request to create a character.
  *
  * This file is part of the Lobby Server (lobby).
  *

@@ -11,6 +11,7 @@
     
     <!-- common classes -->
     <include path="account.xml"/>
+    <include path="accountlogin.xml"/>
     <include path="character.xml"/>
     <include path="registeredchannel.xml"/>
     <include path="registeredworld.xml"/>

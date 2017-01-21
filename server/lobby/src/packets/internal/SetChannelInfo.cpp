@@ -67,6 +67,20 @@ bool Parsers::SetChannelInfo::Parse(libcomp::ManagerPacket *pPacketManager,
     if(InternalPacketAction_t::PACKET_ACTION_REMOVE == action)
     {
         world->RemoveChannelByID(svr->GetID());
+
+        server->QueueWork([](std::shared_ptr<LobbyServer> lobbyServer,
+            int8_t worldID, int8_t channel)
+            {
+                auto accountManager = lobbyServer->GetAccountManager();
+                auto usernames = accountManager->LogoutUsersInWorld(worldID, channel);
+
+                if(usernames.size() > 0)
+                {
+                    LOG_WARNING(libcomp::String("%1 user(s) forcefully logged out"
+                        " from channel %2 on world %3.\n").Arg(usernames.size())
+                        .Arg(channel).Arg(worldID));
+                }
+            }, server, world->GetRegisteredWorld()->GetID(), channelID);
     }
     else
     {

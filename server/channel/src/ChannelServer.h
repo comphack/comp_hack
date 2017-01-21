@@ -40,6 +40,7 @@
 // channel Includes
 #include "AccountManager.h"
 #include "CharacterManager.h"
+#include "ChatManager.h"
 
 namespace channel
 {
@@ -124,6 +125,12 @@ public:
     bool RegisterServer(uint8_t channelID);
 
     /**
+     * Get the connection manager for the server.
+     * @return Pointer to the connection manager.
+     */
+    std::shared_ptr<ManagerConnection> GetManagerConnection() const;
+
+    /**
      * Get a pointer to the account manager.
      * @return Pointer to the AccountManager
      */
@@ -134,6 +141,9 @@ public:
      * @return Pointer to the CharacterManager
      */
     CharacterManager* GetCharacterManager() const;
+
+    //Get ChatManager
+    ChatManager* GetChatManager() const;
 
 protected:
     /**
@@ -164,6 +174,9 @@ protected:
 
     /// Poiner to the character manager.
     CharacterManager *mCharacterManager;
+
+    /// Pointer to the Chat Manager.
+    ChatManager *mChatManager;
 };
 
 } // namespace channel

@@ -49,6 +49,8 @@ PACKET_PARSER_DECL(PurchaseTicket);      // 0x0013
 //Internal Packets
 PACKET_PARSER_DECL(SetWorldInfo);      // 0x1002
 PACKET_PARSER_DECL(SetChannelInfo);    // 0x1003
+PACKET_PARSER_DECL(AccountLogin);      // 0x1004
+PACKET_PARSER_DECL(AccountLogout);     // 0x1005
 
 } // namespace Parsers
 

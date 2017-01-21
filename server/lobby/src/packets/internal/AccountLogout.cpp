@@ -1,10 +1,10 @@
 /**
- * @file server/lobby/src/packets/QueryPurchaseTicket.cpp
+ * @file server/lobby/src/packets/AccountLogout.cpp
  * @ingroup lobby
  *
- * @author COMP Omega <compomega@tutanota.com>
+ * @author HACKfrost
  *
- * @brief Packet parser to handle purchasing lobby tickets.
+ * @brief Parser to handle logging out an account.
  *
  * This file is part of the Lobby Server (lobby).
  *
@@ -27,39 +27,36 @@
 #include "Packets.h"
 
 // libcomp Includes
-#include <Decrypt.h>
 #include <Log.h>
+#include <ManagerPacket.h>
 #include <Packet.h>
-#include <PacketCodes.h>
 #include <ReadOnlyPacket.h>
-#include <TcpConnection.h>
+
+// lobby Includes
+#include "LobbyServer.h"
 
 using namespace lobby;
 
-bool Parsers::QueryPurchaseTicket::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::AccountLogout::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {
-    (void)pPacketManager;
+    (void)connection;
 
-    if(p.Size() != 1 || p.ReadU8() != 1)
+    libcomp::String username = p.ReadString16Little(
+        libcomp::Convert::Encoding_t::ENCODING_UTF8).C();
+
+    auto server = std::dynamic_pointer_cast<LobbyServer>(pPacketManager->GetServer());
+    auto accountManager = server->GetAccountManager();
+
+    int8_t worldID;
+    if(!accountManager->IsLoggedIn(username, worldID))
     {
         return false;
     }
 
-    libcomp::Packet reply;
-    reply.WritePacketCode(
-        LobbyClientPacketCode_t::PACKET_QUERY_PURCHASE_TICKET_RESPONSE);
-    reply.WriteU32Little(0);
-    reply.WriteU8(1);
-
-    // Ticket cost.
-    reply.WriteU32Little(1337);
-
-    // CP balance.
-    reply.WriteU32Little(9999); // Over 9000!
-
-    connection->SendPacket(reply);
+    LOG_DEBUG(libcomp::String("Logging out user: '%1'\n").Arg(username));
+    accountManager->LogoutUser(username, worldID);
 
     return true;
 }

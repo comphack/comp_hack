@@ -138,6 +138,19 @@ void ManagerConnection::RemoveConnection(std::shared_ptr<libcomp::InternalConnec
         auto db = server->GetWorldDatabase();
         svr->Delete(db);
 
+        server->QueueWork([](std::shared_ptr<WorldServer> worldServer,
+            int8_t channelID)
+            {
+                auto accountManager = worldServer->GetAccountManager();
+                auto usernames = accountManager->LogoutUsersOnChannel(channelID);
+
+                if(usernames.size() > 0)
+                {
+                    LOG_WARNING(libcomp::String("%1 user(s) forcefully logged out"
+                        " from channel %2.\n").Arg(usernames.size()).Arg(channelID));
+                }
+            }, server, svr->GetID());
+
         //Channel disconnected
         libcomp::Packet packet;
         packet.WritePacketCode(

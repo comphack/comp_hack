@@ -180,7 +180,7 @@ void LoginHandler::ParsePost(CivetServer *pServer,
     else if(pServer->getParam(szPostData, "login", postValue))
     {
         // Get the information for this account.
-        auto account = objects::Account::LoadAccountByUserName(mDatabase, postVars.id);
+        auto account = objects::Account::LoadAccountByUsername(mDatabase, postVars.id);
 
         // Check the password.
         if(nullptr != account && account->GetPassword() ==

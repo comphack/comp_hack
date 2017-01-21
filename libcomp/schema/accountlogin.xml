@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="AccountLogin" persistent="false">
+        <member type="Account*" name="Account"/>
+        <member type="u8" name="CID"/>
+        <member type="s8" name="WorldID" default="-1"/>
+        <member type="s8" name="ChannelID" default="-1"/>
+        <member type="string" name="SessionID" size="300"/>
+        <member type="u32" name="SessionKey"/>
+    </object>
+</objgen>

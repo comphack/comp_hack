@@ -1,10 +1,10 @@
 /**
- * @file server/lobby/src/packets/Login.cpp
+ * @file server/lobby/src/packets/StartGame.cpp
  * @ingroup lobby
  *
  * @author COMP Omega <compomega@tutanota.com>
  *
- * @brief Manager to handle lobby packets.
+ * @brief Packet parser to handle a lobby request to start the game.
  *
  * This file is part of the Lobby Server (lobby).
  *
@@ -35,9 +35,12 @@
 #include <TcpConnection.h>
 
 // object Includes
+#include <Account.h>
+#include <AccountLogin.h>
 #include <Character.h>
 
 // lobby Includes
+#include "AccountManager.h"
 #include "LobbyClientConnection.h"
 #include "LobbyServer.h"
 #include "ManagerPacket.h"
@@ -58,30 +61,32 @@ bool Parsers::StartGame::Parse(libcomp::ManagerPacket *pPacketManager,
     uint8_t cid = p.ReadU8();
     int8_t worldID = p.ReadS8();
 
-    /// @todo: get this ID from the world
-    auto channelID = 0;
+    auto client = std::dynamic_pointer_cast<LobbyClientConnection>(connection);
+    auto state = client->GetClientState();
+    auto username = state->GetAccount()->GetUsername();
+
+    auto account = state->GetAccount();
 
     auto server = std::dynamic_pointer_cast<LobbyServer>(pPacketManager->GetServer());
     auto world = server->GetWorldByID((uint8_t)worldID);
-    auto channel = world->GetChannelByID((uint8_t)channelID);
+    auto accountManager = server->GetAccountManager();
 
-    LOG_DEBUG(libcomp::String("Login character with ID %1 into world %2, channel %3\n"
-        ).Arg(cid).Arg(worldID).Arg(channelID));
+    int8_t loginWorldID;
+    if(!accountManager->IsLoggedIn(username, loginWorldID) || loginWorldID != -1)
+    {
+        LOG_ERROR(libcomp::String("User '%1' attempted to start a game but is not"
+            " currently logged into the lobby.\n").Arg(username));
+        return false;
+    }
 
-    libcomp::Packet reply;
-    reply.WritePacketCode(LobbyClientPacketCode_t::PACKET_START_GAME_RESPONSE);
+    auto login = accountManager->GetUserLogin(username);
+    login->SetCID(cid);
 
-    // Some session key.
-    reply.WriteU32Little(0);
+    libcomp::Packet request;
+    request.WritePacketCode(InternalPacketCode_t::PACKET_ACCOUNT_LOGIN);
+    login->SavePacket(request);
 
-    // Server address.
-    reply.WriteString16Little(libcomp::Convert::ENCODING_UTF8,
-        libcomp::String("%1:%2").Arg(channel->GetIP()).Arg(channel->GetPort()), true);
-
-    // Character ID.
-    reply.WriteU8(cid);
-
-    connection->SendPacket(reply);
+    world->GetConnection()->SendPacket(request);
 
     return true;
 }

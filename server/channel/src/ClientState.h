@@ -54,6 +54,12 @@ public:
     virtual ~ClientState();
 
     /**
+     * Get the string encoding to use for this client.
+     * @return Encoding to use for strings
+     */
+    libcomp::Convert::Encoding_t GetClientStringEncoding();
+
+    /**
      * Get the state of the character associated to the client.
      * @return Pointer to the CharacterState
      */

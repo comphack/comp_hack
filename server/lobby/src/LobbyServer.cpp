@@ -111,6 +111,10 @@ bool LobbyServer::Initialize()
         to_underlying(InternalPacketCode_t::PACKET_SET_WORLD_INFO));
     internalPacketManager->AddParser<Parsers::SetChannelInfo>(
         to_underlying(InternalPacketCode_t::PACKET_SET_CHANNEL_INFO));
+    internalPacketManager->AddParser<Parsers::AccountLogin>(
+        to_underlying(InternalPacketCode_t::PACKET_ACCOUNT_LOGIN));
+    internalPacketManager->AddParser<Parsers::AccountLogout>(
+        to_underlying(InternalPacketCode_t::PACKET_ACCOUNT_LOGOUT));
 
     //Add the managers to the main worker.
     mMainWorker.AddManager(internalPacketManager);
@@ -177,6 +181,11 @@ std::shared_ptr<libcomp::Database> LobbyServer::GetMainDatabase() const
     return mDatabase;
 }
 
+std::shared_ptr<ManagerConnection> LobbyServer::GetManagerConnection() const
+{
+    return mManagerConnection;
+}
+
 std::shared_ptr<libcomp::TcpConnection> LobbyServer::CreateConnection(
     asio::ip::tcp::socket& socket)
 {
@@ -216,7 +225,7 @@ bool LobbyServer::InitializeTestMode()
     libcomp::String password = "same_as_my_luggage"; // 12345
     libcomp::String salt = libcomp::Decrypt::GenerateRandom(10);
 
-    account->SetUserName("testalpha");
+    account->SetUsername("testalpha");
     account->SetDisplayName("Test Account Alpha");
     account->SetEmail("alpha@test.account");
     account->SetPassword(libcomp::Decrypt::HashPassword(password, salt));
@@ -445,7 +454,7 @@ void LobbyServer::PromptCreateAccount()
 
     std::shared_ptr<objects::Account> account(new objects::Account);
 
-    account->SetUserName(username);
+    account->SetUsername(username);
     account->SetDisplayName(displayName);
     account->SetEmail(email);
     account->SetPassword(password);

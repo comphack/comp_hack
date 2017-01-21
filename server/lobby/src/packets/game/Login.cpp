@@ -4,7 +4,7 @@
  *
  * @author COMP Omega <compomega@tutanota.com>
  *
- * @brief Manager to handle lobby packets.
+ * @brief Packet parser to a request to login to the lobby.
  *
  * This file is part of the Lobby Server (lobby).
  *
@@ -64,10 +64,11 @@ bool Parsers::Login::Parse(libcomp::ManagerPacket *pPacketManager,
         LobbyClientPacketCode_t::PACKET_LOGIN_RESPONSE));
 
     auto server = std::dynamic_pointer_cast<LobbyServer>(pPacketManager->GetServer());
+    auto accountManager = server->GetAccountManager();
     auto mainDB = server->GetMainDatabase();
 
     /// @todo Ask the world server is the user is already logged in.
-    auto account = objects::Account::LoadAccountByUserName(mainDB, obj.GetUsername());
+    auto account = objects::Account::LoadAccountByUsername(mainDB, obj.GetUsername());
 
     uint32_t clientVersion = static_cast<uint32_t>(
         conf->GetClientVersion() * 1000.0f);
@@ -84,7 +85,13 @@ bool Parsers::Login::Parse(libcomp::ManagerPacket *pPacketManager,
     }
     else
     {
+        auto login = std::shared_ptr<objects::AccountLogin>(new objects::AccountLogin);
+        login->SetAccount(account);
+        accountManager->LoginUser(obj.GetUsername(), login);
+
         state(connection)->SetAccount(account);
+        server->GetManagerConnection()->SetClientConnection(
+            std::dynamic_pointer_cast<LobbyClientConnection>(connection));
 
         reply.SetResponseCode(to_underlying(
             ErrorCodes_t::SUCCESS));

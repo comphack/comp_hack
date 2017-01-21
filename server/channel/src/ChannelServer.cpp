@@ -42,7 +42,7 @@ using namespace channel;
 
 ChannelServer::ChannelServer(std::shared_ptr<objects::ServerConfig> config,
     const libcomp::String& configPath) : libcomp::BaseServer(config, configPath),
-    mAccountManager(0), mCharacterManager(0)
+    mAccountManager(0), mCharacterManager(0), mChatManager(0)
 {
 }
 
@@ -79,6 +79,8 @@ bool ChannelServer::Initialize()
     auto internalPacketManager = std::make_shared<libcomp::ManagerPacket>(self);
     internalPacketManager->AddParser<Parsers::SetWorldInfo>(
         to_underlying(InternalPacketCode_t::PACKET_SET_WORLD_INFO));
+    internalPacketManager->AddParser<Parsers::AccountLogin>(
+        to_underlying(InternalPacketCode_t::PACKET_ACCOUNT_LOGIN));
 
     //Add the managers to the main worker.
     mMainWorker.AddManager(internalPacketManager);
@@ -91,6 +93,10 @@ bool ChannelServer::Initialize()
         to_underlying(ChannelClientPacketCode_t::PACKET_AUTH));
     clientPacketManager->AddParser<Parsers::SendData>(
         to_underlying(ChannelClientPacketCode_t::PACKET_SEND_DATA));
+    clientPacketManager->AddParser<Parsers::Logout>(
+        to_underlying(ChannelClientPacketCode_t::PACKET_LOGOUT));
+    clientPacketManager->AddParser<Parsers::Chat>(
+        to_underlying(ChannelClientPacketCode_t::PACKET_CHAT));
     clientPacketManager->AddParser<Parsers::KeepAlive>(
         to_underlying(ChannelClientPacketCode_t::PACKET_KEEP_ALIVE));
     clientPacketManager->AddParser<Parsers::State>(
@@ -108,6 +114,7 @@ bool ChannelServer::Initialize()
     mAccountManager = new AccountManager(std::dynamic_pointer_cast<
         ChannelServer>(shared_from_this()));
     mCharacterManager = new CharacterManager();
+    mChatManager = new ChatManager();
 
     return true;
 }
@@ -116,6 +123,7 @@ ChannelServer::~ChannelServer()
 {
     delete[] mAccountManager;
     delete[] mCharacterManager;
+    delete[] mChatManager;
 }
 
 const std::shared_ptr<objects::RegisteredChannel> ChannelServer::GetRegisteredChannel()
@@ -191,6 +199,11 @@ bool ChannelServer::RegisterServer(uint8_t channelID)
     return true;
 }
 
+std::shared_ptr<ManagerConnection> ChannelServer::GetManagerConnection() const
+{
+    return mManagerConnection;
+}
+
 AccountManager* ChannelServer::GetAccountManager() const
 {
     return mAccountManager;
@@ -199,6 +212,11 @@ AccountManager* ChannelServer::GetAccountManager() const
 CharacterManager* ChannelServer::GetCharacterManager() const
 {
     return mCharacterManager;
+}
+
+ChatManager* ChannelServer::GetChatManager() const
+{
+    return mChatManager;
 }
 
 std::shared_ptr<libcomp::TcpConnection> ChannelServer::CreateConnection(

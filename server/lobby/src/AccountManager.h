@@ -34,6 +34,9 @@
 #include <mutex>
 #include <unordered_map>
 
+// object Includes
+#include <AccountLogin.h>
+
 namespace lobby
 {
 
@@ -63,12 +66,29 @@ public:
     /**
      * Mark the user logged into the given world.
      * @param username Username for the account to login.
-     * @param world World the user is logged into or -1 if they are in the
-     * lobby server.
+     * @param login Login information associated to the account.
      * @return true if the user was logged in; false if the user is already
      * logged in to another world.
      */
-    bool LoginUser(const libcomp::String& username, int8_t world = -1);
+    bool LoginUser(const libcomp::String& username,
+        std::shared_ptr<objects::AccountLogin> login = nullptr);
+
+    /*
+     * Updates the session ID of the login associated to a username.
+     * @param username Username for the logged in account.
+     * @param sid Session ID to update.
+     * @return true if the user is logged in; false if not
+     */
+    bool UpdateSessionID(const libcomp::String& username,
+        const libcomp::String& sid);
+
+    /**
+     * Get the current user login state independent of world.
+     * @param username Username for the account to login.
+     * @return Pointer to the login state; null if it does not exist.
+     */
+    std::shared_ptr<objects::AccountLogin> GetUserLogin(
+        const libcomp::String& username);
 
     /**
      * Mark the user logged out of the given world.
@@ -80,12 +100,24 @@ public:
      */
     bool LogoutUser(const libcomp::String& username, int8_t world = -1);
 
+    /**
+     * Log out all users in a given world (and optionally on a specific
+     * channel). This should only be called when a world or channel disconnects.
+     * @param world World to log out all users from.
+     * @param channel Channel in the world to log out all users from. If
+     * this is empty, all users in the world will be logged out.
+     * @return List of usernames that were logged out.
+     */
+    std::list<libcomp::String> LogoutUsersInWorld(int8_t world,
+        int8_t channel = -1);
+
 private:
     /// Mutex to lock access to the account map.
     std::mutex mAccountLock;
 
-    /// Map of accounts with associated world.
-    std::unordered_map<libcomp::String, int8_t> mAccountMap;
+    /// Map of accounts with associated login information.
+    std::unordered_map<libcomp::String,
+        std::shared_ptr<objects::AccountLogin>> mAccountMap;
 };
 
 } // namespace lobby

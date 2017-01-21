@@ -45,6 +45,8 @@ SET(${PROJECT_NAME}_SCHEMA
     schema/worldconfig.xml
 )
 
+SOURCE_GROUP("objgen" ${CMAKE_CURRENT_BINARY_DIR}/objgen/*)
+
 OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     # Main schema
     schema/master.xml
@@ -65,7 +67,9 @@ SOURCE_GROUP("Source Files\\Packets" src/packets/*)
 
 SET(${PROJECT_NAME}_PACKETS
     src/packets/GetWorldInfo.cpp               # 0x1001
-    src/packets/SetChannelInfo.cpp               # 0x1003
+    src/packets/SetChannelInfo.cpp             # 0x1003
+    src/packets/AccountLogin.cpp               # 0x1004
+    src/packets/AccountLogout.cpp              # 0x1005
 )
 
 ADD_EXECUTABLE(${PROJECT_NAME} ${${PROJECT_NAME}_SRCS}

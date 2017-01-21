@@ -107,6 +107,12 @@ public:
     std::shared_ptr<libcomp::Database> GetMainDatabase() const;
 
     /**
+     * Get the connection manager for the server.
+     * @return Pointer to the connection manager.
+     */
+    std::shared_ptr<ManagerConnection> GetManagerConnection() const;
+
+    /**
      * Get the account manager for the server.
      * @return Account manager for the server.
      */
@@ -158,7 +164,7 @@ protected:
     /// A shared pointer to the main database used by the server.
     std::shared_ptr<libcomp::Database> mDatabase;
 
-    /// Pointer to the manager in charge of connection messages.
+    /// Pointer to the manager in charge of connections.
     std::shared_ptr<ManagerConnection> mManagerConnection;
 
     /// Indicates the unit test database should be used.

@@ -36,7 +36,9 @@ SET(${PROJECT_NAME}_SRCS
     src/CharacterState.cpp
     src/ClientState.cpp
     src/ManagerConnection.cpp
+    src/ChatManager.cpp
     src/main.cpp
+    src/packets/game/Chat.cpp
 )
 
 SET(${PROJECT_NAME}_HDRS
@@ -47,6 +49,8 @@ SET(${PROJECT_NAME}_HDRS
     src/CharacterState.h
     src/ClientState.h
     src/ManagerConnection.h
+    src/ChatManager.h
+    src/Packets.h
 )
 
 SET(${PROJECT_NAME}_SCHEMA
@@ -54,6 +58,8 @@ SET(${PROJECT_NAME}_SCHEMA
     schema/characterstate.xml
     schema/clientstate.xml
 )
+
+SOURCE_GROUP("objgen" ${CMAKE_CURRENT_BINARY_DIR}/objgen/*)
 
 OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     # Main schema
@@ -82,12 +88,15 @@ SET(${PROJECT_NAME}_PACKETS
     src/packets/game/Login.cpp               # 0x0000
     src/packets/game/Auth.cpp                # 0x0002
     src/packets/game/SendData.cpp            # 0x0004
+    src/packets/game/Logout.cpp              # 0x0005
+    src/packets/game/Chat.cpp                # 0x0026
     src/packets/game/KeepAlive.cpp           # 0x0056
     src/packets/game/State.cpp               # 0x005A
     src/packets/game/Sync.cpp                # 0x00F3
 
     #Internal packets
     src/packets/internal/SetWorldInfo.cpp    # 0x1002
+    src/packets/internal/AccountLogin.cpp    # 0x1004
 )
 
 ADD_EXECUTABLE(${PROJECT_NAME} ${${PROJECT_NAME}_SRCS}

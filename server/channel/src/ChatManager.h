@@ -1,10 +1,10 @@
 /**
- * @file server/channel/src/ClientState.cpp
+ * @file server/channel/src/ChatManager.h
  * @ingroup channel
  *
- * @author HACKfrost
+ * @author HikaruM
  *
- * @brief State of a client connection.
+ * @brief Manages Chat Messages and GM Commands
  *
  * This file is part of the Channel Server (channel).
  *
@@ -24,31 +24,49 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "ClientState.h"
+#ifndef SERVER_CHANNEL_SRC_CHATMANAGER_H
+#define SERVER_CHANNEL_SRC_CHATMANAGER_H
 
-using namespace channel;
+#include "ChannelClientConnection.h"
 
-ClientState::ClientState() : objects::ClientStateObject(),
-    mCharacterState(std::shared_ptr<CharacterState>(new CharacterState))
+namespace channel
 {
-}
 
-libcomp::Convert::Encoding_t ClientState::GetClientStringEncoding()
-{
-    /// @todo: Return UTF-8 for US Client
-    return libcomp::Convert::Encoding_t::ENCODING_CP932;
-}
+class ChannelServer;
 
-ClientState::~ClientState()
+enum ChatType_t : uint16_t
 {
-}
+    CHAT_PARTY = 41,
+	CHAT_SHOUT = 44,
+	CHAT_SAY = 45,
+//    CHAT_KLAN = ???,
+//    CHAT_TEAM = ???,
+//    CHAT_TELL = ???,
+};
 
-std::shared_ptr<CharacterState> ClientState::GetCharacterState()
+enum ChatVis_t : uint16_t
 {
-    return mCharacterState;
-}
+    CHAT_VIS_SELF,
+    CHAT_VIS_PARTY,
+    CHAT_VIS_ZONE,
+    CHAT_VIS_RANGE,
+    CHAT_VIS_KLAN,
+    CHAT_VIS_TEAM,
+    CHAT_VIS_GLOBAL,
+    CHAT_VIS_GMS,
+};
 
-bool ClientState::Ready()
+class ChatManager
 {
-    return GetAuthenticated() && mCharacterState->Ready();
+public:
+    ChatManager();
+    ~ChatManager();
+
+   bool SendChatMessage(const std::shared_ptr<channel::ChannelClientConnection>& client, ChatType_t chatChannel, libcomp::String message);
+	
+private:
+
+};
+
 }
+#endif

@@ -28,6 +28,11 @@
 
 using namespace world;
 
+AccountManager::AccountManager()
+{
+    mMaxSessionKey = 0;
+}
+
 bool AccountManager::IsLoggedIn(const libcomp::String& username) const
 {
     bool result = false;
@@ -57,13 +62,14 @@ bool AccountManager::IsLoggedIn(const libcomp::String& username,
     {
         result = true;
 
-        channel = pair->second;
+        channel = pair->second->GetChannelID();
     }
 
     return result;
 }
 
-bool AccountManager::LoginUser(const libcomp::String& username, int8_t channel)
+bool AccountManager::LoginUser(const libcomp::String& username,
+    std::shared_ptr<objects::AccountLogin> login)
 {
     bool result = false;
 
@@ -73,7 +79,15 @@ bool AccountManager::LoginUser(const libcomp::String& username, int8_t channel)
 
     if(mAccountMap.end() == pair)
     {
-        auto res = mAccountMap.insert(std::make_pair(username, channel));
+        if(nullptr == login)
+        {
+            login = std::shared_ptr<objects::AccountLogin>(
+                new objects::AccountLogin);
+        }
+
+        login->SetSessionKey(mMaxSessionKey++);
+
+        auto res = mAccountMap.insert(std::make_pair(lookup, login));
 
         // This pair is the iterator (first) and a bool indicating it was
         // inserted into the map (second).
@@ -81,6 +95,15 @@ bool AccountManager::LoginUser(const libcomp::String& username, int8_t channel)
     }
 
     return result;
+}
+
+std::shared_ptr<objects::AccountLogin> AccountManager::GetUserLogin(
+    const libcomp::String& username)
+{
+    libcomp::String lookup = username.ToLower();
+
+    auto pair = mAccountMap.find(lookup);
+    return pair != mAccountMap.end() ? pair->second : nullptr;
 }
 
 bool AccountManager::LogoutUser(const libcomp::String& username, int8_t channel)
@@ -91,7 +114,7 @@ bool AccountManager::LogoutUser(const libcomp::String& username, int8_t channel)
 
     auto pair = mAccountMap.find(lookup);
 
-    if(mAccountMap.end() != pair && channel == pair->second)
+    if(mAccountMap.end() != pair && channel == pair->second->GetChannelID())
     {
         (void)mAccountMap.erase(pair);
 
@@ -99,4 +122,28 @@ bool AccountManager::LogoutUser(const libcomp::String& username, int8_t channel)
     }
 
     return result;
+}
+
+std::list<libcomp::String> AccountManager::LogoutUsersOnChannel(int8_t channel)
+{
+    if(0 > channel)
+    {
+        return std::list<libcomp::String>();
+    }
+
+    std::list<libcomp::String> usernames;
+    for(auto pair : mAccountMap)
+    {
+        if(pair.second->GetChannelID() == channel)
+        {
+            usernames.push_back(pair.first);
+        }
+    }
+
+    for(auto username : usernames)
+    {
+        mAccountMap.erase(username);
+    }
+
+    return usernames;
 }

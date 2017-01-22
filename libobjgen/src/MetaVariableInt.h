@@ -341,6 +341,11 @@ public:
             }
 
             SetMinimumValue(value);
+
+            if(nullptr == szDefault && mDefaultValue < mMinimumValue)
+            {
+                mDefaultValue = mMinimumValue;
+            }
         }
 
         const char *szMaximum = root.Attribute("max");

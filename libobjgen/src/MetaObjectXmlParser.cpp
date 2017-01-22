@@ -226,7 +226,7 @@ bool MetaObjectXmlParser::LoadMembers(const std::string& object,
         mObject->mVariables.clear();
     }
 
-    error |= mError.length() > 0;
+    error |= mError.length() > 0 || !mObject->IsValid();
     if(!result || error)
     {
         return false;

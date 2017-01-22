@@ -26,6 +26,19 @@
 
 #include "AccountManager.h"
 
+// libcomp Includes
+#include <Log.h>
+
+// Standard C++11 Includes
+#include <ctime>
+
+// objects Includes
+#include <Account.h>
+#include <Character.h>
+
+// lobby Includes
+#include "LobbyServer.h"
+
 using namespace lobby;
 
 bool AccountManager::IsLoggedIn(const libcomp::String& username)
@@ -173,4 +186,107 @@ std::list<libcomp::String> AccountManager::LogoutUsersInWorld(int8_t world,
     }
 
     return usernames;
+}
+
+bool AccountManager::UpdateKillTime(const libcomp::String& username,
+    uint8_t cid, std::shared_ptr<LobbyServer>& server)
+{
+    auto config = std::dynamic_pointer_cast<objects::LobbyConfig>(
+        server->GetConfig());
+
+    auto login = GetUserLogin(username);
+    auto account = login->GetAccount();
+    auto character = account->GetCharacters(cid);
+    if(character.GetCurrentReference())
+    {
+        auto world = server->GetWorldByID(character->GetWorldID());
+        auto worldDB = world->GetWorldDatabase();
+
+        if(character->GetKillTime() > 0)
+        {
+            // Clear the kill time
+            character->SetKillTime(0);
+        }
+        else
+        {
+            auto deleteMinutes = config->GetCharacterDeletionDelay();
+            if(deleteMinutes > 0)
+            {
+                // Set the kill time
+                time_t now = time(0);
+                character->SetKillTime(static_cast<uint32_t>(now + (deleteMinutes * 60)));
+            }
+            else
+            {
+                // Delete the character now
+                return DeleteCharacter(username, cid, server);
+            }
+        }
+
+        if(!character->Update(worldDB))
+        {
+            LOG_DEBUG("Character kill time failed to save.\n");
+            return false;
+        }
+
+        return true;
+    }
+
+    return false;
+}
+
+std::list<uint8_t> AccountManager::GetCharactersForDeletion(const libcomp::String& username)
+{
+    std::list<uint8_t> cids;
+
+    auto login = GetUserLogin(username);
+    auto account = login->GetAccount();
+    auto characters = account->GetCharacters();
+
+    time_t now = time(0);
+    for(auto character : characters)
+    {
+        if(character.GetCurrentReference() && character->GetKillTime() != 0 &&
+            character->GetKillTime() <= (uint32_t)now)
+        {
+            cids.push_back(character->GetCID());
+        }
+    }
+
+    return cids;
+}
+
+bool AccountManager::DeleteCharacter(const libcomp::String& username, uint8_t cid,
+    std::shared_ptr<LobbyServer>& server)
+{
+    auto login = GetUserLogin(username);
+    auto account = login->GetAccount();
+    auto characters = account->GetCharacters();
+    auto deleteCharacter = characters[cid];
+    if(deleteCharacter.GetCurrentReference())
+    {
+        auto world = server->GetWorldByID(deleteCharacter->GetWorldID());
+        auto worldDB = world->GetWorldDatabase();
+
+        if(!deleteCharacter->Delete(worldDB))
+        {
+            LOG_ERROR(libcomp::String("Character failed to delete: %1\n").Arg(
+                deleteCharacter->GetUUID().ToString()));
+            return false;
+        }
+
+        characters[cid].SetReference(nullptr);
+        account->SetCharacters(characters);
+
+        if(!account->Update(server->GetMainDatabase()))
+        {
+            LOG_ERROR(libcomp::String("Account failed to update after character"
+                " deletion: %1\n").Arg(deleteCharacter->GetUUID().ToString()));
+            return false;
+        }
+
+        return true;
+    }
+
+    return false;
 }

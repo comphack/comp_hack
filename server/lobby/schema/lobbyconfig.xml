@@ -6,5 +6,6 @@
         <member type="float" name="ClientVersion" default="1.666"/>
         <member type="DatabaseConfigSQLite3*" name="SQLite3Config"/>
         <member type="DatabaseConfigCassandra*" name="CassandraConfig"/>
+        <member type="u16" name="CharacterDeletionDelay" default="1440"/>
     </object>
 </objgen>

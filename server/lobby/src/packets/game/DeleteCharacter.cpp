@@ -34,14 +34,21 @@
 #include <ReadOnlyPacket.h>
 #include <TcpConnection.h>
 
+// object Includes
+#include <Account.h>
+#include <Character.h>
+
+// lobby Includes
+#include "LobbyClientConnection.h"
+#include "LobbyServer.h"
+#include "ManagerPacket.h"
+
 using namespace lobby;
 
 bool Parsers::DeleteCharacter::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {
-    (void)pPacketManager;
-
     if(p.Size() != 1)
     {
         return false;
@@ -51,12 +58,39 @@ bool Parsers::DeleteCharacter::Parse(libcomp::ManagerPacket *pPacketManager,
 
     LOG_DEBUG(libcomp::String("Character ID: %1\n").Arg(cid));
 
-    libcomp::Packet reply;
-    reply.WritePacketCode(
-        LobbyClientPacketCode_t::PACKET_DELETE_CHARACTER_RESPONSE);
-    reply.WriteU8(cid);
+    auto server = std::dynamic_pointer_cast<LobbyServer>(pPacketManager->GetServer());
+    auto config = std::dynamic_pointer_cast<objects::LobbyConfig>(server->GetConfig());
+    auto lobbyConnection = std::dynamic_pointer_cast<LobbyClientConnection>(connection);
+    auto account = lobbyConnection->GetClientState()->GetAccount();
 
-    connection->SendPacket(reply);
+    //Every character should have already been loaded by the CharacterList
+    auto deleteCharacter = account->GetCharacters(cid);
+    if(deleteCharacter.GetCurrentReference())
+    {
+        auto world = server->GetWorldByID(deleteCharacter->GetWorldID());
+        auto worldDB = world->GetWorldDatabase();
+
+        server->QueueWork([](const std::shared_ptr<LobbyClientConnection> client,
+            uint8_t c, std::shared_ptr<LobbyServer> s)
+        {
+            libcomp::Packet reply;
+            reply.WritePacketCode(
+                LobbyClientPacketCode_t::PACKET_DELETE_CHARACTER_RESPONSE);
+
+            if(s->GetAccountManager()->UpdateKillTime(
+                client->GetClientState()->GetAccount()->GetUsername(), c, s))
+            {
+                reply.WriteS8((int8_t)c);
+            }
+            else
+            {
+                //Send failure
+                reply.WriteS8(-1);
+            }
+
+            client->SendPacket(reply);
+        }, lobbyConnection, cid, server);
+    }
 
     return true;
 }

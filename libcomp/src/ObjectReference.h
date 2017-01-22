@@ -150,7 +150,13 @@ public:
     {
         if(IsPersistentReference())
         {
-            SetUUID(std::dynamic_pointer_cast<PersistentObject>(ref)->GetUUID());
+            libobjgen::UUID uuid;
+            if(ref != nullptr)
+            {
+                uuid = std::dynamic_pointer_cast<PersistentObject>(
+                    ref)->GetUUID();
+            }
+            SetUUID(uuid);
         }
 
         mRef = ref;

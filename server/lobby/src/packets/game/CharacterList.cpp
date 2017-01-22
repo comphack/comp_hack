@@ -172,7 +172,7 @@ bool Parsers::CharacterList::Parse(libcomp::ManagerPacket *pPacketManager,
         reply.WriteS8(-1);
 
         // Level.
-        reply.WriteU8(stats->GetLevel());
+        reply.WriteS8(stats->GetLevel());
 
         // Skin type.
         reply.WriteU8(character->GetSkinType());

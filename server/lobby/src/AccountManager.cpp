@@ -197,7 +197,7 @@ bool AccountManager::UpdateKillTime(const libcomp::String& username,
     auto login = GetUserLogin(username);
     auto account = login->GetAccount();
     auto character = account->GetCharacters(cid);
-    if(character.GetCurrentReference())
+    if(character.Get())
     {
         auto world = server->GetWorldByID(character->GetWorldID());
         auto worldDB = world->GetWorldDatabase();
@@ -246,7 +246,7 @@ std::list<uint8_t> AccountManager::GetCharactersForDeletion(const libcomp::Strin
     time_t now = time(0);
     for(auto character : characters)
     {
-        if(character.GetCurrentReference() && character->GetKillTime() != 0 &&
+        if(character.Get() && character->GetKillTime() != 0 &&
             character->GetKillTime() <= (uint32_t)now)
         {
             cids.push_back(character->GetCID());
@@ -263,7 +263,7 @@ bool AccountManager::DeleteCharacter(const libcomp::String& username, uint8_t ci
     auto account = login->GetAccount();
     auto characters = account->GetCharacters();
     auto deleteCharacter = characters[cid];
-    if(deleteCharacter.GetCurrentReference())
+    if(deleteCharacter.Get())
     {
         auto world = server->GetWorldByID(deleteCharacter->GetWorldID());
         auto worldDB = world->GetWorldDatabase();

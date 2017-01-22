@@ -114,11 +114,6 @@ bool Parsers::CharacterList::Parse(libcomp::ManagerPacket *pPacketManager,
                         .Arg(account->GetUUID().ToString()));
                     return false;
                 }
-                else
-                {
-                    //Write back the loaded character
-                    account->SetCharacters(cid, existing);
-                }
             }
             else
             {

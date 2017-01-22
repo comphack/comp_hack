@@ -1,1 +1,1 @@
-!(@VAR_NAME@ = @CONSTRUCT_VALUE@).IsNull() && @VAR_NAME@.Get()->Load(@STREAM@)
+nullptr != (@VAR_NAME@ = @CONSTRUCT_VALUE@) && @VAR_NAME@->Load(@STREAM@)

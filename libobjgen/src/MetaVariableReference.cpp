@@ -218,16 +218,14 @@ bool MetaVariableReference::SetDynamicSizeCount(uint16_t dynamicSizeCount)
 
 std::string MetaVariableReference::GetCodeType() const
 {
-    std::string code;
-
-    if(!mReferenceType.empty())
+    if(mPersistentReference)
     {
-        std::stringstream ss;
-        ss << "libcomp::ObjectReference<" << GetReferenceType(true) << ">";
-        code = ss.str();
+        return "libcomp::ObjectReference<" + GetReferenceType(true) + ">";
     }
-
-    return code;
+    else
+    {
+        return "std::shared_ptr<" + GetReferenceType(true) + ">";
+    }
 }
 
 std::string MetaVariableReference::GetConstructValue() const
@@ -239,9 +237,7 @@ std::string MetaVariableReference::GetConstructValue() const
     }
     else
     {
-        std::string fullName = GetReferenceType(true);
-        defaultVal << GetCodeType()
-            << "(std::shared_ptr<" << fullName << ">(new " << fullName << "))";
+        defaultVal << GetCodeType() << "(new " << GetReferenceType(true) << ")";
     }
 
     std::stringstream ss;
@@ -322,10 +318,20 @@ std::string MetaVariableReference::GetValidCondition(const Generator& generator,
 
     if(recursive)
     {
-        std::stringstream ss;
-        ss << "nullptr != " << name  << ".GetCurrentReference() && (!recursive || "
-            << name << ".GetCurrentReference()->IsValid(recursive))";
-        return ss.str();
+        if(mPersistentReference)
+        {
+            std::stringstream ss;
+            ss << "nullptr != " << name << ".GetCurrentReference() && (!recursive || "
+                << name << ".GetCurrentReference()->IsValid(recursive))";
+            return ss.str();
+        }
+        else
+        {
+            std::stringstream ss;
+            ss << "nullptr != " << name << " && (!recursive || "
+                << name << "->IsValid(recursive))";
+            return ss.str();
+        }
     }
     else
     {
@@ -486,7 +492,7 @@ std::string MetaVariableReference::GetAccessDeclarations(const Generator& genera
     if(mPersistentReference)
     {
         ss << generator.Tab(tabLevel) << "const std::shared_ptr<"
-            << GetReferenceType(true) << ">& Load" << generator.GetCapitalName(*this)
+            << GetReferenceType(true) << "> Load" << generator.GetCapitalName(*this)
             << "(const std::shared_ptr<libcomp::Database>& db = nullptr);" << std::endl;
     }
 
@@ -501,7 +507,7 @@ std::string MetaVariableReference::GetAccessFunctions(const Generator& generator
 
     if(mPersistentReference)
     {
-        ss << "const std::shared_ptr<" << GetReferenceType(true) << ">& "
+        ss << "const std::shared_ptr<" << GetReferenceType(true) << "> "
             << object.GetName() << "::Load" << generator.GetCapitalName(*this)
             << "(const std::shared_ptr<libcomp::Database>& db)" << std::endl;
         ss << "{" << std::endl;

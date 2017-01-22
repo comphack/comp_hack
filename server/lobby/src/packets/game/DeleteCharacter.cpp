@@ -65,7 +65,7 @@ bool Parsers::DeleteCharacter::Parse(libcomp::ManagerPacket *pPacketManager,
 
     //Every character should have already been loaded by the CharacterList
     auto deleteCharacter = account->GetCharacters(cid);
-    if(deleteCharacter.GetCurrentReference())
+    if(deleteCharacter.Get())
     {
         auto world = server->GetWorldByID(deleteCharacter->GetWorldID());
         auto worldDB = world->GetWorldDatabase();

@@ -1,1 +1,1 @@
-!@VAR_NAME@.IsNull() && @VAR_NAME@.GetCurrentReference()->Save(@STREAM@)
+nullptr != @VAR_NAME@ && @VAR_NAME@->Save(@STREAM@)

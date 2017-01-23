@@ -61,8 +61,8 @@ bool Parsers::PurchaseTicket::Parse(libcomp::ManagerPacket *pPacketManager,
 
     if(account->GetCP() >= ticketCost)
     {
-        account->SetCP(account->GetCP() - ticketCost);
-        account->SetTicketCount(account->GetTicketCount() + 1);
+        account->SetCP(static_cast<uint32_t>(account->GetCP() - ticketCost));
+        account->SetTicketCount(static_cast<uint8_t>(account->GetTicketCount() + 1));
 
         if(!account->Update(lobbyDB))
         {

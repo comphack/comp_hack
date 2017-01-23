@@ -75,10 +75,10 @@ ClientTime ClientState::ToClientTime(ServerTime time) const
         return 0.0f;
     }
 
-    return static_cast<ClientTime>((time - mStartTime) / 1000000.0f);
+    return static_cast<ClientTime>((ClientTime)(time - mStartTime) / 1000000.0f);
 }
 
 ServerTime ClientState::ToServerTime(ClientTime time) const
 {
-    return static_cast<ServerTime>(((ServerTime)time * 1000000.0f) + mStartTime);
+    return static_cast<ServerTime>(((ServerTime)time * 1000000) + mStartTime);
 }

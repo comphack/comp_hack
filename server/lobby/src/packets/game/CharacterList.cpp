@@ -57,6 +57,12 @@ bool Parsers::CharacterList::Parse(libcomp::ManagerPacket *pPacketManager,
         return false;
     }
 
+    auto server = std::dynamic_pointer_cast<LobbyServer>(pPacketManager->GetServer());
+    auto accountManager = server->GetAccountManager();
+    auto lobbyDB = server->GetMainDatabase();
+    auto lobbyConnection = std::dynamic_pointer_cast<LobbyClientConnection>(connection);
+    auto account = lobbyConnection->GetClientState()->GetAccount().Get();
+
     libcomp::Packet reply;
     reply.WritePacketCode(
         LobbyClientPacketCode_t::PACKET_CHARACTER_LIST_RESPONSE);
@@ -65,13 +71,7 @@ bool Parsers::CharacterList::Parse(libcomp::ManagerPacket *pPacketManager,
     reply.WriteU32Little((uint32_t)time(0));
 
     // Number of character tickets.
-    reply.WriteU8(1);
-
-    auto server = std::dynamic_pointer_cast<LobbyServer>(pPacketManager->GetServer());
-    auto accountManager = server->GetAccountManager();
-    auto lobbyDB = server->GetMainDatabase();
-    auto lobbyConnection = std::dynamic_pointer_cast<LobbyClientConnection>(connection);
-    auto account = lobbyConnection->GetClientState()->GetAccount().Get();
+    reply.WriteU8(account->GetTicketCount());
 
     std::list<std::shared_ptr<objects::Character>> characters;
     for(auto world : server->GetWorlds())

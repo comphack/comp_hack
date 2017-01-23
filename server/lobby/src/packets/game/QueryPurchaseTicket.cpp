@@ -27,12 +27,16 @@
 #include "Packets.h"
 
 // libcomp Includes
-#include <Decrypt.h>
-#include <Log.h>
+#include <ManagerPacket.h>
 #include <Packet.h>
 #include <PacketCodes.h>
 #include <ReadOnlyPacket.h>
-#include <TcpConnection.h>
+
+// lobby Includes
+#include "LobbyServer.h"
+
+// object Includes
+#include <Account.h>
 
 using namespace lobby;
 
@@ -42,24 +46,39 @@ bool Parsers::QueryPurchaseTicket::Parse(libcomp::ManagerPacket *pPacketManager,
 {
     (void)pPacketManager;
 
-    if(p.Size() != 1 || p.ReadU8() != 1)
+    if(p.Size() != 1)
     {
         return false;
     }
 
-    libcomp::Packet reply;
-    reply.WritePacketCode(
-        LobbyClientPacketCode_t::PACKET_QUERY_PURCHASE_TICKET_RESPONSE);
-    reply.WriteU32Little(0);
-    reply.WriteU8(1);
+    uint8_t code = p.ReadU8();
+    if(1 < code)
+    {
+        return false;
+    }
 
-    // Ticket cost.
-    reply.WriteU32Little(1337);
+    if(code == 1)
+    {
+        auto server = std::dynamic_pointer_cast<LobbyServer>(pPacketManager->GetServer());
+        auto config = std::dynamic_pointer_cast<objects::LobbyConfig>(
+            server->GetConfig());
+        auto account = state(connection)->GetAccount();
 
-    // CP balance.
-    reply.WriteU32Little(9999); // Over 9000!
+        libcomp::Packet reply;
+        reply.WritePacketCode(
+            LobbyClientPacketCode_t::PACKET_QUERY_PURCHASE_TICKET_RESPONSE);
+        reply.WriteU32Little(0);
+        reply.WriteU8(1);
 
-    connection->SendPacket(reply);
+        reply.WriteU32Little(config->GetCharacterTicketCost());
+        reply.WriteU32Little(account->GetCP());
+
+        connection->SendPacket(reply);
+    }
+    else
+    {
+        //Request was cancelled, nothing to do
+    }
 
     return true;
 }

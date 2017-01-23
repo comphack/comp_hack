@@ -7,5 +7,6 @@
         <member type="DatabaseConfigSQLite3*" name="SQLite3Config"/>
         <member type="DatabaseConfigCassandra*" name="CassandraConfig"/>
         <member type="u16" name="CharacterDeletionDelay" default="1440"/>
+        <member type="u32" name="CharacterTicketCost"/>
     </object>
 </objgen>

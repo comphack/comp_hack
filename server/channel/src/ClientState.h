@@ -36,6 +36,9 @@
 namespace channel
 {
 
+typedef float ClientTime;
+typedef uint64_t ServerTime;
+
 /**
  * Contains the state of a game client currently connected to the
  * channel.
@@ -72,9 +75,36 @@ public:
      */
     bool Ready();
 
+    /**
+     * Handle any actions needed when the game client pings the
+     * server with a sync request.  If the start time has not been
+     * set, it will be set here.
+     */
+    void SyncReceived();
+
+    /**
+     * Convert time relative to the server to time relative to the
+     * game client.
+     * @param time Time relative to the server
+     * @return Time relative to the client
+     */
+    ClientTime ToClientTime(ServerTime time) const;
+
+    /**
+     * Convert time relative to the game client to time relative
+     * to the server.
+     * @param time Time relative to the client
+     * @return Time relative to the server
+     */
+    ServerTime ToServerTime(ClientTime time) const;
+
 private:
     /// State of the character associated to the client
     std::shared_ptr<CharacterState> mCharacterState;
+
+    /// Current time of the server set upon starting the client
+    /// communication.
+    ServerTime mStartTime;
 };
 
 } // namespace channel

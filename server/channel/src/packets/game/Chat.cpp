@@ -81,7 +81,7 @@ bool Parsers::Chat::Parse(libcomp::ManagerPacket *pPacketManager,
     auto state = client->GetClientState();
 
     libcomp::String line = p.ReadString16Little(
-        state->GetClientStringEncoding()).C();
+        state->GetClientStringEncoding(), true);
 
     std::smatch match;
     std::string input = line.C();

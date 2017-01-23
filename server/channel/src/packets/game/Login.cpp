@@ -51,7 +51,7 @@ bool Parsers::Login::Parse(libcomp::ManagerPacket *pPacketManager,
     libcomp::ReadOnlyPacket& p) const
 {
     // Classic authentication method: username followed by the session key
-    libcomp::String username = p.ReadString16(libcomp::Convert::ENCODING_UTF8).C();
+    libcomp::String username = p.ReadString16(libcomp::Convert::ENCODING_UTF8, true);
     uint32_t sessionKey = p.ReadU32Little();
 
     auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());

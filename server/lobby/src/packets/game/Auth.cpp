@@ -66,7 +66,7 @@ bool Parsers::Auth::Parse(libcomp::ManagerPacket *pPacketManager,
 
     // Authentication token (session ID) provided by the web server.
     libcomp::String sid = p.ReadString16Little(
-        libcomp::Convert::ENCODING_UTF8).ToLower().C();
+        libcomp::Convert::ENCODING_UTF8, true).ToLower();
 
     LOG_DEBUG(libcomp::String("SID: %1\n").Arg(sid));
 

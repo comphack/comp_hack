@@ -185,7 +185,7 @@ bool Parsers::AccountLogin::Parse(libcomp::ManagerPacket *pPacketManager,
     {
         uint32_t sesssionKey = p.ReadU32();
         libcomp::String username = p.ReadString16Little(
-            libcomp::Convert::Encoding_t::ENCODING_UTF8).C();
+            libcomp::Convert::Encoding_t::ENCODING_UTF8, true);
         server->QueueWork(ChannelLogin, server, iConnection, sesssionKey, username);
     }
 

@@ -35,6 +35,7 @@ SET(${PROJECT_NAME}_SRCS
     src/CharacterManager.cpp
     src/CharacterState.cpp
     src/ClientState.cpp
+    src/DemonState.cpp
     src/ManagerConnection.cpp
     src/ChatManager.cpp
     src/main.cpp
@@ -48,6 +49,7 @@ SET(${PROJECT_NAME}_HDRS
     src/CharacterManager.h
     src/CharacterState.h
     src/ClientState.h
+    src/DemonState.h
     src/ManagerConnection.h
     src/ChatManager.h
     src/Packets.h
@@ -79,6 +81,10 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     CharacterStateObject.cpp
     ClientStateObject.h
     ClientStateObject.cpp
+    DemonStateObject.h
+    DemonStateObject.cpp
+    EntityStateObject.h
+    EntityStateObject.cpp
 )
 
 SOURCE_GROUP("Source Files\\Packets\\Game" src/packets/game/*)

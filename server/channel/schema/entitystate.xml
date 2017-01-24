@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="EntityStateObject" persistent="false">
+        <member type="s32" name="EntityID"/>
+
+        <!-- Calculated Stats -->
+        <member type="s16" name="STR"/>
+        <member type="s16" name="MAGIC"/>
+        <member type="s16" name="VIT"/>
+        <member type="s16" name="INTEL"/>
+        <member type="s16" name="SPEED"/>
+        <member type="s16" name="LUCK"/>
+        <member type="s16" name="CLSR"/>
+        <member type="s16" name="LNGR"/>
+        <member type="s16" name="SPELL"/>
+        <member type="s16" name="SUPPORT"/>
+        <member type="s16" name="PDEF"/>
+        <member type="s16" name="MDEF"/>
+
+        <!-- Movement -->
+        <member type="float" name="OriginX"/>
+        <member type="float" name="OriginY"/>
+        <member type="float" name="OriginRotation"/>
+        <member type="u64" name="OriginTicks"/>
+        <member type="float" name="DestinationX"/>
+        <member type="float" name="DestinationY"/>
+        <member type="float" name="DestinationRotation"/>
+        <member type="u64" name="DestinationTicks"/>
+    </object>
+    <object name="CharacterStateObject" baseobject="EntityStateObject" persistent="false">
+        <member type="Character*" name="Character"/>
+    </object>
+    <object name="DemonStateObject" baseobject="EntityStateObject" persistent="false">
+        <member type="Demon*" name="Demon"/>
+    </object>
+</objgen>

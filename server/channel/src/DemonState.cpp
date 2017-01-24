@@ -1,10 +1,10 @@
 /**
- * @file server/channel/src/CharacterState.cpp
+ * @file server/channel/src/DemonState.cpp
  * @ingroup channel
  *
  * @author HACKfrost
  *
- * @brief State of a character on the channel.
+ * @brief State of a demon on the channel.
  *
  * This file is part of the Channel Server (channel).
  *
@@ -24,26 +24,26 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "CharacterState.h"
+#include "DemonState.h"
 
 // objects Includes
-#include <Character.h>
+#include <Demon.h>
 #include <EntityStats.h>
 
 using namespace channel;
 
-CharacterState::CharacterState() : objects::CharacterStateObject()
+DemonState::DemonState() : objects::DemonStateObject()
 {
 }
 
-CharacterState::~CharacterState()
+DemonState::~DemonState()
 {
 }
 
-bool CharacterState::RecalculateStats()
+bool DemonState::RecalculateStats()
 {
-    auto c = GetCharacter().Get();
-    auto cs = c->GetCoreStats();
+    auto d = GetDemon().Get();
+    auto cs = d->GetCoreStats();
 
     SetSTR(cs->GetSTR());
     SetMAGIC(cs->GetMAGIC());
@@ -63,7 +63,7 @@ bool CharacterState::RecalculateStats()
     return true;
 }
 
-bool CharacterState::Ready()
+bool DemonState::Ready()
 {
-    return !GetCharacter().IsNull();
+    return !GetDemon().IsNull();
 }

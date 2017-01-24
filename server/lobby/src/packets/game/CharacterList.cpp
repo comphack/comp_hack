@@ -40,6 +40,7 @@
 #include <Account.h>
 #include <Character.h>
 #include <EntityStats.h>
+#include <Item.h>
 
 // Lobby Includes
 #include "LobbyClientConnection.h"
@@ -83,7 +84,18 @@ bool Parsers::CharacterList::Parse(libcomp::ManagerPacket *pPacketManager,
         auto characterList = objects::Character::LoadCharacterListByAccount(worldDB, account);
         for(auto character : characterList)
         {
-            if(!character->LoadCoreStats(worldDB))
+            bool loaded = character->LoadCoreStats(worldDB) != nullptr;
+
+            if(loaded)
+            {
+                for(auto equip : character->GetEquippedItems())
+                {
+                    loaded &= equip.IsNull() || equip.Get(worldDB) != nullptr;
+                    if(!loaded) break;
+                }
+            }
+
+            if(!loaded)
             {
                 LOG_ERROR(libcomp::String("Character CID %1 could not be loaded fully.\n")
                     .Arg(character->GetCID()));
@@ -202,11 +214,11 @@ bool Parsers::CharacterList::Parse(libcomp::ManagerPacket *pPacketManager,
         // Equipment
         for(size_t i = 0; i < 15; i++)
         {
-            uint32_t equip = character->GetEquippedItems(i);
+            auto equip = character->GetEquippedItems(i);
 
-            if(equip != 0)
+            if(!equip.IsNull())
             {
-                reply.WriteU32Little(equip);
+                reply.WriteU32Little(equip->GetType());
             }
             else
             {

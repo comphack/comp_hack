@@ -34,7 +34,9 @@
 #include <Account.h>
 #include <AccountLogin.h>
 #include <Character.h>
+#include <CharacterProgress.h>
 #include <EntityStats.h>
+#include <Item.h>
 
 // channel Includes
 #include "ChannelServer.h"
@@ -96,21 +98,46 @@ void AccountManager::HandleLoginResponse(const std::shared_ptr<
     auto character = account->GetCharacters(cid);
 
     // Load the character into the cache
-    bool success = false;
-    if(!character.IsNull() && character.Get(worldDB) &&
-        character->LoadCoreStats(worldDB) &&
-        character->LoadProgress(worldDB))
+    bool success = !character.IsNull() && character.Get(worldDB) &&
+        character->LoadCoreStats(worldDB);
+    if(success)
+    {
+        if(character->GetProgress().IsNull())
+        {
+            // Character has never been initialized past lobby values
+            auto progress = libcomp::PersistentObject::New<
+                objects::CharacterProgress>();
+
+            success = progress->Register(progress) &&
+                progress->Insert(worldDB) &&
+                character->SetProgress(progress);
+        }
+        else if(!character->LoadProgress(worldDB))
+        {
+            success = false;
+        }
+    }
+
+    if(success)
+    {
+        //If we're still good, load up the sub-collections
+        for(auto equip : character->GetEquippedItems())
+        {
+            if(!equip.IsNull() && !equip.Get(worldDB))
+            {
+                success = false;
+                break;
+            }
+        }
+    }
+
+    if(success)
     {
         auto charState = state->GetCharacterState();
         charState->SetCharacter(character);
         charState->SetEntityID(character->GetCID() + 1);    /// @todo
         charState->RecalculateStats();
 
-        success = true;
-    }
-
-    if(success)
-    {
         reply.WriteU32Little(1);
     }
     else

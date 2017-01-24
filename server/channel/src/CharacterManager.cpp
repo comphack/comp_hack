@@ -32,6 +32,7 @@
 // object Includes
 #include <Character.h>
 #include <EntityStats.h>
+#include <Item.h>
 
 using namespace channel;
 
@@ -72,11 +73,11 @@ void CharacterManager::SendCharacterData(const std::shared_ptr<
 
     for(size_t i = 0; i < 15; i++)
     {
-        uint32_t equip = c->GetEquippedItems(i);
+        auto equip = c->GetEquippedItems(i);
 
-        if(equip != 0)
+        if(!equip.IsNull())
         {
-            reply.WriteU32Little(equip);
+            reply.WriteU32Little(equip->GetType());
         }
         else
         {

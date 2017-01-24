@@ -103,6 +103,7 @@ void AccountManager::HandleLoginResponse(const std::shared_ptr<
     {
         auto charState = state->GetCharacterState();
         charState->SetCharacter(character);
+        charState->SetEntityID(character->GetCID() + 1);    /// @todo
         charState->RecalculateStats();
 
         success = true;

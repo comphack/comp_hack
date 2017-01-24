@@ -95,6 +95,8 @@ bool ChannelServer::Initialize()
         to_underlying(ChannelClientPacketCode_t::PACKET_SEND_DATA));
     clientPacketManager->AddParser<Parsers::Logout>(
         to_underlying(ChannelClientPacketCode_t::PACKET_LOGOUT));
+    clientPacketManager->AddParser<Parsers::Move>(
+        to_underlying(ChannelClientPacketCode_t::PACKET_MOVE));
     clientPacketManager->AddParser<Parsers::Chat>(
         to_underlying(ChannelClientPacketCode_t::PACKET_CHAT));
     clientPacketManager->AddParser<Parsers::KeepAlive>(
@@ -103,6 +105,8 @@ bool ChannelServer::Initialize()
         to_underlying(ChannelClientPacketCode_t::PACKET_STATE));
     clientPacketManager->AddParser<Parsers::Sync>(
         to_underlying(ChannelClientPacketCode_t::PACKET_SYNC));
+    clientPacketManager->AddParser<Parsers::Rotate>(
+        to_underlying(ChannelClientPacketCode_t::PACKET_ROTATE));
 
     // Add the managers to the generic workers.
     for(auto worker : mWorkers)

@@ -77,11 +77,16 @@ bool Parsers::SetChannelInfo::Parse(libcomp::ManagerPacket *pPacketManager,
         .Arg(svr->GetID())
         .Arg(svr->GetName()));
 
-    svr->SetIP(connection->GetRemoteAddress());
-    if(!svr->Update(worldDB))
+    // If the channel has already set the IP, it should be the externally facing IP
+    // so we'll leave it alone
+    if(svr->GetIP().IsEmpty())
     {
-        LOG_DEBUG("Channel Server could not be updated with its address.\n");
-        return false;
+        svr->SetIP(connection->GetRemoteAddress());
+        if(!svr->Update(worldDB))
+        {
+            LOG_DEBUG("Channel Server could not be updated with its address.\n");
+            return false;
+        }
     }
 
     server->RegisterChannel(svr, conn);

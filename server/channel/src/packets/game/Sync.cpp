@@ -34,11 +34,10 @@
 #include <ReadOnlyPacket.h>
 #include <TcpConnection.h>
 
+// channel Includes
+#include "ChannelServer.h"
+
 using namespace channel;
-
-/// @todo: handle server time properly
-
-float serverTime = 1.f;
 
 bool Parsers::Sync::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
@@ -46,10 +45,21 @@ bool Parsers::Sync::Parse(libcomp::ManagerPacket *pPacketManager,
 {
     (void)pPacketManager;
 
+    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+    auto state = client->GetClientState();
+    state->SyncReceived();
+
+    uint32_t timeFromClient = p.ReadU32Little();
+    ServerTime currentServerTime = ChannelServer::GetServerTime();
+    ClientTime currentClientTime = state->ToClientTime(currentServerTime);
+
+    // Respond with the time received from the client (appears to be based off
+    // the executing system time) then the amount of time elapsed since the
+    // client state connection started.
     libcomp::Packet reply;
     reply.WritePacketCode(ChannelClientPacketCode_t::PACKET_SYNC_RESPONSE);
-    reply.WriteFloat(p.ReadFloat());
-    reply.WriteFloat(serverTime+=10.f);
+    reply.WriteU32Little(timeFromClient);
+    reply.WriteFloat(currentClientTime);
 
     connection->SendPacket(reply);
 

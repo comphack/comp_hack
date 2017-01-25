@@ -34,6 +34,7 @@
 #include <Account.h>
 #include <AccountLogin.h>
 #include <Character.h>
+#include <EntityStats.h>
 
 // channel Includes
 #include "ChannelServer.h"
@@ -92,15 +93,16 @@ void AccountManager::HandleLoginResponse(const std::shared_ptr<
     reply.WritePacketCode(ChannelClientPacketCode_t::PACKET_LOGIN_RESPONSE);
     
     auto cid = login->GetCID();
-    auto charactersByCID = account->GetCharactersByCID();
+    auto character = account->GetCharacters(cid);
 
-    auto character = charactersByCID.find(cid);
-
+    // Load the character into the cache
     bool success = false;
-    if(character != charactersByCID.end() && character->second.Get(worldDB))
+    if(!character.IsNull() && character.Get(worldDB) &&
+        character->LoadCoreStats(worldDB) &&
+        character->LoadProgress(worldDB))
     {
         auto charState = state->GetCharacterState();
-        charState->SetCharacter(character->second.GetCurrentReference());
+        charState->SetCharacter(character);
         charState->RecalculateStats();
 
         success = true;

@@ -1,1 +1,1 @@
-flat || (!@VAR_NAME@.IsNull() && @VAR_NAME@.GetCurrentReference()->Save(@STREAM@))
+flat || (nullptr != @VAR_NAME@ && @VAR_NAME@->Save(@STREAM@))

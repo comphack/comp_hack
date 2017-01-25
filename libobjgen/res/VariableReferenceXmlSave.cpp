@@ -1,4 +1,4 @@
-if(!@VAR_NAME@.IsNull())
+if(nullptr != @VAR_NAME@)
 {
     tinyxml2::XMLElement *temp = @PARENT@;
     {
@@ -10,7 +10,7 @@ if(!@VAR_NAME@.IsNull())
         @PARENT@ = pMember;
     }
 
-    @VAR_NAME@.GetCurrentReference()->Save(@DOC@, *@PARENT@);
+    @VAR_NAME@->Save(@DOC@, *@PARENT@);
 
     @PARENT@ = temp;
 }

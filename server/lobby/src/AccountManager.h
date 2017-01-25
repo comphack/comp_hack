@@ -40,6 +40,8 @@
 namespace lobby
 {
 
+class LobbyServer;
+
 /**
  * Manages logged in user accounts.
  */
@@ -110,6 +112,40 @@ public:
      */
     std::list<libcomp::String> LogoutUsersInWorld(int8_t world,
         int8_t channel = -1);
+    
+    /**
+     * Mark or clear a character by CID for deletion.  This assumes the character
+     * has already been loaded and will not load them if they are not.
+     * @param username Username of the account that the character belongs to.
+     * @param cid CID of the character to update.
+     * @param server Pointer to the lobby server.
+     * @return true if the character was updated, false otherwise.
+     */
+    bool UpdateKillTime(const libcomp::String& username,
+        uint8_t cid, std::shared_ptr<LobbyServer>& server);
+
+    /**
+     * Get characters on an account with a KillTime that has passed.
+     * This assumes characters have already been loaded and will not
+     * load them if they are not.
+     * @param username Username of the account that the characters belong to.
+     * @return List of CIDs for characters to delete.
+     */
+    std::list<uint8_t> GetCharactersForDeletion(
+        const libcomp::String& username);
+
+    /**
+     * Delete a character by CID and update the Characters array on
+     * the account.  This assumes the character has already been loaded and
+     * will not load them if they are not.
+     * @param username Username of the account that the character belongs to.
+     * @param cid CID of the character to delete.
+     * @param server Pointer to the lobby server.
+     * @return true if the character was deleted and the account was updated,
+     *  false otherwise.
+     */
+    bool DeleteCharacter(const libcomp::String& username,
+        uint8_t cid, std::shared_ptr<LobbyServer>& server);
 
 private:
     /// Mutex to lock access to the account map.

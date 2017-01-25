@@ -166,12 +166,13 @@ public:
      * - ENCODING_UTF8 (Unicode)
      * - ENCODING_CP932 (Japanese)
      * - ENCODING_CP1252 (US English)
+     * @param trimNull When true the null terminator will be removed
      * @returns The string that was read.
      * @sa WriteString16
      * @sa ReadString16Big
      * @sa ReadString16Little
      */
-    String ReadString16(Convert::Encoding_t encoding);
+    String ReadString16(Convert::Encoding_t encoding, bool trimNull = false);
 
     /**
      * Read the string @em str encoded with @em encoding from the packet. The
@@ -182,12 +183,13 @@ public:
      * - ENCODING_UTF8 (Unicode)
      * - ENCODING_CP932 (Japanese)
      * - ENCODING_CP1252 (US English)
+     * @param trimNull When true the null terminator will be removed
      * @returns The string that was read.
      * @sa WriteString16
      * @sa ReadString16
      * @sa ReadString16Little
      */
-    String ReadString16Big(Convert::Encoding_t encoding);
+    String ReadString16Big(Convert::Encoding_t encoding, bool trimNull = false);
 
     /**
      * Read the string @em str encoded with @em encoding from the packet. The
@@ -198,12 +200,13 @@ public:
      * - ENCODING_UTF8 (Unicode)
      * - ENCODING_CP932 (Japanese)
      * - ENCODING_CP1252 (US English)
+     * @param trimNull When true the null terminator will be removed
      * @returns The string that was read.
      * @sa WriteString16
      * @sa ReadString16
      * @sa ReadString16Big
      */
-    String ReadString16Little(Convert::Encoding_t encoding);
+    String ReadString16Little(Convert::Encoding_t encoding, bool trimNull = false);
 
     /**
      * Read the string @em str encoded with @em encoding from the packet. The
@@ -213,12 +216,13 @@ public:
      * - ENCODING_UTF8 (Unicode)
      * - ENCODING_CP932 (Japanese)
      * - ENCODING_CP1252 (US English)
+     * @param trimNull When true the null terminator will be removed
      * @returns The string that was read.
      * @sa WriteString32
      * @sa ReadString32Big
      * @sa ReadString32Little
      */
-    String ReadString32(Convert::Encoding_t encoding);
+    String ReadString32(Convert::Encoding_t encoding, bool trimNull = false);
 
     /**
      * Read the string @em str encoded with @em encoding from the packet. The
@@ -229,12 +233,13 @@ public:
      * - ENCODING_UTF8 (Unicode)
      * - ENCODING_CP932 (Japanese)
      * - ENCODING_CP1252 (US English)
+     * @param trimNull When true the null terminator will be removed
      * @returns The string that was read.
      * @sa WriteString32
      * @sa ReadString32
      * @sa ReadString32Little
      */
-    String ReadString32Big(Convert::Encoding_t encoding);
+    String ReadString32Big(Convert::Encoding_t encoding, bool trimNull = false);
 
     /**
      * Read the string @em str encoded with @em encoding from the packet. The
@@ -245,12 +250,13 @@ public:
      * - ENCODING_UTF8 (Unicode)
      * - ENCODING_CP932 (Japanese)
      * - ENCODING_CP1252 (US English)
+     * @param trimNull When true the null terminator will be removed
      * @returns The string that was read.
      * @sa WriteString32
      * @sa ReadString32
      * @sa ReadString32Big
      */
-    String ReadString32Little(Convert::Encoding_t encoding);
+    String ReadString32Little(Convert::Encoding_t encoding, bool trimNull = false);
 
     /**
      * Read a 8-bit unsigned integer from the packet but do not advance the

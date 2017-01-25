@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="Demon" location="world">
+        <!-- Sub-sections -->
+        <member type="EntityStats*" name="CoreStats"/>
+    </object>
+</objgen>

@@ -26,10 +26,17 @@
 
 #include "ClientState.h"
 
+// Standard C++11 Includes
+#include <ctime>
+
+// channel Includes
+#include "ChannelServer.h"
+
 using namespace channel;
 
 ClientState::ClientState() : objects::ClientStateObject(),
-    mCharacterState(std::shared_ptr<CharacterState>(new CharacterState))
+    mCharacterState(std::shared_ptr<CharacterState>(new CharacterState)),
+    mStartTime(0)
 {
 }
 
@@ -51,4 +58,27 @@ std::shared_ptr<CharacterState> ClientState::GetCharacterState()
 bool ClientState::Ready()
 {
     return GetAuthenticated() && mCharacterState->Ready();
+}
+
+void ClientState::SyncReceived()
+{
+    if(mStartTime == 0)
+    {
+        mStartTime = ChannelServer::GetServerTime();
+    }
+}
+
+ClientTime ClientState::ToClientTime(ServerTime time) const
+{
+    if(time <= mStartTime)
+    {
+        return 0.0f;
+    }
+
+    return static_cast<ClientTime>((ClientTime)(time - mStartTime) / 1000000.0f);
+}
+
+ServerTime ClientState::ToServerTime(ClientTime time) const
+{
+    return static_cast<ServerTime>(((ServerTime)time * 1000000) + mStartTime);
 }

@@ -36,6 +36,7 @@
 #include <UUID.h>
 
 // Standard C++ 11 Includes
+#include <mutex>
 #include <typeindex>
 
 namespace libcomp
@@ -327,6 +328,9 @@ private:
     /// Map of intantiated objects listed by their UUID
     static std::unordered_map<std::string,
         std::weak_ptr<PersistentObject>> sCached;
+
+    /// Mutex to lock accessing the cache
+    static std::mutex mCacheLock;
 
     /// Static map of MetaObject definitions by the source object's C++ type
     static TypeMap sTypeMap;

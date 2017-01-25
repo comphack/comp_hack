@@ -126,6 +126,11 @@ ChannelServer::~ChannelServer()
     delete[] mChatManager;
 }
 
+ServerTime ChannelServer::GetServerTime()
+{
+    return sGetServerTime();
+}
+
 const std::shared_ptr<objects::RegisteredChannel> ChannelServer::GetRegisteredChannel()
 {
     return mRegisteredChannel;
@@ -181,8 +186,18 @@ bool ChannelServer::RegisterServer(uint8_t channelID)
         registeredChannel = std::shared_ptr<objects::RegisteredChannel>(new objects::RegisteredChannel);
         registeredChannel->SetID(channelID);
         registeredChannel->SetName(name);
-        registeredChannel->SetIP(""); //Let the world set the externally visible IP
         registeredChannel->SetPort(conf->GetPort());
+
+        if(!conf->GetExternalIP().IsEmpty())
+        {
+            registeredChannel->SetIP(conf->GetExternalIP());
+        }
+        else
+        {
+            //Let the world set the IP it gets connected to from
+            registeredChannel->SetIP("");
+        }
+
         if(!registeredChannel->Register(registeredChannel) || !registeredChannel->Insert(mWorldDatabase))
         {
             return false;
@@ -238,4 +253,23 @@ std::shared_ptr<libcomp::TcpConnection> ChannelServer::CreateConnection(
 
 
     return connection;
+}
+
+GET_SERVER_TIME ChannelServer::sGetServerTime =
+    std::chrono::high_resolution_clock::is_steady
+        ? &ChannelServer::GetServerTimeHighResolution
+        : &ChannelServer::GetServerTimeSteady;
+
+ServerTime ChannelServer::GetServerTimeSteady()
+{
+    auto now = std::chrono::steady_clock::now();
+    return (ServerTime)std::chrono::time_point_cast<std::chrono::microseconds>(now)
+        .time_since_epoch().count();
+}
+
+ServerTime ChannelServer::GetServerTimeHighResolution()
+{
+    auto now = std::chrono::high_resolution_clock::now();
+    return (ServerTime)std::chrono::time_point_cast<std::chrono::microseconds>(now)
+        .time_since_epoch().count();
 }

@@ -10,7 +10,24 @@
         <member type="s32" name="unk1"/>
         <member type="s16" name="unk2"/>
         <member type="u8" name="unk3"/>
-        <member type="s8" name="equipType"/>
+        <member type="enum" name="equipType" underlying="int8_t">
+            <value num="-1">EQUIP_TYPE_NONE</value>
+            <value>EQUIP_TYPE_HEAD</value>
+            <value>EQUIP_TYPE_FACE</value>
+            <value>EQUIP_TYPE_NECK</value>
+            <value>EQUIP_TYPE_TOP</value>
+            <value>EQUIP_TYPE_ARMS</value>
+            <value>EQUIP_TYPE_BOTTOM</value>
+            <value>EQUIP_TYPE_FEET</value>
+            <value>EQUIP_TYPE_COMP</value>
+            <value>EQUIP_TYPE_RING</value>
+            <value>EQUIP_TYPE_EARRING</value>
+            <value>EQUIP_TYPE_EXTRA</value>
+            <value>EQUIP_TYPE_BACK</value>
+            <value>EQUIP_TYPE_TALISMAN</value>
+            <value>EQUIP_TYPE_WEAPON</value>
+            <value>EQUIP_TYPE_BULLETS</value>
+        </member>
         <member type="u32" name="unk4"/>
     </object>
     <object name="MiPossessionData" persistent="false" scriptenabled="true">

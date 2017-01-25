@@ -13,6 +13,7 @@
     <include path="account.xml"/>
     <include path="accountlogin.xml"/>
     <include path="character.xml"/>
+    <include path="demon.xml"/>
     <include path="registeredchannel.xml"/>
     <include path="registeredworld.xml"/>
 

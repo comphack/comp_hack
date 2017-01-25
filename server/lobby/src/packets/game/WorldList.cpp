@@ -55,6 +55,11 @@ bool Parsers::WorldList::Parse(libcomp::ManagerPacket *pPacketManager,
     auto server = std::dynamic_pointer_cast<LobbyServer>(pPacketManager->GetServer());
 
     auto worlds = server->GetWorlds();
+    worlds.remove_if([](const std::shared_ptr<lobby::World>& world)
+        {
+            return world->GetRegisteredWorld()->GetStatus()
+                == objects::RegisteredWorld::Status_t::INACTIVE;
+        });
 
     // World count.
     reply.WriteU8((uint8_t)worlds.size());

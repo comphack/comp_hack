@@ -77,7 +77,7 @@ bool Parsers::AccountLogout::Parse(libcomp::ManagerPacket *pPacketManager,
     (void)connection;
 
     libcomp::String username = p.ReadString16Little(
-        libcomp::Convert::Encoding_t::ENCODING_UTF8).C();
+        libcomp::Convert::Encoding_t::ENCODING_UTF8, true);
 
     auto server = std::dynamic_pointer_cast<WorldServer>(pPacketManager->GetServer());
 

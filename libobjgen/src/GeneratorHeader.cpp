@@ -68,14 +68,15 @@ std::string GeneratorHeader::GenerateClass(const MetaObject& obj)
 
         if(var->GetMetaType() == MetaVariable::MetaVariableType_t::TYPE_ENUM)
         {
-            ss << Tab() << "enum class " << var->GetName() << "_t : "
+            ss << Tab() << "enum class " << Generator::GetCapitalName(var) << "_t : "
                 << std::dynamic_pointer_cast<MetaVariableEnum>(var)->GetUnderlyingType()
                 << std::endl;
             ss << Tab() << "{" << std::endl;
             auto values = std::dynamic_pointer_cast<MetaVariableEnum>(var)->GetValues();
             for(auto value : values)
             {
-                ss << Tab(2) << value << "," << std::endl;
+                ss << Tab(2) << value.first <<
+                    (!value.second.empty() ? " = " + value.second : "") << "," << std::endl;
             }
             ss << Tab() << "};" << std::endl << std::endl;
         }

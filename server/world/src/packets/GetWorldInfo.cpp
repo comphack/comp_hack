@@ -118,10 +118,10 @@ bool Parsers::GetWorldInfo::Parse(libcomp::ManagerPacket *pPacketManager,
         switch(databaseType)
         {
             case objects::ServerConfig::DatabaseType_t::CASSANDRA:
-                config->GetCassandraConfig().Get()->SavePacket(reply, false);
+                config->GetCassandraConfig()->SavePacket(reply, false);
                 break;
             case objects::ServerConfig::DatabaseType_t::SQLITE3:
-                config->GetSQLite3Config().Get()->SavePacket(reply, false);
+                config->GetSQLite3Config()->SavePacket(reply, false);
                 break;
         }
 

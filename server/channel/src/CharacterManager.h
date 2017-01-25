@@ -59,6 +59,13 @@ public:
         channel::ChannelClientConnection>& client);
 
     /**
+     * Tell the game client to show a character.
+     * @param client Pointer to the client connection
+     */
+    void ShowCharacter(const std::shared_ptr<
+        channel::ChannelClientConnection>& client);
+
+    /**
      * Send a character's status icon to the game clients.
      * @param client Pointer to the client connection containing
      *  the character

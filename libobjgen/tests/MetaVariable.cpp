@@ -151,13 +151,29 @@ TEST(MetaVariableType, Enum)
     ASSERT_FALSE(var.IsValid())
         << "Checking validity with missing requirements.";
 
-    std::vector<std::string> values = { "VALUE_1", "VALUE_2", "VALUE_1" };
+    std::vector<std::pair<std::string, std::string>> values =
+        { { "VALUE_1", "0" }, { "VALUE_2", "1" }, { "VALUE_1", "2" } };
     ASSERT_FALSE(var.SetValues(values))
-        << "Setting invalid values containing an duplicate.";
+        << "Setting invalid values containing an duplicate enum value.";
+    
+    values =
+        { { "VALUE_1", "" },{ "VALUE_2", "1" },{ "VALUE_3", "1" } };
+    ASSERT_FALSE(var.SetValues(values))
+        << "Setting invalid values containing an duplicate numeric value.";
 
-    values = { "VALUE_1", "VALUE_2", "VALUE_3" };
+    values =
+        { { "VALUE_1", "" },{ "VALUE_2", "2" },{ "VALUE_3", "3" } };
     ASSERT_TRUE(var.SetValues(values))
         << "Setting valid values.";
+
+    values = var.GetValues();
+    ASSERT_EQ(values.size(), 3);
+    ASSERT_EQ(values[0].first, "VALUE_1");
+    ASSERT_EQ(values[0].second, "0");
+    ASSERT_EQ(values[1].first, "VALUE_2");
+    ASSERT_EQ(values[1].second, "2");
+    ASSERT_EQ(values[2].first, "VALUE_3");
+    ASSERT_EQ(values[2].second, "3");
 
     var.SetDefaultValue("VALUE_3");
     var.SetTypePrefix("Testing");

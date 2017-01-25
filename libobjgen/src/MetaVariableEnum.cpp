@@ -29,6 +29,7 @@
 // libobjgen Includes
 #include "Generator.h"
 #include "MetaObject.h"
+#include "MetaVariableInt.h"
 
 // Standard C++11 Libraries
 #include <regex>
@@ -75,19 +76,41 @@ void MetaVariableEnum::SetUnderlyingType(const std::string& underlyingType)
     mUnderlyingType = underlyingType;
 }
 
-const std::vector<std::string> MetaVariableEnum::GetValues() const
+const std::vector<std::pair<std::string, std::string>>
+MetaVariableEnum::GetValues() const
 {
     return mValues;
 }
 
-bool MetaVariableEnum::SetValues(const std::vector<std::string>& values)
+bool MetaVariableEnum::SetValues(const std::vector<std::pair<std::string,
+    std::string>>& values)
 {
-    if(ContainsDupilicateValues(values))
+    if(ContainsDuplicateValues(values))
     {
         return false;
     }
 
+    for(auto val : mValues)
+    {
+        if(!NumericValueIsValid(val.second))
+        {
+            return false;
+        }
+    }
+
     mValues = values;
+    
+    //The first value is always required
+    if(mValues.size() > 0 && mValues[0].second.empty())
+    {
+        if(ValueExists("0", false))
+        {
+            return false;
+        }
+
+        mValues[0].second = "0";
+    }
+
     return true;
 }
 
@@ -133,9 +156,17 @@ bool MetaVariableEnum::IsScriptAccessible() const
 
 bool MetaVariableEnum::IsValid() const
 {
-    if(ContainsDupilicateValues(mValues))
+    if(ContainsDuplicateValues(mValues))
     {
         return false;
+    }
+
+    for(auto val : mValues)
+    {
+        if(!NumericValueIsValid(val.second))
+        {
+            return false;
+        }
     }
 
     std::smatch match;
@@ -152,7 +183,7 @@ bool MetaVariableEnum::IsValid() const
     }
     else
     {
-        return mValues.size() > 0 && ValueExists(mDefaultValue);
+        return mValues.size() > 0 && ValueExists(mDefaultValue, true);
     }
 }
 
@@ -171,8 +202,9 @@ bool MetaVariableEnum::Load(std::istream& stream)
     mValues.clear();
     for(size_t i = 0; i < len; i++)
     {
-        std::string val;
-        Generator::LoadString(stream, val);
+        std::pair<std::string, std::string> val;
+        Generator::LoadString(stream, val.first);
+        Generator::LoadString(stream, val.second);
         mValues.push_back(val);
     }
 
@@ -195,7 +227,8 @@ bool MetaVariableEnum::Save(std::ostream& stream) const
 
         for(auto val : mValues)
         {
-            Generator::SaveString(stream, val);
+            Generator::SaveString(stream, val.first);
+            Generator::SaveString(stream, val.second);
         }
 
         result = stream.good();
@@ -210,6 +243,13 @@ bool MetaVariableEnum::Load(const tinyxml2::XMLDocument& doc,
     (void)doc;
 
     bool status = true;
+    
+    const char *szUnderlying = root.Attribute("underlying");
+
+    if(nullptr != szUnderlying)
+    {
+        SetUnderlyingType(szUnderlying);
+    }
 
     mValues.clear();
     const tinyxml2::XMLElement *pVariableChild = root.FirstChildElement();
@@ -217,10 +257,20 @@ bool MetaVariableEnum::Load(const tinyxml2::XMLDocument& doc,
     {
         if(std::string("value") == pVariableChild->Name())
         {
+            auto numAttr = pVariableChild->Attribute("num");
+
             std::string val(pVariableChild->GetText());
-            if(val.length() > 0 && !ValueExists(val))
+            std::string num(numAttr != nullptr ? numAttr : "");
+            if(val.length() > 0 && !ValueExists(val, true)
+                && !ValueExists(num, false))
             {
-                mValues.push_back(val);
+                if(mValues.size() == 0 && num.empty())
+                {
+                    num = "0";
+                }
+
+                std::pair<std::string, std::string> pair(val, num);
+                mValues.push_back(pair);
             }
             else
             {
@@ -237,12 +287,9 @@ bool MetaVariableEnum::Load(const tinyxml2::XMLDocument& doc,
     {
         mDefaultValue = std::string(defaultVal);
     }
-    
-    const char *szUnderlying = root.Attribute("underlying");
-
-    if(nullptr != szUnderlying)
+    else if(mValues.size() > 0)
     {
-        SetUnderlyingType(szUnderlying);
+        mDefaultValue = mValues.front().first;
     }
 
     return status && BaseLoad(root) && IsValid();
@@ -260,7 +307,11 @@ bool MetaVariableEnum::Save(tinyxml2::XMLDocument& doc,
     for(auto val : mValues)
     {
         tinyxml2::XMLElement *pVariableValue = doc.NewElement("value");
-        pVariableValue->SetText(val.c_str());
+        pVariableValue->SetText(val.first.c_str());
+        if(!val.second.empty())
+        {
+            pVariableValue->SetAttribute("num", val.second.c_str());
+        }
         pVariableElement->InsertEndChild(pVariableValue);
     }
 
@@ -285,7 +336,7 @@ std::string MetaVariableEnum::GetCodeType() const
     {
         ss << mTypePrefix << "::";
     }
-    ss << GetName() << "_t";
+    ss << Generator::GetCapitalName(*this) << "_t";
     return ss.str();
 }
 
@@ -312,8 +363,8 @@ std::string MetaVariableEnum::GetValidCondition(const Generator& generator,
     if(mValues.size() > 0)
     {
         ss << name << " >= " << GetCodeType()
-            << "::" << mValues[0] << " && " << name
-            << " <= " << GetCodeType() << "::" << mValues[mValues.size() - 1];
+            << "::" << mValues[0].first << " && " << name
+            << " <= " << GetCodeType() << "::" << mValues[mValues.size() - 1].first;
     }
 
     return ss.str();
@@ -373,7 +424,7 @@ std::string MetaVariableEnum::GetXmlLoadCode(const Generator& generator,
     (void)doc;
 
     std::map<std::string, std::string> replacements;
-    replacements["@VAR_NAME@"] = GetName();
+    replacements["@VAR_CAMELCASE_NAME@"] = generator.GetCapitalName(*this);
     replacements["@VAR_CODE_TYPE@"] = GetCodeType();
     replacements["@DEFAULT@"] = GetDefaultValueCode();
     replacements["@NODE@"] = node;
@@ -389,7 +440,7 @@ std::string MetaVariableEnum::GetXmlSaveCode(const Generator& generator,
     (void)doc;
 
     std::map<std::string, std::string> replacements;
-    replacements["@VAR_NAME@"] = GetName();
+    replacements["@VAR_CAMELCASE_NAME@"] = generator.GetCapitalName(*this);
     replacements["@VAR_XML_NAME@"] = generator.Escape(GetName());
     replacements["@ELEMENT_NAME@"] = generator.Escape(elemName);
     replacements["@GETTER@"] = GetInternalGetterCode(generator, name);
@@ -457,15 +508,15 @@ std::string MetaVariableEnum::GetUtilityFunctions(const Generator& generator,
     std::stringstream cases;
     for(auto val : mValues)
     {
-        cases << "case " << GetCodeType() << "::" << val << ": return "
-            << generator.Escape(val) << "; break;" << std::endl;
+        cases << "case " << GetCodeType() << "::" << val.first << ": return "
+            << generator.Escape(val.first) << "; break;" << std::endl;
     }
 
     std::stringstream conditions;
     for(auto val : mValues)
     {
-        conditions << "if(val == " << generator.Escape(val) << ") return "
-            << GetCodeType() << "::" << val << ";" << std::endl;
+        conditions << "if(val == " << generator.Escape(val.first) << ") return "
+            << GetCodeType() << "::" << val.first << ";" << std::endl;
     }
 
     std::map<std::string, std::string> replacements;
@@ -481,23 +532,77 @@ std::string MetaVariableEnum::GetUtilityFunctions(const Generator& generator,
     return ss.str();
 }
 
-bool MetaVariableEnum::ValueExists(const std::string& val) const
+bool MetaVariableEnum::NumericValueIsValid(const std::string& num) const
 {
-    if(mValues.size() > 0)
+    if(num.empty())
     {
-        return std::find(mValues.begin(), mValues.end(), val) != mValues.end();
+        return true;
+    }
+
+    bool ok = false;
+    if(mUnderlyingType == "int8_t")
+    {
+        MetaVariableInt<int8_t>::StringToValue(num, &ok);
+    }
+    else if(mUnderlyingType == "uint8_t")
+    {
+        MetaVariableInt<uint8_t>::StringToValue(num, &ok);
+    }
+    else if(mUnderlyingType == "int16_t")
+    {
+        MetaVariableInt<int16_t>::StringToValue(num, &ok);
+    }
+    else if(mUnderlyingType == "uint16_t")
+    {
+        MetaVariableInt<uint16_t>::StringToValue(num, &ok);
+    }
+    else if(mUnderlyingType == "int32_t" || mUnderlyingType.empty())
+    {
+        MetaVariableInt<int32_t>::StringToValue(num, &ok);
+    }
+    else if(mUnderlyingType == "uint32_t")
+    {
+        MetaVariableInt<uint32_t>::StringToValue(num, &ok);
+    }
+    else if(mUnderlyingType == "int64_t")
+    {
+        MetaVariableInt<int64_t>::StringToValue(num, &ok);
+    }
+    else if(mUnderlyingType == "uint64_t")
+    {
+        MetaVariableInt<uint64_t>::StringToValue(num, &ok);
+    }
+    
+    return ok;
+}
+
+bool MetaVariableEnum::ValueExists(const std::string& val, bool first) const
+{
+    for(auto pair : mValues)
+    {
+        if(first && pair.first == val)
+        {
+            return true;
+        }
+        else if(!first && pair.second == val && val != "")
+        {
+            return true;
+        }
     }
 
     return false;
 }
 
-bool MetaVariableEnum::ContainsDupilicateValues(const std::vector<std::string>& values) const
+bool MetaVariableEnum::ContainsDuplicateValues(const std::vector<
+    std::pair<std::string, std::string>>& values) const
 {
-    if(values.size() > 0)
+    for(size_t i = 0; i < values.size(); i++)
     {
-        for(auto iter = values.begin(); iter <= values.end()-1; iter++)
+        for(size_t k = i + 1; k < values.size(); k++)
         {
-            if(std::find(iter + 1, values.end(), *iter) != values.end())
+            if(values[i].first == values[k].first ||
+                (values[i].second == values[k].second &&
+                !values[i].second.empty()))
             {
                 return true;
             }

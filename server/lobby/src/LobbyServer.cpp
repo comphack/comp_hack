@@ -69,10 +69,10 @@ bool LobbyServer::Initialize()
         std::shared_ptr<objects::DatabaseConfig>> configMap;
 
     configMap[objects::ServerConfig::DatabaseType_t::SQLITE3]
-        = conf->GetSQLite3Config().Get();
+        = conf->GetSQLite3Config();
 
     configMap[objects::ServerConfig::DatabaseType_t::CASSANDRA]
-        = conf->GetCassandraConfig().Get();
+        = conf->GetCassandraConfig();
 
     mDatabase = GetDatabase(configMap, true);
 

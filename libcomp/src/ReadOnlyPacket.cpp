@@ -230,73 +230,103 @@ String ReadOnlyPacket::ReadString(Convert::Encoding_t encoding)
     return Convert::FromEncoding(encoding, buffer);
 }
 
-String ReadOnlyPacket::ReadString16(Convert::Encoding_t encoding)
+String ReadOnlyPacket::ReadString16(Convert::Encoding_t encoding,
+    bool trimNull)
 {
     // Read the size of the string.
     uint16_t sz = ReadU16();
 
     // Read the string into the buffer.
     std::vector<char> buffer = ReadArray(sz);
+    if(trimNull && buffer.size() > 0 && buffer.back() == 0)
+    {
+        buffer.pop_back();
+    }
 
     // Convert the string to the requested encoding.
     return Convert::FromEncoding(encoding, buffer);
 }
 
-String ReadOnlyPacket::ReadString16Big(Convert::Encoding_t encoding)
+String ReadOnlyPacket::ReadString16Big(Convert::Encoding_t encoding,
+    bool trimNull)
 {
     // Read the size of the string.
     uint16_t sz = ReadU16Big();
 
     // Read the string into the buffer.
     std::vector<char> buffer = ReadArray(sz);
+    if(trimNull && buffer.size() > 0 && buffer.back() == 0)
+    {
+        buffer.pop_back();
+    }
 
     // Convert the string to the requested encoding.
     return Convert::FromEncoding(encoding, buffer);
 }
 
-String ReadOnlyPacket::ReadString16Little(Convert::Encoding_t encoding)
+String ReadOnlyPacket::ReadString16Little(Convert::Encoding_t encoding,
+    bool trimNull)
 {
     // Read the size of the string.
     uint16_t sz = ReadU16Little();
 
     // Read the string into the buffer.
     std::vector<char> buffer = ReadArray(sz);
+    if(trimNull && buffer.size() > 0 && buffer.back() == 0)
+    {
+        buffer.pop_back();
+    }
 
     // Convert the string to the requested encoding.
     return Convert::FromEncoding(encoding, buffer);
 }
 
-String ReadOnlyPacket::ReadString32(Convert::Encoding_t encoding)
+String ReadOnlyPacket::ReadString32(Convert::Encoding_t encoding,
+    bool trimNull)
 {
     // Read the size of the string.
     uint32_t sz = ReadU32();
 
     // Read the string into the buffer.
     std::vector<char> buffer = ReadArray(sz);
+    if(trimNull && buffer.size() > 0 && buffer.back() == 0)
+    {
+        buffer.pop_back();
+    }
 
     // Convert the string to the requested encoding.
     return Convert::FromEncoding(encoding, buffer);
 }
 
-String ReadOnlyPacket::ReadString32Big(Convert::Encoding_t encoding)
+String ReadOnlyPacket::ReadString32Big(Convert::Encoding_t encoding,
+    bool trimNull)
 {
     // Read the size of the string.
     uint32_t sz = ReadU32Big();
 
     // Read the string into the buffer.
     std::vector<char> buffer = ReadArray(sz);
+    if(trimNull && buffer.size() > 0 && buffer.back() == 0)
+    {
+        buffer.pop_back();
+    }
 
     // Convert the string to the requested encoding.
     return Convert::FromEncoding(encoding, buffer);
 }
 
-String ReadOnlyPacket::ReadString32Little(Convert::Encoding_t encoding)
+String ReadOnlyPacket::ReadString32Little(Convert::Encoding_t encoding,
+    bool trimNull)
 {
     // Read the size of the string.
     uint32_t sz = ReadU32Little();
 
     // Read the string into the buffer.
     std::vector<char> buffer = ReadArray(sz);
+    if(trimNull && buffer.size() > 0 && buffer.back() == 0)
+    {
+        buffer.pop_back();
+    }
 
     // Convert the string to the requested encoding.
     return Convert::FromEncoding(encoding, buffer);

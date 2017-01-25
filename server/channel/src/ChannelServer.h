@@ -45,6 +45,9 @@
 namespace channel
 {
 
+typedef uint64_t ServerTime;
+typedef ServerTime (*GET_SERVER_TIME)();
+
 /**
  * Channel server that handles client packets in game.
  */
@@ -73,6 +76,12 @@ public:
      * @return true on success, false on failure
      */
     virtual bool Initialize();
+
+    /**
+     * Get the current time relative to the server.
+     * @return Current time relative to the server
+     */
+    static ServerTime GetServerTime();
 
     /**
      * Get the RegisteredChannel.
@@ -153,6 +162,24 @@ protected:
      */
     virtual std::shared_ptr<libcomp::TcpConnection> CreateConnection(
         asio::ip::tcp::socket& socket);
+
+    /**
+     * Get the current time relative to the server using the
+     * C++ standard steady_clock.
+     * @return Current time relative to the server
+     */
+    static ServerTime GetServerTimeSteady();
+
+    /**
+     * Get the current time relative to the server using the
+     * C++ standard high_resolution_clock.
+     * @return Current time relative to the server
+     */
+    static ServerTime GetServerTimeHighResolution();
+
+    /// Function pointer to the most accurate time detection code
+    /// available for the current machine.
+    static GET_SERVER_TIME sGetServerTime;
 
     /// Pointer to the manager in charge of connection messages.
     std::shared_ptr<ManagerConnection> mManagerConnection;

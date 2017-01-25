@@ -2,6 +2,7 @@
 <objgen>
     <object name="ChannelConfig" baseobject="ServerConfig">
         <member type="string" name="Name"/>
+        <member type="string" name="ExternalIP"/>
         <member type="u16" name="Port" inherited="true" default="14666"/>
         <member type="string" name="WorldIP" default="127.0.0.1"/>
         <member type="u16" name="WorldPort" default="18666"/>

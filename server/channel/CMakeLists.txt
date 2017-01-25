@@ -57,8 +57,8 @@ SET(${PROJECT_NAME}_HDRS
 
 SET(${PROJECT_NAME}_SCHEMA
     schema/channelconfig.xml
-    schema/characterstate.xml
     schema/clientstate.xml
+    schema/entitystate.xml
 )
 
 SOURCE_GROUP("objgen" ${CMAKE_CURRENT_BINARY_DIR}/objgen/*)

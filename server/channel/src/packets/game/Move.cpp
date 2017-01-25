@@ -35,6 +35,9 @@
 #include <ReadOnlyPacket.h>
 #include <TcpConnection.h>
 
+// Standard C++11 Includes
+#include <math.h>
+
 // channel Includes
 #include "ChannelClientConnection.h"
 #include "ChannelServer.h"
@@ -79,19 +82,21 @@ bool Parsers::Move::Parse(libcomp::ManagerPacket *pPacketManager,
     ClientTime start = (ClientTime)p.ReadFloat();
     ClientTime stop = (ClientTime)p.ReadFloat();
 
-    float deltaX = destX - originX;
-    float deltaY = destY - originY;
-    float dist2 = (deltaX * deltaX) + (deltaY * deltaY);
-
     ServerTime startTime = state->ToServerTime(start);
     ServerTime stopTime = state->ToServerTime(stop);
+
+    (void)ratePerSec;
+
+    /*float deltaX = destX - originX;
+    float deltaY = destY - originY;
+    float dist2 = (deltaX * deltaX) + (deltaY * deltaY);
 
     // Delta time in seconds
     double deltaTime = static_cast<double>((double)(stopTime - startTime) / 1000000.0);
     double maxDist = static_cast<double>(deltaTime * ratePerSec);
     double dist = (double)sqrtl(dist2);
 
-    /*LOG_DEBUG(libcomp::String("Rate: %1 | Dist: %2 | Max Dist: %3 | Time: %4\n").Arg(
+    LOG_DEBUG(libcomp::String("Rate: %1 | Dist: %2 | Max Dist: %3 | Time: %4\n").Arg(
         ratePerSec).Arg(dist).Arg(maxDist).Arg(std::to_string(deltaTime)));*/
 
     eState->SetOriginX(originX);

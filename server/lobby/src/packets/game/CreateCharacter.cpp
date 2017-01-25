@@ -121,38 +121,48 @@ bool Parsers::CreateCharacter::Parse(libcomp::ManagerPacket *pPacketManager,
     character->SetRightEyeColor((uint8_t)eyeColor);
     character->SetAccount(account);
 
+    std::unordered_map<size_t, std::shared_ptr<objects::Item>> equipMap;
+
     auto itemTop = libcomp::PersistentObject::New<objects::Item>();
     itemTop->SetType(equipTop);
+    equipMap[(size_t)
+        objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_TOP] = itemTop;
+
     auto itemBottom = libcomp::PersistentObject::New<objects::Item>();
     itemBottom->SetType(equipBottom);
+    equipMap[(size_t)
+        objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_BOTTOM] = itemBottom;
+
     auto itemFeet = libcomp::PersistentObject::New<objects::Item>();
     itemFeet->SetType(equipFeet);
+    equipMap[(size_t)
+        objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_FEET] = itemFeet;
+
     auto comp = libcomp::PersistentObject::New<objects::Item>();
     comp->SetType(equipComp);
+    equipMap[(size_t)
+        objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_COMP] = comp;
+
     auto weapon = libcomp::PersistentObject::New<objects::Item>();
     weapon->SetType(equipWeapon);
+    equipMap[(size_t)
+        objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_WEAPON] = weapon;
 
     auto stats = libcomp::PersistentObject::New<objects::EntityStats>();
+
+    bool equipped = true;
+    for(auto pair : equipMap)
+    {
+        auto equip = pair.second;
+        equipped &= equip->Register(equip) && equip->Insert(worldDB) &&
+            character->SetEquippedItems(pair.first, equip);
+    }
 
     libcomp::Packet reply;
     reply.WritePacketCode(
         LobbyClientPacketCode_t::PACKET_CREATE_CHARACTER_RESPONSE);
-    
-    if(!itemTop->Register(itemTop) || !itemTop->Insert(worldDB) ||
-        !itemBottom->Register(itemBottom) || !itemBottom->Insert(worldDB) ||
-        !itemFeet->Register(itemFeet) || !itemFeet->Insert(worldDB) ||
-        !comp->Register(comp) || !comp->Insert(worldDB) ||
-        !weapon->Register(weapon) || !weapon->Insert(worldDB) ||
-        !character->SetEquippedItems(
-            (size_t)objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_TOP, itemTop) ||
-        !character->SetEquippedItems(
-            (size_t)objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_BOTTOM, itemBottom) ||
-        !character->SetEquippedItems(
-            (size_t)objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_FEET, itemFeet) ||
-        !character->SetEquippedItems(
-            (size_t)objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_COMP, comp) ||
-        !character->SetEquippedItems(
-            (size_t)objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_WEAPON, weapon))
+
+    if(!equipped)
     {
         LOG_DEBUG("Character item data failed to save.\n");
         reply.WriteU32Little(1);

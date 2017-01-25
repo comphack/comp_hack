@@ -78,6 +78,10 @@ bool Parsers::Rotate::Parse(libcomp::ManagerPacket *pPacketManager,
     ServerTime startTime = state->ToServerTime(start);
     ServerTime stopTime = state->ToServerTime(stop);
 
+    // Rotating does not update the X and Y position
+    eState->SetOriginX(eState->GetDestinationX());
+    eState->SetOriginY(eState->GetDestinationY());
+
     eState->SetOriginTicks(startTime);
     eState->SetDestinationTicks(stopTime);
 

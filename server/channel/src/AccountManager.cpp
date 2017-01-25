@@ -46,6 +46,7 @@ using namespace channel;
 AccountManager::AccountManager(const std::weak_ptr<ChannelServer>& server)
     : mServer(server)
 {
+    mMaxEntityID = 0;
 }
 
 AccountManager::~AccountManager()
@@ -91,51 +92,17 @@ void AccountManager::HandleLoginResponse(const std::shared_ptr<
     auto login = state->GetAccountLogin();
     auto account = login->GetAccount();
 
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelClientPacketCode_t::PACKET_LOGIN_RESPONSE);
-    
     auto cid = login->GetCID();
     auto character = account->GetCharacters(cid);
 
-    // Load the character into the cache
-    bool success = !character.IsNull() && character.Get(worldDB) &&
-        character->LoadCoreStats(worldDB);
-    if(success)
-    {
-        if(character->GetProgress().IsNull())
-        {
-            // Character has never been initialized past lobby values
-            auto progress = libcomp::PersistentObject::New<
-                objects::CharacterProgress>();
+    libcomp::Packet reply;
+    reply.WritePacketCode(ChannelClientPacketCode_t::PACKET_LOGIN_RESPONSE);
 
-            success = progress->Register(progress) &&
-                progress->Insert(worldDB) &&
-                character->SetProgress(progress);
-        }
-        else if(!character->LoadProgress(worldDB))
-        {
-            success = false;
-        }
-    }
-
-    if(success)
-    {
-        //If we're still good, load up the sub-collections
-        for(auto equip : character->GetEquippedItems())
-        {
-            if(!equip.IsNull() && !equip.Get(worldDB))
-            {
-                success = false;
-                break;
-            }
-        }
-    }
-
-    if(success)
+    if(InitializeCharacter(character, worldDB))
     {
         auto charState = state->GetCharacterState();
         charState->SetCharacter(character);
-        charState->SetEntityID(character->GetCID() + 1);    /// @todo
+        charState->SetEntityID(++mMaxEntityID);
         charState->RecalculateStats();
 
         reply.WriteU32Little(1);
@@ -241,4 +208,48 @@ void AccountManager::Authenticate(const std::shared_ptr<
     }
 
     client->SendPacket(reply);
+}
+
+bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
+    objects::Character>& character,
+    const std::shared_ptr<libcomp::Database>& db)
+{
+    if(character.IsNull() || !character.Get(db) ||
+        !character->LoadCoreStats(db))
+    {
+        return false;
+    }
+
+    bool updateCharacter = false;
+    if(character->GetProgress().IsNull())
+    {
+        auto progress = libcomp::PersistentObject::New<
+            objects::CharacterProgress>();
+
+        if(!progress->Register(progress) ||
+            !progress->Insert(db) ||
+            !character->SetProgress(progress))
+        {
+            return false;
+        }
+        updateCharacter = true;
+    }
+    else if(!character->LoadProgress(db))
+    {
+        return false;
+    }
+
+    for(auto equip : character->GetEquippedItems())
+    {
+        if(!equip.IsNull())
+        {
+            if(!equip.Get(db))
+            {
+                return false;
+            }
+            updateCharacter = true;
+        }
+    }
+
+    return !updateCharacter || character->Update(db);
 }

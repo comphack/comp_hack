@@ -36,7 +36,7 @@ using namespace channel;
 
 ClientState::ClientState() : objects::ClientStateObject(),
     mCharacterState(std::shared_ptr<CharacterState>(new CharacterState)),
-    mStartTime(0)
+    mDemonState(nullptr), mStartTime(0)
 {
 }
 
@@ -53,6 +53,11 @@ ClientState::~ClientState()
 std::shared_ptr<CharacterState> ClientState::GetCharacterState()
 {
     return mCharacterState;
+}
+
+std::shared_ptr<DemonState> ClientState::GetDemonState()
+{
+    return mDemonState;
 }
 
 bool ClientState::Ready()

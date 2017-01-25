@@ -35,12 +35,21 @@
 
 // All libcomp PersistentObject Includes
 #include "Account.h"
+#include "AccountWorldData.h"
 #include "Character.h"
 #include "CharacterProgress.h"
 #include "Demon.h"
 #include "EntityStats.h"
+#include "Expertise.h"
+#include "Hotbar.h"
+#include "HotbarItem.h"
+#include "InheritedSkill.h"
+#include "Item.h"
+#include "ItemBox.h"
+#include "Quest.h"
 #include "RegisteredChannel.h"
 #include "RegisteredWorld.h"
+#include "StatusEffect.h"
 
 using namespace libcomp;
 
@@ -286,18 +295,51 @@ bool PersistentObject::Initialize()
 {
     RegisterType(typeid(objects::Account), objects::Account::GetMetadata(),
         []() {  return (PersistentObject*)new objects::Account(); });
+
+    RegisterType(typeid(objects::AccountWorldData), objects::AccountWorldData::GetMetadata(),
+        []() {  return (PersistentObject*)new objects::AccountWorldData(); });
+
     RegisterType(typeid(objects::Character), objects::Character::GetMetadata(),
         []() {  return (PersistentObject*)new objects::Character(); });
+
     RegisterType(typeid(objects::CharacterProgress), objects::CharacterProgress::GetMetadata(),
         []() {  return (PersistentObject*)new objects::CharacterProgress(); });
+
     RegisterType(typeid(objects::Demon), objects::Demon::GetMetadata(),
         []() {  return (PersistentObject*)new objects::Demon(); });
+
     RegisterType(typeid(objects::EntityStats), objects::EntityStats::GetMetadata(),
         []() {  return (PersistentObject*)new objects::EntityStats(); });
+
+    RegisterType(typeid(objects::Expertise), objects::Expertise::GetMetadata(),
+        []() {  return (PersistentObject*)new objects::Expertise(); });
+
+    RegisterType(typeid(objects::Hotbar), objects::Hotbar::GetMetadata(),
+        []() {  return (PersistentObject*)new objects::Hotbar(); });
+
+    RegisterType(typeid(objects::HotbarItem), objects::HotbarItem::GetMetadata(),
+        []() {  return (PersistentObject*)new objects::HotbarItem(); });
+
+    RegisterType(typeid(objects::InheritedSkill), objects::InheritedSkill::GetMetadata(),
+        []() {  return (PersistentObject*)new objects::InheritedSkill(); });
+
+    RegisterType(typeid(objects::Item), objects::Item::GetMetadata(),
+        []() {  return (PersistentObject*)new objects::Item(); });
+
+    RegisterType(typeid(objects::ItemBox), objects::ItemBox::GetMetadata(),
+        []() {  return (PersistentObject*)new objects::ItemBox(); });
+
+    RegisterType(typeid(objects::Quest), objects::Quest::GetMetadata(),
+        []() {  return (PersistentObject*)new objects::Quest(); });
+
     RegisterType(typeid(objects::RegisteredChannel), objects::RegisteredChannel::GetMetadata(),
         []() {  return (PersistentObject*)new objects::RegisteredChannel(); });
+
     RegisterType(typeid(objects::RegisteredWorld), objects::RegisteredWorld::GetMetadata(),
         []() {  return (PersistentObject*)new objects::RegisteredWorld(); });
+
+    RegisterType(typeid(objects::StatusEffect), objects::StatusEffect::GetMetadata(),
+        []() {  return (PersistentObject*)new objects::StatusEffect(); });
 
     return !sInitializationFailed;
 }

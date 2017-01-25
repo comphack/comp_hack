@@ -12,8 +12,19 @@
         <member type="bool" name="Enabled"/>
         <member type="bool" name="IsGM" default="false"/>
         <member type="u32" name="LastLogin"/>
+
         <member type="array" name="Characters" size="20">
             <element type="Character*"/>
+        </member>
+    </object>
+    <object name="AccountWorldData" location="world">
+        <member type="Account*" name="Account" key="true" unique="true"/>
+
+        <member type="array" name="DemonBox" size="50">
+            <element type="Demon*"/>
+        </member>
+        <member type="array" name="ItemBoxes" size="10">
+            <element type="ItemBox*"/>
         </member>
     </object>
 </objgen>

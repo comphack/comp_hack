@@ -32,6 +32,7 @@
 // object Includes
 #include <Character.h>
 #include <EntityStats.h>
+#include <Item.h>
 
 using namespace channel;
 
@@ -54,7 +55,7 @@ void CharacterManager::SendCharacterData(const std::shared_ptr<
     libcomp::Packet reply;
     reply.WritePacketCode(ChannelClientPacketCode_t::PACKET_CHARACTER_DATA);
 
-    reply.WriteS32Little((int32_t)c->GetCID());    /// @todo: replace with unique object ID
+    reply.WriteS32Little(cState->GetEntityID());
     reply.WriteString16Little(libcomp::Convert::ENCODING_CP932,
         c->GetName(), true);
     reply.WriteU32Little(0); // Special Title
@@ -72,11 +73,11 @@ void CharacterManager::SendCharacterData(const std::shared_ptr<
 
     for(size_t i = 0; i < 15; i++)
     {
-        uint32_t equip = c->GetEquippedItems(i);
+        auto equip = c->GetEquippedItems(i);
 
-        if(equip != 0)
+        if(!equip.IsNull())
         {
-            reply.WriteU32Little(equip);
+            reply.WriteU32Little(equip->GetType());
         }
         else
         {
@@ -191,10 +192,10 @@ void CharacterManager::SendCharacterData(const std::shared_ptr<
 
     /// @todo: zone position
     reply.WriteS32Little(1);    //set
-    reply.WriteS32Little(0x00004E85); // Zone ID
-    reply.WriteFloat(0);    //x
-    reply.WriteFloat(0);    //y
-    reply.WriteFloat(0);    //rotation
+    reply.WriteS32Little(0); // Zone UID
+    reply.WriteFloat(cState->GetDestinationX());
+    reply.WriteFloat(cState->GetDestinationY());
+    reply.WriteFloat(cState->GetDestinationRotation());
 
     reply.WriteU8(0);   //Unknown bool
     reply.WriteS32Little(0); // Homepoint zone
@@ -225,7 +226,7 @@ void CharacterManager::ShowCharacter(const std::shared_ptr<channel::ChannelClien
 
     libcomp::Packet reply;
     reply.WritePacketCode(ChannelClientPacketCode_t::PACKET_SHOW_CHARACTER);
-    reply.WriteS32Little((uint32_t)c->GetCID());
+    reply.WriteS32Little(cState->GetEntityID());
 
     client->SendPacket(reply);
 }

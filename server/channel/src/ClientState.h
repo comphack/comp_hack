@@ -29,6 +29,7 @@
 
 // channel Includes
 #include "CharacterState.h"
+#include "DemonState.h"
 
 // objects Includes
 #include <ClientStateObject.h>
@@ -69,6 +70,12 @@ public:
     std::shared_ptr<CharacterState> GetCharacterState();
 
     /**
+     * Get the state of the active demon associated to the client.
+     * @return Pointer to the DemonState
+     */
+    std::shared_ptr<DemonState> GetDemonState();
+
+    /**
      * Check if the client state has everything needed to start
      * being used.
      * @return true if the state is ready to use, otherwise false
@@ -101,6 +108,9 @@ public:
 private:
     /// State of the character associated to the client
     std::shared_ptr<CharacterState> mCharacterState;
+
+    /// State of the active demon associated to the client
+    std::shared_ptr<DemonState> mDemonState;
 
     /// Current time of the server set upon starting the client
     /// communication.

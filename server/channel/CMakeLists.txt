@@ -35,6 +35,7 @@ SET(${PROJECT_NAME}_SRCS
     src/CharacterManager.cpp
     src/CharacterState.cpp
     src/ClientState.cpp
+    src/DemonState.cpp
     src/ManagerConnection.cpp
     src/ChatManager.cpp
     src/main.cpp
@@ -48,6 +49,7 @@ SET(${PROJECT_NAME}_HDRS
     src/CharacterManager.h
     src/CharacterState.h
     src/ClientState.h
+    src/DemonState.h
     src/ManagerConnection.h
     src/ChatManager.h
     src/Packets.h
@@ -55,8 +57,8 @@ SET(${PROJECT_NAME}_HDRS
 
 SET(${PROJECT_NAME}_SCHEMA
     schema/channelconfig.xml
-    schema/characterstate.xml
     schema/clientstate.xml
+    schema/entitystate.xml
 )
 
 SOURCE_GROUP("objgen" ${CMAKE_CURRENT_BINARY_DIR}/objgen/*)
@@ -79,6 +81,10 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     CharacterStateObject.cpp
     ClientStateObject.h
     ClientStateObject.cpp
+    DemonStateObject.h
+    DemonStateObject.cpp
+    EntityStateObject.h
+    EntityStateObject.cpp
 )
 
 SOURCE_GROUP("Source Files\\Packets\\Game" src/packets/game/*)
@@ -89,10 +95,12 @@ SET(${PROJECT_NAME}_PACKETS
     src/packets/game/Auth.cpp                # 0x0002
     src/packets/game/SendData.cpp            # 0x0004
     src/packets/game/Logout.cpp              # 0x0005
+    src/packets/game/Move.cpp                # 0x001C
     src/packets/game/Chat.cpp                # 0x0026
     src/packets/game/KeepAlive.cpp           # 0x0056
     src/packets/game/State.cpp               # 0x005A
     src/packets/game/Sync.cpp                # 0x00F3
+    src/packets/game/Rotate.cpp              # 0x00F8
 
     #Internal packets
     src/packets/internal/SetWorldInfo.cpp    # 0x1002

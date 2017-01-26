@@ -39,7 +39,7 @@ using namespace channel;
 void SendZoneChange(const std::shared_ptr<libcomp::TcpConnection>& connection)
 {
     libcomp::Packet reply;
-    reply.WritePacketCode(ChannelClientPacketCode_t::PACKET_ZONE_CHANGE);
+    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_ZONE_CHANGE);
     reply.WriteU32Little(0x00004E85);        //id
     reply.WriteU32Little(1);        //set
     reply.WriteFloat(0.f);          //x
@@ -60,7 +60,7 @@ bool Parsers::SendData::Parse(libcomp::ManagerPacket *pPacketManager,
     /// @todo: A bunch of stuff
 
     libcomp::Packet reply;
-    reply.WritePacketCode(ChannelClientPacketCode_t::PACKET_CONFIRMATION);
+    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_CONFIRMATION);
     reply.WriteU32Little(0x00010000); // 1.0.0
 
     connection->SendPacket(reply);

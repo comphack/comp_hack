@@ -114,7 +114,7 @@ bool Parsers::Move::Parse(libcomp::ManagerPacket *pPacketManager,
     /// @todo: Send to the whole zone, including the player this sent from if they
     /// need to be corrected
     /*libcomp::Packet reply;
-    reply.WritePacketCode(ChannelClientPacketCode_t::PACKET_MOVE_RESPONSE);
+    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_MOVE_RESPONSE);
     reply.WriteS32Little(entityID);
     reply.WriteFloat(destX);
     reply.WriteFloat(destY);

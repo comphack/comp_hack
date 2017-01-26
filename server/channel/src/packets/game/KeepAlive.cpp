@@ -53,7 +53,7 @@ bool Parsers::KeepAlive::Parse(libcomp::ManagerPacket *pPacketManager,
 
     libcomp::Packet reply;
     reply.WritePacketCode(
-        ChannelClientPacketCode_t::PACKET_KEEP_ALIVE_RESPONSE);
+        ChannelToClientPacketCode_t::PACKET_KEEP_ALIVE);
     reply.WriteU32Little(p.ReadU32Little());
 
     connection->SendPacket(reply);

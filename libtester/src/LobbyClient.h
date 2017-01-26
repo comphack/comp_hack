@@ -61,7 +61,7 @@ public:
     bool WaitEncrypted(double& waitTime, asio::steady_timer::duration timeout =
         DEFAULT_TIMEOUT);
 
-    bool WaitForPacket(LobbyClientPacketCode_t code,
+    bool WaitForPacket(LobbyToClientPacketCode_t code,
         libcomp::ReadOnlyPacket& p, double& waitTime,
         asio::steady_timer::duration timeout = DEFAULT_TIMEOUT);
 

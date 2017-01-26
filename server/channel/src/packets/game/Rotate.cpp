@@ -90,7 +90,7 @@ bool Parsers::Rotate::Parse(libcomp::ManagerPacket *pPacketManager,
 
     /// @todo: Send to the whole rest of the zone
     /*libcomp::Packet reply;
-    reply.WritePacketCode(ChannelClientPacketCode_t::PACKET_ROTATE_RESPNOSE);
+    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_ROTATE_RESPNOSE);
     reply.WriteS32Little(entityID);
     reply.WriteFloat(rotation);
     reply.WriteFloat(start);

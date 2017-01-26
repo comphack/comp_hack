@@ -88,25 +88,25 @@ bool ChannelServer::Initialize()
 
     auto clientPacketManager = std::make_shared<libcomp::ManagerPacket>(self);
     clientPacketManager->AddParser<Parsers::Login>(
-        to_underlying(ChannelClientPacketCode_t::PACKET_LOGIN));
+        to_underlying(ClientToChannelPacketCode_t::PACKET_LOGIN));
     clientPacketManager->AddParser<Parsers::Auth>(
-        to_underlying(ChannelClientPacketCode_t::PACKET_AUTH));
+        to_underlying(ClientToChannelPacketCode_t::PACKET_AUTH));
     clientPacketManager->AddParser<Parsers::SendData>(
-        to_underlying(ChannelClientPacketCode_t::PACKET_SEND_DATA));
+        to_underlying(ClientToChannelPacketCode_t::PACKET_SEND_DATA));
     clientPacketManager->AddParser<Parsers::Logout>(
-        to_underlying(ChannelClientPacketCode_t::PACKET_LOGOUT));
+        to_underlying(ClientToChannelPacketCode_t::PACKET_LOGOUT));
     clientPacketManager->AddParser<Parsers::Move>(
-        to_underlying(ChannelClientPacketCode_t::PACKET_MOVE));
+        to_underlying(ClientToChannelPacketCode_t::PACKET_MOVE));
     clientPacketManager->AddParser<Parsers::Chat>(
-        to_underlying(ChannelClientPacketCode_t::PACKET_CHAT));
+        to_underlying(ClientToChannelPacketCode_t::PACKET_CHAT));
     clientPacketManager->AddParser<Parsers::KeepAlive>(
-        to_underlying(ChannelClientPacketCode_t::PACKET_KEEP_ALIVE));
+        to_underlying(ClientToChannelPacketCode_t::PACKET_KEEP_ALIVE));
     clientPacketManager->AddParser<Parsers::State>(
-        to_underlying(ChannelClientPacketCode_t::PACKET_STATE));
+        to_underlying(ClientToChannelPacketCode_t::PACKET_STATE));
     clientPacketManager->AddParser<Parsers::Sync>(
-        to_underlying(ChannelClientPacketCode_t::PACKET_SYNC));
+        to_underlying(ClientToChannelPacketCode_t::PACKET_SYNC));
     clientPacketManager->AddParser<Parsers::Rotate>(
-        to_underlying(ChannelClientPacketCode_t::PACKET_ROTATE));
+        to_underlying(ClientToChannelPacketCode_t::PACKET_ROTATE));
 
     // Add the managers to the generic workers.
     for(auto worker : mWorkers)

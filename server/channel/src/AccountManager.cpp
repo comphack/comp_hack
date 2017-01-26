@@ -96,7 +96,7 @@ void AccountManager::HandleLoginResponse(const std::shared_ptr<
     auto character = account->GetCharacters(cid);
 
     libcomp::Packet reply;
-    reply.WritePacketCode(ChannelClientPacketCode_t::PACKET_LOGIN_RESPONSE);
+    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_LOGIN);
 
     if(InitializeCharacter(character, worldDB))
     {
@@ -128,13 +128,13 @@ void AccountManager::HandleLogoutRequest(const std::shared_ptr<
             {
                 libcomp::Packet reply;
                 reply.WritePacketCode(
-                    ChannelClientPacketCode_t::PACKET_LOGOUT_RESPONSE);
+                    ChannelToClientPacketCode_t::PACKET_LOGOUT);
                 reply.WriteU32Little((uint32_t)10);
                 replies.push_back(reply);
 
                 reply = libcomp::Packet();
                 reply.WritePacketCode(
-                    ChannelClientPacketCode_t::PACKET_LOGOUT_RESPONSE);
+                    ChannelToClientPacketCode_t::PACKET_LOGOUT);
                 reply.WriteU32Little((uint32_t)13);
                 replies.push_back(reply);
             }
@@ -195,7 +195,7 @@ void AccountManager::Authenticate(const std::shared_ptr<
     auto state = client->GetClientState();
 
     libcomp::Packet reply;
-    reply.WritePacketCode(ChannelClientPacketCode_t::PACKET_AUTH_RESPONSE);
+    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_AUTH);
 
     if(nullptr != state)
     {

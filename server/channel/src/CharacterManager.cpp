@@ -53,7 +53,7 @@ void CharacterManager::SendCharacterData(const std::shared_ptr<
     auto cs = c->GetCoreStats().Get();
 
     libcomp::Packet reply;
-    reply.WritePacketCode(ChannelClientPacketCode_t::PACKET_CHARACTER_DATA);
+    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_CHARACTER_DATA);
 
     reply.WriteS32Little(cState->GetEntityID());
     reply.WriteString16Little(libcomp::Convert::ENCODING_CP932,
@@ -225,7 +225,7 @@ void CharacterManager::ShowCharacter(const std::shared_ptr<channel::ChannelClien
     auto c = cState->GetCharacter().Get();
 
     libcomp::Packet reply;
-    reply.WritePacketCode(ChannelClientPacketCode_t::PACKET_SHOW_CHARACTER);
+    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_SHOW_CHARACTER);
     reply.WriteS32Little(cState->GetEntityID());
 
     client->SendPacket(reply);
@@ -237,7 +237,7 @@ void CharacterManager::SendStatusIcon(const std::shared_ptr<channel::ChannelClie
     uint8_t icon = 0;
 
     libcomp::Packet reply;
-    reply.WritePacketCode(ChannelClientPacketCode_t::PACKET_STATUS_ICON);
+    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_STATUS_ICON);
     reply.WriteU8(0);
     reply.WriteU8(icon);
 

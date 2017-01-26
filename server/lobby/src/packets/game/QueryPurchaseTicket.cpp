@@ -66,7 +66,7 @@ bool Parsers::QueryPurchaseTicket::Parse(libcomp::ManagerPacket *pPacketManager,
 
         libcomp::Packet reply;
         reply.WritePacketCode(
-            LobbyClientPacketCode_t::PACKET_QUERY_PURCHASE_TICKET_RESPONSE);
+            LobbyToClientPacketCode_t::PACKET_QUERY_PURCHASE_TICKET);
         reply.WriteU32Little(0);
         reply.WriteU8(1);
 

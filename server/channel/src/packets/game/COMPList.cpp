@@ -45,8 +45,7 @@
 
 using namespace channel;
 
-void SendCOMPList(const std::shared_ptr<ChannelServer>& server,
-    const std::shared_ptr<ChannelClientConnection>& client,
+void SendCOMPList(const std::shared_ptr<ChannelClientConnection>& client,
     int8_t unknown)
 {
     auto state = client->GetClientState();
@@ -123,7 +122,7 @@ bool Parsers::COMPList::Parse(libcomp::ManagerPacket *pPacketManager,
     auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
     auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
 
-    server->QueueWork(SendCOMPList, server, client, unknown);
+    server->QueueWork(SendCOMPList, client, unknown);
 
     return true;
 }

@@ -25,7 +25,7 @@
             <element type="StatusEffect*"/>
         </member>
         <member type="array" name="Reunion" size="12">
-            <element type="u8"/>
+            <element type="s8"/>
         </member>
 
         <!-- Sub-sections -->

@@ -160,13 +160,13 @@ void CharacterManager::SendCharacterData(const std::shared_ptr<
     reply.WriteU8(1);
 
     size_t skillCount = c->LearnedSkillsCount();
-    reply.WriteU32(static_cast<int32_t>(skillCount));
+    reply.WriteU32(static_cast<uint32_t>(skillCount));
     for(auto skill : c->GetLearnedSkills())
     {
         reply.WriteU32Little(skill);
     }
 
-    for(int i = 0; i < 38; i++)
+    for(size_t i = 0; i < 38; i++)
     {
         auto expertise = c->GetExpertises(i);
 
@@ -249,7 +249,7 @@ void CharacterManager::SendCOMPDemonData(const std::shared_ptr<
     auto dState = state->GetDemonState();
     auto comp = cState->GetCharacter()->GetCOMP();
 
-    auto d = comp[slot].Get();
+    auto d = comp[(size_t)slot].Get();
     if(d == nullptr || state->GetObjectID(d->GetUUID()) != id)
     {
         return;

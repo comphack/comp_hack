@@ -56,14 +56,25 @@ public:
      * @param client Pointer to the client connection
      */
     void SendCharacterData(const std::shared_ptr<
-        channel::ChannelClientConnection>& client);
+        ChannelClientConnection>& client);
 
     /**
      * Tell the game client to show a character.
      * @param client Pointer to the client connection
      */
     void ShowCharacter(const std::shared_ptr<
-        channel::ChannelClientConnection>& client);
+        ChannelClientConnection>& client);
+
+    /**
+     * Send updated data about a demon in the COMP to the game client.
+     * @param client Pointer to the client connection
+     * @param box Demon container ID, should always be zero
+     * @param slot Slot of the demon to send data for
+     * @param id ID of the demon to send data for
+     */
+    void SendCOMPDemonData(const std::shared_ptr<
+        ChannelClientConnection>& client,
+        int8_t box, int8_t slot, int64_t id);
 
     /**
      * Send a character's status icon to the game clients.

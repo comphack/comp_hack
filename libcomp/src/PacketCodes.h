@@ -77,6 +77,7 @@ enum class ClientToChannelPacketCode_t : uint16_t
     PACKET_KEEP_ALIVE = 0x0056,  //!< Request/check to keep the connection alive.
     PACKET_STATE = 0x005A,  //!< Request for their character state.
     PACKET_COMP_LIST = 0x005C,  //!< COMP demon list request.
+    PACKET_COMP_DEMON_DATA = 0x005E,  //!< COMP demon data request.
     PACKET_SYNC = 0x00F3,  //!< Request to retrieve the server time.
     PACKET_ROTATE = 0x00F8,  //!< Request to rotate an entity or object.
 };
@@ -96,6 +97,7 @@ enum class ChannelToClientPacketCode_t : uint16_t
     PACKET_CHAT = 0x0028, //!< Response from chat request.
     PACKET_KEEP_ALIVE = 0x0057,  //!< Response to keep the client connection alive.
     PACKET_COMP_LIST = 0x005D,  //!< COMP demon list response.
+    PACKET_COMP_DEMON_DATA = 0x005F,  //!< COMP demon data response.
     PACKET_SYNC = 0x00F4,  //!< Response containing the server time.
     PACKET_ROTATE = 0x00F9,    //!< Message containing entity or object rotation information.
     PACKET_STATUS_ICON = 0x0195,  //!< Message containing the icon to show for a character.

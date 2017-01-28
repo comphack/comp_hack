@@ -1,5 +1,5 @@
 /**
- * @file server/channel/src/packets/Rotate.cpp
+ * @file server/channel/src/packets/game/Rotate.cpp
  * @ingroup channel
  *
  * @author HACKfrost

@@ -1,5 +1,5 @@
 /**
- * @file server/lobby/src/packets/DeleteCharacter.cpp
+ * @file server/lobby/src/packets/game/DeleteCharacter.cpp
  * @ingroup lobby
  *
  * @author COMP Omega <compomega@tutanota.com>

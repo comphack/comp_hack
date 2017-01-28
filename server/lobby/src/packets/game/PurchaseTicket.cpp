@@ -1,5 +1,5 @@
 /**
- * @file server/lobby/src/packets/PurchaseTicket.cpp
+ * @file server/lobby/src/packets/game/PurchaseTicket.cpp
  * @ingroup lobby
  *
  * @author COMP Omega <compomega@tutanota.com>

@@ -1,5 +1,5 @@
 /**
- * @file server/channel/src/packets/SetWorldInfo.cpp
+ * @file server/channel/src/packets/internal/SetWorldInfo.cpp
  * @ingroup channel
  *
  * @author HACKfrost

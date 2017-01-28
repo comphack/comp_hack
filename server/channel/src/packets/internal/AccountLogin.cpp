@@ -1,5 +1,5 @@
 /**
- * @file server/channel/src/packets/AccountLogin.cpp
+ * @file server/channel/src/packets/internal/AccountLogin.cpp
  * @ingroup world
  *
  * @author HACKfrost

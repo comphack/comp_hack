@@ -1,5 +1,5 @@
 /**
- * @file server/lobby/src/packets/Auth.cpp
+ * @file server/lobby/src/packets/game/Auth.cpp
  * @ingroup lobby
  *
  * @author COMP Omega <compomega@tutanota.com>

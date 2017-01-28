@@ -1,5 +1,5 @@
 /**
- * @file server/channel/src/packets/SendData.cpp
+ * @file server/channel/src/packets/game/SendData.cpp
  * @ingroup channel
  *
  * @author HACKfrost

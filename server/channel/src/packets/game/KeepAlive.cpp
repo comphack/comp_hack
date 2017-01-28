@@ -1,5 +1,5 @@
 /**
- * @file server/channel/src/packets/KeepAlive.cpp
+ * @file server/channel/src/packets/game/KeepAlive.cpp
  * @ingroup channel
  *
  * @author HACKfrost

@@ -1,5 +1,5 @@
 /**
- * @file server/channel/src/packets/Logout.cpp
+ * @file server/channel/src/packets/game/Logout.cpp
  * @ingroup channel
  *
  * @author HACKfrost

@@ -1,5 +1,5 @@
 /**
- * @file server/lobby/src/packets/CharacterList.cpp
+ * @file server/lobby/src/packets/game/CharacterList.cpp
  * @ingroup lobby
  *
  * @author COMP Omega <compomega@tutanota.com>

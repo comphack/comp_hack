@@ -1,5 +1,5 @@
 /**
- * @file server/lobby/src/packets/WorldList.cpp
+ * @file server/lobby/src/packets/game/WorldList.cpp
  * @ingroup lobby
  *
  * @author COMP Omega <compomega@tutanota.com>

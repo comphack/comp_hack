@@ -1,5 +1,5 @@
 /**
- * @file server/lobby/src/packets/AccountLogout.cpp
+ * @file server/lobby/src/packets/internal/AccountLogout.cpp
  * @ingroup lobby
  *
  * @author HACKfrost

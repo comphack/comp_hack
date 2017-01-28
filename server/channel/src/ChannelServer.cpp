@@ -104,6 +104,8 @@ bool ChannelServer::Initialize()
         to_underlying(ClientToChannelPacketCode_t::PACKET_KEEP_ALIVE));
     clientPacketManager->AddParser<Parsers::State>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_STATE));
+    clientPacketManager->AddParser<Parsers::COMPList>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_COMP_LIST));
     clientPacketManager->AddParser<Parsers::Sync>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_SYNC));
     clientPacketManager->AddParser<Parsers::Rotate>(

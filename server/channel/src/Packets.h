@@ -44,6 +44,7 @@ PACKET_PARSER_DECL(Move);               // 0x001C
 PACKET_PARSER_DECL(Chat);               // 0x0026
 PACKET_PARSER_DECL(KeepAlive);          // 0x0056
 PACKET_PARSER_DECL(State);              // 0x005A
+PACKET_PARSER_DECL(COMPList);           // 0x005C
 PACKET_PARSER_DECL(Sync);               // 0x00F3
 PACKET_PARSER_DECL(Rotate);             // 0x00F8
 

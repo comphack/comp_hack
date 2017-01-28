@@ -112,18 +112,17 @@ private:
     /**
      * Create character data if not initialized or load
      * if it has been initaliazed.
-     * @param client Pointer to the client connection
+     * @param character Character to initialize
+     * @param state Pointer to the client state the character
+     *  belongs to
      * @return true on success, false on failure
      */
     bool InitializeCharacter(libcomp::ObjectReference<
         objects::Character>& character,
-        const std::shared_ptr<libcomp::Database>& db);
+        channel::ClientState* state);
 
     /// Pointer to the channel server
     std::weak_ptr<ChannelServer> mServer;
-
-    /// Highest entity ID currently assigned
-    int32_t mMaxEntityID;
 };
 
 } // namespace channel

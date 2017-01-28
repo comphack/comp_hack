@@ -71,9 +71,28 @@ public:
 
     /**
      * Get the state of the active demon associated to the client.
+     * If there is no active demon, a state will still be returned
+     * but no demon will be set.
      * @return Pointer to the DemonState
      */
     std::shared_ptr<DemonState> GetDemonState();
+
+    /**
+     * Get the object ID associated a UUID associated to the client.
+     * If a zero is returned, the UUID is not registered.
+     * @param uuid UUID to retrieve the corresponding object ID from
+     * @return Object ID associated to a UUID
+     */
+    int64_t GetObjectID(const libobjgen::UUID& uuid) const;
+
+    /**
+     * Set the object ID associated a UUID associated to the client.
+     * @param uuid UUID to set the corresponding object ID for
+     * @param objectID Object ID to map to the UUID
+     * @return true if the UUID was not already registered, false
+     *  if it was
+     */
+    bool SetObjectID(const libobjgen::UUID& uuid, int64_t objectID);
 
     /**
      * Check if the client state has everything needed to start
@@ -109,8 +128,12 @@ private:
     /// State of the character associated to the client
     std::shared_ptr<CharacterState> mCharacterState;
 
-    /// State of the active demon associated to the client
+    /// State of the active demon associated to the client which will
+    /// be set to an empty Demon pointer when one is not summoned
     std::shared_ptr<DemonState> mDemonState;
+
+    /// Map of UUIDs to game client object IDs
+    std::unordered_map<libcomp::String, int64_t> mObjectIDs;
 
     /// Current time of the server set upon starting the client
     /// communication.

@@ -35,8 +35,10 @@
 #include <AccountLogin.h>
 #include <Character.h>
 #include <CharacterProgress.h>
+#include <Demon.h>
 #include <EntityStats.h>
 #include <Item.h>
+#include <ItemBox.h>
 
 // channel Includes
 #include "ChannelServer.h"
@@ -46,7 +48,6 @@ using namespace channel;
 AccountManager::AccountManager(const std::weak_ptr<ChannelServer>& server)
     : mServer(server)
 {
-    mMaxEntityID = 0;
 }
 
 AccountManager::~AccountManager()
@@ -98,12 +99,18 @@ void AccountManager::HandleLoginResponse(const std::shared_ptr<
     libcomp::Packet reply;
     reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_LOGIN);
 
-    if(InitializeCharacter(character, worldDB))
+    if(InitializeCharacter(character, state))
     {
         auto charState = state->GetCharacterState();
         charState->SetCharacter(character);
-        charState->SetEntityID(++mMaxEntityID);
+        charState->SetEntityID(server->GetNextEntityID());
         charState->RecalculateStats();
+
+        // If we don't have an active demon, set up the state anyway
+        auto demonState = state->GetDemonState();
+        demonState->SetDemon(character->GetActiveDemon());
+        demonState->SetEntityID(server->GetNextEntityID());
+        demonState->RecalculateStats();
 
         reply.WriteU32Little(1);
     }
@@ -211,9 +218,11 @@ void AccountManager::Authenticate(const std::shared_ptr<
 }
 
 bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
-    objects::Character>& character,
-    const std::shared_ptr<libcomp::Database>& db)
+    objects::Character>& character, channel::ClientState* state)
 {
+    auto server = mServer.lock();
+    auto db = server->GetWorldDatabase();
+
     if(character.IsNull() || !character.Get(db) ||
         !character->LoadCoreStats(db))
     {
@@ -239,16 +248,148 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
         return false;
     }
 
+    // Item boxes
+    bool addEquipmentToBox = false;
+    if(character->GetItemBoxes(0).IsNull())
+    {
+        addEquipmentToBox = true;
+
+        auto box = libcomp::PersistentObject::New<
+            objects::ItemBox>();
+        
+        if(!box->Register(box) ||
+            !box->Insert(db) ||
+            !character->SetItemBoxes(0, box))
+        {
+            return false;
+        }
+        updateCharacter = true;
+    }
+
+    for(auto itemBox : character->GetItemBoxes())
+    {
+        if(!itemBox.IsNull())
+        {
+            if(!itemBox.Get(db))
+            {
+                return false;
+            }
+
+            state->SetObjectID(itemBox->GetUUID(),
+                server->GetNextObjectID());
+
+            for(auto item : itemBox->GetItems())
+            {
+                if(!item.IsNull())
+                {
+                    if(!item.Get(db))
+                    {
+                        return false;
+                    }
+
+                    state->SetObjectID(item->GetUUID(),
+                        server->GetNextObjectID());
+                }
+            }
+        }
+    }
+
+    // Equipment
+    size_t equipmentBoxSlot = 0;
+    auto defaultBox = character->GetItemBoxes(0);
     for(auto equip : character->GetEquippedItems())
     {
         if(!equip.IsNull())
         {
-            if(!equip.Get(db))
+            //If we already have an object ID, it's already loaded
+            if(!state->GetObjectID(equip.GetUUID()))
+            {
+                if(!equip.Get(db))
+                {
+                    return false;
+                }
+
+                state->SetObjectID(equip->GetUUID(),
+                    server->GetNextObjectID());
+            }
+
+            if(addEquipmentToBox)
+            {
+                character->GetItemBoxes(0)
+                    ->SetItems(equipmentBoxSlot++, equip);
+            }
+        }
+    }
+
+    if(addEquipmentToBox && !defaultBox->Update(db))
+    {
+        return false;
+    }
+
+    // Materials
+    for(auto material : character->GetMaterials())
+    {
+        if(!material.IsNull())
+        {
+            if(!material.Get(db))
             {
                 return false;
             }
-            updateCharacter = true;
         }
+    }
+
+    // COMP
+    int demonCount = 0;
+    for(auto demon : character->GetCOMP())
+    {
+        if(!demon.IsNull())
+        {
+            if(!demon.Get(db) || !demon->LoadCoreStats(db))
+            {
+                return false;
+            }
+            demonCount++;
+
+            state->SetObjectID(demon->GetUUID(),
+                server->GetNextObjectID());
+        }
+    }
+
+    //Hack to add a test demon
+    if(demonCount == 0)
+    {
+        auto demon = libcomp::PersistentObject::New<
+            objects::Demon>();
+        demon->SetType(0x0239); //Jack Frost
+        demon->SetLocked(false);
+
+        auto ds = libcomp::PersistentObject::New<
+            objects::EntityStats>();
+        ds->SetMaxHP(999);
+        ds->SetMaxMP(666);
+        ds->SetHP(999);
+        ds->SetMP(666);
+        ds->SetLevel(1);
+        ds->SetSTR(1);
+        ds->SetMAGIC(2);
+        ds->SetVIT(3);
+        ds->SetINTEL(4);
+        ds->SetSPEED(5);
+        ds->SetLUCK(6);
+        ds->SetCLSR(7);
+        ds->SetLNGR(8);
+        ds->SetSPELL(9);
+        ds->SetSUPPORT(10);
+        ds->SetPDEF(11);
+        ds->SetMDEF(12);
+
+        if(!ds->Register(ds) || !ds->Insert(db) ||
+            !demon->SetCoreStats(ds) || !demon->Register(demon) ||
+            !demon->Insert(db) || !character->SetCOMP(0, demon))
+        {
+            return false;
+        }
+        updateCharacter = true;
     }
 
     return !updateCharacter || character->Update(db);

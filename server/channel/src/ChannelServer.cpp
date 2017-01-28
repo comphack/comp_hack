@@ -42,7 +42,8 @@ using namespace channel;
 
 ChannelServer::ChannelServer(std::shared_ptr<objects::ServerConfig> config,
     const libcomp::String& configPath) : libcomp::BaseServer(config, configPath),
-    mAccountManager(0), mCharacterManager(0), mChatManager(0)
+    mAccountManager(0), mCharacterManager(0), mChatManager(0), mMaxEntityID(0),
+    mMaxObjectID(0)
 {
 }
 
@@ -236,6 +237,18 @@ CharacterManager* ChannelServer::GetCharacterManager() const
 ChatManager* ChannelServer::GetChatManager() const
 {
     return mChatManager;
+}
+
+int32_t ChannelServer::GetNextEntityID()
+{
+    std::lock_guard<std::mutex> lock(mLock);
+    return ++mMaxEntityID;
+}
+
+int64_t ChannelServer::GetNextObjectID()
+{
+    std::lock_guard<std::mutex> lock(mLock);
+    return ++mMaxObjectID;
 }
 
 std::shared_ptr<libcomp::TcpConnection> ChannelServer::CreateConnection(

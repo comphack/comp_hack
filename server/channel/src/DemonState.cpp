@@ -43,6 +43,11 @@ DemonState::~DemonState()
 bool DemonState::RecalculateStats()
 {
     auto d = GetDemon().Get();
+    if(nullptr == d)
+    {
+        return true;
+    }
+
     auto cs = d->GetCoreStats();
 
     SetSTR(cs->GetSTR());

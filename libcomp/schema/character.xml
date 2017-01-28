@@ -102,9 +102,9 @@
         </member>
     </object>
     <object name="Expertise" location="world">
-        <member type="u32" name="Points"/>
+        <member type="s32" name="Points"/>
         <!--<member type="u8" name="Unknown"/>-->
-        <member type="bool" name="IsCapped"/>
+        <member type="bool" name="Capped"/>
     </object>
     <object name="Hotbar" location="world">
         <!--<member type="u32" name="Unknown"/>-->

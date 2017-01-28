@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <objgen>
     <object name="Demon" location="world">
-        <member type="u8" name="AttackSettings"/>
-        <member type="u32" name="SoulPoints"/>
+        <member type="u32" name="Type"/>
+        <member type="u16" name="AttackSettings"/>
+        <member type="s32" name="SoulPoints"/>
         <member type="u16" name="GrowthType"/>
         <member type="u8" name="Loyalty"/>
         <!--<member type="u8" name="Unknown1"/>
@@ -32,6 +33,6 @@
     </object>
     <object name="InheritedSkill" location="world">
         <member type="u32" name="Skill"/>
-        <member type="u16" name="Progress"/>
+        <member type="s16" name="Progress"/>
     </object>
 </objgen>

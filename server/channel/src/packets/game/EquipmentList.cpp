@@ -44,8 +44,7 @@
 
 using namespace channel;
 
-void SendEquipmentList(const std::shared_ptr<ChannelServer>& server,
-    const std::shared_ptr<ChannelClientConnection>& client)
+void SendEquipmentList(const std::shared_ptr<ChannelClientConnection>& client)
 {
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
@@ -82,7 +81,7 @@ bool Parsers::EquipmentList::Parse(libcomp::ManagerPacket *pPacketManager,
     auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
     auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
 
-    server->QueueWork(SendEquipmentList, server, client);
+    server->QueueWork(SendEquipmentList, client);
 
     return true;
 }

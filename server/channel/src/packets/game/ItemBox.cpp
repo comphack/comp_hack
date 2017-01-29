@@ -44,14 +44,13 @@
 
 using namespace channel;
 
-void SendItemBox(const std::shared_ptr<ChannelServer>& server,
-    const std::shared_ptr<ChannelClientConnection>& client,
+void SendItemBox(const std::shared_ptr<ChannelClientConnection>& client,
     int64_t boxID)
 {
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
     auto character = cState->GetCharacter();
-    auto box = character->GetItemBoxes(boxID);
+    auto box = character->GetItemBoxes((size_t)boxID);
 
     libcomp::Packet reply;
     reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_ITEM_BOX);
@@ -146,7 +145,7 @@ bool Parsers::ItemBox::Parse(libcomp::ManagerPacket *pPacketManager,
 
     if(type == 0 && boxID == 0)
     {
-        server->QueueWork(SendItemBox, server, client, boxID);
+        server->QueueWork(SendItemBox, client, boxID);
     }
     else
     {

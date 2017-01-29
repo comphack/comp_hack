@@ -98,6 +98,8 @@ bool ChannelServer::Initialize()
         to_underlying(ClientToChannelPacketCode_t::PACKET_LOGOUT));
     clientPacketManager->AddParser<Parsers::Move>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_MOVE));
+    clientPacketManager->AddParser<Parsers::PopulateZone>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_POPULATE_ZONE));
     clientPacketManager->AddParser<Parsers::Chat>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_CHAT));
     clientPacketManager->AddParser<Parsers::KeepAlive>(
@@ -108,6 +110,10 @@ bool ChannelServer::Initialize()
         to_underlying(ClientToChannelPacketCode_t::PACKET_COMP_LIST));
     clientPacketManager->AddParser<Parsers::COMPDemonData>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_COMP_DEMON_DATA));
+    clientPacketManager->AddParser<Parsers::ItemBox>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_ITEM_BOX));
+    clientPacketManager->AddParser<Parsers::EquipmentList>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_EQUIPMENT_LIST));
     clientPacketManager->AddParser<Parsers::Sync>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_SYNC));
     clientPacketManager->AddParser<Parsers::Rotate>(

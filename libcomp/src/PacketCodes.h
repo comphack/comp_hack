@@ -73,11 +73,14 @@ enum class ClientToChannelPacketCode_t : uint16_t
     PACKET_SEND_DATA = 0x0004,  //!< Request for data from the server.
     PACKET_LOGOUT = 0x0005,  //!< Logout request.
     PACKET_MOVE = 0x001C,  //!< Request to move an entity or object.
+    PACKET_POPULATE_ZONE = 0x0019,  //!< Request to populate a zone with game objects and entities.
     PACKET_CHAT = 0x0026, //!< Request to add a message to the chat or process a GM command.
     PACKET_KEEP_ALIVE = 0x0056,  //!< Request/check to keep the connection alive.
     PACKET_STATE = 0x005A,  //!< Request for their character state.
     PACKET_COMP_LIST = 0x005C,  //!< COMP demon list request.
     PACKET_COMP_DEMON_DATA = 0x005E,  //!< COMP demon data request.
+    PACKET_ITEM_BOX = 0x0074,  //!< Request for info about a specific item box.
+    PACKET_EQUIPMENT_LIST = 0x007B,  //!< Request for equipment information.
     PACKET_SYNC = 0x00F3,  //!< Request to retrieve the server time.
     PACKET_ROTATE = 0x00F8,  //!< Request to rotate an entity or object.
 };
@@ -90,14 +93,16 @@ enum class ChannelToClientPacketCode_t : uint16_t
     PACKET_LOGIN = 0x0001,  //!< Login response.
     PACKET_AUTH = 0x0003,  //!< Authorization response.
     PACKET_LOGOUT = 0x0009,  //!< Logout response.
-    PACKET_CHARACTER_DATA = 0x000F,  //!< Message containing all sorts of character data.
-    PACKET_SHOW_CHARACTER = 0x001A,  //!< Message to display a character.
+    PACKET_CHARACTER_DATA = 0x000F,  //!< Message containing data about the client's character.
+    PACKET_SHOW_ENTITY = 0x001A,  //!< Message to display a game entity.
     PACKET_MOVE = 0x001D,  //!< Message containing entity or object movement information.
     PACKET_ZONE_CHANGE = 0x0023,  //!< Information about a character's zone.
     PACKET_CHAT = 0x0028, //!< Response from chat request.
     PACKET_KEEP_ALIVE = 0x0057,  //!< Response to keep the client connection alive.
     PACKET_COMP_LIST = 0x005D,  //!< COMP demon list response.
     PACKET_COMP_DEMON_DATA = 0x005F,  //!< COMP demon data response.
+    PACKET_ITEM_BOX = 0x0075,  //!< Response for info about a specific item box.
+    PACKET_EQUIPMENT_LIST = 0x007C,  //!< Response for equipment information.
     PACKET_SYNC = 0x00F4,  //!< Response containing the server time.
     PACKET_ROTATE = 0x00F9,    //!< Message containing entity or object rotation information.
     PACKET_STATUS_ICON = 0x0195,  //!< Message containing the icon to show for a character.

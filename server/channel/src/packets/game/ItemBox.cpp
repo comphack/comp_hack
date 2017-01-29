@@ -107,7 +107,7 @@ void SendItemBox(const std::shared_ptr<ChannelServer>& server,
         }
         else
         {
-            reply.WriteU32Little(0);
+            reply.WriteU32Little(static_cast<uint32_t>(-1));
         }
 
         auto specialEffect = item->GetSpecialEffect();
@@ -117,7 +117,7 @@ void SendItemBox(const std::shared_ptr<ChannelServer>& server,
         }
         else
         {
-            reply.WriteU32Little(0);
+            reply.WriteU32Little(static_cast<uint32_t>(-1));
         }
 
         for(auto bonus : item->GetFuseBonuses())

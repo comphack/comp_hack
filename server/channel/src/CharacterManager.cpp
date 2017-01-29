@@ -86,7 +86,7 @@ void CharacterManager::SendCharacterData(const std::shared_ptr<
         }
         else
         {
-            reply.WriteU32Little(0);
+            reply.WriteU32Little(static_cast<uint32_t>(-1));
         }
     }
 

@@ -187,7 +187,7 @@ bool Parsers::CreateCharacter::Parse(libcomp::ManagerPacket *pPacketManager,
         }
         else
         {
-            reply.WriteU32Little(0);
+            reply.WriteU32Little(static_cast<uint32_t>(-1));
         }
     }
 

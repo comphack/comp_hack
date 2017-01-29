@@ -44,6 +44,8 @@ void SendZoneData(const std::shared_ptr<ChannelServer> server,
     const std::shared_ptr<ChannelClientConnection> client,
     int32_t characterUID)
 {
+    (void)characterUID;
+
     auto characterManager = server->GetCharacterManager();
 
     characterManager->ShowCharacter(client);

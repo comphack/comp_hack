@@ -118,7 +118,7 @@ void AccountManager::HandleLoginResponse(const std::shared_ptr<
     {
         LOG_ERROR(libcomp::String("User account could not be logged in:"
             " %1\n").Arg(account->GetUsername()));
-        reply.WriteU32Little(0);
+        reply.WriteU32Little(static_cast<uint32_t>(-1));
     }
 
     client->SendPacket(reply);
@@ -211,7 +211,7 @@ void AccountManager::Authenticate(const std::shared_ptr<
     }
     else
     {
-        reply.WriteU32Little(1);
+        reply.WriteU32Little(static_cast<uint32_t>(-1));
     }
 
     client->SendPacket(reply);

@@ -223,7 +223,7 @@ bool Parsers::CharacterList::Parse(libcomp::ManagerPacket *pPacketManager,
             else
             {
                 // None.
-                reply.WriteU32Little(0x7FFFFFFF);
+                reply.WriteU32Little(static_cast<uint32_t>(-1));
             }
         }
 

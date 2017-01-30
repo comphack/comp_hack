@@ -183,11 +183,11 @@ bool Parsers::CreateCharacter::Parse(libcomp::ManagerPacket *pPacketManager,
         {
             LOG_ERROR(libcomp::String("Account character array failed to save for account %1\n")
                 .Arg(account->GetUUID().ToString()));
-            reply.WriteU32Little(1);
+            reply.WriteU32Little(static_cast<uint32_t>(-1));
         }
         else
         {
-            reply.WriteU32Little(static_cast<uint32_t>(-1));
+            reply.WriteU32Little(0);
         }
     }
 

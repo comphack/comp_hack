@@ -355,6 +355,20 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
         }
     }
 
+    if(character->LearnedSkillsCount() == 0)
+    {
+        //Equip
+        character->AppendLearnedSkills(0x00001654);
+
+        //Summon demon
+        character->AppendLearnedSkills(0x00001648);
+
+        //Store demon
+        character->AppendLearnedSkills(0x00001649);
+
+        updateCharacter = true;
+    }
+
     //Hack to add a test demon
     if(demonCount == 0)
     {

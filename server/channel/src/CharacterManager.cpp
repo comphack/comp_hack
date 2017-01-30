@@ -136,8 +136,8 @@ void CharacterManager::SendCharacterData(const std::shared_ptr<
     reply.WriteS16Little(static_cast<int16_t>(
         cState->GetMDEF() - cs->GetMDEF()));
 
-    reply.WriteS16(0); // Unknown
-    reply.WriteS16(0); // Unknown
+    reply.WriteS16(-5600); // Unknown
+    reply.WriteS16(5600); // Unknown
 
     // Add status effects + 1 for testing effect below
     size_t statusEffectCount = c->StatusEffectsCount() + 1;
@@ -170,11 +170,17 @@ void CharacterManager::SendCharacterData(const std::shared_ptr<
     {
         auto expertise = c->GetExpertises(i);
 
-        if(expertise.IsNull()) continue;
-
-        reply.WriteS32Little(expertise->GetPoints());
-        reply.WriteS8(0);   // Unknown
-        reply.WriteU8(expertise->GetCapped() ? 1 : 0);
+        if(expertise.IsNull())
+        {
+            reply.WriteBlank(5);
+            reply.WriteU8(1);
+        }
+        else
+        {
+            reply.WriteS32Little(expertise->GetPoints());
+            reply.WriteS8(0);   // Unknown
+            reply.WriteU8(expertise->GetCapped() ? 1 : 0);
+        }
     }
 
     reply.WriteU8(0);   // Unknown bool
@@ -210,16 +216,17 @@ void CharacterManager::SendCharacterData(const std::shared_ptr<
     reply.WriteS32Little(0); // Homepoint zone
     reply.WriteFloat(0); // Homepoint X
     reply.WriteFloat(0); // Homepoint Y
-    reply.WriteS8(0);
-    reply.WriteS8(0);
-    reply.WriteS8(1);
+    reply.WriteS8(0);   // Unknown
+    reply.WriteS8(0);   // Unknown
+    reply.WriteS8(0);   // Unknown
 
-    size_t ukCount = 0;
-    reply.WriteS32(static_cast<int32_t>(ukCount)); // some count
-    for(size_t i = 0; i < ukCount; i++)
+    /// @todo: Virtual Appearance
+    size_t vaCount = 0;
+    reply.WriteS32(static_cast<int32_t>(vaCount));
+    for(size_t i = 0; i < vaCount; i++)
     {
-        reply.WriteS8(0);   //Unknown
-        reply.WriteU32Little(0);    //Unknown
+        reply.WriteS8(0);   // Equipment Slot
+        reply.WriteU32Little(0);    // VA Item Type
     }
 
     client->SendPacket(reply);

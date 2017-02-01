@@ -102,14 +102,22 @@ bool ChannelServer::Initialize()
         to_underlying(ClientToChannelPacketCode_t::PACKET_POPULATE_ZONE));
     clientPacketManager->AddParser<Parsers::Chat>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_CHAT));
+    clientPacketManager->AddParser<Parsers::ActivateSkill>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_ACTIVATE_SKILL));
     clientPacketManager->AddParser<Parsers::KeepAlive>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_KEEP_ALIVE));
+    clientPacketManager->AddParser<Parsers::FixObjectPosition>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_FIX_OBJECT_POSITION));
     clientPacketManager->AddParser<Parsers::State>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_STATE));
+    clientPacketManager->AddParser<Parsers::PartnerDemonData>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_PARTNER_DEMON_DATA));
     clientPacketManager->AddParser<Parsers::COMPList>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_COMP_LIST));
     clientPacketManager->AddParser<Parsers::COMPDemonData>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_COMP_DEMON_DATA));
+    clientPacketManager->AddParser<Parsers::StopMovement>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_STOP_MOVEMENT));
     clientPacketManager->AddParser<Parsers::ItemBox>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_ITEM_BOX));
     clientPacketManager->AddParser<Parsers::EquipmentList>(

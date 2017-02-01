@@ -16,7 +16,7 @@
             <element type="u32"/>
         </member>
         <member type="array" name="LearnedSkills" size="8">
-            <element type="u32"/>
+            <element type="u32" default="0xFFFFFFFF"/>
         </member>
         <member type="list" name="InheritedSkills">
             <element type="InheritedSkill*"/>

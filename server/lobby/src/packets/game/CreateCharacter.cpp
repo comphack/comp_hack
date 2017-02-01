@@ -123,6 +123,7 @@ bool Parsers::CreateCharacter::Parse(libcomp::ManagerPacket *pPacketManager,
 
     std::unordered_map<size_t, std::shared_ptr<objects::Item>> equipMap;
 
+    /// @todo: Build these properly from item data
     auto itemTop = libcomp::PersistentObject::New<objects::Item>();
     itemTop->SetType(equipTop);
     equipMap[(size_t)
@@ -154,6 +155,8 @@ bool Parsers::CreateCharacter::Parse(libcomp::ManagerPacket *pPacketManager,
     for(auto pair : equipMap)
     {
         auto equip = pair.second;
+        equip->SetDurability(1);
+        equip->SetMaxDurability(1);
         equipped &= equip->Register(equip) && equip->Insert(worldDB) &&
             character->SetEquippedItems(pair.first, equip);
     }

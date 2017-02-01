@@ -30,6 +30,16 @@
 // channel Includes
 #include "ChannelClientConnection.h"
 
+namespace libcomp
+{
+class Packet;
+}
+
+namespace objects
+{
+class EntityStats;
+}
+
 namespace channel
 {
 
@@ -59,10 +69,18 @@ public:
         ChannelClientConnection>& client);
 
     /**
-     * Tell the game client to show a character.
+     * Tell the game client to show an entity.
+     * @param client Pointer to the client connection
+     * @param entityID ID of the entity to show
+     */
+    void ShowEntity(const std::shared_ptr<
+        ChannelClientConnection>& client, int32_t entityID);
+
+    /**
+     * Send updated data about the active demon of the game client.
      * @param client Pointer to the client connection
      */
-    void ShowCharacter(const std::shared_ptr<
+    void SendPartnerData(const std::shared_ptr<
         ChannelClientConnection>& client);
 
     /**
@@ -83,6 +101,48 @@ public:
      */
     void SendStatusIcon(const std::shared_ptr<
         channel::ChannelClientConnection>& client);
+
+    /**
+     * Summon the demon matching the supplied ID on the client's character.
+     * @param client Pointer to the client connection containing
+     *  the character
+     * @param demonID ID of the demon to summon
+     */
+    void SummonDemon(const std::shared_ptr<
+        channel::ChannelClientConnection>& client, int64_t demonID);
+
+    /**
+     * Return the current demon of the client's character to the COMP.
+     * @param client Pointer to the client connection containing
+     *  the character
+     */
+    void StoreDemon(const std::shared_ptr<
+        channel::ChannelClientConnection>& client);
+
+    /**
+     * Equip an item matching the supplied ID on the client's character.
+     * @param client Pointer to the client connection containing
+     *  the character
+     * @param itemID Object ID matching an item in the character's item
+     *  box
+     */
+    void EquipItem(const std::shared_ptr<
+        channel::ChannelClientConnection>& client, int64_t itemID);
+
+private:
+    /**
+     * Add the core stat data from the supplied EntityStats instance
+     * and state object to the packet.
+     * @param p Packet to populate with stat data
+     * @param coreStats EntityStats pointer to the core stats of either
+     *  a character or demon
+     * @param state Pointer to the current state of the entity in a
+     *  zone.  If this parameter is supplied as null, only the core
+     *  stats will be populated.
+     */
+    void GetEntityStatsPacketData(libcomp::Packet& p,
+        const std::shared_ptr<objects::EntityStats>& coreStats,
+        const std::shared_ptr<objects::EntityStateObject>& state);
 };
 
 } // namespace channel

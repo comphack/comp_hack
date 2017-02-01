@@ -65,7 +65,7 @@ void SendCOMPList(const std::shared_ptr<ChannelClientConnection>& client,
 
     reply.WriteS8(unknown);
     reply.WriteS32Little(0);   //Unknown
-    reply.WriteS32Little(0);   //Unknown
+    reply.WriteS32Little(-1);   //Unknown
     reply.WriteS32Little(count);
 
     for(size_t i = 0; i < 10; i++)

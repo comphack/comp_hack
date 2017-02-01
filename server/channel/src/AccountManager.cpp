@@ -256,10 +256,16 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
 
         auto box = libcomp::PersistentObject::New<
             objects::ItemBox>();
+
+        auto mag = libcomp::PersistentObject::New<
+            objects::Item>();
+
+        mag->SetType(800);
+        mag->SetStackSize(5000);
         
-        if(!box->Register(box) ||
-            !box->Insert(db) ||
-            !character->SetItemBoxes(0, box))
+        if(!mag->Register(mag) || !mag->Insert(db) ||
+            !box->SetItems(49, mag) || !box->Register(box) ||
+            !box->Insert(db) || !character->SetItemBoxes(0, box))
         {
             return false;
         }

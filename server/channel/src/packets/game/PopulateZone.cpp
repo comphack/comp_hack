@@ -30,6 +30,7 @@
 // libcomp Includes
 #include <Log.h>
 #include <ManagerPacket.h>
+#include <PacketCodes.h>
 #include <ReadOnlyPacket.h>
 #include <TcpConnection.h>
 
@@ -46,9 +47,13 @@ void SendZoneData(const std::shared_ptr<ChannelServer> server,
 {
     (void)characterUID;
 
-    auto characterManager = server->GetCharacterManager();
+    auto state = client->GetClientState();
+    auto cState = state->GetCharacterState();
 
-    characterManager->ShowCharacter(client);
+    // The client's partner demon will be shown elsewhere
+
+    auto characterManager = server->GetCharacterManager();
+    characterManager->ShowEntity(client, cState->GetEntityID());
 
     /// @todo: Populate NPCs, enemies, other players, etc
 }

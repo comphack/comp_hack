@@ -1,10 +1,11 @@
 /**
- * @file server/channel/src/packets/game/Rotate.cpp
+ * @file server/channel/src/packets/game/StopMovement.cpp
  * @ingroup channel
  *
  * @author HACKfrost
  *
- * @brief Request from the client to rotate an entity or game object.
+ * @brief Request from the client to stop the movement of an entity or
+ *  game object.
  *
  * This file is part of the Channel Server (channel).
  *
@@ -27,32 +28,25 @@
 #include "Packets.h"
 
 // libcomp Includes
-#include <Decrypt.h>
 #include <Log.h>
 #include <ManagerPacket.h>
-#include <Packet.h>
-#include <PacketCodes.h>
-#include <ReadOnlyPacket.h>
-#include <TcpConnection.h>
 
 // channel Includes
 #include "ChannelClientConnection.h"
-#include "ChannelServer.h"
-#include "CharacterState.h"
-#include "ClientState.h"
 
 using namespace channel;
 
-bool Parsers::Rotate::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::StopMovement::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {
+    (void)pPacketManager;
+
     if(p.Size() != 16)
     {
         return false;
     }
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
     auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
@@ -71,37 +65,34 @@ bool Parsers::Rotate::Parse(libcomp::ManagerPacket *pPacketManager,
     }
     else
     {
-        LOG_ERROR(libcomp::String("Invalid entity ID received from a rotate request: %1\n")
-            .Arg(entityID));
+        LOG_ERROR(libcomp::String("Invalid entity ID received from a stop movement"
+            " request: %1\n").Arg(entityID));
         return false;
     }
 
-    float rotation = p.ReadFloat();
-    ClientTime start = (ClientTime)p.ReadFloat();
+    float destX = p.ReadFloat();
+    float destY = p.ReadFloat();
     ClientTime stop = (ClientTime)p.ReadFloat();
 
-    ServerTime startTime = state->ToServerTime(start);
     ServerTime stopTime = state->ToServerTime(stop);
 
-    // Rotating does not update the X and Y position
-    eState->SetOriginX(eState->GetDestinationX());
-    eState->SetOriginY(eState->GetDestinationY());
-
-    eState->SetOriginTicks(startTime);
-    eState->SetDestinationTicks(stopTime);
-
+    // Stop using the current rotation value
     eState->SetOriginRotation(eState->GetDestinationRotation());
-    eState->SetDestinationRotation(rotation);
+
+    eState->SetDestinationX(destX);
+    eState->SetDestinationY(destY);
+
+    eState->SetDestinationTicks(stopTime);
 
     /// @todo: Send to the whole rest of the zone
     /*libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_ROTATE_RESPNOSE);
+    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_STOP_MOVEMENT);
     reply.WriteS32Little(entityID);
-    reply.WriteFloat(rotation);
-    reply.WriteFloat(start);
+    reply.WriteFloat(destX);
+    reply.WriteFloat(destY);
     reply.WriteFloat(stop);
 
-    connection->SendPacket(reply); */
+    connection->SendPacket(reply);*/
 
     return true;
 }

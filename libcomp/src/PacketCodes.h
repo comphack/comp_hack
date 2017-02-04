@@ -117,6 +117,7 @@ enum class ChannelToClientPacketCode_t : uint16_t
     PACKET_EQUIPMENT_LIST = 0x007C,  //!< Response for equipment information.
     PACKET_SYNC = 0x00F4,  //!< Response containing the server time.
     PACKET_ROTATE = 0x00F9,    //!< Message containing entity or object rotation information.
+    PACKET_LNC_POINTS = 0x0126,    //!< Message containing a character's LNC alignment value.
     PACKET_STATUS_ICON = 0x0195,  //!< Message containing the icon to show for a character.
 
     PACKET_CONFIRMATION = 0x1FFF,  //!< Generic confirmation response.

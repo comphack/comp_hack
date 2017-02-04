@@ -134,10 +134,10 @@ bool ChannelServer::Initialize()
         worker->AddManager(mManagerConnection);
     }
 
-    mAccountManager = new AccountManager(std::dynamic_pointer_cast<
-        ChannelServer>(shared_from_this()));
+    auto channelPtr = std::dynamic_pointer_cast<ChannelServer>(self);
+    mAccountManager = new AccountManager(channelPtr);
     mCharacterManager = new CharacterManager();
-    mChatManager = new ChatManager();
+    mChatManager = new ChatManager(channelPtr);
 
     return true;
 }

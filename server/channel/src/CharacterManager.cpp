@@ -660,6 +660,23 @@ void CharacterManager::EquipItem(const std::shared_ptr<
     client->SendPacket(reply);
 }
 
+void CharacterManager::UpdateLNC(const std::shared_ptr<
+    channel::ChannelClientConnection>& client, int16_t lnc)
+{
+    auto state = client->GetClientState();
+    auto cState = state->GetCharacterState();
+    auto character = cState->GetCharacter().Get();
+
+    character->SetLNC(lnc);
+
+    libcomp::Packet reply;
+    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_LNC_POINTS);
+    reply.WriteS32Little(cState->GetEntityID());
+    reply.WriteS16Little(character->GetLNC());
+
+    client->SendPacket(reply);
+}
+
 void CharacterManager::GetEntityStatsPacketData(libcomp::Packet& p,
     const std::shared_ptr<objects::EntityStats>& coreStats,
     const std::shared_ptr<objects::EntityStateObject>& state)

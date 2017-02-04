@@ -36,11 +36,13 @@
 #include <Character.h>
 
 // channel Includes
+#include <ChannelServer.h>
 #include <ClientState.h>
 
 using namespace channel;
 
-ChatManager::ChatManager()
+ChatManager::ChatManager(const std::weak_ptr<ChannelServer>& server)
+    : mServer(server)
 {
 }
 
@@ -107,6 +109,52 @@ bool ChatManager::SendChatMessage(const std::shared_ptr<
         default:
             return false;
     }
+
+    return true;
+}
+
+bool ChatManager::ExecuteGMCommand(const std::shared_ptr<
+    channel::ChannelClientConnection>& client, GMCommand_t cmd,
+    const std::list<libcomp::String>& args)
+{
+    switch(cmd)
+    {
+        case GMCommand_t::GM_COMMAND_LNC:
+            return GMCommand_LNC(client, args);
+        default:
+            break;
+    }
+
+    return false;
+}
+
+bool ChatManager::GMCommand_LNC(const std::shared_ptr<
+    channel::ChannelClientConnection>& client,
+    const std::list<libcomp::String>& args)
+{
+    std::list<libcomp::String> argsCopy = args;
+
+    int16_t lnc;
+    if(!GetIntegerArg(lnc, argsCopy))
+    {
+        return false;
+    }
+
+    mServer.lock()->GetCharacterManager()->UpdateLNC(client, lnc);
+
+    return true;
+}
+
+bool ChatManager::GetStringArg(libcomp::String& outVal,
+    std::list<libcomp::String>& args) const
+{
+    if(args.size() == 0)
+    {
+        return false;
+    }
+
+    outVal = args.front();
+    args.pop_front();
 
     return true;
 }

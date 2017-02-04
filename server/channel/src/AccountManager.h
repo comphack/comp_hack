@@ -55,6 +55,8 @@ class AccountManager
 public:
     /**
      * Create a new AccountManager.
+     * @param server Pointer back to the channel server this
+     *  belongs to
      */
     AccountManager(const std::weak_ptr<ChannelServer>& server);
 

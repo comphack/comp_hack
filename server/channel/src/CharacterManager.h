@@ -53,6 +53,8 @@ class CharacterManager
 public:
     /**
      * Create a new CharacterManager.
+     * @param server Pointer back to the channel server this
+     *  belongs to
      */
     CharacterManager();
 
@@ -128,6 +130,15 @@ public:
      */
     void EquipItem(const std::shared_ptr<
         channel::ChannelClientConnection>& client, int64_t itemID);
+
+    /**
+     * Update the client's character's LNC value.
+     * @param client Pointer to the client connection containing
+     *  the character
+     * @param lnc LNC alignment value
+     */
+    void UpdateLNC(const std::shared_ptr<
+        channel::ChannelClientConnection>& client, int16_t lnc);
 
 private:
     /**

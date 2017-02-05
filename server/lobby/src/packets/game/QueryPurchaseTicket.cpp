@@ -1,5 +1,5 @@
 /**
- * @file server/lobby/src/packets/QueryPurchaseTicket.cpp
+ * @file server/lobby/src/packets/game/QueryPurchaseTicket.cpp
  * @ingroup lobby
  *
  * @author COMP Omega <compomega@tutanota.com>
@@ -66,8 +66,8 @@ bool Parsers::QueryPurchaseTicket::Parse(libcomp::ManagerPacket *pPacketManager,
 
         libcomp::Packet reply;
         reply.WritePacketCode(
-            LobbyClientPacketCode_t::PACKET_QUERY_PURCHASE_TICKET_RESPONSE);
-        reply.WriteU32Little(0);
+            LobbyToClientPacketCode_t::PACKET_QUERY_PURCHASE_TICKET);
+        reply.WriteU32Little(static_cast<uint32_t>(0));
         reply.WriteU8(1);
 
         reply.WriteU32Little(config->GetCharacterTicketCost());

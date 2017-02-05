@@ -122,23 +122,23 @@ bool LobbyServer::Initialize()
 
     auto clientPacketManager = std::make_shared<libcomp::ManagerPacket>(self);
     clientPacketManager->AddParser<Parsers::Login>(to_underlying(
-        LobbyClientPacketCode_t::PACKET_LOGIN));
+        ClientToLobbyPacketCode_t::PACKET_LOGIN));
     clientPacketManager->AddParser<Parsers::Auth>(to_underlying(
-        LobbyClientPacketCode_t::PACKET_AUTH));
+        ClientToLobbyPacketCode_t::PACKET_AUTH));
     clientPacketManager->AddParser<Parsers::StartGame>(to_underlying(
-        LobbyClientPacketCode_t::PACKET_START_GAME));
+        ClientToLobbyPacketCode_t::PACKET_START_GAME));
     clientPacketManager->AddParser<Parsers::CharacterList>(to_underlying(
-        LobbyClientPacketCode_t::PACKET_CHARACTER_LIST));
+        ClientToLobbyPacketCode_t::PACKET_CHARACTER_LIST));
     clientPacketManager->AddParser<Parsers::WorldList>(to_underlying(
-        LobbyClientPacketCode_t::PACKET_WORLD_LIST));
+        ClientToLobbyPacketCode_t::PACKET_WORLD_LIST));
     clientPacketManager->AddParser<Parsers::CreateCharacter>(to_underlying(
-        LobbyClientPacketCode_t::PACKET_CREATE_CHARACTER));
+        ClientToLobbyPacketCode_t::PACKET_CREATE_CHARACTER));
     clientPacketManager->AddParser<Parsers::DeleteCharacter>(to_underlying(
-        LobbyClientPacketCode_t::PACKET_DELETE_CHARACTER));
+        ClientToLobbyPacketCode_t::PACKET_DELETE_CHARACTER));
     clientPacketManager->AddParser<Parsers::QueryPurchaseTicket>(to_underlying(
-        LobbyClientPacketCode_t::PACKET_QUERY_PURCHASE_TICKET));
+        ClientToLobbyPacketCode_t::PACKET_QUERY_PURCHASE_TICKET));
     clientPacketManager->AddParser<Parsers::PurchaseTicket>(to_underlying(
-        LobbyClientPacketCode_t::PACKET_PURCHASE_TICKET));
+        ClientToLobbyPacketCode_t::PACKET_PURCHASE_TICKET));
 
     // Add the managers to the generic workers.
     for(auto worker : mWorkers)

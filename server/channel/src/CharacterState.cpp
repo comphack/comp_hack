@@ -45,11 +45,6 @@ bool CharacterState::RecalculateStats()
     auto c = GetCharacter().Get();
     auto cs = c->GetCoreStats();
 
-    if(nullptr == c)
-    {
-        return false;
-    }
-
     SetSTR(cs->GetSTR());
     SetMAGIC(cs->GetMAGIC());
     SetVIT(cs->GetVIT());

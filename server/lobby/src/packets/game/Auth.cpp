@@ -1,5 +1,5 @@
 /**
- * @file server/lobby/src/packets/Auth.cpp
+ * @file server/lobby/src/packets/game/Auth.cpp
  * @ingroup lobby
  *
  * @author COMP Omega <compomega@tutanota.com>
@@ -80,7 +80,7 @@ bool Parsers::Auth::Parse(libcomp::ManagerPacket *pPacketManager,
     }
 
     libcomp::Packet reply;
-    reply.WritePacketCode(LobbyClientPacketCode_t::PACKET_AUTH_RESPONSE);
+    reply.WritePacketCode(LobbyToClientPacketCode_t::PACKET_AUTH);
 
     // Status code (see the Login handler for a list).
     reply.WriteS32Little(0);

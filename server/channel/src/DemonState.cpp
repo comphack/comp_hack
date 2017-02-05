@@ -1,10 +1,10 @@
 /**
- * @file server/channel/src/packets/game/KeepAlive.cpp
+ * @file server/channel/src/DemonState.cpp
  * @ingroup channel
  *
  * @author HACKfrost
  *
- * @brief Request from the client to keep the connection active.
+ * @brief State of a demon on the channel.
  *
  * This file is part of the Channel Server (channel).
  *
@@ -24,39 +24,51 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "Packets.h"
+#include "DemonState.h"
 
-// libcomp Includes
-#include <Decrypt.h>
-#include <Log.h>
-#include <ManagerPacket.h>
-#include <Packet.h>
-#include <PacketCodes.h>
-#include <ReadOnlyPacket.h>
-#include <TcpConnection.h>
-
-// channel Includes
-#include "ChannelServer.h"
+// objects Includes
+#include <Demon.h>
+#include <EntityStats.h>
 
 using namespace channel;
 
-bool Parsers::KeepAlive::Parse(libcomp::ManagerPacket *pPacketManager,
-    const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
+DemonState::DemonState() : objects::DemonStateObject()
 {
-    (void)pPacketManager;
+}
 
-    if(p.Size() != 4)
+DemonState::~DemonState()
+{
+}
+
+bool DemonState::RecalculateStats()
+{
+    auto d = GetDemon().Get();
+    if(nullptr == d)
     {
-        return false;
+        return true;
     }
 
-    libcomp::Packet reply;
-    reply.WritePacketCode(
-        ChannelToClientPacketCode_t::PACKET_KEEP_ALIVE);
-    reply.WriteU32Little(p.ReadU32Little());
+    auto cs = d->GetCoreStats();
 
-    connection->SendPacket(reply);
+    SetSTR(cs->GetSTR());
+    SetMAGIC(cs->GetMAGIC());
+    SetVIT(cs->GetVIT());
+    SetINTEL(cs->GetINTEL());
+    SetSPEED(cs->GetSPEED());
+    SetLUCK(cs->GetLUCK());
+    SetCLSR(cs->GetCLSR());
+    SetLNGR(cs->GetLNGR());
+    SetSPELL(cs->GetSPELL());
+    SetSUPPORT(cs->GetSUPPORT());
+    SetPDEF(cs->GetPDEF());
+    SetMDEF(cs->GetMDEF());
+
+    /// @todo: transform stats
 
     return true;
+}
+
+bool DemonState::Ready()
+{
+    return !GetDemon().IsNull();
 }

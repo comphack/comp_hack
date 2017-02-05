@@ -1,5 +1,5 @@
 /**
- * @file server/lobby/src/packets/Login.cpp
+ * @file server/lobby/src/packets/game/Login.cpp
  * @ingroup lobby
  *
  * @author COMP Omega <compomega@tutanota.com>
@@ -61,7 +61,7 @@ bool Parsers::Login::Parse(libcomp::ManagerPacket *pPacketManager,
 
     objects::PacketResponseCode reply;
     reply.SetCommandCode(to_underlying(
-        LobbyClientPacketCode_t::PACKET_LOGIN_RESPONSE));
+        LobbyToClientPacketCode_t::PACKET_LOGIN));
 
     auto server = std::dynamic_pointer_cast<LobbyServer>(pPacketManager->GetServer());
     auto accountManager = server->GetAccountManager();

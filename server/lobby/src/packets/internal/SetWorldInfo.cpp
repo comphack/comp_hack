@@ -1,5 +1,5 @@
 /**
- * @file server/lobby/src/packets/SetWorldInfo.cpp
+ * @file server/lobby/src/packets/internal/SetWorldInfo.cpp
  * @ingroup lobby
  *
  * @author HACKfrost

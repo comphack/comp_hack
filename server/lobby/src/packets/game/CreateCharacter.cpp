@@ -1,5 +1,5 @@
 /**
- * @file server/lobby/src/packets/CreateCharacter.cpp
+ * @file server/lobby/src/packets/game/CreateCharacter.cpp
  * @ingroup lobby
  *
  * @author COMP Omega <compomega@tutanota.com>
@@ -37,8 +37,8 @@
 // object Includes
 #include <Account.h>
 #include <Character.h>
-#include <CharacterProgress.h>
 #include <EntityStats.h>
+#include <Item.h>
 #include <MiItemBasicData.h>
 
 // lobby Includes
@@ -121,29 +121,58 @@ bool Parsers::CreateCharacter::Parse(libcomp::ManagerPacket *pPacketManager,
     character->SetRightEyeColor((uint8_t)eyeColor);
     character->SetAccount(account);
 
-    character->SetEquippedItems(
-        (size_t)objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_TOP, equipTop);
-    character->SetEquippedItems(
-        (size_t)objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_BOTTOM, equipBottom);
-    character->SetEquippedItems(
-        (size_t)objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_FEET, equipFeet);
-    character->SetEquippedItems(
-        (size_t)objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_COMP, equipComp);
-    character->SetEquippedItems(
-        (size_t)objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_WEAPON, equipWeapon);
+    std::unordered_map<size_t, std::shared_ptr<objects::Item>> equipMap;
 
-    //Set some defaults
+    /// @todo: Build these properly from item data
+    auto itemTop = libcomp::PersistentObject::New<objects::Item>();
+    itemTop->SetType(equipTop);
+    equipMap[(size_t)
+        objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_TOP] = itemTop;
+
+    auto itemBottom = libcomp::PersistentObject::New<objects::Item>();
+    itemBottom->SetType(equipBottom);
+    equipMap[(size_t)
+        objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_BOTTOM] = itemBottom;
+
+    auto itemFeet = libcomp::PersistentObject::New<objects::Item>();
+    itemFeet->SetType(equipFeet);
+    equipMap[(size_t)
+        objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_FEET] = itemFeet;
+
+    auto comp = libcomp::PersistentObject::New<objects::Item>();
+    comp->SetType(equipComp);
+    equipMap[(size_t)
+        objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_COMP] = comp;
+
+    auto weapon = libcomp::PersistentObject::New<objects::Item>();
+    weapon->SetType(equipWeapon);
+    equipMap[(size_t)
+        objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_WEAPON] = weapon;
+
     auto stats = libcomp::PersistentObject::New<objects::EntityStats>();
-    auto progress = libcomp::PersistentObject::New<objects::CharacterProgress>();
+
+    bool equipped = true;
+    for(auto pair : equipMap)
+    {
+        auto equip = pair.second;
+        equip->SetDurability(1);
+        equip->SetMaxDurability(1);
+        equipped &= equip->Register(equip) && equip->Insert(worldDB) &&
+            character->SetEquippedItems(pair.first, equip);
+    }
 
     libcomp::Packet reply;
     reply.WritePacketCode(
-        LobbyClientPacketCode_t::PACKET_CREATE_CHARACTER_RESPONSE);
+        LobbyToClientPacketCode_t::PACKET_CREATE_CHARACTER);
 
-    if(!stats->Register(stats) || !stats->Insert(worldDB) || 
-        !progress->Register(progress) || !progress->Insert(worldDB) ||
-        !character->SetCoreStats(stats) || !character->SetProgress(progress) ||
-        !character->Register(character) || !character->Insert(worldDB))
+    if(!equipped)
+    {
+        LOG_DEBUG("Character item data failed to save.\n");
+        reply.WriteU32Little(1);
+    }
+    else if(!stats->Register(stats) || !stats->Insert(worldDB) ||
+        !character->SetCoreStats(stats) || !character->Register(character)
+        || !character->Insert(worldDB))
     {
         LOG_DEBUG("Character failed to save.\n");
         reply.WriteU32Little(1);
@@ -157,7 +186,7 @@ bool Parsers::CreateCharacter::Parse(libcomp::ManagerPacket *pPacketManager,
         {
             LOG_ERROR(libcomp::String("Account character array failed to save for account %1\n")
                 .Arg(account->GetUUID().ToString()));
-            reply.WriteU32Little(1);
+            reply.WriteU32Little(static_cast<uint32_t>(-1));
         }
         else
         {

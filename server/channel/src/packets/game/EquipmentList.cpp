@@ -1,10 +1,10 @@
 /**
- * @file server/channel/src/packets/game/Auth.cpp
+ * @file server/channel/src/packets/game/EquipmentList.cpp
  * @ingroup channel
  *
  * @author HACKfrost
  *
- * @brief Request from the client to authenticate.
+ * @brief Request from the client for the character's equipment list.
  *
  * This file is part of the Channel Server (channel).
  *
@@ -26,37 +26,62 @@
 
 #include "Packets.h"
 
-// libcomp Includes
+ // libcomp Includes
 #include <ManagerPacket.h>
 #include <Packet.h>
+#include <PacketCodes.h>
+#include <ReadOnlyPacket.h>
+#include <TcpConnection.h>
+
+// object Includes
+#include <Character.h>
+#include <Item.h>
+#include <MiItemBasicData.h>
 
 // channel Includes
-#include "AccountManager.h"
 #include "ChannelServer.h"
+#include "ChannelClientConnection.h"
 
 using namespace channel;
 
-void AuthenticateAccount(AccountManager* accountManager,
-    const std::shared_ptr<ChannelClientConnection> client)
+void SendEquipmentList(const std::shared_ptr<ChannelClientConnection>& client)
 {
-    accountManager->Authenticate(client);
+    auto state = client->GetClientState();
+    auto cState = state->GetCharacterState();
+    auto character = cState->GetCharacter();
+
+    libcomp::Packet reply;
+    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_EQUIPMENT_LIST);
+
+    for(size_t i = 0; i < 15; i++)
+    {
+        auto equip = character->GetEquippedItems(i);
+        if(equip.IsNull())
+        {
+            reply.WriteS64Little(0);
+        }
+        else
+        {
+            reply.WriteS64Little(state->GetObjectID(equip.GetUUID()));
+        }
+    }
+
+    client->SendPacket(reply);
 }
 
-bool Parsers::Auth::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::EquipmentList::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {
-    (void)pPacketManager;
-
-    if(p.Size() != 43 || p.PeekU16Little() != 41)
+    if (p.Size() != 0)
     {
         return false;
     }
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
     auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
 
-    server->QueueWork(AuthenticateAccount, server->GetAccountManager(), client);
+    server->QueueWork(SendEquipmentList, client);
 
     return true;
 }

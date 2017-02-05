@@ -1,5 +1,5 @@
 /**
- * @file server/lobby/src/packets/SetChannelInfo.cpp
+ * @file server/lobby/src/packets/internal/SetChannelInfo.cpp
  * @ingroup lobby
  *
  * @author HACKfrost

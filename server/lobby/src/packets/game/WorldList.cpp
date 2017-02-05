@@ -1,5 +1,5 @@
 /**
- * @file server/lobby/src/packets/WorldList.cpp
+ * @file server/lobby/src/packets/game/WorldList.cpp
  * @ingroup lobby
  *
  * @author COMP Omega <compomega@tutanota.com>
@@ -50,7 +50,7 @@ bool Parsers::WorldList::Parse(libcomp::ManagerPacket *pPacketManager,
     }
 
     libcomp::Packet reply;
-    reply.WritePacketCode(LobbyClientPacketCode_t::PACKET_WORLD_LIST_RESPONSE);
+    reply.WritePacketCode(LobbyToClientPacketCode_t::PACKET_WORLD_LIST);
 
     auto server = std::dynamic_pointer_cast<LobbyServer>(pPacketManager->GetServer());
 

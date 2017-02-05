@@ -1,10 +1,10 @@
 /**
- * @file server/channel/src/packets/game/KeepAlive.cpp
+ * @file server/channel/src/packets/game/PartnerDemonData.cpp
  * @ingroup channel
  *
  * @author HACKfrost
  *
- * @brief Request from the client to keep the connection active.
+ * @brief Request from the client for information about the active demon.
  *
  * This file is part of the Channel Server (channel).
  *
@@ -27,36 +27,35 @@
 #include "Packets.h"
 
 // libcomp Includes
-#include <Decrypt.h>
 #include <Log.h>
 #include <ManagerPacket.h>
-#include <Packet.h>
-#include <PacketCodes.h>
-#include <ReadOnlyPacket.h>
-#include <TcpConnection.h>
 
 // channel Includes
+#include "ChannelClientConnection.h"
 #include "ChannelServer.h"
+#include "CharacterManager.h"
 
 using namespace channel;
 
-bool Parsers::KeepAlive::Parse(libcomp::ManagerPacket *pPacketManager,
+void SendPartnerData(CharacterManager* characterManager,
+    const std::shared_ptr<ChannelClientConnection> client)
+{
+    characterManager->SendPartnerData(client);
+}
+
+bool Parsers::PartnerDemonData::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {
-    (void)pPacketManager;
-
-    if(p.Size() != 4)
+    if(p.Size() != 0)
     {
         return false;
     }
 
-    libcomp::Packet reply;
-    reply.WritePacketCode(
-        ChannelToClientPacketCode_t::PACKET_KEEP_ALIVE);
-    reply.WriteU32Little(p.ReadU32Little());
+    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
 
-    connection->SendPacket(reply);
+    server->QueueWork(SendPartnerData, server->GetCharacterManager(), client);
 
     return true;
 }

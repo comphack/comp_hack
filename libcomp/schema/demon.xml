@@ -1,7 +1,38 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <objgen>
     <object name="Demon" location="world">
+        <member type="u32" name="Type"/>
+        <member type="u16" name="AttackSettings"/>
+        <member type="s32" name="SoulPoints"/>
+        <member type="u16" name="GrowthType"/>
+        <member type="u8" name="Loyalty"/>
+        <!--<member type="u8" name="Unknown1"/>
+        <member type="u8" name="Unknown2"/>
+        <member type="u8" name="Unknown3"/>-->
+        <member type="bool" name="Locked"/>
+        
+        <!-- Collections -->
+        <member type="list" name="AcquiredSkills">
+            <element type="u32"/>
+        </member>
+        <member type="array" name="LearnedSkills" size="8">
+            <element type="u32" default="0xFFFFFFFF"/>
+        </member>
+        <member type="list" name="InheritedSkills">
+            <element type="InheritedSkill*"/>
+        </member>
+        <member type="list" name="StatusEffects">
+            <element type="StatusEffect*"/>
+        </member>
+        <member type="array" name="Reunion" size="12">
+            <element type="s8"/>
+        </member>
+
         <!-- Sub-sections -->
         <member type="EntityStats*" name="CoreStats"/>
+    </object>
+    <object name="InheritedSkill" location="world">
+        <member type="u32" name="Skill"/>
+        <member type="s16" name="Progress"/>
     </object>
 </objgen>

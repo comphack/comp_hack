@@ -100,7 +100,7 @@ bool LobbyClient::WaitEncrypted(double& waitTime,
     }, waitTime, timeout);
 }
 
-bool LobbyClient::WaitForPacket(LobbyClientPacketCode_t code,
+bool LobbyClient::WaitForPacket(LobbyToClientPacketCode_t code,
     libcomp::ReadOnlyPacket& p, double& waitTime,
     asio::steady_timer::duration timeout)
 {

@@ -36,6 +36,7 @@ using namespace channel;
 
 ClientState::ClientState() : objects::ClientStateObject(),
     mCharacterState(std::shared_ptr<CharacterState>(new CharacterState)),
+    mDemonState(std::shared_ptr<DemonState>(new DemonState)),
     mStartTime(0)
 {
 }
@@ -53,6 +54,38 @@ ClientState::~ClientState()
 std::shared_ptr<CharacterState> ClientState::GetCharacterState()
 {
     return mCharacterState;
+}
+
+std::shared_ptr<DemonState> ClientState::GetDemonState()
+{
+    return mDemonState;
+}
+
+int64_t ClientState::GetObjectID(const libobjgen::UUID& uuid) const
+{
+    auto uuidStr = uuid.ToString();
+
+    auto iter = mObjectIDs.find(uuidStr);
+    if(iter != mObjectIDs.end())
+    {
+        return iter->second;
+    }
+
+    return 0;
+}
+
+bool ClientState::SetObjectID(const libobjgen::UUID& uuid, int64_t objectID)
+{
+    auto uuidStr = uuid.ToString();
+
+    auto iter = mObjectIDs.find(uuidStr);
+    if(iter == mObjectIDs.end())
+    {
+        mObjectIDs[uuidStr] = objectID;
+        return true;
+    }
+
+    return false;
 }
 
 bool ClientState::Ready()

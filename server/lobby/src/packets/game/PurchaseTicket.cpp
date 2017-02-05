@@ -1,5 +1,5 @@
 /**
- * @file server/lobby/src/packets/PurchaseTicket.cpp
+ * @file server/lobby/src/packets/game/PurchaseTicket.cpp
  * @ingroup lobby
  *
  * @author COMP Omega <compomega@tutanota.com>
@@ -78,7 +78,7 @@ bool Parsers::PurchaseTicket::Parse(libcomp::ManagerPacket *pPacketManager,
 
     libcomp::Packet reply;
     reply.WritePacketCode(
-        LobbyClientPacketCode_t::PACKET_PURCHASE_TICKET_RESPONSE);
+        LobbyToClientPacketCode_t::PACKET_PURCHASE_TICKET);
 
     connection->SendPacket(reply);
 

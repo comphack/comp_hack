@@ -1,5 +1,5 @@
 /**
-* @file server/channel/src/packets/game/Message.cpp
+* @file server/channel/src/packets/game/Chat.cpp
 * @ingroup channel
 *
 * @author HikaruM

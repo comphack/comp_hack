@@ -42,7 +42,8 @@ using namespace channel;
 
 ChannelServer::ChannelServer(std::shared_ptr<objects::ServerConfig> config,
     const libcomp::String& configPath) : libcomp::BaseServer(config, configPath),
-    mAccountManager(0), mCharacterManager(0), mChatManager(0)
+    mAccountManager(0), mCharacterManager(0), mChatManager(0), mMaxEntityID(0),
+    mMaxObjectID(0)
 {
 }
 
@@ -88,21 +89,43 @@ bool ChannelServer::Initialize()
 
     auto clientPacketManager = std::make_shared<libcomp::ManagerPacket>(self);
     clientPacketManager->AddParser<Parsers::Login>(
-        to_underlying(ChannelClientPacketCode_t::PACKET_LOGIN));
+        to_underlying(ClientToChannelPacketCode_t::PACKET_LOGIN));
     clientPacketManager->AddParser<Parsers::Auth>(
-        to_underlying(ChannelClientPacketCode_t::PACKET_AUTH));
+        to_underlying(ClientToChannelPacketCode_t::PACKET_AUTH));
     clientPacketManager->AddParser<Parsers::SendData>(
-        to_underlying(ChannelClientPacketCode_t::PACKET_SEND_DATA));
+        to_underlying(ClientToChannelPacketCode_t::PACKET_SEND_DATA));
     clientPacketManager->AddParser<Parsers::Logout>(
-        to_underlying(ChannelClientPacketCode_t::PACKET_LOGOUT));
+        to_underlying(ClientToChannelPacketCode_t::PACKET_LOGOUT));
+    clientPacketManager->AddParser<Parsers::Move>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_MOVE));
+    clientPacketManager->AddParser<Parsers::PopulateZone>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_POPULATE_ZONE));
     clientPacketManager->AddParser<Parsers::Chat>(
-        to_underlying(ChannelClientPacketCode_t::PACKET_CHAT));
+        to_underlying(ClientToChannelPacketCode_t::PACKET_CHAT));
+    clientPacketManager->AddParser<Parsers::ActivateSkill>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_ACTIVATE_SKILL));
     clientPacketManager->AddParser<Parsers::KeepAlive>(
-        to_underlying(ChannelClientPacketCode_t::PACKET_KEEP_ALIVE));
+        to_underlying(ClientToChannelPacketCode_t::PACKET_KEEP_ALIVE));
+    clientPacketManager->AddParser<Parsers::FixObjectPosition>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_FIX_OBJECT_POSITION));
     clientPacketManager->AddParser<Parsers::State>(
-        to_underlying(ChannelClientPacketCode_t::PACKET_STATE));
+        to_underlying(ClientToChannelPacketCode_t::PACKET_STATE));
+    clientPacketManager->AddParser<Parsers::PartnerDemonData>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_PARTNER_DEMON_DATA));
+    clientPacketManager->AddParser<Parsers::COMPList>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_COMP_LIST));
+    clientPacketManager->AddParser<Parsers::COMPDemonData>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_COMP_DEMON_DATA));
+    clientPacketManager->AddParser<Parsers::StopMovement>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_STOP_MOVEMENT));
+    clientPacketManager->AddParser<Parsers::ItemBox>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_ITEM_BOX));
+    clientPacketManager->AddParser<Parsers::EquipmentList>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_EQUIPMENT_LIST));
     clientPacketManager->AddParser<Parsers::Sync>(
-        to_underlying(ChannelClientPacketCode_t::PACKET_SYNC));
+        to_underlying(ClientToChannelPacketCode_t::PACKET_SYNC));
+    clientPacketManager->AddParser<Parsers::Rotate>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_ROTATE));
 
     // Add the managers to the generic workers.
     for(auto worker : mWorkers)
@@ -232,6 +255,18 @@ CharacterManager* ChannelServer::GetCharacterManager() const
 ChatManager* ChannelServer::GetChatManager() const
 {
     return mChatManager;
+}
+
+int32_t ChannelServer::GetNextEntityID()
+{
+    std::lock_guard<std::mutex> lock(mLock);
+    return ++mMaxEntityID;
+}
+
+int64_t ChannelServer::GetNextObjectID()
+{
+    std::lock_guard<std::mutex> lock(mLock);
+    return ++mMaxObjectID;
 }
 
 std::shared_ptr<libcomp::TcpConnection> ChannelServer::CreateConnection(

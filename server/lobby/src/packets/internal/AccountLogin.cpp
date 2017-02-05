@@ -1,5 +1,5 @@
 /**
- * @file server/lobby/src/packets/AccountLogin.cpp
+ * @file server/lobby/src/packets/internal/AccountLogin.cpp
  * @ingroup lobby
  *
  * @author HACKfrost
@@ -94,7 +94,7 @@ void UpdateAccountLogin(std::shared_ptr<LobbyServer> server,
             ).Arg(cid).Arg(worldID).Arg(channelID));
 
         libcomp::Packet reply;
-        reply.WritePacketCode(LobbyClientPacketCode_t::PACKET_START_GAME_RESPONSE);
+        reply.WritePacketCode(LobbyToClientPacketCode_t::PACKET_START_GAME);
 
         // Some session key.
         reply.WriteU32Little(login->GetSessionKey());

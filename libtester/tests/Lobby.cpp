@@ -74,7 +74,7 @@ TEST(Lobby, Connection)
     obj.SetUsername(LOGIN_USERNAME);
 
     libcomp::Packet p;
-    p.WritePacketCode(LobbyClientPacketCode_t::PACKET_LOGIN);
+    p.WritePacketCode(ClientToLobbyPacketCode_t::PACKET_LOGIN);
 
     ASSERT_TRUE(obj.SavePacket(p));
 
@@ -84,7 +84,7 @@ TEST(Lobby, Connection)
     client->GetConnection()->SendPacket(p);
 
     ASSERT_TRUE(client->WaitForPacket(
-        LobbyClientPacketCode_t::PACKET_LOGIN_RESPONSE, reply, waitTime));
+        LobbyToClientPacketCode_t::PACKET_LOGIN, reply, waitTime));
     ASSERT_EQ(reply.ReadU32Little(), 0);
 }
 

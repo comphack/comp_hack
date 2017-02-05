@@ -84,7 +84,7 @@ bool ChatManager::SendChatMessage(const std::shared_ptr<
     }
 
     libcomp::Packet reply;
-    reply.WritePacketCode(ChannelClientPacketCode_t::PACKET_CHAT_RESPONSE);
+    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_CHAT);
     reply.WriteU16Little((uint16_t)chatChannel);
     reply.WriteString16Little(client->GetClientState()
             ->GetClientStringEncoding(), sentFrom, true);

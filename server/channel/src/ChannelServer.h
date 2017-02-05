@@ -151,8 +151,23 @@ public:
      */
     CharacterManager* GetCharacterManager() const;
 
-    //Get ChatManager
+    /**
+     * Get a pointer to the chat manager.
+     * @return Pointer to the ChatManager
+     */
     ChatManager* GetChatManager() const;
+
+    /**
+     * Increments and returns the next available entity ID.
+     * @return Next game entity ID for the channel
+     */
+    int32_t GetNextEntityID();
+
+    /**
+     * Increments and returns the next available object ID.
+     * @return Next object ID for the channel
+     */
+    int64_t GetNextObjectID();
 
 protected:
     /**
@@ -204,6 +219,15 @@ protected:
 
     /// Pointer to the Chat Manager.
     ChatManager *mChatManager;
+
+    /// Highest entity ID currently assigned
+    int32_t mMaxEntityID;
+
+    /// Highest unique object ID currently assigned
+    int64_t mMaxObjectID;
+
+    /// Server lock for shared resources
+    std::mutex mLock;
 };
 
 } // namespace channel

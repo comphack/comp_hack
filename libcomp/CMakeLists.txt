@@ -211,6 +211,8 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     Account.cpp
     AccountLogin.h
     AccountLogin.cpp
+    AccountWorldData.h
+    AccountWorldData.cpp
     Character.h
     Character.cpp
     CharacterProgress.h
@@ -225,16 +227,32 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     Demon.cpp
     EntityStats.h
     EntityStats.cpp
+    Expertise.h
+    Expertise.cpp
+    Hotbar.h
+    Hotbar.cpp
+    HotbarItem.h
+    HotbarItem.cpp
+    InheritedSkill.h
+    InheritedSkill.cpp
+    Item.h
+    Item.cpp
+    ItemBox.h
+    ItemBox.cpp
     PacketLogin.h
     PacketLogin.cpp
     PacketResponseCode.h
     PacketResponseCode.cpp
+    Quest.h
+    Quest.cpp
     RegisteredChannel.h
     RegisteredChannel.cpp
     RegisteredWorld.h
     RegisteredWorld.cpp
     ServerConfig.h
     ServerConfig.cpp
+    StatusEffect.h
+    StatusEffect.cpp
     TestObject.h
     TestObject.cpp
 

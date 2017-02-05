@@ -1,5 +1,5 @@
 /**
- * @file server/lobby/src/packets/DeleteCharacter.cpp
+ * @file server/lobby/src/packets/game/DeleteCharacter.cpp
  * @ingroup lobby
  *
  * @author COMP Omega <compomega@tutanota.com>
@@ -75,7 +75,7 @@ bool Parsers::DeleteCharacter::Parse(libcomp::ManagerPacket *pPacketManager,
         {
             libcomp::Packet reply;
             reply.WritePacketCode(
-                LobbyClientPacketCode_t::PACKET_DELETE_CHARACTER_RESPONSE);
+                LobbyToClientPacketCode_t::PACKET_DELETE_CHARACTER);
 
             if(s->GetAccountManager()->UpdateKillTime(
                 client->GetClientState()->GetAccount()->GetUsername(), c, s))

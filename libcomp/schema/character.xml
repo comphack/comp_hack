@@ -23,16 +23,36 @@
         <!-- Character specific attributes -->
         <member type="s16" name="LNC" caps="true"/>
         <member type="s32" name="Points"/>
+        <member type="Demon*" name="ActiveDemon"/>
 
         <!-- Collections -->
-        <member type="array" name="EquippedItems" size="15">
-            <element type="u32"/>
-        </member>
-        <member type="array" name="Materials" size="52">
-            <element type="u32"/>
-        </member>
         <member type="array" name="COMP" caps="true" size="10">
             <element type="Demon*"/>
+        </member>
+        <member type="list" name="LearnedSkills">
+            <element type="u32"/>
+        </member>
+        <member type="array" name="EquippedItems" size="15">
+            <element type="Item*"/>
+        </member>
+        <member type="array" name="Materials" size="52">
+            <element type="Item*"/>
+        </member>
+        <member type="array" name="ItemBoxes" size="5">
+            <element type="ItemBox*"/>
+        </member>
+        <member type="array" name="Expertises" size="38">
+            <element type="Expertise*"/>
+        </member>
+        <member type="list" name="StatusEffects">
+            <element type="StatusEffect*"/>
+        </member>
+        <member type="map" name="Quests">
+            <key type="u16"/>
+            <value type="Quest*"/>
+        </member>
+        <member type="array" name="Hotbars" size="10">
+            <element type="Hotbar*"/>
         </member>
 
         <!-- Sub-sections -->
@@ -59,6 +79,11 @@
         <member type="s16" name="PDEF" caps="true"/>
         <member type="s16" name="MDEF" caps="true"/>
     </object>
+    <object name="StatusEffect" location="world">
+        <member type="u32" name="Effect"/>
+        <member type="u64" name="Duration"/>
+        <member type="u8" name="Stack"/>
+    </object>
     <object name="CharacterProgress" location="world">
         <member type="array" name="Maps" size="32">
             <element type="u8"/>
@@ -74,6 +99,29 @@
         </member>
         <member type="array" name="CompletedQuests" size="512">
             <element type="u8"/>
+        </member>
+    </object>
+    <object name="Expertise" location="world">
+        <member type="s32" name="Points"/>
+        <!--<member type="u8" name="Unknown"/>-->
+        <member type="bool" name="Capped"/>
+    </object>
+    <object name="Hotbar" location="world">
+        <!--<member type="u32" name="Unknown"/>-->
+        <member type="array" name="Items" size="16">
+            <element type="HotbarItem*"/>
+        </member>
+    </object>
+    <object name="HotbarItem" location="world">
+        <member type="u8" name="Type"/>
+        <member type="u32" name="Value"/>
+        <member type="u32" name="Extra"/>
+    </object>
+    <object name="Quest" location="world">
+        <member type="u16" name="QuestID"/>
+        <member type="u8" name="State"/>
+        <member type="list" name="CustomData">
+            <element type="s32"/>
         </member>
     </object>
 </objgen>

@@ -1,5 +1,5 @@
 /**
- * @file server/channel/src/packets/Sync.cpp
+ * @file server/channel/src/packets/game/Sync.cpp
  * @ingroup channel
  *
  * @author HACKfrost
@@ -57,7 +57,7 @@ bool Parsers::Sync::Parse(libcomp::ManagerPacket *pPacketManager,
     // the executing system time) then the amount of time elapsed since the
     // client state connection started.
     libcomp::Packet reply;
-    reply.WritePacketCode(ChannelClientPacketCode_t::PACKET_SYNC_RESPONSE);
+    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_SYNC);
     reply.WriteU32Little(timeFromClient);
     reply.WriteFloat(currentClientTime);
 

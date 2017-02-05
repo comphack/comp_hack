@@ -109,6 +109,18 @@ public:
         channel::ChannelClientConnection>& client);
 
 private:
+    /**
+     * Create character data if not initialized or load
+     * if it has been initaliazed.
+     * @param character Character to initialize
+     * @param state Pointer to the client state the character
+     *  belongs to
+     * @return true on success, false on failure
+     */
+    bool InitializeCharacter(libcomp::ObjectReference<
+        objects::Character>& character,
+        channel::ClientState* state);
+
     /// Pointer to the channel server
     std::weak_ptr<ChannelServer> mServer;
 };

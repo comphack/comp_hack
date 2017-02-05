@@ -34,7 +34,11 @@
 #include <Account.h>
 #include <AccountLogin.h>
 #include <Character.h>
+#include <CharacterProgress.h>
+#include <Demon.h>
 #include <EntityStats.h>
+#include <Item.h>
+#include <ItemBox.h>
 
 // channel Includes
 #include "ChannelServer.h"
@@ -89,34 +93,32 @@ void AccountManager::HandleLoginResponse(const std::shared_ptr<
     auto login = state->GetAccountLogin();
     auto account = login->GetAccount();
 
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelClientPacketCode_t::PACKET_LOGIN_RESPONSE);
-    
     auto cid = login->GetCID();
     auto character = account->GetCharacters(cid);
 
-    // Load the character into the cache
-    bool success = false;
-    if(!character.IsNull() && character.Get(worldDB) &&
-        character->LoadCoreStats(worldDB) &&
-        character->LoadProgress(worldDB))
+    libcomp::Packet reply;
+    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_LOGIN);
+
+    if(InitializeCharacter(character, state))
     {
         auto charState = state->GetCharacterState();
         charState->SetCharacter(character);
+        charState->SetEntityID(server->GetNextEntityID());
         charState->RecalculateStats();
 
-        success = true;
-    }
+        // If we don't have an active demon, set up the state anyway
+        auto demonState = state->GetDemonState();
+        demonState->SetDemon(character->GetActiveDemon());
+        demonState->SetEntityID(server->GetNextEntityID());
+        demonState->RecalculateStats();
 
-    if(success)
-    {
         reply.WriteU32Little(1);
     }
     else
     {
         LOG_ERROR(libcomp::String("User account could not be logged in:"
             " %1\n").Arg(account->GetUsername()));
-        reply.WriteU32Little(0);
+        reply.WriteU32Little(static_cast<uint32_t>(-1));
     }
 
     client->SendPacket(reply);
@@ -133,13 +135,13 @@ void AccountManager::HandleLogoutRequest(const std::shared_ptr<
             {
                 libcomp::Packet reply;
                 reply.WritePacketCode(
-                    ChannelClientPacketCode_t::PACKET_LOGOUT_RESPONSE);
+                    ChannelToClientPacketCode_t::PACKET_LOGOUT);
                 reply.WriteU32Little((uint32_t)10);
                 replies.push_back(reply);
 
                 reply = libcomp::Packet();
                 reply.WritePacketCode(
-                    ChannelClientPacketCode_t::PACKET_LOGOUT_RESPONSE);
+                    ChannelToClientPacketCode_t::PACKET_LOGOUT);
                 reply.WriteU32Little((uint32_t)13);
                 replies.push_back(reply);
             }
@@ -200,7 +202,7 @@ void AccountManager::Authenticate(const std::shared_ptr<
     auto state = client->GetClientState();
 
     libcomp::Packet reply;
-    reply.WritePacketCode(ChannelClientPacketCode_t::PACKET_AUTH_RESPONSE);
+    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_AUTH);
 
     if(nullptr != state)
     {
@@ -209,8 +211,206 @@ void AccountManager::Authenticate(const std::shared_ptr<
     }
     else
     {
-        reply.WriteU32Little(1);
+        reply.WriteU32Little(static_cast<uint32_t>(-1));
     }
 
     client->SendPacket(reply);
+}
+
+bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
+    objects::Character>& character, channel::ClientState* state)
+{
+    auto server = mServer.lock();
+    auto db = server->GetWorldDatabase();
+
+    if(character.IsNull() || !character.Get(db) ||
+        !character->LoadCoreStats(db))
+    {
+        return false;
+    }
+
+    bool updateCharacter = false;
+    if(character->GetProgress().IsNull())
+    {
+        auto progress = libcomp::PersistentObject::New<
+            objects::CharacterProgress>();
+
+        if(!progress->Register(progress) ||
+            !progress->Insert(db) ||
+            !character->SetProgress(progress))
+        {
+            return false;
+        }
+        updateCharacter = true;
+    }
+    else if(!character->LoadProgress(db))
+    {
+        return false;
+    }
+
+    // Item boxes
+    bool addEquipmentToBox = false;
+    if(character->GetItemBoxes(0).IsNull())
+    {
+        addEquipmentToBox = true;
+
+        auto box = libcomp::PersistentObject::New<
+            objects::ItemBox>();
+
+        auto mag = libcomp::PersistentObject::New<
+            objects::Item>();
+
+        mag->SetType(800);
+        mag->SetStackSize(5000);
+        
+        if(!mag->Register(mag) || !mag->Insert(db) ||
+            !box->SetItems(49, mag) || !box->Register(box) ||
+            !box->Insert(db) || !character->SetItemBoxes(0, box))
+        {
+            return false;
+        }
+        updateCharacter = true;
+    }
+
+    for(auto itemBox : character->GetItemBoxes())
+    {
+        if(!itemBox.IsNull())
+        {
+            if(!itemBox.Get(db))
+            {
+                return false;
+            }
+
+            state->SetObjectID(itemBox->GetUUID(),
+                server->GetNextObjectID());
+
+            for(auto item : itemBox->GetItems())
+            {
+                if(!item.IsNull())
+                {
+                    if(!item.Get(db))
+                    {
+                        return false;
+                    }
+
+                    state->SetObjectID(item->GetUUID(),
+                        server->GetNextObjectID());
+                }
+            }
+        }
+    }
+
+    // Equipment
+    size_t equipmentBoxSlot = 0;
+    auto defaultBox = character->GetItemBoxes(0);
+    for(auto equip : character->GetEquippedItems())
+    {
+        if(!equip.IsNull())
+        {
+            //If we already have an object ID, it's already loaded
+            if(!state->GetObjectID(equip.GetUUID()))
+            {
+                if(!equip.Get(db))
+                {
+                    return false;
+                }
+
+                state->SetObjectID(equip->GetUUID(),
+                    server->GetNextObjectID());
+            }
+
+            if(addEquipmentToBox)
+            {
+                character->GetItemBoxes(0)
+                    ->SetItems(equipmentBoxSlot++, equip);
+            }
+        }
+    }
+
+    if(addEquipmentToBox && !defaultBox->Update(db))
+    {
+        return false;
+    }
+
+    // Materials
+    for(auto material : character->GetMaterials())
+    {
+        if(!material.IsNull())
+        {
+            if(!material.Get(db))
+            {
+                return false;
+            }
+        }
+    }
+
+    // COMP
+    int demonCount = 0;
+    for(auto demon : character->GetCOMP())
+    {
+        if(!demon.IsNull())
+        {
+            if(!demon.Get(db) || !demon->LoadCoreStats(db))
+            {
+                return false;
+            }
+            demonCount++;
+
+            state->SetObjectID(demon->GetUUID(),
+                server->GetNextObjectID());
+        }
+    }
+
+    if(character->LearnedSkillsCount() == 0)
+    {
+        //Equip
+        character->AppendLearnedSkills(0x00001654);
+
+        //Summon demon
+        character->AppendLearnedSkills(0x00001648);
+
+        //Store demon
+        character->AppendLearnedSkills(0x00001649);
+
+        updateCharacter = true;
+    }
+
+    //Hack to add a test demon
+    if(demonCount == 0)
+    {
+        auto demon = libcomp::PersistentObject::New<
+            objects::Demon>();
+        demon->SetType(0x0239); //Jack Frost
+        demon->SetLocked(false);
+
+        auto ds = libcomp::PersistentObject::New<
+            objects::EntityStats>();
+        ds->SetMaxHP(999);
+        ds->SetMaxMP(666);
+        ds->SetHP(999);
+        ds->SetMP(666);
+        ds->SetLevel(1);
+        ds->SetSTR(1);
+        ds->SetMAGIC(2);
+        ds->SetVIT(3);
+        ds->SetINTEL(4);
+        ds->SetSPEED(5);
+        ds->SetLUCK(6);
+        ds->SetCLSR(7);
+        ds->SetLNGR(8);
+        ds->SetSPELL(9);
+        ds->SetSUPPORT(10);
+        ds->SetPDEF(11);
+        ds->SetMDEF(12);
+
+        if(!ds->Register(ds) || !ds->Insert(db) ||
+            !demon->SetCoreStats(ds) || !demon->Register(demon) ||
+            !demon->Insert(db) || !character->SetCOMP(0, demon))
+        {
+            return false;
+        }
+        updateCharacter = true;
+    }
+
+    return !updateCharacter || character->Update(db);
 }

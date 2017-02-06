@@ -52,6 +52,9 @@ PACKET_PARSER_DECL(COMPList);           // 0x005C
 PACKET_PARSER_DECL(COMPDemonData);      // 0x005E
 PACKET_PARSER_DECL(StopMovement);       // 0x006F
 PACKET_PARSER_DECL(ItemBox);            // 0x0074
+PACKET_PARSER_DECL(ItemMove);           // 0x0076
+PACKET_PARSER_DECL(ItemDrop);           // 0x0077
+PACKET_PARSER_DECL(ItemStack);          // 0x0078
 PACKET_PARSER_DECL(EquipmentList);      // 0x007B
 PACKET_PARSER_DECL(Sync);               // 0x00F3
 PACKET_PARSER_DECL(Rotate);             // 0x00F8

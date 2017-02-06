@@ -123,6 +123,15 @@ private:
         objects::Character>& character,
         channel::ClientState* state);
 
+    /**
+     * Persist character data associated to a client that is
+     * logging out.
+     * @param state Pointer to the client state the character
+     *  belongs to
+     * @return true on success, false on failure
+     */
+    bool LogoutCharacter(channel::ClientState* state);
+
     /// Pointer to the channel server
     std::weak_ptr<ChannelServer> mServer;
 };

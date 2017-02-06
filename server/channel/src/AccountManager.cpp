@@ -173,17 +173,17 @@ void AccountManager::Logout(const std::shared_ptr<
     {
         return;
     }
+
+    if(!LogoutCharacter(state))
+    {
+        LOG_ERROR(libcomp::String("Character %1 failed to save on account"
+            " %2.\n").Arg(character->GetUUID().ToString())
+            .Arg(account->GetUUID().ToString()));
+    }
     else
     {
-        /// @todo: detach character from anything using it
-        /// @todo: set logout information
-
-        if(!character->Update(server->GetWorldDatabase()))
-        {
-            LOG_ERROR(libcomp::String("Character %1 failed to save on account"
-                " %2.\n").Arg(character->GetUUID().ToString())
-                .Arg(account->GetUUID().ToString()));
-        }
+        LOG_DEBUG(libcomp::String("Logged out user: '%1'\n").Arg(
+            account->GetUsername()));
     }
 
     //Remove the connection if it hasn't been removed already.
@@ -413,4 +413,56 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
     }
 
     return !updateCharacter || character->Update(db);
+}
+
+bool AccountManager::LogoutCharacter(channel::ClientState* state)
+{
+    auto character = state->GetCharacterState()->GetCharacter().Get();
+
+    /// @todo: detach character from anything using it
+
+    std::list<std::shared_ptr<libcomp::PersistentObject>> saveList;
+    saveList.push_back(character);
+    saveList.push_back(character->GetCoreStats().Get());
+    saveList.push_back(character->GetProgress().Get());
+    /// @todo: logout information
+
+    // Save items
+    for(auto itemBox : character->GetItemBoxes())
+    {
+        if(!itemBox.IsNull())
+        {
+            saveList.push_back(itemBox.Get());
+            for(auto item : itemBox->GetItems())
+            {
+                saveList.push_back(item.Get());
+            }
+        }
+    }
+
+    // Save materials
+    for(auto material : character->GetMaterials())
+    {
+        saveList.push_back(material.Get());
+    }
+
+    // Save demons
+    for(auto demon : character->GetCOMP())
+    {
+        if(!demon.IsNull())
+        {
+            saveList.push_back(demon.Get());
+            saveList.push_back(demon->GetCoreStats().Get());
+        }
+    }
+
+    bool ok = true;
+    auto server = mServer.lock();
+    auto worldDB = server->GetWorldDatabase();
+    for(auto obj : saveList)
+    {
+        ok &= obj == nullptr || obj->Update(worldDB);
+    }
+
+    return ok;
 }

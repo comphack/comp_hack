@@ -120,6 +120,12 @@ bool ChannelServer::Initialize()
         to_underlying(ClientToChannelPacketCode_t::PACKET_STOP_MOVEMENT));
     clientPacketManager->AddParser<Parsers::ItemBox>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_ITEM_BOX));
+    clientPacketManager->AddParser<Parsers::ItemMove>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_ITEM_MOVE));
+    clientPacketManager->AddParser<Parsers::ItemDrop>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_ITEM_DROP));
+    clientPacketManager->AddParser<Parsers::ItemStack>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_ITEM_STACK));
     clientPacketManager->AddParser<Parsers::EquipmentList>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_EQUIPMENT_LIST));
     clientPacketManager->AddParser<Parsers::Sync>(

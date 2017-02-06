@@ -107,6 +107,9 @@ SET(${PROJECT_NAME}_PACKETS
     src/packets/game/COMPDemonData.cpp       # 0x005E
     src/packets/game/StopMovement.cpp        # 0x006F
     src/packets/game/ItemBox.cpp             # 0x0074
+    src/packets/game/ItemMove.cpp            # 0x0076
+    src/packets/game/ItemDrop.cpp            # 0x0077
+    src/packets/game/ItemStack.cpp           # 0x0078
     src/packets/game/EquipmentList.cpp       # 0x007B
     src/packets/game/Sync.cpp                # 0x00F3
     src/packets/game/Rotate.cpp              # 0x00F8

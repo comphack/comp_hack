@@ -553,6 +553,90 @@ void CharacterManager::StoreDemon(const std::shared_ptr<
     client->SendPacket(reply);
 }
 
+void CharacterManager::SendItemBoxData(const std::shared_ptr<
+    ChannelClientConnection>& client, int64_t boxID)
+{
+    auto state = client->GetClientState();
+    auto cState = state->GetCharacterState();
+    auto character = cState->GetCharacter();
+    auto box = character->GetItemBoxes((size_t)boxID);
+
+    libcomp::Packet reply;
+    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_ITEM_BOX);
+    reply.WriteS8(box->GetType());
+    reply.WriteS64(state->GetObjectID(box->GetUUID()));
+    reply.WriteS32(0);  //Unknown
+    reply.WriteU16Little(50); // Max Item Count
+    reply.WriteS32Little(0); // Unknown
+
+    int32_t usedSlots = 0;
+    for(auto item : box->GetItems())
+    {
+        if(!item.IsNull())
+        {
+            usedSlots++;
+        }
+    }
+
+    reply.WriteS32Little(usedSlots);
+
+    for(uint16_t i = 0; i < 50; i++)
+    {
+        auto item = box->GetItems(i);
+
+        if(item.IsNull()) continue;
+
+        reply.WriteU16Little(i);    //Slot
+        reply.WriteS64Little(
+            state->GetObjectID(item->GetUUID()));
+        reply.WriteU32Little(item->GetType());
+        reply.WriteU16Little(item->GetStackSize());
+        reply.WriteU16Little(item->GetDurability());
+        reply.WriteS8(item->GetMaxDurability());
+
+        reply.WriteS16Little(item->GetTarot());
+        reply.WriteS16Little(item->GetSoul());
+
+        for(auto modSlot : item->GetModSlots())
+        {
+            reply.WriteU16Little(modSlot);
+        }
+
+        reply.WriteS32Little(0);    //Unknown
+        /*reply.WriteU8(0);   //Unknown
+        reply.WriteS16Little(0);   //Unknown
+        reply.WriteS16Little(0);   //Unknown
+        reply.WriteU8(0); // Failed Item Fuse 0 = OK | 1 = FAIL*/
+
+        auto basicEffect = item->GetBasicEffect();
+        if(basicEffect)
+        {
+            reply.WriteU32Little(basicEffect);
+        }
+        else
+        {
+            reply.WriteU32Little(static_cast<uint32_t>(-1));
+        }
+
+        auto specialEffect = item->GetSpecialEffect();
+        if(specialEffect)
+        {
+            reply.WriteU32Little(specialEffect);
+        }
+        else
+        {
+            reply.WriteU32Little(static_cast<uint32_t>(-1));
+        }
+
+        for(auto bonus : item->GetFuseBonuses())
+        {
+            reply.WriteS8(bonus);
+        }
+    }
+
+    client->SendPacket(reply);
+}
+
 void CharacterManager::EquipItem(const std::shared_ptr<
     channel::ChannelClientConnection>& client, int64_t itemID)
 {

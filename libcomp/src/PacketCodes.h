@@ -84,6 +84,9 @@ enum class ClientToChannelPacketCode_t : uint16_t
     PACKET_COMP_DEMON_DATA = 0x005E,  //!< COMP demon data request.
     PACKET_STOP_MOVEMENT = 0x006F,  //!< Request to stop the movement of an entity or object.
     PACKET_ITEM_BOX = 0x0074,  //!< Request for info about a specific item box.
+    PACKET_ITEM_MOVE = 0x0076,  //!< Request to move an item in an item box.
+    PACKET_ITEM_DROP = 0x0077,  //!< Request to throw away an item from an item box.
+    PACKET_ITEM_STACK = 0x0078,  //!< Request to stack or split stacked items in an item box.
     PACKET_EQUIPMENT_LIST = 0x007B,  //!< Request for equipment information.
     PACKET_SYNC = 0x00F3,  //!< Request to retrieve the server time.
     PACKET_ROTATE = 0x00F8,  //!< Request to rotate an entity or object.

@@ -122,6 +122,15 @@ public:
         channel::ChannelClientConnection>& client);
 
     /**
+     * Send the information about the specified to the client.
+     * @param client Pointer to the client connection containing
+     *  the box
+     * @param boxID Box index ID
+     */
+    void SendItemBoxData(const std::shared_ptr<
+        ChannelClientConnection>& client, int64_t boxID);
+
+    /**
      * Equip an item matching the supplied ID on the client's character.
      * @param client Pointer to the client connection containing
      *  the character

@@ -22,6 +22,8 @@
     </object>
     <object name="ItemBox" location="world">
         <member type="s8" name="Type"/>
+        <member type="Account*" name="Account" key="true" unique="false"/>
+        <member type="Character*" name="Character" key="true" unique="false"/>
         <member type="array" name="Items" size="50">
             <element type="Item*"/>
         </member>

@@ -60,6 +60,7 @@
         <member type="CharacterProgress*" name="Progress"/>
     </object>
     <object name="EntityStats" location="world">
+        <member type="ref" name="Entity" key="true" unique="true"/>
         <member type="s8" name="Level" default="1"/>
         <member type="s64" name="XP" caps="true"/>
         <member type="s16" name="HP" caps="true" default="73"/>
@@ -81,10 +82,12 @@
     </object>
     <object name="StatusEffect" location="world">
         <member type="u32" name="Effect"/>
+        <member type="ref" name="Entity" key="true" unique="false"/>
         <member type="u64" name="Duration"/>
         <member type="u8" name="Stack"/>
     </object>
     <object name="CharacterProgress" location="world">
+        <member type="Character*" name="Character" key="true" unique="true"/>
         <member type="array" name="Maps" size="32">
             <element type="u8"/>
         </member>
@@ -102,11 +105,13 @@
         </member>
     </object>
     <object name="Expertise" location="world">
+        <member type="Character*" name="Character" key="true" unique="false"/>
         <member type="s32" name="Points"/>
         <!--<member type="u8" name="Unknown"/>-->
         <member type="bool" name="Capped"/>
     </object>
     <object name="Hotbar" location="world">
+        <member type="Character*" name="Character" key="true" unique="false"/>
         <!--<member type="u32" name="Unknown"/>-->
         <member type="array" name="Items" size="16">
             <element type="ref"/>
@@ -117,6 +122,7 @@
     </object>
     <object name="Quest" location="world">
         <member type="u16" name="QuestID"/>
+        <member type="Character*" name="Character" key="true" unique="false"/>
         <member type="u8" name="State"/>
         <member type="list" name="CustomData">
             <element type="s32"/>

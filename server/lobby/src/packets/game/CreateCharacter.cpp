@@ -120,6 +120,7 @@ bool Parsers::CreateCharacter::Parse(libcomp::ManagerPacket *pPacketManager,
     character->SetLeftEyeColor((uint8_t)eyeColor);
     character->SetRightEyeColor((uint8_t)eyeColor);
     character->SetAccount(account);
+    character->Register(character);
 
     std::unordered_map<size_t, std::shared_ptr<objects::Item>> equipMap;
 
@@ -150,6 +151,10 @@ bool Parsers::CreateCharacter::Parse(libcomp::ManagerPacket *pPacketManager,
         objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_WEAPON] = weapon;
 
     auto stats = libcomp::PersistentObject::New<objects::EntityStats>();
+    stats->Register(stats);
+    stats->SetEntity(std::dynamic_pointer_cast<
+        libcomp::PersistentObject>(character));
+    character->SetCoreStats(stats);
 
     bool equipped = true;
     for(auto pair : equipMap)
@@ -170,9 +175,7 @@ bool Parsers::CreateCharacter::Parse(libcomp::ManagerPacket *pPacketManager,
         LOG_DEBUG("Character item data failed to save.\n");
         reply.WriteU32Little(1);
     }
-    else if(!stats->Register(stats) || !stats->Insert(worldDB) ||
-        !character->SetCoreStats(stats) || !character->Register(character)
-        || !character->Insert(worldDB))
+    else if(!stats->Insert(worldDB) ||  !character->Insert(worldDB))
     {
         LOG_DEBUG("Character failed to save.\n");
         reply.WriteU32Little(1);

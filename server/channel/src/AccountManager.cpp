@@ -235,6 +235,7 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
     {
         auto progress = libcomp::PersistentObject::New<
             objects::CharacterProgress>();
+        progress->SetCharacter(character);
 
         if(!progress->Register(progress) ||
             !progress->Insert(db) ||
@@ -257,6 +258,8 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
 
         auto box = libcomp::PersistentObject::New<
             objects::ItemBox>();
+        box->SetAccount(character->GetAccount());
+        box->SetCharacter(character);
 
         if(!box->Register(box) ||
             !box->Insert(db) || !character->SetItemBoxes(0, box))
@@ -405,6 +408,9 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
             objects::Demon>();
         demon->SetType(0x0239); //Jack Frost
         demon->SetLocked(false);
+        demon->SetAccount(character->GetAccount());
+        demon->SetCharacter(character);
+        demon->Register(demon);
 
         auto ds = libcomp::PersistentObject::New<
             objects::EntityStats>();
@@ -425,13 +431,18 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
         ds->SetSUPPORT(10);
         ds->SetPDEF(11);
         ds->SetMDEF(12);
+        ds->Register(ds);
 
-        if(!ds->Register(ds) || !ds->Insert(db) ||
-            !demon->SetCoreStats(ds) || !demon->Register(demon) ||
-            !demon->Insert(db) || !character->SetCOMP(0, demon))
+        demon->SetCoreStats(ds);
+        ds->SetEntity(std::dynamic_pointer_cast<
+            libcomp::PersistentObject>(demon));
+
+        if(!ds->Insert(db) || !demon->Insert(db))
         {
             return false;
         }
+
+        character->SetCOMP(0, demon);
         updateCharacter = true;
     }
 

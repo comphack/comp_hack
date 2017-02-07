@@ -51,32 +51,21 @@ void MoveItem(const std::shared_ptr<ChannelClientConnection>& client,
 {
     auto state = client->GetClientState();
     auto character = state->GetCharacterState()->GetCharacter();
+    auto item = std::dynamic_pointer_cast<objects::Item>(
+        libcomp::PersistentObject::GetObjectByUUID(
+            state->GetObjectUUID(itemID)));
 
-    auto sourceItems = sourceBox->GetItems();
-
-    size_t sourceSlot = 0;
-    std::shared_ptr<objects::Item> item;
-    for(; sourceSlot < 50; sourceSlot++)
-    {
-        if(!sourceItems[sourceSlot].IsNull() &&
-            state->GetObjectID(sourceItems[sourceSlot].GetUUID()) == itemID)
-        {
-            item = sourceItems[sourceSlot].Get();
-            break;
-        }
-    }
-
-    if(nullptr == item)
+    size_t sourceSlot = (size_t)item->GetBoxSlot();
+    if(sourceBox->GetItems(sourceSlot).Get() != item)
     {
         LOG_ERROR(libcomp::String("Item move operation failed due to unknown supplied"
             " item ID on character: %1\n").Arg(character->GetUUID().ToString()));
         return;
     }
 
+    item->SetBoxSlot((int8_t)destSlot);
     destBox->SetItems(destSlot, item);
-
-    libcomp::ObjectReference<objects::Item> empty;
-    sourceBox->SetItems(sourceSlot, empty);
+    sourceBox->SetItems(sourceSlot, NULLUUID);
 
     // Nothing was created or deleted so just let the next save operation pick this up
 }
@@ -90,18 +79,26 @@ bool Parsers::ItemMove::Parse(libcomp::ManagerPacket *pPacketManager,
         return false;
     }
 
-    int8_t sourceType = p.ReadS8();
-    int64_t sourceBoxID = p.ReadS64Little();
-    int64_t itemID = p.ReadS64Little();
-
-    int8_t destType = p.ReadS8();
-    int64_t destBoxID = p.ReadS64Little();
-    int16_t destSlot = p.ReadS16Little();
-
     auto server = std::dynamic_pointer_cast<ChannelServer>(
         pPacketManager->GetServer());
     auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
         connection);
+
+    int8_t sourceType = p.ReadS8();
+    int64_t sourceBoxID = p.ReadS64Little();
+    int64_t itemID = p.ReadS64Little();
+
+    auto uuid = client->GetClientState()->GetObjectUUID(itemID);
+
+    if(uuid.IsNull() || nullptr == std::dynamic_pointer_cast<objects::Item>(
+        libcomp::PersistentObject::GetObjectByUUID(uuid)))
+    {
+        return false;
+    }
+
+    int8_t destType = p.ReadS8();
+    int64_t destBoxID = p.ReadS64Little();
+    int16_t destSlot = p.ReadS16Little();
     auto character = client->GetClientState()->
         GetCharacterState()->GetCharacter();
 

@@ -37,6 +37,8 @@
 // Cassandra Includes
 #include <cassandra.h>
 
+#define NULLUUID libobjgen::UUID()
+
 namespace libobjgen
 {
 

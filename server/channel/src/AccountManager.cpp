@@ -257,18 +257,26 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
         auto box = libcomp::PersistentObject::New<
             objects::ItemBox>();
 
+        if(!box->Register(box) ||
+            !box->Insert(db) || !character->SetItemBoxes(0, box))
+        {
+            return false;
+        }
+
         auto mag = libcomp::PersistentObject::New<
             objects::Item>();
 
         mag->SetType(800);
         mag->SetStackSize(5000);
-        
+        mag->SetItemBox(box);
+        mag->SetBoxSlot(49);
+
         if(!mag->Register(mag) || !mag->Insert(db) ||
-            !box->SetItems(49, mag) || !box->Register(box) ||
-            !box->Insert(db) || !character->SetItemBoxes(0, box))
+            !box->SetItems(49, mag))
         {
             return false;
         }
+
         updateCharacter = true;
     }
 
@@ -321,8 +329,10 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
 
             if(addEquipmentToBox)
             {
-                character->GetItemBoxes(0)
-                    ->SetItems(equipmentBoxSlot++, equip);
+                auto slot = equipmentBoxSlot++;
+                equip->SetItemBox(defaultBox);
+                equip->SetBoxSlot((int8_t)slot);
+                defaultBox->SetItems(slot, equip);
             }
         }
     }

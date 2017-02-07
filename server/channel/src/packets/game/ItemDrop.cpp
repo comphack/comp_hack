@@ -51,36 +51,20 @@ void DropItem(const std::shared_ptr<ChannelServer> server,
 {
     auto state = client->GetClientState();
     auto character = state->GetCharacterState()->GetCharacter();
+    auto item = std::dynamic_pointer_cast<objects::Item>(
+        libcomp::PersistentObject::GetObjectByUUID(
+            state->GetObjectUUID(itemID)));
 
-    std::shared_ptr<objects::Item> item;
-    std::shared_ptr<objects::ItemBox> itemBox;
-    for(auto box : character->GetItemBoxes())
+    if(nullptr == item)
     {
-        if(box.IsNull()) continue;
-
-        auto sourceItems = box->GetItems();
-        for(size_t i = 0; i < 50; i++)
-        {
-            if(!sourceItems[i].IsNull() &&
-                state->GetObjectID(sourceItems[i].GetUUID()) == itemID)
-            {
-                item = sourceItems[i].Get();
-                itemBox = box.Get();
-
-                libcomp::ObjectReference<objects::Item> empty;
-                itemBox->SetItems(i, empty);
-                break;
-            }
-        }
-
-        if(nullptr != item)
-        {
-            break;
-        }
+        return;
     }
-    
-    if(nullptr != item)
+
+    auto itemBox = item->GetItemBox().Get();
+    if(nullptr != itemBox)
     {
+        itemBox->SetItems((size_t)item->GetBoxSlot(), NULLUUID);
+
         auto worldDB = server->GetWorldDatabase();
         if(!item->Delete(worldDB) || !itemBox->Update(worldDB))
         {
@@ -105,10 +89,17 @@ bool Parsers::ItemDrop::Parse(libcomp::ManagerPacket *pPacketManager,
         return false;
     }
 
-    int64_t itemID = p.ReadS64Little();
-
     auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
     auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+
+    int64_t itemID = p.ReadS64Little();
+    auto uuid = client->GetClientState()->GetObjectUUID(itemID);
+
+    if(uuid.IsNull() || nullptr == std::dynamic_pointer_cast<objects::Item>(
+        libcomp::PersistentObject::GetObjectByUUID(uuid)))
+    {
+        return false;
+    }
 
     server->QueueWork(DropItem, server, client, itemID);
 

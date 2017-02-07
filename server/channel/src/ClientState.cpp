@@ -74,6 +74,17 @@ int64_t ClientState::GetObjectID(const libobjgen::UUID& uuid) const
     return 0;
 }
 
+const libobjgen::UUID ClientState::GetObjectUUID(int64_t objectID) const
+{
+    auto iter = mObjectUUIDs.find(objectID);
+    if(iter != mObjectUUIDs.end())
+    {
+        return iter->second;
+    }
+
+    return NULLUUID;
+}
+
 bool ClientState::SetObjectID(const libobjgen::UUID& uuid, int64_t objectID)
 {
     auto uuidStr = uuid.ToString();
@@ -82,6 +93,7 @@ bool ClientState::SetObjectID(const libobjgen::UUID& uuid, int64_t objectID)
     if(iter == mObjectIDs.end())
     {
         mObjectIDs[uuidStr] = objectID;
+        mObjectUUIDs[objectID] = uuid;
         return true;
     }
 

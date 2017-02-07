@@ -96,6 +96,16 @@ public:
     }
 
     /**
+     * Create a reference of the templated type with the UUID set.
+     * @param uuid UUID of the referenced object
+     */
+    ObjectReference(const libobjgen::UUID& uuid)
+    {
+        mData = sNull;
+        SetUUID(uuid);
+    }
+
+    /**
      * Create a reference of the templated type with the pointer set.
      * @param ref Pointer to the referenced object
      */

@@ -82,6 +82,7 @@ void SplitStack(const std::shared_ptr<ChannelServer> server,
     srcItem->SetStackSize(static_cast<uint16_t>(
         srcItem->GetStackSize() - srcStack));
     destItem->SetStackSize(srcStack);
+    destItem->SetBoxSlot((int8_t)destSlot);
 
     auto worldDB = server->GetWorldDatabase();
     if(destItem->Register(destItem) && destItem->Insert(worldDB) &&
@@ -125,9 +126,7 @@ void CombineStacks(const std::shared_ptr<ChannelServer> server,
         if(srcItem->GetStackSize() == 0)
         {
             deleteItems.push_back(srcItem);
-
-            libcomp::ObjectReference<objects::Item> empty;
-            itemBox->SetItems(srcSlot, empty);
+            itemBox->SetItems(srcSlot, NULLUUID);
         }
 
         targetItem->SetStackSize(static_cast<uint16_t>(

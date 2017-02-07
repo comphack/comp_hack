@@ -56,6 +56,8 @@ PACKET_PARSER_DECL(ItemMove);           // 0x0076
 PACKET_PARSER_DECL(ItemDrop);           // 0x0077
 PACKET_PARSER_DECL(ItemStack);          // 0x0078
 PACKET_PARSER_DECL(EquipmentList);      // 0x007B
+PACKET_PARSER_DECL(HotbarData);         // 0x00A2
+PACKET_PARSER_DECL(HotbarSave);         // 0x00A4
 PACKET_PARSER_DECL(Sync);               // 0x00F3
 PACKET_PARSER_DECL(Rotate);             // 0x00F8
 

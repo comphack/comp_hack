@@ -37,6 +37,7 @@
 #include <CharacterProgress.h>
 #include <Demon.h>
 #include <EntityStats.h>
+#include <Hotbar.h>
 #include <Item.h>
 #include <ItemBox.h>
 
@@ -371,6 +372,18 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
         }
     }
 
+    // Hotbar
+    for(auto hotbar : character->GetHotbars())
+    {
+        if(!hotbar.IsNull())
+        {
+            if(!hotbar.Get(db))
+            {
+                return false;
+            }
+        }
+    }
+
     if(character->LearnedSkillsCount() == 0)
     {
         //Equip
@@ -464,6 +477,12 @@ bool AccountManager::LogoutCharacter(channel::ClientState* state)
             saveList.push_back(demon.Get());
             saveList.push_back(demon->GetCoreStats().Get());
         }
+    }
+
+    // Save hotbars
+    for(auto hotbar : character->GetHotbars())
+    {
+        saveList.push_back(hotbar.Get());
     }
 
     bool ok = true;

@@ -231,8 +231,6 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     Expertise.cpp
     Hotbar.h
     Hotbar.cpp
-    HotbarItem.h
-    HotbarItem.cpp
     InheritedSkill.h
     InheritedSkill.cpp
     Item.h

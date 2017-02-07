@@ -107,6 +107,25 @@ bool MetaVariableReference::SetPersistentReference(bool persistentReference)
     return true;
 }
 
+bool MetaVariableReference::IsGeneric() const
+{
+    return mNamespace == "libcomp" &&
+        (mReferenceType == "Object" || mReferenceType == "PersistentObject");
+}
+
+void MetaVariableReference::SetGeneric()
+{
+    mNamespace = "libcomp";
+    if(mPersistentReference)
+    {
+        mReferenceType = "PersistentObject";
+    }
+    else
+    {
+        mReferenceType = "Object";
+    }
+}
+
 void MetaVariableReference::AddDefaultedVariable(std::shared_ptr<MetaVariable>& var)
 {
     mDefaultedVariables.push_back(var);
@@ -237,7 +256,12 @@ std::string MetaVariableReference::GetConstructValue() const
     }
     else
     {
-        defaultVal << GetCodeType() << "(new " << GetReferenceType(true) << ")";
+        defaultVal << GetCodeType() << "(";
+        if(!IsGeneric())
+        {
+            defaultVal << "new " << GetReferenceType(true);
+        }
+        defaultVal << ")";
     }
 
     std::stringstream ss;
@@ -489,7 +513,7 @@ std::string MetaVariableReference::GetAccessDeclarations(const Generator& genera
     ss << MetaVariable::GetAccessDeclarations(generator,
         object, name, tabLevel);
 
-    if(mPersistentReference)
+    if(mPersistentReference && !IsGeneric())
     {
         ss << generator.Tab(tabLevel) << "const std::shared_ptr<"
             << GetReferenceType(true) << "> Load" << generator.GetCapitalName(*this)
@@ -505,7 +529,7 @@ std::string MetaVariableReference::GetAccessFunctions(const Generator& generator
     std::stringstream ss;
     ss << MetaVariable::GetAccessFunctions(generator, object, name);
 
-    if(mPersistentReference)
+    if(mPersistentReference && !IsGeneric())
     {
         ss << "const std::shared_ptr<" << GetReferenceType(true) << "> "
             << object.GetName() << "::Load" << generator.GetCapitalName(*this)

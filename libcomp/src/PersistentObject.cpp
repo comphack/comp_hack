@@ -42,7 +42,6 @@
 #include "EntityStats.h"
 #include "Expertise.h"
 #include "Hotbar.h"
-#include "HotbarItem.h"
 #include "InheritedSkill.h"
 #include "Item.h"
 #include "ItemBox.h"
@@ -316,9 +315,6 @@ bool PersistentObject::Initialize()
 
     RegisterType(typeid(objects::Hotbar), objects::Hotbar::GetMetadata(),
         []() {  return (PersistentObject*)new objects::Hotbar(); });
-
-    RegisterType(typeid(objects::HotbarItem), objects::HotbarItem::GetMetadata(),
-        []() {  return (PersistentObject*)new objects::HotbarItem(); });
 
     RegisterType(typeid(objects::InheritedSkill), objects::InheritedSkill::GetMetadata(),
         []() {  return (PersistentObject*)new objects::InheritedSkill(); });

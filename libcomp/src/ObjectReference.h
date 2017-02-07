@@ -227,9 +227,10 @@ protected:
 
     /**
      * Load the referenced object from the database by its UUID.
-     * This will fail if the UUID is not set or the load fails.
-     * Calling this function without a DB set will pull from the
-     * PersistentObject cache instead.
+     * This will do nothing if the UUID is not set, the load fails or
+     * the templated type is a generic PersistentObject. Calling this
+     * function without a DB set will pull from the PersistentObject
+     * cache instead.
      * @param db Database to load from
      * @return true on success, false on failure
      */
@@ -242,7 +243,8 @@ protected:
         {
             auto uuid = mData->mUUID;
 
-            bool dbLoad = nullptr != db;
+            bool dbLoad = nullptr != db &&
+                typeid(PersistentObject) != typeid(T);
             std::shared_ptr<PersistentObject> pRef;
             if(dbLoad)
             {

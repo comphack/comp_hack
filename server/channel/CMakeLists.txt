@@ -34,10 +34,10 @@ SET(${PROJECT_NAME}_SRCS
     src/ChannelServer.cpp
     src/CharacterManager.cpp
     src/CharacterState.cpp
+    src/ChatManager.cpp
     src/ClientState.cpp
     src/DemonState.cpp
     src/ManagerConnection.cpp
-    src/ChatManager.cpp
     src/main.cpp
     src/packets/game/Chat.cpp
 )
@@ -48,10 +48,10 @@ SET(${PROJECT_NAME}_HDRS
     src/ChannelServer.h
     src/CharacterManager.h
     src/CharacterState.h
+    src/ChatManager.h
     src/ClientState.h
     src/DemonState.h
     src/ManagerConnection.h
-    src/ChatManager.h
     src/Packets.h
 )
 
@@ -111,6 +111,8 @@ SET(${PROJECT_NAME}_PACKETS
     src/packets/game/ItemDrop.cpp            # 0x0077
     src/packets/game/ItemStack.cpp           # 0x0078
     src/packets/game/EquipmentList.cpp       # 0x007B
+    src/packets/game/HotbarData.cpp          # 0x00A2
+    src/packets/game/HotbarSave.cpp          # 0x00A4
     src/packets/game/Sync.cpp                # 0x00F3
     src/packets/game/Rotate.cpp              # 0x00F8
 

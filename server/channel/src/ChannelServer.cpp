@@ -128,6 +128,10 @@ bool ChannelServer::Initialize()
         to_underlying(ClientToChannelPacketCode_t::PACKET_ITEM_STACK));
     clientPacketManager->AddParser<Parsers::EquipmentList>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_EQUIPMENT_LIST));
+    clientPacketManager->AddParser<Parsers::HotbarData>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_HOTBAR_DATA));
+    clientPacketManager->AddParser<Parsers::HotbarSave>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_HOTBAR_SAVE));
     clientPacketManager->AddParser<Parsers::Sync>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_SYNC));
     clientPacketManager->AddParser<Parsers::Rotate>(

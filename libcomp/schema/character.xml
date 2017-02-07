@@ -109,13 +109,11 @@
     <object name="Hotbar" location="world">
         <!--<member type="u32" name="Unknown"/>-->
         <member type="array" name="Items" size="16">
-            <element type="HotbarItem*"/>
+            <element type="ref"/>
         </member>
-    </object>
-    <object name="HotbarItem" location="world">
-        <member type="u8" name="Type"/>
-        <member type="u32" name="Value"/>
-        <member type="u32" name="Extra"/>
+        <member type="array" name="ItemTypes" size="16">
+            <element type="u8"/>
+        </member>
     </object>
     <object name="Quest" location="world">
         <member type="u16" name="QuestID"/>

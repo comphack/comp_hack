@@ -30,6 +30,13 @@
 // channel Includes
 #include "ChannelClientConnection.h"
 
+namespace libcomp
+{
+
+class Database;
+
+}
+
 namespace channel
 {
 
@@ -131,6 +138,24 @@ private:
      * @return true on success, false on failure
      */
     bool LogoutCharacter(channel::ClientState* state);
+
+    /**
+     * Unload an object from references and update it in the DB.
+     * @param obj Pointer to the object to clean up
+     * @param db Pointer to the database to use
+     * @return true on success, false on failure
+     */
+    template <class T>
+    bool Cleanup(const std::shared_ptr<T>& obj,
+        const std::shared_ptr<libcomp::Database>& db)
+    {
+        if(obj != nullptr)
+        {
+            libcomp::ObjectReference<T>::Unload(obj->GetUUID());
+            return obj->Update(db);
+        }
+        return true;
+    }
 
     /// Pointer to the channel server
     std::weak_ptr<ChannelServer> mServer;

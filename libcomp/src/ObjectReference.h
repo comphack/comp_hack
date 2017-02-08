@@ -213,6 +213,28 @@ public:
         return true;
     }
 
+    /**
+     * Clear the loaded pointer associated to a UUID when an object
+     * needs to be cleaned up.  This allows circular references in
+     * objgen schemas to not cause issues with garbage collection.
+     * @param uuid UUID of the persistent object
+     * @return true if it was loaded, false if it was not
+     */
+    static bool Unload(const libobjgen::UUID& uuid)
+    {
+        std::string uuidStr = uuid.ToString();
+
+        std::lock_guard<std::mutex> lock(mReferenceLock);
+        auto iter = sData.find(uuidStr);
+        if(iter != sData.end())
+        {
+            bool loaded = iter->second->mRef != nullptr;
+            iter->second->mRef = nullptr;
+            return loaded;
+        }
+        return false;
+    }
+
 protected:
     /**
      * Get the PersistentObject reference casted to the templated

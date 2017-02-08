@@ -190,6 +190,9 @@ void AccountManager::Logout(const std::shared_ptr<
     //Remove the connection if it hasn't been removed already.
     managerConnection->RemoveClientConnection(client);
 
+    libcomp::ObjectReference<
+        objects::Account>::Unload(account->GetUUID());
+
     libcomp::Packet p;
     p.WritePacketCode(InternalPacketCode_t::PACKET_ACCOUNT_LOGOUT);
     p.WriteString16Little(
@@ -455,10 +458,15 @@ bool AccountManager::LogoutCharacter(channel::ClientState* state)
 
     /// @todo: detach character from anything using it
 
-    std::list<std::shared_ptr<libcomp::PersistentObject>> saveList;
-    saveList.push_back(character);
-    saveList.push_back(character->GetCoreStats().Get());
-    saveList.push_back(character->GetProgress().Get());
+    bool ok = true;
+    auto server = mServer.lock();
+    auto worldDB = server->GetWorldDatabase();
+
+    ok &= Cleanup<objects::Character>(character, worldDB);
+    ok &= Cleanup<objects::EntityStats>(character
+        ->GetCoreStats().Get(), worldDB);
+    ok &= Cleanup<objects::CharacterProgress>(character
+        ->GetProgress().Get(), worldDB);
     /// @todo: logout information
 
     // Save items
@@ -466,18 +474,18 @@ bool AccountManager::LogoutCharacter(channel::ClientState* state)
     {
         if(!itemBox.IsNull())
         {
-            saveList.push_back(itemBox.Get());
             for(auto item : itemBox->GetItems())
             {
-                saveList.push_back(item.Get());
+                ok &= Cleanup<objects::Item>(item.Get(), worldDB);
             }
+            ok &= Cleanup<objects::ItemBox>(itemBox.Get(), worldDB);
         }
     }
 
     // Save materials
     for(auto material : character->GetMaterials())
     {
-        saveList.push_back(material.Get());
+        ok &= Cleanup<objects::Item>(material.Get(), worldDB);
     }
 
     // Save demons
@@ -485,23 +493,16 @@ bool AccountManager::LogoutCharacter(channel::ClientState* state)
     {
         if(!demon.IsNull())
         {
-            saveList.push_back(demon.Get());
-            saveList.push_back(demon->GetCoreStats().Get());
+            ok &= Cleanup<objects::EntityStats>(demon
+                ->GetCoreStats().Get(), worldDB);
+            ok &= Cleanup<objects::Demon>(demon.Get(), worldDB);
         }
     }
 
     // Save hotbars
     for(auto hotbar : character->GetHotbars())
     {
-        saveList.push_back(hotbar.Get());
-    }
-
-    bool ok = true;
-    auto server = mServer.lock();
-    auto worldDB = server->GetWorldDatabase();
-    for(auto obj : saveList)
-    {
-        ok &= obj == nullptr || obj->Update(worldDB);
+        ok &= Cleanup<objects::Hotbar>(hotbar.Get(), worldDB);
     }
 
     return ok;

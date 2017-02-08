@@ -117,7 +117,7 @@
             <element type="ref"/>
         </member>
         <member type="array" name="ItemTypes" size="16">
-            <element type="u8"/>
+            <element type="s8"/>
         </member>
     </object>
     <object name="Quest" location="world">

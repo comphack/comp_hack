@@ -59,7 +59,7 @@ void SendHotbarData(const std::shared_ptr<ChannelClientConnection> client,
 
     for(size_t i = 0; i < 16; i++)
     {
-        auto type = hotbar != nullptr ? hotbar->GetItemTypes(i) : 0;
+        auto type = hotbar != nullptr ? hotbar->GetItemTypes(i) : (int8_t)0;
         auto item = hotbar != nullptr ? hotbar->GetItems(i).Get() : nullptr;
         if(item != nullptr)
         {

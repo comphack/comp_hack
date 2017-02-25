@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <objgen>
-    <include path="binarydata/skillitemstatuscommon.xml"/>
-    <include path="binarydata/correcttbl.xml"/>
+    <include path="binarydata/shared.xml"/>
 
     <object name="MiItemBasicData" persistent="false" scriptenabled="true">
         <member type="u32" name="id2" caps="true"/>

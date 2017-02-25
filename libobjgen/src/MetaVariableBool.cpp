@@ -35,7 +35,8 @@
 
 using namespace libobjgen;
 
-MetaVariableBool::MetaVariableBool() : MetaVariable()
+MetaVariableBool::MetaVariableBool() : MetaVariable(),
+    mDefaultValue(false)
 {
 }
 

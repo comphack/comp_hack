@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<objgen>
-    <object name="MiCategoryData" persistent="false" scriptenabled="true">
-        <member type="u8" name="unk1"/>
-        <member type="u8" name="unk2"/>
-        <member type="u16" name="unk3"/>
-    </object>
-</objgen>

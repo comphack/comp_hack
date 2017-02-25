@@ -54,6 +54,7 @@ SET(${PROJECT_NAME}_SRCS
     src/DatabaseQuerySQLite3.cpp
     src/DatabaseSQLite3.cpp
     src/Decrypt.cpp
+    src/DefinitionManager.cpp
     src/DynamicObject.cpp
     src/DynamicVariable.cpp
     src/DynamicVariableFactory.cpp
@@ -114,6 +115,7 @@ SET(${PROJECT_NAME}_HDRS
     src/DatabaseQuerySQLite3.h
     src/DatabaseSQLite3.h
     src/Decrypt.h
+    src/DefinitionManager.h
     src/DynamicObject.h
     src/DynamicVariable.h
     src/DynamicVariableFactory.h
@@ -187,10 +189,15 @@ SET(${PROJECT_NAME}_SCHEMA
     schema/test.xml
 
     # BinaryData Files
-    schema/binarydata/category.xml
-    schema/binarydata/correcttbl.xml
+    schema/binarydata/citemdata.xml
+    schema/binarydata/devildata.xml
+    schema/binarydata/devillvupratedata.xml
+    schema/binarydata/expertdata.xml
+    schema/binarydata/hnpcdata.xml
     schema/binarydata/itemdata.xml
-    schema/binarydata/skillitemstatuscommon.xml
+    schema/binarydata/onpcdata.xml
+    schema/binarydata/shared.xml
+    schema/binarydata/skilldata.xml
     schema/binarydata/zonedata.xml
 )
 
@@ -255,53 +262,144 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     TestObject.cpp
 
     # BinaryData Files
-    # category.xml
+    MiAcquisitionData.cpp
+    MiAcquisitionData.h
+    MiAcquisitionSkillData.cpp
+    MiAcquisitionSkillData.h
+    MiAddStatusTbl.cpp
+    MiAddStatusTbl.h
+    MiAIRelationData.cpp
+    MiAIRelationData.h
+    MiBattleDamageData.cpp
+    MiBattleDamageData.h
+    MiBreakData.cpp
+    MiBreakData.h
+    MiCastBasicData.cpp
+    MiCastBasicData.h
+    MiCastCancelData.cpp
+    MiCastCancelData.h
+    MiCastData.cpp
+    MiCastData.h
     MiCategoryData.h
     MiCategoryData.cpp
-    # correcttbl.xml
+    MiCItemBaseData.cpp
+    MiCItemBaseData.h
+    MiCItemData.cpp
+    MiCItemData.h
+    MiCItemMotionData.cpp
+    MiCItemMotionData.h
+    MiCItemSPEffectData.cpp
+    MiCItemSPEffectData.h
+    MiConditionData.cpp
+    MiConditionData.h
     MiCorrectTbl.h
     MiCorrectTbl.cpp
-    # itemdata.xml
+    MiCostTbl.cpp
+    MiCostTbl.h
+    MiDamageData.cpp
+    MiDamageData.h
+    MiDCategoryData.cpp
+    MiDCategoryData.h
+    MiDevilBattleData.cpp
+    MiDevilBattleData.h
+    MiDevilData.cpp
+    MiDevilData.h
+    MiDevilFamiliarityData.cpp
+    MiDevilFamiliarityData.h
+    MiDevilLVUpData.cpp
+    MiDevilLVUpData.h
+    MiDevilLVUpRateData.cpp
+    MiDevilLVUpRateData.h
+    MiDevilReunionConditionData.cpp
+    MiDevilReunionConditionData.h
+    MiDischargeData.cpp
+    MiDischargeData.h
+    MiEffectiveRangeData.cpp
+    MiEffectiveRangeData.h
+    MiExpertClassData.cpp
+    MiExpertClassData.h
+    MiExpertData.cpp
+    MiExpertData.h
+    MiExpertGrowthTbl.cpp
+    MiExpertGrowthTbl.h
+    MiExpertRankData.cpp
+    MiExpertRankData.h
+    MiExpertUnkData.cpp
+    MiExpertUnkData.h
+    MiGrowthData.cpp
+    MiGrowthData.h
+    MiHNPCAppearanceData.cpp
+    MiHNPCAppearanceData.h
+    MiHNPCBasicData.cpp
+    MiHNPCBasicData.h
+    MiHNPCData.cpp
+    MiHNPCData.h
     MiItemBasicData.h
     MiItemBasicData.cpp
-    MiPossessionData.h
-    MiPossessionData.cpp
-    MiUseRestrictionsData.h
-    MiUseRestrictionsData.cpp
-    MiItemPvPData.h
-    MiItemPvPData.cpp
-    MiRentalData.h
-    MiRentalData.cpp
-    MiSkillTbl.h
-    MiSkillTbl.cpp
     MiItemData.h
     MiItemData.cpp
-    # skillitemstatuscommon.xml
+    MiItemPvPData.h
+    MiItemPvPData.cpp
+    MiKnockBackData.cpp
+    MiKnockBackData.h
+    MiNegotiationDamageData.cpp
+    MiNegotiationDamageData.h
+    MiNegotiationData.cpp
+    MiNegotiationData.h
+    MiNPCBasicData.cpp
+    MiNPCBasicData.h
+    MiONPCData.cpp
+    MiONPCData.h
+    MiPossessionData.h
+    MiPossessionData.cpp
+    MiRentalData.h
+    MiRentalData.cpp
+    MiRestrictionData.cpp
+    MiRestrictionData.h
+    MiSkillBasicData.cpp
+    MiSkillBasicData.h
+    MiSkillCharasticData.cpp
+    MiSkillCharasticData.h
+    MiSkillData.cpp
+    MiSkillData.h
     MiSkillItemStatusCommonData.h
     MiSkillItemStatusCommonData.cpp
-    # zonedata.xml
+    MiSkillPvPData.cpp
+    MiSkillPvPData.h
+    MiSkillSpecialParams.cpp
+    MiSkillSpecialParams.h
+    MiSkillTbl.h
+    MiSkillTbl.cpp
+    MiSummonData.cpp
+    MiSummonData.h
+    MiTargetData.cpp
+    MiTargetData.h
+    MiUnionData.cpp
+    MiUnionData.h
+    MiUseRestrictionsData.h
+    MiUseRestrictionsData.cpp
     MiZoneBasicData.h
     MiZoneBasicData.cpp
+    MiZoneBGMData.h
+    MiZoneBGMData.cpp
+    MiZoneCameraData.h
+    MiZoneCameraData.cpp
+    MiZoneData.h
+    MiZoneData.cpp
     MiZoneFileData.h
     MiZoneFileData.cpp
     MiZoneFogData.h
     MiZoneFogData.cpp
-    MiZoneCameraData.h
-    MiZoneCameraData.cpp
-    MiZoneSkyData.h
-    MiZoneSkyData.cpp
     MiZoneGouraudData.h
     MiZoneGouraudData.cpp
-    MiZoneLensFlareLayerData.h
-    MiZoneLensFlareLayerData.cpp
     MiZoneLensFlareData.h
     MiZoneLensFlareData.cpp
-    MiZoneBGMData.h
-    MiZoneBGMData.cpp
+    MiZoneLensFlareLayerData.h
+    MiZoneLensFlareLayerData.cpp
     MiZoneOtherData.h
     MiZoneOtherData.cpp
-    MiZoneData.h
-    MiZoneData.cpp
+    MiZoneSkyData.h
+    MiZoneSkyData.cpp
 )
 
 ADD_LIBRARY(comp STATIC ${${PROJECT_NAME}_SRCS} ${${PROJECT_NAME}_HDRS}

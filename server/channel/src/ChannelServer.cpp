@@ -42,8 +42,8 @@ using namespace channel;
 
 ChannelServer::ChannelServer(std::shared_ptr<objects::ServerConfig> config,
     const libcomp::String& configPath) : libcomp::BaseServer(config, configPath),
-    mAccountManager(0), mCharacterManager(0), mChatManager(0), mMaxEntityID(0),
-    mMaxObjectID(0)
+    mAccountManager(0), mCharacterManager(0), mChatManager(0), mDefinitionManager(0),
+    mMaxEntityID(0), mMaxObjectID(0)
 {
 }
 
@@ -56,6 +56,14 @@ bool ChannelServer::Initialize()
         return false;
     }
 
+    auto conf = std::dynamic_pointer_cast<objects::ChannelConfig>(mConfig);
+
+    mDefinitionManager = new libcomp::DefinitionManager();
+    if(!mDefinitionManager->LoadAllData(conf->GetBinaryDataDirectory()))
+    {
+        return false;
+    }
+
     // Connect to the world server.
     auto worldConnection = std::make_shared<
         libcomp::InternalConnection>(mService);
@@ -63,8 +71,6 @@ bool ChannelServer::Initialize()
 
     mManagerConnection = std::make_shared<ManagerConnection>(self);
     mManagerConnection->SetWorldConnection(worldConnection);
-
-    auto conf = std::dynamic_pointer_cast<objects::ChannelConfig>(mConfig);
 
     worldConnection->Connect(conf->GetWorldIP(), conf->GetWorldPort(), false);
 
@@ -157,6 +163,7 @@ ChannelServer::~ChannelServer()
     delete[] mAccountManager;
     delete[] mCharacterManager;
     delete[] mChatManager;
+    delete[] mDefinitionManager;
 }
 
 ServerTime ChannelServer::GetServerTime()
@@ -265,6 +272,11 @@ CharacterManager* ChannelServer::GetCharacterManager() const
 ChatManager* ChannelServer::GetChatManager() const
 {
     return mChatManager;
+}
+
+libcomp::DefinitionManager* ChannelServer::GetDefinitionManager() const
+{
+    return mDefinitionManager;
 }
 
 int32_t ChannelServer::GetNextEntityID()

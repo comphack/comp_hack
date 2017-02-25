@@ -5,17 +5,17 @@
     
     @ENCODE_CODE@
     
-    if(@STREAM@.stream.good())
+    if(@STREAM@.good())
     {
         @LENGTH_TYPE@ len = static_cast<@LENGTH_TYPE@>(value.size());
-        @STREAM@.stream.write(reinterpret_cast<const char*>(&len),
+        @STREAM@.write(reinterpret_cast<const char*>(&len),
             sizeof(len));
         
-        if(@STREAM@.stream.good())
+        if(@STREAM@.good() && len > 0)
         {
-            @STREAM@.stream << @ENCODESTREAM@.rdbuf();
+            @STREAM@ << @ENCODESTREAM@.rdbuf();
         }
     }
 
-    return @STREAM@.stream.good();
+    return @STREAM@.good();
 })()

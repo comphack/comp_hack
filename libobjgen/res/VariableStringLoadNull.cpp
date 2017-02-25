@@ -6,16 +6,16 @@
 
     do
     {
-        @STREAM@.stream.read(&c, sizeof(c));
+        @STREAM@.read(&c, sizeof(c));
 
-        if(@STREAM@.stream.good())
+        if(@STREAM@.good())
         {
             s += c;
         }
     }
-    while(0 != c && @STREAM@.stream.good());
+    while(0 != c && @STREAM@.good());
 
-    if(!@STREAM@.stream.good())
+    if(!@STREAM@.good())
     {
         return false;
     }
@@ -24,5 +24,5 @@
 
     @SET_CODE@
 
-    return @STREAM@.stream.good();
+    return @STREAM@.good();
 })()

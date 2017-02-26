@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="ServerObjectBase" persistent="false">
+        <member type="u32" name="ID"/>
+        <member type="float" name="X"/>
+        <member type="float" name="Y"/>
+        <member type="float" name="Rotation"/>
+    </object>
+    <object name="ServerObject" baseobject="ServerObjectBase" persistent="false">
+        <member type="u8" name="State"/>
+    </object>
+</objgen>

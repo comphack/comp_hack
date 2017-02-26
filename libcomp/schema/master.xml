@@ -22,6 +22,11 @@
     <include path="packet_login.xml"/>
     <include path="packet_response_code.xml"/>
 
+    <!-- Server Files -->
+    <include path="server_npc.xml"/>
+    <include path="server_object.xml"/>
+    <include path="server_zone.xml"/>
+
     <!-- BinaryData Files -->
     <include path="binarydata/citemdata.xml"/>
     <include path="binarydata/devildata.xml"/>

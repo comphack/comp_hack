@@ -42,6 +42,7 @@
 #include "CharacterManager.h"
 #include "ChatManager.h"
 #include "DefinitionManager.h"
+#include "ServerDataManager.h"
 
 namespace channel
 {
@@ -165,6 +166,12 @@ public:
     libcomp::DefinitionManager* GetDefinitionManager() const;
 
     /**
+     * Get a pointer to the server data manager.
+     * @return Pointer to the ServerDataManager
+     */
+    libcomp::ServerDataManager* GetServerDataManager() const;
+
+    /**
      * Increments and returns the next available entity ID.
      * @return Next game entity ID for the channel
      */
@@ -229,6 +236,9 @@ protected:
 
     /// Pointer to the Definition Manager.
     libcomp::DefinitionManager *mDefinitionManager;
+
+    /// Pointer to the Server Data Manager.
+    libcomp::ServerDataManager *mServerDataManager;
 
     /// Highest entity ID currently assigned
     int32_t mMaxEntityID;

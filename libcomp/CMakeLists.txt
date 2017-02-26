@@ -83,6 +83,7 @@ SET(${PROJECT_NAME}_SRCS
     src/ReadOnlyPacket.cpp
     src/RingBuffer.cpp
     src/ScriptEngine.cpp
+    src/ServerDataManager.cpp
     src/Shutdown.cpp
     #src/Structgen.cpp
     src/TcpConnection.cpp
@@ -159,6 +160,7 @@ SET(${PROJECT_NAME}_HDRS
     src/ReadOnlyPacket.h
     src/RingBuffer.h
     src/ScriptEngine.h
+    src/ServerDataManager.h
     src/Shutdown.h
     src/TcpConnection.h
     src/TcpServer.h
@@ -185,6 +187,9 @@ SET(${PROJECT_NAME}_SCHEMA
     schema/packet_response_code.xml
     schema/registeredchannel.xml
     schema/registeredworld.xml
+    schema/server_npc.xml
+    schema/server_object.xml
+    schema/server_zone.xml
     schema/serverconfig.xml
     schema/test.xml
 
@@ -256,6 +261,14 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     RegisteredWorld.cpp
     ServerConfig.h
     ServerConfig.cpp
+    ServerNPC.h
+    ServerNPC.cpp
+    ServerObject.h
+    ServerObject.cpp
+    ServerObjectBase.h
+    ServerObjectBase.cpp
+    ServerZone.h
+    ServerZone.cpp
     StatusEffect.h
     StatusEffect.cpp
     TestObject.h

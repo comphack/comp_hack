@@ -32,7 +32,13 @@
 #include <ManagerPacket.h>
 #include <PacketCodes.h>
 #include <ReadOnlyPacket.h>
+#include <ServerDataManager.h>
 #include <TcpConnection.h>
+
+// objects Include
+#include <ServerNPC.h>
+#include <ServerObject.h>
+#include <ServerZone.h>
 
 // channel Includes
 #include "ChannelClientConnection.h"
@@ -55,7 +61,49 @@ void SendZoneData(const std::shared_ptr<ChannelServer> server,
     auto characterManager = server->GetCharacterManager();
     characterManager->ShowEntity(client, cState->GetEntityID());
 
-    /// @todo: Populate NPCs, enemies, other players, etc
+    /// @todo: Populate enemies, other players, etc
+    /// @todo: Fix packet size limit when sending too many NPCs
+
+    auto serverDataManager = server->GetServerDataManager();
+    /// @todo: remove hardcoded values
+    auto zoneData = serverDataManager->GetZoneData(20101);
+    for(auto npc : zoneData->GetNPCs())
+    {
+        int32_t npcID = server->GetNextEntityID();
+        libcomp::Packet reply;
+        reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_NPC_DATA);
+        reply.WriteS32Little(npcID);
+        reply.WriteU32Little(npc->GetID());
+        reply.WriteS32Little(zoneData->GetSet());
+        reply.WriteS32Little(zoneData->GetID());
+        reply.WriteFloat(npc->GetX());
+        reply.WriteFloat(npc->GetY());
+        reply.WriteFloat(npc->GetRotation());
+        reply.WriteS16Little(0);    //Unknown
+
+        client->SendPacket(reply);
+
+        characterManager->ShowEntity(client, npcID);
+    }
+
+    for(auto onpc : zoneData->GetObjects())
+    {
+        int32_t objID = server->GetNextEntityID();
+        libcomp::Packet reply;
+        reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_OBJECT_NPC_DATA);
+        reply.WriteS32Little(objID);
+        reply.WriteU32Little(onpc->GetID());
+        reply.WriteU8(onpc->GetState());
+        reply.WriteS32Little(zoneData->GetSet());
+        reply.WriteS32Little(zoneData->GetID());
+        reply.WriteFloat(onpc->GetX());
+        reply.WriteFloat(onpc->GetY());
+        reply.WriteFloat(onpc->GetRotation());
+
+        client->SendPacket(reply);
+
+        characterManager->ShowEntity(client, objID);
+    }
 }
 
 bool Parsers::PopulateZone::Parse(libcomp::ManagerPacket *pPacketManager,

@@ -64,6 +64,12 @@ bool ChannelServer::Initialize()
         return false;
     }
 
+    mServerDataManager = new libcomp::ServerDataManager();
+    if(!mServerDataManager->LoadData(conf->GetServerDataDefinitionsFile()))
+    {
+        return false;
+    }
+
     // Connect to the world server.
     auto worldConnection = std::make_shared<
         libcomp::InternalConnection>(mService);
@@ -180,6 +186,7 @@ ChannelServer::~ChannelServer()
     delete[] mCharacterManager;
     delete[] mChatManager;
     delete[] mDefinitionManager;
+    delete[] mServerDataManager;
 }
 
 ServerTime ChannelServer::GetServerTime()
@@ -293,6 +300,11 @@ ChatManager* ChannelServer::GetChatManager() const
 libcomp::DefinitionManager* ChannelServer::GetDefinitionManager() const
 {
     return mDefinitionManager;
+}
+
+libcomp::ServerDataManager* ChannelServer::GetServerDataManager() const
+{
+    return mServerDataManager;
 }
 
 int32_t ChannelServer::GetNextEntityID()

@@ -39,7 +39,6 @@ SET(${PROJECT_NAME}_SRCS
     src/DemonState.cpp
     src/ManagerConnection.cpp
     src/main.cpp
-    src/packets/game/Chat.cpp
 )
 
 SET(${PROJECT_NAME}_HDRS

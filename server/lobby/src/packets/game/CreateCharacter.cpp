@@ -160,8 +160,6 @@ bool Parsers::CreateCharacter::Parse(libcomp::ManagerPacket *pPacketManager,
     for(auto pair : equipMap)
     {
         auto equip = pair.second;
-        equip->SetDurability(1);
-        equip->SetMaxDurability(1);
         equipped &= equip->Register(equip) && equip->Insert(worldDB) &&
             character->SetEquippedItems(pair.first, equip);
     }

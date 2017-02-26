@@ -70,6 +70,7 @@ enum ChatVis_t : uint16_t
  */
 enum GMCommand_t : uint16_t
 {
+    GM_COMMAND_CONTRACT,
     GM_COMMAND_LNC,
 };
 
@@ -114,6 +115,16 @@ public:
         const std::list<libcomp::String>& args);
 
 private:
+    /**
+     * GM command to add a demon to a character's COMP.
+     * @param client Pointer to the client that sent the command
+     * @param args List of arguments for the command
+     * @return true if the command was handled properly, else false
+     */
+    bool GMCommand_Contract(const std::shared_ptr<
+        channel::ChannelClientConnection>& client,
+        const std::list<libcomp::String>& args);
+
     /*
      * GM command to set a character's LNC alignment value.
      * @param client Pointer to the client that sent the command
@@ -128,10 +139,13 @@ private:
      * Get the next argument from the supplied argument list as a string.
      * @param outVal Output variable to return the string argument to
      * @param args List of arguments read and update
+     * @param encoding Optional encoding to use when reading the string.
+     *  Defaults to UTF8.
      * @return true if there was an argument in the list, else false
      */
     bool GetStringArg(libcomp::String& outVal,
-        std::list<libcomp::String>& args) const;
+        std::list<libcomp::String>& args, libcomp::Convert::Encoding_t encoding
+        = libcomp::Convert::Encoding_t::ENCODING_UTF8) const;
 
     /*
      * Get the next argument from the supplied argument list as an integer

@@ -152,7 +152,7 @@ bool ChannelServer::Initialize()
 
     auto channelPtr = std::dynamic_pointer_cast<ChannelServer>(self);
     mAccountManager = new AccountManager(channelPtr);
-    mCharacterManager = new CharacterManager();
+    mCharacterManager = new CharacterManager(channelPtr);
     mChatManager = new ChatManager(channelPtr);
 
     return true;

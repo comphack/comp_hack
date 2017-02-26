@@ -37,7 +37,11 @@ class Packet;
 
 namespace objects
 {
+class Character;
+class Demon;
 class EntityStats;
+class MiDevilData;
+class MiDevilLVUpData;
 }
 
 namespace channel
@@ -56,7 +60,7 @@ public:
      * @param server Pointer back to the channel server this
      *  belongs to
      */
-    CharacterManager();
+    CharacterManager(const std::weak_ptr<ChannelServer>& server);
 
     /**
      * Clean up the CharacterManager.
@@ -149,20 +153,93 @@ public:
     void UpdateLNC(const std::shared_ptr<
         channel::ChannelClientConnection>& client, int16_t lnc);
 
-private:
+    /**
+     * Create or copy an existing demon and add them to a character's COMP.
+     * @param character Pointer to the character that should receive the demon
+     * @param demonData Pointer to a demon's definition that represents
+     *  the demon to create
+     * @param demon Optional pointer to an existing demon to make a copy from
+     * @return Pointer to the newly created demon
+     */
+    std::shared_ptr<objects::Demon> ContractDemon(
+        const std::shared_ptr<objects::Character>& character,
+        const std::shared_ptr<objects::MiDevilData>& demonData,
+        const std::shared_ptr<objects::Demon>& demon = nullptr);
+
+    /**
+     * Calculate the base stats of a character.
+     * @param cs Pointer to the core stats of a character
+     */
+    void CalculateCharacterBaseStats(const std::shared_ptr<
+        objects::EntityStats>& cs);
+
+    /**
+     * Calculate the base stats of a demon.
+     * @param ds Pointer to the core stats of a demon
+     * @param demonData Pointer to the demon's definition 
+     */
+    void CalculateDemonBaseStats(const std::shared_ptr<objects::EntityStats>& ds,
+        const std::shared_ptr<objects::MiDevilData>& demonData);
+    
+    /**
+     * Retrieve a map of correct table indexes to corresponding stat values.
+     * @param cs Pointer to the core stats of a character
+     * @return Map of correct table indexes to corresponding stat values
+     */
+    static std::unordered_map<uint8_t, int16_t> GetCharacterBaseStatMap(
+        const std::shared_ptr<objects::EntityStats>& cs);
+
+    /**
+     * Calculate the dependent stats (ex: max HP, close range damage) for a character
+     * or demon and update the values of a correct table map.
+     * @param stats Reference to a correct table map
+     * @param level Current level of the character or demon
+     * @param isDemon true if the entity is a demon, false if it is character
+     */
+    static void CalculateDependentStats(std::unordered_map<uint8_t, int16_t>& stats,
+        int8_t level, bool isDemon);
+
+    /**
+     * Add COMP slot data to a packet.
+     * @param p Packet to populate with COMP data
+     * @param client Current client to retrieve COMP information from
+     * @param slot COMP slot index to populate information from
+     */
+    void GetCOMPSlotPacketData(libcomp::Packet& p, 
+        const std::shared_ptr<channel::ChannelClientConnection>& client, size_t slot);
+
     /**
      * Add the core stat data from the supplied EntityStats instance
-     * and state object to the packet.
+     * and state object to a packet.
      * @param p Packet to populate with stat data
      * @param coreStats EntityStats pointer to the core stats of either
      *  a character or demon
      * @param state Pointer to the current state of the entity in a
      *  zone.  If this parameter is supplied as null, only the core
      *  stats will be populated.
+     * @param boostFormat true if the format should match the one used when
+     *  stat changes are reported to the client, false if the format should
+     *  match the one used for full entity descriptions
      */
     void GetEntityStatsPacketData(libcomp::Packet& p,
         const std::shared_ptr<objects::EntityStats>& coreStats,
-        const std::shared_ptr<objects::EntityStateObject>& state);
+        const std::shared_ptr<objects::EntityStateObject>& state,
+        bool boostFormat);
+
+private:
+    /**
+     * Update the stats of a demon by a specified boost level determined by the
+     * demon's actual level.
+     * @param stats Reference to a correct table map containing stats that may
+     *  or may not have already been boosted
+     * @param data Pointer to the level up definition of a demon
+     * @param boostLevel Boost level to use when calculating the stat increases
+     */
+    void BoostStats(std::unordered_map<uint8_t, int16_t>& stats,
+        const std::shared_ptr<objects::MiDevilLVUpData>& data, int boostLevel);
+
+    /// Pointer to the channel server
+    std::weak_ptr<ChannelServer> mServer;
 };
 
 } // namespace channel

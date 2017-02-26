@@ -40,6 +40,8 @@
 #include <Hotbar.h>
 #include <Item.h>
 #include <ItemBox.h>
+#include <MiItemData.h>
+#include <MiPossessionData.h>
 
 // channel Includes
 #include "ChannelServer.h"
@@ -105,13 +107,13 @@ void AccountManager::HandleLoginResponse(const std::shared_ptr<
         auto charState = state->GetCharacterState();
         charState->SetCharacter(character);
         charState->SetEntityID(server->GetNextEntityID());
-        charState->RecalculateStats();
+        charState->RecalculateStats(server->GetDefinitionManager());
 
         // If we don't have an active demon, set up the state anyway
         auto demonState = state->GetDemonState();
         demonState->SetDemon(character->GetActiveDemon());
         demonState->SetEntityID(server->GetNextEntityID());
-        demonState->RecalculateStats();
+        demonState->RecalculateStats(server->GetDefinitionManager());
 
         reply.WriteU32Little(1);
     }
@@ -233,9 +235,18 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
         return false;
     }
 
-    bool updateCharacter = false;
-    if(character->GetProgress().IsNull())
+    bool newCharacter = character->GetCoreStats()->GetLevel() == -1;
+    auto characterManager = server->GetCharacterManager();
+    auto definitionManager = server->GetDefinitionManager();
+    if(newCharacter)
     {
+        auto cs = character->GetCoreStats().Get();
+        cs->SetLevel(1);
+        characterManager->CalculateCharacterBaseStats(cs);
+        cs->SetHP(cs->GetMaxHP());
+        cs->SetMP(cs->GetMaxMP());
+
+        // Create the character progress
         auto progress = libcomp::PersistentObject::New<
             objects::CharacterProgress>();
         progress->SetCharacter(character);
@@ -246,19 +257,8 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
         {
             return false;
         }
-        updateCharacter = true;
-    }
-    else if(!character->LoadProgress(db))
-    {
-        return false;
-    }
 
-    // Item boxes
-    bool addEquipmentToBox = false;
-    if(character->GetItemBoxes(0).IsNull())
-    {
-        addEquipmentToBox = true;
-
+        // Create the inventory item box (the others can be lazy loaded later)
         auto box = libcomp::PersistentObject::New<
             objects::ItemBox>();
         box->SetAccount(character->GetAccount());
@@ -270,6 +270,7 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
             return false;
         }
 
+        //Hacks to add MAG, a test demon and some starting skills
         auto mag = libcomp::PersistentObject::New<
             objects::Item>();
 
@@ -284,9 +285,30 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
             return false;
         }
 
-        updateCharacter = true;
+        auto demon = characterManager->ContractDemon(character.Get(),
+            definitionManager->GetDevilData(0x0239),    //Jack Frost
+            nullptr);
+        if(nullptr == demon)
+        {
+            return false;
+        }
+
+        //Equip
+        character->AppendLearnedSkills(0x00001654);
+
+        //Summon demon
+        character->AppendLearnedSkills(0x00001648);
+
+        //Store demon
+        character->AppendLearnedSkills(0x00001649);
+
+        for(auto skillID : definitionManager->GetDefaultCharacterSkills())
+        {
+            character->AppendLearnedSkills(skillID);
+        }
     }
 
+    // Item boxes
     for(auto itemBox : character->GetItemBoxes())
     {
         if(!itemBox.IsNull())
@@ -334,19 +356,19 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
                     server->GetNextObjectID());
             }
 
-            if(addEquipmentToBox)
+            if(newCharacter)
             {
+                auto def = definitionManager->GetItemData(equip->GetType());
+                auto poss = def->GetPossession();
+                equip->SetDurability(poss->GetDurability());
+                equip->SetMaxDurability(poss->GetDurability());
+
                 auto slot = equipmentBoxSlot++;
                 equip->SetItemBox(defaultBox);
                 equip->SetBoxSlot((int8_t)slot);
                 defaultBox->SetItems(slot, equip);
             }
         }
-    }
-
-    if(addEquipmentToBox && !defaultBox->Update(db))
-    {
-        return false;
     }
 
     // Materials
@@ -362,7 +384,6 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
     }
 
     // COMP
-    int demonCount = 0;
     for(auto demon : character->GetCOMP())
     {
         if(!demon.IsNull())
@@ -371,7 +392,6 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
             {
                 return false;
             }
-            demonCount++;
 
             state->SetObjectID(demon->GetUUID(),
                 server->GetNextObjectID());
@@ -390,66 +410,8 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
         }
     }
 
-    if(character->LearnedSkillsCount() == 0)
-    {
-        //Equip
-        character->AppendLearnedSkills(0x00001654);
-
-        //Summon demon
-        character->AppendLearnedSkills(0x00001648);
-
-        //Store demon
-        character->AppendLearnedSkills(0x00001649);
-
-        updateCharacter = true;
-    }
-
-    //Hack to add a test demon
-    if(demonCount == 0)
-    {
-        auto demon = libcomp::PersistentObject::New<
-            objects::Demon>();
-        demon->SetType(0x0239); //Jack Frost
-        demon->SetLocked(false);
-        demon->SetAccount(character->GetAccount());
-        demon->SetCharacter(character);
-        demon->Register(demon);
-
-        auto ds = libcomp::PersistentObject::New<
-            objects::EntityStats>();
-        ds->SetMaxHP(999);
-        ds->SetMaxMP(666);
-        ds->SetHP(999);
-        ds->SetMP(666);
-        ds->SetLevel(1);
-        ds->SetSTR(1);
-        ds->SetMAGIC(2);
-        ds->SetVIT(3);
-        ds->SetINTEL(4);
-        ds->SetSPEED(5);
-        ds->SetLUCK(6);
-        ds->SetCLSR(7);
-        ds->SetLNGR(8);
-        ds->SetSPELL(9);
-        ds->SetSUPPORT(10);
-        ds->SetPDEF(11);
-        ds->SetMDEF(12);
-        ds->Register(ds);
-
-        demon->SetCoreStats(ds);
-        ds->SetEntity(std::dynamic_pointer_cast<
-            libcomp::PersistentObject>(demon));
-
-        if(!ds->Insert(db) || !demon->Insert(db))
-        {
-            return false;
-        }
-
-        character->SetCOMP(0, demon);
-        updateCharacter = true;
-    }
-
-    return !updateCharacter || character->Update(db);
+    return !newCharacter ||
+        (character->Update(db) && defaultBox->Update(db));
 }
 
 bool AccountManager::LogoutCharacter(channel::ClientState* state)

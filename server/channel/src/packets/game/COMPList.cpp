@@ -45,7 +45,8 @@
 
 using namespace channel;
 
-void SendCOMPList(const std::shared_ptr<ChannelClientConnection>& client,
+void SendCOMPList(const std::shared_ptr<ChannelServer> server,
+    const std::shared_ptr<ChannelClientConnection> client,
     int8_t unknown)
 {
     auto state = client->GetClientState();
@@ -68,38 +69,12 @@ void SendCOMPList(const std::shared_ptr<ChannelClientConnection>& client,
     reply.WriteS32Little(-1);   //Unknown
     reply.WriteS32Little(count);
 
+    auto characterManager = server->GetCharacterManager();
     for(size_t i = 0; i < 10; i++)
     {
-        auto demon = comp[i];
         if(comp[i].IsNull()) continue;
 
-        auto cs = demon->GetCoreStats();
-
-        reply.WriteS8(static_cast<int8_t>(i)); // Slot
-        reply.WriteS64Little(
-            state->GetObjectID(demon->GetUUID()));
-        reply.WriteU32Little(demon->GetType());
-        reply.WriteS16Little(cs->GetMaxHP());
-        reply.WriteS16Little(cs->GetMaxMP());
-        reply.WriteS16Little(cs->GetHP());
-        reply.WriteS16Little(cs->GetMP());
-        reply.WriteS8(cs->GetLevel());
-        reply.WriteU8(demon->GetLocked() ? 1 : 0);
-
-        size_t statusEffectCount = demon->StatusEffectsCount();
-        reply.WriteS32Little(static_cast<int32_t>(statusEffectCount));
-        for(auto effect : demon->GetStatusEffects())
-        {
-            reply.WriteU32Little(effect->GetEffect());
-        }
-
-        reply.WriteS8(0);   //Unknown
-
-        //Epitaph/Mitama fusion flag
-        reply.WriteS8(0);
-
-        //Effect length in seconds
-        reply.WriteS32Little(0);
+        characterManager->GetCOMPSlotPacketData(reply, client, i);
         reply.WriteU8(0);   //Unknown
     }
 
@@ -122,7 +97,7 @@ bool Parsers::COMPList::Parse(libcomp::ManagerPacket *pPacketManager,
     auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
     auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
 
-    server->QueueWork(SendCOMPList, client, unknown);
+    server->QueueWork(SendCOMPList, server, client, unknown);
 
     return true;
 }

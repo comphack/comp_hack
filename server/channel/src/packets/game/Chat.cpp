@@ -48,8 +48,6 @@ using namespace channel;
 
 static std::unordered_map<libcomp::String, GMCommand_t> gmands;
 
-//This function sets up the GM commands, including teleport, place npc,
-//level up, etc.
 static void SetupGMCommands()
 {
     if(!gmands.empty())
@@ -57,6 +55,7 @@ static void SetupGMCommands()
         return;
     }
 
+    gmands["contract"] = GMCommand_t::GM_COMMAND_CONTRACT;
     gmands["lnc"] = GMCommand_t::GM_COMMAND_LNC;
 }
 
@@ -109,13 +108,13 @@ bool Parsers::Chat::Parse(libcomp::ManagerPacket *pPacketManager,
         libcomp::String args(match.max_size() > 2 ? match[2].str() : "");
 
         command = command.ToLower();
-        args = args.Trimmed();
 
         std::list<libcomp::String> argsList;
         if(!args.IsEmpty())
         {
             argsList = args.Split(" ");
         }
+        argsList.remove_if([](const libcomp::String& value) { return value.IsEmpty(); });
 
         auto iter = gmands.find(command);
         if(iter != gmands.end())

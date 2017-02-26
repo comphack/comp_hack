@@ -29,6 +29,12 @@
 // objects Includes
 #include <Demon.h>
 #include <EntityStats.h>
+#include <MiDevilBattleData.h>
+#include <MiDevilData.h>
+
+// channel Includes
+#include <CharacterManager.h>
+#include <DefinitionManager.h>
 
 using namespace channel;
 
@@ -40,7 +46,7 @@ DemonState::~DemonState()
 {
 }
 
-bool DemonState::RecalculateStats()
+bool DemonState::RecalculateStats(libcomp::DefinitionManager* definitionManager)
 {
     auto d = GetDemon().Get();
     if(nullptr == d)
@@ -48,22 +54,44 @@ bool DemonState::RecalculateStats()
         return true;
     }
 
-    auto cs = d->GetCoreStats();
+    auto cs = d->GetCoreStats().Get();
+    auto demonData = definitionManager->GetDevilData(d->GetType());
+    auto battleData = demonData->GetBattleData();
+    
+    std::unordered_map<uint8_t, int16_t> correctMap;
+    correctMap[libcomp::CORRECT_STR] = cs->GetSTR();
+    correctMap[libcomp::CORRECT_MAGIC] = cs->GetMAGIC();
+    correctMap[libcomp::CORRECT_VIT] = cs->GetVIT();
+    correctMap[libcomp::CORRECT_INTEL] = cs->GetINTEL();
+    correctMap[libcomp::CORRECT_SPEED] = cs->GetSPEED();
+    correctMap[libcomp::CORRECT_LUCK] = cs->GetLUCK();
+    correctMap[libcomp::CORRECT_MAXHP] = battleData->GetCorrect(libcomp::CORRECT_MAXHP);
+    correctMap[libcomp::CORRECT_MAXMP] = battleData->GetCorrect(libcomp::CORRECT_MAXMP);
+    correctMap[libcomp::CORRECT_CLSR] = battleData->GetCorrect(libcomp::CORRECT_CLSR);
+    correctMap[libcomp::CORRECT_LNGR] = battleData->GetCorrect(libcomp::CORRECT_LNGR);
+    correctMap[libcomp::CORRECT_SPELL] = battleData->GetCorrect(libcomp::CORRECT_SPELL);
+    correctMap[libcomp::CORRECT_SUPPORT] = battleData->GetCorrect(libcomp::CORRECT_SUPPORT);
+    correctMap[libcomp::CORRECT_PDEF] = battleData->GetCorrect(libcomp::CORRECT_PDEF);
+    correctMap[libcomp::CORRECT_MDEF] = battleData->GetCorrect(libcomp::CORRECT_MDEF);
 
-    SetSTR(cs->GetSTR());
-    SetMAGIC(cs->GetMAGIC());
-    SetVIT(cs->GetVIT());
-    SetINTEL(cs->GetINTEL());
-    SetSPEED(cs->GetSPEED());
-    SetLUCK(cs->GetLUCK());
-    SetCLSR(cs->GetCLSR());
-    SetLNGR(cs->GetLNGR());
-    SetSPELL(cs->GetSPELL());
-    SetSUPPORT(cs->GetSUPPORT());
-    SetPDEF(cs->GetPDEF());
-    SetMDEF(cs->GetMDEF());
+    /// @todo: apply effects
 
-    /// @todo: transform stats
+    CharacterManager::CalculateDependentStats(correctMap, cs->GetLevel(), true);
+
+    SetMaxHP(correctMap[libcomp::CORRECT_MAXHP]);
+    SetMaxMP(correctMap[libcomp::CORRECT_MAXMP]);
+    SetSTR(correctMap[libcomp::CORRECT_STR]);
+    SetMAGIC(correctMap[libcomp::CORRECT_MAGIC]);
+    SetVIT(correctMap[libcomp::CORRECT_VIT]);
+    SetINTEL(correctMap[libcomp::CORRECT_INTEL]);
+    SetSPEED(correctMap[libcomp::CORRECT_SPEED]);
+    SetLUCK(correctMap[libcomp::CORRECT_LUCK]);
+    SetCLSR(correctMap[libcomp::CORRECT_CLSR]);
+    SetLNGR(correctMap[libcomp::CORRECT_LNGR]);
+    SetSPELL(correctMap[libcomp::CORRECT_SPELL]);
+    SetSUPPORT(correctMap[libcomp::CORRECT_SUPPORT]);
+    SetPDEF(correctMap[libcomp::CORRECT_PDEF]);
+    SetMDEF(correctMap[libcomp::CORRECT_MDEF]);
 
     return true;
 }

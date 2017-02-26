@@ -34,6 +34,10 @@
 #include <Account.h>
 #include <AccountLogin.h>
 #include <Character.h>
+#include <Demon.h>
+#include <EntityStats.h>
+#include <MiDevilData.h>
+#include <MiNPCBasicData.h>
 
 // channel Includes
 #include <ChannelServer.h>
@@ -119,6 +123,8 @@ bool ChatManager::ExecuteGMCommand(const std::shared_ptr<
 {
     switch(cmd)
     {
+        case GMCommand_t::GM_COMMAND_CONTRACT:
+            return GMCommand_Contract(client, args);
         case GMCommand_t::GM_COMMAND_LNC:
             return GMCommand_LNC(client, args);
         default:
@@ -128,6 +134,64 @@ bool ChatManager::ExecuteGMCommand(const std::shared_ptr<
     return false;
 }
 
+bool ChatManager::GMCommand_Contract(const std::shared_ptr<
+    channel::ChannelClientConnection>& client,
+    const std::list<libcomp::String>& args)
+{
+    std::list<libcomp::String> argsCopy = args;
+
+    auto server = mServer.lock();
+    auto characterManager = server->GetCharacterManager();
+    auto definitionManager = server->GetDefinitionManager();
+
+    int16_t demonID;
+    if(!GetIntegerArg<int16_t>(demonID, argsCopy))
+    {
+        libcomp::String name;
+        if(!GetStringArg(name, argsCopy, libcomp::Convert::Encoding_t::ENCODING_CP932))
+        {
+            return false;
+        }
+
+        auto devilData = definitionManager->GetDevilData(name);
+        if(devilData == nullptr)
+        {
+            return false;
+        }
+        demonID = devilData->GetBasic()->GetID();
+    }
+
+    auto state = client->GetClientState();
+    auto character = state->GetCharacterState()
+        ->GetCharacter();
+
+    auto demon = characterManager->ContractDemon(character.Get(),
+        definitionManager->GetDevilData(demonID),
+        nullptr);
+    if(nullptr == demon)
+    {
+        return false;
+    }
+
+    state->SetObjectID(demon->GetUUID(),
+        server->GetNextObjectID());
+
+    int8_t slot = -1;
+    for(size_t i = 0; i < 10; i++)
+    {
+        if(character->GetCOMP(i).Get() == demon)
+        {
+            slot = (int8_t)i;
+            break;
+        }
+    }
+
+    characterManager->SendCOMPDemonData(client, 0, slot,
+        state->GetObjectID(demon->GetUUID()));
+
+    return true;
+}
+
 bool ChatManager::GMCommand_LNC(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
@@ -135,7 +199,7 @@ bool ChatManager::GMCommand_LNC(const std::shared_ptr<
     std::list<libcomp::String> argsCopy = args;
 
     int16_t lnc;
-    if(!GetIntegerArg(lnc, argsCopy))
+    if(!GetIntegerArg<int16_t>(lnc, argsCopy))
     {
         return false;
     }
@@ -146,7 +210,8 @@ bool ChatManager::GMCommand_LNC(const std::shared_ptr<
 }
 
 bool ChatManager::GetStringArg(libcomp::String& outVal,
-    std::list<libcomp::String>& args) const
+    std::list<libcomp::String>& args,
+    libcomp::Convert::Encoding_t encoding) const
 {
     if(args.size() == 0)
     {
@@ -155,6 +220,14 @@ bool ChatManager::GetStringArg(libcomp::String& outVal,
 
     outVal = args.front();
     args.pop_front();
+
+    if(encoding != libcomp::Convert::Encoding_t::ENCODING_UTF8)
+    {
+        auto convertedBytes = libcomp::Convert::ToEncoding(
+            encoding, outVal, false);
+        outVal = libcomp::String (std::string(convertedBytes.begin(),
+            convertedBytes.end()));
+    }
 
     return true;
 }

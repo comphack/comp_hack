@@ -30,6 +30,11 @@
 // objects Includes
 #include <CharacterStateObject.h>
 
+namespace libcomp
+{
+class DefinitionManager;
+}
+
 namespace channel
 {
 
@@ -53,9 +58,10 @@ public:
     /**
      * Recalculate the character's current stats, adjusted by equipment and
      * effects.
+     * @param Pointer to the server's definition manager to use for calculations
      * @return true if the calculation succeeded, false if it errored
      */
-    bool RecalculateStats();
+    bool RecalculateStats(libcomp::DefinitionManager* definitionManager);
 
     /**
      * Check if the character state has everything needed to start

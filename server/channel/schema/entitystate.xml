@@ -4,6 +4,8 @@
         <member type="s32" name="EntityID"/>
 
         <!-- Calculated Stats -->
+        <member type="s16" name="MaxHP"/>
+        <member type="s16" name="MaxMP"/>
         <member type="s16" name="STR"/>
         <member type="s16" name="MAGIC"/>
         <member type="s16" name="VIT"/>

@@ -89,10 +89,13 @@ enum class ClientToChannelPacketCode_t : uint16_t
     PACKET_ITEM_DROP = 0x0077,  //!< Request to throw away an item from an item box.
     PACKET_ITEM_STACK = 0x0078,  //!< Request to stack or split stacked items in an item box.
     PACKET_EQUIPMENT_LIST = 0x007B,  //!< Request for equipment information.
+    PACKET_COMP_SLOT_UPDATE = 0x009A,  //!< Request to update a COMP slot.
+    PACKET_DISMISS_DEMON = 0x009B,  //!< Request to dismiss a demon.
     PACKET_HOTBAR_DATA = 0x00A2,  //!< Request for data about a hotbar page.
     PACKET_HOTBAR_SAVE = 0x00A4,  //!< Request to save a hotbar page.
     PACKET_SYNC = 0x00F3,  //!< Request to retrieve the server time.
     PACKET_ROTATE = 0x00F8,  //!< Request to rotate an entity or object.
+    PACKET_LOCK_DEMON = 0x0233,  //!< Request to lock or unlock a demon in the COMP.
 };
 
 /**
@@ -125,12 +128,14 @@ enum class ChannelToClientPacketCode_t : uint16_t
     PACKET_STOP_MOVEMENT = 0x0070,  //!< Message containing entity or object movement stopping information.
     PACKET_ITEM_BOX = 0x0075,  //!< Response for info about a specific item box.
     PACKET_EQUIPMENT_LIST = 0x007C,  //!< Response for equipment information.
+    PACKET_COMP_SLOT_UPDATED = 0x0098,  //!< Message containing information that a COMP slot has been updated.
     PACKET_HOTBAR_DATA = 0x00A3,  //!< Response for data about a hotbar page.
     PACKET_HOTBAR_SAVE = 0x00A5,  //!< Response to save a hotbar page.
     PACKET_SYNC = 0x00F4,  //!< Response containing the server time.
     PACKET_ROTATE = 0x00F9,    //!< Message containing entity or object rotation information.
     PACKET_LNC_POINTS = 0x0126,    //!< Message containing a character's LNC alignment value.
     PACKET_STATUS_ICON = 0x0195,  //!< Message containing the icon to show for a character.
+    PACKET_LOCK_DEMON = 0x0234,  //!< Response to lock a demon in the COMP.
 
     PACKET_CONFIRMATION = 0x1FFF,  //!< Generic confirmation response.
 };

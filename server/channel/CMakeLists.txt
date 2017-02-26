@@ -112,10 +112,13 @@ SET(${PROJECT_NAME}_PACKETS
     src/packets/game/ItemDrop.cpp           # 0x0077
     src/packets/game/ItemStack.cpp          # 0x0078
     src/packets/game/EquipmentList.cpp      # 0x007B
+    src/packets/game/COMPSlotUpdate.cpp     # 0x009A
+    src/packets/game/DismissDemon.cpp       # 0x009B
     src/packets/game/HotbarData.cpp         # 0x00A2
     src/packets/game/HotbarSave.cpp         # 0x00A4
     src/packets/game/Sync.cpp               # 0x00F3
     src/packets/game/Rotate.cpp             # 0x00F8
+    src/packets/game/LockDemon.cpp          # 0x0233
 
     #Internal packets
     src/packets/internal/SetWorldInfo.cpp   # 0x1002

@@ -136,6 +136,10 @@ bool ChannelServer::Initialize()
         to_underlying(ClientToChannelPacketCode_t::PACKET_ITEM_STACK));
     clientPacketManager->AddParser<Parsers::EquipmentList>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_EQUIPMENT_LIST));
+    clientPacketManager->AddParser<Parsers::COMPSlotUpdate>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_COMP_SLOT_UPDATE));
+    clientPacketManager->AddParser<Parsers::DismissDemon>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_DISMISS_DEMON));
     clientPacketManager->AddParser<Parsers::HotbarData>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_HOTBAR_DATA));
     clientPacketManager->AddParser<Parsers::HotbarSave>(
@@ -144,6 +148,8 @@ bool ChannelServer::Initialize()
         to_underlying(ClientToChannelPacketCode_t::PACKET_SYNC));
     clientPacketManager->AddParser<Parsers::Rotate>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_ROTATE));
+    clientPacketManager->AddParser<Parsers::LockDemon>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_LOCK_DEMON));
 
     // Add the managers to the generic workers.
     for(auto worker : mWorkers)

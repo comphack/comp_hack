@@ -34,13 +34,19 @@
 #include <Account.h>
 #include <AccountLogin.h>
 #include <Character.h>
+#include <Demon.h>
+#include <EntityStats.h>
+#include <MiDevilData.h>
+#include <MiNPCBasicData.h>
 
 // channel Includes
+#include <ChannelServer.h>
 #include <ClientState.h>
 
 using namespace channel;
 
-ChatManager::ChatManager()
+ChatManager::ChatManager(const std::weak_ptr<ChannelServer>& server)
+    : mServer(server)
 {
 }
 
@@ -106,6 +112,223 @@ bool ChatManager::SendChatMessage(const std::shared_ptr<
         case ChatVis_t::CHAT_VIS_GMS:
         default:
             return false;
+    }
+
+    return true;
+}
+
+bool ChatManager::ExecuteGMCommand(const std::shared_ptr<
+    channel::ChannelClientConnection>& client, GMCommand_t cmd,
+    const std::list<libcomp::String>& args)
+{
+    switch(cmd)
+    {
+        case GMCommand_t::GM_COMMAND_CONTRACT:
+            return GMCommand_Contract(client, args);
+        case GMCommand_t::GM_COMMAND_EXPERTISE_UPDATE:
+            return GMCommand_ExpertiseUpdate(client, args);
+        case GMCommand_t::GM_COMMAND_LEVEL_UP:
+            return GMCommand_LevelUp(client, args);
+        case GMCommand_t::GM_COMMAND_LNC:
+            return GMCommand_LNC(client, args);
+        case GMCommand_t::GM_COMMAND_XP:
+            return GMCommand_XP(client, args);
+        default:
+            break;
+    }
+
+    return false;
+}
+
+bool ChatManager::GMCommand_Contract(const std::shared_ptr<
+    channel::ChannelClientConnection>& client,
+    const std::list<libcomp::String>& args)
+{
+    std::list<libcomp::String> argsCopy = args;
+
+    auto server = mServer.lock();
+    auto characterManager = server->GetCharacterManager();
+    auto definitionManager = server->GetDefinitionManager();
+
+    int16_t demonID;
+    if(!GetIntegerArg<int16_t>(demonID, argsCopy))
+    {
+        libcomp::String name;
+        if(!GetStringArg(name, argsCopy, libcomp::Convert::Encoding_t::ENCODING_CP932))
+        {
+            return false;
+        }
+
+        auto devilData = definitionManager->GetDevilData(name);
+        if(devilData == nullptr)
+        {
+            return false;
+        }
+        demonID = devilData->GetBasic()->GetID();
+    }
+
+    auto state = client->GetClientState();
+    auto character = state->GetCharacterState()
+        ->GetCharacter();
+
+    auto demon = characterManager->ContractDemon(character.Get(),
+        definitionManager->GetDevilData(demonID),
+        nullptr);
+    if(nullptr == demon)
+    {
+        return false;
+    }
+
+    state->SetObjectID(demon->GetUUID(),
+        server->GetNextObjectID());
+
+    int8_t slot = -1;
+    for(size_t i = 0; i < 10; i++)
+    {
+        if(character->GetCOMP(i).Get() == demon)
+        {
+            slot = (int8_t)i;
+            break;
+        }
+    }
+
+    characterManager->SendCOMPDemonData(client, 0, slot,
+        state->GetObjectID(demon->GetUUID()));
+
+    return true;
+}
+
+bool ChatManager::GMCommand_ExpertiseUpdate(const std::shared_ptr<
+    channel::ChannelClientConnection>& client,
+    const std::list<libcomp::String>& args)
+{
+    std::list<libcomp::String> argsCopy = args;
+
+    auto server = mServer.lock();
+
+    uint32_t skillID;
+    if(!GetIntegerArg<uint32_t>(skillID, argsCopy))
+    {
+        return false;
+    }
+
+    server->GetCharacterManager()->UpdateExpertise(client, skillID);
+
+    return true;
+}
+
+bool ChatManager::GMCommand_LevelUp(const std::shared_ptr<
+    channel::ChannelClientConnection>& client,
+    const std::list<libcomp::String>& args)
+{
+    std::list<libcomp::String> argsCopy = args;
+
+    int8_t lvl;
+    if(GetIntegerArg<int8_t>(lvl, argsCopy))
+    {
+        if(lvl > 99 || lvl < 1)
+        {
+            return false;
+        }
+    }
+    else
+    {
+        // Increase by 1
+        lvl = -1;
+    }
+
+    auto state = client->GetClientState();
+
+    libcomp::String target;
+    bool isDemon = GetStringArg(target, argsCopy) && target.ToLower() == "demon";
+    int32_t entityID;
+    int8_t currentLevel;
+    if(isDemon)
+    {
+        entityID = state->GetDemonState()->GetEntityID();
+        currentLevel = state->GetDemonState()->GetDemon()
+            ->GetCoreStats()->GetLevel();
+    }
+    else
+    {
+        entityID = state->GetCharacterState()->GetEntityID();
+        currentLevel = state->GetCharacterState()->GetCharacter()
+            ->GetCoreStats()->GetLevel();
+    }
+
+    if(lvl == -1 && lvl != 99)
+    {
+        lvl = currentLevel + 1;
+    }
+    else if(currentLevel >= lvl)
+    {
+        return false;
+    }
+
+    mServer.lock()->GetCharacterManager()->LevelUp(client, lvl, entityID);
+
+    return true;
+}
+
+bool ChatManager::GMCommand_LNC(const std::shared_ptr<
+    channel::ChannelClientConnection>& client,
+    const std::list<libcomp::String>& args)
+{
+    std::list<libcomp::String> argsCopy = args;
+
+    int16_t lnc;
+    if(!GetIntegerArg<int16_t>(lnc, argsCopy))
+    {
+        return false;
+    }
+
+    mServer.lock()->GetCharacterManager()->UpdateLNC(client, lnc);
+
+    return true;
+}
+
+bool ChatManager::GMCommand_XP(const std::shared_ptr<
+    channel::ChannelClientConnection>& client,
+    const std::list<libcomp::String>& args)
+{
+    std::list<libcomp::String> argsCopy = args;
+
+    uint64_t xpGain;
+    if(!GetIntegerArg<uint64_t>(xpGain, argsCopy))
+    {
+        return false;
+    }
+
+    auto state = client->GetClientState();
+
+    libcomp::String target;
+    bool isDemon = GetStringArg(target, argsCopy) && target.ToLower() == "demon";
+    auto entityID = isDemon ? state->GetDemonState()->GetEntityID()
+        : state->GetCharacterState()->GetEntityID();
+
+    mServer.lock()->GetCharacterManager()->ExperienceGain(client, xpGain, entityID);
+
+    return true;
+}
+
+bool ChatManager::GetStringArg(libcomp::String& outVal,
+    std::list<libcomp::String>& args,
+    libcomp::Convert::Encoding_t encoding) const
+{
+    if(args.size() == 0)
+    {
+        return false;
+    }
+
+    outVal = args.front();
+    args.pop_front();
+
+    if(encoding != libcomp::Convert::Encoding_t::ENCODING_UTF8)
+    {
+        auto convertedBytes = libcomp::Convert::ToEncoding(
+            encoding, outVal, false);
+        outVal = libcomp::String (std::string(convertedBytes.begin(),
+            convertedBytes.end()));
     }
 
     return true;

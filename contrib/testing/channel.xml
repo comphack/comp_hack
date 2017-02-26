@@ -11,5 +11,6 @@
         <member name="Name">Test Channel</member>
         <member name="WorldIP">127.0.0.1</member>
         <member name="WorldPort">18666</member>
+        <member name="BinaryDataDirectory"/>	<!-- Defaults to exe directory -->
     </object>
 </objgen>

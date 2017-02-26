@@ -323,6 +323,8 @@ std::shared_ptr<MetaVariable> MetaVariable::CreateType(
         nameToMetaType["enum"] = MetaVariableType_t::TYPE_ENUM;
 
         nameToMetaType["string"] = MetaVariableType_t::TYPE_STRING;
+
+        nameToMetaType["ref"] = MetaVariableType_t::TYPE_REF;
     }
 
     auto iter = nameToMetaType.find(typeName);

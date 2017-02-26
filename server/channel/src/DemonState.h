@@ -30,6 +30,11 @@
 // objects Includes
 #include <DemonStateObject.h>
 
+namespace libcomp
+{
+class DefinitionManager;
+}
+
 namespace channel
 {
 
@@ -52,9 +57,10 @@ public:
 
     /**
      * Recalculate the demon's current stats, adjusted by effects.
+     * @param Pointer to the server's definition manager to use for calculations
      * @return true if the calculation succeeded, false if it errored
      */
-    bool RecalculateStats();
+    bool RecalculateStats(libcomp::DefinitionManager* definitionManager);
 
     /**
      * Check if the demon state has everything needed to start

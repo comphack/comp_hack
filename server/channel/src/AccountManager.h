@@ -30,6 +30,13 @@
 // channel Includes
 #include "ChannelClientConnection.h"
 
+namespace libcomp
+{
+
+class Database;
+
+}
+
 namespace channel
 {
 
@@ -55,6 +62,8 @@ class AccountManager
 public:
     /**
      * Create a new AccountManager.
+     * @param server Pointer back to the channel server this
+     *  belongs to
      */
     AccountManager(const std::weak_ptr<ChannelServer>& server);
 
@@ -120,6 +129,33 @@ private:
     bool InitializeCharacter(libcomp::ObjectReference<
         objects::Character>& character,
         channel::ClientState* state);
+
+    /**
+     * Persist character data associated to a client that is
+     * logging out.
+     * @param state Pointer to the client state the character
+     *  belongs to
+     * @return true on success, false on failure
+     */
+    bool LogoutCharacter(channel::ClientState* state);
+
+    /**
+     * Unload an object from references and update it in the DB.
+     * @param obj Pointer to the object to clean up
+     * @param db Pointer to the database to use
+     * @return true on success, false on failure
+     */
+    template <class T>
+    bool Cleanup(const std::shared_ptr<T>& obj,
+        const std::shared_ptr<libcomp::Database>& db)
+    {
+        if(obj != nullptr)
+        {
+            libcomp::ObjectReference<T>::Unload(obj->GetUUID());
+            return obj->Update(db);
+        }
+        return true;
+    }
 
     /// Pointer to the channel server
     std::weak_ptr<ChannelServer> mServer;

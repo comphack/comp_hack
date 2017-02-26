@@ -34,6 +34,11 @@ namespace channel
 
 class ChannelServer;
 
+/*
+ * Chat type sent from and returned to the client to signify what type of
+ * chat message is being sent.  This value is used to determine the
+ * ChatVis_t level.
+ */
 enum ChatType_t : uint16_t
 {
     CHAT_PARTY = 41,
@@ -44,6 +49,10 @@ enum ChatType_t : uint16_t
 //    CHAT_TELL = ???,
 };
 
+/*
+ * Visiblity for a chat message used internally to route messages. This level
+ * is determined by the ChatType_t value.
+ */
 enum ChatVis_t : uint16_t
 {
     CHAT_VIS_SELF,
@@ -56,16 +65,150 @@ enum ChatVis_t : uint16_t
     CHAT_VIS_GMS,
 };
 
+/*
+ * Available GM commands handled by the ChatManager.
+ */
+enum GMCommand_t : uint16_t
+{
+    GM_COMMAND_CONTRACT,
+    GM_COMMAND_EXPERTISE_UPDATE,
+    GM_COMMAND_LEVEL_UP,
+    GM_COMMAND_LNC,
+    GM_COMMAND_XP,
+};
+
+/*
+ * Manager to handle chat communication and processing of GM commands.
+ */
 class ChatManager
 {
 public:
-    ChatManager();
+    /**
+     * Create a new ChatManager.
+     * @param server Pointer back to the channel server this
+     *  belongs to
+     */
+    ChatManager(const std::weak_ptr<ChannelServer>& server);
+
+    /**
+     * Clean up the ChatManager.
+     */
     ~ChatManager();
 
-   bool SendChatMessage(const std::shared_ptr<channel::ChannelClientConnection>& client, ChatType_t chatChannel, libcomp::String message);
-	
-private:
+    /*
+     * Send a chat message to the specified chat channel.
+     * @param client Pointer to the client that sent the message
+     * @param chatChannel Channel to send the chat message to
+     * @param message Message to send
+     * @return true if the message was handled properly, else false
+     */
+    bool SendChatMessage(const std::shared_ptr<
+        channel::ChannelClientConnection>& client, ChatType_t chatChannel,
+        libcomp::String message);
 
+    /*
+     * Execute a GM command using the supplied arguments.
+     * @param client Pointer to the client that sent the command
+     * @param cmd Command to execute
+     * @param args List of arguments for the command
+     * @return true if the command was handled properly, else false
+     */
+    bool ExecuteGMCommand(const std::shared_ptr<
+        channel::ChannelClientConnection>& client, GMCommand_t cmd,
+        const std::list<libcomp::String>& args);
+
+private:
+    /**
+     * GM command to add a demon to a character's COMP.
+     * @param client Pointer to the client that sent the command
+     * @param args List of arguments for the command
+     * @return true if the command was handled properly, else false
+     */
+    bool GMCommand_Contract(const std::shared_ptr<
+        channel::ChannelClientConnection>& client,
+        const std::list<libcomp::String>& args);
+
+    /**
+     * GM command to update a character's expertise as if a skill
+     * were used.
+     * @param client Pointer to the client that sent the command
+     * @param args List of arguments for the command
+     * @return true if the command was handled properly, else false
+     */
+    bool GMCommand_ExpertiseUpdate(const std::shared_ptr<
+        channel::ChannelClientConnection>& client,
+        const std::list<libcomp::String>& args);
+
+    /**
+     * GM command to level up a character or demon.
+     * @param client Pointer to the client that sent the command
+     * @param args List of arguments for the command
+     * @return true if the command was handled properly, else false
+     */
+    bool GMCommand_LevelUp(const std::shared_ptr<
+        channel::ChannelClientConnection>& client,
+        const std::list<libcomp::String>& args);
+
+    /*
+     * GM command to set a character's LNC alignment value.
+     * @param client Pointer to the client that sent the command
+     * @param args List of arguments for the command
+     * @return true if the command was handled properly, else false
+     */
+    bool GMCommand_LNC(const std::shared_ptr<
+        channel::ChannelClientConnection>& client,
+        const std::list<libcomp::String>& args);
+
+    /**
+     * GM command to increase the XP of a character or demon.
+     * @param client Pointer to the client that sent the command
+     * @param args List of arguments for the command
+     * @return true if the command was handled properly, else false
+     */
+    bool GMCommand_XP(const std::shared_ptr<
+        channel::ChannelClientConnection>& client,
+        const std::list<libcomp::String>& args);
+
+    /*
+     * Get the next argument from the supplied argument list as a string.
+     * @param outVal Output variable to return the string argument to
+     * @param args List of arguments read and update
+     * @param encoding Optional encoding to use when reading the string.
+     *  Defaults to UTF8.
+     * @return true if there was an argument in the list, else false
+     */
+    bool GetStringArg(libcomp::String& outVal,
+        std::list<libcomp::String>& args, libcomp::Convert::Encoding_t encoding
+        = libcomp::Convert::Encoding_t::ENCODING_UTF8) const;
+
+    /*
+     * Get the next argument from the supplied argument list as an integer
+     * type.
+     * @param outVal Output variable to return the integer argument to
+     * @param args List of arguments read and update
+     * @return true if there was an argument in the list that was an
+     *  integer, else false
+     */
+    template<typename T>
+    bool GetIntegerArg(T& outVal, std::list<libcomp::String>& args) const
+    {
+        if(args.size() == 0)
+        {
+            return false;
+        }
+
+        bool ok = true;
+        outVal = args.front().ToInteger<T>(&ok);
+        if(ok)
+        {
+            args.pop_front();
+        }
+
+        return ok;
+    }
+
+    /// Pointer to the channel server
+    std::weak_ptr<ChannelServer> mServer;
 };
 
 }

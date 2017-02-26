@@ -46,19 +46,20 @@
 
 using namespace channel;
 
-static std::unordered_map<libcomp::String,
-    void(*)(ClientState*, std::list<libcomp::String>)> gmands;
+static std::unordered_map<libcomp::String, GMCommand_t> gmands;
 
-//This function sets up the GM commands, including teleport, place npc,
-//level up, etc.
 static void SetupGMCommands()
 {
-    if (!gmands.empty())
+    if(!gmands.empty())
     {
         return;
     }
-    /// @todo: write GM commands, once stuff is functional
-    else return;
+
+    gmands["contract"] = GMCommand_t::GM_COMMAND_CONTRACT;
+    gmands["expertiseup"] = GMCommand_t::GM_COMMAND_EXPERTISE_UPDATE;
+    gmands["levelup"] = GMCommand_t::GM_COMMAND_LEVEL_UP;
+    gmands["lnc"] = GMCommand_t::GM_COMMAND_LNC;
+    gmands["xp"] = GMCommand_t::GM_COMMAND_XP;
 }
 
 bool Parsers::Chat::Parse(libcomp::ManagerPacket *pPacketManager,
@@ -78,6 +79,8 @@ bool Parsers::Chat::Parse(libcomp::ManagerPacket *pPacketManager,
     }
 
     auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+    auto server = std::dynamic_pointer_cast<ChannelServer>(
+        pPacketManager->GetServer());
     auto state = client->GetClientState();
 
     libcomp::String line = p.ReadString16Little(
@@ -86,9 +89,17 @@ bool Parsers::Chat::Parse(libcomp::ManagerPacket *pPacketManager,
     std::smatch match;
     std::string input = line.C();
     std::regex toFind("@([^\\s]+)(.*)");
-    if((std::regex_match(input, match, toFind)) &&
-        state->GetAccountLogin()->GetAccount()->GetIsGM())
+    if(std::regex_match(input, match, toFind))
     {
+        auto account = state->GetAccountLogin()->GetAccount();
+        if(!account->GetIsGM())
+        {
+            // Don't process the message but don't fail
+            LOG_DEBUG(libcomp::String("Non-GM account attempted to execute a GM"
+                " command: %1\n").Arg(account->GetUUID().ToString()));
+            return true;
+        }
+
         libcomp::String sentFrom = state->GetCharacterState()->GetCharacter()
             ->GetName();
         LOG_INFO(libcomp::String("[GM] %1: %2\n").Arg(sentFrom).Arg(line));
@@ -96,22 +107,32 @@ bool Parsers::Chat::Parse(libcomp::ManagerPacket *pPacketManager,
         // Make sure the gmands map is setup 
         SetupGMCommands();
 
-        libcomp::String command(match[0]);
-        libcomp::String args(match[1]);
+        libcomp::String command(match[1]);
+        libcomp::String args(match.max_size() > 2 ? match[2].str() : "");
 
         command = command.ToLower();
-        args = args.Trimmed();
 
         std::list<libcomp::String> argsList;
         if(!args.IsEmpty())
         {
-            argsList = line.Split(" ");
+            argsList = args.Split(" ");
         }
+        argsList.remove_if([](const libcomp::String& value) { return value.IsEmpty(); });
 
         auto iter = gmands.find(command);
         if(iter != gmands.end())
         {
-            iter->second(state, argsList);
+            server->QueueWork([](ChatManager* pChatManager,
+                const std::shared_ptr<ChannelClientConnection> pClient,
+                GMCommand_t pCmd, libcomp::String pCommandString,
+                const std::list<libcomp::String> pArgsList)
+            {
+                if(!pChatManager->ExecuteGMCommand(pClient, pCmd, pArgsList))
+                {
+                    LOG_WARNING(libcomp::String("GM command could not be"
+                        " processed: %1\n").Arg(pCommandString));
+                }
+            }, server->GetChatManager(), client, iter->second, command, argsList);
         }
         else
         {
@@ -121,10 +142,8 @@ bool Parsers::Chat::Parse(libcomp::ManagerPacket *pPacketManager,
     }
     else
     {
-        auto server = std::dynamic_pointer_cast<ChannelServer>(
-            pPacketManager->GetServer());
-        auto ChatManager = server->GetChatManager();
-        if(!ChatManager->SendChatMessage(client, (ChatType_t)chatchannel, line))
+        auto chatManager = server->GetChatManager();
+        if(!chatManager->SendChatMessage(client, (ChatType_t)chatchannel, line))
         {
             LOG_ERROR("Chat message could not be sent.\n");
         }

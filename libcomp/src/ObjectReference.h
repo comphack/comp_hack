@@ -96,6 +96,16 @@ public:
     }
 
     /**
+     * Create a reference of the templated type with the UUID set.
+     * @param uuid UUID of the referenced object
+     */
+    ObjectReference(const libobjgen::UUID& uuid)
+    {
+        mData = sNull;
+        SetUUID(uuid);
+    }
+
+    /**
      * Create a reference of the templated type with the pointer set.
      * @param ref Pointer to the referenced object
      */
@@ -203,6 +213,28 @@ public:
         return true;
     }
 
+    /**
+     * Clear the loaded pointer associated to a UUID when an object
+     * needs to be cleaned up.  This allows circular references in
+     * objgen schemas to not cause issues with garbage collection.
+     * @param uuid UUID of the persistent object
+     * @return true if it was loaded, false if it was not
+     */
+    static bool Unload(const libobjgen::UUID& uuid)
+    {
+        std::string uuidStr = uuid.ToString();
+
+        std::lock_guard<std::mutex> lock(mReferenceLock);
+        auto iter = sData.find(uuidStr);
+        if(iter != sData.end())
+        {
+            bool loaded = iter->second->mRef != nullptr;
+            iter->second->mRef = nullptr;
+            return loaded;
+        }
+        return false;
+    }
+
 protected:
     /**
      * Get the PersistentObject reference casted to the templated
@@ -217,9 +249,10 @@ protected:
 
     /**
      * Load the referenced object from the database by its UUID.
-     * This will fail if the UUID is not set or the load fails.
-     * Calling this function without a DB set will pull from the
-     * PersistentObject cache instead.
+     * This will do nothing if the UUID is not set, the load fails or
+     * the templated type is a generic PersistentObject. Calling this
+     * function without a DB set will pull from the PersistentObject
+     * cache instead.
      * @param db Database to load from
      * @return true on success, false on failure
      */
@@ -232,7 +265,8 @@ protected:
         {
             auto uuid = mData->mUUID;
 
-            bool dbLoad = nullptr != db;
+            bool dbLoad = nullptr != db &&
+                typeid(PersistentObject) != typeid(T);
             std::shared_ptr<PersistentObject> pRef;
             if(dbLoad)
             {

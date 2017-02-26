@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="ServerZone" persistent="false">
+        <member type="u32" name="ID"/>
+        <member type="u32" name="Set"/>
+        <member type="bool" name="Global"/>
+        <member type="float" name="StartingX"/>
+        <member type="float" name="StartingY"/>
+        <member type="float" name="StartingRotation"/>
+        <member type="list" name="NPCs">
+            <element type="ServerNPC*"/>
+        </member>
+        <member type="list" name="Objects">
+            <element type="ServerObject*"/>
+        </member>
+    </object>
+</objgen>

@@ -86,6 +86,14 @@ public:
     int64_t GetObjectID(const libobjgen::UUID& uuid) const;
 
     /**
+     * Get the UUID associated to an object ID associated to the client.
+     * If a null UUID is returned, the object ID is not registered.
+     * @param objectID Object ID to retrieve the corresponding UUID from
+     * @return UUID associated to an object ID
+     */
+    const libobjgen::UUID GetObjectUUID(int64_t objectID) const;
+
+    /**
      * Set the object ID associated a UUID associated to the client.
      * @param uuid UUID to set the corresponding object ID for
      * @param objectID Object ID to map to the UUID
@@ -134,6 +142,9 @@ private:
 
     /// Map of UUIDs to game client object IDs
     std::unordered_map<libcomp::String, int64_t> mObjectIDs;
+
+    /// Map of game client object IDs to UUIDs
+    std::unordered_map<int64_t, libobjgen::UUID> mObjectUUIDs;
 
     /// Current time of the server set upon starting the client
     /// communication.

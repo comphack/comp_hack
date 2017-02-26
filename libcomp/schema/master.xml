@@ -22,10 +22,20 @@
     <include path="packet_login.xml"/>
     <include path="packet_response_code.xml"/>
 
+    <!-- Server Files -->
+    <include path="server_npc.xml"/>
+    <include path="server_object.xml"/>
+    <include path="server_zone.xml"/>
+
     <!-- BinaryData Files -->
-    <include path="binarydata/category.xml"/>
-    <include path="binarydata/correcttbl.xml"/>
+    <include path="binarydata/citemdata.xml"/>
+    <include path="binarydata/devildata.xml"/>
+    <include path="binarydata/devillvupratedata.xml"/>
+    <include path="binarydata/expertdata.xml"/>
+    <include path="binarydata/hnpcdata.xml"/>
     <include path="binarydata/itemdata.xml"/>
-    <include path="binarydata/skillitemstatuscommon.xml"/>
+    <include path="binarydata/onpcdata.xml"/>
+    <include path="binarydata/shared.xml"/>
+    <include path="binarydata/skilldata.xml"/>
     <include path="binarydata/zonedata.xml"/>
 </objgen>

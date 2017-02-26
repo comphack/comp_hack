@@ -57,6 +57,9 @@ public:
     bool IsPersistentReference() const;
     bool SetPersistentReference(bool persistentReference);
 
+    bool IsGeneric() const;
+    void SetGeneric();
+
     void AddDefaultedVariable(std::shared_ptr<MetaVariable>& var);
     const std::list<std::shared_ptr<MetaVariable>> GetDefaultedVariables() const;
 

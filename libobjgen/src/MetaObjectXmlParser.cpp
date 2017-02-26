@@ -307,8 +307,10 @@ bool MetaObjectXmlParser::FinalizeObjectAndReferences(const std::string& object)
         for(auto var : obj->GetReferences())
         {
             auto ref = std::dynamic_pointer_cast<libobjgen::MetaVariableReference>(var);
-            auto refType = ref->GetReferenceType();
 
+            if(ref->IsGeneric()) continue;
+
+            auto refType = ref->GetReferenceType();
             refs.push_back(ref);
             if(mFinalizedObjects.find(refType) == mFinalizedObjects.end() &&
                 requiresLoad.find(refType) == requiresLoad.end())
@@ -392,7 +394,7 @@ bool MetaObjectXmlParser::SetReferenceFieldDynamicSizes(
     std::vector<std::shared_ptr<libobjgen::MetaVariableReference>> remaining
         { std::begin(refs), std::end(refs) };
 
-    // Loop through and keep updating until we remaining is empty or nothing
+    // Loop through and keep updating until remaining is empty or nothing
     // more can be updated.
     int updated;
     do
@@ -417,6 +419,9 @@ bool MetaObjectXmlParser::SetReferenceFieldDynamicSizes(
             {
                 auto objRef = std::dynamic_pointer_cast<
                     libobjgen::MetaVariableReference>(var);
+
+                if(objRef->IsGeneric()) continue;
+
                 auto objRefObject = GetKnownObject(objRef->GetReferenceType());
                 if(!objRefObject->IsPersistent() &&
                     objRef->GetDynamicSizeCount() == 0)
@@ -636,44 +641,54 @@ std::shared_ptr<MetaVariable> MetaObjectXmlParser::GetVariable(const tinyxml2::X
         {
             auto ref = std::dynamic_pointer_cast<MetaVariableReference>(var);
 
-            auto ns = pMember->Attribute("namespace");
-            if(ns)
-            {
-                ref->SetNamespace(ns);
-            }
-
             auto refType = ref->GetReferenceType();
             bool persistentRefType = false;
 
-            if(mKnownObjects.find(refType) == mKnownObjects.end())
+            bool genericReference = refType.empty();
+            if(genericReference)
             {
-                std::stringstream ss;
-                ss << "Unknown reference type '" << refType << "' encountered"
-                    " on field '" << szMemberName << "' in object '" << szName << "'.";
-
-                mError = ss.str();
-            }
-            else if(mKnownObjects[refType]->GetNamespace() != ref->GetNamespace())
-            {
-                std::stringstream ss;
-                ss << "Reference type '" << refType << "' with invalid namespace "
-                    " encountered on field '" << szMemberName << "' in object '"
-                    << szName << "'.";
-
-                mError = ss.str();
+                persistentRefType = mObject->IsPersistent();
+                ref->SetPersistentReference(persistentRefType);
+                ref->SetGeneric();
             }
             else
             {
-                persistentRefType = mKnownObjects[refType]->IsPersistent();
-                ref->SetPersistentReference(persistentRefType);
-                if(!persistentRefType && mKnownObjects[szName]->IsPersistent())
+                auto ns = pMember->Attribute("namespace");
+                if(ns)
+                {
+                    ref->SetNamespace(ns);
+                }
+
+                if(mKnownObjects.find(refType) == mKnownObjects.end())
                 {
                     std::stringstream ss;
-                    ss << "Non-peristent reference type '" << refType << "' encountered"
-                        " on field '" << szMemberName << "' in persistent object '"
+                    ss << "Unknown reference type '" << refType << "' encountered"
+                        " on field '" << szMemberName << "' in object '" << szName << "'.";
+
+                    mError = ss.str();
+                }
+                else if(mKnownObjects[refType]->GetNamespace() != ref->GetNamespace())
+                {
+                    std::stringstream ss;
+                    ss << "Reference type '" << refType << "' with invalid namespace "
+                        " encountered on field '" << szMemberName << "' in object '"
                         << szName << "'.";
 
                     mError = ss.str();
+                }
+                else
+                {
+                    persistentRefType = mKnownObjects[refType]->IsPersistent();
+                    ref->SetPersistentReference(persistentRefType);
+                    if(!persistentRefType && mKnownObjects[szName]->IsPersistent())
+                    {
+                        std::stringstream ss;
+                        ss << "Non-peristent reference type '" << refType << "' encountered"
+                            " on field '" << szMemberName << "' in persistent object '"
+                            << szName << "'.";
+
+                        mError = ss.str();
+                    }
                 }
             }
 
@@ -693,6 +708,16 @@ std::shared_ptr<MetaVariable> MetaObjectXmlParser::GetVariable(const tinyxml2::X
                                 << "' on field '" << szMemberName
                                 << "' in object '" << szName
                                 << "' defaulted with a field other than UID.";
+
+                            mError = ss.str();
+                            break;
+                        }
+                        else if(!persistentRefType && ref->IsGeneric())
+                        {
+                            std::stringstream ss;
+                            ss << "Non-persistent generic reference type"
+                                " on field '" << szMemberName << "' in object '" << szName
+                                << "' has a default field value set.";
 
                             mError = ss.str();
                             break;
@@ -847,7 +872,10 @@ bool MetaObjectXmlParser::HasCircularReference(const std::shared_ptr<MetaObject>
             std::shared_ptr<MetaVariableReference> ref =
                 std::dynamic_pointer_cast<MetaVariableReference>(var);
 
-            auto refObject = mKnownObjects.find(ref->GetReferenceType());
+            if(ref->IsGeneric()) continue;
+
+            auto refType = ref->GetReferenceType();
+            auto refObject = mKnownObjects.find(refType);
             status = refObject != mKnownObjects.end() &&
                 !refObject->second->IsPersistent() &&
                 HasCircularReference(refObject->second, referencesCopy);

@@ -2,10 +2,10 @@
 ([&]() -> bool
 {
     @LENGTH_TYPE@ len;
-    @STREAM@.stream.read(reinterpret_cast<char*>(&len),
+    @STREAM@.read(reinterpret_cast<char*>(&len),
         sizeof(len));
 
-    if(!@STREAM@.stream.good())
+    if(!@STREAM@.good())
     {
         return false;
     }
@@ -18,9 +18,9 @@
     char *szValue = new char[len + 1];
     szValue[len] = 0;
 
-    @STREAM@.stream.read(szValue, len);
+    @STREAM@.read(szValue, len);
 
-    if(!@STREAM@.stream.good())
+    if(!@STREAM@.good())
     {
         delete[] szValue;
         return false;
@@ -30,5 +30,5 @@
 
     delete[] szValue;
 
-    return @STREAM@.stream.good();
+    return @STREAM@.good();
 })()

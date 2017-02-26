@@ -2,6 +2,8 @@
 <objgen>
     <object name="Demon" location="world">
         <member type="u32" name="Type"/>
+        <member type="Account*" name="Account" key="true" unique="false"/>
+        <member type="Character*" name="Character" key="true" unique="false"/>
         <member type="u16" name="AttackSettings"/>
         <member type="s32" name="SoulPoints"/>
         <member type="u16" name="GrowthType"/>
@@ -33,6 +35,7 @@
     </object>
     <object name="InheritedSkill" location="world">
         <member type="u32" name="Skill"/>
+        <member type="Demon*" name="Demon" key="true" unique="false"/>
         <member type="s16" name="Progress"/>
     </object>
 </objgen>

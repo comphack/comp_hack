@@ -26,9 +26,20 @@
 
 #include "CharacterState.h"
 
+// libcomp Includes
+#include <Constants.h>
+
 // objects Includes
 #include <Character.h>
 #include <EntityStats.h>
+#include <Item.h>
+#include <MiCorrectTbl.h>
+#include <MiItemData.h>
+#include <MiSkillItemStatusCommonData.h>
+
+// channel Includes
+#include <CharacterManager.h>
+#include <DefinitionManager.h>
 
 using namespace channel;
 
@@ -40,25 +51,55 @@ CharacterState::~CharacterState()
 {
 }
 
-bool CharacterState::RecalculateStats()
+bool CharacterState::RecalculateStats(libcomp::DefinitionManager* definitionManager)
 {
     auto c = GetCharacter().Get();
-    auto cs = c->GetCoreStats();
+    auto cs = c->GetCoreStats().Get();
 
-    SetSTR(cs->GetSTR());
-    SetMAGIC(cs->GetMAGIC());
-    SetVIT(cs->GetVIT());
-    SetINTEL(cs->GetINTEL());
-    SetSPEED(cs->GetSPEED());
-    SetLUCK(cs->GetLUCK());
-    SetCLSR(cs->GetCLSR());
-    SetLNGR(cs->GetLNGR());
-    SetSPELL(cs->GetSPELL());
-    SetSUPPORT(cs->GetSUPPORT());
-    SetPDEF(cs->GetPDEF());
-    SetMDEF(cs->GetMDEF());
+    std::unordered_map<uint8_t, int16_t> correctMap = CharacterManager::GetCharacterBaseStatMap(cs);
 
-    /// @todo: transform stats
+    for(auto equip : c->GetEquippedItems())
+    {
+        if(!equip.IsNull())
+        {
+            auto itemData = definitionManager->GetItemData(equip->GetType());
+            auto itemCommonData = itemData->GetCommon();
+
+            for(auto ct : itemCommonData->GetCorrectTbl())
+            {
+                switch (ct->GetType())
+                {
+                    case objects::MiCorrectTbl::Type_t::NUMERIC:
+                        correctMap[ct->GetID()] += ct->GetValue();
+                        break;
+                    case objects::MiCorrectTbl::Type_t::PERCENT:
+                        /// @todo: apply in the right order
+                        break;
+                    default:
+                        break;
+                }
+            }
+        }
+    }
+
+    /// @todo: apply effects
+
+    CharacterManager::CalculateDependentStats(correctMap, cs->GetLevel(), false);
+
+    SetMaxHP(correctMap[libcomp::CORRECT_MAXHP]);
+    SetMaxMP(correctMap[libcomp::CORRECT_MAXMP]);
+    SetSTR(correctMap[libcomp::CORRECT_STR]);
+    SetMAGIC(correctMap[libcomp::CORRECT_MAGIC]);
+    SetVIT(correctMap[libcomp::CORRECT_VIT]);
+    SetINTEL(correctMap[libcomp::CORRECT_INTEL]);
+    SetSPEED(correctMap[libcomp::CORRECT_SPEED]);
+    SetLUCK(correctMap[libcomp::CORRECT_LUCK]);
+    SetCLSR(correctMap[libcomp::CORRECT_CLSR]);
+    SetLNGR(correctMap[libcomp::CORRECT_LNGR]);
+    SetSPELL(correctMap[libcomp::CORRECT_SPELL]);
+    SetSUPPORT(correctMap[libcomp::CORRECT_SUPPORT]);
+    SetPDEF(correctMap[libcomp::CORRECT_PDEF]);
+    SetMDEF(correctMap[libcomp::CORRECT_MDEF]);
 
     return true;
 }

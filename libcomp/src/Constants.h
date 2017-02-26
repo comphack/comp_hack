@@ -188,46 +188,35 @@ namespace libcomp
 /// Client is attempting to log out.
 #define LOGIN_STATE_PENDING_LOGOUT (7)
 
-/**
- * Equip types used to determine the type of and where to place an equip.
- * @sa BfCharacterData::equip
- * @sa BfCharacterData::equipItem
- */
-typedef enum _EquipType
+/// Known index values contained in the binary structure Correct tables
+enum CorrectData : unsigned char
 {
-    /// Item is not an equip
-    EQUIP_TYPE_NONE = -1,
-    /// Items like helmets, hats, or decorative flowers
-    EQUIP_TYPE_HEAD = 0,
-    /// Items like masks or cigarettes
-    EQUIP_TYPE_FACE,
-    /// Typically necklaces
-    EQUIP_TYPE_NECK,
-    /// Items like dresses, shirts, or costumes
-    EQUIP_TYPE_TOP,
-    /// Items like gloves or wrist bands
-    EQUIP_TYPE_ARMS,
-    /// Items like pants or skirts
-    EQUIP_TYPE_BOTTOM,
-    /// Items like shoes, boots, or sandals
-    EQUIP_TYPE_FEET,
-    /// Typically a COMP
-    EQUIP_TYPE_COMP,
-    /// Typically a ring
-    EQUIP_TYPE_RING,
-    /// Typically an earring
-    EQUIP_TYPE_EARRING,
-    /// Items like flaming auras or floating snow flakes
-    EQUIP_TYPE_EXTRA,
-    /// Items like cloaks or guitars
-    EQUIP_TYPE_BACK,
-    /// Items like talismans or charms
-    EQUIP_TYPE_TALISMAN,
-    /// Items like swords, guns, or staffs
-    EQUIP_TYPE_WEAPON,
-    /// Typically bullets
-    EQUIP_TYPE_BULLETS
-}EquipType;
+    CORRECT_STR = 0,
+    CORRECT_MAGIC = 1,
+    CORRECT_VIT = 2,
+    CORRECT_INTEL = 3,
+    CORRECT_SPEED = 4,
+    CORRECT_LUCK = 5,
+    CORRECT_MAXHP = 6,
+    CORRECT_MAXMP = 7,
+    CORRECT_HP_REGEN = 8,
+    CORRECT_MP_REGEN = 9,
+
+    CORRECT_MOVE_SPEED = 11,
+    CORRECT_CLSR = 12,
+    CORRECT_LNGR = 13,
+    CORRECT_SPELL = 14,
+    CORRECT_SUPPORT = 15,
+    CORRECT_CRITICAL = 16,
+
+    CORRECT_PDEF = 19,
+    CORRECT_MDEF = 20,
+
+    CORRECT_ACQUIRE_EXP = 80,
+    CORRECT_ACQUIRE_MAG = 81,
+    CORRECT_ACQUIRE_MACCA = 82,
+    CORRECT_ACQUIRE_EXPERTISE = 83,
+};
 
 } // namespace libcomp
 

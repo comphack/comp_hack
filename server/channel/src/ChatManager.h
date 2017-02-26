@@ -71,6 +71,7 @@ enum ChatVis_t : uint16_t
 enum GMCommand_t : uint16_t
 {
     GM_COMMAND_CONTRACT,
+    GM_COMMAND_EXPERTISE_UPDATE,
     GM_COMMAND_LEVEL_UP,
     GM_COMMAND_LNC,
     GM_COMMAND_XP,
@@ -124,6 +125,17 @@ private:
      * @return true if the command was handled properly, else false
      */
     bool GMCommand_Contract(const std::shared_ptr<
+        channel::ChannelClientConnection>& client,
+        const std::list<libcomp::String>& args);
+
+    /**
+     * GM command to update a character's expertise as if a skill
+     * were used.
+     * @param client Pointer to the client that sent the command
+     * @param args List of arguments for the command
+     * @return true if the command was handled properly, else false
+     */
+    bool GMCommand_ExpertiseUpdate(const std::shared_ptr<
         channel::ChannelClientConnection>& client,
         const std::list<libcomp::String>& args);
 

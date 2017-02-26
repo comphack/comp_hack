@@ -100,6 +100,8 @@ SET(${PROJECT_NAME}_PACKETS
     src/packets/game/Chat.cpp               # 0x0026
     src/packets/game/ActivateSkill.cpp      # 0x0030
     src/packets/game/AllocateSkillPoint.cpp # 0x0049
+    src/packets/game/ToggleExpertise.cpp    # 0x004F
+    src/packets/game/LearnSkill.cpp         # 0x0051
     src/packets/game/KeepAlive.cpp          # 0x0056
     src/packets/game/FixObjectPosition.cpp  # 0x0058
     src/packets/game/State.cpp              # 0x005A
@@ -116,8 +118,10 @@ SET(${PROJECT_NAME}_PACKETS
     src/packets/game/DismissDemon.cpp       # 0x009B
     src/packets/game/HotbarData.cpp         # 0x00A2
     src/packets/game/HotbarSave.cpp         # 0x00A4
+    src/packets/game/ValuableList.cpp       # 0x00B8
     src/packets/game/Sync.cpp               # 0x00F3
     src/packets/game/Rotate.cpp             # 0x00F8
+    src/packets/game/UnionFlag.cpp          # 0x0100
     src/packets/game/LockDemon.cpp          # 0x0233
 
     #Internal packets

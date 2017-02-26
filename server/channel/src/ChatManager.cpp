@@ -125,6 +125,8 @@ bool ChatManager::ExecuteGMCommand(const std::shared_ptr<
     {
         case GMCommand_t::GM_COMMAND_CONTRACT:
             return GMCommand_Contract(client, args);
+        case GMCommand_t::GM_COMMAND_EXPERTISE_UPDATE:
+            return GMCommand_ExpertiseUpdate(client, args);
         case GMCommand_t::GM_COMMAND_LEVEL_UP:
             return GMCommand_LevelUp(client, args);
         case GMCommand_t::GM_COMMAND_LNC:
@@ -192,6 +194,25 @@ bool ChatManager::GMCommand_Contract(const std::shared_ptr<
 
     characterManager->SendCOMPDemonData(client, 0, slot,
         state->GetObjectID(demon->GetUUID()));
+
+    return true;
+}
+
+bool ChatManager::GMCommand_ExpertiseUpdate(const std::shared_ptr<
+    channel::ChannelClientConnection>& client,
+    const std::list<libcomp::String>& args)
+{
+    std::list<libcomp::String> argsCopy = args;
+
+    auto server = mServer.lock();
+
+    uint32_t skillID;
+    if(!GetIntegerArg<uint32_t>(skillID, argsCopy))
+    {
+        return false;
+    }
+
+    server->GetCharacterManager()->UpdateExpertise(client, skillID);
 
     return true;
 }

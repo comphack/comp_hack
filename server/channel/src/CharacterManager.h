@@ -188,6 +188,15 @@ public:
         int32_t entityID);
 
     /**
+     * Update a client's character's exptertise for a given skill.
+     * @param client Pointer to the client connection
+     * @param skillID Skill ID that will have it's corresponding
+     *  expertise updated if it is enabled
+     */
+    void UpdateExpertise(const std::shared_ptr<
+        channel::ChannelClientConnection>& client, uint32_t skillID);
+
+    /**
      * Calculate the base stats of a character.
      * @param cs Pointer to the core stats of a character
      */

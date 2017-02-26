@@ -37,6 +37,7 @@
 #include <CharacterProgress.h>
 #include <Demon.h>
 #include <EntityStats.h>
+#include <Expertise.h>
 #include <Hotbar.h>
 #include <Item.h>
 #include <ItemBox.h>
@@ -308,6 +309,12 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
         }
     }
 
+    // Progress
+    if(!character->LoadProgress(db))
+    {
+        return false;
+    }
+
     // Item boxes
     for(auto itemBox : character->GetItemBoxes())
     {
@@ -383,6 +390,18 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
         }
     }
 
+    // Expertises
+    for(auto expertise : character->GetExpertises())
+    {
+        if(!expertise.IsNull())
+        {
+            if(!expertise.Get(db))
+            {
+                return false;
+            }
+        }
+    }
+
     // COMP
     for(auto demon : character->GetCOMP())
     {
@@ -448,6 +467,12 @@ bool AccountManager::LogoutCharacter(channel::ClientState* state)
     for(auto material : character->GetMaterials())
     {
         ok &= Cleanup<objects::Item>(material.Get(), worldDB);
+    }
+
+    // Save expertises
+    for(auto expertise : character->GetExpertises())
+    {
+        ok &= Cleanup<objects::Expertise>(expertise.Get(), worldDB);
     }
 
     // Save demons

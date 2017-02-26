@@ -77,6 +77,8 @@ enum class ClientToChannelPacketCode_t : uint16_t
     PACKET_CHAT = 0x0026, //!< Request to add a message to the chat or process a GM command.
     PACKET_ACTIVATE_SKILL = 0x0030, //!< Request to activate a player or demon skill.
     PACKET_ALLOCATE_SKILL_POINT = 0x0049, //!< Request to allocate a skill point for a character.
+    PACKET_TOGGLE_EXPERTISE = 0x004F, //!< Request to enable or disable an expertise.
+    PACKET_LEARN_SKILL = 0x0051, //!< Request for a character to learn a skill.
     PACKET_KEEP_ALIVE = 0x0056,  //!< Request/check to keep the connection alive.
     PACKET_FIX_OBJECT_POSITION = 0x0058,  //!< Request to fix a game object's position.
     PACKET_STATE = 0x005A,  //!< Request for the client's character state.
@@ -93,8 +95,10 @@ enum class ClientToChannelPacketCode_t : uint16_t
     PACKET_DISMISS_DEMON = 0x009B,  //!< Request to dismiss a demon.
     PACKET_HOTBAR_DATA = 0x00A2,  //!< Request for data about a hotbar page.
     PACKET_HOTBAR_SAVE = 0x00A4,  //!< Request to save a hotbar page.
+    PACKET_VALUABLE_LIST = 0x00B8,  //!< Request for a list of obtained valuables.
     PACKET_SYNC = 0x00F3,  //!< Request to retrieve the server time.
     PACKET_ROTATE = 0x00F8,  //!< Request to rotate an entity or object.
+    PACKET_UNION_FLAG = 0x0100,  //!< Request to receive uniion information.
     PACKET_LOCK_DEMON = 0x0233,  //!< Request to lock or unlock a demon in the COMP.
 };
 
@@ -120,6 +124,10 @@ enum class ChannelToClientPacketCode_t : uint16_t
     PACKET_PARTNER_LEVEL_UP = 0x0048, //!< Notifies the client that a partner demon has leveled up.
     PACKET_ALLOCATE_SKILL_POINT = 0x004A, //!< Response from the request to allocate a skill point for a character.
     PACKET_EQUIPMENT_CHANGED = 0x004B, //!< Notifies the client that a character's equipment has changed.
+    PACKET_EXPERTISE_POINT_UPDATE = 0x004D, //!< Notifies the client that a character's expertise points have been updated.
+    PACKET_EXPERTISE_RANK_UP = 0x004E, //!< Notifies the client that a character's expertise has ranked up.
+    PACKET_TOGGLE_EXPERTISE = 0x0050, //!< Notifies the client to enable or disable an expertise.
+    PACKET_LEARN_SKILL = 0x0052, //!< Notifies the client that a character has learned a skill.
     PACKET_KEEP_ALIVE = 0x0057,  //!< Response to keep the client connection alive.
     PACKET_FIX_OBJECT_POSITION = 0x0059,  //!< Response to fix a game object's position.
     PACKET_COMP_LIST = 0x005D,  //!< COMP demon list response.
@@ -131,7 +139,9 @@ enum class ChannelToClientPacketCode_t : uint16_t
     PACKET_COMP_SLOT_UPDATED = 0x0098,  //!< Message containing information that a COMP slot has been updated.
     PACKET_HOTBAR_DATA = 0x00A3,  //!< Response for data about a hotbar page.
     PACKET_HOTBAR_SAVE = 0x00A5,  //!< Response to save a hotbar page.
+    PACKET_VALUABLE_LIST = 0x00B9,  //!< Response containing a list of obtained valuables.
     PACKET_SYNC = 0x00F4,  //!< Response containing the server time.
+    PACKET_UNION_FLAG = 0x0101,  //!< Message containing union information.
     PACKET_ROTATE = 0x00F9,    //!< Message containing entity or object rotation information.
     PACKET_LNC_POINTS = 0x0126,    //!< Message containing a character's LNC alignment value.
     PACKET_STATUS_ICON = 0x0195,  //!< Message containing the icon to show for a character.

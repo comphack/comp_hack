@@ -47,6 +47,8 @@
 #include <MiDevilData.h>
 #include <MiDevilLVUpData.h>
 #include <MiDevilLVUpRateData.h>
+#include <MiExpertData.h>
+#include <MiExpertGrowthTbl.h>
 #include <MiGrowthData.h>
 #include <MiItemBasicData.h>
 #include <MiItemData.h>
@@ -167,14 +169,15 @@ void CharacterManager::SendCharacterData(const std::shared_ptr<
 
         if(expertise.IsNull())
         {
-            reply.WriteBlank(5);
+            reply.WriteS32Little(0);
+            reply.WriteS8((int8_t)i);
             reply.WriteU8(1);
         }
         else
         {
             reply.WriteS32Little(expertise->GetPoints());
-            reply.WriteS8(0);   // Unknown
-            reply.WriteU8(expertise->GetCapped() ? 1 : 0);
+            reply.WriteS8((int8_t)i);
+            reply.WriteU8(expertise->GetDisabled() ? 1 : 0);
         }
     }
 
@@ -973,6 +976,90 @@ void CharacterManager::LevelUp(const std::shared_ptr<
     }
 
     ExperienceGain(client, xpGain, entityID);
+}
+
+void CharacterManager::UpdateExpertise(const std::shared_ptr<
+    channel::ChannelClientConnection>& client, uint32_t skillID)
+{
+    auto server = mServer.lock();
+    auto definitionManager = server->GetDefinitionManager();
+
+    auto state = client->GetClientState();
+    auto cState = state->GetCharacterState();
+    auto character = cState->GetCharacter().Get();
+
+    auto skill = definitionManager->GetSkillData(skillID);
+    if(nullptr == skill)
+    {
+        LOG_WARNING(libcomp::String("Unknown skill ID encountered in"
+            " UpdateExpertise: %1").Arg(skillID));
+        return;
+    }
+
+    std::list<std::pair<int8_t, int32_t>> updated;
+    for(auto expertGrowth : skill->GetExpertGrowth())
+    {
+        auto expertise = character->GetExpertises(expertGrowth->GetExpertiseID()).Get();
+
+        // If it hasn't been created, it is disabled
+        if(nullptr == expertise || expertise->GetDisabled()) continue;
+
+        auto expDef = definitionManager->GetExpertClassData(expertGrowth->GetExpertiseID());
+
+        // Should never happen
+        if(nullptr == expDef) continue;
+
+        int32_t maxPoints = (expDef->GetMaxClass() * 100 * 1000)
+            + (expDef->GetMaxRank() * 100 * 100);
+
+        int32_t points = expertise->GetPoints();
+        int8_t currentRank = (int8_t)floorl(points * 0.0001f);
+
+        if(points == maxPoints) continue;
+
+        // Calculate the floating point gain
+        /// @todo: validate
+        float fGain = 3954.482803f / ((expertise->GetPoints() * 0.01f) + 158.1808409f)
+            * expertGrowth->GetGrowthRate();
+
+        points += (uint32_t)(fGain * 100.0f + 0.5f);
+
+        if(points > maxPoints)
+        {
+            points = maxPoints;
+        }
+
+        expertise->SetPoints(points);
+        updated.push_back(std::pair<int8_t, int32_t>((int8_t)expDef->GetID(), points));
+
+        int8_t newRank = (int8_t)(points * 0.0001f);
+        if(currentRank != newRank)
+        {
+            libcomp::Packet reply;
+            reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_EXPERTISE_RANK_UP);
+            reply.WriteS32Little(cState->GetEntityID());
+            reply.WriteS8((int8_t)expDef->GetID());
+            reply.WriteS8(newRank);
+
+            /// @todo: Does this need to send to the rest of the zone?
+            client->SendPacket(reply);
+        }
+    }
+
+    if(updated.size() > 0)
+    {
+        libcomp::Packet reply;
+        reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_EXPERTISE_POINT_UPDATE);
+        reply.WriteS32Little(cState->GetEntityID());
+        reply.WriteS32Little((int32_t)updated.size());
+        for(auto update : updated)
+        {
+            reply.WriteS8(update.first);
+            reply.WriteS32Little(update.second);
+        }
+
+        client->SendPacket(reply);
+    }
 }
 
 void CharacterManager::CalculateCharacterBaseStats(const std::shared_ptr<objects::EntityStats>& cs)

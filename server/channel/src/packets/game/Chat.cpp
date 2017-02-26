@@ -56,6 +56,7 @@ static void SetupGMCommands()
     }
 
     gmands["contract"] = GMCommand_t::GM_COMMAND_CONTRACT;
+    gmands["expertiseup"] = GMCommand_t::GM_COMMAND_EXPERTISE_UPDATE;
     gmands["levelup"] = GMCommand_t::GM_COMMAND_LEVEL_UP;
     gmands["lnc"] = GMCommand_t::GM_COMMAND_LNC;
     gmands["xp"] = GMCommand_t::GM_COMMAND_XP;

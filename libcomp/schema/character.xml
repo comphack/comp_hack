@@ -94,7 +94,7 @@
         <member type="array" name="Plugins" size="32">
             <element type="u8"/>
         </member>
-        <member type="array" name="Valuables" size="64">
+        <member type="array" name="Valuables" size="128">
             <element type="u8"/>
         </member>
         <member type="array" name="DevilBook" size="512">
@@ -107,8 +107,7 @@
     <object name="Expertise" location="world">
         <member type="Character*" name="Character" key="true" unique="false"/>
         <member type="s32" name="Points"/>
-        <!--<member type="u8" name="Unknown"/>-->
-        <member type="bool" name="Capped"/>
+        <member type="bool" name="Disabled"/>
     </object>
     <object name="Hotbar" location="world">
         <member type="Character*" name="Character" key="true" unique="false"/>

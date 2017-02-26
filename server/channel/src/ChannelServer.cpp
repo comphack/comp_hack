@@ -112,6 +112,10 @@ bool ChannelServer::Initialize()
         to_underlying(ClientToChannelPacketCode_t::PACKET_ACTIVATE_SKILL));
     clientPacketManager->AddParser<Parsers::AllocateSkillPoint>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_ALLOCATE_SKILL_POINT));
+    clientPacketManager->AddParser<Parsers::ToggleExpertise>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_TOGGLE_EXPERTISE));
+    clientPacketManager->AddParser<Parsers::LearnSkill>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_LEARN_SKILL));
     clientPacketManager->AddParser<Parsers::KeepAlive>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_KEEP_ALIVE));
     clientPacketManager->AddParser<Parsers::FixObjectPosition>(
@@ -144,10 +148,14 @@ bool ChannelServer::Initialize()
         to_underlying(ClientToChannelPacketCode_t::PACKET_HOTBAR_DATA));
     clientPacketManager->AddParser<Parsers::HotbarSave>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_HOTBAR_SAVE));
+    clientPacketManager->AddParser<Parsers::ValuableList>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_VALUABLE_LIST));
     clientPacketManager->AddParser<Parsers::Sync>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_SYNC));
     clientPacketManager->AddParser<Parsers::Rotate>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_ROTATE));
+    clientPacketManager->AddParser<Parsers::UnionFlag>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_UNION_FLAG));
     clientPacketManager->AddParser<Parsers::LockDemon>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_LOCK_DEMON));
 

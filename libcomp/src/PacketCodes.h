@@ -76,6 +76,7 @@ enum class ClientToChannelPacketCode_t : uint16_t
     PACKET_POPULATE_ZONE = 0x0019,  //!< Request to populate a zone with game objects and entities.
     PACKET_CHAT = 0x0026, //!< Request to add a message to the chat or process a GM command.
     PACKET_ACTIVATE_SKILL = 0x0030, //!< Request to activate a player or demon skill.
+    PACKET_ALLOCATE_SKILL_POINT = 0x0049, //!< Request to allocate a skill point for a character.
     PACKET_KEEP_ALIVE = 0x0056,  //!< Request/check to keep the connection alive.
     PACKET_FIX_OBJECT_POSITION = 0x0058,  //!< Request to fix a game object's position.
     PACKET_STATE = 0x005A,  //!< Request for the client's character state.
@@ -111,6 +112,10 @@ enum class ChannelToClientPacketCode_t : uint16_t
     PACKET_CHAT = 0x0028, //!< Response from chat request.
     PACKET_COMPLETE_SKILL = 0x0034, //!< Response from skill activation request to complete a skill.
     PACKET_EXECUTE_SKILL = 0x0036, //!< Response from skill activation request to execute a skill.
+    PACKET_XP_UPDATE = 0x0046, //!< Notifies the client of an entity's XP value.
+    PACKET_CHARACTER_LEVEL_UP = 0x0047, //!< Notifies the client that a character has leveled up.
+    PACKET_PARTNER_LEVEL_UP = 0x0048, //!< Notifies the client that a partner demon has leveled up.
+    PACKET_ALLOCATE_SKILL_POINT = 0x004A, //!< Response from the request to allocate a skill point for a character.
     PACKET_EQUIPMENT_CHANGED = 0x004B, //!< Notifies the client that a character's equipment has changed.
     PACKET_KEEP_ALIVE = 0x0057,  //!< Response to keep the client connection alive.
     PACKET_FIX_OBJECT_POSITION = 0x0059,  //!< Response to fix a game object's position.

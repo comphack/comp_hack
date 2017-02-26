@@ -52,7 +52,20 @@
 #include <MiItemData.h>
 #include <MiNPCBasicData.h>
 #include <MiSkillData.h>
-#include <StatusEffect.h>;
+#include <StatusEffect.h>
+
+const uint64_t LevelXPRequirements[] = {
+    0ULL, 40ULL, 180ULL, 480ULL, 1100ULL, 2400ULL, 4120ULL, 6220ULL, 9850ULL,   //1-9
+    14690ULL, 20080ULL, 25580ULL, 33180ULL, 41830ULL, 50750ULL, 63040ULL, 79130ULL, 99520ULL, 129780ULL,    //10-19
+    159920ULL, 189800ULL, 222600ULL, 272800ULL, 354200ULL, 470400ULL, 625000ULL, 821600ULL, 1063800ULL, 1355200ULL, //20-29
+    1699400ULL, 840000ULL, 899000ULL, 1024000ULL, 1221000ULL, 1496000ULL, 1855000ULL, 2304000ULL, 2849000ULL, 3496000ULL,   //30-39
+    4251000ULL, 2160000ULL, 2255000ULL, 2436000ULL, 2709000ULL, 3080000ULL, 3452000ULL, 4127000ULL, 5072000ULL, 6241000ULL, //40-49
+    7640000ULL, 4115000ULL, 4401000ULL, 4803000ULL, 5353000ULL, 6015000ULL, 6892000ULL, 7900000ULL, 9308000ULL, 11220000ULL,    //50-59
+    14057000ULL, 8122000ULL, 8538000ULL, 9247000ULL, 10101000ULL, 11203000ULL, 12400000ULL, 14382000ULL, 17194000ULL, 20444000ULL,  //60-69
+    25600000ULL, 21400314ULL, 23239696ULL, 24691100ULL, 27213000ULL, 31415926ULL, 37564000ULL, 46490000ULL, 55500000ULL, 66600000ULL,   //70-79
+    78783200ULL, 76300000ULL, 78364000ULL, 81310000ULL, 85100000ULL, 89290000ULL, 97400000ULL, 110050000ULL, 162000000ULL, 264000000ULL,    //80-89
+    354000000ULL, 696409989ULL, 1392819977ULL, 2089229966ULL, 2100000000ULL, 2110000000ULL, 10477689898ULL, 41910759592ULL, 125732278776ULL, 565795254492ULL,   //90-99
+};
 
 using namespace channel;
 
@@ -806,6 +819,160 @@ std::shared_ptr<objects::Demon> CharacterManager::ContractDemon(
     }
 
     return d;
+}
+
+void CharacterManager::ExperienceGain(const std::shared_ptr<
+    channel::ChannelClientConnection>& client, uint64_t xpGain, int32_t entityID)
+{
+    auto server = mServer.lock();
+    auto definitionManager = server->GetDefinitionManager();
+
+    auto state = client->GetClientState();
+    auto cState = state->GetCharacterState();
+    auto character = cState->GetCharacter().Get();
+    auto dState = state->GetDemonState();
+    auto demon = dState->GetDemon().Get();
+
+    bool isDemon = false;
+    std::shared_ptr<objects::EntityStats> stats;
+    std::shared_ptr<objects::MiDevilData> demonData;
+    if(cState->GetEntityID() == entityID)
+    {
+        stats = character->GetCoreStats().Get();
+    }
+    else if(dState->GetEntityID() == entityID && nullptr != demon)
+    {
+        stats = demon->GetCoreStats().Get();
+        isDemon = true;
+        demonData = definitionManager->GetDevilData(demon->GetType());
+    }
+    else
+    {
+        return;
+    }
+
+    auto level = stats->GetLevel();
+    if(level == 99)
+    {
+        return;
+    }
+
+    uint64_t xpDelta = stats->GetXP() + xpGain;
+    while(level < 99 && xpDelta >= LevelXPRequirements[level])
+    {
+        xpDelta -= LevelXPRequirements[level];
+
+        level++;
+
+        stats->SetLevel(level);
+
+        libcomp::Packet reply;
+        if(isDemon)
+        {
+            auto growth = demonData->GetGrowth();
+            for(auto acSkill : growth->GetAcquisitionSkills())
+            {
+                if(acSkill->GetLevel() == level)
+                {
+                    demon->AppendAcquiredSkills(acSkill->GetID());
+                }
+            }
+
+            CalculateDemonBaseStats(stats, demonData);
+            dState->RecalculateStats(definitionManager);
+            stats->SetHP(dState->GetMaxHP());
+            stats->SetMP(dState->GetMaxMP());
+
+            reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_PARTNER_LEVEL_UP);
+            reply.WriteS32Little(entityID);
+            reply.WriteS8(level);
+            reply.WriteS64Little(state->GetObjectID(demon->GetUUID()));
+            GetEntityStatsPacketData(reply, stats, dState, true);
+
+            size_t aSkillCount = demon->AcquiredSkillsCount();
+            reply.WriteU32Little(static_cast<uint32_t>(aSkillCount));
+            for(auto aSkill : demon->GetAcquiredSkills())
+            {
+                reply.WriteU32Little(aSkill);
+            }
+        }
+        else
+        {
+            CalculateCharacterBaseStats(stats);
+            cState->RecalculateStats(definitionManager);
+            stats->SetHP(cState->GetMaxHP());
+            stats->SetMP(cState->GetMaxMP());
+
+            int32_t points = (int32_t)(floorl((float)level / 5) + 2);
+            character->SetPoints(character->GetPoints() + points);
+
+            reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_CHARACTER_LEVEL_UP);
+            reply.WriteS32Little(entityID);
+            reply.WriteS32(0);  //Unknown
+            reply.WriteS8(level);
+            reply.WriteS64(xpDelta);
+            reply.WriteS16Little(stats->GetHP());
+            reply.WriteS16Little(stats->GetMP());
+            reply.WriteS32Little(points);
+        }
+
+        /// @todo: send to all players in the zone
+        client->SendPacket(reply);
+    }
+
+    stats->SetXP(xpDelta);
+
+    libcomp::Packet reply;
+    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_XP_UPDATE);
+    reply.WriteS32Little(entityID);
+    reply.WriteS64(xpDelta);
+    reply.WriteS32Little((int32_t)xpGain);
+    reply.WriteS32Little(0);    //Unknown
+
+    /// @todo: send to all players in the zone
+    client->SendPacket(reply);
+}
+
+void CharacterManager::LevelUp(const std::shared_ptr<
+    channel::ChannelClientConnection>& client, int8_t level, int32_t entityID)
+{
+    if(level < 2 || level > 99)
+    {
+        return;
+    }
+
+    auto state = client->GetClientState();
+    auto cState = state->GetCharacterState();
+    auto dState = state->GetDemonState();
+
+    std::shared_ptr<objects::EntityStats> stats;
+    if(cState->GetEntityID() == entityID)
+    {
+        stats = cState->GetCharacter()->GetCoreStats().Get();
+    }
+    else if(dState->GetEntityID() == entityID && !dState->GetDemon().IsNull())
+    {
+        stats = dState->GetDemon()->GetCoreStats().Get();
+    }
+    else
+    {
+        return;
+    }
+
+    uint64_t xpGain = 0;
+    for(int8_t i = stats->GetLevel(); i < level; i++)
+    {
+        if(xpGain == 0)
+        {
+            xpGain += LevelXPRequirements[i] - stats->GetXP();
+        }
+        else
+        {
+            xpGain += LevelXPRequirements[i];
+        }
+    }
+
+    ExperienceGain(client, xpGain, entityID);
 }
 
 void CharacterManager::CalculateCharacterBaseStats(const std::shared_ptr<objects::EntityStats>& cs)

@@ -167,6 +167,27 @@ public:
         const std::shared_ptr<objects::Demon>& demon = nullptr);
 
     /**
+     * Update the client's character or demon's experience and level
+     * up if the level threshold is passed.
+     * @param client Pointer to the client connection
+     * @param xpGain Experience amount to gain
+     * @param entityID Character or demon ID to gain experience
+     */
+    void ExperienceGain(const std::shared_ptr<
+        channel::ChannelClientConnection>& client, uint64_t xpGain,
+        int32_t entityID);
+
+    /**
+     * Increase the level of a client's character or demon.
+     * @param client Pointer to the client connection
+     * @param level Number of levels to gain
+     * @param entityID Character or demon ID to level up
+     */
+    void LevelUp(const std::shared_ptr<
+        channel::ChannelClientConnection>& client, int8_t level,
+        int32_t entityID);
+
+    /**
      * Calculate the base stats of a character.
      * @param cs Pointer to the core stats of a character
      */

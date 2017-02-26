@@ -125,8 +125,12 @@ bool ChatManager::ExecuteGMCommand(const std::shared_ptr<
     {
         case GMCommand_t::GM_COMMAND_CONTRACT:
             return GMCommand_Contract(client, args);
+        case GMCommand_t::GM_COMMAND_LEVEL_UP:
+            return GMCommand_LevelUp(client, args);
         case GMCommand_t::GM_COMMAND_LNC:
             return GMCommand_LNC(client, args);
+        case GMCommand_t::GM_COMMAND_XP:
+            return GMCommand_XP(client, args);
         default:
             break;
     }
@@ -192,6 +196,59 @@ bool ChatManager::GMCommand_Contract(const std::shared_ptr<
     return true;
 }
 
+bool ChatManager::GMCommand_LevelUp(const std::shared_ptr<
+    channel::ChannelClientConnection>& client,
+    const std::list<libcomp::String>& args)
+{
+    std::list<libcomp::String> argsCopy = args;
+
+    int8_t lvl;
+    if(GetIntegerArg<int8_t>(lvl, argsCopy))
+    {
+        if(lvl > 99 || lvl < 1)
+        {
+            return false;
+        }
+    }
+    else
+    {
+        // Increase by 1
+        lvl = -1;
+    }
+
+    auto state = client->GetClientState();
+
+    libcomp::String target;
+    bool isDemon = GetStringArg(target, argsCopy) && target.ToLower() == "demon";
+    int32_t entityID;
+    int8_t currentLevel;
+    if(isDemon)
+    {
+        entityID = state->GetDemonState()->GetEntityID();
+        currentLevel = state->GetDemonState()->GetDemon()
+            ->GetCoreStats()->GetLevel();
+    }
+    else
+    {
+        entityID = state->GetCharacterState()->GetEntityID();
+        currentLevel = state->GetCharacterState()->GetCharacter()
+            ->GetCoreStats()->GetLevel();
+    }
+
+    if(lvl == -1 && lvl != 99)
+    {
+        lvl = currentLevel + 1;
+    }
+    else if(currentLevel >= lvl)
+    {
+        return false;
+    }
+
+    mServer.lock()->GetCharacterManager()->LevelUp(client, lvl, entityID);
+
+    return true;
+}
+
 bool ChatManager::GMCommand_LNC(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
@@ -205,6 +262,30 @@ bool ChatManager::GMCommand_LNC(const std::shared_ptr<
     }
 
     mServer.lock()->GetCharacterManager()->UpdateLNC(client, lnc);
+
+    return true;
+}
+
+bool ChatManager::GMCommand_XP(const std::shared_ptr<
+    channel::ChannelClientConnection>& client,
+    const std::list<libcomp::String>& args)
+{
+    std::list<libcomp::String> argsCopy = args;
+
+    uint64_t xpGain;
+    if(!GetIntegerArg<uint64_t>(xpGain, argsCopy))
+    {
+        return false;
+    }
+
+    auto state = client->GetClientState();
+
+    libcomp::String target;
+    bool isDemon = GetStringArg(target, argsCopy) && target.ToLower() == "demon";
+    auto entityID = isDemon ? state->GetDemonState()->GetEntityID()
+        : state->GetCharacterState()->GetEntityID();
+
+    mServer.lock()->GetCharacterManager()->ExperienceGain(client, xpGain, entityID);
 
     return true;
 }

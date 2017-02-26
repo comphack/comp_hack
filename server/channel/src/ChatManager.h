@@ -71,7 +71,9 @@ enum ChatVis_t : uint16_t
 enum GMCommand_t : uint16_t
 {
     GM_COMMAND_CONTRACT,
+    GM_COMMAND_LEVEL_UP,
     GM_COMMAND_LNC,
+    GM_COMMAND_XP,
 };
 
 /*
@@ -125,6 +127,16 @@ private:
         channel::ChannelClientConnection>& client,
         const std::list<libcomp::String>& args);
 
+    /**
+     * GM command to level up a character or demon.
+     * @param client Pointer to the client that sent the command
+     * @param args List of arguments for the command
+     * @return true if the command was handled properly, else false
+     */
+    bool GMCommand_LevelUp(const std::shared_ptr<
+        channel::ChannelClientConnection>& client,
+        const std::list<libcomp::String>& args);
+
     /*
      * GM command to set a character's LNC alignment value.
      * @param client Pointer to the client that sent the command
@@ -132,6 +144,16 @@ private:
      * @return true if the command was handled properly, else false
      */
     bool GMCommand_LNC(const std::shared_ptr<
+        channel::ChannelClientConnection>& client,
+        const std::list<libcomp::String>& args);
+
+    /**
+     * GM command to increase the XP of a character or demon.
+     * @param client Pointer to the client that sent the command
+     * @param args List of arguments for the command
+     * @return true if the command was handled properly, else false
+     */
+    bool GMCommand_XP(const std::shared_ptr<
         channel::ChannelClientConnection>& client,
         const std::list<libcomp::String>& args);
 

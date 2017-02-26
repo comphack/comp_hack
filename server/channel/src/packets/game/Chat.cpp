@@ -56,7 +56,9 @@ static void SetupGMCommands()
     }
 
     gmands["contract"] = GMCommand_t::GM_COMMAND_CONTRACT;
+    gmands["levelup"] = GMCommand_t::GM_COMMAND_LEVEL_UP;
     gmands["lnc"] = GMCommand_t::GM_COMMAND_LNC;
+    gmands["xp"] = GMCommand_t::GM_COMMAND_XP;
 }
 
 bool Parsers::Chat::Parse(libcomp::ManagerPacket *pPacketManager,

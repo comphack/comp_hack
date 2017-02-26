@@ -110,6 +110,8 @@ bool ChannelServer::Initialize()
         to_underlying(ClientToChannelPacketCode_t::PACKET_CHAT));
     clientPacketManager->AddParser<Parsers::ActivateSkill>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_ACTIVATE_SKILL));
+    clientPacketManager->AddParser<Parsers::AllocateSkillPoint>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_ALLOCATE_SKILL_POINT));
     clientPacketManager->AddParser<Parsers::KeepAlive>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_KEEP_ALIVE));
     clientPacketManager->AddParser<Parsers::FixObjectPosition>(

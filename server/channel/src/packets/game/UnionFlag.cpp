@@ -60,7 +60,7 @@ bool Parsers::UnionFlag::Parse(libcomp::ManagerPacket *pPacketManager,
     /// @todo: Properly implement
     libcomp::Packet reply;
     reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_UNION_FLAG);
-    reply.WriteS32Little(cState->GetEntityID());
+    reply.WriteS32Little(entityID);
     reply.WriteU16Little(20);
     reply.WriteBlank(20);
 

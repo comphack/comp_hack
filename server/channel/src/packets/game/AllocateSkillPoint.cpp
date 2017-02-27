@@ -32,6 +32,9 @@
 #include <Packet.h>
 #include <PacketCodes.h>
 
+// Standard C++11 Includes
+#include <math.h>
+
 // channel Includes
 #include "ChannelServer.h"
 
@@ -60,27 +63,27 @@ void AllocatePoint(const std::shared_ptr<ChannelServer> server,
     {
         case libcomp::CorrectData::CORRECT_STR:
             pointCost = GetPointCost(stats->GetSTR());
-            stats->SetSTR(stats->GetSTR() + 1);
+            stats->SetSTR(static_cast<int16_t>(stats->GetSTR() + 1));
             break;
         case libcomp::CorrectData::CORRECT_MAGIC:
             pointCost = GetPointCost(stats->GetMAGIC());
-            stats->SetMAGIC(stats->GetMAGIC() + 1);
+            stats->SetMAGIC(static_cast<int16_t>(stats->GetMAGIC() + 1));
             break;
         case libcomp::CorrectData::CORRECT_VIT:
             pointCost = GetPointCost(stats->GetVIT());
-            stats->SetVIT(stats->GetVIT() + 1);
+            stats->SetVIT(static_cast<int16_t>(stats->GetVIT() + 1));
             break;
         case libcomp::CorrectData::CORRECT_INTEL:
             pointCost = GetPointCost(stats->GetINTEL());
-            stats->SetINTEL(stats->GetINTEL() + 1);
+            stats->SetINTEL(static_cast<int16_t>(stats->GetINTEL() + 1));
             break;
         case libcomp::CorrectData::CORRECT_SPEED:
             pointCost = GetPointCost(stats->GetSPEED());
-            stats->SetSPEED(stats->GetSPEED() + 1);
+            stats->SetSPEED(static_cast<int16_t>(stats->GetSPEED() + 1));
             break;
         case libcomp::CorrectData::CORRECT_LUCK:
             pointCost = GetPointCost(stats->GetLUCK());
-            stats->SetLUCK(stats->GetLUCK() + 1);
+            stats->SetLUCK(static_cast<int16_t>(stats->GetLUCK() + 1));
             break;
         default:
             return;

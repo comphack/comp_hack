@@ -460,6 +460,11 @@ std::string MetaVariableString::GetConstructValue() const
     {
         code = Generator::Escape(value);
     }
+    else
+    {
+        //Default to empty string
+        code = Generator::Escape("");
+    }
 
     return code;
 }
@@ -582,8 +587,8 @@ std::string MetaVariableString::GetSaveRawCode(const Generator& generator,
 
     std::string code;
 
-    if(MetaObject::IsValidIdentifier(name) &&
-        MetaObject::IsValidIdentifier(stream))
+    if(MetaObject::IsValidIdentifier(name) /*&&
+        MetaObject::IsValidIdentifier(stream)*/)
     {
         std::map<std::string, std::string> replacements;
         replacements["@LENGTH_TYPE@"] = LengthSizeType();

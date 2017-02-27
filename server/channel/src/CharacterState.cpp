@@ -67,10 +67,11 @@ bool CharacterState::RecalculateStats(libcomp::DefinitionManager* definitionMana
 
             for(auto ct : itemCommonData->GetCorrectTbl())
             {
+                auto tblID = ct->GetID();
                 switch (ct->GetType())
                 {
                     case objects::MiCorrectTbl::Type_t::NUMERIC:
-                        correctMap[ct->GetID()] += ct->GetValue();
+                        correctMap[tblID] = (int16_t)(correctMap[tblID] + ct->GetValue());
                         break;
                     case objects::MiCorrectTbl::Type_t::PERCENT:
                         /// @todo: apply in the right order

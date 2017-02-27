@@ -368,7 +368,7 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
                 auto def = definitionManager->GetItemData(equip->GetType());
                 auto poss = def->GetPossession();
                 equip->SetDurability(poss->GetDurability());
-                equip->SetMaxDurability(poss->GetDurability());
+                equip->SetMaxDurability((int8_t)poss->GetDurability());
 
                 auto slot = equipmentBoxSlot++;
                 equip->SetItemBox(defaultBox);

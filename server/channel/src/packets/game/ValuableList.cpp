@@ -57,11 +57,12 @@ bool Parsers::ValuableList::Parse(libcomp::ManagerPacket *pPacketManager,
     auto cState = state->GetCharacterState();
     auto character = cState->GetCharacter().Get();
     auto progress = character->GetProgress().Get();
+    auto valuables = progress->GetValuables();
 
     libcomp::Packet reply;
     reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_VALUABLE_LIST);
-    reply.WriteU16Little(128);
-    reply.WriteArray(&progress->GetValuables(), 128);
+    reply.WriteU16Little((uint16_t)valuables.size());
+    reply.WriteArray(&valuables, (uint32_t)valuables.size());
 
     client->SendPacket(reply);
 

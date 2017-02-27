@@ -31,6 +31,9 @@
 #include <Log.h>
 #include <PacketCodes.h>
 
+// Standard C++11 Includes
+#include <math.h>
+
 // channel Includes
 #include "ChannelServer.h"
 
@@ -812,7 +815,7 @@ std::shared_ptr<objects::Demon> CharacterManager::ContractDemon(
     d->SetCoreStats(ds);
     ds->SetEntity(std::dynamic_pointer_cast<
         libcomp::PersistentObject>(d));
-    character->SetCOMP(compSlot, d);
+    character->SetCOMP((size_t)compSlot, d);
 
     auto server = mServer.lock();
     auto db = server->GetWorldDatabase();
@@ -860,10 +863,10 @@ void CharacterManager::ExperienceGain(const std::shared_ptr<
         return;
     }
 
-    uint64_t xpDelta = stats->GetXP() + xpGain;
-    while(level < 99 && xpDelta >= LevelXPRequirements[level])
+    int64_t xpDelta = stats->GetXP() + (int64_t)xpGain;
+    while(level < 99 && xpDelta >= (int64_t)LevelXPRequirements[level])
     {
-        xpDelta -= LevelXPRequirements[level];
+        xpDelta = xpDelta - (int64_t)LevelXPRequirements[level];
 
         level++;
 
@@ -875,7 +878,7 @@ void CharacterManager::ExperienceGain(const std::shared_ptr<
             auto growth = demonData->GetGrowth();
             for(auto acSkill : growth->GetAcquisitionSkills())
             {
-                if(acSkill->GetLevel() == level)
+                if(acSkill->GetLevel() == (uint32_t)level)
                 {
                     demon->AppendAcquiredSkills(acSkill->GetID());
                 }
@@ -967,7 +970,7 @@ void CharacterManager::LevelUp(const std::shared_ptr<
     {
         if(xpGain == 0)
         {
-            xpGain += LevelXPRequirements[i] - stats->GetXP();
+            xpGain += LevelXPRequirements[i] - (uint64_t)stats->GetXP();
         }
         else
         {
@@ -1013,16 +1016,17 @@ void CharacterManager::UpdateExpertise(const std::shared_ptr<
             + (expDef->GetMaxRank() * 100 * 100);
 
         int32_t points = expertise->GetPoints();
-        int8_t currentRank = (int8_t)floorl(points * 0.0001f);
+        int8_t currentRank = (int8_t)floorl((float)points * 0.0001f);
 
         if(points == maxPoints) continue;
 
         // Calculate the floating point gain
         /// @todo: validate
-        float fGain = 3954.482803f / ((expertise->GetPoints() * 0.01f) + 158.1808409f)
-            * expertGrowth->GetGrowthRate();
+        float fGain = static_cast<float>(3954.482803f /
+            (((float)expertise->GetPoints() * 0.01f) + 158.1808409f)
+            * expertGrowth->GetGrowthRate());
 
-        points += (uint32_t)(fGain * 100.0f + 0.5f);
+        points += (int32_t)(fGain * 100.0f + 0.5f);
 
         if(points > maxPoints)
         {
@@ -1032,7 +1036,7 @@ void CharacterManager::UpdateExpertise(const std::shared_ptr<
         expertise->SetPoints(points);
         updated.push_back(std::pair<int8_t, int32_t>((int8_t)expDef->GetID(), points));
 
-        int8_t newRank = (int8_t)(points * 0.0001f);
+        int8_t newRank = (int8_t)((float)points * 0.0001f);
         if(currentRank != newRank)
         {
             libcomp::Packet reply;
@@ -1092,8 +1096,8 @@ void CharacterManager::CalculateDemonBaseStats(const std::shared_ptr<
         demonData->GetGrowth()->GetGrowthType());
 
     int8_t level = ds->GetLevel();
-    uint8_t boostLevel = (level + 3) / 4;
-    uint8_t boostStage = (boostLevel - 1) / 5;
+    uint8_t boostLevel = static_cast<uint8_t>((level + 3) / 4);
+    uint8_t boostStage = static_cast<uint8_t>((boostLevel - 1) / 5);
     
 	/*
 	 * A | 1
@@ -1208,38 +1212,54 @@ void CharacterManager::CalculateDependentStats(
     if(isDemon)
     {
         // Round up each part
-        stats[libcomp::CORRECT_MAXHP] += (int16_t)ceill(stats[libcomp::CORRECT_MAXHP] * 0.03 * level) +
+        stats[libcomp::CORRECT_MAXHP] = (int16_t)(stats[libcomp::CORRECT_MAXHP] +
+            (int16_t)ceill(stats[libcomp::CORRECT_MAXHP] * 0.03 * level) +
             (int16_t)ceill(stats[libcomp::CORRECT_STR] * 0.3) +
-            (int16_t)ceill(((stats[libcomp::CORRECT_MAXHP] * 0.01) + 0.5) * stats[libcomp::CORRECT_VIT]);
-        stats[libcomp::CORRECT_MAXMP] += (int16_t)ceill(stats[libcomp::CORRECT_MAXMP] * 0.03 * level) +
+            (int16_t)ceill(((stats[libcomp::CORRECT_MAXHP] * 0.01) + 0.5) * stats[libcomp::CORRECT_VIT]));
+        stats[libcomp::CORRECT_MAXMP] = (int16_t)(stats[libcomp::CORRECT_MAXMP] +
+            (int16_t)ceill(stats[libcomp::CORRECT_MAXMP] * 0.03 * level) +
             (int16_t)ceill(stats[libcomp::CORRECT_MAGIC] * 0.3) +
-            (int16_t)ceill(((stats[libcomp::CORRECT_MAXMP] * 0.01) + 0.5) * stats[libcomp::CORRECT_INTEL]);
+            (int16_t)ceill(((stats[libcomp::CORRECT_MAXMP] * 0.01) + 0.5) * stats[libcomp::CORRECT_INTEL]));
 
         // Round the result, adjusting by 0.5
-        stats[libcomp::CORRECT_CLSR] += (int16_t)roundl(((stats[libcomp::CORRECT_STR]) * 0.5) + 0.5 + (level * 0.1));
-        stats[libcomp::CORRECT_LNGR] += (int16_t)roundl(((stats[libcomp::CORRECT_SPEED]) * 0.5) + 0.5 + (level * 0.1));
-        stats[libcomp::CORRECT_SPELL] += (int16_t)roundl(((stats[libcomp::CORRECT_MAGIC]) * 0.5) + 0.5 + (level * 0.1));
-        stats[libcomp::CORRECT_SUPPORT] += (int16_t)roundl(((stats[libcomp::CORRECT_INTEL]) * 0.5) + 0.5 + (level * 0.1));
-        stats[libcomp::CORRECT_PDEF] += (int16_t)roundl(((stats[libcomp::CORRECT_VIT]) * 0.1) + 0.5 + (level * 0.1));
-        stats[libcomp::CORRECT_MDEF] += (int16_t)roundl(((stats[libcomp::CORRECT_INTEL]) * 0.1) + 0.5 + (level * 0.1));
+        stats[libcomp::CORRECT_CLSR] = (int16_t)(stats[libcomp::CORRECT_CLSR] +
+            (int16_t)roundl(((stats[libcomp::CORRECT_STR]) * 0.5) + 0.5 + (level * 0.1)));
+        stats[libcomp::CORRECT_LNGR] = (int16_t)(stats[libcomp::CORRECT_LNGR] +
+            (int16_t)roundl(((stats[libcomp::CORRECT_SPEED]) * 0.5) + 0.5 + (level * 0.1)));
+        stats[libcomp::CORRECT_SPELL] = (int16_t)(stats[libcomp::CORRECT_SPELL] +
+            (int16_t)roundl(((stats[libcomp::CORRECT_MAGIC]) * 0.5) + 0.5 + (level * 0.1)));
+        stats[libcomp::CORRECT_SUPPORT] = (int16_t)(stats[libcomp::CORRECT_SUPPORT] +
+            (int16_t)roundl(((stats[libcomp::CORRECT_INTEL]) * 0.5) + 0.5 + (level * 0.1)));
+        stats[libcomp::CORRECT_PDEF] = (int16_t)(stats[libcomp::CORRECT_PDEF] +
+            (int16_t)roundl(((stats[libcomp::CORRECT_VIT]) * 0.1) + 0.5 + (level * 0.1)));
+        stats[libcomp::CORRECT_MDEF] = (int16_t)(stats[libcomp::CORRECT_MDEF] +
+            (int16_t)roundl(((stats[libcomp::CORRECT_INTEL]) * 0.1) + 0.5 + (level * 0.1)));
     }
     else
     {
         // Round each part
-        stats[libcomp::CORRECT_MAXHP] += (int16_t)roundl(stats[libcomp::CORRECT_MAXHP] * 0.03 * level) +
+        stats[libcomp::CORRECT_MAXHP] = (int16_t)(stats[libcomp::CORRECT_MAXHP] +
+            (int16_t)roundl(stats[libcomp::CORRECT_MAXHP] * 0.03 * level) +
             (int16_t)roundl(stats[libcomp::CORRECT_STR] * 0.3) +
-            (int16_t)roundl(((stats[libcomp::CORRECT_MAXHP] * 0.01) + 0.5) * stats[libcomp::CORRECT_VIT]);
-        stats[libcomp::CORRECT_MAXMP] += (int16_t)roundl(stats[libcomp::CORRECT_MAXMP] * 0.03 * level) +
+            (int16_t)roundl(((stats[libcomp::CORRECT_MAXHP] * 0.01) + 0.5) * stats[libcomp::CORRECT_VIT]));
+        stats[libcomp::CORRECT_MAXMP] = (int16_t)(stats[libcomp::CORRECT_MAXMP] +
+            (int16_t)roundl(stats[libcomp::CORRECT_MAXMP] * 0.03 * level) +
             (int16_t)roundl(stats[libcomp::CORRECT_MAGIC] * 0.3) +
-            (int16_t)roundl(((stats[libcomp::CORRECT_MAXMP] * 0.01) + 0.5) * stats[libcomp::CORRECT_INTEL]);
+            (int16_t)roundl(((stats[libcomp::CORRECT_MAXMP] * 0.01) + 0.5) * stats[libcomp::CORRECT_INTEL]));
 
         // Round the results down
-        stats[libcomp::CORRECT_CLSR] += (int16_t)floorl(((stats[libcomp::CORRECT_STR]) * 0.5) + (level * 0.1));
-        stats[libcomp::CORRECT_LNGR] += (int16_t)floorl(((stats[libcomp::CORRECT_SPEED]) * 0.5) + (level * 0.1));
-        stats[libcomp::CORRECT_SPELL] += (int16_t)floorl(((stats[libcomp::CORRECT_MAGIC]) * 0.5) + (level * 0.1));
-        stats[libcomp::CORRECT_SUPPORT] += (int16_t)floorl(((stats[libcomp::CORRECT_INTEL]) * 0.5) + (level * 0.1));
-        stats[libcomp::CORRECT_PDEF] += (int16_t)floorl(((stats[libcomp::CORRECT_VIT]) * 0.1) + (level * 0.1));
-        stats[libcomp::CORRECT_MDEF] += (int16_t)floorl(((stats[libcomp::CORRECT_INTEL]) * 0.1) + (level * 0.1));
+        stats[libcomp::CORRECT_CLSR] = (int16_t)(stats[libcomp::CORRECT_CLSR] +
+            (int16_t)floorl(((stats[libcomp::CORRECT_STR]) * 0.5) + (level * 0.1)));
+        stats[libcomp::CORRECT_LNGR] = (int16_t)(stats[libcomp::CORRECT_LNGR] +
+            (int16_t)floorl(((stats[libcomp::CORRECT_SPEED]) * 0.5) + (level * 0.1)));
+        stats[libcomp::CORRECT_SPELL] = (int16_t)(stats[libcomp::CORRECT_SPELL] +
+            (int16_t)floorl(((stats[libcomp::CORRECT_MAGIC]) * 0.5) + (level * 0.1)));
+        stats[libcomp::CORRECT_SUPPORT] = (int16_t)(stats[libcomp::CORRECT_SUPPORT] +
+            (int16_t)floorl(((stats[libcomp::CORRECT_INTEL]) * 0.5) + (level * 0.1)));
+        stats[libcomp::CORRECT_PDEF] = (int16_t)(stats[libcomp::CORRECT_PDEF] +
+            (int16_t)floorl(((stats[libcomp::CORRECT_VIT]) * 0.1) + (level * 0.1)));
+        stats[libcomp::CORRECT_MDEF] = (int16_t)(stats[libcomp::CORRECT_MDEF] +
+            (int16_t)floorl(((stats[libcomp::CORRECT_INTEL]) * 0.1) + (level * 0.1)));
     }
 }
 
@@ -1338,10 +1358,16 @@ void CharacterManager::GetEntityStatsPacketData(libcomp::Packet& p,
 void CharacterManager::BoostStats(std::unordered_map<uint8_t, int16_t>& stats,
     const std::shared_ptr<objects::MiDevilLVUpData>& data, int boostLevel)
 {
-    stats[libcomp::CORRECT_STR] += data->GetSTR() * boostLevel;
-    stats[libcomp::CORRECT_MAGIC] += data->GetMAGIC() * boostLevel;
-    stats[libcomp::CORRECT_VIT] += data->GetVIT() * boostLevel;
-    stats[libcomp::CORRECT_INTEL] += data->GetINTEL() * boostLevel;
-    stats[libcomp::CORRECT_SPEED] += data->GetSPEED() * boostLevel;
-    stats[libcomp::CORRECT_LUCK] += data->GetLUCK() * boostLevel;
+    stats[libcomp::CORRECT_STR] = (int16_t)(stats[libcomp::CORRECT_STR] +
+        (int16_t)(data->GetSTR() * boostLevel));
+    stats[libcomp::CORRECT_MAGIC] = (int16_t)(stats[libcomp::CORRECT_MAGIC] +
+        (int16_t)(data->GetMAGIC() * boostLevel));
+    stats[libcomp::CORRECT_VIT] = (int16_t)(stats[libcomp::CORRECT_VIT] +
+        (int16_t)(data->GetVIT() * boostLevel));
+    stats[libcomp::CORRECT_INTEL] = (int16_t)(stats[libcomp::CORRECT_INTEL] +
+        (int16_t)(data->GetINTEL() * boostLevel));
+    stats[libcomp::CORRECT_SPEED] = (int16_t)(stats[libcomp::CORRECT_SPEED] +
+        (int16_t)(data->GetSPEED() * boostLevel));
+    stats[libcomp::CORRECT_LUCK] = (int16_t)(stats[libcomp::CORRECT_LUCK] +
+        (int16_t)(data->GetLUCK() * boostLevel));
 }

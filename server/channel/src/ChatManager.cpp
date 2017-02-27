@@ -164,7 +164,7 @@ bool ChatManager::GMCommand_Contract(const std::shared_ptr<
         {
             return false;
         }
-        demonID = devilData->GetBasic()->GetID();
+        demonID = (int16_t)devilData->GetBasic()->GetID();
     }
 
     auto state = client->GetClientState();
@@ -172,7 +172,7 @@ bool ChatManager::GMCommand_Contract(const std::shared_ptr<
         ->GetCharacter();
 
     auto demon = characterManager->ContractDemon(character.Get(),
-        definitionManager->GetDevilData(demonID),
+        definitionManager->GetDevilData((uint32_t)demonID),
         nullptr);
     if(nullptr == demon)
     {
@@ -258,7 +258,7 @@ bool ChatManager::GMCommand_LevelUp(const std::shared_ptr<
 
     if(lvl == -1 && lvl != 99)
     {
-        lvl = currentLevel + 1;
+        lvl = static_cast<int8_t>(currentLevel + 1);
     }
     else if(currentLevel >= lvl)
     {

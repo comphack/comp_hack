@@ -77,7 +77,6 @@ private:
         const tinyxml2::XMLElement *rootNode = doc.RootElement();
         const tinyxml2::XMLElement *objNode = rootNode->FirstChildElement("object");
 
-        bool failure = false;
         while(nullptr != objNode)
         {
             std::shared_ptr<T> obj = std::shared_ptr<T>(new T);

@@ -44,6 +44,8 @@ void UpdateCOMPSlots(const std::shared_ptr<ChannelServer> server,
     const std::shared_ptr<ChannelClientConnection> client,
     int8_t compID, int64_t demonID, int8_t unknown, int8_t destSlot)
 {
+    (void)unknown;
+
     if(compID != 0)
     {
         //Only COMP supported currently
@@ -71,9 +73,9 @@ void UpdateCOMPSlots(const std::shared_ptr<ChannelServer> server,
         return;
     }
 
-    auto destDemon = character->GetCOMP(destSlot).Get();
-    character->SetCOMP(srcSlot, destDemon);
-    character->SetCOMP(destSlot, srcDemon);
+    auto destDemon = character->GetCOMP((size_t)destSlot).Get();
+    character->SetCOMP((size_t)srcSlot, destDemon);
+    character->SetCOMP((size_t)destSlot, srcDemon);
 
     libcomp::Packet reply;
     reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_COMP_SLOT_UPDATED);

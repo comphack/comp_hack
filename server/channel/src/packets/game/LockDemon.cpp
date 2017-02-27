@@ -40,8 +40,7 @@
 
 using namespace channel;
 
-void SetDemonLock(const std::shared_ptr<ChannelServer> server,
-    const std::shared_ptr<ChannelClientConnection> client,
+void SetDemonLock(const std::shared_ptr<ChannelClientConnection> client,
     int64_t demonID, bool lock)
 {
     auto state = client->GetClientState();
@@ -86,7 +85,7 @@ bool Parsers::LockDemon::Parse(libcomp::ManagerPacket *pPacketManager,
         return false;
     }
 
-    server->QueueWork(SetDemonLock, server, client, demonID, lock == 1);
+    server->QueueWork(SetDemonLock, client, demonID, lock == 1);
 
     return true;
 }

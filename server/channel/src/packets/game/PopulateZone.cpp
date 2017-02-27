@@ -74,8 +74,8 @@ void SendZoneData(const std::shared_ptr<ChannelServer> server,
         reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_NPC_DATA);
         reply.WriteS32Little(npcID);
         reply.WriteU32Little(npc->GetID());
-        reply.WriteS32Little(zoneData->GetSet());
-        reply.WriteS32Little(zoneData->GetID());
+        reply.WriteS32Little((int32_t)zoneData->GetSet());
+        reply.WriteS32Little((int32_t)zoneData->GetID());
         reply.WriteFloat(npc->GetX());
         reply.WriteFloat(npc->GetY());
         reply.WriteFloat(npc->GetRotation());
@@ -94,8 +94,8 @@ void SendZoneData(const std::shared_ptr<ChannelServer> server,
         reply.WriteS32Little(objID);
         reply.WriteU32Little(onpc->GetID());
         reply.WriteU8(onpc->GetState());
-        reply.WriteS32Little(zoneData->GetSet());
-        reply.WriteS32Little(zoneData->GetID());
+        reply.WriteS32Little((int32_t)zoneData->GetSet());
+        reply.WriteS32Little((int32_t)zoneData->GetID());
         reply.WriteFloat(onpc->GetX());
         reply.WriteFloat(onpc->GetY());
         reply.WriteFloat(onpc->GetRotation());

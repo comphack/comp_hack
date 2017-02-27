@@ -111,12 +111,16 @@
     </object>
     <object name="Hotbar" location="world">
         <member type="Character*" name="Character" key="true" unique="false"/>
-        <!--<member type="u32" name="Unknown"/>-->
+        <member type="array" name="ItemTypes" size="16">
+            <element type="s8"/>
+        </member>
+        <!-- Hotbar items associated to a persistent object type have a reference -->
         <member type="array" name="Items" size="16">
             <element type="ref"/>
         </member>
-        <member type="array" name="ItemTypes" size="16">
-            <element type="s8"/>
+        <!-- Hotbar items not associated to a persistent object type just have an ID -->
+        <member type="array" name="ItemIDs" size="16">
+            <element type="u32"/>
         </member>
     </object>
     <object name="Quest" location="world">

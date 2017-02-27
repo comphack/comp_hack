@@ -5,8 +5,8 @@
  * @author HACKfrost
  *
  * @brief Request from the client to save a hotbar page. Requests to
- *  save the hotbar appear to be delayed to the next 5 minute interval
- *  that elapses since login after making a change.
+ *  save the hotbar happen on logout and are also delayed to the next
+ *  5 minute interval that elapses since login after making a change.
  *
  * This file is part of the Channel Server (channel).
  *
@@ -72,9 +72,20 @@ void SaveHotbarItems(const std::shared_ptr<ChannelServer> server,
     for(size_t i = 0; i < 16; i++)
     {
         auto item = items[i];
-        auto uuid = state->GetObjectUUID(item.ObjectID);
-        hotbar->SetItems(i, uuid);
-        hotbar->SetItemTypes(i, uuid.IsNull() ? 0 : item.Type);
+
+        // Demons and equipment need to be instance references
+        bool instanceRef = item.Type == 3 || item.Type == 5;
+        if(instanceRef)
+        {
+            hotbar->SetItems(i, state->GetObjectUUID(item.ObjectID));
+            hotbar->SetItemIDs(i, 0);
+        }
+        else
+        {
+            hotbar->SetItems(i, NULLUUID);
+            hotbar->SetItemIDs(i, (uint32_t)item.ObjectID);
+        }
+        hotbar->SetItemTypes(i, item.Type);
     }
 
     libcomp::Packet reply;

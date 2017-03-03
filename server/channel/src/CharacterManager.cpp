@@ -56,6 +56,7 @@
 #include <MiItemBasicData.h>
 #include <MiItemData.h>
 #include <MiNPCBasicData.h>
+#include <MiPossessionData.h>
 #include <MiSkillData.h>
 #include <StatusEffect.h>
 
@@ -531,20 +532,9 @@ void CharacterManager::SummonDemon(const std::shared_ptr<
     auto dState = state->GetDemonState();
     auto character = cState->GetCharacter().Get();
 
-    std::shared_ptr<objects::Demon> demon;
-    for(auto d : character->GetCOMP())
-    {
-        if(d.IsNull()) continue;
-
-        int64_t demonObjectID = state->GetObjectID(d.GetUUID());
-        if(demonID == demonObjectID)
-        {
-            demon = d.Get();
-            break;
-        }
-    }
-
-    if(nullptr == demon)
+    auto demon = std::dynamic_pointer_cast<objects::Demon>(
+        libcomp::PersistentObject::GetObjectByUUID(state->GetObjectUUID(demonID)));
+    if(nullptr == demon || character->GetUUID() != demon->GetCharacter().GetUUID())
     {
         return;
     }
@@ -589,39 +579,87 @@ void CharacterManager::StoreDemon(const std::shared_ptr<
 void CharacterManager::SendItemBoxData(const std::shared_ptr<
     ChannelClientConnection>& client, int64_t boxID)
 {
+    std::list<uint16_t> allSlots = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+                                    10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
+                                    20, 21, 22, 23, 24, 25, 26, 27, 28, 29,
+                                    30, 31, 32, 33, 34, 35, 36, 37, 38, 39,
+                                    40, 41, 42, 43, 44, 45, 46, 47, 48, 49 };
+    SendItemBoxData(client, boxID, allSlots);
+}
+
+void CharacterManager::SendItemBoxData(const std::shared_ptr<
+    ChannelClientConnection>& client, int64_t boxID,
+    const std::list<uint16_t>& slots)
+{
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
     auto character = cState->GetCharacter();
     auto box = character->GetItemBoxes((size_t)boxID);
 
+    bool updateMode = slots.size() < 50;
+
     libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_ITEM_BOX);
+    if(updateMode)
+    {
+        reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_ITEM_UPDATE);
+    }
+    else
+    {
+        reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_ITEM_BOX);
+    }
     reply.WriteS8(box->GetType());
     reply.WriteS64(state->GetObjectID(box->GetUUID()));
-    reply.WriteS32(0);  //Unknown
-    reply.WriteU16Little(50); // Max Item Count
-    reply.WriteS32Little(0); // Unknown
-
-    int32_t usedSlots = 0;
-    for(auto item : box->GetItems())
+    
+    if(updateMode)
     {
-        if(!item.IsNull())
+        reply.WriteU32((uint32_t)slots.size());
+    }
+    else
+    {
+        reply.WriteS32(0);  //Unknown
+        reply.WriteU16Little(50); // Max Item Count
+        reply.WriteS32Little(0); // Unknown
+
+        int32_t usedSlots = 0;
+        for(auto item : box->GetItems())
         {
-            usedSlots++;
+            if(!item.IsNull())
+            {
+                usedSlots++;
+            }
         }
+
+        reply.WriteS32Little(usedSlots);
     }
 
-    reply.WriteS32Little(usedSlots);
-
-    for(uint16_t i = 0; i < 50; i++)
+    auto server = mServer.lock();
+    for(uint16_t slot : slots)
     {
-        auto item = box->GetItems(i);
+        auto item = box->GetItems((size_t)slot);
 
-        if(item.IsNull()) continue;
+        if(item.IsNull())
+        {
+            if(updateMode)
+            {
+                // Only send blanks when updating slots
+                reply.WriteU16Little(slot);
+                reply.WriteS64Little(-1);
+            }
+            continue;
+        }
+        else
+        {
+            reply.WriteU16Little(slot);
 
-        reply.WriteU16Little(i);    //Slot
-        reply.WriteS64Little(
-            state->GetObjectID(item->GetUUID()));
+            int64_t objectID = state->GetObjectID(item.GetUUID());
+            if(objectID == 0)
+            {
+                objectID = server->GetNextObjectID();
+                state->SetObjectID(item.GetUUID(), objectID);
+            }
+            reply.WriteS64Little(objectID);
+        }
+
         reply.WriteU32Little(item->GetType());
         reply.WriteU16Little(item->GetStackSize());
         reply.WriteU16Little(item->GetDurability());
@@ -668,6 +706,226 @@ void CharacterManager::SendItemBoxData(const std::shared_ptr<
     }
 
     client->SendPacket(reply);
+}
+
+std::list<std::shared_ptr<objects::Item>> CharacterManager::GetExistingItems(
+    const std::shared_ptr<objects::Character>& character,
+    uint32_t itemID)
+{
+    auto itemBox = character->GetItemBoxes(0).Get();
+
+    std::list<std::shared_ptr<objects::Item>> existing;
+    for(size_t i = 0; i < 50; i++)
+    {
+        auto item = itemBox->GetItems(i);
+        if(!item.IsNull() && item->GetType() == itemID)
+        {
+            existing.push_back(item.Get());
+        }
+    }
+
+    return existing;
+}
+
+std::shared_ptr<objects::Item> CharacterManager::GenerateItem(
+    uint32_t itemID, uint16_t stackSize)
+{
+    auto server = mServer.lock();
+    auto def = server->GetDefinitionManager()->GetItemData(itemID);
+    auto poss = def->GetPossession();
+
+    auto item = libcomp::PersistentObject::New<
+        objects::Item>();
+
+    item->SetType(itemID);
+    item->SetStackSize(stackSize);
+    item->SetDurability(poss->GetDurability());
+    item->SetMaxDurability((int8_t)poss->GetDurability());
+    item->Register(item);
+
+    return item;
+}
+
+bool CharacterManager::AddRemoveItem(const std::shared_ptr<
+    channel::ChannelClientConnection>& client, uint32_t itemID,
+    uint16_t quantity, bool add, int64_t skillTargetID)
+{
+    auto state = client->GetClientState();
+    auto cState = state->GetCharacterState();
+    auto character = cState->GetCharacter().Get();
+    auto itemBox = character->GetItemBoxes(0).Get();
+
+    auto server = mServer.lock();
+    auto db = server->GetWorldDatabase();
+    auto def = server->GetDefinitionManager()->GetItemData(itemID);
+
+    auto existing = GetExistingItems(character, itemID);
+
+    std::list<uint16_t> updatedSlots;
+    auto maxStack = def->GetPossession()->GetStackSize();
+    if(add)
+    {
+        uint16_t quantityLeft = quantity;
+        for(auto item : existing)
+        {
+            auto free = maxStack - item->GetStackSize();
+            if(free > quantityLeft)
+            {
+                quantityLeft = 0;
+            }
+            else
+            {
+                quantityLeft = (uint16_t)(quantityLeft - free);
+            }
+
+            if(quantityLeft == 0)
+            {
+                break;
+            }
+        }
+
+        std::list<size_t> freeSlots;
+        for(size_t i = 0; i < 50; i++)
+        {
+            if(itemBox->GetItems(i).IsNull())
+            {
+                freeSlots.push_back(i);
+            }
+        }
+
+        if(quantityLeft <= (freeSlots.size() * maxStack))
+        {
+            uint16_t added = 0;
+            for(auto item : existing)
+            {
+                uint16_t free = (uint16_t)(maxStack - item->GetStackSize());
+                if(added < quantity && free > 0)
+                {
+                    uint16_t delta = (uint16_t)(quantity - added);
+                    if(free < delta)
+                    {
+                        delta = free;
+                    }
+                    item->SetStackSize((uint16_t)(item->GetStackSize() + delta));
+                    updatedSlots.push_back((uint16_t)item->GetBoxSlot());
+                    added = (uint16_t)(added + delta);
+                }
+
+                if(added == quantity)
+                {
+                    break;
+                }
+            }
+
+            if(added < quantity)
+            {
+                for(auto freeSlot : freeSlots)
+                {
+                    uint16_t delta = maxStack;
+                    if((delta + added) > quantity)
+                    {
+                        delta = (uint16_t)(quantity - added);
+                    }
+                    added = (uint16_t)(added + delta);
+
+                    auto item = GenerateItem(itemID, delta);
+                    item->SetItemBox(itemBox);
+                    item->SetBoxSlot((int8_t)freeSlot);
+                    
+                    if(!item->Insert(db) ||
+                        !itemBox->SetItems(freeSlot, item))
+                    {
+                        return false;
+                    }
+                    updatedSlots.push_back((uint16_t)freeSlot);
+
+                    if(added == quantity)
+                    {
+                        break;
+                    }
+                }
+            }
+        }
+        else
+        {
+            // Not enough room
+            return false;
+        }
+    }
+    else
+    {
+        // Items should be remove from the end of the list first
+        existing.reverse();
+
+        uint16_t quantityLeft = quantity;
+        for(auto item : existing)
+        {
+            if(item->GetStackSize() > quantityLeft)
+            {
+                quantityLeft = 0;
+            }
+            else
+            {
+                quantityLeft = (uint16_t)(quantityLeft - item->GetStackSize());
+            }
+
+            if(quantityLeft == 0)
+            {
+                break;
+            }
+        }
+
+        if(quantityLeft > 0)
+        {
+            return false;
+        }
+
+        // Remove from the skill target first if its one of the items
+        if(skillTargetID > 0)
+        {
+            auto skillTarget = std::dynamic_pointer_cast<objects::Item>(
+                libcomp::PersistentObject::GetObjectByUUID(
+                    state->GetObjectUUID(skillTargetID)));
+            if(skillTarget != nullptr &&
+                std::find(existing.begin(), existing.end(), skillTarget) != existing.end())
+            {
+                existing.erase(std::find(existing.begin(), existing.end(), skillTarget));
+                existing.push_front(skillTarget);
+            }
+        }
+
+        uint16_t removed = 0;
+        for(auto item : existing)
+        {
+            auto slot = item->GetBoxSlot();
+            if(item->GetStackSize() <= (quantity - removed))
+            {
+                removed = (uint16_t)(removed + item->GetStackSize());
+                
+                if(!itemBox->SetItems((size_t)slot, NULLUUID) ||
+                    !item->Delete(db))
+                {
+                    return false;
+                }
+            }
+            else
+            {
+                item->SetStackSize((uint16_t)(item->GetStackSize() -
+                    (quantity - removed)));
+                removed = quantity;
+            }
+            updatedSlots.push_back((uint16_t)slot);
+
+            if(removed == quantity)
+            {
+                break;
+            }
+        }
+    }
+
+    SendItemBoxData(client, 0, updatedSlots);
+
+    return true;
 }
 
 void CharacterManager::EquipItem(const std::shared_ptr<
@@ -731,7 +989,42 @@ void CharacterManager::EquipItem(const std::shared_ptr<
         reply.WriteU32Little(equip->GetType());
     }
 
-    GetEntityStatsPacketData(reply, character->GetCoreStats().Get(), cState, true);
+    auto cs = character->GetCoreStats().Get();
+
+    // Return updated stats in a format not like that seen in
+    // GetEntityStatsPacketData
+    reply.WriteS16Little(static_cast<int16_t>(
+        cState->GetSTR() - cs->GetSTR()));
+    reply.WriteS16Little(static_cast<int16_t>(
+        cState->GetMAGIC() - cs->GetMAGIC()));
+    reply.WriteS16Little(static_cast<int16_t>(
+        cState->GetVIT() - cs->GetVIT()));
+    reply.WriteS16Little(static_cast<int16_t>(
+        cState->GetINTEL() - cs->GetINTEL()));
+    reply.WriteS16Little(static_cast<int16_t>(
+        cState->GetSPEED() - cs->GetSPEED()));
+    reply.WriteS16Little(static_cast<int16_t>(
+        cState->GetLUCK() - cs->GetLUCK()));
+    reply.WriteS16Little(cs->GetMaxHP());
+    reply.WriteS16Little(cs->GetMaxMP());
+    reply.WriteS16Little(static_cast<int16_t>(
+        cState->GetCLSR() - cs->GetCLSR()));
+    reply.WriteS16Little(static_cast<int16_t>(
+        cState->GetLNGR() - cs->GetLNGR()));
+    reply.WriteS16Little(static_cast<int16_t>(
+        cState->GetSPELL() - cs->GetSPELL()));
+    reply.WriteS16Little(static_cast<int16_t>(
+        cState->GetSUPPORT() - cs->GetSUPPORT()));
+    reply.WriteS16Little(static_cast<int16_t>(
+        cState->GetPDEF() - cs->GetPDEF()));
+    reply.WriteS16Little(static_cast<int16_t>(
+        cState->GetMDEF() - cs->GetMDEF()));
+    reply.WriteS16Little(cs->GetCLSR());
+    reply.WriteS16Little(cs->GetLNGR());
+    reply.WriteS16Little(cs->GetSPELL());
+    reply.WriteS16Little(cs->GetSUPPORT());
+    reply.WriteS16Little(cs->GetPDEF());
+    reply.WriteS16Little(cs->GetMDEF());
 
     client->SendPacket(reply);
 }

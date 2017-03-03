@@ -43,6 +43,7 @@
 #include "ChatManager.h"
 #include "DefinitionManager.h"
 #include "ServerDataManager.h"
+#include "SkillManager.h"
 
 namespace channel
 {
@@ -160,6 +161,12 @@ public:
     ChatManager* GetChatManager() const;
 
     /**
+     * Get a pointer to the skill manager.
+     * @return Pointer to the SkillManager
+     */
+    SkillManager* GetSkillManager() const;
+
+    /**
      * Get a pointer to the definition manager.
      * @return Pointer to the DefinitionManager
      */
@@ -233,6 +240,9 @@ protected:
 
     /// Pointer to the Chat Manager.
     ChatManager *mChatManager;
+
+    /// Pointer to the Skill Manager.
+    SkillManager *mSkillManager;
 
     /// Pointer to the Definition Manager.
     libcomp::DefinitionManager *mDefinitionManager;

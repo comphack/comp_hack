@@ -272,16 +272,11 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
         }
 
         //Hacks to add MAG, a test demon and some starting skills
-        auto mag = libcomp::PersistentObject::New<
-            objects::Item>();
-
-        mag->SetType(800);
-        mag->SetStackSize(5000);
+        auto mag = characterManager->GenerateItem(800, 5000);
         mag->SetItemBox(box);
         mag->SetBoxSlot(49);
 
-        if(!mag->Register(mag) || !mag->Insert(db) ||
-            !box->SetItems(49, mag))
+        if(!mag->Insert(db) || !box->SetItems(49, mag))
         {
             return false;
         }

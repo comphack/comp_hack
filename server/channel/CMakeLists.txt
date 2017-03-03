@@ -38,6 +38,7 @@ SET(${PROJECT_NAME}_SRCS
     src/ClientState.cpp
     src/DemonState.cpp
     src/ManagerConnection.cpp
+    src/SkillManager.cpp
     src/main.cpp
 )
 
@@ -52,6 +53,7 @@ SET(${PROJECT_NAME}_HDRS
     src/DemonState.h
     src/ManagerConnection.h
     src/Packets.h
+    src/SkillManager.h
 )
 
 SET(${PROJECT_NAME}_SCHEMA
@@ -74,6 +76,8 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     ../../libcomp/schema
 
     # Output files
+    ActivatedAbility.h
+    ActivatedAbility.cpp
     ChannelConfig.h
     ChannelConfig.cpp
     CharacterStateObject.h
@@ -98,6 +102,7 @@ SET(${PROJECT_NAME}_PACKETS
     src/packets/game/Move.cpp               # 0x001C
     src/packets/game/Chat.cpp               # 0x0026
     src/packets/game/ActivateSkill.cpp      # 0x0030
+    src/packets/game/ExecuteSkill.cpp       # 0x0031
     src/packets/game/AllocateSkillPoint.cpp # 0x0049
     src/packets/game/ToggleExpertise.cpp    # 0x004F
     src/packets/game/LearnSkill.cpp         # 0x0051

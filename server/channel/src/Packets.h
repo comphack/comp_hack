@@ -44,6 +44,7 @@ PACKET_PARSER_DECL(PopulateZone);        // 0x0019
 PACKET_PARSER_DECL(Move);                // 0x001C
 PACKET_PARSER_DECL(Chat);                // 0x0026
 PACKET_PARSER_DECL(ActivateSkill);       // 0x0030
+PACKET_PARSER_DECL(ExecuteSkill);        // 0x0031
 PACKET_PARSER_DECL(AllocateSkillPoint);  // 0x0049
 PACKET_PARSER_DECL(ToggleExpertise);     // 0x004F
 PACKET_PARSER_DECL(LearnSkill);          // 0x0051

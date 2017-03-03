@@ -1,10 +1,10 @@
 /**
- * @file server/channel/src/packets/game/ActivateSkill.cpp
+ * @file server/channel/src/packets/game/ExecuteSkill.cpp
  * @ingroup channel
  *
  * @author HACKfrost
  *
- * @brief Request from the client to activate a character or demon skill.
+ * @brief Request from the client to execute a skill that has charged.
  *
  * This file is part of the Channel Server (channel).
  *
@@ -35,18 +35,18 @@
 
 using namespace channel;
 
-void SkillActivation(SkillManager* server,
+void SkillExecution(SkillManager* skillManager,
     const std::shared_ptr<ChannelClientConnection> client,
-    uint32_t skillID, int32_t sourceEntityID, int64_t targetObjectID)
+    int32_t sourceEntityID, uint8_t activationID, int64_t targetObjectID)
 {
-    server->ActivateSkill(client, skillID, sourceEntityID, targetObjectID);
+    skillManager->ExecuteSkill(client, sourceEntityID, activationID, targetObjectID);
 }
 
-bool Parsers::ActivateSkill::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::ExecuteSkill::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {
-    if(p.Size() < 12)
+    if(p.Size() < 9)
     {
         return false;
     }
@@ -56,38 +56,10 @@ bool Parsers::ActivateSkill::Parse(libcomp::ManagerPacket *pPacketManager,
     auto skillManager = server->GetSkillManager();
 
     int32_t sourceEntityID = p.ReadS32Little();
-    uint32_t skillID = p.ReadU32Little();
+    uint8_t activationID = p.ReadU8();
+    int64_t targetObjectID = p.Size() == 9 ? (int64_t)p.ReadS32Little() : p.ReadS64Little();
 
-    uint32_t targetType = p.ReadU32Little();
-    if(targetType != ACTIVATION_NOTARGET && p.Left() == 0)
-    {
-        return false;
-    }
-
-    int64_t targetObjectID = -1;
-    switch(targetType)
-    {
-        case ACTIVATION_NOTARGET:
-            //Nothing special to do
-            break;
-        case ACTIVATION_DEMON:
-        case ACTIVATION_ITEM:
-            targetObjectID = p.ReadS64Little();
-            break;
-        case ACTIVATION_TARGET:
-            targetObjectID = (int64_t)p.ReadS32Little();
-            break;
-        default:
-            {
-                LOG_ERROR(libcomp::String("Unknown skill target type encountered: %1\n")
-                    .Arg(targetType));
-                skillManager->SendFailure(client, sourceEntityID, skillID);
-                return false;
-            }
-            break;
-    }
-
-    server->QueueWork(SkillActivation, skillManager, client, skillID, sourceEntityID, targetObjectID);
+    server->QueueWork(SkillExecution, skillManager, client, sourceEntityID, activationID, targetObjectID);
 
     return true;
 }

@@ -37,7 +37,7 @@ using namespace channel;
 ClientState::ClientState() : objects::ClientStateObject(),
     mCharacterState(std::shared_ptr<CharacterState>(new CharacterState)),
     mDemonState(std::shared_ptr<DemonState>(new DemonState)),
-    mStartTime(0)
+    mStartTime(0), mNextActivatedAbilityID(1)
 {
 }
 
@@ -98,6 +98,19 @@ bool ClientState::SetObjectID(const libobjgen::UUID& uuid, int64_t objectID)
     }
 
     return false;
+}
+
+uint8_t ClientState::GetNextActivatedAbilityID()
+{
+    uint8_t next = mNextActivatedAbilityID;
+
+    mNextActivatedAbilityID = (uint8_t)((mNextActivatedAbilityID + 1) % 128);
+    if(mNextActivatedAbilityID == 0)
+    {
+        mNextActivatedAbilityID = 1;
+    }
+
+    return next;
 }
 
 bool ClientState::Ready()

@@ -55,22 +55,6 @@ DefinitionManager::~DefinitionManager()
 {
 }
 
-const std::shared_ptr<objects::MiCItemData> DefinitionManager::GetCItemData(uint32_t id)
-{
-    return GetRecordByID<objects::MiCItemData>(id, mCItemData);
-}
-
-const std::shared_ptr<objects::MiCItemData> DefinitionManager::GetCItemData(const libcomp::String& name)
-{
-    auto iter = mCItemNameLookup.find(name);
-    if(iter != mCItemNameLookup.end())
-    {
-        return GetCItemData(iter->second);
-    }
-
-    return nullptr;
-}
-
 const std::shared_ptr<objects::MiDevilData> DefinitionManager::GetDevilData(uint32_t id)
 {
     return GetRecordByID<objects::MiDevilData>(id, mDevilData);
@@ -105,6 +89,17 @@ const std::shared_ptr<objects::MiHNPCData> DefinitionManager::GetHNPCData(uint32
 const std::shared_ptr<objects::MiItemData> DefinitionManager::GetItemData(uint32_t id)
 {
     return GetRecordByID<objects::MiItemData>(id, mItemData);
+}
+
+const std::shared_ptr<objects::MiItemData> DefinitionManager::GetItemData(const libcomp::String& name)
+{
+    auto iter = mCItemNameLookup.find(name);
+    if(iter != mCItemNameLookup.end())
+    {
+        return GetRecordByID<objects::MiItemData>(iter->second, mItemData);
+    }
+
+    return nullptr;
 }
 
 const std::shared_ptr<objects::MiONPCData> DefinitionManager::GetONPCData(uint32_t id)
@@ -156,8 +151,6 @@ bool DefinitionManager::LoadCItemData(const libcomp::String& path)
     {
         auto id = record->GetBaseData()->GetID();
         auto name = record->GetBaseData()->GetName();
-
-        mCItemData[id] = record;
         if(mCItemNameLookup.find(name) == mCItemNameLookup.end())
         {
             mCItemNameLookup[name] = id;

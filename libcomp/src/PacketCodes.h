@@ -76,6 +76,7 @@ enum class ClientToChannelPacketCode_t : uint16_t
     PACKET_POPULATE_ZONE = 0x0019,  //!< Request to populate a zone with game objects and entities.
     PACKET_CHAT = 0x0026, //!< Request to add a message to the chat or process a GM command.
     PACKET_ACTIVATE_SKILL = 0x0030, //!< Request to activate a player or demon skill.
+    PACKET_EXECUTE_SKILL = 0x0031, //!< Request to execute a skill that has finished charging.
     PACKET_ALLOCATE_SKILL_POINT = 0x0049, //!< Request to allocate a skill point for a character.
     PACKET_TOGGLE_EXPERTISE = 0x004F, //!< Request to enable or disable an expertise.
     PACKET_LEARN_SKILL = 0x0051, //!< Request for a character to learn a skill.
@@ -119,8 +120,11 @@ enum class ChannelToClientPacketCode_t : uint16_t
     PACKET_MOVE = 0x001D,  //!< Message containing entity or object movement information.
     PACKET_ZONE_CHANGE = 0x0023,  //!< Information about a character's zone.
     PACKET_CHAT = 0x0028, //!< Response from chat request.
-    PACKET_COMPLETE_SKILL = 0x0034, //!< Response from skill activation request to complete a skill.
-    PACKET_EXECUTE_SKILL = 0x0036, //!< Response from skill activation request to execute a skill.
+    PACKET_SKILL_CHARGING = 0x0033, //!< Response from skill activation request to charge a skill.
+    PACKET_SKILL_COMPLETED = 0x0034, //!< Response from skill activation request to complete a skill.
+    PACKET_SKILL_EXECUTING = 0x0036, //!< Response from skill activation request to execute a skill.
+    PACKET_SKILL_FAILED = 0x0037,  //!< Response from skill activation request that execution has failed.
+    PACKET_SKILL_REPORTS = 0x0038,  //!< Response from skill activation reporting what has been updated.
     PACKET_XP_UPDATE = 0x0046, //!< Notifies the client of an entity's XP value.
     PACKET_CHARACTER_LEVEL_UP = 0x0047, //!< Notifies the client that a character has leveled up.
     PACKET_PARTNER_LEVEL_UP = 0x0048, //!< Notifies the client that a partner demon has leveled up.
@@ -137,6 +141,7 @@ enum class ChannelToClientPacketCode_t : uint16_t
     PACKET_PARTNER_SUMMONED = 0x0060,  //!< Notifies the client that a partner demon has been summoned.
     PACKET_STOP_MOVEMENT = 0x0070,  //!< Message containing entity or object movement stopping information.
     PACKET_ITEM_BOX = 0x0075,  //!< Response for info about a specific item box.
+    PACKET_ITEM_UPDATE = 0x007A,  //!< Message containing updated information about an item in a box.
     PACKET_EQUIPMENT_LIST = 0x007C,  //!< Response for equipment information.
     PACKET_COMP_SLOT_UPDATED = 0x0098,  //!< Message containing information that a COMP slot has been updated.
     PACKET_HOTBAR_DATA = 0x00A3,  //!< Response for data about a hotbar page.

@@ -40,6 +40,8 @@ namespace objects
 class Character;
 class Demon;
 class EntityStats;
+class Item;
+class ItemBox;
 class MiDevilData;
 class MiDevilLVUpData;
 }
@@ -126,13 +128,60 @@ public:
         channel::ChannelClientConnection>& client);
 
     /**
-     * Send the information about the specified to the client.
+     * Send information about the specified box to the client.
      * @param client Pointer to the client connection containing
      *  the box
      * @param boxID Box index ID
      */
     void SendItemBoxData(const std::shared_ptr<
         ChannelClientConnection>& client, int64_t boxID);
+
+    /**
+     * Send information about the specified box slots to the client.
+     * @param client Pointer to the client connection containing
+     *  the box
+     * @param boxID Box index ID
+     * @param slots List of slots to send information about
+     */
+    void SendItemBoxData(const std::shared_ptr<
+        ChannelClientConnection>& client, int64_t boxID,
+        const std::list<uint16_t>& slots);
+
+    /**
+     * Get all items in a character's inventory that match the supplied
+     * itemID.
+     * @param character Pointer to the character
+     * @param itemID Item ID to find in the inventory
+     * @return List of pointers to the items of the matching ID
+     */
+    std::list<std::shared_ptr<objects::Item>> GetExistingItems(
+        const std::shared_ptr<objects::Character>& character,
+        uint32_t itemID);
+
+    /**
+     * Generate an item with the specified stack size.  The stack size
+     * will not be checked for the maximum allowed value.
+     * @param itemID Item ID to generate an item from
+     * @param stackSize Number of items in the stack to generate
+     * @return Pointer to the generated item
+     */
+    std::shared_ptr<objects::Item> GenerateItem(uint32_t itemID,
+        uint16_t stackSize);
+
+    /**
+     * Add or remove items to a character's inventory.
+     * @param client Pointer to the client connection containing
+     *  the character
+     * @param itemID Item ID to modify the amount of in the inventory
+     * @param quantity Number of items to add or remove
+     * @param add true if items should be added, false if they should
+     *  be removed
+     * @param skillTargetID Object ID of an item used for a skill. If
+     *  this is specified for a remove command, it will be removed first
+     */
+    bool AddRemoveItem(const std::shared_ptr<
+        channel::ChannelClientConnection>& client, uint32_t itemID,
+        uint16_t quantity, bool add, int64_t skillTargetID = 0);
 
     /**
      * Equip an item matching the supplied ID on the client's character.
@@ -210,7 +259,7 @@ public:
      */
     void CalculateDemonBaseStats(const std::shared_ptr<objects::EntityStats>& ds,
         const std::shared_ptr<objects::MiDevilData>& demonData);
-    
+
     /**
      * Retrieve a map of correct table indexes to corresponding stat values.
      * @param cs Pointer to the core stats of a character

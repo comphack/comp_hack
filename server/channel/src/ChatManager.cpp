@@ -36,8 +36,10 @@
 #include <Character.h>
 #include <Demon.h>
 #include <EntityStats.h>
+#include <MiItemData.h>
 #include <MiDevilData.h>
 #include <MiNPCBasicData.h>
+#include <MiSkillItemStatusCommonData.h>
 
 // channel Includes
 #include <ChannelServer.h>
@@ -127,6 +129,8 @@ bool ChatManager::ExecuteGMCommand(const std::shared_ptr<
             return GMCommand_Contract(client, args);
         case GMCommand_t::GM_COMMAND_EXPERTISE_UPDATE:
             return GMCommand_ExpertiseUpdate(client, args);
+        case GMCommand_t::GM_COMMAND_ITEM:
+            return GMCommand_Item(client, args);
         case GMCommand_t::GM_COMMAND_LEVEL_UP:
             return GMCommand_LevelUp(client, args);
         case GMCommand_t::GM_COMMAND_LNC:
@@ -215,6 +219,42 @@ bool ChatManager::GMCommand_ExpertiseUpdate(const std::shared_ptr<
     server->GetCharacterManager()->UpdateExpertise(client, skillID);
 
     return true;
+}
+
+bool ChatManager::GMCommand_Item(const std::shared_ptr<
+    channel::ChannelClientConnection>& client,
+    const std::list<libcomp::String>& args)
+{
+    std::list<libcomp::String> argsCopy = args;
+
+    auto server = mServer.lock();
+    auto definitionManager = server->GetDefinitionManager();
+
+    uint32_t itemID;
+    if(!GetIntegerArg<uint32_t>(itemID, argsCopy))
+    {
+        libcomp::String name;
+        if(!GetStringArg(name, argsCopy, libcomp::Convert::Encoding_t::ENCODING_CP932))
+        {
+            return false;
+        }
+
+        auto itemData = definitionManager->GetItemData(name);
+        if(itemData == nullptr)
+        {
+            return false;
+        }
+        itemID = itemData->GetCommon()->GetID();
+    }
+
+    uint16_t stackSize;
+    if(!GetIntegerArg<uint16_t>(stackSize, argsCopy))
+    {
+        stackSize = 1;
+    }
+
+    return server->GetCharacterManager()
+        ->AddRemoveItem(client, itemID, stackSize, true);
 }
 
 bool ChatManager::GMCommand_LevelUp(const std::shared_ptr<

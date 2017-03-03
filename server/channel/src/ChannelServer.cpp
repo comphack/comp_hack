@@ -42,8 +42,8 @@ using namespace channel;
 
 ChannelServer::ChannelServer(std::shared_ptr<objects::ServerConfig> config,
     const libcomp::String& configPath) : libcomp::BaseServer(config, configPath),
-    mAccountManager(0), mCharacterManager(0), mChatManager(0), mDefinitionManager(0),
-    mMaxEntityID(0), mMaxObjectID(0)
+    mAccountManager(0), mCharacterManager(0), mChatManager(0), mSkillManager(0),
+    mDefinitionManager(0), mServerDataManager(0), mMaxEntityID(0), mMaxObjectID(0)
 {
 }
 
@@ -116,6 +116,8 @@ bool ChannelServer::Initialize()
         to_underlying(ClientToChannelPacketCode_t::PACKET_CHAT));
     clientPacketManager->AddParser<Parsers::ActivateSkill>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_ACTIVATE_SKILL));
+    clientPacketManager->AddParser<Parsers::ExecuteSkill>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_EXECUTE_SKILL));
     clientPacketManager->AddParser<Parsers::AllocateSkillPoint>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_ALLOCATE_SKILL_POINT));
     clientPacketManager->AddParser<Parsers::ToggleExpertise>(
@@ -176,6 +178,7 @@ bool ChannelServer::Initialize()
     mAccountManager = new AccountManager(channelPtr);
     mCharacterManager = new CharacterManager(channelPtr);
     mChatManager = new ChatManager(channelPtr);
+    mSkillManager = new SkillManager(channelPtr);
 
     return true;
 }
@@ -185,6 +188,7 @@ ChannelServer::~ChannelServer()
     delete[] mAccountManager;
     delete[] mCharacterManager;
     delete[] mChatManager;
+    delete[] mSkillManager;
     delete[] mDefinitionManager;
     delete[] mServerDataManager;
 }
@@ -295,6 +299,11 @@ CharacterManager* ChannelServer::GetCharacterManager() const
 ChatManager* ChannelServer::GetChatManager() const
 {
     return mChatManager;
+}
+
+SkillManager* ChannelServer::GetSkillManager() const
+{
+    return mSkillManager;
 }
 
 libcomp::DefinitionManager* ChannelServer::GetDefinitionManager() const

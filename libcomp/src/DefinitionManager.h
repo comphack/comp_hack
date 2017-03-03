@@ -56,14 +56,13 @@ public:
     DefinitionManager();
     ~DefinitionManager();
 
-    const std::shared_ptr<objects::MiCItemData> GetCItemData(uint32_t id);
-    const std::shared_ptr<objects::MiCItemData> GetCItemData(const libcomp::String& name);
     const std::shared_ptr<objects::MiDevilData> GetDevilData(uint32_t id);
     const std::shared_ptr<objects::MiDevilData> GetDevilData(const libcomp::String& name);
     const std::shared_ptr<objects::MiDevilLVUpRateData> GetDevilLVUpRateData(uint32_t id);
     const std::shared_ptr<objects::MiExpertData> GetExpertClassData(uint32_t id);
     const std::shared_ptr<objects::MiHNPCData> GetHNPCData(uint32_t id);
     const std::shared_ptr<objects::MiItemData> GetItemData(uint32_t id);
+    const std::shared_ptr<objects::MiItemData> GetItemData(const libcomp::String& name);
     const std::shared_ptr<objects::MiONPCData> GetONPCData(uint32_t id);
     const std::shared_ptr<objects::MiSkillData> GetSkillData(uint32_t id);
 
@@ -156,8 +155,6 @@ private:
 
     std::list<uint32_t> mDefaultCharacterSkills;
 
-    std::unordered_map<uint32_t,
-        std::shared_ptr<objects::MiCItemData>> mCItemData;
     std::unordered_map<libcomp::String, uint32_t> mCItemNameLookup;
     
     std::unordered_map<uint32_t,

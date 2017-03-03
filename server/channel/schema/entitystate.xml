@@ -28,11 +28,20 @@
         <member type="float" name="DestinationY"/>
         <member type="float" name="DestinationRotation"/>
         <member type="u64" name="DestinationTicks"/>
+
+        <member type="ActivatedAbility*" name="ActivatedAbility"/>
     </object>
     <object name="CharacterStateObject" baseobject="EntityStateObject" persistent="false">
         <member type="Character*" name="Character"/>
     </object>
     <object name="DemonStateObject" baseobject="EntityStateObject" persistent="false">
         <member type="Demon*" name="Demon"/>
+    </object>
+    <object name="ActivatedAbility" persistent="false">
+        <member type="u32" name="SkillID"/>
+        <member type="s64" name="TargetObjectID"/>
+        <member type="u8" name="ActivationID"/>
+        <member type="u64" name="ActivationTime"/>
+        <member type="u64" name="ChargedTime"/>
     </object>
 </objgen>

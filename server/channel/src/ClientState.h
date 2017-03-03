@@ -103,6 +103,12 @@ public:
     bool SetObjectID(const libobjgen::UUID& uuid, int64_t objectID);
 
     /**
+     * Get the next activated ability ID from 1 to 128.
+     * @return The next activated ability ID for the client
+     */
+    uint8_t GetNextActivatedAbilityID();
+
+    /**
      * Check if the client state has everything needed to start
      * being used.
      * @return true if the state is ready to use, otherwise false
@@ -149,6 +155,8 @@ private:
     /// Current time of the server set upon starting the client
     /// communication.
     ServerTime mStartTime;
+
+    uint8_t mNextActivatedAbilityID;
 };
 
 } // namespace channel

@@ -62,14 +62,19 @@ void SendZoneData(const std::shared_ptr<ChannelServer> server,
     characterManager->ShowEntity(client, cState->GetEntityID());
 
     /// @todo: Populate enemies, other players, etc
-    /// @todo: Fix packet size limit when sending too many NPCs
 
     auto serverDataManager = server->GetServerDataManager();
     /// @todo: remove hardcoded values
     auto zoneData = serverDataManager->GetZoneData(20101);
+
+    // It seems that if NPC data is sent to the client before a previous
+    // NPC was processed and shown, the client will force a log-out. To
+    // counter-act this, all message information of this type will be queued
+    // and sent together at the end.
     for(auto npc : zoneData->GetNPCs())
     {
         int32_t npcID = server->GetNextEntityID();
+
         libcomp::Packet reply;
         reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_NPC_DATA);
         reply.WriteS32Little(npcID);
@@ -81,14 +86,14 @@ void SendZoneData(const std::shared_ptr<ChannelServer> server,
         reply.WriteFloat(npc->GetRotation());
         reply.WriteS16Little(0);    //Unknown
 
-        client->SendPacket(reply);
-
-        characterManager->ShowEntity(client, npcID);
+        client->QueuePacket(reply);
+        characterManager->ShowEntity(client, npcID, true);
     }
 
     for(auto onpc : zoneData->GetObjects())
     {
         int32_t objID = server->GetNextEntityID();
+
         libcomp::Packet reply;
         reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_OBJECT_NPC_DATA);
         reply.WriteS32Little(objID);
@@ -100,10 +105,12 @@ void SendZoneData(const std::shared_ptr<ChannelServer> server,
         reply.WriteFloat(onpc->GetY());
         reply.WriteFloat(onpc->GetRotation());
 
-        client->SendPacket(reply);
-
-        characterManager->ShowEntity(client, objID);
+        client->QueuePacket(reply);
+        characterManager->ShowEntity(client, objID, true);
     }
+
+    // Send all the queued NPC packets
+    client->FlushOutgoing();
 }
 
 bool Parsers::PopulateZone::Parse(libcomp::ManagerPacket *pPacketManager,

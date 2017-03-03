@@ -235,7 +235,7 @@ void CharacterManager::SendCharacterData(const std::shared_ptr<
 }
 
 void CharacterManager::ShowEntity(const std::shared_ptr<
-    ChannelClientConnection>& client, int32_t entityID)
+    ChannelClientConnection>& client, int32_t entityID, bool queue)
 {
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
@@ -244,7 +244,14 @@ void CharacterManager::ShowEntity(const std::shared_ptr<
     reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_SHOW_ENTITY);
     reply.WriteS32Little(entityID);
 
-    client->SendPacket(reply);
+    if(queue)
+    {
+        client->QueuePacket(reply);
+    }
+    else
+    {
+        client->SendPacket(reply);
+    }
 }
 
 void CharacterManager::SendPartnerData(const std::shared_ptr<

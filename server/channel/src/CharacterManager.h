@@ -80,9 +80,11 @@ public:
      * Tell the game client to show an entity.
      * @param client Pointer to the client connection
      * @param entityID ID of the entity to show
+     * @param queue true if the message should be queued, false if
+     *  it should send right away
      */
     void ShowEntity(const std::shared_ptr<
-        ChannelClientConnection>& client, int32_t entityID);
+        ChannelClientConnection>& client, int32_t entityID, bool queue = false);
 
     /**
      * Send updated data about the active demon of the game client.

@@ -35,10 +35,12 @@
 
 using namespace channel;
 
-void SendCharacterData(CharacterManager* characterManager,
+void SendCharacterData(std::shared_ptr<ChannelServer> server,
     const std::shared_ptr<ChannelClientConnection> client)
 {
-    characterManager->SendCharacterData(client);
+    /// @todo: replace with last zone information
+    server->GetZoneManager()->EnterZone(client, 0x00004E85);
+    server->GetCharacterManager()->SendCharacterData(client);
 }
 
 void SendStatusIcon(CharacterManager* characterManager,
@@ -62,7 +64,7 @@ bool Parsers::State::Parse(libcomp::ManagerPacket *pPacketManager,
 
     auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
 
-    server->QueueWork(SendCharacterData, server->GetCharacterManager(), client);
+    server->QueueWork(SendCharacterData, server, client);
     server->QueueWork(SendStatusIcon, server->GetCharacterManager(), client);
 
     return true;

@@ -52,7 +52,7 @@ void SplitStack(const std::shared_ptr<ChannelServer> server,
     std::pair<uint32_t, uint16_t> sourceItem)
 {
     auto state = client->GetClientState();
-    auto character = state->GetCharacterState()->GetCharacter();
+    auto character = state->GetCharacterState()->GetEntity();
     auto itemBox = character->GetItemBoxes(0).Get();
 
     size_t srcSlot = (size_t)sourceItem.first;
@@ -108,7 +108,7 @@ void CombineStacks(const std::shared_ptr<ChannelServer> server,
     uint32_t targetSlot)
 {
     auto state = client->GetClientState();
-    auto character = state->GetCharacterState()->GetCharacter();
+    auto character = state->GetCharacterState()->GetEntity();
     auto itemBox = character->GetItemBoxes(0).Get();
 
     auto targetItem = itemBox->GetItems(targetSlot);

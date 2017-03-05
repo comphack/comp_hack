@@ -57,7 +57,7 @@ void SaveHotbarItems(const std::shared_ptr<ChannelServer> server,
     size_t page, std::vector<HotbarItemRequest> items)
 {
     auto state = client->GetClientState();
-    auto character = state->GetCharacterState()->GetCharacter();
+    auto character = state->GetCharacterState()->GetEntity();
     auto hotbar = character->GetHotbars(page).Get();
 
     if(nullptr == hotbar)

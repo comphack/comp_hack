@@ -115,6 +115,8 @@ enum class ChannelToClientPacketCode_t : uint16_t
     PACKET_PARTNER_DATA = 0x0010,  //!< Message containing data about the client's active demon.
     PACKET_NPC_DATA = 0x0014,  //!< Message containing data about an NPC in a zone.
     PACKET_OBJECT_NPC_DATA = 0x0015,  //!< Message containing data about an object NPC in a zone.
+    PACKET_OTHER_CHARACTER_DATA = 0x0016,  //!< Message containing data about a different client's character.
+    PACKET_OTHER_PARTNER_DATA = 0x0017,  //!< Message containing data about a different client's active demon.
     PACKET_REMOVE_OBJECT = 0x0018,  //!< Message to remove an entity or object.
     PACKET_SHOW_ENTITY = 0x001A,  //!< Message to display a game entity.
     PACKET_MOVE = 0x001D,  //!< Message containing entity or object movement information.

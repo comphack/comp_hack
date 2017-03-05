@@ -44,6 +44,7 @@
 #include "DefinitionManager.h"
 #include "ServerDataManager.h"
 #include "SkillManager.h"
+#include "ZoneManager.h"
 
 namespace channel
 {
@@ -167,6 +168,12 @@ public:
     SkillManager* GetSkillManager() const;
 
     /**
+     * Get a pointer to the zone manager.
+     * @return Pointer to the ZoneManager
+     */
+    ZoneManager* GetZoneManager() const;
+
+    /**
      * Get a pointer to the definition manager.
      * @return Pointer to the DefinitionManager
      */
@@ -243,6 +250,9 @@ protected:
 
     /// Pointer to the Skill Manager.
     SkillManager *mSkillManager;
+
+    /// Pointer to the Zone Manager.
+    ZoneManager *mZoneManager;
 
     /// Pointer to the Definition Manager.
     libcomp::DefinitionManager *mDefinitionManager;

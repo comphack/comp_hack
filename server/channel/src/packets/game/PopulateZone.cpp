@@ -30,88 +30,15 @@
 // libcomp Includes
 #include <Log.h>
 #include <ManagerPacket.h>
-#include <PacketCodes.h>
 #include <ReadOnlyPacket.h>
-#include <ServerDataManager.h>
 #include <TcpConnection.h>
-
-// objects Include
-#include <ServerNPC.h>
-#include <ServerObject.h>
-#include <ServerZone.h>
 
 // channel Includes
 #include "ChannelClientConnection.h"
 #include "ChannelServer.h"
-#include "CharacterManager.h"
+#include "ZoneManager.h"
 
 using namespace channel;
-
-void SendZoneData(const std::shared_ptr<ChannelServer> server,
-    const std::shared_ptr<ChannelClientConnection> client,
-    int32_t characterUID)
-{
-    (void)characterUID;
-
-    auto state = client->GetClientState();
-    auto cState = state->GetCharacterState();
-
-    // The client's partner demon will be shown elsewhere
-
-    auto characterManager = server->GetCharacterManager();
-    characterManager->ShowEntity(client, cState->GetEntityID());
-
-    /// @todo: Populate enemies, other players, etc
-
-    auto serverDataManager = server->GetServerDataManager();
-    /// @todo: remove hardcoded values
-    auto zoneData = serverDataManager->GetZoneData(20101);
-
-    // It seems that if NPC data is sent to the client before a previous
-    // NPC was processed and shown, the client will force a log-out. To
-    // counter-act this, all message information of this type will be queued
-    // and sent together at the end.
-    for(auto npc : zoneData->GetNPCs())
-    {
-        int32_t npcID = server->GetNextEntityID();
-
-        libcomp::Packet reply;
-        reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_NPC_DATA);
-        reply.WriteS32Little(npcID);
-        reply.WriteU32Little(npc->GetID());
-        reply.WriteS32Little((int32_t)zoneData->GetSet());
-        reply.WriteS32Little((int32_t)zoneData->GetID());
-        reply.WriteFloat(npc->GetX());
-        reply.WriteFloat(npc->GetY());
-        reply.WriteFloat(npc->GetRotation());
-        reply.WriteS16Little(0);    //Unknown
-
-        client->QueuePacket(reply);
-        characterManager->ShowEntity(client, npcID, true);
-    }
-
-    for(auto onpc : zoneData->GetObjects())
-    {
-        int32_t objID = server->GetNextEntityID();
-
-        libcomp::Packet reply;
-        reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_OBJECT_NPC_DATA);
-        reply.WriteS32Little(objID);
-        reply.WriteU32Little(onpc->GetID());
-        reply.WriteU8(onpc->GetState());
-        reply.WriteS32Little((int32_t)zoneData->GetSet());
-        reply.WriteS32Little((int32_t)zoneData->GetID());
-        reply.WriteFloat(onpc->GetX());
-        reply.WriteFloat(onpc->GetY());
-        reply.WriteFloat(onpc->GetRotation());
-
-        client->QueuePacket(reply);
-        characterManager->ShowEntity(client, objID, true);
-    }
-
-    // Send all the queued NPC packets
-    client->FlushOutgoing();
-}
 
 bool Parsers::PopulateZone::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
@@ -134,8 +61,10 @@ bool Parsers::PopulateZone::Parse(libcomp::ManagerPacket *pPacketManager,
     }
 
     auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-
-    server->QueueWork(SendZoneData, server, client, characterUID);
+    server->QueueWork([](ZoneManager* manager, const std::shared_ptr<ChannelClientConnection> c)
+                    {
+                        manager->SendPopulateZoneData(c);
+                    }, server->GetZoneManager(), client);
 
     return true;
 }

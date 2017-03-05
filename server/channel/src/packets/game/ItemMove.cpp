@@ -50,7 +50,7 @@ void MoveItem(const std::shared_ptr<ChannelClientConnection>& client,
     const std::shared_ptr<objects::ItemBox> destBox, size_t destSlot)
 {
     auto state = client->GetClientState();
-    auto character = state->GetCharacterState()->GetCharacter();
+    auto character = state->GetCharacterState()->GetEntity();
     auto item = std::dynamic_pointer_cast<objects::Item>(
         libcomp::PersistentObject::GetObjectByUUID(
             state->GetObjectUUID(itemID)));
@@ -100,7 +100,7 @@ bool Parsers::ItemMove::Parse(libcomp::ManagerPacket *pPacketManager,
     int64_t destBoxID = p.ReadS64Little();
     int16_t destSlot = p.ReadS16Little();
     auto character = client->GetClientState()->
-        GetCharacterState()->GetCharacter();
+        GetCharacterState()->GetEntity();
 
     std::shared_ptr<objects::ItemBox> sourceBox;
     if(sourceType == 0 && sourceBoxID == 0)

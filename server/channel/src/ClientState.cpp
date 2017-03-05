@@ -61,6 +61,20 @@ std::shared_ptr<DemonState> ClientState::GetDemonState()
     return mDemonState;
 }
 
+std::shared_ptr<ActiveEntityState> ClientState::GetEntityState(int32_t entityID)
+{
+    std::list<std::shared_ptr<ActiveEntityState>> states = { mCharacterState, mDemonState };
+    for(auto state : states)
+    {
+        if(state->GetEntityID() == entityID && state->Ready())
+        {
+            return state;
+        }
+    }
+
+    return nullptr;
+}
+
 int64_t ClientState::GetObjectID(const libobjgen::UUID& uuid) const
 {
     auto uuidStr = uuid.ToString();
@@ -102,6 +116,7 @@ bool ClientState::SetObjectID(const libobjgen::UUID& uuid, int64_t objectID)
 
 uint8_t ClientState::GetNextActivatedAbilityID()
 {
+    std::lock_guard<std::mutex> lock(mLock);
     uint8_t next = mNextActivatedAbilityID;
 
     mNextActivatedAbilityID = (uint8_t)((mNextActivatedAbilityID + 1) % 128);

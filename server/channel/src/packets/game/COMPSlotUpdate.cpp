@@ -54,7 +54,7 @@ void UpdateCOMPSlots(const std::shared_ptr<ChannelServer> server,
 
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
-    auto character = cState->GetCharacter().Get();
+    auto character = cState->GetEntity();
     auto srcDemon = std::dynamic_pointer_cast<objects::Demon>(
         libcomp::PersistentObject::GetObjectByUUID(state->GetObjectUUID(demonID)));
     
@@ -106,7 +106,7 @@ bool Parsers::COMPSlotUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
     auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
     auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
     auto state = client->GetClientState();
-    auto character = state->GetCharacterState()->GetCharacter().Get();
+    auto character = state->GetCharacterState()->GetEntity();
 
     if(state->GetObjectUUID(demonID).IsNull())
     {

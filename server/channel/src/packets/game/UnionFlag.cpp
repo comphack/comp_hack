@@ -35,10 +35,6 @@
 // channel Includes
 #include "ChannelServer.h"
 
-// objects Includes
-#include <Character.h>
-#include <EntityStats.h>
-
 using namespace channel;
 
 bool Parsers::UnionFlag::Parse(libcomp::ManagerPacket *pPacketManager,

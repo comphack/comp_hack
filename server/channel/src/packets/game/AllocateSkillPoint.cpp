@@ -38,10 +38,6 @@
 // channel Includes
 #include "ChannelServer.h"
 
-// objects Includes
-#include <Character.h>
-#include <EntityStats.h>
-
 using namespace channel;
 
 int32_t GetPointCost(int16_t val)
@@ -55,7 +51,7 @@ void AllocatePoint(const std::shared_ptr<ChannelServer> server,
 {
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
-    auto character = cState->GetCharacter().Get();
+    auto character = cState->GetEntity();
     auto stats = character->GetCoreStats().Get();
 
     int32_t pointCost = 0;

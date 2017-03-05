@@ -38,9 +38,6 @@
 #include "ChannelServer.h"
 
 // object Includes
-#include <Character.h>
-#include <Demon.h>
-#include <EntityStats.h>
 #include <Expertise.h>
 #include <InheritedSkill.h>
 #include <Item.h>
@@ -58,6 +55,7 @@
 #include <MiNPCBasicData.h>
 #include <MiPossessionData.h>
 #include <MiSkillData.h>
+#include <ServerZone.h>
 #include <StatusEffect.h>
 
 const uint64_t LevelXPRequirements[] = {
@@ -89,7 +87,7 @@ void CharacterManager::SendCharacterData(const std::shared_ptr<
 {
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
-    auto c = cState->GetCharacter().Get();
+    auto c = cState->GetEntity();
     auto cs = c->GetCoreStats().Get();
 
     libcomp::Packet reply;
@@ -103,8 +101,7 @@ void CharacterManager::SendCharacterData(const std::shared_ptr<
     reply.WriteU8(c->GetSkinType());
     reply.WriteU8(c->GetHairType());
     reply.WriteU8(c->GetHairColor());
-    reply.WriteU8(c->GetGender() == objects::Character::Gender_t::MALE
-        ? 0x03 : 0x65); // One of these is wrong
+    reply.WriteU8(c->GetEyeType());
     reply.WriteU8(c->GetRightEyeColor());
     reply.WriteU8(c->GetFaceType());
     reply.WriteU8(c->GetLeftEyeColor());
@@ -205,11 +202,11 @@ void CharacterManager::SendCharacterData(const std::shared_ptr<
     reply.WriteS64Little(-1);
     reply.WriteS64Little(-1);
 
-    //BfZonePtr zone = state->zoneInst()->zone();
+    auto zone = mServer.lock()->GetZoneManager()->GetZoneInstance(client);
+    auto zoneDef = zone->GetDefinition();
 
-    /// @todo: zone position
-    reply.WriteS32Little(1);    //set
-    reply.WriteS32Little(0x00004E85); // Zone ID (not UID)
+    reply.WriteS32Little((int32_t)zoneDef->GetSet());
+    reply.WriteS32Little((int32_t)zoneDef->GetID());
     reply.WriteFloat(cState->GetDestinationX());
     reply.WriteFloat(cState->GetDestinationY());
     reply.WriteFloat(cState->GetDestinationRotation());
@@ -234,12 +231,119 @@ void CharacterManager::SendCharacterData(const std::shared_ptr<
     client->SendPacket(reply);
 }
 
+void CharacterManager::SendOtherCharacterData(const std::shared_ptr<
+    ChannelClientConnection>& client, ClientState *otherState)
+{
+    auto state = client->GetClientState();
+    auto cState = otherState->GetCharacterState();
+    auto c = cState->GetEntity();
+    auto cs = c->GetCoreStats().Get();
+
+    libcomp::Packet reply;
+    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_OTHER_CHARACTER_DATA);
+
+    reply.WriteS32Little(cState->GetEntityID());
+    reply.WriteString16Little(libcomp::Convert::ENCODING_CP932,
+        c->GetName(), true);
+    reply.WriteU32Little(0); // Special Title
+    reply.WriteS32Little(otherState->GetDemonState()->GetEntityID());
+    reply.WriteU8((uint8_t)c->GetGender());
+    reply.WriteU8(c->GetSkinType());
+    reply.WriteU8(c->GetHairType());
+    reply.WriteU8(c->GetHairColor());
+    reply.WriteU8(c->GetEyeType());
+    reply.WriteU8(c->GetRightEyeColor());
+    reply.WriteU8(c->GetFaceType());
+    reply.WriteU8(c->GetLeftEyeColor());
+    reply.WriteU8(0x00); // Unknown
+    reply.WriteU8(0x01); // Unknown bool
+
+    for(size_t i = 0; i < 15; i++)
+    {
+        auto equip = c->GetEquippedItems(i);
+
+        if(!equip.IsNull())
+        {
+            reply.WriteU32Little(equip->GetType());
+        }
+        else
+        {
+            reply.WriteU32Little(static_cast<uint32_t>(-1));
+        }
+    }
+
+    reply.WriteS16Little(cState->GetMaxHP());
+    reply.WriteS16Little(cState->GetMaxMP());
+    reply.WriteS16Little(cs->GetHP());
+    reply.WriteS16Little(cs->GetMP());
+    reply.WriteS8(cs->GetLevel());
+    reply.WriteS16Little(c->GetLNC());
+    
+    size_t statusEffectCount = c->StatusEffectsCount();
+    reply.WriteU32Little(static_cast<uint32_t>(statusEffectCount));
+    for(auto effect : c->GetStatusEffects())
+    {
+        reply.WriteU32Little(effect->GetEffect());
+        reply.WriteFloat(state->ToClientTime(
+            (ServerTime)effect->GetDuration()));
+        reply.WriteU8(effect->GetStack());
+    }
+
+    // Unknown
+    reply.WriteS64Little(-1);
+    reply.WriteS64Little(-1);
+
+    auto zone = mServer.lock()->GetZoneManager()->GetZoneInstance(client);
+    auto zoneDef = zone->GetDefinition();
+
+    reply.WriteS32Little((int32_t)zoneDef->GetSet());
+    reply.WriteS32Little((int32_t)zoneDef->GetID());
+    reply.WriteFloat(cState->GetDestinationX());
+    reply.WriteFloat(cState->GetDestinationY());
+    reply.WriteFloat(cState->GetDestinationRotation());
+
+    reply.WriteU8(0);   //Unknown bool
+    reply.WriteS8(0);   // Unknown
+    reply.WriteString16Little(libcomp::Convert::ENCODING_CP932,
+        "Unknown", true);
+    reply.WriteS8(0);   // Unknown
+    reply.WriteS8(0);   // Unknown
+    reply.WriteS8(0);   // Unknown
+
+    reply.WriteU8(0);   //Unknown
+    reply.WriteU8(0);   //Unknown
+    reply.WriteU8(0);   //Unknown
+    reply.WriteU8(0);   //Unknown
+    reply.WriteU8(0);   //Unknown
+    reply.WriteU8(0);   //Unknown
+    reply.WriteU8(0);   //Unknown
+    reply.WriteU8(0);   //Unknown
+
+    for(size_t i = 0; i < 13; i++)
+    {
+        reply.WriteS16Little(0);    //Unknown
+    }
+
+    reply.WriteU8(0);   //Unknown bool
+    reply.WriteS8(0);   // Unknown
+    reply.WriteS32(0);  // Unknown
+    reply.WriteS8(0);   // Unknown
+    
+    /// @todo: Virtual Appearance
+    size_t vaCount = 0;
+    reply.WriteS32(static_cast<int32_t>(vaCount));
+    for(size_t i = 0; i < vaCount; i++)
+    {
+        reply.WriteS8(0);   // Equipment Slot
+        reply.WriteU32Little(0);    // VA Item Type
+    }
+
+    client->SendPacket(reply);
+}
+
 void CharacterManager::ShowEntity(const std::shared_ptr<
     ChannelClientConnection>& client, int32_t entityID, bool queue)
 {
-    auto state = client->GetClientState();
-    auto cState = state->GetCharacterState();
-
     libcomp::Packet reply;
     reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_SHOW_ENTITY);
     reply.WriteS32Little(entityID);
@@ -254,16 +358,26 @@ void CharacterManager::ShowEntity(const std::shared_ptr<
     }
 }
 
+void CharacterManager::ShowEntityToZone(const std::shared_ptr<
+    ChannelClientConnection>& client, int32_t entityID)
+{
+    libcomp::Packet reply;
+    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_SHOW_ENTITY);
+    reply.WriteS32Little(entityID);
+
+    mServer.lock()->GetZoneManager()->BroadcastPacket(client, reply, true);
+}
+
 void CharacterManager::SendPartnerData(const std::shared_ptr<
     ChannelClientConnection>& client)
 {
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
     auto dState = state->GetDemonState();
-    auto character = cState->GetCharacter();
+    auto character = cState->GetEntity();
     auto comp = character->GetCOMP();
 
-    auto d = dState->GetDemon().Get();
+    auto d = dState->GetEntity();
     if(d == nullptr)
     {
         return;
@@ -283,7 +397,7 @@ void CharacterManager::SendPartnerData(const std::shared_ptr<
     {
         LOG_ERROR(libcomp::String("Parter demon encountered that does not"
             " exist in the COMP of character: %1\n").Arg(
-                character.GetUUID().ToString()));
+                character->GetUUID().ToString()));
         return;
     }
 
@@ -343,9 +457,11 @@ void CharacterManager::SendPartnerData(const std::shared_ptr<
     reply.WriteS64Little(-1);
     reply.WriteS64Little(-1);
 
-    /// @todo: zone position
-    reply.WriteS32Little(1);    //set
-    reply.WriteS32Little(0x00004E85); // Zone ID (not UID)
+    auto zone = mServer.lock()->GetZoneManager()->GetZoneInstance(client);
+    auto zoneDef = zone->GetDefinition();
+
+    reply.WriteS32Little((int32_t)zoneDef->GetSet());
+    reply.WriteS32Little((int32_t)zoneDef->GetID());
     reply.WriteFloat(dState->GetDestinationX());
     reply.WriteFloat(dState->GetDestinationY());
     reply.WriteFloat(dState->GetDestinationRotation());
@@ -403,6 +519,56 @@ void CharacterManager::SendPartnerData(const std::shared_ptr<
     client->SendPacket(reply);
 }
 
+void CharacterManager::SendOtherPartnerData(const std::shared_ptr<
+    ChannelClientConnection>& client, ClientState *otherState)
+{
+    auto state = client->GetClientState();
+    auto dState = otherState->GetDemonState();
+    auto d = dState->GetEntity();
+    auto ds = d->GetCoreStats().Get();
+
+    libcomp::Packet reply;
+    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_OTHER_PARTNER_DATA);
+    reply.WriteS32Little(dState->GetEntityID());
+    reply.WriteU32Little(d->GetType());
+    reply.WriteS32Little(otherState->GetDemonState()->GetEntityID());
+    reply.WriteS16Little(dState->GetMaxHP());
+    reply.WriteS16Little(ds->GetHP());
+    reply.WriteS8(ds->GetLevel());
+    
+    size_t statusEffectCount = d->StatusEffectsCount();
+    reply.WriteU32Little(static_cast<uint32_t>(statusEffectCount));
+    for(auto effect : d->GetStatusEffects())
+    {
+        reply.WriteU32Little(effect->GetEffect());
+        reply.WriteFloat(state->ToClientTime(
+            (ServerTime)effect->GetDuration()));    //Registered as int32?
+        reply.WriteU8(effect->GetStack());
+    }
+
+    // Unknown
+    reply.WriteS64Little(-1);
+    reply.WriteS64Little(-1);
+
+    auto zone = mServer.lock()->GetZoneManager()->GetZoneInstance(client);
+    auto zoneDef = zone->GetDefinition();
+
+    reply.WriteS32Little((int32_t)zoneDef->GetSet());
+    reply.WriteS32Little((int32_t)zoneDef->GetID());
+    reply.WriteFloat(dState->GetDestinationX());
+    reply.WriteFloat(dState->GetDestinationY());
+    reply.WriteFloat(dState->GetDestinationRotation());
+
+    reply.WriteU8(0);   //Unknown bool
+
+    reply.WriteS16Little(0);    //Unknown
+    reply.WriteS16Little(0);    //Unknown
+    reply.WriteU16Little(0);    //Unknown
+    reply.WriteU8(0);   //Unknown
+
+    client->SendPacket(reply);
+}
+
 void CharacterManager::SendCOMPDemonData(const std::shared_ptr<
     ChannelClientConnection>& client,
     int8_t box, int8_t slot, int64_t id)
@@ -410,7 +576,7 @@ void CharacterManager::SendCOMPDemonData(const std::shared_ptr<
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
     auto dState = state->GetDemonState();
-    auto comp = cState->GetCharacter()->GetCOMP();
+    auto comp = cState->GetEntity()->GetCOMP();
 
     auto d = comp[(size_t)slot].Get();
     if(d == nullptr || state->GetObjectID(d->GetUUID()) != id)
@@ -419,7 +585,7 @@ void CharacterManager::SendCOMPDemonData(const std::shared_ptr<
     }
 
     auto cs = d->GetCoreStats().Get();
-    bool isSummoned = dState->GetDemon().Get() == d;
+    bool isSummoned = dState->GetEntity() == d;
 
     libcomp::Packet reply;
     reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_COMP_DEMON_DATA);
@@ -537,7 +703,7 @@ void CharacterManager::SummonDemon(const std::shared_ptr<
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
     auto dState = state->GetDemonState();
-    auto character = cState->GetCharacter().Get();
+    auto character = cState->GetEntity();
 
     auto demon = std::dynamic_pointer_cast<objects::Demon>(
         libcomp::PersistentObject::GetObjectByUUID(state->GetObjectUUID(demonID)));
@@ -547,7 +713,7 @@ void CharacterManager::SummonDemon(const std::shared_ptr<
     }
 
     character->SetActiveDemon(demon);
-    dState->SetDemon(demon);
+    dState->SetEntity(demon);
     dState->SetDestinationX(cState->GetDestinationX());
     dState->SetDestinationY(cState->GetDestinationY());
 
@@ -555,7 +721,7 @@ void CharacterManager::SummonDemon(const std::shared_ptr<
     reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_PARTNER_SUMMONED);
     reply.WriteS64Little(demonID);
 
-    client->SendPacket(reply);
+    mServer.lock()->GetZoneManager()->BroadcastPacket(client, reply, true);
 }
 
 void CharacterManager::StoreDemon(const std::shared_ptr<
@@ -564,23 +730,22 @@ void CharacterManager::StoreDemon(const std::shared_ptr<
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
     auto dState = state->GetDemonState();
-    auto character = cState->GetCharacter().Get();
+    auto character = cState->GetEntity();
 
-    auto dRef = dState->GetDemon();
-    if(dRef.IsNull())
+    auto demon = dState->GetEntity();
+    if(nullptr == demon)
     {
         return;
     }
 
-    dRef.SetReference(nullptr);
-    character->SetActiveDemon(dRef);
-    dState->SetDemon(dRef);
+    dState->SetEntity(nullptr);
+    character->SetActiveDemon(NULLUUID);
 
     libcomp::Packet reply;
     reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_REMOVE_OBJECT);
     reply.WriteS32Little(dState->GetEntityID());
 
-    client->SendPacket(reply);
+    mServer.lock()->GetZoneManager()->BroadcastPacket(client, reply, true);
 }
 
 void CharacterManager::SendItemBoxData(const std::shared_ptr<
@@ -600,7 +765,7 @@ void CharacterManager::SendItemBoxData(const std::shared_ptr<
 {
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
-    auto character = cState->GetCharacter();
+    auto character = cState->GetEntity();
     auto box = character->GetItemBoxes((size_t)boxID);
 
     bool updateMode = slots.size() < 50;
@@ -759,7 +924,7 @@ bool CharacterManager::AddRemoveItem(const std::shared_ptr<
 {
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
-    auto character = cState->GetCharacter().Get();
+    auto character = cState->GetEntity();
     auto itemBox = character->GetItemBoxes(0).Get();
 
     auto server = mServer.lock();
@@ -940,7 +1105,7 @@ void CharacterManager::EquipItem(const std::shared_ptr<
 {
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
-    auto character = cState->GetCharacter().Get();
+    auto character = cState->GetEntity();
     auto equip = std::dynamic_pointer_cast<objects::Item>(
         libcomp::PersistentObject::GetObjectByUUID(
             state->GetObjectUUID(itemID)));
@@ -1041,7 +1206,7 @@ void CharacterManager::UpdateLNC(const std::shared_ptr<
 {
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
-    auto character = cState->GetCharacter().Get();
+    auto character = cState->GetEntity();
 
     character->SetLNC(lnc);
 
@@ -1135,28 +1300,25 @@ void CharacterManager::ExperienceGain(const std::shared_ptr<
 
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
-    auto character = cState->GetCharacter().Get();
+    auto character = cState->GetEntity();
     auto dState = state->GetDemonState();
-    auto demon = dState->GetDemon().Get();
+    auto demon = dState->GetEntity();
 
-    bool isDemon = false;
-    std::shared_ptr<objects::EntityStats> stats;
-    std::shared_ptr<objects::MiDevilData> demonData;
-    if(cState->GetEntityID() == entityID)
-    {
-        stats = character->GetCoreStats().Get();
-    }
-    else if(dState->GetEntityID() == entityID && nullptr != demon)
-    {
-        stats = demon->GetCoreStats().Get();
-        isDemon = true;
-        demonData = definitionManager->GetDevilData(demon->GetType());
-    }
-    else
+    auto eState = state->GetEntityState(entityID);
+    if(nullptr == eState)
     {
         return;
     }
 
+    bool isDemon = false;
+    std::shared_ptr<objects::MiDevilData> demonData;
+    if(eState == dState)
+    {
+        isDemon = true;
+        demonData = definitionManager->GetDevilData(demon->GetType());
+    }
+
+    auto stats = eState->GetCoreStats();
     auto level = stats->GetLevel();
     if(level == 99)
     {
@@ -1222,8 +1384,7 @@ void CharacterManager::ExperienceGain(const std::shared_ptr<
             reply.WriteS32Little(points);
         }
 
-        /// @todo: send to all players in the zone
-        client->SendPacket(reply);
+        server->GetZoneManager()->BroadcastPacket(client, reply, true);
     }
 
     stats->SetXP(xpDelta);
@@ -1235,7 +1396,7 @@ void CharacterManager::ExperienceGain(const std::shared_ptr<
     reply.WriteS32Little((int32_t)xpGain);
     reply.WriteS32Little(0);    //Unknown
 
-    /// @todo: send to all players in the zone
+    /// @todo: send to all players in the zone?
     client->SendPacket(reply);
 }
 
@@ -1248,23 +1409,13 @@ void CharacterManager::LevelUp(const std::shared_ptr<
     }
 
     auto state = client->GetClientState();
-    auto cState = state->GetCharacterState();
-    auto dState = state->GetDemonState();
-
-    std::shared_ptr<objects::EntityStats> stats;
-    if(cState->GetEntityID() == entityID)
-    {
-        stats = cState->GetCharacter()->GetCoreStats().Get();
-    }
-    else if(dState->GetEntityID() == entityID && !dState->GetDemon().IsNull())
-    {
-        stats = dState->GetDemon()->GetCoreStats().Get();
-    }
-    else
+    auto eState = state->GetEntityState(entityID);
+    if(nullptr == eState)
     {
         return;
     }
 
+    auto stats = eState->GetCoreStats();
     uint64_t xpGain = 0;
     for(int8_t i = stats->GetLevel(); i < level; i++)
     {
@@ -1289,7 +1440,7 @@ void CharacterManager::UpdateExpertise(const std::shared_ptr<
 
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
-    auto character = cState->GetCharacter().Get();
+    auto character = cState->GetEntity();
 
     auto skill = definitionManager->GetSkillData(skillID);
     if(nullptr == skill)
@@ -1567,7 +1718,7 @@ void CharacterManager::GetCOMPSlotPacketData(libcomp::Packet& p,
     const std::shared_ptr<channel::ChannelClientConnection>& client, size_t slot)
 {
     auto state = client->GetClientState();
-    auto demon = state->GetCharacterState()->GetCharacter()->GetCOMP(slot).Get();
+    auto demon = state->GetCharacterState()->GetEntity()->GetCOMP(slot).Get();
 
     p.WriteS8(static_cast<int8_t>(slot)); // Slot
     p.WriteS64Little(nullptr != demon
@@ -1603,7 +1754,7 @@ void CharacterManager::GetCOMPSlotPacketData(libcomp::Packet& p,
 
 void CharacterManager::GetEntityStatsPacketData(libcomp::Packet& p,
     const std::shared_ptr<objects::EntityStats>& coreStats,
-    const std::shared_ptr<objects::EntityStateObject>& state,
+    const std::shared_ptr<ActiveEntityState>& state,
     bool boostFormat)
 {
     auto baseOnly = state == nullptr;

@@ -31,11 +31,8 @@
 #include <PacketCodes.h>
 
 // object Includes
-#include <Account.h>
 #include <AccountLogin.h>
 #include <Character.h>
-#include <Demon.h>
-#include <EntityStats.h>
 #include <MiItemData.h>
 #include <MiDevilData.h>
 #include <MiNPCBasicData.h>
@@ -66,7 +63,7 @@ bool ChatManager::SendChatMessage(const std::shared_ptr<
     }
 
     auto character = client->GetClientState()->GetCharacterState()
-        ->GetCharacter();
+        ->GetEntity();
     libcomp::String sentFrom = character->GetName();
 
     ChatVis_t visibility = ChatVis_t::CHAT_VIS_SELF;
@@ -172,10 +169,9 @@ bool ChatManager::GMCommand_Contract(const std::shared_ptr<
     }
 
     auto state = client->GetClientState();
-    auto character = state->GetCharacterState()
-        ->GetCharacter();
+    auto character = state->GetCharacterState()->GetEntity();
 
-    auto demon = characterManager->ContractDemon(character.Get(),
+    auto demon = characterManager->ContractDemon(character,
         definitionManager->GetDevilData((uint32_t)demonID),
         nullptr);
     if(nullptr == demon)
@@ -286,13 +282,13 @@ bool ChatManager::GMCommand_LevelUp(const std::shared_ptr<
     if(isDemon)
     {
         entityID = state->GetDemonState()->GetEntityID();
-        currentLevel = state->GetDemonState()->GetDemon()
+        currentLevel = state->GetDemonState()->GetEntity()
             ->GetCoreStats()->GetLevel();
     }
     else
     {
         entityID = state->GetCharacterState()->GetEntityID();
-        currentLevel = state->GetCharacterState()->GetCharacter()
+        currentLevel = state->GetCharacterState()->GetEntity()
             ->GetCoreStats()->GetLevel();
     }
 

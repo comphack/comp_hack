@@ -101,7 +101,7 @@ bool Parsers::Chat::Parse(libcomp::ManagerPacket *pPacketManager,
             return true;
         }
 
-        libcomp::String sentFrom = state->GetCharacterState()->GetCharacter()
+        libcomp::String sentFrom = state->GetCharacterState()->GetEntity()
             ->GetName();
         LOG_INFO(libcomp::String("[GM] %1: %2\n").Arg(sentFrom).Arg(line));
 

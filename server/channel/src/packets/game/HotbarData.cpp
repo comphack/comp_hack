@@ -49,7 +49,7 @@ void SendHotbarData(const std::shared_ptr<ChannelClientConnection> client,
 {
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
-    auto character = cState->GetCharacter();
+    auto character = cState->GetEntity();
     auto hotbar = character->GetHotbars(page).Get();
 
     libcomp::Packet reply;

@@ -35,9 +35,6 @@
 #include <TcpConnection.h>
 
 // object Includes
-#include <Character.h>
-#include <Demon.h>
-#include <EntityStats.h>
 #include <InheritedSkill.h>
 #include <StatusEffect.h>
 

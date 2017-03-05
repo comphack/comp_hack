@@ -68,7 +68,7 @@ bool Parsers::ToggleExpertise::Parse(libcomp::ManagerPacket *pPacketManager,
         return false;
     }
 
-    auto character = cState->GetCharacter().Get();
+    auto character = cState->GetEntity();
     auto expertise = character->GetExpertises((size_t)expID).Get();
     if(nullptr == expertise)
     {

@@ -33,10 +33,7 @@
 // object Includes
 #include <Account.h>
 #include <AccountLogin.h>
-#include <Character.h>
 #include <CharacterProgress.h>
-#include <Demon.h>
-#include <EntityStats.h>
 #include <Expertise.h>
 #include <Hotbar.h>
 #include <Item.h>
@@ -106,13 +103,13 @@ void AccountManager::HandleLoginResponse(const std::shared_ptr<
     if(InitializeCharacter(character, state))
     {
         auto charState = state->GetCharacterState();
-        charState->SetCharacter(character);
+        charState->SetEntity(character.Get());
         charState->SetEntityID(server->GetNextEntityID());
         charState->RecalculateStats(server->GetDefinitionManager());
 
         // If we don't have an active demon, set up the state anyway
         auto demonState = state->GetDemonState();
-        demonState->SetDemon(character->GetActiveDemon());
+        demonState->SetEntity(character->GetActiveDemon().Get());
         demonState->SetEntityID(server->GetNextEntityID());
         demonState->RecalculateStats(server->GetDefinitionManager());
 
@@ -171,7 +168,7 @@ void AccountManager::Logout(const std::shared_ptr<
     auto managerConnection = server->GetManagerConnection();
     auto state = client->GetClientState();
     auto account = state->GetAccountLogin()->GetAccount().Get();
-    auto character = state->GetCharacterState()->GetCharacter().Get();
+    auto character = state->GetCharacterState()->GetEntity();
 
     if(nullptr == account || nullptr == character)
     {
@@ -192,6 +189,7 @@ void AccountManager::Logout(const std::shared_ptr<
 
     //Remove the connection if it hasn't been removed already.
     managerConnection->RemoveClientConnection(client);
+    server->GetZoneManager()->LeaveZone(client);
 
     libcomp::ObjectReference<
         objects::Account>::Unload(account->GetUUID());
@@ -430,7 +428,7 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
 
 bool AccountManager::LogoutCharacter(channel::ClientState* state)
 {
-    auto character = state->GetCharacterState()->GetCharacter().Get();
+    auto character = state->GetCharacterState()->GetEntity();
 
     /// @todo: detach character from anything using it
 

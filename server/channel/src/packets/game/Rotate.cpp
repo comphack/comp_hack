@@ -38,7 +38,6 @@
 // channel Includes
 #include "ChannelClientConnection.h"
 #include "ChannelServer.h"
-#include "CharacterState.h"
 #include "ClientState.h"
 
 using namespace channel;
@@ -55,21 +54,11 @@ bool Parsers::Rotate::Parse(libcomp::ManagerPacket *pPacketManager,
     auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
     auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
     auto state = client->GetClientState();
-    auto cState = state->GetCharacterState();
-    auto dState = state->GetDemonState();
 
     int32_t entityID = p.ReadS32Little();
 
-    std::shared_ptr<objects::EntityStateObject> eState;
-    if(cState->GetEntityID() == entityID)
-    {
-        eState = std::dynamic_pointer_cast<objects::EntityStateObject>(cState);
-    }
-    else if(nullptr != dState && dState->GetEntityID() == entityID)
-    {
-        eState = std::dynamic_pointer_cast<objects::EntityStateObject>(dState);
-    }
-    else
+    auto eState = state->GetEntityState(entityID);
+    if(nullptr == eState)
     {
         LOG_ERROR(libcomp::String("Invalid entity ID received from a rotate request: %1\n")
             .Arg(entityID));
@@ -93,15 +82,32 @@ bool Parsers::Rotate::Parse(libcomp::ManagerPacket *pPacketManager,
     eState->SetOriginRotation(eState->GetDestinationRotation());
     eState->SetDestinationRotation(rotation);
 
-    /// @todo: Send to the whole rest of the zone
-    /*libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_ROTATE_RESPNOSE);
-    reply.WriteS32Little(entityID);
-    reply.WriteFloat(rotation);
-    reply.WriteFloat(start);
-    reply.WriteFloat(stop);
 
-    connection->SendPacket(reply); */
+    auto zoneConnections = server->GetZoneManager()->GetZoneInstance(client)->GetConnections();
+    if(zoneConnections.size() > 1)
+    {
+        libcomp::Packet reply;
+        reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_ROTATE);
+        reply.WriteS32Little(entityID);
+        reply.WriteFloat(rotation);
+
+        // Times must be sent relative to the other players
+        uint32_t timePos = reply.Size();
+        for(auto connectionPair : zoneConnections)
+        {
+            auto zConnection = connectionPair.second;
+            if(zConnection != client)
+            {
+                auto otherState = zConnection->GetClientState();
+
+                reply.Seek(timePos);
+                reply.WriteFloat(otherState->ToClientTime(startTime));
+                reply.WriteFloat(otherState->ToClientTime(stopTime));
+
+                zConnection->SendPacket(reply);
+            }
+        }
+    }
 
     return true;
 }

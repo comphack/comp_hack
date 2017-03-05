@@ -30,30 +30,34 @@ FILE(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/objgen)
 
 SET(${PROJECT_NAME}_SRCS
     src/AccountManager.cpp
+    src/ActiveEntityState.cpp
     src/ChannelClientConnection.cpp
     src/ChannelServer.cpp
     src/CharacterManager.cpp
-    src/CharacterState.cpp
     src/ChatManager.cpp
     src/ClientState.cpp
-    src/DemonState.cpp
+    src/EntityState.cpp
     src/ManagerConnection.cpp
     src/SkillManager.cpp
+    src/Zone.cpp
+    src/ZoneManager.cpp
     src/main.cpp
 )
 
 SET(${PROJECT_NAME}_HDRS
     src/AccountManager.h
+    src/ActiveEntityState.h
     src/ChannelClientConnection.h
     src/ChannelServer.h
     src/CharacterManager.h
-    src/CharacterState.h
     src/ChatManager.h
     src/ClientState.h
-    src/DemonState.h
+    src/EntityState.h
     src/ManagerConnection.h
     src/Packets.h
     src/SkillManager.h
+    src/Zone.h
+    src/ZoneManager.h
 )
 
 SET(${PROJECT_NAME}_SCHEMA
@@ -78,14 +82,12 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     # Output files
     ActivatedAbility.h
     ActivatedAbility.cpp
+    ActiveEntityStateObject.h
+    ActiveEntityStateObject.cpp
     ChannelConfig.h
     ChannelConfig.cpp
-    CharacterStateObject.h
-    CharacterStateObject.cpp
     ClientStateObject.h
     ClientStateObject.cpp
-    DemonStateObject.h
-    DemonStateObject.cpp
     EntityStateObject.h
     EntityStateObject.cpp
 )

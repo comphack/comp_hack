@@ -43,7 +43,8 @@ using namespace channel;
 ChannelServer::ChannelServer(std::shared_ptr<objects::ServerConfig> config,
     const libcomp::String& configPath) : libcomp::BaseServer(config, configPath),
     mAccountManager(0), mCharacterManager(0), mChatManager(0), mSkillManager(0),
-    mDefinitionManager(0), mServerDataManager(0), mMaxEntityID(0), mMaxObjectID(0)
+    mZoneManager(0), mDefinitionManager(0), mServerDataManager(0),
+    mMaxEntityID(0), mMaxObjectID(0)
 {
 }
 
@@ -179,6 +180,7 @@ bool ChannelServer::Initialize()
     mCharacterManager = new CharacterManager(channelPtr);
     mChatManager = new ChatManager(channelPtr);
     mSkillManager = new SkillManager(channelPtr);
+    mZoneManager = new ZoneManager(channelPtr);
 
     return true;
 }
@@ -189,6 +191,7 @@ ChannelServer::~ChannelServer()
     delete[] mCharacterManager;
     delete[] mChatManager;
     delete[] mSkillManager;
+    delete[] mZoneManager;
     delete[] mDefinitionManager;
     delete[] mServerDataManager;
 }
@@ -304,6 +307,11 @@ ChatManager* ChannelServer::GetChatManager() const
 SkillManager* ChannelServer::GetSkillManager() const
 {
     return mSkillManager;
+}
+
+ZoneManager* ChannelServer::GetZoneManager() const
+{
+    return mZoneManager;
 }
 
 libcomp::DefinitionManager* ChannelServer::GetDefinitionManager() const

@@ -34,9 +34,6 @@
 #include <TcpConnection.h>
 
 // object Includes
-#include <Character.h>
-#include <Demon.h>
-#include <EntityStats.h>
 #include <StatusEffect.h>
 
 // channel Includes
@@ -51,7 +48,7 @@ void SendCOMPList(const std::shared_ptr<ChannelServer> server,
 {
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
-    auto character = cState->GetCharacter();
+    auto character = cState->GetEntity();
     auto comp = character->GetCOMP();
 
     libcomp::Packet reply;

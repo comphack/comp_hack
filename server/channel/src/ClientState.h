@@ -28,17 +28,20 @@
 #define SERVER_CHANNEL_SRC_CLIENTSTATE_H
 
 // channel Includes
-#include "CharacterState.h"
-#include "DemonState.h"
+#include "ActiveEntityState.h"
 
 // objects Includes
+#include <Character.h>
 #include <ClientStateObject.h>
+#include <Demon.h>
 
 namespace channel
 {
 
 typedef float ClientTime;
 typedef uint64_t ServerTime;
+typedef ActiveEntityStateImp<objects::Character> CharacterState;
+typedef ActiveEntityStateImp<objects::Demon> DemonState;
 
 /**
  * Contains the state of a game client currently connected to the
@@ -76,6 +79,14 @@ public:
      * @return Pointer to the DemonState
      */
     std::shared_ptr<DemonState> GetDemonState();
+
+    /**
+     * Get the entity state associated to an entity ID for this client.
+     * @param entityID Entity ID associated to this client to retrieve
+     * @return Pointer to the matching entity state, null if no match
+     *  exists
+     */
+    std::shared_ptr<ActiveEntityState> GetEntityState(int32_t entityID);
 
     /**
      * Get the object ID associated a UUID associated to the client.
@@ -156,7 +167,11 @@ private:
     /// communication.
     ServerTime mStartTime;
 
+    /// Next available activated ability ID
     uint8_t mNextActivatedAbilityID;
+
+    /// Server lock for shared resources
+    std::mutex mLock;
 };
 
 } // namespace channel

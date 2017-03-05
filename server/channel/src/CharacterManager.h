@@ -77,14 +77,32 @@ public:
         ChannelClientConnection>& client);
 
     /**
+     * Send updated character data to a different game client.
+     * @param client Pointer to the client connection
+     * @param otherState Pointer to the state of another client
+     */
+    void SendOtherCharacterData(const std::shared_ptr<
+        ChannelClientConnection>& client,
+        ClientState *otherState);
+
+    /**
      * Tell the game client to show an entity.
      * @param client Pointer to the client connection
      * @param entityID ID of the entity to show
      * @param queue true if the message should be queued, false if
      *  it should send right away
      */
-    void ShowEntity(const std::shared_ptr<
-        ChannelClientConnection>& client, int32_t entityID, bool queue = false);
+    void ShowEntity(const std::shared_ptr<ChannelClientConnection>& client,
+        int32_t entityID, bool queue = false);
+
+    /**
+     * Tell all game clients in a zone to show an entity.
+     * @param client Pointer to the client connection with an entity
+     *  to show to other clients in the same zone.
+     * @param entityID ID of the entity to show
+     */
+    void ShowEntityToZone(const std::shared_ptr<
+        ChannelClientConnection>& client, int32_t entityID);
 
     /**
      * Send updated data about the active demon of the game client.
@@ -92,6 +110,15 @@ public:
      */
     void SendPartnerData(const std::shared_ptr<
         ChannelClientConnection>& client);
+
+    /**
+     * Send updated data about the active demon of a different game client.
+     * @param client Pointer to the client connection
+     * @param otherState Pointer to the state of another client
+     */
+    void SendOtherPartnerData(const std::shared_ptr<
+        ChannelClientConnection>& client,
+        ClientState *otherState);
 
     /**
      * Send updated data about a demon in the COMP to the game client.
@@ -304,7 +331,7 @@ public:
      */
     void GetEntityStatsPacketData(libcomp::Packet& p,
         const std::shared_ptr<objects::EntityStats>& coreStats,
-        const std::shared_ptr<objects::EntityStateObject>& state,
+        const std::shared_ptr<ActiveEntityState>& state,
         bool boostFormat);
 
 private:

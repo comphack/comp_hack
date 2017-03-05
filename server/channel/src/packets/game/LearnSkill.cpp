@@ -63,7 +63,7 @@ bool Parsers::LearnSkill::Parse(libcomp::ManagerPacket *pPacketManager,
         return false;
     }
 
-    auto character = cState->GetCharacter();
+    auto character = cState->GetEntity();
     character->AppendLearnedSkills(skillID);
 
     libcomp::Packet reply;

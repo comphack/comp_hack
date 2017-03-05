@@ -33,18 +33,17 @@
 namespace objects
 {
 class ActivatedAbility;
-class EntityStats;
-class EntityStateObject;
 class MiSkillData;
 }
 
 namespace channel
 {
 
+class ActiveEntityState;
 class ChannelServer;
 
 /**
- * Manager to handle Character focused actions.
+ * Manager to handle skill focused actions.
  */
 class SkillManager
 {
@@ -98,15 +97,13 @@ private:
     /**
      * Pay any costs related to and execute the skill of a character or demon.
      * @param client Pointer to the client connection that activated the skill
-     * @param sourceStats Pointer to the stats of the source entity
      * @param sourceState Pointer to the state of the source entity
      * @param activated Pointer to the activated ability instance
      * @param targetObjectID ID of the object being targeted by the skill
      * @return true if the skill was executed successfully, false otherwise
      */
     bool ExecuteSkill(const std::shared_ptr<ChannelClientConnection> client,
-        std::shared_ptr<objects::EntityStats> sourceStats,
-        std::shared_ptr<objects::EntityStateObject> sourceState,
+        std::shared_ptr<ActiveEntityState> sourceState,
         std::shared_ptr<objects::ActivatedAbility> activated, int64_t targetObjectID);
 
     /**
@@ -193,18 +190,6 @@ private:
      */
     void SendCompleteSkill(const std::shared_ptr<ChannelClientConnection> client,
         int32_t sourceEntityID, std::shared_ptr<objects::ActivatedAbility> activated);
-
-    /**
-     * Get the activated ability source stats and state pointers.
-     * @param state Pointer to the client state containing the entities to check
-     * @param sourceEntityID ID of the entity that activated the skill
-     * @param sourceStats Reference to the stats pointer to set on success
-     * @param sourceState Reference to the state pointer to set on success
-     * @return true if the entity was found, false otherwise
-     */
-    bool GetSkillSource(channel::ClientState *state,
-        int32_t sourceEntityID, std::shared_ptr<objects::EntityStats>& sourceStats,
-        std::shared_ptr<objects::EntityStateObject>& sourceState);
 
     /// Pointer to the channel server
     std::weak_ptr<ChannelServer> mServer;

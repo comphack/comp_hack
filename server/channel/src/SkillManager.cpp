@@ -38,11 +38,6 @@
 
 // object Includes
 #include <ActivatedAbility.h>
-#include <Character.h>
-#include <CharacterState.h>
-#include <DemonState.h>
-#include <Demon.h>
-#include <EntityStats.h>
 #include <Item.h>
 #include <ItemBox.h>
 #include <MiBattleDamageData.h>
@@ -89,7 +84,7 @@ const uint16_t FLAG2_INSTANT_DEATH = 1 << 9;
 struct SkillTargetReport
 {
     std::shared_ptr<objects::EntityStats> EntityStats;
-    std::shared_ptr<objects::EntityStateObject> EntityState;
+    std::shared_ptr<ActiveEntityState> EntityState;
     int32_t Damage1 = 0;
     uint8_t Damage1Type = DAMAGE_TYPE_NONE;
     int32_t Damage2 = 0;
@@ -137,13 +132,13 @@ bool SkillManager::ActivateSkill(const std::shared_ptr<ChannelClientConnection> 
     activated->SetActivationTime(activatedTime);
     activated->SetChargedTime(chargedTime);
 
-    std::shared_ptr<objects::EntityStats> sourceStats;
-    std::shared_ptr<objects::EntityStateObject> sourceState;
-    if(!GetSkillSource(state, sourceEntityID, sourceStats, sourceState))
+    auto sourceState = state->GetEntityState(sourceEntityID);
+    if(nullptr == sourceState)
     {
         SendFailure(client, sourceEntityID, skillID);
         return false;
     }
+    auto sourceStats = sourceState->GetCoreStats();
     sourceState->SetActivatedAbility(activated);
 
     SendChargeSkill(client, sourceEntityID, activated);
@@ -151,7 +146,7 @@ bool SkillManager::ActivateSkill(const std::shared_ptr<ChannelClientConnection> 
     if(chargeTime == 0)
     {
         // Cast instantly
-        if(!ExecuteSkill(client, sourceStats, sourceState, activated, targetObjectID))
+        if(!ExecuteSkill(client, sourceState, activated, targetObjectID))
         {
             SendFailure(client, sourceEntityID, skillID);
             return false;
@@ -165,13 +160,12 @@ bool SkillManager::ExecuteSkill(const std::shared_ptr<ChannelClientConnection> c
     int32_t sourceEntityID, uint8_t activationID, int64_t targetObjectID)
 {
     auto state = client->GetClientState();
+    auto sourceState = state->GetEntityState(sourceEntityID);
 
-    std::shared_ptr<objects::EntityStats> sourceStats;
-    std::shared_ptr<objects::EntityStateObject> sourceState;
-    bool success = GetSkillSource(state, sourceEntityID, sourceStats, sourceState);
+    bool success = sourceState != nullptr;
 
     uint32_t skillID = 0;
-    auto activated = sourceState->GetActivatedAbility();
+    auto activated = success ? sourceState->GetActivatedAbility() : nullptr;
     if(nullptr == activated || activationID != activated->GetActivationID())
     {
         LOG_ERROR(libcomp::String("Unknown activation ID encountered: %1\n")
@@ -183,7 +177,7 @@ bool SkillManager::ExecuteSkill(const std::shared_ptr<ChannelClientConnection> c
         skillID = activated->GetSkillID();
     }
 
-    if(!success || !ExecuteSkill(client, sourceStats, sourceState, activated, targetObjectID))
+    if(!success || !ExecuteSkill(client, sourceState, activated, targetObjectID))
     {
         SendFailure(client, sourceEntityID, skillID);
     }
@@ -192,8 +186,7 @@ bool SkillManager::ExecuteSkill(const std::shared_ptr<ChannelClientConnection> c
 }
 
 bool SkillManager::ExecuteSkill(const std::shared_ptr<ChannelClientConnection> client,
-    std::shared_ptr<objects::EntityStats> sourceStats,
-    std::shared_ptr<objects::EntityStateObject> sourceState,
+    std::shared_ptr<ActiveEntityState> sourceState,
     std::shared_ptr<objects::ActivatedAbility> activated, int64_t targetObjectID)
 {
     sourceState->SetActivatedAbility(nullptr);
@@ -212,7 +205,7 @@ bool SkillManager::ExecuteSkill(const std::shared_ptr<ChannelClientConnection> c
 
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
-    auto character = cState->GetCharacter().Get();
+    auto character = cState->GetEntity();
 
     // Check conditions
     /// @todo: check more than just costs
@@ -296,6 +289,7 @@ bool SkillManager::ExecuteSkill(const std::shared_ptr<ChannelClientConnection> c
     hpCost = (uint32_t)(hpCost + ceil(((float)hpCostPercent * 0.01f) * (float)sourceState->GetMaxHP()));
     mpCost = (uint32_t)(mpCost + ceil(((float)mpCostPercent * 0.01f) * (float)sourceState->GetMaxMP()));
 
+    auto sourceStats = sourceState->GetCoreStats();
     bool canPay = ((hpCost == 0) || hpCost < (uint32_t)sourceStats->GetHP()) &&
         ((mpCost == 0) || mpCost < (uint32_t)sourceStats->GetMP());
     auto characterManager = server->GetCharacterManager();
@@ -445,19 +439,19 @@ bool SkillManager::ExecuteNormalSkill(const std::shared_ptr<ChannelClientConnect
 {
     auto state = client->GetClientState();
 
-    std::shared_ptr<objects::EntityStats> sourceStats;
-    std::shared_ptr<objects::EntityStateObject> sourceState;
-    if(!GetSkillSource(state, sourceEntityID, sourceStats, sourceState))
+    auto sourceState = state->GetEntityState(sourceEntityID);
+    if(nullptr == sourceState)
     {
         return false;
     }
+    auto sourceStats = sourceState->GetCoreStats();
 
     auto server = mServer.lock();
     auto definitionManager = server->GetDefinitionManager();
     auto skillID = activated->GetSkillID();
     auto skillData = definitionManager->GetSkillData(skillID);
     auto cState = state->GetCharacterState();
-    auto character = cState->GetCharacter().Get();
+    auto character = cState->GetEntity();
 
     // Gather targets
     std::list<SkillTargetReport> targetReports;
@@ -749,32 +743,4 @@ void SkillManager::SendCompleteSkill(const std::shared_ptr<ChannelClientConnecti
     reply.WriteU8(0);   //Unknown
 
     client->SendPacket(reply);
-}
-
-bool SkillManager::GetSkillSource(channel::ClientState *state,
-    int32_t sourceEntityID, std::shared_ptr<objects::EntityStats>& sourceStats,
-    std::shared_ptr<objects::EntityStateObject>& sourceState)
-{
-    auto cState = state->GetCharacterState();
-    auto dState = state->GetDemonState();
-
-    if(cState->GetEntityID() == sourceEntityID)
-    {
-        sourceStats = cState->GetCharacter()->GetCoreStats().Get();
-        sourceState = cState;
-    }
-    else if(dState->GetEntityID() == sourceEntityID &&
-        !dState->GetDemon().IsNull())
-    {
-        sourceStats = dState->GetDemon()->GetCoreStats().Get();
-        sourceState = dState;
-    }
-    else
-    {
-        LOG_ERROR(libcomp::String("Invalid skill source encountered: %1\n")
-            .Arg(sourceEntityID));
-        return false;
-    }
-
-    return true;
 }

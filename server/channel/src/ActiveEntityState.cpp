@@ -1,10 +1,10 @@
 /**
- * @file server/channel/src/DemonState.cpp
+ * @file server/channel/src/ActiveEntityState.cpp
  * @ingroup channel
  *
  * @author HACKfrost
  *
- * @brief State of a demon on the channel.
+ * @brief Represents the state of an active entity on the channel.
  *
  * This file is part of the Channel Server (channel).
  *
@@ -24,32 +24,102 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "DemonState.h"
+#include "ActiveEntityState.h"
+
+// libcomp Includes
+#include <Constants.h>
 
 // objects Includes
+#include <Character.h>
 #include <Demon.h>
-#include <EntityStats.h>
+#include <Item.h>
+#include <MiCorrectTbl.h>
 #include <MiDevilBattleData.h>
 #include <MiDevilData.h>
+#include <MiItemData.h>
+#include <MiSkillItemStatusCommonData.h>
 
 // channel Includes
 #include <CharacterManager.h>
 #include <DefinitionManager.h>
 
-using namespace channel;
-
-DemonState::DemonState() : objects::DemonStateObject()
+namespace channel
 {
+
+template<>
+ActiveEntityStateImp<objects::Character>::ActiveEntityStateImp()
+{
+    SetEntityType(objects::EntityStateObject::EntityType_t::CHARACTER);
 }
 
-DemonState::~DemonState()
+template<>
+ActiveEntityStateImp<objects::Demon>::ActiveEntityStateImp()
 {
+    SetEntityType(objects::EntityStateObject::EntityType_t::PARTNER_DEMON);
 }
 
-bool DemonState::RecalculateStats(libcomp::DefinitionManager* definitionManager)
+template<>
+bool ActiveEntityStateImp<objects::Character>::RecalculateStats(
+    libcomp::DefinitionManager* definitionManager)
 {
-    auto d = GetDemon().Get();
-    if(nullptr == d)
+    auto c = GetEntity();
+    auto cs = c->GetCoreStats().Get();
+
+    std::unordered_map<uint8_t, int16_t> correctMap = CharacterManager::GetCharacterBaseStatMap(cs);
+
+    for(auto equip : c->GetEquippedItems())
+    {
+        if(!equip.IsNull())
+        {
+            auto itemData = definitionManager->GetItemData(equip->GetType());
+            auto itemCommonData = itemData->GetCommon();
+
+            for(auto ct : itemCommonData->GetCorrectTbl())
+            {
+                auto tblID = ct->GetID();
+                switch (ct->GetType())
+                {
+                    case objects::MiCorrectTbl::Type_t::NUMERIC:
+                        correctMap[tblID] = (int16_t)(correctMap[tblID] + ct->GetValue());
+                        break;
+                    case objects::MiCorrectTbl::Type_t::PERCENT:
+                        /// @todo: apply in the right order
+                        break;
+                    default:
+                        break;
+                }
+            }
+        }
+    }
+
+    /// @todo: apply effects
+
+    CharacterManager::CalculateDependentStats(correctMap, cs->GetLevel(), false);
+
+    SetMaxHP(correctMap[libcomp::CORRECT_MAXHP]);
+    SetMaxMP(correctMap[libcomp::CORRECT_MAXMP]);
+    SetSTR(correctMap[libcomp::CORRECT_STR]);
+    SetMAGIC(correctMap[libcomp::CORRECT_MAGIC]);
+    SetVIT(correctMap[libcomp::CORRECT_VIT]);
+    SetINTEL(correctMap[libcomp::CORRECT_INTEL]);
+    SetSPEED(correctMap[libcomp::CORRECT_SPEED]);
+    SetLUCK(correctMap[libcomp::CORRECT_LUCK]);
+    SetCLSR(correctMap[libcomp::CORRECT_CLSR]);
+    SetLNGR(correctMap[libcomp::CORRECT_LNGR]);
+    SetSPELL(correctMap[libcomp::CORRECT_SPELL]);
+    SetSUPPORT(correctMap[libcomp::CORRECT_SUPPORT]);
+    SetPDEF(correctMap[libcomp::CORRECT_PDEF]);
+    SetMDEF(correctMap[libcomp::CORRECT_MDEF]);
+
+    return true;
+}
+
+template<>
+bool ActiveEntityStateImp<objects::Demon>::RecalculateStats(
+    libcomp::DefinitionManager* definitionManager)
+{
+    auto d = GetEntity();
+    if (nullptr == d)
     {
         return true;
     }
@@ -57,7 +127,7 @@ bool DemonState::RecalculateStats(libcomp::DefinitionManager* definitionManager)
     auto cs = d->GetCoreStats().Get();
     auto demonData = definitionManager->GetDevilData(d->GetType());
     auto battleData = demonData->GetBattleData();
-    
+
     std::unordered_map<uint8_t, int16_t> correctMap;
     correctMap[libcomp::CORRECT_STR] = cs->GetSTR();
     correctMap[libcomp::CORRECT_MAGIC] = cs->GetMAGIC();
@@ -96,7 +166,4 @@ bool DemonState::RecalculateStats(libcomp::DefinitionManager* definitionManager)
     return true;
 }
 
-bool DemonState::Ready()
-{
-    return !GetDemon().IsNull();
 }

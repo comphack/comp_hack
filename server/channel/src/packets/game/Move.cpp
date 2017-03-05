@@ -41,7 +41,6 @@
 // channel Includes
 #include "ChannelClientConnection.h"
 #include "ChannelServer.h"
-#include "CharacterState.h"
 #include "ClientState.h"
 
 using namespace channel;
@@ -58,16 +57,8 @@ bool Parsers::Move::Parse(libcomp::ManagerPacket *pPacketManager,
 
     int32_t entityID = p.ReadS32Little();
 
-    std::shared_ptr<objects::EntityStateObject> eState;
-    if(cState->GetEntityID() == entityID)
-    {
-        eState = std::dynamic_pointer_cast<objects::EntityStateObject>(cState);
-    }
-    else if(nullptr != dState && dState->GetEntityID() == entityID)
-    {
-        eState = std::dynamic_pointer_cast<objects::EntityStateObject>(dState);
-    }
-    else
+    auto eState = state->GetEntityState(entityID);
+    if(nullptr == eState)
     {
         LOG_ERROR(libcomp::String("Invalid entity ID received from a move request: %1\n")
             .Arg(entityID));
@@ -86,6 +77,9 @@ bool Parsers::Move::Parse(libcomp::ManagerPacket *pPacketManager,
     ServerTime stopTime = state->ToServerTime(stop);
 
     (void)ratePerSec;
+
+    /// @todo: Determine if the player's movement was valid (collisions, triggers etc)
+    bool positionCorrected = false;
 
     /*float deltaX = destX - originX;
     float deltaY = destY - originY;
@@ -111,20 +105,43 @@ bool Parsers::Move::Parse(libcomp::ManagerPacket *pPacketManager,
 
     /// @todo: Fire zone triggers
 
-    /// @todo: Send to the whole zone, including the player this sent from if they
-    /// need to be corrected
-    /*libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_MOVE_RESPONSE);
+    libcomp::Packet reply;
+    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_MOVE);
     reply.WriteS32Little(entityID);
     reply.WriteFloat(destX);
     reply.WriteFloat(destY);
     reply.WriteFloat(originX);
     reply.WriteFloat(originY);
     reply.WriteFloat(ratePerSec);
-    reply.WriteFloat(start);
-    reply.WriteFloat(stop);
 
-    connection->SendPacket(reply);*/
+    // Times must be sent relative to the other players
+    uint32_t timePos = reply.Size();
+    if(positionCorrected)
+    {
+        // Reply to the sender
+        reply.WriteFloat(start);
+        reply.WriteFloat(stop);
+        client->SendPacket(reply);
+    }
+
+    auto zoneConnections = server->GetZoneManager()->GetZoneInstance(client)->GetConnections();
+    for(auto connectionPair : zoneConnections)
+    {
+        auto zConnection = connectionPair.second;
+        if(zConnection != client)
+        {
+            auto otherState = zConnection->GetClientState();
+            float startAdjust = otherState->ToClientTime(startTime);
+            float stopAdjust = startAdjust + (stop - start);
+
+            reply.Seek(timePos);
+            reply.WriteFloat(startAdjust);
+            reply.WriteFloat(stopAdjust);
+
+            zConnection->SendPacket(reply);
+        }
+    }
+
 
     return true;
 }

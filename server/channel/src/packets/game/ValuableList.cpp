@@ -55,7 +55,7 @@ bool Parsers::ValuableList::Parse(libcomp::ManagerPacket *pPacketManager,
     auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
-    auto character = cState->GetCharacter().Get();
+    auto character = cState->GetEntity();
     auto progress = character->GetProgress().Get();
     auto valuables = progress->GetValuables();
 

@@ -45,7 +45,7 @@ void SetDemonLock(const std::shared_ptr<ChannelClientConnection> client,
 {
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
-    auto character = cState->GetCharacter().Get();
+    auto character = cState->GetEntity();
     auto demon = std::dynamic_pointer_cast<objects::Demon>(
         libcomp::PersistentObject::GetObjectByUUID(state->GetObjectUUID(demonID)));
 

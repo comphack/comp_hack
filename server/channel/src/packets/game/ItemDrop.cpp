@@ -50,7 +50,7 @@ void DropItem(const std::shared_ptr<ChannelServer> server,
     int64_t itemID)
 {
     auto state = client->GetClientState();
-    auto character = state->GetCharacterState()->GetCharacter();
+    auto character = state->GetCharacterState()->GetEntity();
     auto item = std::dynamic_pointer_cast<objects::Item>(
         libcomp::PersistentObject::GetObjectByUUID(
             state->GetObjectUUID(itemID)));

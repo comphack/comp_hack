@@ -34,11 +34,6 @@
 // channel Includes
 #include "ChannelServer.h"
 
-// objects Includes
-#include <Character.h>
-#include <Demon.h>
-#include <EntityStats.h>
-
 using namespace channel;
 
 void DemonDismiss(const std::shared_ptr<ChannelServer> server,
@@ -48,7 +43,7 @@ void DemonDismiss(const std::shared_ptr<ChannelServer> server,
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
     auto dState = state->GetDemonState();
-    auto character = cState->GetCharacter().Get();
+    auto character = cState->GetEntity();
     auto demon = std::dynamic_pointer_cast<objects::Demon>(
         libcomp::PersistentObject::GetObjectByUUID(state->GetObjectUUID(demonID)));
 
@@ -72,7 +67,7 @@ void DemonDismiss(const std::shared_ptr<ChannelServer> server,
         return;
     }
 
-    if(dState->GetDemon().Get() == demon)
+    if(dState->GetEntity() == demon)
     {
         server->GetCharacterManager()->StoreDemon(client);
     }

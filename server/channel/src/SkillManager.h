@@ -99,12 +99,11 @@ private:
      * @param client Pointer to the client connection that activated the skill
      * @param sourceState Pointer to the state of the source entity
      * @param activated Pointer to the activated ability instance
-     * @param targetObjectID ID of the object being targeted by the skill
      * @return true if the skill was executed successfully, false otherwise
      */
     bool ExecuteSkill(const std::shared_ptr<ChannelClientConnection> client,
         std::shared_ptr<ActiveEntityState> sourceState,
-        std::shared_ptr<objects::ActivatedAbility> activated, int64_t targetObjectID);
+        std::shared_ptr<objects::ActivatedAbility> activated);
 
     /**
      * Execute a normal ability, not handled by a special handler.

@@ -341,33 +341,6 @@ void CharacterManager::SendOtherCharacterData(const std::shared_ptr<
     client->SendPacket(reply);
 }
 
-void CharacterManager::ShowEntity(const std::shared_ptr<
-    ChannelClientConnection>& client, int32_t entityID, bool queue)
-{
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_SHOW_ENTITY);
-    reply.WriteS32Little(entityID);
-
-    if(queue)
-    {
-        client->QueuePacket(reply);
-    }
-    else
-    {
-        client->SendPacket(reply);
-    }
-}
-
-void CharacterManager::ShowEntityToZone(const std::shared_ptr<
-    ChannelClientConnection>& client, int32_t entityID)
-{
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_SHOW_ENTITY);
-    reply.WriteS32Little(entityID);
-
-    mServer.lock()->GetZoneManager()->BroadcastPacket(client, reply, true);
-}
-
 void CharacterManager::SendPartnerData(const std::shared_ptr<
     ChannelClientConnection>& client)
 {

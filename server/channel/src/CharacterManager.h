@@ -86,25 +86,6 @@ public:
         ClientState *otherState);
 
     /**
-     * Tell the game client to show an entity.
-     * @param client Pointer to the client connection
-     * @param entityID ID of the entity to show
-     * @param queue true if the message should be queued, false if
-     *  it should send right away
-     */
-    void ShowEntity(const std::shared_ptr<ChannelClientConnection>& client,
-        int32_t entityID, bool queue = false);
-
-    /**
-     * Tell all game clients in a zone to show an entity.
-     * @param client Pointer to the client connection with an entity
-     *  to show to other clients in the same zone.
-     * @param entityID ID of the entity to show
-     */
-    void ShowEntityToZone(const std::shared_ptr<
-        ChannelClientConnection>& client, int32_t entityID);
-
-    /**
      * Send updated data about the active demon of the game client.
      * @param client Pointer to the client connection
      */

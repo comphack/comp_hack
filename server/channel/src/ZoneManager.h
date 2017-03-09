@@ -97,6 +97,25 @@ public:
     void SendPopulateZoneData(const std::shared_ptr<ChannelClientConnection>& client);
 
     /**
+     * Tell the game client to show an entity.
+     * @param client Pointer to the client connection
+     * @param entityID ID of the entity to show
+     * @param queue true if the message should be queued, false if
+     *  it should send right away
+     */
+    void ShowEntity(const std::shared_ptr<ChannelClientConnection>& client,
+        int32_t entityID, bool queue = false);
+
+    /**
+     * Tell all game clients in a zone to show an entity.
+     * @param client Pointer to the client connection with an entity
+     *  to show to other clients in the same zone.
+     * @param entityID ID of the entity to show
+     */
+    void ShowEntityToZone(const std::shared_ptr<
+        ChannelClientConnection>& client, int32_t entityID);
+
+    /**
      * Send a packet to every connection in the zone or all but the client specified
      * @param client Client connection to use as the "source" connection
      * @param p Packet to send to the zone

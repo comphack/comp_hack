@@ -44,40 +44,52 @@ uint64_t Zone::GetID()
 
 void Zone::AddConnection(const std::shared_ptr<ChannelClientConnection>& client)
 {
-    auto primaryEntityID = client->GetClientState()->GetCharacterState()->GetEntityID();
+    auto cState = client->GetClientState()->GetCharacterState();
+    auto dState = client->GetClientState()->GetDemonState();
+
+    RegisterEntityState(cState);
+    RegisterEntityState(dState);
 
     std::lock_guard<std::mutex> lock(mLock);
-    mConnections[primaryEntityID] = client;
+    mConnections[cState->GetEntityID()] = client;
 }
 
 void Zone::RemoveConnection(const std::shared_ptr<ChannelClientConnection>& client)
 {
-    auto primaryEntityID = client->GetClientState()->GetCharacterState()->GetEntityID();
+    auto cEntityID = client->GetClientState()->GetCharacterState()->GetEntityID();
+    auto dEntityID = client->GetClientState()->GetDemonState()->GetEntityID();
+
+    UnregisterEntityState(cEntityID);
+    UnregisterEntityState(dEntityID);
 
     std::lock_guard<std::mutex> lock(mLock);
-    mConnections.erase(primaryEntityID);
+    mConnections.erase(cEntityID);
 }
 
-std::shared_ptr<NPCState> Zone::AddNPC(const std::shared_ptr<objects::ServerNPC>& npc)
+void Zone::AddNPC(const std::shared_ptr<NPCState>& npc)
 {
-    auto state = std::shared_ptr<NPCState>(new NPCState(npc));
-    mNPCs.push_back(state);
-    return state;
+    mNPCs.push_back(npc);
+    RegisterEntityState(npc);
 }
 
-std::shared_ptr<ServerObjectState> Zone::AddObject(
-    const std::shared_ptr<objects::ServerObject>& object)
+void Zone::AddObject(const std::shared_ptr<ServerObjectState>& object)
 {
-    auto state = std::shared_ptr<ServerObjectState>(new ServerObjectState(object));
-    mObjects.push_back(state);
-    return state;
+    mObjects.push_back(object);
+    RegisterEntityState(object);
 }
-
 
 std::unordered_map<int32_t,
     std::shared_ptr<ChannelClientConnection>> Zone::GetConnections()
 {
     return mConnections;
+}
+
+const std::shared_ptr<ActiveEntityState> Zone::GetActiveEntityState(int32_t entityID)
+{
+    std::lock_guard<std::mutex> lock(mLock);
+    auto iter = mAllEntities.find(entityID);
+    return iter != mAllEntities.end() ?
+        std::dynamic_pointer_cast<ActiveEntityState>(iter->second) : nullptr;
 }
 
 const std::list<std::shared_ptr<NPCState>> Zone::GetNPCs()
@@ -93,4 +105,16 @@ const std::list<std::shared_ptr<ServerObjectState>> Zone::GetObjects()
 const std::shared_ptr<objects::ServerZone> Zone::GetDefinition()
 {
     return mServerZone;
+}
+
+void Zone::RegisterEntityState(const std::shared_ptr<objects::EntityStateObject>& state)
+{
+    std::lock_guard<std::mutex> lock(mLock);
+    mAllEntities[state->GetEntityID()] = state;
+}
+
+void Zone::UnregisterEntityState(int32_t entityID)
+{
+    std::lock_guard<std::mutex> lock(mLock);
+    mAllEntities.erase(entityID);
 }

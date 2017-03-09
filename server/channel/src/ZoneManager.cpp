@@ -144,9 +144,9 @@ void ZoneManager::SendPopulateZoneData(const std::shared_ptr<ChannelClientConnec
 
     // The client's partner demon will be shown elsewhere
 
-    characterManager->ShowEntityToZone(client, characterEntityID);
+    ShowEntityToZone(client, characterEntityID);
 
-    /// @todo: Populate enemies, other players, etc
+    /// @todo: Populate enemies
 
     // It seems that if NPC data is sent to the client before a previous
     // NPC was processed and shown, the client will force a log-out. To
@@ -168,7 +168,7 @@ void ZoneManager::SendPopulateZoneData(const std::shared_ptr<ChannelClientConnec
         reply.WriteS16Little(0);    //Unknown
 
         client->QueuePacket(reply);
-        characterManager->ShowEntity(client, npcState->GetEntityID(), true);
+        ShowEntity(client, npcState->GetEntityID(), true);
     }
 
     for(auto objState : zone->GetObjects())
@@ -187,7 +187,7 @@ void ZoneManager::SendPopulateZoneData(const std::shared_ptr<ChannelClientConnec
         reply.WriteFloat(objState->GetOriginRotation());
 
         client->QueuePacket(reply);
-        characterManager->ShowEntity(client, objState->GetEntityID(), true);
+        ShowEntity(client, objState->GetEntityID(), true);
     }
 
     // Send all the queued NPC packets
@@ -203,15 +203,42 @@ void ZoneManager::SendPopulateZoneData(const std::shared_ptr<ChannelClientConnec
             auto oDemonState = oState->GetDemonState();
 
             characterManager->SendOtherCharacterData(client, oState);
-            characterManager->ShowEntity(client, oCharacterState->GetEntityID());
+            ShowEntity(client, oCharacterState->GetEntityID());
 
             if(nullptr != oDemonState->GetEntity())
             {
                 characterManager->SendOtherPartnerData(client, oState);
-                characterManager->ShowEntity(client, oDemonState->GetEntityID());
+                ShowEntity(client, oDemonState->GetEntityID());
             }
         }
     }
+}
+
+void ZoneManager::ShowEntity(const std::shared_ptr<
+    ChannelClientConnection>& client, int32_t entityID, bool queue)
+{
+    libcomp::Packet reply;
+    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_SHOW_ENTITY);
+    reply.WriteS32Little(entityID);
+
+    if(queue)
+    {
+        client->QueuePacket(reply);
+    }
+    else
+    {
+        client->SendPacket(reply);
+    }
+}
+
+void ZoneManager::ShowEntityToZone(const std::shared_ptr<
+    ChannelClientConnection>& client, int32_t entityID)
+{
+    libcomp::Packet reply;
+    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_SHOW_ENTITY);
+    reply.WriteS32Little(entityID);
+
+    mServer.lock()->GetZoneManager()->BroadcastPacket(client, reply, true);
 }
 
 void ZoneManager::BroadcastPacket(const std::shared_ptr<ChannelClientConnection>& client,
@@ -288,20 +315,23 @@ std::shared_ptr<Zone> ZoneManager::CreateZoneInstance(
     auto zone = std::shared_ptr<Zone>(new Zone(id, definition));
     for(auto npc : definition->GetNPCs())
     {
-        auto state = zone->AddNPC(npc);
+        auto state = std::shared_ptr<NPCState>(new NPCState(npc));
         state->SetOriginX(npc->GetX());
         state->SetOriginY(npc->GetY());
         state->SetOriginRotation(npc->GetRotation());
         state->SetEntityID(server->GetNextEntityID());
+        zone->AddNPC(state);
     }
     
     for(auto obj : definition->GetObjects())
     {
-        auto state = zone->AddObject(obj);
+        auto state = std::shared_ptr<ServerObjectState>(
+            new ServerObjectState(obj));
         state->SetOriginX(obj->GetX());
         state->SetOriginY(obj->GetY());
         state->SetOriginRotation(obj->GetRotation());
         state->SetEntityID(server->GetNextEntityID());
+        zone->AddObject(state);
     }
 
     {

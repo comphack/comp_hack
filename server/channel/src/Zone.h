@@ -84,19 +84,18 @@ public:
     void RemoveConnection(const std::shared_ptr<ChannelClientConnection>& client);
 
     /**
-     * Add an NPC to the zone
-     * @param npc Pointer to the definition of an NPC to add
-     * @return Pointer to the instantiated NPC for the zone
+     * Add an NPC to the zone. This is not thread safe and should only be
+     * called before the zone is being used.
+     * @param npc Pointer to the NPC to add
      */
-    std::shared_ptr<NPCState> AddNPC(const std::shared_ptr<objects::ServerNPC>& npc);
+    void AddNPC(const std::shared_ptr<NPCState>& npc);
 
     /**
-     * Add an object to the zone
-     * @param object Pointer to the definition of an object to add
-     * @return Pointer to the instantiated object for the zone
+     * Add an object to the zone. This is not thread safe and should only be
+     * called before the zone is being used.
+     * @param object Pointer to the object to add
      */
-    std::shared_ptr<ServerObjectState> AddObject(
-        const std::shared_ptr<objects::ServerObject>& object);
+    void AddObject(const std::shared_ptr<ServerObjectState>& object);
 
     /**
      * Get all client connections in the zone mapped by primary entity ID
@@ -104,6 +103,14 @@ public:
      */
     std::unordered_map<int32_t,
         std::shared_ptr<ChannelClientConnection>> GetConnections();
+
+    /**
+     * Get an active entity in the zone by ID
+     * @param entityID ID of the active entity to retrieve
+     * @return Pointer to the active entity or null if does not exist or is
+     *  not active
+     */
+    const std::shared_ptr<ActiveEntityState> GetActiveEntityState(int32_t entityID);
 
     /**
      * Get all NPC instances in the zone
@@ -124,7 +131,17 @@ public:
     const std::shared_ptr<objects::ServerZone> GetDefinition();
 
 private:
-    void BuildZone();
+    /**
+     * Register an entity as one that currently exists in the zone
+     * @param state Pointer to an entity state in the zone
+     */
+    void RegisterEntityState(const std::shared_ptr<objects::EntityStateObject>& state);
+
+    /**
+     * Remove an entity that no longer exists in the zone by its ID
+     * @param entityID ID of an entity to remove
+     */
+    void UnregisterEntityState(int32_t entityID);
 
     /// Pointer to the ServerZone definition
     std::shared_ptr<objects::ServerZone> mServerZone;
@@ -137,6 +154,9 @@ private:
 
     /// List of pointers to objects instantiated for the zone
     std::list<std::shared_ptr<ServerObjectState>> mObjects;
+
+    /// Map of entities in the zone by their ID
+    std::unordered_map<int32_t, std::shared_ptr<objects::EntityStateObject>> mAllEntities;
 
     /// Unique instance ID of the zone
     uint64_t mID;

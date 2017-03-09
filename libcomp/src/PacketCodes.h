@@ -150,8 +150,8 @@ enum class ChannelToClientPacketCode_t : uint16_t
     PACKET_HOTBAR_SAVE = 0x00A5,  //!< Response to save a hotbar page.
     PACKET_VALUABLE_LIST = 0x00B9,  //!< Response containing a list of obtained valuables.
     PACKET_SYNC = 0x00F4,  //!< Response containing the server time.
-    PACKET_UNION_FLAG = 0x0101,  //!< Message containing union information.
     PACKET_ROTATE = 0x00F9,    //!< Message containing entity or object rotation information.
+    PACKET_UNION_FLAG = 0x0101,  //!< Message containing union information.
     PACKET_LNC_POINTS = 0x0126,    //!< Message containing a character's LNC alignment value.
     PACKET_STATUS_ICON = 0x0195,  //!< Message containing the icon to show for a character.
     PACKET_LOCK_DEMON = 0x0234,  //!< Response to lock a demon in the COMP.

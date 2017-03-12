@@ -39,17 +39,6 @@ matrix:
           sources:
             - ubuntu-toolchain-r-test
           packages:
-            - g++-4.9
-      env:
-        - COMPILER_CC=gcc-4.9
-        - COMPILER_CXX=g++-4.9
-        - CMAKE_GENERATOR='Unix Makefiles'
-    - compiler: gcc
-      addons:
-        apt:
-          sources:
-            - ubuntu-toolchain-r-test
-          packages:
             - g++-5
       env:
         - COMPILER_CC=gcc-5

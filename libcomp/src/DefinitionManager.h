@@ -89,8 +89,18 @@ private:
         const libcomp::String& binaryFile, bool decrypt,
         uint16_t tablesExpected, std::list<std::shared_ptr<T>>& records)
     {
-        std::vector<char> data = pDataStore->DecryptFile(
-            libcomp::String("/BinaryData/") + binaryFile);
+        std::vector<char> data;
+
+        auto path = libcomp::String("/BinaryData/") + binaryFile;
+
+        if(decrypt)
+        {
+            data = pDataStore->DecryptFile(path);
+        }
+        else
+        {
+            data = pDataStore->ReadFile(path);
+        }
 
         if(data.empty())
         {

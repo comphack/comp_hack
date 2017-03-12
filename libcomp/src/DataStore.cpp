@@ -370,7 +370,7 @@ std::vector<char> DataStore::DecryptFile(const libcomp::String& path)
         return data;
     }
 
-    return ReadFile(path);
+    return {};
 }
 
 bool DataStore::EncryptFile(const libcomp::String& path,

@@ -57,7 +57,7 @@ int main(int argc, const char *argv[])
 
     auto config = std::make_shared<objects::ChannelConfig>();
     auto server = std::make_shared<channel::ChannelServer>(
-        config, configPath);
+        argv[0], config, configPath);
 
     if(!server->Initialize())
     {

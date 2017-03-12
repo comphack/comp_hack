@@ -27,9 +27,13 @@
 #ifndef LIBCOMP_SRC_BASESERVER_H
 #define LIBCOMP_SRC_BASESERVER_H
 
+// Standard C++14 Includes
+#include <gsl/gsl>
+
 // libcomp Includes
 #include "Database.h"
 #include "DatabaseConfig.h"
+#include "DataStore.h"
 #include "EncryptedConnection.h"
 #include "ServerConfig.h"
 #include "TcpServer.h"
@@ -51,11 +55,13 @@ class BaseServer : public TcpServer, public Manager,
 public:
     /**
      * Create a new base server.
+     * @param szProgram First command line argument for the application.
      * @param config Pointer to a config container that will hold properties
      *   every server has in common.
      * @param configPath File path to the location of the config to be loaded.
      */
-    BaseServer(std::shared_ptr<objects::ServerConfig> config, const String& configPath);
+    BaseServer(const char *szProgram, std::shared_ptr<
+        objects::ServerConfig> config, const String& configPath);
 
     /**
      * Clean up the server workers and send out the the server shutdown message.
@@ -100,6 +106,12 @@ public:
     std::shared_ptr<Database> GetDatabase(
         const EnumMap<objects::ServerConfig::DatabaseType_t,
             std::shared_ptr<objects::DatabaseConfig>>& configMap, bool performSetup);
+
+    /**
+     * Get the data store for the server.
+     * @returns Pointer to the data store. This shold never be deleted.
+     */
+    gsl::not_null<DataStore*> GetDataStore();
 
     /**
      * Call the Shutdown function on each worker.  This should be called
@@ -200,6 +212,9 @@ protected:
 
     /// List of workers to handle incoming connection packet based work.
     std::list<std::shared_ptr<libcomp::Worker>> mWorkers;
+
+    /// Data store for the server.
+    libcomp::DataStore mDataStore;
 };
 
 } // namespace libcomp

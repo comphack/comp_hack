@@ -53,6 +53,8 @@ SET(${PROJECT_NAME}_SRCS
     src/DatabaseQueryCassandra.cpp
     src/DatabaseQuerySQLite3.cpp
     src/DatabaseSQLite3.cpp
+    src/DataFile.cpp
+    src/DataStore.cpp
     src/Decrypt.cpp
     src/DefinitionManager.cpp
     src/DynamicObject.cpp
@@ -115,6 +117,8 @@ SET(${PROJECT_NAME}_HDRS
     src/DatabaseQueryCassandra.h
     src/DatabaseQuerySQLite3.h
     src/DatabaseSQLite3.h
+    src/DataFile.h
+    src/DataStore.h
     src/Decrypt.h
     src/DefinitionManager.h
     src/DynamicObject.h
@@ -433,7 +437,7 @@ TARGET_LINK_LIBRARIES(comp ${OPENSSL_LIBRARIES} ${ZLIB_LIBRARIES}
     ${SYSTEM_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} objgen sqlite3
     squirrel sqstdlib ttvfs ttvfs_zip tinyxml2 cassandra uv physfs)
 
-ADD_DEPENDENCIES(comp asio sqrat)
+ADD_DEPENDENCIES(comp asio sqrat gsl)
 
 IF(WIN32)
     TARGET_LINK_LIBRARIES(comp advapi32 iphlpapi psapi shell32 userenv ws2_32)

@@ -40,11 +40,12 @@
 
 using namespace channel;
 
-ChannelServer::ChannelServer(std::shared_ptr<objects::ServerConfig> config,
-    const libcomp::String& configPath) : libcomp::BaseServer(config, configPath),
-    mAccountManager(0), mCharacterManager(0), mChatManager(0), mSkillManager(0),
-    mZoneManager(0), mDefinitionManager(0), mServerDataManager(0),
-    mMaxEntityID(0), mMaxObjectID(0)
+ChannelServer::ChannelServer(const char *szProgram, std::shared_ptr<
+    objects::ServerConfig> config, const libcomp::String& configPath) :
+    libcomp::BaseServer(szProgram, config, configPath), mAccountManager(0),
+    mCharacterManager(0), mChatManager(0), mSkillManager(0), mZoneManager(0),
+    mDefinitionManager(0), mServerDataManager(0), mMaxEntityID(0),
+    mMaxObjectID(0)
 {
 }
 
@@ -60,13 +61,13 @@ bool ChannelServer::Initialize()
     auto conf = std::dynamic_pointer_cast<objects::ChannelConfig>(mConfig);
 
     mDefinitionManager = new libcomp::DefinitionManager();
-    if(!mDefinitionManager->LoadAllData(conf->GetBinaryDataDirectory()))
+    if(!mDefinitionManager->LoadAllData(GetDataStore()))
     {
         return false;
     }
 
     mServerDataManager = new libcomp::ServerDataManager();
-    if(!mServerDataManager->LoadData(conf->GetServerDataDefinitionsFile()))
+    if(!mServerDataManager->LoadData(GetDataStore()))
     {
         return false;
     }

@@ -51,11 +51,13 @@ class WorldServer : public libcomp::BaseServer
 public:
     /**
      * Create a new world server.
+     * @param szProgram First command line argument for the application.
      * @param config Pointer to a casted WorldConfig that will contain properties
      *   every server has in addition to world specific ones.
      * @param configPath File path to the location of the config to be loaded.
      */
-    WorldServer(std::shared_ptr<objects::ServerConfig> config, const libcomp::String& configPath);
+    WorldServer(const char *szProgram, std::shared_ptr<
+        objects::ServerConfig> config, const libcomp::String& configPath);
 
     /**
      * Clean up the server.

@@ -39,17 +39,6 @@ matrix:
           sources:
             - ubuntu-toolchain-r-test
           packages:
-            - g++-4.9
-      env:
-        - COMPILER_CC=gcc-4.9
-        - COMPILER_CXX=g++-4.9
-        - CMAKE_GENERATOR='Unix Makefiles'
-    - compiler: gcc
-      addons:
-        apt:
-          sources:
-            - ubuntu-toolchain-r-test
-          packages:
             - g++-5
       env:
         - COMPILER_CC=gcc-5
@@ -65,6 +54,7 @@ before_install:
   - sudo wget https://github.com/ninja-build/ninja/releases/download/v1.7.1/ninja-linux.zip
   - sudo unzip ninja-linux.zip
   - sudo chmod 755 ninja
+  - sudo mkdir -p /var/lib/comp_hack/zones
   - sudo rm ninja-linux.zip
   - export PATH="/opt/ninja/bin:${PATH}"
   - cd /opt

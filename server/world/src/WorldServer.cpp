@@ -42,8 +42,9 @@
 
 using namespace world;
 
-WorldServer::WorldServer(std::shared_ptr<objects::ServerConfig> config, const libcomp::String& configPath) :
-    libcomp::BaseServer(config, configPath)
+WorldServer::WorldServer(const char *szProgram, std::shared_ptr<
+    objects::ServerConfig> config, const libcomp::String& configPath) :
+    libcomp::BaseServer(szProgram, config, configPath)
 {
 }
 

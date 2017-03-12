@@ -55,6 +55,8 @@ IF("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
     IF(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 4.9)
         MESSAGE(FATAL_ERROR "GCC version must be at least 4.9!")
     ENDIF()
+
+    ADD_COMPILER_FLAGS(AUTO -fno-strict-aliasing)
 ELSEIF("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
     SET(SPECIAL_COMPILER_FLAGS "-stdlib=libc++")
 
@@ -119,8 +121,8 @@ IF(NOT MSVC)
         SET(CMAKE_BUILD_TYPE Debug)
     ENDIF()
 
-    # Ensure C++11 support is on.
-    ADD_CXX_FLAGS(AUTO -std=c++11)
+    # Ensure C++14 support is on.
+    ADD_CXX_FLAGS(AUTO -std=c++14)
 
     IF(NOT ("${SPECIAL_COMPILER_FLAGS}" STREQUAL ""))
         ADD_CXX_FLAGS(AUTO "${SPECIAL_COMPILER_FLAGS}")
@@ -161,6 +163,7 @@ SET(EXECUTABLE_OUTPUT_PATH "${CMAKE_CURRENT_BINARY_DIR}/bin")
 
 # List of common include paths for every project using libobjgen.
 SET(LIBOBJGEN_INCLUDES
+    ${GSL_INCLUDE_DIRS}
     ${CMAKE_SOURCE_DIR}/libobjgen/src
     # Needed for PushIgnore.h and PopIgnore.h.
     ${CMAKE_SOURCE_DIR}/libcomp/src

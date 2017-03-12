@@ -121,10 +121,8 @@ typedef struct __attribute__((packed))
 #pragma pack(pop)
 #endif // _WIN32
 
-std::vector<char> Decrypt::DecryptFile(const std::string& path)
+bool Decrypt::DecryptFile(std::vector<char>& data)
 {
-    std::vector<char> data = Decrypt::LoadFile(path);
-
     // Check the file is large enough.
     if(sizeof(EncryptedFileHeader_t) < data.size())
     {
@@ -145,6 +143,8 @@ std::vector<char> Decrypt::DecryptFile(const std::string& path)
 
             // Decrypt the file.
             Decrypt::DecryptCbc(data, originalSize);
+
+            return true;
         }
         else
         {
@@ -153,7 +153,32 @@ std::vector<char> Decrypt::DecryptFile(const std::string& path)
         }
     }
 
+    return false;
+}
+
+std::vector<char> Decrypt::DecryptFile(const std::string& path)
+{
+    std::vector<char> data = Decrypt::LoadFile(path);
+
+    (void)DecryptFile(data);
+
     return data;
+}
+
+bool Decrypt::EncryptFile(std::vector<char>& data)
+{
+    EncryptedFileHeader_t header;
+    header.originalSize = static_cast<uint32_t>(data.size());
+
+    memcpy(&header.magic[0], Config::ENCRYPTED_FILE_MAGIC,
+        sizeof(header.magic));
+
+    Decrypt::EncryptCbc(data);
+
+    data.insert(data.begin(), reinterpret_cast<char*>(&header),
+        reinterpret_cast<char*>(&header) + sizeof(header));
+
+    return true;
 }
 
 bool Decrypt::EncryptFile(const std::string& path,

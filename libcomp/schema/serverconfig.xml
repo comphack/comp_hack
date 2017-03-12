@@ -9,5 +9,9 @@
             <value>SQLITE3</value>
         </member>
         <member type="bool" name="MultithreadMode" default="true"/>
+        <member type="list" name="DataStore">
+            <element type="string"/>
+        </member>
+        <member type="bool" name="DataStoreSync" default="true"/>
     </object>
 </objgen>

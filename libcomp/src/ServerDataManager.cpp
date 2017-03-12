@@ -48,68 +48,43 @@ const std::shared_ptr<objects::ServerZone> ServerDataManager::GetZoneData(uint32
     return GetObjectByID<objects::ServerZone>(id, mZoneData);
 }
 
-bool ServerDataManager::LoadData(const libcomp::String& definitionPath)
+bool ServerDataManager::LoadData(gsl::not_null<DataStore*> pDataStore)
 {
-    tinyxml2::XMLDocument defDoc;
-    if(tinyxml2::XML_SUCCESS != defDoc.LoadFile(definitionPath.C()))
-    {
-        LOG_WARNING(libcomp::String("Failed to parse server definitions file: %1\n").Arg(
-            definitionPath));
-        return false;
-    }
-
-    LOG_DEBUG(libcomp::String("Reading server definitions file: %1\n").Arg(
-        definitionPath));
-
-    const tinyxml2::XMLElement *defRootNode = defDoc.RootElement();
-    const tinyxml2::XMLElement *defNode = defRootNode->FirstChildElement("definition");
-
     bool failure = false;
-    while(nullptr != defNode)
+
+    if(!failure)
     {
-        const char *szPath = defNode->Attribute("path");
-        const char *szType = defNode->Attribute("type");
+        std::list<libcomp::String> files;
+        std::list<libcomp::String> dirs;
+        std::list<libcomp::String> symLinks;
 
-        if(nullptr == szPath || nullptr == szType)
-        {
-            failure = true;
-            break;
-        }
+        (void)pDataStore->GetListing("/zones", files, dirs, symLinks,
+            true, true);
 
-        tinyxml2::XMLDocument objsDoc;
-        if(tinyxml2::XML_SUCCESS != objsDoc.LoadFile(szPath))
+        for(auto path : files)
         {
-            failure = true;
-            break;
-        }
-
-        std::string type(szType);
-        if(type == "zone")
-        {
-            if(!LoadObjects<objects::ServerZone>(objsDoc, mZoneData))
+            if(path.Matches("^.*\\.xml$"))
             {
-                failure = true;
-                break;
+                tinyxml2::XMLDocument objsDoc;
+
+                std::vector<char> data = pDataStore->ReadFile(path);
+
+                if(data.empty() || tinyxml2::XML_SUCCESS !=
+                    objsDoc.Parse(&data[0], data.size()))
+                {
+                    failure = true;
+                    break;
+                }
+
+                if(!LoadObjects<objects::ServerZone>(objsDoc, mZoneData))
+                {
+                    failure = true;
+                    break;
+                }
+
+                LOG_DEBUG(libcomp::String("Loaded zone file: %1\n").Arg(path));
             }
         }
-        
-        defNode = defNode->NextSiblingElement("definition");
-    }
-
-    if(failure)
-    {
-        LOG_ERROR(libcomp::String("Error encountered while loading server data.\n"));
-    }
-    else
-    {
-        size_t loadCount = 0;
-        for(auto z : mZoneData)
-        {
-            loadCount += z.second->NPCsCount() + z.second->ObjectsCount();
-        }
-
-        LOG_DEBUG(libcomp::String("Successfully loaded %1 server object(s).\n").Arg(
-            loadCount));
     }
 
     return !failure;

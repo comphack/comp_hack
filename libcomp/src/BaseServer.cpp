@@ -42,14 +42,27 @@
 
 using namespace libcomp;
 
-BaseServer::BaseServer(std::shared_ptr<objects::ServerConfig> config, const String& configPath) :
-    TcpServer("any", config->GetPort()), mConfig(config)
+BaseServer::BaseServer(const char *szProgram, std::shared_ptr<
+    objects::ServerConfig> config, const String& configPath) :
+    TcpServer("any", config->GetPort()), mConfig(config), mDataStore(szProgram)
 {
     ReadConfig(config, configPath);
 }
 
 bool BaseServer::Initialize()
 {
+    if(0 == mConfig->DataStoreCount())
+    {
+        LOG_CRITICAL("At least one data store path must be specified.\n");
+
+        return false;
+    }
+
+    if(!mDataStore.AddSearchPaths(mConfig->GetDataStore()))
+    {
+        return false;
+    }
+
     switch(mConfig->GetDatabaseType())
     {
         case objects::ServerConfig::DatabaseType_t::SQLITE3:
@@ -166,6 +179,11 @@ BaseServer::~BaseServer()
         worker->Join();
     }
     mWorkers.clear();
+}
+
+gsl::not_null<DataStore*> BaseServer::GetDataStore()
+{
+    return &mDataStore;
 }
 
 int BaseServer::Run()

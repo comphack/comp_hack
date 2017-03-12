@@ -45,14 +45,16 @@ class LobbyServer : public libcomp::BaseServer
 public:
     /**
      * Create a new lobby server.
+     * @param szProgram First command line argument for the application.
      * @param config Pointer to a casted LobbyConfig that will contain properties
      *   every server has in addition to lobby specific ones.
      * @param configPath File path to the location of the config to be loaded.
      * @param unitTestMode Debug parameter to use in unit tests.  Set to true
      *  to enable unit test mode.
      */
-    LobbyServer(std::shared_ptr<objects::ServerConfig> config,
-        const libcomp::String& configPath, bool unitTestMode);
+    LobbyServer(const char *szProgram, std::shared_ptr<
+        objects::ServerConfig> config, const libcomp::String& configPath,
+        bool unitTestMode);
 
     /**
      * Clean up the server.

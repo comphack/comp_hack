@@ -117,18 +117,18 @@ const std::list<uint32_t> DefinitionManager::GetDefaultCharacterSkills()
     return mDefaultCharacterSkills;
 }
 
-bool DefinitionManager::LoadAllData(const libcomp::String& path)
+bool DefinitionManager::LoadAllData(gsl::not_null<DataStore*> pDataStore)
 {
     LOG_INFO("Loading binary data definitions...\n");
     bool success = true;
-    success &= LoadCItemData(path);
-    success &= LoadDevilData(path);
-    success &= LoadDevilLVUpRateData(path);
-    success &= LoadExpertClassData(path);
-    success &= LoadHNPCData(path);
-    success &= LoadItemData(path);
-    success &= LoadONPCData(path);
-    success &= LoadSkillData(path);
+    success &= LoadCItemData(pDataStore);
+    success &= LoadDevilData(pDataStore);
+    success &= LoadDevilLVUpRateData(pDataStore);
+    success &= LoadExpertClassData(pDataStore);
+    success &= LoadHNPCData(pDataStore);
+    success &= LoadItemData(pDataStore);
+    success &= LoadONPCData(pDataStore);
+    success &= LoadSkillData(pDataStore);
 
     if(success)
     {
@@ -142,11 +142,11 @@ bool DefinitionManager::LoadAllData(const libcomp::String& path)
     return success;
 }
 
-bool DefinitionManager::LoadCItemData(const libcomp::String& path)
+bool DefinitionManager::LoadCItemData(gsl::not_null<DataStore*> pDataStore)
 {
     std::list<std::shared_ptr<objects::MiCItemData>> records;
-    bool success = LoadBinaryData<objects::MiCItemData>(path, "Shield/CItemData.sbin",
-        true, 0, records);
+    bool success = LoadBinaryData<objects::MiCItemData>(pDataStore,
+        "Shield/CItemData.sbin", true, 0, records);
     for(auto record : records)
     {
         auto id = record->GetBaseData()->GetID();
@@ -160,11 +160,11 @@ bool DefinitionManager::LoadCItemData(const libcomp::String& path)
     return success;
 }
 
-bool DefinitionManager::LoadDevilData(const libcomp::String& path)
+bool DefinitionManager::LoadDevilData(gsl::not_null<DataStore*> pDataStore)
 {
     std::list<std::shared_ptr<objects::MiDevilData>> records;
-    bool success = LoadBinaryData<objects::MiDevilData>(path, "Shield/DevilData.sbin",
-        true, 0, records);
+    bool success = LoadBinaryData<objects::MiDevilData>(pDataStore,
+        "Shield/DevilData.sbin", true, 0, records);
     for(auto record : records)
     {
         auto id = record->GetBasic()->GetID();
@@ -180,11 +180,12 @@ bool DefinitionManager::LoadDevilData(const libcomp::String& path)
     return success;
 }
 
-bool DefinitionManager::LoadDevilLVUpRateData(const libcomp::String& path)
+bool DefinitionManager::LoadDevilLVUpRateData(
+    gsl::not_null<DataStore*> pDataStore)
 {
     std::list<std::shared_ptr<objects::MiDevilLVUpRateData>> records;
-    bool success = LoadBinaryData<objects::MiDevilLVUpRateData>(path, "Shield/DevilLVUpRateData.sbin",
-        true, 0, records);
+    bool success = LoadBinaryData<objects::MiDevilLVUpRateData>(pDataStore,
+        "Shield/DevilLVUpRateData.sbin", true, 0, records);
     for(auto record : records)
     {
         mDevilLVUpRateData[record->GetID()] = record;
@@ -193,11 +194,12 @@ bool DefinitionManager::LoadDevilLVUpRateData(const libcomp::String& path)
     return success;
 }
 
-bool DefinitionManager::LoadExpertClassData(const libcomp::String& path)
+bool DefinitionManager::LoadExpertClassData(
+    gsl::not_null<DataStore*> pDataStore)
 {
     std::list<std::shared_ptr<objects::MiExpertData>> records;
-    bool success = LoadBinaryData<objects::MiExpertData>(path, "Shield/ExpertClassData.sbin",
-        true, 0, records);
+    bool success = LoadBinaryData<objects::MiExpertData>(pDataStore,
+        "Shield/ExpertClassData.sbin", true, 0, records);
     for(auto record : records)
     {
         mExpertData[record->GetID()] = record;
@@ -208,7 +210,8 @@ bool DefinitionManager::LoadExpertClassData(const libcomp::String& path)
             auto rank0Data = class0Data->GetRankData(0);
             for(uint32_t i = 0; i < rank0Data->GetSkillCount(); i++)
             {
-                mDefaultCharacterSkills.push_back(rank0Data->GetSkill((size_t)i));
+                mDefaultCharacterSkills.push_back(
+                    rank0Data->GetSkill((size_t)i));
             }
         }
     }
@@ -216,11 +219,11 @@ bool DefinitionManager::LoadExpertClassData(const libcomp::String& path)
     return success;
 }
 
-bool DefinitionManager::LoadHNPCData(const libcomp::String& path)
+bool DefinitionManager::LoadHNPCData(gsl::not_null<DataStore*> pDataStore)
 {
     std::list<std::shared_ptr<objects::MiHNPCData>> records;
-    bool success = LoadBinaryData<objects::MiHNPCData>(path, "Shield/hNPCData.sbin",
-        true, 0, records);
+    bool success = LoadBinaryData<objects::MiHNPCData>(pDataStore,
+        "Shield/hNPCData.sbin", true, 0, records);
     for(auto record : records)
     {
         mHNPCData[record->GetBasic()->GetID()] = record;
@@ -229,11 +232,11 @@ bool DefinitionManager::LoadHNPCData(const libcomp::String& path)
     return success;
 }
 
-bool DefinitionManager::LoadItemData(const libcomp::String& path)
+bool DefinitionManager::LoadItemData(gsl::not_null<DataStore*> pDataStore)
 {
     std::list<std::shared_ptr<objects::MiItemData>> records;
-    bool success = LoadBinaryData<objects::MiItemData>(path, "Shield/ItemData.sbin",
-        true, 2, records);
+    bool success = LoadBinaryData<objects::MiItemData>(pDataStore,
+        "Shield/ItemData.sbin", true, 2, records);
     for(auto record : records)
     {
         mItemData[record->GetCommon()->GetID()] = record;
@@ -242,11 +245,11 @@ bool DefinitionManager::LoadItemData(const libcomp::String& path)
     return success;
 }
 
-bool DefinitionManager::LoadONPCData(const libcomp::String& path)
+bool DefinitionManager::LoadONPCData(gsl::not_null<DataStore*> pDataStore)
 {
     std::list<std::shared_ptr<objects::MiONPCData>> records;
-    bool success = LoadBinaryData<objects::MiONPCData>(path, "Shield/oNPCData.sbin",
-        true, 0, records);
+    bool success = LoadBinaryData<objects::MiONPCData>(pDataStore,
+        "Shield/oNPCData.sbin", true, 0, records);
     for(auto record : records)
     {
         mONPCData[record->GetID()] = record;
@@ -255,11 +258,11 @@ bool DefinitionManager::LoadONPCData(const libcomp::String& path)
     return success;
 }
 
-bool DefinitionManager::LoadSkillData(const libcomp::String& path)
+bool DefinitionManager::LoadSkillData(gsl::not_null<DataStore*> pDataStore)
 {
     std::list<std::shared_ptr<objects::MiSkillData>> records;
-    bool success = LoadBinaryData<objects::MiSkillData>(path, "Shield/SkillData.sbin",
-        true, 4, records);
+    bool success = LoadBinaryData<objects::MiSkillData>(pDataStore,
+        "Shield/SkillData.sbin", true, 4, records);
     for(auto record : records)
     {
         mSkillData[record->GetCommon()->GetID()] = record;

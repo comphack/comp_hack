@@ -678,6 +678,19 @@ String String::Arg(double a, int fieldWidth, int base, char fillChar)
     return Arg(String(ss.str()));
 }
 
+bool String::Matches(const libcomp::String& expression) const
+{
+    std::smatch match;
+    std::string s = ToUtf8();
+
+    if(std::regex_match(s, match, std::regex(expression.ToUtf8())))
+    {
+        return true;
+    }
+
+    return false;
+}
+
 String String::ToUpper() const
 {
     std::string s = d->mString;

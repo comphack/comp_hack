@@ -27,8 +27,12 @@
 #ifndef LIBCOMP_SRC_DEFINITIONMANAGER_H
 #define LIBCOMP_SRC_DEFINITIONMANAGER_H
 
+// Standard C++14 Includes
+#include <gsl/gsl>
+
 // libcomp Includes
 #include "CString.h"
+#include "DataStore.h"
 #include "Decrypt.h"
 #include "Object.h"
 
@@ -68,33 +72,40 @@ public:
 
     const std::list<uint32_t> GetDefaultCharacterSkills();
 
-    bool LoadAllData(const libcomp::String& path);
+    bool LoadAllData(gsl::not_null<DataStore*> pDataStore);
 
-    bool LoadCItemData(const libcomp::String& path);
-    bool LoadDevilData(const libcomp::String& path);
-    bool LoadDevilLVUpRateData(const libcomp::String& path);
-    bool LoadExpertClassData(const libcomp::String& path);
-    bool LoadHNPCData(const libcomp::String& path);
-    bool LoadItemData(const libcomp::String& path);
-    bool LoadONPCData(const libcomp::String& path);
-    bool LoadSkillData(const libcomp::String& path);
+    bool LoadCItemData(gsl::not_null<DataStore*> pDataStore);
+    bool LoadDevilData(gsl::not_null<DataStore*> pDataStore);
+    bool LoadDevilLVUpRateData(gsl::not_null<DataStore*> pDataStore);
+    bool LoadExpertClassData(gsl::not_null<DataStore*> pDataStore);
+    bool LoadHNPCData(gsl::not_null<DataStore*> pDataStore);
+    bool LoadItemData(gsl::not_null<DataStore*> pDataStore);
+    bool LoadONPCData(gsl::not_null<DataStore*> pDataStore);
+    bool LoadSkillData(gsl::not_null<DataStore*> pDataStore);
 
 private:
     template <class T>
-    bool LoadBinaryData(const libcomp::String& path, const libcomp::String& binaryFile,
-        bool decrypt, uint16_t tablesExpected, std::list<std::shared_ptr<T>>& records)
+    bool LoadBinaryData(gsl::not_null<DataStore*> pDataStore,
+        const libcomp::String& binaryFile, bool decrypt,
+        uint16_t tablesExpected, std::list<std::shared_ptr<T>>& records)
     {
         std::vector<char> data;
-        auto filePath = libcomp::String("%1%2").Arg(!path.IsEmpty() ? (path + "/") : "")
-            .Arg(binaryFile).ToUtf8();
-	    if(decrypt)
-	    {
-            data = Decrypt::DecryptFile(filePath);
-	    }
-	    else
-	    {
-            data = Decrypt::LoadFile(filePath);
-	    }
+
+        auto path = libcomp::String("/BinaryData/") + binaryFile;
+
+        if(decrypt)
+        {
+            data = pDataStore->DecryptFile(path);
+        }
+        else
+        {
+            data = pDataStore->ReadFile(path);
+        }
+
+        if(data.empty())
+        {
+            return false;
+        }
 
         std::stringstream ss(std::string(data.begin(), data.end()));
         libcomp::ObjectInStream ois(ss);

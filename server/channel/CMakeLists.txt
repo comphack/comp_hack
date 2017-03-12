@@ -16,7 +16,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
- 
+
 PROJECT(comp_channel)
 
 MESSAGE("** Configuring ${PROJECT_NAME} **")

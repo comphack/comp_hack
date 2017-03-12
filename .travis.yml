@@ -54,6 +54,7 @@ before_install:
   - sudo wget https://github.com/ninja-build/ninja/releases/download/v1.7.1/ninja-linux.zip
   - sudo unzip ninja-linux.zip
   - sudo chmod 755 ninja
+  - sudo mkdir -p /var/lib/comp_hack/zones
   - sudo rm ninja-linux.zip
   - export PATH="/opt/ninja/bin:${PATH}"
   - cd /opt

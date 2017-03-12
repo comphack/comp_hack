@@ -21,6 +21,47 @@ INCLUDE(ExternalProject)
 OPTION(GIT_DEPENDENCIES "Download dependencies from Git instead." OFF)
 
 IF(GIT_DEPENDENCIES)
+    SET(GSL_URL
+        GIT_REPOSITORY https://github.com/Microsoft/GSL.git
+        GIT_TAG master
+    )
+ELSE()
+    SET(GSL_URL
+        URL https://github.com/Microsoft/GSL/archive/5905d2d77467d9daa18fe711b55e2db7a30fe3e3.zip
+        URL_HASH SHA1=a2d2c6bfe101be3ef80d9c69e3361f164517e7b9
+    )
+ENDIF()
+
+ExternalProject_Add(
+    gsl
+
+    ${GSL_URL}
+
+    PREFIX ${CMAKE_CURRENT_BINARY_DIR}/gsl
+    CMAKE_ARGS -DCMAKE_INSTALL_PREFIX:PATH=<INSTALL_DIR>
+
+    # Dump output to a log instead of the screen.
+    LOG_DOWNLOAD ON
+    LOG_CONFIGURE ON
+    LOG_BUILD ON
+    LOG_INSTALL ON
+
+    CONFIGURE_COMMAND ""
+    BUILD_COMMAND ""
+    INSTALL_COMMAND ""
+)
+
+ExternalProject_Get_Property(gsl SOURCE_DIR)
+ExternalProject_Get_Property(gsl INSTALL_DIR)
+
+SET_TARGET_PROPERTIES(gsl PROPERTIES FOLDER "Dependencies")
+
+#SET(GSL_INCLUDE_DIRS "${INSTALL_DIR}/include")
+SET(GSL_INCLUDE_DIRS "${SOURCE_DIR}/include")
+
+FILE(MAKE_DIRECTORY "${GSL_INCLUDE_DIRS}")
+
+IF(GIT_DEPENDENCIES)
     SET(ZLIB_URL
         GIT_REPOSITORY https://github.com/comphack/zlib.git
         GIT_TAG comp_hack

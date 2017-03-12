@@ -19,6 +19,10 @@
             <!--<member name="Password"/>-->
         </member>
         <member name="MultithreadMode">true</member>
+        <member name="DataStore">
+            <element>/var/lib/comp_hack</element>
+        </member>
+        <member name="DataStoreSync">true</element>
         
         <!-- From LobbyConfig -->
         <member name="CharacterDeletionDelay">1440</member>	<!-- In minutes, 24 hours by default -->

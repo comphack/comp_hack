@@ -19,7 +19,11 @@
             <!--<member name="Password"/>-->
         </member>
         <member name="MultithreadMode">true</member>
-        
+        <member name="DataStore">
+            <element>/var/lib/comp_hack</element>
+        </member>
+        <member name="DataStoreSync">true</element>
+
         <!-- From WorldConfig -->
         <member name="ID">0</member>
         <member name="Name">Test World</member>

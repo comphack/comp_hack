@@ -48,9 +48,10 @@
 
 using namespace lobby;
 
-LobbyServer::LobbyServer(std::shared_ptr<objects::ServerConfig> config,
-    const libcomp::String& configPath, bool unitTestMode) :
-    libcomp::BaseServer(config, configPath), mUnitTestMode(unitTestMode)
+LobbyServer::LobbyServer(const char *szProgram, std::shared_ptr<
+    objects::ServerConfig> config, const libcomp::String& configPath,
+    bool unitTestMode) : libcomp::BaseServer(szProgram, config, configPath),
+    mUnitTestMode(unitTestMode)
 {
 }
 

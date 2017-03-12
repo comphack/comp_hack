@@ -357,6 +357,13 @@ public:
         char fillChar = ' ');
 
     /**
+     * Determine if a string matches a regular expression.
+     * @param expression Regular expression to match.
+     * @returns true if the string matches, false otherwise.
+     */
+    bool Matches(const libcomp::String& expression) const;
+
+    /**
      * Compare the string to a C-style UTF-8 encoded string.
      * @param szString C-style UTF-8 encoded string to compare to.
      * @returns true if the string data matches exactly.

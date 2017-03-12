@@ -53,6 +53,8 @@ SET(${PROJECT_NAME}_SRCS
     src/DatabaseQueryCassandra.cpp
     src/DatabaseQuerySQLite3.cpp
     src/DatabaseSQLite3.cpp
+    src/DataFile.cpp
+    src/DataStore.cpp
     src/Decrypt.cpp
     src/DefinitionManager.cpp
     src/DynamicObject.cpp
@@ -115,6 +117,8 @@ SET(${PROJECT_NAME}_HDRS
     src/DatabaseQueryCassandra.h
     src/DatabaseQuerySQLite3.h
     src/DatabaseSQLite3.h
+    src/DataFile.h
+    src/DataStore.h
     src/Decrypt.h
     src/DefinitionManager.h
     src/DynamicObject.h

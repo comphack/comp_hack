@@ -54,6 +54,18 @@ namespace Decrypt
 {
 
 /**
+ * @brief Decrypt a file buffer.
+ * @param buffer Buffer of the file to be decrypted.
+ * @retval true File was decrypted.
+ * @retval false File was not decrypted.
+ * @sa Decrypt::EncryptFile
+ * @sa Config::ENCRYPTED_FILE_MAGIC
+ * @sa Config::ENCRYPTED_FILE_KEY
+ * @sa Config::ENCRYPTED_FILE_IV
+ */
+bool DecryptFile(std::vector<char>& buffer);
+
+/**
  * @brief Decrypt a file into a buffer.
  * @param path Path to the file to be decrypted.
  * @returns Buffer of the decrypted file. Will be empty if an error occurred.
@@ -63,6 +75,18 @@ namespace Decrypt
  * @sa Config::ENCRYPTED_FILE_IV
  */
 std::vector<char> DecryptFile(const std::string& path);
+
+/**
+ * Encrypt a file buffer.
+ * @param buffer Buffer of the file to be encrypted.
+ * @retval true File was encrypted.
+ * @retval false File was not encrypted.
+ * @sa Decrypt::DecryptFile
+ * @sa Config::ENCRYPTED_FILE_MAGIC
+ * @sa Config::ENCRYPTED_FILE_KEY
+ * @sa Config::ENCRYPTED_FILE_IV
+ */
+bool EncryptFile(std::vector<char>& data);
 
 /**
  * Encrypt a file from a buffer.

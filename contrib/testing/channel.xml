@@ -6,6 +6,10 @@
         <member name="Port">14666</member>
         <member name="DatabaseType">CASSANDRA</member>    <!-- CASSANDRA/SQLITE3 -->
         <member name="MultithreadMode">true</member>
+        <member name="DataStore">
+            <element>/var/lib/comp_hack</element>
+        </member>
+        <member name="DataStoreSync">true</element>
         
         <!-- From ChannelConfig -->
         <member name="Name">Test Channel</member>

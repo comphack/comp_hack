@@ -27,8 +27,12 @@
 #ifndef LIBCOMP_SRC_SERVERDATAMANAGER_H
 #define LIBCOMP_SRC_SERVERDATAMANAGER_H
 
+// Standard C++14 Includes
+#include <gsl/gsl>
+
 // libcomp Includes
 #include "CString.h"
+#include "DataStore.h"
 
 // tinyxml2 Includes
 #include "PushIgnore.h"
@@ -54,7 +58,7 @@ public:
 
     const std::shared_ptr<objects::ServerZone> GetZoneData(uint32_t id);
 
-    bool LoadData(const libcomp::String& definitionPath);
+    bool LoadData(gsl::not_null<DataStore*> pDataStore);
 
 private:
     template <class T>

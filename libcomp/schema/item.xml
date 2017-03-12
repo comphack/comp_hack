@@ -2,6 +2,8 @@
 <objgen>
     <object name="Item" location="world">
         <member type="u32" name="Type"/>
+        <member type="ItemBox*" name="ItemBox"/>
+        <member type="s8" name="BoxSlot" default="-1"/>
         <member type="u16" name="StackSize" default="1"/>
         <member type="u16" name="Durability"/>
         <member type="s8" name="MaxDurability"/>
@@ -20,6 +22,8 @@
     </object>
     <object name="ItemBox" location="world">
         <member type="s8" name="Type"/>
+        <member type="Account*" name="Account" key="true" unique="false"/>
+        <member type="Character*" name="Character" key="true" unique="false"/>
         <member type="array" name="Items" size="50">
             <element type="Item*"/>
         </member>

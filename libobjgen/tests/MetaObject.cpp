@@ -209,6 +209,7 @@ TEST(MetaObjectXmlParser, ValidReferenceCheck)
             "</object>"
             "<object name='Object2' persistent='false'>"
                 "<member name='Object1' type='Object1*'/>"
+                "<member name='Generic' type='ref'/>"
             "</object>"
         "</objects>";
 

@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="MiNPCBasicData" persistent="false">
+        <member type="u32" name="ID"/>
+        <member type="string" length="36" name="name"/>
+        <member type="s16" name="title"/>
+        <member type="u16" name="unk1"/>
+        <member type="u8" name="unk2"/>
+        <member type="u8" name="unk3"/>
+        <member type="u8" name="unk4"/>
+        <member type="u8" name="unk5"/>
+        <member type="s16" name="LNC"/>
+        <member type="s16" name="unk7"/>
+        <member type="u32" name="modelID"/>
+    </object>
+    <object name="MiDCategoryData" persistent="false">
+        <member type="u8" name="category1"/>
+        <member type="u8" name="category2"/>
+        <member type="u16" name="category3"/>
+    </object>
+    <object name="MiAIRelationData" persistent="false">
+        <member type="u16" name="ai1"/>
+        <member type="u16" name="ai2"/>
+        <member type="u16" name="ai3"/>
+        <member type="u16" name="ai4"/>
+    </object>
+    <object name="MiNegotiationData" persistent="false">
+        <member type="u8" name="negotiation1"/>
+        <member type="u8" name="negotiation2"/>
+        <member type="u8" name="negotiation3"/>
+        <member type="u8" name="negotiation4"/>
+    </object>
+    <object name="MiSummonData" persistent="false">
+        <member type="u32" name="summon1"/>
+        <member type="u8" name="summon2"/>
+        <member type="u8" name="magModifier"/>
+        <member type="u16" name="summon3"/>
+    </object>
+    <object name="MiUnionData" persistent="false">
+        <member type="u8" name="union1"/>
+        <member type="u8" name="union2"/>
+        <member type="u16" name="union3"/>
+        <member type="u32" name="union4"/>
+        <member type="array" size="5" name="union5">
+            <element type="float"/>
+        </member>
+        <member type="u32" name="union6"/>
+    </object>
+    <object name="MiAcquisitionSkillData" persistent="false">
+        <member type="u32" name="ID"/>
+        <member type="u32" name="level"/>
+    </object>
+    <object name="MiGrowthData" persistent="false">
+        <member type="u8" name="growthType"/>
+        <member type="u8" name="baseLevel"/>
+        <member type="u8" name="growth1"/>
+        <member type="u8" name="growth2"/>
+        <member type="u16" name="growth3"/>
+        <member type="u16" name="growth4"/>
+        <member type="array" size="8" name="skills">
+            <element type="u32"/>
+        </member>
+        <member type="array" size="8" name="growth5">
+            <element type="u32"/>
+        </member>
+        <member type="array" size="4" name="traits">
+            <element type="u32"/>
+        </member>
+        <member type="array" size="16" name="acquisitionSkills">
+            <element type="MiAcquisitionSkillData*"/>
+        </member>
+        <member type="u8" name="growth6"/>
+        <member type="u8" name="growth7"/>
+        <member type="u16" name="growth8"/>
+        <member type="array" size="8" name="salesDialogue">
+            <element type="string" length="68"/>
+        </member>
+    </object>
+    <object name="MiDevilBattleData" persistent="false">
+        <member type="u32" name="battle1"/>
+        <member type="u32" name="battle2"/>
+        <member type="u8" name="battle3"/>
+        <member type="u8" name="battle4"/>
+        <member type="u8" name="battle5"/>
+        <member type="u8" name="battle6"/>
+        <member type="array" size="126" name="correct">
+            <element type="s16"/>
+        </member>
+        <member type="array" size="1" name="battle7">
+            <element type="s32"/>
+        </member>
+    </object>
+    <object name="MiDevilFamiliarityData" persistent="false">
+        <member type="s32" name="familiarity1"/>
+        <member type="s32" name="familiarity2"/>
+    </object>
+    <object name="MiDevilData" persistent="false">
+        <member type="MiNPCBasicData*" name="basic"/>
+        <member type="MiDCategoryData*" name="category"/>
+        <member type="MiAIRelationData*" name="AI"/>
+        <member type="MiNegotiationData*" name="negotiation"/>
+        <member type="MiSummonData*" name="summonData"/>
+        <member type="MiUnionData*" name="unionData"/>
+        <member type="MiGrowthData*" name="growth"/>
+        <member type="MiDevilBattleData*" name="battleData"/>
+        <member type="MiDevilFamiliarityData*" name="familiarity"/>
+    </object>
+</objgen>

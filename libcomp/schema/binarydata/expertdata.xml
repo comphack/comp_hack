@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="MiExpertRankData" persistent="false">
+        <member type="u32" name="skillCount"/>
+        <member type="array" size="4" name="skill">
+            <element type="u32"/>
+        </member>
+    </object>
+    <object name="MiExpertClassData" persistent="false">
+        <member type="u32" name="ID"/>
+        <member type="array" size="10" name="rankData">
+            <element type="MiExpertRankData*"/>
+        </member>
+    </object>
+    <object name="MiExpertUnkData" persistent="false">
+        <member type="u32" name="unk1"/>
+        <member type="u16" name="unk2"/>
+        <member type="s16" name="unk3"/>
+        <member type="float" name="unk4"/>
+    </object>
+    <object name="MiExpertData" persistent="false">
+        <member type="u32" name="ID"/>
+        <member type="s16" name="maxClass"/>
+        <member type="s16" name="maxRank"/>
+        <member type="array" size="11" name="classData">
+            <element type="MiExpertClassData*"/>
+        </member>
+        <member type="bool" name="disabled"/>
+        <member type="u8" name="unk1"/>
+        <member type="u16" name="unk2"/>
+        <member type="array" size="4" name="unk3">
+            <element type="MiExpertUnkData*"/>
+        </member>
+    </object>
+</objgen>

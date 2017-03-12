@@ -30,33 +30,15 @@
 // libcomp Includes
 #include <Log.h>
 #include <ManagerPacket.h>
-#include <PacketCodes.h>
 #include <ReadOnlyPacket.h>
 #include <TcpConnection.h>
 
 // channel Includes
 #include "ChannelClientConnection.h"
 #include "ChannelServer.h"
-#include "CharacterManager.h"
+#include "ZoneManager.h"
 
 using namespace channel;
-
-void SendZoneData(const std::shared_ptr<ChannelServer> server,
-    const std::shared_ptr<ChannelClientConnection> client,
-    int32_t characterUID)
-{
-    (void)characterUID;
-
-    auto state = client->GetClientState();
-    auto cState = state->GetCharacterState();
-
-    // The client's partner demon will be shown elsewhere
-
-    auto characterManager = server->GetCharacterManager();
-    characterManager->ShowEntity(client, cState->GetEntityID());
-
-    /// @todo: Populate NPCs, enemies, other players, etc
-}
 
 bool Parsers::PopulateZone::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
@@ -79,8 +61,10 @@ bool Parsers::PopulateZone::Parse(libcomp::ManagerPacket *pPacketManager,
     }
 
     auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-
-    server->QueueWork(SendZoneData, server, client, characterUID);
+    server->QueueWork([](ZoneManager* manager, const std::shared_ptr<ChannelClientConnection> c)
+                    {
+                        manager->SendPopulateZoneData(c);
+                    }, server->GetZoneManager(), client);
 
     return true;
 }

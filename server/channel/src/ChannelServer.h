@@ -41,6 +41,10 @@
 #include "AccountManager.h"
 #include "CharacterManager.h"
 #include "ChatManager.h"
+#include "DefinitionManager.h"
+#include "ServerDataManager.h"
+#include "SkillManager.h"
+#include "ZoneManager.h"
 
 namespace channel
 {
@@ -158,6 +162,30 @@ public:
     ChatManager* GetChatManager() const;
 
     /**
+     * Get a pointer to the skill manager.
+     * @return Pointer to the SkillManager
+     */
+    SkillManager* GetSkillManager() const;
+
+    /**
+     * Get a pointer to the zone manager.
+     * @return Pointer to the ZoneManager
+     */
+    ZoneManager* GetZoneManager() const;
+
+    /**
+     * Get a pointer to the definition manager.
+     * @return Pointer to the DefinitionManager
+     */
+    libcomp::DefinitionManager* GetDefinitionManager() const;
+
+    /**
+     * Get a pointer to the server data manager.
+     * @return Pointer to the ServerDataManager
+     */
+    libcomp::ServerDataManager* GetServerDataManager() const;
+
+    /**
      * Increments and returns the next available entity ID.
      * @return Next game entity ID for the channel
      */
@@ -219,6 +247,18 @@ protected:
 
     /// Pointer to the Chat Manager.
     ChatManager *mChatManager;
+
+    /// Pointer to the Skill Manager.
+    SkillManager *mSkillManager;
+
+    /// Pointer to the Zone Manager.
+    ZoneManager *mZoneManager;
+
+    /// Pointer to the Definition Manager.
+    libcomp::DefinitionManager *mDefinitionManager;
+
+    /// Pointer to the Server Data Manager.
+    libcomp::ServerDataManager *mServerDataManager;
 
     /// Highest entity ID currently assigned
     int32_t mMaxEntityID;

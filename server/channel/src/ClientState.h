@@ -28,17 +28,20 @@
 #define SERVER_CHANNEL_SRC_CLIENTSTATE_H
 
 // channel Includes
-#include "CharacterState.h"
-#include "DemonState.h"
+#include "ActiveEntityState.h"
 
 // objects Includes
+#include <Character.h>
 #include <ClientStateObject.h>
+#include <Demon.h>
 
 namespace channel
 {
 
 typedef float ClientTime;
 typedef uint64_t ServerTime;
+typedef ActiveEntityStateImp<objects::Character> CharacterState;
+typedef ActiveEntityStateImp<objects::Demon> DemonState;
 
 /**
  * Contains the state of a game client currently connected to the
@@ -78,12 +81,28 @@ public:
     std::shared_ptr<DemonState> GetDemonState();
 
     /**
+     * Get the entity state associated to an entity ID for this client.
+     * @param entityID Entity ID associated to this client to retrieve
+     * @return Pointer to the matching entity state, null if no match
+     *  exists
+     */
+    std::shared_ptr<ActiveEntityState> GetEntityState(int32_t entityID);
+
+    /**
      * Get the object ID associated a UUID associated to the client.
      * If a zero is returned, the UUID is not registered.
      * @param uuid UUID to retrieve the corresponding object ID from
      * @return Object ID associated to a UUID
      */
     int64_t GetObjectID(const libobjgen::UUID& uuid) const;
+
+    /**
+     * Get the UUID associated to an object ID associated to the client.
+     * If a null UUID is returned, the object ID is not registered.
+     * @param objectID Object ID to retrieve the corresponding UUID from
+     * @return UUID associated to an object ID
+     */
+    const libobjgen::UUID GetObjectUUID(int64_t objectID) const;
 
     /**
      * Set the object ID associated a UUID associated to the client.
@@ -93,6 +112,12 @@ public:
      *  if it was
      */
     bool SetObjectID(const libobjgen::UUID& uuid, int64_t objectID);
+
+    /**
+     * Get the next activated ability ID from 1 to 128.
+     * @return The next activated ability ID for the client
+     */
+    uint8_t GetNextActivatedAbilityID();
 
     /**
      * Check if the client state has everything needed to start
@@ -135,9 +160,18 @@ private:
     /// Map of UUIDs to game client object IDs
     std::unordered_map<libcomp::String, int64_t> mObjectIDs;
 
+    /// Map of game client object IDs to UUIDs
+    std::unordered_map<int64_t, libobjgen::UUID> mObjectUUIDs;
+
     /// Current time of the server set upon starting the client
     /// communication.
     ServerTime mStartTime;
+
+    /// Next available activated ability ID
+    uint8_t mNextActivatedAbilityID;
+
+    /// Server lock for shared resources
+    std::mutex mLock;
 };
 
 } // namespace channel

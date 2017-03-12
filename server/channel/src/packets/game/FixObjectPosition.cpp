@@ -50,21 +50,11 @@ bool Parsers::FixObjectPosition::Parse(libcomp::ManagerPacket *pPacketManager,
     auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
     auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
     auto state = client->GetClientState();
-    auto cState = state->GetCharacterState();
-    auto dState = state->GetDemonState();
 
     int32_t entityID = p.ReadS32Little();
 
-    std::shared_ptr<objects::EntityStateObject> eState;
-    if(cState->GetEntityID() == entityID)
-    {
-        eState = std::dynamic_pointer_cast<objects::EntityStateObject>(cState);
-    }
-    else if(nullptr != dState && dState->GetEntityID() == entityID)
-    {
-        eState = std::dynamic_pointer_cast<objects::EntityStateObject>(dState);
-    }
-    else
+    auto eState = state->GetEntityState(entityID);
+    if(nullptr == eState)
     {
         LOG_ERROR(libcomp::String("Invalid entity ID received from a fix object position"
             " request: %1\n").Arg(entityID));
@@ -85,21 +75,21 @@ bool Parsers::FixObjectPosition::Parse(libcomp::ManagerPacket *pPacketManager,
 
     eState->SetDestinationTicks(stopTime);
 
-    /// @todo: Send to the whole rest of the zone
-    /*libcomp::Packet reply;
+    libcomp::Packet reply;
     reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_FIX_OBJECT_POSITION);
     reply.WriteS32Little(entityID);
     reply.WriteFloat(destX);
     reply.WriteFloat(destY);
     reply.WriteFloat(stop);
 
-    connection->SendPacket(reply);*/
+    server->GetZoneManager()->BroadcastPacket(client, reply, false);
 
-    if(eState == dState)
+    auto dState = std::dynamic_pointer_cast<DemonState>(eState);
+    if(nullptr != dState)
     {
         // If a demon is being placed, it will have already been described to the
         // the client by this point so show it now.
-        server->GetCharacterManager()->ShowEntity(client, dState->GetEntityID());
+        server->GetZoneManager()->ShowEntityToZone(client, dState->GetEntityID());
     }
 
     return true;

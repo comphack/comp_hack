@@ -1,0 +1,234 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <include path="binarydata/shared.xml"/>
+    
+    <object name="MiSkillBasicData" persistent="false">
+        <member type="u8" name="basic1"/>
+        <member type="u8" name="expertise"/>
+        <member type="bool" name="combatSkill"/>
+        <member type="u8" name="basic4"/>
+        <member type="u8" name="basic5"/>
+        <member type="u8" name="basic6"/>
+        <member type="u8" name="basic7"/>
+        <member type="u8" name="basic8"/>
+        <member type="u32" name="cooldownID"/>
+    </object>
+    <object name="MiRestrictionData" persistent="false">
+        <member type="u32" name="restriction1"/>
+        <member type="enum" name="weaponType" underlying="uint8_t">
+            <value>NONE</value>
+            <value>CLOSE_RANGE</value>
+            <value>LONG_RANGE</value>
+        </member>
+        <member type="enum" name="LNC" underlying="uint8_t">
+            <value num="0">ALL</value>
+            <value num="1">CHAOS</value>
+            <value num="2">NEUTRAL</value>
+            <value num="3">CHAOS_NEUTRAL</value>
+            <value num="4">LAW</value>
+            <value num="5">CHAOS_LAW</value>
+            <value num="6">NEUTRAL_LAW</value>
+        </member>
+        <member type="bool" name="digitizeRestricted"/>
+        <member type="enum" name="digitizeWeaponType" underlying="uint8_t">
+            <value>NONE</value>
+            <value>CLOSE_RANGE</value>
+            <value>LONG_RANGE</value>
+        </member>
+    </object>
+    <object name="MiCostTbl" persistent="false">
+        <member type="enum" name="type" underlying="uint8_t">
+            <value>HP</value>
+            <value>MP</value>
+            <value>ITEM</value>
+        </member>
+        <member type="enum" name="numType" underlying="uint8_t">
+            <value>NUMERIC</value>
+            <value>PERCENT</value>
+        </member>
+        <member type="u16" name="cost"/>
+        <member type="u32" name="item"/>
+    </object>
+    <object name="MiConditionData" persistent="false">
+        <member type="MiRestrictionData*" name="restriction"/>
+        <member type="list" name="costs">
+            <element type="MiCostTbl*"/>
+        </member>
+        <member type="u32" name="cooldownTime"/>
+        <member type="s16" name="condition2"/>
+        <member type="u16" name="condition3"/>
+    </object>
+    <object name="MiCastBasicData" persistent="false">
+        <member type="u32" name="chargeTime"/>
+        <member type="u8" name="stackCount"/>
+        <member type="u8" name="cast3"/>
+        <member type="u16" name="cast4"/>
+    </object>
+    <object name="MiCastCancelData" persistent="false">
+        <member type="bool" name="damageCancel"/>
+        <member type="bool" name="knockbackCancel"/>
+        <member type="u16" name="cancel3"/>
+        <member type="u32" name="autoCancelTime"/>
+    </object>
+    <object name="MiCastData" persistent="false">
+        <member type="MiCastBasicData*" name="basic"/>
+        <member type="MiCastCancelData*" name="cancel"/>
+    </object>
+    <object name="MiTargetData" persistent="false">
+        <member type="u16" name="range"/>
+        <member type="enum" name="type" underlying="uint8_t">
+            <value num="0">NONE</value>
+            <value num="1">ALLY</value>
+            <value num="2">DEAD_ALLY</value>
+            <value num="3">PARTNER</value>
+            <value num="4">PARTY</value>
+            <value num="6">ENEMY</value>
+            <value num="8">DEAD_PARTNER</value>
+            <value num="9">OTHER_PLAYER</value>
+            <value num="10">OBJECT</value>
+            <value num="11">OTHER_DEMON</value>
+            <value num="12">ALLY_PLAYER</value>
+            <value num="13">ALLY_DEMON</value>
+            <value num="14">PLAYER</value>
+        </member>
+        <member type="u8" name="target3"/>
+    </object>
+    <object name="MiDischargeData" persistent="false">
+        <member type="u32" name="discharge1"/>
+        <member type="u32" name="discharge2"/>
+        <member type="u32" name="discharge3"/>
+        <member type="u32" name="stiffness"/>
+        <member type="bool" name="discharge5"/>
+        <member type="u8" name="discharge6"/>
+        <member type="u16" name="discharge7"/>
+    </object>
+    <object name="MiEffectiveRangeData" persistent="false">
+        <member type="enum" name="areaType" underlying="uint8_t">
+            <value num="0">NONE</value>
+            <value num="1">TARGET_RADIUS</value>
+            <value num="2">STRAIGHT_LINE</value>
+            <value num="3">SOURCE_RADIUS</value>
+            <value num="4">FRONT_1</value>
+            <value num="5">FRONT_2</value>
+            <value num="6">FRONT_3</value>
+            <value num="7">SOURCE</value>
+            <value num="9">UNKNOWN_9</value>
+        </member>
+        <member type="enum" name="areaTarget" underlying="uint8_t">
+            <value num="0">ENEMY</value>
+            <value num="1">ALLY</value>
+            <value num="2">DEAD_ALLY</value>
+            <value num="3">PARTY</value>
+            <value num="4">SOURCE</value>
+            <value num="6">DEAD_PARTY</value>
+        </member>
+        <member type="u16" name="range3"/>
+        <member type="s32" name="aoeRange"/>
+        <member type="s32" name="aoeTargetMax"/>
+    </object>
+    <object name="MiBattleDamageData" persistent="false">
+        <member type="enum" name="formula" underlying="uint8_t">
+            <value num="0">NONE</value>
+            <value num="1">DMG_NORMAL</value>
+            <value num="2">DMG_STATIC</value>
+            <value num="3">DMG_PERCENT</value>
+            <value num="5">UNKNOWN_5</value>
+            <value num="6">UNKNOWN_6</value>
+            <value num="7">DMG_SOURCE_PERCENT</value>
+            <value num="9">HEAL_NORMAL</value>
+            <value num="10">HEAL_STATIC</value>
+            <value num="11">HEAL_MAX_PERCENT</value>
+            <value num="14">DMG_MAX_PERCENT</value>
+        </member>
+        <member type="u8" name="battleDamage2"/>
+        <member type="u8" name="castRange"/>
+        <member type="u8" name="battleDamage4"/>
+        <member type="u16" name="modifier1"/>
+        <member type="u16" name="modifier2"/>
+        <member type="u8" name="HPDrainPercent"/>
+        <member type="u8" name="MPDrainPercent"/>
+        <member type="u16" name="battleDamage9"/>
+    </object>
+    <object name="MiNegotiationDamageData" persistent="false">
+        <member type="s8" name="negotiationDamage1"/>
+        <member type="s8" name="negotiationDamage2"/>
+        <member type="s8" name="negotiationDamage3"/>
+        <member type="s8" name="negotiationDamage4"/>
+    </object>
+    <object name="MiBreakData" persistent="false">
+        <member type="u16" name="weapon"/>
+        <member type="u16" name="armor"/>
+    </object>
+    <object name="MiKnockBackData" persistent="false">
+        <member type="u8" name="knockBack1"/>
+        <member type="s8" name="modifier"/>
+        <member type="u16" name="distance"/>
+    </object>
+    <object name="MiAddStatusTbl" persistent="false">
+        <member type="u32" name="statusID"/>
+        <member type="s8" name="addStatus2"/>
+        <member type="s8" name="addStatus3"/>
+        <member type="u8" name="addStatus4"/>
+        <member type="bool" name="isCancel"/>
+        <member type="u16" name="successRate"/>
+        <member type="u16" name="addStatus7"/>
+    </object>
+    <object name="MiDamageData" persistent="false">
+        <member type="MiBattleDamageData*" name="battleDamage"/>
+        <member type="MiNegotiationDamageData*" name="negotiationDamage"/>
+        <member type="MiBreakData*" name="breakData"/>
+        <member type="MiKnockBackData*" name="knockBack"/>
+        <member type="u32" name="hitStopTime"/>
+        <member type="list" name="addStatuses">
+            <element type="MiAddStatusTbl*"/>
+        </member>
+        <member type="u16" name="damage1"/>
+        <member type="u16" name="damage2"/>
+    </object>
+    <object name="MiAcquisitionData" persistent="false">
+        <member type="u8" name="acquisition1"/>
+        <member type="s8" name="acquisition2"/>
+        <member type="u16" name="acquisition3"/>
+    </object>
+    <object name="MiExpertGrowthTbl" persistent="false">
+        <member type="u8" name="expertiseID"/>
+        <member type="s8" name="growthRate"/>
+        <member type="u16" name="expertGrowth3"/>
+    </object>
+    <object name="MiSkillCharasticData" persistent="false">
+        <member type="array" size="4" name="charastic1">
+            <element type="s32"/>
+        </member>
+    </object>
+    <object name="MiSkillSpecialParams" persistent="false">
+        <member type="array" size="4" name="specialParams1">
+            <element type="s32"/>
+        </member>
+    </object>
+    <object name="MiSkillPvPData" persistent="false">
+        <member type="enum" name="PVPRestriction" underlying="uint8_t">
+            <value>NONE</value>
+            <value>PVP_RESTRICTED</value>
+            <value>PVP_ONLY</value>
+        </member>
+        <member type="u8" name="pvp2"/>
+        <member type="u16" name="pvp3"/>
+    </object>
+    <object name="MiSkillData" persistent="false">
+        <member type="MiSkillItemStatusCommonData*" name="common"/>
+        <member type="MiSkillBasicData*" name="basic"/>
+        <member type="MiConditionData*" name="condition"/>
+        <member type="MiCastData*" name="cast"/>
+        <member type="MiTargetData*" name="target"/>
+        <member type="MiDischargeData*" name="discharge"/>
+        <member type="MiEffectiveRangeData*" name="range"/>
+        <member type="MiDamageData*" name="damage"/>
+        <member type="MiAcquisitionData*" name="acquisition"/>
+        <member type="list" name="expertGrowth">
+            <element type="MiExpertGrowthTbl*"/>
+        </member>
+        <member type="MiSkillCharasticData*" name="charastic"/>
+        <member type="MiSkillSpecialParams*" name="special"/>
+        <member type="MiSkillPvPData*" name="pvp"/>
+    </object>
+</objgen>

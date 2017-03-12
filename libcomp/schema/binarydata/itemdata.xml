@@ -1,15 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <objgen>
-    <include path="binarydata/skillitemstatuscommon.xml"/>
-    <include path="binarydata/correcttbl.xml"/>
+    <include path="binarydata/shared.xml"/>
 
     <object name="MiItemBasicData" persistent="false" scriptenabled="true">
         <member type="u32" name="id2" caps="true"/>
         <member type="s32" name="buyPrice"/>
         <member type="s32" name="sellPrice"/>
         <member type="s32" name="unk1"/>
-        <member type="s16" name="unk2"/>
-        <member type="u8" name="unk3"/>
+        <member type="s16" name="appearanceID"/>
+        <member type="enum" name="weaponType" underlying="uint8_t">
+            <value>CLOSE_RANGE</value>
+            <value>LONG_RANGE</value>
+            <value>NONE</value>
+        </member>
         <member type="enum" name="equipType" underlying="int8_t">
             <value num="-1">EQUIP_TYPE_NONE</value>
             <value>EQUIP_TYPE_HEAD</value>
@@ -39,7 +42,12 @@
     <object name="MiUseRestrictionsData" persistent="false" scriptenabled="true">
         <member type="u8" name="gender"/>
         <member type="u8" name="level"/>
-        <member type="u8" name="alignment"/>
+        <member type="enum" name="alignment" underlying="uint8_t">
+            <value>ALL</value>
+            <value>CHAOS</value>
+            <value>NEUTRAL</value>
+            <value>LAW</value>
+        </member>
         <member type="u8" name="restriction1"/>
         <member type="list" name="skillTbl">
             <element type="MiSkillTbl*"/>

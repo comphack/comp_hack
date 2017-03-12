@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="MiCategoryData" persistent="false" scriptenabled="true">
+        <member type="u8" name="unk1"/>
+        <member type="u8" name="unk2"/>
+        <member type="u16" name="unk3"/>
+    </object>
+    <object name="MiCorrectTbl" persistent="false" scriptenabled="true">
+        <member type="u8" name="ID"/>
+        <member type="enum" name="Type" underlying="uint8_t" default="NUMERIC">
+            <value>NUMERIC</value>
+            <value>PERCENT</value>
+        </member>
+        <member type="s16" name="Value"/>
+    </object>
+    <object name="MiSkillItemStatusCommonData" persistent="false"
+        scriptenabled="true">
+        <member type="u32" name="id" caps="true"/>
+        <member type="MiCategoryData*" name="category"/>
+        <member type="u8" name="affinity"/>
+        <member type="u8" name="common1"/>
+        <member type="u16" name="common2"/>
+        <member type="list" name="correctTbl">
+            <element type="MiCorrectTbl*"/>
+        </member>
+    </object>
+</objgen>

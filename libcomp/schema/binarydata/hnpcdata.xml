@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="MiHNPCBasicData" persistent="false">
+        <member type="u32" name="ID"/>
+        <member type="string" length="36" name="name"/>
+        <member type="s16" name="unk1"/>
+        <member type="u16" name="unk2"/>
+        <member type="u8" name="unk3"/>
+        <member type="u8" name="unk4"/>
+        <member type="u8" name="unk5"/>
+        <member type="u8" name="unk6"/>
+        <member type="u32" name="modelID"/>
+    </object>
+    <object name="MiHNPCAppearanceData" persistent="false">
+        <member type="u8" name="appearance1"/>
+        <member type="u8" name="appearance2"/>
+        <member type="u8" name="appearance3"/>
+        <member type="u8" name="appearance4"/>
+        <member type="bool" name="appearance5"/>
+        <member type="u8" name="appearance6"/>
+        <member type="u16" name="appearance7"/>
+    </object>
+    <object name="MiHNPCData" persistent="false">
+        <member type="MiHNPCBasicData*" name="basic"/>
+        <member type="MiHNPCAppearanceData*" name="appearance"/>
+        <!-- MiEquipmentData -->
+        <member type="array" size="26" name="equipment">
+            <element type="string" length="36"/>
+        </member>
+    </object>
+</objgen>

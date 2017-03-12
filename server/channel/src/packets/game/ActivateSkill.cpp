@@ -27,99 +27,19 @@
 #include "Packets.h"
 
 // libcomp Includes
-#include <Constants.h>
 #include <Log.h>
 #include <ManagerPacket.h>
-#include <PacketCodes.h>
-
-// object Includes
-#include <Character.h>
-#include <Item.h>
-#include <ItemBox.h>
 
 // channel Includes
 #include "ChannelServer.h"
 
 using namespace channel;
 
-const uint32_t SKILL_SUMMON_DEMON = 0x00001648;
-const uint32_t SKILL_STORE_DEMON = 0x00001649;
-const uint32_t SKILL_EQUIP_ITEM = 0x00001654;
-
-/// @todo: Replace the following two functions with proper skill handling
-
-void SendExecuteSkill(const std::shared_ptr<ChannelClientConnection> client,
-    int32_t characterEntityID, uint32_t skillID)
-{
-    auto state = client->GetClientState();
-
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_EXECUTE_SKILL);
-    reply.WriteS32Little(characterEntityID);
-    reply.WriteU32Little(skillID);
-    reply.WriteS8(1);
-    reply.WriteS32Little(0);
-    reply.WriteFloat(state->ToClientTime(ChannelServer::GetServerTime()));
-    reply.WriteFloat(state->ToClientTime(ChannelServer::GetServerTime()));
-    reply.WriteBlank(31);
-
-    client->SendPacket(reply);
-}
-
-void SendCompleteSkill(const std::shared_ptr<ChannelClientConnection> client,
-    int32_t characterEntityID, uint32_t skillID)
-{
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_COMPLETE_SKILL);
-    reply.WriteS32Little(characterEntityID);
-    reply.WriteU32Little(skillID);
-    reply.WriteS8(1);
-    reply.WriteFloat(0.0f);
-    reply.WriteU8(1);
-    reply.WriteFloat(300.0f);   //Run speed
-    reply.WriteU8(0);
-
-    client->SendPacket(reply);
-}
-
-void EquipItem(CharacterManager* characterManager,
+void SkillActivation(SkillManager* server,
     const std::shared_ptr<ChannelClientConnection> client,
-    int64_t itemID)
+    uint32_t skillID, int32_t sourceEntityID, int64_t targetObjectID)
 {
-    auto characterEntityID = client->GetClientState()
-        ->GetCharacterState()->GetEntityID();
-
-    /// @todo: add charge time
-    SendExecuteSkill(client, characterEntityID, SKILL_EQUIP_ITEM);
-    SendCompleteSkill(client, characterEntityID, SKILL_EQUIP_ITEM);
-
-    characterManager->EquipItem(client, itemID);
-}
-
-void SummonDemon(CharacterManager* characterManager,
-    const std::shared_ptr<ChannelClientConnection> client,
-    int64_t demonID)
-{
-    auto characterEntityID = client->GetClientState()
-        ->GetCharacterState()->GetEntityID();
-
-    /// @todo: implement MAG cost
-    SendExecuteSkill(client, characterEntityID, SKILL_SUMMON_DEMON);
-    SendCompleteSkill(client, characterEntityID, SKILL_SUMMON_DEMON);
-
-    characterManager->SummonDemon(client, demonID);
-}
-
-void StoreDemon(CharacterManager* characterManager,
-    const std::shared_ptr<ChannelClientConnection> client)
-{
-    auto characterEntityID = client->GetClientState()
-        ->GetCharacterState()->GetEntityID();
-
-    SendExecuteSkill(client, characterEntityID, SKILL_STORE_DEMON);
-    SendCompleteSkill(client, characterEntityID, SKILL_STORE_DEMON);
-
-    characterManager->StoreDemon(client);
+    server->ActivateSkill(client, skillID, sourceEntityID, targetObjectID);
 }
 
 bool Parsers::ActivateSkill::Parse(libcomp::ManagerPacket *pPacketManager,
@@ -131,8 +51,12 @@ bool Parsers::ActivateSkill::Parse(libcomp::ManagerPacket *pPacketManager,
         return false;
     }
 
+    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+    auto skillManager = server->GetSkillManager();
+
     int32_t sourceEntityID = p.ReadS32Little();
-    uint32_t skillType = p.ReadU32Little();
+    uint32_t skillID = p.ReadU32Little();
 
     uint32_t targetType = p.ReadU32Little();
     if(targetType != ACTIVATION_NOTARGET && p.Left() == 0)
@@ -151,80 +75,19 @@ bool Parsers::ActivateSkill::Parse(libcomp::ManagerPacket *pPacketManager,
             targetObjectID = p.ReadS64Little();
             break;
         case ACTIVATION_TARGET:
-            /// @todo: implement these
+            targetObjectID = (int64_t)p.ReadS32Little();
+            break;
         default:
             {
-                LOG_ERROR(libcomp::String("Unknown skill target type encountered: %1")
+                LOG_ERROR(libcomp::String("Unknown skill target type encountered: %1\n")
                     .Arg(targetType));
+                skillManager->SendFailure(client, sourceEntityID, skillID);
                 return false;
             }
             break;
     }
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-    auto state = client->GetClientState();
-
-    switch(skillType)
-    {
-        case SKILL_EQUIP_ITEM:
-            if(targetObjectID == -1)
-            {
-                LOG_ERROR(libcomp::String("Invalid item specified to equip: %1\n")
-                    .Arg(targetObjectID));
-                return false;
-            }
-
-            if(sourceEntityID != state->GetCharacterState()->GetEntityID())
-            {
-                LOG_ERROR(libcomp::String("Invalid character specified to equip: %1\n")
-                    .Arg(sourceEntityID));
-                return false;
-            }
-            
-            server->QueueWork(EquipItem, server->GetCharacterManager(), client, targetObjectID);
-            break;
-        case SKILL_SUMMON_DEMON:
-            if(targetObjectID == -1)
-            {
-                LOG_ERROR(libcomp::String("Invalid demon specified to summon: %1\n")
-                    .Arg(targetObjectID));
-                return false;
-            }
-
-            if(sourceEntityID != state->GetCharacterState()->GetEntityID())
-            {
-                LOG_ERROR(libcomp::String("Invalid character specified to summon specified demon: %1\n")
-                    .Arg(sourceEntityID));
-                return false;
-            }
-
-            server->QueueWork(SummonDemon, server->GetCharacterManager(), client, targetObjectID);
-            break;
-        case SKILL_STORE_DEMON:
-            if(targetObjectID == -1)
-            {
-                LOG_ERROR(libcomp::String("Invalid demon specified to store: %1\n")
-                    .Arg(targetObjectID));
-                return false;
-            }
-
-            if(sourceEntityID != state->GetCharacterState()->GetEntityID())
-            {
-                LOG_ERROR(libcomp::String("Invalid character specified to store specified demon: %1\n")
-                    .Arg(sourceEntityID));
-                return false;
-            }
-
-            server->QueueWork(StoreDemon, server->GetCharacterManager(), client);
-            break;
-            /// @todo: Handle normal abilities
-        default:
-            LOG_ERROR(libcomp::String("Unknown skill type encountered: %1\n")
-                .Arg(skillType));
-            return false;
-            break;
-    }
+    server->QueueWork(SkillActivation, skillManager, client, skillID, sourceEntityID, targetObjectID);
 
     return true;
 }

@@ -2,8 +2,28 @@
 <objgen>
     <object name="EntityStateObject" persistent="false">
         <member type="s32" name="EntityID"/>
+        <member type="bool" name="IsActive"/>
+        <member type="enum" name="EntityType" underlying="int8_t">
+            <value>OBJECT</value>
+            <value>NPC</value>
+            <value>CHARACTER</value>
+            <value>PARTNER_DEMON</value>
+            <value>ENEMY</value>
+        </member>
 
-        <!-- Calculated Stats -->
+        <member type="float" name="OriginX"/>
+        <member type="float" name="OriginY"/>
+        <member type="float" name="OriginRotation"/>
+        <member type="u64" name="OriginTicks"/>
+        <member type="float" name="DestinationX"/>
+        <member type="float" name="DestinationY"/>
+        <member type="float" name="DestinationRotation"/>
+        <member type="u64" name="DestinationTicks"/>
+    </object>
+    <object name="ActiveEntityStateObject" baseobject="EntityStateObject" persistent="false">
+        <member type="bool" name="IsActive" inherited="true" default="true"/>
+        <member type="s16" name="MaxHP"/>
+        <member type="s16" name="MaxMP"/>
         <member type="s16" name="STR"/>
         <member type="s16" name="MAGIC"/>
         <member type="s16" name="VIT"/>
@@ -16,21 +36,13 @@
         <member type="s16" name="SUPPORT"/>
         <member type="s16" name="PDEF"/>
         <member type="s16" name="MDEF"/>
-
-        <!-- Movement -->
-        <member type="float" name="OriginX"/>
-        <member type="float" name="OriginY"/>
-        <member type="float" name="OriginRotation"/>
-        <member type="u64" name="OriginTicks"/>
-        <member type="float" name="DestinationX"/>
-        <member type="float" name="DestinationY"/>
-        <member type="float" name="DestinationRotation"/>
-        <member type="u64" name="DestinationTicks"/>
+        <member type="ActivatedAbility*" name="ActivatedAbility"/>
     </object>
-    <object name="CharacterStateObject" baseobject="EntityStateObject" persistent="false">
-        <member type="Character*" name="Character"/>
-    </object>
-    <object name="DemonStateObject" baseobject="EntityStateObject" persistent="false">
-        <member type="Demon*" name="Demon"/>
+    <object name="ActivatedAbility" persistent="false">
+        <member type="u32" name="SkillID"/>
+        <member type="s64" name="TargetObjectID"/>
+        <member type="u8" name="ActivationID"/>
+        <member type="u64" name="ActivationTime"/>
+        <member type="u64" name="ChargedTime"/>
     </object>
 </objgen>

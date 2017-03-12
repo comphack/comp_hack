@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="MiCItemBaseData" persistent="false">
+        <member type="u32" name="ID"/>
+        <member type="string" length="36" name="name"/>
+        <member type="string" length="36" name="name2"/>
+        <member type="string" length="516" name="desc"/>
+        <member type="u16" name="icon"/>
+        <member type="s8" name="unk1"/>
+        <member type="s8" name="canTrade"/>
+        <member type="u32" name="unk2"/>
+    </object>
+    <object name="MiCItemMotionData" persistent="false">
+        <member type="u32" name="motion1"/>
+        <member type="u32" name="motion2"/>
+        <member type="u32" name="motion3"/>
+        <member type="u32" name="motion4"/>
+    </object>
+    <object name="MiCItemSPEffectData" persistent="false">
+        <member type="string" length="68" name="effect1"/>
+        <member type="string" length="68" name="effect2"/>
+        <member type="array" size="3" name="effect3">
+            <element type="u8"/>
+        </member>
+        <member type="u8" name="effect4"/>
+    </object>
+    <object name="MiCItemData" persistent="false">
+        <member type="MiCItemBaseData*" name="baseData"/>
+        <member type="MiCItemMotionData*" name="motionData"/>
+        <member type="MiCItemSPEffectData*" name="specialEffectData"/>
+    </object>
+</objgen>

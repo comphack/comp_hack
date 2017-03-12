@@ -5,11 +5,11 @@
 
     @ENCODE_CODE@
 
-    if(@STREAM@.stream.good() && @FIXED_LENGTH@ != value.size())
+    if(@STREAM@.good() && @FIXED_LENGTH@ != value.size())
     {
-        @STREAM@.stream.write(zero, static_cast<std::streamsize>(
+        @STREAM@.write(zero, static_cast<std::streamsize>(
             @FIXED_LENGTH@) - static_cast<std::streamsize>(value.size()));
     }
 
-    return @STREAM@.stream.good();
+    return @STREAM@.good();
 })()

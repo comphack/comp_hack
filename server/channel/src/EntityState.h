@@ -1,10 +1,10 @@
 /**
- * @file server/channel/src/CharacterState.h
+ * @file server/channel/src/EntityState.h
  * @ingroup channel
  *
  * @author HACKfrost
  *
- * @brief State of a character on the channel.
+ * @brief State of a non-active entity on the channel.
  *
  * This file is part of the Channel Server (channel).
  *
@@ -24,47 +24,45 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef SERVER_CHANNEL_SRC_CHARACTERSTATE_H
-#define SERVER_CHANNEL_SRC_CHARACTERSTATE_H
+#ifndef SERVER_CHANNEL_SRC_ENTITYSTATE_H
+#define SERVER_CHANNEL_SRC_ENTITYSTATE_H
 
 // objects Includes
-#include <CharacterStateObject.h>
+#include <EntityStateObject.h>
 
 namespace channel
 {
 
 /**
- * Contains the state of a character from a game client currently connected
- * to the channel.
+ * Contains the state of a non-active entity related to a channel.
  */
-class CharacterState : public objects::CharacterStateObject
+template<typename T>
+class EntityState : public objects::EntityStateObject
 {
 public:
     /**
-     * Create a new character state.
+     * Create a new non-active entity state.
      */
-    CharacterState();
+    EntityState(const std::shared_ptr<T>& entity);
 
     /**
-     * Clean up the character state.
+     * Clean up the non-active entity state.
      */
-    virtual ~CharacterState();
+    virtual ~EntityState() { }
 
     /**
-     * Recalculate the character's current stats, adjusted by equipment and
-     * effects.
-     * @return true if the calculation succeeded, false if it errored
+     * Get the entity
+     * @return Pointer to the entity
      */
-    bool RecalculateStats();
+    std::shared_ptr<T> GetEntity()
+    {
+        return mEntity;
+    }
 
-    /**
-     * Check if the character state has everything needed to start
-     * being used.
-     * @return true if the state is ready to use, otherwise false
-     */
-    bool Ready();
+private:
+    std::shared_ptr<T> mEntity;
 };
 
 } // namespace channel
 
-#endif // SERVER_CHANNEL_SRC_CHARACTERSTATE_H
+#endif // SERVER_CHANNEL_SRC_ENTITYSTATE_H

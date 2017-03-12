@@ -33,12 +33,13 @@
 // object Includes
 #include <Account.h>
 #include <AccountLogin.h>
-#include <Character.h>
 #include <CharacterProgress.h>
-#include <Demon.h>
-#include <EntityStats.h>
+#include <Expertise.h>
+#include <Hotbar.h>
 #include <Item.h>
 #include <ItemBox.h>
+#include <MiItemData.h>
+#include <MiPossessionData.h>
 
 // channel Includes
 #include "ChannelServer.h"
@@ -102,15 +103,15 @@ void AccountManager::HandleLoginResponse(const std::shared_ptr<
     if(InitializeCharacter(character, state))
     {
         auto charState = state->GetCharacterState();
-        charState->SetCharacter(character);
+        charState->SetEntity(character.Get());
         charState->SetEntityID(server->GetNextEntityID());
-        charState->RecalculateStats();
+        charState->RecalculateStats(server->GetDefinitionManager());
 
         // If we don't have an active demon, set up the state anyway
         auto demonState = state->GetDemonState();
-        demonState->SetDemon(character->GetActiveDemon());
+        demonState->SetEntity(character->GetActiveDemon().Get());
         demonState->SetEntityID(server->GetNextEntityID());
-        demonState->RecalculateStats();
+        demonState->RecalculateStats(server->GetDefinitionManager());
 
         reply.WriteU32Little(1);
     }
@@ -167,27 +168,31 @@ void AccountManager::Logout(const std::shared_ptr<
     auto managerConnection = server->GetManagerConnection();
     auto state = client->GetClientState();
     auto account = state->GetAccountLogin()->GetAccount().Get();
-    auto character = state->GetCharacterState()->GetCharacter().Get();
+    auto character = state->GetCharacterState()->GetEntity();
 
     if(nullptr == account || nullptr == character)
     {
         return;
     }
+
+    if(!LogoutCharacter(state))
+    {
+        LOG_ERROR(libcomp::String("Character %1 failed to save on account"
+            " %2.\n").Arg(character->GetUUID().ToString())
+            .Arg(account->GetUUID().ToString()));
+    }
     else
     {
-        /// @todo: detach character from anything using it
-        /// @todo: set logout information
-
-        if(!character->Update(server->GetWorldDatabase()))
-        {
-            LOG_ERROR(libcomp::String("Character %1 failed to save on account"
-                " %2.\n").Arg(character->GetUUID().ToString())
-                .Arg(account->GetUUID().ToString()));
-        }
+        LOG_DEBUG(libcomp::String("Logged out user: '%1'\n").Arg(
+            account->GetUsername()));
     }
 
     //Remove the connection if it hasn't been removed already.
     managerConnection->RemoveClientConnection(client);
+    server->GetZoneManager()->LeaveZone(client);
+
+    libcomp::ObjectReference<
+        objects::Account>::Unload(account->GetUUID());
 
     libcomp::Packet p;
     p.WritePacketCode(InternalPacketCode_t::PACKET_ACCOUNT_LOGOUT);
@@ -229,11 +234,21 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
         return false;
     }
 
-    bool updateCharacter = false;
-    if(character->GetProgress().IsNull())
+    bool newCharacter = character->GetCoreStats()->GetLevel() == -1;
+    auto characterManager = server->GetCharacterManager();
+    auto definitionManager = server->GetDefinitionManager();
+    if(newCharacter)
     {
+        auto cs = character->GetCoreStats().Get();
+        cs->SetLevel(1);
+        characterManager->CalculateCharacterBaseStats(cs);
+        cs->SetHP(cs->GetMaxHP());
+        cs->SetMP(cs->GetMaxMP());
+
+        // Create the character progress
         auto progress = libcomp::PersistentObject::New<
             objects::CharacterProgress>();
+        progress->SetCharacter(character);
 
         if(!progress->Register(progress) ||
             !progress->Insert(db) ||
@@ -241,37 +256,59 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
         {
             return false;
         }
-        updateCharacter = true;
+
+        // Create the inventory item box (the others can be lazy loaded later)
+        auto box = libcomp::PersistentObject::New<
+            objects::ItemBox>();
+        box->SetAccount(character->GetAccount());
+        box->SetCharacter(character);
+
+        if(!box->Register(box) ||
+            !box->Insert(db) || !character->SetItemBoxes(0, box))
+        {
+            return false;
+        }
+
+        //Hacks to add MAG, a test demon and some starting skills
+        auto mag = characterManager->GenerateItem(800, 5000);
+        mag->SetItemBox(box);
+        mag->SetBoxSlot(49);
+
+        if(!mag->Insert(db) || !box->SetItems(49, mag))
+        {
+            return false;
+        }
+
+        auto demon = characterManager->ContractDemon(character.Get(),
+            definitionManager->GetDevilData(0x0239),    //Jack Frost
+            nullptr);
+        if(nullptr == demon)
+        {
+            return false;
+        }
+
+        //Equip
+        character->AppendLearnedSkills(0x00001654);
+
+        //Summon demon
+        character->AppendLearnedSkills(0x00001648);
+
+        //Store demon
+        character->AppendLearnedSkills(0x00001649);
+
+        for(auto skillID : definitionManager->GetDefaultCharacterSkills())
+        {
+            character->AppendLearnedSkills(skillID);
+        }
     }
-    else if(!character->LoadProgress(db))
+
+    // Progress
+    if(!character->LoadProgress(db))
     {
         return false;
     }
 
     // Item boxes
-    bool addEquipmentToBox = false;
-    if(character->GetItemBoxes(0).IsNull())
-    {
-        addEquipmentToBox = true;
-
-        auto box = libcomp::PersistentObject::New<
-            objects::ItemBox>();
-
-        auto mag = libcomp::PersistentObject::New<
-            objects::Item>();
-
-        mag->SetType(800);
-        mag->SetStackSize(5000);
-        
-        if(!mag->Register(mag) || !mag->Insert(db) ||
-            !box->SetItems(49, mag) || !box->Register(box) ||
-            !box->Insert(db) || !character->SetItemBoxes(0, box))
-        {
-            return false;
-        }
-        updateCharacter = true;
-    }
-
     for(auto itemBox : character->GetItemBoxes())
     {
         if(!itemBox.IsNull())
@@ -319,17 +356,19 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
                     server->GetNextObjectID());
             }
 
-            if(addEquipmentToBox)
+            if(newCharacter)
             {
-                character->GetItemBoxes(0)
-                    ->SetItems(equipmentBoxSlot++, equip);
+                auto def = definitionManager->GetItemData(equip->GetType());
+                auto poss = def->GetPossession();
+                equip->SetDurability(poss->GetDurability());
+                equip->SetMaxDurability((int8_t)poss->GetDurability());
+
+                auto slot = equipmentBoxSlot++;
+                equip->SetItemBox(defaultBox);
+                equip->SetBoxSlot((int8_t)slot);
+                defaultBox->SetItems(slot, equip);
             }
         }
-    }
-
-    if(addEquipmentToBox && !defaultBox->Update(db))
-    {
-        return false;
     }
 
     // Materials
@@ -344,8 +383,19 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
         }
     }
 
+    // Expertises
+    for(auto expertise : character->GetExpertises())
+    {
+        if(!expertise.IsNull())
+        {
+            if(!expertise.Get(db))
+            {
+                return false;
+            }
+        }
+    }
+
     // COMP
-    int demonCount = 0;
     for(auto demon : character->GetCOMP())
     {
         if(!demon.IsNull())
@@ -354,63 +404,86 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
             {
                 return false;
             }
-            demonCount++;
 
             state->SetObjectID(demon->GetUUID(),
                 server->GetNextObjectID());
         }
     }
 
-    if(character->LearnedSkillsCount() == 0)
+    // Hotbar
+    for(auto hotbar : character->GetHotbars())
     {
-        //Equip
-        character->AppendLearnedSkills(0x00001654);
-
-        //Summon demon
-        character->AppendLearnedSkills(0x00001648);
-
-        //Store demon
-        character->AppendLearnedSkills(0x00001649);
-
-        updateCharacter = true;
-    }
-
-    //Hack to add a test demon
-    if(demonCount == 0)
-    {
-        auto demon = libcomp::PersistentObject::New<
-            objects::Demon>();
-        demon->SetType(0x0239); //Jack Frost
-        demon->SetLocked(false);
-
-        auto ds = libcomp::PersistentObject::New<
-            objects::EntityStats>();
-        ds->SetMaxHP(999);
-        ds->SetMaxMP(666);
-        ds->SetHP(999);
-        ds->SetMP(666);
-        ds->SetLevel(1);
-        ds->SetSTR(1);
-        ds->SetMAGIC(2);
-        ds->SetVIT(3);
-        ds->SetINTEL(4);
-        ds->SetSPEED(5);
-        ds->SetLUCK(6);
-        ds->SetCLSR(7);
-        ds->SetLNGR(8);
-        ds->SetSPELL(9);
-        ds->SetSUPPORT(10);
-        ds->SetPDEF(11);
-        ds->SetMDEF(12);
-
-        if(!ds->Register(ds) || !ds->Insert(db) ||
-            !demon->SetCoreStats(ds) || !demon->Register(demon) ||
-            !demon->Insert(db) || !character->SetCOMP(0, demon))
+        if(!hotbar.IsNull())
         {
-            return false;
+            if(!hotbar.Get(db))
+            {
+                return false;
+            }
         }
-        updateCharacter = true;
     }
 
-    return !updateCharacter || character->Update(db);
+    return !newCharacter ||
+        (character->Update(db) && defaultBox->Update(db));
+}
+
+bool AccountManager::LogoutCharacter(channel::ClientState* state)
+{
+    auto character = state->GetCharacterState()->GetEntity();
+
+    /// @todo: detach character from anything using it
+
+    bool ok = true;
+    auto server = mServer.lock();
+    auto worldDB = server->GetWorldDatabase();
+
+    ok &= Cleanup<objects::Character>(character, worldDB);
+    ok &= Cleanup<objects::EntityStats>(character
+        ->GetCoreStats().Get(), worldDB);
+    ok &= Cleanup<objects::CharacterProgress>(character
+        ->GetProgress().Get(), worldDB);
+    /// @todo: logout information
+
+    // Save items
+    for(auto itemBox : character->GetItemBoxes())
+    {
+        if(!itemBox.IsNull())
+        {
+            for(auto item : itemBox->GetItems())
+            {
+                ok &= Cleanup<objects::Item>(item.Get(), worldDB);
+            }
+            ok &= Cleanup<objects::ItemBox>(itemBox.Get(), worldDB);
+        }
+    }
+
+    // Save materials
+    for(auto material : character->GetMaterials())
+    {
+        ok &= Cleanup<objects::Item>(material.Get(), worldDB);
+    }
+
+    // Save expertises
+    for(auto expertise : character->GetExpertises())
+    {
+        ok &= Cleanup<objects::Expertise>(expertise.Get(), worldDB);
+    }
+
+    // Save demons
+    for(auto demon : character->GetCOMP())
+    {
+        if(!demon.IsNull())
+        {
+            ok &= Cleanup<objects::EntityStats>(demon
+                ->GetCoreStats().Get(), worldDB);
+            ok &= Cleanup<objects::Demon>(demon.Get(), worldDB);
+        }
+    }
+
+    // Save hotbars
+    for(auto hotbar : character->GetHotbars())
+    {
+        ok &= Cleanup<objects::Hotbar>(hotbar.Get(), worldDB);
+    }
+
+    return ok;
 }

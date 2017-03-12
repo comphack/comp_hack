@@ -30,29 +30,34 @@ FILE(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/objgen)
 
 SET(${PROJECT_NAME}_SRCS
     src/AccountManager.cpp
+    src/ActiveEntityState.cpp
     src/ChannelClientConnection.cpp
     src/ChannelServer.cpp
     src/CharacterManager.cpp
-    src/CharacterState.cpp
-    src/ClientState.cpp
-    src/DemonState.cpp
-    src/ManagerConnection.cpp
     src/ChatManager.cpp
+    src/ClientState.cpp
+    src/EntityState.cpp
+    src/ManagerConnection.cpp
+    src/SkillManager.cpp
+    src/Zone.cpp
+    src/ZoneManager.cpp
     src/main.cpp
-    src/packets/game/Chat.cpp
 )
 
 SET(${PROJECT_NAME}_HDRS
     src/AccountManager.h
+    src/ActiveEntityState.h
     src/ChannelClientConnection.h
     src/ChannelServer.h
     src/CharacterManager.h
-    src/CharacterState.h
-    src/ClientState.h
-    src/DemonState.h
-    src/ManagerConnection.h
     src/ChatManager.h
+    src/ClientState.h
+    src/EntityState.h
+    src/ManagerConnection.h
     src/Packets.h
+    src/SkillManager.h
+    src/Zone.h
+    src/ZoneManager.h
 )
 
 SET(${PROJECT_NAME}_SCHEMA
@@ -75,14 +80,14 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     ../../libcomp/schema
 
     # Output files
+    ActivatedAbility.h
+    ActivatedAbility.cpp
+    ActiveEntityStateObject.h
+    ActiveEntityStateObject.cpp
     ChannelConfig.h
     ChannelConfig.cpp
-    CharacterStateObject.h
-    CharacterStateObject.cpp
     ClientStateObject.h
     ClientStateObject.cpp
-    DemonStateObject.h
-    DemonStateObject.cpp
     EntityStateObject.h
     EntityStateObject.cpp
 )
@@ -91,30 +96,43 @@ SOURCE_GROUP("Source Files\\Packets\\Game" src/packets/game/*)
 SOURCE_GROUP("Source Files\\Packets\\Internal" src/packets/internal/*)
 
 SET(${PROJECT_NAME}_PACKETS
-    src/packets/game/Login.cpp               # 0x0000
-    src/packets/game/Auth.cpp                # 0x0002
-    src/packets/game/SendData.cpp            # 0x0004
-    src/packets/game/Logout.cpp              # 0x0005
-    src/packets/game/PopulateZone.cpp        # 0x0019
-    src/packets/game/Move.cpp                # 0x001C
-    src/packets/game/Chat.cpp                # 0x0026
-    src/packets/game/ActivateSkill.cpp       # 0x0030
-    src/packets/game/Chat.cpp                # 0x0026
-    src/packets/game/KeepAlive.cpp           # 0x0056
-    src/packets/game/FixObjectPosition.cpp   # 0x0058
-    src/packets/game/State.cpp               # 0x005A
-    src/packets/game/PartnerDemonData.cpp    # 0x005B
-    src/packets/game/COMPList.cpp            # 0x005C
-    src/packets/game/COMPDemonData.cpp       # 0x005E
-    src/packets/game/StopMovement.cpp        # 0x006F
-    src/packets/game/ItemBox.cpp             # 0x0074
-    src/packets/game/EquipmentList.cpp       # 0x007B
-    src/packets/game/Sync.cpp                # 0x00F3
-    src/packets/game/Rotate.cpp              # 0x00F8
+    src/packets/game/Login.cpp              # 0x0000
+    src/packets/game/Auth.cpp               # 0x0002
+    src/packets/game/SendData.cpp           # 0x0004
+    src/packets/game/Logout.cpp             # 0x0005
+    src/packets/game/PopulateZone.cpp       # 0x0019
+    src/packets/game/Move.cpp               # 0x001C
+    src/packets/game/Chat.cpp               # 0x0026
+    src/packets/game/ActivateSkill.cpp      # 0x0030
+    src/packets/game/ExecuteSkill.cpp       # 0x0031
+    src/packets/game/AllocateSkillPoint.cpp # 0x0049
+    src/packets/game/ToggleExpertise.cpp    # 0x004F
+    src/packets/game/LearnSkill.cpp         # 0x0051
+    src/packets/game/KeepAlive.cpp          # 0x0056
+    src/packets/game/FixObjectPosition.cpp  # 0x0058
+    src/packets/game/State.cpp              # 0x005A
+    src/packets/game/PartnerDemonData.cpp   # 0x005B
+    src/packets/game/COMPList.cpp           # 0x005C
+    src/packets/game/COMPDemonData.cpp      # 0x005E
+    src/packets/game/StopMovement.cpp       # 0x006F
+    src/packets/game/ItemBox.cpp            # 0x0074
+    src/packets/game/ItemMove.cpp           # 0x0076
+    src/packets/game/ItemDrop.cpp           # 0x0077
+    src/packets/game/ItemStack.cpp          # 0x0078
+    src/packets/game/EquipmentList.cpp      # 0x007B
+    src/packets/game/COMPSlotUpdate.cpp     # 0x009A
+    src/packets/game/DismissDemon.cpp       # 0x009B
+    src/packets/game/HotbarData.cpp         # 0x00A2
+    src/packets/game/HotbarSave.cpp         # 0x00A4
+    src/packets/game/ValuableList.cpp       # 0x00B8
+    src/packets/game/Sync.cpp               # 0x00F3
+    src/packets/game/Rotate.cpp             # 0x00F8
+    src/packets/game/UnionFlag.cpp          # 0x0100
+    src/packets/game/LockDemon.cpp          # 0x0233
 
     #Internal packets
-    src/packets/internal/SetWorldInfo.cpp    # 0x1002
-    src/packets/internal/AccountLogin.cpp    # 0x1004
+    src/packets/internal/SetWorldInfo.cpp   # 0x1002
+    src/packets/internal/AccountLogin.cpp   # 0x1004
 )
 
 ADD_EXECUTABLE(${PROJECT_NAME} ${${PROJECT_NAME}_SRCS}

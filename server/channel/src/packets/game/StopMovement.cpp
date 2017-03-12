@@ -30,9 +30,11 @@
 // libcomp Includes
 #include <Log.h>
 #include <ManagerPacket.h>
+#include <PacketCodes.h>
 
 // channel Includes
 #include "ChannelClientConnection.h"
+#include "ChannelServer.h"
 
 using namespace channel;
 
@@ -40,30 +42,19 @@ bool Parsers::StopMovement::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {
-    (void)pPacketManager;
-
     if(p.Size() != 16)
     {
         return false;
     }
 
+    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
     auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
     auto state = client->GetClientState();
-    auto cState = state->GetCharacterState();
-    auto dState = state->GetDemonState();
 
     int32_t entityID = p.ReadS32Little();
 
-    std::shared_ptr<objects::EntityStateObject> eState;
-    if(cState->GetEntityID() == entityID)
-    {
-        eState = std::dynamic_pointer_cast<objects::EntityStateObject>(cState);
-    }
-    else if(nullptr != dState && dState->GetEntityID() == entityID)
-    {
-        eState = std::dynamic_pointer_cast<objects::EntityStateObject>(dState);
-    }
-    else
+    auto eState = state->GetEntityState(entityID);
+    if(nullptr == eState)
     {
         LOG_ERROR(libcomp::String("Invalid entity ID received from a stop movement"
             " request: %1\n").Arg(entityID));
@@ -84,15 +75,31 @@ bool Parsers::StopMovement::Parse(libcomp::ManagerPacket *pPacketManager,
 
     eState->SetDestinationTicks(stopTime);
 
-    /// @todo: Send to the whole rest of the zone
-    /*libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_STOP_MOVEMENT);
-    reply.WriteS32Little(entityID);
-    reply.WriteFloat(destX);
-    reply.WriteFloat(destY);
-    reply.WriteFloat(stop);
+    auto zoneConnections = server->GetZoneManager()->GetZoneInstance(client)->GetConnections();
+    if(zoneConnections.size() > 1)
+    {
+        libcomp::Packet reply;
+        reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_STOP_MOVEMENT);
+        reply.WriteS32Little(entityID);
+        reply.WriteFloat(destX);
+        reply.WriteFloat(destY);
 
-    connection->SendPacket(reply);*/
+        // Times must be sent relative to the other players
+        uint32_t timePos = reply.Size();
+        for(auto connectionPair : zoneConnections)
+        {
+            auto zConnection = connectionPair.second;
+            if(zConnection != client)
+            {
+                auto otherState = zConnection->GetClientState();
+
+                reply.Seek(timePos);
+                reply.WriteFloat(otherState->ToClientTime(stopTime));
+
+                zConnection->SendPacket(reply);
+            }
+        }
+    }
 
     return true;
 }

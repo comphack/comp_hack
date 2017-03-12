@@ -42,8 +42,9 @@ using namespace channel;
 
 ChannelServer::ChannelServer(std::shared_ptr<objects::ServerConfig> config,
     const libcomp::String& configPath) : libcomp::BaseServer(config, configPath),
-    mAccountManager(0), mCharacterManager(0), mChatManager(0), mMaxEntityID(0),
-    mMaxObjectID(0)
+    mAccountManager(0), mCharacterManager(0), mChatManager(0), mSkillManager(0),
+    mZoneManager(0), mDefinitionManager(0), mServerDataManager(0),
+    mMaxEntityID(0), mMaxObjectID(0)
 {
 }
 
@@ -56,6 +57,20 @@ bool ChannelServer::Initialize()
         return false;
     }
 
+    auto conf = std::dynamic_pointer_cast<objects::ChannelConfig>(mConfig);
+
+    mDefinitionManager = new libcomp::DefinitionManager();
+    if(!mDefinitionManager->LoadAllData(conf->GetBinaryDataDirectory()))
+    {
+        return false;
+    }
+
+    mServerDataManager = new libcomp::ServerDataManager();
+    if(!mServerDataManager->LoadData(conf->GetServerDataDefinitionsFile()))
+    {
+        return false;
+    }
+
     // Connect to the world server.
     auto worldConnection = std::make_shared<
         libcomp::InternalConnection>(mService);
@@ -63,8 +78,6 @@ bool ChannelServer::Initialize()
 
     mManagerConnection = std::make_shared<ManagerConnection>(self);
     mManagerConnection->SetWorldConnection(worldConnection);
-
-    auto conf = std::dynamic_pointer_cast<objects::ChannelConfig>(mConfig);
 
     worldConnection->Connect(conf->GetWorldIP(), conf->GetWorldPort(), false);
 
@@ -104,6 +117,14 @@ bool ChannelServer::Initialize()
         to_underlying(ClientToChannelPacketCode_t::PACKET_CHAT));
     clientPacketManager->AddParser<Parsers::ActivateSkill>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_ACTIVATE_SKILL));
+    clientPacketManager->AddParser<Parsers::ExecuteSkill>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_EXECUTE_SKILL));
+    clientPacketManager->AddParser<Parsers::AllocateSkillPoint>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_ALLOCATE_SKILL_POINT));
+    clientPacketManager->AddParser<Parsers::ToggleExpertise>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_TOGGLE_EXPERTISE));
+    clientPacketManager->AddParser<Parsers::LearnSkill>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_LEARN_SKILL));
     clientPacketManager->AddParser<Parsers::KeepAlive>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_KEEP_ALIVE));
     clientPacketManager->AddParser<Parsers::FixObjectPosition>(
@@ -120,12 +141,32 @@ bool ChannelServer::Initialize()
         to_underlying(ClientToChannelPacketCode_t::PACKET_STOP_MOVEMENT));
     clientPacketManager->AddParser<Parsers::ItemBox>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_ITEM_BOX));
+    clientPacketManager->AddParser<Parsers::ItemMove>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_ITEM_MOVE));
+    clientPacketManager->AddParser<Parsers::ItemDrop>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_ITEM_DROP));
+    clientPacketManager->AddParser<Parsers::ItemStack>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_ITEM_STACK));
     clientPacketManager->AddParser<Parsers::EquipmentList>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_EQUIPMENT_LIST));
+    clientPacketManager->AddParser<Parsers::COMPSlotUpdate>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_COMP_SLOT_UPDATE));
+    clientPacketManager->AddParser<Parsers::DismissDemon>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_DISMISS_DEMON));
+    clientPacketManager->AddParser<Parsers::HotbarData>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_HOTBAR_DATA));
+    clientPacketManager->AddParser<Parsers::HotbarSave>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_HOTBAR_SAVE));
+    clientPacketManager->AddParser<Parsers::ValuableList>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_VALUABLE_LIST));
     clientPacketManager->AddParser<Parsers::Sync>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_SYNC));
     clientPacketManager->AddParser<Parsers::Rotate>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_ROTATE));
+    clientPacketManager->AddParser<Parsers::UnionFlag>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_UNION_FLAG));
+    clientPacketManager->AddParser<Parsers::LockDemon>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_LOCK_DEMON));
 
     // Add the managers to the generic workers.
     for(auto worker : mWorkers)
@@ -134,10 +175,12 @@ bool ChannelServer::Initialize()
         worker->AddManager(mManagerConnection);
     }
 
-    mAccountManager = new AccountManager(std::dynamic_pointer_cast<
-        ChannelServer>(shared_from_this()));
-    mCharacterManager = new CharacterManager();
-    mChatManager = new ChatManager();
+    auto channelPtr = std::dynamic_pointer_cast<ChannelServer>(self);
+    mAccountManager = new AccountManager(channelPtr);
+    mCharacterManager = new CharacterManager(channelPtr);
+    mChatManager = new ChatManager(channelPtr);
+    mSkillManager = new SkillManager(channelPtr);
+    mZoneManager = new ZoneManager(channelPtr);
 
     return true;
 }
@@ -147,6 +190,10 @@ ChannelServer::~ChannelServer()
     delete[] mAccountManager;
     delete[] mCharacterManager;
     delete[] mChatManager;
+    delete[] mSkillManager;
+    delete[] mZoneManager;
+    delete[] mDefinitionManager;
+    delete[] mServerDataManager;
 }
 
 ServerTime ChannelServer::GetServerTime()
@@ -255,6 +302,26 @@ CharacterManager* ChannelServer::GetCharacterManager() const
 ChatManager* ChannelServer::GetChatManager() const
 {
     return mChatManager;
+}
+
+SkillManager* ChannelServer::GetSkillManager() const
+{
+    return mSkillManager;
+}
+
+ZoneManager* ChannelServer::GetZoneManager() const
+{
+    return mZoneManager;
+}
+
+libcomp::DefinitionManager* ChannelServer::GetDefinitionManager() const
+{
+    return mDefinitionManager;
+}
+
+libcomp::ServerDataManager* ChannelServer::GetServerDataManager() const
+{
+    return mServerDataManager;
 }
 
 int32_t ChannelServer::GetNextEntityID()

@@ -21,7 +21,7 @@
         <member type="u8" name="RightEyeColor"/>
         
         <!-- Character specific attributes -->
-        <member type="s16" name="LNC" caps="true"/>
+        <member type="s16" name="LNC" caps="true" min="-10000" max="10000"/>
         <member type="s32" name="Points"/>
         <member type="Demon*" name="ActiveDemon"/>
 
@@ -60,12 +60,13 @@
         <member type="CharacterProgress*" name="Progress"/>
     </object>
     <object name="EntityStats" location="world">
-        <member type="s8" name="Level" default="1"/>
+        <member type="ref" name="Entity" key="true" unique="true"/>
+        <member type="s8" name="Level" default="-1"/>
         <member type="s64" name="XP" caps="true"/>
-        <member type="s16" name="HP" caps="true" default="73"/>
-        <member type="s16" name="MP" caps="true" default="11"/>
-        <member type="s16" name="MaxHP" default="73"/>
-        <member type="s16" name="MaxMP" default="11"/>
+        <member type="s16" name="HP" caps="true"/>
+        <member type="s16" name="MP" caps="true"/>
+        <member type="s16" name="MaxHP"/>
+        <member type="s16" name="MaxMP"/>
         <member type="s16" name="STR" caps="true" default="1"/>
         <member type="s16" name="MAGIC" caps="true" default="1"/>
         <member type="s16" name="VIT" caps="true" default="1"/>
@@ -81,17 +82,19 @@
     </object>
     <object name="StatusEffect" location="world">
         <member type="u32" name="Effect"/>
+        <member type="ref" name="Entity" key="true" unique="false"/>
         <member type="u64" name="Duration"/>
         <member type="u8" name="Stack"/>
     </object>
     <object name="CharacterProgress" location="world">
+        <member type="Character*" name="Character" key="true" unique="true"/>
         <member type="array" name="Maps" size="32">
             <element type="u8"/>
         </member>
         <member type="array" name="Plugins" size="32">
             <element type="u8"/>
         </member>
-        <member type="array" name="Valuables" size="64">
+        <member type="array" name="Valuables" size="128">
             <element type="u8"/>
         </member>
         <member type="array" name="DevilBook" size="512">
@@ -102,23 +105,27 @@
         </member>
     </object>
     <object name="Expertise" location="world">
+        <member type="Character*" name="Character" key="true" unique="false"/>
         <member type="s32" name="Points"/>
-        <!--<member type="u8" name="Unknown"/>-->
-        <member type="bool" name="Capped"/>
+        <member type="bool" name="Disabled"/>
     </object>
     <object name="Hotbar" location="world">
-        <!--<member type="u32" name="Unknown"/>-->
-        <member type="array" name="Items" size="16">
-            <element type="HotbarItem*"/>
+        <member type="Character*" name="Character" key="true" unique="false"/>
+        <member type="array" name="ItemTypes" size="16">
+            <element type="s8"/>
         </member>
-    </object>
-    <object name="HotbarItem" location="world">
-        <member type="u8" name="Type"/>
-        <member type="u32" name="Value"/>
-        <member type="u32" name="Extra"/>
+        <!-- Hotbar items associated to a persistent object type have a reference -->
+        <member type="array" name="Items" size="16">
+            <element type="ref"/>
+        </member>
+        <!-- Hotbar items not associated to a persistent object type just have an ID -->
+        <member type="array" name="ItemIDs" size="16">
+            <element type="u32"/>
+        </member>
     </object>
     <object name="Quest" location="world">
         <member type="u16" name="QuestID"/>
+        <member type="Character*" name="Character" key="true" unique="false"/>
         <member type="u8" name="State"/>
         <member type="list" name="CustomData">
             <element type="s32"/>

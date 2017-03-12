@@ -48,7 +48,7 @@ void SendEquipmentList(const std::shared_ptr<ChannelClientConnection>& client)
 {
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
-    auto character = cState->GetCharacter();
+    auto character = cState->GetEntity();
 
     libcomp::Packet reply;
     reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_EQUIPMENT_LIST);

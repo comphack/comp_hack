@@ -37,7 +37,7 @@ using namespace channel;
 ClientState::ClientState() : objects::ClientStateObject(),
     mCharacterState(std::shared_ptr<CharacterState>(new CharacterState)),
     mDemonState(std::shared_ptr<DemonState>(new DemonState)),
-    mStartTime(0)
+    mStartTime(0), mNextActivatedAbilityID(1)
 {
 }
 
@@ -61,6 +61,20 @@ std::shared_ptr<DemonState> ClientState::GetDemonState()
     return mDemonState;
 }
 
+std::shared_ptr<ActiveEntityState> ClientState::GetEntityState(int32_t entityID)
+{
+    std::list<std::shared_ptr<ActiveEntityState>> states = { mCharacterState, mDemonState };
+    for(auto state : states)
+    {
+        if(state->GetEntityID() == entityID && state->Ready())
+        {
+            return state;
+        }
+    }
+
+    return nullptr;
+}
+
 int64_t ClientState::GetObjectID(const libobjgen::UUID& uuid) const
 {
     auto uuidStr = uuid.ToString();
@@ -74,6 +88,17 @@ int64_t ClientState::GetObjectID(const libobjgen::UUID& uuid) const
     return 0;
 }
 
+const libobjgen::UUID ClientState::GetObjectUUID(int64_t objectID) const
+{
+    auto iter = mObjectUUIDs.find(objectID);
+    if(iter != mObjectUUIDs.end())
+    {
+        return iter->second;
+    }
+
+    return NULLUUID;
+}
+
 bool ClientState::SetObjectID(const libobjgen::UUID& uuid, int64_t objectID)
 {
     auto uuidStr = uuid.ToString();
@@ -82,10 +107,25 @@ bool ClientState::SetObjectID(const libobjgen::UUID& uuid, int64_t objectID)
     if(iter == mObjectIDs.end())
     {
         mObjectIDs[uuidStr] = objectID;
+        mObjectUUIDs[objectID] = uuid;
         return true;
     }
 
     return false;
+}
+
+uint8_t ClientState::GetNextActivatedAbilityID()
+{
+    std::lock_guard<std::mutex> lock(mLock);
+    uint8_t next = mNextActivatedAbilityID;
+
+    mNextActivatedAbilityID = (uint8_t)((mNextActivatedAbilityID + 1) % 128);
+    if(mNextActivatedAbilityID == 0)
+    {
+        mNextActivatedAbilityID = 1;
+    }
+
+    return next;
 }
 
 bool ClientState::Ready()

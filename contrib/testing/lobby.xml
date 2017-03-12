@@ -22,7 +22,7 @@
         <member name="DataStore">
             <element>/var/lib/comp_hack</element>
         </member>
-        <member name="DataStoreSync">true</element>
+        <member name="DataStoreSync">true</member>
         
         <!-- From LobbyConfig -->
         <member name="CharacterDeletionDelay">1440</member>	<!-- In minutes, 24 hours by default -->

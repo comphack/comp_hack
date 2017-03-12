@@ -40,6 +40,7 @@
 
 // channel Includes
 #include <ChannelServer.h>
+#include <ZoneManager.h>
 #include <ClientState.h>
 
 using namespace channel;
@@ -57,6 +58,8 @@ bool ChatManager::SendChatMessage(const std::shared_ptr<
     ChannelClientConnection>& client, ChatType_t chatChannel,
     libcomp::String message)
 {
+    auto server = mServer.lock();
+    auto ZoneManager = server->GetZoneManager();
     if(message.IsEmpty())
     {
         return false;
@@ -67,6 +70,7 @@ bool ChatManager::SendChatMessage(const std::shared_ptr<
     libcomp::String sentFrom = character->GetName();
 
     ChatVis_t visibility = ChatVis_t::CHAT_VIS_SELF;
+
     switch(chatChannel)
     {
         case ChatType_t::CHAT_PARTY:
@@ -104,7 +108,12 @@ bool ChatManager::SendChatMessage(const std::shared_ptr<
             break;
         case ChatVis_t::CHAT_VIS_PARTY:
         case ChatVis_t::CHAT_VIS_ZONE:
+            ZoneManager->BroadcastPacket(client, reply, true);
+            break;
         case ChatVis_t::CHAT_VIS_RANGE:
+            //To Do: Figure out how to force it to use a radius for range.
+            ZoneManager->BroadcastPacket(client, reply, true);
+            break;
         case ChatVis_t::CHAT_VIS_KLAN:
         case ChatVis_t::CHAT_VIS_TEAM:
         case ChatVis_t::CHAT_VIS_GLOBAL:

@@ -137,11 +137,13 @@ public:
      * cause the reference to load from the database if the
      * database is specified and only the UUID is set.
      * @param db Database to load from
+     * @param reload Forces a reload from the DB if true
      * @return Pointer to the referenced object
      */
-    const std::shared_ptr<T> Get(const std::shared_ptr<Database>& db = nullptr)
+    const std::shared_ptr<T> Get(const std::shared_ptr<Database>& db = nullptr,
+        bool reload = false)
     {
-        LoadReference(db);
+        LoadReference(db, reload);
 
         return GetReference();
     }
@@ -254,13 +256,15 @@ protected:
      * function without a DB set will pull from the PersistentObject
      * cache instead.
      * @param db Database to load from
+     * @param reload Forces a reload from the DB if true
      * @return true on success, false on failure
      */
-    bool LoadReference(const std::shared_ptr<Database>& db = nullptr)
+    bool LoadReference(const std::shared_ptr<Database>& db = nullptr,
+        bool reload = false)
     {
         // Do not count an attempt to load without a DB as a
         // load failure
-        if(!mData->mLoadFailed && nullptr == mData->mRef &&
+        if(!mData->mLoadFailed && (reload || nullptr == mData->mRef) &&
             !mData->mUUID.IsNull())
         {
             auto uuid = mData->mUUID;
@@ -271,7 +275,8 @@ protected:
             if(dbLoad)
             {
                 pRef = std::dynamic_pointer_cast<PersistentObject>(
-                    PersistentObject::LoadObjectByUUID<T>(db, uuid));
+                    PersistentObject::LoadObjectByUUID<T>(db, uuid,
+                        reload));
             }
             else
             {

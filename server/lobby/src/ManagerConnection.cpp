@@ -375,6 +375,7 @@ void ManagerConnection::RemoveClientConnection(const std::shared_ptr<
         {
             LOG_DEBUG(libcomp::String("Logging out user: '%1'\n").Arg(username));
             accountManager->LogoutUser(username, worldID);
+            server->GetSessionManager()->ExpireSession(username);
         }
     }
 }

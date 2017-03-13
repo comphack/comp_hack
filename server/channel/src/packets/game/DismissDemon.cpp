@@ -75,7 +75,8 @@ void DemonDismiss(const std::shared_ptr<ChannelServer> server,
     character->SetCOMP((size_t)slot, NULLUUID);
 
     auto db = server->GetWorldDatabase();
-    if(!demon->GetCoreStats()->Delete(db) || !demon->Delete(db))
+    if(!character->Update(db) || !demon->GetCoreStats()->Delete(db) ||
+        !demon->Delete(db))
     {
         return;
     }

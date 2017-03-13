@@ -152,6 +152,7 @@ private:
         if(obj != nullptr)
         {
             libcomp::ObjectReference<T>::Unload(obj->GetUUID());
+            obj->Unregister();
             return obj->Update(db);
         }
         return true;

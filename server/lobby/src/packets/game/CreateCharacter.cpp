@@ -92,98 +92,106 @@ bool Parsers::CreateCharacter::Parse(libcomp::ManagerPacket *pPacketManager,
         nextCID++;
     }
 
-    auto gender = (objects::Character::Gender_t)p.ReadU8();
-
-    uint32_t skinType  = p.ReadU32Little();
-    uint32_t faceType  = p.ReadU32Little();
-    uint32_t hairType  = p.ReadU32Little();
-    uint32_t hairColor = p.ReadU32Little();
-    uint32_t eyeColor  = p.ReadU32Little();
-
-    uint32_t equipTop    = p.ReadU32Little();
-    uint32_t equipBottom = p.ReadU32Little();
-    uint32_t equipFeet   = p.ReadU32Little();
-    uint32_t equipComp   = p.ReadU32Little();
-    uint32_t equipWeapon = p.ReadU32Little();
-
-    uint8_t eyeType = (uint8_t)(gender == objects::Character::Gender_t::MALE ? 1 : 101);
-
-    auto character = libcomp::PersistentObject::New<objects::Character>();
-    character->SetCID(nextCID);
-    character->SetName(name);
-    character->SetGender(gender);
-    character->SetSkinType((uint8_t)skinType);
-    character->SetFaceType((uint8_t)faceType);
-    character->SetHairType((uint8_t)hairType);
-    character->SetHairColor((uint8_t)hairColor);
-    character->SetEyeType((uint8_t)eyeType);
-    character->SetLeftEyeColor((uint8_t)eyeColor);
-    character->SetRightEyeColor((uint8_t)eyeColor);
-    character->SetAccount(account);
-    character->Register(character);
-
-    std::unordered_map<size_t, std::shared_ptr<objects::Item>> equipMap;
-
-    /// @todo: Build these properly from item data
-    auto itemTop = libcomp::PersistentObject::New<objects::Item>();
-    itemTop->SetType(equipTop);
-    equipMap[(size_t)
-        objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_TOP] = itemTop;
-
-    auto itemBottom = libcomp::PersistentObject::New<objects::Item>();
-    itemBottom->SetType(equipBottom);
-    equipMap[(size_t)
-        objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_BOTTOM] = itemBottom;
-
-    auto itemFeet = libcomp::PersistentObject::New<objects::Item>();
-    itemFeet->SetType(equipFeet);
-    equipMap[(size_t)
-        objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_FEET] = itemFeet;
-
-    auto comp = libcomp::PersistentObject::New<objects::Item>();
-    comp->SetType(equipComp);
-    equipMap[(size_t)
-        objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_COMP] = comp;
-
-    auto weapon = libcomp::PersistentObject::New<objects::Item>();
-    weapon->SetType(equipWeapon);
-    equipMap[(size_t)
-        objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_WEAPON] = weapon;
-
-    auto stats = libcomp::PersistentObject::New<objects::EntityStats>();
-    stats->Register(stats);
-    stats->SetEntity(std::dynamic_pointer_cast<
-        libcomp::PersistentObject>(character));
-    character->SetCoreStats(stats);
-
-    bool equipped = true;
-    for(auto pair : equipMap)
-    {
-        auto equip = pair.second;
-        equipped &= equip->Register(equip) && equip->Insert(worldDB) &&
-            character->SetEquippedItems(pair.first, equip);
-    }
-
     libcomp::Packet reply;
     reply.WritePacketCode(
         LobbyToClientPacketCode_t::PACKET_CREATE_CHARACTER);
 
-    if(!equipped)
+    if(nextCID == characters.size() || account->GetTicketCount() == 0)
     {
-        LOG_DEBUG("Character item data failed to save.\n");
-        reply.WriteU32Little(1);
-    }
-    else if(!stats->Insert(worldDB) ||  !character->Insert(worldDB))
-    {
-        LOG_DEBUG("Character failed to save.\n");
-        reply.WriteU32Little(1);
+        LOG_ERROR(libcomp::String("No new characters can be created for account %1\n")
+            .Arg(account->GetUUID().ToString()));
+        reply.WriteU32Little(static_cast<uint32_t>(-1));
     }
     else
     {
-        characters[character->GetCID()] = character;
-        account->SetCharacters(characters);
+        auto gender = (objects::Character::Gender_t)p.ReadU8();
 
-        if(!account->Update(lobbyDB))
+        uint32_t skinType  = p.ReadU32Little();
+        uint32_t faceType  = p.ReadU32Little();
+        uint32_t hairType  = p.ReadU32Little();
+        uint32_t hairColor = p.ReadU32Little();
+        uint32_t eyeColor  = p.ReadU32Little();
+
+        uint32_t equipTop    = p.ReadU32Little();
+        uint32_t equipBottom = p.ReadU32Little();
+        uint32_t equipFeet   = p.ReadU32Little();
+        uint32_t equipComp   = p.ReadU32Little();
+        uint32_t equipWeapon = p.ReadU32Little();
+
+        uint8_t eyeType = (uint8_t)(gender == objects::Character::Gender_t::MALE ? 1 : 101);
+
+        auto character = libcomp::PersistentObject::New<objects::Character>();
+        character->SetCID(nextCID);
+        character->SetName(name);
+        character->SetGender(gender);
+        character->SetSkinType((uint8_t)skinType);
+        character->SetFaceType((uint8_t)faceType);
+        character->SetHairType((uint8_t)hairType);
+        character->SetHairColor((uint8_t)hairColor);
+        character->SetEyeType((uint8_t)eyeType);
+        character->SetLeftEyeColor((uint8_t)eyeColor);
+        character->SetRightEyeColor((uint8_t)eyeColor);
+        character->SetAccount(account);
+        character->Register(character);
+
+        std::unordered_map<size_t, std::shared_ptr<objects::Item>> equipMap;
+
+        /// @todo: Build these properly from item data
+        auto itemTop = libcomp::PersistentObject::New<objects::Item>();
+        itemTop->SetType(equipTop);
+        equipMap[(size_t)
+            objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_TOP] = itemTop;
+
+        auto itemBottom = libcomp::PersistentObject::New<objects::Item>();
+        itemBottom->SetType(equipBottom);
+        equipMap[(size_t)
+            objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_BOTTOM] = itemBottom;
+
+        auto itemFeet = libcomp::PersistentObject::New<objects::Item>();
+        itemFeet->SetType(equipFeet);
+        equipMap[(size_t)
+            objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_FEET] = itemFeet;
+
+        auto comp = libcomp::PersistentObject::New<objects::Item>();
+        comp->SetType(equipComp);
+        equipMap[(size_t)
+            objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_COMP] = comp;
+
+        auto weapon = libcomp::PersistentObject::New<objects::Item>();
+        weapon->SetType(equipWeapon);
+        equipMap[(size_t)
+            objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_WEAPON] = weapon;
+
+        auto stats = libcomp::PersistentObject::New<objects::EntityStats>();
+        stats->Register(stats);
+        stats->SetEntity(std::dynamic_pointer_cast<
+            libcomp::PersistentObject>(character));
+        character->SetCoreStats(stats);
+
+        bool equipped = true;
+        for(auto pair : equipMap)
+        {
+            auto equip = pair.second;
+            equipped &= equip->Register(equip) && equip->Insert(worldDB) &&
+                character->SetEquippedItems(pair.first, equip);
+        }
+
+        account->SetTicketCount(account->GetTicketCount() - 1);
+
+        if(!equipped)
+        {
+            LOG_ERROR(libcomp::String("Character item data failed to save for account %1\n")
+                .Arg(account->GetUUID().ToString()));
+            reply.WriteU32Little(static_cast<uint32_t>(-1));
+        }
+        else if(!stats->Insert(worldDB) || !character->Insert(worldDB))
+        {
+            LOG_ERROR(libcomp::String("Character failed to save for account %1\n")
+                .Arg(account->GetUUID().ToString()));
+            reply.WriteU32Little(static_cast<uint32_t>(-1));
+        }
+        else if(!account->SetCharacters(character->GetCID(), character) ||
+            !account->Update(lobbyDB))
         {
             LOG_ERROR(libcomp::String("Account character array failed to save for account %1\n")
                 .Arg(account->GetUUID().ToString()));

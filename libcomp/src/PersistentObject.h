@@ -156,15 +156,17 @@ public:
      * or database.
      * @param db Database to load from
      * @param uuid UUID of the object to load
+     * @param reload Forces a reload from the DB if true
      * @return Pointer to the object or nullptr if it doesn't exist
      */
     template<class T> static std::shared_ptr<T> LoadObjectByUUID(
-        const std::shared_ptr<Database>& db, const libobjgen::UUID& uuid)
+        const std::shared_ptr<Database>& db, const libobjgen::UUID& uuid,
+        bool reload = false)
     {
         if(std::is_base_of<PersistentObject, T>::value)
         {
             return std::dynamic_pointer_cast<T>(LoadObjectByUUID(
-                typeid(T), db, uuid));
+                typeid(T), db, uuid, reload));
         }
 
         return nullptr;
@@ -176,11 +178,12 @@ public:
      * @param type C++ type representing the object type to load
      * @param db Database to load from
      * @param uuid UUID of the object to load
+     * @param reload Forces a reload from the DB if true
      * @return Pointer to the object or nullptr if it doesn't exist
      */
     static std::shared_ptr<PersistentObject> LoadObjectByUUID(
         std::type_index type, const std::shared_ptr<Database>& db,
-        const libobjgen::UUID& uuid);
+        const libobjgen::UUID& uuid, bool reload = false);
 
     /*
      * Get all PersistentObject derived class MetaObject definitions.

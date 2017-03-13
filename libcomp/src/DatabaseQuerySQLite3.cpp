@@ -30,10 +30,17 @@
  // SQLite3 Includes
 #include <sqlite3.h>
 
+// Standard C++11 Includes
+#include <thread>
+#include <chrono>
+
 using namespace libcomp;
 
-DatabaseQuerySQLite3::DatabaseQuerySQLite3(sqlite3 *pDatabase)
-    : mDatabase(pDatabase), mStatement(nullptr), mStatus(SQLITE_OK)
+DatabaseQuerySQLite3::DatabaseQuerySQLite3(sqlite3 *pDatabase,
+    uint8_t maxRetryCount, uint16_t retryDelay)
+    : mDatabase(pDatabase), mStatement(nullptr), mStatus(SQLITE_OK),
+    mDidJustExecute(false), mMaxRetryCount(maxRetryCount),
+    mRetryDelay(retryDelay)
 {
 }
 
@@ -61,7 +68,19 @@ bool DatabaseQuerySQLite3::Execute()
         return false;
     }
 
-    mStatus = sqlite3_step(mStatement);
+    // To circumvent the limitations of SQLite multi-process access,
+    // allow a configurable retry count and a delay
+    uint8_t attempts = 0;
+    do
+    {
+        if(attempts++ > 0)
+        {
+            std::this_thread::sleep_for(std::chrono::milliseconds(mRetryDelay));
+        }
+
+        mStatus = sqlite3_step(mStatement);
+    } while(mStatus == SQLITE_BUSY && attempts < mMaxRetryCount);
+
     mDidJustExecute = true;
     
     int colCount = sqlite3_column_count(mStatement);

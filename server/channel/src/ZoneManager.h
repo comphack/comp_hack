@@ -79,8 +79,10 @@ public:
      * Associate a client connection to a zone
      * @param client Client connection to connect to a zone
      * @param zoneID Definition ID of a zone to add the client to
+     * @return true if the client entered the zone properly, false if they
+     *  did not
      */
-    void EnterZone(const std::shared_ptr<ChannelClientConnection>& client,
+    bool EnterZone(const std::shared_ptr<ChannelClientConnection>& client,
         uint32_t zoneID);
 
     /**
@@ -142,18 +144,19 @@ private:
         const std::shared_ptr<objects::ServerZone>& definition);
 
     /// Map of zone intances by instance ID
-    std::unordered_map<uint64_t, std::shared_ptr<Zone>> mZones;
+    std::unordered_map<uint32_t, std::shared_ptr<Zone>> mZones;
 
     /// Map of zone definition IDs to zone instance IDs
-    std::unordered_map<uint32_t, std::set<uint64_t>> mZoneMap;
+    std::unordered_map<uint32_t, std::set<uint32_t>> mZoneMap;
 
-    std::unordered_map<int32_t, uint64_t> mEntityMap;
+    /// Map of primary entity IDs to zone instance IDs
+    std::unordered_map<int32_t, uint32_t> mEntityMap;
 
     /// Pointer to the channel server
     std::weak_ptr<ChannelServer> mServer;
 
     /// Next available zone instance ID
-    uint64_t mNextZoneInstanceID;
+    uint32_t mNextZoneInstanceID;
 
     /// Server lock for shared resources
     std::mutex mLock;

@@ -52,17 +52,10 @@ bool Parsers::Auth::Parse(libcomp::ManagerPacket *pPacketManager,
     }
 
     auto server = std::dynamic_pointer_cast<LobbyServer>(pPacketManager->GetServer());
-    auto username = state(connection)->GetAccount()->GetUsername();
+    auto account = state(connection)->GetAccount();
+    auto username = account->GetUsername();
     auto accountManager = server->GetAccountManager();
     auto sessionManager = server->GetSessionManager();
-
-    int8_t loginWorldID;
-    if(!accountManager->IsLoggedIn(username, loginWorldID) || loginWorldID != -1)
-    {
-        LOG_ERROR(libcomp::String("User '%1' attempted to authorize their session"
-            " but is not currently logged into the lobby.\n").Arg(username));
-        return false;
-    }
 
     // Authentication token (session ID) provided by the web server.
     libcomp::String sid = p.ReadString16Little(
@@ -71,12 +64,38 @@ bool Parsers::Auth::Parse(libcomp::ManagerPacket *pPacketManager,
     LOG_DEBUG(libcomp::String("SID: %1\n").Arg(sid));
 
     libcomp::String sid2;
-    if(!sessionManager->CheckSID(0, username, sid, sid2))
+    int8_t loginWorldID;
+    bool isLoggedIn = accountManager->IsLoggedIn(username, loginWorldID);
+    if(!sessionManager->CheckSID(username, sid, sid2))
     {
         LOG_ERROR(libcomp::String("User '%1' session ID provided by the client"
             " was not valid: %2\n").Arg(username).Arg(sid2));
         accountManager->LogoutUser(username, loginWorldID);
         return false;
+    }
+
+    if(!isLoggedIn || loginWorldID != -1)
+    {
+        if(isLoggedIn)
+        {
+            accountManager->LogoutUser(username, loginWorldID);
+        }
+
+        auto login = accountManager->GetUserLogin(username);
+        if(nullptr == login)
+        {
+            login = std::shared_ptr<objects::AccountLogin>(new objects::AccountLogin);
+            login->SetAccount(account);
+        }
+
+        login->SetWorldID(-1);
+        login->SetChannelID(-1);
+
+        if(!accountManager->LoginUser(username, login))
+        {
+            LOG_ERROR(libcomp::String("User '%1' could not be logged in.\n").Arg(username));
+            return false;
+        }
     }
 
     libcomp::Packet reply;
@@ -85,10 +104,9 @@ bool Parsers::Auth::Parse(libcomp::ManagerPacket *pPacketManager,
     // Status code (see the Login handler for a list).
     reply.WriteS32Little(0);
 
-    sid2 = sessionManager->GenerateSID(1, username);
     accountManager->UpdateSessionID(username, sid2);
 
-    LOG_DEBUG(libcomp::String("SID2: %1\n").Arg(sid2));
+    LOG_DEBUG(libcomp::String("New SID: %1\n").Arg(sid2));
 
     // Write a new session ID to be used when the client switches channels.
     reply.WriteString16Little(libcomp::Convert::ENCODING_UTF8, sid2, true);

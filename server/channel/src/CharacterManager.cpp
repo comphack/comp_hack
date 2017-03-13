@@ -877,6 +877,11 @@ std::shared_ptr<objects::Item> CharacterManager::GenerateItem(
 {
     auto server = mServer.lock();
     auto def = server->GetDefinitionManager()->GetItemData(itemID);
+    if(nullptr == def)
+    {
+        return nullptr;
+    }
+
     auto poss = def->GetPossession();
 
     auto item = libcomp::PersistentObject::New<
@@ -903,6 +908,10 @@ bool CharacterManager::AddRemoveItem(const std::shared_ptr<
     auto server = mServer.lock();
     auto db = server->GetWorldDatabase();
     auto def = server->GetDefinitionManager()->GetItemData(itemID);
+    if(nullptr == def)
+    {
+        return false;
+    }
 
     auto existing = GetExistingItems(character, itemID);
 
@@ -1048,7 +1057,7 @@ bool CharacterManager::AddRemoveItem(const std::shared_ptr<
                 removed = (uint16_t)(removed + item->GetStackSize());
                 
                 if(!itemBox->SetItems((size_t)slot, NULLUUID) ||
-                    !item->Delete(db))
+                    !itemBox->Update(db) || !item->Delete(db))
                 {
                     return false;
                 }

@@ -38,8 +38,6 @@ using namespace channel;
 void SendCharacterData(std::shared_ptr<ChannelServer> server,
     const std::shared_ptr<ChannelClientConnection> client)
 {
-    /// @todo: replace with last zone information
-    server->GetZoneManager()->EnterZone(client, 0x00004E85);
     server->GetCharacterManager()->SendCharacterData(client);
 }
 

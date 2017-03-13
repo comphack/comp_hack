@@ -163,9 +163,9 @@ std::shared_ptr<PersistentObject> PersistentObject::GetObjectByUUID(const libobj
 }
 
 std::shared_ptr<PersistentObject> PersistentObject::LoadObjectByUUID(std::type_index type,
-    const std::shared_ptr<Database>& db,  const libobjgen::UUID& uuid)
+    const std::shared_ptr<Database>& db,  const libobjgen::UUID& uuid, bool reload)
 {
-    auto obj = GetObjectByUUID(uuid);
+    auto obj = !reload ? GetObjectByUUID(uuid) : nullptr;
 
     if(nullptr == obj)
     {

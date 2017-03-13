@@ -66,7 +66,7 @@ void DropItem(const std::shared_ptr<ChannelServer> server,
         itemBox->SetItems((size_t)item->GetBoxSlot(), NULLUUID);
 
         auto worldDB = server->GetWorldDatabase();
-        if(!item->Delete(worldDB) || !itemBox->Update(worldDB))
+        if(!itemBox->Update(worldDB) || !item->Delete(worldDB))
         {
             LOG_ERROR(libcomp::String("Save failed during combine stack operation"
                 " which may have resulted in invalid item data for character: %1\n")

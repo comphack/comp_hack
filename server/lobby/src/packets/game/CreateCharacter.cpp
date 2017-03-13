@@ -176,7 +176,7 @@ bool Parsers::CreateCharacter::Parse(libcomp::ManagerPacket *pPacketManager,
                 character->SetEquippedItems(pair.first, equip);
         }
 
-        account->SetTicketCount(account->GetTicketCount() - 1);
+        account->SetTicketCount(static_cast<uint8_t>(account->GetTicketCount() - 1));
 
         if(!equipped)
         {

@@ -124,6 +124,12 @@ bool SkillManager::ActivateSkill(const std::shared_ptr<ChannelClientConnection> 
     auto server = mServer.lock();
     auto definitionManager = server->GetDefinitionManager();
     auto def = definitionManager->GetSkillData(skillID);
+    if(nullptr == def)
+    {
+        SendFailure(client, sourceEntityID, skillID);
+        return false;
+    }
+
     auto cast = def->GetCast();
     auto chargeTime = cast->GetBasic()->GetChargeTime();
 

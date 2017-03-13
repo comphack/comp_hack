@@ -31,61 +31,6 @@
 
 using namespace lobby;
 
-libcomp::String SessionManager::GenerateSID(uint8_t sid,
-    const libcomp::String& username)
-{
-    if(1 < sid)
-    {
-        return {};
-    }
-
-    libcomp::String result = libcomp::Decrypt::GenerateRandom(300).ToLower();
-    libcomp::String lookup = username.ToLower();
-
-    std::lock_guard<std::mutex> lock(mSessionLock);
-
-    auto entry = mSessionMap.find(username);
-
-    if(mSessionMap.end() != entry)
-    {
-        if(0 == sid)
-        {
-            entry->second.first = result;
-        }
-        else // 1 == sid
-        {
-            entry->second.second = result;
-        }
-    }
-    else
-    {
-        if(0 == sid)
-        {
-            auto res = mSessionMap.insert(std::make_pair(lookup,
-                std::make_pair(result, libcomp::String())));
-
-            // Check the insert.
-            if(!res.second)
-            {
-                result.Clear();
-            }
-        }
-        else // 1 == sid
-        {
-            auto res = mSessionMap.insert(std::make_pair(lookup,
-                std::make_pair(libcomp::String(), result)));
-
-            // Check the insert.
-            if(!res.second)
-            {
-                result.Clear();
-            }
-        }
-    }
-
-    return result;
-}
-
 std::pair<libcomp::String, libcomp::String> SessionManager::GenerateSIDs(
     const libcomp::String& username)
 {
@@ -116,15 +61,10 @@ std::pair<libcomp::String, libcomp::String> SessionManager::GenerateSIDs(
     return result;
 }
 
-bool SessionManager::CheckSID(uint8_t sid, const libcomp::String& username,
-    const libcomp::String& value, libcomp::String& otherSID)
+bool SessionManager::CheckSID(const libcomp::String& username,
+    const libcomp::String& value, libcomp::String& newSID)
 {
     bool result = false;
-
-    if(1 < sid)
-    {
-        return result;
-    }
 
     libcomp::String lookup = username.ToLower();
 
@@ -134,25 +74,23 @@ bool SessionManager::CheckSID(uint8_t sid, const libcomp::String& username,
 
     if(mSessionMap.end() != entry)
     {
-        if(0 == sid)
-        {
-            result = (entry->second.first == value);
+        result = (entry->second.first == value);
 
-            if(result)
-            {
-                otherSID = entry->second.second;
-            }
-        }
-        else // 1 == sid
+        if(result)
         {
-            result = (entry->second.second == value);
-
-            if(result)
-            {
-                otherSID = entry->second.first;
-            }
+            mSessionMap[lookup].second = entry->second.first;
+            newSID = libcomp::Decrypt::GenerateRandom(300).ToLower();
+            mSessionMap[lookup].first = newSID;
         }
     }
 
     return result;
+}
+
+void SessionManager::ExpireSession(const libcomp::String& username)
+{
+    libcomp::String lookup = username.ToLower();
+
+    std::lock_guard<std::mutex> lock(mSessionLock);
+    mSessionMap.erase(lookup);
 }

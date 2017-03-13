@@ -69,10 +69,16 @@ std::shared_ptr<Zone> ZoneManager::GetZoneInstance(int32_t primaryEntityID)
     return nullptr;
 }
 
-void ZoneManager::EnterZone(const std::shared_ptr<ChannelClientConnection>& client,
+bool ZoneManager::EnterZone(const std::shared_ptr<ChannelClientConnection>& client,
     uint32_t zoneID)
 {
-    auto instanceID = GetZone(zoneID)->GetID();
+    auto instance = GetZone(zoneID);
+    if(instance == nullptr)
+    {
+        return false;
+    }
+
+    auto instanceID = instance->GetID();
 
     auto state = client->GetClientState();
     auto primaryEntityID = state->GetCharacterState()->GetEntityID();
@@ -81,6 +87,8 @@ void ZoneManager::EnterZone(const std::shared_ptr<ChannelClientConnection>& clie
         mEntityMap[primaryEntityID] = instanceID;
         mZones[instanceID]->AddConnection(client);
     }
+
+    return true;
 }
 
 void ZoneManager::LeaveZone(const std::shared_ptr<ChannelClientConnection>& client)
@@ -92,7 +100,7 @@ void ZoneManager::LeaveZone(const std::shared_ptr<ChannelClientConnection>& clie
         auto iter = mEntityMap.find(primaryEntityID);
         if(iter != mEntityMap.end())
         {
-            uint64_t instanceID = iter->second;
+            uint32_t instanceID = iter->second;
             auto zone = mZones[instanceID];
 
             mEntityMap.erase(primaryEntityID);
@@ -103,7 +111,7 @@ void ZoneManager::LeaveZone(const std::shared_ptr<ChannelClientConnection>& clie
                 mZones.erase(instanceID);
 
                 auto zoneDefID = zone->GetDefinition()->GetID();
-                std::set<uint64_t>& instances = mZoneMap[zoneDefID];
+                std::set<uint32_t>& instances = mZoneMap[zoneDefID];
                 instances.erase(instanceID);
                 if(instances.size() == 0)
                 {
@@ -278,7 +286,7 @@ std::shared_ptr<Zone> ZoneManager::GetZone(uint32_t zoneID)
         auto iter = mZoneMap.find(zoneID);
         if(iter != mZoneMap.end())
         {
-            for(uint64_t instanceID : iter->second)
+            for(uint32_t instanceID : iter->second)
             {
                 auto instance = mZones[instanceID];
                 /// @todo: replace with public/private logic
@@ -305,7 +313,12 @@ std::shared_ptr<Zone> ZoneManager::GetZone(uint32_t zoneID)
 std::shared_ptr<Zone> ZoneManager::CreateZoneInstance(
     const std::shared_ptr<objects::ServerZone>& definition)
 {
-    uint64_t id;
+    if(nullptr == definition)
+    {
+        return nullptr;
+    }
+
+    uint32_t id;
     {
         std::lock_guard<std::mutex> lock(mLock);
         id = mNextZoneInstanceID++;

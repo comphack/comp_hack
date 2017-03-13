@@ -120,6 +120,14 @@ void AccountManager::HandleLoginResponse(const std::shared_ptr<
         LOG_ERROR(libcomp::String("User account could not be logged in:"
             " %1\n").Arg(account->GetUsername()));
         reply.WriteU32Little(static_cast<uint32_t>(-1));
+
+        // Tell the world that the character login failed without performing
+        // any logout save actions etc
+        libcomp::Packet p;
+        p.WritePacketCode(InternalPacketCode_t::PACKET_ACCOUNT_LOGOUT);
+        p.WriteString16Little(
+            libcomp::Convert::Encoding_t::ENCODING_UTF8, account->GetUsername());
+        server->GetManagerConnection()->GetWorldConnection()->SendPacket(p);
     }
 
     client->SendPacket(reply);

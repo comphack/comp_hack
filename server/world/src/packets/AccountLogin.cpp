@@ -55,7 +55,7 @@ void LobbyLogin(std::shared_ptr<WorldServer> server,
     auto accountManager = server->GetAccountManager();
     auto lobbyDB = server->GetLobbyDatabase();
     auto worldDB = server->GetWorldDatabase();
-    auto account = login->GetAccount().Get(lobbyDB);
+    auto account = login->GetAccount().Get(lobbyDB, true);
     if(nullptr == account)
     {
         LOG_ERROR(libcomp::String("Invalid account sent to world"
@@ -68,7 +68,7 @@ void LobbyLogin(std::shared_ptr<WorldServer> server,
         auto cid = login->GetCID();
         auto characters = account->GetCharacters();
         if(characters[cid].IsNull() ||
-            nullptr == characters[cid].Get(worldDB))
+            nullptr == characters[cid].Get(worldDB, true))
         {
             LOG_ERROR(libcomp::String("Character ID '%1' is not valid"
                 " for this world.\n").Arg(cid));

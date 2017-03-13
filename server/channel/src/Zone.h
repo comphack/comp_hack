@@ -58,7 +58,7 @@ public:
      * @param id Unique instance ID of the zone
      * @param definition Pointer to the ServerZone definition
      */
-    Zone(uint64_t id, const std::shared_ptr<objects::ServerZone>& definition);
+    Zone(uint32_t id, const std::shared_ptr<objects::ServerZone>& definition);
 
     /**
      * Clean up the zone instance.
@@ -69,7 +69,7 @@ public:
      * Get the unique instance ID of the zone
      * @return Unique instance ID of the zone
      */
-    uint64_t GetID();
+    uint32_t GetID();
 
     /**
      * Add a client connection to the zone and register its primary entity ID
@@ -159,7 +159,7 @@ private:
     std::unordered_map<int32_t, std::shared_ptr<objects::EntityStateObject>> mAllEntities;
 
     /// Unique instance ID of the zone
-    uint64_t mID;
+    uint32_t mID;
 
     /// Server lock for shared resources
     std::mutex mLock;

@@ -28,7 +28,7 @@
 
 using namespace channel;
 
-Zone::Zone(uint64_t id, const std::shared_ptr<objects::ServerZone>& definition)
+Zone::Zone(uint32_t id, const std::shared_ptr<objects::ServerZone>& definition)
     : mServerZone(definition), mID(id)
 {
 }
@@ -37,7 +37,7 @@ Zone::~Zone()
 {
 }
 
-uint64_t Zone::GetID()
+uint32_t Zone::GetID()
 {
     return mID;
 }

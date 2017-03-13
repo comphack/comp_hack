@@ -44,14 +44,6 @@ class SessionManager
 {
 public:
     /**
-     * Generate a new SID for an account.
-     * @param sid Which SID to generate.
-     * @param username Username of the account.
-     * @return Generated SID for the account.
-     */
-    libcomp::String GenerateSID(uint8_t sid, const libcomp::String& username);
-
-    /**
      * Generate a new SID set for an account.
      * @param username Username of the account.
      * @return Generated SIDs for the account.
@@ -61,14 +53,19 @@ public:
 
     /**
      * Check an SID for an account.
-     * @param sid Which SID to check.
      * @param username Username of the account.
      * @param value Value to check against the SID.
-     * @param otherSID Value of the other SID.
+     * @param newSID Value of the new SID.
      * @return If the value matches what was recorded.
      */
-    bool CheckSID(uint8_t sid, const libcomp::String& username,
-        const libcomp::String& value, libcomp::String& otherSID);
+    bool CheckSID(const libcomp::String& username,
+        const libcomp::String& value, libcomp::String& newSID);
+
+    /**
+     * Clear an account's session.
+     * @param username Username of the account.
+     */
+    void ExpireSession(const libcomp::String& username);
 
 private:
     /// Lock for access to the session map.

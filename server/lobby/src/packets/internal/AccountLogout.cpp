@@ -55,8 +55,13 @@ bool Parsers::AccountLogout::Parse(libcomp::ManagerPacket *pPacketManager,
         return false;
     }
 
-    LOG_DEBUG(libcomp::String("Logging out user: '%1'\n").Arg(username));
-    accountManager->LogoutUser(username, worldID);
+    // Do not log out the user if they connected back to the lobby
+    if(worldID != -1)
+    {
+        LOG_DEBUG(libcomp::String("Logging out user: '%1'\n").Arg(username));
+        accountManager->LogoutUser(username, worldID);
+        server->GetSessionManager()->ExpireSession(username);
+    }
 
     return true;
 }

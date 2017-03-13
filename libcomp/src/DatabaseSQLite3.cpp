@@ -96,7 +96,9 @@ bool DatabaseSQLite3::IsOpen() const
 
 DatabaseQuery DatabaseSQLite3::Prepare(const String& query)
 {
-    return DatabaseQuery(new DatabaseQuerySQLite3(mDatabase), query);
+    auto config = std::dynamic_pointer_cast<objects::DatabaseConfigSQLite3>(mConfig);
+    return DatabaseQuery(new DatabaseQuerySQLite3(mDatabase,
+        config->GetMaxRetryCount(), config->GetRetryDelay()), query);
 }
 
 bool DatabaseSQLite3::Exists()

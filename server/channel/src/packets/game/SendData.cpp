@@ -27,34 +27,53 @@
 #include "Packets.h"
 
 // libcomp Includes
-#include <Decrypt.h>
 #include <Log.h>
-#include <Packet.h>
+#include <ManagerPacket.h>
 #include <PacketCodes.h>
-#include <ReadOnlyPacket.h>
-#include <TcpConnection.h>
+
+// object includes
+#include <ServerZone.h>
+
+// channel Includes
+#include "ChannelServer.h"
 
 using namespace channel;
 
-void SendZoneChange(const std::shared_ptr<libcomp::TcpConnection>& connection)
+void SendZoneChange(std::shared_ptr<ChannelServer> server,
+    const std::shared_ptr<ChannelClientConnection> client)
 {
+    auto zoneManager = server->GetZoneManager();
+    auto cState = client->GetClientState()->GetCharacterState();
+
+    /// @todo: replace with last zone information
+    uint32_t zoneID = 0x00004E85;
+    if(!zoneManager->EnterZone(client, zoneID))
+    {
+        LOG_ERROR(libcomp::String("Failed to add client to zone"
+            " %1. Closing the connection.\n").Arg(zoneID));
+        client->Close();
+        return;
+    }
+
+    auto instance = zoneManager->GetZoneInstance(client);
+    auto def = instance->GetDefinition();
+
     libcomp::Packet reply;
     reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_ZONE_CHANGE);
-    reply.WriteU32Little(0x00004E85);        //id
-    reply.WriteU32Little(1);        //set
-    reply.WriteFloat(0.f);          //x
-    reply.WriteFloat(0.f);          //y
-    reply.WriteFloat(0.f);          //rotation
-    reply.WriteU32Little(0);        //unique id
+    reply.WriteU32Little(zoneID);
+    reply.WriteU32Little(def->GetSet());
+    reply.WriteFloat(cState->GetOriginX());
+    reply.WriteFloat(cState->GetOriginY());
+    reply.WriteFloat(cState->GetOriginRotation());
+    reply.WriteU32Little(instance->GetID());
 
-    connection->SendPacket(reply);
+    client->SendPacket(reply);
 }
 
 bool Parsers::SendData::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {
-    (void)pPacketManager;
     (void)p;
 
     /// @todo: A bunch of stuff
@@ -65,7 +84,10 @@ bool Parsers::SendData::Parse(libcomp::ManagerPacket *pPacketManager,
 
     connection->SendPacket(reply);
 
-    SendZoneChange(connection);
+    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+
+    server->QueueWork(SendZoneChange, server, client);
 
     return true;
 }

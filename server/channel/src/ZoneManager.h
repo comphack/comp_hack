@@ -118,6 +118,14 @@ public:
         ChannelClientConnection>& client, int32_t entityID);
 
     /**
+     * Tell all game clients in a zone to remove an entity.
+     * @param zone Pointer to the zone to remove the entities from
+     * @param entityIDs IDs of the entities to remove
+     */
+    void RemoveEntitiesFromZone(const std::shared_ptr<Zone>& zone,
+        const std::list<int32_t>& entityIDs);
+
+    /**
      * Send a packet to every connection in the zone or all but the client specified
      * @param client Client connection to use as the "source" connection
      * @param p Packet to send to the zone
@@ -126,7 +134,25 @@ public:
      */
     void BroadcastPacket(const std::shared_ptr<ChannelClientConnection>& client,
         libcomp::Packet& p, bool includeSelf = true);
+
+    /**
+     * Get a list of client connections in the zone
+     * @param client Client connection to use as the "source" connection
+     * @return List of client connections in the zone
+     * @param includeSelf Optional parameter to include the connection being passed
+     *  in as part of the return set. Defaults to true
+     */
+    std::list<std::shared_ptr<ChannelClientConnection>> GetZoneConnections(
+        const std::shared_ptr<ChannelClientConnection>& client,
+        bool includeSelf = true);
 private:
+    /**
+     * Send a packet to every connection in the specified zone
+     * @param zone Pointer to the zone to send the packet to
+     * @param p Packet to send to the zone
+     */
+    void BroadcastPacket(const std::shared_ptr<Zone>& zone, libcomp::Packet& p);
+
     /**
      * Get a zone instance by zone definition ID. This function is responsible for
      * deciding if a non-public zone should have an additional instance created.

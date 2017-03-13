@@ -95,13 +95,16 @@ void ZoneManager::LeaveZone(const std::shared_ptr<ChannelClientConnection>& clie
 {
     auto state = client->GetClientState();
     auto primaryEntityID = state->GetCharacterState()->GetEntityID();
+
+    bool instanceRemoved = false;
+    std::shared_ptr<Zone> zone = nullptr;
     {
         std::lock_guard<std::mutex> lock(mLock);
         auto iter = mEntityMap.find(primaryEntityID);
         if(iter != mEntityMap.end())
         {
             uint32_t instanceID = iter->second;
-            auto zone = mZones[instanceID];
+            zone = mZones[instanceID];
 
             mEntityMap.erase(primaryEntityID);
             zone->RemoveConnection(client);
@@ -116,9 +119,17 @@ void ZoneManager::LeaveZone(const std::shared_ptr<ChannelClientConnection>& clie
                 if(instances.size() == 0)
                 {
                     mZoneMap.erase(zoneDefID);
+                    instanceRemoved = true;
                 }
             }
         }
+    }
+
+    if(!instanceRemoved)
+    {
+        auto demonID = state->GetDemonState()->GetEntityID();
+        std::list<int32_t> entityIDs = { primaryEntityID, demonID };
+        RemoveEntitiesFromZone(zone, entityIDs);
     }
 }
 
@@ -132,21 +143,16 @@ void ZoneManager::SendPopulateZoneData(const std::shared_ptr<ChannelClientConnec
 
     auto zone = GetZoneInstance(characterEntityID);
     auto zoneData = zone->GetDefinition();
-    auto zoneConnections = zone->GetConnections();
     auto characterManager = server->GetCharacterManager();
     
     // Send the new connection entity data to the other clients
-    for(auto connectionPair : zoneConnections)
+    auto otherClients = GetZoneConnections(client, false);
+    if(otherClients.size() > 0)
     {
-        if(connectionPair.first != characterEntityID)
+        characterManager->SendOtherCharacterData(otherClients, state);
+        if(nullptr != dState->GetEntity())
         {
-            auto oConnection = connectionPair.second;
-            characterManager->SendOtherCharacterData(oConnection, state);
-            
-            if(nullptr != dState->GetEntity())
-            {
-                characterManager->SendOtherPartnerData(oConnection, state);
-            }
+            characterManager->SendOtherPartnerData(otherClients, state);
         }
     }
 
@@ -201,23 +207,20 @@ void ZoneManager::SendPopulateZoneData(const std::shared_ptr<ChannelClientConnec
     // Send all the queued NPC packets
     client->FlushOutgoing();
     
-    for(auto connectionPair : zoneConnections)
+    std::list<std::shared_ptr<ChannelClientConnection>> self = { client };
+    for(auto oConnection : otherClients)
     {
-        if(connectionPair.first != characterEntityID)
+        auto oState = oConnection->GetClientState();
+        auto oCharacterState = oState->GetCharacterState();
+        auto oDemonState = oState->GetDemonState();
+
+        characterManager->SendOtherCharacterData(self, oState);
+        ShowEntity(client, oCharacterState->GetEntityID());
+
+        if(nullptr != oDemonState->GetEntity())
         {
-            auto oConnection = connectionPair.second;
-            auto oState = oConnection->GetClientState();
-            auto oCharacterState = oState->GetCharacterState();
-            auto oDemonState = oState->GetDemonState();
-
-            characterManager->SendOtherCharacterData(client, oState);
-            ShowEntity(client, oCharacterState->GetEntityID());
-
-            if(nullptr != oDemonState->GetEntity())
-            {
-                characterManager->SendOtherPartnerData(client, oState);
-                ShowEntity(client, oDemonState->GetEntityID());
-            }
+            characterManager->SendOtherPartnerData(self, oState);
+            ShowEntity(client, oDemonState->GetEntityID());
         }
     }
 }
@@ -225,33 +228,74 @@ void ZoneManager::SendPopulateZoneData(const std::shared_ptr<ChannelClientConnec
 void ZoneManager::ShowEntity(const std::shared_ptr<
     ChannelClientConnection>& client, int32_t entityID, bool queue)
 {
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_SHOW_ENTITY);
-    reply.WriteS32Little(entityID);
+    libcomp::Packet p;
+    p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_SHOW_ENTITY);
+    p.WriteS32Little(entityID);
 
     if(queue)
     {
-        client->QueuePacket(reply);
+        client->QueuePacket(p);
     }
     else
     {
-        client->SendPacket(reply);
+        client->SendPacket(p);
     }
 }
 
 void ZoneManager::ShowEntityToZone(const std::shared_ptr<
     ChannelClientConnection>& client, int32_t entityID)
 {
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_SHOW_ENTITY);
-    reply.WriteS32Little(entityID);
+    libcomp::Packet p;
+    p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_SHOW_ENTITY);
+    p.WriteS32Little(entityID);
 
-    mServer.lock()->GetZoneManager()->BroadcastPacket(client, reply, true);
+    BroadcastPacket(client, p, true);
+}
+
+void ZoneManager::RemoveEntitiesFromZone(const std::shared_ptr<Zone>& zone,
+    const std::list<int32_t>& entityIDs)
+{
+    for(int32_t entityID : entityIDs)
+    {
+        libcomp::Packet p;
+        p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_REMOVE_ENTITY);
+        p.WriteS32Little(entityID);
+
+        BroadcastPacket(zone, p);
+    }
 }
 
 void ZoneManager::BroadcastPacket(const std::shared_ptr<ChannelClientConnection>& client,
     libcomp::Packet& p, bool includeSelf)
 {
+    std::list<std::shared_ptr<libcomp::TcpConnection>> connections;
+    for(auto connection : GetZoneConnections(client, includeSelf))
+    {
+        connections.push_back(connection);
+    }
+
+    libcomp::TcpConnection::BroadcastPacket(connections, p);
+}
+
+void ZoneManager::BroadcastPacket(const std::shared_ptr<Zone>& zone, libcomp::Packet& p)
+{
+    if(nullptr != zone)
+    {
+        std::list<std::shared_ptr<libcomp::TcpConnection>> connections;
+        for(auto connectionPair : zone->GetConnections())
+        {
+            connections.push_back(connectionPair.second);
+        }
+
+        libcomp::TcpConnection::BroadcastPacket(connections, p);
+    }
+}
+
+std::list<std::shared_ptr<ChannelClientConnection>> ZoneManager::GetZoneConnections(
+    const std::shared_ptr<ChannelClientConnection>& client, bool includeSelf)
+{
+    std::list<std::shared_ptr<ChannelClientConnection>> connections;
+
     auto primaryEntityID = client->GetClientState()->GetCharacterState()->GetEntityID();
     std::shared_ptr<Zone> zone;
     {
@@ -265,7 +309,6 @@ void ZoneManager::BroadcastPacket(const std::shared_ptr<ChannelClientConnection>
 
     if(nullptr != zone)
     {
-        std::list<std::shared_ptr<libcomp::TcpConnection>> connections;
         for(auto connectionPair : zone->GetConnections())
         {
             if(includeSelf || connectionPair.first != primaryEntityID)
@@ -273,9 +316,9 @@ void ZoneManager::BroadcastPacket(const std::shared_ptr<ChannelClientConnection>
                 connections.push_back(connectionPair.second);
             }
         }
-
-        libcomp::TcpConnection::BroadcastPacket(connections, p);
     }
+
+    return connections;
 }
 
 std::shared_ptr<Zone> ZoneManager::GetZone(uint32_t zoneID)

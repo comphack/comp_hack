@@ -231,10 +231,20 @@ void CharacterManager::SendCharacterData(const std::shared_ptr<
     client->SendPacket(reply);
 }
 
-void CharacterManager::SendOtherCharacterData(const std::shared_ptr<
-    ChannelClientConnection>& client, ClientState *otherState)
+void CharacterManager::SendOtherCharacterData(const std::list<std::shared_ptr<
+    ChannelClientConnection>> &clients, ClientState *otherState)
 {
-    auto state = client->GetClientState();
+    if(clients.size() == 0)
+    {
+        return;
+    }
+
+    // Keep track of where client specific times need to be written
+    std::unordered_map<uint32_t, ServerTime> timePositions;
+
+    auto zone = mServer.lock()->GetZoneManager()->GetZoneInstance(clients.front());
+    auto zoneDef = zone->GetDefinition();
+
     auto cState = otherState->GetCharacterState();
     auto c = cState->GetEntity();
     auto cs = c->GetCoreStats().Get();
@@ -284,17 +294,14 @@ void CharacterManager::SendOtherCharacterData(const std::shared_ptr<
     for(auto effect : c->GetStatusEffects())
     {
         reply.WriteU32Little(effect->GetEffect());
-        reply.WriteFloat(state->ToClientTime(
-            (ServerTime)effect->GetDuration()));
+        timePositions[reply.Size()] = effect->GetDuration();
+        reply.WriteFloat(0.f);
         reply.WriteU8(effect->GetStack());
     }
 
     // Unknown
     reply.WriteS64Little(-1);
     reply.WriteS64Little(-1);
-
-    auto zone = mServer.lock()->GetZoneManager()->GetZoneInstance(client);
-    auto zoneDef = zone->GetDefinition();
 
     reply.WriteS32Little((int32_t)zoneDef->GetSet());
     reply.WriteS32Little((int32_t)zoneDef->GetID());
@@ -338,7 +345,17 @@ void CharacterManager::SendOtherCharacterData(const std::shared_ptr<
         reply.WriteU32Little(0);    // VA Item Type
     }
 
-    client->SendPacket(reply);
+    for(auto client : clients)
+    {
+        auto state = client->GetClientState();
+        for(auto timePair : timePositions)
+        {
+            reply.Seek(timePair.first);
+            reply.WriteFloat(state->ToClientTime(timePair.second));
+        }
+
+        client->SendPacket(reply);
+    }
 }
 
 void CharacterManager::SendPartnerData(const std::shared_ptr<
@@ -492,10 +509,20 @@ void CharacterManager::SendPartnerData(const std::shared_ptr<
     client->SendPacket(reply);
 }
 
-void CharacterManager::SendOtherPartnerData(const std::shared_ptr<
-    ChannelClientConnection>& client, ClientState *otherState)
+void CharacterManager::SendOtherPartnerData(const std::list<std::shared_ptr<
+    ChannelClientConnection>> &clients, ClientState *otherState)
 {
-    auto state = client->GetClientState();
+    if(clients.size() == 0)
+    {
+        return;
+    }
+
+    // Keep track of where client specific times need to be written
+    std::unordered_map<uint32_t, ServerTime> timePositions;
+
+    auto zone = mServer.lock()->GetZoneManager()->GetZoneInstance(clients.front());
+    auto zoneDef = zone->GetDefinition();
+
     auto dState = otherState->GetDemonState();
     auto d = dState->GetEntity();
     auto ds = d->GetCoreStats().Get();
@@ -514,17 +541,14 @@ void CharacterManager::SendOtherPartnerData(const std::shared_ptr<
     for(auto effect : d->GetStatusEffects())
     {
         reply.WriteU32Little(effect->GetEffect());
-        reply.WriteFloat(state->ToClientTime(
-            (ServerTime)effect->GetDuration()));    //Registered as int32?
+        timePositions[reply.Size()] = effect->GetDuration();
+        reply.WriteFloat(0.f);
         reply.WriteU8(effect->GetStack());
     }
 
     // Unknown
     reply.WriteS64Little(-1);
     reply.WriteS64Little(-1);
-
-    auto zone = mServer.lock()->GetZoneManager()->GetZoneInstance(client);
-    auto zoneDef = zone->GetDefinition();
 
     reply.WriteS32Little((int32_t)zoneDef->GetSet());
     reply.WriteS32Little((int32_t)zoneDef->GetID());
@@ -539,7 +563,17 @@ void CharacterManager::SendOtherPartnerData(const std::shared_ptr<
     reply.WriteU16Little(0);    //Unknown
     reply.WriteU8(0);   //Unknown
 
-    client->SendPacket(reply);
+    for(auto client : clients)
+    {
+        auto state = client->GetClientState();
+        for(auto timePair : timePositions)
+        {
+            reply.Seek(timePair.first);
+            reply.WriteFloat(state->ToClientTime(timePair.second));
+        }
+
+        client->SendPacket(reply);
+    }
 }
 
 void CharacterManager::SendCOMPDemonData(const std::shared_ptr<
@@ -694,7 +728,11 @@ void CharacterManager::SummonDemon(const std::shared_ptr<
     reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_PARTNER_SUMMONED);
     reply.WriteS64Little(demonID);
 
-    mServer.lock()->GetZoneManager()->BroadcastPacket(client, reply, true);
+    client->SendPacket(reply);
+
+    auto otherClients = mServer.lock()->GetZoneManager()
+        ->GetZoneConnections(client, false);
+    SendOtherPartnerData(otherClients, state);
 }
 
 void CharacterManager::StoreDemon(const std::shared_ptr<
@@ -718,7 +756,14 @@ void CharacterManager::StoreDemon(const std::shared_ptr<
     reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_REMOVE_OBJECT);
     reply.WriteS32Little(dState->GetEntityID());
 
-    mServer.lock()->GetZoneManager()->BroadcastPacket(client, reply, true);
+    client->SendPacket(reply);
+
+    // Remove the entity from other client's games
+    reply.Clear();
+    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_REMOVE_ENTITY);
+    reply.WriteS32Little(dState->GetEntityID());
+
+    mServer.lock()->GetZoneManager()->BroadcastPacket(client, reply, false);
 }
 
 void CharacterManager::SendItemBoxData(const std::shared_ptr<

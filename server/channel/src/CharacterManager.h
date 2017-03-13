@@ -78,11 +78,12 @@ public:
 
     /**
      * Send updated character data to a different game client.
-     * @param client Pointer to the client connection
+     * @param clients List of pointers to the client connections to send
+     *  the data to
      * @param otherState Pointer to the state of another client
      */
-    void SendOtherCharacterData(const std::shared_ptr<
-        ChannelClientConnection>& client,
+    void SendOtherCharacterData(const std::list<std::shared_ptr<
+        ChannelClientConnection>>& clients,
         ClientState *otherState);
 
     /**
@@ -94,11 +95,12 @@ public:
 
     /**
      * Send updated data about the active demon of a different game client.
-     * @param client Pointer to the client connection
+     * @param clients List of pointers to the client connections to send
+     *  the data to
      * @param otherState Pointer to the state of another client
      */
-    void SendOtherPartnerData(const std::shared_ptr<
-        ChannelClientConnection>& client,
+    void SendOtherPartnerData(const std::list<std::shared_ptr<
+        ChannelClientConnection>>& clients,
         ClientState *otherState);
 
     /**

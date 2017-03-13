@@ -124,24 +124,19 @@ bool Parsers::Move::Parse(libcomp::ManagerPacket *pPacketManager,
         client->SendPacket(reply);
     }
 
-    auto zoneConnections = server->GetZoneManager()->GetZoneInstance(client)->GetConnections();
-    for(auto connectionPair : zoneConnections)
+    auto zoneConnections = server->GetZoneManager()->GetZoneConnections(client, false);
+    for(auto zConnection : zoneConnections)
     {
-        auto zConnection = connectionPair.second;
-        if(zConnection != client)
-        {
-            auto otherState = zConnection->GetClientState();
-            float startAdjust = otherState->ToClientTime(startTime);
-            float stopAdjust = startAdjust + (stop - start);
+        auto otherState = zConnection->GetClientState();
+        float startAdjust = otherState->ToClientTime(startTime);
+        float stopAdjust = startAdjust + (stop - start);
 
-            reply.Seek(timePos);
-            reply.WriteFloat(startAdjust);
-            reply.WriteFloat(stopAdjust);
+        reply.Seek(timePos);
+        reply.WriteFloat(startAdjust);
+        reply.WriteFloat(stopAdjust);
 
-            zConnection->SendPacket(reply);
-        }
+        zConnection->SendPacket(reply);
     }
-
 
     return true;
 }

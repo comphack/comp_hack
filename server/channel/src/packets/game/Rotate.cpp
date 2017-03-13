@@ -83,8 +83,8 @@ bool Parsers::Rotate::Parse(libcomp::ManagerPacket *pPacketManager,
     eState->SetDestinationRotation(rotation);
 
 
-    auto zoneConnections = server->GetZoneManager()->GetZoneInstance(client)->GetConnections();
-    if(zoneConnections.size() > 1)
+    auto zoneConnections = server->GetZoneManager()->GetZoneConnections(client, false);
+    if(zoneConnections.size() > 0)
     {
         libcomp::Packet reply;
         reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_ROTATE);
@@ -93,19 +93,15 @@ bool Parsers::Rotate::Parse(libcomp::ManagerPacket *pPacketManager,
 
         // Times must be sent relative to the other players
         uint32_t timePos = reply.Size();
-        for(auto connectionPair : zoneConnections)
+        for(auto zConnection : zoneConnections)
         {
-            auto zConnection = connectionPair.second;
-            if(zConnection != client)
-            {
-                auto otherState = zConnection->GetClientState();
+            auto otherState = zConnection->GetClientState();
 
-                reply.Seek(timePos);
-                reply.WriteFloat(otherState->ToClientTime(startTime));
-                reply.WriteFloat(otherState->ToClientTime(stopTime));
+            reply.Seek(timePos);
+            reply.WriteFloat(otherState->ToClientTime(startTime));
+            reply.WriteFloat(otherState->ToClientTime(stopTime));
 
-                zConnection->SendPacket(reply);
-            }
+            zConnection->SendPacket(reply);
         }
     }
 

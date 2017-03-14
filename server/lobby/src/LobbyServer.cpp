@@ -42,6 +42,8 @@
 #include "Account.h"
 #include "LobbyConfig.h"
 #include "RegisteredWorld.h"
+#include "SetupAccount.h"
+#include "SetupConfig.h"
 
 // Standard C++11 Includes
 #include <iostream>
@@ -91,7 +93,31 @@ bool LobbyServer::Initialize()
     }
     else if(!mDatabase->TableHasRows("Account"))
     {
-        CreateFirstAccount();
+        std::string configPath = GetDefaultConfigPath() + "setup.xml";
+
+        tinyxml2::XMLDocument doc;
+        auto config = std::make_shared<objects::SetupConfig>();
+
+        if(tinyxml2::XML_SUCCESS == doc.LoadFile(configPath.c_str()))
+        {
+            const tinyxml2::XMLElement *pRoot = doc.RootElement();
+            const tinyxml2::XMLElement *pObject = nullptr;
+
+            if(nullptr != pRoot)
+            {
+                pObject = pRoot->FirstChildElement("object");
+            }
+
+            if(nullptr == pObject || !config->Load(doc, *pObject) ||
+                !Setup(config))
+            {
+                CreateFirstAccount();
+            }
+        }
+        else
+        {
+            CreateFirstAccount();
+        }
     }
 
     mManagerConnection = std::make_shared<ManagerConnection>(
@@ -472,6 +498,40 @@ void LobbyServer::PromptCreateAccount()
     {
         LOG_ERROR("Failed to create account!\n");
     }
+}
+
+bool LobbyServer::Setup(const std::shared_ptr<objects::SetupConfig>& config)
+{
+    for(auto acc : config->GetAccounts())
+    {
+        std::shared_ptr<objects::Account> account(new objects::Account);
+
+        libcomp::String salt = libcomp::Decrypt::GenerateRandom(10);
+        libcomp::String password = libcomp::Decrypt::HashPassword(
+            acc->GetPassword(), salt);
+
+        account->SetUsername(acc->GetUsername());
+        account->SetDisplayName(acc->GetDisplayName());
+        account->SetEmail(acc->GetEmail());
+        account->SetPassword(password);
+        account->SetSalt(salt);
+        account->SetIsGM(acc->GetIsGM());
+        account->SetCP(acc->GetCP());
+        account->SetTicketCount(acc->GetTicketCount());
+        account->SetUserLevel(acc->GetUserLevel());
+        account->SetEnabled(acc->GetEnabled());
+        account->Register(std::dynamic_pointer_cast<
+            libcomp::PersistentObject>(account));
+
+        if(!account->Insert(mDatabase))
+        {
+            LOG_ERROR("Failed to create account!\n");
+
+            return false;
+        }
+    }
+
+    return true;
 }
 
 AccountManager* LobbyServer::GetAccountManager()

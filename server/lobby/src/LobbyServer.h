@@ -37,6 +37,13 @@
 #include "SessionManager.h"
 #include "World.h"
 
+namespace objects
+{
+
+class SetupConfig;
+
+} // namespace objects
+
 namespace lobby
 {
 
@@ -154,6 +161,12 @@ protected:
      * @return true on success, false on failure
      */
     bool ResetRegisteredWorlds();
+
+    /**
+     * Setup the server based on the setup config.
+     * @return true on success, false on failure
+     */
+    bool Setup(const std::shared_ptr<objects::SetupConfig>& config);
 
     /**
      * Create a connection to a newly active socket.

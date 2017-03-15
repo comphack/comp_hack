@@ -56,16 +56,28 @@ public:
      * @param username Username of the account.
      * @param value Value to check against the SID.
      * @param newSID Value of the new SID.
-     * @return If the value matches what was recorded.
+     * @return If the value matches what was recorded and
+     *  there is either no timeout or it has not passed.
      */
     bool CheckSID(const libcomp::String& username,
         const libcomp::String& value, libcomp::String& newSID);
 
     /**
-     * Clear an account's session.
+     * Clear an account's session or set an expiration timeout.
+     * @param username Username of the account.
+     * @param timeout Optional parameter to invalidate the
+     *  session after the specified time offset has passed.
+     *  If a negative value is specified (or defaulted) the
+     *  timeout will not be used.
+     */
+    void ExpireSession(const libcomp::String& username,
+        int8_t timeout = -1);
+
+    /**
+     * Clear an account session's expiration timeout.
      * @param username Username of the account.
      */
-    void ExpireSession(const libcomp::String& username);
+    void RefreshSession(const libcomp::String& username);
 
 private:
     /// Lock for access to the session map.
@@ -74,6 +86,9 @@ private:
     /// Map of accounts with associated session IDs.
     std::unordered_map<libcomp::String,
         std::pair<libcomp::String, libcomp::String>> mSessionMap;
+
+    /// Map of accounts with timeouts for session validation.
+    std::unordered_map<libcomp::String, time_t> mTimeoutMap;
 };
 
 } // namespace lobby

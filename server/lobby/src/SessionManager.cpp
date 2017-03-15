@@ -65,32 +65,74 @@ bool SessionManager::CheckSID(const libcomp::String& username,
     const libcomp::String& value, libcomp::String& newSID)
 {
     bool result = false;
+    bool expireSession = false;
 
     libcomp::String lookup = username.ToLower();
-
-    std::lock_guard<std::mutex> lock(mSessionLock);
-
-    auto entry = mSessionMap.find(lookup);
-
-    if(mSessionMap.end() != entry)
     {
-        result = (entry->second.first == value);
+        std::lock_guard<std::mutex> lock(mSessionLock);
 
-        if(result)
+        auto entry = mSessionMap.find(lookup);
+
+        if(mSessionMap.end() != entry)
         {
-            mSessionMap[lookup].second = entry->second.first;
-            newSID = libcomp::Decrypt::GenerateRandom(300).ToLower();
-            mSessionMap[lookup].first = newSID;
+            result = (entry->second.first == value);
+
+            if(result)
+            {
+                auto timeIter = mTimeoutMap.find(lookup);
+                if(mTimeoutMap.end() != timeIter)
+                {
+                    if(timeIter->second < time(0))
+                    {
+                        result = false;
+                        expireSession = true;
+                    }
+                    else
+                    {
+                        mTimeoutMap.erase(lookup);
+                    }
+                }
+
+                if(!expireSession)
+                {
+                    newSID = libcomp::Decrypt::GenerateRandom(300).ToLower();
+                    mSessionMap[lookup].first = newSID;
+                }
+            }
         }
+    }
+
+    if(expireSession)
+    {
+        ExpireSession(lookup);
     }
 
     return result;
 }
 
-void SessionManager::ExpireSession(const libcomp::String& username)
+void SessionManager::ExpireSession(const libcomp::String& username,
+    int8_t timeout)
 {
     libcomp::String lookup = username.ToLower();
 
     std::lock_guard<std::mutex> lock(mSessionLock);
-    mSessionMap.erase(lookup);
+    if(timeout >= 0)
+    {
+        // Mark for invalidation timeout
+        mTimeoutMap[lookup] = (time_t)(time(0) + ((timeout > 0) ? timeout : 0));
+    }
+    else
+    {
+        // Expire now
+        mSessionMap.erase(lookup);
+        mTimeoutMap.erase(lookup);
+    }
+}
+
+void SessionManager::RefreshSession(const libcomp::String& username)
+{
+    libcomp::String lookup = username.ToLower();
+
+    std::lock_guard<std::mutex> lock(mSessionLock);
+    mTimeoutMap.erase(lookup);
 }

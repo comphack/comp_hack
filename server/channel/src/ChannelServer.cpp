@@ -120,6 +120,8 @@ bool ChannelServer::Initialize()
         to_underlying(ClientToChannelPacketCode_t::PACKET_ACTIVATE_SKILL));
     clientPacketManager->AddParser<Parsers::ExecuteSkill>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_EXECUTE_SKILL));
+    clientPacketManager->AddParser<Parsers::CancelSkill>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_CANCEL_SKILL));
     clientPacketManager->AddParser<Parsers::AllocateSkillPoint>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_ALLOCATE_SKILL_POINT));
     clientPacketManager->AddParser<Parsers::ToggleExpertise>(

@@ -47,6 +47,7 @@
 #include <MiCostTbl.h>
 #include <MiDamageData.h>
 #include <MiDevilData.h>
+#include <MiDischargeData.h>
 #include <MiNPCBasicData.h>
 #include <MiSkillData.h>
 #include <MiSummonData.h>
@@ -361,7 +362,32 @@ bool SkillManager::ExecuteSkill(const std::shared_ptr<ChannelClientConnection> c
     if(success)
     {
         FinalizeSkillExecution(client, sourceState->GetEntityID(), activated, skillData, 0, 0);
-        SendCompleteSkill(client, sourceState->GetEntityID(), activated);
+        SendCompleteSkill(client, sourceState->GetEntityID(), activated, false);
+        sourceState->SetActivatedAbility(nullptr);
+    }
+
+    return success;
+}
+
+bool SkillManager::CancelSkill(const std::shared_ptr<ChannelClientConnection> client,
+    int32_t sourceEntityID, uint8_t activationID)
+{
+    auto state = client->GetClientState();
+    auto sourceState = state->GetEntityState(sourceEntityID);
+
+    bool success = sourceState != nullptr;
+
+    auto activated = success ? sourceState->GetActivatedAbility() : nullptr;
+    if(nullptr == activated || activationID != activated->GetActivationID())
+    {
+        LOG_ERROR(libcomp::String("Unknown activation ID encountered: %1\n")
+            .Arg(activationID));
+        success = false;
+    }
+
+    if(success)
+    {
+        SendCompleteSkill(client, sourceEntityID, activated, true);
         sourceState->SetActivatedAbility(nullptr);
     }
 
@@ -428,6 +454,14 @@ bool SkillManager::ExecuteNormalSkill(const std::shared_ptr<ChannelClientConnect
         case objects::MiTargetData::Type_t::ALLY_DEMON:
         case objects::MiTargetData::Type_t::PLAYER:
             {
+                auto targetEntityID = (int32_t)activated->GetTargetObjectID();
+
+                if(targetEntityID == -1)
+                {
+                    //No target
+                    break;
+                }
+
                 auto zone = zoneManager->GetZoneInstance(client);
                 if(nullptr == zone)
                 {
@@ -435,7 +469,6 @@ bool SkillManager::ExecuteNormalSkill(const std::shared_ptr<ChannelClientConnect
                     return false;
                 }
 
-                auto targetEntityID = (int32_t)activated->GetTargetObjectID();
                 auto targetEntity = zone->GetActiveEntityState(targetEntityID);
                 if(nullptr == targetEntity || !targetEntity->Ready())
                 {
@@ -548,7 +581,7 @@ bool SkillManager::ExecuteNormalSkill(const std::shared_ptr<ChannelClientConnect
     }
 
     FinalizeSkillExecution(client, sourceEntityID, activated, skillData, hpCost, mpCost);
-    SendCompleteSkill(client, sourceEntityID, activated);
+    SendCompleteSkill(client, sourceEntityID, activated, false);
 
     libcomp::Packet reply;
     reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_SKILL_REPORTS);
@@ -906,12 +939,13 @@ void SkillManager::SendExecuteSkill(const std::shared_ptr<ChannelClientConnectio
     std::shared_ptr<objects::MiSkillData> skillData, uint32_t hpCost, uint32_t mpCost)
 {
     auto state = client->GetClientState();
+    auto cState = state->GetCharacterState();
     auto conditionData = skillData->GetCondition();
+    auto dischargeData = skillData->GetDischarge();
 
     auto currentTime = state->ToClientTime(ChannelServer::GetServerTime());
     auto cooldownTime = currentTime + ((float)conditionData->GetCooldownTime() * 0.001f);
-    /// @todo: figure out how to properly use lockOutTime
-    auto lockOutTime = cooldownTime;
+    auto lockOutTime = currentTime + ((float)dischargeData->GetStiffness() * 0.001f);
 
     libcomp::Packet reply;
     reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_SKILL_EXECUTING);
@@ -936,17 +970,17 @@ void SkillManager::SendExecuteSkill(const std::shared_ptr<ChannelClientConnectio
 }
 
 void SkillManager::SendCompleteSkill(const std::shared_ptr<ChannelClientConnection> client,
-    int32_t sourceEntityID, std::shared_ptr<objects::ActivatedAbility> activated)
+    int32_t sourceEntityID, std::shared_ptr<objects::ActivatedAbility> activated, bool cancelled)
 {
     libcomp::Packet reply;
     reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_SKILL_COMPLETED);
     reply.WriteS32Little(sourceEntityID);
     reply.WriteU32Little(activated->GetSkillID());
     reply.WriteS8((int8_t)activated->GetActivationID());
-    reply.WriteFloat(0.0f);   //Unknown
+    reply.WriteFloat(0);   //Unknown
     reply.WriteU8(1);   //Unknown
     reply.WriteFloat(300.0f);   //Run speed
-    reply.WriteU8(0);   //Unknown
+    reply.WriteU8(cancelled ? 1 : 0);
 
     client->SendPacket(reply);
 }

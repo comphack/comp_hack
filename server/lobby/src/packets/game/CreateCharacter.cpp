@@ -27,7 +27,7 @@
 #include "Packets.h"
 
 // libcomp Includes
-#include <Decrypt.h>
+#include <ErrorCodes.h>
 #include <Log.h>
 #include <Packet.h>
 #include <PacketCodes.h>
@@ -96,11 +96,23 @@ bool Parsers::CreateCharacter::Parse(libcomp::ManagerPacket *pPacketManager,
     reply.WritePacketCode(
         LobbyToClientPacketCode_t::PACKET_CREATE_CHARACTER);
 
-    if(nextCID == characters.size() || account->GetTicketCount() == 0)
+    if(nextCID == characters.size())
     {
         LOG_ERROR(libcomp::String("No new characters can be created for account %1\n")
             .Arg(account->GetUUID().ToString()));
-        reply.WriteU32Little(static_cast<uint32_t>(-1));
+        reply.WriteU32Little(static_cast<uint32_t>(ErrorCodes_t::NO_EMPTY_CHARACTER_SLOTS));
+    }
+    else if(account->GetTicketCount() == 0)
+    {
+        LOG_ERROR(libcomp::String("No character tickets available for account %1\n")
+            .Arg(account->GetUUID().ToString()));
+        reply.WriteU32Little(static_cast<uint32_t>(ErrorCodes_t::NEED_CHARACTER_TICKET));
+    }
+    else if(nullptr != objects::Character::LoadCharacterByName(worldDB, name))
+    {
+        LOG_ERROR(libcomp::String("Invalid character name entered for account %1\n")
+            .Arg(account->GetUUID().ToString()));
+        reply.WriteU32Little(static_cast<uint32_t>(ErrorCodes_t::BAD_CHARACTER_NAME));
     }
     else
     {

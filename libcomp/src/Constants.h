@@ -30,6 +30,9 @@
 namespace libcomp
 {
 
+/// Maximum length of a chat message.
+#define MAX_MESSAGE_LENGTH (80)
+
 /// Number of bits in a Blowfish key.
 #define BF_NET_KEY_BIT_SIZE (64)
 

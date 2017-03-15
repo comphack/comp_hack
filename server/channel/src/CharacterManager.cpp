@@ -1093,9 +1093,18 @@ bool CharacterManager::AddRemoveItem(const std::shared_ptr<
             }
         }
 
+        auto equipType = def->GetBasic()->GetEquipType();
+
         uint16_t removed = 0;
         for(auto item : existing)
         {
+            // Unequip anything we're removing
+            if(equipType != objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_NONE &&
+                character->GetEquippedItems((size_t)equipType).Get() == item)
+            {
+                EquipItem(client, state->GetObjectID(item->GetUUID()));
+            }
+
             auto slot = item->GetBoxSlot();
             if(item->GetStackSize() <= (quantity - removed))
             {
@@ -1225,7 +1234,7 @@ void CharacterManager::EquipItem(const std::shared_ptr<
     reply.WriteS16Little(cs->GetPDEF());
     reply.WriteS16Little(cs->GetMDEF());
 
-    client->SendPacket(reply);
+    server->GetZoneManager()->BroadcastPacket(client, reply);
 }
 
 void CharacterManager::UpdateLNC(const std::shared_ptr<
@@ -1523,8 +1532,7 @@ void CharacterManager::UpdateExpertise(const std::shared_ptr<
             reply.WriteS8((int8_t)expDef->GetID());
             reply.WriteS8(newRank);
 
-            /// @todo: Does this need to send to the rest of the zone?
-            client->SendPacket(reply);
+            server->GetZoneManager()->BroadcastPacket(client, reply);
         }
     }
 

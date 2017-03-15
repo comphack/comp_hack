@@ -77,6 +77,7 @@ enum class ClientToChannelPacketCode_t : uint16_t
     PACKET_CHAT = 0x0026, //!< Request to add a message to the chat or process a GM command.
     PACKET_ACTIVATE_SKILL = 0x0030, //!< Request to activate a player or demon skill.
     PACKET_EXECUTE_SKILL = 0x0031, //!< Request to execute a skill that has finished charging.
+    PACKET_CANCEL_SKILL = 0x0032, //!< Request to execute a skill that has finished charging.
     PACKET_ALLOCATE_SKILL_POINT = 0x0049, //!< Request to allocate a skill point for a character.
     PACKET_TOGGLE_EXPERTISE = 0x004F, //!< Request to enable or disable an expertise.
     PACKET_LEARN_SKILL = 0x0051, //!< Request for a character to learn a skill.

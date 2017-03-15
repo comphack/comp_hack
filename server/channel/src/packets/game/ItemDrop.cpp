@@ -38,6 +38,8 @@
 #include <Character.h>
 #include <Item.h>
 #include <ItemBox.h>
+#include <MiItemBasicData.h>
+#include <MiItemData.h>
 
 // channel Includes
 #include "ChannelServer.h"
@@ -63,6 +65,17 @@ void DropItem(const std::shared_ptr<ChannelServer> server,
     auto itemBox = item->GetItemBox().Get();
     if(nullptr != itemBox)
     {
+        // Unequip if needed
+        auto def = server->GetDefinitionManager()->GetItemData(item->GetType());
+        auto equipType = def != nullptr ? def->GetBasic()->GetEquipType()
+            : objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_NONE;
+        if(equipType != objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_NONE &&
+            character->GetEquippedItems((size_t)equipType).Get() == item)
+        {
+            server->GetCharacterManager()
+                ->EquipItem(client, state->GetObjectID(item->GetUUID()));
+        }
+
         itemBox->SetItems((size_t)item->GetBoxSlot(), NULLUUID);
 
         auto worldDB = server->GetWorldDatabase();

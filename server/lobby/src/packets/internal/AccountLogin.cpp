@@ -114,7 +114,10 @@ void UpdateAccountLogin(std::shared_ptr<LobbyServer> server,
     {
         return;
     }
-    accountManager->LoginUser(account->GetUsername(), login);
+    accountManager->LoginUser(username, login);
+
+    //Clear the session expiration
+    server->GetSessionManager()->RefreshSession(username);
 }
 
 bool Parsers::AccountLogin::Parse(libcomp::ManagerPacket *pPacketManager,

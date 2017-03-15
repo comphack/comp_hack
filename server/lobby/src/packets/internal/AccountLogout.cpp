@@ -60,7 +60,8 @@ bool Parsers::AccountLogout::Parse(libcomp::ManagerPacket *pPacketManager,
     {
         LOG_DEBUG(libcomp::String("Logging out user: '%1'\n").Arg(username));
         accountManager->LogoutUser(username, worldID);
-        server->GetSessionManager()->ExpireSession(username);
+        // Invalidate the session in 60 seconds
+        server->GetSessionManager()->ExpireSession(username, 60);
     }
 
     return true;

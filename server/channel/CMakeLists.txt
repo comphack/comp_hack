@@ -105,6 +105,7 @@ SET(${PROJECT_NAME}_PACKETS
     src/packets/game/Chat.cpp               # 0x0026
     src/packets/game/ActivateSkill.cpp      # 0x0030
     src/packets/game/ExecuteSkill.cpp       # 0x0031
+    src/packets/game/CancelSkill.cpp        # 0x0032
     src/packets/game/AllocateSkillPoint.cpp # 0x0049
     src/packets/game/ToggleExpertise.cpp    # 0x004F
     src/packets/game/LearnSkill.cpp         # 0x0051

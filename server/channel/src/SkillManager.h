@@ -85,6 +85,16 @@ public:
         int32_t sourceEntityID, uint8_t activationID, int64_t targetObjectID);
 
     /**
+     * Cancel the activated skill of a character or demon.
+     * @param client Pointer to the client connection that activated the skill
+     * @param sourceEntityID ID of the entity that activated the skill
+     * @param activationID ID of the activated ability instance
+     * @return true if the skill was cancelled successfully, false otherwise
+     */
+    bool CancelSkill(const std::shared_ptr<ChannelClientConnection> client,
+        int32_t sourceEntityID, uint8_t activationID);
+
+    /**
      * Notify the client that a skill failed activation or execution.
      * @param client Pointer to the client connection that activated the skill
      * @param sourceEntityID ID of the entity that activated the skill
@@ -186,9 +196,11 @@ private:
      * @param client Pointer to the client connection that activated the skill
      * @param sourceEntityID ID of the entity that activated the skill
      * @param activated Pointer to the activated ability instance
+     * @param cancelled true if the skill was cancelled
      */
     void SendCompleteSkill(const std::shared_ptr<ChannelClientConnection> client,
-        int32_t sourceEntityID, std::shared_ptr<objects::ActivatedAbility> activated);
+        int32_t sourceEntityID, std::shared_ptr<objects::ActivatedAbility> activated,
+        bool cancelled);
 
     /// Pointer to the channel server
     std::weak_ptr<ChannelServer> mServer;

@@ -79,6 +79,10 @@ bool Parsers::StartGame::Parse(libcomp::ManagerPacket *pPacketManager,
         return false;
     }
 
+    // Expire session with current time, meaning until we hear back from the
+    // channel that the login took place, do not consider the connection valid
+    server->GetSessionManager()->ExpireSession(username, 0);
+
     auto login = accountManager->GetUserLogin(username);
     login->SetCID(cid);
 

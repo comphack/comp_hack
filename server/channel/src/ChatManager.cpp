@@ -111,7 +111,8 @@ bool ChatManager::SendChatMessage(const std::shared_ptr<
         sentFrom, true);
     reply.WriteU16Little((uint16_t)(encodedMessage.size() + 1));
     reply.WriteArray(encodedMessage);
-    reply.WriteBlank((uint32_t)(MAX_MESSAGE_LENGTH + 1 - message.Size()));
+    reply.WriteBlank((uint32_t)(MAX_MESSAGE_LENGTH + 1 -
+        encodedMessage.size()));
 
     switch(visibility)
     {

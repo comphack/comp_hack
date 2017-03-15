@@ -64,14 +64,13 @@ bool ChatManager::SendChatMessage(const std::shared_ptr<
     {
         return false;
     }
+
+    auto state = client->GetClientState();
     
     auto encodedMessage = libcomp::Convert::ToEncoding(
-        libcomp::Convert::Encoding_t::ENCODING_CP932, message, false);
-    message = libcomp::String (std::string(encodedMessage.begin(),
-        encodedMessage.end()));
+        state->GetClientStringEncoding(), message, false);
 
-    auto character = client->GetClientState()->GetCharacterState()
-        ->GetEntity();
+    auto character = state->GetCharacterState()->GetEntity();
     libcomp::String sentFrom = character->GetName();
 
     ChatVis_t visibility = ChatVis_t::CHAT_VIS_SELF;
@@ -97,14 +96,22 @@ bool ChatManager::SendChatMessage(const std::shared_ptr<
             return false;
     }
 
+    // Make sure the message is clamped to the max size to prevent
+    // bad math on the zero'd section of the packet. This may not
+    // react well to multi-byte characters (CP932).
+    if(MAX_MESSAGE_LENGTH < encodedMessage.size())
+    {
+        encodedMessage.resize(MAX_MESSAGE_LENGTH);
+    }
+
     libcomp::Packet reply;
     reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_CHAT);
     reply.WriteU16Little((uint16_t)chatChannel);
-    reply.WriteString16Little(client->GetClientState()
-            ->GetClientStringEncoding(), sentFrom, true);
-    reply.WriteU16Little((uint16_t)(message.Size() + 1));
-    reply.WriteArray(message.C(), (uint32_t)(message.Size()));
-    reply.WriteBlank((uint32_t)(81 - message.Size()));
+    reply.WriteString16Little(state->GetClientStringEncoding(),
+        sentFrom, true);
+    reply.WriteU16Little((uint16_t)(encodedMessage.size() + 1));
+    reply.WriteArray(encodedMessage);
+    reply.WriteBlank((uint32_t)(MAX_MESSAGE_LENGTH + 1 - message.Size()));
 
     switch(visibility)
     {

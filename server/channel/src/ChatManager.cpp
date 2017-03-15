@@ -64,6 +64,11 @@ bool ChatManager::SendChatMessage(const std::shared_ptr<
     {
         return false;
     }
+    
+    auto encodedMessage = libcomp::Convert::ToEncoding(
+        libcomp::Convert::Encoding_t::ENCODING_CP932, message, false);
+    message = libcomp::String (std::string(encodedMessage.begin(),
+        encodedMessage.end()));
 
     auto character = client->GetClientState()->GetCharacterState()
         ->GetEntity();

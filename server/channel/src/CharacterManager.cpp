@@ -965,7 +965,7 @@ bool CharacterManager::AddRemoveItem(const std::shared_ptr<
     if(add)
     {
         uint16_t quantityLeft = quantity;
-        for(auto item : existing)
+        /*for(auto item : existing)
         {
             auto free = maxStack - item->GetStackSize();
             if(free > quantityLeft)
@@ -981,7 +981,7 @@ bool CharacterManager::AddRemoveItem(const std::shared_ptr<
             {
                 break;
             }
-        }
+        }*/
 
         std::list<size_t> freeSlots;
         for(size_t i = 0; i < 50; i++)
@@ -995,7 +995,7 @@ bool CharacterManager::AddRemoveItem(const std::shared_ptr<
         if(quantityLeft <= (freeSlots.size() * maxStack))
         {
             uint16_t added = 0;
-            for(auto item : existing)
+            /*for(auto item : existing)
             {
                 uint16_t free = (uint16_t)(maxStack - item->GetStackSize());
                 if(added < quantity && free > 0)
@@ -1014,7 +1014,7 @@ bool CharacterManager::AddRemoveItem(const std::shared_ptr<
                 {
                     break;
                 }
-            }
+            }*/
 
             if(added < quantity)
             {
@@ -1120,6 +1120,10 @@ bool CharacterManager::AddRemoveItem(const std::shared_ptr<
             {
                 item->SetStackSize((uint16_t)(item->GetStackSize() -
                     (quantity - removed)));
+                if(!item->Update(db))
+                {
+                    return false;
+                }
                 removed = quantity;
             }
             updatedSlots.push_back((uint16_t)slot);
@@ -1132,6 +1136,11 @@ bool CharacterManager::AddRemoveItem(const std::shared_ptr<
     }
 
     SendItemBoxData(client, 0, updatedSlots);
+
+    if(!itemBox->Update(db))
+    {
+        return false;
+    }
 
     return true;
 }
@@ -1234,6 +1243,10 @@ void CharacterManager::EquipItem(const std::shared_ptr<
     reply.WriteS16Little(cs->GetPDEF());
     reply.WriteS16Little(cs->GetMDEF());
 
+    auto db = server->GetWorldDatabase();
+
+    (void)character->Update(db);
+
     server->GetZoneManager()->BroadcastPacket(client, reply);
 }
 
@@ -1245,6 +1258,11 @@ void CharacterManager::UpdateLNC(const std::shared_ptr<
     auto character = cState->GetEntity();
 
     character->SetLNC(lnc);
+
+    auto server = mServer.lock();
+    auto db = server->GetWorldDatabase();
+
+    (void)character->Update(db);
 
     libcomp::Packet reply;
     reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_LNC_POINTS);

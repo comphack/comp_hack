@@ -46,23 +46,6 @@
 
 using namespace channel;
 
-static std::unordered_map<libcomp::String, GMCommand_t> gmands;
-
-static void SetupGMCommands()
-{
-    if(!gmands.empty())
-    {
-        return;
-    }
-
-    gmands["contract"] = GMCommand_t::GM_COMMAND_CONTRACT;
-    gmands["expertiseup"] = GMCommand_t::GM_COMMAND_EXPERTISE_UPDATE;
-    gmands["item"] = GMCommand_t::GM_COMMAND_ITEM;
-    gmands["levelup"] = GMCommand_t::GM_COMMAND_LEVEL_UP;
-    gmands["lnc"] = GMCommand_t::GM_COMMAND_LNC;
-    gmands["xp"] = GMCommand_t::GM_COMMAND_XP;
-}
-
 bool Parsers::Chat::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
@@ -105,9 +88,6 @@ bool Parsers::Chat::Parse(libcomp::ManagerPacket *pPacketManager,
             ->GetName();
         LOG_INFO(libcomp::String("[GM] %1: %2\n").Arg(sentFrom).Arg(line));
 
-        // Make sure the gmands map is setup 
-        SetupGMCommands();
-
         libcomp::String command(match[1]);
         libcomp::String args(match.max_size() > 2 ? match[2].str() : "");
 
@@ -120,26 +100,17 @@ bool Parsers::Chat::Parse(libcomp::ManagerPacket *pPacketManager,
         }
         argsList.remove_if([](const libcomp::String& value) { return value.IsEmpty(); });
 
-        auto iter = gmands.find(command);
-        if(iter != gmands.end())
+        server->QueueWork([](ChatManager* pChatManager,
+            const std::shared_ptr<ChannelClientConnection>& cmdClient,
+            const libcomp::String& cmd,
+            const std::list<libcomp::String>& cmdArgs)
         {
-            server->QueueWork([](ChatManager* pChatManager,
-                const std::shared_ptr<ChannelClientConnection> pClient,
-                GMCommand_t pCmd, libcomp::String pCommandString,
-                const std::list<libcomp::String> pArgsList)
+            if(!pChatManager->ExecuteGMCommand(cmdClient, cmd, cmdArgs))
             {
-                if(!pChatManager->ExecuteGMCommand(pClient, pCmd, pArgsList))
-                {
-                    LOG_WARNING(libcomp::String("GM command could not be"
-                        " processed: %1\n").Arg(pCommandString));
-                }
-            }, server->GetChatManager(), client, iter->second, command, argsList);
-        }
-        else
-        {
-            LOG_WARNING(libcomp::String("Unknown GM command encountered: %1\n")
-                .Arg(command));
-        }
+                LOG_WARNING(libcomp::String("GM command could not be"
+                    " processed: %1\n").Arg(cmd));
+            }
+        }, server->GetChatManager(), client, command, argsList);
     }
     else
     {

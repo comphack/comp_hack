@@ -43,11 +43,22 @@
 #include <ClientState.h>
 #include <ZoneManager.h>
 
+// Standard C Includes
+#include <cstdlib>
+
 using namespace channel;
 
 ChatManager::ChatManager(const std::weak_ptr<ChannelServer>& server)
     : mServer(server)
 {
+    mGMands["contract"] = &ChatManager::GMCommand_Contract;
+    mGMands["crash"] = &ChatManager::GMCommand_Crash;
+    mGMands["expertiseup"] = &ChatManager::GMCommand_ExpertiseUpdate;
+    mGMands["item"] = &ChatManager::GMCommand_Item;
+    mGMands["levelup"] = &ChatManager::GMCommand_LevelUp;
+    mGMands["lnc"] = &ChatManager::GMCommand_LNC;
+    mGMands["pos"] = &ChatManager::GMCommand_Position;
+    mGMands["xp"] = &ChatManager::GMCommand_XP;
 }
 
 ChatManager::~ChatManager()
@@ -90,6 +101,11 @@ bool ChatManager::SendChatMessage(const std::shared_ptr<
         case ChatType_t::CHAT_SAY:
             visibility = ChatVis_t::CHAT_VIS_RANGE;
             LOG_INFO(libcomp::String("[Say]:  %1: %2\n.").Arg(sentFrom)
+                .Arg(message));
+            break;
+        case ChatType_t::CHAT_SELF:
+            visibility = ChatVis_t::CHAT_VIS_SELF;
+            LOG_INFO(libcomp::String("[Self]:  %1: %2\n.").Arg(sentFrom)
                 .Arg(message));
             break;
         default:
@@ -139,26 +155,18 @@ bool ChatManager::SendChatMessage(const std::shared_ptr<
 }
 
 bool ChatManager::ExecuteGMCommand(const std::shared_ptr<
-    channel::ChannelClientConnection>& client, GMCommand_t cmd,
+    channel::ChannelClientConnection>& client, const libcomp::String& cmd,
     const std::list<libcomp::String>& args)
 {
-    switch(cmd)
+    auto it = mGMands.find(cmd);
+
+    if(it != mGMands.end())
     {
-        case GMCommand_t::GM_COMMAND_CONTRACT:
-            return GMCommand_Contract(client, args);
-        case GMCommand_t::GM_COMMAND_EXPERTISE_UPDATE:
-            return GMCommand_ExpertiseUpdate(client, args);
-        case GMCommand_t::GM_COMMAND_ITEM:
-            return GMCommand_Item(client, args);
-        case GMCommand_t::GM_COMMAND_LEVEL_UP:
-            return GMCommand_LevelUp(client, args);
-        case GMCommand_t::GM_COMMAND_LNC:
-            return GMCommand_LNC(client, args);
-        case GMCommand_t::GM_COMMAND_XP:
-            return GMCommand_XP(client, args);
-        default:
-            break;
+        return it->second(*this, client, args);
     }
+
+    LOG_WARNING(libcomp::String("Unknown GM command encountered: %1\n").Arg(
+        cmd));
 
     return false;
 }
@@ -218,6 +226,16 @@ bool ChatManager::GMCommand_Contract(const std::shared_ptr<
         state->GetObjectID(demon->GetUUID()));
 
     return true;
+}
+
+bool ChatManager::GMCommand_Crash(const std::shared_ptr<
+    channel::ChannelClientConnection>& client,
+    const std::list<libcomp::String>& args)
+{
+    (void)client;
+    (void)args;
+
+    abort();
 }
 
 bool ChatManager::GMCommand_ExpertiseUpdate(const std::shared_ptr<
@@ -343,6 +361,43 @@ bool ChatManager::GMCommand_LNC(const std::shared_ptr<
     mServer.lock()->GetCharacterManager()->UpdateLNC(client, lnc);
 
     return true;
+}
+
+bool ChatManager::GMCommand_Position(const std::shared_ptr<
+    channel::ChannelClientConnection>& client,
+    const std::list<libcomp::String>& args)
+{
+    if(!args.empty())
+    {
+        LOG_DEBUG("Argument list is not empty.\n");
+
+        return false;
+    }
+
+    auto state = client->GetClientState();
+    auto cState = state->GetCharacterState();
+
+    if(!cState)
+    {
+        LOG_DEBUG("Bad character state.\n");
+
+        return false;
+    }
+
+    auto eState = state->GetEntityState(cState->GetEntityID());
+
+    if(!eState)
+    {
+        LOG_DEBUG("Bad entity state.\n");
+
+        return false;
+    }
+
+    /// @todo We may need to use the time to calculate where between the origin
+    /// and destination the character is.
+    return SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(
+        "Position: (%1, %2)").Arg(eState->GetDestinationX()).Arg(
+        eState->GetDestinationY()));
 }
 
 bool ChatManager::GMCommand_XP(const std::shared_ptr<

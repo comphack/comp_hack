@@ -41,6 +41,7 @@ class ChannelServer;
  */
 enum ChatType_t : uint16_t
 {
+    CHAT_SELF = 0,
     CHAT_PARTY = 41,
 	CHAT_SHOUT = 44,
 	CHAT_SAY = 45,
@@ -63,19 +64,6 @@ enum ChatVis_t : uint16_t
     CHAT_VIS_TEAM,
     CHAT_VIS_GLOBAL,
     CHAT_VIS_GMS,
-};
-
-/*
- * Available GM commands handled by the ChatManager.
- */
-enum GMCommand_t : uint16_t
-{
-    GM_COMMAND_CONTRACT,
-    GM_COMMAND_EXPERTISE_UPDATE,
-    GM_COMMAND_ITEM,
-    GM_COMMAND_LEVEL_UP,
-    GM_COMMAND_LNC,
-    GM_COMMAND_XP,
 };
 
 /*
@@ -115,7 +103,7 @@ public:
      * @return true if the command was handled properly, else false
      */
     bool ExecuteGMCommand(const std::shared_ptr<
-        channel::ChannelClientConnection>& client, GMCommand_t cmd,
+        channel::ChannelClientConnection>& client, const libcomp::String& cmd,
         const std::list<libcomp::String>& args);
 
 private:
@@ -126,6 +114,16 @@ private:
      * @return true if the command was handled properly, else false
      */
     bool GMCommand_Contract(const std::shared_ptr<
+        channel::ChannelClientConnection>& client,
+        const std::list<libcomp::String>& args);
+
+    /**
+     * GM command to crash the server (for testing).
+     * @param client Pointer to the client that sent the command
+     * @param args List of arguments for the command
+     * @return true if the command was handled properly, else false
+     */
+    bool GMCommand_Crash(const std::shared_ptr<
         channel::ChannelClientConnection>& client,
         const std::list<libcomp::String>& args);
 
@@ -167,6 +165,16 @@ private:
      * @return true if the command was handled properly, else false
      */
     bool GMCommand_LNC(const std::shared_ptr<
+        channel::ChannelClientConnection>& client,
+        const std::list<libcomp::String>& args);
+
+    /*
+     * GM command to get a character's position.
+     * @param client Pointer to the client that sent the command
+     * @param args List of arguments for the command
+     * @return true if the command was handled properly, else false
+     */
+    bool GMCommand_Position(const std::shared_ptr<
         channel::ChannelClientConnection>& client,
         const std::list<libcomp::String>& args);
 
@@ -220,6 +228,11 @@ private:
 
     /// Pointer to the channel server
     std::weak_ptr<ChannelServer> mServer;
+
+    /// List of GM command parsers.
+    std::unordered_map<libcomp::String, std::function<bool(ChatManager&,
+        const std::shared_ptr<channel::ChannelClientConnection>&,
+        const std::list<libcomp::String>&)>> mGMands;
 };
 
 }

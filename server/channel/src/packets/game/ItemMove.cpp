@@ -47,7 +47,8 @@ using namespace channel;
 
 void MoveItem(const std::shared_ptr<ChannelClientConnection>& client,
     int64_t itemID, const std::shared_ptr<objects::ItemBox> sourceBox,
-    const std::shared_ptr<objects::ItemBox> destBox, size_t destSlot)
+    const std::shared_ptr<objects::ItemBox> destBox, size_t destSlot,
+    const std::shared_ptr<ChannelServer>& server)
 {
     auto state = client->GetClientState();
     auto character = state->GetCharacterState()->GetEntity();
@@ -56,18 +57,38 @@ void MoveItem(const std::shared_ptr<ChannelClientConnection>& client,
             state->GetObjectUUID(itemID)));
 
     size_t sourceSlot = (size_t)item->GetBoxSlot();
+
     if(sourceBox->GetItems(sourceSlot).Get() != item)
     {
-        LOG_ERROR(libcomp::String("Item move operation failed due to unknown supplied"
-            " item ID on character: %1\n").Arg(character->GetUUID().ToString()));
+        LOG_ERROR(libcomp::String("Item move operation failed due to unknown "
+            "supplied item ID %1 on character: %2\n").Arg(itemID).Arg(
+            character->GetUUID().ToString()));
+
         return;
     }
 
+    // Swap the items (the destination could be a null object or a real item).
     item->SetBoxSlot((int8_t)destSlot);
+    auto otherItem = destBox->GetItems(destSlot);
     destBox->SetItems(destSlot, item);
-    sourceBox->SetItems(sourceSlot, NULLUUID);
+    sourceBox->SetItems(sourceSlot, otherItem);
 
-    // Nothing was created or deleted so just let the next save operation pick this up
+    auto db = server->GetWorldDatabase();
+
+    // Save the item boxes.
+    bool dbWrite = destBox->Update(db);
+
+    if(destBox.get() != sourceBox.get())
+    {
+        dbWrite &= sourceBox->Update(db);
+    }
+
+    if(!dbWrite)
+    {
+        LOG_ERROR(libcomp::String("Save failed during item move operation "
+            "which may have resulted in invalid item data for character: %1\n")
+            .Arg(character->GetUUID().ToString()));
+    }
 }
 
 bool Parsers::ItemMove::Parse(libcomp::ManagerPacket *pPacketManager,
@@ -129,7 +150,7 @@ bool Parsers::ItemMove::Parse(libcomp::ManagerPacket *pPacketManager,
     if(nullptr != sourceBox && nullptr != destBox)
     {
         server->QueueWork(MoveItem, client, itemID, sourceBox,
-            destBox, (size_t)destSlot);
+            destBox, (size_t)destSlot, server);
     }
     else
     {

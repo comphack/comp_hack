@@ -46,6 +46,7 @@
 using namespace channel;
 
 /// @todo: does this work on item boxes that are not the inventory?
+/// Omega: I don't think so. You have to move the item to inventory first.
 
 void SplitStack(const std::shared_ptr<ChannelServer> server,
     const std::shared_ptr<ChannelClientConnection> client,
@@ -112,6 +113,7 @@ void CombineStacks(const std::shared_ptr<ChannelServer> server,
     auto itemBox = character->GetItemBoxes(0).Get();
 
     auto targetItem = itemBox->GetItems(targetSlot);
+    auto worldDB = server->GetWorldDatabase();
 
     std::list<std::shared_ptr<objects::Item>> deleteItems;
     for(auto sourceItem : sourceItems)
@@ -131,12 +133,17 @@ void CombineStacks(const std::shared_ptr<ChannelServer> server,
 
         targetItem->SetStackSize(static_cast<uint16_t>(
             targetItem->GetStackSize() + srcStack));
+
+        if(!srcItem->Update(worldDB) || !targetItem->Update(worldDB))
+        {
+            LOG_ERROR(libcomp::String("Save failed during combine stack operation"
+                " which may have resulted in invalid item data for character: %1\n")
+                .Arg(character->GetUUID().ToString()));
+        }
     }
 
     if(deleteItems.size() > 0)
     {
-        auto worldDB = server->GetWorldDatabase();
-
         auto objs = libcomp::PersistentObject::ToList<objects::Item>(
             deleteItems);
         if(!worldDB->DeleteObjects(objs) || !itemBox->Update(worldDB))

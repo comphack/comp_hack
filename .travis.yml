@@ -55,6 +55,8 @@ before_install:
   - sudo unzip ninja-linux.zip
   - sudo chmod 755 ninja
   - sudo mkdir -p /var/lib/comp_hack/zones
+  - sudo mkdir -p /var/log/comp_hack
+  - sudo chown `whoami`:`whoami` /var/log/comp_hack
   - sudo rm ninja-linux.zip
   - export PATH="/opt/ninja/bin:${PATH}"
   - cd /opt

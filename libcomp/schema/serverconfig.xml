@@ -13,5 +13,11 @@
             <element type="string"/>
         </member>
         <member type="bool" name="DataStoreSync" default="true"/>
+        <member type="string" name="LogFile"/>
+        <member type="bool" name="LogDebug" default="true"/>
+        <member type="bool" name="LogInfo" default="true"/>
+        <member type="bool" name="LogWarning" default="true"/>
+        <member type="bool" name="LogError" default="true"/>
+        <member type="bool" name="LogCritical" default="true"/>
     </object>
 </objgen>

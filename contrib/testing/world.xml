@@ -23,6 +23,12 @@
             <element>/var/lib/comp_hack</element>
         </member>
         <member name="DataStoreSync">true</member>
+        <member name="LogFile">/var/log/comp_hack/world.log</member>
+        <member name="LogDebug">true</member>
+        <member name="LogInfo">true</member>
+        <member name="LogWarning">true</member>
+        <member name="LogError">true</member>
+        <member name="LogCritical">true</member>
 
         <!-- From WorldConfig -->
         <member name="ID">0</member>

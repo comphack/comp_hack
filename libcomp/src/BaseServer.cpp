@@ -51,6 +51,24 @@ BaseServer::BaseServer(const char *szProgram, std::shared_ptr<
 
 bool BaseServer::Initialize()
 {
+    auto log = libcomp::Log::GetSingletonPtr();
+
+    log->SetLogLevelEnabled(libcomp::Log::LOG_LEVEL_DEBUG,
+        mConfig->GetLogDebug());
+    log->SetLogLevelEnabled(libcomp::Log::LOG_LEVEL_INFO,
+        mConfig->GetLogInfo());
+    log->SetLogLevelEnabled(libcomp::Log::LOG_LEVEL_WARNING,
+        mConfig->GetLogWarning());
+    log->SetLogLevelEnabled(libcomp::Log::LOG_LEVEL_ERROR,
+        mConfig->GetLogError());
+    log->SetLogLevelEnabled(libcomp::Log::LOG_LEVEL_CRITICAL,
+        mConfig->GetLogCritical());
+
+    if(!mConfig->GetLogFile().IsEmpty())
+    {
+        log->SetLogPath(mConfig->GetLogFile());
+    }
+
     if(0 == mConfig->DataStoreCount())
     {
         LOG_CRITICAL("At least one data store path must be specified.\n");

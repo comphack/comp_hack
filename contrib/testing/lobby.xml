@@ -23,6 +23,12 @@
             <element>/var/lib/comp_hack</element>
         </member>
         <member name="DataStoreSync">true</member>
+        <member name="LogFile">/var/log/comp_hack/lobby.log</member>
+        <member name="LogDebug">true</member>
+        <member name="LogInfo">true</member>
+        <member name="LogWarning">true</member>
+        <member name="LogError">true</member>
+        <member name="LogCritical">true</member>
         
         <!-- From LobbyConfig -->
         <member name="CharacterDeletionDelay">1440</member>	<!-- In minutes, 24 hours by default -->

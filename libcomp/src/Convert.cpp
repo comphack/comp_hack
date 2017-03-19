@@ -156,7 +156,9 @@ static String FromCP932Encoding(const uint8_t *szString, int size)
         // advanced.
         uint16_t cp932 = *(szString++);
 
-        if(cp932 & 0x80)
+        // Certain byte values indicate multibyte characters.
+        if( (0x81 <= cp932 && 0x9F >= cp932) ||
+            (0xE0 <= cp932 && 0xFC >= cp932) )
         {
             // Sanity check that we can read the 2nd byte of the code point.
             // If not, we should return an empty string to indicate an error.
@@ -250,7 +252,7 @@ static std::vector<char> ToCP932Encoding(const String& str,
 
         // If the most significant bit is set, this CP932 code point is a
         // multi-byte codepoint.
-        if(cp932 & 0x8000)
+        if(0xFF < cp932)
         {
             // Double byte, ensure the value is in big endian host order.
             cp932 = htobe16(cp932);

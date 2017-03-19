@@ -59,7 +59,7 @@ size_t MetaVariableArray::GetSize() const
 
 uint16_t MetaVariableArray::GetDynamicSizeCount() const
 {
-    return 1;
+    return 0;
 }
 
 std::shared_ptr<MetaVariable> MetaVariableArray::GetElementType() const

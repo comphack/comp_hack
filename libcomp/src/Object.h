@@ -202,6 +202,15 @@ public:
         std::istream& stream, const std::function<
         std::shared_ptr<Object>()>& objectAllocator);
 
+    /**
+    * Static utliity function to save multiple objects to an output stream.
+    * @param stream Byte stream to save the object data to.
+    * @param objs List of objects to save to the stream.
+    * @return true if saving was successful, false if it was not
+    */
+    static bool SaveBinaryData(std::ostream& stream,
+        const std::list<std::shared_ptr<Object>>& objs);
+
 protected:
     /**
      * Utility function to get a child XML element from a parent node

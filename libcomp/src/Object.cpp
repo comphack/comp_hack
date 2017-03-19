@@ -156,7 +156,6 @@ std::list<std::shared_ptr<Object>> Object::LoadBinaryData(
     stream.read(reinterpret_cast<char*>(&dynamicSizeCount),
         sizeof(dynamicSizeCount));
 
-
     if(!stream.good())
     {
         return {};
@@ -195,4 +194,97 @@ std::list<std::shared_ptr<Object>> Object::LoadBinaryData(
     }
 
     return objects;
+}
+
+bool Object::SaveBinaryData(std::ostream& stream,
+    const std::list<std::shared_ptr<Object>>& objs)
+{
+    if(objs.empty())
+    {
+        return false;
+    }
+
+    uint16_t dynamicSizeCount = objs.front()->GetDynamicSizeCount();
+
+    for(auto obj : objs)
+    {
+        if(obj->GetDynamicSizeCount() != dynamicSizeCount)
+        {
+            return false;
+        }
+    }
+
+    uint16_t objectCount = static_cast<uint16_t>(objs.size());
+
+    stream.write(reinterpret_cast<char*>(&objectCount),
+        sizeof(objectCount));
+
+    if(!stream.good())
+    {
+        return false;
+    }
+
+    stream.write(reinterpret_cast<char*>(&dynamicSizeCount),
+        sizeof(dynamicSizeCount));
+
+    if(!stream.good())
+    {
+        return false;
+    }
+
+    ObjectOutStream objectStream(stream);
+
+    // Save the position of this data to come back and write it out.
+    auto dyanmicSizePosition = stream.tellp();
+
+    for(uint16_t i = 0; i < objectCount; ++i)
+    {
+        for(uint16_t j = 0; j < dynamicSizeCount; ++j)
+        {
+            uint16_t dyanmicSize = 0;
+
+            stream.write(reinterpret_cast<char*>(&dyanmicSize),
+                sizeof(dyanmicSize));
+
+            if(!stream.good())
+            {
+                return false;
+            }
+        }
+    }
+
+    for(auto obj : objs)
+    {
+        if(!obj->Save(objectStream) || !stream.good())
+        {
+            return false;
+        }
+    }
+
+    // Go back and write the dynamic sizes.
+    stream.seekp(dyanmicSizePosition);
+
+    if(!stream.good())
+    {
+        return false;
+    }
+
+    for(uint16_t i = 0; i < objectCount; ++i)
+    {
+        for(uint16_t j = 0; j < dynamicSizeCount; ++j)
+        {
+            uint16_t dyanmicSize = objectStream.dynamicSizes.front();
+            objectStream.dynamicSizes.pop_front();
+
+            stream.write(reinterpret_cast<char*>(&dyanmicSize),
+                sizeof(dyanmicSize));
+
+            if(!stream.good())
+            {
+                return false;
+            }
+        }
+    }
+
+    return true;
 }

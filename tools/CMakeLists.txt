@@ -15,6 +15,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+ADD_SUBDIRECTORY(bdpatch)
 ADD_SUBDIRECTORY(capgrep)
 ADD_SUBDIRECTORY(decrypt)
 ADD_SUBDIRECTORY(encrypt)

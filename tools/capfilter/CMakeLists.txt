@@ -1,6 +1,6 @@
 # This file is part of COMP_hack.
 #
-# Copyright (C) 2010-2016 COMP_hack Team <compomega@tutanota.com>
+# Copyright (C) 2010-2017 COMP_hack Team <compomega@tutanota.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -15,13 +15,31 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-ADD_SUBDIRECTORY(bdpatch)
-ADD_SUBDIRECTORY(capgrep)
-ADD_SUBDIRECTORY(decrypt)
-ADD_SUBDIRECTORY(encrypt)
-ADD_SUBDIRECTORY(logger)
-ADD_SUBDIRECTORY(objgen)
-ADD_SUBDIRECTORY(patcher)
-ADD_SUBDIRECTORY(rehash)
-ADD_SUBDIRECTORY(updater)
-ADD_SUBDIRECTORY(capfilter)
+CMAKE_MINIMUM_REQUIRED(VERSION 3.5)
+
+PROJECT(comp_capfilter)
+
+SET(CMAKE_AUTOMOC ON)
+SET(CMAKE_INCLUDE_CURRENT_DIR ON)
+
+FIND_PACKAGE(Qt5Core REQUIRED)
+
+MESSAGE("** Configuring ${PROJECT_NAME} **")
+
+SET(${PROJECT_NAME}_SRCS
+    src/main.cpp
+)
+
+ADD_EXECUTABLE(${PROJECT_NAME} ${${PROJECT_NAME}_SRCS}
+    ${${PROJECT_NAME}_MOC_SRCS})
+
+SET_TARGET_PROPERTIES(${PROJECT_NAME} PROPERTIES FOLDER "Tools")
+
+TARGET_INCLUDE_DIRECTORIES(${PROJECT_NAME} PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${CMAKE_CURRENT_BINARY_DIR}
+)
+
+TARGET_LINK_LIBRARIES(${PROJECT_NAME} comp zlib Qt5::Core)
+
+INSTALL(TARGETS ${PROJECT_NAME} DESTINATION bin)

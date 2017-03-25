@@ -49,6 +49,7 @@ class MiHNPCData;
 class MiItemData;
 class MiONPCData;
 class MiSkillData;
+class MiZoneData;
 }
 
 namespace libcomp
@@ -69,6 +70,7 @@ public:
     const std::shared_ptr<objects::MiItemData> GetItemData(const libcomp::String& name);
     const std::shared_ptr<objects::MiONPCData> GetONPCData(uint32_t id);
     const std::shared_ptr<objects::MiSkillData> GetSkillData(uint32_t id);
+    const std::shared_ptr<objects::MiZoneData> GetZoneData(uint32_t id);
 
     const std::list<uint32_t> GetDefaultCharacterSkills();
 
@@ -82,6 +84,7 @@ public:
     bool LoadItemData(gsl::not_null<DataStore*> pDataStore);
     bool LoadONPCData(gsl::not_null<DataStore*> pDataStore);
     bool LoadSkillData(gsl::not_null<DataStore*> pDataStore);
+    bool LoadZoneData(gsl::not_null<DataStore*> pDataStore);
 
 private:
     template <class T>
@@ -190,6 +193,9 @@ private:
 
     std::unordered_map<uint32_t,
         std::shared_ptr<objects::MiSkillData>> mSkillData;
+
+    std::unordered_map<uint32_t,
+        std::shared_ptr<objects::MiZoneData>> mZoneData;
 };
 
 } // namspace libcomp

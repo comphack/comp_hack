@@ -44,6 +44,8 @@
 #include <MiONPCData.h>
 #include <MiSkillData.h>
 #include <MiSkillItemStatusCommonData.h>
+#include <MiZoneData.h>
+#include <MiZoneBasicData.h>
 
 using namespace libcomp;
 
@@ -112,6 +114,11 @@ const std::shared_ptr<objects::MiSkillData> DefinitionManager::GetSkillData(uint
     return GetRecordByID<objects::MiSkillData>(id, mSkillData);
 }
 
+const std::shared_ptr<objects::MiZoneData> DefinitionManager::GetZoneData(uint32_t id)
+{
+    return GetRecordByID<objects::MiZoneData>(id, mZoneData);
+}
+
 const std::list<uint32_t> DefinitionManager::GetDefaultCharacterSkills()
 {
     return mDefaultCharacterSkills;
@@ -129,6 +136,7 @@ bool DefinitionManager::LoadAllData(gsl::not_null<DataStore*> pDataStore)
     success &= LoadItemData(pDataStore);
     success &= LoadONPCData(pDataStore);
     success &= LoadSkillData(pDataStore);
+    success &= LoadZoneData(pDataStore);
 
     if(success)
     {
@@ -266,6 +274,19 @@ bool DefinitionManager::LoadSkillData(gsl::not_null<DataStore*> pDataStore)
     for(auto record : records)
     {
         mSkillData[record->GetCommon()->GetID()] = record;
+    }
+
+    return success;
+}
+
+bool DefinitionManager::LoadZoneData(gsl::not_null<DataStore*> pDataStore)
+{
+    std::list<std::shared_ptr<objects::MiZoneData>> records;
+    bool success = LoadBinaryData<objects::MiZoneData>(pDataStore,
+        "Shield/ZoneData.sbin", true, 0, records);
+    for(auto record : records)
+    {
+        mZoneData[record->GetBasic()->GetID()] = record;
     }
     
     return success;

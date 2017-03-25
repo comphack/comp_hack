@@ -2,7 +2,7 @@
 <objgen>
     <object name="MiNPCBasicData" persistent="false">
         <member type="u32" name="ID"/>
-        <member type="string" length="36" name="name"/>
+        <member type="string" length="36" name="name" encoding="cp932"/>
         <member type="s16" name="title"/>
         <member type="u16" name="unk1"/>
         <member type="u8" name="unk2"/>
@@ -73,7 +73,7 @@
         <member type="u8" name="growth7"/>
         <member type="u16" name="growth8"/>
         <member type="array" size="8" name="salesDialogue">
-            <element type="string" length="68"/>
+            <element type="string" length="68" encoding="cp932"/>
         </member>
     </object>
     <object name="MiDevilBattleData" persistent="false">

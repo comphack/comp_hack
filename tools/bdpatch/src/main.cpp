@@ -36,6 +36,9 @@
 #include <MiCItemBaseData.h>
 #include <MiCItemData.h>
 
+#include <MiDevilData.h>
+#include <MiNPCBasicData.h>
+
 // tinyxml2 Includes
 #include <PushIgnore.h>
 #include <tinyxml2.h>
@@ -177,6 +180,7 @@ int Usage(const char *szAppName)
     std::cerr << "TYPE indicates the format of the BinaryData and can "
         << "be one of:" << std::endl;
     std::cerr << "  citem Format for CItemData.sbin" << std::endl;
+    std::cerr << "  devil Format for DevilData.sbin" << std::endl;
     std::cerr << std::endl;
     std::cerr << "Mode 'load' will take the input BinaryData file and "
         << "write the output XML file." << std::endl;
@@ -219,6 +223,21 @@ int main(int argc, char *argv[])
                 return std::dynamic_pointer_cast<objects::MiCItemData>(
                     obj)->GetBaseData()->GetID();
             }
+        );
+    }
+    else if ("devil" == bdType)
+    {
+        pSet = new BinaryDataSet(
+            []()
+        {
+            return std::make_shared<objects::MiDevilData>();
+        },
+
+            [](const std::shared_ptr<libcomp::Object>& obj)
+        {
+            return std::dynamic_pointer_cast<objects::MiDevilData>(
+                obj)->GetBasic()->GetID();
+        }
         );
     }
     else

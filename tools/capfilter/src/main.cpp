@@ -497,11 +497,25 @@ private:
 ZoneFilter::ZoneFilter(const char *szProgram,
     const libcomp::String& dataStorePath) : mStore(szProgram)
 {
-    (void)mStore.AddSearchPath(dataStorePath);
+    if(!mStore.AddSearchPath(dataStorePath))
+    {
+        std::cerr << "Failed to add search path." << std::endl;
+    }
 
-    (void)mDefinitions.LoadHNPCData(&mStore);
-    (void)mDefinitions.LoadONPCData(&mStore);
-    (void)mDefinitions.LoadZoneData(&mStore);
+    if(!mDefinitions.LoadHNPCData(&mStore))
+    {
+        std::cerr << "Failed to load hNPC data." << std::endl;
+    }
+
+    if(!mDefinitions.LoadONPCData(&mStore))
+    {
+        std::cerr << "Failed to load oNPC data." << std::endl;
+    }
+
+    if(!mDefinitions.LoadZoneData(&mStore))
+    {
+        std::cerr << "Failed to load zone data." << std::endl;
+    }
 }
 
 ZoneFilter::~ZoneFilter()
@@ -720,17 +734,6 @@ bool ZoneFilter::PostProcess()
             return false;
         }
 
-        if(zoneDefinition)
-        {
-            auto name = zoneDefinition->GetBasic()->GetName();
-
-            if(!name.IsEmpty())
-            {
-                pRoot->InsertFirstChild(doc.NewComment(libcomp::String(
-                    " %1 ").Arg(name).C()));
-            }
-        }
-
         std::list<libcomp::String> objectNames;
         std::list<libcomp::String> npcNames;
 
@@ -776,7 +779,7 @@ bool ZoneFilter::PostProcess()
                         " %1 ").Arg(name).C()));
                 }
 
-                pChild = pElement->NextSiblingElement("element");
+                pChild = pChild->NextSiblingElement("element");
             }
         }
 
@@ -822,7 +825,18 @@ bool ZoneFilter::PostProcess()
                         " %1 ").Arg(name).C()));
                 }
 
-                pChild = pElement->NextSiblingElement("element");
+                pChild = pChild->NextSiblingElement("element");
+            }
+        }
+
+        if(zoneDefinition)
+        {
+            auto name = zoneDefinition->GetBasic()->GetName();
+
+            if(!name.IsEmpty())
+            {
+                pRoot->InsertFirstChild(doc.NewComment(libcomp::String(
+                    " %1 ").Arg(name).C()));
             }
         }
 
@@ -905,7 +919,7 @@ int main(int argc, char *argv[])
         if(!f.Load(capturePath.toUtf8().constData()))
         {
             std::cerr << "Failed to parse capture: "
-                << capturePath.toUtf8().constData();
+                << capturePath.toUtf8().constData() << std::endl;
 
             return EXIT_FAILURE;
         }

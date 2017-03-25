@@ -291,6 +291,32 @@ void ZoneManager::BroadcastPacket(const std::shared_ptr<Zone>& zone, libcomp::Pa
     }
 }
 
+void ZoneManager::SendToRange(const std::shared_ptr<ChannelClientConnection>& client, libcomp::Packet& p, bool includeSelf)
+{
+    //get all clients in range
+    auto state = client->GetClientState(); //Get sender's client's state
+    auto cState = state->GetCharacterState(); //Get sender's entity state
+    auto MyX = cState->GetDestinationX();  //Get Sending Char's X
+    auto MyY = cState->GetDestinationY();  //Get Sending Char's Y
+    // auto zoneConnections = GetZoneConnections(client, false); //Get Other zone connections
+    auto r = 92;  // @todo: Define value here  (how big?)
+
+    std::list<std::shared_ptr<libcomp::TcpConnection>> zConnections;
+    for(auto zConnection : GetZoneConnections(client, includeSelf))
+    {
+        //ZoneX is the x-coord of the other character in the zone
+        auto ZoneX = zConnection->GetClientState()->GetCharacterState()->GetDestinationX();
+        //ZoneY is the y-coord of the other character in question.
+        auto ZoneY = zConnection->GetClientState()->GetCharacterState()->GetDestinationY();
+            //This checks to see if the other character is in range of the sender
+        if(pow(r,2) >= pow((MyX-ZoneX),2)+pow((MyY-ZoneY),2))
+        {
+            zConnections.push_back(zConnection);
+        }
+    }
+    libcomp::TcpConnection::BroadcastPacket(zConnections, p);
+}
+
 std::list<std::shared_ptr<ChannelClientConnection>> ZoneManager::GetZoneConnections(
     const std::shared_ptr<ChannelClientConnection>& client, bool includeSelf)
 {

@@ -140,7 +140,7 @@ bool ChatManager::SendChatMessage(const std::shared_ptr<
             break;
         case ChatVis_t::CHAT_VIS_RANGE:
             /// @todo: Figure out how to force it to use a radius for range.
-            zoneManager->BroadcastPacket(client, reply, true);
+            zoneManager->SendToRange(client, reply, true);
             break;
         case ChatVis_t::CHAT_VIS_PARTY:
         case ChatVis_t::CHAT_VIS_KLAN:

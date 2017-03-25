@@ -39,6 +39,14 @@
 #include <MiDevilData.h>
 #include <MiNPCBasicData.h>
 
+#include <MiZoneData.h>
+#include <MiZoneBasicData.h>
+
+#include <MiHNPCData.h>
+#include <MiHNPCBasicData.h>
+
+#include <MiONPCData.h>
+
 // tinyxml2 Includes
 #include <PushIgnore.h>
 #include <tinyxml2.h>
@@ -181,6 +189,9 @@ int Usage(const char *szAppName)
         << "be one of:" << std::endl;
     std::cerr << "  citem Format for CItemData.sbin" << std::endl;
     std::cerr << "  devil Format for DevilData.sbin" << std::endl;
+    std::cerr << "  hnpc Format for hNPCData.sbin" << std::endl;
+    std::cerr << "  onpc Format for oNPCData.sbin" << std::endl;
+    std::cerr << "  zone  Format for ZoneData.sbin" << std::endl;
     std::cerr << std::endl;
     std::cerr << "Mode 'load' will take the input BinaryData file and "
         << "write the output XML file." << std::endl;
@@ -225,19 +236,64 @@ int main(int argc, char *argv[])
             }
         );
     }
-    else if ("devil" == bdType)
+    else if("devil" == bdType)
     {
         pSet = new BinaryDataSet(
             []()
-        {
-            return std::make_shared<objects::MiDevilData>();
-        },
+            {
+                return std::make_shared<objects::MiDevilData>();
+            },
 
             [](const std::shared_ptr<libcomp::Object>& obj)
-        {
-            return std::dynamic_pointer_cast<objects::MiDevilData>(
-                obj)->GetBasic()->GetID();
-        }
+            {
+                return std::dynamic_pointer_cast<objects::MiDevilData>(
+                    obj)->GetBasic()->GetID();
+            }
+        );
+    }
+    else if("hnpc" == bdType)
+    {
+        pSet = new BinaryDataSet(
+            []()
+            {
+                return std::make_shared<objects::MiHNPCData>();
+            },
+
+            [](const std::shared_ptr<libcomp::Object>& obj)
+            {
+                return std::dynamic_pointer_cast<objects::MiHNPCData>(
+                    obj)->GetBasic()->GetID();
+            }
+        );
+    }
+    else if("onpc" == bdType)
+    {
+        pSet = new BinaryDataSet(
+            []()
+            {
+                return std::make_shared<objects::MiONPCData>();
+            },
+
+            [](const std::shared_ptr<libcomp::Object>& obj)
+            {
+                return std::dynamic_pointer_cast<objects::MiONPCData>(
+                    obj)->GetID();
+            }
+        );
+    }
+    else if("zone" == bdType)
+    {
+        pSet = new BinaryDataSet(
+            []()
+            {
+                return std::make_shared<objects::MiZoneData>();
+            },
+
+            [](const std::shared_ptr<libcomp::Object>& obj)
+            {
+                return std::dynamic_pointer_cast<objects::MiZoneData>(
+                    obj)->GetBasic()->GetID();
+            }
         );
     }
     else

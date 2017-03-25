@@ -2,7 +2,8 @@
 <objgen>
     <object name="MiONPCData" persistent="false">
         <member type="u32" name="ID"/>
-        <member type="string" length="36" name="name"/>
+        <member type="string" length="36" name="name"
+            encoding="cp932"/>
         <member type="s16" name="unk1"/>
         <member type="u16" name="unk2"/>
         <member type="string" length="68" name="barrierName"/><!-- From qmp file -->

@@ -34,6 +34,7 @@
 #include <MiCItemData.h>
 #include <MiDevilData.h>
 #include <MiDevilLVUpRateData.h>
+#include <MiDynamicMapData.h>
 #include <MiExpertClassData.h>
 #include <MiExpertData.h>
 #include <MiExpertRankData.h>
@@ -76,6 +77,11 @@ const std::shared_ptr<objects::MiDevilData> DefinitionManager::GetDevilData(cons
 const std::shared_ptr<objects::MiDevilLVUpRateData> DefinitionManager::GetDevilLVUpRateData(uint32_t id)
 {
     return GetRecordByID<objects::MiDevilLVUpRateData>(id, mDevilLVUpRateData);
+}
+
+const std::shared_ptr<objects::MiDynamicMapData> DefinitionManager::GetDynamicMapData(uint32_t id)
+{
+    return GetRecordByID<objects::MiDynamicMapData>(id, mDynamicMapData);
 }
 
 const std::shared_ptr<objects::MiExpertData> DefinitionManager::GetExpertClassData(uint32_t id)
@@ -131,6 +137,7 @@ bool DefinitionManager::LoadAllData(gsl::not_null<DataStore*> pDataStore)
     success &= LoadCItemData(pDataStore);
     success &= LoadDevilData(pDataStore);
     success &= LoadDevilLVUpRateData(pDataStore);
+    success &= LoadDynamicMapData(pDataStore);
     success &= LoadExpertClassData(pDataStore);
     success &= LoadHNPCData(pDataStore);
     success &= LoadItemData(pDataStore);
@@ -199,6 +206,19 @@ bool DefinitionManager::LoadDevilLVUpRateData(
         mDevilLVUpRateData[record->GetID()] = record;
     }
     
+    return success;
+}
+
+bool DefinitionManager::LoadDynamicMapData(gsl::not_null<DataStore*> pDataStore)
+{
+    std::list<std::shared_ptr<objects::MiDynamicMapData>> records;
+    bool success = LoadBinaryData<objects::MiDynamicMapData>(pDataStore,
+        "Client/DynamicMapData.bin", false, 0, records);
+    for(auto record : records)
+    {
+        mDynamicMapData[record->GetID()] = record;
+    }
+
     return success;
 }
 

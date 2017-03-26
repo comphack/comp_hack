@@ -40,6 +40,9 @@
 #include "ChannelServer.h"
 #include "Zone.h"
 
+// Other Includes
+#include <cmath.h>
+
 using namespace channel;
 
 ZoneManager::ZoneManager(const std::weak_ptr<ChannelServer>& server)

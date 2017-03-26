@@ -44,6 +44,7 @@ namespace objects
 class MiCItemData;
 class MiDevilData;
 class MiDevilLVUpRateData;
+class MiDynamicMapData;
 class MiExpertData;
 class MiHNPCData;
 class MiItemData;
@@ -64,6 +65,7 @@ public:
     const std::shared_ptr<objects::MiDevilData> GetDevilData(uint32_t id);
     const std::shared_ptr<objects::MiDevilData> GetDevilData(const libcomp::String& name);
     const std::shared_ptr<objects::MiDevilLVUpRateData> GetDevilLVUpRateData(uint32_t id);
+    const std::shared_ptr<objects::MiDynamicMapData> GetDynamicMapData(uint32_t id);
     const std::shared_ptr<objects::MiExpertData> GetExpertClassData(uint32_t id);
     const std::shared_ptr<objects::MiHNPCData> GetHNPCData(uint32_t id);
     const std::shared_ptr<objects::MiItemData> GetItemData(uint32_t id);
@@ -79,6 +81,7 @@ public:
     bool LoadCItemData(gsl::not_null<DataStore*> pDataStore);
     bool LoadDevilData(gsl::not_null<DataStore*> pDataStore);
     bool LoadDevilLVUpRateData(gsl::not_null<DataStore*> pDataStore);
+    bool LoadDynamicMapData(gsl::not_null<DataStore*> pDataStore);
     bool LoadExpertClassData(gsl::not_null<DataStore*> pDataStore);
     bool LoadHNPCData(gsl::not_null<DataStore*> pDataStore);
     bool LoadItemData(gsl::not_null<DataStore*> pDataStore);
@@ -178,6 +181,9 @@ private:
     
     std::unordered_map<uint32_t,
         std::shared_ptr<objects::MiDevilLVUpRateData>> mDevilLVUpRateData;
+
+    std::unordered_map<uint32_t,
+        std::shared_ptr<objects::MiDynamicMapData>> mDynamicMapData;
 
     std::unordered_map<uint32_t,
         std::shared_ptr<objects::MiExpertData>> mExpertData;

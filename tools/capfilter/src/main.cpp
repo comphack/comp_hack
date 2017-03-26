@@ -466,11 +466,6 @@ CommandFilter::~CommandFilter()
 {
 }
 
-uint64_t ZoneToUnique(uint32_t zoneId, uint32_t zoneSet)
-{
-    return (uint64_t)zoneId | ((uint64_t)zoneSet << 32);
-}
-
 class ZoneFilter : public CommandFilter
 {
 public:
@@ -536,24 +531,24 @@ bool ZoneFilter::ProcessCommand(uint16_t commandCode,
         }
 
         uint32_t zoneId = packet.ReadU32Little();
-        uint32_t zoneSet = packet.ReadU32Little();
+        uint32_t zoneDynamicMapID = packet.ReadU32Little();
         packet.Skip(3 * sizeof(float));
         uint32_t zoneInstance = packet.ReadU32Little();
         (void)zoneInstance;
 
-        auto it = mZones.find(ZoneToUnique(zoneId, zoneSet));
+        auto it = mZones.find(zoneId);
 
         if(mZones.end() == it)
         {
             auto zone = std::make_shared<objects::ServerZone>();
             zone->SetID(zoneId);
-            zone->SetSet(zoneSet);
+            zone->SetDynamicMapID(zoneDynamicMapID);
             zone->SetGlobal(true);
             zone->SetStartingX(0.0f);
             zone->SetStartingY(0.0f);
             zone->SetStartingRotation(0.0f);
 
-            mZones[ZoneToUnique(zoneId, zoneSet)] = zone;
+            mZones[zoneId] = zone;
             //mActiveZone = zone;
         }
         else
@@ -580,29 +575,29 @@ bool ZoneFilter::ProcessCommand(uint16_t commandCode,
 
         int32_t entityId = packet.ReadS32Little();
         uint32_t objectId = packet.ReadU32Little();
-        uint32_t zoneSet = packet.ReadU32Little();
+        uint32_t zoneDynamicMapID = packet.ReadU32Little();
         uint32_t zoneId = packet.ReadU32Little();
         float originX = packet.ReadFloat();
         float originY = packet.ReadFloat();
         float originRotation = packet.ReadFloat();
         (void)entityId;
 
-        auto it = mZones.find(ZoneToUnique(zoneId, zoneSet));
+        auto it = mZones.find(zoneId);
 
         if(mZones.end() == it)
         {
             auto zone = std::make_shared<objects::ServerZone>();
             zone->SetID(zoneId);
-            zone->SetSet(zoneSet);
+            zone->SetDynamicMapID(zoneDynamicMapID);
             zone->SetGlobal(true);
             zone->SetStartingX(0.0f);
             zone->SetStartingY(0.0f);
             zone->SetStartingRotation(0.0f);
 
-            mZones[ZoneToUnique(zoneId, zoneSet)] = zone;
+            mZones[zoneId] = zone;
             //mActiveZone = zone;
 
-            it = mZones.find(ZoneToUnique(zoneId, zoneSet));
+            it = mZones.find(zoneId);
         }
 
         auto zone = it->second;
@@ -616,11 +611,11 @@ bool ZoneFilter::ProcessCommand(uint16_t commandCode,
             return false;
         }
 
-        if(zoneSet != zone->GetSet())
+        if(zoneDynamicMapID != zone->GetDynamicMapID())
         {
-            std::cerr << "hNPC does not match zone set!" << std::endl;
-            std::cerr << "Expected: " << zone->GetSet() << std::endl;
-            std::cerr << "Actual: " << zoneSet << std::endl;
+            std::cerr << "hNPC does not match dynamic map ID!" << std::endl;
+            std::cerr << "Expected: " << zone->GetDynamicMapID() << std::endl;
+            std::cerr << "Actual: " << zoneDynamicMapID << std::endl;
 
             return false;
         }
@@ -656,29 +651,29 @@ bool ZoneFilter::ProcessCommand(uint16_t commandCode,
         int32_t entityId = packet.ReadS32Little();
         uint32_t objectId = packet.ReadU32Little();
         uint8_t state = packet.ReadU8();
-        uint32_t zoneSet = packet.ReadU32Little();
+        uint32_t zoneDynamicMapID = packet.ReadU32Little();
         uint32_t zoneId = packet.ReadU32Little();
         float originX = packet.ReadFloat();
         float originY = packet.ReadFloat();
         float originRotation = packet.ReadFloat();
         (void)entityId;
 
-        auto it = mZones.find(ZoneToUnique(zoneId, zoneSet));
+        auto it = mZones.find(zoneId);
 
         if(mZones.end() == it)
         {
             auto zone = std::make_shared<objects::ServerZone>();
             zone->SetID(zoneId);
-            zone->SetSet(zoneSet);
+            zone->SetDynamicMapID(zoneDynamicMapID);
             zone->SetGlobal(true);
             zone->SetStartingX(0.0f);
             zone->SetStartingY(0.0f);
             zone->SetStartingRotation(0.0f);
 
-            mZones[ZoneToUnique(zoneId, zoneSet)] = zone;
+            mZones[zoneId] = zone;
             //mActiveZone = zone;
 
-            it = mZones.find(ZoneToUnique(zoneId, zoneSet));
+            it = mZones.find(zoneId);
         }
 
         auto zone = it->second;
@@ -692,11 +687,11 @@ bool ZoneFilter::ProcessCommand(uint16_t commandCode,
             return false;
         }
 
-        if(zoneSet != zone->GetSet())
+        if(zoneDynamicMapID != zone->GetDynamicMapID())
         {
-            std::cerr << "oNPC does not match zone set!" << std::endl;
-            std::cerr << "Expected: " << zone->GetSet() << std::endl;
-            std::cerr << "Actual: " << zoneSet << std::endl;
+            std::cerr << "oNPC does not match dynamic map ID!" << std::endl;
+            std::cerr << "Expected: " << zone->GetDynamicMapID() << std::endl;
+            std::cerr << "Actual: " << zoneDynamicMapID << std::endl;
 
             return false;
         }
@@ -848,7 +843,7 @@ bool ZoneFilter::PostProcess()
         */
 
         if(tinyxml2::XML_NO_ERROR != doc.SaveFile(libcomp::String(
-            "zone-id%1-set%2.xml").Arg(zone->GetID()).Arg(zone->GetSet()).C()))
+            "zone-%1.xml").Arg(zone->GetID()).C()))
         {
             std::cerr << "Failed to save XML file." << std::endl;
 

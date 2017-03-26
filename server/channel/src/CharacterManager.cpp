@@ -205,7 +205,7 @@ void CharacterManager::SendCharacterData(const std::shared_ptr<
     auto zone = mServer.lock()->GetZoneManager()->GetZoneInstance(client);
     auto zoneDef = zone->GetDefinition();
 
-    reply.WriteS32Little((int32_t)zoneDef->GetSet());
+    reply.WriteS32Little((int32_t)zone->GetID());
     reply.WriteS32Little((int32_t)zoneDef->GetID());
     reply.WriteFloat(cState->GetDestinationX());
     reply.WriteFloat(cState->GetDestinationY());
@@ -303,7 +303,7 @@ void CharacterManager::SendOtherCharacterData(const std::list<std::shared_ptr<
     reply.WriteS64Little(-1);
     reply.WriteS64Little(-1);
 
-    reply.WriteS32Little((int32_t)zoneDef->GetSet());
+    reply.WriteS32Little((int32_t)zone->GetID());
     reply.WriteS32Little((int32_t)zoneDef->GetID());
     reply.WriteFloat(cState->GetDestinationX());
     reply.WriteFloat(cState->GetDestinationY());
@@ -450,7 +450,7 @@ void CharacterManager::SendPartnerData(const std::shared_ptr<
     auto zone = mServer.lock()->GetZoneManager()->GetZoneInstance(client);
     auto zoneDef = zone->GetDefinition();
 
-    reply.WriteS32Little((int32_t)zoneDef->GetSet());
+    reply.WriteS32Little((int32_t)zone->GetID());
     reply.WriteS32Little((int32_t)zoneDef->GetID());
     reply.WriteFloat(dState->GetDestinationX());
     reply.WriteFloat(dState->GetDestinationY());
@@ -550,7 +550,7 @@ void CharacterManager::SendOtherPartnerData(const std::list<std::shared_ptr<
     reply.WriteS64Little(-1);
     reply.WriteS64Little(-1);
 
-    reply.WriteS32Little((int32_t)zoneDef->GetSet());
+    reply.WriteS32Little((int32_t)zone->GetID());
     reply.WriteS32Little((int32_t)zoneDef->GetID());
     reply.WriteFloat(dState->GetDestinationX());
     reply.WriteFloat(dState->GetDestinationY());

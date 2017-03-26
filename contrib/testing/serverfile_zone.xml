@@ -2,7 +2,7 @@
 <objgen>
     <object>
         <member name="ID">530101</member>
-        <member name="Set">10803</member>
+        <member name="DynamicMapID">10803</member>
         <member name="Global">false</member>
         <member name="StartingX">1.70805</member>
         <member name="StartingY">2382.18</member>

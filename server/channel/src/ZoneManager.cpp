@@ -29,6 +29,7 @@
 // libcomp Includes
 #include <Log.h>
 #include <PacketCodes.h>
+#include <Constants.h>
 
 // objects Include
 #include <ServerNPC.h>
@@ -38,6 +39,9 @@
 // channel Includes
 #include "ChannelServer.h"
 #include "Zone.h"
+
+// Other Includes
+#include <cmath>
 
 using namespace channel;
 
@@ -289,6 +293,32 @@ void ZoneManager::BroadcastPacket(const std::shared_ptr<Zone>& zone, libcomp::Pa
 
         libcomp::TcpConnection::BroadcastPacket(connections, p);
     }
+}
+
+void ZoneManager::SendToRange(const std::shared_ptr<ChannelClientConnection>& client, libcomp::Packet& p, bool includeSelf)
+{
+    //get all clients in range
+    auto state = client->GetClientState(); //Get sender's client's state
+    auto cState = state->GetCharacterState(); //Get sender's entity state
+    auto MyX = cState->GetDestinationX();  //Get Sending Char's X
+    auto MyY = cState->GetDestinationY();  //Get Sending Char's Y
+    auto r = CHAT_RADIUS_SAY;
+
+    std::list<std::shared_ptr<libcomp::TcpConnection>> zConnections;
+    for(auto zConnection : GetZoneConnections(client, includeSelf))
+    {
+        auto zState = zConnection->GetClientState()->GetCharacterState();
+        //ZoneX is the x-coord of the other character in the zone
+        auto ZoneX = zState->GetDestinationX();
+        //ZoneY is the y-coord of the other character in question.
+        auto ZoneY = zState->GetDestinationY();
+            //This checks to see if the other character is in range of the sender
+        if(std::pow(r,2) >= std::pow((MyX-ZoneX),2)+std::pow((MyY-ZoneY),2))
+        {
+            zConnections.push_back(zConnection);
+        }
+    }
+    libcomp::TcpConnection::BroadcastPacket(zConnections, p);
 }
 
 std::list<std::shared_ptr<ChannelClientConnection>> ZoneManager::GetZoneConnections(

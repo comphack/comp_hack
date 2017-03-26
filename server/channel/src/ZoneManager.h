@@ -136,6 +136,15 @@ public:
         libcomp::Packet& p, bool includeSelf = true);
 
     /**
+    * sends a packet to a specified range
+    * @param client Client connection to use as the "source" connection
+    * @param p Packet to send to the zone
+    * @param includeSelf Optional parameter to include the connection being passed
+    *  in when sending the packets. Defaults to true
+    */
+    void SendToRange(const std::shared_ptr<ChannelClientConnection>& client, libcomp::Packet& p, bool includeSelf = true);
+
+    /**
      * Get a list of client connections in the zone
      * @param client Client connection to use as the "source" connection
      * @return List of client connections in the zone

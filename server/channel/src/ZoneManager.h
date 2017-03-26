@@ -135,6 +135,7 @@ public:
     void BroadcastPacket(const std::shared_ptr<ChannelClientConnection>& client,
         libcomp::Packet& p, bool includeSelf = true);
 
+    void SendToRange(const std::shared_ptr<ChannelClientConnection>& client, libcomp::Packet& p, bool includeSelf = true);
     /**
     * sends a packet to a specified range
     * @param client Client connection to use as the "source" connection

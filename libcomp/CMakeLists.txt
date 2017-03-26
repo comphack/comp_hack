@@ -201,6 +201,7 @@ SET(${PROJECT_NAME}_SCHEMA
     schema/binarydata/citemdata.xml
     schema/binarydata/devildata.xml
     schema/binarydata/devillvupratedata.xml
+    schema/binarydata/dynamicmapdata.xml
     schema/binarydata/expertdata.xml
     schema/binarydata/hnpcdata.xml
     schema/binarydata/itemdata.xml
@@ -331,6 +332,8 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     MiDevilReunionConditionData.h
     MiDischargeData.cpp
     MiDischargeData.h
+    MiDynamicMapData.h
+    MiDynamicMapData.cpp
     MiEffectiveRangeData.cpp
     MiEffectiveRangeData.h
     MiExpertClassData.cpp

@@ -2,7 +2,7 @@
 <objgen>
     <object name="ServerZone" persistent="false">
         <member type="u32" name="ID"/>
-        <member type="u32" name="Set"/>
+        <member type="u32" name="DynamicMapID"/>
         <member type="bool" name="Global"/>
         <member type="float" name="StartingX"/>
         <member type="float" name="StartingY"/>

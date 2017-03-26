@@ -41,7 +41,7 @@
 #include "Zone.h"
 
 // Other Includes
-#include <cmath.h>
+#include <cmath>
 
 using namespace channel;
 

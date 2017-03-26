@@ -29,7 +29,7 @@
 // libcomp Includes
 #include <Log.h>
 #include <PacketCodes.h>
-#include <Constants.h
+#include <Constants.h>
 
 // objects Include
 #include <ServerNPC.h>

@@ -457,8 +457,8 @@ class CommandFilter
 public:
     virtual ~CommandFilter();
 
-    virtual bool ProcessCommand(uint16_t commandCode,
-        libcomp::ReadOnlyPacket& packet) = 0;
+    virtual bool ProcessCommand(const libcomp::String& capturePath,
+        uint16_t commandCode, libcomp::ReadOnlyPacket& packet) = 0;
     virtual bool PostProcess() = 0;
 };
 
@@ -472,8 +472,8 @@ public:
     ZoneFilter(const char *szProgram, const libcomp::String& dataStorePath);
     virtual ~ZoneFilter();
 
-    virtual bool ProcessCommand(uint16_t commandCode,
-        libcomp::ReadOnlyPacket& packet);
+    virtual bool ProcessCommand(const libcomp::String& capturePath,
+        uint16_t commandCode, libcomp::ReadOnlyPacket& packet);
     virtual bool PostProcess();
 
 private:
@@ -517,9 +517,11 @@ ZoneFilter::~ZoneFilter()
 {
 }
 
-bool ZoneFilter::ProcessCommand(uint16_t commandCode,
-    libcomp::ReadOnlyPacket& packet)
+bool ZoneFilter::ProcessCommand(const libcomp::String& capturePath,
+    uint16_t commandCode, libcomp::ReadOnlyPacket& packet)
 {
+    (void)capturePath;
+
     if(commandCode ==
         to_underlying(ChannelToClientPacketCode_t::PACKET_ZONE_CHANGE))
     {
@@ -531,9 +533,9 @@ bool ZoneFilter::ProcessCommand(uint16_t commandCode,
         }
 
         uint32_t zoneId = packet.ReadU32Little();
-        uint32_t zoneDynamicMapID = packet.ReadU32Little();
-        packet.Skip(3 * sizeof(float));
         uint32_t zoneInstance = packet.ReadU32Little();
+        packet.Skip(3 * sizeof(float));
+        uint32_t zoneDynamicMapID = packet.ReadU32Little();
         (void)zoneInstance;
 
         auto it = mZones.find(zoneId);
@@ -575,7 +577,7 @@ bool ZoneFilter::ProcessCommand(uint16_t commandCode,
 
         int32_t entityId = packet.ReadS32Little();
         uint32_t objectId = packet.ReadU32Little();
-        uint32_t zoneDynamicMapID = packet.ReadU32Little();
+        uint32_t zoneInstance = packet.ReadU32Little();
         uint32_t zoneId = packet.ReadU32Little();
         float originX = packet.ReadFloat();
         float originY = packet.ReadFloat();
@@ -588,7 +590,7 @@ bool ZoneFilter::ProcessCommand(uint16_t commandCode,
         {
             auto zone = std::make_shared<objects::ServerZone>();
             zone->SetID(zoneId);
-            zone->SetDynamicMapID(zoneDynamicMapID);
+            zone->SetDynamicMapID(1);
             zone->SetGlobal(true);
             zone->SetStartingX(0.0f);
             zone->SetStartingY(0.0f);
@@ -607,15 +609,6 @@ bool ZoneFilter::ProcessCommand(uint16_t commandCode,
             std::cerr << "hNPC does not match zone ID!" << std::endl;
             std::cerr << "Expected: " << zone->GetID() << std::endl;
             std::cerr << "Actual: " << zoneId << std::endl;
-
-            return false;
-        }
-
-        if(zoneDynamicMapID != zone->GetDynamicMapID())
-        {
-            std::cerr << "hNPC does not match dynamic map ID!" << std::endl;
-            std::cerr << "Expected: " << zone->GetDynamicMapID() << std::endl;
-            std::cerr << "Actual: " << zoneDynamicMapID << std::endl;
 
             return false;
         }
@@ -651,7 +644,7 @@ bool ZoneFilter::ProcessCommand(uint16_t commandCode,
         int32_t entityId = packet.ReadS32Little();
         uint32_t objectId = packet.ReadU32Little();
         uint8_t state = packet.ReadU8();
-        uint32_t zoneDynamicMapID = packet.ReadU32Little();
+        uint32_t zoneInstance = packet.ReadU32Little();
         uint32_t zoneId = packet.ReadU32Little();
         float originX = packet.ReadFloat();
         float originY = packet.ReadFloat();
@@ -664,7 +657,7 @@ bool ZoneFilter::ProcessCommand(uint16_t commandCode,
         {
             auto zone = std::make_shared<objects::ServerZone>();
             zone->SetID(zoneId);
-            zone->SetDynamicMapID(zoneDynamicMapID);
+            zone->SetDynamicMapID(1);
             zone->SetGlobal(true);
             zone->SetStartingX(0.0f);
             zone->SetStartingY(0.0f);
@@ -683,15 +676,6 @@ bool ZoneFilter::ProcessCommand(uint16_t commandCode,
             std::cerr << "oNPC does not match zone ID!" << std::endl;
             std::cerr << "Expected: " << zone->GetID() << std::endl;
             std::cerr << "Actual: " << zoneId << std::endl;
-
-            return false;
-        }
-
-        if(zoneDynamicMapID != zone->GetDynamicMapID())
-        {
-            std::cerr << "oNPC does not match dynamic map ID!" << std::endl;
-            std::cerr << "Expected: " << zone->GetDynamicMapID() << std::endl;
-            std::cerr << "Actual: " << zoneDynamicMapID << std::endl;
 
             return false;
         }
@@ -925,7 +909,8 @@ int main(int argc, char *argv[])
             {
                 libcomp::ReadOnlyPacket p(cmd.second);
 
-                if(!pFilter->ProcessCommand(cmd.first, p))
+                if(!pFilter->ProcessCommand(capturePath.toUtf8().constData(),
+                    cmd.first, p))
                 {
                     return EXIT_FAILURE;
                 }

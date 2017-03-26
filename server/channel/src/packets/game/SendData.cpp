@@ -61,11 +61,11 @@ void SendZoneChange(std::shared_ptr<ChannelServer> server,
     libcomp::Packet reply;
     reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_ZONE_CHANGE);
     reply.WriteU32Little(zoneID);
-    reply.WriteU32Little(def->GetSet());
+    reply.WriteU32Little(instance->GetID());
     reply.WriteFloat(cState->GetOriginX());
     reply.WriteFloat(cState->GetOriginY());
     reply.WriteFloat(cState->GetOriginRotation());
-    reply.WriteU32Little(instance->GetID());
+    reply.WriteU32Little(def->GetDynamicMapID());
 
     client->SendPacket(reply);
 }

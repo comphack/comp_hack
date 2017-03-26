@@ -174,7 +174,7 @@ void ZoneManager::SendPopulateZoneData(const std::shared_ptr<ChannelClientConnec
         reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_NPC_DATA);
         reply.WriteS32Little(npcState->GetEntityID());
         reply.WriteU32Little(npc->GetID());
-        reply.WriteS32Little((int32_t)zoneData->GetSet());
+        reply.WriteS32Little((int32_t)zone->GetID());
         reply.WriteS32Little((int32_t)zoneData->GetID());
         reply.WriteFloat(npcState->GetOriginX());
         reply.WriteFloat(npcState->GetOriginY());
@@ -194,7 +194,7 @@ void ZoneManager::SendPopulateZoneData(const std::shared_ptr<ChannelClientConnec
         reply.WriteS32Little(objState->GetEntityID());
         reply.WriteU32Little(obj->GetID());
         reply.WriteU8(obj->GetState());
-        reply.WriteS32Little((int32_t)zoneData->GetSet());
+        reply.WriteS32Little((int32_t)zone->GetID());
         reply.WriteS32Little((int32_t)zoneData->GetID());
         reply.WriteFloat(objState->GetOriginX());
         reply.WriteFloat(objState->GetOriginY());

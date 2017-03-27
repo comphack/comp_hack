@@ -367,15 +367,10 @@ bool ChatManager::GMCommand_Position(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
 {
-    if(!args.empty())
-    {
-        LOG_DEBUG("Argument list is not empty.\n");
-
-        return false;
-    }
-
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
+    auto eState = state->GetEntityState(cState->GetEntityID());
+    std::list<libcomp::String> argsCopy = args;
 
     if(!cState)
     {
@@ -384,13 +379,43 @@ bool ChatManager::GMCommand_Position(const std::shared_ptr<
         return false;
     }
 
-    auto eState = state->GetEntityState(cState->GetEntityID());
-
     if(!eState)
     {
         LOG_DEBUG("Bad entity state.\n");
 
         return false;
+    }
+
+    if (!args.empty() && args.size() == 2)
+    {
+        //LOG_DEBUG("Argument list is not empty.\n");
+        uint32_t DestX;
+        uint32_t DestY;
+        int ratePerSec = 100;
+        GetIntegerArg<uint32_t>(DestX, argsCopy);
+        GetIntegerArg<uint32_t>(DestY, argsCopy);
+        eState->SetDestinationX(DestX);
+        eState->SetDestinationY(DestY);
+
+        libcomp::Packet reply;
+        reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_MOVE);
+        reply.WriteS32Little(cState->GetEntityID());
+        reply.WriteFloat(eState->GetDestinationX());
+        reply.WriteFloat(eState->GetDestinationY());
+        reply.WriteFloat(eState->GetOriginX());
+        reply.WriteFloat(eState->GetOriginY());
+        reply.WriteFloat(ratePerSec);
+        client->SendPacket(reply);
+
+        return SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(
+            "Destination Set: (%1, %2)").Arg(eState->GetDestinationX()).Arg(
+                eState->GetDestinationY()));
+    }
+
+    if(!args.empty() && args.size() == 1)
+    {
+        return SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(
+            "@pos requires zero or 2 args"));
     }
 
     /// @todo We may need to use the time to calculate where between the origin

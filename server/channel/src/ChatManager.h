@@ -41,11 +41,12 @@ class ChannelServer;
  */
 enum ChatType_t : uint16_t
 {
-    CHAT_SELF = 0,
+   
     CHAT_PARTY = 41,
-	CHAT_SHOUT = 44,
-	CHAT_SAY = 45,
+    CHAT_SHOUT = 44,
+    CHAT_SAY = 45,
 //    CHAT_KLAN = ???,
+    CHAT_SELF = 47,
 //    CHAT_TEAM = ???,
 //    CHAT_TELL = ???,
 };

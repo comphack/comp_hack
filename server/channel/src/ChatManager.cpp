@@ -369,6 +369,7 @@ bool ChatManager::GMCommand_Position(const std::shared_ptr<
 {
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
+    auto dState = state->GetDemonState();
     auto server = mServer.lock();
     auto zoneManager = server->GetZoneManager();
     std::list<libcomp::String> argsCopy = args;
@@ -401,8 +402,14 @@ bool ChatManager::GMCommand_Position(const std::shared_ptr<
         reply.WriteFloat(cState->GetOriginX());
         reply.WriteFloat(cState->GetOriginY());
         reply.WriteFloat(ratePerSec);
+        uint32_t resetPos = reply.Size();
         zoneManager->BroadcastPacket(client, reply, true);
-
+        if (dState->GetEntity())
+        {
+            reply.Seek(resetPos);
+            reply.WriteS32Little(dState->GetEntityID());
+            zoneManager->BroadcastPacket(client, reply, true);
+        }
         return SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(
             "Destination Set: (%1, %2)").Arg(cState->GetDestinationX()).Arg(
                 cState->GetDestinationY()));

@@ -369,19 +369,11 @@ bool ChatManager::GMCommand_Position(const std::shared_ptr<
 {
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
-    auto eState = state->GetEntityState(cState->GetEntityID());
     std::list<libcomp::String> argsCopy = args;
 
     if(!cState)
     {
         LOG_DEBUG("Bad character state.\n");
-
-        return false;
-    }
-
-    if(!eState)
-    {
-        LOG_DEBUG("Bad entity state.\n");
 
         return false;
     }
@@ -394,35 +386,35 @@ bool ChatManager::GMCommand_Position(const std::shared_ptr<
         int ratePerSec = 100;
         GetIntegerArg<uint32_t>(DestX, argsCopy);
         GetIntegerArg<uint32_t>(DestY, argsCopy);
-        eState->SetDestinationX(DestX);
-        eState->SetDestinationY(DestY);
+        cState->SetDestinationX(DestX);
+        cState->SetDestinationY(DestY);
 
         libcomp::Packet reply;
         reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_MOVE);
         reply.WriteS32Little(cState->GetEntityID());
-        reply.WriteFloat(eState->GetDestinationX());
-        reply.WriteFloat(eState->GetDestinationY());
-        reply.WriteFloat(eState->GetOriginX());
-        reply.WriteFloat(eState->GetOriginY());
+        reply.WriteFloat(cState->GetDestinationX());
+        reply.WriteFloat(cState->GetDestinationY());
+        reply.WriteFloat(cState->GetOriginX());
+        reply.WriteFloat(cState->GetOriginY());
         reply.WriteFloat(ratePerSec);
         client->SendPacket(reply);
 
         return SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(
-            "Destination Set: (%1, %2)").Arg(eState->GetDestinationX()).Arg(
-                eState->GetDestinationY()));
+            "Destination Set: (%1, %2)").Arg(cState->GetDestinationX()).Arg(
+                cState->GetDestinationY()));
     }
 
     if(!args.empty() && args.size() == 1)
     {
         return SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(
-            "@pos requires zero or 2 args"));
+            "@pos requires zero or two args"));
     }
 
     /// @todo We may need to use the time to calculate where between the origin
     /// and destination the character is.
     return SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(
-        "Position: (%1, %2)").Arg(eState->GetDestinationX()).Arg(
-        eState->GetDestinationY()));
+        "Position: (%1, %2)").Arg(cState->GetDestinationX()).Arg(
+        cState->GetDestinationY()));
 }
 
 bool ChatManager::GMCommand_XP(const std::shared_ptr<

@@ -396,7 +396,7 @@ bool ChatManager::GMCommand_Position(const std::shared_ptr<
         
         libcomp::Packet reply;
         reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_MOVE);
-        uint32_t resetPos = reply.Size();
+        //uint32_t resetPos = reply.Size();
         reply.WriteS32Little(cState->GetEntityID());
         reply.WriteFloat(destX);
         reply.WriteFloat(destY);
@@ -405,7 +405,7 @@ bool ChatManager::GMCommand_Position(const std::shared_ptr<
         reply.WriteFloat(ratePerSec);
         reply.WriteBlank(8);
         zoneManager->BroadcastPacket(client, reply, true);
-       /* @todo: Fix demon code.
+       /* ToDo: Fix demon code.
         if (dState->GetEntity())
         {
             dState->SetDestinationX(destX);
@@ -429,6 +429,8 @@ bool ChatManager::GMCommand_Position(const std::shared_ptr<
             "@pos requires zero or two args"));
     }
 
+    /// @todo We may need to use the time to calculate where between the origin
+    /// and destination the character is.
     return SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(
         "Position: (%1, %2)").Arg(cState->GetDestinationX()).Arg(
         cState->GetDestinationY()));

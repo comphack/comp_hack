@@ -388,6 +388,8 @@ bool ChatManager::GMCommand_Position(const std::shared_ptr<
         GetIntegerArg<uint32_t>(DestY, argsCopy);
         cState->SetDestinationX(DestX);
         cState->SetDestinationY(DestY);
+        cState->SetOriginX(DestX);
+        cState->SetOriginY(DestY);
 
         libcomp::Packet reply;
         reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_MOVE);

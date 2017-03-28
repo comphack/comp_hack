@@ -41,11 +41,12 @@ class ChannelServer;
  */
 enum ChatType_t : uint16_t
 {
-    CHAT_SELF = 0,
+   
     CHAT_PARTY = 41,
-	CHAT_SHOUT = 44,
-	CHAT_SAY = 45,
+    CHAT_SHOUT = 44,
+    CHAT_SAY = 45,
 //    CHAT_KLAN = ???,
+    CHAT_SELF = 47,
 //    CHAT_TEAM = ???,
 //    CHAT_TELL = ???,
 };
@@ -219,6 +220,32 @@ private:
         bool ok = true;
         outVal = args.front().ToInteger<T>(&ok);
         if(ok)
+        {
+            args.pop_front();
+        }
+
+        return ok;
+    }
+
+    /*
+    * Get next argument from the supplied argument list as a float type.
+     * @param outVal Output variable to return the float argument to
+     * @param args List of arguments read and update
+     * @return true if there was an argument in the list that was an
+     *  float, else false
+    */
+
+    template<typename T>
+    bool GetFloatArg(T& outVal, std::list<libcomp::String>& args) const
+    {
+        if (args.size() == 0)
+        {
+            return false;
+        }
+
+        bool ok = true;
+        outVal = args.front().ToDecimal<T>(&ok);
+        if (ok)
         {
             args.pop_front();
         }

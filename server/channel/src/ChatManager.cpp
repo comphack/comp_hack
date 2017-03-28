@@ -393,24 +393,31 @@ bool ChatManager::GMCommand_Position(const std::shared_ptr<
         cState->SetDestinationY(destY);
         cState->SetOriginX(destX);
         cState->SetOriginY(destY);
-
+        
         libcomp::Packet reply;
         reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_MOVE);
         uint32_t resetPos = reply.Size();
         reply.WriteS32Little(cState->GetEntityID());
-        reply.WriteFloat(cState->GetDestinationX());
-        reply.WriteFloat(cState->GetDestinationY());
-        reply.WriteFloat(cState->GetOriginX());
-        reply.WriteFloat(cState->GetOriginY());
+        reply.WriteFloat(destX);
+        reply.WriteFloat(destY);
+        reply.WriteFloat(destX);
+        reply.WriteFloat(destY);
         reply.WriteFloat(ratePerSec);
-        
+        reply.WriteBlank(8);
         zoneManager->BroadcastPacket(client, reply, true);
+       /* ToDo: Fix demon code.
         if (dState->GetEntity())
         {
+            dState->SetDestinationX(destX);
+            dState->SetDestinationY(destY);
+            dState->SetOriginX(destX);
+            dState->SetOriginY(destY);
+
             reply.Seek(resetPos);
             reply.WriteS32Little(dState->GetEntityID());
             zoneManager->BroadcastPacket(client, reply, true);
-        }
+        } */
+        
         return SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(
             "Destination Set: (%1, %2)").Arg(cState->GetDestinationX()).Arg(
                 cState->GetDestinationY()));

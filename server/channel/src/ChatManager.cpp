@@ -383,7 +383,7 @@ bool ChatManager::GMCommand_Position(const std::shared_ptr<
         //LOG_DEBUG("Argument list is not empty.\n");
         uint32_t DestX;
         uint32_t DestY;
-        int ratePerSec = 100;
+       
         GetIntegerArg<uint32_t>(DestX, argsCopy);
         GetIntegerArg<uint32_t>(DestY, argsCopy);
         cState->SetDestinationX(DestX);
@@ -396,7 +396,6 @@ bool ChatManager::GMCommand_Position(const std::shared_ptr<
         reply.WriteFloat(cState->GetDestinationY());
         reply.WriteFloat(cState->GetOriginX());
         reply.WriteFloat(cState->GetOriginY());
-        reply.WriteFloat(ratePerSec);
         client->SendPacket(reply);
 
         return SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(

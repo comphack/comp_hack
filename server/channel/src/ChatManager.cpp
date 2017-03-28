@@ -396,7 +396,7 @@ bool ChatManager::GMCommand_Position(const std::shared_ptr<
         
         libcomp::Packet reply;
         reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_MOVE);
-        uint32_t resetPos = reply.Size();
+        //uint32_t resetPos = reply.Size();
         reply.WriteS32Little(cState->GetEntityID());
         reply.WriteFloat(destX);
         reply.WriteFloat(destY);

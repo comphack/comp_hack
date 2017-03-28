@@ -228,15 +228,15 @@ private:
     }
 
     /*
-    * Get next argument from the supplied argument list as a float type.
-     * @param outVal Output variable to return the float argument to
+     * Get next argument from the supplied argument list as a float/long type.
+     * @param outVal Output variable to return the argument to
      * @param args List of arguments read and update
      * @return true if there was an argument in the list that was an
-     *  float, else false
-    */
+     *  float/long, else false
+     */
 
     template<typename T>
-    bool GetFloatArg(T& outVal, std::list<libcomp::String>& args) const
+    bool GetDecimalArg(T& outVal, std::list<libcomp::String>& args) const
     {
         if (args.size() == 0)
         {

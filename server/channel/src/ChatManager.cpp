@@ -372,6 +372,13 @@ bool ChatManager::GMCommand_Position(const std::shared_ptr<
     auto dState = state->GetDemonState();
     auto server = mServer.lock();
     auto zoneManager = server->GetZoneManager();
+    auto zoneConnections = server->GetZoneManager()->GetZoneConnections(client, false);
+    ServerTime stopTime;
+    ServerTime startTime;
+    startTime = stopTime = server->GetServerTime();
+    ClientTime start = client->GetClientState()->ToClientTime(startTime);
+    ClientTime stop = client->GetClientState()->ToClientTime(stopTime);
+
     std::list<libcomp::String> argsCopy = args;
 
     if(!cState)
@@ -387,12 +394,14 @@ bool ChatManager::GMCommand_Position(const std::shared_ptr<
         float destX = 0.0;
         float destY = 0.0;
         float ratePerSec = 0.0; //hardcoded for testing purposes
-        GetFloatArg<float>(destX, argsCopy);
-        GetFloatArg<float>(destY, argsCopy);
-        cState->SetDestinationX(destX);
-        cState->SetDestinationY(destY);
+        GetDecimalArg<float>(destX, argsCopy);
+        GetDecimalArg<float>(destY, argsCopy);
         cState->SetOriginX(destX);
         cState->SetOriginY(destY);
+        cState->SetOriginTicks(startTime);
+        cState->SetDestinationX(destX);
+        cState->SetDestinationY(destY);
+        cState->SetDestinationTicks(stopTime);
         
         libcomp::Packet reply;
         reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_MOVE);
@@ -403,27 +412,30 @@ bool ChatManager::GMCommand_Position(const std::shared_ptr<
         reply.WriteFloat(destX);
         reply.WriteFloat(destY);
         reply.WriteFloat(ratePerSec);
-        reply.WriteBlank(8);
+        reply.WriteFloat(start);
+        reply.WriteFloat(stop);
         zoneManager->BroadcastPacket(client, reply, true);
-       /* ToDo: Fix demon code.
+        /*ToDo: Fix demon code.
         if (dState->GetEntity())
         {
-            dState->SetDestinationX(destX);
-            dState->SetDestinationY(destY);
             dState->SetOriginX(destX);
             dState->SetOriginY(destY);
+            dState->SetOriginTicks(startTime);
+            dState->SetDestinationX(destX);
+            dState->SetDestinationY(destY);
+            dState->SetDestinationTicks(stopTime);
 
             reply.Seek(resetPos);
             reply.WriteS32Little(dState->GetEntityID());
             zoneManager->BroadcastPacket(client, reply, true);
-        } */
+        }*/
         
         return SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(
             "Destination Set: (%1, %2)").Arg(cState->GetDestinationX()).Arg(
                 cState->GetDestinationY()));
     }
 
-    if(!args.empty() && args.size() == 1)
+    if(!args.empty() && args.size() != 2)
     {
         return SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(
             "@pos requires zero or two args"));

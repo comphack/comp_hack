@@ -403,7 +403,7 @@ bool ChatManager::GMCommand_Position(const std::shared_ptr<
         reply.WriteFloat(cState->GetOriginX());
         reply.WriteFloat(cState->GetOriginY());
         reply.WriteFloat(ratePerSec);
-        uint32_t resetPos = reply.Size();
+        
         zoneManager->BroadcastPacket(client, reply, true);
         if (dState->GetEntity())
         {

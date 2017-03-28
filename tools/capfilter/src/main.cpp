@@ -583,6 +583,7 @@ bool ZoneFilter::ProcessCommand(const libcomp::String& capturePath,
         float originY = packet.ReadFloat();
         float originRotation = packet.ReadFloat();
         (void)entityId;
+        (void)zoneInstance;
 
         auto it = mZones.find(zoneId);
 
@@ -650,6 +651,7 @@ bool ZoneFilter::ProcessCommand(const libcomp::String& capturePath,
         float originY = packet.ReadFloat();
         float originRotation = packet.ReadFloat();
         (void)entityId;
+        (void)zoneInstance;
 
         auto it = mZones.find(zoneId);
 

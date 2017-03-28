@@ -58,19 +58,6 @@
 #include <ServerZone.h>
 #include <StatusEffect.h>
 
-const uint64_t LevelXPRequirements[] = {
-    0ULL, 40ULL, 180ULL, 480ULL, 1100ULL, 2400ULL, 4120ULL, 6220ULL, 9850ULL,   //1-9
-    14690ULL, 20080ULL, 25580ULL, 33180ULL, 41830ULL, 50750ULL, 63040ULL, 79130ULL, 99520ULL, 129780ULL,    //10-19
-    159920ULL, 189800ULL, 222600ULL, 272800ULL, 354200ULL, 470400ULL, 625000ULL, 821600ULL, 1063800ULL, 1355200ULL, //20-29
-    1699400ULL, 840000ULL, 899000ULL, 1024000ULL, 1221000ULL, 1496000ULL, 1855000ULL, 2304000ULL, 2849000ULL, 3496000ULL,   //30-39
-    4251000ULL, 2160000ULL, 2255000ULL, 2436000ULL, 2709000ULL, 3080000ULL, 3452000ULL, 4127000ULL, 5072000ULL, 6241000ULL, //40-49
-    7640000ULL, 4115000ULL, 4401000ULL, 4803000ULL, 5353000ULL, 6015000ULL, 6892000ULL, 7900000ULL, 9308000ULL, 11220000ULL,    //50-59
-    14057000ULL, 8122000ULL, 8538000ULL, 9247000ULL, 10101000ULL, 11203000ULL, 12400000ULL, 14382000ULL, 17194000ULL, 20444000ULL,  //60-69
-    25600000ULL, 21400314ULL, 23239696ULL, 24691100ULL, 27213000ULL, 31415926ULL, 37564000ULL, 46490000ULL, 55500000ULL, 66600000ULL,   //70-79
-    78783200ULL, 76300000ULL, 78364000ULL, 81310000ULL, 85100000ULL, 89290000ULL, 97400000ULL, 110050000ULL, 162000000ULL, 264000000ULL,    //80-89
-    354000000ULL, 696409989ULL, 1392819977ULL, 2089229966ULL, 2100000000ULL, 2110000000ULL, 10477689898ULL, 41910759592ULL, 125732278776ULL, 565795254492ULL,   //90-99
-};
-
 using namespace channel;
 
 CharacterManager::CharacterManager(const std::weak_ptr<ChannelServer>& server)
@@ -1380,9 +1367,9 @@ void CharacterManager::ExperienceGain(const std::shared_ptr<
     }
 
     int64_t xpDelta = stats->GetXP() + (int64_t)xpGain;
-    while(level < 99 && xpDelta >= (int64_t)LevelXPRequirements[level])
+    while(level < 99 && xpDelta >= (int64_t)libcomp::LEVEL_XP_REQUIREMENTS[level])
     {
-        xpDelta = xpDelta - (int64_t)LevelXPRequirements[level];
+        xpDelta = xpDelta - (int64_t)libcomp::LEVEL_XP_REQUIREMENTS[level];
 
         level++;
 
@@ -1475,11 +1462,11 @@ void CharacterManager::LevelUp(const std::shared_ptr<
     {
         if(xpGain == 0)
         {
-            xpGain += LevelXPRequirements[i] - (uint64_t)stats->GetXP();
+            xpGain += libcomp::LEVEL_XP_REQUIREMENTS[i] - (uint64_t)stats->GetXP();
         }
         else
         {
-            xpGain += LevelXPRequirements[i];
+            xpGain += libcomp::LEVEL_XP_REQUIREMENTS[i];
         }
     }
 

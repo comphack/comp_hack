@@ -381,8 +381,8 @@ bool ChatManager::GMCommand_Position(const std::shared_ptr<
     if (!args.empty() && args.size() == 2)
     {
         //LOG_DEBUG("Argument list is not empty.\n");
-        float DestX;
-        float DestY;
+        float DestX = 0.0;
+        float DestY = 0.0;
         float ratePerSec = 0.0; //hardcoded for testing purposes
         GetFloatArg<float>(DestX, argsCopy);
         GetFloatArg<float>(DestY, argsCopy);

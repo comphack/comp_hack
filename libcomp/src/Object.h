@@ -162,10 +162,13 @@ public:
      * Save the object's data members to an XML file.
      * @param doc XML document to save the definition to
      * @param root Root XML node to save the definition to
+     * @param append true if the root node should be appended to,
+     *  false if an object node should be added to the root then
+     *  appended to
      * @return true if saving was successful, false if it was not
      */
     virtual bool Save(tinyxml2::XMLDocument& doc,
-        tinyxml2::XMLElement& root) const = 0;
+        tinyxml2::XMLElement& root, bool append = false) const = 0;
 
     /**
      * Load the object's data members from a data packet.

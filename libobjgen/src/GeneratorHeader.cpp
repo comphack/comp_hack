@@ -106,7 +106,7 @@ std::string GeneratorHeader::GenerateClass(const MetaObject& obj)
         << std::endl << std::endl;
     ss << Tab() << "virtual bool Save("
         "tinyxml2::XMLDocument& doc, " << std::endl;
-    ss << Tab(2) << "tinyxml2::XMLElement& root) const;"
+    ss << Tab(2) << "tinyxml2::XMLElement& root, bool append = false) const;"
         << std::endl << std::endl;
 
     ss << Tab() << "virtual uint16_t GetDynamicSizeCount() const;" << std::endl;

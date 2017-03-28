@@ -363,14 +363,28 @@ std::string GeneratorSource::Generate(const MetaObject& obj)
     // Save (XML)
     ss << "bool " << obj.GetName()
         << "::Save(tinyxml2::XMLDocument& doc, " << std::endl;
-    ss << Tab() << "tinyxml2::XMLElement& root) const" << std::endl;
+    ss << Tab() << "tinyxml2::XMLElement& root, bool append) const" << std::endl;
     ss << "{" << std::endl;
     ss << Tab() << "bool status = true;" << std::endl;
     ss << std::endl;
-    ss << Tab() << "tinyxml2::XMLElement *pElement = doc.NewElement("
-        "\"object\");" << std::endl;
-    ss << Tab() << "pElement->SetAttribute(\"name\", " << Escape(obj.GetName())
+    ss << Tab() << "tinyxml2::XMLElement *pElement = nullptr;" << std::endl;
+    ss << Tab() << "if(append)" << std::endl;
+    ss << Tab() << "{" << std::endl;
+    ss << Tab(2) << "pElement = &root;" << std::endl;
+    ss << Tab() << "}" << std::endl;
+    ss << Tab() << "else" << std::endl;
+    ss << Tab() << "{" << std::endl;
+    ss << Tab(2) << "pElement = doc.NewElement(\"object\");" << std::endl;
+    ss << Tab(2) << "pElement->SetAttribute(\"name\", " << Escape(obj.GetName())
         << ");" << std::endl;
+    ss << Tab() << "}" << std::endl;
+
+    // Save the base object fields first
+    if(!baseObject.empty())
+    {
+        ss << std::endl << Tab() << "status &= " << baseObject << "::Save(doc, *pElement, true);"
+            << std::endl;
+    }
 
     for(auto it = obj.VariablesBegin(); it != obj.VariablesEnd(); ++it)
     {
@@ -383,22 +397,18 @@ std::string GeneratorSource::Generate(const MetaObject& obj)
 
         if(!code.empty())
         {
-            ss << std::endl;
             ss << code;
+            ss << std::endl;
         }
-    }
-    ss << std::endl;
-
-    if(!baseObject.empty())
-    {
-        ss << std::endl;
-        ss <<  Tab() << "status &= " << baseObject << "::Save(doc, root);" << std::endl;
     }
 
     ss << std::endl;
     ss << Tab() << "if(status)" << std::endl;
     ss << Tab() << "{" << std::endl;
-    ss << Tab(2) << "root.InsertEndChild(pElement);" << std::endl;
+    ss << Tab(2) << "if(!append)" << std::endl;
+    ss << Tab(2) << "{" << std::endl;
+    ss << Tab(3) << "root.InsertEndChild(pElement);" << std::endl;
+    ss << Tab(2) << "}" << std::endl;
     ss << Tab() << "}" << std::endl;
     ss << Tab() << "else" << std::endl;
     ss << Tab() << "{" << std::endl;

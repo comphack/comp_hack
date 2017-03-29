@@ -189,7 +189,7 @@ void ZoneManager::SendPopulateZoneData(const std::shared_ptr<ChannelClientConnec
         ShowEntity(client, npcState->GetEntityID(), true);
     }
 
-    for(auto objState : zone->GetObjects())
+    for(auto objState : zone->GetServerObjects())
     {
         auto obj = objState->GetEntity();
 

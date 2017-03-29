@@ -77,7 +77,7 @@ bool Parsers::ObjectInteraction::Parse(libcomp::ManagerPacket *pPacketManager,
     // Look for an object if there is no NPC by that name.
     if(!entity)
     {
-        entity = zone->GetObject(entityID);
+        entity = zone->GetServerObject(entityID);
     }
 
     /// @todo Implement better checks? In range of entity?

@@ -374,7 +374,7 @@ bool MetaObject::Save(tinyxml2::XMLDocument& doc,
 
     if(IsInheritedConstruction())
     {
-        pObjectElement->SetAttribute("persistent", "true");
+        pObjectElement->SetAttribute("inherited-construction", "true");
     }
 
     if(IsScriptEnabled())

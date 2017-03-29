@@ -6,17 +6,21 @@
         <member name="Port">18666</member>
         <member name="DatabaseType">CASSANDRA</member>    <!-- CASSANDRA/SQLITE3 -->
         <member name="SQLite3Config">
-            <member name="IP">127.0.0.1</member>
-            <member name="DatabaseName">world</member>
-            <member name="DefaultDatabaseName">comp_hack</member>
-            <!--<member name="FileDirectory"/>-->
+            <object>
+                <member name="IP">127.0.0.1</member>
+                <member name="DatabaseName">world</member>
+                <member name="DefaultDatabaseName">comp_hack</member>
+                <!--<member name="FileDirectory"/>-->
+            </object>
         </member>
         <member name="CassandraConfig">
-            <member name="IP">127.0.0.1</member>
-            <member name="Keyspace">world</member>
-            <member name="DefaultKeyspace">comp_hack</member>
-            <!--<member name="Username"/>-->
-            <!--<member name="Password"/>-->
+            <object>
+                <member name="IP">127.0.0.1</member>
+                <member name="Keyspace">world</member>
+                <member name="DefaultKeyspace">comp_hack</member>
+                <!--<member name="Username"/>-->
+                <!--<member name="Password"/>-->
+            </object>
         </member>
         <member name="MultithreadMode">true</member>
         <member name="DataStore">

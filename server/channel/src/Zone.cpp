@@ -86,18 +86,15 @@ std::unordered_map<int32_t,
 
 const std::shared_ptr<ActiveEntityState> Zone::GetActiveEntityState(int32_t entityID)
 {
-    std::lock_guard<std::mutex> lock(mLock);
-    auto iter = mAllEntities.find(entityID);
-    return iter != mAllEntities.end() ?
-        std::dynamic_pointer_cast<ActiveEntityState>(iter->second) : nullptr;
+    return std::dynamic_pointer_cast<ActiveEntityState>(GetEntity(entityID));
 }
 
-const std::list<std::shared_ptr<NPCState>> Zone::GetNPCs()
+const std::list<std::shared_ptr<NPCState>> Zone::GetNPCs() const
 {
     return mNPCs;
 }
 
-const std::list<std::shared_ptr<ServerObjectState>> Zone::GetObjects()
+const std::list<std::shared_ptr<ServerObjectState>> Zone::GetServerObjects() const
 {
     return mObjects;
 }
@@ -119,8 +116,9 @@ void Zone::UnregisterEntityState(int32_t entityID)
     mAllEntities.erase(entityID);
 }
 
-std::shared_ptr<objects::EntityStateObject> Zone::GetEntity(int32_t id) const
+std::shared_ptr<objects::EntityStateObject> Zone::GetEntity(int32_t id)
 {
+    std::lock_guard<std::mutex> lock(mLock);
     auto it = mAllEntities.find(id);
 
     if(mAllEntities.end() != it)
@@ -131,26 +129,12 @@ std::shared_ptr<objects::EntityStateObject> Zone::GetEntity(int32_t id) const
     return {};
 }
 
-std::shared_ptr<NPCState> Zone::GetNPC(int32_t id) const
+std::shared_ptr<NPCState> Zone::GetNPC(int32_t id)
 {
-    auto it = mAllEntities.find(id);
-
-    if(mAllEntities.end() != it)
-    {
-        return std::dynamic_pointer_cast<NPCState>(it->second);
-    }
-
-    return {};
+    return std::dynamic_pointer_cast<NPCState>(GetEntity(id));
 }
 
-std::shared_ptr<ServerObjectState> Zone::GetObject(int32_t id) const
+std::shared_ptr<ServerObjectState> Zone::GetServerObject(int32_t id)
 {
-    auto it = mAllEntities.find(id);
-
-    if(mAllEntities.end() != it)
-    {
-        return std::dynamic_pointer_cast<ServerObjectState>(it->second);
-    }
-
-    return {};
+    return std::dynamic_pointer_cast<ServerObjectState>(GetEntity(id));
 }

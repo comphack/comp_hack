@@ -117,33 +117,33 @@ public:
      * @param id Instance ID of the entity.
      * @return Pointer to the entity instance.
      */
-    std::shared_ptr<objects::EntityStateObject> GetEntity(int32_t id) const;
+    std::shared_ptr<objects::EntityStateObject> GetEntity(int32_t id);
 
     /**
      * Get an NPC instance by it's ID.
      * @param id Instance ID of the NPC.
      * @return Pointer to the NPC instance.
      */
-    std::shared_ptr<NPCState> GetNPC(int32_t id) const;
+    std::shared_ptr<NPCState> GetNPC(int32_t id);
 
     /**
      * Get all NPC instances in the zone
      * @return List of all NPC instances in the zone
      */
-    const std::list<std::shared_ptr<NPCState>> GetNPCs();
+    const std::list<std::shared_ptr<NPCState>> GetNPCs() const;
 
     /**
      * Get an object instance by it's ID.
      * @param id Instance ID of the object.
      * @return Pointer to the object instance.
      */
-    std::shared_ptr<ServerObjectState> GetObject(int32_t id) const;
+    std::shared_ptr<ServerObjectState> GetServerObject(int32_t id);
 
     /**
      * Get all object instances in the zone
      * @return List of all object instances in the zone
      */
-    const std::list<std::shared_ptr<ServerObjectState>> GetObjects();
+    const std::list<std::shared_ptr<ServerObjectState>> GetServerObjects() const;
 
     /**
      * Get the definition of the zone

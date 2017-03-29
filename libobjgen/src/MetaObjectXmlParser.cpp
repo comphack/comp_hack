@@ -78,6 +78,8 @@ bool MetaObjectXmlParser::LoadTypeInformation(const tinyxml2::XMLDocument& doc,
         const char *szNamespace = root.Attribute("namespace");
         const char *szBaseObject = root.Attribute("baseobject");
         const char *szPersistent = root.Attribute("persistent");
+        const char *szInheritedConstruction = root.Attribute(
+            "inherited-construction");
         const char *szScriptEnabled = root.Attribute("scriptenabled");
 
         if(nullptr != szName && mObject->SetName(szName))
@@ -95,6 +97,12 @@ bool MetaObjectXmlParser::LoadTypeInformation(const tinyxml2::XMLDocument& doc,
             else
             {
                 mObject->mPersistent = nullptr == szBaseObject;
+            }
+
+            if(nullptr != szInheritedConstruction)
+            {
+                mObject->mInheritedConstruction = Generator::GetXmlAttributeBoolean(
+                    szInheritedConstruction);
             }
 
             const char *szLocation = root.Attribute("location");
@@ -905,4 +913,34 @@ std::unordered_map<std::string,
     std::shared_ptr<MetaObject>> MetaObjectXmlParser::GetKnownObjects() const
 {
     return mKnownObjects;
+}
+
+bool MetaObjectXmlParser::FinalizeClassHierarchy()
+{
+    for(auto objPair : mKnownObjects)
+    {
+        auto obj = objPair.second;
+
+        if(!obj->GetBaseObject().empty())
+        {
+            auto baseName = obj->GetBaseObject();
+            auto it = mKnownObjects.find(Generator::GetObjectName(baseName));
+
+            if(mKnownObjects.end() == it)
+            {
+                std::stringstream ss;
+                ss << "Failed to find base object " << baseName
+                    << ".";
+
+                mError = ss.str();
+
+                return false;
+            }
+
+            auto baseObj = it->second;
+            baseObj->AddInheritedObject(obj);
+        }
+    }
+
+    return true;
 }

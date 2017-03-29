@@ -105,4 +105,4 @@ script:
   - bin/comp_channel &
   - nodetool status
   - cqlsh -e "SHOW HOST; SHOW VERSION;"
-  - cmake --build . --target Experimental
+  - cmake --build . --target test

@@ -12,6 +12,8 @@
     <!-- common classes -->
     <include path="account.xml"/>
     <include path="accountlogin.xml"/>
+    <include path="action.xml"/>
+    <include path="action_zonechange.xml"/>
     <include path="character.xml"/>
     <include path="demon.xml"/>
     <include path="item.xml"/>
@@ -29,6 +31,7 @@
 
     <!-- BinaryData Files -->
     <include path="binarydata/citemdata.xml"/>
+    <include path="binarydata/czonerelationdata.xml"/>
     <include path="binarydata/devildata.xml"/>
     <include path="binarydata/devillvupratedata.xml"/>
     <include path="binarydata/dynamicmapdata.xml"/>
@@ -38,5 +41,6 @@
     <include path="binarydata/onpcdata.xml"/>
     <include path="binarydata/shared.xml"/>
     <include path="binarydata/skilldata.xml"/>
+    <include path="binarydata/spotdata.xml"/>
     <include path="binarydata/zonedata.xml"/>
 </objgen>

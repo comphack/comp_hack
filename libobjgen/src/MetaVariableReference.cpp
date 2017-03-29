@@ -453,6 +453,7 @@ std::string MetaVariableReference::GetXmlLoadCode(const Generator& generator,
     replacements["@DOC@"] = doc;
     replacements["@NODE@"] = node;
     replacements["@CONSTRUCT_VALUE@"] = GetConstructValue();
+    replacements["@REF_TYPE@"] = GetReferenceType(true);
 
     if(mPersistentReference)
     {

@@ -56,6 +56,7 @@ PACKET_PARSER_DECL(PartnerDemonData);    // 0x005B
 PACKET_PARSER_DECL(COMPList);            // 0x005C
 PACKET_PARSER_DECL(COMPDemonData);       // 0x005E
 PACKET_PARSER_DECL(StopMovement);        // 0x006F
+PACKET_PARSER_DECL(SpotTriggered);       // 0x0071
 PACKET_PARSER_DECL(ItemBox);             // 0x0074
 PACKET_PARSER_DECL(ItemMove);            // 0x0076
 PACKET_PARSER_DECL(ItemDrop);            // 0x0077
@@ -66,6 +67,7 @@ PACKET_PARSER_DECL(DismissDemon);        // 0x009B
 PACKET_PARSER_DECL(HotbarData);          // 0x00A2
 PACKET_PARSER_DECL(HotbarSave);          // 0x00A4
 PACKET_PARSER_DECL(ValuableList);        // 0x00B8
+PACKET_PARSER_DECL(ObjectInteraction);   // 0x00BA
 PACKET_PARSER_DECL(Sync);                // 0x00F3
 PACKET_PARSER_DECL(Rotate);              // 0x00F8
 PACKET_PARSER_DECL(UnionFlag);           // 0x0100

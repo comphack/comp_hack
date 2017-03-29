@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="MiSpotData" persistent="false" scriptenabled="true">
+        <member type="u32" name="id" caps="true"/>
+        <member type="u8" name="unk1"/>
+        <member type="u8" name="unk2"/>
+        <member type="u16" name="unk3"/>
+        <member type="array" name="unk4" size="3">
+            <element type="f32"/>
+        </member>
+        <member type="f32" name="unk5"/>
+        <member type="array" name="unk6" size="2">
+            <element type="f32"/>
+        </member>
+        <member type="array" name="unk7" size="4">
+            <element type="f32"/>
+        </member>
+    </object>
+</objgen>

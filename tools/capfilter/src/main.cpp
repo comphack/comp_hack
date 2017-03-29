@@ -32,6 +32,9 @@
 #include <PacketCodes.h>
 
 // object Includes
+#include <ActionZoneChange.h>
+#include <MiCZoneRelationData.h>
+#include <MiRelationZoneIDData.h>
 #include <MiHNPCData.h>
 #include <MiHNPCBasicData.h>
 #include <MiONPCData.h>
@@ -40,6 +43,7 @@
 #include <ServerNPC.h>
 #include <ServerObject.h>
 #include <ServerZone.h>
+#include <ServerZoneSpot.h>
 
 // Qt Includes
 #include <QCoreApplication>
@@ -511,6 +515,11 @@ ZoneFilter::ZoneFilter(const char *szProgram,
     {
         std::cerr << "Failed to load zone data." << std::endl;
     }
+
+    if(!mDefinitions.LoadCZoneRelationData(&mStore))
+    {
+        std::cerr << "Failed to load zone relation data." << std::endl;
+    }
 }
 
 ZoneFilter::~ZoneFilter()
@@ -704,6 +713,61 @@ bool ZoneFilter::PostProcess()
     {
         auto zone = zonePair.second;
         auto zoneDefinition = mDefinitions.GetZoneData(zone->GetID());
+
+        // Add in information about connected zones.
+        auto zoneRelations = mDefinitions.GetZoneRelationData(zone->GetID());
+
+        if(zoneRelations)
+        {
+            uint32_t nextSpotID = 1;
+
+            for(size_t i = 0; i < zoneRelations->ConnectedZonesCount(); ++i)
+            {
+                auto connectedZone = zoneRelations->GetConnectedZones(i);
+
+                if(connectedZone && 0 != connectedZone->GetZoneID())
+                {
+                    // Find the one that points back here.
+                    auto otherZoneRelations = mDefinitions.GetZoneRelationData(
+                        connectedZone->GetZoneID());
+
+                    if(otherZoneRelations)
+                    {
+                        // Now find the original zone in the list.
+                        for(size_t j = 0; j <
+                            otherZoneRelations->ConnectedZonesCount(); ++j)
+                        {
+                            auto backConnection =
+                                otherZoneRelations->GetConnectedZones(j);
+
+                            if(backConnection->GetZoneID() == zone->GetID())
+                            {
+                                auto action = std::make_shared<
+                                    objects::ActionZoneChange>();
+                                action->SetActionType(
+                                    objects::Action::ActionType_t::ZONE_CHANGE);
+                                action->SetZoneID(connectedZone->GetZoneID());
+                                action->SetDestinationX(
+                                    backConnection->GetSourceX());
+                                action->SetDestinationY(
+                                    backConnection->GetSourceY());
+                                action->SetDestinationRotation(0.0f);
+
+                                auto spot = std::make_shared<
+                                    objects::ServerZoneSpot>();
+                                spot->SetID(nextSpotID++);
+                                spot->AppendActions(action);
+
+                                zone->SetSpots(spot->GetID(), spot);
+
+                                // We are done now.
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
 
         tinyxml2::XMLDocument doc;
 

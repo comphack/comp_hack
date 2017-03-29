@@ -65,6 +65,21 @@ private:
     std::shared_ptr<ClientState> mClientState;
 };
 
+static inline ClientState* state(
+    const std::shared_ptr<libcomp::TcpConnection>& connection)
+{
+    ClientState *pState = nullptr;
+
+    auto conn = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+
+    if(nullptr != conn)
+    {
+        pState = conn->GetClientState();
+    }
+
+    return pState;
+}
+
 } // namespace channel
 
 #endif // SERVER_CHANNEL_SRC_CHANNELCLIENTCONNECTION_H

@@ -44,7 +44,8 @@
 using namespace libobjgen;
 
 MetaObject::MetaObject()
-    : mNamespace("objects"), mScriptEnabled(false), mPersistent(false)
+    : mNamespace("objects"), mScriptEnabled(false), mPersistent(false),
+    mInheritedConstruction(false)
 {
 }
 
@@ -75,6 +76,16 @@ bool MetaObject::IsPersistent() const
 void MetaObject::SetPersistent(bool persistent)
 {
     mPersistent = persistent;
+}
+
+bool MetaObject::IsInheritedConstruction() const
+{
+    return mInheritedConstruction;
+}
+
+void MetaObject::SetInheritedConstruction(bool enabled)
+{
+    mInheritedConstruction = enabled;
 }
 
 bool MetaObject::IsScriptEnabled() const
@@ -290,6 +301,8 @@ bool MetaObject::Load(std::istream& stream)
         sizeof(mScriptEnabled));
     stream.read(reinterpret_cast<char*>(&mPersistent),
         sizeof(mPersistent));
+    stream.read(reinterpret_cast<char*>(&mInheritedConstruction),
+        sizeof(mInheritedConstruction));
     result &= Generator::LoadString(stream, mSourceLocation);
 
     VariableList vars;
@@ -326,6 +339,8 @@ bool MetaObject::Save(std::ostream& stream) const
         sizeof(mScriptEnabled));
     stream.write(reinterpret_cast<const char*>(&mPersistent),
         sizeof(mPersistent));
+    stream.write(reinterpret_cast<const char*>(&mInheritedConstruction),
+        sizeof(mInheritedConstruction));
     result &= Generator::SaveString(stream, mSourceLocation);
 
     return result && stream.good() &&
@@ -355,6 +370,11 @@ bool MetaObject::Save(tinyxml2::XMLDocument& doc,
     else if(!mSourceLocation.empty())
     {
         pObjectElement->SetAttribute("location", mSourceLocation.c_str());
+    }
+
+    if(IsInheritedConstruction())
+    {
+        pObjectElement->SetAttribute("persistent", "true");
     }
 
     if(IsScriptEnabled())
@@ -446,5 +466,33 @@ void MetaObject::GetReferences(std::shared_ptr<MetaVariable>& var,
             default:
                 break;
         }
+    }
+}
+
+void MetaObject::AddInheritedObject(const std::shared_ptr<MetaObject>& obj)
+{
+    if(mInheritedObjects.end() == std::find(mInheritedObjects.begin(),
+        mInheritedObjects.end(), obj))
+    {
+        mInheritedObjects.push_back(obj);
+    }
+}
+
+std::list<std::shared_ptr<MetaObject>> MetaObject::GetInheritedObjects() const
+{
+    return mInheritedObjects;
+}
+
+void MetaObject::GetAllInheritedObjects(
+    std::list<std::shared_ptr<MetaObject>>& objs) const
+{
+    // Add the inherited objects to the list.
+    objs.insert(objs.end(), mInheritedObjects.begin(),
+        mInheritedObjects.end());
+
+    // Now add all inherited object's inherited objects to the list as well.
+    for(auto obj : mInheritedObjects)
+    {
+        obj->GetAllInheritedObjects(objs);
     }
 }

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="MiRelationZoneIDData" persistent="false" scriptenabled="true">
+        <member type="u32" name="zoneID"/>
+        <member type="f32" name="sourceX"/>
+        <member type="f32" name="sourceY"/>
+    </object>
+    <object name="MiCZoneRelationData" persistent="false" scriptenabled="true">
+        <member type="u32" name="id" caps="true"/>
+        <member type="array" name="connectedZones" size="16">
+            <element type="MiRelationZoneIDData*"/>
+        </member>
+    </object>
+</objgen>

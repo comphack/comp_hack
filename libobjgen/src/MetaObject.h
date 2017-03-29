@@ -66,6 +66,9 @@ public:
     bool IsPersistent() const;
     void SetPersistent(bool persistent);
 
+    bool IsInheritedConstruction() const;
+    void SetInheritedConstruction(bool enabled);
+
     bool IsScriptEnabled() const;
     void SetScriptEnabled(bool scriptEnabled);
 
@@ -94,6 +97,11 @@ public:
         bool includeNamespace = false) const;
     std::list<std::shared_ptr<MetaVariable>> GetReferences() const;
 
+    void AddInheritedObject(const std::shared_ptr<MetaObject>& obj);
+    std::list<std::shared_ptr<MetaObject>> GetInheritedObjects() const;
+    void GetAllInheritedObjects(std::list<std::shared_ptr<
+        MetaObject>>& objs) const;
+
 private:
     void GetReferences(std::shared_ptr<MetaVariable>& var,
         std::list<std::shared_ptr<MetaVariable>>& references) const;
@@ -103,10 +111,13 @@ private:
     std::string mBaseObject;
     bool mScriptEnabled;
     bool mPersistent;
+    bool mInheritedConstruction;
     std::string mSourceLocation;
 
     VariableList mVariables;
     VariableMap mVariableMapping;
+
+    std::list<std::shared_ptr<MetaObject>> mInheritedObjects;
 };
 
 } // namespace libobjgen

@@ -58,6 +58,8 @@ public:
     bool SetReferenceFieldDynamicSizes(
         const std::list<std::shared_ptr<libobjgen::MetaVariableReference>>& refs);
 
+    bool FinalizeClassHierarchy();
+
     std::shared_ptr<MetaObject> GetCurrentObject() const;
     std::shared_ptr<MetaObject> GetKnownObject(const std::string& object) const;
     std::unordered_map<std::string,

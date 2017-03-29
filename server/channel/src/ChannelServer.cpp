@@ -43,9 +43,9 @@ using namespace channel;
 ChannelServer::ChannelServer(const char *szProgram, std::shared_ptr<
     objects::ServerConfig> config, const libcomp::String& configPath) :
     libcomp::BaseServer(szProgram, config, configPath), mAccountManager(0),
-    mCharacterManager(0), mChatManager(0), mSkillManager(0), mZoneManager(0),
-    mDefinitionManager(0), mServerDataManager(0), mMaxEntityID(0),
-    mMaxObjectID(0)
+    mActionManager(0), mCharacterManager(0), mChatManager(0), mSkillManager(0),
+    mZoneManager(0), mDefinitionManager(0), mServerDataManager(0),
+    mMaxEntityID(0), mMaxObjectID(0)
 {
 }
 
@@ -142,6 +142,8 @@ bool ChannelServer::Initialize()
         to_underlying(ClientToChannelPacketCode_t::PACKET_COMP_DEMON_DATA));
     clientPacketManager->AddParser<Parsers::StopMovement>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_STOP_MOVEMENT));
+    clientPacketManager->AddParser<Parsers::SpotTriggered>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_SPOT_TRIGGERED));
     clientPacketManager->AddParser<Parsers::ItemBox>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_ITEM_BOX));
     clientPacketManager->AddParser<Parsers::ItemMove>(
@@ -162,6 +164,8 @@ bool ChannelServer::Initialize()
         to_underlying(ClientToChannelPacketCode_t::PACKET_HOTBAR_SAVE));
     clientPacketManager->AddParser<Parsers::ValuableList>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_VALUABLE_LIST));
+    clientPacketManager->AddParser<Parsers::ObjectInteraction>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_OBJECT_INTERACTION));
     clientPacketManager->AddParser<Parsers::Sync>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_SYNC));
     clientPacketManager->AddParser<Parsers::Rotate>(
@@ -180,6 +184,7 @@ bool ChannelServer::Initialize()
 
     auto channelPtr = std::dynamic_pointer_cast<ChannelServer>(self);
     mAccountManager = new AccountManager(channelPtr);
+    mActionManager = new ActionManager(channelPtr);
     mCharacterManager = new CharacterManager(channelPtr);
     mChatManager = new ChatManager(channelPtr);
     mSkillManager = new SkillManager(channelPtr);
@@ -295,6 +300,11 @@ std::shared_ptr<ManagerConnection> ChannelServer::GetManagerConnection() const
 AccountManager* ChannelServer::GetAccountManager() const
 {
     return mAccountManager;
+}
+
+ActionManager* ChannelServer::GetActionManager() const
+{
+    return mActionManager;
 }
 
 CharacterManager* ChannelServer::GetCharacterManager() const

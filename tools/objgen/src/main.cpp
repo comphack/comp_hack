@@ -296,6 +296,13 @@ int main(int argc, char *argv[])
         }
     }
 
+    if(!gParser.FinalizeClassHierarchy())
+    {
+        std::cerr << "Error: " << gParser.GetError() << std::endl;
+
+        return EXIT_FAILURE;
+    }
+
     for(auto outputFile : outputFiles)
     {
         std::smatch match;

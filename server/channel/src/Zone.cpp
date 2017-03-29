@@ -118,3 +118,39 @@ void Zone::UnregisterEntityState(int32_t entityID)
     std::lock_guard<std::mutex> lock(mLock);
     mAllEntities.erase(entityID);
 }
+
+std::shared_ptr<objects::EntityStateObject> Zone::GetEntity(int32_t id) const
+{
+    auto it = mAllEntities.find(id);
+
+    if(mAllEntities.end() != it)
+    {
+        return it->second;
+    }
+
+    return {};
+}
+
+std::shared_ptr<NPCState> Zone::GetNPC(int32_t id) const
+{
+    auto it = mAllEntities.find(id);
+
+    if(mAllEntities.end() != it)
+    {
+        return std::dynamic_pointer_cast<NPCState>(it->second);
+    }
+
+    return {};
+}
+
+std::shared_ptr<ServerObjectState> Zone::GetObject(int32_t id) const
+{
+    auto it = mAllEntities.find(id);
+
+    if(mAllEntities.end() != it)
+    {
+        return std::dynamic_pointer_cast<ServerObjectState>(it->second);
+    }
+
+    return {};
+}

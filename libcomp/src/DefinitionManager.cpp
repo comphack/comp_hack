@@ -32,6 +32,7 @@
 // object Includes
 #include <MiCItemBaseData.h>
 #include <MiCItemData.h>
+#include <MiCZoneRelationData.h>
 #include <MiDevilData.h>
 #include <MiDevilLVUpRateData.h>
 #include <MiDynamicMapData.h>
@@ -125,6 +126,11 @@ const std::shared_ptr<objects::MiZoneData> DefinitionManager::GetZoneData(uint32
     return GetRecordByID<objects::MiZoneData>(id, mZoneData);
 }
 
+const std::shared_ptr<objects::MiCZoneRelationData> DefinitionManager::GetZoneRelationData(uint32_t id)
+{
+    return GetRecordByID<objects::MiCZoneRelationData>(id, mZoneRelationData);
+}
+
 const std::list<uint32_t> DefinitionManager::GetDefaultCharacterSkills()
 {
     return mDefaultCharacterSkills;
@@ -172,6 +178,19 @@ bool DefinitionManager::LoadCItemData(gsl::not_null<DataStore*> pDataStore)
         }
     }
     
+    return success;
+}
+
+bool DefinitionManager::LoadCZoneRelationData(gsl::not_null<DataStore*> pDataStore)
+{
+    std::list<std::shared_ptr<objects::MiCZoneRelationData>> records;
+    bool success = LoadBinaryData<objects::MiCZoneRelationData>(pDataStore,
+        "Shield/CZoneRelationData.sbin", true, 0, records);
+    for(auto record : records)
+    {
+        mZoneRelationData[record->GetID()] = record;
+    }
+
     return success;
 }
 

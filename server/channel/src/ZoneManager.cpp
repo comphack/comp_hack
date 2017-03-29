@@ -406,6 +406,7 @@ std::shared_ptr<Zone> ZoneManager::CreateZoneInstance(
         state->SetOriginY(npc->GetY());
         state->SetOriginRotation(npc->GetRotation());
         state->SetEntityID(server->GetNextEntityID());
+        state->SetActions(npc->GetActions());
         zone->AddNPC(state);
     }
     
@@ -417,6 +418,7 @@ std::shared_ptr<Zone> ZoneManager::CreateZoneInstance(
         state->SetOriginY(obj->GetY());
         state->SetOriginRotation(obj->GetRotation());
         state->SetEntityID(server->GetNextEntityID());
+        state->SetActions(obj->GetActions());
         zone->AddObject(state);
     }
 

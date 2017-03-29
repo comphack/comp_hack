@@ -78,6 +78,34 @@ std::string GeneratorSource::Generate(const MetaObject& obj)
         ss << std::endl;
     }
 
+    std::list<std::string> inheritedObjects;
+
+    if(obj.IsInheritedConstruction())
+    {
+        std::list<std::shared_ptr<MetaObject>> objs;
+
+        obj.GetAllInheritedObjects(objs);
+
+        for(auto o : objs)
+        {
+            inheritedObjects.push_back(o->GetName());
+        }
+    }
+
+    if(!inheritedObjects.empty())
+    {
+        ss << "// Inherited Objects" << std::endl;
+
+        for(auto objName : inheritedObjects)
+        {
+            ss << "#include <" << objName << ".h>" << std::endl;
+        }
+
+        ss << std::endl;
+    }
+
+    inheritedObjects.push_front(obj.GetName());
+
     ss << "using namespace " << obj.GetNamespace() << ";" << std::endl;
     ss << std::endl;
 
@@ -333,7 +361,7 @@ std::string GeneratorSource::Generate(const MetaObject& obj)
         if(var->IsInherited()) continue;
 
         std::string code = var->GetXmlLoadCode(*this, GetMemberName(var),
-                "doc", "pMember");
+            "doc", "pMember");
 
         if(!code.empty())
         {
@@ -351,12 +379,7 @@ std::string GeneratorSource::Generate(const MetaObject& obj)
     }
 
     ss << std::endl;
-    ss << Tab() << "return status";
-    if(!baseObject.empty())
-    {
-        ss << " && " << baseObject << "::Load(doc, root)";
-    }
-    ss << ";" << std::endl;
+    ss << Tab() << "return status;" << std::endl;
     ss << "}" << std::endl;
     ss << std::endl;
 
@@ -423,6 +446,25 @@ std::string GeneratorSource::Generate(const MetaObject& obj)
         << "::GetDynamicSizeCount() const" << std::endl;
     ss << "{" << std::endl;
     ss << Tab() << "return " << obj.GetDynamicSizeCount() << ";" << std::endl;
+    ss << "}" << std::endl;
+    ss << std::endl;
+
+    ss << "std::shared_ptr<" << obj.GetName() << "> " << obj.GetName()
+        << "::InheritedConstruction(const libcomp::String& name)" << std::endl;
+    ss << "{" << std::endl;
+
+    for(auto objName : inheritedObjects)
+    {
+        ss << std::endl;
+        ss << Tab() << "if(" << Escape(objName) << " == name)" << std::endl;
+        ss << Tab() << "{" << std::endl;
+        ss << Tab(2) << "return std::make_shared<" << objName
+            << ">();" << std::endl;
+        ss << Tab() << "}" << std::endl;
+        ss << std::endl;
+    }
+
+    ss << Tab() << "return {};" << std::endl;
     ss << "}" << std::endl;
     ss << std::endl;
 

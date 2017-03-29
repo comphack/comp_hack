@@ -36,6 +36,8 @@
 #include <MiCItemBaseData.h>
 #include <MiCItemData.h>
 
+#include <MiCZoneRelationData.h>
+
 #include <MiDevilData.h>
 #include <MiNPCBasicData.h>
 
@@ -45,6 +47,8 @@
 #include <MiHNPCBasicData.h>
 
 #include <MiONPCData.h>
+
+#include <MiSpotData.h>
 
 #include <MiZoneData.h>
 #include <MiZoneBasicData.h>
@@ -189,12 +193,14 @@ int Usage(const char *szAppName)
     std::cerr << std::endl;
     std::cerr << "TYPE indicates the format of the BinaryData and can "
         << "be one of:" << std::endl;
-    std::cerr << "  citem      Format for CItemData.sbin" << std::endl;
-    std::cerr << "  devil      Format for DevilData.sbin" << std::endl;
-    std::cerr << "  dynamicmap Format for DynamicMapData.bin" << std::endl;
-    std::cerr << "  hnpc       Format for hNPCData.sbin" << std::endl;
-    std::cerr << "  onpc       Format for oNPCData.sbin" << std::endl;
-    std::cerr << "  zone       Format for ZoneData.sbin" << std::endl;
+    std::cerr << "  citem         Format for CItemData.sbin" << std::endl;
+    std::cerr << "  czonerelation Format for CZoneRelationData.sbin" << std::endl;
+    std::cerr << "  devil         Format for DevilData.sbin" << std::endl;
+    std::cerr << "  dynamicmap    Format for DynamicMapData.bin" << std::endl;
+    std::cerr << "  hnpc          Format for hNPCData.sbin" << std::endl;
+    std::cerr << "  onpc          Format for oNPCData.sbin" << std::endl;
+    std::cerr << "  spot          Format for SpotData.bin" << std::endl;
+    std::cerr << "  zone          Format for ZoneData.sbin" << std::endl;
     std::cerr << std::endl;
     std::cerr << "Mode 'load' will take the input BinaryData file and "
         << "write the output XML file." << std::endl;
@@ -236,6 +242,21 @@ int main(int argc, char *argv[])
             {
                 return std::dynamic_pointer_cast<objects::MiCItemData>(
                     obj)->GetBaseData()->GetID();
+            }
+        );
+    }
+    else if("czonerelation" == bdType)
+    {
+        pSet = new BinaryDataSet(
+            []()
+            {
+                return std::make_shared<objects::MiCZoneRelationData>();
+            },
+
+            [](const std::shared_ptr<libcomp::Object>& obj)
+            {
+                return std::dynamic_pointer_cast<objects::MiCZoneRelationData>(
+                    obj)->GetID();
             }
         );
     }
@@ -295,6 +316,21 @@ int main(int argc, char *argv[])
             [](const std::shared_ptr<libcomp::Object>& obj)
             {
                 return std::dynamic_pointer_cast<objects::MiONPCData>(
+                    obj)->GetID();
+            }
+        );
+    }
+    else if("spot" == bdType)
+    {
+        pSet = new BinaryDataSet(
+            []()
+            {
+                return std::make_shared<objects::MiSpotData>();
+            },
+
+            [](const std::shared_ptr<libcomp::Object>& obj)
+            {
+                return std::dynamic_pointer_cast<objects::MiSpotData>(
                     obj)->GetID();
             }
         );

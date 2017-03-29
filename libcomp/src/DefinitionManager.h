@@ -42,6 +42,7 @@
 namespace objects
 {
 class MiCItemData;
+class MiCZoneRelationData;
 class MiDevilData;
 class MiDevilLVUpRateData;
 class MiDynamicMapData;
@@ -73,12 +74,14 @@ public:
     const std::shared_ptr<objects::MiONPCData> GetONPCData(uint32_t id);
     const std::shared_ptr<objects::MiSkillData> GetSkillData(uint32_t id);
     const std::shared_ptr<objects::MiZoneData> GetZoneData(uint32_t id);
+    const std::shared_ptr<objects::MiCZoneRelationData> GetZoneRelationData(uint32_t id);
 
     const std::list<uint32_t> GetDefaultCharacterSkills();
 
     bool LoadAllData(gsl::not_null<DataStore*> pDataStore);
 
     bool LoadCItemData(gsl::not_null<DataStore*> pDataStore);
+    bool LoadCZoneRelationData(gsl::not_null<DataStore*> pDataStore);
     bool LoadDevilData(gsl::not_null<DataStore*> pDataStore);
     bool LoadDevilLVUpRateData(gsl::not_null<DataStore*> pDataStore);
     bool LoadDynamicMapData(gsl::not_null<DataStore*> pDataStore);
@@ -202,6 +205,9 @@ private:
 
     std::unordered_map<uint32_t,
         std::shared_ptr<objects::MiZoneData>> mZoneData;
+
+    std::unordered_map<uint32_t,
+        std::shared_ptr<objects::MiCZoneRelationData>> mZoneRelationData;
 };
 
 } // namspace libcomp

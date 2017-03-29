@@ -1,5 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <objgen>
+    <object name="ServerZoneSpot" persistent="false">
+        <member type="u32" name="ID"/>
+        <member type="list" name="Actions">
+            <element type="Action*"/>
+        </member>
+    </object>
     <object name="ServerZone" persistent="false">
         <member type="u32" name="ID"/>
         <member type="u32" name="DynamicMapID"/>
@@ -12,6 +18,10 @@
         </member>
         <member type="list" name="Objects">
             <element type="ServerObject*"/>
+        </member>
+        <member type="map" name="Spots">
+            <key type="u32"/>
+            <value type="ServerZoneSpot*"/>
         </member>
     </object>
 </objgen>

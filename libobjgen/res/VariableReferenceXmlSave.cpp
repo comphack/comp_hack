@@ -10,7 +10,7 @@ if(nullptr != @VAR_NAME@)
         @PARENT@ = pMember;
     }
 
-    @VAR_NAME@->Save(@DOC@, *@PARENT@, true);
+    @VAR_NAME@->Save(@DOC@, *@PARENT@, false);
 
     @PARENT@ = temp;
 }

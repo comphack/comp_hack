@@ -142,6 +142,10 @@ std::string GeneratorHeader::GenerateClass(const MetaObject& obj)
         }
     }
 
+    ss << Tab() << "static std::shared_ptr<" << obj.GetName()
+        << "> InheritedConstruction(const libcomp::String& name);" << std::endl;
+    ss << std::endl;
+
     std::string utilDeclarations = utilStream.str();
     if(utilDeclarations.length() > 0)
     {

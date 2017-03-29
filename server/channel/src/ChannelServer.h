@@ -39,6 +39,7 @@
 
 // channel Includes
 #include "AccountManager.h"
+#include "ActionManager.h"
 #include "CharacterManager.h"
 #include "ChatManager.h"
 #include "DefinitionManager.h"
@@ -152,6 +153,12 @@ public:
     AccountManager* GetAccountManager() const;
 
     /**
+     * Get a pointer to the action manager.
+     * @return Pointer to the ActionManager
+     */
+    ActionManager* GetActionManager() const;
+
+    /**
      * Get a pointer to the character manager.
      * @return Pointer to the CharacterManager
      */
@@ -243,6 +250,9 @@ protected:
 
     /// Pointer to the account manager.
     AccountManager *mAccountManager;
+
+    /// Pointer to the action manager.
+    ActionManager *mActionManager;
 
     /// Poiner to the character manager.
     CharacterManager *mCharacterManager;

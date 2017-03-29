@@ -30,6 +30,7 @@ FILE(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/objgen)
 
 SET(${PROJECT_NAME}_SRCS
     src/AccountManager.cpp
+    src/ActionManager.cpp
     src/ActiveEntityState.cpp
     src/ChannelClientConnection.cpp
     src/ChannelServer.cpp
@@ -46,6 +47,7 @@ SET(${PROJECT_NAME}_SRCS
 
 SET(${PROJECT_NAME}_HDRS
     src/AccountManager.h
+    src/ActionManager.h
     src/ActiveEntityState.h
     src/ChannelClientConnection.h
     src/ChannelServer.h
@@ -116,6 +118,7 @@ SET(${PROJECT_NAME}_PACKETS
     src/packets/game/COMPList.cpp           # 0x005C
     src/packets/game/COMPDemonData.cpp      # 0x005E
     src/packets/game/StopMovement.cpp       # 0x006F
+    src/packets/game/SpotTriggered.cpp      # 0x0071
     src/packets/game/ItemBox.cpp            # 0x0074
     src/packets/game/ItemMove.cpp           # 0x0076
     src/packets/game/ItemDrop.cpp           # 0x0077
@@ -126,6 +129,7 @@ SET(${PROJECT_NAME}_PACKETS
     src/packets/game/HotbarData.cpp         # 0x00A2
     src/packets/game/HotbarSave.cpp         # 0x00A4
     src/packets/game/ValuableList.cpp       # 0x00B8
+    src/packets/game/ObjectInteraction.cpp  # 0x00BA
     src/packets/game/Sync.cpp               # 0x00F3
     src/packets/game/Rotate.cpp             # 0x00F8
     src/packets/game/UnionFlag.cpp          # 0x0100

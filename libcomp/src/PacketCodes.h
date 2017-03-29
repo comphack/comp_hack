@@ -88,6 +88,7 @@ enum class ClientToChannelPacketCode_t : uint16_t
     PACKET_COMP_LIST = 0x005C,  //!< COMP demon list request.
     PACKET_COMP_DEMON_DATA = 0x005E,  //!< COMP demon data request.
     PACKET_STOP_MOVEMENT = 0x006F,  //!< Request to stop the movement of an entity or object.
+    PACKET_SPOT_TRIGGERED = 0x0071,  //!< A spot has been triggered by the client.
     PACKET_ITEM_BOX = 0x0074,  //!< Request for info about a specific item box.
     PACKET_ITEM_MOVE = 0x0076,  //!< Request to move an item in an item box.
     PACKET_ITEM_DROP = 0x0077,  //!< Request to throw away an item from an item box.
@@ -98,6 +99,7 @@ enum class ClientToChannelPacketCode_t : uint16_t
     PACKET_HOTBAR_DATA = 0x00A2,  //!< Request for data about a hotbar page.
     PACKET_HOTBAR_SAVE = 0x00A4,  //!< Request to save a hotbar page.
     PACKET_VALUABLE_LIST = 0x00B8,  //!< Request for a list of obtained valuables.
+    PACKET_OBJECT_INTERACTION = 0x00BA,  //!< An object has been clicked on.
     PACKET_SYNC = 0x00F3,  //!< Request to retrieve the server time.
     PACKET_ROTATE = 0x00F8,  //!< Request to rotate an entity or object.
     PACKET_UNION_FLAG = 0x0100,  //!< Request to receive uniion information.

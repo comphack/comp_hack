@@ -183,6 +183,8 @@ SET(${PROJECT_NAME}_HDRS
 SET(${PROJECT_NAME}_SCHEMA
     schema/account.xml
     schema/accountlogin.xml
+    schema/action.xml
+    schema/action_zonechange.xml
     schema/character.xml
     schema/databaseconfig.xml
     schema/databaseconfig_cassandra.xml
@@ -199,6 +201,7 @@ SET(${PROJECT_NAME}_SCHEMA
 
     # BinaryData Files
     schema/binarydata/citemdata.xml
+    schema/binarydata/czonerelationdata.xml
     schema/binarydata/devildata.xml
     schema/binarydata/devillvupratedata.xml
     schema/binarydata/dynamicmapdata.xml
@@ -208,6 +211,7 @@ SET(${PROJECT_NAME}_SCHEMA
     schema/binarydata/onpcdata.xml
     schema/binarydata/shared.xml
     schema/binarydata/skilldata.xml
+    schema/binarydata/spotdata.xml
     schema/binarydata/zonedata.xml
 )
 
@@ -230,6 +234,10 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     AccountLogin.cpp
     AccountWorldData.h
     AccountWorldData.cpp
+    Action.h
+    Action.cpp
+    ActionZoneChange.h
+    ActionZoneChange.cpp
     Character.h
     Character.cpp
     CharacterProgress.h
@@ -274,6 +282,8 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     ServerObjectBase.cpp
     ServerZone.h
     ServerZone.cpp
+    ServerZoneSpot.h
+    ServerZoneSpot.cpp
     StatusEffect.h
     StatusEffect.cpp
     TestObject.h
@@ -376,6 +386,10 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     MiRentalData.cpp
     MiRestrictionData.cpp
     MiRestrictionData.h
+    MiCZoneRelationData.h
+    MiCZoneRelationData.cpp
+    MiRelationZoneIDData.h
+    MiRelationZoneIDData.cpp
     MiSkillBasicData.cpp
     MiSkillBasicData.h
     MiSkillCharasticData.cpp
@@ -398,6 +412,8 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     MiUnionData.h
     MiUseRestrictionsData.h
     MiUseRestrictionsData.cpp
+    MiSpotData.h
+    MiSpotData.cpp
     MiZoneBasicData.h
     MiZoneBasicData.cpp
     MiZoneBGMData.h

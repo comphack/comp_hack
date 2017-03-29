@@ -372,7 +372,6 @@ bool ChatManager::GMCommand_Position(const std::shared_ptr<
     auto dState = state->GetDemonState();
     auto server = mServer.lock();
     auto zoneManager = server->GetZoneManager();
-    auto zoneConnections = server->GetZoneManager()->GetZoneConnections(client, false);
     ServerTime stopTime;
     ServerTime startTime;
     startTime = stopTime = server->GetServerTime();
@@ -404,7 +403,9 @@ bool ChatManager::GMCommand_Position(const std::shared_ptr<
         cState->SetDestinationTicks(stopTime);
         
         libcomp::Packet reply;
+        libcomp::Packet dreply;
         reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_MOVE);
+        dreply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_MOVE);
         //uint32_t resetPos = reply.Size();
         reply.WriteS32Little(cState->GetEntityID());
         reply.WriteFloat(destX);
@@ -415,7 +416,6 @@ bool ChatManager::GMCommand_Position(const std::shared_ptr<
         reply.WriteFloat(start);
         reply.WriteFloat(stop);
         zoneManager->BroadcastPacket(client, reply, true);
-        /*ToDo: Fix demon code.
         if (dState->GetEntity())
         {
             dState->SetOriginX(destX);
@@ -425,10 +425,17 @@ bool ChatManager::GMCommand_Position(const std::shared_ptr<
             dState->SetDestinationY(destY);
             dState->SetDestinationTicks(stopTime);
 
-            reply.Seek(resetPos);
-            reply.WriteS32Little(dState->GetEntityID());
-            zoneManager->BroadcastPacket(client, reply, true);
-        }*/
+           // reply.Seek(resetPos);
+            dreply.WriteS32Little(dState->GetEntityID());
+            dreply.WriteFloat(destX);
+            dreply.WriteFloat(destY);
+            dreply.WriteFloat(destX);
+            dreply.WriteFloat(destY);
+            dreply.WriteFloat(ratePerSec);
+            dreply.WriteFloat(start);
+            dreply.WriteFloat(stop);
+            zoneManager->BroadcastPacket(client, dreply, true);
+        }
         
         return SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(
             "Destination Set: (%1, %2)").Arg(cState->GetDestinationX()).Arg(

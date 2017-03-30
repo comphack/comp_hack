@@ -46,6 +46,12 @@ class Database;
 class DatabaseBind;
 class DatabaseQuery;
 
+/**
+ * Base class of a all dynamically generated objects that persist in the
+ * database. Persistent objects are cached upon load or by explicitly
+ * registering them which will allow them to be retrieved via a generated
+ * UUID.
+ */
 class PersistentObject : public Object
 {
 public:

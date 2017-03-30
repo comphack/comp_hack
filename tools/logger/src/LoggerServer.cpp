@@ -180,7 +180,7 @@ void LoggerServer::registerChannelKey(uint32_t key, const QString& addr)
 void LoggerServer::startServer()
 {
     // Listen on the port for client connections.
-    if( !mLobbyServer->listen(QHostAddress::Any, PORT_LOBBY_SERVER) )
+    if( !mLobbyServer->listen(QHostAddress::AnyIPv4, PORT_LOBBY_SERVER) )
     {
         QString msg  = QString("Lobby server: failed to listen on port "
             "%1.").arg(PORT_LOBBY_SERVER);
@@ -193,7 +193,7 @@ void LoggerServer::startServer()
     }
 
     // Listen on the port for client connections.
-    if( !mChannelServer->listen(QHostAddress::Any, PORT_CHANNEL_SERVER) )
+    if( !mChannelServer->listen(QHostAddress::AnyIPv4, PORT_CHANNEL_SERVER) )
     {
         QString msg  = QString("Channel server: failed to listen on port "
             "%1.").arg(PORT_CHANNEL_SERVER);
@@ -206,7 +206,7 @@ void LoggerServer::startServer()
     }
 
     // Listen on the port for client connections.
-    if( !mWebAuthServer->listen(QHostAddress::Any, PORT_WEBAUTH_SERVER) )
+    if( !mWebAuthServer->listen(QHostAddress::AnyIPv4, PORT_WEBAUTH_SERVER) )
     {
         QString msg  = QString("WebAuth server: failed to listen on port "
             "%1.").arg(PORT_WEBAUTH_SERVER);

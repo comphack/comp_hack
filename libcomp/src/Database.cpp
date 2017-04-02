@@ -82,10 +82,10 @@ bool Database::TableHasRows(const String& table)
     return 0 < count;
 }
 
-std::shared_ptr<PersistentObject> Database::LoadSingleObject(std::type_index type,
+std::shared_ptr<PersistentObject> Database::LoadSingleObject(size_t typeHash,
     DatabaseBind *pValue)
 {
-    auto objects = LoadObjects(type, pValue);
+    auto objects = LoadObjects(typeHash, pValue);
 
     return objects.size() > 0 ? objects.front() : nullptr;
 }
@@ -98,7 +98,7 @@ bool Database::DeleteSingleObject(std::shared_ptr<PersistentObject>& obj)
 }
 
 std::shared_ptr<PersistentObject> Database::LoadSingleObjectFromRow(
-    std::type_index type, DatabaseQuery& query)
+    size_t typeHash, DatabaseQuery& query)
 {
     bool isNew = false;
 
@@ -113,7 +113,7 @@ std::shared_ptr<PersistentObject> Database::LoadSingleObjectFromRow(
 
     if(nullptr == obj)
     {
-        obj = PersistentObject::New(type);
+        obj = PersistentObject::New(typeHash);
         isNew = true;
     }
 

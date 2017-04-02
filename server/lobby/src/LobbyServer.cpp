@@ -42,8 +42,6 @@
 #include "Account.h"
 #include "LobbyConfig.h"
 #include "RegisteredWorld.h"
-#include "SetupAccount.h"
-#include "SetupConfig.h"
 
 // Standard C++11 Includes
 #include <iostream>
@@ -93,28 +91,7 @@ bool LobbyServer::Initialize()
     }
     else if(!mDatabase->TableHasRows("Account"))
     {
-        std::string configPath = GetDefaultConfigPath() + "setup.xml";
-
-        tinyxml2::XMLDocument doc;
-        auto config = std::make_shared<objects::SetupConfig>();
-
-        if(tinyxml2::XML_SUCCESS == doc.LoadFile(configPath.c_str()))
-        {
-            const tinyxml2::XMLElement *pRoot = doc.RootElement();
-            const tinyxml2::XMLElement *pObject = nullptr;
-
-            if(nullptr != pRoot)
-            {
-                pObject = pRoot->FirstChildElement("object");
-            }
-
-            if(nullptr == pObject || !config->Load(doc, *pObject) ||
-                !Setup(config))
-            {
-                CreateFirstAccount();
-            }
-        }
-        else
+        if(!Setup())
         {
             CreateFirstAccount();
         }
@@ -239,35 +216,7 @@ std::shared_ptr<libcomp::TcpConnection> LobbyServer::CreateConnection(
 
 bool LobbyServer::InitializeTestMode()
 {
-    // Remove all accounts first.
-    if(!mDatabase->Execute(libcomp::String("TRUNCATE account")))
-    {
-        LOG_ERROR("Failed to truncate account table.\n");
-
-        return false;
-    }
-
-    std::shared_ptr<objects::Account> account(new objects::Account);
-
-    libcomp::String password = "same_as_my_luggage"; // 12345
-    libcomp::String salt = libcomp::Decrypt::GenerateRandom(10);
-
-    account->SetUsername("testalpha");
-    account->SetDisplayName("Test Account Alpha");
-    account->SetEmail("alpha@test.account");
-    account->SetPassword(libcomp::Decrypt::HashPassword(password, salt));
-    account->SetSalt(salt);
-    account->SetCP(1000000);
-    account->SetTicketCount(1);
-    account->SetUserLevel(1000);
-    account->SetEnabled(1);
-    account->Register(std::dynamic_pointer_cast<
-        libcomp::PersistentObject>(account));
-
-    if(!account->Insert(mDatabase))
-    {
-        LOG_ERROR("Failed to create test account.\n");
-    }
+    /// @todo: Is this still needed now that mock data is inserted elsewhere?
 
     return true;
 }
@@ -500,38 +449,11 @@ void LobbyServer::PromptCreateAccount()
     }
 }
 
-bool LobbyServer::Setup(const std::shared_ptr<objects::SetupConfig>& config)
+bool LobbyServer::Setup()
 {
-    for(auto acc : config->GetAccounts())
-    {
-        std::shared_ptr<objects::Account> account(new objects::Account);
-
-        libcomp::String salt = libcomp::Decrypt::GenerateRandom(10);
-        libcomp::String password = libcomp::Decrypt::HashPassword(
-            acc->GetPassword(), salt);
-
-        account->SetUsername(acc->GetUsername());
-        account->SetDisplayName(acc->GetDisplayName());
-        account->SetEmail(acc->GetEmail());
-        account->SetPassword(password);
-        account->SetSalt(salt);
-        account->SetIsGM(acc->GetIsGM());
-        account->SetCP(acc->GetCP());
-        account->SetTicketCount(acc->GetTicketCount());
-        account->SetUserLevel(acc->GetUserLevel());
-        account->SetEnabled(acc->GetEnabled());
-        account->Register(std::dynamic_pointer_cast<
-            libcomp::PersistentObject>(account));
-
-        if(!account->Insert(mDatabase))
-        {
-            LOG_ERROR("Failed to create account!\n");
-
-            return false;
-        }
-    }
-
-    return true;
+    std::string configPath = GetDefaultConfigPath() + "setup.xml";
+    return InsertDataFromFile(configPath, mDatabase,
+        std::set<std::string>{ "Account" });
 }
 
 AccountManager* LobbyServer::GetAccountManager()

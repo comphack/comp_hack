@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="Account">
+        <member name="UID">00000000-0000-0000-0000-000000000a01</member>
+        <member name="Username">testalpha</member>
+        <member name="DisplayName">Test Account Alpha</member>
+        <member name="Email">alpha@test.account</member>
+        <member name="Password">same_as_my_luggage</member>
+        <member name="CP">1000000</member>
+        <member name="TicketCount">1</member>
+        <member name="UserLevel">1000</member>
+        <member name="Enabled">true</member>
+        <member name="IsGM">true</member>
+    </object>
+</objgen>

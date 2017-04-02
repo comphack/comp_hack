@@ -55,7 +55,8 @@ using namespace libcomp;
 std::unordered_map<std::string, std::weak_ptr<PersistentObject>> PersistentObject::sCached;
 std::mutex PersistentObject::mCacheLock;
 PersistentObject::TypeMap PersistentObject::sTypeMap;
-std::unordered_map<std::type_index, std::function<PersistentObject*()>> PersistentObject::sFactory;
+std::unordered_map<std::string, size_t> PersistentObject::sTypeNames;
+std::unordered_map<size_t, std::function<PersistentObject*()>> PersistentObject::sFactory;
 
 PersistentObject::PersistentObject() : Object(), mUUID(), mDeleted(false)
 {
@@ -92,7 +93,8 @@ libobjgen::UUID PersistentObject::GetUUID() const
     return mUUID;
 }
 
-bool PersistentObject::Register(const std::shared_ptr<PersistentObject>& self)
+bool PersistentObject::Register(const std::shared_ptr<PersistentObject>& self,
+    const libobjgen::UUID& pUuid)
 {
     if(!self->IsDeleted())
     {
@@ -103,11 +105,18 @@ bool PersistentObject::Register(const std::shared_ptr<PersistentObject>& self)
         std::lock_guard<std::mutex> lock(mCacheLock);
         if(uuid.IsNull())
         {
-            uuid = libobjgen::UUID::Random();
-
-            registered = true;
+            if(!pUuid.IsNull())
+            {
+                uuid = pUuid;
+            }
+            else
+            {
+                uuid = libobjgen::UUID::Random();
+                registered = true;
+            }
         }
-        else if(sCached.find(uuid.ToString()) == sCached.end())
+        
+        if(!registered && sCached.find(uuid.ToString()) == sCached.end())
         {
             registered = true;
         }
@@ -162,7 +171,7 @@ std::shared_ptr<PersistentObject> PersistentObject::GetObjectByUUID(const libobj
     return nullptr;
 }
 
-std::shared_ptr<PersistentObject> PersistentObject::LoadObjectByUUID(std::type_index type,
+std::shared_ptr<PersistentObject> PersistentObject::LoadObjectByUUID(size_t typeHash,
     const std::shared_ptr<Database>& db,  const libobjgen::UUID& uuid, bool reload)
 {
     auto obj = !reload ? GetObjectByUUID(uuid) : nullptr;
@@ -171,14 +180,14 @@ std::shared_ptr<PersistentObject> PersistentObject::LoadObjectByUUID(std::type_i
     {
         auto bind = new DatabaseBindUUID("UID", uuid);
 
-        obj = LoadObject(type, db, bind);
+        obj = LoadObject(typeHash, db, bind);
 
         delete bind;
 
         if(nullptr == obj)
         {
             LOG_ERROR(String("Unknown UUID '%1' for '%2' failed to load\n")
-                .Arg(uuid.ToString()).Arg(sTypeMap[type]->GetName()));
+                .Arg(uuid.ToString()).Arg(sTypeMap[typeHash]->GetName()));
         }
     }
 
@@ -186,26 +195,26 @@ std::shared_ptr<PersistentObject> PersistentObject::LoadObjectByUUID(std::type_i
 }
 
 std::shared_ptr<PersistentObject> PersistentObject::LoadObject(
-    std::type_index type, const std::shared_ptr<Database>& db,
+    size_t typeHash, const std::shared_ptr<Database>& db,
     DatabaseBind *pValue)
 {
     std::shared_ptr<PersistentObject> obj;
 
     if(nullptr != db)
     {
-        obj = db->LoadSingleObject(type, pValue);
+        obj = db->LoadSingleObject(typeHash, pValue);
     }
 
     return obj;
 }
 
 std::list<std::shared_ptr<PersistentObject>> PersistentObject::LoadObjects(
-    std::type_index type, const std::shared_ptr<Database>& db,
+    size_t typeHash, const std::shared_ptr<Database>& db,
     DatabaseBind *pValue)
 {
     if(nullptr != db)
     {
-        return db->LoadObjects(type, pValue);
+        return db->LoadObjects(typeHash, pValue);
     }
 
     return std::list<std::shared_ptr<PersistentObject>>();
@@ -215,8 +224,11 @@ void PersistentObject::RegisterType(std::type_index type,
     const std::shared_ptr<libobjgen::MetaObject>& obj,
     const std::function<PersistentObject*()>& f)
 {
-    sTypeMap[type] = obj;
-    sFactory[type] = f;
+    size_t typeHash = type.hash_code();
+
+    sTypeMap[typeHash] = obj;
+    sTypeNames[obj->GetName()] = typeHash;
+    sFactory[typeHash] = f;
 }
 
 PersistentObject::TypeMap& PersistentObject::GetRegistry()
@@ -224,9 +236,16 @@ PersistentObject::TypeMap& PersistentObject::GetRegistry()
     return sTypeMap;
 }
 
-const std::shared_ptr<libobjgen::MetaObject> PersistentObject::GetRegisteredMetadata(std::type_index type)
+size_t PersistentObject::GetTypeHashByName(std::string name, bool& result)
 {
-    auto iter = sTypeMap.find(type);
+    auto iter = sTypeNames.find(name);
+    result = iter != sTypeNames.end();
+    return result ? iter->second : 0;
+}
+
+const std::shared_ptr<libobjgen::MetaObject> PersistentObject::GetRegisteredMetadata(size_t typeHash)
+{
+    auto iter = sTypeMap.find(typeHash);
     return iter != sTypeMap.end() ? iter->second : nullptr;
 }
 
@@ -250,9 +269,9 @@ std::shared_ptr<libobjgen::MetaObject> PersistentObject::GetMetadataFromBytes(co
     return obj;
 }
 
-std::shared_ptr<PersistentObject> PersistentObject::New(std::type_index type)
+std::shared_ptr<PersistentObject> PersistentObject::New(size_t typeHash)
 {
-    auto iter = sFactory.find(type);
+    auto iter = sFactory.find(typeHash);
     return iter != sFactory.end() ? std::shared_ptr<PersistentObject>(iter->second()) : nullptr;
 }
 

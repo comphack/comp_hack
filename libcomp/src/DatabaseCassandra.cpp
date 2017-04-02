@@ -134,7 +134,7 @@ bool DatabaseCassandra::Exists()
     return q.GetRows(results) && results.size() > 0;
 }
 
-bool DatabaseCassandra::Setup()
+bool DatabaseCassandra::Setup(bool rebuild)
 {
     if(!IsOpen())
     {
@@ -191,7 +191,7 @@ bool DatabaseCassandra::Setup()
     LOG_DEBUG(String("Database connection established to '%1' keyspace.\n")
         .Arg(keyspace));
 
-    if(!VerifyAndSetupSchema())
+    if(!VerifyAndSetupSchema(rebuild))
     {
         LOG_ERROR("Schema verification and setup failed.\n");
 
@@ -217,11 +217,11 @@ bool DatabaseCassandra::Use()
 }
 
 std::list<std::shared_ptr<PersistentObject>> DatabaseCassandra::LoadObjects(
-    std::type_index type, DatabaseBind *pValue)
+    size_t typeHash, DatabaseBind *pValue)
 {
     std::list<std::shared_ptr<PersistentObject>> objects;
 
-    auto metaObject = PersistentObject::GetRegisteredMetadata(type);
+    auto metaObject = PersistentObject::GetRegisteredMetadata(typeHash);
 
     if(nullptr == metaObject)
     {
@@ -267,7 +267,7 @@ std::list<std::shared_ptr<PersistentObject>> DatabaseCassandra::LoadObjects(
 
     while(query.Next())
     {
-        auto obj = LoadSingleObjectFromRow(type, query);
+        auto obj = LoadSingleObjectFromRow(typeHash, query);
 
         if(nullptr != obj)
         {
@@ -505,7 +505,7 @@ bool DatabaseCassandra::DeleteObjects(std::list<std::shared_ptr<PersistentObject
     return true;
 }
 
-bool DatabaseCassandra::VerifyAndSetupSchema()
+bool DatabaseCassandra::VerifyAndSetupSchema(bool recreateTables)
 {
     auto keyspace = std::dynamic_pointer_cast<objects::DatabaseConfigCassandra>(
         mConfig)->GetKeyspace();
@@ -611,6 +611,8 @@ bool DatabaseCassandra::VerifyAndSetupSchema()
         }
         else
         {
+            archiving = recreateTables;
+
             std::unordered_map<std::string,
                 String> columns = tableIter->second;
             if(columns.size() - 1 != vars.size()

@@ -19,5 +19,6 @@
         <member type="bool" name="LogWarning" default="true"/>
         <member type="bool" name="LogError" default="true"/>
         <member type="bool" name="LogCritical" default="true"/>
+        <member type="string" name="CapturePath"/>
     </object>
 </objgen>

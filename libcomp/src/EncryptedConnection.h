@@ -32,7 +32,15 @@
 #include "TcpConnection.h"
 
 // Standard C++11 Includes
+#include <fstream>
 #include <functional>
+
+namespace objects
+{
+
+class ServerConfig;
+
+} // namespace objects
 
 namespace libcomp
 {
@@ -158,6 +166,12 @@ public:
      */
     void SetMessageQueue(const std::shared_ptr<MessageQueue<
         libcomp::Message::Message*>>& messageQueue);
+
+    /**
+     * Set the server configuration object.
+     * @param config Server configuration object to use.
+     */
+    void SetServerConfig(const std::shared_ptr<objects::ServerConfig>& config);
 
 protected:
     /**
@@ -314,6 +328,12 @@ protected:
 
     /// Shared pointer for the message queue for this connection.
     std::shared_ptr<MessageQueue<libcomp::Message::Message*>> mMessageQueue;
+
+    /// Server configuration.
+    std::shared_ptr<objects::ServerConfig> mServerConfig;
+
+    /// File to save a capture to.
+    std::ofstream *mCaptureFile;
 };
 
 } // namespace libcomp

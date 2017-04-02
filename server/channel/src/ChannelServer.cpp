@@ -354,6 +354,7 @@ std::shared_ptr<libcomp::TcpConnection> ChannelServer::CreateConnection(
 {
     auto connection = std::make_shared<channel::ChannelClientConnection>(
         socket, CopyDiffieHellman(GetDiffieHellman()));
+    connection->SetServerConfig(mConfig);
 
     if(AssignMessageQueue(connection))
     {

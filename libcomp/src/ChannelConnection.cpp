@@ -123,6 +123,67 @@ void ChannelConnection::PreparePackets(std::list<ReadOnlyPacket>& packets)
         // If the packet is OK, encrypt and complete the procedure.
         if(packetOK)
         {
+            // Save the packet to the capture.
+            if(nullptr != mCaptureFile)
+            {
+                // Copy the packet and format it for the capture.
+                libcomp::Packet capturePacket(finalPacket.ConstData(),
+                    finalPacket.Size());
+
+                uint32_t realSize = capturePacket.Size() - 2 *
+                    static_cast<uint32_t>(sizeof(uint32_t));
+
+                // Write the real size.
+                capturePacket.Seek(sizeof(uint32_t));
+                capturePacket.WriteU32Big(realSize);
+
+                // Round up the size of the packet to a multiple of
+                // BLOWFISH_BLOCK_SIZE.
+                uint32_t paddedSize = static_cast<uint32_t>(((realSize +
+                    BLOWFISH_BLOCK_SIZE - 1) / BLOWFISH_BLOCK_SIZE) *
+                    BLOWFISH_BLOCK_SIZE);
+
+                // Make sure the packet is padded.
+                if(realSize != paddedSize)
+                {
+                    capturePacket.End();
+                    capturePacket.WriteBlank(paddedSize - realSize);
+                }
+
+                // Write the padded size.
+                capturePacket.Rewind();
+                capturePacket.WriteU32Big(paddedSize);
+
+                std::time_t now = std::time_t(nullptr);
+
+                uint8_t source = HACK_SOURCE_SERVER;
+                uint64_t stamp = static_cast<uint64_t>(now);
+                uint64_t microtime = static_cast<uint64_t>(
+                    std::chrono::time_point_cast<std::chrono::microseconds>(
+                        std::chrono::steady_clock::now()
+                    ).time_since_epoch().count());
+                uint32_t size = capturePacket.Size();
+
+                mCaptureFile->write(reinterpret_cast<char*>(&source),
+                    sizeof(source));
+                mCaptureFile->write(reinterpret_cast<char*>(&stamp),
+                    sizeof(stamp));
+                mCaptureFile->write(reinterpret_cast<char*>(&microtime),
+                    sizeof(microtime));
+                mCaptureFile->write(reinterpret_cast<char*>(&size),
+                    sizeof(size));
+                mCaptureFile->write(capturePacket.ConstData(),
+                    size);
+
+                if(!mCaptureFile->good())
+                {
+                    LOG_CRITICAL("Failed to write capture file.\n");
+
+                    delete mCaptureFile;
+                    mCaptureFile = nullptr;
+                }
+            }
+
             // Encrypt the packet
             Decrypt::EncryptPacket(mEncryptionKey, finalPacket);
 

@@ -36,21 +36,33 @@
 #include "MessagePacket.h"
 #include "TcpServer.h"
 
+// object Includes
+#include <ServerConfig.h>
+
+// Standard C++11 Includes
+#include <ctime>
+
 using namespace libcomp;
 
 EncryptedConnection::EncryptedConnection(asio::io_service& io_service) :
-    libcomp::TcpConnection(io_service), mPacketParser(nullptr)
+    libcomp::TcpConnection(io_service), mPacketParser(nullptr),
+    mCaptureFile(nullptr)
 {
 }
 
 EncryptedConnection::EncryptedConnection(asio::ip::tcp::socket& socket,
     DH *pDiffieHellman) : libcomp::TcpConnection(socket, pDiffieHellman),
-    mPacketParser(nullptr)
+    mPacketParser(nullptr), mCaptureFile(nullptr)
 {
 }
 
 EncryptedConnection::~EncryptedConnection()
 {
+    if(nullptr != mCaptureFile)
+    {
+        delete mCaptureFile;
+        mCaptureFile = nullptr;
+    }
 }
 
 bool EncryptedConnection::Close()
@@ -122,6 +134,71 @@ void EncryptedConnection::ConnectionSuccess()
 void EncryptedConnection::ConnectionEncrypted()
 {
     LOG_DEBUG("Connection encrypted!\n");
+
+    // Check if a capture file should be created.
+    if(nullptr != mServerConfig.get())
+    {
+        auto capturePath = mServerConfig->GetCapturePath();
+
+        if(!capturePath.IsEmpty())
+        {
+            std::time_t now = std::time_t(nullptr);
+            std::tm *pTM = std::localtime(&now);
+
+            char szTimeStamp[15];
+            std::memset(szTimeStamp, 0, sizeof(szTimeStamp));
+
+            std::strftime(szTimeStamp, 32, "%Y%m%d%H%m%S", pTM);
+
+            auto captureFilePath = libcomp::String("%1/%2-%3.hack").Arg(
+                capturePath).Arg(szTimeStamp).Arg(GetRemoteAddress());
+
+            mCaptureFile = new std::ofstream();
+            mCaptureFile->open(captureFilePath.C(), std::ofstream::binary);
+
+            if(!mCaptureFile->good())
+            {
+                delete mCaptureFile;
+                mCaptureFile = nullptr;
+
+                LOG_CRITICAL(libcomp::String("Failed to open capture "
+                    "file: %1\n").Arg(captureFilePath));
+            }
+            else
+            {
+                auto remoteAddress = GetRemoteAddress();
+
+                uint32_t magic = HACK_FORMAT_MAGIC;
+                uint32_t version = HACK_FORMAT_VER2;
+                uint64_t stamp = static_cast<uint64_t>(now);
+                uint32_t addrlen = static_cast<uint32_t>(remoteAddress.Size());
+
+                // Write the header.
+                mCaptureFile->write(reinterpret_cast<char*>(&magic),
+                    sizeof(magic));
+                mCaptureFile->write(reinterpret_cast<char*>(&version),
+                    sizeof(version));
+                mCaptureFile->write(reinterpret_cast<char*>(&stamp),
+                    sizeof(stamp));
+                mCaptureFile->write(reinterpret_cast<char*>(&addrlen),
+                    sizeof(addrlen));
+                mCaptureFile->write(remoteAddress.C(),
+                    addrlen);
+
+                if(!mCaptureFile->good())
+                {
+                    LOG_CRITICAL(libcomp::String("Failed to write capture "
+                        "file: %1\n").Arg(captureFilePath));
+
+                    delete mCaptureFile;
+                    mCaptureFile = nullptr;
+                }
+
+                LOG_DEBUG(libcomp::String("Started capture: %1\n").Arg(
+                    captureFilePath));
+            }
+        }
+    }
 
     SendMessage([](const std::shared_ptr<libcomp::TcpConnection>& self){
         return new libcomp::Message::Encrypted(self);
@@ -504,6 +581,39 @@ void EncryptedConnection::ParsePacket(libcomp::Packet& packet,
     // Decrypt the packet
     Decrypt::DecryptPacket(mEncryptionKey, packet);
 
+    // Save the packet to the capture.
+    if(nullptr != mCaptureFile)
+    {
+        std::time_t now = std::time_t(nullptr);
+
+        uint8_t source = HACK_SOURCE_CLIENT;
+        uint64_t stamp = static_cast<uint64_t>(now);
+        uint64_t microtime = static_cast<uint64_t>(
+            std::chrono::time_point_cast<std::chrono::microseconds>(
+                std::chrono::steady_clock::now()
+            ).time_since_epoch().count());
+        uint32_t size = packet.Size();
+
+        mCaptureFile->write(reinterpret_cast<char*>(&source),
+            sizeof(source));
+        mCaptureFile->write(reinterpret_cast<char*>(&stamp),
+            sizeof(stamp));
+        mCaptureFile->write(reinterpret_cast<char*>(&microtime),
+            sizeof(microtime));
+        mCaptureFile->write(reinterpret_cast<char*>(&size),
+            sizeof(size));
+        mCaptureFile->write(packet.ConstData(),
+            size);
+
+        if(!mCaptureFile->good())
+        {
+            LOG_CRITICAL("Failed to write capture file.\n");
+
+            delete mCaptureFile;
+            mCaptureFile = nullptr;
+        }
+    }
+
     // This is where to find the data.
     uint32_t dataStart = 2 * sizeof(uint32_t);
 
@@ -650,6 +760,12 @@ void EncryptedConnection::SetMessageQueue(const std::shared_ptr<
     MessageQueue<libcomp::Message::Message*>>& messageQueue)
 {
     mMessageQueue = messageQueue;
+}
+
+void EncryptedConnection::SetServerConfig(const std::shared_ptr<
+    objects::ServerConfig>& config)
+{
+    mServerConfig = config;
 }
 
 void EncryptedConnection::PreparePackets(std::list<ReadOnlyPacket>& packets)

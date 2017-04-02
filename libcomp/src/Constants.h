@@ -30,6 +30,21 @@
 namespace libcomp
 {
 
+/// HACK format magic.
+#define HACK_FORMAT_MAGIC (0x4B434148)
+
+/// Major, Minor, Patch (1.0.0).
+#define HACK_FORMAT_VER1 (0x00010000)
+
+/// Major, Minor, Patch (1.1.0).
+#define HACK_FORMAT_VER2 (0x00010100)
+
+/// Indicates the packet came from the client.
+#define HACK_SOURCE_CLIENT (0)
+
+/// Indicates the packet came from the server.
+#define HACK_SOURCE_SERVER (1)
+
 /// Maximum length of a chat message.
 #define MAX_MESSAGE_LENGTH (80)
 

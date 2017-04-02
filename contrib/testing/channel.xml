@@ -16,6 +16,7 @@
         <member name="LogWarning">true</member>
         <member name="LogError">true</member>
         <member name="LogCritical">true</member>
+        <member name="CapturePath">/var/log/comp_hack/captures</member>
         
         <!-- From ChannelConfig -->
         <member name="Name">Test Channel</member>

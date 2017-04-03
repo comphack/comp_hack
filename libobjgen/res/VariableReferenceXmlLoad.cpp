@@ -4,7 +4,6 @@
 
     auto pRefChildNode = @NODE@->FirstChildElement("object");
 
-    /// @todo This does not handle errors... at all.
     if(nullptr != pRefChildNode)
     {
         const char *szObjectName = pRefChildNode->Attribute("name");
@@ -24,11 +23,18 @@
             ref = @REF_TYPE@::InheritedConstruction(objectName);
         }
 
-        /// @todo Check if the load failed!
         if(ref)
         {
-            (void)ref->Load(@DOC@, *pRefChildNode);
+            status = status && ref->Load(@DOC@, *pRefChildNode);
         }
+        else
+        {
+            status = false;
+        }
+    }
+	else
+    {
+        status = false;
     }
 
     return ref;

@@ -81,26 +81,26 @@ public:
      */
     libobjgen::UUID GetUUID() const;
 
-    /*
+    /**
      * Get the MetaObject definition associated to the object.
      * @return Pointer to the MetaObject defintion
      */
     virtual std::shared_ptr<libobjgen::MetaObject> GetObjectMetadata() = 0;
 
-    /*
+    /**
      * Get database bindings for every data member.
      * @return List of pointers to data member database binds
      */
     virtual std::list<libcomp::DatabaseBind*> GetMemberBindValues() = 0;
 
-    /*
+    /**
      * Load the object from a successfully executed query.
      * @param query Database query that has executed to load from
      * @return true on success, false on failure
      */
     virtual bool LoadDatabaseValues(DatabaseQuery& query) = 0;
 
-    /*
+    /**
      * Register a derived class object to the cache and get a new UUID if not
      * specified.
      * @param self Pointer to the object itself
@@ -111,19 +111,19 @@ public:
     static bool Register(const std::shared_ptr<PersistentObject>& self,
         const libobjgen::UUID& pUuid = NULLUUID);
 
-    /*
+    /**
      * Unregisters an object from the cache and marks it as deleted.
      * Once an object is marked as deleted, it will not be cached again.
      */
     void Unregister();
 
-    /*
+    /**
      * Check if the record is marked as deleted from the database.
      * @return true if it is deleted, false if it is not
      */
     bool IsDeleted();
 
-    /*
+    /**
      * Register all derived types in libcomp to the TypeMap.
      * Persisted types needed in other databases should derive from this class
      * to register their own as well.
@@ -131,7 +131,7 @@ public:
      */
     static bool Initialize();
 
-    /*
+    /**
      * Retrieve an object by its UUID but do not load from the database.
      * @param uuid UUID to retrieve from the cache
      * @return Pointer to the cached object or nullptr if it doesn't exist
@@ -139,7 +139,7 @@ public:
     static std::shared_ptr<PersistentObject> GetObjectByUUID(
         const libobjgen::UUID& uuid);
 
-    /*
+    /**
      * Retrieve all objects of the specified type by its UUID from the
      * database.  Use sparingly.
      * @param db Database to load from
@@ -160,7 +160,7 @@ public:
         return retval;
     }
 
-    /*
+    /**
      * Retrieve an object of the specified type by its UUID from the cache
      * or database.
      * @param db Database to load from
@@ -181,7 +181,7 @@ public:
         return nullptr;
     }
 
-    /*
+    /**
      * Retrieve an object of the specified type ID by its UUID from the cache
      * or database.
      * @param typeHash C++ type hash representing the object type to load
@@ -194,13 +194,13 @@ public:
         size_t typeHash, const std::shared_ptr<Database>& db,
         const libobjgen::UUID& uuid, bool reload = false);
 
-    /*
+    /**
      * Get all PersistentObject derived class MetaObject definitions.
      * @return Map of MetaObject definitions by the source object's C++ type
      */
     static TypeMap& GetRegistry();
 
-    /*
+    /**
      * Get the C++ type hash by the associated object type's name.
      * @param name Name of a persistent object type
      * @param result true if the type is registered, false if it is not
@@ -208,7 +208,7 @@ public:
      */
     static size_t GetTypeHashByName(std::string name, bool& result);
 
-    /*
+    /**
      * Get the PersistentObject of the specified type's MetaObject definition.
      * @return Pointer to the MetaObject definition
      */
@@ -223,7 +223,7 @@ public:
         return nullptr;
     }
 
-    /*
+    /**
      * Get the PersistentObject of the specified type ID's MetaObject definition.
      * @param typeHash C++ type hash representing the object type to load
      * @return Pointer to the MetaObject definition
@@ -231,7 +231,7 @@ public:
     static const std::shared_ptr<libobjgen::MetaObject> GetRegisteredMetadata(
         size_t typeHash);
 
-    /*
+    /**
      * Get the MetaObject definition from loading a byte array.
      * @param bytes Byte array of the definition
      * @param length Number of bytes in the array
@@ -240,7 +240,7 @@ public:
     static std::shared_ptr<libobjgen::MetaObject> GetMetadataFromBytes(
         const char* bytes, size_t length);
 
-    /*
+    /**
      * Create a new instance of a PersistentObject of the specified type.
      * @return Pointer to a new PersistentObject of the specified type
      */
@@ -254,14 +254,14 @@ public:
         return nullptr;
     }
 
-    /*
+    /**
      * Create a new instance of a PersistentObject of the specified type ID.
      * @param typeHash C++ type hash representing the object type to load
      * @return Pointer to a new PersistentObject of the specified type ID
      */
     static std::shared_ptr<PersistentObject> New(size_t typeHash);
 
-    /*
+    /**
      * Convert a list of PersistentObject derived object pointers into a
      * list of PersistentObject pointers.
      * @param objList List of PersistentObject derived object pointers
@@ -283,21 +283,21 @@ public:
         return converted;
     }
 
-    /*
+    /**
      * Save a new record to the database.
      * @param db Database to load from
      * @return true on success, false on failure
      */
     bool Insert(const std::shared_ptr<Database>& db);
 
-    /*
+    /**
      * Update an existing record in the database.
      * @param db Database to load from
      * @return true on success, false on failure
      */
     bool Update(const std::shared_ptr<Database>& db);
 
-    /*
+    /**
      * Deletes an existing record from the database.
      * @param db Database to load from
      * @return true on success, false on failure
@@ -305,7 +305,7 @@ public:
     bool Delete(const std::shared_ptr<Database>& db);
 
 protected:
-    /*
+    /**
      * Register a derived class type with a function to describe it to the
      * database.
      * @param type C++ type representing the object type to load
@@ -316,7 +316,7 @@ protected:
         const std::shared_ptr<libobjgen::MetaObject>& obj,
         const std::function<PersistentObject*()>& f);
 
-    /*
+    /**
      * Load an object from the database from a field database binding.
      * @param typeHash C++ type hash representing the object type to load
      * @param db Database to load from
@@ -326,7 +326,7 @@ protected:
     static std::shared_ptr<PersistentObject> LoadObject(size_t typeHash,
         const std::shared_ptr<Database>& db, DatabaseBind *pValue);
 
-    /*
+    /**
      * Load multiple objects from the database from a field database binding.
      * @param typeHash C++ type hash representing the object type to load
      * @param db Database to load from

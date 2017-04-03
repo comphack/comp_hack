@@ -154,7 +154,7 @@ void ChannelConnection::PreparePackets(std::list<ReadOnlyPacket>& packets)
                 capturePacket.Rewind();
                 capturePacket.WriteU32Big(paddedSize);
 
-                std::time_t now = std::time_t(nullptr);
+                std::time_t now = std::time(nullptr);
 
                 uint8_t source = HACK_SOURCE_SERVER;
                 uint64_t stamp = static_cast<uint64_t>(now);

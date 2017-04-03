@@ -142,7 +142,7 @@ void EncryptedConnection::ConnectionEncrypted()
 
         if(!capturePath.IsEmpty())
         {
-            std::time_t now = std::time_t(nullptr);
+            std::time_t now = std::time(nullptr);
             std::tm *pTM = std::localtime(&now);
 
             char szTimeStamp[15];
@@ -584,7 +584,7 @@ void EncryptedConnection::ParsePacket(libcomp::Packet& packet,
     // Save the packet to the capture.
     if(nullptr != mCaptureFile)
     {
-        std::time_t now = std::time_t(nullptr);
+        std::time_t now = std::time(nullptr);
 
         uint8_t source = HACK_SOURCE_CLIENT;
         uint64_t stamp = static_cast<uint64_t>(now);

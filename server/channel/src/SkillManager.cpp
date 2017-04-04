@@ -362,9 +362,10 @@ bool SkillManager::ExecuteSkill(const std::shared_ptr<ChannelClientConnection> c
     if(success)
     {
         FinalizeSkillExecution(client, sourceState->GetEntityID(), activated, skillData, 0, 0);
-        SendCompleteSkill(client, sourceState->GetEntityID(), activated, false);
-        sourceState->SetActivatedAbility(nullptr);
     }
+
+    SendCompleteSkill(client, sourceState->GetEntityID(), activated, !success);
+    sourceState->SetActivatedAbility(nullptr);
 
     return success;
 }
@@ -480,6 +481,8 @@ bool SkillManager::ExecuteNormalSkill(const std::shared_ptr<ChannelClientConnect
                 SkillTargetResult target;
                 target.EntityState = targetEntity;
                 targetResults.push_back(target);
+
+                activated->SetEntityTargeted(true);
             }
             break;
         case objects::MiTargetData::Type_t::OBJECT:
@@ -867,10 +870,8 @@ bool SkillManager::EquipItem(const std::shared_ptr<ChannelClientConnection> clie
     (void)sourceEntityID;
 
     auto itemID = activated->GetTargetObjectID();
-    if(itemID == -1)
+    if(itemID <= 0)
     {
-        LOG_ERROR(libcomp::String("Invalid item specified to equip: %1\n")
-            .Arg(itemID));
         return false;
     }
 
@@ -885,7 +886,7 @@ bool SkillManager::SummonDemon(const std::shared_ptr<ChannelClientConnection> cl
     (void)sourceEntityID;
 
     auto demonID = activated->GetTargetObjectID();
-    if(demonID == -1)
+    if(demonID <= 0)
     {
         LOG_ERROR(libcomp::String("Invalid demon specified to summon: %1\n")
             .Arg(demonID));
@@ -903,7 +904,7 @@ bool SkillManager::StoreDemon(const std::shared_ptr<ChannelClientConnection> cli
     (void)sourceEntityID;
 
     auto demonID = activated->GetTargetObjectID();
-    if(demonID == -1)
+    if(demonID <= 0)
     {
         LOG_ERROR(libcomp::String("Invalid demon specified to store: %1\n")
             .Arg(demonID));
@@ -943,6 +944,9 @@ void SkillManager::SendExecuteSkill(const std::shared_ptr<ChannelClientConnectio
     auto conditionData = skillData->GetCondition();
     auto dischargeData = skillData->GetDischarge();
 
+    int32_t targetedEntityID = activated->GetEntityTargeted() ?
+        (int32_t)activated->GetTargetObjectID() : sourceEntityID;
+
     auto currentTime = state->ToClientTime(ChannelServer::GetServerTime());
     auto cooldownTime = currentTime + ((float)conditionData->GetCooldownTime() * 0.001f);
     auto lockOutTime = currentTime + ((float)dischargeData->GetStiffness() * 0.001f);
@@ -952,7 +956,7 @@ void SkillManager::SendExecuteSkill(const std::shared_ptr<ChannelClientConnectio
     reply.WriteS32Little(sourceEntityID);
     reply.WriteU32Little(activated->GetSkillID());
     reply.WriteS8((int8_t)activated->GetActivationID());
-    reply.WriteS32Little(0);   //Unknown
+    reply.WriteS32Little(targetedEntityID);
     reply.WriteFloat(cooldownTime);
     reply.WriteFloat(lockOutTime);
     reply.WriteU32Little(hpCost);
@@ -964,7 +968,7 @@ void SkillManager::SendExecuteSkill(const std::shared_ptr<ChannelClientConnectio
     reply.WriteFloat(0);    //Unknown
     reply.WriteFloat(0);    //Unknown
     reply.WriteU8(0);   //Unknown
-    reply.WriteU8(0);   //Unknown
+    reply.WriteU8(0xFF);   //Unknown
 
     client->SendPacket(reply);
 }

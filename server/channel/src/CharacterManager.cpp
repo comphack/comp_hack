@@ -415,7 +415,8 @@ void CharacterManager::SendPartnerData(const std::shared_ptr<
     //Learned skill count will always be static
     for(size_t i = 0; i < 8; i++)
     {
-        reply.WriteU32Little(d->GetLearnedSkills(i));
+        auto skillID = d->GetLearnedSkills(i);
+        reply.WriteU32Little(skillID == 0 ? (uint32_t)-1 : skillID);
     }
 
     size_t aSkillCount = d->AcquiredSkillsCount();
@@ -605,7 +606,8 @@ void CharacterManager::SendCOMPDemonData(const std::shared_ptr<
     reply.WriteS32Little(8);
     for(size_t i = 0; i < 8; i++)
     {
-        reply.WriteU32Little(d->GetLearnedSkills(i));
+        auto skillID = d->GetLearnedSkills(i);
+        reply.WriteU32Little(skillID == 0 ? (uint32_t)-1 : skillID);
     }
 
     size_t aSkillCount = d->AcquiredSkillsCount();
@@ -668,8 +670,8 @@ void CharacterManager::SendCOMPDemonData(const std::shared_ptr<
     //Characteristics panel?
     for(size_t i = 0; i < 4; i++)
     {
-        reply.WriteS64Little(0);    //Item object ID?
-        reply.WriteU32Little(0);    //Item type?
+        reply.WriteS64Little(-1);    //Item object ID?
+        reply.WriteU32Little(static_cast<uint32_t>(-1));    //Item type?
     }
 
     //Effect length in seconds remaining

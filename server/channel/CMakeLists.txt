@@ -111,6 +111,7 @@ SET(${PROJECT_NAME}_PACKETS
     src/packets/game/AllocateSkillPoint.cpp # 0x0049
     src/packets/game/ToggleExpertise.cpp    # 0x004F
     src/packets/game/LearnSkill.cpp         # 0x0051
+    src/packets/game/UpdateDemonSkill.cpp   # 0x0054
     src/packets/game/KeepAlive.cpp          # 0x0056
     src/packets/game/FixObjectPosition.cpp  # 0x0058
     src/packets/game/State.cpp              # 0x005A

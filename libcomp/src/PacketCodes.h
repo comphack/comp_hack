@@ -81,6 +81,7 @@ enum class ClientToChannelPacketCode_t : uint16_t
     PACKET_ALLOCATE_SKILL_POINT = 0x0049, //!< Request to allocate a skill point for a character.
     PACKET_TOGGLE_EXPERTISE = 0x004F, //!< Request to enable or disable an expertise.
     PACKET_LEARN_SKILL = 0x0051, //!< Request for a character to learn a skill.
+    PACKET_UPDATE_DEMON_SKILL = 0x0054, //!< Request for a demon's learned skill set to be updated.
     PACKET_KEEP_ALIVE = 0x0056,  //!< Request/check to keep the connection alive.
     PACKET_FIX_OBJECT_POSITION = 0x0058,  //!< Request to fix a game object's position.
     PACKET_STATE = 0x005A,  //!< Request for the client's character state.
@@ -140,6 +141,7 @@ enum class ChannelToClientPacketCode_t : uint16_t
     PACKET_EXPERTISE_RANK_UP = 0x004E, //!< Notifies the client that a character's expertise has ranked up.
     PACKET_TOGGLE_EXPERTISE = 0x0050, //!< Notifies the client to enable or disable an expertise.
     PACKET_LEARN_SKILL = 0x0052, //!< Notifies the client that a character has learned a skill.
+    PACKET_UPDATE_DEMON_SKILL = 0x0055, //!< Notifies the client that the partner demon's learned skill set has been updated.
     PACKET_KEEP_ALIVE = 0x0057,  //!< Response to keep the client connection alive.
     PACKET_FIX_OBJECT_POSITION = 0x0059,  //!< Response to fix a game object's position.
     PACKET_COMP_LIST = 0x005D,  //!< COMP demon list response.

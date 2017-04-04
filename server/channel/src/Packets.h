@@ -49,6 +49,7 @@ PACKET_PARSER_DECL(CancelSkill);         // 0x0032
 PACKET_PARSER_DECL(AllocateSkillPoint);  // 0x0049
 PACKET_PARSER_DECL(ToggleExpertise);     // 0x004F
 PACKET_PARSER_DECL(LearnSkill);          // 0x0051
+PACKET_PARSER_DECL(UpdateDemonSkill);    // 0x0054
 PACKET_PARSER_DECL(KeepAlive);           // 0x0056
 PACKET_PARSER_DECL(FixObjectPosition);   // 0x0058
 PACKET_PARSER_DECL(State);               // 0x005A

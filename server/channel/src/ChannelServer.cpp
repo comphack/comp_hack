@@ -128,6 +128,8 @@ bool ChannelServer::Initialize()
         to_underlying(ClientToChannelPacketCode_t::PACKET_TOGGLE_EXPERTISE));
     clientPacketManager->AddParser<Parsers::LearnSkill>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_LEARN_SKILL));
+    clientPacketManager->AddParser<Parsers::UpdateDemonSkill>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_UPDATE_DEMON_SKILL));
     clientPacketManager->AddParser<Parsers::KeepAlive>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_KEEP_ALIVE));
     clientPacketManager->AddParser<Parsers::FixObjectPosition>(

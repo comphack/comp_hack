@@ -378,7 +378,11 @@ void CharacterManager::SendPartnerData(const std::shared_ptr<
         return;
     }
 
-    dState->RecalculateStats(mServer.lock()->GetDefinitionManager());
+    auto server = mServer.lock();
+    auto definitionManager = server->GetDefinitionManager();
+    auto def = definitionManager->GetDevilData(d->GetType());
+
+    dState->RecalculateStats(definitionManager);
 
     auto ds = d->GetCoreStats().Get();
 
@@ -394,7 +398,7 @@ void CharacterManager::SendPartnerData(const std::shared_ptr<
     reply.WriteS16Little(ds->GetMP());
     reply.WriteS64Little(ds->GetXP());
     reply.WriteS8(ds->GetLevel());
-    reply.WriteS16Little(0x22C7); //Unknown
+    reply.WriteS16Little(def->GetBasic()->GetLNC());
 
     GetEntityStatsPacketData(reply, ds, dState, false);
 
@@ -434,7 +438,7 @@ void CharacterManager::SendPartnerData(const std::shared_ptr<
     reply.WriteS64Little(-1);
     reply.WriteS64Little(-1);
 
-    auto zone = mServer.lock()->GetZoneManager()->GetZoneInstance(client);
+    auto zone = server->GetZoneManager()->GetZoneInstance(client);
     auto zoneDef = zone->GetDefinition();
 
     reply.WriteS32Little((int32_t)zone->GetID());

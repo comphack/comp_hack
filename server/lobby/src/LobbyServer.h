@@ -163,10 +163,10 @@ protected:
     bool ResetRegisteredWorlds();
 
     /**
-     * Setup the server based on the setup config.
-     * @return true on success, false on failure
+     * Setup the server based on the setup config file.
+     * @return true on success, false on failure or no work done
      */
-    bool Setup(const std::shared_ptr<objects::SetupConfig>& config);
+    bool Setup();
 
     /**
      * Create a connection to a newly active socket.

@@ -37,8 +37,12 @@
 // libcomp Includes
 #include <DatabaseCassandra.h>
 #include <DatabaseSQLite3.h>
+#include <Decrypt.h>
 #include <Log.h>
 #include <MessageInit.h>
+
+// object Includes
+#include <Account.h>
 
 using namespace libcomp;
 
@@ -179,8 +183,24 @@ std::shared_ptr<Database> BaseServer::GetDatabase(
         return nullptr;
     }
 
-    if((performSetup && !db->Setup())
-        || (!performSetup && !db->Use()))
+    bool initFailure = false;
+    if(performSetup)
+    {
+        bool createMockData = configIter->second->GetMockData();
+        initFailure = !db->Setup(createMockData);
+        if(!initFailure && createMockData)
+        {
+            std::string configPath = GetDefaultConfigPath() +
+                configIter->second->GetMockDataFilename().ToUtf8();
+            initFailure = !InsertDataFromFile(configPath, db);
+        }
+    }
+    else
+    {
+        initFailure = !db->Use();
+    }
+
+    if(initFailure)
     {
         LOG_CRITICAL("Failed to init database.\n");
         return nullptr;
@@ -402,4 +422,94 @@ bool BaseServer::ProcessMessage(const libcomp::Message::Message *pMessage)
     }
 
     return false;
+}
+
+bool BaseServer::InsertDataFromFile(const libcomp::String& filePath,
+    const std::shared_ptr<Database>& db, const std::set<std::string>& specificTypes)
+{
+    bool recordsFound = false;
+    
+    tinyxml2::XMLDocument doc;
+    if(tinyxml2::XML_SUCCESS != doc.LoadFile(filePath.C()))
+    {
+        return false;
+    }
+
+    LOG_DEBUG(libcomp::String("Inserting records from file '%1'...\n").Arg(filePath));
+
+    const tinyxml2::XMLElement *objXml = doc.RootElement()->FirstChildElement("object");
+
+    while(nullptr != objXml)
+    {
+        bool typeExists = true;
+
+        std::string name(objXml->Attribute("name"));
+        if(specificTypes.size() > 0 && specificTypes.find(name) == specificTypes.end())
+        {
+            continue;
+        }
+
+        auto typeHash = libcomp::PersistentObject::GetTypeHashByName(name, typeExists);
+        if(!typeExists)
+        {
+            return false;
+        }
+
+        // Retrieve the UID if specified
+        libobjgen::UUID uuid;
+        const tinyxml2::XMLElement *memberXml = objXml->FirstChildElement("member");
+        while(nullptr != memberXml)
+        {
+            if("uid" == libcomp::String(memberXml->Attribute("name")).ToLower())
+            {
+                std::string uuidText(memberXml->GetText());
+                uuid = libobjgen::UUID(uuidText);
+                if(uuid.IsNull())
+                {
+                    return false;
+                }
+                break;
+            }
+            memberXml = memberXml->NextSiblingElement("member");
+        }
+
+        auto record = libcomp::PersistentObject::New(typeHash);
+        if(!record->Load(doc, *objXml))
+        {
+            return false;
+        }
+
+        if(name == "Account")
+        {
+            // Check that there is a password and salt it
+            auto account = std::dynamic_pointer_cast<objects::Account>(record);
+
+            if(account->GetUsername().IsEmpty() ||
+                account->GetPassword().IsEmpty())
+            {
+                LOG_ERROR("Attempted to insert an account with no username"
+                    " or no password.\n");
+                return false;
+            }
+
+            libcomp::String salt = libcomp::Decrypt::GenerateRandom(10);
+            account->SetSalt(salt);
+            account->SetPassword(libcomp::Decrypt::HashPassword(
+                account->GetPassword(), salt));
+        }
+
+        if(!record->Register(record, uuid) ||
+            !record->Insert(db))
+        {
+            return false;
+        }
+
+        // Don't cache the records until they are needed
+        record->Unregister();
+
+        objXml = objXml->NextSiblingElement("object");
+        recordsFound = true;
+    }
+
+    return recordsFound;
 }

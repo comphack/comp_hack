@@ -58,7 +58,6 @@ SET(${PROJECT_NAME}_HDRS
 SET(${PROJECT_NAME}_SCHEMA
     schema/clientstate.xml
     schema/lobbyconfig.xml
-    schema/setupconfig.xml
 )
 
 SOURCE_GROUP("objgen" ${CMAKE_CURRENT_BINARY_DIR}/objgen/*)
@@ -79,10 +78,6 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     ClientStateObject.cpp
     LobbyConfig.h
     LobbyConfig.cpp
-    SetupAccount.h
-    SetupAccount.cpp
-    SetupConfig.h
-    SetupConfig.cpp
 )
 
 SOURCE_GROUP("Source Files\\Packets\\Game" src/packets/game/*)

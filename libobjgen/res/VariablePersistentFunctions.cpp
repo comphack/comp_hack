@@ -24,7 +24,7 @@ std::shared_ptr<libobjgen::MetaObject> @OBJECT_NAME@::GetObjectMetadata()
 
 std::shared_ptr<libobjgen::MetaObject> @OBJECT_NAME@::GetMetadata()
 {
-    auto m = libcomp::PersistentObject::GetRegisteredMetadata(typeid(@OBJECT_NAME@));
+    auto m = libcomp::PersistentObject::GetRegisteredMetadata(typeid(@OBJECT_NAME@).hash_code());
     if(nullptr == m)
     {
         static char metadataBytes[@BYTE_COUNT@] = { @BYTES@ };

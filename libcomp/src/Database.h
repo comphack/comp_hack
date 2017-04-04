@@ -42,7 +42,7 @@ class DatabaseBind;
  * Abstract base class that represents a database to use for loading
  * and modifying @ref PersistentObject instances as well as utility
  * tables by translating actions to database specific query syntax.
- * std::type_index is used as a parameter to access object metadata
+ * The typeHash is used as a parameter to access object metadata
  * to perform various tasks such as checking column data types and
  * knowing what table name to use in a select statement.
  */
@@ -103,9 +103,11 @@ public:
 
     /**
      * Setup the database schema and perform all validation steps.
+     * @param rebuild Optional parameter to rebuild all tables used
+     *  by this database during the verification step
      * @return true if it could be set up, false if it could not
      */
-    virtual bool Setup() = 0;
+    virtual bool Setup(bool rebuild = false) = 0;
 
     /**
      * Use the database schema, keyspace, namespace, etc.
@@ -123,24 +125,24 @@ public:
     /**
      * Load multiple @ref PersistentObject instances from a single bound
      * database column and value to select upon.
-     * @param type C++ type representing the object type to load
+     * @param typeHash C++ type hash representing the object type to load
      * @param pValue Database specific agnostic binding
      * @return List of pointers to loaded objects from the query results
      */
     virtual std::list<std::shared_ptr<PersistentObject>> LoadObjects(
-        std::type_index type, DatabaseBind *pValue) = 0;
+       size_t typeHash, DatabaseBind *pValue) = 0;
 
     /**
      * Load one @ref PersistentObject instance from a single bound
      * database column and value to select upon.  This simply filters
      * down the results of @ref LoadObjects to the first record so
      * it should be used only when the value being bound to is unique.
-     * @param type C++ type representing the object type to load
+     * @param typeHash C++ type hash representing the object type to load
      * @param pValue Database agnostic column binding
      * @return Pointer to the first loaded object from the query results
      */
     virtual std::shared_ptr<PersistentObject> LoadSingleObject(
-        std::type_index type, DatabaseBind *pValue);
+        size_t typeHash, DatabaseBind *pValue);
 
     /**
      * Insert one @ref PersistentObject instance into the database.
@@ -188,12 +190,12 @@ protected:
      * Get a pointer to a new @ref PersistentObject of the specified
      * type populated with the current row being read from a database
      * query.
-     * @param type C++ type of object to load
+     * @param typeHash C++ type hash of object to load
      * @param query Current query to use results from
      * @return Pointer to the new object
      */
     std::shared_ptr<PersistentObject> LoadSingleObjectFromRow(
-        std::type_index type, DatabaseQuery& query);
+        size_t typeHash, DatabaseQuery& query);
 
     /// Last error raised by a database related action
     String mError;

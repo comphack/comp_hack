@@ -3,5 +3,4 @@
     <include path="../../libcomp/schema/master.xml"/>
     <include path="clientstate.xml"/>
     <include path="lobbyconfig.xml"/>
-    <include path="setupconfig.xml"/>
 </objgen>

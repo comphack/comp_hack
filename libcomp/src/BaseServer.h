@@ -201,6 +201,20 @@ protected:
      */
     virtual std::shared_ptr<libcomp::Worker> GetNextConnectionWorker();
 
+    /**
+     * Dynamicaly instantiate and insert data from an XML config file. Records
+     * will be created in the order they are listed in the file and are assumed
+     * to be valid for the database loaded for the server.
+     * @param filePath Path to the XML config file
+     * @param db Pointer to the database connection
+     * @param specificTypes Optional parameter to only load the specified types
+     * @return true on success, false if either no data was found or an error
+     *  occurred
+     */
+    bool InsertDataFromFile(const libcomp::String& filePath,
+        const std::shared_ptr<Database>& db,
+        const std::set<std::string>& specificTypes = std::set<std::string>());
+
     /// A shared pointer to the config used to set up the server.
     std::shared_ptr<objects::ServerConfig> mConfig;
 

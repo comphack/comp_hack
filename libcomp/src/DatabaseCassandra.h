@@ -66,11 +66,11 @@ public:
 
     virtual DatabaseQuery Prepare(const String& query);
     virtual bool Exists();
-    virtual bool Setup();
+    virtual bool Setup(bool rebuild = false);
     virtual bool Use();
 
     virtual std::list<std::shared_ptr<PersistentObject>> LoadObjects(
-        std::type_index type, DatabaseBind *pValue);
+        size_t typeHash, DatabaseBind *pValue);
 
     virtual bool InsertSingleObject(std::shared_ptr<PersistentObject>& obj);
     virtual bool UpdateSingleObject(std::shared_ptr<PersistentObject>& obj);
@@ -83,9 +83,11 @@ public:
      * take place and a replacement will be built instead and missing indexes
      * will be created should they not exist based off of of fields marked
      * as lookup keys in their objgen definitions.
+     * @param recreateTables Optional parameter to archive and recreate all
+     *  tables used by this database
      * @return true on success, false on failure
      */
-    bool VerifyAndSetupSchema();
+    bool VerifyAndSetupSchema(bool recreateTables = false);
 
     /**
      * Check if this database is configured to use the default keyspace

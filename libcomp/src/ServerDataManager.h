@@ -50,17 +50,45 @@ class ServerZone;
 namespace libcomp
 {
 
+/**
+ * Manager class responsible for loading server specific files such as
+ * zones and script files.
+ */
 class ServerDataManager
 {
 public:
+    /**
+     * Create a new ServerDataManager.
+     */
     ServerDataManager();
+
+    /**
+     * Clean up the ServerDataManager.
+     */
     ~ServerDataManager();
 
+    /**
+     * Get a server zone by definition ID
+     * @param id Definition ID of a zone to load
+     * @return Pointer to the server zone matching the specified id
+     */
     const std::shared_ptr<objects::ServerZone> GetZoneData(uint32_t id);
 
+    /**
+     * Load all server data defintions in the data store
+     * @param pDataStore Pointer to the datastore to load binary files from
+     * @return true on success, false on failure
+     */
     bool LoadData(gsl::not_null<DataStore*> pDataStore);
 
 private:
+    /**
+     * Get a server object by ID from the supplied map of the specified
+     * type
+     * @param id ID of the server object to retrieve from the map
+     * @param data Map of server objects to retrieve by ID
+     * @return Pointer to the matching server object, null if doesn't exist
+     */
     template <class T>
     std::shared_ptr<T> GetObjectByID(uint32_t id,
         std::unordered_map<uint32_t, std::shared_ptr<T>>& data)
@@ -73,7 +101,13 @@ private:
 
         return nullptr;
     }
-    
+
+    /**
+     * Load all objects in an XML document into the specified type
+     * @param doc Loaded XML document
+     * @param data Output map to store the loaded objects in by ID
+     * @return true on success, false on failure
+     */
     template <class T>
     bool LoadObjects(const tinyxml2::XMLDocument& doc,
         std::unordered_map<uint32_t, std::shared_ptr<T>>& data)
@@ -97,6 +131,7 @@ private:
         return true;
     }
 
+    /// Map of server zone defintions by zone definition ID
     std::unordered_map<uint32_t,
         std::shared_ptr<objects::ServerZone>> mZoneData;
 };

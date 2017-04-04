@@ -28,6 +28,7 @@
 
 // libcomp Includes
 #include <Decrypt.h>
+#include <Log.h>
 
 using namespace lobby;
 
@@ -41,6 +42,9 @@ std::pair<libcomp::String, libcomp::String> SessionManager::GenerateSIDs(
     libcomp::String lookup = username.ToLower();
 
     std::lock_guard<std::mutex> lock(mSessionLock);
+
+    // Clear any existing timeouts
+    mTimeoutMap.erase(lookup);
 
     auto entry = mSessionMap.find(lookup);
 
@@ -84,6 +88,9 @@ bool SessionManager::CheckSID(const libcomp::String& username,
                 {
                     if(timeIter->second < time(0))
                     {
+                        LOG_WARNING(libcomp::String("Valid SID supplied but the"
+                            " session time-out has expired: '%1'").Arg(username));
+
                         result = false;
                         expireSession = true;
                     }

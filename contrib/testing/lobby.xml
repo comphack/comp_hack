@@ -5,23 +5,6 @@
         <member name="DiffieHellmanKeyPair">9C4169BBE8F535F7A7404D4EB3AE22CF63C0450FC2C7B2A5A03794D4CFA9F290FF5774267885E60B848280E3A07468366E62F040DAC3CB67E95E8F3DC4D97F94AD1D3D98F0B066F72B65CB391643A95BB96CF048ED5D60FB7AF7A969F38ABD2301F6A7EC4DB7DAFC2CFD1F417E0B634033FEE8B102D62A28EC03D95266E2B0B3</member>
         <member name="Port">10666</member>
         <member name="DatabaseType">CASSANDRA</member>    <!-- CASSANDRA/SQLITE3 -->
-        <member name="SQLite3Config">
-            <object>
-                <member name="IP">127.0.0.1</member>
-                <member name="DatabaseName">comp_hack</member>
-                <member name="DefaultDatabaseName">comp_hack</member>
-                <!--<member name="FileDirectory"/>-->
-            </object>
-        </member>
-        <member name="CassandraConfig">
-            <object>
-                <member name="IP">127.0.0.1</member>
-                <member name="Keyspace">comp_hack</member>
-                <member name="DefaultKeyspace">comp_hack</member>
-                <!--<member name="Username"/>-->
-                <!--<member name="Password"/>-->
-            </object>
-        </member>
         <member name="MultithreadMode">true</member>
         <member name="DataStore">
             <element>/var/lib/comp_hack</element>
@@ -33,8 +16,29 @@
         <member name="LogWarning">true</member>
         <member name="LogError">true</member>
         <member name="LogCritical">true</member>
-        
+
         <!-- From LobbyConfig -->
+        <member name="SQLite3Config">
+            <object>
+                <member name="IP">127.0.0.1</member>
+                <member name="DatabaseName">comp_hack</member>
+                <member name="DefaultDatabaseName">comp_hack</member>
+                <!--<member name="FileDirectory"/>-->
+                <member name="MockData">true</member>
+                <member name="MockDataFilename">test_lobby_setup.xml</member>
+            </object>
+        </member>
+        <member name="CassandraConfig">
+            <object>
+                <member name="IP">127.0.0.1</member>
+                <member name="Keyspace">comp_hack</member>
+                <member name="DefaultKeyspace">comp_hack</member>
+                <!--<member name="Username"/>-->
+                <!--<member name="Password"/>-->
+                <member name="MockData">true</member>
+                <member name="MockDataFilename">test_lobby_setup.xml</member>
+            </object>
+        </member>
         <member name="CharacterDeletionDelay">1440</member>    <!-- In minutes, 24 hours by default -->
         <member name="CharacterTicketCost">0</member>
         <member name="WebListeningPort">10999</member>

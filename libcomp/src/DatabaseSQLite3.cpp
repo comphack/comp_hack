@@ -117,7 +117,7 @@ bool DatabaseSQLite3::Exists()
     }
 }
 
-bool DatabaseSQLite3::Setup()
+bool DatabaseSQLite3::Setup(bool rebuild)
 {
     if(!IsOpen())
     {
@@ -156,7 +156,7 @@ bool DatabaseSQLite3::Setup()
     LOG_DEBUG(String("Database connection established to '%1' file.\n")
         .Arg(filename));
 
-    if(!VerifyAndSetupSchema())
+    if(!VerifyAndSetupSchema(rebuild))
     {
         LOG_ERROR("Schema verification and setup failed.\n");
 
@@ -173,11 +173,11 @@ bool DatabaseSQLite3::Use()
 }
 
 std::list<std::shared_ptr<PersistentObject>> DatabaseSQLite3::LoadObjects(
-    std::type_index type, DatabaseBind *pValue)
+    size_t typeHash, DatabaseBind *pValue)
 {
     std::list<std::shared_ptr<PersistentObject>> objects;
 
-    auto metaObject = PersistentObject::GetRegisteredMetadata(type);
+    auto metaObject = PersistentObject::GetRegisteredMetadata(typeHash);
 
     if(nullptr == metaObject)
     {
@@ -223,7 +223,7 @@ std::list<std::shared_ptr<PersistentObject>> DatabaseSQLite3::LoadObjects(
 
     while(query.Next())
     {
-        auto obj = LoadSingleObjectFromRow(type, query);
+        auto obj = LoadSingleObjectFromRow(typeHash, query);
 
         if(nullptr != obj)
         {
@@ -437,7 +437,7 @@ bool DatabaseSQLite3::DeleteObjects(std::list<std::shared_ptr<PersistentObject>>
     return false;
 }
 
-bool DatabaseSQLite3::VerifyAndSetupSchema()
+bool DatabaseSQLite3::VerifyAndSetupSchema(bool recreateTables)
 {
     auto databaseName = std::dynamic_pointer_cast<objects::DatabaseConfigSQLite3>(
         mConfig)->GetDatabaseName();
@@ -548,6 +548,8 @@ bool DatabaseSQLite3::VerifyAndSetupSchema()
         }
         else
         {
+            archiving = recreateTables;
+
             std::unordered_map<std::string,
                 String> columns = tableIter->second;
             if(columns.size() - 1 != vars.size()

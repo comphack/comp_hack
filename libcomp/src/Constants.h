@@ -119,8 +119,8 @@ namespace libcomp
 /// Chat message is visible to all GMs.
 #define CHAT_VISIBILITY_GMS    (7)
 
-// Chat Radius for Say Chat.  ToDo: Define Proper Range.
-#define CHAT_RADIUS_SAY (7921)
+// Chat Radius for Say Chat.
+#define CHAT_RADIUS_SAY (8000)
 
 /// Number of G1 times stored.
 #define G1_TIME_COUNT (18)

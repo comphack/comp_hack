@@ -94,7 +94,7 @@ bool ActionManager::ZoneChange(
     zoneManager->LeaveZone(client);
 
     // Enter the new zone.
-    if(!zoneManager->EnterZone(client, zoneID))
+    if(!zoneManager->EnterZone(client, zoneID, x, y, rotation))
     {
         LOG_ERROR(libcomp::String("Failed to add client to zone"
             " %1. Closing the connection.\n").Arg(zoneID));
@@ -103,33 +103,6 @@ bool ActionManager::ZoneChange(
 
         return false;
     }
-
-    auto ticks = server->GetServerTime();
-
-    // Move the entity to the new location.
-    /// @todo Do this for the demon too?
-    cState->SetOriginX(x);
-    cState->SetOriginY(x);
-    cState->SetOriginRotation(x);
-    cState->SetOriginTicks(ticks);
-    cState->SetDestinationX(x);
-    cState->SetDestinationY(x);
-    cState->SetDestinationRotation(x);
-    cState->SetDestinationTicks(ticks);
-
-    auto instance = zoneManager->GetZoneInstance(client);
-    auto zoneDef = instance->GetDefinition();
-
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_ZONE_CHANGE);
-    reply.WriteU32Little(zoneDef->GetID());
-    reply.WriteU32Little(instance->GetID());
-    reply.WriteFloat(x);
-    reply.WriteFloat(y);
-    reply.WriteFloat(rotation);
-    reply.WriteU32Little(zoneDef->GetDynamicMapID());
-
-    client->SendPacket(reply);
-
+    
     return true;
 }

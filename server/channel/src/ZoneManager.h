@@ -79,11 +79,14 @@ public:
      * Associate a client connection to a zone
      * @param client Client connection to connect to a zone
      * @param zoneID Definition ID of a zone to add the client to
+     * @param xCoord: Float that defines x-coordinate to send character to.
+     * @param yCoord: Float that defines y-coordinate to send character to.
+     * @param rotation: Float that defines character rotation.
      * @return true if the client entered the zone properly, false if they
      *  did not
      */
     bool EnterZone(const std::shared_ptr<ChannelClientConnection>& client,
-        uint32_t zoneID);
+        uint32_t zoneID, float xCoord, float yCoord, float rotation);
 
     /**
      * Remove a client connection from a zone

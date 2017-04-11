@@ -44,30 +44,19 @@ void SendZoneChange(std::shared_ptr<ChannelServer> server,
 {
     auto zoneManager = server->GetZoneManager();
     auto cState = client->GetClientState()->GetCharacterState();
+    float xCoord = cState->GetOriginX();
+    float yCoord = cState->GetOriginY();
+    float rotation = cState->GetOriginRotation();
 
     /// @todo: replace with last zone information
     uint32_t zoneID = 0x00004E85;
-    if(!zoneManager->EnterZone(client, zoneID))
+    if(!zoneManager->EnterZone(client, zoneID, xCoord, yCoord, rotation))
     {
         LOG_ERROR(libcomp::String("Failed to add client to zone"
             " %1. Closing the connection.\n").Arg(zoneID));
         client->Close();
         return;
     }
-
-    auto instance = zoneManager->GetZoneInstance(client);
-    auto def = instance->GetDefinition();
-
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_ZONE_CHANGE);
-    reply.WriteU32Little(zoneID);
-    reply.WriteU32Little(instance->GetID());
-    reply.WriteFloat(cState->GetOriginX());
-    reply.WriteFloat(cState->GetOriginY());
-    reply.WriteFloat(cState->GetOriginRotation());
-    reply.WriteU32Little(def->GetDynamicMapID());
-
-    client->SendPacket(reply);
 }
 
 bool Parsers::SendData::Parse(libcomp::ManagerPacket *pPacketManager,

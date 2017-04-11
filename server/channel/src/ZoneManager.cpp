@@ -74,23 +74,52 @@ std::shared_ptr<Zone> ZoneManager::GetZoneInstance(int32_t primaryEntityID)
 }
 
 bool ZoneManager::EnterZone(const std::shared_ptr<ChannelClientConnection>& client,
-    uint32_t zoneID)
+    uint32_t zoneID, float xCoord, float yCoord, float rotation)
 {
+    auto server = mServer.lock();
     auto instance = GetZone(zoneID);
     if(instance == nullptr)
     {
         return false;
     }
 
-    auto instanceID = instance->GetID();
 
+    auto instanceID = instance->GetID();
     auto state = client->GetClientState();
-    auto primaryEntityID = state->GetCharacterState()->GetEntityID();
+    auto cState = state->GetCharacterState();
+    auto primaryEntityID = cState->GetEntityID();
     {
         std::lock_guard<std::mutex> lock(mLock);
         mEntityMap[primaryEntityID] = instanceID;
         mZones[instanceID]->AddConnection(client);
     }
+
+
+    auto ticks = server->GetServerTime();
+
+    // Move the entity to the new location.
+    /// @todo Do this for the demon too?
+    cState->SetOriginX(xCoord);
+    cState->SetOriginY(yCoord);
+    cState->SetOriginRotation(rotation);
+    cState->SetOriginTicks(ticks);
+    cState->SetDestinationX(xCoord);
+    cState->SetDestinationY(yCoord);
+    cState->SetDestinationRotation(rotation);
+    cState->SetDestinationTicks(ticks);
+
+    auto zoneDef = instance->GetDefinition();
+
+    libcomp::Packet reply;
+    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_ZONE_CHANGE);
+    reply.WriteU32Little(zoneDef->GetID());
+    reply.WriteU32Little(instance->GetID());
+    reply.WriteFloat(xCoord);
+    reply.WriteFloat(yCoord);
+    reply.WriteFloat(rotation);
+    reply.WriteU32Little(zoneDef->GetDynamicMapID());
+
+    client->SendPacket(reply);
 
     return true;
 }

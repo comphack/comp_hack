@@ -185,7 +185,7 @@ private:
      * @param args List of arguments for the command
      * @return true if the command was handled properly, else false
      */
-    bool ChatManager::GMCommand_Zone(const std::shared_ptr<
+    bool GMCommand_Zone(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args);
 

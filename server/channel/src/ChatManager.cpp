@@ -477,25 +477,18 @@ bool ChatManager::GMCommand_Zone(const std::shared_ptr<
     }
     else
     {
-        GetIntegerArg<uint32_t>(zoneID, argsCopy);
-        auto zoneDefinition = server->GetServerDataManager()->GetZoneData(zoneID);
-        if(!zoneDefinition)
+        if(!GetIntegerArg<uint32_t>(zoneID, argsCopy) || !server->GetServerDataManager()->GetZoneData(zoneID))
         {
             return SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String("ERROR: INVALID ZONE ID.  Please enter a proper zoneID and try again."));
         }
+
         zoneManager->LeaveZone(client);
-        //copy zoneID from args.
-        if(args.size() == 3)
+
+        if(args.size() == 3 && (!GetDecimalArg<float>(xCoord, argsCopy) || !GetDecimalArg<float>(yCoord, argsCopy)))
         {
-            //pull x coord
-            bool xTrue = GetDecimalArg<float>(xCoord, argsCopy);
-            //pull y coord
-            bool yTrue = GetDecimalArg<float>(yCoord, argsCopy);
-            if(!xTrue||!yTrue)
-            {
-                return SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String("ERROR: One of the inputs is not a number.  Please re-enter the command with proper inputs."));
-            }
+            return SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String("ERROR: One of the inputs is not a number.  Please re-enter the command with proper inputs."));
         }
+
         zoneManager->EnterZone(client, zoneID, xCoord, yCoord, rotation);
         
         return true;

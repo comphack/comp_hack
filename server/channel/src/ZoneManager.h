@@ -79,9 +79,9 @@ public:
      * Associate a client connection to a zone
      * @param client Client connection to connect to a zone
      * @param zoneID Definition ID of a zone to add the client to
-     * @param xCoord: x-coordinate to send character to.
-     * @param yCoord: y-coordinate to send character to.
-     * @param rotation: character rotation.
+     * @param xCoord x-coordinate to send character to.
+     * @param yCoord y-coordinate to send character to.
+     * @param rotation character rotation.
      * @return true if the client entered the zone properly, false if they
      *  did not
      */

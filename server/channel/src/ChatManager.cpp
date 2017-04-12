@@ -464,7 +464,6 @@ bool ChatManager::GMCommand_Zone(const std::shared_ptr<
     auto cState = state->GetCharacterState();
     auto server = mServer.lock();
     auto zoneManager = server->GetZoneManager();
-
     uint32_t zoneID = 0;
     float xCoord = 0.00;
     float yCoord = 0.00;
@@ -474,30 +473,30 @@ bool ChatManager::GMCommand_Zone(const std::shared_ptr<
     if(args.empty())
     {
         return SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(
-            "Error: @Zone requires at least a zoneID, or a zoneID and (x,y) coordinates"));
+            "Error: @Zone requires at least a zoneID, or a zoneID and (x,y) coordinates."));
     }
     else
     {
+        GetIntegerArg<uint32_t>(zoneID, argsCopy);
+        auto zoneDefinition = server->GetServerDataManager()->GetZoneData(zoneID);
+        if(!zoneDefinition)
+        {
+            return SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String("ERROR: INVALID ZONE ID.  Please enter a proper zoneID and try again."));
+        }
         zoneManager->LeaveZone(client);
         //copy zoneID from args.
-        GetIntegerArg<uint32_t>(zoneID, argsCopy);
         if(args.size() == 3)
         {
             //pull x coord
-            GetDecimalArg<float>(xCoord, argsCopy);
+            bool xTrue = GetDecimalArg<float>(xCoord, argsCopy);
             //pull y coord
-            GetDecimalArg<float>(yCoord, argsCopy);
+            bool yTrue = GetDecimalArg<float>(yCoord, argsCopy);
+            if(!xTrue||!yTrue)
+            {
+                return SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String("ERROR: One of the inputs is not a number.  Please re-enter the command with proper inputs."));
+            }
         }
-        if(!zoneManager->EnterZone(client, zoneID, xCoord, yCoord, rotation))
-        {
-            //in failure case, will send to home3 at position 0,0 with rotation value 0.
-            zoneManager->EnterZone(client, 20101, 0, 0, 0);
-            return true;
-        }
-        else
-        {
-            zoneManager->EnterZone(client, zoneID, xCoord, yCoord, rotation);
-        }
+        zoneManager->EnterZone(client, zoneID, xCoord, yCoord, rotation);
         
         return true;
     }

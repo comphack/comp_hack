@@ -465,7 +465,7 @@ bool ChatManager::GMCommand_Zone(const std::shared_ptr<
     auto server = mServer.lock();
     auto zoneManager = server->GetZoneManager();
 
-    uint32_t mapID = 0;
+    uint32_t zoneID = 0;
     float xCoord = 0.00;
     float yCoord = 0.00;
     float rotation =0.00;
@@ -474,15 +474,13 @@ bool ChatManager::GMCommand_Zone(const std::shared_ptr<
     if(args.empty())
     {
         return SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(
-            "Error: @Zone requires at least a mapID, or a mapID and (x,y) coordinates"));
+            "Error: @Zone requires at least a zoneID, or a zoneID and (x,y) coordinates"));
     }
     else
     {
         zoneManager->LeaveZone(client);
-        //copy mapID from args.
-        GetIntegerArg<uint32_t>(mapID, argsCopy);
-        SendChatMessage (client, ChatType_t::CHAT_SELF, libcomp::String("Zoning to new map"));
-        //if there are 3 input args
+        //copy zoneID from args.
+        GetIntegerArg<uint32_t>(zoneID, argsCopy);
         if(args.size() == 3)
         {
             //pull x coord
@@ -490,7 +488,16 @@ bool ChatManager::GMCommand_Zone(const std::shared_ptr<
             //pull y coord
             GetDecimalArg<float>(yCoord, argsCopy);
         }
-        zoneManager->EnterZone(client, mapID, xCoord, yCoord, rotation);
+        if(!zoneManager->EnterZone(client, zoneID, xCoord, yCoord, rotation))
+        {
+            //in failure case, will send to home3 at position 0,0 with rotation value 0.
+            zoneManager->EnterZone(client, 20101, 0, 0, 0);
+            return true;
+        }
+        else
+        {
+            zoneManager->EnterZone(client, zoneID, xCoord, yCoord, rotation);
+        }
         
         return true;
     }

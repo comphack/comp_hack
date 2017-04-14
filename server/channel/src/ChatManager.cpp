@@ -37,6 +37,9 @@
 #include <MiDevilData.h>
 #include <MiNPCBasicData.h>
 #include <MiSkillItemStatusCommonData.h>
+#include <MiZoneBasicData.h>
+#include <MiZoneData.h>
+#include <ServerZone.h>
 
 // channel Includes
 #include <ChannelServer.h>
@@ -465,33 +468,75 @@ bool ChatManager::GMCommand_Zone(const std::shared_ptr<
     auto server = mServer.lock();
     auto zoneManager = server->GetZoneManager();
     uint32_t zoneID = 0;
-    float xCoord = 0.00;
-    float yCoord = 0.00;
-    float rotation =0.00;
+    float xCoord = 0.0f;
+    float yCoord = 0.0f;
+    float rotation = 0.0f;
     std::list<libcomp::String> argsCopy = args;
 
     if(args.empty())
     {
-        return SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(
-            "Error: @Zone requires at least a zoneID, or a zoneID and (x,y) coordinates."));
-    }
-    else
-    {
-        if(!GetIntegerArg<uint32_t>(zoneID, argsCopy) || !server->GetServerDataManager()->GetZoneData(zoneID))
+        auto zone = zoneManager->GetZoneInstance(client);
+        auto zoneData = zone->GetDefinition();
+        auto zoneDef = server->GetDefinitionManager()->GetZoneData(
+            zoneData->GetID());
+
+        if(zoneDef)
         {
-            return SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String("ERROR: INVALID ZONE ID.  Please enter a proper zoneID and try again."));
+            return SendChatMessage(client, ChatType_t::CHAT_SELF,
+                libcomp::String("You are in zone %1 (%2)").Arg(
+                    zoneData->GetID()).Arg(zoneDef->GetBasic()->GetName()));
+        }
+        else
+        {
+            return SendChatMessage(client, ChatType_t::CHAT_SELF,
+                libcomp::String("You are in zone %1").Arg(zoneData->GetID()));
+        }
+    }
+    else if(1 == args.size() || 3 == args.size())
+    {
+        // Parse the zone ID.
+        bool parseOk = GetIntegerArg<uint32_t>(zoneID, argsCopy);
+
+        std::shared_ptr<objects::ServerZone> zoneData;
+
+        // If the zone ID argument is right, look for the zone.
+        if(parseOk)
+        {
+            zoneData = server->GetServerDataManager()->GetZoneData(zoneID);
+        }
+
+        // If the ID did not parse or the zone does not exist, stop here.
+        if(!parseOk || !zoneData)
+        {
+            return SendChatMessage(client, ChatType_t::CHAT_SELF, "ERROR: "
+                "INVALID ZONE ID.  Please enter a proper zoneID and "
+                "try again.");
+        }
+
+        if(1 == args.size())
+        {
+            // Load the defaults.
+            xCoord = zoneData->GetStartingX();
+            yCoord = zoneData->GetStartingY();
+            rotation = zoneData->GetStartingRotation();
+        }
+        else if(!GetDecimalArg<float>(xCoord, argsCopy) ||
+            !GetDecimalArg<float>(yCoord, argsCopy))
+        {
+            return SendChatMessage(client, ChatType_t::CHAT_SELF, "ERROR: "
+                "One of the inputs is not a number.  Please re-enter the "
+                "command with proper inputs.");
         }
 
         zoneManager->LeaveZone(client);
-
-        if(args.size() == 3 && (!GetDecimalArg<float>(xCoord, argsCopy) || !GetDecimalArg<float>(yCoord, argsCopy)))
-        {
-            return SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String("ERROR: One of the inputs is not a number.  Please re-enter the command with proper inputs."));
-        }
-
         zoneManager->EnterZone(client, zoneID, xCoord, yCoord, rotation);
         
         return true;
+    }
+    else
+    {
+        return SendChatMessage(client, ChatType_t::CHAT_SELF,
+            "USAGE: @zone [ID [X Y]]");
     }
 }
 

@@ -1384,12 +1384,14 @@ void CharacterManager::ExperienceGain(const std::shared_ptr<
         libcomp::Packet reply;
         if(isDemon)
         {
+            std::list<uint32_t> newSkills;
             auto growth = demonData->GetGrowth();
             for(auto acSkill : growth->GetAcquisitionSkills())
             {
                 if(acSkill->GetLevel() == (uint32_t)level)
                 {
                     demon->AppendAcquiredSkills(acSkill->GetID());
+                    newSkills.push_back(acSkill->GetID());
                 }
             }
 
@@ -1404,9 +1406,9 @@ void CharacterManager::ExperienceGain(const std::shared_ptr<
             reply.WriteS64Little(state->GetObjectID(demon->GetUUID()));
             GetEntityStatsPacketData(reply, stats, dState, true);
 
-            size_t aSkillCount = demon->AcquiredSkillsCount();
-            reply.WriteU32Little(static_cast<uint32_t>(aSkillCount));
-            for(auto aSkill : demon->GetAcquiredSkills())
+            size_t newSkillCount = newSkills.size();
+            reply.WriteU32Little(static_cast<uint32_t>(newSkillCount));
+            for(auto aSkill : newSkills)
             {
                 reply.WriteU32Little(aSkill);
             }

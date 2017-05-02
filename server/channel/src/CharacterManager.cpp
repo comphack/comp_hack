@@ -478,9 +478,8 @@ void CharacterManager::SendPartnerData(const std::shared_ptr<
     //Force Stack Pending?
     reply.WriteU16Little(0);
 
-    //Unknown
-    reply.WriteU8(12);
-    reply.WriteU8(1);
+    reply.WriteU8(0);   //Unknown
+    reply.WriteU8(0);   //Mitama type
 
     //Reunion bonuses (12 * 8 ranks)
     for(size_t i = 0; i < 96; i++)
@@ -657,9 +656,8 @@ void CharacterManager::SendCOMPDemonData(const std::shared_ptr<
     //Force Stack Pending?
     reply.WriteU16Little(0);
 
-    //Unknown
-    reply.WriteU8(0);
-    reply.WriteU8(0);
+    reply.WriteU8(0);   //Unknown
+    reply.WriteU8(0);   //Mitama type
 
     //Reunion bonuses (12 * 8 ranks)
     for(size_t i = 0; i < 96; i++)

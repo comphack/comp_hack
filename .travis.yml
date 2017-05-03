@@ -82,10 +82,10 @@ before_install:
 script:
   - jdk_switcher use oraclejdk8
   - java -version
-  - wget http://apache.claz.org/cassandra/3.9/apache-cassandra-3.9-bin.tar.gz
-  - tar xzf apache-cassandra-3.9-bin.tar.gz
-  - sudo mv apache-cassandra-3.9 /opt/cassandra
-  - rm apache-cassandra-3.9-bin.tar.gz
+  - wget http://apache.claz.org/cassandra/3.10/apache-cassandra-3.10-bin.tar.gz
+  - tar xzf apache-cassandra-3.10-bin.tar.gz
+  - sudo mv apache-cassandra-3.10 /opt/cassandra
+  - rm apache-cassandra-3.10-bin.tar.gz
   - sudo mkdir /var/lib/cassandra
   - sudo mkdir /var/log/cassandra
   - sudo chown -R $USER:$GROUP /var/lib/cassandra

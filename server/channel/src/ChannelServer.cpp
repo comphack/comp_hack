@@ -29,6 +29,8 @@
 // libcomp Includes
 #include <Log.h>
 #include <ManagerPacket.h>
+#include <ManagerSystem.h>
+#include <MessageTick.h>
 #include <PacketCodes.h>
 
 // channel Includes
@@ -100,6 +102,10 @@ bool ChannelServer::Initialize()
     //Add the managers to the main worker.
     mMainWorker.AddManager(internalPacketManager);
     mMainWorker.AddManager(mManagerConnection);
+
+    //Add managers to the queue worker.
+    auto systemManager = std::make_shared<channel::ManagerSystem>(self);
+    mQueueWorker.AddManager(systemManager);
 
     auto clientPacketManager = std::make_shared<libcomp::ManagerPacket>(self);
     clientPacketManager->AddParser<Parsers::Login>(
@@ -197,6 +203,11 @@ bool ChannelServer::Initialize()
 
 ChannelServer::~ChannelServer()
 {
+    if(mTickThread.joinable())
+    {
+        mTickThread.join();
+    }
+
     delete[] mAccountManager;
     delete[] mCharacterManager;
     delete[] mChatManager;
@@ -351,6 +362,23 @@ int64_t ChannelServer::GetNextObjectID()
     return ++mMaxObjectID;
 }
 
+void ChannelServer::Tick()
+{
+    /// @todo: check/update server time
+
+    /// @todo: update zone states
+
+    /// @todo: save client states
+
+    QueueNextTick();
+}
+
+int ChannelServer::Run()
+{
+    QueueNextTick();
+    return BaseServer::Run();
+}
+
 std::shared_ptr<libcomp::TcpConnection> ChannelServer::CreateConnection(
     asio::ip::tcp::socket& socket)
 {
@@ -390,4 +418,20 @@ ServerTime ChannelServer::GetServerTimeHighResolution()
     auto now = std::chrono::high_resolution_clock::now();
     return (ServerTime)std::chrono::time_point_cast<std::chrono::microseconds>(now)
         .time_since_epoch().count();
+}
+
+void ChannelServer::QueueNextTick()
+{
+    if(mTickThread.joinable())
+    {
+        mTickThread.join();
+    }
+    
+    mTickThread = std::thread([this](channel::ChannelServer* server,
+        std::shared_ptr<libcomp::MessageQueue<libcomp::Message::Message*>> queue)
+    {
+        const static int tickDelta = 100;
+        std::this_thread::sleep_for(std::chrono::milliseconds(tickDelta));
+        queue->Enqueue(new libcomp::Message::Tick);
+    }, this, mQueueWorker.GetMessageQueue());
 }

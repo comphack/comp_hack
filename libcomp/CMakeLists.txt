@@ -145,6 +145,7 @@ SET(${PROJECT_NAME}_HDRS
     src/MessagePong.h
     src/MessageQueue.h
     src/MessageShutdown.h
+    src/MessageTick.h
     src/MessageTimeout.h
     src/MessageWorldNotification.h
     src/Object.h

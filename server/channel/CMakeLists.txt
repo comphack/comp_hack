@@ -39,6 +39,7 @@ SET(${PROJECT_NAME}_SRCS
     src/ClientState.cpp
     src/EntityState.cpp
     src/ManagerConnection.cpp
+    src/ManagerSystem.cpp
     src/SkillManager.cpp
     src/Zone.cpp
     src/ZoneManager.cpp
@@ -56,6 +57,7 @@ SET(${PROJECT_NAME}_HDRS
     src/ClientState.h
     src/EntityState.h
     src/ManagerConnection.h
+    src/ManagerSystem.h
     src/Packets.h
     src/SkillManager.h
     src/Zone.h

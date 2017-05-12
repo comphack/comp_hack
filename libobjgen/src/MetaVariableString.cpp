@@ -693,8 +693,7 @@ std::string MetaVariableString::GetDatabaseLoadCode(const Generator& generator,
     std::map<std::string, std::string> replacements;
     replacements["@DATABASE_TYPE@"] = GetCodeType();
     replacements["@COLUMN_NAME@"] = generator.Escape(GetName());
-    replacements["@SET_FUNCTION@"] = std::string("Set") +
-        generator.GetCapitalName(*this);
+    replacements["@VAR_NAME@"] = name;
 
     return generator.ParseTemplate(tabLevel, "VariableDatabaseLoad",
         replacements);

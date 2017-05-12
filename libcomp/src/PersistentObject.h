@@ -36,7 +36,6 @@
 #include <UUID.h>
 
 // Standard C++ 11 Includes
-#include <mutex>
 #include <typeindex>
 
 namespace libcomp
@@ -343,6 +342,9 @@ protected:
 
     /// UUID associated to the object
     libobjgen::UUID mUUID;
+
+    /// Set of fields that have been updated since the last save operation
+    std::set<std::string> mDirtyFields;
 
 private:
     /// Map of intantiated objects listed by their UUID

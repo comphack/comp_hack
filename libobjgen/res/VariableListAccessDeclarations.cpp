@@ -1,4 +1,4 @@
-@VAR_TYPE@ Get@VAR_CAMELCASE_NAME@(size_t index) const;
+@VAR_TYPE@ Get@VAR_CAMELCASE_NAME@(size_t index);
 bool Append@VAR_CAMELCASE_NAME@(@VAR_ARG_TYPE@ val);
 bool Prepend@VAR_CAMELCASE_NAME@(@VAR_ARG_TYPE@ val);
 bool Insert@VAR_CAMELCASE_NAME@(size_t index, @VAR_ARG_TYPE@ val);

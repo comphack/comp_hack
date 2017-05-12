@@ -450,6 +450,8 @@ std::string MetaVariableArray::GetAccessFunctions(const Generator& generator,
         replacements["@OBJECT_NAME@"] = object.GetName();
         replacements["@VAR_CAMELCASE_NAME@"] = generator.GetCapitalName(*this);
         replacements["@ELEMENT_COUNT@"] = std::to_string(mElementCount);
+        replacements["@PERSISTENT_CODE@"] = object.IsPersistent() ?
+            ("mDirtyFields.insert(\"" + GetName() + "\");") : "";
 
         ss << std::endl << generator.ParseTemplate(0, "VariableArrayAccessFunctions",
             replacements) << std::endl;

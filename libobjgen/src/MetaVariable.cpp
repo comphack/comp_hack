@@ -491,17 +491,23 @@ std::string MetaVariable::GetInternalGetterCode(const Generator& generator,
 }
 
 std::string MetaVariable::GetSetterCode(const Generator& generator,
-    const std::string& name, const std::string argument, size_t tabLevel) const
+    const MetaObject& object, const std::string& name, const std::string argument,
+    size_t tabLevel) const
 {
     std::string condition = GetValidCondition(generator, argument);
 
     std::stringstream ss;
 
+    ss << generator.Tab(tabLevel) <<
+        "std::lock_guard<std::mutex> lock(mFieldLock);" << std::endl;
+
+    std::string persistentCode = object.IsPersistent() ?
+        ("mDirtyFields.insert(\"" + GetName() + "\");") : "";
     if(condition.empty())
     {
         ss << generator.Tab(tabLevel) << name << " = "
             << argument << ";" << std::endl;
-        ss << std::endl;
+        ss << generator.Tab(tabLevel) << persistentCode << std::endl;
         ss << generator.Tab(tabLevel) << "return true;" << std::endl;
     }
     else
@@ -510,7 +516,7 @@ std::string MetaVariable::GetSetterCode(const Generator& generator,
         ss << generator.Tab(tabLevel) << "{" << std::endl;
         ss << generator.Tab(tabLevel + 1) << name << " = "
             << argument << ";" << std::endl;
-        ss << std::endl;
+        ss << generator.Tab(tabLevel + 1) << persistentCode << std::endl;
         ss << generator.Tab(tabLevel + 1) << "return true;" << std::endl;
         ss << generator.Tab(tabLevel) << "}" << std::endl;
         ss << std::endl;
@@ -584,7 +590,7 @@ std::string MetaVariable::GetAccessFunctions(const Generator& generator,
         << generator.GetCapitalName(*this) << "(" << GetArgument(GetName())
         << ")" << std::endl;
     ss << "{" << std::endl;
-    ss << GetSetterCode(generator, name, GetName());
+    ss << GetSetterCode(generator, object, name, GetName());
     ss << "}" << std::endl;
 
     if(IsLookupKey())

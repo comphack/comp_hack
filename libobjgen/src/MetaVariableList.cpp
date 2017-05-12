@@ -365,6 +365,8 @@ std::string MetaVariableList::GetAccessFunctions(const Generator& generator,
         replacements["@VAR_ARG_TYPE@"] = mElementType->GetArgumentType();
         replacements["@OBJECT_NAME@"] = object.GetName();
         replacements["@VAR_CAMELCASE_NAME@"] = generator.GetCapitalName(*this);
+        replacements["@PERSISTENT_CODE@"] = object.IsPersistent() ?
+            ("mDirtyFields.insert(\"" + GetName() + "\");") : "";
 
         ss << std::endl << generator.ParseTemplate(0, "VariableListAccessFunctions",
             replacements) << std::endl;

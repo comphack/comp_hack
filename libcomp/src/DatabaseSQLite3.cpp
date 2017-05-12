@@ -338,6 +338,11 @@ bool DatabaseSQLite3::UpdateSingleObject(std::shared_ptr<PersistentObject>& obj)
     }
 
     auto values = obj->GetMemberBindValues();
+    if(values.size() == 0)
+    {
+        //Nothing updated, nothing to do
+        return true;
+    }
 
     std::list<String> columnNames;
 

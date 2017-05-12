@@ -262,8 +262,7 @@ std::string MetaVariableBool::GetDatabaseLoadCode(const Generator& generator,
     std::map<std::string, std::string> replacements;
     replacements["@DATABASE_TYPE@"] = "bool";
     replacements["@COLUMN_NAME@"] = generator.Escape(GetName());
-    replacements["@SET_FUNCTION@"] = std::string("Set") +
-        generator.GetCapitalName(*this);
+    replacements["@VAR_NAME@"] = name;
     replacements["@VAR_TYPE@"] = GetCodeType();
 
     return generator.ParseTemplate(tabLevel, "VariableDatabaseCastLoad",

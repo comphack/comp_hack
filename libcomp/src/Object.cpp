@@ -37,6 +37,11 @@ Object::Object()
 {
 }
 
+Object::Object(const Object& other)
+{
+    (void)other;
+}
+
 Object::~Object()
 {
 }

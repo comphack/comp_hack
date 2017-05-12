@@ -381,6 +381,11 @@ bool DatabaseCassandra::UpdateSingleObject(std::shared_ptr<PersistentObject>& ob
     }
 
     auto values = obj->GetMemberBindValues();
+    if(values.size() == 0)
+    {
+        //Nothing updated, nothing to do
+        return true;
+    }
 
     std::list<String> columnNames;
 

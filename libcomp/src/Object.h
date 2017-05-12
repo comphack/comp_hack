@@ -33,6 +33,7 @@
 #include <istream>
 #include <list>
 #include <memory>
+#include <mutex>
 #include <ostream>
 #include <unordered_map>
 
@@ -100,6 +101,13 @@ public:
      * Create an object.
      */
     Object();
+
+    /**
+     * Explicitly defined copy constructor necessary due to removal
+     *  of implicit constructor from non-copyable mutex member.
+     * @param other The other object to copy
+     */
+    Object(const Object& other);
 
     /**
      * Clean up the object.
@@ -249,6 +257,9 @@ protected:
      * @return Text contained in the node's element text
      */
     virtual std::string GetXmlText(const tinyxml2::XMLElement& root) const;
+
+    /// Mutex to lock accessing the object fields
+    std::mutex mFieldLock;
 };
 
 } // namespace libcomp

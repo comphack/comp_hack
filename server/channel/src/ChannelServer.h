@@ -215,13 +215,6 @@ public:
 
 protected:
     /**
-     * Queue server tick message then execute the BaseServer
-     * implementation to enter the main loop.
-     * @return 0 on success, 1 on failure
-     */
-    virtual int Run();
-
-    /**
      * Create a connection to a newly active socket.
      * @param socket A new socket connection.
      * @return Pointer to the newly created connection

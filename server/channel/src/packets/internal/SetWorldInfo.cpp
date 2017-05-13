@@ -135,6 +135,10 @@ bool SetWorldInfoFromPacket(libcomp::ManagerPacket *pPacketManager,
 
     connection->SendPacket(reply);
 
+    // Now that we've connected to the world successfully, hit the first server tick
+    // to start the main loop
+    server->Tick();
+
     return true;
 }
 

@@ -97,6 +97,129 @@ bool Database::DeleteSingleObject(std::shared_ptr<PersistentObject>& obj)
     return DeleteObjects(objs);
 }
 
+void Database::QueueInsert(std::shared_ptr<PersistentObject> obj,
+    const libobjgen::UUID& uuid)
+{
+    DatabaseChangeMap m;
+    m[DatabaseChangeType_t::DATABASE_INSERT].push_back(obj);
+    QueueChanges(m, uuid);
+}
+
+void Database::QueueUpdate(std::shared_ptr<PersistentObject> obj,
+    const libobjgen::UUID& uuid)
+{
+    DatabaseChangeMap m;
+    m[DatabaseChangeType_t::DATABASE_UPDATE].push_back(obj);
+    QueueChanges(m, uuid);
+}
+
+void Database::QueueDelete(std::shared_ptr<PersistentObject> obj,
+    const libobjgen::UUID& uuid)
+{
+    DatabaseChangeMap m;
+    m[DatabaseChangeType_t::DATABASE_DELETE].push_back(obj);
+    QueueChanges(m, uuid);
+}
+
+void Database::QueueChanges(DatabaseChangeMap changes,
+    const libobjgen::UUID& uuid)
+{
+    std::string key = uuid.ToString();
+
+    std::lock_guard<std::mutex> lock(mTransactionLock);
+    auto queueEntry = mTransactionQueue[key];
+    if(queueEntry == nullptr)
+    {
+        queueEntry = std::shared_ptr<DatabaseTransaction>(
+            new DatabaseTransaction(uuid));
+    }
+
+    DatabaseChangeMap& entryChanges = queueEntry->GetChanges();
+    for(auto kv : changes)
+    {
+        std::list<std::shared_ptr<PersistentObject>>& objs =
+            entryChanges[kv.first];
+
+        for(auto obj : kv.second)
+        {
+            objs.push_back(obj);
+        }
+        objs.unique();
+    }
+
+    mTransactionQueue[key] = queueEntry;
+}
+
+std::list<libobjgen::UUID> Database::ProcessTransactionQueue()
+{
+    std::list<libobjgen::UUID> failures;
+
+    std::unordered_map<std::string,
+        std::shared_ptr<DatabaseTransaction>> queue;
+    {
+        std::lock_guard<std::mutex> lock(mTransactionLock);
+
+        if(mTransactionQueue.size() == 0)
+        {
+            return failures;
+        }
+
+        queue = mTransactionQueue;
+        mTransactionQueue.clear();
+    }
+
+    // Process the general queue transaction first
+    auto nullKey = NULLUUID.ToString();
+    if(queue.find(nullKey) != queue.end())
+    {
+        if(!ProcessTransaction(queue[nullKey]))
+        {
+            failures.push_back(nullKey);
+        }
+        queue.erase(nullKey);
+    }
+
+    // Process the remaining transactions
+    for(auto kv : queue)
+    {
+        if(!ProcessTransaction(kv.second))
+        {
+            failures.push_back(kv.second->GetUUID());
+        }
+    }
+
+    return failures;
+}
+
+bool Database::ProcessTransaction(const std::shared_ptr<DatabaseTransaction>& transaction)
+{
+    if(transaction == nullptr)
+    {
+        return true;
+    }
+
+    /// @todo: replace with actual transaction handling
+
+    bool result = true;
+    auto changes = transaction->GetChanges();
+    for(auto obj : changes[DatabaseChangeType_t::DATABASE_INSERT])
+    {
+        result &= InsertSingleObject(obj);
+    }
+
+    for(auto obj : changes[DatabaseChangeType_t::DATABASE_UPDATE])
+    {
+        result &= UpdateSingleObject(obj);
+    }
+
+    if(changes[DatabaseChangeType_t::DATABASE_DELETE].size() > 0)
+    {
+        result &= DeleteObjects(changes[DatabaseChangeType_t::DATABASE_DELETE]);
+    }
+
+    return result;
+}
+
 std::shared_ptr<PersistentObject> Database::LoadSingleObjectFromRow(
     size_t typeHash, DatabaseQuery& query)
 {

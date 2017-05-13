@@ -368,15 +368,13 @@ void ChannelServer::Tick()
 
     /// @todo: update zone states
 
-    /// @todo: save client states
+    // Process queued world database changes
+    mWorldDatabase->ProcessTransactionQueue();
+
+    // Process queued lobby database changes
+    mLobbyDatabase->ProcessTransactionQueue();
 
     QueueNextTick();
-}
-
-int ChannelServer::Run()
-{
-    QueueNextTick();
-    return BaseServer::Run();
 }
 
 std::shared_ptr<libcomp::TcpConnection> ChannelServer::CreateConnection(
@@ -427,11 +425,11 @@ void ChannelServer::QueueNextTick()
         mTickThread.join();
     }
     
-    mTickThread = std::thread([this](channel::ChannelServer* server,
-        std::shared_ptr<libcomp::MessageQueue<libcomp::Message::Message*>> queue)
+    mTickThread = std::thread([this](std::shared_ptr<
+        libcomp::MessageQueue<libcomp::Message::Message*>> queue)
     {
         const static int tickDelta = 100;
         std::this_thread::sleep_for(std::chrono::milliseconds(tickDelta));
         queue->Enqueue(new libcomp::Message::Tick);
-    }, this, mQueueWorker.GetMessageQueue());
+    }, mQueueWorker.GetMessageQueue());
 }

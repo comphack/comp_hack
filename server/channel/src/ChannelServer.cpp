@@ -38,6 +38,7 @@
 #include "Packets.h"
 
 // Object Includes
+#include "Account.h"
 #include "ChannelConfig.h"
 
 using namespace channel;
@@ -376,8 +377,28 @@ void ChannelServer::Tick()
 
     if(worldFailures.size() > 0 || lobbyFailures.size() > 0)
     {
-        /// @todo: disconnect clients associated to a failure
-        /// matching an account UUID
+        // Disconnect any clients associated to failed account updates
+        for(auto failures : { worldFailures, lobbyFailures })
+        {
+            for(auto failedUUID : failures)
+            {
+                auto account = std::dynamic_pointer_cast<objects::Account>(
+                    libcomp::PersistentObject::GetObjectByUUID(failedUUID));
+
+                if(nullptr != account)
+                {
+                    auto username = account->GetUsername();
+                    auto client = mManagerConnection->GetClientConnection(
+                        username);
+                    if(nullptr != client)
+                    {
+                        LOG_ERROR(libcomp::String("Queued updates for client"
+                            " failed to save for account: %1\n").Arg(username));
+                        client->Close();
+                    }
+                }
+            }
+        }
     }
 
     QueueNextTick();

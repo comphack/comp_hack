@@ -265,7 +265,7 @@ bool DatabaseSQLite3::InsertSingleObject(std::shared_ptr<PersistentObject>& obj)
     std::list<String> columnBinds;
     columnBinds.push_back(":UID");
 
-    auto values = obj->GetMemberBindValues();
+    auto values = obj->GetMemberBindValues(true);
 
     for(auto value : values)
     {
@@ -724,8 +724,6 @@ bool DatabaseSQLite3::ProcessChanges(DatabaseChangeMap& changes)
     {
         result = DeleteObjects(changes[DatabaseChangeType_t::DATABASE_DELETE]);
     }
-
-    result = false;
 
     if(result)
     {

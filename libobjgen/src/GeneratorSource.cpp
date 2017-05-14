@@ -552,7 +552,7 @@ bool GeneratorSource::GeneratePersistentObjectFunctions(const MetaObject& obj,
         auto var = *it;
 
         //Only return fields to save if the record is new or the field was updated
-        binds << Tab() << "if(isNew || mDirtyFields.find(\"" << var->GetName() <<
+        binds << Tab() << "if(retrieveAll || mDirtyFields.find(\"" << var->GetName() <<
             "\") != mDirtyFields.end())" << std::endl;
         binds << Tab() << "{" << std::endl;
         binds << Tab(1) << "values.push_back((" << var->GetBindValueCode(

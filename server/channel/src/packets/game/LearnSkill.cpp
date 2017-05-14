@@ -73,5 +73,7 @@ bool Parsers::LearnSkill::Parse(libcomp::ManagerPacket *pPacketManager,
 
     client->SendPacket(reply);
 
+    server->GetWorldDatabase()->QueueUpdate(character, state->GetAccountUID());
+
     return true;
 }

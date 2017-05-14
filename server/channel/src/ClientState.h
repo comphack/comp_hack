@@ -120,6 +120,12 @@ public:
     uint8_t GetNextActivatedAbilityID();
 
     /**
+     * Get the UID of the account associated to the client.
+     * @return UID of the account associated to the client
+     */
+    const libobjgen::UUID GetAccountUID() const;
+
+    /**
      * Check if the client state has everything needed to start
      * being used.
      * @return true if the state is ready to use, otherwise false

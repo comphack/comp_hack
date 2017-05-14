@@ -942,7 +942,6 @@ bool CharacterManager::AddRemoveItem(const std::shared_ptr<
     auto itemBox = character->GetItemBoxes(0).Get();
 
     auto server = mServer.lock();
-    auto db = server->GetWorldDatabase();
     auto def = server->GetDefinitionManager()->GetItemData(itemID);
     if(nullptr == def)
     {
@@ -951,6 +950,7 @@ bool CharacterManager::AddRemoveItem(const std::shared_ptr<
 
     auto existing = GetExistingItems(character, itemID);
 
+    libcomp::DatabaseChangeMap dbChanges;
     std::list<uint16_t> updatedSlots;
     auto maxStack = def->GetPossession()->GetStackSize();
     if(add)
@@ -1022,12 +1022,13 @@ bool CharacterManager::AddRemoveItem(const std::shared_ptr<
                     item->SetItemBox(itemBox);
                     item->SetBoxSlot((int8_t)freeSlot);
                     
-                    if(!item->Insert(db) ||
-                        !itemBox->SetItems(freeSlot, item))
+                    if(!itemBox->SetItems(freeSlot, item))
                     {
                         return false;
                     }
                     updatedSlots.push_back((uint16_t)freeSlot);
+                    dbChanges[libcomp::DatabaseChangeType_t::DATABASE_INSERT]
+                        .push_back(item);
 
                     if(added == quantity)
                     {
@@ -1101,21 +1102,22 @@ bool CharacterManager::AddRemoveItem(const std::shared_ptr<
             {
                 removed = (uint16_t)(removed + item->GetStackSize());
                 
-                if(!itemBox->SetItems((size_t)slot, NULLUUID) ||
-                    !itemBox->Update(db) || !item->Delete(db))
+                if(!itemBox->SetItems((size_t)slot, NULLUUID))
                 {
                     return false;
                 }
+
+                dbChanges[libcomp::DatabaseChangeType_t::DATABASE_DELETE]
+                    .push_back(item);
             }
             else
             {
                 item->SetStackSize((uint16_t)(item->GetStackSize() -
                     (quantity - removed)));
-                if(!item->Update(db))
-                {
-                    return false;
-                }
                 removed = quantity;
+
+                dbChanges[libcomp::DatabaseChangeType_t::DATABASE_UPDATE]
+                    .push_back(item);
             }
             updatedSlots.push_back((uint16_t)slot);
 
@@ -1128,10 +1130,10 @@ bool CharacterManager::AddRemoveItem(const std::shared_ptr<
 
     SendItemBoxData(client, 0, updatedSlots);
 
-    if(!itemBox->Update(db))
-    {
-        return false;
-    }
+    dbChanges[libcomp::DatabaseChangeType_t::DATABASE_UPDATE]
+        .push_back(itemBox);
+
+    server->GetWorldDatabase()->QueueChanges(dbChanges, state->GetAccountUID());
 
     return true;
 }
@@ -1234,9 +1236,7 @@ void CharacterManager::EquipItem(const std::shared_ptr<
     reply.WriteS16Little(cs->GetPDEF());
     reply.WriteS16Little(cs->GetMDEF());
 
-    auto db = server->GetWorldDatabase();
-
-    (void)character->Update(db);
+    server->GetWorldDatabase()->QueueUpdate(character, state->GetAccountUID());
 
     server->GetZoneManager()->BroadcastPacket(client, reply);
 }
@@ -1251,9 +1251,7 @@ void CharacterManager::UpdateLNC(const std::shared_ptr<
     character->SetLNC(lnc);
 
     auto server = mServer.lock();
-    auto db = server->GetWorldDatabase();
-
-    (void)character->Update(db);
+    server->GetWorldDatabase()->QueueUpdate(character, state->GetAccountUID());
 
     libcomp::Packet reply;
     reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_LNC_POINTS);
@@ -1327,12 +1325,17 @@ std::shared_ptr<objects::Demon> CharacterManager::ContractDemon(
         libcomp::PersistentObject>(d));
     character->SetCOMP((size_t)compSlot, d);
 
+    libcomp::DatabaseChangeMap dbChanges;
+    dbChanges[libcomp::DatabaseChangeType_t::DATABASE_INSERT]
+        .push_back(d);
+    dbChanges[libcomp::DatabaseChangeType_t::DATABASE_INSERT]
+        .push_back(ds);
+    dbChanges[libcomp::DatabaseChangeType_t::DATABASE_UPDATE]
+        .push_back(character);
+
     auto server = mServer.lock();
-    auto db = server->GetWorldDatabase();
-    if(!ds->Insert(db) || !d->Insert(db))
-    {
-        return nullptr;
-    }
+    server->GetWorldDatabase()->QueueChanges(dbChanges,
+        character->GetAccount().GetUUID());
 
     return d;
 }
@@ -1445,6 +1448,8 @@ void CharacterManager::ExperienceGain(const std::shared_ptr<
 
     /// @todo: send to all players in the zone?
     client->SendPacket(reply);
+
+    server->GetWorldDatabase()->QueueUpdate(stats, state->GetAccountUID());
 }
 
 void CharacterManager::LevelUp(const std::shared_ptr<
@@ -1515,6 +1520,7 @@ void CharacterManager::UpdateExpertise(const std::shared_ptr<
     }
 
     std::list<std::pair<int8_t, int32_t>> updated;
+    libcomp::DatabaseChangeMap dbChanges;
     for(auto expertGrowth : skill->GetExpertGrowth())
     {
         auto expertise = character->GetExpertises(expertGrowth->GetExpertiseID()).Get();
@@ -1560,6 +1566,8 @@ void CharacterManager::UpdateExpertise(const std::shared_ptr<
 
         expertise->SetPoints(points);
         updated.push_back(std::pair<int8_t, int32_t>((int8_t)expDef->GetID(), points));
+        dbChanges[libcomp::DatabaseChangeType_t::DATABASE_UPDATE]
+            .push_back(expertise);
 
         int8_t newRank = (int8_t)((float)points * 0.0001f);
         if(currentRank != newRank)
@@ -1587,6 +1595,8 @@ void CharacterManager::UpdateExpertise(const std::shared_ptr<
         }
 
         client->SendPacket(reply);
+
+        server->GetWorldDatabase()->QueueChanges(dbChanges, state->GetAccountUID());
     }
 }
 

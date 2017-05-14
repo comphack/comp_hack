@@ -86,14 +86,22 @@ void SplitStack(const std::shared_ptr<ChannelServer> server,
     destItem->SetBoxSlot((int8_t)destSlot);
 
     auto worldDB = server->GetWorldDatabase();
-    if(destItem->Register(destItem) && destItem->Insert(worldDB) &&
-        srcItem->Update(worldDB) && itemBox->SetItems(destSlot, destItem) &&
-        itemBox->Update(worldDB))
+    if(destItem->Register(destItem) && itemBox->SetItems(destSlot, destItem))
     {
         state->SetObjectID(destItem->GetUUID(),
             server->GetNextObjectID());
 
         server->GetCharacterManager()->SendItemBoxData(client, 0);
+
+        libcomp::DatabaseChangeMap dbChanges;
+        dbChanges[libcomp::DatabaseChangeType_t::DATABASE_INSERT]
+            .push_back(destItem);
+        dbChanges[libcomp::DatabaseChangeType_t::DATABASE_UPDATE]
+            .push_back(srcItem);
+        dbChanges[libcomp::DatabaseChangeType_t::DATABASE_UPDATE]
+            .push_back(itemBox);
+
+        server->GetWorldDatabase()->QueueChanges(dbChanges, state->GetAccountUID());
     }
     else
     {

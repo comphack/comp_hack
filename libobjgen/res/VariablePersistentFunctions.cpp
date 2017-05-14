@@ -1,8 +1,7 @@
-std::list<libcomp::DatabaseBind*> @OBJECT_NAME@::GetMemberBindValues()
+std::list<libcomp::DatabaseBind*> @OBJECT_NAME@::GetMemberBindValues(bool retrieveAll)
 {
     std::list<libcomp::DatabaseBind*> values;
     std::lock_guard<std::mutex> lock(mFieldLock);
-    bool isNew = mDirtyFields.find("new") != mDirtyFields.end();
 
     @BINDS@
 
@@ -13,7 +12,6 @@ std::list<libcomp::DatabaseBind*> @OBJECT_NAME@::GetMemberBindValues()
 bool @OBJECT_NAME@::LoadDatabaseValues(libcomp::DatabaseQuery& query)
 {
     std::lock_guard<std::mutex> lock(mFieldLock);
-    mDirtyFields.erase("new");
 
     @GET_DATABASE_VALUES@
 

@@ -579,7 +579,7 @@ bool DatabaseCassandra::ProcessChanges(DatabaseChangeMap& changes)
         std::list<String> columnNames;
         std::list<String> columnBinds;
 
-        auto vals = obj->GetMemberBindValues();
+        auto vals = obj->GetMemberBindValues(true);
 
         for(auto value : vals)
         {
@@ -682,11 +682,12 @@ bool DatabaseCassandra::ProcessChanges(DatabaseChangeMap& changes)
     DatabaseQuery query = Prepare(queries[0]);
     auto combinedCQL = queries[0];
 
-    for(int i = 0; i < values.size(); i++)
+    for(size_t i = 0; i < values.size(); i++)
     {
         auto cql = queries[i];
         auto vals = values[i];
 
+        // If there is more than one query, run as a batch
         if(i > 0)
         {
             query.BatchNext();

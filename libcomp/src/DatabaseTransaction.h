@@ -28,6 +28,7 @@
 #define LIBCOMP_SRC_DATABASETRANSACTION_H
 
 // libcomp Includes
+#include "EnumMap.h"
 #include "PersistentObject.h"
 
 namespace libcomp
@@ -43,7 +44,7 @@ enum DatabaseChangeType_t : uint8_t
     DATABASE_DELETE
 };
 
-typedef std::unordered_map<DatabaseChangeType_t,
+typedef EnumMap<DatabaseChangeType_t,
     std::list<std::shared_ptr<PersistentObject>>> DatabaseChangeMap;
 
 /**

@@ -128,6 +128,12 @@ uint8_t ClientState::GetNextActivatedAbilityID()
     return next;
 }
 
+const libobjgen::UUID ClientState::GetAccountUID() const
+{
+    return mCharacterState->Ready() ?
+        mCharacterState->GetEntity()->GetAccount().GetUUID() : NULLUUID;
+}
+
 bool ClientState::Ready()
 {
     return GetAuthenticated() && mCharacterState->Ready();

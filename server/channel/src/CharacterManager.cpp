@@ -478,9 +478,8 @@ void CharacterManager::SendPartnerData(const std::shared_ptr<
     //Force Stack Pending?
     reply.WriteU16Little(0);
 
-    //Unknown
-    reply.WriteU8(12);
-    reply.WriteU8(1);
+    reply.WriteU8(0);   //Unknown
+    reply.WriteU8(0);   //Mitama type
 
     //Reunion bonuses (12 * 8 ranks)
     for(size_t i = 0; i < 96; i++)
@@ -657,9 +656,8 @@ void CharacterManager::SendCOMPDemonData(const std::shared_ptr<
     //Force Stack Pending?
     reply.WriteU16Little(0);
 
-    //Unknown
-    reply.WriteU8(0);
-    reply.WriteU8(0);
+    reply.WriteU8(0);   //Unknown
+    reply.WriteU8(0);   //Mitama type
 
     //Reunion bonuses (12 * 8 ranks)
     for(size_t i = 0; i < 96; i++)
@@ -1384,12 +1382,14 @@ void CharacterManager::ExperienceGain(const std::shared_ptr<
         libcomp::Packet reply;
         if(isDemon)
         {
+            std::list<uint32_t> newSkills;
             auto growth = demonData->GetGrowth();
             for(auto acSkill : growth->GetAcquisitionSkills())
             {
                 if(acSkill->GetLevel() == (uint32_t)level)
                 {
                     demon->AppendAcquiredSkills(acSkill->GetID());
+                    newSkills.push_back(acSkill->GetID());
                 }
             }
 
@@ -1404,9 +1404,9 @@ void CharacterManager::ExperienceGain(const std::shared_ptr<
             reply.WriteS64Little(state->GetObjectID(demon->GetUUID()));
             GetEntityStatsPacketData(reply, stats, dState, true);
 
-            size_t aSkillCount = demon->AcquiredSkillsCount();
-            reply.WriteU32Little(static_cast<uint32_t>(aSkillCount));
-            for(auto aSkill : demon->GetAcquiredSkills())
+            size_t newSkillCount = newSkills.size();
+            reply.WriteU32Little(static_cast<uint32_t>(newSkillCount));
+            for(auto aSkill : newSkills)
             {
                 reply.WriteU32Little(aSkill);
             }

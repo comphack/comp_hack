@@ -189,7 +189,7 @@ bool ChatManager::GMCommand_Contract(const std::shared_ptr<
     if(!GetIntegerArg<int16_t>(demonID, argsCopy))
     {
         libcomp::String name;
-        if(!GetStringArg(name, argsCopy, libcomp::Convert::Encoding_t::ENCODING_CP932))
+        if(!GetStringArg(name, argsCopy))
         {
             return false;
         }
@@ -274,7 +274,7 @@ bool ChatManager::GMCommand_Item(const std::shared_ptr<
     if(!GetIntegerArg<uint32_t>(itemID, argsCopy))
     {
         libcomp::String name;
-        if(!GetStringArg(name, argsCopy, libcomp::Convert::Encoding_t::ENCODING_CP932))
+        if(!GetStringArg(name, argsCopy))
         {
             return false;
         }

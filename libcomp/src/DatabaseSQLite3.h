@@ -109,6 +109,9 @@ public:
      */
     bool UsingDefaultDatabaseFile();
 
+protected:
+    virtual bool ProcessChanges(DatabaseChangeMap& changes);
+
 private:
     /**
      * Get the path to the database file to use.

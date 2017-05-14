@@ -290,224 +290,23 @@ std::list<std::shared_ptr<PersistentObject>> DatabaseCassandra::LoadObjects(
 
 bool DatabaseCassandra::InsertSingleObject(std::shared_ptr<PersistentObject>& obj)
 {
-    auto metaObject = obj->GetObjectMetadata();
-
-    std::stringstream objstream;
-    if(!obj->Save(objstream))
-    {
-        return false;
-    }
-
-    if(obj->GetUUID().IsNull() && !obj->Register(obj))
-    {
-        return false;
-    }
-
-    std::list<String> columnNames;
-    columnNames.push_back("uid");
-
-    std::list<String> columnBinds;
-    columnBinds.push_back("?");
-
-    auto values = obj->GetMemberBindValues();
-
-    for(auto value : values)
-    {
-        columnNames.push_back(value->GetColumn());
-        columnBinds.push_back("?");
-    }
-
-    String cql = String("INSERT INTO %1 (%2) VALUES (%3)").Arg(
-        String(metaObject->GetName()).ToLower()).Arg(
-        String::Join(columnNames, ", ")).Arg(
-        String::Join(columnBinds, ", "));
-
-    DatabaseQuery query = Prepare(cql);
-
-    if(!query.IsValid())
-    {
-        LOG_ERROR(String("Failed to prepare CQL query: %1\n").Arg(cql));
-        LOG_ERROR(String("Database said: %1\n").Arg(GetLastError()));
-
-        return false;
-    }
-
-    if(!query.Bind("uid", obj->GetUUID()))
-    {
-        LOG_ERROR("Failed to bind value: uid\n");
-        LOG_ERROR(String("Database said: %1\n").Arg(GetLastError()));
-
-        return false;
-    }
-
-    for(auto value : values)
-    {
-        if(!value->Bind(query))
-        {
-            LOG_ERROR(String("Failed to bind value: %1\n").Arg(
-                value->GetColumn()));
-            LOG_ERROR(String("Database said: %1\n").Arg(GetLastError()));
-
-            return false;
-        }
-
-        delete value;
-    }
-
-    if(!query.Execute())
-    {
-        LOG_ERROR(String("Failed to execute query: %1\n").Arg(cql));
-        LOG_ERROR(String("Database said: %1\n").Arg(GetLastError()));
-
-        return false;
-    }
-
-    return true;
+    DatabaseChangeMap changes;
+    changes[DatabaseChangeType_t::DATABASE_INSERT].push_back(obj);
+    return ProcessChanges(changes);
 }
 
 bool DatabaseCassandra::UpdateSingleObject(std::shared_ptr<PersistentObject>& obj)
 {
-    auto metaObject = obj->GetObjectMetadata();
-
-    std::stringstream objstream;
-    if(!obj->Save(objstream))
-    {
-        return false;
-    }
-
-    if(obj->GetUUID().IsNull())
-    {
-        return false;
-    }
-
-    auto values = obj->GetMemberBindValues();
-    if(values.size() == 0)
-    {
-        //Nothing updated, nothing to do
-        return true;
-    }
-
-    std::list<String> columnNames;
-
-    for(auto value : values)
-    {
-        columnNames.push_back(String("%1 = ?").Arg(value->GetColumn()));
-    }
-
-    String cql = String("UPDATE %1 SET %2 WHERE uid = ?").Arg(
-        String(metaObject->GetName()).ToLower()).Arg(
-        String::Join(columnNames, ", "));
-
-    DatabaseQuery query = Prepare(cql);
-
-    if(!query.IsValid())
-    {
-        LOG_ERROR(String("Failed to prepare CQL query: %1\n").Arg(cql));
-        LOG_ERROR(String("Database said: %1\n").Arg(GetLastError()));
-
-        return false;
-    }
-
-    for(auto value : values)
-    {
-        if(!value->Bind(query))
-        {
-            LOG_ERROR(String("Failed to bind value: %1\n").Arg(
-                value->GetColumn()));
-            LOG_ERROR(String("Database said: %1\n").Arg(GetLastError()));
-
-            return false;
-        }
-
-        delete value;
-    }
-
-    if(!query.Bind("uid", obj->GetUUID()))
-    {
-        LOG_ERROR("Failed to bind value: uid\n");
-        LOG_ERROR(String("Database said: %1\n").Arg(GetLastError()));
-
-        return false;
-    }
-
-    if(!query.Execute())
-    {
-        LOG_ERROR(String("Failed to execute query: %1\n").Arg(cql));
-        LOG_ERROR(String("Database said: %1\n").Arg(GetLastError()));
-
-        return false;
-    }
-
-    return true;
+    DatabaseChangeMap changes;
+    changes[DatabaseChangeType_t::DATABASE_UPDATE].push_back(obj);
+    return ProcessChanges(changes);
 }
 
 bool DatabaseCassandra::DeleteObjects(std::list<std::shared_ptr<PersistentObject>>& objs)
 {
-    std::shared_ptr<libobjgen::MetaObject> metaObject;
-
-    std::list<String> uidBindings;
-    for(auto obj : objs)
-    {
-        auto uuid = obj->GetUUID();
-
-        if(uuid.IsNull())
-        {
-            return false;
-        }
-
-        auto metaObj = obj->GetObjectMetadata();
-
-        if(nullptr == metaObject)
-        {
-            metaObject = metaObj;
-        }
-        else if(metaObject != metaObj)
-        {
-            return false;
-        }
-
-        uidBindings.push_back("?");
-    }
-
-    String cql = String("DELETE FROM %1 WHERE uid in (%2)").Arg(
-        String(metaObject->GetName()).ToLower()).Arg(
-        String::Join(uidBindings, ", "));
-
-    DatabaseQuery query = Prepare(cql);
-
-    if(!query.IsValid())
-    {
-        LOG_ERROR(String("Failed to prepare CQL query: %1\n").Arg(cql));
-        LOG_ERROR(String("Database said: %1\n").Arg(GetLastError()));
-
-        return false;
-    }
-
-    for(auto obj : objs)
-    {
-        if(!query.Bind("uid", obj->GetUUID()))
-        {
-            LOG_ERROR("Failed to bind value: uid\n");
-            LOG_ERROR(String("Database said: %1\n").Arg(GetLastError()));
-
-            return false;
-        }
-    }
-
-    if(!query.Execute())
-    {
-        LOG_ERROR(String("Failed to execute query: %1\n").Arg(cql));
-        LOG_ERROR(String("Database said: %1\n").Arg(GetLastError()));
-
-        return false;
-    }
-
-    for(auto obj : objs)
-    {
-        obj->Unregister();
-    }
-
-    return true;
+    DatabaseChangeMap changes;
+    changes[DatabaseChangeType_t::DATABASE_DELETE] = objs;
+    return ProcessChanges(changes);
 }
 
 bool DatabaseCassandra::VerifyAndSetupSchema(bool recreateTables)
@@ -755,6 +554,179 @@ bool DatabaseCassandra::UsingDefaultKeyspace()
 {
     auto config = std::dynamic_pointer_cast<objects::DatabaseConfigCassandra>(mConfig);
     return config->GetKeyspace() == config->GetDefaultKeyspace();
+}
+
+bool DatabaseCassandra::ProcessChanges(DatabaseChangeMap& changes)
+{
+    std::vector<libcomp::String> queries;
+    std::vector<std::list<libcomp::DatabaseBind*>> values;
+
+    for(auto obj : changes[DatabaseChangeType_t::DATABASE_INSERT])
+    {
+        auto metaObject = obj->GetObjectMetadata();
+
+        std::stringstream objstream;
+        if(!obj->Save(objstream))
+        {
+            return false;
+        }
+        
+        if(obj->GetUUID().IsNull() && !obj->Register(obj))
+        {
+            return false;
+        }
+
+        std::list<String> columnNames;
+        std::list<String> columnBinds;
+
+        auto vals = obj->GetMemberBindValues();
+
+        for(auto value : vals)
+        {
+            columnNames.push_back(value->GetColumn());
+            columnBinds.push_back("?");
+        }
+
+        queries.push_back(String("INSERT INTO %1 (uid, %2) VALUES (?, %3)").Arg(
+            String(metaObject->GetName()).ToLower()).Arg(
+            String::Join(columnNames, ", ")).Arg(
+            String::Join(columnBinds, ", ")));
+
+        vals.push_back(new DatabaseBindUUID("uid", obj->GetUUID()));
+        values.push_back(vals);
+    }
+
+    for(auto obj : changes[DatabaseChangeType_t::DATABASE_UPDATE])
+    {
+        auto metaObject = obj->GetObjectMetadata();
+
+        std::stringstream objstream;
+        if(!obj->Save(objstream))
+        {
+            return false;
+        }
+
+        if(obj->GetUUID().IsNull())
+        {
+            return false;
+        }
+
+        auto vals = obj->GetMemberBindValues();
+        if(vals.size() == 0)
+        {
+            //Nothing updated, nothing to do
+            continue;
+        }
+        
+        std::list<String> columnNames;
+        for(auto value : vals)
+        {
+            columnNames.push_back(String("%1 = ?").Arg(
+                value->GetColumn()));
+        }
+
+        queries.push_back(String("UPDATE %1 SET %2 WHERE uid = ?").Arg(
+                libcomp::String(metaObject->GetName()).ToLower()).Arg(
+                String::Join(columnNames, ", ")));
+
+        vals.push_back(new DatabaseBindUUID("uid", obj->GetUUID()));
+        values.push_back(vals);
+    }
+
+    if(changes[DatabaseChangeType_t::DATABASE_DELETE].size() > 0)
+    {
+        std::unordered_map<std::string,std::list<
+            std::shared_ptr<libcomp::PersistentObject>>> groupedObjects;
+
+        //Group all the same objects together
+        for(auto obj : changes[DatabaseChangeType_t::DATABASE_DELETE])
+        {
+            auto uuid = obj->GetUUID();
+
+            if(uuid.IsNull())
+            {
+                continue;
+            }
+
+            obj->Unregister();
+
+            auto metaObject = obj->GetObjectMetadata();
+            groupedObjects[metaObject->GetName()].push_back(obj);
+        }
+
+        //Build one statement per object
+        for(auto kv : groupedObjects)
+        {
+            std::list<String> uidBindings;
+            std::list<libcomp::DatabaseBind*> vals;
+
+            for(auto obj : kv.second)
+            {
+                vals.push_back(new DatabaseBindUUID("uid", obj->GetUUID()));
+                uidBindings.push_back("?");
+            }
+            
+            queries.push_back(String("DELETE FROM %1 WHERE uid in (%2)").Arg(
+                String(kv.first).ToLower()).Arg(
+                String::Join(uidBindings, ", ")));
+            values.push_back(vals);
+        }
+    }
+
+    if(queries.size() == 0)
+    {
+        //Nothing to do
+        return true;
+    }
+
+    DatabaseQuery query = Prepare(queries[0]);
+    auto combinedCQL = queries[0];
+
+    for(int i = 0; i < values.size(); i++)
+    {
+        auto cql = queries[i];
+        auto vals = values[i];
+
+        if(i > 0)
+        {
+            query.BatchNext();
+            query.Prepare(queries[i]);
+            combinedCQL = libcomp::String("%1\n%2").Arg(combinedCQL)
+                .Arg(cql);
+        }
+
+        if(!query.IsValid())
+        {
+            LOG_ERROR(String("Failed to prepare CQL query: %1\n").Arg(cql));
+            LOG_ERROR(String("Database said: %1\n").Arg(GetLastError()));
+
+            return false;
+        }
+        
+        for(auto value : vals)
+        {
+            if(!value->Bind(query))
+            {
+                LOG_ERROR(String("Failed to bind value: %1\n").Arg(
+                    value->GetColumn()));
+                LOG_ERROR(String("Database said: %1\n").Arg(GetLastError()));
+
+                return false;
+            }
+
+            delete value;
+        }
+    }
+    
+    if(!query.Execute())
+    {
+        LOG_ERROR(String("Failed to execute query: %1\n").Arg(combinedCQL));
+        LOG_ERROR(String("Database said: %1\n").Arg(GetLastError()));
+
+        return false;
+    }
+
+    return true;
 }
 
 bool DatabaseCassandra::WaitForFuture(CassFuture *pFuture)

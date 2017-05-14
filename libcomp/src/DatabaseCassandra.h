@@ -99,6 +99,8 @@ public:
     bool UsingDefaultKeyspace();
 
 protected:
+    virtual bool ProcessChanges(DatabaseChangeMap& changes);
+
     /**
      * Wait for the completion of an async future execution.
      * @param pFuture Pointer to a query's future operation

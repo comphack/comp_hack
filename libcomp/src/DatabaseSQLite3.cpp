@@ -412,6 +412,8 @@ bool DatabaseSQLite3::DeleteObjects(std::list<std::shared_ptr<PersistentObject>>
             return false;
         }
 
+        obj->Unregister();
+
         auto metaObj = obj->GetObjectMetadata();
 
         if(nullptr == metaObject)
@@ -432,10 +434,6 @@ bool DatabaseSQLite3::DeleteObjects(std::list<std::shared_ptr<PersistentObject>>
         .Arg(metaObject->GetName())
         .Arg(String::Join(uidBindings, ", "))))
     {
-        for(auto obj : objs)
-        {
-            obj->Unregister();
-        }
         return true;
     }
 
@@ -688,6 +686,67 @@ bool DatabaseSQLite3::UsingDefaultDatabaseFile()
 {
     auto config = std::dynamic_pointer_cast<objects::DatabaseConfigSQLite3>(mConfig);
     return config->GetDatabaseName() == config->GetDefaultDatabaseName();
+}
+
+bool DatabaseSQLite3::ProcessChanges(DatabaseChangeMap& changes)
+{
+    libcomp::String transactionID = libcomp::String("_%1").Arg(
+            libcomp::String(libobjgen::UUID::Random().ToString()).Replace("-", "_"));
+    if(!Prepare(libcomp::String("BEGIN TRANSACTION %1").Arg(
+        transactionID)).Execute())
+    {
+        return false;
+    }
+
+    bool result = true;
+    for(auto obj : changes[DatabaseChangeType_t::DATABASE_INSERT])
+    {
+        if(!InsertSingleObject(obj))
+        {
+            result = false;
+            break;
+        }
+    }
+    
+    if(result)
+    {
+        for(auto obj : changes[DatabaseChangeType_t::DATABASE_INSERT])
+        {
+            if(!UpdateSingleObject(obj))
+            {
+                result = false;
+                break;
+            }
+        }
+    }
+
+    if(result && changes[DatabaseChangeType_t::DATABASE_DELETE].size() > 0)
+    {
+        result = DeleteObjects(changes[DatabaseChangeType_t::DATABASE_DELETE]);
+    }
+
+    result = false;
+
+    if(result)
+    {
+        if(!Prepare(libcomp::String("COMMIT TRANSACTION %1").Arg(
+            transactionID)).Execute())
+        {
+            return false;
+        }
+    }
+    else
+    {
+        if(!Prepare(libcomp::String("ROLLBACK TRANSACTION %1").Arg(
+            transactionID)).Execute())
+        {
+            // If this happens the server may need to be shut down
+            LOG_CRITICAL("Rollback failed!\n");
+            return false;
+        }
+    }
+
+    return result;
 }
 
 String DatabaseSQLite3::GetFilepath() const

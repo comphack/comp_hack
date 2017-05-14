@@ -245,6 +245,13 @@ protected:
     std::shared_ptr<PersistentObject> LoadSingleObjectFromRow(
         size_t typeHash, DatabaseQuery& query);
 
+    /**
+     * Process one or many database changes as a single query.
+     * @param changes Map of all changes to apply to the database
+     * @return true on success, false on failure
+     */
+    virtual bool ProcessChanges(DatabaseChangeMap& changes) = 0;
+
     /// Last error raised by a database related action
     String mError;
 

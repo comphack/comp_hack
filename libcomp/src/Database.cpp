@@ -198,26 +198,7 @@ bool Database::ProcessTransaction(const std::shared_ptr<DatabaseTransaction>& tr
         return true;
     }
 
-    /// @todo: replace with actual transaction handling
-
-    bool result = true;
-    auto changes = transaction->GetChanges();
-    for(auto obj : changes[DatabaseChangeType_t::DATABASE_INSERT])
-    {
-        result &= InsertSingleObject(obj);
-    }
-
-    for(auto obj : changes[DatabaseChangeType_t::DATABASE_UPDATE])
-    {
-        result &= UpdateSingleObject(obj);
-    }
-
-    if(changes[DatabaseChangeType_t::DATABASE_DELETE].size() > 0)
-    {
-        result &= DeleteObjects(changes[DatabaseChangeType_t::DATABASE_DELETE]);
-    }
-
-    return result;
+    return ProcessChanges(transaction->GetChanges());
 }
 
 std::shared_ptr<PersistentObject> Database::LoadSingleObjectFromRow(

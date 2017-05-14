@@ -369,10 +369,16 @@ void ChannelServer::Tick()
     /// @todo: update zone states
 
     // Process queued world database changes
-    mWorldDatabase->ProcessTransactionQueue();
+    auto worldFailures = mWorldDatabase->ProcessTransactionQueue();
 
     // Process queued lobby database changes
-    mLobbyDatabase->ProcessTransactionQueue();
+    auto lobbyFailures = mLobbyDatabase->ProcessTransactionQueue();
+
+    if(worldFailures.size() > 0 || lobbyFailures.size() > 0)
+    {
+        /// @todo: disconnect clients associated to a failure
+        /// matching an account UUID
+    }
 
     QueueNextTick();
 }

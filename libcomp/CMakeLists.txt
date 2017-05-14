@@ -190,6 +190,7 @@ SET(${PROJECT_NAME}_SCHEMA
     schema/databaseconfig_cassandra.xml
     schema/databaseconfig_sqlite3.xml
     schema/packet_login.xml
+    schema/packet_login_reply.xml
     schema/packet_response_code.xml
     schema/registeredchannel.xml
     schema/registeredworld.xml
@@ -264,6 +265,8 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     ItemBox.cpp
     PacketLogin.h
     PacketLogin.cpp
+    PacketLoginReply.h
+    PacketLoginReply.cpp
     PacketResponseCode.h
     PacketResponseCode.cpp
     Quest.h

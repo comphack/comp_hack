@@ -40,7 +40,7 @@
 // object Includes
 #include <Account.h>
 #include <PacketLogin.h>
-#include <PacketResponseCode.h>
+#include <PacketLoginReply.h>
 
 using namespace lobby;
 
@@ -59,7 +59,7 @@ bool Parsers::Login::Parse(libcomp::ManagerPacket *pPacketManager,
         return false;
     }
 
-    objects::PacketResponseCode reply;
+    objects::PacketLoginReply reply;
     reply.SetCommandCode(to_underlying(
         LobbyToClientPacketCode_t::PACKET_LOGIN));
 
@@ -95,6 +95,8 @@ bool Parsers::Login::Parse(libcomp::ManagerPacket *pPacketManager,
 
         reply.SetResponseCode(to_underlying(
             ErrorCodes_t::SUCCESS));
+        reply.SetChallenge(0xCAFEBABE); /// @todo generate, save, and use.
+        reply.SetSalt(account->GetSalt());
     }
 
     return connection->SendObject(reply);

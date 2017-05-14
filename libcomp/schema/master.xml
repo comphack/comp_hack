@@ -22,6 +22,7 @@
 
     <!-- Lobby Packets -->
     <include path="packet_login.xml"/>
+    <include path="packet_login_reply.xml"/>
     <include path="packet_response_code.xml"/>
 
     <!-- Server Files -->

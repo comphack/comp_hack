@@ -109,8 +109,7 @@ public:
      */
     bool UsingDefaultDatabaseFile();
 
-protected:
-    virtual bool ProcessChanges(DatabaseChangeMap& changes);
+    virtual bool ProcessChangeSet(const std::shared_ptr<DatabaseChangeSet>& changes);
 
 private:
     /**

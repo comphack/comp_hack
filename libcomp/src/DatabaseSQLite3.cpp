@@ -688,7 +688,7 @@ bool DatabaseSQLite3::UsingDefaultDatabaseFile()
     return config->GetDatabaseName() == config->GetDefaultDatabaseName();
 }
 
-bool DatabaseSQLite3::ProcessChanges(DatabaseChangeMap& changes)
+bool DatabaseSQLite3::ProcessChangeSet(const std::shared_ptr<DatabaseChangeSet>& changes)
 {
     libcomp::String transactionID = libcomp::String("_%1").Arg(
             libcomp::String(libobjgen::UUID::Random().ToString()).Replace("-", "_"));
@@ -699,7 +699,7 @@ bool DatabaseSQLite3::ProcessChanges(DatabaseChangeMap& changes)
     }
 
     bool result = true;
-    for(auto obj : changes[DatabaseChangeType_t::DATABASE_INSERT])
+    for(auto obj : changes->GetInserts())
     {
         if(!InsertSingleObject(obj))
         {
@@ -710,7 +710,7 @@ bool DatabaseSQLite3::ProcessChanges(DatabaseChangeMap& changes)
     
     if(result)
     {
-        for(auto obj : changes[DatabaseChangeType_t::DATABASE_INSERT])
+        for(auto obj : changes->GetUpdates())
         {
             if(!UpdateSingleObject(obj))
             {
@@ -720,9 +720,10 @@ bool DatabaseSQLite3::ProcessChanges(DatabaseChangeMap& changes)
         }
     }
 
-    if(result && changes[DatabaseChangeType_t::DATABASE_DELETE].size() > 0)
+    auto deletes = changes->GetDeletes();
+    if(result && deletes.size())
     {
-        result = DeleteObjects(changes[DatabaseChangeType_t::DATABASE_DELETE]);
+        result = DeleteObjects(deletes);
     }
 
     if(result)

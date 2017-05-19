@@ -98,9 +98,9 @@ public:
      */
     bool UsingDefaultKeyspace();
 
-protected:
-    virtual bool ProcessChanges(DatabaseChangeMap& changes);
+    virtual bool ProcessChangeSet(const std::shared_ptr<DatabaseChangeSet>& changes);
 
+protected:
     /**
      * Wait for the completion of an async future execution.
      * @param pFuture Pointer to a query's future operation

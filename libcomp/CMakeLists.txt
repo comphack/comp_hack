@@ -113,11 +113,11 @@ SET(${PROJECT_NAME}_HDRS
     src/Database.h
     src/DatabaseBind.h
     src/DatabaseCassandra.h
+    src/DatabaseChangeSet.h
     src/DatabaseQuery.h
     src/DatabaseQueryCassandra.h
     src/DatabaseQuerySQLite3.h
     src/DatabaseSQLite3.h
-    src/DatabaseTransaction.h
     src/DataFile.h
     src/DataStore.h
     src/Decrypt.h

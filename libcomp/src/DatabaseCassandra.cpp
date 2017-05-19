@@ -290,23 +290,26 @@ std::list<std::shared_ptr<PersistentObject>> DatabaseCassandra::LoadObjects(
 
 bool DatabaseCassandra::InsertSingleObject(std::shared_ptr<PersistentObject>& obj)
 {
-    DatabaseChangeMap changes;
-    changes[DatabaseChangeType_t::DATABASE_INSERT].push_back(obj);
-    return ProcessChanges(changes);
+    auto s = DatabaseChangeSet::Create();
+    s->Insert(obj);
+    return ProcessChangeSet(s);
 }
 
 bool DatabaseCassandra::UpdateSingleObject(std::shared_ptr<PersistentObject>& obj)
 {
-    DatabaseChangeMap changes;
-    changes[DatabaseChangeType_t::DATABASE_UPDATE].push_back(obj);
-    return ProcessChanges(changes);
+    auto s = DatabaseChangeSet::Create();
+    s->Update(obj);
+    return ProcessChangeSet(s);
 }
 
 bool DatabaseCassandra::DeleteObjects(std::list<std::shared_ptr<PersistentObject>>& objs)
 {
-    DatabaseChangeMap changes;
-    changes[DatabaseChangeType_t::DATABASE_DELETE] = objs;
-    return ProcessChanges(changes);
+    auto s = DatabaseChangeSet::Create();
+    for(auto obj : objs)
+    {
+        s->Delete(obj);
+    }
+    return ProcessChangeSet(s);
 }
 
 bool DatabaseCassandra::VerifyAndSetupSchema(bool recreateTables)
@@ -556,12 +559,12 @@ bool DatabaseCassandra::UsingDefaultKeyspace()
     return config->GetKeyspace() == config->GetDefaultKeyspace();
 }
 
-bool DatabaseCassandra::ProcessChanges(DatabaseChangeMap& changes)
+bool DatabaseCassandra::ProcessChangeSet(const std::shared_ptr<DatabaseChangeSet>& changes)
 {
     std::vector<libcomp::String> queries;
     std::vector<std::list<libcomp::DatabaseBind*>> values;
 
-    for(auto obj : changes[DatabaseChangeType_t::DATABASE_INSERT])
+    for(auto obj : changes->GetInserts())
     {
         auto metaObject = obj->GetObjectMetadata();
 
@@ -596,7 +599,7 @@ bool DatabaseCassandra::ProcessChanges(DatabaseChangeMap& changes)
         values.push_back(vals);
     }
 
-    for(auto obj : changes[DatabaseChangeType_t::DATABASE_UPDATE])
+    for(auto obj : changes->GetUpdates())
     {
         auto metaObject = obj->GetObjectMetadata();
 
@@ -633,13 +636,13 @@ bool DatabaseCassandra::ProcessChanges(DatabaseChangeMap& changes)
         values.push_back(vals);
     }
 
-    if(changes[DatabaseChangeType_t::DATABASE_DELETE].size() > 0)
+    if(changes->GetDeletes().size() > 0)
     {
         std::unordered_map<std::string,std::list<
             std::shared_ptr<libcomp::PersistentObject>>> groupedObjects;
 
         //Group all the same objects together
-        for(auto obj : changes[DatabaseChangeType_t::DATABASE_DELETE])
+        for(auto obj : changes->GetDeletes())
         {
             auto uuid = obj->GetUUID();
 

@@ -31,7 +31,7 @@
 #include "CString.h"
 #include "DatabaseConfig.h"
 #include "DatabaseQuery.h"
-#include "DatabaseTransaction.h"
+#include "DatabaseChangeSet.h"
 #include "PersistentObject.h"
 
 namespace libcomp
@@ -204,10 +204,9 @@ public:
     /**
      * Queue a set of changes to execute during the next call to
      * ProcessTransactionQueue.
-     * @param changes Map of change types to object pointers to process
-     * @param uuid UUID used to group the changes together
+     * @param changes DatabaseChangeSet to queue for processing
      */
-    void QueueChanges(DatabaseChangeMap changes, const libobjgen::UUID& uuid = NULLUUID);
+    void QueueChangeSet(const std::shared_ptr<DatabaseChangeSet>& changes);
 
     /**
      * Pop and process all transactions stored in the transaction queue.
@@ -216,10 +215,12 @@ public:
     std::list<libobjgen::UUID> ProcessTransactionQueue();
 
     /**
-     * Process a transaction and rollback on failure.
+     * Process one or many database changes as a single query.
+     * @param changes Grouping of changes to apply to the database
      * @return true on success, false on failure
      */
-    bool ProcessTransaction(const std::shared_ptr<DatabaseTransaction>& transaction);
+    virtual bool ProcessChangeSet(const std::shared_ptr<
+        DatabaseChangeSet>& changes) = 0;
 
     /**
      * Retrieve the last error raised by a database operation.
@@ -245,13 +246,6 @@ protected:
     std::shared_ptr<PersistentObject> LoadSingleObjectFromRow(
         size_t typeHash, DatabaseQuery& query);
 
-    /**
-     * Process one or many database changes as a single query.
-     * @param changes Map of all changes to apply to the database
-     * @return true on success, false on failure
-     */
-    virtual bool ProcessChanges(DatabaseChangeMap& changes) = 0;
-
     /// Last error raised by a database related action
     String mError;
 
@@ -261,7 +255,7 @@ protected:
 private:
     /// Map of transaction pointers by UUID
     std::unordered_map<std::string,
-        std::shared_ptr<DatabaseTransaction>> mTransactionQueue;
+        std::shared_ptr<DatabaseChangeSet>> mTransactionQueue;
 
     /// Mutex to lock accessing the transaction queue
     std::mutex mTransactionLock;

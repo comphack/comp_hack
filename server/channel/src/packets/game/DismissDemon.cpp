@@ -84,15 +84,11 @@ void DemonDismiss(const std::shared_ptr<ChannelServer> server,
 
     client->SendPacket(reply);
 
-    libcomp::DatabaseChangeMap dbChanges;
-    dbChanges[libcomp::DatabaseChangeType_t::DATABASE_UPDATE]
-        .push_back(character);
-    dbChanges[libcomp::DatabaseChangeType_t::DATABASE_DELETE]
-        .push_back(demon->GetCoreStats().Get());
-    dbChanges[libcomp::DatabaseChangeType_t::DATABASE_DELETE]
-        .push_back(demon);
-
-    server->GetWorldDatabase()->QueueChanges(dbChanges, state->GetAccountUID());
+    auto dbChanges = libcomp::DatabaseChangeSet::Create(state->GetAccountUID());
+    dbChanges->Update(character);
+    dbChanges->Delete(demon->GetCoreStats().Get());
+    dbChanges->Delete(demon);
+    server->GetWorldDatabase()->QueueChangeSet(dbChanges);
 }
 
 bool Parsers::DismissDemon::Parse(libcomp::ManagerPacket *pPacketManager,

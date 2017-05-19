@@ -950,7 +950,8 @@ bool CharacterManager::AddRemoveItem(const std::shared_ptr<
 
     auto existing = GetExistingItems(character, itemID);
 
-    libcomp::DatabaseChangeMap dbChanges;
+    auto dbChanges = libcomp::DatabaseChangeSet::Create(
+        state->GetAccountUID());
     std::list<uint16_t> updatedSlots;
     auto maxStack = def->GetPossession()->GetStackSize();
     if(add)
@@ -1027,8 +1028,7 @@ bool CharacterManager::AddRemoveItem(const std::shared_ptr<
                         return false;
                     }
                     updatedSlots.push_back((uint16_t)freeSlot);
-                    dbChanges[libcomp::DatabaseChangeType_t::DATABASE_INSERT]
-                        .push_back(item);
+                    dbChanges->Insert(item);
 
                     if(added == quantity)
                     {
@@ -1107,8 +1107,7 @@ bool CharacterManager::AddRemoveItem(const std::shared_ptr<
                     return false;
                 }
 
-                dbChanges[libcomp::DatabaseChangeType_t::DATABASE_DELETE]
-                    .push_back(item);
+                dbChanges->Delete(item);
             }
             else
             {
@@ -1116,8 +1115,7 @@ bool CharacterManager::AddRemoveItem(const std::shared_ptr<
                     (quantity - removed)));
                 removed = quantity;
 
-                dbChanges[libcomp::DatabaseChangeType_t::DATABASE_UPDATE]
-                    .push_back(item);
+                dbChanges->Update(item);
             }
             updatedSlots.push_back((uint16_t)slot);
 
@@ -1130,10 +1128,9 @@ bool CharacterManager::AddRemoveItem(const std::shared_ptr<
 
     SendItemBoxData(client, 0, updatedSlots);
 
-    dbChanges[libcomp::DatabaseChangeType_t::DATABASE_UPDATE]
-        .push_back(itemBox);
+    dbChanges->Update(itemBox);
 
-    server->GetWorldDatabase()->QueueChanges(dbChanges, state->GetAccountUID());
+    server->GetWorldDatabase()->QueueChangeSet(dbChanges);
 
     return true;
 }
@@ -1325,17 +1322,14 @@ std::shared_ptr<objects::Demon> CharacterManager::ContractDemon(
         libcomp::PersistentObject>(d));
     character->SetCOMP((size_t)compSlot, d);
 
-    libcomp::DatabaseChangeMap dbChanges;
-    dbChanges[libcomp::DatabaseChangeType_t::DATABASE_INSERT]
-        .push_back(d);
-    dbChanges[libcomp::DatabaseChangeType_t::DATABASE_INSERT]
-        .push_back(ds);
-    dbChanges[libcomp::DatabaseChangeType_t::DATABASE_UPDATE]
-        .push_back(character);
+    auto dbChanges = libcomp::DatabaseChangeSet::Create(
+        character->GetAccount().GetUUID());
+    dbChanges->Insert(d);
+    dbChanges->Insert(ds);
+    dbChanges->Update(character);
 
     auto server = mServer.lock();
-    server->GetWorldDatabase()->QueueChanges(dbChanges,
-        character->GetAccount().GetUUID());
+    server->GetWorldDatabase()->QueueChangeSet(dbChanges);
 
     return d;
 }
@@ -1520,7 +1514,7 @@ void CharacterManager::UpdateExpertise(const std::shared_ptr<
     }
 
     std::list<std::pair<int8_t, int32_t>> updated;
-    libcomp::DatabaseChangeMap dbChanges;
+    auto dbChanges = libcomp::DatabaseChangeSet::Create(state->GetAccountUID());
     for(auto expertGrowth : skill->GetExpertGrowth())
     {
         auto expertise = character->GetExpertises(expertGrowth->GetExpertiseID()).Get();
@@ -1566,8 +1560,7 @@ void CharacterManager::UpdateExpertise(const std::shared_ptr<
 
         expertise->SetPoints(points);
         updated.push_back(std::pair<int8_t, int32_t>((int8_t)expDef->GetID(), points));
-        dbChanges[libcomp::DatabaseChangeType_t::DATABASE_UPDATE]
-            .push_back(expertise);
+        dbChanges->Update(expertise);
 
         int8_t newRank = (int8_t)((float)points * 0.0001f);
         if(currentRank != newRank)
@@ -1596,7 +1589,7 @@ void CharacterManager::UpdateExpertise(const std::shared_ptr<
 
         client->SendPacket(reply);
 
-        server->GetWorldDatabase()->QueueChanges(dbChanges, state->GetAccountUID());
+        server->GetWorldDatabase()->QueueChangeSet(dbChanges);
     }
 }
 

@@ -97,13 +97,10 @@ void AllocatePoint(const std::shared_ptr<ChannelServer> server,
 
     client->SendPacket(reply);
 
-    libcomp::DatabaseChangeMap dbChanges;
-    dbChanges[libcomp::DatabaseChangeType_t::DATABASE_UPDATE]
-        .push_back(character);
-    dbChanges[libcomp::DatabaseChangeType_t::DATABASE_UPDATE]
-        .push_back(stats);
-
-    server->GetWorldDatabase()->QueueChanges(dbChanges, state->GetAccountUID());
+    auto dbChanges = libcomp::DatabaseChangeSet::Create(state->GetAccountUID());
+    dbChanges->Update(character);
+    dbChanges->Update(stats);
+    server->GetWorldDatabase()->QueueChangeSet(dbChanges);
 }
 
 bool Parsers::AllocateSkillPoint::Parse(libcomp::ManagerPacket *pPacketManager,

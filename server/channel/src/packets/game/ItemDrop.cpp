@@ -78,13 +78,10 @@ void DropItem(const std::shared_ptr<ChannelServer> server,
 
         itemBox->SetItems((size_t)item->GetBoxSlot(), NULLUUID);
 
-        libcomp::DatabaseChangeMap dbChanges;
-        dbChanges[libcomp::DatabaseChangeType_t::DATABASE_UPDATE]
-            .push_back(itemBox);
-        dbChanges[libcomp::DatabaseChangeType_t::DATABASE_DELETE]
-            .push_back(item);
-
-        server->GetWorldDatabase()->QueueChanges(dbChanges, state->GetAccountUID());
+        auto dbChanges = libcomp::DatabaseChangeSet::Create(state->GetAccountUID());
+        dbChanges->Update(itemBox);
+        dbChanges->Delete(item);
+        server->GetWorldDatabase()->QueueChangeSet(dbChanges);
     }
     else
     {

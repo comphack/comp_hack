@@ -73,22 +73,18 @@ void MoveItem(const std::shared_ptr<ChannelClientConnection>& client,
     destBox->SetItems(destSlot, item);
     sourceBox->SetItems(sourceSlot, otherItem);
 
-    libcomp::DatabaseChangeMap dbChanges;
-    dbChanges[libcomp::DatabaseChangeType_t::DATABASE_UPDATE]
-        .push_back(item);
-    dbChanges[libcomp::DatabaseChangeType_t::DATABASE_UPDATE]
-        .push_back(destBox);
-    dbChanges[libcomp::DatabaseChangeType_t::DATABASE_UPDATE]
-        .push_back(sourceBox);
+    auto dbChanges = libcomp::DatabaseChangeSet::Create(state->GetAccountUID());
+    dbChanges->Update(item);
+    dbChanges->Update(destBox);
+    dbChanges->Update(sourceBox);
 
     if(!otherItem.IsNull())
     {
         otherItem->SetBoxSlot((int8_t)sourceSlot);
-        dbChanges[libcomp::DatabaseChangeType_t::DATABASE_UPDATE]
-            .push_back(otherItem.Get());
+        dbChanges->Update(otherItem.Get());
     }
 
-    server->GetWorldDatabase()->QueueChanges(dbChanges, state->GetAccountUID());
+    server->GetWorldDatabase()->QueueChangeSet(dbChanges);
 }
 
 bool Parsers::ItemMove::Parse(libcomp::ManagerPacket *pPacketManager,

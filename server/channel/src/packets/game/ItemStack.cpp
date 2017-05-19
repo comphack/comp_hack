@@ -93,15 +93,12 @@ void SplitStack(const std::shared_ptr<ChannelServer> server,
 
         server->GetCharacterManager()->SendItemBoxData(client, 0);
 
-        libcomp::DatabaseChangeMap dbChanges;
-        dbChanges[libcomp::DatabaseChangeType_t::DATABASE_INSERT]
-            .push_back(destItem);
-        dbChanges[libcomp::DatabaseChangeType_t::DATABASE_UPDATE]
-            .push_back(srcItem);
-        dbChanges[libcomp::DatabaseChangeType_t::DATABASE_UPDATE]
-            .push_back(itemBox);
-
-        server->GetWorldDatabase()->QueueChanges(dbChanges, state->GetAccountUID());
+        auto dbChanges = libcomp::DatabaseChangeSet::Create(
+            state->GetAccountUID());
+        dbChanges->Insert(destItem);
+        dbChanges->Update(srcItem);
+        dbChanges->Update(itemBox);
+        server->GetWorldDatabase()->QueueChangeSet(dbChanges);
     }
     else
     {

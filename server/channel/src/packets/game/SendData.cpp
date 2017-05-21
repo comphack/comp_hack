@@ -4,7 +4,10 @@
  *
  * @author HACKfrost
  *
- * @brief Request from the client to update data on the server.
+ * @brief Request from the client to get updated data from the server.
+ *  This can be thought of as the sign that the client is ready to receive
+ *  regular updates but also involves certain packets that should
+ *  always send at this point.
  *
  * This file is part of the Channel Server (channel).
  *
@@ -39,24 +42,103 @@
 
 using namespace channel;
 
-void SendZoneChange(std::shared_ptr<ChannelServer> server,
+void SendClientReadyData(std::shared_ptr<ChannelServer> server,
     const std::shared_ptr<ChannelClientConnection> client)
 {
+    auto characterManager = server->GetCharacterManager();
     auto zoneManager = server->GetZoneManager();
-    auto cState = client->GetClientState()->GetCharacterState();
-    float xCoord = cState->GetOriginX();
-    float yCoord = cState->GetOriginY();
-    float rotation = cState->GetOriginRotation();
+    auto state = client->GetClientState();
+    auto cState = state->GetCharacterState();
+    auto character = cState->GetEntity();
 
-    /// @todo: replace with last zone information
-    uint32_t zoneID = 0x00004E85;
-    if(!zoneManager->EnterZone(client, zoneID, xCoord, yCoord, rotation))
+    // Send world time
     {
-        LOG_ERROR(libcomp::String("Failed to add client to zone"
-            " %1. Closing the connection.\n").Arg(zoneID));
-        client->Close();
-        return;
+        int8_t phase, hour, min;
+        server->GetWorldClockTime(phase, hour, min);
+
+        libcomp::Packet p;
+        p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_WORLD_TIME);
+        p.WriteS8(phase);
+        p.WriteS8(hour);
+        p.WriteS8(min);
+
+        client->QueuePacket(p);
     }
+
+    // Send sync time relative to the client
+    {
+        ServerTime currentServerTime = ChannelServer::GetServerTime();
+        ClientTime currentClientTime = state->ToClientTime(currentServerTime);
+
+        libcomp::Packet p;
+        p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_SYNC);
+        p.WriteFloat(currentClientTime);
+
+        client->QueuePacket(p);
+    }
+
+    /// @todo: send system message (if any) [0x0171]
+    /// @todo: send "world bonus" [0x0405]
+    /// @todo: send player skill updates (toggleable abilities for example) [0x03B8]
+
+    // Send character icon
+    characterManager->SendStatusIcon(client);
+
+    // Send zone information
+    {
+        // Default to last logout information first
+        uint32_t zoneID = character->GetLogoutZone();
+        float xCoord = character->GetLogoutX();
+        float yCoord = character->GetLogoutY();
+        float rotation = character->GetLogoutRotation();
+
+        // Default to homepoint second
+        if(zoneID == 0)
+        {
+            zoneID = character->GetHomepointZone();
+            xCoord = character->GetHomepointX();
+            yCoord = character->GetHomepointY();
+            rotation = 0;
+        }
+
+        /// @todo: validate if the zone can be logged into
+        
+        // If all else fails start in the default zone
+        if(zoneID == 0)
+        {
+            /// @todo: make this configurable?
+            zoneID = 0x00004E85;
+            xCoord = 0;
+            yCoord = 0;
+            rotation = 0;
+        }
+
+        if(!zoneManager->EnterZone(client, zoneID, xCoord, yCoord, rotation))
+        {
+            LOG_ERROR(libcomp::String("Failed to add client to zone"
+                " %1. Closing the connection.\n").Arg(zoneID));
+            client->Close();
+            return;
+        }
+    }
+
+    // Send active partner demon ID
+    if(!character->GetActiveDemon().IsNull())
+    {
+        libcomp::Packet p;
+        p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_PARTNER_SUMMONED);
+        p.WriteS64Little(state->GetObjectID(character->GetActiveDemon().GetUUID()));
+
+        client->QueuePacket(p);
+    }
+
+    /// @todo: send skill cost rate [0x019E]
+    /// @todo: send "connected commu SV" [0x015A]
+    /// @todo: send clan data [0x0155]
+    /// @todo: send updated player skill list (before character data for some reason) [0x0187]
+    /// @todo: send more clan data (may send first clan data again) [0x01E5]
+
+    client->FlushOutgoing();
 }
 
 bool Parsers::SendData::Parse(libcomp::ManagerPacket *pPacketManager,
@@ -65,18 +147,10 @@ bool Parsers::SendData::Parse(libcomp::ManagerPacket *pPacketManager,
 {
     (void)p;
 
-    /// @todo: A bunch of stuff
-
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_CONFIRMATION);
-    reply.WriteU32Little(0x00010000); // 1.0.0
-
-    connection->SendPacket(reply);
-
     auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
     auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
 
-    server->QueueWork(SendZoneChange, server, client);
+    server->QueueWork(SendClientReadyData, server, client);
 
     return true;
 }

@@ -40,6 +40,7 @@
 #include <ItemBox.h>
 #include <MiItemData.h>
 #include <MiPossessionData.h>
+#include <ServerZone.h>
 
 // channel Includes
 #include "ChannelServer.h"
@@ -173,14 +174,25 @@ void AccountManager::Logout(const std::shared_ptr<
     channel::ChannelClientConnection>& client)
 {
     auto server = mServer.lock();
+    auto zoneManager = server->GetZoneManager();
     auto managerConnection = server->GetManagerConnection();
     auto state = client->GetClientState();
     auto account = state->GetAccountLogin()->GetAccount().Get();
-    auto character = state->GetCharacterState()->GetEntity();
+    auto cState = state->GetCharacterState();
+    auto character = cState->GetEntity();
 
     if(nullptr == account || nullptr == character)
     {
         return;
+    }
+
+    auto zone = zoneManager->GetZoneInstance(client);
+    if(nullptr != zone)
+    {
+        character->SetLogoutZone(zone->GetDefinition()->GetID());
+        character->SetLogoutX(cState->GetDestinationX());
+        character->SetLogoutY(cState->GetDestinationY());
+        character->SetLogoutRotation(cState->GetDestinationRotation());
     }
 
     if(!LogoutCharacter(state))
@@ -197,7 +209,7 @@ void AccountManager::Logout(const std::shared_ptr<
 
     //Remove the connection if it hasn't been removed already.
     managerConnection->RemoveClientConnection(client);
-    server->GetZoneManager()->LeaveZone(client);
+    zoneManager->LeaveZone(client);
 
     libcomp::ObjectReference<
         objects::Account>::Unload(account->GetUUID());
@@ -436,7 +448,8 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
 
 bool AccountManager::LogoutCharacter(channel::ClientState* state)
 {
-    auto character = state->GetCharacterState()->GetEntity();
+    auto cState = state->GetCharacterState();
+    auto character = cState->GetEntity();
 
     /// @todo: detach character from anything using it
 
@@ -449,7 +462,6 @@ bool AccountManager::LogoutCharacter(channel::ClientState* state)
         ->GetCoreStats().Get(), worldDB);
     ok &= Cleanup<objects::CharacterProgress>(character
         ->GetProgress().Get(), worldDB);
-    /// @todo: logout information
 
     // Save items
     for(auto itemBox : character->GetItemBoxes())

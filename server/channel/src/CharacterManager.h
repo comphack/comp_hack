@@ -258,6 +258,51 @@ public:
         channel::ChannelClientConnection>& client, uint32_t skillID);
 
     /**
+     * Update the specified entity to learn a skill by ID.
+     * @param client Pointer to the client connection
+     * @param entityID ID of the entity to learn the skill
+     * @param skillID Skill ID to update the entity to learn
+     * @return true if the skill was learned or is already learned,
+     *  false if it failed
+     */
+    bool LearnSkill(const std::shared_ptr<
+        channel::ChannelClientConnection>& client, int32_t entityID,
+        uint32_t skillID);
+
+    /**
+     * Update the homepoint of the client's character.
+     * @param client Pointer to the client connection
+     * @param zoneID Zone definition ID to set as the homepoint
+     * @param xCoord X coordinate to set as the homepoint in the zone
+     * @param yCoord Y coordinate to set as the homepoint in the zone
+     * @return true if the homepoint was updated, false if it was not
+     */
+    bool UpdateHomepoint(const std::shared_ptr<
+        channel::ChannelClientConnection>& client, uint32_t zoneID,
+        float xCoord, float yCoord);
+
+    /**
+     * Add a map to the byte array representing the maps the client character
+     * has obtained.
+     * @param client Pointer to the client connection
+     * @param mapIndex Array offset to apply the map value to
+     * @param mapValue Value to apply to the map array at the specified
+     *  offset. Can represent multiple maps at the same offset
+     * @return true if the map is valid and was either added or already
+     *  obtained, false it was not
+     */
+    bool UpdateMapFlags(const std::shared_ptr<
+        channel::ChannelClientConnection>& client, size_t mapIndex,
+        uint8_t mapValue);
+
+    /**
+     * Send the client character's obtained maps stored as an array of flags
+     * @param client Pointer to the client connection
+     */
+    void SendMapFlags(const std::shared_ptr<
+        ChannelClientConnection>& client);
+
+    /**
      * Calculate the base stats of a character.
      * @param cs Pointer to the core stats of a character
      */

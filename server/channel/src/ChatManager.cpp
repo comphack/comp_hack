@@ -56,11 +56,15 @@ ChatManager::ChatManager(const std::weak_ptr<ChannelServer>& server)
 {
     mGMands["contract"] = &ChatManager::GMCommand_Contract;
     mGMands["crash"] = &ChatManager::GMCommand_Crash;
+    mGMands["enemy"] = &ChatManager::GMCommand_Enemy;
     mGMands["expertiseup"] = &ChatManager::GMCommand_ExpertiseUpdate;
+    mGMands["homepoint"] = &ChatManager::GMCommand_Homepoint;
     mGMands["item"] = &ChatManager::GMCommand_Item;
     mGMands["levelup"] = &ChatManager::GMCommand_LevelUp;
     mGMands["lnc"] = &ChatManager::GMCommand_LNC;
+    mGMands["map"] = &ChatManager::GMCommand_Map;
     mGMands["pos"] = &ChatManager::GMCommand_Position;
+    mGMands["skill"] = &ChatManager::GMCommand_Skill;
     mGMands["xp"] = &ChatManager::GMCommand_XP;
     mGMands["zone"] =&ChatManager::GMCommand_Zone;
 }
@@ -185,8 +189,8 @@ bool ChatManager::GMCommand_Contract(const std::shared_ptr<
     auto characterManager = server->GetCharacterManager();
     auto definitionManager = server->GetDefinitionManager();
 
-    int16_t demonID;
-    if(!GetIntegerArg<int16_t>(demonID, argsCopy))
+    uint32_t demonID;
+    if(!GetIntegerArg<uint32_t>(demonID, argsCopy))
     {
         libcomp::String name;
         if(!GetStringArg(name, argsCopy))
@@ -199,14 +203,14 @@ bool ChatManager::GMCommand_Contract(const std::shared_ptr<
         {
             return false;
         }
-        demonID = (int16_t)devilData->GetBasic()->GetID();
+        demonID = devilData->GetBasic()->GetID();
     }
 
     auto state = client->GetClientState();
     auto character = state->GetCharacterState()->GetEntity();
 
     auto demon = characterManager->ContractDemon(character,
-        definitionManager->GetDevilData((uint32_t)demonID),
+        definitionManager->GetDevilData(demonID),
         nullptr);
     if(nullptr == demon)
     {
@@ -242,6 +246,72 @@ bool ChatManager::GMCommand_Crash(const std::shared_ptr<
     abort();
 }
 
+bool ChatManager::GMCommand_Enemy(const std::shared_ptr<
+    channel::ChannelClientConnection>& client,
+    const std::list<libcomp::String>& args)
+{
+    std::list<libcomp::String> argsCopy = args;
+
+    if(argsCopy.size() != 1 && argsCopy.size() != 3 && argsCopy.size() != 4)
+    {
+        return SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(
+            "@enemy requires one to four args"));
+    }
+
+    auto state = client->GetClientState();
+    auto cState = state->GetCharacterState();
+    auto server = mServer.lock();
+    auto definitionManager = server->GetDefinitionManager();
+    auto zoneManager = server->GetZoneManager();
+
+    uint32_t demonID;
+    if(!GetIntegerArg<uint32_t>(demonID, argsCopy))
+    {
+        libcomp::String name;
+        if(!GetStringArg(name, argsCopy))
+        {
+            return false;
+        }
+
+        auto devilData = definitionManager->GetDevilData(name);
+        if(devilData == nullptr)
+        {
+            return false;
+        }
+        demonID = devilData->GetBasic()->GetID();
+    }
+
+    /// @todo: Default to directly in front of the player
+    float x = cState->GetOriginX();
+    float y = cState->GetOriginY();
+    float rot = cState->GetOriginRotation();
+
+    if(argsCopy.size() > 0)
+    {
+        //X/Y optional but must be set if additional args exist
+        if(!GetDecimalArg<float>(x, argsCopy) || !GetDecimalArg<float>(y, argsCopy))
+        {
+            return false;
+        }
+
+        //Rotation is optional
+        if(!GetDecimalArg<float>(rot, argsCopy))
+        {
+            rot = 0.f;
+        }
+    }
+
+    auto def = definitionManager->GetDevilData(demonID);
+    auto zone = zoneManager->GetZoneInstance(client);
+
+    if(nullptr == def)
+    {
+        return false;
+    }
+
+    return zoneManager->SpawnEnemy(zone, demonID, x, y, rot);
+}
+
 bool ChatManager::GMCommand_ExpertiseUpdate(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
@@ -257,6 +327,31 @@ bool ChatManager::GMCommand_ExpertiseUpdate(const std::shared_ptr<
     }
 
     server->GetCharacterManager()->UpdateExpertise(client, skillID);
+
+    return true;
+}
+
+bool ChatManager::GMCommand_Homepoint(const std::shared_ptr<
+    channel::ChannelClientConnection>& client,
+    const std::list<libcomp::String>& args)
+{
+    (void)args;
+
+    auto server = mServer.lock();
+    auto state = client->GetClientState();
+    auto cState = state->GetCharacterState();
+
+    auto xCoord = cState->GetDestinationX();
+    auto yCoord = cState->GetDestinationY();
+    auto zone = server->GetZoneManager()->GetZoneInstance(client);
+
+    if(nullptr == zone)
+    {
+        return false;
+    }
+
+    server->GetCharacterManager()->UpdateHomepoint(client,
+        zone->GetDefinition()->GetID(), xCoord, yCoord);
 
     return true;
 }
@@ -367,6 +462,26 @@ bool ChatManager::GMCommand_LNC(const std::shared_ptr<
     return true;
 }
 
+bool ChatManager::GMCommand_Map(const std::shared_ptr<
+    channel::ChannelClientConnection>& client,
+    const std::list<libcomp::String>& args)
+{
+    std::list<libcomp::String> argsCopy = args;
+
+    size_t mapIndex;
+    uint8_t mapValue;
+    if(!GetIntegerArg<size_t>(mapIndex, argsCopy) ||
+        !GetIntegerArg<uint8_t>(mapValue, argsCopy))
+    {
+        return false;
+    }
+
+    mServer.lock()->GetCharacterManager()->UpdateMapFlags(client,
+        mapIndex, mapValue);
+
+    return true;
+}
+
 bool ChatManager::GMCommand_Position(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
@@ -457,6 +572,37 @@ bool ChatManager::GMCommand_Position(const std::shared_ptr<
     return SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(
         "Position: (%1, %2)").Arg(cState->GetDestinationX()).Arg(
         cState->GetDestinationY()));
+}
+
+bool ChatManager::GMCommand_Skill(const std::shared_ptr<
+    channel::ChannelClientConnection>& client,
+    const std::list<libcomp::String>& args)
+{
+    std::list<libcomp::String> argsCopy = args;
+
+    auto server = mServer.lock();
+    auto state = client->GetClientState();
+    auto definitionManager = server->GetDefinitionManager();
+
+    uint32_t skillID;
+    if(!GetIntegerArg<uint32_t>(skillID, argsCopy))
+    {
+        return false;
+    }
+
+    auto skill = definitionManager->GetSkillData(skillID);
+    if(skill == nullptr)
+    {
+        return false;
+    }
+
+    libcomp::String target;
+    bool isDemon = GetStringArg(target, argsCopy) && target.ToLower() == "demon";
+    auto entityID = isDemon ? state->GetDemonState()->GetEntityID()
+        : state->GetCharacterState()->GetEntityID();
+
+    return mServer.lock()->GetCharacterManager()->LearnSkill(
+        client, entityID, skillID);
 }
 
 bool ChatManager::GMCommand_Zone(const std::shared_ptr<

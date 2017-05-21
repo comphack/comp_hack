@@ -28,11 +28,13 @@
 #define SERVER_CHANNEL_SRC_ZONE_H
 
 // channel Includes
+#include "ActiveEntityState.h"
 #include "ChannelClientConnection.h"
 #include "EntityState.h"
 
 namespace objects
 {
+class Enemy;
 class ServerNPC;
 class ServerObject;
 class ServerZone;
@@ -43,6 +45,7 @@ namespace channel
 
 class ChannelClientConnection;
 
+typedef ActiveEntityStateImp<objects::Enemy> EnemyState;
 typedef EntityState<objects::ServerNPC> NPCState;
 typedef EntityState<objects::ServerObject> ServerObjectState;
 
@@ -84,15 +87,19 @@ public:
     void RemoveConnection(const std::shared_ptr<ChannelClientConnection>& client);
 
     /**
-     * Add an NPC to the zone. This is not thread safe and should only be
-     * called before the zone is being used.
+     * Add an enemy to the zone
+     * @param enemy Pointer to the enemy to add
+     */
+    void AddEnemy(const std::shared_ptr<EnemyState>& enemy);
+
+    /**
+     * Add an NPC to the zone
      * @param npc Pointer to the NPC to add
      */
     void AddNPC(const std::shared_ptr<NPCState>& npc);
 
     /**
-     * Add an object to the zone. This is not thread safe and should only be
-     * called before the zone is being used.
+     * Add an object to the zone
      * @param object Pointer to the object to add
      */
     void AddObject(const std::shared_ptr<ServerObjectState>& object);
@@ -118,6 +125,19 @@ public:
      * @return Pointer to the entity instance.
      */
     std::shared_ptr<objects::EntityStateObject> GetEntity(int32_t id);
+
+    /**
+     * Get an enemy instance by it's ID.
+     * @param id Instance ID of the enemy.
+     * @return Pointer to the enemy instance.
+     */
+    std::shared_ptr<EnemyState> GetEnemy(int32_t id);
+
+    /**
+     * Get all enemy instances in the zone
+     * @return List of all enemy instances in the zone
+     */
+    const std::list<std::shared_ptr<EnemyState>> GetEnemies() const;
 
     /**
      * Get an NPC instance by it's ID.
@@ -169,6 +189,9 @@ private:
 
     /// Map of primarty entity IDs to client connections
     std::unordered_map<int32_t, std::shared_ptr<ChannelClientConnection>> mConnections;
+
+    /// List of pointers to enemies instantiated for the zone
+    std::list<std::shared_ptr<EnemyState>> mEnemies;
 
     /// List of pointers to NPCs instantiated for the zone
     std::list<std::shared_ptr<NPCState>> mNPCs;

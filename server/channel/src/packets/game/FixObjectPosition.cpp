@@ -88,7 +88,8 @@ bool Parsers::FixObjectPosition::Parse(libcomp::ManagerPacket *pPacketManager,
     if(nullptr != dState)
     {
         // If a demon is being placed, it will have already been described to the
-        // the client by this point so show it now.
+        // the client by this point so create and show it now.
+        server->GetZoneManager()->PopEntityForZoneProduction(client, dState->GetEntityID(), 2);
         server->GetZoneManager()->ShowEntityToZone(client, dState->GetEntityID());
     }
 

@@ -88,8 +88,10 @@ enum class ClientToChannelPacketCode_t : uint16_t
     PACKET_PARTNER_DEMON_DATA = 0x005B,  //!< Request for the client's active demon state.
     PACKET_COMP_LIST = 0x005C,  //!< COMP demon list request.
     PACKET_COMP_DEMON_DATA = 0x005E,  //!< COMP demon data request.
+    PACKET_CHANNEL_LIST = 0x0063,  //!< Request for the list of channels connected to the world.
     PACKET_STOP_MOVEMENT = 0x006F,  //!< Request to stop the movement of an entity or object.
     PACKET_SPOT_TRIGGERED = 0x0071,  //!< A spot has been triggered by the client.
+    PACKET_WORLD_TIME = 0x0072,  //!< Request for the server's current world time.
     PACKET_ITEM_BOX = 0x0074,  //!< Request for info about a specific item box.
     PACKET_ITEM_MOVE = 0x0076,  //!< Request to move an item in an item box.
     PACKET_ITEM_DROP = 0x0077,  //!< Request to throw away an item from an item box.
@@ -101,10 +103,35 @@ enum class ClientToChannelPacketCode_t : uint16_t
     PACKET_HOTBAR_SAVE = 0x00A4,  //!< Request to save a hotbar page.
     PACKET_VALUABLE_LIST = 0x00B8,  //!< Request for a list of obtained valuables.
     PACKET_OBJECT_INTERACTION = 0x00BA,  //!< An object has been clicked on.
+    PACKET_FRIEND_INFO = 0x00BD,  //!< Request for the current player's friend information.
     PACKET_SYNC = 0x00F3,  //!< Request to retrieve the server time.
     PACKET_ROTATE = 0x00F8,  //!< Request to rotate an entity or object.
-    PACKET_UNION_FLAG = 0x0100,  //!< Request to receive uniion information.
+    PACKET_UNION_FLAG = 0x0100,  //!< Request to receive union information.
+    PACKET_QUEST_ACTIVE_LIST = 0x010B,  //!< Request for the player's active quest list.
+    PACKET_QUEST_COMPLETED_LIST = 0x010C,  //!< Request for the player's completed quest list.
+    PACKET_CLAN_INFO = 0x0150,  //!< Request for the current player's clan information.
+    PACKET_MAP_FLAG = 0x0197,  //!< Request to receive map information.
+    PACKET_DEMON_COMPENDIUM = 0x019B,  //!< Request for the Demon Compendium.
+    PACKET_DUNGEON_RECORDS = 0x01C4,  //!< Request for the current player's dungeon challenge records.
+    PACKET_MATERIAL_BOX = 0x0205,  //!< Request for info about the materials container.
+    PACKET_FUSION_GAUGE = 0x0217,   //!< Request for the player's fusion gauge state.
+    PACKET_TITLE_LIST = 0x021B,   //!< Request for the list of available titles.
+    PACKET_PARTNER_DEMON_QUEST_LIST = 0x022D,   //!< Request for the player's partner demon quest list.
+    PACKET_UNSUPPORTED_0232 = 0x0232,  //!< Unknown. Requested at start up. Contains character name and client side flags.
     PACKET_LOCK_DEMON = 0x0233,  //!< Request to lock or unlock a demon in the COMP.
+    PACKET_PVP_CHARACTER_INFO = 0x024D,  //!< Request for PvP character information.
+    PACKET_TEAM_INFO = 0x027B,  //!< Request for the current player's team information.
+    PACKET_PARTNER_DEMON_QUEST_TEMP = 0x028F,  //!< Unknown. Request for partner demon quest info.
+    PACKET_RECEIVED_PLAYER_DATA = 0x028C,  //!< Empty message sent after character/demon data requested have been received.
+    PACKET_RECEIVED_LISTS = 0x028E,  //!< Empty message sent after setup lists requested have been received.
+    PACKET_COMMON_SWITCH_INFO = 0x02F4,  //!< Unknown. Request for "common switch" information.
+    PACKET_CASINO_COIN_TOTAL = 0x02FA,   //!< Request for the current character's casino coin total.
+    PACKET_SEARCH_ENTRY_INFO = 0x03A3,  //!< Unknown. Request for the current player's search entries.
+    PACKET_HOURAI_DATA = 0x03A5,  //!< Request for Club Hourai related information.
+    PACKET_CULTURE_DATA = 0x03AC,  //!< Unknown. Request for culture information.
+    PACKET_BLACKLIST = 0x0408,  //!< Request for the current player's blacklist.
+    PACKET_DIGITALIZE_POINTS = 0x0414,  //!< Request for the current player's digitalize point information.
+    PACKET_DIGITALIZE_ASSIST = 0x0418,  //!< Request for the current player's digitalize assist information.
 };
 
 /**
@@ -117,6 +144,7 @@ enum class ChannelToClientPacketCode_t : uint16_t
     PACKET_LOGOUT = 0x0009,  //!< Logout response.
     PACKET_CHARACTER_DATA = 0x000F,  //!< Message containing data about the client's character.
     PACKET_PARTNER_DATA = 0x0010,  //!< Message containing data about the client's active demon.
+    PACKET_ENEMY = 0x0011,  //!< Message containing data about an enemy in a zone.
     PACKET_NPC_DATA = 0x0014,  //!< Message containing data about an NPC in a zone.
     PACKET_OBJECT_NPC_DATA = 0x0015,  //!< Message containing data about an object NPC in a zone.
     PACKET_OTHER_CHARACTER_DATA = 0x0016,  //!< Message containing data about a different client's character.
@@ -126,6 +154,7 @@ enum class ChannelToClientPacketCode_t : uint16_t
     PACKET_REMOVE_ENTITY = 0x001B,  //!< Message to remove a game entity.
     PACKET_MOVE = 0x001D,  //!< Message containing entity or object movement information.
     PACKET_ZONE_CHANGE = 0x0023,  //!< Information about a character's zone.
+    PACKET_SYNC_TIME = 0x0025,  //!< Message containing the current server time.
     PACKET_CHAT = 0x0028, //!< Response from chat request.
     PACKET_SKILL_CHARGING = 0x0033, //!< Response from skill activation request to charge a skill.
     PACKET_SKILL_COMPLETED = 0x0034, //!< Response from skill activation request to complete a skill.
@@ -147,7 +176,10 @@ enum class ChannelToClientPacketCode_t : uint16_t
     PACKET_COMP_LIST = 0x005D,  //!< COMP demon list response.
     PACKET_COMP_DEMON_DATA = 0x005F,  //!< COMP demon data response.
     PACKET_PARTNER_SUMMONED = 0x0060,  //!< Notifies the client that a partner demon has been summoned.
+    PACKET_POP_ENTITY_FOR_PRODUCTION = 0x0061,  //!< Sets up an entity that will spawn in via PACKET_SHOW_ENTITY.
+    PACKET_CHANNEL_LIST = 0x0064,  //!< Message containing the list of channels connected to the world.
     PACKET_STOP_MOVEMENT = 0x0070,  //!< Message containing entity or object movement stopping information.
+    PACKET_WORLD_TIME = 0x0073,  //!< Response for the server's current world time.
     PACKET_ITEM_BOX = 0x0075,  //!< Response for info about a specific item box.
     PACKET_ITEM_UPDATE = 0x007A,  //!< Message containing updated information about an item in a box.
     PACKET_EQUIPMENT_LIST = 0x007C,  //!< Response for equipment information.
@@ -155,14 +187,35 @@ enum class ChannelToClientPacketCode_t : uint16_t
     PACKET_HOTBAR_DATA = 0x00A3,  //!< Response for data about a hotbar page.
     PACKET_HOTBAR_SAVE = 0x00A5,  //!< Response to save a hotbar page.
     PACKET_VALUABLE_LIST = 0x00B9,  //!< Response containing a list of obtained valuables.
+    PACKET_FRIEND_INFO = 0x00BE,  //!< Response containing the current player's friend information.
     PACKET_SYNC = 0x00F4,  //!< Response containing the server time.
     PACKET_ROTATE = 0x00F9,    //!< Message containing entity or object rotation information.
     PACKET_UNION_FLAG = 0x0101,  //!< Message containing union information.
+    PACKET_HOMEPOINT_UPDATE = 0x0106,  //!< Message indicating that the player's homepoint has been updated.
+    PACKET_QUEST_ACTIVE_LIST = 0x010D,  //!< Response containing the player's active quest list.
+    PACKET_QUEST_COMPLETED_LIST = 0x010E,  //!< Response containing the player's completed quest list.
     PACKET_LNC_POINTS = 0x0126,    //!< Message containing a character's LNC alignment value.
+    PACKET_CLAN_INFO = 0x0151,  //!< Response containing the current player's clan information.
     PACKET_STATUS_ICON = 0x0195,  //!< Message containing the icon to show for a character.
+    PACKET_MAP_FLAG = 0x0198,  //!< Message containing map information.
+    PACKET_DEMON_COMPENDIUM = 0x019C,  //!< Response containing the Demon Compendium.
+    PACKET_DUNGEON_CHALLENGES = 0x01C5,  //!< Response containing the current player's dungeon challenge records.
+    PACKET_MATERIAL_BOX = 0x0206,  //!< Response containing info about the materials container.
+    PACKET_FUSION_GAUGE = 0x0218,   //!< Response containing the player's fusion gauge state.
+    PACKET_TITLE_LIST = 0x021C,   //!< Response containing the list of available titles.
+    PACKET_PARTNER_DEMON_QUEST_LIST = 0x022E,   //!< Response containing the player's partner demon quest list.
     PACKET_LOCK_DEMON = 0x0234,  //!< Response to lock a demon in the COMP.
-
-    PACKET_CONFIRMATION = 0x1FFF,  //!< Generic confirmation response.
+    PACKET_PVP_CHARACTER_INFO = 0x024E,  //!< Response containing PvP character information.
+    PACKET_TEAM_INFO = 0x027C,  //!< Response containing the current player's team information.
+    PACKET_PARTNER_DEMON_QUEST_TEMP = 0x0290,  //!< Unknown. Response containing partner demon quest info.
+    PACKET_COMMON_SWITCH_INFO = 0x02F5,  //!< Unknown. Response containing "common switch" information.
+    PACKET_CASINO_COIN_TOTAL = 0x02FB,   //!< Message containing the current character's casino coin total.
+    PACKET_SEARCH_ENTRY_INFO = 0x03A4,  //!< Unknown. Response containing the current player's search entries.
+    PACKET_HOURAI_DATA = 0x03A6,  //!< Response containing Club Hourai related information.
+    PACKET_CULTURE_DATA = 0x03AD,  //!< Unknown. Response containing culture information.
+    PACKET_BLACKLIST = 0x0409,  //!< Response containing the current player's blacklist.
+    PACKET_DIGITALIZE_POINTS = 0x0415,  //!< Response containing the current player's digitalize point information.
+    PACKET_DIGITALIZE_ASSIST = 0x0419,  //!< Response containing the current player's digitalize assist information.
 };
 
 /**
@@ -172,7 +225,7 @@ enum class InternalPacketCode_t : uint16_t
 {
     PACKET_GET_WORLD_INFO = 0x1001, //!< Request to detail the world server.
     PACKET_SET_WORLD_INFO = 0x1002,  //!< Request to update a non-world server's world information.
-    PACKET_SET_CHANNEL_INFO = 0x1003,    //!< Request to update a non-channel server's channel information.
+    PACKET_SET_CHANNEL_INFO = 0x1003,    //!< Request to update a server's channel information.
     PACKET_ACCOUNT_LOGIN = 0x1004,    //!< Pass login information between the servers.
     PACKET_ACCOUNT_LOGOUT = 0x1005,    //!< Pass logout information between the servers.
 };

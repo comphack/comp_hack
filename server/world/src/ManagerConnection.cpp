@@ -151,6 +151,17 @@ void ManagerConnection::RemoveConnection(std::shared_ptr<libcomp::InternalConnec
                 }
             }, server, svr->GetID());
 
+        std::list<std::shared_ptr<libcomp::TcpConnection>> connections;
+        connections.push_back(mLobbyConnection);
+
+        for(auto kv : server->GetChannels())
+        {
+            if(kv.first != connection)
+            {
+                connections.push_back(kv.first);
+            }
+        }
+
         //Channel disconnected
         libcomp::Packet packet;
         packet.WritePacketCode(
@@ -158,6 +169,7 @@ void ManagerConnection::RemoveConnection(std::shared_ptr<libcomp::InternalConnec
         packet.WriteU8(to_underlying(
             InternalPacketAction_t::PACKET_ACTION_REMOVE));
         packet.WriteU8(svr->GetID());
-        mLobbyConnection->SendPacket(packet);
+
+        libcomp::TcpConnection::BroadcastPacket(connections, packet);
     }
 }

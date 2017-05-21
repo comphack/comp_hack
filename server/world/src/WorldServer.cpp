@@ -176,6 +176,12 @@ std::shared_ptr<objects::RegisteredChannel> WorldServer::GetChannel(
     return nullptr;
 }
 
+std::map<std::shared_ptr<libcomp::InternalConnection>,
+    std::shared_ptr<objects::RegisteredChannel>> WorldServer::GetChannels() const
+{
+    return mRegisteredChannels;
+}
+
 uint8_t WorldServer::GetNextChannelID() const
 {
     std::set<uint8_t> registeredIDs;

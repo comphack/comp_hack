@@ -1,10 +1,10 @@
 /**
- * @file server/channel/src/packets/game/LearnSkill.cpp
+ * @file server/channel/src/packets/game/MaterialBox.cpp
  * @ingroup channel
  *
  * @author HACKfrost
  *
- * @brief Request from the client for a character to learn a skill.
+ * @brief Request from the client for info about the materials container.
  *
  * This file is part of the Channel Server (channel).
  *
@@ -27,32 +27,39 @@
 #include "Packets.h"
 
 // libcomp Includes
-#include <ManagerPacket.h>
 #include <Packet.h>
 #include <PacketCodes.h>
 
 // channel Includes
-#include "ChannelServer.h"
-
-// objects Includes
-#include <Character.h>
+#include "ChannelClientConnection.h"
 
 using namespace channel;
 
-bool Parsers::LearnSkill::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::MaterialBox::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {
-    if(p.Size() != 8)
+    (void)pPacketManager;
+
+    if(p.Size() != 0)
     {
         return false;
     }
 
-    int32_t entityID = p.ReadS32Little();
-    uint32_t skillID = p.ReadU32Little();
+    /// @todo: implement non-default values
+    
+    libcomp::Packet reply;
+    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_MATERIAL_BOX);
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+    int32_t materialCount = 0;
+    reply.WriteS32Little(materialCount);
+    for(int8_t i = 0; i < materialCount; i++)
+    {
+        reply.WriteU32Little(0);    // Material Type
+        reply.WriteS32Little(0);    // Material Amount
+    }
 
-    return server->GetCharacterManager()->LearnSkill(client, entityID, skillID);
+    connection->SendPacket(reply);
+
+    return true;
 }

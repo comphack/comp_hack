@@ -1,10 +1,11 @@
 /**
- * @file server/channel/src/packets/game/LearnSkill.cpp
+ * @file server/channel/src/packets/game/ChannelList.cpp
  * @ingroup channel
  *
  * @author HACKfrost
  *
- * @brief Request from the client for a character to learn a skill.
+ * @brief Request from the client for the list of channels connected to
+ *	the server.
  *
  * This file is part of the Channel Server (channel).
  *
@@ -32,27 +33,38 @@
 #include <PacketCodes.h>
 
 // channel Includes
+#include "ChannelClientConnection.h"
 #include "ChannelServer.h"
-
-// objects Includes
-#include <Character.h>
 
 using namespace channel;
 
-bool Parsers::LearnSkill::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::ChannelList::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {
-    if(p.Size() != 8)
+    if(p.Size() != 0)
     {
         return false;
     }
 
-    int32_t entityID = p.ReadS32Little();
-    uint32_t skillID = p.ReadU32Little();
-
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
     auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+    auto channels = server->GetAllRegisteredChannels();
 
-    return server->GetCharacterManager()->LearnSkill(client, entityID, skillID);
+    libcomp::Packet reply;
+    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_CHANNEL_LIST);
+    reply.WriteS8((int8_t)channels.size());
+
+    for(auto channel : channels)
+    {
+        reply.WriteString16Little(libcomp::Convert::ENCODING_UTF8,
+            channel->GetName(), true);
+
+        reply.WriteU8(1);   // Unknown bool
+        reply.WriteS8(0);   // Unknown
+        reply.WriteS8(0);   // Unknown (visibility?)
+    }
+
+    connection->SendPacket(reply);
+
+    return true;
 }

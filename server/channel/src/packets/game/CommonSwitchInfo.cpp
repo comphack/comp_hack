@@ -1,10 +1,10 @@
 /**
- * @file server/channel/src/packets/game/LearnSkill.cpp
+ * @file server/channel/src/packets/game/CommonSwitchInfo.cpp
  * @ingroup channel
  *
  * @author HACKfrost
  *
- * @brief Request from the client for a character to learn a skill.
+ * @brief Unknown. Request for "common switch" information.
  *
  * This file is part of the Channel Server (channel).
  *
@@ -27,32 +27,35 @@
 #include "Packets.h"
 
 // libcomp Includes
-#include <ManagerPacket.h>
 #include <Packet.h>
 #include <PacketCodes.h>
 
 // channel Includes
-#include "ChannelServer.h"
-
-// objects Includes
-#include <Character.h>
+#include "ChannelClientConnection.h"
 
 using namespace channel;
 
-bool Parsers::LearnSkill::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::CommonSwitchInfo::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {
-    if(p.Size() != 8)
+    (void)pPacketManager;
+
+    if(p.Size() != 0)
     {
         return false;
     }
 
-    int32_t entityID = p.ReadS32Little();
-    uint32_t skillID = p.ReadU32Little();
+    /// @todo: implement non-default values
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+    libcomp::String unknown;
+    
+    libcomp::Packet reply;
+    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_COMMON_SWITCH_INFO);
+    reply.WriteString16Little(libcomp::Convert::ENCODING_UTF8,
+        unknown, true);
 
-    return server->GetCharacterManager()->LearnSkill(client, entityID, skillID);
+    connection->SendPacket(reply);
+
+    return true;
 }

@@ -1,10 +1,10 @@
 /**
- * @file server/channel/src/packets/game/LearnSkill.cpp
+ * @file server/channel/src/packets/game/QuestActiveList.cpp
  * @ingroup channel
  *
  * @author HACKfrost
  *
- * @brief Request from the client for a character to learn a skill.
+ * @brief Request from the client for the current active quests.
  *
  * This file is part of the Channel Server (channel).
  *
@@ -27,32 +27,51 @@
 #include "Packets.h"
 
 // libcomp Includes
-#include <ManagerPacket.h>
 #include <Packet.h>
 #include <PacketCodes.h>
+
+// object Includes
+#include <Character.h>
+#include <Quest.h>
 
 // channel Includes
 #include "ChannelServer.h"
 
-// objects Includes
-#include <Character.h>
-
 using namespace channel;
 
-bool Parsers::LearnSkill::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::QuestActiveList::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {
-    if(p.Size() != 8)
+    (void)pPacketManager;
+
+    if(p.Size() != 0)
     {
         return false;
     }
 
-    int32_t entityID = p.ReadS32Little();
-    uint32_t skillID = p.ReadU32Little();
-
     auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+    auto state = client->GetClientState();
+    auto cState = state->GetCharacterState();
+    auto character = cState->GetEntity();
+    auto questMap = character->GetQuests();
+    
+    libcomp::Packet reply;
+    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_QUEST_ACTIVE_LIST);
 
-    return server->GetCharacterManager()->LearnSkill(client, entityID, skillID);
+    reply.WriteS8((int8_t)questMap.size());
+    for(auto kv : questMap)
+    {
+        auto quest = kv.second;
+        auto customData = quest->GetCustomData();
+
+        reply.WriteS16Little(quest->GetQuestID());
+        reply.WriteS8(quest->GetState());
+
+        reply.WriteArray(&customData, (uint32_t)customData.size() * sizeof(int32_t));
+    }
+
+    connection->SendPacket(reply);
+
+    return true;
 }

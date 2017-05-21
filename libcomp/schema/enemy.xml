@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="Enemy" persistent="false">
+        <member type="u32" name="Type"/>
+        
+        <!-- Sub-sections -->
+        <member type="EntityStats*" name="CoreStats"/>
+    </object>
+</objgen>

@@ -32,6 +32,10 @@
 #include <Constants.h>
 
 // objects Include
+#include <Enemy.h>
+#include <EntityStats.h>
+#include <MiDevilData.h>
+#include <MiGrowthData.h>
 #include <ServerNPC.h>
 #include <ServerObject.h>
 #include <ServerZone.h>
@@ -74,31 +78,42 @@ std::shared_ptr<Zone> ZoneManager::GetZoneInstance(int32_t primaryEntityID)
 }
 
 bool ZoneManager::EnterZone(const std::shared_ptr<ChannelClientConnection>& client,
-    uint32_t zoneID, float xCoord, float yCoord, float rotation)
+    uint32_t zoneID, float xCoord, float yCoord, float rotation, bool forceLeave)
 {
-    auto server = mServer.lock();
     auto instance = GetZone(zoneID);
     if(instance == nullptr)
     {
         return false;
     }
 
-
-    auto instanceID = instance->GetID();
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
+    auto dState = state->GetDemonState();
     auto primaryEntityID = cState->GetEntityID();
+
+    if(forceLeave)
+    {
+        LeaveZone(client);
+
+        // Pull a fresh version of the zone in case it was cleaned up
+        instance = GetZone(zoneID);
+        if(instance == nullptr)
+        {
+            return false;
+        }
+    }
+
+    auto instanceID = instance->GetID();
     {
         std::lock_guard<std::mutex> lock(mLock);
         mEntityMap[primaryEntityID] = instanceID;
-        mZones[instanceID]->AddConnection(client);
     }
+    instance->AddConnection(client);
 
-
+    auto server = mServer.lock();
     auto ticks = server->GetServerTime();
 
     // Move the entity to the new location.
-    /// @todo Do this for the demon too?
     cState->SetOriginX(xCoord);
     cState->SetOriginY(yCoord);
     cState->SetOriginRotation(rotation);
@@ -107,6 +122,15 @@ bool ZoneManager::EnterZone(const std::shared_ptr<ChannelClientConnection>& clie
     cState->SetDestinationY(yCoord);
     cState->SetDestinationRotation(rotation);
     cState->SetDestinationTicks(ticks);
+
+    dState->SetOriginX(xCoord);
+    dState->SetOriginY(yCoord);
+    dState->SetOriginRotation(rotation);
+    dState->SetOriginTicks(ticks);
+    dState->SetDestinationX(xCoord);
+    dState->SetDestinationY(yCoord);
+    dState->SetDestinationRotation(rotation);
+    dState->SetDestinationTicks(ticks);
 
     auto zoneDef = instance->GetDefinition();
 
@@ -143,7 +167,6 @@ void ZoneManager::LeaveZone(const std::shared_ptr<ChannelClientConnection>& clie
             zone->RemoveConnection(client);
             if(zone->GetConnections().size() == 0)
             {
-                zone->RemoveConnection(client);
                 mZones.erase(instanceID);
 
                 auto zoneDefID = zone->GetDefinition()->GetID();
@@ -155,6 +178,11 @@ void ZoneManager::LeaveZone(const std::shared_ptr<ChannelClientConnection>& clie
                     instanceRemoved = true;
                 }
             }
+        }
+        else
+        {
+            // Not in a zone, nothing to do
+            return;
         }
     }
 
@@ -191,14 +219,20 @@ void ZoneManager::SendPopulateZoneData(const std::shared_ptr<ChannelClientConnec
 
     // The client's partner demon will be shown elsewhere
 
+    PopEntityForZoneProduction(client, characterEntityID, 0);
     ShowEntityToZone(client, characterEntityID);
 
-    /// @todo: Populate enemies
+    // It seems that if entity data is sent to the client before a previous
+    // entity was processed and shown, the client will force a log-out. To
+    // counter-act this, all message information remaining of this type will
+    // be queued and sent together at the end.
+    for(auto enemyState : zone->GetEnemies())
+    {
+        SendEnemyData(client, enemyState, zone, true);
+    }
 
-    // It seems that if NPC data is sent to the client before a previous
-    // NPC was processed and shown, the client will force a log-out. To
-    // counter-act this, all message information of this type will be queued
-    // and sent together at the end.
+    /// @todo: send corpses
+
     for(auto npcState : zone->GetNPCs())
     {
         auto npc = npcState->GetEntity();
@@ -248,11 +282,13 @@ void ZoneManager::SendPopulateZoneData(const std::shared_ptr<ChannelClientConnec
         auto oDemonState = oState->GetDemonState();
 
         characterManager->SendOtherCharacterData(self, oState);
+        PopEntityForProduction(client, oCharacterState->GetEntityID(), 0);
         ShowEntity(client, oCharacterState->GetEntityID());
 
         if(nullptr != oDemonState->GetEntity())
         {
             characterManager->SendOtherPartnerData(self, oState);
+            PopEntityForProduction(client, oDemonState->GetEntityID(), 2);
             ShowEntity(client, oDemonState->GetEntityID());
         }
     }
@@ -285,6 +321,35 @@ void ZoneManager::ShowEntityToZone(const std::shared_ptr<
     BroadcastPacket(client, p, true);
 }
 
+void ZoneManager::PopEntityForProduction(const std::shared_ptr<
+    ChannelClientConnection>& client, int32_t entityID, int32_t type, bool queue)
+{
+    libcomp::Packet p;
+    p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_POP_ENTITY_FOR_PRODUCTION);
+    p.WriteS32Little(entityID);
+    p.WriteS32Little(type);
+
+    if(queue)
+    {
+        client->QueuePacket(p);
+    }
+    else
+    {
+        client->SendPacket(p);
+    }
+}
+
+void ZoneManager::PopEntityForZoneProduction(const std::shared_ptr<
+    ChannelClientConnection>& client, int32_t entityID, int32_t type)
+{
+    libcomp::Packet p;
+    p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_POP_ENTITY_FOR_PRODUCTION);
+    p.WriteS32Little(entityID);
+    p.WriteS32Little(type);
+
+    BroadcastPacket(client, p, true);
+}
+
 void ZoneManager::RemoveEntitiesFromZone(const std::shared_ptr<Zone>& zone,
     const std::list<int32_t>& entityIDs)
 {
@@ -293,8 +358,63 @@ void ZoneManager::RemoveEntitiesFromZone(const std::shared_ptr<Zone>& zone,
         libcomp::Packet p;
         p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_REMOVE_ENTITY);
         p.WriteS32Little(entityID);
+        p.WriteS32Little(0);
 
         BroadcastPacket(zone, p);
+    }
+}
+
+void ZoneManager::SendEnemyData(const std::shared_ptr<ChannelClientConnection>& client,
+    const std::shared_ptr<EnemyState>& enemyState, const std::shared_ptr<Zone>& zone,
+    bool sendToAll, bool queue)
+{
+    auto stats = enemyState->GetCoreStats();
+    auto zoneData = zone->GetDefinition();
+
+    libcomp::Packet p;
+    p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_ENEMY);
+    p.WriteS32Little(enemyState->GetEntityID());
+    p.WriteS32Little((int32_t)enemyState->GetEntity()->GetType());
+    p.WriteS32Little((int32_t)stats->GetMaxHP());
+    p.WriteS32Little((int32_t)stats->GetHP());
+    p.WriteS8(stats->GetLevel());
+    p.WriteS32Little((int32_t)zone->GetID());
+    p.WriteS32Little((int32_t)zoneData->GetID());
+    p.WriteFloat(enemyState->GetOriginX());
+    p.WriteFloat(enemyState->GetOriginY());
+    p.WriteFloat(enemyState->GetOriginRotation());
+
+    uint32_t unknownCount = 0;
+    p.WriteU32Little(unknownCount);
+    for(uint32_t i = 0; i < unknownCount; i++)
+    {
+        p.WriteU32Little(0);
+        p.WriteS32Little(0);
+        p.WriteU8(0);
+    }
+
+    //Unknown
+    p.WriteU32Little(0);
+
+    if(!sendToAll)
+    {
+        if(queue)
+        {
+            client->QueuePacket(p);
+        }
+        else
+        {
+            client->SendPacket(p);
+        }
+
+        PopEntityForProduction(client, enemyState->GetEntityID(), 3, queue);
+        ShowEntity(client, enemyState->GetEntityID(), queue);
+    }
+    else
+    {
+        BroadcastPacket(client, p, true);
+        PopEntityForZoneProduction(client, enemyState->GetEntityID(), 3);
+        ShowEntityToZone(client, enemyState->GetEntityID());
     }
 }
 
@@ -378,6 +498,51 @@ std::list<std::shared_ptr<ChannelClientConnection>> ZoneManager::GetZoneConnecti
     }
 
     return connections;
+}
+
+bool ZoneManager::SpawnEnemy(const std::shared_ptr<Zone>& zone, uint32_t demonID,
+    float x, float y, float rot)
+{
+    auto server = mServer.lock();
+    auto definitionManager = server->GetDefinitionManager();
+    auto def = definitionManager->GetDevilData(demonID);
+
+    if(nullptr == def)
+    {
+        return false;
+    }
+
+    auto enemy = std::shared_ptr<objects::Enemy>(new objects::Enemy);
+    enemy->SetType(demonID);
+
+    auto enemyStats = libcomp::PersistentObject::New<objects::EntityStats>();
+    enemyStats->SetLevel((int8_t)def->GetGrowth()->GetBaseLevel());
+    server->GetCharacterManager()->CalculateDemonBaseStats(enemyStats, def);
+    enemy->SetCoreStats(enemyStats);
+
+    auto eState = std::shared_ptr<EnemyState>(new EnemyState);
+    eState->SetEntityID(server->GetNextEntityID());
+    eState->SetOriginX(x);
+    eState->SetOriginY(y);
+    eState->SetOriginRotation(rot);
+    eState->SetDestinationX(x);
+    eState->SetDestinationY(y);
+    eState->SetDestinationRotation(rot);
+    eState->SetEntity(enemy);
+
+    eState->RecalculateStats(definitionManager);
+
+    zone->AddEnemy(eState);
+
+    //If anyone is currently connected, immediately send the enemy's info
+    auto clients = zone->GetConnections();
+    if(clients.size() > 0)
+    {
+        auto firstClient = clients.begin()->second;
+        SendEnemyData(firstClient, eState, zone, true, false);
+    }
+
+    return true;
 }
 
 std::shared_ptr<Zone> ZoneManager::GetZone(uint32_t zoneID)

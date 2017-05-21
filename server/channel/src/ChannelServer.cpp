@@ -97,6 +97,8 @@ bool ChannelServer::Initialize()
     auto internalPacketManager = std::make_shared<libcomp::ManagerPacket>(self);
     internalPacketManager->AddParser<Parsers::SetWorldInfo>(
         to_underlying(InternalPacketCode_t::PACKET_SET_WORLD_INFO));
+    internalPacketManager->AddParser<Parsers::SetOtherChannelInfo>(
+        to_underlying(InternalPacketCode_t::PACKET_SET_CHANNEL_INFO));
     internalPacketManager->AddParser<Parsers::AccountLogin>(
         to_underlying(InternalPacketCode_t::PACKET_ACCOUNT_LOGIN));
 
@@ -108,6 +110,7 @@ bool ChannelServer::Initialize()
     auto systemManager = std::make_shared<channel::ManagerSystem>(self);
     mQueueWorker.AddManager(systemManager);
 
+    // Map packet parsers to supported packets
     auto clientPacketManager = std::make_shared<libcomp::ManagerPacket>(self);
     clientPacketManager->AddParser<Parsers::Login>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_LOGIN));
@@ -149,10 +152,14 @@ bool ChannelServer::Initialize()
         to_underlying(ClientToChannelPacketCode_t::PACKET_COMP_LIST));
     clientPacketManager->AddParser<Parsers::COMPDemonData>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_COMP_DEMON_DATA));
+    clientPacketManager->AddParser<Parsers::ChannelList>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_CHANNEL_LIST));
     clientPacketManager->AddParser<Parsers::StopMovement>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_STOP_MOVEMENT));
     clientPacketManager->AddParser<Parsers::SpotTriggered>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_SPOT_TRIGGERED));
+    clientPacketManager->AddParser<Parsers::WorldTime>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_WORLD_TIME));
     clientPacketManager->AddParser<Parsers::ItemBox>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_ITEM_BOX));
     clientPacketManager->AddParser<Parsers::ItemMove>(
@@ -175,14 +182,67 @@ bool ChannelServer::Initialize()
         to_underlying(ClientToChannelPacketCode_t::PACKET_VALUABLE_LIST));
     clientPacketManager->AddParser<Parsers::ObjectInteraction>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_OBJECT_INTERACTION));
+    clientPacketManager->AddParser<Parsers::FriendInfo>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_FRIEND_INFO));
     clientPacketManager->AddParser<Parsers::Sync>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_SYNC));
     clientPacketManager->AddParser<Parsers::Rotate>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_ROTATE));
     clientPacketManager->AddParser<Parsers::UnionFlag>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_UNION_FLAG));
+    clientPacketManager->AddParser<Parsers::QuestActiveList>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_QUEST_ACTIVE_LIST));
+    clientPacketManager->AddParser<Parsers::QuestCompletedList>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_QUEST_COMPLETED_LIST));
+    clientPacketManager->AddParser<Parsers::ClanInfo>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_CLAN_INFO));
+    clientPacketManager->AddParser<Parsers::MapFlag>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_MAP_FLAG));
+    clientPacketManager->AddParser<Parsers::DemonCompendium>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_DEMON_COMPENDIUM));
+    clientPacketManager->AddParser<Parsers::DungeonRecords>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_DUNGEON_RECORDS));
+    clientPacketManager->AddParser<Parsers::MaterialBox>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_MATERIAL_BOX));
+    clientPacketManager->AddParser<Parsers::FusionGauge>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_FUSION_GAUGE));
+    clientPacketManager->AddParser<Parsers::TitleList>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_TITLE_LIST));
+    clientPacketManager->AddParser<Parsers::PartnerDemonQuestList>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_PARTNER_DEMON_QUEST_LIST));
     clientPacketManager->AddParser<Parsers::LockDemon>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_LOCK_DEMON));
+    clientPacketManager->AddParser<Parsers::PvPCharacterInfo>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_PVP_CHARACTER_INFO));
+    clientPacketManager->AddParser<Parsers::TeamInfo>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_TEAM_INFO));
+    clientPacketManager->AddParser<Parsers::PartnerDemonQuestTemp>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_PARTNER_DEMON_QUEST_TEMP));
+    clientPacketManager->AddParser<Parsers::CommonSwitchInfo>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_COMMON_SWITCH_INFO));
+    clientPacketManager->AddParser<Parsers::CasinoCoinTotal>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_CASINO_COIN_TOTAL));
+    clientPacketManager->AddParser<Parsers::SearchEntryInfo>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_SEARCH_ENTRY_INFO));
+    clientPacketManager->AddParser<Parsers::HouraiData>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_HOURAI_DATA));
+    clientPacketManager->AddParser<Parsers::CultureData>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_CULTURE_DATA));
+    clientPacketManager->AddParser<Parsers::Blacklist>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_BLACKLIST));
+    clientPacketManager->AddParser<Parsers::DigitalizePoints>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_DIGITALIZE_POINTS));
+    clientPacketManager->AddParser<Parsers::DigitalizeAssist>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_DIGITALIZE_ASSIST));
+
+    // Map the Unsupported packet parser to unsupported packets or packets that
+    // the server does not need to react to
+    clientPacketManager->AddParser<Parsers::Unsupported>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_UNSUPPORTED_0232));
+    clientPacketManager->AddParser<Parsers::Unsupported>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_RECEIVED_PLAYER_DATA));
+    clientPacketManager->AddParser<Parsers::Unsupported>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_RECEIVED_LISTS));
 
     // Add the managers to the generic workers.
     for(auto worker : mWorkers)
@@ -223,9 +283,30 @@ ServerTime ChannelServer::GetServerTime()
     return sGetServerTime();
 }
 
+void ChannelServer::GetWorldClockTime(int8_t& phase, int8_t& hour, int8_t& min)
+{
+    // World time is relative to seconds so no need for more precision
+    std::time_t now = std::time(nullptr);
+
+    // 24 minutes = 1 game phase (16 total)
+    phase = (int8_t)((now / 1440) % 16);
+
+    // 2 minutes = 1 game hour
+    hour = (int8_t)((now / 120) % 24);
+
+    // 2 seconds = 1 game minute
+    min = (int8_t)((now / 2) % 60);
+}
+
 const std::shared_ptr<objects::RegisteredChannel> ChannelServer::GetRegisteredChannel()
 {
     return mRegisteredChannel;
+}
+
+const std::list<std::shared_ptr<objects::RegisteredChannel>>
+    ChannelServer::GetAllRegisteredChannels()
+{
+    return mAllRegisteredChannels;
 }
 
 std::shared_ptr<objects::RegisteredWorld> ChannelServer::GetRegisteredWorld()
@@ -237,6 +318,12 @@ void ChannelServer::RegisterWorld(const std::shared_ptr<
     objects::RegisteredWorld>& registeredWorld)
 {
     mRegisteredWorld = registeredWorld;
+}
+
+void ChannelServer::LoadAllRegisteredChannels()
+{
+    mAllRegisteredChannels = libcomp::PersistentObject::LoadAll<
+        objects::RegisteredChannel>(mWorldDatabase);
 }
 
 std::shared_ptr<libcomp::Database> ChannelServer::GetWorldDatabase() const
@@ -302,6 +389,7 @@ bool ChannelServer::RegisterServer(uint8_t channelID)
     }
 
     mRegisteredChannel = registeredChannel;
+    mAllRegisteredChannels.push_back(mRegisteredChannel);
 
     return true;
 }
@@ -365,8 +453,6 @@ int64_t ChannelServer::GetNextObjectID()
 
 void ChannelServer::Tick()
 {
-    /// @todo: check/update server time
-
     /// @todo: update zone states
 
     // Process queued world database changes

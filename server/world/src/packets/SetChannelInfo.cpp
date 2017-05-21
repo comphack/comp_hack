@@ -91,8 +91,17 @@ bool Parsers::SetChannelInfo::Parse(libcomp::ManagerPacket *pPacketManager,
 
     server->RegisterChannel(svr, conn);
 
-    //Forward the information to the lobby
-    auto lobbyConnection = server->GetLobbyConnection();
+    //Forward the information to the lobby and other channels
+    std::list<std::shared_ptr<libcomp::TcpConnection>> connections;
+    connections.push_back(server->GetLobbyConnection());
+    
+    for(auto kv : server->GetChannels())
+    {
+        if(kv.first != connection)
+        {
+            connections.push_back(kv.first);
+        }
+    }
 
     libcomp::Packet packet;
     packet.WritePacketCode(
@@ -100,7 +109,8 @@ bool Parsers::SetChannelInfo::Parse(libcomp::ManagerPacket *pPacketManager,
     packet.WriteU8(to_underlying(
         InternalPacketAction_t::PACKET_ACTION_UPDATE));
     packet.WriteU8(channelID);
-    lobbyConnection->SendPacket(packet);
+
+    libcomp::TcpConnection::BroadcastPacket(connections, packet);
 
     return true;
 }

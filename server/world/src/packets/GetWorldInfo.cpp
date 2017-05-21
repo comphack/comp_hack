@@ -113,6 +113,9 @@ bool Parsers::GetWorldInfo::Parse(libcomp::ManagerPacket *pPacketManager,
         {
             auto nextChannelID = server->GetNextChannelID();
             reply.WriteU8(nextChannelID);
+
+            bool otherChannelsExist = server->GetChannels().size() > 1;
+            reply.WriteU8(otherChannelsExist ? 1 : 0);
         }
     
         switch(databaseType)

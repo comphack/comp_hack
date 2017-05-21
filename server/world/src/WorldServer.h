@@ -95,6 +95,9 @@ public:
     std::shared_ptr<objects::RegisteredChannel> GetChannel(
         const std::shared_ptr<libcomp::InternalConnection>& connection) const;
 
+    std::map<std::shared_ptr<libcomp::InternalConnection>,
+        std::shared_ptr<objects::RegisteredChannel>> GetChannels() const;
+
     /**
      * Get the next channel ID to use for connecting channels.
      * @return Next channel ID, starting at 0

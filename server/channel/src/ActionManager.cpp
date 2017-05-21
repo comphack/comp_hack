@@ -90,11 +90,8 @@ bool ActionManager::ZoneChange(
     float y = action->GetDestinationY();
     float rotation = action->GetDestinationRotation();
 
-    // The character must first leave their existing zone.
-    zoneManager->LeaveZone(client);
-
-    // Enter the new zone.
-    if(!zoneManager->EnterZone(client, zoneID, x, y, rotation))
+    // Enter the new zone and always leave the old zone even if its the same.
+    if(!zoneManager->EnterZone(client, zoneID, x, y, rotation, true))
     {
         LOG_ERROR(libcomp::String("Failed to add client to zone"
             " %1. Closing the connection.\n").Arg(zoneID));

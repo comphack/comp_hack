@@ -38,6 +38,7 @@
 #include "ChannelServer.h"
 
 // object Includes
+#include <CharacterProgress.h>
 #include <Expertise.h>
 #include <InheritedSkill.h>
 #include <Item.h>
@@ -199,9 +200,12 @@ void CharacterManager::SendCharacterData(const std::shared_ptr<
     reply.WriteFloat(cState->GetDestinationRotation());
 
     reply.WriteU8(0);   //Unknown bool
-    reply.WriteS32Little(0); // Homepoint zone
-    reply.WriteFloat(0); // Homepoint X
-    reply.WriteFloat(0); // Homepoint Y
+
+    // Homepoint
+    reply.WriteS32Little((int32_t)c->GetHomepointZone());
+    reply.WriteFloat(c->GetHomepointX());
+    reply.WriteFloat(c->GetHomepointY());
+
     reply.WriteS8(0);   // Unknown
     reply.WriteS8(0);   // Unknown
     reply.WriteS8(0);   // Unknown
@@ -743,18 +747,19 @@ void CharacterManager::StoreDemon(const std::shared_ptr<
     dState->SetEntity(nullptr);
     character->SetActiveDemon(NULLUUID);
 
+    auto zoneManager = mServer.lock()->GetZoneManager();
+    auto zone = zoneManager->GetZoneInstance(client);
+    std::list<int32_t> removeIDs = { dState->GetEntityID() };
+
+    //Remove the entity from each client's zone
+    zoneManager->RemoveEntitiesFromZone(zone, removeIDs);
+
+    //Send the request to free up the object data
     libcomp::Packet reply;
     reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_REMOVE_OBJECT);
     reply.WriteS32Little(dState->GetEntityID());
 
-    client->SendPacket(reply);
-
-    // Remove the entity from other client's games
-    reply.Clear();
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_REMOVE_ENTITY);
-    reply.WriteS32Little(dState->GetEntityID());
-
-    mServer.lock()->GetZoneManager()->BroadcastPacket(client, reply, false);
+    zoneManager->BroadcastPacket(client, reply, true);
 }
 
 void CharacterManager::SendItemBoxData(const std::shared_ptr<
@@ -1591,6 +1596,154 @@ void CharacterManager::UpdateExpertise(const std::shared_ptr<
 
         server->GetWorldDatabase()->QueueChangeSet(dbChanges);
     }
+}
+
+bool CharacterManager::LearnSkill(const std::shared_ptr<channel::ChannelClientConnection>& client,
+    int32_t entityID, uint32_t skillID)
+{
+    auto server = mServer.lock();
+    auto definitionManager = server->GetDefinitionManager();
+    auto state = client->GetClientState();
+    auto eState = state->GetEntityState(entityID);
+
+    auto def = definitionManager->GetSkillData(skillID);
+    if(nullptr == eState || nullptr == def)
+    {
+        return false;
+    }
+
+    auto dState = state->GetDemonState();
+    if(eState == dState)
+    {
+        // Check if the skill is available anywhere for the demon
+        auto demon = dState->GetEntity();
+        auto learnedSkills = demon->GetLearnedSkills();
+        auto inheritedSkills = demon->GetInheritedSkills();
+
+        std::list<uint32_t> skills = demon->GetAcquiredSkills();
+        for(auto s : learnedSkills)
+        {
+            skills.push_back(s);
+        }
+
+        for(auto s : inheritedSkills)
+        {
+            if(!s.IsNull())
+            {
+                skills.push_back(s->GetSkill());
+            }
+        }
+        
+        if(std::find(skills.begin(), skills.end(), skillID) != skills.end())
+        {
+            // Skill already exists
+            return true;
+        }
+        
+        demon->AppendAcquiredSkills(skillID);
+
+        SendPartnerData(client);
+
+        // Learning a skill outside of leveling or inheritence is not natively
+        // supported so this is a hack to stop the demon from depoping
+        //server->GetZoneManager()->ShowEntity(client, entityID);
+
+        server->GetWorldDatabase()->QueueUpdate(demon, state->GetAccountUID());
+    }
+    else
+    {
+        // Check if the skill has already been learned
+        auto character = state->GetCharacterState()->GetEntity();
+        auto skills = character->GetLearnedSkills();
+        
+        if(std::find(skills.begin(), skills.end(), skillID) != skills.end())
+        {
+            // Skill already exists
+            return true;
+        }
+
+        character->AppendLearnedSkills(skillID);
+
+        libcomp::Packet reply;
+        reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_LEARN_SKILL);
+        reply.WriteS32Little(entityID);
+        reply.WriteU32Little(skillID);
+
+        client->SendPacket(reply);
+
+        server->GetWorldDatabase()->QueueUpdate(character, state->GetAccountUID());
+    }
+
+    return true;
+}
+
+bool CharacterManager::UpdateHomepoint(const std::shared_ptr<
+    channel::ChannelClientConnection>& client, uint32_t zoneID, float xCoord, float yCoord)
+{
+    auto state = client->GetClientState();
+    auto cState = state->GetCharacterState();
+    auto character = cState->GetEntity();
+
+    /// @todo: check for invalid zone types or positions
+
+    character->SetHomepointZone(zoneID);
+    character->SetHomepointX(xCoord);
+    character->SetHomepointY(yCoord);
+
+    libcomp::Packet p;
+    p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_HOMEPOINT_UPDATE);
+    p.WriteS32Little((int32_t)zoneID);
+    p.WriteFloat(xCoord);
+    p.WriteFloat(yCoord);
+
+    client->SendPacket(p);
+
+    mServer.lock()->GetWorldDatabase()->QueueUpdate(character, state->GetAccountUID());
+
+    return true;
+}
+
+bool CharacterManager::UpdateMapFlags(const std::shared_ptr<
+    channel::ChannelClientConnection>& client, size_t mapIndex, uint8_t mapValue)
+{
+    auto state = client->GetClientState();
+    auto cState = state->GetCharacterState();
+    auto character = cState->GetEntity();
+    auto progress = character->GetProgress().Get();
+
+    if(mapIndex >= progress->GetMaps().size())
+    {
+        return false;
+    }
+
+    auto oldValue = progress->GetMaps(mapIndex);
+    uint8_t newValue = static_cast<uint8_t>(oldValue | mapValue);
+
+    if(oldValue != newValue)
+    {
+        progress->SetMaps((size_t)mapIndex, newValue);
+
+        SendMapFlags(client);
+
+        mServer.lock()->GetWorldDatabase()->QueueUpdate(progress, state->GetAccountUID());
+    }
+
+    return true;
+}
+
+void CharacterManager::SendMapFlags(const std::shared_ptr<ChannelClientConnection>& client)
+{
+    auto state = client->GetClientState();
+    auto cState = state->GetCharacterState();
+    auto character = cState->GetEntity();
+    auto maps = character->GetProgress()->GetMaps();
+
+    libcomp::Packet reply;
+    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_MAP_FLAG);
+    reply.WriteU16Little((uint16_t)maps.size());
+    reply.WriteArray(&maps, (uint32_t)maps.size());
+
+    client->SendPacket(reply);
 }
 
 void CharacterManager::CalculateCharacterBaseStats(const std::shared_ptr<objects::EntityStats>& cs)

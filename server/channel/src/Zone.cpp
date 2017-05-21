@@ -26,6 +26,9 @@
 
 #include "Zone.h"
 
+// channel Includes
+#include "Enemy.h"
+
 using namespace channel;
 
 Zone::Zone(uint32_t id, const std::shared_ptr<objects::ServerZone>& definition)
@@ -66,6 +69,15 @@ void Zone::RemoveConnection(const std::shared_ptr<ChannelClientConnection>& clie
     mConnections.erase(cEntityID);
 }
 
+void Zone::AddEnemy(const std::shared_ptr<EnemyState>& enemy)
+{
+    {
+        std::lock_guard<std::mutex> lock(mLock);
+        mEnemies.push_back(enemy);
+    }
+    RegisterEntityState(enemy);
+}
+
 void Zone::AddNPC(const std::shared_ptr<NPCState>& npc)
 {
     mNPCs.push_back(npc);
@@ -87,6 +99,16 @@ std::unordered_map<int32_t,
 const std::shared_ptr<ActiveEntityState> Zone::GetActiveEntityState(int32_t entityID)
 {
     return std::dynamic_pointer_cast<ActiveEntityState>(GetEntity(entityID));
+}
+
+std::shared_ptr<EnemyState> Zone::GetEnemy(int32_t id)
+{
+    return std::dynamic_pointer_cast<EnemyState>(GetEntity(id));
+}
+
+const std::list<std::shared_ptr<EnemyState>> Zone::GetEnemies() const
+{
+    return mEnemies;
 }
 
 const std::list<std::shared_ptr<NPCState>> Zone::GetNPCs() const

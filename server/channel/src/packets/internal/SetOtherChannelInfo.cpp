@@ -1,10 +1,10 @@
 /**
- * @file server/channel/src/packets/game/LearnSkill.cpp
+ * @file server/channel/src/packets/internal/SetOtherChannelInfo.cpp
  * @ingroup channel
  *
  * @author HACKfrost
  *
- * @brief Request from the client for a character to learn a skill.
+ * @brief Request from the world to reload its registered channel.
  *
  * This file is part of the Channel Server (channel).
  *
@@ -34,25 +34,21 @@
 // channel Includes
 #include "ChannelServer.h"
 
-// objects Includes
-#include <Character.h>
-
 using namespace channel;
 
-bool Parsers::LearnSkill::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::SetOtherChannelInfo::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {
-    if(p.Size() != 8)
-    {
-        return false;
-    }
+    (void)connection;
 
-    int32_t entityID = p.ReadS32Little();
-    uint32_t skillID = p.ReadU32Little();
+    // Packet contains data but ignore it because the set will always be small
+    // enough to reload each time to ensure correctness
+    (void)p;
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
     auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
 
-    return server->GetCharacterManager()->LearnSkill(client, entityID, skillID);
+    server->LoadAllRegisteredChannels();
+
+    return true;
 }

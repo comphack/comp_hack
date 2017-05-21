@@ -34,7 +34,7 @@ namespace channel
 
 class ChannelServer;
 
-/*
+/**
  * Chat type sent from and returned to the client to signify what type of
  * chat message is being sent.  This value is used to determine the
  * ChatVis_t level.
@@ -67,7 +67,7 @@ enum ChatVis_t : uint16_t
     CHAT_VIS_GMS,
 };
 
-/*
+/**
  * Manager to handle chat communication and processing of GM commands.
  */
 class ChatManager
@@ -85,7 +85,7 @@ public:
      */
     ~ChatManager();
 
-    /*
+    /**
      * Send a chat message to the specified chat channel.
      * @param client Pointer to the client that sent the message
      * @param chatChannel Channel to send the chat message to
@@ -96,7 +96,7 @@ public:
         channel::ChannelClientConnection>& client, ChatType_t chatChannel,
         libcomp::String message);
 
-    /*
+    /**
      * Execute a GM command using the supplied arguments.
      * @param client Pointer to the client that sent the command
      * @param cmd Command to execute
@@ -129,6 +129,16 @@ private:
         const std::list<libcomp::String>& args);
 
     /**
+     * GM command to spawn an entity in the client's zone.
+     * @param client Pointer to the client that sent the command
+     * @param args List of arguments for the command
+     * @return true if the command was handled properly, else false
+     */
+    bool GMCommand_Enemy(const std::shared_ptr<
+        channel::ChannelClientConnection>& client,
+        const std::list<libcomp::String>& args);
+
+    /**
      * GM command to update a character's expertise as if a skill
      * were used.
      * @param client Pointer to the client that sent the command
@@ -136,6 +146,17 @@ private:
      * @return true if the command was handled properly, else false
      */
     bool GMCommand_ExpertiseUpdate(const std::shared_ptr<
+        channel::ChannelClientConnection>& client,
+        const std::list<libcomp::String>& args);
+
+    /**
+     * GM command to set the client character's homepoint to their
+     * current position.
+     * @param client Pointer to the client that sent the command
+     * @param args List of arguments for the command
+     * @return true if the command was handled properly, else false
+     */
+    bool GMCommand_Homepoint(const std::shared_ptr<
         channel::ChannelClientConnection>& client,
         const std::list<libcomp::String>& args);
 
@@ -159,7 +180,7 @@ private:
         channel::ChannelClientConnection>& client,
         const std::list<libcomp::String>& args);
 
-    /*
+    /**
      * GM command to set a character's LNC alignment value.
      * @param client Pointer to the client that sent the command
      * @param args List of arguments for the command
@@ -169,7 +190,17 @@ private:
         channel::ChannelClientConnection>& client,
         const std::list<libcomp::String>& args);
 
-    /*
+    /**
+     * GM command to set a character's obtained maps.
+     * @param client Pointer to the client that sent the command
+     * @param args List of arguments for the command
+     * @return true if the command was handled properly, else false
+     */
+    bool GMCommand_Map(const std::shared_ptr<
+        channel::ChannelClientConnection>& client,
+        const std::list<libcomp::String>& args);
+
+    /**
      * GM command to get a character's position.
      * @param client Pointer to the client that sent the command
      * @param args List of arguments for the command
@@ -179,7 +210,18 @@ private:
         channel::ChannelClientConnection>& client,
         const std::list<libcomp::String>& args);
 
-    /*
+    /**
+     * GM command to have the client's character or partner demon
+     * learn a skill.
+     * @param client Pointer to the client that sent the command
+     * @param args List of arguments for the command
+     * @return true if the command was handled properly, else false
+     */
+    bool GMCommand_Skill(const std::shared_ptr<
+        channel::ChannelClientConnection>& client,
+        const std::list<libcomp::String>& args);
+
+    /**
      * GM command to zone to a new map.
      * @param client Pointer to the client that sent the command
      * @param args List of arguments for the command
@@ -199,7 +241,7 @@ private:
         channel::ChannelClientConnection>& client,
         const std::list<libcomp::String>& args);
 
-    /*
+    /**
      * Get the next argument from the supplied argument list as a string.
      * @param outVal Output variable to return the string argument to
      * @param args List of arguments read and update
@@ -211,7 +253,7 @@ private:
         std::list<libcomp::String>& args, libcomp::Convert::Encoding_t encoding
         = libcomp::Convert::Encoding_t::ENCODING_UTF8) const;
 
-    /*
+    /**
      * Get the next argument from the supplied argument list as an integer
      * type.
      * @param outVal Output variable to return the integer argument to
@@ -237,14 +279,13 @@ private:
         return ok;
     }
 
-    /*
+    /**
      * Get next argument from the supplied argument list as a float/long type.
      * @param outVal Output variable to return the argument to
      * @param args List of arguments read and update
      * @return true if there was an argument in the list that was an
      *  float/long, else false
      */
-
     template<typename T>
     bool GetDecimalArg(T& outVal, std::list<libcomp::String>& args) const
     {

@@ -91,10 +91,26 @@ public:
     static ServerTime GetServerTime();
 
     /**
+     * Get the world clock time of the server.
+     * @param phase Output param, world clock phase of the server
+     * @param hour Output param, world clock hours of the server
+     * @param min Output param, world clock minutes of the server
+     */
+    void GetWorldClockTime(int8_t& phase, int8_t& hour, int8_t& min);
+
+    /**
      * Get the RegisteredChannel.
      * @return Pointer to the RegisteredChannel
      */
     const std::shared_ptr<objects::RegisteredChannel> GetRegisteredChannel();
+
+    /**
+     * Get all channels registerd on the channel's world (including
+     * itself).
+     * @return List of pointers to all of the world's registered channels
+     */
+    const std::list<std::shared_ptr<objects::RegisteredChannel>>
+        GetAllRegisteredChannels();
 
     /**
      * Get the RegisteredWorld.
@@ -108,6 +124,13 @@ public:
      */
     void RegisterWorld(const std::shared_ptr<
         objects::RegisteredWorld>& registeredWorld);
+
+    /**
+     * Load all of the channel's connected world's RegisteredChannel
+     * entries in the database.  This allows other channels to be seen
+     * by the current channel for listing existing channels to the client.
+     */
+    void LoadAllRegisteredChannels();
 
     /**
      * Get the world database.
@@ -258,8 +281,11 @@ protected:
     /// A shared pointer to the main database used by the server.
     std::shared_ptr<libcomp::Database> mLobbyDatabase;
 
-    /// Pointer to the RegisteredChannel.
+    /// Pointer to the RegisteredChannel for this server.
     std::shared_ptr<objects::RegisteredChannel> mRegisteredChannel;
+
+    /// List of pointers to all RegisteredChannels for the world.
+    std::list<std::shared_ptr<objects::RegisteredChannel>> mAllRegisteredChannels;
 
     /// Pointer to the account manager.
     AccountManager *mAccountManager;

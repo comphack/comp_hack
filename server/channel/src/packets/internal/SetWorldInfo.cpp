@@ -88,6 +88,7 @@ bool SetWorldInfoFromPacket(libcomp::ManagerPacket *pPacketManager,
 
     auto worldID = p.ReadU8();
     auto channelID = p.ReadU8();
+    auto otherChannelsExist = p.ReadU8() == 1;
 
     auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
     auto worldDatabase = ParseDatabase(server, p);
@@ -124,6 +125,11 @@ bool SetWorldInfoFromPacket(libcomp::ManagerPacket *pPacketManager,
     {
         LOG_CRITICAL("The server failed to register with the lobby's database.\n");
         return false;
+    }
+
+    if(otherChannelsExist)
+    {
+        server->LoadAllRegisteredChannels();
     }
 
     //Reply with the channel information

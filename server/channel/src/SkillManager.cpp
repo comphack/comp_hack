@@ -52,15 +52,20 @@
 #include <MiSkillData.h>
 #include <MiSummonData.h>
 #include <MiTargetData.h>
+#include <ServerZone.h>
 
 // channel Includes
 #include "ChannelServer.h"
+#include "Zone.h"
 
 using namespace channel;
 
+/// @todo: figure out how many unique logic skills exist (and posibly script intead)
 const uint32_t SKILL_SUMMON_DEMON = 0x00001648;
 const uint32_t SKILL_STORE_DEMON = 0x00001649;
 const uint32_t SKILL_EQUIP_ITEM = 0x00001654;
+const uint32_t SKILL_TRAESTO = 0x00001405;
+const uint32_t SKILL_TRAESTO_STONE = 0x0000280D;
 
 const uint8_t DAMAGE_TYPE_GENERIC = 0;
 const uint8_t DAMAGE_TYPE_HEALING = 1;
@@ -158,7 +163,11 @@ bool SkillManager::ActivateSkill(const std::shared_ptr<ChannelClientConnection> 
 
     SendChargeSkill(client, sourceEntityID, activated);
 
-    if(chargeTime == 0)
+    /// @todo: figure out what actually consitutes an instant cast and
+    /// a client side delay
+    bool delay = skillID == SKILL_TRAESTO || skillID == SKILL_TRAESTO_STONE;
+
+    if(chargeTime == 0 && !delay)
     {
         // Cast instantly
         if(!ExecuteSkill(client, sourceState, activated))
@@ -353,6 +362,10 @@ bool SkillManager::ExecuteSkill(const std::shared_ptr<ChannelClientConnection> c
             break;
         case SKILL_STORE_DEMON:
             success = StoreDemon(client, sourceState->GetEntityID(), activated);
+            break;
+        case SKILL_TRAESTO:
+        case SKILL_TRAESTO_STONE:
+            success = Traesto(client, sourceState->GetEntityID(), activated);
             break;
         default:
             return ExecuteNormalSkill(client, sourceState->GetEntityID(), activated,
@@ -914,6 +927,30 @@ bool SkillManager::StoreDemon(const std::shared_ptr<ChannelClientConnection> cli
     mServer.lock()->GetCharacterManager()->StoreDemon(client);
 
     return true;
+}
+
+bool SkillManager::Traesto(const std::shared_ptr<ChannelClientConnection> client,
+    int32_t sourceEntityID, std::shared_ptr<objects::ActivatedAbility> activated)
+{
+    (void)sourceEntityID;
+    (void)activated;
+
+    auto state = client->GetClientState();
+    auto cState = state->GetCharacterState();
+    auto character = cState->GetEntity();
+
+    auto zoneID = character->GetHomepointZone();
+    auto xCoord = character->GetHomepointX();
+    auto yCoord = character->GetHomepointY();
+
+    if(zoneID == 0)
+    {
+        LOG_ERROR(libcomp::String("Character with no homepoint set attempted to use"
+            " Traesto: %1\n").Arg(character->GetName()));
+        return false;
+    }
+
+    return mServer.lock()->GetZoneManager()->EnterZone(client, zoneID, xCoord, yCoord, 0, true);
 }
 
 void SkillManager::SendChargeSkill(const std::shared_ptr<ChannelClientConnection> client,

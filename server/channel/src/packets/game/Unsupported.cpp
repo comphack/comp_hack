@@ -1,10 +1,10 @@
 /**
- * @file server/channel/src/packets/game/LearnSkill.cpp
+ * @file server/channel/src/packets/game/Unsupported.cpp
  * @ingroup channel
  *
  * @author HACKfrost
  *
- * @brief Request from the client for a character to learn a skill.
+ * @brief General handler for identified but unsupported packets.
  *
  * This file is part of the Channel Server (channel).
  *
@@ -26,33 +26,15 @@
 
 #include "Packets.h"
 
-// libcomp Includes
-#include <ManagerPacket.h>
-#include <Packet.h>
-#include <PacketCodes.h>
-
-// channel Includes
-#include "ChannelServer.h"
-
-// objects Includes
-#include <Character.h>
-
 using namespace channel;
 
-bool Parsers::LearnSkill::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::Unsupported::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {
-    if(p.Size() != 8)
-    {
-        return false;
-    }
+    (void)pPacketManager;
+    (void)connection;
+    (void)p;
 
-    int32_t entityID = p.ReadS32Little();
-    uint32_t skillID = p.ReadU32Little();
-
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-
-    return server->GetCharacterManager()->LearnSkill(client, entityID, skillID);
+    return true;
 }

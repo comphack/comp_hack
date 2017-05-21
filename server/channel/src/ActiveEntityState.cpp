@@ -32,6 +32,7 @@
 // objects Includes
 #include <Character.h>
 #include <Demon.h>
+#include <Enemy.h>
 #include <Item.h>
 #include <MiCorrectTbl.h>
 #include <MiDevilBattleData.h>
@@ -56,6 +57,12 @@ template<>
 ActiveEntityStateImp<objects::Demon>::ActiveEntityStateImp()
 {
     SetEntityType(objects::EntityStateObject::EntityType_t::PARTNER_DEMON);
+}
+
+template<>
+ActiveEntityStateImp<objects::Enemy>::ActiveEntityStateImp()
+{
+    SetEntityType(objects::EntityStateObject::EntityType_t::ENEMY);
 }
 
 template<>
@@ -114,18 +121,11 @@ bool ActiveEntityStateImp<objects::Character>::RecalculateStats(
     return true;
 }
 
-template<>
-bool ActiveEntityStateImp<objects::Demon>::RecalculateStats(
-    libcomp::DefinitionManager* definitionManager)
+bool RecalculateDemonStats(libcomp::DefinitionManager* definitionManager,
+    objects::ActiveEntityStateObject* entity,
+    std::shared_ptr<objects::EntityStats> cs, uint32_t demonID)
 {
-    auto d = GetEntity();
-    if (nullptr == d)
-    {
-        return true;
-    }
-
-    auto cs = d->GetCoreStats().Get();
-    auto demonData = definitionManager->GetDevilData(d->GetType());
+    auto demonData = definitionManager->GetDevilData(demonID);
     auto battleData = demonData->GetBattleData();
 
     std::unordered_map<uint8_t, int16_t> correctMap;
@@ -148,22 +148,48 @@ bool ActiveEntityStateImp<objects::Demon>::RecalculateStats(
 
     CharacterManager::CalculateDependentStats(correctMap, cs->GetLevel(), true);
 
-    SetMaxHP(correctMap[libcomp::CORRECT_MAXHP]);
-    SetMaxMP(correctMap[libcomp::CORRECT_MAXMP]);
-    SetSTR(correctMap[libcomp::CORRECT_STR]);
-    SetMAGIC(correctMap[libcomp::CORRECT_MAGIC]);
-    SetVIT(correctMap[libcomp::CORRECT_VIT]);
-    SetINTEL(correctMap[libcomp::CORRECT_INTEL]);
-    SetSPEED(correctMap[libcomp::CORRECT_SPEED]);
-    SetLUCK(correctMap[libcomp::CORRECT_LUCK]);
-    SetCLSR(correctMap[libcomp::CORRECT_CLSR]);
-    SetLNGR(correctMap[libcomp::CORRECT_LNGR]);
-    SetSPELL(correctMap[libcomp::CORRECT_SPELL]);
-    SetSUPPORT(correctMap[libcomp::CORRECT_SUPPORT]);
-    SetPDEF(correctMap[libcomp::CORRECT_PDEF]);
-    SetMDEF(correctMap[libcomp::CORRECT_MDEF]);
+    entity->SetMaxHP(correctMap[libcomp::CORRECT_MAXHP]);
+    entity->SetMaxMP(correctMap[libcomp::CORRECT_MAXMP]);
+    entity->SetSTR(correctMap[libcomp::CORRECT_STR]);
+    entity->SetMAGIC(correctMap[libcomp::CORRECT_MAGIC]);
+    entity->SetVIT(correctMap[libcomp::CORRECT_VIT]);
+    entity->SetINTEL(correctMap[libcomp::CORRECT_INTEL]);
+    entity->SetSPEED(correctMap[libcomp::CORRECT_SPEED]);
+    entity->SetLUCK(correctMap[libcomp::CORRECT_LUCK]);
+    entity->SetCLSR(correctMap[libcomp::CORRECT_CLSR]);
+    entity->SetLNGR(correctMap[libcomp::CORRECT_LNGR]);
+    entity->SetSPELL(correctMap[libcomp::CORRECT_SPELL]);
+    entity->SetSUPPORT(correctMap[libcomp::CORRECT_SUPPORT]);
+    entity->SetPDEF(correctMap[libcomp::CORRECT_PDEF]);
+    entity->SetMDEF(correctMap[libcomp::CORRECT_MDEF]);
 
     return true;
+}
+
+template<>
+bool ActiveEntityStateImp<objects::Demon>::RecalculateStats(
+    libcomp::DefinitionManager* definitionManager)
+{
+    auto d = GetEntity();
+    if (nullptr == d)
+    {
+        return true;
+    }
+
+    return RecalculateDemonStats(definitionManager, this, d->GetCoreStats().Get(), d->GetType());
+}
+
+template<>
+bool ActiveEntityStateImp<objects::Enemy>::RecalculateStats(
+    libcomp::DefinitionManager* definitionManager)
+{
+    auto e = GetEntity();
+    if (nullptr == e)
+    {
+        return true;
+    }
+
+    return RecalculateDemonStats(definitionManager, this, e->GetCoreStats().Get(), e->GetType());
 }
 
 }

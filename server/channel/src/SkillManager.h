@@ -169,6 +169,15 @@ private:
         int32_t sourceEntityID, std::shared_ptr<objects::ActivatedAbility> activated);
 
     /**
+     * Execute the ability "Traesto" which returns the user to their homepoint.
+     * @param client Pointer to the client connection that activated the skill
+     * @param sourceEntityID ID of the entity that activated the skill
+     * @param activated Pointer to the activated ability instance
+     */
+    bool Traesto(const std::shared_ptr<ChannelClientConnection> client,
+        int32_t sourceEntityID, std::shared_ptr<objects::ActivatedAbility> activated);
+
+    /**
      * Notify the client that a skill needs to charge.  The client will notify
      * the server when the specified charge time has elapsed for execution.
      * @param client Pointer to the client connection that activated the skill

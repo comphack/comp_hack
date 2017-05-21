@@ -24,6 +24,13 @@
         <member type="s16" name="LNC" caps="true" min="-10000" max="10000"/>
         <member type="s32" name="Points"/>
         <member type="Demon*" name="ActiveDemon"/>
+        <member type="u32" name="HomepointZone"/>
+        <member type="float" name="HomepointX"/>
+        <member type="float" name="HomepointY"/>
+        <member type="u32" name="LogoutZone"/>
+        <member type="float" name="LogoutX"/>
+        <member type="float" name="LogoutY"/>
+        <member type="float" name="LogoutRotation"/>
 
         <!-- Collections -->
         <member type="array" name="COMP" caps="true" size="10">
@@ -100,7 +107,7 @@
         <member type="array" name="DevilBook" size="512">
             <element type="u8"/>
         </member>
-        <member type="array" name="CompletedQuests" size="512">
+        <member type="array" name="CompletedQuests" size="128">
             <element type="u8"/>
         </member>
     </object>
@@ -124,10 +131,10 @@
         </member>
     </object>
     <object name="Quest" location="world">
-        <member type="u16" name="QuestID"/>
+        <member type="s16" name="QuestID"/>
         <member type="Character*" name="Character" key="true" unique="false"/>
-        <member type="u8" name="State"/>
-        <member type="list" name="CustomData">
+        <member type="s8" name="State"/>
+        <member type="array" name="CustomData" size="8">
             <element type="s32"/>
         </member>
     </object>

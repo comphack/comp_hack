@@ -86,6 +86,9 @@ before_install:
   - export GENERATOR="${CMAKE_GENERATOR}"
   - export CTEST_OUTPUT_ON_FAILURE=1
 
+before_script:
+  - mysql -u root < MariaDBTestSetup.sql
+
 script:
   - jdk_switcher use oraclejdk8
   - java -version

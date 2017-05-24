@@ -33,12 +33,19 @@
 
 using namespace libcomp;
 
-TEST(MariaDB, Connection)
+std::shared_ptr<objects::DatabaseConfigMariaDB> GetConfig()
 {
     auto config = std::shared_ptr<objects::DatabaseConfigMariaDB>(
         new objects::DatabaseConfigMariaDB);
     config->SetDatabaseName("comp_hack_test");
-    config->SetUsername("root");
+    config->SetUsername("testuser");
+    config->SetPassword("un1tt3st");
+    return config;
+}
+
+TEST(MariaDB, Connection)
+{
+    auto config = GetConfig();
 
     DatabaseMariaDB db(config);
 
@@ -51,10 +58,7 @@ TEST(MariaDB, Connection)
 
 TEST(MariaDB, BadPrepare)
 {
-    auto config = std::shared_ptr<objects::DatabaseConfigMariaDB>(
-        new objects::DatabaseConfigMariaDB);
-    config->SetDatabaseName("comp_hack_test");
-    config->SetUsername("root");
+    auto config = GetConfig();
 
     DatabaseMariaDB db(config);
 
@@ -92,10 +96,7 @@ TEST(MariaDB, ObjectBindIndex)
 
     String testString2 = "今晩は！";
 
-    auto config = std::shared_ptr<objects::DatabaseConfigMariaDB>(
-        new objects::DatabaseConfigMariaDB);
-    config->SetDatabaseName("comp_hack_test");
-    config->SetUsername("root");
+    auto config = GetConfig();
 
     DatabaseMariaDB db(config);
 
@@ -130,7 +131,7 @@ TEST(MariaDB, ObjectBindIndex)
     EXPECT_TRUE(q.Execute());
 
     libobjgen::UUID outUuid;
-    int32_t outSort;
+    int32_t outSort = 0;
     std::vector<char> outData;
     String outString;
 
@@ -204,10 +205,7 @@ TEST(MariaDB, ObjectBindName)
 
     String testString2 = "今晩は！";
 
-    auto config = std::shared_ptr<objects::DatabaseConfigMariaDB>(
-        new objects::DatabaseConfigMariaDB);
-    config->SetDatabaseName("comp_hack_test");
-    config->SetUsername("root");
+    auto config = GetConfig();
 
     DatabaseMariaDB db(config);
 
@@ -242,7 +240,7 @@ TEST(MariaDB, ObjectBindName)
     EXPECT_TRUE(q.Execute());
 
     libobjgen::UUID outUuid;
-    int32_t outSort;
+    int32_t outSort = 0;
     std::vector<char> outData;
     String outString;
 

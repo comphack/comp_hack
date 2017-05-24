@@ -193,6 +193,11 @@ std::list<libobjgen::UUID> Database::ProcessTransactionQueue()
     return failures;
 }
 
+bool Database::UsingDefaultDatabaseType()
+{
+    return mConfig->GetDatabaseType() == mConfig->GetDefaultDatabaseType();
+}
+
 std::shared_ptr<PersistentObject> Database::LoadSingleObjectFromRow(
     size_t typeHash, DatabaseQuery& query)
 {
@@ -224,4 +229,20 @@ std::shared_ptr<PersistentObject> Database::LoadSingleObjectFromRow(
     }
 
     return obj;
+}
+
+std::vector<std::shared_ptr<libobjgen::MetaObject>> Database::GetMappedObjects()
+{
+    auto databaseType = mConfig->GetDatabaseType();
+    std::vector<std::shared_ptr<libobjgen::MetaObject>> metaObjectTables;
+    for(auto registrar : PersistentObject::GetRegistry())
+    {
+        std::string source = registrar.second->GetSourceLocation();
+        if(source == databaseType || (source.length() == 0 && UsingDefaultDatabaseType()))
+        {
+            metaObjectTables.push_back(registrar.second);
+        }
+    }
+
+    return metaObjectTables;
 }

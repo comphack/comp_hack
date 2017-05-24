@@ -89,15 +89,6 @@ public:
      */
     bool VerifyAndSetupSchema(bool recreateTables = false);
 
-    /**
-     * Check if this database is configured to use the default keyspace
-     * for the Cassandra database.  Non-default keyspace connections are
-     * only responsible for verifying the schema of their own tables where-as
-     * default keyspace connections may also have additional tables to maintain.
-     * @return true if the default keyspace is configured, false if it is not
-     */
-    bool UsingDefaultKeyspace();
-
     virtual bool ProcessChangeSet(const std::shared_ptr<DatabaseChangeSet>& changes);
 
 protected:

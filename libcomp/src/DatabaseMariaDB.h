@@ -1,10 +1,10 @@
 /**
- * @file libcomp/src/DatabaseSQLite3.h
+ * @file libcomp/src/DatabaseMariaDB.h
  * @ingroup libcomp
  *
- * @author COMP Omega <compomega@tutanota.com>
+ * @author HACKfrost
  *
- * @brief Class to handle an SQLite3 database.
+ * @brief Class to handle a MariaDB database.
  *
  * This file is part of the COMP_hack Library (libcomp).
  *
@@ -24,56 +24,66 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef LIBCOMP_SRC_DATABASESQLITE3_H
-#define LIBCOMP_SRC_DATABASESQLITE3_H
+#ifndef LIBCOMP_SRC_DATABASEMARIADB_H
+#define LIBCOMP_SRC_DATABASEMARIADB_H
 
  // libcomp Includes
 #include "Database.h"
-#include "DatabaseConfigSQLite3.h"
+#include "DatabaseConfigMariaDB.h"
 
 // libobjgen Includes
 #include <MetaVariable.h>
 
-typedef struct sqlite3 sqlite3;
+// Standard C++ Includes
+#include <thread>
+
+typedef struct st_mysql MYSQL;
 
 namespace libcomp
 {
 
 /**
- * Represents a SQLite3 database connection associated to a specific
- * file via the supplied config.
+ * Represents a MariaDB database connection via the supplied config.
  */
-class DatabaseSQLite3 : public Database
+class DatabaseMariaDB : public Database
 {
 public:
     /**
-     * Create a new SQLite3 Database connection.
+     * Create a new MariaDB Database connection.
      * @param config Pointer to a database configuration
      */
-    DatabaseSQLite3(const std::shared_ptr<objects::DatabaseConfigSQLite3>& config);
+    DatabaseMariaDB(const std::shared_ptr<objects::DatabaseConfigMariaDB>& config);
 
     /**
      * Close and clean up the database connection.
      */
-    virtual ~DatabaseSQLite3();
+    virtual ~DatabaseMariaDB();
 
     /**
-     * Open or create the database file for use.
+     * Open or create the database for use.
      * @return true on success, false on failure
      */
     virtual bool Open();
 
     /**
-     * Close the database connection and file.
+     * Close dall database connections.
      * @return true on success, false on failure
      */
     virtual bool Close();
+
+    /**
+     * Close the specified database connection.
+     * @param connection Pointer to the connection to close
+     * @return true on success, false on failure
+     */
+    bool Close(MYSQL*& connection);
+
     virtual bool IsOpen() const;
 
     virtual DatabaseQuery Prepare(const String& query);
 
     /**
-     * Check if the database file exists.
+     * Check if the database exists.
      * @return true if it exists, false if it does not
      */
     virtual bool Exists();
@@ -104,22 +114,38 @@ public:
 
 private:
     /**
-     * Get the path to the database file to use.
-     * @return Path to the database file to use
+     * Establish a connection to a MariaDB database.
+     * @param connection Pointer to database connection to connect with
+     * @param databaseName Name of the database to connect to on the configured host
+     * @return true if the connection succeeded, false if it did not
      */
-    String GetFilepath() const;
+    bool ConnectToDatabase(MYSQL*& connection, const libcomp::String& databaseName);
 
     /**
-     * Get the SQLite3 type represented by a MetaVariable type.
-     * @param var Metadata variable containing a type to conver to a SQLite3 type
-     * @return Data type string representing a SQLite3 type
+     * Get a connection for the executing thread.
+     * @param autoConnect true if the connection should be established before
+     *  returning it, false if it should just return the conection reference
+     * @return Reference to the executing thread's connection pointer
+     */
+    MYSQL*& GetConnection(bool autoConnect);
+
+    /**
+     * Get the MariaDB type represented by a MetaVariable type.
+     * @param var Metadata variable containing a type to conver to a MariaDB type
+     * @return Data type string representing a MariaDB type
      */
     String GetVariableType(const std::shared_ptr<libobjgen::MetaVariable> var);
 
-    /// Pointer to the SQLite3 representation of the database file connection
-    sqlite3 *mDatabase;
+    /// Mutex to lock access to the database connection map
+    std::mutex mConnectionLock;
+
+    /// Pointers to the MariaDB representation of a database connection per thread.
+    /// References to the pointers in this collection are passed around for use
+    /// throughout the class as they are not removed or modified until the database
+    /// is closed.
+    std::unordered_map<std::thread::id, MYSQL*> mConnections;
 };
 
 } // namespace libcomp
 
-#endif // LIBCOMP_SRC_DATABASESQLITE3_H
+#endif // LIBCOMP_SRC_DATABASEMARIADB_H

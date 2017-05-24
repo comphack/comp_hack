@@ -49,8 +49,10 @@ SET(${PROJECT_NAME}_SRCS
     src/Database.cpp
     src/DatabaseBind.cpp
     src/DatabaseCassandra.cpp
+    src/DatabaseMariaDB.cpp
     src/DatabaseQuery.cpp
     src/DatabaseQueryCassandra.cpp
+    src/DatabaseQueryMariaDB.cpp
     src/DatabaseQuerySQLite3.cpp
     src/DatabaseSQLite3.cpp
     src/DataFile.cpp
@@ -114,8 +116,10 @@ SET(${PROJECT_NAME}_HDRS
     src/DatabaseBind.h
     src/DatabaseCassandra.h
     src/DatabaseChangeSet.h
+    src/DatabaseMariaDB.h
     src/DatabaseQuery.h
     src/DatabaseQueryCassandra.h
+    src/DatabaseQueryMariaDB.h
     src/DatabaseQuerySQLite3.h
     src/DatabaseSQLite3.h
     src/DataFile.h
@@ -190,6 +194,7 @@ SET(${PROJECT_NAME}_SCHEMA
     schema/character.xml
     schema/databaseconfig.xml
     schema/databaseconfig_cassandra.xml
+    schema/databaseconfig_mariadb.xml
     schema/databaseconfig_sqlite3.xml
     schema/enemy.xml
     schema/packet_login.xml
@@ -250,6 +255,8 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     DatabaseConfig.cpp
     DatabaseConfigCassandra.h
     DatabaseConfigCassandra.cpp
+    DatabaseConfigMariaDB.h
+    DatabaseConfigMariaDB.cpp
     DatabaseConfigSQLite3.h
     DatabaseConfigSQLite3.cpp
     Demon.h
@@ -480,6 +487,7 @@ SET(${PROJECT_NAME}_TEST_SRCS
     # DiffieHellman
 
     GeneratedObjects
+    MariaDB
     Packet
     ScriptEngine
     String

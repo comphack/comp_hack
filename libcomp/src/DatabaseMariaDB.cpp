@@ -1,10 +1,10 @@
 /**
- * @file libcomp/src/DatabaseSQLite3.cpp
+ * @file libcomp/src/DatabaseMariaDB.cpp
  * @ingroup libcomp
  *
- * @author COMP Omega <compomega@tutanota.com>
+ * @author HACKfrost
  *
- * @brief Class to handle an SQLite3 database.
+ * @brief Class to handle a MariaDB database.
  *
  * This file is part of the COMP_hack Library (libcomp).
  *
@@ -24,97 +24,95 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "DatabaseSQLite3.h"
+#include "DatabaseMariaDB.h"
 
 // libcomp Includes
 #include "DatabaseBind.h"
-#include "DatabaseQuerySQLite3.h"
+#include "DatabaseQueryMariaDB.h"
 #include "Log.h"
 
-// SQLite3 Includes
-#include <sqlite3.h>
+// config-win.h and my_global.h redefine bool unless explicitly defined
+#define bool bool
+
+// MariaDB Includes
+#include <my_global.h>
+#include <mysql.h>
 
 using namespace libcomp;
 
-DatabaseSQLite3::DatabaseSQLite3(const std::shared_ptr<
-    objects::DatabaseConfigSQLite3>& config) :
-    Database(std::dynamic_pointer_cast<objects::DatabaseConfig>(config)),
-    mDatabase(nullptr)
+DatabaseMariaDB::DatabaseMariaDB(const std::shared_ptr<
+    objects::DatabaseConfigMariaDB>& config) :
+    Database(std::dynamic_pointer_cast<objects::DatabaseConfig>(config))
 {
 }
 
-DatabaseSQLite3::~DatabaseSQLite3()
+DatabaseMariaDB::~DatabaseMariaDB()
 {
     Close();
 }
 
-bool DatabaseSQLite3::Open()
+bool DatabaseMariaDB::Open()
 {
-    auto filepath = GetFilepath();
+    return ConnectToDatabase(GetConnection(false), "");
+}
 
+bool DatabaseMariaDB::Close()
+{
     bool result = true;
 
-    if(SQLITE_OK != sqlite3_open(filepath.C(), &mDatabase))
+    std::lock_guard<std::mutex> lock(mConnectionLock);
+    for(auto kv : mConnections)
     {
-        result = false;
-
-        LOG_ERROR(String("Failed to open database connection: %1\n").Arg(
-            sqlite3_errmsg(mDatabase)));
-
-        (void)Close();
+        result &= Close(kv.second);
     }
+    mConnections.clear();
 
     return result;
 }
 
-bool DatabaseSQLite3::Close()
+bool DatabaseMariaDB::Close(MYSQL*& connection)
 {
-    bool result = true;
-
-    if(nullptr != mDatabase)
+    if(nullptr != connection && nullptr != connection)
     {
-        if(SQLITE_OK != sqlite3_close(mDatabase))
-        {
-            result = false;
-
-            LOG_ERROR("Failed to close database connection.\n");
-        }
-
-        mDatabase = nullptr;
+        mysql_close(connection);
+        connection = nullptr;
     }
 
-    return result;
+    return true;
 }
 
-bool DatabaseSQLite3::IsOpen() const
+bool DatabaseMariaDB::IsOpen() const
 {
-    return nullptr != mDatabase;
+    // Connections are only added when they are valid
+    return mConnections.size() > 0;
 }
 
-DatabaseQuery DatabaseSQLite3::Prepare(const String& query)
+DatabaseQuery DatabaseMariaDB::Prepare(const String& query)
 {
-    auto config = std::dynamic_pointer_cast<objects::DatabaseConfigSQLite3>(mConfig);
-    return DatabaseQuery(new DatabaseQuerySQLite3(mDatabase,
-        config->GetMaxRetryCount(), config->GetRetryDelay()), query);
+    auto connection = GetConnection(true);
+    return DatabaseQuery(new DatabaseQueryMariaDB(connection), query);
 }
 
-bool DatabaseSQLite3::Exists()
+bool DatabaseMariaDB::Exists()
 {
-    auto filepath = GetFilepath();
-
-    // Check if the database file exists
-    if(FILE *file = fopen(filepath.C(), "r"))
+    DatabaseQuery q = Prepare(String(
+        "SELECT 1 FROM information_schema.TABLES WHERE TABLE_SCHEMA = '%1';")
+        .Arg(std::dynamic_pointer_cast<objects::DatabaseConfigMariaDB>(
+            mConfig)->GetDatabaseName()));
+    if(!q.Execute())
     {
-        fclose(file);
-        return true;
-    }
-    else
-    {
+        LOG_CRITICAL("Failed to query for database.\n");
+
         return false;
     }
+
+    std::list<std::unordered_map<std::string, std::vector<char>>> results;
+    q.Next();
+
+    return q.GetRows(results) && results.size() > 0;
 }
 
-bool DatabaseSQLite3::Setup(bool rebuild)
+bool DatabaseMariaDB::Setup(bool rebuild)
 {
     if(!IsOpen())
     {
@@ -123,35 +121,43 @@ bool DatabaseSQLite3::Setup(bool rebuild)
         return false;
     }
 
-    auto filename = std::dynamic_pointer_cast<objects::DatabaseConfigSQLite3>(
+    auto databaseName = std::dynamic_pointer_cast<objects::DatabaseConfigMariaDB>(
         mConfig)->GetDatabaseName();
     if(!Exists())
     {
-        LOG_ERROR("Database file was not created!\n");
-    }
+        // Delete the old database if it exists.
+        if(!Execute(String("DROP DATABASE IF EXISTS %1;").Arg(databaseName)))
+        {
+            LOG_ERROR("Failed to delete existing database\n");
 
-    if(UsingDefaultDatabaseType())
+            return false;
+        }
+
+        // Now re-create the database.
+        if(!Execute(String("CREATE DATABASE %1;").Arg(databaseName)))
+        {
+            LOG_ERROR("Failed to create database\n");
+
+            return false;
+        }
+
+        // Use the database.
+        if(!Use())
+        {
+            LOG_ERROR("Failed to use the newly created database\n");
+
+            return false;
+        }
+    }
+    else if(!Use())
     {
-        std::list<std::unordered_map<std::string, std::vector<char>>> results;
-        auto q = Prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'objects';");
-        if(!q.IsValid() || !q.Execute() || !q.GetRows(results))
-        {
-            LOG_ERROR("Failed to query the master table for schema.\n");
+        LOG_ERROR("Failed to use the existing database\n");
 
-            return false;
-        }
-        
-        if(results.size() == 0 &&
-            !Execute("CREATE TABLE objects (uid string PRIMARY KEY, member_vars blob);"))
-        {
-            LOG_ERROR("Failed to create the objects table.\n");
-
-            return false;
-        }
+        return false;
     }
 
-    LOG_DEBUG(String("Database connection established to '%1' file.\n")
-        .Arg(filename));
+    LOG_DEBUG(String("Database connection established to '%1' database.\n")
+        .Arg(databaseName));
 
     if(!VerifyAndSetupSchema(rebuild))
     {
@@ -163,13 +169,15 @@ bool DatabaseSQLite3::Setup(bool rebuild)
     return true;
 }
 
-bool DatabaseSQLite3::Use()
+bool DatabaseMariaDB::Use()
 {
-    // Since each database is its own file there is nothing to do here.
-    return true;
+    // USE not supported so close the connection and re-open
+    auto config = std::dynamic_pointer_cast<objects::DatabaseConfigMariaDB>(mConfig);
+
+    return ConnectToDatabase(GetConnection(false), config->GetDatabaseName());
 }
 
-std::list<std::shared_ptr<PersistentObject>> DatabaseSQLite3::LoadObjects(
+std::list<std::shared_ptr<PersistentObject>> DatabaseMariaDB::LoadObjects(
     size_t typeHash, DatabaseBind *pValue)
 {
     std::list<std::shared_ptr<PersistentObject>> objects;
@@ -183,7 +191,7 @@ std::list<std::shared_ptr<PersistentObject>> DatabaseSQLite3::LoadObjects(
         return {};
     }
 
-    String sql = String("SELECT * FROM %1%2").Arg(
+    String sql = String("SELECT * FROM `%1`%2").Arg(
         metaObject->GetName()).Arg(
         (nullptr != pValue
             ? String(" WHERE %1 = :%1").Arg(pValue->GetColumn())
@@ -241,7 +249,7 @@ std::list<std::shared_ptr<PersistentObject>> DatabaseSQLite3::LoadObjects(
     return objects;
 }
 
-bool DatabaseSQLite3::InsertSingleObject(std::shared_ptr<PersistentObject>& obj)
+bool DatabaseMariaDB::InsertSingleObject(std::shared_ptr<PersistentObject>& obj)
 {
     auto metaObject = obj->GetObjectMetadata();
 
@@ -257,7 +265,7 @@ bool DatabaseSQLite3::InsertSingleObject(std::shared_ptr<PersistentObject>& obj)
     }
 
     std::list<String> columnNames;
-    columnNames.push_back("UID");
+    columnNames.push_back("`UID`");
 
     std::list<String> columnBinds;
     columnBinds.push_back(":UID");
@@ -267,11 +275,11 @@ bool DatabaseSQLite3::InsertSingleObject(std::shared_ptr<PersistentObject>& obj)
     for(auto value : values)
     {
         auto columnName = value->GetColumn();
-        columnNames.push_back(columnName);
+        columnNames.push_back(String("`%1`").Arg(columnName));
         columnBinds.push_back(String(":%1").Arg(columnName));
     }
 
-    String sql = String("INSERT INTO %1 (%2) VALUES (%3);").Arg(
+    String sql = String("INSERT INTO `%1` (%2) VALUES (%3);").Arg(
         metaObject->GetName()).Arg(
         String::Join(columnNames, ", ")).Arg(
         String::Join(columnBinds, ", "));
@@ -319,7 +327,7 @@ bool DatabaseSQLite3::InsertSingleObject(std::shared_ptr<PersistentObject>& obj)
     return true;
 }
 
-bool DatabaseSQLite3::UpdateSingleObject(std::shared_ptr<PersistentObject>& obj)
+bool DatabaseMariaDB::UpdateSingleObject(std::shared_ptr<PersistentObject>& obj)
 {
     auto metaObject = obj->GetObjectMetadata();
 
@@ -345,10 +353,10 @@ bool DatabaseSQLite3::UpdateSingleObject(std::shared_ptr<PersistentObject>& obj)
 
     for(auto value : values)
     {
-        columnNames.push_back(String("%1 = :%1").Arg(value->GetColumn()));
+        columnNames.push_back(String("`%1` = :%1").Arg(value->GetColumn()));
     }
 
-    String sql = String("UPDATE %1 SET %2 WHERE UID = :UID;").Arg(
+    String sql = String("UPDATE `%1` SET %2 WHERE `UID` = :UID;").Arg(
         metaObject->GetName()).Arg(
         String::Join(columnNames, ", "));
 
@@ -395,7 +403,7 @@ bool DatabaseSQLite3::UpdateSingleObject(std::shared_ptr<PersistentObject>& obj)
     return true;
 }
 
-bool DatabaseSQLite3::DeleteObjects(std::list<std::shared_ptr<PersistentObject>>& objs)
+bool DatabaseMariaDB::DeleteObjects(std::list<std::shared_ptr<PersistentObject>>& objs)
 {
     std::shared_ptr<libobjgen::MetaObject> metaObject;
 
@@ -427,7 +435,7 @@ bool DatabaseSQLite3::DeleteObjects(std::list<std::shared_ptr<PersistentObject>>
         uidBindings.push_back(String("'%1'").Arg(uuidStr));
     }
 
-    if(Execute(String("DELETE FROM %1 WHERE UID in (%2);")
+    if(Execute(String("DELETE FROM `%1` WHERE `UID` in (%2);")
         .Arg(metaObject->GetName())
         .Arg(String::Join(uidBindings, ", "))))
     {
@@ -437,7 +445,7 @@ bool DatabaseSQLite3::DeleteObjects(std::list<std::shared_ptr<PersistentObject>>
     return false;
 }
 
-bool DatabaseSQLite3::VerifyAndSetupSchema(bool recreateTables)
+bool DatabaseMariaDB::VerifyAndSetupSchema(bool recreateTables)
 {
     auto metaObjectTables = GetMappedObjects();
     if(metaObjectTables.size() == 0)
@@ -445,72 +453,71 @@ bool DatabaseSQLite3::VerifyAndSetupSchema(bool recreateTables)
         return true;
     }
 
-    LOG_DEBUG("Verifying database table structure.\n");
+    auto databaseName = std::dynamic_pointer_cast<objects::DatabaseConfigMariaDB>(
+        mConfig)->GetDatabaseName();
 
-    DatabaseQuery q = Prepare("SELECT name, type, tbl_name FROM sqlite_master"
-        " where type in ('table', 'index') and name <> 'objects';");
+    LOG_DEBUG("Verifying database table structure.\n");
+    DatabaseQuery q = Prepare(libcomp::String("SELECT TABLE_NAME, COLUMN_NAME, DATA_TYPE"
+        " FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = '%1';").Arg(databaseName));
     if(!q.Execute())
     {
-        LOG_CRITICAL("Failed to query for existing columns.\n");
+        LOG_CRITICAL("Failed to query for existing columns\n");
 
         return false;
     }
 
     std::unordered_map<std::string,
         std::unordered_map<std::string, String>> fieldMap;
-    std::unordered_map<std::string, std::set<std::string>> indexedFields;
     while(q.Next())
     {
         String name;
-        String type;
+        String colName;
+        String colType;
 
-        if(!q.GetValue("name", name) || !q.GetValue("type", type))
+        if(!q.GetValue("TABLE_NAME", name) || !q.GetValue("COLUMN_NAME", colName)
+            || !q.GetValue("DATA_TYPE", colType))
         {
-            LOG_CRITICAL(String("Invalid query results returned from sqlite_master table.\n")
+            LOG_CRITICAL(String("Invalid query results returned from the COLUMNS table.\n")
                 .Arg(name));
 
             return false;
         }
 
-        if(type == "table")
-        {
-            std::unordered_map<std::string, String>& m = fieldMap[name.ToUtf8()];
-
-            DatabaseQuery sq = Prepare(String("PRAGMA table_info('%1');").Arg(name));
-            if(!sq.Execute() || !sq.Next())
-            {
-                LOG_CRITICAL(String("Failed to query for '%1' columns.\n").Arg(name));
-
-                return false;
-            }
-
-            do
-            {
-                String colName;
-                String dataType;
-
-                if(sq.GetValue("name", colName) && sq.GetValue("type", dataType))
-                {
-                    m[colName.ToUtf8()] = dataType;
-                }
-            } while (sq.Next());
-        }
-        else if(type == "index")
-        {
-            String tableName;
-
-            if(q.GetValue("tbl_name", tableName))
-            {
-                std::set<std::string>& s = indexedFields[tableName.ToUtf8()];
-                s.insert(name.ToUtf8());
-            }
-        }
+        fieldMap[name.ToLower().ToUtf8()][colName.ToLower().ToUtf8()] = colType.ToLower();
     }
-    
+
+    q = Prepare(libcomp::String("SELECT TABLE_NAME, INDEX_NAME, COLUMN_NAME"
+        " FROM INFORMATION_SCHEMA.STATISTICS WHERE TABLE_SCHEMA = '%1';").Arg(databaseName));
+    if(!q.Execute())
+    {
+        LOG_CRITICAL("Failed to query for existing indexes\n");
+
+        return false;
+    }
+
+    std::unordered_map<std::string, std::set<std::string>> indexedFields;
+    while(q.Next())
+    {
+        String name;
+        String idxName;
+
+        if(!q.GetValue("TABLE_NAME", name) || !q.GetValue("INDEX_NAME", idxName))
+        {
+            LOG_CRITICAL(String("Invalid query results returned from the STATISTICS table.\n")
+                .Arg(name));
+
+            return false;
+        }
+
+        indexedFields[name.ToLower().ToUtf8()].insert(idxName.ToLower().ToUtf8());
+    }
+
     for(auto metaObjectTable : metaObjectTables)
     {
         auto metaObject = *metaObjectTable.get();
         auto objName = metaObject.GetName();
+        auto objNameLower = String(objName)
+            .ToLower().ToUtf8();
 
         std::vector<std::shared_ptr<libobjgen::MetaVariable>> vars;
         for(auto iter = metaObject.VariablesBegin();
@@ -530,7 +537,7 @@ bool DatabaseSQLite3::VerifyAndSetupSchema(bool recreateTables)
         bool creating = false;
         bool archiving = false;
         std::set<std::string> needsIndex;
-        auto tableIter = fieldMap.find(objName);
+        auto tableIter = fieldMap.find(objNameLower);
         if(tableIter == fieldMap.end())
         {
             creating = true;
@@ -542,18 +549,25 @@ bool DatabaseSQLite3::VerifyAndSetupSchema(bool recreateTables)
             std::unordered_map<std::string,
                 String> columns = tableIter->second;
             if(columns.size() - 1 != vars.size()
-                || columns.find("UID") == columns.end())
+                || columns.find("uid") == columns.end())
             {
                 archiving = true;
             }
             else
             {
-                auto indexes = indexedFields[objName];
-                columns.erase("UID");
+                auto indexes = indexedFields[objNameLower];
+                columns.erase("uid");
                 for(auto var : vars)
                 {
-                    auto name = var->GetName();
+                    auto name = String(
+                        var->GetName()).ToLower().ToUtf8();
                     auto type = GetVariableType(var);
+                    
+                    // Do not compare on size specifiers
+                    if(type.Contains("("))
+                    {
+                        type = type.Split("(").front();
+                    }
 
                     if(columns.find(name) == columns.end()
                         || columns[name] != type)
@@ -562,7 +576,7 @@ bool DatabaseSQLite3::VerifyAndSetupSchema(bool recreateTables)
                     }
 
                     auto indexName = String("idx_%1_%2")
-                        .Arg(objName).Arg(name).ToUtf8();
+                        .Arg(objNameLower).Arg(name).ToUtf8();
                     if(var->IsLookupKey() &&
                         indexes.find(indexName) == indexes.end())
                     {
@@ -578,7 +592,7 @@ bool DatabaseSQLite3::VerifyAndSetupSchema(bool recreateTables)
                 .Arg(metaObject.GetName()));
             
             /// @todo: do this properly
-            if(Execute(String("DROP TABLE %1;").Arg(objName)))
+            if(Execute(String("DROP TABLE `%1`;").Arg(objName)))
             {
                 LOG_DEBUG("Archiving complete\n");
             }
@@ -599,14 +613,14 @@ bool DatabaseSQLite3::VerifyAndSetupSchema(bool recreateTables)
             bool success = false;
 
             std::stringstream ss;
-            ss << "CREATE TABLE " << objName
-                << " (UID string PRIMARY KEY";
+            ss << "CREATE TABLE `" << objName
+                << "` (`UID` varchar(36) PRIMARY KEY";
             for(size_t i = 0; i < vars.size(); i++)
             {
                 auto var = vars[i];
                 String type = GetVariableType(var);
 
-                ss << "," << std::endl << var->GetName() << " " << type;
+                ss << "," << std::endl << "`" << var->GetName() << "` " << type;
             }
             ss << ");";
 
@@ -630,17 +644,25 @@ bool DatabaseSQLite3::VerifyAndSetupSchema(bool recreateTables)
             {
                 auto var = vars[i];
 
+                auto name = String("%1").Arg(var->GetName()).ToLower().ToUtf8();
+
                 if(!var->IsLookupKey() ||
-                    (!creating && needsIndex.find(var->GetName()) == needsIndex.end()))
+                    (!creating && needsIndex.find(name) == needsIndex.end()))
                 {
                     continue;
                 }
 
                 auto indexStr = String("idx_%1_%2")
-                    .Arg(objName).Arg(var->GetName());
+                    .Arg(objNameLower).Arg(name);
 
-                auto cmd = String("CREATE INDEX %1 ON %2(%3);")
-                    .Arg(indexStr).Arg(objName).Arg(var->GetName());
+                // MariaDB indexes values based off a set size so values like blobs and
+                // strings without a limited size need to be indexed by a specified amount
+                bool limitIndex = GetVariableType(var) == "blob"
+                    || var->GetMetaType() == libobjgen::MetaVariable::MetaVariableType_t::TYPE_STRING;
+                auto fieldStr = String("`%1`%2").Arg(var->GetName()).Arg(limitIndex ? "(10)" : "");
+
+                auto cmd = String("CREATE INDEX %1 ON `%2`(%3);")
+                    .Arg(indexStr).Arg(objNameLower).Arg(fieldStr);
 
                 if(Execute(cmd))
                 {
@@ -668,12 +690,15 @@ bool DatabaseSQLite3::VerifyAndSetupSchema(bool recreateTables)
     return true;
 }
 
-bool DatabaseSQLite3::ProcessChangeSet(const std::shared_ptr<DatabaseChangeSet>& changes)
+bool DatabaseMariaDB::ProcessChangeSet(const std::shared_ptr<DatabaseChangeSet>& changes)
 {
-    libcomp::String transactionID = libcomp::String("_%1").Arg(
-            libcomp::String(libobjgen::UUID::Random().ToString()).Replace("-", "_"));
-    if(!Prepare(libcomp::String("BEGIN TRANSACTION %1").Arg(
-        transactionID)).Execute())
+    auto connection = GetConnection(true);
+    if(connection == nullptr)
+    {
+        return false;
+    }
+
+    if(mysql_autocommit(connection, false))
     {
         return false;
     }
@@ -708,43 +733,86 @@ bool DatabaseSQLite3::ProcessChangeSet(const std::shared_ptr<DatabaseChangeSet>&
 
     if(result)
     {
-        if(!Prepare(libcomp::String("COMMIT TRANSACTION %1").Arg(
-            transactionID)).Execute())
-        {
-            return false;
-        }
+        result = !mysql_commit(connection);
     }
-    else
+    else if(mysql_rollback(connection))
     {
-        if(!Prepare(libcomp::String("ROLLBACK TRANSACTION %1").Arg(
-            transactionID)).Execute())
-        {
-            // If this happens the server may need to be shut down
-            LOG_CRITICAL("Rollback failed!\n");
-            return false;
-        }
+        // If this happens the server may need to be shut down
+        LOG_CRITICAL("Rollback failed!\n");
+    }
+
+    if(mysql_autocommit(connection, true))
+    {
+        return false;
     }
 
     return result;
 }
 
-String DatabaseSQLite3::GetFilepath() const
+bool DatabaseMariaDB::ConnectToDatabase(MYSQL*& connection, const libcomp::String& databaseName)
 {
-    auto config = std::dynamic_pointer_cast<objects::DatabaseConfigSQLite3>(mConfig);
-    auto directory = config->GetFileDirectory();
-    auto filename = config->GetDatabaseName();
+    Close(connection);
 
-    return String("%1%2.sqlite3").Arg(directory).Arg(filename);
+    connection = mysql_init(NULL);
+    if(connection == NULL)
+    {
+        return false;
+    }
+
+    auto config = std::dynamic_pointer_cast<objects::DatabaseConfigMariaDB>(mConfig);
+    auto hostIP = config->GetIP();
+    auto username = config->GetUsername();
+    auto password = config->GetPassword();
+
+    connection = mysql_real_connect(connection,
+        (!hostIP.IsEmpty() ? hostIP.C() : "localhost"),
+        (!username.IsEmpty() ? username.C() : NULL),
+        (!password.IsEmpty() ? password.C() : NULL),
+        (!databaseName.IsEmpty() ? databaseName.C() : NULL),
+        config->GetPort(),
+        NULL,
+        0);
+    if(connection == NULL)
+    {
+        LOG_ERROR("Failed to open database connection\n");
+
+        Close(connection);
+
+        return false;
+    }
+
+    return true;
 }
 
-String DatabaseSQLite3::GetVariableType(const std::shared_ptr
+MYSQL*& DatabaseMariaDB::GetConnection(bool autoConnect)
+{
+    auto threadID = std::this_thread::get_id();
+    std::lock_guard<std::mutex> lock(mConnectionLock);
+    if(mConnections.find(threadID) == mConnections.end())
+    {
+        MYSQL* connection = nullptr;
+
+        if(autoConnect)
+        {
+            auto config = std::dynamic_pointer_cast<objects::DatabaseConfigMariaDB>(mConfig);
+            ConnectToDatabase(connection, config->GetDatabaseName());
+        }
+
+        mConnections[threadID] = connection;
+    }
+    
+    return mConnections[threadID];
+}
+
+String DatabaseMariaDB::GetVariableType(const std::shared_ptr
     <libobjgen::MetaVariable> var)
 {
     switch(var->GetMetaType())
     {
         case libobjgen::MetaVariable::MetaVariableType_t::TYPE_STRING:
+            return "text";
         case libobjgen::MetaVariable::MetaVariableType_t::TYPE_REF:
-            return "string";
+            return "varchar(36)";
         case libobjgen::MetaVariable::MetaVariableType_t::TYPE_BOOL:
             return "bit";
         case libobjgen::MetaVariable::MetaVariableType_t::TYPE_S8:

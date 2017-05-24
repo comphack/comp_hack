@@ -117,10 +117,13 @@ public:
     String GetLogPath() const;
 
     /**
-     * Set the path to the log file. This will open the log file and truncate.
+     * Set the path to the log file. This will open the log file and optionally
+     * truncate.
      * @param path Path to the log file.
+     * @param truncate true if the file should be truncated, false if it should
+     * append to the existing file.
      */
-    void SetLogPath(const String& path);
+    void SetLogPath(const String& path, bool truncate);
 
     /**
      * Add a log hook to the logging subsystem. The log hook @em func will be
@@ -166,6 +169,18 @@ public:
      */
     void SetLogLevelEnabled(Level_t level, bool enabled);
 
+    /**
+     * Get if the log file timestamps are enabled.
+     * @return true if file logging timestamps are enabled.
+     */
+    bool GetLogFileTimestampsEnabled() const;
+
+    /**
+     * Set if the log file timestamps are enabled.
+     * @param enabled If file logging timestamps are enabled.
+     */
+    void SetLogFileTimestampsEnabled(bool enabled);
+
 protected:
     /**
      * @internal
@@ -188,6 +203,12 @@ protected:
      * Whether to log messages for each level.
      */
     bool mLogEnables[LOG_LEVEL_COUNT];
+
+    /**
+     * @internal
+     * Whether log file messages will contain a timestamp.
+     */
+    bool mLogFileTimestampEnabled;
 
     /**
      * @internal

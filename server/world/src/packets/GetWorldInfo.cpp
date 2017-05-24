@@ -28,6 +28,7 @@
 
 // libcomp Includes
 #include <DatabaseConfigCassandra.h>
+#include <DatabaseConfigMariaDB.h>
 #include <DatabaseConfigSQLite3.h>
 #include <Decrypt.h>
 #include <Log.h>
@@ -61,6 +62,10 @@ bool Parsers::GetWorldInfo::Parse(libcomp::ManagerPacket *pPacketManager,
             case objects::ServerConfig::DatabaseType_t::CASSANDRA:
                 dbConfig = std::shared_ptr<objects::DatabaseConfig>(
                     new objects::DatabaseConfigCassandra);
+                break;
+            case objects::ServerConfig::DatabaseType_t::MARIADB:
+                dbConfig = std::shared_ptr<objects::DatabaseConfig>(
+                    new objects::DatabaseConfigMariaDB);
                 break;
             case objects::ServerConfig::DatabaseType_t::SQLITE3:
                 dbConfig = std::shared_ptr<objects::DatabaseConfig>(
@@ -122,6 +127,9 @@ bool Parsers::GetWorldInfo::Parse(libcomp::ManagerPacket *pPacketManager,
         {
             case objects::ServerConfig::DatabaseType_t::CASSANDRA:
                 config->GetCassandraConfig()->SavePacket(reply, false);
+                break;
+            case objects::ServerConfig::DatabaseType_t::MARIADB:
+                config->GetMariaDBConfig()->SavePacket(reply, false);
                 break;
             case objects::ServerConfig::DatabaseType_t::SQLITE3:
                 config->GetSQLite3Config()->SavePacket(reply, false);

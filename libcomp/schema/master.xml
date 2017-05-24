@@ -6,6 +6,7 @@
     <!-- config classes -->
     <include path="databaseconfig.xml"/>
     <include path="databaseconfig_cassandra.xml"/>
+    <include path="databaseconfig_mariadb.xml"/>
     <include path="databaseconfig_sqlite3.xml"/>
     <include path="serverconfig.xml"/>
     

@@ -172,7 +172,7 @@ bool DatabaseCassandra::Setup(bool rebuild)
             return false;
         }
 
-        if(UsingDefaultKeyspace() &&
+        if(UsingDefaultDatabaseType() &&
             !Execute("CREATE TABLE objects ( uid uuid PRIMARY KEY, "
             "member_vars map<ascii, blob> );"))
         {
@@ -314,22 +314,14 @@ bool DatabaseCassandra::DeleteObjects(std::list<std::shared_ptr<PersistentObject
 
 bool DatabaseCassandra::VerifyAndSetupSchema(bool recreateTables)
 {
-    auto keyspace = std::dynamic_pointer_cast<objects::DatabaseConfigCassandra>(
-        mConfig)->GetKeyspace();
-    std::vector<std::shared_ptr<libobjgen::MetaObject>> metaObjectTables;
-    for(auto registrar : PersistentObject::GetRegistry())
-    {
-        std::string source = registrar.second->GetSourceLocation();
-        if(source == keyspace || (source.length() == 0 && UsingDefaultKeyspace()))
-        {
-            metaObjectTables.push_back(registrar.second);
-        }
-    }
-
+    auto metaObjectTables = GetMappedObjects();
     if(metaObjectTables.size() == 0)
     {
         return true;
     }
+
+    auto keyspace = std::dynamic_pointer_cast<objects::DatabaseConfigCassandra>(
+        mConfig)->GetKeyspace();
 
     LOG_DEBUG("Verifying database table structure.\n");
 
@@ -551,12 +543,6 @@ bool DatabaseCassandra::VerifyAndSetupSchema(bool recreateTables)
     LOG_DEBUG("Database verification complete.\n");
 
     return true;
-}
-
-bool DatabaseCassandra::UsingDefaultKeyspace()
-{
-    auto config = std::dynamic_pointer_cast<objects::DatabaseConfigCassandra>(mConfig);
-    return config->GetKeyspace() == config->GetDefaultKeyspace();
 }
 
 bool DatabaseCassandra::ProcessChangeSet(const std::shared_ptr<DatabaseChangeSet>& changes)

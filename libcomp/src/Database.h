@@ -223,6 +223,14 @@ public:
         DatabaseChangeSet>& changes) = 0;
 
     /**
+     * Check if the config is for the default database type.  Non-default connections are
+     * only responsible for verifying the schema of their own tables where-as
+     * default database connections may also have additional tables to maintain.
+     * @return true if the default database type is configured, false if it is not
+     */
+    bool UsingDefaultDatabaseType();
+
+    /**
      * Retrieve the last error raised by a database operation.
      * @return The last error that occurred
      */
@@ -245,6 +253,14 @@ protected:
      */
     std::shared_ptr<PersistentObject> LoadSingleObjectFromRow(
         size_t typeHash, DatabaseQuery& query);
+
+    /**
+     * Get the list of objects mapped to the current database type
+     * configured for the database.
+     * @return List of pointers to object definitions with a source
+     *  set to the current database type
+     */
+    std::vector<std::shared_ptr<libobjgen::MetaObject>> GetMappedObjects();
 
     /// Last error raised by a database related action
     String mError;

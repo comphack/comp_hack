@@ -2,7 +2,6 @@
 <objgen>
     <object name="DatabaseConfigSQLite3" baseobject="DatabaseConfig" persistent="false">
         <member type="string" name="DatabaseName" default="comp_hack"/>
-        <member type="string" name="DefaultDatabaseName" default="comp_hack"/>
         <member type="string" name="FileDirectory"/>
         <member type="u8" name="MaxRetryCount" default="3"/>
         <member type="u16" name="RetryDelay" default="500"/>

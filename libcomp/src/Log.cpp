@@ -28,6 +28,7 @@
 
 #include <iostream>
 #include <cassert>
+#include <chrono>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -167,6 +168,8 @@ Log::Log() : mLogFile(nullptr)
     {
         mLogEnables[i] = true;
     }
+
+    mLogFileTimestampEnabled = false;
 }
 
 Log::~Log()
@@ -229,10 +232,22 @@ void Log::LogMessage(Log::Level_t level, const String& msg)
 
     if(nullptr != mLogFile)
     {
-        std::vector<char> data = final.Data();
+        if(mLogFileTimestampEnabled)
+        {
+            auto currentTime = std::chrono::system_clock::to_time_t(
+                std::chrono::system_clock::now());
 
-        mLogFile->write(&data[0],
-            (std::streamsize)(data.size() * sizeof(char)));
+            std::stringstream ss;
+            ss << std::put_time(std::localtime(&currentTime), "%Y/%m/%d %T");
+
+            String formattedTime = String("[%1] ").Arg(ss.str());
+
+            mLogFile->write(formattedTime.C(),
+                (std::streamsize)(formattedTime.Length() * sizeof(char)));
+        }
+
+        mLogFile->write(final.C(),
+            (std::streamsize)(final.Length() * sizeof(char)));
         mLogFile->flush();
     }
 
@@ -254,7 +269,7 @@ String Log::GetLogPath() const
     return mLogPath;
 }
 
-void Log::SetLogPath(const String& path)
+void Log::SetLogPath(const String& path, bool truncate)
 {
     // Set the log path.
     mLogPath = path;
@@ -269,13 +284,22 @@ void Log::SetLogPath(const String& path)
         mLogFile = nullptr;
     }
 
-    // If the log path isn't empty, create a new log file. The file will be
-    // truncated first.
+    // If the log path isn't empty, log to a file. The file will be
+    // truncated and created new first if truncate is set.
     if(!mLogPath.IsEmpty())
     {
+        int mode = std::ofstream::out;
+        if(truncate)
+        {
+            mode |= std::ofstream::trunc;
+        }
+        else
+        {
+            mode |= std::ofstream::app;
+        }
+
         mLogFile = new std::ofstream();
-        mLogFile->open(mLogPath.C(), std::ofstream::out |
-            std::ofstream::trunc);
+        mLogFile->open(mLogPath.C(), (std::ios_base::openmode)mode);
         mLogFile->flush();
 
         // If this failed, close it.
@@ -344,4 +368,16 @@ void Log::SetLogLevelEnabled(Level_t level, bool enabled)
 
     // Set if the level is enabled.
     mLogEnables[level] = enabled;
+}
+
+bool Log::GetLogFileTimestampsEnabled() const
+{
+    // Get if the log file timestamps are enabled.
+    return mLogFileTimestampEnabled;
+}
+
+void Log::SetLogFileTimestampsEnabled(bool enabled)
+{
+    // Set if the log file timestamps are enabled.
+    mLogFileTimestampEnabled = enabled;
 }

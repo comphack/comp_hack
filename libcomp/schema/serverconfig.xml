@@ -4,8 +4,9 @@
         <member type="string" name="DiffieHellmanKeyPair"
             regex="^[a-fA-F0-9]{256}|$"/>
         <member type="u16" name="Port"/>
-        <member type="enum" name="DatabaseType" default="CASSANDRA">
+        <member type="enum" name="DatabaseType" default="MARIADB">
             <value>CASSANDRA</value>
+            <value>MARIADB</value>
             <value>SQLITE3</value>
         </member>
         <member type="bool" name="MultithreadMode" default="true"/>
@@ -14,6 +15,8 @@
         </member>
         <member type="bool" name="DataStoreSync" default="true"/>
         <member type="string" name="LogFile"/>
+        <member type="bool" name="LogFileTimestamp" default="true"/>
+        <member type="bool" name="LogFileAppend" default="true"/>
         <member type="bool" name="LogDebug" default="true"/>
         <member type="bool" name="LogInfo" default="true"/>
         <member type="bool" name="LogWarning" default="true"/>

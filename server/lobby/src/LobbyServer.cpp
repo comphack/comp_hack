@@ -32,6 +32,7 @@
 
 // libcomp Includes
 #include <DatabaseConfigCassandra.h>
+#include <DatabaseConfigMariaDB.h>
 #include <DatabaseConfigSQLite3.h>
 #include <Decrypt.h>
 #include <Log.h>
@@ -74,6 +75,9 @@ bool LobbyServer::Initialize()
 
     configMap[objects::ServerConfig::DatabaseType_t::CASSANDRA]
         = conf->GetCassandraConfig();
+
+    configMap[objects::ServerConfig::DatabaseType_t::MARIADB]
+        = conf->GetMariaDBConfig();
 
     mDatabase = GetDatabase(configMap, true);
 

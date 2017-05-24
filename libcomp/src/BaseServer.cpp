@@ -36,6 +36,7 @@
 
 // libcomp Includes
 #include <DatabaseCassandra.h>
+#include <DatabaseMariaDB.h>
 #include <DatabaseSQLite3.h>
 #include <Decrypt.h>
 #include <Log.h>
@@ -70,7 +71,8 @@ bool BaseServer::Initialize()
 
     if(!mConfig->GetLogFile().IsEmpty())
     {
-        log->SetLogPath(mConfig->GetLogFile());
+        log->SetLogPath(mConfig->GetLogFile(), !mConfig->GetLogFileAppend());
+        log->SetLogFileTimestampsEnabled(mConfig->GetLogFileTimestamp());
     }
 
     if(0 == mConfig->DataStoreCount())
@@ -90,8 +92,13 @@ bool BaseServer::Initialize()
         case objects::ServerConfig::DatabaseType_t::SQLITE3:
             LOG_DEBUG("Using SQLite3 Database.\n");
             break;
+        case objects::ServerConfig::DatabaseType_t::MARIADB:
+            LOG_DEBUG("Using MariaDB Database.\n");
+            break;
         case objects::ServerConfig::DatabaseType_t::CASSANDRA:
             LOG_DEBUG("Using Cassandra Database.\n");
+            LOG_WARNING("Cassandra will be deprecated in a"
+                " subsequent release.\n");
             break;
         default:
             LOG_CRITICAL("Invalid database type specified.\n");
@@ -153,6 +160,19 @@ std::shared_ptr<Database> BaseServer::GetDatabase(
                 LOG_CRITICAL("No SQLite3 Database configuration specified.\n");
             }
             break;
+        case objects::ServerConfig::DatabaseType_t::MARIADB:
+            if(configExists)
+            {
+                auto sqlConfig = std::dynamic_pointer_cast<
+                    objects::DatabaseConfigMariaDB>(configIter->second);
+                db = std::shared_ptr<libcomp::Database>(
+                    new libcomp::DatabaseMariaDB(sqlConfig));
+            }
+            else
+            {
+                LOG_CRITICAL("No MariaDB Database configuration specified.\n");
+            }
+            break;
         case objects::ServerConfig::DatabaseType_t::CASSANDRA:
             if(configExists)
             {
@@ -190,9 +210,23 @@ std::shared_ptr<Database> BaseServer::GetDatabase(
         initFailure = !db->Setup(createMockData);
         if(!initFailure && createMockData)
         {
-            std::string configPath = GetDefaultConfigPath() +
-                configIter->second->GetMockDataFilename().ToUtf8();
-            initFailure = !InsertDataFromFile(configPath, db);
+            auto configFile = configIter->second->GetMockDataFilename();
+            if(configFile.IsEmpty())
+            {
+                LOG_CRITICAL("Data mocking enabled but no setup file"
+                    " specified.\n");
+                initFailure = true;
+            }
+            else
+            {
+                std::string configPath = GetDefaultConfigPath() +
+                    configFile.ToUtf8();
+                if(!InsertDataFromFile(configPath, db))
+                {
+                    LOG_CRITICAL("Mock data failed to insert.\n");
+                    initFailure = true;
+                }
+            }
         }
     }
     else

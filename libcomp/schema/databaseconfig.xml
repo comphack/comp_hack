@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <objgen>
     <object name="DatabaseConfig" persistent="false">
+        <member type="string" name="DatabaseType" default="comp_hack"/>
+        <member type="string" name="DefaultDatabaseType" default="comp_hack"/>
         <member type="bool" name="MockData"/>
         <member type="string" name="MockDataFilename"/>
     </object>

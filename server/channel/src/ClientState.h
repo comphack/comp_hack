@@ -126,13 +126,6 @@ public:
     const libobjgen::UUID GetAccountUID() const;
 
     /**
-     * Check if the client state has everything needed to start
-     * being used.
-     * @return true if the state is ready to use, otherwise false
-     */
-    bool Ready();
-
-    /**
      * Handle any actions needed when the game client pings the
      * server with a sync request.  If the start time has not been
      * set, it will be set here.

@@ -73,7 +73,7 @@ bool Parsers::COMPDemonData::Parse(libcomp::ManagerPacket *pPacketManager,
     else if(box != 0)
     {
         LOG_ERROR("Non-COMP demon boxes are currently not supported.\n");
-        return false;
+        return true;
     }
 
     auto server = std::dynamic_pointer_cast<ChannelServer>

@@ -115,6 +115,8 @@ void AccountManager::HandleLoginResponse(const std::shared_ptr<
         demonState->RecalculateStats(server->GetDefinitionManager());
 
         reply.WriteU32Little(1);
+
+        state->SetLoggedIn(true);
     }
     else
     {

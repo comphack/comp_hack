@@ -2,6 +2,7 @@
 <objgen>
     <object name="ClientStateObject" persistent="false">
         <member type="bool" name="Authenticated"/>
+        <member type="bool" name="LoggedIn"/>
         <member type="AccountLogin*" name="AccountLogin"/>
     </object>
 </objgen>

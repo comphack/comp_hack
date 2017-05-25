@@ -34,6 +34,7 @@ SET(${PROJECT_NAME}_SRCS
     src/LobbyClientConnection.cpp
     src/LobbyServer.cpp
     src/LoginWebHandler.cpp
+    src/ManagerClientPacket.cpp
     src/ManagerConnection.cpp
     src/SessionManager.cpp
     src/World.cpp
@@ -48,6 +49,7 @@ SET(${PROJECT_NAME}_HDRS
     src/LobbyClientConnection.h
     src/LobbyServer.h
     src/LoginWebHandler.h
+    src/ManagerClientPacket.h
     src/ManagerConnection.h
     src/SessionManager.h
     src/World.h

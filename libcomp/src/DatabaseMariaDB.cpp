@@ -483,7 +483,7 @@ bool DatabaseMariaDB::VerifyAndSetupSchema(bool recreateTables)
             return false;
         }
 
-        fieldMap[name.ToUtf8()][colName.ToUtf8()] = colType;
+        fieldMap[name.ToLower().ToUtf8()][colName.ToLower().ToUtf8()] = colType;
     }
 
     q = Prepare(libcomp::String("SELECT TABLE_NAME, INDEX_NAME, COLUMN_NAME"
@@ -509,14 +509,14 @@ bool DatabaseMariaDB::VerifyAndSetupSchema(bool recreateTables)
             return false;
         }
 
-        indexedFields[name.ToUtf8()].insert(idxName.ToUtf8());
+        indexedFields[name.ToLower().ToUtf8()].insert(idxName.ToLower().ToUtf8());
     }
 
     for(auto metaObjectTable : metaObjectTables)
     {
         auto metaObject = *metaObjectTable.get();
         auto objName = metaObject.GetName();
-        auto objNameLower = String(objName).ToUtf8();
+        auto objNameLower = String(objName).ToLower().ToUtf8();
 
         std::vector<std::shared_ptr<libobjgen::MetaVariable>> vars;
         for(auto iter = metaObject.VariablesBegin();
@@ -558,7 +558,8 @@ bool DatabaseMariaDB::VerifyAndSetupSchema(bool recreateTables)
                 columns.erase("uid");
                 for(auto var : vars)
                 {
-                    auto name = String(var->GetName()).ToUtf8();
+                    auto name = String(var->GetName())
+                        .ToLower().ToUtf8();
                     auto type = GetVariableType(var);
                     
                     // Do not compare on size specifiers
@@ -578,7 +579,7 @@ bool DatabaseMariaDB::VerifyAndSetupSchema(bool recreateTables)
                     if(var->IsLookupKey() &&
                         indexes.find(indexName) == indexes.end())
                     {
-                        needsIndex.insert(name);
+                        needsIndex.insert(var->GetName());
                     }
                 }
             }
@@ -642,7 +643,7 @@ bool DatabaseMariaDB::VerifyAndSetupSchema(bool recreateTables)
             {
                 auto var = vars[i];
 
-                auto name = String("%1").Arg(var->GetName()).ToUtf8();
+                auto name = var->GetName();
 
                 if(!var->IsLookupKey() ||
                     (!creating && needsIndex.find(name) == needsIndex.end()))
@@ -651,7 +652,7 @@ bool DatabaseMariaDB::VerifyAndSetupSchema(bool recreateTables)
                 }
 
                 auto indexStr = String("idx_%1_%2")
-                    .Arg(objNameLower).Arg(name);
+                    .Arg(objName).Arg(name);
 
                 // MariaDB indexes values based off a set size so values like blobs and
                 // strings without a limited size need to be indexed by a specified amount
@@ -660,7 +661,7 @@ bool DatabaseMariaDB::VerifyAndSetupSchema(bool recreateTables)
                 auto fieldStr = String("`%1`%2").Arg(var->GetName()).Arg(limitIndex ? "(10)" : "");
 
                 auto cmd = String("CREATE INDEX %1 ON `%2`(%3);")
-                    .Arg(indexStr).Arg(objNameLower).Arg(fieldStr);
+                    .Arg(indexStr).Arg(objName).Arg(fieldStr);
 
                 if(Execute(cmd))
                 {

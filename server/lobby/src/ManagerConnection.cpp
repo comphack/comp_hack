@@ -300,6 +300,8 @@ void ManagerConnection::RemoveWorld(std::shared_ptr<lobby::World>& world)
                             LOG_WARNING(libcomp::String("%1 user(s) forcefully logged out"
                                 " from world %2.\n").Arg(usernames.size()).Arg(worldID));
                         }
+
+                        lobbyServer->SendWorldList(nullptr);
                     }, server, svr->GetID());
             }
             else
@@ -326,6 +328,19 @@ const std::shared_ptr<LobbyClientConnection> ManagerConnection::GetClientConnect
 {
     auto iter = mClientConnections.find(username);
     return iter != mClientConnections.end() ? iter->second : nullptr;
+}
+
+const std::list<std::shared_ptr<libcomp::TcpConnection>>
+    ManagerConnection::GetClientConnections() const
+{
+    std::list<std::shared_ptr<libcomp::TcpConnection>> retval;
+    auto connectionCopy = mClientConnections;
+    for(auto kv : connectionCopy)
+    {
+        retval.push_back(kv.second);
+    }
+
+    return retval;
 }
 
 void ManagerConnection::SetClientConnection(const std::shared_ptr<

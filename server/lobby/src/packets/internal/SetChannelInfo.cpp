@@ -89,5 +89,8 @@ bool Parsers::SetChannelInfo::Parse(libcomp::ManagerPacket *pPacketManager,
         world->RegisterChannel(svr);
     }
 
+    // Now update the world list for all connections
+    server->SendWorldList(nullptr);
+
     return true;
 }

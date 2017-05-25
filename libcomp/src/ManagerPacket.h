@@ -90,6 +90,9 @@ public:
     std::shared_ptr<libcomp::BaseServer> GetServer();
 
 protected:
+    virtual bool ValidateConnectionState(const std::shared_ptr<
+        libcomp::TcpConnection>& connection, CommandCode_t commandCode) const;
+
     /// Static list containing the packet message type to return via
     /// @ref ManagerPacket::GetSupportedTypes
     static std::list<libcomp::Message::MessageType> sSupportedTypes;

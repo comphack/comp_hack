@@ -38,6 +38,7 @@ SET(${PROJECT_NAME}_SRCS
     src/ChatManager.cpp
     src/ClientState.cpp
     src/EntityState.cpp
+    src/ManagerClientPacket.cpp
     src/ManagerConnection.cpp
     src/ManagerSystem.cpp
     src/SkillManager.cpp
@@ -56,6 +57,7 @@ SET(${PROJECT_NAME}_HDRS
     src/ChatManager.h
     src/ClientState.h
     src/EntityState.h
+    src/ManagerClientPacket.h
     src/ManagerConnection.h
     src/ManagerSystem.h
     src/Packets.h

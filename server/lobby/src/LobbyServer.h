@@ -82,7 +82,7 @@ public:
      * Get a list of pointers to the connected worlds.
      * @return List of pointers to the connected worlds
      */
-    std::list<std::shared_ptr<lobby::World>> GetWorlds();
+    std::list<std::shared_ptr<lobby::World>> GetWorlds() const;
 
     /**
      * Get a world by ID.
@@ -108,6 +108,15 @@ public:
      */
     const std::shared_ptr<lobby::World> RegisterWorld(
         std::shared_ptr<lobby::World>& world);
+
+    /**
+     * Send the world list to either one or all client connections.
+     * @param connection Optional pointer to a specific connection to
+     *  send the world list to.  If not specified, all connections  will
+     *  be broadcast to instead.
+     */
+    void SendWorldList(const std::shared_ptr<
+        libcomp::TcpConnection>& connection) const;
 
     /**
      * Get the main database.

@@ -158,10 +158,10 @@ bool DatabaseQueryMariaDB::Execute()
                     }
                     break;
                 case MYSQL_TYPE_BIT:
-                case MYSQL_TYPE_TINY:
                     {
                         mBufferBool.push_back(false);
                         b.buffer = &mBufferBool.back();
+                        b.buffer_length = field->length;
                     }
                     break;
                 default:
@@ -571,8 +571,7 @@ bool DatabaseQueryMariaDB::GetValue(const String& name, double& value)
 bool DatabaseQueryMariaDB::GetValue(size_t index, bool& value)
 {
     if(mResultColumnTypes.size() <= index
-        || (mResultColumnTypes[index] != MYSQL_TYPE_TINY
-            && mResultColumnTypes[index] != MYSQL_TYPE_BIT))
+        || mResultColumnTypes[index] != MYSQL_TYPE_BIT)
     {
         return false;
     }
@@ -682,6 +681,7 @@ bool DatabaseQueryMariaDB::GetRows(std::list<std::unordered_map<
                     }
                     break;
                 case MYSQL_TYPE_STRING:
+                case MYSQL_TYPE_VAR_STRING:
                     {
                         libcomp::String val;
                         GetValue(i, val);
@@ -691,7 +691,6 @@ bool DatabaseQueryMariaDB::GetRows(std::list<std::unordered_map<
                     }
                     break;
                 case MYSQL_TYPE_BIT:
-                case MYSQL_TYPE_TINY:
                     {
                         bool val;
                         GetValue(i, val);

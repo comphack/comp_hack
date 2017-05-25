@@ -75,7 +75,20 @@ bool ManagerPacket::ProcessMessage(const libcomp::Message::Message *pMessage)
             return false;
         }
 
-        return it->second->Parse(this, pPacketMessage->GetConnection(), p);
+        auto connection = pPacketMessage->GetConnection();
+        if(!ValidateConnectionState(connection, code))
+        {
+            connection->Close();
+            return false;
+        }
+
+        if(!it->second->Parse(this, connection, p))
+        {
+            connection->Close();
+            return false;
+        }
+
+        return true;
     }
     else
     {
@@ -86,6 +99,15 @@ bool ManagerPacket::ProcessMessage(const libcomp::Message::Message *pMessage)
 std::shared_ptr<libcomp::BaseServer> ManagerPacket::GetServer()
 {
     return mServer.lock();
+}
+
+bool ManagerPacket::ValidateConnectionState(const std::shared_ptr<
+    libcomp::TcpConnection>& connection, CommandCode_t commandCode) const
+{
+    (void)connection;
+    (void)commandCode;
+
+    return true;
 }
 
 bool Parsers::Placeholder::Parse(ManagerPacket *pPacketManager,

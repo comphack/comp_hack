@@ -58,7 +58,6 @@ before_install:
   - if [ ! -f ninja-linux.zip ]; then wget https://github.com/ninja-build/ninja/releases/download/v1.7.1/ninja-linux.zip; fi
   - if [ ! -f cmake-3.6.1-Linux-x86_64.tar.gz ]; then wget -q https://cmake.org/files/v3.6/cmake-3.6.1-Linux-x86_64.tar.gz; fi
   - if [ ! -f clang+llvm-3.8.0-x86_64-linux-gnu-ubuntu-14.04.tar.xz ]; then wget -q http://llvm.org/releases/3.8.0/clang+llvm-3.8.0-x86_64-linux-gnu-ubuntu-14.04.tar.xz; fi
-  - if [ ! -f apache-cassandra-3.10-bin.tar.gz ]; then wget http://apache.claz.org/cassandra/3.10/apache-cassandra-3.10-bin.tar.gz; fi
   - ls -lh
   - cd ${ROOT_DIR}
   - sudo apt-get update -q
@@ -92,15 +91,6 @@ before_script:
 script:
   - jdk_switcher use oraclejdk8
   - java -version
-  - tar xzf $CACHE_DIR/apache-cassandra-3.10-bin.tar.gz
-  - sudo mv apache-cassandra-3.10 /opt/cassandra
-  - sudo mkdir /var/lib/cassandra
-  - sudo mkdir /var/log/cassandra
-  - sudo chown -R $USER:$GROUP /var/lib/cassandra
-  - sudo chown -R $USER:$GROUP /var/log/cassandra
-  - export CASSANDRA_HOME="/opt/cassandra"
-  - export PATH="$PATH:$CASSANDRA_HOME/bin"
-  - sudo sh "$CASSANDRA_HOME/bin/cassandra" -R
   - sudo mkdir /etc/comp_hack
   - sudo cp contrib/testing/*.xml /etc/comp_hack/
   - mkdir -p build && cd build && cmake -G "${GENERATOR}" .. && cmake --build .
@@ -111,6 +101,4 @@ script:
   - bin/comp_world &
   - sleep 10
   - bin/comp_channel &
-  - nodetool status
-  - cqlsh -e "SHOW HOST; SHOW VERSION;"
   - cmake --build . --target test

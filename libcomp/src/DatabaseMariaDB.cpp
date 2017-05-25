@@ -483,7 +483,7 @@ bool DatabaseMariaDB::VerifyAndSetupSchema(bool recreateTables)
             return false;
         }
 
-        fieldMap[name.ToLower().ToUtf8()][colName.ToLower().ToUtf8()] = colType.ToLower();
+        fieldMap[name.ToUtf8()][colName.ToUtf8()] = colType;
     }
 
     q = Prepare(libcomp::String("SELECT TABLE_NAME, INDEX_NAME, COLUMN_NAME"
@@ -509,15 +509,14 @@ bool DatabaseMariaDB::VerifyAndSetupSchema(bool recreateTables)
             return false;
         }
 
-        indexedFields[name.ToLower().ToUtf8()].insert(idxName.ToLower().ToUtf8());
+        indexedFields[name.ToUtf8()].insert(idxName.ToUtf8());
     }
 
     for(auto metaObjectTable : metaObjectTables)
     {
         auto metaObject = *metaObjectTable.get();
         auto objName = metaObject.GetName();
-        auto objNameLower = String(objName)
-            .ToLower().ToUtf8();
+        auto objNameLower = String(objName).ToUtf8();
 
         std::vector<std::shared_ptr<libobjgen::MetaVariable>> vars;
         for(auto iter = metaObject.VariablesBegin();
@@ -559,8 +558,7 @@ bool DatabaseMariaDB::VerifyAndSetupSchema(bool recreateTables)
                 columns.erase("uid");
                 for(auto var : vars)
                 {
-                    auto name = String(
-                        var->GetName()).ToLower().ToUtf8();
+                    auto name = String(var->GetName()).ToUtf8();
                     auto type = GetVariableType(var);
                     
                     // Do not compare on size specifiers
@@ -644,7 +642,7 @@ bool DatabaseMariaDB::VerifyAndSetupSchema(bool recreateTables)
             {
                 auto var = vars[i];
 
-                auto name = String("%1").Arg(var->GetName()).ToLower().ToUtf8();
+                auto name = String("%1").Arg(var->GetName()).ToUtf8();
 
                 if(!var->IsLookupKey() ||
                     (!creating && needsIndex.find(name) == needsIndex.end()))

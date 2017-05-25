@@ -28,13 +28,13 @@
 
 // libcomp Includes
 #include <Log.h>
-#include <ManagerPacket.h>
 #include <ManagerSystem.h>
 #include <MessageTick.h>
 #include <PacketCodes.h>
 
 // channel Includes
 #include "ChannelClientConnection.h"
+#include "ManagerClientPacket.h"
 #include "Packets.h"
 
 // Object Includes
@@ -111,7 +111,7 @@ bool ChannelServer::Initialize()
     mQueueWorker.AddManager(systemManager);
 
     // Map packet parsers to supported packets
-    auto clientPacketManager = std::make_shared<libcomp::ManagerPacket>(self);
+    auto clientPacketManager = std::make_shared<ManagerClientPacket>(self);
     clientPacketManager->AddParser<Parsers::Login>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_LOGIN));
     clientPacketManager->AddParser<Parsers::Auth>(
@@ -285,17 +285,23 @@ ServerTime ChannelServer::GetServerTime()
 
 void ChannelServer::GetWorldClockTime(int8_t& phase, int8_t& hour, int8_t& min)
 {
-    // World time is relative to seconds so no need for more precision
-    std::time_t now = std::time(nullptr);
+    // Use the first calculable new moon start time.
+    // (Adjusted from NEW MOON 00:00 on Sep 9, 2012 12:47:40 GMT)
+    static uint64_t baseTime = 46060;
+
+    // World time is relative to seconds so no need for precision past time_t.
+    // Every 4 days, 15 full moon cycles will elapse and the same game time will
+    // occur on the same time offset.
+    uint64_t nowOffset = (uint64_t)(((uint64_t)std::time(nullptr) - baseTime) % 345600);
 
     // 24 minutes = 1 game phase (16 total)
-    phase = (int8_t)((now / 1440) % 16);
+    phase = (int8_t)((nowOffset / 1440) % 16);
 
     // 2 minutes = 1 game hour
-    hour = (int8_t)((now / 120) % 24);
+    hour = (int8_t)((nowOffset / 120) % 24);
 
     // 2 seconds = 1 game minute
-    min = (int8_t)((now / 2) % 60);
+    min = (int8_t)((nowOffset / 2) % 60);
 }
 
 const std::shared_ptr<objects::RegisteredChannel> ChannelServer::GetRegisteredChannel()

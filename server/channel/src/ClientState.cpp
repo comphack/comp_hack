@@ -134,11 +134,6 @@ const libobjgen::UUID ClientState::GetAccountUID() const
         mCharacterState->GetEntity()->GetAccount().GetUUID() : NULLUUID;
 }
 
-bool ClientState::Ready()
-{
-    return GetAuthenticated() && mCharacterState->Ready();
-}
-
 void ClientState::SyncReceived()
 {
     if(mStartTime == 0)

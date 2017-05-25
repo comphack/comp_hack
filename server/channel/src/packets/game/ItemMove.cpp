@@ -128,7 +128,7 @@ bool Parsers::ItemMove::Parse(libcomp::ManagerPacket *pPacketManager,
     {
         /// @todo
         LOG_ERROR("Item move request sent using a non-inventory item box.\n");
-        return false;
+        return true;
     }
     
     std::shared_ptr<objects::ItemBox> destBox;
@@ -140,7 +140,7 @@ bool Parsers::ItemMove::Parse(libcomp::ManagerPacket *pPacketManager,
     {
         /// @todo
         LOG_ERROR("Item move request sent using a non-inventory item box.\n");
-        return false;
+        return true;
     }
 
     if(nullptr != sourceBox && nullptr != destBox)

@@ -108,6 +108,8 @@ bool Parsers::Login::Parse(libcomp::ManagerPacket *pPacketManager,
             ErrorCodes_t::SUCCESS));
         reply.SetChallenge(0xCAFEBABE); /// @todo generate, save, and use.
         reply.SetSalt(account->GetSalt());
+
+        state(connection)->SetLoggedIn(true);
     }
 
     return connection->SendObject(reply);

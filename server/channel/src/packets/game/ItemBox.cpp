@@ -74,7 +74,7 @@ bool Parsers::ItemBox::Parse(libcomp::ManagerPacket *pPacketManager,
     {
         /// @todo
         LOG_ERROR("Item box request sent for a non-inventory item box.\n");
-        return false;
+        return true;
     }
 
     return true;

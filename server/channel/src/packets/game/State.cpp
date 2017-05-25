@@ -54,12 +54,6 @@ bool Parsers::State::Parse(libcomp::ManagerPacket *pPacketManager,
     (void)p;
 
     auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-    auto state = client->GetClientState();
-    if(!state->Ready())
-    {
-        return false;
-    }
-
     auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
 
     server->QueueWork(SendCharacterData, server, client);

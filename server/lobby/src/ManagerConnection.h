@@ -132,6 +132,13 @@ public:
         const libcomp::String& username) const;
 
     /**
+     * Get all client connections.
+     * @return List of pointers to all client connections
+     */
+    const std::list<std::shared_ptr<libcomp::TcpConnection>>
+        GetClientConnections() const;
+
+    /**
      * Set an active client connection after its account has
      * been detected.
      * @param connection Pointer to the client connection

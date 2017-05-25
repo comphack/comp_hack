@@ -1,10 +1,10 @@
 /**
- * @file server/lobby/src/packets/game/WorldList.cpp
+ * @file server/lobby/src/ManagerClientPacket.h
  * @ingroup lobby
  *
- * @author COMP Omega <compomega@tutanota.com>
+ * @author HACKfrost
  *
- * @brief Packet parser to return the lobby's world list.
+ * @brief Manager to handle lobby packet logic.
  *
  * This file is part of the Lobby Server (lobby).
  *
@@ -24,36 +24,37 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "Packets.h"
+#ifndef SERVER_LOBBY_SRC_MANAGERCLIENTPACKET_H
+#define SERVER_LOBBY_SRC_MANAGERCLIENTPACKET_H
 
 // libcomp Includes
-#include <Decrypt.h>
-#include <Log.h>
 #include <ManagerPacket.h>
-#include <Packet.h>
-#include <PacketCodes.h>
-#include <ReadOnlyPacket.h>
-#include <TcpConnection.h>
 
-// lobby Includes
-#include "LobbyServer.h"
-
-using namespace lobby;
-
-bool Parsers::WorldList::Parse(libcomp::ManagerPacket *pPacketManager,
-    const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
+namespace lobby
 {
-    if(p.Size() != 0)
-    {
-        return false;
-    }
 
-    libcomp::Packet reply;
-    reply.WritePacketCode(LobbyToClientPacketCode_t::PACKET_WORLD_LIST);
+/**
+ * Manager class responsible for handling client side packets.
+ */
+class ManagerClientPacket : public libcomp::ManagerPacket
+{
+public:
+    /**
+     * Create a new manager.
+     * @param server Pointer to the server that uses this manager
+     */
+    ManagerClientPacket(std::weak_ptr<libcomp::BaseServer> server);
 
-    auto server = std::dynamic_pointer_cast<LobbyServer>(pPacketManager->GetServer());
-    server->SendWorldList(connection);
+    /**
+     * Clean up the manager.
+     */
+    virtual ~ManagerClientPacket();
 
-    return true;
-}
+protected:
+    virtual bool ValidateConnectionState(const std::shared_ptr<
+        libcomp::TcpConnection>& connection, libcomp::CommandCode_t commandCode) const;
+};
+
+} // namespace lobby
+
+#endif // SERVER_LOBBY_SRC_MANAGERCLIENTPACKET_H

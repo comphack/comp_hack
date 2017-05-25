@@ -28,6 +28,7 @@
 
 // lobby Includes
 #include "LobbyClientConnection.h"
+#include "ManagerClientPacket.h"
 #include "Packets.h"
 
 // libcomp Includes
@@ -36,7 +37,6 @@
 #include <DatabaseConfigSQLite3.h>
 #include <Decrypt.h>
 #include <Log.h>
-#include <ManagerPacket.h>
 #include <PacketCodes.h>
 
 // Object Includes
@@ -128,7 +128,7 @@ bool LobbyServer::Initialize()
     mMainWorker.AddManager(internalPacketManager);
     mMainWorker.AddManager(connectionManager);
 
-    auto clientPacketManager = std::make_shared<libcomp::ManagerPacket>(self);
+    auto clientPacketManager = std::make_shared<ManagerClientPacket>(self);
     clientPacketManager->AddParser<Parsers::Login>(to_underlying(
         ClientToLobbyPacketCode_t::PACKET_LOGIN));
     clientPacketManager->AddParser<Parsers::Auth>(to_underlying(
@@ -162,7 +162,7 @@ LobbyServer::~LobbyServer()
 {
 }
 
-std::list<std::shared_ptr<lobby::World>> LobbyServer::GetWorlds()
+std::list<std::shared_ptr<lobby::World>> LobbyServer::GetWorlds() const
 {
     return mManagerConnection->GetWorlds();
 }
@@ -182,6 +182,68 @@ const std::shared_ptr<lobby::World> LobbyServer::RegisterWorld(
     std::shared_ptr<lobby::World>& world)
 {
     return mManagerConnection->RegisterWorld(world);
+}
+
+void LobbyServer::SendWorldList(const std::shared_ptr<
+    libcomp::TcpConnection>& connection) const
+{
+    libcomp::Packet p;
+    p.WritePacketCode(LobbyToClientPacketCode_t::PACKET_WORLD_LIST);
+
+    auto worlds = GetWorlds();
+    worlds.remove_if([](const std::shared_ptr<lobby::World>& world)
+        {
+            return world->GetRegisteredWorld()->GetStatus()
+                == objects::RegisteredWorld::Status_t::INACTIVE;
+        });
+
+    // World count.
+    p.WriteU8((uint8_t)worlds.size());
+
+    // Add each world to the list.
+    for(auto world : worlds)
+    {
+        auto worldServer = world->GetRegisteredWorld();
+
+        // ID for this world.
+        p.WriteU8(worldServer->GetID());
+
+        // Name of the world.
+        p.WriteString16Little(libcomp::Convert::ENCODING_UTF8,
+            worldServer->GetName(), true);
+
+        auto channels = world->GetChannels();
+
+        // Number of channels on this world.
+        p.WriteU8((uint8_t)channels.size());
+
+        // Add each channel for this world.
+        for(auto channel : channels)
+        {
+            // Name of the channel. This used to be displayed in the channel
+            // list that was hidden from the user.
+            p.WriteString16Little(libcomp::Convert::ENCODING_UTF8,
+                channel->GetName(), true);
+
+            // Ping time??? Again, something that used to be in the list.
+            p.WriteU16Little(1);
+
+            // 0 - Visible | 2 - Hidden (or PvP)
+            // Pointless without the list.
+            p.WriteU8(0);
+        }
+    }
+
+    if(nullptr == connection)
+    {
+        // Send to all client connections
+        auto connections = mManagerConnection->GetClientConnections();
+        libcomp::TcpConnection::BroadcastPacket(connections, p);
+    }
+    else
+    {
+        connection->SendPacket(p);
+    }
 }
 
 std::shared_ptr<libcomp::Database> LobbyServer::GetMainDatabase() const

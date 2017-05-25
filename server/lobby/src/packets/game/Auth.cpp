@@ -90,6 +90,8 @@ static bool CompleteLogin(
         }
     }
 
+    state(connection)->SetAuthenticated(true);
+
     libcomp::Packet reply;
     reply.WritePacketCode(LobbyToClientPacketCode_t::PACKET_AUTH);
 

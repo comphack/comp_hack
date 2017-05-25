@@ -117,6 +117,9 @@ bool SetWorldInfoFromPacket(libcomp::ManagerPacket *pPacketManager,
 
     server->RegisterWorld(world);
 
+    // Now update the world list for all connections
+    server->SendWorldList(nullptr);
+
     return true;
 }
 

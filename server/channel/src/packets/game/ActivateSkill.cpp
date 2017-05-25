@@ -82,7 +82,7 @@ bool Parsers::ActivateSkill::Parse(libcomp::ManagerPacket *pPacketManager,
                 LOG_ERROR(libcomp::String("Unknown skill target type encountered: %1\n")
                     .Arg(targetType));
                 skillManager->SendFailure(client, sourceEntityID, skillID);
-                return false;
+                return true;
             }
             break;
     }

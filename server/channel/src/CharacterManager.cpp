@@ -38,7 +38,9 @@
 #include "ChannelServer.h"
 
 // object Includes
+#include <AccountWorldData.h>
 #include <CharacterProgress.h>
+#include <DemonBox.h>
 #include <Expertise.h>
 #include <InheritedSkill.h>
 #include <Item.h>
@@ -302,9 +304,11 @@ void CharacterManager::SendOtherCharacterData(const std::list<std::shared_ptr<
 
     reply.WriteU8(0);   //Unknown bool
     reply.WriteS8(0);   // Unknown
+
+    libcomp::String clanName;
     reply.WriteString16Little(libcomp::Convert::ENCODING_CP932,
-        "Unknown", true);
-    reply.WriteS8(0);   // Unknown
+        clanName, true);
+    reply.WriteS8(otherState->GetStatusIcon());
     reply.WriteS8(0);   // Unknown
     reply.WriteS8(0);   // Unknown
 
@@ -356,29 +360,10 @@ void CharacterManager::SendPartnerData(const std::shared_ptr<
     auto cState = state->GetCharacterState();
     auto dState = state->GetDemonState();
     auto character = cState->GetEntity();
-    auto comp = character->GetCOMP();
 
     auto d = dState->GetEntity();
     if(d == nullptr)
     {
-        return;
-    }
-
-    int8_t slot = -1;
-    for(size_t i = 0; i < comp.size(); i++)
-    {
-        if(d == comp[i].Get())
-        {
-            slot = (int8_t)i;
-            break;
-        }
-    }
-
-    if(slot == -1)
-    {
-        LOG_ERROR(libcomp::String("Parter demon encountered that does not"
-            " exist in the COMP of character: %1\n").Arg(
-                character->GetUUID().ToString()));
         return;
     }
 
@@ -393,7 +378,7 @@ void CharacterManager::SendPartnerData(const std::shared_ptr<
     libcomp::Packet reply;
     reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_PARTNER_DATA);
     reply.WriteS32Little(dState->GetEntityID());
-    reply.WriteS8(slot);
+    reply.WriteS8(d->GetBoxSlot());
     reply.WriteS64Little(state->GetObjectID(d->GetUUID()));
     reply.WriteU32Little(d->GetType());
     reply.WriteS16Little(dState->GetMaxHP());
@@ -571,17 +556,17 @@ void CharacterManager::SendOtherPartnerData(const std::list<std::shared_ptr<
     }
 }
 
-void CharacterManager::SendCOMPDemonData(const std::shared_ptr<
+void CharacterManager::SendDemonData(const std::shared_ptr<
     ChannelClientConnection>& client,
-    int8_t box, int8_t slot, int64_t id)
+    int8_t boxID, int8_t slot, int64_t demonID)
 {
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
     auto dState = state->GetDemonState();
-    auto comp = cState->GetEntity()->GetCOMP();
+    auto box = GetDemonBox(state, boxID);
 
-    auto d = comp[(size_t)slot].Get();
-    if(d == nullptr || state->GetObjectID(d->GetUUID()) != id)
+    auto d = box->GetDemons((size_t)slot).Get();
+    if(d == nullptr || state->GetObjectID(d->GetUUID()) != demonID)
     {
         return;
     }
@@ -590,10 +575,10 @@ void CharacterManager::SendCOMPDemonData(const std::shared_ptr<
     bool isSummoned = dState->GetEntity() == d;
 
     libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_COMP_DEMON_DATA);
-    reply.WriteS8(box);
+    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_DEMON_BOX_DATA);
+    reply.WriteS8(boxID);
     reply.WriteS8(slot);
-    reply.WriteS64Little(id);
+    reply.WriteS64Little(demonID);
     reply.WriteU32Little(d->GetType());
 
     reply.WriteS16Little(cs->GetMaxHP());
@@ -682,19 +667,32 @@ void CharacterManager::SendCOMPDemonData(const std::shared_ptr<
     client->SendPacket(reply);
 }
 
-void CharacterManager::SendStatusIcon(const std::shared_ptr<ChannelClientConnection>& client)
+void CharacterManager::SetStatusIcon(const std::shared_ptr<ChannelClientConnection>& client, int8_t icon)
 {
-    /// @todo: implement icons
-    uint8_t icon = 0;
+    auto state = client->GetClientState();
 
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_STATUS_ICON);
-    reply.WriteU8(0);
-    reply.WriteU8(icon);
+    if(state->GetStatusIcon() == icon)
+    {
+        return;
+    }
 
-    client->SendPacket(reply);
+    state->SetStatusIcon(icon);
 
-    /// @todo: broadcast to other players
+    // Send icon to the client
+    libcomp::Packet p;
+    p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_STATUS_ICON);
+    p.WriteS8(0);
+    p.WriteS8(icon);
+
+    client->SendPacket(p);
+
+    // Send icon to others in the zone
+    p.Clear();
+    p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_STATUS_ICON_OTHER);
+    p.WriteS32Little(state->GetCharacterState()->GetEntityID());
+    p.WriteS8(icon);
+
+    mServer.lock()->GetZoneManager()->BroadcastPacket(client, p, false);
 }
 
 void CharacterManager::SummonDemon(const std::shared_ptr<
@@ -709,7 +707,7 @@ void CharacterManager::SummonDemon(const std::shared_ptr<
 
     auto demon = std::dynamic_pointer_cast<objects::Demon>(
         libcomp::PersistentObject::GetObjectByUUID(state->GetObjectUUID(demonID)));
-    if(nullptr == demon || character->GetUUID() != demon->GetCharacter().GetUUID())
+    if(nullptr == demon)
     {
         return;
     }
@@ -762,25 +760,108 @@ void CharacterManager::StoreDemon(const std::shared_ptr<
     zoneManager->BroadcastPacket(client, reply, true);
 }
 
+void CharacterManager::SendDemonBoxData(const std::shared_ptr<
+    ChannelClientConnection>& client, int8_t boxID)
+{
+    auto state = client->GetClientState();
+    auto cState = state->GetCharacterState();
+    auto box = GetDemonBox(state, boxID);
+
+    auto character = cState->GetEntity();
+    auto progress = character->GetProgress();
+
+    uint32_t expiration = 0;
+    int32_t count = 0;
+    size_t maxSlots = boxID == 0 ? (size_t)progress->GetMaxCOMPSlots() : 50;
+    if(nullptr != box)
+    {
+        for(size_t i = 0; i < maxSlots; i++)
+        {
+            count += !box->GetDemons(i).IsNull() ? 1 : 0;
+        }
+        expiration = box->GetRentalExpiration();
+    }
+
+    libcomp::Packet reply;
+    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_DEMON_BOX);
+
+    reply.WriteS8(boxID);
+    reply.WriteS32Little(0);   //Unknown
+    reply.WriteS32Little(expiration == 0 || box == nullptr
+        ? -1 : ChannelServer::GetExpirationInSeconds(expiration));
+    reply.WriteS32Little(count);
+
+    for(size_t i = 0; i < maxSlots; i++)
+    {
+        if(nullptr == box || box->GetDemons(i).IsNull()) continue;
+
+        GetDemonPacketData(reply, client, box, (int8_t)i);
+        reply.WriteU8(0);   //Unknown
+    }
+
+    reply.WriteU8((uint8_t)maxSlots);
+
+    client->SendPacket(reply);
+}
+
+std::shared_ptr<objects::DemonBox> CharacterManager::GetDemonBox(
+    ClientState* state, int8_t boxID)
+{
+    auto cState = state->GetCharacterState();
+    auto character = cState->GetEntity();
+    auto worldData = state->GetAccountWorldData();
+
+    return boxID == 0
+        ? character->GetCOMP().Get()
+        : worldData->GetDemonBoxes((size_t)(boxID-1)).Get();
+}
+
+std::shared_ptr<objects::ItemBox> CharacterManager::GetItemBox(
+    ClientState* state, int8_t boxType, int64_t boxID)
+{
+    auto cState = state->GetCharacterState();
+    auto character = cState->GetEntity();
+    auto worldData = state->GetAccountWorldData();
+
+    std::shared_ptr<objects::ItemBox> box;
+    switch((objects::ItemBox::Type_t)boxType)
+    {
+        case objects::ItemBox::Type_t::INVENTORY:
+            box = character->GetItemBoxes((size_t)boxID).Get();
+            break;
+        case objects::ItemBox::Type_t::ITEM_DEPO:
+            box = worldData->GetItemBoxes((size_t)boxID).Get();
+            break;
+        default:
+            if(nullptr == box)
+            {
+                LOG_ERROR(libcomp::String("Attempted to retrieve unknown"
+                    " item box of type %1, with ID %2\n").Arg(boxType).Arg(boxID));
+            }
+            break;
+    }
+
+    return box;
+}
+
 void CharacterManager::SendItemBoxData(const std::shared_ptr<
-    ChannelClientConnection>& client, int64_t boxID)
+    ChannelClientConnection>& client, const std::shared_ptr<objects::ItemBox>& box)
 {
     std::list<uint16_t> allSlots = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
                                     10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
                                     20, 21, 22, 23, 24, 25, 26, 27, 28, 29,
                                     30, 31, 32, 33, 34, 35, 36, 37, 38, 39,
                                     40, 41, 42, 43, 44, 45, 46, 47, 48, 49 };
-    SendItemBoxData(client, boxID, allSlots);
+    SendItemBoxData(client, box, allSlots);
 }
 
 void CharacterManager::SendItemBoxData(const std::shared_ptr<
-    ChannelClientConnection>& client, int64_t boxID,
+    ChannelClientConnection>& client, const std::shared_ptr<objects::ItemBox>& box,
     const std::list<uint16_t>& slots)
 {
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
     auto character = cState->GetEntity();
-    auto box = character->GetItemBoxes((size_t)boxID);
 
     bool updateMode = slots.size() < 50;
 
@@ -793,8 +874,8 @@ void CharacterManager::SendItemBoxData(const std::shared_ptr<
     {
         reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_ITEM_BOX);
     }
-    reply.WriteS8(box->GetType());
-    reply.WriteS64(state->GetObjectID(box->GetUUID()));
+    reply.WriteS8((int8_t)box->GetType());
+    reply.WriteS64(box->GetBoxID());
     
     if(updateMode)
     {
@@ -896,14 +977,17 @@ void CharacterManager::SendItemBoxData(const std::shared_ptr<
 
 std::list<std::shared_ptr<objects::Item>> CharacterManager::GetExistingItems(
     const std::shared_ptr<objects::Character>& character,
-    uint32_t itemID)
+    uint32_t itemID, std::shared_ptr<objects::ItemBox> box)
 {
-    auto itemBox = character->GetItemBoxes(0).Get();
+    if(box == nullptr)
+    {
+        box = character->GetItemBoxes(0).Get();
+    }
 
     std::list<std::shared_ptr<objects::Item>> existing;
     for(size_t i = 0; i < 50; i++)
     {
-        auto item = itemBox->GetItems(i);
+        auto item = box->GetItems(i);
         if(!item.IsNull() && item->GetType() == itemID)
         {
             existing.push_back(item.Get());
@@ -1131,7 +1215,7 @@ bool CharacterManager::AddRemoveItem(const std::shared_ptr<
         }
     }
 
-    SendItemBoxData(client, 0, updatedSlots);
+    SendItemBoxData(client, itemBox, updatedSlots);
 
     dbChanges->Update(itemBox);
 
@@ -1274,11 +1358,15 @@ std::shared_ptr<objects::Demon> CharacterManager::ContractDemon(
         return nullptr;
     }
 
+    auto comp = character->GetCOMP().Get();
+    auto progress = character->GetProgress();
+
     //Find the next empty slot to add the demon to
     int8_t compSlot = -1;
-    for(size_t i = 0; i < 10; i++)
+    size_t maxCompSlots = (size_t)progress->GetMaxCOMPSlots();
+    for(size_t i = 0; i < maxCompSlots; i++)
     {
-        if(character->GetCOMP(i).IsNull())
+        if(comp->GetDemons(i).IsNull())
         {
             compSlot = (int8_t)i;
             break;
@@ -1317,21 +1405,22 @@ std::shared_ptr<objects::Demon> CharacterManager::ContractDemon(
     }
 
     d->SetLocked(false);
-    d->SetAccount(character->GetAccount());
-    d->SetCharacter(character);
+    d->SetDemonBox(comp);
+    d->SetBoxSlot(compSlot);
 
     d->Register(d);
     ds->Register(ds);
     d->SetCoreStats(ds);
     ds->SetEntity(std::dynamic_pointer_cast<
         libcomp::PersistentObject>(d));
-    character->SetCOMP((size_t)compSlot, d);
+
+    comp->SetDemons((size_t)compSlot, d);
 
     auto dbChanges = libcomp::DatabaseChangeSet::Create(
         character->GetAccount().GetUUID());
     dbChanges->Insert(d);
     dbChanges->Insert(ds);
-    dbChanges->Update(character);
+    dbChanges->Update(comp);
 
     auto server = mServer.lock();
     server->GetWorldDatabase()->QueueChangeSet(dbChanges);
@@ -1677,32 +1766,6 @@ bool CharacterManager::LearnSkill(const std::shared_ptr<channel::ChannelClientCo
     return true;
 }
 
-bool CharacterManager::UpdateHomepoint(const std::shared_ptr<
-    channel::ChannelClientConnection>& client, uint32_t zoneID, float xCoord, float yCoord)
-{
-    auto state = client->GetClientState();
-    auto cState = state->GetCharacterState();
-    auto character = cState->GetEntity();
-
-    /// @todo: check for invalid zone types or positions
-
-    character->SetHomepointZone(zoneID);
-    character->SetHomepointX(xCoord);
-    character->SetHomepointY(yCoord);
-
-    libcomp::Packet p;
-    p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_HOMEPOINT_UPDATE);
-    p.WriteS32Little((int32_t)zoneID);
-    p.WriteFloat(xCoord);
-    p.WriteFloat(yCoord);
-
-    client->SendPacket(p);
-
-    mServer.lock()->GetWorldDatabase()->QueueUpdate(character, state->GetAccountUID());
-
-    return true;
-}
-
 bool CharacterManager::UpdateMapFlags(const std::shared_ptr<
     channel::ChannelClientConnection>& client, size_t mapIndex, uint8_t mapValue)
 {
@@ -1943,13 +2006,14 @@ void CharacterManager::CalculateDependentStats(
     }
 }
 
-void CharacterManager::GetCOMPSlotPacketData(libcomp::Packet& p,
-    const std::shared_ptr<channel::ChannelClientConnection>& client, size_t slot)
+void CharacterManager::GetDemonPacketData(libcomp::Packet& p,
+    const std::shared_ptr<channel::ChannelClientConnection>& client,
+    const std::shared_ptr<objects::DemonBox>& box, int8_t slot)
 {
     auto state = client->GetClientState();
-    auto demon = state->GetCharacterState()->GetEntity()->GetCOMP(slot).Get();
+    auto demon = box->GetDemons((size_t)slot).Get();
 
-    p.WriteS8(static_cast<int8_t>(slot)); // Slot
+    p.WriteS8(slot);
     p.WriteS64Little(nullptr != demon
         ? state->GetObjectID(demon->GetUUID()) : -1);
 

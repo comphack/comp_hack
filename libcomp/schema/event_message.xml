@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="EventMessage" baseobject="Event" persistent="false">
+        <member type="enum" name="eventType" inherited="true" default="MESSAGE"/>
+        <member type="list" name="messageIDs">
+            <element type="s32"/>
+        </member>
+        <member type="string" name="next"/>
+        <member type="bool" name="pop"/>
+        <member type="bool" name="popNext"/>
+    </object>
+    <object name="EventNPCMessage" baseobject="EventMessage" persistent="false">
+        <member type="enum" name="eventType" inherited="true" default="NPC_MESSAGE"/>
+        <member type="s32" name="unknownDefault" default="170"/>
+        <member type="list" name="unknown">	<!-- Camera focus settings? -->
+            <element type="s32"/>
+        </member>
+    </object>
+</objgen>

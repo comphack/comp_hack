@@ -45,12 +45,9 @@
 
 using namespace channel;
 
-/// @todo: does this work on item boxes that are not the inventory?
-/// Omega: I don't think so. You have to move the item to inventory first.
-
 void SplitStack(const std::shared_ptr<ChannelServer> server,
     const std::shared_ptr<ChannelClientConnection> client,
-    std::pair<uint32_t, uint16_t> sourceItem)
+    std::pair<uint32_t, uint16_t> sourceItem, uint32_t targetSlot)
 {
     auto state = client->GetClientState();
     auto character = state->GetCharacterState()->GetEntity();
@@ -63,16 +60,20 @@ void SplitStack(const std::shared_ptr<ChannelServer> server,
     auto destItem = std::shared_ptr<objects::Item>(
         new objects::Item(*srcItem));
 
-    size_t destSlot = 0;
-    for(; destSlot < 50; destSlot++)
+    bool targetSpecified = targetSlot != static_cast<uint32_t>(-1);
+    if(!targetSpecified)
     {
-        if(itemBox->GetItems(destSlot).IsNull())
+        targetSlot = 0;
+        for(; targetSlot < 50; targetSlot++)
         {
-            break;
+            if (itemBox->GetItems(targetSlot).IsNull())
+            {
+                break;
+            }
         }
     }
 
-    if(destSlot == 50)
+    if(targetSlot == 50 || !itemBox->GetItems((size_t)targetSlot).IsNull())
     {
         LOG_ERROR(libcomp::String("Split stack failed because there was"
             " no empty slot available for character: %1\n").Arg(
@@ -83,29 +84,23 @@ void SplitStack(const std::shared_ptr<ChannelServer> server,
     srcItem->SetStackSize(static_cast<uint16_t>(
         srcItem->GetStackSize() - srcStack));
     destItem->SetStackSize(srcStack);
-    destItem->SetBoxSlot((int8_t)destSlot);
+    destItem->SetBoxSlot((int8_t)targetSlot);
 
-    auto worldDB = server->GetWorldDatabase();
-    if(destItem->Register(destItem) && itemBox->SetItems(destSlot, destItem))
-    {
-        state->SetObjectID(destItem->GetUUID(),
-            server->GetNextObjectID());
+    destItem->Register(destItem);
+    itemBox->SetItems((size_t)targetSlot, destItem);
 
-        server->GetCharacterManager()->SendItemBoxData(client, 0);
+    state->SetObjectID(destItem->GetUUID(),
+        server->GetNextObjectID());
 
-        auto dbChanges = libcomp::DatabaseChangeSet::Create(
-            state->GetAccountUID());
-        dbChanges->Insert(destItem);
-        dbChanges->Update(srcItem);
-        dbChanges->Update(itemBox);
-        server->GetWorldDatabase()->QueueChangeSet(dbChanges);
-    }
-    else
-    {
-        LOG_ERROR(libcomp::String("Save failed during split stack operation"
-            " which may have resulted in loss of data for character: %1\n")
-            .Arg(character->GetUUID().ToString()));
-    }
+    std::list<uint16_t> updatedSlots = { (uint16_t)srcSlot, (uint16_t)targetSlot };
+    server->GetCharacterManager()->SendItemBoxData(client, itemBox, updatedSlots);
+
+    auto dbChanges = libcomp::DatabaseChangeSet::Create(
+        state->GetAccountUID());
+    dbChanges->Insert(destItem);
+    dbChanges->Update(srcItem);
+    dbChanges->Update(itemBox);
+    server->GetWorldDatabase()->QueueChangeSet(dbChanges);
 }
 
 void CombineStacks(const std::shared_ptr<ChannelServer> server,
@@ -117,10 +112,11 @@ void CombineStacks(const std::shared_ptr<ChannelServer> server,
     auto character = state->GetCharacterState()->GetEntity();
     auto itemBox = character->GetItemBoxes(0).Get();
 
-    auto targetItem = itemBox->GetItems(targetSlot);
-    auto worldDB = server->GetWorldDatabase();
+    auto targetItem = itemBox->GetItems(targetSlot).Get();
 
-    std::list<std::shared_ptr<objects::Item>> deleteItems;
+    auto dbChanges = libcomp::DatabaseChangeSet::Create(
+        state->GetAccountUID());
+    dbChanges->Update(itemBox);
     for(auto sourceItem : sourceItems)
     {
         size_t srcSlot = (size_t)sourceItem.first;
@@ -132,32 +128,21 @@ void CombineStacks(const std::shared_ptr<ChannelServer> server,
 
         if(srcItem->GetStackSize() == 0)
         {
-            deleteItems.push_back(srcItem);
+            dbChanges->Delete(srcItem);
             itemBox->SetItems(srcSlot, NULLUUID);
+        }
+        else
+        {
+            dbChanges->Update(srcItem);
         }
 
         targetItem->SetStackSize(static_cast<uint16_t>(
             targetItem->GetStackSize() + srcStack));
 
-        if(!srcItem->Update(worldDB) || !targetItem->Update(worldDB))
-        {
-            LOG_ERROR(libcomp::String("Save failed during combine stack operation"
-                " which may have resulted in invalid item data for character: %1\n")
-                .Arg(character->GetUUID().ToString()));
-        }
+        dbChanges->Update(targetItem);
     }
 
-    if(deleteItems.size() > 0)
-    {
-        auto objs = libcomp::PersistentObject::ToList<objects::Item>(
-            deleteItems);
-        if(!worldDB->DeleteObjects(objs) || !itemBox->Update(worldDB))
-        {
-            LOG_ERROR(libcomp::String("Save failed during combine stack operation"
-                " which may have resulted in invalid item data for character: %1\n")
-                .Arg(character->GetUUID().ToString()));
-        }
-    }
+    server->GetWorldDatabase()->QueueChangeSet(dbChanges);
 }
 
 bool Parsers::ItemStack::Parse(libcomp::ManagerPacket *pPacketManager,
@@ -199,12 +184,12 @@ bool Parsers::ItemStack::Parse(libcomp::ManagerPacket *pPacketManager,
     auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
         connection);
 
+    // A stack is being requested when the target slot contains an item.
+    // If the target slot is -1, a split is being requested to the next
+    // available slot.
+    bool isSplit = true;
     uint32_t targetSlot = p.ReadU32Little();
-    if(targetSlot == static_cast<uint32_t>(-1))
-    {
-        server->QueueWork(SplitStack, server, client, srcItems.front());
-    }
-    else
+    if(targetSlot != static_cast<uint32_t>(-1))
     {
         if(targetSlot >= 50)
         {
@@ -213,6 +198,18 @@ bool Parsers::ItemStack::Parse(libcomp::ManagerPacket *pPacketManager,
             return false;
         }
 
+        auto state = client->GetClientState();
+        auto character = state->GetCharacterState()->GetEntity();
+        auto itemBox = character->GetItemBoxes(0).Get();
+        isSplit = itemBox->GetItems((size_t)targetSlot).IsNull();
+    }
+
+    if(isSplit)
+    {
+        server->QueueWork(SplitStack, server, client, srcItems.front(), targetSlot);
+    }
+    else
+    {
         server->QueueWork(CombineStacks, server, client, srcItems, targetSlot);
     }
 

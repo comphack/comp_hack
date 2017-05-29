@@ -2,8 +2,8 @@
 <objgen>
     <object name="Demon" location="world">
         <member type="u32" name="Type"/>
-        <member type="Account*" name="Account" key="true" unique="false"/>
-        <member type="Character*" name="Character" key="true" unique="false"/>
+        <member type="DemonBox*" name="DemonBox"/>
+        <member type="s8" name="BoxSlot" default="-1"/>
         <member type="u16" name="AttackSettings"/>
         <member type="s32" name="SoulPoints"/>
         <member type="u16" name="GrowthType"/>
@@ -37,5 +37,16 @@
         <member type="u32" name="Skill"/>
         <member type="Demon*" name="Demon" key="true" unique="false"/>
         <member type="s16" name="Progress"/>
+    </object>
+    <object name="DemonBox" location="world">
+        <member type="s8" name="BoxID"/>
+        <member type="Account*" name="Account" key="true" unique="false"/>
+        <member type="Character*" name="Character" key="true" unique="false"/>
+
+        <!-- The COMP only uses the first 10 elements at most -->
+        <member type="array" name="Demons" size="50">
+            <element type="Demon*"/>
+        </member>
+        <member type="u32" name="RentalExpiration"/>
     </object>
 </objgen>

@@ -1,10 +1,10 @@
 /**
- * @file server/channel/src/packets/game/COMPList.cpp
+ * @file server/channel/src/packets/game/DemonBoxData.cpp
  * @ingroup channel
  *
  * @author HACKfrost
  *
- * @brief Request from the client to return the COMP's demon list.
+ * @brief Request from the client to return a demon in a demon box's data.
  *
  * This file is part of the Channel Server (channel).
  *
@@ -27,6 +27,7 @@
 #include "Packets.h"
 
 // libcomp Includes
+#include <Log.h>
 #include <ManagerPacket.h>
 #include <Packet.h>
 #include <PacketCodes.h>
@@ -34,7 +35,7 @@
 #include <TcpConnection.h>
 
 // object Includes
-#include <StatusEffect.h>
+#include <CharacterProgress.h>
 
 // channel Includes
 #include "ChannelServer.h"
@@ -42,59 +43,35 @@
 
 using namespace channel;
 
-void SendCOMPList(const std::shared_ptr<ChannelServer> server,
-    const std::shared_ptr<ChannelClientConnection> client,
-    int8_t unknown)
-{
-    auto state = client->GetClientState();
-    auto cState = state->GetCharacterState();
-    auto character = cState->GetEntity();
-    auto comp = character->GetCOMP();
-
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_COMP_LIST);
-
-    int32_t count = 0;
-
-    for(size_t i = 0; i < 10; i++)
-    {
-        count += !comp[i].IsNull() ? 1 : 0;
-    }
-
-    reply.WriteS8(unknown);
-    reply.WriteS32Little(0);   //Unknown
-    reply.WriteS32Little(-1);   //Unknown
-    reply.WriteS32Little(count);
-
-    auto characterManager = server->GetCharacterManager();
-    for(size_t i = 0; i < 10; i++)
-    {
-        if(comp[i].IsNull()) continue;
-
-        characterManager->GetCOMPSlotPacketData(reply, client, i);
-        reply.WriteU8(0);   //Unknown
-    }
-
-    reply.WriteU8(10);  //Total COMP slots
-
-    client->SendPacket(reply);
-}
-
-bool Parsers::COMPList::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::DemonBoxData::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {
-    if(p.Size() != 1)
+    if(p.Size() != 10)
     {
         return false;
     }
 
-    int8_t unknown = p.ReadS8();    //Demon container? Is this ever not 0 for COMP?
+    int8_t boxID = p.ReadS8();
+    int8_t slot = p.ReadS8();
+    int64_t demonID = p.ReadS64Little();
 
     auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
     auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+    auto state = client->GetClientState();
+    auto cState = state->GetCharacterState();
+    auto character = cState->GetEntity();
+    auto progress = character->GetProgress();
 
-    server->QueueWork(SendCOMPList, server, client, unknown);
+    size_t maxSlots = boxID == 0 ? (size_t)progress->GetMaxCOMPSlots() : 50;
+    if(slot < 0 || (size_t)slot >= maxSlots)
+    {
+        LOG_ERROR(libcomp::String("Demon box slot exceeded the maximum available slots"
+            " requested for demon data information.\n").Arg(slot));
+        return false;
+    }
+
+    server->GetCharacterManager()->SendDemonData(client, boxID, slot, demonID);
 
     return true;
 }

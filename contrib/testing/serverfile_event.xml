@@ -1,0 +1,20 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="EventHomepoint">
+        <member name="ID">event_homepoint</member>
+    </object>
+    <object name="EventOpenMenu">
+        <member name="ID">event_itemDepo</member>
+        <member name="menuType">180</member>
+    </object>
+    <object name="EventOpenMenu">
+        <member name="ID">event_demonDepo</member>
+        <member name="menuType">181</member>
+    </object>
+    <object name="EventNPCMessage">
+        <member name="ID">test_message</member>
+        <member name="messageIDs">
+            <element>85</element>
+        </member>
+    </object>
+</objgen>

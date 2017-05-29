@@ -190,13 +190,22 @@ SET(${PROJECT_NAME}_SCHEMA
     schema/account.xml
     schema/accountlogin.xml
     schema/action.xml
+    schema/action_startevent.xml
     schema/action_zonechange.xml
     schema/character.xml
     schema/databaseconfig.xml
     schema/databaseconfig_cassandra.xml
     schema/databaseconfig_mariadb.xml
     schema/databaseconfig_sqlite3.xml
+    schema/demon.xml
     schema/enemy.xml
+    schema/event.xml
+    schema/event_homepoint.xml
+    schema/event_message.xml
+    schema/event_openmenu.xml
+    schema/event_performactions.xml
+    schema/event_prompt.xml
+    schema/item.xml
     schema/packet_login.xml
     schema/packet_login_reply.xml
     schema/packet_response_code.xml
@@ -245,6 +254,8 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     AccountWorldData.cpp
     Action.h
     Action.cpp
+    ActionStartEvent.h
+    ActionStartEvent.cpp
     ActionZoneChange.h
     ActionZoneChange.cpp
     Character.h
@@ -261,10 +272,28 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     DatabaseConfigSQLite3.cpp
     Demon.h
     Demon.cpp
+    DemonBox.h
+    DemonBox.cpp
     Enemy.h
     Enemy.cpp
     EntityStats.h
     EntityStats.cpp
+    Event.h
+    Event.cpp
+    EventChoice.h
+    EventChoice.cpp
+    EventHomepoint.h
+    EventHomepoint.cpp
+    EventMessage.h
+    EventMessage.cpp
+    EventNPCMessage.h
+    EventNPCMessage.cpp
+    EventOpenMenu.h
+    EventOpenMenu.cpp
+    EventPerformActions.h
+    EventPerformActions.cpp
+    EventPrompt.h
+    EventPrompt.cpp
     Expertise.h
     Expertise.cpp
     Hotbar.h

@@ -23,6 +23,7 @@
         <!-- Character specific attributes -->
         <member type="s16" name="LNC" caps="true" min="-10000" max="10000"/>
         <member type="s32" name="Points"/>
+        <member type="DemonBox*" name="COMP" caps="true"/>
         <member type="Demon*" name="ActiveDemon"/>
         <member type="u32" name="HomepointZone"/>
         <member type="float" name="HomepointX"/>
@@ -33,9 +34,6 @@
         <member type="float" name="LogoutRotation"/>
 
         <!-- Collections -->
-        <member type="array" name="COMP" caps="true" size="10">
-            <element type="Demon*"/>
-        </member>
         <member type="list" name="LearnedSkills">
             <element type="u32"/>
         </member>
@@ -95,6 +93,7 @@
     </object>
     <object name="CharacterProgress" location="world">
         <member type="Character*" name="Character" key="true" unique="true"/>
+        <member type="u8" name="MaxCOMPSlots" default="6"/>
         <member type="array" name="Maps" size="32">
             <element type="u8"/>
         </member>

@@ -46,8 +46,8 @@ using namespace channel;
 ChannelServer::ChannelServer(const char *szProgram, std::shared_ptr<
     objects::ServerConfig> config, const libcomp::String& configPath) :
     libcomp::BaseServer(szProgram, config, configPath), mAccountManager(0),
-    mActionManager(0), mCharacterManager(0), mChatManager(0), mSkillManager(0),
-    mZoneManager(0), mDefinitionManager(0), mServerDataManager(0),
+    mActionManager(0), mCharacterManager(0), mChatManager(0), mEventManager(0),
+    mSkillManager(0), mZoneManager(0), mDefinitionManager(0), mServerDataManager(0),
     mMaxEntityID(0), mMaxObjectID(0)
 {
 }
@@ -148,10 +148,10 @@ bool ChannelServer::Initialize()
         to_underlying(ClientToChannelPacketCode_t::PACKET_STATE));
     clientPacketManager->AddParser<Parsers::PartnerDemonData>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_PARTNER_DEMON_DATA));
-    clientPacketManager->AddParser<Parsers::COMPList>(
-        to_underlying(ClientToChannelPacketCode_t::PACKET_COMP_LIST));
-    clientPacketManager->AddParser<Parsers::COMPDemonData>(
-        to_underlying(ClientToChannelPacketCode_t::PACKET_COMP_DEMON_DATA));
+    clientPacketManager->AddParser<Parsers::DemonBox>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_DEMON_BOX));
+    clientPacketManager->AddParser<Parsers::DemonBoxData>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_DEMON_BOX_DATA));
     clientPacketManager->AddParser<Parsers::ChannelList>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_CHANNEL_LIST));
     clientPacketManager->AddParser<Parsers::StopMovement>(
@@ -170,14 +170,16 @@ bool ChannelServer::Initialize()
         to_underlying(ClientToChannelPacketCode_t::PACKET_ITEM_STACK));
     clientPacketManager->AddParser<Parsers::EquipmentList>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_EQUIPMENT_LIST));
-    clientPacketManager->AddParser<Parsers::COMPSlotUpdate>(
-        to_underlying(ClientToChannelPacketCode_t::PACKET_COMP_SLOT_UPDATE));
+    clientPacketManager->AddParser<Parsers::DemonBoxMove>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_DEMON_BOX_MOVE));
     clientPacketManager->AddParser<Parsers::DismissDemon>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_DISMISS_DEMON));
     clientPacketManager->AddParser<Parsers::HotbarData>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_HOTBAR_DATA));
     clientPacketManager->AddParser<Parsers::HotbarSave>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_HOTBAR_SAVE));
+    clientPacketManager->AddParser<Parsers::EventResponse>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_EVENT_RESPONSE));
     clientPacketManager->AddParser<Parsers::ValuableList>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_VALUABLE_LIST));
     clientPacketManager->AddParser<Parsers::ObjectInteraction>(
@@ -190,6 +192,10 @@ bool ChannelServer::Initialize()
         to_underlying(ClientToChannelPacketCode_t::PACKET_ROTATE));
     clientPacketManager->AddParser<Parsers::UnionFlag>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_UNION_FLAG));
+    clientPacketManager->AddParser<Parsers::ItemDepoList>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_ITEM_DEPO_LIST));
+    clientPacketManager->AddParser<Parsers::DepoRent>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_DEPO_RENT));
     clientPacketManager->AddParser<Parsers::QuestActiveList>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_QUEST_ACTIVE_LIST));
     clientPacketManager->AddParser<Parsers::QuestCompletedList>(
@@ -218,6 +224,10 @@ bool ChannelServer::Initialize()
         to_underlying(ClientToChannelPacketCode_t::PACKET_TEAM_INFO));
     clientPacketManager->AddParser<Parsers::PartnerDemonQuestTemp>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_PARTNER_DEMON_QUEST_TEMP));
+    clientPacketManager->AddParser<Parsers::ItemDepoRemote>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_ITEM_DEPO_REMOTE));
+    clientPacketManager->AddParser<Parsers::DemonDepoRemote>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_DEMON_DEPO_REMOTE));
     clientPacketManager->AddParser<Parsers::CommonSwitchInfo>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_COMMON_SWITCH_INFO));
     clientPacketManager->AddParser<Parsers::CasinoCoinTotal>(
@@ -228,6 +238,8 @@ bool ChannelServer::Initialize()
         to_underlying(ClientToChannelPacketCode_t::PACKET_HOURAI_DATA));
     clientPacketManager->AddParser<Parsers::CultureData>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_CULTURE_DATA));
+    clientPacketManager->AddParser<Parsers::DemonDepoList>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_DEMON_DEPO_LIST));
     clientPacketManager->AddParser<Parsers::Blacklist>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_BLACKLIST));
     clientPacketManager->AddParser<Parsers::DigitalizePoints>(
@@ -256,6 +268,7 @@ bool ChannelServer::Initialize()
     mActionManager = new ActionManager(channelPtr);
     mCharacterManager = new CharacterManager(channelPtr);
     mChatManager = new ChatManager(channelPtr);
+    mEventManager = new EventManager(channelPtr);
     mSkillManager = new SkillManager(channelPtr);
     mZoneManager = new ZoneManager(channelPtr);
 
@@ -272,6 +285,7 @@ ChannelServer::~ChannelServer()
     delete[] mAccountManager;
     delete[] mCharacterManager;
     delete[] mChatManager;
+    delete[] mEventManager;
     delete[] mSkillManager;
     delete[] mZoneManager;
     delete[] mDefinitionManager;
@@ -280,7 +294,26 @@ ChannelServer::~ChannelServer()
 
 ServerTime ChannelServer::GetServerTime()
 {
-    return sGetServerTime();
+    auto now = std::chrono::system_clock::now();
+    return (ServerTime)std::chrono::time_point_cast<std::chrono::microseconds>(now)
+        .time_since_epoch().count();
+}
+
+uint32_t ChannelServer::GetServerTimeInSeconds()
+{
+    auto now = std::chrono::system_clock::now();
+    return (uint32_t)std::chrono::time_point_cast<std::chrono::seconds>(now)
+        .time_since_epoch().count();
+}
+
+int32_t ChannelServer::GetExpirationInSeconds(uint32_t fixedTime, uint32_t relativeTo)
+{
+    if(relativeTo == 0)
+    {
+        relativeTo = GetServerTimeInSeconds();
+    }
+
+    return (int32_t)(fixedTime > relativeTo ? fixedTime - relativeTo : 0);
 }
 
 void ChannelServer::GetWorldClockTime(int8_t& phase, int8_t& hour, int8_t& min)
@@ -425,6 +458,11 @@ ChatManager* ChannelServer::GetChatManager() const
     return mChatManager;
 }
 
+EventManager* ChannelServer::GetEventManager() const
+{
+    return mEventManager;
+}
+
 SkillManager* ChannelServer::GetSkillManager() const
 {
     return mSkillManager;
@@ -516,25 +554,6 @@ std::shared_ptr<libcomp::TcpConnection> ChannelServer::CreateConnection(
 
 
     return connection;
-}
-
-GET_SERVER_TIME ChannelServer::sGetServerTime =
-    std::chrono::high_resolution_clock::is_steady
-        ? &ChannelServer::GetServerTimeHighResolution
-        : &ChannelServer::GetServerTimeSteady;
-
-ServerTime ChannelServer::GetServerTimeSteady()
-{
-    auto now = std::chrono::steady_clock::now();
-    return (ServerTime)std::chrono::time_point_cast<std::chrono::microseconds>(now)
-        .time_since_epoch().count();
-}
-
-ServerTime ChannelServer::GetServerTimeHighResolution()
-{
-    auto now = std::chrono::high_resolution_clock::now();
-    return (ServerTime)std::chrono::time_point_cast<std::chrono::microseconds>(now)
-        .time_since_epoch().count();
 }
 
 void ChannelServer::QueueNextTick()

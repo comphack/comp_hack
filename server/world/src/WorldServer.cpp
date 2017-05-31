@@ -82,9 +82,36 @@ void WorldServer::FinishInitialize()
 {
     auto conf = std::dynamic_pointer_cast<objects::WorldConfig>(mConfig);
 
+    mManagerConnection = std::make_shared<ManagerConnection>(
+        shared_from_this());
+
+    auto connectionManager = std::dynamic_pointer_cast<libcomp::Manager>(mManagerConnection);
+
+    auto packetManager = std::make_shared<libcomp::ManagerPacket>(
+        shared_from_this());
+    packetManager->AddParser<Parsers::GetWorldInfo>(to_underlying(
+        InternalPacketCode_t::PACKET_GET_WORLD_INFO));
+    packetManager->AddParser<Parsers::SetChannelInfo>(to_underlying(
+        InternalPacketCode_t::PACKET_SET_CHANNEL_INFO));
+    packetManager->AddParser<Parsers::AccountLogin>(to_underlying(
+        InternalPacketCode_t::PACKET_ACCOUNT_LOGIN));
+    packetManager->AddParser<Parsers::AccountLogout>(to_underlying(
+        InternalPacketCode_t::PACKET_ACCOUNT_LOGOUT));
+
+    //Add the managers to the main worker.
+    mMainWorker.AddManager(packetManager);
+    mMainWorker.AddManager(connectionManager);
+
+    // Add the managers to the generic workers.
+    for(auto worker : mWorkers)
+    {
+        worker->AddManager(packetManager);
+        worker->AddManager(connectionManager);
+    }
+
+    // Now Connect to the lobby server.
     asio::io_service service;
 
-    // Connect to the world server.
     auto lobbyConnection = std::make_shared<libcomp::LobbyConnection>(service,
             libcomp::LobbyConnection::ConnectionMode_t::MODE_WORLD_UP);
 
@@ -122,37 +149,10 @@ void WorldServer::FinishInitialize()
 
     delete pMessage;
 
-    mManagerConnection = std::make_shared<ManagerConnection>(
-        shared_from_this());
-
     lobbyConnection->Close();
     serviceThread.join();
     lobbyConnection.reset();
     messageQueue.reset();
-
-    auto connectionManager = std::dynamic_pointer_cast<libcomp::Manager>(mManagerConnection);
-
-    auto packetManager = std::make_shared<libcomp::ManagerPacket>(
-        shared_from_this());
-    packetManager->AddParser<Parsers::GetWorldInfo>(to_underlying(
-        InternalPacketCode_t::PACKET_GET_WORLD_INFO));
-    packetManager->AddParser<Parsers::SetChannelInfo>(to_underlying(
-        InternalPacketCode_t::PACKET_SET_CHANNEL_INFO));
-    packetManager->AddParser<Parsers::AccountLogin>(to_underlying(
-        InternalPacketCode_t::PACKET_ACCOUNT_LOGIN));
-    packetManager->AddParser<Parsers::AccountLogout>(to_underlying(
-        InternalPacketCode_t::PACKET_ACCOUNT_LOGOUT));
-
-    //Add the managers to the main worker.
-    mMainWorker.AddManager(packetManager);
-    mMainWorker.AddManager(connectionManager);
-
-    // Add the managers to the generic workers.
-    for(auto worker : mWorkers)
-    {
-        worker->AddManager(packetManager);
-        worker->AddManager(connectionManager);
-    }
 }
 
 WorldServer::~WorldServer()

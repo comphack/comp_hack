@@ -75,24 +75,7 @@ bool ChannelServer::Initialize()
         return false;
     }
 
-    // Connect to the world server.
-    auto worldConnection = std::make_shared<
-        libcomp::InternalConnection>(mService);
-    worldConnection->SetMessageQueue(mMainWorker.GetMessageQueue());
-
     mManagerConnection = std::make_shared<ManagerConnection>(self);
-    mManagerConnection->SetWorldConnection(worldConnection);
-
-    worldConnection->Connect(conf->GetWorldIP(), conf->GetWorldPort(), false);
-
-    bool connected = libcomp::TcpConnection::STATUS_CONNECTED ==
-        worldConnection->GetStatus();
-
-    if(!connected)
-    {
-        LOG_CRITICAL("Failed to connect to the world server!\n");
-        return false;
-    }
 
     auto internalPacketManager = std::make_shared<libcomp::ManagerPacket>(self);
     internalPacketManager->AddParser<Parsers::SetWorldInfo>(
@@ -271,6 +254,24 @@ bool ChannelServer::Initialize()
     mEventManager = new EventManager(channelPtr);
     mSkillManager = new SkillManager(channelPtr);
     mZoneManager = new ZoneManager(channelPtr);
+
+    // Now connect to the world server.
+    auto worldConnection = std::make_shared<
+        libcomp::InternalConnection>(mService);
+    worldConnection->SetMessageQueue(mMainWorker.GetMessageQueue());
+
+    mManagerConnection->SetWorldConnection(worldConnection);
+
+    worldConnection->Connect(conf->GetWorldIP(), conf->GetWorldPort(), false);
+
+    bool connected = libcomp::TcpConnection::STATUS_CONNECTED ==
+        worldConnection->GetStatus();
+
+    if(!connected)
+    {
+        LOG_CRITICAL("Failed to connect to the world server!\n");
+        return false;
+    }
 
     return true;
 }

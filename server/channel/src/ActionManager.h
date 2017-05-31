@@ -64,20 +64,34 @@ public:
      * Perform the list of actions on behalf of the client.
      * @param client Client to perform the actions for.
      * @param actions List of actions to perform.
+     * @param sourceEntityID ID of the entity performing the actions.
      */
     void PerformActions(const std::shared_ptr<ChannelClientConnection>& client,
-        const std::list<std::shared_ptr<objects::Action>>& actions);
+        const std::list<std::shared_ptr<objects::Action>>& actions,
+        int32_t sourceEntityID);
 
 private:
+    /**
+     * Start an event sequence for the client.
+     * @param client Client to perform the actions for.
+     * @param action Action to perform.
+     * @param sourceEntityID ID of the entity to use as the event source.
+     * @retval true More actions can be performed.
+     * @retval false The action list should stop after this action.
+     */
+    bool StartEvent(const std::shared_ptr<ChannelClientConnection>& client,
+        const std::shared_ptr<objects::Action>& action, int32_t sourceEntityID);
+
     /**
      * Perform the zone change action on behalf of the client.
      * @param client Client to perform the actions for.
      * @param action Action to perform.
+     * @param sourceEntityID ID of the entity causing the zone change.
      * @retval true More actions can be performed.
      * @retval false The action list should stop after this action.
      */
     bool ZoneChange(const std::shared_ptr<ChannelClientConnection>& client,
-        const std::shared_ptr<objects::Action>& action);
+        const std::shared_ptr<objects::Action>& action, int32_t sourceEntityID);
 
     /// Pointer to the channel server.
     std::weak_ptr<ChannelServer> mServer;
@@ -86,7 +100,7 @@ private:
     libcomp::EnumMap<objects::Action::ActionType_t, std::function<bool(
         ActionManager&,
         const std::shared_ptr<channel::ChannelClientConnection>&,
-        const std::shared_ptr<objects::Action>&)>> mActionHandlers;
+        const std::shared_ptr<objects::Action>&, int32_t)>> mActionHandlers;
 };
 
 } // namespace channel

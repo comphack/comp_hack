@@ -45,48 +45,6 @@
 
 using namespace channel;
 
-void MoveItem(const std::shared_ptr<ChannelClientConnection>& client,
-    int64_t itemID, const std::shared_ptr<objects::ItemBox> sourceBox,
-    const std::shared_ptr<objects::ItemBox> destBox, size_t destSlot,
-    const std::shared_ptr<ChannelServer>& server)
-{
-    auto state = client->GetClientState();
-    auto character = state->GetCharacterState()->GetEntity();
-    auto item = std::dynamic_pointer_cast<objects::Item>(
-        libcomp::PersistentObject::GetObjectByUUID(
-            state->GetObjectUUID(itemID)));
-
-    size_t sourceSlot = (size_t)item->GetBoxSlot();
-
-    if(sourceBox->GetItems(sourceSlot).Get() != item)
-    {
-        LOG_ERROR(libcomp::String("Item move operation failed due to unknown "
-            "supplied item ID %1 on character: %2\n").Arg(itemID).Arg(
-            character->GetUUID().ToString()));
-
-        return;
-    }
-
-    // Swap the items (the destination could be a null object or a real item).
-    item->SetBoxSlot((int8_t)destSlot);
-    auto otherItem = destBox->GetItems(destSlot);
-    destBox->SetItems(destSlot, item);
-    sourceBox->SetItems(sourceSlot, otherItem);
-
-    auto dbChanges = libcomp::DatabaseChangeSet::Create(state->GetAccountUID());
-    dbChanges->Update(item);
-    dbChanges->Update(destBox);
-    dbChanges->Update(sourceBox);
-
-    if(!otherItem.IsNull())
-    {
-        otherItem->SetBoxSlot((int8_t)sourceSlot);
-        dbChanges->Update(otherItem.Get());
-    }
-
-    server->GetWorldDatabase()->QueueChangeSet(dbChanges);
-}
-
 bool Parsers::ItemMove::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
@@ -96,61 +54,74 @@ bool Parsers::ItemMove::Parse(libcomp::ManagerPacket *pPacketManager,
         return false;
     }
 
+    // Since there is no fail state to send back to the client, if there is a failure
+    // past this point, the client should be disconnected
+
     auto server = std::dynamic_pointer_cast<ChannelServer>(
         pPacketManager->GetServer());
     auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
         connection);
+    auto state = client->GetClientState();
+    auto characterManager = server->GetCharacterManager();
 
     int8_t sourceType = p.ReadS8();
     int64_t sourceBoxID = p.ReadS64Little();
     int64_t itemID = p.ReadS64Little();
 
-    auto uuid = client->GetClientState()->GetObjectUUID(itemID);
-
-    if(uuid.IsNull() || nullptr == std::dynamic_pointer_cast<objects::Item>(
-        libcomp::PersistentObject::GetObjectByUUID(uuid)))
+    auto item = std::dynamic_pointer_cast<objects::Item>(
+        libcomp::PersistentObject::GetObjectByUUID(state->GetObjectUUID(itemID)));
+    if(nullptr == item)
     {
-        return false;
+        LOG_ERROR("Item move failed due to unknown item ID.\n");
+        client->Close();
+        return true;
     }
 
     int8_t destType = p.ReadS8();
     int64_t destBoxID = p.ReadS64Little();
     int16_t destSlot = p.ReadS16Little();
-    auto character = client->GetClientState()->
-        GetCharacterState()->GetEntity();
 
-    std::shared_ptr<objects::ItemBox> sourceBox;
-    if(sourceType == 0 && sourceBoxID == 0)
-    {
-        sourceBox = character->GetItemBoxes(0).Get();
-    }
-    else
-    {
-        /// @todo
-        LOG_ERROR("Item move request sent using a non-inventory item box.\n");
-        return true;
-    }
-    
-    std::shared_ptr<objects::ItemBox> destBox;
-    if(destType == 0 && destBoxID == 0)
-    {
-        destBox = character->GetItemBoxes(0).Get();
-    }
-    else
-    {
-        /// @todo
-        LOG_ERROR("Item move request sent using a non-inventory item box.\n");
-        return true;
-    }
+    auto sourceBox = characterManager->GetItemBox(state, sourceType, sourceBoxID);
+    auto destBox = characterManager->GetItemBox(state, destType, destBoxID);
 
     if(nullptr != sourceBox && nullptr != destBox)
     {
-        server->QueueWork(MoveItem, client, itemID, sourceBox,
-            destBox, (size_t)destSlot, server);
+        auto character = state->GetCharacterState()->GetEntity();
+
+        size_t sourceSlot = (size_t)item->GetBoxSlot();
+        if(sourceBox->GetItems(sourceSlot).Get() != item)
+        {
+            LOG_ERROR("Item move operation failed.\n");
+            client->Close();
+            return true;
+        }
+
+        // Swap the items (the destination could be a null object or a real item)
+        item->SetItemBox(destBox);
+        item->SetBoxSlot((int8_t)destSlot);
+
+        auto otherItem = destBox->GetItems((size_t)destSlot);
+        destBox->SetItems((size_t)destSlot, item);
+        sourceBox->SetItems(sourceSlot, otherItem);
+
+        auto dbChanges = libcomp::DatabaseChangeSet::Create(state->GetAccountUID());
+        dbChanges->Update(item);
+        dbChanges->Update(destBox);
+        dbChanges->Update(sourceBox);
+
+        if(!otherItem.IsNull())
+        {
+            otherItem->SetItemBox(sourceBox);
+            otherItem->SetBoxSlot((int8_t)sourceSlot);
+            dbChanges->Update(otherItem.Get());
+        }
+
+        server->GetWorldDatabase()->QueueChangeSet(dbChanges);
     }
     else
     {
-        return false;
+        LOG_ERROR("Item move failed due to invalid source or destination box.\n");
+        client->Close();
     }
 
     return true;

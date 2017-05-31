@@ -21,11 +21,17 @@
         </member>
     </object>
     <object name="ItemBox" location="world">
-        <member type="s8" name="Type"/>
+        <member type="s64" name="BoxID"/>
+        <member type="enum" name="Type" underlying="int8_t">
+            <value>INVENTORY</value>
+            <value>UNKNOWN_1</value>
+            <value>ITEM_DEPO</value>
+        </member>
         <member type="Account*" name="Account" key="true" unique="false"/>
         <member type="Character*" name="Character" key="true" unique="false"/>
         <member type="array" name="Items" size="50">
             <element type="Item*"/>
         </member>
+        <member type="u32" name="RentalExpiration"/>
     </object>
 </objgen>

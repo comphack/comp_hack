@@ -38,6 +38,7 @@ SET(${PROJECT_NAME}_SRCS
     src/ChatManager.cpp
     src/ClientState.cpp
     src/EntityState.cpp
+    src/EventManager.cpp
     src/ManagerClientPacket.cpp
     src/ManagerConnection.cpp
     src/ManagerSystem.cpp
@@ -57,6 +58,7 @@ SET(${PROJECT_NAME}_HDRS
     src/ChatManager.h
     src/ClientState.h
     src/EntityState.h
+    src/EventManager.h
     src/ManagerClientPacket.h
     src/ManagerConnection.h
     src/ManagerSystem.h
@@ -96,6 +98,10 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     ClientStateObject.cpp
     EntityStateObject.h
     EntityStateObject.cpp
+    EventInstance.h
+    EventInstance.cpp
+    EventState.h
+    EventState.cpp
 )
 
 SOURCE_GROUP("Source Files\\Packets\\Game" src/packets/game/*)
@@ -121,8 +127,8 @@ SET(${PROJECT_NAME}_PACKETS
     src/packets/game/FixObjectPosition.cpp      # 0x0058
     src/packets/game/State.cpp                  # 0x005A
     src/packets/game/PartnerDemonData.cpp       # 0x005B
-    src/packets/game/COMPList.cpp               # 0x005C
-    src/packets/game/COMPDemonData.cpp          # 0x005E
+    src/packets/game/DemonBox.cpp               # 0x005C
+    src/packets/game/DemonBoxData.cpp           # 0x005E
     src/packets/game/ChannelList.cpp            # 0x0063
     src/packets/game/StopMovement.cpp           # 0x006F
     src/packets/game/SpotTriggered.cpp          # 0x0071
@@ -132,16 +138,19 @@ SET(${PROJECT_NAME}_PACKETS
     src/packets/game/ItemDrop.cpp               # 0x0077
     src/packets/game/ItemStack.cpp              # 0x0078
     src/packets/game/EquipmentList.cpp          # 0x007B
-    src/packets/game/COMPSlotUpdate.cpp         # 0x009A
+    src/packets/game/DemonBoxMove.cpp           # 0x009A
     src/packets/game/DismissDemon.cpp           # 0x009B
     src/packets/game/HotbarData.cpp             # 0x00A2
     src/packets/game/HotbarSave.cpp             # 0x00A4
+    src/packets/game/EventResponse.cpp          # 0x00B7
     src/packets/game/ValuableList.cpp           # 0x00B8
     src/packets/game/ObjectInteraction.cpp      # 0x00BA
     src/packets/game/FriendInfo.cpp             # 0x00BD
     src/packets/game/Sync.cpp                   # 0x00F3
     src/packets/game/Rotate.cpp                 # 0x00F8
     src/packets/game/UnionFlag.cpp              # 0x0100
+    src/packets/game/ItemDepoList.cpp           # 0x0102
+    src/packets/game/DepoRent.cpp               # 0x0104
     src/packets/game/QuestActiveList.cpp        # 0x010B
     src/packets/game/QuestCompletedList.cpp     # 0x010C
     src/packets/game/ClanInfo.cpp               # 0x0150
@@ -156,11 +165,14 @@ SET(${PROJECT_NAME}_PACKETS
     src/packets/game/PvPCharacterInfo.cpp       # 0x024D
     src/packets/game/TeamInfo.cpp               # 0x027B
     src/packets/game/PartnerDemonQuestTemp.cpp  # 0x028F
+    src/packets/game/ItemDepoRemote.cpp         # 0x0296
+    src/packets/game/DemonDepoRemote.cpp        # 0x02EF
     src/packets/game/CommonSwitchInfo.cpp       # 0x02F4
     src/packets/game/CasinoCoinTotal.cpp        # 0x02FA
     src/packets/game/SearchEntryInfo.cpp        # 0x03A3
     src/packets/game/HouraiData.cpp             # 0x03A5
     src/packets/game/CultureData.cpp            # 0x03AC
+    src/packets/game/DemonDepoList.cpp          # 0x03F5
     src/packets/game/Blacklist.cpp              # 0x0408
     src/packets/game/DigitalizePoints.cpp       # 0x0414
     src/packets/game/DigitalizeAssist.cpp       # 0x0418

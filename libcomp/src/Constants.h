@@ -209,6 +209,18 @@ namespace libcomp
 /// Client is attempting to log out.
 #define LOGIN_STATE_PENDING_LOGOUT (7)
 
+/// Macca note item ID
+#define ITEM_MACCA_NOTE (699)
+
+/// Macca note value
+#define ITEM_MACCA_NOTE_AMOUNT (50000)
+
+/// Macca item ID
+#define ITEM_MACCA (799)
+
+/// Magnetite item ID
+#define ITEM_MAGNETITE (800)
+
 /// Known index values contained in the binary structure Correct tables
 enum CorrectData : unsigned char
 {

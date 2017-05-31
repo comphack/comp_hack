@@ -30,7 +30,7 @@
 #include "Log.h"
 
 // object Includes
-#include "ServerNPC.h"
+#include "Event.h"
 #include "ServerZone.h"
 
 using namespace libcomp;
@@ -45,7 +45,12 @@ ServerDataManager::~ServerDataManager()
 
 const std::shared_ptr<objects::ServerZone> ServerDataManager::GetZoneData(uint32_t id)
 {
-    return GetObjectByID<objects::ServerZone>(id, mZoneData);
+    return GetObjectByID<uint32_t, objects::ServerZone>(id, mZoneData);
+}
+
+const std::shared_ptr<objects::Event> ServerDataManager::GetEventData(const libcomp::String& id)
+{
+    return GetObjectByID<std::string, objects::Event>(id.C(), mEventData);
 }
 
 bool ServerDataManager::LoadData(gsl::not_null<DataStore*> pDataStore)
@@ -54,38 +59,60 @@ bool ServerDataManager::LoadData(gsl::not_null<DataStore*> pDataStore)
 
     if(!failure)
     {
-        std::list<libcomp::String> files;
-        std::list<libcomp::String> dirs;
-        std::list<libcomp::String> symLinks;
+        failure = !LoadObjects<objects::ServerZone>(pDataStore, "/zones");
+    }
 
-        (void)pDataStore->GetListing("/zones", files, dirs, symLinks,
-            true, true);
-
-        for(auto path : files)
-        {
-            if(path.Matches("^.*\\.xml$"))
-            {
-                tinyxml2::XMLDocument objsDoc;
-
-                std::vector<char> data = pDataStore->ReadFile(path);
-
-                if(data.empty() || tinyxml2::XML_SUCCESS !=
-                    objsDoc.Parse(&data[0], data.size()))
-                {
-                    failure = true;
-                    break;
-                }
-
-                if(!LoadObjects<objects::ServerZone>(objsDoc, mZoneData))
-                {
-                    failure = true;
-                    break;
-                }
-
-                LOG_DEBUG(libcomp::String("Loaded zone file: %1\n").Arg(path));
-            }
-        }
+    if(!failure)
+    {
+        failure = !LoadObjects<objects::Event>(pDataStore, "/events");
     }
 
     return !failure;
+}
+
+namespace libcomp
+{
+    template<>
+    bool ServerDataManager::LoadObject<objects::ServerZone>(const tinyxml2::XMLDocument& doc,
+        const tinyxml2::XMLElement *objNode)
+    {
+        auto zone = std::shared_ptr<objects::ServerZone>(new objects::ServerZone);
+        if(!zone->Load(doc, *objNode))
+        {
+            return false;
+        }
+
+        auto id = zone->GetID();
+        if(mZoneData.find(id) != mZoneData.end())
+        {
+            LOG_ERROR(libcomp::String("Duplicate zone encountered: %1\n").Arg(id));
+            return false;
+        }
+
+        mZoneData[id] = zone;
+
+        return true;
+    }
+
+    template<>
+    bool ServerDataManager::LoadObject<objects::Event>(const tinyxml2::XMLDocument& doc,
+        const tinyxml2::XMLElement *objNode)
+    {
+        auto event = objects::Event::InheritedConstruction(objNode->Attribute("name"));
+        if(event == nullptr || !event->Load(doc, *objNode))
+        {
+            return false;
+        }
+    
+        auto id = std::string(event->GetID().C());
+        if(mEventData.find(id) != mEventData.end())
+        {
+            LOG_ERROR(libcomp::String("Duplicate event encountered: %1\n").Arg(id));
+            return false;
+        }
+
+        mEventData[id] = event;
+
+        return true;
+    }
 }

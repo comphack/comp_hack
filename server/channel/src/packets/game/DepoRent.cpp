@@ -148,7 +148,7 @@ bool Parsers::DepoRent::Parse(libcomp::ManagerPacket *pPacketManager,
 
 
     // Set the expiration timestamp to the specified offset past the current time
-    auto timestamp = ChannelServer::GetServerTimeInSeconds();
+    auto timestamp = (uint32_t)time(0);
     int32_t delta = (int32_t)(dayCount * 24 * 60 * 60);
     uint32_t expirationTime = (uint32_t)(timestamp + (uint32_t)delta);
 

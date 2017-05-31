@@ -267,10 +267,28 @@ protected:
         asio::ip::tcp::socket& socket);
 
     /**
+     * Get the current time relative to the server using the
+     * C++ standard steady_clock.
+     * @return Current time relative to the server
+     */
+    static ServerTime GetServerTimeSteady();
+
+    /**
+     * Get the current time relative to the server using the
+     * C++ standard high_resolution_clock.
+     * @return Current time relative to the server
+     */
+    static ServerTime GetServerTimeHighResolution();
+
+    /**
      * Queues up a time based event to insert a system message
      * that triggers a server tick.
      */
     void QueueNextTick();
+
+    /// Function pointer to the most accurate time detection code
+    /// available for the current machine.
+    static GET_SERVER_TIME sGetServerTime;
 
     /// Pointer to the manager in charge of connection messages.
     std::shared_ptr<ManagerConnection> mManagerConnection;

@@ -294,23 +294,14 @@ ChannelServer::~ChannelServer()
 
 ServerTime ChannelServer::GetServerTime()
 {
-    auto now = std::chrono::system_clock::now();
-    return (ServerTime)std::chrono::time_point_cast<std::chrono::microseconds>(now)
-        .time_since_epoch().count();
-}
-
-uint32_t ChannelServer::GetServerTimeInSeconds()
-{
-    auto now = std::chrono::system_clock::now();
-    return (uint32_t)std::chrono::time_point_cast<std::chrono::seconds>(now)
-        .time_since_epoch().count();
+    return sGetServerTime();
 }
 
 int32_t ChannelServer::GetExpirationInSeconds(uint32_t fixedTime, uint32_t relativeTo)
 {
     if(relativeTo == 0)
     {
-        relativeTo = GetServerTimeInSeconds();
+        relativeTo = (uint32_t)time(0);
     }
 
     return (int32_t)(fixedTime > relativeTo ? fixedTime - relativeTo : 0);
@@ -554,6 +545,25 @@ std::shared_ptr<libcomp::TcpConnection> ChannelServer::CreateConnection(
 
 
     return connection;
+}
+
+GET_SERVER_TIME ChannelServer::sGetServerTime =
+    std::chrono::high_resolution_clock::is_steady
+        ? &ChannelServer::GetServerTimeHighResolution
+        : &ChannelServer::GetServerTimeSteady;
+
+ServerTime ChannelServer::GetServerTimeSteady()
+{
+    auto now = std::chrono::steady_clock::now();
+    return (ServerTime)std::chrono::time_point_cast<std::chrono::microseconds>(now)
+        .time_since_epoch().count();
+}
+
+ServerTime ChannelServer::GetServerTimeHighResolution()
+{
+    auto now = std::chrono::high_resolution_clock::now();
+    return (ServerTime)std::chrono::time_point_cast<std::chrono::microseconds>(now)
+        .time_since_epoch().count();
 }
 
 void ChannelServer::QueueNextTick()

@@ -55,7 +55,7 @@ bool Parsers::ItemDepoList::Parse(libcomp::ManagerPacket *pPacketManager,
     auto state = client->GetClientState();
     auto worldData = state->GetAccountWorldData();
 
-    auto timestamp = ChannelServer::GetServerTimeInSeconds();
+    auto timestamp = (uint32_t)time(0);
 
     libcomp::Packet reply;
     reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_ITEM_DEPO_LIST);

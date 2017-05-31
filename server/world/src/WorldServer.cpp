@@ -27,7 +27,6 @@
 #include "WorldServer.h"
 
 // libcomp Includes
-#include <DatabaseConfigCassandra.h>
 #include <DatabaseConfigMariaDB.h>
 #include <DatabaseConfigSQLite3.h>
 #include <InternalConnection.h>
@@ -65,9 +64,6 @@ bool WorldServer::Initialize()
 
     configMap[objects::ServerConfig::DatabaseType_t::SQLITE3]
         = conf->GetSQLite3Config();
-
-    configMap[objects::ServerConfig::DatabaseType_t::CASSANDRA]
-        = conf->GetCassandraConfig();
 
     configMap[objects::ServerConfig::DatabaseType_t::MARIADB]
         = conf->GetMariaDBConfig();

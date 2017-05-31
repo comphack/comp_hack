@@ -5,7 +5,6 @@
             regex="^[a-fA-F0-9]{256}|$"/>
         <member type="u16" name="Port"/>
         <member type="enum" name="DatabaseType" default="MARIADB">
-            <value>CASSANDRA</value>
             <value>MARIADB</value>
             <value>SQLITE3</value>
         </member>

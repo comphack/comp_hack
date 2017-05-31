@@ -35,7 +35,6 @@
 #endif // _WIN32
 
 // libcomp Includes
-#include <DatabaseCassandra.h>
 #include <DatabaseMariaDB.h>
 #include <DatabaseSQLite3.h>
 #include <Decrypt.h>
@@ -94,11 +93,6 @@ bool BaseServer::Initialize()
             break;
         case objects::ServerConfig::DatabaseType_t::MARIADB:
             LOG_DEBUG("Using MariaDB Database.\n");
-            break;
-        case objects::ServerConfig::DatabaseType_t::CASSANDRA:
-            LOG_DEBUG("Using Cassandra Database.\n");
-            LOG_WARNING("Cassandra will be deprecated in a"
-                " subsequent release.\n");
             break;
         default:
             LOG_CRITICAL("Invalid database type specified.\n");
@@ -171,19 +165,6 @@ std::shared_ptr<Database> BaseServer::GetDatabase(
             else
             {
                 LOG_CRITICAL("No MariaDB Database configuration specified.\n");
-            }
-            break;
-        case objects::ServerConfig::DatabaseType_t::CASSANDRA:
-            if(configExists)
-            {
-                auto cassandraConfig = std::dynamic_pointer_cast<
-                    objects::DatabaseConfigCassandra>(configIter->second);
-                db = std::shared_ptr<libcomp::Database>(
-                    new libcomp::DatabaseCassandra(cassandraConfig));
-            }
-            else
-            {
-                LOG_CRITICAL("No Cassandra Database configuration specified.\n");
             }
             break;
         default:

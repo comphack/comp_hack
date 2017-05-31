@@ -48,10 +48,8 @@ SET(${PROJECT_NAME}_SRCS
     src/CString.cpp
     src/Database.cpp
     src/DatabaseBind.cpp
-    src/DatabaseCassandra.cpp
     src/DatabaseMariaDB.cpp
     src/DatabaseQuery.cpp
-    src/DatabaseQueryCassandra.cpp
     src/DatabaseQueryMariaDB.cpp
     src/DatabaseQuerySQLite3.cpp
     src/DatabaseSQLite3.cpp
@@ -114,11 +112,9 @@ SET(${PROJECT_NAME}_HDRS
     src/CString.h
     src/Database.h
     src/DatabaseBind.h
-    src/DatabaseCassandra.h
     src/DatabaseChangeSet.h
     src/DatabaseMariaDB.h
     src/DatabaseQuery.h
-    src/DatabaseQueryCassandra.h
     src/DatabaseQueryMariaDB.h
     src/DatabaseQuerySQLite3.h
     src/DatabaseSQLite3.h
@@ -193,7 +189,6 @@ SET(${PROJECT_NAME}_SCHEMA
     schema/action_zonechange.xml
     schema/character.xml
     schema/databaseconfig.xml
-    schema/databaseconfig_cassandra.xml
     schema/databaseconfig_mariadb.xml
     schema/databaseconfig_sqlite3.xml
     schema/enemy.xml
@@ -253,8 +248,6 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     CharacterProgress.cpp
     DatabaseConfig.h
     DatabaseConfig.cpp
-    DatabaseConfigCassandra.h
-    DatabaseConfigCassandra.cpp
     DatabaseConfigMariaDB.h
     DatabaseConfigMariaDB.cpp
     DatabaseConfigSQLite3.h
@@ -469,7 +462,7 @@ TARGET_INCLUDE_DIRECTORIES(comp PRIVATE
 
 TARGET_LINK_LIBRARIES(comp mariadbclient ${OPENSSL_LIBRARIES} ${ZLIB_LIBRARIES}
     ${SYSTEM_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} objgen sqlite3
-    squirrel sqstdlib ttvfs ttvfs_zip tinyxml2 cassandra uv physfs)
+    squirrel sqstdlib ttvfs ttvfs_zip tinyxml2 physfs)
 
 ADD_DEPENDENCIES(comp asio sqrat gsl)
 

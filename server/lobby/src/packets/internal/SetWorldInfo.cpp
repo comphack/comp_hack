@@ -27,7 +27,6 @@
 #include "Packets.h"
 
 // libcomp Includes
-#include <DatabaseConfigCassandra.h>
 #include <DatabaseConfigMariaDB.h>
 #include <DatabaseConfigSQLite3.h>
 #include <Decrypt.h>
@@ -69,10 +68,6 @@ bool SetWorldInfoFromPacket(libcomp::ManagerPacket *pPacketManager,
     std::shared_ptr<objects::DatabaseConfig> dbConfig;
     switch(databaseType)
     {
-        case objects::ServerConfig::DatabaseType_t::CASSANDRA:
-            dbConfig = std::shared_ptr<objects::DatabaseConfig>(
-                new objects::DatabaseConfigCassandra);
-            break;
         case objects::ServerConfig::DatabaseType_t::MARIADB:
             dbConfig = std::shared_ptr<objects::DatabaseConfig>(
                 new objects::DatabaseConfigMariaDB);

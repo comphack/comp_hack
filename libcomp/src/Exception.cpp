@@ -102,8 +102,15 @@ Exception::Exception(const String& msg, const String& f, int l) :
             (DWORD64)backtraceAddresses[i], &displacement, pInfo))
         {
             char name[MAX_SYMBOL_LEN];
+            char sym[MAX_SYMBOL_LEN];
 
             std::stringstream ss;
+
+            if(0 >= UnDecorateSymbolName(pInfo->Name, sym,
+                MAX_SYMBOL_LEN, UNDNAME_COMPLETE))
+            {
+                strncpy(sym, pInfo->Name, MAX_SYMBOL_LEN - 1);
+            }
 
             if(0 < GetModuleFileNameA((HMODULE)pInfo->ModBase, name,
                 MAX_SYMBOL_LEN))
@@ -119,12 +126,12 @@ Exception::Exception(const String& msg, const String& f, int l) :
                     pModuleName++;
                 }
 
-                ss << pModuleName << "(" << pInfo->Name << "+0x"
+                ss << pModuleName << "(" << sym << "+0x"
                     << std::hex << displacement << ")";
             }
             else
             {
-                ss << R"_raw_(???()_raw_" << pInfo->Name << "+0x"
+                ss << R"_raw_(???()_raw_" << sym << "+0x"
                     << std::hex << displacement << ")";
             }
 

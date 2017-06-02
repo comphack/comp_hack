@@ -6,11 +6,11 @@ os:
 
 platform:
   - x86
-  - x64
+#  - x64
 
 configuration:
-  - Debug
-  - Release
+#  - Debug
+#  - Release
   - RelWithDebInfo
 
 init:

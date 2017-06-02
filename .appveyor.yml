@@ -29,7 +29,8 @@ build_script:
   - cmake -DCMAKE_CONFIGURATION_TYPES="%configuration%" -G"%generator%" ..
   - msbuild comp_hack.sln /property:Configuration="%configuration%" /property:Platform="%msplatform%"
   - mkdir comp_hack-pixie-%appveyor_build_number%
-  - move bin\%configuration%\*.exe bin\%configuration%\*.pdb comp_hack-pixie-%appveyor_build_number%\
+  - move bin\%configuration%\*.exe comp_hack-pixie-%appveyor_build_number%\
+  - move bin\%configuration%\*.exe comp_hack-pixie-%appveyor_build_number%\
   - 7z a comp_hack-pixie-%appveyor_build_number%.zip comp_hack-pixie-%appveyor_build_number%
 
 artifacts:

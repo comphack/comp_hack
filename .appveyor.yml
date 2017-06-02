@@ -11,6 +11,7 @@ platform:
 configuration:
   - Debug
   - Release
+  - RelWithDebInfo
 
 init:
   - if platform==x64 (set CMAKE_PREFIX_PATH=C:\Qt\5.7\msvc2015_64) else (set CMAKE_PREFIX_PATH=C:\Qt\5.7\msvc2015)
@@ -27,3 +28,22 @@ before_build:
 build_script:
   - cmake -DCMAKE_CONFIGURATION_TYPES="%configuration%" -G"%generator%" ..
   - msbuild comp_hack.sln /property:Configuration="%configuration%" /property:Platform="%msplatform%"
+  - 7z a comp_hack-pixie-v%appveyor_build_version%.zip bin\%configuration%\*.exe bin\%configuration%\*.pdb
+
+artifacts:
+  - path: build\comp_hack-pixie-v$(appveyor_build_version).zip
+    name: comp_hack-pixie-v$(appveyor_build_version)
+
+deploy:
+  release: comp_hack-pixie-v$(appveyor_build_version)
+  description: 'Development Build'
+  provider: GitHub
+  auth_token:
+    secure: /xJRd5oxBbWa7IDdzPFbollIUAc7uqashBu8crIATrv4iUJX//DvzrGSFCaDdFsj
+artifact: build\comp_hack-pixie-v$(appveyor_build_version).zip
+draft: false
+prerelease: true
+on:
+  branch: develop
+  platform: x86
+  configuration: RelWithDebInfo

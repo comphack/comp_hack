@@ -28,19 +28,21 @@ before_build:
 build_script:
   - cmake -DCMAKE_CONFIGURATION_TYPES="%configuration%" -G"%generator%" ..
   - msbuild comp_hack.sln /property:Configuration="%configuration%" /property:Platform="%msplatform%"
-  - 7z a comp_hack-pixie-v%appveyor_build_version%.zip bin\%configuration%\*.exe bin\%configuration%\*.pdb
+  - mkdir comp_hack-pixie-%appveyor_build_number%
+  - mv bin\%configuration%\*.exe bin\%configuration%\*.pdb comp_hack-pixie-%appveyor_build_number%\
+  - 7z a comp_hack-pixie-%appveyor_build_number%.zip comp_hack-pixie-%appveyor_build_number%
 
 artifacts:
-  - path: build\comp_hack-pixie-v$(appveyor_build_version).zip
-    name: comp_hack-pixie-v$(appveyor_build_version)
+  - path: build\comp_hack-pixie-$(appveyor_build_number).zip
+    name: comp_hack-pixie-$(appveyor_build_number)
 
 deploy:
-  release: comp_hack-pixie-v$(appveyor_build_version)
+  release: comp_hack-pixie-$(appveyor_build_number)
   description: 'Development Build'
   provider: GitHub
   auth_token:
     secure: /xJRd5oxBbWa7IDdzPFbollIUAc7uqashBu8crIATrv4iUJX//DvzrGSFCaDdFsj
-  artifact: build\comp_hack-pixie-v$(appveyor_build_version).zip
+  artifact: build\comp_hack-pixie-$(appveyor_build_number).zip
   draft: false
   prerelease: true
   on:

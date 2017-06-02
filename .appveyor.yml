@@ -50,3 +50,5 @@ deploy:
     branch: develop
     platform: x86
     configuration: RelWithDebInfo
+
+skip_tags: true

@@ -40,10 +40,10 @@ deploy:
   provider: GitHub
   auth_token:
     secure: /xJRd5oxBbWa7IDdzPFbollIUAc7uqashBu8crIATrv4iUJX//DvzrGSFCaDdFsj
-artifact: build\comp_hack-pixie-v$(appveyor_build_version).zip
-draft: false
-prerelease: true
-on:
-  branch: develop
-  platform: x86
-  configuration: RelWithDebInfo
+  artifact: build\comp_hack-pixie-v$(appveyor_build_version).zip
+  draft: false
+  prerelease: true
+  on:
+    branch: develop
+    platform: x86
+    configuration: RelWithDebInfo

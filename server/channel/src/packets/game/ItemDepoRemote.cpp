@@ -1,10 +1,10 @@
 /**
- * @file server/channel/src/packets/game/ItemBox.cpp
+ * @file server/channel/src/packets/game/ItemDepoRemote.cpp
  * @ingroup channel
  *
  * @author HACKfrost
  *
- * @brief Request from the client for info about a specific item box.
+ * @brief Request from the client to open the remote item depos.
  *
  * This file is part of the Channel Server (channel).
  *
@@ -27,17 +27,9 @@
 #include "Packets.h"
 
 // libcomp Includes
-#include <Log.h>
 #include <ManagerPacket.h>
 #include <Packet.h>
 #include <PacketCodes.h>
-#include <ReadOnlyPacket.h>
-#include <TcpConnection.h>
-
-// object Includes
-#include <Character.h>
-#include <Item.h>
-#include <ItemBox.h>
 
 // channel Includes
 #include "ChannelServer.h"
@@ -45,34 +37,26 @@
 
 using namespace channel;
 
-bool Parsers::ItemBox::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::ItemDepoRemote::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {
-    if(p.Size() != 9)
+    if(p.Size() != 0)
     {
         return false;
     }
 
-    int8_t type = p.ReadS8();
-    int64_t boxID = p.ReadS64Little();
-
     auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
     auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-    auto state = client->GetClientState();
-    auto characterManager = server->GetCharacterManager();
 
-    auto itemBox = characterManager->GetItemBox(state, type, boxID);
-    if(nullptr != itemBox)
-    {
-        server->QueueWork([](
-            CharacterManager* pCharacterManager,
-            const std::shared_ptr<ChannelClientConnection>& pClient,
-            const std::shared_ptr<objects::ItemBox>& pBox)
-        {
-            pCharacterManager->SendItemBoxData(pClient, pBox);
-        }, characterManager, client, itemBox);
-    }
+    /// @todo: replace the menu packet with a scripted binding
+    server->GetEventManager()->HandleEvent(client, "event_itemDepo", 0);
+
+    libcomp::Packet reply;
+    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_ITEM_DEPO_REMOTE);
+    reply.WriteS32Little(0);
+
+    connection->SendPacket(reply);
 
     return true;
 }

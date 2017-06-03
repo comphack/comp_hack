@@ -114,7 +114,7 @@ bool Parsers::SpotTriggered::Parse(libcomp::ManagerPacket *pPacketManager,
             gsl::owner<ActionList*> pActionListWork)
         {
             serverWork->GetActionManager()->PerformActions(clientWork,
-                pActionListWork->actions);
+                pActionListWork->actions, 0);
 
             delete pActionListWork;
         }, server, client, pActionList);

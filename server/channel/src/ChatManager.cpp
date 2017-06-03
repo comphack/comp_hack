@@ -220,17 +220,8 @@ bool ChatManager::GMCommand_Contract(const std::shared_ptr<
     state->SetObjectID(demon->GetUUID(),
         server->GetNextObjectID());
 
-    int8_t slot = -1;
-    for(size_t i = 0; i < 10; i++)
-    {
-        if(character->GetCOMP(i).Get() == demon)
-        {
-            slot = (int8_t)i;
-            break;
-        }
-    }
-
-    characterManager->SendCOMPDemonData(client, 0, slot,
+    int8_t slot = demon->GetBoxSlot();
+    characterManager->SendDemonData(client, 0, slot,
         state->GetObjectID(demon->GetUUID()));
 
     return true;
@@ -337,21 +328,9 @@ bool ChatManager::GMCommand_Homepoint(const std::shared_ptr<
 {
     (void)args;
 
+    /// @todo: replace the menu packet with a scripted binding
     auto server = mServer.lock();
-    auto state = client->GetClientState();
-    auto cState = state->GetCharacterState();
-
-    auto xCoord = cState->GetDestinationX();
-    auto yCoord = cState->GetDestinationY();
-    auto zone = server->GetZoneManager()->GetZoneInstance(client);
-
-    if(nullptr == zone)
-    {
-        return false;
-    }
-
-    server->GetCharacterManager()->UpdateHomepoint(client,
-        zone->GetDefinition()->GetID(), xCoord, yCoord);
+    server->GetEventManager()->HandleEvent(client, "event_homepoint", 0);
 
     return true;
 }

@@ -36,6 +36,7 @@
 
 // object Includes
 #include <Action.h>
+#include <ActionStartEvent.h>
 #include <ActionZoneChange.h>
 #include <ServerZone.h>
 
@@ -46,6 +47,8 @@ ActionManager::ActionManager(const std::weak_ptr<ChannelServer>& server)
 {
     mActionHandlers[objects::Action::ActionType_t::ZONE_CHANGE] =
         &ActionManager::ZoneChange;
+    mActionHandlers[objects::Action::ActionType_t::START_EVENT] =
+        &ActionManager::StartEvent;
 }
 
 ActionManager::~ActionManager()
@@ -54,7 +57,8 @@ ActionManager::~ActionManager()
 
 void ActionManager::PerformActions(
     const std::shared_ptr<ChannelClientConnection>& client,
-    const std::list<std::shared_ptr<objects::Action>>& actions)
+    const std::list<std::shared_ptr<objects::Action>>& actions,
+    int32_t sourceEntityID)
 {
     (void)client;
 
@@ -67,17 +71,33 @@ void ActionManager::PerformActions(
             LOG_ERROR(libcomp::String("Failed to parse action of type %1\n"
                 ).Arg(to_underlying(action->GetActionType())));
         }
-        else if(!it->second(*this, client, action))
+        else if(!it->second(*this, client, action, sourceEntityID))
         {
             break;
         }
     }
 }
 
+bool ActionManager::StartEvent(
+    const std::shared_ptr<ChannelClientConnection>& client,
+    const std::shared_ptr<objects::Action>& act, int32_t sourceEntityID)
+{
+    auto action = std::dynamic_pointer_cast<objects::ActionStartEvent>(act);
+
+    auto server = mServer.lock();
+    auto eventManager = server->GetEventManager();
+
+    eventManager->HandleEvent(client, action->GetEventID(), sourceEntityID);
+    
+    return true;
+}
+
 bool ActionManager::ZoneChange(
     const std::shared_ptr<ChannelClientConnection>& client,
-    const std::shared_ptr<objects::Action>& act)
+    const std::shared_ptr<objects::Action>& act, int32_t sourceEntityID)
 {
+    (void)sourceEntityID;
+
     auto action = std::dynamic_pointer_cast<objects::ActionZoneChange>(act);
 
     auto server = mServer.lock();

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="EventPrompt" baseobject="Event" persistent="false">
+        <member type="enum" name="eventType" inherited="true" default="PROMPT"/>
+        <member type="s32" name="messageID"/>
+        <member type="list" name="choices">
+            <element type="EventChoice*"/>
+        </member>
+    </object>
+    <object name="EventChoice" persistent="false">
+        <member type="s32" name="messageID"/>
+        <member type="string" name="eventID"/>
+        <member type="bool" name="pop"/>
+        <member type="bool" name="popNext"/>
+    </object>
+</objgen>

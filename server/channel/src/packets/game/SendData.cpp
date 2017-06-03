@@ -81,8 +81,8 @@ void SendClientReadyData(std::shared_ptr<ChannelServer> server,
     /// @todo: send "world bonus" [0x0405]
     /// @todo: send player skill updates (toggleable abilities for example) [0x03B8]
 
-    // Send character icon
-    characterManager->SendStatusIcon(client);
+    // Set character icon
+    characterManager->SetStatusIcon(client);
 
     // Send zone information
     {

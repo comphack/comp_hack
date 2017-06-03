@@ -104,23 +104,25 @@ public:
         ClientState *otherState);
 
     /**
-     * Send updated data about a demon in the COMP to the game client.
+     * Send updated data about a demon in a box to the game client.
      * @param client Pointer to the client connection
-     * @param box Demon container ID, should always be zero
+     * @param boxID Demon box ID
      * @param slot Slot of the demon to send data for
-     * @param id ID of the demon to send data for
+     * @param demonID ID of the demon to send data for
      */
-    void SendCOMPDemonData(const std::shared_ptr<
+    void SendDemonData(const std::shared_ptr<
         ChannelClientConnection>& client,
-        int8_t box, int8_t slot, int64_t id);
+        int8_t boxID, int8_t slot, int64_t demonID);
 
     /**
-     * Send a character's status icon to the game clients.
+     * Set the character's status icon and send to the game clients
+     * if it has changed.
      * @param client Pointer to the client connection containing
      *  the character
+     * @param icon Value of the new status icon to set
      */
-    void SendStatusIcon(const std::shared_ptr<
-        channel::ChannelClientConnection>& client);
+    void SetStatusIcon(const std::shared_ptr<
+        channel::ChannelClientConnection>& client, int8_t icon = 0);
 
     /**
      * Summon the demon matching the supplied ID on the client's character.
@@ -140,35 +142,68 @@ public:
         channel::ChannelClientConnection>& client);
 
     /**
-     * Send information about the specified box to the client.
+     * Send information about the specified demon box to the client.
      * @param client Pointer to the client connection containing
      *  the box
-     * @param boxID Box index ID
+     * @param boxID Demon box ID
+     */
+    void SendDemonBoxData(const std::shared_ptr<
+        ChannelClientConnection>& client, int8_t boxID);
+
+    /**
+     * Get the client's character or account owned demon box by ID.
+     * @param client Pointer to the client connection containing
+     *  the box
+     * @param boxID Demon box ID to retrieve. 0 represents the COMP
+     *  and anything higher is a depo box
+     * @return Pointer to the demon box with the specified ID
+     */
+    std::shared_ptr<objects::DemonBox> GetDemonBox(ClientState* state,
+        int8_t boxID);
+
+    /**
+     * Get the client's character or account owned item box by ID.
+     * @param client Pointer to the client connection containing
+     *  the box
+     * @param boxType Type of item box to retrieve
+     * @param boxID Item box ID to retrieve by index
+     * @return Pointer to the item box with the specified type and ID
+     */
+    std::shared_ptr<objects::ItemBox> GetItemBox(ClientState* state,
+        int8_t boxType, int64_t boxID);
+
+    /**
+     * Send information about the specified item box to the client.
+     * @param client Pointer to the client connection containing
+     *  the box
+     * @param box Box to send information regarding
      */
     void SendItemBoxData(const std::shared_ptr<
-        ChannelClientConnection>& client, int64_t boxID);
+        ChannelClientConnection>& client,
+        const std::shared_ptr<objects::ItemBox>& box);
 
     /**
      * Send information about the specified box slots to the client.
      * @param client Pointer to the client connection containing
      *  the box
-     * @param boxID Box index ID
+     * @param box Box to send information regarding
      * @param slots List of slots to send information about
      */
     void SendItemBoxData(const std::shared_ptr<
-        ChannelClientConnection>& client, int64_t boxID,
-        const std::list<uint16_t>& slots);
+        ChannelClientConnection>& client, const std::shared_ptr<
+        objects::ItemBox>& box, const std::list<uint16_t>& slots);
 
     /**
-     * Get all items in a character's inventory that match the supplied
+     * Get all items in the specified box that match the supplied
      * itemID.
      * @param character Pointer to the character
      * @param itemID Item ID to find in the inventory
+     * @param box Box to return items for
      * @return List of pointers to the items of the matching ID
      */
     std::list<std::shared_ptr<objects::Item>> GetExistingItems(
         const std::shared_ptr<objects::Character>& character,
-        uint32_t itemID);
+        uint32_t itemID, std::shared_ptr<objects::ItemBox> box = nullptr);
 
     /**
      * Generate an item with the specified stack size.  The stack size
@@ -270,18 +305,6 @@ public:
         uint32_t skillID);
 
     /**
-     * Update the homepoint of the client's character.
-     * @param client Pointer to the client connection
-     * @param zoneID Zone definition ID to set as the homepoint
-     * @param xCoord X coordinate to set as the homepoint in the zone
-     * @param yCoord Y coordinate to set as the homepoint in the zone
-     * @return true if the homepoint was updated, false if it was not
-     */
-    bool UpdateHomepoint(const std::shared_ptr<
-        channel::ChannelClientConnection>& client, uint32_t zoneID,
-        float xCoord, float yCoord);
-
-    /**
      * Add a map to the byte array representing the maps the client character
      * has obtained.
      * @param client Pointer to the client connection
@@ -336,13 +359,15 @@ public:
         int8_t level, bool isDemon);
 
     /**
-     * Add COMP slot data to a packet.
-     * @param p Packet to populate with COMP data
-     * @param client Current client to retrieve COMP information from
-     * @param slot COMP slot index to populate information from
+     * Add data to a packet about a demon in a box.
+     * @param p Packet to populate with demon data
+     * @param client Current client to retrieve demon information from
+     * @param box Demon box to populate information from
+     * @param slot Demon box slot index to populate information from
      */
-    void GetCOMPSlotPacketData(libcomp::Packet& p, 
-        const std::shared_ptr<channel::ChannelClientConnection>& client, size_t slot);
+    void GetDemonPacketData(libcomp::Packet& p, 
+        const std::shared_ptr<channel::ChannelClientConnection>& client,
+        const std::shared_ptr<objects::DemonBox>& box, int8_t slot);
 
     /**
      * Add the core stat data from the supplied EntityStats instance

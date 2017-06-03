@@ -86,7 +86,7 @@ before_install:
   - export CTEST_OUTPUT_ON_FAILURE=1
 
 before_script:
-  - mysql -u root < MariaDBTestSetup.sql
+  - mysql -u root < contrib/testing/MariaDBTestSetup.sql
 
 script:
   - jdk_switcher use oraclejdk8

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="Event" persistent="false" inherited-construction="true">
+        <member type="string" name="ID"/>
+        <member type="enum" name="eventType">
+            <value>MESSAGE</value>
+            <value>NPC_MESSAGE</value>
+            <value>PROMPT</value>
+            <value>PERFORM_ACTIONS</value>
+            <value>OPEN_MENU</value>
+            <value>HOMEPOINT</value>
+        </member>
+    </object>
+</objgen>

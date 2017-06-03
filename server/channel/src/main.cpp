@@ -29,12 +29,15 @@
 #include "ChannelServer.h"
 
 // libcomp Includes
+#include <Exception.h>
 #include <Log.h>
 #include <PersistentObject.h>
 #include <Shutdown.h>
 
 int main(int argc, const char *argv[])
 {
+    libcomp::Exception::RegisterSignalHandler();
+
     libcomp::Log::GetSingletonPtr()->AddStandardOutputHook();
 
     LOG_INFO("COMP_hack Channel Server v0.0.1 build 1\n");

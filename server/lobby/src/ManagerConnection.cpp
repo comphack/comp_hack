@@ -31,7 +31,6 @@
 #include "LobbyServer.h"
 
 // libcomp Includes
-#include <DatabaseConfigCassandra.h>
 #include <DatabaseConfigSQLite3.h>
 #include <Log.h>
 #include <MessageConnectionClosed.h>

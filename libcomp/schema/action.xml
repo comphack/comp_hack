@@ -3,6 +3,7 @@
     <object name="Action" persistent="false" inherited-construction="true">
         <member type="enum" name="actionType" default="ZONE_CHANGE">
             <value>ZONE_CHANGE</value>
+            <value>START_EVENT</value>
         </member>
     </object>
 </objgen>

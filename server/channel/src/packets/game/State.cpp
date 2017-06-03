@@ -41,10 +41,10 @@ void SendCharacterData(std::shared_ptr<ChannelServer> server,
     server->GetCharacterManager()->SendCharacterData(client);
 }
 
-void SendStatusIcon(CharacterManager* characterManager,
+void SetStatusIcon(CharacterManager* characterManager,
     const std::shared_ptr<ChannelClientConnection> client)
 {
-    characterManager->SendStatusIcon(client);
+    characterManager->SetStatusIcon(client);
 }
 
 bool Parsers::State::Parse(libcomp::ManagerPacket *pPacketManager,
@@ -57,7 +57,7 @@ bool Parsers::State::Parse(libcomp::ManagerPacket *pPacketManager,
     auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
 
     server->QueueWork(SendCharacterData, server, client);
-    server->QueueWork(SendStatusIcon, server->GetCharacterManager(), client);
+    server->QueueWork(SetStatusIcon, server->GetCharacterManager(), client);
 
     return true;
 }

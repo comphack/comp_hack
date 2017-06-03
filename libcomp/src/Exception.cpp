@@ -31,15 +31,19 @@
 
 #ifdef _WIN32
 #include <windows.h>
-//#include <dbghelp.h>
+#include <dbghelp.h>
 #else // _WIN32
 #include <regex_ext>
 #include <execinfo.h>
 #include <cxxabi.h>
 #endif // _WIN32
 
-#include <sstream>
+#include <climits>
 #include <cstdlib>
+#include <iomanip>
+#include <sstream>
+
+#include <signal.h>
 
 using namespace libcomp;
 
@@ -52,6 +56,10 @@ typedef size_t  backtrace_size_t;
 typedef int     backtrace_size_t;
 #endif
 
+#ifdef _WIN32
+#define MAX_SYMBOL_LEN (1024)
+#endif // _WIN32
+
 /**
  * Length of the absolute path to the source directory to strip from backtrace
  * paths. Calculate the length of the path to the project so we may remove that
@@ -63,7 +71,95 @@ Exception::Exception(const String& msg, const String& f, int l) :
     mLine(l), mFile(f), mMessage(msg)
 {
 #ifdef _WIN32
-    /// @todo Implement backtraces on Windows.
+    // Array to store each backtrace address.
+    void *backtraceAddresses[USHRT_MAX];
+
+    USHORT frameCount = CaptureStackBackTrace(0, USHRT_MAX,
+        backtraceAddresses, NULL);
+
+    SymSetOptions(SYMOPT_LOAD_LINES);
+
+    BOOL symInit = SymInitialize(GetCurrentProcess(), NULL, TRUE);
+
+    if(TRUE != symInit)
+    {
+        LOG_CRITICAL("Failed to load symbols!\n");
+    }
+
+    for(USHORT i = 0; i < frameCount; ++i)
+    {
+        DWORD64 displacement = 0;
+
+        uint8_t *pInfoBuffer = new uint8_t[sizeof(SYMBOL_INFO) +
+            MAX_SYMBOL_LEN];
+        SYMBOL_INFO *pInfo = reinterpret_cast<SYMBOL_INFO*>(pInfoBuffer);
+        memset(pInfoBuffer, 0, sizeof(SYMBOL_INFO) + MAX_SYMBOL_LEN);
+        pInfo->MaxNameLen = MAX_SYMBOL_LEN;
+        pInfo->SizeOfStruct = sizeof(SYMBOL_INFO);
+
+        // Retrieve the symbol for each frame in the array.
+        if(TRUE == symInit && TRUE == SymFromAddr(GetCurrentProcess(),
+            (DWORD64)backtraceAddresses[i], &displacement, pInfo))
+        {
+            char name[MAX_SYMBOL_LEN];
+            char sym[MAX_SYMBOL_LEN];
+
+            std::stringstream ss;
+
+            if(0 >= UnDecorateSymbolName(pInfo->Name, sym,
+                MAX_SYMBOL_LEN, UNDNAME_COMPLETE))
+            {
+                strncpy(sym, pInfo->Name, MAX_SYMBOL_LEN - 1);
+            }
+
+            if(0 < GetModuleFileNameA((HMODULE)pInfo->ModBase, name,
+                MAX_SYMBOL_LEN))
+            {
+                char *pModuleName = strrchr(name, '\\');
+
+                if(NULL == pModuleName)
+                {
+                    pModuleName = name;
+                }
+                else
+                {
+                    pModuleName++;
+                }
+
+                ss << pModuleName << "(" << sym << "+0x"
+                    << std::hex << displacement << ")";
+            }
+            else
+            {
+                ss << R"_raw_(???()_raw_" << sym << "+0x"
+                    << std::hex << displacement << ")";
+            }
+
+            ss << " [0x" << std::hex << (DWORD64)backtraceAddresses[i] << "]";
+
+            DWORD lineDisplacement;
+            IMAGEHLP_LINE64 line;
+
+            if(TRUE == SymGetLineFromAddr64(GetCurrentProcess(),
+                (ULONG64)backtraceAddresses[i], &lineDisplacement, &line))
+            {
+                ss << " " << line.FileName << ":"
+                    << std::dec << line.LineNumber;
+            }
+
+            mBacktrace.push_back(ss.str());
+        }
+        else
+        {
+            std::stringstream ss;
+            ss << "0x" << std::hex << (DWORD64)backtraceAddresses[i];
+
+            mBacktrace.push_back(ss.str());
+        }
+
+        delete[] pInfoBuffer;
+        pInfoBuffer = nullptr;
+    }
 #else // _WIN32
     // Array to store each backtrace address.
     void *backtraceAddresses[MAX_BACKTRACE_DEPTH];
@@ -189,4 +285,25 @@ void Exception::Log() const
         "========================================\n"
     ).Arg(File()).Arg(Line()).Arg(Message()).Arg(
         String::Join(Backtrace(), "\n")));
+}
+
+static void SignalHandler(int sig)
+{
+    (void)sig;
+
+    Exception e("SIGSEGV", __FILE__, __LINE__);
+
+    LOG_CRITICAL("The server has crashed. A backtrace will follow.\n");
+
+    for(libcomp::String s : e.Backtrace())
+    {
+        LOG_CRITICAL(libcomp::String("Backtrace: %1\n").Arg(s));
+    }
+
+    exit(EXIT_FAILURE);
+}
+
+void Exception::RegisterSignalHandler()
+{
+    signal(SIGSEGV, SignalHandler);
 }

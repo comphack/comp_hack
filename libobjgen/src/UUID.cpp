@@ -26,6 +26,7 @@
 
 #include "UUID.h"
 #include "Endian.h"
+
 // OpenSSL Includes
 #include <openssl/rand.h>
 
@@ -128,20 +129,6 @@ libobjgen::UUID libobjgen::UUID::Random()
     return uuid;
 }
 
-libobjgen::UUID::UUID(CassUuid other) : mTimeAndVersion(other.time_and_version),
-    mClockSequenceAndNode(other.clock_seq_and_node)
-{
-}
-
-CassUuid libobjgen::UUID::ToCassandra() const
-{
-    CassUuid other;
-    other.time_and_version = mTimeAndVersion;
-    other.clock_seq_and_node = mClockSequenceAndNode;
-
-    return other;
-}
-
 std::string libobjgen::UUID::ToString() const
 {
     std::stringstream ss;
@@ -200,16 +187,4 @@ bool libobjgen::UUID::operator!=(UUID other) const
 {
     return mTimeAndVersion != other.mTimeAndVersion ||
         mClockSequenceAndNode != other.mClockSequenceAndNode;
-}
-
-bool libobjgen::UUID::operator==(CassUuid other) const
-{
-    return mTimeAndVersion == other.time_and_version &&
-        mClockSequenceAndNode == other.clock_seq_and_node;
-}
-
-bool libobjgen::UUID::operator!=(CassUuid other) const
-{
-    return mTimeAndVersion != other.time_and_version ||
-        mClockSequenceAndNode != other.clock_seq_and_node;
 }

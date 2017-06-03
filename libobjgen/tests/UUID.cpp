@@ -35,79 +35,11 @@ using namespace libobjgen;
 
 TEST(UUID, Null)
 {
-    CassUuid cassUUID;
-    cassUUID.time_and_version = 0;
-    cassUUID.clock_seq_and_node = 0;
-
     EXPECT_TRUE(UUID().IsNull());
     EXPECT_TRUE(UUID("00000000-0000-0000-0000-000000000000").IsNull());
-    EXPECT_TRUE(UUID(cassUUID).IsNull());
 
     EXPECT_FALSE(UUID("00000001-0000-0000-0000-000000000000").IsNull());
     EXPECT_FALSE(UUID("00000000-0000-0000-0000-000000000001").IsNull());
-
-    cassUUID.time_and_version = 1;
-    cassUUID.clock_seq_and_node = 0;
-    EXPECT_FALSE(UUID(cassUUID).IsNull());
-
-    cassUUID.time_and_version = 0;
-    cassUUID.clock_seq_and_node = 1;
-    EXPECT_FALSE(UUID(cassUUID).IsNull());
-
-    cassUUID.time_and_version = 1;
-    cassUUID.clock_seq_and_node = 1;
-    EXPECT_FALSE(UUID(cassUUID).IsNull());
-}
-
-TEST(UUID, Compare)
-{
-    CassUuid cassUUID;
-    CassUuid cassUUID2;
-
-    CassUuidGen *pGenerator = cass_uuid_gen_new();
-    cass_uuid_gen_random(pGenerator, &cassUUID);
-    cass_uuid_gen_random(pGenerator, &cassUUID2);
-
-    UUID libcompUUID(cassUUID);
-    UUID libcompUUID2(cassUUID2);
-
-    EXPECT_EQ(libcompUUID, libcompUUID);
-    EXPECT_EQ(libcompUUID, cassUUID);
-    EXPECT_EQ(libcompUUID.ToCassandra().time_and_version,
-        cassUUID.time_and_version);
-    EXPECT_EQ(libcompUUID.ToCassandra().clock_seq_and_node,
-        cassUUID.clock_seq_and_node);
-
-    EXPECT_NE(libcompUUID2, libcompUUID);
-    EXPECT_NE(libcompUUID2, cassUUID);
-    EXPECT_NE(libcompUUID2.ToCassandra().time_and_version,
-        cassUUID.time_and_version);
-    EXPECT_NE(libcompUUID2.ToCassandra().clock_seq_and_node,
-        cassUUID.clock_seq_and_node);
-
-    EXPECT_NE(libcompUUID, libcompUUID2);
-    EXPECT_NE(libcompUUID, cassUUID2);
-    EXPECT_NE(libcompUUID.ToCassandra().time_and_version,
-        cassUUID2.time_and_version);
-    EXPECT_NE(libcompUUID.ToCassandra().clock_seq_and_node,
-        cassUUID2.clock_seq_and_node);
-
-    cass_uuid_gen_free(pGenerator);
-}
-
-TEST(UUID, StringConversion)
-{
-    CassUuid cassUUID;
-    char uuidString[CASS_UUID_STRING_LENGTH];
-
-    CassUuidGen *pGenerator = cass_uuid_gen_new();
-    cass_uuid_gen_random(pGenerator, &cassUUID);
-    cass_uuid_string(cassUUID, uuidString);
-
-    EXPECT_EQ(UUID(uuidString), cassUUID);
-    EXPECT_EQ(UUID(uuidString).ToString(), uuidString);
-
-    cass_uuid_gen_free(pGenerator);
 }
 
 TEST(UUID, Generate)
@@ -117,9 +49,6 @@ TEST(UUID, Generate)
 
     EXPECT_FALSE(a.IsNull());
     EXPECT_FALSE(b.IsNull());
-
-    EXPECT_EQ(cass_uuid_version(a.ToCassandra()), 4);
-    EXPECT_EQ(cass_uuid_version(b.ToCassandra()), 4);
 
     EXPECT_NE(a, b);
 }

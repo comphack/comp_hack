@@ -100,7 +100,7 @@ TARGET_INCLUDE_DIRECTORIES(objgen PRIVATE
 )
 
 TARGET_LINK_LIBRARIES(objgen ${OPENSSL_LIBRARIES} ${ZLIB_LIBRARIES} tinyxml2
-    cassandra uv ttvfs ttvfs_zip)
+    ttvfs ttvfs_zip)
 
 IF(WIN32)
     TARGET_LINK_LIBRARIES(objgen advapi32 iphlpapi psapi shell32 userenv ws2_32)
@@ -115,6 +115,6 @@ SET(${PROJECT_NAME}_TEST_SRCS
 
 IF(NOT BSD)
     # Add the unit tests.
-    CREATE_GTESTS(LIBS objgen ${CMAKE_THREAD_LIBS_INIT} cassandra
-        uv SRCS ${${PROJECT_NAME}_TEST_SRCS})
+    CREATE_GTESTS(LIBS objgen ${CMAKE_THREAD_LIBS_INIT}
+        SRCS ${${PROJECT_NAME}_TEST_SRCS})
 ENDIF(NOT BSD)

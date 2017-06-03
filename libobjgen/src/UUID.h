@@ -34,9 +34,6 @@
 #include <string>
 #include <vector>
 
-// Cassandra Includes
-#include <cassandra.h>
-
 #define NULLUUID libobjgen::UUID()
 
 namespace libobjgen
@@ -48,11 +45,9 @@ public:
     UUID();
     UUID(const std::string& other);
     UUID(const std::vector<char>& data);
-    UUID(CassUuid other);
 
     static UUID Random();
 
-    CassUuid ToCassandra() const;
     std::string ToString() const;
     std::vector<char> ToData() const;
 
@@ -60,8 +55,6 @@ public:
 
     bool operator==(UUID other) const;
     bool operator!=(UUID other) const;
-    bool operator==(CassUuid other) const;
-    bool operator!=(CassUuid other) const;
 
 private:
     uint64_t mTimeAndVersion;

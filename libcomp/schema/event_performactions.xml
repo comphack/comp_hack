@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="EventPerformActions" baseobject="Event" persistent="false">
+        <member type="enum" name="eventType" inherited="true" default="PERFORM_ACTIONS"/>
+        <member type="list" name="actions">
+            <element type="Action*"/>
+        </member>
+        <member type="string" name="next"/>
+        <member type="bool" name="pop"/>
+    </object>
+</objgen>

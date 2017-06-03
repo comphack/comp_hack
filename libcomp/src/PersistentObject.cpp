@@ -39,6 +39,7 @@
 #include "Character.h"
 #include "CharacterProgress.h"
 #include "Demon.h"
+#include "DemonBox.h"
 #include "EntityStats.h"
 #include "Expertise.h"
 #include "Hotbar.h"
@@ -327,6 +328,9 @@ bool PersistentObject::Initialize()
 
     RegisterType(typeid(objects::Demon), objects::Demon::GetMetadata(),
         []() {  return (PersistentObject*)new objects::Demon(); });
+
+    RegisterType(typeid(objects::DemonBox), objects::DemonBox::GetMetadata(),
+        []() {  return (PersistentObject*)new objects::DemonBox(); });
 
     RegisterType(typeid(objects::EntityStats), objects::EntityStats::GetMetadata(),
         []() {  return (PersistentObject*)new objects::EntityStats(); });

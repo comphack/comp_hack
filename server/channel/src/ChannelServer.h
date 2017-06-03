@@ -43,6 +43,7 @@
 #include "CharacterManager.h"
 #include "ChatManager.h"
 #include "DefinitionManager.h"
+#include "EventManager.h"
 #include "ServerDataManager.h"
 #include "SkillManager.h"
 #include "ZoneManager.h"
@@ -89,6 +90,20 @@ public:
      * @return Current time relative to the server
      */
     static ServerTime GetServerTime();
+
+    /**
+     * Get the current time relative to the server in seconds.
+     * @return Current time relative to the server in seconds
+     */
+    static uint32_t GetServerTimeInSeconds();
+
+    /**
+     * Get the amount of time left in an expiration relative to the server,
+     * in seconds.
+     * @return Time until expiration relative to the server, in seconds
+     */
+    static int32_t GetExpirationInSeconds(uint32_t fixedTime,
+        uint32_t relativeTo = 0);
 
     /**
      * Get the world clock time of the server.
@@ -192,6 +207,12 @@ public:
      * @return Pointer to the ChatManager
      */
     ChatManager* GetChatManager() const;
+
+    /**
+     * Get a pointer to the event manager.
+     * @return Pointer to the EventManager
+     */
+    EventManager* GetEventManager() const;
 
     /**
      * Get a pointer to the skill manager.
@@ -298,6 +319,9 @@ protected:
 
     /// Pointer to the Chat Manager.
     ChatManager *mChatManager;
+
+    /// Pointer to the Event Manager.
+    EventManager *mEventManager;
 
     /// Pointer to the Skill Manager.
     SkillManager *mSkillManager;

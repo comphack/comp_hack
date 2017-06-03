@@ -4,5 +4,21 @@
         <member type="bool" name="Authenticated"/>
         <member type="bool" name="LoggedIn"/>
         <member type="AccountLogin*" name="AccountLogin"/>
+        <member type="AccountWorldData*" name="AccountWorldData"/>
+        <member type="EventState*" name="EventState"/>
+        <member type="s8" name="StatusIcon"/>
+    </object>
+    <object name="EventState" persistent="false">
+        <member type="EventInstance*" name="Current"/>
+        <member type="list" name="Previous">
+            <element type="EventInstance*"/>
+        </member>
+    </object>
+    <object name="EventInstance" persistent="false">
+        <member type="Event*" name="Event"/>
+        <member type="s32" name="SourceEntityID"/>
+        <member type="u8" name="Index"/>
+        <member type="bool" name="Pop"/>
+        <member type="bool" name="PopNext"/>
     </object>
 </objgen>

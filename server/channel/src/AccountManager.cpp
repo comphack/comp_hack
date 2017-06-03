@@ -33,7 +33,10 @@
 // object Includes
 #include <Account.h>
 #include <AccountLogin.h>
+#include <AccountWorldData.h>
 #include <CharacterProgress.h>
+#include <DemonBox.h>
+#include <EventState.h>
 #include <Expertise.h>
 #include <Hotbar.h>
 #include <Item.h>
@@ -103,6 +106,10 @@ void AccountManager::HandleLoginResponse(const std::shared_ptr<
 
     if(InitializeCharacter(character, state))
     {
+        // Set current event to null
+        state->GetEventState()->SetCurrent(nullptr);
+
+        // Get entity IDs for the character and demon
         auto charState = state->GetCharacterState();
         charState->SetEntity(character.Get());
         charState->SetEntityID(server->GetNextEntityID());
@@ -256,11 +263,14 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
         return false;
     }
 
+    auto account = character->GetAccount();
     bool newCharacter = character->GetCoreStats()->GetLevel() == -1;
     auto characterManager = server->GetCharacterManager();
     auto definitionManager = server->GetDefinitionManager();
     if(newCharacter)
     {
+        bool isGM = account->GetIsGM();
+
         auto cs = character->GetCoreStats().Get();
         cs->SetLevel(1);
         characterManager->CalculateCharacterBaseStats(cs);
@@ -271,6 +281,12 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
         auto progress = libcomp::PersistentObject::New<
             objects::CharacterProgress>();
         progress->SetCharacter(character);
+        
+        // Max COMP slots if the account is a GM
+        if(isGM)
+        {
+            progress->SetMaxCOMPSlots(10);
+        }
 
         if(!progress->Register(progress) ||
             !progress->Insert(db) ||
@@ -278,11 +294,23 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
         {
             return false;
         }
+        
+        // Create the COMP
+        auto comp = libcomp::PersistentObject::New<
+            objects::DemonBox>();
+        comp->SetAccount(account);
+        comp->SetCharacter(character);
+
+        if(!comp->Register(comp) ||
+            !comp->Insert(db) || !character->SetCOMP(comp))
+        {
+            return false;
+        }
 
         // Create the inventory item box (the others can be lazy loaded later)
         auto box = libcomp::PersistentObject::New<
             objects::ItemBox>();
-        box->SetAccount(character->GetAccount());
+        box->SetAccount(account);
         box->SetCharacter(character);
 
         if(!box->Register(box) ||
@@ -292,7 +320,7 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
         }
 
         //Hacks to add MAG, a test demon and some starting skills
-        auto mag = characterManager->GenerateItem(800, 5000);
+        auto mag = characterManager->GenerateItem(ITEM_MAGNETITE, 5000);
         mag->SetItemBox(box);
         mag->SetBoxSlot(49);
 
@@ -323,6 +351,42 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
             character->AppendLearnedSkills(skillID);
         }
     }
+    
+    // Load or create the account world data
+    auto worldData = objects::AccountWorldData
+        ::LoadAccountWorldDataByAccount(db, account);
+    if(worldData == nullptr)
+    {
+        worldData = libcomp::PersistentObject::New<
+            objects::AccountWorldData>();
+
+        worldData->Register(worldData);
+        worldData->SetAccount(account);
+
+        auto itemDepo = libcomp::PersistentObject::New<
+            objects::ItemBox>();
+
+        itemDepo->Register(itemDepo);
+        itemDepo->SetType(objects::ItemBox::Type_t::ITEM_DEPO);
+        itemDepo->SetAccount(account);
+        worldData->SetItemBoxes(0, itemDepo);
+
+        auto demonDepo = libcomp::PersistentObject::New<
+            objects::DemonBox>();
+
+        demonDepo->Register(demonDepo);
+        demonDepo->SetAccount(account);
+        demonDepo->SetBoxID(1);
+        worldData->SetDemonBoxes(0, demonDepo);
+
+        if(!itemDepo->Insert(db) || !demonDepo->Insert(db) ||
+            !worldData->Insert(db))
+        {
+            return false;
+        }
+    }
+
+    state->SetAccountWorldData(worldData);
 
     // Progress
     if(!character->LoadProgress(db))
@@ -330,8 +394,19 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
         return false;
     }
 
-    // Item boxes
+    // Item boxes and items
+    std::list<libcomp::ObjectReference<objects::ItemBox>> allBoxes;
     for(auto itemBox : character->GetItemBoxes())
+    {
+        allBoxes.push_back(itemBox);
+    }
+    
+    for(auto itemBox : worldData->GetItemBoxes())
+    {
+        allBoxes.push_back(itemBox);
+    }
+
+    for(auto itemBox : allBoxes)
     {
         if(!itemBox.IsNull())
         {
@@ -339,9 +414,6 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
             {
                 return false;
             }
-
-            state->SetObjectID(itemBox->GetUUID(),
-                server->GetNextObjectID());
 
             for(auto item : itemBox->GetItems())
             {
@@ -416,19 +488,37 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
             }
         }
     }
-
-    // COMP
-    for(auto demon : character->GetCOMP())
+    
+    // Demon boxes, demons and stats
+    std::list<libcomp::ObjectReference<objects::DemonBox>> demonBoxes;
+    demonBoxes.push_back(character->GetCOMP());
+    for(auto box : worldData->GetDemonBoxes())
     {
-        if(!demon.IsNull())
+        demonBoxes.push_back(box);
+    }
+
+    for(auto box : demonBoxes)
+    {
+        if(!box.IsNull())
         {
-            if(!demon.Get(db) || !demon->LoadCoreStats(db))
+            if(!box.Get(db))
             {
                 return false;
             }
+            
+            for(auto demon : box->GetDemons())
+            {
+                if(!demon.IsNull())
+                {
+                    if(!demon.Get(db) || !demon->LoadCoreStats(db))
+                    {
+                        return false;
+                    }
 
-            state->SetObjectID(demon->GetUUID(),
-                server->GetNextObjectID());
+                    state->SetObjectID(demon->GetUUID(),
+                        server->GetNextObjectID());
+                }
+            }
         }
     }
 
@@ -465,16 +555,27 @@ bool AccountManager::LogoutCharacter(channel::ClientState* state)
     ok &= Cleanup<objects::CharacterProgress>(character
         ->GetProgress().Get(), worldDB);
 
-    // Save items
+    // Save items and boxes
+    std::list<std::shared_ptr<objects::ItemBox>> allBoxes;
     for(auto itemBox : character->GetItemBoxes())
     {
-        if(!itemBox.IsNull())
+        allBoxes.push_back(itemBox.Get());
+    }
+    
+    for(auto itemBox : state->GetAccountWorldData()->GetItemBoxes())
+    {
+        allBoxes.push_back(itemBox.Get());
+    }
+
+    for(auto itemBox : allBoxes)
+    {
+        if(nullptr != itemBox)
         {
             for(auto item : itemBox->GetItems())
             {
                 ok &= Cleanup<objects::Item>(item.Get(), worldDB);
             }
-            ok &= Cleanup<objects::ItemBox>(itemBox.Get(), worldDB);
+            ok &= Cleanup<objects::ItemBox>(itemBox, worldDB);
         }
     }
 
@@ -490,14 +591,29 @@ bool AccountManager::LogoutCharacter(channel::ClientState* state)
         ok &= Cleanup<objects::Expertise>(expertise.Get(), worldDB);
     }
 
-    // Save demons
-    for(auto demon : character->GetCOMP())
+    // Save demon boxes, demons and stats
+    std::list<std::shared_ptr<objects::DemonBox>> demonBoxes;
+    demonBoxes.push_back(character->GetCOMP().Get());
+    for(auto box : state->GetAccountWorldData()->GetDemonBoxes())
     {
-        if(!demon.IsNull())
+        demonBoxes.push_back(box.Get());
+    }
+    
+    for(auto box : demonBoxes)
+    {
+        if(nullptr != box)
         {
-            ok &= Cleanup<objects::EntityStats>(demon
-                ->GetCoreStats().Get(), worldDB);
-            ok &= Cleanup<objects::Demon>(demon.Get(), worldDB);
+            for(auto demon : box->GetDemons())
+            {
+                if(!demon.IsNull())
+                {
+                    ok &= Cleanup<objects::EntityStats>(demon
+                        ->GetCoreStats().Get(), worldDB);
+                    ok &= Cleanup<objects::Demon>(demon.Get(), worldDB);
+                }
+            }
+
+            ok &= Cleanup<objects::DemonBox>(box, worldDB);
         }
     }
 
@@ -506,6 +622,10 @@ bool AccountManager::LogoutCharacter(channel::ClientState* state)
     {
         ok &= Cleanup<objects::Hotbar>(hotbar.Get(), worldDB);
     }
+
+    // Save world data
+    ok &= Cleanup<objects::AccountWorldData>(
+        state->GetAccountWorldData().Get(), worldDB);
 
     return ok;
 }

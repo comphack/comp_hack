@@ -1,10 +1,10 @@
 /**
- * @file server/channel/src/packets/game/COMPDemonData.cpp
+ * @file server/channel/src/packets/game/DemonBox.cpp
  * @ingroup channel
  *
  * @author HACKfrost
  *
- * @brief Request from the client to return a demon in the COMP's data.
+ * @brief Request from the client to return a demon box's demon list.
  *
  * This file is part of the Channel Server (channel).
  *
@@ -35,7 +35,8 @@
 #include <TcpConnection.h>
 
 // object Includes
-#include <InheritedSkill.h>
+#include <CharacterProgress.h>
+#include <DemonBox.h>
 #include <StatusEffect.h>
 
 // channel Includes
@@ -44,45 +45,21 @@
 
 using namespace channel;
 
-void SendCOMPDemonData(CharacterManager* characterManager,
-    const std::shared_ptr<ChannelClientConnection>& client,
-    int8_t box, int8_t slot, int64_t id)
-{
-    characterManager->SendCOMPDemonData(client, box, slot, id);
-}
-
-bool Parsers::COMPDemonData::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::DemonBox::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {
-    if(p.Size() != 10)
+    if(p.Size() != 1)
     {
         return false;
     }
 
-    int8_t box = p.ReadS8();
-    int8_t slot = p.ReadS8();
-    int64_t id = p.ReadS64Little();
+    int8_t boxID = p.ReadS8();
 
-    if(slot > 10)
-    {
-        LOG_ERROR(libcomp::String("Invalid COMP slot requested: %1\n")
-            .Arg(slot));
-        return false;
-    }
-    else if(box != 0)
-    {
-        LOG_ERROR("Non-COMP demon boxes are currently not supported.\n");
-        return true;
-    }
+    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>
-        (pPacketManager->GetServer());
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
-        connection);
-
-    server->QueueWork(SendCOMPDemonData, server->GetCharacterManager(),
-        client, box, slot, id);
+    server->GetCharacterManager()->SendDemonBoxData(client, boxID);
 
     return true;
 }

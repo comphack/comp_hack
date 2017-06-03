@@ -84,6 +84,11 @@ public:
      */
     virtual void Log() const;
 
+    /**
+     * Register the SIGSEGV signal handler to catch crashes.
+     */
+    static void RegisterSignalHandler();
+
 private:
     /// Line number the exception occured on.
     int mLine;

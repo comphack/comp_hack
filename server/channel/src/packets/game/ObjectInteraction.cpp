@@ -47,6 +47,7 @@ class ActionList
 {
 public:
     std::list<std::shared_ptr<objects::Action>> actions;
+    int32_t sourceEntityID;
 };
 
 bool Parsers::ObjectInteraction::Parse(libcomp::ManagerPacket *pPacketManager,
@@ -89,6 +90,7 @@ bool Parsers::ObjectInteraction::Parse(libcomp::ManagerPacket *pPacketManager,
         // Get the action list.
         auto pActionList = new ActionList;
         pActionList->actions = entity->GetActions();
+        pActionList->sourceEntityID = entityID;
 
         LOG_DEBUG(libcomp::String("Got entity with %1 actions.\n").Arg(
             pActionList->actions.size()));
@@ -108,7 +110,7 @@ bool Parsers::ObjectInteraction::Parse(libcomp::ManagerPacket *pPacketManager,
             gsl::owner<ActionList*> pActionListWork)
         {
             serverWork->GetActionManager()->PerformActions(clientWork,
-                pActionListWork->actions);
+                pActionListWork->actions, pActionListWork->sourceEntityID);
 
             delete pActionListWork;
         }, server, client, pActionList);

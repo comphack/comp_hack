@@ -71,7 +71,7 @@ void SendClientReadyData(std::shared_ptr<ChannelServer> server,
         ClientTime currentClientTime = state->ToClientTime(currentServerTime);
 
         libcomp::Packet p;
-        p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_SYNC);
+        p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_SYNC_TIME);
         p.WriteFloat(currentClientTime);
 
         client->QueuePacket(p);

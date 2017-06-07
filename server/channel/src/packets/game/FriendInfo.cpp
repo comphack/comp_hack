@@ -66,8 +66,10 @@ bool Parsers::FriendInfo::Parse(libcomp::ManagerPacket *pPacketManager,
     reply.WriteS8(0);    // Unknown
     reply.WriteString16Little(libcomp::Convert::ENCODING_CP932,
         friendMessage, true);
-    reply.WriteU8(1);    // Unknown
-    reply.WriteU8(1);    // Unknown
+
+    bool publicToZone = true;
+    reply.WriteU8(publicToZone ? 1 : 0);    // Seems to always match below
+    reply.WriteU8(publicToZone ? 1 : 0);    // Actual value
 
     connection->SendPacket(reply);
 

@@ -65,6 +65,7 @@ ChatManager::ChatManager(const std::weak_ptr<ChannelServer>& server)
     mGMands["map"] = &ChatManager::GMCommand_Map;
     mGMands["pos"] = &ChatManager::GMCommand_Position;
     mGMands["skill"] = &ChatManager::GMCommand_Skill;
+    mGMands["speed"] = &ChatManager::GMCommand_Speed;
     mGMands["xp"] = &ChatManager::GMCommand_XP;
     mGMands["zone"] =&ChatManager::GMCommand_Zone;
 }
@@ -582,6 +583,33 @@ bool ChatManager::GMCommand_Skill(const std::shared_ptr<
 
     return mServer.lock()->GetCharacterManager()->LearnSkill(
         client, entityID, skillID);
+}
+
+bool ChatManager::GMCommand_Speed(const std::shared_ptr<
+    channel::ChannelClientConnection>& client,
+    const std::list<libcomp::String>& args)
+{
+    std::list<libcomp::String> argsCopy = args;
+
+    auto server = mServer.lock();
+    auto state = client->GetClientState();
+
+    float scaling = 1.f;
+    GetDecimalArg<float>(scaling, argsCopy);
+
+    libcomp::String target;
+    bool isDemon = GetStringArg(target, argsCopy) && target.ToLower() == "demon";
+    auto entityID = isDemon ? state->GetDemonState()->GetEntityID()
+        : state->GetCharacterState()->GetEntityID();
+
+    libcomp::Packet p;
+    p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_RUN_SPEED);
+    p.WriteS32Little(entityID);
+    p.WriteFloat(static_cast<float>(300.0f * scaling));
+
+    client->SendPacket(p);
+
+    return true;
 }
 
 bool ChatManager::GMCommand_Zone(const std::shared_ptr<

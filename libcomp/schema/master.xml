@@ -19,11 +19,15 @@
     <include path="demon.xml"/>
     <include path="enemy.xml"/>
     <include path="event.xml"/>
+    <include path="event_direction.xml"/>
+    <include path="event_getitem.xml"/>
     <include path="event_homepoint.xml"/>
     <include path="event_message.xml"/>
     <include path="event_openmenu.xml"/>
     <include path="event_performactions.xml"/>
+    <include path="event_playscene.xml"/>
     <include path="event_prompt.xml"/>
+    <include path="event_stageeffect.xml"/>
     <include path="item.xml"/>
     <include path="registeredchannel.xml"/>
     <include path="registeredworld.xml"/>

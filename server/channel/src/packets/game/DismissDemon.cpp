@@ -35,6 +35,7 @@
 #include "ChannelServer.h"
 
 // objects Includes
+#include <CharacterProgress.h>
 #include <DemonBox.h>
 
 using namespace channel;
@@ -44,10 +45,10 @@ void DemonDismiss(const std::shared_ptr<ChannelServer> server,
     int64_t demonID)
 {
     auto state = client->GetClientState();
-    auto cState = state->GetCharacterState();
     auto dState = state->GetDemonState();
+    auto cState = state->GetCharacterState();
     auto character = cState->GetEntity();
-    auto comp = character->GetCOMP();
+    auto progress = character->GetProgress();
     auto demon = std::dynamic_pointer_cast<objects::Demon>(
         libcomp::PersistentObject::GetObjectByUUID(state->GetObjectUUID(demonID)));
 
@@ -58,6 +59,7 @@ void DemonDismiss(const std::shared_ptr<ChannelServer> server,
 
     int8_t slot = demon->GetBoxSlot();
     auto box = demon->GetDemonBox().Get();
+    uint8_t maxSlots = box == 0 ? progress->GetMaxCOMPSlots() : 50;
     if(dState->GetEntity() == demon)
     {
         server->GetCharacterManager()->StoreDemon(client);
@@ -71,7 +73,7 @@ void DemonDismiss(const std::shared_ptr<ChannelServer> server,
 
     reply.WriteS32Little(1);    //Slots updated
     server->GetCharacterManager()->GetDemonPacketData(reply, client, box, slot);
-    reply.WriteS8((int8_t)box->DemonsCount());
+    reply.WriteS8((int8_t)maxSlots);
 
     client->SendPacket(reply);
 

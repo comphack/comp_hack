@@ -94,11 +94,22 @@ int main(int argc, const char *argv[])
         return EXIT_FAILURE;
     }
 
+    bool useSSL = !std::dynamic_pointer_cast<objects::LobbyConfig>(config
+        )->GetWebCertificate().IsEmpty();
+
     /// @todo Consider moving the web server.
     std::vector<std::string> options;
     options.push_back("listening_ports");
     options.push_back(std::to_string(std::dynamic_pointer_cast<
-        objects::LobbyConfig>(config)->GetWebListeningPort()));
+        objects::LobbyConfig>(config)->GetWebListeningPort()) +
+        (useSSL ? "s" : ""));
+
+    if(useSSL)
+    {
+        options.push_back("ssl_certificate");
+        options.push_back(std::dynamic_pointer_cast<
+            objects::LobbyConfig>(config)->GetWebCertificate().ToUtf8());
+    }
 
     auto pLoginHandler = new lobby::LoginHandler(server->GetMainDatabase());
     pLoginHandler->SetAccountManager(server->GetAccountManager());

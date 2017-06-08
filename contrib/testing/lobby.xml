@@ -58,6 +58,7 @@
         <member name="CharacterDeletionDelay">1440</member>    <!-- In minutes, 24 hours by default -->
         <member name="CharacterTicketCost">0</member>
         <member name="WebListeningPort">10999</member>
+        <!-- <member name="WebCertificate">/etc/comp_hack/server.pem</member> -->
         <member name="ClientVersion">1.666</member>
     </object>
 </objgen>

@@ -511,7 +511,7 @@ void CharacterManager::SendOtherPartnerData(const std::list<std::shared_ptr<
     reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_OTHER_PARTNER_DATA);
     reply.WriteS32Little(dState->GetEntityID());
     reply.WriteU32Little(d->GetType());
-    reply.WriteS32Little(otherState->GetDemonState()->GetEntityID());
+    reply.WriteS32Little(otherState->GetCharacterState()->GetEntityID());
     reply.WriteS16Little(dState->GetMaxHP());
     reply.WriteS16Little(ds->GetHP());
     reply.WriteS8(ds->GetLevel());

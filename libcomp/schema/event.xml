@@ -1,14 +1,32 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <objgen>
-    <object name="Event" persistent="false" inherited-construction="true">
+    <object name="EventBase" persistent="false">
+        <member type="string" name="next"/>
+        <member type="string" name="conditionID"/>
+        <member type="bool" name="pop"/>
+        <member type="bool" name="popNext"/>
+    </object>
+    <object name="EventSequence" baseobject="EventBase" persistent="false">
+        <member type="list" name="branches">
+            <element type="EventBase*"/>
+        </member>
+    </object>
+    <object name="Event" baseobject="EventSequence" persistent="false" inherited-construction="true">
         <member type="string" name="ID"/>
         <member type="enum" name="eventType">
             <value>MESSAGE</value>
             <value>NPC_MESSAGE</value>
+            <value>EX_NPC_MESSAGE</value>
+            <value>MULTITALK</value>
             <value>PROMPT</value>
             <value>PERFORM_ACTIONS</value>
             <value>OPEN_MENU</value>
             <value>HOMEPOINT</value>
+            <value>GET_ITEMS</value>
+            <value>PLAY_SCENE</value>
+            <value>STAGE_EFFECT</value>
+            <value>DIRECTION</value>
+            <value>SPECIAL_DIRECTION</value>
         </member>
     </object>
 </objgen>

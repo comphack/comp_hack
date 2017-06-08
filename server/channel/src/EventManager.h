@@ -103,12 +103,9 @@ private:
      * no event is found, the event sequence is ended.
      * @param client Pointer to the client the event affects
      * @param current Current event instance to process relative to
-     * @param nextEventID ID of the next event to process. If this is
-     *  empty, the event will attempt to pop to the previous event.
      */
     void HandleNext(const std::shared_ptr<ChannelClientConnection>& client,
-        const std::shared_ptr<objects::EventInstance>& current,
-        const libcomp::String& nextEventID);
+        const std::shared_ptr<objects::EventInstance>& current);
 
     /**
      * Send a message to the client
@@ -120,12 +117,30 @@ private:
         const std::shared_ptr<objects::EventInstance>& instance);
 
     /**
-     * Send a NPC based message to the client
+     * Send an NPC based message to the client
      * @param client Pointer to the client the event affects
      * @param instance Current event instance to process relative to
      * @return true on success, false on failure
      */
     bool NPCMessage(const std::shared_ptr<ChannelClientConnection>& client,
+        const std::shared_ptr<objects::EventInstance>& instance);
+
+    /**
+     * Send an extended NPC based message to the client
+     * @param client Pointer to the client the event affects
+     * @param instance Current event instance to process relative to
+     * @return true on success, false on failure
+     */
+    bool ExNPCMessage(const std::shared_ptr<ChannelClientConnection>& client,
+        const std::shared_ptr<objects::EventInstance>& instance);
+
+    /**
+     * Start a multitalk event clientside
+     * @param client Pointer to the client the event affects
+     * @param instance Current event instance to process relative to
+     * @return true on success, false on failure
+     */
+    bool Multitalk(const std::shared_ptr<ChannelClientConnection>& client,
         const std::shared_ptr<objects::EventInstance>& instance);
 
     /**
@@ -138,6 +153,15 @@ private:
         const std::shared_ptr<objects::EventInstance>& instance);
 
     /**
+     * Play an in-game cinematic clientside
+     * @param client Pointer to the client the event affects
+     * @param instance Current event instance to process relative to
+     * @return true on success, false on failure
+     */
+    bool PlayScene(const std::shared_ptr<ChannelClientConnection>& client,
+        const std::shared_ptr<objects::EventInstance>& instance);
+
+    /**
      * Open a menu to the player representing various facilities
      * and functions
      * @param client Pointer to the client the event affects
@@ -145,6 +169,15 @@ private:
      * @return true on success, false on failure
      */
     bool OpenMenu(const std::shared_ptr<ChannelClientConnection>& client,
+        const std::shared_ptr<objects::EventInstance>& instance);
+
+    /**
+     * Inform the player that items have been obtained
+     * @param client Pointer to the client the event affects
+     * @param instance Current event instance to process relative to
+     * @return true on success, false on failure
+     */
+    bool GetItems(const std::shared_ptr<ChannelClientConnection>& client,
         const std::shared_ptr<objects::EventInstance>& instance);
 
     /**
@@ -164,6 +197,33 @@ private:
      * @return true on success, false on failure
      */
     bool Homepoint(const std::shared_ptr<ChannelClientConnection>& client,
+        const std::shared_ptr<objects::EventInstance>& instance);
+
+    /**
+     * Render a stage effect on the client
+     * @param client Pointer to the client the event affects
+     * @param instance Current event instance to process relative to
+     * @return true on success, false on failure
+     */
+    bool StageEffect(const std::shared_ptr<ChannelClientConnection>& client,
+        const std::shared_ptr<objects::EventInstance>& instance);
+
+    /**
+     * Signify a direction to the player
+     * @param client Pointer to the client the event affects
+     * @param instance Current event instance to process relative to
+     * @return true on success, false on failure
+     */
+    bool Direction(const std::shared_ptr<ChannelClientConnection>& client,
+        const std::shared_ptr<objects::EventInstance>& instance);
+
+    /**
+     * Signify a special direction to the player
+     * @param client Pointer to the client the event affects
+     * @param instance Current event instance to process relative to
+     * @return true on success, false on failure
+     */
+    bool SpecialDirection(const std::shared_ptr<ChannelClientConnection>& client,
         const std::shared_ptr<objects::EventInstance>& instance);
 
     /**

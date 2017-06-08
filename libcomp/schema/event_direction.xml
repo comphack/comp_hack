@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="EventDirection" baseobject="Event" persistent="false">
+        <member type="enum" name="eventType" inherited="true" default="DIRECTION"/>
+        <member type="s32" name="direction"/>
+    </object>
+    <object name="EventSpecialDirection" baseobject="EventDirection" persistent="false">
+        <member type="enum" name="eventType" inherited="true" default="SPECIAL_DIRECTION"/>
+        <member type="u8" name="special1"/>
+        <member type="u8" name="special2"/>
+    </object>
+</objgen>

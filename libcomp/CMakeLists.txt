@@ -195,11 +195,15 @@ SET(${PROJECT_NAME}_SCHEMA
     schema/demon.xml
     schema/enemy.xml
     schema/event.xml
+    schema/event_direction.xml
+    schema/event_getitem.xml
     schema/event_homepoint.xml
     schema/event_message.xml
     schema/event_openmenu.xml
     schema/event_performactions.xml
+    schema/event_playscene.xml
     schema/event_prompt.xml
+    schema/event_stageeffect.xml
     schema/item.xml
     schema/packet_login.xml
     schema/packet_login_reply.xml
@@ -273,20 +277,38 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     EntityStats.cpp
     Event.h
     Event.cpp
+    EventBase.h
+    EventBase.cpp
     EventChoice.h
     EventChoice.cpp
+    EventDirection.h
+    EventDirection.cpp
+    EventExNPCMessage.h
+    EventExNPCMessage.cpp
+    EventGetItem.h
+    EventGetItem.cpp
     EventHomepoint.h
     EventHomepoint.cpp
     EventMessage.h
     EventMessage.cpp
+    EventMultitalk.h
+    EventMultitalk.cpp
     EventNPCMessage.h
     EventNPCMessage.cpp
     EventOpenMenu.h
     EventOpenMenu.cpp
     EventPerformActions.h
     EventPerformActions.cpp
+    EventPlayScene.h
+    EventPlayScene.cpp
     EventPrompt.h
     EventPrompt.cpp
+    EventSequence.h
+    EventSequence.cpp
+    EventSpecialDirection.h
+    EventSpecialDirection.cpp
+    EventStageEffect.h
+    EventStageEffect.cpp
     Expertise.h
     Expertise.cpp
     Hotbar.h

@@ -5,7 +5,5 @@
         <member type="list" name="actions">
             <element type="Action*"/>
         </member>
-        <member type="string" name="next"/>
-        <member type="bool" name="pop"/>
     </object>
 </objgen>

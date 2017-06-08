@@ -37,13 +37,20 @@
 // object Includes
 #include <Account.h>
 #include <EventChoice.h>
+#include <EventDirection.h>
+#include <EventExNPCMessage.h>
+#include <EventGetItem.h>
 #include <EventHomepoint.h>
 #include <EventInstance.h>
 #include <EventMessage.h>
+#include <EventMultitalk.h>
 #include <EventNPCMessage.h>
 #include <EventOpenMenu.h>
 #include <EventPerformActions.h>
+#include <EventPlayScene.h>
 #include <EventPrompt.h>
+#include <EventSpecialDirection.h>
+#include <EventStageEffect.h>
 #include <EventState.h>
 #include <ServerZone.h>
 
@@ -108,12 +115,10 @@ bool EventManager::HandleResponse(const std::shared_ptr<ChannelClientConnection>
         return false;
     }
 
-    libcomp::String nextEventID;
     auto event = current->GetEvent();
     auto eventType = event->GetEventType();
     switch(eventType)
     {
-        case objects::Event::EventType_t::MESSAGE:
         case objects::Event::EventType_t::NPC_MESSAGE:
             if(responseID != 0)
             {
@@ -130,8 +135,6 @@ bool EventManager::HandleResponse(const std::shared_ptr<ChannelClientConnection>
                     HandleEvent(client, current);
                     return true;
                 }
-                
-                nextEventID = e->GetNext();
 
                 /// @todo: check infinite loops
             }
@@ -147,22 +150,20 @@ bool EventManager::HandleResponse(const std::shared_ptr<ChannelClientConnection>
                 }
                 else
                 {
-                    // Set pop information now that an option has been selected
-                    current->SetPop(choice->GetPop());
-                    current->SetPopNext(choice->GetPopNext());
-
-                    nextEventID = choice->GetEventID();
+                    current->SetState(choice);
                 }
             }
             break;
         case objects::Event::EventType_t::OPEN_MENU:
+        case objects::Event::EventType_t::PLAY_SCENE:
+        case objects::Event::EventType_t::DIRECTION:
+        case objects::Event::EventType_t::EX_NPC_MESSAGE:
+        case objects::Event::EventType_t::MULTITALK:
             {
-                auto e = std::dynamic_pointer_cast<objects::EventOpenMenu>(event);
-                // 0 seems to signify to close the menu
                 if(responseID != 0)
                 {
-                    LOG_ERROR(libcomp::String("Non-close choice %1 received for event %2\n"
-                        ).Arg(responseID).Arg(e->GetID()));
+                    LOG_ERROR(libcomp::String("Non-zero response %1 received for event %2\n"
+                        ).Arg(responseID).Arg(event->GetID()));
                 }
             }
             break;
@@ -172,7 +173,7 @@ bool EventManager::HandleResponse(const std::shared_ptr<ChannelClientConnection>
             break;
     }
     
-    HandleNext(client, current, nextEventID);
+    HandleNext(client, current);
 
     return true;
 }
@@ -180,6 +181,8 @@ bool EventManager::HandleResponse(const std::shared_ptr<ChannelClientConnection>
 bool EventManager::HandleEvent(const std::shared_ptr<ChannelClientConnection>& client,
     const std::shared_ptr<objects::EventInstance>& instance)
 {
+    instance->SetState(instance->GetEvent());
+
     bool handled = false;
     auto server = mServer.lock();
     auto eventType = instance->GetEvent()->GetEventType();
@@ -193,9 +196,21 @@ bool EventManager::HandleEvent(const std::shared_ptr<ChannelClientConnection>& c
             server->GetCharacterManager()->SetStatusIcon(client, 4);
             handled = NPCMessage(client, instance);
             break;
+        case objects::Event::EventType_t::EX_NPC_MESSAGE:
+            server->GetCharacterManager()->SetStatusIcon(client, 4);
+            handled = ExNPCMessage(client, instance);
+            break;
+        case objects::Event::EventType_t::MULTITALK:
+            server->GetCharacterManager()->SetStatusIcon(client, 4);
+            handled = Multitalk(client, instance);
+            break;
         case objects::Event::EventType_t::PROMPT:
             server->GetCharacterManager()->SetStatusIcon(client, 4);
             handled = Prompt(client, instance);
+            break;
+        case objects::Event::EventType_t::PLAY_SCENE:
+            server->GetCharacterManager()->SetStatusIcon(client, 4);
+            handled = PlayScene(client, instance);
             break;
         case objects::Event::EventType_t::PERFORM_ACTIONS:
             handled = PerformActions(client, instance);
@@ -204,8 +219,21 @@ bool EventManager::HandleEvent(const std::shared_ptr<ChannelClientConnection>& c
             server->GetCharacterManager()->SetStatusIcon(client, 4);
             handled = OpenMenu(client, instance);
             break;
+        case objects::Event::EventType_t::GET_ITEMS:
+            handled = GetItems(client, instance);
+            break;
         case objects::Event::EventType_t::HOMEPOINT:
             handled = Homepoint(client, instance);
+            break;
+        case objects::Event::EventType_t::STAGE_EFFECT:
+            handled = StageEffect(client, instance);
+            break;
+        case objects::Event::EventType_t::DIRECTION:
+            server->GetCharacterManager()->SetStatusIcon(client, 4);
+            handled = Direction(client, instance);
+            break;
+        case objects::Event::EventType_t::SPECIAL_DIRECTION:
+            handled = SpecialDirection(client, instance);
             break;
         default:
             LOG_ERROR(libcomp::String("Failed to handle event of type %1\n"
@@ -222,16 +250,20 @@ bool EventManager::HandleEvent(const std::shared_ptr<ChannelClientConnection>& c
 }
 
 void EventManager::HandleNext(const std::shared_ptr<ChannelClientConnection>& client,
-    const std::shared_ptr<objects::EventInstance>& current,
-    const libcomp::String& nextEventID)
+    const std::shared_ptr<objects::EventInstance>& current)
 {
     auto state = client->GetClientState();
     auto eState = state->GetEventState();
+    auto event = current->GetEvent();
+    auto iState = current->GetState();
+    auto nextEventID = iState->GetNext();
+
+    /// @todo: handle conditional events
 
     if(nextEventID.IsEmpty())
     {
         auto previous = eState->PreviousCount() > 0 ? eState->GetPrevious().back() : nullptr;
-        if(previous != nullptr && (current->GetPop() || previous->GetPopNext()))
+        if(previous != nullptr && (iState->GetPop() || iState->GetPopNext()))
         {
             eState->RemovePrevious(eState->PreviousCount() - 1);
             eState->SetCurrent(previous);
@@ -252,16 +284,21 @@ bool EventManager::Message(const std::shared_ptr<ChannelClientConnection>& clien
     const std::shared_ptr<objects::EventInstance>& instance)
 {
     auto e = std::dynamic_pointer_cast<objects::EventMessage>(instance->GetEvent());
-    auto idx = instance->GetIndex();
-
-    instance->SetPop(e->GetPop());
-    instance->SetPopNext(e->GetPopNext());
 
     libcomp::Packet p;
     p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_EVENT_MESSAGE);
-    p.WriteS32Little(e->GetMessageIDs((size_t)idx));
 
-    client->SendPacket(p);
+    for(auto msg : e->GetMessageIDs())
+    {
+        p.Seek(2);
+        p.WriteS32Little(msg);
+
+        client->QueuePacket(p);
+    }
+
+    client->FlushOutgoing();
+
+    HandleNext(client, instance);
 
     return true;
 }
@@ -273,14 +310,49 @@ bool EventManager::NPCMessage(const std::shared_ptr<ChannelClientConnection>& cl
     auto idx = instance->GetIndex();
     auto unknown = e->GetUnknown((size_t)idx);
 
-    instance->SetPop(e->GetPop());
-    instance->SetPopNext(e->GetPopNext());
-
     libcomp::Packet p;
     p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_EVENT_NPC_MESSAGE);
     p.WriteS32Little(instance->GetSourceEntityID());
     p.WriteS32Little(e->GetMessageIDs((size_t)idx));
     p.WriteS32Little(unknown != 0 ? unknown : e->GetUnknownDefault());
+
+    client->SendPacket(p);
+
+    return true;
+}
+
+bool EventManager::ExNPCMessage(const std::shared_ptr<ChannelClientConnection>& client,
+    const std::shared_ptr<objects::EventInstance>& instance)
+{
+    auto e = std::dynamic_pointer_cast<objects::EventExNPCMessage>(instance->GetEvent());
+
+    libcomp::Packet p;
+    p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_EVENT_EX_NPC_MESSAGE);
+    p.WriteS32Little(instance->GetSourceEntityID());
+    p.WriteS32Little(e->GetMessageID());
+    p.WriteS16Little(e->GetEx1());
+
+    bool ex2Set = e->GetEx2() != 0;
+    p.WriteS8(ex2Set ? 1 : 0);
+    if(ex2Set)
+    {
+        p.WriteS32Little(e->GetEx2());
+    }
+
+    client->SendPacket(p);
+
+    return true;
+}
+
+bool EventManager::Multitalk(const std::shared_ptr<ChannelClientConnection>& client,
+    const std::shared_ptr<objects::EventInstance>& instance)
+{
+    auto e = std::dynamic_pointer_cast<objects::EventMultitalk>(instance->GetEvent());
+
+    libcomp::Packet p;
+    p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_EVENT_MULTITALK);
+    p.WriteS32Little(instance->GetSourceEntityID());
+    p.WriteS32Little(e->GetMessageID());
 
     client->SendPacket(p);
 
@@ -297,15 +369,42 @@ bool EventManager::Prompt(const std::shared_ptr<ChannelClientConnection>& client
     p.WriteS32Little(instance->GetSourceEntityID());
     p.WriteS32Little(e->GetMessageID());
 
-    auto choiceCount = e->ChoicesCount();
+    size_t choiceCount = 0;
+    for(auto choice : e->GetChoices())
+    {
+        /// @todo: implement conditions
+        if(choice->GetMessageID() != 0)
+        {
+            choiceCount++;
+        }
+    }
+
     p.WriteS32Little((int32_t)choiceCount);
     for(size_t i = 0; i < choiceCount; i++)
     {
         auto choice = e->GetChoices(i);
 
-        p.WriteS32Little((int32_t)i);
-        p.WriteS32Little(choice->GetMessageID());
+        if(choice->GetMessageID() != 0)
+        {
+            p.WriteS32Little((int32_t)i);
+            p.WriteS32Little(choice->GetMessageID());
+        }
     }
+
+    client->SendPacket(p);
+
+    return true;
+}
+
+bool EventManager::PlayScene(const std::shared_ptr<ChannelClientConnection>& client,
+    const std::shared_ptr<objects::EventInstance>& instance)
+{
+    auto e = std::dynamic_pointer_cast<objects::EventPlayScene>(instance->GetEvent());
+
+    libcomp::Packet p;
+    p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_EVENT_PLAY_SCENE);
+    p.WriteS32Little(e->GetSceneID());
+    p.WriteS8(e->GetUnknown());
 
     client->SendPacket(p);
 
@@ -318,8 +417,6 @@ bool EventManager::OpenMenu(const std::shared_ptr<ChannelClientConnection>& clie
     auto e = std::dynamic_pointer_cast<objects::EventOpenMenu>(instance->GetEvent());
     auto state = client->GetClientState();
 
-    instance->SetPop(e->GetPop());
-
     libcomp::Packet p;
     p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_EVENT_OPEN_MENU);
     p.WriteS32Little(instance->GetSourceEntityID());
@@ -329,6 +426,29 @@ bool EventManager::OpenMenu(const std::shared_ptr<ChannelClientConnection>& clie
         libcomp::String(), true);
 
     client->SendPacket(p);
+
+    return true;
+}
+
+bool EventManager::GetItems(const std::shared_ptr<ChannelClientConnection>& client,
+    const std::shared_ptr<objects::EventInstance>& instance)
+{
+    auto e = std::dynamic_pointer_cast<objects::EventGetItem>(instance->GetEvent());
+
+    libcomp::Packet p;
+    p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_EVENT_GET_ITEMS);
+    p.WriteS8((int8_t)e->ItemsCount());
+    for(auto entry : e->GetItems())
+    {
+        p.WriteU32Little(entry.first);      // Item type
+        p.WriteU16Little(entry.second);     // Item quantity
+    }
+
+    /// @todo: add items
+
+    client->SendPacket(p);
+
+    HandleNext(client, instance);
 
     return true;
 }
@@ -344,7 +464,7 @@ bool EventManager::PerformActions(const std::shared_ptr<ChannelClientConnection>
 
     actionManager->PerformActions(client, actions, instance->GetSourceEntityID());
 
-    HandleNext(client, instance, e->GetNext());
+    HandleNext(client, instance);
 
     return true;
 }
@@ -359,8 +479,6 @@ bool EventManager::Homepoint(const std::shared_ptr<ChannelClientConnection>& cli
     auto cState = state->GetCharacterState();
     auto character = cState->GetEntity();
     auto zone = server->GetZoneManager()->GetZoneInstance(client);
-
-    instance->SetPop(e->GetPop());
 
     /// @todo: check for invalid zone types or positions
 
@@ -382,7 +500,63 @@ bool EventManager::Homepoint(const std::shared_ptr<ChannelClientConnection>& cli
 
     mServer.lock()->GetWorldDatabase()->QueueUpdate(character, state->GetAccountUID());
 
-    HandleNext(client, instance, e->GetNext());
+    HandleNext(client, instance);
+
+    return true;
+}
+
+bool EventManager::StageEffect(const std::shared_ptr<ChannelClientConnection>& client,
+    const std::shared_ptr<objects::EventInstance>& instance)
+{
+    auto e = std::dynamic_pointer_cast<objects::EventStageEffect>(instance->GetEvent());
+
+    libcomp::Packet p;
+    p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_EVENT_STAGE_EFFECT);
+    p.WriteS32Little(e->GetMessageID());
+    p.WriteS8(e->GetEffect1());
+
+    bool effect2Set = e->GetEffect2() != 0;
+    p.WriteS8(effect2Set ? 1 : 0);
+    if(effect2Set)
+    {
+        p.WriteS32Little(e->GetEffect2());
+    }
+
+    client->SendPacket(p);
+
+    HandleNext(client, instance);
+
+    return true;
+}
+
+bool EventManager::Direction(const std::shared_ptr<ChannelClientConnection>& client,
+    const std::shared_ptr<objects::EventInstance>& instance)
+{
+    auto e = std::dynamic_pointer_cast<objects::EventDirection>(instance->GetEvent());
+
+    libcomp::Packet p;
+    p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_EVENT_DIRECTION);
+    p.WriteS32Little(e->GetDirection());
+
+    client->SendPacket(p);
+
+    return true;
+}
+
+bool EventManager::SpecialDirection(const std::shared_ptr<ChannelClientConnection>& client,
+    const std::shared_ptr<objects::EventInstance>& instance)
+{
+    auto e = std::dynamic_pointer_cast<objects::EventSpecialDirection>(instance->GetEvent());
+
+    libcomp::Packet p;
+    p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_EVENT_SPECIAL_DIRECTION);
+    p.WriteU8(e->GetSpecial1());
+    p.WriteU8(e->GetSpecial2());
+    p.WriteS32Little(e->GetDirection());
+
+    client->SendPacket(p);
+
+    HandleNext(client, instance);
 
     return true;
 }

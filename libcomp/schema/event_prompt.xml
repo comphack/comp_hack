@@ -7,10 +7,7 @@
             <element type="EventChoice*"/>
         </member>
     </object>
-    <object name="EventChoice" persistent="false">
+    <object name="EventChoice" baseobject="EventSequence" persistent="false">
         <member type="s32" name="messageID"/>
-        <member type="string" name="eventID"/>
-        <member type="bool" name="pop"/>
-        <member type="bool" name="popNext"/>
     </object>
 </objgen>

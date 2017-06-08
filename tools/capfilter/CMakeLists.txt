@@ -28,10 +28,16 @@ MESSAGE("** Configuring ${PROJECT_NAME} **")
 
 SET(${PROJECT_NAME}_SRCS
     src/main.cpp
+    src/ZoneFilter.cpp
+)
+
+SET(${PROJECT_NAME}_HDRS
+    src/CommandFilter.h
+    src/ZoneFilter.h
 )
 
 ADD_EXECUTABLE(${PROJECT_NAME} ${${PROJECT_NAME}_SRCS}
-    ${${PROJECT_NAME}_MOC_SRCS})
+    ${${PROJECT_NAME}_HDRS} ${${PROJECT_NAME}_MOC_SRCS})
 
 SET_TARGET_PROPERTIES(${PROJECT_NAME} PROPERTIES FOLDER "Tools")
 

@@ -3,6 +3,5 @@
     <object name="EventOpenMenu" baseobject="Event" persistent="false">
         <member type="enum" name="eventType" inherited="true" default="OPEN_MENU"/>
         <member type="s32" name="menuType"/>
-        <member type="bool" name="pop"/>
     </object>
 </objgen>

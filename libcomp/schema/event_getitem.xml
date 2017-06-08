@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="EventGetItem" baseobject="Event" persistent="false">
+        <member type="enum" name="eventType" inherited="true" default="GET_ITEMS"/>
+        <member type="map" name="items">
+            <key type="u32"/>   <!-- Item Type -->
+            <value type="u16"/> <!-- Quantity -->
+        </member>
+    </object>
+</objgen>

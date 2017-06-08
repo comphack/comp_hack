@@ -136,12 +136,12 @@ bool ZoneManager::EnterZone(const std::shared_ptr<ChannelClientConnection>& clie
 
     libcomp::Packet reply;
     reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_ZONE_CHANGE);
-    reply.WriteU32Little(zoneDef->GetID());
-    reply.WriteU32Little(instance->GetID());
+    reply.WriteS32Little((int32_t)zoneDef->GetID());
+    reply.WriteS32Little((int32_t)instance->GetID());
     reply.WriteFloat(xCoord);
     reply.WriteFloat(yCoord);
     reply.WriteFloat(rotation);
-    reply.WriteU32Little(zoneDef->GetDynamicMapID());
+    reply.WriteS32Little((int32_t)zoneDef->GetDynamicMapID());
 
     client->SendPacket(reply);
 

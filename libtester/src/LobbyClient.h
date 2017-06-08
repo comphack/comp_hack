@@ -62,6 +62,9 @@ public:
     bool WaitEncrypted(double& waitTime, asio::steady_timer::duration timeout =
         DEFAULT_TIMEOUT);
 
+    bool WaitForDisconnect(double& waitTime,
+        asio::steady_timer::duration timeout = DEFAULT_TIMEOUT);
+
     bool WaitForPacket(LobbyToClientPacketCode_t code,
         libcomp::ReadOnlyPacket& p, double& waitTime,
         asio::steady_timer::duration timeout = DEFAULT_TIMEOUT);
@@ -80,7 +83,8 @@ public:
             ErrorCodes_t::SUCCESS, uint32_t clientVersion = 0);
     void WebLogin(const libcomp::String& username,
         const libcomp::String& password = libcomp::String(),
-        const libcomp::String& sid = libcomp::String());
+        const libcomp::String& sid = libcomp::String(),
+        bool expectError = false);
 
 private:
     bool HasDisconnectOrTimeout();

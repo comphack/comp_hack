@@ -60,7 +60,11 @@ LobbyClient::LobbyClient() : mTimer(mService),
 LobbyClient::~LobbyClient()
 {
     mService.stop();
-    mServiceThread.join();
+
+    if(mServiceThread.joinable())
+    {
+        mServiceThread.join();
+    }
 
     ClearMessages();
 }
@@ -105,6 +109,23 @@ bool LobbyClient::WaitEncrypted(double& waitTime,
         for(auto msg : msgs)
         {
             if(nullptr != dynamic_cast<libcomp::Message::Encrypted*>(msg))
+            {
+                return WaitStatus::Success;
+            }
+        }
+
+        return WaitStatus::Wait;
+    }, waitTime, timeout);
+}
+
+bool LobbyClient::WaitForDisconnect(double& waitTime,
+    asio::steady_timer::duration timeout)
+{
+    return WaitForMessage([](const MessageList& msgs){
+        for(auto msg : msgs)
+        {
+            printf("msg\n");
+            if(nullptr != dynamic_cast<libcomp::Message::ConnectionClosed*>(msg))
             {
                 return WaitStatus::Success;
             }
@@ -329,13 +350,25 @@ void LobbyClient::Login(const libcomp::String& username,
 }
 
 void LobbyClient::WebLogin(const libcomp::String& username,
-    const libcomp::String& password, const libcomp::String& sid)
+    const libcomp::String& password, const libcomp::String& sid,
+    bool expectError)
 {
     if(sid.IsEmpty() && !password.IsEmpty())
     {
-        ASSERT_TRUE(libtester::Login::WebLogin(username, password,
-            LOGIN_CLIENT_VERSION, mSID1, mSID2))
-            << "Failed to authenticate with the website.";
+        if(expectError)
+        {
+            ASSERT_FALSE(libtester::Login::WebLogin(username, password,
+                LOGIN_CLIENT_VERSION, mSID1, mSID2))
+                << "Authenticated with the website when an error was expected.";
+
+            return;
+        }
+        else
+        {
+            ASSERT_TRUE(libtester::Login::WebLogin(username, password,
+                LOGIN_CLIENT_VERSION, mSID1, mSID2))
+                << "Failed to authenticate with the website.";
+        }
     }
     else if(!sid.IsEmpty())
     {
@@ -378,7 +411,7 @@ void LobbyClient::WebLogin(const libcomp::String& username,
     ASSERT_TRUE(WaitForPacket(LobbyToClientPacketCode_t::PACKET_AUTH,
         reply, waitTime));
 
-    if(sid.IsEmpty())
+    if(!expectError)
     {
         ASSERT_EQ(reply.ReadS32Little(),
             to_underlying(ErrorCodes_t::SUCCESS));

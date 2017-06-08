@@ -97,7 +97,7 @@ TEST(Lobby, BadSID)
 
     std::shared_ptr<libtester::LobbyClient> client(new libtester::LobbyClient);
 
-    client->WebLogin(LOGIN_USERNAME, LOGIN_PASSWORD, sid1);
+    client->WebLogin(LOGIN_USERNAME, LOGIN_PASSWORD, sid1, true);
 }
 
 TEST(Lobby, GoodSID)
@@ -120,6 +120,94 @@ TEST(Lobby, GoodPassword)
     std::shared_ptr<libtester::LobbyClient> client(new libtester::LobbyClient);
 
     client->Login(LOGIN_USERNAME, LOGIN_PASSWORD);
+}
+
+TEST(Lobby, PacketsWithoutAuth)
+{
+    double waitTime;
+
+    std::shared_ptr<libtester::LobbyClient> client(new libtester::LobbyClient);
+
+    ASSERT_TRUE(client->Connect());
+    ASSERT_TRUE(client->WaitEncrypted(waitTime));
+
+    libcomp::Packet p;
+    p.WritePacketCode(ClientToLobbyPacketCode_t::PACKET_WORLD_LIST);
+
+    libcomp::ReadOnlyPacket reply;
+
+    client->ClearMessages();
+    client->GetConnection()->SendPacket(p);
+
+    ASSERT_FALSE(client->WaitForPacket(
+        LobbyToClientPacketCode_t::PACKET_WORLD_LIST, reply, waitTime));
+}
+
+TEST(Lobby, PacketsWithBadAuth)
+{
+    double waitTime;
+
+    std::shared_ptr<libtester::LobbyClient> client(new libtester::LobbyClient);
+
+    client->Login(LOGIN_USERNAME, "letMeInAnyway",
+        ErrorCodes_t::SUCCESS, ErrorCodes_t::BAD_USERNAME_PASSWORD);
+
+    libcomp::Packet p;
+    p.WritePacketCode(ClientToLobbyPacketCode_t::PACKET_WORLD_LIST);
+
+    libcomp::ReadOnlyPacket reply;
+
+    client->ClearMessages();
+    client->GetConnection()->SendPacket(p);
+
+    ASSERT_FALSE(client->WaitForPacket(
+        LobbyToClientPacketCode_t::PACKET_WORLD_LIST, reply, waitTime));
+}
+
+TEST(Lobby, DeleteInvalidCharacter)
+{
+    double waitTime;
+
+    std::shared_ptr<libtester::LobbyClient> client(new libtester::LobbyClient);
+
+    client->Login(LOGIN_USERNAME, LOGIN_PASSWORD);
+
+    libcomp::Packet p;
+    p.WritePacketCode(ClientToLobbyPacketCode_t::PACKET_DELETE_CHARACTER);
+    p.WriteU8(1);
+
+    libcomp::ReadOnlyPacket reply;
+
+    client->ClearMessages();
+    client->GetConnection()->SendPacket(p);
+
+    ASSERT_FALSE(client->WaitForPacket(
+        LobbyToClientPacketCode_t::PACKET_DELETE_CHARACTER, reply, waitTime));
+}
+
+TEST(Lobby, DoubleLogin)
+{
+    std::shared_ptr<libtester::LobbyClient> client(new libtester::LobbyClient);
+    std::shared_ptr<libtester::LobbyClient> client2(new libtester::LobbyClient);
+    std::shared_ptr<libtester::LobbyClient> client3(new libtester::LobbyClient);
+
+    client->Login(LOGIN_USERNAME, LOGIN_PASSWORD);
+    client2->Login(LOGIN_USERNAME, LOGIN_PASSWORD,
+        ErrorCodes_t::ACCOUNT_STILL_LOGGED_IN);
+    client.reset();
+    client3->Login(LOGIN_USERNAME, LOGIN_PASSWORD);
+}
+
+TEST(Lobby, DoubleWebAuth)
+{
+    std::shared_ptr<libtester::LobbyClient> client(new libtester::LobbyClient);
+    std::shared_ptr<libtester::LobbyClient> client2(new libtester::LobbyClient);
+
+    client->WebLogin(LOGIN_USERNAME, LOGIN_PASSWORD);
+    client2->WebLogin(LOGIN_USERNAME, LOGIN_PASSWORD,
+        libcomp::String(), true);
+    client.reset();
+    client2->WebLogin(LOGIN_USERNAME, LOGIN_PASSWORD);
 }
 
 int main(int argc, char *argv[])

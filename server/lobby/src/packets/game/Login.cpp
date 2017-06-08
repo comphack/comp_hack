@@ -98,7 +98,11 @@ bool Parsers::Login::Parse(libcomp::ManagerPacket *pPacketManager,
     {
         auto login = std::shared_ptr<objects::AccountLogin>(new objects::AccountLogin);
         login->SetAccount(account);
-        accountManager->LoginUser(obj.GetUsername(), login);
+
+        if(!accountManager->LoginUser(obj.GetUsername(), login))
+        {
+            return LoginError(connection, ErrorCodes_t::ACCOUNT_STILL_LOGGED_IN);
+        }
 
         state(connection)->SetAccount(account);
         server->GetManagerConnection()->SetClientConnection(

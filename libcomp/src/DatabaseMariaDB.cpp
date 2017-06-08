@@ -134,7 +134,8 @@ bool DatabaseMariaDB::Setup(bool rebuild)
         }
 
         // Now re-create the database.
-        if(!Execute(String("CREATE DATABASE %1;").Arg(databaseName)))
+        if(!Execute(String("CREATE DATABASE %1"
+            " CHARACTER SET utf8 COLLATE utf8_general_ci;").Arg(databaseName)))
         {
             LOG_ERROR("Failed to create database\n");
 

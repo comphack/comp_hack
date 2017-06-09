@@ -31,8 +31,15 @@
 // libcomp Includes
 #include "PersistentObject.h"
 
+// libobjgen Includes
+#include "MetaObject.h"
+#include "MetaVariable.h"
+
 namespace libcomp
 {
+
+class DataBind;
+class PersistentObject;
 
 /**
  * Database change set grouped by a transaction UUID to be processed
@@ -44,110 +51,105 @@ public:
     /**
      * Create a new database change set
      */
-    DatabaseChangeSet()
-    {
-    }
+    DatabaseChangeSet();
 
     /**
      * Create a new database change set
      * @param uuid UUID of the grouped transaction changes
      */
-    DatabaseChangeSet(const libobjgen::UUID& uuid) :
-        mTransactionUUID(uuid)
-    {
-    }
+    DatabaseChangeSet(const libobjgen::UUID& uuid);
 
     /**
      * Clean up the database change set
      */
-    ~DatabaseChangeSet()
-    {
-    }
+    virtual ~DatabaseChangeSet();
 
     /**
-     * Static builder for a new DatabaseChangeSet pointer
+     * Static builder for a new standard DatabaseChangeSet pointer
      * @param uuid Optional UUID associated to the transaction
      * @return Pointer to a new DatabaseChangeSet
      */
     static std::shared_ptr<DatabaseChangeSet> Create(
-        const libobjgen::UUID& uuid = NULLUUID)
-    {
-        return std::shared_ptr<DatabaseChangeSet>(
-            new DatabaseChangeSet(uuid));
-    }
+        const libobjgen::UUID& uuid = NULLUUID);
 
     /**
      * Add an object for insertion to the change set
      * @param obj Pointer to the object to insert
      */
-    void Insert(const std::shared_ptr<PersistentObject>& obj)
-    {
-        mInserts.push_back(obj);
-        mInserts.unique();
-    }
+    virtual void Insert(const std::shared_ptr<PersistentObject>& obj) = 0;
 
     /**
      * Add an object for update to the change set
      * @param obj Pointer to the object to update
      */
-    void Update(const std::shared_ptr<PersistentObject>& obj)
-    {
-        mUpdates.push_back(obj);
-        mUpdates.unique();
-    }
+    virtual void Update(const std::shared_ptr<PersistentObject>& obj) = 0;
 
     /**
      * Add an object for deletion to the change set
      * @param obj Pointer to the object to delete
      */
-    void Delete(const std::shared_ptr<PersistentObject>& obj)
-    {
-        mDeletes.push_back(obj);
-        mDeletes.unique();
-    }
+    virtual void Delete(const std::shared_ptr<PersistentObject>& obj) = 0;
 
     /**
      * Get the transaction UUID
      * @return UUID associated to the transaction
      */
-    const libobjgen::UUID GetTransactionUUID() const
-    {
-        return mTransactionUUID;
-    }
-
-    /**
-     * Get the transaction inserts
-     * @return Inserts associated to the transaction
-     */
-    std::list<std::shared_ptr<PersistentObject>> GetInserts() const
-    {
-        return mInserts;
-    }
-
-    /**
-     * Get the transaction updates
-     * @return Updates associated to the transaction
-     */
-    std::list<std::shared_ptr<PersistentObject>> GetUpdates() const
-    {
-        return mUpdates;
-    }
-
-    /**
-     * Get the transaction deletes
-     * @return Deletes associated to the transaction
-     */
-    std::list<std::shared_ptr<PersistentObject>> GetDeletes() const
-    {
-        return mDeletes;
-    }
+    const libobjgen::UUID GetTransactionUUID() const;
 
 private:
     /// UUID used to group the transaction changes.  Useful
     /// when tying a transaction back to a parent object the
     /// UUID belongs to.
     libobjgen::UUID mTransactionUUID;
+};
 
+/**
+ * Standard database change set consisting of inserts, updates or
+ * deletes which will be processed in that order, NOT the order they
+ * were added in.
+ */
+class DBStandardChangeSet : public DatabaseChangeSet
+{
+public:
+    /**
+     * Create a new standard database change set
+     */
+    DBStandardChangeSet();
+
+    /**
+     * Create a new standard database change set
+     * @param uuid UUID of the grouped transaction changes
+     */
+    DBStandardChangeSet(const libobjgen::UUID& uuid);
+
+    /**
+     * Clean up the database change set
+     */
+    virtual ~DBStandardChangeSet();
+
+    virtual void Insert(const std::shared_ptr<PersistentObject>& obj);
+    virtual void Update(const std::shared_ptr<PersistentObject>& obj);
+    virtual void Delete(const std::shared_ptr<PersistentObject>& obj);
+
+    /**
+     * Get the change set inserts
+     * @return Inserts associated to the change set
+     */
+    std::list<std::shared_ptr<PersistentObject>> GetInserts() const;
+
+    /**
+     * Get the change set updates
+     * @return Updates associated to the change set
+     */
+    std::list<std::shared_ptr<PersistentObject>> GetUpdates() const;
+
+    /**
+     * Get the change set deletes
+     * @return Deletes associated to the change set
+     */
+    std::list<std::shared_ptr<PersistentObject>> GetDeletes() const;
+
+private:
     /// Inserts associated to the change set
     std::list<std::shared_ptr<PersistentObject>> mInserts;
 
@@ -156,6 +158,251 @@ private:
 
     /// Deletes associated to the change set
     std::list<std::shared_ptr<PersistentObject>> mDeletes;
+};
+
+/**
+ * Represents a single operation that can be strung together
+ * with others to form a database agnostic complex query.
+ */
+class DBOperationalChange
+{
+public:
+    /**
+     * Specifies the type of operation is contained within a
+     * DBOperationalChange
+     */
+    enum class DBOperationType
+    {
+        DBOP_INSERT,    //!< Record insert using in memory values
+        DBOP_UPDATE,    //!< Record update using in memory values
+        DBOP_DELETE,    //!< Record delete by UUID
+        DBOP_EXPLICIT,  //!< Explicitly defined database-side operation
+    };
+
+    /**
+     * Create a new DBOperationalChange
+     * @param record Pointer to the affected record
+     * @param type Type of operation
+     */
+    DBOperationalChange(const std::shared_ptr<PersistentObject>& record,
+        DBOperationType type);
+
+    /**
+     * Clean up the DBOperationalChange
+     */
+    virtual ~DBOperationalChange();
+
+    /**
+     * Get the change's DBOperationType
+     * @return The change's DBOperationType
+     */
+    DBOperationType GetType();
+
+    /**
+     * Get the affected record
+     * @return Pointer to the affected record
+     */
+    std::shared_ptr<PersistentObject> GetRecord();
+
+protected:
+    /// Type of operational change
+    DBOperationType mType;
+
+    /// Pointer to the affected record
+    std::shared_ptr<PersistentObject> mRecord;
+};
+
+/**
+ * Explicit operational update to a record containing one or many
+ * field updates that are bound to match an expected "pre-update" value.
+ * Useful in handling sensitive operations within transactions that
+ * are prone to race conditions.
+ */ 
+class DBExplicitUpdate : public DBOperationalChange
+{
+public:
+    /**
+     * Create a new DBExplicitUpdate
+     * @param record Pointer to the affected record
+     */
+    DBExplicitUpdate(const std::shared_ptr<PersistentObject>& record);
+
+    /**
+     * Clean up the DBExplicitUpdate, deleting all the bindings
+     * generated for its execution
+     */
+    virtual ~DBExplicitUpdate();
+
+    /**
+     * Prepares an update to the specificed column to use the supplied
+     * value based upon the current record value being set in the DB.
+     * @param column Column to bind a value to
+     * @param value Value to bind to the column
+     * @return true if the update is valid, false if it is not
+     */
+    template <typename T>
+    bool Set(const libcomp::String& column, T value);
+
+    /**
+     * Prepares an update to the specificed column to use the supplied
+     * value based upon an expcted value being set in the DB.
+     * @param column Column to bind a value to
+     * @param value Value to bind to the column
+     * @param expected Value that is expected to be set on the record
+     *  when the operation is run
+     * @return true if the update is valid, false if it is not
+     */
+    template <typename T>
+    bool SetFrom(const libcomp::String& column, T value, T expected);
+
+    /**
+     * Prepares an update to the specificed column to increase by the supplied
+     * value based upon the current record value being set in the DB.
+     * @param column Column to bind a value to
+     * @param value Value to bind to the column via addition
+     * @return true if the update is valid, false if it is not
+     */
+    template <typename T>
+    bool Add(const libcomp::String& column, T value);
+
+    /**
+     * Prepares an update to the specificed column to increase by the supplied
+     * value based upon an expcted value being set in the DB.
+     * @param column Column to bind a value to
+     * @param value Value to bind to the column via addition
+     * @param expected Value that is expected to be set on the record
+     *  when the operation is run
+     * @return true if the update is valid, false if it is not
+     */
+    template <typename T>
+    bool AddFrom(const libcomp::String& column, T value, T expected);
+
+    /**
+     * Prepares an update to the specificed column to decrease by the supplied
+     * value based upon the current record value being set in the DB.
+     * @param column Column to bind a value to
+     * @param value Value to bind to the column via subtraction
+     * @return true if the update is valid, false if it is not
+     */
+    template <typename T>
+    bool Subtract(const libcomp::String& column, T value);
+
+    /**
+     * Prepares an update to the specificed column to decrease by the supplied
+     * value based upon an expcted value being set in the DB.
+     * @param column Column to bind a value to
+     * @param value Value to bind to the column via subtraction
+     * @param expected Value that is expected to be set on the record
+     *  when the operation is run
+     * @return true if the update is valid, false if it is not
+     */
+    template <typename T>
+    bool SubtractFrom(const libcomp::String& column, T value, T expected);
+
+    /**
+     * Get the column bindings to match upon when checking if the update is valid
+     * @return Bindings representing the expected values before the update
+     */
+    std::unordered_map<std::string, DatabaseBind*> GetExpectedValues() const;
+
+    /**
+     * Get the column bindings to set if the update is valid
+     * @return Bindings representing the expected values after the update
+     */
+    std::unordered_map<std::string, DatabaseBind*> GetChanges() const;
+
+private:
+    /**
+     * Verify that the supplied column is not already bound and is a real
+     * column of the supplied type and returns the current record value
+     * binding upon success.
+     * @param column Name of the column to verify
+     * @param validType Type of the column to verify
+     * @return Pointer to the current record value binding or null on faliure
+     */
+    DatabaseBind* Verify(const libcomp::String& column,
+        libobjgen::MetaVariable::MetaVariableType_t validType);
+
+    /**
+     * Verify that the supplied column is not already bound and is a real
+     * column of one of the supplied types and returns the current record value
+     * binding upon success.
+     * @param column Name of the column to verify
+     * @param validTypes Valid types of the column to verify
+     * @return Pointer to the current record value binding or null on faliure
+     */
+    DatabaseBind* Verify(const libcomp::String& column,
+        const std::set<libobjgen::MetaVariable::MetaVariableType_t>& validTypes);
+
+    /**
+     * Stores the bindings of the supplied new and expected values to bind
+     * to a database query during execution.
+     * @param column Name of the column
+     * @param binding Binding reprsenting the new value to set
+     * @param expected Binding reprsenting the value expected during execution
+     * @return true on success, false on failure
+     */
+    bool Bind(const libcomp::String& column, DatabaseBind* binding,
+        DatabaseBind* expected);
+
+    /// Map of values set on the record at the time of the change set's
+    /// creation by column name
+    std::unordered_map<std::string, DatabaseBind*> mStoredValues;
+
+    /// Map of values for columns to check before update by column name
+    std::unordered_map<std::string, DatabaseBind*> mExpectedValues;
+
+    /// Map of values to set during execution by column name
+    std::unordered_map<std::string, DatabaseBind*> mChanges;
+
+    /// Pointer to the metadata of the affected record
+    std::shared_ptr<libobjgen::MetaObject> mMetadata;
+};
+
+/**
+ * Operational database change set consisting of inserts, updates,
+ * deletes or explicit updates which will be processed in the order
+ * they were added in.
+ */
+class DBOperationalChangeSet : public DatabaseChangeSet
+{
+public:
+    /**
+     * Create a new operational database change set
+     */
+    DBOperationalChangeSet();
+
+    /**
+     * Create a new operational database change set
+     * @param uuid UUID of the grouped transaction changes
+     */
+    DBOperationalChangeSet(const libobjgen::UUID& uuid);
+
+    /**
+     * Clean up the database change set
+     */
+    virtual ~DBOperationalChangeSet();
+
+    /**
+     * Get the list of changes contained in the change set
+     * @return List of changes contained in the change set
+     */
+    std::list<std::shared_ptr<DBOperationalChange>> GetOperations();
+
+    /**
+     * Add either a standard or explicit operational change to
+     * the set
+     * @param op Operational change to add to the change set
+     */
+    void AddOperation(const std::shared_ptr<DBOperationalChange>& op);
+
+    virtual void Insert(const std::shared_ptr<PersistentObject>& obj);
+    virtual void Update(const std::shared_ptr<PersistentObject>& obj);
+    virtual void Delete(const std::shared_ptr<PersistentObject>& obj);
+
+private:
+    /// List of changes contained in the change set
+    std::list<std::shared_ptr<DBOperationalChange>> mOperations;
 };
 
 } // namespace libcomp

@@ -668,7 +668,8 @@ bool DatabaseSQLite3::VerifyAndSetupSchema(bool recreateTables)
     return true;
 }
 
-bool DatabaseSQLite3::ProcessChangeSet(const std::shared_ptr<DatabaseChangeSet>& changes)
+bool DatabaseSQLite3::ProcessStandardChangeSet(const std::shared_ptr<
+    DBStandardChangeSet>& changes)
 {
     libcomp::String transactionID = libcomp::String("_%1").Arg(
             libcomp::String(libobjgen::UUID::Random().ToString()).Replace("-", "_"));
@@ -726,6 +727,175 @@ bool DatabaseSQLite3::ProcessChangeSet(const std::shared_ptr<DatabaseChangeSet>&
     }
 
     return result;
+}
+
+
+bool DatabaseSQLite3::ProcessOperationalChangeSet(const std::shared_ptr<
+    DBOperationalChangeSet>& changes)
+{
+    libcomp::String transactionID = libcomp::String("_%1").Arg(
+            libcomp::String(libobjgen::UUID::Random().ToString()).Replace("-", "_"));
+    if(!Prepare(libcomp::String("BEGIN TRANSACTION %1").Arg(
+        transactionID)).Execute())
+    {
+        return false;
+    }
+
+    bool result = true;
+    std::set<std::shared_ptr<libcomp::PersistentObject>> objs;
+    for(auto op : changes->GetOperations())
+    {
+        auto obj = op->GetRecord();
+        switch(op->GetType())
+        {
+        case DBOperationalChange::DBOperationType::DBOP_INSERT:
+            result &= InsertSingleObject(obj);
+            break;
+        case DBOperationalChange::DBOperationType::DBOP_UPDATE:
+            result &= UpdateSingleObject(obj);
+            break;
+        case DBOperationalChange::DBOperationType::DBOP_DELETE:
+            result &= DeleteSingleObject(obj);
+            break;
+        case DBOperationalChange::DBOperationType::DBOP_EXPLICIT:
+            objs.insert(obj);
+            result &= ProcessExplicitUpdate(
+                std::dynamic_pointer_cast<DBExplicitUpdate>(op));
+            break;
+        }
+
+        if(!result)
+        {
+            break;
+        }
+    }
+
+    if(result)
+    {
+        if(!Prepare(libcomp::String("COMMIT TRANSACTION %1").Arg(
+            transactionID)).Execute())
+        {
+            return false;
+        }
+    }
+    else
+    {
+        if(!Prepare(libcomp::String("ROLLBACK TRANSACTION %1").Arg(
+            transactionID)).Execute())
+        {
+            // If this happens the server may need to be shut down
+            LOG_CRITICAL("Rollback failed!\n");
+            return false;
+        }
+    }
+
+    for(auto obj : objs)
+    {
+        auto bind = new DatabaseBindUUID("UID", obj->GetUUID());
+        result = nullptr != LoadSingleObject(
+            libcomp::PersistentObject::GetTypeHashByName(
+            obj->GetObjectMetadata()->GetName(), result), bind);
+
+        if(!result)
+        {
+            break;
+        }
+    }
+
+    return result;
+}
+
+bool DatabaseSQLite3::ProcessExplicitUpdate(const std::shared_ptr<
+    DBExplicitUpdate>& update)
+{
+    auto obj = update->GetRecord();
+    auto expectedVals = update->GetExpectedValues();
+    auto changedVals = update->GetChanges();
+    if(changedVals.size() == 0)
+    {
+        return false;
+    }
+
+    size_t idx = 1;
+    std::list<String> updateClause;
+    std::list<String> whereClause;
+    // Bind the update clause values
+    for(auto cPair : changedVals)
+    {
+        auto it = expectedVals.find(cPair.first);
+        if(it == expectedVals.end())
+        {
+            return false;
+        }
+
+        updateClause.push_back(String("%1 = ?%2").Arg(cPair.first).Arg(idx++));
+    }
+
+    auto uidIdx = idx++;
+    
+    // Now bind the where clause values
+    for(auto cPair : changedVals)
+    {
+        whereClause.push_back(String("%1 = ?%2").Arg(cPair.first).Arg(idx++));
+    }
+
+    String sql = String("UPDATE `%1` SET %2 WHERE `UID` = :%3 AND %4;").Arg(
+        obj->GetObjectMetadata()->GetName()).Arg(
+        String::Join(updateClause, ", ")).Arg(uidIdx).Arg(
+        String::Join(whereClause, " AND "));
+
+    DatabaseQuery query = Prepare(sql);
+
+    if(!query.IsValid())
+    {
+        LOG_ERROR(String("Failed to prepare SQL query: %1\n").Arg(sql));
+        LOG_ERROR(String("Database said: %1\n").Arg(GetLastError()));
+
+        return false;
+    }
+
+    idx = 1;
+    for(auto cPair : changedVals)
+    {
+        if(!cPair.second->Bind(query, idx++))
+        {
+            LOG_ERROR(String("Failed to bind value: %1\n").Arg(
+                cPair.first));
+            LOG_ERROR(String("Database said: %1\n").Arg(GetLastError()));
+
+            return false;
+        }
+    }
+
+    if(!query.Bind(idx++, obj->GetUUID()))
+    {
+        LOG_ERROR("Failed to bind value: UID\n");
+        LOG_ERROR(String("Database said: %1\n").Arg(GetLastError()));
+
+        return false;
+    }
+    
+    for(auto cPair : changedVals)
+    {
+        if(!expectedVals[cPair.first]->Bind(query, idx++))
+        {
+            LOG_ERROR(String("Failed to bind where clause for value: %1\n").Arg(
+                cPair.first));
+            LOG_ERROR(String("Database said: %1\n").Arg(GetLastError()));
+
+            return false;
+        }
+    }
+
+    if(!query.Execute())
+    {
+        LOG_ERROR(String("Failed to execute query: %1\n").Arg(sql));
+        LOG_ERROR(String("Database said: %1\n").Arg(GetLastError()));
+
+        return false;
+    }
+
+    return query.AffectedRowCount() == 1;
 }
 
 String DatabaseSQLite3::GetFilepath() const

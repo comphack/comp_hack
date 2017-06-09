@@ -90,6 +90,7 @@ bool DatabaseQueryMariaDB::Execute()
     }
 
     mStatus = mysql_stmt_execute(mStatement);
+    mAffectedRowCount = (int64_t)mysql_affected_rows(mDatabase);
 
     my_bool aBool = 1;
     mysql_stmt_attr_set(mStatement, STMT_ATTR_UPDATE_MAX_LENGTH, &aBool);
@@ -195,7 +196,15 @@ bool DatabaseQueryMariaDB::Bind(size_t index, const String& value)
     }
 
     auto data = value.Data(false);
-    mBufferBlob.push_back(data);
+    if(value.Length() == 0)
+    {
+        mBufferBlob.back().push_back(0);
+    }
+    else
+    {
+        mBufferBlob.push_back(data);
+    }
+
     bind->buffer = &mBufferBlob.back()[0];
     bind->buffer_length = (*bind->length) = (unsigned long)data.size();
 
@@ -593,26 +602,6 @@ bool DatabaseQueryMariaDB::GetValue(const String& name, bool& value)
     return GetValue(index, value);
 }
 
-bool DatabaseQueryMariaDB::GetMap(size_t index,
-    std::unordered_map<std::string, std::vector<char>>& values)
-{
-    (void)index;
-    (void)values;
-
-    /// @todo
-    return false;
-}
-
-bool DatabaseQueryMariaDB::GetMap(const String& name,
-    std::unordered_map<std::string, std::vector<char>>& values)
-{
-    (void)name;
-    (void)values;
-
-    /// @todo
-    return false;
-}
-
 bool DatabaseQueryMariaDB::GetRows(std::list<std::unordered_map<
     std::string, std::vector<char>> >& rows)
 {
@@ -718,12 +707,6 @@ bool DatabaseQueryMariaDB::GetRows(std::list<std::unordered_map<
     }
 
     return IsValid();
-}
-
-bool DatabaseQueryMariaDB::BatchNext()
-{
-    /// @todo
-    return false;
 }
 
 bool DatabaseQueryMariaDB::IsValid() const

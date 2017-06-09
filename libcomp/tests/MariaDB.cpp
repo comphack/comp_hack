@@ -29,9 +29,29 @@
 #include <PopIgnore.h>
 
 // libcomp Includes
+#include <Account.h>
 #include <DatabaseMariaDB.h>
 
 using namespace libcomp;
+
+class MariaDBAccount : public objects::Account
+{
+public:
+    MariaDBAccount()
+    {
+    }
+
+    static void RegisterPersistentType()
+    {
+        RegisterType(typeid(MariaDBAccount),
+            MariaDBAccount::GetMetadata(), []()
+        { 
+            return (PersistentObject*)new MariaDBAccount();
+        });
+    }
+
+    libcomp::String text;
+};
 
 std::shared_ptr<objects::DatabaseConfigMariaDB> GetConfig()
 {
@@ -283,6 +303,55 @@ TEST(MariaDB, ObjectBindName)
     EXPECT_FALSE(q.Next());
 
     EXPECT_TRUE(db.Execute("DROP TABLE objects;"));
+
+    EXPECT_TRUE(db.Execute("DROP DATABASE IF EXISTS comp_hack_test;"));
+
+    EXPECT_TRUE(db.Close());
+    EXPECT_FALSE(db.IsOpen());
+}
+
+TEST(MariaDB, ChangeSet)
+{
+    auto config = GetConfig();
+    MariaDBAccount::RegisterPersistentType();
+
+    DatabaseMariaDB db(config);
+
+    EXPECT_TRUE(db.Open());
+    EXPECT_TRUE(db.Setup());
+
+    auto account = std::make_shared<MariaDBAccount>();
+    account->Register(account);
+    account->SetCP(0);
+
+    auto changeset = libcomp::DatabaseChangeSet::Create();
+    changeset->Insert(account);
+
+    EXPECT_TRUE(db.ProcessChangeSet(changeset));
+
+    EXPECT_EQ(account->GetCP(), 0);
+
+    auto opChangeset = std::make_shared<libcomp::DBOperationalChangeSet>();
+    opChangeset->Update(account);
+
+    auto expl = std::make_shared<libcomp::DBExplicitUpdate>(account);
+    EXPECT_TRUE(expl->Set<int64_t>("CP", 1000));
+    opChangeset->AddOperation(expl);
+
+    expl = std::make_shared<libcomp::DBExplicitUpdate>(account);
+    EXPECT_TRUE(expl->AddFrom<int64_t>("CP", 5, 1000));
+    opChangeset->AddOperation(expl);
+
+    expl = std::make_shared<libcomp::DBExplicitUpdate>(account);
+    EXPECT_TRUE(expl->SubtractFrom<int64_t>("CP", 10, 1005));
+    opChangeset->AddOperation(expl);
+
+    // Sanity check
+    EXPECT_EQ(account->GetCP(), 0);
+
+    EXPECT_TRUE(db.ProcessChangeSet(opChangeset));
+
+    EXPECT_EQ(account->GetCP(), 995);
 
     EXPECT_TRUE(db.Execute("DROP DATABASE IF EXISTS comp_hack_test;"));
 

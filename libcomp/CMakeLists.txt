@@ -48,6 +48,7 @@ SET(${PROJECT_NAME}_SRCS
     src/CString.cpp
     src/Database.cpp
     src/DatabaseBind.cpp
+    src/DatabaseChangeSet.cpp
     src/DatabaseMariaDB.cpp
     src/DatabaseQuery.cpp
     src/DatabaseQueryMariaDB.cpp

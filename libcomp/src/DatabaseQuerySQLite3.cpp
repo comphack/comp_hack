@@ -79,6 +79,7 @@ bool DatabaseQuerySQLite3::Execute()
         }
 
         mStatus = sqlite3_step(mStatement);
+        mAffectedRowCount = (int64_t)sqlite3_changes(mDatabase);
     } while(mStatus == SQLITE_BUSY && attempts < mMaxRetryCount);
 
     mDidJustExecute = true;
@@ -498,26 +499,6 @@ bool DatabaseQuerySQLite3::GetValue(const String& name, bool& value)
     return GetValue(index, value);
 }
 
-bool DatabaseQuerySQLite3::GetMap(size_t index,
-    std::unordered_map<std::string, std::vector<char>>& values)
-{
-    (void)index;
-    (void)values;
-
-    /// @todo
-    return false;
-}
-
-bool DatabaseQuerySQLite3::GetMap(const String& name,
-    std::unordered_map<std::string, std::vector<char>>& values)
-{
-    (void)name;
-    (void)values;
-
-    /// @todo
-    return false;
-}
-
 bool DatabaseQuerySQLite3::GetRows(std::list<std::unordered_map<
     std::string, std::vector<char>> >& rows)
 {
@@ -603,12 +584,6 @@ bool DatabaseQuerySQLite3::GetRows(std::list<std::unordered_map<
     }
 
     return IsValid();
-}
-
-bool DatabaseQuerySQLite3::BatchNext()
-{
-    /// @todo
-    return false;
 }
 
 bool DatabaseQuerySQLite3::IsValid() const

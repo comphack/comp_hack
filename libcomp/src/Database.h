@@ -205,8 +205,9 @@ public:
      * Queue a set of changes to execute during the next call to
      * ProcessTransactionQueue.
      * @param changes DatabaseChangeSet to queue for processing
+     * @return true on success, false on failure
      */
-    void QueueChangeSet(const std::shared_ptr<DatabaseChangeSet>& changes);
+    bool QueueChangeSet(const std::shared_ptr<DatabaseChangeSet>& changes);
 
     /**
      * Pop and process all transactions stored in the transaction queue.
@@ -215,12 +216,11 @@ public:
     std::list<libobjgen::UUID> ProcessTransactionQueue();
 
     /**
-     * Process one or many database changes as a single query.
+     * Process one or many database changes as a single transaction.
      * @param changes Grouping of changes to apply to the database
      * @return true on success, false on failure
      */
-    virtual bool ProcessChangeSet(const std::shared_ptr<
-        DatabaseChangeSet>& changes) = 0;
+    bool ProcessChangeSet(const std::shared_ptr<DatabaseChangeSet>& changes);
 
     /**
      * Check if the config is for the default database type.  Non-default connections are
@@ -255,6 +255,22 @@ protected:
         size_t typeHash, DatabaseQuery& query);
 
     /**
+     * Process one or many standard database changes as a single transaction.
+     * @param changes Grouping of changes to apply to the database
+     * @return true on success, false on failure
+     */
+    virtual bool ProcessStandardChangeSet(const std::shared_ptr<
+        DBStandardChangeSet>& changes) = 0;
+
+    /**
+     * Process an operational change set as a single transaction.
+     * @param changes Grouping of changes to apply to the database
+     * @return true on success, false on failure
+     */
+    virtual bool ProcessOperationalChangeSet(const std::shared_ptr<
+        DBOperationalChangeSet>& changes) = 0;
+
+    /**
      * Get the list of objects mapped to the current database type
      * configured for the database.
      * @return List of pointers to object definitions with a source
@@ -271,7 +287,7 @@ protected:
 private:
     /// Map of transaction pointers by UUID
     std::unordered_map<std::string,
-        std::shared_ptr<DatabaseChangeSet>> mTransactionQueue;
+        std::shared_ptr<DBStandardChangeSet>> mTransactionQueue;
 
     /// Mutex to lock accessing the transaction queue
     std::mutex mTransactionLock;

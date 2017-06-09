@@ -121,35 +121,55 @@ void Database::QueueDelete(std::shared_ptr<PersistentObject> obj,
     QueueChangeSet(s);
 }
 
-void Database::QueueChangeSet(const std::shared_ptr<
+bool Database::QueueChangeSet(const std::shared_ptr<
     DatabaseChangeSet>& changes)
 {
     auto uuid = changes->GetTransactionUUID();
     std::string key = uuid.ToString();
 
-    std::lock_guard<std::mutex> lock(mTransactionLock);
-    auto queueEntry = mTransactionQueue[key];
-    if(queueEntry == nullptr)
+    auto opChanges = std::dynamic_pointer_cast<
+        DBOperationalChangeSet>(changes);
+    if(opChanges)
     {
-        queueEntry = DatabaseChangeSet::Create(uuid);
+        // Operational change queuing is not supported
+        return false;
+    }
+    else
+    {
+        auto standardChanges = std::dynamic_pointer_cast<
+            DBStandardChangeSet>(changes);
+
+        if(standardChanges)
+        {
+            std::lock_guard<std::mutex> lock(mTransactionLock);
+            auto queueEntry = mTransactionQueue[key];
+            if(queueEntry == nullptr)
+            {
+                queueEntry = std::make_shared<DBStandardChangeSet>(uuid);
+            }
+
+            for(auto obj : standardChanges->GetInserts())
+            {
+                queueEntry->Insert(obj);
+            }
+
+            for(auto obj : standardChanges->GetUpdates())
+            {
+                queueEntry->Update(obj);
+            }
+
+            for(auto obj : standardChanges->GetDeletes())
+            {
+                queueEntry->Delete(obj);
+            }
+
+            mTransactionQueue[key] = queueEntry;
+
+            return true;
+        }
     }
 
-    for(auto obj : changes->GetInserts())
-    {
-        queueEntry->Insert(obj);
-    }
-
-    for(auto obj : changes->GetUpdates())
-    {
-        queueEntry->Update(obj);
-    }
-
-    for(auto obj : changes->GetDeletes())
-    {
-        queueEntry->Delete(obj);
-    }
-
-    mTransactionQueue[key] = queueEntry;
+    return false;
 }
 
 std::list<libobjgen::UUID> Database::ProcessTransactionQueue()
@@ -157,7 +177,7 @@ std::list<libobjgen::UUID> Database::ProcessTransactionQueue()
     std::list<libobjgen::UUID> failures;
 
     std::unordered_map<std::string,
-        std::shared_ptr<DatabaseChangeSet>> queue;
+        std::shared_ptr<DBStandardChangeSet>> queue;
     {
         std::lock_guard<std::mutex> lock(mTransactionLock);
 
@@ -191,6 +211,26 @@ std::list<libobjgen::UUID> Database::ProcessTransactionQueue()
     }
 
     return failures;
+}
+
+bool Database::ProcessChangeSet(const std::shared_ptr<DatabaseChangeSet>& changes)
+{
+    auto opChanges = std::dynamic_pointer_cast<DBOperationalChangeSet>(changes);
+
+    if(opChanges)
+    {
+        return ProcessOperationalChangeSet(opChanges);
+    }
+    else
+    {
+        auto standardChanges = std::dynamic_pointer_cast<DBStandardChangeSet>(changes);
+        if(standardChanges)
+        {
+            return ProcessStandardChangeSet(standardChanges);
+        }
+    }
+
+    return false;
 }
 
 bool Database::UsingDefaultDatabaseType()

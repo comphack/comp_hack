@@ -102,14 +102,8 @@ public:
     virtual bool GetValue(const String& name, double& value);
     virtual bool GetValue(size_t index, bool& value);
     virtual bool GetValue(const String& name, bool& value);
-    virtual bool GetMap(size_t index, std::unordered_map<
-        std::string, std::vector<char>>& values);
-    virtual bool GetMap(const String& name, std::unordered_map<
-        std::string, std::vector<char>> &values);
     virtual bool GetRows(std::list<std::unordered_map<
         std::string, std::vector<char>>>& rows);
-
-    virtual bool BatchNext();
 
     virtual bool IsValid() const;
 

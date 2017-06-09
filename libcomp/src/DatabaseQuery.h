@@ -48,6 +48,11 @@ class DatabaseQueryImpl
 {
 public:
     /**
+     * Create the query implementation.
+     */
+    DatabaseQueryImpl();
+
+    /**
      * Clean up the query implementation.
      */
     virtual ~DatabaseQueryImpl();
@@ -348,24 +353,6 @@ public:
     virtual bool GetValue(const String& name, bool& value) = 0;
 
     /**
-     * Get a map column value by its index.
-     * @param index The column's index
-     * @param values Variable to bind the value to
-     * @return true on success, false on failure
-     */
-    virtual bool GetMap(size_t index, std::unordered_map<
-        std::string, std::vector<char>>& values);
-
-    /**
-     * Get a map column value by its name.
-     * @param name The column's name
-     * @param values Variable to bind the value to
-     * @return true on success, false on failure
-     */
-    virtual bool GetMap(const String& name, std::unordered_map<
-        std::string, std::vector<char>>& values);
-
-    /**
      * Get all of the query result's rows as bytes mapped
      * by column name.
      * @param rows Output map to insert a row with each
@@ -376,16 +363,22 @@ public:
         std::string, std::vector<char>>>& rows);
 
     /**
-     * Increment the query results to look at the next result set batch.
-     * @return true on success, false on failure
+     * Get the count of affected rows from the last query
+     * execution.
+     * @return Number of affected rows
      */
-    virtual bool BatchNext() = 0;
+    int64_t AffectedRowCount() const;
 
     /**
      * Check current query state validity.
      * @return true on valid, false on invalid
      */
     virtual bool IsValid() const = 0;
+
+protected:
+    /// Represents the number of affected rows since the
+    /// last sucessful call to Execute
+    int64_t mAffectedRowCount;
 };
 
 /**
@@ -726,24 +719,6 @@ public:
     bool GetValue(const String& name, bool& value);
 
     /**
-     * Get an implementation's map column value by its index.
-     * @param index The column's index
-     * @param values Variable to bind the value to
-     * @return true on success, false on failure
-     */
-    bool GetMap(size_t index, std::unordered_map<
-        std::string, std::vector<char>>& values);
-
-    /**
-     * Get an implementation's map column value by its name.
-     * @param name The column's name
-     * @param values Variable to bind the value to
-     * @return true on success, false on failure
-     */
-    bool GetMap(const String& name, std::unordered_map<
-        std::string, std::vector<char>>& values);
-
-    /**
      * Get all of the query imementation's result's rows as
      * bytes mapped by column name.
      * @param rows Output map to insert a row with each
@@ -754,17 +729,17 @@ public:
         std::string, std::vector<char>>>& rows);
 
     /**
-     * Increment the query implementation's results to look at
-     * the next result set batch.
-     * @return true on success, false on failure
-     */
-    bool BatchNext();
-
-    /**
      * Check current query implementation's state validity.
      * @return true on valid, false on invalid
      */
     bool IsValid() const;
+
+    /**
+     * Get the count of affected rows from the last query
+     * execution.
+     * @return Number of affected rows
+     */
+    int64_t AffectedRowCount() const;
 
     /**
      * Copy operator implementation.

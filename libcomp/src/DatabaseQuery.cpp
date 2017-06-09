@@ -28,6 +28,10 @@
 
 using namespace libcomp;
 
+DatabaseQueryImpl::DatabaseQueryImpl() : mAffectedRowCount(0)
+{
+}
+
 DatabaseQueryImpl::~DatabaseQueryImpl()
 {
 }
@@ -50,30 +54,17 @@ bool DatabaseQueryImpl::Bind(const String& name, const std::unordered_map<
     return false;
 }
 
-bool DatabaseQueryImpl::GetMap(size_t index, std::unordered_map<
-    std::string, std::vector<char>>& values)
-{
-    (void)index;
-    (void)values;
-
-    return false;
-}
-
-bool DatabaseQueryImpl::GetMap(const String& name, std::unordered_map<
-    std::string, std::vector<char>>& values)
-{
-    (void)name;
-    (void)values;
-
-    return false;
-}
-
 bool DatabaseQueryImpl::GetRows(std::list<std::unordered_map<
     std::string, std::vector<char>>>& rows)
 {
     (void)rows;
 
     return false;
+}
+
+int64_t DatabaseQueryImpl::AffectedRowCount() const
+{
+    return mAffectedRowCount;
 }
 
 DatabaseQuery::DatabaseQuery(DatabaseQueryImpl *pImpl) : mImpl(pImpl)
@@ -555,32 +546,6 @@ bool DatabaseQuery::GetValue(const String& name, bool& value)
     return result;
 }
 
-bool DatabaseQuery::GetMap(size_t index, std::unordered_map<
-    std::string, std::vector<char>>& values)
-{
-    bool result = false;
-
-    if(nullptr != mImpl)
-    {
-        result = mImpl->GetMap(index, values);
-    }
-
-    return result;
-}
-
-bool DatabaseQuery::GetMap(const String& name, std::unordered_map<
-    std::string, std::vector<char>>& values)
-{
-    bool result = false;
-
-    if(nullptr != mImpl)
-    {
-        result = mImpl->GetMap(name, values);
-    }
-
-    return result;
-}
-
 bool DatabaseQuery::GetRows(std::list<std::unordered_map<
     std::string, std::vector<char>>>& rows)
 {
@@ -594,13 +559,13 @@ bool DatabaseQuery::GetRows(std::list<std::unordered_map<
     return result;
 }
 
-bool DatabaseQuery::BatchNext()
+int64_t DatabaseQuery::AffectedRowCount() const
 {
-    bool result = false;
+    int64_t result = false;
 
     if(nullptr != mImpl)
     {
-        result = mImpl->BatchNext();
+        result = mImpl->AffectedRowCount();
     }
 
     return result;

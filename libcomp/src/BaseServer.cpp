@@ -442,8 +442,6 @@ bool BaseServer::ProcessMessage(const libcomp::Message::Message *pMessage)
 bool BaseServer::InsertDataFromFile(const libcomp::String& filePath,
     const std::shared_ptr<Database>& db, const std::set<std::string>& specificTypes)
 {
-    bool recordsFound = false;
-    
     tinyxml2::XMLDocument doc;
     if(tinyxml2::XML_SUCCESS != doc.LoadFile(filePath.C()))
     {
@@ -523,8 +521,8 @@ bool BaseServer::InsertDataFromFile(const libcomp::String& filePath,
         record->Unregister();
 
         objXml = objXml->NextSiblingElement("object");
-        recordsFound = true;
     }
 
-    return recordsFound;
+    // Allow no records as a means to clear out the DB on restart
+    return true;
 }

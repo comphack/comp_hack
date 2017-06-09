@@ -110,9 +110,22 @@ public:
      */
     bool VerifyAndSetupSchema(bool recreateTables = false);
 
-    virtual bool ProcessChangeSet(const std::shared_ptr<DatabaseChangeSet>& changes);
+protected:
+    virtual bool ProcessStandardChangeSet(const std::shared_ptr<
+        DBStandardChangeSet>& changes);
+    virtual bool ProcessOperationalChangeSet(const std::shared_ptr<
+        DBOperationalChangeSet>& changes);
 
 private:
+    /**
+     * Process and explicit update to a single record, checking each column's
+     * state before and verifying it set to the expected value afterwards.
+     * @param update Pointer to the explicit update
+     * @return true if the the updated succeeded, false if it did not
+     */
+    bool ProcessExplicitUpdate(const std::shared_ptr<
+        DBExplicitUpdate>& update);
+
     /**
      * Establish a connection to a MariaDB database.
      * @param connection Pointer to database connection to connect with

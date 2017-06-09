@@ -44,6 +44,7 @@
 // channel Includes
 #include <ChannelServer.h>
 #include <ClientState.h>
+#include <Git.h>
 #include <ZoneManager.h>
 
 // Standard C Includes
@@ -66,6 +67,7 @@ ChatManager::ChatManager(const std::weak_ptr<ChannelServer>& server)
     mGMands["pos"] = &ChatManager::GMCommand_Position;
     mGMands["skill"] = &ChatManager::GMCommand_Skill;
     mGMands["speed"] = &ChatManager::GMCommand_Speed;
+    mGMands["version"] =&ChatManager::GMCommand_Version;
     mGMands["xp"] = &ChatManager::GMCommand_XP;
     mGMands["zone"] =&ChatManager::GMCommand_Zone;
 }
@@ -608,6 +610,22 @@ bool ChatManager::GMCommand_Speed(const std::shared_ptr<
     p.WriteFloat(static_cast<float>(300.0f * scaling));
 
     client->SendPacket(p);
+
+    return true;
+}
+
+bool ChatManager::GMCommand_Version(const std::shared_ptr<
+    channel::ChannelClientConnection>& client,
+    const std::list<libcomp::String>& args)
+{
+    (void)args;
+
+    SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(
+        "%1 on branch %2").Arg(szGitCommittish).Arg(szGitBranch));
+    SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(
+        "Commit by %1 <%2> on %3").Arg(szGitAuthor).Arg(
+        szGitAuthorEmail).Arg(szGitDate));
+    SendChatMessage(client, ChatType_t::CHAT_SELF, szGitDescription);
 
     return true;
 }

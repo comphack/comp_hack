@@ -233,6 +233,16 @@ private:
         const std::list<libcomp::String>& args);
 
     /**
+     * GM command to print the server version.
+     * @param client Pointer to the client that sent the command
+     * @param args List of arguments for the command
+     * @return true if the command was handled properly, else false
+     */
+    bool GMCommand_Version(const std::shared_ptr<
+        channel::ChannelClientConnection>& client,
+        const std::list<libcomp::String>& args);
+
+    /**
      * GM command to zone to a new map.
      * @param client Pointer to the client that sent the command
      * @param args List of arguments for the command

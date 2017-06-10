@@ -25,6 +25,7 @@
  */
 
 // lobby Includes
+#include "ApiHandler.h"
 #include "LoginWebHandler.h"
 #include "LobbyConfig.h"
 #include "LobbyServer.h"
@@ -117,8 +118,11 @@ int main(int argc, const char *argv[])
     pLoginHandler->SetConfig(std::dynamic_pointer_cast<
         objects::LobbyConfig>(config));
 
+    auto pApiHandler = new lobby::ApiHandler(config, server);
+
     CivetServer webServer(options);
     webServer.addHandler("/", pLoginHandler);
+    webServer.addHandler("/api", pApiHandler);
 
     // Set this for the signal handler.
     libcomp::Shutdown::Configure(server.get());

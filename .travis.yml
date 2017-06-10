@@ -61,7 +61,7 @@ before_install:
   - ls -lh
   - cd ${ROOT_DIR}
   - sudo apt-get update -q
-  - sudo apt-get install libssl-dev docbook-xsl doxygen texlive-font-utils xmlto libsqlite3-dev sqlite3 libuv-dev libqt5webkit5-dev unzip -y
+  - sudo apt-get install libssl-dev docbook-xsl doxygen texlive-font-utils xmlto libsqlite3-dev sqlite3 libuv-dev libqt5webkit5-dev unzip ruby-rspec-core ruby-mechanize ruby-json -y
   - sudo mkdir -p /opt/ninja/bin
   - cd /opt/ninja/bin
   - sudo unzip $CACHE_DIR/ninja-linux.zip

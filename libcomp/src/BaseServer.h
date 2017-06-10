@@ -99,6 +99,18 @@ public:
     /**
      * Get an open database connection of the database type associated to the
      * server.
+     * @param dbType Database type to use.
+     * @param configMap Map of the available database configs by type
+     * @return Pointer to the new database connection or nullptr on failure
+     */
+    static std::shared_ptr<Database> GetDatabase(
+        objects::ServerConfig::DatabaseType_t dbType,
+        const EnumMap<objects::ServerConfig::DatabaseType_t,
+            std::shared_ptr<objects::DatabaseConfig>>& configMap);
+
+    /**
+     * Get an open database connection of the database type associated to the
+     * server.
      * @param configMap Map of the available database configs by type
      * @param performSetup If true, @ref Database::Setup will be executed
      * @return Pointer to the new database connection or nullptr on failure

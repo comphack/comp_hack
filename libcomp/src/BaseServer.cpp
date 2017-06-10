@@ -129,17 +129,16 @@ void BaseServer::FinishInitialize()
 }
 
 std::shared_ptr<Database> BaseServer::GetDatabase(
+    objects::ServerConfig::DatabaseType_t dbType,
     const EnumMap<objects::ServerConfig::DatabaseType_t,
-    std::shared_ptr<objects::DatabaseConfig>>& configMap, bool performSetup)
+    std::shared_ptr<objects::DatabaseConfig>>& configMap)
 {
-    auto type = mConfig->GetDatabaseType();
-    
-    auto configIter = configMap.find(type);
+    auto configIter = configMap.find(dbType);
     bool configExists = configIter != configMap.end() &&
         configIter->second != nullptr;
 
     std::shared_ptr<Database> db;
-    switch(type)
+    switch(dbType)
     {
         case objects::ServerConfig::DatabaseType_t::SQLITE3:
             if(configExists)
@@ -184,9 +183,22 @@ std::shared_ptr<Database> BaseServer::GetDatabase(
         return nullptr;
     }
 
+    return db;
+}
+
+std::shared_ptr<Database> BaseServer::GetDatabase(
+    const EnumMap<objects::ServerConfig::DatabaseType_t,
+    std::shared_ptr<objects::DatabaseConfig>>& configMap, bool performSetup)
+{
+    auto dbType = mConfig->GetDatabaseType();
+
+    std::shared_ptr<Database> db = GetDatabase(dbType, configMap);
+
     bool initFailure = false;
     if(performSetup)
     {
+        auto configIter = configMap.find(dbType);
+
         bool createMockData = configIter->second->GetMockData();
         initFailure = !db->Setup(createMockData);
         if(!initFailure && createMockData)

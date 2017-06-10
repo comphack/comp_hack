@@ -423,6 +423,14 @@ MACRO(OBJGEN_XML outfiles xml)
     SET(${outfiles} ${${outfiles}} ${outs})
 ENDMACRO(OBJGEN_XML outfiles xml)
 
+# Macro to create rspec tests (web testing with ruby).
+MACRO(RSPEC_TESTS)
+    FOREACH(test ${ARGN})
+        ADD_TEST(NAME ${test} COMMAND rspec ${test}.rb
+            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/rspec)
+    ENDFOREACH(test ${ARGN})
+ENDMACRO(RSPEC_TESTS)
+
 ADD_SUBDIRECTORY(libcomp)
 #ADD_SUBDIRECTORY(chanman)
 

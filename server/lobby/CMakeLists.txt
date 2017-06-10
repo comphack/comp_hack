@@ -30,6 +30,7 @@ FILE(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/objgen)
 
 SET(${PROJECT_NAME}_SRCS
     src/AccountManager.cpp
+    src/ApiHandler.cpp
     src/ClientState.cpp
     src/LobbyClientConnection.cpp
     src/LobbyServer.cpp
@@ -45,6 +46,7 @@ SET(${PROJECT_NAME}_SRCS
 
 SET(${PROJECT_NAME}_HDRS
     src/AccountManager.h
+    src/ApiHandler.h
     src/ClientState.h
     src/LobbyClientConnection.h
     src/LobbyServer.h
@@ -132,8 +134,12 @@ TARGET_INCLUDE_DIRECTORIES(${PROJECT_NAME} PRIVATE
 )
 
 TARGET_LINK_LIBRARIES(${PROJECT_NAME} ${CMAKE_THREAD_LIBS_INIT} comp tinyxml2
-    civetweb-cxx civetweb)
+    civetweb-cxx civetweb jsonbox)
 
 UPX_WRAP(${PROJECT_NAME})
 
 INSTALL(TARGETS ${PROJECT_NAME} DESTINATION bin)
+
+RSPEC_TESTS(
+    LobbyAPI
+)

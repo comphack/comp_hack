@@ -1,11 +1,14 @@
-std::list<libcomp::DatabaseBind*> @OBJECT_NAME@::GetMemberBindValues(bool retrieveAll)
+std::list<libcomp::DatabaseBind*> @OBJECT_NAME@::GetMemberBindValues(bool retrieveAll, bool clearChanges)
 {
     std::list<libcomp::DatabaseBind*> values;
     std::lock_guard<std::mutex> lock(mFieldLock);
 
     @BINDS@
 
-    mDirtyFields.clear();
+    if(clearChanges)
+    {
+        mDirtyFields.clear();
+    }
     return values;
 }
 

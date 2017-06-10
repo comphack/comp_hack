@@ -77,6 +77,15 @@ public:
      */
     virtual bool Bind(DatabaseQuery& db) = 0;
 
+    /**
+     * Set the binding based on a database specific query
+     * implementation by binding index.
+     * @param db A database specific query
+     * @param idx Index to bind to
+     * @return true on success, false on failure
+     */
+    virtual bool Bind(DatabaseQuery& db, size_t idx) = 0;
+
 protected:
     /// Column being bound
     String mColumn;
@@ -101,6 +110,14 @@ public:
     virtual ~DatabaseBindText();
 
     virtual bool Bind(DatabaseQuery& db);
+
+    virtual bool Bind(DatabaseQuery& db, size_t idx);
+
+    /**
+     * Get the value being bound
+     * @return The value being bound
+     */
+    String GetValue() const;
 
 private:
     /// String value to bind
@@ -127,6 +144,14 @@ public:
 
     virtual bool Bind(DatabaseQuery& db);
 
+    virtual bool Bind(DatabaseQuery& db, size_t idx);
+
+    /**
+     * Get the value being bound
+     * @return The value being bound
+     */
+    std::vector<char> GetValue() const;
+
 private:
     /// Blob value to bind
     std::vector<char> mValue;
@@ -151,6 +176,14 @@ public:
     virtual ~DatabaseBindUUID();
 
     virtual bool Bind(DatabaseQuery& db);
+
+    virtual bool Bind(DatabaseQuery& db, size_t idx);
+
+    /**
+     * Get the value being bound
+     * @return The value being bound
+     */
+    libobjgen::UUID GetValue() const;
 
 private:
     /// UUID value to bind
@@ -177,6 +210,14 @@ public:
 
     virtual bool Bind(DatabaseQuery& db);
 
+    virtual bool Bind(DatabaseQuery& db, size_t idx);
+
+    /**
+     * Get the value being bound
+     * @return The value being bound
+     */
+    int32_t GetValue() const;
+
 private:
     /// 32-bit integer value to bind
     int32_t mValue;
@@ -201,6 +242,14 @@ public:
     virtual ~DatabaseBindBigInt();
 
     virtual bool Bind(DatabaseQuery& db);
+
+    virtual bool Bind(DatabaseQuery& db, size_t idx);
+
+    /**
+     * Get the value being bound
+     * @return The value being bound
+     */
+    int64_t GetValue() const;
 
 private:
     /// 64-bit integer value to bind
@@ -227,6 +276,14 @@ public:
 
     virtual bool Bind(DatabaseQuery& db);
 
+    virtual bool Bind(DatabaseQuery& db, size_t idx);
+
+    /**
+     * Get the value being bound
+     * @return The value being bound
+     */
+    float GetValue() const;
+
 private:
     /// Float value to bind
     float mValue;
@@ -252,6 +309,14 @@ public:
 
     virtual bool Bind(DatabaseQuery& db);
 
+    virtual bool Bind(DatabaseQuery& db, size_t idx);
+
+    /**
+     * Get the value being bound
+     * @return The value being bound
+     */
+    double GetValue() const;
+
 private:
     /// Double value to bind
     double mValue;
@@ -276,6 +341,14 @@ public:
     virtual ~DatabaseBindBool();
 
     virtual bool Bind(DatabaseQuery& db);
+
+    virtual bool Bind(DatabaseQuery& db, size_t idx);
+
+    /**
+     * Get the value being bound
+     * @return The value being bound
+     */
+    bool GetValue() const;
 
 private:
     /// Boolean value to bind

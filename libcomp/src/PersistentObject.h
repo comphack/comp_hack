@@ -91,10 +91,12 @@ public:
      * Calling this will clear the set of fields marked as changed.
      * @param retrieveAll Optional parameter to retrieve all data members
      *  instead of the default change only behavior
+     * @param clearChanges Optional parameter to clear not clear all
+     *  fields marked as changed
      * @return List of pointers to data member database binds
      */
     virtual std::list<libcomp::DatabaseBind*> GetMemberBindValues(
-        bool retrieveAll = false) = 0;
+        bool retrieveAll = false, bool clearChanges = true) = 0;
 
     /**
      * Load the object from a successfully executed query.

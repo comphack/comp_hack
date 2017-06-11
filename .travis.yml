@@ -100,5 +100,7 @@ script:
   - ls ~/.rspec*
   - ls -lah ~
   - cat ~/.rspec
+  - rm -rf ~/.rvm* ~/.gem*
+  - env
   - rspec LobbyAPI.rb
   - which ruby

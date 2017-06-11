@@ -196,13 +196,12 @@ bool DatabaseQueryMariaDB::Bind(size_t index, const String& value)
     }
 
     auto data = value.Data(false);
-    if(value.Length() == 0)
+    mBufferBlob.push_back(data);
+
+    // Ensure that there is at least a 0 representing empty
+    if(data.size() == 0)
     {
         mBufferBlob.back().push_back(0);
-    }
-    else
-    {
-        mBufferBlob.push_back(data);
     }
 
     bind->buffer = &mBufferBlob.back()[0];
@@ -227,6 +226,7 @@ bool DatabaseQueryMariaDB::Bind(size_t index, const std::vector<char>& value)
 
     mBufferBlob.push_back(value);
 
+    // Ensure that there is at least a 0 representing empty
     if(value.size() == 0)
     {
         mBufferBlob.back().push_back(0);

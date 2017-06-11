@@ -489,7 +489,8 @@ int64_t ChannelServer::GetNextObjectID()
 
 void ChannelServer::Tick()
 {
-    /// @todo: update zone states
+    // Update the active zone states
+    mZoneManager->UpdateActiveZoneStates();
 
     // Process queued world database changes
     auto worldFailures = mWorldDatabase->ProcessTransactionQueue();

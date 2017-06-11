@@ -199,9 +199,9 @@ void AccountManager::Logout(const std::shared_ptr<
     if(nullptr != zone)
     {
         character->SetLogoutZone(zone->GetDefinition()->GetID());
-        character->SetLogoutX(cState->GetDestinationX());
-        character->SetLogoutY(cState->GetDestinationY());
-        character->SetLogoutRotation(cState->GetDestinationRotation());
+        character->SetLogoutX(cState->GetCurrentX());
+        character->SetLogoutY(cState->GetCurrentY());
+        character->SetLogoutRotation(cState->GetCurrentRotation());
     }
 
     if(!LogoutCharacter(state))

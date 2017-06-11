@@ -30,11 +30,11 @@
 // channel Includes
 #include "ActiveEntityState.h"
 #include "ChannelClientConnection.h"
+#include "EnemyState.h"
 #include "EntityState.h"
 
 namespace objects
 {
-class Enemy;
 class ServerNPC;
 class ServerObject;
 class ServerZone;
@@ -45,7 +45,6 @@ namespace channel
 
 class ChannelClientConnection;
 
-typedef ActiveEntityStateImp<objects::Enemy> EnemyState;
 typedef EntityState<objects::ServerNPC> NPCState;
 typedef EntityState<objects::ServerObject> ServerObjectState;
 

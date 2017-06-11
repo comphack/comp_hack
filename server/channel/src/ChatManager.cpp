@@ -246,10 +246,12 @@ bool ChatManager::GMCommand_Enemy(const std::shared_ptr<
 {
     std::list<libcomp::String> argsCopy = args;
 
-    if(argsCopy.size() != 1 && argsCopy.size() != 3 && argsCopy.size() != 4)
+    // Valid params: enemy, enemy+AI, enemy+AI+x+y, enemy+AI+x+y+rot,
+    // enemy+x+y, enemy+x+y+rot
+    if(argsCopy.size() == 0 || argsCopy.size() > 5)
     {
         return SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(
-            "@enemy requires one to four args"));
+            "@enemy requires one to five args"));
     }
 
     auto state = client->GetClientState();
@@ -280,18 +282,32 @@ bool ChatManager::GMCommand_Enemy(const std::shared_ptr<
     float y = cState->GetOriginY();
     float rot = cState->GetOriginRotation();
 
+    // All optional params past this point
+    libcomp::String aiType = "default";
     if(argsCopy.size() > 0)
     {
-        //X/Y optional but must be set if additional args exist
-        if(!GetDecimalArg<float>(x, argsCopy) || !GetDecimalArg<float>(y, argsCopy))
+        // Check for a number for X first
+        bool xParam = GetDecimalArg<float>(x, argsCopy);
+        if(!xParam)
         {
-            return false;
+            // Assume a non-number is an AI script type
+            GetStringArg(aiType, argsCopy);
+            xParam = GetDecimalArg<float>(x, argsCopy);
         }
 
-        //Rotation is optional
-        if(!GetDecimalArg<float>(rot, argsCopy))
+        // X/Y optional but Y must be set if X is
+        if(xParam)
         {
-            rot = 0.f;
+            if(!GetDecimalArg<float>(y, argsCopy))
+            {
+                return false;
+            }
+
+            //Rotation is optional
+            if(!GetDecimalArg<float>(rot, argsCopy))
+            {
+                rot = 0.f;
+            }
         }
     }
 
@@ -303,7 +319,7 @@ bool ChatManager::GMCommand_Enemy(const std::shared_ptr<
         return false;
     }
 
-    return zoneManager->SpawnEnemy(zone, demonID, x, y, rot);
+    return zoneManager->SpawnEnemy(zone, demonID, x, y, rot, aiType);
 }
 
 bool ChatManager::GMCommand_ExpertiseUpdate(const std::shared_ptr<
@@ -502,6 +518,8 @@ bool ChatManager::GMCommand_Position(const std::shared_ptr<
         cState->SetDestinationX(destX);
         cState->SetDestinationY(destY);
         cState->SetDestinationTicks(stopTime);
+        cState->SetCurrentX(destX);
+        cState->SetCurrentY(destY);
         
         libcomp::Packet reply;
         libcomp::Packet dreply;
@@ -525,6 +543,8 @@ bool ChatManager::GMCommand_Position(const std::shared_ptr<
             dState->SetDestinationX(destX);
             dState->SetDestinationY(destY);
             dState->SetDestinationTicks(stopTime);
+            dState->SetCurrentX(destX);
+            dState->SetCurrentY(destY);
 
            // reply.Seek(resetPos);
             dreply.WriteS32Little(dState->GetEntityID());

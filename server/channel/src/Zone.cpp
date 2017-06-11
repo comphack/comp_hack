@@ -26,9 +26,6 @@
 
 #include "Zone.h"
 
-// channel Includes
-#include "Enemy.h"
-
 using namespace channel;
 
 Zone::Zone(uint32_t id, const std::shared_ptr<objects::ServerZone>& definition)

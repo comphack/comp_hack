@@ -524,11 +524,17 @@ std::string GeneratorSource::Generate(const MetaObject& obj)
             }
         }
 
+        std::string bindingsStr = scriptBindings.str();
+        if(!bindingsStr.empty())
+        {
+            bindingsStr = "binding" + bindingsStr + ";";
+        }
+
         std::map<std::string, std::string> replacements;
         replacements["@BINDING_TYPE@"] = bindingType.str();
         replacements["@OBJECT_NAME@"] = obj.GetName();
         replacements["@OBJECT_STRING_NAME@"] = Escape(obj.GetName());
-        replacements["@BINDINGS@"] = scriptBindings.str();
+        replacements["@BINDINGS@"] = bindingsStr;
         replacements["@DEPENDENCIES@"] = dependencies.str();
 
         ss << ParseTemplate(0, "VariableAccessScriptBindings", replacements)

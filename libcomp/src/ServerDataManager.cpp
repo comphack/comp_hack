@@ -28,6 +28,7 @@
 
 // libcomp Includes
 #include "Log.h"
+#include "ScriptEngine.h"
 
 // object Includes
 #include "Event.h"
@@ -53,6 +54,11 @@ const std::shared_ptr<objects::Event> ServerDataManager::GetEventData(const libc
     return GetObjectByID<std::string, objects::Event>(id.C(), mEventData);
 }
 
+const std::shared_ptr<ServerAIScript> ServerDataManager::GetAIScript(const libcomp::String& name)
+{
+    return GetObjectByID<std::string, ServerAIScript>(name.C(), mAIScripts);
+}
+
 bool ServerDataManager::LoadData(gsl::not_null<DataStore*> pDataStore)
 {
     bool failure = false;
@@ -67,11 +73,60 @@ bool ServerDataManager::LoadData(gsl::not_null<DataStore*> pDataStore)
         failure = !LoadObjects<objects::Event>(pDataStore, "/events");
     }
 
+    if(!failure)
+    {
+        failure = !LoadScripts(pDataStore, "/ai", &ServerDataManager::LoadAIScript);
+    }
+
     return !failure;
+}
+
+bool ServerDataManager::LoadScripts(gsl::not_null<DataStore*> pDataStore,
+    const libcomp::String& datastorePath,
+    std::function<bool(ServerDataManager&,
+        const libcomp::String&, const libcomp::String&)> handler)
+{
+    std::list<libcomp::String> files;
+    std::list<libcomp::String> dirs;
+    std::list<libcomp::String> symLinks;
+
+    (void)pDataStore->GetListing(datastorePath, files, dirs, symLinks,
+        true, true);
+
+    for (auto path : files)
+    {
+        if (path.Matches("^.*\\.nut$"))
+        {
+            std::vector<char> data = pDataStore->ReadFile(path);
+            if(!handler(*this, path, std::string(data.begin(), data.end())))
+            {
+                LOG_ERROR(libcomp::String("Failed to load script file: %1\n").Arg(path));
+                return false;
+            }
+
+            LOG_DEBUG(libcomp::String("Loaded script file: %1\n").Arg(path));
+        }
+    }
+
+
+    return true;
 }
 
 namespace libcomp
 {
+    template<>
+    ScriptEngine& ScriptEngine::Using<ServerAIScript>()
+    {
+        if(!BindingExists("ServerAIScript"))
+        {
+            Sqrat::Class<ServerAIScript> binding(mVM, "ServerAIScript");
+            binding.Var("Name", &ServerAIScript::Name);
+            Bind<ServerAIScript>("ServerAIScript", binding);
+        }
+
+        return *this;
+    }
+
     template<>
     bool ServerDataManager::LoadObject<objects::ServerZone>(const tinyxml2::XMLDocument& doc,
         const tinyxml2::XMLElement *objNode)
@@ -115,4 +170,44 @@ namespace libcomp
 
         return true;
     }
+}
+
+bool ServerDataManager::LoadAIScript(const libcomp::String& path,
+    const libcomp::String& source)
+{
+    ScriptEngine engine;
+    engine.Using<ServerAIScript>();
+    if(!engine.Eval(source))
+    {
+        LOG_ERROR(libcomp::String("Improperly formatted AI script encountered: %1\n")
+            .Arg(path));
+        return false;
+    }
+
+    auto root = Sqrat::RootTable(engine.GetVM());
+    auto fDef = root.GetFunction("define");
+    auto fUpdate = root.GetFunction("update");
+    if(fDef.IsNull() || fUpdate.IsNull())
+    {
+        LOG_ERROR(libcomp::String("Invalid AI script encountered: %1\n").Arg(path));
+        return false;
+    }
+
+    auto script = std::make_shared<ServerAIScript>();
+    auto result = fDef.Evaluate<int>(script);
+    if(!result || *result != 0 || script->Name.IsEmpty())
+    {
+        LOG_ERROR(libcomp::String("AI script is not properly defined: %1\n").Arg(path));
+        return false;
+    }
+    script->Path = path;
+    script->Source = source;
+
+    if(mAIScripts.find(script->Name.C()) != mAIScripts.end())
+    {
+        LOG_ERROR(libcomp::String("Duplicate AI script encountered: %1\n").Arg(script->Name.C()));
+        return false;
+    }
+    mAIScripts[script->Name.C()] = script;
+    return true;
 }

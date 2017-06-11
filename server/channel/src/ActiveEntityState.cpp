@@ -28,6 +28,7 @@
 
 // libcomp Includes
 #include <Constants.h>
+#include <ScriptEngine.h>
 
 // objects Includes
 #include <Character.h>
@@ -41,8 +42,137 @@
 #include <MiSkillItemStatusCommonData.h>
 
 // channel Includes
-#include <CharacterManager.h>
-#include <DefinitionManager.h>
+#include "CharacterManager.h"
+#include "DefinitionManager.h"
+
+using namespace channel;
+
+void ActiveEntityState::Move(float xPos, float yPos, uint64_t now)
+{
+    SetOriginX(GetCurrentX());
+    SetOriginY(GetCurrentY());
+    SetOriginRotation(GetCurrentRotation());
+    SetOriginTicks(now);
+
+    SetDestinationX(xPos);
+    SetDestinationY(yPos);
+    SetDestinationTicks(now + 500000);  /// @todo: modify for speed
+}
+
+void ActiveEntityState::Rotate(float rot, uint64_t now)
+{
+    SetOriginX(GetCurrentX());
+    SetOriginY(GetCurrentY());
+    SetOriginRotation(GetCurrentRotation());
+    SetOriginTicks(now);
+
+    SetDestinationRotation(CorrectRotation(rot));
+    SetDestinationTicks(now + 500000);  /// @todo: modify for speed
+}
+
+void ActiveEntityState::Stop(uint64_t now)
+{
+    SetDestinationX(GetCurrentX());
+    SetDestinationY(GetCurrentY());
+    SetDestinationRotation(GetCurrentRotation());
+    SetDestinationTicks(now);
+    SetOriginX(GetCurrentX());
+    SetOriginY(GetCurrentY());
+    SetOriginRotation(GetCurrentRotation());
+    SetOriginTicks(now);
+}
+
+bool ActiveEntityState::IsMoving() const
+{
+    return GetCurrentX() != GetDestinationX() ||
+        GetCurrentY() != GetDestinationY();
+}
+
+bool ActiveEntityState::IsRotating() const
+{
+    return GetCurrentRotation() != GetDestinationRotation();
+}
+
+void ActiveEntityState::RefreshCurrentPosition(uint64_t now)
+{
+    if(now != mLastRefresh)
+    {
+        mLastRefresh = now;
+
+        float currentX = GetCurrentX();
+        float currentY = GetCurrentY();
+        float currentRot = GetCurrentRotation();
+
+        float destX = GetDestinationX();
+        float destY = GetDestinationY();
+        float destRot = GetDestinationRotation();
+
+        bool xDiff = currentX != destX;
+        bool yDiff = currentY != destY;
+        bool rotDiff = currentRot != destRot;
+
+        if(!xDiff && !yDiff && !rotDiff)
+        {
+            // Already up to date
+            return;
+        }
+
+        uint64_t destTicks = GetDestinationTicks();
+
+        if(now >= destTicks)
+        {
+            SetCurrentX(destX);
+            SetCurrentY(destY);
+            SetCurrentRotation(destRot);
+        }
+        else
+        {
+            float originX = GetOriginX();
+            float originY = GetOriginY();
+            float originRot = GetOriginRotation();
+            uint64_t originTicks = GetOriginTicks();
+
+            uint64_t elapsed = now - originTicks;
+            uint64_t total = destTicks - originTicks;
+
+            double prog = (double)((double)elapsed/(double)total);
+            if(xDiff || yDiff)
+            {
+                float newX = (float)(originX + (prog * (destX - originX)));
+                float newY = (float)(originY + (prog * (destY - originY)));
+
+                SetCurrentX(newX);
+                SetCurrentY(newY);
+            }
+
+            if(rotDiff)
+            {
+                // Bump both origin and destination by 3.14 to range from
+                // 0-+6.28 instead of -3.14-+3.14 for simpler math
+                originRot += 3.14f;
+                destRot += 3.14f;
+
+                float newRot = (float)(originRot + (prog * (destRot - originRot)));
+
+                SetCurrentRotation(CorrectRotation(newRot));
+            }
+        }
+    }
+}
+
+float ActiveEntityState::CorrectRotation(float rot) const
+{
+    if(rot > 3.16f)
+    {
+        return rot - 6.32f;
+    }
+    else if(rot < -3.16f)
+    {
+        return -rot - 3.16f;
+    }
+
+    return rot;
+}
 
 namespace channel
 {

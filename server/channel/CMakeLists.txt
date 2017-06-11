@@ -44,6 +44,7 @@ SET(${PROJECT_NAME}_SRCS
     src/CharacterManager.cpp
     src/ChatManager.cpp
     src/ClientState.cpp
+    src/EnemyState.cpp
     src/EntityState.cpp
     src/EventManager.cpp
     src/ManagerClientPacket.cpp
@@ -64,6 +65,7 @@ SET(${PROJECT_NAME}_HDRS
     src/CharacterManager.h
     src/ChatManager.h
     src/ClientState.h
+    src/EnemyState.h
     src/EntityState.h
     src/EventManager.h
     src/ManagerClientPacket.h

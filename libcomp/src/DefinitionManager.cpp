@@ -44,6 +44,7 @@
 #include <MiItemData.h>
 #include <MiNPCBasicData.h>
 #include <MiONPCData.h>
+#include <MiShopProductData.h>
 #include <MiSkillData.h>
 #include <MiSkillItemStatusCommonData.h>
 #include <MiZoneData.h>
@@ -116,6 +117,11 @@ const std::shared_ptr<objects::MiONPCData> DefinitionManager::GetONPCData(uint32
     return GetRecordByID<objects::MiONPCData>(id, mONPCData);
 }
 
+const std::shared_ptr<objects::MiShopProductData> DefinitionManager::GetShopProductData(uint32_t id)
+{
+    return GetRecordByID<objects::MiShopProductData>(id, mShopProductData);
+}
+
 const std::shared_ptr<objects::MiSkillData> DefinitionManager::GetSkillData(uint32_t id)
 {
     return GetRecordByID<objects::MiSkillData>(id, mSkillData);
@@ -148,6 +154,7 @@ bool DefinitionManager::LoadAllData(gsl::not_null<DataStore*> pDataStore)
     success &= LoadHNPCData(pDataStore);
     success &= LoadItemData(pDataStore);
     success &= LoadONPCData(pDataStore);
+    success &= LoadShopProductData(pDataStore);
     success &= LoadSkillData(pDataStore);
     success &= LoadZoneData(pDataStore);
 
@@ -302,6 +309,19 @@ bool DefinitionManager::LoadONPCData(gsl::not_null<DataStore*> pDataStore)
         mONPCData[record->GetID()] = record;
     }
     
+    return success;
+}
+
+bool DefinitionManager::LoadShopProductData(gsl::not_null<DataStore*> pDataStore)
+{
+    std::list<std::shared_ptr<objects::MiShopProductData>> records;
+    bool success = LoadBinaryData<objects::MiShopProductData>(pDataStore,
+        "Shield/ShopProductData.sbin", true, 0, records);
+    for(auto record : records)
+    {
+        mShopProductData[record->GetID()] = record;
+    }
+
     return success;
 }
 

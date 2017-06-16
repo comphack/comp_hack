@@ -153,6 +153,26 @@ bool ChannelServer::Initialize()
         to_underlying(ClientToChannelPacketCode_t::PACKET_ITEM_STACK));
     clientPacketManager->AddParser<Parsers::EquipmentList>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_EQUIPMENT_LIST));
+    clientPacketManager->AddParser<Parsers::TradeRequest>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_TRADE_REQUEST));
+    clientPacketManager->AddParser<Parsers::TradeAccept>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_TRADE_ACCEPT));
+    clientPacketManager->AddParser<Parsers::TradeAddItem>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_TRADE_ADD_ITEM));
+    clientPacketManager->AddParser<Parsers::TradeLock>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_TRADE_LOCK));
+    clientPacketManager->AddParser<Parsers::TradeFinish>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_TRADE_FINISH));
+    clientPacketManager->AddParser<Parsers::TradeCancel>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_TRADE_CANCEL));
+    clientPacketManager->AddParser<Parsers::CashBalance>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_CASH_BALANCE));
+    clientPacketManager->AddParser<Parsers::ShopData>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_SHOP_DATA));
+    clientPacketManager->AddParser<Parsers::ShopBuy>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_SHOP_BUY));
+    clientPacketManager->AddParser<Parsers::ShopSell>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_SHOP_SELL));
     clientPacketManager->AddParser<Parsers::DemonBoxMove>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_DEMON_BOX_MOVE));
     clientPacketManager->AddParser<Parsers::DismissDemon>(

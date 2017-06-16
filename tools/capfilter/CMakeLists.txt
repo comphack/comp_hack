@@ -28,11 +28,13 @@ MESSAGE("** Configuring ${PROJECT_NAME} **")
 
 SET(${PROJECT_NAME}_SRCS
     src/main.cpp
+    src/ShopFilter.cpp
     src/ZoneFilter.cpp
 )
 
 SET(${PROJECT_NAME}_HDRS
     src/CommandFilter.h
+    src/ShopFilter.h
     src/ZoneFilter.h
 )
 

@@ -33,6 +33,7 @@
 #include <ScriptEngine.h>
 
 // objects Include
+#include <Account.h>
 #include <Enemy.h>
 #include <EntityStats.h>
 #include <MiDevilData.h>
@@ -40,6 +41,7 @@
 #include <ServerNPC.h>
 #include <ServerObject.h>
 #include <ServerZone.h>
+#include <TradeSession.h>
 
 // channel Includes
 #include "ChannelServer.h"
@@ -159,6 +161,28 @@ void ZoneManager::LeaveZone(const std::shared_ptr<ChannelClientConnection>& clie
 {
     auto state = client->GetClientState();
     auto primaryEntityID = state->GetCharacterState()->GetEntityID();
+
+    // Detach from zone specific state info
+    if(state->GetTradeSession()->GetOtherCharacterState() != nullptr)
+    {
+        auto server = mServer.lock();
+        auto characterManager = server->GetCharacterManager();
+        auto connectionManager = server->GetManagerConnection();
+
+        auto otherCState = std::dynamic_pointer_cast<CharacterState>(
+            state->GetTradeSession()->GetOtherCharacterState());
+        auto otherChar = otherCState->GetEntity();
+        auto otherClient = otherChar != nullptr ? 
+            connectionManager->GetClientConnection(
+                otherChar->GetAccount()->GetUsername()) : nullptr;
+
+        if(otherClient)
+        {
+            characterManager->EndTrade(otherClient);
+        }
+
+        characterManager->EndTrade(client);
+    }
 
     bool instanceRemoved = false;
     std::shared_ptr<Zone> zone = nullptr;
@@ -682,6 +706,44 @@ void ZoneManager::UpdateActiveZoneStates()
     for(auto client : clients)
     {
         client->FlushOutgoing();
+    }
+}
+
+void ZoneManager::Warp(const std::shared_ptr<ChannelClientConnection>& client,
+    const std::shared_ptr<ActiveEntityState>& eState, float xPos, float yPos,
+    float rot)
+{
+    auto server = mServer.lock();
+    ServerTime timestamp = server->GetServerTime();
+
+    eState->SetOriginX(xPos);
+    eState->SetOriginY(yPos);
+    eState->SetOriginTicks(timestamp);
+    eState->SetDestinationX(xPos);
+    eState->SetDestinationY(yPos);
+    eState->SetDestinationTicks(timestamp);
+    eState->SetCurrentX(xPos);
+    eState->SetCurrentY(yPos);
+
+    libcomp::Packet p;
+    p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_WARP);
+    p.WriteS32Little(eState->GetEntityID());
+    p.WriteFloat(xPos);
+    p.WriteFloat(yPos);
+    p.WriteFloat(0.0f);  // Unknown
+    p.WriteFloat(rot);
+
+    uint32_t timePos = p.Size();
+    auto connections = server->GetZoneManager()->GetZoneConnections(client, true);
+    for(auto zConnection : connections)
+    {
+        auto otherState = zConnection->GetClientState();
+        float timeAdjust = otherState->ToClientTime(timestamp);
+
+        p.Seek(timePos);
+        p.WriteFloat(timeAdjust);
+
+        zConnection->SendPacket(p);
     }
 }
 

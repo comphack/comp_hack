@@ -421,7 +421,7 @@ bool EventManager::OpenMenu(const std::shared_ptr<ChannelClientConnection>& clie
     p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_EVENT_OPEN_MENU);
     p.WriteS32Little(instance->GetSourceEntityID());
     p.WriteS32Little(e->GetMenuType());
-    p.WriteS32Little(0);    // Unknown
+    p.WriteS32Little(e->GetShopID());
     p.WriteString16Little(state->GetClientStringEncoding(),
         libcomp::String(), true);
 

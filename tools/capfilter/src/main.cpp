@@ -41,6 +41,7 @@
 
 // comp_capfilter
 #include "CommandFilter.h"
+#include "ShopFilter.h"
 #include "ZoneFilter.h"
 
 class CaptureFile;
@@ -440,24 +441,40 @@ std::list<CaptureEvent*>::const_iterator CaptureFile::end() const
 
 int main(int argc, char *argv[])
 {
-    if(3 != argc)
+    if(4 != argc)
     {
         std::cerr << "USAGE: " << argv[0]
-            << " DATASTORE_DIR CAPTURE_DIR" << std::endl;
+            << " MODE DATASTORE_DIR CAPTURE_DIR" << std::endl;
 
         return EXIT_FAILURE;
     }
 
-    const char *szDataStore = argv[1];
-    const char *szCapturePath = argv[2];
+    const char *szMode = argv[1];
+    const char *szDataStore = argv[2];
+    const char *szCapturePath = argv[3];
 
     QCoreApplication app(argc, argv);
 
     QDirIterator it(szCapturePath, QStringList() << "*.hack",
         QDir::Files, QDirIterator::Subdirectories);
 
-    /// @todo Command line option to pick one?
-    CommandFilter *pFilter = new ZoneFilter(argv[0], szDataStore, true);
+    CommandFilter *pFilter;
+    
+    auto mode = std::string(szMode);
+    if(mode == "zone")
+    {
+        pFilter = new ZoneFilter(argv[0], szDataStore, true);
+    }
+    else if(mode == "shop")
+    {
+        pFilter = new ShopFilter(argv[0], szDataStore);
+    }
+    else
+    {
+        std::cerr << "INVALID MODE: " << argv[1] << std::endl;
+
+        return EXIT_FAILURE;
+    }
 
     while (it.hasNext())
     {

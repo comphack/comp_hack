@@ -372,12 +372,23 @@ bool ChatManager::GMCommand_Item(const std::shared_ptr<
             return false;
         }
 
-        auto itemData = definitionManager->GetItemData(name);
-        if(itemData == nullptr)
+        if(name.ToLower() == "macca")
         {
-            return false;
+            itemID = ITEM_MACCA;
         }
-        itemID = itemData->GetCommon()->GetID();
+        else if(name.ToLower() == "mag")
+        {
+            itemID = ITEM_MAGNETITE;
+        }
+        else
+        {
+            auto itemData = definitionManager->GetItemData(name);
+            if(itemData == nullptr)
+            {
+                return false;
+            }
+            itemID = itemData->GetCommon()->GetID();
+        }
     }
 
     uint16_t stackSize;
@@ -486,94 +497,42 @@ bool ChatManager::GMCommand_Position(const std::shared_ptr<
 {
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
-    auto dState = state->GetDemonState();
     auto server = mServer.lock();
     auto zoneManager = server->GetZoneManager();
-    ServerTime stopTime;
-    ServerTime startTime;
-    startTime = stopTime = server->GetServerTime();
-    ClientTime start = client->GetClientState()->ToClientTime(startTime);
-    ClientTime stop = client->GetClientState()->ToClientTime(stopTime);
 
     std::list<libcomp::String> argsCopy = args;
-
-    if(!cState)
+    if(!args.empty() && args.size() == 2)
     {
-        LOG_DEBUG("Bad character state.\n");
-
-        return false;
-    }
-
-    if (!args.empty() && args.size() == 2)
-    {
-        //LOG_DEBUG("Argument list is not empty.\n");
-        float destX = 0.0;
-        float destY = 0.0;
-        float ratePerSec = 0.0; //hardcoded for testing purposes
-        GetDecimalArg<float>(destX, argsCopy);
-        GetDecimalArg<float>(destY, argsCopy);
-        cState->SetOriginX(destX);
-        cState->SetOriginY(destY);
-        cState->SetOriginTicks(startTime);
-        cState->SetDestinationX(destX);
-        cState->SetDestinationY(destY);
-        cState->SetDestinationTicks(stopTime);
-        cState->SetCurrentX(destX);
-        cState->SetCurrentY(destY);
-        
-        libcomp::Packet reply;
-        libcomp::Packet dreply;
-        reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_MOVE);
-        dreply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_MOVE);
-        //uint32_t resetPos = reply.Size();
-        reply.WriteS32Little(cState->GetEntityID());
-        reply.WriteFloat(destX);
-        reply.WriteFloat(destY);
-        reply.WriteFloat(destX);
-        reply.WriteFloat(destY);
-        reply.WriteFloat(ratePerSec);
-        reply.WriteFloat(start);
-        reply.WriteFloat(stop);
-        zoneManager->BroadcastPacket(client, reply, true);
-        if (dState->GetEntity())
+        float destX, destY;
+        if(!GetDecimalArg<float>(destX, argsCopy) ||
+            !GetDecimalArg<float>(destY, argsCopy))
         {
-            dState->SetOriginX(destX);
-            dState->SetOriginY(destY);
-            dState->SetOriginTicks(startTime);
-            dState->SetDestinationX(destX);
-            dState->SetDestinationY(destY);
-            dState->SetDestinationTicks(stopTime);
-            dState->SetCurrentX(destX);
-            dState->SetCurrentY(destY);
+            return SendChatMessage(client, ChatType_t::CHAT_SELF,
+                "Invalid args supplied for @pos command");
+        }
 
-           // reply.Seek(resetPos);
-            dreply.WriteS32Little(dState->GetEntityID());
-            dreply.WriteFloat(destX);
-            dreply.WriteFloat(destY);
-            dreply.WriteFloat(destX);
-            dreply.WriteFloat(destY);
-            dreply.WriteFloat(ratePerSec);
-            dreply.WriteFloat(start);
-            dreply.WriteFloat(stop);
-            zoneManager->BroadcastPacket(client, dreply, true);
+        auto dState = state->GetDemonState();
+
+        zoneManager->Warp(client, cState, destX, destY,
+            cState->GetDestinationRotation());
+        if(dState->GetEntity())
+        {
+            zoneManager->Warp(client, dState, destX, destY,
+                dState->GetDestinationRotation());
         }
         
-        return SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(
-            "Destination Set: (%1, %2)").Arg(cState->GetDestinationX()).Arg(
-                cState->GetDestinationY()));
+        return true;
     }
-
-    if(!args.empty() && args.size() != 2)
+    else if(!args.empty() && args.size() != 2)
     {
-        return SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(
-            "@pos requires zero or two args"));
+        return SendChatMessage(client, ChatType_t::CHAT_SELF,
+            "@pos requires zero or two args");
     }
 
-    /// @todo We may need to use the time to calculate where between the origin
-    /// and destination the character is.
+    cState->RefreshCurrentPosition(server->GetServerTime());
     return SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(
-        "Position: (%1, %2)").Arg(cState->GetDestinationX()).Arg(
-        cState->GetDestinationY()));
+        "Position: (%1, %2)").Arg(cState->GetCurrentX()).Arg(
+        cState->GetCurrentY()));
 }
 
 bool ChatManager::GMCommand_Skill(const std::shared_ptr<

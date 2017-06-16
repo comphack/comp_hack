@@ -60,6 +60,7 @@
 #include <MiSkillData.h>
 #include <ServerZone.h>
 #include <StatusEffect.h>
+#include <TradeSession.h>
 
 using namespace channel;
 
@@ -947,24 +948,12 @@ void CharacterManager::SendItemBoxData(const std::shared_ptr<
         reply.WriteU8(0); // Failed Item Fuse 0 = OK | 1 = FAIL*/
 
         auto basicEffect = item->GetBasicEffect();
-        if(basicEffect)
-        {
-            reply.WriteU32Little(basicEffect);
-        }
-        else
-        {
-            reply.WriteU32Little(static_cast<uint32_t>(-1));
-        }
+        reply.WriteU32Little(basicEffect ? basicEffect
+            : static_cast<uint32_t>(-1));
 
         auto specialEffect = item->GetSpecialEffect();
-        if(specialEffect)
-        {
-            reply.WriteU32Little(specialEffect);
-        }
-        else
-        {
-            reply.WriteU32Little(static_cast<uint32_t>(-1));
-        }
+        reply.WriteU32Little(specialEffect ? specialEffect
+            : static_cast<uint32_t>(-1));
 
         for(auto bonus : item->GetFuseBonuses())
         {
@@ -1325,6 +1314,48 @@ void CharacterManager::EquipItem(const std::shared_ptr<
     server->GetWorldDatabase()->QueueUpdate(character, state->GetAccountUID());
 
     server->GetZoneManager()->BroadcastPacket(client, reply);
+}
+
+bool CharacterManager::UnequipItem(const std::shared_ptr<
+    channel::ChannelClientConnection>& client,
+    const std::shared_ptr<objects::Item>& item)
+{
+    auto state = client->GetClientState();
+    auto cState = state->GetCharacterState();
+    auto character = cState->GetEntity();
+
+    auto server = mServer.lock();
+    auto def = server->GetDefinitionManager()->GetItemData(item->GetType());
+    if(def)
+    {
+        int8_t equipType = (int8_t)def->GetBasic()->GetEquipType();
+        if(equipType > 0 &&
+            character->GetEquippedItems((size_t)equipType).Get() == item)
+        {
+            auto objID = state->GetObjectID(item->GetUUID());
+            EquipItem(client, objID);
+            return true;
+        }
+    }
+
+    return false;
+}
+
+void  CharacterManager::EndTrade(const std::shared_ptr<
+    channel::ChannelClientConnection>& client, int32_t outcome)
+{
+    auto state = client->GetClientState();
+
+    // Reset the session
+    auto newSession = std::make_shared<objects::TradeSession>();
+    newSession->SetOtherCharacterState(nullptr);
+    state->SetTradeSession(newSession);
+
+    libcomp::Packet reply;
+    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_TRADE_ENDED);
+    reply.WriteS32Little(outcome);
+    client->QueuePacket(reply);
+    SetStatusIcon(client, 0);
 }
 
 void CharacterManager::UpdateLNC(const std::shared_ptr<

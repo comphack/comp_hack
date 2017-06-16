@@ -203,6 +203,19 @@ public:
      */
     void UpdateActiveZoneStates();
 
+    /**
+     * Warp an entity to the specified location immediately.
+     * @param client Pointer to the client connection to use for gathering zone
+     *  information
+     * @param eState Pointer to the state of the entity being warped
+     * @param xPos X coordinate to warp the entity to
+     * @param yPos Y coordinate to warp the entity to
+     * @param rot Rotation to set at the target coordinates
+     */
+    void Warp(const std::shared_ptr<ChannelClientConnection>& client,
+        const std::shared_ptr<ActiveEntityState>& eState, float xPos, float yPos,
+        float rot);
+
 private:
     /**
      * Send entity information about an enemy in a zone

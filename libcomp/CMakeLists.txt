@@ -211,6 +211,7 @@ SET(${PROJECT_NAME}_SCHEMA
     schema/registeredworld.xml
     schema/server_npc.xml
     schema/server_object.xml
+    schema/server_shop.xml
     schema/server_zone.xml
     schema/serverconfig.xml
     schema/test.xml
@@ -226,6 +227,7 @@ SET(${PROJECT_NAME}_SCHEMA
     schema/binarydata/itemdata.xml
     schema/binarydata/onpcdata.xml
     schema/binarydata/shared.xml
+    schema/binarydata/shopproductdata.xml
     schema/binarydata/skilldata.xml
     schema/binarydata/spotdata.xml
     schema/binarydata/zonedata.xml
@@ -338,6 +340,12 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     ServerObject.cpp
     ServerObjectBase.h
     ServerObjectBase.cpp
+    ServerShop.h
+    ServerShop.cpp
+    ServerShopProduct.h
+    ServerShopProduct.cpp
+    ServerShopTab.h
+    ServerShopTab.cpp
     ServerZone.h
     ServerZone.cpp
     ServerZoneSpot.h
@@ -448,6 +456,8 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     MiCZoneRelationData.cpp
     MiRelationZoneIDData.h
     MiRelationZoneIDData.cpp
+    MiShopProductData.cpp
+    MiShopProductData.h
     MiSkillBasicData.cpp
     MiSkillBasicData.h
     MiSkillCharasticData.cpp

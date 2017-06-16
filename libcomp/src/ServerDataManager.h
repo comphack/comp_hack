@@ -46,6 +46,7 @@
 namespace objects
 {
 class Event;
+class ServerShop;
 class ServerZone;
 }
 
@@ -92,6 +93,13 @@ public:
      * @return Pointer to the event matching the specified id
      */
     const std::shared_ptr<objects::Event> GetEventData(const libcomp::String& id);
+
+    /**
+     * Get a shop by definition ID
+     * @param id Definition ID of a shop to load
+     * @return Pointer to the shop matching the specified id
+     */
+    const std::shared_ptr<objects::ServerShop> GetShopData(uint32_t id);
 
     /**
      * Get an AI script by name
@@ -218,6 +226,10 @@ private:
     /// Map of events by definition ID
     std::unordered_map<std::string,
         std::shared_ptr<objects::Event>> mEventData;
+
+    /// Map of shops by definition ID
+    std::unordered_map<uint32_t,
+        std::shared_ptr<objects::ServerShop>> mShopData;
 
     /// Map of AI scripts by name
     std::unordered_map<std::string, std::shared_ptr<ServerAIScript>> mAIScripts;

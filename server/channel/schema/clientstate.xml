@@ -3,9 +3,11 @@
     <object name="ClientStateObject" persistent="false">
         <member type="bool" name="Authenticated"/>
         <member type="bool" name="LoggedIn"/>
+        <member type="bool" name="ForcedClose"/>
         <member type="AccountLogin*" name="AccountLogin"/>
         <member type="AccountWorldData*" name="AccountWorldData"/>
         <member type="EventState*" name="EventState"/>
+        <member type="TradeSession*" name="TradeSession"/>
         <member type="s8" name="StatusIcon"/>
     </object>
     <object name="EventState" persistent="false">
@@ -19,5 +21,13 @@
         <member type="EventSequence*" name="State"/>
         <member type="s32" name="SourceEntityID"/>
         <member type="u8" name="Index"/>
+    </object>
+    <object name="TradeSession" persistent="false">
+        <member type="EntityStateObject*" name="OtherCharacterState"/>
+        <member type="bool" name="Locked"/>
+        <member type="bool" name="Finished"/>
+        <member type="array" name="Items" size="30">
+            <element type="Item*"/>
+        </member>
     </object>
 </objgen>

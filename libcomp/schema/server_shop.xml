@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="ServerShop" persistent="false">
+        <member type="s32" name="ShopID"/>
+        <member type="s32" name="Shop1"/>
+        <member type="s32" name="Shop2"/>
+        <member type="s32" name="Shop3"/>
+        <member type="u16" name="Shop4"/>
+        <member type="s8" name="Shop5"/>
+        <member type="s8" name="Shop6"/>
+        <member type="list" name="Tabs">
+            <element type="ServerShopTab*"/>
+        </member>
+    </object>
+    <object name="ServerShopTab" persistent="false">
+        <member type="string" name="Name"/>
+        <member type="u8" name="Tab1"/>
+        <member type="u16" name="Tab2"/>
+        <member type="u16" name="Tab3"/>
+        <member type="list" name="Products">
+            <element type="ServerShopProduct*"/>
+        </member>
+    </object>
+    <object name="ServerShopProduct" persistent="false">
+        <member type="u16" name="ProductID"/>
+        <member type="u8" name="MerchantDescription"/>
+        <member type="u8" name="Flags"/>
+        <member type="s32" name="BasePrice"/>
+        <member type="list" name="ExtraBytes">
+            <element type="u8"/>
+        </member>
+    </object>
+</objgen>

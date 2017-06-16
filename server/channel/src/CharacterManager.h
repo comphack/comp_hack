@@ -231,7 +231,8 @@ public:
         uint16_t quantity, bool add, int64_t skillTargetID = 0);
 
     /**
-     * Equip an item matching the supplied ID on the client's character.
+     * Equip or unequip an item matching the supplied ID on the
+     * client's character.
      * @param client Pointer to the client connection containing
      *  the character
      * @param itemID Object ID matching an item in the character's item
@@ -239,6 +240,33 @@ public:
      */
     void EquipItem(const std::shared_ptr<
         channel::ChannelClientConnection>& client, int64_t itemID);
+
+    /**
+     * Unequip the supplied item from the client's character.  Unlike
+     * EquipItem, the item will not be toggled if it isn't equipped.
+     * @param client Pointer to the client connection containing
+     *  the character
+     * @param item Pointer to the item to unequip
+     * @return true if the item was unequipped, false if it was not
+     *  equipped to begin with
+     */
+    bool UnequipItem(const std::shared_ptr<
+        channel::ChannelClientConnection>& client,
+        const std::shared_ptr<objects::Item>& item);
+
+    /**
+     * End the current trade session for the client with various outcome
+     * types. The trade logic is handled elsewhere and the other
+     * participant in the trade must be notified via this function as well.
+     * @param client Client to notify of the end of a trade
+     * @param outcome Defaults to cancelled
+     *  0 = trade success
+     *  2 = player can't hold more items
+     *  3 = other player can't hold more items
+     *  anything else = trade cancelled
+     */
+    void EndTrade(const std::shared_ptr<
+        channel::ChannelClientConnection>& client, int32_t outcome = 1);
 
     /**
      * Update the client's character's LNC value.

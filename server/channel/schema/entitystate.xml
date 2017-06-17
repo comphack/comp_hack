@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <objgen>
-    <object name="EntityStateObject" persistent="false">
+    <object name="EntityStateObject" scriptenabled="true" persistent="false">
         <member type="s32" name="EntityID"/>
         <member type="bool" name="IsActive"/>
         <member type="enum" name="EntityType" underlying="int8_t">
@@ -11,6 +11,18 @@
             <value>ENEMY</value>
         </member>
 
+        <member type="float" name="CurrentX"/>
+        <member type="float" name="CurrentY"/>
+        <member type="float" name="CurrentRotation"/>
+
+        <member type="list" name="Actions">
+            <element type="Action*"/>
+        </member>
+    </object>
+    <object name="ActiveEntityStateObject" baseobject="EntityStateObject"
+    scriptenabled="true" persistent="false">
+        <member type="bool" name="IsActive" inherited="true" default="true"/>
+
         <member type="float" name="OriginX"/>
         <member type="float" name="OriginY"/>
         <member type="float" name="OriginRotation"/>
@@ -20,12 +32,6 @@
         <member type="float" name="DestinationRotation"/>
         <member type="u64" name="DestinationTicks"/>
 
-        <member type="list" name="Actions">
-            <element type="Action*"/>
-        </member>
-    </object>
-    <object name="ActiveEntityStateObject" baseobject="EntityStateObject" persistent="false">
-        <member type="bool" name="IsActive" inherited="true" default="true"/>
         <member type="s16" name="MaxHP"/>
         <member type="s16" name="MaxMP"/>
         <member type="s16" name="STR"/>
@@ -42,7 +48,7 @@
         <member type="s16" name="MDEF"/>
         <member type="ActivatedAbility*" name="ActivatedAbility"/>
     </object>
-    <object name="ActivatedAbility" persistent="false">
+    <object name="ActivatedAbility" scriptenabled="true" persistent="false">
         <member type="u32" name="SkillID"/>
         <member type="s64" name="TargetObjectID"/>
         <member type="bool" name="EntityTargeted"/>

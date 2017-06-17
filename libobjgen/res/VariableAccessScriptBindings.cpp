@@ -7,8 +7,7 @@ namespace libcomp
         {
             @DEPENDENCIES@
             Sqrat::@BINDING_TYPE@ binding(mVM, @OBJECT_STRING_NAME@);
-            binding
-                @BINDINGS@; // Last call to binding
+            @BINDINGS@
 
             Bind<@OBJECT_NAME@>(@OBJECT_STRING_NAME@, binding);
         }

@@ -483,8 +483,8 @@ bool EventManager::Homepoint(const std::shared_ptr<ChannelClientConnection>& cli
     /// @todo: check for invalid zone types or positions
 
     auto zoneID = zone->GetDefinition()->GetID();
-    auto xCoord = cState->GetDestinationX();
-    auto yCoord = cState->GetDestinationY();
+    auto xCoord = cState->GetCurrentX();
+    auto yCoord = cState->GetCurrentY();
 
     character->SetHomepointZone(zoneID);
     character->SetHomepointX(xCoord);

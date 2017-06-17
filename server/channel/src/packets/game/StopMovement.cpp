@@ -68,10 +68,14 @@ bool Parsers::StopMovement::Parse(libcomp::ManagerPacket *pPacketManager,
     ServerTime stopTime = state->ToServerTime(stop);
 
     // Stop using the current rotation value
-    eState->SetOriginRotation(eState->GetDestinationRotation());
+    eState->RefreshCurrentPosition(server->GetServerTime());
+    float rot = eState->GetCurrentRotation();
+    eState->SetDestinationRotation(rot);
 
     eState->SetDestinationX(destX);
+    eState->SetCurrentX(destX);
     eState->SetDestinationY(destY);
+    eState->SetCurrentY(destY);
 
     eState->SetDestinationTicks(stopTime);
 

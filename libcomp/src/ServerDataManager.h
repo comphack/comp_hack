@@ -53,6 +53,16 @@ namespace libcomp
 {
 
 /**
+ * Container for AI script information.
+ */
+struct ServerAIScript
+{
+    String Name;
+    String Path;
+    String Source;
+};
+
+/**
  * Manager class responsible for loading server specific files such as
  * zones and script files.
  */
@@ -82,6 +92,13 @@ public:
      * @return Pointer to the event matching the specified id
      */
     const std::shared_ptr<objects::Event> GetEventData(const libcomp::String& id);
+
+    /**
+     * Get an AI script by name
+     * @param name Name of the script to load
+     * @return Pointer to the script definition
+     */
+    const std::shared_ptr<ServerAIScript> GetAIScript(const libcomp::String& name);
 
     /**
      * Load all server data defintions in the data store
@@ -149,14 +166,14 @@ private:
                 {
                     if(!LoadObject<T>(objsDoc, objNode))
                     {
-                        LOG_ERROR(libcomp::String("Failed to load file: %1\n").Arg(path));
+                        LOG_ERROR(libcomp::String("Failed to load XML file: %1\n").Arg(path));
                         return false;
                     }
 
                     objNode = objNode->NextSiblingElement("object");
                 }
 
-                LOG_DEBUG(libcomp::String("Loaded file: %1\n").Arg(path));
+                LOG_DEBUG(libcomp::String("Loaded XML file: %1\n").Arg(path));
             }
         }
 
@@ -172,6 +189,27 @@ private:
      */
     template <class T>
     bool LoadObject(const tinyxml2::XMLDocument& doc, const tinyxml2::XMLElement *objNode);
+    
+
+    /**
+     * Load all script files in the specified datastore
+     * @param pDataStore Pointer to the datastore to use
+     * @param datastorePath Path within the data store to load scripts from
+     * @param handler Function pointer to call upon successful load
+     * @return true on success, false on failure
+     */
+    bool LoadScripts(gsl::not_null<DataStore*> pDataStore,
+        const libcomp::String& datastorePath,
+        std::function<bool(ServerDataManager&,
+            const libcomp::String&, const libcomp::String&)> handler);
+
+    /**
+     * Verify and store a successfully loaded AI script
+     * @param path Path to the AI script file
+     * @param source Source contained within the AI script file
+     * @return true on success, false on failure
+     */
+    bool LoadAIScript(const libcomp::String& path, const libcomp::String& source);
 
     /// Map of server zone defintions by zone definition ID
     std::unordered_map<uint32_t,
@@ -180,6 +218,9 @@ private:
     /// Map of events by definition ID
     std::unordered_map<std::string,
         std::shared_ptr<objects::Event>> mEventData;
+
+    /// Map of AI scripts by name
+    std::unordered_map<std::string, std::shared_ptr<ServerAIScript>> mAIScripts;
 };
 
 } // namspace libcomp

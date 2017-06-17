@@ -189,10 +189,19 @@ public:
      * @param x X coordinate to render the enemy at
      * @param y Y coordinate to render the enemy at
      * @param rot Rotation to render the enemy with
+     * @param aiType Optional parameter to specify the type of AI
+     *  script to bind to the enemy by its type name
      * @return true if the enemy was spawned, false if it was not
      */
     bool SpawnEnemy(const std::shared_ptr<Zone>& zone, uint32_t demonID, float x,
-        float y, float rot);
+        float y, float rot, const libcomp::String& aiType = "default");
+
+    /**
+     * Updates the current states of entities in the zone.  Enemy AI is
+     * processed from here as well as updating the current state of moving
+     * entities.
+     */
+    void UpdateActiveZoneStates();
 
 private:
     /**

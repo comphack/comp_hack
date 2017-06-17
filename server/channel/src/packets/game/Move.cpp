@@ -94,14 +94,22 @@ bool Parsers::Move::Parse(libcomp::ManagerPacket *pPacketManager,
         ratePerSec).Arg(dist).Arg(maxDist).Arg(std::to_string(deltaTime)));*/
 
     eState->SetOriginX(originX);
+    eState->SetCurrentX(originX);
     eState->SetOriginY(originY);
+    eState->SetCurrentY(originY);
     eState->SetOriginTicks(startTime);
     eState->SetDestinationX(destX);
     eState->SetDestinationY(destY);
     eState->SetDestinationTicks(stopTime);
 
-    eState->SetOriginRotation(eState->GetDestinationRotation());
-    eState->SetDestinationRotation((float)atan2(destY, destX));
+    float originRot = eState->GetCurrentRotation();
+    float destRot = (float)atan2(destY, destX);
+    eState->SetOriginRotation(originRot);
+    eState->SetDestinationRotation(destRot);
+
+    // Time to rotate while moving is nearly instantaneous
+    // and kind of irrelavent so mark it right away
+    eState->SetCurrentRotation(destRot);
 
     /// @todo: Fire zone triggers
 

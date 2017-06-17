@@ -57,11 +57,69 @@ public:
     virtual std::shared_ptr<objects::EntityStats> GetCoreStats() = 0;
 
     /**
-     * Check if the character state has everything needed to start
+     * Set the entity's destination position based on the supplied
+     * values and uses the current position values to set the origin.
+     * Communicating that the move has taken place must be done elsewhere.
+     * @param xPos X position to move to
+     * @param yPos Y position to move to
+     * @param now Server time to use as the origin ticks
+     */
+    void Move(float xPos, float yPos, uint64_t now);
+
+    /**
+     * Set the entity's destination rotation based on the supplied
+     * values and uses the current rotation values to set the origin.
+     * Communicating that the rotation has taken place must be done elsewhere.
+     * @param rot New rotation value to set
+     * @param now Server time to use as the origin ticks
+     */
+    void Rotate(float rot, uint64_t now);
+
+    /**
+     * Stop the entity's movement based on the current postion information.
+     * Communicating that the movement has stopped must be done elsewhere.
+     * @param now Server time to use as the origin ticks
+     */
+    void Stop(uint64_t now);
+
+    /**
+     * Check if the entity is currently not at their destination position
+     * @return true if the entity is moving, false if they are not
+     */
+    bool IsMoving() const;
+
+    /**
+     * Check if the entity is currently not at their destination rotation
+     * @return true if the entity is rotating, false if they are not
+     */
+    bool IsRotating() const;
+
+    /**
+     * Update the entity's current position and rotation values based
+     * upon the source/destination ticks and the current time.  If now
+     * matches the last refresh time, no work is done.
+     * @param now Current timestamp of the server
+     */
+    void RefreshCurrentPosition(uint64_t now);
+
+    /**
+     * Check if the entity state has everything needed to start
      * being used.
      * @return true if the state is ready to use, otherwise false
      */
     virtual bool Ready() = 0;
+
+private:
+    /**
+     * Corrects rotation values that have exceeded the minimum
+     * or maximum allowed range.
+     * @param rot Original rotation value to correct
+     * @return Equivalent but corrected rotation value
+     */
+    float CorrectRotation(float rot) const;
+
+    /// Last timestamp the entity's state was refreshed
+    uint64_t mLastRefresh;
 };
 
 /**

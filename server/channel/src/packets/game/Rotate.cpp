@@ -73,15 +73,19 @@ bool Parsers::Rotate::Parse(libcomp::ManagerPacket *pPacketManager,
     ServerTime stopTime = state->ToServerTime(stop);
 
     // Rotating does not update the X and Y position
-    eState->SetOriginX(eState->GetDestinationX());
-    eState->SetOriginY(eState->GetDestinationY());
+    eState->RefreshCurrentPosition(server->GetServerTime());
+    float x = eState->GetCurrentX();
+    float y = eState->GetCurrentY();
+    eState->SetOriginX(x);
+    eState->SetOriginY(y);
+    eState->SetDestinationX(x);
+    eState->SetDestinationY(y);
 
     eState->SetOriginTicks(startTime);
     eState->SetDestinationTicks(stopTime);
 
-    eState->SetOriginRotation(eState->GetDestinationRotation());
+    eState->SetOriginRotation(eState->GetCurrentRotation());
     eState->SetDestinationRotation(rotation);
-
 
     auto zoneConnections = server->GetZoneManager()->GetZoneConnections(client, false);
     if(zoneConnections.size() > 0)

@@ -43,7 +43,14 @@
 
 Updater::Updater(QWidget *p) : QWidget(p), mDone(false)
 {
-    QSettings settings("ImagineUpdate.dat", QSettings::IniFormat);
+    QString settingsPath = "ImagineUpdate.dat";
+
+    if(QFileInfo("ImagineUpdate-user.dat").exists())
+    {
+        settingsPath = "ImagineUpdate-user.dat";
+    }
+
+    QSettings settings(settingsPath, QSettings::IniFormat);
 
     mURL = settings.value("Setting/BaseURL1").toString();
     mWebsite = settings.value("Setting/Information").toString();
@@ -129,7 +136,14 @@ void Updater::unlock()
 
     mVersionMap.clear();
 
-    QFile versionMap("VersionData.txt");
+    QString versionPath = "VersionData.txt";
+
+    if(QFileInfo("VersionData-user.txt").exists())
+    {
+        versionPath = "VersionData-user.txt";
+    }
+
+    QFile versionMap(versionPath);
 
     if( versionMap.open(QIODevice::ReadOnly | QIODevice::Text) )
     {

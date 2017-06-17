@@ -27,6 +27,7 @@
 #include <PushIgnore.h>
 #ifdef COMP_HACK_HEADLESS
 #include <QCoreApplication>
+#include <QFileInfo>
 #include <QSettings>
 
 #include "Downloader.h"
@@ -56,7 +57,14 @@ int main(int argc, char *argv[])
 #ifdef COMP_HACK_HEADLESS
     QCoreApplication app(argc, argv);
 
-    QSettings settings("ImagineUpdate.dat", QSettings::IniFormat);
+    QString settingsPath = "ImagineUpdate.dat";
+
+    if(QFileInfo("ImagineUpdate-user.dat").exists())
+    {
+        settingsPath = "ImagineUpdate-user.dat";
+    }
+
+    QSettings settings(settingsPath, QSettings::IniFormat);
     QString url = settings.value("Setting/BaseURL1").toString();
 
     Downloader *dl = new Downloader(url);

@@ -31,9 +31,9 @@ build_script:
   - mkdir comp_hack-pixie-%appveyor_build_number%
   - move bin\%configuration%\*.exe comp_hack-pixie-%appveyor_build_number%\
   - move bin\%configuration%\*.pdb comp_hack-pixie-%appveyor_build_number%\
-  - windeployqt comp_hack-pixie-%appveyor_build_number%\comp_updater.exe
-  - windeployqt comp_hack-pixie-%appveyor_build_number%\comp_capgrep.exe
-  - windeployqt comp_hack-pixie-%appveyor_build_number%\comp_logger.exe
+  - C:\Qt\5.7\msvc2015_64\bin\windeployqt.exe comp_hack-pixie-%appveyor_build_number%\comp_updater.exe
+  - C:\Qt\5.7\msvc2015_64\bin\windeployqt.exe comp_hack-pixie-%appveyor_build_number%\comp_capgrep.exe
+  - C:\Qt\5.7\msvc2015_64\bin\windeployqt.exe comp_hack-pixie-%appveyor_build_number%\comp_logger.exe
   - 7z a comp_hack-pixie-%appveyor_build_number%.zip comp_hack-pixie-%appveyor_build_number%
 
 artifacts:

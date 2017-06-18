@@ -31,7 +31,7 @@ build_script:
   - mkdir comp_hack-pixie-%appveyor_build_number%
   - move bin\%configuration%\*.exe comp_hack-pixie-%appveyor_build_number%\
   - move bin\%configuration%\*.pdb comp_hack-pixie-%appveyor_build_number%\
-  - %CMAKE_PREFIX_PATH%\bin\windeployqt.exe comp_hack-pixie-%appveyor_build_number%\comp_updater.exe
+  - %cmake_prefix_path%\bin\windeployqt.exe comp_hack-pixie-%appveyor_build_number%\comp_updater.exe
   - %CMAKE_PREFIX_PATH%\bin\windeployqt.exe comp_hack-pixie-%appveyor_build_number%\comp_capgrep.exe
   - %CMAKE_PREFIX_PATH%\bin\windeployqt.exe comp_hack-pixie-%appveyor_build_number%\comp_logger.exe
   - 7z a comp_hack-pixie-%appveyor_build_number%.zip comp_hack-pixie-%appveyor_build_number%

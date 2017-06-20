@@ -1,5 +1,5 @@
 /**
- * @file tools/encrypt/src/main.cpp
+ * @file tools/rehash/src/main.cpp
  * @ingroup tools
  *
  * @author COMP Omega <compomega@tutanota.com>
@@ -24,98 +24,59 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <PushIgnore.h>
-#include <QCoreApplication>
-#include <QDir>
-#include <QMap>
-#include <QList>
-#include <QFile>
-#include <QRegExp>
-#include <QDateTime>
-#include <QStringList>
-#include <QCryptographicHash>
+// libcomp Includes
+#include <Compress.h>
+#include <CString.h>
+#include <DataStore.h>
+#include <Decrypt.h>
 
+// Standard C++11 Includes
+#include <fstream>
 #include <iostream>
-#include <zlib.h>
-#include <PopIgnore.h>
+#include <regex>
+#include <unordered_map>
+#include <vector>
+
+// Standard C Includes
+#include <ctime>
 
 class FileData
 {
 public:
-    QString path;
-    QString compressed_hash;
-    QString uncompressed_hash;
+    libcomp::String path;
+    libcomp::String compressed_hash;
+    libcomp::String uncompressed_hash;
 
     int compressed_size;
     int uncompressed_size;
 };
 
-int compressChunk(const void *src, void *dest, int chunk_size,
-    int out_size, int level)
+std::unordered_map<libcomp::String, FileData*> ParseFileList(
+    const std::vector<char> data)
 {
-    z_stream strm;
+    std::unordered_map<libcomp::String, FileData*> files;
 
-    strm.zalloc = Z_NULL;
-    strm.zfree = Z_NULL;
-    strm.opaque = Z_NULL;
+    std::list<libcomp::String> lines = libcomp::String(&data[0]).Split("\n");
 
-    if(deflateInit(&strm, level >= 0 ? level : Z_DEFAULT_COMPRESSION) != Z_OK)
+    std::regex fileMatcher("FILE : (.+),([0-9a-fA-F]{32}),([0-9]+),"
+        "([0-9a-fA-F]{32}),([0-9]+)");
+
+    // Parse each line of the hashlist.dat file.
+    for(auto line : lines)
     {
-        printf("Call to deflateInit failed.\n");
-        if(strm.msg)
-            printf("Zlib reported the following: %s\n", strm.msg);
+        std::string cleanLine = line.Trimmed().ToUtf8();
+        std::smatch match;
 
-        return 0;
-    }
-
-    strm.avail_in = static_cast<uInt>(chunk_size);
-    strm.next_in = (Bytef*)src;
-
-    strm.avail_out = static_cast<uInt>(out_size);
-    strm.next_out = (Bytef*)dest;
-
-    if(deflate(&strm, Z_FINISH) != Z_STREAM_END)
-    {
-        printf("Call to deflate failed.\n");
-        if(strm.msg)
-            printf("Zlib reported the following: %s\n", strm.msg);
-
-        return 0;
-    }
-
-    int written = out_size - static_cast<int>(strm.avail_out);
-
-    if(deflateEnd(&strm) != Z_OK)
-    {
-        printf("Call to deflateEnd failed.\n");
-        if(strm.msg)
-            printf("Zlib reported the following: %s\n", strm.msg);
-
-        return 0;
-    }
-
-    return written;
-}
-
-QMap<QString, FileData*> parseFileList(const QByteArray& d)
-{
-    QMap<QString, FileData*> files;
-
-    QStringList lines = QString::fromUtf8(d).split("\n");
-    foreach(QString line, lines)
-    {
-        QRegExp fileMatcher("FILE : (.+),([0-9a-fA-F]{32}),([0-9]+),"
-            "([0-9a-fA-F]{32}),([0-9]+)");
-
-        if( !fileMatcher.exactMatch( line.trimmed() ) )
+        if(!std::regex_match(cleanLine, match, fileMatcher))
             continue;
 
+        // Add each file entry to the map.
         FileData *info = new FileData;
-        info->path = fileMatcher.cap(1).mid(2).replace("\\", "/");
-        info->compressed_hash = fileMatcher.cap(2).toUpper();
-        info->compressed_size = fileMatcher.cap(3).toInt();
-        info->uncompressed_hash = fileMatcher.cap(4).toUpper();
-        info->uncompressed_size = fileMatcher.cap(5).toInt();
+        info->path = libcomp::String(match[1]).Mid(2).Replace("\\", "/");
+        info->compressed_hash = libcomp::String(match[2]).ToUpper();
+        info->compressed_size = libcomp::String(match[3]).ToInteger<int>();
+        info->uncompressed_hash = libcomp::String(match[4]).ToUpper();
+        info->uncompressed_size = libcomp::String(match[5]).ToInteger<int>();
 
         files[info->path] = info;
     }
@@ -123,21 +84,23 @@ QMap<QString, FileData*> parseFileList(const QByteArray& d)
     return files;
 }
 
-QStringList recursiveEntryList(const QString& dir, QDir::SortFlags sort)
+std::list<libcomp::String> RecursiveEntryList(const libcomp::String& dir)
 {
-    QStringList files;
+    std::list<libcomp::String> files;
+    std::list<libcomp::String> dirs;
+    std::list<libcomp::String> symLinks;
 
-    QStringList temp_files = QDir(dir).entryList(QDir::Files, sort);
+    libcomp::DataStore store(NULL);
 
-    foreach(QString f, temp_files)
-        files << QString("%1/%2").arg(dir).arg(f);
-
-    QStringList dirs = QDir(dir).entryList(QDir::Dirs |
-        QDir::NoDotAndDotDot, sort);
-
-    foreach(QString d, dirs)
+    if(!store.AddSearchPath(dir))
     {
-        files << recursiveEntryList(QString("%1/%2").arg(dir).arg(d), sort);
+        return {};
+    }
+
+    // Get all the files in the directory.
+    if(!store.GetListing("/", files, dirs, symLinks, true, true))
+    {
+        return {};
     }
 
     return files;
@@ -145,12 +108,9 @@ QStringList recursiveEntryList(const QString& dir, QDir::SortFlags sort)
 
 int main(int argc, char *argv[])
 {
-    QCoreApplication app(argc, argv);
-    QStringList args = app.arguments();
-    args.removeFirst();
-
-    if(args.count() != 4 || args.at(0) != "--base" ||
-        args.at(2) != "--overlay")
+    // Check the arguments and print the usage.
+    if(argc != 5 || libcomp::String(argv[1]) != "--base" ||
+        libcomp::String(argv[3]) != "--overlay")
     {
         std::cerr << "SYNTAX: comp_rehash --base BASE --overlay OVERLAY"
             << std::endl;
@@ -158,15 +118,18 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    QString base = args.at(1);
-    QString overlay = args.at(3);
+    libcomp::String base = argv[2];
+    libcomp::String overlay = argv[4];
 
     // Read in the original file list
-    QMap<QString, FileData*> files;
+    std::unordered_map<libcomp::String, FileData*> files;
+
     {
-        // Open the hashlist.dat
-        QFile hashlist(QString("%1/hashlist.dat").arg(base));
-        if( !hashlist.open(QIODevice::ReadOnly) )
+        // Open and read the hashlist.dat file.
+        auto hashlist = libcomp::Decrypt::LoadFile(
+            libcomp::String("%1/hashlist.dat").Arg(base).ToUtf8());
+
+        if(hashlist.empty())
         {
             std::cerr << "Failed to open the hashlist.dat file "
                 "for reading." << std::endl;
@@ -174,149 +137,186 @@ int main(int argc, char *argv[])
             return -1;
         }
 
-        // Read and parse the hashlist.dat
-        files = parseFileList( hashlist.readAll() );
-
-        // Close the hashlist.dat file
-        hashlist.close();
+        // Parse the hashlist.dat
+        files = ParseFileList(hashlist);
     }
 
-    // Find each file in the overlay
-    foreach(QString file, recursiveEntryList(overlay, QDir::Name))
+    std::regex compressedRx("^.+\\.compressed$");
+
+    // Find each file in the overlay and handle it.
+    for(auto filePath : RecursiveEntryList(overlay))
     {
-        if( QRegExp(".+\\.compressed").exactMatch(file) )
+        std::smatch match;
+
+        auto file = filePath;
+        auto fileString = file.ToUtf8();
+
+        // See if the file is an *.compressed file and ignore it.
+        if(std::regex_match(fileString, match, compressedRx))
             continue;
 
-        QString shortName = file.mid(overlay.length() + 1);
-        QString shortComp = QString("%1.compressed").arg(shortName);
+        // Get the relative path.
+        libcomp::String shortName = file.Mid(1);
 
+        // Make the path absolute.
+        file = overlay + file;
+
+        // Relative path for the compressed file.
+        libcomp::String shortComp = libcomp::String("%1.compressed").Arg(
+            shortName);
+
+        // Ignore the hashlist.dat and hashlist.ver files.
         if(shortName == "hashlist.dat")
             continue;
         if(shortName == "hashlist.ver")
             continue;
 
-        if( files.contains(shortComp) )
-        {
-            delete files.value(shortComp);
-        }
-        if( files.contains(shortName) )
-        {
-            delete files.value(shortName);
+        // Check if the file is in the original hashlist.dat file.
+        auto it = files.find(shortComp);
 
-            files.remove(shortName);
+        // If the file is in the base, remove the entry.
+        if(files.end() != it)
+        {
+            delete it->second;
         }
 
+        it = files.find(shortName);
+
+        if(files.end() != it)
+        {
+            delete it->second;
+
+            files.erase(it);
+        }
+
+        // Create a new entry for the file.
         FileData *d = new FileData;
         d->path = shortComp;
 
-        QByteArray uncomp_data;
-        {
-            QFile handle(file);
-            handle.open(QIODevice::ReadOnly);
+        // Get the original file contents.
+        std::vector<char> uncomp_data = libcomp::Decrypt::LoadFile(
+            file.ToUtf8());
 
-            uncomp_data = handle.readAll();
-        }
-
-        d->uncompressed_hash = QCryptographicHash::hash(uncomp_data,
-            QCryptographicHash::Md5).toHex();
-        d->uncompressed_size = uncomp_data.length();
+        // Hash the original file.
+        d->uncompressed_hash = libcomp::Decrypt::MD5(uncomp_data).ToUpper();
+        d->uncompressed_size = (int)uncomp_data.size();
 
         //
-        // Process the compressed copy now
+        // Process the compressed copy now.
         //
 
-        // Calculate max size
+        // Calculate max size.
         int out_size = (int)((float)uncomp_data.size() * 0.001f + 0.5f);
-        out_size += uncomp_data.size() + 12;
+        out_size += (int32_t)uncomp_data.size() + 12;
 
         char *out_buffer = new char[out_size];
 
-        int sz = compressChunk(uncomp_data.constData(), out_buffer,
-            uncomp_data.size(), out_size, 9);
-
-        QByteArray comp_data(out_buffer, sz);
-
-        delete[] out_buffer;
+        // Compress the file.
+        int32_t sz = libcomp::Compress::Compress(&uncomp_data[0], out_buffer,
+            (int32_t)uncomp_data.size(), out_size, 9);
 
         // Write the compressed copy
         {
-            QFile handle(file + ".compressed");
-            handle.open(QIODevice::WriteOnly);
-            handle.write(comp_data);
+            std::ofstream file_comp;
+            file_comp.open(libcomp::String(file + ".compressed").C(),
+                std::ofstream::binary);
+            file_comp.write(out_buffer, (std::streamsize)sz);
+            file_comp.close();
         }
 
-        d->compressed_hash = QCryptographicHash::hash(comp_data,
-            QCryptographicHash::Md5).toHex();
-        d->compressed_size = comp_data.length();
+        // Get the hash for the compressed copy.
+        d->compressed_hash = libcomp::Decrypt::MD5(std::vector<char>(
+            out_buffer, out_buffer + sz)).ToUpper();
+        d->compressed_size = sz;
 
+        // Save the entry.
         files[shortComp] = d;
+
+        delete[] out_buffer;
     }
 
-    QFile hashlist(QString("%1/hashlist.dat").arg(overlay));
-    hashlist.open(QIODevice::WriteOnly);
+    // Write the overlay hashlist.dat file now.
+    std::ofstream hashlist;
+    hashlist.open(libcomp::String("%1/hashlist.dat").Arg(overlay).C(),
+        std::ofstream::binary);
 
-    foreach(FileData *d, files)
+    // Add each file in the list.
+    for(auto file : files)
     {
+        FileData *d = file.second;
+
+        // Don't compress this file.
         if(d->path == "ImagineUpdate.dat.compressed")
             continue;
 
-        QString line = "FILE : .\\%1,%2,%3,%4,%5 ";
-        line = line.arg(d->path.replace("/", "\\"));
-        line = line.arg(d->compressed_hash.toUpper());
-        line = line.arg(d->compressed_size);
-        line = line.arg(d->uncompressed_hash.toUpper());
-        line = line.arg(d->uncompressed_size);
+        libcomp::String line = "FILE : .\\%1,%2,%3,%4,%5 ";
+        line = line.Arg(d->path.Replace("/", "\\"));
+        line = line.Arg(d->compressed_hash.ToUpper());
+        line = line.Arg(d->compressed_size);
+        line = line.Arg(d->uncompressed_hash.ToUpper());
+        line = line.Arg(d->uncompressed_size);
 
-        hashlist.write(line.toUtf8());
+        auto l = line.ToUtf8();
+
+        hashlist.write(l.c_str(), (std::streamsize)l.size());
         hashlist.write("\r\n", 2);
     }
 
-    QString exe = "EXE : .\\ImagineClient.exe ";
-    QString ver = "VERSION : %1";
-    ver = ver.arg( QDateTime::currentDateTime().toString("yyyyMMddhhmmss") );
+    libcomp::String exe = "EXE : .\\ImagineClient.exe ";
+    libcomp::String ver = "VERSION : %1";
 
-    hashlist.write(exe.toUtf8());
+    // Generate a timestamp.
+    char mbstr[100];
+    std::time_t t = std::time(NULL);
+    std::strftime(mbstr, sizeof(mbstr), "%Y%m%d%H%M%S", std::localtime(&t));
+
+    ver = ver.Arg(mbstr);
+
+    auto l = exe.ToUtf8();
+    hashlist.write(l.c_str(), (std::streamsize)l.size());
     hashlist.write("\r\n", 2);
-    hashlist.write(ver.toUtf8());
+    l = ver.ToUtf8();
+    hashlist.write(l.c_str(), (std::streamsize)l.size());
     hashlist.close();
 
-    QFile hashver(QString("%1/hashlist.ver").arg(overlay));
-    hashver.open(QIODevice::WriteOnly);
-    hashver.write(ver.toUtf8());
+    std::ofstream hashver;
+    hashver.open(libcomp::String("%1/hashlist.ver").Arg(overlay).C(),
+        std::ofstream::binary);
+    hashver.write(l.c_str(), (std::streamsize)l.size());
     hashver.close();
 
     //
-    // Compress the hashlist.dat
+    // Compress the hashlist.dat file.
     //
     {
-        // Open the hashlist.dat
-        hashlist.open(QIODevice::ReadOnly);
+        // Read in the hashlist.dat file.
+        auto uncomp_data = libcomp::Decrypt::LoadFile(
+            libcomp::String("%1/hashlist.dat").Arg(overlay).ToUtf8());
 
-        // Read in the hashlist.dat
-        QByteArray uncomp_data = hashlist.readAll();
-
-        // Close the hashlist.dat
+        // Close the hashlist.dat file.
         hashlist.close();
 
-        // Calculate max size
-        int out_size = (int)((float)uncomp_data.size() * 0.001f + 0.5f);
-        out_size += uncomp_data.size() + 12;
+        // Calculate max size.
+        int32_t out_size = (int32_t)((float)uncomp_data.size() * 0.001f + 0.5f);
+        out_size += (int32_t)uncomp_data.size() + 12;
 
         char *out_buffer = new char[out_size];
 
-        int sz = compressChunk(uncomp_data.constData(), out_buffer,
-            uncomp_data.size(), out_size, 9);
+        // Compress the file.
+        int32_t sz = libcomp::Compress::Compress(&uncomp_data[0],
+            out_buffer, (int32_t)uncomp_data.size(), out_size, 9);
 
-        QByteArray comp_data(out_buffer, sz);
+        // Write the compressed copy.
+        {
+            std::ofstream hashlist_comp;
+            hashlist_comp.open(libcomp::String(
+                "%1/hashlist.dat.compressed").Arg(overlay).C(),
+                std::ofstream::binary);
+            hashlist_comp.write(out_buffer, (std::streamsize)sz);
+            hashlist_comp.close();
+        }
 
         delete[] out_buffer;
-
-        // Write the compressed copy
-        {
-            QFile handle(QString("%1/hashlist.dat.compressed").arg(overlay));
-            handle.open(QIODevice::WriteOnly);
-            handle.write(comp_data);
-        }
     }
 
     return 0;

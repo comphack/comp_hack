@@ -264,6 +264,13 @@ String HashPassword(const String& password, const String& salt);
  */
 String SHA1(const std::vector<char>& data);
 
+/**
+ * Generate a MD5 hash of the given data.
+ * @param data Data to generate the hash of.
+ * @returns MD5 hash string of the given data.
+ */
+String MD5(const std::vector<char>& data);
+
 } // namespace Decrypt
 
 } // namespace libcomp

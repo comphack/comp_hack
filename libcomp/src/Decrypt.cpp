@@ -790,3 +790,26 @@ String Decrypt::SHA1(const std::vector<char>& data)
 
     return hash;
 }
+
+String Decrypt::MD5(const std::vector<char>& data)
+{
+    String hash;
+    unsigned char output[MD5_DIGEST_LENGTH];
+
+    if(output == ::MD5(reinterpret_cast<const unsigned char*>(&data[0]),
+        static_cast<size_t>(data.size()), output))
+    {
+        std::stringstream ss;
+
+        // Convert the bytes into a base-16 string.
+        for(int i = 0; i < MD5_DIGEST_LENGTH; ++i)
+        {
+            ss << std::hex << std::setw(2) << std::setfill('0')
+                << ((int)output[i] & 0xFF);
+        }
+
+        hash = ss.str();
+    }
+
+    return hash;
+}

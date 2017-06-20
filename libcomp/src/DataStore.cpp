@@ -164,7 +164,7 @@ bool DataStore::GetListing(const libcomp::String& path,
                 }
 
                 files.splice(files.end(), recursiveFiles);
-                dirs.splice(files.end(), recursiveDirs);
+                dirs.splice(dirs.end(), recursiveDirs);
                 symLinks.splice(symLinks.end(), recursiveSymLinks);
             }
 

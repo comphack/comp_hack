@@ -80,6 +80,13 @@ public:
     virtual bool Setup(bool rebuild = false);
     virtual bool Use();
 
+    /**
+     * Check if the supplied table name exists and has at least one row.
+     * @param table Name of the table to check
+     * @return true if a row exists, false if it does not
+     */
+    virtual bool TableHasRows(const String& table);
+
     virtual std::list<std::shared_ptr<PersistentObject>> LoadObjects(
         size_t typeHash, DatabaseBind *pValue);
 

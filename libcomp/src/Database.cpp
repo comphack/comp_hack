@@ -42,7 +42,7 @@ bool Database::Execute(const String& query)
     return Prepare(query).Execute();
 }
 
-String Database::GetLastError() const
+String Database::GetLastError()
 {
     return mError;
 }
@@ -55,7 +55,7 @@ std::shared_ptr<objects::DatabaseConfig> Database::GetConfig() const
 bool Database::TableHasRows(const String& table)
 {
     libcomp::DatabaseQuery query = Prepare(String(
-        "SELECT COUNT(1) FROM %1").Arg(table.ToLower()));
+        "SELECT COUNT(1) FROM %1").Arg(table));
 
     if(!query.IsValid())
     {

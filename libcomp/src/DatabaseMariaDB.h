@@ -110,6 +110,12 @@ public:
      */
     bool VerifyAndSetupSchema(bool recreateTables = false);
 
+    /**
+     * Retrieve the last error raised by a database operation.
+     * @return The last error that occurred
+     */
+    virtual String GetLastError();
+
 protected:
     virtual bool ProcessStandardChangeSet(const std::shared_ptr<
         DBStandardChangeSet>& changes);

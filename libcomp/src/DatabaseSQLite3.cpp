@@ -169,6 +169,11 @@ bool DatabaseSQLite3::Use()
     return true;
 }
 
+bool DatabaseSQLite3::TableHasRows(const String& table)
+{
+    return Database::TableHasRows(table.ToLower());
+}
+
 std::list<std::shared_ptr<PersistentObject>> DatabaseSQLite3::LoadObjects(
     size_t typeHash, DatabaseBind *pValue)
 {

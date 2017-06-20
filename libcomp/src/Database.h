@@ -234,7 +234,7 @@ public:
      * Retrieve the last error raised by a database operation.
      * @return The last error that occurred
      */
-    String GetLastError() const;
+    virtual String GetLastError();
     
     /**
      * Get the database config.

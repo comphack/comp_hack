@@ -101,7 +101,8 @@ bool DatabaseMariaDB::Exists()
             mConfig)->GetDatabaseName()));
     if(!q.Execute())
     {
-        LOG_CRITICAL("Failed to query for database.\n");
+        LOG_CRITICAL(String("Failed to query for database: %1\n").Arg(
+            GetLastError()));
 
         return false;
     }
@@ -1006,4 +1007,21 @@ String DatabaseMariaDB::GetVariableType(const std::shared_ptr
     }
 
     return "blob";
+}
+
+String DatabaseMariaDB::GetLastError()
+{
+    auto connection = GetConnection(false);
+
+    if(connection)
+    {
+        const char *szError = mysql_error(connection);
+
+        if(nullptr != szError && 0 != szError[0])
+        {
+            return szError;
+        }
+    }
+
+    return "Invalid connection.";
 }

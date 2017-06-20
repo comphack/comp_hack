@@ -719,6 +719,7 @@ bool ZoneFilter::ProcessEventCommands(const libcomp::String& capturePath,
 
             auto sourceEntityID = packet.ReadS32Little();
             auto menuType = packet.ReadS32Little();
+            auto shopID = packet.ReadS32Little();
 
             if(!CheckUnknownEntity(capturePath, instance, sourceEntityID, "Open menu"))
             {
@@ -729,6 +730,7 @@ bool ZoneFilter::ProcessEventCommands(const libcomp::String& capturePath,
 
             auto menu = std::make_shared<objects::EventOpenMenu>();
             menu->SetMenuType(menuType);
+            menu->SetShopID(shopID);
 
             instance->currentSequence = std::make_shared<MappedEvent>(menu, source);
             endEvent = true;
@@ -2107,7 +2109,8 @@ bool ZoneFilter::MergeEventMenus(std::shared_ptr<MappedEvent> e1,
 {
     auto c1 = std::dynamic_pointer_cast<objects::EventOpenMenu>(e1->event);
     auto c2 = std::dynamic_pointer_cast<objects::EventOpenMenu>(e2->event);
-    if(c1->GetMenuType() != c2->GetMenuType())
+    if(c1->GetMenuType() != c2->GetMenuType() ||
+        c1->GetShopID() != c2->GetShopID())
     {
         return false;
     }

@@ -111,6 +111,8 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     EventInstance.cpp
     EventState.h
     EventState.cpp
+    TradeSession.h
+    TradeSession.cpp
 )
 
 SOURCE_GROUP("Source Files\\Packets\\Game" src/packets/game/*)
@@ -147,6 +149,16 @@ SET(${PROJECT_NAME}_PACKETS
     src/packets/game/ItemDrop.cpp               # 0x0077
     src/packets/game/ItemStack.cpp              # 0x0078
     src/packets/game/EquipmentList.cpp          # 0x007B
+    src/packets/game/TradeRequest.cpp           # 0x007D
+    src/packets/game/TradeAccept.cpp            # 0x0080
+    src/packets/game/TradeAddItem.cpp           # 0x0082
+    src/packets/game/TradeLock.cpp              # 0x0085
+    src/packets/game/TradeFinish.cpp            # 0x0088
+    src/packets/game/TradeCancel.cpp            # 0x008B
+    src/packets/game/CashBalance.cpp            # 0x0090
+    src/packets/game/ShopData.cpp               # 0x0092
+    src/packets/game/ShopBuy.cpp                # 0x0094
+    src/packets/game/ShopSell.cpp               # 0x0096
     src/packets/game/DemonBoxMove.cpp           # 0x009A
     src/packets/game/DismissDemon.cpp           # 0x009B
     src/packets/game/HotbarData.cpp             # 0x00A2

@@ -66,6 +66,16 @@ PACKET_PARSER_DECL(ItemMove);               // 0x0076
 PACKET_PARSER_DECL(ItemDrop);               // 0x0077
 PACKET_PARSER_DECL(ItemStack);              // 0x0078
 PACKET_PARSER_DECL(EquipmentList);          // 0x007B
+PACKET_PARSER_DECL(TradeRequest);           // 0x007D
+PACKET_PARSER_DECL(TradeAccept);            // 0x0080
+PACKET_PARSER_DECL(TradeAddItem);           // 0x0082
+PACKET_PARSER_DECL(TradeLock);              // 0x0085
+PACKET_PARSER_DECL(TradeFinish);            // 0x0088
+PACKET_PARSER_DECL(TradeCancel);            // 0x008B
+PACKET_PARSER_DECL(CashBalance);            // 0x0090
+PACKET_PARSER_DECL(ShopData);               // 0x0092
+PACKET_PARSER_DECL(ShopBuy);                // 0x0094
+PACKET_PARSER_DECL(ShopSell);               // 0x0096
 PACKET_PARSER_DECL(DemonBoxMove);           // 0x009A
 PACKET_PARSER_DECL(DismissDemon);           // 0x009B
 PACKET_PARSER_DECL(HotbarData);             // 0x00A2

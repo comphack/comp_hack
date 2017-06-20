@@ -34,6 +34,9 @@
 
 using namespace channel;
 
+std::unordered_map<int32_t, ClientState*> ClientState::sEntityClients;
+std::mutex ClientState::sLock;
+
 ClientState::ClientState() : objects::ClientStateObject(),
     mCharacterState(std::shared_ptr<CharacterState>(new CharacterState)),
     mDemonState(std::shared_ptr<DemonState>(new DemonState)),
@@ -41,14 +44,22 @@ ClientState::ClientState() : objects::ClientStateObject(),
 {
 }
 
+ClientState::~ClientState()
+{
+    auto cEntityID = mCharacterState->GetEntityID();
+    auto dEntityID = mDemonState->GetEntityID();
+    if(cEntityID != 0 || dEntityID != 0)
+    {
+        std::lock_guard<std::mutex> lock(sLock);
+        sEntityClients.erase(cEntityID);
+        sEntityClients.erase(dEntityID);
+    }
+}
+
 libcomp::Convert::Encoding_t ClientState::GetClientStringEncoding()
 {
     /// @todo: Return UTF-8 for US Client
     return libcomp::Convert::Encoding_t::ENCODING_CP932;
-}
-
-ClientState::~ClientState()
-{
 }
 
 std::shared_ptr<CharacterState> ClientState::GetCharacterState()
@@ -73,6 +84,28 @@ std::shared_ptr<ActiveEntityState> ClientState::GetEntityState(int32_t entityID)
     }
 
     return nullptr;
+}
+
+bool ClientState::Register()
+{
+    auto cEntityID = mCharacterState->GetEntityID();
+    auto dEntityID = mDemonState->GetEntityID();
+    if(cEntityID == 0 || dEntityID == 0)
+    {
+        return false;
+    }
+
+    std::lock_guard<std::mutex> lock(sLock);
+    if(sEntityClients.find(cEntityID) != sEntityClients.end() ||
+        sEntityClients.find(dEntityID) != sEntityClients.end())
+    {
+        return false;
+    }
+
+    sEntityClients[cEntityID] = this;
+    sEntityClients[dEntityID] = this;
+
+    return true;
 }
 
 int64_t ClientState::GetObjectID(const libobjgen::UUID& uuid) const
@@ -155,4 +188,11 @@ ClientTime ClientState::ToClientTime(ServerTime time) const
 ServerTime ClientState::ToServerTime(ClientTime time) const
 {
     return static_cast<ServerTime>(((ServerTime)time * 1000000) + mStartTime);
+}
+
+ClientState* ClientState::GetEntityClientState(int32_t entityID)
+{
+    std::lock_guard<std::mutex> lock(sLock);
+    auto it = sEntityClients.find(entityID);
+    return it != sEntityClients.end() ? it->second : nullptr;
 }

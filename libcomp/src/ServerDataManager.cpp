@@ -32,6 +32,7 @@
 
 // object Includes
 #include "Event.h"
+#include "ServerShop.h"
 #include "ServerZone.h"
 
 using namespace libcomp;
@@ -54,6 +55,11 @@ const std::shared_ptr<objects::Event> ServerDataManager::GetEventData(const libc
     return GetObjectByID<std::string, objects::Event>(id.C(), mEventData);
 }
 
+const std::shared_ptr<objects::ServerShop> ServerDataManager::GetShopData(uint32_t id)
+{
+    return GetObjectByID<uint32_t, objects::ServerShop>(id, mShopData);
+}
+
 const std::shared_ptr<ServerAIScript> ServerDataManager::GetAIScript(const libcomp::String& name)
 {
     return GetObjectByID<std::string, ServerAIScript>(name.C(), mAIScripts);
@@ -71,6 +77,11 @@ bool ServerDataManager::LoadData(gsl::not_null<DataStore*> pDataStore)
     if(!failure)
     {
         failure = !LoadObjects<objects::Event>(pDataStore, "/events");
+    }
+
+    if(!failure)
+    {
+        failure = !LoadObjects<objects::ServerShop>(pDataStore, "/shops");
     }
 
     if(!failure)
@@ -167,6 +178,28 @@ namespace libcomp
         }
 
         mEventData[id] = event;
+
+        return true;
+    }
+
+    template<>
+    bool ServerDataManager::LoadObject<objects::ServerShop>(const tinyxml2::XMLDocument& doc,
+        const tinyxml2::XMLElement *objNode)
+    {
+        auto shop = std::shared_ptr<objects::ServerShop>(new objects::ServerShop);
+        if(!shop->Load(doc, *objNode))
+        {
+            return false;
+        }
+
+        uint32_t id = (uint32_t)shop->GetShopID();
+        if(mShopData.find(id) != mShopData.end())
+        {
+            LOG_ERROR(libcomp::String("Duplicate shop encountered: %1\n").Arg(id));
+            return false;
+        }
+
+        mShopData[id] = shop;
 
         return true;
     }

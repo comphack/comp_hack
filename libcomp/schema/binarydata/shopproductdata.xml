@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="MiShopProductData" persistent="false">
+        <member type="u32" name="ID"/>
+        <member type="u32" name="item"/>
+        <member type="u32" name="stack"/>
+        <member type="u32" name="CPCost"/>
+        <member type="u32" name="unk"/>
+        <member type="u32" name="unpurchasable"/>
+    </object>
+</objgen>

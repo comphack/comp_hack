@@ -56,7 +56,8 @@ public:
     ClientState();
 
     /**
-     * Clean up the client state.
+     * Clean up the client state, removing it from the registry
+     * if it exists there.
      */
     virtual ~ClientState();
 
@@ -87,6 +88,13 @@ public:
      *  exists
      */
     std::shared_ptr<ActiveEntityState> GetEntityState(int32_t entityID);
+
+    /**
+     * Registers the client state with the static entity map for access by
+     * other clients.
+     * @return true if the state was registered properly, otherwise false
+     */
+    bool Register();
 
     /**
      * Get the object ID associated a UUID associated to the client.
@@ -148,7 +156,21 @@ public:
      */
     ServerTime ToServerTime(ClientTime time) const;
 
+    /**
+     * Get the client state associated to the supplied entity ID.
+     * @param entityID Entity ID associated to the client state to retrieve
+     * @return Pointer to the client state associated to the entity ID or
+     *  nullptr if it does not exist
+     */
+    static ClientState* GetEntityClientState(int32_t entityID);
+
 private:
+    /// Static registry of all client states by entity IDs associated
+    static std::unordered_map<int32_t, ClientState*> sEntityClients;
+
+    /// Static lock for shared static resources
+    static std::mutex sLock;
+
     /// State of the character associated to the client
     std::shared_ptr<CharacterState> mCharacterState;
 

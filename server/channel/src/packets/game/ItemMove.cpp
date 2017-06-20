@@ -38,6 +38,8 @@
 #include <Character.h>
 #include <Item.h>
 #include <ItemBox.h>
+#include <MiItemBasicData.h>
+#include <MiItemData.h>
 
 // channel Includes
 #include "ChannelServer.h"
@@ -73,6 +75,7 @@ bool Parsers::ItemMove::Parse(libcomp::ManagerPacket *pPacketManager,
     if(nullptr == item)
     {
         LOG_ERROR("Item move failed due to unknown item ID.\n");
+        state->SetForcedClose(true);
         client->Close();
         return true;
     }
@@ -92,8 +95,14 @@ bool Parsers::ItemMove::Parse(libcomp::ManagerPacket *pPacketManager,
         if(sourceBox->GetItems(sourceSlot).Get() != item)
         {
             LOG_ERROR("Item move operation failed.\n");
+            state->SetForcedClose(true);
             client->Close();
             return true;
+        }
+
+        if(destBox != sourceBox)
+        {
+            characterManager->UnequipItem(client, item);
         }
 
         // Swap the items (the destination could be a null object or a real item)
@@ -121,6 +130,7 @@ bool Parsers::ItemMove::Parse(libcomp::ManagerPacket *pPacketManager,
     else
     {
         LOG_ERROR("Item move failed due to invalid source or destination box.\n");
+        state->SetForcedClose(true);
         client->Close();
     }
 

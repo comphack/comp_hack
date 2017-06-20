@@ -143,17 +143,20 @@ private:
      * Unload an object from references and update it in the DB.
      * @param obj Pointer to the object to clean up
      * @param db Pointer to the database to use
+     * @param doSave Indicates if the record should be updated
+     *  or just unregistered
      * @return true on success, false on failure
      */
     template <class T>
     bool Cleanup(const std::shared_ptr<T>& obj,
-        const std::shared_ptr<libcomp::Database>& db)
+        const std::shared_ptr<libcomp::Database>& db,
+        bool doSave)
     {
         if(obj != nullptr)
         {
             libcomp::ObjectReference<T>::Unload(obj->GetUUID());
             obj->Unregister();
-            return obj->Update(db);
+            return !doSave || obj->Update(db);
         }
         return true;
     }

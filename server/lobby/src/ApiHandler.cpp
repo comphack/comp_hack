@@ -51,6 +51,8 @@ ApiHandler::ApiHandler(const std::shared_ptr<objects::LobbyConfig>& config,
 {
     mParsers["/auth/get_challenge"] = &ApiHandler::Auth_Token;
     mParsers["/account/get_cp"] = &ApiHandler::Account_GetCP;
+    mParsers["/account/get_details"] = &ApiHandler::Account_GetDetails;
+    mParsers["/account/register"] = &ApiHandler::Account_Register;
 }
 
 ApiHandler::~ApiHandler()
@@ -124,6 +126,143 @@ bool ApiHandler::Account_GetCP(const JsonBox::Object& request,
     }
 
     response["cp"] = (int)account->GetCP();
+
+    return true;
+}
+
+bool ApiHandler::Account_GetDetails(const JsonBox::Object& request,
+    JsonBox::Object& response, const std::shared_ptr<ApiSession>& session)
+{
+    (void)request;
+
+    // Find the account for the given username.
+    auto account = objects::Account::LoadAccountByUsername(
+        GetDatabase(), session->username);
+
+    if(!account)
+    {
+        return false;
+    }
+
+    response["cp"] = (int)account->GetCP();
+    response["username"] = account->GetUsername().ToUtf8();
+    response["disp_name"] = account->GetDisplayName().ToUtf8();
+    response["email"] = account->GetEmail().ToUtf8();
+    response["ticket_count"] = (int)account->GetTicketCount();
+    response["user_level"] = (int)account->GetUserLevel();
+    response["enabled"] = account->GetEnabled();
+    response["gm"] = account->GetIsGM();
+    response["last_login"] = (int)account->GetLastLogin();
+    response["character_count"] = (int)account->CharactersCount();
+
+    return true;
+}
+
+bool ApiHandler::Account_Register(const JsonBox::Object& request,
+    JsonBox::Object& response, const std::shared_ptr<ApiSession>& session)
+{
+    (void)session;
+
+    libcomp::String username, email, password;
+
+    auto it = request.find("username");
+LOG_DEBUG("register?\n");
+    if(it != request.end())
+    {
+        username = it->second.getString();
+    }
+
+    it = request.find("email");
+
+    if(it != request.end())
+    {
+        email = it->second.getString();
+    }
+
+    it = request.find("password");
+
+    if(it != request.end())
+    {
+        password = it->second.getString();
+    }
+
+    if(username.IsEmpty() || email.IsEmpty() || password.IsEmpty())
+    {LOG_DEBUG("bad req\n");
+        return false;
+    }
+
+    if(!username.Matches("^[a-z][a-z0-9]{3,31}$"))
+    {LOG_DEBUG("bad user\n");
+        response["error"] = "Bad username";
+
+        return true;
+    }
+    else if(!password.Matches("^[a-zA-Z0-9\\\\\\(\\)\\[\\]\\/{}~`'\"<>"
+        ".,_|!@#$%^&*+=-]{6,16}$"))
+    {LOG_DEBUG("bad pass\n");
+        response["error"] = "Bad password";
+
+        return true;
+    }
+    else if(!email.Matches("(?:[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\\.[a-z0-9!"
+        "#$%&'*+/=?^_`{|}~-]+)*|\"(?:[\\x01-\\x08\\x0b\\x0c\\x0e-\\x1f\\x21"
+        "\\x23-\\x5b\\x5d-\\x7f]|\\\\[\\x01-\\x09\\x0b\\x0c\\x0e-\\x7f])*\")"
+        "@(?:(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\\.)+[a-z0-9](?:[a-z0-9-]*"
+        "[a-z0-9])?|\\[(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}"
+        "(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?|[a-z0-9-]*[a-z0-9]:(?:["
+        "\\x01-\\x08\\x0b\\x0c\\x0e-\\x1f\\x21-\\x5a\\x53-\\x7f]|\\\\[\\x01"
+        "-\\x09\\x0b\\x0c\\x0e-\\x7f])+)\\])"))
+    {LOG_DEBUG("bad email\n");
+        // RFC 5322
+        response["error"] = "Bad email";
+
+        return true;
+    }
+
+    auto db = GetDatabase();
+
+    if(objects::Account::LoadAccountByUsername(db, username) ||
+        objects::Account::LoadAccountByEmail(db, email))
+    {LOG_DEBUG("exists\n");
+        response["error"] = "Account exists";
+
+        return true;
+    }
+
+    std::shared_ptr<objects::Account> account(new objects::Account);
+
+    libcomp::String displayName = username;
+    libcomp::String salt = libcomp::Decrypt::GenerateRandom(10);
+    uint32_t cp = 1000000;
+    uint8_t ticketCount = 20;
+    int32_t userLevel = 1000;
+    bool enabled = true;
+    bool isGM = true;
+
+    // Hash the password for database storage.
+    password = libcomp::Decrypt::HashPassword(password, salt);
+
+    account->SetUsername(username);
+    account->SetDisplayName(displayName);
+    account->SetEmail(email);
+    account->SetPassword(password);
+    account->SetSalt(salt);
+    account->SetIsGM(isGM);
+    account->SetCP(cp);
+    account->SetTicketCount(ticketCount);
+    account->SetUserLevel(userLevel);
+    account->SetEnabled(enabled);
+    account->Register(std::dynamic_pointer_cast<
+        libcomp::PersistentObject>(account));
+
+    if(!account->Insert(db))
+    {LOG_DEBUG("fail\n");
+        response["error"] = "Failed to create account.";
+    }
+    else
+    {LOG_DEBUG("ok\n");
+        response["error"] = "Success";
+    }
 
     return true;
 }
@@ -283,6 +422,7 @@ bool ApiHandler::handlePost(CivetServer *pServer,
     }
 
     if("/auth/get_challenge" != method &&
+        "/account/register" != method &&
         !Authenticate(obj, response, session))
     {
         mg_printf(pConnection, "HTTP/1.1 401 Unauthorized\r\n"

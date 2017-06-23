@@ -85,6 +85,12 @@ protected:
     bool Account_GetCP(const JsonBox::Object& request,
         JsonBox::Object& response,
         const std::shared_ptr<ApiSession>& session);
+    bool Account_GetDetails(const JsonBox::Object& request,
+        JsonBox::Object& response,
+        const std::shared_ptr<ApiSession>& session);
+    bool Account_Register(const JsonBox::Object& request,
+        JsonBox::Object& response,
+        const std::shared_ptr<ApiSession>& session);
 
 private:
     // List of API sessions.

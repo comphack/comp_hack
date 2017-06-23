@@ -691,6 +691,31 @@ bool String::Matches(const libcomp::String& expression) const
     return false;
 }
 
+bool String::Matches(const libcomp::String& expression,
+    std::vector<libcomp::String>& matches) const
+{
+    std::smatch match;
+    std::string s = ToUtf8();
+
+    if(std::regex_match(s, match, std::regex(expression.ToUtf8())))
+    {
+        matches.resize(static_cast<std::vector<libcomp::String>::size_type>(
+            match.size()));
+
+        int i = 0;
+
+        for(auto m : match)
+        {
+            matches[static_cast<std::vector<libcomp::String>::size_type
+                >(i++)] = libcomp::String(m);
+        }
+
+        return true;
+    }
+
+    return false;
+}
+
 String String::ToUpper() const
 {
     std::string s = d->mString;

@@ -364,6 +364,15 @@ public:
     bool Matches(const libcomp::String& expression) const;
 
     /**
+     * Determine if a string matches a regular expression.
+     * @param expression Regular expression to match.
+     * @param matches The capture list. Index 0 is the full match.
+     * @returns true if the string matches, false otherwise.
+     */
+    bool Matches(const libcomp::String& expression,
+        std::vector<libcomp::String>& matches) const;
+
+    /**
      * Compare the string to a C-style UTF-8 encoded string.
      * @param szString C-style UTF-8 encoded string to compare to.
      * @returns true if the string data matches exactly.

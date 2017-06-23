@@ -166,7 +166,7 @@ bool ApiHandler::Account_Register(const JsonBox::Object& request,
     libcomp::String username, email, password;
 
     auto it = request.find("username");
-LOG_DEBUG("register?\n");
+
     if(it != request.end())
     {
         username = it->second.getString();
@@ -187,19 +187,19 @@ LOG_DEBUG("register?\n");
     }
 
     if(username.IsEmpty() || email.IsEmpty() || password.IsEmpty())
-    {LOG_DEBUG("bad req\n");
+    {
         return false;
     }
 
     if(!username.Matches("^[a-z][a-z0-9]{3,31}$"))
-    {LOG_DEBUG("bad user\n");
+    {
         response["error"] = "Bad username";
 
         return true;
     }
     else if(!password.Matches("^[a-zA-Z0-9\\\\\\(\\)\\[\\]\\/{}~`'\"<>"
         ".,_|!@#$%^&*+=-]{6,16}$"))
-    {LOG_DEBUG("bad pass\n");
+    {
         response["error"] = "Bad password";
 
         return true;
@@ -212,7 +212,7 @@ LOG_DEBUG("register?\n");
         "(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?|[a-z0-9-]*[a-z0-9]:(?:["
         "\\x01-\\x08\\x0b\\x0c\\x0e-\\x1f\\x21-\\x5a\\x53-\\x7f]|\\\\[\\x01"
         "-\\x09\\x0b\\x0c\\x0e-\\x7f])+)\\])"))
-    {LOG_DEBUG("bad email\n");
+    {
         // RFC 5322
         response["error"] = "Bad email";
 
@@ -223,7 +223,7 @@ LOG_DEBUG("register?\n");
 
     if(objects::Account::LoadAccountByUsername(db, username) ||
         objects::Account::LoadAccountByEmail(db, email))
-    {LOG_DEBUG("exists\n");
+    {
         response["error"] = "Account exists";
 
         return true;
@@ -256,11 +256,11 @@ LOG_DEBUG("register?\n");
         libcomp::PersistentObject>(account));
 
     if(!account->Insert(db))
-    {LOG_DEBUG("fail\n");
+    {
         response["error"] = "Failed to create account.";
     }
     else
-    {LOG_DEBUG("ok\n");
+    {
         response["error"] = "Success";
     }
 

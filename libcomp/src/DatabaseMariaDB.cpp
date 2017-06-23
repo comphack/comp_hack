@@ -965,6 +965,10 @@ MYSQL*& DatabaseMariaDB::GetConnection(bool autoConnect)
         {
             auto config = std::dynamic_pointer_cast<objects::DatabaseConfigMariaDB>(mConfig);
             ConnectToDatabase(connection, config->GetDatabaseName());
+
+            // Set auto reconnect in case a connection idles too long
+            bool reconnect = 1;
+            mysql_options(connection, MYSQL_OPT_RECONNECT, &reconnect);
         }
 
         mConnections[threadID] = connection;

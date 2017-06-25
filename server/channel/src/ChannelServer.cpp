@@ -84,6 +84,12 @@ bool ChannelServer::Initialize()
         to_underlying(InternalPacketCode_t::PACKET_SET_CHANNEL_INFO));
     internalPacketManager->AddParser<Parsers::AccountLogin>(
         to_underlying(InternalPacketCode_t::PACKET_ACCOUNT_LOGIN));
+    internalPacketManager->AddParser<Parsers::CharacterLogin>(
+        to_underlying(InternalPacketCode_t::PACKET_CHARACTER_LOGIN));
+    internalPacketManager->AddParser<Parsers::FriendsUpdate>(
+        to_underlying(InternalPacketCode_t::PACKET_FRIENDS_UPDATE));
+    internalPacketManager->AddParser<Parsers::PartyUpdate>(
+        to_underlying(InternalPacketCode_t::PACKET_PARTY_UPDATE));
 
     //Add the managers to the main worker.
     mMainWorker.AddManager(internalPacketManager);
@@ -189,6 +195,30 @@ bool ChannelServer::Initialize()
         to_underlying(ClientToChannelPacketCode_t::PACKET_OBJECT_INTERACTION));
     clientPacketManager->AddParser<Parsers::FriendInfo>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_FRIEND_INFO));
+    clientPacketManager->AddParser<Parsers::FriendRequest>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_FRIEND_REQUEST));
+    clientPacketManager->AddParser<Parsers::FriendAddRemove>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_FRIEND_ADD));
+    clientPacketManager->AddParser<Parsers::FriendAddRemove>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_FRIEND_REMOVE));
+    clientPacketManager->AddParser<Parsers::FriendData>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_FRIEND_DATA));
+    clientPacketManager->AddParser<Parsers::PartyInvite>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_PARTY_INVITE));
+    clientPacketManager->AddParser<Parsers::PartyJoin>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_PARTY_JOIN));
+    clientPacketManager->AddParser<Parsers::PartyCancel>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_PARTY_CANCEL));
+    clientPacketManager->AddParser<Parsers::PartyLeave>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_PARTY_LEAVE));
+    clientPacketManager->AddParser<Parsers::PartyDisband>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_PARTY_DISBAND));
+    clientPacketManager->AddParser<Parsers::PartyLeaderUpdate>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_PARTY_LEADER_UPDATE));
+    clientPacketManager->AddParser<Parsers::PartyDropRule>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_PARTY_DROP_RULE));
+    clientPacketManager->AddParser<Parsers::PartyKick>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_PARTY_KICK));
     clientPacketManager->AddParser<Parsers::Sync>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_SYNC));
     clientPacketManager->AddParser<Parsers::Rotate>(
@@ -252,6 +282,8 @@ bool ChannelServer::Initialize()
 
     // Map the Unsupported packet parser to unsupported packets or packets that
     // the server does not need to react to
+    clientPacketManager->AddParser<Parsers::Unsupported>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_PARTY_MEMBER_UPDATE));
     clientPacketManager->AddParser<Parsers::Unsupported>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_UNSUPPORTED_0232));
     clientPacketManager->AddParser<Parsers::Unsupported>(

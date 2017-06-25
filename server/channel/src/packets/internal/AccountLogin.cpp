@@ -37,6 +37,7 @@
 #include <Account.h>
 #include <AccountLogin.h>
 #include <Character.h>
+#include <CharacterLogin.h>
 
 // channel Includes
 #include "AccountManager.h"
@@ -57,7 +58,7 @@ bool Parsers::AccountLogin::Parse(libcomp::ManagerPacket *pPacketManager,
     (void)connection;
 
     objects::AccountLogin response;
-    if(!response.LoadPacket(p))
+    if(!response.LoadPacket(p, false))
     {
         LOG_ERROR("Invalid response received for AccountLogin.\n");
         return false;
@@ -66,11 +67,20 @@ bool Parsers::AccountLogin::Parse(libcomp::ManagerPacket *pPacketManager,
     auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
     auto worldDB = server->GetWorldDatabase();
 
-    //This user should already be cached since its the same one we passed in.
+    // This user should already be cached since its the same one we passed in
     auto account = response.GetAccount().Get(worldDB);
     if(nullptr == account)
     {
         LOG_ERROR("Unknown account returned from AccountLogin response.\n");
+        return false;
+    }
+
+    // The character should be cached as well
+    auto character = response.GetCharacterLogin() != nullptr
+        ? response.GetCharacterLogin()->GetCharacter().Get(worldDB) : nullptr;
+    if(nullptr == character)
+    {
+        LOG_ERROR("Invalid character returned from AccountLogin response.\n");
         return false;
     }
 
@@ -82,9 +92,8 @@ bool Parsers::AccountLogin::Parse(libcomp::ManagerPacket *pPacketManager,
     }
 
     auto login = client->GetClientState()->GetAccountLogin();
-    
     login->SetSessionID(response.GetSessionID());
-    login->SetCID(response.GetCID());
+    login->SetCharacterLogin(response.GetCharacterLogin());
 
     server->QueueWork(HandleLoginResponse, server->GetAccountManager(), client);
 

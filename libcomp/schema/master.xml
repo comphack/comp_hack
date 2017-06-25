@@ -29,6 +29,7 @@
     <include path="event_prompt.xml"/>
     <include path="event_stageeffect.xml"/>
     <include path="item.xml"/>
+    <include path="partymember.xml"/>
     <include path="registeredchannel.xml"/>
     <include path="registeredworld.xml"/>
 

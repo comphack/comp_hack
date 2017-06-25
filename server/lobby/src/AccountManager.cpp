@@ -34,7 +34,9 @@
 
 // objects Includes
 #include <Account.h>
+#include <AccountLogin.h>
 #include <Character.h>
+#include <CharacterLogin.h>
 
 // lobby Includes
 #include "LobbyServer.h"
@@ -74,7 +76,7 @@ bool AccountManager::IsLoggedIn(const libcomp::String& username,
     {
         result = true;
 
-        world = pair->second->GetWorldID();
+        world = pair->second->GetCharacterLogin()->GetWorldID();
     }
 
     return result;
@@ -150,7 +152,8 @@ bool AccountManager::LogoutUser(const libcomp::String& username, int8_t world)
 
     auto pair = mAccountMap.find(lookup);
 
-    if(mAccountMap.end() != pair && world == pair->second->GetWorldID())
+    if(mAccountMap.end() != pair && world == pair->second->
+        GetCharacterLogin()->GetWorldID())
     {
         (void)mAccountMap.erase(pair);
 
@@ -173,8 +176,9 @@ std::list<libcomp::String> AccountManager::LogoutUsersInWorld(int8_t world,
     std::list<libcomp::String> usernames;
     for(auto pair : mAccountMap)
     {
-        if(pair.second->GetWorldID() == world &&
-            (channel < 0 || pair.second->GetChannelID() == channel))
+        auto charLogin = pair.second->GetCharacterLogin();
+        if(charLogin->GetWorldID() == world &&
+            (channel < 0 || charLogin->GetChannelID() == channel))
         {
             usernames.push_back(pair.first);
         }

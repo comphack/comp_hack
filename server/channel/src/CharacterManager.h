@@ -129,17 +129,25 @@ public:
      * @param client Pointer to the client connection containing
      *  the character
      * @param demonID ID of the demon to summon
+     * @param updatePartyState true if the world should be updated
+     *  with the character's new party state, false if it will be updated
+     *  later
      */
     void SummonDemon(const std::shared_ptr<
-        channel::ChannelClientConnection>& client, int64_t demonID);
+        channel::ChannelClientConnection>& client, int64_t demonID,
+        bool updatePartyState = true);
 
     /**
      * Return the current demon of the client's character to the COMP.
      * @param client Pointer to the client connection containing
      *  the character
+     * @param updatePartyState true if the world should be updated
+     *  with the character's new party state, false if it will be updated
+     *  later
      */
     void StoreDemon(const std::shared_ptr<
-        channel::ChannelClientConnection>& client);
+        channel::ChannelClientConnection>& client,
+        bool updatePartyState = true);
 
     /**
      * Send information about the specified demon box to the client.

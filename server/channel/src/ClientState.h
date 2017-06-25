@@ -34,6 +34,12 @@
 #include <Character.h>
 #include <ClientStateObject.h>
 #include <Demon.h>
+#include <PartyCharacter.h>
+
+namespace libcomp
+{
+class Packet;
+}
 
 namespace channel
 {
@@ -134,6 +140,37 @@ public:
     const libobjgen::UUID GetAccountUID() const;
 
     /**
+     * Get a current party character representation from the
+     *.associated CharacterState.
+     * @param includeDemon true if the demon state is set
+     *  on the member variable of the party character
+     * @return Pointer to a party character representation
+     */
+    std::shared_ptr<objects::PartyCharacter> GetPartyCharacter(
+        bool includeDemon) const;
+
+    /**
+     * Get a current party demon representation from the
+     * associated DemonState.
+     * @return Pointer to a party demon representation
+     */
+    std::shared_ptr<objects::PartyMember> GetPartyDemon() const;
+
+    /**
+     * Populate the supplied packet with an internal CharacterLogin
+     * packet containing character information.
+     * @param p Packet to populate
+     */
+    void GetPartyCharacterPacket(libcomp::Packet& p) const;
+
+    /**
+     * Populate the supplied packet with an internal CharacterLogin
+     * packet containing partner demon information.
+     * @param p Packet to populate
+     */
+    void GetPartyDemonPacket(libcomp::Packet& p) const;
+
+    /**
      * Handle any actions needed when the game client pings the
      * server with a sync request.  If the start time has not been
      * set, it will be set here.
@@ -158,15 +195,21 @@ public:
 
     /**
      * Get the client state associated to the supplied entity ID.
-     * @param entityID Entity ID associated to the client state to retrieve
-     * @return Pointer to the client state associated to the entity ID or
+     * @param id Entity ID or world ID associated to the client
+     *  state to retrieve
+     * @param worldID true if the ID is from the world, false if it is a
+     *  local entity ID
+     * @return Pointer to the client state associated to the ID or
      *  nullptr if it does not exist
      */
-    static ClientState* GetEntityClientState(int32_t entityID);
+    static ClientState* GetEntityClientState(int32_t id,
+        bool worldID = false);
 
 private:
-    /// Static registry of all client states by entity IDs associated
-    static std::unordered_map<int32_t, ClientState*> sEntityClients;
+    /// Static registry of all client states sorted as world (true) or
+    /// local entity IDs (false) and their respective IDs
+    static std::unordered_map<bool,
+        std::unordered_map<int32_t, ClientState*>> sEntityClients;
 
     /// Static lock for shared static resources
     static std::mutex sLock;

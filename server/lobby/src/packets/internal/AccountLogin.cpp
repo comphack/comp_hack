@@ -39,6 +39,8 @@
 // object Includes
 #include <Account.h>
 #include <AccountLogin.h>
+#include <Character.h>
+#include <CharacterLogin.h>
 
 // lobby Includes
 #include "LobbyServer.h"
@@ -48,9 +50,10 @@ using namespace lobby;
 void UpdateAccountLogin(std::shared_ptr<LobbyServer> server,
     const std::shared_ptr<objects::AccountLogin> login)
 {
-    auto cid = login->GetCID();
-    auto worldID = login->GetWorldID();
-    auto channelID = login->GetChannelID();
+    auto cLogin = login->GetCharacterLogin();
+    auto character = cLogin->GetCharacter();
+    auto worldID = cLogin->GetWorldID();
+    auto channelID = cLogin->GetChannelID();
     if(0 > worldID || 0 > channelID)
     {
         LOG_ERROR("Invalid channel or world ID received for AccountLogin.\n");
@@ -64,7 +67,7 @@ void UpdateAccountLogin(std::shared_ptr<LobbyServer> server,
     }
 
     //Should be the same one we passed in
-    auto account = login->GetAccount().Get(world->GetWorldDatabase());
+    auto account = login->GetAccount().Get(server->GetMainDatabase());
     if(nullptr == account)
     {
         return;
@@ -90,8 +93,8 @@ void UpdateAccountLogin(std::shared_ptr<LobbyServer> server,
         account->GetUsername());
     if(nullptr != clientConnection && currentWorldID == -1)
     {
-        LOG_DEBUG(libcomp::String("Login character with ID %1 into world %2, channel %3\n"
-            ).Arg(cid).Arg(worldID).Arg(channelID));
+        LOG_DEBUG(libcomp::String("Login character with UUID '%1' into world %2, channel %3\n"
+            ).Arg(character.GetUUID().ToString()).Arg(worldID).Arg(channelID));
 
         libcomp::Packet reply;
         reply.WritePacketCode(LobbyToClientPacketCode_t::PACKET_START_GAME);
@@ -104,7 +107,7 @@ void UpdateAccountLogin(std::shared_ptr<LobbyServer> server,
             libcomp::String("%1:%2").Arg(channel->GetIP()).Arg(channel->GetPort()), true);
 
         // Character ID.
-        reply.WriteU8(cid);
+        reply.WriteU8(character->GetCID());
 
         clientConnection->SendPacket(reply);
     }
@@ -127,7 +130,7 @@ bool Parsers::AccountLogin::Parse(libcomp::ManagerPacket *pPacketManager,
     (void)connection;
 
     auto response = std::shared_ptr<objects::AccountLogin>(new objects::AccountLogin);
-    if(!response->LoadPacket(p))
+    if(!response->LoadPacket(p, false))
     {
         LOG_ERROR("Invalid response received for AccountLogin.\n");
         return false;

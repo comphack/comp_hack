@@ -30,6 +30,7 @@ FILE(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/objgen)
 
 SET(${PROJECT_NAME}_SRCS
     src/AccountManager.cpp
+    src/CharacterManager.cpp
     src/ManagerConnection.cpp
     src/WorldServer.cpp
     src/main.cpp
@@ -37,11 +38,13 @@ SET(${PROJECT_NAME}_SRCS
 
 SET(${PROJECT_NAME}_HDRS
     src/AccountManager.h
+    src/CharacterManager.h
     src/ManagerConnection.h
     src/WorldServer.h
 )
 
 SET(${PROJECT_NAME}_SCHEMA
+    schema/party.xml
     schema/worldconfig.xml
 )
 
@@ -59,6 +62,8 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     ../../libcomp/schema
 
     # Output files
+    Party.h
+    Party.cpp
     WorldConfig.h
     WorldConfig.cpp
 )
@@ -70,6 +75,9 @@ SET(${PROJECT_NAME}_PACKETS
     src/packets/SetChannelInfo.cpp             # 0x1003
     src/packets/AccountLogin.cpp               # 0x1004
     src/packets/AccountLogout.cpp              # 0x1005
+    src/packets/CharacterLogin.cpp             # 0x1007
+    src/packets/FriendsUpdate.cpp              # 0x1008
+    src/packets/PartyUpdate.cpp                # 0x1009
 )
 
 ADD_EXECUTABLE(${PROJECT_NAME} ${${PROJECT_NAME}_SRCS}

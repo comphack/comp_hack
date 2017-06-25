@@ -26,6 +26,11 @@
 
 #include "AccountManager.h"
 
+// object Includes
+#include <Account.h>
+#include <Character.h>
+#include <CharacterLogin.h>
+
 using namespace world;
 
 AccountManager::AccountManager()
@@ -33,48 +38,33 @@ AccountManager::AccountManager()
     mMaxSessionKey = 0;
 }
 
-bool AccountManager::IsLoggedIn(const libcomp::String& username) const
-{
-    bool result = false;
-
-    libcomp::String lookup = username.ToLower();
-
-    auto pair = mAccountMap.find(lookup);
-
-    if(mAccountMap.end() != pair)
-    {
-        result = true;
-    }
-
-    return result;
-}
-
 bool AccountManager::IsLoggedIn(const libcomp::String& username,
-    int8_t& channel) const
+    int8_t& channel)
 {
     bool result = false;
 
     libcomp::String lookup = username.ToLower();
 
+    std::lock_guard<std::mutex> lock(mLock);
     auto pair = mAccountMap.find(lookup);
 
     if(mAccountMap.end() != pair)
     {
         result = true;
 
-        channel = pair->second->GetChannelID();
+        channel = pair->second->GetCharacterLogin()->GetChannelID();
     }
 
     return result;
 }
 
-bool AccountManager::LoginUser(const libcomp::String& username,
-    std::shared_ptr<objects::AccountLogin> login)
+bool AccountManager::LoginUser(std::shared_ptr<objects::AccountLogin> login)
 {
     bool result = false;
 
-    libcomp::String lookup = username.ToLower();
+    libcomp::String lookup = login->GetAccount()->GetUsername().ToLower();
 
+    std::lock_guard<std::mutex> lock(mLock);
     auto pair = mAccountMap.find(lookup);
 
     if(mAccountMap.end() == pair)
@@ -102,42 +92,53 @@ std::shared_ptr<objects::AccountLogin> AccountManager::GetUserLogin(
 {
     libcomp::String lookup = username.ToLower();
 
+    std::lock_guard<std::mutex> lock(mLock);
     auto pair = mAccountMap.find(lookup);
     return pair != mAccountMap.end() ? pair->second : nullptr;
 }
 
-bool AccountManager::LogoutUser(const libcomp::String& username, int8_t channel)
+std::shared_ptr<objects::AccountLogin> AccountManager::LogoutUser(
+    const libcomp::String& username, int8_t channel)
 {
-    bool result = false;
+    std::shared_ptr<objects::AccountLogin> result;
 
     libcomp::String lookup = username.ToLower();
 
+    std::lock_guard<std::mutex> lock(mLock);
     auto pair = mAccountMap.find(lookup);
 
-    if(mAccountMap.end() != pair && channel == pair->second->GetChannelID())
+    if(mAccountMap.end() != pair && channel == pair->second->
+        GetCharacterLogin()->GetChannelID())
     {
+        result = pair->second;
+        Cleanup(result);
         (void)mAccountMap.erase(pair);
-
-        result = true;
     }
 
     return result;
 }
 
-std::list<libcomp::String> AccountManager::LogoutUsersOnChannel(int8_t channel)
+std::list<std::shared_ptr<objects::AccountLogin>>
+    AccountManager::LogoutUsersOnChannel(int8_t channel)
 {
+    std::list<std::shared_ptr<objects::AccountLogin>> loggedOut;
     if(0 > channel)
     {
-        return std::list<libcomp::String>();
+        return loggedOut;
     }
 
     std::list<libcomp::String> usernames;
+    std::lock_guard<std::mutex> lock(mLock);
     for(auto pair : mAccountMap)
     {
-        if(pair.second->GetChannelID() == channel)
+        auto cLogin = pair.second->GetCharacterLogin();
+        if(cLogin->GetChannelID() == channel)
         {
             usernames.push_back(pair.first);
+            loggedOut.push_back(pair.second);
         }
+
+        Cleanup(pair.second);
     }
 
     for(auto username : usernames)
@@ -145,5 +146,16 @@ std::list<libcomp::String> AccountManager::LogoutUsersOnChannel(int8_t channel)
         mAccountMap.erase(username);
     }
 
-    return usernames;
+    return loggedOut;
+}
+
+void AccountManager::Cleanup(const std::shared_ptr<objects::AccountLogin>& login)
+{
+    auto cLogin = login->GetCharacterLogin();
+    cLogin->SetStatus(objects::CharacterLogin::Status_t::OFFLINE);
+    cLogin->SetWorldID(-1);
+    cLogin->SetChannelID(-1);
+    cLogin->SetZoneID(0);
+    Cleanup<objects::Character>(cLogin->GetCharacter().Get());
+    Cleanup<objects::Account>(login->GetAccount().Get());
 }

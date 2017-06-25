@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <objgen>
     <include path="../../libcomp/schema/master.xml"/>
+    <include path="party.xml"/>
     <include path="worldconfig.xml"/>
 </objgen>

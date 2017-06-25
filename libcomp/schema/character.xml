@@ -63,6 +63,7 @@
         <!-- Sub-sections -->
         <member type="EntityStats*" name="CoreStats"/>
         <member type="CharacterProgress*" name="Progress"/>
+        <member type="FriendSettings*" name="FriendSettings"/>
     </object>
     <object name="EntityStats" location="world">
         <member type="ref" name="Entity" key="true" unique="true"/>
@@ -136,5 +137,13 @@
         <member type="array" name="CustomData" size="8">
             <element type="s32"/>
         </member>
+    </object>
+    <object name="FriendSettings" location="world">
+        <member type="Character*" name="Character" key="true" unique="true"/>
+        <member type="string" name="FriendMessage"/>
+        <member type="list" name="Friends">
+            <element type="ref"/>
+        </member>
+        <member type="bool" name="PublicToZone" default="true"/>
     </object>
 </objgen>

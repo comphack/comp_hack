@@ -207,6 +207,7 @@ SET(${PROJECT_NAME}_SCHEMA
     schema/packet_login.xml
     schema/packet_login_reply.xml
     schema/packet_response_code.xml
+    schema/partymember.xml
     schema/registeredchannel.xml
     schema/registeredworld.xml
     schema/server_npc.xml
@@ -260,6 +261,8 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     ActionZoneChange.cpp
     Character.h
     Character.cpp
+    CharacterLogin.h
+    CharacterLogin.cpp
     CharacterProgress.h
     CharacterProgress.cpp
     DatabaseConfig.h
@@ -312,6 +315,8 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     EventStageEffect.cpp
     Expertise.h
     Expertise.cpp
+    FriendSettings.h
+    FriendSettings.cpp
     Hotbar.h
     Hotbar.cpp
     InheritedSkill.h
@@ -326,6 +331,10 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     PacketLoginReply.cpp
     PacketResponseCode.h
     PacketResponseCode.cpp
+    PartyCharacter.h
+    PartyCharacter.cpp
+    PartyMember.h
+    PartyMember.cpp
     Quest.h
     Quest.cpp
     RegisteredChannel.h

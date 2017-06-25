@@ -196,7 +196,7 @@ std::list<std::shared_ptr<PersistentObject>> DatabaseMariaDB::LoadObjects(
     String sql = String("SELECT * FROM `%1`%2").Arg(
         metaObject->GetName()).Arg(
         (nullptr != pValue
-            ? String(" WHERE %1 = :%1").Arg(pValue->GetColumn())
+            ? String(" WHERE `%1` = :%1").Arg(pValue->GetColumn())
             : ""));
 
     DatabaseQuery query = Prepare(sql);

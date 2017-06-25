@@ -50,7 +50,7 @@ WorldServer::WorldServer(const char *szProgram, std::shared_ptr<
 
 bool WorldServer::Initialize()
 {
-    auto self = shared_from_this();
+    auto self = std::dynamic_pointer_cast<WorldServer>(shared_from_this());
 
     if(!BaseServer::Initialize())
     {
@@ -75,6 +75,8 @@ bool WorldServer::Initialize()
         return false;
     }
 
+    mCharacterManager = new CharacterManager(self);
+
     return true;
 }
 
@@ -87,6 +89,7 @@ void WorldServer::FinishInitialize()
 
     auto connectionManager = std::dynamic_pointer_cast<libcomp::Manager>(mManagerConnection);
 
+    // Build the lobby manager
     auto packetManager = std::make_shared<libcomp::ManagerPacket>(
         shared_from_this());
     packetManager->AddParser<Parsers::GetWorldInfo>(to_underlying(
@@ -98,9 +101,27 @@ void WorldServer::FinishInitialize()
     packetManager->AddParser<Parsers::AccountLogout>(to_underlying(
         InternalPacketCode_t::PACKET_ACCOUNT_LOGOUT));
 
-    //Add the managers to the main worker.
+    // Add the managers to the main worker.
     mMainWorker.AddManager(packetManager);
     mMainWorker.AddManager(connectionManager);
+
+    // Build the channel manager
+    packetManager = std::make_shared<libcomp::ManagerPacket>(
+        shared_from_this());
+    packetManager->AddParser<Parsers::GetWorldInfo>(to_underlying(
+        InternalPacketCode_t::PACKET_GET_WORLD_INFO));
+    packetManager->AddParser<Parsers::SetChannelInfo>(to_underlying(
+        InternalPacketCode_t::PACKET_SET_CHANNEL_INFO));
+    packetManager->AddParser<Parsers::AccountLogin>(to_underlying(
+        InternalPacketCode_t::PACKET_ACCOUNT_LOGIN));
+    packetManager->AddParser<Parsers::AccountLogout>(to_underlying(
+        InternalPacketCode_t::PACKET_ACCOUNT_LOGOUT));
+    packetManager->AddParser<Parsers::CharacterLogin>(to_underlying(
+        InternalPacketCode_t::PACKET_CHARACTER_LOGIN));
+    packetManager->AddParser<Parsers::FriendsUpdate>(to_underlying(
+        InternalPacketCode_t::PACKET_FRIENDS_UPDATE));
+    packetManager->AddParser<Parsers::PartyUpdate>(to_underlying(
+        InternalPacketCode_t::PACKET_PARTY_UPDATE));
 
     // Add the managers to the generic workers.
     for(auto worker : mWorkers)
@@ -157,6 +178,7 @@ void WorldServer::FinishInitialize()
 
 WorldServer::~WorldServer()
 {
+    delete mCharacterManager;
 }
 
 const std::shared_ptr<objects::RegisteredWorld> WorldServer::GetRegisteredWorld() const
@@ -171,6 +193,20 @@ std::shared_ptr<objects::RegisteredChannel> WorldServer::GetChannel(
     if(iter != mRegisteredChannels.end())
     {
         return iter->second;
+    }
+
+    return nullptr;
+}
+
+std::shared_ptr<libcomp::InternalConnection> WorldServer::GetChannelConnectionByID(
+    int8_t channelID) const
+{
+    for(auto cPair : mRegisteredChannels)
+    {
+        if(cPair.second->GetID() == channelID)
+        {
+            return cPair.first;
+        }
     }
 
     return nullptr;
@@ -315,6 +351,11 @@ bool WorldServer::RegisterServer()
 AccountManager* WorldServer::GetAccountManager()
 {
     return &mAccountManager;
+}
+
+CharacterManager* WorldServer::GetCharacterManager()
+{
+    return mCharacterManager;
 }
 
 std::shared_ptr<libcomp::TcpConnection> WorldServer::CreateConnection(

@@ -114,7 +114,20 @@ enum class ClientToChannelPacketCode_t : uint16_t
     PACKET_EVENT_RESPONSE = 0x00B7,  //!< Message that the player has responded to the current event.
     PACKET_VALUABLE_LIST = 0x00B8,  //!< Request for a list of obtained valuables.
     PACKET_OBJECT_INTERACTION = 0x00BA,  //!< An object has been clicked on.
-    PACKET_FRIEND_INFO = 0x00BD,  //!< Request for the current player's friend information.
+    PACKET_FRIEND_INFO = 0x00BD,  //!< Request for the current player's own friend information.
+    PACKET_FRIEND_REQUEST = 0x00C0,  //!< Request to ask a player to be added to the player's friend list.
+    PACKET_FRIEND_ADD = 0x00C3,  //!< Request to add the player and the requestor to both friend lists.
+    PACKET_FRIEND_REMOVE = 0x00C4,  //!< Request to remove the player and the target from both friend lists.
+    PACKET_FRIEND_DATA = 0x00C6,  //!< Request to update friend list specific data for the player.
+    PACKET_PARTY_INVITE = 0x00D2,  //!< Request to invite a player to join the player's party.
+    PACKET_PARTY_JOIN = 0x00D5,  //!< Request to join a party from which an invite was received.
+    PACKET_PARTY_CANCEL = 0x00D8,  //!< Request to cancel a party invite.
+    PACKET_PARTY_LEAVE = 0x00DA,  //!< Request to leave the player's current party.
+    PACKET_PARTY_DISBAND = 0x00DD,  //!< Request to disband the current party.
+    PACKET_PARTY_LEADER_UPDATE = 0x00E0,  //!< Request to update the current party's designated leader.
+    PACKET_PARTY_DROP_RULE = 0x00E3,  //!< Request to update the current party's drop rule setting.
+    PACKET_PARTY_MEMBER_UPDATE = 0x00E6,  //!< Response signifying whether a party member update was received correctly.
+    PACKET_PARTY_KICK = 0x00EB,  //!< Request to kick a player from the current party.
     PACKET_SYNC = 0x00F3,  //!< Request to retrieve the server time.
     PACKET_ROTATE = 0x00F8,  //!< Request to rotate an entity or object.
     PACKET_UNION_FLAG = 0x0100,  //!< Request to receive union information.
@@ -224,7 +237,30 @@ enum class ChannelToClientPacketCode_t : uint16_t
     PACKET_EVENT_OPEN_MENU = 0x00AE,  //!< Request to the client to open a menu.
     PACKET_VALUABLE_LIST = 0x00B9,  //!< Response containing a list of obtained valuables.
     PACKET_EVENT_END = 0x00BB,  //!< Request to the client to end the current event.
-    PACKET_FRIEND_INFO = 0x00BE,  //!< Response containing the current player's friend information.
+    PACKET_FRIEND_INFO_SELF = 0x00BE,  //!< Response containing the current player's own friend information.
+    PACKET_FRIEND_INFO = 0x00BF,  //!< Message containing information about a friend on the friends list.
+    PACKET_FRIEND_REQUEST = 0x00C1,    //!< Response from a player to be added to the player's friend list.
+    PACKET_FRIEND_REQUESTED = 0x00C2,  //!< Notification that a friend request has been received.
+    PACKET_FRIEND_ADD_REMOVE = 0x00C5,  //!< Response to the client stating that a friend was added or removed.
+    PACKET_FRIEND_DATA = 0x00C7,  //!< Notification to update friend list specific data from a player.
+    PACKET_PARTY_INVITE = 0x00D3,  //!< Response to the request to invite a player to join the player's party.
+    PACKET_PARTY_INVITED = 0x00D4,  //!< Notification that a party invite has been received.
+    PACKET_PARTY_JOIN = 0x00D6,  //!< Response to the request to join a party.
+    PACKET_PARTY_MEMBER_INFO = 0x00D7,  //!< Message containing information about a party member.
+    PACKET_PARTY_CANCEL = 0x00D9,  //!< Response to the request to cancel a party invite.
+    PACKET_PARTY_LEAVE = 0x00DB,  //!< Response to the request to leave the player's current party.
+    PACKET_PARTY_LEFT = 0x00DC,  //!< Notification that a player has left the current party.
+    PACKET_PARTY_DISBAND = 0x00DE,  //!< Response to the request to disband the current party.
+    PACKET_PARTY_DISBANDED = 0x00DF,  //!< Notification that the current party has been disbanded.
+    PACKET_PARTY_LEADER_UPDATE = 0x00E1,  //!< Response to the request to update the current party's designated leader.
+    PACKET_PARTY_LEADER_UPDATED = 0x00E2,  //!< Notification that the current party's designated leader has changed.
+    PACKET_PARTY_DROP_RULE = 0x00E4,  //!< Response to the request to update the current party's drop rule setting.
+    PACKET_PARTY_DROP_RULE_SET = 0x00E5,  //!< Notification that the current party's drop rule has been changed.
+    PACKET_PARTY_MEMBER_UPDATE = 0x00E7,  //!< Notification containing a player character's info in the current party.
+    PACKET_PARTY_MEMBER_PARTNER = 0x00E8,  //!< Notification containing a parter demon's info in the current party.
+    PACKET_PARTY_MEMBER_ZONE = 0x00E9,  //!< Notification that a current party member has moved to a different zone.
+    PACKET_PARTY_MEMBER_ICON = 0x00EA,  //!< Notification that a current party member's icon state has changed.
+    PACKET_PARTY_KICK = 0x00EC,  //!< Notification that a player has been kicked from the current party.
     PACKET_SYNC = 0x00F4,  //!< Response containing the server time.
     PACKET_ROTATE = 0x00F9,    //!< Message containing entity or object rotation information.
     PACKET_RUN_SPEED = 0x00FB,    //!< Message containing an entity's updated running speed.
@@ -279,6 +315,9 @@ enum class InternalPacketCode_t : uint16_t
     PACKET_SET_CHANNEL_INFO = 0x1003,    //!< Request to update a server's channel information.
     PACKET_ACCOUNT_LOGIN = 0x1004,    //!< Pass login information between the servers.
     PACKET_ACCOUNT_LOGOUT = 0x1005,    //!< Pass logout information between the servers.
+    PACKET_CHARACTER_LOGIN = 0x1007,    //!< Pass character login information between the servers.
+    PACKET_FRIENDS_UPDATE = 0x1008,    //!< Pass friend information between the servers.
+    PACKET_PARTY_UPDATE = 0x1009,    //!< Pass party information between the servers.
 };
 
 /**
@@ -286,9 +325,39 @@ enum class InternalPacketCode_t : uint16_t
  */
 enum class InternalPacketAction_t : uint8_t
 {
-    PACKET_ACTION_ADD = 1,  //!< Packet action is an addition.
-    PACKET_ACTION_UPDATE,   //!< Packet action is an update.
-    PACKET_ACTION_REMOVE,   //!< Pacekt action is a removal.
+    PACKET_ACTION_ADD = 1,  //!< Indicates a contextual addition.
+    PACKET_ACTION_UPDATE,   //!< Indicates a contextual update.
+    PACKET_ACTION_REMOVE,   //!< Indicates a contextual removal.
+    PACKET_ACTION_YN_REQUEST,   //!< Indicates a contextual Yes/No request.
+    PACKET_ACTION_RESPONSE_YES, //!< Indicates a contextual "Yes" response.
+    PACKET_ACTION_RESPONSE_NO,  //!< Indicates a contextual "No" response.
+
+    PACKET_ACTION_FRIEND_LIST,  //!< Indicates that a friend list is being requested or sent.
+
+    PACKET_ACTION_PARTY_LEAVE,  //!< Indicates that a party update consists of "leave" information.
+    PACKET_ACTION_PARTY_DISBAND,    //!< Indicates that a party update consists of "disband" information.
+    PACKET_ACTION_PARTY_LEADER_UPDATE,  //!< Indicates that a party update consists of "leader update" information.
+    PACKET_ACTION_PARTY_DROP_RULE,  //!< Indicates that a party update consists of "drop rule" information.
+    PACKET_ACTION_PARTY_KICK,   //!< Indicates that a party update consists of "kick" information.
+};
+
+/**
+ * Flags used to indicate the type of information being sent in a PACKET_CHARACTER_LOGIN message.  Data
+ * signified to have been added to the packet should be written from lowest to highest value listed here.
+ */
+enum class CharacterLoginStateFlag_t : uint8_t
+{
+    CHARLOGIN_STATUS = 0x01,  //!< Indicates that a player's active status is contained in a packet.
+    CHARLOGIN_ZONE = 0x02,   //!< Indicates that a character's zone is contained in a packet.
+    CHARLOGIN_CHANNEL = 0x04,  //!< Indicates that a character's channel is contained in a packet.
+    CHARLOGIN_BASIC = 0x07,  //!< Indicates that basic information about a character is contained in a packet.
+    CHARLOGIN_FRIEND_MESSAGE = 0x08,  //!< Indicates that a character's friend message is contained in a packet.
+    CHARLOGIN_FRIEND_UNKNOWN = 0x10,  //!< Unknown. Indicates that some friend information is being sent.
+    CHARLOGIN_FRIEND_FLAGS = 0x1F,  //!< Indicates that one or many friend related pieces of data are contained in a packet.
+    CHARLOGIN_PARTY_INFO = 0x20,  //!< Indicates that player character party information is contained in a packet.
+    CHARLOGIN_PARTY_DEMON_INFO = 0x40,  //!< Indicates that partner demon party information is contained in a packet.
+    CHARLOGIN_PARTY_ICON = 0x80,  //!< Indicates that party icon information is contained in a packet.
+    CHARLOGIN_PARTY_FLAGS = 0xE2,  //!< Indicates that one or many party related pieces of data are contained in a packet.
 };
 
 /**

@@ -48,8 +48,8 @@ static pid_t CreateProcess(const char *szProgram,
     {
         if(redirectOutput)
         {
-            //dup2(open("/dev/null", O_WRONLY), STDOUT_FILENO);
-            //dup2(open("/dev/null", O_WRONLY), STDERR_FILENO);
+            dup2(open("/dev/null", O_WRONLY), STDOUT_FILENO);
+            dup2(open("/dev/null", O_WRONLY), STDERR_FILENO);
         }
 
         (void)execv(szProgram, szArguments);

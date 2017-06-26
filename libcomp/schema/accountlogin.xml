@@ -2,10 +2,22 @@
 <objgen>
     <object name="AccountLogin" persistent="false">
         <member type="Account*" name="Account"/>
-        <member type="u8" name="CID" max="19"/>
-        <member type="s8" name="WorldID" default="-1"/>
-        <member type="s8" name="ChannelID" default="-1"/>
+        <member type="CharacterLogin*" name="CharacterLogin"/>
         <member type="string" name="SessionID" size="300"/>
         <member type="u32" name="SessionKey"/>
+    </object>
+    <object name="CharacterLogin" persistent="false">
+        <member type="s32" name="WorldCID"/>
+        <member type="Character*" name="Character"/>
+        <member type="s8" name="WorldID" default="-1"/>
+        <member type="s8" name="ChannelID" default="-1"/>
+        <member type="u32" name="ZoneID"/>
+        <member type="u32" name="PartyID"/>
+        <member type="enum" name="Status" underlying="int8_t">
+            <value num="0">OFFLINE</value>
+            <value num="1">AWAY</value>
+            <value num="2">BUSY</value>
+            <value num="3">ONLINE</value>
+        </member>
     </object>
 </objgen>

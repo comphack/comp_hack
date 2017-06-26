@@ -42,6 +42,7 @@
 
 // world Includes
 #include "AccountManager.h"
+#include "CharacterManager.h"
 
 namespace world
 {
@@ -95,6 +96,18 @@ public:
     std::shared_ptr<objects::RegisteredChannel> GetChannel(
         const std::shared_ptr<libcomp::InternalConnection>& connection) const;
 
+    /**
+     * Get channel connection associated to the specified ID.
+     * @param channelID ID of the channel to retrieve
+     * @return Pointer to the channel connnection
+     */
+    std::shared_ptr<libcomp::InternalConnection> GetChannelConnectionByID(
+        int8_t channelID) const;
+
+    /**
+     * Get all channels by connection.
+     * @return Map of channels by connection
+     */
     std::map<std::shared_ptr<libcomp::InternalConnection>,
         std::shared_ptr<objects::RegisteredChannel>> GetChannels() const;
 
@@ -162,6 +175,12 @@ public:
      */
     AccountManager* GetAccountManager();
 
+    /**
+     * Get the character manager for the server.
+     * @return Character manager for the server.
+     */
+    CharacterManager* GetCharacterManager();
+
 protected:
     /**
      * Create a connection to a newly active socket.
@@ -189,6 +208,9 @@ protected:
 
     /// Account manager for the server.
     AccountManager mAccountManager;
+
+    /// Character manager for the server.
+    CharacterManager* mCharacterManager;
 };
 
 } // namespace world

@@ -697,9 +697,9 @@ void CharacterManager::SetStatusIcon(const std::shared_ptr<ChannelClientConnecti
 }
 
 void CharacterManager::SummonDemon(const std::shared_ptr<
-    channel::ChannelClientConnection>& client, int64_t demonID)
+    channel::ChannelClientConnection>& client, int64_t demonID, bool updatePartyState)
 {
-    StoreDemon(client);
+    StoreDemon(client, false);
 
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
@@ -727,10 +727,17 @@ void CharacterManager::SummonDemon(const std::shared_ptr<
     auto otherClients = mServer.lock()->GetZoneManager()
         ->GetZoneConnections(client, false);
     SendOtherPartnerData(otherClients, state);
+
+    if(updatePartyState && state->GetPartyID())
+    {
+        libcomp::Packet request;
+        state->GetPartyDemonPacket(request);
+        mServer.lock()->GetManagerConnection()->GetWorldConnection()->SendPacket(request);
+    }
 }
 
 void CharacterManager::StoreDemon(const std::shared_ptr<
-    channel::ChannelClientConnection>& client)
+    channel::ChannelClientConnection>& client, bool updatePartyState)
 {
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
@@ -759,6 +766,13 @@ void CharacterManager::StoreDemon(const std::shared_ptr<
     reply.WriteS32Little(dState->GetEntityID());
 
     zoneManager->BroadcastPacket(client, reply, true);
+    
+    if(updatePartyState && state->GetPartyID())
+    {
+        libcomp::Packet request;
+        state->GetPartyDemonPacket(request);
+        mServer.lock()->GetManagerConnection()->GetWorldConnection()->SendPacket(request);
+    }
 }
 
 void CharacterManager::SendDemonBoxData(const std::shared_ptr<
@@ -1551,6 +1565,13 @@ void CharacterManager::ExperienceGain(const std::shared_ptr<
             reply.WriteS16Little(stats->GetHP());
             reply.WriteS16Little(stats->GetMP());
             reply.WriteS32Little(points);
+
+            if(state->GetPartyID())
+            {
+                libcomp::Packet request;
+                state->GetPartyCharacterPacket(request);
+                mServer.lock()->GetManagerConnection()->GetWorldConnection()->SendPacket(request);
+            }
         }
 
         server->GetZoneManager()->BroadcastPacket(client, reply, true);

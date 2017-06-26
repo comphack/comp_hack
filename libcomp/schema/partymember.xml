@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="PartyMember" persistent="false">
+        <member type="u32" name="DemonType"/>
+        <member type="u16" name="HP"/>
+        <member type="u16" name="MaxHP"/>
+        <member type="u16" name="MP"/>
+        <member type="u16" name="MaxMP"/>
+    </object>
+    <object name="PartyCharacter" baseobject="PartyMember" persistent="false">
+        <member type="s32" name="WorldCID"/>
+        <member type="string" name="Name"/>
+        <member type="u8" name="Level"/>
+        <member type="PartyMember*" name="Demon"/>
+    </object>
+</objgen>

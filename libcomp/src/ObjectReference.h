@@ -211,7 +211,10 @@ public:
      */
     bool SetUUID(const libobjgen::UUID& uuid)
     {
-        SetReference(uuid);
+        if(mData->mUUID != uuid)
+        {
+            SetReference(uuid);
+        }
         return true;
     }
 

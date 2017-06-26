@@ -34,10 +34,12 @@
 #include <Account.h>
 #include <AccountLogin.h>
 #include <AccountWorldData.h>
+#include <CharacterLogin.h>
 #include <CharacterProgress.h>
 #include <DemonBox.h>
 #include <EventState.h>
 #include <Expertise.h>
+#include <FriendSettings.h>
 #include <Hotbar.h>
 #include <Item.h>
 #include <ItemBox.h>
@@ -98,9 +100,7 @@ void AccountManager::HandleLoginResponse(const std::shared_ptr<
     auto state = client->GetClientState();
     auto login = state->GetAccountLogin();
     auto account = login->GetAccount();
-
-    auto cid = login->GetCID();
-    auto character = account->GetCharacters(cid);
+    auto character = login->GetCharacterLogin()->GetCharacter();
 
     libcomp::Packet reply;
     reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_LOGIN);
@@ -283,7 +283,7 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
 
         // Create the character progress
         auto progress = libcomp::PersistentObject::New<
-            objects::CharacterProgress>();
+            objects::CharacterProgress>(true);
         progress->SetCharacter(character);
         
         // Max COMP slots if the account is a GM
@@ -292,33 +292,40 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
             progress->SetMaxCOMPSlots(10);
         }
 
-        if(!progress->Register(progress) ||
-            !progress->Insert(db) ||
+        if(!progress->Insert(db) ||
             !character->SetProgress(progress))
         {
             return false;
         }
-        
+
+        auto fSettings = libcomp::PersistentObject::New<
+            objects::FriendSettings>(true);
+        fSettings->SetCharacter(character);
+
+        if(!fSettings->Insert(db) ||
+            !character->SetFriendSettings(fSettings))
+        {
+            return false;
+        }
+
         // Create the COMP
         auto comp = libcomp::PersistentObject::New<
-            objects::DemonBox>();
+            objects::DemonBox>(true);
         comp->SetAccount(account);
         comp->SetCharacter(character);
 
-        if(!comp->Register(comp) ||
-            !comp->Insert(db) || !character->SetCOMP(comp))
+        if(!comp->Insert(db) || !character->SetCOMP(comp))
         {
             return false;
         }
 
         // Create the inventory item box (the others can be lazy loaded later)
         auto box = libcomp::PersistentObject::New<
-            objects::ItemBox>();
+            objects::ItemBox>(true);
         box->SetAccount(account);
         box->SetCharacter(character);
 
-        if(!box->Register(box) ||
-            !box->Insert(db) || !character->SetItemBoxes(0, box))
+        if(!box->Insert(db) || !character->SetItemBoxes(0, box))
         {
             return false;
         }
@@ -354,6 +361,11 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
         {
             character->AppendLearnedSkills(skillID);
         }
+
+        if(!cs->Update(db))
+        {
+            return false;
+        }
     }
     
     // Load or create the account world data
@@ -362,23 +374,20 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
     if(worldData == nullptr)
     {
         worldData = libcomp::PersistentObject::New<
-            objects::AccountWorldData>();
+            objects::AccountWorldData>(true);
 
-        worldData->Register(worldData);
         worldData->SetAccount(account);
 
         auto itemDepo = libcomp::PersistentObject::New<
-            objects::ItemBox>();
+            objects::ItemBox>(true);
 
-        itemDepo->Register(itemDepo);
         itemDepo->SetType(objects::ItemBox::Type_t::ITEM_DEPO);
         itemDepo->SetAccount(account);
         worldData->SetItemBoxes(0, itemDepo);
 
         auto demonDepo = libcomp::PersistentObject::New<
-            objects::DemonBox>();
+            objects::DemonBox>(true);
 
-        demonDepo->Register(demonDepo);
         demonDepo->SetAccount(account);
         demonDepo->SetBoxID(1);
         worldData->SetDemonBoxes(0, demonDepo);
@@ -394,6 +403,12 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
 
     // Progress
     if(!character->LoadProgress(db))
+    {
+        return false;
+    }
+
+    // Friend Settings
+    if(!character->LoadFriendSettings(db))
     {
         return false;
     }
@@ -557,6 +572,8 @@ bool AccountManager::LogoutCharacter(channel::ClientState* state)
         ->GetCoreStats().Get(), worldDB, doSave);
     ok &= Cleanup<objects::CharacterProgress>(character
         ->GetProgress().Get(), worldDB, doSave);
+    ok &= Cleanup<objects::FriendSettings>(character
+        ->GetFriendSettings().Get(), worldDB, doSave);
 
     // Save items and boxes
     std::list<std::shared_ptr<objects::ItemBox>> allBoxes;

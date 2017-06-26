@@ -40,6 +40,8 @@
 
 // object Includes
 #include <Account.h>
+#include <AccountLogin.h>
+#include <CharacterLogin.h>
 
 using namespace lobby;
 
@@ -79,9 +81,10 @@ static bool CompleteLogin(
             login = std::shared_ptr<objects::AccountLogin>(new objects::AccountLogin);
             login->SetAccount(account);
         }
-
-        login->SetWorldID(-1);
-        login->SetChannelID(-1);
+        else
+        {
+            login->SetCharacterLogin(std::make_shared<objects::CharacterLogin>());
+        }
 
         if(!accountManager->LoginUser(username, login))
         {

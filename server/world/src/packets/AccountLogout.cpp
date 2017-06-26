@@ -49,6 +49,7 @@ void Logout(std::shared_ptr<WorldServer> server,
     const libcomp::String username)
 {
     auto accountManager = server->GetAccountManager();
+    auto characterManager = server->GetCharacterManager();
 
     int8_t channelID;
     if(!accountManager->IsLoggedIn(username, channelID))
@@ -57,11 +58,22 @@ void Logout(std::shared_ptr<WorldServer> server,
     }
 
     LOG_DEBUG(libcomp::String("Logging out user: '%1'\n").Arg(username));
-    accountManager->LogoutUser(username, channelID);
+    auto loggedOut = accountManager->LogoutUser(username, channelID);
+    if(loggedOut)
+    {
+        auto cLogin = loggedOut->GetCharacterLogin();
+        characterManager->PartyLeave(cLogin, nullptr, true);
+
+        std::list<std::shared_ptr<objects::CharacterLogin>> cLogOuts;
+        cLogOuts.push_back(cLogin);
+
+        characterManager->SendStatusToRelatedCharacters(cLogOuts,
+            (uint8_t)CharacterLoginStateFlag_t::CHARLOGIN_BASIC);
+    }
 
     auto lobbyConnection = server->GetLobbyConnection();
 
-    //Relay the message  to the lobby
+    //Relay the message to the lobby
     libcomp::Packet lobbyMessage;
     lobbyMessage.WritePacketCode(
         InternalPacketCode_t::PACKET_ACCOUNT_LOGOUT);

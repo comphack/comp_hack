@@ -84,6 +84,17 @@ PACKET_PARSER_DECL(EventResponse);          // 0x00B7
 PACKET_PARSER_DECL(ValuableList);           // 0x00B8
 PACKET_PARSER_DECL(ObjectInteraction);      // 0x00BA
 PACKET_PARSER_DECL(FriendInfo);             // 0x00BD
+PACKET_PARSER_DECL(FriendRequest);          // 0x00C0
+PACKET_PARSER_DECL(FriendAddRemove);        // 0x00C3
+PACKET_PARSER_DECL(FriendData);             // 0x00C6
+PACKET_PARSER_DECL(PartyInvite);            // 0x00D2
+PACKET_PARSER_DECL(PartyJoin);              // 0x00D5
+PACKET_PARSER_DECL(PartyCancel);            // 0x00D8
+PACKET_PARSER_DECL(PartyLeave);             // 0x00DA
+PACKET_PARSER_DECL(PartyDisband);           // 0x00DD
+PACKET_PARSER_DECL(PartyLeaderUpdate);      // 0x00E0
+PACKET_PARSER_DECL(PartyDropRule);          // 0x00E3
+PACKET_PARSER_DECL(PartyKick);              // 0x00EB
 PACKET_PARSER_DECL(Sync);                   // 0x00F3
 PACKET_PARSER_DECL(Rotate);                 // 0x00F8
 PACKET_PARSER_DECL(UnionFlag);              // 0x0100
@@ -118,6 +129,9 @@ PACKET_PARSER_DECL(DigitalizeAssist);       // 0x0418
 PACKET_PARSER_DECL(SetWorldInfo);        // 0x1002
 PACKET_PARSER_DECL(SetOtherChannelInfo); // 0x1003
 PACKET_PARSER_DECL(AccountLogin);        // 0x1004
+PACKET_PARSER_DECL(CharacterLogin);      // 0x1007
+PACKET_PARSER_DECL(FriendsUpdate);       // 0x1008
+PACKET_PARSER_DECL(PartyUpdate);         // 0x1009
 
 } // namespace Parsers
 

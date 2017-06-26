@@ -42,6 +42,7 @@
 #include "DemonBox.h"
 #include "EntityStats.h"
 #include "Expertise.h"
+#include "FriendSettings.h"
 #include "Hotbar.h"
 #include "InheritedSkill.h"
 #include "Item.h"
@@ -337,6 +338,9 @@ bool PersistentObject::Initialize()
 
     RegisterType(typeid(objects::Expertise), objects::Expertise::GetMetadata(),
         []() {  return (PersistentObject*)new objects::Expertise(); });
+
+    RegisterType(typeid(objects::FriendSettings), objects::FriendSettings::GetMetadata(),
+        []() {  return (PersistentObject*)new objects::FriendSettings(); });
 
     RegisterType(typeid(objects::Hotbar), objects::Hotbar::GetMetadata(),
         []() {  return (PersistentObject*)new objects::Hotbar(); });

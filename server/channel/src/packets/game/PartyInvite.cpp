@@ -1,10 +1,10 @@
 /**
- * @file server/channel/src/packets/game/FriendInfo.cpp
+ * @file server/channel/src/packets/game/PartyInvite.cpp
  * @ingroup channel
  *
  * @author HACKfrost
  *
- * @brief Request from the client for the current player's own friend info.
+ * @brief Request from the client to invite someone to your party.
  *
  * This file is part of the Channel Server (channel).
  *
@@ -31,54 +31,56 @@
 #include <Packet.h>
 #include <PacketCodes.h>
 
-// object Includes
+// objects Includes
 #include <AccountLogin.h>
 #include <CharacterLogin.h>
-#include <FriendSettings.h>
 
 // channel Includes
 #include "ChannelServer.h"
 
 using namespace channel;
 
-bool Parsers::FriendInfo::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::PartyInvite::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {
-    if(p.Size() != 0)
+    if(p.Size() < 2 || (p.Size() != (uint32_t)(2 + p.PeekU16Little())))
     {
         return false;
     }
 
+    libcomp::String targetName = p.ReadString16Little(
+        libcomp::Convert::Encoding_t::ENCODING_CP932, true);
+
     auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
     auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
     auto state = client->GetClientState();
-    auto cLogin = state->GetAccountLogin()->GetCharacterLogin();
     auto character = state->GetCharacterState()->GetEntity();
-    auto fSettings = character->LoadFriendSettings(server->GetWorldDatabase());
+    auto worldDB = server->GetWorldDatabase();
 
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_FRIEND_INFO_SELF);
-    reply.WriteString16Little(libcomp::Convert::ENCODING_CP932,
-        character->GetName(), true);
-    reply.WriteU32Little((uint32_t)cLogin->GetWorldCID());
-    reply.WriteS8(0);
-    reply.WriteString16Little(libcomp::Convert::ENCODING_CP932,
-        fSettings->GetFriendMessage(), true);
+    auto target = objects::Character::LoadCharacterByName(worldDB, targetName);
+    if(target && target != character)
+    {
+        auto member = state->GetPartyCharacter(true);
 
-    auto privacySet = fSettings->GetPublicToZone();
-    reply.WriteU8(privacySet ? 1 : 0);
-    reply.WriteU8(fSettings->GetPublicToZone() ? 1 : 0);
+        libcomp::Packet request;
+        request.WritePacketCode(InternalPacketCode_t::PACKET_PARTY_UPDATE);
+        request.WriteU8((int8_t)InternalPacketAction_t::PACKET_ACTION_YN_REQUEST);
+        member->SavePacket(request, false);
+        request.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_UTF8,
+            targetName, true);
 
-    connection->SendPacket(reply);
-
-    // Request current friend info from the world to send on reply
-    libcomp::Packet request;
-    request.WritePacketCode(InternalPacketCode_t::PACKET_FRIENDS_UPDATE);
-    request.WriteU8((int8_t)InternalPacketAction_t::PACKET_ACTION_FRIEND_LIST);
-    request.WriteS32Little(cLogin->GetWorldCID());
-
-    server->GetManagerConnection()->GetWorldConnection()->SendPacket(request);
+        server->GetManagerConnection()->GetWorldConnection()->SendPacket(request);
+    }
+    else
+    {
+        libcomp::Packet reply;
+        reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_PARTY_INVITE);
+        reply.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_CP932,
+            targetName, true);
+        reply.WriteU16Little(201);  // Offline
+        client->SendPacket(reply);
+    }
 
     return true;
 }

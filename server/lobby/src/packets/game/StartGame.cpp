@@ -38,6 +38,7 @@
 #include <Account.h>
 #include <AccountLogin.h>
 #include <Character.h>
+#include <CharacterLogin.h>
 
 // lobby Includes
 #include "AccountManager.h"
@@ -84,11 +85,11 @@ bool Parsers::StartGame::Parse(libcomp::ManagerPacket *pPacketManager,
     server->GetSessionManager()->ExpireSession(username, 0);
 
     auto login = accountManager->GetUserLogin(username);
-    login->SetCID(cid);
+    login->GetCharacterLogin()->SetCharacter(account->GetCharacters(cid));
 
     libcomp::Packet request;
     request.WritePacketCode(InternalPacketCode_t::PACKET_ACCOUNT_LOGIN);
-    login->SavePacket(request);
+    login->SavePacket(request, false);
 
     world->GetConnection()->SendPacket(request);
 

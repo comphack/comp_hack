@@ -528,7 +528,14 @@ bool SkillManager::ExecuteNormalSkill(const std::shared_ptr<ChannelClientConnect
         }
     }
 
-    // Apply calculation results
+    std::set<std::shared_ptr<ActiveEntityState>> displayStateModified;
+    if(hpCost > 0 || mpCost > 0)
+    {
+        displayStateModified.insert(source);
+    }
+
+    // Apply calculation results, keeping track of entities that may
+    // need to update the world with their modified state
     for(auto target : targetResults)
     {
         if(hasBattleDamage)
@@ -556,7 +563,10 @@ bool SkillManager::ExecuteNormalSkill(const std::shared_ptr<ChannelClientConnect
                         }
                         break;
                     default:
-                        hpAdjust = (int32_t)(mpAdjust + val);
+                        if(hpMode)
+                        {
+                            hpAdjust = (int32_t)(hpAdjust + val);
+                        }
                         break;
                 }
             }
@@ -591,6 +601,16 @@ bool SkillManager::ExecuteNormalSkill(const std::shared_ptr<ChannelClientConnect
 
             targetStats->SetHP(static_cast<int16_t>(hpAdjust));
             targetStats->SetMP(static_cast<int16_t>(mpAdjust));
+
+            switch(target.EntityState->GetEntityType())
+            {
+                case objects::EntityStateObject::EntityType_t::CHARACTER:
+                case objects::EntityStateObject::EntityType_t::PARTNER_DEMON:
+                    displayStateModified.insert(target.EntityState);
+                    break;
+                default:
+                    break;
+            }
         }
 
         target.EntityState->RecalculateStats(definitionManager);
@@ -651,6 +671,34 @@ bool SkillManager::ExecuteNormalSkill(const std::shared_ptr<ChannelClientConnect
     }
 
     client->SendPacket(reply);
+
+    // Each entity with adjusted HP/MP needs to be communicated to the world
+    // if they belong to a party
+    if(displayStateModified.size() > 0)
+    {
+        auto worldConnection = server->GetManagerConnection()
+            ->GetWorldConnection();
+        for(auto entity : displayStateModified)
+        {
+            auto entityClientState = ClientState::GetEntityClientState(
+                entity->GetEntityID());
+            if(!entityClientState || !entityClientState->GetPartyID()) continue;
+
+            libcomp::Packet packet;
+            if(entity->GetEntityType() ==
+                objects::EntityStateObject::EntityType_t::PARTNER_DEMON)
+            {
+                entityClientState->GetPartyDemonPacket(packet);
+            }
+            else
+            {
+                entityClientState->GetPartyCharacterPacket(packet);
+            }
+            worldConnection->QueuePacket(packet);
+        }
+
+        worldConnection->FlushOutgoing();
+    }
 
     return true;
 }

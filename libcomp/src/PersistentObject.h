@@ -247,13 +247,19 @@ public:
 
     /**
      * Create a new instance of a PersistentObject of the specified type.
+     * @param doRegister Register the pointer automatically on success.
      * @return Pointer to a new PersistentObject of the specified type
      */
-    template<class T> static std::shared_ptr<T> New()
+    template<class T> static std::shared_ptr<T> New(bool doRegister = false)
     {
         if(std::is_base_of<PersistentObject, T>::value)
         {
-            return std::dynamic_pointer_cast<T>(New(typeid(T).hash_code()));
+            auto result = std::dynamic_pointer_cast<T>(New(typeid(T).hash_code()));
+            if(doRegister)
+            {
+                result->Register(result);
+            }
+            return result;
         }
 
         return nullptr;

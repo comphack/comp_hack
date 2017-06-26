@@ -1,10 +1,11 @@
 /**
- * @file server/channel/src/packets/game/Sync.cpp
+ * @file server/channel/src/packets/game/State.cpp
  * @ingroup channel
  *
  * @author HACKfrost
  *
- * @brief Request from the client to sync with the server time.
+ * @brief Request from the client to retrieve the player's initial login
+ *  state information.
  *
  * This file is part of the Channel Server (channel).
  *
@@ -28,6 +29,11 @@
 
 // libcomp Includes
 #include <ManagerPacket.h>
+#include <PacketCodes.h>
+
+// object Includes
+#include <AccountLogin.h>
+#include <CharacterLogin.h>
 
 // channel Includes
 #include "ChannelServer.h"
@@ -35,16 +41,35 @@
 
 using namespace channel;
 
-void SendCharacterData(std::shared_ptr<ChannelServer> server,
+void SendStateData(std::shared_ptr<ChannelServer> server,
     const std::shared_ptr<ChannelClientConnection> client)
 {
-    server->GetCharacterManager()->SendCharacterData(client);
-}
+    auto state = client->GetClientState();
+    auto cLogin = state->GetAccountLogin()->GetCharacterLogin();
+    auto characterManager = server->GetCharacterManager();
 
-void SetStatusIcon(CharacterManager* characterManager,
-    const std::shared_ptr<ChannelClientConnection> client)
-{
+    characterManager->SendCharacterData(client);
     characterManager->SetStatusIcon(client);
+
+    // If we're already in a party, send party member info to rejoin
+    // the existing one if possible
+    if(cLogin->GetPartyID())
+    {
+        libcomp::Packet request;
+        request.WritePacketCode(InternalPacketCode_t::PACKET_CHARACTER_LOGIN);
+        request.WriteS32Little(cLogin->GetWorldCID());
+
+        request.WriteU8((uint8_t)CharacterLoginStateFlag_t::CHARLOGIN_PARTY_INFO
+            | (uint8_t)CharacterLoginStateFlag_t::CHARLOGIN_PARTY_DEMON_INFO);
+        
+        auto member = state->GetPartyCharacter(false);
+        member->SavePacket(request, true);
+
+        auto partyDemon = state->GetPartyDemon();
+        partyDemon->SavePacket(request, true);
+
+        server->GetManagerConnection()->GetWorldConnection()->SendPacket(request);
+    }
 }
 
 bool Parsers::State::Parse(libcomp::ManagerPacket *pPacketManager,
@@ -56,8 +81,7 @@ bool Parsers::State::Parse(libcomp::ManagerPacket *pPacketManager,
     auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
     auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
 
-    server->QueueWork(SendCharacterData, server, client);
-    server->QueueWork(SetStatusIcon, server->GetCharacterManager(), client);
+    server->QueueWork(SendStateData, server, client);
 
     return true;
 }

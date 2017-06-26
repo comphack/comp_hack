@@ -305,7 +305,7 @@ String Convert::FromEncoding(Encoding_t encoding,
 
 String Convert::FromEncoding(Encoding_t encoding, const std::vector<char>& str)
 {
-    return FromEncoding(encoding, &str[0], (int)str.size());
+    return str.size() > 0 ? FromEncoding(encoding, &str[0], (int)str.size()) : String();
 }
 
 std::vector<char> Convert::ToEncoding(Encoding_t encoding, const String& str,

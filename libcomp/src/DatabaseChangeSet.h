@@ -106,7 +106,31 @@ private:
 /**
  * Standard database change set consisting of inserts, updates or
  * deletes which will be processed in that order, NOT the order they
- * were added in.
+ * were added in. Here is some normal usecase example code:
+ * @code
+ * // Using objects::Item instances "item1", "item2" and "item3" and database
+ * // instance "db"
+ *
+ * // Create a standard change set using the static create function
+ * // This is equivalent to:
+ * // auto changeset = std::make_shared<libcomp::DBStandardChangeSet>();
+ * auto changeset = libcomp::DatabaseChangeSet::Create();
+ *
+ * // Mark new object item1 as an insert
+ * changeset->Insert(item1);
+ *
+ * // Mark existing object item2 as an update
+ * changeset->Update(item2);
+ *
+ * // Mark existing object item3 as a delete
+ * changeset->Delete(item3);
+ *
+ * // Process all 3 at once as an all or nothing operation. It doesn't
+ * // matter in this instance what order they are processed in as they
+ * // do not have fields referencing one another but the order would be
+ * // item1 inserted, item2 updated, item3 deleted
+ * db.ProcessChangeSet(changeset);
+ * @endcode
  */
 class DBStandardChangeSet : public DatabaseChangeSet
 {
@@ -362,7 +386,38 @@ private:
 /**
  * Operational database change set consisting of inserts, updates,
  * deletes or explicit updates which will be processed in the order
- * they were added in.
+ * they were added in. Here is some normal usecase example code:
+ * @code
+ * // Using objects::Item instance "item", objects::Inventory instance
+ * // "inventory", related objects::Account instance "account" as well
+ * // as database instance "db"
+ *
+ * // Create the changeset
+ * auto opChangeset = std::make_shared<libcomp::DBOperationalChangeSet>();
+ *
+ * // Create an explicit update for the account, spending 5 CP. This
+ * // assumes account has at least 5 CP in memory before attempting this logic
+ * auto expl = std::make_shared<libcomp::DBExplicitUpdate>(account);
+ * expl->SubtractFrom<int64_t>("CP", 5, acccount->GetCP() - 5);
+ *
+ * // Add the update to the operation set
+ * opChangeset->AddOperation(expl);
+ *
+ * // Insert the item which has already been allocated a box slot
+ * opChangeset->Insert(item);
+ *
+ * // Update the inventory which has already had its box slot set in memory
+ * opChangeset->Update(inventory);
+ *
+ * // Process the 3 changes as an all or nothing operation in the order
+ * // they were specified.
+ * if(!db.ProcessChangeSet(opChangeset))
+ * {
+ *     // Handle any failure reporting here. If it fails, the account will
+ *     // be in the state it was already in, the item will not be inserted
+ *     // and the inventory will have reloaded with its current database values
+ * }
+ * @endcode
  */
 class DBOperationalChangeSet : public DatabaseChangeSet
 {

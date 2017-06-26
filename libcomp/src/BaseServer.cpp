@@ -46,33 +46,33 @@
 
 using namespace libcomp;
 
+std::string BaseServer::sConfigPath;
+
 BaseServer::BaseServer(const char *szProgram, std::shared_ptr<
-    objects::ServerConfig> config, const String& configPath) :
+    objects::ServerConfig> config) :
     TcpServer("any", config->GetPort()), mConfig(config), mDataStore(szProgram)
 {
-    ReadConfig(config, configPath);
 }
 
 bool BaseServer::Initialize()
 {
-    auto log = libcomp::Log::GetSingletonPtr();
+    SetDiffieHellman(LoadDiffieHellman(
+        mConfig->GetDiffieHellmanKeyPair()));
 
-    log->SetLogLevelEnabled(libcomp::Log::LOG_LEVEL_DEBUG,
-        mConfig->GetLogDebug());
-    log->SetLogLevelEnabled(libcomp::Log::LOG_LEVEL_INFO,
-        mConfig->GetLogInfo());
-    log->SetLogLevelEnabled(libcomp::Log::LOG_LEVEL_WARNING,
-        mConfig->GetLogWarning());
-    log->SetLogLevelEnabled(libcomp::Log::LOG_LEVEL_ERROR,
-        mConfig->GetLogError());
-    log->SetLogLevelEnabled(libcomp::Log::LOG_LEVEL_CRITICAL,
-        mConfig->GetLogCritical());
-
-    if(!mConfig->GetLogFile().IsEmpty())
+    if(nullptr == GetDiffieHellman())
     {
-        log->SetLogPath(mConfig->GetLogFile(), !mConfig->GetLogFileAppend());
-        log->SetLogFileTimestampsEnabled(mConfig->GetLogFileTimestamp());
+        LOG_WARNING("No DH key pair set in the config file, it will"
+            " need to be generated on startup.\n");
     }
+
+    if(mConfig->GetPort() == 0)
+    {
+        LOG_WARNING("No port specified.\n");
+        return false;
+    }
+
+    LOG_DEBUG(libcomp::String("Port: %1\n").Arg(
+        mConfig->GetPort()));
 
     if(0 == mConfig->DataStoreCount())
     {
@@ -212,7 +212,7 @@ std::shared_ptr<Database> BaseServer::GetDatabase(
             }
             else
             {
-                std::string configPath = GetDefaultConfigPath() +
+                std::string configPath = GetConfigPath() +
                     configFile.ToUtf8();
                 if(!InsertDataFromFile(configPath, db))
                 {
@@ -276,6 +276,23 @@ void BaseServer::Shutdown()
     }
 }
 
+std::string BaseServer::GetConfigPath()
+{
+    if(!sConfigPath.empty())
+    {
+        return sConfigPath;
+    }
+    else
+    {
+        return GetDefaultConfigPath();
+    }
+}
+
+void BaseServer::SetConfigPath(const std::string& path)
+{
+    sConfigPath = path;
+}
+
 std::string BaseServer::GetDefaultConfigPath()
 {
 #ifdef _WIN32
@@ -320,32 +337,28 @@ bool BaseServer::ReadConfig(std::shared_ptr<objects::ServerConfig> config, tinyx
 
     if(nullptr == pObject || !config->Load(doc, *pObject))
     {
-        LOG_WARNING("Failed to load config file\n");
         return false;
     }
     else
     {
-        //Set the shared members
-        LOG_DEBUG(libcomp::String("DH Pair: %1\n").Arg(
-            config->GetDiffieHellmanKeyPair()));
+        auto log = libcomp::Log::GetSingletonPtr();
 
-        SetDiffieHellman(LoadDiffieHellman(
-            config->GetDiffieHellmanKeyPair()));
+        log->SetLogLevelEnabled(libcomp::Log::LOG_LEVEL_DEBUG,
+            config->GetLogDebug());
+        log->SetLogLevelEnabled(libcomp::Log::LOG_LEVEL_INFO,
+            config->GetLogInfo());
+        log->SetLogLevelEnabled(libcomp::Log::LOG_LEVEL_WARNING,
+            config->GetLogWarning());
+        log->SetLogLevelEnabled(libcomp::Log::LOG_LEVEL_ERROR,
+            config->GetLogError());
+        log->SetLogLevelEnabled(libcomp::Log::LOG_LEVEL_CRITICAL,
+            config->GetLogCritical());
 
-        if(nullptr == GetDiffieHellman())
+        if(!config->GetLogFile().IsEmpty())
         {
-            LOG_WARNING("Failed to load DH key pair from config file\n");
-            return false;
+            log->SetLogPath(config->GetLogFile(), !config->GetLogFileAppend());
+            log->SetLogFileTimestampsEnabled(config->GetLogFileTimestamp());
         }
-
-        if(config->GetPort() == 0)
-        {
-            LOG_WARNING("No port specified\n");
-            return false;
-        }
-
-        LOG_DEBUG(libcomp::String("Port: %1\n").Arg(
-            config->GetPort()));
     }
 
     return true;

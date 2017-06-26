@@ -44,8 +44,8 @@
 using namespace channel;
 
 ChannelServer::ChannelServer(const char *szProgram, std::shared_ptr<
-    objects::ServerConfig> config, const libcomp::String& configPath) :
-    libcomp::BaseServer(szProgram, config, configPath), mAccountManager(0),
+    objects::ServerConfig> config) :
+    libcomp::BaseServer(szProgram, config), mAccountManager(0),
     mActionManager(0), mCharacterManager(0), mChatManager(0), mEventManager(0),
     mSkillManager(0), mZoneManager(0), mDefinitionManager(0), mServerDataManager(0),
     mMaxEntityID(0), mMaxObjectID(0)

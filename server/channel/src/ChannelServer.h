@@ -65,10 +65,9 @@ public:
      * @param szProgram First command line argument for the application.
      * @param config Pointer to a casted ChannelConfig that will contain properties
      *   every server has in addition to channel specific ones.
-     * @param configPath File path to the location of the config to be loaded.
      */
     ChannelServer(const char *szProgram, std::shared_ptr<
-        objects::ServerConfig> config, const libcomp::String& configPath);
+        objects::ServerConfig> config);
 
     /**
      * Clean up the server.

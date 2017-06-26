@@ -49,9 +49,8 @@
 using namespace lobby;
 
 LobbyServer::LobbyServer(const char *szProgram, std::shared_ptr<
-    objects::ServerConfig> config, const libcomp::String& configPath,
-    bool unitTestMode) : libcomp::BaseServer(szProgram, config, configPath),
-    mUnitTestMode(unitTestMode)
+    objects::ServerConfig> config, bool unitTestMode)
+    : libcomp::BaseServer(szProgram, config), mUnitTestMode(unitTestMode)
 {
 }
 
@@ -513,7 +512,7 @@ void LobbyServer::PromptCreateAccount()
 
 bool LobbyServer::Setup()
 {
-    std::string configPath = GetDefaultConfigPath() + "setup.xml";
+    std::string configPath = GetConfigPath() + "setup.xml";
     return InsertDataFromFile(configPath, mDatabase,
         std::set<std::string>{ "Account" });
 }

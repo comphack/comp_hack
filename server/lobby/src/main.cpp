@@ -74,6 +74,20 @@ int main(int argc, const char *argv[])
 
         LOG_DEBUG(libcomp::String("Using custom config path %1\n").Arg(
             configPath));
+
+        size_t pos = configPath.find_last_of("\\/");
+        if(std::string::npos != pos)
+        {
+            libcomp::BaseServer::SetConfigPath(
+                configPath.substr(0, ((size_t)pos+1)));
+        }
+    }
+
+    auto config = std::make_shared<objects::LobbyConfig>();
+    if(!libcomp::BaseServer::ReadConfig(config, configPath))
+    {
+        LOG_WARNING("Failed to load the lobby config file."
+            " Default values will be used.\n");
     }
 
     if(!libcomp::PersistentObject::Initialize())
@@ -83,10 +97,8 @@ int main(int argc, const char *argv[])
 
         return EXIT_FAILURE;
     }
-
-    auto config = std::make_shared<objects::LobbyConfig>();
     auto server = std::make_shared<lobby::LobbyServer>(
-        argv[0], config, configPath, unitTestMode);
+        argv[0], config, unitTestMode);
 
     if(!server->Initialize())
     {

@@ -187,7 +187,7 @@ namespace ServerConfig
 static inline ServerTestConfig LobbyOnly()
 {
     return ServerTestConfig(
-        std::chrono::milliseconds(5000),
+        std::chrono::milliseconds(10000),
         std::chrono::milliseconds(3000),
         "bin/testing/programs-lobby.xml");
 }

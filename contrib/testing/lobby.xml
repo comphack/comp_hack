@@ -7,7 +7,7 @@
         <member name="DatabaseType">MARIADB</member>    <!-- CASSANDRA/MARIADB/SQLITE3 -->
         <member name="MultithreadMode">true</member>
         <member name="DataStore">
-            <element>/var/lib/comp_hack</element>
+            <element>bin/testing</element>
         </member>
         <member name="DataStoreSync">true</member>
         <member name="LogFile">/var/log/comp_hack/lobby.log</member>

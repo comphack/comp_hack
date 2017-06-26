@@ -66,7 +66,6 @@ before_install:
   - cd /opt/ninja/bin
   - sudo unzip $CACHE_DIR/ninja-linux.zip
   - sudo chmod 755 ninja
-  - sudo mkdir -p /var/lib/comp_hack/zones
   - sudo mkdir -p /var/log/comp_hack
   - sudo chown `whoami`:`whoami` /var/log/comp_hack
   - export PATH="/opt/ninja/bin:${PATH}"
@@ -92,14 +91,7 @@ before_script:
 script:
   - jdk_switcher use oraclejdk8
   - java -version
-  - sudo mkdir /etc/comp_hack
-  - sudo cp contrib/testing/*.xml /etc/comp_hack/
   - mkdir -p build && cd build && cmake -G "${GENERATOR}" .. && cmake --build .
   - cmake --build . --target doc
   - cmake --build . --target guide
-  - bin/comp_lobby --test &
-  - sleep 10
-  - bin/comp_world &
-  - sleep 10
-  - bin/comp_channel &
   - cmake --build . --target test

@@ -1,12 +1,12 @@
 /**
- * @file tools/manager/src/DayCare.h
- * @ingroup tools
+ * @file libcomp/src/DayCare.h
+ * @ingroup libcomp
  *
  * @author COMP Omega <compomega@tutanota.com>
  *
  * @brief Big brother keeps the little monsters under control (sorta).
  *
- * This tool will spawn and manage server processes.
+ * This file is part of the COMP_hack Library (libcomp).
  *
  * Copyright (C) 2012-2017 COMP_hack Team <compomega@tutanota.com>
  *
@@ -24,17 +24,20 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef TOOLS_MANAGER_SRC_DAYCARE_H
-#define TOOLS_MANAGER_SRC_DAYCARE_H
+#ifndef LIBCOMP_SRC_DAYCARE_H
+#define LIBCOMP_SRC_DAYCARE_H
 
-// manager Includes
+// libcomp Includes
 #include "Child.h"
 
 // Standard C++11 Includes
 #include <memory>
 #include <mutex>
 
-namespace manager
+// tinyxml Includes
+#include <tinyxml2.h>
+
+namespace libcomp
 {
 
 class SpawnThread;
@@ -43,10 +46,11 @@ class WatchThread;
 class DayCare
 {
 public:
-    DayCare();
+    DayCare(bool printDetails = true);
     ~DayCare();
 
     bool DetainMonsters(const std::string& path);
+    bool LoadProcessXml(const std::string& xml);
 
     bool IsRunning() const;
     bool HaveChildren();
@@ -60,7 +64,10 @@ public:
         const std::list<std::shared_ptr<Child>>& children);
 
 private:
+    bool LoadProcessDoc(tinyxml2::XMLDocument& doc);
+
     bool mRunning;
+    bool mPrintDetails;
 
     SpawnThread *mSpawnThread;
     WatchThread *mWatchThread;
@@ -69,6 +76,6 @@ private:
     std::mutex mChildrenShackles;
 };
 
-} // namespace manager
+} // namespace libcomp
 
-#endif // TOOLS_MANAGER_SRC_DAYCARE_H
+#endif // LIBCOMP_SRC_DAYCARE_H

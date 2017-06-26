@@ -1,12 +1,12 @@
 /**
- * @file tools/manager/src/DayCare.h
- * @ingroup tools
+ * @file libcomp/src/DayCare.h
+ * @ingroup libcomp
  *
  * @author COMP Omega <compomega@tutanota.com>
  *
  * @brief Big brother keeps the little monsters under control (sorta).
  *
- * This tool will spawn and manage server processes.
+ * This file is part of the COMP_hack Library (libcomp).
  *
  * Copyright (C) 2012-2017 COMP_hack Team <compomega@tutanota.com>
  *
@@ -31,12 +31,11 @@
 // Standard C++11 Includes
 #include <algorithm>
 
-// tinyxml Includes
-#include <tinyxml2.h>
+using namespace libcomp;
 
-using namespace manager;
-
-DayCare::DayCare() : mRunning(true), mSpawnThread(new SpawnThread(this)),
+DayCare::DayCare(bool printDetails) : mRunning(true),
+    mPrintDetails(printDetails),
+    mSpawnThread(new SpawnThread(this, printDetails)),
     mWatchThread(new WatchThread(this))
 {
 }
@@ -52,87 +51,102 @@ DayCare::~DayCare()
 
 bool DayCare::DetainMonsters(const std::string& path)
 {
-    std::list<std::shared_ptr<Child>> children;
-
     tinyxml2::XMLDocument doc;
 
     if(tinyxml2::XML_SUCCESS == doc.LoadFile(path.c_str()))
     {
-        tinyxml2::XMLElement *pRoot = doc.FirstChildElement("programs");
+        return LoadProcessDoc(doc);
+    }
 
-        if(nullptr == pRoot)
+    return false;
+}
+
+bool DayCare::LoadProcessXml(const std::string& xml)
+{
+    tinyxml2::XMLDocument doc;
+
+    if(tinyxml2::XML_SUCCESS == doc.Parse(xml.c_str()))
+    {
+        return LoadProcessDoc(doc);
+    }
+
+    return false;
+}
+
+bool DayCare::LoadProcessDoc(tinyxml2::XMLDocument& doc)
+{
+    std::list<std::shared_ptr<Child>> children;
+
+    tinyxml2::XMLElement *pRoot = doc.FirstChildElement("programs");
+
+    if(nullptr == pRoot)
+    {
+        return false;
+    }
+
+    tinyxml2::XMLElement *pProgram = pRoot->FirstChildElement("program");
+
+    while(nullptr != pProgram)
+    {
+        tinyxml2::XMLElement *pPath = pProgram->FirstChildElement("path");
+
+        if(nullptr == pPath)
         {
             return false;
         }
 
-        tinyxml2::XMLElement *pProgram = pRoot->FirstChildElement("program");
+        const char *szPath = pPath->GetText();
 
-        while(nullptr != pProgram)
+        if(nullptr == szPath)
         {
-            tinyxml2::XMLElement *pPath = pProgram->FirstChildElement("path");
-
-            if(nullptr == pPath)
-            {
-                return false;
-            }
-
-            const char *szPath = pPath->GetText();
-
-            if(nullptr == szPath)
-            {
-                return false;
-            }
-
-            tinyxml2::XMLElement *pArg = pProgram->FirstChildElement("arg");
-
-            std::list<std::string> arguments;
-
-            while(nullptr != pArg)
-            {
-                const char *szArg = pArg->GetText();
-
-                if(nullptr == szArg)
-                {
-                    return false;
-                }
-
-                arguments.push_back(szArg);
-
-                pArg = pArg->NextSiblingElement("arg");
-            }
-
-            int timeout = 0;
-            bool restart = false;
-
-            const char *szTimeout = pProgram->Attribute("timeout");
-            const char *szRestart = pProgram->Attribute("restart");
-
-            if(nullptr != szTimeout)
-            {
-                timeout = atoi(szTimeout);
-            }
-
-            if(nullptr != szRestart)
-            {
-                std::string s(szRestart);
-                std::transform(s.begin(), s.end(), s.begin(), ::tolower);
-
-                if(s == "true" || s == "on" || s == "1" || s == "yes")
-                {
-                    restart = true;
-                }
-            }
-
-            auto child = std::make_shared<Child>(szPath, arguments,
-                timeout, restart);
-            children.push_back(child);
-
-            pProgram = pProgram->NextSiblingElement("program");
+            return false;
         }
-    }
-    else
-    {
-        return false;
+
+        tinyxml2::XMLElement *pArg = pProgram->FirstChildElement("arg");
+
+        std::list<std::string> arguments;
+
+        while(nullptr != pArg)
+        {
+            const char *szArg = pArg->GetText();
+
+            if(nullptr == szArg)
+            {
+                return false;
+            }
+
+            arguments.push_back(szArg);
+
+            pArg = pArg->NextSiblingElement("arg");
+        }
+
+        int timeout = 0;
+        bool restart = false;
+
+        const char *szTimeout = pProgram->Attribute("timeout");
+        const char *szRestart = pProgram->Attribute("restart");
+
+        if(nullptr != szTimeout)
+        {
+            timeout = atoi(szTimeout);
+        }
+
+        if(nullptr != szRestart)
+        {
+            std::string s(szRestart);
+            std::transform(s.begin(), s.end(), s.begin(), ::tolower);
+
+            if(s == "true" || s == "on" || s == "1" || s == "yes")
+            {
+                restart = true;
+            }
+        }
+
+        auto child = std::make_shared<Child>(szPath, arguments,
+            timeout, restart);
+        children.push_back(child);
+
+        pProgram = pProgram->NextSiblingElement("program");
     }
 
     std::lock_guard<std::mutex> guard(mChildrenShackles);
@@ -193,8 +207,11 @@ void DayCare::NotifyExit(pid_t pid, int status)
 
     if(child)
     {
-        printf("%d exit with status %d: %s\n", pid, status,
-            child->GetCommandLine().c_str());
+        if(mPrintDetails || 0 != status)
+        {
+            printf("%d exit with status %d: %s\n", pid, status,
+                child->GetCommandLine().c_str());
+        }
 
         if(mRunning && child->ShouldRestart())
         {

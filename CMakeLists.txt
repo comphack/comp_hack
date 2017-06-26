@@ -354,7 +354,8 @@ MACRO(CREATE_GTESTS)
                 ${CMAKE_THREAD_LIBS_INIT} ${ZLIB_LIBRARIES})
 
             # Add the test to CTest.
-            ADD_TEST(NAME ${test} COMMAND ${EXECUTABLE_OUTPUT_PATH}/${ttest})
+            ADD_TEST(NAME ${test} COMMAND ${EXECUTABLE_OUTPUT_PATH}/${ttest}
+                WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
         ELSE() # Must be a library.
             # Add the library to the list.
             SET(TEST_LIBS ${TEST_LIBS} ${test})
@@ -428,6 +429,8 @@ MACRO(RSPEC_TESTS)
     FOREACH(test ${ARGN})
         ADD_TEST(NAME ${test} COMMAND rspec ${test}.rb
             WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/rspec)
+        SET_PROPERTY(TEST ${test} PROPERTY ENVIRONMENT
+            "TESTING_DIR=${CMAKE_BINARY_DIR}")
     ENDFOREACH(test ${ARGN})
 ENDMACRO(RSPEC_TESTS)
 
@@ -473,3 +476,7 @@ IF(NOT WIN32)
     INSTALL(FILES icons/64x64/comp_hack.png
         DESTINATION share/app-install/icons)
 ENDIF(NOT WIN32)
+
+# Copy all contrib/testing to the bin directory.
+FILE(COPY "${CMAKE_SOURCE_DIR}/contrib/testing"
+    DESTINATION "${CMAKE_BINARY_DIR}/bin")

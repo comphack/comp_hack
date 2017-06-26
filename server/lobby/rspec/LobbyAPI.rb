@@ -24,6 +24,37 @@ password = 'same_as_my_luggage'
 server = 'http://127.0.0.1:10999'
 
 describe "API" do
+    before(:all) do
+        @serverProcess = fork do
+            comp_manager = ENV['TESTING_DIR'] + '/bin/comp_manager'
+            config_path = ENV['TESTING_DIR'] + '/bin/testing/programs-lobby.xml'
+
+            Dir.chdir ENV['TESTING_DIR']
+            Kernel.exec comp_manager, config_path
+        end
+
+        sleep 3.0
+    end
+
+    after(:all) do
+        begin
+            Process.kill "INT", @serverProcess
+
+            # If the process does not exit, force it to.
+            begin
+                Timeout::timeout(3.0) {
+                    Process.wait @serverProcess
+                }
+            rescue Timeout::Error
+                Process.kill "KILL", @serverProcess
+            end
+
+            Process.wait @serverProcess
+        rescue SystemCallError
+            # Do nothing if an error occurs.
+        end
+    end
+
     describe "/account/get_challenge" do
         it "Bad user" do
             s = Session.new(server, 'hackerBob', 'hackMe')

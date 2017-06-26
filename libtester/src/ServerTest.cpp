@@ -1,12 +1,12 @@
 /**
- * @file tools/manager/src/WatchThread.h
- * @ingroup tools
+ * @file libtester/src/ServerTest.cpp
+ * @ingroup libtester
  *
  * @author COMP Omega <compomega@tutanota.com>
  *
- * @brief Thread to monitor child processes for exit.
+ * @brief Function to assist with testing a suite of server applications.
  *
- * This tool will spawn and manage server processes.
+ * This file is part of the COMP_hack Tester Library (libtester).
  *
  * Copyright (C) 2012-2017 COMP_hack Team <compomega@tutanota.com>
  *
@@ -24,37 +24,29 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef TOOLS_MANAGER_SRC_WATCHTHREAD_H
-#define TOOLS_MANAGER_SRC_WATCHTHREAD_H
+#include "ServerTest.h"
 
-// manager Includes
-#include "Child.h"
+using namespace libtester;
 
-// Standard C++11 Includes
-#include <thread>
-
-// libcomp Includes
-#include <MessageQueue.h>
-
-namespace manager
+ServerTestConfig::ServerTestConfig(
+    const std::chrono::milliseconds& testTime,
+    const std::chrono::milliseconds& bootTime,
+    const std::string& programsPath) : mTestTime(testTime),
+    mBootTime(bootTime), mProgramsPath(programsPath)
 {
+}
 
-class DayCare;
-
-class WatchThread
+std::chrono::milliseconds ServerTestConfig::GetTestTime() const
 {
-public:
-    explicit WatchThread(DayCare *pJuvy);
-    ~WatchThread();
+    return mTestTime;
+}
 
-    void Run();
-    void WaitForExit();
+std::chrono::milliseconds ServerTestConfig::GetBootTime() const
+{
+    return mBootTime;
+}
 
-private:
-    DayCare *mDayCare;
-    std::thread *mThread;
-};
-
-} // namespace manager
-
-#endif // TOOLS_MANAGER_SRC_WATCHTHREAD_H
+std::string ServerTestConfig::GetProgramsPath() const
+{
+    return mProgramsPath;
+}

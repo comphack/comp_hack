@@ -59,9 +59,17 @@ bool Parsers::ChannelList::Parse(libcomp::ManagerPacket *pPacketManager,
         reply.WriteString16Little(libcomp::Convert::ENCODING_UTF8,
             channel->GetName(), true);
 
-        reply.WriteU8(1);   // Unknown bool
-        reply.WriteS8(0);   // Unknown
-        reply.WriteS8(0);   // Unknown (visibility?)
+        /*
+         * Server status is as follows:
+         * 0-24 Comfortable
+         * 25-39 Normal
+         * 40-98 Conjested
+         * 99 Full (White Text)
+         * 100+ Full (Red Text)
+         */
+        reply.WriteU8(1); // Server online (bool)
+        reply.WriteS8(0); // Server status
+        reply.WriteS8(0); // Visibility (0=normal, 2=PvP, instance or hidden)
     }
 
     connection->SendPacket(reply);

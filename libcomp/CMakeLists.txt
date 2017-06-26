@@ -91,6 +91,12 @@ SET(${PROJECT_NAME}_SRCS
     src/TcpServer.cpp
     #src/ThreadManager.cpp
     src/Worker.cpp
+
+    # for comp_manager and testing.
+    src/Child.cpp
+    src/DayCare.cpp
+    src/SpawnThread.cpp
+    src/WatchThread.cpp
 )
 
 IF(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/src/ConfigCustom.cpp)

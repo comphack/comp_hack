@@ -1,12 +1,12 @@
 /**
- * @file tools/manager/src/Child.cpp
- * @ingroup tools
+ * @file libcomp/src/Child.cpp
+ * @ingroup libcomp
  *
  * @author COMP Omega <compomega@tutanota.com>
  *
  * @brief Class to wrap and manage a child process.
  *
- * This tool will spawn and manage server processes.
+ * This file is part of the COMP_hack Library (libcomp).
  *
  * Copyright (C) 2012-2017 COMP_hack Team <compomega@tutanota.com>
  *
@@ -37,7 +37,7 @@
 // Standard C++ Includes
 #include <sstream>
 
-using namespace manager;
+using namespace libcomp;
 
 static pid_t CreateProcess(const char *szProgram,
     char * const szArguments[], bool redirectOutput = true)

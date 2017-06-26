@@ -1,12 +1,12 @@
 /**
- * @file tools/manager/src/SpawnThread.cpp
- * @ingroup tools
+ * @file libcomp/src/SpawnThread.cpp
+ * @ingroup libcomp
  *
  * @author COMP Omega <compomega@tutanota.com>
  *
  * @brief Thread to spawn new child processes.
  *
- * This tool will spawn and manage server processes.
+ * This file is part of the COMP_hack Library (libcomp).
  *
  * Copyright (C) 2012-2017 COMP_hack Team <compomega@tutanota.com>
  *
@@ -27,9 +27,10 @@
 #include "SpawnThread.h"
 #include "DayCare.h"
 
-using namespace manager;
+using namespace libcomp;
 
-SpawnThread::SpawnThread(DayCare *pJuvy) : mDayCare(pJuvy)
+SpawnThread::SpawnThread(DayCare *pJuvy, bool printDetails) :
+    mPrintDetails(printDetails), mDayCare(pJuvy)
 {
     mThread = new std::thread([](SpawnThread *pThread){
         pThread->Run();
@@ -82,8 +83,11 @@ void SpawnThread::Run()
             {
                 if(child->Start())
                 {
-                    printf("Started with PID %d: %s\n", child->GetPID(),
-                        child->GetCommandLine().c_str());
+                    if(mPrintDetails)
+                    {
+                        printf("Started with PID %d: %s\n", child->GetPID(),
+                            child->GetCommandLine().c_str());
+                    }
 
                     int timeout = child->GetBootTimeout();
 

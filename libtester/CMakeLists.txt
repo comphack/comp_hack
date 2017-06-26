@@ -25,12 +25,14 @@ SET(${PROJECT_NAME}_SRCS
     src/HttpConnection.cpp
     src/LobbyClient.cpp
     src/Login.cpp
+    src/ServerTest.cpp
 )
 
 SET(${PROJECT_NAME}_HDRS
     src/HttpConnection.h
     src/LobbyClient.h
     src/Login.h
+    src/ServerTest.h
 )
 
 ADD_LIBRARY(tester STATIC ${${PROJECT_NAME}_SRCS}

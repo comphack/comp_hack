@@ -1,12 +1,12 @@
 /**
- * @file tools/manager/src/WatchThread.cpp
- * @ingroup tools
+ * @file libcomp/src/WatchThread.cpp
+ * @ingroup libcomp
  *
  * @author COMP Omega <compomega@tutanota.com>
  *
  * @brief Thread to monitor child processes for exit.
  *
- * This tool will spawn and manage server processes.
+ * This file is part of the COMP_hack Library (libcomp).
  *
  * Copyright (C) 2012-2017 COMP_hack Team <compomega@tutanota.com>
  *
@@ -31,7 +31,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 
-using namespace manager;
+using namespace libcomp;
 
 WatchThread::WatchThread(DayCare *pJuvy) : mDayCare(pJuvy)
 {
@@ -69,7 +69,6 @@ void WatchThread::Run()
             usleep(1000000); // 1 second
         }
     }
-    printf("exit\n");
 }
 
 void WatchThread::WaitForExit()

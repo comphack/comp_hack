@@ -1,12 +1,12 @@
 /**
- * @file tools/manager/src/SpawnThread.h
- * @ingroup tools
+ * @file libcomp/src/Child.h
+ * @ingroup libcomp
  *
  * @author COMP Omega <compomega@tutanota.com>
  *
- * @brief Thread to spawn new child processes.
+ * @brief Class to wrap and manage a child process.
  *
- * This tool will spawn and manage server processes.
+ * This file is part of the COMP_hack Library (libcomp).
  *
  * Copyright (C) 2012-2017 COMP_hack Team <compomega@tutanota.com>
  *
@@ -24,42 +24,44 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef TOOLS_MANAGER_SRC_SPAWNTHREAD_H
-#define TOOLS_MANAGER_SRC_SPAWNTHREAD_H
+#ifndef LIBCOMP_SRC_CHILD_H
+#define LIBCOMP_SRC_CHILD_H
 
-// manager Includes
-#include "Child.h"
+// Linux Includes
+#include <unistd.h>
 
 // Standard C++11 Includes
-#include <thread>
+#include <list>
+#include <string>
 
-// libcomp Includes
-#include <MessageQueue.h>
-
-namespace manager
+namespace libcomp
 {
 
-class DayCare;
-
-class SpawnThread
+class Child
 {
 public:
-    explicit SpawnThread(DayCare *pJuvy);
-    ~SpawnThread();
+    explicit Child(const std::string& program,
+        const std::list<std::string>& arguments,
+        int bootTimeout = 0, bool restart = false);
+    ~Child();
 
-    void QueueChild(const std::shared_ptr<Child>& child);
+    bool Start();
+    pid_t GetPID() const;
+    std::string GetCommandLine() const;
+    bool ShouldRestart() const;
+    int GetBootTimeout() const;
 
-    void Run();
-    void WaitForExit();
-    void RequestExit();
+    void Kill();
+    void Interrupt();
 
 private:
-    DayCare *mDayCare;
-    std::thread *mThread;
-
-    libcomp::MessageQueue<std::shared_ptr<Child>> mRestartQueue;
+    std::string mProgram;
+    std::list<std::string> mArguments;
+    pid_t mPID;
+    int mBootTimeout;
+    bool mRestart;
 };
 
-} // namespace manager
+} // namespace libcomp
 
-#endif // TOOLS_MANAGER_SRC_SPAWNTHREAD_H
+#endif // LIBCOMP_SRC_CHILD_H

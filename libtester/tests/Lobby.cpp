@@ -4,11 +4,11 @@
  *
  * @author COMP Omega <compomega@tutanota.com>
  *
- * @brief Test the Diffie-Hellman key exchange.
+ * @brief Test the lobby server.
  *
- * This file is part of the COMP_hack Library (libcomp).
+ * This file is part of the COMP_hack Tester Library (libtester).
  *
- * Copyright (C) 2014-2016 COMP_hack Team <compomega@tutanota.com>
+ * Copyright (C) 2014-2017 COMP_hack Team <compomega@tutanota.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as
@@ -32,6 +32,8 @@
 #include <HttpConnection.h>
 #include <LobbyClient.h>
 #include <Login.h>
+#include <ServerTest.h>
+#include <TestConfig.h>
 
 // libcomp Includes
 #include <Decrypt.h>
@@ -44,170 +46,218 @@
 
 using namespace libcomp;
 
-static const libcomp::String LOGIN_USERNAME = "testalpha";
-static const libcomp::String LOGIN_PASSWORD = "same_as_my_luggage"; // 12345
-static const libcomp::String LOGIN_CLIENT_VERSION = "1.666";
-
 TEST(Lobby, WebAuth)
 {
-    libcomp::String sid1;
-    libcomp::String sid2;
+    EXPECT_SERVER(libtester::ServerConfig::LobbyOnly(), []()
+    {
+        libcomp::String sid1;
+        libcomp::String sid2;
 
-    EXPECT_FALSE(libtester::Login::WebLogin(LOGIN_USERNAME, "12345",
-        LOGIN_CLIENT_VERSION, sid1, sid2))
-        << "Was able to authenticate with the website using bad credentials.";
+        EXPECT_FALSE(libtester::Login::WebLogin(LOGIN_USERNAME, "12345",
+            LOGIN_CLIENT_VERSION, sid1, sid2))
+            << "Was able to authenticate with website using bad credentials.";
 
-    EXPECT_TRUE(libtester::Login::WebLogin(LOGIN_USERNAME, LOGIN_PASSWORD,
-        LOGIN_CLIENT_VERSION, sid1, sid2))
-        << "Failed to authenticate with the website.";
+        EXPECT_TRUE(libtester::Login::WebLogin(LOGIN_USERNAME, LOGIN_PASSWORD,
+            LOGIN_CLIENT_VERSION, sid1, sid2))
+            << "Failed to authenticate with website.";
 
-    EXPECT_FALSE(libtester::Login::WebLogin(LOGIN_USERNAME, LOGIN_PASSWORD,
-        "1.001", sid1, sid2))
-        << "Was able to authenticate with a bad client version.";
+        EXPECT_FALSE(libtester::Login::WebLogin(LOGIN_USERNAME, LOGIN_PASSWORD,
+            "1.001", sid1, sid2))
+            << "Was able to authenticate with a bad client version.";
+    });
 }
 
 TEST(Lobby, BadClientVersion)
 {
-    std::shared_ptr<libtester::LobbyClient> client(new libtester::LobbyClient);
+    EXPECT_SERVER(libtester::ServerConfig::LobbyOnly(), []()
+    {
+        std::shared_ptr<libtester::LobbyClient> client(
+            new libtester::LobbyClient);
 
-    client->Login(LOGIN_USERNAME, LOGIN_PASSWORD,
-        ErrorCodes_t::WRONG_CLIENT_VERSION, ErrorCodes_t::SUCCESS, 1);
+        client->Login(LOGIN_USERNAME, LOGIN_PASSWORD,
+            ErrorCodes_t::WRONG_CLIENT_VERSION, ErrorCodes_t::SUCCESS, 1);
+    });
 }
 
 TEST(Lobby, BadUsername)
 {
-    std::shared_ptr<libtester::LobbyClient> client(new libtester::LobbyClient);
+    EXPECT_SERVER(libtester::ServerConfig::LobbyOnly(), []()
+    {
+        std::shared_ptr<libtester::LobbyClient> client(
+            new libtester::LobbyClient);
 
-    client->Login("h@k3r", LOGIN_PASSWORD, ErrorCodes_t::BAD_USERNAME_PASSWORD);
+        client->Login("h@k3r", LOGIN_PASSWORD,
+            ErrorCodes_t::BAD_USERNAME_PASSWORD);
+    });
 }
 
 TEST(Lobby, BadSID)
 {
-    libcomp::String sid1 =
-        "000000000000000000000000000000"
-        "000000000000000000000000000000"
-        "000000000000000000000000000000"
-        "000000000000000000000000000000"
-        "000000000000000000000000000000"
-        "000000000000000000000000000000"
-        "000000000000000000000000000000"
-        "000000000000000000000000000000"
-        "000000000000000000000000000000"
-        "000000000000000000000000000000";
+    EXPECT_SERVER(libtester::ServerConfig::LobbyOnly(), []()
+    {
+        libcomp::String sid1 =
+            "000000000000000000000000000000"
+            "000000000000000000000000000000"
+            "000000000000000000000000000000"
+            "000000000000000000000000000000"
+            "000000000000000000000000000000"
+            "000000000000000000000000000000"
+            "000000000000000000000000000000"
+            "000000000000000000000000000000"
+            "000000000000000000000000000000"
+            "000000000000000000000000000000";
 
-    std::shared_ptr<libtester::LobbyClient> client(new libtester::LobbyClient);
+        std::shared_ptr<libtester::LobbyClient> client(
+            new libtester::LobbyClient);
 
-    client->WebLogin(LOGIN_USERNAME, LOGIN_PASSWORD, sid1, true);
+        client->WebLogin(LOGIN_USERNAME, LOGIN_PASSWORD, sid1, true);
+    });
 }
 
 TEST(Lobby, GoodSID)
 {
-    std::shared_ptr<libtester::LobbyClient> client(new libtester::LobbyClient);
+    EXPECT_SERVER(libtester::ServerConfig::LobbyOnly(), []()
+    {
+        std::shared_ptr<libtester::LobbyClient> client(
+            new libtester::LobbyClient);
 
-    client->WebLogin(LOGIN_USERNAME, LOGIN_PASSWORD);
+        client->WebLogin(LOGIN_USERNAME, LOGIN_PASSWORD);
+    });
 }
 
 TEST(Lobby, BadPassword)
 {
-    std::shared_ptr<libtester::LobbyClient> client(new libtester::LobbyClient);
+    EXPECT_SERVER(libtester::ServerConfig::LobbyOnly(), []()
+    {
+        std::shared_ptr<libtester::LobbyClient> client(
+            new libtester::LobbyClient);
 
-    client->Login(LOGIN_USERNAME, "letMeInAnyway",
-        ErrorCodes_t::SUCCESS, ErrorCodes_t::BAD_USERNAME_PASSWORD);
+        client->Login(LOGIN_USERNAME, "letMeInAnyway",
+            ErrorCodes_t::SUCCESS, ErrorCodes_t::BAD_USERNAME_PASSWORD);
+    });
 }
 
 TEST(Lobby, GoodPassword)
 {
-    std::shared_ptr<libtester::LobbyClient> client(new libtester::LobbyClient);
+    EXPECT_SERVER(libtester::ServerConfig::LobbyOnly(), []()
+    {
+        std::shared_ptr<libtester::LobbyClient> client(
+            new libtester::LobbyClient);
 
-    client->Login(LOGIN_USERNAME, LOGIN_PASSWORD);
+        client->Login(LOGIN_USERNAME, LOGIN_PASSWORD);
+    });
 }
 
 TEST(Lobby, PacketsWithoutAuth)
 {
-    double waitTime;
+    EXPECT_SERVER(libtester::ServerConfig::LobbyOnly(), []()
+    {
+        double waitTime;
 
-    std::shared_ptr<libtester::LobbyClient> client(new libtester::LobbyClient);
+        std::shared_ptr<libtester::LobbyClient> client(
+            new libtester::LobbyClient);
 
-    ASSERT_TRUE(client->Connect());
-    ASSERT_TRUE(client->WaitEncrypted(waitTime));
+        ASSERT_TRUE(client->Connect());
+        ASSERT_TRUE(client->WaitEncrypted(waitTime));
 
-    libcomp::Packet p;
-    p.WritePacketCode(ClientToLobbyPacketCode_t::PACKET_WORLD_LIST);
+        libcomp::Packet p;
+        p.WritePacketCode(ClientToLobbyPacketCode_t::PACKET_WORLD_LIST);
 
-    libcomp::ReadOnlyPacket reply;
+        libcomp::ReadOnlyPacket reply;
 
-    client->ClearMessages();
-    client->GetConnection()->SendPacket(p);
+        client->ClearMessages();
+        client->GetConnection()->SendPacket(p);
 
-    ASSERT_FALSE(client->WaitForPacket(
-        LobbyToClientPacketCode_t::PACKET_WORLD_LIST, reply, waitTime));
+        ASSERT_FALSE(client->WaitForPacket(
+            LobbyToClientPacketCode_t::PACKET_WORLD_LIST, reply, waitTime));
+    });
 }
 
 TEST(Lobby, PacketsWithBadAuth)
 {
-    double waitTime;
+    EXPECT_SERVER(libtester::ServerConfig::LobbyOnly(), []()
+    {
+        double waitTime;
 
-    std::shared_ptr<libtester::LobbyClient> client(new libtester::LobbyClient);
+        std::shared_ptr<libtester::LobbyClient> client(
+            new libtester::LobbyClient);
 
-    client->Login(LOGIN_USERNAME, "letMeInAnyway",
-        ErrorCodes_t::SUCCESS, ErrorCodes_t::BAD_USERNAME_PASSWORD);
+        client->Login(LOGIN_USERNAME, "letMeInAnyway",
+            ErrorCodes_t::SUCCESS, ErrorCodes_t::BAD_USERNAME_PASSWORD);
 
-    libcomp::Packet p;
-    p.WritePacketCode(ClientToLobbyPacketCode_t::PACKET_WORLD_LIST);
+        libcomp::Packet p;
+        p.WritePacketCode(ClientToLobbyPacketCode_t::PACKET_WORLD_LIST);
 
-    libcomp::ReadOnlyPacket reply;
+        libcomp::ReadOnlyPacket reply;
 
-    client->ClearMessages();
-    client->GetConnection()->SendPacket(p);
+        client->ClearMessages();
+        client->GetConnection()->SendPacket(p);
 
-    ASSERT_FALSE(client->WaitForPacket(
-        LobbyToClientPacketCode_t::PACKET_WORLD_LIST, reply, waitTime));
+        ASSERT_FALSE(client->WaitForPacket(
+            LobbyToClientPacketCode_t::PACKET_WORLD_LIST, reply, waitTime));
+    });
 }
 
 TEST(Lobby, DeleteInvalidCharacter)
 {
-    double waitTime;
+    EXPECT_SERVER(libtester::ServerConfig::LobbyOnly(), []()
+    {
+        double waitTime;
 
-    std::shared_ptr<libtester::LobbyClient> client(new libtester::LobbyClient);
+        std::shared_ptr<libtester::LobbyClient> client(
+            new libtester::LobbyClient);
 
-    client->Login(LOGIN_USERNAME, LOGIN_PASSWORD);
+        client->Login(LOGIN_USERNAME, LOGIN_PASSWORD);
 
-    libcomp::Packet p;
-    p.WritePacketCode(ClientToLobbyPacketCode_t::PACKET_DELETE_CHARACTER);
-    p.WriteU8(1);
+        libcomp::Packet p;
+        p.WritePacketCode(ClientToLobbyPacketCode_t::PACKET_DELETE_CHARACTER);
+        p.WriteU8(1);
 
-    libcomp::ReadOnlyPacket reply;
+        libcomp::ReadOnlyPacket reply;
 
-    client->ClearMessages();
-    client->GetConnection()->SendPacket(p);
+        client->ClearMessages();
+        client->GetConnection()->SendPacket(p);
 
-    ASSERT_FALSE(client->WaitForPacket(
-        LobbyToClientPacketCode_t::PACKET_DELETE_CHARACTER, reply, waitTime));
+        ASSERT_FALSE(client->WaitForPacket(
+            LobbyToClientPacketCode_t::PACKET_DELETE_CHARACTER,
+            reply, waitTime));
+    });
 }
 
 TEST(Lobby, DoubleLogin)
 {
-    std::shared_ptr<libtester::LobbyClient> client(new libtester::LobbyClient);
-    std::shared_ptr<libtester::LobbyClient> client2(new libtester::LobbyClient);
-    std::shared_ptr<libtester::LobbyClient> client3(new libtester::LobbyClient);
+    EXPECT_SERVER(libtester::ServerConfig::LobbyOnly(), []()
+    {
+        std::shared_ptr<libtester::LobbyClient> client(
+            new libtester::LobbyClient);
+        std::shared_ptr<libtester::LobbyClient> client2(
+            new libtester::LobbyClient);
+        std::shared_ptr<libtester::LobbyClient> client3(
+            new libtester::LobbyClient);
 
-    client->Login(LOGIN_USERNAME, LOGIN_PASSWORD);
-    client2->Login(LOGIN_USERNAME, LOGIN_PASSWORD,
-        ErrorCodes_t::ACCOUNT_STILL_LOGGED_IN);
-    client.reset();
-    client3->Login(LOGIN_USERNAME, LOGIN_PASSWORD);
+        client->Login(LOGIN_USERNAME, LOGIN_PASSWORD);
+        client2->Login(LOGIN_USERNAME, LOGIN_PASSWORD,
+            ErrorCodes_t::ACCOUNT_STILL_LOGGED_IN);
+        client.reset();
+        client3->Login(LOGIN_USERNAME, LOGIN_PASSWORD);
+    });
 }
 
 TEST(Lobby, DoubleWebAuth)
 {
-    std::shared_ptr<libtester::LobbyClient> client(new libtester::LobbyClient);
-    std::shared_ptr<libtester::LobbyClient> client2(new libtester::LobbyClient);
+    EXPECT_SERVER(libtester::ServerConfig::LobbyOnly(), []()
+    {
+        std::shared_ptr<libtester::LobbyClient> client(
+            new libtester::LobbyClient);
+        std::shared_ptr<libtester::LobbyClient> client2(
+            new libtester::LobbyClient);
 
-    client->WebLogin(LOGIN_USERNAME, LOGIN_PASSWORD);
-    client2->WebLogin(LOGIN_USERNAME, LOGIN_PASSWORD,
-        libcomp::String(), true);
-    client.reset();
-    client2->WebLogin(LOGIN_USERNAME, LOGIN_PASSWORD);
+        client->WebLogin(LOGIN_USERNAME, LOGIN_PASSWORD);
+        client2->WebLogin(LOGIN_USERNAME, LOGIN_PASSWORD,
+            libcomp::String(), true);
+        client.reset();
+        client2->WebLogin(LOGIN_USERNAME, LOGIN_PASSWORD);
+    });
 }
 
 int main(int argc, char *argv[])

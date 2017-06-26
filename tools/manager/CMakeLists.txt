@@ -23,10 +23,6 @@ MESSAGE("** Configuring ${PROJECT_NAME} **")
 
 SET(${PROJECT_NAME}_SRCS
     src/manager.cpp
-    src/Child.cpp
-    src/DayCare.cpp
-    src/SpawnThread.cpp
-    src/WatchThread.cpp
 )
 
 SET(${PROJECT_NAME}_HDRS

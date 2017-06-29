@@ -118,17 +118,14 @@ bool Parsers::FriendsUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
     int32_t cid = p.ReadS32Little();
 
     auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-    auto state = ClientState::GetEntityClientState(cid, true);
-    auto cState = state != nullptr ? state->GetCharacterState() : nullptr;
-    auto client = cState->GetEntity() != nullptr ?
-        server->GetManagerConnection()->GetClientConnection(
-            cState->GetEntity()->GetAccount()->GetUsername()) : nullptr;
+    auto client = server->GetManagerConnection()->GetEntityClient(cid, true);
     if(!client)
     {
         // Character is not here anymore, exit now
         return true;
     }
 
+    auto cState = client->GetClientState()->GetCharacterState();
     switch((InternalPacketAction_t)mode)
     {
     case InternalPacketAction_t::PACKET_ACTION_FRIEND_LIST:

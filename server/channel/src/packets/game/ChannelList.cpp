@@ -59,9 +59,9 @@ bool Parsers::ChannelList::Parse(libcomp::ManagerPacket *pPacketManager,
         reply.WriteString16Little(libcomp::Convert::ENCODING_UTF8,
             channel->GetName(), true);
 
-        reply.WriteU8(1);   // Unknown bool
-        reply.WriteS8(0);   // Unknown
-        reply.WriteS8(0);   // Unknown (visibility?)
+        reply.WriteU8(1);   // Show in list (always return true)
+        reply.WriteS8(0);   // Percent full
+        reply.WriteS8(0);   // 0 = visible, 2 = PvP
     }
 
     connection->SendPacket(reply);

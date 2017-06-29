@@ -30,7 +30,12 @@
 #include <Log.h>
 #include <ManagerPacket.h>
 #include <Packet.h>
+#include <PacketCodes.h>
 #include <ReadOnlyPacket.h>
+
+// libcomp Includes
+#include <AccountLogin.h>
+#include <CharacterLogin.h>
 
 // lobby Includes
 #include "LobbyServer.h"
@@ -45,23 +50,40 @@ bool Parsers::AccountLogout::Parse(libcomp::ManagerPacket *pPacketManager,
 
     libcomp::String username = p.ReadString16Little(
         libcomp::Convert::Encoding_t::ENCODING_UTF8, true);
+    bool channelSwitch = p.Left() > 4 &&
+        p.ReadU32Little() == (uint32_t)LogoutPacketAction_t::LOGOUT_CHANNEL_SWITCH;
 
     auto server = std::dynamic_pointer_cast<LobbyServer>(pPacketManager->GetServer());
     auto accountManager = server->GetAccountManager();
 
-    int8_t worldID;
-    if(!accountManager->IsLoggedIn(username, worldID))
+    auto login = accountManager->GetUserLogin(username);
+    if(!login)
     {
         return false;
     }
 
-    // Do not log out the user if they connected back to the lobby
-    if(worldID != -1)
+    auto cLogin = login->GetCharacterLogin();
+    int8_t expiration = 0;
+    if(channelSwitch)
     {
-        LOG_DEBUG(libcomp::String("Logging out user: '%1'\n").Arg(username));
-        accountManager->LogoutUser(username, worldID);
-        // Invalidate the session in 60 seconds
-        server->GetSessionManager()->ExpireSession(username, 60);
+        cLogin->SetChannelID(p.ReadS8());
+        login->SetSessionKey(p.ReadU32Little());
+        expiration = 10;
+    }
+    else
+    {
+        // Do not log out the user if they connected back to the lobby
+        if(cLogin->GetWorldID() != -1)
+        {
+            LOG_DEBUG(libcomp::String("Logging out user: '%1'\n").Arg(username));
+            accountManager->LogoutUser(username, cLogin->GetWorldID());
+            expiration = 60;
+        }
+    }
+
+    if(expiration)
+    {
+        server->GetSessionManager()->ExpireSession(username, expiration);
     }
 
     return true;

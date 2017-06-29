@@ -143,3 +143,21 @@ void SessionManager::RefreshSession(const libcomp::String& username)
     std::lock_guard<std::mutex> lock(mSessionLock);
     mTimeoutMap.erase(lookup);
 }
+
+bool SessionManager::HasExpiredSession(const libcomp::String& username)
+{
+    libcomp::String lookup = username.ToLower();
+
+    std::lock_guard<std::mutex> lock(mSessionLock);
+
+    auto timeIter = mTimeoutMap.find(lookup);
+    if(mTimeoutMap.end() != timeIter)
+    {
+        if(timeIter->second < time(0))
+        {
+            return true;
+        }
+    }
+
+    return false;
+}

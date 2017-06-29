@@ -45,55 +45,104 @@
 
 using namespace world;
 
-void Logout(std::shared_ptr<WorldServer> server,
-    const libcomp::String username)
-{
-    auto accountManager = server->GetAccountManager();
-    auto characterManager = server->GetCharacterManager();
-
-    int8_t channelID;
-    if(!accountManager->IsLoggedIn(username, channelID))
-    {
-        return;
-    }
-
-    LOG_DEBUG(libcomp::String("Logging out user: '%1'\n").Arg(username));
-    auto loggedOut = accountManager->LogoutUser(username, channelID);
-    if(loggedOut)
-    {
-        auto cLogin = loggedOut->GetCharacterLogin();
-        characterManager->PartyLeave(cLogin, nullptr, true);
-
-        std::list<std::shared_ptr<objects::CharacterLogin>> cLogOuts;
-        cLogOuts.push_back(cLogin);
-
-        characterManager->SendStatusToRelatedCharacters(cLogOuts,
-            (uint8_t)CharacterLoginStateFlag_t::CHARLOGIN_BASIC);
-    }
-
-    auto lobbyConnection = server->GetLobbyConnection();
-
-    //Relay the message to the lobby
-    libcomp::Packet lobbyMessage;
-    lobbyMessage.WritePacketCode(
-        InternalPacketCode_t::PACKET_ACCOUNT_LOGOUT);
-    lobbyMessage.WriteString16Little(
-        libcomp::Convert::Encoding_t::ENCODING_UTF8, username);
-    lobbyConnection->SendPacket(lobbyMessage);
-}
-
 bool Parsers::AccountLogout::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {
     (void)connection;
 
+    LogoutPacketAction_t action = (LogoutPacketAction_t)p.ReadU32Little();
     libcomp::String username = p.ReadString16Little(
         libcomp::Convert::Encoding_t::ENCODING_UTF8, true);
 
     auto server = std::dynamic_pointer_cast<WorldServer>(pPacketManager->GetServer());
+    auto accountManager = server->GetAccountManager();
+    
+    int8_t channelID;
+    if(!accountManager->IsLoggedIn(username, channelID))
+    {
+        // Nothing to do
+        return true;
+    }
 
-    server->QueueWork(Logout, server, username);
+    auto login = accountManager->GetUserLogin(username);
+    auto cLogin = login->GetCharacterLogin();
+    if(action == LogoutPacketAction_t::LOGOUT_CHANNEL_SWITCH)
+    {
+        channelID = p.ReadS8();
+        accountManager->PushChannelSwitch(username, channelID);
+
+        // Mark the expected location for when the connection returns
+        cLogin->SetChannelID(channelID);
+
+        // Set the session key now but only update the lobby if the channel switch
+        // actually occurs
+        accountManager->UpdateSessionKey(login);
+
+        libcomp::Packet reply;
+        reply.WritePacketCode(
+            InternalPacketCode_t::PACKET_ACCOUNT_LOGOUT);
+        reply.WriteS32Little(cLogin->GetWorldCID());
+        reply.WriteU32Little((uint32_t)LogoutPacketAction_t::LOGOUT_CHANNEL_SWITCH);
+        reply.WriteS8(channelID);
+        reply.WriteU32Little(login->GetSessionKey());
+        connection->SendPacket(reply);
+    }
+    else if(p.Left() > 0 && p.PeekU8() == 1)
+    {
+        // Tell the channel to disconnect
+        libcomp::Packet reply;
+        reply.WritePacketCode(
+            InternalPacketCode_t::PACKET_ACCOUNT_LOGOUT);
+        reply.WriteS32Little(cLogin->GetWorldCID());
+        reply.WriteU32Little((uint32_t)LogoutPacketAction_t::LOGOUT_DISCONNECT);
+        connection->SendPacket(reply);
+    }
+    else
+    {
+        auto characterManager = server->GetCharacterManager();
+
+        if(accountManager->PopChannelSwitch(username, channelID))
+        {
+            LOG_DEBUG(libcomp::String("User is switching to channel %1: '%2'\n")
+                .Arg(channelID).Arg(username));
+
+            // Tell the lobby a channel switch is happening
+            libcomp::Packet lobbyMessage;
+            lobbyMessage.WritePacketCode(
+                InternalPacketCode_t::PACKET_ACCOUNT_LOGOUT);
+            lobbyMessage.WriteString16Little(
+                libcomp::Convert::Encoding_t::ENCODING_UTF8, username);
+            lobbyMessage.WriteU32Little((uint32_t)LogoutPacketAction_t::LOGOUT_CHANNEL_SWITCH);
+
+            // Make sure the lobby has the new session key and channel
+            lobbyMessage.WriteS8(channelID);
+            lobbyMessage.WriteU32Little(login->GetSessionKey());
+
+            server->GetLobbyConnection()->SendPacket(lobbyMessage);
+        }
+        else
+        {
+            LOG_DEBUG(libcomp::String("Logging out user: '%1'\n").Arg(username));
+            auto loggedOut = accountManager->LogoutUser(username, channelID);
+            
+            characterManager->PartyLeave(cLogin, nullptr, true);
+
+            std::list<std::shared_ptr<objects::CharacterLogin>> cLogOuts;
+            cLogOuts.push_back(cLogin);
+
+            characterManager->SendStatusToRelatedCharacters(cLogOuts,
+                (uint8_t)CharacterLoginStateFlag_t::CHARLOGIN_BASIC);
+
+            // Relay the message to the lobby
+            libcomp::Packet lobbyMessage;
+            lobbyMessage.WritePacketCode(
+                InternalPacketCode_t::PACKET_ACCOUNT_LOGOUT);
+            lobbyMessage.WriteString16Little(
+                libcomp::Convert::Encoding_t::ENCODING_UTF8, username);
+            server->GetLobbyConnection()->SendPacket(lobbyMessage);
+        }
+    }
 
     return true;
 }

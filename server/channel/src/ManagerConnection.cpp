@@ -97,7 +97,7 @@ bool ManagerConnection::ProcessMessage(const libcomp::Message::Message *pMessage
 
                 if(mWorldConnection == connection)
                 {
-                    LOG_INFO(libcomp::String("World connection closed. Shutting down."));
+                    LOG_INFO("World connection closed. Shutting down.\n");
                     server->Shutdown();
                 }
 
@@ -134,8 +134,9 @@ void ManagerConnection::SetWorldConnection(const std::shared_ptr<libcomp::Intern
 }
 
 const std::shared_ptr<ChannelClientConnection> ManagerConnection::GetClientConnection(
-    const libcomp::String& username) const
+    const libcomp::String& username)
 {
+    std::lock_guard<std::mutex> lock(mLock);
     auto iter = mClientConnections.find(username);
     return iter != mClientConnections.end() ? iter->second : nullptr;
 }
@@ -152,6 +153,8 @@ void ManagerConnection::SetClientConnection(const std::shared_ptr<
     }
 
     auto username = account->GetUsername();
+
+    std::lock_guard<std::mutex> lock(mLock);
     auto iter = mClientConnections.find(username);
     if(iter == mClientConnections.end())
     {
@@ -176,14 +179,86 @@ void ManagerConnection::RemoveClientConnection(const std::shared_ptr<
     }
 
     auto username = account->GetUsername();
-    auto iter = mClientConnections.find(username);
-    if(iter != mClientConnections.end())
+    bool removed = false;
     {
-        mClientConnections.erase(iter);
+        std::lock_guard<std::mutex> lock(mLock);
+        auto iter = mClientConnections.find(username);
+        if(iter != mClientConnections.end())
+        {
+            mClientConnections.erase(iter);
+            removed = true;
+        }
+    }
 
+    if(removed)
+    {
         auto server = std::dynamic_pointer_cast<ChannelServer>(
             mServer.lock());
         auto accountManager = server->GetAccountManager();
         accountManager->Logout(connection);
+    }
+}
+
+const std::shared_ptr<ChannelClientConnection>
+    ManagerConnection::GetEntityClient(int32_t id, bool worldID)
+{
+    auto state = ClientState::GetEntityClientState(id, worldID);
+    auto cState = state != nullptr ? state->GetCharacterState() : nullptr;
+    return cState && cState->GetEntity() != nullptr
+        ? GetClientConnection(cState->GetEntity()->GetAccount()->GetUsername())
+        : nullptr;
+}
+
+bool ManagerConnection::ScheduleClientTimeoutHandler()
+{
+    auto server = std::dynamic_pointer_cast<ChannelServer>(mServer.lock());
+
+    // Check timeouts every 30 seconds
+    ServerTime nextTime = server->GetServerTime() + 30000000;
+    return server->ScheduleWork(nextTime, [](ChannelServer* svr)
+        {
+            uint64_t timestamp = svr->GetServerTime();
+            auto manager = svr->GetManagerConnection();
+
+            manager->HandleClientTimeouts(timestamp);
+            manager->ScheduleClientTimeoutHandler();
+        }, server.get());
+}
+
+void ManagerConnection::HandleClientTimeouts(uint64_t now)
+{
+    std::list<libcomp::String> timeOuts;
+    {
+        std::lock_guard<std::mutex> lock(mLock);
+        for(auto it = mClientConnections.begin();
+            it != mClientConnections.end(); it++)
+        {
+            auto timeout = it->second->GetTimeout();
+            if(timeout && timeout <= now)
+            {
+                timeOuts.push_back(it->first);
+
+                // Stop the timeout from throwing multiple times
+                it->second->RefreshTimeout(0);
+            }
+        }
+    }
+
+    if(timeOuts.size() > 0)
+    {
+        for(auto timedOut : timeOuts)
+        {
+            LOG_ERROR(libcomp::String(
+                "Client connection timed out: %1\n").Arg(timedOut));
+
+            libcomp::Packet p;
+            p.WritePacketCode(InternalPacketCode_t::PACKET_ACCOUNT_LOGOUT);
+            p.WriteU32Little((uint32_t)LogoutPacketAction_t::LOGOUT_DISCONNECT);
+            p.WriteString16Little(
+                libcomp::Convert::Encoding_t::ENCODING_UTF8, timedOut);
+            p.WriteU8(1);
+            mWorldConnection->QueuePacket(p);
+        }
+        mWorldConnection->FlushOutgoing();
     }
 }

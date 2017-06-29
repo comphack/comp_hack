@@ -66,7 +66,7 @@ void UpdateAccountLogin(std::shared_ptr<LobbyServer> server,
         return;
     }
 
-    //Should be the same one we passed in
+    // Should be the same one we passed in
     auto account = login->GetAccount().Get(server->GetMainDatabase());
     if(nullptr == account)
     {
@@ -89,38 +89,52 @@ void UpdateAccountLogin(std::shared_ptr<LobbyServer> server,
         return;
     }
 
+    int8_t timeout = 0;
     auto clientConnection = server->GetManagerConnection()->GetClientConnection(
         account->GetUsername());
     if(nullptr != clientConnection && currentWorldID == -1)
     {
+        // Initial login response from the world
         LOG_DEBUG(libcomp::String("Login character with UUID '%1' into world %2, channel %3\n"
             ).Arg(character.GetUUID().ToString()).Arg(worldID).Arg(channelID));
 
         libcomp::Packet reply;
         reply.WritePacketCode(LobbyToClientPacketCode_t::PACKET_START_GAME);
 
-        // Some session key.
+        // Current session key
         reply.WriteU32Little(login->GetSessionKey());
 
-        // Server address.
+        // Server address
         reply.WriteString16Little(libcomp::Convert::ENCODING_UTF8,
             libcomp::String("%1:%2").Arg(channel->GetIP()).Arg(channel->GetPort()), true);
 
-        // Character ID.
+        // Character (account) ID
         reply.WriteU8(character->GetCID());
 
         clientConnection->SendPacket(reply);
+
+        // 10 seconds until the connection to the channel is considered a failure
+        timeout = 10;
     }
     
-    //Always refresh the connection
+    // Always refresh the connection
     if(!accountManager->LogoutUser(username, currentWorldID))
     {
         return;
     }
     accountManager->LoginUser(username, login);
 
-    //Clear the session expiration
-    server->GetSessionManager()->RefreshSession(username);
+    auto sessionManager = server->GetSessionManager();
+    if(timeout)
+    {
+        // Set a session expiration time
+        sessionManager->ExpireSession(username, timeout);
+    }
+    else
+    {
+        // Clear the session expiration
+        sessionManager->RefreshSession(username);
+    }
 }
 
 bool Parsers::AccountLogin::Parse(libcomp::ManagerPacket *pPacketManager,

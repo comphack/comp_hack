@@ -57,21 +57,10 @@ bool Parsers::TradeRequest::Parse(libcomp::ManagerPacket *pPacketManager,
     auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
+    auto otherClient = server->GetManagerConnection()->GetEntityClient((int32_t)targetEntityID);
 
     libcomp::Packet reply;
     reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_TRADE_REQUEST);
-
-    std::shared_ptr<CharacterState> otherCState;
-    std::shared_ptr<ChannelClientConnection> otherClient;
-    auto otherState = ClientState::GetEntityClientState((int32_t)targetEntityID);
-    if(otherState != nullptr)
-    {
-        otherCState = otherState->GetCharacterState();
-        auto otherChar = otherCState != nullptr ? otherCState->GetEntity() : nullptr;
-        otherClient = otherChar != nullptr ?
-            server->GetManagerConnection()->GetClientConnection(
-                otherChar->GetAccount()->GetUsername()) : nullptr;
-    }
 
     bool cancel = false;
     if(!otherClient)
@@ -94,9 +83,11 @@ bool Parsers::TradeRequest::Parse(libcomp::ManagerPacket *pPacketManager,
         return true;
     }
 
+    auto otherState = otherClient->GetClientState();
+
     // Set the trade session info
     auto tradeSession = state->GetTradeSession();
-    tradeSession->SetOtherCharacterState(otherCState);
+    tradeSession->SetOtherCharacterState(otherState->GetCharacterState());
 
     auto otherTradeSession = otherState->GetTradeSession();
     otherTradeSession->SetOtherCharacterState(cState);

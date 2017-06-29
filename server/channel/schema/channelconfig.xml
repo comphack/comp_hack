@@ -6,5 +6,6 @@
         <member type="u16" name="Port" inherited="true" default="14666"/>
         <member type="string" name="WorldIP" default="127.0.0.1"/>
         <member type="u16" name="WorldPort" default="18666"/>
+        <member type="bool" name="TimeoutEnabled"/>
     </object>
 </objgen>

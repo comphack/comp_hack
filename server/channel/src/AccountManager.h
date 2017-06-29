@@ -95,20 +95,24 @@ public:
      * Handle the client's logout request.
      * @param client Pointer to the client connection
      * @param code Action being requested
-     * @param channel Channel to connect to after logging out.
-     * This will only be used if the the logout code is
-     * LOGOUT_CODE_SWITCH.
+     * @param channelIdx Index of the channel to connect
+     * to after logging out. This will only be used if
+     * the the logout code is LOGOUT_CODE_SWITCH.
      */
     void HandleLogoutRequest(const std::shared_ptr<
         channel::ChannelClientConnection>& client,
-        LogoutCode_t code, uint8_t channel = 0);
+        LogoutCode_t code, uint8_t channelIdx = 0);
 
     /**
      * Log out a user by their connection.
      * @param client Pointer to the client connection
+     * @param delay Optional parameter to perform the normal
+     *  logout save actions but leave the connection open
+     *  to be removed upon the connection actually closing
      */
     void Logout(const std::shared_ptr<
-        channel::ChannelClientConnection>& client);
+        channel::ChannelClientConnection>& client,
+        bool delay = false);
 
     /**
      * Authenticate an account by its connection.
@@ -135,27 +139,36 @@ private:
      * logging out.
      * @param state Pointer to the client state the character
      *  belongs to
+     * @param delay Optional parameter to perform the normal
+     *  logout save actions but do not unregister anything.
+     *  If this is specified, a second pass to this function
+     *  should be performed later.
      * @return true on success, false on failure
      */
-    bool LogoutCharacter(channel::ClientState* state);
+    bool LogoutCharacter(channel::ClientState* state,
+        bool delay = false);
 
     /**
      * Unload an object from references and update it in the DB.
      * @param obj Pointer to the object to clean up
      * @param db Pointer to the database to use
      * @param doSave Indicates if the record should be updated
-     *  or just unregistered
+     * @param unregister Indicates if the record should be unloaded
+     *  and unregistered
      * @return true on success, false on failure
      */
     template <class T>
     bool Cleanup(const std::shared_ptr<T>& obj,
         const std::shared_ptr<libcomp::Database>& db,
-        bool doSave)
+        bool doSave, bool unregister = true)
     {
         if(obj != nullptr)
         {
-            libcomp::ObjectReference<T>::Unload(obj->GetUUID());
-            obj->Unregister();
+            if(unregister)
+            {
+                libcomp::ObjectReference<T>::Unload(obj->GetUUID());
+                obj->Unregister();
+            }
             return !doSave || obj->Update(db);
         }
         return true;

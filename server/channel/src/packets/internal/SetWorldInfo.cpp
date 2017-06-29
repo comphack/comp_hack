@@ -37,6 +37,9 @@
 #include <ReadOnlyPacket.h>
 #include <TcpConnection.h>
 
+// object Includes
+#include <ChannelConfig.h>
+
 // channel Includes
 #include "ChannelServer.h"
 
@@ -91,6 +94,7 @@ bool SetWorldInfoFromPacket(libcomp::ManagerPacket *pPacketManager,
     auto otherChannelsExist = p.ReadU8() == 1;
 
     auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+    auto conf = std::dynamic_pointer_cast<objects::ChannelConfig>(server->GetConfig());
     auto worldDatabase = ParseDatabase(server, p);
     if(nullptr == worldDatabase)
     {
@@ -142,8 +146,13 @@ bool SetWorldInfoFromPacket(libcomp::ManagerPacket *pPacketManager,
     connection->SendPacket(reply);
 
     // Now that we've connected to the world successfully, hit the first server tick
-    // to start the main loop
+    // to start the main loop in addition to any recurring scheduled work
     server->Tick();
+
+    if(conf->GetTimeoutEnabled())
+    {
+        server->GetManagerConnection()->ScheduleClientTimeoutHandler();
+    }
 
     return true;
 }

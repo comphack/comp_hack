@@ -96,10 +96,22 @@ bool Parsers::Login::Parse(libcomp::ManagerPacket *pPacketManager,
     }
     else
     {
+        auto username = obj.GetUsername();
+        auto sessionManager = server->GetSessionManager();
+
+        // If an expired session exists, expire it and log the user out
+        if(sessionManager->HasExpiredSession(username))
+        {
+            int8_t loginWorldID;
+            accountManager->IsLoggedIn(username, loginWorldID);
+            sessionManager->ExpireSession(username);
+            accountManager->LogoutUser(username, loginWorldID);
+        }
+
         auto login = std::shared_ptr<objects::AccountLogin>(new objects::AccountLogin);
         login->SetAccount(account);
 
-        if(!accountManager->LoginUser(obj.GetUsername(), login))
+        if(!accountManager->LoginUser(username, login))
         {
             return LoginError(connection, ErrorCodes_t::ACCOUNT_STILL_LOGGED_IN);
         }

@@ -149,6 +149,35 @@ std::list<std::shared_ptr<objects::AccountLogin>>
     return loggedOut;
 }
 
+void AccountManager::UpdateSessionKey(std::shared_ptr<objects::AccountLogin> login)
+{
+    std::lock_guard<std::mutex> lock(mLock);
+    login->SetSessionKey(mMaxSessionKey++);
+}
+
+void AccountManager::PushChannelSwitch(const libcomp::String& username, int8_t channel)
+{
+    libcomp::String lookup = username.ToLower();
+    std::lock_guard<std::mutex> lock(mLock);
+    mChannelSwitches[lookup] = channel;
+}
+
+bool AccountManager::PopChannelSwitch(const libcomp::String& username, int8_t& channel)
+{
+    libcomp::String lookup = username.ToLower();
+    std::lock_guard<std::mutex> lock(mLock);
+
+    auto it = mChannelSwitches.find(lookup);
+    if(it != mChannelSwitches.end())
+    {
+        channel = it->second;
+        mChannelSwitches.erase(it);
+        return true;
+    }
+
+    return false;
+}
+
 void AccountManager::Cleanup(const std::shared_ptr<objects::AccountLogin>& login)
 {
     auto cLogin = login->GetCharacterLogin();

@@ -139,6 +139,7 @@ void AccountManager::HandleLoginResponse(const std::shared_ptr<
         // any logout save actions etc
         libcomp::Packet p;
         p.WritePacketCode(InternalPacketCode_t::PACKET_ACCOUNT_LOGOUT);
+        p.WriteU32Little((uint32_t)LogoutPacketAction_t::LOGOUT_DISCONNECT);
         p.WriteString16Little(
             libcomp::Convert::Encoding_t::ENCODING_UTF8, account->GetUsername());
         server->GetManagerConnection()->GetWorldConnection()->SendPacket(p);
@@ -149,42 +150,50 @@ void AccountManager::HandleLoginResponse(const std::shared_ptr<
 
 void AccountManager::HandleLogoutRequest(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
-    LogoutCode_t code, uint8_t channel)
+    LogoutCode_t code, uint8_t channelIdx)
 {
-    std::list<libcomp::Packet> replies;
     switch(code)
     {
         case LogoutCode_t::LOGOUT_CODE_QUIT:
             {
+                // No need to tell the world, just disconnect
                 libcomp::Packet reply;
                 reply.WritePacketCode(
                     ChannelToClientPacketCode_t::PACKET_LOGOUT);
-                reply.WriteU32Little((uint32_t)10);
-                replies.push_back(reply);
+                reply.WriteU32Little(
+                    (uint32_t)LogoutPacketAction_t::LOGOUT_PREPARE);
+                client->QueuePacket(reply);
 
-                reply = libcomp::Packet();
+                reply.Clear();
                 reply.WritePacketCode(
                     ChannelToClientPacketCode_t::PACKET_LOGOUT);
-                reply.WriteU32Little((uint32_t)13);
-                replies.push_back(reply);
+                reply.WriteU32Little(
+                    (uint32_t)LogoutPacketAction_t::LOGOUT_DISCONNECT);
+                client->SendPacket(reply);
             }
             break;
         case LogoutCode_t::LOGOUT_CODE_SWITCH:
-            (void)channel;
-            /// @todo: handle switching code
+            {
+                // Tell the world we're performing a channel switch and
+                // wait for the message to be responded to
+                auto account = client->GetClientState()->GetAccountLogin()->GetAccount();
+
+                libcomp::Packet p;
+                p.WritePacketCode(InternalPacketCode_t::PACKET_ACCOUNT_LOGOUT);
+                p.WriteU32Little((uint32_t)LogoutPacketAction_t::LOGOUT_CHANNEL_SWITCH);
+                p.WriteString16Little(
+                    libcomp::Convert::Encoding_t::ENCODING_UTF8, account->GetUsername());
+                p.WriteS8((int8_t)channelIdx);
+                mServer.lock()->GetManagerConnection()->GetWorldConnection()->SendPacket(p);
+            }
             break;
         default:
             break;
     }
-
-    for(libcomp::Packet& reply : replies)
-    {
-        client->SendPacket(reply);
-    }
 }
 
 void AccountManager::Logout(const std::shared_ptr<
-    channel::ChannelClientConnection>& client)
+    channel::ChannelClientConnection>& client, bool delay)
 {
     auto server = mServer.lock();
     auto zoneManager = server->GetZoneManager();
@@ -209,29 +218,33 @@ void AccountManager::Logout(const std::shared_ptr<
         zoneManager->LeaveZone(client);
     }
 
-    if(!LogoutCharacter(state))
+    if(!LogoutCharacter(state, delay))
     {
         LOG_ERROR(libcomp::String("Character %1 failed to save on account"
             " %2.\n").Arg(character->GetUUID().ToString())
             .Arg(account->GetUUID().ToString()));
     }
-    else
+    else if(!delay)
     {
         LOG_DEBUG(libcomp::String("Logged out user: '%1'\n").Arg(
             account->GetUsername()));
     }
 
-    //Remove the connection if it hasn't been removed already.
-    managerConnection->RemoveClientConnection(client);
+    if(!delay)
+    {
+        //Remove the connection if it hasn't been removed already.
+        managerConnection->RemoveClientConnection(client);
 
-    libcomp::ObjectReference<
-        objects::Account>::Unload(account->GetUUID());
+        libcomp::ObjectReference<
+            objects::Account>::Unload(account->GetUUID());
 
-    libcomp::Packet p;
-    p.WritePacketCode(InternalPacketCode_t::PACKET_ACCOUNT_LOGOUT);
-    p.WriteString16Little(
-        libcomp::Convert::Encoding_t::ENCODING_UTF8, account->GetUsername());
-    managerConnection->GetWorldConnection()->SendPacket(p);
+        libcomp::Packet p;
+        p.WritePacketCode(InternalPacketCode_t::PACKET_ACCOUNT_LOGOUT);
+        p.WriteU32Little((uint32_t)LogoutPacketAction_t::LOGOUT_DISCONNECT);
+        p.WriteString16Little(
+            libcomp::Convert::Encoding_t::ENCODING_UTF8, account->GetUsername());
+        managerConnection->GetWorldConnection()->SendPacket(p);
+    }
 }
 
 void AccountManager::Authenticate(const std::shared_ptr<
@@ -557,23 +570,25 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
         (character->Update(db) && defaultBox->Update(db));
 }
 
-bool AccountManager::LogoutCharacter(channel::ClientState* state)
+bool AccountManager::LogoutCharacter(channel::ClientState* state,
+    bool delay)
 {
     auto cState = state->GetCharacterState();
     auto character = cState->GetEntity();
 
     bool ok = true;
-    bool doSave = !state->GetForcedClose();
+    bool doSave = !state->GetLogoutSave();
     auto server = mServer.lock();
     auto worldDB = server->GetWorldDatabase();
 
-    ok &= Cleanup<objects::Character>(character, worldDB, doSave);
+    ok &= Cleanup<objects::Character>(character, worldDB, doSave,
+        !delay);
     ok &= Cleanup<objects::EntityStats>(character
-        ->GetCoreStats().Get(), worldDB, doSave);
+        ->GetCoreStats().Get(), worldDB, doSave, !delay);
     ok &= Cleanup<objects::CharacterProgress>(character
-        ->GetProgress().Get(), worldDB, doSave);
+        ->GetProgress().Get(), worldDB, doSave, !delay);
     ok &= Cleanup<objects::FriendSettings>(character
-        ->GetFriendSettings().Get(), worldDB, doSave);
+        ->GetFriendSettings().Get(), worldDB, doSave, !delay);
 
     // Save items and boxes
     std::list<std::shared_ptr<objects::ItemBox>> allBoxes;
@@ -581,10 +596,14 @@ bool AccountManager::LogoutCharacter(channel::ClientState* state)
     {
         allBoxes.push_back(itemBox.Get());
     }
-    
-    for(auto itemBox : state->GetAccountWorldData()->GetItemBoxes())
+
+    auto accountWorldData = state->GetAccountWorldData().Get();
+    if(accountWorldData)
     {
-        allBoxes.push_back(itemBox.Get());
+        for(auto itemBox : accountWorldData->GetItemBoxes())
+        {
+            allBoxes.push_back(itemBox.Get());
+        }
     }
 
     for(auto itemBox : allBoxes)
@@ -594,10 +613,10 @@ bool AccountManager::LogoutCharacter(channel::ClientState* state)
             for(auto item : itemBox->GetItems())
             {
                 ok &= Cleanup<objects::Item>(item.Get(), worldDB,
-                    doSave);
+                    doSave, !delay);
             }
             ok &= Cleanup<objects::ItemBox>(itemBox, worldDB,
-                doSave);
+                doSave, !delay);
         }
     }
 
@@ -605,22 +624,26 @@ bool AccountManager::LogoutCharacter(channel::ClientState* state)
     for(auto material : character->GetMaterials())
     {
         ok &= Cleanup<objects::Item>(material.Get(), worldDB,
-            doSave);
+            doSave, !delay);
     }
 
     // Save expertises
     for(auto expertise : character->GetExpertises())
     {
         ok &= Cleanup<objects::Expertise>(expertise.Get(),
-            worldDB, doSave);
+            worldDB, doSave, !delay);
     }
 
     // Save demon boxes, demons and stats
     std::list<std::shared_ptr<objects::DemonBox>> demonBoxes;
     demonBoxes.push_back(character->GetCOMP().Get());
-    for(auto box : state->GetAccountWorldData()->GetDemonBoxes())
+
+    if(accountWorldData)
     {
-        demonBoxes.push_back(box.Get());
+        for(auto box : accountWorldData->GetDemonBoxes())
+        {
+            demonBoxes.push_back(box.Get());
+        }
     }
     
     for(auto box : demonBoxes)
@@ -632,13 +655,15 @@ bool AccountManager::LogoutCharacter(channel::ClientState* state)
                 if(!demon.IsNull())
                 {
                     ok &= Cleanup<objects::EntityStats>(demon
-                        ->GetCoreStats().Get(), worldDB, doSave);
+                        ->GetCoreStats().Get(), worldDB, doSave,
+                        !delay);
                     ok &= Cleanup<objects::Demon>(demon.Get(),
-                        worldDB, doSave);
+                        worldDB, doSave, !delay);
                 }
             }
 
-            ok &= Cleanup<objects::DemonBox>(box, worldDB, doSave);
+            ok &= Cleanup<objects::DemonBox>(box, worldDB, doSave,
+                !delay);
         }
     }
 
@@ -646,12 +671,12 @@ bool AccountManager::LogoutCharacter(channel::ClientState* state)
     for(auto hotbar : character->GetHotbars())
     {
         ok &= Cleanup<objects::Hotbar>(hotbar.Get(),
-            worldDB, doSave);
+            worldDB, doSave, !delay);
     }
 
     // Save world data
     ok &= Cleanup<objects::AccountWorldData>(
-        state->GetAccountWorldData().Get(), worldDB, doSave);
+        accountWorldData, worldDB, doSave, !delay);
 
     return ok;
 }

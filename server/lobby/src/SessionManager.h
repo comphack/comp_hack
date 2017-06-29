@@ -79,6 +79,15 @@ public:
      */
     void RefreshSession(const libcomp::String& username);
 
+    /**
+     * Check and clear out any expired sessions associated
+     * to the supplied username.
+     * @param username Username of the account to check.
+     * @return true if a session was expired, false if one
+     *  was not
+     */
+    bool HasExpiredSession(const libcomp::String& username);
+
 private:
     /// Lock for access to the session map.
     std::mutex mSessionLock;

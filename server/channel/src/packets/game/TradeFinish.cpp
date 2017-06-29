@@ -216,8 +216,8 @@ bool Parsers::TradeFinish::Parse(libcomp::ManagerPacket *pPacketManager,
     if(!db->ProcessChangeSet(changes))
     {
         LOG_ERROR("Trade failed to save.\n");
-        state->SetForcedClose(true);
-        otherState->SetForcedClose(true);
+        state->SetLogoutSave(true);
+        otherState->SetLogoutSave(true);
         client->Close();
         otherClient->Close();
     }

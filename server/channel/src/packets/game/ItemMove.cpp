@@ -75,7 +75,7 @@ bool Parsers::ItemMove::Parse(libcomp::ManagerPacket *pPacketManager,
     if(nullptr == item)
     {
         LOG_ERROR("Item move failed due to unknown item ID.\n");
-        state->SetForcedClose(true);
+        state->SetLogoutSave(true);
         client->Close();
         return true;
     }
@@ -95,7 +95,7 @@ bool Parsers::ItemMove::Parse(libcomp::ManagerPacket *pPacketManager,
         if(sourceBox->GetItems(sourceSlot).Get() != item)
         {
             LOG_ERROR("Item move operation failed.\n");
-            state->SetForcedClose(true);
+            state->SetLogoutSave(true);
             client->Close();
             return true;
         }
@@ -130,7 +130,7 @@ bool Parsers::ItemMove::Parse(libcomp::ManagerPacket *pPacketManager,
     else
     {
         LOG_ERROR("Item move failed due to invalid source or destination box.\n");
-        state->SetForcedClose(true);
+        state->SetLogoutSave(true);
         client->Close();
     }
 

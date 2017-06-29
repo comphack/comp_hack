@@ -3,7 +3,7 @@
     <object name="ClientStateObject" persistent="false">
         <member type="bool" name="Authenticated"/>
         <member type="bool" name="LoggedIn"/>
-        <member type="bool" name="ForcedClose"/>
+        <member type="bool" name="LogoutSave" default="true"/>
         <member type="AccountLogin*" name="AccountLogin"/>
         <member type="AccountWorldData*" name="AccountWorldData"/>
         <member type="EventState*" name="EventState"/>

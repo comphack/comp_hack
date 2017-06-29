@@ -84,6 +84,8 @@ bool ChannelServer::Initialize()
         to_underlying(InternalPacketCode_t::PACKET_SET_CHANNEL_INFO));
     internalPacketManager->AddParser<Parsers::AccountLogin>(
         to_underlying(InternalPacketCode_t::PACKET_ACCOUNT_LOGIN));
+    internalPacketManager->AddParser<Parsers::AccountLogout>(
+        to_underlying(InternalPacketCode_t::PACKET_ACCOUNT_LOGOUT));
     internalPacketManager->AddParser<Parsers::CharacterLogin>(
         to_underlying(InternalPacketCode_t::PACKET_CHARACTER_LOGIN));
     internalPacketManager->AddParser<Parsers::FriendsUpdate>(
@@ -407,6 +409,15 @@ void ChannelServer::LoadAllRegisteredChannels()
 {
     mAllRegisteredChannels = libcomp::PersistentObject::LoadAll<
         objects::RegisteredChannel>(mWorldDatabase);
+
+    // Key channels sorted by ID in ascending order
+    auto currentChannel = mRegisteredChannel;
+    mAllRegisteredChannels.sort([currentChannel](
+        const std::shared_ptr<objects::RegisteredChannel>& a,
+        const std::shared_ptr<objects::RegisteredChannel>& b)
+    {
+        return a->GetID() < b->GetID();
+    });
 }
 
 std::shared_ptr<libcomp::Database> ChannelServer::GetWorldDatabase() const
@@ -541,6 +552,8 @@ int64_t ChannelServer::GetNextObjectID()
 
 void ChannelServer::Tick()
 {
+    ServerTime tickTime = GetServerTime();
+
     // Update the active zone states
     mZoneManager->UpdateActiveZoneStates();
 
@@ -576,6 +589,43 @@ void ChannelServer::Tick()
         }
     }
 
+    std::map<ServerTime, std::list<libcomp::Message::Execute*>> schedule;
+    {
+        std::lock_guard<std::mutex> lock(mLock);
+
+        // Retrieve all work scheduled for the current time or before
+        for(auto it = mScheduledWork.begin(); it != mScheduledWork.end(); it++)
+        {
+            if(it->first <= tickTime)
+            {
+                schedule[it->first] = it->second;
+            }
+            else
+            {
+                break;
+            }
+        }
+
+        // Clear all scheduled work retrieved from the member map
+        for(auto it = schedule.begin(); it != schedule.end(); it++)
+        {
+            mScheduledWork.erase(it->first);
+        }
+    }
+
+    // Queue any work that has been scheduled
+    if(schedule.size() > 0)
+    {
+        auto queue = mQueueWorker.GetMessageQueue();
+        for(auto it = schedule.begin(); it != schedule.end(); it++)
+        {
+            for(auto it2 = it->second.begin(); it2 != it->second.end(); it2++)
+            {
+                queue->Enqueue(*it2);
+            }
+        }
+    }
+
     QueueNextTick();
 }
 
@@ -590,6 +640,10 @@ std::shared_ptr<libcomp::TcpConnection> ChannelServer::CreateConnection(
     {
         // Make sure this is called after connecting.
         connection->ConnectionSuccess();
+
+        // Kill the connection if the client doesn't send packets
+        // shortly after connecting
+        connection->RefreshTimeout(GetServerTime());
     }
     else
     {

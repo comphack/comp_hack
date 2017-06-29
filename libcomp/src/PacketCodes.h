@@ -306,6 +306,17 @@ enum class ChannelToClientPacketCode_t : uint16_t
 };
 
 /**
+ * Client specified set of flags added to the log out packet to signify the expected action to take.
+ */
+enum class LogoutPacketAction_t : uint32_t
+{
+    LOGOUT_PREPARE = 10, //!< Prepare to log out, printing a 10 second countdown if not sent a different code shortly after.
+    LOGOUT_CANCEL = 11, //!< Logout cancel confirmation.
+    LOGOUT_DISCONNECT = 13, //!< Close the connection resulting in a generic disconnect message if sent not following a prepare.
+    LOGOUT_CHANNEL_SWITCH = 14, //!< Log out of the current channel and move to the one specified in the packet.
+};
+
+/**
  * Request or response packet code between two internal servers.
  */
 enum class InternalPacketCode_t : uint16_t

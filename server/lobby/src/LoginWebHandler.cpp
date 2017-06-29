@@ -186,9 +186,17 @@ void LoginHandler::ParsePost(CivetServer *pServer,
         if(nullptr != account && account->GetPassword() ==
             libcomp::Decrypt::HashPassword(postVars.pass, account->GetSalt()))
         {
+            // If an expired session exists, expire it and log the user out
+            if(mSessionManager->HasExpiredSession(postVars.id))
+            {
+                int8_t loginWorldID;
+                mAccountManager->IsLoggedIn(postVars.id, loginWorldID);
+                mSessionManager->ExpireSession(postVars.id);
+                mAccountManager->LogoutUser(postVars.id, loginWorldID);
+            }
+
             // Make sure the account is not logged in.
-            if(nullptr != mAccountManager && nullptr != mSessionManager &&
-                mAccountManager->LoginUser(postVars.id))
+            if(mAccountManager->LoginUser(postVars.id))
             {
                 // Generate the session IDs.
                 sids = mSessionManager->GenerateSIDs(postVars.id);

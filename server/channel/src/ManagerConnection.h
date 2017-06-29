@@ -99,7 +99,7 @@ public:
      * @return Pointer to the client connection
      */
     const std::shared_ptr<ChannelClientConnection> GetClientConnection(
-        const libcomp::String& username) const;
+        const libcomp::String& username);
 
     /**
      * Set an active client connection after its account has
@@ -116,6 +116,31 @@ public:
     void RemoveClientConnection(const std::shared_ptr<
         ChannelClientConnection>& connection);
 
+    /**
+     * Get the client connection associated to the supplied entity ID.
+     * @param id Entity ID or world ID associated to the client
+     *  state to retrieve
+     * @param worldID true if the ID is from the world, false if it is a
+     *  local entity ID
+     * @return Pointer to the client connection associated to the ID or
+     *  nullptr if it does not exist
+     */
+    const std::shared_ptr<ChannelClientConnection>
+        GetEntityClient(int32_t id, bool worldID = false);
+
+    /**
+     * Schedule future server work to execute HandleClientTimeouts.
+     * @return true if the work was scheduled, false if it was not
+     */
+    bool ScheduleClientTimeoutHandler();
+
+    /**
+     * Cycle through the current client connections and disconnect clients
+     * that not pinged the server for a while.
+     * @param now The current server time used to check for timeouts 
+     */
+    void HandleClientTimeouts(uint64_t now);
+
 private:
     /// Static list of supported message types for the manager.
     static std::list<libcomp::Message::MessageType> sSupportedTypes;
@@ -129,6 +154,9 @@ private:
 
     /// Pointer to the server that uses this manager.
     std::weak_ptr<libcomp::BaseServer> mServer;
+
+    /// Server lock for shared resources
+    std::mutex mLock;
 };
 
 } // namespace world

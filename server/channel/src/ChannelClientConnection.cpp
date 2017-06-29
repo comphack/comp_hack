@@ -30,7 +30,7 @@ using namespace channel;
 
 ChannelClientConnection::ChannelClientConnection(asio::ip::tcp::socket& socket,
     DH *pDiffieHellman) : ChannelConnection(socket, pDiffieHellman),
-    mClientState(std::shared_ptr<ClientState>(new ClientState))
+    mClientState(std::shared_ptr<ClientState>(new ClientState)), mTimeout(0)
 {
 }
 
@@ -41,4 +41,15 @@ ChannelClientConnection::~ChannelClientConnection()
 ClientState* ChannelClientConnection::GetClientState() const
 {
     return mClientState.get();
+}
+
+void ChannelClientConnection::RefreshTimeout(uint64_t now)
+{
+    // 30 seconds from now
+    mTimeout = now + 30000000;
+}
+
+uint64_t ChannelClientConnection::GetTimeout() const
+{
+    return mTimeout;
 }

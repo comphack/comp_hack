@@ -40,13 +40,6 @@
 
 using namespace channel;
 
-void LogoutAccount(AccountManager* accountManager,
-    const std::shared_ptr<ChannelClientConnection>& client,
-    LogoutCode_t code, uint8_t channel)
-{
-    accountManager->HandleLogoutRequest(client, code, channel);
-}
-
 bool Parsers::Logout::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
@@ -75,7 +68,7 @@ bool Parsers::Logout::Parse(libcomp::ManagerPacket *pPacketManager,
     }
 
     bool sendReply = false;
-    uint8_t channelID = 0;
+    uint8_t channelIdx = 0;
     switch(code)
     {
         case LogoutCode_t::LOGOUT_CODE_QUIT:
@@ -85,9 +78,8 @@ bool Parsers::Logout::Parse(libcomp::ManagerPacket *pPacketManager,
             // Cancel is not currently supported
             break;
         case LogoutCode_t::LOGOUT_CODE_SWITCH:
-            channelID = p.ReadU8();
+            channelIdx = p.ReadU8();
             sendReply = true;
-            return false;   /// @todo: handle switch properly
             break;
         default:
             break;
@@ -95,8 +87,8 @@ bool Parsers::Logout::Parse(libcomp::ManagerPacket *pPacketManager,
 
     if(sendReply)
     {
-        server->QueueWork(LogoutAccount, server->GetAccountManager(), client,
-            code, channelID);
+        server->GetAccountManager()->HandleLogoutRequest(client,
+            code, channelIdx);
     }
 
     return true;

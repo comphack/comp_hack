@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <programs>
-	<program timeout="3000" restart="false">
+	<program timeout="0" restart="false">
 		<path>bin/comp_lobby</path>
 		<arg>--test</arg>
 		<arg>bin/testing/lobby.xml</arg>

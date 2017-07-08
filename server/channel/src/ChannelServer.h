@@ -66,8 +66,9 @@ public:
      * @param config Pointer to a casted ChannelConfig that will contain properties
      *   every server has in addition to channel specific ones.
      */
-    ChannelServer(const char *szProgram, std::shared_ptr<
-        objects::ServerConfig> config);
+    ChannelServer(const char *szProgram,
+        std::shared_ptr<objects::ServerConfig> config,
+        std::shared_ptr<libcomp::ServerCommandLineParser> commandLine);
 
     /**
      * Clean up the server.

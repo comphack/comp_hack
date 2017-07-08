@@ -138,6 +138,11 @@ protected:
     virtual int Run();
 
     /**
+     * Called when the server has started.
+     */
+    virtual void ServerReady();
+
+    /**
      * Create a connection to a newly active socket.
      * @param socket A new socket connection.
      * @return Pointer to the newly created connection

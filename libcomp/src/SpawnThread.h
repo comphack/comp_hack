@@ -32,6 +32,7 @@
 #include "MessageQueue.h"
 
 // Standard C++11 Includes
+#include <functional>
 #include <thread>
 
 namespace libcomp
@@ -42,7 +43,8 @@ class DayCare;
 class SpawnThread
 {
 public:
-    explicit SpawnThread(DayCare *pJuvy, bool printDetails = true);
+    explicit SpawnThread(DayCare *pJuvy, bool printDetails = true,
+        std::function<void()> onDetain = 0);
     ~SpawnThread();
 
     void QueueChild(const std::shared_ptr<Child>& child);
@@ -58,6 +60,7 @@ private:
     std::thread *mThread;
 
     libcomp::MessageQueue<std::shared_ptr<Child>> mRestartQueue;
+    std::function<void()> mOnDetain;
 };
 
 } // namespace libcomp

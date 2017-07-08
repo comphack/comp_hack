@@ -27,10 +27,15 @@
 #include "SpawnThread.h"
 #include "DayCare.h"
 
+#include <signal.h>
+
 using namespace libcomp;
 
-SpawnThread::SpawnThread(DayCare *pJuvy, bool printDetails) :
-    mPrintDetails(printDetails), mDayCare(pJuvy)
+pthread_t gSelf;
+
+SpawnThread::SpawnThread(DayCare *pJuvy, bool printDetails,
+    std::function<void()> onDetain) : mPrintDetails(printDetails),
+    mDayCare(pJuvy), mOnDetain(onDetain)
 {
     mThread = new std::thread([](SpawnThread *pThread){
         pThread->Run();
@@ -61,7 +66,9 @@ void SpawnThread::QueueChild(const std::shared_ptr<Child>& child)
 void SpawnThread::Run()
 {
     bool running = true;
-   
+
+    gSelf = pthread_self();
+
     while(running)
     {
         std::list<std::shared_ptr<Child>> children;
@@ -81,7 +88,9 @@ void SpawnThread::Run()
         {
             for(auto child : children)
             {
-                if(child->Start())
+                int timeout = child->GetBootTimeout();
+
+                if(child->Start(0 == timeout))
                 {
                     if(mPrintDetails)
                     {
@@ -89,11 +98,21 @@ void SpawnThread::Run()
                             child->GetCommandLine().c_str());
                     }
 
-                    int timeout = child->GetBootTimeout();
-
                     if(0 != timeout)
                     {
                         usleep((uint32_t)(timeout * 1000));
+                    }
+                    else
+                    {
+                        sigset_t set;
+                        int sig;
+
+                        sigemptyset(&set);
+                        sigaddset(&set, SIGUSR2);
+
+                        pthread_sigmask(SIG_BLOCK, &set, NULL);
+                        sigwait(&set, &sig);
+                        pthread_sigmask(SIG_UNBLOCK, &set, NULL);
                     }
                 }
                 else
@@ -101,6 +120,11 @@ void SpawnThread::Run()
                     printf("Failed to start: %s\n",
                         child->GetCommandLine().c_str());
                 }
+            }
+
+            if(mOnDetain)
+            {
+                mOnDetain();
             }
         }
     }

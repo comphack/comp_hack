@@ -102,7 +102,7 @@ int TcpServer::Start()
         mService.run();
     });
 
-    LOG_INFO("Server ready!\n");
+    ServerReady();
 
     int returnCode = Run();
 
@@ -123,6 +123,11 @@ void TcpServer::RemoveConnection(std::shared_ptr<TcpConnection>& connection)
 int TcpServer::Run()
 {
     return 0;
+}
+
+void TcpServer::ServerReady()
+{
+    LOG_INFO("Server ready!\n");
 }
 
 std::shared_ptr<TcpConnection> TcpServer::CreateConnection(

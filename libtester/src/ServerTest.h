@@ -159,13 +159,24 @@ static inline void EXPECT_SERVER(const libtester::ServerTestConfig& config,
         const std::string& _programsPath,
         const std::shared_ptr<libtester::TimedTask>& _task)
     {
-        libcomp::DayCare procManager(false);
+        std::promise<bool> promisedStart;
+        auto future = promisedStart.get_future();
+
+        libcomp::DayCare procManager(false, [&](){
+            promisedStart.set_value(true);
+        });
 
         ASSERT_TRUE(procManager.DetainMonsters(_programsPath));
 
-        std::this_thread::sleep_for(_bootDur);
+        auto futureStatus = future.wait_for(_bootDur);
 
-        _task->Run();
+        EXPECT_TRUE(std::future_status::timeout != futureStatus)
+            << "Server(s) did not start.";
+
+        if(std::future_status::timeout != futureStatus)
+        {
+            _task->Run();
+        }
 
         procManager.CloseDoors();
         procManager.WaitForExit();
@@ -187,8 +198,8 @@ namespace ServerConfig
 static inline ServerTestConfig LobbyOnly()
 {
     return ServerTestConfig(
-        std::chrono::milliseconds(10000),
-        std::chrono::milliseconds(3000),
+        std::chrono::milliseconds(60000), // 60 seconds
+        std::chrono::milliseconds(20000), // 20 seconds
         "bin/testing/programs-lobby.xml");
 }
 

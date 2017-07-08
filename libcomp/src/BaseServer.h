@@ -42,6 +42,8 @@
 namespace libcomp
 {
 
+class ServerCommandLineParser;
+
 /**
  * Base class for all servers that run workers to handle
  * incoming messages in the message queue.  Each of these
@@ -59,8 +61,9 @@ public:
      * @param config Pointer to a config container that will hold properties
      *   every server has in common.
      */
-    BaseServer(const char *szProgram, std::shared_ptr<
-        objects::ServerConfig> config);
+    BaseServer(const char *szProgram,
+        std::shared_ptr<objects::ServerConfig> config,
+        std::shared_ptr<ServerCommandLineParser> commandLine);
 
     /**
      * Clean up the server workers and send out the the server shutdown message.
@@ -81,7 +84,7 @@ public:
      * fully started.
      */
     virtual void FinishInitialize();
-    
+
     /**
      * Get the different types of messages handled by this manager.
      * @return List of supported message types
@@ -199,6 +202,11 @@ protected:
     virtual int Run();
 
     /**
+     * Called when the server has started.
+     */
+    virtual void ServerReady();
+
+    /**
      * Create one or many workers to handle connection requests based upon
      * the server config allowing mutliple workers as well as how many cores
      * are available on the executing machine's CPU.
@@ -240,6 +248,9 @@ protected:
 
     /// A shared pointer to the config used to set up the server.
     std::shared_ptr<objects::ServerConfig> mConfig;
+
+    /// Command line options for the server.
+    std::shared_ptr<ServerCommandLineParser> mCommandLine;
 
     /// Worker that blocks and runs in the main thread.
     libcomp::Worker mMainWorker;

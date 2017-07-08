@@ -32,6 +32,7 @@
 #include <Exception.h>
 #include <Log.h>
 #include <PersistentObject.h>
+#include <ServerCommandLineParser.h>
 #include <Shutdown.h>
 
 int main(int argc, const char *argv[])
@@ -43,11 +44,24 @@ int main(int argc, const char *argv[])
     LOG_INFO("COMP_hack World Server v0.0.1 build 1\n");
     LOG_INFO("Copyright (C) 2010-2016 COMP_hack Team\n\n");
 
-    std::string configPath = libcomp::BaseServer::GetDefaultConfigPath() + "world.xml";
+    std::string configPath = libcomp::BaseServer::GetDefaultConfigPath() +
+        "world.xml";
 
-    if(argc == 2)
+    // Command line argument parser.
+    auto parser = std::make_shared<libcomp::ServerCommandLineParser>();
+
+    // Parse the command line arguments.
+    if(!parser->Parse(argc, argv))
     {
-        configPath = argv[1];
+        return EXIT_FAILURE;
+    }
+
+    auto arguments = parser->GetStandardArguments();
+
+    if(!arguments.empty())
+    {
+        configPath = arguments.front().ToUtf8();
+
         LOG_DEBUG(libcomp::String("Using custom config path "
             "%1\n").Arg(configPath));
 
@@ -73,7 +87,7 @@ int main(int argc, const char *argv[])
     }
 
     auto server = std::make_shared<world::WorldServer>(
-        argv[0], config);
+        argv[0], config, parser);
 
     if(!server->Initialize())
     {

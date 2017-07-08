@@ -37,6 +37,8 @@ using namespace libcomp;
 static DayCare *gDayCare = nullptr;
 static volatile bool gTerm = false;
 
+extern pthread_t gSelf;
+
 void SignalHandler(int signum)
 {
     static int killCount = 0;
@@ -51,6 +53,13 @@ void SignalHandler(int signum)
             {
                 gDayCare->PrintStatus();
             }
+            break;
+        }
+        case SIGUSR2:
+        {
+            printf("Got SIGUSR2. Server has started.\n");
+            pthread_kill(gSelf, SIGUSR2);
+
             break;
         }
         case SIGINT:
@@ -94,6 +103,7 @@ void SignalHandler(int signum)
 int main(int argc, char *argv[])
 {
     signal(SIGUSR1, SignalHandler);
+    signal(SIGUSR2, SignalHandler);
     signal(SIGTERM, SignalHandler);
     signal(SIGINT, SignalHandler);
 

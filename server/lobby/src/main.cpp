@@ -34,6 +34,7 @@
 #include <Exception.h>
 #include <Log.h>
 #include <PersistentObject.h>
+#include <ServerCommandLineParser.h>
 #include <Shutdown.h>
 
 // Civet Includes
@@ -53,12 +54,21 @@ int main(int argc, const char *argv[])
 
     bool unitTestMode = false;
 
+    // Command line argument parser.
+    auto parser = std::make_shared<libcomp::ServerCommandLineParser>();
+
+    // Parse the command line arguments.
+    if(!parser->Parse(argc, argv))
+    {
+        return EXIT_FAILURE;
+    }
+
     //initialize x
     int x = 4;
     //set x
     x = 2;
     //use x
-    if(x <= argc && std::string("--test") == argv[1])
+    if(x <= argc && parser->GetTestingEnabled())
     {
         argc--;
         argv++;
@@ -68,9 +78,11 @@ int main(int argc, const char *argv[])
         unitTestMode = true;
     }
 
-    if(2 == argc)
+    auto arguments = parser->GetStandardArguments();
+
+    if(!arguments.empty())
     {
-        configPath = argv[1];
+        configPath = arguments.front().ToUtf8();
 
         LOG_DEBUG(libcomp::String("Using custom config path %1\n").Arg(
             configPath));
@@ -98,7 +110,7 @@ int main(int argc, const char *argv[])
         return EXIT_FAILURE;
     }
     auto server = std::make_shared<lobby::LobbyServer>(
-        argv[0], config, unitTestMode);
+        argv[0], config, parser, unitTestMode);
 
     if(!server->Initialize())
     {

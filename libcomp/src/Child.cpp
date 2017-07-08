@@ -117,7 +117,7 @@ void Child::Interrupt()
     }
 }
 
-bool Child::Start()
+bool Child::Start(bool notify)
 {
     if(0 != mPID)
     {
@@ -128,7 +128,17 @@ bool Child::Start()
         waitpid(mPID, &status, 0);
     }
 
-    mPID = CreateProcess(mProgram, mArguments);
+    std::list<std::string> arguments = mArguments;
+
+    if(notify)
+    {
+        std::stringstream ss;
+        ss << "--notify=" << (int)getpid();
+
+        arguments.push_front(ss.str());
+    }
+
+    mPID = CreateProcess(mProgram, arguments);
 
     return 0 != mPID;
 }

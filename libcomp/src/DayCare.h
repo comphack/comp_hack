@@ -31,6 +31,7 @@
 #include "Child.h"
 
 // Standard C++11 Includes
+#include <functional>
 #include <memory>
 #include <mutex>
 
@@ -46,7 +47,8 @@ class WatchThread;
 class DayCare
 {
 public:
-    DayCare(bool printDetails = true);
+    DayCare(bool printDetails = true,
+        std::function<void()> onDetain = 0);
     ~DayCare();
 
     bool DetainMonsters(const std::string& path);

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="ServerCommandLine" persistent="false">
+        <member type="bool" name="TestingEnabled"/>
+        <member type="s32" name="NotifyProcess"/>
+    </object>
+</objgen>

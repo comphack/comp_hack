@@ -43,9 +43,10 @@
 
 using namespace channel;
 
-ChannelServer::ChannelServer(const char *szProgram, std::shared_ptr<
-    objects::ServerConfig> config) :
-    libcomp::BaseServer(szProgram, config), mAccountManager(0),
+ChannelServer::ChannelServer(const char *szProgram,
+    std::shared_ptr<objects::ServerConfig> config,
+    std::shared_ptr<libcomp::ServerCommandLineParser> commandLine) :
+    libcomp::BaseServer(szProgram, config, commandLine), mAccountManager(0),
     mActionManager(0), mCharacterManager(0), mChatManager(0), mEventManager(0),
     mSkillManager(0), mZoneManager(0), mDefinitionManager(0), mServerDataManager(0),
     mMaxEntityID(0), mMaxObjectID(0)
@@ -429,7 +430,7 @@ void ChannelServer::SetWorldDatabase(const std::shared_ptr<libcomp::Database>& d
 {
     mWorldDatabase = database;
 }
-   
+
 std::shared_ptr<libcomp::Database> ChannelServer::GetLobbyDatabase() const
 {
     return mLobbyDatabase;
@@ -680,7 +681,7 @@ void ChannelServer::QueueNextTick()
     {
         mTickThread.join();
     }
-    
+
     mTickThread = std::thread([this](std::shared_ptr<
         libcomp::MessageQueue<libcomp::Message::Message*>> queue)
     {

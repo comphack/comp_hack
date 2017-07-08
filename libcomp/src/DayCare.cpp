@@ -33,9 +33,9 @@
 
 using namespace libcomp;
 
-DayCare::DayCare(bool printDetails) : mRunning(true),
-    mPrintDetails(printDetails),
-    mSpawnThread(new SpawnThread(this, printDetails)),
+DayCare::DayCare(bool printDetails, std::function<void()> onDetain) :
+    mRunning(true), mPrintDetails(printDetails),
+    mSpawnThread(new SpawnThread(this, printDetails, onDetain)),
     mWatchThread(new WatchThread(this))
 {
 }

@@ -2,13 +2,16 @@
 <objgen>
     <!-- test classes -->
     <include path="test.xml"/>
-    
+
     <!-- config classes -->
     <include path="databaseconfig.xml"/>
     <include path="databaseconfig_mariadb.xml"/>
     <include path="databaseconfig_sqlite3.xml"/>
     <include path="serverconfig.xml"/>
-    
+
+    <!-- command line option classes -->
+    <include path="server_command_line.xml"/>
+
     <!-- common classes -->
     <include path="account.xml"/>
     <include path="accountlogin.xml"/>

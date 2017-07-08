@@ -58,8 +58,10 @@ public:
      * @param unitTestMode Debug parameter to use in unit tests.  Set to true
      *  to enable unit test mode.
      */
-    LobbyServer(const char *szProgram, std::shared_ptr<
-        objects::ServerConfig> config, bool unitTestMode);
+    LobbyServer(const char *szProgram,
+        std::shared_ptr<objects::ServerConfig> config,
+        std::shared_ptr<libcomp::ServerCommandLineParser> commandLine,
+        bool unitTestMode);
 
     /**
      * Clean up the server.

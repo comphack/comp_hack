@@ -260,8 +260,20 @@ TEST(Lobby, DoubleWebAuth)
     });
 }
 
+static void SignalHandler(int signum)
+{
+    extern pthread_t gSelf;
+
+    if(SIGUSR2 == signum)
+    {
+        pthread_kill(gSelf, SIGUSR2);
+    }
+}
+
 int main(int argc, char *argv[])
 {
+    signal(SIGUSR2, SignalHandler);
+
     try
     {
         ::testing::InitGoogleTest(&argc, argv);

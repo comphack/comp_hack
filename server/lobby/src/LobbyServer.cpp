@@ -48,9 +48,11 @@
 
 using namespace lobby;
 
-LobbyServer::LobbyServer(const char *szProgram, std::shared_ptr<
-    objects::ServerConfig> config, bool unitTestMode)
-    : libcomp::BaseServer(szProgram, config), mUnitTestMode(unitTestMode)
+LobbyServer::LobbyServer(const char *szProgram,
+    std::shared_ptr<objects::ServerConfig> config,
+    std::shared_ptr<libcomp::ServerCommandLineParser> commandLine,
+    bool unitTestMode) : libcomp::BaseServer(szProgram, config, commandLine),
+    mUnitTestMode(unitTestMode)
 {
 }
 
@@ -64,7 +66,7 @@ bool LobbyServer::Initialize()
     }
 
     auto conf = std::dynamic_pointer_cast<objects::LobbyConfig>(mConfig);
-    
+
     libcomp::EnumMap<objects::ServerConfig::DatabaseType_t,
         std::shared_ptr<objects::DatabaseConfig>> configMap;
 

@@ -42,8 +42,10 @@
 
 using namespace world;
 
-WorldServer::WorldServer(const char *szProgram, std::shared_ptr<
-    objects::ServerConfig> config) : libcomp::BaseServer(szProgram, config)
+WorldServer::WorldServer(const char *szProgram,
+    std::shared_ptr<objects::ServerConfig> config,
+    std::shared_ptr<libcomp::ServerCommandLineParser> commandLine) :
+    libcomp::BaseServer(szProgram, config, commandLine)
 {
 }
 
@@ -57,7 +59,7 @@ bool WorldServer::Initialize()
     }
 
     auto conf = std::dynamic_pointer_cast<objects::WorldConfig>(mConfig);
-    
+
     libcomp::EnumMap<objects::ServerConfig::DatabaseType_t,
         std::shared_ptr<objects::DatabaseConfig>> configMap;
 
@@ -271,7 +273,7 @@ std::shared_ptr<libcomp::Database> WorldServer::GetWorldDatabase() const
 {
     return mDatabase;
 }
-   
+
 std::shared_ptr<libcomp::Database> WorldServer::GetLobbyDatabase() const
 {
     return mLobbyDatabase;

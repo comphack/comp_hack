@@ -40,6 +40,7 @@
 #include <Decrypt.h>
 #include <Log.h>
 #include <MessageInit.h>
+#include <ServerCommandLineParser.h>
 
 // object Includes
 #include <Account.h>
@@ -48,9 +49,11 @@ using namespace libcomp;
 
 std::string BaseServer::sConfigPath;
 
-BaseServer::BaseServer(const char *szProgram, std::shared_ptr<
-    objects::ServerConfig> config) :
-    TcpServer("any", config->GetPort()), mConfig(config), mDataStore(szProgram)
+BaseServer::BaseServer(const char *szProgram,
+    std::shared_ptr<objects::ServerConfig> config,
+    std::shared_ptr<ServerCommandLineParser> commandLine) :
+    TcpServer("any", config->GetPort()), mConfig(config),
+    mCommandLine(commandLine), mDataStore(szProgram)
 {
 }
 
@@ -263,6 +266,23 @@ int BaseServer::Run()
     mService.stop();
 
     return 0;
+}
+
+void BaseServer::ServerReady()
+{
+    //TcpServer::ServerReady();
+
+    int32_t pid = mCommandLine->GetNotifyProcess();
+
+    if(0 < pid)
+    {
+#ifndef _WIN32
+        LOG_DEBUG(String("Sending startup notification to "
+            "PID %1\n").Arg(pid));
+
+        kill((pid_t)pid, SIGUSR2);
+#endif // !_WIN32
+    }
 }
 
 void BaseServer::Shutdown()

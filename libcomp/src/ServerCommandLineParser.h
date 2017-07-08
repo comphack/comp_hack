@@ -1,10 +1,10 @@
 /**
- * @file libcomp/src/Child.h
+ * @file libcomp/src/ServerCommandLineParser.h
  * @ingroup libcomp
  *
  * @author COMP Omega <compomega@tutanota.com>
  *
- * @brief Class to wrap and manage a child process.
+ * @brief Class to handle parsing command line arguments for a server.
  *
  * This file is part of the COMP_hack Library (libcomp).
  *
@@ -24,44 +24,29 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef LIBCOMP_SRC_CHILD_H
-#define LIBCOMP_SRC_CHILD_H
+#ifndef LIBCOMP_SRC_SERVERCOMMANDLINEPARSER_H
+#define LIBCOMP_SRC_SERVERCOMMANDLINEPARSER_H
 
-// Linux Includes
-#include <unistd.h>
+// libcomp Includes
+#include "ArgumentParser.h"
 
-// Standard C++11 Includes
-#include <list>
-#include <string>
+// object Includes
+#include <ServerCommandLine.h>
 
 namespace libcomp
 {
 
-class Child
+/**
+ * Class to handle parsing command line arguments for a server.
+ */
+class ServerCommandLineParser : public ArgumentParser,
+    public objects::ServerCommandLine
 {
 public:
-    explicit Child(const std::string& program,
-        const std::list<std::string>& arguments,
-        int bootTimeout = 0, bool restart = false);
-    ~Child();
-
-    bool Start(bool notify = false);
-    pid_t GetPID() const;
-    std::string GetCommandLine() const;
-    bool ShouldRestart() const;
-    int GetBootTimeout() const;
-
-    void Kill();
-    void Interrupt();
-
-private:
-    std::string mProgram;
-    std::list<std::string> mArguments;
-    pid_t mPID;
-    int mBootTimeout;
-    bool mRestart;
+    ServerCommandLineParser();
+    virtual ~ServerCommandLineParser();
 };
 
 } // namespace libcomp
 
-#endif // LIBCOMP_SRC_CHILD_H
+#endif // LIBCOMP_SRC_SERVERCOMMANDLINEPARSER_H

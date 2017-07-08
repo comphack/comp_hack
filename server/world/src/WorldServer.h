@@ -56,8 +56,9 @@ public:
      * @param config Pointer to a casted WorldConfig that will contain properties
      *   every server has in addition to world specific ones.
      */
-    WorldServer(const char *szProgram, std::shared_ptr<
-        objects::ServerConfig> config);
+    WorldServer(const char *szProgram,
+        std::shared_ptr<objects::ServerConfig> config,
+        std::shared_ptr<libcomp::ServerCommandLineParser> commandLine);
 
     /**
      * Clean up the server.
@@ -202,7 +203,7 @@ protected:
     std::map<std::shared_ptr<libcomp::InternalConnection>,
         std::shared_ptr<objects::RegisteredChannel>> mRegisteredChannels;
 
-    /// Pointer to the manager in charge of connection messages. 
+    /// Pointer to the manager in charge of connection messages.
     std::shared_ptr<ManagerConnection> mManagerConnection;
 
     /// Account manager for the server.

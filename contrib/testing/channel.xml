@@ -25,5 +25,6 @@
         <member name="WorldIP">127.0.0.1</member>
         <member name="WorldPort">18666</member>
         <member name="ExternalIP">127.0.0.1</member>
+        <member name="TimeoutEnabled">false</member>
     </object>
 </objgen>

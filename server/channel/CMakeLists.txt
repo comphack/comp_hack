@@ -213,6 +213,7 @@ SET(${PROJECT_NAME}_PACKETS
     src/packets/internal/SetWorldInfo.cpp          # 0x1002
     src/packets/internal/SetOtherChannelInfo.cpp   # 0x1003
     src/packets/internal/AccountLogin.cpp          # 0x1004
+    src/packets/internal/AccountLogout.cpp         # 0x1005
     src/packets/internal/CharacterLogin.cpp        # 0x1007
     src/packets/internal/FriendsUpdate.cpp         # 0x1008
     src/packets/internal/PartyUpdate.cpp           # 0x1009

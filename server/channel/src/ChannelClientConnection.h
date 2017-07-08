@@ -60,9 +60,25 @@ public:
      */
     ClientState* GetClientState() const;
 
+    /**
+     * Refresh the client timeout.
+     * @param now Current server time
+     */
+    void RefreshTimeout(uint64_t now);
+
+    /**
+     * Get the next client timeout timestamp.
+     * @return Server time representation of the next timeout timestamp
+     */
+    uint64_t GetTimeout() const;
+
 private:
     /// State of the client
     std::shared_ptr<ClientState> mClientState;
+
+    /// Server timestamp used to disconnect the client should it pass
+    /// without refreshing beforehand.
+    uint64_t mTimeout;
 };
 
 static inline ClientState* state(

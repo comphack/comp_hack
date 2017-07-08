@@ -27,13 +27,9 @@
 #include "Packets.h"
 
 // libcomp Includes
-#include <Decrypt.h>
-#include <Log.h>
 #include <ManagerPacket.h>
 #include <Packet.h>
 #include <PacketCodes.h>
-#include <ReadOnlyPacket.h>
-#include <TcpConnection.h>
 
 // channel Includes
 #include "ChannelServer.h"
@@ -44,19 +40,24 @@ bool Parsers::KeepAlive::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {
-    (void)pPacketManager;
-
     if(p.Size() != 4)
     {
         return false;
     }
+
+    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+
+    // Keep alive requests should occur once every 10 seconds
+    // The client can miss only a few requests before the server kills the connection
+    client->RefreshTimeout(server->GetServerTime());
 
     libcomp::Packet reply;
     reply.WritePacketCode(
         ChannelToClientPacketCode_t::PACKET_KEEP_ALIVE);
     reply.WriteU32Little(p.ReadU32Little());
 
-    connection->SendPacket(reply);
+    client->SendPacket(reply);
 
     return true;
 }

@@ -104,11 +104,7 @@ bool Parsers::CharacterLogin::Parse(libcomp::ManagerPacket *pPacketManager,
     std::unordered_map<int32_t, std::shared_ptr<ChannelClientConnection>> connections;
     for(int32_t cid : cids)
     {
-        auto state = ClientState::GetEntityClientState(cid, true);
-        auto cState = state != nullptr ? state->GetCharacterState() : nullptr;
-        auto client = cState->GetEntity() != nullptr ?
-            server->GetManagerConnection()->GetClientConnection(
-                cState->GetEntity()->GetAccount()->GetUsername()) : nullptr;
+        auto client = server->GetManagerConnection()->GetEntityClient(cid, true);
         if(client)
         {
             connections[cid] = client;

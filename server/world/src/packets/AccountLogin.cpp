@@ -82,21 +82,47 @@ void LobbyLogin(std::shared_ptr<WorldServer> server,
 
     if(ok)
     {
-        auto channel = server->GetLoginChannel();
-        if(nullptr != channel)
+        auto loginChannel = server->GetLoginChannel();
+        if(nullptr != loginChannel)
         {
-            auto worldID = std::dynamic_pointer_cast<objects::WorldConfig>(
-                server->GetConfig())->GetID();
-            auto channelID = channel->GetID();
+            int8_t channelID;
+            auto accountManager = server->GetAccountManager();
             auto characterManager = server->GetCharacterManager();
 
+            // Remove any channel switches stored for whatever reason
+            accountManager->PopChannelSwitch(login->GetAccount()
+                ->GetUsername(), channelID);
+
+            auto worldID = std::dynamic_pointer_cast<objects::WorldConfig>(
+                server->GetConfig())->GetID();
+            channelID = (int8_t)loginChannel->GetID();
+
             // Login now to get the session key
-            server->GetAccountManager()->LoginUser(login);
+            accountManager->LoginUser(login);
 
             // Get the cached character login or register a new one
             cLogin = characterManager->RegisterCharacter(cLogin);
+
+            // If the character is already logged in somehow, send a 
+            // disconnect request (should cover dead connections)
+            if(cLogin->GetChannelID() >= 0)
+            {
+                auto channel = server->GetChannelConnectionByID(
+                    cLogin->GetChannelID());
+                if(channel)
+                {
+                    libcomp::Packet p;
+                    p.WritePacketCode(
+                        InternalPacketCode_t::PACKET_ACCOUNT_LOGOUT);
+                    p.WriteS32Little(cLogin->GetWorldCID());
+                    p.WriteU32Little(
+                        (uint32_t)LogoutPacketAction_t::LOGOUT_DISCONNECT);
+                    channel->SendPacket(p);
+                }
+            }
+
             cLogin->SetWorldID((int8_t)worldID);
-            cLogin->SetChannelID((int8_t)channelID);
+            cLogin->SetChannelID(channelID);
 
             // Check if they were part of a party that was disbanded
             if(cLogin->GetPartyID() &&

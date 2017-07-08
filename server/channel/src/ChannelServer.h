@@ -256,6 +256,27 @@ public:
      */
     void Tick();
 
+    /**
+     * Schedule code work to be queued by the next server tick that occurs
+     * following the specified time.
+     * @param timestamp ServerTime timestamp that needs to pass for the
+     *  specified work to be processed
+     * @param f Function (lambda) to execute
+     * @param args Arguments to pass to the function when it is executed
+     * @return true on success, false on failure
+     */
+    template<typename Function, typename... Args>
+    bool ScheduleWork(ServerTime timestamp, Function&& f, Args&&... args)
+    {
+        auto msg = new libcomp::Message::ExecuteImpl<Args...>(
+            std::forward<Function>(f), std::forward<Args>(args)...);
+
+        std::lock_guard<std::mutex> lock(mLock);
+        mScheduledWork[timestamp].push_back(msg);
+
+        return true;
+    }
+
 protected:
     /**
      * Create a connection to a newly active socket.
@@ -288,6 +309,11 @@ protected:
     /// Function pointer to the most accurate time detection code
     /// available for the current machine.
     static GET_SERVER_TIME sGetServerTime;
+
+    /// Timestamp ordered map of prepared Execute messages and timestamps
+    /// associated to when they should be queued following a server tick
+    std::map<ServerTime,
+        std::list<libcomp::Message::Execute*>> mScheduledWork;
 
     /// Pointer to the manager in charge of connection messages.
     std::shared_ptr<ManagerConnection> mManagerConnection;

@@ -129,6 +129,7 @@ PACKET_PARSER_DECL(DigitalizeAssist);       // 0x0418
 PACKET_PARSER_DECL(SetWorldInfo);        // 0x1002
 PACKET_PARSER_DECL(SetOtherChannelInfo); // 0x1003
 PACKET_PARSER_DECL(AccountLogin);        // 0x1004
+PACKET_PARSER_DECL(AccountLogout);       // 0x1005
 PACKET_PARSER_DECL(CharacterLogin);      // 0x1007
 PACKET_PARSER_DECL(FriendsUpdate);       // 0x1008
 PACKET_PARSER_DECL(PartyUpdate);         // 0x1009

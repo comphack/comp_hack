@@ -53,6 +53,8 @@ SET(${PROJECT_NAME}_TEST_SRCS
 )
 
 IF(NOT BSD)
+IF(NOT WIN32) # Windows does not have the server spawning code.
     # Add the unit tests.
     CREATE_GTESTS(LIBS comp tester SRCS ${${PROJECT_NAME}_TEST_SRCS})
+ENDIF(NOT WIN32)
 ENDIF(NOT BSD)

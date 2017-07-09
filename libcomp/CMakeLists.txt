@@ -93,13 +93,18 @@ SET(${PROJECT_NAME}_SRCS
     src/TcpServer.cpp
     #src/ThreadManager.cpp
     src/Worker.cpp
-
-    # for comp_manager and testing.
-    src/Child.cpp
-    src/DayCare.cpp
-    src/SpawnThread.cpp
-    src/WatchThread.cpp
 )
+
+IF(NOT WIN32)
+    SET(${PROJECT_NAME}_SRCS
+        ${${PROJECT_NAME}_SRCS}
+        # for comp_manager and testing.
+        src/Child.cpp
+        src/DayCare.cpp
+        src/SpawnThread.cpp
+        src/WatchThread.cpp
+    )
+ENDIF(NOT WIN32)
 
 IF(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/src/ConfigCustom.cpp)
     SET(${PROJECT_NAME}_SRCS ${${PROJECT_NAME}_SRCS} src/ConfigCustom.cpp)
@@ -190,6 +195,17 @@ SET(${PROJECT_NAME}_HDRS
     src/PushIgnore.h
     src/PopIgnore.h
 )
+
+IF(NOT WIN32)
+    SET(${PROJECT_NAME}_HDRS
+        ${${PROJECT_NAME}_HDRS}
+        # for comp_manager and testing.
+        src/Child.h
+        src/DayCare.h
+        src/SpawnThread.h
+        src/WatchThread.h
+    )
+ENDIF(NOT WIN32)
 
 SET(${PROJECT_NAME}_SCHEMA
     schema/account.xml

@@ -445,7 +445,12 @@ ENDIF(IS_DIRECTORY "${CMAKE_SOURCE_DIR}/client" AND NOT ${DISABLE_CLIENT})
 
 #ADD_SUBDIRECTORY(console)
 ADD_SUBDIRECTORY(server)
-ADD_SUBDIRECTORY(libtester)
+
+# Windows does not have the server spawning code.
+IF(NOT WIN32)
+    ADD_SUBDIRECTORY(libtester)
+ENDIF(NOT WIN32)
+
 #ADD_SUBDIRECTORY(updater)
 
 # Add all the documentation targets to a single target "doc".

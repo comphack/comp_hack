@@ -270,7 +270,7 @@ int BaseServer::Run()
 
 void BaseServer::ServerReady()
 {
-    //TcpServer::ServerReady();
+    TcpServer::ServerReady();
 
     int32_t pid = mCommandLine->GetNotifyProcess();
 

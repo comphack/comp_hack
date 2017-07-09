@@ -91,12 +91,6 @@ public:
     static ServerTime GetServerTime();
 
     /**
-     * Get the current time relative to the server in seconds.
-     * @return Current time relative to the server in seconds
-     */
-    static uint32_t GetServerTimeInSeconds();
-
-    /**
      * Get the amount of time left in an expiration relative to the server,
      * in seconds.
      * @return Time until expiration relative to the server, in seconds

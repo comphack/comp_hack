@@ -55,29 +55,29 @@ void AllocatePoint(const std::shared_ptr<ChannelServer> server,
     auto stats = character->GetCoreStats().Get();
 
     int32_t pointCost = 0;
-    switch((libcomp::CorrectData)correctStatOffset)
+    switch((CorrectTbl)correctStatOffset)
     {
-        case libcomp::CorrectData::CORRECT_STR:
+        case CorrectTbl::STR:
             pointCost = GetPointCost(stats->GetSTR());
             stats->SetSTR(static_cast<int16_t>(stats->GetSTR() + 1));
             break;
-        case libcomp::CorrectData::CORRECT_MAGIC:
+        case CorrectTbl::MAGIC:
             pointCost = GetPointCost(stats->GetMAGIC());
             stats->SetMAGIC(static_cast<int16_t>(stats->GetMAGIC() + 1));
             break;
-        case libcomp::CorrectData::CORRECT_VIT:
+        case CorrectTbl::VIT:
             pointCost = GetPointCost(stats->GetVIT());
             stats->SetVIT(static_cast<int16_t>(stats->GetVIT() + 1));
             break;
-        case libcomp::CorrectData::CORRECT_INTEL:
+        case CorrectTbl::INT:
             pointCost = GetPointCost(stats->GetINTEL());
             stats->SetINTEL(static_cast<int16_t>(stats->GetINTEL() + 1));
             break;
-        case libcomp::CorrectData::CORRECT_SPEED:
+        case CorrectTbl::SPEED:
             pointCost = GetPointCost(stats->GetSPEED());
             stats->SetSPEED(static_cast<int16_t>(stats->GetSPEED() + 1));
             break;
-        case libcomp::CorrectData::CORRECT_LUCK:
+        case CorrectTbl::LUCK:
             pointCost = GetPointCost(stats->GetLUCK());
             stats->SetLUCK(static_cast<int16_t>(stats->GetLUCK() + 1));
             break;
@@ -87,12 +87,13 @@ void AllocatePoint(const std::shared_ptr<ChannelServer> server,
 
     character->SetPoints(static_cast<int32_t>(character->GetPoints() - pointCost));
 
-    cState->RecalculateStats(server->GetDefinitionManager());
+    auto characterManager = server->GetCharacterManager();
+    characterManager->RecalculateStats(client, cState->GetEntityID(), false);
 
     libcomp::Packet reply;
     reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_ALLOCATE_SKILL_POINT);
     reply.WriteS32Little(cState->GetEntityID());
-    server->GetCharacterManager()->GetEntityStatsPacketData(reply, stats, cState, true);
+    characterManager->GetEntityStatsPacketData(reply, stats, cState, 1);
     reply.WriteS32Little(pointCost);
 
     client->SendPacket(reply);

@@ -27,34 +27,93 @@
 #ifndef SERVER_CHANNEL_SRC_ACTIVEENTITYSTATE_H
 #define SERVER_CHANNEL_SRC_ACTIVEENTITYSTATE_H
 
+// libcomp Includes
+#include <EnumMap.h>
+
 // objects Includes
 #include <ActiveEntityStateObject.h>
 #include <EntityStats.h>
+#include <MiCorrectTbl.h>
+#include <StatusEffect.h>
+
+// Standard C++11 includes
+#include <map>
+
+/// Effect cancelled upon logout
+const uint8_t EFFECT_CANCEL_LOGOUT = 0x01;
+
+/// Effect cancelled upon leaving a zone
+const uint8_t EFFECT_CANCEL_ZONEOUT = 0x04;
+
+/// Effect cancelled upon death
+const uint8_t EFFECT_CANCEL_DEATH = 0x08;
+
+/// Effect cancelled upon being hit
+const uint8_t EFFECT_CANCEL_HIT = 0x10;
+
+/// Effect cancelled upon receiving any damage
+const uint8_t EFFECT_CANCEL_DAMAGE = 0x20;
+
+/// Effect cancelled upon being knocked back
+const uint8_t EFFECT_CANCEL_KNOCKBACK = 0x40;
+
+/// Effect cancelled upon performing a skill
+const uint8_t EFFECT_CANCEL_SKILL = 0x80;
 
 namespace libcomp
 {
 class DefinitionManager;
 }
 
+typedef objects::MiCorrectTbl::ID_t CorrectTbl;
+typedef std::unordered_map<uint32_t, std::pair<uint8_t, bool>> AddStatusEffectMap;
+
 namespace channel
 {
 
+class Zone;
+
+/**
+ * Represents an active entity on the channel server. An entity is
+ * active if it can move or perform actions independent of other entities.
+ * Active entities have stats and status effects in addition to the usual
+ * current zone position shared with non-active entities.
+ */
 class ActiveEntityState : public objects::ActiveEntityStateObject
 {
 public:
+    ActiveEntityState();
+
     /**
-     * Recalculate the entity's current stats, adjusted by equipment and
-     * effects.
-     * @param Pointer to the server's definition manager to use for calculations
-     * @return true if the calculation succeeded, false if it errored
+     * Explicitly defined copy constructor necessary due to removal
+     * of implicit constructor from non-copyable mutex member. This should
+     * never actually be used.
+     * @param other The other entity to copy
      */
-    virtual bool RecalculateStats(libcomp::DefinitionManager* definitionManager) = 0;
+    ActiveEntityState(const ActiveEntityState& other);
+
+    /**
+     * Recalculate the entity's stats, adjusted by equipment and
+     * effects.
+     * @param definitionManager Pointer to the DefinitionManager to use when
+     *  determining how effects and items interact with the entity
+     * @return 1 if the calculation resulted in a change to the stats that should
+     *  be sent to the client, 2 if one of the changes should be communicated to
+     *  the world (for party members etc), 0 otherwise
+     */
+    virtual uint8_t RecalculateStats(libcomp::DefinitionManager* definitionManager) = 0;
 
     /**
      * Get the core stats associated to the active entity.
      * @return Pointer to the active entity's core stats
      */
     virtual std::shared_ptr<objects::EntityStats> GetCoreStats() = 0;
+
+    /**
+     * Get the the entity UUID associated to the entity this state represents.
+     * @return Entity UUID or null UUID if not specified
+     */
+    virtual const libobjgen::UUID GetEntityUUID();
 
     /**
      * Set the entity's destination position based on the supplied
@@ -83,6 +142,12 @@ public:
     void Stop(uint64_t now);
 
     /**
+     * Check if the entity is currently alive
+     * @return true if the entity is alive, false if they are not
+     */
+    bool IsAlive() const;
+
+    /**
      * Check if the entity is currently not at their destination position
      * @return true if the entity is moving, false if they are not
      */
@@ -109,7 +174,216 @@ public:
      */
     virtual bool Ready() = 0;
 
-private:
+    /**
+     * Get the zone the entity currently exists in.
+     * @return Pointer to the entity's current zone, nullptr if they
+     *  are not currently in a zone
+     */
+    Zone* GetZone() const;
+
+    /**
+     * Set the entity's current zone.
+     * @param zone Pointer to the zone the entity has entered
+     * @param updatePrevious true if the previous zone should be notified
+     *  of the change, false if this is being handled elsewhere
+     */
+    void SetZone(Zone* zone, bool updatePrevious = true);
+
+    /**
+     * Set the HP and/or MP of the entity to either a specified or adjusted
+     * value. Use this instead of a raw EntityStats function to avoid
+     * conflicting updats running at the same time.
+     * @param hp Specified or adjusted HP value to apply
+     * @param mp Specified or adjusted MP value to apply
+     * @param adjust If true the supplied HP and MP values will be added to
+     *  the current value instead of being set explicitly
+     * @param canOverflow true if the entity can be changed from alive to
+     *  dead and vice-versa
+     * @return If adjust and canOverflow are both true, the returned value
+     *  will be whether the entity's HP has overflowed.  If one of those params
+     *  is false, the returned value represents if the HP or MP were changed
+     */
+    bool SetHPMP(int16_t hp, int16_t mp, bool adjust, bool canOverflow = false);
+
+    /**
+     * Set the HP and/or MP of the entity to either a specified or adjusted
+     * value. Use this instead of a raw EntityStats function to avoid
+     * conflicting updats running at the same time.
+     * @param hp Specified or adjusted HP value to apply
+     * @param mp Specified or adjusted MP value to apply
+     * @param adjust If true the supplied HP and MP values will be added to
+     *  the current value instead of being set explicitly
+     * @param canOverflow true if the entity can be changed from alive to
+     *  dead and vice-versa
+     * @param hpAdjusted If not adjusting, this will be the HP damage dealt,
+     *  otherwise it matches the value supplied
+     * @param mpAdjusted If not adjusting, this will be the MP damage dealt,
+     *  otherwise it matches the value supplied
+     * @return If adjust and canOverflow are both true, the returned value
+     *  will be whether the entity's HP has overflowed.  If one of those params
+     *  is false, the returned value represents if the HP or MP were changed
+     */
+    bool SetHPMP(int16_t hp, int16_t mp, bool adjust, bool canOverflow,
+        int16_t& hpAdjusted, int16_t& mpAdjusted);
+
+    /**
+     * Get the current status effect map
+     * @return Map of current status effects by type ID
+     */
+    const std::unordered_map<uint32_t,
+        std::shared_ptr<objects::StatusEffect>>& GetStatusEffects() const;
+
+    /**
+     * Set the status effects currently on the entity
+     * @param List of status effects currently on the entity
+     */
+    void SetStatusEffects(
+        const std::list<std::shared_ptr<objects::StatusEffect>>& effects);
+
+    /**
+     * Add new status effects to the entity and activate them. If there are
+     * status effects that are replaced by the application of the new ones
+     * they will be expired and returned.
+     * @param effects Map of status effect stacks and whether they are replaces
+     *  or not by effect type ID
+     * @param definitionManager Pointer to the DefinitionManager to use when
+     *  determining how the effects behave
+     * @param now Current system timestamp to use when activating the effects,
+     *  defaults to the current time if not specified
+     * @param queueChanges If true and the entity is in an effect active state,
+     *  the effect inserts, updates and removes will be queued as the next entity
+     *  time-based events to be processed by the next server tick. Set to false
+     *  if the changes will be communicated by some other means
+     * @return Set of expired effect IDs if any added effects cancel existing
+     *  effects
+     */
+    std::set<uint32_t> AddStatusEffects(const AddStatusEffectMap& effects,
+        libcomp::DefinitionManager* definitionManager, uint32_t now = 0,
+        bool queueChanges = true);
+
+    /**
+     * Expire existing status effects by effect type ID. The expire event
+     * will be queued up for processing on the next server tick.
+     * @param effectTypes Set of effect type IDs to expire
+     */
+    void ExpireStatusEffects(const std::set<uint32_t>& effectTypes);
+
+    /**
+     * Cancel existing status effects via cancel event flags. The expire
+     * event will be queued up for processing on the next server tick.
+     * @param cancelFlags Flags indicating conditions that can cause status
+     *  effects to be cancelled. The set of valid status conditions are listed
+     *  as constants on ActiveEntityState
+     */
+    void CancelStatusEffects(uint8_t cancelFlags);
+
+    /**
+     * Activate or deactivate the entity's status effect states. By activating
+     * effects, they will be registered with the ActiveEntityState and its current
+     * zone via their absolute server time expiration in addition to setting any
+     * quick access properties on the entity. By deactivating effects, they will
+     * be unregistered from the zone, the quick access properties will be cleared
+     * and the expiration time of relative effects will be updated.
+     * @param activate true if the effects will activated, else they will be
+     *  deactivated
+     * @param definitionManager Pointer to the DefinitionManager to use when
+     *  determining how the effects behave
+     * @param now Current system timestamp to use when activating the effects,
+     *  defaults to the current time if not specified
+     */
+    void SetStatusEffectsActive(bool activate,
+        libcomp::DefinitionManager* definitionManager, uint32_t now = 0);
+
+    /**
+     * Pop effect events that have occurred past the specified time off the
+     * event mapping for the entity and their current zone.
+     * @param definitionManager Pointer to the DefinitionManager to use when
+     *  determining how the effects behave
+     * @param time System timestamp to use for comparing effect events that
+     *  have passed
+     * @param hpTDamage Output parameter to store the amount of HP time
+     *  damage that should be dealt
+     * @param mpTDamage Output parameter to store the amount of MP time
+     *  damage that should be dealt
+     * @param added Output set to store the effect type IDs of newly added
+     *  effects that have been queued since the specified time
+     * @param updated Output set to store the effect type IDs of updated
+     *  effects that have been queued since the specified time
+     * @param removed Output set to store the effect type IDs of removed
+     *  effects that have been queued since the specified time
+     * @return true if any events have passed, false if none have
+     */
+    bool PopEffectTicks(libcomp::DefinitionManager* definitionManager,
+        uint32_t time, int32_t& hpTDamage, int32_t& mpTDamage,
+        std::set<uint32_t>& added, std::set<uint32_t>& updated,
+        std::set<uint32_t>& removed);
+
+    /**
+     * Get a snapshot of status effects currently on the entity with their
+     * corresponding expiration time which is based upon he supplied time
+     * for relative duration effects
+     * @param definitionManager Pointer to the DefinitionManager to use when
+     *  determining how the effects behave
+     * @param now Current system timestamp to use for caculating relative duration
+     *  expirations remaining, if nothing is specified, the current time will be used
+     * @return List of current status effects paired with their expiration time
+     *  remaining
+     */
+    std::list<std::pair<std::shared_ptr<objects::StatusEffect>, uint32_t>>
+        GetCurrentStatusEffectStates(libcomp::DefinitionManager* definitionManager,
+        uint32_t now = 0);
+
+protected:
+    /**
+     * Set the status effects currently on the entity
+     * @param List of status effects currently on the entity as object references
+     */
+    void SetStatusEffects(
+        const std::list<libcomp::ObjectReference<objects::StatusEffect>>& effects);
+
+    /**
+     * Activate a status effect added to the entity's current status effect set.
+     * By activating an effect, it will be registered with the ActiveEntityState
+     * and its current zone via their absolute server time expiration in addition
+     * to setting any quick access properties on the entity.
+     * @param effect Pointer to the effect to activate
+     * @param definitionManager Pointer to the DefinitionManager to use when
+     *  determining how the effect behaves
+     * @param now Current system timestamp to use when activating the effect
+     */
+    void ActivateStatusEffect(
+        const std::shared_ptr<objects::StatusEffect>& effect,
+        libcomp::DefinitionManager* definitionManager, uint32_t now);
+
+    /**
+     * Set the next effect event time for a specified effect type for the entity's
+     * event map. The zone itself must be updated using RegisterNextEffectTime after
+     * each effect is set using this function.
+     * @param effectType Effect type ID to register an event for
+     * @param time Absolute system time to register for the event
+     */
+    void SetNextEffectTime(uint32_t effectType, uint32_t time);
+
+    /**
+     * Register the entity's next effect event time with the current zone.
+     */
+    void RegisterNextEffectTime();
+
+    /**
+     * Calculate the relative or absolute expiration for an effect based upon
+     * the current system time and an absolute system time.
+     * @param effect Pointer to the effect to calculate the expiration of
+     * @param definitionManager Pointer to the DefinitionManager to use when
+     *  determining how the effect behaves
+     * @param nextTime Absolute system time to use when calculating the expiration
+     * @param now Current system timestamp to use when activating the effect
+     * @return Calculated expiration for the effect
+     */
+    uint32_t GetCurrentExpiration(
+        const std::shared_ptr<objects::StatusEffect>& effect,
+        libcomp::DefinitionManager* definitionManager, uint32_t nextTime,
+        uint32_t now);
+
     /**
      * Corrects rotation values that have exceeded the minimum
      * or maximum allowed range.
@@ -118,8 +392,86 @@ private:
      */
     float CorrectRotation(float rot) const;
 
+    /**
+     * Adjust the supplied correct table stat values based upon adjustments from
+     * equipment or status effects.
+     * @param adjustments List of adjustments to the correct table values supplied
+     * @param stats Output map parameter of base or calculated stats to adjust for
+     *  the current entity
+     * @param baseMode If true only base stat correct table types will be adjusted,
+     *  if false only the non-base stat correct table types will be adjusted
+     */
+    void AdjustStats(const std::list<std::shared_ptr<objects::MiCorrectTbl>>& adjustments,
+        libcomp::EnumMap<CorrectTbl, int16_t>& stats, bool baseMode) const;
+
+    /**
+     * Get the correct table value adjustments from the entity's current status effects.
+     * @param definitionManager Pointer to the DefinitionManager to use when
+     *  determining how the effects behave
+     * @param adjustments Output list parameter to add the adjustments to
+     */
+    void GetStatusEffectCorrectTbls(libcomp::DefinitionManager* definitionManager,
+        std::list<std::shared_ptr<objects::MiCorrectTbl>>& adjustments);
+
+    /**
+     * Recalculate a demon or enemy entity's stats.
+     * @param definitionManager Pointer to the DefinitionManager to use when
+     *  determining how effects and items interact with the entity
+     * @param demonID Demon type ID of the entity
+     * @return 1 if the calculation resulted in a change to the stats that should
+     *  be sent to the client, 2 if one of the changes should be communicated to
+     *  the world (for party members etc), 0 otherwise
+     */
+    uint8_t RecalculateDemonStats(libcomp::DefinitionManager* definitionManager,
+        uint32_t demonID);
+
+    /**
+     * Compare and set the entity's current stats and also keep track of if
+     * a change occurred.
+     * @param stats Map of correct table IDs to calculated stats to set on the
+     *  entity
+     * @return 1 if the calculation resulted in a change to the stats that should
+     *  be sent to the client, 2 if one of the changes should be communicated to
+     *  the world (for party members etc), 0 if no change resulted from the
+     *  recalculation
+     */
+    uint8_t CompareAndResetStats(libcomp::EnumMap<CorrectTbl, int16_t>& stats);
+
+    /// Map of active status effects by effect type ID
+    std::unordered_map<uint32_t,
+        std::shared_ptr<objects::StatusEffect>> mStatusEffects;
+
+    /// IDs of status effects currently active that deal time damage for
+    /// quick access
+    std::set<uint32_t> mTimeDamageEffects;
+
+    /// Active effect type IDs mapped to cancel condition flags for quick
+    /// access
+    std::unordered_map<uint8_t, std::set<uint32_t>> mCancelConditions;
+
+    /// Map of server system times mapped to the next event time associated
+    /// to each active status effect. Natural HP/MP regen is stored here as
+    /// a 0. Actual effects will be stored here as reserved values 1
+    /// (inticating a new effect was added), 2 (indicating an efect has
+    /// been updated) or 3 (indicating an effect has expired). Any other
+    /// value stored will be an absolute system time when the regen or
+    /// T-Damage will be applied or the effect associated will be expired.
+    std::map<uint32_t, std::set<uint32_t>> mNextEffectTimes;
+
+    /// Pointer to the current zone the entity is in
+    Zone* mCurrentZone;
+
+    /// true if the status effects have been activated for the current zone
+    bool mEffectsActive;
+
+    /// Signifies that the entity is alive
+    bool mAlive;
+
     /// Last timestamp the entity's state was refreshed
     uint64_t mLastRefresh;
+
+    /// Server lock for shared resources
+    std::mutex mLock;
 };
 
 /**
@@ -152,17 +504,16 @@ public:
      * Set the active entity
      * @param entity Pointer to the active entity
      */
-    void SetEntity(const std::shared_ptr<T>& entity)
-    {
-        mEntity = entity;
-    }
+    void SetEntity(const std::shared_ptr<T>& entity);
+
+    virtual const libobjgen::UUID GetEntityUUID();
 
     virtual std::shared_ptr<objects::EntityStats> GetCoreStats()
     {
-        return mEntity->GetCoreStats().Get();
+        return mEntity ? mEntity->GetCoreStats().Get() : nullptr;
     }
 
-    virtual bool RecalculateStats(libcomp::DefinitionManager* definitionManager);
+    virtual uint8_t RecalculateStats(libcomp::DefinitionManager* definitionManager);
 
     virtual bool Ready()
     {

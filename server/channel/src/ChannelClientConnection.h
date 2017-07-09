@@ -63,14 +63,24 @@ public:
     /**
      * Refresh the client timeout.
      * @param now Current server time
+     * @param aliveUntil Time in seconds that needs to pass before the
+     *  refresh time is no longer valid and the timeout countdown starts
      */
-    void RefreshTimeout(uint64_t now);
+    void RefreshTimeout(uint64_t now, uint16_t aliveUntil);
 
     /**
      * Get the next client timeout timestamp.
      * @return Server time representation of the next timeout timestamp
      */
     uint64_t GetTimeout() const;
+
+    /**
+     * Broadcast the supplied packet to each client connection in the list.
+     * @param clients List of client connections to send the packet to
+     * @param packet Packet to send to the supplied clients
+     */
+    static void BroadcastPacket(const std::list<std::shared_ptr<
+        ChannelClientConnection>>& clients, libcomp::Packet& packet);
 
 private:
     /// State of the client

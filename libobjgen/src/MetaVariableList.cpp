@@ -190,6 +190,8 @@ std::string MetaVariableList::GetLoadCode(const Generator& generator,
             replacements["@VAR_TYPE@"] = mElementType->GetCodeType();
             replacements["@VAR_LOAD_CODE@"] = code;
             replacements["@STREAM@"] = stream;
+            replacements["@PERSIST_COPY@"] =
+                generator.GetPersistentRefCopyCode(mElementType, name);
 
             code = generator.ParseTemplate(0, "VariableListLoad",
                 replacements);
@@ -245,6 +247,8 @@ std::string MetaVariableList::GetLoadRawCode(const Generator& generator,
             replacements["@VAR_TYPE@"] = mElementType->GetCodeType();
             replacements["@VAR_LOAD_CODE@"] = code;
             replacements["@STREAM@"] = stream;
+            replacements["@PERSIST_COPY@"] =
+                generator.GetPersistentRefCopyCode(mElementType, name);
 
             code = generator.ParseTemplate(0, "VariableListLoadRaw",
                 replacements);

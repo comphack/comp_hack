@@ -129,6 +129,17 @@ private:
         const std::list<libcomp::String>& args);
 
     /**
+     * GM command to apply a status effect to the client's character or
+     * demon.
+     * @param client Pointer to the client that sent the command
+     * @param args List of arguments for the command
+     * @return true if the command was handled properly, else false
+     */
+    bool GMCommand_Effect(const std::shared_ptr<
+        channel::ChannelClientConnection>& client,
+        const std::list<libcomp::String>& args);
+
+    /**
      * GM command to spawn an entity in the client's zone.
      * @param client Pointer to the client that sent the command
      * @param args List of arguments for the command
@@ -167,6 +178,16 @@ private:
      * @return true if the command was handled properly, else false
      */
     bool GMCommand_Item(const std::shared_ptr<
+        channel::ChannelClientConnection>& client,
+        const std::list<libcomp::String>& args);
+
+    /**
+     * GM command to kill a character in the same zone.
+     * @param client Pointer to the client that sent the command
+     * @param args List of arguments for the command
+     * @return true if the command was handled properly, else false
+     */
+    bool GMCommand_Kill(const std::shared_ptr<
         channel::ChannelClientConnection>& client,
         const std::list<libcomp::String>& args);
 

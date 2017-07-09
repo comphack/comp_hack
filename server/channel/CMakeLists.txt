@@ -141,6 +141,7 @@ SET(${PROJECT_NAME}_PACKETS
     src/packets/game/DemonBox.cpp               # 0x005C
     src/packets/game/DemonBoxData.cpp           # 0x005E
     src/packets/game/ChannelList.cpp            # 0x0063
+    src/packets/game/ReviveCharacter.cpp        # 0x0067
     src/packets/game/StopMovement.cpp           # 0x006F
     src/packets/game/SpotTriggered.cpp          # 0x0071
     src/packets/game/WorldTime.cpp              # 0x0072
@@ -186,6 +187,7 @@ SET(${PROJECT_NAME}_PACKETS
     src/packets/game/QuestActiveList.cpp        # 0x010B
     src/packets/game/QuestCompletedList.cpp     # 0x010C
     src/packets/game/ClanInfo.cpp               # 0x0150
+    src/packets/game/SyncCharacter.cpp          # 0x017E
     src/packets/game/MapFlag.cpp                # 0x0197
     src/packets/game/DemonCompendium.cpp        # 0x019B
     src/packets/game/DungeonRecords.cpp         # 0x01C4

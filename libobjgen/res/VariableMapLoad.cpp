@@ -8,6 +8,7 @@
     uint16_t elementCount = @STREAM@.dynamicSizes.front();
     @STREAM@.dynamicSizes.pop_front();
 
+    @PERSIST_COPY@
     @VAR_NAME@.clear();
     for(uint16_t i = 0; i < elementCount; ++i)
     {

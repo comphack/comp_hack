@@ -35,6 +35,7 @@
 // object Includes
 #include <Account.h>
 #include <AccountLogin.h>
+#include <ChannelConfig.h>
 
 // channel Includes
 #include "ChannelServer.h"
@@ -209,37 +210,39 @@ const std::shared_ptr<ChannelClientConnection>
         : nullptr;
 }
 
-bool ManagerConnection::ScheduleClientTimeoutHandler()
+bool ManagerConnection::ScheduleClientTimeoutHandler(uint16_t timeout)
 {
     auto server = std::dynamic_pointer_cast<ChannelServer>(mServer.lock());
 
-    // Check timeouts every 30 seconds
-    ServerTime nextTime = server->GetServerTime() + 30000000;
-    return server->ScheduleWork(nextTime, [](ChannelServer* svr)
+    // Check every 10 seconds
+    ServerTime nextTime = server->GetServerTime() + 10000000ULL;
+    return server->ScheduleWork(nextTime, [](ChannelServer* svr, uint16_t t)
         {
-            uint64_t timestamp = svr->GetServerTime();
+            uint64_t now = svr->GetServerTime();
             auto manager = svr->GetManagerConnection();
 
-            manager->HandleClientTimeouts(timestamp);
-            manager->ScheduleClientTimeoutHandler();
-        }, server.get());
+            manager->HandleClientTimeouts(now, t);
+            manager->ScheduleClientTimeoutHandler(t);
+        }, server.get(), timeout);
 }
 
-void ManagerConnection::HandleClientTimeouts(uint64_t now)
+void ManagerConnection::HandleClientTimeouts(uint64_t now, uint16_t timeout)
 {
     std::list<libcomp::String> timeOuts;
     {
+        ServerTime expireBefore = now - (ServerTime)(timeout * 1000000ULL);
+
         std::lock_guard<std::mutex> lock(mLock);
         for(auto it = mClientConnections.begin();
             it != mClientConnections.end(); it++)
         {
-            auto timeout = it->second->GetTimeout();
-            if(timeout && timeout <= now)
+            auto clientTimeout = it->second->GetTimeout();
+            if(clientTimeout && clientTimeout <= expireBefore)
             {
                 timeOuts.push_back(it->first);
 
                 // Stop the timeout from throwing multiple times
-                it->second->RefreshTimeout(0);
+                it->second->RefreshTimeout(0, 0);
             }
         }
     }

@@ -129,17 +129,22 @@ public:
         GetEntityClient(int32_t id, bool worldID = false);
 
     /**
-     * Schedule future server work to execute HandleClientTimeouts.
+     * Schedule future server work to execute HandleClientTimeouts every
+     * 10 seconds.
+     * @param timeout Time in seconds that needs to pass for a client
+     *  connection to time out
      * @return true if the work was scheduled, false if it was not
      */
-    bool ScheduleClientTimeoutHandler();
+    bool ScheduleClientTimeoutHandler(uint16_t timeout);
 
     /**
      * Cycle through the current client connections and disconnect clients
      * that not pinged the server for a while.
-     * @param now The current server time used to check for timeouts 
+     * @param now The current server time used to check for timeouts
+     * @param timeout Time in seconds that needs to pass for a client
+     *  connection to time out
      */
-    void HandleClientTimeouts(uint64_t now);
+    void HandleClientTimeouts(uint64_t now, uint16_t timeout);
 
 private:
     /// Static list of supported message types for the manager.

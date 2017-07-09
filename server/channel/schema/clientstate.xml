@@ -4,6 +4,7 @@
         <member type="bool" name="Authenticated"/>
         <member type="bool" name="LoggedIn"/>
         <member type="bool" name="LogoutSave" default="true"/>
+        <member type="bool" name="AcceptRevival"/>
         <member type="AccountLogin*" name="AccountLogin"/>
         <member type="AccountWorldData*" name="AccountWorldData"/>
         <member type="EventState*" name="EventState"/>

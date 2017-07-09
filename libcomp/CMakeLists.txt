@@ -231,6 +231,7 @@ SET(${PROJECT_NAME}_SCHEMA
     schema/binarydata/shopproductdata.xml
     schema/binarydata/skilldata.xml
     schema/binarydata/spotdata.xml
+    schema/binarydata/statusdata.xml
     schema/binarydata/zonedata.xml
 )
 
@@ -377,6 +378,8 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     MiBattleDamageData.h
     MiBreakData.cpp
     MiBreakData.h
+    MiCancelData.cpp
+    MiCancelData.h
     MiCastBasicData.cpp
     MiCastBasicData.h
     MiCastCancelData.cpp
@@ -417,8 +420,12 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     MiDevilReunionConditionData.h
     MiDischargeData.cpp
     MiDischargeData.h
+    MiDoTDamageData.cpp
+    MiDoTDamageData.h
     MiDynamicMapData.h
     MiDynamicMapData.cpp
+    MiEffectData.cpp
+    MiEffectData.h
     MiEffectiveRangeData.cpp
     MiEffectiveRangeData.h
     MiExpertClassData.cpp
@@ -481,6 +488,10 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     MiSkillSpecialParams.h
     MiSkillTbl.h
     MiSkillTbl.cpp
+    MiStatusBasicData.cpp
+    MiStatusBasicData.h
+    MiStatusData.cpp
+    MiStatusData.h
     MiSummonData.cpp
     MiSummonData.h
     MiTargetData.cpp

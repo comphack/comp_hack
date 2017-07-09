@@ -149,9 +149,9 @@ bool SetWorldInfoFromPacket(libcomp::ManagerPacket *pPacketManager,
     // to start the main loop in addition to any recurring scheduled work
     server->Tick();
 
-    if(conf->GetTimeoutEnabled())
+    if(conf->GetTimeout() > 0)
     {
-        server->GetManagerConnection()->ScheduleClientTimeoutHandler();
+        server->GetManagerConnection()->ScheduleClientTimeoutHandler(conf->GetTimeout());
     }
 
     return true;

@@ -47,6 +47,9 @@ void Zone::AddConnection(const std::shared_ptr<ChannelClientConnection>& client)
     auto cState = client->GetClientState()->GetCharacterState();
     auto dState = client->GetClientState()->GetDemonState();
 
+    cState->SetZone(this);
+    dState->SetZone(this);
+
     RegisterEntityState(cState);
     RegisterEntityState(dState);
 
@@ -56,11 +59,17 @@ void Zone::AddConnection(const std::shared_ptr<ChannelClientConnection>& client)
 
 void Zone::RemoveConnection(const std::shared_ptr<ChannelClientConnection>& client)
 {
-    auto cEntityID = client->GetClientState()->GetCharacterState()->GetEntityID();
-    auto dEntityID = client->GetClientState()->GetDemonState()->GetEntityID();
+    auto cState = client->GetClientState()->GetCharacterState();
+    auto dState = client->GetClientState()->GetDemonState();
+
+    auto cEntityID = cState->GetEntityID();
+    auto dEntityID = dState->GetEntityID();
 
     UnregisterEntityState(cEntityID);
     UnregisterEntityState(dEntityID);
+
+    cState->SetZone(0);
+    dState->SetZone(0);
 
     std::lock_guard<std::mutex> lock(mLock);
     mConnections.erase(cEntityID);
@@ -156,4 +165,71 @@ std::shared_ptr<NPCState> Zone::GetNPC(int32_t id)
 std::shared_ptr<ServerObjectState> Zone::GetServerObject(int32_t id)
 {
     return std::dynamic_pointer_cast<ServerObjectState>(GetEntity(id));
+}
+
+void Zone::SetNextStatusEffectTime(uint32_t time, int32_t entityID)
+{
+    std::lock_guard<std::mutex> lock(mLock);
+    if(time)
+    {
+        mNextEntityStatusTimes[time].insert(entityID);
+    }
+    else
+    {
+        for(auto pair : mNextEntityStatusTimes)
+        {
+            pair.second.erase(entityID);
+        }
+    }
+}
+
+std::list<std::shared_ptr<ActiveEntityState>>
+    Zone::GetUpdatedStatusEffectEntities(uint32_t now)
+{
+    std::list<std::shared_ptr<ActiveEntityState>> result;
+    std::set<uint32_t> passed;
+
+    std::lock_guard<std::mutex> lock(mLock);
+    for(auto pair : mNextEntityStatusTimes)
+    {
+        if(pair.first > now) break;
+
+        passed.insert(pair.first);
+        for(auto entityID : pair.second)
+        {
+            auto it = mAllEntities.find(entityID);
+            auto active = it != mAllEntities.end()
+                ? std::dynamic_pointer_cast<ActiveEntityState>(it->second)
+                : nullptr;
+            if(active)
+            {
+                result.push_back(active);
+            }
+        }
+    }
+
+    for(auto p : passed)
+    {
+        mNextEntityStatusTimes.erase(p);
+    }
+
+    return result;
+}
+
+void Zone::Cleanup()
+{
+    std::lock_guard<std::mutex> lock(mLock);
+    for(auto pair : mAllEntities)
+    {
+        auto active = std::dynamic_pointer_cast<ActiveEntityState>(pair.second);
+        if(active)
+        {
+            active->SetZone(0, false);
+        }
+    }
+
+    mEnemies.clear();
+    mNPCs.clear();
+    mObjects.clear();
+    mAllEntities.clear();
 }

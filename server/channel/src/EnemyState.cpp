@@ -111,7 +111,7 @@ bool EnemyState::Prepare(const std::weak_ptr<EnemyState>& self,
 
 bool EnemyState::UpdateState(uint64_t now)
 {
-    if(!mAIScript)
+    if(!IsAlive() || !mAIScript)
     {
         return false;
     }

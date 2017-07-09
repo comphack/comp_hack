@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <include path="binarydata/shared.xml"/>
+    
+    <object name="MiStatusBasicData" persistent="false">
+        <member type="u8" name="maxStack"/>
+        <member type="u8" name="stackType"/>
+        <member type="u8" name="applicationLogic"/>
+        <member type="u8" name="unknown"/>
+        <member type="u16" name="groupID"/>
+        <member type="u8" name="groupRank"/>
+        <member type="u8" name="unused"/>
+        <member type="u32" name="functionID"/>
+    </object>
+    <object name="MiDoTDamageData" persistent="false">
+        <member type="s16" name="HPDamage"/>
+        <member type="s16" name="MPDamage"/>
+    </object>
+    <object name="MiEffectData" persistent="false">
+        <member type="u32" name="restrictions"/>
+        <member type="MiDoTDamageData*" name="damage"/>
+    </object>
+    <object name="MiCancelData" persistent="false">
+        <member type="u32" name="duration"/>
+        <member type="enum" name="durationType" underlying="uint8_t">
+            <value num="0">MS</value>
+            <value num="1">DAY</value>
+            <value num="3">NONE</value>
+            <value num="4">HOUR</value>
+            <value num="5">DAY_SET</value>
+            <value num="6">MS_SET</value>
+        </member>
+        <member type="u8" name="cancelTypes"/>
+        <member type="u16" name="unused"/>
+    </object>
+    <object name="MiStatusData" persistent="false">
+        <member type="MiSkillItemStatusCommonData*" name="common"/>
+        <member type="MiStatusBasicData*" name="basic"/>
+        <member type="MiEffectData*" name="effect"/>
+        <member type="MiCancelData*" name="cancel"/>
+    </object>
+</objgen>

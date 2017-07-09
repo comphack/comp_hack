@@ -205,6 +205,8 @@ std::string MetaVariableMap::GetLoadCode(const Generator& generator,
             replacements["@VAR_VALUE_TYPE@"] = mValueElementType->GetCodeType();
             replacements["@VAR_VALUE_LOAD_CODE@"] = valueCode;
             replacements["@STREAM@"] = stream;
+            replacements["@PERSIST_COPY@"] =
+                generator.GetPersistentRefCopyCode(mValueElementType, name);
 
             code = generator.ParseTemplate(0, "VariableMapLoad",
                 replacements);
@@ -265,6 +267,8 @@ std::string MetaVariableMap::GetLoadRawCode(const Generator& generator,
             replacements["@VAR_VALUE_TYPE@"] = mValueElementType->GetCodeType();
             replacements["@VAR_VALUE_LOAD_CODE@"] = valueCode;
             replacements["@STREAM@"] = stream;
+            replacements["@PERSIST_COPY@"] =
+                generator.GetPersistentRefCopyCode(mValueElementType, name);
 
             code = generator.ParseTemplate(0, "VariableMapLoadRaw",
                 replacements);

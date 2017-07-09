@@ -221,36 +221,6 @@ namespace libcomp
 /// Magnetite item ID
 #define ITEM_MAGNETITE (800)
 
-/// Known index values contained in the binary structure Correct tables
-enum CorrectData : unsigned char
-{
-    CORRECT_STR = 0,
-    CORRECT_MAGIC = 1,
-    CORRECT_VIT = 2,
-    CORRECT_INTEL = 3,
-    CORRECT_SPEED = 4,
-    CORRECT_LUCK = 5,
-    CORRECT_MAXHP = 6,
-    CORRECT_MAXMP = 7,
-    CORRECT_HP_REGEN = 8,
-    CORRECT_MP_REGEN = 9,
-
-    CORRECT_MOVE_SPEED = 11,
-    CORRECT_CLSR = 12,
-    CORRECT_LNGR = 13,
-    CORRECT_SPELL = 14,
-    CORRECT_SUPPORT = 15,
-    CORRECT_CRITICAL = 16,
-
-    CORRECT_PDEF = 19,
-    CORRECT_MDEF = 20,
-
-    CORRECT_ACQUIRE_EXP = 80,
-    CORRECT_ACQUIRE_MAG = 81,
-    CORRECT_ACQUIRE_MACCA = 82,
-    CORRECT_ACQUIRE_EXPERTISE = 83,
-};
-
 /// Experience required to proceed from the indexed level to the next
 const unsigned long long LEVEL_XP_REQUIREMENTS[] = {
     0ULL,               // 0->1

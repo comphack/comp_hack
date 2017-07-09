@@ -145,6 +145,8 @@ bool ChannelServer::Initialize()
         to_underlying(ClientToChannelPacketCode_t::PACKET_DEMON_BOX_DATA));
     clientPacketManager->AddParser<Parsers::ChannelList>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_CHANNEL_LIST));
+    clientPacketManager->AddParser<Parsers::ReviveCharacter>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_REVIVE_CHARACTER));
     clientPacketManager->AddParser<Parsers::StopMovement>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_STOP_MOVEMENT));
     clientPacketManager->AddParser<Parsers::SpotTriggered>(
@@ -237,6 +239,8 @@ bool ChannelServer::Initialize()
         to_underlying(ClientToChannelPacketCode_t::PACKET_QUEST_COMPLETED_LIST));
     clientPacketManager->AddParser<Parsers::ClanInfo>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_CLAN_INFO));
+    clientPacketManager->AddParser<Parsers::SyncCharacter>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_SYNC_CHARACTER));
     clientPacketManager->AddParser<Parsers::MapFlag>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_MAP_FLAG));
     clientPacketManager->AddParser<Parsers::DemonCompendium>(
@@ -643,7 +647,7 @@ std::shared_ptr<libcomp::TcpConnection> ChannelServer::CreateConnection(
 
         // Kill the connection if the client doesn't send packets
         // shortly after connecting
-        connection->RefreshTimeout(GetServerTime());
+        connection->RefreshTimeout(GetServerTime(), 30);
     }
     else
     {

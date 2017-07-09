@@ -10,6 +10,7 @@
         return false;
     }
 
+    @PERSIST_COPY@
     @VAR_NAME@.clear();
     for(uint32_t i = 0; i < elementCount; ++i)
     {

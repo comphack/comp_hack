@@ -36,6 +36,10 @@
 #include <unordered_map>
 #include <vector>
 
+#if defined(_WIN32) && defined(OPTIONAL)
+#undef OPTIONAL
+#endif // defined(_WIN32) && defined(OPTIONAL)
+
 namespace libcomp
 {
 

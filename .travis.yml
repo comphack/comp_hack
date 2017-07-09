@@ -91,7 +91,7 @@ before_script:
 script:
   - jdk_switcher use oraclejdk8
   - java -version
-  - mkdir -p build && cd build && cmake -G "${GENERATOR}" .. && cmake --build .
+  - mkdir -p build && cd build && cmake -DBUILD_OPTIMIZED=OFF -G "${GENERATOR}" .. && cmake --build .
   - cmake --build . --target doc
   - cmake --build . --target guide
   - cmake --build . --target test

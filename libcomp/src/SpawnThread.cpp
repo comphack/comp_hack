@@ -90,7 +90,7 @@ void SpawnThread::Run()
             {
                 int timeout = child->GetBootTimeout();
 
-                if(child->Start(0 == timeout))
+                if(child->Start(true))
                 {
                     if(mPrintDetails)
                     {
@@ -100,18 +100,24 @@ void SpawnThread::Run()
 
                     if(0 != timeout)
                     {
-                        usleep((uint32_t)(timeout * 1000));
-                    }
-                    else
-                    {
                         sigset_t set;
                         int sig;
+                        struct timespec tm;
+
+                        tm.tv_sec = timeout / 1000;
+                        tm.tv_nsec = (timeout % 1000) * 1000;
 
                         sigemptyset(&set);
                         sigaddset(&set, SIGUSR2);
 
                         pthread_sigmask(SIG_BLOCK, &set, NULL);
-                        sigwait(&set, &sig);
+
+                        if(0 > (sig = sigtimedwait(&set, NULL, &tm)))
+                        {
+                            printf("Failed to start: %s\n",
+                                child->GetCommandLine().c_str());
+                        }
+
                         pthread_sigmask(SIG_UNBLOCK, &set, NULL);
                     }
                 }

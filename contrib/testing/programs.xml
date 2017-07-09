@@ -1,16 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <programs>
-	<program timeout="3000" restart="false">
+	<program timeout="20000" restart="false">
 		<path>bin/comp_lobby</path>
 		<arg>--test</arg>
 		<arg>bin/testing/lobby.xml</arg>
 	</program>
-	<program timeout="3000" restart="false">
+	<program timeout="20000" restart="false">
 		<path>bin/comp_world</path>
+		<arg>--test</arg>
 		<arg>bin/testing/world.xml</arg>
 	</program>
-	<program timeout="3000" restart="false">
-		<path>build/bin/comp_channel</path>
+	<program timeout="20000" restart="false">
+		<path>bin/comp_channel</path>
+		<arg>--test</arg>
 		<arg>bin/testing/channel.xml</arg>
 	</program>
 </programs>

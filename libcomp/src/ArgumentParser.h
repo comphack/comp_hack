@@ -31,6 +31,7 @@
 #include "CString.h"
 
 // Standard C++ Includes
+#include <functional>
 #include <list>
 #include <unordered_map>
 #include <vector>

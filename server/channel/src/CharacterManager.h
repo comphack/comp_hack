@@ -27,6 +27,12 @@
 #ifndef SERVER_CHANNEL_SRC_CHARACTERMANAGER_H
 #define SERVER_CHANNEL_SRC_CHARACTERMANAGER_H
 
+// libcomp Includes
+#include <EnumMap.h>
+
+// object Includes
+#include <MiCorrectTbl.h>
+
 // channel Includes
 #include "ChannelClientConnection.h"
 
@@ -45,6 +51,8 @@ class ItemBox;
 class MiDevilData;
 class MiDevilLVUpData;
 }
+
+typedef objects::MiCorrectTbl::ID_t CorrectTbl;
 
 namespace channel
 {
@@ -113,6 +121,63 @@ public:
     void SendDemonData(const std::shared_ptr<
         ChannelClientConnection>& client,
         int8_t boxID, int8_t slot, int64_t demonID);
+
+    /**
+     * Recalculate the stats of an entity belonging to the supplied
+     * client and send any resulting changes to the zone (and world
+     * if applicable).
+     * @param client Pointer to the client connection
+     * @param entityID ID of the entity associated to the client to
+     *  recalculate the stats of
+     * @param updateSourceClient true if the changes should be sent
+     *  to the client itself as well, false if the client will be
+     *  communicated about the changes later
+     * @return 1 if the calculation resulted in a change to the stats
+     *  that should be sent to the client, 2 if one of the changes should
+     *  be communicated to the world (for party members etc), 0 otherwise
+     */
+    uint8_t RecalculateStats(std::shared_ptr<
+        ChannelClientConnection> client, int32_t entityID,
+        bool updateSourceClient = true);
+
+    /**
+     * Send the stats of an entity that has been recalculated to the
+     * zone (and world if applicable).
+     * @param client Pointer to the client connection
+     * @param entityID ID of the entity associated to the client to
+     *  recalculate the stats of
+     * @param includeSelf true if the packet should be sent to the
+     *  source client as well
+     */
+    void SendEntityStats(std::shared_ptr<
+        ChannelClientConnection> client, int32_t entityID,
+        bool includeSelf = true);
+
+    /**
+     * Send a revival action notification about the specified client to
+     * one client or the whole zone they are connected to.
+     * @param client Pointer to the client connection
+     * @param entity Entity that has had a revival action performed
+     *  on them
+     * @param action Revival action that has taken place. The valid
+     *  values are:
+     *  -1) Revival done: Signifies that no other revival action will
+     *      be sent following this one
+     *   1) Revive and wait: Revive the player character and wait for
+     *      a "revival done" notification. This is typically followed
+     *      with a zone change.
+     *   3) Normal: The entity has been revived by a skill or item
+     *   4) Accept revival: The entity is a character and is accepting
+     *      revival from other players
+     *   5) Deny revival: The entity is a character and is not accepting
+     *      revival from other players
+     * @param sendToZone true if the entire zone should be sent the
+     *  notification, false if just the client should be sent it
+     */
+    void SendEntityRevival(std::shared_ptr<
+        ChannelClientConnection> client,
+        const std::shared_ptr<ActiveEntityState>& eState,
+        int8_t action, bool sendToZone = false);
 
     /**
      * Set the character's status icon and send to the game clients
@@ -362,6 +427,37 @@ public:
         ChannelClientConnection>& client);
 
     /**
+     * Update the status effects assigned directly on a character or demon
+     * entity from the current status effect states and save them to the
+     * database.
+     * @param eState Pointer to the entity to save the status effects for
+     * @param queueSave true if the save action should be queued, false
+     *  if it should be done synchronously
+     */
+    bool UpdateStatusEffects(const std::shared_ptr<
+        ActiveEntityState>& eState, bool queueSave = false);
+
+    /**
+     * Cancel status effects associated to a client's character and demon
+     * based upon an action that affects both entities.
+     * @param client Pointer to the client connection
+     * @param cancelFlags Flags indicating conditions that can cause status
+     *  effects to be cancelled. The set of valid status conditions are listed
+     *  as constants on ActiveEntityState
+     */
+    void CancelStatusEffects(const std::shared_ptr<
+        ChannelClientConnection>& client, uint8_t cancelFlags);
+
+    /**
+     * Update the state of the supplied entities on the world server.
+     * @param entities List of pointers to entities to update on the world
+     *  server. If the supplied entities are not associated to any others
+     *  at a world server level, nothing will be sent.
+     */
+    void UpdateWorldDisplayState(const std::set<
+        std::shared_ptr<ActiveEntityState>> &entities);
+
+    /**
      * Calculate the base stats of a character.
      * @param cs Pointer to the core stats of a character
      */
@@ -381,7 +477,7 @@ public:
      * @param cs Pointer to the core stats of a character
      * @return Map of correct table indexes to corresponding stat values
      */
-    static std::unordered_map<uint8_t, int16_t> GetCharacterBaseStatMap(
+    static libcomp::EnumMap<CorrectTbl, int16_t> GetCharacterBaseStatMap(
         const std::shared_ptr<objects::EntityStats>& cs);
 
     /**
@@ -391,8 +487,15 @@ public:
      * @param level Current level of the character or demon
      * @param isDemon true if the entity is a demon, false if it is character
      */
-    static void CalculateDependentStats(std::unordered_map<uint8_t, int16_t>& stats,
+    static void CalculateDependentStats(libcomp::EnumMap<CorrectTbl, int16_t>& stats,
         int8_t level, bool isDemon);
+
+    /**
+     * Correct a map of calculated stat values to not exceed the maximum or
+     * minimum values possible.
+     * @param stats Reference to a correct table map
+     */
+    static void AdjustStatBounds(libcomp::EnumMap<CorrectTbl, int16_t>& stats);
 
     /**
      * Add data to a packet about a demon in a box.
@@ -414,14 +517,18 @@ public:
      * @param state Pointer to the current state of the entity in a
      *  zone.  If this parameter is supplied as null, only the core
      *  stats will be populated.
-     * @param boostFormat true if the format should match the one used when
-     *  stat changes are reported to the client, false if the format should
-     *  match the one used for full entity descriptions
+     * @param format Format to write the data in from the followin options:
+     *  0) Standard format used when intially describing a new entity
+     *  1) "Boost" format used when describing an entity that
+     *     has leveled up or had its non-calculated stats adjusted
+     *  2) Recalc format used when stats have been recalculated caused
+     *     by equipment or status effects being modified.
+     *  3) Recalc extended format
      */
     void GetEntityStatsPacketData(libcomp::Packet& p,
         const std::shared_ptr<objects::EntityStats>& coreStats,
         const std::shared_ptr<ActiveEntityState>& state,
-        bool boostFormat);
+        uint8_t format);
 
 private:
     /**
@@ -432,7 +539,7 @@ private:
      * @param data Pointer to the level up definition of a demon
      * @param boostLevel Boost level to use when calculating the stat increases
      */
-    void BoostStats(std::unordered_map<uint8_t, int16_t>& stats,
+    void BoostStats(libcomp::EnumMap<CorrectTbl, int16_t>& stats,
         const std::shared_ptr<objects::MiDevilLVUpData>& data, int boostLevel);
 
     /// Pointer to the channel server

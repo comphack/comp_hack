@@ -28,6 +28,7 @@
 
 // libobjgen Includes
 #include "MetaVariable.h"
+#include "MetaVariableReference.h"
 #include "ResourceTemplate.h"
 
 // Standard C++11 Includes
@@ -206,6 +207,20 @@ bool Generator::GetXmlAttributeBoolean(const std::string& attr)
     auto lower = attr;
     std::transform(lower.begin(), lower.end(), lower.begin(), ::tolower);
     return "1" == lower || "true" == lower || "on" == lower || "yes" == lower;
+}
+
+std::string Generator::GetPersistentRefCopyCode(
+    const std::shared_ptr<MetaVariable>& var, const std::string& name)
+{
+    auto ref = std::dynamic_pointer_cast<MetaVariableReference>(var);
+    if(ref && ref->IsPersistentReference())
+    {
+        return "auto " + name + "Copy = " + name + "; // Keep copy of references";
+    }
+    else
+    {
+        return "";
+    }
 }
 
 std::string Generator::Escape(const std::string& str)

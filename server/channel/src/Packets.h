@@ -58,6 +58,7 @@ PACKET_PARSER_DECL(PartnerDemonData);       // 0x005B
 PACKET_PARSER_DECL(DemonBox);               // 0x005C
 PACKET_PARSER_DECL(DemonBoxData);           // 0x005E
 PACKET_PARSER_DECL(ChannelList);            // 0x0063
+PACKET_PARSER_DECL(ReviveCharacter);        // 0x0067
 PACKET_PARSER_DECL(StopMovement);           // 0x006F
 PACKET_PARSER_DECL(SpotTriggered);          // 0x0071
 PACKET_PARSER_DECL(WorldTime);              // 0x0072
@@ -103,6 +104,7 @@ PACKET_PARSER_DECL(DepoRent);               // 0x0104
 PACKET_PARSER_DECL(QuestActiveList);        // 0x010B
 PACKET_PARSER_DECL(QuestCompletedList);     // 0x010C
 PACKET_PARSER_DECL(ClanInfo);               // 0x0150
+PACKET_PARSER_DECL(SyncCharacter);          // 0x017E
 PACKET_PARSER_DECL(MapFlag);                // 0x0197
 PACKET_PARSER_DECL(DemonCompendium);        // 0x019B
 PACKET_PARSER_DECL(DungeonRecords);         // 0x01C4

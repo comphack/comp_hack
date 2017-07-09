@@ -94,8 +94,10 @@ public:
     /**
      * Remove a client connection from a zone
      * @param client Client connection to remove from any associated zone
+     * @param logOut If true, special logout actions will be performed
      */
-    void LeaveZone(const std::shared_ptr<ChannelClientConnection>& client);
+    void LeaveZone(const std::shared_ptr<ChannelClientConnection>& client,
+        bool logOut);
 
     /**
      * Send data about entities that exist in a zone to a new connection and
@@ -231,6 +233,17 @@ private:
     void SendEnemyData(const std::shared_ptr<ChannelClientConnection>& client,
         const std::shared_ptr<EnemyState>& enemyState,
         const std::shared_ptr<Zone>& zone, bool sendToAll, bool queue = false);
+
+    /**
+     * Update the state of status effects in the supplied zone, adding
+     * and updating existing effects, expiring old effects and applying
+     * T-damage and regen to entities with applicable affects
+     * @param zone Pointer to the zone to update status effects for
+     * @param now System time representing the current server time to use
+     *  for event checking
+     */
+    void UpdateStatusEffectStates(const std::shared_ptr<Zone>& zone,
+        uint32_t now);
 
     /**
      * Send a packet to every connection in the specified zone

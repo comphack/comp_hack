@@ -89,6 +89,7 @@ enum class ClientToChannelPacketCode_t : uint16_t
     PACKET_DEMON_BOX = 0x005C,  //!< Demon box list request.
     PACKET_DEMON_BOX_DATA = 0x005E,  //!< Demon box demon data request.
     PACKET_CHANNEL_LIST = 0x0063,  //!< Request for the list of channels connected to the world.
+    PACKET_REVIVE_CHARACTER = 0x0067,  //!< Request to revive the client's character.
     PACKET_STOP_MOVEMENT = 0x006F,  //!< Request to stop the movement of an entity or object.
     PACKET_SPOT_TRIGGERED = 0x0071,  //!< A spot has been triggered by the client.
     PACKET_WORLD_TIME = 0x0072,  //!< Request for the server's current world time.
@@ -136,6 +137,7 @@ enum class ClientToChannelPacketCode_t : uint16_t
     PACKET_QUEST_ACTIVE_LIST = 0x010B,  //!< Request for the player's active quest list.
     PACKET_QUEST_COMPLETED_LIST = 0x010C,  //!< Request for the player's completed quest list.
     PACKET_CLAN_INFO = 0x0150,  //!< Request for the current player's clan information.
+    PACKET_SYNC_CHARACTER = 0x017E,  //!< Request to sync the player character's basic information.
     PACKET_MAP_FLAG = 0x0197,  //!< Request to receive map information.
     PACKET_DEMON_COMPENDIUM = 0x019B,  //!< Request for the Demon Compendium.
     PACKET_DUNGEON_RECORDS = 0x01C4,  //!< Request for the current player's dungeon challenge records.
@@ -191,11 +193,15 @@ enum class ChannelToClientPacketCode_t : uint16_t
     PACKET_SKILL_EXECUTING = 0x0036, //!< Response from skill activation request to execute a skill.
     PACKET_SKILL_FAILED = 0x0037,  //!< Response from skill activation request that execution has failed.
     PACKET_SKILL_REPORTS = 0x0038,  //!< Response from skill activation reporting what has been updated.
+    PACKET_DO_TDAMAGE = 0x0043, //!< Notifies the client that "time" damage has been dealt to an entity.
+    PACKET_ADD_STATUS_EFFECT = 0x0044, //!< Notifies the client that an entity has gained a status effect.
+    PACKET_REMOVE_STATUS_EFFECT = 0x0045, //!< Notifies the client that an entity has lost a status effect.
     PACKET_XP_UPDATE = 0x0046, //!< Notifies the client of an entity's XP value.
     PACKET_CHARACTER_LEVEL_UP = 0x0047, //!< Notifies the client that a character has leveled up.
     PACKET_PARTNER_LEVEL_UP = 0x0048, //!< Notifies the client that a partner demon has leveled up.
     PACKET_ALLOCATE_SKILL_POINT = 0x004A, //!< Response from the request to allocate a skill point for a character.
     PACKET_EQUIPMENT_CHANGED = 0x004B, //!< Notifies the client that a character's equipment has changed.
+    PACKET_ENTITY_STATS = 0x004C,  //!< Notifies the client of a character or parter demon's calculated stats.
     PACKET_EXPERTISE_POINT_UPDATE = 0x004D, //!< Notifies the client that a character's expertise points have been updated.
     PACKET_EXPERTISE_RANK_UP = 0x004E, //!< Notifies the client that a character's expertise has ranked up.
     PACKET_TOGGLE_EXPERTISE = 0x0050, //!< Notifies the client to enable or disable an expertise.
@@ -208,6 +214,7 @@ enum class ChannelToClientPacketCode_t : uint16_t
     PACKET_PARTNER_SUMMONED = 0x0060,  //!< Notifies the client that a partner demon has been summoned.
     PACKET_POP_ENTITY_FOR_PRODUCTION = 0x0061,  //!< Sets up an entity that will spawn in via PACKET_SHOW_ENTITY.
     PACKET_CHANNEL_LIST = 0x0064,  //!< Message containing the list of channels connected to the world.
+    PACKET_REVIVE_ENTITY = 0x006E,  //!< Notification that an entity has been revived.
     PACKET_STOP_MOVEMENT = 0x0070,  //!< Message containing entity or object movement stopping information.
     PACKET_WORLD_TIME = 0x0073,  //!< Response for the server's current world time.
     PACKET_ITEM_BOX = 0x0075,  //!< Response for info about a specific item box.
@@ -274,6 +281,7 @@ enum class ChannelToClientPacketCode_t : uint16_t
     PACKET_EVENT_STAGE_EFFECT = 0x0127,  //!< Request to the client to render a stage effect.
     PACKET_CLAN_INFO = 0x0151,  //!< Response containing the current player's clan information.
     PACKET_EVENT_DIRECTION = 0x015D,  //!< Request to the client to signify a direction to the player.
+    PACKET_SYNC_CHARACTER = 0x017F,  //!< Response to the request to sync the player character's basic information.
     PACKET_BAZAAR_DATA = 0x0183,  //!< Message containing data about a bazaar in a zone.
     PACKET_STATUS_ICON = 0x0195,  //!< Message containing the icon to show for the client's character.
     PACKET_STATUS_ICON_OTHER = 0x0196,  //!< Message containing the icon to show for another player's character.

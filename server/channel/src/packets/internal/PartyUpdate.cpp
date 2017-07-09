@@ -125,11 +125,12 @@ void QueuePartyMemberInfo(std::shared_ptr<ChannelClientConnection> client,
         reply.WriteU16Little(member->GetMP());
         reply.WriteU16Little(member->GetMaxMP());
 
-        int8_t unknownCount = 0;
-        reply.WriteS8(unknownCount);
-        for(int8_t i = 0; i < unknownCount; i++)
+        // Seemingly unused, maybe this was previously status effects?
+        int8_t unusedCount = 0;
+        reply.WriteS8(unusedCount);
+        for(int8_t i = 0; i < unusedCount; i++)
         {
-            reply.WriteS32Little(0);    // Unknown
+            reply.WriteS32Little(0);
         }
 
         reply.WriteS32Little(localDemonEntityID);

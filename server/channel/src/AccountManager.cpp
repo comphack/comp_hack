@@ -208,14 +208,14 @@ void AccountManager::Logout(const std::shared_ptr<
         return;
     }
 
-    auto zone = zoneManager->GetZoneInstance(client);
+    auto zone = cState->GetZone();
     if(nullptr != zone)
     {
         character->SetLogoutZone(zone->GetDefinition()->GetID());
         character->SetLogoutX(cState->GetCurrentX());
         character->SetLogoutY(cState->GetCurrentY());
         character->SetLogoutRotation(cState->GetCurrentRotation());
-        zoneManager->LeaveZone(client);
+        zoneManager->LeaveZone(client, true);
     }
 
     if(!LogoutCharacter(state, delay))
@@ -520,6 +520,10 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
             }
         }
     }
+
+    std::list<std::list<
+        libcomp::ObjectReference<objects::StatusEffect>>> statusEffectSets;
+    statusEffectSets.push_back(character->GetStatusEffects());
     
     // Demon boxes, demons and stats
     std::list<libcomp::ObjectReference<objects::DemonBox>> demonBoxes;
@@ -549,6 +553,23 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
 
                     state->SetObjectID(demon->GetUUID(),
                         server->GetNextObjectID());
+
+                    statusEffectSets.push_back(demon->GetStatusEffects());
+                }
+            }
+        }
+    }
+    
+    // Status effects
+    for(auto seSet : statusEffectSets)
+    {
+        for(auto effect : seSet)
+        {
+            if(!effect.IsNull())
+            {
+                if(!effect.Get(db))
+                {
+                    return false;
                 }
             }
         }
@@ -577,12 +598,10 @@ bool AccountManager::LogoutCharacter(channel::ClientState* state,
     auto character = cState->GetEntity();
 
     bool ok = true;
-    bool doSave = !state->GetLogoutSave();
+    bool doSave = state->GetLogoutSave();
     auto server = mServer.lock();
     auto worldDB = server->GetWorldDatabase();
 
-    ok &= Cleanup<objects::Character>(character, worldDB, doSave,
-        !delay);
     ok &= Cleanup<objects::EntityStats>(character
         ->GetCoreStats().Get(), worldDB, doSave, !delay);
     ok &= Cleanup<objects::CharacterProgress>(character
@@ -634,6 +653,10 @@ bool AccountManager::LogoutCharacter(channel::ClientState* state,
             worldDB, doSave, !delay);
     }
 
+    std::list<std::list<
+        libcomp::ObjectReference<objects::StatusEffect >> > statusEffectSets;
+    statusEffectSets.push_back(character->GetStatusEffects());
+
     // Save demon boxes, demons and stats
     std::list<std::shared_ptr<objects::DemonBox>> demonBoxes;
     demonBoxes.push_back(character->GetCOMP().Get());
@@ -654,6 +677,8 @@ bool AccountManager::LogoutCharacter(channel::ClientState* state,
             {
                 if(!demon.IsNull())
                 {
+                    statusEffectSets.push_back(demon->GetStatusEffects());
+
                     ok &= Cleanup<objects::EntityStats>(demon
                         ->GetCoreStats().Get(), worldDB, doSave,
                         !delay);
@@ -664,6 +689,21 @@ bool AccountManager::LogoutCharacter(channel::ClientState* state,
 
             ok &= Cleanup<objects::DemonBox>(box, worldDB, doSave,
                 !delay);
+        }
+    }
+    
+    // Status effects
+    for(auto seSet : statusEffectSets)
+    {
+        for(auto effect : seSet)
+        {
+            if(!effect.IsNull())
+            {
+                // Unregister but do not save. Updating status
+                // effects requires special handling
+                ok &= Cleanup<objects::StatusEffect>(effect.Get(),
+                    worldDB, false, !delay);
+            }
         }
     }
 
@@ -677,6 +717,9 @@ bool AccountManager::LogoutCharacter(channel::ClientState* state,
     // Save world data
     ok &= Cleanup<objects::AccountWorldData>(
         accountWorldData, worldDB, doSave, !delay);
+
+    ok &= Cleanup<objects::Character>(character, worldDB, doSave,
+        !delay);
 
     return ok;
 }

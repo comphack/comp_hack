@@ -33,6 +33,9 @@
 #include "EnemyState.h"
 #include "EntityState.h"
 
+// Standard C++11 includes
+#include <map>
+
 namespace objects
 {
 class ServerNPC;
@@ -170,6 +173,30 @@ public:
      */
     const std::shared_ptr<objects::ServerZone> GetDefinition();
 
+    /**
+     * Set the next status effect event time associated to an entity
+     * in the zone
+     * @param time Time of the next status effect event time
+     * @param entityID ID of the entity with a status effect event
+     *  at the specified time
+     */
+    void SetNextStatusEffectTime(uint32_t time, int32_t entityID);
+
+    /**
+     * Get the list of entities that have had registered status effect
+     * event times that have passed since the specified time
+     * @param now System time representing the current server time
+     * @return List of entities that have had registered status effect
+     *  event times that have passed
+     */
+    std::list<std::shared_ptr<ActiveEntityState>>
+        GetUpdatedStatusEffectEntities(uint32_t now);
+
+    /**
+     * Perform pre-deletion cleanup actions
+     */
+    void Cleanup();
+
 private:
     /**
      * Register an entity as one that currently exists in the zone
@@ -200,6 +227,10 @@ private:
 
     /// Map of entities in the zone by their ID
     std::unordered_map<int32_t, std::shared_ptr<objects::EntityStateObject>> mAllEntities;
+
+    /// Map of system times to active entities with status effects that need
+    /// handling at that time
+    std::map<uint32_t, std::set<int32_t>> mNextEntityStatusTimes;
 
     /// Unique instance ID of the zone
     uint32_t mID;

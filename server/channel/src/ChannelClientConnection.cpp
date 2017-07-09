@@ -43,13 +43,24 @@ ClientState* ChannelClientConnection::GetClientState() const
     return mClientState.get();
 }
 
-void ChannelClientConnection::RefreshTimeout(uint64_t now)
+void ChannelClientConnection::RefreshTimeout(uint64_t now, uint16_t aliveUntil)
 {
-    // 30 seconds from now
-    mTimeout = now + 30000000;
+    mTimeout = now + (uint64_t)(aliveUntil * 1000000);
 }
 
 uint64_t ChannelClientConnection::GetTimeout() const
 {
     return mTimeout;
+}
+
+void ChannelClientConnection::BroadcastPacket(const std::list<std::shared_ptr<
+    ChannelClientConnection>>& clients, libcomp::Packet& packet)
+{
+    std::list<std::shared_ptr<libcomp::TcpConnection>> connections;
+    for(auto client : clients)
+    {
+        connections.push_back(client);
+    }
+
+    libcomp::TcpConnection::BroadcastPacket(connections, packet);
 }

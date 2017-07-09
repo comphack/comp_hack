@@ -61,6 +61,10 @@ ZoneManager::ZoneManager(const std::weak_ptr<ChannelServer>& server)
 
 ZoneManager::~ZoneManager()
 {
+    for(auto zPair : mZones)
+    {
+        zPair.second->Cleanup();
+    }
 }
 
 std::shared_ptr<Zone> ZoneManager::GetZoneInstance(const std::shared_ptr<
@@ -98,7 +102,7 @@ bool ZoneManager::EnterZone(const std::shared_ptr<ChannelClientConnection>& clie
 
     if(forceLeave)
     {
-        LeaveZone(client);
+        LeaveZone(client, false);
 
         // Pull a fresh version of the zone in case it was cleaned up
         instance = GetZone(zoneID);
@@ -182,16 +186,20 @@ bool ZoneManager::EnterZone(const std::shared_ptr<ChannelClientConnection>& clie
     return true;
 }
 
-void ZoneManager::LeaveZone(const std::shared_ptr<ChannelClientConnection>& client)
+void ZoneManager::LeaveZone(const std::shared_ptr<ChannelClientConnection>& client,
+    bool logOut)
 {
+    auto server = mServer.lock();
+    auto characterManager = server->GetCharacterManager();
+    auto definitionManager = server->GetDefinitionManager();
     auto state = client->GetClientState();
-    auto primaryEntityID = state->GetCharacterState()->GetEntityID();
+    auto cState = state->GetCharacterState();
+    auto dState = state->GetDemonState();
+    auto primaryEntityID = cState->GetEntityID();
 
     // Detach from zone specific state info
     if(state->GetTradeSession()->GetOtherCharacterState() != nullptr)
     {
-        auto server = mServer.lock();
-        auto characterManager = server->GetCharacterManager();
         auto connectionManager = server->GetManagerConnection();
 
         auto otherCState = std::dynamic_pointer_cast<CharacterState>(
@@ -223,6 +231,7 @@ void ZoneManager::LeaveZone(const std::shared_ptr<ChannelClientConnection>& clie
             zone->RemoveConnection(client);
             if(zone->GetConnections().size() == 0)
             {
+                zone->Cleanup();
                 mZones.erase(instanceID);
 
                 auto zoneDefID = zone->GetDefinition()->GetID();
@@ -244,10 +253,24 @@ void ZoneManager::LeaveZone(const std::shared_ptr<ChannelClientConnection>& clie
 
     if(!instanceRemoved)
     {
-        auto demonID = state->GetDemonState()->GetEntityID();
+        auto demonID = dState->GetEntityID();
         std::list<int32_t> entityIDs = { primaryEntityID, demonID };
         RemoveEntitiesFromZone(zone, entityIDs);
     }
+
+    // If logging out, cancel zone out and log out effects (zone out effects
+    // are cancelled on zone enter instead if not logging out)
+    if(logOut)
+    {
+        characterManager->CancelStatusEffects(client, EFFECT_CANCEL_LOGOUT
+            | EFFECT_CANCEL_ZONEOUT);
+    }
+
+    // Deactivate and save the updated status effects
+    cState->SetStatusEffectsActive(false, definitionManager);
+    dState->SetStatusEffectsActive(false, definitionManager);
+    characterManager->UpdateStatusEffects(cState, !logOut);
+    characterManager->UpdateStatusEffects(dState, !logOut);
 }
 
 void ZoneManager::SendPopulateZoneData(const std::shared_ptr<ChannelClientConnection>& client)
@@ -261,13 +284,14 @@ void ZoneManager::SendPopulateZoneData(const std::shared_ptr<ChannelClientConnec
     auto zone = GetZoneInstance(characterEntityID);
     auto zoneData = zone->GetDefinition();
     auto characterManager = server->GetCharacterManager();
+    auto definitionManager = server->GetDefinitionManager();
     
     // Send the new connection entity data to the other clients
     auto otherClients = GetZoneConnections(client, false);
     if(otherClients.size() > 0)
     {
         characterManager->SendOtherCharacterData(otherClients, state);
-        if(nullptr != dState->GetEntity())
+        if(dState->GetEntity())
         {
             characterManager->SendOtherPartnerData(otherClients, state);
         }
@@ -277,6 +301,13 @@ void ZoneManager::SendPopulateZoneData(const std::shared_ptr<ChannelClientConnec
 
     PopEntityForZoneProduction(client, characterEntityID, 0);
     ShowEntityToZone(client, characterEntityID);
+
+    // Activate status effects
+    cState->SetStatusEffectsActive(true, definitionManager);
+    dState->SetStatusEffectsActive(true, definitionManager);
+
+    // Expire zone change status effects
+    characterManager->CancelStatusEffects(client, EFFECT_CANCEL_ZONEOUT);
 
     // It seems that if entity data is sent to the client before a previous
     // entity was processed and shown, the client will force a log-out. To
@@ -439,17 +470,19 @@ void ZoneManager::SendEnemyData(const std::shared_ptr<ChannelClientConnection>& 
     p.WriteFloat(enemyState->GetOriginX());
     p.WriteFloat(enemyState->GetOriginY());
     p.WriteFloat(enemyState->GetOriginRotation());
+    
+    auto statusEffects = enemyState->GetCurrentStatusEffectStates(
+        mServer.lock()->GetDefinitionManager());
 
-    uint32_t unknownCount = 0;
-    p.WriteU32Little(unknownCount);
-    for(uint32_t i = 0; i < unknownCount; i++)
+    p.WriteU32Little(static_cast<uint32_t>(statusEffects.size()));
+    for(auto ePair : statusEffects)
     {
-        p.WriteU32Little(0);
-        p.WriteS32Little(0);
-        p.WriteU8(0);
+        p.WriteU32Little(ePair.first->GetEffect());
+        p.WriteS32Little((int32_t)ePair.second);
+        p.WriteU8(ePair.first->GetStack());
     }
 
-    //Unknown
+    // Variant Type
     p.WriteU32Little(0);
 
     if(!sendToAll)
@@ -471,6 +504,146 @@ void ZoneManager::SendEnemyData(const std::shared_ptr<ChannelClientConnection>& 
         BroadcastPacket(client, p, true);
         PopEntityForZoneProduction(client, enemyState->GetEntityID(), 3);
         ShowEntityToZone(client, enemyState->GetEntityID());
+    }
+}
+
+void ZoneManager::UpdateStatusEffectStates(const std::shared_ptr<Zone>& zone,
+    uint32_t now)
+{
+    auto effectEntities = zone->GetUpdatedStatusEffectEntities(now);
+    if(effectEntities.size() == 0)
+    {
+        return;
+    }
+
+    auto server = mServer.lock();
+    auto definitionManager = server->GetDefinitionManager();
+    auto characterManager = server->GetCharacterManager();
+
+    std::list<libcomp::Packet> zonePackets;
+    std::set<uint32_t> added, updated, removed;
+    std::set<std::shared_ptr<ActiveEntityState>> displayStateModified;
+    std::set<std::shared_ptr<ActiveEntityState>> statusRemoved;
+    for(auto entity : effectEntities)
+    {
+        int32_t hpTDamage, mpTDamage;
+        if(!entity->PopEffectTicks(definitionManager, now, hpTDamage,
+            mpTDamage, added, updated, removed)) continue;
+
+        if(added.size() > 0 || updated.size() > 0)
+        {
+            uint32_t missing = 0;
+            auto effectMap = entity->GetStatusEffects();
+            for(uint32_t effectType : added)
+            {
+                if(effectMap.find(effectType) == effectMap.end())
+                {
+                    missing++;
+                }
+            }
+            
+            for(uint32_t effectType : updated)
+            {
+                if(effectMap.find(effectType) == effectMap.end())
+                {
+                    missing++;
+                }
+            }
+
+            libcomp::Packet p;
+            p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_ADD_STATUS_EFFECT);
+            p.WriteS32Little(entity->GetEntityID());
+            p.WriteU32Little((uint32_t)(added.size() + updated.size() - missing));
+
+            for(uint32_t effectType : added)
+            {
+                auto effect = effectMap[effectType];
+                if(effect)
+                {
+                    p.WriteU32Little(effectType);
+                    p.WriteS32Little((int32_t)effect->GetExpiration());
+                    p.WriteU8(effect->GetStack());
+                }
+            }
+            
+            for(uint32_t effectType : updated)
+            {
+                auto effect = effectMap[effectType];
+                if(effect)
+                {
+                    p.WriteU32Little(effectType);
+                    p.WriteS32Little((int32_t)effect->GetExpiration());
+                    p.WriteU8(effect->GetStack());
+                }
+            }
+
+            zonePackets.push_back(p);
+        }
+
+        if(hpTDamage != 0 || mpTDamage != 0)
+        {
+            auto cs = entity->GetCoreStats();
+            int16_t hpAdjusted, mpAdjusted;
+            if(entity->SetHPMP((int16_t)-hpTDamage, (int16_t)-mpTDamage, true,
+                false, hpAdjusted, mpAdjusted))
+            {
+                if(hpAdjusted < 0)
+                {
+                    entity->CancelStatusEffects(EFFECT_CANCEL_DAMAGE);
+                }
+                displayStateModified.insert(entity);
+
+                libcomp::Packet p;
+                p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_DO_TDAMAGE);
+                p.WriteS32Little(entity->GetEntityID());
+                p.WriteS32Little(hpAdjusted);
+                p.WriteS32Little(mpAdjusted);
+                zonePackets.push_back(p);
+            }
+        }
+        
+        if(removed.size() > 0)
+        {
+            libcomp::Packet p;
+            p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_REMOVE_STATUS_EFFECT);
+            p.WriteS32Little(entity->GetEntityID());
+            p.WriteU32Little((uint32_t)removed.size());
+            for(uint32_t effectType : removed)
+            {
+                p.WriteU32Little(effectType);
+            }
+            zonePackets.push_back(p);
+
+            statusRemoved.insert(entity);
+        }
+    }
+
+    if(zonePackets.size() > 0)
+    {
+        for(auto zPair : zone->GetConnections())
+        {
+            for(libcomp::Packet& p : zonePackets)
+            {
+                libcomp::Packet pCopy(p);
+                zPair.second->QueuePacket(pCopy);
+            }
+            zPair.second->FlushOutgoing();
+        }
+    }
+
+    for(auto entity : statusRemoved)
+    {
+        // Make sure T-damage is sent first
+        // Status add/update and world update handled when applying changes
+        if(2 == characterManager->RecalculateStats(nullptr, entity->GetEntityID()))
+        {
+            displayStateModified.erase(entity);
+        }
+    }
+    
+    if(displayStateModified.size() > 0)
+    {
+        characterManager->UpdateWorldDisplayState(displayStateModified);
     }
 }
 
@@ -589,10 +762,12 @@ bool ZoneManager::SpawnEnemy(const std::shared_ptr<Zone>& zone, uint32_t demonID
     eState->SetCurrentY(y);
     eState->SetCurrentRotation(rot);
     eState->SetEntity(enemy);
+    eState->SetStatusEffectsActive(true, definitionManager);
     eState->Prepare(eState, aiType, serverDataManager);
 
     eState->RecalculateStats(definitionManager);
 
+    eState->SetZone(zone.get());
     zone->AddEnemy(eState);
 
     //If anyone is currently connected, immediately send the enemy's info
@@ -621,14 +796,23 @@ void ZoneManager::UpdateActiveZoneStates()
         }
     }
 
-    auto currentTime = mServer.lock()->GetServerTime();
+    // Spin through entities with updated status effects
+    uint32_t systemTime = (uint32_t)std::time(0);
+    for(auto instance : instances)
+    {
+        UpdateStatusEffectStates(instance, systemTime);
+    }
+
+    auto serverTime = mServer.lock()->GetServerTime();
     std::set<std::shared_ptr<ChannelClientConnection>> clients;
     for(auto instance : instances)
     {
+        /// @todo: regen and status effects
+
         std::list<std::shared_ptr<EnemyState>> updated;
         for(auto enemy : instance->GetEnemies())
         {
-            if(enemy->UpdateState(currentTime))
+            if(enemy->UpdateState(serverTime))
             {
                 updated.push_back(enemy);
             }
@@ -639,7 +823,7 @@ void ZoneManager::UpdateActiveZoneStates()
             // Update the clients with what the enemy is doing
 
             // Check if the enemy's position or rotation has updated
-            if(currentTime == enemy->GetOriginTicks())
+            if(serverTime == enemy->GetOriginTicks())
             {
                 if(enemy->IsMoving())
                 {
@@ -657,7 +841,7 @@ void ZoneManager::UpdateActiveZoneStates()
                     {
                         auto client = zPair.second;
                         auto state = client->GetClientState();
-                        float startAdjust = state->ToClientTime(currentTime);
+                        float startAdjust = state->ToClientTime(serverTime);
                         float stopAdjust = state->ToClientTime(
                             enemy->GetDestinationTicks());
 
@@ -682,7 +866,7 @@ void ZoneManager::UpdateActiveZoneStates()
                         auto client = zPair.second;
 
                         auto state = client->GetClientState();
-                        float startAdjust = state->ToClientTime(currentTime);
+                        float startAdjust = state->ToClientTime(serverTime);
                         float stopAdjust = state->ToClientTime(
                             enemy->GetDestinationTicks());
 

@@ -89,7 +89,7 @@
     <object name="StatusEffect" location="world">
         <member type="u32" name="Effect"/>
         <member type="ref" name="Entity" key="true" unique="false"/>
-        <member type="u64" name="Duration"/>
+        <member type="u32" name="Expiration"/>
         <member type="u8" name="Stack"/>
     </object>
     <object name="CharacterProgress" location="world">

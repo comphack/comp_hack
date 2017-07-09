@@ -474,11 +474,10 @@ bool EventManager::Homepoint(const std::shared_ptr<ChannelClientConnection>& cli
 {
     auto e = std::dynamic_pointer_cast<objects::EventHomepoint>(instance->GetEvent());
 
-    auto server = mServer.lock();
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
     auto character = cState->GetEntity();
-    auto zone = server->GetZoneManager()->GetZoneInstance(client);
+    auto zone = cState->GetZone();
 
     /// @todo: check for invalid zone types or positions
 

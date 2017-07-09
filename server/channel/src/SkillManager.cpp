@@ -40,6 +40,7 @@
 #include <ActivatedAbility.h>
 #include <Item.h>
 #include <ItemBox.h>
+#include <MiAddStatusTbl.h>
 #include <MiBattleDamageData.h>
 #include <MiCastBasicData.h>
 #include <MiCastData.h>
@@ -48,8 +49,12 @@
 #include <MiDamageData.h>
 #include <MiDevilData.h>
 #include <MiDischargeData.h>
+#include <MiDoTDamageData.h>
+#include <MiEffectData.h>
 #include <MiNPCBasicData.h>
 #include <MiSkillData.h>
+#include <MiStatusData.h>
+#include <MiStatusBasicData.h>
 #include <MiSummonData.h>
 #include <MiTargetData.h>
 #include <ServerZone.h>
@@ -77,6 +82,7 @@ const uint8_t DAMAGE_TYPE_DRAIN = 5;
 const uint16_t FLAG1_LETHAL = 1;
 const uint16_t FLAG1_CRITICAL = 1 << 6;
 const uint16_t FLAG1_WEAKPOINT = 1 << 7;
+const uint16_t FLAG1_REVIVAL = 1 << 9;
 const uint16_t FLAG1_REFLECT = 1 << 11; //Only displayed with DAMAGE_TYPE_NONE
 const uint16_t FLAG1_BLOCK = 1 << 12;   //Only dsiplayed with DAMAGE_TYPE_NONE
 const uint16_t FLAG1_PROTECT = 1 << 15;
@@ -95,15 +101,18 @@ struct SkillTargetResult
     int32_t Damage2 = 0;
     uint8_t Damage2Type = DAMAGE_TYPE_NONE;
     uint16_t DamageFlags1 = 0;
-    bool AilmentDamaged = false;
-    int32_t AilmentDamageAmount = 0;
+    uint8_t AilmentDamageType = 0;
+    int32_t AilmentDamage = 0;
     uint16_t DamageFlags2 = 0;
     int32_t TechnicalDamage = 0;
     int32_t PursuitDamage = 0;
+    bool Knockback = false;
+    AddStatusEffectMap AddedStatuses;
+    std::set<uint32_t> CancelledStatuses;
 };
 
 bool CalculateDamage(const std::shared_ptr<ActiveEntityState>& source,
-    uint32_t hpCost, uint32_t mpCost, SkillTargetResult& target,
+    int16_t hpCost, int16_t mpCost, SkillTargetResult& target,
     std::shared_ptr<objects::MiBattleDamageData> damageData);
 
 int32_t CalculateDamage_Normal(uint16_t mod, uint8_t& damageType,
@@ -230,10 +239,28 @@ bool SkillManager::ExecuteSkill(const std::shared_ptr<ChannelClientConnection> c
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
     auto character = cState->GetEntity();
+    
+    // Check targets
+    if(skillData->GetTarget()->GetType() == objects::MiTargetData::Type_t::DEAD_ALLY)
+    {
+        auto damageFormula = skillData->GetDamage()->GetBattleDamage()->GetFormula();
+        bool isRevive = damageFormula == objects::MiBattleDamageData::Formula_t::HEAL_NORMAL
+            || damageFormula == objects::MiBattleDamageData::Formula_t::HEAL_STATIC
+            || damageFormula == objects::MiBattleDamageData::Formula_t::HEAL_MAX_PERCENT;
 
-    // Check conditions
-    /// @todo: check more than just costs
-    uint32_t hpCost = 0, mpCost = 0;
+        // If the target is a character and they have not accepted revival, stop here
+        auto targetEntityID = (int32_t)activated->GetTargetObjectID();
+        auto targetClientState = ClientState::GetEntityClientState(targetEntityID);
+        if(isRevive && (!targetClientState ||
+            (!targetClientState->GetAcceptRevival() &&
+            targetClientState->GetCharacterState()->GetEntityID() == targetEntityID)))
+        {
+            return false;
+        }
+    }
+
+    // Check costs
+    int16_t hpCost = 0, mpCost = 0;
     uint16_t hpCostPercent = 0, mpCostPercent = 0;
     std::unordered_map<uint32_t, uint16_t> itemCosts;
     if(skillID == SKILL_SUMMON_DEMON)
@@ -273,7 +300,7 @@ bool SkillManager::ExecuteSkill(const std::shared_ptr<ChannelClientConnection> c
                     }
                     else
                     {
-                        hpCost += num;
+                        hpCost = (int16_t)(hpCost + num);
                     }
                     break;
                 case objects::MiCostTbl::Type_t::MP:
@@ -283,7 +310,7 @@ bool SkillManager::ExecuteSkill(const std::shared_ptr<ChannelClientConnection> c
                     }
                     else
                     {
-                        mpCost += num;
+                        mpCost = (int16_t)(mpCost + num);
                     }
                     break;
                 case objects::MiCostTbl::Type_t::ITEM:
@@ -310,14 +337,14 @@ bool SkillManager::ExecuteSkill(const std::shared_ptr<ChannelClientConnection> c
         }
     }
 
-    hpCost = (uint32_t)(hpCost + ceil(((float)hpCostPercent * 0.01f) *
+    hpCost = (int16_t)(hpCost + ceil(((float)hpCostPercent * 0.01f) *
         (float)sourceState->GetMaxHP()));
-    mpCost = (uint32_t)(mpCost + ceil(((float)mpCostPercent * 0.01f) *
+    mpCost = (int16_t)(mpCost + ceil(((float)mpCostPercent * 0.01f) *
         (float)sourceState->GetMaxMP()));
 
     auto sourceStats = sourceState->GetCoreStats();
-    bool canPay = ((hpCost == 0) || hpCost < (uint32_t)sourceStats->GetHP()) &&
-        ((mpCost == 0) || mpCost < (uint32_t)sourceStats->GetMP());
+    bool canPay = ((hpCost == 0) || hpCost < sourceStats->GetHP()) &&
+        ((mpCost == 0) || mpCost < sourceStats->GetMP());
     auto characterManager = server->GetCharacterManager();
     for(auto itemCost : itemCosts)
     {
@@ -342,8 +369,11 @@ bool SkillManager::ExecuteSkill(const std::shared_ptr<ChannelClientConnection> c
     }
 
     // Pay the costs
-    sourceStats->SetHP(static_cast<int16_t>(sourceStats->GetHP() - (uint16_t)hpCost));
-    sourceStats->SetMP(static_cast<int16_t>(sourceStats->GetMP() - (uint16_t)mpCost));
+    if(hpCost > 0 || mpCost > 0)
+    {
+        sourceState->SetHPMP((int16_t)-hpCost, (int16_t)-mpCost, true);
+    }
+
     for(auto itemCost : itemCosts)
     {
         characterManager->AddRemoveItem(client, itemCost.first, itemCost.second,
@@ -371,6 +401,8 @@ bool SkillManager::ExecuteSkill(const std::shared_ptr<ChannelClientConnection> c
             return ExecuteNormalSkill(client, sourceState->GetEntityID(), activated,
                 hpCost, mpCost);
     }
+
+    characterManager->CancelStatusEffects(client, EFFECT_CANCEL_SKILL);
 
     if(success)
     {
@@ -420,12 +452,12 @@ void SkillManager::SendFailure(const std::shared_ptr<ChannelClientConnection> cl
     reply.WriteU8(0);  //Unknown
     reply.WriteS32Little(-1);  //Unknown
 
-    client->SendPacket(reply);
+    mServer.lock()->GetZoneManager()->BroadcastPacket(client, reply);
 }
 
 bool SkillManager::ExecuteNormalSkill(const std::shared_ptr<ChannelClientConnection> client,
     int32_t sourceEntityID, std::shared_ptr<objects::ActivatedAbility> activated,
-    uint32_t hpCost, uint32_t mpCost)
+    int16_t hpCost, int16_t mpCost)
 {
     auto state = client->GetClientState();
 
@@ -436,6 +468,7 @@ bool SkillManager::ExecuteNormalSkill(const std::shared_ptr<ChannelClientConnect
     }
 
     auto server = mServer.lock();
+    auto characterManager = server->GetCharacterManager();
     auto definitionManager = server->GetDefinitionManager();
     auto zoneManager = server->GetZoneManager();
     auto skillID = activated->GetSkillID();
@@ -512,11 +545,15 @@ bool SkillManager::ExecuteNormalSkill(const std::shared_ptr<ChannelClientConnect
     // Run calculations
     bool hasBattleDamage = false;
     auto battleDamageData = skillData->GetDamage()->GetBattleDamage();
+    auto addStatuses = skillData->GetDamage()->GetAddStatuses();
     for(SkillTargetResult& target : targetResults)
     {
         if(battleDamageData->GetFormula() !=
             objects::MiBattleDamageData::Formula_t::NONE)
         {
+            /// @todo: implement knockback properly
+            target.Knockback = true;
+
             if(!CalculateDamage(source, hpCost, mpCost, target, battleDamageData))
             {
                 LOG_ERROR(libcomp::String("Damage failed to calculate: %1\n")
@@ -525,6 +562,42 @@ bool SkillManager::ExecuteNormalSkill(const std::shared_ptr<ChannelClientConnect
             }
 
             hasBattleDamage = true;
+        }
+
+        // Determine which status effects to apply
+        for(auto addStatus : addStatuses)
+        {
+            if(addStatus->GetOnKnockback() && !target.Knockback) continue;
+
+            uint16_t successRate = addStatus->GetSuccessRate();
+            if(successRate >= 100 || (rand() % 99) <= successRate)
+            {
+                int8_t minStack = addStatus->GetMinStack();
+                int8_t maxStack = addStatus->GetMaxStack();
+
+                // Sanity check
+                if(minStack > maxStack) continue;
+
+                int8_t stack = (int8_t)(minStack + (rand() % (maxStack - minStack)));
+                if(stack == 0) continue;
+
+                target.AddedStatuses[addStatus->GetStatusID()] =
+                    std::pair<uint8_t, bool>(stack, addStatus->GetIsReplace());
+
+                // Check for status T-Damage to apply at the end of the skill
+                auto statusDef = definitionManager->GetStatusData(
+                    addStatus->GetStatusID());
+                auto basicDef = statusDef->GetBasic();
+                if(basicDef->GetStackType() == 1 && basicDef->GetApplicationLogic() == 0)
+                {
+                    auto tDamage = statusDef->GetEffect()->GetDamage();
+                    if(tDamage->GetHPDamage() > 0)
+                    {
+                        /// @todo: transform properly
+                        target.AilmentDamage += tDamage->GetHPDamage();
+                    }
+                }
+            }
         }
     }
 
@@ -536,12 +609,16 @@ bool SkillManager::ExecuteNormalSkill(const std::shared_ptr<ChannelClientConnect
 
     // Apply calculation results, keeping track of entities that may
     // need to update the world with their modified state
-    for(auto target : targetResults)
+    std::set<std::shared_ptr<ActiveEntityState>> revived;
+    std::unordered_map<std::shared_ptr<ActiveEntityState>, uint8_t> cancellations;
+    for(SkillTargetResult& target : targetResults)
     {
+        cancellations[target.EntityState] = target.Knockback
+            ? EFFECT_CANCEL_KNOCKBACK : 0;
         if(hasBattleDamage)
         {
-            int32_t hpAdjust = target.TechnicalDamage;
-            int32_t mpAdjust = 0;
+            int32_t hpDamage = target.TechnicalDamage + target.AilmentDamage;
+            int32_t mpDamage = 0;
 
             for(int i = 0; i < 2; i++)
             {
@@ -555,52 +632,54 @@ bool SkillManager::ExecuteNormalSkill(const std::shared_ptr<ChannelClientConnect
                     case DAMAGE_TYPE_DRAIN:
                         if(hpMode)
                         {
-                            hpAdjust = (int32_t)(hpAdjust + val);
+                            hpDamage = (int32_t)(hpDamage + val);
                         }
                         else
                         {
-                            mpAdjust = (int32_t)(mpAdjust + val);
+                            mpDamage = (int32_t)(mpDamage + val);
                         }
                         break;
                     default:
                         if(hpMode)
                         {
-                            hpAdjust = (int32_t)(hpAdjust + val);
+                            hpDamage = (int32_t)(hpDamage + val);
                         }
                         break;
                 }
             }
 
-            auto targetStats = target.EntityState->GetCoreStats();
-            hpAdjust = static_cast<int32_t>(targetStats->GetHP() - hpAdjust);
-            mpAdjust = static_cast<int32_t>(targetStats->GetMP() - mpAdjust);
+            bool targetAlive = target.EntityState->IsAlive();
 
-            // Adjust for more than max or less than zero
-            if(hpAdjust <= 0)
+            int16_t hpAdjusted, mpAdjusted;
+            if(target.EntityState->SetHPMP((int16_t)-hpDamage, (int16_t)-mpDamage, true,
+                true, hpAdjusted, mpAdjusted))
             {
-                hpAdjust = 0;
+                // Changed from alive to dead or vice versa
+                if(target.EntityState->GetEntityType() ==
+                    objects::EntityStateObject::EntityType_t::CHARACTER)
+                {
+                    // Reset accept revival
+                    auto targetClientState = ClientState::GetEntityClientState(
+                        target.EntityState->GetEntityID());
+                    targetClientState->SetAcceptRevival(false);
+                }
 
-                if(targetStats->GetHP() > 0)
+                if(targetAlive)
                 {
                     target.DamageFlags1 |= FLAG1_LETHAL;
                 }
-            }
-            else if(hpAdjust > target.EntityState->GetMaxHP())
-            {
-                hpAdjust = target.EntityState->GetMaxHP();
+                else
+                {
+                    target.DamageFlags1 |= FLAG1_REVIVAL;
+                    revived.insert(target.EntityState);
+                }
             }
             
-            if(mpAdjust < 0)
+            if(hpAdjusted <= 0)
             {
-                mpAdjust = 0;
+                cancellations[target.EntityState] |= EFFECT_CANCEL_HIT |
+                    EFFECT_CANCEL_DAMAGE;
             }
-            else if(mpAdjust > target.EntityState->GetMaxMP())
-            {
-                mpAdjust = target.EntityState->GetMaxMP();
-            }
-
-            targetStats->SetHP(static_cast<int16_t>(hpAdjust));
-            targetStats->SetMP(static_cast<int16_t>(mpAdjust));
 
             switch(target.EntityState->GetEntityType())
             {
@@ -613,7 +692,32 @@ bool SkillManager::ExecuteNormalSkill(const std::shared_ptr<ChannelClientConnect
             }
         }
 
-        target.EntityState->RecalculateStats(definitionManager);
+        characterManager->RecalculateStats(client, target.EntityState->GetEntityID());
+    }
+
+    for(auto cancelPair : cancellations)
+    {
+        if(cancelPair.second)
+        {
+            cancelPair.first->CancelStatusEffects(cancelPair.second);
+        }
+    }
+
+    characterManager->CancelStatusEffects(client, EFFECT_CANCEL_SKILL);
+
+    // Now that previous effects have been cancelled, add the new ones
+    uint32_t effectTime = (uint32_t)std::time(0);
+    for(SkillTargetResult& target : targetResults)
+    {
+        if(target.AddedStatuses.size() > 0)
+        {
+            auto removed = target.EntityState->AddStatusEffects(
+                target.AddedStatuses, definitionManager, effectTime, false);
+            for(auto r : removed)
+            {
+                target.CancelledStatuses.insert(r);
+            }
+        }
     }
 
     FinalizeSkillExecution(client, sourceEntityID, activated, skillData, hpCost, mpCost);
@@ -626,7 +730,7 @@ bool SkillManager::ExecuteNormalSkill(const std::shared_ptr<ChannelClientConnect
     reply.WriteS8((int8_t)activated->GetActivationID());
 
     reply.WriteU32Little((uint32_t)targetResults.size());
-    for(auto target : targetResults)
+    for(SkillTargetResult& target : targetResults)
     {
         reply.WriteS32Little(target.EntityState->GetEntityID());
         reply.WriteS32Little(abs(target.Damage1));
@@ -635,34 +739,58 @@ bool SkillManager::ExecuteNormalSkill(const std::shared_ptr<ChannelClientConnect
         reply.WriteU8(target.Damage2Type);
         reply.WriteU16Little(target.DamageFlags1);
 
-        reply.WriteU8(static_cast<uint8_t>(target.AilmentDamaged ? 1 : 0));
-        reply.WriteS32Little(abs(target.AilmentDamageAmount));
+        reply.WriteU8(target.AilmentDamageType);
+        reply.WriteS32Little(abs(target.AilmentDamage));
 
         //Knockback location info?
         reply.WriteFloat(0);
         reply.WriteFloat(0);
         reply.WriteFloat(0);
-        reply.WriteFloat(0);
-        reply.WriteFloat(0);
-        reply.WriteFloat(0);
-        reply.WriteU8(0);
 
-        uint32_t effectAddCount = 0;
-        uint32_t effectCancelCount = 0;
-        reply.WriteU32Little(effectAddCount);
-        reply.WriteU32Little(effectCancelCount);
-        for(uint32_t i = 0; i < effectAddCount; i++)
+        /// @todo: Apply hit timing values properly
+        reply.WriteFloat(0);
+        reply.WriteFloat(0);
+        reply.WriteFloat(0);
+
+        reply.WriteU8(0);   // Unknown
+
+        std::list<std::shared_ptr<objects::StatusEffect>> addedStatuses;
+        std::set<uint32_t> cancelledStatuses;
+        if(target.AddedStatuses.size() > 0)
         {
-            /// @todo: Added status effects
-            reply.WriteU32Little(0);
-            reply.WriteS32Little(0);
-            reply.WriteU8(0);
+            // Make sure the added statuses didn't get removed/re-added
+            // already for some reason
+            auto effects = target.EntityState->GetStatusEffects();
+            for(auto added : target.AddedStatuses)
+            {
+                if(effects.find(added.first) != effects.end())
+                {
+                    addedStatuses.push_back(effects[added.first]);
+                }
+            }
+
+            for(auto cancelled : target.CancelledStatuses)
+            {
+                if(effects.find(cancelled) == effects.end())
+                {
+                    cancelledStatuses.insert(cancelled);
+                }
+            }
         }
-        
-        for(uint32_t i = 0; i < effectCancelCount; i++)
+
+        reply.WriteU32Little((uint32_t)addedStatuses.size());
+        reply.WriteU32Little((uint32_t)cancelledStatuses.size());
+
+        for(auto effect : addedStatuses)
         {
-            /// @todo: Cancelled status effects
-            reply.WriteU32Little(0);
+            reply.WriteU32Little(effect->GetEffect());
+            reply.WriteS32Little((int32_t)effect->GetExpiration());
+            reply.WriteU8(effect->GetStack());
+        }
+
+        for(auto cancelled : cancelledStatuses)
+        {
+            reply.WriteU32Little(cancelled);
         }
 
         reply.WriteU16Little(target.DamageFlags2);
@@ -670,41 +798,28 @@ bool SkillManager::ExecuteNormalSkill(const std::shared_ptr<ChannelClientConnect
         reply.WriteS32Little(target.PursuitDamage);
     }
 
-    client->SendPacket(reply);
+    zoneManager->BroadcastPacket(client, reply);
 
-    // Each entity with adjusted HP/MP needs to be communicated to the world
-    // if they belong to a party
+    if(revived.size() > 0)
+    {
+        for(auto entity : revived)
+        {
+            characterManager->SendEntityRevival(client, entity, 6, true);
+        }
+    }
+
+    /// @todo: Transform enemies killed into bodies
+
     if(displayStateModified.size() > 0)
     {
-        auto worldConnection = server->GetManagerConnection()
-            ->GetWorldConnection();
-        for(auto entity : displayStateModified)
-        {
-            auto entityClientState = ClientState::GetEntityClientState(
-                entity->GetEntityID());
-            if(!entityClientState || !entityClientState->GetPartyID()) continue;
-
-            libcomp::Packet packet;
-            if(entity->GetEntityType() ==
-                objects::EntityStateObject::EntityType_t::PARTNER_DEMON)
-            {
-                entityClientState->GetPartyDemonPacket(packet);
-            }
-            else
-            {
-                entityClientState->GetPartyCharacterPacket(packet);
-            }
-            worldConnection->QueuePacket(packet);
-        }
-
-        worldConnection->FlushOutgoing();
+        characterManager->UpdateWorldDisplayState(displayStateModified);
     }
 
     return true;
 }
 
 bool CalculateDamage(const std::shared_ptr<ActiveEntityState>& source,
-    uint32_t hpCost, uint32_t mpCost, SkillTargetResult& target,
+    int16_t hpCost, int16_t mpCost, SkillTargetResult& target,
     std::shared_ptr<objects::MiBattleDamageData> damageData)
 {
     bool isHeal = false;
@@ -782,11 +897,11 @@ bool CalculateDamage(const std::shared_ptr<ActiveEntityState>& source,
                 target.Damage1 = CalculateDamage_Percent(
                     damageData->GetModifier1(), target.Damage1Type,
                     static_cast<int16_t>(source->GetCoreStats()->GetHP() +
-                        (int16_t)hpCost));
+                        hpCost));
                 target.Damage2 = CalculateDamage_Percent(
                     damageData->GetModifier2(), target.Damage2Type,
                     static_cast<int16_t>(source->GetCoreStats()->GetMP() +
-                        (int16_t)mpCost));
+                        mpCost));
             }
             break;
         case objects::MiBattleDamageData::Formula_t::DMG_MAX_PERCENT:
@@ -918,7 +1033,7 @@ int32_t CalculateDamage_MaxPercent(uint16_t mod, uint8_t& damageType,
 
 void SkillManager::FinalizeSkillExecution(const std::shared_ptr<ChannelClientConnection> client,
     int32_t sourceEntityID, std::shared_ptr<objects::ActivatedAbility> activated,
-    std::shared_ptr<objects::MiSkillData> skillData, uint32_t hpCost, uint32_t mpCost)
+    std::shared_ptr<objects::MiSkillData> skillData, int16_t hpCost, int16_t mpCost)
 {
     SendExecuteSkill(client, sourceEntityID, activated, skillData, hpCost, mpCost);
 
@@ -1017,12 +1132,12 @@ void SkillManager::SendChargeSkill(const std::shared_ptr<ChannelClientConnection
     reply.WriteFloat(300.0f);   //Run speed during charge
     reply.WriteFloat(300.0f);   //Run speed after charge
 
-    client->SendPacket(reply);
+    mServer.lock()->GetZoneManager()->BroadcastPacket(client, reply);
 }
 
 void SkillManager::SendExecuteSkill(const std::shared_ptr<ChannelClientConnection> client,
     int32_t sourceEntityID, std::shared_ptr<objects::ActivatedAbility> activated,
-    std::shared_ptr<objects::MiSkillData> skillData, uint32_t hpCost, uint32_t mpCost)
+    std::shared_ptr<objects::MiSkillData> skillData, int16_t hpCost, int16_t mpCost)
 {
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
@@ -1044,8 +1159,8 @@ void SkillManager::SendExecuteSkill(const std::shared_ptr<ChannelClientConnectio
     reply.WriteS32Little(targetedEntityID);
     reply.WriteFloat(cooldownTime);
     reply.WriteFloat(lockOutTime);
-    reply.WriteU32Little(hpCost);
-    reply.WriteU32Little(mpCost);
+    reply.WriteU32Little((uint32_t)hpCost);
+    reply.WriteU32Little((uint32_t)mpCost);
     reply.WriteU8(0);   //Unknown
     reply.WriteFloat(0);    //Unknown
     reply.WriteFloat(0);    //Unknown
@@ -1055,7 +1170,7 @@ void SkillManager::SendExecuteSkill(const std::shared_ptr<ChannelClientConnectio
     reply.WriteU8(0);   //Unknown
     reply.WriteU8(0xFF);   //Unknown
 
-    client->SendPacket(reply);
+    mServer.lock()->GetZoneManager()->BroadcastPacket(client, reply);
 }
 
 void SkillManager::SendCompleteSkill(const std::shared_ptr<ChannelClientConnection> client,
@@ -1071,5 +1186,5 @@ void SkillManager::SendCompleteSkill(const std::shared_ptr<ChannelClientConnecti
     reply.WriteFloat(300.0f);   //Run speed
     reply.WriteU8(cancelled ? 1 : 0);
 
-    client->SendPacket(reply);
+    mServer.lock()->GetZoneManager()->BroadcastPacket(client, reply);
 }

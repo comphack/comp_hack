@@ -57,10 +57,12 @@ ChatManager::ChatManager(const std::weak_ptr<ChannelServer>& server)
 {
     mGMands["contract"] = &ChatManager::GMCommand_Contract;
     mGMands["crash"] = &ChatManager::GMCommand_Crash;
+    mGMands["effect"] = &ChatManager::GMCommand_Effect;
     mGMands["enemy"] = &ChatManager::GMCommand_Enemy;
     mGMands["expertiseup"] = &ChatManager::GMCommand_ExpertiseUpdate;
     mGMands["homepoint"] = &ChatManager::GMCommand_Homepoint;
     mGMands["item"] = &ChatManager::GMCommand_Item;
+    mGMands["kill"] = &ChatManager::GMCommand_Kill;
     mGMands["levelup"] = &ChatManager::GMCommand_LevelUp;
     mGMands["lnc"] = &ChatManager::GMCommand_LNC;
     mGMands["map"] = &ChatManager::GMCommand_Map;
@@ -240,6 +242,64 @@ bool ChatManager::GMCommand_Crash(const std::shared_ptr<
     abort();
 }
 
+bool ChatManager::GMCommand_Effect(const std::shared_ptr<
+    channel::ChannelClientConnection>& client,
+    const std::list<libcomp::String>& args)
+{
+    std::list<libcomp::String> argsCopy = args;
+
+    uint32_t effectID;
+    if(!GetIntegerArg<uint32_t>(effectID, argsCopy))
+    {
+        return SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(
+            "@effect requires an effect ID\n"));
+    }
+
+    auto server = mServer.lock();
+    auto definitionManager = server->GetDefinitionManager();
+    auto def = definitionManager->GetStatusData(effectID);
+    if(!def)
+    {
+        return SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(
+            "Invalid effect ID supplied: %1\n").Arg(effectID));
+    }
+
+    // If the next arg starts with a '+', mark as an add instead of replace
+    bool isAdd = false;
+    if(argsCopy.size() > 0)
+    {
+        libcomp::String& next = argsCopy.front();
+        if(!next.IsEmpty() && next.C()[0] == '+')
+        {
+            isAdd = true;
+            next = next.Right(next.Length() - 1);
+        }
+    }
+
+    uint8_t stack;
+    if(!GetIntegerArg<uint8_t>(stack, argsCopy))
+    {
+        return SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(
+            "@effect requires a stack count\n"));
+    }
+
+    auto state = client->GetClientState();
+
+    libcomp::String target;
+    bool isDemon = GetStringArg(target, argsCopy) && target.ToLower() == "demon";
+    auto eState = isDemon
+        ? std::dynamic_pointer_cast<ActiveEntityState>(state->GetDemonState())
+        : std::dynamic_pointer_cast<ActiveEntityState>(state->GetCharacterState());
+
+    AddStatusEffectMap m;
+    m[effectID] = std::pair<uint8_t, bool>(stack, !isAdd);
+    eState->AddStatusEffects(m, definitionManager);
+
+    server->GetCharacterManager()->RecalculateStats(client, eState->GetEntityID());
+
+    return true;
+}
+
 bool ChatManager::GMCommand_Enemy(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
@@ -399,6 +459,69 @@ bool ChatManager::GMCommand_Item(const std::shared_ptr<
 
     return server->GetCharacterManager()
         ->AddRemoveItem(client, itemID, stackSize, true);
+}
+
+bool ChatManager::GMCommand_Kill(const std::shared_ptr<
+    channel::ChannelClientConnection>& client,
+    const std::list<libcomp::String>& args)
+{
+    std::list<libcomp::String> argsCopy = args;
+
+    auto state = client->GetClientState();
+    auto cState = state->GetCharacterState();
+    auto targetState = cState;
+
+    auto server = mServer.lock();
+    auto characterManager = server->GetCharacterManager();
+    auto zoneManager = server->GetZoneManager();
+
+    libcomp::String name;
+    if(GetStringArg(name, argsCopy))
+    {
+        targetState = nullptr;
+        for(auto zConnection : zoneManager->GetZoneConnections(client, true))
+        {
+            auto zCharState = zConnection->GetClientState()->
+                GetCharacterState();
+            if(zCharState->GetEntity()->GetName() == name)
+            {
+                targetState = zCharState;
+                break;
+            }
+        }
+
+        if(!targetState)
+        {
+            return SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(
+                "Invalid character name supplied for the current zone: %1\n").Arg(name));
+        }
+    }
+
+    if(targetState->SetHPMP(0, -1, false, true))
+    {
+        // Send a generic non-combat damage skill report to kill the target
+        libcomp::Packet reply;
+        reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_SKILL_REPORTS);
+        reply.WriteS32Little(cState->GetEntityID());
+        reply.WriteU32Little(10);   // Any valid skill ID
+        reply.WriteS8(-1);          // No activation ID
+        reply.WriteU32Little(1);    // Number of targets
+        reply.WriteS32Little(targetState->GetEntityID());
+        reply.WriteS32Little(9999); // Damage 1
+        reply.WriteU8(0);           // Damage 1 type (generic)
+        reply.WriteS32Little(0);    // Damage 2
+        reply.WriteU8(2);           // Damage 2 type (none)
+        reply.WriteU16Little(1);    // Lethal flag
+        reply.WriteBlank(48);
+
+        zoneManager->BroadcastPacket(client, reply);
+
+        std::set<std::shared_ptr<ActiveEntityState>> entities;
+        entities.insert(targetState);
+        characterManager->UpdateWorldDisplayState(entities);
+    }
+
+    return true;
 }
 
 bool ChatManager::GMCommand_LevelUp(const std::shared_ptr<
@@ -625,7 +748,7 @@ bool ChatManager::GMCommand_Zone(const std::shared_ptr<
 
     if(args.empty())
     {
-        auto zone = zoneManager->GetZoneInstance(client);
+        auto zone = cState->GetZone();
         auto zoneData = zone->GetDefinition();
         auto zoneDef = server->GetDefinitionManager()->GetZoneData(
             zoneData->GetID());
@@ -678,7 +801,7 @@ bool ChatManager::GMCommand_Zone(const std::shared_ptr<
                 "command with proper inputs.");
         }
 
-        zoneManager->LeaveZone(client);
+        zoneManager->LeaveZone(client, false);
         zoneManager->EnterZone(client, zoneID, xCoord, yCoord, rotation);
         
         return true;

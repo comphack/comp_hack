@@ -1,10 +1,12 @@
 /**
- * @file server/channel/src/packets/game/KeepAlive.cpp
+ * @file server/channel/src/packets/game/SyncCharacter.cpp
  * @ingroup channel
  *
  * @author HACKfrost
  *
- * @brief Request from the client to keep the connection active.
+ * @brief Request from the client to sync the player character data. This
+ *  happens if the client expected an expiration to take place that the
+ *  server never sent.
  *
  * This file is part of the Channel Server (channel).
  *
@@ -27,6 +29,7 @@
 #include "Packets.h"
 
 // libcomp Includes
+#include <Log.h>
 #include <ManagerPacket.h>
 #include <Packet.h>
 #include <PacketCodes.h>
@@ -36,7 +39,7 @@
 
 using namespace channel;
 
-bool Parsers::KeepAlive::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::SyncCharacter::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {
@@ -45,19 +48,39 @@ bool Parsers::KeepAlive::Parse(libcomp::ManagerPacket *pPacketManager,
         return false;
     }
 
+    int32_t entityID = p.ReadS32Little();
+
     auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
     auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+    auto state = client->GetClientState();
+    auto cState = state->GetCharacterState();
+    auto cs = cState->GetCoreStats();
 
-    // Keep alive requests should occur once every 10 seconds
-    // After a missed request, the configurable server timeout countdown will occur
-    client->RefreshTimeout(server->GetServerTime(), 10);
+    if(cState->GetEntityID() != entityID)
+    {
+        LOG_ERROR(libcomp::String("Character not belonging to the client"
+            " requested for SyncCharacter: %1\n").Arg(entityID));
+        return true;
+    }
+
+    auto statusEffects = cState->GetCurrentStatusEffectStates(
+        server->GetDefinitionManager());
 
     libcomp::Packet reply;
-    reply.WritePacketCode(
-        ChannelToClientPacketCode_t::PACKET_KEEP_ALIVE);
-    reply.WriteU32Little(p.ReadU32Little());
+    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_SYNC_CHARACTER);
+    reply.WriteS32Little(entityID);
+    reply.WriteS16Little(cs->GetHP());
+    reply.WriteS16Little(cs->GetMP());
+    reply.WriteU32Little(static_cast<uint32_t>(statusEffects.size()));
+    for (auto ePair : statusEffects)
+    {
+        reply.WriteU32Little(ePair.first->GetEffect());
+        reply.WriteS32Little((int32_t)ePair.second);
+        reply.WriteU8(ePair.first->GetStack());
+    }
 
-    client->SendPacket(reply);
+    // Send back to the whole zone just in case
+    server->GetZoneManager()->BroadcastPacket(client, reply);
 
     return true;
 }

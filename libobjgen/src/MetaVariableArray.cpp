@@ -273,6 +273,8 @@ std::string MetaVariableArray::GetLoadCode(const Generator& generator,
             replacements["@VAR_NAME@"] = name;
             replacements["@VAR_LOAD_CODE@"] = code;
             replacements["@STREAM@"] = stream + std::string(".stream");
+            replacements["@PERSIST_COPY@"] =
+                generator.GetPersistentRefCopyCode(mElementType, name);
 
             code = generator.ParseTemplate(0, "VariableArrayLoad",
                 replacements);
@@ -327,6 +329,8 @@ std::string MetaVariableArray::GetLoadRawCode(const Generator& generator,
             replacements["@VAR_NAME@"] = name;
             replacements["@VAR_LOAD_CODE@"] = code;
             replacements["@STREAM@"] = stream;
+            replacements["@PERSIST_COPY@"] =
+                generator.GetPersistentRefCopyCode(mElementType, name);
 
             code = generator.ParseTemplate(0, "VariableArrayLoad",
                 replacements);

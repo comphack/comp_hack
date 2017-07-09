@@ -46,6 +46,8 @@
         <member type="s16" name="SUPPORT"/>
         <member type="s16" name="PDEF"/>
         <member type="s16" name="MDEF"/>
+        <member type="s16" name="HPRegen"/>
+        <member type="s16" name="MPRegen"/>
         <member type="ActivatedAbility*" name="ActivatedAbility"/>
     </object>
     <object name="ActivatedAbility" scriptenabled="true" persistent="false">

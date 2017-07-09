@@ -74,6 +74,9 @@ public:
 
     static bool GetXmlAttributeBoolean(const std::string& attr);
 
+    static std::string GetPersistentRefCopyCode(
+        const std::shared_ptr<MetaVariable>& var, const std::string& name);
+
     static std::string Escape(const std::string& str);
 
     static bool LoadString(std::istream& stream, std::string& s);

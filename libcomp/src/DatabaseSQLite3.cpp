@@ -402,44 +402,42 @@ bool DatabaseSQLite3::UpdateSingleObject(std::shared_ptr<PersistentObject>& obj)
 
 bool DatabaseSQLite3::DeleteObjects(std::list<std::shared_ptr<PersistentObject>>& objs)
 {
-    std::shared_ptr<libobjgen::MetaObject> metaObject;
-
-    std::list<String> uidBindings;
+    std::unordered_map<std::shared_ptr<libobjgen::MetaObject>,
+        std::list<std::shared_ptr<PersistentObject>>> metaObjectMap;
     for(auto obj : objs)
     {
-        auto uuid = obj->GetUUID();
-
-        if(uuid.IsNull())
-        {
-            return false;
-        }
-
-        obj->Unregister();
-
         auto metaObj = obj->GetObjectMetadata();
+        metaObjectMap[metaObj].push_back(obj);
+    }
 
-        if(nullptr == metaObject)
+    for(auto mPair : metaObjectMap)
+    {
+        auto metaObject = mPair.first;
+
+        std::list<String> uidBindings;
+        for(auto obj : mPair.second)
         {
-            metaObject = metaObj;
+            auto uuid = obj->GetUUID();
+            if(uuid.IsNull())
+            {
+                return false;
+            }
+
+            obj->Unregister();
+
+            std::string uuidStr = obj->GetUUID().ToString();
+            uidBindings.push_back(String("'%1'").Arg(uuidStr));
         }
-        else if(metaObject != metaObj)
+
+        if(!Execute(String("DELETE FROM %1 WHERE UID in (%2);")
+            .Arg(metaObject->GetName())
+            .Arg(String::Join(uidBindings, ", "))))
         {
             return false;
         }
-
-        std::string uuidStr = obj->GetUUID().ToString();
-
-        uidBindings.push_back(String("'%1'").Arg(uuidStr));
     }
 
-    if(Execute(String("DELETE FROM %1 WHERE UID in (%2);")
-        .Arg(metaObject->GetName())
-        .Arg(String::Join(uidBindings, ", "))))
-    {
-        return true;
-    }
-
-    return false;
+    return true;
 }
 
 bool DatabaseSQLite3::VerifyAndSetupSchema(bool recreateTables)

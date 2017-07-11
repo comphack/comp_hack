@@ -281,6 +281,7 @@ enum class ChannelToClientPacketCode_t : uint16_t
     PACKET_EVENT_STAGE_EFFECT = 0x0127,  //!< Request to the client to render a stage effect.
     PACKET_CLAN_INFO = 0x0151,  //!< Response containing the current player's clan information.
     PACKET_EVENT_DIRECTION = 0x015D,  //!< Request to the client to signify a direction to the player.
+    PACKET_SYSTEM_MSG = 0x0171, //!< Message containing announcement ticker data. 
     PACKET_SYNC_CHARACTER = 0x017F,  //!< Response to the request to sync the player character's basic information.
     PACKET_BAZAAR_DATA = 0x0183,  //!< Message containing data about a bazaar in a zone.
     PACKET_STATUS_ICON = 0x0195,  //!< Message containing the icon to show for the client's character.

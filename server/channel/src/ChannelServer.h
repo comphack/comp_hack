@@ -251,9 +251,6 @@ public:
      */
     void Tick();
 
-
-
-
     /**
     * Sends an announcement to each client connected to world
     * Color can be chosen out of four colors:
@@ -266,8 +263,6 @@ public:
     bool SendSystemMessage(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     libcomp::String message, int8_t color, bool);
-
-    
 
     /**
      * Schedule code work to be queued by the next server tick that occurs

@@ -699,12 +699,11 @@ bool ChannelServer::SendSystemMessage(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     libcomp::String message, int8_t color, bool sendToAll)
 {
-
     libcomp::Packet p;
     p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_SYSTEM_MSG);
-    p.WriteS8(color); //Color of the text
+    p.WriteS8(color);
     p.WriteS8(0); // Unknown for now, possibly speed?
-    p.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_CP932,message,true); // message we are trying to send
+    p.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_CP932,message,true);
 
     if(!sendToAll) {
         client->SendPacket(p);

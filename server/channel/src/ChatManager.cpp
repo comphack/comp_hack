@@ -762,7 +762,7 @@ bool ChatManager::GMCommand_TickerMessage(const std::shared_ptr<
 
     if (mode == 1) 
     {
-    server->SendSystemMessage(client,message,0,true);
+        server->SendSystemMessage(client,message,0,true);
     }  
 
     conf->SetSystemMessage(message);

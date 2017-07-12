@@ -754,7 +754,7 @@ bool ChatManager::GMCommand_TickerMessage(const std::shared_ptr<
     if(!(GetIntegerArg(mode,argsCopy)) || argsCopy.size() < 1)   
     {
         return SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(
-        "Syntax invalid, try @tickermessage <mode> <message>"));
+            "Syntax invalid, try @tickermessage <mode> <message>"));
     }
     libcomp::String message = libcomp::String::Join(argsCopy," ");
 

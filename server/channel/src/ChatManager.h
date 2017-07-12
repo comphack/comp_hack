@@ -271,8 +271,8 @@ private:
      * @return true if the command was handled problerly, else false
      */
     bool GMCommand_TickerMessage(const std::shared_ptr<
-    channel::ChannelClientConnection>& client,
-    const std::list<libcomp::String>& args);
+        channel::ChannelClientConnection>& client,
+        const std::list<libcomp::String>& args);
 
     /**
      * GM command to print the server version.
@@ -291,8 +291,8 @@ private:
      * @return true if the command was handled properly, else false
      */
     bool GMCommand_Zone(const std::shared_ptr<
-    channel::ChannelClientConnection>& client,
-    const std::list<libcomp::String>& args);
+        channel::ChannelClientConnection>& client,
+        const std::list<libcomp::String>& args);
 
     /**
      * GM command to increase the XP of a character or demon.

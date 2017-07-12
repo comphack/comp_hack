@@ -81,7 +81,7 @@ void SendClientReadyData(std::shared_ptr<ChannelServer> server,
     auto conf = std::dynamic_pointer_cast<objects::ChannelConfig>(server->GetConfig());
     libcomp::String systemMessage = conf->GetSystemMessage();
 
-    if(!systemMessage.isEmpty()) 
+    if(!systemMessage.IsEmpty()) 
     {
         server->SendSystemMessage(client,systemMessage,0,false);
     }

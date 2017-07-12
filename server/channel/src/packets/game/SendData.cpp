@@ -77,17 +77,15 @@ void SendClientReadyData(std::shared_ptr<ChannelServer> server,
 
         client->QueuePacket(p);
     }
+      
+    auto conf = std::dynamic_pointer_cast<objects::ChannelConfig>(server->GetConfig());
+    libcomp::String systemMessage = conf->GetSystemMessage();
 
+    if(!systemMessage.isEmpty()) 
     {
-        libcomp::String systemMessage; 
-        auto conf = std::dynamic_pointer_cast<objects::ChannelConfig>(server->GetConfig());
-        systemMessage = conf->GetSystemMessage();
-
-        if(systemMessage != "") 
-        {
-            server->SendSystemMessage(client,systemMessage,0,false);
-        }
+        server->SendSystemMessage(client,systemMessage,0,false);
     }
+    
     /// @todo: send "world bonus" [0x0405]
     /// @todo: send player skill updates (toggleable abilities for example) [0x03B8]
 

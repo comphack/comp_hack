@@ -261,8 +261,8 @@ public:
     * @return True if the message was successfully sent, false otherwise.
     */
     bool SendSystemMessage(const std::shared_ptr<
-    channel::ChannelClientConnection>& client,
-    libcomp::String message, int8_t color, bool);
+        channel::ChannelClientConnection>& client,
+        libcomp::String message, int8_t color, bool);
 
     /**
      * Schedule code work to be queued by the next server tick that occurs

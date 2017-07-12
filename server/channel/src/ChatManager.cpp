@@ -56,7 +56,7 @@ using namespace channel;
 ChatManager::ChatManager(const std::weak_ptr<ChannelServer>& server)
     : mServer(server)
 {
-    mGMands["announce"] =&ChatManager::GMCommand_Announce;
+    mGMands["announce"] = &ChatManager::GMCommand_Announce;
     mGMands["contract"] = &ChatManager::GMCommand_Contract;
     mGMands["crash"] = &ChatManager::GMCommand_Crash;
     mGMands["effect"] = &ChatManager::GMCommand_Effect;
@@ -71,10 +71,10 @@ ChatManager::ChatManager(const std::weak_ptr<ChannelServer>& server)
     mGMands["pos"] = &ChatManager::GMCommand_Position;
     mGMands["skill"] = &ChatManager::GMCommand_Skill;
     mGMands["speed"] = &ChatManager::GMCommand_Speed;
-    mGMands["tickermessage"] =&ChatManager::GMCommand_TickerMessage;
-    mGMands["version"] =&ChatManager::GMCommand_Version;
+    mGMands["tickermessage"] = &ChatManager::GMCommand_TickerMessage;
+    mGMands["version"] = &ChatManager::GMCommand_Version;
     mGMands["xp"] = &ChatManager::GMCommand_XP;
-    mGMands["zone"] =&ChatManager::GMCommand_Zone;
+    mGMands["zone"] = &ChatManager::GMCommand_Zone;
 }
 
 ChatManager::~ChatManager()
@@ -202,8 +202,7 @@ bool ChatManager::GMCommand_Announce(const std::shared_ptr<
             "@announce requires two arguments, <color> <message>"));
     }
     
-    libcomp::String message = "";
-    message = libcomp::String::Join(argsCopy," ");
+    libcomp::String message = libcomp::String::Join(argsCopy," ");
     auto server = mServer.lock();
     server->SendSystemMessage(client, message, color, true);
     return true;
@@ -749,8 +748,7 @@ bool ChatManager::GMCommand_TickerMessage(const std::shared_ptr<
 {
     auto server = mServer.lock();
     auto conf = std::dynamic_pointer_cast<objects::ChannelConfig>(server->GetConfig());
-    std::list<libcomp::String> argsCopy = args;    
-    libcomp::String message = "";
+    std::list<libcomp::String> argsCopy = args;
     int8_t mode = 0;
 
     if(!(GetIntegerArg(mode,argsCopy)) || argsCopy.size() < 1)   
@@ -758,7 +756,7 @@ bool ChatManager::GMCommand_TickerMessage(const std::shared_ptr<
         return SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(
         "Syntax invalid, try @tickermessage <mode> <message>"));
     }
-    message = libcomp::String::Join(argsCopy," ");
+    libcomp::String message = libcomp::String::Join(argsCopy," ");
 
     if (mode == 1) 
     {

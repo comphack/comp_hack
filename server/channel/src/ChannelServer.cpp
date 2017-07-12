@@ -703,7 +703,7 @@ bool ChannelServer::SendSystemMessage(const std::shared_ptr<
     p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_SYSTEM_MSG);
     p.WriteS8(color);
     p.WriteS8(0); // Unknown for now, possibly speed?
-    p.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_CP932,message,true);
+    p.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_CP932, message, true);
 
     if(!sendToAll) {
         client->SendPacket(p);

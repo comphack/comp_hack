@@ -62,6 +62,7 @@ ChatManager::ChatManager(const std::weak_ptr<ChannelServer>& server)
     mGMands["effect"] = &ChatManager::GMCommand_Effect;
     mGMands["enemy"] = &ChatManager::GMCommand_Enemy;
     mGMands["expertiseup"] = &ChatManager::GMCommand_ExpertiseUpdate;
+    mGMands["familiarity"] = &ChatManager::GMCommand_Familiarity;
     mGMands["homepoint"] = &ChatManager::GMCommand_Homepoint;
     mGMands["item"] = &ChatManager::GMCommand_Item;
     mGMands["kill"] = &ChatManager::GMCommand_Kill;
@@ -240,8 +241,7 @@ bool ChatManager::GMCommand_Contract(const std::shared_ptr<
     auto character = state->GetCharacterState()->GetEntity();
 
     auto demon = characterManager->ContractDemon(character,
-        definitionManager->GetDevilData(demonID),
-        nullptr);
+        definitionManager->GetDevilData(demonID));
     if(nullptr == demon)
     {
         return false;
@@ -422,6 +422,24 @@ bool ChatManager::GMCommand_ExpertiseUpdate(const std::shared_ptr<
     }
 
     server->GetCharacterManager()->UpdateExpertise(client, skillID);
+
+    return true;
+}
+
+bool ChatManager::GMCommand_Familiarity(const std::shared_ptr<
+    channel::ChannelClientConnection>& client,
+    const std::list<libcomp::String>& args)
+{
+    std::list<libcomp::String> argsCopy = args;
+
+    uint16_t familiarity;
+    if(!GetIntegerArg<uint16_t>(familiarity, argsCopy))
+    {
+        return false;
+    }
+
+    mServer.lock()->GetCharacterManager()->UpdateFamiliarity(
+        client, familiarity);
 
     return true;
 }

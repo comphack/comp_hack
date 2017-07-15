@@ -259,6 +259,7 @@ SET(${PROJECT_NAME}_SCHEMA
     schema/binarydata/skilldata.xml
     schema/binarydata/spotdata.xml
     schema/binarydata/statusdata.xml
+    schema/binarydata/triunionspecialdata.xml
     schema/binarydata/zonedata.xml
 )
 
@@ -525,6 +526,8 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     MiSummonData.h
     MiTargetData.cpp
     MiTargetData.h
+    MiTriUnionSpecialData.cpp
+    MiTriUnionSpecialData.h
     MiUnionData.cpp
     MiUnionData.h
     MiUseRestrictionsData.h

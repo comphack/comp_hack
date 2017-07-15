@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="MiTriUnionSpecialData" persistent="false">
+        <member type="u16" name="ID"/>
+        <member type="u16" name="unused1"/>
+        <member type="bool" name="isTriFusion"/>
+        <member type="u8" name="triunion4"/>
+        <member type="u8" name="unused2"/>
+        <member type="u8" name="unused3"/>
+        <member type="u32" name="resultID"/>
+        <member type="u8" name="pluginID"/>
+        <member type="u8" name="unused4"/>
+        <member type="u8" name="unused5"/>
+        <member type="u8" name="unused6"/>
+        <member type="u8" name="variant1Allowed"/>
+        <member type="u8" name="unused7"/>
+        <member type="u16" name="unused8"/>
+        <member type="u32" name="sourceID1"/>
+        <member type="u8" name="variant2Allowed"/>
+        <member type="u8" name="unused9"/>
+        <member type="u16" name="unused10"/>
+        <member type="u32" name="sourceID2"/>
+        <member type="u8" name="variant3Allowed"/>
+        <member type="u8" name="unused11"/>
+        <member type="u16" name="unused12"/>
+        <member type="u32" name="sourceID3"/>
+        <member type="u8" name="unused13"/>
+        <member type="u8" name="unused14"/>
+        <member type="u16" name="unused15"/>
+        <member type="s32" name="unused16"/>
+        <member type="s32" name="unused17"/>
+        <member type="u8" name="unused18"/>
+        <member type="u8" name="unused19"/>
+        <member type="u16" name="unused20"/>
+        <member type="s32" name="unused21"/>
+        <member type="s32" name="unused22"/>
+        <member type="u8" name="unused23"/>
+        <member type="u8" name="unused24"/>
+        <member type="u8" name="unused25"/>
+        <member type="u8" name="unused26"/>
+    </object>
+</objgen>

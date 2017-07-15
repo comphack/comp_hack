@@ -115,10 +115,14 @@ bool Parsers::DemonBoxMove::Parse(libcomp::ManagerPacket *pPacketManager,
     srcBox->SetDemons((size_t)srcSlot, destDemon);
     destBox->SetDemons((size_t)destSlot, srcDemon);
 
-    characterManager->SendDemonBoxData(client, srcBoxID);
     if(srcBox != destBox)
     {
-        characterManager->SendDemonBoxData(client, destBoxID);
+        characterManager->SendDemonBoxData(client, destBoxID, { destSlot });
+        characterManager->SendDemonBoxData(client, srcBoxID, { srcSlot });
+    }
+    else
+    {
+        characterManager->SendDemonBoxData(client, srcBoxID, { srcSlot, destSlot });
     }
 
     server->GetWorldDatabase()->QueueChangeSet(dbChanges);

@@ -172,6 +172,17 @@ private:
         const std::list<libcomp::String>& args);
 
     /**
+     * GM command to update the familiarity level of the client's
+     * partner demon.
+     * @param client Pointer to the client that sent the command
+     * @param args List of arguments for the command
+     * @return true if the command was handled properly, else false
+     */
+    bool GMCommand_Familiarity(const std::shared_ptr<
+        channel::ChannelClientConnection>& client,
+        const std::list<libcomp::String>& args);
+
+    /**
      * GM command to set the client character's homepoint to their
      * current position.
      * @param client Pointer to the client that sent the command

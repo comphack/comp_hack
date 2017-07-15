@@ -129,6 +129,7 @@ enum class ClientToChannelPacketCode_t : uint16_t
     PACKET_PARTY_DROP_RULE = 0x00E3,  //!< Request to update the current party's drop rule setting.
     PACKET_PARTY_MEMBER_UPDATE = 0x00E6,  //!< Response signifying whether a party member update was received correctly.
     PACKET_PARTY_KICK = 0x00EB,  //!< Request to kick a player from the current party.
+    PACKET_DEMON_FUSION = 0x00EF,  //!< Request to fuse two demons into a new demon.
     PACKET_SYNC = 0x00F3,  //!< Request to retrieve the server time.
     PACKET_ROTATE = 0x00F8,  //!< Request to rotate an entity or object.
     PACKET_UNION_FLAG = 0x0100,  //!< Request to receive union information.
@@ -141,6 +142,7 @@ enum class ClientToChannelPacketCode_t : uint16_t
     PACKET_MAP_FLAG = 0x0197,  //!< Request to receive map information.
     PACKET_DEMON_COMPENDIUM = 0x019B,  //!< Request for the Demon Compendium.
     PACKET_DUNGEON_RECORDS = 0x01C4,  //!< Request for the current player's dungeon challenge records.
+    PACKET_DEMON_FAMILIARITY = 0x01E6,  //!< Request to sync the familiarity of every demon in the player's COMP.
     PACKET_MATERIAL_BOX = 0x0205,  //!< Request for info about the materials container.
     PACKET_FUSION_GAUGE = 0x0217,   //!< Request for the player's fusion gauge state.
     PACKET_TITLE_LIST = 0x021B,   //!< Request for the list of available titles.
@@ -267,6 +269,7 @@ enum class ChannelToClientPacketCode_t : uint16_t
     PACKET_PARTY_MEMBER_PARTNER = 0x00E8,  //!< Notification containing a parter demon's info in the current party.
     PACKET_PARTY_MEMBER_ZONE = 0x00E9,  //!< Notification that a current party member has moved to a different zone.
     PACKET_PARTY_MEMBER_ICON = 0x00EA,  //!< Notification that a current party member's icon state has changed.
+    PACKET_DEMON_FUSION = 0x00F0,  //!< Response containing the results of a two-way fusion.
     PACKET_PARTY_KICK = 0x00EC,  //!< Notification that a player has been kicked from the current party.
     PACKET_SYNC = 0x00F4,  //!< Response containing the server time.
     PACKET_ROTATE = 0x00F9,    //!< Message containing entity or object rotation information.
@@ -288,7 +291,9 @@ enum class ChannelToClientPacketCode_t : uint16_t
     PACKET_STATUS_ICON_OTHER = 0x0196,  //!< Message containing the icon to show for another player's character.
     PACKET_MAP_FLAG = 0x0198,  //!< Message containing map information.
     PACKET_DEMON_COMPENDIUM = 0x019C,  //!< Response containing the Demon Compendium.
+    PACKET_DEMON_FAMILIARITY_UPDATE = 0x01A5,  //!< Notification that the current partner demon's familiarity has updated.
     PACKET_DUNGEON_CHALLENGES = 0x01C5,  //!< Response containing the current player's dungeon challenge records.
+    PACKET_DEMON_FAMILIARITY = 0x01E7,  //!< Response to the request for the familiarity values of each demon in the COMP.
     PACKET_EVENT_EX_NPC_MESSAGE = 0x01E9,  //!< Request to the client to display an extended NPC event message.
     PACKET_MATERIAL_BOX = 0x0206,  //!< Response containing info about the materials container.
     PACKET_EVENT_SPECIAL_DIRECTION = 0x0216,  //!< Request to the client to signify a special direction to the player.

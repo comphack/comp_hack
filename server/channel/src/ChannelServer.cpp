@@ -224,6 +224,8 @@ bool ChannelServer::Initialize()
         to_underlying(ClientToChannelPacketCode_t::PACKET_PARTY_DROP_RULE));
     clientPacketManager->AddParser<Parsers::PartyKick>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_PARTY_KICK));
+    clientPacketManager->AddParser<Parsers::DemonFusion>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_DEMON_FUSION));
     clientPacketManager->AddParser<Parsers::Sync>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_SYNC));
     clientPacketManager->AddParser<Parsers::Rotate>(
@@ -248,6 +250,8 @@ bool ChannelServer::Initialize()
         to_underlying(ClientToChannelPacketCode_t::PACKET_DEMON_COMPENDIUM));
     clientPacketManager->AddParser<Parsers::DungeonRecords>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_DUNGEON_RECORDS));
+    clientPacketManager->AddParser<Parsers::DemonFamiliarity>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_DEMON_FAMILIARITY));
     clientPacketManager->AddParser<Parsers::MaterialBox>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_MATERIAL_BOX));
     clientPacketManager->AddParser<Parsers::FusionGauge>(

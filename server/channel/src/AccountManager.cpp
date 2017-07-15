@@ -41,6 +41,7 @@
 #include <Expertise.h>
 #include <FriendSettings.h>
 #include <Hotbar.h>
+#include <InheritedSkill.h>
 #include <Item.h>
 #include <ItemBox.h>
 #include <MiItemData.h>
@@ -354,8 +355,7 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
         }
 
         auto demon = characterManager->ContractDemon(character.Get(),
-            definitionManager->GetDevilData(0x0239),    //Jack Frost
-            nullptr);
+            definitionManager->GetDevilData(0x0239));    //Jack Frost
         if(nullptr == demon)
         {
             return false;
@@ -440,26 +440,24 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
 
     for(auto itemBox : allBoxes)
     {
-        if(!itemBox.IsNull())
+        if(itemBox.IsNull()) continue;
+
+        if(!itemBox.Get(db))
         {
-            if(!itemBox.Get(db))
+            return false;
+        }
+
+        for(auto item : itemBox->GetItems())
+        {
+            if(item.IsNull()) continue;
+
+            if(!item.Get(db))
             {
                 return false;
             }
 
-            for(auto item : itemBox->GetItems())
-            {
-                if(!item.IsNull())
-                {
-                    if(!item.Get(db))
-                    {
-                        return false;
-                    }
-
-                    state->SetObjectID(item->GetUUID(),
-                        server->GetNextObjectID());
-                }
-            }
+            state->SetObjectID(item->GetUUID(),
+                server->GetNextObjectID());
         }
     }
 
@@ -468,56 +466,49 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
     auto defaultBox = character->GetItemBoxes(0);
     for(auto equip : character->GetEquippedItems())
     {
-        if(!equip.IsNull())
+        if(equip.IsNull()) continue;
+
+        //If we already have an object ID, it's already loaded
+        if(!state->GetObjectID(equip.GetUUID()))
         {
-            //If we already have an object ID, it's already loaded
-            if(!state->GetObjectID(equip.GetUUID()))
+            if(!equip.Get(db))
             {
-                if(!equip.Get(db))
-                {
-                    return false;
-                }
-
-                state->SetObjectID(equip->GetUUID(),
-                    server->GetNextObjectID());
+                return false;
             }
 
-            if(newCharacter)
-            {
-                auto def = definitionManager->GetItemData(equip->GetType());
-                auto poss = def->GetPossession();
-                equip->SetDurability(poss->GetDurability());
-                equip->SetMaxDurability((int8_t)poss->GetDurability());
+            state->SetObjectID(equip->GetUUID(),
+                server->GetNextObjectID());
+        }
 
-                auto slot = equipmentBoxSlot++;
-                equip->SetItemBox(defaultBox);
-                equip->SetBoxSlot((int8_t)slot);
-                defaultBox->SetItems(slot, equip);
-            }
+        if(newCharacter)
+        {
+            auto def = definitionManager->GetItemData(equip->GetType());
+            auto poss = def->GetPossession();
+            equip->SetDurability(poss->GetDurability());
+            equip->SetMaxDurability((int8_t)poss->GetDurability());
+
+            auto slot = equipmentBoxSlot++;
+            equip->SetItemBox(defaultBox);
+            equip->SetBoxSlot((int8_t)slot);
+            defaultBox->SetItems(slot, equip);
         }
     }
 
     // Materials
     for(auto material : character->GetMaterials())
     {
-        if(!material.IsNull())
+        if(!material.IsNull() && !material.Get(db))
         {
-            if(!material.Get(db))
-            {
-                return false;
-            }
+            return false;
         }
     }
 
     // Expertises
     for(auto expertise : character->GetExpertises())
     {
-        if(!expertise.IsNull())
+        if(!expertise.IsNull() && !expertise.Get(db))
         {
-            if(!expertise.Get(db))
-            {
-                return false;
-            }
+            return false;
         }
     }
 
@@ -535,28 +526,34 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
 
     for(auto box : demonBoxes)
     {
-        if(!box.IsNull())
+        if(box.IsNull()) continue;
+
+        if(!box.Get(db))
         {
-            if(!box.Get(db))
+            return false;
+        }
+            
+        for(auto demon : box->GetDemons())
+        {
+            if(demon.IsNull()) continue;
+
+            if(!demon.Get(db) || !demon->LoadCoreStats(db))
             {
                 return false;
             }
-            
-            for(auto demon : box->GetDemons())
+
+            for(auto iSkill : demon->GetInheritedSkills())
             {
-                if(!demon.IsNull())
+                if(!iSkill.Get(db))
                 {
-                    if(!demon.Get(db) || !demon->LoadCoreStats(db))
-                    {
-                        return false;
-                    }
-
-                    state->SetObjectID(demon->GetUUID(),
-                        server->GetNextObjectID());
-
-                    statusEffectSets.push_back(demon->GetStatusEffects());
+                    return false;
                 }
             }
+
+            state->SetObjectID(demon->GetUUID(),
+                server->GetNextObjectID());
+
+            statusEffectSets.push_back(demon->GetStatusEffects());
         }
     }
     
@@ -565,12 +562,9 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
     {
         for(auto effect : seSet)
         {
-            if(!effect.IsNull())
+            if(!effect.IsNull() && !effect.Get(db))
             {
-                if(!effect.Get(db))
-                {
-                    return false;
-                }
+                return false;
             }
         }
     }
@@ -578,12 +572,9 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
     // Hotbar
     for(auto hotbar : character->GetHotbars())
     {
-        if(!hotbar.IsNull())
+        if(!hotbar.IsNull() && !hotbar.Get(db))
         {
-            if(!hotbar.Get(db))
-            {
-                return false;
-            }
+            return false;
         }
     }
 
@@ -627,16 +618,15 @@ bool AccountManager::LogoutCharacter(channel::ClientState* state,
 
     for(auto itemBox : allBoxes)
     {
-        if(nullptr != itemBox)
+        if(!itemBox) continue;
+
+        for(auto item : itemBox->GetItems())
         {
-            for(auto item : itemBox->GetItems())
-            {
-                ok &= Cleanup<objects::Item>(item.Get(), worldDB,
-                    doSave, !delay);
-            }
-            ok &= Cleanup<objects::ItemBox>(itemBox, worldDB,
+            ok &= Cleanup<objects::Item>(item.Get(), worldDB,
                 doSave, !delay);
         }
+        ok &= Cleanup<objects::ItemBox>(itemBox, worldDB,
+            doSave, !delay);
     }
 
     // Save materials
@@ -671,25 +661,29 @@ bool AccountManager::LogoutCharacter(channel::ClientState* state,
     
     for(auto box : demonBoxes)
     {
-        if(nullptr != box)
-        {
-            for(auto demon : box->GetDemons())
-            {
-                if(!demon.IsNull())
-                {
-                    statusEffectSets.push_back(demon->GetStatusEffects());
+        if(!box) continue;
 
-                    ok &= Cleanup<objects::EntityStats>(demon
-                        ->GetCoreStats().Get(), worldDB, doSave,
-                        !delay);
-                    ok &= Cleanup<objects::Demon>(demon.Get(),
-                        worldDB, doSave, !delay);
-                }
+        for(auto demon : box->GetDemons())
+        {
+            if(demon.IsNull()) continue;
+
+            statusEffectSets.push_back(demon->GetStatusEffects());
+
+            for(auto iSkill : demon->GetInheritedSkills())
+            {
+                ok &= Cleanup<objects::InheritedSkill>(iSkill.Get(),
+                    worldDB, doSave, !delay);
             }
 
-            ok &= Cleanup<objects::DemonBox>(box, worldDB, doSave,
+            ok &= Cleanup<objects::EntityStats>(demon
+                ->GetCoreStats().Get(), worldDB, doSave,
                 !delay);
+            ok &= Cleanup<objects::Demon>(demon.Get(),
+                worldDB, doSave, !delay);
         }
+
+        ok &= Cleanup<objects::DemonBox>(box, worldDB, doSave,
+            !delay);
     }
     
     // Status effects

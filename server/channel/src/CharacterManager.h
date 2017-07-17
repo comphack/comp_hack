@@ -219,9 +219,12 @@ public:
      * @param client Pointer to the client connection containing
      *  the box
      * @param boxID Demon box ID
+     * @param slots Optional param to signify only specific slotss have
+     *  been updated
      */
     void SendDemonBoxData(const std::shared_ptr<
-        ChannelClientConnection>& client, int8_t boxID);
+        ChannelClientConnection>& client, int8_t boxID,
+        std::set<int8_t> slots = {});
 
     /**
      * Get the client's character or account owned demon box by ID.
@@ -351,17 +354,36 @@ public:
         channel::ChannelClientConnection>& client, int16_t lnc);
 
     /**
-     * Create or copy an existing demon and add them to a character's COMP.
+     * Create a demon and add it to a character's COMP.
      * @param character Pointer to the character that should receive the demon
      * @param demonData Pointer to a demon's definition that represents
      *  the demon to create
-     * @param demon Optional pointer to an existing demon to make a copy from
      * @return Pointer to the newly created demon
      */
     std::shared_ptr<objects::Demon> ContractDemon(
         const std::shared_ptr<objects::Character>& character,
-        const std::shared_ptr<objects::MiDevilData>& demonData,
-        const std::shared_ptr<objects::Demon>& demon = nullptr);
+        const std::shared_ptr<objects::MiDevilData>& demonData);
+
+    /**
+     * Create a demon.
+     * @param demonData Pointer to a demon's definition that represents
+     *  the demon to create
+     * @return Pointer to the newly created demon
+     */
+    std::shared_ptr<objects::Demon> GenerateDemon(
+        const std::shared_ptr<objects::MiDevilData>& demonData);
+
+    /**
+     * Update the current partner demon's familiarity.
+     * @param client Pointer to the client connection
+     * @param familiarity Set or adjusted familiarity points to
+     *  update the demon with
+     * @param isAdjust true if the familiarity value should be added
+     *  to the current value, false if it should replace the curent value
+     */
+    void UpdateFamiliarity(const std::shared_ptr<
+        channel::ChannelClientConnection>& client, int32_t familiarity,
+        bool isAdjust = false);
 
     /**
      * Update the client's character or demon's experience and level
@@ -529,6 +551,16 @@ public:
         const std::shared_ptr<objects::EntityStats>& coreStats,
         const std::shared_ptr<ActiveEntityState>& state,
         uint8_t format);
+
+    /**
+     * Mark the supplied demon and its related data as deleted in the
+     * supplied changeset. If the demon is in a demon box, the box will
+     * be updated as well.
+     * @param demon Pointer to the demon that will be deleted
+     * @param changes Pointer to the changeset to apply the changes to
+     */
+    void DeleteDemon(const std::shared_ptr<objects::Demon>& demon,
+        const std::shared_ptr<libcomp::DatabaseChangeSet>& changes);
 
 private:
     /**

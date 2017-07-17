@@ -54,6 +54,7 @@ class MiONPCData;
 class MiShopProductData;
 class MiSkillData;
 class MiStatusData;
+class MiTriUnionSpecialData;
 class MiZoneData;
 }
 
@@ -116,6 +117,14 @@ public:
     const std::shared_ptr<objects::MiExpertData> GetExpertClassData(uint32_t id);
 
     /**
+     * Get the list of fusion range level and demon ID pairs associated to
+     * the supplied demon race
+     * @param raceID Demon race ID
+     * @return List of maximum fusion range level (key) and demon ID (value) pairs
+     */
+    const std::list<std::pair<uint8_t, uint32_t>> GetFusionRanges(uint8_t raceID);
+
+    /**
      * Get the human NPC definition corresponding to an ID
      * @param id Human NPC ID to retrieve
      * @return Pointer to the matching human NPC definition, null if it does
@@ -165,6 +174,15 @@ public:
      * @return Pointer to the matching skill definition, null if it does not exist
      */
     const std::shared_ptr<objects::MiStatusData> GetStatusData(uint32_t id);
+
+    /**
+     * Get the list of pointers to special fusion definitions by the ID of a source
+     * demon involved
+     * @param sourceDemonTypeID ID of a source demon for the special fusion
+     * @return List of pointers to special fusion definitions
+     */
+    const std::list<std::shared_ptr<objects::MiTriUnionSpecialData>>
+        GetTriUnionSpecialData(uint32_t sourceDemonTypeID);
 
     /**
      * Get the zone definition corresponding to an ID
@@ -277,6 +295,13 @@ public:
      * @return true on success, false on failure
      */
     bool LoadStatusData(gsl::not_null<DataStore*> pDataStore);
+
+    /**
+     * Load the special fusion binary data definitions
+     * @param pDataStore Pointer to the datastore to load binary file from
+     * @return true on success, false on failure
+     */
+    bool LoadTriUnionSpecialData(gsl::not_null<DataStore*> pDataStore);
 
     /**
      * Load the zone binary data definitions
@@ -433,6 +458,11 @@ private:
     std::unordered_map<uint32_t,
         std::shared_ptr<objects::MiExpertData>> mExpertData;
 
+    /// Map of demon race IDs to maximum fusion range levels paired
+    /// with their corresponding result demon
+    std::unordered_map<uint8_t,
+        std::list<std::pair<uint8_t, uint32_t>>> mFusionRanges;
+
     /// Map of human NPC definitions by ID
     std::unordered_map<uint32_t,
         std::shared_ptr<objects::MiHNPCData>> mHNPCData;
@@ -456,6 +486,14 @@ private:
     /// Map of status definitions by ID
     std::unordered_map<uint32_t,
         std::shared_ptr<objects::MiStatusData>> mStatusData;
+
+    /// Map of special fusion definitions by ID
+    std::unordered_map<uint32_t,
+        std::shared_ptr<objects::MiTriUnionSpecialData>> mTriUnionSpecialData;
+
+    /// Map of source demon IDs to special fusions they belong to
+    std::unordered_map<uint32_t,
+        std::list<uint32_t>> mTriUnionSpecialDataBySourceID;
 
     /// Map of zone definitions by ID
     std::unordered_map<uint32_t,

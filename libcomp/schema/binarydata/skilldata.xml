@@ -186,7 +186,7 @@
         <member type="u16" name="unused"/>
     </object>
     <object name="MiAcquisitionData" persistent="false">
-        <member type="u8" name="acquisition1"/>
+        <member type="u8" name="inheritanceRestriction"/>
         <member type="s8" name="acquisition2"/>
         <member type="u16" name="unused"/>
     </object>

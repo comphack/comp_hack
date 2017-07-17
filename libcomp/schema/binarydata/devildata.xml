@@ -4,19 +4,23 @@
         <member type="u32" name="ID"/>
         <member type="string" length="36" name="name" encoding="cp932"/>
         <member type="s16" name="title"/>
-        <member type="u16" name="unk1"/>
-        <member type="u8" name="unk2"/>
-        <member type="u8" name="unk3"/>
-        <member type="u8" name="unk4"/>
-        <member type="u8" name="unk5"/>
+        <member type="u16" name="unused1"/>
+        <member type="enum" name="gender" underlying="uint8_t">
+            <value>MALE</value>
+            <value>FEMALE</value>
+            <value>NONE</value>
+        </member>
+        <member type="u8" name="unused2"/>
+        <member type="u8" name="fusionModifier"/>
+        <member type="u8" name="unused3"/>
         <member type="s16" name="LNC"/>
-        <member type="s16" name="unk7"/>
+        <member type="s16" name="unused4"/>
         <member type="u32" name="modelID"/>
     </object>
     <object name="MiDCategoryData" persistent="false">
-        <member type="u8" name="category1"/>
-        <member type="u8" name="category2"/>
-        <member type="u16" name="category3"/>
+        <member type="u8" name="family"/>
+        <member type="u8" name="race"/>
+        <member type="u16" name="unused"/>
     </object>
     <object name="MiAIRelationData" persistent="false">
         <member type="u16" name="ai1"/>
@@ -25,26 +29,26 @@
         <member type="u16" name="ai4"/>
     </object>
     <object name="MiNegotiationData" persistent="false">
-        <member type="u8" name="negotiation1"/>
-        <member type="u8" name="negotiation2"/>
-        <member type="u8" name="negotiation3"/>
-        <member type="u8" name="negotiation4"/>
+        <member type="u8" name="affabilityThreshold"/>
+        <member type="u8" name="fearThreshold"/>
+        <member type="u8" name="fusionIntro"/>
+        <member type="u8" name="unused"/>
     </object>
     <object name="MiSummonData" persistent="false">
         <member type="u32" name="summon1"/>
-        <member type="u8" name="summon2"/>
+        <member type="u8" name="unused1"/>
         <member type="u8" name="magModifier"/>
-        <member type="u16" name="summon3"/>
+        <member type="u16" name="unused2"/>
     </object>
     <object name="MiUnionData" persistent="false">
-        <member type="u8" name="union1"/>
-        <member type="u8" name="union2"/>
-        <member type="u16" name="union3"/>
-        <member type="u32" name="union4"/>
+        <member type="u8" name="fusionDifficulty"/>
+        <member type="u8" name="fusionOptions"/>
+        <member type="u16" name="unused"/>
+        <member type="u32" name="baseDemonID"/>
         <member type="array" size="5" name="union5">
             <element type="float"/>
         </member>
-        <member type="u32" name="union6"/>
+        <member type="u32" name="mitamaFusionID"/>
     </object>
     <object name="MiAcquisitionSkillData" persistent="false">
         <member type="u32" name="ID"/>
@@ -53,14 +57,14 @@
     <object name="MiGrowthData" persistent="false">
         <member type="u8" name="growthType"/>
         <member type="u8" name="baseLevel"/>
-        <member type="u8" name="growth1"/>
-        <member type="u8" name="growth2"/>
-        <member type="u16" name="growth3"/>
-        <member type="u16" name="growth4"/>
+        <member type="u8" name="inheritanceType"/>
+        <member type="u8" name="unused1"/>
+        <member type="u16" name="inheritanceRestrictions"/>
+        <member type="u16" name="unused2"/>
         <member type="array" size="8" name="skills">
             <element type="u32"/>
         </member>
-        <member type="array" size="8" name="growth5">
+        <member type="array" size="8" name="enemyOnlySkills">
             <element type="u32"/>
         </member>
         <member type="array" size="4" name="traits">
@@ -69,30 +73,30 @@
         <member type="array" size="16" name="acquisitionSkills">
             <element type="MiAcquisitionSkillData*"/>
         </member>
-        <member type="u8" name="growth6"/>
-        <member type="u8" name="growth7"/>
-        <member type="u16" name="growth8"/>
+        <member type="u8" name="forceStock"/>
+        <member type="u8" name="unused3"/>
+        <member type="u16" name="unused4"/>
         <member type="array" size="8" name="salesDialogue">
             <element type="string" length="68" encoding="cp932"/>
         </member>
     </object>
     <object name="MiDevilBattleData" persistent="false">
         <member type="u32" name="battle1"/>
-        <member type="u32" name="battle2"/>
-        <member type="u8" name="battle3"/>
-        <member type="u8" name="battle4"/>
-        <member type="u8" name="battle5"/>
-        <member type="u8" name="battle6"/>
+        <member type="u32" name="digitalizeXP"/>
+        <member type="u8" name="enemyLevel"/>
+        <member type="bool" name="isFloating"/>
+        <member type="u8" name="unused1"/>
+        <member type="u8" name="unused2"/>
         <member type="array" size="126" name="correct">
             <element type="s16"/>
         </member>
-        <member type="array" size="1" name="battle7">
+        <member type="array" size="1" name="enemyHP">
             <element type="s32"/>
         </member>
     </object>
     <object name="MiDevilFamiliarityData" persistent="false">
-        <member type="s32" name="familiarity1"/>
-        <member type="s32" name="familiarity2"/>
+        <member type="s32" name="familiarityType"/>
+        <member type="s32" name="unused"/>
     </object>
     <object name="MiDevilData" persistent="false">
         <member type="MiNPCBasicData*" name="basic"/>

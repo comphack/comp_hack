@@ -84,6 +84,9 @@ namespace libcomp
 /// Maximum supported character level.
 #define MAX_LEVEL (99)
 
+/// Maximum demon familiarity.
+#define MAX_FAMILIARITY (10000)
+
 /// Number of expertise.
 #define EXPERTISE_COUNT (38)
 
@@ -220,6 +223,15 @@ namespace libcomp
 
 /// Magnetite item ID
 #define ITEM_MAGNETITE (800)
+
+/// Summon sync (10 minutes)
+#define STATUS_SUMMON_SYNC_10 (194)
+
+/// Summon sync (20 minutes)
+#define STATUS_SUMMON_SYNC_20 (364)
+
+/// Summon sync (30 minutes)
+#define STATUS_SUMMON_SYNC_30 (365)
 
 /// Experience required to proceed from the indexed level to the next
 const unsigned long long LEVEL_XP_REQUIREMENTS[] = {

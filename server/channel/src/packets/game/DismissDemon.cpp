@@ -51,6 +51,7 @@ void DemonDismiss(const std::shared_ptr<ChannelServer> server,
     auto progress = character->GetProgress();
     auto demon = std::dynamic_pointer_cast<objects::Demon>(
         libcomp::PersistentObject::GetObjectByUUID(state->GetObjectUUID(demonID)));
+    auto characterManager = server->GetCharacterManager();
 
     if(nullptr == demon)
     {
@@ -59,28 +60,18 @@ void DemonDismiss(const std::shared_ptr<ChannelServer> server,
 
     int8_t slot = demon->GetBoxSlot();
     auto box = demon->GetDemonBox().Get();
-    uint8_t maxSlots = box == 0 ? progress->GetMaxCOMPSlots() : 50;
     if(dState->GetEntity() == demon)
     {
-        server->GetCharacterManager()->StoreDemon(client);
+        characterManager->StoreDemon(client);
     }
 
     box->SetDemons((size_t)slot, NULLUUID);
 
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_DEMON_BOX_UPDATE);
-    reply.WriteS8(0);   //Unknown
-
-    reply.WriteS32Little(1);    //Slots updated
-    server->GetCharacterManager()->GetDemonPacketData(reply, client, box, slot);
-    reply.WriteS8((int8_t)maxSlots);
-
-    client->SendPacket(reply);
+    characterManager->SendDemonBoxData(client, box->GetBoxID(), { slot });
 
     auto dbChanges = libcomp::DatabaseChangeSet::Create(state->GetAccountUID());
     dbChanges->Update(box);
-    dbChanges->Delete(demon->GetCoreStats().Get());
-    dbChanges->Delete(demon);
+    characterManager->DeleteDemon(demon, dbChanges);
     server->GetWorldDatabase()->QueueChangeSet(dbChanges);
 }
 

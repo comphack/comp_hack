@@ -33,16 +33,20 @@
 #include <Packet.h>
 #include <PacketCodes.h>
 
+// object Includes
+#include <InheritedSkill.h>
+
 // channel Includes
 #include "ChannelServer.h"
 
-const int8_t ACTION_LEARN = 0;
-const int8_t ACTION_UNKNOWN = 1;
+const int8_t ACTION_LEARN_ACQUIRED = 0;
+const int8_t ACTION_LEARN_INHERITED = 1;
 const int8_t ACTION_MOVE = 2;
 
 using namespace channel;
 
-void DemonSkillUpdate(const std::shared_ptr<ChannelClientConnection> client,
+void DemonSkillUpdate(const std::shared_ptr<ChannelServer> server,
+    const std::shared_ptr<ChannelClientConnection> client,
     int32_t entityID, int8_t skillSlot, uint32_t skillID)
 {
     auto state = client->GetClientState();
@@ -64,19 +68,19 @@ void DemonSkillUpdate(const std::shared_ptr<ChannelClientConnection> client,
         }
     }
 
-    int8_t action = ACTION_LEARN;
+    int8_t action = ACTION_LEARN_ACQUIRED;
     if(oldSlot != -1)
     {
         action = ACTION_MOVE;
     }
-    /*else if(false)
-    {
-        action = ACTION_UNKNOWN;
-    }*/
+
+    auto changes = libcomp::DatabaseChangeSet::Create(
+        state->GetAccountUID());
+    changes->Update(demon);
 
     uint32_t currentSkillID = demon->GetLearnedSkills((size_t)skillSlot);
     demon->SetLearnedSkills((size_t)skillSlot, skillID);
-    if(action == ACTION_LEARN)
+    if(action == ACTION_LEARN_ACQUIRED)
     {
         // Remove from acquired skills if it exists
         size_t skillCount = demon->AcquiredSkillsCount();
@@ -87,6 +91,21 @@ void DemonSkillUpdate(const std::shared_ptr<ChannelClientConnection> client,
             {
                 demon->RemoveAcquiredSkills(idx);
             }
+        }
+
+        // Remove from inherited skills if it exists and update
+        // the action
+        size_t iSkillIdx = 0;
+        for (auto iSkill : demon->GetInheritedSkills())
+        {
+            if(!iSkill.IsNull() && iSkill->GetSkill() == skillID)
+            {
+                action = ACTION_LEARN_INHERITED;
+                changes->Delete(iSkill.Get());
+                demon->RemoveInheritedSkills(iSkillIdx);
+                break;
+            }
+            iSkillIdx++;
         }
     }
     else if(action == ACTION_MOVE)
@@ -108,12 +127,13 @@ void DemonSkillUpdate(const std::shared_ptr<ChannelClientConnection> client,
     }
     else
     {
-        /// @todo: figure out if these are actually the default values
         reply.WriteS8(0);
         reply.WriteU32Little(6);
     }
 
     client->SendPacket(reply);
+
+    server->GetWorldDatabase()->QueueChangeSet(changes);
 }
 
 bool Parsers::UpdateDemonSkill::Parse(libcomp::ManagerPacket *pPacketManager,
@@ -145,7 +165,7 @@ bool Parsers::UpdateDemonSkill::Parse(libcomp::ManagerPacket *pPacketManager,
         return false;
     }
 
-    server->QueueWork(DemonSkillUpdate, client, entityID, skillSlot, skillID);
+    server->QueueWork(DemonSkillUpdate, server, client, entityID, skillSlot, skillID);
 
     return true;
 }

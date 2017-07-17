@@ -40,6 +40,7 @@
 #include <MiZoneBasicData.h>
 #include <MiZoneData.h>
 #include <ServerZone.h>
+#include <ChannelConfig.h>
 
 // channel Includes
 #include <ChannelServer.h>
@@ -55,11 +56,13 @@ using namespace channel;
 ChatManager::ChatManager(const std::weak_ptr<ChannelServer>& server)
     : mServer(server)
 {
+    mGMands["announce"] = &ChatManager::GMCommand_Announce;
     mGMands["contract"] = &ChatManager::GMCommand_Contract;
     mGMands["crash"] = &ChatManager::GMCommand_Crash;
     mGMands["effect"] = &ChatManager::GMCommand_Effect;
     mGMands["enemy"] = &ChatManager::GMCommand_Enemy;
     mGMands["expertiseup"] = &ChatManager::GMCommand_ExpertiseUpdate;
+    mGMands["familiarity"] = &ChatManager::GMCommand_Familiarity;
     mGMands["homepoint"] = &ChatManager::GMCommand_Homepoint;
     mGMands["item"] = &ChatManager::GMCommand_Item;
     mGMands["kill"] = &ChatManager::GMCommand_Kill;
@@ -69,9 +72,10 @@ ChatManager::ChatManager(const std::weak_ptr<ChannelServer>& server)
     mGMands["pos"] = &ChatManager::GMCommand_Position;
     mGMands["skill"] = &ChatManager::GMCommand_Skill;
     mGMands["speed"] = &ChatManager::GMCommand_Speed;
-    mGMands["version"] =&ChatManager::GMCommand_Version;
+    mGMands["tickermessage"] = &ChatManager::GMCommand_TickerMessage;
+    mGMands["version"] = &ChatManager::GMCommand_Version;
     mGMands["xp"] = &ChatManager::GMCommand_XP;
-    mGMands["zone"] =&ChatManager::GMCommand_Zone;
+    mGMands["zone"] = &ChatManager::GMCommand_Zone;
 }
 
 ChatManager::~ChatManager()
@@ -184,6 +188,28 @@ bool ChatManager::ExecuteGMCommand(const std::shared_ptr<
     return false;
 }
 
+
+bool ChatManager::GMCommand_Announce(const std::shared_ptr<
+    channel::ChannelClientConnection>& client,
+    const std::list<libcomp::String>& args)
+
+{
+    std::list<libcomp::String> argsCopy = args;
+    int8_t color = 0;
+
+    if ((!GetIntegerArg<int8_t>(color,argsCopy)) || argsCopy.size() < 1) 
+    {
+        return SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(
+            "@announce requires two arguments, <color> <message>"));
+    }
+    
+    libcomp::String message = libcomp::String::Join(argsCopy," ");
+    auto server = mServer.lock();
+    server->SendSystemMessage(client, message, color, true);
+    return true;
+}
+
+
 bool ChatManager::GMCommand_Contract(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
@@ -215,8 +241,7 @@ bool ChatManager::GMCommand_Contract(const std::shared_ptr<
     auto character = state->GetCharacterState()->GetEntity();
 
     auto demon = characterManager->ContractDemon(character,
-        definitionManager->GetDevilData(demonID),
-        nullptr);
+        definitionManager->GetDevilData(demonID));
     if(nullptr == demon)
     {
         return false;
@@ -397,6 +422,24 @@ bool ChatManager::GMCommand_ExpertiseUpdate(const std::shared_ptr<
     }
 
     server->GetCharacterManager()->UpdateExpertise(client, skillID);
+
+    return true;
+}
+
+bool ChatManager::GMCommand_Familiarity(const std::shared_ptr<
+    channel::ChannelClientConnection>& client,
+    const std::list<libcomp::String>& args)
+{
+    std::list<libcomp::String> argsCopy = args;
+
+    uint16_t familiarity;
+    if(!GetIntegerArg<uint16_t>(familiarity, argsCopy))
+    {
+        return false;
+    }
+
+    mServer.lock()->GetCharacterManager()->UpdateFamiliarity(
+        client, familiarity);
 
     return true;
 }
@@ -715,6 +758,33 @@ bool ChatManager::GMCommand_Speed(const std::shared_ptr<
 
     return true;
 }
+
+bool ChatManager::GMCommand_TickerMessage(const std::shared_ptr<
+    channel::ChannelClientConnection>& client,
+    const std::list<libcomp::String>& args)
+
+{
+    auto server = mServer.lock();
+    auto conf = std::dynamic_pointer_cast<objects::ChannelConfig>(server->GetConfig());
+    std::list<libcomp::String> argsCopy = args;
+    int8_t mode = 0;
+
+    if(!(GetIntegerArg(mode,argsCopy)) || argsCopy.size() < 1)   
+    {
+        return SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(
+            "Syntax invalid, try @tickermessage <mode> <message>"));
+    }
+    libcomp::String message = libcomp::String::Join(argsCopy," ");
+
+    if (mode == 1) 
+    {
+        server->SendSystemMessage(client,message,0,true);
+    }  
+
+    conf->SetSystemMessage(message);
+    return true;
+}
+
 
 bool ChatManager::GMCommand_Version(const std::shared_ptr<
     channel::ChannelClientConnection>& client,

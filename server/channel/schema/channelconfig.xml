@@ -7,5 +7,6 @@
         <member type="string" name="WorldIP" default="127.0.0.1"/>
         <member type="u16" name="WorldPort" default="18666"/>
         <member type="u16" name="Timeout"/>
+        <member type="string" name="SystemMessage" default=""/>
     </object>
 </objgen>

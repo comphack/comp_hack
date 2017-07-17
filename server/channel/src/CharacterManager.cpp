@@ -400,8 +400,7 @@ void CharacterManager::SendPartnerData(const std::shared_ptr<
     for(auto iSkill : d->GetInheritedSkills())
     {
         reply.WriteU32Little(iSkill->GetSkill());
-        reply.WriteU32Little(static_cast<uint32_t>(
-            iSkill->GetProgress() * 100));
+        reply.WriteU32Little((uint32_t)iSkill->GetProgress());
     }
 
     // Unknown
@@ -420,7 +419,7 @@ void CharacterManager::SendPartnerData(const std::shared_ptr<
     reply.WriteU8(0);   //Unknown bool
     reply.WriteU16Little(d->GetAttackSettings());
     reply.WriteU8(0);   //Loyalty?
-    reply.WriteU16Little(d->GetGrowthType());
+    reply.WriteU16Little(d->GetFamiliarity());
     reply.WriteU8(d->GetLocked() ? 1 : 0);
 
     // Reunion ranks
@@ -586,7 +585,7 @@ void CharacterManager::SendDemonData(const std::shared_ptr<
 
     reply.WriteU16Little(d->GetAttackSettings());
     reply.WriteU8(0);   //Loyalty?
-    reply.WriteU16Little(d->GetGrowthType());
+    reply.WriteU16Little(d->GetFamiliarity());
     reply.WriteU8(d->GetLocked() ? 1 : 0);
 
     // Reunion ranks
@@ -778,16 +777,51 @@ void CharacterManager::SummonDemon(const std::shared_ptr<
 
     auto demon = std::dynamic_pointer_cast<objects::Demon>(
         libcomp::PersistentObject::GetObjectByUUID(state->GetObjectUUID(demonID)));
-    if(nullptr == demon)
+    if(!demon)
     {
         return;
     }
 
     auto server = mServer.lock();
     auto definitionManager = server->GetDefinitionManager();
+    auto def = definitionManager->GetDevilData(demon->GetType());
+    if(!def)
+    {
+        return;
+    }
 
     character->SetActiveDemon(demon);
     dState->SetEntity(demon);
+
+    // If the character and demon share alignment, apply summon sync
+    auto charLNC = character->GetLNC();
+    auto demonLNC = def->GetBasic()->GetLNC();
+    uint8_t charLNCType = charLNC <= -5000
+        ? 0 : (charLNC >= 5000 ? 2 : 1);
+    uint8_t demonLNCType = demonLNC <= -5000
+        ? 0 : (demonLNC >= 5000 ? 2 : 1);
+    if(charLNCType == demonLNCType)
+    {
+        uint32_t syncStatusType = 0;
+        if(demon->GetFamiliarity() == MAX_FAMILIARITY)
+        {
+            syncStatusType = STATUS_SUMMON_SYNC_30;
+        }
+        else if(demon->GetFamiliarity() > 4000)
+        {
+            syncStatusType = STATUS_SUMMON_SYNC_20;
+        }
+        else
+        {
+            syncStatusType = STATUS_SUMMON_SYNC_10;
+        }
+
+        AddStatusEffectMap m;
+        m[syncStatusType] = std::pair<uint8_t, bool>(1, true);
+        dState->AddStatusEffects(m, definitionManager);
+    }
+
+    dState->RecalculateStats(definitionManager);
     dState->SetStatusEffectsActive(true, definitionManager);
     dState->SetDestinationX(cState->GetDestinationX());
     dState->SetDestinationY(cState->GetDestinationY());
@@ -806,7 +840,7 @@ void CharacterManager::SummonDemon(const std::shared_ptr<
     {
         libcomp::Packet request;
         state->GetPartyDemonPacket(request);
-        mServer.lock()->GetManagerConnection()->GetWorldConnection()->SendPacket(request);
+        server->GetManagerConnection()->GetWorldConnection()->SendPacket(request);
     }
 }
 
@@ -830,6 +864,16 @@ void CharacterManager::StoreDemon(const std::shared_ptr<
     auto zone = zoneManager->GetZoneInstance(client);
 
     dState->SetStatusEffectsActive(false, definitionManager);
+
+    // Apply special cancel event for summon sync effects
+    const static std::set<uint32_t> summonSyncs =
+        {
+            STATUS_SUMMON_SYNC_10,
+            STATUS_SUMMON_SYNC_20,
+            STATUS_SUMMON_SYNC_30
+        };
+    dState->ExpireStatusEffects(summonSyncs);
+
     UpdateStatusEffects(dState, true);
     dState->SetEntity(nullptr);
     character->SetActiveDemon(NULLUUID);
@@ -855,7 +899,7 @@ void CharacterManager::StoreDemon(const std::shared_ptr<
 }
 
 void CharacterManager::SendDemonBoxData(const std::shared_ptr<
-    ChannelClientConnection>& client, int8_t boxID)
+    ChannelClientConnection>& client, int8_t boxID, std::set<int8_t> slots)
 {
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
@@ -867,7 +911,7 @@ void CharacterManager::SendDemonBoxData(const std::shared_ptr<
     uint32_t expiration = 0;
     int32_t count = 0;
     size_t maxSlots = boxID == 0 ? (size_t)progress->GetMaxCOMPSlots() : 50;
-    if(nullptr != box)
+    if(box)
     {
         for(size_t i = 0; i < maxSlots; i++)
         {
@@ -877,20 +921,40 @@ void CharacterManager::SendDemonBoxData(const std::shared_ptr<
     }
 
     libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_DEMON_BOX);
-
-    reply.WriteS8(boxID);
-    reply.WriteS32Little(0);   //Unknown
-    reply.WriteS32Little(expiration == 0 || box == nullptr
-        ? -1 : ChannelServer::GetExpirationInSeconds(expiration));
-    reply.WriteS32Little(count);
-
-    for(size_t i = 0; i < maxSlots; i++)
+    if(slots.size() > 0)
     {
-        if(nullptr == box || box->GetDemons(i).IsNull()) continue;
+        // Just send the specified slots
+        reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_DEMON_BOX_UPDATE);
 
-        GetDemonPacketData(reply, client, box, (int8_t)i);
-        reply.WriteU8(0);   //Unknown
+        reply.WriteS8(0);
+        reply.WriteS32Little((int32_t)slots.size());
+        for(int8_t slot : slots)
+        {
+            GetDemonPacketData(reply, client, box, slot);
+        }
+        reply.WriteS8((int8_t)maxSlots);
+    }
+    else
+    {
+        // Send the whole thing
+        reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_DEMON_BOX);
+
+        reply.WriteS8(boxID);
+        reply.WriteS32Little(0);   //Unknown
+        reply.WriteS32Little(expiration == 0 || box == nullptr
+            ? -1 : ChannelServer::GetExpirationInSeconds(expiration));
+        reply.WriteS32Little(count);
+    
+        if(box)
+        {
+            for(size_t i = 0; i < maxSlots; i++)
+            {
+                if (box->GetDemons(i).IsNull()) continue;
+
+                GetDemonPacketData(reply, client, box, (int8_t)i);
+                reply.WriteU8(0);   //Unknown
+            }
+        }
     }
 
     reply.WriteU8((uint8_t)maxSlots);
@@ -1439,15 +1503,8 @@ void CharacterManager::UpdateLNC(const std::shared_ptr<
 
 std::shared_ptr<objects::Demon> CharacterManager::ContractDemon(
     const std::shared_ptr<objects::Character>& character,
-    const std::shared_ptr<objects::MiDevilData>& demonData,
-    const std::shared_ptr<objects::Demon>& demon)
+    const std::shared_ptr<objects::MiDevilData>& demonData)
 {
-    //Was valid demon data supplied?
-    if(nullptr == demonData)
-    {
-        return nullptr;
-    }
-
     auto comp = character->GetCOMP().Get();
     auto progress = character->GetProgress();
 
@@ -1469,40 +1526,16 @@ std::shared_ptr<objects::Demon> CharacterManager::ContractDemon(
         return nullptr;
     }
 
-    std::shared_ptr<objects::Demon> d = nullptr;
-    std::shared_ptr<objects::EntityStats> ds = nullptr;
-    if(nullptr != demon)
+    auto d = GenerateDemon(demonData);
+    if(!d)
     {
-        //Copy the demon being passed in
-        d = std::shared_ptr<objects::Demon>(new objects::Demon(*demon.get()));
-        ds = std::shared_ptr<objects::EntityStats>(
-            new objects::EntityStats(*d->GetCoreStats().Get()));
-    }
-    else
-    {
-        //Create a new demon from it's defaults
-        auto growth = demonData->GetGrowth();
-
-        d = std::shared_ptr<objects::Demon>(new objects::Demon);
-        d->SetType(demonData->GetBasic()->GetID());
-
-        ds = libcomp::PersistentObject::New<
-            objects::EntityStats>();
-        ds->SetLevel(static_cast<int8_t>(growth->GetBaseLevel()));
-
-        CalculateDemonBaseStats(ds, demonData);
-        d->SetLearnedSkills(growth->GetSkills());
+        return nullptr;
     }
 
-    d->SetLocked(false);
+    auto ds = d->GetCoreStats().Get();
+
     d->SetDemonBox(comp);
     d->SetBoxSlot(compSlot);
-
-    d->Register(d);
-    ds->Register(ds);
-    d->SetCoreStats(ds);
-    ds->SetEntity(std::dynamic_pointer_cast<
-        libcomp::PersistentObject>(d));
 
     comp->SetDemons((size_t)compSlot, d);
 
@@ -1516,6 +1549,78 @@ std::shared_ptr<objects::Demon> CharacterManager::ContractDemon(
     server->GetWorldDatabase()->QueueChangeSet(dbChanges);
 
     return d;
+}
+
+std::shared_ptr<objects::Demon> CharacterManager::GenerateDemon(
+    const std::shared_ptr<objects::MiDevilData>& demonData)
+{
+    //Was valid demon data supplied?
+    if(nullptr == demonData)
+    {
+        return nullptr;
+    }
+
+    //Create a new demon from it's defaults
+    auto growth = demonData->GetGrowth();
+
+    auto d = libcomp::PersistentObject::New<
+        objects::Demon>(true);
+    d->SetType(demonData->GetBasic()->GetID());
+
+    auto ds = libcomp::PersistentObject::New<
+        objects::EntityStats>(true);
+    ds->SetLevel(static_cast<int8_t>(growth->GetBaseLevel()));
+
+    CalculateDemonBaseStats(ds, demonData);
+    d->SetLearnedSkills(growth->GetSkills());
+
+    d->SetCoreStats(ds);
+    ds->SetEntity(d->GetUUID());
+
+    return d;
+}
+
+void CharacterManager::UpdateFamiliarity(const std::shared_ptr<
+    channel::ChannelClientConnection>& client, int32_t familiarity,
+    bool isAdjust)
+{
+    auto state = client->GetClientState();
+    auto dState = state->GetDemonState();
+    auto demon = dState->GetEntity();
+
+    if(!demon)
+    {
+        return;
+    }
+
+    uint16_t current = demon->GetFamiliarity();
+    int32_t newFamiliarity = isAdjust ? 0 : (int32_t)familiarity;
+    if(isAdjust)
+    {
+        newFamiliarity = current + familiarity;
+    }
+
+    if(newFamiliarity > MAX_FAMILIARITY)
+    {
+        newFamiliarity = MAX_FAMILIARITY;
+    }
+
+    if(newFamiliarity < 0)
+    {
+        newFamiliarity = 0;
+    }
+
+    if(current != (uint16_t)newFamiliarity)
+    {
+        demon->SetFamiliarity((uint16_t)newFamiliarity);
+
+        libcomp::Packet p;
+        p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_DEMON_FAMILIARITY_UPDATE);
+        p.WriteS32Little(dState->GetEntityID());
+        p.WriteU16Little((uint16_t)familiarity);
+
+        client->SendPacket(p);
+    }
 }
 
 void CharacterManager::ExperienceGain(const std::shared_ptr<
@@ -1591,6 +1696,10 @@ void CharacterManager::ExperienceGain(const std::shared_ptr<
             {
                 reply.WriteU32Little(aSkill);
             }
+
+            /// @todo: replace with the correct value after more analysis can
+            /// be done
+            UpdateFamiliarity(client, 500, true);
         }
         else
         {
@@ -1822,10 +1931,6 @@ bool CharacterManager::LearnSkill(const std::shared_ptr<channel::ChannelClientCo
         demon->AppendAcquiredSkills(skillID);
 
         SendPartnerData(client);
-
-        // Learning a skill outside of leveling or inheritence is not natively
-        // supported so this is a hack to stop the demon from depoping
-        //server->GetZoneManager()->ShowEntity(client, entityID);
 
         server->GetWorldDatabase()->QueueUpdate(demon, state->GetAccountUID());
     }
@@ -2472,6 +2577,25 @@ void CharacterManager::GetEntityStatsPacketData(libcomp::Packet& p,
         break;
     default:
         break;
+    }
+}
+
+void CharacterManager::DeleteDemon(const std::shared_ptr<objects::Demon>& demon,
+    const std::shared_ptr<libcomp::DatabaseChangeSet>& changes)
+{
+    auto box = demon->GetDemonBox().Get();
+    if(box->GetDemons((size_t)demon->GetBoxSlot()).Get() == demon)
+    {
+        box->SetDemons((size_t)demon->GetBoxSlot(), NULLUUID);
+        changes->Update(box);
+    }
+
+    changes->Delete(demon);
+    changes->Delete(demon->GetCoreStats().Get());
+
+    for(auto iSkill : demon->GetInheritedSkills())
+    {
+        changes->Delete(iSkill.Get());
     }
 }
 

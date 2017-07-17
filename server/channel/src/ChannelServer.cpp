@@ -224,6 +224,8 @@ bool ChannelServer::Initialize()
         to_underlying(ClientToChannelPacketCode_t::PACKET_PARTY_DROP_RULE));
     clientPacketManager->AddParser<Parsers::PartyKick>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_PARTY_KICK));
+    clientPacketManager->AddParser<Parsers::DemonFusion>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_DEMON_FUSION));
     clientPacketManager->AddParser<Parsers::Sync>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_SYNC));
     clientPacketManager->AddParser<Parsers::Rotate>(
@@ -248,6 +250,8 @@ bool ChannelServer::Initialize()
         to_underlying(ClientToChannelPacketCode_t::PACKET_DEMON_COMPENDIUM));
     clientPacketManager->AddParser<Parsers::DungeonRecords>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_DUNGEON_RECORDS));
+    clientPacketManager->AddParser<Parsers::DemonFamiliarity>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_DEMON_FAMILIARITY));
     clientPacketManager->AddParser<Parsers::MaterialBox>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_MATERIAL_BOX));
     clientPacketManager->AddParser<Parsers::FusionGauge>(
@@ -693,4 +697,24 @@ void ChannelServer::QueueNextTick()
         std::this_thread::sleep_for(std::chrono::milliseconds(tickDelta));
         queue->Enqueue(new libcomp::Message::Tick);
     }, mQueueWorker.GetMessageQueue());
+}
+
+bool ChannelServer::SendSystemMessage(const std::shared_ptr<
+    channel::ChannelClientConnection>& client,
+    libcomp::String message, int8_t color, bool sendToAll)
+{
+    libcomp::Packet p;
+    p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_SYSTEM_MSG);
+    p.WriteS8(color);
+    p.WriteS8(0); // Unknown for now, possibly speed?
+    p.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_CP932, message, true);
+
+    if(!sendToAll) {
+        client->SendPacket(p);
+        return true;
+    } else {
+        mZoneManager->BroadcastPacket(client,p);
+        return true;
+    }
+    return false;
 }

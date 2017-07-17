@@ -62,5 +62,6 @@
     <include path="binarydata/skilldata.xml"/>
     <include path="binarydata/spotdata.xml"/>
     <include path="binarydata/statusdata.xml"/>
+    <include path="binarydata/triunionspecialdata.xml"/>
     <include path="binarydata/zonedata.xml"/>
 </objgen>

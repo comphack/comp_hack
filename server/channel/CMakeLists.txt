@@ -47,6 +47,7 @@ SET(${PROJECT_NAME}_SRCS
     src/EnemyState.cpp
     src/EntityState.cpp
     src/EventManager.cpp
+    src/FusionTables.cpp
     src/ManagerClientPacket.cpp
     src/ManagerConnection.cpp
     src/ManagerSystem.cpp
@@ -68,6 +69,7 @@ SET(${PROJECT_NAME}_HDRS
     src/EnemyState.h
     src/EntityState.h
     src/EventManager.h
+    src/FusionTables.h
     src/ManagerClientPacket.h
     src/ManagerConnection.h
     src/ManagerSystem.h
@@ -179,6 +181,7 @@ SET(${PROJECT_NAME}_PACKETS
     src/packets/game/PartyLeaderUpdate          # 0x00E0
     src/packets/game/PartyDropRule              # 0x00E3
     src/packets/game/PartyKick                  # 0x00EB
+    src/packets/game/DemonFusion                # 0x00EF
     src/packets/game/Sync.cpp                   # 0x00F3
     src/packets/game/Rotate.cpp                 # 0x00F8
     src/packets/game/UnionFlag.cpp              # 0x0100
@@ -191,6 +194,7 @@ SET(${PROJECT_NAME}_PACKETS
     src/packets/game/MapFlag.cpp                # 0x0197
     src/packets/game/DemonCompendium.cpp        # 0x019B
     src/packets/game/DungeonRecords.cpp         # 0x01C4
+    src/packets/game/DemonFamiliarity.cpp       # 0x01E6
     src/packets/game/MaterialBox.cpp            # 0x0205
     src/packets/game/FusionGauge.cpp            # 0x0217
     src/packets/game/TitleList.cpp              # 0x021B

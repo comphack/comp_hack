@@ -252,6 +252,19 @@ public:
     void Tick();
 
     /**
+    * Sends an announcement to each client connected to world
+    * Color can be chosen out of four colors:
+    * @param client, client that sent announcement packet to channel
+    * @param message, content of message that will be announced
+    * @param color, color of the ticker message, red, white, blue, purple
+    * @param bool, if true, the packet will be broadcasted to everyone in the current zone
+    * @return True if the message was successfully sent, false otherwise.
+    */
+    bool SendSystemMessage(const std::shared_ptr<
+        channel::ChannelClientConnection>& client,
+        libcomp::String message, int8_t color, bool);
+
+    /**
      * Schedule code work to be queued by the next server tick that occurs
      * following the specified time.
      * @param timestamp ServerTime timestamp that needs to pass for the

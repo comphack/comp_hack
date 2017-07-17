@@ -36,6 +36,7 @@
 
 // object includes
 #include <ServerZone.h>
+#include <ChannelConfig.h>
 
 // channel Includes
 #include "ChannelServer.h"
@@ -76,8 +77,15 @@ void SendClientReadyData(std::shared_ptr<ChannelServer> server,
 
         client->QueuePacket(p);
     }
+      
+    auto conf = std::dynamic_pointer_cast<objects::ChannelConfig>(server->GetConfig());
+    libcomp::String systemMessage = conf->GetSystemMessage();
 
-    /// @todo: send system message (if any) [0x0171]
+    if(!systemMessage.IsEmpty()) 
+    {
+        server->SendSystemMessage(client,systemMessage,0,false);
+    }
+    
     /// @todo: send "world bonus" [0x0405]
     /// @todo: send player skill updates (toggleable abilities for example) [0x03B8]
 

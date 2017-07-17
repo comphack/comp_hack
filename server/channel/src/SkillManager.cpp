@@ -610,6 +610,7 @@ bool SkillManager::ExecuteNormalSkill(const std::shared_ptr<ChannelClientConnect
     // Apply calculation results, keeping track of entities that may
     // need to update the world with their modified state
     std::set<std::shared_ptr<ActiveEntityState>> revived;
+    std::set<std::shared_ptr<ActiveEntityState>> killed;
     std::unordered_map<std::shared_ptr<ActiveEntityState>, uint8_t> cancellations;
     for(SkillTargetResult& target : targetResults)
     {
@@ -667,6 +668,7 @@ bool SkillManager::ExecuteNormalSkill(const std::shared_ptr<ChannelClientConnect
                 if(targetAlive)
                 {
                     target.DamageFlags1 |= FLAG1_LETHAL;
+                    killed.insert(target.EntityState);
                 }
                 else
                 {
@@ -805,6 +807,24 @@ bool SkillManager::ExecuteNormalSkill(const std::shared_ptr<ChannelClientConnect
         for(auto entity : revived)
         {
             characterManager->SendEntityRevival(client, entity, 6, true);
+        }
+    }
+
+    if(killed.size() > 0)
+    {
+        for(auto entity : killed)
+        {
+            if(entity->GetEntityType() ==
+                objects::EntityStateObject::EntityType_t::PARTNER_DEMON)
+            {
+                // If a partner demon was killed, decrease familiarity
+                auto demonClient = server->GetManagerConnection()->
+                    GetEntityClient(entity->GetEntityID());
+                if(!demonClient) continue;
+
+                /// @todo: verify this value more
+                characterManager->UpdateFamiliarity(demonClient, -100, true);
+            }
         }
     }
 

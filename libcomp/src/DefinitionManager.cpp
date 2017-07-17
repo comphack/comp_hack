@@ -33,12 +33,14 @@
 #include <MiCItemBaseData.h>
 #include <MiCItemData.h>
 #include <MiCZoneRelationData.h>
+#include <MiDCategoryData.h>
 #include <MiDevilData.h>
 #include <MiDevilLVUpRateData.h>
 #include <MiDynamicMapData.h>
 #include <MiExpertClassData.h>
 #include <MiExpertData.h>
 #include <MiExpertRankData.h>
+#include <MiGrowthData.h>
 #include <MiHNPCBasicData.h>
 #include <MiHNPCData.h>
 #include <MiItemData.h>
@@ -48,6 +50,8 @@
 #include <MiSkillData.h>
 #include <MiSkillItemStatusCommonData.h>
 #include <MiStatusData.h>
+#include <MiTriUnionSpecialData.h>
+#include <MiUnionData.h>
 #include <MiZoneData.h>
 #include <MiZoneBasicData.h>
 
@@ -92,6 +96,17 @@ const std::shared_ptr<objects::MiExpertData> DefinitionManager::GetExpertClassDa
     return GetRecordByID<objects::MiExpertData>(id, mExpertData);
 }
 
+const std::list<std::pair<uint8_t, uint32_t>> DefinitionManager::GetFusionRanges(uint8_t raceID)
+{
+    auto iter = mFusionRanges.find(raceID);
+    if(iter != mFusionRanges.end())
+    {
+        return iter->second;
+    }
+
+    return std::list<std::pair<uint8_t, uint32_t>>();
+}
+
 const std::shared_ptr<objects::MiHNPCData> DefinitionManager::GetHNPCData(uint32_t id)
 {
     return GetRecordByID<objects::MiHNPCData>(id, mHNPCData);
@@ -133,6 +148,23 @@ const std::shared_ptr<objects::MiStatusData> DefinitionManager::GetStatusData(ui
     return GetRecordByID<objects::MiStatusData>(id, mStatusData);
 }
 
+
+const std::list<std::shared_ptr<objects::MiTriUnionSpecialData>>
+    DefinitionManager::GetTriUnionSpecialData(uint32_t sourceDemonTypeID)
+{
+    std::list<std::shared_ptr<objects::MiTriUnionSpecialData>> result;
+    auto it = mTriUnionSpecialDataBySourceID.find(sourceDemonTypeID);
+    if(it != mTriUnionSpecialDataBySourceID.end())
+    {
+        for(auto specialID : it->second)
+        {
+            result.push_back(mTriUnionSpecialData[specialID]);
+        }
+    }
+
+    return result;
+}
+
 const std::shared_ptr<objects::MiZoneData> DefinitionManager::GetZoneData(uint32_t id)
 {
     return GetRecordByID<objects::MiZoneData>(id, mZoneData);
@@ -163,6 +195,7 @@ bool DefinitionManager::LoadAllData(gsl::not_null<DataStore*> pDataStore)
     success &= LoadShopProductData(pDataStore);
     success &= LoadSkillData(pDataStore);
     success &= LoadStatusData(pDataStore);
+    success &= LoadTriUnionSpecialData(pDataStore);
     success &= LoadZoneData(pDataStore);
 
     if(success)
@@ -223,6 +256,27 @@ bool DefinitionManager::LoadDevilData(gsl::not_null<DataStore*> pDataStore)
         {
             mDevilNameLookup[name] = id;
         }
+
+        // If the fusion options contain 2-way fusion result, add to
+        // the fusion range map
+        auto fusionOptions = record->GetUnionData()->GetFusionOptions();
+        if(fusionOptions & 2)
+        {
+            mFusionRanges[record->GetCategory()->GetRace()].
+                push_back(std::pair<uint8_t, uint32_t>(
+                (uint8_t)(record->GetGrowth()->GetBaseLevel() * 2 - 1), id));
+        }
+    }
+
+    // Sort the fusion ranges
+    for(auto& pair : mFusionRanges)
+    {
+        auto& ranges = pair.second;
+        ranges.sort([](const std::pair<uint8_t, uint32_t>& a,
+            const std::pair<uint8_t, uint32_t>& b)
+        {
+            return a.first < b.first;
+        });
     }
     
     return success;
@@ -353,6 +407,29 @@ bool DefinitionManager::LoadStatusData(gsl::not_null<DataStore*> pDataStore)
     for(auto record : records)
     {
         mStatusData[record->GetCommon()->GetID()] = record;
+    }
+    
+    return success;
+}
+
+bool DefinitionManager::LoadTriUnionSpecialData(gsl::not_null<DataStore*> pDataStore)
+{
+    std::list<std::shared_ptr<objects::MiTriUnionSpecialData>> records;
+    bool success = LoadBinaryData<objects::MiTriUnionSpecialData>(pDataStore,
+        "Shield/TriUnionSpecialData.sbin", true, 0, records);
+    for(auto record : records)
+    {
+        auto id = record->GetID();
+        mTriUnionSpecialData[id] = record;
+
+        for(auto sourceID : { record->GetSourceID1(), record->GetSourceID2(),
+            record->GetSourceID3() })
+        {
+            if(sourceID)
+            {
+                mTriUnionSpecialDataBySourceID[sourceID].push_back(id);
+            }
+        }
     }
     
     return success;

@@ -96,6 +96,7 @@ PACKET_PARSER_DECL(PartyDisband);           // 0x00DD
 PACKET_PARSER_DECL(PartyLeaderUpdate);      // 0x00E0
 PACKET_PARSER_DECL(PartyDropRule);          // 0x00E3
 PACKET_PARSER_DECL(PartyKick);              // 0x00EB
+PACKET_PARSER_DECL(DemonFusion);            // 0x00EF
 PACKET_PARSER_DECL(Sync);                   // 0x00F3
 PACKET_PARSER_DECL(Rotate);                 // 0x00F8
 PACKET_PARSER_DECL(UnionFlag);              // 0x0100
@@ -108,6 +109,7 @@ PACKET_PARSER_DECL(SyncCharacter);          // 0x017E
 PACKET_PARSER_DECL(MapFlag);                // 0x0197
 PACKET_PARSER_DECL(DemonCompendium);        // 0x019B
 PACKET_PARSER_DECL(DungeonRecords);         // 0x01C4
+PACKET_PARSER_DECL(DemonFamiliarity);       // 0x01E6
 PACKET_PARSER_DECL(MaterialBox);            // 0x0205
 PACKET_PARSER_DECL(FusionGauge);            // 0x0217
 PACKET_PARSER_DECL(TitleList);              // 0x021B

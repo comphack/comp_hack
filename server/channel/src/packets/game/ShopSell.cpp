@@ -30,6 +30,7 @@
 #include <ManagerPacket.h>
 #include <Packet.h>
 #include <PacketCodes.h>
+#include <ServerConstants.h>
 
 // object Includes
 #include <Account.h>
@@ -133,10 +134,10 @@ void HandleShopSale(const std::shared_ptr<ChannelServer> server,
     uint16_t macca = (uint16_t)(saleAmount % ITEM_MACCA_NOTE_AMOUNT);
     uint16_t notes = (uint16_t)((saleAmount - macca) % ITEM_MACCA_NOTE_AMOUNT);
 
-    auto maxNoteStack = defnitionManager->GetItemData(ITEM_MACCA_NOTE)
+    auto maxNoteStack = defnitionManager->GetItemData(SVR_CONST.ITEM_MACCA_NOTE)
         ->GetPossession()->GetStackSize();
     for(auto item : characterManager->GetExistingItems(character,
-        ITEM_MACCA_NOTE, inventory))
+        SVR_CONST.ITEM_MACCA_NOTE, inventory))
     {
         if(notes == 0) break;
 
@@ -149,7 +150,7 @@ void HandleShopSale(const std::shared_ptr<ChannelServer> server,
     }
 
     for(auto item : characterManager->GetExistingItems(character,
-        ITEM_MACCA, inventory))
+        SVR_CONST.ITEM_MACCA, inventory))
     {
         if(macca == 0) break;
 
@@ -167,14 +168,14 @@ void HandleShopSale(const std::shared_ptr<ChannelServer> server,
     {
         uint16_t stack = (notes > maxNoteStack) ? maxNoteStack : notes;
         insertItems.push_back(characterManager->GenerateItem(
-            ITEM_MACCA_NOTE, stack));
+            SVR_CONST.ITEM_MACCA_NOTE, stack));
         notes = (uint16_t)(notes - stack);
     }
 
     if(macca > 0)
     {
         insertItems.push_back(characterManager->GenerateItem(
-            ITEM_MACCA, macca));
+            SVR_CONST.ITEM_MACCA, macca));
     }
 
     if(freeSlots.size() < insertItems.size())

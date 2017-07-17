@@ -30,6 +30,7 @@
 #include <Constants.h>
 #include <Log.h>
 #include <PacketCodes.h>
+#include <ServerConstants.h>
 
 // Standard C++11 Includes
 #include <math.h>
@@ -805,15 +806,15 @@ void CharacterManager::SummonDemon(const std::shared_ptr<
         uint32_t syncStatusType = 0;
         if(demon->GetFamiliarity() == MAX_FAMILIARITY)
         {
-            syncStatusType = STATUS_SUMMON_SYNC_30;
+            syncStatusType = SVR_CONST.STATUS_SUMMON_SYNC_3;
         }
         else if(demon->GetFamiliarity() > 4000)
         {
-            syncStatusType = STATUS_SUMMON_SYNC_20;
+            syncStatusType = SVR_CONST.STATUS_SUMMON_SYNC_2;
         }
         else
         {
-            syncStatusType = STATUS_SUMMON_SYNC_10;
+            syncStatusType = SVR_CONST.STATUS_SUMMON_SYNC_1;
         }
 
         AddStatusEffectMap m;
@@ -868,9 +869,9 @@ void CharacterManager::StoreDemon(const std::shared_ptr<
     // Apply special cancel event for summon sync effects
     const static std::set<uint32_t> summonSyncs =
         {
-            STATUS_SUMMON_SYNC_10,
-            STATUS_SUMMON_SYNC_20,
-            STATUS_SUMMON_SYNC_30
+            SVR_CONST.STATUS_SUMMON_SYNC_1,
+            SVR_CONST.STATUS_SUMMON_SYNC_2,
+            SVR_CONST.STATUS_SUMMON_SYNC_3
         };
     dState->ExpireStatusEffects(summonSyncs);
 
@@ -2596,6 +2597,11 @@ void CharacterManager::DeleteDemon(const std::shared_ptr<objects::Demon>& demon,
     for(auto iSkill : demon->GetInheritedSkills())
     {
         changes->Delete(iSkill.Get());
+    }
+
+    for(auto effect : demon->GetStatusEffects())
+    {
+        changes->Delete(effect.Get());
     }
 }
 

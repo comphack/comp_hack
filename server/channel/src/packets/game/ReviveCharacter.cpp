@@ -32,6 +32,7 @@
 #include <ManagerPacket.h>
 #include <Packet.h>
 #include <PacketCodes.h>
+#include <ServerConstants.h>
 
 // Standard C++11 Includes
 #include <math.h>
@@ -132,15 +133,13 @@ bool Parsers::ReviveCharacter::Parse(libcomp::ManagerPacket *pPacketManager,
         break;
     case 107:   // Item revival
         {
-            /// @todo: replace hardcoded value
-            const static uint32_t itemType = 101;
-
             auto items = characterManager->GetExistingItems(character,
-                itemType, character->GetItemBoxes(0).Get());
+                SVR_CONST.ITEM_BALM_OF_LIFE, character->GetItemBoxes(0).Get());
 
             if(items.size() > 0)
             {
-                characterManager->AddRemoveItem(client, itemType, 1, false);
+                characterManager->AddRemoveItem(client,
+                    SVR_CONST.ITEM_BALM_OF_LIFE, 1, false);
                 responseType1 = REVIVAL_REVIVE_NORMAL;
                 hpRestore = 1.f;
             }

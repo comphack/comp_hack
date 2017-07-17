@@ -31,6 +31,7 @@
 #include <ManagerPacket.h>
 #include <Packet.h>
 #include <PacketCodes.h>
+#include <ServerConstants.h>
 
 // Standard C++11 Includes
 #include <math.h>
@@ -139,6 +140,14 @@ bool ProcessDemonFusion(const std::shared_ptr<ChannelServer>& server,
         }
     }
 
+    const static uint32_t FUSION_ELEMENTAL_TYPES[] =
+        {
+            SVR_CONST.ELEMENTAL_1_FLAEMIS,
+            SVR_CONST.ELEMENTAL_2_AQUANS,
+            SVR_CONST.ELEMENTAL_3_AEROS,
+            SVR_CONST.ELEMENTAL_4_ERTHYS
+        };
+
     uint32_t resultDemonType = 0;
     if(specialFusion)
     {
@@ -146,8 +155,8 @@ bool ProcessDemonFusion(const std::shared_ptr<ChannelServer>& server,
     }
     else
     {
-        uint8_t race1 = def1->GetCategory()->GetRace();
-        uint8_t race2 = def2->GetCategory()->GetRace();
+        uint8_t race1 = (uint8_t)def1->GetCategory()->GetRace();
+        uint8_t race2 = (uint8_t)def2->GetCategory()->GetRace();
 
         // Get the race axis mappings from the first map row
         size_t race1Idx = 0, race2Idx = 0;

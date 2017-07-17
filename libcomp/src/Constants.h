@@ -212,26 +212,8 @@ namespace libcomp
 /// Client is attempting to log out.
 #define LOGIN_STATE_PENDING_LOGOUT (7)
 
-/// Macca note item ID
-#define ITEM_MACCA_NOTE (699)
-
 /// Macca note value
 #define ITEM_MACCA_NOTE_AMOUNT (50000)
-
-/// Macca item ID
-#define ITEM_MACCA (799)
-
-/// Magnetite item ID
-#define ITEM_MAGNETITE (800)
-
-/// Summon sync (10 minutes)
-#define STATUS_SUMMON_SYNC_10 (194)
-
-/// Summon sync (20 minutes)
-#define STATUS_SUMMON_SYNC_20 (364)
-
-/// Summon sync (30 minutes)
-#define STATUS_SUMMON_SYNC_30 (365)
 
 /// Experience required to proceed from the indexed level to the next
 const unsigned long long LEVEL_XP_REQUIREMENTS[] = {

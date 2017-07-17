@@ -32,6 +32,7 @@
 #include <Log.h>
 #include <ManagerPacket.h>
 #include <PacketCodes.h>
+#include <ServerConstants.h>
 
 // Standard C++11 Includes
 #include <math.h>
@@ -64,13 +65,6 @@
 #include "Zone.h"
 
 using namespace channel;
-
-/// @todo: figure out how many unique logic skills exist (and posibly script intead)
-const uint32_t SKILL_SUMMON_DEMON = 0x00001648;
-const uint32_t SKILL_STORE_DEMON = 0x00001649;
-const uint32_t SKILL_EQUIP_ITEM = 0x00001654;
-const uint32_t SKILL_TRAESTO = 0x00001405;
-const uint32_t SKILL_TRAESTO_STONE = 0x0000280D;
 
 const uint8_t DAMAGE_TYPE_GENERIC = 0;
 const uint8_t DAMAGE_TYPE_HEALING = 1;
@@ -126,6 +120,10 @@ int32_t CalculateDamage_MaxPercent(uint16_t mod, uint8_t& damageType,
 SkillManager::SkillManager(const std::weak_ptr<ChannelServer>& server)
     : mServer(server)
 {
+    mSkillFunctions[SVR_CONST.SKILL_EQUIP_ITEM] = &SkillManager::EquipItem;
+    mSkillFunctions[SVR_CONST.SKILL_SUMMON_DEMON] = &SkillManager::SummonDemon;
+    mSkillFunctions[SVR_CONST.SKILL_STORE_DEMON] = &SkillManager::StoreDemon;
+    mSkillFunctions[SVR_CONST.SKILL_TRAESTO] = &SkillManager::Traesto;
 }
 
 SkillManager::~SkillManager()
@@ -174,7 +172,8 @@ bool SkillManager::ActivateSkill(const std::shared_ptr<ChannelClientConnection> 
 
     /// @todo: figure out what actually consitutes an instant cast and
     /// a client side delay
-    bool delay = skillID == SKILL_TRAESTO || skillID == SKILL_TRAESTO_STONE;
+    uint16_t functionID = def->GetDamage()->GetFunctionID();
+    bool delay = functionID == SVR_CONST.SKILL_TRAESTO;
 
     if(chargeTime == 0 && !delay)
     {
@@ -239,6 +238,7 @@ bool SkillManager::ExecuteSkill(const std::shared_ptr<ChannelClientConnection> c
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
     auto character = cState->GetEntity();
+    uint16_t functionID = skillData->GetDamage()->GetFunctionID();
     
     // Check targets
     if(skillData->GetTarget()->GetType() == objects::MiTargetData::Type_t::DEAD_ALLY)
@@ -263,7 +263,7 @@ bool SkillManager::ExecuteSkill(const std::shared_ptr<ChannelClientConnection> c
     int16_t hpCost = 0, mpCost = 0;
     uint16_t hpCostPercent = 0, mpCostPercent = 0;
     std::unordered_map<uint32_t, uint16_t> itemCosts;
-    if(skillID == SKILL_SUMMON_DEMON)
+    if(functionID == SVR_CONST.SKILL_SUMMON_DEMON)
     {
         /*auto demon = std::dynamic_pointer_cast<objects::Demon>(
             libcomp::PersistentObject::GetObjectByUUID(state->GetObjectUUID(targetObjectID)));
@@ -382,24 +382,15 @@ bool SkillManager::ExecuteSkill(const std::shared_ptr<ChannelClientConnection> c
 
     // Execute the skill
     bool success = false;
-    switch(skillID)
+    auto fIter = mSkillFunctions.find(functionID);
+    if(fIter != mSkillFunctions.end())
     {
-        case SKILL_EQUIP_ITEM:
-            success = EquipItem(client, sourceState->GetEntityID(), activated);
-            break;
-        case SKILL_SUMMON_DEMON:
-            success = SummonDemon(client, sourceState->GetEntityID(), activated);
-            break;
-        case SKILL_STORE_DEMON:
-            success = StoreDemon(client, sourceState->GetEntityID(), activated);
-            break;
-        case SKILL_TRAESTO:
-        case SKILL_TRAESTO_STONE:
-            success = Traesto(client, sourceState->GetEntityID(), activated);
-            break;
-        default:
-            return ExecuteNormalSkill(client, sourceState->GetEntityID(), activated,
-                hpCost, mpCost);
+        success = fIter->second(*this, client, sourceState->GetEntityID(), activated);
+    }
+    else
+    {
+        return ExecuteNormalSkill(client, sourceState->GetEntityID(), activated,
+            hpCost, mpCost);
     }
 
     characterManager->CancelStatusEffects(client, EFFECT_CANCEL_SKILL);
@@ -578,7 +569,8 @@ bool SkillManager::ExecuteNormalSkill(const std::shared_ptr<ChannelClientConnect
                 // Sanity check
                 if(minStack > maxStack) continue;
 
-                int8_t stack = (int8_t)(minStack + (rand() % (maxStack - minStack)));
+                int8_t stack = minStack == maxStack ? maxStack
+                    : (int8_t)(minStack + (rand() % (maxStack - minStack)));
                 if(stack == 0) continue;
 
                 target.AddedStatuses[addStatus->GetStatusID()] =

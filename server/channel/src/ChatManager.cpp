@@ -29,6 +29,7 @@
 // libcomp Includes
 #include <Log.h>
 #include <PacketCodes.h>
+#include <ServerConstants.h>
 
 // object Includes
 #include <AccountLogin.h>
@@ -450,9 +451,9 @@ bool ChatManager::GMCommand_Homepoint(const std::shared_ptr<
 {
     (void)args;
 
-    /// @todo: replace the menu packet with a scripted binding
     auto server = mServer.lock();
-    server->GetEventManager()->HandleEvent(client, "event_homepoint", 0);
+    server->GetEventManager()->HandleEvent(client,
+        SVR_CONST.EVENT_MENU_HOMEPOINT, 0);
 
     return true;
 }
@@ -477,11 +478,11 @@ bool ChatManager::GMCommand_Item(const std::shared_ptr<
 
         if(name.ToLower() == "macca")
         {
-            itemID = ITEM_MACCA;
+            itemID = SVR_CONST.ITEM_MACCA;
         }
         else if(name.ToLower() == "mag")
         {
-            itemID = ITEM_MAGNETITE;
+            itemID = SVR_CONST.ITEM_MAGNETITE;
         }
         else
         {

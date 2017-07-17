@@ -30,6 +30,7 @@
 #include <ManagerPacket.h>
 #include <Packet.h>
 #include <PacketCodes.h>
+#include <ServerConstants.h>
 
 // object Includes
 #include <Account.h>
@@ -142,10 +143,10 @@ void HandleShopPurchase(const std::shared_ptr<ChannelServer> server,
     if(!cpPurchase)
     {
         // Macca purchase
-        auto macca = characterManager->GetExistingItems(character, ITEM_MACCA,
+        auto macca = characterManager->GetExistingItems(character, SVR_CONST.ITEM_MACCA,
             character->GetItemBoxes(0).Get());
-        auto maccaNotes = characterManager->GetExistingItems(character, ITEM_MACCA_NOTE,
-            character->GetItemBoxes(0).Get());
+        auto maccaNotes = characterManager->GetExistingItems(character,
+            SVR_CONST.ITEM_MACCA_NOTE, character->GetItemBoxes(0).Get());
 
         uint64_t totalMacca = 0;
         for(auto m : macca)
@@ -207,7 +208,7 @@ void HandleShopPurchase(const std::shared_ptr<ChannelServer> server,
                 if(maccaLeft)
                 {
                     insertItems.push_back(
-                        characterManager->GenerateItem(ITEM_MACCA, maccaLeft));
+                        characterManager->GenerateItem(SVR_CONST.ITEM_MACCA, maccaLeft));
                 }
             }
             else

@@ -213,6 +213,11 @@ private:
 
     /// Pointer to the channel server
     std::weak_ptr<ChannelServer> mServer;
+
+    /// List of skill function IDs mapped to manager functions.
+    std::unordered_map<uint16_t, std::function<bool(SkillManager&,
+        const std::shared_ptr<channel::ChannelClientConnection>&,
+        int32_t, std::shared_ptr<objects::ActivatedAbility>&)>> mSkillFunctions;
 };
 
 } // namespace channel

@@ -113,37 +113,24 @@ bool Parsers::Move::Parse(libcomp::ManagerPacket *pPacketManager,
 
     /// @todo: Fire zone triggers
 
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_MOVE);
-    reply.WriteS32Little(entityID);
-    reply.WriteFloat(destX);
-    reply.WriteFloat(destY);
-    reply.WriteFloat(originX);
-    reply.WriteFloat(originY);
-    reply.WriteFloat(ratePerSec);
-
-    // Times must be sent relative to the other players
-    uint32_t timePos = reply.Size();
-    if(positionCorrected)
+    auto zoneConnections = server->GetZoneManager()->GetZoneConnections(client,
+        positionCorrected);
+    if(zoneConnections.size() > 0)
     {
-        // Reply to the sender
-        reply.WriteFloat(start);
-        reply.WriteFloat(stop);
-        client->SendPacket(reply);
-    }
+        libcomp::Packet reply;
+        reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_MOVE);
+        reply.WriteS32Little(entityID);
+        reply.WriteFloat(destX);
+        reply.WriteFloat(destY);
+        reply.WriteFloat(originX);
+        reply.WriteFloat(originY);
+        reply.WriteFloat(ratePerSec);
 
-    auto zoneConnections = server->GetZoneManager()->GetZoneConnections(client, false);
-    for(auto zConnection : zoneConnections)
-    {
-        auto otherState = zConnection->GetClientState();
-        float startAdjust = otherState->ToClientTime(startTime);
-        float stopAdjust = startAdjust + (stop - start);
+        std::unordered_map<uint32_t, uint64_t> timeMap;
+        timeMap[reply.Size()] = startTime;
+        timeMap[reply.Size() + 4] = stopTime;
 
-        reply.Seek(timePos);
-        reply.WriteFloat(startAdjust);
-        reply.WriteFloat(stopAdjust);
-
-        zConnection->SendPacket(reply);
+        ChannelClientConnection::SendRelativeTimePacket(zoneConnections, reply, timeMap);
     }
 
     return true;

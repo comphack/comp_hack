@@ -104,32 +104,34 @@ bool ProcessDemonFusion(const std::shared_ptr<ChannelServer>& server,
         /// @todo: support plugins
         if(special->GetPluginID() > 0) continue;
 
-        bool match = true;
-        for(auto source : { special->GetSourceID1(), special->GetSourceID2(),
-            special->GetSourceID3() })
-        {
-            if(!source) continue;
+        // Map of source ID to its "variant allowed" value
+        std::unordered_map<uint32_t, bool> sourceMap;
+        sourceMap[special->GetSourceID1()] = special->GetVariant1Allowed() == 1;
+        sourceMap[special->GetSourceID2()] = special->GetVariant2Allowed() == 1;
+        sourceMap[special->GetSourceID3()] = special->GetVariant3Allowed() == 1;
 
-            auto sourceID = special->GetSourceID1();
-            if(sourceID)
+        bool match = true;
+        for(auto sourcePair : sourceMap)
+        {
+            uint32_t sourceID = sourcePair.first;
+            if(!sourceID) continue;
+
+            if(sourcePair.second)
             {
-                if(special->GetVariant1Allowed())
-                {
-                    auto specialDef = definitionManager->GetDevilData(sourceID);
-                    auto sourceBaseDemonType = specialDef->GetUnionData()
-                        ->GetBaseDemonID();
-                    if(baseDemonType1 != sourceBaseDemonType &&
-                        baseDemonType2 != sourceBaseDemonType)
-                    {
-                        match = false;
-                        break;
-                    }
-                }
-                else if(sourceID != demonType1 && sourceID != demonType2)
+                auto specialDef = definitionManager->GetDevilData(sourceID);
+                auto sourceBaseDemonType = specialDef->GetUnionData()
+                    ->GetBaseDemonID();
+                if(baseDemonType1 != sourceBaseDemonType &&
+                    baseDemonType2 != sourceBaseDemonType)
                 {
                     match = false;
                     break;
                 }
+            }
+            else if(sourceID != demonType1 && sourceID != demonType2)
+            {
+                match = false;
+                break;
             }
         }
 

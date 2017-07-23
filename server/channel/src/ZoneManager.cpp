@@ -49,7 +49,7 @@
 #include "ChannelServer.h"
 #include "Zone.h"
 
-// Other Includes
+// C++ Standard Includes
 #include <cmath>
 
 using namespace channel;
@@ -118,6 +118,8 @@ bool ZoneManager::EnterZone(const std::shared_ptr<ChannelClientConnection>& clie
         mEntityMap[primaryEntityID] = instanceID;
     }
     instance->AddConnection(client);
+    cState->SetZone(instance);
+    dState->SetZone(instance);
 
     auto server = mServer.lock();
     auto ticks = server->GetServerTime();
@@ -271,6 +273,10 @@ void ZoneManager::LeaveZone(const std::shared_ptr<ChannelClientConnection>& clie
     dState->SetStatusEffectsActive(false, definitionManager);
     characterManager->UpdateStatusEffects(cState, !logOut);
     characterManager->UpdateStatusEffects(dState, !logOut);
+
+    // Remove any opponents
+    characterManager->AddRemoveOpponent(false, cState, nullptr);
+    characterManager->AddRemoveOpponent(false, dState, nullptr);
 }
 
 void ZoneManager::SendPopulateZoneData(const std::shared_ptr<ChannelClientConnection>& client)
@@ -673,25 +679,30 @@ void ZoneManager::BroadcastPacket(const std::shared_ptr<Zone>& zone, libcomp::Pa
     }
 }
 
-void ZoneManager::SendToRange(const std::shared_ptr<ChannelClientConnection>& client, libcomp::Packet& p, bool includeSelf)
+void ZoneManager::SendToRange(const std::shared_ptr<ChannelClientConnection>& client,
+    libcomp::Packet& p, bool includeSelf)
 {
-    //get all clients in range
-    auto state = client->GetClientState(); //Get sender's client's state
-    auto cState = state->GetCharacterState(); //Get sender's entity state
-    auto MyX = cState->GetDestinationX();  //Get Sending Char's X
-    auto MyY = cState->GetDestinationY();  //Get Sending Char's Y
-    auto r = CHAT_RADIUS_SAY;
+    uint64_t now = mServer.lock()->GetServerTime();
+
+    auto state = client->GetClientState();
+    auto cState = state->GetCharacterState();
+
+    cState->RefreshCurrentPosition(now);
 
     std::list<std::shared_ptr<libcomp::TcpConnection>> zConnections;
-    for(auto zConnection : GetZoneConnections(client, includeSelf))
+    if(includeSelf)
     {
-        auto zState = zConnection->GetClientState()->GetCharacterState();
-        //ZoneX is the x-coord of the other character in the zone
-        auto ZoneX = zState->GetDestinationX();
-        //ZoneY is the y-coord of the other character in question.
-        auto ZoneY = zState->GetDestinationY();
-            //This checks to see if the other character is in range of the sender
-        if(std::pow(r,2) >= std::pow((MyX-ZoneX),2)+std::pow((MyY-ZoneY),2))
+        zConnections.push_back(client);
+    }
+
+    float rSquared = (float)std::pow(CHAT_RADIUS_SAY, 2);
+    for(auto zConnection : GetZoneConnections(client, false))
+    {
+        auto otherCState = zConnection->GetClientState()->GetCharacterState();
+        otherCState->RefreshCurrentPosition(now);
+
+        if(rSquared >= cState->GetDistance(otherCState->GetCurrentX(),
+            otherCState->GetCurrentY(), true))
         {
             zConnections.push_back(zConnection);
         }
@@ -767,7 +778,7 @@ bool ZoneManager::SpawnEnemy(const std::shared_ptr<Zone>& zone, uint32_t demonID
 
     eState->RecalculateStats(definitionManager);
 
-    eState->SetZone(zone.get());
+    eState->SetZone(zone);
     zone->AddEnemy(eState);
 
     //If anyone is currently connected, immediately send the enemy's info
@@ -807,8 +818,6 @@ void ZoneManager::UpdateActiveZoneStates()
     std::set<std::shared_ptr<ChannelClientConnection>> clients;
     for(auto instance : instances)
     {
-        /// @todo: regen and status effects
-
         std::list<std::shared_ptr<EnemyState>> updated;
         for(auto enemy : instance->GetEnemies())
         {
@@ -818,6 +827,10 @@ void ZoneManager::UpdateActiveZoneStates()
             }
         }
 
+        if(updated.size() == 0) continue;
+
+        auto zConnections = instance->GetConnectionList();
+        std::unordered_map<uint32_t, uint64_t> timeMap;
         for(auto enemy : updated)
         {
             // Update the clients with what the enemy is doing
@@ -836,22 +849,10 @@ void ZoneManager::UpdateActiveZoneStates()
                     p.WriteFloat(enemy->GetOriginY());
                     p.WriteFloat(1.f);      /// @todo: correct rate per second
 
-                    uint32_t timePos = p.Size();
-                    for(auto zPair : instance->GetConnections())
-                    {
-                        auto client = zPair.second;
-                        auto state = client->GetClientState();
-                        float startAdjust = state->ToClientTime(serverTime);
-                        float stopAdjust = state->ToClientTime(
-                            enemy->GetDestinationTicks());
-
-                        p.Seek(timePos);
-                        p.WriteFloat(startAdjust);
-                        p.WriteFloat(stopAdjust);
-
-                        client->QueuePacket(p);
-                        clients.insert(client);
-                    }
+                    timeMap[p.Size()] = serverTime;
+                    timeMap[p.Size() + 4] = enemy->GetDestinationTicks();
+                    ChannelClientConnection::SendRelativeTimePacket(zConnections, p,
+                        timeMap, true);
                 }
                 else if(enemy->IsRotating())
                 {
@@ -860,23 +861,10 @@ void ZoneManager::UpdateActiveZoneStates()
                     p.WriteS32Little(enemy->GetEntityID());
                     p.WriteFloat(enemy->GetDestinationRotation());
 
-                    uint32_t timePos = p.Size();
-                    for(auto zPair : instance->GetConnections())
-                    {
-                        auto client = zPair.second;
-
-                        auto state = client->GetClientState();
-                        float startAdjust = state->ToClientTime(serverTime);
-                        float stopAdjust = state->ToClientTime(
-                            enemy->GetDestinationTicks());
-
-                        p.Seek(timePos);
-                        p.WriteFloat(startAdjust);
-                        p.WriteFloat(stopAdjust);
-
-                        client->QueuePacket(p);
-                        clients.insert(client);
-                    }
+                    timeMap[p.Size()] = serverTime;
+                    timeMap[p.Size() + 4] = enemy->GetDestinationTicks();
+                    ChannelClientConnection::SendRelativeTimePacket(zConnections, p,
+                        timeMap, true);
                 }
                 else
                 {
@@ -888,26 +876,18 @@ void ZoneManager::UpdateActiveZoneStates()
                     p.WriteFloat(enemy->GetDestinationX());
                     p.WriteFloat(enemy->GetDestinationY());
 
-                    // Times must be sent relative to the other players
-                    uint32_t timePos = p.Size();
-                    for(auto zPair : instance->GetConnections())
-                    {
-                        auto client = zPair.second;
-
-                        auto state = client->GetClientState();
-                        float stopAdjust = state->ToClientTime(
-                            enemy->GetDestinationTicks());
-
-                        p.Seek(timePos);
-                        p.WriteFloat(stopAdjust);
-
-                        client->QueuePacket(p);
-                        clients.insert(client);
-                    }
+                    timeMap[p.Size()] = enemy->GetDestinationTicks();
+                    ChannelClientConnection::SendRelativeTimePacket(zConnections, p,
+                        timeMap, true);
                 }
             }
 
             /// @todo: check for ability usage
+        }
+
+        for(auto client : zConnections)
+        {
+            clients.insert(client);
         }
     }
 
@@ -942,18 +922,11 @@ void ZoneManager::Warp(const std::shared_ptr<ChannelClientConnection>& client,
     p.WriteFloat(0.0f);  // Unknown
     p.WriteFloat(rot);
 
-    uint32_t timePos = p.Size();
+    std::unordered_map<uint32_t, uint64_t> timeMap;
+    timeMap[p.Size()] = timestamp;
+
     auto connections = server->GetZoneManager()->GetZoneConnections(client, true);
-    for(auto zConnection : connections)
-    {
-        auto otherState = zConnection->GetClientState();
-        float timeAdjust = otherState->ToClientTime(timestamp);
-
-        p.Seek(timePos);
-        p.WriteFloat(timeAdjust);
-
-        zConnection->SendPacket(p);
-    }
+    ChannelClientConnection::SendRelativeTimePacket(connections, p, timeMap);
 }
 
 std::shared_ptr<Zone> ZoneManager::GetZone(uint32_t zoneID)

@@ -43,6 +43,8 @@
             <value num="16">CRITICAL</value>
             <!-- 召喚速度 - Summoning Speed -->
             <value num="17">SUMMON_SPEED</value>
+            <!-- ノックバック耐性 - Knockback resist -->
+            <value num="18">KNOCKBACK_RESIST</value>
             <!-- 物理防御 - Physical Defense -->
             <value num="19">PDEF</value>
             <!-- 魔法防御 - Magic Defense -->
@@ -146,33 +148,33 @@
             <!-- 状態変化抵抗 - Resistance to Status Effects -->
             <value num="79">RES_STATUS</value>
             <!-- 経験値獲得量 - Experience Acquisition Rate -->
-            <value num="80">UP_EXP</value>
+            <value num="80">RATE_XP</value>
             <!-- マグネタイト獲得量 - Magnetite Acquisition Rate -->
-            <value num="81">UP_MAG</value>
+            <value num="81">RATE_MAG</value>
             <!-- マッカ獲得量 - Makka Acquisition Rate -->
-            <value num="82">UP_MACCA</value>
+            <value num="82">RATE_MACCA</value>
             <!-- エキスパート獲得量 - Expertise Acquisition Rate -->
-            <value num="83">UP_EXPERTISE</value>
+            <value num="83">RATE_EXPERTISE</value>
             <!-- 与近接ダメージ - Physical Damage Dealt -->
-            <value num="84">UP_CLSR</value>
+            <value num="84">RATE_CLSR</value>
             <!-- 与射撃ダメージ - Gun Damage Dealt -->
-            <value num="85">UP_LNGR</value>
-            <!-- 与魔法ダメージ - Magic Damage Dealt -->
-            <value num="86">UP_SPELL</value>
+            <value num="85">RATE_LNGR</value>
+            <!-- 与魔法ダメージ - Spell Damage Dealt -->
+            <value num="86">RATE_SPELL</value>
             <!-- 与援助ダメージ - Support "Damage" Dealt -->
-            <value num="87">UP_SUPPORT</value>
+            <value num="87">RATE_SUPPORT</value>
             <!-- 回復高揚:効果 - Healing Effect Up -->
-            <value num="88">UP_HEAL</value>
+            <value num="88">RATE_HEAL</value>
             <!-- 被近接ダメージ - Physical Damage Received -->
-            <value num="89">UP_CLSR_TAKEN</value>
+            <value num="89">RATE_CLSR_TAKEN</value>
             <!-- 被射撃ダメージ - Gun Damage Received -->
-            <value num="90">UP_LNGR_TAKEN</value>
-            <!-- 被魔法ダメージ - Magic Damage Received -->
-            <value num="91">UP_MAGIC_TAKEN</value>
-            <!-- 被援助ダメージ - Support "Damage" Dealt -->
-            <value num="92">UP_SUPPORT_TAKEN</value>
-            <!-- 被回復量 - Healing Amount Up -->
-            <value num="95">UP_HEAL_AMOUNT</value>
+            <value num="90">RATE_LNGR_TAKEN</value>
+            <!-- 被魔法ダメージ - Spell Damage Received -->
+            <value num="91">RATE_SPELL_TAKEN</value>
+            <!-- 被援助ダメージ - Support "Damage" Received -->
+            <value num="92">RATE_SUPPORT_TAKEN</value>
+            <!-- 被回復量 - Healing "Damage" Received -->
+            <value num="95">RATE_HEAL_TAKEN</value>
             <!-- 斬撃高揚 - Slash Boost -->
             <value num="96">BOOST_SLASH</value>
             <!-- 突撃高揚 - Thrust Boost -->

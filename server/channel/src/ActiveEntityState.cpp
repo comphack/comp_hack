@@ -31,6 +31,9 @@
 #include <DefinitionManager.h>
 #include <ScriptEngine.h>
 
+// C++ Standard Includes
+#include <cmath>
+
 // objects Includes
 #include <Character.h>
 #include <Demon.h>
@@ -64,6 +67,11 @@ ActiveEntityState::ActiveEntityState(const ActiveEntityState& other)
     (void)other;
 }
 
+int16_t ActiveEntityState::GetCorrectValue(CorrectTbl tableID)
+{
+    return GetCorrectTbl((size_t)tableID);
+}
+
 const libobjgen::UUID ActiveEntityState::GetEntityUUID()
 {
     return NULLUUID;
@@ -82,6 +90,40 @@ void ActiveEntityState::Move(float xPos, float yPos, uint64_t now)
         SetDestinationY(yPos);
         SetDestinationTicks(now + 500000);  /// @todo: modify for speed
     }
+}
+
+void ActiveEntityState::MoveRelative(
+    float targetX, float targetY, float distance, bool away,
+    uint64_t now, uint64_t endTime)
+{
+    float x = GetCurrentX();
+    float y = GetCurrentY();
+
+    float destX = 0.f, destY = 0.f;
+    if(targetX != x)
+    {
+        float slope = (targetY - y)/(targetX - x);
+        float denom = (float)std::sqrt(1.0f + std::pow(slope, 2));
+
+        float xOffset = (float)(distance / denom);
+        float yOffset = (float)fabs((slope * distance) / denom);;
+
+        destX = (away == (targetX > x)) ? (x - xOffset) : (x + xOffset);
+        destY = (away == (targetY > y)) ? (y - yOffset) : (y + yOffset);
+    }
+    else if(targetY == y)
+    {
+        // Same coordinates, do nothing
+        return;
+    }
+
+    SetOriginX(x);
+    SetOriginY(y);
+    SetOriginTicks(now);
+
+    SetDestinationX(destX);
+    SetDestinationY(destY);
+    SetDestinationTicks(endTime);
 }
 
 void ActiveEntityState::Rotate(float rot, uint64_t now)
@@ -126,6 +168,13 @@ bool ActiveEntityState::IsRotating() const
     return GetCurrentRotation() != GetDestinationRotation();
 }
 
+float ActiveEntityState::GetDistance(float x, float y, bool squared)
+{
+    float dSquared = (float)(std::pow((GetCurrentX() - x), 2)
+        + std::pow((GetCurrentY() - y), 2));
+    return squared ? dSquared : std::sqrt(dSquared);
+}
+
 void ActiveEntityState::RefreshCurrentPosition(uint64_t now)
 {
     if(now != mLastRefresh)
@@ -167,6 +216,13 @@ void ActiveEntityState::RefreshCurrentPosition(uint64_t now)
 
             uint64_t elapsed = now - originTicks;
             uint64_t total = destTicks - originTicks;
+            if(total == 0)
+            {
+                SetCurrentX(destX);
+                SetCurrentY(destY);
+                SetCurrentRotation(destRot);
+                return;
+            }
 
             double prog = (double)((double)elapsed/(double)total);
             if(xDiff || yDiff)
@@ -193,12 +249,64 @@ void ActiveEntityState::RefreshCurrentPosition(uint64_t now)
     }
 }
 
-Zone* ActiveEntityState::GetZone() const
+void ActiveEntityState::RefreshKnockback(uint64_t now)
+{
+    std::lock_guard<std::mutex> lock(mLock);
+
+    auto kb = GetKnockbackResist();
+    float kbMax = (float)GetCorrectValue(CorrectTbl::KNOCKBACK_RESIST);
+    if(kb < kbMax)
+    {
+        // Knockback refreshes at a rate of 15/s (or 0.015/ms)
+        kb = kb + (float)((double)(now - GetKnockbackTicks()) * 0.001 * 0.015);
+        if(kb > kbMax)
+        {
+            kb = kbMax;
+        }
+        else if(kb < 0.f)
+        {
+            // Sanity check
+            kb = 0.f;
+        }
+
+        SetKnockbackResist(kb);
+        if(kb == kbMax)
+        {
+            // Reset to no time
+            SetKnockbackTicks(0);
+        }
+    }
+}
+
+float ActiveEntityState::UpdateKnockback(uint64_t now, float decrease)
+{
+    // Always get up to date first
+    RefreshKnockback(now);
+
+    std::lock_guard<std::mutex> lock(mLock);
+
+    auto kb = GetKnockbackResist();
+    if(kb > 0)
+    {
+        kb -= decrease;
+        if(kb <= 0)
+        {
+            kb = 0.f;
+        }
+
+        SetKnockbackResist(kb);
+        SetKnockbackTicks(now);
+    }
+
+    return kb;
+}
+
+std::shared_ptr<Zone> ActiveEntityState::GetZone() const
 {
     return mCurrentZone;
 }
 
-void ActiveEntityState::SetZone(Zone* zone, bool updatePrevious)
+void ActiveEntityState::SetZone(const std::shared_ptr<Zone>& zone, bool updatePrevious)
 {
     if(updatePrevious && mCurrentZone)
     {
@@ -832,8 +940,10 @@ bool ActiveEntityState::PopEffectTicks(libcomp::DefinitionManager* definitionMan
                 // Adjust T-Damage if the entity is not dead
                 if(mAlive)
                 {
-                    hpTDamage = (int32_t)(hpTDamage - GetHPRegen());
-                    mpTDamage = (int32_t)(mpTDamage - GetMPRegen());
+                    hpTDamage = (int32_t)(hpTDamage -
+                        GetCorrectValue(CorrectTbl::HP_REGEN));
+                    mpTDamage = (int32_t)(mpTDamage -
+                        GetCorrectValue(CorrectTbl::MP_REGEN));
 
                     // Apply T-damage
                     for(auto effectType : mTimeDamageEffects)
@@ -953,6 +1063,32 @@ std::list<std::pair<std::shared_ptr<objects::StatusEffect>, uint32_t>>
     }
 
     return result;
+}
+
+std::set<int32_t> ActiveEntityState::GetOpponentIDs() const
+{
+    return mOpponentIDs;
+}
+
+bool ActiveEntityState::HasOpponent(int32_t opponentID)
+{
+    std::lock_guard<std::mutex> lock(mLock);
+    return mOpponentIDs.find(opponentID) != mOpponentIDs.end();
+}
+
+size_t ActiveEntityState::AddRemoveOpponent(bool add, int32_t opponentID)
+{
+    std::lock_guard<std::mutex> lock(mLock);
+    if(add)
+    {
+        mOpponentIDs.insert(opponentID);
+    }
+    else
+    {
+        mOpponentIDs.erase(opponentID);
+    }
+
+    return mOpponentIDs.size();
 }
 
 void ActiveEntityState::SetStatusEffects(
@@ -1105,18 +1241,21 @@ template<>
 ActiveEntityStateImp<objects::Character>::ActiveEntityStateImp()
 {
     SetEntityType(objects::EntityStateObject::EntityType_t::CHARACTER);
+    SetFaction(objects::ActiveEntityStateObject::Faction_t::PLAYER);
 }
 
 template<>
 ActiveEntityStateImp<objects::Demon>::ActiveEntityStateImp()
 {
     SetEntityType(objects::EntityStateObject::EntityType_t::PARTNER_DEMON);
+    SetFaction(objects::ActiveEntityStateObject::Faction_t::PLAYER);
 }
 
 template<>
 ActiveEntityStateImp<objects::Enemy>::ActiveEntityStateImp()
 {
     SetEntityType(objects::EntityStateObject::EntityType_t::ENEMY);
+    SetFaction(objects::ActiveEntityStateObject::Faction_t::ENEMY);
 }
 
 template<>
@@ -1137,6 +1276,9 @@ void ActiveEntityStateImp<objects::Character>::SetEntity(
     }
 
     SetStatusEffects(effects);
+
+    // Reset knockback and let refresh correct
+    SetKnockbackResist(0);
 }
 
 template<>
@@ -1156,6 +1298,9 @@ void ActiveEntityStateImp<objects::Demon>::SetEntity(
     }
 
     SetStatusEffects(effects);
+
+    // Reset knockback and let refresh correct
+    SetKnockbackResist(0);
 }
 
 template<>
@@ -1171,6 +1316,9 @@ void ActiveEntityStateImp<objects::Enemy>::SetEntity(
     {
         mAlive = entity->GetCoreStats()->GetHP() > 0;
     }
+
+    // Reset knockback and let refresh correct
+    SetKnockbackResist(0);
 }
 
 template<>
@@ -1201,6 +1349,12 @@ uint8_t ActiveEntityStateImp<objects::Character>::RecalculateStats(
     auto cs = c->GetCoreStats().Get();
 
     auto stats = CharacterManager::GetCharacterBaseStatMap(cs);
+    
+    // Check if knockback max and current need to be set
+    if(GetCorrectValue(CorrectTbl::KNOCKBACK_RESIST) == 0)
+    {
+        SetKnockbackResist((float)stats[CorrectTbl::KNOCKBACK_RESIST]);
+    }
 
     std::list<std::shared_ptr<objects::MiCorrectTbl>> correctTbls;
     for(auto equip : c->GetEquippedItems())
@@ -1342,6 +1496,12 @@ uint8_t ActiveEntityState::RecalculateDemonStats(
     auto cs = GetCoreStats();
 
     libcomp::EnumMap<CorrectTbl, int16_t> stats;
+    for(size_t i = 0; i < 126; i++)
+    {
+        CorrectTbl tblID = (CorrectTbl)i;
+        stats[tblID] = battleData->GetCorrect((size_t)i);
+    }
+
     stats[CorrectTbl::STR] = cs->GetSTR();
     stats[CorrectTbl::MAGIC] = cs->GetMAGIC();
     stats[CorrectTbl::VIT] = cs->GetVIT();
@@ -1349,13 +1509,10 @@ uint8_t ActiveEntityState::RecalculateDemonStats(
     stats[CorrectTbl::SPEED] = cs->GetSPEED();
     stats[CorrectTbl::LUCK] = cs->GetLUCK();
 
-    for(size_t i = 0; i < 126; i++)
+    // Check if knockback max and current need to be set
+    if(GetCorrectValue(CorrectTbl::KNOCKBACK_RESIST) == 0)
     {
-        CorrectTbl tblID = (CorrectTbl)i;
-        if(BASE_STATS.find(tblID) == BASE_STATS.end())
-        {
-            stats[tblID] = battleData->GetCorrect((size_t)i);
-        }
+        SetKnockbackResist((float)stats[CorrectTbl::KNOCKBACK_RESIST]);
     }
 
     std::list<std::shared_ptr<objects::MiCorrectTbl>> correctTbls;
@@ -1367,6 +1524,24 @@ uint8_t ActiveEntityState::RecalculateDemonStats(
 
     return CompareAndResetStats(stats);
 }
+
+const std::set<CorrectTbl> VISIBLE_STATS =
+    {
+        CorrectTbl::STR,
+        CorrectTbl::MAGIC,
+        CorrectTbl::VIT,
+        CorrectTbl::INT,
+        CorrectTbl::SPEED,
+        CorrectTbl::LUCK,
+        CorrectTbl::HP_MAX,
+        CorrectTbl::MP_MAX,
+        CorrectTbl::CLSR,
+        CorrectTbl::LNGR,
+        CorrectTbl::SPELL,
+        CorrectTbl::SUPPORT,
+        CorrectTbl::PDEF,
+        CorrectTbl::MDEF
+    };
 
 uint8_t ActiveEntityState::CompareAndResetStats(libcomp::EnumMap<CorrectTbl, int16_t>& stats)
 {
@@ -1380,7 +1555,12 @@ uint8_t ActiveEntityState::CompareAndResetStats(libcomp::EnumMap<CorrectTbl, int
 
     if(mp > stats[CorrectTbl::MP_MAX])
     {
-        mp = stats[CorrectTbl::HP_MAX];
+        mp = stats[CorrectTbl::MP_MAX];
+    }
+
+    for(auto statPair : stats)
+    {
+        SetCorrectTbl((size_t)statPair.first, statPair.second);
     }
 
     bool worldChange =
@@ -1389,7 +1569,7 @@ uint8_t ActiveEntityState::CompareAndResetStats(libcomp::EnumMap<CorrectTbl, int
         || GetMaxHP() != stats[CorrectTbl::HP_MAX]
         || GetMaxMP() != stats[CorrectTbl::MP_MAX];
 
-    bool anyChange = worldChange
+    bool anyClientChange = worldChange
         || GetSTR() != stats[CorrectTbl::STR]
         || GetMAGIC() != stats[CorrectTbl::MAGIC]
         || GetVIT() != stats[CorrectTbl::VIT]
@@ -1401,9 +1581,7 @@ uint8_t ActiveEntityState::CompareAndResetStats(libcomp::EnumMap<CorrectTbl, int
         || GetSPELL() != stats[CorrectTbl::SPELL]
         || GetSUPPORT() != stats[CorrectTbl::SUPPORT]
         || GetPDEF() != stats[CorrectTbl::PDEF]
-        || GetMDEF() != stats[CorrectTbl::MDEF]
-        || GetHPRegen() != stats[CorrectTbl::HP_REGEN]
-        || GetMPRegen() != stats[CorrectTbl::MP_REGEN];
+        || GetMDEF() != stats[CorrectTbl::MDEF];
 
     cs->SetHP(hp);
     cs->SetMP(mp);
@@ -1421,8 +1599,6 @@ uint8_t ActiveEntityState::CompareAndResetStats(libcomp::EnumMap<CorrectTbl, int
     SetSUPPORT(stats[CorrectTbl::SUPPORT]);
     SetPDEF(stats[CorrectTbl::PDEF]);
     SetMDEF(stats[CorrectTbl::MDEF]);
-    SetHPRegen(stats[CorrectTbl::HP_REGEN]);
-    SetMPRegen(stats[CorrectTbl::MP_REGEN]);
 
-    return worldChange ? 2 : (anyChange ? 1 : 0);
+    return worldChange ? 2 : (anyClientChange ? 1 : 0);
 }

@@ -182,15 +182,30 @@ bool Parsers::ReviveCharacter::Parse(libcomp::ManagerPacket *pPacketManager,
         state->SetAcceptRevival(false);
     }
 
-    characterManager->SendEntityRevival(client, cState, responseType1,
-        responseType1 == REVIVAL_REVIVE_NORMAL ||
+    libcomp::Packet reply;
+    characterManager->GetEntityRevivalPacket(reply, cState, responseType1);
+
+    if(responseType1 == REVIVAL_REVIVE_NORMAL ||
         responseType1 == REVIVAL_REVIVE_ACCEPT ||
-        responseType1 == REVIVAL_REVIVE_DENY);
+        responseType1 == REVIVAL_REVIVE_DENY)
+    {
+        zoneManager->BroadcastPacket(client, reply);
+    }
+    else
+    {
+        client->QueuePacket(reply);
+    }
 
     if(newZoneID)
     {
+        reply.Clear();
         zoneManager->EnterZone(client, newZoneID, newX, newY, newRot, true);
-        characterManager->SendEntityRevival(client, cState, responseType2, true);
+        characterManager->GetEntityRevivalPacket(reply, cState, responseType2);
+        zoneManager->BroadcastPacket(client, reply);
+    }
+    else
+    {
+        client->FlushOutgoing();
     }
 
     return true;

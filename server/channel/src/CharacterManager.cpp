@@ -711,15 +711,14 @@ void CharacterManager::SendEntityStats(std::shared_ptr<
     server->GetZoneManager()->BroadcastPacket(client, p, includeSelf);
 }
 
-void CharacterManager::SendEntityRevival(std::shared_ptr<ChannelClientConnection> client,
-    const std::shared_ptr<ActiveEntityState>& eState, int8_t action, bool sendToZone)
+bool CharacterManager::GetEntityRevivalPacket(libcomp::Packet& p,
+    const std::shared_ptr<ActiveEntityState>& eState, int8_t action)
 {
     auto cs = eState->GetCoreStats();
     if(cs)
     {
         bool syncXP = cs->GetLevel() >= 10;
 
-        libcomp::Packet p;
         p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_REVIVE_ENTITY);
         p.WriteS32Little(eState->GetEntityID());
         p.WriteS8(action);
@@ -727,15 +726,10 @@ void CharacterManager::SendEntityRevival(std::shared_ptr<ChannelClientConnection
         p.WriteS32Little(cs->GetMP());
         p.WriteS64Little(syncXP ? cs->GetXP() : 0);
 
-        if(sendToZone)
-        {
-            mServer.lock()->GetZoneManager()->BroadcastPacket(client, p);
-        }
-        else
-        {
-            client->SendPacket(p);
-        }
+        return true;
     }
+
+    return false;
 }
 
 void CharacterManager::SetStatusIcon(const std::shared_ptr<ChannelClientConnection>& client, int8_t icon)
@@ -858,6 +852,9 @@ void CharacterManager::StoreDemon(const std::shared_ptr<
     {
         return;
     }
+
+    // Remove all opponents
+    AddRemoveOpponent(false, dState, nullptr);
 
     auto server = mServer.lock();
     auto definitionManager = server->GetDefinitionManager();
@@ -1328,6 +1325,7 @@ bool CharacterManager::AddRemoveItem(const std::shared_ptr<
         {
             // Unequip anything we're removing
             if(equipType != objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_NONE &&
+                item->GetStackSize() <= quantity &&
                 character->GetEquippedItems((size_t)equipType).Get() == item)
             {
                 EquipItem(client, state->GetObjectID(item->GetUUID()));
@@ -2155,6 +2153,162 @@ void CharacterManager::CancelStatusEffects(const std::shared_ptr<
     }
 }
 
+bool CharacterManager::AddRemoveOpponent(bool add, const std::shared_ptr<
+    ActiveEntityState>& eState1, const std::shared_ptr<ActiveEntityState>& eState2)
+{
+    auto zone = eState1->GetZone();
+    if(!zone || (add && !eState2))
+    {
+        return false;
+    }
+
+    if(add && eState1->HasOpponent(eState2->GetEntityID()))
+    {
+        return true;
+    }
+
+    if(!add && eState1->GetOpponentIDs().size() == 0)
+    {
+        return true;
+    }
+
+    std::list<libcomp::Packet> packets;
+    if(add)
+    {
+        // If one isn't alive, stop here
+        if(!eState1->IsAlive() || !eState2->IsAlive())
+        {
+            return true;
+        }
+        
+        // If either are a client entity, get both the character
+        // and partner demon
+        std::list<std::shared_ptr<ActiveEntityState>> e1s;
+        std::list<std::shared_ptr<ActiveEntityState>> e2s;
+
+        for(size_t i = 0; i < 2; i++)
+        {
+            auto entity = i == 0 ? eState1 : eState2;
+            auto state = entity ? ClientState::GetEntityClientState(
+                entity->GetEntityID()) : nullptr;
+            auto& l = (i == 0) ? e1s : e2s;
+            if(state)
+            {
+                l.push_back(state->GetCharacterState());
+                l.push_back(state->GetDemonState());
+            }
+            else
+            {
+                l.push_back(entity);
+            }
+        }
+
+        std::list<std::shared_ptr<ActiveEntityState>> battleStarted;
+        std::list<std::shared_ptr<ActiveEntityState>> activatedEnemies;
+        for(auto e1 : e1s)
+        {
+            for(auto e2 : e2s)
+            {
+                size_t opponentCount = e1->AddRemoveOpponent(true, e2->GetEntityID());
+                if(opponentCount == 1)
+                {
+                    battleStarted.push_back(e1);
+                    auto enemy = std::dynamic_pointer_cast<EnemyState>(e1);
+                    if(enemy)
+                    {
+                        activatedEnemies.push_back(enemy);
+                    }
+                }
+        
+                opponentCount = e2->AddRemoveOpponent(true, e1->GetEntityID());
+                if(opponentCount == 1)
+                {
+                    battleStarted.push_back(e2);
+                    auto enemy = std::dynamic_pointer_cast<EnemyState>(e1);
+                    if(enemy)
+                    {
+                        activatedEnemies.push_back(enemy);
+                    }
+                }
+            }
+        }
+
+        for(auto entity : battleStarted)
+        {
+            libcomp::Packet p;
+            p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_BATTLE_STARTED);
+            p.WriteS32Little(entity->GetEntityID());
+            p.WriteFloat(300.f);    // Combat run speed
+            packets.push_back(p);
+        }
+
+        for(auto enemy : activatedEnemies)
+        {
+            libcomp::Packet p;
+            p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_ENEMY_ACTIVATED);
+            p.WriteS32Little(eState1->GetEntityID());
+            p.WriteS32Little(enemy->GetEntityID());
+            packets.push_back(p);
+        }
+    }
+    else
+    {
+        int32_t e1ID = eState1->GetEntityID();
+        std::list<std::shared_ptr<ActiveEntityState>> opponents;
+        if(eState2)
+        {
+            opponents.push_back(eState2);
+            eState1->AddRemoveOpponent(false, eState2->GetEntityID());
+        }
+        else
+        {
+            auto opponentIDs = eState1->GetOpponentIDs();
+            for(int32_t oppID : opponentIDs)
+            {
+                eState1->AddRemoveOpponent(false, oppID);
+
+                auto opponent = zone->GetActiveEntity(oppID);
+                if(opponent)
+                {
+                    opponents.push_back(opponent);
+                }
+            }
+        }
+
+        std::list<std::shared_ptr<ActiveEntityState>> battleStopped;
+        if(eState1->GetOpponentIDs().size() == 0)
+        {
+            battleStopped.push_back(eState1);
+        }
+
+        for(auto opponent : opponents)
+        {
+            opponent->AddRemoveOpponent(false, e1ID);
+            if(opponent->GetOpponentIDs().size() == 0)
+            {
+                battleStopped.push_back(opponent);
+            }
+        }
+
+        for(auto entity : battleStopped)
+        {
+            libcomp::Packet p;
+            p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_BATTLE_STOPPED);
+            p.WriteS32Little(entity->GetEntityID());
+            p.WriteFloat(300.f);    // Run speed
+            packets.push_back(p);
+        }
+    }
+
+    if(packets.size() > 0)
+    {
+        auto zoneConnections = zone->GetConnectionList();
+        ChannelClientConnection::BroadcastPackets(zoneConnections, packets);
+    }
+
+    return true;
+}
+
 void CharacterManager::UpdateWorldDisplayState(
     const std::set<std::shared_ptr<ActiveEntityState>>& entities)
 {
@@ -2307,6 +2461,12 @@ libcomp::EnumMap<CorrectTbl, int16_t> CharacterManager::GetCharacterBaseStatMap(
     const std::shared_ptr<objects::EntityStats>& cs)
 {
     libcomp::EnumMap<CorrectTbl, int16_t> stats;
+    for(size_t i = 0; i < 126; i++)
+    {
+        CorrectTbl tblID = (CorrectTbl)i;
+        stats[tblID] = 0;
+    }
+
     stats[CorrectTbl::STR] = cs->GetSTR();
     stats[CorrectTbl::MAGIC] = cs->GetMAGIC();
     stats[CorrectTbl::VIT] = cs->GetVIT();
@@ -2315,14 +2475,22 @@ libcomp::EnumMap<CorrectTbl, int16_t> CharacterManager::GetCharacterBaseStatMap(
     stats[CorrectTbl::LUCK] = cs->GetLUCK();
     stats[CorrectTbl::HP_MAX] = 70;
     stats[CorrectTbl::MP_MAX] = 10;
-    stats[CorrectTbl::CLSR] = 0;
-    stats[CorrectTbl::LNGR] = 0;
-    stats[CorrectTbl::SPELL] = 0;
-    stats[CorrectTbl::SUPPORT] = 0;
-    stats[CorrectTbl::PDEF] = 0;
-    stats[CorrectTbl::MDEF] = 0;
     stats[CorrectTbl::HP_REGEN] = 1;
     stats[CorrectTbl::MP_REGEN] = 1;
+    stats[CorrectTbl::MOVE1] = 15;
+    stats[CorrectTbl::MOVE2] = 30;
+    stats[CorrectTbl::SUMMON_SPEED] = 100;
+    stats[CorrectTbl::KNOCKBACK_RESIST] = 100;
+    stats[CorrectTbl::COOLDOWN_TIME] = 100;
+    stats[CorrectTbl::BOOST_LB_DAMAGE] = 100;
+
+    // Default all the rates to 100%
+    for(uint8_t i = (uint8_t)CorrectTbl::RATE_XP;
+        i < (uint8_t)CorrectTbl::RATE_SUPPORT_TAKEN; i++)
+    {
+        stats[(CorrectTbl)i] = 100;
+    }
+
     return stats;
 }
 
@@ -2538,8 +2706,8 @@ void CharacterManager::GetEntityStatsPacketData(libcomp::Packet& p,
                 state->GetSPEED() - coreStats->GetSPEED()));
             p.WriteS16Little(static_cast<int16_t>(
                 state->GetLUCK() - coreStats->GetLUCK()));
-            p.WriteS16Little(coreStats->GetMaxHP());
-            p.WriteS16Little(coreStats->GetMaxMP());
+            p.WriteS16Little(state->GetMaxHP());
+            p.WriteS16Little(state->GetMaxMP());
             p.WriteS16Little(static_cast<int16_t>(
                 state->GetCLSR() - coreStats->GetCLSR()));
             p.WriteS16Little(static_cast<int16_t>(

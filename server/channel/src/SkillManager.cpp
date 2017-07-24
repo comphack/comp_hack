@@ -43,6 +43,7 @@
 #include <ItemBox.h>
 #include <MiAddStatusTbl.h>
 #include <MiBattleDamageData.h>
+#include <MiCancelData.h>
 #include <MiCastBasicData.h>
 #include <MiCastData.h>
 #include <MiConditionData.h>
@@ -83,6 +84,7 @@ const uint16_t FLAG1_CRITICAL = 1 << 6;
 const uint16_t FLAG1_WEAKPOINT = 1 << 7;
 const uint16_t FLAG1_KNOCKBACK = 1 << 8;
 const uint16_t FLAG1_REVIVAL = 1 << 9;
+const uint16_t FLAG1_ABSORB = 1 << 10;  //Only displayed with DAMAGE_TYPE_HEALING
 const uint16_t FLAG1_REFLECT = 1 << 11; //Only displayed with DAMAGE_TYPE_NONE
 const uint16_t FLAG1_BLOCK = 1 << 12;   //Only dsiplayed with DAMAGE_TYPE_NONE
 const uint16_t FLAG1_PROTECT = 1 << 15;
@@ -92,6 +94,21 @@ const uint16_t FLAG2_IMPOSSIBLE = 1 << 6;
 const uint16_t FLAG2_BARRIER = 1 << 7;
 const uint16_t FLAG2_INTENSIVE_BREAK = 1 << 8;
 const uint16_t FLAG2_INSTANT_DEATH = 1 << 9;
+
+const uint8_t RES_OFFSET = (uint8_t)CorrectTbl::RES_WEAPON - 1;
+const uint8_t BOOST_OFFSET = (uint8_t)CorrectTbl::BOOST_SLASH - 2;
+const uint8_t NRA_OFFSET = (uint8_t)CorrectTbl::NRA_WEAPON - 1;
+/*const uint8_t DAMAGE_TAKEN_OFFSET = (uint8_t)((uint8_t)CorrectTbl::RATE_CLSR -
+    (uint8_t)CorrectTbl::RATE_CLSR_TAKEN);*/
+
+class channel::ProcessingSkill
+{
+public:
+    std::shared_ptr<objects::MiSkillData> Definition;
+    uint8_t BaseAffinity;
+    uint8_t EffectiveAffinity;
+    uint8_t EffectiveDependencyType;
+};
 
 class channel::SkillTargetResult
 {
@@ -440,6 +457,10 @@ bool SkillManager::ExecuteSkill(const std::shared_ptr<ChannelClientConnection> c
         sourceState->SetHPMP((int16_t)-hpCost, (int16_t)-mpCost, true);
         activated->SetHPCost(hpCost);
         activated->SetMPCost(mpCost);
+
+        std::set<std::shared_ptr<ActiveEntityState>> displayStateModified;
+        displayStateModified.insert(sourceState);
+        characterManager->UpdateWorldDisplayState(displayStateModified);
     }
 
     for(auto itemCost : itemCosts)
@@ -606,21 +627,56 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
     auto skillID = activated->GetSkillID();
     auto skillData = definitionManager->GetSkillData(skillID);
 
-    std::set<std::shared_ptr<ActiveEntityState>> displayStateModified;
-    if(activated->GetHPCost() > 0 || activated->GetMPCost() > 0)
+    ProcessingSkill skill;
+    skill.Definition = skillData;
+    skill.EffectiveDependencyType = skillData->GetBasic()->GetDependencyType();
+    skill.BaseAffinity = skill.EffectiveAffinity = skillData->GetCommon()->GetAffinity();
+
+    // Calculate effective dependency and affinity types if "weapon" is specified
+    if(skill.EffectiveDependencyType == 4 || skill.BaseAffinity == 1)
     {
-        displayStateModified.insert(source);
+        auto cState = std::dynamic_pointer_cast<CharacterState>(source);
+        auto weapon = cState ? cState->GetEntity()->GetEquippedItems((size_t)
+            objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_WEAPON).Get() : nullptr;
+        auto weaponDef = weapon ? mServer.lock()->GetDefinitionManager()
+            ->GetItemData(weapon->GetType()) : nullptr;
+
+        // If at any point the type cannot be determined,
+        // default to strike, close range (ex: no weapon/non-character source)
+        skill.EffectiveAffinity = (uint8_t)CorrectTbl::RES_STRIKE - RES_OFFSET;
+        skill.EffectiveDependencyType = 0;
+        if(weaponDef)
+        {
+            if(skill.EffectiveAffinity == 1)
+            {
+                skill.EffectiveAffinity = weaponDef->GetCommon()->GetAffinity();
+            }
+
+            if(skill.EffectiveDependencyType == 4)
+            {
+                switch (weaponDef->GetBasic()->GetWeaponType())
+                {
+                case objects::MiItemBasicData::WeaponType_t::LONG_RANGE:
+                    skill.EffectiveDependencyType = 1;
+                    break;
+                case objects::MiItemBasicData::WeaponType_t::CLOSE_RANGE:
+                default:
+                    // Already set
+                    break;
+                }
+            }
+        }
     }
 
-    // Gather targets
+    // Get the target of the spell
+    uint16_t initialDamageFlags1 = 0;
+    auto effectiveSource = source;
     std::shared_ptr<ActiveEntityState> primaryTarget;
     std::list<SkillTargetResult> targetResults;
     switch(skillData->GetTarget()->GetType())
     {
     case objects::MiTargetData::Type_t::NONE:
-        {
-            primaryTarget = source;
-        }
+        // Source can be affected but it is not a target
         break;
     case objects::MiTargetData::Type_t::ALLY:
     case objects::MiTargetData::Type_t::DEAD_ALLY:
@@ -644,7 +700,22 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
                 break;
             }
 
-            primaryTarget = targetEntity;
+            SkillTargetResult target;
+            target.EntityState = targetEntity;
+            if(SetNRA(target, skill))
+            {
+                // The skill is reflected and the source becomes
+                // the primary target
+                primaryTarget = source;
+                effectiveSource = targetEntity;
+                targetResults.push_back(target);
+            }
+            else
+            {
+                primaryTarget = targetEntity;
+            }
+
+            initialDamageFlags1 = target.DamageFlags1;
         }
         break;
     case objects::MiTargetData::Type_t::OBJECT:
@@ -656,32 +727,38 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
         return false;
     }
 
+    std::list<std::shared_ptr<ActiveEntityState>> effectiveTargets;
     if(primaryTarget)
     {
-        SkillTargetResult target;
-        target.EntityState = primaryTarget;
-        target.PrimaryTarget = true;
-        targetResults.push_back(target);
+        effectiveTargets.push_back(primaryTarget);
     }
 
     auto skillRange = skillData->GetRange();
     if(skillRange->GetAoeRange() > 0 &&
         skillRange->GetAreaType() != objects::MiEffectiveRangeData::AreaType_t::NONE)
     {
+        // Determine area effects
+        // Unlike damage calculations, this will use effectiveSource instead
+        // of source since reflects may have changed the context of the skill
+
         double aoeRange = (double)(skillRange->GetAoeRange() * 10);
 
-        std::list<std::shared_ptr<ActiveEntityState>> aoeTargets;
         switch(skillRange->GetAreaType())
         {
+        case objects::MiEffectiveRangeData::AreaType_t::SOURCE:
+            // Not exactly an area but skills targetting the source only should pass
+            // both this check and area target type filtering for "Ally" or "Source"
+            effectiveTargets.push_back(effectiveSource);
+            break;
         case objects::MiEffectiveRangeData::AreaType_t::SOURCE_RADIUS:
-            aoeTargets = zone->GetActiveEntitiesInRadius(source->GetCurrentX(),
-                source->GetCurrentY(), aoeRange);
+            effectiveTargets = zone->GetActiveEntitiesInRadius(
+                effectiveSource->GetCurrentX(), effectiveSource->GetCurrentY(), aoeRange);
             break;
         case objects::MiEffectiveRangeData::AreaType_t::TARGET_RADIUS:
             if(primaryTarget)
             {
-                aoeTargets = zone->GetActiveEntitiesInRadius(primaryTarget->GetCurrentX(),
-                    primaryTarget->GetCurrentY(), aoeRange);
+                effectiveTargets = zone->GetActiveEntitiesInRadius(
+                    primaryTarget->GetCurrentX(), primaryTarget->GetCurrentY(), aoeRange);
             }
             break;
         case objects::MiEffectiveRangeData::AreaType_t::FRONT_1:
@@ -695,23 +772,28 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
             return false;
         }
 
-        // Make sure the primary target isnt in here twice
-        aoeTargets.remove_if([primaryTarget](
-            const std::shared_ptr<ActiveEntityState>& target)
-            {
-                return target == primaryTarget;
-            });
-        
-        // Filter out invalid targets
+        // Make sure the primary target isn't in here twice and it is also
+        // at the front of the list
+        if(primaryTarget)
+        {
+            effectiveTargets.remove_if([primaryTarget](
+                const std::shared_ptr<ActiveEntityState>& target)
+                {
+                    return target == primaryTarget;
+                });
+            effectiveTargets.push_front(primaryTarget);
+        }
+
+        // Filter out invalid effective targets (including the primary target)
         /// @todo: implement a more complex faction system for PvP etc
         auto areaTargetType = skillRange->GetAreaTarget();
         switch(areaTargetType)
         {
         case objects::MiEffectiveRangeData::AreaTarget_t::ENEMY:
-            aoeTargets.remove_if([source](
+            effectiveTargets.remove_if([effectiveSource](
                 const std::shared_ptr<ActiveEntityState>& target)
                 {
-                    return (target->GetFaction() == source->GetFaction()) ||
+                    return (target->GetFaction() == effectiveSource->GetFaction()) ||
                         !target->IsAlive();
                 });
             break;
@@ -723,10 +805,10 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
                 bool deadOnly = areaTargetType ==
                     objects::MiEffectiveRangeData::AreaTarget_t::DEAD_ALLY ||
                     areaTargetType == objects::MiEffectiveRangeData::AreaTarget_t::DEAD_PARTY;
-                aoeTargets.remove_if([source, deadOnly](
+                effectiveTargets.remove_if([effectiveSource, deadOnly](
                     const std::shared_ptr<ActiveEntityState>& target)
                     {
-                        return (target->GetFaction() != source->GetFaction())
+                        return (target->GetFaction() != effectiveSource->GetFaction())
                             || (deadOnly == target->IsAlive());
                     });
 
@@ -735,10 +817,10 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
                 {
                     // This will result in an empty list if cast by an enemy, though
                     // technically it should in that instance
-                    auto sourceState = ClientState::GetEntityClientState(source->GetEntityID());
+                    auto sourceState = ClientState::GetEntityClientState(effectiveSource->GetEntityID());
                     uint32_t sourcePartyID = sourceState ? sourceState->GetPartyID() : 0;
 
-                    aoeTargets.remove_if([sourcePartyID](
+                    effectiveTargets.remove_if([sourcePartyID](
                         const std::shared_ptr<ActiveEntityState>& target)
                         {
                             auto state = ClientState::GetEntityClientState(target->GetEntityID());
@@ -749,10 +831,10 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
             }
             break;
         case objects::MiEffectiveRangeData::AreaTarget_t::SOURCE:
-            aoeTargets.remove_if([source](
+            effectiveTargets.remove_if([effectiveSource](
                 const std::shared_ptr<ActiveEntityState>& target)
                 {
-                    return target != source;
+                    return target != effectiveSource;
                 });
             break;
         default:
@@ -760,22 +842,60 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
                 .Arg((uint8_t)skillRange->GetAreaTarget()));
             return false;
         }
+    }
 
-        int32_t targetCount = 0;
-        int32_t targetMax = skillRange->GetAoeTargetMax();
-        for(auto aoeTarget : aoeTargets)
+    // Filter down to all valid targets, limited by AOE restrictions
+    uint16_t aoeReflect = 0;
+    int32_t aoeTargetCount = 0;
+    int32_t aoeTargetMax = skillRange->GetAoeTargetMax();
+    for(auto effectiveTarget : effectiveTargets)
+    {
+        bool isPrimaryTarget = effectiveTarget == primaryTarget;
+
+        // Skip the primary target for the count which will always be first
+        // in the list if it is still valid at this point
+        if(!isPrimaryTarget &&
+            aoeTargetMax > 0 && aoeTargetCount >= aoeTargetMax)
         {
-            if(targetMax > 0 && targetCount >= targetMax)
-            {
-                break;
-            }
-
-            SkillTargetResult target;
-            target.EntityState = aoeTarget;
-            targetResults.push_back(target);
-
-            targetCount++;
+            break;
         }
+
+        SkillTargetResult target;
+        target.PrimaryTarget = isPrimaryTarget;
+        target.EntityState = effectiveTarget;
+
+        // Set NRA
+        // If the primary target is still in the set and a reflect did not
+        // occur, apply the initially calculated flags first
+        // If an AOE target that is not the source is in the set, increase
+        // the number of AOE reflections as needed
+        bool isSource = effectiveTarget == source;
+        if(isPrimaryTarget && (initialDamageFlags1 & FLAG1_REFLECT) == 0)
+        {
+            target.DamageFlags1 = initialDamageFlags1;
+        }
+        else if(SetNRA(target, skill) && !isSource)
+        {
+            aoeReflect++;
+        }
+
+        targetResults.push_back(target);
+
+        if(!isPrimaryTarget)
+        {
+            aoeTargetCount++;
+        }
+    }
+
+    // For each time the skill was reflected by an AOE target, target the
+    // source again as each can potentially have NRA and damage calculated
+    for(uint16_t i = 0; i < aoeReflect; i++)
+    {
+        SkillTargetResult target;
+        target.EntityState = source;
+        targetResults.push_back(target);
+        SetNRA(target, skill);
+        targetResults.push_back(target);
     }
     
     // Run calculations
@@ -783,7 +903,7 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
     if(skillData->GetDamage()->GetBattleDamage()->GetFormula()
         != objects::MiBattleDamageData::Formula_t::NONE)
     {
-        if(!CalculateDamage(source, activated, targetResults, skillData))
+        if(!CalculateDamage(source, activated, targetResults, skill))
         {
             LOG_ERROR(libcomp::String("Damage failed to calculate: %1\n")
                 .Arg(skillID));
@@ -805,9 +925,11 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
     // need to update the world with their modified state
     std::set<std::shared_ptr<ActiveEntityState>> revived;
     std::set<std::shared_ptr<ActiveEntityState>> killed;
+    std::set<std::shared_ptr<ActiveEntityState>> displayStateModified;
     std::unordered_map<std::shared_ptr<ActiveEntityState>, uint8_t> cancellations;
     for(SkillTargetResult& target : targetResults)
     {
+        target.EntityState->RefreshCurrentPosition(now);
         cancellations[target.EntityState] = 0;
         if(hasBattleDamage)
         {
@@ -861,6 +983,7 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
                 if(targetAlive)
                 {
                     target.DamageFlags1 |= FLAG1_LETHAL;
+                    cancellations[target.EntityState] |= EFFECT_CANCEL_DEATH;
                     killed.insert(target.EntityState);
                 }
                 else
@@ -898,37 +1021,50 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
         }
 
         // Determine which status effects to apply
-        for(auto addStatus : addStatuses)
+        if((target.DamageFlags1 & (FLAG1_BLOCK | FLAG1_REFLECT | FLAG1_ABSORB)) == 0)
         {
-            if(addStatus->GetOnKnockback() && !(target.DamageFlags1 & FLAG1_KNOCKBACK)) continue;
-
-            uint16_t successRate = addStatus->GetSuccessRate();
-            if(successRate >= 100 || (rand() % 99) <= successRate)
+            for(auto addStatus : addStatuses)
             {
-                int8_t minStack = addStatus->GetMinStack();
-                int8_t maxStack = addStatus->GetMaxStack();
+                if(addStatus->GetOnKnockback() && !(target.DamageFlags1 & FLAG1_KNOCKBACK)) continue;
 
-                // Sanity check
-                if(minStack > maxStack) continue;
-
-                int8_t stack = minStack == maxStack ? maxStack
-                    : (int8_t)(minStack + (rand() % (maxStack - minStack)));
-                if(stack == 0) continue;
-
-                target.AddedStatuses[addStatus->GetStatusID()] =
-                    std::pair<uint8_t, bool>(stack, addStatus->GetIsReplace());
-
-                // Check for status T-Damage to apply at the end of the skill
-                auto statusDef = definitionManager->GetStatusData(
-                    addStatus->GetStatusID());
-                auto basicDef = statusDef->GetBasic();
-                if(basicDef->GetStackType() == 1 && basicDef->GetApplicationLogic() == 0)
+                uint16_t successRate = addStatus->GetSuccessRate();
+                if(successRate >= 100 || (rand() % 99) <= successRate)
                 {
-                    auto tDamage = statusDef->GetEffect()->GetDamage();
-                    if(tDamage->GetHPDamage() > 0)
+                    auto statusDef = definitionManager->GetStatusData(
+                        addStatus->GetStatusID());
+
+                    auto cancelDef = statusDef->GetCancel();
+                    if((target.DamageFlags1 & FLAG1_LETHAL) &&
+                        (cancelDef->GetCancelTypes() & EFFECT_CANCEL_DEATH))
                     {
-                        /// @todo: transform properly
-                        target.AilmentDamage += tDamage->GetHPDamage();
+                        // If the target is killed and the status cancels on death,
+                        // stop here and do not add
+                        continue;
+                    }
+
+                    int8_t minStack = addStatus->GetMinStack();
+                    int8_t maxStack = addStatus->GetMaxStack();
+
+                    // Sanity check
+                    if(minStack > maxStack) continue;
+
+                    int8_t stack = minStack == maxStack ? maxStack
+                        : (int8_t)(minStack + (rand() % (maxStack - minStack)));
+                    if(stack == 0) continue;
+
+                    target.AddedStatuses[addStatus->GetStatusID()] =
+                        std::pair<uint8_t, bool>(stack, addStatus->GetIsReplace());
+
+                    // Check for status T-Damage to apply at the end of the skill
+                    auto basicDef = statusDef->GetBasic();
+                    if(basicDef->GetStackType() == 1 && basicDef->GetApplicationLogic() == 0)
+                    {
+                        auto tDamage = statusDef->GetEffect()->GetDamage();
+                        if(tDamage->GetHPDamage() > 0)
+                        {
+                            /// @todo: transform properly
+                            target.AilmentDamage += tDamage->GetHPDamage();
+                        }
                     }
                 }
             }
@@ -960,18 +1096,19 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
         }
     }
 
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_SKILL_REPORTS);
-    reply.WriteS32Little(source->GetEntityID());
-    reply.WriteU32Little(skillID);
-    reply.WriteS8((int8_t)activated->GetActivationID());
-
+    auto effectiveTarget = primaryTarget ? primaryTarget : effectiveSource;
     std::unordered_map<uint32_t, uint64_t> timeMap;
     uint64_t hitTimings[3];
     uint64_t completeTime = now +
         (skillData->GetDischarge()->GetStiffness() * 1000);
     uint64_t hitStopTime = completeTime +
         (skillData->GetDamage()->GetHitStopTime() * 1000);
+
+    libcomp::Packet reply;
+    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_SKILL_REPORTS);
+    reply.WriteS32Little(source->GetEntityID());
+    reply.WriteU32Little(skillID);
+    reply.WriteS8((int8_t)activated->GetActivationID());
 
     reply.WriteU32Little((uint32_t)targetResults.size());
     for(SkillTargetResult& target : targetResults)
@@ -988,13 +1125,22 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
 
         if((target.DamageFlags1 & FLAG1_KNOCKBACK) && kbType != 2)
         {
+            uint8_t kbEffectiveType = kbType;
+            if(kbType == 1 && target.PrimaryTarget)
+            {
+                // Targets of AOE knockback are treated like default knockback
+                kbEffectiveType = 0;
+            }
+
             // Ignore knockback type 2 which is "None"
-            switch(kbType)
+            switch(kbEffectiveType)
             {
             case 1:
-                // Away from target (ex: AOE explosion)
-                target.EntityState->MoveRelative(primaryTarget->GetCurrentX(),
-                    primaryTarget->GetCurrentY(), kbDistance, true, now, hitStopTime);
+                {
+                    // Away from the effective target (ex: AOE explosion)
+                    target.EntityState->MoveRelative(effectiveTarget->GetCurrentX(),
+                        effectiveTarget->GetCurrentY(), kbDistance, true, now, hitStopTime);
+                }
                 break;
             case 4:
                 /// @todo: To the front of the source
@@ -1006,8 +1152,8 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
             case 3: /// @todo: technically this has more spread than 0
             default:
                 // Default if not specified, directly away from source
-                target.EntityState->MoveRelative(source->GetCurrentX(),
-                    source->GetCurrentY(), kbDistance, true, now, hitStopTime);
+                target.EntityState->MoveRelative(effectiveSource->GetCurrentX(),
+                    effectiveSource->GetCurrentY(), kbDistance, true, now, hitStopTime);
                 break;
             }
 
@@ -1155,55 +1301,9 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
 
 bool SkillManager::CalculateDamage(const std::shared_ptr<ActiveEntityState>& source,
     const std::shared_ptr<objects::ActivatedAbility>& activated,
-    std::list<SkillTargetResult>& targets,
-    const std::shared_ptr<objects::MiSkillData>& skillData)
+    std::list<SkillTargetResult>& targets, ProcessingSkill& skill)
 {
-    const uint8_t RES_OFFSET = (uint8_t)CorrectTbl::RES_SLASH - 2;
-    //const uint8_t NRA_OFFSET = (uint8_t)CorrectTbl::NRA_SLASH - 2;
-    const uint8_t BOOST_OFFSET = (uint8_t)CorrectTbl::BOOST_SLASH - 2;
-    /*const uint8_t DAMAGE_TAKEN_OFFSET = (uint8_t)((uint8_t)CorrectTbl::RATE_CLSR -
-        (uint8_t)CorrectTbl::RATE_CLSR_TAKEN);*/
-
-    uint8_t dependencyType = skillData->GetBasic()->GetDependencyType();
-    uint8_t effectiveType = dependencyType;
-    uint8_t skillAffinity = skillData->GetCommon()->GetAffinity();
-    if(dependencyType == 4 || skillAffinity == 1)
-    {
-        // The effective type or affinity is determined by weapon type
-        auto cState = std::dynamic_pointer_cast<CharacterState>(source);
-        auto weapon = cState ? cState->GetEntity()->GetEquippedItems((size_t)
-            objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_WEAPON).Get() : nullptr;
-        auto weaponDef = weapon ? mServer.lock()->GetDefinitionManager()
-            ->GetItemData(weapon->GetType()) : nullptr;
-
-        // If at any point the type cannot be determined,
-        // default to strike, close range (ex: no weapon/non-character source)
-        skillAffinity = (uint8_t)CorrectTbl::RES_STRIKE - RES_OFFSET;
-        effectiveType = 0;
-        if(weaponDef)
-        {
-            if(skillAffinity == 1)
-            {
-                skillAffinity = weaponDef->GetCommon()->GetAffinity();
-            }
-
-            if(dependencyType == 4)
-            {
-                switch (weaponDef->GetBasic()->GetWeaponType())
-                {
-                case objects::MiItemBasicData::WeaponType_t::LONG_RANGE:
-                    effectiveType = 1;
-                    break;
-                case objects::MiItemBasicData::WeaponType_t::CLOSE_RANGE:
-                default:
-                    // Already set
-                    break;
-                }
-            }
-        }
-    }
-
-    auto damageData = skillData->GetDamage()->GetBattleDamage();
+    auto damageData = skill.Definition->GetDamage()->GetBattleDamage();
     auto formula = damageData->GetFormula();
     bool isHeal = formula == objects::MiBattleDamageData::Formula_t::HEAL_NORMAL
         || formula == objects::MiBattleDamageData::Formula_t::HEAL_STATIC
@@ -1211,7 +1311,7 @@ bool SkillManager::CalculateDamage(const std::shared_ptr<ActiveEntityState>& sou
 
     uint8_t rateBoostIdx = 0;
     uint16_t off = 0;
-    switch(effectiveType)
+    switch(skill.EffectiveDependencyType)
     {
     case 0:
         off = (uint16_t)source->GetCLSR();
@@ -1222,7 +1322,7 @@ bool SkillManager::CalculateDamage(const std::shared_ptr<ActiveEntityState>& sou
         rateBoostIdx = (uint8_t)CorrectTbl::RATE_LNGR;
         break;
     case 2:
-        off = (uint16_t)source->GetMAGIC();
+        off = (uint16_t)source->GetSPELL();
         rateBoostIdx = (uint8_t)CorrectTbl::RATE_SPELL;
         break;
     case 3:
@@ -1230,40 +1330,41 @@ bool SkillManager::CalculateDamage(const std::shared_ptr<ActiveEntityState>& sou
         rateBoostIdx = (uint8_t)CorrectTbl::RATE_SUPPORT;
         break;
     case 6:
-        off = (uint16_t)(source->GetLNGR() + source->GetMAGIC() / 2);
+        off = (uint16_t)(source->GetLNGR() + source->GetSPELL() / 2);
         rateBoostIdx = (uint8_t)CorrectTbl::RATE_LNGR;
         break;
     case 7:
-        off = (uint16_t)(source->GetMAGIC() + source->GetCLSR() / 2);
-        rateBoostIdx = (uint8_t)CorrectTbl::RATE_MAG;
+        off = (uint16_t)(source->GetSPELL() + source->GetCLSR() / 2);
+        rateBoostIdx = (uint8_t)CorrectTbl::RATE_SPELL;
         break;
     case 8:
-        off = (uint16_t)(source->GetMAGIC() + source->GetLNGR() / 2);
+        off = (uint16_t)(source->GetSPELL() + source->GetLNGR() / 2);
         rateBoostIdx = (uint8_t)CorrectTbl::RATE_SPELL;
         break;
     case 9:
         off = (uint16_t)(source->GetCLSR() + source->GetLNGR()
-            + source->GetMAGIC());
+            + source->GetSPELL());
         rateBoostIdx = (uint8_t)CorrectTbl::RATE_CLSR;
         break;
     case 10:
         off = (uint16_t)(source->GetLNGR() + source->GetCLSR()
-            + source->GetMAGIC());
+            + source->GetSPELL());
         rateBoostIdx = (uint8_t)CorrectTbl::RATE_LNGR;
         break;
     case 11:
-        off = (uint16_t)(source->GetMAGIC() + source->GetCLSR()
+        off = (uint16_t)(source->GetSPELL() + source->GetCLSR()
             + source->GetLNGR());
         rateBoostIdx = (uint8_t)CorrectTbl::RATE_SPELL;
         break;
     case 12:
-        off = (uint16_t)(source->GetCLSR() + source->GetMAGIC() / 2);
+        off = (uint16_t)(source->GetCLSR() + source->GetSPELL() / 2);
         rateBoostIdx = (uint8_t)CorrectTbl::RATE_CLSR;
         break;
     case 5:
     default:
         LOG_ERROR(libcomp::String("Invalid dependency type for"
-            " damage calculation encountered: %1\n").Arg(dependencyType));
+            " damage calculation encountered: %1\n")
+            .Arg(skill.EffectiveDependencyType));
         return false;
     }
 
@@ -1280,19 +1381,11 @@ bool SkillManager::CalculateDamage(const std::shared_ptr<ActiveEntityState>& sou
             (source->GetCorrectValue(CorrectTbl::RATE_HEAL) * 0.01));
     }
 
-    if(skillAffinity == 0 || skillAffinity > 22)
-    {
-        LOG_ERROR(libcomp::String("Invalid affinity type for"
-            " damage calculation encountered: %1\n").Arg(skillAffinity));
-        return false;
-    }
-
-    CorrectTbl boostCorrectType = (CorrectTbl)(skillAffinity + BOOST_OFFSET);
-    CorrectTbl resistCorrectType = (CorrectTbl)(skillAffinity + RES_OFFSET);
-    //CorrectTbl nraCorrectType = (CorrectTbl)(skillAffinity + NRA_OFFSET);
+    CorrectTbl boostCorrectType = (CorrectTbl)(skill.EffectiveAffinity + BOOST_OFFSET);
+    CorrectTbl resistCorrectType = (CorrectTbl)(skill.EffectiveAffinity + RES_OFFSET);
 
     float boost = (float)(source->GetCorrectValue(boostCorrectType) * 0.01);
-    if(boost <= -100.f)
+    if(boost < -100.f)
     {
         boost = -100.f;
     }
@@ -1301,6 +1394,8 @@ bool SkillManager::CalculateDamage(const std::shared_ptr<ActiveEntityState>& sou
 
     for(SkillTargetResult& target : targets)
     {
+        if(target.DamageFlags1 & (FLAG1_BLOCK | FLAG1_REFLECT)) continue;
+
         uint16_t mod1 = damageData->GetModifier1();
         uint16_t mod2 = damageData->GetModifier2();
 
@@ -1312,7 +1407,7 @@ bool SkillManager::CalculateDamage(const std::shared_ptr<ActiveEntityState>& sou
         case objects::MiBattleDamageData::Formula_t::HEAL_NORMAL:
             {
                 uint16_t def = 0;
-                switch(effectiveType)
+                switch(skill.EffectiveDependencyType)
                 {
                 case 0:
                 case 1:
@@ -1346,9 +1441,11 @@ bool SkillManager::CalculateDamage(const std::shared_ptr<ActiveEntityState>& sou
 
                 float resist = (float)
                     (target.EntityState->GetCorrectValue(resistCorrectType) * 0.01);
-                /*float nra = (float)
-                    (target.EntityState->GetCorrectValue(nraCorrectType) * 0.01);*/
-                /// @todo: implement NRA
+                if(target.DamageFlags1 & FLAG1_ABSORB)
+                {
+                    // Resistance is not applied during absorption
+                    resist = 0;
+                }
 
                 target.Damage1 = CalculateDamage_Normal(
                     mod1, target.Damage1Type, off, def,
@@ -1357,35 +1454,39 @@ bool SkillManager::CalculateDamage(const std::shared_ptr<ActiveEntityState>& sou
                     mod2, target.Damage2Type, off, def,
                     resist, boost, critLevel);
 
-                // Set crit-level adjustment flags
-                switch(critLevel)
+                // Crits, protect and weakpoint do not apply to healing
+                if(!isHeal && (target.DamageFlags1 & FLAG1_ABSORB) == 0)
                 {
-                    case 1:
-                        target.DamageFlags1 |= FLAG1_CRITICAL;
-                        break;
-                    case 2:
-                        if(target.Damage1 >= 30000 ||
-                            target.Damage2 >= 30000)
-                        {
-                            target.DamageFlags2 |= FLAG2_INTENSIVE_BREAK;
-                        }
-                        else
-                        {
-                            target.DamageFlags2 |= FLAG2_LIMIT_BREAK;
-                        }
-                        break;
-                    default:
-                        break;
-                }
+                    // Set crit-level adjustment flags
+                    switch(critLevel)
+                    {
+                        case 1:
+                            target.DamageFlags1 |= FLAG1_CRITICAL;
+                            break;
+                        case 2:
+                            if(target.Damage1 >= 30000 ||
+                                target.Damage2 >= 30000)
+                            {
+                                target.DamageFlags2 |= FLAG2_INTENSIVE_BREAK;
+                            }
+                            else
+                            {
+                                target.DamageFlags2 |= FLAG2_LIMIT_BREAK;
+                            }
+                            break;
+                        default:
+                            break;
+                    }
 
-                // Set resistence flags
-                if(resist >= 0.5f)
-                {
-                    target.DamageFlags1 |= FLAG1_PROTECT;
-                }
-                else if(resist <= -0.5f)
-                {
-                    target.DamageFlags1 |= FLAG1_WEAKPOINT;
+                    // Set resistence flags
+                    if(resist >= 0.5f)
+                    {
+                        target.DamageFlags1 |= FLAG1_PROTECT;
+                    }
+                    else if(resist <= -0.5f)
+                    {
+                        target.DamageFlags1 |= FLAG1_WEAKPOINT;
+                    }
                 }
             }
             break;
@@ -1471,7 +1572,7 @@ bool SkillManager::CalculateDamage(const std::shared_ptr<ActiveEntityState>& sou
         }
 
         // If the damage was actually a heal, invert the amount and change the type
-        if(isHeal)
+        if(isHeal || (target.DamageFlags1 & FLAG1_ABSORB))
         {
             target.Damage1 = target.Damage1 * -1;
             target.Damage2 = target.Damage2 * -1;
@@ -1519,19 +1620,8 @@ int32_t SkillManager::CalculateDamage_Normal(uint16_t mod, uint8_t& damageType,
         // max damage factor
         calc = calc * scale;
 
-        if(resist != 0.f)
-        {
-            if(resist < 0.f)
-            {
-                // Multiply by 100% + -resistance
-                calc = calc * (1.f + resist * -1.f);
-            }
-            else
-            {
-                // Divide by 100% + resistance
-                calc = (float)(calc / (1.f + resist));
-            }
-        }
+        // Multiply by 100% + -resistance
+        calc = calc * (1 + resist * -1.f);
 
         // Multiply by 100% + boost
         calc = calc * (1.f + boost);
@@ -1587,6 +1677,43 @@ int32_t SkillManager::CalculateDamage_MaxPercent(uint16_t mod, uint8_t& damageTy
     }
 
     return amount;
+}
+
+bool SkillManager::SetNRA(SkillTargetResult& target, ProcessingSkill& skill)
+{
+    // Calculate affinity checks for both base and effective values if they differ
+    std::list<CorrectTbl> affinities;
+    if(skill.BaseAffinity != skill.EffectiveAffinity)
+    {
+        affinities.push_back((CorrectTbl)(skill.BaseAffinity + NRA_OFFSET));
+    }
+    affinities.push_back((CorrectTbl)(skill.EffectiveAffinity + NRA_OFFSET));
+
+    for(CorrectTbl affinity : affinities)
+    {
+        for(auto nraIdx : { NRA_ABSORB, NRA_REFLECT, NRA_NULL })
+        {
+            int16_t chance = target.EntityState->GetNRAChance((uint8_t)nraIdx, affinity);
+            if(chance > 0 && (rand() % 100) <= chance)
+            {
+                switch(nraIdx)
+                {
+                case NRA_NULL:
+                    target.DamageFlags1 |= FLAG1_BLOCK;
+                    return false;
+                case NRA_ABSORB:
+                    target.DamageFlags1 |= FLAG1_ABSORB;
+                    return false;
+                case NRA_REFLECT:
+                default:
+                    target.DamageFlags1 |= FLAG1_REFLECT;
+                    return true;
+                }
+            }
+        }
+    }
+
+    return false;
 }
 
 void SkillManager::FinalizeSkillExecution(const std::shared_ptr<ChannelClientConnection> client,

@@ -219,6 +219,10 @@ void ZoneManager::LeaveZone(const std::shared_ptr<ChannelClientConnection>& clie
         characterManager->EndTrade(client);
     }
 
+    // Remove any opponents
+    characterManager->AddRemoveOpponent(false, cState, nullptr);
+    characterManager->AddRemoveOpponent(false, dState, nullptr);
+
     bool instanceRemoved = false;
     std::shared_ptr<Zone> zone = nullptr;
     {
@@ -273,10 +277,6 @@ void ZoneManager::LeaveZone(const std::shared_ptr<ChannelClientConnection>& clie
     dState->SetStatusEffectsActive(false, definitionManager);
     characterManager->UpdateStatusEffects(cState, !logOut);
     characterManager->UpdateStatusEffects(dState, !logOut);
-
-    // Remove any opponents
-    characterManager->AddRemoveOpponent(false, cState, nullptr);
-    characterManager->AddRemoveOpponent(false, dState, nullptr);
 }
 
 void ZoneManager::SendPopulateZoneData(const std::shared_ptr<ChannelClientConnection>& client)

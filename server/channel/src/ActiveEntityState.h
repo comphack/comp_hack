@@ -407,6 +407,19 @@ public:
      */
     size_t AddRemoveOpponent(bool add, int32_t opponentID);
 
+    /**
+     * Get the entity's chance to null, reflect or absorb the specified affinity.
+     * @param nraIdx Correct table index for affinity NRA
+     *  1) Null
+     *  2) Reflect
+     *  3) Absorb
+     *  Defines exist in the Constants header for each of these.
+     * @param type Correct table type of the affinity to retrieve
+     * @return Integer representation of the chance to avoid affinity damage, 0
+     *  if the supplied values are invalid
+     */
+    int16_t GetNRAChance(uint8_t nraIdx, CorrectTbl type);
+
 protected:
     /**
      * Set the status effects currently on the entity
@@ -473,10 +486,22 @@ protected:
      * @param stats Output map parameter of base or calculated stats to adjust for
      *  the current entity
      * @param baseMode If true only base stat correct table types will be adjusted,
-     *  if false only the non-base stat correct table types will be adjusted
+     *  if false only the non-base stat correct table types will be adjusted and NRA
+     *  values will be updated immediately.
      */
     void AdjustStats(const std::list<std::shared_ptr<objects::MiCorrectTbl>>& adjustments,
-        libcomp::EnumMap<CorrectTbl, int16_t>& stats, bool baseMode) const;
+        libcomp::EnumMap<CorrectTbl, int16_t>& stats, bool baseMode);
+
+    /**
+     * Update the entity's calculated NRA chances for each affinity from base and
+     * equipment values. NRA chances will further be modified for status effects
+     * within AdjustStats during the calculated stat mode.
+     * @param stats Map containing the base NRA values
+     * @param adjustments List of adjustments to the correct table values supplied
+     *  by equipment
+     */
+    void UpdateNRAChances(libcomp::EnumMap<CorrectTbl, int16_t>& stats,
+        const std::list<std::shared_ptr<objects::MiCorrectTbl>>& adjustments = {});
 
     /**
      * Get the correct table value adjustments from the entity's current status effects.
@@ -539,6 +564,15 @@ protected:
     /// fighting. If an entity is in this set, this entity should be in their
     /// set as well.
     std::set<int32_t> mOpponentIDs;
+
+    /// Map of affinity null chances by correct table ID
+    libcomp::EnumMap<CorrectTbl, int16_t> mNullMap;
+
+    /// Map of affinity reflect chances by correct table ID
+    libcomp::EnumMap<CorrectTbl, int16_t> mReflectMap;
+
+    /// Map of affinity absorb chances by correct table ID
+    libcomp::EnumMap<CorrectTbl, int16_t> mAbsorbMap;
 
     /// true if the status effects have been activated for the current zone
     bool mEffectsActive;

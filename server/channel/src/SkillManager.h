@@ -39,6 +39,7 @@ class MiSkillData;
 namespace channel
 {
 
+class ProcessingSkill;
 class SkillTargetResult;
 class ActiveEntityState;
 class ChannelServer;
@@ -138,13 +139,12 @@ private:
      * @param source Pointer to the entity that activated the skill
      * @param activated Pointer to the activated ability instance
      * @param targets List target results associated to the skill
-     * @param skillData Pointer to skill definition
+     * @param skill Current skill processing state
      * @return true if the calculation succeeded, false otherwise
      */
     bool CalculateDamage(const std::shared_ptr<ActiveEntityState>& source,
         const std::shared_ptr<objects::ActivatedAbility>& activated,
-        std::list<SkillTargetResult>& targets,
-        const std::shared_ptr<objects::MiSkillData>& skillData);
+        std::list<SkillTargetResult>& targets, ProcessingSkill& skill);
 
     /**
      * Calculate skill damage or healing using the default formula
@@ -189,6 +189,14 @@ private:
      */
     int32_t CalculateDamage_MaxPercent(uint16_t mod, uint8_t& damageType,
         int16_t max);
+
+    /**
+     * Set null, reflect or absorb on the skill target
+     * @param target Target to update with NRA flags
+     * @param skill Current skill processing state
+     * @return true if the damage was reflected, otherwise false
+     */
+    bool SetNRA(SkillTargetResult& target, ProcessingSkill& skill);
 
     /**
      * Execute post execution steps like notifying the client that the skill

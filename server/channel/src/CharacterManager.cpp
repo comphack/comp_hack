@@ -1451,7 +1451,7 @@ bool CharacterManager::UnequipItem(const std::shared_ptr<
     if(def)
     {
         int8_t equipType = (int8_t)def->GetBasic()->GetEquipType();
-        if(equipType > 0 &&
+        if(equipType >= 0 &&
             character->GetEquippedItems((size_t)equipType).Get() == item)
         {
             auto objID = state->GetObjectID(item->GetUUID());

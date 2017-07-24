@@ -215,6 +215,15 @@ namespace libcomp
 /// Macca note value
 #define ITEM_MACCA_NOTE_AMOUNT (50000)
 
+/// Mode specifier for affinity nullification in the correct table
+#define NRA_NULL (1)
+
+/// Mode specifier for affinity reflection in the correct table
+#define NRA_REFLECT (2)
+
+/// Mode specifier for affinity absorption in the correct table
+#define NRA_ABSORB (3)
+
 /// Experience required to proceed from the indexed level to the next
 const unsigned long long LEVEL_XP_REQUIREMENTS[] = {
     0ULL,               // 0->1

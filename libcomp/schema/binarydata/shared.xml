@@ -95,8 +95,8 @@
             <value num="47">RES_SPECIAL</value>
             <!-- 自爆耐性 - Self-Destruct Resistance -->
             <value num="48">RES_SUICIDE</value>
-            <!-- 火炎(無効/反射/吸収) - Null/Reflect/Absorb Fire (Rarely Used) -->
-            <value num="50">NRA_FIRE_2</value>
+            <!-- 武器(無効/反射/吸収) - Null/Reflect/Absorb Weapon -->
+            <value num="50">NRA_WEAPON</value>
             <!-- 斬撃(無効/反射/吸収) - Null/Reflect/Absorb Slash -->
             <value num="51">NRA_SLASH</value>
             <!-- 突撃(無効/反射/吸収) - Null/Reflect/Absorb Thrust -->
@@ -139,10 +139,10 @@
             <value num="70">NRA_SPECIAL</value>
             <!-- 特殊(無効/反射/吸収) - Null/Reflect/Absorb Self-Destruct -->
             <value num="71">NRA_SUICIDE</value>
-            <!-- 魔法(無効/反射/吸収) - Null/Reflect/Absorb Magic -->
-            <value num="72">NRA_MAG</value>
             <!-- 物理(無効/反射/吸収) - Null/Reflect/Absorb Physical -->
-            <value num="73">NRA_PHYS</value>
+            <value num="72">NRA_PHYS</value>
+            <!-- 魔法(無効/反射/吸収) - Null/Reflect/Absorb Magic -->
+            <value num="73">NRA_MAGIC</value>
             <!-- クールタイム - Cool time -->
             <value num="78">COOLDOWN_TIME</value>
             <!-- 状態変化抵抗 - Resistance to Status Effects -->
@@ -174,7 +174,7 @@
             <!-- 被援助ダメージ - Support "Damage" Received -->
             <value num="92">RATE_SUPPORT_TAKEN</value>
             <!-- 被回復量 - Healing "Damage" Received -->
-            <value num="95">RATE_HEAL_TAKEN</value>
+            <value num="93">RATE_HEAL_TAKEN</value>
             <!-- 斬撃高揚 - Slash Boost -->
             <value num="96">BOOST_SLASH</value>
             <!-- 突撃高揚 - Thrust Boost -->
@@ -226,10 +226,7 @@
             <!-- 防御拡張２ - Defense Expansion 2 -->
             <value num="120">DEFENSE_EXPAND_2</value>
         </member>
-        <member type="enum" name="Type" underlying="uint8_t" default="NUMERIC">
-            <value>NUMERIC</value>
-            <value>PERCENT</value>
-        </member>
+        <member type="u8" name="Type"/>
         <member type="s16" name="Value"/>
     </object>
     <object name="MiSkillItemStatusCommonData" persistent="false"

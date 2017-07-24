@@ -558,8 +558,7 @@ std::set<uint32_t> ActiveEntityState::AddStatusEffects(const AddStatusEffectMap&
             libcomp::EnumMap<CorrectTbl, std::unordered_map<bool, uint8_t>> cancelMap;
             for(auto c : common->GetCorrectTbl())
             {
-                if(c->GetValue() == 0 ||
-                    c->GetType() == objects::MiCorrectTbl::Type_t::PERCENT)
+                if(c->GetValue() == 0 || c->GetType() == 1)
                 {
                     canCancel = false;
                     cancelMap.clear();
@@ -608,8 +607,7 @@ std::set<uint32_t> ActiveEntityState::AddStatusEffects(const AddStatusEffectMap&
                     libcomp::EnumMap<CorrectTbl, std::unordered_map<bool, uint8_t>> exCancelMap;
                     for(auto c : exCommon->GetCorrectTbl())
                     {
-                        if(c->GetValue() == 0 ||
-                            c->GetType() == objects::MiCorrectTbl::Type_t::PERCENT)
+                        if(c->GetValue() == 0 || c->GetType() == 1)
                         {
                             exCancel = false;
                             break;
@@ -1091,6 +1089,28 @@ size_t ActiveEntityState::AddRemoveOpponent(bool add, int32_t opponentID)
     return mOpponentIDs.size();
 }
 
+int16_t ActiveEntityState::GetNRAChance(uint8_t nraIdx, CorrectTbl type)
+{
+    libcomp::EnumMap<CorrectTbl, int16_t>* map;
+    switch(nraIdx)
+    {
+    case NRA_NULL:
+        map = &mNullMap;
+        break;
+    case NRA_REFLECT:
+        map = &mReflectMap;
+        break;
+    case NRA_ABSORB:
+        map = &mAbsorbMap;
+        break;
+    default:
+        return 0;
+    }
+
+    auto it = map->find(type);
+    return it != map->end() ? it->second : 0;
+}
+
 void ActiveEntityState::SetStatusEffects(
     const std::list<libcomp::ObjectReference<objects::StatusEffect>>& effects)
 {
@@ -1357,6 +1377,7 @@ uint8_t ActiveEntityStateImp<objects::Character>::RecalculateStats(
     }
 
     std::list<std::shared_ptr<objects::MiCorrectTbl>> correctTbls;
+    std::list<std::shared_ptr<objects::MiCorrectTbl>> nraTbls;
     for(auto equip : c->GetEquippedItems())
     {
         if(!equip.IsNull())
@@ -1364,13 +1385,22 @@ uint8_t ActiveEntityStateImp<objects::Character>::RecalculateStats(
             auto itemData = definitionManager->GetItemData(equip->GetType());
             for(auto ct : itemData->GetCommon()->GetCorrectTbl())
             {
-                correctTbls.push_back(ct);
+                if((uint8_t)ct->GetID() >= (uint8_t)CorrectTbl::NRA_WEAPON &&
+                    (uint8_t)ct->GetID() <= (uint8_t)CorrectTbl::NRA_MAGIC)
+                {
+                    nraTbls.push_back(ct);
+                }
+                else
+                {
+                    correctTbls.push_back(ct);
+                }
             }
         }
     }
 
     GetStatusEffectCorrectTbls(definitionManager, correctTbls);
 
+    UpdateNRAChances(stats, nraTbls);
     AdjustStats(correctTbls, stats, true);
     CharacterManager::CalculateDependentStats(stats, cs->GetLevel(), false);
     AdjustStats(correctTbls, stats, false);
@@ -1418,7 +1448,7 @@ const std::set<CorrectTbl> BASE_STATS =
 
 void ActiveEntityState::AdjustStats(
     const std::list<std::shared_ptr<objects::MiCorrectTbl>>& adjustments,
-    libcomp::EnumMap<CorrectTbl, int16_t>& stats, bool baseMode) const
+    libcomp::EnumMap<CorrectTbl, int16_t>& stats, bool baseMode)
 {
     std::set<CorrectTbl> removed;
     for(auto ct : adjustments)
@@ -1430,32 +1460,151 @@ void ActiveEntityState::AdjustStats(
 
         // If a value is reduced to 0%, leave it
         if(removed.find(tblID) != removed.end()) continue;
-
-        switch(ct->GetType())
+        
+        if((uint8_t)tblID >= (uint8_t)CorrectTbl::NRA_WEAPON &&
+            (uint8_t)tblID <= (uint8_t)CorrectTbl::NRA_MAGIC)
         {
-        case objects::MiCorrectTbl::Type_t::PERCENT:
-            // Percentage sets can either be an immutable set to zero
-            // or an increase/decrease by a set amount
-            if(ct->GetValue() == 0)
+            // NRA is calculated differently from everything else
+            if(ct->GetType() == 0)
             {
-                removed.insert(tblID);
-                stats[tblID] = 0;
+                // For type 0, the NRA value becomes 100% and CANNOT be reduced.
+                switch(ct->GetValue())
+                {
+                case NRA_NULL:
+                    removed.insert(tblID);
+                    mNullMap[tblID] = 100;
+                    break;
+                case NRA_REFLECT:
+                    removed.insert(tblID);
+                    mReflectMap[tblID] = 100;
+                    break;
+                case NRA_ABSORB:
+                    removed.insert(tblID);
+                    mAbsorbMap[tblID] = 100;
+                    break;
+                default:
+                    break;
+                }
             }
             else
             {
-                stats[tblID] = (int16_t)(stats[tblID] +
-                    (int16_t)(stats[tblID] * (ct->GetValue() * 0.01)));
+                // For other types, reduce the value by 2 to get the NRA index
+                // and add the value supplied.
+                libcomp::EnumMap<CorrectTbl, int16_t>* m = nullptr;
+                switch(ct->GetType())
+                {
+                case (NRA_NULL + 2):
+                    m = &mNullMap;
+                    break;
+                case (NRA_REFLECT + 2):
+                    m = &mReflectMap;
+                    break;
+                case (NRA_ABSORB + 2):
+                    m = &mAbsorbMap;
+                    break;
+                default:
+                    break;
+                }
+
+                if(m)
+                {
+                    if(m->find(tblID) == m->end())
+                    {
+                        (*m)[tblID] = 0;
+                    }
+
+                    (*m)[tblID] = (int16_t)((*m)[tblID] + ct->GetValue());
+                }
             }
+        }
+        else
+        {
+            switch(ct->GetType())
+            {
+            case 1:
+                // Percentage sets can either be an immutable set to zero
+                // or an increase/decrease by a set amount
+                if(ct->GetValue() == 0)
+                {
+                    removed.insert(tblID);
+                    stats[tblID] = 0;
+                }
+                else
+                {
+                    stats[tblID] = (int16_t)(stats[tblID] +
+                        (int16_t)(stats[tblID] * (ct->GetValue() * 0.01)));
+                }
+                break;
+            case 0:
+                stats[tblID] = (int16_t)(stats[tblID] + ct->GetValue());
+                break;
+            default:
+                break;
+            }
+        }
+    }
+
+    CharacterManager::AdjustStatBounds(stats);
+}
+
+void ActiveEntityState::UpdateNRAChances(libcomp::EnumMap<CorrectTbl, int16_t>& stats,
+    const std::list<std::shared_ptr<objects::MiCorrectTbl>>& adjustments)
+{
+    // Clear existing values
+    mNullMap.clear();
+    mReflectMap.clear();
+    mAbsorbMap.clear();
+    
+    // Set from base
+    for(uint8_t x = (uint8_t)CorrectTbl::NRA_WEAPON;
+        x <= (uint8_t)CorrectTbl::NRA_MAGIC; x++)
+    {
+        CorrectTbl tblID = (CorrectTbl)x;
+        int16_t val = stats[tblID];
+        if(val > 0)
+        {
+            // Natural NRA is stored as NRA index in the 1s place and
+            // perccentage of success as the rest
+            float shift = (float)(val * 0.1f);
+            uint8_t nraIdx = (uint8_t)((shift - (float)floorl(val / 10)) * 10);
+            val = (int16_t)floorl(val / 10);
+            switch(nraIdx)
+            {
+                case NRA_NULL:
+                    mNullMap[tblID] = val;
+                    break;
+                case NRA_REFLECT:
+                    mReflectMap[tblID] = val;
+                    break;
+                case NRA_ABSORB:
+                    mAbsorbMap[tblID] = val;
+                    break;
+                default:
+                    break;
+            }
+        }
+    }
+
+    // Equipment adjustments use type equal to the NRA index and
+    // relative value to add
+    for(auto ct : adjustments)
+    {
+        auto tblID = ct->GetID();
+        switch(ct->GetType())
+        {
+        case NRA_NULL:
+            mNullMap[tblID] = (int16_t)(mNullMap[tblID] + ct->GetValue());
             break;
-        case objects::MiCorrectTbl::Type_t::NUMERIC:
-            stats[tblID] = (int16_t)(stats[tblID] + ct->GetValue());
+        case NRA_REFLECT:
+            mReflectMap[tblID] = (int16_t)(mReflectMap[tblID] + ct->GetValue());
+            break;
+        case NRA_ABSORB:
+            mAbsorbMap[tblID] = (int16_t)(mAbsorbMap[tblID] + ct->GetValue());
             break;
         default:
             break;
         }
     }
-
-    CharacterManager::AdjustStatBounds(stats);
 }
 
 void ActiveEntityState::GetStatusEffectCorrectTbls(
@@ -1480,9 +1629,9 @@ void ActiveEntityState::GetStatusEffectCorrectTbls(
     adjustments.sort([](const std::shared_ptr<objects::MiCorrectTbl>& a,
         const std::shared_ptr<objects::MiCorrectTbl>& b)
     {
-        return a->GetType() == objects::MiCorrectTbl::Type_t::PERCENT &&
+        return a->GetType() == 1 &&
             (a->GetValue() == 0 ||
-            b->GetType() != objects::MiCorrectTbl::Type_t::PERCENT);
+            b->GetType() != 1);
     });
 }
 
@@ -1518,6 +1667,7 @@ uint8_t ActiveEntityState::RecalculateDemonStats(
     std::list<std::shared_ptr<objects::MiCorrectTbl>> correctTbls;
     GetStatusEffectCorrectTbls(definitionManager, correctTbls);
 
+    UpdateNRAChances(stats);
     AdjustStats(correctTbls, stats, true);
     CharacterManager::CalculateDependentStats(stats, cs->GetLevel(), true);
     AdjustStats(correctTbls, stats, false);

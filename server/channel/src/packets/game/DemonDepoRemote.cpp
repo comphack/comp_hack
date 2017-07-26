@@ -30,6 +30,7 @@
 #include <ManagerPacket.h>
 #include <Packet.h>
 #include <PacketCodes.h>
+#include <ServerConstants.h>
 
 // channel Includes
 #include "ChannelServer.h"
@@ -51,8 +52,7 @@ bool Parsers::DemonDepoRemote::Parse(libcomp::ManagerPacket *pPacketManager,
     auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
     auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
 
-    /// @todo: replace the menu packet with a scripted binding
-    server->GetEventManager()->HandleEvent(client, "event_demonDepo", 0);
+    server->GetEventManager()->HandleEvent(client, SVR_CONST.EVENT_MENU_DEMON_DEPO, 0);
 
     libcomp::Packet reply;
     reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_DEMON_DEPO_REMOTE);

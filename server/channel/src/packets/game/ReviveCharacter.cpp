@@ -32,6 +32,7 @@
 #include <ManagerPacket.h>
 #include <Packet.h>
 #include <PacketCodes.h>
+#include <ServerConstants.h>
 
 // Standard C++11 Includes
 #include <math.h>
@@ -132,15 +133,13 @@ bool Parsers::ReviveCharacter::Parse(libcomp::ManagerPacket *pPacketManager,
         break;
     case 107:   // Item revival
         {
-            /// @todo: replace hardcoded value
-            const static uint32_t itemType = 101;
-
             auto items = characterManager->GetExistingItems(character,
-                itemType, character->GetItemBoxes(0).Get());
+                SVR_CONST.ITEM_BALM_OF_LIFE, character->GetItemBoxes(0).Get());
 
             if(items.size() > 0)
             {
-                characterManager->AddRemoveItem(client, itemType, 1, false);
+                characterManager->AddRemoveItem(client,
+                    SVR_CONST.ITEM_BALM_OF_LIFE, 1, false);
                 responseType1 = REVIVAL_REVIVE_NORMAL;
                 hpRestore = 1.f;
             }
@@ -183,15 +182,30 @@ bool Parsers::ReviveCharacter::Parse(libcomp::ManagerPacket *pPacketManager,
         state->SetAcceptRevival(false);
     }
 
-    characterManager->SendEntityRevival(client, cState, responseType1,
-        responseType1 == REVIVAL_REVIVE_NORMAL ||
+    libcomp::Packet reply;
+    characterManager->GetEntityRevivalPacket(reply, cState, responseType1);
+
+    if(responseType1 == REVIVAL_REVIVE_NORMAL ||
         responseType1 == REVIVAL_REVIVE_ACCEPT ||
-        responseType1 == REVIVAL_REVIVE_DENY);
+        responseType1 == REVIVAL_REVIVE_DENY)
+    {
+        zoneManager->BroadcastPacket(client, reply);
+    }
+    else
+    {
+        client->QueuePacket(reply);
+    }
 
     if(newZoneID)
     {
+        reply.Clear();
         zoneManager->EnterZone(client, newZoneID, newX, newY, newRot, true);
-        characterManager->SendEntityRevival(client, cState, responseType2, true);
+        characterManager->GetEntityRevivalPacket(reply, cState, responseType2);
+        zoneManager->BroadcastPacket(client, reply);
+    }
+    else
+    {
+        client->FlushOutgoing();
     }
 
     return true;

@@ -195,6 +195,9 @@ enum class ChannelToClientPacketCode_t : uint16_t
     PACKET_SKILL_EXECUTING = 0x0036, //!< Response from skill activation request to execute a skill.
     PACKET_SKILL_FAILED = 0x0037,  //!< Response from skill activation request that execution has failed.
     PACKET_SKILL_REPORTS = 0x0038,  //!< Response from skill activation reporting what has been updated.
+    PACKET_BATTLE_STARTED = 0x003B, //!< Notifies the client that an entity has entered into a battle.
+    PACKET_BATTLE_STOPPED = 0x003C, //!< Notifies the client that an entity is no longer in battle.
+    PACKET_ENEMY_ACTIVATED = 0x0041, //!< Notifies the client that an enemy has become activate.
     PACKET_DO_TDAMAGE = 0x0043, //!< Notifies the client that "time" damage has been dealt to an entity.
     PACKET_ADD_STATUS_EFFECT = 0x0044, //!< Notifies the client that an entity has gained a status effect.
     PACKET_REMOVE_STATUS_EFFECT = 0x0045, //!< Notifies the client that an entity has lost a status effect.

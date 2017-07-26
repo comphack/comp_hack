@@ -31,6 +31,7 @@
 #include <ManagerPacket.h>
 #include <Packet.h>
 #include <PacketCodes.h>
+#include <ServerConstants.h>
 
 // Standard C++11 Includes
 #include <math.h>
@@ -103,32 +104,34 @@ bool ProcessDemonFusion(const std::shared_ptr<ChannelServer>& server,
         /// @todo: support plugins
         if(special->GetPluginID() > 0) continue;
 
-        bool match = true;
-        for(auto source : { special->GetSourceID1(), special->GetSourceID2(),
-            special->GetSourceID3() })
-        {
-            if(!source) continue;
+        // Map of source ID to its "variant allowed" value
+        std::unordered_map<uint32_t, bool> sourceMap;
+        sourceMap[special->GetSourceID1()] = special->GetVariant1Allowed() == 1;
+        sourceMap[special->GetSourceID2()] = special->GetVariant2Allowed() == 1;
+        sourceMap[special->GetSourceID3()] = special->GetVariant3Allowed() == 1;
 
-            auto sourceID = special->GetSourceID1();
-            if(sourceID)
+        bool match = true;
+        for(auto sourcePair : sourceMap)
+        {
+            uint32_t sourceID = sourcePair.first;
+            if(!sourceID) continue;
+
+            if(sourcePair.second)
             {
-                if(special->GetVariant1Allowed())
-                {
-                    auto specialDef = definitionManager->GetDevilData(sourceID);
-                    auto sourceBaseDemonType = specialDef->GetUnionData()
-                        ->GetBaseDemonID();
-                    if(baseDemonType1 != sourceBaseDemonType &&
-                        baseDemonType2 != sourceBaseDemonType)
-                    {
-                        match = false;
-                        break;
-                    }
-                }
-                else if(sourceID != demonType1 && sourceID != demonType2)
+                auto specialDef = definitionManager->GetDevilData(sourceID);
+                auto sourceBaseDemonType = specialDef->GetUnionData()
+                    ->GetBaseDemonID();
+                if(baseDemonType1 != sourceBaseDemonType &&
+                    baseDemonType2 != sourceBaseDemonType)
                 {
                     match = false;
                     break;
                 }
+            }
+            else if(sourceID != demonType1 && sourceID != demonType2)
+            {
+                match = false;
+                break;
             }
         }
 
@@ -139,6 +142,14 @@ bool ProcessDemonFusion(const std::shared_ptr<ChannelServer>& server,
         }
     }
 
+    const static uint32_t FUSION_ELEMENTAL_TYPES[] =
+        {
+            SVR_CONST.ELEMENTAL_1_FLAEMIS,
+            SVR_CONST.ELEMENTAL_2_AQUANS,
+            SVR_CONST.ELEMENTAL_3_AEROS,
+            SVR_CONST.ELEMENTAL_4_ERTHYS
+        };
+
     uint32_t resultDemonType = 0;
     if(specialFusion)
     {
@@ -146,8 +157,8 @@ bool ProcessDemonFusion(const std::shared_ptr<ChannelServer>& server,
     }
     else
     {
-        uint8_t race1 = def1->GetCategory()->GetRace();
-        uint8_t race2 = def2->GetCategory()->GetRace();
+        uint8_t race1 = (uint8_t)def1->GetCategory()->GetRace();
+        uint8_t race2 = (uint8_t)def2->GetCategory()->GetRace();
 
         // Get the race axis mappings from the first map row
         size_t race1Idx = 0, race2Idx = 0;

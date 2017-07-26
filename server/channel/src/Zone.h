@@ -114,12 +114,28 @@ public:
         std::shared_ptr<ChannelClientConnection>> GetConnections();
 
     /**
+     * Get all client connections in the zone as a list
+     * @return List of all client connections in the zone
+     */
+    std::list<std::shared_ptr<ChannelClientConnection>> GetConnectionList();
+
+    /**
      * Get an active entity in the zone by ID
      * @param entityID ID of the active entity to retrieve
      * @return Pointer to the active entity or null if does not exist or is
      *  not active
      */
-    const std::shared_ptr<ActiveEntityState> GetActiveEntityState(int32_t entityID);
+    const std::shared_ptr<ActiveEntityState> GetActiveEntity(int32_t entityID);
+
+    /**
+     * Get all active entities in the zone within a supplied radius
+     * @param x X coordinate of the center of the radius
+     * @param y Y coordinate of the center of the radius
+     * @param radius Radius to check for entities
+     * @return List of pointers to active entities in the radius
+     */
+    const std::list<std::shared_ptr<ActiveEntityState>>
+        GetActiveEntitiesInRadius(float x, float y, double radius);
 
     /**
      * Get an entity instance by it's ID.

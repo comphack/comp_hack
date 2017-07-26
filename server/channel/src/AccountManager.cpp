@@ -29,6 +29,7 @@
 // libcomp Includes
 #include <Log.h>
 #include <PacketCodes.h>
+#include <ServerConstants.h>
 
 // object Includes
 #include <Account.h>
@@ -345,7 +346,8 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
         }
 
         //Hacks to add MAG, a test demon and some starting skills
-        auto mag = characterManager->GenerateItem(ITEM_MAGNETITE, 5000);
+        auto mag = characterManager->GenerateItem(SVR_CONST.ITEM_MAGNETITE,
+            5000);
         mag->SetItemBox(box);
         mag->SetBoxSlot(49);
 

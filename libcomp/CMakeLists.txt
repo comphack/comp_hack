@@ -86,6 +86,7 @@ SET(${PROJECT_NAME}_SRCS
     src/RingBuffer.cpp
     src/ScriptEngine.cpp
     src/ServerCommandLineParser.cpp
+    src/ServerConstants.cpp
     src/ServerDataManager.cpp
     src/Shutdown.cpp
     #src/Structgen.cpp
@@ -180,6 +181,7 @@ SET(${PROJECT_NAME}_HDRS
     src/RingBuffer.h
     src/ScriptEngine.h
     src/ServerCommandLineParser.h
+    src/ServerConstants.h
     src/ServerDataManager.h
     src/Shutdown.h
     src/TcpConnection.h

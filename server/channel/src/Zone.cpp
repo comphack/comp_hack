@@ -26,6 +26,9 @@
 
 #include "Zone.h"
 
+// C++ Standard Includes
+#include <cmath>
+
 using namespace channel;
 
 Zone::Zone(uint32_t id, const std::shared_ptr<objects::ServerZone>& definition)
@@ -46,9 +49,6 @@ void Zone::AddConnection(const std::shared_ptr<ChannelClientConnection>& client)
 {
     auto cState = client->GetClientState()->GetCharacterState();
     auto dState = client->GetClientState()->GetDemonState();
-
-    cState->SetZone(this);
-    dState->SetZone(this);
 
     RegisterEntityState(cState);
     RegisterEntityState(dState);
@@ -102,9 +102,40 @@ std::unordered_map<int32_t,
     return mConnections;
 }
 
-const std::shared_ptr<ActiveEntityState> Zone::GetActiveEntityState(int32_t entityID)
+std::list<std::shared_ptr<ChannelClientConnection>> Zone::GetConnectionList()
+{
+    std::lock_guard<std::mutex> lock(mLock);
+    std::list<std::shared_ptr<ChannelClientConnection>> connections;
+    for(auto cPair : mConnections)
+    {
+        connections.push_back(cPair.second);
+    }
+    return connections;
+}
+
+const std::shared_ptr<ActiveEntityState> Zone::GetActiveEntity(int32_t entityID)
 {
     return std::dynamic_pointer_cast<ActiveEntityState>(GetEntity(entityID));
+}
+
+
+const std::list<std::shared_ptr<ActiveEntityState>>
+    Zone::GetActiveEntitiesInRadius(float x, float y, double radius)
+{
+    float rSquared = (float)std::pow(radius, 2);
+
+    std::lock_guard<std::mutex> lock(mLock);
+    std::list<std::shared_ptr<ActiveEntityState>> results;
+    for(auto ePair : mAllEntities)
+    {
+        auto active = std::dynamic_pointer_cast<ActiveEntityState>(ePair.second);
+        if(active && rSquared >= active->GetDistance(x, y, true))
+        {
+            results.push_back(active);
+        }
+    }
+
+    return results;
 }
 
 std::shared_ptr<EnemyState> Zone::GetEnemy(int32_t id)

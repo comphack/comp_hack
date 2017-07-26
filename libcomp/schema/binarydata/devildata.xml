@@ -19,7 +19,48 @@
     </object>
     <object name="MiDCategoryData" persistent="false">
         <member type="u8" name="family"/>
-        <member type="u8" name="race"/>
+        <member type="enum" name="race" underlying="uint8_t">
+            <value num="0">NONE</value>
+            <value num="1">SERAPHIM</value>
+            <value num="2">ENTITY</value>
+            <value num="3">DEMON_GOD</value>
+            <value num="4">VILE</value>
+            <value num="5">AVIAN</value>
+            <value num="6">GODDESS</value>
+            <value num="7">HEAVENLY_GOD</value>
+            <value num="8">RAPTOR</value>
+            <value num="9">DIVINE</value>
+            <value num="10">EVIL_DEMON</value>
+            <value num="11">WILD_BIRD</value>
+            <value num="12">YOMA</value>
+            <value num="13">EARTH_ELEMENT</value>
+            <value num="14">ELEMENTAL</value>
+            <value num="15">OTHER</value>
+            <value num="51">REAPER</value>
+            <value num="52">HOLY_BEAST</value>
+            <value num="53">BEAST</value>
+            <value num="54">FAIRY</value>
+            <value num="58">DEMIGOD</value>
+            <value num="59">WILDER</value>
+            <value num="60">DRAGON_KING</value>
+            <value num="61">NOCTURNE</value>
+            <value num="62">GODLY_BEAST</value>
+            <value num="63">INNOCENT</value>
+            <value num="64">HUMAN</value>
+            <value num="101">FOUL</value>
+            <value num="102">BRUTE</value>
+            <value num="103">HAUNT</value>
+            <value num="104">DRAGON</value>
+            <value num="105">FALLEN_ANGEL</value>
+            <value num="106">FEMME</value>
+            <value num="107">NATION_RULER</value>
+            <value num="108">EARTH_MOTHER</value>
+            <value num="109">EVIL_DRAGON</value>
+            <value num="110">GUARDIAN</value>
+            <value num="111">DESTROYER</value>
+            <value num="112">TYRANT</value>
+            <value num="113">GAIAN</value>
+        </member>
         <member type="u16" name="unused"/>
     </object>
     <object name="MiAIRelationData" persistent="false">

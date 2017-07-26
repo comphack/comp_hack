@@ -1,212 +1,1369 @@
 ﻿/**
- * @file server/channel/src/FusionTables.cpp
- * @ingroup channel
- *
- * @author HACKfrost
- *
- * @brief Tables used by fusion operations.
- *
- * This file is part of the channel Server (channel).
- *
- * Copyright (C) 2012-2016 COMP_hack Team <compomega@tutanota.com>
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as
- * published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
- *
- * You should have received a copy of the GNU Affero General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+* @file server/channel/src/FusionTables.cpp
+* @ingroup channel
+*
+* @author HACKfrost
+*
+* @brief Tables used by fusion operations.
+*
+* This file is part of the channel Server (channel).
+*
+* Copyright (C) 2012-2016 COMP_hack Team <compomega@tutanota.com>
+*
+* This program is free software: you can redistribute it and/or modify
+* it under the terms of the GNU Affero General Public License as
+* published by the Free Software Foundation, either version 3 of the
+* License, or (at your option) any later version.
+*
+* This program is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU Affero General Public License for more details.
+*
+* You should have received a copy of the GNU Affero General Public License
+* along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
  
- #include "FusionTables.h"
+#include "FusionTables.h"
+
+// object includes
+#include <MiDCategoryData.h>
+
+typedef objects::MiDCategoryData::Race_t RaceID;
 
 uint8_t FUSION_RACE_MAP[35][34] =
 {
-    // Idx Map
-    { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12,
-    13, 51, 52, 53, 54, 58, 59, 60, 61, 62, 101, 102,
-    103, 104, 105, 106, 107, 108, 109, 110, 111, 112 },
-    // 大天使
-    { 0, 6, 0, 9, 9, 108, 107, 51, 6, 0, 5, 6,
-    7, 0, 62, 0, 52, 6, 0, 0, 105, 5, 105, 0,
-    105, 52, 108, 0, 104, 7, 0, 107, 4, 105 },
-    // 威霊
-    { 6, 0, 6, 51, 7, 108, 110, 4, 6, 4, 5, 6,
-    107, 4, 110, 52, 9, 110, 102, 7, 102, 7, 0, 107,
-    0, 108, 110, 108, 104, 7, 0, 6, 108, 4 },
-    // 魔神
-    { 0, 6, 0, 110, 7, 7, 107, 4, 6, 0, 105, 58,
-    102, 0, 5, 62, 61, 0, 53, 110, 4, 104, 0, 110,
-    0, 107, 0, 108, 7, 0, 0, 7, 0, 0 },
-    // 邪神
-    { 9, 51, 110, 0, 51, 51, 0, 109, 51, 101, 109, 13,
-    103, 101, 0, 101, 8, 107, 101, 110, 103, 109, 103, 101,
-    101, 60, 102, 102, 51, 51, 59, 51, 51, 51 },
-    // 霊鳥
-    { 9, 7, 7, 51, /*E*/3, 7, 104, 0, 60, 8, 8, 61,
-    9, 8, 108, 60, 11, 7, 11, 7, 106, 52, 0, 58,
-    0, 62, 60, 6, 7, 104, 0, 104, 110, 0 },
-    // 女神
-    { 108, 108, 7, 51, 7, 0, 0, 105, 7, 106, 5, 106,
-    108, 4, 62, 52, 58, 7, 53, 54, 105, 53, 0, 106,
-    4, 62, 9, 108, 108, 0, 4, 108, 106, 0 },
-    // 天津神
-    { 107, 110, 107, 0, 104, 0, /*E*/2, 61, 5, 4, 5, 6,
-    107, 0, 62, 52, 9, 104, 106, 6, 105, 104, 103, 62,
-    0, 52, 11, 105, 0, 6, 0, 107, 107, 0 },
-    // 凶鳥
-    { 51, 4, 4, 109, 0, 105, 61, 0, 11, 101, 0, 10,
-    101, 109, 5, 60, 103, 52, 11, 101, 11, 59, 0, 106,
-    11, 59, 101, 101, 51, 60, 59, 4, 109, 104 },
-    // 天使
-    { 6, 6, 6, 51, 60, 7, 5, 11, /*E*/3, 51, 54, 60,
-    61, 8, 6, 52, 6, 6, 105, 54, 60, 6, 105, 12,
-    13, 6, 0, 53, 11, 6, 11, 108, 4, 4 },
-    // 邪鬼
-    { 0, 4, 0, 101, 8, 106, 4, 101, 51, 0, 102, 13,
-    53, 4, 8, 59, 102, 107, 102, 109, 105, 0, 102, 103,
-    101, 110, 109, 53, 4, 110, 4, 102, 0, 101 },
-    // 妖鳥
-    { 5, 5, 105, 109, 8, 5, 5, 0, 54, 102, /*E*/3, 9,
-    54, 8, 5, 59, 9, 5, 101, 53, 102, 5, 0, 8,
-    12, 7, 8, 10, 108, 5, 8, 106, 108, 109 },
-    // 妖魔
-    { 6, 6, 58, 13, 61, 106, 6, 10, 60, 13, 9, /*E*/2,
-    59, 13, 9, 105, 13, 0, 10, 61, 9, 9, 11, 106,
-    13, 62, 13, 102, 106, 61, 60, 107, 58, 61 },
-    // 地霊
-    { 7, 107, 102, 103, 9, 108, 107, 101, 61, 53, 54, 59,
-    /*E*/4, 10, 53, 12, 59, 108, 102, 105, 101, 107, 106, 54,
-    101, 107, 12, 59, 60, 53, 10, 60, 106, 59 },
-    // 死神
-    { 0, 4, 0, 101, 8, 4, 0, 109, 8, 4, 8, 13,
-    10, 0, 0, 59, 61, 103, 8, 109, 105, 4, 0, 13,
-    0, 109, 8, 10, 4, 0, 59, 10, 104, 4 },
-    // 聖獣
-    { 62, 110, 5, 0, 108, 62, 62, 5, 6, 8, 5, 9,
-    53, 0, /*E*/1, 62, 6, 62, 0, 110, 108, 6, 0, 106,
-    11, 60, 53, 108, 13, 62, 0, 107, 110, 109 },
-    // 魔獣
-    { 0, 52, 62, 101, 60, 52, 52, 60, 52, 59, 59, 105,
-    12, 59, 62, /*E*/3, 9, 52, 13, 102, 52, 60, 59, 106,
-    59, 60, 61, 101, 60, 60, 51, 52, 109, 61 },
-    // 妖精
-    { 52, 9, 61, 8, 11, 58, 9, 103, 6, 102, 9, 13,
-    59, 61, 6, 9, /*E*/3, 0, 11, 12, 0, 9, 103, 12,
-    11, 58, 12, 103, 60, 12, 60, 102, 102, 61 },
-    // 幻魔
-    { 6, 110, 0, 107, 7, 7, 104, 52, 6, 107, 5, 0,
-    108, 103, 62, 52, 0, 0, 12, 104, 52, 7, 0, 9,
-    0, 52, 108, 61, 110, 106, 62, 62, 110, 12 },
-    // 妖獣
-    { 0, 102, 53, 101, 11, 53, 106, 11, 105, 102, 101, 10,
-    102, 8, 0, 13, 11, 12, /*E*/3, 61, 53, 0, 11, 54,
-    13, 53, 61, 105, 62, 103, 51, 0, 104, 61 },
-    // 龍王
-    { 0, 7, 110, 110, 7, 54, 6, 101, 54, 109, 53, 61,
-    105, 109, 110, 102, 12, 104, 61, /*E*/2, 105, 104, 105, 53,
-    102, 108, 58, 58, 108, 106, 10, 104, 109, 109 },
-    // 夜魔
-    { 105, 102, 4, 103, 106, 105, 105, 11, 60, 105, 102, 9,
-    101, 105, 108, 52, 0, 52, 53, 105, /*E*/4, 52, 102, 110,
-    12, 106, 54, 10, 108, 110, 105, 106, 108, 108 },
-    // 神獣
-    { 5, 7, 104, 109, 52, 53, 104, 59, 6, 0, 5, 9,
-    107, 4, 6, 60, 9, 7, 0, 104, 52, /*E*/1, 0, 109,
-    0, 58, 9, 110, 104, 5, 0, 52, 52, 0 },
-    // 外道
-    { 105, 0, 0, 103, 0, 0, 103, 0, 105, 102, 0, 11,
-    106, 0, 0, 59, 103, 0, 11, 105, 102, 0, 0, 59,
-    102, 60, 0, 59, 0, 13, 4, 109, 0, 103 },
-    // 妖鬼
-    { 0, 107, 110, 101, 58, 106, 62, 106, 12, 103, 8, 106,
-    54, 13, 106, 106, 12, 9, 54, 53, 110, 109, 59, /*E*/4,
-    101, 61, 13, 53, 60, 9, 10, 13, 106, 103 },
-    // 幽鬼
-    { 105, 0, 0, 101, 0, 4, 0, 11, 13, 101, 12, 13,
-    101, 0, 11, 59, 11, 0, 13, 102, 12, 0, 102, 101,
-    0, 0, 12, 101, 102, 106, 8, 0, 0, 101 },
-    // 龍神
-    { 52, 108, 107, 60, 62, 62, 52, 59, 6, 110, 7, 62,
-    107, 109, 60, 60, 58, 52, 53, 108, 106, 58, 60, 61,
-    0, /*E*/2, 60, 61, 108, 0, 0, 107, 109, 109 },
-    // 堕天使
-    { 108, 110, 0, 102, 60, 9, 11, 101, 0, 109, 8, 13,
-    12, 8, 53, 61, 12, 108, 61, 58, 54, 9, 0, 13,
-    12, 60, /*E*/4, 59, 60, 106, 10, 61, 4, 0 },
-    // 鬼女
-    { 0, 108, 108, 102, 6, 108, 105, 101, 53, 53, 10, 102,
-    59, 10, 108, 101, 103, 61, 105, 58, 10, 110, 59, 53,
-    101, 61, 59, /*E*/2, 110, 110, 10, 108, 0, 108 },
-    // 国津神
-    { 104, 104, 7, 51, 7, 108, 0, 51, 11, 4, 108, 106,
-    60, 4, 13, 60, 60, 110, 62, 108, 108, 104, 0, 60,
-    102, 108, 60, 110, /*E*/4, 110, 51, 0, 104, 110 },
-    // 地母神
-    { 7, 7, 0, 51, 104, 0, 6, 60, 6, 110, 5, 61,
-    53, 0, 62, 60, 12, 106, 103, 106, 110, 5, 13, 9,
-    106, 0, 106, 110, 110, /*E*/4, 13, 106, 4, 0 },
-    // 邪龍
-    { 0, 0, 0, 59, 0, 4, 0, 59, 11, 4, 8, 60,
-    10, 59, 0, 51, 60, 62, 51, 10, 105, 0, 4, 10,
-    8, 0, 10, 10, 51, 13, 0, 4, 0, 4 },
-    // 鬼神
-    { 107, 6, 7, 51, 104, 108, 107, 4, 108, 102, 106, 107,
-    60, 10, 107, 52, 102, 62, 0, 104, 106, 52, 109, 13,
-    0, 107, 61, 108, 0, 106, 4, 0, 108, 104 },
-    // 破壊神
-    { 4, 108, 0, 51, 110, 106, 107, 109, 4, 0, 108, 58,
-    106, 104, 110, 109, 102, 110, 104, 109, 108, 52, 0, 106,
-    0, 109, 4, 0, 104, 4, 0, 108, 0, 108 },
-    // 魔王
-    { 105, 4, 0, 51, 0, 0, 0, 104, 4, 101, 109, 61,
-    59, 4, 109, 61, 61, 12, 61, 109, 108, 0, 103, 103,
-    101, 109, 0, 108, 110, 0, 4, 104, 108, 0 }
+// Idx Map
+{
+(uint8_t)RaceID::SERAPHIM,
+(uint8_t)RaceID::ENTITY,
+(uint8_t)RaceID::DEMON_GOD,
+(uint8_t)RaceID::VILE,
+(uint8_t)RaceID::AVIAN,
+(uint8_t)RaceID::GODDESS,
+(uint8_t)RaceID::HEAVENLY_GOD,
+(uint8_t)RaceID::RAPTOR,
+(uint8_t)RaceID::DIVINE,
+(uint8_t)RaceID::EVIL_DEMON,
+(uint8_t)RaceID::WILD_BIRD,
+(uint8_t)RaceID::YOMA,
+(uint8_t)RaceID::EARTH_ELEMENT,
+(uint8_t)RaceID::REAPER,
+(uint8_t)RaceID::HOLY_BEAST,
+(uint8_t)RaceID::BEAST,
+(uint8_t)RaceID::FAIRY,
+(uint8_t)RaceID::DEMIGOD,
+(uint8_t)RaceID::WILDER,
+(uint8_t)RaceID::DRAGON_KING,
+(uint8_t)RaceID::NOCTURNE,
+(uint8_t)RaceID::GODLY_BEAST,
+(uint8_t)RaceID::FOUL,
+(uint8_t)RaceID::BRUTE,
+(uint8_t)RaceID::HAUNT,
+(uint8_t)RaceID::DRAGON,
+(uint8_t)RaceID::FALLEN_ANGEL,
+(uint8_t)RaceID::FEMME,
+(uint8_t)RaceID::NATION_RULER,
+(uint8_t)RaceID::EARTH_MOTHER,
+(uint8_t)RaceID::EVIL_DRAGON,
+(uint8_t)RaceID::GUARDIAN,
+(uint8_t)RaceID::DESTROYER,
+(uint8_t)RaceID::TYRANT
+},
+// 大天使: SERAPHIM
+{
+0,                              // x SERAPHIM
+(uint8_t)RaceID::GODDESS,       // x ENTITY
+0,                              // x DEMON_GOD
+(uint8_t)RaceID::DIVINE,        // x VILE
+(uint8_t)RaceID::DIVINE,        // x AVIAN
+(uint8_t)RaceID::EARTH_MOTHER,  // x GODDESS
+(uint8_t)RaceID::NATION_RULER,  // x HEAVENLY_GOD
+(uint8_t)RaceID::REAPER,        // x RAPTOR
+(uint8_t)RaceID::GODDESS,       // x DIVINE
+0,                              // x EVIL_DEMON
+(uint8_t)RaceID::AVIAN,         // x WILD_BIRD
+(uint8_t)RaceID::GODDESS,       // x YOMA
+(uint8_t)RaceID::HEAVENLY_GOD,  // x EARTH_ELEMENT
+0,                              // x REAPER
+(uint8_t)RaceID::GODLY_BEAST,   // x HOLY_BEAST
+0,                              // x BEAST
+(uint8_t)RaceID::HOLY_BEAST,    // x FAIRY
+(uint8_t)RaceID::GODDESS,       // x DEMIGOD
+0,                              // x WILDER
+0,                              // x DRAGON_KING
+(uint8_t)RaceID::FALLEN_ANGEL,  // x NOCTURNE
+(uint8_t)RaceID::AVIAN,         // x GODLY_BEAST
+(uint8_t)RaceID::FALLEN_ANGEL,  // x FOUL
+0,                              // x BRUTE
+(uint8_t)RaceID::FALLEN_ANGEL,  // x HAUNT
+(uint8_t)RaceID::HOLY_BEAST,    // x DRAGON
+(uint8_t)RaceID::EARTH_MOTHER,  // x FALLEN_ANGEL
+0,                              // x FEMME
+(uint8_t)RaceID::DRAGON,        // x NATION_RULER
+(uint8_t)RaceID::HEAVENLY_GOD,  // x EARTH_MOTHER
+0,                              // x EVIL_DRAGON
+(uint8_t)RaceID::NATION_RULER,  // x GUARDIAN
+(uint8_t)RaceID::VILE,          // x DESTROYER
+(uint8_t)RaceID::FALLEN_ANGEL   // x TYRANT
+},
+// 威霊: ENTITY
+{
+(uint8_t)RaceID::GODDESS,       // x SERAPHIM
+0,                              // x ENTITY
+(uint8_t)RaceID::GODDESS,       // x DEMON_GOD
+(uint8_t)RaceID::REAPER,        // x VILE
+(uint8_t)RaceID::HEAVENLY_GOD,  // x AVIAN
+(uint8_t)RaceID::EARTH_MOTHER,  // x GODDESS
+(uint8_t)RaceID::GUARDIAN,      // x HEAVENLY_GOD
+(uint8_t)RaceID::VILE,          // x RAPTOR
+(uint8_t)RaceID::GODDESS,       // x DIVINE
+(uint8_t)RaceID::VILE,          // x EVIL_DEMON
+(uint8_t)RaceID::AVIAN,         // x WILD_BIRD
+(uint8_t)RaceID::GODDESS,       // x YOMA
+(uint8_t)RaceID::NATION_RULER,  // x EARTH_ELEMENT
+(uint8_t)RaceID::VILE,          // x REAPER
+(uint8_t)RaceID::GUARDIAN,      // x HOLY_BEAST
+(uint8_t)RaceID::HOLY_BEAST,    // x BEAST
+(uint8_t)RaceID::DIVINE,        // x FAIRY
+(uint8_t)RaceID::GUARDIAN,      // x DEMIGOD
+(uint8_t)RaceID::BRUTE,         // x WILDER
+(uint8_t)RaceID::HEAVENLY_GOD,  // x DRAGON_KING
+(uint8_t)RaceID::BRUTE,         // x NOCTURNE
+(uint8_t)RaceID::HEAVENLY_GOD,  // x GODLY_BEAST
+0,                              // x FOUL
+(uint8_t)RaceID::NATION_RULER,  // x BRUTE
+0,                              // x HAUNT
+(uint8_t)RaceID::EARTH_MOTHER,  // x DRAGON
+(uint8_t)RaceID::GUARDIAN,      // x FALLEN_ANGEL
+(uint8_t)RaceID::EARTH_MOTHER,  // x FEMME
+(uint8_t)RaceID::DRAGON,        // x NATION_RULER
+(uint8_t)RaceID::HEAVENLY_GOD,  // x EARTH_MOTHER
+0,                              // x EVIL_DRAGON
+(uint8_t)RaceID::GODDESS,       // x GUARDIAN
+(uint8_t)RaceID::EARTH_MOTHER,  // x DESTROYER
+(uint8_t)RaceID::VILE           // x TYRANT
+},
+// 魔神: DEMON_GOD
+{
+0,                              // x SERAPHIM
+(uint8_t)RaceID::GODDESS,       // x ENTITY
+0,                              // x DEMON_GOD
+(uint8_t)RaceID::GUARDIAN,      // x VILE
+(uint8_t)RaceID::HEAVENLY_GOD,  // x AVIAN
+(uint8_t)RaceID::HEAVENLY_GOD,  // x GODDESS
+(uint8_t)RaceID::NATION_RULER,  // x HEAVENLY_GOD
+(uint8_t)RaceID::VILE,          // x RAPTOR
+(uint8_t)RaceID::GODDESS,       // x DIVINE
+0,                              // x EVIL_DEMON
+(uint8_t)RaceID::FALLEN_ANGEL,  // x WILD_BIRD
+(uint8_t)RaceID::DEMIGOD,       // x YOMA
+(uint8_t)RaceID::BRUTE,         // x EARTH_ELEMENT
+0,                              // x REAPER
+(uint8_t)RaceID::AVIAN,         // x HOLY_BEAST
+(uint8_t)RaceID::GODLY_BEAST,   // x BEAST
+(uint8_t)RaceID::NOCTURNE,      // x FAIRY
+0,                              // x DEMIGOD
+(uint8_t)RaceID::BEAST,         // x WILDER
+(uint8_t)RaceID::GUARDIAN,      // x DRAGON_KING
+(uint8_t)RaceID::VILE,          // x NOCTURNE
+(uint8_t)RaceID::DRAGON,        // x GODLY_BEAST
+0,                              // x FOUL
+(uint8_t)RaceID::GUARDIAN,      // x BRUTE
+0,                              // x HAUNT
+(uint8_t)RaceID::NATION_RULER,  // x DRAGON
+0,                              // x FALLEN_ANGEL
+(uint8_t)RaceID::EARTH_MOTHER,  // x FEMME
+(uint8_t)RaceID::HEAVENLY_GOD,  // x NATION_RULER
+0,                              // x EARTH_MOTHER
+0,                              // x EVIL_DRAGON
+(uint8_t)RaceID::HEAVENLY_GOD,  // x GUARDIAN
+0,                              // x DESTROYER
+0                               // x TYRANT
+},
+// 邪神: VILE
+{
+(uint8_t)RaceID::DIVINE,        // x SERAPHIM
+(uint8_t)RaceID::REAPER,        // x ENTITY
+(uint8_t)RaceID::GUARDIAN,      // x DEMON_GOD
+0,                              // x VILE
+(uint8_t)RaceID::REAPER,        // x AVIAN
+(uint8_t)RaceID::REAPER,        // x GODDESS
+0,                              // x HEAVENLY_GOD
+(uint8_t)RaceID::EVIL_DRAGON,   // x RAPTOR
+(uint8_t)RaceID::REAPER,        // x DIVINE
+(uint8_t)RaceID::FOUL,          // x EVIL_DEMON
+(uint8_t)RaceID::EVIL_DRAGON,   // x WILD_BIRD
+(uint8_t)RaceID::EARTH_ELEMENT, // x YOMA
+(uint8_t)RaceID::HAUNT,         // x EARTH_ELEMENT
+(uint8_t)RaceID::FOUL,          // x REAPER
+0,                              // x HOLY_BEAST
+(uint8_t)RaceID::FOUL,          // x BEAST
+(uint8_t)RaceID::RAPTOR,        // x FAIRY
+(uint8_t)RaceID::NATION_RULER,  // x DEMIGOD
+(uint8_t)RaceID::FOUL,          // x WILDER
+(uint8_t)RaceID::GUARDIAN,      // x DRAGON_KING
+(uint8_t)RaceID::HAUNT,         // x NOCTURNE
+(uint8_t)RaceID::EVIL_DRAGON,   // x GODLY_BEAST
+(uint8_t)RaceID::HAUNT,         // x FOUL
+(uint8_t)RaceID::FOUL,          // x BRUTE
+(uint8_t)RaceID::FOUL,          // x HAUNT
+(uint8_t)RaceID::DRAGON_KING,   // x DRAGON
+(uint8_t)RaceID::BRUTE,         // x FALLEN_ANGEL
+(uint8_t)RaceID::BRUTE,         // x FEMME
+(uint8_t)RaceID::REAPER,        // x NATION_RULER
+(uint8_t)RaceID::REAPER,        // x EARTH_MOTHER
+(uint8_t)RaceID::WILDER,        // x EVIL_DRAGON
+(uint8_t)RaceID::REAPER,        // x GUARDIAN
+(uint8_t)RaceID::REAPER,        // x DESTROYER
+(uint8_t)RaceID::REAPER         // x TYRANT
+},
+// 霊鳥: AVIAN
+{
+(uint8_t)RaceID::DIVINE,        // x SERAPHIM
+(uint8_t)RaceID::HEAVENLY_GOD,  // x ENTITY
+(uint8_t)RaceID::HEAVENLY_GOD,  // x DEMON_GOD
+(uint8_t)RaceID::REAPER,        // x VILE
+3,                              // x AVIAN
+(uint8_t)RaceID::HEAVENLY_GOD,  // x GODDESS
+(uint8_t)RaceID::DRAGON,        // x HEAVENLY_GOD
+0,                              // x RAPTOR
+(uint8_t)RaceID::DRAGON_KING,   // x DIVINE
+(uint8_t)RaceID::RAPTOR,        // x EVIL_DEMON
+(uint8_t)RaceID::RAPTOR,        // x WILD_BIRD
+(uint8_t)RaceID::NOCTURNE,      // x YOMA
+(uint8_t)RaceID::DIVINE,        // x EARTH_ELEMENT
+(uint8_t)RaceID::RAPTOR,        // x REAPER
+(uint8_t)RaceID::EARTH_MOTHER,  // x HOLY_BEAST
+(uint8_t)RaceID::DRAGON_KING,   // x BEAST
+(uint8_t)RaceID::WILD_BIRD,     // x FAIRY
+(uint8_t)RaceID::HEAVENLY_GOD,  // x DEMIGOD
+(uint8_t)RaceID::WILD_BIRD,     // x WILDER
+(uint8_t)RaceID::HEAVENLY_GOD,  // x DRAGON_KING
+(uint8_t)RaceID::FEMME,         // x NOCTURNE
+(uint8_t)RaceID::HOLY_BEAST,    // x GODLY_BEAST
+0,                              // x FOUL
+(uint8_t)RaceID::DEMIGOD,       // x BRUTE
+0,                              // x HAUNT
+(uint8_t)RaceID::GODLY_BEAST,   // x DRAGON
+(uint8_t)RaceID::DRAGON_KING,   // x FALLEN_ANGEL
+(uint8_t)RaceID::GODDESS,       // x FEMME
+(uint8_t)RaceID::HEAVENLY_GOD,  // x NATION_RULER
+(uint8_t)RaceID::DRAGON,        // x EARTH_MOTHER
+0,                              // x EVIL_DRAGON
+(uint8_t)RaceID::DRAGON,        // x GUARDIAN
+(uint8_t)RaceID::GUARDIAN,      // x DESTROYER
+0                               // x TYRANT
+},
+// 女神: GODDESS
+{
+(uint8_t)RaceID::EARTH_MOTHER,  // x SERAPHIM
+(uint8_t)RaceID::EARTH_MOTHER,  // x ENTITY
+(uint8_t)RaceID::HEAVENLY_GOD,  // x DEMON_GOD
+(uint8_t)RaceID::REAPER,        // x VILE
+(uint8_t)RaceID::HEAVENLY_GOD,  // x AVIAN
+0,                              // x GODDESS
+0,                              // x HEAVENLY_GOD
+(uint8_t)RaceID::FALLEN_ANGEL,  // x RAPTOR
+(uint8_t)RaceID::HEAVENLY_GOD,  // x DIVINE
+(uint8_t)RaceID::FEMME,         // x EVIL_DEMON
+(uint8_t)RaceID::AVIAN,         // x WILD_BIRD
+(uint8_t)RaceID::FEMME,         // x YOMA
+(uint8_t)RaceID::EARTH_MOTHER,  // x EARTH_ELEMENT
+(uint8_t)RaceID::VILE,          // x REAPER
+(uint8_t)RaceID::GODLY_BEAST,   // x HOLY_BEAST
+(uint8_t)RaceID::HOLY_BEAST,    // x BEAST
+(uint8_t)RaceID::DEMIGOD,       // x FAIRY
+(uint8_t)RaceID::HEAVENLY_GOD,  // x DEMIGOD
+(uint8_t)RaceID::BEAST,         // x WILDER
+(uint8_t)RaceID::FAIRY,         // x DRAGON_KING
+(uint8_t)RaceID::FALLEN_ANGEL,  // x NOCTURNE
+(uint8_t)RaceID::BEAST,         // x GODLY_BEAST
+0,                              // x FOUL
+(uint8_t)RaceID::FEMME,         // x BRUTE
+(uint8_t)RaceID::VILE,          // x HAUNT
+(uint8_t)RaceID::GODLY_BEAST,   // x DRAGON
+(uint8_t)RaceID::DIVINE,        // x FALLEN_ANGEL
+(uint8_t)RaceID::EARTH_MOTHER,  // x FEMME
+(uint8_t)RaceID::EARTH_MOTHER,  // x NATION_RULER
+0,                              // x EARTH_MOTHER
+(uint8_t)RaceID::VILE,          // x EVIL_DRAGON
+(uint8_t)RaceID::EARTH_MOTHER,  // x GUARDIAN
+(uint8_t)RaceID::FEMME,         // x DESTROYER
+0                               // x TYRANT
+},
+// 天津神: HEAVENLY_GOD
+{
+(uint8_t)RaceID::NATION_RULER,  // x SERAPHIM
+(uint8_t)RaceID::GUARDIAN,      // x ENTITY
+(uint8_t)RaceID::NATION_RULER,  // x DEMON_GOD
+0,                              // x VILE
+(uint8_t)RaceID::DRAGON,        // x AVIAN
+0,                              // x GODDESS
+2,                              // x HEAVENLY_GOD
+(uint8_t)RaceID::NOCTURNE,      // x RAPTOR
+(uint8_t)RaceID::AVIAN,         // x DIVINE
+(uint8_t)RaceID::VILE,          // x EVIL_DEMON
+(uint8_t)RaceID::AVIAN,         // x WILD_BIRD
+(uint8_t)RaceID::GODDESS,       // x YOMA
+(uint8_t)RaceID::NATION_RULER,  // x EARTH_ELEMENT
+0,                              // x REAPER
+(uint8_t)RaceID::GODLY_BEAST,   // x HOLY_BEAST
+(uint8_t)RaceID::HOLY_BEAST,    // x BEAST
+(uint8_t)RaceID::DIVINE,        // x FAIRY
+(uint8_t)RaceID::DRAGON,        // x DEMIGOD
+(uint8_t)RaceID::FEMME,         // x WILDER
+(uint8_t)RaceID::GODDESS,       // x DRAGON_KING
+(uint8_t)RaceID::FALLEN_ANGEL,  // x NOCTURNE
+(uint8_t)RaceID::DRAGON,        // x GODLY_BEAST
+(uint8_t)RaceID::HAUNT,         // x FOUL
+(uint8_t)RaceID::GODLY_BEAST,   // x BRUTE
+0,                              // x HAUNT
+(uint8_t)RaceID::HOLY_BEAST,    // x DRAGON
+(uint8_t)RaceID::WILD_BIRD,     // x FALLEN_ANGEL
+(uint8_t)RaceID::FALLEN_ANGEL,  // x FEMME
+0,                              // x NATION_RULER
+(uint8_t)RaceID::GODDESS,       // x EARTH_MOTHER
+0,                              // x EVIL_DRAGON
+(uint8_t)RaceID::NATION_RULER,  // x GUARDIAN
+(uint8_t)RaceID::NATION_RULER,  // x DESTROYER
+0                               // x TYRANT
+},
+// 凶鳥: RAPTOR
+{
+(uint8_t)RaceID::REAPER,        // x SERAPHIM
+(uint8_t)RaceID::VILE,          // x ENTITY
+(uint8_t)RaceID::VILE,          // x DEMON_GOD
+(uint8_t)RaceID::EVIL_DRAGON,   // x VILE
+0,                              // x AVIAN
+(uint8_t)RaceID::FALLEN_ANGEL,  // x GODDESS
+(uint8_t)RaceID::NOCTURNE,      // x HEAVENLY_GOD
+0,                              // x RAPTOR
+(uint8_t)RaceID::WILD_BIRD,     // x DIVINE
+(uint8_t)RaceID::FOUL,          // x EVIL_DEMON
+0,                              // x WILD_BIRD
+(uint8_t)RaceID::EVIL_DEMON,    // x YOMA
+(uint8_t)RaceID::FOUL,          // x EARTH_ELEMENT
+(uint8_t)RaceID::EVIL_DRAGON,   // x REAPER
+(uint8_t)RaceID::AVIAN,         // x HOLY_BEAST
+(uint8_t)RaceID::DRAGON_KING,   // x BEAST
+(uint8_t)RaceID::HAUNT,         // x FAIRY
+(uint8_t)RaceID::HOLY_BEAST,    // x DEMIGOD
+(uint8_t)RaceID::WILD_BIRD,     // x WILDER
+(uint8_t)RaceID::FOUL,          // x DRAGON_KING
+(uint8_t)RaceID::WILD_BIRD,     // x NOCTURNE
+(uint8_t)RaceID::WILDER,        // x GODLY_BEAST
+0,                              // x FOUL
+(uint8_t)RaceID::FEMME,         // x BRUTE
+(uint8_t)RaceID::WILD_BIRD,     // x HAUNT
+(uint8_t)RaceID::WILDER,        // x DRAGON
+(uint8_t)RaceID::FOUL,          // x FALLEN_ANGEL
+(uint8_t)RaceID::FOUL,          // x FEMME
+(uint8_t)RaceID::REAPER,        // x NATION_RULER
+(uint8_t)RaceID::DRAGON_KING,   // x EARTH_MOTHER
+(uint8_t)RaceID::WILDER,        // x EVIL_DRAGON
+(uint8_t)RaceID::VILE,          // x GUARDIAN
+(uint8_t)RaceID::EVIL_DRAGON,   // x DESTROYER
+(uint8_t)RaceID::DRAGON         // x TYRANT
+},
+// 天使: DIVINE
+{
+(uint8_t)RaceID::GODDESS,       // x SERAPHIM
+(uint8_t)RaceID::GODDESS,       // x ENTITY
+(uint8_t)RaceID::GODDESS,       // x DEMON_GOD
+(uint8_t)RaceID::REAPER,        // x VILE
+(uint8_t)RaceID::DRAGON_KING,   // x AVIAN
+(uint8_t)RaceID::HEAVENLY_GOD,  // x GODDESS
+(uint8_t)RaceID::AVIAN,         // x HEAVENLY_GOD
+(uint8_t)RaceID::WILD_BIRD,     // x RAPTOR
+3,                              // x DIVINE
+(uint8_t)RaceID::REAPER,        // x EVIL_DEMON
+(uint8_t)RaceID::FAIRY,         // x WILD_BIRD
+(uint8_t)RaceID::DRAGON_KING,   // x YOMA
+(uint8_t)RaceID::NOCTURNE,      // x EARTH_ELEMENT
+(uint8_t)RaceID::RAPTOR,        // x REAPER
+(uint8_t)RaceID::GODDESS,       // x HOLY_BEAST
+(uint8_t)RaceID::HOLY_BEAST,    // x BEAST
+(uint8_t)RaceID::GODDESS,       // x FAIRY
+(uint8_t)RaceID::GODDESS,       // x DEMIGOD
+(uint8_t)RaceID::FALLEN_ANGEL,  // x WILDER
+(uint8_t)RaceID::FAIRY,         // x DRAGON_KING
+(uint8_t)RaceID::DRAGON_KING,   // x NOCTURNE
+(uint8_t)RaceID::GODDESS,       // x GODLY_BEAST
+(uint8_t)RaceID::FALLEN_ANGEL,  // x FOUL
+(uint8_t)RaceID::YOMA,          // x BRUTE
+(uint8_t)RaceID::EARTH_ELEMENT, // x HAUNT
+(uint8_t)RaceID::GODDESS,       // x DRAGON
+0,                              // x FALLEN_ANGEL
+(uint8_t)RaceID::BEAST,         // x FEMME
+(uint8_t)RaceID::WILD_BIRD,     // x NATION_RULER
+(uint8_t)RaceID::GODDESS,       // x EARTH_MOTHER
+(uint8_t)RaceID::WILD_BIRD,     // x EVIL_DRAGON
+(uint8_t)RaceID::EARTH_MOTHER,  // x GUARDIAN
+(uint8_t)RaceID::VILE,          // x DESTROYER
+(uint8_t)RaceID::VILE           // x TYRANT
+},
+// 邪鬼: EVIL_DEMON
+{
+0,                              // x SERAPHIM
+(uint8_t)RaceID::VILE,          // x ENTITY
+0,                              // x DEMON_GOD
+(uint8_t)RaceID::FOUL,          // x VILE
+(uint8_t)RaceID::RAPTOR,        // x AVIAN
+(uint8_t)RaceID::FEMME,         // x GODDESS
+(uint8_t)RaceID::VILE,          // x HEAVENLY_GOD
+(uint8_t)RaceID::FOUL,          // x RAPTOR
+(uint8_t)RaceID::REAPER,        // x DIVINE
+0,                              // x EVIL_DEMON
+(uint8_t)RaceID::BRUTE,         // x WILD_BIRD
+(uint8_t)RaceID::EARTH_ELEMENT, // x YOMA
+(uint8_t)RaceID::BEAST,         // x EARTH_ELEMENT
+(uint8_t)RaceID::VILE,          // x REAPER
+(uint8_t)RaceID::RAPTOR,        // x HOLY_BEAST
+(uint8_t)RaceID::WILDER,        // x BEAST
+(uint8_t)RaceID::BRUTE,         // x FAIRY
+(uint8_t)RaceID::NATION_RULER,  // x DEMIGOD
+(uint8_t)RaceID::BRUTE,         // x WILDER
+(uint8_t)RaceID::EVIL_DRAGON,   // x DRAGON_KING
+(uint8_t)RaceID::FALLEN_ANGEL,  // x NOCTURNE
+0,                              // x GODLY_BEAST
+(uint8_t)RaceID::BRUTE,         // x FOUL
+(uint8_t)RaceID::HAUNT,         // x BRUTE
+(uint8_t)RaceID::FOUL,          // x HAUNT
+(uint8_t)RaceID::GUARDIAN,      // x DRAGON
+(uint8_t)RaceID::EVIL_DRAGON,   // x FALLEN_ANGEL
+(uint8_t)RaceID::BEAST,         // x FEMME
+(uint8_t)RaceID::VILE,          // x NATION_RULER
+(uint8_t)RaceID::GUARDIAN,      // x EARTH_MOTHER
+(uint8_t)RaceID::VILE,          // x EVIL_DRAGON
+(uint8_t)RaceID::BRUTE,         // x GUARDIAN
+0,                              // x DESTROYER
+(uint8_t)RaceID::FOUL           // x TYRANT
+},
+// 妖鳥: WILD_BIRD
+{
+(uint8_t)RaceID::AVIAN,         // x SERAPHIM
+(uint8_t)RaceID::AVIAN,         // x ENTITY
+(uint8_t)RaceID::FALLEN_ANGEL,  // x DEMON_GOD
+(uint8_t)RaceID::EVIL_DRAGON,   // x VILE
+(uint8_t)RaceID::RAPTOR,        // x AVIAN
+(uint8_t)RaceID::AVIAN,         // x GODDESS
+(uint8_t)RaceID::AVIAN,         // x HEAVENLY_GOD
+0,                              // x RAPTOR
+(uint8_t)RaceID::FAIRY,         // x DIVINE
+(uint8_t)RaceID::BRUTE,         // x EVIL_DEMON
+3,                              // x WILD_BIRD
+(uint8_t)RaceID::DIVINE,        // x YOMA
+(uint8_t)RaceID::FAIRY,         // x EARTH_ELEMENT
+(uint8_t)RaceID::RAPTOR,        // x REAPER
+(uint8_t)RaceID::AVIAN,         // x HOLY_BEAST
+(uint8_t)RaceID::WILDER,        // x BEAST
+(uint8_t)RaceID::DIVINE,        // x FAIRY
+(uint8_t)RaceID::AVIAN,         // x DEMIGOD
+(uint8_t)RaceID::FOUL,          // x WILDER
+(uint8_t)RaceID::BEAST,         // x DRAGON_KING
+(uint8_t)RaceID::BRUTE,         // x NOCTURNE
+(uint8_t)RaceID::AVIAN,         // x GODLY_BEAST
+0,                              // x FOUL
+(uint8_t)RaceID::RAPTOR,        // x BRUTE
+(uint8_t)RaceID::YOMA,          // x HAUNT
+(uint8_t)RaceID::HEAVENLY_GOD,  // x DRAGON
+(uint8_t)RaceID::RAPTOR,        // x FALLEN_ANGEL
+(uint8_t)RaceID::EVIL_DEMON,    // x FEMME
+(uint8_t)RaceID::EARTH_MOTHER,  // x NATION_RULER
+(uint8_t)RaceID::AVIAN,         // x EARTH_MOTHER
+(uint8_t)RaceID::RAPTOR,        // x EVIL_DRAGON
+(uint8_t)RaceID::FEMME,         // x GUARDIAN
+(uint8_t)RaceID::EARTH_MOTHER,  // x DESTROYER
+(uint8_t)RaceID::EVIL_DRAGON    // x TYRANT
+},
+// 妖魔: YOMA
+{
+(uint8_t)RaceID::GODDESS,       // x SERAPHIM
+(uint8_t)RaceID::GODDESS,       // x ENTITY
+(uint8_t)RaceID::DEMIGOD,       // x DEMON_GOD
+(uint8_t)RaceID::EARTH_ELEMENT, // x VILE
+(uint8_t)RaceID::NOCTURNE,      // x AVIAN
+(uint8_t)RaceID::FEMME,         // x GODDESS
+(uint8_t)RaceID::GODDESS,       // x HEAVENLY_GOD
+(uint8_t)RaceID::EVIL_DEMON,    // x RAPTOR
+(uint8_t)RaceID::DRAGON_KING,   // x DIVINE
+(uint8_t)RaceID::EARTH_ELEMENT, // x EVIL_DEMON
+(uint8_t)RaceID::DIVINE,        // x WILD_BIRD
+2,                              // x YOMA
+(uint8_t)RaceID::WILDER,        // x EARTH_ELEMENT
+(uint8_t)RaceID::EARTH_ELEMENT, // x REAPER
+(uint8_t)RaceID::DIVINE,        // x HOLY_BEAST
+(uint8_t)RaceID::FALLEN_ANGEL,  // x BEAST
+(uint8_t)RaceID::EARTH_ELEMENT, // x FAIRY
+0,                              // x DEMIGOD
+(uint8_t)RaceID::EVIL_DEMON,    // x WILDER
+(uint8_t)RaceID::NOCTURNE,      // x DRAGON_KING
+(uint8_t)RaceID::DIVINE,        // x NOCTURNE
+(uint8_t)RaceID::DIVINE,        // x GODLY_BEAST
+(uint8_t)RaceID::WILD_BIRD,     // x FOUL
+(uint8_t)RaceID::FEMME,         // x BRUTE
+(uint8_t)RaceID::EARTH_ELEMENT, // x HAUNT
+(uint8_t)RaceID::GODLY_BEAST,   // x DRAGON
+(uint8_t)RaceID::EARTH_ELEMENT, // x FALLEN_ANGEL
+(uint8_t)RaceID::BRUTE,         // x FEMME
+(uint8_t)RaceID::FEMME,         // x NATION_RULER
+(uint8_t)RaceID::NOCTURNE,      // x EARTH_MOTHER
+(uint8_t)RaceID::DRAGON_KING,   // x EVIL_DRAGON
+(uint8_t)RaceID::NATION_RULER,  // x GUARDIAN
+(uint8_t)RaceID::DEMIGOD,       // x DESTROYER
+(uint8_t)RaceID::NOCTURNE       // x TYRANT
+},
+// 地霊: EARTH_ELEMENT
+{
+(uint8_t)RaceID::HEAVENLY_GOD,  // x SERAPHIM
+(uint8_t)RaceID::NATION_RULER,  // x ENTITY
+(uint8_t)RaceID::BRUTE,         // x DEMON_GOD
+(uint8_t)RaceID::HAUNT,         // x VILE
+(uint8_t)RaceID::DIVINE,        // x AVIAN
+(uint8_t)RaceID::EARTH_MOTHER,  // x GODDESS
+(uint8_t)RaceID::NATION_RULER,  // x HEAVENLY_GOD
+(uint8_t)RaceID::FOUL,          // x RAPTOR
+(uint8_t)RaceID::NOCTURNE,      // x DIVINE
+(uint8_t)RaceID::BEAST,         // x EVIL_DEMON
+(uint8_t)RaceID::FAIRY,         // x WILD_BIRD
+(uint8_t)RaceID::WILDER,        // x YOMA
+4,                              // x EARTH_ELEMENT
+(uint8_t)RaceID::EVIL_DEMON,    // x REAPER
+(uint8_t)RaceID::BEAST,         // x HOLY_BEAST
+(uint8_t)RaceID::YOMA,          // x BEAST
+(uint8_t)RaceID::WILDER,        // x FAIRY
+(uint8_t)RaceID::EARTH_MOTHER,  // x DEMIGOD
+(uint8_t)RaceID::BRUTE,         // x WILDER
+(uint8_t)RaceID::FALLEN_ANGEL,  // x DRAGON_KING
+(uint8_t)RaceID::FOUL,          // x NOCTURNE
+(uint8_t)RaceID::NATION_RULER,  // x GODLY_BEAST
+(uint8_t)RaceID::FEMME,         // x FOUL
+(uint8_t)RaceID::FAIRY,         // x BRUTE
+(uint8_t)RaceID::FOUL,          // x HAUNT
+(uint8_t)RaceID::NATION_RULER,  // x DRAGON
+(uint8_t)RaceID::YOMA,          // x FALLEN_ANGEL
+(uint8_t)RaceID::WILDER,        // x FEMME
+(uint8_t)RaceID::DRAGON_KING,   // x NATION_RULER
+(uint8_t)RaceID::BEAST,         // x EARTH_MOTHER
+(uint8_t)RaceID::EVIL_DEMON,    // x EVIL_DRAGON
+(uint8_t)RaceID::DRAGON_KING,   // x GUARDIAN
+(uint8_t)RaceID::FEMME,         // x DESTROYER
+(uint8_t)RaceID::WILDER         // x TYRANT
+},
+// 死神: REAPER
+{
+0,                              // x SERAPHIM
+(uint8_t)RaceID::VILE,          // x ENTITY
+0,                              // x DEMON_GOD
+(uint8_t)RaceID::FOUL,          // x VILE
+(uint8_t)RaceID::RAPTOR,        // x AVIAN
+(uint8_t)RaceID::VILE,          // x GODDESS
+0,                              // x HEAVENLY_GOD
+(uint8_t)RaceID::EVIL_DRAGON,   // x RAPTOR
+(uint8_t)RaceID::RAPTOR,        // x DIVINE
+(uint8_t)RaceID::VILE,          // x EVIL_DEMON
+(uint8_t)RaceID::RAPTOR,        // x WILD_BIRD
+(uint8_t)RaceID::EARTH_ELEMENT, // x YOMA
+(uint8_t)RaceID::EVIL_DEMON,    // x EARTH_ELEMENT
+0,                              // x REAPER
+0,                              // x HOLY_BEAST
+(uint8_t)RaceID::WILDER,        // x BEAST
+(uint8_t)RaceID::NOCTURNE,      // x FAIRY
+(uint8_t)RaceID::HAUNT,         // x DEMIGOD
+(uint8_t)RaceID::RAPTOR,        // x WILDER
+(uint8_t)RaceID::EVIL_DRAGON,   // x DRAGON_KING
+(uint8_t)RaceID::FALLEN_ANGEL,  // x NOCTURNE
+(uint8_t)RaceID::VILE,          // x GODLY_BEAST
+0,                              // x FOUL
+(uint8_t)RaceID::EARTH_ELEMENT, // x BRUTE
+0,                              // x HAUNT
+(uint8_t)RaceID::EVIL_DRAGON,   // x DRAGON
+(uint8_t)RaceID::RAPTOR,        // x FALLEN_ANGEL
+(uint8_t)RaceID::EVIL_DEMON,    // x FEMME
+(uint8_t)RaceID::VILE,          // x NATION_RULER
+0,                              // x EARTH_MOTHER
+(uint8_t)RaceID::WILDER,        // x EVIL_DRAGON
+(uint8_t)RaceID::EVIL_DEMON,    // x GUARDIAN
+(uint8_t)RaceID::DRAGON,        // x DESTROYER
+(uint8_t)RaceID::VILE           // x TYRANT
+},
+// 聖獣: HOLY_BEAST
+{
+(uint8_t)RaceID::GODLY_BEAST,   // x SERAPHIM
+(uint8_t)RaceID::GUARDIAN,      // x ENTITY
+(uint8_t)RaceID::AVIAN,         // x DEMON_GOD
+0,                              // x VILE
+(uint8_t)RaceID::EARTH_MOTHER,  // x AVIAN
+(uint8_t)RaceID::GODLY_BEAST,   // x GODDESS
+(uint8_t)RaceID::GODLY_BEAST,   // x HEAVENLY_GOD
+(uint8_t)RaceID::AVIAN,         // x RAPTOR
+(uint8_t)RaceID::GODDESS,       // x DIVINE
+(uint8_t)RaceID::RAPTOR,        // x EVIL_DEMON
+(uint8_t)RaceID::AVIAN,         // x WILD_BIRD
+(uint8_t)RaceID::DIVINE,        // x YOMA
+(uint8_t)RaceID::BEAST,         // x EARTH_ELEMENT
+0,                              // x REAPER
+1,                              // x HOLY_BEAST
+(uint8_t)RaceID::GODLY_BEAST,   // x BEAST
+(uint8_t)RaceID::GODDESS,       // x FAIRY
+(uint8_t)RaceID::GODLY_BEAST,   // x DEMIGOD
+0,                              // x WILDER
+(uint8_t)RaceID::GUARDIAN,      // x DRAGON_KING
+(uint8_t)RaceID::EARTH_MOTHER,  // x NOCTURNE
+(uint8_t)RaceID::GODDESS,       // x GODLY_BEAST
+0,                              // x FOUL
+(uint8_t)RaceID::FEMME,         // x BRUTE
+(uint8_t)RaceID::WILD_BIRD,     // x HAUNT
+(uint8_t)RaceID::DRAGON_KING,   // x DRAGON
+(uint8_t)RaceID::BEAST,         // x FALLEN_ANGEL
+(uint8_t)RaceID::EARTH_MOTHER,  // x FEMME
+(uint8_t)RaceID::EARTH_ELEMENT, // x NATION_RULER
+(uint8_t)RaceID::GODLY_BEAST,   // x EARTH_MOTHER
+0,                              // x EVIL_DRAGON
+(uint8_t)RaceID::NATION_RULER,  // x GUARDIAN
+(uint8_t)RaceID::GUARDIAN,      // x DESTROYER
+(uint8_t)RaceID::EVIL_DRAGON    // x TYRANT
+},
+// 魔獣: BEAST
+{
+0,                              // x SERAPHIM
+(uint8_t)RaceID::HOLY_BEAST,    // x ENTITY
+(uint8_t)RaceID::GODLY_BEAST,   // x DEMON_GOD
+(uint8_t)RaceID::FOUL,          // x VILE
+(uint8_t)RaceID::DRAGON_KING,   // x AVIAN
+(uint8_t)RaceID::HOLY_BEAST,    // x GODDESS
+(uint8_t)RaceID::HOLY_BEAST,    // x HEAVENLY_GOD
+(uint8_t)RaceID::DRAGON_KING,   // x RAPTOR
+(uint8_t)RaceID::HOLY_BEAST,    // x DIVINE
+(uint8_t)RaceID::WILDER,        // x EVIL_DEMON
+(uint8_t)RaceID::WILDER,        // x WILD_BIRD
+(uint8_t)RaceID::FALLEN_ANGEL,  // x YOMA
+(uint8_t)RaceID::YOMA,          // x EARTH_ELEMENT
+(uint8_t)RaceID::WILDER,        // x REAPER
+(uint8_t)RaceID::GODLY_BEAST,   // x HOLY_BEAST
+3,                              // x BEAST
+(uint8_t)RaceID::DIVINE,        // x FAIRY
+(uint8_t)RaceID::HOLY_BEAST,    // x DEMIGOD
+(uint8_t)RaceID::EARTH_ELEMENT, // x WILDER
+(uint8_t)RaceID::BRUTE,         // x DRAGON_KING
+(uint8_t)RaceID::HOLY_BEAST,    // x NOCTURNE
+(uint8_t)RaceID::DRAGON_KING,   // x GODLY_BEAST
+(uint8_t)RaceID::WILDER,        // x FOUL
+(uint8_t)RaceID::FEMME,         // x BRUTE
+(uint8_t)RaceID::WILDER,        // x HAUNT
+(uint8_t)RaceID::DRAGON_KING,   // x DRAGON
+(uint8_t)RaceID::NOCTURNE,      // x FALLEN_ANGEL
+(uint8_t)RaceID::FOUL,          // x FEMME
+(uint8_t)RaceID::DRAGON_KING,   // x NATION_RULER
+(uint8_t)RaceID::DRAGON_KING,   // x EARTH_MOTHER
+(uint8_t)RaceID::REAPER,        // x EVIL_DRAGON
+(uint8_t)RaceID::HOLY_BEAST,    // x GUARDIAN
+(uint8_t)RaceID::EVIL_DRAGON,   // x DESTROYER
+(uint8_t)RaceID::NOCTURNE       // x TYRANT
+},
+// 妖精: FAIRY
+{
+(uint8_t)RaceID::HOLY_BEAST,    // x SERAPHIM
+(uint8_t)RaceID::DIVINE,        // x ENTITY
+(uint8_t)RaceID::NOCTURNE,      // x DEMON_GOD
+(uint8_t)RaceID::RAPTOR,        // x VILE
+(uint8_t)RaceID::WILD_BIRD,     // x AVIAN
+(uint8_t)RaceID::DEMIGOD,       // x GODDESS
+(uint8_t)RaceID::DIVINE,        // x HEAVENLY_GOD
+(uint8_t)RaceID::HAUNT,         // x RAPTOR
+(uint8_t)RaceID::GODDESS,       // x DIVINE
+(uint8_t)RaceID::BRUTE,         // x EVIL_DEMON
+(uint8_t)RaceID::DIVINE,        // x WILD_BIRD
+(uint8_t)RaceID::EARTH_ELEMENT, // x YOMA
+(uint8_t)RaceID::WILDER,        // x EARTH_ELEMENT
+(uint8_t)RaceID::NOCTURNE,      // x REAPER
+(uint8_t)RaceID::GODDESS,       // x HOLY_BEAST
+(uint8_t)RaceID::DIVINE,        // x BEAST
+3,                              // x FAIRY
+0,                              // x DEMIGOD
+(uint8_t)RaceID::WILD_BIRD,     // x WILDER
+(uint8_t)RaceID::YOMA,          // x DRAGON_KING
+0,                              // x NOCTURNE
+(uint8_t)RaceID::DIVINE,        // x GODLY_BEAST
+(uint8_t)RaceID::HAUNT,         // x FOUL
+(uint8_t)RaceID::YOMA,          // x BRUTE
+(uint8_t)RaceID::WILD_BIRD,     // x HAUNT
+(uint8_t)RaceID::DEMIGOD,       // x DRAGON
+(uint8_t)RaceID::YOMA,          // x FALLEN_ANGEL
+(uint8_t)RaceID::HAUNT,         // x FEMME
+(uint8_t)RaceID::DRAGON_KING,   // x NATION_RULER
+(uint8_t)RaceID::YOMA,          // x EARTH_MOTHER
+(uint8_t)RaceID::DRAGON_KING,   // x EVIL_DRAGON
+(uint8_t)RaceID::BRUTE,         // x GUARDIAN
+(uint8_t)RaceID::BRUTE,         // x DESTROYER
+(uint8_t)RaceID::NOCTURNE       // x TYRANT
+},
+// 幻魔: DEMIGOD
+{
+(uint8_t)RaceID::GODDESS,       // x SERAPHIM
+(uint8_t)RaceID::GUARDIAN,      // x ENTITY
+0,                              // x DEMON_GOD
+(uint8_t)RaceID::NATION_RULER,  // x VILE
+(uint8_t)RaceID::HEAVENLY_GOD,  // x AVIAN
+(uint8_t)RaceID::HEAVENLY_GOD,  // x GODDESS
+(uint8_t)RaceID::DRAGON,        // x HEAVENLY_GOD
+(uint8_t)RaceID::HOLY_BEAST,    // x RAPTOR
+(uint8_t)RaceID::GODDESS,       // x DIVINE
+(uint8_t)RaceID::NATION_RULER,  // x EVIL_DEMON
+(uint8_t)RaceID::AVIAN,         // x WILD_BIRD
+0,                              // x YOMA
+(uint8_t)RaceID::EARTH_MOTHER,  // x EARTH_ELEMENT
+(uint8_t)RaceID::HAUNT,         // x REAPER
+(uint8_t)RaceID::GODLY_BEAST,   // x HOLY_BEAST
+(uint8_t)RaceID::HOLY_BEAST,    // x BEAST
+0,                              // x FAIRY
+0,                              // x DEMIGOD
+(uint8_t)RaceID::YOMA,          // x WILDER
+(uint8_t)RaceID::DRAGON,        // x DRAGON_KING
+(uint8_t)RaceID::HOLY_BEAST,    // x NOCTURNE
+(uint8_t)RaceID::HEAVENLY_GOD,  // x GODLY_BEAST
+0,                              // x FOUL
+(uint8_t)RaceID::DIVINE,        // x BRUTE
+0,                              // x HAUNT
+(uint8_t)RaceID::HOLY_BEAST,    // x DRAGON
+(uint8_t)RaceID::EARTH_MOTHER,  // x FALLEN_ANGEL
+(uint8_t)RaceID::NOCTURNE,      // x FEMME
+(uint8_t)RaceID::GUARDIAN,      // x NATION_RULER
+(uint8_t)RaceID::FEMME,         // x EARTH_MOTHER
+(uint8_t)RaceID::GODLY_BEAST,   // x EVIL_DRAGON
+(uint8_t)RaceID::GODLY_BEAST,   // x GUARDIAN
+(uint8_t)RaceID::GUARDIAN,      // x DESTROYER
+(uint8_t)RaceID::YOMA           // x TYRANT
+},
+// 妖獣: WILDER
+{
+0,                              // x SERAPHIM
+(uint8_t)RaceID::BRUTE,         // x ENTITY
+(uint8_t)RaceID::BEAST,         // x DEMON_GOD
+(uint8_t)RaceID::FOUL,          // x VILE
+(uint8_t)RaceID::WILD_BIRD,     // x AVIAN
+(uint8_t)RaceID::BEAST,         // x GODDESS
+(uint8_t)RaceID::FEMME,         // x HEAVENLY_GOD
+(uint8_t)RaceID::WILD_BIRD,     // x RAPTOR
+(uint8_t)RaceID::FALLEN_ANGEL,  // x DIVINE
+(uint8_t)RaceID::BRUTE,         // x EVIL_DEMON
+(uint8_t)RaceID::FOUL,          // x WILD_BIRD
+(uint8_t)RaceID::EVIL_DEMON,    // x YOMA
+(uint8_t)RaceID::BRUTE,         // x EARTH_ELEMENT
+(uint8_t)RaceID::RAPTOR,        // x REAPER
+0,                              // x HOLY_BEAST
+(uint8_t)RaceID::EARTH_ELEMENT, // x BEAST
+(uint8_t)RaceID::WILD_BIRD,     // x FAIRY
+(uint8_t)RaceID::YOMA,          // x DEMIGOD
+3,                              // x WILDER
+(uint8_t)RaceID::NOCTURNE,      // x DRAGON_KING
+(uint8_t)RaceID::BEAST,         // x NOCTURNE
+0,                              // x GODLY_BEAST
+(uint8_t)RaceID::WILD_BIRD,     // x FOUL
+(uint8_t)RaceID::FAIRY,         // x BRUTE
+(uint8_t)RaceID::EARTH_ELEMENT, // x HAUNT
+(uint8_t)RaceID::BEAST,         // x DRAGON
+(uint8_t)RaceID::NOCTURNE,      // x FALLEN_ANGEL
+(uint8_t)RaceID::FALLEN_ANGEL,  // x FEMME
+(uint8_t)RaceID::GODLY_BEAST,   // x NATION_RULER
+(uint8_t)RaceID::HAUNT,         // x EARTH_MOTHER
+(uint8_t)RaceID::REAPER,        // x EVIL_DRAGON
+0,                              // x GUARDIAN
+(uint8_t)RaceID::DRAGON,        // x DESTROYER
+(uint8_t)RaceID::NOCTURNE       // x TYRANT
+},
+// 龍王: DRAGON_KING
+{
+0,                              // x SERAPHIM
+(uint8_t)RaceID::HEAVENLY_GOD,  // x ENTITY
+(uint8_t)RaceID::GUARDIAN,      // x DEMON_GOD
+(uint8_t)RaceID::GUARDIAN,      // x VILE
+(uint8_t)RaceID::HEAVENLY_GOD,  // x AVIAN
+(uint8_t)RaceID::FAIRY,         // x GODDESS
+(uint8_t)RaceID::GODDESS,       // x HEAVENLY_GOD
+(uint8_t)RaceID::FOUL,          // x RAPTOR
+(uint8_t)RaceID::FAIRY,         // x DIVINE
+(uint8_t)RaceID::EVIL_DRAGON,   // x EVIL_DEMON
+(uint8_t)RaceID::BEAST,         // x WILD_BIRD
+(uint8_t)RaceID::NOCTURNE,      // x YOMA
+(uint8_t)RaceID::FALLEN_ANGEL,  // x EARTH_ELEMENT
+(uint8_t)RaceID::EVIL_DRAGON,   // x REAPER
+(uint8_t)RaceID::GUARDIAN,      // x HOLY_BEAST
+(uint8_t)RaceID::BRUTE,         // x BEAST
+(uint8_t)RaceID::YOMA,          // x FAIRY
+(uint8_t)RaceID::DRAGON,        // x DEMIGOD
+(uint8_t)RaceID::NOCTURNE,      // x WILDER
+2,                              // x DRAGON_KING
+(uint8_t)RaceID::FALLEN_ANGEL,  // x NOCTURNE
+(uint8_t)RaceID::DRAGON,        // x GODLY_BEAST
+(uint8_t)RaceID::FALLEN_ANGEL,  // x FOUL
+(uint8_t)RaceID::BEAST,         // x BRUTE
+(uint8_t)RaceID::BRUTE,         // x HAUNT
+(uint8_t)RaceID::EARTH_MOTHER,  // x DRAGON
+(uint8_t)RaceID::DEMIGOD,       // x FALLEN_ANGEL
+(uint8_t)RaceID::DEMIGOD,       // x FEMME
+(uint8_t)RaceID::EARTH_MOTHER,  // x NATION_RULER
+(uint8_t)RaceID::FEMME,         // x EARTH_MOTHER
+(uint8_t)RaceID::EVIL_DEMON,    // x EVIL_DRAGON
+(uint8_t)RaceID::DRAGON,        // x GUARDIAN
+(uint8_t)RaceID::EVIL_DRAGON,   // x DESTROYER
+(uint8_t)RaceID::EVIL_DRAGON    // x TYRANT
+},
+// 夜魔: NOCTURNE
+{
+(uint8_t)RaceID::FALLEN_ANGEL,  // x SERAPHIM
+(uint8_t)RaceID::BRUTE,         // x ENTITY
+(uint8_t)RaceID::VILE,          // x DEMON_GOD
+(uint8_t)RaceID::HAUNT,         // x VILE
+(uint8_t)RaceID::FEMME,         // x AVIAN
+(uint8_t)RaceID::FALLEN_ANGEL,  // x GODDESS
+(uint8_t)RaceID::FALLEN_ANGEL,  // x HEAVENLY_GOD
+(uint8_t)RaceID::WILD_BIRD,     // x RAPTOR
+(uint8_t)RaceID::DRAGON_KING,   // x DIVINE
+(uint8_t)RaceID::FALLEN_ANGEL,  // x EVIL_DEMON
+(uint8_t)RaceID::BRUTE,         // x WILD_BIRD
+(uint8_t)RaceID::DIVINE,        // x YOMA
+(uint8_t)RaceID::FOUL,          // x EARTH_ELEMENT
+(uint8_t)RaceID::FALLEN_ANGEL,  // x REAPER
+(uint8_t)RaceID::EARTH_MOTHER,  // x HOLY_BEAST
+(uint8_t)RaceID::HOLY_BEAST,    // x BEAST
+0,                              // x FAIRY
+(uint8_t)RaceID::HOLY_BEAST,    // x DEMIGOD
+(uint8_t)RaceID::BEAST,         // x WILDER
+(uint8_t)RaceID::FALLEN_ANGEL,  // x DRAGON_KING
+4,                              // x NOCTURNE
+(uint8_t)RaceID::HOLY_BEAST,    // x GODLY_BEAST
+(uint8_t)RaceID::BRUTE,         // x FOUL
+(uint8_t)RaceID::GUARDIAN,      // x BRUTE
+(uint8_t)RaceID::YOMA,          // x HAUNT
+(uint8_t)RaceID::FEMME,         // x DRAGON
+(uint8_t)RaceID::FAIRY,         // x FALLEN_ANGEL
+(uint8_t)RaceID::EVIL_DEMON,    // x FEMME
+(uint8_t)RaceID::EARTH_MOTHER,  // x NATION_RULER
+(uint8_t)RaceID::GUARDIAN,      // x EARTH_MOTHER
+(uint8_t)RaceID::FALLEN_ANGEL,  // x EVIL_DRAGON
+(uint8_t)RaceID::FEMME,         // x GUARDIAN
+(uint8_t)RaceID::EARTH_MOTHER,  // x DESTROYER
+(uint8_t)RaceID::EARTH_MOTHER   // x TYRANT
+},
+// 神獣: GODLY_BEAST
+{
+(uint8_t)RaceID::AVIAN,         // x SERAPHIM
+(uint8_t)RaceID::HEAVENLY_GOD,  // x ENTITY
+(uint8_t)RaceID::DRAGON,        // x DEMON_GOD
+(uint8_t)RaceID::EVIL_DRAGON,   // x VILE
+(uint8_t)RaceID::HOLY_BEAST,    // x AVIAN
+(uint8_t)RaceID::BEAST,         // x GODDESS
+(uint8_t)RaceID::DRAGON,        // x HEAVENLY_GOD
+(uint8_t)RaceID::WILDER,        // x RAPTOR
+(uint8_t)RaceID::GODDESS,       // x DIVINE
+0,                              // x EVIL_DEMON
+(uint8_t)RaceID::AVIAN,         // x WILD_BIRD
+(uint8_t)RaceID::DIVINE,        // x YOMA
+(uint8_t)RaceID::NATION_RULER,  // x EARTH_ELEMENT
+(uint8_t)RaceID::VILE,          // x REAPER
+(uint8_t)RaceID::GODDESS,       // x HOLY_BEAST
+(uint8_t)RaceID::DRAGON_KING,   // x BEAST
+(uint8_t)RaceID::DIVINE,        // x FAIRY
+(uint8_t)RaceID::HEAVENLY_GOD,  // x DEMIGOD
+0,                              // x WILDER
+(uint8_t)RaceID::DRAGON,        // x DRAGON_KING
+(uint8_t)RaceID::HOLY_BEAST,    // x NOCTURNE
+1,                              // x GODLY_BEAST
+0,                              // x FOUL
+(uint8_t)RaceID::EVIL_DRAGON,   // x BRUTE
+0,                              // x HAUNT
+(uint8_t)RaceID::DEMIGOD,       // x DRAGON
+(uint8_t)RaceID::DIVINE,        // x FALLEN_ANGEL
+(uint8_t)RaceID::GUARDIAN,      // x FEMME
+(uint8_t)RaceID::DRAGON,        // x NATION_RULER
+(uint8_t)RaceID::AVIAN,         // x EARTH_MOTHER
+0,                              // x EVIL_DRAGON
+(uint8_t)RaceID::HOLY_BEAST,    // x GUARDIAN
+(uint8_t)RaceID::HOLY_BEAST,    // x DESTROYER
+0                               // x TYRANT
+},
+// 外道: FOUL
+{
+(uint8_t)RaceID::FALLEN_ANGEL,  // x SERAPHIM
+0,                              // x ENTITY
+0,                              // x DEMON_GOD
+(uint8_t)RaceID::HAUNT,         // x VILE
+0,                              // x AVIAN
+0,                              // x GODDESS
+(uint8_t)RaceID::HAUNT,         // x HEAVENLY_GOD
+0,                              // x RAPTOR
+(uint8_t)RaceID::FALLEN_ANGEL,  // x DIVINE
+(uint8_t)RaceID::BRUTE,         // x EVIL_DEMON
+0,                              // x WILD_BIRD
+(uint8_t)RaceID::WILD_BIRD,     // x YOMA
+(uint8_t)RaceID::FEMME,         // x EARTH_ELEMENT
+0,                              // x REAPER
+0,                              // x HOLY_BEAST
+(uint8_t)RaceID::WILDER,        // x BEAST
+(uint8_t)RaceID::HAUNT,         // x FAIRY
+0,                              // x DEMIGOD
+(uint8_t)RaceID::WILD_BIRD,     // x WILDER
+(uint8_t)RaceID::FALLEN_ANGEL,  // x DRAGON_KING
+(uint8_t)RaceID::BRUTE,         // x NOCTURNE
+0,                              // x GODLY_BEAST
+0,                              // x FOUL
+(uint8_t)RaceID::WILDER,        // x BRUTE
+(uint8_t)RaceID::BRUTE,         // x HAUNT
+(uint8_t)RaceID::DRAGON_KING,   // x DRAGON
+0,                              // x FALLEN_ANGEL
+(uint8_t)RaceID::WILDER,        // x FEMME
+0,                              // x NATION_RULER
+(uint8_t)RaceID::EARTH_ELEMENT, // x EARTH_MOTHER
+(uint8_t)RaceID::VILE,          // x EVIL_DRAGON
+(uint8_t)RaceID::EVIL_DRAGON,   // x GUARDIAN
+0,                              // x DESTROYER
+(uint8_t)RaceID::HAUNT          // x TYRANT
+},
+// 妖鬼: BRUTE
+{
+0,                              // x SERAPHIM
+(uint8_t)RaceID::NATION_RULER,  // x ENTITY
+(uint8_t)RaceID::GUARDIAN,      // x DEMON_GOD
+(uint8_t)RaceID::FOUL,          // x VILE
+(uint8_t)RaceID::DEMIGOD,       // x AVIAN
+(uint8_t)RaceID::FEMME,         // x GODDESS
+(uint8_t)RaceID::GODLY_BEAST,   // x HEAVENLY_GOD
+(uint8_t)RaceID::FEMME,         // x RAPTOR
+(uint8_t)RaceID::YOMA,          // x DIVINE
+(uint8_t)RaceID::HAUNT,         // x EVIL_DEMON
+(uint8_t)RaceID::RAPTOR,        // x WILD_BIRD
+(uint8_t)RaceID::FEMME,         // x YOMA
+(uint8_t)RaceID::FAIRY,         // x EARTH_ELEMENT
+(uint8_t)RaceID::EARTH_ELEMENT, // x REAPER
+(uint8_t)RaceID::FEMME,         // x HOLY_BEAST
+(uint8_t)RaceID::FEMME,         // x BEAST
+(uint8_t)RaceID::YOMA,          // x FAIRY
+(uint8_t)RaceID::DIVINE,        // x DEMIGOD
+(uint8_t)RaceID::FAIRY,         // x WILDER
+(uint8_t)RaceID::BEAST,         // x DRAGON_KING
+(uint8_t)RaceID::GUARDIAN,      // x NOCTURNE
+(uint8_t)RaceID::EVIL_DRAGON,   // x GODLY_BEAST
+(uint8_t)RaceID::WILDER,        // x FOUL
+4,                              // x BRUTE
+(uint8_t)RaceID::FOUL,          // x HAUNT
+(uint8_t)RaceID::NOCTURNE,      // x DRAGON
+(uint8_t)RaceID::EARTH_ELEMENT, // x FALLEN_ANGEL
+(uint8_t)RaceID::BEAST,         // x FEMME
+(uint8_t)RaceID::DRAGON_KING,   // x NATION_RULER
+(uint8_t)RaceID::DIVINE,        // x EARTH_MOTHER
+(uint8_t)RaceID::EVIL_DEMON,    // x EVIL_DRAGON
+(uint8_t)RaceID::EARTH_ELEMENT, // x GUARDIAN
+(uint8_t)RaceID::FEMME,         // x DESTROYER
+(uint8_t)RaceID::HAUNT          // x TYRANT
+},
+// 幽鬼: HAUNT
+{
+(uint8_t)RaceID::FALLEN_ANGEL,  // x SERAPHIM
+0,                              // x ENTITY
+0,                              // x DEMON_GOD
+(uint8_t)RaceID::FOUL,          // x VILE
+0,                              // x AVIAN
+(uint8_t)RaceID::VILE,          // x GODDESS
+0,                              // x HEAVENLY_GOD
+(uint8_t)RaceID::WILD_BIRD,     // x RAPTOR
+(uint8_t)RaceID::EARTH_ELEMENT, // x DIVINE
+(uint8_t)RaceID::FOUL,          // x EVIL_DEMON
+(uint8_t)RaceID::YOMA,          // x WILD_BIRD
+(uint8_t)RaceID::EARTH_ELEMENT, // x YOMA
+(uint8_t)RaceID::FOUL,          // x EARTH_ELEMENT
+0,                              // x REAPER
+(uint8_t)RaceID::WILD_BIRD,     // x HOLY_BEAST
+(uint8_t)RaceID::WILDER,        // x BEAST
+(uint8_t)RaceID::WILD_BIRD,     // x FAIRY
+0,                              // x DEMIGOD
+(uint8_t)RaceID::EARTH_ELEMENT, // x WILDER
+(uint8_t)RaceID::BRUTE,         // x DRAGON_KING
+(uint8_t)RaceID::YOMA,          // x NOCTURNE
+0,                              // x GODLY_BEAST
+(uint8_t)RaceID::BRUTE,         // x FOUL
+(uint8_t)RaceID::FOUL,          // x BRUTE
+0,                              // x HAUNT
+0,                              // x DRAGON
+(uint8_t)RaceID::YOMA,          // x FALLEN_ANGEL
+(uint8_t)RaceID::FOUL,          // x FEMME
+(uint8_t)RaceID::BRUTE,         // x NATION_RULER
+(uint8_t)RaceID::FEMME,         // x EARTH_MOTHER
+(uint8_t)RaceID::RAPTOR,        // x EVIL_DRAGON
+0,                              // x GUARDIAN
+0,                              // x DESTROYER
+(uint8_t)RaceID::FOUL           // x TYRANT
+},
+// 龍神: DRAGON
+{
+(uint8_t)RaceID::HOLY_BEAST,    // x SERAPHIM
+(uint8_t)RaceID::EARTH_MOTHER,  // x ENTITY
+(uint8_t)RaceID::NATION_RULER,  // x DEMON_GOD
+(uint8_t)RaceID::DRAGON_KING,   // x VILE
+(uint8_t)RaceID::GODLY_BEAST,   // x AVIAN
+(uint8_t)RaceID::GODLY_BEAST,   // x GODDESS
+(uint8_t)RaceID::HOLY_BEAST,    // x HEAVENLY_GOD
+(uint8_t)RaceID::WILDER,        // x RAPTOR
+(uint8_t)RaceID::GODDESS,       // x DIVINE
+(uint8_t)RaceID::GUARDIAN,      // x EVIL_DEMON
+(uint8_t)RaceID::HEAVENLY_GOD,  // x WILD_BIRD
+(uint8_t)RaceID::GODLY_BEAST,   // x YOMA
+(uint8_t)RaceID::NATION_RULER,  // x EARTH_ELEMENT
+(uint8_t)RaceID::EVIL_DRAGON,   // x REAPER
+(uint8_t)RaceID::DRAGON_KING,   // x HOLY_BEAST
+(uint8_t)RaceID::DRAGON_KING,   // x BEAST
+(uint8_t)RaceID::DEMIGOD,       // x FAIRY
+(uint8_t)RaceID::HOLY_BEAST,    // x DEMIGOD
+(uint8_t)RaceID::BEAST,         // x WILDER
+(uint8_t)RaceID::EARTH_MOTHER,  // x DRAGON_KING
+(uint8_t)RaceID::FEMME,         // x NOCTURNE
+(uint8_t)RaceID::DEMIGOD,       // x GODLY_BEAST
+(uint8_t)RaceID::DRAGON_KING,   // x FOUL
+(uint8_t)RaceID::NOCTURNE,      // x BRUTE
+0,                              // x HAUNT
+2,                              // x DRAGON
+(uint8_t)RaceID::DRAGON_KING,   // x FALLEN_ANGEL
+(uint8_t)RaceID::NOCTURNE,      // x FEMME
+(uint8_t)RaceID::EARTH_MOTHER,  // x NATION_RULER
+0,                              // x EARTH_MOTHER
+0,                              // x EVIL_DRAGON
+(uint8_t)RaceID::NATION_RULER,  // x GUARDIAN
+(uint8_t)RaceID::EVIL_DRAGON,   // x DESTROYER
+(uint8_t)RaceID::EVIL_DRAGON    // x TYRANT
+},
+// 堕天使: FALLEN_ANGEL
+{
+(uint8_t)RaceID::EARTH_MOTHER,  // x SERAPHIM
+(uint8_t)RaceID::GUARDIAN,      // x ENTITY
+0,                              // x DEMON_GOD
+(uint8_t)RaceID::BRUTE,         // x VILE
+(uint8_t)RaceID::DRAGON_KING,   // x AVIAN
+(uint8_t)RaceID::DIVINE,        // x GODDESS
+(uint8_t)RaceID::WILD_BIRD,     // x HEAVENLY_GOD
+(uint8_t)RaceID::FOUL,          // x RAPTOR
+0,                              // x DIVINE
+(uint8_t)RaceID::EVIL_DRAGON,   // x EVIL_DEMON
+(uint8_t)RaceID::RAPTOR,        // x WILD_BIRD
+(uint8_t)RaceID::EARTH_ELEMENT, // x YOMA
+(uint8_t)RaceID::YOMA,          // x EARTH_ELEMENT
+(uint8_t)RaceID::RAPTOR,        // x REAPER
+(uint8_t)RaceID::BEAST,         // x HOLY_BEAST
+(uint8_t)RaceID::NOCTURNE,      // x BEAST
+(uint8_t)RaceID::YOMA,          // x FAIRY
+(uint8_t)RaceID::EARTH_MOTHER,  // x DEMIGOD
+(uint8_t)RaceID::NOCTURNE,      // x WILDER
+(uint8_t)RaceID::DEMIGOD,       // x DRAGON_KING
+(uint8_t)RaceID::FAIRY,         // x NOCTURNE
+(uint8_t)RaceID::DIVINE,        // x GODLY_BEAST
+0,                              // x FOUL
+(uint8_t)RaceID::EARTH_ELEMENT, // x BRUTE
+(uint8_t)RaceID::YOMA,          // x HAUNT
+(uint8_t)RaceID::DRAGON_KING,   // x DRAGON
+4,                              // x FALLEN_ANGEL
+(uint8_t)RaceID::WILDER,        // x FEMME
+(uint8_t)RaceID::DRAGON_KING,   // x NATION_RULER
+(uint8_t)RaceID::FEMME,         // x EARTH_MOTHER
+(uint8_t)RaceID::EVIL_DEMON,    // x EVIL_DRAGON
+(uint8_t)RaceID::NOCTURNE,      // x GUARDIAN
+(uint8_t)RaceID::VILE,          // x DESTROYER
+0                               // x TYRANT
+},
+// 鬼女: FEMME
+{
+0,                              // x SERAPHIM
+(uint8_t)RaceID::EARTH_MOTHER,  // x ENTITY
+(uint8_t)RaceID::EARTH_MOTHER,  // x DEMON_GOD
+(uint8_t)RaceID::BRUTE,         // x VILE
+(uint8_t)RaceID::GODDESS,       // x AVIAN
+(uint8_t)RaceID::EARTH_MOTHER,  // x GODDESS
+(uint8_t)RaceID::FALLEN_ANGEL,  // x HEAVENLY_GOD
+(uint8_t)RaceID::FOUL,          // x RAPTOR
+(uint8_t)RaceID::BEAST,         // x DIVINE
+(uint8_t)RaceID::BEAST,         // x EVIL_DEMON
+(uint8_t)RaceID::EVIL_DEMON,    // x WILD_BIRD
+(uint8_t)RaceID::BRUTE,         // x YOMA
+(uint8_t)RaceID::WILDER,        // x EARTH_ELEMENT
+(uint8_t)RaceID::EVIL_DEMON,    // x REAPER
+(uint8_t)RaceID::EARTH_MOTHER,  // x HOLY_BEAST
+(uint8_t)RaceID::FOUL,          // x BEAST
+(uint8_t)RaceID::HAUNT,         // x FAIRY
+(uint8_t)RaceID::NOCTURNE,      // x DEMIGOD
+(uint8_t)RaceID::FALLEN_ANGEL,  // x WILDER
+(uint8_t)RaceID::DEMIGOD,       // x DRAGON_KING
+(uint8_t)RaceID::EVIL_DEMON,    // x NOCTURNE
+(uint8_t)RaceID::GUARDIAN,      // x GODLY_BEAST
+(uint8_t)RaceID::WILDER,        // x FOUL
+(uint8_t)RaceID::BEAST,         // x BRUTE
+(uint8_t)RaceID::FOUL,          // x HAUNT
+(uint8_t)RaceID::NOCTURNE,      // x DRAGON
+(uint8_t)RaceID::WILDER,        // x FALLEN_ANGEL
+2,                              // x FEMME
+(uint8_t)RaceID::GUARDIAN,      // x NATION_RULER
+(uint8_t)RaceID::GUARDIAN,      // x EARTH_MOTHER
+(uint8_t)RaceID::EVIL_DEMON,    // x EVIL_DRAGON
+(uint8_t)RaceID::EARTH_MOTHER,  // x GUARDIAN
+0,                              // x DESTROYER
+(uint8_t)RaceID::EARTH_MOTHER   // x TYRANT
+},
+// 国津神: NATION_RULER
+{
+(uint8_t)RaceID::DRAGON,        // x SERAPHIM
+(uint8_t)RaceID::DRAGON,        // x ENTITY
+(uint8_t)RaceID::HEAVENLY_GOD,  // x DEMON_GOD
+(uint8_t)RaceID::REAPER,        // x VILE
+(uint8_t)RaceID::HEAVENLY_GOD,  // x AVIAN
+(uint8_t)RaceID::EARTH_MOTHER,  // x GODDESS
+0,                              // x HEAVENLY_GOD
+(uint8_t)RaceID::REAPER,        // x RAPTOR
+(uint8_t)RaceID::WILD_BIRD,     // x DIVINE
+(uint8_t)RaceID::VILE,          // x EVIL_DEMON
+(uint8_t)RaceID::EARTH_MOTHER,  // x WILD_BIRD
+(uint8_t)RaceID::FEMME,         // x YOMA
+(uint8_t)RaceID::DRAGON_KING,   // x EARTH_ELEMENT
+(uint8_t)RaceID::VILE,          // x REAPER
+(uint8_t)RaceID::EARTH_ELEMENT, // x HOLY_BEAST
+(uint8_t)RaceID::DRAGON_KING,   // x BEAST
+(uint8_t)RaceID::DRAGON_KING,   // x FAIRY
+(uint8_t)RaceID::GUARDIAN,      // x DEMIGOD
+(uint8_t)RaceID::GODLY_BEAST,   // x WILDER
+(uint8_t)RaceID::EARTH_MOTHER,  // x DRAGON_KING
+(uint8_t)RaceID::EARTH_MOTHER,  // x NOCTURNE
+(uint8_t)RaceID::DRAGON,        // x GODLY_BEAST
+0,                              // x FOUL
+(uint8_t)RaceID::DRAGON_KING,   // x BRUTE
+(uint8_t)RaceID::BRUTE,         // x HAUNT
+(uint8_t)RaceID::EARTH_MOTHER,  // x DRAGON
+(uint8_t)RaceID::DRAGON_KING,   // x FALLEN_ANGEL
+(uint8_t)RaceID::GUARDIAN,      // x FEMME
+4,                              // x NATION_RULER
+(uint8_t)RaceID::GUARDIAN,      // x EARTH_MOTHER
+(uint8_t)RaceID::REAPER,        // x EVIL_DRAGON
+0,                              // x GUARDIAN
+(uint8_t)RaceID::DRAGON,        // x DESTROYER
+(uint8_t)RaceID::GUARDIAN       // x TYRANT
+},
+// 地母神: EARTH_MOTHER
+{
+(uint8_t)RaceID::HEAVENLY_GOD,  // x SERAPHIM
+(uint8_t)RaceID::HEAVENLY_GOD,  // x ENTITY
+0,                              // x DEMON_GOD
+(uint8_t)RaceID::REAPER,        // x VILE
+(uint8_t)RaceID::DRAGON,        // x AVIAN
+0,                              // x GODDESS
+(uint8_t)RaceID::GODDESS,       // x HEAVENLY_GOD
+(uint8_t)RaceID::DRAGON_KING,   // x RAPTOR
+(uint8_t)RaceID::GODDESS,       // x DIVINE
+(uint8_t)RaceID::GUARDIAN,      // x EVIL_DEMON
+(uint8_t)RaceID::AVIAN,         // x WILD_BIRD
+(uint8_t)RaceID::NOCTURNE,      // x YOMA
+(uint8_t)RaceID::BEAST,         // x EARTH_ELEMENT
+0,                              // x REAPER
+(uint8_t)RaceID::GODLY_BEAST,   // x HOLY_BEAST
+(uint8_t)RaceID::DRAGON_KING,   // x BEAST
+(uint8_t)RaceID::YOMA,          // x FAIRY
+(uint8_t)RaceID::FEMME,         // x DEMIGOD
+(uint8_t)RaceID::HAUNT,         // x WILDER
+(uint8_t)RaceID::FEMME,         // x DRAGON_KING
+(uint8_t)RaceID::GUARDIAN,      // x NOCTURNE
+(uint8_t)RaceID::AVIAN,         // x GODLY_BEAST
+(uint8_t)RaceID::EARTH_ELEMENT, // x FOUL
+(uint8_t)RaceID::DIVINE,        // x BRUTE
+(uint8_t)RaceID::FEMME,         // x HAUNT
+0,                              // x DRAGON
+(uint8_t)RaceID::FEMME,         // x FALLEN_ANGEL
+(uint8_t)RaceID::GUARDIAN,      // x FEMME
+(uint8_t)RaceID::GUARDIAN,      // x NATION_RULER
+4,    // x EARTH_MOTHER
+(uint8_t)RaceID::EARTH_ELEMENT, // x EVIL_DRAGON
+(uint8_t)RaceID::FEMME,         // x GUARDIAN
+(uint8_t)RaceID::VILE,          // x DESTROYER
+0                               // x TYRANT
+},
+// 邪龍: EVIL_DRAGON
+{
+0,                              // x SERAPHIM
+0,                              // x ENTITY
+0,                              // x DEMON_GOD
+(uint8_t)RaceID::WILDER,        // x VILE
+0,                              // x AVIAN
+(uint8_t)RaceID::VILE,          // x GODDESS
+0,                              // x HEAVENLY_GOD
+(uint8_t)RaceID::WILDER,        // x RAPTOR
+(uint8_t)RaceID::WILD_BIRD,     // x DIVINE
+(uint8_t)RaceID::VILE,          // x EVIL_DEMON
+(uint8_t)RaceID::RAPTOR,        // x WILD_BIRD
+(uint8_t)RaceID::DRAGON_KING,   // x YOMA
+(uint8_t)RaceID::EVIL_DEMON,    // x EARTH_ELEMENT
+(uint8_t)RaceID::WILDER,        // x REAPER
+0,                              // x HOLY_BEAST
+(uint8_t)RaceID::REAPER,        // x BEAST
+(uint8_t)RaceID::DRAGON_KING,   // x FAIRY
+(uint8_t)RaceID::GODLY_BEAST,   // x DEMIGOD
+(uint8_t)RaceID::REAPER,        // x WILDER
+(uint8_t)RaceID::EVIL_DEMON,    // x DRAGON_KING
+(uint8_t)RaceID::FALLEN_ANGEL,  // x NOCTURNE
+0,                              // x GODLY_BEAST
+(uint8_t)RaceID::VILE,          // x FOUL
+(uint8_t)RaceID::EVIL_DEMON,    // x BRUTE
+(uint8_t)RaceID::RAPTOR,        // x HAUNT
+0,                              // x DRAGON
+(uint8_t)RaceID::EVIL_DEMON,    // x FALLEN_ANGEL
+(uint8_t)RaceID::EVIL_DEMON,    // x FEMME
+(uint8_t)RaceID::REAPER,        // x NATION_RULER
+(uint8_t)RaceID::EARTH_ELEMENT, // x EARTH_MOTHER
+0,                              // x EVIL_DRAGON
+(uint8_t)RaceID::VILE,          // x GUARDIAN
+0,                              // x DESTROYER
+(uint8_t)RaceID::VILE           // x TYRANT
+},
+// 鬼神: GUARDIAN
+{
+(uint8_t)RaceID::NATION_RULER,  // x SERAPHIM
+(uint8_t)RaceID::GODDESS,       // x ENTITY
+(uint8_t)RaceID::HEAVENLY_GOD,  // x DEMON_GOD
+(uint8_t)RaceID::REAPER,        // x VILE
+(uint8_t)RaceID::DRAGON,        // x AVIAN
+(uint8_t)RaceID::EARTH_MOTHER,  // x GODDESS
+(uint8_t)RaceID::NATION_RULER,  // x HEAVENLY_GOD
+(uint8_t)RaceID::VILE,          // x RAPTOR
+(uint8_t)RaceID::EARTH_MOTHER,  // x DIVINE
+(uint8_t)RaceID::BRUTE,         // x EVIL_DEMON
+(uint8_t)RaceID::FEMME,         // x WILD_BIRD
+(uint8_t)RaceID::NATION_RULER,  // x YOMA
+(uint8_t)RaceID::DRAGON_KING,   // x EARTH_ELEMENT
+(uint8_t)RaceID::EVIL_DEMON,    // x REAPER
+(uint8_t)RaceID::NATION_RULER,  // x HOLY_BEAST
+(uint8_t)RaceID::HOLY_BEAST,    // x BEAST
+(uint8_t)RaceID::BRUTE,         // x FAIRY
+(uint8_t)RaceID::GODLY_BEAST,   // x DEMIGOD
+0,                              // x WILDER
+(uint8_t)RaceID::DRAGON,        // x DRAGON_KING
+(uint8_t)RaceID::FEMME,         // x NOCTURNE
+(uint8_t)RaceID::HOLY_BEAST,    // x GODLY_BEAST
+(uint8_t)RaceID::EVIL_DRAGON,   // x FOUL
+(uint8_t)RaceID::EARTH_ELEMENT, // x BRUTE
+0,                              // x HAUNT
+(uint8_t)RaceID::NATION_RULER,  // x DRAGON
+(uint8_t)RaceID::NOCTURNE,      // x FALLEN_ANGEL
+(uint8_t)RaceID::EARTH_MOTHER,  // x FEMME
+0,                              // x NATION_RULER
+(uint8_t)RaceID::FEMME,         // x EARTH_MOTHER
+(uint8_t)RaceID::VILE,          // x EVIL_DRAGON
+0,                              // x GUARDIAN
+(uint8_t)RaceID::EARTH_MOTHER,  // x DESTROYER
+(uint8_t)RaceID::DRAGON         // x TYRANT
+},
+// 破壊神: DESTROYER
+{
+(uint8_t)RaceID::VILE,          // x SERAPHIM
+(uint8_t)RaceID::EARTH_MOTHER,  // x ENTITY
+0,                              // x DEMON_GOD
+(uint8_t)RaceID::REAPER,        // x VILE
+(uint8_t)RaceID::GUARDIAN,      // x AVIAN
+(uint8_t)RaceID::FEMME,         // x GODDESS
+(uint8_t)RaceID::NATION_RULER,  // x HEAVENLY_GOD
+(uint8_t)RaceID::EVIL_DRAGON,   // x RAPTOR
+(uint8_t)RaceID::VILE,          // x DIVINE
+0,                              // x EVIL_DEMON
+(uint8_t)RaceID::EARTH_MOTHER,  // x WILD_BIRD
+(uint8_t)RaceID::DEMIGOD,       // x YOMA
+(uint8_t)RaceID::FEMME,         // x EARTH_ELEMENT
+(uint8_t)RaceID::DRAGON,        // x REAPER
+(uint8_t)RaceID::GUARDIAN,      // x HOLY_BEAST
+(uint8_t)RaceID::EVIL_DRAGON,   // x BEAST
+(uint8_t)RaceID::BRUTE,         // x FAIRY
+(uint8_t)RaceID::GUARDIAN,      // x DEMIGOD
+(uint8_t)RaceID::DRAGON,        // x WILDER
+(uint8_t)RaceID::EVIL_DRAGON,   // x DRAGON_KING
+(uint8_t)RaceID::EARTH_MOTHER,  // x NOCTURNE
+(uint8_t)RaceID::HOLY_BEAST,    // x GODLY_BEAST
+0,                              // x FOUL
+(uint8_t)RaceID::FEMME,         // x BRUTE
+0,                              // x HAUNT
+(uint8_t)RaceID::EVIL_DRAGON,   // x DRAGON
+(uint8_t)RaceID::VILE,          // x FALLEN_ANGEL
+0,                              // x FEMME
+(uint8_t)RaceID::DRAGON,        // x NATION_RULER
+(uint8_t)RaceID::VILE,          // x EARTH_MOTHER
+0,                              // x EVIL_DRAGON
+(uint8_t)RaceID::EARTH_MOTHER,  // x GUARDIAN
+0,                              // x DESTROYER
+(uint8_t)RaceID::EARTH_MOTHER   // x TYRANT
+},
+// 魔王: TYRANT
+{
+(uint8_t)RaceID::FALLEN_ANGEL,  // x SERAPHIM
+(uint8_t)RaceID::VILE,          // x ENTITY
+0,                              // x DEMON_GOD
+(uint8_t)RaceID::REAPER,        // x VILE
+0,                              // x AVIAN
+0,                              // x GODDESS
+0,                              // x HEAVENLY_GOD
+(uint8_t)RaceID::DRAGON,        // x RAPTOR
+(uint8_t)RaceID::VILE,          // x DIVINE
+(uint8_t)RaceID::FOUL,          // x EVIL_DEMON
+(uint8_t)RaceID::EVIL_DRAGON,   // x WILD_BIRD
+(uint8_t)RaceID::NOCTURNE,      // x YOMA
+(uint8_t)RaceID::WILDER,        // x EARTH_ELEMENT
+(uint8_t)RaceID::VILE,          // x REAPER
+(uint8_t)RaceID::EVIL_DRAGON,   // x HOLY_BEAST
+(uint8_t)RaceID::NOCTURNE,      // x BEAST
+(uint8_t)RaceID::NOCTURNE,      // x FAIRY
+(uint8_t)RaceID::YOMA,          // x DEMIGOD
+(uint8_t)RaceID::NOCTURNE,      // x WILDER
+(uint8_t)RaceID::EVIL_DRAGON,   // x DRAGON_KING
+(uint8_t)RaceID::EARTH_MOTHER,  // x NOCTURNE
+0,                              // x GODLY_BEAST
+(uint8_t)RaceID::HAUNT,         // x FOUL
+(uint8_t)RaceID::HAUNT,         // x BRUTE
+(uint8_t)RaceID::FOUL,          // x HAUNT
+(uint8_t)RaceID::EVIL_DRAGON,   // x DRAGON
+0,                              // x FALLEN_ANGEL
+(uint8_t)RaceID::EARTH_MOTHER,  // x FEMME
+(uint8_t)RaceID::GUARDIAN,      // x NATION_RULER
+0,                              // x EARTH_MOTHER
+(uint8_t)RaceID::VILE,          // x EVIL_DRAGON
+(uint8_t)RaceID::DRAGON,        // x GUARDIAN
+(uint8_t)RaceID::EARTH_MOTHER,  // x DESTROYER
+0                               // x TYRANT
+}
 };
-
-/// @todo: remove hardcoded values
-uint32_t FUSION_ELEMENTAL_TYPES[4] = { 581, 582, 583, 584 };
 
 int8_t FUSION_ELEMENTAL_ADJUST[34][4] =
 {
-    { 0, 0, 0, 0 },     // 大天使
-    { 0, 0, 0, 0 },     // 威霊
-    { 0, 0, 0, 0 },     // 魔神
-    { -1, -1, -1, -1 }, // 邪神
-    { -1, -1, -1, -1 }, // 霊鳥
-    { -1, -1, -1, -1 }, // 女神
-    { -1, -1, -1, -1 }, // 天津神
-    { -1, -1, -1, -1 }, // 凶鳥
-    { 1, 1, -1, -1 },   // 天使
-    { -1, -1, -1, -1 }, // 邪鬼
-    { -1, -1, -1, -1 }, // 妖鳥
-    { -1, 1, 1, -1 },   // 妖魔
-    { -1, -1, 1, 1 },   // 地霊
-    { -1, -1, -1, -1 }, // 死神
-    { 1, -1, -1, -1 },  // 聖獣
-    { 1, -1, 1, -1 },   // 魔獣
-    { -1, 1, -1, 1 },   // 妖精
-    { -1, -1, -1, -1 }, // 幻魔
-    { 1, 1, -1, -1 },   // 妖獣
-    { 1, 1, -1, -1 },   // 龍王
-    { -1, -1, 1, -1 },  // 夜魔
-    { -1, -1, -1, -1 }, // 神獣
-    { -1, 1, -1, -1 },  // 外道
-    { 1, 1, -1, 1 },    // 妖鬼
-    { -1, -1, 1, -1 },  // 幽鬼
-    { -1, -1, -1, -1 }, // 龍神
-    { 1, -1, 1, -1 },   // 堕天使
-    { 1, 1, -1, 1 },    // 鬼女
-    { -1, -1, -1, -1 }, // 国津神
-    { -1, -1, -1, 1 },  // 地母神
-    { -1, -1, -1, -1 }, // 邪龍
-    { -1, -1, -1, 1 },  // 鬼神
-    { 0, 0, 0, 0 },     // 破壊神
-    { 0, 0, 0, 0 }      // 魔王
+    { 0, 0, 0, 0 },     // SERAPHIM
+    { 0, 0, 0, 0 },     // ENTITY
+    { 0, 0, 0, 0 },     // DEMON_GOD
+    { -1, -1, -1, -1 }, // VILE
+    { -1, -1, -1, -1 }, // AVIAN
+    { -1, -1, -1, -1 }, // GODDESS
+    { -1, -1, -1, -1 }, // HEAVENLY_GOD
+    { -1, -1, -1, -1 }, // RAPTOR
+    { 1, 1, -1, -1 },   // DIVINE
+    { -1, -1, -1, -1 }, // EVIL_DEMON
+    { -1, -1, -1, -1 }, // WILD_BIRD
+    { -1, 1, 1, -1 },   // YOMA
+    { -1, -1, 1, 1 },   // EARTH_ELEMENT
+    { -1, -1, -1, -1 }, // REAPER
+    { 1, -1, -1, -1 },  // HOLY_BEAST
+    { 1, -1, 1, -1 },   // BEAST
+    { -1, 1, -1, 1 },   // FAIRY
+    { -1, -1, -1, -1 }, // DEMIGOD
+    { 1, 1, -1, -1 },   // WILDER
+    { 1, 1, -1, -1 },   // DRAGON_KING
+    { -1, -1, 1, -1 },  // NOCTURNE
+    { -1, -1, -1, -1 }, // GODLY_BEAST
+    { -1, 1, -1, -1 },  // FOUL
+    { 1, 1, -1, 1 },    // BRUTE
+    { -1, -1, 1, -1 },  // HAUNT 
+    { -1, -1, -1, -1 }, // DRAGON
+    { 1, -1, 1, -1 },   // FALLEN_ANGEL
+    { 1, 1, -1, 1 },    // FEMME
+    { -1, -1, -1, -1 }, // NATION_RULER
+    { -1, -1, -1, 1 },  // EARTH_MOTHER
+    { -1, -1, -1, -1 }, // EVIL_DRAGON
+    { -1, -1, -1, 1 },  // GUARDIAN
+    { 0, 0, 0, 0 },     // DESTROYER
+    { 0, 0, 0, 0 }      // TYRANT
 };

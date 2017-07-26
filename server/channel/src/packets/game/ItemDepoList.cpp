@@ -29,6 +29,7 @@
 // libcomp Includes
 #include <ManagerPacket.h>
 #include <PacketCodes.h>
+#include <ServerConstants.h>
 
 // channel Includes
 #include "ChannelServer.h"
@@ -93,20 +94,19 @@ bool Parsers::ItemDepoList::Parse(libcomp::ManagerPacket *pPacketManager,
 
                 itemCount++;
 
-                switch(item->GetType())
+                auto itemType = item->GetType();
+                if(itemType == SVR_CONST.ITEM_MACCA_NOTE)
                 {
-                    case ITEM_MACCA_NOTE:
-                        macca = (int64_t)(macca + item->GetStackSize()
-                            * ITEM_MACCA_NOTE_AMOUNT);
-                        break;
-                    case ITEM_MACCA:
-                        macca = (int64_t)(macca + item->GetStackSize());
-                        break;
-                    case ITEM_MAGNETITE:
-                        mag = (int32_t)(mag + item->GetStackSize());
-                        break;
-                    default:
-                        break;
+                    macca = (int64_t)(macca + item->GetStackSize()
+                        * ITEM_MACCA_NOTE_AMOUNT);
+                }
+                else if(itemType == SVR_CONST.ITEM_MACCA)
+                {
+                    macca = (int64_t)(macca + item->GetStackSize());
+                }
+                else if(itemType == SVR_CONST.ITEM_MAGNETITE)
+                {
+                    mag = (int32_t)(mag + item->GetStackSize());
                 }
             }
 

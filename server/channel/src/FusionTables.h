@@ -30,21 +30,16 @@
 #define SERVER_CHANNEL_SRC_FUSIONTABLES_H
 
  // 34x34 2-Way Fusion table of race IDs to resulting race ID or
- // elemental ID index (when source IDs match, denoted by an 'E')
+ // elemental ID index (when source IDs match, no enum used)
  // The first row represents the positioning of each input race
  // on both the row (starting at 1) and column.
 extern uint8_t FUSION_RACE_MAP[35][34];
 
-// Set of elemental fusion demon IDs (starting at index 1 in
-// the above fusion map) that result when two demons of the
-// same race are fused together and result in a non-zero value.
-extern uint32_t FUSION_ELEMENTAL_TYPES[4];
-
 // Set of fusion level up (1), level down (-1) or null (0) fusion
 // results when an elemental is only one of the components. The
 // row index should match the race index value of FUSION_RACE_MAP
-// and the column index used here should match the demon index of
-// FUSION_ELEMENTAL_TYPES listed above.
+// and the column index used here should match the elemental demon
+// index in SVR_CONST (ex: SVR_CONST.ELEMENTAL_1_FLAEMIS).
 extern int8_t FUSION_ELEMENTAL_ADJUST[34][4];
 
 #endif // SERVER_CHANNEL_SRC_FUSIONTABLES_H

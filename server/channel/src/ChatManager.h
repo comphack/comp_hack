@@ -119,6 +119,16 @@ private:
         channel::ChannelClientConnection>& client,
         const std::list<libcomp::String>& args);
 
+    /** 
+     * GM command to ban a player currently on the channel
+     * @param client Pointer to the client that sent the command
+     * @param args List of arguments for the command
+     * @return true if the command was handled properly, else false
+     */
+    bool GMCommand_Ban(const std::shared_ptr<
+        channel::ChannelClientConnection>& client,
+        const std::list<libcomp::String>& args);
+
     /**
      * GM command to add a demon to a character's COMP.
      * @param client Pointer to the client that sent the command
@@ -200,6 +210,16 @@ private:
      * @return true if the command was handled properly, else false
      */
     bool GMCommand_Item(const std::shared_ptr<
+        channel::ChannelClientConnection>& client,
+        const std::list<libcomp::String>& args);
+    
+    /** 
+     * GM command to kick a player from the channel
+     * @param client Pointer to the client that sent the command
+     * @param args List of arguments for the command
+     * @return true if the command was handled properly, else false
+     */
+    bool GMCommand_Kick(const std::shared_ptr<
         channel::ChannelClientConnection>& client,
         const std::list<libcomp::String>& args);
 

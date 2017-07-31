@@ -711,14 +711,13 @@ bool ChannelServer::SendSystemMessage(const std::shared_ptr<
 
     if(!sendToAll) {
         client->SendPacket(p);
-        return true;
     } else {
-        mZoneManager->BroadcastPacket(client,p);
-        return true;
+        mZoneManager->BroadcastPacket(client, p);
     }
-    return false;
-<<<<<<< HEAD
+    return true;
 }
-=======
-}
->>>>>>> 3a9f2dd75efbd4697b0feb4a68315ca52d1528ee
+
+
+
+
+

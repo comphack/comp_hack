@@ -32,6 +32,7 @@
 #include <ServerConstants.h>
 
 // object Includes
+#include <Account.h>
 #include <AccountLogin.h>
 #include <Character.h>
 #include <MiItemData.h>
@@ -58,6 +59,7 @@ ChatManager::ChatManager(const std::weak_ptr<ChannelServer>& server)
     : mServer(server)
 {
     mGMands["announce"] = &ChatManager::GMCommand_Announce;
+    mGMands["ban"] = &ChatManager::GMCommand_Ban;
     mGMands["contract"] = &ChatManager::GMCommand_Contract;
     mGMands["crash"] = &ChatManager::GMCommand_Crash;
     mGMands["effect"] = &ChatManager::GMCommand_Effect;
@@ -66,6 +68,7 @@ ChatManager::ChatManager(const std::weak_ptr<ChannelServer>& server)
     mGMands["familiarity"] = &ChatManager::GMCommand_Familiarity;
     mGMands["homepoint"] = &ChatManager::GMCommand_Homepoint;
     mGMands["item"] = &ChatManager::GMCommand_Item;
+    mGMands["kick"] = &ChatManager::GMCommand_Kick;
     mGMands["kill"] = &ChatManager::GMCommand_Kill;
     mGMands["levelup"] = &ChatManager::GMCommand_LevelUp;
     mGMands["lnc"] = &ChatManager::GMCommand_LNC;
@@ -193,23 +196,50 @@ bool ChatManager::ExecuteGMCommand(const std::shared_ptr<
 bool ChatManager::GMCommand_Announce(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
-
 {
     std::list<libcomp::String> argsCopy = args;
     int8_t color = 0;
 
-    if ((!GetIntegerArg<int8_t>(color,argsCopy)) || argsCopy.size() < 1) 
+    if ((!GetIntegerArg<int8_t>(color, argsCopy)) || argsCopy.size() < 1) 
     {
         return SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(
             "@announce requires two arguments, <color> <message>"));
     }
     
-    libcomp::String message = libcomp::String::Join(argsCopy," ");
+    libcomp::String message = libcomp::String::Join(argsCopy, " ");
     auto server = mServer.lock();
     server->SendSystemMessage(client, message, color, true);
     return true;
 }
 
+bool ChatManager::GMCommand_Ban(const std::shared_ptr<
+    channel::ChannelClientConnection>& client,
+    const std::list<libcomp::String>& args)
+{
+    std::list<libcomp::String> argsCopy = args;
+    libcomp::String bannedPlayer;
+    if (!GetStringArg(bannedPlayer, argsCopy) || argsCopy.size() > 1)
+    {
+         return SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(
+            "@ban requires one argument, <username>"));
+    }
+    
+    auto server = mServer.lock();
+    auto worldDB = server->GetWorldDatabase();
+    auto lobbyDB = server->GetLobbyDatabase();
+    auto target = objects::Character::LoadCharacterByName(worldDB, bannedPlayer);
+    auto targetAccount = target ? target->GetAccount().Get() : nullptr;
+    auto targetClient = targetAccount ? server->GetManagerConnection()->GetClientConnection(
+        targetAccount->GetUsername()) : nullptr;
+    if(targetClient != nullptr) 
+    {
+        targetAccount->SetIsBanned(true);
+        targetAccount->Update(lobbyDB);
+        targetClient->Close();
+        return true;
+    }
+    return false;
+}
 
 bool ChatManager::GMCommand_Contract(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
@@ -505,6 +535,32 @@ bool ChatManager::GMCommand_Item(const std::shared_ptr<
         ->AddRemoveItem(client, itemID, stackSize, true);
 }
 
+bool ChatManager::GMCommand_Kick(const std::shared_ptr<
+    channel::ChannelClientConnection>& client,
+    const std::list<libcomp::String>& args)
+{
+    std::list<libcomp::String> argsCopy = args;
+    libcomp::String kickedPlayer;
+    if (!GetStringArg(kickedPlayer, argsCopy) || argsCopy.size() > 1)
+    {
+         return SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(
+            "@kick requires one argument, <username>"));
+    }
+
+    auto server = mServer.lock();
+    auto worldDB = server->GetWorldDatabase();
+    auto target = objects::Character::LoadCharacterByName(worldDB, kickedPlayer);
+    auto targetAccount = target ? target->GetAccount().Get() : nullptr;
+    auto targetClient = targetAccount ? server->GetManagerConnection()->GetClientConnection(
+        targetAccount->GetUsername()) : nullptr;
+    if(targetClient != nullptr) 
+    {
+        targetClient->Close();
+        return true;
+    }
+    return false;
+}
+
 bool ChatManager::GMCommand_Kill(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
@@ -770,16 +826,16 @@ bool ChatManager::GMCommand_TickerMessage(const std::shared_ptr<
     std::list<libcomp::String> argsCopy = args;
     int8_t mode = 0;
 
-    if(!(GetIntegerArg(mode,argsCopy)) || argsCopy.size() < 1)   
+    if(!(GetIntegerArg(mode, argsCopy)) || argsCopy.size() < 1)   
     {
         return SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(
             "Syntax invalid, try @tickermessage <mode> <message>"));
     }
-    libcomp::String message = libcomp::String::Join(argsCopy," ");
+    libcomp::String message = libcomp::String::Join(argsCopy, " ");
 
     if (mode == 1) 
     {
-        server->SendSystemMessage(client,message,0,true);
+        server->SendSystemMessage(client, message, 0, true);
     }  
 
     conf->SetSystemMessage(message);

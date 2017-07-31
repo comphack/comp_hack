@@ -709,15 +709,13 @@ bool ChannelServer::SendSystemMessage(const std::shared_ptr<
     p.WriteS8(0); // Unknown for now, possibly speed?
     p.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_CP932, message, true);
 
-    if(!sendToAll) {
+    if(!sendToAll)
+    {
         client->SendPacket(p);
-    } else {
+    }
+    else
+    {
         mZoneManager->BroadcastPacket(client, p);
     }
     return true;
 }
-
-
-
-
-

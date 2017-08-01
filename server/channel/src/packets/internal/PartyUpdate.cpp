@@ -51,44 +51,6 @@ struct PartyMemberInfo
     bool IsLeader;
 };
 
-bool GatherPartyTargetConnections(const std::shared_ptr<ChannelServer>& server,
-    std::list<std::shared_ptr<libcomp::TcpConnection>>& connections, libcomp::ReadOnlyPacket& p)
-{
-    // Affected CIDs are appended to the end
-    std::list<int32_t> cids;
-    if(p.Left() == 4)
-    {
-        // No count, just one
-        cids.push_back(p.ReadS32Little());
-    }
-    else
-    {
-        uint16_t cidCount = p.ReadU16Little();
-
-        if(p.Left() < (uint32_t)(cidCount * 4))
-        {
-            LOG_ERROR("Invalid CID count received for CharacterLogin.\n");
-            return false;
-        }
-
-        for(uint16_t i = 0; i < cidCount; i++)
-        {
-            cids.push_back(p.ReadS32Little());
-        }
-    }
-
-    for(int32_t cid : cids)
-    {
-        auto client = server->GetManagerConnection()->GetEntityClient(cid, true);
-        if(client)
-        {
-            connections.push_back(client);
-        }
-    }
-
-    return true;
-}
-
 void QueuePartyMemberInfo(std::shared_ptr<ChannelClientConnection> client,
     PartyMemberInfo memberInfo)
 {
@@ -173,15 +135,24 @@ bool Parsers::PartyUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
 {
     (void)connection;
 
-    if(p.Size() < 1)
+    if(p.Size() < 3)
     {
-        LOG_ERROR("Invalid response received for CharacterLogin.\n");
+        LOG_ERROR("Invalid response received for PartyUpdate.\n");
         return false;
     }
 
     auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
 
+    bool connectionsFound = false;
     uint8_t mode = p.ReadU8();
+
+    auto clients = server->GetManagerConnection()
+        ->GatherWorldTargetClients(p, connectionsFound);
+    if(!connectionsFound)
+    {
+        LOG_ERROR("Connections not found for CharacterLogin.\n");
+        return false;
+    }
 
     switch((InternalPacketAction_t)mode)
     {
@@ -192,19 +163,13 @@ bool Parsers::PartyUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
 
             if(isResponse)
             {
-                if(p.Left() < 6)
+                if(p.Left() != 2)
                 {
                     return false;
                 }
 
                 uint16_t responseCode = p.ReadU16Little();
-                
-                std::list<std::shared_ptr<libcomp::TcpConnection>> connections;
-                if(!GatherPartyTargetConnections(server, connections, p))
-                {
-                    return false;
-                }
-                else if(connections.size() == 1)
+                if(clients.size() == 1)
                 {
                     libcomp::Packet response;
                     response.WritePacketCode(ChannelToClientPacketCode_t::PACKET_PARTY_INVITE);
@@ -212,24 +177,18 @@ bool Parsers::PartyUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
                         charName, true);
                     response.WriteU16Little(responseCode);
 
-                    connections.front()->SendPacket(response);
+                    clients.front()->SendPacket(response);
                 }
             }
             else
             {
-                if(p.Left() != 8)
+                if(p.Left() != 4)
                 {
                     return false;
                 }
 
                 uint32_t partyID = p.ReadU32Little();
-                
-                std::list<std::shared_ptr<libcomp::TcpConnection>> connections;
-                if(!GatherPartyTargetConnections(server, connections, p))
-                {
-                    return false;
-                }
-                else if(connections.size() == 1)
+                if(clients.size() == 1)
                 {
                     libcomp::Packet request;
                     request.WritePacketCode(ChannelToClientPacketCode_t::PACKET_PARTY_INVITED);
@@ -237,7 +196,7 @@ bool Parsers::PartyUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
                         charName, true);
                     request.WriteU32Little(partyID);
 
-                    connections.front()->SendPacket(request);
+                    clients.front()->SendPacket(request);
                 }
             }
         }
@@ -246,13 +205,7 @@ bool Parsers::PartyUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
         {
             auto charName = p.ReadString16Little(libcomp::Convert::Encoding_t::ENCODING_UTF8, true);
             uint16_t responseCode = p.ReadU16Little();
-            
-            std::list<std::shared_ptr<libcomp::TcpConnection>> connections;
-            if(!GatherPartyTargetConnections(server, connections, p))
-            {
-                return false;
-            }
-            else if(connections.size() == 1)
+            if(clients.size() == 1)
             {
                 libcomp::Packet response;
                 response.WritePacketCode(ChannelToClientPacketCode_t::PACKET_PARTY_JOIN);
@@ -260,28 +213,21 @@ bool Parsers::PartyUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
                     charName, true);
                 response.WriteU16Little(responseCode);
 
-                auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connections.front());
-                client->SendPacket(response);
+                clients.front()->SendPacket(response);
             }
         }
         break;
     case InternalPacketAction_t::PACKET_ACTION_RESPONSE_NO:
         {
             auto charName = p.ReadString16Little(libcomp::Convert::Encoding_t::ENCODING_UTF8, true);
-            
-            std::list<std::shared_ptr<libcomp::TcpConnection>> connections;
-            if(!GatherPartyTargetConnections(server, connections, p))
-            {
-                return false;
-            }
-            else if(connections.size() == 1)
+            if(clients.size() == 1)
             {
                 libcomp::Packet response;
                 response.WritePacketCode(ChannelToClientPacketCode_t::PACKET_PARTY_CANCEL);
                 response.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_CP932,
                     charName, true);
 
-                connections.front()->SendPacket(response);
+                clients.front()->SendPacket(response);
             }
         }
         break;
@@ -294,7 +240,7 @@ bool Parsers::PartyUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
             for(uint8_t i = 0; i < memberCount; i++)
             {
                 auto member = std::make_shared<objects::PartyCharacter>();
-                if(!member->LoadPacket(p, false) || p.Left() < 7)
+                if(!member->LoadPacket(p, false) || p.Left() < 5)
                 {
                     return false;
                 }
@@ -309,19 +255,12 @@ bool Parsers::PartyUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
                 members.push_back(info);
             }
             
-            std::list<std::shared_ptr<libcomp::TcpConnection>> connections;
-            if(!GatherPartyTargetConnections(server, connections, p))
+            for(auto client : clients)
             {
-                return false;
-            }
-            
-            for(auto c : connections)
-            {
-                auto client = std::dynamic_pointer_cast<ChannelClientConnection>(c);
                 auto state = client->GetClientState();
                 if(!state->GetPartyID())
                 {
-                    state->SetPartyID(partyID);
+                    state->GetAccountLogin()->GetCharacterLogin()->SetPartyID(partyID);
                 }
 
                 for(auto info : members)
@@ -332,50 +271,40 @@ bool Parsers::PartyUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
             }
         }
         break;
-    case InternalPacketAction_t::PACKET_ACTION_PARTY_LEAVE:
+    case InternalPacketAction_t::PACKET_ACTION_GROUP_LEAVE:
         {
             bool isResponse = p.ReadU8() == 1;
 
             if(isResponse)
             {
-                if(p.Left() < 6)
+                if(p.Left() != 2)
                 {
                     return false;
                 }
 
                 uint16_t responseCode = p.ReadU16Little();
-                
-                std::list<std::shared_ptr<libcomp::TcpConnection>> connections;
-                if(!GatherPartyTargetConnections(server, connections, p))
-                {
-                    return false;
-                }
-                else if(connections.size() == 1)
+                if(clients.size() == 1)
                 {
                     libcomp::Packet response;
                     response.WritePacketCode(ChannelToClientPacketCode_t::PACKET_PARTY_LEAVE);
                     response.WriteU16Little(responseCode);
 
-                    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connections.front());
+                    auto client = clients.front();
 
                     // Whether leaving was "successful" or not, the party ID should now be empty
-                    client->GetClientState()->SetPartyID(0);
+                    client->GetClientState()->GetAccountLogin()->GetCharacterLogin()
+                        ->SetPartyID(0);
                     client->SendPacket(response);
                 }
             }
             else
             {
-                if(p.Left() < 8)
+                if(p.Left() != 4)
                 {
                     return false;
                 }
 
                 int32_t worldCID = p.ReadS32Little();
-                std::list<std::shared_ptr<libcomp::TcpConnection>> connections;
-                if(!GatherPartyTargetConnections(server, connections, p))
-                {
-                    return false;
-                }
 
                 auto partyState = ClientState::GetEntityClientState(worldCID, true);
 
@@ -390,102 +319,80 @@ bool Parsers::PartyUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
                 request.WriteS32Little(localEntityID);
                 request.WriteS32Little(worldCID);
 
-                libcomp::TcpConnection::BroadcastPacket(connections, request);
+                ChannelClientConnection::BroadcastPacket(clients, request);
             }
         }
         break;
-    case InternalPacketAction_t::PACKET_ACTION_PARTY_DISBAND:
+    case InternalPacketAction_t::PACKET_ACTION_GROUP_DISBAND:
         {
             bool isResponse = p.ReadU8() == 1;
 
             if(isResponse)
             {
-                if(p.Left() < 6)
+                if(p.Left() != 2)
                 {
                     return false;
                 }
 
                 uint16_t responseCode = p.ReadU16Little();
-                
-                std::list<std::shared_ptr<libcomp::TcpConnection>> connections;
-                if(!GatherPartyTargetConnections(server, connections, p))
-                {
-                    return false;
-                }
-                else if(connections.size() == 1)
+                if(clients.size() == 1)
                 {
                     libcomp::Packet response;
                     response.WritePacketCode(ChannelToClientPacketCode_t::PACKET_PARTY_DISBAND);
                     response.WriteU16Little(responseCode);
 
-                    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connections.front());
+                    auto client = clients.front();
 
                     // Whether leaving was "successful" or not, the party ID should now be empty
-                    client->GetClientState()->SetPartyID(0);
+                    client->GetClientState()->GetAccountLogin()->GetCharacterLogin()
+                        ->SetPartyID(0);
                     client->SendPacket(response);
                 }
             }
             else
             {
-                std::list<std::shared_ptr<libcomp::TcpConnection>> connections;
-                if(!GatherPartyTargetConnections(server, connections, p))
+                for(auto client : clients)
                 {
-                    return false;
-                }
-
-                for(auto c : connections)
-                {
-                    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(c);
-                    client->GetClientState()->SetPartyID(0);
+                    client->GetClientState()->GetAccountLogin()->GetCharacterLogin()
+                        ->SetPartyID(0);
                 }
 
                 libcomp::Packet request;
                 request.WritePacketCode(ChannelToClientPacketCode_t::PACKET_PARTY_DISBANDED);
 
-                libcomp::TcpConnection::BroadcastPacket(connections, request);
+                ChannelClientConnection::BroadcastPacket(clients, request);
             }
         }
         break;
-    case InternalPacketAction_t::PACKET_ACTION_PARTY_LEADER_UPDATE:
+    case InternalPacketAction_t::PACKET_ACTION_GROUP_LEADER_UPDATE:
         {
             bool isResponse = p.ReadU8() == 1;
 
             if(isResponse)
             {
-                if(p.Left() < 6)
+                if(p.Left() != 2)
                 {
                     return false;
                 }
 
                 uint16_t responseCode = p.ReadU16Little();
-                
-                std::list<std::shared_ptr<libcomp::TcpConnection>> connections;
-                if(!GatherPartyTargetConnections(server, connections, p))
-                {
-                    return false;
-                }
-                else if(connections.size() == 1)
+                if(clients.size() == 1)
                 {
                     libcomp::Packet response;
                     response.WritePacketCode(ChannelToClientPacketCode_t::PACKET_PARTY_LEADER_UPDATE);
                     response.WriteU16Little(responseCode);
 
-                    connections.front()->SendPacket(response);
+                    clients.front()->SendPacket(response);
                 }
             }
             else
             {
-                if(p.Left() < 8)
+                if(p.Left() != 4)
                 {
                     return false;
                 }
 
                 int32_t leaderCID = p.ReadS32Little();
-                std::list<std::shared_ptr<libcomp::TcpConnection>> connections;
-                if(!GatherPartyTargetConnections(server, connections, p))
-                {
-                    return false;
-                }
 
                 auto partyState = ClientState::GetEntityClientState(leaderCID, true);
 
@@ -500,7 +407,7 @@ bool Parsers::PartyUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
                 request.WriteS32Little(localEntityID);
                 request.WriteS32Little(leaderCID);
 
-                libcomp::TcpConnection::BroadcastPacket(connections, request);
+                ChannelClientConnection::BroadcastPacket(clients, request);
             }
         }
         break;
@@ -510,69 +417,53 @@ bool Parsers::PartyUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
 
             if(isResponse)
             {
-                if(p.Left() < 6)
+                if(p.Left() != 2)
                 {
                     return false;
                 }
 
                 uint16_t responseCode = p.ReadU16Little();
-                
-                std::list<std::shared_ptr<libcomp::TcpConnection>> connections;
-                if(!GatherPartyTargetConnections(server, connections, p))
-                {
-                    return false;
-                }
-                else if(connections.size() == 1)
+                if(clients.size() == 1)
                 {
                     libcomp::Packet response;
                     response.WritePacketCode(ChannelToClientPacketCode_t::PACKET_PARTY_DROP_RULE);
                     response.WriteU16Little(responseCode);
 
-                    connections.front()->SendPacket(response);
+                    clients.front()->SendPacket(response);
                 }
             }
             else
             {
-                if(p.Left() < 5)
+                if(p.Left() != 1)
                 {
                     return false;
                 }
 
                 uint8_t rule = p.ReadU8();
-                std::list<std::shared_ptr<libcomp::TcpConnection>> connections;
-                if(!GatherPartyTargetConnections(server, connections, p))
-                {
-                    return false;
-                }
 
                 libcomp::Packet request;
                 request.WritePacketCode(ChannelToClientPacketCode_t::PACKET_PARTY_DROP_RULE_SET);
                 request.WriteU8(rule);
 
-                libcomp::TcpConnection::BroadcastPacket(connections, request);
+                ChannelClientConnection::BroadcastPacket(clients, request);
             }
         }
         break;
-    case InternalPacketAction_t::PACKET_ACTION_PARTY_KICK:
+    case InternalPacketAction_t::PACKET_ACTION_GROUP_KICK:
         {
-            if(p.Left() < 8)
+            if(p.Left() != 4)
             {
                 return false;
             }
 
             int32_t targetCID = p.ReadS32Little();
-            std::list<std::shared_ptr<libcomp::TcpConnection>> connections;
-            if(!GatherPartyTargetConnections(server, connections, p))
-            {
-                return false;
-            }
 
             auto partyState = ClientState::GetEntityClientState(targetCID, true);
 
             int32_t localEntityID = -1;
             if(partyState)
             {
-                partyState->SetPartyID(0);
+                partyState->GetAccountLogin()->GetCharacterLogin()->SetPartyID(0);
                 localEntityID = partyState->GetCharacterState()->GetEntityID();
             }
 
@@ -581,14 +472,14 @@ bool Parsers::PartyUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
             request.WriteS32Little(localEntityID);
             request.WriteS32Little(targetCID);
 
-            libcomp::TcpConnection::BroadcastPacket(connections, request);
+            ChannelClientConnection::BroadcastPacket(clients, request);
 
             request.Clear();
             request.WritePacketCode(ChannelToClientPacketCode_t::PACKET_PARTY_LEFT);
             request.WriteS32Little(localEntityID);
             request.WriteS32Little(targetCID);
 
-            libcomp::TcpConnection::BroadcastPacket(connections, request);
+            ChannelClientConnection::BroadcastPacket(clients, request);
         }
         break;
     default:

@@ -38,6 +38,8 @@
 #include <AccountLogin.h>
 #include <Character.h>
 #include <CharacterLogin.h>
+#include <Clan.h>
+#include <ClanMember.h>
 #include <FriendSettings.h>
 
 // channel Includes
@@ -60,6 +62,21 @@ bool Parsers::CharacterLogin::Parse(libcomp::ManagerPacket *pPacketManager,
     uint8_t updateFlags = p.ReadU8();
 
     auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+
+    bool connectionsFound = false;
+    auto clients = server->GetManagerConnection()
+        ->GatherWorldTargetClients(p, connectionsFound);
+    if(!connectionsFound)
+    {
+        LOG_ERROR("Connections not found for CharacterLogin.\n");
+        return false;
+    }
+
+    if(clients.size() == 0)
+    {
+        // Character(s) are not here anymore, exit now
+        return true;
+    }
 
     // Pull all the logins
     auto worldDB = server->GetWorldDatabase();
@@ -86,37 +103,6 @@ bool Parsers::CharacterLogin::Parse(libcomp::ManagerPacket *pPacketManager,
         return false;
     }
 
-    // Affected CIDs are appended to the end
-    uint16_t cidCount = p.ReadU16Little();
-
-    if(p.Left() < (uint32_t)(cidCount * 4))
-    {
-        LOG_ERROR("Invalid CID count received for CharacterLogin.\n");
-        return false;
-    }
-
-    std::list<int32_t> cids;
-    for(uint16_t i = 0; i < cidCount; i++)
-    {
-        cids.push_back(p.ReadS32Little());
-    }
-
-    std::unordered_map<int32_t, std::shared_ptr<ChannelClientConnection>> connections;
-    for(int32_t cid : cids)
-    {
-        auto client = server->GetManagerConnection()->GetEntityClient(cid, true);
-        if(client)
-        {
-            connections[cid] = client;
-        }
-    }
-
-    if(connections.size() == 0)
-    {
-        // Character(s) are not here anymore, exit now
-        return true;
-    }
-
     // Update friend information
     if(updateFlags & (uint8_t)CharacterLoginStateFlag_t::CHARLOGIN_FRIEND_FLAGS)
     {
@@ -130,16 +116,16 @@ bool Parsers::CharacterLogin::Parse(libcomp::ManagerPacket *pPacketManager,
         }
 
         auto friends = fSettings->GetFriends();
-        std::list<std::shared_ptr<libcomp::TcpConnection>> friendConnections;
-        for(auto cPair : connections)
+        std::list<std::shared_ptr<ChannelClientConnection>> friendConnections;
+        for(auto client : clients)
         {
-            auto uuid = cPair.second->GetClientState()->GetCharacterState()
+            auto uuid = client->GetClientState()->GetCharacterState()
                 ->GetEntity()->GetUUID();
             for(auto f : friends)
             {
                 if(f.GetUUID() == uuid)
                 {
-                    friendConnections.push_back(cPair.second);
+                    friendConnections.push_back(client);
                     break;
                 }
             }
@@ -148,7 +134,7 @@ bool Parsers::CharacterLogin::Parse(libcomp::ManagerPacket *pPacketManager,
         libcomp::Packet packet;
         packet.WritePacketCode(ChannelToClientPacketCode_t::PACKET_FRIEND_DATA);
         packet.WriteS32Little(login->GetWorldCID());
-        packet.WriteU8(updateFlags);
+        packet.WriteU8(updateFlags & (uint8_t)CharacterLoginStateFlag_t::CHARLOGIN_FRIEND_FLAGS);
 
         if(updateFlags & (uint8_t)CharacterLoginStateFlag_t::CHARLOGIN_STATUS)
         {
@@ -165,7 +151,7 @@ bool Parsers::CharacterLogin::Parse(libcomp::ManagerPacket *pPacketManager,
             packet.WriteS8(login->GetChannelID());
         }
 
-        if(updateFlags & (uint8_t)CharacterLoginStateFlag_t::CHARLOGIN_FRIEND_MESSAGE)
+        if(updateFlags & (uint8_t)CharacterLoginStateFlag_t::CHARLOGIN_MESSAGE)
         {
             packet.WriteString16Little(libcomp::Convert::ENCODING_CP932,
                 fSettings->GetFriendMessage(), true);
@@ -177,7 +163,51 @@ bool Parsers::CharacterLogin::Parse(libcomp::ManagerPacket *pPacketManager,
             packet.WriteS8(0);   // Unknown
         }
 
-        libcomp::TcpConnection::BroadcastPacket(friendConnections, packet);
+        ChannelClientConnection::BroadcastPacket(friendConnections, packet);
+    }
+    
+    // Update clan information
+    if(updateFlags & (uint8_t)CharacterLoginStateFlag_t::CHARLOGIN_BASIC)
+    {
+        int32_t clanID = p.ReadS32Little();
+
+        // Load the character if they are not local
+        auto character = login->GetCharacter().Get(worldDB);
+
+        std::list<std::shared_ptr<ChannelClientConnection>> clanConnections;
+        for(auto client : clients)
+        {
+            auto clientChar = client->GetClientState()->GetCharacterState()
+                ->GetEntity();
+            if(clientChar->GetClan().GetUUID() == character->GetClan().GetUUID())
+            {
+                clanConnections.push_back(client);
+                break;
+            }
+        }
+
+        libcomp::Packet packet;
+        packet.WritePacketCode(ChannelToClientPacketCode_t::PACKET_CLAN_DATA);
+        packet.WriteS32Little(clanID);
+        packet.WriteS32Little(login->GetWorldCID());
+        packet.WriteS8(updateFlags & (uint8_t)CharacterLoginStateFlag_t::CHARLOGIN_BASIC);
+
+        if(updateFlags & (uint8_t)CharacterLoginStateFlag_t::CHARLOGIN_STATUS)
+        {
+            packet.WriteS8((int8_t)login->GetStatus());
+        }
+
+        if(updateFlags & (uint8_t)CharacterLoginStateFlag_t::CHARLOGIN_ZONE)
+        {
+            packet.WriteS32Little((int32_t)login->GetZoneID());
+        }
+
+        if(updateFlags & (uint8_t)CharacterLoginStateFlag_t::CHARLOGIN_CHANNEL)
+        {
+            packet.WriteS8(login->GetChannelID());
+        }
+
+        ChannelClientConnection::BroadcastPacket(clanConnections, packet);
     }
     
     // Update local party information
@@ -190,24 +220,24 @@ bool Parsers::CharacterLogin::Parse(libcomp::ManagerPacket *pPacketManager,
         int32_t localEntityID = state ? state->GetCharacterState()->GetEntityID() : -1;
         int32_t localDemonEntityID = state ? state->GetDemonState()->GetEntityID() : -1;
 
-        std::list<std::shared_ptr<libcomp::TcpConnection>> partyConnections;
-        std::list<std::shared_ptr<libcomp::TcpConnection>> sameZoneConnections;
-        std::list<std::shared_ptr<libcomp::TcpConnection>> differentZoneConnections;
-        for(auto cPair : connections)
+        std::list<std::shared_ptr<ChannelClientConnection>> partyConnections;
+        std::list<std::shared_ptr<ChannelClientConnection>> sameZoneConnections;
+        std::list<std::shared_ptr<ChannelClientConnection>> differentZoneConnections;
+        for(auto client : clients)
         {
-            auto otherState = cPair.second->GetClientState();
+            auto otherState = client->GetClientState();
             auto otherLogin = otherState->GetAccountLogin()->GetCharacterLogin();
             if(otherState->GetPartyID() == login->GetPartyID())
             {
-                partyConnections.push_back(cPair.second);
+                partyConnections.push_back(client);
                 if(otherLogin->GetZoneID() == zoneID &&
                     otherLogin->GetChannelID() == login->GetChannelID())
                 {
-                    sameZoneConnections.push_back(cPair.second);
+                    sameZoneConnections.push_back(client);
                 }
                 else
                 {
-                    differentZoneConnections.push_back(cPair.second);
+                    differentZoneConnections.push_back(client);
                 }
             }
         }
@@ -215,7 +245,7 @@ bool Parsers::CharacterLogin::Parse(libcomp::ManagerPacket *pPacketManager,
         if(updateFlags & (uint8_t)CharacterLoginStateFlag_t::CHARLOGIN_ZONE)
         {
             // Map connections by local entity visibility
-            std::unordered_map<bool, std::list<std::shared_ptr<libcomp::TcpConnection>>*> cMap;
+            std::unordered_map<bool, std::list<std::shared_ptr<ChannelClientConnection>>*> cMap;
             cMap[true] = &sameZoneConnections;
             cMap[false] = &differentZoneConnections;
             for(auto pair : cMap)
@@ -228,7 +258,7 @@ bool Parsers::CharacterLogin::Parse(libcomp::ManagerPacket *pPacketManager,
                 packet.WriteS32Little((int32_t)zoneID);
                 packet.WriteS32Little(login->GetWorldCID());
 
-                libcomp::TcpConnection::BroadcastPacket(*pair.second, packet);
+                ChannelClientConnection::BroadcastPacket(*pair.second, packet);
             }
 
             if(differentZoneConnections.size() > 0)
@@ -242,7 +272,7 @@ bool Parsers::CharacterLogin::Parse(libcomp::ManagerPacket *pPacketManager,
                 packet.WriteU16Little(0);
                 packet.WriteS32Little(login->GetWorldCID());
 
-                libcomp::TcpConnection::BroadcastPacket(differentZoneConnections, packet);
+                ChannelClientConnection::BroadcastPacket(differentZoneConnections, packet);
             }
         }
 
@@ -268,7 +298,7 @@ bool Parsers::CharacterLogin::Parse(libcomp::ManagerPacket *pPacketManager,
             packet.WriteS32Little(login->GetWorldCID());
             packet.WriteS8(0);  // Unknown
 
-            libcomp::TcpConnection::BroadcastPacket(sameZoneConnections, packet);
+            ChannelClientConnection::BroadcastPacket(sameZoneConnections, packet);
         }
         
         if(updateFlags & (uint8_t)CharacterLoginStateFlag_t::CHARLOGIN_PARTY_DEMON_INFO &&
@@ -283,7 +313,7 @@ bool Parsers::CharacterLogin::Parse(libcomp::ManagerPacket *pPacketManager,
             packet.WriteU16Little(partyDemon->GetMaxHP());
             packet.WriteS32Little(login->GetWorldCID());
 
-            libcomp::TcpConnection::BroadcastPacket(sameZoneConnections, packet);
+            ChannelClientConnection::BroadcastPacket(sameZoneConnections, packet);
         }
         
         if(updateFlags & (uint8_t)CharacterLoginStateFlag_t::CHARLOGIN_PARTY_ICON)
@@ -296,7 +326,7 @@ bool Parsers::CharacterLogin::Parse(libcomp::ManagerPacket *pPacketManager,
             packet.WriteU8(0);
             packet.WriteS8(0);
 
-            libcomp::TcpConnection::BroadcastPacket(partyConnections, packet);
+            ChannelClientConnection::BroadcastPacket(partyConnections, packet);
         }
     }
 

@@ -132,10 +132,14 @@ public:
 SkillManager::SkillManager(const std::weak_ptr<ChannelServer>& server)
     : mServer(server)
 {
+    mSkillFunctions[SVR_CONST.SKILL_CLAN_FORM] = &SkillManager::SpecialSkill;
     mSkillFunctions[SVR_CONST.SKILL_EQUIP_ITEM] = &SkillManager::EquipItem;
     mSkillFunctions[SVR_CONST.SKILL_SUMMON_DEMON] = &SkillManager::SummonDemon;
     mSkillFunctions[SVR_CONST.SKILL_STORE_DEMON] = &SkillManager::StoreDemon;
     mSkillFunctions[SVR_CONST.SKILL_TRAESTO] = &SkillManager::Traesto;
+
+    // Make sure anything not set is not pulled in to the mapping
+    mSkillFunctions.erase(0);
 }
 
 SkillManager::~SkillManager()
@@ -249,7 +253,7 @@ bool SkillManager::ExecuteSkill(const std::shared_ptr<ChannelClientConnection> c
     auto cState = state->GetCharacterState();
     auto character = cState->GetEntity();
     uint16_t functionID = skillData->GetDamage()->GetFunctionID();
-    
+
     // Check targets
     if(skillData->GetTarget()->GetType() == objects::MiTargetData::Type_t::DEAD_ALLY)
     {
@@ -734,8 +738,7 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
     }
 
     auto skillRange = skillData->GetRange();
-    if(skillRange->GetAoeRange() > 0 &&
-        skillRange->GetAreaType() != objects::MiEffectiveRangeData::AreaType_t::NONE)
+    if(skillRange->GetAreaType() != objects::MiEffectiveRangeData::AreaType_t::NONE)
     {
         // Determine area effects
         // Unlike damage calculations, this will use effectiveSource instead
@@ -1746,6 +1749,15 @@ void SkillManager::FinalizeSkillExecution(const std::shared_ptr<ChannelClientCon
 
     // Cancel any status effects that expire on skill execution
     characterManager->CancelStatusEffects(client, EFFECT_CANCEL_SKILL);
+}
+
+bool SkillManager::SpecialSkill(const std::shared_ptr<ChannelClientConnection> client,
+    std::shared_ptr<objects::ActivatedAbility> activated)
+{
+    (void)client;
+    (void)activated;
+
+    return true;
 }
 
 bool SkillManager::EquipItem(const std::shared_ptr<ChannelClientConnection> client,

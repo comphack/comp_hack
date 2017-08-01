@@ -87,12 +87,16 @@ bool ChannelServer::Initialize()
         to_underlying(InternalPacketCode_t::PACKET_ACCOUNT_LOGIN));
     internalPacketManager->AddParser<Parsers::AccountLogout>(
         to_underlying(InternalPacketCode_t::PACKET_ACCOUNT_LOGOUT));
+    internalPacketManager->AddParser<Parsers::Relay>(
+        to_underlying(InternalPacketCode_t::PACKET_RELAY));
     internalPacketManager->AddParser<Parsers::CharacterLogin>(
         to_underlying(InternalPacketCode_t::PACKET_CHARACTER_LOGIN));
     internalPacketManager->AddParser<Parsers::FriendsUpdate>(
         to_underlying(InternalPacketCode_t::PACKET_FRIENDS_UPDATE));
     internalPacketManager->AddParser<Parsers::PartyUpdate>(
         to_underlying(InternalPacketCode_t::PACKET_PARTY_UPDATE));
+    internalPacketManager->AddParser<Parsers::ClanUpdate>(
+        to_underlying(InternalPacketCode_t::PACKET_CLAN_UPDATE));
 
     //Add the managers to the main worker.
     mMainWorker.AddManager(internalPacketManager);
@@ -118,6 +122,8 @@ bool ChannelServer::Initialize()
         to_underlying(ClientToChannelPacketCode_t::PACKET_POPULATE_ZONE));
     clientPacketManager->AddParser<Parsers::Chat>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_CHAT));
+    clientPacketManager->AddParser<Parsers::Tell>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_TELL));
     clientPacketManager->AddParser<Parsers::ActivateSkill>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_ACTIVATE_SKILL));
     clientPacketManager->AddParser<Parsers::ExecuteSkill>(
@@ -188,6 +194,10 @@ bool ChannelServer::Initialize()
         to_underlying(ClientToChannelPacketCode_t::PACKET_DEMON_BOX_MOVE));
     clientPacketManager->AddParser<Parsers::DismissDemon>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_DISMISS_DEMON));
+    clientPacketManager->AddParser<Parsers::PostList>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_POST_LIST));
+    clientPacketManager->AddParser<Parsers::PostItem>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_POST_ITEM));
     clientPacketManager->AddParser<Parsers::HotbarData>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_HOTBAR_DATA));
     clientPacketManager->AddParser<Parsers::HotbarSave>(
@@ -240,8 +250,32 @@ bool ChannelServer::Initialize()
         to_underlying(ClientToChannelPacketCode_t::PACKET_QUEST_ACTIVE_LIST));
     clientPacketManager->AddParser<Parsers::QuestCompletedList>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_QUEST_COMPLETED_LIST));
+    clientPacketManager->AddParser<Parsers::ClanDisband>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_CLAN_DISBAND));
+    clientPacketManager->AddParser<Parsers::ClanInvite>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_CLAN_INVITE));
+    clientPacketManager->AddParser<Parsers::ClanJoin>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_CLAN_JOIN));
+    clientPacketManager->AddParser<Parsers::ClanCancel>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_CLAN_CANCEL));
+    clientPacketManager->AddParser<Parsers::ClanKick>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_CLAN_KICK));
+    clientPacketManager->AddParser<Parsers::ClanMasterUpdate>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_CLAN_MASTER_UPDATE));
+    clientPacketManager->AddParser<Parsers::ClanSubMasterUpdate>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_CLAN_SUB_MASTER_UPDATE));
+    clientPacketManager->AddParser<Parsers::ClanLeave>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_CLAN_LEAVE));
+    clientPacketManager->AddParser<Parsers::ClanChat>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_CLAN_CHAT));
     clientPacketManager->AddParser<Parsers::ClanInfo>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_CLAN_INFO));
+    clientPacketManager->AddParser<Parsers::ClanList>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_CLAN_LIST));
+    clientPacketManager->AddParser<Parsers::ClanData>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_CLAN_DATA));
+    clientPacketManager->AddParser<Parsers::ClanForm>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_CLAN_FORM));
     clientPacketManager->AddParser<Parsers::SyncCharacter>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_SYNC_CHARACTER));
     clientPacketManager->AddParser<Parsers::MapFlag>(
@@ -250,10 +284,14 @@ bool ChannelServer::Initialize()
         to_underlying(ClientToChannelPacketCode_t::PACKET_DEMON_COMPENDIUM));
     clientPacketManager->AddParser<Parsers::DungeonRecords>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_DUNGEON_RECORDS));
+    clientPacketManager->AddParser<Parsers::ClanEmblemUpdate>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_CLAN_EMBLEM_UPDATE));
     clientPacketManager->AddParser<Parsers::DemonFamiliarity>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_DEMON_FAMILIARITY));
     clientPacketManager->AddParser<Parsers::MaterialBox>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_MATERIAL_BOX));
+    clientPacketManager->AddParser<Parsers::Analyze>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_ANALYZE));
     clientPacketManager->AddParser<Parsers::FusionGauge>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_FUSION_GAUGE));
     clientPacketManager->AddParser<Parsers::TitleList>(

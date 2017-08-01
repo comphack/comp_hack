@@ -21,11 +21,19 @@
     <object name="AccountWorldData" location="world">
         <member type="Account*" name="Account" key="true" unique="true"/>
 
+        <member type="list" name="Post">
+            <element type="PostItem*"/>
+        </member>
         <member type="array" name="DemonBoxes" size="10">
             <element type="DemonBox*"/>
         </member>
         <member type="array" name="ItemBoxes" size="10">
             <element type="ItemBox*"/>
         </member>
+    </object>
+    <object name="PostItem" location="world">
+        <member type="u32" name="Type"/>
+        <member type="Account*" name="Account" key="true" unique="false"/>
+        <member type="u32" name="Timestamp"/>
     </object>
 </objgen>

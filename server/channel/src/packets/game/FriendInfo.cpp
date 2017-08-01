@@ -75,7 +75,7 @@ bool Parsers::FriendInfo::Parse(libcomp::ManagerPacket *pPacketManager,
     // Request current friend info from the world to send on reply
     libcomp::Packet request;
     request.WritePacketCode(InternalPacketCode_t::PACKET_FRIENDS_UPDATE);
-    request.WriteU8((int8_t)InternalPacketAction_t::PACKET_ACTION_FRIEND_LIST);
+    request.WriteU8((int8_t)InternalPacketAction_t::PACKET_ACTION_GROUP_LIST);
     request.WriteS32Little(cLogin->GetWorldCID());
 
     server->GetManagerConnection()->GetWorldConnection()->SendPacket(request);

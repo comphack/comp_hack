@@ -103,12 +103,12 @@ public:
     bool Register();
 
     /**
-     * Get the object ID associated a UUID associated to the client.
+     * Get the object ID associated to a UUID associated to the client.
      * If a zero is returned, the UUID is not registered.
      * @param uuid UUID to retrieve the corresponding object ID from
      * @return Object ID associated to a UUID
      */
-    int64_t GetObjectID(const libobjgen::UUID& uuid) const;
+    int64_t GetObjectID(const libobjgen::UUID& uuid);
 
     /**
      * Get the UUID associated to an object ID associated to the client.
@@ -116,7 +116,23 @@ public:
      * @param objectID Object ID to retrieve the corresponding UUID from
      * @return UUID associated to an object ID
      */
-    const libobjgen::UUID GetObjectUUID(int64_t objectID) const;
+    const libobjgen::UUID GetObjectUUID(int64_t objectID);
+
+    /**
+     * Get the local object ID associated to a UUID associated to the
+     * client. If a zero is returned, the UUID is not registered.
+     * @param uuid UUID to retrieve the corresponding object ID from
+     * @return Local object ID associated to a UUID
+     */
+    int32_t GetLocalObjectID(const libobjgen::UUID& uuid);
+
+    /**
+     * Get the UUID associated to an object ID associated to the client.
+     * If a null UUID is returned, the object ID is not registered.
+     * @param objectID Object ID to retrieve the corresponding UUID from
+     * @return UUID associated to an object ID contextual to the client
+     */
+    const libobjgen::UUID GetLocalObjectUUID(int32_t objectID);
 
     /**
      * Set the object ID associated a UUID associated to the client.
@@ -138,6 +154,27 @@ public:
      * @return UID of the account associated to the client
      */
     const libobjgen::UUID GetAccountUID() const;
+
+    /**
+     * Get the current world CID associated to the logged in
+     * character.
+     * @return Current character's world CID
+     */
+    int32_t GetWorldCID() const;
+
+    /**
+     * Get the current party ID associated to the logged in
+     * character.
+     * @return Current character's party ID
+     */
+    uint32_t GetPartyID() const;
+
+    /**
+     * Get the current clan ID associated to the logged in
+     * character.
+     * @return Current character's clan ID
+     */
+    int32_t GetClanID() const;
 
     /**
      * Get a current party character representation from the
@@ -227,12 +264,23 @@ private:
     /// Map of game client object IDs to UUIDs
     std::unordered_map<int64_t, libobjgen::UUID> mObjectUUIDs;
 
+    /// Map of UUIDs to game client object IDs
+    /// The IDs listed here are only relevant to this client
+    std::unordered_map<libcomp::String, int32_t> mLocalObjectIDs;
+
+    /// Map of game client object IDs to UUIDs
+    /// The IDs listed here are only relevant to this client
+    std::unordered_map<int32_t, libobjgen::UUID> mLocalObjectUUIDs;
+
     /// Current time of the server set upon starting the client
     /// communication.
     ServerTime mStartTime;
 
     /// Next available activated ability ID
     uint8_t mNextActivatedAbilityID;
+
+    /// Next available local object ID
+    int32_t mNextLocalObjectID;
 
     /// Server lock for shared resources
     std::mutex mLock;

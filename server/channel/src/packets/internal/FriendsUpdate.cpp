@@ -128,7 +128,7 @@ bool Parsers::FriendsUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
     auto cState = client->GetClientState()->GetCharacterState();
     switch((InternalPacketAction_t)mode)
     {
-    case InternalPacketAction_t::PACKET_ACTION_FRIEND_LIST:
+    case InternalPacketAction_t::PACKET_ACTION_GROUP_LIST:
         {
             int8_t loginCount = p.ReadS8();
 

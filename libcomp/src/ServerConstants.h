@@ -31,6 +31,11 @@
 // libcomp Includes
 #include "CString.h"
 
+// Standard C++11 Includes
+#include <array>
+#include <set>
+#include <unordered_map>
+
 namespace libcomp
 {
 
@@ -118,6 +123,9 @@ struct Data
     /// Item ID of the 90 day item box rental ticket
     uint32_t RENTAL_ITEM_90;
 
+    /// Function ID of clan formation item skills
+    uint16_t SKILL_CLAN_FORM;
+
     /// Function ID of equipment changing skills
     uint16_t SKILL_EQUIP_ITEM;
 
@@ -138,6 +146,12 @@ struct Data
 
     /// Status effect ID of summon sync level 3
     uint32_t STATUS_SUMMON_SYNC_3;
+
+    /// Map of clan formation item IDs to their corresponding home base zones
+    std::unordered_map<uint32_t, uint32_t> CLAN_FORM_MAP;
+
+    /// Array of skill IDs gained at clan levels 1-10
+    std::array<std::set<uint32_t>, 10> CLAN_LEVEL_SKILLS;
 };
 
 public:

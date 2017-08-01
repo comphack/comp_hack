@@ -49,7 +49,7 @@ std::mutex ClientState::sLock;
 ClientState::ClientState() : objects::ClientStateObject(),
     mCharacterState(std::shared_ptr<CharacterState>(new CharacterState)),
     mDemonState(std::shared_ptr<DemonState>(new DemonState)),
-    mStartTime(0), mNextActivatedAbilityID(1)
+    mStartTime(0), mNextActivatedAbilityID(1), mNextLocalObjectID(1)
 {
 }
 
@@ -101,7 +101,7 @@ bool ClientState::Register()
 {
     auto cEntityID = mCharacterState->GetEntityID();
     auto dEntityID = mDemonState->GetEntityID();
-    auto worldCID = GetAccountLogin()->GetCharacterLogin()->GetWorldCID();
+    auto worldCID = GetWorldCID();
     if(cEntityID == 0 || dEntityID == 0 || worldCID == 0)
     {
         return false;
@@ -121,8 +121,9 @@ bool ClientState::Register()
     return true;
 }
 
-int64_t ClientState::GetObjectID(const libobjgen::UUID& uuid) const
+int64_t ClientState::GetObjectID(const libobjgen::UUID& uuid)
 {
+    std::lock_guard<std::mutex> lock(sLock);
     auto uuidStr = uuid.ToString();
 
     auto iter = mObjectIDs.find(uuidStr);
@@ -134,10 +135,41 @@ int64_t ClientState::GetObjectID(const libobjgen::UUID& uuid) const
     return 0;
 }
 
-const libobjgen::UUID ClientState::GetObjectUUID(int64_t objectID) const
+const libobjgen::UUID ClientState::GetObjectUUID(int64_t objectID)
 {
+    std::lock_guard<std::mutex> lock(sLock);
     auto iter = mObjectUUIDs.find(objectID);
     if(iter != mObjectUUIDs.end())
+    {
+        return iter->second;
+    }
+
+    return NULLUUID;
+}
+
+int32_t ClientState::GetLocalObjectID(const libobjgen::UUID& uuid)
+{
+    std::lock_guard<std::mutex> lock(sLock);
+    auto uuidStr = uuid.ToString();
+
+    auto iter = mLocalObjectIDs.find(uuidStr);
+    if(iter != mLocalObjectIDs.end())
+    {
+        return iter->second;
+    }
+
+    int32_t localID = mNextLocalObjectID++;
+    mLocalObjectIDs[uuidStr] = localID;
+    mLocalObjectUUIDs[localID] = uuid;
+
+    return localID;
+}
+
+const libobjgen::UUID ClientState::GetLocalObjectUUID(int32_t objectID)
+{
+    std::lock_guard<std::mutex> lock(sLock);
+    auto iter = mLocalObjectUUIDs.find(objectID);
+    if(iter != mLocalObjectUUIDs.end())
     {
         return iter->second;
     }
@@ -178,6 +210,21 @@ const libobjgen::UUID ClientState::GetAccountUID() const
 {
     return mCharacterState->Ready() ?
         mCharacterState->GetEntity()->GetAccount().GetUUID() : NULLUUID;
+}
+
+int32_t ClientState::GetWorldCID() const
+{
+    return GetAccountLogin()->GetCharacterLogin()->GetWorldCID();
+}
+
+uint32_t ClientState::GetPartyID() const
+{
+    return GetAccountLogin()->GetCharacterLogin()->GetPartyID();
+}
+
+int32_t ClientState::GetClanID() const
+{
+    return GetAccountLogin()->GetCharacterLogin()->GetClanID();
 }
 
 std::shared_ptr<objects::PartyCharacter> ClientState::GetPartyCharacter(

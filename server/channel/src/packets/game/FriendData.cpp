@@ -119,7 +119,7 @@ bool Parsers::FriendData::Parse(libcomp::ManagerPacket *pPacketManager,
         if(updateFlags & 0x02)
         {
             charLoginFlags = (uint8_t)(charLoginFlags |
-                (uint8_t)CharacterLoginStateFlag_t::CHARLOGIN_FRIEND_MESSAGE);
+                (uint8_t)CharacterLoginStateFlag_t::CHARLOGIN_MESSAGE);
         }
 
         // Rewind and set the flags

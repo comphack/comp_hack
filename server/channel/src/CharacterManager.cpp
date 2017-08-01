@@ -41,6 +41,7 @@
 // object Includes
 #include <AccountWorldData.h>
 #include <CharacterProgress.h>
+#include <Clan.h>
 #include <DemonBox.h>
 #include <Expertise.h>
 #include <InheritedSkill.h>
@@ -298,21 +299,28 @@ void CharacterManager::SendOtherCharacterData(const std::list<std::shared_ptr<
     reply.WriteU8(otherState->GetAcceptRevival() ? 1 : 0);
     reply.WriteS8(0);   // Unknown
 
-    libcomp::String clanName;
+    auto clan = c->GetClan().Get();
     reply.WriteString16Little(libcomp::Convert::ENCODING_CP932,
-        clanName, true);
+        clan ? clan->GetName() : "", true);
     reply.WriteS8(otherState->GetStatusIcon());
     reply.WriteS8(0);   // Unknown
-    reply.WriteS8(0);   // Unknown
 
-    reply.WriteU8(0);   //Unknown
-    reply.WriteU8(0);   //Unknown
-    reply.WriteU8(0);   //Unknown
-    reply.WriteU8(0);   //Unknown
-    reply.WriteU8(0);   //Unknown
-    reply.WriteU8(0);   //Unknown
-    reply.WriteU8(0);   //Unknown
-    reply.WriteU8(0);   //Unknown
+    if(clan)
+    {
+        reply.WriteS8(clan->GetLevel());
+        reply.WriteU8(clan->GetEmblemBase());
+        reply.WriteU8(clan->GetEmblemSymbol());
+        reply.WriteU8(clan->GetEmblemColorR1());
+        reply.WriteU8(clan->GetEmblemColorG1());
+        reply.WriteU8(clan->GetEmblemColorB1());
+        reply.WriteU8(clan->GetEmblemColorR2());
+        reply.WriteU8(clan->GetEmblemColorG2());
+        reply.WriteU8(clan->GetEmblemColorB2());
+    }
+    else
+    {
+        reply.WriteBlank(9);
+    }
 
     for(size_t i = 0; i < 13; i++)
     {
@@ -1435,7 +1443,28 @@ void CharacterManager::EquipItem(const std::shared_ptr<
 
     server->GetWorldDatabase()->QueueUpdate(character, state->GetAccountUID());
 
-    server->GetZoneManager()->BroadcastPacket(client, reply);
+    client->SendPacket(reply);
+
+    // Now update the other players
+    reply.Clear();
+    reply.WritePacketCode(
+        ChannelToClientPacketCode_t::PACKET_OTHER_CHARACTER_EQUIPMENT_CHANGED);
+    reply.WriteS32Little(cState->GetEntityID());
+    reply.WriteU8((uint8_t)slot);
+
+    if(unequip)
+    {
+        reply.WriteU32Little(static_cast<uint32_t>(-1));
+    }
+    else
+    {
+        reply.WriteU32Little(equip->GetType());
+    }
+
+    reply.WriteS16Little(cState->GetMaxHP());
+    reply.WriteS16Little(cState->GetMaxMP());
+
+    server->GetZoneManager()->BroadcastPacket(client, reply, false);
 }
 
 bool CharacterManager::UnequipItem(const std::shared_ptr<

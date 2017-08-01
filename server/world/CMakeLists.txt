@@ -75,9 +75,11 @@ SET(${PROJECT_NAME}_PACKETS
     src/packets/SetChannelInfo.cpp             # 0x1003
     src/packets/AccountLogin.cpp               # 0x1004
     src/packets/AccountLogout.cpp              # 0x1005
+    src/packets/Relay.cpp                      # 0x1006
     src/packets/CharacterLogin.cpp             # 0x1007
     src/packets/FriendsUpdate.cpp              # 0x1008
     src/packets/PartyUpdate.cpp                # 0x1009
+    src/packets/ClanUpdate.cpp                 # 0x100A
 )
 
 ADD_EXECUTABLE(${PROJECT_NAME} ${${PROJECT_NAME}_SRCS}

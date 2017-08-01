@@ -75,6 +75,7 @@ enum class ClientToChannelPacketCode_t : uint16_t
     PACKET_MOVE = 0x001C,  //!< Request to move an entity or object.
     PACKET_POPULATE_ZONE = 0x0019,  //!< Request to populate a zone with game objects and entities.
     PACKET_CHAT = 0x0026, //!< Request to add a message to the chat or process a GM command.
+    PACKET_TELL = 0x0027, //!< Request to send a chat message to a specific player in the world.
     PACKET_ACTIVATE_SKILL = 0x0030, //!< Request to activate a player or demon skill.
     PACKET_EXECUTE_SKILL = 0x0031, //!< Request to execute a skill that has finished charging.
     PACKET_CANCEL_SKILL = 0x0032, //!< Request to execute a skill that has finished charging.
@@ -110,6 +111,8 @@ enum class ClientToChannelPacketCode_t : uint16_t
     PACKET_SHOP_SELL = 0x0096,  //!< Request to sell an item to a shop.
     PACKET_DEMON_BOX_MOVE = 0x009A,  //!< Request to move a demon in a box.
     PACKET_DISMISS_DEMON = 0x009B,  //!< Request to dismiss a demon.
+    PACKET_POST_LIST = 0x009C,  //!< Request to list items in the player account's Post.
+    PACKET_POST_ITEM = 0x009E,  //!< Request to move an item from the Post into the current character's inventory.
     PACKET_HOTBAR_DATA = 0x00A2,  //!< Request for data about a hotbar page.
     PACKET_HOTBAR_SAVE = 0x00A4,  //!< Request to save a hotbar page.
     PACKET_EVENT_RESPONSE = 0x00B7,  //!< Message that the player has responded to the current event.
@@ -137,13 +140,27 @@ enum class ClientToChannelPacketCode_t : uint16_t
     PACKET_DEPO_RENT = 0x0104,  //!< Request to rent a client account item or demon depository.
     PACKET_QUEST_ACTIVE_LIST = 0x010B,  //!< Request for the player's active quest list.
     PACKET_QUEST_COMPLETED_LIST = 0x010C,  //!< Request for the player's completed quest list.
-    PACKET_CLAN_INFO = 0x0150,  //!< Request for the current player's clan information.
+    PACKET_CLAN_DISBAND = 0x0138,   //!< Request to disband the player character's clan.
+    PACKET_CLAN_INVITE = 0x013B,    //!< Request to invite a character to the player character's clan.
+    PACKET_CLAN_JOIN = 0x013E,  //!< Request to accept an invite to join a clan.
+    PACKET_CLAN_CANCEL = 0x0140,    //!< Request to reject an invite to join a clan.
+    PACKET_CLAN_KICK = 0x0142,  //!< Request to kick a character from the player character's clan.
+    PACKET_CLAN_MASTER_UPDATE = 0x0145, //!< Request to update a clan's master member.
+    PACKET_CLAN_SUB_MASTER_UPDATE = 0x0148, //!< Request to toggle a player's sub-master member type.
+    PACKET_CLAN_LEAVE = 0x014B, //!< Request to leave the player character's clan.
+    PACKET_CLAN_CHAT = 0x014E,  //!< Request to send a chat message to the current clan's channel.
+    PACKET_CLAN_INFO = 0x0150,  //!< Request for the current player character's clan information.
+    PACKET_CLAN_LIST = 0x0152,  //!< Request for member information from the current player character's clan.
+    PACKET_CLAN_DATA = 0x0154,  //!< Request to update clan member information about the current player character.
+    PACKET_CLAN_FORM = 0x0156,  //!< Request to form a new clan from a clan formation item.
     PACKET_SYNC_CHARACTER = 0x017E,  //!< Request to sync the player character's basic information.
     PACKET_MAP_FLAG = 0x0197,  //!< Request to receive map information.
     PACKET_DEMON_COMPENDIUM = 0x019B,  //!< Request for the Demon Compendium.
     PACKET_DUNGEON_RECORDS = 0x01C4,  //!< Request for the current player's dungeon challenge records.
+    PACKET_CLAN_EMBLEM_UPDATE = 0x01E1, //!< Request to update the player character's clan's emblem.
     PACKET_DEMON_FAMILIARITY = 0x01E6,  //!< Request to sync the familiarity of every demon in the player's COMP.
     PACKET_MATERIAL_BOX = 0x0205,  //!< Request for info about the materials container.
+    PACKET_ANALYZE = 0x0209,  //!< Request to analyze another player character.
     PACKET_FUSION_GAUGE = 0x0217,   //!< Request for the player's fusion gauge state.
     PACKET_TITLE_LIST = 0x021B,   //!< Request for the list of available titles.
     PACKET_PARTNER_DEMON_QUEST_LIST = 0x022D,   //!< Request for the player's partner demon quest list.
@@ -240,6 +257,8 @@ enum class ChannelToClientPacketCode_t : uint16_t
     PACKET_SHOP_BUY = 0x0095,  //!< Response to the request to buy an item from a shop.
     PACKET_SHOP_SELL = 0x0097,  //!< Response to the request to sell an item to a shop.
     PACKET_DEMON_BOX_UPDATE = 0x0098,  //!< Message containing information that one or more demon box has been updated.
+    PACKET_POST_LIST = 0x009D, //!< Response to the request to list items in the player account's Post.
+    PACKET_POST_ITEM = 0x009F, //!< Response to the request to move an item from the Post into the current character's inventory.
     PACKET_HOTBAR_DATA = 0x00A3,  //!< Response for data about a hotbar page.
     PACKET_HOTBAR_SAVE = 0x00A5,  //!< Response to save a hotbar page.
     PACKET_EVENT_MESSAGE = 0x00A6,  //!< Request to the client to display an event message.
@@ -285,8 +304,27 @@ enum class ChannelToClientPacketCode_t : uint16_t
     PACKET_QUEST_COMPLETED_LIST = 0x010E,  //!< Response containing the player's completed quest list.
     PACKET_LNC_POINTS = 0x0126,    //!< Message containing a character's LNC alignment value.
     PACKET_EVENT_STAGE_EFFECT = 0x0127,  //!< Request to the client to render a stage effect.
+    PACKET_CLAN_FORM = 0x0137,   //!< Response to the request to form a new clan from a clan formation item.
+    PACKET_CLAN_DISBAND = 0x0139,  //!< Response to the request to disband the player character's clan.
+    PACKET_CLAN_DISBANDED = 0x013A,    //!< Notification that the player character's clan has disbanded.
+    PACKET_CLAN_INVITE = 0x013C,   //!< Response to the request to invite a character to the player character's clan.
+    PACKET_CLAN_INVITED = 0x013D,  //!< Notification that the player character has been invited to join a clan.
+    PACKET_CLAN_JOIN = 0x013F, //!< Response to the request to accept an invite to join a clan.
+    PACKET_CLAN_CANCEL = 0x0141,   //!< Response to the request to reject an invite to join a clan.
+    PACKET_CLAN_KICK = 0x0143, //!< Response to the request to kick a character from the player character's clan.
+    PACKET_CLAN_KICKED = 0x0144,   //!< Notification that a character has been kicked from the player character's clan.
+    PACKET_CLAN_MASTER_UPDATE = 0x0146,    //!< Response to the request to update a clan's master member.
+    PACKET_CLAN_MASTER_UPDATED = 0x0147,   //!< Notification that the player character's clan's master has changed.
+    PACKET_CLAN_SUB_MASTER_UPDATE = 0x0149,    //!< Response to the request to toggle a player's sub-master member type.
+    PACKET_CLAN_SUB_MASTER_UPDATED = 0x014A,   //!< Notification that a clan member has had their sub-master role toggled.
+    PACKET_CLAN_LEAVE = 0x014C,    //!< Response to the request to leave the player character's clan.
+    PACKET_CLAN_LEFT = 0x014D, //!< Notification that a member of the player character's clan has left.
+    PACKET_CLAN_CHAT = 0x014F, //!< Chat message sent from a member of the same clan.
     PACKET_CLAN_INFO = 0x0151,  //!< Response containing the current player's clan information.
+    PACKET_CLAN_LIST = 0x0153, //!< Response to the request for member information from the current player character's clan.
+    PACKET_CLAN_DATA = 0x0155, //!< Notification that a player character's clan's member info has updated
     PACKET_EVENT_DIRECTION = 0x015D,  //!< Request to the client to signify a direction to the player.
+    PACKET_CLAN_NAME_UPDATED = 0x0169,  //!< Notification that a character's clan name has updated.
     PACKET_SYSTEM_MSG = 0x0171, //!< Message containing announcement ticker data. 
     PACKET_SYNC_CHARACTER = 0x017F,  //!< Response to the request to sync the player character's basic information.
     PACKET_BAZAAR_DATA = 0x0183,  //!< Message containing data about a bazaar in a zone.
@@ -296,9 +334,15 @@ enum class ChannelToClientPacketCode_t : uint16_t
     PACKET_DEMON_COMPENDIUM = 0x019C,  //!< Response containing the Demon Compendium.
     PACKET_DEMON_FAMILIARITY_UPDATE = 0x01A5,  //!< Notification that the current partner demon's familiarity has updated.
     PACKET_DUNGEON_CHALLENGES = 0x01C5,  //!< Response containing the current player's dungeon challenge records.
+    PACKET_CLAN_EMBLEM_UPDATE = 0x01E2,    //!< Response to the request to update the player character's clan's emblem.
+    PACKET_CLAN_EMBLEM_UPDATED = 0x01E3,   //!< Notification that a character's clan emblem has updated.
+    PACKET_CLAN_LEVEL_UPDATED = 0x01E4,    //!< Notification that a character's clan level has updated.
+    PACKET_CLAN_UPDATE = 0x01E5,   //!< Notification to a character that their visible clan info has been updated.
     PACKET_DEMON_FAMILIARITY = 0x01E7,  //!< Response to the request for the familiarity values of each demon in the COMP.
     PACKET_EVENT_EX_NPC_MESSAGE = 0x01E9,  //!< Request to the client to display an extended NPC event message.
     PACKET_MATERIAL_BOX = 0x0206,  //!< Response containing info about the materials container.
+    PACKET_EQUIPMENT_ANALYZE = 0x020A, //!< Message containing another player character's current equipment for "analyze".
+    PACKET_OTHER_CHARACTER_EQUIPMENT_CHANGED = 0x020B, //!< Notifies the client that another character's equipment has changed.
     PACKET_EVENT_SPECIAL_DIRECTION = 0x0216,  //!< Request to the client to signify a special direction to the player.
     PACKET_FUSION_GAUGE = 0x0218,   //!< Response containing the player's fusion gauge state.
     PACKET_TITLE_LIST = 0x021C,   //!< Response containing the list of available titles.
@@ -339,13 +383,15 @@ enum class LogoutPacketAction_t : uint32_t
 enum class InternalPacketCode_t : uint16_t
 {
     PACKET_GET_WORLD_INFO = 0x1001, //!< Request to detail the world server.
-    PACKET_SET_WORLD_INFO = 0x1002,  //!< Request to update a non-world server's world information.
-    PACKET_SET_CHANNEL_INFO = 0x1003,    //!< Request to update a server's channel information.
-    PACKET_ACCOUNT_LOGIN = 0x1004,    //!< Pass login information between the servers.
-    PACKET_ACCOUNT_LOGOUT = 0x1005,    //!< Pass logout information between the servers.
+    PACKET_SET_WORLD_INFO = 0x1002, //!< Request to update a non-world server's world information.
+    PACKET_SET_CHANNEL_INFO = 0x1003,   //!< Request to update a server's channel information.
+    PACKET_ACCOUNT_LOGIN = 0x1004,  //!< Pass login information between the servers.
+    PACKET_ACCOUNT_LOGOUT = 0x1005, //!< Pass logout information between the servers.
+    PACKET_RELAY = 0x1006,  //!< Relay a channel to client message from one player to another between servers.
     PACKET_CHARACTER_LOGIN = 0x1007,    //!< Pass character login information between the servers.
-    PACKET_FRIENDS_UPDATE = 0x1008,    //!< Pass friend information between the servers.
-    PACKET_PARTY_UPDATE = 0x1009,    //!< Pass party information between the servers.
+    PACKET_FRIENDS_UPDATE = 0x1008, //!< Pass friend information between the servers.
+    PACKET_PARTY_UPDATE = 0x1009,   //!< Pass party information between the servers.
+    PACKET_CLAN_UPDATE = 0x100A,    //!< Pass clan information between the servers.
 };
 
 /**
@@ -360,13 +406,28 @@ enum class InternalPacketAction_t : uint8_t
     PACKET_ACTION_RESPONSE_YES, //!< Indicates a contextual "Yes" response.
     PACKET_ACTION_RESPONSE_NO,  //!< Indicates a contextual "No" response.
 
-    PACKET_ACTION_FRIEND_LIST,  //!< Indicates that a friend list is being requested or sent.
+    PACKET_ACTION_GROUP_LIST,   //!< Indicates that a contextual group list is being requested or sent.
+    PACKET_ACTION_GROUP_LEAVE,  //!< Indicates that a contextual group update consists of "leave" information.
+    PACKET_ACTION_GROUP_DISBAND,    //!< Indicates that a contextual group update consists of "disband" information.
+    PACKET_ACTION_GROUP_LEADER_UPDATE,  //!< Indicates that a contextual group update consists of "leader update" information.
+    PACKET_ACTION_GROUP_KICK,   //!< Indicates that a contextual group update consists of "kick" information.
 
-    PACKET_ACTION_PARTY_LEAVE,  //!< Indicates that a party update consists of "leave" information.
-    PACKET_ACTION_PARTY_DISBAND,    //!< Indicates that a party update consists of "disband" information.
-    PACKET_ACTION_PARTY_LEADER_UPDATE,  //!< Indicates that a party update consists of "leader update" information.
+    PACKET_ACTION_CLAN_EMBLEM_UPDATE,  //!< Indicates that a clan update consists of "emblem update" information.
     PACKET_ACTION_PARTY_DROP_RULE,  //!< Indicates that a party update consists of "drop rule" information.
-    PACKET_ACTION_PARTY_KICK,   //!< Indicates that a party update consists of "kick" information.
+};
+
+/**
+ * Specifies how the message should be relayed. All options are valid when communicating with the world
+ * server and only the failure or world CIDs options are used when the world relays the packet to a channel.
+ */
+enum class PacketRelayMode_t : uint8_t
+{
+    RELAY_FAILURE = 0,  //!< Response back to the world containing CIDs that were not in the channel to attempt a retry.
+    RELAY_CHARACTER,  //!< Request to relay a message to a character by name.
+    RELAY_CIDS,  //!< Request to relay a message to one or more characters by world CID.
+    RELAY_PARTY,  //!< Request to relay a message to all current members of a party.
+    RELAY_CLAN,  //!< Request to relay a message to all online clan members.
+    RELAY_TEAM,  //!< Request to relay a message to all current team members.
 };
 
 /**
@@ -379,7 +440,7 @@ enum class CharacterLoginStateFlag_t : uint8_t
     CHARLOGIN_ZONE = 0x02,   //!< Indicates that a character's zone is contained in a packet.
     CHARLOGIN_CHANNEL = 0x04,  //!< Indicates that a character's channel is contained in a packet.
     CHARLOGIN_BASIC = 0x07,  //!< Indicates that basic information about a character is contained in a packet.
-    CHARLOGIN_FRIEND_MESSAGE = 0x08,  //!< Indicates that a character's friend message is contained in a packet.
+    CHARLOGIN_MESSAGE = 0x08,  //!< Indicates that a character's friend or clan message is contained in a packet.
     CHARLOGIN_FRIEND_UNKNOWN = 0x10,  //!< Unknown. Indicates that some friend information is being sent.
     CHARLOGIN_FRIEND_FLAGS = 0x1F,  //!< Indicates that one or many friend related pieces of data are contained in a packet.
     CHARLOGIN_PARTY_INFO = 0x20,  //!< Indicates that player character party information is contained in a packet.

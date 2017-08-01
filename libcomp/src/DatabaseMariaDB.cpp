@@ -434,11 +434,11 @@ bool DatabaseMariaDB::DeleteObjects(std::list<std::shared_ptr<PersistentObject>>
             uidBindings.push_back(String("'%1'").Arg(uuidStr));
         }
 
-        if(Execute(String("DELETE FROM `%1` WHERE `UID` in (%2);")
+        if(!Execute(String("DELETE FROM `%1` WHERE `UID` in (%2);")
             .Arg(metaObject->GetName())
             .Arg(String::Join(uidBindings, ", "))))
         {
-            return true;
+            return false;
         }
     }
 

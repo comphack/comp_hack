@@ -31,10 +31,6 @@
 #include <Packet.h>
 #include <PacketCodes.h>
 
-// objects Includes
-#include <AccountLogin.h>
-#include <CharacterLogin.h>
-
 // channel Includes
 #include "ChannelServer.h"
 
@@ -59,9 +55,8 @@ bool Parsers::PartyLeaderUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
 
     libcomp::Packet request;
     request.WritePacketCode(InternalPacketCode_t::PACKET_PARTY_UPDATE);
-    request.WriteU8((int8_t)InternalPacketAction_t::PACKET_ACTION_PARTY_LEADER_UPDATE);
-    request.WriteS32Little(state->GetAccountLogin()->GetCharacterLogin()
-        ->GetWorldCID());
+    request.WriteU8((int8_t)InternalPacketAction_t::PACKET_ACTION_GROUP_LEADER_UPDATE);
+    request.WriteS32Little(state->GetWorldCID());
     request.WriteS32Little(worldCID);
 
     server->GetManagerConnection()->GetWorldConnection()->SendPacket(request);

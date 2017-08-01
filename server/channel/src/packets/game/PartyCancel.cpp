@@ -31,10 +31,6 @@
 #include <Packet.h>
 #include <PacketCodes.h>
 
-// objects Includes
-#include <AccountLogin.h>
-#include <CharacterLogin.h>
-
 // channel Includes
 #include "ChannelServer.h"
 
@@ -61,8 +57,7 @@ bool Parsers::PartyCancel::Parse(libcomp::ManagerPacket *pPacketManager,
     libcomp::Packet request;
     request.WritePacketCode(InternalPacketCode_t::PACKET_PARTY_UPDATE);
     request.WriteU8((int8_t)InternalPacketAction_t::PACKET_ACTION_RESPONSE_NO);
-    request.WriteS32Little(state->GetAccountLogin()->GetCharacterLogin()
-        ->GetWorldCID());
+    request.WriteS32Little(state->GetWorldCID());
     request.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_UTF8,
         character->GetName(), true);
     request.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_UTF8,

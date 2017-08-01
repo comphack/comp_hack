@@ -38,6 +38,8 @@
 #include "AccountWorldData.h"
 #include "Character.h"
 #include "CharacterProgress.h"
+#include "Clan.h"
+#include "ClanMember.h"
 #include "Demon.h"
 #include "DemonBox.h"
 #include "EntityStats.h"
@@ -47,6 +49,7 @@
 #include "InheritedSkill.h"
 #include "Item.h"
 #include "ItemBox.h"
+#include "PostItem.h"
 #include "Quest.h"
 #include "RegisteredChannel.h"
 #include "RegisteredWorld.h"
@@ -327,6 +330,12 @@ bool PersistentObject::Initialize()
     RegisterType(typeid(objects::CharacterProgress), objects::CharacterProgress::GetMetadata(),
         []() {  return (PersistentObject*)new objects::CharacterProgress(); });
 
+    RegisterType(typeid(objects::Clan), objects::Clan::GetMetadata(),
+        []() {  return (PersistentObject*)new objects::Clan(); });
+
+    RegisterType(typeid(objects::ClanMember), objects::ClanMember::GetMetadata(),
+        []() {  return (PersistentObject*)new objects::ClanMember(); });
+
     RegisterType(typeid(objects::Demon), objects::Demon::GetMetadata(),
         []() {  return (PersistentObject*)new objects::Demon(); });
 
@@ -353,6 +362,9 @@ bool PersistentObject::Initialize()
 
     RegisterType(typeid(objects::ItemBox), objects::ItemBox::GetMetadata(),
         []() {  return (PersistentObject*)new objects::ItemBox(); });
+
+    RegisterType(typeid(objects::PostItem), objects::PostItem::GetMetadata(),
+        []() {  return (PersistentObject*)new objects::PostItem(); });
 
     RegisterType(typeid(objects::Quest), objects::Quest::GetMetadata(),
         []() {  return (PersistentObject*)new objects::Quest(); });

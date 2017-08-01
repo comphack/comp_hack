@@ -53,6 +53,7 @@ bool ServerConstants::Initialize(const String& filePath)
     
     // Read all constants as strings
     std::unordered_map<std::string, std::string> constants;
+    std::unordered_map<std::string, const tinyxml2::XMLElement*> complexConstants;
     const tinyxml2::XMLElement *pMember = doc.RootElement()->
         FirstChildElement("constant");
     while(pMember)
@@ -61,10 +62,18 @@ bool ServerConstants::Initialize(const String& filePath)
 
         if(szName && pMember->FirstChild())
         {
-            const tinyxml2::XMLText *pText = pMember->FirstChild()->ToText();
-            if(pText)
+            const tinyxml2::XMLElement *child = pMember->FirstChildElement();
+            if(child)
             {
-                constants[szName] = pText->Value();
+                complexConstants[szName] = child;
+            }
+            else
+            {
+                const tinyxml2::XMLText *pText = pMember->FirstChild()->ToText();
+                if(pText)
+                {
+                    constants[szName] = pText->Value();
+                }
             }
         }
 
@@ -129,6 +138,8 @@ bool ServerConstants::Initialize(const String& filePath)
         sConstants.RENTAL_ITEM_90);
 
     // Load skill constants
+    success &= LoadInteger(constants["SKILL_CLAN_FORM"],
+        sConstants.SKILL_CLAN_FORM);
     success &= LoadInteger(constants["SKILL_EQUIP_ITEM"],
         sConstants.SKILL_EQUIP_ITEM);
     success &= LoadInteger(constants["SKILL_STORE_DEMON"],
@@ -145,6 +156,99 @@ bool ServerConstants::Initialize(const String& filePath)
         sConstants.STATUS_SUMMON_SYNC_2);
     success &= LoadInteger(constants["STATUS_SUMMON_SYNC_3"],
         sConstants.STATUS_SUMMON_SYNC_3);
+
+    if(success && complexConstants.find("CLAN_FORM_MAP") != complexConstants.end())
+    {
+        const tinyxml2::XMLElement* pPair = complexConstants["CLAN_FORM_MAP"];
+        if(std::string(pPair->Value()) != "pair")
+        {
+            success = false;
+        }
+        else
+        {
+            while(pPair)
+            {
+                const tinyxml2::XMLElement* pKey = pPair->FirstChildElement("key");
+                const tinyxml2::XMLElement* pVal = pPair->FirstChildElement("value");
+
+                std::string keyStr(pKey && pKey->FirstChild()->ToText()
+                    ? pKey->FirstChild()->ToText()->Value() : "");
+                std::string valStr(pVal && pVal->FirstChild()->ToText()
+                    ? pVal->FirstChild()->ToText()->Value() : "");
+                if(!keyStr.empty() || !valStr.empty())
+                {
+                    uint32_t key = 0;
+                    uint32_t val = 0;
+                    if(LoadInteger(keyStr, key) && LoadInteger(valStr, val))
+                    {
+                        sConstants.CLAN_FORM_MAP[key] = val;
+                    }
+                    else
+                    {
+                        success = false;
+                        break;
+                    }
+                }
+                else
+                {
+                    success = false;
+                    break;
+                }
+
+                pPair = pPair->NextSiblingElement("pair");
+            }
+        }
+    }
+    
+    if(success && complexConstants.find("CLAN_LEVEL_SKILLS") != complexConstants.end())
+    {
+        const tinyxml2::XMLElement* pElement = complexConstants["CLAN_LEVEL_SKILLS"];
+        if(std::string(pElement->Value()) != "element")
+        {
+            success = false;
+        }
+        else
+        {
+            size_t idx = 0;
+            while(pElement)
+            {
+                if(idx == 10)
+                {
+                    success = false;
+                    break;
+                }
+
+                sConstants.CLAN_LEVEL_SKILLS[idx].clear();
+
+                libcomp::String elemStr(pElement && pElement->FirstChild()->ToText()
+                    ? pElement->FirstChild()->ToText()->Value() : "");
+                if(!elemStr.IsEmpty())
+                {
+                    for(auto elem : elemStr.Split(","))
+                    {
+                        uint32_t entry = 0;
+                        if(LoadInteger(elem.C(), entry))
+                        {
+                            sConstants.CLAN_LEVEL_SKILLS[idx].insert(entry);
+                        }
+                        else
+                        {
+                            success = false;
+                            break;
+                        }
+                    }
+                }
+
+                pElement = pElement->NextSiblingElement("element");
+                idx++;
+            }
+
+            if(idx < 9)
+            {
+                success = false;
+            }
+        }
+    }
 
     return success;
 }

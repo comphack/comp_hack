@@ -212,6 +212,10 @@ std::shared_ptr<Database> BaseServer::GetDatabase(
     auto dbType = mConfig->GetDatabaseType();
 
     std::shared_ptr<Database> db = GetDatabase(dbType, configMap);
+    if(!db)
+    {
+        return nullptr;
+    }
 
     bool initFailure = false;
     if(performSetup)

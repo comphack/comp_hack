@@ -32,10 +32,6 @@
 #include <Packet.h>
 #include <PacketCodes.h>
 
-// objects Includes
-#include <AccountLogin.h>
-#include <CharacterLogin.h>
-
 // channel Includes
 #include "ChannelServer.h"
 
@@ -73,8 +69,7 @@ bool Parsers::FriendAddRemove::Parse(libcomp::ManagerPacket *pPacketManager,
         request.WriteU8(mode == 0
             ? (int8_t)InternalPacketAction_t::PACKET_ACTION_ADD
             : (int8_t)InternalPacketAction_t::PACKET_ACTION_RESPONSE_NO);
-        request.WriteS32Little(state->GetAccountLogin()->GetCharacterLogin()
-            ->GetWorldCID());
+        request.WriteS32Little(state->GetWorldCID());
         request.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_UTF8,
             state->GetCharacterState()->GetEntity()->GetName(), true);
         request.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_UTF8,
@@ -89,8 +84,7 @@ bool Parsers::FriendAddRemove::Parse(libcomp::ManagerPacket *pPacketManager,
         libcomp::Packet request;
         request.WritePacketCode(InternalPacketCode_t::PACKET_FRIENDS_UPDATE);
         request.WriteU8((int8_t)InternalPacketAction_t::PACKET_ACTION_REMOVE);
-        request.WriteS32Little(state->GetAccountLogin()->GetCharacterLogin()
-            ->GetWorldCID());
+        request.WriteS32Little(state->GetWorldCID());
         request.WriteS32Little(worldCID);
 
         server->GetManagerConnection()->GetWorldConnection()->SendPacket(request);

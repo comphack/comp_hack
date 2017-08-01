@@ -210,6 +210,15 @@ private:
         std::shared_ptr<objects::MiSkillData> skillData);
 
     /**
+     * Placeholder function for an ability actually handled outside of the
+     * SkillManager.
+     * @param client Pointer to the client connection that activated the skill
+     * @param activated Pointer to the activated ability instance
+     */
+    bool SpecialSkill(const std::shared_ptr<ChannelClientConnection> client,
+        std::shared_ptr<objects::ActivatedAbility> activated);
+
+    /**
      * Execute the "equip item" ability.
      * @param client Pointer to the client connection that activated the skill
      * @param activated Pointer to the activated ability instance

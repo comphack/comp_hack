@@ -32,6 +32,9 @@
         <member type="float" name="LogoutX"/>
         <member type="float" name="LogoutY"/>
         <member type="float" name="LogoutRotation"/>
+        <member type="s32" name="LoginPoints"/>
+        <member type="u32" name="LastLogin"/>
+        <member type="Clan*" name="Clan"/>
 
         <!-- Collections -->
         <member type="list" name="LearnedSkills">

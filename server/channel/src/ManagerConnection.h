@@ -129,6 +129,18 @@ public:
         GetEntityClient(int32_t id, bool worldID = false);
 
     /**
+     * Read a list of world CIDs from the supplied packet and convert them
+     * to client connections.
+     * @param p Packet containing the connection list
+     * @param success Output parameter which specifies that the packet was read
+     *  was successful
+     * @return List of client connections associated to the world CIDs in the
+     *  packet
+     */
+    std::list<std::shared_ptr<ChannelClientConnection>>
+        GatherWorldTargetClients(libcomp::ReadOnlyPacket& p, bool& success);
+
+    /**
      * Schedule future server work to execute HandleClientTimeouts every
      * 10 seconds.
      * @param timeout Time in seconds that needs to pass for a client

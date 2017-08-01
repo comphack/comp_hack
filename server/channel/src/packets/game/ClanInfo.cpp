@@ -4,7 +4,7 @@
  *
  * @author HACKfrost
  *
- * @brief Request from the client for the current player's clan info.
+ * @brief Request from the client for the current player's basic clan info.
  *
  * This file is part of the Channel Server (channel).
  *
@@ -27,11 +27,13 @@
 #include "Packets.h"
 
 // libcomp Includes
+#include <ManagerPacket.h>
 #include <Packet.h>
 #include <PacketCodes.h>
 
 // channel Includes
 #include "ChannelClientConnection.h"
+#include "ChannelServer.h"
 
 using namespace channel;
 
@@ -39,49 +41,22 @@ bool Parsers::ClanInfo::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {
-    (void)pPacketManager;
-
     if(p.Size() != 0)
     {
         return false;
     }
 
-    /// @todo: implement non-default values
+    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+    auto state = client->GetClientState();
 
-    libcomp::String empty;
-    
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_CLAN_INFO);
-    reply.WriteS32Little(0);    // Clan ID
-    reply.WriteString16Little(libcomp::Convert::ENCODING_CP932,
-        empty, true);           // Clan name
-    reply.WriteS32Little(0);    // Base zone ID
+    libcomp::Packet request;
+    request.WritePacketCode(InternalPacketCode_t::PACKET_CLAN_UPDATE);
+    request.WriteU8((int8_t)InternalPacketAction_t::PACKET_ACTION_GROUP_LIST);
+    request.WriteS32Little(state->GetWorldCID());
+    request.WriteU8(0); // Clan level info
 
-    int8_t activeMemberCount = 0;
-    reply.WriteS8(activeMemberCount);
-    for(int8_t i = 0; i < activeMemberCount; i++)
-    {
-        reply.WriteS32Little(0);    // Active member entity ID
-    }
-
-    reply.WriteS8(0);    // Clan level
-    reply.WriteU8(0);    // Emblem base
-    reply.WriteU8(0);    // Emblem symbol
-
-    // Base color values
-    reply.WriteU8(0);    // R
-    reply.WriteU8(0);    // G
-    reply.WriteU8(0);    // B
-
-    // Symbol color values
-    reply.WriteU8(0);    // R
-    reply.WriteU8(0);    // G
-    reply.WriteU8(0);    // B
-
-    reply.WriteString16Little(libcomp::Convert::ENCODING_CP932,
-        empty, true);   // Unknown
-
-    connection->SendPacket(reply);
+    server->GetManagerConnection()->GetWorldConnection()->SendPacket(request);
 
     return true;
 }

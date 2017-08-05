@@ -42,7 +42,8 @@ class Child
 public:
     explicit Child(const std::string& program,
         const std::list<std::string>& arguments,
-        int bootTimeout = 0, bool restart = false);
+        int bootTimeout = 0, bool restart = false,
+        bool displayOutput = false);
     ~Child();
 
     bool Start(bool notify = false);
@@ -60,6 +61,7 @@ private:
     pid_t mPID;
     int mBootTimeout;
     bool mRestart;
+    bool mDisplayOutput;
 };
 
 } // namespace libcomp

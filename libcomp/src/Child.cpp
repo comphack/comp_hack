@@ -85,9 +85,10 @@ static pid_t CreateProcess(const std::string& program,
 
 Child::Child(const std::string& program,
     const std::list<std::string>& arguments,
-    int bootTimeout, bool restart) :
+    int bootTimeout, bool restart, bool displayOutput) :
     mProgram(program), mArguments(arguments), mPID(0),
-    mBootTimeout(bootTimeout), mRestart(restart)
+    mBootTimeout(bootTimeout), mRestart(restart),
+    mDisplayOutput(displayOutput)
 {
 }
 
@@ -138,7 +139,7 @@ bool Child::Start(bool notify)
         arguments.push_front(ss.str());
     }
 
-    mPID = CreateProcess(mProgram, arguments);
+    mPID = CreateProcess(mProgram, arguments, !mDisplayOutput);
 
     return 0 != mPID;
 }

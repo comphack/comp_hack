@@ -88,6 +88,21 @@ bool DayCare::LoadProcessDoc(tinyxml2::XMLDocument& doc)
 
     while(nullptr != pProgram)
     {
+        const char *szOutput = pProgram->Attribute("output");
+
+        bool displayOutput = false;
+
+        if(nullptr != szOutput)
+        {
+            std::string s(szOutput);
+            std::transform(s.begin(), s.end(), s.begin(), ::tolower);
+
+            if(s == "true" || s == "on" || s == "1" || s == "yes")
+            {
+                displayOutput = true;
+            }
+        }
+
         tinyxml2::XMLElement *pPath = pProgram->FirstChildElement("path");
 
         if(nullptr == pPath)
@@ -143,7 +158,7 @@ bool DayCare::LoadProcessDoc(tinyxml2::XMLDocument& doc)
         }
 
         auto child = std::make_shared<Child>(szPath, arguments,
-            timeout, restart);
+            timeout, restart, displayOutput);
         children.push_back(child);
 
         pProgram = pProgram->NextSiblingElement("program");

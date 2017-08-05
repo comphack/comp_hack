@@ -948,6 +948,17 @@ bool DatabaseMariaDB::ConnectToDatabase(MYSQL*& connection, const libcomp::Strin
         return false;
     }
 
+    // Set auto reconnect in case a connection idles too long
+    bool reconnect = 1;
+    if(mysql_options(connection, MYSQL_OPT_RECONNECT, &reconnect))
+    {
+        LOG_ERROR("Failed to set MYSQL_OPT_RECONNECT on the database.\n");
+
+        Close(connection);
+
+        return false;
+    }
+
     return true;
 }
 
@@ -963,10 +974,6 @@ MYSQL*& DatabaseMariaDB::GetConnection(bool autoConnect)
         {
             auto config = std::dynamic_pointer_cast<objects::DatabaseConfigMariaDB>(mConfig);
             ConnectToDatabase(connection, config->GetDatabaseName());
-
-            // Set auto reconnect in case a connection idles too long
-            bool reconnect = 1;
-            mysql_options(connection, MYSQL_OPT_RECONNECT, &reconnect);
         }
 
         mConnections[threadID] = connection;

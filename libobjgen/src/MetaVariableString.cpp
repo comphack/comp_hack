@@ -596,6 +596,7 @@ std::string MetaVariableString::GetSaveRawCode(const Generator& generator,
         replacements["@ENCODING@"] = EncodingToComp(mEncoding);
         replacements["@VAR_NAME@"] = name;
         replacements["@STREAM@"] = stream;
+        replacements["@ROUND@"] = std::to_string(GetRounding());
 
         bool dynamicString = (0 == mSize) && (mLengthSize > 0);
         if(dynamicString)
@@ -623,8 +624,16 @@ std::string MetaVariableString::GetSaveRawCode(const Generator& generator,
         {
             if(dynamicString)
             {
-                code = generator.ParseTemplate(0, "VariableStringSaveDynamic",
-                    replacements);
+                if(1 < GetRounding())
+                {
+                    code = generator.ParseTemplate(0,
+                        "VariableStringSaveDynamicRound", replacements);
+                }
+                else
+                {
+                    code = generator.ParseTemplate(0,
+                        "VariableStringSaveDynamic", replacements);
+                }
             }
             else
             {

@@ -181,6 +181,31 @@ public:
      */
     CharacterManager* GetCharacterManager();
 
+    /**
+     * Build the data-less relay packet from and targetting the supplied
+     * world CIDs.
+     * @param p Reference param containing the packet to write to
+     * @param targetCIDs Optional list of target CIDs. If this is not supplied
+     *  it must be inserted elsewhere.
+     * @param sourceCID World CID of the source character, 0 means it came
+     *  from the world
+     * @return Position of the target CIDs section of the packet. This is useful
+     *  for when the target CIDs are added later.
+     */
+    uint32_t GetRelayPacket(libcomp::Packet& p,
+        const std::list<int32_t>& targetCIDs = {}, int32_t sourceCID = 0);
+
+    /**
+     * Build the data-less relay packet from and targetting the supplied
+     * world CIDs.
+     * @param p Reference param containing the packet to write to
+     * @param targetCID World CID of the target to send the packet to
+     * @param sourceCID World CID of the source character, 0 means it came
+     *  from the world
+     */
+    void GetRelayPacket(libcomp::Packet& p, int32_t targetCID,
+        int32_t sourceCID = 0);
+
 protected:
     /**
      * Create a connection to a newly active socket.

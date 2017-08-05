@@ -29,6 +29,7 @@
 // libcomp Includes
 #include <Log.h>
 #include <PacketCodes.h>
+#include <ServerConstants.h>
 
 // object Includes
 #include <Account.h>
@@ -36,6 +37,8 @@
 #include <AccountWorldData.h>
 #include <CharacterLogin.h>
 #include <CharacterProgress.h>
+#include <Clan.h>
+#include <ClanMember.h>
 #include <DemonBox.h>
 #include <EventState.h>
 #include <Expertise.h>
@@ -101,7 +104,8 @@ void AccountManager::HandleLoginResponse(const std::shared_ptr<
     auto state = client->GetClientState();
     auto login = state->GetAccountLogin();
     auto account = login->GetAccount();
-    auto character = login->GetCharacterLogin()->GetCharacter();
+    auto cLogin = login->GetCharacterLogin();
+    auto character = cLogin->GetCharacter();
 
     libcomp::Packet reply;
     reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_LOGIN);
@@ -345,7 +349,8 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
         }
 
         //Hacks to add MAG, a test demon and some starting skills
-        auto mag = characterManager->GenerateItem(ITEM_MAGNETITE, 5000);
+        auto mag = characterManager->GenerateItem(SVR_CONST.ITEM_MAGNETITE,
+            5000);
         mag->SetItemBox(box);
         mag->SetBoxSlot(49);
 
@@ -578,6 +583,15 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
         }
     }
 
+    // Clan
+    if(!character->GetClan().IsNull())
+    {
+        if(!character->LoadClan(db))
+        {
+            return false;
+        }
+    }
+
     return !newCharacter ||
         (character->Update(db) && defaultBox->Update(db));
 }
@@ -711,6 +725,9 @@ bool AccountManager::LogoutCharacter(channel::ClientState* state,
     // Save world data
     ok &= Cleanup<objects::AccountWorldData>(
         accountWorldData, worldDB, doSave, !delay);
+
+    // Do not save or unload clan information as it is managed
+    // by the server
 
     ok &= Cleanup<objects::Character>(character, worldDB, doSave,
         !delay);

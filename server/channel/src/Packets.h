@@ -44,6 +44,7 @@ PACKET_PARSER_DECL(Logout);                 // 0x0005
 PACKET_PARSER_DECL(PopulateZone);           // 0x0019
 PACKET_PARSER_DECL(Move);                   // 0x001C
 PACKET_PARSER_DECL(Chat);                   // 0x0026
+PACKET_PARSER_DECL(Tell);                   // 0x0027
 PACKET_PARSER_DECL(ActivateSkill);          // 0x0030
 PACKET_PARSER_DECL(ExecuteSkill);           // 0x0031
 PACKET_PARSER_DECL(CancelSkill);            // 0x0032
@@ -79,6 +80,8 @@ PACKET_PARSER_DECL(ShopBuy);                // 0x0094
 PACKET_PARSER_DECL(ShopSell);               // 0x0096
 PACKET_PARSER_DECL(DemonBoxMove);           // 0x009A
 PACKET_PARSER_DECL(DismissDemon);           // 0x009B
+PACKET_PARSER_DECL(PostList);               // 0x009C
+PACKET_PARSER_DECL(PostItem);               // 0x009E
 PACKET_PARSER_DECL(HotbarData);             // 0x00A2
 PACKET_PARSER_DECL(HotbarSave);             // 0x00A4
 PACKET_PARSER_DECL(EventResponse);          // 0x00B7
@@ -104,13 +107,27 @@ PACKET_PARSER_DECL(ItemDepoList);           // 0x0102
 PACKET_PARSER_DECL(DepoRent);               // 0x0104
 PACKET_PARSER_DECL(QuestActiveList);        // 0x010B
 PACKET_PARSER_DECL(QuestCompletedList);     // 0x010C
+PACKET_PARSER_DECL(ClanDisband);            // 0x0138
+PACKET_PARSER_DECL(ClanInvite);             // 0x013B
+PACKET_PARSER_DECL(ClanJoin);               // 0x013E
+PACKET_PARSER_DECL(ClanCancel);             // 0x0140
+PACKET_PARSER_DECL(ClanKick);               // 0x0142
+PACKET_PARSER_DECL(ClanMasterUpdate);       // 0x0145
+PACKET_PARSER_DECL(ClanSubMasterUpdate);    // 0x0148
+PACKET_PARSER_DECL(ClanLeave);              // 0x014B
+PACKET_PARSER_DECL(ClanChat);               // 0x014E
 PACKET_PARSER_DECL(ClanInfo);               // 0x0150
+PACKET_PARSER_DECL(ClanList);               // 0x0152
+PACKET_PARSER_DECL(ClanData);               // 0x0154
+PACKET_PARSER_DECL(ClanForm);               // 0x0156
 PACKET_PARSER_DECL(SyncCharacter);          // 0x017E
 PACKET_PARSER_DECL(MapFlag);                // 0x0197
 PACKET_PARSER_DECL(DemonCompendium);        // 0x019B
 PACKET_PARSER_DECL(DungeonRecords);         // 0x01C4
+PACKET_PARSER_DECL(ClanEmblemUpdate);       // 0x01E1
 PACKET_PARSER_DECL(DemonFamiliarity);       // 0x01E6
 PACKET_PARSER_DECL(MaterialBox);            // 0x0205
+PACKET_PARSER_DECL(Analyze);                // 0x0209
 PACKET_PARSER_DECL(FusionGauge);            // 0x0217
 PACKET_PARSER_DECL(TitleList);              // 0x021B
 PACKET_PARSER_DECL(PartnerDemonQuestList);  // 0x022D
@@ -134,9 +151,11 @@ PACKET_PARSER_DECL(SetWorldInfo);        // 0x1002
 PACKET_PARSER_DECL(SetOtherChannelInfo); // 0x1003
 PACKET_PARSER_DECL(AccountLogin);        // 0x1004
 PACKET_PARSER_DECL(AccountLogout);       // 0x1005
+PACKET_PARSER_DECL(Relay);               // 0x1006
 PACKET_PARSER_DECL(CharacterLogin);      // 0x1007
 PACKET_PARSER_DECL(FriendsUpdate);       // 0x1008
 PACKET_PARSER_DECL(PartyUpdate);         // 0x1009
+PACKET_PARSER_DECL(ClanUpdate);          // 0x100A
 
 } // namespace Parsers
 

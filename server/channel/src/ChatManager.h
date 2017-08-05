@@ -45,10 +45,10 @@ enum ChatType_t : uint16_t
     CHAT_PARTY = 41,
     CHAT_SHOUT = 44,
     CHAT_SAY = 45,
-//    CHAT_KLAN = ???,
+    CHAT_TELL = 46,
     CHAT_SELF = 47,
-//    CHAT_TEAM = ???,
-//    CHAT_TELL = ???,
+    CHAT_CLAN = 48,
+    CHAT_TEAM = 714,
 };
 
 /*
@@ -61,10 +61,8 @@ enum ChatVis_t : uint16_t
     CHAT_VIS_PARTY,
     CHAT_VIS_ZONE,
     CHAT_VIS_RANGE,
-    CHAT_VIS_KLAN,
+    CHAT_VIS_CLAN,
     CHAT_VIS_TEAM,
-    CHAT_VIS_GLOBAL,
-    CHAT_VIS_GMS,
 };
 
 /**
@@ -94,7 +92,18 @@ public:
      */
     bool SendChatMessage(const std::shared_ptr<
         channel::ChannelClientConnection>& client, ChatType_t chatChannel,
-        libcomp::String message);
+        const libcomp::String& message);
+
+    /**
+     * Send a tell message to the specified character.
+     * @param client Pointer to the client that sent the message
+     * @param message Message to send
+     * @param targetName Name of the player the message is sending to
+     * @return true if the message was handled properly, else false
+     */
+    bool SendTellMessage(const std::shared_ptr<
+        ChannelClientConnection>& client, const libcomp::String& message,
+        const libcomp::String& targetName);
 
     /**
      * Execute a GM command using the supplied arguments.
@@ -116,6 +125,16 @@ private:
      * @return true if the command was handled properly, else false
      */
     bool GMCommand_Announce(const std::shared_ptr<
+        channel::ChannelClientConnection>& client,
+        const std::list<libcomp::String>& args);
+
+    /** 
+     * GM command to ban a player currently on the channel
+     * @param client Pointer to the client that sent the command
+     * @param args List of arguments for the command
+     * @return true if the command was handled properly, else false
+     */
+    bool GMCommand_Ban(const std::shared_ptr<
         channel::ChannelClientConnection>& client,
         const std::list<libcomp::String>& args);
 
@@ -202,6 +221,16 @@ private:
     bool GMCommand_Item(const std::shared_ptr<
         channel::ChannelClientConnection>& client,
         const std::list<libcomp::String>& args);
+    
+    /** 
+     * GM command to kick a player from the channel
+     * @param client Pointer to the client that sent the command
+     * @param args List of arguments for the command
+     * @return true if the command was handled properly, else false
+     */
+    bool GMCommand_Kick(const std::shared_ptr<
+        channel::ChannelClientConnection>& client,
+        const std::list<libcomp::String>& args);
 
     /**
      * GM command to kill a character in the same zone.
@@ -250,6 +279,16 @@ private:
      * @return true if the command was handled properly, else false
      */
     bool GMCommand_Position(const std::shared_ptr<
+        channel::ChannelClientConnection>& client,
+        const std::list<libcomp::String>& args);
+
+    /**
+     * GM command to add an item to a character's post.
+     * @param client Pointer to the client that sent the command
+     * @param args List of arguments for the command
+     * @return true if the command was handled properly, else false
+     */
+    bool GMCommand_Post(const std::shared_ptr<
         channel::ChannelClientConnection>& client,
         const std::list<libcomp::String>& args);
 

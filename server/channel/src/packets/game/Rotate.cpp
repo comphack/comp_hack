@@ -95,18 +95,11 @@ bool Parsers::Rotate::Parse(libcomp::ManagerPacket *pPacketManager,
         reply.WriteS32Little(entityID);
         reply.WriteFloat(rotation);
 
-        // Times must be sent relative to the other players
-        uint32_t timePos = reply.Size();
-        for(auto zConnection : zoneConnections)
-        {
-            auto otherState = zConnection->GetClientState();
+        std::unordered_map<uint32_t, uint64_t> timeMap;
+        timeMap[reply.Size()] = startTime;
+        timeMap[reply.Size() + 4] = stopTime;
 
-            reply.Seek(timePos);
-            reply.WriteFloat(otherState->ToClientTime(startTime));
-            reply.WriteFloat(otherState->ToClientTime(stopTime));
-
-            zConnection->SendPacket(reply);
-        }
+        ChannelClientConnection::SendRelativeTimePacket(zoneConnections, reply, timeMap);
     }
 
     return true;

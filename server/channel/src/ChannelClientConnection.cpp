@@ -64,3 +64,44 @@ void ChannelClientConnection::BroadcastPacket(const std::list<std::shared_ptr<
 
     libcomp::TcpConnection::BroadcastPacket(connections, packet);
 }
+
+void ChannelClientConnection::BroadcastPackets(const std::list<std::shared_ptr<
+    ChannelClientConnection>> &clients, std::list<libcomp::Packet>& packets)
+{
+    for(auto client : clients)
+    {
+        for(auto& packet : packets)
+        {
+            client->QueuePacket(packet);
+        }
+
+        client->FlushOutgoing();
+    }
+}
+
+void ChannelClientConnection::SendRelativeTimePacket(
+    const std::list<std::shared_ptr<ChannelClientConnection>>& clients,
+    libcomp::Packet& packet, const std::unordered_map<uint32_t, uint64_t>& timeMap,
+    bool queue)
+{
+    for(auto client : clients)
+    {
+        libcomp::Packet pCopy(packet);
+
+        auto state = client->GetClientState();
+        for(auto tPair : timeMap)
+        {
+            pCopy.Seek(tPair.first);
+            pCopy.WriteFloat(state->ToClientTime(tPair.second));
+        }
+
+        if(queue)
+        {
+            client->QueuePacket(pCopy);
+        }
+        else
+        {
+            client->SendPacket(pCopy);
+        }
+    }
+}

@@ -19,6 +19,7 @@
     <include path="action_startevent.xml"/>
     <include path="action_zonechange.xml"/>
     <include path="character.xml"/>
+    <include path="clan.xml"/>
     <include path="demon.xml"/>
     <include path="enemy.xml"/>
     <include path="event.xml"/>

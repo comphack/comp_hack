@@ -31,6 +31,9 @@
 #include <DefinitionManager.h>
 #include <ScriptEngine.h>
 
+// C++ Standard Includes
+#include <cmath>
+
 // objects Includes
 #include <Character.h>
 #include <Demon.h>
@@ -64,6 +67,11 @@ ActiveEntityState::ActiveEntityState(const ActiveEntityState& other)
     (void)other;
 }
 
+int16_t ActiveEntityState::GetCorrectValue(CorrectTbl tableID)
+{
+    return GetCorrectTbl((size_t)tableID);
+}
+
 const libobjgen::UUID ActiveEntityState::GetEntityUUID()
 {
     return NULLUUID;
@@ -82,6 +90,40 @@ void ActiveEntityState::Move(float xPos, float yPos, uint64_t now)
         SetDestinationY(yPos);
         SetDestinationTicks(now + 500000);  /// @todo: modify for speed
     }
+}
+
+void ActiveEntityState::MoveRelative(
+    float targetX, float targetY, float distance, bool away,
+    uint64_t now, uint64_t endTime)
+{
+    float x = GetCurrentX();
+    float y = GetCurrentY();
+
+    float destX = 0.f, destY = 0.f;
+    if(targetX != x)
+    {
+        float slope = (targetY - y)/(targetX - x);
+        float denom = (float)std::sqrt(1.0f + std::pow(slope, 2));
+
+        float xOffset = (float)(distance / denom);
+        float yOffset = (float)fabs((slope * distance) / denom);;
+
+        destX = (away == (targetX > x)) ? (x - xOffset) : (x + xOffset);
+        destY = (away == (targetY > y)) ? (y - yOffset) : (y + yOffset);
+    }
+    else if(targetY == y)
+    {
+        // Same coordinates, do nothing
+        return;
+    }
+
+    SetOriginX(x);
+    SetOriginY(y);
+    SetOriginTicks(now);
+
+    SetDestinationX(destX);
+    SetDestinationY(destY);
+    SetDestinationTicks(endTime);
 }
 
 void ActiveEntityState::Rotate(float rot, uint64_t now)
@@ -126,6 +168,13 @@ bool ActiveEntityState::IsRotating() const
     return GetCurrentRotation() != GetDestinationRotation();
 }
 
+float ActiveEntityState::GetDistance(float x, float y, bool squared)
+{
+    float dSquared = (float)(std::pow((GetCurrentX() - x), 2)
+        + std::pow((GetCurrentY() - y), 2));
+    return squared ? dSquared : std::sqrt(dSquared);
+}
+
 void ActiveEntityState::RefreshCurrentPosition(uint64_t now)
 {
     if(now != mLastRefresh)
@@ -167,6 +216,13 @@ void ActiveEntityState::RefreshCurrentPosition(uint64_t now)
 
             uint64_t elapsed = now - originTicks;
             uint64_t total = destTicks - originTicks;
+            if(total == 0)
+            {
+                SetCurrentX(destX);
+                SetCurrentY(destY);
+                SetCurrentRotation(destRot);
+                return;
+            }
 
             double prog = (double)((double)elapsed/(double)total);
             if(xDiff || yDiff)
@@ -193,12 +249,64 @@ void ActiveEntityState::RefreshCurrentPosition(uint64_t now)
     }
 }
 
-Zone* ActiveEntityState::GetZone() const
+void ActiveEntityState::RefreshKnockback(uint64_t now)
+{
+    std::lock_guard<std::mutex> lock(mLock);
+
+    auto kb = GetKnockbackResist();
+    float kbMax = (float)GetCorrectValue(CorrectTbl::KNOCKBACK_RESIST);
+    if(kb < kbMax)
+    {
+        // Knockback refreshes at a rate of 15/s (or 0.015/ms)
+        kb = kb + (float)((double)(now - GetKnockbackTicks()) * 0.001 * 0.015);
+        if(kb > kbMax)
+        {
+            kb = kbMax;
+        }
+        else if(kb < 0.f)
+        {
+            // Sanity check
+            kb = 0.f;
+        }
+
+        SetKnockbackResist(kb);
+        if(kb == kbMax)
+        {
+            // Reset to no time
+            SetKnockbackTicks(0);
+        }
+    }
+}
+
+float ActiveEntityState::UpdateKnockback(uint64_t now, float decrease)
+{
+    // Always get up to date first
+    RefreshKnockback(now);
+
+    std::lock_guard<std::mutex> lock(mLock);
+
+    auto kb = GetKnockbackResist();
+    if(kb > 0)
+    {
+        kb -= decrease;
+        if(kb <= 0)
+        {
+            kb = 0.f;
+        }
+
+        SetKnockbackResist(kb);
+        SetKnockbackTicks(now);
+    }
+
+    return kb;
+}
+
+std::shared_ptr<Zone> ActiveEntityState::GetZone() const
 {
     return mCurrentZone;
 }
 
-void ActiveEntityState::SetZone(Zone* zone, bool updatePrevious)
+void ActiveEntityState::SetZone(const std::shared_ptr<Zone>& zone, bool updatePrevious)
 {
     if(updatePrevious && mCurrentZone)
     {
@@ -450,8 +558,7 @@ std::set<uint32_t> ActiveEntityState::AddStatusEffects(const AddStatusEffectMap&
             libcomp::EnumMap<CorrectTbl, std::unordered_map<bool, uint8_t>> cancelMap;
             for(auto c : common->GetCorrectTbl())
             {
-                if(c->GetValue() == 0 ||
-                    c->GetType() == objects::MiCorrectTbl::Type_t::PERCENT)
+                if(c->GetValue() == 0 || c->GetType() == 1)
                 {
                     canCancel = false;
                     cancelMap.clear();
@@ -500,8 +607,7 @@ std::set<uint32_t> ActiveEntityState::AddStatusEffects(const AddStatusEffectMap&
                     libcomp::EnumMap<CorrectTbl, std::unordered_map<bool, uint8_t>> exCancelMap;
                     for(auto c : exCommon->GetCorrectTbl())
                     {
-                        if(c->GetValue() == 0 ||
-                            c->GetType() == objects::MiCorrectTbl::Type_t::PERCENT)
+                        if(c->GetValue() == 0 || c->GetType() == 1)
                         {
                             exCancel = false;
                             break;
@@ -832,8 +938,10 @@ bool ActiveEntityState::PopEffectTicks(libcomp::DefinitionManager* definitionMan
                 // Adjust T-Damage if the entity is not dead
                 if(mAlive)
                 {
-                    hpTDamage = (int32_t)(hpTDamage - GetHPRegen());
-                    mpTDamage = (int32_t)(mpTDamage - GetMPRegen());
+                    hpTDamage = (int32_t)(hpTDamage -
+                        GetCorrectValue(CorrectTbl::HP_REGEN));
+                    mpTDamage = (int32_t)(mpTDamage -
+                        GetCorrectValue(CorrectTbl::MP_REGEN));
 
                     // Apply T-damage
                     for(auto effectType : mTimeDamageEffects)
@@ -953,6 +1061,54 @@ std::list<std::pair<std::shared_ptr<objects::StatusEffect>, uint32_t>>
     }
 
     return result;
+}
+
+std::set<int32_t> ActiveEntityState::GetOpponentIDs() const
+{
+    return mOpponentIDs;
+}
+
+bool ActiveEntityState::HasOpponent(int32_t opponentID)
+{
+    std::lock_guard<std::mutex> lock(mLock);
+    return mOpponentIDs.find(opponentID) != mOpponentIDs.end();
+}
+
+size_t ActiveEntityState::AddRemoveOpponent(bool add, int32_t opponentID)
+{
+    std::lock_guard<std::mutex> lock(mLock);
+    if(add)
+    {
+        mOpponentIDs.insert(opponentID);
+    }
+    else
+    {
+        mOpponentIDs.erase(opponentID);
+    }
+
+    return mOpponentIDs.size();
+}
+
+int16_t ActiveEntityState::GetNRAChance(uint8_t nraIdx, CorrectTbl type)
+{
+    libcomp::EnumMap<CorrectTbl, int16_t>* map;
+    switch(nraIdx)
+    {
+    case NRA_NULL:
+        map = &mNullMap;
+        break;
+    case NRA_REFLECT:
+        map = &mReflectMap;
+        break;
+    case NRA_ABSORB:
+        map = &mAbsorbMap;
+        break;
+    default:
+        return 0;
+    }
+
+    auto it = map->find(type);
+    return it != map->end() ? it->second : 0;
 }
 
 void ActiveEntityState::SetStatusEffects(
@@ -1105,18 +1261,21 @@ template<>
 ActiveEntityStateImp<objects::Character>::ActiveEntityStateImp()
 {
     SetEntityType(objects::EntityStateObject::EntityType_t::CHARACTER);
+    SetFaction(objects::ActiveEntityStateObject::Faction_t::PLAYER);
 }
 
 template<>
 ActiveEntityStateImp<objects::Demon>::ActiveEntityStateImp()
 {
     SetEntityType(objects::EntityStateObject::EntityType_t::PARTNER_DEMON);
+    SetFaction(objects::ActiveEntityStateObject::Faction_t::PLAYER);
 }
 
 template<>
 ActiveEntityStateImp<objects::Enemy>::ActiveEntityStateImp()
 {
     SetEntityType(objects::EntityStateObject::EntityType_t::ENEMY);
+    SetFaction(objects::ActiveEntityStateObject::Faction_t::ENEMY);
 }
 
 template<>
@@ -1137,6 +1296,9 @@ void ActiveEntityStateImp<objects::Character>::SetEntity(
     }
 
     SetStatusEffects(effects);
+
+    // Reset knockback and let refresh correct
+    SetKnockbackResist(0);
 }
 
 template<>
@@ -1156,6 +1318,9 @@ void ActiveEntityStateImp<objects::Demon>::SetEntity(
     }
 
     SetStatusEffects(effects);
+
+    // Reset knockback and let refresh correct
+    SetKnockbackResist(0);
 }
 
 template<>
@@ -1171,6 +1336,9 @@ void ActiveEntityStateImp<objects::Enemy>::SetEntity(
     {
         mAlive = entity->GetCoreStats()->GetHP() > 0;
     }
+
+    // Reset knockback and let refresh correct
+    SetKnockbackResist(0);
 }
 
 template<>
@@ -1201,8 +1369,15 @@ uint8_t ActiveEntityStateImp<objects::Character>::RecalculateStats(
     auto cs = c->GetCoreStats().Get();
 
     auto stats = CharacterManager::GetCharacterBaseStatMap(cs);
+    
+    // Check if knockback max and current need to be set
+    if(GetCorrectValue(CorrectTbl::KNOCKBACK_RESIST) == 0)
+    {
+        SetKnockbackResist((float)stats[CorrectTbl::KNOCKBACK_RESIST]);
+    }
 
     std::list<std::shared_ptr<objects::MiCorrectTbl>> correctTbls;
+    std::list<std::shared_ptr<objects::MiCorrectTbl>> nraTbls;
     for(auto equip : c->GetEquippedItems())
     {
         if(!equip.IsNull())
@@ -1210,13 +1385,22 @@ uint8_t ActiveEntityStateImp<objects::Character>::RecalculateStats(
             auto itemData = definitionManager->GetItemData(equip->GetType());
             for(auto ct : itemData->GetCommon()->GetCorrectTbl())
             {
-                correctTbls.push_back(ct);
+                if((uint8_t)ct->GetID() >= (uint8_t)CorrectTbl::NRA_WEAPON &&
+                    (uint8_t)ct->GetID() <= (uint8_t)CorrectTbl::NRA_MAGIC)
+                {
+                    nraTbls.push_back(ct);
+                }
+                else
+                {
+                    correctTbls.push_back(ct);
+                }
             }
         }
     }
 
     GetStatusEffectCorrectTbls(definitionManager, correctTbls);
 
+    UpdateNRAChances(stats, nraTbls);
     AdjustStats(correctTbls, stats, true);
     CharacterManager::CalculateDependentStats(stats, cs->GetLevel(), false);
     AdjustStats(correctTbls, stats, false);
@@ -1264,7 +1448,7 @@ const std::set<CorrectTbl> BASE_STATS =
 
 void ActiveEntityState::AdjustStats(
     const std::list<std::shared_ptr<objects::MiCorrectTbl>>& adjustments,
-    libcomp::EnumMap<CorrectTbl, int16_t>& stats, bool baseMode) const
+    libcomp::EnumMap<CorrectTbl, int16_t>& stats, bool baseMode)
 {
     std::set<CorrectTbl> removed;
     for(auto ct : adjustments)
@@ -1276,32 +1460,151 @@ void ActiveEntityState::AdjustStats(
 
         // If a value is reduced to 0%, leave it
         if(removed.find(tblID) != removed.end()) continue;
-
-        switch(ct->GetType())
+        
+        if((uint8_t)tblID >= (uint8_t)CorrectTbl::NRA_WEAPON &&
+            (uint8_t)tblID <= (uint8_t)CorrectTbl::NRA_MAGIC)
         {
-        case objects::MiCorrectTbl::Type_t::PERCENT:
-            // Percentage sets can either be an immutable set to zero
-            // or an increase/decrease by a set amount
-            if(ct->GetValue() == 0)
+            // NRA is calculated differently from everything else
+            if(ct->GetType() == 0)
             {
-                removed.insert(tblID);
-                stats[tblID] = 0;
+                // For type 0, the NRA value becomes 100% and CANNOT be reduced.
+                switch(ct->GetValue())
+                {
+                case NRA_NULL:
+                    removed.insert(tblID);
+                    mNullMap[tblID] = 100;
+                    break;
+                case NRA_REFLECT:
+                    removed.insert(tblID);
+                    mReflectMap[tblID] = 100;
+                    break;
+                case NRA_ABSORB:
+                    removed.insert(tblID);
+                    mAbsorbMap[tblID] = 100;
+                    break;
+                default:
+                    break;
+                }
             }
             else
             {
-                stats[tblID] = (int16_t)(stats[tblID] +
-                    (int16_t)(stats[tblID] * (ct->GetValue() * 0.01)));
+                // For other types, reduce the value by 2 to get the NRA index
+                // and add the value supplied.
+                libcomp::EnumMap<CorrectTbl, int16_t>* m = nullptr;
+                switch(ct->GetType())
+                {
+                case (NRA_NULL + 2):
+                    m = &mNullMap;
+                    break;
+                case (NRA_REFLECT + 2):
+                    m = &mReflectMap;
+                    break;
+                case (NRA_ABSORB + 2):
+                    m = &mAbsorbMap;
+                    break;
+                default:
+                    break;
+                }
+
+                if(m)
+                {
+                    if(m->find(tblID) == m->end())
+                    {
+                        (*m)[tblID] = 0;
+                    }
+
+                    (*m)[tblID] = (int16_t)((*m)[tblID] + ct->GetValue());
+                }
             }
+        }
+        else
+        {
+            switch(ct->GetType())
+            {
+            case 1:
+                // Percentage sets can either be an immutable set to zero
+                // or an increase/decrease by a set amount
+                if(ct->GetValue() == 0)
+                {
+                    removed.insert(tblID);
+                    stats[tblID] = 0;
+                }
+                else
+                {
+                    stats[tblID] = (int16_t)(stats[tblID] +
+                        (int16_t)(stats[tblID] * (ct->GetValue() * 0.01)));
+                }
+                break;
+            case 0:
+                stats[tblID] = (int16_t)(stats[tblID] + ct->GetValue());
+                break;
+            default:
+                break;
+            }
+        }
+    }
+
+    CharacterManager::AdjustStatBounds(stats);
+}
+
+void ActiveEntityState::UpdateNRAChances(libcomp::EnumMap<CorrectTbl, int16_t>& stats,
+    const std::list<std::shared_ptr<objects::MiCorrectTbl>>& adjustments)
+{
+    // Clear existing values
+    mNullMap.clear();
+    mReflectMap.clear();
+    mAbsorbMap.clear();
+    
+    // Set from base
+    for(uint8_t x = (uint8_t)CorrectTbl::NRA_WEAPON;
+        x <= (uint8_t)CorrectTbl::NRA_MAGIC; x++)
+    {
+        CorrectTbl tblID = (CorrectTbl)x;
+        int16_t val = stats[tblID];
+        if(val > 0)
+        {
+            // Natural NRA is stored as NRA index in the 1s place and
+            // perccentage of success as the rest
+            float shift = (float)(val * 0.1f);
+            uint8_t nraIdx = (uint8_t)((shift - (float)floorl(val / 10)) * 10);
+            val = (int16_t)floorl(val / 10);
+            switch(nraIdx)
+            {
+                case NRA_NULL:
+                    mNullMap[tblID] = val;
+                    break;
+                case NRA_REFLECT:
+                    mReflectMap[tblID] = val;
+                    break;
+                case NRA_ABSORB:
+                    mAbsorbMap[tblID] = val;
+                    break;
+                default:
+                    break;
+            }
+        }
+    }
+
+    // Equipment adjustments use type equal to the NRA index and
+    // relative value to add
+    for(auto ct : adjustments)
+    {
+        auto tblID = ct->GetID();
+        switch(ct->GetType())
+        {
+        case NRA_NULL:
+            mNullMap[tblID] = (int16_t)(mNullMap[tblID] + ct->GetValue());
             break;
-        case objects::MiCorrectTbl::Type_t::NUMERIC:
-            stats[tblID] = (int16_t)(stats[tblID] + ct->GetValue());
+        case NRA_REFLECT:
+            mReflectMap[tblID] = (int16_t)(mReflectMap[tblID] + ct->GetValue());
+            break;
+        case NRA_ABSORB:
+            mAbsorbMap[tblID] = (int16_t)(mAbsorbMap[tblID] + ct->GetValue());
             break;
         default:
             break;
         }
     }
-
-    CharacterManager::AdjustStatBounds(stats);
 }
 
 void ActiveEntityState::GetStatusEffectCorrectTbls(
@@ -1326,9 +1629,9 @@ void ActiveEntityState::GetStatusEffectCorrectTbls(
     adjustments.sort([](const std::shared_ptr<objects::MiCorrectTbl>& a,
         const std::shared_ptr<objects::MiCorrectTbl>& b)
     {
-        return a->GetType() == objects::MiCorrectTbl::Type_t::PERCENT &&
+        return a->GetType() == 1 &&
             (a->GetValue() == 0 ||
-            b->GetType() != objects::MiCorrectTbl::Type_t::PERCENT);
+            b->GetType() != 1);
     });
 }
 
@@ -1342,6 +1645,12 @@ uint8_t ActiveEntityState::RecalculateDemonStats(
     auto cs = GetCoreStats();
 
     libcomp::EnumMap<CorrectTbl, int16_t> stats;
+    for(size_t i = 0; i < 126; i++)
+    {
+        CorrectTbl tblID = (CorrectTbl)i;
+        stats[tblID] = battleData->GetCorrect((size_t)i);
+    }
+
     stats[CorrectTbl::STR] = cs->GetSTR();
     stats[CorrectTbl::MAGIC] = cs->GetMAGIC();
     stats[CorrectTbl::VIT] = cs->GetVIT();
@@ -1349,24 +1658,40 @@ uint8_t ActiveEntityState::RecalculateDemonStats(
     stats[CorrectTbl::SPEED] = cs->GetSPEED();
     stats[CorrectTbl::LUCK] = cs->GetLUCK();
 
-    for(size_t i = 0; i < 126; i++)
+    // Check if knockback max and current need to be set
+    if(GetCorrectValue(CorrectTbl::KNOCKBACK_RESIST) == 0)
     {
-        CorrectTbl tblID = (CorrectTbl)i;
-        if(BASE_STATS.find(tblID) == BASE_STATS.end())
-        {
-            stats[tblID] = battleData->GetCorrect((size_t)i);
-        }
+        SetKnockbackResist((float)stats[CorrectTbl::KNOCKBACK_RESIST]);
     }
 
     std::list<std::shared_ptr<objects::MiCorrectTbl>> correctTbls;
     GetStatusEffectCorrectTbls(definitionManager, correctTbls);
 
+    UpdateNRAChances(stats);
     AdjustStats(correctTbls, stats, true);
     CharacterManager::CalculateDependentStats(stats, cs->GetLevel(), true);
     AdjustStats(correctTbls, stats, false);
 
     return CompareAndResetStats(stats);
 }
+
+const std::set<CorrectTbl> VISIBLE_STATS =
+    {
+        CorrectTbl::STR,
+        CorrectTbl::MAGIC,
+        CorrectTbl::VIT,
+        CorrectTbl::INT,
+        CorrectTbl::SPEED,
+        CorrectTbl::LUCK,
+        CorrectTbl::HP_MAX,
+        CorrectTbl::MP_MAX,
+        CorrectTbl::CLSR,
+        CorrectTbl::LNGR,
+        CorrectTbl::SPELL,
+        CorrectTbl::SUPPORT,
+        CorrectTbl::PDEF,
+        CorrectTbl::MDEF
+    };
 
 uint8_t ActiveEntityState::CompareAndResetStats(libcomp::EnumMap<CorrectTbl, int16_t>& stats)
 {
@@ -1380,7 +1705,12 @@ uint8_t ActiveEntityState::CompareAndResetStats(libcomp::EnumMap<CorrectTbl, int
 
     if(mp > stats[CorrectTbl::MP_MAX])
     {
-        mp = stats[CorrectTbl::HP_MAX];
+        mp = stats[CorrectTbl::MP_MAX];
+    }
+
+    for(auto statPair : stats)
+    {
+        SetCorrectTbl((size_t)statPair.first, statPair.second);
     }
 
     bool worldChange =
@@ -1389,7 +1719,7 @@ uint8_t ActiveEntityState::CompareAndResetStats(libcomp::EnumMap<CorrectTbl, int
         || GetMaxHP() != stats[CorrectTbl::HP_MAX]
         || GetMaxMP() != stats[CorrectTbl::MP_MAX];
 
-    bool anyChange = worldChange
+    bool anyClientChange = worldChange
         || GetSTR() != stats[CorrectTbl::STR]
         || GetMAGIC() != stats[CorrectTbl::MAGIC]
         || GetVIT() != stats[CorrectTbl::VIT]
@@ -1401,9 +1731,7 @@ uint8_t ActiveEntityState::CompareAndResetStats(libcomp::EnumMap<CorrectTbl, int
         || GetSPELL() != stats[CorrectTbl::SPELL]
         || GetSUPPORT() != stats[CorrectTbl::SUPPORT]
         || GetPDEF() != stats[CorrectTbl::PDEF]
-        || GetMDEF() != stats[CorrectTbl::MDEF]
-        || GetHPRegen() != stats[CorrectTbl::HP_REGEN]
-        || GetMPRegen() != stats[CorrectTbl::MP_REGEN];
+        || GetMDEF() != stats[CorrectTbl::MDEF];
 
     cs->SetHP(hp);
     cs->SetMP(mp);
@@ -1421,8 +1749,6 @@ uint8_t ActiveEntityState::CompareAndResetStats(libcomp::EnumMap<CorrectTbl, int
     SetSUPPORT(stats[CorrectTbl::SUPPORT]);
     SetPDEF(stats[CorrectTbl::PDEF]);
     SetMDEF(stats[CorrectTbl::MDEF]);
-    SetHPRegen(stats[CorrectTbl::HP_REGEN]);
-    SetMPRegen(stats[CorrectTbl::MP_REGEN]);
 
-    return worldChange ? 2 : (anyChange ? 1 : 0);
+    return worldChange ? 2 : (anyClientChange ? 1 : 0);
 }

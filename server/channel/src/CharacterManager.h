@@ -154,9 +154,8 @@ public:
         bool includeSelf = true);
 
     /**
-     * Send a revival action notification about the specified client to
-     * one client or the whole zone they are connected to.
-     * @param client Pointer to the client connection
+     * Write a revival action notification packet.
+     * @param p Packet to write the data to
      * @param entity Entity that has had a revival action performed
      *  on them
      * @param action Revival action that has taken place. The valid
@@ -171,13 +170,11 @@ public:
      *      revival from other players
      *   5) Deny revival: The entity is a character and is not accepting
      *      revival from other players
-     * @param sendToZone true if the entire zone should be sent the
-     *  notification, false if just the client should be sent it
+     * @return false if the entity is not valid
      */
-    void SendEntityRevival(std::shared_ptr<
-        ChannelClientConnection> client,
+    bool GetEntityRevivalPacket(libcomp::Packet& p,
         const std::shared_ptr<ActiveEntityState>& eState,
-        int8_t action, bool sendToZone = false);
+        int8_t action);
 
     /**
      * Set the character's status icon and send to the game clients
@@ -469,6 +466,21 @@ public:
      */
     void CancelStatusEffects(const std::shared_ptr<
         ChannelClientConnection>& client, uint8_t cancelFlags);
+
+    /**
+     * Add or remove both supplied entities to the other's opponent set.
+     * If adding and either of the supplied entities is a player character
+     * or partner demon, both of those entities will be added instead.
+     * @param add true if the opponents should be added, false if they should
+     *  be removed
+     * @param eState1 Pointer to the primary entity to modify
+     * @param eState2 Pointer ot the secondary entity to modify. If removing
+     *  and this is not supplied, all entities will be removed from the
+     *  primary entity
+     */
+    bool AddRemoveOpponent(bool add, const std::shared_ptr<
+        ActiveEntityState>& eState1, const std::shared_ptr<
+        ActiveEntityState>& eState2);
 
     /**
      * Update the state of the supplied entities on the world server.

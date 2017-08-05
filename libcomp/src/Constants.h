@@ -98,38 +98,22 @@ namespace libcomp
 /// network issues is not able to confirm socket closure on their end.
 #define TIMEOUT_SOCKET (17)
 
-/// Chat message is only visible by the person who sent it.
-#define CHAT_VISIBILITY_SELF   (0)
-
-/// Chat message is only visible to characters near the sender.
-#define CHAT_VISIBILITY_RANGE  (1)
-
-/// Chat message is only visible to characters in the same zone.
-#define CHAT_VISIBILITY_ZONE   (2)
-
-/// Chat message is only visible to characters in the same party.
-#define CHAT_VISIBILITY_PARTY  (3)
-
-/// Chat message is only visible to characters in the same clan.
-#define CHAT_VISIBILITY_KLAN   (4)
-
-/// Chat message is only visible to characters on the same PvP team.
-#define CHAT_VISIBILITY_TEAM   (5)
-
-/// Chat message is visible to all characters.
-#define CHAT_VISIBILITY_GLOBAL (6)
-
-/// Chat message is visible to all GMs.
-#define CHAT_VISIBILITY_GMS    (7)
-
-// Chat Radius for Say Chat.
+/// Chat Radius for Say Chat.
 #define CHAT_RADIUS_SAY (8000)
 
 /// Number of G1 times stored.
 #define G1_TIME_COUNT (18)
 
 /// Number of friends that can be registered in the friend list.
-#define FRIEND_COUNT (100)
+#define MAX_FRIEND_COUNT (100)
+
+/// Number of members a clan can have.
+#define MAX_CLAN_COUNT (100)
+
+/// Number of items allowed in the post before it starts to display wrong.
+/// Essentially the number of items cannot exceed 10000 but the "pages" in
+/// the Post are 21 items each.
+#define MAX_POST_ITEM_COUNT (9996)
 
 /// Number of valuable mask bytes to send to the client.
 #define VALUABLE_MASK_COUNT (64)
@@ -212,26 +196,17 @@ namespace libcomp
 /// Client is attempting to log out.
 #define LOGIN_STATE_PENDING_LOGOUT (7)
 
-/// Macca note item ID
-#define ITEM_MACCA_NOTE (699)
-
 /// Macca note value
 #define ITEM_MACCA_NOTE_AMOUNT (50000)
 
-/// Macca item ID
-#define ITEM_MACCA (799)
+/// Mode specifier for affinity nullification in the correct table
+#define NRA_NULL (1)
 
-/// Magnetite item ID
-#define ITEM_MAGNETITE (800)
+/// Mode specifier for affinity reflection in the correct table
+#define NRA_REFLECT (2)
 
-/// Summon sync (10 minutes)
-#define STATUS_SUMMON_SYNC_10 (194)
-
-/// Summon sync (20 minutes)
-#define STATUS_SUMMON_SYNC_20 (364)
-
-/// Summon sync (30 minutes)
-#define STATUS_SUMMON_SYNC_30 (365)
+/// Mode specifier for affinity absorption in the correct table
+#define NRA_ABSORB (3)
 
 /// Experience required to proceed from the indexed level to the next
 const unsigned long long LEVEL_XP_REQUIREMENTS[] = {

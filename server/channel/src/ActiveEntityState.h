@@ -82,6 +82,9 @@ class Zone;
 class ActiveEntityState : public objects::ActiveEntityStateObject
 {
 public:
+    /**
+     * Create a new active entity state
+     */
     ActiveEntityState();
 
     /**
@@ -91,6 +94,13 @@ public:
      * @param other The other entity to copy
      */
     ActiveEntityState(const ActiveEntityState& other);
+
+    /**
+     * Get the adjusted correct table value associated to the entity.
+     * @param tableID ID of the correct table value to retrieve
+     * @return Adjusted correct table value
+     */
+    int16_t GetCorrectValue(CorrectTbl tableID);
 
     /**
      * Recalculate the entity's stats, adjusted by equipment and
@@ -124,6 +134,21 @@ public:
      * @param now Server time to use as the origin ticks
      */
     void Move(float xPos, float yPos, uint64_t now);
+
+    /**
+     * Set the entity's destination position at a distace directly away or
+     * directly towards the specified point. Communicating that the move
+     * has taken place must be done elsewhere.
+     * @param targetX X coordinate to move relative to
+     * @param targetY Y coordinate to move relative to
+     * @param distance Distance to move
+     * @param away true if the entity should move away from the point,
+     *  false if it should move toward it
+     * @param now Server time to use as the origin ticks
+     * @param endTime Server time to use as the destination ticks
+     */
+    void MoveRelative(float targetX, float targetY, float distance, bool away,
+        uint64_t now, uint64_t endTime);
 
     /**
      * Set the entity's destination rotation based on the supplied
@@ -160,12 +185,40 @@ public:
     bool IsRotating() const;
 
     /**
+     * Calculate the distance between the entity and the specified X
+     * and Y coordiates
+     * @param x X coordinate to calculate the distance for
+     * @param y Y coordinate to calculate the distance for
+     * @param squared Optional parameter to return the distance squared
+     *  for faster radius comparisons
+     * @return Distance between the entity and the specified point
+     */
+    float GetDistance(float x, float y, bool squared = false);
+
+    /**
      * Update the entity's current position and rotation values based
      * upon the source/destination ticks and the current time.  If now
      * matches the last refresh time, no work is done.
      * @param now Current timestamp of the server
      */
     void RefreshCurrentPosition(uint64_t now);
+
+    /**
+     * Update the entity's current knockback value based on the last
+     * ticks associated to the value and the current time. If the value
+     * reaches or exceeds the maximum knockback resistance, the max
+     * value will be used and the last update tick will be cleared.
+     * @param now Current timestamp of the server
+     */
+    void RefreshKnockback(uint64_t now);
+
+    /**
+     * Refresh and then reduce the entity's knockback value. If the value
+     * goes under zero, it will be set to zero.
+     * @param now Current timestamp of the server
+     * @param decrease Value to decrease the knockback value by
+     */
+    float UpdateKnockback(uint64_t now, float decrease);
 
     /**
      * Check if the entity state has everything needed to start
@@ -179,7 +232,7 @@ public:
      * @return Pointer to the entity's current zone, nullptr if they
      *  are not currently in a zone
      */
-    Zone* GetZone() const;
+    std::shared_ptr<Zone> GetZone() const;
 
     /**
      * Set the entity's current zone.
@@ -187,7 +240,7 @@ public:
      * @param updatePrevious true if the previous zone should be notified
      *  of the change, false if this is being handled elsewhere
      */
-    void SetZone(Zone* zone, bool updatePrevious = true);
+    void SetZone(const std::shared_ptr<Zone>& zone, bool updatePrevious = true);
 
     /**
      * Set the HP and/or MP of the entity to either a specified or adjusted
@@ -333,6 +386,40 @@ public:
         GetCurrentStatusEffectStates(libcomp::DefinitionManager* definitionManager,
         uint32_t now = 0);
 
+    /**
+     * Get the entity IDs of opponents this entity is in combat against.
+     * @return Set of opponent entity IDs
+     */
+    std::set<int32_t> GetOpponentIDs() const;
+
+    /**
+     * Check if the entity has an opponent with the specified entity ID.
+     * @param opponentID Entity ID of an opponent to find
+     * @return true if the entity ID is associated as an opponent to this entity
+     */
+    bool HasOpponent(int32_t opponentID);
+
+    /**
+     * Add or remove an opponent with the specified entity ID.
+     * @param add true if the opponent will be added, false if it will be removed
+     * @param opponentID Entity ID of an opponent to add or remove
+     * @return Number of opponents associated to the entity after the operation
+     */
+    size_t AddRemoveOpponent(bool add, int32_t opponentID);
+
+    /**
+     * Get the entity's chance to null, reflect or absorb the specified affinity.
+     * @param nraIdx Correct table index for affinity NRA
+     *  1) Null
+     *  2) Reflect
+     *  3) Absorb
+     *  Defines exist in the Constants header for each of these.
+     * @param type Correct table type of the affinity to retrieve
+     * @return Integer representation of the chance to avoid affinity damage, 0
+     *  if the supplied values are invalid
+     */
+    int16_t GetNRAChance(uint8_t nraIdx, CorrectTbl type);
+
 protected:
     /**
      * Set the status effects currently on the entity
@@ -399,10 +486,22 @@ protected:
      * @param stats Output map parameter of base or calculated stats to adjust for
      *  the current entity
      * @param baseMode If true only base stat correct table types will be adjusted,
-     *  if false only the non-base stat correct table types will be adjusted
+     *  if false only the non-base stat correct table types will be adjusted and NRA
+     *  values will be updated immediately.
      */
     void AdjustStats(const std::list<std::shared_ptr<objects::MiCorrectTbl>>& adjustments,
-        libcomp::EnumMap<CorrectTbl, int16_t>& stats, bool baseMode) const;
+        libcomp::EnumMap<CorrectTbl, int16_t>& stats, bool baseMode);
+
+    /**
+     * Update the entity's calculated NRA chances for each affinity from base and
+     * equipment values. NRA chances will further be modified for status effects
+     * within AdjustStats during the calculated stat mode.
+     * @param stats Map containing the base NRA values
+     * @param adjustments List of adjustments to the correct table values supplied
+     *  by equipment
+     */
+    void UpdateNRAChances(libcomp::EnumMap<CorrectTbl, int16_t>& stats,
+        const std::list<std::shared_ptr<objects::MiCorrectTbl>>& adjustments = {});
 
     /**
      * Get the correct table value adjustments from the entity's current status effects.
@@ -459,7 +558,21 @@ protected:
     std::map<uint32_t, std::set<uint32_t>> mNextEffectTimes;
 
     /// Pointer to the current zone the entity is in
-    Zone* mCurrentZone;
+    std::shared_ptr<Zone> mCurrentZone;
+
+    /// Set of entity IDs representing opponents that the entity is currently
+    /// fighting. If an entity is in this set, this entity should be in their
+    /// set as well.
+    std::set<int32_t> mOpponentIDs;
+
+    /// Map of affinity null chances by correct table ID
+    libcomp::EnumMap<CorrectTbl, int16_t> mNullMap;
+
+    /// Map of affinity reflect chances by correct table ID
+    libcomp::EnumMap<CorrectTbl, int16_t> mReflectMap;
+
+    /// Map of affinity absorb chances by correct table ID
+    libcomp::EnumMap<CorrectTbl, int16_t> mAbsorbMap;
 
     /// true if the status effects have been activated for the current zone
     bool mEffectsActive;

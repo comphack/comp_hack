@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="Clan" location="world">
+        <member type="string" name="Name" key="true" unique="true"/>
+        <member type="s8" name="Level" default="1"/>
+        <member type="u32" name="BaseZoneID"/>
+
+        <member type="list" name="Members">
+            <element type="ClanMember*"/>
+        </member>
+
+        <member type="u8" name="EmblemBase"/>
+        <member type="u8" name="EmblemSymbol"/>
+        <member type="u8" name="EmblemColorR1"/>
+        <member type="u8" name="EmblemColorG1"/>
+        <member type="u8" name="EmblemColorB1"/>
+        <member type="u8" name="EmblemColorR2"/>
+        <member type="u8" name="EmblemColorG2"/>
+        <member type="u8" name="EmblemColorB2"/>
+    </object>
+    <object name="ClanMember" location="world">
+        <member type="Clan*" name="Clan" key="true" unique="false"/>
+        <member type="Character*" name="Character" key="true" unique="true"/>
+        <member type="string" name="ClanMessage"/>
+        <member type="enum" name="MemberType" underlying="int8_t">
+            <value>NORMAL</value>
+            <value>SUB_MASTER</value>
+            <value>MASTER</value>
+        </member>
+    </object>
+
+    <object name="ClanInfo" persistent="false">
+        <member type="s32" name="ID"/>
+        <member type="Clan*" name="Clan"/>
+
+        <member type="map" name="MemberMap">
+            <key type="s32"/>
+            <value type="ClanMember*"/>
+        </member>
+    </object>
+</objgen>

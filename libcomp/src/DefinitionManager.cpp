@@ -262,7 +262,7 @@ bool DefinitionManager::LoadDevilData(gsl::not_null<DataStore*> pDataStore)
         auto fusionOptions = record->GetUnionData()->GetFusionOptions();
         if(fusionOptions & 2)
         {
-            mFusionRanges[record->GetCategory()->GetRace()].
+            mFusionRanges[(uint8_t)record->GetCategory()->GetRace()].
                 push_back(std::pair<uint8_t, uint32_t>(
                 (uint8_t)(record->GetGrowth()->GetBaseLevel() * 2 - 1), id));
         }

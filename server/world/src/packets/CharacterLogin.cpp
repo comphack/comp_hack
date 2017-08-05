@@ -152,7 +152,7 @@ bool Parsers::CharacterLogin::Parse(libcomp::ManagerPacket *pPacketManager,
     if(partyMove)
     {
         auto partyMembers = characterManager->GetRelatedCharacterLogins(
-            cLogin, false, true);
+            cLogin, RELATED_PARTY);
 
         // Send all up to date info on party members in the zone they just entered or the left
         bool queued = false;
@@ -175,7 +175,7 @@ bool Parsers::CharacterLogin::Parse(libcomp::ManagerPacket *pPacketManager,
             if(characterManager->GetStatusPacket(reply, login, outFlags) &&
                 (previousZone || outFlags != (uint8_t)CharacterLoginStateFlag_t::CHARLOGIN_ZONE))
             {
-                reply.WriteU16Little(1);
+                characterManager->ConvertToTargetCIDPacket(reply, 1, 1);
                 reply.WriteS32Little(cLogin->GetWorldCID());
                 connection->QueuePacket(reply);
                 queued = true;

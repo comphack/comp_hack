@@ -33,11 +33,17 @@
 #include <PacketCodes.h>
 #include <ReadOnlyPacket.h>
 
+// C++ 11 Standard Includes
+#include <math.h>
+
 // object Includes
 #include <Account.h>
 #include <AccountLogin.h>
 #include <Character.h>
 #include <CharacterLogin.h>
+#include <Clan.h>
+#include <ClanMember.h>
+#include <EntityStats.h>
 
 // world Includes
 #include "AccountManager.h"
@@ -102,6 +108,37 @@ void LobbyLogin(std::shared_ptr<WorldServer> server,
 
             // Get the cached character login or register a new one
             cLogin = characterManager->RegisterCharacter(cLogin);
+
+            auto character = cLogin->GetCharacter().Get();
+            if(!character->GetClan().IsNull())
+            {
+                // Load the clan
+                auto clan = character->GetClan().Get();
+                if(!clan)
+                {
+                    clan = libcomp::PersistentObject::LoadObjectByUUID<
+                        objects::Clan>(worldDB, character->GetClan().GetUUID());
+                }
+
+                if(clan)
+                {
+                    // Load the members and store in the CharacterManager
+                    auto members = objects::ClanMember::LoadClanMemberListByClan(worldDB, clan);
+                    auto clanInfo = characterManager->GetClan(clan->GetUUID());
+                    if(clanInfo)
+                    {
+                        cLogin->SetClanID(clanInfo->GetID());
+                    }
+                    else
+                    {
+                        ok = false;
+                    }
+                }
+                else
+                {
+                    ok = false;
+                }
+            }
 
             // If the character is already logged in somehow, send a 
             // disconnect request (should cover dead connections)
@@ -186,18 +223,66 @@ void ChannelLogin(std::shared_ptr<WorldServer> server,
 
     if(ok)
     {
-        cLogin->SetWorldID((int8_t)server->GetRegisteredWorld()->GetID());
-        cLogin->SetStatus(objects::CharacterLogin::Status_t::ONLINE);
-        login->SavePacket(reply, false);
+        auto lobbyDB = server->GetLobbyDatabase();
+        auto worldDB = server->GetWorldDatabase();
+        auto character = cLogin->GetCharacter().Get();
+        auto account = login->LoadAccount(worldDB);
 
-        //Update the lobby with the new connection info
-        auto lobbyConnection = server->GetLobbyConnection();
-        libcomp::Packet lobbyMessage;
-        lobbyMessage.WritePacketCode(
-            InternalPacketCode_t::PACKET_ACCOUNT_LOGIN);
+        uint32_t lastLogin = character->GetLastLogin();
+        auto now = std::time(0);
 
-        login->SavePacket(lobbyMessage, false);
-        lobbyConnection->SendPacket(lobbyMessage);
+        // Get the beginning of today (UTC)
+        std::tm localTime = *std::localtime(&now);
+        localTime.tm_hour = 0;
+        localTime.tm_min = 0;
+        localTime.tm_sec = 0;
+
+        uint32_t today = (uint32_t)std::mktime(&localTime);
+        if(today > lastLogin)
+        {
+            // This is the character's first login of the day, increase
+            // their login points
+            auto stats = character->LoadCoreStats(worldDB);
+
+            if(stats->GetLevel() > 0)
+            {
+                int32_t points = character->GetLoginPoints();
+                points = points + (int32_t)ceil((float)stats->GetLevel() * 0.2);
+                character->SetLoginPoints(points);
+
+                // If the character is in a clan, queue up a recalculation of
+                // the clan level and sending of the character updates
+                if(cLogin->GetClanID())
+                {
+                    server->QueueWork([](std::shared_ptr<WorldServer> pServer,
+                        std::shared_ptr<objects::CharacterLogin> pLogin, int32_t pClanID)
+                    {
+                        auto characterManager = pServer->GetCharacterManager();
+                        characterManager->SendClanMemberInfo(pLogin);
+                        characterManager->RecalculateClanLevel(pClanID);
+                    }, server, cLogin, cLogin->GetClanID());
+                }
+            }
+        }
+
+        character->SetLastLogin((uint32_t)now);
+        account->SetLastLogin((uint32_t)now);
+
+        if(character->Update(worldDB) && account->Update(lobbyDB))
+        {
+            cLogin->SetWorldID((int8_t)server->GetRegisteredWorld()->GetID());
+            cLogin->SetStatus(objects::CharacterLogin::Status_t::ONLINE);
+            login->SavePacket(reply, false);
+
+            // Update the lobby with the new connection info
+            auto lobbyConnection = server->GetLobbyConnection();
+            libcomp::Packet lobbyMessage;
+            lobbyMessage.WritePacketCode(
+                InternalPacketCode_t::PACKET_ACCOUNT_LOGIN);
+
+            login->SavePacket(lobbyMessage, false);
+            lobbyConnection->SendPacket(lobbyMessage);
+        }
     }
 
     connection->SendPacket(reply);

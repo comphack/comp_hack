@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<constants>
+    <!-- Primitive types -->
+    <constant name="ELEMENTAL_1_FLAEMIS">581</constant>
+    <constant name="ELEMENTAL_2_AQUANS">582</constant>
+    <constant name="ELEMENTAL_3_AEROS">583</constant>
+    <constant name="ELEMENTAL_4_ERTHYS">584</constant>
+    <constant name="EVENT_MENU_DEMON_DEPO">event_demonDepo</constant>
+    <constant name="EVENT_MENU_HOMEPOINT">event_homepoint</constant>
+    <constant name="EVENT_MENU_ITEM_DEPO">event_itemDepo</constant>
+    <constant name="ITEM_MACCA">799</constant>
+    <constant name="ITEM_MACCA_NOTE">699</constant>
+    <constant name="ITEM_MAGNETITE">800</constant>
+    <constant name="ITEM_BALM_OF_LIFE">101</constant>
+    <constant name="RENTAL_DEMON_1">12761</constant>
+    <constant name="RENTAL_DEMON_3">12762</constant>
+    <constant name="RENTAL_DEMON_7">12763</constant>
+    <constant name="RENTAL_DEMON_30">904</constant>
+    <constant name="RENTAL_DEMON_60">905</constant>
+    <constant name="RENTAL_DEMON_90">906</constant>
+    <constant name="RENTAL_ITEM_1">12758</constant>
+    <constant name="RENTAL_ITEM_3">12759</constant>
+    <constant name="RENTAL_ITEM_7">12760</constant>
+    <constant name="RENTAL_ITEM_30">901</constant>
+    <constant name="RENTAL_ITEM_60">902</constant>
+    <constant name="RENTAL_ITEM_90">903</constant>
+    <constant name="SKILL_TRAESTO">101</constant>
+    <constant name="SKILL_SUMMON_DEMON">200</constant>
+    <constant name="SKILL_STORE_DEMON">201</constant>
+    <constant name="SKILL_EQUIP_ITEM">203</constant>
+    <constant name="SKILL_CLAN_FORM">304</constant>
+    <constant name="STATUS_SUMMON_SYNC_1">194</constant>
+    <constant name="STATUS_SUMMON_SYNC_2">364</constant>
+    <constant name="STATUS_SUMMON_SYNC_3">365</constant>
+
+    <!-- Complex types -->
+    <constant name="CLAN_FORM_MAP">
+        <pair>
+            <key>1001</key>
+            <value>20101</value>
+        </pair>
+        <pair>
+            <key>1002</key>
+            <value>50101</value>
+        </pair>
+        <pair>
+            <key>1003</key>
+            <value>130101</value>
+        </pair>
+        <pair>
+            <key>1004</key>
+            <value>100101</value>
+        </pair>
+        <pair>
+            <key>1005</key>
+            <value>140101</value>
+        </pair>
+    </constant>
+    <constant name="CLAN_LEVEL_SKILLS">
+        <element>7001</element>
+        <element>7002,7003</element>
+        <element>7004,7005,7006</element>
+        <element>7007,7008,7009</element>
+        <element>7010,7011,7012</element>
+        <element>7013,7014,7015</element>
+        <element>7016,7017</element>
+        <element>7018,7019</element>
+        <element>7020,7021</element>
+        <element>7022,7023,7024</element>
+    </constant>
+</constants>

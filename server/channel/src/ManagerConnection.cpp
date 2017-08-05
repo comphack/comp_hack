@@ -210,6 +210,39 @@ const std::shared_ptr<ChannelClientConnection>
         : nullptr;
 }
 
+std::list<std::shared_ptr<ChannelClientConnection>>
+    ManagerConnection::GatherWorldTargetClients(libcomp::ReadOnlyPacket& p, bool& success)
+{
+    std::list<std::shared_ptr<ChannelClientConnection>> results;
+    success = false;
+
+    if(p.Left() < 2 || p.Left() < (2 + (uint32_t)(p.PeekU16Little() * 4)))
+    {
+        LOG_ERROR("Invalid CID count received for world target entity list.\n");
+        return results;
+    }
+
+    uint16_t cidCount = p.ReadU16Little();
+
+    std::list<int32_t> cids;
+    for(uint16_t i = 0; i < cidCount; i++)
+    {
+        cids.push_back(p.ReadS32Little());
+    }
+
+    for(int32_t cid : cids)
+    {
+        auto client = GetEntityClient(cid, true);
+        if(client)
+        {
+            results.push_back(client);
+        }
+    }
+
+    success = true;
+    return results;
+}
+
 bool ManagerConnection::ScheduleClientTimeoutHandler(uint16_t timeout)
 {
     auto server = std::dynamic_pointer_cast<ChannelServer>(mServer.lock());

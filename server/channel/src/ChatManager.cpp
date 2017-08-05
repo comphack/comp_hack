@@ -29,9 +29,12 @@
 // libcomp Includes
 #include <Log.h>
 #include <PacketCodes.h>
+#include <ServerConstants.h>
 
 // object Includes
+#include <Account.h>
 #include <AccountLogin.h>
+#include <AccountWorldData.h>
 #include <Character.h>
 #include <MiItemData.h>
 #include <MiDevilData.h>
@@ -39,6 +42,7 @@
 #include <MiSkillItemStatusCommonData.h>
 #include <MiZoneBasicData.h>
 #include <MiZoneData.h>
+#include <PostItem.h>
 #include <ServerZone.h>
 #include <ChannelConfig.h>
 
@@ -57,6 +61,7 @@ ChatManager::ChatManager(const std::weak_ptr<ChannelServer>& server)
     : mServer(server)
 {
     mGMands["announce"] = &ChatManager::GMCommand_Announce;
+    mGMands["ban"] = &ChatManager::GMCommand_Ban;
     mGMands["contract"] = &ChatManager::GMCommand_Contract;
     mGMands["crash"] = &ChatManager::GMCommand_Crash;
     mGMands["effect"] = &ChatManager::GMCommand_Effect;
@@ -65,11 +70,13 @@ ChatManager::ChatManager(const std::weak_ptr<ChannelServer>& server)
     mGMands["familiarity"] = &ChatManager::GMCommand_Familiarity;
     mGMands["homepoint"] = &ChatManager::GMCommand_Homepoint;
     mGMands["item"] = &ChatManager::GMCommand_Item;
+    mGMands["kick"] = &ChatManager::GMCommand_Kick;
     mGMands["kill"] = &ChatManager::GMCommand_Kill;
     mGMands["levelup"] = &ChatManager::GMCommand_LevelUp;
     mGMands["lnc"] = &ChatManager::GMCommand_LNC;
     mGMands["map"] = &ChatManager::GMCommand_Map;
     mGMands["pos"] = &ChatManager::GMCommand_Position;
+    mGMands["post"] = &ChatManager::GMCommand_Post;
     mGMands["skill"] = &ChatManager::GMCommand_Skill;
     mGMands["speed"] = &ChatManager::GMCommand_Speed;
     mGMands["tickermessage"] = &ChatManager::GMCommand_TickerMessage;
@@ -84,7 +91,7 @@ ChatManager::~ChatManager()
 
 bool ChatManager::SendChatMessage(const std::shared_ptr<
     ChannelClientConnection>& client, ChatType_t chatChannel,
-    libcomp::String message)
+    const libcomp::String& message)
 {
     auto server = mServer.lock();
     auto zoneManager = server->GetZoneManager();
@@ -94,21 +101,46 @@ bool ChatManager::SendChatMessage(const std::shared_ptr<
     }
 
     auto state = client->GetClientState();
-    
-    auto encodedMessage = libcomp::Convert::ToEncoding(
-        state->GetClientStringEncoding(), message, false);
-
     auto character = state->GetCharacterState()->GetEntity();
     libcomp::String sentFrom = character->GetName();
 
     ChatVis_t visibility = ChatVis_t::CHAT_VIS_SELF;
 
+    uint32_t relayID = 0;
+    PacketRelayMode_t relayMode = PacketRelayMode_t::RELAY_FAILURE;
     switch(chatChannel)
     {
         case ChatType_t::CHAT_PARTY:
             visibility = ChatVis_t::CHAT_VIS_PARTY;
             LOG_INFO(libcomp::String("[Party]:  %1: %2\n.").Arg(sentFrom)
                 .Arg(message));
+            if(state->GetPartyID())
+            {
+                relayID = state->GetPartyID();
+                relayMode = PacketRelayMode_t::RELAY_PARTY;
+            }
+            else
+            {
+                LOG_ERROR(libcomp::String("Party chat attempted by"
+                    " character not in a party: %1\n.").Arg(sentFrom));
+                return false;
+            }
+            break;
+        case ChatType_t::CHAT_CLAN:
+            visibility = ChatVis_t::CHAT_VIS_CLAN;
+            LOG_INFO(libcomp::String("[Clan]:  %1: %2\n.").Arg(sentFrom)
+                .Arg(message));
+            if(state->GetClanID())
+            {
+                relayID = (uint32_t)state->GetClanID();
+                relayMode = PacketRelayMode_t::RELAY_CLAN;
+            }
+            else
+            {
+                LOG_ERROR(libcomp::String("Clan chat attempted by"
+                    " character not in a clan: %1\n.").Arg(sentFrom));
+                return false;
+            }
             break;
         case ChatType_t::CHAT_SHOUT:
             visibility = ChatVis_t::CHAT_VIS_ZONE;
@@ -129,44 +161,92 @@ bool ChatManager::SendChatMessage(const std::shared_ptr<
             return false;
     }
 
-    // Make sure the message is clamped to the max size to prevent
-    // bad math on the zero'd section of the packet. This may not
-    // react well to multi-byte characters (CP932).
-    if(MAX_MESSAGE_LENGTH < encodedMessage.size())
+    libcomp::Packet p;
+    if(relayMode != PacketRelayMode_t::RELAY_FAILURE)
     {
-        encodedMessage.resize(MAX_MESSAGE_LENGTH);
+        // Route the message through the world via packet relay
+        p.WritePacketCode(InternalPacketCode_t::PACKET_RELAY);
+        p.WriteS32Little(state->GetWorldCID());
+        p.WriteU8((uint8_t)relayMode);
+        p.WriteU32Little(relayID);
+        p.WriteU8(1);   // Include self
     }
 
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_CHAT);
-    reply.WriteU16Little((uint16_t)chatChannel);
-    reply.WriteString16Little(state->GetClientStringEncoding(),
-        sentFrom, true);
-    reply.WriteU16Little((uint16_t)(encodedMessage.size() + 1));
-    reply.WriteArray(encodedMessage);
-    reply.WriteBlank((uint32_t)(MAX_MESSAGE_LENGTH + 1 -
-        encodedMessage.size()));
+    if(chatChannel == ChatType_t::CHAT_CLAN)
+    {
+        p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_CLAN_CHAT);
+        p.WriteS32Little(state->GetClanID());
+        p.WriteString16Little(state->GetClientStringEncoding(),
+            sentFrom, true);
+        p.WriteString16Little(state->GetClientStringEncoding(),
+            message, true);
+    }
+    else if(chatChannel == ChatType_t::CHAT_TEAM)
+    {
+        /// @todo: team chat
+    }
+    else
+    {
+        p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_CHAT);
+        p.WriteU16Little((uint16_t)chatChannel);
+        p.WriteString16Little(state->GetClientStringEncoding(),
+            sentFrom, true);
+        p.WriteString16Little(state->GetClientStringEncoding(),
+            message, true);
+    }
 
     switch(visibility)
     {
         case ChatVis_t::CHAT_VIS_SELF:
-            client->SendPacket(reply);
+            client->SendPacket(p);
             break;
         case ChatVis_t::CHAT_VIS_ZONE:
-            zoneManager->BroadcastPacket(client, reply, true);
+            zoneManager->BroadcastPacket(client, p, true);
             break;
         case ChatVis_t::CHAT_VIS_RANGE:
-            /// @todo: Figure out how to force it to use a radius for range.
-            zoneManager->SendToRange(client, reply, true);
+            zoneManager->SendToRange(client, p, true);
             break;
         case ChatVis_t::CHAT_VIS_PARTY:
-        case ChatVis_t::CHAT_VIS_KLAN:
+        case ChatVis_t::CHAT_VIS_CLAN:
         case ChatVis_t::CHAT_VIS_TEAM:
-        case ChatVis_t::CHAT_VIS_GLOBAL:
-        case ChatVis_t::CHAT_VIS_GMS:
+            mServer.lock()->GetManagerConnection()->GetWorldConnection()
+                ->SendPacket(p);
+            break;
         default:
             return false;
     }
+
+    return true;
+}
+
+bool ChatManager::SendTellMessage(const std::shared_ptr<
+    ChannelClientConnection>& client, const libcomp::String& message,
+    const libcomp::String& targetName)
+{
+    auto state = client->GetClientState();
+    auto cState = state->GetCharacterState();
+    auto character = cState->GetEntity();
+
+    // Relay a packet by target name
+    libcomp::Packet relay;
+    relay.WritePacketCode(InternalPacketCode_t::PACKET_RELAY);
+    relay.WriteS32Little(state->GetWorldCID());
+    relay.WriteU8((uint8_t)PacketRelayMode_t::RELAY_CHARACTER);
+    relay.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_UTF8,
+        targetName, true);
+
+    // Write the normal packet to relay
+    relay.WritePacketCode(ChannelToClientPacketCode_t::PACKET_CHAT);
+    relay.WriteU16Little((uint16_t)ChatType_t::CHAT_TELL);
+
+    // Clients should be using the same encoding
+    relay.WriteString16Little(state->GetClientStringEncoding(),
+        character->GetName(), true);
+    relay.WriteString16Little(state->GetClientStringEncoding(),
+        message, true);
+
+    mServer.lock()->GetManagerConnection()->GetWorldConnection()
+        ->SendPacket(relay);
 
     return true;
 }
@@ -192,23 +272,55 @@ bool ChatManager::ExecuteGMCommand(const std::shared_ptr<
 bool ChatManager::GMCommand_Announce(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
-
 {
     std::list<libcomp::String> argsCopy = args;
     int8_t color = 0;
 
-    if ((!GetIntegerArg<int8_t>(color,argsCopy)) || argsCopy.size() < 1) 
+    if(!GetIntegerArg<int8_t>(color, argsCopy) || argsCopy.size() < 1)
     {
         return SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(
             "@announce requires two arguments, <color> <message>"));
     }
-    
-    libcomp::String message = libcomp::String::Join(argsCopy," ");
+
+    libcomp::String message = libcomp::String::Join(argsCopy, " ");
     auto server = mServer.lock();
     server->SendSystemMessage(client, message, color, true);
+
     return true;
 }
 
+bool ChatManager::GMCommand_Ban(const std::shared_ptr<
+    channel::ChannelClientConnection>& client,
+    const std::list<libcomp::String>& args)
+{
+    std::list<libcomp::String> argsCopy = args;
+    libcomp::String bannedPlayer;
+
+    if (!GetStringArg(bannedPlayer, argsCopy) || argsCopy.size() > 1)
+    {
+         return SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(
+            "@ban requires one argument, <username>"));
+    }
+    
+    auto server = mServer.lock();
+    auto worldDB = server->GetWorldDatabase();
+    auto lobbyDB = server->GetLobbyDatabase();
+    auto target = objects::Character::LoadCharacterByName(worldDB, bannedPlayer);
+    auto targetAccount = target ? target->GetAccount().Get() : nullptr;
+    auto targetClient = targetAccount ? server->GetManagerConnection()->GetClientConnection(
+        targetAccount->GetUsername()) : nullptr;
+
+    if(targetClient != nullptr) 
+    {
+        targetAccount->SetIsBanned(true);
+        targetAccount->Update(lobbyDB);
+        targetClient->Close();
+
+        return true;
+    }
+
+    return false;
+}
 
 bool ChatManager::GMCommand_Contract(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
@@ -221,6 +333,7 @@ bool ChatManager::GMCommand_Contract(const std::shared_ptr<
     auto definitionManager = server->GetDefinitionManager();
 
     uint32_t demonID;
+
     if(!GetIntegerArg<uint32_t>(demonID, argsCopy))
     {
         libcomp::String name;
@@ -242,6 +355,7 @@ bool ChatManager::GMCommand_Contract(const std::shared_ptr<
 
     auto demon = characterManager->ContractDemon(character,
         definitionManager->GetDevilData(demonID));
+
     if(nullptr == demon)
     {
         return false;
@@ -274,6 +388,7 @@ bool ChatManager::GMCommand_Effect(const std::shared_ptr<
     std::list<libcomp::String> argsCopy = args;
 
     uint32_t effectID;
+
     if(!GetIntegerArg<uint32_t>(effectID, argsCopy))
     {
         return SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(
@@ -283,6 +398,7 @@ bool ChatManager::GMCommand_Effect(const std::shared_ptr<
     auto server = mServer.lock();
     auto definitionManager = server->GetDefinitionManager();
     auto def = definitionManager->GetStatusData(effectID);
+
     if(!def)
     {
         return SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(
@@ -291,6 +407,7 @@ bool ChatManager::GMCommand_Effect(const std::shared_ptr<
 
     // If the next arg starts with a '+', mark as an add instead of replace
     bool isAdd = false;
+
     if(argsCopy.size() > 0)
     {
         libcomp::String& next = argsCopy.front();
@@ -302,6 +419,7 @@ bool ChatManager::GMCommand_Effect(const std::shared_ptr<
     }
 
     uint8_t stack;
+
     if(!GetIntegerArg<uint8_t>(stack, argsCopy))
     {
         return SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(
@@ -333,7 +451,7 @@ bool ChatManager::GMCommand_Enemy(const std::shared_ptr<
 
     // Valid params: enemy, enemy+AI, enemy+AI+x+y, enemy+AI+x+y+rot,
     // enemy+x+y, enemy+x+y+rot
-    if(argsCopy.size() == 0 || argsCopy.size() > 5)
+    if(argsCopy.empty() || argsCopy.size() > 5)
     {
         return SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(
             "@enemy requires one to five args"));
@@ -346,19 +464,23 @@ bool ChatManager::GMCommand_Enemy(const std::shared_ptr<
     auto zoneManager = server->GetZoneManager();
 
     uint32_t demonID;
+
     if(!GetIntegerArg<uint32_t>(demonID, argsCopy))
     {
         libcomp::String name;
+
         if(!GetStringArg(name, argsCopy))
         {
             return false;
         }
 
         auto devilData = definitionManager->GetDevilData(name);
+
         if(devilData == nullptr)
         {
             return false;
         }
+
         demonID = devilData->GetBasic()->GetID();
     }
 
@@ -369,10 +491,12 @@ bool ChatManager::GMCommand_Enemy(const std::shared_ptr<
 
     // All optional params past this point
     libcomp::String aiType = "default";
-    if(argsCopy.size() > 0)
+
+    if(!argsCopy.empty())
     {
         // Check for a number for X first
         bool xParam = GetDecimalArg<float>(x, argsCopy);
+
         if(!xParam)
         {
             // Assume a non-number is an AI script type
@@ -433,6 +557,7 @@ bool ChatManager::GMCommand_Familiarity(const std::shared_ptr<
     std::list<libcomp::String> argsCopy = args;
 
     uint16_t familiarity;
+
     if(!GetIntegerArg<uint16_t>(familiarity, argsCopy))
     {
         return false;
@@ -450,9 +575,9 @@ bool ChatManager::GMCommand_Homepoint(const std::shared_ptr<
 {
     (void)args;
 
-    /// @todo: replace the menu packet with a scripted binding
     auto server = mServer.lock();
-    server->GetEventManager()->HandleEvent(client, "event_homepoint", 0);
+    server->GetEventManager()->HandleEvent(client,
+        SVR_CONST.EVENT_MENU_HOMEPOINT, 0);
 
     return true;
 }
@@ -467,6 +592,7 @@ bool ChatManager::GMCommand_Item(const std::shared_ptr<
     auto definitionManager = server->GetDefinitionManager();
 
     uint32_t itemID;
+
     if(!GetIntegerArg<uint32_t>(itemID, argsCopy))
     {
         libcomp::String name;
@@ -477,11 +603,11 @@ bool ChatManager::GMCommand_Item(const std::shared_ptr<
 
         if(name.ToLower() == "macca")
         {
-            itemID = ITEM_MACCA;
+            itemID = SVR_CONST.ITEM_MACCA;
         }
         else if(name.ToLower() == "mag")
         {
-            itemID = ITEM_MAGNETITE;
+            itemID = SVR_CONST.ITEM_MAGNETITE;
         }
         else
         {
@@ -495,6 +621,7 @@ bool ChatManager::GMCommand_Item(const std::shared_ptr<
     }
 
     uint16_t stackSize;
+
     if(!GetIntegerArg<uint16_t>(stackSize, argsCopy))
     {
         stackSize = 1;
@@ -502,6 +629,36 @@ bool ChatManager::GMCommand_Item(const std::shared_ptr<
 
     return server->GetCharacterManager()
         ->AddRemoveItem(client, itemID, stackSize, true);
+}
+
+bool ChatManager::GMCommand_Kick(const std::shared_ptr<
+    channel::ChannelClientConnection>& client,
+    const std::list<libcomp::String>& args)
+{
+    std::list<libcomp::String> argsCopy = args;
+    libcomp::String kickedPlayer;
+
+    if(!GetStringArg(kickedPlayer, argsCopy) || argsCopy.size() > 1)
+    {
+         return SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(
+            "@kick requires one argument, <username>"));
+    }
+
+    auto server = mServer.lock();
+    auto worldDB = server->GetWorldDatabase();
+    auto target = objects::Character::LoadCharacterByName(worldDB, kickedPlayer);
+    auto targetAccount = target ? target->GetAccount().Get() : nullptr;
+    auto targetClient = targetAccount ? server->GetManagerConnection()->GetClientConnection(
+        targetAccount->GetUsername()) : nullptr;
+
+    if(targetClient != nullptr) 
+    {
+        targetClient->Close();
+
+        return true;
+    }
+
+    return false;
 }
 
 bool ChatManager::GMCommand_Kill(const std::shared_ptr<
@@ -519,13 +676,16 @@ bool ChatManager::GMCommand_Kill(const std::shared_ptr<
     auto zoneManager = server->GetZoneManager();
 
     libcomp::String name;
+
     if(GetStringArg(name, argsCopy))
     {
         targetState = nullptr;
+
         for(auto zConnection : zoneManager->GetZoneConnections(client, true))
         {
             auto zCharState = zConnection->GetClientState()->
                 GetCharacterState();
+
             if(zCharState->GetEntity()->GetName() == name)
             {
                 targetState = zCharState;
@@ -574,6 +734,7 @@ bool ChatManager::GMCommand_LevelUp(const std::shared_ptr<
     std::list<libcomp::String> argsCopy = args;
 
     int8_t lvl;
+
     if(GetIntegerArg<int8_t>(lvl, argsCopy))
     {
         if(lvl > 99 || lvl < 1)
@@ -593,6 +754,7 @@ bool ChatManager::GMCommand_LevelUp(const std::shared_ptr<
     bool isDemon = GetStringArg(target, argsCopy) && target.ToLower() == "demon";
     int32_t entityID;
     int8_t currentLevel;
+
     if(isDemon)
     {
         entityID = state->GetDemonState()->GetEntityID();
@@ -627,6 +789,7 @@ bool ChatManager::GMCommand_LNC(const std::shared_ptr<
     std::list<libcomp::String> argsCopy = args;
 
     int16_t lnc;
+
     if(!GetIntegerArg<int16_t>(lnc, argsCopy))
     {
         return false;
@@ -645,6 +808,7 @@ bool ChatManager::GMCommand_Map(const std::shared_ptr<
 
     size_t mapIndex;
     uint8_t mapValue;
+
     if(!GetIntegerArg<size_t>(mapIndex, argsCopy) ||
         !GetIntegerArg<uint8_t>(mapValue, argsCopy))
     {
@@ -667,9 +831,11 @@ bool ChatManager::GMCommand_Position(const std::shared_ptr<
     auto zoneManager = server->GetZoneManager();
 
     std::list<libcomp::String> argsCopy = args;
+
     if(!args.empty() && args.size() == 2)
     {
         float destX, destY;
+
         if(!GetDecimalArg<float>(destX, argsCopy) ||
             !GetDecimalArg<float>(destY, argsCopy))
         {
@@ -701,6 +867,68 @@ bool ChatManager::GMCommand_Position(const std::shared_ptr<
         cState->GetCurrentY()));
 }
 
+bool ChatManager::GMCommand_Post(const std::shared_ptr<
+    channel::ChannelClientConnection>& client,
+    const std::list<libcomp::String>& args)
+{
+    std::list<libcomp::String> argsCopy = args;
+
+    auto targetAccount = client->GetClientState()->GetAccountUID();
+    auto server = mServer.lock();
+    auto worldDB = server->GetWorldDatabase();
+    auto definitionManager = server->GetDefinitionManager();
+    
+    uint32_t itemID;
+
+    if(!GetIntegerArg<uint32_t>(itemID, argsCopy) ||
+        !definitionManager->GetItemData(itemID))
+    {
+        return SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(
+            "Invalid item ID specified: %1\n").Arg(itemID));
+    }
+
+    libcomp::String name;
+
+    if(GetStringArg(name, argsCopy))
+    {
+        auto target = objects::Character::LoadCharacterByName(worldDB, name);
+        targetAccount = target ? target->GetAccount().GetUUID() : NULLUUID;
+    }
+    
+    if(targetAccount.IsNull())
+    {
+        return SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(
+            "Invalid post target character specified: %1\n").Arg(name));
+    }
+
+    auto worldData = objects::AccountWorldData::LoadAccountWorldDataByAccount(
+        worldDB, targetAccount);
+
+    if(!worldData)
+    {
+        return SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(
+            "No world data exists for account: %1\n").Arg(targetAccount.ToString()));
+    }
+
+    if(worldData->PostCount() >= MAX_POST_ITEM_COUNT)
+    {
+        return SendChatMessage(client, ChatType_t::CHAT_SELF,
+            "There is no more room in the Post!\n");
+    }
+
+    auto postItem = libcomp::PersistentObject::New<objects::PostItem>(true);
+    postItem->SetType(itemID);
+    postItem->SetTimestamp((uint32_t)std::time(0));
+    postItem->SetAccount(targetAccount);
+
+    worldData->AppendPost(postItem);
+
+    postItem->Insert(worldDB);
+    worldData->Update(worldDB);
+
+    return true;
+}
+
 bool ChatManager::GMCommand_Skill(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
@@ -712,12 +940,14 @@ bool ChatManager::GMCommand_Skill(const std::shared_ptr<
     auto definitionManager = server->GetDefinitionManager();
 
     uint32_t skillID;
+
     if(!GetIntegerArg<uint32_t>(skillID, argsCopy))
     {
         return false;
     }
 
     auto skill = definitionManager->GetSkillData(skillID);
+
     if(skill == nullptr)
     {
         return false;
@@ -769,19 +999,21 @@ bool ChatManager::GMCommand_TickerMessage(const std::shared_ptr<
     std::list<libcomp::String> argsCopy = args;
     int8_t mode = 0;
 
-    if(!(GetIntegerArg(mode,argsCopy)) || argsCopy.size() < 1)   
+    if(!GetIntegerArg(mode, argsCopy) || argsCopy.size() < 1)   
     {
         return SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(
             "Syntax invalid, try @tickermessage <mode> <message>"));
     }
-    libcomp::String message = libcomp::String::Join(argsCopy," ");
+
+    libcomp::String message = libcomp::String::Join(argsCopy, " ");
 
     if (mode == 1) 
     {
-        server->SendSystemMessage(client,message,0,true);
+        server->SendSystemMessage(client, message, 0, true);
     }  
 
     conf->SetSystemMessage(message);
+
     return true;
 }
 
@@ -890,6 +1122,7 @@ bool ChatManager::GMCommand_XP(const std::shared_ptr<
     std::list<libcomp::String> argsCopy = args;
 
     uint64_t xpGain;
+
     if(!GetIntegerArg<uint64_t>(xpGain, argsCopy))
     {
         return false;

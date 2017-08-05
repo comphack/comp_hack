@@ -790,7 +790,7 @@ void EncryptedConnection::PreparePackets(std::list<ReadOnlyPacket>& packets)
 
         mOutgoing = finalPacket;
     }
-    else
+    else if(STATUS_NOT_CONNECTED != mStatus)
     {
         // There should only be one!
         if(packets.size() != 1)

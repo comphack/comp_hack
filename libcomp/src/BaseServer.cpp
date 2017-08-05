@@ -41,6 +41,7 @@
 #include <Log.h>
 #include <MessageInit.h>
 #include <ServerCommandLineParser.h>
+#include <ServerConstants.h>
 
 // object Includes
 #include <Account.h>
@@ -76,6 +77,21 @@ bool BaseServer::Initialize()
 
     LOG_DEBUG(libcomp::String("Port: %1\n").Arg(
         mConfig->GetPort()));
+
+    libcomp::String constantsPath = mConfig->GetServerConstantsPath();
+    if(constantsPath.IsEmpty())
+    {
+        constantsPath = libcomp::String("%1constants.xml")
+            .Arg(GetConfigPath());
+    }
+
+    if(!libcomp::ServerConstants::Initialize(constantsPath))
+    {
+        LOG_CRITICAL(libcomp::String("Server side constants failed to load"
+            " from file path: %1\n").Arg(constantsPath));
+
+        return false;
+    }
 
     if(0 == mConfig->DataStoreCount())
     {
@@ -196,6 +212,10 @@ std::shared_ptr<Database> BaseServer::GetDatabase(
     auto dbType = mConfig->GetDatabaseType();
 
     std::shared_ptr<Database> db = GetDatabase(dbType, configMap);
+    if(!db)
+    {
+        return nullptr;
+    }
 
     bool initFailure = false;
     if(performSetup)

@@ -31,6 +31,7 @@
 #include <ManagerPacket.h>
 #include <Packet.h>
 #include <PacketCodes.h>
+#include <ServerConstants.h>
 
 // object Includes
 #include <AccountWorldData.h>
@@ -62,23 +63,22 @@ bool Parsers::DepoRent::Parse(libcomp::ManagerPacket *pPacketManager,
     int64_t boxID = p.ReadS64Little();
     int64_t itemID = p.ReadS64Little();
 
-    /// @todo: move to server side config
     const static std::unordered_map<uint32_t, uint8_t> itemDayMap = {
-        { 901, 30 },
-        { 902, 60 },
-        { 903, 90 },
-        { 12758, 1 },
-        { 12759, 3 },
-        { 12760, 7 },
+        { SVR_CONST.RENTAL_ITEM_1, 1 },
+        { SVR_CONST.RENTAL_ITEM_3, 3 },
+        { SVR_CONST.RENTAL_ITEM_7, 7 },
+        { SVR_CONST.RENTAL_ITEM_30, 30 },
+        { SVR_CONST.RENTAL_ITEM_60, 60 },
+        { SVR_CONST.RENTAL_ITEM_90, 90 }
     };
 
     const static std::unordered_map<uint32_t, uint8_t> demonDayMap = {
-        { 904, 30 },
-        { 905, 60 },
-        { 906, 90 },
-        { 12761, 1 },
-        { 12762, 3 },
-        { 12763, 7 },
+        { SVR_CONST.RENTAL_DEMON_1, 1 },
+        { SVR_CONST.RENTAL_DEMON_3, 3 },
+        { SVR_CONST.RENTAL_DEMON_7, 7 },
+        { SVR_CONST.RENTAL_DEMON_30, 30 },
+        { SVR_CONST.RENTAL_DEMON_60, 60 },
+        { SVR_CONST.RENTAL_DEMON_90, 90 }
     };
     
     auto item = std::dynamic_pointer_cast<objects::Item>(

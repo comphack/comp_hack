@@ -117,12 +117,16 @@ void WorldServer::FinishInitialize()
         InternalPacketCode_t::PACKET_ACCOUNT_LOGIN));
     packetManager->AddParser<Parsers::AccountLogout>(to_underlying(
         InternalPacketCode_t::PACKET_ACCOUNT_LOGOUT));
+    packetManager->AddParser<Parsers::Relay>(to_underlying(
+        InternalPacketCode_t::PACKET_RELAY));
     packetManager->AddParser<Parsers::CharacterLogin>(to_underlying(
         InternalPacketCode_t::PACKET_CHARACTER_LOGIN));
     packetManager->AddParser<Parsers::FriendsUpdate>(to_underlying(
         InternalPacketCode_t::PACKET_FRIENDS_UPDATE));
     packetManager->AddParser<Parsers::PartyUpdate>(to_underlying(
         InternalPacketCode_t::PACKET_PARTY_UPDATE));
+    packetManager->AddParser<Parsers::ClanUpdate>(to_underlying(
+        InternalPacketCode_t::PACKET_CLAN_UPDATE));
 
     // Add the managers to the generic workers.
     for(auto worker : mWorkers)
@@ -357,6 +361,33 @@ AccountManager* WorldServer::GetAccountManager()
 CharacterManager* WorldServer::GetCharacterManager()
 {
     return mCharacterManager;
+}
+
+uint32_t WorldServer::GetRelayPacket(libcomp::Packet& p,
+    const std::list<int32_t>& targetCIDs, int32_t sourceCID)
+{
+    p.WritePacketCode(InternalPacketCode_t::PACKET_RELAY);
+    p.WriteS32Little(sourceCID);
+
+    p.WriteU8((uint8_t)PacketRelayMode_t::RELAY_CIDS);
+    if(targetCIDs.size() > 0)
+    {
+        p.WriteU16Little((uint16_t)targetCIDs.size());
+        for(auto targetCID : targetCIDs)
+        {
+            p.WriteS32Little(targetCID);
+        }
+    }
+
+    // Return the target ID packet offset
+    return 5;
+}
+
+void WorldServer::GetRelayPacket(libcomp::Packet& p, int32_t targetCID,
+    int32_t sourceCID)
+{
+    std::list<int32_t> cids = { targetCID };
+    GetRelayPacket(p, cids, sourceCID);
 }
 
 std::shared_ptr<libcomp::TcpConnection> WorldServer::CreateConnection(

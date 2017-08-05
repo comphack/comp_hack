@@ -129,6 +129,7 @@ SET(${PROJECT_NAME}_PACKETS
     src/packets/game/PopulateZone.cpp           # 0x0019
     src/packets/game/Move.cpp                   # 0x001C
     src/packets/game/Chat.cpp                   # 0x0026
+    src/packets/game/Tell.cpp                   # 0x0027
     src/packets/game/ActivateSkill.cpp          # 0x0030
     src/packets/game/ExecuteSkill.cpp           # 0x0031
     src/packets/game/CancelSkill.cpp            # 0x0032
@@ -164,6 +165,8 @@ SET(${PROJECT_NAME}_PACKETS
     src/packets/game/ShopSell.cpp               # 0x0096
     src/packets/game/DemonBoxMove.cpp           # 0x009A
     src/packets/game/DismissDemon.cpp           # 0x009B
+    src/packets/game/PostList.cpp               # 0x009C
+    src/packets/game/PostItem.cpp               # 0x009E
     src/packets/game/HotbarData.cpp             # 0x00A2
     src/packets/game/HotbarSave.cpp             # 0x00A4
     src/packets/game/EventResponse.cpp          # 0x00B7
@@ -189,13 +192,27 @@ SET(${PROJECT_NAME}_PACKETS
     src/packets/game/DepoRent.cpp               # 0x0104
     src/packets/game/QuestActiveList.cpp        # 0x010B
     src/packets/game/QuestCompletedList.cpp     # 0x010C
+    src/packets/game/ClanDisband.cpp            # 0x0138
+    src/packets/game/ClanInvite.cpp             # 0x013B
+    src/packets/game/ClanJoin.cpp               # 0x013E
+    src/packets/game/ClanCancel.cpp             # 0x0140
+    src/packets/game/ClanKick.cpp               # 0x0142
+    src/packets/game/ClanMasterUpdate.cpp       # 0x0145
+    src/packets/game/ClanSubMasterUpdate.cpp    # 0x0148
+    src/packets/game/ClanLeave.cpp              # 0x014B
+    src/packets/game/ClanChat.cpp               # 0x014E
     src/packets/game/ClanInfo.cpp               # 0x0150
+    src/packets/game/ClanList.cpp               # 0x0152
+    src/packets/game/ClanData.cpp               # 0x0154
+    src/packets/game/ClanForm.cpp               # 0x0156
     src/packets/game/SyncCharacter.cpp          # 0x017E
     src/packets/game/MapFlag.cpp                # 0x0197
     src/packets/game/DemonCompendium.cpp        # 0x019B
     src/packets/game/DungeonRecords.cpp         # 0x01C4
+    src/packets/game/ClanEmblemUpdate.cpp       # 0x01E1
     src/packets/game/DemonFamiliarity.cpp       # 0x01E6
     src/packets/game/MaterialBox.cpp            # 0x0205
+    src/packets/game/Analyze.cpp                # 0x0209
     src/packets/game/FusionGauge.cpp            # 0x0217
     src/packets/game/TitleList.cpp              # 0x021B
     src/packets/game/PartnerDemonQuestList.cpp  # 0x022D
@@ -220,9 +237,11 @@ SET(${PROJECT_NAME}_PACKETS
     src/packets/internal/SetOtherChannelInfo.cpp   # 0x1003
     src/packets/internal/AccountLogin.cpp          # 0x1004
     src/packets/internal/AccountLogout.cpp         # 0x1005
+    src/packets/internal/Relay.cpp                 # 0x1006
     src/packets/internal/CharacterLogin.cpp        # 0x1007
     src/packets/internal/FriendsUpdate.cpp         # 0x1008
     src/packets/internal/PartyUpdate.cpp           # 0x1009
+    src/packets/internal/ClanUpdate.cpp            # 0x100A
 )
 
 ADD_EXECUTABLE(${PROJECT_NAME} ${${PROJECT_NAME}_SRCS}

@@ -3,7 +3,7 @@
     <include path="binarydata/shared.xml"/>
 
     <object name="MiItemBasicData" persistent="false" scriptenabled="true">
-        <member type="u32" name="id2" caps="true"/>
+        <member type="u32" name="baseID"/>
         <member type="s32" name="buyPrice"/>
         <member type="s32" name="sellPrice"/>
         <member type="s32" name="unk1"/>
@@ -57,8 +57,8 @@
         <member type="u16" name="restriction2"/>
     </object>
     <object name="MiItemPvPData" persistent="false" scriptenabled="true">
-        <member type="s16" name="pvp1"/>
-        <member type="u16" name="pvp2"/>
+        <member type="s16" name="GPRequirement"/>
+        <member type="u16" name="unused"/>
     </object>
     <object name="MiRentalData" persistent="false" scriptenabled="true">
         <member type="s32" name="rental"/>

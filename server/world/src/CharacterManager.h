@@ -32,8 +32,19 @@
 
 // object Includes
 #include <CharacterLogin.h>
+#include <Clan.h>
+#include <ClanInfo.h>
 #include <Party.h>
 #include <PartyCharacter.h>
+
+/// Related characters should be retrieved from the friends list
+const uint8_t RELATED_FRIENDS = 0x01;
+
+/// Related characters should be retrieved from the current party
+const uint8_t RELATED_PARTY = 0x02;
+
+/// Related characters should be retrieved from the same clan
+const uint8_t RELATED_CLAN = 0x04;
 
 namespace libcomp
 {
@@ -98,23 +109,34 @@ public:
      * @param p Packet to send
      * @param cLogins CharacterLogins to map channel connections to when sending
      *  the packet
-     * @param appendCIDs true if the list of world CIDs from the associated logins
-     *  should be appended to the end of the packet, false if it should be sent
-     *  as is
+     * @param cidOffset Position in bytes after the packet code where the list
+     *  of CIDs should be inserted. If the value is larger than the packet, it will
+     *  be appended to the end.
      * @return false if an error occurs
      */
     bool SendToCharacters(libcomp::Packet& p,
         const std::list<std::shared_ptr<objects::CharacterLogin>>& cLogins,
-        bool appendCIDs);
+        uint32_t cidOffset);
+
+    /**
+     * Insert space in a packet for a count denoted list of world CID targets and
+     * seek to the position of the first CID in the list.
+     * @param p Packet to convert
+     * @param cidOffset Position in bytes after the packet code where the list
+     *  of CIDs should be inserted
+     * @param cidCount Number of CIDs that space needs to be allocated for
+     */
+    void ConvertToTargetCIDPacket(libcomp::Packet& p, uint32_t cidOffset, size_t cidCount);
 
     /**
      * Send a packet to various characters related to the supplied world CID
      * @param p Packet to send
      * @param worldCID World CID used to find related characters
-     * @param appendCIDs true if the list of world CIDs from the characters found
-     *  should be appended to the end of the packet, false if it should be sent as is
-     * @param friends true if characters from the related friend list should be included
-     * @param party true if characters from the same party should be included
+     * @param cidOffset Position in bytes after the packet code where the list
+     *  of CIDs should be inserted. If the value is larger than the packet, it will
+     *  be appended to the end.
+     * @param relatedTypes Flags indicating what types of related characters to send
+     *  the packet to. Use the constants in the CharacterManager header to signify these.
      * @param includeSelf Optional parameter to include the character associated
      *  to the world CID. Defaults to false.
      * @param zoneRestrict Optional parameter to restrict the characters being
@@ -122,19 +144,19 @@ public:
      * @return false if an error occurs
      */
     bool SendToRelatedCharacters(libcomp::Packet& p, int32_t worldCID,
-        bool appendCIDs, bool friends, bool party, bool includeSelf = false,
+        uint32_t cidOffset, uint8_t relatedTypes, bool includeSelf = false,
         bool zoneRestrict = false);
 
     /**
      * Retrieves characters related to the supplied CharacterLogin
      * @param cLogin CharacterLogin to find related characters for
-     * @param friends true if characters from the related friend list should be included
-     * @param party true if characters from the same party should be included
+     * @param relatedTypes Flags indicating what types of related characters to send
+     *  the packet to. Use the constants in the CharacterManager header to signify these.
      * @return List of pointers to the related CharacterLogins
      */
     std::list<std::shared_ptr<objects::CharacterLogin>>
         GetRelatedCharacterLogins(std::shared_ptr<objects::CharacterLogin> cLogin,
-            bool friends, bool party);
+            uint8_t relatedTypes);
 
     /**
      * Send packets containing CharacterLogin information about the supplied logins
@@ -247,6 +269,111 @@ public:
      */
     void PartyKick(std::shared_ptr<objects::CharacterLogin> cLogin, int32_t targetCID);
 
+    /**
+     * Get the clan info associated to the specified clan ID.
+     * @param clanID Clan instance ID
+     * @param Pointer to the related clan info or null if it does not exist
+     */
+    std::shared_ptr<objects::ClanInfo> GetClan(int32_t clanID);
+
+    /**
+     * Get (and register if needed) the clan info associated to the specified
+     * clan UUID.
+     * @param uuid UUID of the clan to retrieve
+     * @param Pointer to the related clan info
+     */
+    std::shared_ptr<objects::ClanInfo> GetClan(const libobjgen::UUID& uuid);
+
+    /**
+     * Add the specified character to an existing clan
+     * @param cLogin Pointer to the CharacterLogin to add to the clan
+     * @param clanID Clan instance ID
+     * @return true if the character joined successfully, false if they did not
+     */
+    bool ClanJoin(std::shared_ptr<objects::CharacterLogin> cLogin, int32_t clanID);
+
+    /**
+     * Remove the specified character from an existing clan
+     * @param cLogin Pointer to the CharacterLogin to remove from the clan
+     * @param clanID Clan instance ID
+     * @param requestConnection Pointer to the connection requesting the change
+     */
+    void ClanLeave(std::shared_ptr<objects::CharacterLogin> cLogin, int32_t clanID,
+        std::shared_ptr<libcomp::TcpConnection> requestConnection);
+
+    /**
+     * Disband an existing clan
+     * @param clanID Clan instance ID
+     * @param sourceCID World CID of the character requesting the disband. This is
+     *  only checked when the requestConnection is specified as well
+     * @param requestConnection Pointer to the connection requesting the change
+     */
+    void ClanDisband(int32_t clanID, int32_t sourceCID = 0,
+        std::shared_ptr<libcomp::TcpConnection> requestConnection = nullptr);
+
+    /**
+     * Kick a character from a clan
+     * @param cLogin Pointer to the CharacterLogin requesting the change
+     * @param clanID Clan instance ID
+     * @param targetCID World CID of the character to kick
+     * @param requestConnection Pointer to the connection requesting the change
+     */
+    void ClanKick(std::shared_ptr<objects::CharacterLogin> cLogin, int32_t clanID,
+        int32_t targetCID, std::shared_ptr<libcomp::TcpConnection> requestConnection);
+
+    /**
+     * Send clan level or clan member level details to the specified character
+     * @param cLogin Pointer to the CharacterLogin requesting the information
+     * @param requestConnection Pointer to the connection requesting the change
+     * @param memberIDs Optional list of member world CIDs being requested. If
+     *  this is left empty, the clan level information will be sent instead.
+     */
+    void SendClanDetails(std::shared_ptr<objects::CharacterLogin> cLogin,
+        std::shared_ptr<libcomp::TcpConnection> requestConnection,
+        std::list<int32_t> memberIDs = {});
+
+    /**
+     * Send clan information to specific members or all members to update
+     * channel side
+     * @param clanID Clan instance ID
+     * @param updateFlags Flags specifying what information to send. Available
+     *  options are:
+     *  0x01: Clan name
+     *  0x02: Clan emblem
+     *  0x04: Clan level
+     *  0x08: Indicates that the clan instance ID has updated (ex: joined or left)
+     *  Defaults to name, emblem, level
+     */
+    void SendClanInfo(int32_t clanID, uint8_t updateFlags = 0x07,
+        const std::list<int32_t>& cids = {});
+
+    /**
+     * Send clan member updates about the specified player character
+     * @param cLogin Pointer to the CharacterLogin to describe
+     * @param updateFlags Flags specifying what information to send. Available
+     *  options are:
+     *  0x01: Member specified status
+     *  0x02: Member zone
+     *  0x04: Member channel
+     *  0x08: Member message
+     *  0x10: Member login points
+     *  0x20: Member level
+     *  Defaults to login points and level as the rest are sent via
+     *  CharacterManager::SendStatusToRelatedCharacters
+     */
+    void SendClanMemberInfo(std::shared_ptr<objects::CharacterLogin> cLogin,
+        uint8_t updateFlags = 0x30);
+
+    /**
+     * Recalculate a clan's level based on a summation of each member's
+     * login points. Every 10,000 points grants a new level starting at 20,000
+     * and ending at 100,000.
+     * @param clanID Clan instance ID
+     * @param sendUpdate If true and the level is changed by the calculation, it
+     *  is broadcast to each logged in clan member.
+     */
+    void RecalculateClanLevel(int32_t clanID, bool sendUpdate = true);
+
 private:
     /**
      * Create a new party and set the supplied member as the leader
@@ -258,9 +385,18 @@ private:
     /**
      * Remove the supplied CharacterLogin from their current party
      * @param cLogin CharacterLogin to remove
-     * @return true on succes, false if they were not in a party
+     * @return true on success, false if they were not in a party
      */
     bool RemoveFromParty(std::shared_ptr<objects::CharacterLogin> cLogin);
+
+    /**
+     * Remove the supplied CharacterLogin from the specified clan
+     * @param cLogin CharacterLogin to remove
+     * @param clanID Clan instance ID
+     * @return true on success, false if they were not in specified clan
+     */
+    bool RemoveFromClan(std::shared_ptr<objects::CharacterLogin> cLogin,
+        int32_t clanID);
 
     /// Pointer back to theworld server this belongs to
     std::weak_ptr<WorldServer> mServer;
@@ -278,11 +414,20 @@ private:
     /// response
     std::unordered_map<uint32_t, std::shared_ptr<objects::Party>> mParties;
 
+    /// Map of clan IDs to clans loaded on the server.
+    std::unordered_map<int32_t, std::shared_ptr<objects::ClanInfo>> mClans;
+
+    /// Map of clan UUIDs to clan ID assigned when loaded on the server.
+    std::unordered_map<libcomp::String, int32_t> mClanMap;
+
     /// Highest CID registered for a logged in character
     int32_t mMaxCID;
 
     /// Highest party ID registered with the server
     uint32_t mMaxPartyID;
+
+    /// Highest clan ID registered with the server
+    int32_t mMaxClanID;
 
     /// Server lock for shared resources
     std::mutex mLock;

@@ -66,7 +66,7 @@ void FriendList(std::shared_ptr<WorldServer> server,
     auto characterManager = server->GetCharacterManager();
 
     auto fLogins = characterManager->GetRelatedCharacterLogins(
-        cLogin, true, false);
+        cLogin, RELATED_FRIENDS);
     if(fLogins.size() == 0)
     {
         // No friend info to send
@@ -75,7 +75,7 @@ void FriendList(std::shared_ptr<WorldServer> server,
 
     libcomp::Packet reply;
     reply.WritePacketCode(InternalPacketCode_t::PACKET_FRIENDS_UPDATE);
-    reply.WriteU8((uint8_t)InternalPacketAction_t::PACKET_ACTION_FRIEND_LIST);
+    reply.WriteU8((uint8_t)InternalPacketAction_t::PACKET_ACTION_GROUP_LIST);
     reply.WriteS32Little(cLogin->GetWorldCID());
     reply.WriteS8((int8_t)fLogins.size());
     for(auto fLogin : fLogins)
@@ -154,8 +154,8 @@ void FriendRequestAccepted(std::shared_ptr<WorldServer> server,
 
         if(sourceFSettings && targetFSettings)
         {
-            if(sourceFSettings->FriendsCount() >= 100 ||
-                targetFSettings->FriendsCount() >= 100)
+            if(sourceFSettings->FriendsCount() >= MAX_FRIEND_COUNT ||
+                targetFSettings->FriendsCount() >= MAX_FRIEND_COUNT)
             {
                 failed = true;
             }
@@ -351,7 +351,7 @@ bool Parsers::FriendsUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
         return false;
     }
 
-    if((InternalPacketAction_t)mode == InternalPacketAction_t::PACKET_ACTION_FRIEND_LIST)
+    if((InternalPacketAction_t)mode == InternalPacketAction_t::PACKET_ACTION_GROUP_LIST)
     {
         server->QueueWork(FriendList, server, connection, cLogin);
     }

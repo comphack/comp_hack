@@ -86,6 +86,7 @@ SET(${PROJECT_NAME}_SRCS
     src/RingBuffer.cpp
     src/ScriptEngine.cpp
     src/ServerCommandLineParser.cpp
+    src/ServerConstants.cpp
     src/ServerDataManager.cpp
     src/Shutdown.cpp
     #src/Structgen.cpp
@@ -180,6 +181,7 @@ SET(${PROJECT_NAME}_HDRS
     src/RingBuffer.h
     src/ScriptEngine.h
     src/ServerCommandLineParser.h
+    src/ServerConstants.h
     src/ServerDataManager.h
     src/Shutdown.h
     src/TcpConnection.h
@@ -214,6 +216,7 @@ SET(${PROJECT_NAME}_SCHEMA
     schema/action_startevent.xml
     schema/action_zonechange.xml
     schema/character.xml
+    schema/clan.xml
     schema/databaseconfig.xml
     schema/databaseconfig_mariadb.xml
     schema/databaseconfig_sqlite3.xml
@@ -288,6 +291,12 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     ActionStartEvent.cpp
     ActionZoneChange.h
     ActionZoneChange.cpp
+    Clan.h
+    Clan.cpp
+    ClanInfo.h
+    ClanInfo.cpp
+    ClanMember.h
+    ClanMember.cpp
     Character.h
     Character.cpp
     CharacterLogin.h
@@ -364,6 +373,8 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     PartyCharacter.cpp
     PartyMember.h
     PartyMember.cpp
+    PostItem.h
+    PostItem.cpp
     Quest.h
     Quest.cpp
     RegisteredChannel.h

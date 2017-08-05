@@ -22,6 +22,10 @@
     <object name="ActiveEntityStateObject" baseobject="EntityStateObject"
     scriptenabled="true" persistent="false">
         <member type="bool" name="IsActive" inherited="true" default="true"/>
+        <member type="enum" name="Faction" underlying="int8_t">
+            <value>PLAYER</value>
+            <value>ENEMY</value>
+        </member>
 
         <member type="float" name="OriginX"/>
         <member type="float" name="OriginY"/>
@@ -31,6 +35,9 @@
         <member type="float" name="DestinationY"/>
         <member type="float" name="DestinationRotation"/>
         <member type="u64" name="DestinationTicks"/>
+
+        <member type="float" name="KnockbackResist"/>
+        <member type="u64" name="KnockbackTicks"/>
 
         <member type="s16" name="MaxHP"/>
         <member type="s16" name="MaxMP"/>
@@ -46,16 +53,20 @@
         <member type="s16" name="SUPPORT"/>
         <member type="s16" name="PDEF"/>
         <member type="s16" name="MDEF"/>
-        <member type="s16" name="HPRegen"/>
-        <member type="s16" name="MPRegen"/>
+        <member type="array" name="CorrectTbl" size="128">
+            <element type="s16"/>
+        </member>
         <member type="ActivatedAbility*" name="ActivatedAbility"/>
     </object>
     <object name="ActivatedAbility" scriptenabled="true" persistent="false">
         <member type="u32" name="SkillID"/>
+        <member type="EntityStateObject*" name="SourceEntity"/>
         <member type="s64" name="TargetObjectID"/>
         <member type="bool" name="EntityTargeted"/>
         <member type="u8" name="ActivationID"/>
         <member type="u64" name="ActivationTime"/>
         <member type="u64" name="ChargedTime"/>
+        <member type="s16" name="HPCost"/>
+        <member type="s16" name="MPCost"/>
     </object>
 </objgen>

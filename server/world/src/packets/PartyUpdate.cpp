@@ -68,11 +68,12 @@ void PartyInvite(std::shared_ptr<WorldServer> server,
                 libcomp::Packet request;
                 request.WritePacketCode(InternalPacketCode_t::PACKET_PARTY_UPDATE);
                 request.WriteU8((uint8_t)InternalPacketAction_t::PACKET_ACTION_YN_REQUEST);
+                request.WriteU16Little(1); // CID Count
+                request.WriteS32Little(targetLogin->GetWorldCID());
                 request.WriteU8(0); // Not a response
                 request.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_UTF8,
                     member->GetName(), true);
                 request.WriteU32Little(cLogin->GetPartyID());
-                request.WriteS32Little(targetLogin->GetWorldCID());
 
                 channel->SendPacket(request);
 
@@ -84,11 +85,12 @@ void PartyInvite(std::shared_ptr<WorldServer> server,
     libcomp::Packet response;
     response.WritePacketCode(InternalPacketCode_t::PACKET_PARTY_UPDATE);
     response.WriteU8((uint8_t)InternalPacketAction_t::PACKET_ACTION_YN_REQUEST);
+    response.WriteU16Little(1); // CID Count
+    response.WriteS32Little(cLogin->GetWorldCID());
     response.WriteU8(1); // Is a response
     response.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_UTF8,
         targetName, true);
     response.WriteU16Little(responseCode);
-    response.WriteS32Little(cLogin->GetWorldCID());
 
     requestConnection->SendPacket(response);
 }
@@ -107,9 +109,10 @@ void PartyCancel(std::shared_ptr<WorldServer> server,
             libcomp::Packet request;
             request.WritePacketCode(InternalPacketCode_t::PACKET_PARTY_UPDATE);
             request.WriteU8((uint8_t)InternalPacketAction_t::PACKET_ACTION_RESPONSE_NO);
+            request.WriteU16Little(1); // CID Count
+            request.WriteS32Little(targetLogin->GetWorldCID());
             request.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_UTF8,
                 sourceName, true);
-            request.WriteS32Little(targetLogin->GetWorldCID());
 
             channel->SendPacket(request);
         }
@@ -134,9 +137,10 @@ void PartyDropRule(std::shared_ptr<WorldServer> server,
     libcomp::Packet response;
     response.WritePacketCode(InternalPacketCode_t::PACKET_PARTY_UPDATE);
     response.WriteU8((uint8_t)InternalPacketAction_t::PACKET_ACTION_PARTY_DROP_RULE);
+    response.WriteU16Little(1); // CID Count
+    response.WriteS32Little(cLogin->GetWorldCID());
     response.WriteU8(1); // Is a response
     response.WriteU16Little(responseCode);
-    response.WriteS32Little(cLogin->GetWorldCID());
 
     requestConnection->QueuePacket(response);
 
@@ -149,7 +153,7 @@ void PartyDropRule(std::shared_ptr<WorldServer> server,
         request.WriteU8(party->GetDropRule());
 
         server->GetCharacterManager()->SendToRelatedCharacters(request,
-            cLogin->GetWorldCID(), true, false, true, true);
+            cLogin->GetWorldCID(), 1, RELATED_PARTY, true);
     }
 
     requestConnection->FlushOutgoing();
@@ -259,13 +263,13 @@ bool Parsers::PartyUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
             PartyCancel(server, sourceName, targetName, partyID);
         }
         break;
-    case InternalPacketAction_t::PACKET_ACTION_PARTY_LEAVE:
+    case InternalPacketAction_t::PACKET_ACTION_GROUP_LEAVE:
         server->GetCharacterManager()->PartyLeave(cLogin, connection, false);
         break;
-    case InternalPacketAction_t::PACKET_ACTION_PARTY_DISBAND:
+    case InternalPacketAction_t::PACKET_ACTION_GROUP_DISBAND:
         server->GetCharacterManager()->PartyDisband(cLogin->GetPartyID(), cLogin->GetWorldCID(), connection);
         break;
-    case InternalPacketAction_t::PACKET_ACTION_PARTY_LEADER_UPDATE:
+    case InternalPacketAction_t::PACKET_ACTION_GROUP_LEADER_UPDATE:
         {
             if(p.Left() != 4)
             {
@@ -290,7 +294,7 @@ bool Parsers::PartyUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
             PartyDropRule(server, connection, cLogin, rule);
         }
         break;
-    case InternalPacketAction_t::PACKET_ACTION_PARTY_KICK:
+    case InternalPacketAction_t::PACKET_ACTION_GROUP_KICK:
         {
             if(p.Left() != 4)
             {

@@ -39,6 +39,8 @@ class MiSkillData;
 namespace channel
 {
 
+class ProcessingSkill;
+class SkillTargetResult;
 class ActiveEntityState;
 class ChannelServer;
 
@@ -118,101 +120,172 @@ private:
     /**
      * Execute a normal ability, not handled by a special handler.
      * @param client Pointer to the client connection that activated the skill
-     * @param sourceEntityID ID of the entity that activated the skill
      * @param activated Pointer to the activated ability instance
-     * @param hpCost Amount of HP spent on the skill's execution
-     * @param mpCost Amount of MP spent on the skill's execution
      */
     bool ExecuteNormalSkill(const std::shared_ptr<ChannelClientConnection> client,
-        int32_t sourceEntityID, std::shared_ptr<objects::ActivatedAbility> activated,
-        int16_t hpCost, int16_t mpCost);
+        std::shared_ptr<objects::ActivatedAbility> activated);
+
+    /**
+     * Process the results of a normal skill. If the skill involves a projectile
+     * this will be scheduled to execute after skill execution, otherwise it will
+     * execute immediately.
+     * @param activated Pointer to the activated ability instance
+     * @return true if the skill processed successfully, false otherwise
+     */
+    bool ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility> activated);
+
+    /**
+     * Calculate skill damage or healing using the correct formula
+     * @param source Pointer to the entity that activated the skill
+     * @param activated Pointer to the activated ability instance
+     * @param targets List target results associated to the skill
+     * @param skill Current skill processing state
+     * @return true if the calculation succeeded, false otherwise
+     */
+    bool CalculateDamage(const std::shared_ptr<ActiveEntityState>& source,
+        const std::shared_ptr<objects::ActivatedAbility>& activated,
+        std::list<SkillTargetResult>& targets, ProcessingSkill& skill);
+
+    /**
+     * Calculate skill damage or healing using the default formula
+     * @param mod Base modifier damage value
+     * @param damageType Type of damage being dealt
+     * @param off Offensive value of the source
+     * @param def Defensive value of the target
+     * @param resist Resistence to the skill affinity
+     * @param boost Boost level to apply to the skill affinity
+     * @param critLevel Critical level adjustment. Valid values are:
+     *  0) No critical adjustment
+     *  1) Critical hit
+     *  2) Limit break
+     * @return Calculated damage or healing
+     */
+    int32_t CalculateDamage_Normal(uint16_t mod, uint8_t& damageType,
+        uint16_t off, uint16_t def, float resist, float boost, uint8_t critLevel);
+
+    /**
+     * Calculate skill damage or healing based on a static value
+     * @param mod Base modifier damage value
+     * @param damageType Type of damage being dealt
+     * @return Calculated damage or healing
+     */
+    int32_t CalculateDamage_Static(uint16_t mod, uint8_t& damageType);
+
+    /**
+     * Calculate skill damage or healing based on a percent value
+     * @param mod Base modifier damage value
+     * @param damageType Type of damage being dealt
+     * @return Calculated damage or healing
+     */
+    int32_t CalculateDamage_Percent(uint16_t mod, uint8_t& damageType,
+        int16_t current);
+
+    /**
+     * Calculate skill damage or healing based on a max relative value
+     * @param mod Base modifier damage value
+     * @param damageType Type of damage being dealt
+     * @param max Maximum value to calculate relative damage to
+     * @return Calculated damage or healing
+     */
+    int32_t CalculateDamage_MaxPercent(uint16_t mod, uint8_t& damageType,
+        int16_t max);
+
+    /**
+     * Set null, reflect or absorb on the skill target
+     * @param target Target to update with NRA flags
+     * @param skill Current skill processing state
+     * @return true if the damage was reflected, otherwise false
+     */
+    bool SetNRA(SkillTargetResult& target, ProcessingSkill& skill);
 
     /**
      * Execute post execution steps like notifying the client that the skill
      * has executed and updating any related expertises.
      * @param client Pointer to the client connection that activated the skill
-     * @param sourceEntityID ID of the entity that activated the skill
      * @param activated Pointer to the activated ability instance
      * @param skillData Pointer to the skill data
-     * @param hpCost Amount of HP spent on the skill's execution
-     * @param mpCost Amount of MP spent on the skill's execution
      */
     void FinalizeSkillExecution(const std::shared_ptr<ChannelClientConnection> client,
-        int32_t sourceEntityID, std::shared_ptr<objects::ActivatedAbility> activated,
-        std::shared_ptr<objects::MiSkillData> skillData, int16_t hpCost, int16_t mpCost);
+        std::shared_ptr<objects::ActivatedAbility> activated,
+        std::shared_ptr<objects::MiSkillData> skillData);
+
+    /**
+     * Placeholder function for an ability actually handled outside of the
+     * SkillManager.
+     * @param client Pointer to the client connection that activated the skill
+     * @param activated Pointer to the activated ability instance
+     */
+    bool SpecialSkill(const std::shared_ptr<ChannelClientConnection> client,
+        std::shared_ptr<objects::ActivatedAbility> activated);
 
     /**
      * Execute the "equip item" ability.
      * @param client Pointer to the client connection that activated the skill
-     * @param sourceEntityID ID of the entity that activated the skill
      * @param activated Pointer to the activated ability instance
      */
     bool EquipItem(const std::shared_ptr<ChannelClientConnection> client,
-        int32_t sourceEntityID, std::shared_ptr<objects::ActivatedAbility> activated);
+        std::shared_ptr<objects::ActivatedAbility> activated);
 
     /**
      * Execute the "summon demon" ability.
      * @param client Pointer to the client connection that activated the skill
-     * @param sourceEntityID ID of the entity that activated the skill
      * @param activated Pointer to the activated ability instance
      */
     bool SummonDemon(const std::shared_ptr<ChannelClientConnection> client,
-        int32_t sourceEntityID, std::shared_ptr<objects::ActivatedAbility> activated);
+        std::shared_ptr<objects::ActivatedAbility> activated);
 
     /**
      * Execute the "store demon" ability.
      * @param client Pointer to the client connection that activated the skill
-     * @param sourceEntityID ID of the entity that activated the skill
      * @param activated Pointer to the activated ability instance
      */
     bool StoreDemon(const std::shared_ptr<ChannelClientConnection> client,
-        int32_t sourceEntityID, std::shared_ptr<objects::ActivatedAbility> activated);
+        std::shared_ptr<objects::ActivatedAbility> activated);
 
     /**
      * Execute the ability "Traesto" which returns the user to their homepoint.
      * @param client Pointer to the client connection that activated the skill
-     * @param sourceEntityID ID of the entity that activated the skill
      * @param activated Pointer to the activated ability instance
      */
     bool Traesto(const std::shared_ptr<ChannelClientConnection> client,
-        int32_t sourceEntityID, std::shared_ptr<objects::ActivatedAbility> activated);
+        std::shared_ptr<objects::ActivatedAbility> activated);
 
     /**
      * Notify the client that a skill needs to charge.  The client will notify
      * the server when the specified charge time has elapsed for execution.
      * @param client Pointer to the client connection that activated the skill
-     * @param sourceEntityID ID of the entity that activated the skill
      * @param activated Pointer to the activated ability instance
      */
     void SendChargeSkill(const std::shared_ptr<ChannelClientConnection> client,
-        int32_t sourceEntityID, std::shared_ptr<objects::ActivatedAbility> activated);
+        std::shared_ptr<objects::ActivatedAbility> activated);
 
     /**
      * Notify the client that a skill is executing.
      * @param client Pointer to the client connection that activated the skill
-     * @param sourceEntityID ID of the entity that activated the skill
      * @param activated Pointer to the activated ability instance
      * @param skillData Pointer to the skill data
-     * @param hpCost Amount of HP spent on the skill's execution
-     * @param mpCost Amount of MP spent on the skill's execution
      */
     void SendExecuteSkill(const std::shared_ptr<ChannelClientConnection> client,
-        int32_t sourceEntityID, std::shared_ptr<objects::ActivatedAbility> activated,
-        std::shared_ptr<objects::MiSkillData> skillData, int16_t hpCost, int16_t mpCost);
+        std::shared_ptr<objects::ActivatedAbility> activated,
+        std::shared_ptr<objects::MiSkillData> skillData);
 
     /**
      * Notify the client that a skill is complete.
      * @param client Pointer to the client connection that activated the skill
-     * @param sourceEntityID ID of the entity that activated the skill
      * @param activated Pointer to the activated ability instance
      * @param cancelled true if the skill was cancelled
      */
     void SendCompleteSkill(const std::shared_ptr<ChannelClientConnection> client,
-        int32_t sourceEntityID, std::shared_ptr<objects::ActivatedAbility> activated,
+        std::shared_ptr<objects::ActivatedAbility> activated,
         bool cancelled);
 
     /// Pointer to the channel server
     std::weak_ptr<ChannelServer> mServer;
+
+    /// List of skill function IDs mapped to manager functions.
+    std::unordered_map<uint16_t, std::function<bool(SkillManager&,
+        const std::shared_ptr<channel::ChannelClientConnection>&,
+        std::shared_ptr<objects::ActivatedAbility>&)>> mSkillFunctions;
 };
 
 } // namespace channel

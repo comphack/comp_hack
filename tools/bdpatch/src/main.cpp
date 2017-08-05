@@ -38,6 +38,9 @@
 
 #include <MiCZoneRelationData.h>
 
+#include <MiCQuestData.h>
+#include <MiNextEpisodeInfo.h>
+
 #include <MiDevilData.h>
 #include <MiNPCBasicData.h>
 
@@ -71,11 +74,15 @@ public:
     bool LoadXml(tinyxml2::XMLDocument& doc);
 
     std::string GetXml() const;
+    std::string GetTabular() const;
 
     std::list<std::shared_ptr<libcomp::Object>> GetObjects() const;
     std::shared_ptr<libcomp::Object> GetObjectByID(uint32_t id) const;
 
 private:
+    std::list<std::string> ReadNodes(tinyxml2::XMLElement *node,
+        int16_t dataMode) const;
+
     std::function<std::shared_ptr<libcomp::Object>()> mObjectAllocator;
     std::function<uint32_t(const std::shared_ptr<
         libcomp::Object>&)> mObjectMapper;
@@ -89,6 +96,151 @@ BinaryDataSet::BinaryDataSet(std::function<std::shared_ptr<
     const std::shared_ptr<libcomp::Object>&)> mapper) :
     mObjectAllocator(allocator), mObjectMapper(mapper)
 {
+}
+
+std::list<std::string> BinaryDataSet::ReadNodes(tinyxml2::XMLElement *node,
+    int16_t dataMode) const
+{
+    std::list<std::string> data;
+    std::list<tinyxml2::XMLElement*> nodes;
+    while(node != nullptr)
+    {
+        if(node->FirstChildElement() != nullptr)
+        {
+            nodes.push_back(node);
+            node = node->FirstChildElement();
+
+            //Doesn't handle map
+            if(std::string(node->Name()) == "element")
+            {
+                if(dataMode > 1)
+                {
+                    std::list<std::string> nData;
+                    while(node != nullptr)
+                    {
+                        std::list<std::string> sData;
+                        if(node->FirstChildElement() != nullptr)
+                        {
+                            sData = ReadNodes(node->FirstChildElement(), 3);
+                        }
+                        else
+                        {
+                            const char* txt = node->GetText();
+                            auto str = txt != 0 ? std::string(txt) : std::string();
+                            sData.push_back(str);
+                        }
+
+                        std::stringstream ss;
+                        ss << "{ ";
+                        bool first = true;
+                        for(auto d : sData)
+                        {
+                            if(!first) ss << ", ";
+                            ss << d;
+                            first = false;
+                        }
+                        ss << " }";
+                        nData.push_back(ss.str());
+
+                        node = node->NextSiblingElement();
+                    }
+
+                    std::stringstream ss;
+                    bool first = true;
+                    for(auto d : nData)
+                    {
+                        if(!first) ss << ", ";
+                        ss << d;
+                        first = false;
+                    }
+                    data.push_back(ss.str());
+                }
+                else
+                {
+                    //Pull the name and skip
+                    data.push_back(std::string(nodes.back()->Attribute("name")));
+                    node = nullptr;
+                }
+            }
+        }
+        else
+        {
+            const char* txt = node->GetText();
+            auto name = std::string(node->Attribute("name"));
+            auto val = txt != 0 ? std::string(txt) : std::string();
+            val.erase(std::remove(val.begin(), val.end(), '\n'), val.end());
+            switch(dataMode)
+            {
+                case 1:
+                    data.push_back(name);
+                    break;
+                case 2:
+                    data.push_back(val);
+                    break;
+                default:
+                    data.push_back(name + ": " + val);
+                    break;
+            }
+
+            node = node->NextSiblingElement();
+        }
+
+        while(node == nullptr && nodes.size() > 0)
+        {
+            node = nodes.back();
+            nodes.pop_back();
+            node = node->NextSiblingElement();
+        }
+    }
+
+    return data;
+}
+
+std::string BinaryDataSet::GetTabular() const
+{
+    tinyxml2::XMLDocument doc;
+
+    tinyxml2::XMLElement *pRoot = doc.NewElement("objects");
+    doc.InsertEndChild(pRoot);
+
+    for(auto obj : mObjects)
+    {
+        if(!obj->Save(doc, *pRoot))
+        {
+            return {};
+        }
+    }
+
+    std::stringstream ss;
+
+    tinyxml2::XMLNode *pNode = doc.FirstChild()->FirstChild();
+
+    if(pNode != nullptr)
+    {
+        for(auto d : ReadNodes(pNode->FirstChildElement(), 1))
+        {
+            ss << d << "\t";
+        }
+
+        ss << std::endl;
+    }
+
+    while(pNode != nullptr)
+    {
+        std::list<tinyxml2::XMLElement*> nodes;
+
+        tinyxml2::XMLElement *cNode = pNode->FirstChildElement();
+        auto data = ReadNodes(cNode, 2);
+        for(auto d : data)
+        {
+            ss << d << "\t";
+        }
+
+        ss << std::endl;
+        pNode = pNode->NextSiblingElement();
+    }
+
+    return ss.str();
 }
 
 bool BinaryDataSet::Load(std::istream& file)
@@ -190,10 +342,12 @@ int Usage(const char *szAppName)
 {
     std::cerr << "USAGE: " << szAppName << " load TYPE IN OUT" << std::endl;
     std::cerr << "USAGE: " << szAppName << " save TYPE IN OUT" << std::endl;
+    std::cerr << "USAGE: " << szAppName << " flatten TYPE IN OUT" << std::endl;
     std::cerr << std::endl;
     std::cerr << "TYPE indicates the format of the BinaryData and can "
         << "be one of:" << std::endl;
     std::cerr << "  citem         Format for CItemData.sbin" << std::endl;
+    std::cerr << "  cquest        Format for CQuestData.sbin" << std::endl;
     std::cerr << "  czonerelation Format for CZoneRelationData.sbin" << std::endl;
     std::cerr << "  devil         Format for DevilData.sbin" << std::endl;
     std::cerr << "  dynamicmap    Format for DynamicMapData.bin" << std::endl;
@@ -223,7 +377,7 @@ int main(int argc, char *argv[])
     const char *szInPath = argv[3];
     const char *szOutPath = argv[4];
 
-    if("load" != mode && "save" != mode)
+    if("load" != mode && "save" != mode && "flatten" != mode)
     {
         return Usage(argv[0]);
     }
@@ -242,6 +396,21 @@ int main(int argc, char *argv[])
             {
                 return std::dynamic_pointer_cast<objects::MiCItemData>(
                     obj)->GetBaseData()->GetID();
+            }
+        );
+    }
+    else if("cquest" == bdType)
+    {
+        pSet = new BinaryDataSet(
+            []()
+            {
+                return std::make_shared<objects::MiCQuestData>();
+            },
+
+            [](const std::shared_ptr<libcomp::Object>& obj)
+            {
+                return std::dynamic_pointer_cast<objects::MiCQuestData>(
+                    obj)->GetID();
             }
         );
     }
@@ -371,6 +540,30 @@ int main(int argc, char *argv[])
         out.open(szOutPath);
 
         out << pSet->GetXml().c_str();
+
+        if(!out.good())
+        {
+            std::cerr << "Failed to save file: " << szOutPath << std::endl;
+
+            return EXIT_FAILURE;
+        }
+    }
+    else if("flatten" == mode)
+    {
+        std::ifstream file;
+        file.open(szInPath, std::ifstream::binary);
+
+        if(!pSet->Load(file))
+        {
+            std::cerr << "Failed to load file: " << szInPath << std::endl;
+
+            return EXIT_FAILURE;
+        }
+
+        std::ofstream out;
+        out.open(szOutPath);
+
+        out << pSet->GetTabular().c_str();
 
         if(!out.good())
         {

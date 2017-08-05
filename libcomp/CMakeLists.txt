@@ -249,6 +249,7 @@ SET(${PROJECT_NAME}_SCHEMA
 
     # BinaryData Files
     schema/binarydata/citemdata.xml
+    schema/binarydata/cquest.xml
     schema/binarydata/czonerelationdata.xml
     schema/binarydata/devildata.xml
     schema/binarydata/devillvupratedata.xml
@@ -443,6 +444,8 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     MiCorrectTbl.cpp
     MiCostTbl.cpp
     MiCostTbl.h
+    MiCQuestData.cpp
+    MiCQuestData.h
     MiDamageData.cpp
     MiDamageData.h
     MiDCategoryData.cpp
@@ -499,6 +502,8 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     MiNegotiationDamageData.h
     MiNegotiationData.cpp
     MiNegotiationData.h
+    MiNextEpisodeInfo.cpp
+    MiNextEpisodeInfo.h
     MiNPCBasicData.cpp
     MiNPCBasicData.h
     MiONPCData.cpp

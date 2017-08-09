@@ -27,17 +27,12 @@
 #include "Packets.h"
 
 // libcomp Includes
+#include <ManagerPacket.h>
 #include <Packet.h>
 #include <PacketCodes.h>
-#include <ReadOnlyPacket.h>
-#include <TcpConnection.h>
-
-// object Includes
-#include <Character.h>
-#include <CharacterProgress.h>
 
 // channel Includes
-#include "ChannelClientConnection.h"
+#include "ChannelServer.h"
 
 using namespace channel;
 
@@ -45,26 +40,15 @@ bool Parsers::ValuableList::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {
-    (void)pPacketManager;
-
     if(p.Size() != 0)
     {
         return false;
     }
 
     auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-    auto state = client->GetClientState();
-    auto cState = state->GetCharacterState();
-    auto character = cState->GetEntity();
-    auto progress = character->GetProgress().Get();
-    auto valuables = progress->GetValuables();
+    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
 
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_VALUABLE_LIST);
-    reply.WriteU16Little((uint16_t)valuables.size());
-    reply.WriteArray(&valuables, (uint32_t)valuables.size());
-
-    client->SendPacket(reply);
+    server->GetCharacterManager()->SendValuableFlags(client);
 
     return true;
 }

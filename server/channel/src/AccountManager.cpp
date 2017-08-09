@@ -303,6 +303,7 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
         auto progress = libcomp::PersistentObject::New<
             objects::CharacterProgress>(true);
         progress->SetCharacter(character);
+        progress->SetMaps(0, 0x7E);
         
         // Max COMP slots if the account is a GM
         if(isGM)
@@ -366,18 +367,14 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
             return false;
         }
 
-        //Equip
-        character->AppendLearnedSkills(0x00001654);
-
-        //Summon demon
-        character->AppendLearnedSkills(0x00001648);
-
-        //Store demon
-        character->AppendLearnedSkills(0x00001649);
+        for(auto skillID : SVR_CONST.DEFAULT_SKILLS)
+        {
+            character->InsertLearnedSkills(skillID);
+        }
 
         for(auto skillID : definitionManager->GetDefaultCharacterSkills())
         {
-            character->AppendLearnedSkills(skillID);
+            character->InsertLearnedSkills(skillID);
         }
 
         if(!cs->Update(db))

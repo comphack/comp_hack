@@ -12,4 +12,9 @@
     <object name="ServerObject" baseobject="ServerObjectBase" persistent="false">
         <member type="u8" name="State"/>
     </object>
+    <object name="ServerBazaar" baseobject="ServerObjectBase" persistent="false">
+        <member type="set" name="SlotIDs">
+            <element type="u32"/>
+        </member>
+    </object>
 </objgen>

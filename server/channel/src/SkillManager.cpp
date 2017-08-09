@@ -46,6 +46,7 @@
 #include <MiCancelData.h>
 #include <MiCastBasicData.h>
 #include <MiCastData.h>
+#include <MiCategoryData.h>
 #include <MiConditionData.h>
 #include <MiCostTbl.h>
 #include <MiDamageData.h>
@@ -189,7 +190,8 @@ bool SkillManager::ActivateSkill(const std::shared_ptr<ChannelClientConnection> 
     SendChargeSkill(client, activated);
 
     uint8_t activationType = def->GetBasic()->GetActivationType();
-    bool executeNow = activationType == 3 && chargeTime == 0;
+    bool executeNow = (activationType == 3 || activationType == 4)
+        && chargeTime == 0;
     if(executeNow)
     {
         if(!ExecuteSkill(client, sourceState, activated))
@@ -253,6 +255,12 @@ bool SkillManager::ExecuteSkill(const std::shared_ptr<ChannelClientConnection> c
     auto cState = state->GetCharacterState();
     auto character = cState->GetEntity();
     uint16_t functionID = skillData->GetDamage()->GetFunctionID();
+    uint8_t skillCategory = skillData->GetCommon()->GetCategory()->GetMainCategory();
+
+    if(skillCategory == 0)
+    {
+        return false;
+    }
 
     // Check targets
     if(skillData->GetTarget()->GetType() == objects::MiTargetData::Type_t::DEAD_ALLY)
@@ -271,143 +279,6 @@ bool SkillManager::ExecuteSkill(const std::shared_ptr<ChannelClientConnection> c
         {
             return false;
         }
-    }
-
-    // Check costs
-    int16_t hpCost = 0, mpCost = 0;
-    uint16_t hpCostPercent = 0, mpCostPercent = 0;
-    uint16_t bulletCost = 0;
-    std::unordered_map<uint32_t, uint16_t> itemCosts;
-    if(functionID == SVR_CONST.SKILL_SUMMON_DEMON)
-    {
-        /*auto demon = std::dynamic_pointer_cast<objects::Demon>(
-            libcomp::PersistentObject::GetObjectByUUID(state->GetObjectUUID(targetObjectID)));
-        if(demon == nullptr)
-        {
-            return false;
-        }
-
-        uint32_t demonType = demon->GetType();
-        auto demonStats = demon->GetCoreStats().Get();
-        auto demonData = definitionManager->GetDevilData(demonType);
-
-        int16_t characterLNC = character->GetLNC();
-        int16_t demonLNC = demonData->GetBasic()->GetLNC();
-        uint8_t magModifier = demonData->GetSummonData()->GetMagModifier();*/
-
-        /// @todo: calculate MAG
-
-        itemCosts[800] = 1;
-    }
-    else
-    {
-        auto costs = skillData->GetCondition()->GetCosts();
-        for(auto cost : costs)
-        {
-            auto num = cost->GetCost();
-            bool percentCost = cost->GetNumType() == objects::MiCostTbl::NumType_t::PERCENT;
-            switch(cost->GetType())
-            {
-            case objects::MiCostTbl::Type_t::HP:
-                if(percentCost)
-                {
-                    hpCostPercent = (uint16_t)(hpCostPercent + num);
-                }
-                else
-                {
-                    hpCost = (int16_t)(hpCost + num);
-                }
-                break;
-            case objects::MiCostTbl::Type_t::MP:
-                if(percentCost)
-                {
-                    mpCostPercent = (uint16_t)(mpCostPercent + num);
-                }
-                else
-                {
-                    mpCost = (int16_t)(mpCost + num);
-                }
-                break;
-            case objects::MiCostTbl::Type_t::ITEM:
-                if(percentCost)
-                {
-                    LOG_ERROR("Item percent cost encountered.\n");
-                    return false;
-                }
-                else
-                {
-                    auto itemID = cost->GetItem();
-                    if(itemCosts.find(itemID) == itemCosts.end())
-                    {
-                        itemCosts[itemID] = 0;
-                    }
-                    itemCosts[itemID] = (uint16_t)(itemCosts[itemID] + num);
-                }
-                break;
-            case objects::MiCostTbl::Type_t::BULLET:
-                if(percentCost)
-                {
-                    LOG_ERROR("Bullet percent cost encountered.\n");
-                    return false;
-                }
-                else
-                {
-                    bulletCost = (uint16_t)(bulletCost + num);
-                }
-                break;
-            default:
-                LOG_ERROR(libcomp::String("Unsupported cost type encountered: %1\n")
-                    .Arg((uint8_t)cost->GetType()));
-                return false;
-            }
-        }
-    }
-
-    hpCost = (int16_t)(hpCost + ceil(((float)hpCostPercent * 0.01f) *
-        (float)sourceState->GetMaxHP()));
-    mpCost = (int16_t)(mpCost + ceil(((float)mpCostPercent * 0.01f) *
-        (float)sourceState->GetMaxMP()));
-
-    auto sourceStats = sourceState->GetCoreStats();
-    bool canPay = ((hpCost == 0) || hpCost < sourceStats->GetHP()) &&
-        ((mpCost == 0) || mpCost < sourceStats->GetMP());
-    auto characterManager = server->GetCharacterManager();
-    for(auto itemCost : itemCosts)
-    {
-        auto existingItems = characterManager->GetExistingItems(character, itemCost.first);
-        uint16_t itemCount = 0;
-        for(auto item : existingItems)
-        {
-            itemCount = (uint16_t)(itemCount + item->GetStackSize());
-        }
-
-        if(itemCount < itemCost.second)
-        {
-            canPay = false;
-            break;
-        }
-    }
-
-    std::pair<uint32_t, int64_t> bulletIDs;
-    if(bulletCost > 0)
-    {
-        auto bullets = character->GetEquippedItems((size_t)
-            objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_BULLETS);
-        if(!bullets || bullets->GetStackSize() < bulletCost)
-        {
-            canPay = false;
-        }
-        else
-        {
-            bulletIDs = std::pair<uint32_t, int64_t>(bullets->GetType(),
-                state->GetObjectID(bullets->GetUUID()));
-        }
-    }
-
-    // Handle costs that can't be paid as expected errors
-    if(!canPay)
-    {
-        return false;
     }
 
     // Verify the target now
@@ -455,35 +326,193 @@ bool SkillManager::ExecuteSkill(const std::shared_ptr<ChannelClientConnection> c
         break;
     }
 
-    // Pay the costs
-    if(hpCost > 0 || mpCost > 0)
-    {
-        sourceState->SetHPMP((int16_t)-hpCost, (int16_t)-mpCost, true);
-        activated->SetHPCost(hpCost);
-        activated->SetMPCost(mpCost);
+    auto source = std::dynamic_pointer_cast<ActiveEntityState>(
+        activated->GetSourceEntity());
 
-        std::set<std::shared_ptr<ActiveEntityState>> displayStateModified;
-        displayStateModified.insert(sourceState);
-        characterManager->UpdateWorldDisplayState(displayStateModified);
-    }
-
-    for(auto itemCost : itemCosts)
+    // Check costs and pay costs (skip for switch deactivation)
+    if(skillCategory == 1 || (skillCategory == 2 &&
+        !source->ActiveSwitchSkillsContains(skillID)))
     {
-        characterManager->AddRemoveItem(client, itemCost.first, itemCost.second,
-            false, activated->GetTargetObjectID());
-    }
+        int16_t hpCost = 0, mpCost = 0;
+        uint16_t hpCostPercent = 0, mpCostPercent = 0;
+        uint16_t bulletCost = 0;
+        std::unordered_map<uint32_t, uint16_t> itemCosts;
+        if(functionID == SVR_CONST.SKILL_SUMMON_DEMON)
+        {
+            /*auto demon = std::dynamic_pointer_cast<objects::Demon>(
+                libcomp::PersistentObject::GetObjectByUUID(state->GetObjectUUID(targetObjectID)));
+            if(demon == nullptr)
+            {
+                return false;
+            }
 
-    if(bulletCost > 0)
-    {
-        characterManager->AddRemoveItem(client, bulletIDs.first, bulletCost,
-            false, bulletIDs.second);
+            uint32_t demonType = demon->GetType();
+            auto demonStats = demon->GetCoreStats().Get();
+            auto demonData = definitionManager->GetDevilData(demonType);
+
+            int16_t characterLNC = character->GetLNC();
+            int16_t demonLNC = demonData->GetBasic()->GetLNC();
+            uint8_t magModifier = demonData->GetSummonData()->GetMagModifier();*/
+
+            /// @todo: calculate MAG
+
+            itemCosts[800] = 1;
+        }
+        else
+        {
+            auto costs = skillData->GetCondition()->GetCosts();
+            for(auto cost : costs)
+            {
+                auto num = cost->GetCost();
+                bool percentCost = cost->GetNumType() == objects::MiCostTbl::NumType_t::PERCENT;
+                switch(cost->GetType())
+                {
+                case objects::MiCostTbl::Type_t::HP:
+                    if(percentCost)
+                    {
+                        hpCostPercent = (uint16_t)(hpCostPercent + num);
+                    }
+                    else
+                    {
+                        hpCost = (int16_t)(hpCost + num);
+                    }
+                    break;
+                case objects::MiCostTbl::Type_t::MP:
+                    if(percentCost)
+                    {
+                        mpCostPercent = (uint16_t)(mpCostPercent + num);
+                    }
+                    else
+                    {
+                        mpCost = (int16_t)(mpCost + num);
+                    }
+                    break;
+                case objects::MiCostTbl::Type_t::ITEM:
+                    if(percentCost)
+                    {
+                        LOG_ERROR("Item percent cost encountered.\n");
+                        return false;
+                    }
+                    else
+                    {
+                        auto itemID = cost->GetItem();
+                        if(itemCosts.find(itemID) == itemCosts.end())
+                        {
+                            itemCosts[itemID] = 0;
+                        }
+                        itemCosts[itemID] = (uint16_t)(itemCosts[itemID] + num);
+                    }
+                    break;
+                case objects::MiCostTbl::Type_t::BULLET:
+                    if(percentCost)
+                    {
+                        LOG_ERROR("Bullet percent cost encountered.\n");
+                        return false;
+                    }
+                    else
+                    {
+                        bulletCost = (uint16_t)(bulletCost + num);
+                    }
+                    break;
+                default:
+                    LOG_ERROR(libcomp::String("Unsupported cost type encountered: %1\n")
+                        .Arg((uint8_t)cost->GetType()));
+                    return false;
+                }
+            }
+        }
+
+        hpCost = (int16_t)(hpCost + ceil(((float)hpCostPercent * 0.01f) *
+            (float)sourceState->GetMaxHP()));
+        mpCost = (int16_t)(mpCost + ceil(((float)mpCostPercent * 0.01f) *
+            (float)sourceState->GetMaxMP()));
+
+        auto sourceStats = sourceState->GetCoreStats();
+        bool canPay = ((hpCost == 0) || hpCost < sourceStats->GetHP()) &&
+            ((mpCost == 0) || mpCost < sourceStats->GetMP());
+        auto characterManager = server->GetCharacterManager();
+        for(auto itemCost : itemCosts)
+        {
+            auto existingItems = characterManager->GetExistingItems(character,
+                itemCost.first);
+            uint16_t itemCount = 0;
+            for(auto item : existingItems)
+            {
+                itemCount = (uint16_t)(itemCount + item->GetStackSize());
+            }
+
+            if(itemCount < itemCost.second)
+            {
+                canPay = false;
+                break;
+            }
+        }
+
+        std::pair<uint32_t, int64_t> bulletIDs;
+        if(bulletCost > 0)
+        {
+            auto bullets = character->GetEquippedItems((size_t)
+                objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_BULLETS);
+            if(!bullets || bullets->GetStackSize() < bulletCost)
+            {
+                canPay = false;
+            }
+            else
+            {
+                bulletIDs = std::pair<uint32_t, int64_t>(bullets->GetType(),
+                    state->GetObjectID(bullets->GetUUID()));
+            }
+        }
+
+        // Handle costs that can't be paid as expected errors
+        if(!canPay)
+        {
+            return false;
+        }
+
+        // Pay the costs
+        if(hpCost > 0 || mpCost > 0)
+        {
+            sourceState->SetHPMP((int16_t)-hpCost, (int16_t)-mpCost, true);
+            activated->SetHPCost(hpCost);
+            activated->SetMPCost(mpCost);
+
+            std::set<std::shared_ptr<ActiveEntityState>> displayStateModified;
+            displayStateModified.insert(sourceState);
+            characterManager->UpdateWorldDisplayState(displayStateModified);
+        }
+
+        for(auto itemCost : itemCosts)
+        {
+            characterManager->AddRemoveItem(client, itemCost.first, itemCost.second,
+                false, activated->GetTargetObjectID());
+        }
+
+        if(bulletCost > 0)
+        {
+            characterManager->AddRemoveItem(client, bulletIDs.first, bulletCost,
+                false, bulletIDs.second);
+        }
     }
 
     // Execute the skill
     auto fIter = mSkillFunctions.find(functionID);
     if(fIter == mSkillFunctions.end())
     {
-        return ExecuteNormalSkill(client, activated);
+        switch(skillCategory)
+        {
+        case 1:
+            // Active
+            return ExecuteNormalSkill(client, activated);
+        case 2:
+            // Switch
+            return ToggleSwitchSkill(client, activated);
+        case 0:
+            // Passive, shouldn't happen
+        default:
+            return false;
+            break;
+        }
     }
 
     bool success = fIter->second(*this, client, activated);
@@ -900,6 +929,12 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
         SetNRA(target, skill);
         targetResults.push_back(target);
     }
+
+    // Exit if nothing will be affected by damage or effects
+    if(targetResults.size() == 0)
+    {
+        return true;
+    }
     
     // Run calculations
     bool hasBattleDamage = false;
@@ -1297,6 +1332,51 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
     if(displayStateModified.size() > 0)
     {
         characterManager->UpdateWorldDisplayState(displayStateModified);
+    }
+
+    return true;
+}
+
+bool SkillManager::ToggleSwitchSkill(const std::shared_ptr<ChannelClientConnection> client,
+    std::shared_ptr<objects::ActivatedAbility> activated)
+{
+    auto server = mServer.lock();
+    auto definitionManager = server->GetDefinitionManager();
+    auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated->GetSourceEntity());
+
+    auto characterManager = server->GetCharacterManager();
+    auto skillID = activated->GetSkillID();
+    auto skillData = definitionManager->GetSkillData(skillID);
+
+    bool toggleOn = false;
+    if(source->ActiveSwitchSkillsContains(skillID))
+    {
+        source->RemoveActiveSwitchSkills(skillID);
+    }
+    else
+    {
+        source->InsertActiveSwitchSkills(skillID);
+        toggleOn = true;
+    }
+
+    FinalizeSkillExecution(client, activated, skillData);
+
+    if(client)
+    {
+        libcomp::Packet p;
+        p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_SKILL_SWITCH);
+        p.WriteS32Little(source->GetEntityID());
+        p.WriteU32Little(skillID);
+        p.WriteS8(toggleOn ? 1 : 0);
+
+        client->QueuePacket(p);
+    }
+
+    characterManager->RecalculateStats(client, source->GetEntityID());
+
+    if(client)
+    {
+        client->FlushOutgoing();
     }
 
     return true;

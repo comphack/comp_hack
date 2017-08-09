@@ -31,10 +31,6 @@
 #include <Packet.h>
 #include <PacketCodes.h>
 
-// object Includes
-#include <Character.h>
-#include <CharacterProgress.h>
-
 // channel Includes
 #include "ChannelServer.h"
 

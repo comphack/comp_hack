@@ -36,8 +36,10 @@
 #include "MetaVariableEnum.h"
 #include "MetaVariableInt.h"
 #include "MetaVariableList.h"
+#include "MetaVariableSet.h"
 #include "MetaVariableMap.h"
 #include "MetaVariableReference.h"
+#include "MetaVariableSet.h"
 #include "MetaVariableString.h"
 
 // Standard C++11 Includes
@@ -241,6 +243,14 @@ bool MetaVariable::SaveVariableList(std::ostream& stream,
                         subTypes.push_back(l->GetElementType());
                     }
                     break;
+                case MetaVariableType_t::TYPE_SET:
+                    {
+                        auto l = std::dynamic_pointer_cast<
+                            MetaVariableSet>(var);
+
+                        subTypes.push_back(l->GetElementType());
+                    }
+                    break;
                 case MetaVariableType_t::TYPE_MAP:
                     {
                         auto m = std::dynamic_pointer_cast<
@@ -383,6 +393,17 @@ std::shared_ptr<MetaVariable> MetaVariable::CreateType(
                 {
                     return std::shared_ptr<MetaVariable>(
                         new MetaVariableList(elementType));
+                }
+            }
+            break;
+        case MetaVariableType_t::TYPE_SET:
+            if(subtypes.size() == 1)
+            {
+                auto elementType = CreateType(subtypes[0]);
+                if(nullptr != elementType)
+                {
+                    return std::shared_ptr<MetaVariable>(
+                        new MetaVariableSet(elementType));
                 }
             }
             break;

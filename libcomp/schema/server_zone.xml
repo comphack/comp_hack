@@ -19,6 +19,9 @@
         <member type="list" name="Objects">
             <element type="ServerObject*"/>
         </member>
+        <member type="list" name="Bazaars">
+            <element type="ServerBazaar*"/>
+        </member>
         <member type="map" name="Spots">
             <key type="u32"/>
             <value type="ServerZoneSpot*"/>

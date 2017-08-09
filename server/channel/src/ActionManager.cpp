@@ -36,8 +36,13 @@
 
 // object Includes
 #include <Action.h>
+#include <ActionSetNPCState.h>
 #include <ActionStartEvent.h>
+#include <ActionUpdateFlag.h>
+#include <ActionUpdateLNC.h>
+#include <ActionUpdateQuest.h>
 #include <ActionZoneChange.h>
+#include <ServerObject.h>
 #include <ServerZone.h>
 
 using namespace channel;
@@ -49,6 +54,14 @@ ActionManager::ActionManager(const std::weak_ptr<ChannelServer>& server)
         &ActionManager::ZoneChange;
     mActionHandlers[objects::Action::ActionType_t::START_EVENT] =
         &ActionManager::StartEvent;
+    mActionHandlers[objects::Action::ActionType_t::SET_NPC_STATE] =
+        &ActionManager::SetNPCState;
+    mActionHandlers[objects::Action::ActionType_t::UPDATE_FLAG] =
+        &ActionManager::UpdateFlag;
+    mActionHandlers[objects::Action::ActionType_t::UPDATE_LNC] =
+        &ActionManager::UpdateLNC;
+    mActionHandlers[objects::Action::ActionType_t::UPDATE_QUEST] =
+        &ActionManager::UpdateQuest;
 }
 
 ActionManager::~ActionManager()
@@ -80,35 +93,34 @@ void ActionManager::PerformActions(
 
 bool ActionManager::StartEvent(
     const std::shared_ptr<ChannelClientConnection>& client,
-    const std::shared_ptr<objects::Action>& act, int32_t sourceEntityID)
+    const std::shared_ptr<objects::Action>& action, int32_t sourceEntityID)
 {
-    auto action = std::dynamic_pointer_cast<objects::ActionStartEvent>(act);
+    auto act = std::dynamic_pointer_cast<objects::ActionStartEvent>(action);
 
     auto server = mServer.lock();
     auto eventManager = server->GetEventManager();
 
-    eventManager->HandleEvent(client, action->GetEventID(), sourceEntityID);
+    eventManager->HandleEvent(client, act->GetEventID(), sourceEntityID);
     
     return true;
 }
 
 bool ActionManager::ZoneChange(
     const std::shared_ptr<ChannelClientConnection>& client,
-    const std::shared_ptr<objects::Action>& act, int32_t sourceEntityID)
+    const std::shared_ptr<objects::Action>& action, int32_t sourceEntityID)
 {
     (void)sourceEntityID;
 
-    auto action = std::dynamic_pointer_cast<objects::ActionZoneChange>(act);
+    auto act = std::dynamic_pointer_cast<objects::ActionZoneChange>(action);
 
     auto server = mServer.lock();
     auto zoneManager = server->GetZoneManager();
-    auto cState = client->GetClientState()->GetCharacterState();
 
     // Where is the character going?
-    uint32_t zoneID = action->GetZoneID();
-    float x = action->GetDestinationX();
-    float y = action->GetDestinationY();
-    float rotation = action->GetDestinationRotation();
+    uint32_t zoneID = act->GetZoneID();
+    float x = act->GetDestinationX();
+    float y = act->GetDestinationY();
+    float rotation = act->GetDestinationRotation();
 
     // Enter the new zone and always leave the old zone even if its the same.
     if(!zoneManager->EnterZone(client, zoneID, x, y, rotation, true))
@@ -121,5 +133,105 @@ bool ActionManager::ZoneChange(
         return false;
     }
     
+    return true;
+}
+
+bool ActionManager::SetNPCState(
+    const std::shared_ptr<ChannelClientConnection>& client,
+    const std::shared_ptr<objects::Action>& action, int32_t sourceEntityID)
+{
+    auto act = std::dynamic_pointer_cast<objects::ActionSetNPCState>(action);
+
+    auto server = mServer.lock();
+    auto zoneManager = server->GetZoneManager();
+
+    auto zone = zoneManager->GetZoneInstance(client);
+    auto oNPC = zone ? zone->GetServerObject(sourceEntityID) : nullptr;
+    if(oNPC)
+    {
+        oNPC->GetEntity()->SetState(act->GetState());
+
+        libcomp::Packet p;
+        p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_NPC_STATE_CHANGE);
+        p.WriteS32Little(sourceEntityID);
+        p.WriteU8(act->GetState());
+
+        zoneManager->BroadcastPacket(client, p);
+
+        return true;
+    }
+
+    return true;
+}
+
+bool ActionManager::UpdateFlag(
+    const std::shared_ptr<ChannelClientConnection>& client,
+    const std::shared_ptr<objects::Action>& action, int32_t sourceEntityID)
+{
+    (void)sourceEntityID;
+
+    auto act = std::dynamic_pointer_cast<objects::ActionUpdateFlag>(action);
+    auto characterManager = mServer.lock()->GetCharacterManager();
+
+    switch(act->GetFlagType())
+    {
+    case objects::ActionUpdateFlag::FlagType_t::MAP:
+        characterManager->AddMap(client, act->GetID());
+        break;
+    case objects::ActionUpdateFlag::FlagType_t::PLUGIN:
+        characterManager->AddPlugin(client, act->GetID());
+        break;
+    case objects::ActionUpdateFlag::FlagType_t::VALUABLE:
+        characterManager->AddRemoveValuable(client, act->GetID(),
+            act->GetRemove());
+        break;
+    default:
+        return false;
+    }
+
+    return true;
+}
+
+bool ActionManager::UpdateLNC(
+    const std::shared_ptr<ChannelClientConnection>& client,
+    const std::shared_ptr<objects::Action>& action, int32_t sourceEntityID)
+{
+    (void)sourceEntityID;
+
+    auto act = std::dynamic_pointer_cast<objects::ActionUpdateLNC>(action);
+    auto character = client->GetClientState()->GetCharacterState()
+        ->GetEntity();
+    auto characterManager = mServer.lock()->GetCharacterManager();
+
+    int16_t lnc = character->GetLNC();
+    if(act->GetIsSet())
+    {
+        lnc = act->GetValue();
+    }
+    else
+    {
+        lnc = (int16_t)(lnc + act->GetValue());
+    }
+
+    characterManager->UpdateLNC(client, lnc);
+
+    return true;
+}
+
+bool ActionManager::UpdateQuest(
+    const std::shared_ptr<ChannelClientConnection>& client,
+    const std::shared_ptr<objects::Action>& action, int32_t sourceEntityID)
+{
+    (void)sourceEntityID;
+
+    auto act = std::dynamic_pointer_cast<objects::ActionUpdateQuest>(action);
+
+    libcomp::Packet p;
+    p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_QUEST_PHASE_UPDATE);
+    p.WriteS16Little(act->GetQuestID());
+    p.WriteS8(act->GetPhase());
+
+    client->SendPacket(p);
+
     return true;
 }

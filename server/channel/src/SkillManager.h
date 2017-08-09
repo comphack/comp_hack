@@ -135,6 +135,14 @@ private:
     bool ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility> activated);
 
     /**
+     * Toggle a switch skill, not handled by a special handler.
+     * @param client Pointer to the client connection that activated the skill
+     * @param activated Pointer to the activated ability instance
+     */
+    bool ToggleSwitchSkill(const std::shared_ptr<ChannelClientConnection> client,
+        std::shared_ptr<objects::ActivatedAbility> activated);
+
+    /**
      * Calculate skill damage or healing using the correct formula
      * @param source Pointer to the entity that activated the skill
      * @param activated Pointer to the activated ability instance

@@ -76,7 +76,6 @@ private:
      * @param client Client to perform the actions for.
      * @param action Action to perform.
      * @param sourceEntityID ID of the entity to use as the event source.
-     * @retval true More actions can be performed.
      * @retval false The action list should stop after this action.
      */
     bool StartEvent(const std::shared_ptr<ChannelClientConnection>& client,
@@ -87,10 +86,49 @@ private:
      * @param client Client to perform the actions for.
      * @param action Action to perform.
      * @param sourceEntityID ID of the entity causing the zone change.
-     * @retval true More actions can be performed.
      * @retval false The action list should stop after this action.
      */
     bool ZoneChange(const std::shared_ptr<ChannelClientConnection>& client,
+        const std::shared_ptr<objects::Action>& action, int32_t sourceEntityID);
+
+    /**
+     * Change the state of the source entity in the zone.
+     * @param client Client to perform the actions for.
+     * @param action Action to perform.
+     * @param sourceEntityID ID of the entity that is changing state.
+     * @retval false The action list should stop after this action.
+     */
+    bool SetNPCState(const std::shared_ptr<ChannelClientConnection>& client,
+        const std::shared_ptr<objects::Action>& action, int32_t sourceEntityID);
+
+    /**
+     * Update flags related to character maps, valuables or plugins.
+     * @param client Client to perform the actions for.
+     * @param action Action to perform.
+     * @param sourceEntityID ID of the source entity.
+     * @retval false The action list should stop after this action.
+     */
+    bool UpdateFlag(const std::shared_ptr<ChannelClientConnection>& client,
+        const std::shared_ptr<objects::Action>& action, int32_t sourceEntityID);
+
+    /**
+     * Update the client character's LNC alignment.
+     * @param client Client to perform the actions for.
+     * @param action Action to perform.
+     * @param sourceEntityID ID of the source entity.
+     * @retval false The action list should stop after this action.
+     */
+    bool UpdateLNC(const std::shared_ptr<ChannelClientConnection>& client,
+        const std::shared_ptr<objects::Action>& action, int32_t sourceEntityID);
+
+    /**
+     * Update a quest related to the current character.
+     * @param client Client to perform the actions for.
+     * @param action Action to perform.
+     * @param sourceEntityID ID of the source entity.
+     * @retval false The action list should stop after this action.
+     */
+    bool UpdateQuest(const std::shared_ptr<ChannelClientConnection>& client,
         const std::shared_ptr<objects::Action>& action, int32_t sourceEntityID);
 
     /// Pointer to the channel server.

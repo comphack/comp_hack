@@ -212,6 +212,7 @@ enum class ChannelToClientPacketCode_t : uint16_t
     PACKET_SKILL_EXECUTING = 0x0036, //!< Response from skill activation request to execute a skill.
     PACKET_SKILL_FAILED = 0x0037,  //!< Response from skill activation request that execution has failed.
     PACKET_SKILL_REPORTS = 0x0038,  //!< Response from skill activation reporting what has been updated.
+    PACKET_SKILL_SWITCH = 0x0039,   //!< Notification that a switch skill has been enabled or disabled.
     PACKET_BATTLE_STARTED = 0x003B, //!< Notifies the client that an entity has entered into a battle.
     PACKET_BATTLE_STOPPED = 0x003C, //!< Notifies the client that an entity is no longer in battle.
     PACKET_ENEMY_ACTIVATED = 0x0041, //!< Notifies the client that an enemy has become activate.
@@ -268,6 +269,7 @@ enum class ChannelToClientPacketCode_t : uint16_t
     PACKET_EVENT_OPEN_MENU = 0x00AE,  //!< Request to the client to open a menu.
     PACKET_VALUABLE_LIST = 0x00B9,  //!< Response containing a list of obtained valuables.
     PACKET_EVENT_END = 0x00BB,  //!< Request to the client to end the current event.
+    PACKET_NPC_STATE_CHANGE = 0x00BC,  //!< Notification that an object NPC's state has changed.
     PACKET_FRIEND_INFO_SELF = 0x00BE,  //!< Response containing the current player's own friend information.
     PACKET_FRIEND_INFO = 0x00BF,  //!< Message containing information about a friend on the friends list.
     PACKET_FRIEND_REQUEST = 0x00C1,    //!< Response from a player to be added to the player's friend list.
@@ -302,6 +304,7 @@ enum class ChannelToClientPacketCode_t : uint16_t
     PACKET_EVENT_HOMEPOINT_UPDATE = 0x0106,  //!< Message indicating that the player's homepoint has been updated.
     PACKET_QUEST_ACTIVE_LIST = 0x010D,  //!< Response containing the player's active quest list.
     PACKET_QUEST_COMPLETED_LIST = 0x010E,  //!< Response containing the player's completed quest list.
+    PACKET_QUEST_PHASE_UPDATE = 0x010F,    //!< Notification that a quest's phase has been updated.
     PACKET_LNC_POINTS = 0x0126,    //!< Message containing a character's LNC alignment value.
     PACKET_EVENT_STAGE_EFFECT = 0x0127,  //!< Request to the client to render a stage effect.
     PACKET_CLAN_FORM = 0x0137,   //!< Response to the request to form a new clan from a clan formation item.
@@ -328,6 +331,7 @@ enum class ChannelToClientPacketCode_t : uint16_t
     PACKET_SYSTEM_MSG = 0x0171, //!< Message containing announcement ticker data. 
     PACKET_SYNC_CHARACTER = 0x017F,  //!< Response to the request to sync the player character's basic information.
     PACKET_BAZAAR_DATA = 0x0183,  //!< Message containing data about a bazaar in a zone.
+    PACKET_SKILL_LIST_UPDATED = 0x0187, //!< Notification that a player's skill list has been updated.
     PACKET_STATUS_ICON = 0x0195,  //!< Message containing the icon to show for the client's character.
     PACKET_STATUS_ICON_OTHER = 0x0196,  //!< Message containing the icon to show for another player's character.
     PACKET_MAP_FLAG = 0x0198,  //!< Message containing map information.
@@ -340,6 +344,7 @@ enum class ChannelToClientPacketCode_t : uint16_t
     PACKET_CLAN_UPDATE = 0x01E5,   //!< Notification to a character that their visible clan info has been updated.
     PACKET_DEMON_FAMILIARITY = 0x01E7,  //!< Response to the request for the familiarity values of each demon in the COMP.
     PACKET_EVENT_EX_NPC_MESSAGE = 0x01E9,  //!< Request to the client to display an extended NPC event message.
+    PACKET_EVENT_PLAY_SOUND_EFFECT = 0x01FB,  //!< Request to the client to play a sound effect as part of an event.
     PACKET_MATERIAL_BOX = 0x0206,  //!< Response containing info about the materials container.
     PACKET_EQUIPMENT_ANALYZE = 0x020A, //!< Message containing another player character's current equipment for "analyze".
     PACKET_OTHER_CHARACTER_EQUIPMENT_CHANGED = 0x020B, //!< Notifies the client that another character's equipment has changed.
@@ -353,6 +358,8 @@ enum class ChannelToClientPacketCode_t : uint16_t
     PACKET_EVENT_MULTITALK = 0x028D,  //!< Request to the client to start a multitalk event.
     PACKET_PARTNER_DEMON_QUEST_TEMP = 0x0290,  //!< Unknown. Response containing partner demon quest info.
     PACKET_EVENT_GET_ITEMS = 0x0291,  //!< Request to the client to inform the player that a items have been obtained.
+    PACKET_EVENT_PLAY_BGM = 0x0294,   //!< Request to the client to play background music as part of an event.
+    PACKET_EVENT_STOP_BGM = 0x0295,   //!< Request to the client to stop playing specific background music as part of an event.
     PACKET_ITEM_DEPO_REMOTE = 0x0297,  //!< Response to the request to open the remote item depos.
     PACKET_DEMON_DEPO_REMOTE = 0x02F0,  //!< Response to the request to open the remote demon depos.
     PACKET_COMMON_SWITCH_INFO = 0x02F5,  //!< Unknown. Response containing "common switch" information.

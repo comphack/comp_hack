@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="EventPlayBGM" baseobject="Event" persistent="false">
+        <member type="enum" name="eventType" inherited="true" default="PLAY_BGM"/>
+        <member type="s32" name="musicID"/>
+        <member type="s32" name="fadeInDelay"/>
+        <member type="s32" name="unknown"/>
+    </object>
+    <object name="EventStopBGM" baseobject="Event" persistent="false">
+        <member type="enum" name="eventType" inherited="true" default="STOP_BGM"/>
+        <member type="s32" name="musicID"/>
+    </object>
+</objgen>

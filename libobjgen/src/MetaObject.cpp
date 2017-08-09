@@ -34,6 +34,7 @@
 #include "MetaVariableList.h"
 #include "MetaVariableMap.h"
 #include "MetaVariableReference.h"
+#include "MetaVariableSet.h"
 #include "MetaVariableString.h"
 
 // Standard C++11 Includes
@@ -449,6 +450,15 @@ void MetaObject::GetReferences(std::shared_ptr<MetaVariable>& var,
                         std::dynamic_pointer_cast<MetaVariableList>(var);
 
                     auto elementType = list->GetElementType();
+                    GetReferences(elementType, references);
+                }
+                break;
+            case MetaVariable::MetaVariableType_t::TYPE_SET:
+                {
+                    std::shared_ptr<MetaVariableSet> s =
+                        std::dynamic_pointer_cast<MetaVariableSet>(var);
+
+                    auto elementType = s->GetElementType();
                     GetReferences(elementType, references);
                 }
                 break;

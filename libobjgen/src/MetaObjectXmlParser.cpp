@@ -33,6 +33,7 @@
 #include "MetaVariableInt.h"
 #include "MetaVariableList.h"
 #include "MetaVariableMap.h"
+#include "MetaVariableSet.h"
 
 using namespace libobjgen;
 
@@ -534,10 +535,11 @@ std::shared_ptr<MetaVariable> MetaObjectXmlParser::GetVariable(const tinyxml2::X
         const std::string memberType(szMemberType);
         std::shared_ptr<MetaVariable> var = MetaVariable::CreateType(memberType);
 
-        if(!var && (memberType == "list" || memberType == "array" || memberType == "map"))
+        if(!var && (memberType == "list" || memberType == "array" || memberType == "set" ||
+            memberType == "map"))
         {
             std::map<std::string, std::shared_ptr<MetaVariable>> subElems;
-            if(memberType == "list" || memberType == "array")
+            if(memberType == "list" || memberType == "array" || memberType == "set")
             {
                 subElems["element"];
             }
@@ -589,6 +591,22 @@ std::shared_ptr<MetaVariable> MetaObjectXmlParser::GetVariable(const tinyxml2::X
                     mError = ss.str();
                 }
             }
+            else if(memberType == "set")
+            {
+                if(nullptr != subElems["element"])
+                {
+                    var = std::shared_ptr<MetaVariable>(new MetaVariableSet(subElems["element"]));
+                }
+                else
+                {
+                    std::stringstream ss;
+                    ss << "Failed to parse set member '" << szMemberName
+                        << "' element in object '"
+                        << szName << "'";
+
+                    mError = ss.str();
+                }
+            }
             else if(memberType == "map")
             {
                 if(nullptr != subElems["key"] && nullptr != subElems["value"])
@@ -601,6 +619,7 @@ std::shared_ptr<MetaVariable> MetaObjectXmlParser::GetVariable(const tinyxml2::X
 
                     if(keyMetaType == MetaVariable::MetaVariableType_t::TYPE_ARRAY ||
                         keyMetaType == MetaVariable::MetaVariableType_t::TYPE_LIST ||
+                        keyMetaType == MetaVariable::MetaVariableType_t::TYPE_SET ||
                         keyMetaType == MetaVariable::MetaVariableType_t::TYPE_MAP ||
                         keyMetaType == MetaVariable::MetaVariableType_t::TYPE_REF)
                     {
@@ -614,6 +633,7 @@ std::shared_ptr<MetaVariable> MetaObjectXmlParser::GetVariable(const tinyxml2::X
                     }
                     else if(valueMetaType == MetaVariable::MetaVariableType_t::TYPE_ARRAY ||
                         valueMetaType == MetaVariable::MetaVariableType_t::TYPE_LIST ||
+                        valueMetaType == MetaVariable::MetaVariableType_t::TYPE_SET ||
                         valueMetaType == MetaVariable::MetaVariableType_t::TYPE_MAP)
                     {
                         std::stringstream ss;

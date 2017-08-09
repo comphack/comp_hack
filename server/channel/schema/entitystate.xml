@@ -57,6 +57,16 @@
             <element type="s16"/>
         </member>
         <member type="ActivatedAbility*" name="ActivatedAbility"/>
+
+        <member type="set" name="CurrentSkills">
+            <element type="u32"/>
+        </member>
+        <member type="set" name="AddedSkills">
+            <element type="u32"/>
+        </member>
+        <member type="set" name="ActiveSwitchSkills">
+            <element type="u32"/>
+        </member>
     </object>
     <object name="ActivatedAbility" scriptenabled="true" persistent="false">
         <member type="u32" name="SkillID"/>

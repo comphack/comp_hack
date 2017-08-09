@@ -27,7 +27,6 @@
 #include "Packets.h"
 
 // libcomp Includes
-#include <Constants.h>
 #include <ManagerPacket.h>
 #include <Packet.h>
 #include <PacketCodes.h>
@@ -47,20 +46,12 @@ bool Parsers::UnionFlag::Parse(libcomp::ManagerPacket *pPacketManager,
     }
 
     auto entityID = p.ReadS32Little();
+    (void)entityID;
 
     auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
     auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-    auto state = client->GetClientState();
-    auto cState = state->GetCharacterState();
 
-    /// @todo: Properly implement
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_UNION_FLAG);
-    reply.WriteS32Little(entityID);
-    reply.WriteU16Little(20);
-    reply.WriteBlank(20);
-
-    client->SendPacket(reply);
+    server->GetCharacterManager()->SendPluginFlags(client);
 
     return true;
 }

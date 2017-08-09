@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="ActionUpdateFlag" baseobject="Action" persistent="false">
+        <member type="enum" name="actionType" inherited="true" default="UPDATE_FLAG"/>
+        <member type="enum" name="flagType">
+            <value>MAP</value>
+            <value>PLUGIN</value>
+            <value>VALUABLE</value>
+        </member>
+        <member type="u16" name="ID"/>
+        <member type="bool" name="remove"/>
+    </object>
+</objgen>

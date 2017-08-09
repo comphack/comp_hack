@@ -29,23 +29,27 @@
 // libcomp Includes
 #include <Constants.h>
 #include <DefinitionManager.h>
-#include <ScriptEngine.h>
+#include <ServerConstants.h>
 
 // C++ Standard Includes
 #include <cmath>
 
 // objects Includes
 #include <Character.h>
+#include <Clan.h>
 #include <Demon.h>
 #include <Enemy.h>
 #include <Item.h>
 #include <MiCancelData.h>
+#include <MiCategoryData.h>
 #include <MiCorrectTbl.h>
 #include <MiDevilBattleData.h>
 #include <MiDevilData.h>
 #include <MiDoTDamageData.h>
 #include <MiEffectData.h>
+#include <MiGrowthData.h>
 #include <MiItemData.h>
+#include <MiSkillData.h>
 #include <MiSkillItemStatusCommonData.h>
 #include <MiStatusBasicData.h>
 #include <MiStatusData.h>
@@ -58,7 +62,7 @@
 using namespace channel;
 
 ActiveEntityState::ActiveEntityState() : mCurrentZone(0),
-    mEffectsActive(false), mAlive(true)
+    mEffectsActive(false), mAlive(true), mInitialCalc(false)
 {
 }
 
@@ -1299,6 +1303,7 @@ void ActiveEntityStateImp<objects::Character>::SetEntity(
 
     // Reset knockback and let refresh correct
     SetKnockbackResist(0);
+    mInitialCalc = false;
 }
 
 template<>
@@ -1321,6 +1326,7 @@ void ActiveEntityStateImp<objects::Demon>::SetEntity(
 
     // Reset knockback and let refresh correct
     SetKnockbackResist(0);
+    mInitialCalc = false;
 }
 
 template<>
@@ -1339,6 +1345,7 @@ void ActiveEntityStateImp<objects::Enemy>::SetEntity(
 
     // Reset knockback and let refresh correct
     SetKnockbackResist(0);
+    mInitialCalc = false;
 }
 
 template<>
@@ -1363,19 +1370,63 @@ template<>
 uint8_t ActiveEntityStateImp<objects::Character>::RecalculateStats(
     libcomp::DefinitionManager* definitionManager)
 {
+    uint8_t result = 0;
+
     std::lock_guard<std::mutex> lock(mLock);
 
     auto c = GetEntity();
     auto cs = c->GetCoreStats().Get();
 
-    auto stats = CharacterManager::GetCharacterBaseStatMap(cs);
-    
-    // Check if knockback max and current need to be set
-    if(GetCorrectValue(CorrectTbl::KNOCKBACK_RESIST) == 0)
+    // Calculate current skills
+    auto previousSkills = GetCurrentSkills();
+    ClearCurrentSkills();
+
+    // 1) Reset to learned skills
+    SetCurrentSkills(c->GetLearnedSkills());
+
+    // 2) Add clan skills
+    auto clan = c->GetClan().Get();
+    if(clan)
     {
-        SetKnockbackResist((float)stats[CorrectTbl::KNOCKBACK_RESIST]);
+        int8_t clanLevel = clan->GetLevel();
+        for(int8_t i = 0; i < clanLevel; i++)
+        {
+            for(uint32_t clanSkillID : SVR_CONST.CLAN_LEVEL_SKILLS[(size_t)i])
+            {
+                InsertCurrentSkills(clanSkillID);
+            }
+        }
     }
 
+    // 3) Add party/partner tokusei skills
+    /// @todo
+
+    // 4) Remove any switch skills no longer available
+    RemoveInactiveSwitchSkills();
+
+    // 5) Check for skill set changes
+    bool skillsChanged = previousSkills.size() != CurrentSkillsCount();
+    if(!skillsChanged)
+    {
+        for(uint32_t skillID : previousSkills)
+        {
+            if(!CurrentSkillsContains(skillID))
+            {
+                skillsChanged = true;
+                break;
+            }
+        }
+    }
+    result = skillsChanged ? ENTITY_CALC_SKILL : 0x00;
+
+    auto stats = CharacterManager::GetCharacterBaseStatMap(cs);
+    if(!mInitialCalc)
+    {
+        SetKnockbackResist((float)stats[CorrectTbl::KNOCKBACK_RESIST]);
+        mInitialCalc = true;
+    }
+
+    // Calculate based on adjustments
     std::list<std::shared_ptr<objects::MiCorrectTbl>> correctTbls;
     std::list<std::shared_ptr<objects::MiCorrectTbl>> nraTbls;
     for(auto equip : c->GetEquippedItems())
@@ -1398,14 +1449,14 @@ uint8_t ActiveEntityStateImp<objects::Character>::RecalculateStats(
         }
     }
 
-    GetStatusEffectCorrectTbls(definitionManager, correctTbls);
+    GetAdditionalCorrectTbls(definitionManager, correctTbls);
 
     UpdateNRAChances(stats, nraTbls);
     AdjustStats(correctTbls, stats, true);
     CharacterManager::CalculateDependentStats(stats, cs->GetLevel(), false);
     AdjustStats(correctTbls, stats, false);
 
-    return CompareAndResetStats(stats);
+    return result | CompareAndResetStats(stats);
 }
 
 template<>
@@ -1413,9 +1464,17 @@ uint8_t ActiveEntityStateImp<objects::Demon>::RecalculateStats(
     libcomp::DefinitionManager* definitionManager)
 {
     auto d = GetEntity();
-    if (nullptr == d)
+    if(nullptr == d)
     {
         return true;
+    }
+
+    for(uint32_t skillID : d->GetLearnedSkills())
+    {
+        if(skillID)
+        {
+            InsertCurrentSkills(skillID);
+        }
     }
 
     return RecalculateDemonStats(definitionManager, d->GetType());
@@ -1431,7 +1490,29 @@ uint8_t ActiveEntityStateImp<objects::Enemy>::RecalculateStats(
         return true;
     }
 
-    return RecalculateDemonStats(definitionManager, e->GetType());
+    uint32_t demonID = e->GetType();
+    if(!mInitialCalc)
+    {
+        // Calculate initial demon and enemy skills
+        auto demonData = definitionManager->GetDevilData(demonID);
+
+        ClearCurrentSkills();
+
+        auto growth = demonData->GetGrowth();
+        for(auto skillSet : { growth->GetSkills(),
+            growth->GetEnemyOnlySkills() })
+        {
+            for(uint32_t skillID : skillSet)
+            {
+                if (skillID)
+                {
+                    InsertCurrentSkills(skillID);
+                }
+            }
+        }
+    }
+
+    return RecalculateDemonStats(definitionManager, demonID);
 }
 
 }
@@ -1607,10 +1688,41 @@ void ActiveEntityState::UpdateNRAChances(libcomp::EnumMap<CorrectTbl, int16_t>& 
     }
 }
 
-void ActiveEntityState::GetStatusEffectCorrectTbls(
+void ActiveEntityState::GetAdditionalCorrectTbls(
     libcomp::DefinitionManager* definitionManager,
     std::list<std::shared_ptr<objects::MiCorrectTbl>>& adjustments)
 {
+    // 1) Gather skill adjustments
+    for(auto skillID : GetCurrentSkills())
+    {
+        auto skillData = definitionManager->GetSkillData(skillID);
+        auto common = skillData->GetCommon();
+
+        bool include = false;
+        switch(common->GetCategory()->GetMainCategory())
+        {
+        case 0:
+            // Passive
+            include = true;
+            break;
+        case 2:
+            // Switch
+            include = ActiveSwitchSkillsContains(skillID);
+            break;
+        default:
+            break;
+        }
+
+        if(include)
+        {
+            for(auto ct : common->GetCorrectTbl())
+            {
+                adjustments.push_back(ct);
+            }
+        }
+    }
+
+    // 2) Gather status effect adjustments
     for(auto ePair : GetStatusEffects())
     {
         auto statusData = definitionManager->GetStatusData(ePair.first);
@@ -1624,6 +1736,9 @@ void ActiveEntityState::GetStatusEffectCorrectTbls(
             }
         }
     }
+
+    // 3) Gather tokusei direct adjustments
+    /// @todo
 
     // Sort the adjustments, set to 0% first, non-zero percents next, numeric last
     adjustments.sort([](const std::shared_ptr<objects::MiCorrectTbl>& a,
@@ -1658,14 +1773,14 @@ uint8_t ActiveEntityState::RecalculateDemonStats(
     stats[CorrectTbl::SPEED] = cs->GetSPEED();
     stats[CorrectTbl::LUCK] = cs->GetLUCK();
 
-    // Check if knockback max and current need to be set
-    if(GetCorrectValue(CorrectTbl::KNOCKBACK_RESIST) == 0)
+    if(!mInitialCalc)
     {
         SetKnockbackResist((float)stats[CorrectTbl::KNOCKBACK_RESIST]);
+        mInitialCalc = true;
     }
 
     std::list<std::shared_ptr<objects::MiCorrectTbl>> correctTbls;
-    GetStatusEffectCorrectTbls(definitionManager, correctTbls);
+    GetAdditionalCorrectTbls(definitionManager, correctTbls);
 
     UpdateNRAChances(stats);
     AdjustStats(correctTbls, stats, true);
@@ -1673,6 +1788,18 @@ uint8_t ActiveEntityState::RecalculateDemonStats(
     AdjustStats(correctTbls, stats, false);
 
     return CompareAndResetStats(stats);
+}
+
+void ActiveEntityState::RemoveInactiveSwitchSkills()
+{
+    auto previousSwitchSkills = GetActiveSwitchSkills();
+    for(uint32_t skillID : previousSwitchSkills)
+    {
+        if(!CurrentSkillsContains(skillID))
+        {
+            RemoveActiveSwitchSkills(skillID);
+        }
+    }
 }
 
 const std::set<CorrectTbl> VISIBLE_STATS =
@@ -1695,6 +1822,8 @@ const std::set<CorrectTbl> VISIBLE_STATS =
 
 uint8_t ActiveEntityState::CompareAndResetStats(libcomp::EnumMap<CorrectTbl, int16_t>& stats)
 {
+    uint8_t result = 0;
+
     auto cs = GetCoreStats();
     int16_t hp = cs->GetHP();
     int16_t mp = cs->GetMP();
@@ -1713,14 +1842,15 @@ uint8_t ActiveEntityState::CompareAndResetStats(libcomp::EnumMap<CorrectTbl, int
         SetCorrectTbl((size_t)statPair.first, statPair.second);
     }
 
-    bool worldChange =
-        hp != cs->GetHP()
+    if(hp != cs->GetHP()
         || mp != cs->GetMP()
         || GetMaxHP() != stats[CorrectTbl::HP_MAX]
-        || GetMaxMP() != stats[CorrectTbl::MP_MAX];
-
-    bool anyClientChange = worldChange
-        || GetSTR() != stats[CorrectTbl::STR]
+        || GetMaxMP() != stats[CorrectTbl::MP_MAX])
+    {
+        result = ENTITY_CALC_STAT_WORLD |
+            ENTITY_CALC_STAT_LOCAL;
+    }
+    else if(GetSTR() != stats[CorrectTbl::STR]
         || GetMAGIC() != stats[CorrectTbl::MAGIC]
         || GetVIT() != stats[CorrectTbl::VIT]
         || GetINTEL() != stats[CorrectTbl::INT]
@@ -1731,7 +1861,10 @@ uint8_t ActiveEntityState::CompareAndResetStats(libcomp::EnumMap<CorrectTbl, int
         || GetSPELL() != stats[CorrectTbl::SPELL]
         || GetSUPPORT() != stats[CorrectTbl::SUPPORT]
         || GetPDEF() != stats[CorrectTbl::PDEF]
-        || GetMDEF() != stats[CorrectTbl::MDEF];
+        || GetMDEF() != stats[CorrectTbl::MDEF])
+    {
+        result = ENTITY_CALC_STAT_LOCAL;
+    }
 
     cs->SetHP(hp);
     cs->SetMP(mp);
@@ -1750,5 +1883,5 @@ uint8_t ActiveEntityState::CompareAndResetStats(libcomp::EnumMap<CorrectTbl, int
     SetPDEF(stats[CorrectTbl::PDEF]);
     SetMDEF(stats[CorrectTbl::MDEF]);
 
-    return worldChange ? 2 : (anyClientChange ? 1 : 0);
+    return result;
 }

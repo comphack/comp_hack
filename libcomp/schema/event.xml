@@ -27,6 +27,9 @@
             <value>STAGE_EFFECT</value>
             <value>DIRECTION</value>
             <value>SPECIAL_DIRECTION</value>
+            <value>PLAY_SOUND_EFFECT</value>
+            <value>PLAY_BGM</value>
+            <value>STOP_BGM</value>
         </member>
     </object>
 </objgen>

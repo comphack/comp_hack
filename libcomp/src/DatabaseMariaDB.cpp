@@ -1010,6 +1010,7 @@ String DatabaseMariaDB::GetVariableType(const std::shared_ptr
         case libobjgen::MetaVariable::MetaVariableType_t::TYPE_U64:
         case libobjgen::MetaVariable::MetaVariableType_t::TYPE_ARRAY:
         case libobjgen::MetaVariable::MetaVariableType_t::TYPE_LIST:
+        case libobjgen::MetaVariable::MetaVariableType_t::TYPE_SET:
         case libobjgen::MetaVariable::MetaVariableType_t::TYPE_MAP:
         default:
             break;

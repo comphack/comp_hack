@@ -60,6 +60,15 @@ const uint8_t EFFECT_CANCEL_KNOCKBACK = 0x40;
 /// Effect cancelled upon performing a skill
 const uint8_t EFFECT_CANCEL_SKILL = 0x80;
 
+/// Recalculation resulted in a locally visible stat change
+const uint8_t ENTITY_CALC_STAT_LOCAL = 0x01;
+
+/// Recalculation resulted in a stat change visible to the world
+const uint8_t ENTITY_CALC_STAT_WORLD = 0x02;
+
+/// Recalculation resulted in a modified skill set (characters only)
+const uint8_t ENTITY_CALC_SKILL = 0x04;
+
 namespace libcomp
 {
 class DefinitionManager;
@@ -107,9 +116,11 @@ public:
      * effects.
      * @param definitionManager Pointer to the DefinitionManager to use when
      *  determining how effects and items interact with the entity
-     * @return 1 if the calculation resulted in a change to the stats that should
-     *  be sent to the client, 2 if one of the changes should be communicated to
-     *  the world (for party members etc), 0 otherwise
+     * @return Flags indicating if the calculation resulted in a change that
+     *  should be communicated to the client or world:
+     *  0x01) ENTITY_CALC_STAT_LOCAL = locallly visible stats were changed
+     *  0x02) ENTITY_CALC_STAT_WORLD = stats changed that are visible to the world
+     *  0x04) ENTITY_CALC_SKILL = skill set has changed (character only)
      */
     virtual uint8_t RecalculateStats(libcomp::DefinitionManager* definitionManager) = 0;
 
@@ -504,12 +515,13 @@ protected:
         const std::list<std::shared_ptr<objects::MiCorrectTbl>>& adjustments = {});
 
     /**
-     * Get the correct table value adjustments from the entity's current status effects.
+     * Get the correct table value adjustments from the entity's current skills
+     * and status effects.
      * @param definitionManager Pointer to the DefinitionManager to use when
-     *  determining how the effects behave
+     *  determining how the skills and effects behave
      * @param adjustments Output list parameter to add the adjustments to
      */
-    void GetStatusEffectCorrectTbls(libcomp::DefinitionManager* definitionManager,
+    void GetAdditionalCorrectTbls(libcomp::DefinitionManager* definitionManager,
         std::list<std::shared_ptr<objects::MiCorrectTbl>>& adjustments);
 
     /**
@@ -523,6 +535,12 @@ protected:
      */
     uint8_t RecalculateDemonStats(libcomp::DefinitionManager* definitionManager,
         uint32_t demonID);
+
+    /**
+     * Remove any switch skills marked as active that are no longer available
+     * to the entity.
+     */
+    void RemoveInactiveSwitchSkills();
 
     /**
      * Compare and set the entity's current stats and also keep track of if
@@ -579,6 +597,9 @@ protected:
 
     /// Signifies that the entity is alive
     bool mAlive;
+
+    /// false if the entity has been assigned but never calculated
+    bool mInitialCalc;
 
     /// Last timestamp the entity's state was refreshed
     uint64_t mLastRefresh;

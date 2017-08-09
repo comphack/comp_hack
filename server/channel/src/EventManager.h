@@ -227,6 +227,33 @@ private:
         const std::shared_ptr<objects::EventInstance>& instance);
 
     /**
+     * Play a sound effect clientside
+     * @param client Pointer to the client the event affects
+     * @param instance Current event instance to process relative to
+     * @return true on success, false on failure
+     */
+    bool PlaySoundEffect(const std::shared_ptr<ChannelClientConnection>& client,
+        const std::shared_ptr<objects::EventInstance>& instance);
+
+    /**
+     * Play a BGM track clientside
+     * @param client Pointer to the client the event affects
+     * @param instance Current event instance to process relative to
+     * @return true on success, false on failure
+     */
+    bool PlayBGM(const std::shared_ptr<ChannelClientConnection>& client,
+        const std::shared_ptr<objects::EventInstance>& instance);
+
+    /**
+     * Stop a BGM track clientside
+     * @param client Pointer to the client the event affects
+     * @param instance Current event instance to process relative to
+     * @return true on success, false on failure
+     */
+    bool StopBGM(const std::shared_ptr<ChannelClientConnection>& client,
+        const std::shared_ptr<objects::EventInstance>& instance);
+
+    /**
      * End the current event sequence
      * @param client Pointer to the client the event affects
      * @param instance Current event instance to process relative to

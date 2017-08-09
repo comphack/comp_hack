@@ -147,6 +147,9 @@ struct Data
     /// Status effect ID of summon sync level 3
     uint32_t STATUS_SUMMON_SYNC_3;
 
+    /// Default skills to add to a new character
+    std::set<uint32_t> DEFAULT_SKILLS;
+
     /// Map of clan formation item IDs to their corresponding home base zones
     std::unordered_map<uint32_t, uint32_t> CLAN_FORM_MAP;
 

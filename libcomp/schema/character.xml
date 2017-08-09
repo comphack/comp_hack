@@ -37,7 +37,7 @@
         <member type="Clan*" name="Clan"/>
 
         <!-- Collections -->
-        <member type="list" name="LearnedSkills">
+        <member type="set" name="LearnedSkills">
             <element type="u32"/>
         </member>
         <member type="array" name="EquippedItems" size="15">
@@ -56,7 +56,7 @@
             <element type="StatusEffect*"/>
         </member>
         <member type="map" name="Quests">
-            <key type="u16"/>
+            <key type="s16"/>
             <value type="Quest*"/>
         </member>
         <member type="array" name="Hotbars" size="10">

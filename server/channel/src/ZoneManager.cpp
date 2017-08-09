@@ -40,6 +40,7 @@
 #include <EntityStats.h>
 #include <MiDevilData.h>
 #include <MiGrowthData.h>
+#include <ServerBazaar.h>
 #include <ServerNPC.h>
 #include <ServerObject.h>
 #include <ServerZone.h>
@@ -641,7 +642,8 @@ void ZoneManager::UpdateStatusEffectStates(const std::shared_ptr<Zone>& zone,
     {
         // Make sure T-damage is sent first
         // Status add/update and world update handled when applying changes
-        if(2 == characterManager->RecalculateStats(nullptr, entity->GetEntityID()))
+        if(characterManager->RecalculateStats(nullptr, entity->GetEntityID()) &
+            ENTITY_CALC_STAT_WORLD)
         {
             displayStateModified.erase(entity);
         }

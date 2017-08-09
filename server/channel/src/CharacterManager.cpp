@@ -143,9 +143,9 @@ void CharacterManager::SendCharacterData(const std::shared_ptr<
         reply.WriteU8(ePair.first->GetStack());
     }
 
-    size_t skillCount = c->LearnedSkillsCount();
-    reply.WriteU32(static_cast<uint32_t>(skillCount));
-    for(auto skill : c->GetLearnedSkills())
+    auto skills = cState->GetCurrentSkills();
+    reply.WriteU32(static_cast<uint32_t>(skills.size()));
+    for(auto skill : skills)
     {
         reply.WriteU32Little(skill);
     }
@@ -660,14 +660,34 @@ uint8_t CharacterManager::RecalculateStats(std::shared_ptr<
     {
         return 0;
     }
-    
+
     auto definitionManager = mServer.lock()->GetDefinitionManager();
     uint8_t result = eState->RecalculateStats(definitionManager);
-    if(result)
+    if(result & ENTITY_CALC_SKILL)
+    {
+        auto cState = std::dynamic_pointer_cast<CharacterState>(eState);
+        if(cState)
+        {
+            libcomp::Packet p;
+            p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_SKILL_LIST_UPDATED);
+            p.WriteS32Little(cState->GetEntityID());
+
+            auto skills = cState->GetCurrentSkills();
+            p.WriteU32Little((uint32_t)skills.size());
+            for(uint32_t skillID : skills)
+            {
+                p.WriteU32Little(skillID);
+            }
+
+            client->QueuePacket(p);
+        }
+    }
+
+    if(result & ENTITY_CALC_STAT_LOCAL)
     {
         SendEntityStats(client, entityID, updateSourceClient);
 
-        if(result == 2 && state->GetPartyID())
+        if((result & ENTITY_CALC_STAT_WORLD) && state->GetPartyID())
         {
             libcomp::Packet request;
             if(std::dynamic_pointer_cast<CharacterState>(eState))
@@ -680,6 +700,11 @@ uint8_t CharacterManager::RecalculateStats(std::shared_ptr<
             }
             mServer.lock()->GetManagerConnection()->GetWorldConnection()->SendPacket(request);
         }
+    }
+
+    if(client)
+    {
+        client->FlushOutgoing();
     }
 
     return result;
@@ -1420,7 +1445,7 @@ void CharacterManager::EquipItem(const std::shared_ptr<
     }
     character->SetEquippedItems((size_t)slot, equipSlot);
 
-    cState->RecalculateStats(server->GetDefinitionManager());
+    RecalculateStats(client, cState->GetEntityID(), false);
 
     libcomp::Packet reply;
     reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_EQUIPMENT_CHANGED);
@@ -1515,6 +1540,15 @@ void CharacterManager::UpdateLNC(const std::shared_ptr<
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
     auto character = cState->GetEntity();
+
+    if(lnc > 10000)
+    {
+        lnc = 10000;
+    }
+    else if(lnc < -10000)
+    {
+        lnc = -10000;
+    }
 
     character->SetLNC(lnc);
 
@@ -1708,7 +1742,7 @@ void CharacterManager::ExperienceGain(const std::shared_ptr<
             }
 
             CalculateDemonBaseStats(stats, demonData);
-            dState->RecalculateStats(definitionManager);
+            RecalculateStats(client, entityID, false);
             stats->SetHP(dState->GetMaxHP());
             stats->SetMP(dState->GetMaxMP());
 
@@ -1732,7 +1766,7 @@ void CharacterManager::ExperienceGain(const std::shared_ptr<
         else
         {
             CalculateCharacterBaseStats(stats);
-            cState->RecalculateStats(definitionManager);
+            RecalculateStats(client, entityID, false);
             stats->SetHP(cState->GetMaxHP());
             stats->SetMP(cState->GetMaxMP());
 
@@ -1966,15 +2000,13 @@ bool CharacterManager::LearnSkill(const std::shared_ptr<channel::ChannelClientCo
     {
         // Check if the skill has already been learned
         auto character = state->GetCharacterState()->GetEntity();
-        auto skills = character->GetLearnedSkills();
-        
-        if(std::find(skills.begin(), skills.end(), skillID) != skills.end())
+        if(character->LearnedSkillsContains(skillID))
         {
             // Skill already exists
             return true;
         }
 
-        character->AppendLearnedSkills(skillID);
+        character->InsertLearnedSkills(skillID);
 
         libcomp::Packet reply;
         reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_LEARN_SKILL);
@@ -1986,28 +2018,32 @@ bool CharacterManager::LearnSkill(const std::shared_ptr<channel::ChannelClientCo
         server->GetWorldDatabase()->QueueUpdate(character, state->GetAccountUID());
     }
 
+    RecalculateStats(client, entityID);
+
     return true;
 }
 
-bool CharacterManager::UpdateMapFlags(const std::shared_ptr<
-    channel::ChannelClientConnection>& client, size_t mapIndex, uint8_t mapValue)
+bool CharacterManager::AddMap(const std::shared_ptr<
+    channel::ChannelClientConnection>& client, uint16_t mapID)
 {
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
     auto character = cState->GetEntity();
     auto progress = character->GetProgress().Get();
 
-    if(mapIndex >= progress->GetMaps().size())
+    size_t index = (size_t)floor(mapID / 8);
+    uint8_t shiftVal = (uint8_t)(1 << (index ? (mapID % (uint16_t)index) : mapID));
+    if(index >= progress->GetMaps().size())
     {
         return false;
     }
 
-    auto oldValue = progress->GetMaps(mapIndex);
-    uint8_t newValue = static_cast<uint8_t>(oldValue | mapValue);
+    auto oldValue = progress->GetMaps(index);
+    uint8_t newValue = static_cast<uint8_t>(oldValue | shiftVal);
 
     if(oldValue != newValue)
     {
-        progress->SetMaps((size_t)mapIndex, newValue);
+        progress->SetMaps((size_t)index, newValue);
 
         SendMapFlags(client);
 
@@ -2028,6 +2064,98 @@ void CharacterManager::SendMapFlags(const std::shared_ptr<ChannelClientConnectio
     reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_MAP_FLAG);
     reply.WriteU16Little((uint16_t)maps.size());
     reply.WriteArray(&maps, (uint32_t)maps.size());
+
+    client->SendPacket(reply);
+}
+
+bool CharacterManager::AddRemoveValuable(const std::shared_ptr<
+    channel::ChannelClientConnection>& client, uint16_t valuableID, bool remove)
+{
+    auto state = client->GetClientState();
+    auto cState = state->GetCharacterState();
+    auto character = cState->GetEntity();
+    auto progress = character->GetProgress().Get();
+
+    size_t index = (size_t)floor(valuableID / 8);
+    uint8_t shiftVal = (uint8_t)(1 << (index ? (valuableID % (uint16_t)index) : valuableID));
+    if(index >= progress->GetValuables().size())
+    {
+        return false;
+    }
+
+    auto oldValue = progress->GetValuables(index);
+    uint8_t newValue = remove
+        ? static_cast<uint8_t>(oldValue ^ shiftVal) : static_cast<uint8_t>(oldValue | shiftVal);
+
+    if(oldValue != newValue)
+    {
+        progress->SetValuables((size_t)index, newValue);
+
+        SendValuableFlags(client);
+
+        mServer.lock()->GetWorldDatabase()->QueueUpdate(progress, state->GetAccountUID());
+    }
+
+    return true;
+}
+
+void CharacterManager::SendValuableFlags(const std::shared_ptr<ChannelClientConnection>& client)
+{
+    auto state = client->GetClientState();
+    auto cState = state->GetCharacterState();
+    auto character = cState->GetEntity();
+    auto valuables = character->GetProgress()->GetValuables();
+
+    libcomp::Packet reply;
+    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_VALUABLE_LIST);
+    reply.WriteU16Little((uint16_t)valuables.size());
+    reply.WriteArray(&valuables, (uint32_t)valuables.size());
+
+    client->SendPacket(reply);
+}
+
+bool CharacterManager::AddPlugin(const std::shared_ptr<
+    channel::ChannelClientConnection>& client, uint16_t pluginID)
+{
+    auto state = client->GetClientState();
+    auto cState = state->GetCharacterState();
+    auto character = cState->GetEntity();
+    auto progress = character->GetProgress().Get();
+
+    size_t index = (size_t)floor(pluginID / 8);
+    uint8_t shiftVal = (uint8_t)(1 << (index ? (pluginID % (uint16_t)index) : pluginID));
+    if(index >= progress->GetPlugins().size())
+    {
+        return false;
+    }
+
+    auto oldValue = progress->GetPlugins(index);
+    uint8_t newValue = static_cast<uint8_t>(oldValue | shiftVal);
+
+    if(oldValue != newValue)
+    {
+        progress->SetPlugins((size_t)index, newValue);
+
+        SendPluginFlags(client);
+
+        mServer.lock()->GetWorldDatabase()->QueueUpdate(progress, state->GetAccountUID());
+    }
+
+    return true;
+}
+
+void CharacterManager::SendPluginFlags(const std::shared_ptr<ChannelClientConnection>& client)
+{
+    auto state = client->GetClientState();
+    auto cState = state->GetCharacterState();
+    auto character = cState->GetEntity();
+    auto plugins = character->GetProgress()->GetPlugins();
+
+    libcomp::Packet reply;
+    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_UNION_FLAG);
+    reply.WriteS32Little(cState->GetEntityID());
+    reply.WriteU16Little((uint16_t)plugins.size());
+    reply.WriteArray(&plugins, (uint32_t)plugins.size());
 
     client->SendPacket(reply);
 }

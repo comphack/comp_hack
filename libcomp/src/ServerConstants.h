@@ -129,6 +129,15 @@ struct Data
     /// Function ID of equipment changing skills
     uint16_t SKILL_EQUIP_ITEM;
 
+    /// Function ID of familiarity boosting skills
+    uint16_t SKILL_FAM_UP;
+
+    /// Function ID of familiarity boosting item skills
+    uint16_t SKILL_ITEM_FAM_UP;
+
+    /// Function ID of farmiliarity lowering "Mooch" skills
+    uint16_t SKILL_MOOCH;
+
     /// Function ID of skills that store the demon in the COMP
     uint16_t SKILL_STORE_DEMON;
 

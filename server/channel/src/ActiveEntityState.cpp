@@ -49,6 +49,7 @@
 #include <MiEffectData.h>
 #include <MiGrowthData.h>
 #include <MiItemData.h>
+#include <MiNPCBasicData.h>
 #include <MiSkillData.h>
 #include <MiSkillItemStatusCommonData.h>
 #include <MiStatusBasicData.h>
@@ -1357,7 +1358,7 @@ const libobjgen::UUID ActiveEntityStateImp<objects::Character>::GetEntityUUID()
 template<>
 const libobjgen::UUID ActiveEntityStateImp<objects::Demon>::GetEntityUUID()
 {
-    return mEntity->GetUUID();
+    return mEntity ? mEntity->GetUUID() : NULLUUID;
 }
 
 template<>
@@ -1463,13 +1464,12 @@ template<>
 uint8_t ActiveEntityStateImp<objects::Demon>::RecalculateStats(
     libcomp::DefinitionManager* definitionManager)
 {
-    auto d = GetEntity();
-    if(nullptr == d)
+    if(!mEntity)
     {
         return true;
     }
 
-    for(uint32_t skillID : d->GetLearnedSkills())
+    for(uint32_t skillID : mEntity->GetLearnedSkills())
     {
         if(skillID)
         {
@@ -1477,20 +1477,19 @@ uint8_t ActiveEntityStateImp<objects::Demon>::RecalculateStats(
         }
     }
 
-    return RecalculateDemonStats(definitionManager, d->GetType());
+    return RecalculateDemonStats(definitionManager, mEntity->GetType());
 }
 
 template<>
 uint8_t ActiveEntityStateImp<objects::Enemy>::RecalculateStats(
     libcomp::DefinitionManager* definitionManager)
 {
-    auto e = GetEntity();
-    if (nullptr == e)
+    if(!mEntity)
     {
         return true;
     }
 
-    uint32_t demonID = e->GetType();
+    uint32_t demonID = mEntity->GetType();
     if(!mInitialCalc)
     {
         // Calculate initial demon and enemy skills
@@ -1513,6 +1512,45 @@ uint8_t ActiveEntityStateImp<objects::Enemy>::RecalculateStats(
     }
 
     return RecalculateDemonStats(definitionManager, demonID);
+}
+
+template<>
+int8_t ActiveEntityStateImp<objects::Character>::GetLNC(
+    libcomp::DefinitionManager* definitionManager)
+{
+    (void)definitionManager;
+
+    return CalculateLNC(mEntity->GetLNC());
+}
+
+template<>
+int8_t ActiveEntityStateImp<objects::Demon>::GetLNC(
+    libcomp::DefinitionManager* definitionManager)
+{
+    int16_t lncPoints = 0;
+    if(mEntity)
+    {
+        auto demonData = definitionManager->GetDevilData(
+            mEntity->GetType());
+        lncPoints = demonData->GetBasic()->GetLNC();
+    }
+
+    return CalculateLNC(lncPoints);
+}
+
+template<>
+int8_t ActiveEntityStateImp<objects::Enemy>::GetLNC(
+    libcomp::DefinitionManager* definitionManager)
+{
+    int16_t lncPoints = 0;
+    if(mEntity)
+    {
+        auto demonData = definitionManager->GetDevilData(
+            mEntity->GetType());
+        lncPoints = demonData->GetBasic()->GetLNC();
+    }
+
+    return CalculateLNC(lncPoints);
 }
 
 }
@@ -1788,6 +1826,22 @@ uint8_t ActiveEntityState::RecalculateDemonStats(
     AdjustStats(correctTbls, stats, false);
 
     return CompareAndResetStats(stats);
+}
+
+int8_t ActiveEntityState::CalculateLNC(int16_t lncPoints) const
+{
+    if(lncPoints >= 5000)
+    {
+        return LNC_CHAOS;
+    }
+    else if(lncPoints <= -5000)
+    {
+        return LNC_LAW;
+    }
+    else
+    {
+        return LNC_NEUTRAL;
+    }
 }
 
 void ActiveEntityState::RemoveInactiveSwitchSkills()

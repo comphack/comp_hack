@@ -760,7 +760,7 @@ bool ZoneManager::SpawnEnemy(const std::shared_ptr<Zone>& zone, uint32_t demonID
 
     auto enemyStats = libcomp::PersistentObject::New<objects::EntityStats>();
     enemyStats->SetLevel((int8_t)def->GetGrowth()->GetBaseLevel());
-    server->GetCharacterManager()->CalculateDemonBaseStats(enemyStats, def);
+    server->GetCharacterManager()->CalculateDemonBaseStats(nullptr, enemyStats, def);
     enemy->SetCoreStats(enemyStats);
 
     auto eState = std::shared_ptr<EnemyState>(new EnemyState);

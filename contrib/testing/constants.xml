@@ -28,7 +28,10 @@
     <constant name="SKILL_SUMMON_DEMON">200</constant>
     <constant name="SKILL_STORE_DEMON">201</constant>
     <constant name="SKILL_EQUIP_ITEM">203</constant>
+    <constant name="SKILL_FAM_UP">207</constant>
+    <constant name="SKILL_MOOCH">209</constant>
     <constant name="SKILL_CLAN_FORM">304</constant>
+    <constant name="SKILL_ITEM_FAM_UP">316</constant>
     <constant name="STATUS_SUMMON_SYNC_1">194</constant>
     <constant name="STATUS_SUMMON_SYNC_2">364</constant>
     <constant name="STATUS_SUMMON_SYNC_3">365</constant>

@@ -50,7 +50,9 @@
 #include <MiConditionData.h>
 #include <MiCostTbl.h>
 #include <MiDamageData.h>
+#include <MiDCategoryData.h>
 #include <MiDevilData.h>
+#include <MiDevilFamiliarityData.h>
 #include <MiDischargeData.h>
 #include <MiDoTDamageData.h>
 #include <MiEffectData.h>
@@ -62,6 +64,7 @@
 #include <MiSkillBasicData.h>
 #include <MiSkillData.h>
 #include <MiSkillItemStatusCommonData.h>
+#include <MiSkillSpecialParams.h>
 #include <MiStatusData.h>
 #include <MiStatusBasicData.h>
 #include <MiSummonData.h>
@@ -135,6 +138,9 @@ SkillManager::SkillManager(const std::weak_ptr<ChannelServer>& server)
 {
     mSkillFunctions[SVR_CONST.SKILL_CLAN_FORM] = &SkillManager::SpecialSkill;
     mSkillFunctions[SVR_CONST.SKILL_EQUIP_ITEM] = &SkillManager::EquipItem;
+    mSkillFunctions[SVR_CONST.SKILL_FAM_UP] = &SkillManager::FamiliarityUp;
+    mSkillFunctions[SVR_CONST.SKILL_ITEM_FAM_UP] = &SkillManager::FamiliarityUpItem;
+    mSkillFunctions[SVR_CONST.SKILL_MOOCH] = &SkillManager::Mooch;
     mSkillFunctions[SVR_CONST.SKILL_SUMMON_DEMON] = &SkillManager::SummonDemon;
     mSkillFunctions[SVR_CONST.SKILL_STORE_DEMON] = &SkillManager::StoreDemon;
     mSkillFunctions[SVR_CONST.SKILL_TRAESTO] = &SkillManager::Traesto;
@@ -643,7 +649,8 @@ bool SkillManager::ExecuteNormalSkill(const std::shared_ptr<ChannelClientConnect
     return true;
 }
 
-bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility> activated)
+bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility> activated,
+    bool applyStatusEffects)
 {
     auto server = mServer.lock();
     auto zoneManager = server->GetZoneManager();
@@ -709,7 +716,9 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
     switch(skillData->GetTarget()->GetType())
     {
     case objects::MiTargetData::Type_t::NONE:
-        // Source can be affected but it is not a target
+        // Source is technically the primary target (though most of
+        // these types of skills will filter it out)
+        primaryTarget = source;
         break;
     case objects::MiTargetData::Type_t::ALLY:
     case objects::MiTargetData::Type_t::DEAD_ALLY:
@@ -760,13 +769,8 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
         return false;
     }
 
-    std::list<std::shared_ptr<ActiveEntityState>> effectiveTargets;
-    if(primaryTarget)
-    {
-        effectiveTargets.push_back(primaryTarget);
-    }
-
     auto skillRange = skillData->GetRange();
+    std::list<std::shared_ptr<ActiveEntityState>> effectiveTargets;
     if(skillRange->GetAreaType() != objects::MiEffectiveRangeData::AreaType_t::NONE)
     {
         // Determine area effects
@@ -803,77 +807,77 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
                 .Arg((uint8_t)skillRange->GetAreaType()));
             return false;
         }
+    }
 
-        // Make sure the primary target isn't in here twice and it is also
-        // at the front of the list
-        if(primaryTarget)
-        {
-            effectiveTargets.remove_if([primaryTarget](
-                const std::shared_ptr<ActiveEntityState>& target)
-                {
-                    return target == primaryTarget;
-                });
-            effectiveTargets.push_front(primaryTarget);
-        }
-
-        // Filter out invalid effective targets (including the primary target)
-        /// @todo: implement a more complex faction system for PvP etc
-        auto areaTargetType = skillRange->GetAreaTarget();
-        switch(areaTargetType)
-        {
-        case objects::MiEffectiveRangeData::AreaTarget_t::ENEMY:
-            effectiveTargets.remove_if([effectiveSource](
-                const std::shared_ptr<ActiveEntityState>& target)
-                {
-                    return (target->GetFaction() == effectiveSource->GetFaction()) ||
-                        !target->IsAlive();
-                });
-            break;
-        case objects::MiEffectiveRangeData::AreaTarget_t::ALLY:
-        case objects::MiEffectiveRangeData::AreaTarget_t::PARTY:
-        case objects::MiEffectiveRangeData::AreaTarget_t::DEAD_ALLY:
-        case objects::MiEffectiveRangeData::AreaTarget_t::DEAD_PARTY:
+    // Make sure the primary target isn't in here twice and it is also
+    // at the front of the list
+    if(primaryTarget)
+    {
+        effectiveTargets.remove_if([primaryTarget](
+            const std::shared_ptr<ActiveEntityState>& target)
             {
-                bool deadOnly = areaTargetType ==
-                    objects::MiEffectiveRangeData::AreaTarget_t::DEAD_ALLY ||
-                    areaTargetType == objects::MiEffectiveRangeData::AreaTarget_t::DEAD_PARTY;
-                effectiveTargets.remove_if([effectiveSource, deadOnly](
+                return target == primaryTarget;
+            });
+        effectiveTargets.push_front(primaryTarget);
+    }
+
+    // Filter out invalid effective targets (including the primary target)
+    /// @todo: implement a more complex faction system for PvP etc
+    auto validType = skillRange->GetValidType();
+    switch(validType)
+    {
+    case objects::MiEffectiveRangeData::ValidType_t::ENEMY:
+        effectiveTargets.remove_if([effectiveSource](
+            const std::shared_ptr<ActiveEntityState>& target)
+            {
+                return (target->GetFaction() == effectiveSource->GetFaction()) ||
+                    !target->IsAlive();
+            });
+        break;
+    case objects::MiEffectiveRangeData::ValidType_t::ALLY:
+    case objects::MiEffectiveRangeData::ValidType_t::PARTY:
+    case objects::MiEffectiveRangeData::ValidType_t::DEAD_ALLY:
+    case objects::MiEffectiveRangeData::ValidType_t::DEAD_PARTY:
+        {
+            bool deadOnly = validType ==
+                objects::MiEffectiveRangeData::ValidType_t::DEAD_ALLY ||
+                validType == objects::MiEffectiveRangeData::ValidType_t::DEAD_PARTY;
+            effectiveTargets.remove_if([effectiveSource, deadOnly](
+                const std::shared_ptr<ActiveEntityState>& target)
+                {
+                    return (target->GetFaction() != effectiveSource->GetFaction())
+                        || (deadOnly == target->IsAlive());
+                });
+
+            if(validType == objects::MiEffectiveRangeData::ValidType_t::PARTY ||
+                validType == objects::MiEffectiveRangeData::ValidType_t::DEAD_PARTY)
+            {
+                // This will result in an empty list if cast by an enemy, though
+                // technically it should in that instance
+                auto sourceState = ClientState::GetEntityClientState(effectiveSource->GetEntityID());
+                uint32_t sourcePartyID = sourceState ? sourceState->GetPartyID() : 0;
+
+                effectiveTargets.remove_if([sourcePartyID](
                     const std::shared_ptr<ActiveEntityState>& target)
                     {
-                        return (target->GetFaction() != effectiveSource->GetFaction())
-                            || (deadOnly == target->IsAlive());
+                        auto state = ClientState::GetEntityClientState(target->GetEntityID());
+                        return sourcePartyID == 0 || !state ||
+                            state->GetPartyID() != sourcePartyID;
                     });
-
-                if(areaTargetType == objects::MiEffectiveRangeData::AreaTarget_t::PARTY ||
-                   areaTargetType == objects::MiEffectiveRangeData::AreaTarget_t::DEAD_PARTY)
-                {
-                    // This will result in an empty list if cast by an enemy, though
-                    // technically it should in that instance
-                    auto sourceState = ClientState::GetEntityClientState(effectiveSource->GetEntityID());
-                    uint32_t sourcePartyID = sourceState ? sourceState->GetPartyID() : 0;
-
-                    effectiveTargets.remove_if([sourcePartyID](
-                        const std::shared_ptr<ActiveEntityState>& target)
-                        {
-                            auto state = ClientState::GetEntityClientState(target->GetEntityID());
-                            return sourcePartyID == 0 || !state ||
-                                state->GetPartyID() != sourcePartyID;
-                        });
-                }
             }
-            break;
-        case objects::MiEffectiveRangeData::AreaTarget_t::SOURCE:
-            effectiveTargets.remove_if([effectiveSource](
-                const std::shared_ptr<ActiveEntityState>& target)
-                {
-                    return target != effectiveSource;
-                });
-            break;
-        default:
-            LOG_ERROR(libcomp::String("Unsupported skill area target encountered: %1\n")
-                .Arg((uint8_t)skillRange->GetAreaTarget()));
-            return false;
         }
+        break;
+    case objects::MiEffectiveRangeData::ValidType_t::SOURCE:
+        effectiveTargets.remove_if([effectiveSource](
+            const std::shared_ptr<ActiveEntityState>& target)
+            {
+                return target != effectiveSource;
+            });
+        break;
+    default:
+        LOG_ERROR(libcomp::String("Unsupported skill valid target type encountered: %1\n")
+            .Arg((uint8_t)validType));
+        return false;
     }
 
     // Filter down to all valid targets, limited by AOE restrictions
@@ -1059,7 +1063,8 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
         }
 
         // Determine which status effects to apply
-        if((target.DamageFlags1 & (FLAG1_BLOCK | FLAG1_REFLECT | FLAG1_ABSORB)) == 0)
+        if(applyStatusEffects &&
+            (target.DamageFlags1 & (FLAG1_BLOCK | FLAG1_REFLECT | FLAG1_ABSORB)) == 0)
         {
             for(auto addStatus : addStatuses)
             {
@@ -1080,15 +1085,9 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
                         continue;
                     }
 
-                    int8_t minStack = addStatus->GetMinStack();
-                    int8_t maxStack = addStatus->GetMaxStack();
-
-                    // Sanity check
-                    if(minStack > maxStack) continue;
-
-                    int8_t stack = minStack == maxStack ? maxStack
-                        : (int8_t)(minStack + (rand() % (maxStack - minStack)));
-                    if(stack == 0) continue;
+                    uint8_t stack = CalculateStatusEffectStack(addStatus->GetMinStack(),
+                        addStatus->GetMaxStack());
+                    if(stack == 0 && !addStatus->GetIsReplace()) continue;
 
                     target.AddedStatuses[addStatus->GetStatusID()] =
                         std::pair<uint8_t, bool>(stack, addStatus->GetIsReplace());
@@ -1308,22 +1307,104 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
 
     if(killed.size() > 0)
     {
+        // Familiarity is reduced from death (0) or same demon kills (1)
+        // and is dependent upon familiarity type
+        const int16_t fTypeMap[17][2] =
+            {
+                { -100, -5 },   // Type 0
+                { -20, -50 },   // Type 1
+                { -20, -20 },   // Type 2
+                { -50, -50 },   // Type 3
+                { -100, -100 }, // Type 4
+                { -100, -100 }, // Type 5
+                { -20, -20 },   // Type 6
+                { -50, -50 },   // Type 7
+                { -100, -100 }, // Type 8
+                { -100, -100 }, // Type 9
+                { -50, -100 },  // Type 10
+                { -50, 0 },     // Type 11
+                { -100, -100 }, // Type 12
+                { -120, -120 }, // Type 13
+                { 0, 0 },       // Type 14 (invalid)
+                { 0, 0 },       // Type 15 (invalid)
+                { -100, -100 }  // Type 16
+            };
+
+        uint32_t sourceDemonType = (source->GetEntityType() ==
+            objects::EntityStateObject::EntityType_t::PARTNER_DEMON)
+            ? std::dynamic_pointer_cast<DemonState>(source)->GetEntity()->GetType()
+            : 0;
+        auto sourceDemonFType = sourceDemonType
+            ? definitionManager->GetDevilData(sourceDemonType)->GetFamiliarity()
+            ->GetFamiliarityType() : 0;
+
+        std::unordered_map<int32_t, int32_t> adjustments;
         for(auto entity : killed)
         {
             // Remove all opponents
             characterManager->AddRemoveOpponent(false, entity, nullptr);
 
-            if(entity->GetEntityType() ==
-                objects::EntityStateObject::EntityType_t::PARTNER_DEMON)
+            // Determine familiarity adjustments
+            bool partnerDeath = false;
+            uint32_t dType = 0;
+            switch(entity->GetEntityType())
             {
-                // If a partner demon was killed, decrease familiarity
-                auto demonClient = server->GetManagerConnection()->
-                    GetEntityClient(entity->GetEntityID());
-                if(!demonClient) continue;
-
-                /// @todo: verify this value more
-                characterManager->UpdateFamiliarity(demonClient, -100, true);
+            case objects::EntityStateObject::EntityType_t::PARTNER_DEMON:
+                dType = std::dynamic_pointer_cast<DemonState>(entity)
+                    ->GetEntity()->GetType();
+                partnerDeath = true;
+                break;
+            case objects::EntityStateObject::EntityType_t::ENEMY:
+                if(sourceDemonType)
+                {
+                    dType = std::dynamic_pointer_cast<EnemyState>(entity)
+                        ->GetEntity()->GetType();
+                }
+                break;
+            default:
+                break;
             }
+
+            if(dType)
+            {
+                std::list<std::pair<int32_t, int32_t>> adjusts;
+                if(partnerDeath)
+                {
+                    // Partner demon has died
+                    adjusts.push_back(std::pair<int32_t, int32_t>(
+                        entity->GetEntityID(), fTypeMap[(size_t)sourceDemonFType][0]));
+                }
+
+                if(entity != source && sourceDemonType == dType)
+                {
+                    // Same demon type killed
+                    adjusts.push_back(std::pair<int32_t, int32_t>(
+                        source->GetEntityID(), fTypeMap[(size_t)sourceDemonFType][1]));
+                }
+
+                for(auto aPair : adjusts)
+                {
+                    if(adjustments.find(aPair.first) == adjustments.end())
+                    {
+                        adjustments[aPair.first] = aPair.second;
+                    }
+                    else
+                    {
+                        adjustments[aPair.first] = (int32_t)(
+                            adjustments[aPair.first] + aPair.second);
+                    }
+                }
+            }
+        }
+
+        // Apply familiarity adjustments
+        for(auto aPair : adjustments)
+        {
+            auto demonClient = server->GetManagerConnection()->
+                GetEntityClient(aPair.first);
+            if(!demonClient) continue;
+
+            characterManager->UpdateFamiliarity(demonClient, aPair.second, true);
         }
     }
 
@@ -1799,6 +1880,18 @@ bool SkillManager::SetNRA(SkillTargetResult& target, ProcessingSkill& skill)
     return false;
 }
 
+uint8_t SkillManager::CalculateStatusEffectStack(int8_t minStack, int8_t maxStack) const
+{
+    // Sanity check
+    if(minStack > maxStack)
+    {
+        return 0;
+    }
+
+    return minStack == maxStack ? (uint8_t)maxStack
+        : (uint8_t)(minStack + (rand() % (maxStack - minStack)));
+}
+
 void SkillManager::FinalizeSkillExecution(const std::shared_ptr<ChannelClientConnection> client,
     std::shared_ptr<objects::ActivatedAbility> activated,
     std::shared_ptr<objects::MiSkillData> skillData)
@@ -1851,7 +1944,198 @@ bool SkillManager::EquipItem(const std::shared_ptr<ChannelClientConnection> clie
 
     mServer.lock()->GetCharacterManager()->EquipItem(client, itemID);
 
-    return true;
+    return ProcessSkillResult(activated);;
+}
+
+bool SkillManager::FamiliarityUp(const std::shared_ptr<ChannelClientConnection> client,
+    std::shared_ptr<objects::ActivatedAbility> activated)
+{
+    auto state = client->GetClientState();
+    auto cState = state->GetCharacterState();
+    auto dState = state->GetDemonState();
+    auto demon = dState->GetEntity();
+
+    if(!demon)
+    {
+        return false;
+    }
+
+    auto server = mServer.lock();
+    auto definitionManager = server->GetDefinitionManager();
+    auto skillData = definitionManager->GetSkillData(activated->GetSkillID());
+
+    // Skills of this type add a "cooldown status effect". If the player character
+    // already has it, do not allow the skill's usage
+    auto statusEffects = cState->GetStatusEffects();
+    for(auto addStatus : skillData->GetDamage()->GetAddStatuses())
+    {
+        if(statusEffects.find(addStatus->GetStatusID()) != statusEffects.end())
+        {
+            return false;
+        }
+    }
+
+    auto demonData = definitionManager->GetDevilData(demon->GetType());
+    int32_t fType = demonData
+        ? demonData->GetFamiliarity()->GetFamiliarityType() : 0;
+
+    if(!demonData || fType > 16)
+    {
+        return false;
+    }
+
+    // Familiarity is adjusted based on the demon's familiarity type
+    // and if it shares the same alignment with the character
+    const uint16_t fTypeMap[17][2] =
+        {
+            { 50, 25 },     // Type 0
+            { 4000, 2000 }, // Type 1
+            { 2000, 1000 }, // Type 2
+            { 550, 225 },   // Type 3
+            { 250, 125 },   // Type 4
+            { 75, 40 },     // Type 5
+            { 2000, 1500 }, // Type 6
+            { 500, 375 },   // Type 7
+            { 250, 180 },   // Type 8
+            { 100, 75 },    // Type 9
+            { 50, 38 },     // Type 10
+            { 10, 10 },     // Type 11
+            { 2000, 200 },  // Type 12
+            { 650, 65 },    // Type 13
+            { 0, 0 },       // Type 14 (invalid)
+            { 0, 0 },       // Type 15 (invalid)
+            { 5000, 5000 } // Type 16
+        };
+
+    /// @todo: receive items from demon
+
+    bool sameLNC = cState->GetLNC() == dState->GetLNC(definitionManager);
+
+    int32_t fPoints = (int32_t)fTypeMap[(size_t)fType][sameLNC ? 0 : 1];
+    server->GetCharacterManager()->UpdateFamiliarity(client, fPoints, true);
+
+    // Apply the status effects
+    for(auto addStatus : skillData->GetDamage()->GetAddStatuses())
+    {
+        uint8_t stack = CalculateStatusEffectStack(addStatus->GetMinStack(),
+            addStatus->GetMaxStack());
+        if(stack == 0 && !addStatus->GetIsReplace()) continue;
+
+        AddStatusEffectMap m;
+        m[addStatus->GetStatusID()] =
+            std::pair<uint8_t, bool>(stack, addStatus->GetIsReplace());
+
+        cState->AddStatusEffects(m, definitionManager);
+    }
+
+    // Process the skill without status effects
+    return ProcessSkillResult(activated, false);
+}
+
+bool SkillManager::FamiliarityUpItem(const std::shared_ptr<ChannelClientConnection> client,
+    std::shared_ptr<objects::ActivatedAbility> activated)
+{
+    auto state = client->GetClientState();
+    auto dState = state->GetDemonState();
+    auto demon = dState->GetEntity();
+
+    if(!demon)
+    {
+        return false;
+    }
+
+    auto server = mServer.lock();
+    auto definitionManager = server->GetDefinitionManager();
+    auto skillData = definitionManager->GetSkillData(activated->GetSkillID());
+
+    auto demonData = definitionManager->GetDevilData(demon->GetType());
+    auto special = skillData->GetSpecial();
+
+    int32_t maxFamiliarity = special->GetSpecialParams(0);
+    float deltaPercent = (float)special->GetSpecialParams(1);
+    int32_t minIncrease = special->GetSpecialParams(2);
+    int32_t raceRestrict = special->GetSpecialParams(3);
+
+    if(raceRestrict && (int32_t)demonData->GetCategory()->GetRace() != raceRestrict)
+    {
+        return false;
+    }
+
+    uint16_t currentVal = demon->GetFamiliarity();
+    if(maxFamiliarity <= (int32_t)currentVal)
+    {
+        return true;
+    }
+
+    int32_t fPoints = 0;
+    if(maxFamiliarity && deltaPercent)
+    {
+        fPoints = (int32_t)ceill(
+            floorl((float)(maxFamiliarity - currentVal) * deltaPercent * 0.01f) - 1);
+    }
+
+    if(minIncrease && fPoints < minIncrease)
+    {
+        fPoints = minIncrease;
+    }
+
+    /// @todo: receive items from demon
+
+    server->GetCharacterManager()->UpdateFamiliarity(client, fPoints, true);
+
+    return ProcessSkillResult(activated);
+}
+
+bool SkillManager::Mooch(const std::shared_ptr<ChannelClientConnection> client,
+    std::shared_ptr<objects::ActivatedAbility> activated)
+{
+    (void)activated;
+
+    auto state = client->GetClientState();
+    auto cState = state->GetCharacterState();
+    auto dState = state->GetDemonState();
+    auto demon = dState->GetEntity();
+
+    if(!demon)
+    {
+        return false;
+    }
+
+    auto server = mServer.lock();
+    auto definitionManager = server->GetDefinitionManager();
+    auto skillData = definitionManager->GetSkillData(activated->GetSkillID());
+
+    // Skills of this type add a "cooldown status effect". If the player character
+    // already has it, do not allow the skill's usage
+    auto statusEffects = cState->GetStatusEffects();
+    for(auto addStatus : skillData->GetDamage()->GetAddStatuses())
+    {
+        if(statusEffects.find(addStatus->GetStatusID()) != statusEffects.end())
+        {
+            return false;
+        }
+    }
+
+    /// @todo: receive items from demon
+
+    mServer.lock()->GetCharacterManager()->UpdateFamiliarity(client, -2000, true);
+
+    // Apply the status effects
+    for(auto addStatus : skillData->GetDamage()->GetAddStatuses())
+    {
+        uint8_t stack = CalculateStatusEffectStack(addStatus->GetMinStack(),
+            addStatus->GetMaxStack());
+        if(stack == 0 && !addStatus->GetIsReplace()) continue;
+
+        AddStatusEffectMap m;
+        m[addStatus->GetStatusID()] =
+            std::pair<uint8_t, bool>(stack, addStatus->GetIsReplace());
+
+        cState->AddStatusEffects(m, definitionManager);
+    }
+
+    // Process the skill without status effects
+    return ProcessSkillResult(activated, false);
 }
 
 bool SkillManager::SummonDemon(const std::shared_ptr<ChannelClientConnection> client,
@@ -1905,6 +2189,8 @@ bool SkillManager::Traesto(const std::shared_ptr<ChannelClientConnection> client
             " Traesto: %1\n").Arg(character->GetName()));
         return false;
     }
+
+    ProcessSkillResult(activated);
 
     return mServer.lock()->GetZoneManager()->EnterZone(client, zoneID, xCoord, yCoord, 0, true);
 }

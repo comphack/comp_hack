@@ -51,6 +51,7 @@
 #include <MiCancelData.h>
 #include <MiDevilBattleData.h>
 #include <MiDevilData.h>
+#include <MiDevilFamiliarityData.h>
 #include <MiDevilLVUpData.h>
 #include <MiDevilLVUpRateData.h>
 #include <MiExpertData.h>
@@ -526,7 +527,7 @@ void CharacterManager::SendOtherPartnerData(const std::list<std::shared_ptr<
 
     reply.WriteS16Little(0);    //Unknown
     reply.WriteS16Little(0);    //Unknown
-    reply.WriteU16Little(0);    //Unknown
+    reply.WriteU16Little(d->GetFamiliarity());
     reply.WriteU8(0);   //Unknown
 
     ChannelClientConnection::BroadcastPacket(clients, reply);
@@ -822,13 +823,7 @@ void CharacterManager::SummonDemon(const std::shared_ptr<
     dState->SetEntity(demon);
 
     // If the character and demon share alignment, apply summon sync
-    auto charLNC = character->GetLNC();
-    auto demonLNC = def->GetBasic()->GetLNC();
-    uint8_t charLNCType = charLNC <= -5000
-        ? 0 : (charLNC >= 5000 ? 2 : 1);
-    uint8_t demonLNCType = demonLNC <= -5000
-        ? 0 : (demonLNC >= 5000 ? 2 : 1);
-    if(charLNCType == demonLNCType)
+    if(cState->GetLNC() == dState->GetLNC(definitionManager))
     {
         uint32_t syncStatusType = 0;
         if(demon->GetFamiliarity() == MAX_FAMILIARITY)
@@ -847,6 +842,13 @@ void CharacterManager::SummonDemon(const std::shared_ptr<
         AddStatusEffectMap m;
         m[syncStatusType] = std::pair<uint8_t, bool>(1, true);
         dState->AddStatusEffects(m, definitionManager);
+    }
+
+    // If the demon's current familiarity is lower than the top 2
+    // ranks, boost familiarity slightly
+    if(GetFamiliarityRank(demon->GetFamiliarity()) < 3)
+    {
+        UpdateFamiliarity(client, 2, true, false);
     }
 
     dState->RecalculateStats(definitionManager);
@@ -1632,19 +1634,39 @@ std::shared_ptr<objects::Demon> CharacterManager::GenerateDemon(
     auto ds = libcomp::PersistentObject::New<
         objects::EntityStats>(true);
     ds->SetLevel(static_cast<int8_t>(growth->GetBaseLevel()));
+    d->SetCoreStats(ds);
 
-    CalculateDemonBaseStats(ds, demonData);
+    CalculateDemonBaseStats(d);
     d->SetLearnedSkills(growth->GetSkills());
 
-    d->SetCoreStats(ds);
     ds->SetEntity(d->GetUUID());
 
     return d;
 }
 
+int8_t CharacterManager::GetFamiliarityRank(uint16_t familiarity) const
+{
+    if(familiarity <= 1000)
+    {
+        return (familiarity <= 500) ? -3 : -2;
+    }
+    else if(familiarity <= 2000)
+    {
+        return -1;
+    }
+    else if(familiarity == MAX_FAMILIARITY)
+    {
+        return 4;
+    }
+    else
+    {
+        return (int8_t)floor((float)(familiarity - 2001)/2000.f);
+    }
+}
+
 void CharacterManager::UpdateFamiliarity(const std::shared_ptr<
     channel::ChannelClientConnection>& client, int32_t familiarity,
-    bool isAdjust)
+    bool isAdjust, bool sendPacket)
 {
     auto state = client->GetClientState();
     auto dState = state->GetDemonState();
@@ -1674,14 +1696,31 @@ void CharacterManager::UpdateFamiliarity(const std::shared_ptr<
 
     if(current != (uint16_t)newFamiliarity)
     {
+        auto server = mServer.lock();
+
+        int8_t oldRank = GetFamiliarityRank(current);
+        int8_t newRank = GetFamiliarityRank((uint16_t)newFamiliarity);
+
         demon->SetFamiliarity((uint16_t)newFamiliarity);
 
-        libcomp::Packet p;
-        p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_DEMON_FAMILIARITY_UPDATE);
-        p.WriteS32Little(dState->GetEntityID());
-        p.WriteU16Little((uint16_t)familiarity);
+        // Rank adjustments will change base stats
+        if(oldRank != newRank)
+        {
+            CalculateDemonBaseStats(dState->GetEntity());
+            RecalculateStats(client, dState->GetEntityID());
+        }
 
-        client->SendPacket(p);
+        if(sendPacket)
+        {
+            libcomp::Packet p;
+            p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_DEMON_FAMILIARITY_UPDATE);
+            p.WriteS32Little(dState->GetEntityID());
+            p.WriteU16Little((uint16_t)newFamiliarity);
+
+            server->GetZoneManager()->BroadcastPacket(client, p);
+        }
+
+        server->GetWorldDatabase()->QueueUpdate(demon, state->GetAccountUID());
     }
 }
 
@@ -1705,10 +1744,12 @@ void CharacterManager::ExperienceGain(const std::shared_ptr<
 
     bool isDemon = false;
     std::shared_ptr<objects::MiDevilData> demonData;
+    int32_t fType = 0;
     if(eState == dState)
     {
         isDemon = true;
         demonData = definitionManager->GetDevilData(demon->GetType());
+        fType = demonData->GetFamiliarity()->GetFamiliarityType();
     }
 
     auto stats = eState->GetCoreStats();
@@ -1741,7 +1782,7 @@ void CharacterManager::ExperienceGain(const std::shared_ptr<
                 }
             }
 
-            CalculateDemonBaseStats(stats, demonData);
+            CalculateDemonBaseStats(dState->GetEntity());
             RecalculateStats(client, entityID, false);
             stats->SetHP(dState->GetMaxHP());
             stats->SetMP(dState->GetMaxMP());
@@ -1759,9 +1800,31 @@ void CharacterManager::ExperienceGain(const std::shared_ptr<
                 reply.WriteU32Little(aSkill);
             }
 
-            /// @todo: replace with the correct value after more analysis can
-            /// be done
-            UpdateFamiliarity(client, 500, true);
+            // Familiarity is adjusted based on the demon's familiarity type
+            // and level achieved
+            const uint8_t fTypeMultiplier[17] =
+                {
+                    10,     // Type 0
+                    15,     // Type 1
+                    40,     // Type 2
+                    40,     // Type 3
+                    50,     // Type 4
+                    150,    // Type 5
+                    50,     // Type 6
+                    40,     // Type 7
+                    50,     // Type 8
+                    120,    // Type 9
+                    200,    // Type 10
+                    100,    // Type 11
+                    40,     // Type 12
+                    50,     // Type 13
+                    0,      // Type 14 (invalid)
+                    0,      // Type 15 (invalid)
+                    100     // Type 16
+                };
+
+            int32_t familiarityGain = (int32_t)(level * fTypeMultiplier[fType]);
+            UpdateFamiliarity(client, familiarityGain, true);
         }
         else
         {
@@ -1795,7 +1858,6 @@ void CharacterManager::ExperienceGain(const std::shared_ptr<
     reply.WriteS32Little((int32_t)xpGain);
     reply.WriteS32Little(0);    //Unknown
 
-    /// @todo: send to all players in the zone?
     client->SendPacket(reply);
 
     server->GetWorldDatabase()->QueueUpdate(stats, state->GetAccountUID());
@@ -2512,12 +2574,19 @@ void CharacterManager::CalculateCharacterBaseStats(const std::shared_ptr<objects
     cs->SetMDEF(stats[CorrectTbl::MDEF]);
 }
 
-void CharacterManager::CalculateDemonBaseStats(const std::shared_ptr<
-    objects::EntityStats>& ds, const std::shared_ptr<
-    objects::MiDevilData>& demonData)
+void CharacterManager::CalculateDemonBaseStats(
+    const std::shared_ptr<objects::Demon>& demon,
+    std::shared_ptr<objects::EntityStats> ds,
+    std::shared_ptr<objects::MiDevilData> demonData)
 {
     auto server = mServer.lock();
     auto definitionManager = server->GetDefinitionManager();
+
+    if(demon)
+    {
+        ds = demon->GetCoreStats().Get();
+        demonData = definitionManager->GetDevilData(demon->GetType());
+    }
 
     auto basicData = demonData->GetBasic();
     auto battleData = demonData->GetBattleData();
@@ -2583,7 +2652,30 @@ void CharacterManager::CalculateDemonBaseStats(const std::shared_ptr<
             break;
     }
 
-    /// @todo: apply reunion and loyalty boosts
+    if(demon)
+    {
+        int8_t familiarityRank = GetFamiliarityRank(demon->GetFamiliarity());
+        if(familiarityRank < 0)
+        {
+            // Ranks below zero have boost data 0-2 subtracted
+            for(int8_t i = familiarityRank; i < 0; i++)
+            {
+                size_t famBoost = (size_t)(abs(i) - 1);
+                BoostStats(stats, baseLevelRate->GetLevelUpData(famBoost), -1);
+            }
+        }
+        else if(familiarityRank > 0)
+        {
+            // Ranks above zero have boost data 0-3 added
+            for(int8_t i = 0; i < familiarityRank; i++)
+            {
+                size_t famBoost = (size_t)i;
+                BoostStats(stats, baseLevelRate->GetLevelUpData(famBoost), 1);
+            }
+        }
+
+        /// @todo: apply reunion boosts
+    }
 
     CalculateDependentStats(stats, level, true);
 

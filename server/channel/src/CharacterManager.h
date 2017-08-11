@@ -371,16 +371,25 @@ public:
         const std::shared_ptr<objects::MiDevilData>& demonData);
 
     /**
+     * Get a demon's familiarity rank from their current familiarity points.
+     * @param familiarity Demon's familiarity points
+     * @return Converted familiarity rank from -3 to +4
+     */
+    int8_t GetFamiliarityRank(uint16_t familiarity) const;
+
+    /**
      * Update the current partner demon's familiarity.
      * @param client Pointer to the client connection
      * @param familiarity Set or adjusted familiarity points to
      *  update the demon with
      * @param isAdjust true if the familiarity value should be added
      *  to the current value, false if it should replace the curent value
+     * @param sendPacket true if the zone should be informed of the
+     *  updated demon familiarity
      */
     void UpdateFamiliarity(const std::shared_ptr<
         channel::ChannelClientConnection>& client, int32_t familiarity,
-        bool isAdjust = false);
+        bool isAdjust = false, bool sendPacket = true);
 
     /**
      * Update the client's character or demon's experience and level
@@ -535,11 +544,13 @@ public:
 
     /**
      * Calculate the base stats of a demon.
+     * @param demon Pointer to the demon being calculated
      * @param ds Pointer to the core stats of a demon
-     * @param demonData Pointer to the demon's definition 
+     * @param demonData Pointer to the demon's definition
      */
-    void CalculateDemonBaseStats(const std::shared_ptr<objects::EntityStats>& ds,
-        const std::shared_ptr<objects::MiDevilData>& demonData);
+    void CalculateDemonBaseStats(const std::shared_ptr<objects::Demon>& demon,
+        std::shared_ptr<objects::EntityStats> ds = nullptr,
+        std::shared_ptr<objects::MiDevilData> demonData = nullptr);
 
     /**
      * Retrieve a map of correct table indexes to corresponding stat values.

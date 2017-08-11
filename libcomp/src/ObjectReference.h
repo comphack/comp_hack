@@ -246,7 +246,16 @@ public:
      */
     ObjectReference& operator=(const ObjectReference& other)
     {
-        SetUUID(other.GetUUID());
+        auto uuid = other.GetUUID();
+        if(uuid != NULLUUID)
+        {
+            ClearReference();
+            SetUUID(uuid);
+        }
+        else
+        {
+            SetReference(other.GetReference());
+        }
         return *this;
     }
 

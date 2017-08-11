@@ -142,6 +142,14 @@ bool ServerConstants::Initialize(const String& filePath)
         sConstants.SKILL_CLAN_FORM);
     success &= LoadInteger(constants["SKILL_EQUIP_ITEM"],
         sConstants.SKILL_EQUIP_ITEM);
+    success &= LoadInteger(constants["SKILL_EQUIP_ITEM"],
+        sConstants.SKILL_EQUIP_ITEM);
+    success &= LoadInteger(constants["SKILL_FAM_UP"],
+        sConstants.SKILL_FAM_UP);
+    success &= LoadInteger(constants["SKILL_ITEM_FAM_UP"],
+        sConstants.SKILL_ITEM_FAM_UP);
+    success &= LoadInteger(constants["SKILL_MOOCH"],
+        sConstants.SKILL_MOOCH);
     success &= LoadInteger(constants["SKILL_STORE_DEMON"],
         sConstants.SKILL_STORE_DEMON);
     success &= LoadInteger(constants["SKILL_SUMMON_DEMON"],

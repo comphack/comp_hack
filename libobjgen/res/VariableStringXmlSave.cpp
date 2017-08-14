@@ -1,5 +1,7 @@
 {
-    tinyxml2::XMLText *pText = @DOC@.NewText(@GETTER@.C());
+    auto s = @GETTER@.Replace("\r", "&#10;");
+
+    tinyxml2::XMLText *pText = @DOC@.NewText(s.C());
     pText->SetCData(true);
 
     tinyxml2::XMLElement *pMember = @DOC@.NewElement(@ELEMENT_NAME@);

@@ -36,6 +36,8 @@
 #include <MiCItemBaseData.h>
 #include <MiCItemData.h>
 
+#include <MiCMessageData.h>
+
 #include <MiCZoneRelationData.h>
 
 #include <MiCQuestData.h>
@@ -347,6 +349,7 @@ int Usage(const char *szAppName)
     std::cerr << "TYPE indicates the format of the BinaryData and can "
         << "be one of:" << std::endl;
     std::cerr << "  citem         Format for CItemData.sbin" << std::endl;
+    std::cerr << "  cmessage      Format for CMessageData.sbin" << std::endl;
     std::cerr << "  cquest        Format for CQuestData.sbin" << std::endl;
     std::cerr << "  czonerelation Format for CZoneRelationData.sbin" << std::endl;
     std::cerr << "  devil         Format for DevilData.sbin" << std::endl;
@@ -396,6 +399,21 @@ int main(int argc, char *argv[])
             {
                 return std::dynamic_pointer_cast<objects::MiCItemData>(
                     obj)->GetBaseData()->GetID();
+            }
+        );
+    }
+    else if("cmessage" == bdType)
+    {
+        pSet = new BinaryDataSet(
+            []()
+            {
+                return std::make_shared<objects::MiCMessageData>();
+            },
+
+            [](const std::shared_ptr<libcomp::Object>& obj)
+            {
+                return std::dynamic_pointer_cast<objects::MiCMessageData>(
+                    obj)->GetID();
             }
         );
     }

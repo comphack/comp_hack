@@ -142,6 +142,14 @@ bool ServerConstants::Initialize(const String& filePath)
         sConstants.SKILL_CLAN_FORM);
     success &= LoadInteger(constants["SKILL_EQUIP_ITEM"],
         sConstants.SKILL_EQUIP_ITEM);
+    success &= LoadInteger(constants["SKILL_EQUIP_ITEM"],
+        sConstants.SKILL_EQUIP_ITEM);
+    success &= LoadInteger(constants["SKILL_FAM_UP"],
+        sConstants.SKILL_FAM_UP);
+    success &= LoadInteger(constants["SKILL_ITEM_FAM_UP"],
+        sConstants.SKILL_ITEM_FAM_UP);
+    success &= LoadInteger(constants["SKILL_MOOCH"],
+        sConstants.SKILL_MOOCH);
     success &= LoadInteger(constants["SKILL_STORE_DEMON"],
         sConstants.SKILL_STORE_DEMON);
     success &= LoadInteger(constants["SKILL_SUMMON_DEMON"],
@@ -156,6 +164,42 @@ bool ServerConstants::Initialize(const String& filePath)
         sConstants.STATUS_SUMMON_SYNC_2);
     success &= LoadInteger(constants["STATUS_SUMMON_SYNC_3"],
         sConstants.STATUS_SUMMON_SYNC_3);
+
+    if(success && complexConstants.find("DEFAULT_SKILLS") != complexConstants.end())
+    {
+        const tinyxml2::XMLElement* pElement = complexConstants["DEFAULT_SKILLS"];
+        if(std::string(pElement->Value()) != "element")
+        {
+            success = false;
+        }
+        else
+        {
+            while(pElement)
+            {
+                libcomp::String elemStr(pElement && pElement->FirstChild()->ToText()
+                    ? pElement->FirstChild()->ToText()->Value() : "");
+                if(!elemStr.IsEmpty())
+                {
+                    uint32_t entry = 0;
+                    if(LoadInteger(elemStr.C(), entry))
+                    {
+                        sConstants.DEFAULT_SKILLS.insert(entry);
+                    }
+                    else
+                    {
+                        success = false;
+                        break;
+                    }
+                }
+
+                pElement = pElement->NextSiblingElement("element");
+            }
+        }
+    }
+    else
+    {
+        success = false;
+    }
 
     if(success && complexConstants.find("CLAN_FORM_MAP") != complexConstants.end())
     {
@@ -199,7 +243,11 @@ bool ServerConstants::Initialize(const String& filePath)
             }
         }
     }
-    
+    else
+    {
+        success = false;
+    }
+
     if(success && complexConstants.find("CLAN_LEVEL_SKILLS") != complexConstants.end())
     {
         const tinyxml2::XMLElement* pElement = complexConstants["CLAN_LEVEL_SKILLS"];
@@ -248,6 +296,10 @@ bool ServerConstants::Initialize(const String& filePath)
                 success = false;
             }
         }
+    }
+    else
+    {
+        success = false;
     }
 
     return success;

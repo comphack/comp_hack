@@ -28,6 +28,7 @@
 // libcomp Includes
 #include <DataStore.h>
 #include <DefinitionManager.h>
+#include <ServerBazaar.h>
 #include <ServerNPC.h>
 #include <ServerObject.h>
 #include <ServerZone.h>
@@ -77,6 +78,9 @@ private:
         float originX, float originY, float originRotation);
     std::shared_ptr<objects::ServerObject> GetONPC(
         std::shared_ptr<Zone> zone, uint32_t objectId,
+        float originX, float originY, float originRotation);
+    std::shared_ptr<objects::ServerBazaar> GetBazaar(
+        std::shared_ptr<Zone> zone,
         float originX, float originY, float originRotation);
 
     bool CheckUnknownEntity(const libcomp::String& capturePath,
@@ -130,6 +134,18 @@ private:
     bool MergeEventSpecialDirections(std::shared_ptr<MappedEvent> e1,
         std::shared_ptr<MappedEvent> e2, bool checkOnly, bool flat,
         std::set<std::shared_ptr<MappedEvent>> seen);
+    bool MergeEventSoundEffects(std::shared_ptr<MappedEvent> e1,
+        std::shared_ptr<MappedEvent> e2, bool checkOnly, bool flat,
+        std::set<std::shared_ptr<MappedEvent>> seen);
+    bool MergeEventPlayBGMs(std::shared_ptr<MappedEvent> e1,
+        std::shared_ptr<MappedEvent> e2, bool checkOnly, bool flat,
+        std::set<std::shared_ptr<MappedEvent>> seen);
+    bool MergeEventStopBGMs(std::shared_ptr<MappedEvent> e1,
+        std::shared_ptr<MappedEvent> e2, bool checkOnly, bool flat,
+        std::set<std::shared_ptr<MappedEvent>> seen);
+    bool MergeEventPerformActions(std::shared_ptr<MappedEvent> e1,
+        std::shared_ptr<MappedEvent> e2, bool checkOnly, bool flat,
+        std::set<std::shared_ptr<MappedEvent>> seen);
 
     bool MergeNextGeneric(std::shared_ptr<MappedEvent> e1,
         std::shared_ptr<MappedEvent> e2, bool checkOnly, bool flat,
@@ -141,6 +157,10 @@ private:
 
     int32_t mCurrentPlayerEntityID;
     uint64_t mCurrentZoneID;
+    int16_t mCurrentLNC;
+    libcomp::String mCurrentMaps;
+    libcomp::String mCurrentPlugins;
+    libcomp::String mCurrentValuables;
     std::unordered_map<uint64_t, std::shared_ptr<Zone>> mZones;
 };
 

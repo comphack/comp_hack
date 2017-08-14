@@ -118,7 +118,7 @@ private:
         std::shared_ptr<objects::ActivatedAbility> activated);
 
     /**
-     * Execute a normal ability, not handled by a special handler.
+     * Execute a normal skill, not handled by a special handler.
      * @param client Pointer to the client connection that activated the skill
      * @param activated Pointer to the activated ability instance
      */
@@ -130,9 +130,20 @@ private:
      * this will be scheduled to execute after skill execution, otherwise it will
      * execute immediately.
      * @param activated Pointer to the activated ability instance
+     * @param applyStatusEffects false if the status effects are handled
+     *  in a special way outside of normal method
      * @return true if the skill processed successfully, false otherwise
      */
-    bool ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility> activated);
+    bool ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility> activated,
+        bool applyStatusEffects = true);
+
+    /**
+     * Toggle a switch skill, not handled by a special handler.
+     * @param client Pointer to the client connection that activated the skill
+     * @param activated Pointer to the activated ability instance
+     */
+    bool ToggleSwitchSkill(const std::shared_ptr<ChannelClientConnection> client,
+        std::shared_ptr<objects::ActivatedAbility> activated);
 
     /**
      * Calculate skill damage or healing using the correct formula
@@ -199,6 +210,15 @@ private:
     bool SetNRA(SkillTargetResult& target, ProcessingSkill& skill);
 
     /**
+     * Get a random stack size for a status effect being applied
+     * @param minStack Minimum size of the stack
+     * @param maxStack Maximum size of the stack
+     * @return Random stack size between the range or 0 if the range
+     *  is invalid
+     */
+    uint8_t CalculateStatusEffectStack(int8_t minStack, int8_t maxStack) const;
+
+    /**
      * Execute post execution steps like notifying the client that the skill
      * has executed and updating any related expertises.
      * @param client Pointer to the client connection that activated the skill
@@ -210,7 +230,7 @@ private:
         std::shared_ptr<objects::MiSkillData> skillData);
 
     /**
-     * Placeholder function for an ability actually handled outside of the
+     * Placeholder function for a skill actually handled outside of the
      * SkillManager.
      * @param client Pointer to the client connection that activated the skill
      * @param activated Pointer to the activated ability instance
@@ -219,7 +239,7 @@ private:
         std::shared_ptr<objects::ActivatedAbility> activated);
 
     /**
-     * Execute the "equip item" ability.
+     * Execute the "equip item" skill.
      * @param client Pointer to the client connection that activated the skill
      * @param activated Pointer to the activated ability instance
      */
@@ -227,7 +247,33 @@ private:
         std::shared_ptr<objects::ActivatedAbility> activated);
 
     /**
-     * Execute the "summon demon" ability.
+     * Execute a familiarity boosting skill.
+     * @param client Pointer to the client connection that activated the skill
+     * @param activated Pointer to the activated ability instance
+     */
+    bool FamiliarityUp(const std::shared_ptr<ChannelClientConnection> client,
+        std::shared_ptr<objects::ActivatedAbility> activated);
+
+    /**
+     * Execute a familiarity boosting skill from an item. These work slightly
+     * different from the standard skill ones as they can adjust a delta percent
+     * instead of a fixed value.
+     * @param client Pointer to the client connection that activated the skill
+     * @param activated Pointer to the activated ability instance
+     */
+    bool FamiliarityUpItem(const std::shared_ptr<ChannelClientConnection> client,
+        std::shared_ptr<objects::ActivatedAbility> activated);
+
+    /**
+     * Execute the "Mooch" skill.
+     * @param client Pointer to the client connection that activated the skill
+     * @param activated Pointer to the activated ability instance
+     */
+    bool Mooch(const std::shared_ptr<ChannelClientConnection> client,
+        std::shared_ptr<objects::ActivatedAbility> activated);
+
+    /**
+     * Execute the "summon demon" skill.
      * @param client Pointer to the client connection that activated the skill
      * @param activated Pointer to the activated ability instance
      */
@@ -235,7 +281,7 @@ private:
         std::shared_ptr<objects::ActivatedAbility> activated);
 
     /**
-     * Execute the "store demon" ability.
+     * Execute the "store demon" skill.
      * @param client Pointer to the client connection that activated the skill
      * @param activated Pointer to the activated ability instance
      */
@@ -243,7 +289,7 @@ private:
         std::shared_ptr<objects::ActivatedAbility> activated);
 
     /**
-     * Execute the ability "Traesto" which returns the user to their homepoint.
+     * Execute the skill "Traesto" which returns the user to their homepoint.
      * @param client Pointer to the client connection that activated the skill
      * @param activated Pointer to the activated ability instance
      */

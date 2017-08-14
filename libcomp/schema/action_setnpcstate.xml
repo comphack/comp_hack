@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="ActionSetNPCState" baseobject="Action" persistent="false">
+        <member type="enum" name="actionType" inherited="true" default="SET_NPC_STATE"/>
+        <member type="u8" name="state"/>
+    </object>
+</objgen>

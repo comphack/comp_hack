@@ -67,6 +67,7 @@ public:
         TYPE_STRING,
         TYPE_ARRAY,
         TYPE_LIST,
+        TYPE_SET,
         TYPE_MAP,
         TYPE_REF,
     };

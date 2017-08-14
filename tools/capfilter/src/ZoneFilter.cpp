@@ -31,7 +31,11 @@
 #include <math.h>
 
 // object Includes
+#include <ActionSetNPCState.h>
 #include <ActionStartEvent.h>
+#include <ActionUpdateFlag.h>
+#include <ActionUpdateLNC.h>
+#include <ActionUpdateQuest.h>
 #include <ActionZoneChange.h>
 #include <EventChoice.h>
 #include <EventDirection.h>
@@ -42,10 +46,14 @@
 #include <EventMultitalk.h>
 #include <EventNPCMessage.h>
 #include <EventOpenMenu.h>
+#include <EventPerformActions.h>
+#include <EventPlayBGM.h>
 #include <EventPlayScene.h>
+#include <EventPlaySoundEffect.h>
 #include <EventPrompt.h>
 #include <EventSpecialDirection.h>
 #include <EventStageEffect.h>
+#include <EventStopBGM.h>
 #include <MiCZoneRelationData.h>
 #include <MiRelationZoneIDData.h>
 #include <MiHNPCData.h>
@@ -53,9 +61,6 @@
 #include <MiONPCData.h>
 #include <MiZoneData.h>
 #include <MiZoneBasicData.h>
-#include <ServerNPC.h>
-#include <ServerObject.h>
-#include <ServerZone.h>
 #include <ServerZoneSpot.h>
 
 class MappedEvent
@@ -105,8 +110,10 @@ public:
     std::list<std::shared_ptr<MappedEvent>> events;
 
     int32_t eventResponse = -1;
+    int32_t lastEventResponse = -1;
     bool eventsInvalid = false;
     int32_t packetNumber = 0;
+    int32_t lastEventPacketNumber = 0;
 
     // Keep track of the last and second last triggers as zone changes seem
     // to be queued and will fire after the event end sometimes
@@ -115,6 +122,9 @@ public:
 
     std::shared_ptr<MappedEvent> firstSequence;
     std::shared_ptr<MappedEvent> currentSequence;
+    std::shared_ptr<MappedEvent> lastSequence;
+
+    std::set<std::string> otherEvents;
 };
 
 ZoneFilter::ZoneFilter(const char *szProgram,
@@ -176,6 +186,15 @@ bool ZoneFilter::ProcessCommand(const libcomp::String& capturePath,
         instance->packetNumber++;
     }
 
+    bool newFile = !instance || instance->filePath != capturePath;
+    if(newFile)
+    {
+        mCurrentLNC = 0;
+        mCurrentMaps.Clear();
+        mCurrentPlugins.Clear();
+        mCurrentValuables.Clear();
+    }
+
     switch(commandCode)
     {
     case to_underlying(ChannelToClientPacketCode_t::PACKET_ZONE_CHANGE):
@@ -202,7 +221,6 @@ bool ZoneFilter::ProcessCommand(const libcomp::String& capturePath,
                 RegisterZone(zoneId, zoneDynamicMapID);
             }
 
-            bool newFile = instance && instance->filePath != capturePath;
             if(mCurrentZoneID != 0 && zoneId != mCurrentZoneID && !newFile)
             {
                 BindZoneChangeEvent(zoneId, xPos, yPos, rot);
@@ -225,6 +243,8 @@ bool ZoneFilter::ProcessCommand(const libcomp::String& capturePath,
                 mCurrentZoneID = zoneId;
 
                 EndEvent();
+                instance->lastSequence = nullptr;
+                instance->lastEventResponse = -1;
             }
         }
         break;
@@ -238,6 +258,11 @@ bool ZoneFilter::ProcessCommand(const libcomp::String& capturePath,
             }
 
             mCurrentPlayerEntityID = packet.ReadS32Little();
+            auto name = packet.ReadString16Little(libcomp::Convert::ENCODING_CP932,
+                true);
+            packet.Skip(95);
+            mCurrentLNC = packet.ReadS16Little();
+
             instance->entities[mCurrentPlayerEntityID] = nullptr;
         }
         break;
@@ -343,7 +368,21 @@ bool ZoneFilter::ProcessCommand(const libcomp::String& capturePath,
             int32_t entityId = packet.ReadS32Little();
             uint32_t zoneInstance = packet.ReadU32Little();
             uint32_t zoneId = packet.ReadU32Little();
+            float originX = packet.ReadFloat();
+            float originY = packet.ReadFloat();
+            float originRotation = packet.ReadFloat();
+            int32_t slotCount = packet.ReadS32Little();
             (void)zoneInstance;
+
+            std::set<uint32_t> slotIDs;
+            for(int32_t i = 0; i < slotCount; i++)
+            {
+                slotIDs.insert(packet.ReadU32Little());
+                packet.Skip(8);
+
+                uint16_t strSize = packet.ReadU16Little();
+                packet.Skip((uint32_t)strSize);
+            }
 
             auto it = mZones.find(zoneId);
 
@@ -354,15 +393,39 @@ bool ZoneFilter::ProcessCommand(const libcomp::String& capturePath,
                 return false;
             }
 
-            // Nothing to do with bazaars right now
-            instance->entities[entityId] = nullptr;
+            auto zone = it->second;
+
+            auto b = GetBazaar(zone, originX, originY, originRotation);
+            if(!b)
+            {
+                b = std::make_shared<objects::ServerBazaar>();
+                b->SetX(originX);
+                b->SetY(originY);
+                b->SetRotation(originRotation);
+
+                zone->AppendBazaars(b);
+            }
+
+            if(slotIDs.size() > 0)
+            {
+                for(uint32_t slotID : slotIDs)
+                {
+                    b->InsertSlotIDs(slotID);
+                }
+
+                // Bazaars don't really have IDs but their slots do so assign
+                // the lowest one
+                b->SetID(*slotIDs.begin());
+            }
+
+            instance->entities[entityId] = b;
         }
         break;
     case to_underlying(ChannelToClientPacketCode_t::PACKET_SKILL_COMPLETED):
         {
             if(4 > packet.Left())
             {
-                std::cerr << "Bad skill copmleted packet found." << std::endl;
+                std::cerr << "Bad skill completed packet found." << std::endl;
 
                 return false;
             }
@@ -372,9 +435,7 @@ bool ZoneFilter::ProcessCommand(const libcomp::String& capturePath,
 
             int32_t entityId = packet.ReadS32Little();
 
-            if(entityId == mCurrentPlayerEntityID &&
-                (instance->lastTrigger != nullptr ||
-                    instance->secondLastTrigger != nullptr))
+            if(entityId == mCurrentPlayerEntityID)
             {
                 auto t = std::dynamic_pointer_cast<SequenceTriggerPacket>(
                     instance->lastTrigger != nullptr
@@ -383,6 +444,7 @@ bool ZoneFilter::ProcessCommand(const libcomp::String& capturePath,
                 {
                     t->valid = false;
                 }
+                instance->lastEventPacketNumber = 0;
             }
         }
         break;
@@ -399,6 +461,42 @@ bool ZoneFilter::ProcessCommand(const libcomp::String& capturePath,
             // Do not count as part of the instance packet as they occur during
             // the clean up process
             instance->packetNumber--;
+        }
+        break;
+    case to_underlying(ChannelToClientPacketCode_t::PACKET_NPC_STATE_CHANGE):
+        {
+            int32_t npcEntityID = packet.ReadS32Little();
+            uint8_t state = packet.ReadU8();
+
+            auto trigger = instance->lastTrigger != 0
+                ? instance->lastTrigger : instance->secondLastTrigger;
+            if(!trigger || !trigger->valid)
+            {
+                return true;
+            }
+
+            trigger->packet.Rewind();
+
+            if(trigger->commandCode == to_underlying(
+                ClientToChannelPacketCode_t::PACKET_OBJECT_INTERACTION))
+            {
+                auto entityID = trigger->packet.ReadS32Little();
+                auto entity = instance->entities[entityID];
+
+                // Don't add multiple actions automatically
+                if(entity->ActionsCount() == 0 && npcEntityID == entityID)
+                {
+                    auto action = std::make_shared<
+                        objects::ActionSetNPCState>();
+                    action->SetState(state);
+                    entity->AppendActions(action);
+                }
+                else
+                {
+                    //std::cerr << "Unable to map NPC state change." << std::endl;
+                    return true;
+                }
+            }
         }
         break;
     default:
@@ -850,6 +948,81 @@ bool ZoneFilter::ProcessEventCommands(const libcomp::String& capturePath,
             resetResponse = false;
         }
         break;
+    case to_underlying(ChannelToClientPacketCode_t::PACKET_EVENT_PLAY_SOUND_EFFECT):
+        {
+            if(8 != packet.Left())
+            {
+                std::cerr << "Bad event play sound effect packet found." << std::endl;
+
+                return false;
+            }
+
+            instance->lastTrigger = instance->secondLastTrigger = nullptr;
+
+            auto soundID = packet.ReadS32Little();
+            auto unknown = packet.ReadS32Little();
+
+            auto se = std::make_shared<objects::EventPlaySoundEffect>();
+            instance->currentSequence = std::make_shared<MappedEvent>(se, nullptr);
+
+            se->SetSoundID(soundID);
+            se->SetUnknown(unknown);
+
+            // Sound effect events don't wait for a response
+            instance->eventResponse = 0;
+            resetResponse = false;
+        }
+        break;
+    case to_underlying(ChannelToClientPacketCode_t::PACKET_EVENT_PLAY_BGM):
+        {
+            if(12 != packet.Left())
+            {
+                std::cerr << "Bad event play BGM packet found." << std::endl;
+
+                return false;
+            }
+
+            instance->lastTrigger = instance->secondLastTrigger = nullptr;
+
+            auto musicID = packet.ReadS32Little();
+            auto fadeIn = packet.ReadS32Little();
+            auto unknown = packet.ReadS32Little();
+
+            auto dir = std::make_shared<objects::EventPlayBGM>();
+            instance->currentSequence = std::make_shared<MappedEvent>(dir, nullptr);
+
+            dir->SetMusicID(musicID);
+            dir->SetFadeInDelay(fadeIn);
+            dir->SetUnknown(unknown);
+
+            // Play BGM events don't wait for a response
+            instance->eventResponse = 0;
+            resetResponse = false;
+        }
+        break;
+    case to_underlying(ChannelToClientPacketCode_t::PACKET_EVENT_STOP_BGM):
+        {
+            if(4 != packet.Left())
+            {
+                std::cerr << "Bad event stop BGM packet found." << std::endl;
+
+                return false;
+            }
+
+            instance->lastTrigger = instance->secondLastTrigger = nullptr;
+
+            auto musicID = packet.ReadS32Little();
+
+            auto dir = std::make_shared<objects::EventStopBGM>();
+            instance->currentSequence = std::make_shared<MappedEvent>(dir, nullptr);
+
+            dir->SetMusicID(musicID);
+
+            // Play BGM events don't wait for a response
+            instance->eventResponse = 0;
+            resetResponse = false;
+        }
+        break;
     case to_underlying(ClientToChannelPacketCode_t::PACKET_EVENT_RESPONSE):
         {
             if(4 != packet.Left())
@@ -869,10 +1042,260 @@ bool ZoneFilter::ProcessEventCommands(const libcomp::String& capturePath,
             endEvent = true;
         }
         break;
+    // The following packets are not actually events but are appended to a
+    // PerformActions event
+    case to_underlying(ChannelToClientPacketCode_t::PACKET_MAP_FLAG):
+    case to_underlying(ChannelToClientPacketCode_t::PACKET_UNION_FLAG):
+    case to_underlying(ChannelToClientPacketCode_t::PACKET_VALUABLE_LIST):
+        {
+            objects::ActionUpdateFlag::FlagType_t flagType;
+            libcomp::String* currentFlags = nullptr;
+            switch(commandCode)
+            {
+            case to_underlying(ChannelToClientPacketCode_t::PACKET_MAP_FLAG):
+                packet.Skip(2);
+                currentFlags = &mCurrentMaps;
+                flagType = objects::ActionUpdateFlag::FlagType_t::MAP;
+                break;
+            case to_underlying(ChannelToClientPacketCode_t::PACKET_UNION_FLAG):
+                packet.Skip(6);
+                currentFlags = &mCurrentPlugins;
+                flagType = objects::ActionUpdateFlag::FlagType_t::PLUGIN;
+                break;
+            case to_underlying(ChannelToClientPacketCode_t::PACKET_VALUABLE_LIST):
+                packet.Skip(2);
+                currentFlags = &mCurrentValuables;
+                flagType = objects::ActionUpdateFlag::FlagType_t::VALUABLE;
+                break;
+            default:
+                return false;
+            }
+
+            bool newEvent = false;
+            auto arr = packet.ReadArray(packet.Left());
+            libcomp::String flags(&arr[0], arr.size());
+            if(currentFlags->IsEmpty())
+            {
+                *currentFlags = flags;
+            }
+            else if(flags != *currentFlags)
+            {
+                if(flags.Size() != currentFlags->Size())
+                {
+                    std::cerr << "Bad flag update packet found." << std::endl;
+
+                    return false;
+                }
+
+                auto d1 = currentFlags->Data();
+                auto d2 = flags.Data();
+
+                // Get the last event sequence started which may be the current one
+                if(instance->lastSequence)
+                {
+                    auto seq = instance->lastSequence;
+
+                    std::shared_ptr<objects::EventPerformActions> paEvent;
+                    if(seq->event->GetEventType() ==
+                        objects::Event::EventType_t::PERFORM_ACTIONS)
+                    {
+                        paEvent = std::dynamic_pointer_cast<
+                            objects::EventPerformActions>(seq->event);
+                    }
+
+                    size_t flagSize = d1.size();
+                    for(size_t i = 0; i < flagSize; i++)
+                    {
+                        if(d1[i] != d2[i])
+                        {
+                            uint16_t offset = (uint16_t)(i * 8);
+                            for(uint8_t k = 0; k < 8; k++)
+                            {
+                                uint8_t mask = (uint8_t)(1 << k);
+
+                                std::shared_ptr<objects::ActionUpdateFlag> action;
+                                if(!(d1[i] & mask) && (d2[i] & mask))
+                                {
+                                    // Add
+                                    action = std::make_shared<
+                                        objects::ActionUpdateFlag>();
+                                    action->SetRemove(false);
+                                }
+                                else if((d1[i] & mask) && !(d2[i] & mask))
+                                {
+                                    // Remove
+                                    if(flagType == objects::ActionUpdateFlag::FlagType_t::MAP)
+                                    {
+                                        std::cerr << "Map remove encountered." << std::endl;
+
+                                        return false;
+                                    }
+
+                                    action = std::make_shared<
+                                        objects::ActionUpdateFlag>();
+                                    action->SetRemove(true);
+                                }
+
+                                if(action)
+                                {
+                                    action->SetFlagType(flagType);
+                                    action->SetID((uint16_t)(offset + k));
+
+                                    if(!paEvent)
+                                    {
+                                        newEvent = true;
+                                        if(!sequence)
+                                        {
+                                            sequence = instance->lastSequence;
+                                        }
+
+                                        paEvent = std::make_shared<objects::EventPerformActions>();
+                                        instance->currentSequence = std::make_shared<
+                                            MappedEvent>(paEvent, nullptr);
+
+                                        if(instance->eventResponse == -1)
+                                        {
+                                            instance->eventResponse = instance->lastEventResponse != -1
+                                                ? instance->lastEventResponse : 0;
+                                        }
+                                    }
+
+                                    paEvent->AppendActions(action);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                *currentFlags = flags;
+            }
+
+            if(!newEvent)
+            {
+                return true;
+            }
+
+            resetResponse = false;
+        }
+        break;
+    case to_underlying(ChannelToClientPacketCode_t::PACKET_LNC_POINTS):
+        {
+            // Skip the count then read the flags into a string
+            int32_t entityID = packet.ReadS32Little();
+            if(entityID != mCurrentPlayerEntityID)
+            {
+                return true;
+            }
+
+            bool newEvent = false;
+            int16_t lnc = packet.ReadS16Little();
+            if(lnc != mCurrentLNC)
+            {
+                // Get the last event sequence started which may be the current one
+                if(instance->lastSequence)
+                {
+                    auto seq = instance->lastSequence;
+
+                    std::shared_ptr<objects::EventPerformActions> paEvent;
+                    if(seq->event->GetEventType() ==
+                        objects::Event::EventType_t::PERFORM_ACTIONS)
+                    {
+                        paEvent = std::dynamic_pointer_cast<
+                            objects::EventPerformActions>(seq->event);
+                    }
+                    else
+                    {
+                        newEvent = true;
+                        if(!sequence)
+                        {
+                            sequence = instance->lastSequence;
+                        }
+
+                        paEvent = std::make_shared<objects::EventPerformActions>();
+                        instance->currentSequence = std::make_shared<
+                            MappedEvent>(paEvent, nullptr);
+
+                        if(instance->eventResponse == -1)
+                        {
+                            instance->eventResponse = instance->lastEventResponse != -1
+                                ? instance->lastEventResponse : 0;
+                        }
+                    }
+
+                    auto action = std::make_shared<
+                        objects::ActionUpdateLNC>();
+                    action->SetValue((int16_t)(lnc - mCurrentLNC));
+
+                    paEvent->AppendActions(action);
+                }
+
+                mCurrentLNC = lnc;
+            }
+
+            if(!newEvent)
+            {
+                return true;
+            }
+
+            resetResponse = false;
+        }
+        break;
+    case to_underlying(ChannelToClientPacketCode_t::PACKET_QUEST_PHASE_UPDATE):
+        {
+            int16_t questID = packet.ReadS16Little();
+            int8_t phase = packet.ReadS8();
+
+            // Get the last event sequence started which may be the current one
+            if(instance->lastSequence)
+            {
+                auto seq = instance->lastSequence;
+
+                std::shared_ptr<objects::EventPerformActions> paEvent;
+                if(seq->event->GetEventType() ==
+                    objects::Event::EventType_t::PERFORM_ACTIONS)
+                {
+                    paEvent = std::dynamic_pointer_cast<
+                        objects::EventPerformActions>(seq->event);
+                }
+                else
+                {
+                    if(!sequence)
+                    {
+                        sequence = instance->lastSequence;
+                    }
+
+                    paEvent = std::make_shared<objects::EventPerformActions>();
+                    instance->currentSequence = std::make_shared<
+                        MappedEvent>(paEvent, nullptr);
+
+                    if(instance->eventResponse == -1)
+                    {
+                        instance->eventResponse = instance->lastEventResponse != -1
+                            ? instance->lastEventResponse : 0;
+                    }
+                }
+
+                auto action = std::make_shared<
+                    objects::ActionUpdateQuest>();
+                action->SetQuestID(questID);
+                action->SetPhase(phase);
+
+                paEvent->AppendActions(action);
+            }
+            else
+            {
+                return true;
+            }
+
+            resetResponse = false;
+        }
+        break;
     default:
         return true;
         break;
     }
+
+    instance->lastEventPacketNumber = instance->packetNumber;
 
     // Wire up the events in sequence
     if(sequence && instance->currentSequence != sequence)
@@ -880,9 +1303,11 @@ bool ZoneFilter::ProcessEventCommands(const libcomp::String& capturePath,
         if(instance->eventResponse == -1)
         {
             std::cerr << "Event fired with no response from"
-                " the previous event!" << std::endl;
+                " the previous event! Events will not be used"
+                " for this file." << std::endl;
             std::cerr << "Path: " << capturePath << std::endl;
-            return false;
+            instance->eventsInvalid = true;
+            return true;
         }
 
         if(sequence->next.find(instance->eventResponse) != sequence->next.end())
@@ -906,6 +1331,12 @@ bool ZoneFilter::ProcessEventCommands(const libcomp::String& capturePath,
             sequence->next[instance->eventResponse] = instance->currentSequence;
             instance->currentSequence->previous = sequence;
         }
+    }
+
+    instance->lastSequence = instance->currentSequence;
+    if(instance->eventResponse != -1)
+    {
+        instance->lastEventResponse = instance->eventResponse;
     }
 
     if(endEvent)
@@ -953,7 +1384,7 @@ bool ZoneFilter::ProcessEventCommands(const libcomp::String& capturePath,
 
                     previous->next[path] = back2;
                     back2->mergeCount += (instance->currentSequence->mergeCount + 1);
-                    instance->currentSequence = back2;
+                    instance->lastSequence = instance->currentSequence = back2;
                     back2 = nullptr;
                 }
                 else
@@ -1258,6 +1689,18 @@ bool ZoneFilter::PostProcess()
                 case objects::Event::EventType_t::SPECIAL_DIRECTION:
                     eventID = "Z%1_SD%2";
                     break;
+                case objects::Event::EventType_t::PLAY_SOUND_EFFECT:
+                    eventID = "Z%1_SE%2";
+                    break;
+                case objects::Event::EventType_t::PLAY_BGM:
+                    eventID = "Z%1_PM%2";
+                    break;
+                case objects::Event::EventType_t::STOP_BGM:
+                    eventID = "Z%1_SM%2";
+                    break;
+                case objects::Event::EventType_t::PERFORM_ACTIONS:
+                    eventID = "Z%1_PA%2";
+                    break;
                 default:
                     break;
             }
@@ -1361,8 +1804,19 @@ bool ZoneFilter::PostProcess()
             }
             else
             {
+                auto mapped = mappedEvent->source
+                    ? std::dynamic_pointer_cast<objects::ActionStartEvent>(
+                        mappedEvent->source->GetActions().front()) : nullptr;
+                auto mappedID = mapped ? mapped->GetEventID() : "UNKNOWN";
                 for(auto e : eventSet)
                 {
+                    // Set the condition ID of the start of the sequence
+                    // to the one being used
+                    if(e == mappedEvent->event)
+                    {
+                        e->SetConditionID(mappedID);
+                    }
+
                     unmappedEvents.push_back(e);
                 }
             }
@@ -1404,6 +1858,14 @@ bool ZoneFilter::PostProcess()
                 return a->GetID() < b->GetID();
             });
         zone->SetObjects(objects);
+
+        auto bazaars = zone->GetBazaars();
+        bazaars.sort([](const std::shared_ptr<objects::ServerBazaar>& a,
+            const std::shared_ptr<objects::ServerBazaar>& b)
+            {
+                return a->GetID() < b->GetID();
+            });
+        zone->SetBazaars(bazaars);
 
         // Save to XML
         {
@@ -1624,6 +2086,27 @@ std::shared_ptr<objects::ServerObject> ZoneFilter::GetONPC(
     return nullptr;
 }
 
+std::shared_ptr<objects::ServerBazaar> ZoneFilter::GetBazaar(
+    std::shared_ptr<Zone> zone,
+    float originX, float originY, float originRotation)
+{
+    // Adjust for slight differences
+    auto x = floor(originX);
+    auto y = floor(originY);
+    auto rot = floor(originRotation);
+
+    for(auto obj : zone->GetBazaars())
+    {
+        if(floor(obj->GetX()) == x &&
+            floor(obj->GetY()) == y && floor(obj->GetRotation()) == rot)
+        {
+            return obj;
+        }
+    }
+
+    return nullptr;
+}
+
 bool ZoneFilter::CheckUnknownEntity(const libcomp::String& capturePath, 
     const std::shared_ptr<ZoneInstance>& instance,
     int32_t entityID, const libcomp::String& packetType)
@@ -1695,8 +2178,6 @@ void ZoneFilter::RegisterZone(uint32_t zoneID, uint32_t dynamicMapID)
                         {
                             auto action = std::make_shared<
                                 objects::ActionZoneChange>();
-                            action->SetActionType(
-                                objects::Action::ActionType_t::ZONE_CHANGE);
                             action->SetZoneID(connectedZone->GetZoneID());
                             action->SetDestinationX(
                                 backConnection->GetSourceX());
@@ -1726,8 +2207,40 @@ void ZoneFilter::BindZoneChangeEvent(uint32_t zoneID, float x, float y,
     auto instance = mCurrentZoneID != 0
         ? mZones[mCurrentZoneID]->instances.back() : nullptr;
 
-    if(!instance || (!instance->lastTrigger && !instance->secondLastTrigger))
+    if(!instance)
     {
+        return;
+    }
+
+    if(!instance->lastTrigger && !instance->secondLastTrigger)
+    {
+        // If the last thing to happen wasn't a trigger, check the last event
+        // sequence that occurred
+        auto response = instance->lastEventResponse;
+        if(instance->lastSequence && response != -1 &&
+            instance->lastSequence->next.find(response) ==
+                instance->lastSequence->next.end())
+        {
+            // Sanity check that the last event occurred close to the zone change event
+            if((instance->lastEventPacketNumber + 10) < instance->packetNumber)
+            {
+                return;
+            }
+
+            // Do not use the zone connection, generate it new
+            auto action = std::make_shared<
+                objects::ActionZoneChange>();
+            action->SetZoneID(zoneID);
+            action->SetDestinationX(x);
+            action->SetDestinationY(y);
+            action->SetDestinationRotation(rot);
+
+            auto paEvent = std::make_shared<objects::EventPerformActions>();
+            paEvent->AppendActions(action);
+            instance->lastSequence->next[response] = std::make_shared<
+                MappedEvent>(paEvent, nullptr);
+        }
+
         return;
     }
 
@@ -1865,41 +2378,37 @@ bool ZoneFilter::MergeEvents(std::shared_ptr<MappedEvent> e1,
     {
         case objects::Event::EventType_t::MESSAGE:
             return MergeEventMessages(e1, e2, checkOnly, flat, seen);
-            break;
         case objects::Event::EventType_t::NPC_MESSAGE:
             return MergeEventNPCMessages(e1, e2, checkOnly, flat, seen);
-            break;
         case objects::Event::EventType_t::EX_NPC_MESSAGE:
             return MergeEventExNPCMessages(e1, e2, checkOnly, flat, seen);
-            break;
         case objects::Event::EventType_t::MULTITALK:
             return MergeEventMultitalks(e1, e2, checkOnly, flat, seen);
-            break;
         case objects::Event::EventType_t::PROMPT:
             return MergeEventPrompts(e1, e2, checkOnly, flat, seen);
-            break;
         case objects::Event::EventType_t::PLAY_SCENE:
             return MergeEventPlayScenes(e1, e2, checkOnly, flat, seen);
-            break;
+        case objects::Event::EventType_t::PLAY_SOUND_EFFECT:
+            return MergeEventSoundEffects(e1, e2, checkOnly, flat, seen);
+        case objects::Event::EventType_t::PLAY_BGM:
+            return MergeEventPlayBGMs(e1, e2, checkOnly, flat, seen);
+        case objects::Event::EventType_t::STOP_BGM:
+            return MergeEventStopBGMs(e1, e2, checkOnly, flat, seen);
         case objects::Event::EventType_t::OPEN_MENU:
             return MergeEventMenus(e1, e2, checkOnly, flat, seen);
-            break;
         case objects::Event::EventType_t::GET_ITEMS:
             return MergeEventGetItems(e1, e2, checkOnly, flat, seen);
-            break;
         case objects::Event::EventType_t::HOMEPOINT:
             // Homepoint requests currently cannot differ
             return true;
-            break;
         case objects::Event::EventType_t::STAGE_EFFECT:
             return MergeEventStageEffects(e1, e2, checkOnly, flat, seen);
-            break;
         case objects::Event::EventType_t::DIRECTION:
             return MergeEventDirections(e1, e2, checkOnly, flat, seen);
-            break;
         case objects::Event::EventType_t::SPECIAL_DIRECTION:
             return MergeEventSpecialDirections(e1, e2, checkOnly, flat, seen);
-            break;
+        case objects::Event::EventType_t::PERFORM_ACTIONS:
+            return MergeEventPerformActions(e1, e2, checkOnly, flat, seen);
         default:
             return false;
     }
@@ -2182,6 +2691,144 @@ bool ZoneFilter::MergeEventSpecialDirections(std::shared_ptr<MappedEvent> e1,
         c1->GetSpecial2() != c2->GetSpecial2())
     {
         return false;
+    }
+
+    return MergeNextGeneric(e1, e2, checkOnly, flat, seen);
+}
+
+bool ZoneFilter::MergeEventSoundEffects(std::shared_ptr<MappedEvent> e1,
+    std::shared_ptr<MappedEvent> e2, bool checkOnly, bool flat,
+    std::set<std::shared_ptr<MappedEvent>> seen)
+{
+    auto c1 = std::dynamic_pointer_cast<objects::EventPlaySoundEffect>(e1->event);
+    auto c2 = std::dynamic_pointer_cast<objects::EventPlaySoundEffect>(e2->event);
+    if(c1->GetSoundID() != c2->GetSoundID() ||
+        c1->GetUnknown() != c2->GetUnknown())
+    {
+        return false;
+    }
+
+    return MergeNextGeneric(e1, e2, checkOnly, flat, seen);
+}
+
+bool ZoneFilter::MergeEventPlayBGMs(std::shared_ptr<MappedEvent> e1,
+    std::shared_ptr<MappedEvent> e2, bool checkOnly, bool flat,
+    std::set<std::shared_ptr<MappedEvent>> seen)
+{
+    auto c1 = std::dynamic_pointer_cast<objects::EventPlayBGM>(e1->event);
+    auto c2 = std::dynamic_pointer_cast<objects::EventPlayBGM>(e2->event);
+    if(c1->GetMusicID() != c2->GetMusicID() ||
+        c1->GetFadeInDelay() != c2->GetFadeInDelay() ||
+        c1->GetUnknown() != c2->GetUnknown())
+    {
+        return false;
+    }
+
+    return MergeNextGeneric(e1, e2, checkOnly, flat, seen);
+}
+
+bool ZoneFilter::MergeEventStopBGMs(std::shared_ptr<MappedEvent> e1,
+    std::shared_ptr<MappedEvent> e2, bool checkOnly, bool flat,
+    std::set<std::shared_ptr<MappedEvent>> seen)
+{
+    auto c1 = std::dynamic_pointer_cast<objects::EventStopBGM>(e1->event);
+    auto c2 = std::dynamic_pointer_cast<objects::EventStopBGM>(e2->event);
+    if(c1->GetMusicID() != c2->GetMusicID())
+    {
+        return false;
+    }
+
+    return MergeNextGeneric(e1, e2, checkOnly, flat, seen);
+}
+
+bool ZoneFilter::MergeEventPerformActions(std::shared_ptr<MappedEvent> e1,
+    std::shared_ptr<MappedEvent> e2, bool checkOnly, bool flat,
+    std::set<std::shared_ptr<MappedEvent>> seen)
+{
+    auto c1 = std::dynamic_pointer_cast<objects::EventPerformActions>(e1->event);
+    auto c2 = std::dynamic_pointer_cast<objects::EventPerformActions>(e2->event);
+    if(c1->ActionsCount() != c2->ActionsCount())
+    {
+        return false;
+    }
+
+    size_t count = c1->ActionsCount();
+    for(size_t i = 0; i < count; i++)
+    {
+        auto a1 = c1->GetActions(i);
+        auto a2 = c2->GetActions(i);
+        if(a1->GetActionType() != a2->GetActionType())
+        {
+            return false;
+        }
+
+        switch(a1->GetActionType())
+        {
+        case objects::Action::ActionType_t::SET_NPC_STATE:
+            {
+                auto ac1 = std::dynamic_pointer_cast<objects::ActionSetNPCState>(a1);
+                auto ac2 = std::dynamic_pointer_cast<objects::ActionSetNPCState>(a2);
+
+                if(ac1->GetState() != ac2->GetState())
+                {
+                    return false;
+                }
+            }
+            break;
+        case objects::Action::ActionType_t::UPDATE_FLAG:
+            {
+                auto ac1 = std::dynamic_pointer_cast<objects::ActionUpdateFlag>(a1);
+                auto ac2 = std::dynamic_pointer_cast<objects::ActionUpdateFlag>(a2);
+
+                if(ac1->GetFlagType() != ac2->GetFlagType() ||
+                    ac1->GetID() != ac2->GetID() ||
+                    ac1->GetRemove() != ac2->GetRemove())
+                {
+                    return false;
+                }
+            }
+            break;
+        case objects::Action::ActionType_t::UPDATE_LNC:
+            {
+                auto ac1 = std::dynamic_pointer_cast<objects::ActionUpdateLNC>(a1);
+                auto ac2 = std::dynamic_pointer_cast<objects::ActionUpdateLNC>(a2);
+
+                if(ac1->GetValue() != ac2->GetValue() ||
+                    ac1->GetIsSet() != ac2->GetIsSet())
+                {
+                    return false;
+                }
+            }
+            break;
+        case objects::Action::ActionType_t::UPDATE_QUEST:
+            {
+                auto ac1 = std::dynamic_pointer_cast<objects::ActionUpdateQuest>(a1);
+                auto ac2 = std::dynamic_pointer_cast<objects::ActionUpdateQuest>(a2);
+
+                if(ac1->GetQuestID() != ac2->GetQuestID() ||
+                    ac1->GetPhase() != ac2->GetPhase())
+                {
+                    return false;
+                }
+            }
+            break;
+        case objects::Action::ActionType_t::ZONE_CHANGE:
+            {
+                auto ac1 = std::dynamic_pointer_cast<objects::ActionZoneChange>(a1);
+                auto ac2 = std::dynamic_pointer_cast<objects::ActionZoneChange>(a2);
+
+                if(ac1->GetZoneID() != ac2->GetZoneID() ||
+                    ac1->GetDestinationX() != ac2->GetDestinationX() ||
+                    ac1->GetDestinationY() != ac2->GetDestinationY() ||
+                    ac1->GetDestinationRotation() != ac2->GetDestinationRotation())
+                {
+                    return false;
+                }
+            }
+            break;
+        default:
+            return false;
+        }
     }
 
     return MergeNextGeneric(e1, e2, checkOnly, flat, seen);

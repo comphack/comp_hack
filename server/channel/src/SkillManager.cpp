@@ -46,10 +46,13 @@
 #include <MiCancelData.h>
 #include <MiCastBasicData.h>
 #include <MiCastData.h>
+#include <MiCategoryData.h>
 #include <MiConditionData.h>
 #include <MiCostTbl.h>
 #include <MiDamageData.h>
+#include <MiDCategoryData.h>
 #include <MiDevilData.h>
+#include <MiDevilFamiliarityData.h>
 #include <MiDischargeData.h>
 #include <MiDoTDamageData.h>
 #include <MiEffectData.h>
@@ -61,6 +64,7 @@
 #include <MiSkillBasicData.h>
 #include <MiSkillData.h>
 #include <MiSkillItemStatusCommonData.h>
+#include <MiSkillSpecialParams.h>
 #include <MiStatusData.h>
 #include <MiStatusBasicData.h>
 #include <MiSummonData.h>
@@ -134,6 +138,9 @@ SkillManager::SkillManager(const std::weak_ptr<ChannelServer>& server)
 {
     mSkillFunctions[SVR_CONST.SKILL_CLAN_FORM] = &SkillManager::SpecialSkill;
     mSkillFunctions[SVR_CONST.SKILL_EQUIP_ITEM] = &SkillManager::EquipItem;
+    mSkillFunctions[SVR_CONST.SKILL_FAM_UP] = &SkillManager::FamiliarityUp;
+    mSkillFunctions[SVR_CONST.SKILL_ITEM_FAM_UP] = &SkillManager::FamiliarityUpItem;
+    mSkillFunctions[SVR_CONST.SKILL_MOOCH] = &SkillManager::Mooch;
     mSkillFunctions[SVR_CONST.SKILL_SUMMON_DEMON] = &SkillManager::SummonDemon;
     mSkillFunctions[SVR_CONST.SKILL_STORE_DEMON] = &SkillManager::StoreDemon;
     mSkillFunctions[SVR_CONST.SKILL_TRAESTO] = &SkillManager::Traesto;
@@ -189,7 +196,8 @@ bool SkillManager::ActivateSkill(const std::shared_ptr<ChannelClientConnection> 
     SendChargeSkill(client, activated);
 
     uint8_t activationType = def->GetBasic()->GetActivationType();
-    bool executeNow = activationType == 3 && chargeTime == 0;
+    bool executeNow = (activationType == 3 || activationType == 4)
+        && chargeTime == 0;
     if(executeNow)
     {
         if(!ExecuteSkill(client, sourceState, activated))
@@ -253,6 +261,12 @@ bool SkillManager::ExecuteSkill(const std::shared_ptr<ChannelClientConnection> c
     auto cState = state->GetCharacterState();
     auto character = cState->GetEntity();
     uint16_t functionID = skillData->GetDamage()->GetFunctionID();
+    uint8_t skillCategory = skillData->GetCommon()->GetCategory()->GetMainCategory();
+
+    if(skillCategory == 0)
+    {
+        return false;
+    }
 
     // Check targets
     if(skillData->GetTarget()->GetType() == objects::MiTargetData::Type_t::DEAD_ALLY)
@@ -271,143 +285,6 @@ bool SkillManager::ExecuteSkill(const std::shared_ptr<ChannelClientConnection> c
         {
             return false;
         }
-    }
-
-    // Check costs
-    int16_t hpCost = 0, mpCost = 0;
-    uint16_t hpCostPercent = 0, mpCostPercent = 0;
-    uint16_t bulletCost = 0;
-    std::unordered_map<uint32_t, uint16_t> itemCosts;
-    if(functionID == SVR_CONST.SKILL_SUMMON_DEMON)
-    {
-        /*auto demon = std::dynamic_pointer_cast<objects::Demon>(
-            libcomp::PersistentObject::GetObjectByUUID(state->GetObjectUUID(targetObjectID)));
-        if(demon == nullptr)
-        {
-            return false;
-        }
-
-        uint32_t demonType = demon->GetType();
-        auto demonStats = demon->GetCoreStats().Get();
-        auto demonData = definitionManager->GetDevilData(demonType);
-
-        int16_t characterLNC = character->GetLNC();
-        int16_t demonLNC = demonData->GetBasic()->GetLNC();
-        uint8_t magModifier = demonData->GetSummonData()->GetMagModifier();*/
-
-        /// @todo: calculate MAG
-
-        itemCosts[800] = 1;
-    }
-    else
-    {
-        auto costs = skillData->GetCondition()->GetCosts();
-        for(auto cost : costs)
-        {
-            auto num = cost->GetCost();
-            bool percentCost = cost->GetNumType() == objects::MiCostTbl::NumType_t::PERCENT;
-            switch(cost->GetType())
-            {
-            case objects::MiCostTbl::Type_t::HP:
-                if(percentCost)
-                {
-                    hpCostPercent = (uint16_t)(hpCostPercent + num);
-                }
-                else
-                {
-                    hpCost = (int16_t)(hpCost + num);
-                }
-                break;
-            case objects::MiCostTbl::Type_t::MP:
-                if(percentCost)
-                {
-                    mpCostPercent = (uint16_t)(mpCostPercent + num);
-                }
-                else
-                {
-                    mpCost = (int16_t)(mpCost + num);
-                }
-                break;
-            case objects::MiCostTbl::Type_t::ITEM:
-                if(percentCost)
-                {
-                    LOG_ERROR("Item percent cost encountered.\n");
-                    return false;
-                }
-                else
-                {
-                    auto itemID = cost->GetItem();
-                    if(itemCosts.find(itemID) == itemCosts.end())
-                    {
-                        itemCosts[itemID] = 0;
-                    }
-                    itemCosts[itemID] = (uint16_t)(itemCosts[itemID] + num);
-                }
-                break;
-            case objects::MiCostTbl::Type_t::BULLET:
-                if(percentCost)
-                {
-                    LOG_ERROR("Bullet percent cost encountered.\n");
-                    return false;
-                }
-                else
-                {
-                    bulletCost = (uint16_t)(bulletCost + num);
-                }
-                break;
-            default:
-                LOG_ERROR(libcomp::String("Unsupported cost type encountered: %1\n")
-                    .Arg((uint8_t)cost->GetType()));
-                return false;
-            }
-        }
-    }
-
-    hpCost = (int16_t)(hpCost + ceil(((float)hpCostPercent * 0.01f) *
-        (float)sourceState->GetMaxHP()));
-    mpCost = (int16_t)(mpCost + ceil(((float)mpCostPercent * 0.01f) *
-        (float)sourceState->GetMaxMP()));
-
-    auto sourceStats = sourceState->GetCoreStats();
-    bool canPay = ((hpCost == 0) || hpCost < sourceStats->GetHP()) &&
-        ((mpCost == 0) || mpCost < sourceStats->GetMP());
-    auto characterManager = server->GetCharacterManager();
-    for(auto itemCost : itemCosts)
-    {
-        auto existingItems = characterManager->GetExistingItems(character, itemCost.first);
-        uint16_t itemCount = 0;
-        for(auto item : existingItems)
-        {
-            itemCount = (uint16_t)(itemCount + item->GetStackSize());
-        }
-
-        if(itemCount < itemCost.second)
-        {
-            canPay = false;
-            break;
-        }
-    }
-
-    std::pair<uint32_t, int64_t> bulletIDs;
-    if(bulletCost > 0)
-    {
-        auto bullets = character->GetEquippedItems((size_t)
-            objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_BULLETS);
-        if(!bullets || bullets->GetStackSize() < bulletCost)
-        {
-            canPay = false;
-        }
-        else
-        {
-            bulletIDs = std::pair<uint32_t, int64_t>(bullets->GetType(),
-                state->GetObjectID(bullets->GetUUID()));
-        }
-    }
-
-    // Handle costs that can't be paid as expected errors
-    if(!canPay)
-    {
-        return false;
     }
 
     // Verify the target now
@@ -455,35 +332,193 @@ bool SkillManager::ExecuteSkill(const std::shared_ptr<ChannelClientConnection> c
         break;
     }
 
-    // Pay the costs
-    if(hpCost > 0 || mpCost > 0)
-    {
-        sourceState->SetHPMP((int16_t)-hpCost, (int16_t)-mpCost, true);
-        activated->SetHPCost(hpCost);
-        activated->SetMPCost(mpCost);
+    auto source = std::dynamic_pointer_cast<ActiveEntityState>(
+        activated->GetSourceEntity());
 
-        std::set<std::shared_ptr<ActiveEntityState>> displayStateModified;
-        displayStateModified.insert(sourceState);
-        characterManager->UpdateWorldDisplayState(displayStateModified);
-    }
-
-    for(auto itemCost : itemCosts)
+    // Check costs and pay costs (skip for switch deactivation)
+    if(skillCategory == 1 || (skillCategory == 2 &&
+        !source->ActiveSwitchSkillsContains(skillID)))
     {
-        characterManager->AddRemoveItem(client, itemCost.first, itemCost.second,
-            false, activated->GetTargetObjectID());
-    }
+        int16_t hpCost = 0, mpCost = 0;
+        uint16_t hpCostPercent = 0, mpCostPercent = 0;
+        uint16_t bulletCost = 0;
+        std::unordered_map<uint32_t, uint16_t> itemCosts;
+        if(functionID == SVR_CONST.SKILL_SUMMON_DEMON)
+        {
+            /*auto demon = std::dynamic_pointer_cast<objects::Demon>(
+                libcomp::PersistentObject::GetObjectByUUID(state->GetObjectUUID(targetObjectID)));
+            if(demon == nullptr)
+            {
+                return false;
+            }
 
-    if(bulletCost > 0)
-    {
-        characterManager->AddRemoveItem(client, bulletIDs.first, bulletCost,
-            false, bulletIDs.second);
+            uint32_t demonType = demon->GetType();
+            auto demonStats = demon->GetCoreStats().Get();
+            auto demonData = definitionManager->GetDevilData(demonType);
+
+            int16_t characterLNC = character->GetLNC();
+            int16_t demonLNC = demonData->GetBasic()->GetLNC();
+            uint8_t magModifier = demonData->GetSummonData()->GetMagModifier();*/
+
+            /// @todo: calculate MAG
+
+            itemCosts[800] = 1;
+        }
+        else
+        {
+            auto costs = skillData->GetCondition()->GetCosts();
+            for(auto cost : costs)
+            {
+                auto num = cost->GetCost();
+                bool percentCost = cost->GetNumType() == objects::MiCostTbl::NumType_t::PERCENT;
+                switch(cost->GetType())
+                {
+                case objects::MiCostTbl::Type_t::HP:
+                    if(percentCost)
+                    {
+                        hpCostPercent = (uint16_t)(hpCostPercent + num);
+                    }
+                    else
+                    {
+                        hpCost = (int16_t)(hpCost + num);
+                    }
+                    break;
+                case objects::MiCostTbl::Type_t::MP:
+                    if(percentCost)
+                    {
+                        mpCostPercent = (uint16_t)(mpCostPercent + num);
+                    }
+                    else
+                    {
+                        mpCost = (int16_t)(mpCost + num);
+                    }
+                    break;
+                case objects::MiCostTbl::Type_t::ITEM:
+                    if(percentCost)
+                    {
+                        LOG_ERROR("Item percent cost encountered.\n");
+                        return false;
+                    }
+                    else
+                    {
+                        auto itemID = cost->GetItem();
+                        if(itemCosts.find(itemID) == itemCosts.end())
+                        {
+                            itemCosts[itemID] = 0;
+                        }
+                        itemCosts[itemID] = (uint16_t)(itemCosts[itemID] + num);
+                    }
+                    break;
+                case objects::MiCostTbl::Type_t::BULLET:
+                    if(percentCost)
+                    {
+                        LOG_ERROR("Bullet percent cost encountered.\n");
+                        return false;
+                    }
+                    else
+                    {
+                        bulletCost = (uint16_t)(bulletCost + num);
+                    }
+                    break;
+                default:
+                    LOG_ERROR(libcomp::String("Unsupported cost type encountered: %1\n")
+                        .Arg((uint8_t)cost->GetType()));
+                    return false;
+                }
+            }
+        }
+
+        hpCost = (int16_t)(hpCost + ceil(((float)hpCostPercent * 0.01f) *
+            (float)sourceState->GetMaxHP()));
+        mpCost = (int16_t)(mpCost + ceil(((float)mpCostPercent * 0.01f) *
+            (float)sourceState->GetMaxMP()));
+
+        auto sourceStats = sourceState->GetCoreStats();
+        bool canPay = ((hpCost == 0) || hpCost < sourceStats->GetHP()) &&
+            ((mpCost == 0) || mpCost < sourceStats->GetMP());
+        auto characterManager = server->GetCharacterManager();
+        for(auto itemCost : itemCosts)
+        {
+            auto existingItems = characterManager->GetExistingItems(character,
+                itemCost.first);
+            uint16_t itemCount = 0;
+            for(auto item : existingItems)
+            {
+                itemCount = (uint16_t)(itemCount + item->GetStackSize());
+            }
+
+            if(itemCount < itemCost.second)
+            {
+                canPay = false;
+                break;
+            }
+        }
+
+        std::pair<uint32_t, int64_t> bulletIDs;
+        if(bulletCost > 0)
+        {
+            auto bullets = character->GetEquippedItems((size_t)
+                objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_BULLETS);
+            if(!bullets || bullets->GetStackSize() < bulletCost)
+            {
+                canPay = false;
+            }
+            else
+            {
+                bulletIDs = std::pair<uint32_t, int64_t>(bullets->GetType(),
+                    state->GetObjectID(bullets->GetUUID()));
+            }
+        }
+
+        // Handle costs that can't be paid as expected errors
+        if(!canPay)
+        {
+            return false;
+        }
+
+        // Pay the costs
+        if(hpCost > 0 || mpCost > 0)
+        {
+            sourceState->SetHPMP((int16_t)-hpCost, (int16_t)-mpCost, true);
+            activated->SetHPCost(hpCost);
+            activated->SetMPCost(mpCost);
+
+            std::set<std::shared_ptr<ActiveEntityState>> displayStateModified;
+            displayStateModified.insert(sourceState);
+            characterManager->UpdateWorldDisplayState(displayStateModified);
+        }
+
+        for(auto itemCost : itemCosts)
+        {
+            characterManager->AddRemoveItem(client, itemCost.first, itemCost.second,
+                false, activated->GetTargetObjectID());
+        }
+
+        if(bulletCost > 0)
+        {
+            characterManager->AddRemoveItem(client, bulletIDs.first, bulletCost,
+                false, bulletIDs.second);
+        }
     }
 
     // Execute the skill
     auto fIter = mSkillFunctions.find(functionID);
     if(fIter == mSkillFunctions.end())
     {
-        return ExecuteNormalSkill(client, activated);
+        switch(skillCategory)
+        {
+        case 1:
+            // Active
+            return ExecuteNormalSkill(client, activated);
+        case 2:
+            // Switch
+            return ToggleSwitchSkill(client, activated);
+        case 0:
+            // Passive, shouldn't happen
+        default:
+            return false;
+            break;
+        }
     }
 
     bool success = fIter->second(*this, client, activated);
@@ -614,7 +649,8 @@ bool SkillManager::ExecuteNormalSkill(const std::shared_ptr<ChannelClientConnect
     return true;
 }
 
-bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility> activated)
+bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility> activated,
+    bool applyStatusEffects)
 {
     auto server = mServer.lock();
     auto zoneManager = server->GetZoneManager();
@@ -680,7 +716,9 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
     switch(skillData->GetTarget()->GetType())
     {
     case objects::MiTargetData::Type_t::NONE:
-        // Source can be affected but it is not a target
+        // Source is technically the primary target (though most of
+        // these types of skills will filter it out)
+        primaryTarget = source;
         break;
     case objects::MiTargetData::Type_t::ALLY:
     case objects::MiTargetData::Type_t::DEAD_ALLY:
@@ -731,13 +769,8 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
         return false;
     }
 
-    std::list<std::shared_ptr<ActiveEntityState>> effectiveTargets;
-    if(primaryTarget)
-    {
-        effectiveTargets.push_back(primaryTarget);
-    }
-
     auto skillRange = skillData->GetRange();
+    std::list<std::shared_ptr<ActiveEntityState>> effectiveTargets;
     if(skillRange->GetAreaType() != objects::MiEffectiveRangeData::AreaType_t::NONE)
     {
         // Determine area effects
@@ -774,77 +807,77 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
                 .Arg((uint8_t)skillRange->GetAreaType()));
             return false;
         }
+    }
 
-        // Make sure the primary target isn't in here twice and it is also
-        // at the front of the list
-        if(primaryTarget)
-        {
-            effectiveTargets.remove_if([primaryTarget](
-                const std::shared_ptr<ActiveEntityState>& target)
-                {
-                    return target == primaryTarget;
-                });
-            effectiveTargets.push_front(primaryTarget);
-        }
-
-        // Filter out invalid effective targets (including the primary target)
-        /// @todo: implement a more complex faction system for PvP etc
-        auto areaTargetType = skillRange->GetAreaTarget();
-        switch(areaTargetType)
-        {
-        case objects::MiEffectiveRangeData::AreaTarget_t::ENEMY:
-            effectiveTargets.remove_if([effectiveSource](
-                const std::shared_ptr<ActiveEntityState>& target)
-                {
-                    return (target->GetFaction() == effectiveSource->GetFaction()) ||
-                        !target->IsAlive();
-                });
-            break;
-        case objects::MiEffectiveRangeData::AreaTarget_t::ALLY:
-        case objects::MiEffectiveRangeData::AreaTarget_t::PARTY:
-        case objects::MiEffectiveRangeData::AreaTarget_t::DEAD_ALLY:
-        case objects::MiEffectiveRangeData::AreaTarget_t::DEAD_PARTY:
+    // Make sure the primary target isn't in here twice and it is also
+    // at the front of the list
+    if(primaryTarget)
+    {
+        effectiveTargets.remove_if([primaryTarget](
+            const std::shared_ptr<ActiveEntityState>& target)
             {
-                bool deadOnly = areaTargetType ==
-                    objects::MiEffectiveRangeData::AreaTarget_t::DEAD_ALLY ||
-                    areaTargetType == objects::MiEffectiveRangeData::AreaTarget_t::DEAD_PARTY;
-                effectiveTargets.remove_if([effectiveSource, deadOnly](
+                return target == primaryTarget;
+            });
+        effectiveTargets.push_front(primaryTarget);
+    }
+
+    // Filter out invalid effective targets (including the primary target)
+    /// @todo: implement a more complex faction system for PvP etc
+    auto validType = skillRange->GetValidType();
+    switch(validType)
+    {
+    case objects::MiEffectiveRangeData::ValidType_t::ENEMY:
+        effectiveTargets.remove_if([effectiveSource](
+            const std::shared_ptr<ActiveEntityState>& target)
+            {
+                return (target->GetFaction() == effectiveSource->GetFaction()) ||
+                    !target->IsAlive();
+            });
+        break;
+    case objects::MiEffectiveRangeData::ValidType_t::ALLY:
+    case objects::MiEffectiveRangeData::ValidType_t::PARTY:
+    case objects::MiEffectiveRangeData::ValidType_t::DEAD_ALLY:
+    case objects::MiEffectiveRangeData::ValidType_t::DEAD_PARTY:
+        {
+            bool deadOnly = validType ==
+                objects::MiEffectiveRangeData::ValidType_t::DEAD_ALLY ||
+                validType == objects::MiEffectiveRangeData::ValidType_t::DEAD_PARTY;
+            effectiveTargets.remove_if([effectiveSource, deadOnly](
+                const std::shared_ptr<ActiveEntityState>& target)
+                {
+                    return (target->GetFaction() != effectiveSource->GetFaction())
+                        || (deadOnly == target->IsAlive());
+                });
+
+            if(validType == objects::MiEffectiveRangeData::ValidType_t::PARTY ||
+                validType == objects::MiEffectiveRangeData::ValidType_t::DEAD_PARTY)
+            {
+                // This will result in an empty list if cast by an enemy, though
+                // technically it should in that instance
+                auto sourceState = ClientState::GetEntityClientState(effectiveSource->GetEntityID());
+                uint32_t sourcePartyID = sourceState ? sourceState->GetPartyID() : 0;
+
+                effectiveTargets.remove_if([sourcePartyID](
                     const std::shared_ptr<ActiveEntityState>& target)
                     {
-                        return (target->GetFaction() != effectiveSource->GetFaction())
-                            || (deadOnly == target->IsAlive());
+                        auto state = ClientState::GetEntityClientState(target->GetEntityID());
+                        return sourcePartyID == 0 || !state ||
+                            state->GetPartyID() != sourcePartyID;
                     });
-
-                if(areaTargetType == objects::MiEffectiveRangeData::AreaTarget_t::PARTY ||
-                   areaTargetType == objects::MiEffectiveRangeData::AreaTarget_t::DEAD_PARTY)
-                {
-                    // This will result in an empty list if cast by an enemy, though
-                    // technically it should in that instance
-                    auto sourceState = ClientState::GetEntityClientState(effectiveSource->GetEntityID());
-                    uint32_t sourcePartyID = sourceState ? sourceState->GetPartyID() : 0;
-
-                    effectiveTargets.remove_if([sourcePartyID](
-                        const std::shared_ptr<ActiveEntityState>& target)
-                        {
-                            auto state = ClientState::GetEntityClientState(target->GetEntityID());
-                            return sourcePartyID == 0 || !state ||
-                                state->GetPartyID() != sourcePartyID;
-                        });
-                }
             }
-            break;
-        case objects::MiEffectiveRangeData::AreaTarget_t::SOURCE:
-            effectiveTargets.remove_if([effectiveSource](
-                const std::shared_ptr<ActiveEntityState>& target)
-                {
-                    return target != effectiveSource;
-                });
-            break;
-        default:
-            LOG_ERROR(libcomp::String("Unsupported skill area target encountered: %1\n")
-                .Arg((uint8_t)skillRange->GetAreaTarget()));
-            return false;
         }
+        break;
+    case objects::MiEffectiveRangeData::ValidType_t::SOURCE:
+        effectiveTargets.remove_if([effectiveSource](
+            const std::shared_ptr<ActiveEntityState>& target)
+            {
+                return target != effectiveSource;
+            });
+        break;
+    default:
+        LOG_ERROR(libcomp::String("Unsupported skill valid target type encountered: %1\n")
+            .Arg((uint8_t)validType));
+        return false;
     }
 
     // Filter down to all valid targets, limited by AOE restrictions
@@ -899,6 +932,12 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
         targetResults.push_back(target);
         SetNRA(target, skill);
         targetResults.push_back(target);
+    }
+
+    // Exit if nothing will be affected by damage or effects
+    if(targetResults.size() == 0)
+    {
+        return true;
     }
     
     // Run calculations
@@ -1024,7 +1063,8 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
         }
 
         // Determine which status effects to apply
-        if((target.DamageFlags1 & (FLAG1_BLOCK | FLAG1_REFLECT | FLAG1_ABSORB)) == 0)
+        if(applyStatusEffects &&
+            (target.DamageFlags1 & (FLAG1_BLOCK | FLAG1_REFLECT | FLAG1_ABSORB)) == 0)
         {
             for(auto addStatus : addStatuses)
             {
@@ -1045,15 +1085,9 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
                         continue;
                     }
 
-                    int8_t minStack = addStatus->GetMinStack();
-                    int8_t maxStack = addStatus->GetMaxStack();
-
-                    // Sanity check
-                    if(minStack > maxStack) continue;
-
-                    int8_t stack = minStack == maxStack ? maxStack
-                        : (int8_t)(minStack + (rand() % (maxStack - minStack)));
-                    if(stack == 0) continue;
+                    uint8_t stack = CalculateStatusEffectStack(addStatus->GetMinStack(),
+                        addStatus->GetMaxStack());
+                    if(stack == 0 && !addStatus->GetIsReplace()) continue;
 
                     target.AddedStatuses[addStatus->GetStatusID()] =
                         std::pair<uint8_t, bool>(stack, addStatus->GetIsReplace());
@@ -1273,22 +1307,104 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
 
     if(killed.size() > 0)
     {
+        // Familiarity is reduced from death (0) or same demon kills (1)
+        // and is dependent upon familiarity type
+        const int16_t fTypeMap[17][2] =
+            {
+                { -100, -5 },   // Type 0
+                { -20, -50 },   // Type 1
+                { -20, -20 },   // Type 2
+                { -50, -50 },   // Type 3
+                { -100, -100 }, // Type 4
+                { -100, -100 }, // Type 5
+                { -20, -20 },   // Type 6
+                { -50, -50 },   // Type 7
+                { -100, -100 }, // Type 8
+                { -100, -100 }, // Type 9
+                { -50, -100 },  // Type 10
+                { -50, 0 },     // Type 11
+                { -100, -100 }, // Type 12
+                { -120, -120 }, // Type 13
+                { 0, 0 },       // Type 14 (invalid)
+                { 0, 0 },       // Type 15 (invalid)
+                { -100, -100 }  // Type 16
+            };
+
+        uint32_t sourceDemonType = (source->GetEntityType() ==
+            objects::EntityStateObject::EntityType_t::PARTNER_DEMON)
+            ? std::dynamic_pointer_cast<DemonState>(source)->GetEntity()->GetType()
+            : 0;
+        auto sourceDemonFType = sourceDemonType
+            ? definitionManager->GetDevilData(sourceDemonType)->GetFamiliarity()
+            ->GetFamiliarityType() : 0;
+
+        std::unordered_map<int32_t, int32_t> adjustments;
         for(auto entity : killed)
         {
             // Remove all opponents
             characterManager->AddRemoveOpponent(false, entity, nullptr);
 
-            if(entity->GetEntityType() ==
-                objects::EntityStateObject::EntityType_t::PARTNER_DEMON)
+            // Determine familiarity adjustments
+            bool partnerDeath = false;
+            uint32_t dType = 0;
+            switch(entity->GetEntityType())
             {
-                // If a partner demon was killed, decrease familiarity
-                auto demonClient = server->GetManagerConnection()->
-                    GetEntityClient(entity->GetEntityID());
-                if(!demonClient) continue;
-
-                /// @todo: verify this value more
-                characterManager->UpdateFamiliarity(demonClient, -100, true);
+            case objects::EntityStateObject::EntityType_t::PARTNER_DEMON:
+                dType = std::dynamic_pointer_cast<DemonState>(entity)
+                    ->GetEntity()->GetType();
+                partnerDeath = true;
+                break;
+            case objects::EntityStateObject::EntityType_t::ENEMY:
+                if(sourceDemonType)
+                {
+                    dType = std::dynamic_pointer_cast<EnemyState>(entity)
+                        ->GetEntity()->GetType();
+                }
+                break;
+            default:
+                break;
             }
+
+            if(dType)
+            {
+                std::list<std::pair<int32_t, int32_t>> adjusts;
+                if(partnerDeath)
+                {
+                    // Partner demon has died
+                    adjusts.push_back(std::pair<int32_t, int32_t>(
+                        entity->GetEntityID(), fTypeMap[(size_t)sourceDemonFType][0]));
+                }
+
+                if(entity != source && sourceDemonType == dType)
+                {
+                    // Same demon type killed
+                    adjusts.push_back(std::pair<int32_t, int32_t>(
+                        source->GetEntityID(), fTypeMap[(size_t)sourceDemonFType][1]));
+                }
+
+                for(auto aPair : adjusts)
+                {
+                    if(adjustments.find(aPair.first) == adjustments.end())
+                    {
+                        adjustments[aPair.first] = aPair.second;
+                    }
+                    else
+                    {
+                        adjustments[aPair.first] = (int32_t)(
+                            adjustments[aPair.first] + aPair.second);
+                    }
+                }
+            }
+        }
+
+        // Apply familiarity adjustments
+        for(auto aPair : adjustments)
+        {
+            auto demonClient = server->GetManagerConnection()->
+                GetEntityClient(aPair.first);
+            if(!demonClient) continue;
+
+            characterManager->UpdateFamiliarity(demonClient, aPair.second, true);
         }
     }
 
@@ -1297,6 +1413,51 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
     if(displayStateModified.size() > 0)
     {
         characterManager->UpdateWorldDisplayState(displayStateModified);
+    }
+
+    return true;
+}
+
+bool SkillManager::ToggleSwitchSkill(const std::shared_ptr<ChannelClientConnection> client,
+    std::shared_ptr<objects::ActivatedAbility> activated)
+{
+    auto server = mServer.lock();
+    auto definitionManager = server->GetDefinitionManager();
+    auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated->GetSourceEntity());
+
+    auto characterManager = server->GetCharacterManager();
+    auto skillID = activated->GetSkillID();
+    auto skillData = definitionManager->GetSkillData(skillID);
+
+    bool toggleOn = false;
+    if(source->ActiveSwitchSkillsContains(skillID))
+    {
+        source->RemoveActiveSwitchSkills(skillID);
+    }
+    else
+    {
+        source->InsertActiveSwitchSkills(skillID);
+        toggleOn = true;
+    }
+
+    FinalizeSkillExecution(client, activated, skillData);
+
+    if(client)
+    {
+        libcomp::Packet p;
+        p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_SKILL_SWITCH);
+        p.WriteS32Little(source->GetEntityID());
+        p.WriteU32Little(skillID);
+        p.WriteS8(toggleOn ? 1 : 0);
+
+        client->QueuePacket(p);
+    }
+
+    characterManager->RecalculateStats(client, source->GetEntityID());
+
+    if(client)
+    {
+        client->FlushOutgoing();
     }
 
     return true;
@@ -1719,6 +1880,18 @@ bool SkillManager::SetNRA(SkillTargetResult& target, ProcessingSkill& skill)
     return false;
 }
 
+uint8_t SkillManager::CalculateStatusEffectStack(int8_t minStack, int8_t maxStack) const
+{
+    // Sanity check
+    if(minStack > maxStack)
+    {
+        return 0;
+    }
+
+    return minStack == maxStack ? (uint8_t)maxStack
+        : (uint8_t)(minStack + (rand() % (maxStack - minStack)));
+}
+
 void SkillManager::FinalizeSkillExecution(const std::shared_ptr<ChannelClientConnection> client,
     std::shared_ptr<objects::ActivatedAbility> activated,
     std::shared_ptr<objects::MiSkillData> skillData)
@@ -1771,7 +1944,198 @@ bool SkillManager::EquipItem(const std::shared_ptr<ChannelClientConnection> clie
 
     mServer.lock()->GetCharacterManager()->EquipItem(client, itemID);
 
-    return true;
+    return ProcessSkillResult(activated);;
+}
+
+bool SkillManager::FamiliarityUp(const std::shared_ptr<ChannelClientConnection> client,
+    std::shared_ptr<objects::ActivatedAbility> activated)
+{
+    auto state = client->GetClientState();
+    auto cState = state->GetCharacterState();
+    auto dState = state->GetDemonState();
+    auto demon = dState->GetEntity();
+
+    if(!demon)
+    {
+        return false;
+    }
+
+    auto server = mServer.lock();
+    auto definitionManager = server->GetDefinitionManager();
+    auto skillData = definitionManager->GetSkillData(activated->GetSkillID());
+
+    // Skills of this type add a "cooldown status effect". If the player character
+    // already has it, do not allow the skill's usage
+    auto statusEffects = cState->GetStatusEffects();
+    for(auto addStatus : skillData->GetDamage()->GetAddStatuses())
+    {
+        if(statusEffects.find(addStatus->GetStatusID()) != statusEffects.end())
+        {
+            return false;
+        }
+    }
+
+    auto demonData = definitionManager->GetDevilData(demon->GetType());
+    int32_t fType = demonData
+        ? demonData->GetFamiliarity()->GetFamiliarityType() : 0;
+
+    if(!demonData || fType > 16)
+    {
+        return false;
+    }
+
+    // Familiarity is adjusted based on the demon's familiarity type
+    // and if it shares the same alignment with the character
+    const uint16_t fTypeMap[17][2] =
+        {
+            { 50, 25 },     // Type 0
+            { 4000, 2000 }, // Type 1
+            { 2000, 1000 }, // Type 2
+            { 550, 225 },   // Type 3
+            { 250, 125 },   // Type 4
+            { 75, 40 },     // Type 5
+            { 2000, 1500 }, // Type 6
+            { 500, 375 },   // Type 7
+            { 250, 180 },   // Type 8
+            { 100, 75 },    // Type 9
+            { 50, 38 },     // Type 10
+            { 10, 10 },     // Type 11
+            { 2000, 200 },  // Type 12
+            { 650, 65 },    // Type 13
+            { 0, 0 },       // Type 14 (invalid)
+            { 0, 0 },       // Type 15 (invalid)
+            { 5000, 5000 } // Type 16
+        };
+
+    /// @todo: receive items from demon
+
+    bool sameLNC = cState->GetLNC() == dState->GetLNC(definitionManager);
+
+    int32_t fPoints = (int32_t)fTypeMap[(size_t)fType][sameLNC ? 0 : 1];
+    server->GetCharacterManager()->UpdateFamiliarity(client, fPoints, true);
+
+    // Apply the status effects
+    for(auto addStatus : skillData->GetDamage()->GetAddStatuses())
+    {
+        uint8_t stack = CalculateStatusEffectStack(addStatus->GetMinStack(),
+            addStatus->GetMaxStack());
+        if(stack == 0 && !addStatus->GetIsReplace()) continue;
+
+        AddStatusEffectMap m;
+        m[addStatus->GetStatusID()] =
+            std::pair<uint8_t, bool>(stack, addStatus->GetIsReplace());
+
+        cState->AddStatusEffects(m, definitionManager);
+    }
+
+    // Process the skill without status effects
+    return ProcessSkillResult(activated, false);
+}
+
+bool SkillManager::FamiliarityUpItem(const std::shared_ptr<ChannelClientConnection> client,
+    std::shared_ptr<objects::ActivatedAbility> activated)
+{
+    auto state = client->GetClientState();
+    auto dState = state->GetDemonState();
+    auto demon = dState->GetEntity();
+
+    if(!demon)
+    {
+        return false;
+    }
+
+    auto server = mServer.lock();
+    auto definitionManager = server->GetDefinitionManager();
+    auto skillData = definitionManager->GetSkillData(activated->GetSkillID());
+
+    auto demonData = definitionManager->GetDevilData(demon->GetType());
+    auto special = skillData->GetSpecial();
+
+    int32_t maxFamiliarity = special->GetSpecialParams(0);
+    float deltaPercent = (float)special->GetSpecialParams(1);
+    int32_t minIncrease = special->GetSpecialParams(2);
+    int32_t raceRestrict = special->GetSpecialParams(3);
+
+    if(raceRestrict && (int32_t)demonData->GetCategory()->GetRace() != raceRestrict)
+    {
+        return false;
+    }
+
+    uint16_t currentVal = demon->GetFamiliarity();
+    if(maxFamiliarity <= (int32_t)currentVal)
+    {
+        return true;
+    }
+
+    int32_t fPoints = 0;
+    if(maxFamiliarity && deltaPercent)
+    {
+        fPoints = (int32_t)ceill(
+            floorl((float)(maxFamiliarity - currentVal) * deltaPercent * 0.01f) - 1);
+    }
+
+    if(minIncrease && fPoints < minIncrease)
+    {
+        fPoints = minIncrease;
+    }
+
+    /// @todo: receive items from demon
+
+    server->GetCharacterManager()->UpdateFamiliarity(client, fPoints, true);
+
+    return ProcessSkillResult(activated);
+}
+
+bool SkillManager::Mooch(const std::shared_ptr<ChannelClientConnection> client,
+    std::shared_ptr<objects::ActivatedAbility> activated)
+{
+    (void)activated;
+
+    auto state = client->GetClientState();
+    auto cState = state->GetCharacterState();
+    auto dState = state->GetDemonState();
+    auto demon = dState->GetEntity();
+
+    if(!demon)
+    {
+        return false;
+    }
+
+    auto server = mServer.lock();
+    auto definitionManager = server->GetDefinitionManager();
+    auto skillData = definitionManager->GetSkillData(activated->GetSkillID());
+
+    // Skills of this type add a "cooldown status effect". If the player character
+    // already has it, do not allow the skill's usage
+    auto statusEffects = cState->GetStatusEffects();
+    for(auto addStatus : skillData->GetDamage()->GetAddStatuses())
+    {
+        if(statusEffects.find(addStatus->GetStatusID()) != statusEffects.end())
+        {
+            return false;
+        }
+    }
+
+    /// @todo: receive items from demon
+
+    mServer.lock()->GetCharacterManager()->UpdateFamiliarity(client, -2000, true);
+
+    // Apply the status effects
+    for(auto addStatus : skillData->GetDamage()->GetAddStatuses())
+    {
+        uint8_t stack = CalculateStatusEffectStack(addStatus->GetMinStack(),
+            addStatus->GetMaxStack());
+        if(stack == 0 && !addStatus->GetIsReplace()) continue;
+
+        AddStatusEffectMap m;
+        m[addStatus->GetStatusID()] =
+            std::pair<uint8_t, bool>(stack, addStatus->GetIsReplace());
+
+        cState->AddStatusEffects(m, definitionManager);
+    }
+
+    // Process the skill without status effects
+    return ProcessSkillResult(activated, false);
 }
 
 bool SkillManager::SummonDemon(const std::shared_ptr<ChannelClientConnection> client,
@@ -1825,6 +2189,8 @@ bool SkillManager::Traesto(const std::shared_ptr<ChannelClientConnection> client
             " Traesto: %1\n").Arg(character->GetName()));
         return false;
     }
+
+    ProcessSkillResult(activated);
 
     return mServer.lock()->GetZoneManager()->EnterZone(client, zoneID, xCoord, yCoord, 0, true);
 }

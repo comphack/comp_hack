@@ -129,6 +129,15 @@ struct Data
     /// Function ID of equipment changing skills
     uint16_t SKILL_EQUIP_ITEM;
 
+    /// Function ID of familiarity boosting skills
+    uint16_t SKILL_FAM_UP;
+
+    /// Function ID of familiarity boosting item skills
+    uint16_t SKILL_ITEM_FAM_UP;
+
+    /// Function ID of farmiliarity lowering "Mooch" skills
+    uint16_t SKILL_MOOCH;
+
     /// Function ID of skills that store the demon in the COMP
     uint16_t SKILL_STORE_DEMON;
 
@@ -146,6 +155,9 @@ struct Data
 
     /// Status effect ID of summon sync level 3
     uint32_t STATUS_SUMMON_SYNC_3;
+
+    /// Default skills to add to a new character
+    std::set<uint32_t> DEFAULT_SKILLS;
 
     /// Map of clan formation item IDs to their corresponding home base zones
     std::unordered_map<uint32_t, uint32_t> CLAN_FORM_MAP;

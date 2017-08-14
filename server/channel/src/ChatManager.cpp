@@ -806,17 +806,14 @@ bool ChatManager::GMCommand_Map(const std::shared_ptr<
 {
     std::list<libcomp::String> argsCopy = args;
 
-    size_t mapIndex;
-    uint8_t mapValue;
-
-    if(!GetIntegerArg<size_t>(mapIndex, argsCopy) ||
-        !GetIntegerArg<uint8_t>(mapValue, argsCopy))
+    uint16_t mapID;
+    if(!GetIntegerArg<uint16_t>(mapID, argsCopy))
     {
         return false;
     }
 
-    mServer.lock()->GetCharacterManager()->UpdateMapFlags(client,
-        mapIndex, mapValue);
+    mServer.lock()->GetCharacterManager()->AddMap(client,
+        mapID);
 
     return true;
 }

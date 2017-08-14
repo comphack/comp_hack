@@ -116,7 +116,7 @@
             <value num="7">SOURCE</value>
             <value num="9">UNKNOWN_9</value>
         </member>
-        <member type="enum" name="areaTarget" underlying="uint8_t">
+        <member type="enum" name="validType" underlying="uint8_t">
             <value num="0">ENEMY</value>
             <value num="1">ALLY</value>
             <value num="2">DEAD_ALLY</value>

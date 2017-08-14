@@ -213,7 +213,11 @@ SET(${PROJECT_NAME}_SCHEMA
     schema/account.xml
     schema/accountlogin.xml
     schema/action.xml
+    schema/action_setnpcstate.xml
     schema/action_startevent.xml
+    schema/action_updateflag.xml
+    schema/action_updatelnc.xml
+    schema/action_updatequest.xml
     schema/action_zonechange.xml
     schema/character.xml
     schema/clan.xml
@@ -229,7 +233,9 @@ SET(${PROJECT_NAME}_SCHEMA
     schema/event_message.xml
     schema/event_openmenu.xml
     schema/event_performactions.xml
+    schema/event_playbgm.xml
     schema/event_playscene.xml
+    schema/event_playsoundeffect.xml
     schema/event_prompt.xml
     schema/event_stageeffect.xml
     schema/item.xml
@@ -289,8 +295,16 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     AccountWorldData.cpp
     Action.h
     Action.cpp
+    ActionSetNPCState.h
+    ActionSetNPCState.cpp
     ActionStartEvent.h
     ActionStartEvent.cpp
+    ActionUpdateFlag.h
+    ActionUpdateFlag.cpp
+    ActionUpdateLNC.h
+    ActionUpdateLNC.cpp
+    ActionUpdateQuest.h
+    ActionUpdateQuest.cpp
     ActionZoneChange.h
     ActionZoneChange.cpp
     Clan.h
@@ -343,8 +357,12 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     EventOpenMenu.cpp
     EventPerformActions.h
     EventPerformActions.cpp
+    EventPlayBGM.h
+    EventPlayBGM.cpp
     EventPlayScene.h
     EventPlayScene.cpp
+    EventPlaySoundEffect.h
+    EventPlaySoundEffect.cpp
     EventPrompt.h
     EventPrompt.cpp
     EventSequence.h
@@ -353,6 +371,8 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     EventSpecialDirection.cpp
     EventStageEffect.h
     EventStageEffect.cpp
+    EventStopBGM.h
+    EventStopBGM.cpp
     Expertise.h
     Expertise.cpp
     FriendSettings.h
@@ -383,6 +403,8 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     RegisteredChannel.cpp
     RegisteredWorld.h
     RegisteredWorld.cpp
+    ServerBazaar.h
+    ServerBazaar.cpp
     ServerCommandLine.h
     ServerCommandLine.cpp
     ServerConfig.h

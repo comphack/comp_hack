@@ -132,6 +132,7 @@ bool Parsers::ClanUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
     case InternalPacketAction_t::PACKET_ACTION_UPDATE:
         // Visible information updated
         {
+            auto characterManager = server->GetCharacterManager();
             auto zoneManager = server->GetZoneManager();
 
             uint8_t updateFlags = p.ReadU8();
@@ -141,7 +142,7 @@ bool Parsers::ClanUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
             libobjgen::UUID uid(p.ReadString16Little(
                 libcomp::Convert::Encoding_t::ENCODING_UTF8, true).C());
             auto clan = !uid.IsNull() ? libcomp::PersistentObject::LoadObjectByUUID<
-                objects::Clan>(worldDB, uid) : nullptr;
+                objects::Clan>(worldDB, uid, true) : nullptr;
 
             bool nameUpdated = (updateFlags & 0x01) != 0;
             bool emblemUpdated = (updateFlags & 0x02) != 0;
@@ -172,13 +173,16 @@ bool Parsers::ClanUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
                 for(auto client : clients)
                 {
                     auto state = client->GetClientState();
+                    auto cState = state->GetCharacterState();
                     state->GetAccountLogin()->GetCharacterLogin()->SetClanID(clanID);
 
                     // The world will have already saved this but save again so we don't
                     // get into a weird state
-                    auto character = state->GetCharacterState()->GetEntity();
+                    auto character = cState->GetEntity();
                     character->SetClan(clan);
                     worldDB->QueueUpdate(character);
+
+                    characterManager->RecalculateStats(client, cState->GetEntityID());
                 }
             }
 
@@ -232,14 +236,17 @@ bool Parsers::ClanUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
 
                 if(levelUpdated)
                 {
-                    /// @todo: reapply clan skills
-
                     libcomp::Packet request;
                     request.WritePacketCode(ChannelToClientPacketCode_t::PACKET_CLAN_LEVEL_UPDATED);
                     request.WriteS32Little(cState->GetEntityID());
                     request.WriteS8(level);
 
                     zoneManager->BroadcastPacket(client, request);
+
+                    if(!clanUpdated)
+                    {
+                        characterManager->RecalculateStats(client, cState->GetEntityID());
+                    }
                 }
             }
         }

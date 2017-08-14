@@ -240,6 +240,25 @@ public:
         return false;
     }
 
+    /**
+     * Copy another reference's data after clearing the stored reference.
+     * @param other Other reference to copy
+     */
+    ObjectReference& operator=(const ObjectReference& other)
+    {
+        auto uuid = other.GetUUID();
+        if(uuid != NULLUUID)
+        {
+            ClearReference();
+            SetUUID(uuid);
+        }
+        else
+        {
+            SetReference(other.GetReference());
+        }
+        return *this;
+    }
+
 protected:
     /**
      * Get the PersistentObject reference casted to the templated

@@ -16,7 +16,11 @@
     <include path="account.xml"/>
     <include path="accountlogin.xml"/>
     <include path="action.xml"/>
+    <include path="action_setnpcstate.xml"/>
     <include path="action_startevent.xml"/>
+    <include path="action_updateflag.xml"/>
+    <include path="action_updatelnc.xml"/>
+    <include path="action_updatequest.xml"/>
     <include path="action_zonechange.xml"/>
     <include path="character.xml"/>
     <include path="clan.xml"/>
@@ -29,7 +33,9 @@
     <include path="event_message.xml"/>
     <include path="event_openmenu.xml"/>
     <include path="event_performactions.xml"/>
+    <include path="event_playbgm.xml"/>
     <include path="event_playscene.xml"/>
+    <include path="event_playsoundeffect.xml"/>
     <include path="event_prompt.xml"/>
     <include path="event_stageeffect.xml"/>
     <include path="item.xml"/>

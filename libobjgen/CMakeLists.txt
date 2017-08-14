@@ -41,6 +41,7 @@ SET(${PROJECT_NAME}_SRCS
     src/MetaVariableList.cpp
     src/MetaVariableMap.cpp
     src/MetaVariableReference.cpp
+    src/MetaVariableSet.cpp
     src/MetaVariableString.cpp
     src/MetaObjectXmlParser.cpp
     src/UUID.cpp
@@ -62,6 +63,7 @@ SET(${PROJECT_NAME}_HDRS
     src/MetaVariableList.h
     src/MetaVariableMap.h
     src/MetaVariableReference.h
+    src/MetaVariableSet.h
     src/MetaVariableString.h
     src/MetaObjectXmlParser.h
     src/UUID.h

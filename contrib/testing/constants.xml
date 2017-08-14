@@ -28,12 +28,61 @@
     <constant name="SKILL_SUMMON_DEMON">200</constant>
     <constant name="SKILL_STORE_DEMON">201</constant>
     <constant name="SKILL_EQUIP_ITEM">203</constant>
+    <constant name="SKILL_FAM_UP">207</constant>
+    <constant name="SKILL_MOOCH">209</constant>
     <constant name="SKILL_CLAN_FORM">304</constant>
+    <constant name="SKILL_ITEM_FAM_UP">316</constant>
     <constant name="STATUS_SUMMON_SYNC_1">194</constant>
     <constant name="STATUS_SUMMON_SYNC_2">364</constant>
     <constant name="STATUS_SUMMON_SYNC_3">365</constant>
 
     <!-- Complex types -->
+    <constant name="DEFAULT_SKILLS">
+        <element>5125</element>
+        <element>5580</element>
+        <element>5700</element>
+        <element>5704</element>
+        <element>5705</element>
+        <element>5715</element>
+        <element>5716</element>
+        <element>5717</element>
+        <element>5718</element>
+        <element>5841</element>
+        <element>5842</element>
+        <element>5843</element>
+        <element>5890</element>
+        <element>5892</element>
+        <element>5895</element>
+        <element>5896</element>
+        <element>5897</element>
+        <element>5898</element>
+        <element>5899</element>
+        <element>5900</element>
+        <element>5901</element>
+        <element>5902</element>
+        <element>5903</element>
+        <element>5904</element>
+        <element>5905</element>
+        <element>5906</element>
+        <element>5907</element>
+        <element>5908</element>
+        <element>5909</element>
+        <element>5911</element>
+        <element>11115</element>
+        <element>11116</element>
+        <element>11117</element>
+        <element>11610</element>
+        <element>11611</element>
+        <element>11612</element>
+        <element>11636</element>
+        <element>11637</element>
+        <element>11638</element>
+        <element>11747</element>
+        <element>11748</element>
+        <element>11901</element>
+        <element>11902</element>
+        <element>11916</element>
+    </constant>
     <constant name="CLAN_FORM_MAP">
         <pair>
             <key>1001</key>

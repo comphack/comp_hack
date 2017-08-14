@@ -938,6 +938,7 @@ String DatabaseSQLite3::GetVariableType(const std::shared_ptr
         case libobjgen::MetaVariable::MetaVariableType_t::TYPE_ARRAY:
         case libobjgen::MetaVariable::MetaVariableType_t::TYPE_LIST:
         case libobjgen::MetaVariable::MetaVariableType_t::TYPE_MAP:
+        case libobjgen::MetaVariable::MetaVariableType_t::TYPE_SET:
         default:
             break;
     }

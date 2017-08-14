@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="ActionUpdateQuest" baseobject="Action" persistent="false">
+        <member type="enum" name="actionType" inherited="true" default="UPDATE_QUEST"/>
+        <member type="s16" name="questID"/>
+        <member type="s8" name="phase"/>
+    </object>
+</objgen>

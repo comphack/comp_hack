@@ -371,16 +371,25 @@ public:
         const std::shared_ptr<objects::MiDevilData>& demonData);
 
     /**
+     * Get a demon's familiarity rank from their current familiarity points.
+     * @param familiarity Demon's familiarity points
+     * @return Converted familiarity rank from -3 to +4
+     */
+    int8_t GetFamiliarityRank(uint16_t familiarity) const;
+
+    /**
      * Update the current partner demon's familiarity.
      * @param client Pointer to the client connection
      * @param familiarity Set or adjusted familiarity points to
      *  update the demon with
      * @param isAdjust true if the familiarity value should be added
      *  to the current value, false if it should replace the curent value
+     * @param sendPacket true if the zone should be informed of the
+     *  updated demon familiarity
      */
     void UpdateFamiliarity(const std::shared_ptr<
         channel::ChannelClientConnection>& client, int32_t familiarity,
-        bool isAdjust = false);
+        bool isAdjust = false, bool sendPacket = true);
 
     /**
      * Update the client's character or demon's experience and level
@@ -425,24 +434,59 @@ public:
         uint32_t skillID);
 
     /**
-     * Add a map to the byte array representing the maps the client character
-     * has obtained.
+     * Add a map that the client character has obtained.
      * @param client Pointer to the client connection
-     * @param mapIndex Array offset to apply the map value to
-     * @param mapValue Value to apply to the map array at the specified
-     *  offset. Can represent multiple maps at the same offset
+     * @param mapID ID representing both the map that was obtained and its
+     *  byte shift position in the storage array
      * @return true if the map is valid and was either added or already
      *  obtained, false it was not
      */
-    bool UpdateMapFlags(const std::shared_ptr<
-        channel::ChannelClientConnection>& client, size_t mapIndex,
-        uint8_t mapValue);
+    bool AddMap(const std::shared_ptr<
+        channel::ChannelClientConnection>& client, uint16_t mapID);
 
     /**
      * Send the client character's obtained maps stored as an array of flags
      * @param client Pointer to the client connection
      */
     void SendMapFlags(const std::shared_ptr<
+        ChannelClientConnection>& client);
+
+    /**
+     * Add or remove a valuable that the client character has obtained.
+     * @param client Pointer to the client connection
+     * @param valuableID ID representing both the valuable that was obtained
+     *  and its byte shift position in the storage array
+     * @param remove true if the value should be removed instead of added
+     * @return true if the valuable is valid and was either added, removed
+     *  or already updated in the way requested, false it was not
+     */
+    bool AddRemoveValuable(const std::shared_ptr<
+        channel::ChannelClientConnection>& client, uint16_t valuableID,
+        bool remove);
+
+    /**
+     * Send the client character's obtained valuables stored as an array of flags
+     * @param client Pointer to the client connection
+     */
+    void SendValuableFlags(const std::shared_ptr<
+        ChannelClientConnection>& client);
+
+    /**
+     * Add a fusion plugin that the client character has obtained.
+     * @param client Pointer to the client connection
+     * @param pluginID ID representing both the plugin that was obtained and its
+     *  byte shift position in the storage array
+     * @return true if the plugin is valid and was either added or already
+     *  obtained, false it was not
+     */
+    bool AddPlugin(const std::shared_ptr<
+        channel::ChannelClientConnection>& client, uint16_t pluginID);
+
+    /**
+     * Send the client character's obtained plugins stored as an array of flags
+     * @param client Pointer to the client connection
+     */
+    void SendPluginFlags(const std::shared_ptr<
         ChannelClientConnection>& client);
 
     /**
@@ -500,11 +544,13 @@ public:
 
     /**
      * Calculate the base stats of a demon.
+     * @param demon Pointer to the demon being calculated
      * @param ds Pointer to the core stats of a demon
-     * @param demonData Pointer to the demon's definition 
+     * @param demonData Pointer to the demon's definition
      */
-    void CalculateDemonBaseStats(const std::shared_ptr<objects::EntityStats>& ds,
-        const std::shared_ptr<objects::MiDevilData>& demonData);
+    void CalculateDemonBaseStats(const std::shared_ptr<objects::Demon>& demon,
+        std::shared_ptr<objects::EntityStats> ds = nullptr,
+        std::shared_ptr<objects::MiDevilData> demonData = nullptr);
 
     /**
      * Retrieve a map of correct table indexes to corresponding stat values.

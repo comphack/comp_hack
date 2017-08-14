@@ -47,10 +47,13 @@
 #include <EventNPCMessage.h>
 #include <EventOpenMenu.h>
 #include <EventPerformActions.h>
+#include <EventPlayBGM.h>
 #include <EventPlayScene.h>
+#include <EventPlaySoundEffect.h>
 #include <EventPrompt.h>
 #include <EventSpecialDirection.h>
 #include <EventStageEffect.h>
+#include <EventStopBGM.h>
 #include <EventState.h>
 #include <ServerZone.h>
 
@@ -234,6 +237,15 @@ bool EventManager::HandleEvent(const std::shared_ptr<ChannelClientConnection>& c
             break;
         case objects::Event::EventType_t::SPECIAL_DIRECTION:
             handled = SpecialDirection(client, instance);
+            break;
+        case objects::Event::EventType_t::PLAY_SOUND_EFFECT:
+            handled = PlaySoundEffect(client, instance);
+            break;
+        case objects::Event::EventType_t::PLAY_BGM:
+            handled = PlayBGM(client, instance);
+            break;
+        case objects::Event::EventType_t::STOP_BGM:
+            handled = StopBGM(client, instance);
             break;
         default:
             LOG_ERROR(libcomp::String("Failed to handle event of type %1\n"
@@ -559,6 +571,59 @@ bool EventManager::SpecialDirection(const std::shared_ptr<ChannelClientConnectio
 
     return true;
 }
+
+bool EventManager::PlaySoundEffect(const std::shared_ptr<ChannelClientConnection>& client,
+    const std::shared_ptr<objects::EventInstance>& instance)
+{
+    auto e = std::dynamic_pointer_cast<objects::EventPlaySoundEffect>(instance->GetEvent());
+
+    libcomp::Packet p;
+    p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_EVENT_PLAY_SOUND_EFFECT);
+    p.WriteS32Little(e->GetSoundID());
+    p.WriteS32Little(e->GetUnknown());
+
+    client->SendPacket(p);
+
+    HandleNext(client, instance);
+
+    return true;
+}
+
+bool EventManager::PlayBGM(const std::shared_ptr<ChannelClientConnection>& client,
+    const std::shared_ptr<objects::EventInstance>& instance)
+{
+    auto e = std::dynamic_pointer_cast<objects::EventPlayBGM>(instance->GetEvent());
+
+    libcomp::Packet p;
+    p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_EVENT_PLAY_BGM);
+    p.WriteS32Little(e->GetMusicID());
+    p.WriteS32Little(e->GetFadeInDelay());
+    p.WriteS32Little(e->GetUnknown());
+
+    client->SendPacket(p);
+
+    HandleNext(client, instance);
+
+    return true;
+}
+
+
+bool EventManager::StopBGM(const std::shared_ptr<ChannelClientConnection>& client,
+    const std::shared_ptr<objects::EventInstance>& instance)
+{
+    auto e = std::dynamic_pointer_cast<objects::EventStopBGM>(instance->GetEvent());
+
+    libcomp::Packet p;
+    p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_EVENT_STOP_BGM);
+    p.WriteS32Little(e->GetMusicID());
+
+    client->SendPacket(p);
+
+    HandleNext(client, instance);
+
+    return true;
+}
+
 
 bool EventManager::EndEvent(const std::shared_ptr<ChannelClientConnection>& client)
 {

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="MiCEventMessageData" persistent="false">
+        <member type="u32" name="ID"/>
+        <member type="list" name="Lines">
+            <element type="string" encoding="cp932" length="132"/>
+        </member>
+    </object>
+</objgen>

@@ -254,6 +254,7 @@ SET(${PROJECT_NAME}_SCHEMA
     schema/test.xml
 
     # BinaryData Files
+    schema/binarydata/ceventmessagedata.xml
     schema/binarydata/citemdata.xml
     schema/binarydata/cmessagedata.xml
     schema/binarydata/cquest.xml
@@ -453,6 +454,8 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     MiCastData.h
     MiCategoryData.h
     MiCategoryData.cpp
+    MiCEventMessageData.cpp
+    MiCEventMessageData.h
     MiCItemBaseData.cpp
     MiCItemBaseData.h
     MiCItemData.cpp

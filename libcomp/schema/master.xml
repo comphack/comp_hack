@@ -55,6 +55,7 @@
     <include path="server_zone.xml"/>
 
     <!-- BinaryData Files -->
+    <include path="binarydata/ceventmessagedata.xml"/>
     <include path="binarydata/citemdata.xml"/>
     <include path="binarydata/cmessagedata.xml"/>
     <include path="binarydata/cquest.xml"/>

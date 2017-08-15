@@ -33,6 +33,8 @@
 #include <Object.h>
 
 // object Includes
+#include <MiCEventMessageData.h>
+
 #include <MiCItemBaseData.h>
 #include <MiCItemData.h>
 
@@ -348,6 +350,7 @@ int Usage(const char *szAppName)
     std::cerr << std::endl;
     std::cerr << "TYPE indicates the format of the BinaryData and can "
         << "be one of:" << std::endl;
+    std::cerr << "  ceventmessage Format for CEventMessageData.sbin" << std::endl;
     std::cerr << "  citem         Format for CItemData.sbin" << std::endl;
     std::cerr << "  cmessage      Format for CMessageData.sbin" << std::endl;
     std::cerr << "  cquest        Format for CQuestData.sbin" << std::endl;
@@ -387,7 +390,22 @@ int main(int argc, char *argv[])
 
     BinaryDataSet *pSet = nullptr;
 
-    if("citem" == bdType)
+    if("ceventmessage" == bdType)
+    {
+        pSet = new BinaryDataSet(
+            []()
+            {
+                return std::make_shared<objects::MiCEventMessageData>();
+            },
+
+            [](const std::shared_ptr<libcomp::Object>& obj)
+            {
+                return std::dynamic_pointer_cast<objects::MiCEventMessageData>(
+                    obj)->GetID();
+            }
+        );
+    }
+    else if("citem" == bdType)
     {
         pSet = new BinaryDataSet(
             []()

@@ -2,9 +2,10 @@
  * @file server/channel/src/EventManager.h
  * @ingroup channel
  *
- * @author COMP Omega <compomega@tutanota.com>
+ * @author HACKfrost
  *
- * @brief Manages the execution and processing of events.
+ * @brief Manages the execution and processing of events as well
+ *  as quest phase progression and condition evaluation.
  *
  * This file is part of the Channel Server (channel).
  *
@@ -38,6 +39,8 @@
 
 namespace objects
 {
+class EventCondition;
+class EventConditionData;
 class EventInstance;
 }
 
@@ -47,10 +50,11 @@ namespace channel
 class ChannelServer;
 
 /**
- * Manager class in charge of processing event sequences. Events include
- * things like NPC dialogue, player choice prompts, cinematics and context
- * sensitive menus.  Events can be strung together and can progress as well
- * as pop back to previous events much like a dialogue tree.
+ * Manager class in charge of processing event sequences as well as quest
+ * phase progression and condition evaluation. Events include things like
+ * NPC dialogue, player choice prompts, cinematics and context sensitive
+ * menus.  Events can be strung together and can progress as well as pop
+ * back to previous events much like a dialogue tree.
  */
 class EventManager
 {
@@ -86,6 +90,87 @@ public:
      */
     bool HandleResponse(const std::shared_ptr<ChannelClientConnection>& client,
         int32_t responseID);
+
+    /**
+     * Start, update or complete a quest based upon the quest ID and phase
+     * supplied. Restrictions are enforced to disallow skipping phases, etc.
+     * @param client Pointer to the client the quest is associated to
+     * @param questID ID of the quest being updated
+     * @param phase Phase to update the quest to. If 0 is supplied, the quest
+     *  will be started. If -1 is supplied, the quest will be completed.
+     *  Otherwise the quest will move to that phase.
+     * @param forceUpdate Optional parameter to bypass quest state based
+     *  restrictions and force the quest into the specified state
+     * @return true on success (or no phase update needed), false on failure
+     */
+    bool UpdateQuest(const std::shared_ptr<ChannelClientConnection>& client,
+        int16_t questID, int8_t phase, bool forceUpdate = false);
+
+    /**
+     * Update the client's quest kill counts
+     * @param client Pointer to the client with active kill quests
+     * @param kills Map of demon types to the number killed
+     */
+    void UpdateQuestKillCount(const std::shared_ptr<ChannelClientConnection>& client,
+        const std::unordered_map<uint32_t, int32_t>& kills);
+
+    /**
+     * Evaluate each of the valid condition sets required to start a quest
+     * @param client Pointer to the client to evaluate contextually to
+     * @param questID ID of the quest being evaluated
+     * @return true if the any of the condition sets all evaluated to true, false
+     *  if no set's conditions all evaluated to true
+     */
+    bool EvaluateQuestConditions(const std::shared_ptr<ChannelClientConnection>& client,
+        int16_t questID);
+
+    /**
+     * Evaluate an event condition
+     * @param client Pointer to the client to evaluate contextually to
+     * @param conditions List of event conditions to evaluate
+     * @return true if the event condition evaluates to true, otherwise false
+     */
+    bool EvaluateEventCondition(const std::shared_ptr<ChannelClientConnection>& client,
+        const std::shared_ptr<objects::EventCondition>& condition);
+
+    /**
+     * Evaluate a list of event conditions
+     * @param client Pointer to the client to evaluate contextually to
+     * @param condition Event condition to evaluate
+     * @return true if the event conditions evaluate to true, otherwise false
+     */
+    bool EvaluateEventConditions(const std::shared_ptr<ChannelClientConnection>& client,
+        const std::list<std::shared_ptr<objects::EventCondition>>& conditions);
+
+    /**
+     * Evaluate a standard event condition
+     * @param client Pointer to the client to evaluate contextually to
+     * @param condition Standard condition to evaluate
+     * @return true if standard condition evaluates to true, otherwise false
+     */
+    bool EvaluateCondition(const std::shared_ptr<ChannelClientConnection>& client,
+        const std::shared_ptr<objects::EventConditionData>& condition);
+
+    /**
+     * Evaluate each of the requirements to complete the current quest phase
+     * @param client Pointer to the client to evaluate contextually to
+     * @param questID ID of the quest to check
+     * @param phase Current phase ID, acts as assurance that the right phase
+     *  is being checked
+     * @return true if all of the current phase's completion requirements have
+     *  been met, false if any have not been met or the phase supplied is not
+     *  the current phase
+     */
+    bool EvaluateQuestPhaseRequirements(const std::shared_ptr<
+        ChannelClientConnection>& client, int16_t questID, int8_t phase);
+
+    /**
+     * Update the registered set of enemy types that need to be killed to
+     * complete the current quests for the supplied client
+     * @param client Pointer to the client to update
+     */
+    void UpdateQuestTargetEnemies(
+        const std::shared_ptr<ChannelClientConnection>& client);
 
 private:
     /**

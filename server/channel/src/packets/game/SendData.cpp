@@ -142,9 +142,6 @@ void SendClientReadyData(std::shared_ptr<ChannelServer> server,
 
     /// @todo: send skill cost rate [0x019E]
     /// @todo: send "connected commu SV" [0x015A]
-    /// @todo: send clan data [0x0155]
-    /// @todo: send updated player skill list (before character data for some reason) [0x0187]
-    /// @todo: send more clan data (may send first clan data again) [0x01E5]
 
     client->FlushOutgoing();
 }

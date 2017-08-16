@@ -1330,6 +1330,11 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
                 { -100, -100 }  // Type 16
             };
 
+        auto sourceClient = server->GetManagerConnection()->
+            GetEntityClient(source->GetEntityID());
+        auto sourceState = sourceClient ? sourceClient->GetClientState() : nullptr;
+        std::unordered_map<uint32_t, int32_t> questKills;
+
         uint32_t sourceDemonType = (source->GetEntityType() ==
             objects::EntityStateObject::EntityType_t::PARTNER_DEMON)
             ? std::dynamic_pointer_cast<DemonState>(source)->GetEntity()->GetType()
@@ -1355,11 +1360,8 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
                 partnerDeath = true;
                 break;
             case objects::EntityStateObject::EntityType_t::ENEMY:
-                if(sourceDemonType)
-                {
-                    dType = std::dynamic_pointer_cast<EnemyState>(entity)
-                        ->GetEntity()->GetType();
-                }
+                dType = std::dynamic_pointer_cast<EnemyState>(entity)
+                    ->GetEntity()->GetType();
                 break;
             default:
                 break;
@@ -1373,6 +1375,17 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
                     // Partner demon has died
                     adjusts.push_back(std::pair<int32_t, int32_t>(
                         entity->GetEntityID(), fTypeMap[(size_t)sourceDemonFType][0]));
+                }
+                else if(sourceState && sourceState->QuestTargetEnemiesContains(dType))
+                {
+                    if(questKills.find(dType) == questKills.end())
+                    {
+                        questKills[dType] = 1;
+                    }
+                    else
+                    {
+                        questKills[dType] = (questKills[dType] + 1);
+                    }
                 }
 
                 if(entity != source && sourceDemonType == dType)
@@ -1405,6 +1418,12 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
             if(!demonClient) continue;
 
             characterManager->UpdateFamiliarity(demonClient, aPair.second, true);
+        }
+
+        // Update quest kill counts
+        if(questKills.size() > 0)
+        {
+            server->GetEventManager()->UpdateQuestKillCount(sourceClient, questKills);
         }
     }
 
@@ -2009,7 +2028,7 @@ bool SkillManager::FamiliarityUp(const std::shared_ptr<ChannelClientConnection> 
 
     /// @todo: receive items from demon
 
-    bool sameLNC = cState->GetLNC() == dState->GetLNC(definitionManager);
+    bool sameLNC = cState->GetLNCType() == dState->GetLNCType(definitionManager);
 
     int32_t fPoints = (int32_t)fTypeMap[(size_t)fType][sameLNC ? 0 : 1];
     server->GetCharacterManager()->UpdateFamiliarity(client, fPoints, true);

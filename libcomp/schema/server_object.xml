@@ -13,7 +13,7 @@
         <member type="u8" name="State"/>
     </object>
     <object name="ServerBazaar" baseobject="ServerObjectBase" persistent="false">
-        <member type="set" name="SlotIDs">
+        <member type="set" name="MarketIDs">
             <element type="u32"/>
         </member>
     </object>

@@ -39,6 +39,7 @@
 #include <MiItemData.h>
 #include <MiDevilData.h>
 #include <MiNPCBasicData.h>
+#include <MiQuestData.h>
 #include <MiSkillItemStatusCommonData.h>
 #include <MiZoneBasicData.h>
 #include <MiZoneData.h>
@@ -77,6 +78,7 @@ ChatManager::ChatManager(const std::weak_ptr<ChannelServer>& server)
     mGMands["map"] = &ChatManager::GMCommand_Map;
     mGMands["pos"] = &ChatManager::GMCommand_Position;
     mGMands["post"] = &ChatManager::GMCommand_Post;
+    mGMands["quest"] = &ChatManager::GMCommand_Quest;
     mGMands["skill"] = &ChatManager::GMCommand_Skill;
     mGMands["speed"] = &ChatManager::GMCommand_Speed;
     mGMands["tickermessage"] = &ChatManager::GMCommand_TickerMessage;
@@ -922,6 +924,42 @@ bool ChatManager::GMCommand_Post(const std::shared_ptr<
 
     postItem->Insert(worldDB);
     worldData->Update(worldDB);
+
+    return true;
+}
+
+bool ChatManager::GMCommand_Quest(const std::shared_ptr<
+    channel::ChannelClientConnection>& client,
+    const std::list<libcomp::String>& args)
+{
+    std::list<libcomp::String> argsCopy = args;
+
+    auto server = mServer.lock();
+    auto definitionManager = server->GetDefinitionManager();
+    
+    uint32_t questID;
+    bool validQuestID = GetIntegerArg<uint32_t>(questID, argsCopy);
+    auto questData = validQuestID
+        ? definitionManager->GetQuestData(questID) : nullptr;
+    if(!questData)
+    {
+        return SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(
+            "Invalid quest ID specified: %1\n").Arg(questID));
+    }
+
+    int8_t phase;
+    if(!GetIntegerArg<int8_t>(phase, argsCopy))
+    {
+        return SendChatMessage(client, ChatType_t::CHAT_SELF,
+            "No phase specified for @quest command\n");
+    }
+    else if(phase < -1 || (int8_t)questData->GetPhaseCount() < phase)
+    {
+        return SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(
+            "Invalid phase '%1' supplied for quest: %2\n").Arg(phase).Arg(questID));
+    }
+
+    server->GetEventManager()->UpdateQuest(client, (int16_t)questID, phase, true);
 
     return true;
 }

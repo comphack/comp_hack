@@ -51,6 +51,7 @@ class MiExpertData;
 class MiHNPCData;
 class MiItemData;
 class MiONPCData;
+class MiQuestData;
 class MiShopProductData;
 class MiSkillData;
 class MiStatusData;
@@ -153,6 +154,13 @@ public:
      *  does not exist
      */
     const std::shared_ptr<objects::MiONPCData> GetONPCData(uint32_t id);
+
+    /**
+     * Get the quest definition corresponding to an ID
+     * @param id Quest ID to retrieve
+     * @return Pointer to the matching quest, null if it does not exist
+     */
+    const std::shared_ptr<objects::MiQuestData> GetQuestData(uint32_t id);
 
     /**
      * Get the shop product definition corresponding to an ID
@@ -274,6 +282,13 @@ public:
      * @return true on success, false on failure
      */
     bool LoadONPCData(gsl::not_null<DataStore*> pDataStore);
+
+    /**
+     * Load the quest binary data definitions
+     * @param pDataStore Pointer to the datastore to load binary file from
+     * @return true on success, false on failure
+     */
+    bool LoadQuestData(gsl::not_null<DataStore*> pDataStore);
 
     /**
      * Load the shop product binary data definitions
@@ -474,6 +489,10 @@ private:
     /// Map of server object NPC definitions by ID
     std::unordered_map<uint32_t,
         std::shared_ptr<objects::MiONPCData>> mONPCData;
+
+    /// Map of quest definitions by ID
+    std::unordered_map<uint32_t,
+        std::shared_ptr<objects::MiQuestData>> mQuestData;
 
     /// Map of shop product definitions by ID
     std::unordered_map<uint32_t,

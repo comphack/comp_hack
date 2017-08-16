@@ -305,6 +305,7 @@ enum class ChannelToClientPacketCode_t : uint16_t
     PACKET_QUEST_ACTIVE_LIST = 0x010D,  //!< Response containing the player's active quest list.
     PACKET_QUEST_COMPLETED_LIST = 0x010E,  //!< Response containing the player's completed quest list.
     PACKET_QUEST_PHASE_UPDATE = 0x010F,    //!< Notification that a quest's phase has been updated.
+    PACKET_QUEST_KILL_COUNT_UPDATE = 0x0110,    //!< Notification that a quest's kill counts have been updated.
     PACKET_LNC_POINTS = 0x0126,    //!< Message containing a character's LNC alignment value.
     PACKET_EVENT_STAGE_EFFECT = 0x0127,  //!< Request to the client to render a stage effect.
     PACKET_CLAN_FORM = 0x0137,   //!< Response to the request to form a new clan from a clan formation item.

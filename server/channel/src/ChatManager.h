@@ -293,6 +293,17 @@ private:
         const std::list<libcomp::String>& args);
 
     /**
+     * GM command to set a specific quest to a specific phase,
+     * ignoring prior requirements and state.
+     * @param client Pointer to the client that sent the command
+     * @param args List of arguments for the command
+     * @return true if the command was handled properly, else false
+     */
+    bool GMCommand_Quest(const std::shared_ptr<
+        channel::ChannelClientConnection>& client,
+        const std::list<libcomp::String>& args);
+
+    /**
      * GM command to have the client's character or partner demon
      * learn a skill.
      * @param client Pointer to the client that sent the command

@@ -69,15 +69,6 @@ const uint8_t ENTITY_CALC_STAT_WORLD = 0x02;
 /// Recalculation resulted in a modified skill set (characters only)
 const uint8_t ENTITY_CALC_SKILL = 0x04;
 
-/// Represents LNC alignment: Law
-const int8_t LNC_LAW = -1;
-
-/// Represents LNC alignment: Neutral
-const int8_t LNC_NEUTRAL = 0;
-
-/// Represents LNC alignment: Chaos
-const int8_t LNC_CHAOS = 1;
-
 namespace libcomp
 {
 class DefinitionManager;
@@ -546,13 +537,12 @@ protected:
         uint32_t demonID);
 
     /**
-     * Calculate the numeric representation (also stored in constants on
-     * ActiveEntityState) of the entity's alignment based off the supplied
-     * LNC point value
+     * Calculate the numeric representation (also stored in constants)
+     * of the entity's alignment based off the supplied LNC point value
      * @param lncPoints LNC points representing degrees of alignment
      * @return Numeric representation of the entity's current alignment
      */
-    int8_t CalculateLNC(int16_t lncPoints) const;
+    uint8_t CalculateLNCType(int16_t lncPoints) const;
 
     /**
      * Remove any switch skills marked as active that are no longer available
@@ -668,13 +658,13 @@ public:
     virtual uint8_t RecalculateStats(libcomp::DefinitionManager* definitionManager);
 
     /**
-     * Get a numeric representation (also stored in constants on
-     * ActiveEntityState) of the entity's current alignment
+     * Get a numeric representation (also stored in constants) of the
+     * entity's current alignment
      * @param definitionManager Pointer to the definition manager to use
      *  for entities with a static LNC value
      * @return Numeric representation of the entity's current alignment
      */
-    int8_t GetLNC(libcomp::DefinitionManager* definitionManager = nullptr);
+    uint8_t GetLNCType(libcomp::DefinitionManager* definitionManager = nullptr);
 
     virtual bool Ready()
     {

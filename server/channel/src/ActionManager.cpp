@@ -225,13 +225,10 @@ bool ActionManager::UpdateQuest(
     (void)sourceEntityID;
 
     auto act = std::dynamic_pointer_cast<objects::ActionUpdateQuest>(action);
+    auto server = mServer.lock();
+    auto eventManager = server->GetEventManager();
 
-    libcomp::Packet p;
-    p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_QUEST_PHASE_UPDATE);
-    p.WriteS16Little(act->GetQuestID());
-    p.WriteS8(act->GetPhase());
-
-    client->SendPacket(p);
+    eventManager->UpdateQuest(client, act->GetQuestID(), act->GetPhase());
 
     return true;
 }

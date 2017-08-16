@@ -66,7 +66,7 @@ bool Parsers::QuestActiveList::Parse(libcomp::ManagerPacket *pPacketManager,
         auto customData = quest->GetCustomData();
 
         reply.WriteS16Little(quest->GetQuestID());
-        reply.WriteS8(quest->GetState());
+        reply.WriteS8(quest->GetPhase());
 
         reply.WriteArray(&customData, (uint32_t)customData.size() * sizeof(int32_t));
     }

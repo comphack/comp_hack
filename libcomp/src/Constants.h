@@ -127,6 +127,9 @@ namespace libcomp
 /// Max number of quest mask bytes stored in the character data.
 #define QUEST_MASK_MAX   (512)
 
+/// Max number of quests that can be active at one time.
+#define QUEST_ACTIVE_MAX (20)
+
 /// Highest possible account ID (lower to preserve the PC registry IDs).
 #define MAX_ACCOUNT_ID (0x07FFFFFF)
 
@@ -207,6 +210,15 @@ namespace libcomp
 
 /// Mode specifier for affinity absorption in the correct table
 #define NRA_ABSORB (3)
+
+/// LNC alignment: Law
+#define LNC_LAW (0)
+
+/// LNC alignment: Neutral
+#define LNC_NEUTRAL (2)
+
+/// LNC alignment: Chaos
+#define LNC_CHAOS (4)
 
 /// Experience required to proceed from the indexed level to the next
 const unsigned long long LEVEL_XP_REQUIREMENTS[] = {

@@ -371,13 +371,13 @@ bool ZoneFilter::ProcessCommand(const libcomp::String& capturePath,
             float originX = packet.ReadFloat();
             float originY = packet.ReadFloat();
             float originRotation = packet.ReadFloat();
-            int32_t slotCount = packet.ReadS32Little();
+            int32_t marketCount = packet.ReadS32Little();
             (void)zoneInstance;
 
-            std::set<uint32_t> slotIDs;
-            for(int32_t i = 0; i < slotCount; i++)
+            std::set<uint32_t> marketIDs;
+            for(int32_t i = 0; i < marketCount; i++)
             {
-                slotIDs.insert(packet.ReadU32Little());
+                marketIDs.insert(packet.ReadU32Little());
                 packet.Skip(8);
 
                 uint16_t strSize = packet.ReadU16Little();
@@ -406,16 +406,16 @@ bool ZoneFilter::ProcessCommand(const libcomp::String& capturePath,
                 zone->AppendBazaars(b);
             }
 
-            if(slotIDs.size() > 0)
+            if(marketIDs.size() > 0)
             {
-                for(uint32_t slotID : slotIDs)
+                for(uint32_t marketID : marketIDs)
                 {
-                    b->InsertSlotIDs(slotID);
+                    b->InsertMarketIDs(marketID);
                 }
 
-                // Bazaars don't really have IDs but their slots do so assign
+                // Bazaars don't really have IDs but their markets do so assign
                 // the lowest one
-                b->SetID(*slotIDs.begin());
+                b->SetID(*marketIDs.begin());
             }
 
             instance->entities[entityId] = b;

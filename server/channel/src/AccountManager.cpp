@@ -49,6 +49,7 @@
 #include <ItemBox.h>
 #include <MiItemData.h>
 #include <MiPossessionData.h>
+#include <Quest.h>
 #include <ServerZone.h>
 #include <TradeSession.h>
 
@@ -127,6 +128,9 @@ void AccountManager::HandleLoginResponse(const std::shared_ptr<
         demonState->SetEntity(character->GetActiveDemon().Get());
         demonState->SetEntityID(server->GetNextEntityID());
         demonState->RecalculateStats(server->GetDefinitionManager());
+
+        // Prepare active quests
+        server->GetEventManager()->UpdateQuestTargetEnemies(client);
 
         state->Register();
 
@@ -580,6 +584,15 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
         }
     }
 
+    // Quests
+    for(auto qPair : character->GetQuests())
+    {
+        if(!qPair.second.IsNull() && !qPair.second.Get(db))
+        {
+            return false;
+        }
+    }
+
     // Clan
     if(!character->GetClan().IsNull())
     {
@@ -716,6 +729,13 @@ bool AccountManager::LogoutCharacter(channel::ClientState* state,
     for(auto hotbar : character->GetHotbars())
     {
         ok &= Cleanup<objects::Hotbar>(hotbar.Get(),
+            worldDB, doSave, !delay);
+    }
+
+    // Save quests
+    for(auto qPair : character->GetQuests())
+    {
+        ok &= Cleanup<objects::Quest>(qPair.second.Get(),
             worldDB, doSave, !delay);
     }
 

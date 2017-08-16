@@ -434,6 +434,18 @@ public:
         uint32_t skillID);
 
     /**
+     * Convert the supplied ID to its corresponding flag array index
+     * and shift value for use with fields stored as arrays of flags
+     * stored as single bytes
+     * @param uint16_t ID to convert
+     * @param index Output parameter that will be updated to the index
+     *  of the flag array for the ID's corresponding byte
+     * @param shiftVal Ouptput parameter that will be updated to the
+     *  ID's mask position at the index in the flag array
+     */
+    void ConvertIDToMaskValues(uint16_t id, size_t& index, uint8_t& shiftVal);
+
+    /**
      * Add a map that the client character has obtained.
      * @param client Pointer to the client connection
      * @param mapID ID representing both the map that was obtained and its

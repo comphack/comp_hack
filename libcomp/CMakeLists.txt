@@ -266,6 +266,7 @@ SET(${PROJECT_NAME}_SCHEMA
     schema/binarydata/hnpcdata.xml
     schema/binarydata/itemdata.xml
     schema/binarydata/onpcdata.xml
+    schema/binarydata/questdata.xml
     schema/binarydata/shared.xml
     schema/binarydata/shopproductdata.xml
     schema/binarydata/skilldata.xml
@@ -340,6 +341,8 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     EventBase.cpp
     EventChoice.h
     EventChoice.cpp
+    EventCondition.h
+    EventCondition.cpp
     EventDirection.h
     EventDirection.cpp
     EventExNPCMessage.h
@@ -500,6 +503,8 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     MiEffectData.h
     MiEffectiveRangeData.cpp
     MiEffectiveRangeData.h
+    EventConditionData.cpp
+    EventConditionData.h
     MiExpertClassData.cpp
     MiExpertClassData.h
     MiExpertData.cpp
@@ -538,6 +543,14 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     MiONPCData.h
     MiPossessionData.h
     MiPossessionData.cpp
+    MiQuestData.h
+    MiQuestData.cpp
+    MiQuestPhaseData.h
+    MiQuestPhaseData.cpp
+    QuestPhaseRequirement.h
+    QuestPhaseRequirement.cpp
+    MiQuestUpperCondition.h
+    MiQuestUpperCondition.cpp
     MiRentalData.h
     MiRentalData.cpp
     MiRestrictionData.cpp

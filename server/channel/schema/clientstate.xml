@@ -10,6 +10,9 @@
         <member type="EventState*" name="EventState"/>
         <member type="TradeSession*" name="TradeSession"/>
         <member type="s8" name="StatusIcon"/>
+        <member type="set" name="QuestTargetEnemies">
+            <element type="u32"/>
+        </member>
     </object>
     <object name="EventState" persistent="false">
         <member type="EventInstance*" name="Current"/>

@@ -823,7 +823,7 @@ void CharacterManager::SummonDemon(const std::shared_ptr<
     dState->SetEntity(demon);
 
     // If the character and demon share alignment, apply summon sync
-    if(cState->GetLNC() == dState->GetLNC(definitionManager))
+    if(cState->GetLNCType() == dState->GetLNCType(definitionManager))
     {
         uint32_t syncStatusType = 0;
         if(demon->GetFamiliarity() == MAX_FAMILIARITY)
@@ -2085,6 +2085,13 @@ bool CharacterManager::LearnSkill(const std::shared_ptr<channel::ChannelClientCo
     return true;
 }
 
+void CharacterManager::ConvertIDToMaskValues(uint16_t id, size_t& index,
+    uint8_t& shiftVal)
+{
+    index = (size_t)floor(id / 8);
+    shiftVal = (uint8_t)(1 << (index ? (id % (uint16_t)index) : id));
+}
+
 bool CharacterManager::AddMap(const std::shared_ptr<
     channel::ChannelClientConnection>& client, uint16_t mapID)
 {
@@ -2093,8 +2100,10 @@ bool CharacterManager::AddMap(const std::shared_ptr<
     auto character = cState->GetEntity();
     auto progress = character->GetProgress().Get();
 
-    size_t index = (size_t)floor(mapID / 8);
-    uint8_t shiftVal = (uint8_t)(1 << (index ? (mapID % (uint16_t)index) : mapID));
+    size_t index;
+    uint8_t shiftVal;
+    ConvertIDToMaskValues(mapID, index, shiftVal);
+
     if(index >= progress->GetMaps().size())
     {
         return false;
@@ -2138,8 +2147,10 @@ bool CharacterManager::AddRemoveValuable(const std::shared_ptr<
     auto character = cState->GetEntity();
     auto progress = character->GetProgress().Get();
 
-    size_t index = (size_t)floor(valuableID / 8);
-    uint8_t shiftVal = (uint8_t)(1 << (index ? (valuableID % (uint16_t)index) : valuableID));
+    size_t index;
+    uint8_t shiftVal;
+    ConvertIDToMaskValues(valuableID, index, shiftVal);
+
     if(index >= progress->GetValuables().size())
     {
         return false;
@@ -2184,8 +2195,10 @@ bool CharacterManager::AddPlugin(const std::shared_ptr<
     auto character = cState->GetEntity();
     auto progress = character->GetProgress().Get();
 
-    size_t index = (size_t)floor(pluginID / 8);
-    uint8_t shiftVal = (uint8_t)(1 << (index ? (pluginID % (uint16_t)index) : pluginID));
+    size_t index;
+    uint8_t shiftVal;
+    ConvertIDToMaskValues(pluginID, index, shiftVal);
+
     if(index >= progress->GetPlugins().size())
     {
         return false;

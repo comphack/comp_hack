@@ -2,7 +2,10 @@
 <objgen>
     <object name="EventBase" persistent="false">
         <member type="string" name="next"/>
-        <member type="string" name="conditionID"/>
+        <member type="string" name="conditionID"/>  <!-- todo: remove after events are merged -->
+        <member type="list" name="conditions">
+            <element type="EventCondition*"/>
+        </member>
         <member type="bool" name="pop"/>
         <member type="bool" name="popNext"/>
     </object>
@@ -13,7 +16,7 @@
     </object>
     <object name="Event" baseobject="EventSequence" persistent="false" inherited-construction="true">
         <member type="string" name="ID"/>
-        <member type="enum" name="eventType">
+        <member type="enum" name="eventType" underlying="uint8_t">
             <value>MESSAGE</value>
             <value>NPC_MESSAGE</value>
             <value>EX_NPC_MESSAGE</value>
@@ -31,5 +34,19 @@
             <value>PLAY_BGM</value>
             <value>STOP_BGM</value>
         </member>
+    </object>
+    <object name="EventCondition" persistent="false">
+        <member type="enum" name="type" underlying="uint8_t">
+            <value>NORMAL</value>
+            <value>MAX_QUESTS</value>
+            <value>QUEST_AVAILABLE</value>
+            <value>QUEST_PHASE_EQUALS</value>
+            <value>QUEST_PHASE_GTE</value>
+            <value>QUEST_PHASE_REQUIREMENTS</value>
+        </member>
+        <member type="bool" name="negate"/>
+        <member type="EventConditionData*" name="data"/>
+        <member type="s16" name="questID" default="-1"/>
+        <member type="s8" name="phase" default="-1"/>
     </object>
 </objgen>

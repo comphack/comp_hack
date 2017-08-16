@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <!-- Custom -->
+    <object name="EventConditionData" persistent="false">
+        <member type="enum" name="type" underlying="uint32_t">
+            <value num="0">NONE</value>
+            <value num="1">LEVEL</value>
+            <value num="2">LNC</value>
+            <value num="3">ITEM</value>
+            <value num="4">VALUABLE</value>
+            <value num="9">QUEST_COMPLETE</value>
+            <value num="12">TIMESPAN</value>
+            <value num="13">TIMESPAN_REAL</value>
+            <value num="15">MOON_PHASE</value>
+            <value num="16">MAP</value>
+            <value num="17">QUEST_ACTIVE</value>
+            <value num="18">QUEST_SEQUENCE</value>
+            <value num="21">EXPERTISE_NOT_MAX</value>
+            <value num="22">EXPERTISE_ABOVE</value>
+            <value num="23">SI_EQUIPPED</value>
+            <value num="24">SUMMONED</value>
+        </member>
+        <member type="s32" name="value1"/>
+        <member type="s32" name="value2"/>
+    </object>
+    <object name="MiQuestUpperCondition" persistent="false">
+        <member type="u32" name="clauseCount"/>
+        <member type="array" name="clauses" size="10">
+            <element type="EventConditionData*"/>
+        </member>
+    </object>
+    <!-- Custom -->
+    <object name="QuestPhaseRequirement" persistent="false">
+        <member type="enum" name="type" underlying="uint32_t">
+            <value num="0">NONE</value>
+            <value num="1">ITEM</value>
+            <value num="3">SUMMON</value>
+            <value num="4">KILL</value>
+            <value num="12">KILL_HIDDEN</value>
+        </member>
+        <member type="u32" name="objectID"/>
+        <member type="u32" name="objectCount"/>
+    </object>
+    <object name="MiQuestPhaseData" persistent="false">
+        <member type="u32" name="phaseNumber"/>
+        <member type="u32" name="requirementCount"/>
+        <member type="array" name="requirements" size="8">
+            <element type="QuestPhaseRequirement*"/>
+        </member>
+    </object>
+    <object name="MiQuestData" persistent="false">
+        <member type="u32" name="ID"/>
+        <member type="u32" name="type"/>
+        <member type="u32" name="groupID"/>
+        <member type="u32" name="episodeType"/>
+        <member type="u32" name="bonusEnabled"/>
+        <member type="u32" name="conditionsExist"/>
+        <member type="array" name="conditions" size="4">
+            <element type="MiQuestUpperCondition*"/>
+        </member>
+        <member type="string" name="restrictionText"/>
+        <member type="u32" name="phaseCount"/>
+        <member type="array" name="phases" size="8">
+            <element type="MiQuestPhaseData*"/>
+        </member>
+    </object>
+</objgen>

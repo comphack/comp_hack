@@ -1515,16 +1515,16 @@ uint8_t ActiveEntityStateImp<objects::Enemy>::RecalculateStats(
 }
 
 template<>
-int8_t ActiveEntityStateImp<objects::Character>::GetLNC(
+uint8_t ActiveEntityStateImp<objects::Character>::GetLNCType(
     libcomp::DefinitionManager* definitionManager)
 {
     (void)definitionManager;
 
-    return CalculateLNC(mEntity->GetLNC());
+    return CalculateLNCType(mEntity->GetLNC());
 }
 
 template<>
-int8_t ActiveEntityStateImp<objects::Demon>::GetLNC(
+uint8_t ActiveEntityStateImp<objects::Demon>::GetLNCType(
     libcomp::DefinitionManager* definitionManager)
 {
     int16_t lncPoints = 0;
@@ -1535,11 +1535,11 @@ int8_t ActiveEntityStateImp<objects::Demon>::GetLNC(
         lncPoints = demonData->GetBasic()->GetLNC();
     }
 
-    return CalculateLNC(lncPoints);
+    return CalculateLNCType(lncPoints);
 }
 
 template<>
-int8_t ActiveEntityStateImp<objects::Enemy>::GetLNC(
+uint8_t ActiveEntityStateImp<objects::Enemy>::GetLNCType(
     libcomp::DefinitionManager* definitionManager)
 {
     int16_t lncPoints = 0;
@@ -1550,7 +1550,7 @@ int8_t ActiveEntityStateImp<objects::Enemy>::GetLNC(
         lncPoints = demonData->GetBasic()->GetLNC();
     }
 
-    return CalculateLNC(lncPoints);
+    return CalculateLNCType(lncPoints);
 }
 
 }
@@ -1828,7 +1828,7 @@ uint8_t ActiveEntityState::RecalculateDemonStats(
     return CompareAndResetStats(stats);
 }
 
-int8_t ActiveEntityState::CalculateLNC(int16_t lncPoints) const
+uint8_t ActiveEntityState::CalculateLNCType(int16_t lncPoints) const
 {
     if(lncPoints >= 5000)
     {

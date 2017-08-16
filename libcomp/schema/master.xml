@@ -67,6 +67,7 @@
     <include path="binarydata/hnpcdata.xml"/>
     <include path="binarydata/itemdata.xml"/>
     <include path="binarydata/onpcdata.xml"/>
+    <include path="binarydata/questdata.xml"/>
     <include path="binarydata/shared.xml"/>
     <include path="binarydata/shopproductdata.xml"/>
     <include path="binarydata/skilldata.xml"/>

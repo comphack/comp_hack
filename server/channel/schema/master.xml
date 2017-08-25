@@ -4,4 +4,5 @@
     <include path="channelconfig.xml"/>
     <include path="clientstate.xml"/>
     <include path="entitystate.xml"/>
+    <include path="loot.xml"/>
 </objgen>

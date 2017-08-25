@@ -74,6 +74,7 @@ PACKET_PARSER_DECL(TradeAddItem);           // 0x0082
 PACKET_PARSER_DECL(TradeLock);              // 0x0085
 PACKET_PARSER_DECL(TradeFinish);            // 0x0088
 PACKET_PARSER_DECL(TradeCancel);            // 0x008B
+PACKET_PARSER_DECL(LootItem);               // 0x008E
 PACKET_PARSER_DECL(CashBalance);            // 0x0090
 PACKET_PARSER_DECL(ShopData);               // 0x0092
 PACKET_PARSER_DECL(ShopBuy);                // 0x0094
@@ -100,11 +101,14 @@ PACKET_PARSER_DECL(PartyLeaderUpdate);      // 0x00E0
 PACKET_PARSER_DECL(PartyDropRule);          // 0x00E3
 PACKET_PARSER_DECL(PartyKick);              // 0x00EB
 PACKET_PARSER_DECL(DemonFusion);            // 0x00EF
+PACKET_PARSER_DECL(LootDemonEggData);       // 0x00F1
 PACKET_PARSER_DECL(Sync);                   // 0x00F3
 PACKET_PARSER_DECL(Rotate);                 // 0x00F8
+PACKET_PARSER_DECL(LootBossBox);            // 0x00FC
 PACKET_PARSER_DECL(UnionFlag);              // 0x0100
 PACKET_PARSER_DECL(ItemDepoList);           // 0x0102
 PACKET_PARSER_DECL(DepoRent);               // 0x0104
+PACKET_PARSER_DECL(LootTreasureBox);        // 0x0107
 PACKET_PARSER_DECL(QuestActiveList);        // 0x010B
 PACKET_PARSER_DECL(QuestCompletedList);     // 0x010C
 PACKET_PARSER_DECL(ClanDisband);            // 0x0138

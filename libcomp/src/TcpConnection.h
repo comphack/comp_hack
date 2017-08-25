@@ -150,6 +150,14 @@ public:
     virtual void QueuePacket(ReadOnlyPacket& packet);
 
     /**
+     * Queue a copy of a packet to be sent.
+     * @note This will not send the packet until @ref SendPacket or
+     *   @ref FlushOutgoing is called.
+     * @param packet Packet to send to the remote host.
+     */
+    virtual void QueuePacketCopy(libcomp::Packet& packet);
+
+    /**
      * Queue an object to be packetized and sent.
      * @note This will not send the packet until @ref SendPacket or
      *   @ref FlushOutgoing is called.
@@ -173,6 +181,16 @@ public:
      *   send queue has been emptied.
      */
     virtual void SendPacket(ReadOnlyPacket& packet,
+        bool closeConnection = false);
+
+    /**
+     * Queue a copy of a packet and then send all queued packets to the
+     * remote host.
+     * @param packet Packet to send to the remote host.
+     * @param closeConnection If the connection should be closed after the
+     *   send queue has been emptied.
+     */
+    virtual void SendPacketCopy(libcomp::Packet& packet,
         bool closeConnection = false);
 
     /**

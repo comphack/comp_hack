@@ -82,6 +82,7 @@ SET(${PROJECT_NAME}_SRCS
     src/PlatformWindows.cpp
     src/PEFile.cpp
     src/PersistentObject.cpp
+    src/Randomizer.cpp
     src/ReadOnlyPacket.cpp
     src/RingBuffer.cpp
     src/ScriptEngine.cpp
@@ -177,6 +178,7 @@ SET(${PROJECT_NAME}_HDRS
     #src/Platform.h
     #src/PlatformLinux.h
     #src/PlatformWindows.h
+    src/Randomizer.h
     src/ReadOnlyPacket.h
     src/RingBuffer.h
     src/ScriptEngine.h
@@ -213,6 +215,7 @@ SET(${PROJECT_NAME}_SCHEMA
     schema/account.xml
     schema/accountlogin.xml
     schema/action.xml
+    schema/action_createloot.xml
     schema/action_setnpcstate.xml
     schema/action_startevent.xml
     schema/action_updateflag.xml
@@ -251,6 +254,7 @@ SET(${PROJECT_NAME}_SCHEMA
     schema/server_shop.xml
     schema/server_zone.xml
     schema/serverconfig.xml
+    schema/spawn.xml
     schema/test.xml
 
     # BinaryData Files
@@ -297,6 +301,8 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     AccountWorldData.cpp
     Action.h
     Action.cpp
+    ActionCreateLoot.h
+    ActionCreateLoot.cpp
     ActionSetNPCState.h
     ActionSetNPCState.cpp
     ActionStartEvent.h
@@ -389,6 +395,10 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     Item.cpp
     ItemBox.h
     ItemBox.cpp
+    ItemDrop.h
+    ItemDrop.cpp
+    ObjectPosition.h
+    ObjectPosition.cpp
     PacketLogin.h
     PacketLogin.cpp
     PacketLoginReply.h
@@ -431,6 +441,14 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     ServerZoneSpot.cpp
     StatusEffect.h
     StatusEffect.cpp
+    Spawn.h
+    Spawn.cpp
+    SpawnGroup.h
+    SpawnGroup.cpp
+    SpawnLocation.h
+    SpawnLocation.cpp
+    SpawnLocationGroup.h
+    SpawnLocationGroup.cpp
     TestObject.h
     TestObject.cpp
 

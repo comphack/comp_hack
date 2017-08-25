@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="ActionCreateLoot" baseobject="Action" persistent="false">
+        <member type="enum" name="actionType" inherited="true" default="CREATE_LOOT"/>
+        <member type="list" name="drops">
+            <element type="ItemDrop*"/>
+        </member>
+        <member type="bool" name="isBossBox"/>
+        <member type="float" name="expirationTime"/>
+        <member type="enum" name="position" underlying="int8_t">
+            <value>ABS</value>
+            <value>SOURCE_RELATIVE</value>
+        </member>
+        <member type="list" name="locations">
+            <element type="ObjectPosition*"/>
+        </member>
+    </object>
+</objgen>

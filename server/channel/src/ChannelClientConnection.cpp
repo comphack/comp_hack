@@ -66,15 +66,24 @@ void ChannelClientConnection::BroadcastPacket(const std::list<std::shared_ptr<
 }
 
 void ChannelClientConnection::BroadcastPackets(const std::list<std::shared_ptr<
-    ChannelClientConnection>> &clients, std::list<libcomp::Packet>& packets)
+    ChannelClientConnection>>& clients, std::list<libcomp::Packet>& packets)
 {
     for(auto client : clients)
     {
         for(auto& packet : packets)
         {
-            client->QueuePacket(packet);
+            client->QueuePacketCopy(packet);
         }
 
+        client->FlushOutgoing();
+    }
+}
+
+void ChannelClientConnection::FlushAllOutgoing(const std::list<std::shared_ptr<
+    ChannelClientConnection>>& clients)
+{
+    for(auto client : clients)
+    {
         client->FlushOutgoing();
     }
 }

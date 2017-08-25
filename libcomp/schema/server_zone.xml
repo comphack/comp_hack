@@ -22,9 +22,24 @@
         <member type="list" name="Bazaars">
             <element type="ServerBazaar*"/>
         </member>
+        <member type="map" name="Spawns">
+            <key type="u32"/>
+            <value type="Spawn*"/>
+        </member>
+        <member type="map" name="SpawnGroups">
+            <key type="u32"/>
+            <value type="SpawnGroup*"/>
+        </member>
+        <member type="map" name="SpawnLocationGroups">
+            <key type="u32"/>
+            <value type="SpawnLocationGroup*"/>
+        </member>
         <member type="map" name="Spots">
             <key type="u32"/>
             <value type="ServerZoneSpot*"/>
+        </member>
+        <member type="list" name="SetupActions">
+            <element type="Action*"/>
         </member>
     </object>
 </objgen>

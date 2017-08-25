@@ -32,6 +32,7 @@
 #include <Log.h>
 #include <ManagerPacket.h>
 #include <PacketCodes.h>
+#include <Randomizer.h>
 #include <ServerConstants.h>
 
 // Standard C++11 Includes
@@ -41,6 +42,9 @@
 #include <ActivatedAbility.h>
 #include <Item.h>
 #include <ItemBox.h>
+#include <ItemDrop.h>
+#include <Loot.h>
+#include <LootBox.h>
 #include <MiAddStatusTbl.h>
 #include <MiBattleDamageData.h>
 #include <MiCancelData.h>
@@ -60,7 +64,10 @@
 #include <MiItemBasicData.h>
 #include <MiItemData.h>
 #include <MiKnockBackData.h>
+#include <MiNegotiationDamageData.h>
+#include <MiNegotiationData.h>
 #include <MiNPCBasicData.h>
+#include <MiPossessionData.h>
 #include <MiSkillBasicData.h>
 #include <MiSkillData.h>
 #include <MiSkillItemStatusCommonData.h>
@@ -70,6 +77,7 @@
 #include <MiSummonData.h>
 #include <MiTargetData.h>
 #include <ServerZone.h>
+#include <Spawn.h>
 
 // channel Includes
 #include "ChannelServer.h"
@@ -99,6 +107,19 @@ const uint16_t FLAG2_BARRIER = 1 << 7;
 const uint16_t FLAG2_INTENSIVE_BREAK = 1 << 8;
 const uint16_t FLAG2_INSTANT_DEATH = 1 << 9;
 
+const uint8_t TALK_RESPONSE_1 = 1;
+//const uint8_t TALK_RESPONSE_2 = 2;
+//const uint8_t TALK_RESPONSE_3 = 3;
+const uint8_t TALK_RESPONSE_4 = 4;
+const uint8_t TALK_JOIN = 5;
+const uint8_t TALK_GIVE_ITEM = 6;
+//const uint8_t TALK_STOP = 7;
+const uint8_t TALK_LEAVE = 8;
+const uint8_t TALK_JOIN_2 = 9;
+const uint8_t TALK_GIVE_ITEM_2 = 10;
+const uint8_t TALK_REJECT = 13;
+//const uint8_t TALK_THREATENED = 14;
+
 const uint8_t RES_OFFSET = (uint8_t)CorrectTbl::RES_WEAPON - 1;
 const uint8_t BOOST_OFFSET = (uint8_t)CorrectTbl::BOOST_SLASH - 2;
 const uint8_t NRA_OFFSET = (uint8_t)CorrectTbl::NRA_WEAPON - 1;
@@ -124,6 +145,7 @@ public:
     int32_t Damage2 = 0;
     uint8_t Damage2Type = DAMAGE_TYPE_NONE;
     uint16_t DamageFlags1 = 0;
+    uint8_t TalkFlags = 0;
     uint8_t AilmentDamageType = 0;
     int32_t AilmentDamage = 0;
     uint16_t DamageFlags2 = 0;
@@ -184,6 +206,7 @@ bool SkillManager::ActivateSkill(const std::shared_ptr<ChannelClientConnection> 
         new objects::ActivatedAbility);
     activated->SetSkillID(skillID);
     activated->SetSourceEntity(sourceState);
+    activated->SetActivationObjectID(targetObjectID);
     activated->SetTargetObjectID(targetObjectID);
     activated->SetActivationTime(activatedTime);
     activated->SetChargedTime(chargedTime);
@@ -433,6 +456,7 @@ bool SkillManager::ExecuteSkill(const std::shared_ptr<ChannelClientConnection> c
         mpCost = (int16_t)(mpCost + ceil(((float)mpCostPercent * 0.01f) *
             (float)sourceState->GetMaxMP()));
 
+        int64_t targetItem = 0;
         auto sourceStats = sourceState->GetCoreStats();
         bool canPay = ((hpCost == 0) || hpCost < sourceStats->GetHP()) &&
             ((mpCost == 0) || mpCost < sourceStats->GetMP());
@@ -445,6 +469,11 @@ bool SkillManager::ExecuteSkill(const std::shared_ptr<ChannelClientConnection> c
             for(auto item : existingItems)
             {
                 itemCount = (uint16_t)(itemCount + item->GetStackSize());
+                if(state->GetObjectID(item->GetUUID()) ==
+                    activated->GetActivationObjectID())
+                {
+                    targetItem = activated->GetActivationObjectID();
+                }
             }
 
             if(itemCount < itemCost.second)
@@ -488,16 +517,15 @@ bool SkillManager::ExecuteSkill(const std::shared_ptr<ChannelClientConnection> c
             characterManager->UpdateWorldDisplayState(displayStateModified);
         }
 
-        for(auto itemCost : itemCosts)
-        {
-            characterManager->AddRemoveItem(client, itemCost.first, itemCost.second,
-                false, activated->GetTargetObjectID());
-        }
-
         if(bulletCost > 0)
         {
-            characterManager->AddRemoveItem(client, bulletIDs.first, bulletCost,
-                false, bulletIDs.second);
+            itemCosts[bulletIDs.first] = bulletCost;
+            targetItem = bulletIDs.second;
+        }
+
+        if(itemCosts.size() > 0)
+        {
+            characterManager->AddRemoveItems(client, itemCosts, false, targetItem);
         }
     }
 
@@ -939,10 +967,12 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
     {
         return true;
     }
+
+    auto damageData = skillData->GetDamage();
     
     // Run calculations
     bool hasBattleDamage = false;
-    if(skillData->GetDamage()->GetBattleDamage()->GetFormula()
+    if(damageData->GetBattleDamage()->GetFormula()
         != objects::MiBattleDamageData::Formula_t::NONE)
     {
         if(!CalculateDamage(source, activated, targetResults, skill))
@@ -954,11 +984,23 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
         hasBattleDamage = true;
     }
 
-    auto skillKnockback = skillData->GetDamage()->GetKnockBack();
+    // Get knockback info
+    auto skillKnockback = damageData->GetKnockBack();
     int8_t kbMod = skillKnockback->GetModifier();
     uint8_t kbType = skillKnockback->GetKnockBackType();
     float kbDistance = (float)(skillKnockback->GetDistance() * 10);
-    auto addStatuses = skillData->GetDamage()->GetAddStatuses();
+
+    // Get negotiation damage
+    auto talkDamage = damageData->GetNegotiationDamage();
+    int8_t talkAffSuccess = talkDamage->GetSuccessAffability();
+    int8_t talkAffFailure = talkDamage->GetFailureAffability();
+    int8_t talkFearSuccess = talkDamage->GetSuccessFear();
+    int8_t talkFearFailure = talkDamage->GetFailureFear();
+    bool hasTalkDamage = talkAffSuccess != 0 || talkAffFailure != 0 ||
+        talkFearSuccess != 0 || talkFearFailure != 0;
+
+    // Get added status effects
+    auto addStatuses = damageData->GetAddStatuses();
 
     auto now = server->GetServerTime();
     source->RefreshCurrentPosition(now);
@@ -968,6 +1010,7 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
     std::set<std::shared_ptr<ActiveEntityState>> revived;
     std::set<std::shared_ptr<ActiveEntityState>> killed;
     std::set<std::shared_ptr<ActiveEntityState>> displayStateModified;
+    std::list<std::pair<std::shared_ptr<ActiveEntityState>, uint8_t>> talkDone;
     std::unordered_map<std::shared_ptr<ActiveEntityState>, uint8_t> cancellations;
     for(SkillTargetResult& target : targetResults)
     {
@@ -1070,8 +1113,8 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
             {
                 if(addStatus->GetOnKnockback() && !(target.DamageFlags1 & FLAG1_KNOCKBACK)) continue;
 
-                uint16_t successRate = addStatus->GetSuccessRate();
-                if(successRate >= 100 || (rand() % 99) <= successRate)
+                int32_t successRate = (int32_t)addStatus->GetSuccessRate();
+                if(successRate >= 100 || RNG(int32_t, 0, 99) <= successRate)
                 {
                     auto statusDef = definitionManager->GetStatusData(
                         addStatus->GetStatusID());
@@ -1107,6 +1150,91 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
             }
         }
 
+        // Handle negotiation damage
+        if(hasTalkDamage && target.EntityState->GetEntityType() ==
+            objects::EntityStateObject::EntityType_t::ENEMY &&
+            killed.find(target.EntityState) == killed.end())
+        {
+            auto eState = std::dynamic_pointer_cast<EnemyState>(
+                target.EntityState);
+            auto enemy = eState->GetEntity();
+            if(enemy->GetCoreStats()->GetLevel() >
+                source->GetCoreStats()->GetLevel())
+            {
+                // Enemies that are a higher level cannot be negotiated with
+                break;
+            }
+
+            auto talkPoints = eState->GetTalkPoints(source->GetEntityID());
+            auto demonData = definitionManager->GetDevilData(enemy->GetType());
+            auto negData = demonData->GetNegotiation();
+            uint8_t affThreshold = (uint8_t)(100 - negData->GetAffabilityThreshold());
+            uint8_t fearThreshold = (uint8_t)(100 - negData->GetFearThreshold());
+
+            if(talkPoints.first >= affThreshold ||
+                talkPoints.second >= fearThreshold)
+            {
+                // Nothing left to do
+                break;
+            }
+
+            /// @todo: properly handle negotiation chances and outcome
+            bool success = RNG(uint8_t, 0, 100) <= 90;
+            int16_t aff = (int16_t)(talkPoints.first +
+                (success ? talkAffSuccess : talkAffFailure));
+            int16_t fear = (int16_t)(talkPoints.second +
+                (success ? talkFearSuccess : talkFearFailure));
+
+            talkPoints.first = aff < 0 ? 0 : (uint8_t)aff;
+            talkPoints.second = fear < 0 ? 0 : (uint8_t)fear;
+
+            eState->SetTalkPoints(source->GetEntityID(), talkPoints);
+                        
+            if(talkPoints.first >= affThreshold ||
+                talkPoints.second >= fearThreshold)
+            {
+                int32_t outcome = RNG(int32_t, 1, 6);
+                switch(outcome)
+                {
+                case 1:
+                    target.TalkFlags = TALK_JOIN;
+                    break;
+                case 2:
+                    target.TalkFlags = TALK_JOIN_2;
+                    break;
+                case 3:
+                    target.TalkFlags = TALK_GIVE_ITEM;
+                    break;
+                case 4:
+                    target.TalkFlags = TALK_GIVE_ITEM_2;
+                    break;
+                case 5:
+                    target.TalkFlags = TALK_REJECT;
+                    break;
+                case 6:
+                default:
+                    target.TalkFlags = TALK_LEAVE;
+                    break;
+                }
+
+                auto spawn = enemy->GetSpawnSource();
+                if((target.TalkFlags == TALK_GIVE_ITEM ||
+                    target.TalkFlags == TALK_GIVE_ITEM) &&
+                    (!spawn || spawn->GiftsCount() == 0))
+                {
+                    // No gifts mapped, leave instead
+                    target.TalkFlags = TALK_LEAVE;
+                }
+                std::pair<std::shared_ptr<ActiveEntityState>,
+                    uint8_t> pair(target.EntityState, target.TalkFlags);
+                talkDone.push_back(pair);
+            }
+            else
+            {
+                target.TalkFlags = (success ? TALK_RESPONSE_1 : TALK_RESPONSE_4);
+            }
+        }
+
         characterManager->RecalculateStats(nullptr, target.EntityState->GetEntityID());
     }
 
@@ -1131,6 +1259,13 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
                 target.CancelledStatuses.insert(r);
             }
         }
+    }
+
+    // Send negotiation results first since some are dependent upon the
+    // skill hit
+    if(talkDone.size() > 0)
+    {
+        HandleNegotiations(source, zone, talkDone);
     }
 
     auto effectiveTarget = primaryTarget ? primaryTarget : effectiveSource;
@@ -1244,7 +1379,7 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
         // Double back at the end and write client specific times
         reply.WriteBlank(12);
 
-        reply.WriteU8(0);   // Unknown
+        reply.WriteU8(target.TalkFlags);
 
         std::list<std::shared_ptr<objects::StatusEffect>> addedStatuses;
         std::set<uint32_t> cancelledStatuses;
@@ -1307,127 +1442,8 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
 
     if(killed.size() > 0)
     {
-        // Familiarity is reduced from death (0) or same demon kills (1)
-        // and is dependent upon familiarity type
-        const int16_t fTypeMap[17][2] =
-            {
-                { -100, -5 },   // Type 0
-                { -20, -50 },   // Type 1
-                { -20, -20 },   // Type 2
-                { -50, -50 },   // Type 3
-                { -100, -100 }, // Type 4
-                { -100, -100 }, // Type 5
-                { -20, -20 },   // Type 6
-                { -50, -50 },   // Type 7
-                { -100, -100 }, // Type 8
-                { -100, -100 }, // Type 9
-                { -50, -100 },  // Type 10
-                { -50, 0 },     // Type 11
-                { -100, -100 }, // Type 12
-                { -120, -120 }, // Type 13
-                { 0, 0 },       // Type 14 (invalid)
-                { 0, 0 },       // Type 15 (invalid)
-                { -100, -100 }  // Type 16
-            };
-
-        auto sourceClient = server->GetManagerConnection()->
-            GetEntityClient(source->GetEntityID());
-        auto sourceState = sourceClient ? sourceClient->GetClientState() : nullptr;
-        std::unordered_map<uint32_t, int32_t> questKills;
-
-        uint32_t sourceDemonType = (source->GetEntityType() ==
-            objects::EntityStateObject::EntityType_t::PARTNER_DEMON)
-            ? std::dynamic_pointer_cast<DemonState>(source)->GetEntity()->GetType()
-            : 0;
-        auto sourceDemonFType = sourceDemonType
-            ? definitionManager->GetDevilData(sourceDemonType)->GetFamiliarity()
-            ->GetFamiliarityType() : 0;
-
-        std::unordered_map<int32_t, int32_t> adjustments;
-        for(auto entity : killed)
-        {
-            // Remove all opponents
-            characterManager->AddRemoveOpponent(false, entity, nullptr);
-
-            // Determine familiarity adjustments
-            bool partnerDeath = false;
-            uint32_t dType = 0;
-            switch(entity->GetEntityType())
-            {
-            case objects::EntityStateObject::EntityType_t::PARTNER_DEMON:
-                dType = std::dynamic_pointer_cast<DemonState>(entity)
-                    ->GetEntity()->GetType();
-                partnerDeath = true;
-                break;
-            case objects::EntityStateObject::EntityType_t::ENEMY:
-                dType = std::dynamic_pointer_cast<EnemyState>(entity)
-                    ->GetEntity()->GetType();
-                break;
-            default:
-                break;
-            }
-
-            if(dType)
-            {
-                std::list<std::pair<int32_t, int32_t>> adjusts;
-                if(partnerDeath)
-                {
-                    // Partner demon has died
-                    adjusts.push_back(std::pair<int32_t, int32_t>(
-                        entity->GetEntityID(), fTypeMap[(size_t)sourceDemonFType][0]));
-                }
-                else if(sourceState && sourceState->QuestTargetEnemiesContains(dType))
-                {
-                    if(questKills.find(dType) == questKills.end())
-                    {
-                        questKills[dType] = 1;
-                    }
-                    else
-                    {
-                        questKills[dType] = (questKills[dType] + 1);
-                    }
-                }
-
-                if(entity != source && sourceDemonType == dType)
-                {
-                    // Same demon type killed
-                    adjusts.push_back(std::pair<int32_t, int32_t>(
-                        source->GetEntityID(), fTypeMap[(size_t)sourceDemonFType][1]));
-                }
-
-                for(auto aPair : adjusts)
-                {
-                    if(adjustments.find(aPair.first) == adjustments.end())
-                    {
-                        adjustments[aPair.first] = aPair.second;
-                    }
-                    else
-                    {
-                        adjustments[aPair.first] = (int32_t)(
-                            adjustments[aPair.first] + aPair.second);
-                    }
-                }
-            }
-        }
-
-        // Apply familiarity adjustments
-        for(auto aPair : adjustments)
-        {
-            auto demonClient = server->GetManagerConnection()->
-                GetEntityClient(aPair.first);
-            if(!demonClient) continue;
-
-            characterManager->UpdateFamiliarity(demonClient, aPair.second, true);
-        }
-
-        // Update quest kill counts
-        if(questKills.size() > 0)
-        {
-            server->GetEventManager()->UpdateQuestKillCount(sourceClient, questKills);
-        }
+        HandleKills(source, zone, killed);
     }
-
-    /// @todo: Transform enemies killed into bodies
 
     if(displayStateModified.size() > 0)
     {
@@ -1435,6 +1451,387 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
     }
 
     return true;
+}
+
+void SkillManager::HandleKills(std::shared_ptr<ActiveEntityState> source,
+    const std::shared_ptr<Zone> zone,
+    std::set<std::shared_ptr<ActiveEntityState>> killed)
+{
+    auto server = mServer.lock();
+    auto characterManager = server->GetCharacterManager();
+    auto definitionManager = server->GetDefinitionManager();
+    auto zoneManager = server->GetZoneManager();
+
+    auto zConnections = zone->GetConnectionList();
+
+    // Familiarity is reduced from death (0) or same demon kills (1)
+    // and is dependent upon familiarity type
+    const int16_t fTypeMap[17][2] =
+        {
+            { -100, -5 },   // Type 0
+            { -20, -50 },   // Type 1
+            { -20, -20 },   // Type 2
+            { -50, -50 },   // Type 3
+            { -100, -100 }, // Type 4
+            { -100, -100 }, // Type 5
+            { -20, -20 },   // Type 6
+            { -50, -50 },   // Type 7
+            { -100, -100 }, // Type 8
+            { -100, -100 }, // Type 9
+            { -50, -100 },  // Type 10
+            { -50, 0 },     // Type 11
+            { -100, -100 }, // Type 12
+            { -120, -120 }, // Type 13
+            { 0, 0 },       // Type 14 (invalid)
+            { 0, 0 },       // Type 15 (invalid)
+            { -100, -100 }  // Type 16
+        };
+
+    uint32_t sourceDemonType = (source->GetEntityType() ==
+        objects::EntityStateObject::EntityType_t::PARTNER_DEMON)
+        ? std::dynamic_pointer_cast<DemonState>(source)->GetEntity()->GetType()
+        : 0;
+    auto sourceDemonFType = sourceDemonType
+        ? definitionManager->GetDevilData(sourceDemonType)->GetFamiliarity()
+        ->GetFamiliarityType() : 0;
+
+    std::unordered_map<int32_t, int32_t> adjustments;
+    std::list<std::shared_ptr<EnemyState>> enemiesKilled;
+    for(auto entity : killed)
+    {
+        // Remove all opponents
+        characterManager->AddRemoveOpponent(false, entity, nullptr);
+
+        // Determine familiarity adjustments
+        bool partnerDeath = false;
+        uint32_t dType = 0;
+        switch(entity->GetEntityType())
+        {
+        case objects::EntityStateObject::EntityType_t::PARTNER_DEMON:
+            dType = std::dynamic_pointer_cast<DemonState>(entity)
+                ->GetEntity()->GetType();
+            partnerDeath = true;
+            break;
+        case objects::EntityStateObject::EntityType_t::ENEMY:
+            {
+                auto eState = std::dynamic_pointer_cast<EnemyState>(entity);
+                dType = eState->GetEntity()->GetType();
+                enemiesKilled.push_back(eState);
+            }
+            break;
+        default:
+            break;
+        }
+
+        if(dType)
+        {
+            std::list<std::pair<int32_t, int32_t>> adjusts;
+            if(partnerDeath)
+            {
+                // Partner demon has died
+                adjusts.push_back(std::pair<int32_t, int32_t>(
+                    entity->GetEntityID(), fTypeMap[(size_t)sourceDemonFType][0]));
+            }
+
+            if(entity != source && sourceDemonType == dType)
+            {
+                // Same demon type killed
+                adjusts.push_back(std::pair<int32_t, int32_t>(
+                    source->GetEntityID(), fTypeMap[(size_t)sourceDemonFType][1]));
+            }
+
+            for(auto aPair : adjusts)
+            {
+                if(adjustments.find(aPair.first) == adjustments.end())
+                {
+                    adjustments[aPair.first] = aPair.second;
+                }
+                else
+                {
+                    adjustments[aPair.first] = (int32_t)(
+                        adjustments[aPair.first] + aPair.second);
+                }
+            }
+        }
+    }
+
+    // Apply familiarity adjustments
+    for(auto aPair : adjustments)
+    {
+        auto demonClient = server->GetManagerConnection()->
+            GetEntityClient(aPair.first);
+        if(!demonClient) continue;
+
+        characterManager->UpdateFamiliarity(demonClient, aPair.second, true);
+    }
+
+    if(enemiesKilled.size() > 0)
+    {
+        auto sourceClient = server->GetManagerConnection()->
+            GetEntityClient(source->GetEntityID());
+        auto sourceState = sourceClient ? sourceClient->GetClientState() : nullptr;
+
+        // Gather all enemy entity IDs
+        std::list<int32_t> enemyIDs;
+        for(auto eState : enemiesKilled)
+        {
+            zone->RemoveEntity(eState->GetEntityID());
+            enemyIDs.push_back(eState->GetEntityID());
+        }
+
+        zoneManager->RemoveEntitiesFromZone(zone, enemyIDs, 4, true);
+
+        // Transform enemies into loot bodies and gather quest kills
+        std::unordered_map<std::shared_ptr<LootBoxState>,
+            std::shared_ptr<EnemyState>> lStates;
+        std::unordered_map<uint32_t, int32_t> questKills;
+        for(auto eState : enemiesKilled)
+        {
+            auto enemy = eState->GetEntity();
+
+            auto lootBody = std::make_shared<objects::LootBox>();
+            lootBody->SetType(objects::LootBox::Type_t::BODY);
+            lootBody->SetEnemy(enemy);
+
+            auto lState = std::make_shared<LootBoxState>(lootBody);
+            lState->SetCurrentX(eState->GetDestinationX());
+            lState->SetCurrentY(eState->GetDestinationY());
+            lState->SetCurrentRotation(eState->GetDestinationRotation());
+            lState->SetEntityID(server->GetNextEntityID());
+            lStates[lState] = eState;
+
+            zone->AddLootBox(lState);
+
+            uint32_t dType = eState->GetEntity()->GetType();
+            if(sourceState && sourceState->QuestTargetEnemiesContains(dType))
+            {
+                if(questKills.find(dType) == questKills.end())
+                {
+                    questKills[dType] = 1;
+                }
+                else
+                {
+                    questKills[dType] = (questKills[dType] + 1);
+                }
+            }
+        }
+
+        // For each loot body generate and send loot and show the body
+        // After this schedule all of the bodies for cleanup after their
+        // loot time passes
+        if(lStates.size() > 0)
+        {
+            uint64_t now = ChannelServer::GetServerTime();
+            int16_t luck = source->GetLUCK();
+
+            auto firstClient = zConnections.size() > 0 ? zConnections.front() : nullptr;
+
+            std::unordered_map<uint64_t, std::list<int32_t>> lootTimeEntityIDs;
+            for(auto lPair : lStates)
+            {
+                auto lState = lPair.first;
+                auto eState = lPair.second;
+
+                int32_t lootEntityID = lState->GetEntityID();
+
+                auto lootBody = lState->GetEntity();
+                auto enemy = lootBody->GetEnemy();
+                auto spawn = enemy->GetSpawnSource();
+
+                auto drops = GetItemDrops(enemy->GetType(), spawn);
+
+                // Create loot based off drops and send if any was added
+                uint64_t lootTime = 0;
+                if(characterManager->CreateLootFromDrops(lootBody, drops, luck))
+                {
+                    // Bodies remain lootable for 120 seconds with loot
+                    lootTime = (uint64_t)(now + 120000000);
+                }
+                else
+                {
+                    // Bodies remain lootable for 10 seconds without loot
+                    lootTime = (uint64_t)(now + 10000000);
+                }
+
+                lootBody->SetLootTime(lootTime);
+                lootTimeEntityIDs[lootTime].push_back(lootEntityID);
+
+                if(firstClient)
+                {
+                    zoneManager->SendLootBoxData(firstClient, lState, eState,
+                        true, true);
+                }
+            }
+
+            for(auto pair : lootTimeEntityIDs)
+            {
+                zoneManager->ScheduleEntityRemoval(pair.first, zone, pair.second, 13);
+            }
+        }
+
+        // Update quest kill counts
+        if(questKills.size() > 0)
+        {
+            server->GetEventManager()->UpdateQuestKillCount(sourceClient,
+                questKills);
+        }
+
+        ChannelClientConnection::FlushAllOutgoing(zConnections);
+    }
+}
+
+void SkillManager::HandleNegotiations(const std::shared_ptr<ActiveEntityState> source,
+    const std::shared_ptr<Zone> zone,
+    const std::list<std::pair<std::shared_ptr<ActiveEntityState>, uint8_t>> talkDone)
+{
+    auto server = mServer.lock();
+    auto characterManager = server->GetCharacterManager();
+    auto zoneManager = server->GetZoneManager();
+    auto zConnections = zone->GetConnectionList();
+
+    // Gather all enemy IDs that will be removed
+    std::unordered_map<int32_t, std::list<int32_t>> removedEnemies;
+    for(auto pair : talkDone)
+    {
+        if(pair.second != TALK_REJECT)
+        {
+            int32_t removeMode = 0;
+            switch(pair.second)
+            {
+            case TALK_JOIN:
+            case TALK_JOIN_2:
+                removeMode = 5;
+                break;
+            case TALK_GIVE_ITEM:
+            case TALK_GIVE_ITEM_2:
+                removeMode = 6;
+                break;
+            case TALK_LEAVE:
+                removeMode = 8;
+                break;
+            default:
+                break;
+            }
+
+            // Remove all opponents
+            characterManager->AddRemoveOpponent(false, pair.first, nullptr);
+            zone->RemoveEntity(pair.first->GetEntityID(), removeMode == 8);
+            removedEnemies[removeMode].push_back(pair.first->GetEntityID());
+        }
+    }
+
+    for(auto pair : removedEnemies)
+    {
+        zoneManager->RemoveEntitiesFromZone(zone, pair.second, pair.first, true);
+    }
+
+    // Handle the results of negotiations that result in an enemy being removed
+    std::unordered_map<std::shared_ptr<LootBoxState>,
+        std::shared_ptr<EnemyState>> lStates;
+    for(auto pair : talkDone)
+    {
+        auto eState = std::dynamic_pointer_cast<EnemyState>(pair.first);
+        if(pair.second != TALK_LEAVE && pair.second != TALK_REJECT)
+        {
+            auto enemy = eState->GetEntity();
+
+            /// @todo: handle the various outcomes properly
+            std::shared_ptr<objects::LootBox> lBox;
+            switch(pair.second)
+            {
+            case TALK_JOIN:
+            case TALK_JOIN_2:
+                {
+                    lBox = std::make_shared<objects::LootBox>();
+                    lBox->SetType(objects::LootBox::Type_t::EGG);
+                    lBox->SetEnemy(enemy);
+
+                    auto demonLoot = std::make_shared<objects::Loot>();
+                    demonLoot->SetType(enemy->GetType());
+                    demonLoot->SetCount(1);
+                    lBox->SetLoot(0, demonLoot);
+                }
+                break;
+            case TALK_GIVE_ITEM:
+            case TALK_GIVE_ITEM_2:
+                {
+                    lBox = std::make_shared<objects::LootBox>();
+                    lBox->SetType(objects::LootBox::Type_t::GIFT_BOX);
+                    lBox->SetEnemy(enemy);
+
+                    auto drops = GetItemDrops(enemy->GetType(),
+                        enemy->GetSpawnSource(), true);
+                    characterManager->CreateLootFromDrops(lBox, drops,
+                        source->GetLUCK(), true);
+                }
+                break;
+            default:
+                break;
+            }
+
+            if(lBox)
+            {
+                auto lState = std::make_shared<LootBoxState>(lBox);
+                lState->SetCurrentX(eState->GetDestinationX());
+                lState->SetCurrentY(eState->GetDestinationY());
+                lState->SetCurrentRotation(eState->GetDestinationRotation());
+                lState->SetEntityID(server->GetNextEntityID());
+                lStates[lState] = eState;
+
+                zone->AddLootBox(lState);
+            }
+        }
+    }
+
+    // Show each look box and schedule them for cleanup after their
+    // loot time passes
+    if(lStates.size() > 0)
+    {
+        // Spawned boxes remain lootable for 120 seconds
+        uint64_t now = ChannelServer::GetServerTime();
+
+        auto firstClient = zConnections.size() > 0 ? zConnections.front() : nullptr;
+
+        std::unordered_map<uint64_t, std::list<int32_t>> lootTimeEntityIDs;
+        for(auto lPair : lStates)
+        {
+            auto lState = lPair.first;
+            auto eState = lPair.second;
+
+            auto lootBox = lState->GetEntity();
+
+            uint64_t lootTime = 0;
+            if(lootBox->GetType() == objects::LootBox::Type_t::EGG)
+            {
+                // Demon eggs remain lootable for 300 seconds
+                lootTime = (uint64_t)(now + 300000000);
+
+                /// @todo: handle party member lootable time
+            }
+            else
+            {
+                // Gift boxes remain lootable for 120 seconds
+                lootTime = (uint64_t)(now + 120000000);
+            }
+            lootBox->SetLootTime(lootTime);
+
+            if(firstClient)
+            {
+                zoneManager->SendLootBoxData(firstClient, lState, eState,
+                    true, true);
+            }
+
+            int32_t lootEntityID = lState->GetEntityID();
+            lootTimeEntityIDs[lootTime].push_back(lootEntityID);
+        }
+        
+        for(auto pair : lootTimeEntityIDs)
+        {
+            zoneManager->ScheduleEntityRemoval(pair.first, zone, pair.second, 13);
+        }
+    }
+
+    ChannelClientConnection::FlushAllOutgoing(zConnections);
 }
 
 bool SkillManager::ToggleSwitchSkill(const std::shared_ptr<ChannelClientConnection> client,
@@ -1616,7 +2013,7 @@ bool SkillManager::CalculateDamage(const std::shared_ptr<ActiveEntityState>& sou
                 if(critRate > 0)
                 {
                     /// @todo: implement limit break
-                    if(rand() % 100 <= critRate)
+                    if(RNG(int16_t, 0, 100) <= critRate)
                     {
                         critLevel = 1;
                     }
@@ -1786,7 +2183,7 @@ int32_t SkillManager::CalculateDamage_Normal(uint16_t mod, uint8_t& damageType,
                 scale = 1.5f;
                 break;
             default:	// Normal hit, 80%-99% damage
-                scale = 0.8f + ((float)(rand() % 19) * 0.01f);
+                scale = RNG_DEC(float, 0.8f, 0.99f, 2);
                 break;
         }
 
@@ -1877,7 +2274,7 @@ bool SkillManager::SetNRA(SkillTargetResult& target, ProcessingSkill& skill)
         for(auto nraIdx : { NRA_ABSORB, NRA_REFLECT, NRA_NULL })
         {
             int16_t chance = target.EntityState->GetNRAChance((uint8_t)nraIdx, affinity);
-            if(chance > 0 && (rand() % 100) <= chance)
+            if(chance > 0 && RNG(int16_t, 0, 100) <= chance)
             {
                 switch(nraIdx)
                 {
@@ -1908,7 +2305,28 @@ uint8_t SkillManager::CalculateStatusEffectStack(int8_t minStack, int8_t maxStac
     }
 
     return minStack == maxStack ? (uint8_t)maxStack
-        : (uint8_t)(minStack + (rand() % (maxStack - minStack)));
+        : RNG(uint8_t, (uint8_t)minStack, (uint8_t)maxStack);
+}
+
+std::list<std::shared_ptr<objects::ItemDrop>> SkillManager::GetItemDrops(
+    uint32_t enemyType, const std::shared_ptr<objects::Spawn>& spawn,
+    bool giftMode) const
+{
+    (void)enemyType;
+
+    std::list<std::shared_ptr<objects::ItemDrop>> drops;
+
+    /// @todo: add global/family drops
+
+    if(spawn)
+    {
+        for(auto drop : giftMode ? spawn->GetGifts() : spawn->GetDrops())
+        {
+            drops.push_back(drop);
+        }
+    }
+
+    return drops;
 }
 
 void SkillManager::FinalizeSkillExecution(const std::shared_ptr<ChannelClientConnection> client,

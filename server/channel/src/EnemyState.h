@@ -30,6 +30,7 @@
 // objects Includes
 #include <ActiveEntityState.h>
 #include <Enemy.h>
+#include <LootBox.h>
 
 #include <ScriptEngine.h>
 
@@ -92,6 +93,25 @@ public:
      */
     void SetActionTime(const libcomp::String& action, uint64_t time);
 
+    /**
+     * Get the current negotiation point value associated to the
+     * the enemy contextual to the supplied player character entity ID
+     * @param entityID ID of the player character entity talking to the
+     *  enemy
+     * @return Current affability and fear points associated to
+     *  the player character
+     */
+    std::pair<uint8_t, uint8_t> GetTalkPoints(int32_t entityID);
+
+    /**
+     * Set the current negotiation point value associated to the
+     * the enemy contextual to the supplied player character entity ID
+     * @param entityID ID of the player entity talking to the enemy
+     * @param points Current affability and fear points associated to
+     *  the player character
+     */
+    void SetTalkPoints(int32_t entityID, const std::pair<uint8_t, uint8_t>& points);
+
 private:
     /// Static map of scripts that have been loaded and compiled
     /// by AI type name
@@ -103,6 +123,12 @@ private:
 
     /// Pointer to the AI script bound to the enemy
     std::shared_ptr<libcomp::ScriptEngine> mAIScript;
+
+    /// Player local entity IDs mapped to the enemy's current talk skill
+    /// related points: affability then fear. If either of these
+    /// exceeds the demon's set threshold, negotiation will end.
+    std::unordered_map<int32_t,
+        std::pair<uint8_t, uint8_t>> mTalkPoints;
 
     /// Pointer back to the entity
     std::weak_ptr<EnemyState> mSelf;

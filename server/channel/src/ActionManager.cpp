@@ -36,16 +36,26 @@
 
 // object Includes
 #include <Action.h>
+#include <ActionCreateLoot.h>
 #include <ActionSetNPCState.h>
 #include <ActionStartEvent.h>
 #include <ActionUpdateFlag.h>
 #include <ActionUpdateLNC.h>
 #include <ActionUpdateQuest.h>
 #include <ActionZoneChange.h>
+#include <ObjectPosition.h>
 #include <ServerObject.h>
 #include <ServerZone.h>
 
 using namespace channel;
+
+struct channel::ActionContext
+{
+    std::shared_ptr<ChannelClientConnection> Client;
+    std::shared_ptr<objects::Action> Action;
+    int32_t SourceEntityID = 0;
+    std::shared_ptr<Zone> CurrentZone;
+};
 
 ActionManager::ActionManager(const std::weak_ptr<ChannelServer>& server)
     : mServer(server)
@@ -62,6 +72,8 @@ ActionManager::ActionManager(const std::weak_ptr<ChannelServer>& server)
         &ActionManager::UpdateLNC;
     mActionHandlers[objects::Action::ActionType_t::UPDATE_QUEST] =
         &ActionManager::UpdateQuest;
+    mActionHandlers[objects::Action::ActionType_t::CREATE_LOOT] =
+        &ActionManager::CreateLoot;
 }
 
 ActionManager::~ActionManager()
@@ -71,12 +83,32 @@ ActionManager::~ActionManager()
 void ActionManager::PerformActions(
     const std::shared_ptr<ChannelClientConnection>& client,
     const std::list<std::shared_ptr<objects::Action>>& actions,
-    int32_t sourceEntityID)
+    int32_t sourceEntityID, const std::shared_ptr<Zone>& zone)
 {
-    (void)client;
+    ActionContext ctx;
+    ctx.Client = client;
+    ctx.SourceEntityID = sourceEntityID;
+
+    if(zone)
+    {
+        ctx.CurrentZone = zone;
+    }
+    else if(ctx.Client)
+    {
+        ctx.CurrentZone = mServer.lock()->GetZoneManager()
+            ->GetZoneInstance(ctx.Client);
+    }
+    else
+    {
+        LOG_ERROR("Configurable actions cannot be performed"
+            " without supplying a curent zone or source connection\n");
+        return;
+    }
 
     for(auto action : actions)
     {
+        ctx.Action = action;
+
         auto it = mActionHandlers.find(action->GetActionType());
 
         if(mActionHandlers.end() == it)
@@ -84,34 +116,42 @@ void ActionManager::PerformActions(
             LOG_ERROR(libcomp::String("Failed to parse action of type %1\n"
                 ).Arg(to_underlying(action->GetActionType())));
         }
-        else if(!it->second(*this, client, action, sourceEntityID))
+        else if(!it->second(*this, ctx))
         {
             break;
         }
     }
 }
 
-bool ActionManager::StartEvent(
-    const std::shared_ptr<ChannelClientConnection>& client,
-    const std::shared_ptr<objects::Action>& action, int32_t sourceEntityID)
+bool ActionManager::StartEvent(const ActionContext& ctx)
 {
-    auto act = std::dynamic_pointer_cast<objects::ActionStartEvent>(action);
+    if(!ctx.Client)
+    {
+        LOG_ERROR("Attempted to start an event with no associated"
+            " client connection\n");
+        return false;
+    }
+
+    auto act = std::dynamic_pointer_cast<objects::ActionStartEvent>(ctx.Action);
 
     auto server = mServer.lock();
     auto eventManager = server->GetEventManager();
 
-    eventManager->HandleEvent(client, act->GetEventID(), sourceEntityID);
+    eventManager->HandleEvent(ctx.Client, act->GetEventID(), ctx.SourceEntityID);
     
     return true;
 }
 
-bool ActionManager::ZoneChange(
-    const std::shared_ptr<ChannelClientConnection>& client,
-    const std::shared_ptr<objects::Action>& action, int32_t sourceEntityID)
+bool ActionManager::ZoneChange(const ActionContext& ctx)
 {
-    (void)sourceEntityID;
+    if(!ctx.Client)
+    {
+        LOG_ERROR("Attempted to execute a zone change action with no"
+            " associated client connection\n");
+        return false;
+    }
 
-    auto act = std::dynamic_pointer_cast<objects::ActionZoneChange>(action);
+    auto act = std::dynamic_pointer_cast<objects::ActionZoneChange>(ctx.Action);
 
     auto server = mServer.lock();
     auto zoneManager = server->GetZoneManager();
@@ -123,12 +163,12 @@ bool ActionManager::ZoneChange(
     float rotation = act->GetDestinationRotation();
 
     // Enter the new zone and always leave the old zone even if its the same.
-    if(!zoneManager->EnterZone(client, zoneID, x, y, rotation, true))
+    if(!zoneManager->EnterZone(ctx.Client, zoneID, x, y, rotation, true))
     {
         LOG_ERROR(libcomp::String("Failed to add client to zone"
             " %1. Closing the connection.\n").Arg(zoneID));
 
-        client->Close();
+        ctx.Client->Close();
 
         return false;
     }
@@ -136,53 +176,56 @@ bool ActionManager::ZoneChange(
     return true;
 }
 
-bool ActionManager::SetNPCState(
-    const std::shared_ptr<ChannelClientConnection>& client,
-    const std::shared_ptr<objects::Action>& action, int32_t sourceEntityID)
+bool ActionManager::SetNPCState(const ActionContext& ctx)
 {
-    auto act = std::dynamic_pointer_cast<objects::ActionSetNPCState>(action);
+    auto act = std::dynamic_pointer_cast<objects::ActionSetNPCState>(ctx.Action);
 
     auto server = mServer.lock();
     auto zoneManager = server->GetZoneManager();
 
-    auto zone = zoneManager->GetZoneInstance(client);
-    auto oNPC = zone ? zone->GetServerObject(sourceEntityID) : nullptr;
+    auto oNPC = ctx.CurrentZone
+        ? ctx.CurrentZone->GetServerObject(ctx.SourceEntityID) : nullptr;
     if(oNPC)
     {
         oNPC->GetEntity()->SetState(act->GetState());
 
         libcomp::Packet p;
         p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_NPC_STATE_CHANGE);
-        p.WriteS32Little(sourceEntityID);
+        p.WriteS32Little(ctx.SourceEntityID);
         p.WriteU8(act->GetState());
 
-        zoneManager->BroadcastPacket(client, p);
-
-        return true;
+        zoneManager->BroadcastPacket(ctx.CurrentZone, p);
+    }
+    else
+    {
+        return false;
     }
 
     return true;
 }
 
-bool ActionManager::UpdateFlag(
-    const std::shared_ptr<ChannelClientConnection>& client,
-    const std::shared_ptr<objects::Action>& action, int32_t sourceEntityID)
+bool ActionManager::UpdateFlag(const ActionContext& ctx)
 {
-    (void)sourceEntityID;
+    if(!ctx.Client)
+    {
+        LOG_ERROR("Attempted to execute a player flag update action with no"
+            " associated client connection\n");
+        return false;
+    }
 
-    auto act = std::dynamic_pointer_cast<objects::ActionUpdateFlag>(action);
+    auto act = std::dynamic_pointer_cast<objects::ActionUpdateFlag>(ctx.Action);
     auto characterManager = mServer.lock()->GetCharacterManager();
 
     switch(act->GetFlagType())
     {
     case objects::ActionUpdateFlag::FlagType_t::MAP:
-        characterManager->AddMap(client, act->GetID());
+        characterManager->AddMap(ctx.Client, act->GetID());
         break;
     case objects::ActionUpdateFlag::FlagType_t::PLUGIN:
-        characterManager->AddPlugin(client, act->GetID());
+        characterManager->AddPlugin(ctx.Client, act->GetID());
         break;
     case objects::ActionUpdateFlag::FlagType_t::VALUABLE:
-        characterManager->AddRemoveValuable(client, act->GetID(),
+        characterManager->AddRemoveValuable(ctx.Client, act->GetID(),
             act->GetRemove());
         break;
     default:
@@ -192,14 +235,17 @@ bool ActionManager::UpdateFlag(
     return true;
 }
 
-bool ActionManager::UpdateLNC(
-    const std::shared_ptr<ChannelClientConnection>& client,
-    const std::shared_ptr<objects::Action>& action, int32_t sourceEntityID)
+bool ActionManager::UpdateLNC(const ActionContext& ctx)
 {
-    (void)sourceEntityID;
+    if(!ctx.Client)
+    {
+        LOG_ERROR("Attempted to execute a player LNC update action with no"
+            " associated client connection\n");
+        return false;
+    }
 
-    auto act = std::dynamic_pointer_cast<objects::ActionUpdateLNC>(action);
-    auto character = client->GetClientState()->GetCharacterState()
+    auto act = std::dynamic_pointer_cast<objects::ActionUpdateLNC>(ctx.Action);
+    auto character = ctx.Client->GetClientState()->GetCharacterState()
         ->GetEntity();
     auto characterManager = mServer.lock()->GetCharacterManager();
 
@@ -213,22 +259,115 @@ bool ActionManager::UpdateLNC(
         lnc = (int16_t)(lnc + act->GetValue());
     }
 
-    characterManager->UpdateLNC(client, lnc);
+    characterManager->UpdateLNC(ctx.Client, lnc);
 
     return true;
 }
 
-bool ActionManager::UpdateQuest(
-    const std::shared_ptr<ChannelClientConnection>& client,
-    const std::shared_ptr<objects::Action>& action, int32_t sourceEntityID)
+bool ActionManager::UpdateQuest(const ActionContext& ctx)
 {
-    (void)sourceEntityID;
+    if(!ctx.Client)
+    {
+        LOG_ERROR("Attempted to execute a quest update action with no"
+            " associated client connection\n");
+        return false;
+    }
 
-    auto act = std::dynamic_pointer_cast<objects::ActionUpdateQuest>(action);
+    auto act = std::dynamic_pointer_cast<objects::ActionUpdateQuest>(ctx.Action);
     auto server = mServer.lock();
     auto eventManager = server->GetEventManager();
 
-    eventManager->UpdateQuest(client, act->GetQuestID(), act->GetPhase());
+    eventManager->UpdateQuest(ctx.Client, act->GetQuestID(), act->GetPhase());
+
+    return true;
+}
+
+bool ActionManager::CreateLoot(const ActionContext& ctx)
+{
+    auto act = std::dynamic_pointer_cast<objects::ActionCreateLoot>(ctx.Action);
+    auto server = mServer.lock();
+    auto characterManager = server->GetCharacterManager();
+    auto zoneManager = server->GetZoneManager();
+
+    std::list<std::shared_ptr<objects::ObjectPosition>> locations;
+    switch(act->GetPosition())
+    {
+    case objects::ActionCreateLoot::Position_t::ABS:
+        locations = act->GetLocations();
+        break;
+    case objects::ActionCreateLoot::Position_t::SOURCE_RELATIVE:
+        {
+            auto source = ctx.CurrentZone->GetEntity(ctx.SourceEntityID);
+            if(!source)
+            {
+                LOG_ERROR("Attempted to create source relative loot without"
+                    " a valid source entity\n");
+                return false;
+            }
+
+            auto loc = std::make_shared<objects::ObjectPosition>();
+            loc->SetX(source->GetCurrentX());
+            loc->SetY(source->GetCurrentY());
+            loc->SetRotation(source->GetCurrentRotation());
+            locations.push_back(loc);
+        }
+        break;
+    default:
+        break;
+    }
+
+    uint64_t lootTime = 0;
+    if(act->GetExpirationTime() > 0.f)
+    {
+        uint64_t now = ChannelServer::GetServerTime();
+        lootTime = (uint64_t)(now +
+            (uint64_t)((double)act->GetExpirationTime() * 1000000.0));
+    }
+
+    auto zConnections = ctx.CurrentZone->GetConnectionList();
+    auto firstClient = zConnections.size() > 0 ? zConnections.front()
+        : nullptr;
+
+    std::list<int32_t> entityIDs;
+    for(auto loc : locations)
+    {
+        auto lBox = std::make_shared<objects::LootBox>();
+        if(act->GetIsBossBox())
+        {
+            lBox->SetType(objects::LootBox::Type_t::BOSS_BOX);
+        }
+        else
+        {
+            lBox->SetType(objects::LootBox::Type_t::TREASURE_BOX);
+        }
+        lBox->SetLootTime(lootTime);
+
+        auto drops = act->GetDrops();
+        characterManager->CreateLootFromDrops(lBox, drops, 0, true);
+
+        auto lState = std::make_shared<LootBoxState>(lBox);
+        lState->SetCurrentX(loc->GetX());
+        lState->SetCurrentY(loc->GetY());
+        lState->SetCurrentRotation(loc->GetRotation());
+        lState->SetEntityID(server->GetNextEntityID());
+        entityIDs.push_back(lState->GetEntityID());
+
+        ctx.CurrentZone->AddLootBox(lState);
+
+        if(firstClient)
+        {
+            zoneManager->SendLootBoxData(firstClient, lState, nullptr,
+                true, true);
+        }
+    }
+    
+    if(lootTime != 0)
+    {
+        zoneManager->ScheduleEntityRemoval(lootTime, ctx.CurrentZone,
+            entityIDs);
+    }
+
+    ChannelClientConnection::FlushAllOutgoing(zConnections);
 
     return true;
 }

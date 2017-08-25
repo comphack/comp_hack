@@ -119,6 +119,12 @@ void TcpConnection::QueuePacket(ReadOnlyPacket& packet)
     mOutgoingPackets.push_back(std::move(packet));
 }
 
+void TcpConnection::QueuePacketCopy(libcomp::Packet& packet)
+{
+    libcomp::Packet pCopy(packet);
+    QueuePacket(pCopy);
+}
+
 bool TcpConnection::QueueObject(const Object& obj)
 {
     Packet p;
@@ -144,6 +150,13 @@ void TcpConnection::SendPacket(ReadOnlyPacket& packet, bool closeConnection)
 {
     QueuePacket(packet);
     FlushOutgoing(closeConnection);
+}
+
+void TcpConnection::SendPacketCopy(libcomp::Packet& packet,
+    bool closeConnection)
+{
+    libcomp::Packet pCopy(packet);
+    SendPacket(pCopy, closeConnection);
 }
 
 bool TcpConnection::SendObject(const Object& obj, bool closeConnection)

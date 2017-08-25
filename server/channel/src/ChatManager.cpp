@@ -80,6 +80,7 @@ ChatManager::ChatManager(const std::weak_ptr<ChannelServer>& server)
     mGMands["post"] = &ChatManager::GMCommand_Post;
     mGMands["quest"] = &ChatManager::GMCommand_Quest;
     mGMands["skill"] = &ChatManager::GMCommand_Skill;
+    mGMands["spawn"] = &ChatManager::GMCommand_Spawn;
     mGMands["speed"] = &ChatManager::GMCommand_Speed;
     mGMands["tickermessage"] = &ChatManager::GMCommand_TickerMessage;
     mGMands["version"] = &ChatManager::GMCommand_Version;
@@ -352,25 +353,9 @@ bool ChatManager::GMCommand_Contract(const std::shared_ptr<
         demonID = devilData->GetBasic()->GetID();
     }
 
-    auto state = client->GetClientState();
-    auto character = state->GetCharacterState()->GetEntity();
-
-    auto demon = characterManager->ContractDemon(character,
-        definitionManager->GetDevilData(demonID));
-
-    if(nullptr == demon)
-    {
-        return false;
-    }
-
-    state->SetObjectID(demon->GetUUID(),
-        server->GetNextObjectID());
-
-    int8_t slot = demon->GetBoxSlot();
-    characterManager->SendDemonData(client, 0, slot,
-        state->GetObjectID(demon->GetUUID()));
-
-    return true;
+    auto demon = characterManager->ContractDemon(client,
+        definitionManager->GetDevilData(demonID), 0);
+    return demon != nullptr;
 }
 
 bool ChatManager::GMCommand_Crash(const std::shared_ptr<
@@ -629,8 +614,11 @@ bool ChatManager::GMCommand_Item(const std::shared_ptr<
         stackSize = 1;
     }
 
+    std::unordered_map<uint32_t, uint16_t> itemMap;
+    itemMap[itemID] = stackSize;
+
     return server->GetCharacterManager()
-        ->AddRemoveItem(client, itemID, stackSize, true);
+        ->AddRemoveItems(client, itemMap, true);
 }
 
 bool ChatManager::GMCommand_Kick(const std::shared_ptr<
@@ -995,6 +983,20 @@ bool ChatManager::GMCommand_Skill(const std::shared_ptr<
 
     return mServer.lock()->GetCharacterManager()->LearnSkill(
         client, entityID, skillID);
+}
+
+bool ChatManager::GMCommand_Spawn(const std::shared_ptr<
+    channel::ChannelClientConnection>& client,
+    const std::list<libcomp::String>& args)
+{
+    (void)args;
+
+    auto server = mServer.lock();
+    auto zoneManager = server->GetZoneManager();
+    auto zone = zoneManager->GetZoneInstance(client);
+
+    zoneManager->UpdateSpawnGroups(zone, true);
+    return true;
 }
 
 bool ChatManager::GMCommand_Speed(const std::shared_ptr<

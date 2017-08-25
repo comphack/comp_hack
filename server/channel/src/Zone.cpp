@@ -29,6 +29,14 @@
 // C++ Standard Includes
 #include <cmath>
 
+// object Includes
+#include <Loot.h>
+#include <ServerZone.h>
+#include <SpawnGroup.h>
+
+// channel Includes
+#include <ChannelServer.h>
+
 using namespace channel;
 
 Zone::Zone(uint32_t id, const std::shared_ptr<objects::ServerZone>& definition)
@@ -75,13 +83,117 @@ void Zone::RemoveConnection(const std::shared_ptr<ChannelClientConnection>& clie
     mConnections.erase(cEntityID);
 }
 
+void Zone::RemoveEntity(int32_t entityID, bool updateSpawns)
+{
+    auto state = GetEntity(entityID);
+
+    if(state)
+    {
+        std::lock_guard<std::mutex> lock(mLock);
+
+        std::shared_ptr<objects::Enemy> removeEnemy;
+        switch(state->GetEntityType())
+        {
+        case objects::EntityStateObject::EntityType_t::ENEMY:
+            {
+                mEnemies.remove_if([entityID](const std::shared_ptr<EnemyState>& e)
+                    {
+                        return e->GetEntityID() == entityID;
+                    });
+
+                if(updateSpawns)
+                {
+                    removeEnemy = std::dynamic_pointer_cast<EnemyState>(state)
+                        ->GetEntity();
+                }
+            }
+            break;
+        case objects::EntityStateObject::EntityType_t::LOOT_BOX:
+            {
+                auto lState = std::dynamic_pointer_cast<LootBoxState>(state);
+                mLootBoxes.remove_if([entityID](const std::shared_ptr<LootBoxState>& e)
+                    {
+                        return e->GetEntityID() == entityID;
+                    });
+
+                removeEnemy = lState->GetEntity()->GetEnemy();
+            }
+            break;
+        default:
+            break;
+        }
+
+        if(removeEnemy)
+        {
+            uint32_t spawnGroupID = removeEnemy ? removeEnemy->GetSpawnGroupID() : 0;
+            if(spawnGroupID)
+            {
+                mSpawnGroups[spawnGroupID].remove_if([removeEnemy](
+                    const std::shared_ptr<EnemyState>& e)
+                    {
+                        return e->GetEntity() == removeEnemy;
+                    });
+
+                auto spawnGroup = mServerZone->GetSpawnGroups(spawnGroupID);
+                if(spawnGroup->GetRespawnTime() > 0.f &&
+                    (uint16_t)mSpawnGroups[spawnGroupID].size() < spawnGroup->GetMaxCount())
+                {
+                    // Update the reinforce time for the group, exit if found
+                    for(auto rPair : mSpawnGroupReinforceTimes)
+                    {
+                        if(rPair.second.find(spawnGroupID) != rPair.second.end())
+                        {
+                            return;
+                        }
+                    }
+
+                    uint64_t rTime = ChannelServer::GetServerTime()
+                        + (uint64_t)(spawnGroup->GetRespawnTime() * 1000000);
+
+                    mSpawnGroupReinforceTimes[rTime].insert(spawnGroupID);
+                }
+            }
+        }
+    }
+
+    UnregisterEntityState(entityID);
+}
+
 void Zone::AddEnemy(const std::shared_ptr<EnemyState>& enemy)
 {
     {
         std::lock_guard<std::mutex> lock(mLock);
         mEnemies.push_back(enemy);
+
+        auto spawnGroupID = enemy->GetEntity()->GetSpawnGroupID();
+        auto spawnGroup = spawnGroupID > 0
+            ? mServerZone->GetSpawnGroups(spawnGroupID) : nullptr;
+        if(spawnGroup)
+        {
+            mSpawnGroups[spawnGroupID].push_back(enemy);
+
+            // If the last one was spawned, remove it from the
+            // reinforce times so the counter resets
+            if(spawnGroup->GetRespawnTime() > 0.f &&
+                (uint16_t)mSpawnGroups.size() == spawnGroup->GetMaxCount())
+            {
+                for(auto pair : mSpawnGroupReinforceTimes)
+                {
+                    pair.second.erase(spawnGroupID);
+                }
+            }
+        }
     }
     RegisterEntityState(enemy);
+}
+
+void Zone::AddLootBox(const std::shared_ptr<LootBoxState>& box)
+{
+    {
+        std::lock_guard<std::mutex> lock(mLock);
+        mLootBoxes.push_back(box);
+    }
+    RegisterEntityState(box);
 }
 
 void Zone::AddNPC(const std::shared_ptr<NPCState>& npc)
@@ -146,6 +258,16 @@ std::shared_ptr<EnemyState> Zone::GetEnemy(int32_t id)
 const std::list<std::shared_ptr<EnemyState>> Zone::GetEnemies() const
 {
     return mEnemies;
+}
+
+std::shared_ptr<LootBoxState> Zone::GetLootBox(int32_t id)
+{
+    return std::dynamic_pointer_cast<LootBoxState>(GetEntity(id));
+}
+
+const std::list<std::shared_ptr<LootBoxState>> Zone::GetLootBoxes() const
+{
+    return mLootBoxes;
 }
 
 const std::list<std::shared_ptr<NPCState>> Zone::GetNPCs() const
@@ -247,6 +369,108 @@ std::list<std::shared_ptr<ActiveEntityState>>
     return result;
 }
 
+std::unordered_map<uint32_t, uint16_t> Zone::GetReinforceableSpawnGroups(
+    uint64_t now)
+{
+    std::unordered_map<uint32_t, uint16_t> result;
+
+    std::set<uint64_t> passed;
+    std::map<uint64_t, std::set<uint32_t>> nextReinforceTimes;
+
+    std::lock_guard<std::mutex> lock(mLock);
+    for(auto pair : mSpawnGroupReinforceTimes)
+    {
+        if(pair.first > now) break;
+
+        passed.insert(pair.first);
+
+        for(uint32_t spawnGroupID : pair.second)
+        {
+            // Make sure we don't add the group twice
+            if(result.find(spawnGroupID) == result.end())
+            {
+                auto spawnGroup = mServerZone->GetSpawnGroups(spawnGroupID);
+                uint16_t activeCount = (uint16_t)mSpawnGroups[spawnGroupID].size();
+
+                if(spawnGroup->GetMaxCount() > activeCount)
+                {
+                    uint16_t count = (uint16_t)(
+                        spawnGroup->GetMaxCount() - activeCount);
+                    result[spawnGroupID] = count;
+
+                    if(count > 1 && spawnGroup->GetRespawnTime() > 0.f)
+                    {
+                        // Set the next reinforce time, this will be cleared
+                        // if the full group is spawned
+                        uint64_t rTime = now + (uint64_t)(
+                            spawnGroup->GetRespawnTime() * 1000000);
+
+                        nextReinforceTimes[rTime].insert(spawnGroupID);
+                    }
+                }
+            }
+        }
+    }
+
+    for(auto p : passed)
+    {
+        mSpawnGroupReinforceTimes.erase(p);
+    }
+
+    for(auto pair : nextReinforceTimes)
+    {
+        for(auto spawnGroupID : pair.second)
+        {
+            mSpawnGroupReinforceTimes[pair.first].insert(spawnGroupID);
+        }
+    }
+
+    return result;
+}
+
+std::unordered_map<size_t, std::shared_ptr<objects::Loot>>
+    Zone::TakeLoot(std::shared_ptr<LootBoxState> lState, std::set<int8_t> slots,
+    size_t freeSlots, std::unordered_map<uint32_t, uint16_t> stacksFree)
+{
+    std::unordered_map<size_t, std::shared_ptr<objects::Loot>> result;
+    size_t ignoreCount = 0;
+
+    std::lock_guard<std::mutex> lock(mLock);
+    auto lBox = lState->GetEntity();
+    auto loot = lBox->GetLoot();
+    for(size_t i = 0; (size_t)(result.size() - ignoreCount) < freeSlots &&
+        i < lBox->LootCount(); i++)
+    {
+        auto l = loot[i];
+        if(l && l->GetCount() > 0 &&
+            (slots.size() == 0 || slots.find((int8_t)i) != slots.end()))
+        {
+            result[i] = l;
+            loot[i] = nullptr;
+
+            auto it = stacksFree.find(l->GetType());
+            if(it != stacksFree.end() && it->second > 0)
+            {
+                // If there are existing stacks, determine if the loot
+                // can be held in one of them
+                if(it->second >= l->GetCount())
+                {
+                    stacksFree[l->GetType()] = (uint16_t)(
+                        it->second - l->GetCount());
+                    ignoreCount++;
+                }
+                else
+                {
+                    stacksFree[l->GetType()] = 0;
+                }
+            }
+        }
+    }
+    lState->GetEntity()->SetLoot(loot);
+
+    return result;
+}
+
 void Zone::Cleanup()
 {
     std::lock_guard<std::mutex> lock(mLock);
@@ -263,4 +487,5 @@ void Zone::Cleanup()
     mNPCs.clear();
     mObjects.clear();
     mAllEntities.clear();
+    mSpawnGroups.clear();
 }

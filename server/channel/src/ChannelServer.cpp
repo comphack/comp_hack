@@ -182,6 +182,8 @@ bool ChannelServer::Initialize()
         to_underlying(ClientToChannelPacketCode_t::PACKET_TRADE_FINISH));
     clientPacketManager->AddParser<Parsers::TradeCancel>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_TRADE_CANCEL));
+    clientPacketManager->AddParser<Parsers::LootItem>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_LOOT_ITEM));
     clientPacketManager->AddParser<Parsers::CashBalance>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_CASH_BALANCE));
     clientPacketManager->AddParser<Parsers::ShopData>(
@@ -236,16 +238,22 @@ bool ChannelServer::Initialize()
         to_underlying(ClientToChannelPacketCode_t::PACKET_PARTY_KICK));
     clientPacketManager->AddParser<Parsers::DemonFusion>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_DEMON_FUSION));
+    clientPacketManager->AddParser<Parsers::LootDemonEggData>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_LOOT_DEMON_EGG_DATA));
     clientPacketManager->AddParser<Parsers::Sync>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_SYNC));
     clientPacketManager->AddParser<Parsers::Rotate>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_ROTATE));
+    clientPacketManager->AddParser<Parsers::LootBossBox>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_LOOT_BOSS_BOX));
     clientPacketManager->AddParser<Parsers::UnionFlag>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_UNION_FLAG));
     clientPacketManager->AddParser<Parsers::ItemDepoList>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_ITEM_DEPO_LIST));
     clientPacketManager->AddParser<Parsers::DepoRent>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_DEPO_RENT));
+    clientPacketManager->AddParser<Parsers::LootTreasureBox>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_LOOT_TREASURE_BOX));
     clientPacketManager->AddParser<Parsers::QuestActiveList>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_QUEST_ACTIVE_LIST));
     clientPacketManager->AddParser<Parsers::QuestCompletedList>(

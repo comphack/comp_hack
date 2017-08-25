@@ -113,9 +113,10 @@ bool Parsers::ClanUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
                         libcomp::PersistentObject::GetObjectByUUID(
                         state->GetObjectUUID(activatedAbility->GetTargetObjectID())));
 
-                    uint32_t itemID = item ? item->GetType() : 0;
+                    std::unordered_map<uint32_t, uint16_t> itemMap;
+                    itemMap[item ? item->GetType() : 0] = 1;
 
-                    server->GetCharacterManager()->AddRemoveItem(client, itemID, 1, false,
+                    server->GetCharacterManager()->AddRemoveItems(client, itemMap, false,
                         activatedAbility->GetTargetObjectID());
 
                     server->GetSkillManager()->ExecuteSkill(client, cState->GetEntityID(),

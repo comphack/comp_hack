@@ -1518,7 +1518,7 @@ bool ZoneFilter::PostProcess()
                                 for(auto branch : allEvents[i]->nextBranch[key])
                                 {
                                     if(MergeEvents(branch, allEvents[k]->next[key],
-                                        false, true))
+                                        false, false))
                                     {
                                         merged = true;
                                         break;
@@ -1530,6 +1530,14 @@ bool ZoneFilter::PostProcess()
                                     allEvents[i]->nextBranch[key].push_back(
                                         allEvents[k]->next[key]);
                                 }
+                            }
+                        }
+
+                        for(auto bPair : allEvents[k]->nextBranch)
+                        {
+                            for(auto b : bPair.second)
+                            {
+                                allEvents[i]->nextBranch[bPair.first].push_back(b);
                             }
                         }
 
@@ -1563,7 +1571,7 @@ bool ZoneFilter::PostProcess()
                     bool merged = false;
                     for(auto b : branches)
                     {
-                        if(MergeEvents(b, branch, false, true))
+                        if(MergeEvents(b, branch, false, false))
                         {
                             MergeEventReferences(branch, b, allEvents);
                             merged = true;
@@ -2360,6 +2368,11 @@ bool ZoneFilter::MergeEvents(std::shared_ptr<MappedEvent> e1,
     std::shared_ptr<MappedEvent> e2, bool checkOnly, bool flat,
     std::set<std::shared_ptr<MappedEvent>> seen)
 {
+    if(e1 == e2)
+    {
+        return true;
+    }
+
     if(e1->event->GetEventType() != e2->event->GetEventType() ||
         e1->source != e2->source)
     {
@@ -2585,6 +2598,15 @@ bool ZoneFilter::MergeEventPrompts(std::shared_ptr<MappedEvent> e1,
         {
             // Try to get the message even if the event is unknown
             choices1[i] = choices2[i];
+        }
+    }
+
+    // Merge branches
+    for(auto bPair : e2->nextBranch)
+    {
+        for(auto b : bPair.second)
+        {
+            e1->nextBranch[bPair.first].push_back(b);
         }
     }
 
@@ -2872,6 +2894,14 @@ bool ZoneFilter::MergeNextGeneric(std::shared_ptr<MappedEvent> e1,
     {
         auto key = nPair.first;
         MergeEvents(e1->next[key], e2->next[key], false, false, seen);
+    }
+
+    for(auto bPair : e2->nextBranch)
+    {
+        for(auto b : bPair.second)
+        {
+            e1->nextBranch[bPair.first].push_back(b);
+        }
     }
 
     return true;

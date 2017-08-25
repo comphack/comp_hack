@@ -83,6 +83,7 @@ SET(${PROJECT_NAME}_SCHEMA
     schema/channelconfig.xml
     schema/clientstate.xml
     schema/entitystate.xml
+    schema/loot.xml
 )
 
 SOURCE_GROUP("objgen" ${CMAKE_CURRENT_BINARY_DIR}/objgen/*)
@@ -113,6 +114,10 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     EventInstance.cpp
     EventState.h
     EventState.cpp
+    Loot.h
+    Loot.cpp
+    LootBox.h
+    LootBox.cpp
     TradeSession.h
     TradeSession.cpp
 )
@@ -159,6 +164,7 @@ SET(${PROJECT_NAME}_PACKETS
     src/packets/game/TradeLock.cpp              # 0x0085
     src/packets/game/TradeFinish.cpp            # 0x0088
     src/packets/game/TradeCancel.cpp            # 0x008B
+    src/packets/game/LootItem.cpp               # 0x008E
     src/packets/game/CashBalance.cpp            # 0x0090
     src/packets/game/ShopData.cpp               # 0x0092
     src/packets/game/ShopBuy.cpp                # 0x0094
@@ -185,11 +191,14 @@ SET(${PROJECT_NAME}_PACKETS
     src/packets/game/PartyDropRule              # 0x00E3
     src/packets/game/PartyKick                  # 0x00EB
     src/packets/game/DemonFusion                # 0x00EF
+    src/packets/game/LootDemonEggData.cpp       # 0x00F1
     src/packets/game/Sync.cpp                   # 0x00F3
     src/packets/game/Rotate.cpp                 # 0x00F8
+    src/packets/game/LootBossBox.cpp            # 0x00FC
     src/packets/game/UnionFlag.cpp              # 0x0100
     src/packets/game/ItemDepoList.cpp           # 0x0102
     src/packets/game/DepoRent.cpp               # 0x0104
+    src/packets/game/LootTreasureBox.cpp        # 0x0107
     src/packets/game/QuestActiveList.cpp        # 0x010B
     src/packets/game/QuestCompletedList.cpp     # 0x010C
     src/packets/game/ClanDisband.cpp            # 0x0138

@@ -27,6 +27,7 @@
 #include "EntityState.h"
 
 // channel Includes
+#include <LootBox.h>
 #include <ServerNPC.h>
 #include <ServerObject.h>
 
@@ -47,6 +48,14 @@ EntityState<objects::ServerNPC>::EntityState(
     : mEntity(entity)
 {
     SetEntityType(objects::EntityStateObject::EntityType_t::NPC);
+}
+
+template<>
+EntityState<objects::LootBox>::EntityState(
+    const std::shared_ptr<objects::LootBox>& entity)
+    : mEntity(entity)
+{
+    SetEntityType(objects::EntityStateObject::EntityType_t::LOOT_BOX);
 }
 
 }

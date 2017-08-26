@@ -127,6 +127,7 @@ bool EnemyState::UpdateState(uint64_t now)
 
 uint64_t EnemyState::GetActionTime(const libcomp::String& action)
 {
+    std::lock_guard<std::mutex> lock(mLock);
     auto it = mActionTimes.find(action.C());
     if(it != mActionTimes.end())
     {
@@ -138,5 +139,25 @@ uint64_t EnemyState::GetActionTime(const libcomp::String& action)
 
 void EnemyState::SetActionTime(const libcomp::String& action, uint64_t time)
 {
+    std::lock_guard<std::mutex> lock(mLock);
     mActionTimes[action.C()] = time;
+}
+
+std::pair<uint8_t, uint8_t> EnemyState::GetTalkPoints(int32_t entityID)
+{
+    std::lock_guard<std::mutex> lock(mLock);
+    auto it = mTalkPoints.find(entityID);
+    if(it == mTalkPoints.end())
+    {
+        mTalkPoints[entityID] = std::pair<uint8_t, uint8_t>(0, 0);
+    }
+
+    return mTalkPoints[entityID];
+}
+
+void EnemyState::SetTalkPoints(int32_t entityID,
+    const std::pair<uint8_t, uint8_t>& points)
+{
+    std::lock_guard<std::mutex> lock(mLock);
+    mTalkPoints[entityID] = points;
 }

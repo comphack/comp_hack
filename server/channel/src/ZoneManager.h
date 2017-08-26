@@ -150,9 +150,52 @@ public:
      * Tell all game clients in a zone to remove an entity.
      * @param zone Pointer to the zone to remove the entities from
      * @param entityIDs IDs of the entities to remove
+     * @param removeMode Optional preset removal mode
+     *  0) Immediate removal
+     *  2) Store partner demon
+     *  3) Demon egg contract complete
+     *  4) Replacing enemy with lootable body
+     *  5) Replacing enemy with demon egg
+     *  6) Replacing enemy with gift box
+     *  7) Enemy despawn
+     *  8) Enemy running away upon skill hit recovery
+     *  12) Partner demon 2-way fusion
+     *  13) Lootable body despawn
+     *  15) Partner demon crystallized
+     *  16) Partner demon 3-way fusion
+     *  Seen but not unknown (1, 10)
+     * @param queue true if the packet should be queued
      */
     void RemoveEntitiesFromZone(const std::shared_ptr<Zone>& zone,
-        const std::list<int32_t>& entityIDs);
+        const std::list<int32_t>& entityIDs, int32_t removeMode = 0,
+        bool queue = false);
+
+    /**
+     * Schedule the delayed removal of one or more entities in the specified zone.
+     * @param time Server time to schedule entity removal for
+     * @param zone Pointer to the zone the entities belong to
+     * @param entityIDs List of IDs associated to entities to remove
+     * @param removeMode Optional parameter to modify the way the entity is removed
+     *  in regards to the client
+     */
+    void ScheduleEntityRemoval(uint64_t time, const std::shared_ptr<Zone>& zone,
+        const std::list<int32_t>& entityIDs, int32_t removeMode = 0);
+
+    /**
+     * Send the details of a loot box in the specified client's zone to the client
+     * specified or all clients in that zone
+     * @param client Pointer to the client connection
+     * @param lState Entity state of the loot box
+     * @param eState Entity state of the enemy that created the loot box, specified
+     *  when the loot box is first created
+     * @param sendToAll true if all clients in the zone should be sent the data
+     *  false if just the supplied client should be sent to
+     * @param queue true if the message should be queued, false if
+     *  it should send right away
+     */
+    void SendLootBoxData(const std::shared_ptr<ChannelClientConnection>& client,
+        const std::shared_ptr<LootBoxState>& lState, const std::shared_ptr<EnemyState>& eState,
+        bool sendToAll, bool queue = false);
 
     /**
      * Send a packet to every connection in the zone or all but the client specified
@@ -207,6 +250,16 @@ public:
         float y, float rot, const libcomp::String& aiType = "default");
 
     /**
+     * Update the specified zone instance's SpawnLocationGroups
+     * @param zone Pointer to the zone instance where the groups should be updated
+     * @param refreshAll true if each group should be filled, false if only
+     *  spawn groups with an elapsed refresh timer should be updated
+     * @param now Current server time
+     */
+    void UpdateSpawnGroups(const std::shared_ptr<Zone>& zone, bool refreshAll,
+        uint64_t now = 0);
+
+    /**
      * Updates the current states of entities in the zone.  Enemy AI is
      * processed from here as well as updating the current state of moving
      * entities.
@@ -226,7 +279,28 @@ public:
         const std::shared_ptr<ActiveEntityState>& eState, float xPos, float yPos,
         float rot);
 
+    /**
+     * Get a random point within the specified width and height representing
+     * a rectangular area in a zone.
+     * @param width Width of the area to generate a random point within
+     * @param height Height of the area to generate a random point within
+     * @return X, Y coordinates of the random point
+     */
+    std::pair<float, float> GetRandomPoint(float width, float height) const;
+
 private:
+    /**
+     * Create an enemy in the specified zone instance at set coordinates
+     * @param zone Pointer to the zone instance where the enemy should be spawned
+     * @param demonID Demon/enemy type ID to spawn
+     * @param x X coordinate to render the enemy at
+     * @param y Y coordinate to render the enemy at
+     * @param rot Rotation to render the enemy with
+     * @return Pointer to the new enemy state
+     */
+    std::shared_ptr<EnemyState> CreateEnemy(const std::shared_ptr<Zone>& zone,
+        uint32_t demonID, float x, float y, float rot);
+
     /**
      * Send entity information about an enemy in a zone
      * @param client Pointer to the client connection to send to or use as

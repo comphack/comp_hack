@@ -133,13 +133,11 @@ bool Parsers::ReviveCharacter::Parse(libcomp::ManagerPacket *pPacketManager,
         break;
     case 107:   // Item revival
         {
-            auto items = characterManager->GetExistingItems(character,
-                SVR_CONST.ITEM_BALM_OF_LIFE, character->GetItemBoxes(0).Get());
+            std::unordered_map<uint32_t, uint16_t> itemMap;
+            itemMap[SVR_CONST.ITEM_BALM_OF_LIFE] = 1;
 
-            if(items.size() > 0)
+            if(characterManager->AddRemoveItems(client, itemMap, false))
             {
-                characterManager->AddRemoveItem(client,
-                    SVR_CONST.ITEM_BALM_OF_LIFE, 1, false);
                 responseType1 = REVIVAL_REVIVE_NORMAL;
                 hpRestore = 1.f;
             }

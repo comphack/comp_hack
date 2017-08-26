@@ -347,7 +347,7 @@ bool ProcessDemonFusion(const std::shared_ptr<ChannelServer>& server,
         if(dState->GetEntity() == demon1 ||
             dState->GetEntity() == demon2)
         {
-            characterManager->StoreDemon(client);
+            characterManager->StoreDemon(client, true, 12);
         }
 
         // Create the new demon

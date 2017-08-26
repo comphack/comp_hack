@@ -33,7 +33,9 @@
 namespace objects
 {
 class ActivatedAbility;
+class ItemDrop;
 class MiSkillData;
+class Spawn;
 }
 
 namespace channel
@@ -138,6 +140,29 @@ private:
         bool applyStatusEffects = true);
 
     /**
+     * Handle all logic related to kills that occurred from a skill's execution.
+     * @param source Pointer to the source of the skill
+     * @param zone Pointer to the zone where the skill was executed
+     * @param killed Set of entities killed by the skill's execution
+     */
+    void HandleKills(const std::shared_ptr<ActiveEntityState> source,
+        const std::shared_ptr<Zone> zone,
+        const std::set<std::shared_ptr<ActiveEntityState>> killed);
+
+    /**
+     * Handle the outcome of a negotation ending from a skill's execution
+     * including things like creating demon eggs and gift boxes or running away.
+     * @param source Pointer to the source of the skill
+     * @param zone Pointer to the zone where the skill was executed
+     * @param talkDone List of entities that have finished negotiation with
+     *  the skill source and their respective outcomes related to respons flags
+     */
+    void HandleNegotiations(const std::shared_ptr<ActiveEntityState> source,
+        const std::shared_ptr<Zone> zone,
+        const std::list<std::pair<std::shared_ptr<ActiveEntityState>,
+        uint8_t>> talkDone);
+
+    /**
      * Toggle a switch skill, not handled by a special handler.
      * @param client Pointer to the client connection that activated the skill
      * @param activated Pointer to the activated ability instance
@@ -217,6 +242,20 @@ private:
      *  is invalid
      */
     uint8_t CalculateStatusEffectStack(int8_t minStack, int8_t maxStack) const;
+
+    /**
+     * Gather drops for a specific enemy spawn from its own drops, global drops
+     * and demon family drops.
+     * @param enemyType Type of demon to gather drops from, separated in case
+     *  the enemy did not originate from a spawn
+     * @param spawn Pointer to the spawn information for the enemy which may
+     *  or may not exist (ex: GM created enemy)
+     * @param giftMode true if the enemy's negotation gifts should be gathered
+     *  instead of their normal drops
+     * @return List of item drops from each different source
+     */
+    std::list<std::shared_ptr<objects::ItemDrop>> GetItemDrops(uint32_t enemyType,
+        const std::shared_ptr<objects::Spawn>& spawn, bool giftMode = false) const;
 
     /**
      * Execute post execution steps like notifying the client that the skill

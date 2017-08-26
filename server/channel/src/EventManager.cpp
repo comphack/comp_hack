@@ -1039,7 +1039,7 @@ bool EventManager::Message(const std::shared_ptr<ChannelClientConnection>& clien
         p.Seek(2);
         p.WriteS32Little(msg);
 
-        client->QueuePacket(p);
+        client->QueuePacketCopy(p);
     }
 
     client->FlushOutgoing();

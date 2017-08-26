@@ -1,10 +1,11 @@
 /**
- * @file server/channel/src/packets/game/TradeAccept.cpp
+ * @file server/channel/src/packets/game/LootBossBox.cpp
  * @ingroup channel
  *
  * @author HACKfrost
  *
- * @brief Request from the client to accept a trade request.
+ * @brief Request from the client for the list of items inside a boss
+ *  loot box.
  *
  * This file is part of the Channel Server (channel).
  *
@@ -32,74 +33,67 @@
 #include <PacketCodes.h>
 
 // object Includes
-#include <Account.h>
-#include <Character.h>
-#include <TradeSession.h>
+#include <Loot.h>
+#include <LootBox.h>
 
 // channel Includes
 #include "ChannelServer.h"
-#include "ClientState.h"
 
 using namespace channel;
 
-bool Parsers::TradeAccept::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::LootBossBox::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {
-    if(p.Size() != 0)
+    if(p.Size() != 8)
     {
         return false;
     }
 
+    int32_t entityID = p.ReadS32Little();
+    int32_t lootEntityID = p.ReadS32Little();
+
+    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
     auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
     auto characterManager = server->GetCharacterManager();
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
+    auto zone = cState->GetZone();
 
-    auto otherCState = std::dynamic_pointer_cast<CharacterState>(
-        state->GetTradeSession()->GetOtherCharacterState());
-    auto otherChar = otherCState != nullptr ? otherCState->GetEntity() : nullptr;
-    auto otherClient = otherChar != nullptr ?
-        server->GetManagerConnection()->GetClientConnection(
-            otherChar->GetAccount()->GetUsername()) : nullptr;
+    libcomp::Packet reply;
+    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_LOOT_BOSS_BOX);
+    reply.WriteS32Little(entityID);
+    reply.WriteS32Little(lootEntityID);
 
-    bool cancel = false;
-    if(!otherClient)
+    auto lState = zone ? zone->GetLootBox(lootEntityID) : nullptr;
+    if(lState)
     {
-        cancel = true;
+        // If the loot time has not already started, set to 60 minutes
+        auto lBox = lState->GetEntity();
+        if(lBox->GetLootTime() == 0)
+        {
+            uint64_t now = ChannelServer::GetServerTime();
+            uint64_t lootTime = (uint64_t)(now + 3600000000);
+            lBox->SetLootTime(lootTime);
+
+            std::list<int32_t> entityIDs = { lState->GetEntityID() };
+            server->GetZoneManager()->ScheduleEntityRemoval(lootTime, zone, entityIDs);
+        }
+
+        reply.WriteS8(0);   // Success
+
+        client->QueuePacket(reply);
+
+        std::list<std::shared_ptr<ChannelClientConnection>> clients = { client };
+        characterManager->SendLootItemData(clients, lState);
     }
     else
     {
-        auto otherSession = otherClient->GetClientState()->GetTradeSession();
-        if(otherSession->GetOtherCharacterState() != cState)
-        {
-            cancel = true;
-        }
-    }
+        reply.WriteS8(-1);   // Failure
 
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_TRADE_ACCEPT);
-
-    if(cancel)
-    {
-        state->SetTradeSession(std::make_shared<objects::TradeSession>());
-
-        // Rejected
-        reply.WriteS32Little(-1);
         client->SendPacket(reply);
-        return true;
     }
-
-    // Accepted
-    reply.WriteS32Little(0);
-
-    characterManager->SetStatusIcon(otherClient, 8);
-
-    client->QueuePacketCopy(reply);
-    otherClient->SendPacket(reply);
-    characterManager->SetStatusIcon(client, 8);
 
     return true;
 }

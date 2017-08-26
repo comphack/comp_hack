@@ -41,6 +41,7 @@ namespace channel
 {
 
 class ChannelServer;
+struct ActionContext;
 
 /**
  * Class to manage actions when triggering a spot or interacting with
@@ -65,10 +66,11 @@ public:
      * @param client Client to perform the actions for.
      * @param actions List of actions to perform.
      * @param sourceEntityID ID of the entity performing the actions.
+     * @param zone Pointer to the current zone the action is being performed in
      */
     void PerformActions(const std::shared_ptr<ChannelClientConnection>& client,
         const std::list<std::shared_ptr<objects::Action>>& actions,
-        int32_t sourceEntityID);
+        int32_t sourceEntityID, const std::shared_ptr<Zone>& zone = nullptr);
 
 private:
     /**
@@ -78,8 +80,7 @@ private:
      * @param sourceEntityID ID of the entity to use as the event source.
      * @retval false The action list should stop after this action.
      */
-    bool StartEvent(const std::shared_ptr<ChannelClientConnection>& client,
-        const std::shared_ptr<objects::Action>& action, int32_t sourceEntityID);
+    bool StartEvent(const ActionContext& ctx);
 
     /**
      * Perform the zone change action on behalf of the client.
@@ -88,8 +89,7 @@ private:
      * @param sourceEntityID ID of the entity causing the zone change.
      * @retval false The action list should stop after this action.
      */
-    bool ZoneChange(const std::shared_ptr<ChannelClientConnection>& client,
-        const std::shared_ptr<objects::Action>& action, int32_t sourceEntityID);
+    bool ZoneChange(const ActionContext& ctx);
 
     /**
      * Change the state of the source entity in the zone.
@@ -98,8 +98,7 @@ private:
      * @param sourceEntityID ID of the entity that is changing state.
      * @retval false The action list should stop after this action.
      */
-    bool SetNPCState(const std::shared_ptr<ChannelClientConnection>& client,
-        const std::shared_ptr<objects::Action>& action, int32_t sourceEntityID);
+    bool SetNPCState(const ActionContext& ctx);
 
     /**
      * Update flags related to character maps, valuables or plugins.
@@ -108,8 +107,7 @@ private:
      * @param sourceEntityID ID of the source entity.
      * @retval false The action list should stop after this action.
      */
-    bool UpdateFlag(const std::shared_ptr<ChannelClientConnection>& client,
-        const std::shared_ptr<objects::Action>& action, int32_t sourceEntityID);
+    bool UpdateFlag(const ActionContext& ctx);
 
     /**
      * Update the client character's LNC alignment.
@@ -118,8 +116,7 @@ private:
      * @param sourceEntityID ID of the source entity.
      * @retval false The action list should stop after this action.
      */
-    bool UpdateLNC(const std::shared_ptr<ChannelClientConnection>& client,
-        const std::shared_ptr<objects::Action>& action, int32_t sourceEntityID);
+    bool UpdateLNC(const ActionContext& ctx);
 
     /**
      * Update a quest related to the current character.
@@ -128,17 +125,23 @@ private:
      * @param sourceEntityID ID of the source entity.
      * @retval false The action list should stop after this action.
      */
-    bool UpdateQuest(const std::shared_ptr<ChannelClientConnection>& client,
-        const std::shared_ptr<objects::Action>& action, int32_t sourceEntityID);
+    bool UpdateQuest(const ActionContext& ctx);
+
+    /**
+     * Create one or more loot boxes at the specified location.
+     * @param client Client to perform the actions for.
+     * @param action Action to perform.
+     * @param sourceEntityID ID of the source entity.
+     * @retval false The action list should stop after this action.
+     */
+    bool CreateLoot(const ActionContext& ctx);
 
     /// Pointer to the channel server.
     std::weak_ptr<ChannelServer> mServer;
 
     /// List of action parsers.
     libcomp::EnumMap<objects::Action::ActionType_t, std::function<bool(
-        ActionManager&,
-        const std::shared_ptr<channel::ChannelClientConnection>&,
-        const std::shared_ptr<objects::Action>&, int32_t)>> mActionHandlers;
+        ActionManager&, const ActionContext&)>> mActionHandlers;
 };
 
 } // namespace channel

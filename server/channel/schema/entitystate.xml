@@ -9,6 +9,7 @@
             <value>CHARACTER</value>
             <value>PARTNER_DEMON</value>
             <value>ENEMY</value>
+            <value>LOOT_BOX</value>
         </member>
 
         <member type="float" name="CurrentX"/>
@@ -71,6 +72,7 @@
     <object name="ActivatedAbility" scriptenabled="true" persistent="false">
         <member type="u32" name="SkillID"/>
         <member type="EntityStateObject*" name="SourceEntity"/>
+        <member type="s64" name="ActivationObjectID"/>
         <member type="s64" name="TargetObjectID"/>
         <member type="bool" name="EntityTargeted"/>
         <member type="u8" name="ActivationID"/>

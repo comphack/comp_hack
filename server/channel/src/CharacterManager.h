@@ -35,6 +35,7 @@
 
 // channel Includes
 #include "ChannelClientConnection.h"
+#include "Zone.h"
 
 namespace libcomp
 {
@@ -48,6 +49,7 @@ class Demon;
 class EntityStats;
 class Item;
 class ItemBox;
+class ItemDrop;
 class MiDevilData;
 class MiDevilLVUpData;
 }
@@ -206,10 +208,11 @@ public:
      * @param updatePartyState true if the world should be updated
      *  with the character's new party state, false if it will be updated
      *  later
+     * @param removeMode Zone removal mode to use when storing the demon
      */
     void StoreDemon(const std::shared_ptr<
         channel::ChannelClientConnection>& client,
-        bool updatePartyState = true);
+        bool updatePartyState = true, int32_t removeMode = 2);
 
     /**
      * Send information about the specified demon box to the client.
@@ -292,16 +295,44 @@ public:
      * Add or remove items to a character's inventory.
      * @param client Pointer to the client connection containing
      *  the character
-     * @param itemID Item ID to modify the amount of in the inventory
-     * @param quantity Number of items to add or remove
+     * @param itemCounts Item type to quantity to add
      * @param add true if items should be added, false if they should
      *  be removed
      * @param skillTargetID Object ID of an item used for a skill. If
      *  this is specified for a remove command, it will be removed first
+     * @return true if the items were added, false if one or more couldn't
+     *  be added
      */
-    bool AddRemoveItem(const std::shared_ptr<
-        channel::ChannelClientConnection>& client, uint32_t itemID,
-        uint16_t quantity, bool add, int64_t skillTargetID = 0);
+    bool AddRemoveItems(const std::shared_ptr<
+        channel::ChannelClientConnection>& client, 
+        std::unordered_map<uint32_t, uint16_t> itemCounts, bool add,
+        int64_t skillTargetID = 0);
+
+    /**
+     * Create loot from drops based upon the supplied luck value (can be 0)
+     * and add them to the supplied loot box.
+     * @param box Pointer to the loot box
+     * @param drops List of pointers to the item drops to determine what
+     *  should be added to the box
+     * @param luck Current luck value to use when calculating drop chances
+     * @param minLast Optional param to specify if the box needs at least
+     *  one item in which case the last item will be used
+     * @return true if one or more item was added, false if none were
+     */
+    bool CreateLootFromDrops(const std::shared_ptr<objects::LootBox>& box,
+        const std::list<std::shared_ptr<objects::ItemDrop>>& drops, int16_t luck,
+        bool minLast = false);
+
+    /**
+     * Send the loot item data related to a loot box to one or more clients.
+     * @param clients List of clients to send the packet to
+     * @param lState Pointer to the entity state of the loot box
+     * @param queue true if the packet should be queued, false if it
+     *  should be sent right away
+     */
+    void SendLootItemData(const std::list<std::shared_ptr<
+        ChannelClientConnection>>& clients, const std::shared_ptr<
+        LootBoxState>& lState, bool queue = false);
 
     /**
      * Equip or unequip an item matching the supplied ID on the
@@ -349,6 +380,20 @@ public:
      */
     void UpdateLNC(const std::shared_ptr<
         channel::ChannelClientConnection>& client, int16_t lnc);
+
+    /**
+     * Create a demon and add it to the client character's COMP.
+     * @param client Pointer to the client connection
+     * @param demonData Pointer to a demon's definition that represents
+     *  the demon to create
+     * @param sourceEntityID Entity ID of the demon egg used to contract
+     *  the demon
+     * @return Pointer to the newly created demon
+     */
+    std::shared_ptr<objects::Demon> ContractDemon(
+        const std::shared_ptr<channel::ChannelClientConnection>& client,
+        const std::shared_ptr<objects::MiDevilData>& demonData,
+        int32_t sourceEntityID);
 
     /**
      * Create a demon and add it to a character's COMP.

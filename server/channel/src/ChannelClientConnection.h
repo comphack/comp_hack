@@ -88,7 +88,14 @@ public:
      * @param packets Packets to send to the supplied clients
      */
     static void BroadcastPackets(const std::list<std::shared_ptr<
-        ChannelClientConnection>> &clients, std::list<libcomp::Packet>& packets);
+        ChannelClientConnection>>& clients, std::list<libcomp::Packet>& packets);
+
+    /**
+     * Flush all client connection outgoing packets.
+     * @param clients List of client connections to flush
+     */
+    static void FlushAllOutgoing(const std::list<std::shared_ptr<
+        ChannelClientConnection>>& clients);
 
     /**
      * Send (or queue) a packet to a list of client connections. Server

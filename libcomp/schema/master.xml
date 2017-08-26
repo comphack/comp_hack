@@ -15,17 +15,38 @@
     <!-- common classes -->
     <include path="account.xml"/>
     <include path="accountlogin.xml"/>
+    <include path="character.xml"/>
+    <include path="clan.xml"/>
+    <include path="demon.xml"/>
+    <include path="enemy.xml"/>
+    <include path="item.xml"/>
+    <include path="partymember.xml"/>
+    <include path="registeredchannel.xml"/>
+    <include path="registeredworld.xml"/>
+    <include path="spawn.xml"/>
+
+    <!-- Lobby Packets -->
+    <include path="packet_login.xml"/>
+    <include path="packet_login_reply.xml"/>
+    <include path="packet_response_code.xml"/>
+
+    <!-- Server Files -->
+    <include path="server_npc.xml"/>
+    <include path="server_object.xml"/>
+    <include path="server_shop.xml"/>
+    <include path="server_zone.xml"/>
+
+    <!-- Actions -->
     <include path="action.xml"/>
+    <include path="action_createloot.xml"/>
     <include path="action_setnpcstate.xml"/>
     <include path="action_startevent.xml"/>
     <include path="action_updateflag.xml"/>
     <include path="action_updatelnc.xml"/>
     <include path="action_updatequest.xml"/>
     <include path="action_zonechange.xml"/>
-    <include path="character.xml"/>
-    <include path="clan.xml"/>
-    <include path="demon.xml"/>
-    <include path="enemy.xml"/>
+
+    <!-- Events -->
     <include path="event.xml"/>
     <include path="event_direction.xml"/>
     <include path="event_getitem.xml"/>
@@ -38,21 +59,6 @@
     <include path="event_playsoundeffect.xml"/>
     <include path="event_prompt.xml"/>
     <include path="event_stageeffect.xml"/>
-    <include path="item.xml"/>
-    <include path="partymember.xml"/>
-    <include path="registeredchannel.xml"/>
-    <include path="registeredworld.xml"/>
-
-    <!-- Lobby Packets -->
-    <include path="packet_login.xml"/>
-    <include path="packet_login_reply.xml"/>
-    <include path="packet_response_code.xml"/>
-
-    <!-- Server Files -->
-    <include path="server_npc.xml"/>
-    <include path="server_object.xml"/>
-    <include path="server_shop.xml"/>
-    <include path="server_zone.xml"/>
 
     <!-- BinaryData Files -->
     <include path="binarydata/ceventmessagedata.xml"/>

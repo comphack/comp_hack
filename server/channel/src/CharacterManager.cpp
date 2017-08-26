@@ -30,6 +30,7 @@
 #include <Constants.h>
 #include <Log.h>
 #include <PacketCodes.h>
+#include <Randomizer.h>
 #include <ServerConstants.h>
 
 // Standard C++11 Includes
@@ -47,6 +48,8 @@
 #include <InheritedSkill.h>
 #include <Item.h>
 #include <ItemBox.h>
+#include <ItemDrop.h>
+#include <Loot.h>
 #include <MiAcquisitionSkillData.h>
 #include <MiCancelData.h>
 #include <MiDevilBattleData.h>
@@ -875,7 +878,8 @@ void CharacterManager::SummonDemon(const std::shared_ptr<
 }
 
 void CharacterManager::StoreDemon(const std::shared_ptr<
-    channel::ChannelClientConnection>& client, bool updatePartyState)
+    channel::ChannelClientConnection>& client, bool updatePartyState,
+    int32_t removeMode)
 {
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
@@ -914,15 +918,8 @@ void CharacterManager::StoreDemon(const std::shared_ptr<
     std::list<int32_t> removeIDs = { dState->GetEntityID() };
 
     //Remove the entity from each client's zone
-    zoneManager->RemoveEntitiesFromZone(zone, removeIDs);
+    zoneManager->RemoveEntitiesFromZone(zone, removeIDs, removeMode);
 
-    //Send the request to free up the object data
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_REMOVE_OBJECT);
-    reply.WriteS32Little(dState->GetEntityID());
-
-    zoneManager->BroadcastPacket(client, reply, true);
-    
     if(updatePartyState && state->GetPartyID())
     {
         libcomp::Packet request;
@@ -1200,9 +1197,10 @@ std::shared_ptr<objects::Item> CharacterManager::GenerateItem(
     return item;
 }
 
-bool CharacterManager::AddRemoveItem(const std::shared_ptr<
-    channel::ChannelClientConnection>& client, uint32_t itemID,
-    uint16_t quantity, bool add, int64_t skillTargetID)
+bool CharacterManager::AddRemoveItems(const std::shared_ptr<
+    channel::ChannelClientConnection>& client,
+    std::unordered_map<uint32_t, uint16_t> itemCounts, bool add,
+    int64_t skillTargetID)
 {
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
@@ -1210,187 +1208,193 @@ bool CharacterManager::AddRemoveItem(const std::shared_ptr<
     auto itemBox = character->GetItemBoxes(0).Get();
 
     auto server = mServer.lock();
-    auto def = server->GetDefinitionManager()->GetItemData(itemID);
-    if(nullptr == def)
-    {
-        return false;
-    }
-
-    auto existing = GetExistingItems(character, itemID);
-
     auto dbChanges = libcomp::DatabaseChangeSet::Create(
         state->GetAccountUID());
+
     std::list<uint16_t> updatedSlots;
-    auto maxStack = def->GetPossession()->GetStackSize();
-    if(add)
+    for(auto itemPair : itemCounts)
     {
-        uint16_t quantityLeft = quantity;
-        /*for(auto item : existing)
-        {
-            auto free = maxStack - item->GetStackSize();
-            if(free > quantityLeft)
-            {
-                quantityLeft = 0;
-            }
-            else
-            {
-                quantityLeft = (uint16_t)(quantityLeft - free);
-            }
+        uint32_t itemID = itemPair.first;
+        uint16_t quantity = itemPair.second;
 
-            if(quantityLeft == 0)
-            {
-                break;
-            }
-        }*/
-
-        std::list<size_t> freeSlots;
-        for(size_t i = 0; i < 50; i++)
+        auto def = server->GetDefinitionManager()->GetItemData(itemID);
+        if(nullptr == def)
         {
-            if(itemBox->GetItems(i).IsNull())
-            {
-                freeSlots.push_back(i);
-            }
+            return false;
         }
 
-        if(quantityLeft <= (freeSlots.size() * maxStack))
+        auto existing = GetExistingItems(character, itemID);
+        auto maxStack = def->GetPossession()->GetStackSize();
+        if(add)
         {
-            uint16_t added = 0;
-            /*for(auto item : existing)
+            uint16_t quantityLeft = quantity;
+            for(auto item : existing)
             {
-                uint16_t free = (uint16_t)(maxStack - item->GetStackSize());
-                if(added < quantity && free > 0)
+                auto free = maxStack - item->GetStackSize();
+                if(free > quantityLeft)
                 {
-                    uint16_t delta = (uint16_t)(quantity - added);
-                    if(free < delta)
-                    {
-                        delta = free;
-                    }
-                    item->SetStackSize((uint16_t)(item->GetStackSize() + delta));
-                    updatedSlots.push_back((uint16_t)item->GetBoxSlot());
-                    added = (uint16_t)(added + delta);
+                    quantityLeft = 0;
+                }
+                else
+                {
+                    quantityLeft = (uint16_t)(quantityLeft - free);
                 }
 
-                if(added == quantity)
+                if(quantityLeft == 0)
                 {
                     break;
                 }
-            }*/
+            }
 
-            if(added < quantity)
+            std::list<size_t> freeSlots;
+            for(size_t i = 0; i < 50; i++)
             {
-                for(auto freeSlot : freeSlots)
+                if(itemBox->GetItems(i).IsNull())
                 {
-                    uint16_t delta = maxStack;
-                    if((delta + added) > quantity)
-                    {
-                        delta = (uint16_t)(quantity - added);
-                    }
-                    added = (uint16_t)(added + delta);
+                    freeSlots.push_back(i);
+                }
+            }
 
-                    auto item = GenerateItem(itemID, delta);
-                    item->SetItemBox(itemBox);
-                    item->SetBoxSlot((int8_t)freeSlot);
-                    
-                    if(!itemBox->SetItems(freeSlot, item))
+            if(quantityLeft <= (freeSlots.size() * maxStack))
+            {
+                uint16_t added = 0;
+                for(auto item : existing)
+                {
+                    uint16_t free = (uint16_t)(maxStack - item->GetStackSize());
+                    if(added < quantity && free > 0)
                     {
-                        return false;
+                        uint16_t delta = (uint16_t)(quantity - added);
+                        if(free < delta)
+                        {
+                            delta = free;
+                        }
+                        item->SetStackSize((uint16_t)(item->GetStackSize() + delta));
+                        updatedSlots.push_back((uint16_t)item->GetBoxSlot());
+                        added = (uint16_t)(added + delta);
                     }
-                    updatedSlots.push_back((uint16_t)freeSlot);
-                    dbChanges->Insert(item);
 
                     if(added == quantity)
                     {
                         break;
                     }
                 }
+
+                if(added < quantity)
+                {
+                    for(auto freeSlot : freeSlots)
+                    {
+                        uint16_t delta = maxStack;
+                        if((delta + added) > quantity)
+                        {
+                            delta = (uint16_t)(quantity - added);
+                        }
+                        added = (uint16_t)(added + delta);
+
+                        auto item = GenerateItem(itemID, delta);
+                        item->SetItemBox(itemBox);
+                        item->SetBoxSlot((int8_t)freeSlot);
+                    
+                        if(!itemBox->SetItems(freeSlot, item))
+                        {
+                            return false;
+                        }
+                        updatedSlots.push_back((uint16_t)freeSlot);
+                        dbChanges->Insert(item);
+
+                        if(added == quantity)
+                        {
+                            break;
+                        }
+                    }
+                }
+            }
+            else
+            {
+                // Not enough room
+                return false;
             }
         }
         else
         {
-            // Not enough room
-            return false;
-        }
-    }
-    else
-    {
-        // Items should be remove from the end of the list first
-        existing.reverse();
+            // Items should be remove from the end of the list first
+            existing.reverse();
 
-        uint16_t quantityLeft = quantity;
-        for(auto item : existing)
-        {
-            if(item->GetStackSize() > quantityLeft)
+            uint16_t quantityLeft = quantity;
+            for(auto item : existing)
             {
-                quantityLeft = 0;
-            }
-            else
-            {
-                quantityLeft = (uint16_t)(quantityLeft - item->GetStackSize());
-            }
-
-            if(quantityLeft == 0)
-            {
-                break;
-            }
-        }
-
-        if(quantityLeft > 0)
-        {
-            return false;
-        }
-
-        // Remove from the skill target first if its one of the items
-        if(skillTargetID > 0)
-        {
-            auto skillTarget = std::dynamic_pointer_cast<objects::Item>(
-                libcomp::PersistentObject::GetObjectByUUID(
-                    state->GetObjectUUID(skillTargetID)));
-            if(skillTarget != nullptr &&
-                std::find(existing.begin(), existing.end(), skillTarget) != existing.end())
-            {
-                existing.erase(std::find(existing.begin(), existing.end(), skillTarget));
-                existing.push_front(skillTarget);
-            }
-        }
-
-        auto equipType = def->GetBasic()->GetEquipType();
-
-        uint16_t removed = 0;
-        for(auto item : existing)
-        {
-            // Unequip anything we're removing
-            if(equipType != objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_NONE &&
-                item->GetStackSize() <= quantity &&
-                character->GetEquippedItems((size_t)equipType).Get() == item)
-            {
-                EquipItem(client, state->GetObjectID(item->GetUUID()));
-            }
-
-            auto slot = item->GetBoxSlot();
-            if(item->GetStackSize() <= (quantity - removed))
-            {
-                removed = (uint16_t)(removed + item->GetStackSize());
-                
-                if(!itemBox->SetItems((size_t)slot, NULLUUID))
+                if(item->GetStackSize() > quantityLeft)
                 {
-                    return false;
+                    quantityLeft = 0;
+                }
+                else
+                {
+                    quantityLeft = (uint16_t)(quantityLeft - item->GetStackSize());
                 }
 
-                dbChanges->Delete(item);
+                if(quantityLeft == 0)
+                {
+                    break;
+                }
             }
-            else
-            {
-                item->SetStackSize((uint16_t)(item->GetStackSize() -
-                    (quantity - removed)));
-                removed = quantity;
 
-                dbChanges->Update(item);
+            if(quantityLeft > 0)
+            {
+                return false;
             }
-            updatedSlots.push_back((uint16_t)slot);
 
-            if(removed == quantity)
+            // Remove from the skill target first if its one of the items
+            if(skillTargetID > 0)
             {
-                break;
+                auto skillTarget = std::dynamic_pointer_cast<objects::Item>(
+                    libcomp::PersistentObject::GetObjectByUUID(
+                        state->GetObjectUUID(skillTargetID)));
+                if(skillTarget != nullptr &&
+                    std::find(existing.begin(), existing.end(), skillTarget) != existing.end())
+                {
+                    existing.erase(std::find(existing.begin(), existing.end(), skillTarget));
+                    existing.push_front(skillTarget);
+                }
+            }
+
+            auto equipType = def->GetBasic()->GetEquipType();
+
+            uint16_t removed = 0;
+            for(auto item : existing)
+            {
+                // Unequip anything we're removing
+                if(equipType != objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_NONE &&
+                    item->GetStackSize() <= quantity &&
+                    character->GetEquippedItems((size_t)equipType).Get() == item)
+                {
+                    EquipItem(client, state->GetObjectID(item->GetUUID()));
+                }
+
+                auto slot = item->GetBoxSlot();
+                if(item->GetStackSize() <= (quantity - removed))
+                {
+                    removed = (uint16_t)(removed + item->GetStackSize());
+                
+                    if(!itemBox->SetItems((size_t)slot, NULLUUID))
+                    {
+                        return false;
+                    }
+
+                    dbChanges->Delete(item);
+                }
+                else
+                {
+                    item->SetStackSize((uint16_t)(item->GetStackSize() -
+                        (quantity - removed)));
+                    removed = quantity;
+
+                    dbChanges->Update(item);
+                }
+                updatedSlots.push_back((uint16_t)slot);
+
+                if(removed == quantity)
+                {
+                    break;
+                }
             }
         }
     }
@@ -1402,6 +1406,125 @@ bool CharacterManager::AddRemoveItem(const std::shared_ptr<
     server->GetWorldDatabase()->QueueChangeSet(dbChanges);
 
     return true;
+}
+
+bool CharacterManager::CreateLootFromDrops(const std::shared_ptr<objects::LootBox>& box,
+    const std::list<std::shared_ptr<objects::ItemDrop>>& drops, int16_t luck, bool minLast)
+{
+    auto server = mServer.lock();
+    auto definitionManager = server->GetDefinitionManager();
+
+    std::list<std::shared_ptr<objects::Loot>> lootItems;
+    for(auto drop : drops)
+    {
+        // Each point of luck adds 0.2% chance to get the drop
+        uint16_t dropRate = (uint16_t)((drop->GetRate() * 100)
+            + (float)(luck * 20));
+        if(RNG(uint16_t, 0, 10000) < dropRate ||
+            (minLast && lootItems.size() == 0 && drops.back() == drop))
+        {
+            auto itemDef = definitionManager->GetItemData(
+                drop->GetItemType());
+            uint16_t minStack = drop->GetMinStack();
+            uint16_t maxStack = drop->GetMaxStack();
+
+            // The drop rate is affected by luck but the stack size is not
+            uint16_t stackSize = RNG(uint16_t, minStack, maxStack);
+
+            uint16_t maxStackSize = itemDef->GetPossession()->GetStackSize();
+            uint8_t stackCount = (uint8_t)ceill((double)stackSize /
+                (double)maxStackSize);
+
+            for(uint8_t i = 0; i < stackCount &&
+                lootItems.size() < box->LootCount(); i++)
+            {
+                uint16_t stack = stackSize <= maxStackSize
+                    ? stackSize : maxStackSize;
+                stackSize = (uint16_t)(stackSize - stack);
+
+                auto loot = std::make_shared<objects::Loot>();
+                loot->SetType(drop->GetItemType());
+                loot->SetCount(stack);
+                lootItems.push_back(loot);
+            }
+
+            if(lootItems.size() == 12)
+            {
+                break;
+            }
+        }
+    }
+
+    bool added = false;
+    if(lootItems.size() > 0)
+    {
+        for(size_t i = 0; i < box->LootCount(); i++)
+        {
+            if(lootItems.size() > 0)
+            {
+                auto loot = lootItems.front();
+                lootItems.pop_front();
+                box->SetLoot(i, loot);
+                added = true;
+            }
+            else
+            {
+                break;
+            }
+        }
+    }
+
+    return added;
+}
+
+void CharacterManager::SendLootItemData(const std::list<std::shared_ptr<
+    ChannelClientConnection>>& clients, const std::shared_ptr<LootBoxState>& lState,
+    bool queue)
+{
+    /// @todo: filter to only valid characters/parties etc
+
+    auto lootBox = lState->GetEntity();
+
+    libcomp::Packet p;
+    p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_LOOT_ITEM_DATA);
+    p.WriteS32Little(0);    // Entity ID (written later)
+    p.WriteS32Little(lState->GetEntityID());
+    p.WriteFloat(0.f);  // Loot time (written later)
+
+    for(auto loot : lootBox->GetLoot())
+    {
+        if(loot && loot->GetCount() > 0)
+        {
+            p.WriteU32Little(loot->GetType());
+            p.WriteU16Little(loot->GetCount());
+        }
+        else
+        {
+            p.WriteU32Little(static_cast<uint32_t>(-1));
+            p.WriteU16Little(0);
+        }
+        p.WriteS8(3);
+    }
+    
+    for(auto client : clients)
+    {
+        auto state = client->GetClientState();
+        auto cState = state->GetCharacterState();
+
+        p.Seek(2);
+        p.WriteS32Little(cState->GetEntityID());
+        p.Seek(10);
+        p.WriteFloat(state->ToClientTime(lootBox->GetLootTime()));
+
+        if(queue)
+        {
+            client->QueuePacketCopy(p);
+        }
+        else
+        {
+            client->SendPacketCopy(p);
+        }
+    }
 }
 
 void CharacterManager::EquipItem(const std::shared_ptr<
@@ -1563,6 +1686,36 @@ void CharacterManager::UpdateLNC(const std::shared_ptr<
     reply.WriteS16Little(character->GetLNC());
 
     client->SendPacket(reply);
+}
+
+std::shared_ptr<objects::Demon> CharacterManager::ContractDemon(
+    const std::shared_ptr<channel::ChannelClientConnection>& client,
+    const std::shared_ptr<objects::MiDevilData>& demonData,
+    int32_t sourceEntityID)
+{
+    auto state = client->GetClientState();
+    auto cState = state->GetCharacterState();
+    auto character = cState->GetEntity();
+
+    auto demon = ContractDemon(character, demonData);
+
+    auto demonID = mServer.lock()->GetNextObjectID();
+    state->SetObjectID(demon->GetUUID(), demonID);
+
+    if(sourceEntityID != 0)
+    {
+        libcomp::Packet p;
+        p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_CONTRACT_COMPLETED);
+        p.WriteS32Little(sourceEntityID);
+        p.WriteS32Little(cState->GetEntityID());
+
+        mServer.lock()->GetZoneManager()->BroadcastPacket(client, p);
+    }
+
+    int8_t slot = demon->GetBoxSlot();
+    SendDemonData(client, 0, slot, demonID);
+
+    return demon;
 }
 
 std::shared_ptr<objects::Demon> CharacterManager::ContractDemon(

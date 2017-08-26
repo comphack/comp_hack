@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="Spawn" persistent="false">
+        <member type="u32" name="ID"/>
+        <member type="u32" name="EnemyType"/>
+        <member type="list" name="Drops">
+            <element type="ItemDrop*"/>
+        </member>
+        <member type="list" name="Gifts">
+            <element type="ItemDrop*"/>
+        </member>
+        <member type="list" name="DeathActions">
+            <element type="Action*"/>
+        </member>
+    </object>
+    <object name="ItemDrop" persistent="false">
+        <member type="u32" name="ItemType"/>
+        <member type="float" name="Rate"/>
+        <member type="u16" name="MinStack"/>
+        <member type="u16" name="MaxStack"/>
+    </object>
+    <object name="SpawnLocationGroup" persistent="false">
+        <member type="u32" name="ID"/>
+        <member type="list" name="Locations">
+            <element type="SpawnLocation*"/>
+        </member>
+    </object>
+    <object name="SpawnLocation" persistent="false">
+        <member type="float" name="X"/>
+        <member type="float" name="Y"/>
+        <member type="float" name="Width"/>
+        <member type="float" name="Height"/>
+    </object>
+    <object name="SpawnGroup" persistent="false">
+        <member type="u32" name="ID"/>
+        <member type="u32" name="SpawnID"/>
+        <member type="u32" name="SpawnLocationGroupID"/>
+        <member type="u16" name="MaxCount"/>
+        <member type="float" name="RespawnTime"/>
+    </object>
+</objgen>

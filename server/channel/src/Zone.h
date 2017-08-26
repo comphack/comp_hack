@@ -38,6 +38,7 @@
 
 namespace objects
 {
+class LootBox;
 class ServerNPC;
 class ServerObject;
 class ServerZone;
@@ -48,6 +49,7 @@ namespace channel
 
 class ChannelClientConnection;
 
+typedef EntityState<objects::LootBox> LootBoxState;
 typedef EntityState<objects::ServerNPC> NPCState;
 typedef EntityState<objects::ServerObject> ServerObjectState;
 
@@ -89,10 +91,25 @@ public:
     void RemoveConnection(const std::shared_ptr<ChannelClientConnection>& client);
 
     /**
+     * Remove an entity from the zone. For player entities, use RemoveConnection
+     * instead.
+     * @param entityID ID of the entity to remove
+     * @param updateSpawns Optional parameter to update spawn groups
+     *  now instead of waiting for the cleanup of loot boxes etc
+     */
+    void RemoveEntity(int32_t entityID, bool updateSpawns = false);
+
+    /**
      * Add an enemy to the zone
      * @param enemy Pointer to the enemy to add
      */
     void AddEnemy(const std::shared_ptr<EnemyState>& enemy);
+
+    /**
+     * Add a loot body to the zone
+     * @param box Pointer to the loot box to add
+     */
+    void AddLootBox(const std::shared_ptr<LootBoxState>& box);
 
     /**
      * Add an NPC to the zone
@@ -158,6 +175,19 @@ public:
     const std::list<std::shared_ptr<EnemyState>> GetEnemies() const;
 
     /**
+     * Get a loot box instance by it's ID.
+     * @param id Instance ID of the loot box.
+     * @return Pointer to the loot box instance.
+     */
+    std::shared_ptr<LootBoxState> GetLootBox(int32_t id);
+
+    /**
+     * Get all loot box instances in the zone
+     * @return List of all loot box instances in the zone
+     */
+    const std::list<std::shared_ptr<LootBoxState>> GetLootBoxes() const;
+
+    /**
      * Get an NPC instance by it's ID.
      * @param id Instance ID of the NPC.
      * @return Pointer to the NPC instance.
@@ -209,6 +239,33 @@ public:
         GetUpdatedStatusEffectEntities(uint32_t now);
 
     /**
+     * Get the set of spawn groups that have room for another enemy spawn
+     * that have also had their respawn time elapsed.
+     * @param now System time representing the current server time
+     * @return Map of spawn group IDs to the difference between the number
+     *  of enemies still alive and the max allowed number
+     */
+    std::unordered_map<uint32_t, uint16_t> GetReinforceableSpawnGroups(uint64_t now);
+
+    /**
+     * Take loot out of the specified loot box. This should be the only way
+     * loot is removed from a box as it uses a mutex lock to ensure that the
+     * loot is not duplicated for two different people. This currently does NOT
+     * support splitting stacks within the loot box when the box being moved to
+     * becomes full.
+     * @param lState Entity state of the loot box
+     * @param slots Loot slots being requested or empty to request all
+     * @param freeSlots Contextual number of free slots signifying how many
+     *  loot items can be taken
+     * @param stacksFree Contextual number of free stack slots used when
+     *  determining how many items can be taken
+     * @return Map of slot IDs to the loot taken
+     */
+    std::unordered_map<size_t, std::shared_ptr<objects::Loot>>
+        TakeLoot(std::shared_ptr<LootBoxState> lState, std::set<int8_t> slots,
+            size_t freeSlots, std::unordered_map<uint32_t, uint16_t> stacksFree = {});
+
+    /**
      * Perform pre-deletion cleanup actions
      */
     void Cleanup();
@@ -235,11 +292,17 @@ private:
     /// List of pointers to enemies instantiated for the zone
     std::list<std::shared_ptr<EnemyState>> mEnemies;
 
+    /// Map of spawn group IDs to pointers to enemies created from that group
+    std::unordered_map<uint32_t, std::list<std::shared_ptr<EnemyState>>> mSpawnGroups;
+
     /// List of pointers to NPCs instantiated for the zone
     std::list<std::shared_ptr<NPCState>> mNPCs;
 
     /// List of pointers to objects instantiated for the zone
     std::list<std::shared_ptr<ServerObjectState>> mObjects;
+
+    /// List of pointers to lootable boxes for the zone
+    std::list<std::shared_ptr<LootBoxState>> mLootBoxes;
 
     /// Map of entities in the zone by their ID
     std::unordered_map<int32_t, std::shared_ptr<objects::EntityStateObject>> mAllEntities;
@@ -247,6 +310,10 @@ private:
     /// Map of system times to active entities with status effects that need
     /// handling at that time
     std::map<uint32_t, std::set<int32_t>> mNextEntityStatusTimes;
+
+    /// Map of server times to spawn group IDs that need to be reinforced
+    /// at that time
+    std::map<uint64_t, std::set<uint32_t>> mSpawnGroupReinforceTimes;
 
     /// Unique instance ID of the zone
     uint32_t mID;

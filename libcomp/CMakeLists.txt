@@ -245,7 +245,7 @@ SET(${PROJECT_NAME}_SCHEMA
     schema/packet_login.xml
     schema/packet_login_reply.xml
     schema/packet_response_code.xml
-    schema/partymember.xml
+    schema/party.xml
     schema/registeredchannel.xml
     schema/registeredworld.xml
     schema/server_command_line.xml
@@ -405,6 +405,8 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     PacketLoginReply.cpp
     PacketResponseCode.h
     PacketResponseCode.cpp
+    Party.h
+    Party.cpp
     PartyCharacter.h
     PartyCharacter.cpp
     PartyMember.h

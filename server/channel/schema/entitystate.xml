@@ -57,7 +57,8 @@
         <member type="array" name="CorrectTbl" size="128">
             <element type="s16"/>
         </member>
-        <member type="ActivatedAbility*" name="ActivatedAbility"/>
+        <member type="ActivatedAbility*" name="ActivatedAbility"
+            nulldefault="true"/>
 
         <member type="set" name="CurrentSkills">
             <element type="u32"/>
@@ -71,7 +72,8 @@
     </object>
     <object name="ActivatedAbility" scriptenabled="true" persistent="false">
         <member type="u32" name="SkillID"/>
-        <member type="EntityStateObject*" name="SourceEntity"/>
+        <member type="EntityStateObject*" name="SourceEntity"
+            nulldefault="true"/>
         <member type="s64" name="ActivationObjectID"/>
         <member type="s64" name="TargetObjectID"/>
         <member type="bool" name="EntityTargeted"/>

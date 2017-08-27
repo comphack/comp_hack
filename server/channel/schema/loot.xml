@@ -10,9 +10,12 @@
         </member>
         <member type="Enemy*" name="Enemy"/>
         <member type="array" name="Loot" size="12">
-            <element type="Loot*"/>
+            <element type="Loot*" nulldefault="true"/>
         </member>
         <member type="u64" name="LootTime"/>
+        <member type="set" name="ValidLooterIDs">
+            <element type="s32"/>
+        </member>
     </object>
     <object name="Loot" persistent="false">
         <member type="u32" name="Type"/>

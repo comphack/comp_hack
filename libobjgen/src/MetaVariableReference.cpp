@@ -40,6 +40,7 @@ MetaVariableReference::MetaVariableReference()
 {
     mNamespace = "objects";
     mPersistentReference = false;
+    mNullDefault = false;
     mDynamicSizeCount = 0;
 }
 
@@ -126,6 +127,17 @@ void MetaVariableReference::SetGeneric()
     }
 }
 
+bool MetaVariableReference::GetNullDefault() const
+{
+    return mNullDefault;
+}
+
+bool MetaVariableReference::SetNullDefault(bool nullDefault)
+{
+    mNullDefault = nullDefault;
+    return true;
+}
+
 void MetaVariableReference::AddDefaultedVariable(std::shared_ptr<MetaVariable>& var)
 {
     mDefaultedVariables.push_back(var);
@@ -150,7 +162,8 @@ bool MetaVariableReference::IsValid() const
 {
     // Validating that the object exists happens elsewhere
     return MetaObject::IsValidIdentifier(mReferenceType) &&
-        (mNamespace.empty() || MetaObject::IsValidIdentifier(mNamespace));
+        (mNamespace.empty() || MetaObject::IsValidIdentifier(mNamespace)) &&
+        (!mNullDefault || !IsPersistentReference());
 }
 
 bool MetaVariableReference::Load(std::istream& stream)
@@ -163,6 +176,8 @@ bool MetaVariableReference::Load(std::istream& stream)
         sizeof(mDynamicSizeCount));
     stream.read(reinterpret_cast<char*>(&mPersistentReference),
         sizeof(mPersistentReference));
+    stream.read(reinterpret_cast<char*>(&mNullDefault),
+        sizeof(mNullDefault));
 
     if(stream.good())
     {
@@ -185,6 +200,8 @@ bool MetaVariableReference::Save(std::ostream& stream) const
             sizeof(mDynamicSizeCount));
         stream.write(reinterpret_cast<const char*>(&mPersistentReference),
             sizeof(mPersistentReference));
+        stream.write(reinterpret_cast<const char*>(&mNullDefault),
+            sizeof(mNullDefault));
 
         MetaVariable::SaveVariableList(stream, mDefaultedVariables);
 
@@ -202,7 +219,14 @@ bool MetaVariableReference::Load(const tinyxml2::XMLDocument& doc,
     bool status = true;
 
     // Reference type and namespace should be set and verified
-    // elsewhere
+    // elsewhere before this point
+
+    auto nullVal = root.Attribute("nulldefault");
+
+    if(nullVal)
+    {
+        mNullDefault = Generator::GetXmlAttributeBoolean(nullVal);
+    }
 
     return status && BaseLoad(root) && IsValid();
 }
@@ -218,6 +242,8 @@ bool MetaVariableReference::Save(tinyxml2::XMLDocument& doc,
     {
         pVariableElement->SetAttribute("namespace", mNamespace.c_str());
     }
+
+    pVariableElement->SetAttribute("nulldefault", GetNullDefault());
 
     parent.InsertEndChild(pVariableElement);
 
@@ -253,6 +279,10 @@ std::string MetaVariableReference::GetConstructValue() const
     if(mPersistentReference)
     {
         defaultVal << GetCodeType() << "()";
+    }
+    else if(mNullDefault)
+    {
+        return "nullptr";
     }
     else
     {
@@ -386,6 +416,12 @@ std::string MetaVariableReference::GetLoadCode(const Generator& generator,
 std::string MetaVariableReference::GetSaveCode(const Generator& generator,
     const std::string& name, const std::string& stream) const
 {
+    if(mNullDefault)
+    {
+        // Null default references do not write to or load from streams
+        return "";
+    }
+
     std::map<std::string, std::string> replacements;
     replacements["@VAR_NAME@"] = name;
     replacements["@STREAM@"] = stream;

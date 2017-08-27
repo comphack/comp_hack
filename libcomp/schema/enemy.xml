@@ -11,5 +11,9 @@
 
         <!-- Sub-sections -->
         <member type="EntityStats*" name="CoreStats"/>
+        <member type="map" name="DamageSources">
+            <key type="s32"/>
+            <value type="u64"/>
+        </member>
     </object>
 </objgen>

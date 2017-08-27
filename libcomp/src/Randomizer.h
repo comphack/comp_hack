@@ -27,6 +27,9 @@
 #ifndef LIBCOMP_SRC_RANDOMIZER_H
 #define LIBCOMP_SRC_RANDOMIZER_H
 
+// C++ Standard Includes
+#include <cmath>
+#include <random>
 #include <stdint.h>
 
 namespace libcomp
@@ -40,14 +43,38 @@ class Randomizer
 {
 public:
     /**
-     * Get a random number of the templated type between the minimum and maximum
-     * values supplied.
+     * Get a random integer number of the templated type between the minimum
+     * and maximum values supplied. Use GetRandomNumber64 for types uint64_t
+     * and int64_t.
      * @param minVal Minimum value that can be generated
      * @param maxVal Maximum value that can be generated
      * @return Random number between the minimum and maximum values
      */
     template <class T>
-    static T GetRandomNumber(T minVal, T maxVal);
+    static T GetRandomNumber(T minVal, T maxVal)
+    {
+        SeedRNG();
+
+        std::uniform_int_distribution<T> dis(minVal, maxVal);
+        return dis(sGen);
+    }
+
+    /**
+     * Get a random 64 bit integer number of the templated type between the
+     * minimum and maximum values supplied. Use GetRandomNumber instead for
+     * non-64 bit integers as this is significantly less performant.
+     * @param minVal Minimum value that can be generated
+     * @param maxVal Maximum value that can be generated
+     * @return Random number between the minimum and maximum values
+     */
+    template <class T>
+    static T GetRandomNumber64(T minVal, T maxVal)
+    {
+        SeedRNG();
+
+        std::uniform_int_distribution<T> dis(minVal, maxVal);
+        return dis(sGen64);
+    }
 
     /**
      * Get a random decimal number of the templated type between the minimum and
@@ -58,11 +85,25 @@ public:
      */
     template <class T>
     static T GetRandomDecimal(T minVal, T maxVal, uint8_t precision);
+
+private:
+    /**
+     * Generate the random number seed value for the 32-bit and 64-bit
+     * generators if it has not been already.
+     */
+    static void SeedRNG();
+
+    /// Thread specific 32-bit random number generator
+    static thread_local std::mt19937 sGen;
+
+    /// Thread specific 65-bit random number generator
+    static thread_local std::mt19937_64 sGen64;
 };
 
 } // namspace libcomp
 
 #define RNG(T, X, Y) libcomp::Randomizer::GetRandomNumber<T>(X, Y)
+#define RNG64(T, X, Y) libcomp::Randomizer::GetRandomNumber64<T>(X, Y)
 #define RNG_DEC(T, X, Y, P) libcomp::Randomizer::GetRandomDecimal<T>(X, Y, P)
 
 #endif // LIBCOMP_SRC_RANDOMIZER_H

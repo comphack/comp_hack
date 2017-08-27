@@ -38,6 +38,7 @@
 #include <AccountLogin.h>
 #include <Character.h>
 #include <CharacterLogin.h>
+#include <Party.h>
 
 // channel Includes
 #include "ChannelServer.h"
@@ -154,83 +155,11 @@ bool Parsers::PartyUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
         return false;
     }
 
+    // The only packet types that can't be relayed directly from the world
+    // are the local update and ones that require transformations to
+    // local entity IDs
     switch((InternalPacketAction_t)mode)
     {
-    case InternalPacketAction_t::PACKET_ACTION_YN_REQUEST:
-        {
-            bool isResponse = p.ReadU8() == 1;
-            auto charName = p.ReadString16Little(libcomp::Convert::Encoding_t::ENCODING_UTF8, true);
-
-            if(isResponse)
-            {
-                if(p.Left() != 2)
-                {
-                    return false;
-                }
-
-                uint16_t responseCode = p.ReadU16Little();
-                if(clients.size() == 1)
-                {
-                    libcomp::Packet response;
-                    response.WritePacketCode(ChannelToClientPacketCode_t::PACKET_PARTY_INVITE);
-                    response.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_CP932,
-                        charName, true);
-                    response.WriteU16Little(responseCode);
-
-                    clients.front()->SendPacket(response);
-                }
-            }
-            else
-            {
-                if(p.Left() != 4)
-                {
-                    return false;
-                }
-
-                uint32_t partyID = p.ReadU32Little();
-                if(clients.size() == 1)
-                {
-                    libcomp::Packet request;
-                    request.WritePacketCode(ChannelToClientPacketCode_t::PACKET_PARTY_INVITED);
-                    request.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_CP932,
-                        charName, true);
-                    request.WriteU32Little(partyID);
-
-                    clients.front()->SendPacket(request);
-                }
-            }
-        }
-        break;
-    case InternalPacketAction_t::PACKET_ACTION_RESPONSE_YES:
-        {
-            auto charName = p.ReadString16Little(libcomp::Convert::Encoding_t::ENCODING_UTF8, true);
-            uint16_t responseCode = p.ReadU16Little();
-            if(clients.size() == 1)
-            {
-                libcomp::Packet response;
-                response.WritePacketCode(ChannelToClientPacketCode_t::PACKET_PARTY_JOIN);
-                response.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_CP932,
-                    charName, true);
-                response.WriteU16Little(responseCode);
-
-                clients.front()->SendPacket(response);
-            }
-        }
-        break;
-    case InternalPacketAction_t::PACKET_ACTION_RESPONSE_NO:
-        {
-            auto charName = p.ReadString16Little(libcomp::Convert::Encoding_t::ENCODING_UTF8, true);
-            if(clients.size() == 1)
-            {
-                libcomp::Packet response;
-                response.WritePacketCode(ChannelToClientPacketCode_t::PACKET_PARTY_CANCEL);
-                response.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_CP932,
-                    charName, true);
-
-                clients.front()->SendPacket(response);
-            }
-        }
-        break;
     case InternalPacketAction_t::PACKET_ACTION_ADD:
         {
             std::list<PartyMemberInfo> members;
@@ -257,17 +186,46 @@ bool Parsers::PartyUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
             
             for(auto client : clients)
             {
-                auto state = client->GetClientState();
-                if(!state->GetPartyID())
+                if(client->GetClientState()->GetPartyID() == partyID)
                 {
-                    state->GetAccountLogin()->GetCharacterLogin()->SetPartyID(partyID);
+                    for(auto info : members)
+                    {
+                        QueuePartyMemberInfo(client, info);
+                    }
+                    client->FlushOutgoing();
                 }
+            }
+        }
+        break;
+    case InternalPacketAction_t::PACKET_ACTION_UPDATE:
+        {
+            uint32_t partyID = p.ReadU32Little();
+            uint8_t exists = p.ReadU8() == 1;
 
-                for(auto info : members)
+            auto party = exists
+                ? std::make_shared<objects::Party>() : nullptr;
+            if(party && !party->LoadPacket(p))
+            {
+                return false;
+            }
+
+            for(auto client : clients)
+            {
+                auto state = client->GetClientState();
+                if(party && party->MemberIDsContains(state->GetWorldCID()))
                 {
-                    QueuePartyMemberInfo(client, info);
+                    // Adding/updating
+                    state->GetAccountLogin()->GetCharacterLogin()
+                        ->SetPartyID(partyID);
+                    state->SetParty(party);
                 }
-                client->FlushOutgoing();
+                else if(state->GetPartyID() == partyID)
+                {
+                    // Removing
+                    state->GetAccountLogin()->GetCharacterLogin()
+                        ->SetPartyID(0);
+                    state->SetParty(nullptr);
+                }
             }
         }
         break;
@@ -275,29 +233,7 @@ bool Parsers::PartyUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
         {
             bool isResponse = p.ReadU8() == 1;
 
-            if(isResponse)
-            {
-                if(p.Left() != 2)
-                {
-                    return false;
-                }
-
-                uint16_t responseCode = p.ReadU16Little();
-                if(clients.size() == 1)
-                {
-                    libcomp::Packet response;
-                    response.WritePacketCode(ChannelToClientPacketCode_t::PACKET_PARTY_LEAVE);
-                    response.WriteU16Little(responseCode);
-
-                    auto client = clients.front();
-
-                    // Whether leaving was "successful" or not, the party ID should now be empty
-                    client->GetClientState()->GetAccountLogin()->GetCharacterLogin()
-                        ->SetPartyID(0);
-                    client->SendPacket(response);
-                }
-            }
-            else
+            if(!isResponse)
             {
                 if(p.Left() != 4)
                 {
@@ -323,69 +259,11 @@ bool Parsers::PartyUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
             }
         }
         break;
-    case InternalPacketAction_t::PACKET_ACTION_GROUP_DISBAND:
-        {
-            bool isResponse = p.ReadU8() == 1;
-
-            if(isResponse)
-            {
-                if(p.Left() != 2)
-                {
-                    return false;
-                }
-
-                uint16_t responseCode = p.ReadU16Little();
-                if(clients.size() == 1)
-                {
-                    libcomp::Packet response;
-                    response.WritePacketCode(ChannelToClientPacketCode_t::PACKET_PARTY_DISBAND);
-                    response.WriteU16Little(responseCode);
-
-                    auto client = clients.front();
-
-                    // Whether leaving was "successful" or not, the party ID should now be empty
-                    client->GetClientState()->GetAccountLogin()->GetCharacterLogin()
-                        ->SetPartyID(0);
-                    client->SendPacket(response);
-                }
-            }
-            else
-            {
-                for(auto client : clients)
-                {
-                    client->GetClientState()->GetAccountLogin()->GetCharacterLogin()
-                        ->SetPartyID(0);
-                }
-
-                libcomp::Packet request;
-                request.WritePacketCode(ChannelToClientPacketCode_t::PACKET_PARTY_DISBANDED);
-
-                ChannelClientConnection::BroadcastPacket(clients, request);
-            }
-        }
-        break;
     case InternalPacketAction_t::PACKET_ACTION_GROUP_LEADER_UPDATE:
         {
             bool isResponse = p.ReadU8() == 1;
 
-            if(isResponse)
-            {
-                if(p.Left() != 2)
-                {
-                    return false;
-                }
-
-                uint16_t responseCode = p.ReadU16Little();
-                if(clients.size() == 1)
-                {
-                    libcomp::Packet response;
-                    response.WritePacketCode(ChannelToClientPacketCode_t::PACKET_PARTY_LEADER_UPDATE);
-                    response.WriteU16Little(responseCode);
-
-                    clients.front()->SendPacket(response);
-                }
-            }
-            else
+            if(!isResponse)
             {
                 if(p.Left() != 4)
                 {
@@ -411,44 +289,6 @@ bool Parsers::PartyUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
             }
         }
         break;
-    case InternalPacketAction_t::PACKET_ACTION_PARTY_DROP_RULE:
-        {
-            bool isResponse = p.ReadU8() == 1;
-
-            if(isResponse)
-            {
-                if(p.Left() != 2)
-                {
-                    return false;
-                }
-
-                uint16_t responseCode = p.ReadU16Little();
-                if(clients.size() == 1)
-                {
-                    libcomp::Packet response;
-                    response.WritePacketCode(ChannelToClientPacketCode_t::PACKET_PARTY_DROP_RULE);
-                    response.WriteU16Little(responseCode);
-
-                    clients.front()->SendPacket(response);
-                }
-            }
-            else
-            {
-                if(p.Left() != 1)
-                {
-                    return false;
-                }
-
-                uint8_t rule = p.ReadU8();
-
-                libcomp::Packet request;
-                request.WritePacketCode(ChannelToClientPacketCode_t::PACKET_PARTY_DROP_RULE_SET);
-                request.WriteU8(rule);
-
-                ChannelClientConnection::BroadcastPacket(clients, request);
-            }
-        }
-        break;
     case InternalPacketAction_t::PACKET_ACTION_GROUP_KICK:
         {
             if(p.Left() != 4)
@@ -463,7 +303,6 @@ bool Parsers::PartyUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
             int32_t localEntityID = -1;
             if(partyState)
             {
-                partyState->GetAccountLogin()->GetCharacterLogin()->SetPartyID(0);
                 localEntityID = partyState->GetCharacterState()->GetEntityID();
             }
 

@@ -9,13 +9,14 @@
         <member type="AccountWorldData*" name="AccountWorldData"/>
         <member type="EventState*" name="EventState"/>
         <member type="TradeSession*" name="TradeSession"/>
+        <member type="Party*" name="Party" nulldefault="true"/>
         <member type="s8" name="StatusIcon"/>
         <member type="set" name="QuestTargetEnemies">
             <element type="u32"/>
         </member>
     </object>
     <object name="EventState" persistent="false">
-        <member type="EventInstance*" name="Current"/>
+        <member type="EventInstance*" name="Current" nulldefault="true"/>
         <member type="list" name="Previous">
             <element type="EventInstance*"/>
         </member>
@@ -27,7 +28,8 @@
         <member type="u8" name="Index"/>
     </object>
     <object name="TradeSession" persistent="false">
-        <member type="EntityStateObject*" name="OtherCharacterState"/>
+        <member type="EntityStateObject*" name="OtherCharacterState"
+            nulldefault="true"/>
         <member type="bool" name="Locked"/>
         <member type="bool" name="Finished"/>
         <member type="array" name="Items" size="30">

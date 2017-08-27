@@ -44,7 +44,6 @@ SET(${PROJECT_NAME}_HDRS
 )
 
 SET(${PROJECT_NAME}_SCHEMA
-    schema/party.xml
     schema/worldconfig.xml
 )
 
@@ -62,8 +61,6 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     ../../libcomp/schema
 
     # Output files
-    Party.h
-    Party.cpp
     WorldConfig.h
     WorldConfig.cpp
 )

@@ -60,6 +60,9 @@ public:
     bool IsGeneric() const;
     void SetGeneric();
 
+    bool GetNullDefault() const;
+    bool SetNullDefault(bool nullDefault);
+
     void AddDefaultedVariable(std::shared_ptr<MetaVariable>& var);
     const std::list<std::shared_ptr<MetaVariable>> GetDefaultedVariables() const;
 
@@ -114,6 +117,7 @@ private:
     std::string mNamespace;
     uint16_t mDynamicSizeCount;
     bool mPersistentReference;
+    bool mNullDefault;
 
     std::list<std::shared_ptr<MetaVariable>> mDefaultedVariables;
 };

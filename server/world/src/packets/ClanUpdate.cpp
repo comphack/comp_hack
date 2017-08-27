@@ -154,7 +154,7 @@ void ClanInvite(std::shared_ptr<WorldServer> server,
                 if(channel)
                 {
                     libcomp::Packet relay;
-                    server->GetRelayPacket(relay, targetLogin->GetWorldCID());
+                    WorldServer::GetRelayPacket(relay, targetLogin->GetWorldCID());
                     relay.WritePacketCode(ChannelToClientPacketCode_t::PACKET_CLAN_INVITED);
                     relay.WriteS32Little(cLogin->GetWorldCID());
                     relay.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_CP932,
@@ -180,7 +180,7 @@ void ClanInvite(std::shared_ptr<WorldServer> server,
     }
 
     libcomp::Packet relay;
-    server->GetRelayPacket(relay, cLogin->GetWorldCID());
+    WorldServer::GetRelayPacket(relay, cLogin->GetWorldCID());
     relay.WritePacketCode(ChannelToClientPacketCode_t::PACKET_CLAN_INVITE);
     relay.WriteS32Little(clanID);
     relay.WriteS8(responseCode);
@@ -365,7 +365,7 @@ bool Parsers::ClanUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
             case objects::ClanMember::MemberType_t::MASTER:
                 {
                     libcomp::Packet relay;
-                    server->GetRelayPacket(relay, cLogin->GetWorldCID());
+                    WorldServer::GetRelayPacket(relay, cLogin->GetWorldCID());
                     relay.WritePacketCode(ChannelToClientPacketCode_t::PACKET_CLAN_MASTER_UPDATE);
                     relay.WriteS32Little(clanInfo->GetID());
                     relay.WriteS8(0);   // Response code doesn't seem to matter
@@ -397,7 +397,7 @@ bool Parsers::ClanUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
                     clanLogins.push_back(targetLogin);
 
                     relay.Clear();
-                    auto cidOffset = server->GetRelayPacket(relay);
+                    auto cidOffset = WorldServer::GetRelayPacket(relay);
                     relay.WritePacketCode(ChannelToClientPacketCode_t::PACKET_CLAN_MASTER_UPDATED);
                     relay.WriteS32Little(clanInfo->GetID());
                     relay.WriteS32Little(targetCID);
@@ -405,7 +405,7 @@ bool Parsers::ClanUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
                     characterManager->SendToCharacters(relay, clanLogins, cidOffset);
 
                     relay.Clear();
-                    cidOffset = server->GetRelayPacket(relay);
+                    cidOffset = WorldServer::GetRelayPacket(relay);
                     relay.WritePacketCode(ChannelToClientPacketCode_t::PACKET_CLAN_SUB_MASTER_UPDATED);
                     relay.WriteS32Little(clanInfo->GetID());
                     relay.WriteS8((int8_t)objects::ClanMember::MemberType_t::SUB_MASTER);
@@ -417,7 +417,7 @@ bool Parsers::ClanUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
             case objects::ClanMember::MemberType_t::SUB_MASTER:
                 {
                     libcomp::Packet relay;
-                    server->GetRelayPacket(relay, cLogin->GetWorldCID());
+                    WorldServer::GetRelayPacket(relay, cLogin->GetWorldCID());
                     relay.WritePacketCode(ChannelToClientPacketCode_t::PACKET_CLAN_SUB_MASTER_UPDATE);
                     relay.WriteS32Little(clanInfo->GetID());
                     relay.WriteS8(0);   // Response code doesn't seem to matter
@@ -452,7 +452,7 @@ bool Parsers::ClanUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
                     targetMember->Update(worldDB);
 
                     relay.Clear();
-                    auto cidOffset = server->GetRelayPacket(relay);
+                    auto cidOffset = WorldServer::GetRelayPacket(relay);
                     relay.WritePacketCode(ChannelToClientPacketCode_t::PACKET_CLAN_SUB_MASTER_UPDATED);
                     relay.WriteS32Little(clanInfo->GetID());
                     relay.WriteS8((int8_t)newRole);
@@ -480,7 +480,7 @@ bool Parsers::ClanUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
             int32_t clanID = p.ReadS32Little();
 
             libcomp::Packet relay;
-            server->GetRelayPacket(relay, cLogin->GetWorldCID());
+            WorldServer::GetRelayPacket(relay, cLogin->GetWorldCID());
             relay.WritePacketCode(ChannelToClientPacketCode_t::PACKET_CLAN_EMBLEM_UPDATE);
             relay.WriteS32Little(clanID);
             relay.WriteS8(0);   // Response code doesn't seem to matter

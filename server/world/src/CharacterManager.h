@@ -195,11 +195,10 @@ public:
 
     /**
      * Get an active or pending party member by CharacterLogin
-     * @param cLogin CharacterLogin to retrieve the party member by
+     * @param worldCID World CID of the party member info to retrieve
      * @return Pointer to the party member
      */
-    std::shared_ptr<objects::PartyCharacter>
-        GetPartyMember(std::shared_ptr<objects::CharacterLogin> cLogin);
+    std::shared_ptr<objects::PartyCharacter> GetPartyMember(int32_t worldCID);
 
     /**
      * Add a party member to the specified party
@@ -268,6 +267,14 @@ public:
      * @param targetCID CID of the character being kicked
      */
     void PartyKick(std::shared_ptr<objects::CharacterLogin> cLogin, int32_t targetCID);
+
+    /**
+     * Send base level info about the specified party ID to every member to
+     * act as a refresh for channel level drop rule and member info.
+     * @param partyID ID of the party to update
+     * @param cids Additional CIDs to send to, useful when removing members
+     */
+    void SendPartyInfo(uint32_t partyID, const std::list<int32_t>& cids = {});
 
     /**
      * Get the clan info associated to the specified clan ID.
@@ -343,6 +350,7 @@ public:
      *  0x04: Clan level
      *  0x08: Indicates that the clan instance ID has updated (ex: joined or left)
      *  Defaults to name, emblem, level
+     * @param cids Specific CIDs to send to, sends to all if empty
      */
     void SendClanInfo(int32_t clanID, uint8_t updateFlags = 0x07,
         const std::list<int32_t>& cids = {});
@@ -385,9 +393,11 @@ private:
     /**
      * Remove the supplied CharacterLogin from their current party
      * @param cLogin CharacterLogin to remove
+     * @param partyID ID of the party to remove the member from
      * @return true on success, false if they were not in a party
      */
-    bool RemoveFromParty(std::shared_ptr<objects::CharacterLogin> cLogin);
+    bool RemoveFromParty(std::shared_ptr<objects::CharacterLogin> cLogin,
+        uint32_t partyID);
 
     /**
      * Remove the supplied CharacterLogin from the specified clan
@@ -413,6 +423,10 @@ private:
     /// The party ID 0 is used for characters awaiting a join request
     /// response
     std::unordered_map<uint32_t, std::shared_ptr<objects::Party>> mParties;
+
+    /// Map of party characters by world CID
+    std::unordered_map<int32_t,
+        std::shared_ptr<objects::PartyCharacter>> mPartyCharacters;
 
     /// Map of clan IDs to clans loaded on the server.
     std::unordered_map<int32_t, std::shared_ptr<objects::ClanInfo>> mClans;

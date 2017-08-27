@@ -93,7 +93,7 @@ bool Parsers::CharacterLogin::Parse(libcomp::ManagerPacket *pPacketManager,
     }
 
     bool isRejoin = false;
-    auto member = characterManager->GetPartyMember(cLogin);
+    auto member = characterManager->GetPartyMember(cLogin->GetWorldCID());
     if(!member && cLogin->GetPartyID() &&
         (updateFlags & (uint8_t)CharacterLoginStateFlag_t::CHARLOGIN_PARTY_INFO ||
          updateFlags & (uint8_t)CharacterLoginStateFlag_t::CHARLOGIN_PARTY_DEMON_INFO))

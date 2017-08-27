@@ -223,9 +223,34 @@ std::string GeneratorHeader::Generate(const MetaObject& obj)
     }
     ss << std::endl;
 
-    ss << "// Standard C++11 Includes" << std::endl;
-    ss << "#include <array>" << std::endl;
-    ss << std::endl;
+    bool includeArray = false;
+    bool includeSet = false;
+    for(auto it = obj.VariablesBegin(); it != obj.VariablesEnd(); ++it)
+    {
+        auto var = *it;
+        auto metaType = var->GetMetaType();
+        includeArray |= metaType ==
+            libobjgen::MetaVariable::MetaVariableType_t::TYPE_ARRAY;
+        includeSet |= metaType ==
+            libobjgen::MetaVariable::MetaVariableType_t::TYPE_SET;
+    }
+
+    if(includeArray || includeSet)
+    {
+        ss << "// Standard C++11 Includes" << std::endl;
+
+        if(includeArray)
+        {
+            ss << "#include <array>" << std::endl;
+        }
+
+        if(includeSet)
+        {
+            ss << "#include <set>" << std::endl;
+        }
+
+        ss << std::endl;
+    }
 
     ss << "// tinyxml2 Includes" << std::endl;
     ss << "#include <PushIgnore.h>" << std::endl;

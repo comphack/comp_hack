@@ -130,11 +130,11 @@ bool Parsers::Relay::Parse(libcomp::ManagerPacket *pPacketManager,
             bool includeSource = p.ReadU8() == 1;
 
             auto party = characterManager->GetParty(partyID);
-            for(auto member : party->GetMembers())
+            for(auto cid : party->GetMemberIDs())
             {
                 // Party members
-                auto targetLogin = characterManager->GetCharacterLogin(member.first);
-                if(targetLogin && (includeSource || member.first != sourceCID))
+                auto targetLogin = characterManager->GetCharacterLogin(cid);
+                if(targetLogin && (includeSource || cid != sourceCID))
                 {
                     targetLogins.push_back(targetLogin);
                 }
@@ -194,7 +194,7 @@ bool Parsers::Relay::Parse(libcomp::ManagerPacket *pPacketManager,
                 if(!channel) continue;
 
                 libcomp::Packet relay;
-                server->GetRelayPacket(relay, pair.second, sourceCID);
+                WorldServer::GetRelayPacket(relay, pair.second, sourceCID);
                 relay.WriteArray(packetData);
         
                 channel->SendPacket(relay);

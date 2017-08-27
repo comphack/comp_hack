@@ -258,6 +258,17 @@ private:
         const std::shared_ptr<objects::Spawn>& spawn, bool giftMode = false) const;
 
     /**
+     * Schedule the adjustment of who is a valid looter for one or more loot
+     * boxes.
+     * @param time Server time to schedule the adjustment for
+     * @param zone Pointer to the zone the entities belong to
+     * @param lootEntityIDs List of loot box IDs to adjust
+     * @param worldCIDs Set of character world CIDs to add as valid looters
+     */
+    void ScheduleFreeLoot(uint64_t time, const std::shared_ptr<Zone>& zone,
+        const std::list<int32_t>& lootEntityIDs, const std::set<int32_t>& worldCIDs);
+
+    /**
      * Execute post execution steps like notifying the client that the skill
      * has executed and updating any related expertises.
      * @param client Pointer to the client connection that activated the skill

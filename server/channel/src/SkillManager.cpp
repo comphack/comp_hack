@@ -176,75 +176,70 @@ SkillManager::~SkillManager()
 {
 }
 
-bool SkillManager::ActivateSkill(const std::shared_ptr<ChannelClientConnection> client,
-    uint32_t skillID, int32_t sourceEntityID, int64_t targetObjectID)
+bool SkillManager::ActivateSkill(const std::shared_ptr<ActiveEntityState> source,
+    uint32_t skillID, int64_t targetObjectID, bool freeCast)
 {
-    auto state = client->GetClientState();
     auto server = mServer.lock();
     auto definitionManager = server->GetDefinitionManager();
     auto def = definitionManager->GetSkillData(skillID);
     if(nullptr == def)
     {
-        SendFailure(client, sourceEntityID, skillID);
-        return false;
-    }
-
-    auto sourceState = state->GetEntityState(sourceEntityID);
-    if(nullptr == sourceState)
-    {
-        SendFailure(client, sourceEntityID, skillID);
-        return false;
+        return 0;
     }
 
     auto cast = def->GetCast();
     auto chargeTime = cast->GetBasic()->GetChargeTime();
+    auto activatedTime = ChannelServer::GetServerTime();
 
-    auto activatedTime = server->GetServerTime();
     // Charge time is in milliseconds, convert to microseconds
     auto chargedTime = activatedTime + (chargeTime * 1000);
 
     auto activated = std::shared_ptr<objects::ActivatedAbility>(
         new objects::ActivatedAbility);
     activated->SetSkillID(skillID);
-    activated->SetSourceEntity(sourceState);
+    activated->SetSourceEntity(source);
     activated->SetActivationObjectID(targetObjectID);
     activated->SetTargetObjectID(targetObjectID);
     activated->SetActivationTime(activatedTime);
     activated->SetChargedTime(chargedTime);
+    activated->SetActivationID(source->GetNextActivatedAbilityID());
 
-    auto activationID = state->GetNextActivatedAbilityID();
-    activated->SetActivationID(activationID);
+    source->SetActivatedAbility(activated);
 
-    sourceState->SetActivatedAbility(activated);
-
-    SendChargeSkill(client, activated);
+    SendChargeSkill(activated);
 
     uint8_t activationType = def->GetBasic()->GetActivationType();
     bool executeNow = (activationType == 3 || activationType == 4)
         && chargeTime == 0;
     if(executeNow)
     {
-        if(!ExecuteSkill(client, sourceState, activated))
+        auto client = server->GetManagerConnection()->GetEntityClient(
+            source->GetEntityID());
+        if(!ExecuteSkill(source, activated, client, freeCast))
         {
-            SendFailure(client, sourceEntityID, skillID);
-            sourceState->SetActivatedAbility(nullptr);
+            SendFailure(source, skillID);
+            source->SetActivatedAbility(nullptr);
             return false;
         }
+    }
+    else
+    {
+        source->SetStatusTimes(STATUS_CHARGING, chargedTime);
     }
 
     return true;
 }
 
-bool SkillManager::ExecuteSkill(const std::shared_ptr<ChannelClientConnection> client,
-    int32_t sourceEntityID, uint8_t activationID, int64_t targetObjectID)
+bool SkillManager::ExecuteSkill(const std::shared_ptr<ActiveEntityState> source,
+    uint8_t activationID, int64_t targetObjectID, bool freeCast)
 {
-    auto state = client->GetClientState();
-    auto sourceState = state->GetEntityState(sourceEntityID);
+    auto client = mServer.lock()->GetManagerConnection()->GetEntityClient(
+        source->GetEntityID());
 
-    bool success = sourceState != nullptr;
+    bool success = true;
 
     uint32_t skillID = 0;
-    auto activated = success ? sourceState->GetActivatedAbility() : nullptr;
+    auto activated = success ? source->GetActivatedAbility() : nullptr;
     if(nullptr == activated || activationID != activated->GetActivationID())
     {
         LOG_ERROR(libcomp::String("Unknown activation ID encountered: %1\n")
@@ -257,17 +252,17 @@ bool SkillManager::ExecuteSkill(const std::shared_ptr<ChannelClientConnection> c
         skillID = activated->GetSkillID();
     }
 
-    if(!success || !ExecuteSkill(client, sourceState, activated))
+    if(!success || !ExecuteSkill(source, activated, client, freeCast))
     {
-        SendFailure(client, sourceEntityID, skillID);
+        SendFailure(source, skillID);
     }
 
     return success;
 }
 
-bool SkillManager::ExecuteSkill(const std::shared_ptr<ChannelClientConnection> client,
-    std::shared_ptr<ActiveEntityState> sourceState,
-    std::shared_ptr<objects::ActivatedAbility> activated)
+bool SkillManager::ExecuteSkill(std::shared_ptr<ActiveEntityState> source,
+    std::shared_ptr<objects::ActivatedAbility> activated,
+    const std::shared_ptr<ChannelClientConnection> client, bool freeCast)
 {
     auto server = mServer.lock();
     auto definitionManager = server->GetDefinitionManager();
@@ -281,9 +276,6 @@ bool SkillManager::ExecuteSkill(const std::shared_ptr<ChannelClientConnection> c
         return false;
     }
 
-    auto state = client->GetClientState();
-    auto cState = state->GetCharacterState();
-    auto character = cState->GetEntity();
     uint16_t functionID = skillData->GetDamage()->GetFunctionID();
     uint8_t skillCategory = skillData->GetCommon()->GetCategory()->GetMainCategory();
 
@@ -334,7 +326,7 @@ bool SkillManager::ExecuteSkill(const std::shared_ptr<ChannelClientConnection> c
                 break;
             }
 
-            auto zone = sourceState->GetZone();
+            auto zone = source->GetZone();
             if(nullptr == zone)
             {
                 LOG_ERROR("Skill activation attempted outside of a zone.\n");
@@ -356,12 +348,9 @@ bool SkillManager::ExecuteSkill(const std::shared_ptr<ChannelClientConnection> c
         break;
     }
 
-    auto source = std::dynamic_pointer_cast<ActiveEntityState>(
-        activated->GetSourceEntity());
-
     // Check costs and pay costs (skip for switch deactivation)
-    if(skillCategory == 1 || (skillCategory == 2 &&
-        !source->ActiveSwitchSkillsContains(skillID)))
+    if(!freeCast && (skillCategory == 1 || (skillCategory == 2 &&
+        !source->ActiveSwitchSkillsContains(skillID))))
     {
         int16_t hpCost = 0, mpCost = 0;
         uint16_t hpCostPercent = 0, mpCostPercent = 0;
@@ -453,50 +442,67 @@ bool SkillManager::ExecuteSkill(const std::shared_ptr<ChannelClientConnection> c
         }
 
         hpCost = (int16_t)(hpCost + ceil(((float)hpCostPercent * 0.01f) *
-            (float)sourceState->GetMaxHP()));
+            (float)source->GetMaxHP()));
         mpCost = (int16_t)(mpCost + ceil(((float)mpCostPercent * 0.01f) *
-            (float)sourceState->GetMaxMP()));
+            (float)source->GetMaxMP()));
 
-        int64_t targetItem = 0;
-        auto sourceStats = sourceState->GetCoreStats();
+        auto sourceStats = source->GetCoreStats();
         bool canPay = ((hpCost == 0) || hpCost < sourceStats->GetHP()) &&
             ((mpCost == 0) || mpCost < sourceStats->GetMP());
+
         auto characterManager = server->GetCharacterManager();
-        for(auto itemCost : itemCosts)
-        {
-            auto existingItems = characterManager->GetExistingItems(character,
-                itemCost.first);
-            uint16_t itemCount = 0;
-            for(auto item : existingItems)
-            {
-                itemCount = (uint16_t)(itemCount + item->GetStackSize());
-                if(state->GetObjectID(item->GetUUID()) ==
-                    activated->GetActivationObjectID())
-                {
-                    targetItem = activated->GetActivationObjectID();
-                }
-            }
 
-            if(itemCount < itemCost.second)
-            {
-                canPay = false;
-                break;
-            }
-        }
-
+        int64_t targetItem = 0;
         std::pair<uint32_t, int64_t> bulletIDs;
-        if(bulletCost > 0)
+        if(itemCosts.size() > 0)
         {
-            auto bullets = character->GetEquippedItems((size_t)
-                objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_BULLETS);
-            if(!bullets || bullets->GetStackSize() < bulletCost)
+            if(client)
             {
-                canPay = false;
+                auto state = client->GetClientState();
+                auto cState = state->GetCharacterState();
+                auto character = cState->GetEntity();
+
+                for(auto itemCost : itemCosts)
+                {
+                    auto existingItems = characterManager->GetExistingItems(character,
+                        itemCost.first);
+                    uint16_t itemCount = 0;
+                    for(auto item : existingItems)
+                    {
+                        itemCount = (uint16_t)(itemCount + item->GetStackSize());
+                        if(state->GetObjectID(item->GetUUID()) ==
+                            activated->GetActivationObjectID())
+                        {
+                            targetItem = activated->GetActivationObjectID();
+                        }
+                    }
+
+                    if(itemCount < itemCost.second)
+                    {
+                        canPay = false;
+                        break;
+                    }
+                }
+
+                if(bulletCost > 0)
+                {
+                    auto bullets = character->GetEquippedItems((size_t)
+                        objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_BULLETS);
+                    if(!bullets || bullets->GetStackSize() < bulletCost)
+                    {
+                        canPay = false;
+                    }
+                    else
+                    {
+                        bulletIDs = std::pair<uint32_t, int64_t>(bullets->GetType(),
+                            state->GetObjectID(bullets->GetUUID()));
+                    }
+                }
             }
             else
             {
-                bulletIDs = std::pair<uint32_t, int64_t>(bullets->GetType(),
-                    state->GetObjectID(bullets->GetUUID()));
+                // Non-player entities cannot pay item costs
+                canPay = false;
             }
         }
 
@@ -507,28 +513,37 @@ bool SkillManager::ExecuteSkill(const std::shared_ptr<ChannelClientConnection> c
         }
 
         // Pay the costs
-        if(hpCost > 0 || mpCost > 0)
+        bool hpMpCost = hpCost > 0 || mpCost > 0;
+        if(hpMpCost)
         {
-            sourceState->SetHPMP((int16_t)-hpCost, (int16_t)-mpCost, true);
+            source->SetHPMP((int16_t)-hpCost, (int16_t)-mpCost, true);
             activated->SetHPCost(hpCost);
             activated->SetMPCost(mpCost);
-
-            std::set<std::shared_ptr<ActiveEntityState>> displayStateModified;
-            displayStateModified.insert(sourceState);
-            characterManager->UpdateWorldDisplayState(displayStateModified);
         }
 
-        if(bulletCost > 0)
+        if(client)
         {
-            itemCosts[bulletIDs.first] = bulletCost;
-            targetItem = bulletIDs.second;
-        }
+            if(hpMpCost)
+            {
+                std::set<std::shared_ptr<ActiveEntityState>> displayStateModified;
+                displayStateModified.insert(source);
+                characterManager->UpdateWorldDisplayState(displayStateModified);
+            }
 
-        if(itemCosts.size() > 0)
-        {
-            characterManager->AddRemoveItems(client, itemCosts, false, targetItem);
+            if(bulletCost > 0)
+            {
+                itemCosts[bulletIDs.first] = bulletCost;
+                targetItem = bulletIDs.second;
+            }
+
+            if(itemCosts.size() > 0)
+            {
+                characterManager->AddRemoveItems(client, itemCosts, false, targetItem);
+            }
         }
     }
+
+    activated->SetExecutionTime(ChannelServer::GetServerTime());
 
     // Execute the skill
     auto fIter = mSkillFunctions.find(functionID);
@@ -550,58 +565,60 @@ bool SkillManager::ExecuteSkill(const std::shared_ptr<ChannelClientConnection> c
         }
     }
 
-    bool success = fIter->second(*this, client, activated);
+    // Only execute special function skills if the source was a player
+    bool success = client && fIter->second(*this, activated, client);
     if(success)
     {
         FinalizeSkillExecution(client, activated, skillData);
     }
     else
     {
-        SendCompleteSkill(client, activated, true);
-        sourceState->SetActivatedAbility(nullptr);
+        SendCompleteSkill(activated, true);
+        source->SetActivatedAbility(nullptr);
     }
 
     return success;
 }
 
-bool SkillManager::CancelSkill(const std::shared_ptr<ChannelClientConnection> client,
-    int32_t sourceEntityID, uint8_t activationID)
+bool SkillManager::CancelSkill(const std::shared_ptr<ActiveEntityState> source,
+    uint8_t activationID)
 {
-    auto state = client->GetClientState();
-    auto sourceState = state->GetEntityState(sourceEntityID);
-
-    bool success = sourceState != nullptr;
-
-    auto activated = success ? sourceState->GetActivatedAbility() : nullptr;
+    auto activated = source ? source->GetActivatedAbility() : nullptr;
     if(nullptr == activated || activationID != activated->GetActivationID())
     {
         LOG_ERROR(libcomp::String("Unknown activation ID encountered: %1\n")
             .Arg(activationID));
-        success = false;
+        return false;
     }
-
-    if(success)
+    else
     {
-        SendCompleteSkill(client, activated, true);
-        sourceState->SetActivatedAbility(nullptr);
+        SendCompleteSkill(activated, true);
+        source->SetActivatedAbility(nullptr);
+        return true;
     }
-
-    return success;
 }
 
-void SkillManager::SendFailure(const std::shared_ptr<ChannelClientConnection> client,
-    int32_t sourceEntityID, uint32_t skillID)
+void SkillManager::SendFailure(const std::shared_ptr<ActiveEntityState> source,
+    uint32_t skillID, const std::shared_ptr<ChannelClientConnection> client)
 {
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_SKILL_FAILED);
-    reply.WriteS32Little(sourceEntityID);
-    reply.WriteU32Little(skillID);
-    reply.WriteS8(-1);  //Unknown
-    reply.WriteU8(0);  //Unknown
-    reply.WriteU8(0);  //Unknown
-    reply.WriteS32Little(-1);  //Unknown
+    libcomp::Packet p;
+    p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_SKILL_FAILED);
+    p.WriteS32Little(source ? source->GetEntityID() : -1);
+    p.WriteU32Little(skillID);
+    p.WriteS8(-1);  //Unknown
+    p.WriteU8(0);  //Unknown
+    p.WriteU8(0);  //Unknown
+    p.WriteS32Little(-1);  //Unknown
 
-    mServer.lock()->GetZoneManager()->BroadcastPacket(client, reply);
+    if(client)
+    {
+        client->SendPacket(p);
+    }
+    else if(source->GetZone())
+    {
+        auto zConnections = source->GetZone()->GetConnectionList();
+        ChannelClientConnection::BroadcastPacket(zConnections, p);
+    }
 }
 
 bool SkillManager::ExecuteNormalSkill(const std::shared_ptr<ChannelClientConnection> client,
@@ -645,10 +662,8 @@ bool SkillManager::ExecuteNormalSkill(const std::shared_ptr<ChannelClientConnect
         }
 
         // Determine time from projectile speed and distance
-        uint64_t now = server->GetServerTime();
-
-        source->RefreshCurrentPosition(now);
-        target->RefreshCurrentPosition(now);
+        source->RefreshCurrentPosition(activated->GetExecutionTime());
+        target->RefreshCurrentPosition(activated->GetExecutionTime());
 
         float distance = source->GetDistance(target->GetCurrentX(),
             target->GetCurrentY());
@@ -666,7 +681,7 @@ bool SkillManager::ExecuteNormalSkill(const std::shared_ptr<ChannelClientConnect
         // Projectile speed is measured in how many 10ths of a unit the projectile will
         // traverse per millisecond
         uint64_t addMicro = (uint64_t)((double)distance / (projectileSpeed * 10)) * 1000000;
-        uint64_t processTime = now + addMicro;
+        uint64_t processTime = activated->GetExecutionTime() + addMicro;
 
         server->ScheduleWork(processTime, [](const std::shared_ptr<ChannelServer> pServer,
             const std::shared_ptr<objects::ActivatedAbility> pActivated)
@@ -1003,7 +1018,7 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
     // Get added status effects
     auto addStatuses = damageData->GetAddStatuses();
 
-    auto now = server->GetServerTime();
+    uint64_t now = activated->GetExecutionTime();
     source->RefreshCurrentPosition(now);
 
     // Apply calculation results, keeping track of entities that may
@@ -1104,7 +1119,7 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
                 case objects::EntityStateObject::EntityType_t::ENEMY:
                     if(hpDamage > 0)
                     {
-                        // If an enemy is damage by a player character or their
+                        // If an enemy is damaged by a player character or their
                         // partner demon, keep track of the damage for the damage
                         // race drop rule
                         auto sourceState = ClientState::GetEntityClientState(
@@ -1302,29 +1317,29 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
     auto effectiveTarget = primaryTarget ? primaryTarget : effectiveSource;
     std::unordered_map<uint32_t, uint64_t> timeMap;
     uint64_t hitTimings[3];
-    uint64_t completeTime = now +
+    uint64_t completeTime = activated->GetExecutionTime() +
         (skillData->GetDischarge()->GetStiffness() * 1000);
     uint64_t hitStopTime = completeTime +
         (skillData->GetDamage()->GetHitStopTime() * 1000);
 
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_SKILL_REPORTS);
-    reply.WriteS32Little(source->GetEntityID());
-    reply.WriteU32Little(skillID);
-    reply.WriteS8((int8_t)activated->GetActivationID());
+    libcomp::Packet p;
+    p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_SKILL_REPORTS);
+    p.WriteS32Little(source->GetEntityID());
+    p.WriteU32Little(skillID);
+    p.WriteS8((int8_t)activated->GetActivationID());
 
-    reply.WriteU32Little((uint32_t)targetResults.size());
+    p.WriteU32Little((uint32_t)targetResults.size());
     for(SkillTargetResult& target : targetResults)
     {
-        reply.WriteS32Little(target.EntityState->GetEntityID());
-        reply.WriteS32Little(abs(target.Damage1));
-        reply.WriteU8(target.Damage1Type);
-        reply.WriteS32Little(abs(target.Damage2));
-        reply.WriteU8(target.Damage2Type);
-        reply.WriteU16Little(target.DamageFlags1);
+        p.WriteS32Little(target.EntityState->GetEntityID());
+        p.WriteS32Little(abs(target.Damage1));
+        p.WriteU8(target.Damage1Type);
+        p.WriteS32Little(abs(target.Damage2));
+        p.WriteU8(target.Damage2Type);
+        p.WriteU16Little(target.DamageFlags1);
 
-        reply.WriteU8(target.AilmentDamageType);
-        reply.WriteS32Little(abs(target.AilmentDamage));
+        p.WriteU8(target.AilmentDamageType);
+        p.WriteS32Little(abs(target.AilmentDamage));
 
         if((target.DamageFlags1 & FLAG1_KNOCKBACK) && kbType != 2)
         {
@@ -1341,7 +1356,7 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
             case 1:
                 {
                     // Away from the effective target (ex: AOE explosion)
-                    target.EntityState->MoveRelative(effectiveTarget->GetCurrentX(),
+                    zoneManager->MoveRelative(target.EntityState, effectiveTarget->GetCurrentX(),
                         effectiveTarget->GetCurrentY(), kbDistance, true, now, hitStopTime);
                 }
                 break;
@@ -1355,20 +1370,23 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
             case 3: /// @todo: technically this has more spread than 0
             default:
                 // Default if not specified, directly away from source
-                target.EntityState->MoveRelative(effectiveSource->GetCurrentX(),
+                zoneManager->MoveRelative(target.EntityState, effectiveSource->GetCurrentX(),
                     effectiveSource->GetCurrentY(), kbDistance, true, now, hitStopTime);
                 break;
             }
 
-            reply.WriteFloat(target.EntityState->GetDestinationX());
-            reply.WriteFloat(target.EntityState->GetDestinationY());
+            target.EntityState->SetStatusTimes(STATUS_KNOCKBACK,
+                target.EntityState->GetDestinationTicks());
+
+            p.WriteFloat(target.EntityState->GetDestinationX());
+            p.WriteFloat(target.EntityState->GetDestinationY());
         }
         else
         {
-            reply.WriteBlank(8);
+            p.WriteBlank(8);
         }
 
-        reply.WriteFloat(0);    // Unknown
+        p.WriteFloat(0);    // Unknown
 
         // Calculate hit timing
         hitTimings[0] = hitTimings[1] = hitTimings[2] = 0;
@@ -1391,6 +1409,9 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
                     /// @todo: calculate
                     hitTimings[2] = hitStopTime;
                 }
+
+                target.EntityState->SetStatusTimes(STATUS_HIT_STUN,
+                    hitStopTime);
             }
             else
             {
@@ -1403,14 +1424,14 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
         {
             if(hitTimings[i])
             {
-                timeMap[(uint32_t)(reply.Size() + (4 * i))] = hitTimings[i];
+                timeMap[(uint32_t)(p.Size() + (4 * i))] = hitTimings[i];
             }
         }
 
         // Double back at the end and write client specific times
-        reply.WriteBlank(12);
+        p.WriteBlank(12);
 
-        reply.WriteU8(target.TalkFlags);
+        p.WriteU8(target.TalkFlags);
 
         std::list<std::shared_ptr<objects::StatusEffect>> addedStatuses;
         std::set<uint32_t> cancelledStatuses;
@@ -1436,34 +1457,34 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
             }
         }
 
-        reply.WriteU32Little((uint32_t)addedStatuses.size());
-        reply.WriteU32Little((uint32_t)cancelledStatuses.size());
+        p.WriteU32Little((uint32_t)addedStatuses.size());
+        p.WriteU32Little((uint32_t)cancelledStatuses.size());
 
         for(auto effect : addedStatuses)
         {
-            reply.WriteU32Little(effect->GetEffect());
-            reply.WriteS32Little((int32_t)effect->GetExpiration());
-            reply.WriteU8(effect->GetStack());
+            p.WriteU32Little(effect->GetEffect());
+            p.WriteS32Little((int32_t)effect->GetExpiration());
+            p.WriteU8(effect->GetStack());
         }
 
         for(auto cancelled : cancelledStatuses)
         {
-            reply.WriteU32Little(cancelled);
+            p.WriteU32Little(cancelled);
         }
 
-        reply.WriteU16Little(target.DamageFlags2);
-        reply.WriteS32Little(target.TechnicalDamage);
-        reply.WriteS32Little(target.PursuitDamage);
+        p.WriteU16Little(target.DamageFlags2);
+        p.WriteS32Little(target.TechnicalDamage);
+        p.WriteS32Little(target.PursuitDamage);
     }
 
     auto zConnections = zone->GetConnectionList();
-    ChannelClientConnection::SendRelativeTimePacket(zConnections, reply, timeMap);
+    ChannelClientConnection::SendRelativeTimePacket(zConnections, p, timeMap);
 
     if(revived.size() > 0)
     {
         for(auto entity : revived)
         {
-            libcomp::Packet p;
+            p.Clear();
             if(characterManager->GetEntityRevivalPacket(p, entity, 6))
             {
                 zoneManager->BroadcastPacket(zone, p);
@@ -1485,7 +1506,7 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
 }
 
 void SkillManager::HandleKills(std::shared_ptr<ActiveEntityState> source,
-    const std::shared_ptr<Zone> zone,
+    const std::shared_ptr<Zone>& zone,
     std::set<std::shared_ptr<ActiveEntityState>> killed)
 {
     auto server = mServer.lock();
@@ -1779,7 +1800,7 @@ void SkillManager::HandleKills(std::shared_ptr<ActiveEntityState> source,
 }
 
 void SkillManager::HandleNegotiations(const std::shared_ptr<ActiveEntityState> source,
-    const std::shared_ptr<Zone> zone,
+    const std::shared_ptr<Zone>& zone,
     const std::list<std::pair<std::shared_ptr<ActiveEntityState>, uint8_t>> talkDone)
 {
     auto server = mServer.lock();
@@ -2006,13 +2027,14 @@ bool SkillManager::ToggleSwitchSkill(const std::shared_ptr<ChannelClientConnecti
         p.WriteS8(toggleOn ? 1 : 0);
 
         client->QueuePacket(p);
-    }
 
-    characterManager->RecalculateStats(client, source->GetEntityID());
+        characterManager->RecalculateStats(client, source->GetEntityID());
 
-    if(client)
-    {
         client->FlushOutgoing();
+    }
+    else
+    {
+        source->RecalculateStats(definitionManager);
     }
 
     return true;
@@ -2511,30 +2533,49 @@ void SkillManager::FinalizeSkillExecution(const std::shared_ptr<ChannelClientCon
         }
     }
 
-    SendExecuteSkill(client, activated, skillData);
+    auto discharge = skillData->GetDischarge();
+    source->SetStatusTimes(STATUS_IMMOBILE, activated->GetExecutionTime() +
+        (uint64_t)(discharge->GetStiffness() * 1000));
 
-    characterManager->UpdateExpertise(client, activated->GetSkillID());
+    SendExecuteSkill(activated, skillData);
+
+    if(client)
+    {
+        characterManager->UpdateExpertise(client, activated->GetSkillID());
+    }
 
     // Clean up and send the skill complete
     source->SetActivatedAbility(nullptr);
-    SendCompleteSkill(client, activated, false);
+    SendCompleteSkill(activated, false);
 
-    // Cancel any status effects that expire on skill execution
-    characterManager->CancelStatusEffects(client, EFFECT_CANCEL_SKILL);
+    if (client)
+    {
+        // Cancel any status effects that expire on skill execution
+        characterManager->CancelStatusEffects(client, EFFECT_CANCEL_SKILL);
+    }
+    else
+    {
+        source->CancelStatusEffects(EFFECT_CANCEL_SKILL);
+    }
 }
 
-bool SkillManager::SpecialSkill(const std::shared_ptr<ChannelClientConnection> client,
-    std::shared_ptr<objects::ActivatedAbility> activated)
+bool SkillManager::SpecialSkill(const std::shared_ptr<objects::ActivatedAbility>& activated,
+    const std::shared_ptr<ChannelClientConnection>& client)
 {
-    (void)client;
     (void)activated;
+    (void)client;
 
     return true;
 }
 
-bool SkillManager::EquipItem(const std::shared_ptr<ChannelClientConnection> client,
-    std::shared_ptr<objects::ActivatedAbility> activated)
+bool SkillManager::EquipItem(const std::shared_ptr<objects::ActivatedAbility>& activated,
+    const std::shared_ptr<ChannelClientConnection>& client)
 {
+    if(!client)
+    {
+        return false;
+    }
+
     auto itemID = activated->GetTargetObjectID();
     if(itemID <= 0)
     {
@@ -2546,9 +2587,14 @@ bool SkillManager::EquipItem(const std::shared_ptr<ChannelClientConnection> clie
     return ProcessSkillResult(activated);;
 }
 
-bool SkillManager::FamiliarityUp(const std::shared_ptr<ChannelClientConnection> client,
-    std::shared_ptr<objects::ActivatedAbility> activated)
+bool SkillManager::FamiliarityUp(const std::shared_ptr<objects::ActivatedAbility>& activated,
+    const std::shared_ptr<ChannelClientConnection>& client)
 {
+    if(!client)
+    {
+        return false;
+    }
+
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
     auto dState = state->GetDemonState();
@@ -2631,9 +2677,14 @@ bool SkillManager::FamiliarityUp(const std::shared_ptr<ChannelClientConnection> 
     return ProcessSkillResult(activated, false);
 }
 
-bool SkillManager::FamiliarityUpItem(const std::shared_ptr<ChannelClientConnection> client,
-    std::shared_ptr<objects::ActivatedAbility> activated)
+bool SkillManager::FamiliarityUpItem(const std::shared_ptr<objects::ActivatedAbility>& activated,
+    const std::shared_ptr<ChannelClientConnection>& client)
 {
+    if(!client)
+    {
+        return false;
+    }
+
     auto state = client->GetClientState();
     auto dState = state->GetDemonState();
     auto demon = dState->GetEntity();
@@ -2685,10 +2736,15 @@ bool SkillManager::FamiliarityUpItem(const std::shared_ptr<ChannelClientConnecti
     return ProcessSkillResult(activated);
 }
 
-bool SkillManager::Mooch(const std::shared_ptr<ChannelClientConnection> client,
-    std::shared_ptr<objects::ActivatedAbility> activated)
+bool SkillManager::Mooch(const std::shared_ptr<objects::ActivatedAbility>& activated,
+    const std::shared_ptr<ChannelClientConnection>& client)
 {
     (void)activated;
+
+    if(!client)
+    {
+        return false;
+    }
 
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
@@ -2737,9 +2793,14 @@ bool SkillManager::Mooch(const std::shared_ptr<ChannelClientConnection> client,
     return ProcessSkillResult(activated, false);
 }
 
-bool SkillManager::SummonDemon(const std::shared_ptr<ChannelClientConnection> client,
-    std::shared_ptr<objects::ActivatedAbility> activated)
+bool SkillManager::SummonDemon(const std::shared_ptr<objects::ActivatedAbility>& activated,
+    const std::shared_ptr<ChannelClientConnection>& client)
 {
+    if(!client)
+    {
+        return false;
+    }
+
     auto demonID = activated->GetTargetObjectID();
     if(demonID <= 0)
     {
@@ -2753,9 +2814,14 @@ bool SkillManager::SummonDemon(const std::shared_ptr<ChannelClientConnection> cl
     return true;
 }
 
-bool SkillManager::StoreDemon(const std::shared_ptr<ChannelClientConnection> client,
-    std::shared_ptr<objects::ActivatedAbility> activated)
+bool SkillManager::StoreDemon(const std::shared_ptr<objects::ActivatedAbility>& activated,
+    const std::shared_ptr<ChannelClientConnection>& client)
 {
+    if(!client)
+    {
+        return false;
+    }
+
     auto demonID = activated->GetTargetObjectID();
     if(demonID <= 0)
     {
@@ -2769,10 +2835,15 @@ bool SkillManager::StoreDemon(const std::shared_ptr<ChannelClientConnection> cli
     return true;
 }
 
-bool SkillManager::Traesto(const std::shared_ptr<ChannelClientConnection> client,
-    std::shared_ptr<objects::ActivatedAbility> activated)
+bool SkillManager::Traesto(const std::shared_ptr<objects::ActivatedAbility>& activated,
+    const std::shared_ptr<ChannelClientConnection>& client)
 {
     (void)activated;
+
+    if(!client)
+    {
+        return false;
+    }
 
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
@@ -2794,79 +2865,105 @@ bool SkillManager::Traesto(const std::shared_ptr<ChannelClientConnection> client
     return mServer.lock()->GetZoneManager()->EnterZone(client, zoneID, xCoord, yCoord, 0, true);
 }
 
-void SkillManager::SendChargeSkill(const std::shared_ptr<ChannelClientConnection> client,
-    std::shared_ptr<objects::ActivatedAbility> activated)
+void SkillManager::SendChargeSkill(std::shared_ptr<objects::ActivatedAbility> activated)
 {
-    auto state = client->GetClientState();
+    auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated->GetSourceEntity());
+    auto zone = source ? source->GetZone() : nullptr;
+    auto zConnections = zone
+        ? zone->GetConnectionList() : std::list<std::shared_ptr<ChannelClientConnection>>();
+    if(zConnections.size() > 0)
+    {
+        std::unordered_map<uint32_t, uint64_t> timeMap;
 
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_SKILL_CHARGING);
-    reply.WriteS32Little(activated->GetSourceEntity()->GetEntityID());
-    reply.WriteU32Little(activated->GetSkillID());
-    reply.WriteS8((int8_t)activated->GetActivationID());
-    reply.WriteFloat(state->ToClientTime(activated->GetChargedTime()));
-    reply.WriteU8(0);   //Unknown
-    reply.WriteU8(0);   //Unknown
-    reply.WriteFloat(300.0f);   //Run speed during charge
-    reply.WriteFloat(300.0f);   //Run speed after charge
+        libcomp::Packet p;
+        p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_SKILL_CHARGING);
+        p.WriteS32Little(activated->GetSourceEntity()->GetEntityID());
+        p.WriteU32Little(activated->GetSkillID());
+        p.WriteS8((int8_t)activated->GetActivationID());
 
-    mServer.lock()->GetZoneManager()->BroadcastPacket(client, reply);
+        timeMap[11] = activated->GetChargedTime();
+        p.WriteFloat(0.f);
+
+        p.WriteU8(0);   //Unknown
+        p.WriteU8(0);   //Unknown
+        p.WriteFloat(300.0f);   //Run speed during charge
+        p.WriteFloat(300.0f);   //Run speed after charge
+
+        ChannelClientConnection::SendRelativeTimePacket(zConnections, p, timeMap);
+    }
 }
 
-void SkillManager::SendExecuteSkill(const std::shared_ptr<ChannelClientConnection> client,
-    std::shared_ptr<objects::ActivatedAbility> activated,
+void SkillManager::SendExecuteSkill(std::shared_ptr<objects::ActivatedAbility> activated,
     std::shared_ptr<objects::MiSkillData> skillData)
 {
-    auto state = client->GetClientState();
-    auto cState = state->GetCharacterState();
-    auto conditionData = skillData->GetCondition();
-    auto dischargeData = skillData->GetDischarge();
+    auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated->GetSourceEntity());
+    auto zone = source ? source->GetZone() : nullptr;
+    auto zConnections = zone
+        ? zone->GetConnectionList() : std::list<std::shared_ptr<ChannelClientConnection>>();
+    if(zConnections.size() > 0)
+    {
+        auto conditionData = skillData->GetCondition();
+        auto dischargeData = skillData->GetDischarge();
 
-    int32_t targetedEntityID = activated->GetEntityTargeted()
-        ? (int32_t)activated->GetTargetObjectID()
-        : activated->GetSourceEntity()->GetEntityID();
+        int32_t targetedEntityID = activated->GetEntityTargeted()
+            ? (int32_t)activated->GetTargetObjectID()
+            : activated->GetSourceEntity()->GetEntityID();
 
-    auto cdTime = conditionData->GetCooldownTime();
-    auto stiffness = dischargeData->GetStiffness();
-    auto currentTime = state->ToClientTime(ChannelServer::GetServerTime());
+        uint32_t cdTime = conditionData->GetCooldownTime();
+        uint32_t stiffness = dischargeData->GetStiffness();
+        uint64_t currentTime = activated->GetExecutionTime();
 
-    auto cooldownTime = cdTime ? (currentTime + ((float)cdTime * 0.001f)) : 0.f;
-    auto lockOutTime = currentTime + ((float)stiffness * 0.001f);
+        uint64_t cooldownTime = cdTime ? (currentTime + (uint64_t)(cdTime * 1000)) : 0;
+        uint64_t lockOutTime = currentTime + (uint64_t)(stiffness * 1000);
 
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_SKILL_EXECUTING);
-    reply.WriteS32Little(activated->GetSourceEntity()->GetEntityID());
-    reply.WriteU32Little(activated->GetSkillID());
-    reply.WriteS8((int8_t)activated->GetActivationID());
-    reply.WriteS32Little(targetedEntityID);
-    reply.WriteFloat(cooldownTime);
-    reply.WriteFloat(lockOutTime);
-    reply.WriteU32Little((uint32_t)activated->GetHPCost());
-    reply.WriteU32Little((uint32_t)activated->GetMPCost());
-    reply.WriteU8(0);   //Unknown
-    reply.WriteFloat(0);    //Unknown
-    reply.WriteFloat(0);    //Unknown
-    reply.WriteFloat(0);    //Unknown
-    reply.WriteFloat(0);    //Unknown
-    reply.WriteFloat(0);    //Unknown
-    reply.WriteU8(0);   //Unknown
-    reply.WriteU8(0xFF);   //Unknown
+        std::unordered_map<uint32_t, uint64_t> timeMap;
 
-    mServer.lock()->GetZoneManager()->BroadcastPacket(client, reply);
+        libcomp::Packet p;
+        p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_SKILL_EXECUTING);
+        p.WriteS32Little(activated->GetSourceEntity()->GetEntityID());
+        p.WriteU32Little(activated->GetSkillID());
+        p.WriteS8((int8_t)activated->GetActivationID());
+        p.WriteS32Little(targetedEntityID);
+
+        timeMap[15] = cooldownTime;
+        p.WriteFloat(0.f);
+        timeMap[19] = lockOutTime;
+        p.WriteFloat(0.f);
+
+        p.WriteU32Little((uint32_t)activated->GetHPCost());
+        p.WriteU32Little((uint32_t)activated->GetMPCost());
+        p.WriteU8(0);   //Unknown
+        p.WriteFloat(0);    //Unknown
+        p.WriteFloat(0);    //Unknown
+        p.WriteFloat(0);    //Unknown
+        p.WriteFloat(0);    //Unknown
+        p.WriteFloat(0);    //Unknown
+        p.WriteU8(0);   //Unknown
+        p.WriteU8(0xFF);   //Unknown
+
+        ChannelClientConnection::SendRelativeTimePacket(zConnections, p, timeMap);
+    }
 }
 
-void SkillManager::SendCompleteSkill(const std::shared_ptr<ChannelClientConnection> client,
-    std::shared_ptr<objects::ActivatedAbility> activated, bool cancelled)
+void SkillManager::SendCompleteSkill(std::shared_ptr<objects::ActivatedAbility> activated,
+    bool cancelled)
 {
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_SKILL_COMPLETED);
-    reply.WriteS32Little(activated->GetSourceEntity()->GetEntityID());
-    reply.WriteU32Little(activated->GetSkillID());
-    reply.WriteS8((int8_t)activated->GetActivationID());
-    reply.WriteFloat(0);   //Unknown
-    reply.WriteU8(1);   //Unknown
-    reply.WriteFloat(300.0f);   //Run speed
-    reply.WriteU8(cancelled ? 1 : 0);
+    auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated->GetSourceEntity());
+    auto zone = source ? source->GetZone() : nullptr;
+    auto zConnections = zone
+        ? zone->GetConnectionList() : std::list<std::shared_ptr<ChannelClientConnection>>();
+    if(zConnections.size() > 0)
+    {
+        libcomp::Packet p;
+        p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_SKILL_COMPLETED);
+        p.WriteS32Little(activated->GetSourceEntity()->GetEntityID());
+        p.WriteU32Little(activated->GetSkillID());
+        p.WriteS8((int8_t)activated->GetActivationID());
+        p.WriteFloat(0);   //Unknown
+        p.WriteU8(1);   //Unknown
+        p.WriteFloat(300.0f);   //Run speed
+        p.WriteU8(cancelled ? 1 : 0);
 
-    mServer.lock()->GetZoneManager()->BroadcastPacket(client, reply);
+        ChannelClientConnection::BroadcastPacket(zConnections, p);
+    }
 }

@@ -72,13 +72,14 @@ enum class ClientToChannelPacketCode_t : uint16_t
     PACKET_AUTH = 0x0002,   //!< Authorization request.
     PACKET_SEND_DATA = 0x0004,  //!< Request for data from the server.
     PACKET_LOGOUT = 0x0005,  //!< Logout request.
-    PACKET_MOVE = 0x001C,  //!< Request to move an entity or object.
     PACKET_POPULATE_ZONE = 0x0019,  //!< Request to populate a zone with game objects and entities.
+    PACKET_MOVE = 0x001C,  //!< Request to move an entity or object.
+    PACKET_PIVOT = 0x0020,  //!< Request to stop a player entity in place for a set amount of time.
     PACKET_CHAT = 0x0026, //!< Request to add a message to the chat or process a GM command.
     PACKET_TELL = 0x0027, //!< Request to send a chat message to a specific player in the world.
-    PACKET_ACTIVATE_SKILL = 0x0030, //!< Request to activate a player or demon skill.
-    PACKET_EXECUTE_SKILL = 0x0031, //!< Request to execute a skill that has finished charging.
-    PACKET_CANCEL_SKILL = 0x0032, //!< Request to execute a skill that has finished charging.
+    PACKET_SKILL_ACTIVATE = 0x0030, //!< Request to activate a player or demon skill.
+    PACKET_SKILL_EXECUTE = 0x0031, //!< Request to execute a skill that has finished charging.
+    PACKET_SKILL_CANCEL = 0x0032, //!< Request to execute a skill that has finished charging.
     PACKET_ALLOCATE_SKILL_POINT = 0x0049, //!< Request to allocate a skill point for a character.
     PACKET_TOGGLE_EXPERTISE = 0x004F, //!< Request to enable or disable an expertise.
     PACKET_LEARN_SKILL = 0x0051, //!< Request for a character to learn a skill.
@@ -158,6 +159,7 @@ enum class ClientToChannelPacketCode_t : uint16_t
     PACKET_CLAN_DATA = 0x0154,  //!< Request to update clan member information about the current player character.
     PACKET_CLAN_FORM = 0x0156,  //!< Request to form a new clan from a clan formation item.
     PACKET_SYNC_CHARACTER = 0x017E,  //!< Request to sync the player character's basic information.
+    PACKET_PARTNER_DEMON_AI_SET = 0x0181,  //!< Request to update the current partner demon's AI attack settings.
     PACKET_MAP_FLAG = 0x0197,  //!< Request to receive map information.
     PACKET_DEMON_COMPENDIUM = 0x019B,  //!< Request for the Demon Compendium.
     PACKET_DUNGEON_RECORDS = 0x01C4,  //!< Request for the current player's dungeon challenge records.

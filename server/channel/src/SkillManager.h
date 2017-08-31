@@ -43,7 +43,9 @@ namespace channel
 
 class ProcessingSkill;
 class SkillTargetResult;
+
 class ActiveEntityState;
+class AIState;
 class ChannelServer;
 
 /**
@@ -68,56 +70,61 @@ public:
      * Activate the skill of a character or demon. The client will have the
      * charge information sent to it if there is a charge time, otherwise
      * it will execute automatically.
-     * @param client Pointer to the client connection that activated the skill
+     * @param source Pointer of the entity that activated the skill
      * @param skillID ID of the skill to activate
-     * @param sourceEntityID ID of the entity that activated the skill
      * @param targetObjectID ID of the object being targeted by the skill
+     * @param freeCast true if no costs need to be paid, false if they need to be
+     *  paid normally, defaults to false
      * @return true if the skill was activated successfully, false otherwise
      */
-    bool ActivateSkill(const std::shared_ptr<ChannelClientConnection> client,
-        uint32_t skillID, int32_t sourceEntityID, int64_t targetObjectID);
+    bool ActivateSkill(const std::shared_ptr<ActiveEntityState> source,
+        uint32_t skillID, int64_t targetObjectID, bool freeCast = false);
 
     /**
      * Execute the skill of a character or demon.
-     * @param client Pointer to the client connection that activated the skill
-     * @param sourceEntityID ID of the entity that activated the skill
+     * @param source Pointer of the entity that is executing the skill
      * @param activationID ID of the activated ability instance
      * @param targetObjectID ID of the object being targeted by the skill
+     * @param freeCast true if no costs need to be paid, false if they need to be
+     *  paid normally, defaults to false
      * @return true if the skill was executed successfully, false otherwise
      */
-    bool ExecuteSkill(const std::shared_ptr<ChannelClientConnection> client,
-        int32_t sourceEntityID, uint8_t activationID, int64_t targetObjectID);
+    bool ExecuteSkill(const std::shared_ptr<ActiveEntityState> source,
+        uint8_t activationID, int64_t targetObjectID, bool freeCast = false);
 
     /**
      * Cancel the activated skill of a character or demon.
-     * @param client Pointer to the client connection that activated the skill
-     * @param sourceEntityID ID of the entity that activated the skill
+     * @param source Pointer of the entity that is cancelling the skill
      * @param activationID ID of the activated ability instance
      * @return true if the skill was cancelled successfully, false otherwise
      */
-    bool CancelSkill(const std::shared_ptr<ChannelClientConnection> client,
-        int32_t sourceEntityID, uint8_t activationID);
+    bool CancelSkill(const std::shared_ptr<ActiveEntityState> source,
+        uint8_t activationID);
 
     /**
      * Notify the client that a skill failed activation or execution.
-     * @param client Pointer to the client connection that activated the skill
-     * @param sourceEntityID ID of the entity that activated the skill
+     * @param source Pointer of the entity that the skill failed for
      * @param skillID ID of the skill to activate
+     * @param client Optional parameter, pointer to the client connection
+     *  that should be sent the failure instead of the entire zone
      */
-    void SendFailure(const std::shared_ptr<ChannelClientConnection> client,
-        int32_t sourceEntityID, uint32_t skillID);
+    void SendFailure(const std::shared_ptr<ActiveEntityState> source, uint32_t skillID,
+        const std::shared_ptr<ChannelClientConnection> client = nullptr);
 
 private:
     /**
      * Pay any costs related to and execute the skill of a character or demon.
-     * @param client Pointer to the client connection that activated the skill
-     * @param sourceState Pointer to the state of the source entity
+     * @param source Pointer to the state of the source entity
      * @param activated Pointer to the activated ability instance
+     * @param client Pointer to the client connection, can be null if not coming
+     *  from a player entity
+     * @param freeCast true if no costs need to be paid, false if they need to be
+     *  paid normally
      * @return true if the skill was executed successfully, false otherwise
      */
-    bool ExecuteSkill(const std::shared_ptr<ChannelClientConnection> client,
-        std::shared_ptr<ActiveEntityState> sourceState,
-        std::shared_ptr<objects::ActivatedAbility> activated);
+    bool ExecuteSkill(std::shared_ptr<ActiveEntityState> source,
+        std::shared_ptr<objects::ActivatedAbility> activated,
+        const std::shared_ptr<ChannelClientConnection> client, bool freeCast);
 
     /**
      * Execute a normal skill, not handled by a special handler.
@@ -146,7 +153,7 @@ private:
      * @param killed Set of entities killed by the skill's execution
      */
     void HandleKills(const std::shared_ptr<ActiveEntityState> source,
-        const std::shared_ptr<Zone> zone,
+        const std::shared_ptr<Zone>& zone,
         const std::set<std::shared_ptr<ActiveEntityState>> killed);
 
     /**
@@ -158,7 +165,7 @@ private:
      *  the skill source and their respective outcomes related to respons flags
      */
     void HandleNegotiations(const std::shared_ptr<ActiveEntityState> source,
-        const std::shared_ptr<Zone> zone,
+        const std::shared_ptr<Zone>& zone,
         const std::list<std::pair<std::shared_ptr<ActiveEntityState>,
         uint8_t>> talkDone);
 
@@ -282,97 +289,99 @@ private:
     /**
      * Placeholder function for a skill actually handled outside of the
      * SkillManager.
-     * @param client Pointer to the client connection that activated the skill
      * @param activated Pointer to the activated ability instance
+     * @param client Pointer to the client connection that activated the skill,
+     *  can be null for non-player entity sources
      */
-    bool SpecialSkill(const std::shared_ptr<ChannelClientConnection> client,
-        std::shared_ptr<objects::ActivatedAbility> activated);
+    bool SpecialSkill(const std::shared_ptr<objects::ActivatedAbility>& activated,
+        const std::shared_ptr<ChannelClientConnection>& client);
 
     /**
      * Execute the "equip item" skill.
-     * @param client Pointer to the client connection that activated the skill
      * @param activated Pointer to the activated ability instance
+     * @param client Pointer to the client connection that activated the skill,
+     *  this will always fail if it is null
      */
-    bool EquipItem(const std::shared_ptr<ChannelClientConnection> client,
-        std::shared_ptr<objects::ActivatedAbility> activated);
+    bool EquipItem(const std::shared_ptr<objects::ActivatedAbility>& activated,
+        const std::shared_ptr<ChannelClientConnection>& client);
 
     /**
      * Execute a familiarity boosting skill.
-     * @param client Pointer to the client connection that activated the skill
      * @param activated Pointer to the activated ability instance
+     * @param client Pointer to the client connection that activated the skill,
+     *  this will always fail if it is null
      */
-    bool FamiliarityUp(const std::shared_ptr<ChannelClientConnection> client,
-        std::shared_ptr<objects::ActivatedAbility> activated);
+    bool FamiliarityUp(const std::shared_ptr<objects::ActivatedAbility>& activated,
+        const std::shared_ptr<ChannelClientConnection>& client);
 
     /**
      * Execute a familiarity boosting skill from an item. These work slightly
      * different from the standard skill ones as they can adjust a delta percent
      * instead of a fixed value.
-     * @param client Pointer to the client connection that activated the skill
      * @param activated Pointer to the activated ability instance
+     * @param client Pointer to the client connection that activated the skill,
+     *  this will always fail if it is null
      */
-    bool FamiliarityUpItem(const std::shared_ptr<ChannelClientConnection> client,
-        std::shared_ptr<objects::ActivatedAbility> activated);
+    bool FamiliarityUpItem(const std::shared_ptr<objects::ActivatedAbility>& activated,
+        const std::shared_ptr<ChannelClientConnection>& client);
 
     /**
      * Execute the "Mooch" skill.
-     * @param client Pointer to the client connection that activated the skill
      * @param activated Pointer to the activated ability instance
+     * @param client Pointer to the client connection that activated the skill,
+     *  this will always fail if it is null
      */
-    bool Mooch(const std::shared_ptr<ChannelClientConnection> client,
-        std::shared_ptr<objects::ActivatedAbility> activated);
+    bool Mooch(const std::shared_ptr<objects::ActivatedAbility>& activated,
+        const std::shared_ptr<ChannelClientConnection>& client);
 
     /**
      * Execute the "summon demon" skill.
-     * @param client Pointer to the client connection that activated the skill
      * @param activated Pointer to the activated ability instance
+     * @param client Pointer to the client connection that activated the skill,
+     *  this will always fail if it is null
      */
-    bool SummonDemon(const std::shared_ptr<ChannelClientConnection> client,
-        std::shared_ptr<objects::ActivatedAbility> activated);
+    bool SummonDemon(const std::shared_ptr<objects::ActivatedAbility>& activated,
+        const std::shared_ptr<ChannelClientConnection>& client);
 
     /**
      * Execute the "store demon" skill.
-     * @param client Pointer to the client connection that activated the skill
      * @param activated Pointer to the activated ability instance
+     * @param client Pointer to the client connection that activated the skill,
+     *  this will always fail if it is null
      */
-    bool StoreDemon(const std::shared_ptr<ChannelClientConnection> client,
-        std::shared_ptr<objects::ActivatedAbility> activated);
+    bool StoreDemon(const std::shared_ptr<objects::ActivatedAbility>& activated,
+        const std::shared_ptr<ChannelClientConnection>& client);
 
     /**
      * Execute the skill "Traesto" which returns the user to their homepoint.
-     * @param client Pointer to the client connection that activated the skill
      * @param activated Pointer to the activated ability instance
+     * @param client Pointer to the client connection that activated the skill,
+     *  this will always fail if it is null
      */
-    bool Traesto(const std::shared_ptr<ChannelClientConnection> client,
-        std::shared_ptr<objects::ActivatedAbility> activated);
+    bool Traesto(const std::shared_ptr<objects::ActivatedAbility>& activated,
+        const std::shared_ptr<ChannelClientConnection>& client);
 
     /**
      * Notify the client that a skill needs to charge.  The client will notify
      * the server when the specified charge time has elapsed for execution.
-     * @param client Pointer to the client connection that activated the skill
      * @param activated Pointer to the activated ability instance
      */
-    void SendChargeSkill(const std::shared_ptr<ChannelClientConnection> client,
-        std::shared_ptr<objects::ActivatedAbility> activated);
+    void SendChargeSkill(std::shared_ptr<objects::ActivatedAbility> activated);
 
     /**
      * Notify the client that a skill is executing.
-     * @param client Pointer to the client connection that activated the skill
      * @param activated Pointer to the activated ability instance
      * @param skillData Pointer to the skill data
      */
-    void SendExecuteSkill(const std::shared_ptr<ChannelClientConnection> client,
-        std::shared_ptr<objects::ActivatedAbility> activated,
+    void SendExecuteSkill(std::shared_ptr<objects::ActivatedAbility> activated,
         std::shared_ptr<objects::MiSkillData> skillData);
 
     /**
      * Notify the client that a skill is complete.
-     * @param client Pointer to the client connection that activated the skill
      * @param activated Pointer to the activated ability instance
      * @param cancelled true if the skill was cancelled
      */
-    void SendCompleteSkill(const std::shared_ptr<ChannelClientConnection> client,
-        std::shared_ptr<objects::ActivatedAbility> activated,
+    void SendCompleteSkill(std::shared_ptr<objects::ActivatedAbility> activated,
         bool cancelled);
 
     /// Pointer to the channel server
@@ -380,8 +389,8 @@ private:
 
     /// List of skill function IDs mapped to manager functions.
     std::unordered_map<uint16_t, std::function<bool(SkillManager&,
-        const std::shared_ptr<channel::ChannelClientConnection>&,
-        std::shared_ptr<objects::ActivatedAbility>&)>> mSkillFunctions;
+        const std::shared_ptr<objects::ActivatedAbility>&,
+        const std::shared_ptr<channel::ChannelClientConnection>&)>> mSkillFunctions;
 };
 
 } // namespace channel

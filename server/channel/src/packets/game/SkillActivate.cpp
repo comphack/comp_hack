@@ -1,5 +1,5 @@
 /**
- * @file server/channel/src/packets/game/ActivateSkill.cpp
+ * @file server/channel/src/packets/game/SkillActivate.cpp
  * @ingroup channel
  *
  * @author HACKfrost
@@ -35,14 +35,7 @@
 
 using namespace channel;
 
-void SkillActivation(SkillManager* server,
-    const std::shared_ptr<ChannelClientConnection> client,
-    uint32_t skillID, int32_t sourceEntityID, int64_t targetObjectID)
-{
-    server->ActivateSkill(client, skillID, sourceEntityID, targetObjectID);
-}
-
-bool Parsers::ActivateSkill::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::SkillActivate::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {
@@ -53,6 +46,7 @@ bool Parsers::ActivateSkill::Parse(libcomp::ManagerPacket *pPacketManager,
 
     auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
     auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+    auto state = client->GetClientState();
     auto skillManager = server->GetSkillManager();
 
     int32_t sourceEntityID = p.ReadS32Little();
@@ -61,6 +55,14 @@ bool Parsers::ActivateSkill::Parse(libcomp::ManagerPacket *pPacketManager,
     uint32_t targetType = p.ReadU32Little();
     if(targetType != ACTIVATION_NOTARGET && p.Left() == 0)
     {
+        LOG_ERROR("Invalid skill target type sent from client\n");
+        return false;
+    }
+
+    auto source = state->GetEntityState(sourceEntityID);
+    if(!source)
+    {
+        LOG_ERROR("Invalid skill source sent from client for skill activation\n");
         return false;
     }
 
@@ -81,13 +83,17 @@ bool Parsers::ActivateSkill::Parse(libcomp::ManagerPacket *pPacketManager,
             {
                 LOG_ERROR(libcomp::String("Unknown skill target type encountered: %1\n")
                     .Arg(targetType));
-                skillManager->SendFailure(client, sourceEntityID, skillID);
+                skillManager->SendFailure(source, skillID, client);
                 return true;
             }
             break;
     }
 
-    server->QueueWork(SkillActivation, skillManager, client, skillID, sourceEntityID, targetObjectID);
+    server->QueueWork([](SkillManager* pSkillManager, const std::shared_ptr<
+        ActiveEntityState> pSource, uint32_t pSkillID, int64_t pTargetObjectID)
+        {
+            pSkillManager->ActivateSkill(pSource, pSkillID, pTargetObjectID);
+        }, skillManager, source, skillID, targetObjectID);
 
     return true;
 }

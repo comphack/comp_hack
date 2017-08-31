@@ -43,11 +43,12 @@ PACKET_PARSER_DECL(SendData);               // 0x0004
 PACKET_PARSER_DECL(Logout);                 // 0x0005
 PACKET_PARSER_DECL(PopulateZone);           // 0x0019
 PACKET_PARSER_DECL(Move);                   // 0x001C
+PACKET_PARSER_DECL(Pivot);                  // 0x0020
 PACKET_PARSER_DECL(Chat);                   // 0x0026
 PACKET_PARSER_DECL(Tell);                   // 0x0027
-PACKET_PARSER_DECL(ActivateSkill);          // 0x0030
-PACKET_PARSER_DECL(ExecuteSkill);           // 0x0031
-PACKET_PARSER_DECL(CancelSkill);            // 0x0032
+PACKET_PARSER_DECL(SkillActivate);          // 0x0030
+PACKET_PARSER_DECL(SkillExecute);           // 0x0031
+PACKET_PARSER_DECL(SkillCancel);            // 0x0032
 PACKET_PARSER_DECL(AllocateSkillPoint);     // 0x0049
 PACKET_PARSER_DECL(ToggleExpertise);        // 0x004F
 PACKET_PARSER_DECL(LearnSkill);             // 0x0051
@@ -125,6 +126,7 @@ PACKET_PARSER_DECL(ClanList);               // 0x0152
 PACKET_PARSER_DECL(ClanData);               // 0x0154
 PACKET_PARSER_DECL(ClanForm);               // 0x0156
 PACKET_PARSER_DECL(SyncCharacter);          // 0x017E
+PACKET_PARSER_DECL(PartnerDemonAISet);      // 0x0181
 PACKET_PARSER_DECL(MapFlag);                // 0x0197
 PACKET_PARSER_DECL(DemonCompendium);        // 0x019B
 PACKET_PARSER_DECL(DungeonRecords);         // 0x01C4

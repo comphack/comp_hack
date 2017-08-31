@@ -131,7 +131,7 @@ bool Parsers::ClanForm::Parse(libcomp::ManagerPacket *pPacketManager,
 
         client->SendPacket(reply);
 
-        server->GetSkillManager()->CancelSkill(client, entityID, (uint8_t)activationID);
+        server->GetSkillManager()->CancelSkill(sourceState, (uint8_t)activationID);
     }
 
     return true;

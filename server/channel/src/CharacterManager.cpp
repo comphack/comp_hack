@@ -37,6 +37,7 @@
 #include <math.h>
 
 // channel Includes
+#include "AIState.h"
 #include "ChannelServer.h"
 
 // object Includes
@@ -2622,6 +2623,12 @@ bool CharacterManager::AddRemoveOpponent(bool add, const std::shared_ptr<
 
         for(auto entity : battleStarted)
         {
+            auto aiState = entity->GetAIState();
+            if(aiState)
+            {
+                aiState->SetStatus(AIStatus_t::COMBAT);
+            }
+
             libcomp::Packet p;
             p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_BATTLE_STARTED);
             p.WriteS32Little(entity->GetEntityID());
@@ -2679,6 +2686,12 @@ bool CharacterManager::AddRemoveOpponent(bool add, const std::shared_ptr<
 
         for(auto entity : battleStopped)
         {
+            auto aiState = entity->GetAIState();
+            if(aiState)
+            {
+                aiState->SetStatus(aiState->GetDefaultStatus());
+            }
+
             libcomp::Packet p;
             p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_BATTLE_STOPPED);
             p.WriteS32Little(entity->GetEntityID());

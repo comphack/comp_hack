@@ -52,8 +52,6 @@ bool Parsers::Move::Parse(libcomp::ManagerPacket *pPacketManager,
     auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
     auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
     auto state = client->GetClientState();
-    auto cState = state->GetCharacterState();
-    auto dState = state->GetDemonState();
 
     int32_t entityID = p.ReadS32Little();
 
@@ -80,6 +78,15 @@ bool Parsers::Move::Parse(libcomp::ManagerPacket *pPacketManager,
 
     /// @todo: Determine if the player's movement was valid (collisions, triggers etc)
     bool positionCorrected = false;
+    bool stopped = false;
+
+    eState->ExpireStatusTimes(ChannelServer::GetServerTime());
+    if(!eState->CanMove())
+    {
+        stopped = positionCorrected = true;
+        destX = originX;
+        destY = originY;
+    }
 
     /*float deltaX = destX - originX;
     float deltaY = destY - originY;
@@ -113,8 +120,17 @@ bool Parsers::Move::Parse(libcomp::ManagerPacket *pPacketManager,
 
     /// @todo: Fire zone triggers
 
-    auto zoneConnections = server->GetZoneManager()->GetZoneConnections(client,
-        positionCorrected);
+    std::list<std::shared_ptr<ChannelClientConnection>> zoneConnections;
+    if(stopped)
+    {
+        zoneConnections.push_back(client);
+    }
+    else
+    {
+        zoneConnections = server->GetZoneManager()->GetZoneConnections(client,
+            positionCorrected);
+    }
+
     if(zoneConnections.size() > 0)
     {
         libcomp::Packet reply;

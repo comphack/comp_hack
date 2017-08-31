@@ -39,6 +39,9 @@ SET(${PROJECT_NAME}_SRCS
     src/AccountManager.cpp
     src/ActionManager.cpp
     src/ActiveEntityState.cpp
+    src/AICommand.cpp
+    src/AIManager.cpp
+    src/AIState.cpp
     src/ChannelClientConnection.cpp
     src/ChannelServer.cpp
     src/CharacterManager.cpp
@@ -61,6 +64,9 @@ SET(${PROJECT_NAME}_HDRS
     src/AccountManager.h
     src/ActionManager.h
     src/ActiveEntityState.h
+    src/AICommand.h
+    src/AIManager.h
+    src/AIState.h
     src/ChannelClientConnection.h
     src/ChannelServer.h
     src/CharacterManager.h
@@ -133,11 +139,12 @@ SET(${PROJECT_NAME}_PACKETS
     src/packets/game/Logout.cpp                 # 0x0005
     src/packets/game/PopulateZone.cpp           # 0x0019
     src/packets/game/Move.cpp                   # 0x001C
+    src/packets/game/Pivot.cpp                  # 0x0020
     src/packets/game/Chat.cpp                   # 0x0026
     src/packets/game/Tell.cpp                   # 0x0027
-    src/packets/game/ActivateSkill.cpp          # 0x0030
-    src/packets/game/ExecuteSkill.cpp           # 0x0031
-    src/packets/game/CancelSkill.cpp            # 0x0032
+    src/packets/game/SkillActivate.cpp          # 0x0030
+    src/packets/game/SkillExecute.cpp           # 0x0031
+    src/packets/game/SkillCancel.cpp            # 0x0032
     src/packets/game/AllocateSkillPoint.cpp     # 0x0049
     src/packets/game/ToggleExpertise.cpp        # 0x004F
     src/packets/game/LearnSkill.cpp             # 0x0051
@@ -215,6 +222,7 @@ SET(${PROJECT_NAME}_PACKETS
     src/packets/game/ClanData.cpp               # 0x0154
     src/packets/game/ClanForm.cpp               # 0x0156
     src/packets/game/SyncCharacter.cpp          # 0x017E
+    src/packets/game/PartnerDemonAISet.cpp      # 0x0181
     src/packets/game/MapFlag.cpp                # 0x0197
     src/packets/game/DemonCompendium.cpp        # 0x019B
     src/packets/game/DungeonRecords.cpp         # 0x01C4

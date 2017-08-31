@@ -1,5 +1,5 @@
 /**
- * @file server/channel/src/packets/game/CancelSkill.cpp
+ * @file server/channel/src/packets/game/SkillCancel.cpp
  * @ingroup channel
  *
  * @author HACKfrost
@@ -35,14 +35,7 @@
 
 using namespace channel;
 
-void SkillCancellation(SkillManager* skillManager,
-    const std::shared_ptr<ChannelClientConnection> client,
-    int32_t sourceEntityID, uint8_t activationID)
-{
-    skillManager->CancelSkill(client, sourceEntityID, activationID);
-}
-
-bool Parsers::CancelSkill::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::SkillCancel::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {
@@ -53,12 +46,24 @@ bool Parsers::CancelSkill::Parse(libcomp::ManagerPacket *pPacketManager,
 
     auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
     auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+    auto state = client->GetClientState();
     auto skillManager = server->GetSkillManager();
 
     int32_t sourceEntityID = p.ReadS32Little();
     uint8_t activationID = p.ReadU8();
+    
+    auto source = state->GetEntityState(sourceEntityID);
+    if(!source)
+    {
+        LOG_ERROR("Invalid skill source sent from client for skill cancellation\n");
+        return false;
+    }
 
-    server->QueueWork(SkillCancellation, skillManager, client, sourceEntityID, activationID);
+    server->QueueWork([](SkillManager* pSkillManager, const std::shared_ptr<
+        ActiveEntityState> pSource, uint8_t pActivationID)
+        {
+            pSkillManager->CancelSkill(pSource, pActivationID);
+        }, skillManager, source, activationID);
 
     return true;
 }

@@ -53,6 +53,7 @@
 #include <TradeSession.h>
 
 // channel Includes
+#include "AIState.h"
 #include "ChannelServer.h"
 #include "Zone.h"
 
@@ -888,9 +889,7 @@ bool ZoneManager::SpawnEnemy(const std::shared_ptr<Zone>& zone, uint32_t demonID
     auto eState = CreateEnemy(zone, demonID, x, y, rot);
 
     auto server = mServer.lock();
-    auto serverDataManager = server->GetServerDataManager();
-
-    eState->Prepare(eState, aiType, serverDataManager);
+    server->GetAIManager()->Prepare(eState, aiType);
     zone->AddEnemy(eState);
 
     //If anyone is currently connected, immediately send the enemy's info
@@ -984,11 +983,15 @@ void ZoneManager::UpdateSpawnGroups(const std::shared_ptr<Zone>& zone,
     if(eStates.size() > 0)
     {
         auto server = mServer.lock();
-        auto serverDataManager = server->GetServerDataManager();
-
+        auto aiManager = server->GetAIManager();
         for(auto eState : eStates)
         {
-            eState->Prepare(eState, "default", serverDataManager);
+            if(aiManager->Prepare(eState))
+            {
+                /// @todo: change this for enemies that don't wander
+                eState->GetAIState()->SetStatus(AIStatus_t::WANDERING, true);
+            }
+
             zone->AddEnemy(eState);
         }
 
@@ -1074,98 +1077,16 @@ void ZoneManager::UpdateActiveZoneStates()
     }
 
     auto serverTime = ChannelServer::GetServerTime();
-    std::set<std::shared_ptr<ChannelClientConnection>> clients;
+    auto aiManager = mServer.lock()->GetAIManager();
+
     for(auto instance : instances)
     {
-        std::list<std::shared_ptr<EnemyState>> updated;
-        for(auto enemy : instance->GetEnemies())
-        {
-            if(enemy->UpdateState(serverTime))
-            {
-                updated.push_back(enemy);
-            }
-        }
-
-        // Update enemy states first
-        if(updated.size() > 0)
-        {
-            auto zConnections = instance->GetConnectionList();
-            std::unordered_map<uint32_t, uint64_t> timeMap;
-            for(auto enemy : updated)
-            {
-                // Update the clients with what the enemy is doing
-
-                // Check if the enemy's position or rotation has updated
-                if(serverTime == enemy->GetOriginTicks())
-                {
-                    if(enemy->IsMoving())
-                    {
-                        libcomp::Packet p;
-                        p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_MOVE);
-                        p.WriteS32Little(enemy->GetEntityID());
-                        p.WriteFloat(enemy->GetDestinationX());
-                        p.WriteFloat(enemy->GetDestinationY());
-                        p.WriteFloat(enemy->GetOriginX());
-                        p.WriteFloat(enemy->GetOriginY());
-                        p.WriteFloat(1.f);      /// @todo: correct rate per second
-
-                        timeMap[p.Size()] = serverTime;
-                        timeMap[p.Size() + 4] = enemy->GetDestinationTicks();
-                        ChannelClientConnection::SendRelativeTimePacket(zConnections, p,
-                            timeMap, true);
-                    }
-                    else if(enemy->IsRotating())
-                    {
-                        libcomp::Packet p;
-                        p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_ROTATE);
-                        p.WriteS32Little(enemy->GetEntityID());
-                        p.WriteFloat(enemy->GetDestinationRotation());
-
-                        timeMap[p.Size()] = serverTime;
-                        timeMap[p.Size() + 4] = enemy->GetDestinationTicks();
-                        ChannelClientConnection::SendRelativeTimePacket(zConnections, p,
-                            timeMap, true);
-                    }
-                    else
-                    {
-                        // The movement was actually a stop
-
-                        libcomp::Packet p;
-                        p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_STOP_MOVEMENT);
-                        p.WriteS32Little(enemy->GetEntityID());
-                        p.WriteFloat(enemy->GetDestinationX());
-                        p.WriteFloat(enemy->GetDestinationY());
-
-                        timeMap[p.Size()] = enemy->GetDestinationTicks();
-                        ChannelClientConnection::SendRelativeTimePacket(zConnections, p,
-                            timeMap, true);
-                    }
-                }
-
-                /// @todo: check for ability usage
-            }
-
-            for(auto client : zConnections)
-            {
-                clients.insert(client);
-            }
-        }
+        // Update active AI controlled entities
+        aiManager->UpdateActiveStates(instance, serverTime);
 
         // Spawn new enemies next (since they should not immediately act)
         UpdateSpawnGroups(instance, false, serverTime);
     }
-
-    // Send all of the updates
-    for(auto client : clients)
-    {
-        client->FlushOutgoing();
-    }
-}
-
-std::pair<float, float> ZoneManager::GetRandomPoint(float width, float height) const
-{
-    return std::pair<float, float>(RNG_DEC(float, 0.f, (float)fabs(width), 2),
-        RNG_DEC(float, 0.f, (float)fabs(height), 2));
 }
 
 void ZoneManager::Warp(const std::shared_ptr<ChannelClientConnection>& client,
@@ -1197,6 +1118,61 @@ void ZoneManager::Warp(const std::shared_ptr<ChannelClientConnection>& client,
 
     auto connections = server->GetZoneManager()->GetZoneConnections(client, true);
     ChannelClientConnection::SendRelativeTimePacket(connections, p, timeMap);
+}
+
+std::pair<float, float> ZoneManager::GetRandomPoint(float width, float height) const
+{
+    return std::pair<float, float>(RNG_DEC(float, 0.f, (float)fabs(width), 2),
+        RNG_DEC(float, 0.f, (float)fabs(height), 2));
+}
+
+std::pair<float, float> ZoneManager::GetLinearPoint(float sourceX, float sourceY,
+    float targetX, float targetY, float distance, bool away)
+{
+    std::pair<float, float> dest(sourceX, sourceY);
+    if(targetX != sourceX)
+    {
+        float slope = (targetY - sourceY)/(targetX - sourceX);
+        float denom = (float)std::sqrt(1.0f + std::pow(slope, 2));
+
+        float xOffset = (float)(distance / denom);
+        float yOffset = (float)fabs((slope * distance) / denom);
+
+        dest.first = (away == (targetX > sourceX))
+            ? (sourceX - xOffset) : (sourceX + xOffset);
+        dest.second = (away == (targetY > sourceY))
+            ? (sourceY - yOffset) : (sourceY + yOffset);
+    }
+    else if(targetY != sourceY)
+    {
+        float yOffset = (float)((targetY - sourceY)/distance);
+
+        dest.second = (away == (targetY > sourceY))
+            ? (sourceY - yOffset) : (sourceY + yOffset);
+    }
+
+    return dest;
+}
+
+void ZoneManager::MoveRelative(const std::shared_ptr<ActiveEntityState>& eState,
+    float targetX, float targetY, float distance, bool away,
+    uint64_t now, uint64_t endTime)
+{
+    float x = eState->GetCurrentX();
+    float y = eState->GetCurrentY();
+
+    auto point = GetLinearPoint(x, y, targetX, targetY, distance, away);
+
+    if(point.first != x || point.second != y)
+    {
+        eState->SetOriginX(x);
+        eState->SetOriginY(y);
+        eState->SetOriginTicks(now);
+
+        eState->SetDestinationX(point.first);
+        eState->SetDestinationY(point.second);
+        eState->SetDestinationTicks(endTime);
+    }
 }
 
 std::shared_ptr<Zone> ZoneManager::GetZone(uint32_t zoneID)

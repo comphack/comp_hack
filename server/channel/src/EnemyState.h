@@ -30,14 +30,6 @@
 // objects Includes
 #include <ActiveEntityState.h>
 #include <Enemy.h>
-#include <LootBox.h>
-
-#include <ScriptEngine.h>
-
-namespace libcomp
-{
-class ServerDataManager;
-}
 
 namespace channel
 {
@@ -60,40 +52,6 @@ public:
     virtual ~EnemyState() { }
 
     /**
-     * Prepare the enemy for use following the setting of all necessary
-     * data.
-     * @param self Pointer back to the enemy state
-     * @param aiType AI script type to bind to the enemy
-     * @param dataManager Pointer to the server's data manager for loading
-     *  the AI script new if needed
-     * @return true on sucess false if something failed
-     */
-    bool Prepare(const std::weak_ptr<EnemyState>& self,
-        const libcomp::String& aiType, libcomp::ServerDataManager* dataManager);
-
-    /**
-     * Update the state of the enemy, processing AI and performing other
-     * related actions.
-     * @param now Current timestamp of the server
-     * @return true on success, false otherwise
-     */
-    bool UpdateState(uint64_t now);
-
-    /**
-     * Retrieves a timestamp associated to an enemy specific action.
-     * @param action Name of the action to retrieve information from
-     * @return Timestamp associated to the action or 0 if not found
-     */
-    uint64_t GetActionTime(const libcomp::String& action);
-
-    /**
-     * Stores a timestamp associated to an enemy specific action.
-     * @param action Name of the action to store
-     * @param time Timestamp of the specified action
-     */
-    void SetActionTime(const libcomp::String& action, uint64_t time);
-
-    /**
      * Get the current negotiation point value associated to the
      * the enemy contextual to the supplied player character entity ID
      * @param entityID ID of the player character entity talking to the
@@ -113,25 +71,11 @@ public:
     void SetTalkPoints(int32_t entityID, const std::pair<uint8_t, uint8_t>& points);
 
 private:
-    /// Static map of scripts that have been loaded and compiled
-    /// by AI type name
-    static std::unordered_map<std::string,
-        std::shared_ptr<libcomp::ScriptEngine>> sPreparedScripts;
-
-    /// Map of timestamps associated to enemy specific actions
-    std::unordered_map<std::string, uint64_t> mActionTimes;
-
-    /// Pointer to the AI script bound to the enemy
-    std::shared_ptr<libcomp::ScriptEngine> mAIScript;
-
     /// Player local entity IDs mapped to the enemy's current talk skill
     /// related points: affability then fear. If either of these
     /// exceeds the demon's set threshold, negotiation will end.
     std::unordered_map<int32_t,
         std::pair<uint8_t, uint8_t>> mTalkPoints;
-
-    /// Pointer back to the entity
-    std::weak_ptr<EnemyState> mSelf;
 };
 
 } // namespace channel

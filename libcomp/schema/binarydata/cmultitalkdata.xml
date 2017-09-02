@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="MiMultiTalkCmdTbl" persistent="false">
+        <member type="u8" name="Command1"/>
+        <member type="u8" name="Command2"/>
+        <member type="u16" name="Command3"/>
+        <member type="u32" name="Command4"/>
+        <member type="u32" name="Command5"/>
+        <member type="u32" name="Command6"/>
+        <member type="u32" name="Command7"/>
+        <member type="u32" name="Command8"/>
+        <member type="u32" name="Command9"/>
+        <member type="u32" name="Command10"/>
+        <member type="u32" name="Command11"/>
+        <member type="f32" name="Command12"/>
+        <member type="f32" name="Command13"/>
+        <member type="f32" name="Command14"/>
+        <member type="f32" name="Command15"/>
+        <member type="f32" name="Command16"/>
+        <member type="f32" name="Command17"/>
+        <member type="f32" name="Command18"/>
+        <member type="f32" name="Command19"/>
+        <member type="string" length="132" name="Command20"
+            encoding="cp932"/>
+        <member type="string" length="132" name="Command21"
+            encoding="cp932"/>
+    </object>
+    <object name="MiCMultiTalkData" persistent="false">
+        <member type="u32" name="ID"/>
+        <member type="list" name="Commands">
+            <element type="MiMultiTalkCmdTbl*"/>
+        </member>
+    </object>
+</objgen>

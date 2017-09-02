@@ -95,3 +95,4 @@ script:
   - cmake --build . --target doc
   - cmake --build . --target guide
   - cmake --build . --target test
+  - if [ "$CXX"  != "clang++" ]; then cmake --build . --target coveralls; fi

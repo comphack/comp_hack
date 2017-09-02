@@ -662,7 +662,8 @@ String String::Arg(float a, int fieldWidth, int base, char fillChar)
     ss.width(fieldWidth);
     ss.fill(fillChar);
 
-    ss << std::setbase(base) << a;
+    ss << std::setprecision(std::numeric_limits<float>::max_digits10 + 1)
+        << std::setbase(base) << a;
 
     return Arg(String(ss.str()));
 }
@@ -673,7 +674,8 @@ String String::Arg(double a, int fieldWidth, int base, char fillChar)
     ss.width(fieldWidth);
     ss.fill(fillChar);
 
-    ss << std::setbase(base) << a;
+    ss << std::setprecision(std::numeric_limits<double>::max_digits10 + 1)
+        << std::setbase(base) << a;
 
     return Arg(String(ss.str()));
 }

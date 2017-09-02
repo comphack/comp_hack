@@ -30,14 +30,20 @@ PROJECT(comp_hack)
 # Print the CMake version for debugging.
 MESSAGE("-- CMake version: ${CMAKE_VERSION}")
 
+# Our custom cmake modules.
+SET(COMP_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
+
 # Include our custom cmake modules.
-SET(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
+SET(CMAKE_MODULE_PATH
+    ${COMP_MODULE_PATH}
+    ${CMAKE_SOURCE_DIR}/coveralls-cmake/cmake
+)
 
 # Utilities to add and remove compiler flags.
-INCLUDE(${CMAKE_MODULE_PATH}/flags.cmake)
+INCLUDE(${COMP_MODULE_PATH}/flags.cmake)
 
 # Utilities for building with MSVC.
-INCLUDE(${CMAKE_MODULE_PATH}/msvc.cmake)
+INCLUDE(${COMP_MODULE_PATH}/msvc.cmake)
 
 # Option for the static runtime on Windows.
 OPTION(USE_STATIC_RUNTIME "Use the static MSVC runtime." OFF)
@@ -70,7 +76,14 @@ ELSE()
     MESSAGE(WARNING "You are using an unsupported compiler!")
 ENDIF()
 
-INCLUDE(${CMAKE_MODULE_PATH}/DetermineOS.cmake)
+INCLUDE(${COMP_MODULE_PATH}/DetermineOS.cmake)
+
+# If code coverage should be generated.
+OPTION(COVERALLS "Generate coveralls code coverage data." OFF)
+
+IF(COVERALLS)
+    INCLUDE(Coveralls)
+ENDIF(COVERALLS)
 
 # If the build should be optimized.
 OPTION(BUILD_OPTIMIZED "Build an optimized release of the server." ON)
@@ -82,7 +95,7 @@ ELSE()
 ENDIF()
 
 # Include all build code for external projects.
-INCLUDE(${CMAKE_MODULE_PATH}/external.cmake)
+INCLUDE(${COMP_MODULE_PATH}/external.cmake)
 
 # PDB not found for library.
 ADD_LINKER_FLAGS(AUTO /ignore:4099)
@@ -164,6 +177,12 @@ ADD_COMPILER_FLAGS(AUTO -Werror -Wall -Wextra -Wshadow
 # the application or library.
 ADD_EXE_LINKER_FLAGS(AUTO -Wl,--no-undefined)
 
+# Code coverage flags.
+IF(COVERALLS)
+    ADD_COMPILER_FLAGS(AUTO -g -O0 -fprofile-arcs -ftest-coverage)
+    REMOVE_COMPILER_FLAGS(-Os -O2 -O3)
+ENDIF(COVERALLS)
+
 # Place all executables in the same directory.
 SET(EXECUTABLE_OUTPUT_PATH "${CMAKE_CURRENT_BINARY_DIR}/bin")
 
@@ -181,6 +200,19 @@ SET(LIBCOMP_INCLUDES
     ${CMAKE_SOURCE_DIR}/libcomp/src
     ${CMAKE_BINARY_DIR}/libcomp/objgen
 )
+
+SET(COVERALLS_SRCS "" CACHE INTERNAL "Coverage source files")
+
+# Add sources to the coverage source list.
+MACRO(COVERALLS_SOURCES)
+    FOREACH(it ${ARGN})
+        FILE(RELATIVE_PATH filePath "${CMAKE_SOURCE_DIR}"
+            "${CMAKE_CURRENT_SOURCE_DIR}/${it}")
+
+        SET(COVERALLS_SRCS ${COVERALLS_SRCS} "${filePath}"
+            CACHE INTERNAL "Coverage source files")
+    ENDFOREACH()
+ENDMACRO()
 
 # This macro will create a target to generate the documentation using the
 # specified Doxyfile.in file.
@@ -485,3 +517,7 @@ ENDIF(NOT WIN32)
 # Copy all contrib/testing to the bin directory.
 FILE(COPY "${CMAKE_SOURCE_DIR}/contrib/testing"
     DESTINATION "${CMAKE_BINARY_DIR}/bin")
+
+IF(COVERALLS)
+    coveralls_setup("${COVERALLS_SRCS}" ON)
+ENDIF(COVERALLS)

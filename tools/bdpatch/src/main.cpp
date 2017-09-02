@@ -40,6 +40,23 @@
 
 #include <MiCMessageData.h>
 
+#include <MiCMultiTalkData.h>
+#include <MiMultiTalkCmdTbl.h>
+
+#include <MiCPolygonMovieData.h>
+#include <MiPMBaseInfo.h>
+#include <MiPMCameraKeyTbl.h>
+#include <MiPMMsgKeyTbl.h>
+#include <MiPMBGMKeyTbl.h>
+#include <MiPMSEKeyTbl.h>
+#include <MiPMEffectKeyTbl.h>
+#include <MiPMFadeKeyTbl.h>
+#include <MiPMGouraudKeyTbl.h>
+#include <MiPMFogKeyTbl.h>
+#include <MiPMScalingHelperTbl.h>
+#include <MiPMAttachCharacterTbl.h>
+#include <MiPMMotionKeyTbl.h>
+
 #include <MiCZoneRelationData.h>
 
 #include <MiCQuestData.h>
@@ -352,7 +369,9 @@ int Usage(const char *szAppName)
         << "be one of:" << std::endl;
     std::cerr << "  ceventmessage Format for CEventMessageData.sbin" << std::endl;
     std::cerr << "  citem         Format for CItemData.sbin" << std::endl;
+    std::cerr << "  cmultitalk    Format for CMultiTalkData.sbin" << std::endl;
     std::cerr << "  cmessage      Format for CMessageData.sbin" << std::endl;
+    std::cerr << "  cpolygonmovie Format for CPolygonMoveData.sbin" << std::endl;
     std::cerr << "  cquest        Format for CQuestData.sbin" << std::endl;
     std::cerr << "  czonerelation Format for CZoneRelationData.sbin" << std::endl;
     std::cerr << "  devil         Format for DevilData.sbin" << std::endl;
@@ -420,6 +439,21 @@ int main(int argc, char *argv[])
             }
         );
     }
+    else if("cmultitalk" == bdType)
+    {
+        pSet = new BinaryDataSet(
+            []()
+            {
+                return std::make_shared<objects::MiCMultiTalkData>();
+            },
+
+            [](const std::shared_ptr<libcomp::Object>& obj)
+            {
+                return std::dynamic_pointer_cast<objects::MiCMultiTalkData>(
+                    obj)->GetID();
+            }
+        );
+    }
     else if("cmessage" == bdType)
     {
         pSet = new BinaryDataSet(
@@ -432,6 +466,24 @@ int main(int argc, char *argv[])
             {
                 return std::dynamic_pointer_cast<objects::MiCMessageData>(
                     obj)->GetID();
+            }
+        );
+    }
+    else if("cpolygonmovie" == bdType)
+    {
+        static uint32_t nextID = 0;
+
+        pSet = new BinaryDataSet(
+            []()
+            {
+                return std::make_shared<objects::MiCPolygonMovieData>();
+            },
+
+            [](const std::shared_ptr<libcomp::Object>& obj)
+            {
+                (void)obj;
+
+                return nextID++;
             }
         );
     }

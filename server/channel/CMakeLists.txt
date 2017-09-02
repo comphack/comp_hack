@@ -179,18 +179,18 @@ SET(${PROJECT_NAME}_PACKETS
     src/packets/game/ValuableList.cpp           # 0x00B8
     src/packets/game/ObjectInteraction.cpp      # 0x00BA
     src/packets/game/FriendInfo.cpp             # 0x00BD
-    src/packets/game/FriendRequest              # 0x00C0
-    src/packets/game/FriendAddRemove            # 0x00C3
-    src/packets/game/FriendData                 # 0x00C6
-    src/packets/game/PartyInvite                # 0x00D2
-    src/packets/game/PartyJoin                  # 0x00D5
-    src/packets/game/PartyCancel                # 0x00D8
-    src/packets/game/PartyLeave                 # 0x00DA
-    src/packets/game/PartyDisband               # 0x00DD
-    src/packets/game/PartyLeaderUpdate          # 0x00E0
-    src/packets/game/PartyDropRule              # 0x00E3
-    src/packets/game/PartyKick                  # 0x00EB
-    src/packets/game/DemonFusion                # 0x00EF
+    src/packets/game/FriendRequest.cpp          # 0x00C0
+    src/packets/game/FriendAddRemove.cpp        # 0x00C3
+    src/packets/game/FriendData.cpp             # 0x00C6
+    src/packets/game/PartyInvite.cpp            # 0x00D2
+    src/packets/game/PartyJoin.cpp              # 0x00D5
+    src/packets/game/PartyCancel.cpp            # 0x00D8
+    src/packets/game/PartyLeave.cpp             # 0x00DA
+    src/packets/game/PartyDisband.cpp           # 0x00DD
+    src/packets/game/PartyLeaderUpdate.cpp      # 0x00E0
+    src/packets/game/PartyDropRule.cpp          # 0x00E3
+    src/packets/game/PartyKick.cpp              # 0x00EB
+    src/packets/game/DemonFusion.cpp            # 0x00EF
     src/packets/game/LootDemonEggData.cpp       # 0x00F1
     src/packets/game/Sync.cpp                   # 0x00F3
     src/packets/game/Rotate.cpp                 # 0x00F8
@@ -251,6 +251,11 @@ SET(${PROJECT_NAME}_PACKETS
     src/packets/internal/FriendsUpdate.cpp         # 0x1008
     src/packets/internal/PartyUpdate.cpp           # 0x1009
     src/packets/internal/ClanUpdate.cpp            # 0x100A
+)
+
+COVERALLS_SOURCES(
+    ${${PROJECT_NAME}_SRCS}
+    ${${PROJECT_NAME}_PACKETS}
 )
 
 ADD_EXECUTABLE(${PROJECT_NAME} ${${PROJECT_NAME}_SRCS}

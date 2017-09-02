@@ -109,8 +109,20 @@ void SendClientReadyData(std::shared_ptr<ChannelServer> server,
             rotation = 0;
         }
 
-        /// @todo: validate if the zone can be logged into
-        
+        // Make sure the player can start in the zone
+        if(zoneID != 0)
+        {
+            auto serverDataManager = server->GetServerDataManager();
+            auto zoneData = serverDataManager->GetZoneData(zoneID);
+            auto zoneLobbyData = zoneData && !zoneData->GetGlobal()
+                ? serverDataManager->GetZoneData(zoneData->GetGroupID())
+                : nullptr;
+            if(zoneLobbyData)
+            {
+                zoneID = zoneLobbyData->GetID();
+            }
+        }
+
         // If all else fails start in the default zone
         if(zoneID == 0)
         {

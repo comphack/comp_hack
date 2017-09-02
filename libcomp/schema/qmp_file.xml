@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="QmpFile" persistent="false">
+        <member type="list" name="Elements">
+            <element type="QmpElement*"/>
+        </member>
+        <member type="list" name="Boundaries">
+            <element type="QmpBoundary*"/>
+        </member>
+    </object>
+    <object name="QmpElement" persistent="false">
+        <member type="u32" name="ID"/>
+        <member type="u8" name="Unknown"/>
+        <member type="string" name="Name" lensz="1"/>
+    </object>
+    <object name="QmpBoundary" persistent="false">
+        <member type="u32" name="ID"/>
+        <member type="array" name="Unknown" size="28">
+            <element type="u8"/>
+        </member>
+        <member type="list" name="Lines">
+            <element type="QmpBoundaryLine*"/>
+        </member>
+        <member type="list" name="UnknownList">
+            <element type="QmpUnknown1*"/>
+        </member>
+    </object>
+    <object name="QmpBoundaryLine" persistent="false">
+        <member type="u32" name="ElementID"/>
+        <member type="s32" name="X1"/>
+        <member type="s32" name="Y1"/>
+        <member type="s32" name="X2"/>
+        <member type="s32" name="Y2"/>
+    </object>
+    <object name="QmpUnknown1" persistent="false">
+        <member type="array" name="Unknown" size="12">
+            <element type="u8"/>
+        </member>
+        <member type="list" name="UnknownList">
+            <element type="QmpUnknown2*"/>
+        </member>
+    </object>
+    <object name="QmpUnknown2" persistent="false">
+        <member type="array" name="Unknown" size="8">
+            <element type="u8"/>
+        </member>
+    </object>
+</objgen>

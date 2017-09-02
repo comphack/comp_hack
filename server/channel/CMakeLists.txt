@@ -56,6 +56,7 @@ SET(${PROJECT_NAME}_SRCS
     src/ManagerSystem.cpp
     src/SkillManager.cpp
     src/Zone.cpp
+    src/ZoneGeometry.cpp
     src/ZoneManager.cpp
     src/main.cpp
 )
@@ -82,6 +83,7 @@ SET(${PROJECT_NAME}_HDRS
     src/Packets.h
     src/SkillManager.h
     src/Zone.h
+    src/ZoneGeometry.h
     src/ZoneManager.h
 )
 

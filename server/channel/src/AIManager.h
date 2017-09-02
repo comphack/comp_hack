@@ -44,6 +44,8 @@ class AICommand;
 class AIMoveCommand;
 class ChannelServer;
 class EnemyState;
+class Point;
+class Zone;
 
 /**
  * Class to manage actions when triggering a spot or interacting with
@@ -179,14 +181,14 @@ private:
     /**
      * Get a new move command from one point to another, calculating pathing and
      * adjusting for collisions
-     * @param sourceX X coordinate of the starting point
-     * @param sourceY Y coordinate of the starting point
-     * @param targetX X coordinate of the end point
-     * @param targetY Y coordinate of the end point
+     * @param source Starting point
+     * @param dest End point
+     * @param reduce Reduces the final movement path by a set amount so the entity
+     *  ends up that amount of units away
      * @return Pointer to the new move command
      */
-    std::shared_ptr<AIMoveCommand> GetMoveCommand(float sourceX, float sourceY,
-        float targetX, float targetY) const;
+    std::shared_ptr<AIMoveCommand> GetMoveCommand(const std::shared_ptr<Zone>& zone,
+        const Point& source, const Point& dest, float reduce = 0.f) const;
 
     /**
      * Get a new wait command

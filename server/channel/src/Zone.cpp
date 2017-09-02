@@ -40,7 +40,7 @@
 using namespace channel;
 
 Zone::Zone(uint32_t id, const std::shared_ptr<objects::ServerZone>& definition)
-    : mServerZone(definition), mID(id)
+    : mServerZone(definition), mID(id), mOwnerID(0)
 {
 }
 
@@ -53,22 +53,44 @@ uint32_t Zone::GetID()
     return mID;
 }
 
+int32_t Zone::GetOwnerID() const
+{
+    return mOwnerID;
+}
+
+void Zone::SetOwnerID(int32_t ownerID)
+{
+    mOwnerID = ownerID;
+}
+
+const std::shared_ptr<ZoneGeometry> Zone::GetGeometry() const
+{
+    return mGeometry;
+}
+
+void Zone::SetGeometry(const std::shared_ptr<ZoneGeometry>& geometry)
+{
+    mGeometry = geometry;
+}
+
 void Zone::AddConnection(const std::shared_ptr<ChannelClientConnection>& client)
 {
-    auto cState = client->GetClientState()->GetCharacterState();
-    auto dState = client->GetClientState()->GetDemonState();
+    auto state = client->GetClientState();
+    auto cState = state->GetCharacterState();
+    auto dState = state->GetDemonState();
 
     RegisterEntityState(cState);
     RegisterEntityState(dState);
 
     std::lock_guard<std::mutex> lock(mLock);
-    mConnections[cState->GetEntityID()] = client;
+    mConnections[state->GetWorldCID()] = client;
 }
 
 void Zone::RemoveConnection(const std::shared_ptr<ChannelClientConnection>& client)
 {
-    auto cState = client->GetClientState()->GetCharacterState();
-    auto dState = client->GetClientState()->GetDemonState();
+    auto state = client->GetClientState();
+    auto cState = state->GetCharacterState();
+    auto dState = state->GetDemonState();
 
     auto cEntityID = cState->GetEntityID();
     auto dEntityID = dState->GetEntityID();
@@ -80,7 +102,7 @@ void Zone::RemoveConnection(const std::shared_ptr<ChannelClientConnection>& clie
     dState->SetZone(0);
 
     std::lock_guard<std::mutex> lock(mLock);
-    mConnections.erase(cEntityID);
+    mConnections.erase(state->GetWorldCID());
 }
 
 void Zone::RemoveEntity(int32_t entityID, bool updateSpawns)

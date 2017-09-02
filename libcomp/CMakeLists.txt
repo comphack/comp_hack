@@ -246,6 +246,7 @@ SET(${PROJECT_NAME}_SCHEMA
     schema/packet_login_reply.xml
     schema/packet_response_code.xml
     schema/party.xml
+    schema/qmp_file.xml
     schema/registeredchannel.xml
     schema/registeredworld.xml
     schema/server_command_line.xml
@@ -413,6 +414,18 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     PartyMember.cpp
     PostItem.h
     PostItem.cpp
+    QmpFile.h
+    QmpFile.cpp
+    QmpElement.h
+    QmpElement.cpp
+    QmpBoundary.h
+    QmpBoundary.cpp
+    QmpBoundaryLine.h
+    QmpBoundaryLine.cpp
+    QmpUnknown1.h
+    QmpUnknown1.cpp
+    QmpUnknown2.h
+    QmpUnknown2.cpp
     Quest.h
     Quest.cpp
     RegisteredChannel.h

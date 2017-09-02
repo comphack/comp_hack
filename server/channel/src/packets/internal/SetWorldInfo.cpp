@@ -131,6 +131,9 @@ bool SetWorldInfoFromPacket(libcomp::ManagerPacket *pPacketManager,
         return false;
     }
 
+    // Build all global zone instances now that we've connected properly
+    server->GetZoneManager()->InstanceGlobalZones();
+
     if(otherChannelsExist)
     {
         server->LoadAllRegisteredChannels();

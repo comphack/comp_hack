@@ -13,7 +13,7 @@
     <object name="MiZoneFileData" persistent="false" scriptenabled="true">
         <member type="string" length="36" name="file1"/>
         <member type="string" length="36" name="file2"/>
-        <member type="string" length="36" name="file3"/>
+        <member type="string" length="36" name="qmpFile"/>
         <member type="string" length="36" name="file4"/>
         <member type="string" length="36" name="file5"/>
         <member type="string" length="36" name="file6"/>

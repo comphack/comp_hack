@@ -41,6 +41,7 @@
 #include "PopIgnore.h"
 
 // Standard C++11 Includes
+#include <set>
 #include <unordered_map>
 
 namespace objects
@@ -86,6 +87,12 @@ public:
      * @return Pointer to the server zone matching the specified id
      */
     const std::shared_ptr<objects::ServerZone> GetZoneData(uint32_t id);
+
+    /**
+     * Get all server zone defintion IDs registered with the manager
+     * @return Set of all zone definition IDs registered with the manager
+     */
+    const std::set<uint32_t> GetAllZoneIDs();
 
     /**
      * Get an event by definition ID

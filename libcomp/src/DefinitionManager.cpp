@@ -55,6 +55,7 @@
 #include <MiUnionData.h>
 #include <MiZoneData.h>
 #include <MiZoneBasicData.h>
+#include <QmpFile.h>
 
 using namespace libcomp;
 
@@ -466,6 +467,36 @@ bool DefinitionManager::LoadZoneData(gsl::not_null<DataStore*> pDataStore)
     }
     
     return success;
+}
+
+std::shared_ptr<objects::QmpFile> DefinitionManager::LoadQmpFile(
+    const libcomp::String& fileName, gsl::not_null<DataStore*> pDataStore)
+{
+    auto path = libcomp::String("/Map/Zone/Model/") + fileName;
+
+    std::vector<char> data = pDataStore->ReadFile(path);
+    if(data.empty())
+    {
+        return nullptr;
+    }
+
+    std::stringstream ss(std::string(data.begin(), data.end()));
+
+    uint32_t magic;
+    ss.read(reinterpret_cast<char*>(&magic), sizeof(magic));
+
+    if(magic != 0x3F800000)
+    {
+        return nullptr;
+    }
+
+    auto file = std::make_shared<objects::QmpFile>();
+    if(!file->Load(ss))
+    {
+        return nullptr;
+    }
+
+    return file;
 }
 
 bool DefinitionManager::LoadBinaryDataHeader(libcomp::ObjectInStream& ois,

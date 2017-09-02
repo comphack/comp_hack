@@ -5,11 +5,16 @@
         <member type="u32" name="VariantType"/>
 
         <!-- Spawn information -->
-        <member type="Spawn*" name="SpawnSource"/>
-        <member type="SpawnLocation*" name="SpawnLocation"/>
+        <member type="Spawn*" name="SpawnSource" nulldefault="true"/>
+        <member type="SpawnLocation*" name="SpawnLocation"
+            nulldefault="true"/>
         <member type="u32" name="SpawnGroupID"/>
 
         <!-- Sub-sections -->
         <member type="EntityStats*" name="CoreStats"/>
+        <member type="map" name="DamageSources">
+            <key type="s32"/>
+            <value type="u64"/>
+        </member>
     </object>
 </objgen>

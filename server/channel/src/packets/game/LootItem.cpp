@@ -76,7 +76,8 @@ bool Parsers::LootItem::Parse(libcomp::ManagerPacket *pPacketManager,
     uint32_t demonType = 0;
     std::list<int8_t> lootedSlots;
     std::unordered_map<uint32_t, uint16_t> lootedItems;
-    if(lBox)
+    if(lBox && (lBox->ValidLooterIDsCount() == 0 ||
+        lBox->ValidLooterIDsContains(state->GetWorldCID())))
     {
         if(lBox->GetType() == objects::LootBox::Type_t::EGG)
         {
@@ -245,7 +246,7 @@ bool Parsers::LootItem::Parse(libcomp::ManagerPacket *pPacketManager,
     }
     else
     {
-        reply.WriteS8(-1);  /// @todo: verify
+        reply.WriteS8(-1);
 
         client->SendPacket(reply);
     }

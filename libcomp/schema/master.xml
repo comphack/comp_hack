@@ -20,7 +20,7 @@
     <include path="demon.xml"/>
     <include path="enemy.xml"/>
     <include path="item.xml"/>
-    <include path="partymember.xml"/>
+    <include path="party.xml"/>
     <include path="registeredchannel.xml"/>
     <include path="registeredworld.xml"/>
     <include path="spawn.xml"/>

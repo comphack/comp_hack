@@ -49,7 +49,7 @@ std::mutex ClientState::sLock;
 ClientState::ClientState() : objects::ClientStateObject(),
     mCharacterState(std::shared_ptr<CharacterState>(new CharacterState)),
     mDemonState(std::shared_ptr<DemonState>(new DemonState)),
-    mStartTime(0), mNextActivatedAbilityID(1), mNextLocalObjectID(1)
+    mStartTime(0), mNextLocalObjectID(1)
 {
 }
 
@@ -190,20 +190,6 @@ bool ClientState::SetObjectID(const libobjgen::UUID& uuid, int64_t objectID)
     }
 
     return false;
-}
-
-uint8_t ClientState::GetNextActivatedAbilityID()
-{
-    std::lock_guard<std::mutex> lock(mLock);
-    uint8_t next = mNextActivatedAbilityID;
-
-    mNextActivatedAbilityID = (uint8_t)((mNextActivatedAbilityID + 1) % 128);
-    if(mNextActivatedAbilityID == 0)
-    {
-        mNextActivatedAbilityID = 1;
-    }
-
-    return next;
 }
 
 const libobjgen::UUID ClientState::GetAccountUID() const

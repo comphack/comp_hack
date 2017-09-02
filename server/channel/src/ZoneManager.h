@@ -247,7 +247,7 @@ public:
      * @return true if the enemy was spawned, false if it was not
      */
     bool SpawnEnemy(const std::shared_ptr<Zone>& zone, uint32_t demonID, float x,
-        float y, float rot, const libcomp::String& aiType = "default");
+        float y, float rot, const libcomp::String& aiType = "");
 
     /**
      * Update the specified zone instance's SpawnLocationGroups
@@ -287,6 +287,36 @@ public:
      * @return X, Y coordinates of the random point
      */
     std::pair<float, float> GetRandomPoint(float width, float height) const;
+
+    /**
+     * Get a point directly away or directly towards two specified points.
+     * @param sourceX Point 1 X coordinate
+     * @param sourceY Point 1 Y coordinate
+     * @param targetX Point 2 X coordinate
+     * @param targetY Point 2 Y coordinate
+     * @param distance Distance to move
+     * @param away true if the point calculated should be futher from the
+     *  target point, false if it should be closer to it
+     * @return Pair of X, Y coordinates at the specified point
+     */
+    std::pair<float, float> GetLinearPoint(float sourceX, float sourceY,
+        float targetX, float targetY, float distance, bool away);
+
+    /**
+     * Set an entity's destination position at a distace directly away or
+     * directly towards the specified point. Communicating that the move
+     * has taken place must be done elsewhere.
+     * @param targetX X coordinate to move relative to
+     * @param targetY Y coordinate to move relative to
+     * @param distance Distance to move
+     * @param away true if the entity should move away from the point,
+     *  false if it should move toward it
+     * @param now Server time to use as the origin ticks
+     * @param endTime Server time to use as the destination ticks
+     */
+    void MoveRelative(const std::shared_ptr<ActiveEntityState>& eState,
+        float targetX, float targetY, float distance, bool away,
+        uint64_t now, uint64_t endTime);
 
 private:
     /**

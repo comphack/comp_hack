@@ -37,6 +37,7 @@
 #include <math.h>
 
 // channel Includes
+#include "AIState.h"
 #include "ChannelServer.h"
 
 // object Includes
@@ -1481,8 +1482,6 @@ void CharacterManager::SendLootItemData(const std::list<std::shared_ptr<
     ChannelClientConnection>>& clients, const std::shared_ptr<LootBoxState>& lState,
     bool queue)
 {
-    /// @todo: filter to only valid characters/parties etc
-
     auto lootBox = lState->GetEntity();
 
     libcomp::Packet p;
@@ -1509,20 +1508,24 @@ void CharacterManager::SendLootItemData(const std::list<std::shared_ptr<
     for(auto client : clients)
     {
         auto state = client->GetClientState();
-        auto cState = state->GetCharacterState();
-
-        p.Seek(2);
-        p.WriteS32Little(cState->GetEntityID());
-        p.Seek(10);
-        p.WriteFloat(state->ToClientTime(lootBox->GetLootTime()));
-
-        if(queue)
+        if(lootBox->ValidLooterIDsCount() == 0 ||
+            lootBox->ValidLooterIDsContains(state->GetWorldCID()))
         {
-            client->QueuePacketCopy(p);
-        }
-        else
-        {
-            client->SendPacketCopy(p);
+            auto cState = state->GetCharacterState();
+
+            p.Seek(2);
+            p.WriteS32Little(cState->GetEntityID());
+            p.Seek(10);
+            p.WriteFloat(state->ToClientTime(lootBox->GetLootTime()));
+
+            if(queue)
+            {
+                client->QueuePacketCopy(p);
+            }
+            else
+            {
+                client->SendPacketCopy(p);
+            }
         }
     }
 }
@@ -2620,6 +2623,12 @@ bool CharacterManager::AddRemoveOpponent(bool add, const std::shared_ptr<
 
         for(auto entity : battleStarted)
         {
+            auto aiState = entity->GetAIState();
+            if(aiState)
+            {
+                aiState->SetStatus(AIStatus_t::COMBAT);
+            }
+
             libcomp::Packet p;
             p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_BATTLE_STARTED);
             p.WriteS32Little(entity->GetEntityID());
@@ -2677,6 +2686,12 @@ bool CharacterManager::AddRemoveOpponent(bool add, const std::shared_ptr<
 
         for(auto entity : battleStopped)
         {
+            auto aiState = entity->GetAIState();
+            if(aiState)
+            {
+                aiState->SetStatus(aiState->GetDefaultStatus());
+            }
+
             libcomp::Packet p;
             p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_BATTLE_STOPPED);
             p.WriteS32Little(entity->GetEntityID());

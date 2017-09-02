@@ -65,34 +65,28 @@ void PartyInvite(std::shared_ptr<WorldServer> server,
             auto channel = server->GetChannelConnectionByID(targetLogin->GetChannelID());
             if(channel)
             {
-                libcomp::Packet request;
-                request.WritePacketCode(InternalPacketCode_t::PACKET_PARTY_UPDATE);
-                request.WriteU8((uint8_t)InternalPacketAction_t::PACKET_ACTION_YN_REQUEST);
-                request.WriteU16Little(1); // CID Count
-                request.WriteS32Little(targetLogin->GetWorldCID());
-                request.WriteU8(0); // Not a response
-                request.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_UTF8,
+                libcomp::Packet relay;
+                WorldServer::GetRelayPacket(relay, targetLogin->GetWorldCID());
+                relay.WritePacketCode(ChannelToClientPacketCode_t::PACKET_PARTY_INVITED);
+                relay.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_CP932,
                     member->GetName(), true);
-                request.WriteU32Little(cLogin->GetPartyID());
+                relay.WriteU32Little(cLogin->GetPartyID());
 
-                channel->SendPacket(request);
+                channel->SendPacket(relay);
 
                 responseCode = 200; // Success
             }
         }
     }
 
-    libcomp::Packet response;
-    response.WritePacketCode(InternalPacketCode_t::PACKET_PARTY_UPDATE);
-    response.WriteU8((uint8_t)InternalPacketAction_t::PACKET_ACTION_YN_REQUEST);
-    response.WriteU16Little(1); // CID Count
-    response.WriteS32Little(cLogin->GetWorldCID());
-    response.WriteU8(1); // Is a response
-    response.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_UTF8,
+    libcomp::Packet relay;
+    WorldServer::GetRelayPacket(relay, cLogin->GetWorldCID());
+    relay.WritePacketCode(ChannelToClientPacketCode_t::PACKET_PARTY_INVITE);
+    relay.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_CP932,
         targetName, true);
-    response.WriteU16Little(responseCode);
+    relay.WriteU16Little(responseCode);
 
-    requestConnection->SendPacket(response);
+    requestConnection->SendPacket(relay);
 }
 
 void PartyCancel(std::shared_ptr<WorldServer> server,
@@ -106,15 +100,13 @@ void PartyCancel(std::shared_ptr<WorldServer> server,
         auto channel = server->GetChannelConnectionByID(targetLogin->GetChannelID());
         if(channel)
         {
-            libcomp::Packet request;
-            request.WritePacketCode(InternalPacketCode_t::PACKET_PARTY_UPDATE);
-            request.WriteU8((uint8_t)InternalPacketAction_t::PACKET_ACTION_RESPONSE_NO);
-            request.WriteU16Little(1); // CID Count
-            request.WriteS32Little(targetLogin->GetWorldCID());
-            request.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_UTF8,
+            libcomp::Packet relay;
+            WorldServer::GetRelayPacket(relay, targetLogin->GetWorldCID());
+            relay.WritePacketCode(ChannelToClientPacketCode_t::PACKET_PARTY_CANCEL);
+            relay.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_CP932,
                 sourceName, true);
 
-            channel->SendPacket(request);
+            channel->SendPacket(relay);
         }
     }
 }
@@ -128,32 +120,29 @@ void PartyDropRule(std::shared_ptr<WorldServer> server,
     auto party = characterManager->GetParty(cLogin->GetPartyID());
 
     uint16_t responseCode = 201;    // Failure
-    if(party)
+    if(party && party->SetDropRule((objects::Party::DropRule_t)rule))
     {
-        party->SetDropRule(rule);
         responseCode = 200; // Success
     }
     
-    libcomp::Packet response;
-    response.WritePacketCode(InternalPacketCode_t::PACKET_PARTY_UPDATE);
-    response.WriteU8((uint8_t)InternalPacketAction_t::PACKET_ACTION_PARTY_DROP_RULE);
-    response.WriteU16Little(1); // CID Count
-    response.WriteS32Little(cLogin->GetWorldCID());
-    response.WriteU8(1); // Is a response
-    response.WriteU16Little(responseCode);
+    libcomp::Packet relay;
+    WorldServer::GetRelayPacket(relay, cLogin->GetWorldCID());
+    relay.WritePacketCode(ChannelToClientPacketCode_t::PACKET_PARTY_DROP_RULE);
+    relay.WriteU16Little(responseCode);
 
-    requestConnection->QueuePacket(response);
+    requestConnection->QueuePacket(relay);
 
     if(responseCode == 200)
     {
-        libcomp::Packet request;
-        request.WritePacketCode(InternalPacketCode_t::PACKET_PARTY_UPDATE);
-        request.WriteU8((uint8_t)InternalPacketAction_t::PACKET_ACTION_PARTY_DROP_RULE);
-        request.WriteU8(0); // Not a response
-        request.WriteU8(party->GetDropRule());
+        server->GetCharacterManager()->SendPartyInfo(party->GetID());
 
-        server->GetCharacterManager()->SendToRelatedCharacters(request,
-            cLogin->GetWorldCID(), 1, RELATED_PARTY, true);
+        relay.Clear();
+        auto cidOffset = WorldServer::GetRelayPacket(relay);
+        relay.WritePacketCode(ChannelToClientPacketCode_t::PACKET_PARTY_DROP_RULE_SET);
+        relay.WriteU8(rule);
+
+        server->GetCharacterManager()->SendToRelatedCharacters(relay,
+            cLogin->GetWorldCID(), cidOffset, RELATED_PARTY, true);
     }
 
     requestConnection->FlushOutgoing();

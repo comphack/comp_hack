@@ -47,9 +47,9 @@ ChannelServer::ChannelServer(const char *szProgram,
     std::shared_ptr<objects::ServerConfig> config,
     std::shared_ptr<libcomp::ServerCommandLineParser> commandLine) :
     libcomp::BaseServer(szProgram, config, commandLine), mAccountManager(0),
-    mActionManager(0), mCharacterManager(0), mChatManager(0), mEventManager(0),
-    mSkillManager(0), mZoneManager(0), mDefinitionManager(0), mServerDataManager(0),
-    mMaxEntityID(0), mMaxObjectID(0)
+    mActionManager(0), mAIManager(0), mCharacterManager(0), mChatManager(0),
+    mEventManager(0), mSkillManager(0), mZoneManager(0), mDefinitionManager(0),
+    mServerDataManager(0), mMaxEntityID(0), mMaxObjectID(0)
 {
 }
 
@@ -116,20 +116,22 @@ bool ChannelServer::Initialize()
         to_underlying(ClientToChannelPacketCode_t::PACKET_SEND_DATA));
     clientPacketManager->AddParser<Parsers::Logout>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_LOGOUT));
-    clientPacketManager->AddParser<Parsers::Move>(
-        to_underlying(ClientToChannelPacketCode_t::PACKET_MOVE));
     clientPacketManager->AddParser<Parsers::PopulateZone>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_POPULATE_ZONE));
+    clientPacketManager->AddParser<Parsers::Move>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_MOVE));
+    clientPacketManager->AddParser<Parsers::Pivot>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_PIVOT));
     clientPacketManager->AddParser<Parsers::Chat>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_CHAT));
     clientPacketManager->AddParser<Parsers::Tell>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_TELL));
-    clientPacketManager->AddParser<Parsers::ActivateSkill>(
-        to_underlying(ClientToChannelPacketCode_t::PACKET_ACTIVATE_SKILL));
-    clientPacketManager->AddParser<Parsers::ExecuteSkill>(
-        to_underlying(ClientToChannelPacketCode_t::PACKET_EXECUTE_SKILL));
-    clientPacketManager->AddParser<Parsers::CancelSkill>(
-        to_underlying(ClientToChannelPacketCode_t::PACKET_CANCEL_SKILL));
+    clientPacketManager->AddParser<Parsers::SkillActivate>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_SKILL_ACTIVATE));
+    clientPacketManager->AddParser<Parsers::SkillExecute>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_SKILL_EXECUTE));
+    clientPacketManager->AddParser<Parsers::SkillCancel>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_SKILL_CANCEL));
     clientPacketManager->AddParser<Parsers::AllocateSkillPoint>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_ALLOCATE_SKILL_POINT));
     clientPacketManager->AddParser<Parsers::ToggleExpertise>(
@@ -242,6 +244,8 @@ bool ChannelServer::Initialize()
         to_underlying(ClientToChannelPacketCode_t::PACKET_LOOT_DEMON_EGG_DATA));
     clientPacketManager->AddParser<Parsers::Sync>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_SYNC));
+    clientPacketManager->AddParser<Parsers::PartnerDemonAISet>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_PARTNER_DEMON_AI_SET));
     clientPacketManager->AddParser<Parsers::Rotate>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_ROTATE));
     clientPacketManager->AddParser<Parsers::LootBossBox>(
@@ -358,6 +362,7 @@ bool ChannelServer::Initialize()
     auto channelPtr = std::dynamic_pointer_cast<ChannelServer>(self);
     mAccountManager = new AccountManager(channelPtr);
     mActionManager = new ActionManager(channelPtr);
+    mAIManager = new AIManager(channelPtr);
     mCharacterManager = new CharacterManager(channelPtr);
     mChatManager = new ChatManager(channelPtr);
     mEventManager = new EventManager(channelPtr);
@@ -393,6 +398,8 @@ ChannelServer::~ChannelServer()
     }
 
     delete[] mAccountManager;
+    delete[] mActionManager;
+    delete[] mAIManager;
     delete[] mCharacterManager;
     delete[] mChatManager;
     delete[] mEventManager;
@@ -556,6 +563,11 @@ AccountManager* ChannelServer::GetAccountManager() const
 ActionManager* ChannelServer::GetActionManager() const
 {
     return mActionManager;
+}
+
+AIManager* ChannelServer::GetAIManager() const
+{
+    return mAIManager;
 }
 
 CharacterManager* ChannelServer::GetCharacterManager() const

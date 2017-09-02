@@ -25,67 +25,53 @@
  */
 
 #include "Randomizer.h"
-#include "Log.h"
 
-// C++ Standard Includes
-#include <cmath>
-#include <random>
+// libcomp Includes
+#include "Decrypt.h"
 
 using namespace libcomp;
+
+thread_local std::mt19937 Randomizer::sGen;
+thread_local std::mt19937_64 Randomizer::sGen64;
+
+void Randomizer::SeedRNG()
+{
+    static thread_local uint64_t seed = 0;
+
+    // Only seed if we haven't already
+    if(seed == 0)
+    {
+        // Generate the default seed
+        auto b = libcomp::Decrypt::GenerateRandom(8).Data();
+        seed = (uint64_t)&b[0];
+
+        // Seed the high precision random number generators
+        sGen.seed((uint32_t)seed);
+        sGen64.seed(seed);
+    }
+}
 
 namespace libcomp
 {
     template<>
-    int32_t Randomizer::GetRandomNumber<int32_t>(int32_t minVal, int32_t maxVal)
-    {
-        // Keep one random number generator per thread
-        static thread_local std::mt19937 gen;
-        static thread_local uint32_t seed = 0;
-        if(seed == 0)
-        {
-            // Use the system time for default seed
-            seed = (uint32_t)(time(0) * rand());
-
-            // Seed the high precision random number generator
-            gen.seed(seed);
-        }
-
-        std::uniform_int_distribution<> dis(minVal, maxVal);
-        return dis(gen);
-    }
-
-    template<>
-    uint16_t Randomizer::GetRandomNumber<uint16_t>(uint16_t minVal, uint16_t maxVal)
-    {
-        int32_t r = GetRandomNumber<int32_t>((int32_t)minVal, (int32_t)maxVal);
-
-        return (uint16_t)r;
-    }
-
-    template<>
-    int16_t Randomizer::GetRandomNumber<int16_t>(int16_t minVal, int16_t maxVal)
-    {
-        int32_t r = GetRandomNumber<int32_t>((int32_t)minVal, (int32_t)maxVal);
-
-        return (int16_t)r;
-    }
-
-    template<>
-    uint8_t Randomizer::GetRandomNumber<uint8_t>(uint8_t minVal, uint8_t maxVal)
-    {
-        int32_t r = GetRandomNumber<int32_t>((int32_t)minVal, (int32_t)maxVal);
-
-        return (uint8_t)r;
-    }
-
-    template<>
     float Randomizer::GetRandomDecimal<float>(float minVal, float maxVal, uint8_t precision)
     {
-        int32_t p = precision > 0 ? (int32_t)pow(10, (int32_t)precision-1) : 0;
+        uint16_t p = precision > 0 ? (uint16_t)pow(10, (uint16_t)precision-1) : 0;
 
         int32_t r = GetRandomNumber<int32_t>((int32_t)(minVal * (float)p),
             (int32_t)(maxVal * (float)p));
 
         return (float)((double)r / (double)p);
+    }
+
+    template<>
+    double Randomizer::GetRandomDecimal<double>(double minVal, double maxVal, uint8_t precision)
+    {
+        uint16_t p = precision > 0 ? (uint16_t)pow(10, (uint16_t)precision - 1) : 0;
+
+        int64_t r = GetRandomNumber64<int64_t>((int64_t)(minVal * (double)p),
+            (int64_t)(maxVal * (double)p));
+
+        return (double)((double)r / (double)p);
     }
 }

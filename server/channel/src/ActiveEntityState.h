@@ -69,9 +69,25 @@ const uint8_t ENTITY_CALC_STAT_WORLD = 0x02;
 /// Recalculation resulted in a modified skill set (characters only)
 const uint8_t ENTITY_CALC_SKILL = 0x04;
 
+/// Entity is immobile for no specific reason
+const uint8_t STATUS_IMMOBILE = 0x01;
+
+/// Entity is mid-hit stun
+const uint8_t STATUS_HIT_STUN = 0x02;
+
+/// Entity is being knocked back
+const uint8_t STATUS_KNOCKBACK = 0x04;
+
+/// Entity is charging a skill
+const uint8_t STATUS_CHARGING = 0x08;
+
+/// Entity is waiting (used by AI controlled entity)
+const uint8_t STATUS_WAITING = 0x10;
+
 namespace libcomp
 {
 class DefinitionManager;
+class ServerDataManager;
 }
 
 typedef objects::MiCorrectTbl::ID_t CorrectTbl;
@@ -80,6 +96,7 @@ typedef std::unordered_map<uint32_t, std::pair<uint8_t, bool>> AddStatusEffectMa
 namespace channel
 {
 
+class AIState;
 class Zone;
 
 /**
@@ -122,13 +139,13 @@ public:
      *  0x02) ENTITY_CALC_STAT_WORLD = stats changed that are visible to the world
      *  0x04) ENTITY_CALC_SKILL = skill set has changed (character only)
      */
-    virtual uint8_t RecalculateStats(libcomp::DefinitionManager* definitionManager) = 0;
+    virtual uint8_t RecalculateStats(libcomp::DefinitionManager* definitionManager);
 
     /**
      * Get the core stats associated to the active entity.
      * @return Pointer to the active entity's core stats
      */
-    virtual std::shared_ptr<objects::EntityStats> GetCoreStats() = 0;
+    virtual std::shared_ptr<objects::EntityStats> GetCoreStats();
 
     /**
      * Get the the entity UUID associated to the entity this state represents.
@@ -145,21 +162,6 @@ public:
      * @param now Server time to use as the origin ticks
      */
     void Move(float xPos, float yPos, uint64_t now);
-
-    /**
-     * Set the entity's destination position at a distace directly away or
-     * directly towards the specified point. Communicating that the move
-     * has taken place must be done elsewhere.
-     * @param targetX X coordinate to move relative to
-     * @param targetY Y coordinate to move relative to
-     * @param distance Distance to move
-     * @param away true if the entity should move away from the point,
-     *  false if it should move toward it
-     * @param now Server time to use as the origin ticks
-     * @param endTime Server time to use as the destination ticks
-     */
-    void MoveRelative(float targetX, float targetY, float distance, bool away,
-        uint64_t now, uint64_t endTime);
 
     /**
      * Set the entity's destination rotation based on the supplied
@@ -196,6 +198,26 @@ public:
     bool IsRotating() const;
 
     /**
+     * Check if the entity is able to move or activate a skill
+     * @return true if the entity can act, false if it cannot
+     */
+    bool CanAct();
+
+    /**
+     * Check if the entity is able to move
+     * @return true if the entity can move, false if it cannot
+     */
+    bool CanMove();
+
+    /**
+     * Corrects rotation values that have exceeded the minimum
+     * or maximum allowed range.
+     * @param rot Original rotation value to correct
+     * @return Equivalent but corrected rotation value
+     */
+    static float CorrectRotation(float rot);
+
+    /**
      * Calculate the distance between the entity and the specified X
      * and Y coordiates
      * @param x X coordinate to calculate the distance for
@@ -213,6 +235,39 @@ public:
      * @param now Current timestamp of the server
      */
     void RefreshCurrentPosition(uint64_t now);
+
+    /**
+     * Expire any status times that have passed
+     * @param now Current timestamp of the server
+     */
+    void ExpireStatusTimes(uint64_t now);
+
+    /**
+     * Get the AIState of the entity
+     * @return Pointer to the AIState of the entity or null if the
+     *  entity is not AI controlled
+     */
+    std::shared_ptr<channel::AIState> GetAIState() const;
+
+    /**
+     * Set the AIState of the entity
+     * @param Pointer to the AIState of the entity
+     */
+    void SetAIState(const std::shared_ptr<channel::AIState>& aiState);
+
+    /**
+     * Retrieves a timestamp associated to an enemy specific action.
+     * @param action Name of the action to retrieve information from
+     * @return Timestamp associated to the action or 0 if not found
+     */
+    uint64_t GetActionTime(const libcomp::String& action);
+
+    /**
+     * Stores a timestamp associated to an enemy specific action.
+     * @param action Name of the action to store
+     * @param time Timestamp of the specified action
+     */
+    void SetActionTime(const libcomp::String& action, uint64_t time);
 
     /**
      * Update the entity's current knockback value based on the last
@@ -236,7 +291,7 @@ public:
      * being used.
      * @return true if the state is ready to use, otherwise false
      */
-    virtual bool Ready() = 0;
+    virtual bool Ready();
 
     /**
      * Get the zone the entity currently exists in.
@@ -405,10 +460,10 @@ public:
 
     /**
      * Check if the entity has an opponent with the specified entity ID.
-     * @param opponentID Entity ID of an opponent to find
+     * @param opponentID Entity ID of an opponent to find or 0 to check for any
      * @return true if the entity ID is associated as an opponent to this entity
      */
-    bool HasOpponent(int32_t opponentID);
+    bool HasOpponent(int32_t opponentID = 0);
 
     /**
      * Add or remove an opponent with the specified entity ID.
@@ -430,6 +485,12 @@ public:
      *  if the supplied values are invalid
      */
     int16_t GetNRAChance(uint8_t nraIdx, CorrectTbl type);
+
+    /**
+     * Get the next activated ability ID from 1 to 128.
+     * @return The next activated ability ID for the client
+     */
+    uint8_t GetNextActivatedAbilityID();
 
 protected:
     /**
@@ -481,14 +542,6 @@ protected:
         const std::shared_ptr<objects::StatusEffect>& effect,
         libcomp::DefinitionManager* definitionManager, uint32_t nextTime,
         uint32_t now);
-
-    /**
-     * Corrects rotation values that have exceeded the minimum
-     * or maximum allowed range.
-     * @param rot Original rotation value to correct
-     * @return Equivalent but corrected rotation value
-     */
-    float CorrectRotation(float rot) const;
 
     /**
      * Adjust the supplied correct table stat values based upon adjustments from
@@ -611,6 +664,15 @@ protected:
 
     /// Last timestamp the entity's state was refreshed
     uint64_t mLastRefresh;
+
+    /// Next available activated ability ID
+    uint8_t mNextActivatedAbilityID;
+
+    /// Map of timestamps associated to AI specific actions
+    std::unordered_map<std::string, uint64_t> mActionTimes;
+
+    /// Pointer to the AI state information bound to the entity
+    std::shared_ptr<AIState> mAIState;
 
     /// Server lock for shared resources
     std::mutex mLock;

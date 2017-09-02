@@ -219,8 +219,7 @@ bool ServerDataManager::LoadAIScript(const libcomp::String& path,
 
     auto root = Sqrat::RootTable(engine.GetVM());
     auto fDef = root.GetFunction("define");
-    auto fUpdate = root.GetFunction("update");
-    if(fDef.IsNull() || fUpdate.IsNull())
+    if(fDef.IsNull())
     {
         LOG_ERROR(libcomp::String("Invalid AI script encountered: %1\n").Arg(path));
         return false;

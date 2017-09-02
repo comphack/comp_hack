@@ -27,6 +27,9 @@
 #ifndef SERVER_CHANNEL_SRC_ZONE_H
 #define SERVER_CHANNEL_SRC_ZONE_H
 
+ // object Includes
+#include <LootBox.h>
+
 // channel Includes
 #include "ActiveEntityState.h"
 #include "ChannelClientConnection.h"

@@ -192,7 +192,7 @@ public:
      * @return Position of the target CIDs section of the packet. This is useful
      *  for when the target CIDs are added later.
      */
-    uint32_t GetRelayPacket(libcomp::Packet& p,
+    static uint32_t GetRelayPacket(libcomp::Packet& p,
         const std::list<int32_t>& targetCIDs = {}, int32_t sourceCID = 0);
 
     /**
@@ -203,7 +203,7 @@ public:
      * @param sourceCID World CID of the source character, 0 means it came
      *  from the world
      */
-    void GetRelayPacket(libcomp::Packet& p, int32_t targetCID,
+    static void GetRelayPacket(libcomp::Packet& p, int32_t targetCID,
         int32_t sourceCID = 0);
 
 protected:

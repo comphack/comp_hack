@@ -113,10 +113,6 @@ void AccountManager::HandleLoginResponse(const std::shared_ptr<
 
     if(InitializeCharacter(character, state))
     {
-        // Set current session info to null
-        state->GetEventState()->SetCurrent(nullptr);
-        state->GetTradeSession()->SetOtherCharacterState(nullptr);
-
         // Get entity IDs for the character and demon
         auto charState = state->GetCharacterState();
         charState->SetEntity(character.Get());

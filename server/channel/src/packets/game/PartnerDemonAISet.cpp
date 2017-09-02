@@ -1,10 +1,11 @@
 /**
- * @file server/channel/src/packets/game/ExecuteSkill.cpp
+ * @file server/channel/src/packets/game/PartnerDemonAISet.cpp
  * @ingroup channel
  *
  * @author HACKfrost
  *
- * @brief Request from the client to execute a skill that has charged.
+ * @brief Request from the client to update the active partner demon's
+ *  AI attack settings.
  *
  * This file is part of the Channel Server (channel).
  *
@@ -31,35 +32,40 @@
 #include <ManagerPacket.h>
 
 // channel Includes
+#include "ChannelClientConnection.h"
 #include "ChannelServer.h"
 
 using namespace channel;
 
-void SkillExecution(SkillManager* skillManager,
-    const std::shared_ptr<ChannelClientConnection> client,
-    int32_t sourceEntityID, uint8_t activationID, int64_t targetObjectID)
-{
-    skillManager->ExecuteSkill(client, sourceEntityID, activationID, targetObjectID);
-}
-
-bool Parsers::ExecuteSkill::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::PartnerDemonAISet::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {
-    if(p.Size() < 9)
+    (void)pPacketManager;
+
+    if(p.Size() != 2)
     {
         return false;
     }
 
+    uint16_t attackSettings = p.ReadU16Little();
+
     auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
     auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-    auto skillManager = server->GetSkillManager();
+    auto state = client->GetClientState();
+    auto dState = state->GetDemonState();
+    auto demon = dState->GetEntity();
 
-    int32_t sourceEntityID = p.ReadS32Little();
-    uint8_t activationID = p.ReadU8();
-    int64_t targetObjectID = p.Size() == 9 ? (int64_t)p.ReadS32Little() : p.ReadS64Little();
+    if(!demon)
+    {
+        LOG_WARNING("Partner demon attack settings could not be saved"
+            " because no demon is summoned for the requesting client\n");
+        return true;
+    }
 
-    server->QueueWork(SkillExecution, skillManager, client, sourceEntityID, activationID, targetObjectID);
+    demon->SetAttackSettings(attackSettings);
+
+    server->GetWorldDatabase()->QueueUpdate(demon, state->GetAccountUID());
 
     return true;
 }

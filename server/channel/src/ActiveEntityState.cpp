@@ -30,6 +30,7 @@
 #include <Constants.h>
 #include <DefinitionManager.h>
 #include <ServerConstants.h>
+#include <ServerDataManager.h>
 
 // C++ Standard Includes
 #include <cmath>
@@ -56,14 +57,53 @@
 #include <MiStatusData.h>
 
 // channel Includes
+#include "AIState.h"
 #include "ChannelServer.h"
 #include "CharacterManager.h"
 #include "Zone.h"
 
 using namespace channel;
 
+namespace libcomp
+{
+    template<>
+    ScriptEngine& ScriptEngine::Using<ActiveEntityState>()
+    {
+        if(!BindingExists("ActiveEntityState"))
+        {
+            Using<AIState>();
+            Using<objects::ActiveEntityStateObject>();
+
+            // Active entities can rotate or stop directly from the script
+            // but movement must be handled via the AIManager
+            Sqrat::DerivedClass<ActiveEntityState,
+                objects::ActiveEntityStateObject> binding(mVM, "ActiveEntityState");
+            binding
+                .Func<void (ActiveEntityState::*)(float, uint64_t)>(
+                    "Rotate", &ActiveEntityState::Rotate)
+                .Func<void (ActiveEntityState::*)(uint64_t)>(
+                    "Stop", &ActiveEntityState::Stop)
+                .Func<bool (ActiveEntityState::*)(void) const>(
+                    "IsMoving", &ActiveEntityState::IsMoving)
+                .Func<bool (ActiveEntityState::*)(void) const>(
+                    "IsRotating", &ActiveEntityState::IsRotating)
+                .Func<std::shared_ptr<AIState>(ActiveEntityState::*)() const>(
+                    "GetAIState", &ActiveEntityState::GetAIState)
+                .Func<uint64_t (ActiveEntityState::*)(const libcomp::String&)>(
+                    "GetActionTime", &ActiveEntityState::GetActionTime)
+                .Func<void (ActiveEntityState::*)(const libcomp::String&, uint64_t)>(
+                    "SetActionTime", &ActiveEntityState::SetActionTime);
+
+            Bind<ActiveEntityState>("ActiveEntityState", binding);
+        }
+
+        return *this;
+    }
+}
+
 ActiveEntityState::ActiveEntityState() : mCurrentZone(0),
-    mEffectsActive(false), mAlive(true), mInitialCalc(false)
+    mEffectsActive(false), mAlive(true), mInitialCalc(false),
+    mLastRefresh(0), mNextActivatedAbilityID(1)
 {
 }
 
@@ -84,56 +124,26 @@ const libobjgen::UUID ActiveEntityState::GetEntityUUID()
 
 void ActiveEntityState::Move(float xPos, float yPos, uint64_t now)
 {
-    if(IsAlive())
+    if(CanMove())
     {
         SetOriginX(GetCurrentX());
         SetOriginY(GetCurrentY());
         SetOriginRotation(GetCurrentRotation());
         SetOriginTicks(now);
 
+        uint64_t addMicro = (uint64_t)(
+            (double)(GetDistance(xPos, yPos) / 300.f) *
+            1000000.0);
+
         SetDestinationX(xPos);
         SetDestinationY(yPos);
-        SetDestinationTicks(now + 500000);  /// @todo: modify for speed
+        SetDestinationTicks((uint64_t)(now + addMicro));
     }
-}
-
-void ActiveEntityState::MoveRelative(
-    float targetX, float targetY, float distance, bool away,
-    uint64_t now, uint64_t endTime)
-{
-    float x = GetCurrentX();
-    float y = GetCurrentY();
-
-    float destX = 0.f, destY = 0.f;
-    if(targetX != x)
-    {
-        float slope = (targetY - y)/(targetX - x);
-        float denom = (float)std::sqrt(1.0f + std::pow(slope, 2));
-
-        float xOffset = (float)(distance / denom);
-        float yOffset = (float)fabs((slope * distance) / denom);;
-
-        destX = (away == (targetX > x)) ? (x - xOffset) : (x + xOffset);
-        destY = (away == (targetY > y)) ? (y - yOffset) : (y + yOffset);
-    }
-    else if(targetY == y)
-    {
-        // Same coordinates, do nothing
-        return;
-    }
-
-    SetOriginX(x);
-    SetOriginY(y);
-    SetOriginTicks(now);
-
-    SetDestinationX(destX);
-    SetDestinationY(destY);
-    SetDestinationTicks(endTime);
 }
 
 void ActiveEntityState::Rotate(float rot, uint64_t now)
 {
-    if(IsAlive())
+    if(CanMove())
     {
         SetOriginX(GetCurrentX());
         SetOriginY(GetCurrentY());
@@ -171,6 +181,48 @@ bool ActiveEntityState::IsMoving() const
 bool ActiveEntityState::IsRotating() const
 {
     return GetCurrentRotation() != GetDestinationRotation();
+}
+
+bool ActiveEntityState::CanAct()
+{
+    return mAlive && (CanMove() || CurrentSkillsCount() > 0);
+}
+
+bool ActiveEntityState::CanMove()
+{
+    if(!mAlive || GetCorrectValue(CorrectTbl::MOVE1) == 0)
+    {
+        return false;
+    }
+
+    auto statusTimes = GetStatusTimes();
+    if(statusTimes.size() > 0)
+    {
+        for(uint8_t lockState : { STATUS_CHARGING, STATUS_KNOCKBACK,
+            STATUS_HIT_STUN, STATUS_IMMOBILE })
+        {
+            if(statusTimes.find(lockState) != statusTimes.end())
+            {
+                return false;
+            }
+        }
+    }
+
+    return true;
+}
+
+float ActiveEntityState::CorrectRotation(float rot)
+{
+    if(rot > 3.16f)
+    {
+        return rot - 6.32f;
+    }
+    else if(rot < -3.16f)
+    {
+        return -rot - 3.16f;
+    }
+
+    return rot;
 }
 
 float ActiveEntityState::GetDistance(float x, float y, bool squared)
@@ -252,6 +304,49 @@ void ActiveEntityState::RefreshCurrentPosition(uint64_t now)
             }
         }
     }
+}
+
+void ActiveEntityState::ExpireStatusTimes(uint64_t now)
+{
+    auto statusTimes = GetStatusTimes();
+    if(statusTimes.size() > 0)
+    {
+        for(auto pair : statusTimes)
+        {
+            if(pair.second <= now)
+            {
+                RemoveStatusTimes(pair.first);
+            }
+        }
+    }
+}
+
+std::shared_ptr<AIState> ActiveEntityState::GetAIState() const
+{
+    return mAIState;
+}
+
+void ActiveEntityState::SetAIState(const std::shared_ptr<AIState>& aiState)
+{
+    mAIState = aiState;
+}
+
+uint64_t ActiveEntityState::GetActionTime(const libcomp::String& action)
+{
+    std::lock_guard<std::mutex> lock(mLock);
+    auto it = mActionTimes.find(action.C());
+    if(it != mActionTimes.end())
+    {
+        return it->second;
+    }
+
+    return 0;
+}
+
+void ActiveEntityState::SetActionTime(const libcomp::String& action, uint64_t time)
+{
+    std::lock_guard<std::mutex> lock(mLock);
+    mActionTimes[action.C()] = time;
 }
 
 void ActiveEntityState::RefreshKnockback(uint64_t now)
@@ -1076,7 +1171,8 @@ std::set<int32_t> ActiveEntityState::GetOpponentIDs() const
 bool ActiveEntityState::HasOpponent(int32_t opponentID)
 {
     std::lock_guard<std::mutex> lock(mLock);
-    return mOpponentIDs.find(opponentID) != mOpponentIDs.end();
+    return opponentID == 0 ? mOpponentIDs.size() > 0
+        : mOpponentIDs.find(opponentID) != mOpponentIDs.end();
 }
 
 size_t ActiveEntityState::AddRemoveOpponent(bool add, int32_t opponentID)
@@ -1114,6 +1210,20 @@ int16_t ActiveEntityState::GetNRAChance(uint8_t nraIdx, CorrectTbl type)
 
     auto it = map->find(type);
     return it != map->end() ? it->second : 0;
+}
+
+uint8_t ActiveEntityState::GetNextActivatedAbilityID()
+{
+    std::lock_guard<std::mutex> lock(mLock);
+    uint8_t next = mNextActivatedAbilityID;
+
+    mNextActivatedAbilityID = (uint8_t)((mNextActivatedAbilityID + 1) % 128);
+    if(mNextActivatedAbilityID == 0)
+    {
+        mNextActivatedAbilityID = 1;
+    }
+
+    return next;
 }
 
 void ActiveEntityState::SetStatusEffects(
@@ -1245,18 +1355,21 @@ uint32_t ActiveEntityState::GetCurrentExpiration(
     return exp;
 }
 
-float ActiveEntityState::CorrectRotation(float rot) const
+// "Abstract implementations" required for Sqrat usage
+uint8_t ActiveEntityState::RecalculateStats(libcomp::DefinitionManager* definitionManager)
 {
-    if(rot > 3.16f)
-    {
-        return rot - 6.32f;
-    }
-    else if(rot < -3.16f)
-    {
-        return -rot - 3.16f;
-    }
+    (void)definitionManager;
+    return 0;
+}
 
-    return rot;
+std::shared_ptr<objects::EntityStats> ActiveEntityState::GetCoreStats()
+{
+    return nullptr;
+}
+
+bool ActiveEntityState::Ready()
+{
+    return false;
 }
 
 namespace channel
@@ -1469,12 +1582,33 @@ uint8_t ActiveEntityStateImp<objects::Demon>::RecalculateStats(
         return true;
     }
 
+    auto previousSkills = GetCurrentSkills();
+    ClearCurrentSkills();
+
     for(uint32_t skillID : mEntity->GetLearnedSkills())
     {
         if(skillID)
         {
             InsertCurrentSkills(skillID);
         }
+    }
+
+    bool skillsChanged = previousSkills.size() != CurrentSkillsCount();
+    if(!skillsChanged)
+    {
+        for(uint32_t skillID : previousSkills)
+        {
+            if(!CurrentSkillsContains(skillID))
+            {
+                skillsChanged = true;
+                break;
+            }
+        }
+    }
+
+    if(skillsChanged && mAIState)
+    {
+        mAIState->ResetSkillsMapped();
     }
 
     return RecalculateDemonStats(definitionManager, mEntity->GetType());
@@ -1495,6 +1629,7 @@ uint8_t ActiveEntityStateImp<objects::Enemy>::RecalculateStats(
         // Calculate initial demon and enemy skills
         auto demonData = definitionManager->GetDevilData(demonID);
 
+        auto previousSkills = GetCurrentSkills();
         ClearCurrentSkills();
 
         auto growth = demonData->GetGrowth();
@@ -1503,11 +1638,29 @@ uint8_t ActiveEntityStateImp<objects::Enemy>::RecalculateStats(
         {
             for(uint32_t skillID : skillSet)
             {
-                if (skillID)
+                if(skillID)
                 {
                     InsertCurrentSkills(skillID);
                 }
             }
+        }
+
+        bool skillsChanged = previousSkills.size() != CurrentSkillsCount();
+        if(!skillsChanged)
+        {
+            for(uint32_t skillID : previousSkills)
+            {
+                if(!CurrentSkillsContains(skillID))
+                {
+                    skillsChanged = true;
+                    break;
+                }
+            }
+        }
+
+        if(skillsChanged && mAIState)
+        {
+            mAIState->ResetSkillsMapped();
         }
     }
 

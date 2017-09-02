@@ -119,13 +119,12 @@ bool Parsers::ClanUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
                     server->GetCharacterManager()->AddRemoveItems(client, itemMap, false,
                         activatedAbility->GetTargetObjectID());
 
-                    server->GetSkillManager()->ExecuteSkill(client, cState->GetEntityID(),
+                    server->GetSkillManager()->ExecuteSkill(cState,
                         (uint8_t)activationID, activatedAbility->GetTargetObjectID());
                 }
                 else
                 {
-                    server->GetSkillManager()->CancelSkill(client, cState->GetEntityID(),
-                        (uint8_t)activationID);
+                    server->GetSkillManager()->CancelSkill(cState, (uint8_t)activationID);
                 }
             }
         }

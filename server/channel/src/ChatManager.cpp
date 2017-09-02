@@ -472,12 +472,14 @@ bool ChatManager::GMCommand_Enemy(const std::shared_ptr<
     }
 
     /// @todo: Default to directly in front of the player
-    float x = cState->GetOriginX();
-    float y = cState->GetOriginY();
-    float rot = cState->GetOriginRotation();
+    cState->RefreshCurrentPosition(ChannelServer::GetServerTime());
+
+    float x = cState->GetCurrentX();
+    float y = cState->GetCurrentY();
+    float rot = cState->GetCurrentRotation();
 
     // All optional params past this point
-    libcomp::String aiType = "default";
+    libcomp::String aiType = "";
 
     if(!argsCopy.empty())
     {
@@ -504,6 +506,10 @@ bool ChatManager::GMCommand_Enemy(const std::shared_ptr<
             {
                 rot = 0.f;
             }
+        }
+        else
+        {
+            x = cState->GetCurrentX();
         }
     }
 

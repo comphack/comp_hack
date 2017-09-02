@@ -144,12 +144,6 @@ public:
     bool SetObjectID(const libobjgen::UUID& uuid, int64_t objectID);
 
     /**
-     * Get the next activated ability ID from 1 to 128.
-     * @return The next activated ability ID for the client
-     */
-    uint8_t GetNextActivatedAbilityID();
-
-    /**
      * Get the UID of the account associated to the client.
      * @return UID of the account associated to the client
      */
@@ -275,9 +269,6 @@ private:
     /// Current time of the server set upon starting the client
     /// communication.
     ServerTime mStartTime;
-
-    /// Next available activated ability ID
-    uint8_t mNextActivatedAbilityID;
 
     /// Next available local object ID
     int32_t mNextLocalObjectID;

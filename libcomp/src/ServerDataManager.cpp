@@ -50,6 +50,17 @@ const std::shared_ptr<objects::ServerZone> ServerDataManager::GetZoneData(uint32
     return GetObjectByID<uint32_t, objects::ServerZone>(id, mZoneData);
 }
 
+const std::set<uint32_t> ServerDataManager::GetAllZoneIDs()
+{
+    std::set<uint32_t> zoneIDs;
+    for(auto pair : mZoneData)
+    {
+        zoneIDs.insert(pair.first);
+    }
+
+    return zoneIDs;
+}
+
 const std::shared_ptr<objects::Event> ServerDataManager::GetEventData(const libcomp::String& id)
 {
     return GetObjectByID<std::string, objects::Event>(id.C(), mEventData);

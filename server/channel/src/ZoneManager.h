@@ -30,6 +30,7 @@
 // channel Includes
 #include "ChannelClientConnection.h"
 #include "Zone.h"
+#include "ZoneGeometry.h"
 
 namespace libcomp
 {
@@ -60,6 +61,21 @@ public:
     ~ZoneManager();
 
     /**
+     * Load all QMP zone geometry files and prepare them to be bound
+     * to zones as they are instantiated. If a specific file fails to
+     * load, an error will be returned but the zone will still be
+     * accessible without server side collision support.
+     */
+    void LoadGeometry();
+
+    /**
+     * Instantiate all global zones the server is responsible for
+     * hosting. This should be called only once, after a valid world
+     * connection has been established but before any clients connect.
+     */
+    void InstanceGlobalZones();
+
+    /**
      * Get the zone instance associated to a client connection
      * @param client Client connection connected to a zone
      * @return Pointer to a zone instance
@@ -69,11 +85,11 @@ public:
 
     /**
      * Get the zone instance associated to a character entity ID
-     * @param primaryEntityID Character entity ID associated to a client
-     *  connection as the primary entity
+     * @param worldCID World CID of the character associated to a client
+     *  connection
      * @return Pointer to a zone instance
      */
-    std::shared_ptr<Zone> GetZoneInstance(int32_t primaryEntityID);
+    std::shared_ptr<Zone> GetZoneInstance(int32_t worldCID);
 
     /**
      * Associate a client connection to a zone
@@ -286,7 +302,7 @@ public:
      * @param height Height of the area to generate a random point within
      * @return X, Y coordinates of the random point
      */
-    std::pair<float, float> GetRandomPoint(float width, float height) const;
+    Point GetRandomPoint(float width, float height) const;
 
     /**
      * Get a point directly away or directly towards two specified points.
@@ -297,9 +313,10 @@ public:
      * @param distance Distance to move
      * @param away true if the point calculated should be futher from the
      *  target point, false if it should be closer to it
-     * @return Pair of X, Y coordinates at the specified point
+     * @return X, Y coordinates at the specified point not adjusted for
+     *  collisions
      */
-    std::pair<float, float> GetLinearPoint(float sourceX, float sourceY,
+    Point GetLinearPoint(float sourceX, float sourceY,
         float targetX, float targetY, float distance, bool away);
 
     /**
@@ -361,9 +378,12 @@ private:
      * Get a zone instance by zone definition ID. This function is responsible for
      * deciding if a non-public zone should have an additional instance created.
      * @param zoneID Zone definition ID to get an instance for
+     * @param client Pointer to the client connection to use to decide whether
+     *  a new instance should be created if the zone is private
      * @return Pointer to a matching zone instance
      */
-    std::shared_ptr<Zone> GetZone(uint32_t zoneID);
+    std::shared_ptr<Zone> GetZone(uint32_t zoneID,
+        const std::shared_ptr<ChannelClientConnection>& client);
 
     /**
      * Create a new zone instance based off of the supplied definition
@@ -379,8 +399,18 @@ private:
     /// Map of zone definition IDs to zone instance IDs
     std::unordered_map<uint32_t, std::set<uint32_t>> mZoneMap;
 
-    /// Map of primary entity IDs to zone instance IDs
+    /// Map of world CIDs to zone instance IDs
     std::unordered_map<int32_t, uint32_t> mEntityMap;
+
+    /// Map of QMP filenames to the geometry structures built from them
+    std::unordered_map<std::string,
+        std::shared_ptr<ZoneGeometry>> mZoneGeometry;
+
+    /// Set of all zone instances that should be considered active when
+    /// updating states. When an instnace is removed from this set but
+    /// not removed entirely, its AI etc will be frozen until a player
+    /// enters the zone again.
+    std::set<uint32_t> mActiveInstances;
 
     /// Pointer to the channel server
     std::weak_ptr<ChannelServer> mServer;

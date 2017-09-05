@@ -57,6 +57,7 @@ class MiSkillData;
 class MiStatusData;
 class MiTriUnionSpecialData;
 class MiZoneData;
+class QmpFile;
 }
 
 namespace libcomp
@@ -324,6 +325,17 @@ public:
      * @return true on success, false on failure
      */
     bool LoadZoneData(gsl::not_null<DataStore*> pDataStore);
+
+    /**
+     * Load the QMP file with the specified filename from the supplied datastore.
+     * Unlike other "load" functions on the manager, this information is not cached.
+     * @param fileName Name of the QMP file to load, including the file extension
+     * @param pDataStore Pointer to the datastore to load file from
+     * @return Pointer to the structure holding the parsed file information or
+     *  null on failure
+     */
+    std::shared_ptr<objects::QmpFile> LoadQmpFile(const libcomp::String& fileName,
+        gsl::not_null<DataStore*> pDataStore);
 
 private:
     /**

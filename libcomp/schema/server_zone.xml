@@ -10,6 +10,7 @@
         <member type="u32" name="ID"/>
         <member type="u32" name="DynamicMapID"/>
         <member type="bool" name="Global"/>
+        <member type="u32" name="GroupID"/>
         <member type="float" name="StartingX"/>
         <member type="float" name="StartingY"/>
         <member type="float" name="StartingRotation"/>

@@ -1146,7 +1146,6 @@ bool ChatManager::GMCommand_Zone(const std::shared_ptr<
                 "command with proper inputs.");
         }
 
-        zoneManager->LeaveZone(client, false);
         zoneManager->EnterZone(client, zoneID, xCoord, yCoord, rotation);
         
         return true;

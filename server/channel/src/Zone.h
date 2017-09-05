@@ -35,6 +35,7 @@
 #include "ChannelClientConnection.h"
 #include "EnemyState.h"
 #include "EntityState.h"
+#include "ZoneGeometry.h"
 
 // Standard C++11 includes
 #include <map>
@@ -82,13 +83,37 @@ public:
     uint32_t GetID();
 
     /**
-     * Add a client connection to the zone and register its primary entity ID
+     * Get the owner ID of the zone (only applies to non-global zones)
+     * @return Owner ID of the zone
+     */
+    int32_t GetOwnerID() const;
+
+    /**
+     * Set the owner ID of the zone (only applies to non-global zones)
+     * @param ownerID Owner ID of the zone
+     */
+    void SetOwnerID(int32_t ownerID);
+
+    /**
+     * Get the geometry information bound to the zone
+     * @return Geometry information bound to the zone
+     */
+    const std::shared_ptr<ZoneGeometry> GetGeometry() const;
+
+    /**
+     * Set the geometry information bound to the zone
+     * @param geometry Geometry information bound to the zone
+     */
+    void SetGeometry(const std::shared_ptr<ZoneGeometry>& geometry);
+
+    /**
+     * Add a client connection to the zone and register its world CID
      * @param client Pointer to a client connection to add
      */
     void AddConnection(const std::shared_ptr<ChannelClientConnection>& client);
 
     /**
-     * Remove a client connection from the zone and unregister its primary entity ID
+     * Remove a client connection from the zone and unregister its world CID
      * @param client Pointer to a client connection to remove
      */
     void RemoveConnection(const std::shared_ptr<ChannelClientConnection>& client);
@@ -127,8 +152,8 @@ public:
     void AddObject(const std::shared_ptr<ServerObjectState>& object);
 
     /**
-     * Get all client connections in the zone mapped by primary entity ID
-     * @return Map of all client connections in the zone by primary entity ID
+     * Get all client connections in the zone mapped by world CID
+     * @return Map of all client connections in the zone by world CID
      */
     std::unordered_map<int32_t,
         std::shared_ptr<ChannelClientConnection>> GetConnections();
@@ -289,7 +314,7 @@ private:
     /// Pointer to the ServerZone definition
     std::shared_ptr<objects::ServerZone> mServerZone;
 
-    /// Map of primarty entity IDs to client connections
+    /// Map of world CIDs to client connections
     std::unordered_map<int32_t, std::shared_ptr<ChannelClientConnection>> mConnections;
 
     /// List of pointers to enemies instantiated for the zone
@@ -318,8 +343,15 @@ private:
     /// at that time
     std::map<uint64_t, std::set<uint32_t>> mSpawnGroupReinforceTimes;
 
+    /// Geometry information bound to the zone
+    std::shared_ptr<ZoneGeometry> mGeometry;
+
     /// Unique instance ID of the zone
     uint32_t mID;
+
+    /// If the zone is private, this is the world CID of the character who
+    /// instantiated it
+    int32_t mOwnerID;
 
     /// Server lock for shared resources
     std::mutex mLock;

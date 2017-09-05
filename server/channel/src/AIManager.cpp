@@ -480,12 +480,17 @@ bool AIManager::UpdateEnemyState(const std::shared_ptr<EnemyState>& eState, uint
                 auto point = server->GetZoneManager()->GetRandomPoint(
                     spawnLocation->GetWidth(), spawnLocation->GetHeight());
 
-                float x = (float)(spawnLocation->GetX() + point.first);
-                float y = (float)(spawnLocation->GetY() + point.second);
+                float x = (float)(spawnLocation->GetX() + point.x);
+                float y = (float)(spawnLocation->GetY() + point.y);
 
-                auto command = GetMoveCommand(eState->GetCurrentX(),
-                    eState->GetCurrentY(), x, y);
-                aiState->QueueCommand(command);
+                Point source(eState->GetCurrentX(), eState->GetCurrentY());
+                Point dest(x, y);
+
+                auto command = GetMoveCommand(eState->GetZone(), source, dest);
+                if(command)
+                {
+                    aiState->QueueCommand(command);
+                }
             }
 
             /// @todo: determine what this should be per demon type
@@ -555,15 +560,21 @@ bool AIManager::UpdateEnemyState(const std::shared_ptr<EnemyState>& eState, uint
                 if(dist > maxTargetRange)
                 {
                     // Move within range
-                    float sourceX = eState->GetCurrentX();
-                    float sourceY = eState->GetCurrentY();
+                    Point source(eState->GetCurrentX(), eState->GetCurrentY());
 
                     auto zoneManager = server->GetZoneManager();
-                    auto point = zoneManager->GetLinearPoint(sourceX, sourceY,
+                    auto point = zoneManager->GetLinearPoint(source.x, source.y,
                         targetX, targetY, (float)(dist - (float)maxTargetRange), false);
 
-                    auto cmd = GetMoveCommand(sourceX, sourceY, point.first, point.second);
-                    aiState->QueueCommand(cmd);
+                    auto cmd = GetMoveCommand(zone, source, point);
+                    if(cmd)
+                    {
+                        aiState->QueueCommand(cmd);
+                    }
+                    else
+                    {
+                        skillManager->CancelSkill(eState, activated->GetActivationID());
+                    }
                 }
                 else
                 {
@@ -592,15 +603,17 @@ bool AIManager::UpdateEnemyState(const std::shared_ptr<EnemyState>& eState, uint
                     if(dist > 300.f)
                     {
                         // Run up to the target but don't do anything yet
-                        float sourceX = eState->GetCurrentX();
-                        float sourceY = eState->GetCurrentY();
+                        Point source(eState->GetCurrentX(), eState->GetCurrentY());
 
                         auto zoneManager = mServer.lock()->GetZoneManager();
-                        auto point = zoneManager->GetLinearPoint(sourceX, sourceY,
-                            targetX, targetY, (float)(dist - 250.f), false);
+                        auto point = zoneManager->GetLinearPoint(source.x, source.y,
+                            targetX, targetY, dist, false);
 
-                        auto cmd = GetMoveCommand(sourceX, sourceY, point.first, point.second);
-                        aiState->QueueCommand(cmd);
+                        auto cmd = GetMoveCommand(zone, source, point, 250.f);
+                        if(cmd)
+                        {
+                            aiState->QueueCommand(cmd);
+                        }
                     }
                     else if(eState->CurrentSkillsCount() > 0)
                     {
@@ -736,17 +749,77 @@ void AIManager::RefreshSkillMap(const std::shared_ptr<ActiveEntityState>& eState
     }
 }
 
-std::shared_ptr<AIMoveCommand> AIManager::GetMoveCommand(float sourceX, float sourceY,
-    float targetX, float targetY) const
+std::shared_ptr<AIMoveCommand> AIManager::GetMoveCommand(const std::shared_ptr<
+    Zone>& zone, const Point& source, const Point& dest, float reduce) const
 {
-    (void)sourceX;
-    (void)sourceY;
+    if(source.GetDistance(dest) < reduce)
+    {
+        // Don't bother moving if we're trying to move away by accident
+        return nullptr;
+    }
+
+    auto zoneManager = mServer.lock()->GetZoneManager();
 
     auto cmd = std::make_shared<AIMoveCommand>();
 
-    /// @todo: handle collision etc
     std::list<std::pair<float, float>> pathing;
-    pathing.push_back(std::pair<float, float>(targetX, targetY));
+
+    bool collision = false;
+
+    std::list<Point> shortestPath;
+    auto geometry = zone->GetGeometry();
+    if(geometry)
+    {
+        Line path(source, dest);
+
+        Point collidePoint;
+        Line outSurface;
+        std::shared_ptr<ZoneShape> outShape;
+        if(geometry->Collides(path, collidePoint, outSurface, outShape))
+        {
+            /*// Move off the collision point by 10
+            collidePoint = zoneManager->GetLinearPoint(collidePoint.x,
+                collidePoint.y, source.x, source.y, 10.f, false);
+
+            /// @todo: handle pathing properly
+
+            collision = true;*/
+            return nullptr;
+        }
+    }
+
+    if(!collision)
+    {
+        shortestPath.push_back(dest);
+    }
+
+    if(reduce > 0.f)
+    {
+        auto it = shortestPath.rbegin();
+        Point& last = *it;
+
+        Point secondLast;
+        if(shortestPath.size() > 1)
+        {
+            it++;
+            secondLast = *it;
+        }
+        else
+        {
+            secondLast = source;
+        }
+
+        float dist = secondLast.GetDistance(last);
+        auto adjusted = zoneManager->GetLinearPoint(secondLast.x, secondLast.y,
+            last.x, last.y, dist - reduce, false);
+        last.x = adjusted.x;
+        last.y = adjusted.y;
+    }
+
+    for(auto p : shortestPath)
+    {
+        pathing.push_back(std::pair<float, float>(p.x, p.y));
+    }
 
     cmd->SetPathing(pathing);
 

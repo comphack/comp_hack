@@ -369,6 +369,8 @@ bool ChannelServer::Initialize()
     mSkillManager = new SkillManager(channelPtr);
     mZoneManager = new ZoneManager(channelPtr);
 
+    mZoneManager->LoadGeometry();
+
     // Now connect to the world server.
     auto worldConnection = std::make_shared<
         libcomp::InternalConnection>(mService);

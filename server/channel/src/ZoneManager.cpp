@@ -42,6 +42,14 @@
 #include <ItemDrop.h>
 #include <MiDevilData.h>
 #include <MiGrowthData.h>
+#include <MiZoneData.h>
+#include <MiZoneFileData.h>
+#include <Party.h>
+#include <QmpBoundary.h>
+#include <QmpBoundaryLine.h>
+#include <QmpElement.h>
+#include <QmpFile.h>
+#include <ServerObject.h>
 #include <ServerBazaar.h>
 #include <ServerNPC.h>
 #include <ServerObject.h>
@@ -75,17 +83,180 @@ ZoneManager::~ZoneManager()
     }
 }
 
+void ZoneManager::LoadGeometry()
+{
+    auto server = mServer.lock();
+    auto definitionManager = server->GetDefinitionManager();
+
+    std::set<uint32_t> zoneIDs = server->GetServerDataManager()->GetAllZoneIDs();
+
+    for(uint32_t zoneID : zoneIDs)
+    {
+        auto zoneData = definitionManager->GetZoneData(zoneID);
+
+        libcomp::String filename = zoneData->GetFile()->GetQmpFile();
+        if(filename.IsEmpty() || mZoneGeometry.find(filename.C()) != mZoneGeometry.end()) continue;
+
+        auto qmpFile = definitionManager->LoadQmpFile(filename, server->GetDataStore());
+        if(!qmpFile)
+        {
+            //success = false;
+            LOG_ERROR(libcomp::String("Failed to load zone geometry file: %1\n")
+                .Arg(filename));
+            continue;
+        }
+
+        LOG_DEBUG(libcomp::String("Loaded zone geometry file: %1\n")
+            .Arg(filename));
+
+        std::unordered_map<uint32_t, libcomp::String> elementMap;
+        for(auto qmpElem : qmpFile->GetElements())
+        {
+            elementMap[qmpElem->GetID()] = qmpElem->GetName();
+        }
+
+        std::unordered_map<uint32_t, std::list<Line>> lineMap;
+        for(auto qmpBoundary : qmpFile->GetBoundaries())
+        {
+            for(auto qmpLine : qmpBoundary->GetLines())
+            {
+                Line l(Point((float)qmpLine->GetX1(), (float)qmpLine->GetY1()),
+                    Point((float)qmpLine->GetX2(), (float)qmpLine->GetY2()));
+                lineMap[qmpLine->GetElementID()].push_back(l);
+            }
+        }
+
+        auto geometry = std::make_shared<ZoneGeometry>();
+        geometry->QmpFilename = filename;
+
+        uint32_t instanceID = 1;
+        for(auto pair : lineMap)
+        {
+            auto shape =  std::make_shared<ZoneShape>();
+            shape->ShapeID = pair.first;
+            shape->ElementName = elementMap[pair.first];
+
+            // Build a complete shape from the lines provided
+            // If there is a gap in the shape, it is a line instead
+            // of a full shape
+            auto lines = pair.second;
+
+            shape->Surfaces.push_back(lines.front());
+            lines.pop_front();
+            Line& firstLine = shape->Surfaces.front();
+
+            Point* connectPoint = &shape->Surfaces.back().second;
+            while(lines.size() > 0)
+            {
+                bool connected = false;
+                for(auto it = lines.begin(); it != lines.end(); it++)
+                {
+                    if(it->first == *connectPoint)
+                    {
+                        shape->Surfaces.push_back(*it);
+                        connected = true;
+                    }
+                    else if(it->second == *connectPoint)
+                    {
+                        shape->Surfaces.push_back(Line(it->second, it->first));
+                        connected = true;
+                    }
+
+                    if(connected)
+                    {
+                        connectPoint = &shape->Surfaces.back().second;
+                        lines.erase(it);
+                        break;
+                    }
+                }
+
+                if(!connected || lines.size() == 0)
+                {
+                    shape->InstanceID = instanceID++;
+
+                    auto completeShape = shape;
+                    if(*connectPoint == firstLine.first)
+                    {
+                        // Solid shape completed
+                        shape->IsLine = false;
+                    }
+
+                    geometry->Shapes.push_back(shape);
+
+                    // Determine the boundaries of the completed shape
+                    std::list<float> xVals;
+                    std::list<float> yVals;
+
+                    for(Line& line : shape->Surfaces)
+                    {
+                        for(const Point& p : { line.first, line.second })
+                        {
+                            xVals.push_back(p.x);
+                            yVals.push_back(p.y);
+                        }
+                    }
+
+                    xVals.sort([](const float& a, const float& b)
+                        {
+                            return a < b;
+                        });
+
+                    yVals.sort([](const float& a, const float& b)
+                        {
+                            return a < b;
+                        });
+
+                    shape->Boundaries[0] = Point(xVals.front(), yVals.front());
+                    shape->Boundaries[1] = Point(xVals.back(), yVals.back());
+
+                    if(lines.size() > 0)
+                    {
+                        // Start a new shape
+                        shape = std::make_shared<ZoneShape>();
+                        shape->ShapeID = pair.first;
+                        shape->ElementName = elementMap[pair.first];
+
+                        shape->Surfaces.push_back(lines.front());
+                        lines.pop_front();
+                        firstLine = shape->Surfaces.front();
+                        connectPoint = &shape->Surfaces.back().second;
+                    }
+                }
+            }
+
+            mZoneGeometry[filename.C()] = geometry;
+        }
+    }
+}
+
+void ZoneManager::InstanceGlobalZones()
+{
+    auto server = mServer.lock();
+    auto serverDataManager = server->GetServerDataManager();
+
+    std::set<uint32_t> zoneIDs = serverDataManager->GetAllZoneIDs();
+    for(uint32_t zoneID : zoneIDs)
+    {
+        auto zoneData = serverDataManager->GetZoneData(zoneID);
+        if(mZones.find(zoneID) == mZones.end() && zoneData->GetGlobal())
+        {
+            auto zone = CreateZoneInstance(zoneData);
+            mActiveInstances.insert(zone->GetID());
+        }
+    }
+}
+
 std::shared_ptr<Zone> ZoneManager::GetZoneInstance(const std::shared_ptr<
     ChannelClientConnection>& client)
 {
-    auto primaryEntityID = client->GetClientState()->GetCharacterState()->GetEntityID();
-    return GetZoneInstance(primaryEntityID);
+    auto worldCID = client->GetClientState()->GetWorldCID();
+    return GetZoneInstance(worldCID);
 }
 
-std::shared_ptr<Zone> ZoneManager::GetZoneInstance(int32_t primaryEntityID)
+std::shared_ptr<Zone> ZoneManager::GetZoneInstance(int32_t worldCID)
 {
     std::lock_guard<std::mutex> lock(mLock);
-    auto iter = mEntityMap.find(primaryEntityID);
+    auto iter = mEntityMap.find(worldCID);
     if(iter != mEntityMap.end())
     {
         return mZones[iter->second];
@@ -97,7 +268,7 @@ std::shared_ptr<Zone> ZoneManager::GetZoneInstance(int32_t primaryEntityID)
 bool ZoneManager::EnterZone(const std::shared_ptr<ChannelClientConnection>& client,
     uint32_t zoneID, float xCoord, float yCoord, float rotation, bool forceLeave)
 {
-    auto instance = GetZone(zoneID);
+    auto instance = GetZone(zoneID, client);
     if(instance == nullptr)
     {
         return false;
@@ -106,14 +277,15 @@ bool ZoneManager::EnterZone(const std::shared_ptr<ChannelClientConnection>& clie
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
     auto dState = state->GetDemonState();
-    auto primaryEntityID = cState->GetEntityID();
+    auto worldCID = state->GetWorldCID();
 
-    if(forceLeave)
+    auto currentZone = cState->GetZone();
+    if(forceLeave || (currentZone && currentZone != instance))
     {
         LeaveZone(client, false);
 
         // Pull a fresh version of the zone in case it was cleaned up
-        instance = GetZone(zoneID);
+        instance = GetZone(zoneID, client);
         if(instance == nullptr)
         {
             return false;
@@ -123,7 +295,7 @@ bool ZoneManager::EnterZone(const std::shared_ptr<ChannelClientConnection>& clie
     auto instanceID = instance->GetID();
     {
         std::lock_guard<std::mutex> lock(mLock);
-        mEntityMap[primaryEntityID] = instanceID;
+        mEntityMap[worldCID] = instanceID;
     }
     instance->AddConnection(client);
     cState->SetZone(instance);
@@ -205,7 +377,7 @@ void ZoneManager::LeaveZone(const std::shared_ptr<ChannelClientConnection>& clie
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
     auto dState = state->GetDemonState();
-    auto primaryEntityID = cState->GetEntityID();
+    auto worldCID = state->GetWorldCID();
 
     // Detach from zone specific state info
     if(state->GetTradeSession()->GetOtherCharacterState() != nullptr)
@@ -235,26 +407,44 @@ void ZoneManager::LeaveZone(const std::shared_ptr<ChannelClientConnection>& clie
     std::shared_ptr<Zone> zone = nullptr;
     {
         std::lock_guard<std::mutex> lock(mLock);
-        auto iter = mEntityMap.find(primaryEntityID);
+        auto iter = mEntityMap.find(worldCID);
         if(iter != mEntityMap.end())
         {
             uint32_t instanceID = iter->second;
             zone = mZones[instanceID];
 
-            mEntityMap.erase(primaryEntityID);
+            mEntityMap.erase(worldCID);
             zone->RemoveConnection(client);
+
             if(zone->GetConnections().size() == 0)
             {
-                zone->Cleanup();
-                mZones.erase(instanceID);
+                // Always "freeze" the instance
+                mActiveInstances.erase(instanceID);
 
-                auto zoneDefID = zone->GetDefinition()->GetID();
-                std::set<uint32_t>& instances = mZoneMap[zoneDefID];
-                instances.erase(instanceID);
-                if(instances.size() == 0)
+                // Remove the instance if its not global
+                auto def = zone->GetDefinition();
+                if(!def->GetGlobal())
                 {
-                    mZoneMap.erase(zoneDefID);
-                    instanceRemoved = true;
+                    zone->Cleanup();
+                    mZones.erase(instanceID);
+
+                    auto zoneDefID = def->GetID();
+                    std::set<uint32_t>& instances = mZoneMap[zoneDefID];
+                    instances.erase(instanceID);
+                    if(instances.size() == 0)
+                    {
+                        mZoneMap.erase(zoneDefID);
+                        instanceRemoved = true;
+                    }
+                }
+                else
+                {
+                    // Stop all AI in place if global
+                    uint64_t now = ChannelServer::GetServerTime();
+                    for(auto eState : zone->GetEnemies())
+                    {
+                        eState->Stop(now);
+                    }
                 }
             }
         }
@@ -267,8 +457,9 @@ void ZoneManager::LeaveZone(const std::shared_ptr<ChannelClientConnection>& clie
 
     if(!instanceRemoved)
     {
+        auto characterID = cState->GetEntityID();
         auto demonID = dState->GetEntityID();
-        std::list<int32_t> entityIDs = { primaryEntityID, demonID };
+        std::list<int32_t> entityIDs = { characterID, demonID };
         RemoveEntitiesFromZone(zone, entityIDs);
     }
 
@@ -293,9 +484,8 @@ void ZoneManager::SendPopulateZoneData(const std::shared_ptr<ChannelClientConnec
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
     auto dState = state->GetDemonState();
-    auto characterEntityID = cState->GetEntityID();
 
-    auto zone = GetZoneInstance(characterEntityID);
+    auto zone = GetZoneInstance(state->GetWorldCID());
     auto zoneData = zone->GetDefinition();
     auto characterManager = server->GetCharacterManager();
     auto definitionManager = server->GetDefinitionManager();
@@ -313,8 +503,8 @@ void ZoneManager::SendPopulateZoneData(const std::shared_ptr<ChannelClientConnec
 
     // The client's partner demon will be shown elsewhere
 
-    PopEntityForZoneProduction(client, characterEntityID, 0);
-    ShowEntityToZone(client, characterEntityID);
+    PopEntityForZoneProduction(client, cState->GetEntityID(), 0);
+    ShowEntityToZone(client, cState->GetEntityID());
 
     // Activate status effects
     cState->SetStatusEffectsActive(true, definitionManager);
@@ -858,11 +1048,11 @@ std::list<std::shared_ptr<ChannelClientConnection>> ZoneManager::GetZoneConnecti
 {
     std::list<std::shared_ptr<ChannelClientConnection>> connections;
 
-    auto primaryEntityID = client->GetClientState()->GetCharacterState()->GetEntityID();
+    auto worldCID = client->GetClientState()->GetWorldCID();
     std::shared_ptr<Zone> zone;
     {
         std::lock_guard<std::mutex> lock(mLock);
-        auto iter = mEntityMap.find(primaryEntityID);
+        auto iter = mEntityMap.find(worldCID);
         if(iter != mEntityMap.end())
         {
             zone = mZones[iter->second];
@@ -873,7 +1063,7 @@ std::list<std::shared_ptr<ChannelClientConnection>> ZoneManager::GetZoneConnecti
     {
         for(auto connectionPair : zone->GetConnections())
         {
-            if(includeSelf || connectionPair.first != primaryEntityID)
+            if(includeSelf || connectionPair.first != worldCID)
             {
                 connections.push_back(connectionPair.second);
             }
@@ -961,8 +1151,8 @@ void ZoneManager::UpdateSpawnGroups(const std::shared_ptr<Zone>& zone,
 
                 auto rPoint = GetRandomPoint(location->GetWidth(), location->GetHeight());
 
-                float x = location->GetX() + rPoint.first;
-                float y = location->GetY() + rPoint.second;
+                float x = location->GetX() + rPoint.x;
+                float y = location->GetY() + rPoint.y;
                 float rot = RNG_DEC(float, 0.f, 3.16f, 2);
 
                 // Create the enemy state
@@ -1056,16 +1246,12 @@ std::shared_ptr<EnemyState> ZoneManager::CreateEnemy(
 
 void ZoneManager::UpdateActiveZoneStates()
 {
-    /// @todo: keep track of active zones
     std::list<std::shared_ptr<Zone>> instances;
     {
         std::lock_guard<std::mutex> lock(mLock);
-        for(auto zPair : mZoneMap)
+        for(auto instanceID : mActiveInstances)
         {
-            for(auto instanceID : zPair.second)
-            {
-                instances.push_back(mZones[instanceID]);
-            }
+            instances.push_back(mZones[instanceID]);
         }
     }
 
@@ -1120,16 +1306,16 @@ void ZoneManager::Warp(const std::shared_ptr<ChannelClientConnection>& client,
     ChannelClientConnection::SendRelativeTimePacket(connections, p, timeMap);
 }
 
-std::pair<float, float> ZoneManager::GetRandomPoint(float width, float height) const
+Point ZoneManager::GetRandomPoint(float width, float height) const
 {
-    return std::pair<float, float>(RNG_DEC(float, 0.f, (float)fabs(width), 2),
+    return Point(RNG_DEC(float, 0.f, (float)fabs(width), 2),
         RNG_DEC(float, 0.f, (float)fabs(height), 2));
 }
 
-std::pair<float, float> ZoneManager::GetLinearPoint(float sourceX, float sourceY,
+Point ZoneManager::GetLinearPoint(float sourceX, float sourceY,
     float targetX, float targetY, float distance, bool away)
 {
-    std::pair<float, float> dest(sourceX, sourceY);
+    Point dest(sourceX, sourceY);
     if(targetX != sourceX)
     {
         float slope = (targetY - sourceY)/(targetX - sourceX);
@@ -1138,16 +1324,16 @@ std::pair<float, float> ZoneManager::GetLinearPoint(float sourceX, float sourceY
         float xOffset = (float)(distance / denom);
         float yOffset = (float)fabs((slope * distance) / denom);
 
-        dest.first = (away == (targetX > sourceX))
+        dest.x = (away == (targetX > sourceX))
             ? (sourceX - xOffset) : (sourceX + xOffset);
-        dest.second = (away == (targetY > sourceY))
+        dest.y = (away == (targetY > sourceY))
             ? (sourceY - yOffset) : (sourceY + yOffset);
     }
     else if(targetY != sourceY)
     {
         float yOffset = (float)((targetY - sourceY)/distance);
 
-        dest.second = (away == (targetY > sourceY))
+        dest.y = (away == (targetY > sourceY))
             ? (sourceY - yOffset) : (sourceY + yOffset);
     }
 
@@ -1163,20 +1349,48 @@ void ZoneManager::MoveRelative(const std::shared_ptr<ActiveEntityState>& eState,
 
     auto point = GetLinearPoint(x, y, targetX, targetY, distance, away);
 
-    if(point.first != x || point.second != y)
+    if(point.x != x || point.y != y)
     {
+        // Check collision and adjust
+        Line move(x, y, point.x, point.y);
+
+        Point corrected;
+        auto geometry = eState->GetZone()->GetGeometry();
+        if(geometry && geometry->Collides(move, corrected))
+        {
+            // Move off the collision point by 10
+            point = GetLinearPoint(corrected.x, corrected.y, x, y, 10.f, false);
+        }
+
         eState->SetOriginX(x);
         eState->SetOriginY(y);
         eState->SetOriginTicks(now);
 
-        eState->SetDestinationX(point.first);
-        eState->SetDestinationY(point.second);
+        eState->SetDestinationX(point.x);
+        eState->SetDestinationY(point.y);
         eState->SetDestinationTicks(endTime);
     }
 }
 
-std::shared_ptr<Zone> ZoneManager::GetZone(uint32_t zoneID)
+std::shared_ptr<Zone> ZoneManager::GetZone(uint32_t zoneID,
+    const std::shared_ptr<ChannelClientConnection>& client)
 {
+    auto state = client->GetClientState();
+    auto party = state->GetParty();
+
+    auto server = mServer.lock();
+    auto zoneDefinition = server->GetServerDataManager()
+        ->GetZoneData(zoneID);
+
+    std::set<int32_t> validOwnerIDs = { state->GetWorldCID() };
+    if(party)
+    {
+        for(int32_t memberID : party->GetMemberIDs())
+        {
+            validOwnerIDs.insert(memberID);
+        }
+    }
+
     std::shared_ptr<Zone> zone;
     {
         std::lock_guard<std::mutex> lock(mLock);
@@ -1186,8 +1400,8 @@ std::shared_ptr<Zone> ZoneManager::GetZone(uint32_t zoneID)
             for(uint32_t instanceID : iter->second)
             {
                 auto instance = mZones[instanceID];
-                /// @todo: replace with public/private logic
-                if(nullptr != instance)
+                if(instance && (zoneDefinition->GetGlobal() ||
+                    validOwnerIDs.find(instance->GetOwnerID()) != validOwnerIDs.end()))
                 {
                     zone = instance;
                     break;
@@ -1198,10 +1412,8 @@ std::shared_ptr<Zone> ZoneManager::GetZone(uint32_t zoneID)
 
     if(nullptr == zone)
     {
-        auto server = mServer.lock();
-        auto zoneDefinition = server->GetServerDataManager()
-            ->GetZoneData(zoneID);
         zone = CreateZoneInstance(zoneDefinition);
+        zone->SetOwnerID(state->GetWorldCID());
     }
 
     return zone;
@@ -1222,7 +1434,19 @@ std::shared_ptr<Zone> ZoneManager::CreateZoneInstance(
     }
 
     auto server = mServer.lock();
+    auto zoneData = server->GetDefinitionManager()
+        ->GetZoneData(definition->GetID());
+
     auto zone = std::shared_ptr<Zone>(new Zone(id, definition));
+
+    auto qmpFile = zoneData->GetFile()->GetQmpFile();
+    auto geoIter = !qmpFile.IsEmpty()
+        ? mZoneGeometry.find(qmpFile.C()) : mZoneGeometry.end();
+    if(geoIter != mZoneGeometry.end())
+    {
+        zone->SetGeometry(geoIter->second);
+    }
+
     for(auto npc : definition->GetNPCs())
     {
         auto state = std::shared_ptr<NPCState>(new NPCState(npc));

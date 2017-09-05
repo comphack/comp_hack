@@ -1,10 +1,10 @@
 /**
- * @file libtester/src/LobbyClient.h
+ * @file libtester/src/ChannelClient.h
  * @ingroup libtester
  *
  * @author COMP Omega <compomega@tutanota.com>
  *
- * @brief Class to create a lobby test connection.
+ * @brief Class to create a channel test connection.
  *
  * This file is part of the COMP_hack Tester Library (libtester).
  *
@@ -24,8 +24,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef LIBTESTER_SRC_LOBBYCLIENT_H
-#define LIBTESTER_SRC_LOBBYCLIENT_H
+#ifndef LIBTESTER_SRC_CHANNELCLIENT_H
+#define LIBTESTER_SRC_CHANNELCLIENT_H
 
 // libtester Includes
 #include "TestClient.h"
@@ -35,34 +35,33 @@ namespace libtester
 
 typedef std::list<libcomp::Message::Message*> MessageList;
 
-class LobbyClient : public TestClient
+class ChannelClient : public TestClient
 {
 public:
-    LobbyClient();
-    ~LobbyClient();
+    ChannelClient();
+    ~ChannelClient();
 
-    bool WaitForPacket(LobbyToClientPacketCode_t code,
+    bool WaitForPacket(ChannelToClientPacketCode_t code,
         libcomp::ReadOnlyPacket& p, double& waitTime,
         asio::steady_timer::duration timeout = DEFAULT_TIMEOUT);
 
     void Login(const libcomp::String& username,
-        const libcomp::String& password, ErrorCodes_t loginErrorCode =
-            ErrorCodes_t::SUCCESS, ErrorCodes_t authErrorCode =
-            ErrorCodes_t::SUCCESS, uint32_t clientVersion = 0);
-    void WebLogin(const libcomp::String& username,
-        const libcomp::String& password = libcomp::String(),
-        const libcomp::String& sid = libcomp::String(),
-        bool expectError = false);
-    void CreateCharacter(const libcomp::String& name);
-    void StartGame();
+        const libcomp::String& password,
+        const libcomp::String& characterName = libcomp::String());
+    void SendData();
 
-    int32_t GetSessionKey() const;
+    int32_t GetEntityID() const;
+
+protected:
+    virtual void HandlePacket(ChannelToClientPacketCode_t cmd,
+        libcomp::ReadOnlyPacket& p);
 
 private:
-    libcomp::String mSID1, mSID2;
-    int32_t mSessionKey;
+    void HandleCharacterData(libcomp::ReadOnlyPacket& p);
+
+    int32_t mEntityID;
 };
 
 } // namespace libtester
 
-#endif // LIBTESTER_SRC_LOBBYCLIENT_H
+#endif // LIBTESTER_SRC_CHANNELCLIENT_H

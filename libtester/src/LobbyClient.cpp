@@ -8,7 +8,7 @@
  *
  * This file is part of the COMP_hack Tester Library (libtester).
  *
- * Copyright (C) 2012-2016 COMP_hack Team <compomega@tutanota.com>
+ * Copyright (C) 2012-2017 COMP_hack Team <compomega@tutanota.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as
@@ -35,237 +35,34 @@
 
 // libcomp Includes
 #include <Decrypt.h>
-#include <Log.h>
-#include <MessageConnectionClosed.h>
-#include <MessageEncrypted.h>
-#include <MessagePacket.h>
-#include <MessageTimeout.h>
+#include <LobbyConnection.h>
 
 // object Includes
+#include <Character.h>
 #include <PacketLogin.h>
 
-using namespace libtester;
+#include "ServerTest.h"
 
-constexpr asio::steady_timer::duration LobbyClient::DEFAULT_TIMEOUT;
+using namespace libtester;
 
 static const libcomp::String LOGIN_CLIENT_VERSION = "1.666";
 static const uint32_t CLIENT_VERSION = 1666;
 
-LobbyClient::LobbyClient() : mTimer(mService),
-    mConnection(new libcomp::LobbyConnection(mService)),
-    mMessageQueue(new libcomp::MessageQueue<libcomp::Message::Message*>())
+LobbyClient::LobbyClient() : TestClient(), mSessionKey(-1)
 {
+    SetConnection(std::make_shared<libcomp::LobbyConnection>(mService));
 }
 
 LobbyClient::~LobbyClient()
 {
-    mService.stop();
-
-    if(mServiceThread.joinable())
-    {
-        mServiceThread.join();
-    }
-
-    ClearMessages();
-}
-
-bool LobbyClient::Connect()
-{
-    mConnection->SetMessageQueue(mMessageQueue);
-
-    bool result = mConnection->Connect("127.0.0.1", 10666);
-
-    mServiceThread = std::thread([&]()
-    {
-        mService.run();
-    });
-
-    return result;
-}
-
-std::shared_ptr<libcomp::LobbyConnection> LobbyClient::GetConnection()
-{
-    return mConnection;
-}
-
-bool LobbyClient::HasDisconnectOrTimeout()
-{
-    for(auto msg : mReceivedMessages)
-    {
-        if(nullptr != dynamic_cast<libcomp::Message::ConnectionClosed*>(msg) ||
-            nullptr != dynamic_cast<libcomp::Message::Timeout*>(msg))
-        {
-            return true;
-        }
-    }
-
-    return false;
-}
-
-bool LobbyClient::WaitEncrypted(double& waitTime,
-    asio::steady_timer::duration timeout)
-{
-    return WaitForMessage([](const MessageList& msgs){
-        for(auto msg : msgs)
-        {
-            if(nullptr != dynamic_cast<libcomp::Message::Encrypted*>(msg))
-            {
-                return WaitStatus::Success;
-            }
-        }
-
-        return WaitStatus::Wait;
-    }, waitTime, timeout);
-}
-
-bool LobbyClient::WaitForDisconnect(double& waitTime,
-    asio::steady_timer::duration timeout)
-{
-    return WaitForMessage([](const MessageList& msgs){
-        for(auto msg : msgs)
-        {
-            printf("msg\n");
-            if(nullptr != dynamic_cast<libcomp::Message::ConnectionClosed*>(msg))
-            {
-                return WaitStatus::Success;
-            }
-        }
-
-        return WaitStatus::Wait;
-    }, waitTime, timeout);
 }
 
 bool LobbyClient::WaitForPacket(LobbyToClientPacketCode_t code,
     libcomp::ReadOnlyPacket& p, double& waitTime,
     asio::steady_timer::duration timeout)
 {
-    bool result = WaitForMessage([&](const MessageList& msgs){
-        for(auto msg : msgs)
-        {
-            auto pmsg = dynamic_cast<libcomp::Message::Packet*>(msg);
-
-            if(nullptr != pmsg && pmsg->GetCommandCode() == to_underlying(code))
-            {
-                return WaitStatus::Success;
-            }
-        }
-
-        return WaitStatus::Wait;
-    }, waitTime, timeout);
-
-    if(result)
-    {
-        bool foundPacket = false;
-        int badMessages = 0;
-
-        for(auto msg : mReceivedMessages)
-        {
-            auto pmsg = dynamic_cast<libcomp::Message::Packet*>(msg);
-
-            if(nullptr != pmsg && pmsg->GetCommandCode() == to_underlying(code))
-            {
-                foundPacket = true;
-                libcomp::ReadOnlyPacket copy(pmsg->GetPacket());
-                p = copy;
-            }
-        }
-
-        badMessages = static_cast<int>(mReceivedMessages.size()) -
-            (foundPacket ? 1 : 0);
-
-        if(!foundPacket)
-        {
-            result = false;
-        }
-
-        if(0 < badMessages)
-        {
-            LOG_WARNING(libcomp::String("Detected %1 other messages.\n").Arg(
-                badMessages));
-        }
-
-        ClearMessages();
-    }
-
-    return result;
-}
-
-bool LobbyClient::WaitForMessage(std::function<WaitStatus(
-    const MessageList&)> eventFilter, double& waitTime,
-    asio::steady_timer::duration timeout)
-{
-    bool result = true;
-    bool keepLooking = true;
-
-    mTimer.expires_from_now(timeout);
-    mTimer.async_wait([&](asio::error_code ec)
-    {
-        if(asio::error::operation_aborted != ec)
-        {
-            mMessageQueue->Enqueue(new libcomp::Message::Timeout);
-        }
-    });
-
-    auto start = std::chrono::steady_clock::now();
-
-    do
-    {
-        // Check if there is a failure condition.
-        if(HasDisconnectOrTimeout())
-        {
-            result = false;
-            keepLooking = false;
-        }
-        else
-        {
-            // Check if the desired event exists.
-            WaitStatus status = eventFilter(mReceivedMessages);
-
-            if(WaitStatus::Wait != status)
-            {
-                keepLooking = false;
-
-                result = (WaitStatus::Success == status);
-            }
-        }
-
-        // Get more messages.
-        if(keepLooking)
-        {
-            std::list<libcomp::Message::Message*> msgs;
-            mMessageQueue->DequeueAll(msgs);
-            mReceivedMessages.splice(mReceivedMessages.end(), msgs);
-        }
-    } while(keepLooking);
-
-    auto stop = std::chrono::steady_clock::now();
-
-    mTimer.cancel();
-
-    std::chrono::duration<double, std::milli> duration = stop - start;
-    waitTime = duration.count();
-
-    if(result)
-    {
-        LOG_DEBUG(libcomp::String("Wait took %1 ms\n").Arg(waitTime));
-    }
-
-    return result;
-}
-
-std::list<libcomp::Message::Message*> LobbyClient::TakeMessages()
-{
-    return std::move(mReceivedMessages);
-}
-
-void LobbyClient::ClearMessages()
-{
-    std::list<libcomp::Message::Message*> msgs = std::move(mReceivedMessages);
-
-    for(auto msg : msgs)
-    {
-        delete msg;
-    }
+    return TestClient::WaitForPacket(to_underlying(code),
+        p, waitTime, timeout);
 }
 
 void LobbyClient::Login(const libcomp::String& username,
@@ -279,7 +76,7 @@ void LobbyClient::Login(const libcomp::String& username,
         clientVersion = CLIENT_VERSION;
     }
 
-    ASSERT_TRUE(Connect());
+    ASSERT_TRUE(Connect(10666));
     ASSERT_TRUE(WaitEncrypted(waitTime));
 
     objects::PacketLogin obj;
@@ -377,7 +174,7 @@ void LobbyClient::WebLogin(const libcomp::String& username,
 
     double waitTime;
 
-    ASSERT_TRUE(Connect());
+    ASSERT_TRUE(Connect(10666));
     ASSERT_TRUE(WaitEncrypted(waitTime));
 
     objects::PacketLogin obj;
@@ -430,4 +227,103 @@ void LobbyClient::WebLogin(const libcomp::String& username,
     }
 
     ASSERT_EQ(reply.Left(), 0);
+}
+
+void LobbyClient::CreateCharacter(const libcomp::String& name)
+{
+    double waitTime;
+
+    int8_t world = 0;
+
+    objects::Character::Gender_t gender = objects::Character::Gender_t::MALE;
+
+    uint32_t skinType  = 0x00000065;
+    uint32_t faceType  = 0x00000001;
+    uint32_t hairType  = 0x00000001;
+    uint32_t hairColor = 0x00000008;
+    uint32_t eyeColor  = 0x00000008;
+
+    uint32_t equipTop    = 0x00000C3F;
+    uint32_t equipBottom = 0x00000D64;
+    uint32_t equipFeet   = 0x00000DB4;
+    uint32_t equipComp   = 0x00001131;
+    uint32_t equipWeapon = 0x000004B1;
+
+    libcomp::Packet p;
+    p.WritePacketCode(ClientToLobbyPacketCode_t::PACKET_CREATE_CHARACTER);
+    p.WriteS8(world);
+    p.WriteString16Little(libcomp::Convert::ENCODING_CP932, name, true);
+    p.WriteS8(to_underlying(gender));
+    p.WriteU32Little(skinType);
+    p.WriteU32Little(faceType);
+    p.WriteU32Little(hairType);
+    p.WriteU32Little(hairColor);
+    p.WriteU32Little(eyeColor);
+    p.WriteU32Little(equipTop);
+    p.WriteU32Little(equipBottom);
+    p.WriteU32Little(equipFeet);
+    p.WriteU32Little(equipComp);
+    p.WriteU32Little(equipWeapon);
+
+    ClearMessages();
+    GetConnection()->SendPacket(p);
+
+    libcomp::ReadOnlyPacket reply;
+
+    ASSERT_TRUE(WaitForPacket(
+        LobbyToClientPacketCode_t::PACKET_CREATE_CHARACTER,
+        reply, waitTime));
+
+    ASSERT_EQ(reply.Left(), 4);
+    ASSERT_EQ(reply.ReadS32Little(),
+        to_underlying(ErrorCodes_t::SUCCESS));
+}
+
+void LobbyClient::StartGame()
+{
+    double waitTime;
+
+    uint8_t cid = 0;
+    int8_t worldID = 0;
+
+    libcomp::Packet p;
+    p.WritePacketCode(ClientToLobbyPacketCode_t::PACKET_START_GAME);
+    p.WriteU8(cid);
+    p.WriteS8(worldID);
+
+    ClearMessages();
+    GetConnection()->SendPacket(p);
+
+    libcomp::ReadOnlyPacket reply;
+
+    UPHOLD_TRUE(WaitForPacket(
+        LobbyToClientPacketCode_t::PACKET_START_GAME,
+        reply, waitTime));
+
+    int32_t sessionKey;
+    uint8_t cid2;
+
+    UPHOLD_GT(reply.Left(), sizeof(sessionKey) + sizeof(uint16_t) +
+        sizeof(cid2));
+
+    sessionKey = reply.ReadS32Little();
+
+    libcomp::String server = reply.ReadString16Little(
+        libcomp::Convert::ENCODING_UTF8);
+
+    cid2 = reply.ReadU8();
+
+    UPHOLD_EQ(cid, cid2);
+    UPHOLD_FALSE(server.IsEmpty());
+    UPHOLD_GT(sessionKey, -1);
+
+    // Save the session key.
+    mSessionKey = sessionKey;
+
+    // printf("Server: %s\n", server.C());
+}
+
+int32_t LobbyClient::GetSessionKey() const
+{
+    return mSessionKey;
 }

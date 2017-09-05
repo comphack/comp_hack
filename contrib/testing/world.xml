@@ -42,6 +42,8 @@
                 <member name="DefaultDatabaseType">comp_hack</member>
                 <member name="Username">testuser</member>
                 <member name="Password">un1tt3st</member>
+                <member name="MockData">true</member>
+                <member name="MockDataFilename">test_world_setup.xml</member>
             </object>
         </member>
         <member name="CassandraConfig">

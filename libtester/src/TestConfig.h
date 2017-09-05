@@ -32,6 +32,8 @@
 
 static const libcomp::String LOGIN_USERNAME = "testalpha";
 static const libcomp::String LOGIN_PASSWORD = "same_as_my_luggage"; // 12345
+static const libcomp::String LOGIN_USERNAME2 = "testbeta";
+static const libcomp::String LOGIN_PASSWORD2 = "its12345";
 static const libcomp::String LOGIN_CLIENT_VERSION = "1.666";
 
 #endif // LIBTESTER_SRC_TESTCONFIG_H

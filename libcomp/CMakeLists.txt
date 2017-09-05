@@ -264,6 +264,7 @@ SET(${PROJECT_NAME}_SCHEMA
     schema/binarydata/cmultitalkdata.xml
     schema/binarydata/cpolygonmoviedata.xml
     schema/binarydata/cquest.xml
+    schema/binarydata/ctalkmessagedata.xml
     schema/binarydata/czonerelationdata.xml
     schema/binarydata/devildata.xml
     schema/binarydata/devillvupratedata.xml
@@ -633,6 +634,8 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     MiStatusData.h
     MiSummonData.cpp
     MiSummonData.h
+    MiCTalkMessageData.cpp
+    MiCTalkMessageData.h
     MiTargetData.cpp
     MiTargetData.h
     MiTriUnionSpecialData.cpp

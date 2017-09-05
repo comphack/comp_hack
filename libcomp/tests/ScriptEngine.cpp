@@ -195,13 +195,18 @@ TEST(ScriptEngine, FunctionCall)
         "}\n"
     ));
 
+    std::shared_ptr<Sqrat::ObjectReference<libcomp::Packet>> ref;
     std::shared_ptr<libcomp::Packet> a(new libcomp::Packet);
     std::shared_ptr<libcomp::Packet> b;
 
-    b = Sqrat::RootTable(engine.GetVM()).GetFunction(
-        "TestFunction").Evaluate<libcomp::Packet>(a);
+    ref = Sqrat::RootTable(engine.GetVM()).GetFunction("TestFunction"
+        ).Evaluate<Sqrat::ObjectReference<libcomp::Packet>>(a);
 
     EXPECT_EQ(scriptMessages, "");
+
+    ASSERT_TRUE(ref);
+
+    b = ref->GetSharedObject();
 
     ASSERT_TRUE(b);
 

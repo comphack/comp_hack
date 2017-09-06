@@ -396,9 +396,12 @@ MACRO(CREATE_GTESTS)
             IF("${TEST_TARGET}" STREQUAL "test")
                 ADD_TEST(NAME ${test} COMMAND
                     ${EXECUTABLE_OUTPUT_PATH}/${ttest}
-                WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
+                    WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
             ELSE()
-                ADD_DEPENDENCIES(${TEST_TARGET} ${ttest})
+                ADD_CUSTOM_COMMAND(TARGET ${TEST_TARGET} COMMAND
+                    ${EXECUTABLE_OUTPUT_PATH}/${ttest}
+                    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+                    DEPENDS ${ttest})
             ENDIF()
         ELSE() # Must be a library.
             # Add the library to the list.

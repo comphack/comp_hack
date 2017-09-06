@@ -262,7 +262,10 @@ SET(${PROJECT_NAME}_SCHEMA
     schema/binarydata/ceventmessagedata.xml
     schema/binarydata/citemdata.xml
     schema/binarydata/cmessagedata.xml
+    schema/binarydata/cmultitalkdata.xml
+    schema/binarydata/cpolygonmoviedata.xml
     schema/binarydata/cquest.xml
+    schema/binarydata/ctalkmessagedata.xml
     schema/binarydata/czonerelationdata.xml
     schema/binarydata/devildata.xml
     schema/binarydata/devillvupratedata.xml
@@ -500,8 +503,38 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     MiCItemMotionData.h
     MiCItemSPEffectData.cpp
     MiCItemSPEffectData.h
+    MiMultiTalkCmdTbl.cpp
+    MiMultiTalkCmdTbl.h
+    MiCMultiTalkData.cpp
+    MiCMultiTalkData.h
     MiCMessageData.cpp
     MiCMessageData.h
+    MiCPolygonMovieData.cpp
+    MiCPolygonMovieData.h
+    MiPMBaseInfo.cpp
+    MiPMBaseInfo.h
+    MiPMCameraKeyTbl.cpp
+    MiPMCameraKeyTbl.h
+    MiPMMsgKeyTbl.cpp
+    MiPMMsgKeyTbl.h
+    MiPMBGMKeyTbl.cpp
+    MiPMBGMKeyTbl.h
+    MiPMSEKeyTbl.cpp
+    MiPMSEKeyTbl.h
+    MiPMEffectKeyTbl.cpp
+    MiPMEffectKeyTbl.h
+    MiPMFadeKeyTbl.cpp
+    MiPMFadeKeyTbl.h
+    MiPMGouraudKeyTbl.cpp
+    MiPMGouraudKeyTbl.h
+    MiPMFogKeyTbl.cpp
+    MiPMFogKeyTbl.h
+    MiPMScalingHelperTbl.cpp
+    MiPMScalingHelperTbl.h
+    MiPMAttachCharacterTbl.cpp
+    MiPMAttachCharacterTbl.h
+    MiPMMotionKeyTbl.cpp
+    MiPMMotionKeyTbl.h
     MiConditionData.cpp
     MiConditionData.h
     MiCorrectTbl.h
@@ -614,6 +647,8 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     MiStatusData.h
     MiSummonData.cpp
     MiSummonData.h
+    MiCTalkMessageData.cpp
+    MiCTalkMessageData.h
     MiTargetData.cpp
     MiTargetData.h
     MiTriUnionSpecialData.cpp
@@ -647,6 +682,8 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     MiZoneSkyData.h
     MiZoneSkyData.cpp
 )
+
+COVERALLS_SOURCES(${${PROJECT_NAME}_SRCS})
 
 ADD_LIBRARY(comp STATIC ${${PROJECT_NAME}_SRCS} ${${PROJECT_NAME}_HDRS}
     ${${PROJECT_NAME}_MOC_SRCS} ${${PROJECT_NAME}_STRUCTS})

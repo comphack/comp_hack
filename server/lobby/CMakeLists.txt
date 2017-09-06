@@ -40,7 +40,9 @@ SET(${PROJECT_NAME}_SRCS
     src/SessionManager.cpp
     src/World.cpp
     src/main.cpp
+)
 
+SET(${PROJECT_NAME}_RES_SRCS
     ${CMAKE_CURRENT_BINARY_DIR}/res/login/ResourceLogin.c
 )
 
@@ -119,9 +121,14 @@ ADD_CUSTOM_COMMAND(
     COMMENT "Generating resource file for the login screen"
 )
 
+COVERALLS_SOURCES(
+    ${${PROJECT_NAME}_SRCS}
+    ${${PROJECT_NAME}_PACKETS}
+)
+
 ADD_EXECUTABLE(${PROJECT_NAME} ${${PROJECT_NAME}_SRCS}
     ${${PROJECT_NAME}_HDRS} ${${PROJECT_NAME}_PACKETS}
-    ${${PROJECT_NAME}_STRUCTS})
+    ${${PROJECT_NAME}_STRUCTS} ${${PROJECT_NAME}_RES_SRCS})
 
 ADD_DEPENDENCIES(${PROJECT_NAME} asio)
 

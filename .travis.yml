@@ -54,6 +54,8 @@ matrix:
 before_install:
   - export ROOT_DIR=`pwd`
   - export CACHE_DIR=`pwd`/cache
+  - export COVERALLS_ENABLE=OFF
+  - export COVERALLS_SERVICE_NAME=travis-ci
   - cd ${CACHE_DIR}
   - if [ ! -f ninja-linux.zip ]; then wget https://github.com/ninja-build/ninja/releases/download/v1.7.1/ninja-linux.zip; fi
   - if [ ! -f cmake-3.6.1-Linux-x86_64.tar.gz ]; then wget -q https://cmake.org/files/v3.6/cmake-3.6.1-Linux-x86_64.tar.gz; fi
@@ -74,6 +76,7 @@ before_install:
   - export PATH="/opt/cmake-3.6.1-Linux-x86_64/bin:${PATH}"
   - export LD_LIBRARY_PATH="/opt/cmake-3.6.1-Linux-x86_64/lib"
   - cd ${ROOT_DIR}
+  - if [ "$CXX" != "clang++" ]; then export COVERALLS_ENABLE=ON; fi
   - if [ "$CXX" == "clang++" ]; then cd /opt; fi
   - if [ "$CXX" == "clang++" ]; then sudo tar xf $CACHE_DIR/clang+llvm-3.8.0-x86_64-linux-gnu-ubuntu-14.04.tar.xz; fi
   - if [ "$CXX" == "clang++" ]; then export PATH="/opt/clang+llvm-3.8.0-x86_64-linux-gnu-ubuntu-14.04/bin:${PATH}"; fi
@@ -91,7 +94,8 @@ before_script:
 script:
   - jdk_switcher use oraclejdk8
   - java -version
-  - mkdir -p build && cd build && cmake -DBUILD_OPTIMIZED=OFF -G "${GENERATOR}" .. && cmake --build .
+  - mkdir -p build && cd build && cmake -DCOVERALLS=$COVERALLS_ENABLE -DBUILD_OPTIMIZED=OFF -G "${GENERATOR}" .. && cmake --build .
   - cmake --build . --target doc
   - cmake --build . --target guide
   - cmake --build . --target test
+  - if [ "$CXX" != "clang++" ]; then cmake --build . --target coveralls; fi

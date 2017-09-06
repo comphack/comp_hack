@@ -22,17 +22,22 @@ PROJECT(libtester)
 MESSAGE("** Configuring ${PROJECT_NAME} **")
 
 SET(${PROJECT_NAME}_SRCS
+    src/ChannelClient.cpp
+    src/ChannelClient_HandleCharacterData.cpp
     src/HttpConnection.cpp
     src/LobbyClient.cpp
     src/Login.cpp
     src/ServerTest.cpp
+    src/TestClient.cpp
 )
 
 SET(${PROJECT_NAME}_HDRS
+    src/ChannelClient.h
     src/HttpConnection.h
     src/LobbyClient.h
     src/Login.h
     src/ServerTest.h
+    src/TestClient.h
 )
 
 ADD_LIBRARY(tester STATIC ${${PROJECT_NAME}_SRCS}
@@ -50,9 +55,13 @@ TARGET_LINK_LIBRARIES(tester ${CMAKE_THREAD_LIBS_INIT} comp tinyxml2 gtest)
 # List of unit tests to add to CTest.
 SET(${PROJECT_NAME}_TEST_SRCS
     Lobby
+    ChannelLogin
 )
 
 IF(NOT BSD)
+    ADD_CUSTOM_TARGET(client-test DEPENDS comp_lobby comp_channel comp_world)
+
     # Add the unit tests.
-    CREATE_GTESTS(LIBS comp tester SRCS ${${PROJECT_NAME}_TEST_SRCS})
+    CREATE_GTESTS(TARGET client-test LIBS comp tester
+        SRCS ${${PROJECT_NAME}_TEST_SRCS})
 ENDIF(NOT BSD)

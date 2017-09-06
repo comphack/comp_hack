@@ -430,8 +430,8 @@ IF(GIT_DEPENDENCIES)
     )
 ELSE()
     SET(SQRAT_URL
-        URL https://github.com/comphack/sqrat/archive/comp_hack-20161224.zip
-        URL_HASH SHA1=54997f9678d8132d6175fed0d0ff8fab84e7ad9c
+        URL https://github.com/comphack/sqrat/archive/comp_hack-20170905.zip
+        URL_HASH SHA1=6c4df47021866905632c5000a5359d2927604c4f
     )
 ENDIF()
 

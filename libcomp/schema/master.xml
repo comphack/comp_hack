@@ -65,7 +65,10 @@
     <include path="binarydata/ceventmessagedata.xml"/>
     <include path="binarydata/citemdata.xml"/>
     <include path="binarydata/cmessagedata.xml"/>
+    <include path="binarydata/cmultitalkdata.xml"/>
+    <include path="binarydata/cpolygonmoviedata.xml"/>
     <include path="binarydata/cquest.xml"/>
+    <include path="binarydata/ctalkmessagedata.xml"/>
     <include path="binarydata/czonerelationdata.xml"/>
     <include path="binarydata/devildata.xml"/>
     <include path="binarydata/devillvupratedata.xml"/>

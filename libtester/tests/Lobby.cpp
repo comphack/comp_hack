@@ -1,5 +1,5 @@
 /**
- * @file libcomp/tests/DiffieHellman.cpp
+ * @file libcomp/tests/Lobby.cpp
  * @ingroup libcomp
  *
  * @author COMP Omega <compomega@tutanota.com>
@@ -29,20 +29,10 @@
 #include <PopIgnore.h>
 
 // libtester Includes
-#include <HttpConnection.h>
 #include <LobbyClient.h>
 #include <Login.h>
 #include <ServerTest.h>
 #include <TestConfig.h>
-
-// libcomp Includes
-#include <Decrypt.h>
-#include <ErrorCodes.h>
-#include <Log.h>
-#include <PacketCodes.h>
-
-// object Includes
-#include <PacketLogin.h>
 
 using namespace libcomp;
 
@@ -157,7 +147,7 @@ TEST(Lobby, PacketsWithoutAuth)
         std::shared_ptr<libtester::LobbyClient> client(
             new libtester::LobbyClient);
 
-        ASSERT_TRUE(client->Connect());
+        ASSERT_TRUE(client->Connect(10666));
         ASSERT_TRUE(client->WaitEncrypted(waitTime));
 
         libcomp::Packet p;

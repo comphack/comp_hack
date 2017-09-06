@@ -30,14 +30,20 @@ PROJECT(comp_hack)
 # Print the CMake version for debugging.
 MESSAGE("-- CMake version: ${CMAKE_VERSION}")
 
+# Our custom cmake modules.
+SET(COMP_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
+
 # Include our custom cmake modules.
-SET(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
+SET(CMAKE_MODULE_PATH
+    ${COMP_MODULE_PATH}
+    ${CMAKE_SOURCE_DIR}/coveralls-cmake/cmake
+)
 
 # Utilities to add and remove compiler flags.
-INCLUDE(${CMAKE_MODULE_PATH}/flags.cmake)
+INCLUDE(${COMP_MODULE_PATH}/flags.cmake)
 
 # Utilities for building with MSVC.
-INCLUDE(${CMAKE_MODULE_PATH}/msvc.cmake)
+INCLUDE(${COMP_MODULE_PATH}/msvc.cmake)
 
 # Option for the static runtime on Windows.
 OPTION(USE_STATIC_RUNTIME "Use the static MSVC runtime." OFF)
@@ -70,7 +76,14 @@ ELSE()
     MESSAGE(WARNING "You are using an unsupported compiler!")
 ENDIF()
 
-INCLUDE(${CMAKE_MODULE_PATH}/DetermineOS.cmake)
+INCLUDE(${COMP_MODULE_PATH}/DetermineOS.cmake)
+
+# If code coverage should be generated.
+OPTION(COVERALLS "Generate coveralls code coverage data." OFF)
+
+IF(COVERALLS)
+    INCLUDE(Coveralls)
+ENDIF(COVERALLS)
 
 # If the build should be optimized.
 OPTION(BUILD_OPTIMIZED "Build an optimized release of the server." ON)
@@ -82,7 +95,7 @@ ELSE()
 ENDIF()
 
 # Include all build code for external projects.
-INCLUDE(${CMAKE_MODULE_PATH}/external.cmake)
+INCLUDE(${COMP_MODULE_PATH}/external.cmake)
 
 # PDB not found for library.
 ADD_LINKER_FLAGS(AUTO /ignore:4099)
@@ -164,6 +177,12 @@ ADD_COMPILER_FLAGS(AUTO -Werror -Wall -Wextra -Wshadow
 # the application or library.
 ADD_EXE_LINKER_FLAGS(AUTO -Wl,--no-undefined)
 
+# Code coverage flags.
+IF(COVERALLS)
+    ADD_COMPILER_FLAGS(AUTO -g -O0 -fprofile-arcs -ftest-coverage)
+    REMOVE_COMPILER_FLAGS(-Os -O2 -O3)
+ENDIF(COVERALLS)
+
 # Place all executables in the same directory.
 SET(EXECUTABLE_OUTPUT_PATH "${CMAKE_CURRENT_BINARY_DIR}/bin")
 
@@ -181,6 +200,19 @@ SET(LIBCOMP_INCLUDES
     ${CMAKE_SOURCE_DIR}/libcomp/src
     ${CMAKE_BINARY_DIR}/libcomp/objgen
 )
+
+SET(COVERALLS_SRCS "" CACHE INTERNAL "Coverage source files")
+
+# Add sources to the coverage source list.
+MACRO(COVERALLS_SOURCES)
+    FOREACH(it ${ARGN})
+        FILE(RELATIVE_PATH filePath "${CMAKE_SOURCE_DIR}"
+            "${CMAKE_CURRENT_SOURCE_DIR}/${it}")
+
+        SET(COVERALLS_SRCS ${COVERALLS_SRCS} "${filePath}"
+            CACHE INTERNAL "Coverage source files")
+    ENDFOREACH()
+ENDMACRO()
 
 # This macro will create a target to generate the documentation using the
 # specified Doxyfile.in file.
@@ -329,15 +361,22 @@ ENDMACRO(SETUP_TRANSLATION outvar)
 # be in the "tests" subdirectory of the project with the test name and a ".cpp"
 # extension for this macro to work.
 MACRO(CREATE_GTESTS)
+    SET(EXPECT_TARGET False)
+    SET(TEST_TARGET "test")
     SET(TEST_LIBS "")
     SET(HAVE_LIBS False)
 
     # Create a test based on each test name.
     FOREACH(test ${ARGN})
-        IF(${test} MATCHES "LIBS")
+        IF("${test}" MATCHES "LIBS")
             SET(HAVE_LIBS False)
-        ELSEIF(${test} MATCHES "SRCS")
+        ELSEIF("${test}" MATCHES "SRCS")
             SET(HAVE_LIBS True)
+        ELSEIF("${test}" MATCHES "TARGET")
+            SET(EXPECT_TARGET True)
+        ELSEIF(EXPECT_TARGET)
+            SET(TEST_TARGET ${test})
+            SET(EXPECT_TARGET False)
         ELSEIF(HAVE_LIBS)
             # Prefix the test name with "Test".
             SET(ttest "Test${test}")
@@ -354,12 +393,20 @@ MACRO(CREATE_GTESTS)
                 ${CMAKE_THREAD_LIBS_INIT} ${ZLIB_LIBRARIES})
 
             # Add the test to CTest.
-            ADD_TEST(NAME ${test} COMMAND ${EXECUTABLE_OUTPUT_PATH}/${ttest}
-                WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
+            IF("${TEST_TARGET}" STREQUAL "test")
+                ADD_TEST(NAME ${test} COMMAND
+                    ${EXECUTABLE_OUTPUT_PATH}/${ttest}
+                    WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
+            ELSE()
+                ADD_CUSTOM_COMMAND(TARGET ${TEST_TARGET} COMMAND
+                    ${EXECUTABLE_OUTPUT_PATH}/${ttest}
+                    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+                    DEPENDS ${ttest})
+            ENDIF()
         ELSE() # Must be a library.
             # Add the library to the list.
             SET(TEST_LIBS ${TEST_LIBS} ${test})
-        ENDIF(${test} MATCHES "LIBS")
+        ENDIF("${test}" MATCHES "LIBS")
     ENDFOREACH(test ${ARGN})
 ENDMACRO(CREATE_GTESTS)
 
@@ -485,3 +532,7 @@ ENDIF(NOT WIN32)
 # Copy all contrib/testing to the bin directory.
 FILE(COPY "${CMAKE_SOURCE_DIR}/contrib/testing"
     DESTINATION "${CMAKE_BINARY_DIR}/bin")
+
+IF(COVERALLS)
+    coveralls_setup("${COVERALLS_SRCS}" ON)
+ENDIF(COVERALLS)

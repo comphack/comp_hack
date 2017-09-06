@@ -44,21 +44,55 @@
 namespace libtester
 {
 
+class TestFailure { };
+
+} // namespace libtester
+
+#define UPHOLD_EQ(a, b) { bool _didUpholdCondition = false; \
+    ([&](bool& _didUpholdConditionRef) -> void { \
+    ASSERT_EQ(a, b); \
+    _didUpholdConditionRef = true; })(_didUpholdCondition); \
+    if(!_didUpholdCondition) { throw libtester::TestFailure(); } }
+
+#define UPHOLD_GT(a, b) { bool _didUpholdCondition = false; \
+    ([&](bool& _didUpholdConditionRef) -> void { \
+    ASSERT_GT(a, b); \
+    _didUpholdConditionRef = true; })(_didUpholdCondition); \
+    if(!_didUpholdCondition) { throw libtester::TestFailure(); } }
+
+#define UPHOLD_TRUE(a) { bool _didUpholdCondition = false; \
+    ([&](bool& _didUpholdConditionRef) -> void { \
+    ASSERT_TRUE(a); \
+    _didUpholdConditionRef = true; })(_didUpholdCondition); \
+    if(!_didUpholdCondition) { throw libtester::TestFailure(); } }
+
+#define UPHOLD_FALSE(a) { bool _didUpholdCondition = false; \
+    ([&](bool& _didUpholdConditionRef) -> void { \
+    ASSERT_FALSE(a); \
+    _didUpholdConditionRef = true; })(_didUpholdCondition); \
+    if(!_didUpholdCondition) { throw libtester::TestFailure(); } }
+
+namespace libtester
+{
+
 class ServerTestConfig
 {
 public:
     ServerTestConfig(const std::chrono::milliseconds& testTime,
         const std::chrono::milliseconds& bootTime,
-        const std::string& programsPath);
+        const std::string& programsPath,
+        bool debug = false);
 
     std::chrono::milliseconds GetTestTime() const;
     std::chrono::milliseconds GetBootTime() const;
     std::string GetProgramsPath() const;
+    bool GetDebug() const;
 
 private:
     std::chrono::milliseconds mTestTime;
     std::chrono::milliseconds mBootTime;
     std::string mProgramsPath;
+    bool mDebug;
 };
 
 class TimedTask
@@ -110,7 +144,13 @@ static inline void EXPECT_COMPLETE(
     std::thread([](std::promise<bool>& finished,
         const std::shared_ptr<libtester::TimedTask>& _task)
     {
-        _task->Run();
+        try
+        {
+            _task->Run();
+        }
+        catch(libtester::TestFailure&)
+        {
+        }
 
         finished.set_value(true);
     }, std::ref(promisedFinished), task).detach();
@@ -134,7 +174,13 @@ static inline void EXPECT_TIMEOUT(
     std::thread([](std::promise<bool>& finished,
         const std::shared_ptr<libtester::TimedTask>& _task)
     {
-        _task->Run();
+        try
+        {
+            _task->Run();
+        }
+        catch(libtester::TestFailure&)
+        {
+        }
 
         finished.set_value(true);
     }, std::ref(promisedFinished), task).detach();
@@ -157,12 +203,13 @@ static inline void EXPECT_SERVER(const libtester::ServerTestConfig& config,
     std::thread([](std::promise<bool>& finished,
         const std::chrono::milliseconds& _bootDur,
         const std::string& _programsPath,
-        const std::shared_ptr<libtester::TimedTask>& _task)
+        const std::shared_ptr<libtester::TimedTask>& _task,
+        bool _debug)
     {
         std::promise<bool> promisedStart;
         auto future = promisedStart.get_future();
 
-        libcomp::DayCare procManager(false, [&](){
+        libcomp::DayCare procManager(_debug, [&](){
             promisedStart.set_value(true);
         });
 
@@ -175,7 +222,13 @@ static inline void EXPECT_SERVER(const libtester::ServerTestConfig& config,
 
         if(std::future_status::timeout != futureStatus)
         {
-            _task->Run();
+            try
+            {
+                _task->Run();
+            }
+            catch(libtester::TestFailure&)
+            {
+            }
         }
 
         procManager.CloseDoors();
@@ -183,7 +236,7 @@ static inline void EXPECT_SERVER(const libtester::ServerTestConfig& config,
 
         finished.set_value(true);
     }, std::ref(promisedFinished), config.GetBootTime(),
-        config.GetProgramsPath(), task).detach();
+        config.GetProgramsPath(), task, config.GetDebug()).detach();
 
     EXPECT_TRUE(futureResult.wait_for(config.GetTestTime()) !=
         std::future_status::timeout);
@@ -200,7 +253,17 @@ static inline ServerTestConfig LobbyOnly()
     return ServerTestConfig(
         std::chrono::milliseconds(60000), // 60 seconds
         std::chrono::milliseconds(20000), // 20 seconds
-        "bin/testing/programs-lobby.xml");
+        "bin/testing/programs-lobby.xml",
+        false /* debug */);
+}
+
+static inline ServerTestConfig SingleChannel()
+{
+    return ServerTestConfig(
+        std::chrono::milliseconds(3 * 60000), // 3 minutes
+        std::chrono::milliseconds(60000), // 60 seconds
+        "bin/testing/programs.xml",
+        false /* debug */);
 }
 
 } // namespace ServerConfig

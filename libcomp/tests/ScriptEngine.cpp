@@ -188,20 +188,25 @@ TEST(ScriptEngine, FunctionCall)
     EXPECT_TRUE(engine.Eval(
         "function TestFunction(a)\n"
         "{\n"
-            "b <- Packet();"
+            "b <- Packet();\n"
             "a.WriteU16Little(0x1234);\n"
             "b.WriteU16Little(0x5678);\n"
             "return b;\n"
         "}\n"
     ));
 
+    std::shared_ptr<Sqrat::ObjectReference<libcomp::Packet>> ref;
     std::shared_ptr<libcomp::Packet> a(new libcomp::Packet);
     std::shared_ptr<libcomp::Packet> b;
 
-    b = Sqrat::RootTable(engine.GetVM()).GetFunction(
-        "TestFunction").Evaluate<libcomp::Packet>(a);
+    ref = Sqrat::RootTable(engine.GetVM()).GetFunction("TestFunction"
+        ).Evaluate<Sqrat::ObjectReference<libcomp::Packet>>(a);
 
     EXPECT_EQ(scriptMessages, "");
+
+    ASSERT_TRUE(ref);
+
+    b = ref->GetSharedObject();
 
     ASSERT_TRUE(b);
 

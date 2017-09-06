@@ -148,10 +148,11 @@ void EncryptedConnection::ConnectionEncrypted()
             char szTimeStamp[15];
             std::memset(szTimeStamp, 0, sizeof(szTimeStamp));
 
-            std::strftime(szTimeStamp, 32, "%Y%m%d%H%m%S", pTM);
+            std::strftime(szTimeStamp, 32, "%Y%m%d%H%M%S", pTM);
 
-            auto captureFilePath = libcomp::String("%1/%2-%3.hack").Arg(
-                capturePath).Arg(szTimeStamp).Arg(GetRemoteAddress());
+            auto captureFilePath = libcomp::String("%1/%2-%3-%4.hack").Arg(
+                capturePath).Arg(szTimeStamp).Arg(
+                GetRemoteAddress()).Arg(rand());
 
             mCaptureFile = new std::ofstream();
             mCaptureFile->open(captureFilePath.C(), std::ofstream::binary);
@@ -184,6 +185,7 @@ void EncryptedConnection::ConnectionEncrypted()
                     sizeof(addrlen));
                 mCaptureFile->write(remoteAddress.C(),
                     addrlen);
+                mCaptureFile->flush();
 
                 if(!mCaptureFile->good())
                 {
@@ -255,7 +257,7 @@ void EncryptedConnection::ParseClientEncryptionStart(libcomp::Packet& packet)
             SocketError("Failed to request more data.");
         }
     }
-    else 
+    else
     {
         // Parsing status.
         bool status = true;
@@ -604,6 +606,7 @@ void EncryptedConnection::ParsePacket(libcomp::Packet& packet,
             sizeof(size));
         mCaptureFile->write(packet.ConstData(),
             size);
+        mCaptureFile->flush();
 
         if(!mCaptureFile->good())
         {

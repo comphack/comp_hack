@@ -42,6 +42,9 @@ DayCare::DayCare(bool printDetails, std::function<void()> onDetain) :
 
 DayCare::~DayCare()
 {
+    CloseDoors(true);
+    WaitForExit();
+
     delete mSpawnThread;
     mSpawnThread = nullptr;
 

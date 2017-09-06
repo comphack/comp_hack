@@ -188,7 +188,7 @@ TEST(ScriptEngine, FunctionCall)
     EXPECT_TRUE(engine.Eval(
         "function TestFunction(a)\n"
         "{\n"
-            "b <- Packet();"
+            "b <- Packet();\n"
             "a.WriteU16Little(0x1234);\n"
             "b.WriteU16Little(0x5678);\n"
             "return b;\n"

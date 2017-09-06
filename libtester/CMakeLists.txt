@@ -59,6 +59,9 @@ SET(${PROJECT_NAME}_TEST_SRCS
 )
 
 IF(NOT BSD)
+    ADD_CUSTOM_TARGET(client-test DEPENDS comp_lobby comp_channel comp_world)
+
     # Add the unit tests.
-    CREATE_GTESTS(LIBS comp tester SRCS ${${PROJECT_NAME}_TEST_SRCS})
+    CREATE_GTESTS(TARGET client-test LIBS comp tester
+        SRCS ${${PROJECT_NAME}_TEST_SRCS})
 ENDIF(NOT BSD)

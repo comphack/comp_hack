@@ -361,15 +361,22 @@ ENDMACRO(SETUP_TRANSLATION outvar)
 # be in the "tests" subdirectory of the project with the test name and a ".cpp"
 # extension for this macro to work.
 MACRO(CREATE_GTESTS)
+    SET(EXPECT_TARGET False)
+    SET(TEST_TARGET "test")
     SET(TEST_LIBS "")
     SET(HAVE_LIBS False)
 
     # Create a test based on each test name.
     FOREACH(test ${ARGN})
-        IF(${test} MATCHES "LIBS")
+        IF("${test}" MATCHES "LIBS")
             SET(HAVE_LIBS False)
-        ELSEIF(${test} MATCHES "SRCS")
+        ELSEIF("${test}" MATCHES "SRCS")
             SET(HAVE_LIBS True)
+        ELSEIF("${test}" MATCHES "TARGET")
+            SET(EXPECT_TARGET True)
+        ELSEIF(EXPECT_TARGET)
+            SET(TEST_TARGET ${test})
+            SET(EXPECT_TARGET False)
         ELSEIF(HAVE_LIBS)
             # Prefix the test name with "Test".
             SET(ttest "Test${test}")
@@ -386,12 +393,17 @@ MACRO(CREATE_GTESTS)
                 ${CMAKE_THREAD_LIBS_INIT} ${ZLIB_LIBRARIES})
 
             # Add the test to CTest.
-            ADD_TEST(NAME ${test} COMMAND ${EXECUTABLE_OUTPUT_PATH}/${ttest}
+            IF("${TEST_TARGET}" STREQUAL "test")
+                ADD_TEST(NAME ${test} COMMAND
+                    ${EXECUTABLE_OUTPUT_PATH}/${ttest}
                 WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
+            ELSE()
+                ADD_DEPENDENCIES(${TEST_TARGET} ${ttest})
+            ENDIF()
         ELSE() # Must be a library.
             # Add the library to the list.
             SET(TEST_LIBS ${TEST_LIBS} ${test})
-        ENDIF(${test} MATCHES "LIBS")
+        ENDIF("${test}" MATCHES "LIBS")
     ENDFOREACH(test ${ARGN})
 ENDMACRO(CREATE_GTESTS)
 

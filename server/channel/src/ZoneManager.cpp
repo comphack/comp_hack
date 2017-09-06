@@ -826,8 +826,7 @@ void ZoneManager::SendEnemyData(const std::shared_ptr<ChannelClientConnection>& 
         p.WriteU8(ePair.first->GetStack());
     }
 
-    // Variant Type
-    p.WriteU32Little(0);
+    p.WriteU32Little(enemyState->GetEntity()->GetVariantType());
 
     std::list<std::shared_ptr<ChannelClientConnection>> clients;
     if(sendToAll)
@@ -1076,7 +1075,7 @@ std::list<std::shared_ptr<ChannelClientConnection>> ZoneManager::GetZoneConnecti
 bool ZoneManager::SpawnEnemy(const std::shared_ptr<Zone>& zone, uint32_t demonID,
     float x, float y, float rot, const libcomp::String& aiType)
 {
-    auto eState = CreateEnemy(zone, demonID, x, y, rot);
+    auto eState = CreateEnemy(zone, demonID, 0, x, y, rot);
 
     auto server = mServer.lock();
     server->GetAIManager()->Prepare(eState, aiType);
@@ -1131,6 +1130,8 @@ void ZoneManager::UpdateSpawnGroups(const std::shared_ptr<Zone>& zone,
         auto slg = zoneDef->GetSpawnLocationGroups(groupPair.first);
         auto locations = slg->GetLocations();
 
+        if(locations.size() == 0) continue;
+
         // Create each enemy at a random location in the group
         for(auto sg : groupPair.second)
         {
@@ -1157,7 +1158,7 @@ void ZoneManager::UpdateSpawnGroups(const std::shared_ptr<Zone>& zone,
 
                 // Create the enemy state
                 auto eState = CreateEnemy(zone, spawn->GetEnemyType(),
-                    x, y, rot);
+                    spawn->GetVariantType(), x, y, rot);
 
                 // Set the spawn information
                 auto enemy = eState->GetEntity();
@@ -1204,7 +1205,7 @@ void ZoneManager::UpdateSpawnGroups(const std::shared_ptr<Zone>& zone,
 }
 
 std::shared_ptr<EnemyState> ZoneManager::CreateEnemy(
-    const std::shared_ptr<Zone>& zone, uint32_t demonID,
+    const std::shared_ptr<Zone>& zone, uint32_t demonID, uint32_t variantType,
     float x, float y, float rot)
 {
     auto server = mServer.lock();
@@ -1218,6 +1219,7 @@ std::shared_ptr<EnemyState> ZoneManager::CreateEnemy(
 
     auto enemy = std::shared_ptr<objects::Enemy>(new objects::Enemy);
     enemy->SetType(demonID);
+    enemy->SetVariantType(variantType);
 
     auto enemyStats = libcomp::PersistentObject::New<objects::EntityStats>();
     enemyStats->SetLevel((int8_t)def->GetGrowth()->GetBaseLevel());

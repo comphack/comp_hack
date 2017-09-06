@@ -340,13 +340,14 @@ private:
      * Create an enemy in the specified zone instance at set coordinates
      * @param zone Pointer to the zone instance where the enemy should be spawned
      * @param demonID Demon/enemy type ID to spawn
+     * @param variantType Variant type of the demon
      * @param x X coordinate to render the enemy at
      * @param y Y coordinate to render the enemy at
      * @param rot Rotation to render the enemy with
      * @return Pointer to the new enemy state
      */
     std::shared_ptr<EnemyState> CreateEnemy(const std::shared_ptr<Zone>& zone,
-        uint32_t demonID, float x, float y, float rot);
+        uint32_t demonID, uint32_t variantType, float x, float y, float rot);
 
     /**
      * Send entity information about an enemy in a zone

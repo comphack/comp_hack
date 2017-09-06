@@ -3,6 +3,7 @@
     <object name="Spawn" persistent="false">
         <member type="u32" name="ID"/>
         <member type="u32" name="EnemyType"/>
+        <member type="u32" name="VariantType"/>
         <member type="list" name="Drops">
             <element type="ItemDrop*"/>
         </member>

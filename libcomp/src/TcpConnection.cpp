@@ -323,23 +323,27 @@ void TcpConnection::FlushOutgoing(bool closeConnection)
 
 void TcpConnection::FlushOutgoingInside(bool closeConnection)
 {
-    mSendingPacket = true;
-
     mSocket.async_send(asio::buffer(mOutgoing.ConstData() +
         mOutgoing.Tell(), mOutgoing.Left()), 0, [closeConnection,
         this](asio::error_code errorCode, std::size_t length)
     {
+        bool sendSame = false;
         bool sendAnother = false;
         bool packetOk = false;
 
         ReadOnlyPacket readOnlyPacket;
 
         // Ignore errors and everything else, just close the connection.
-        if(closeConnection)
+        if(closeConnection && mOutgoing.Left() == length)
         {
 #ifdef COMP_HACK_DEBUG
             LOG_DEBUG("Closing connection after sending packet.\n");
 #endif // COMP_HACK_DEBUG
+
+            std::lock_guard<std::mutex> outgoingGuard(
+                mOutgoingMutex);
+
+            mSendingPacket = false;
 
             SocketError();
             return;
@@ -366,25 +370,30 @@ void TcpConnection::FlushOutgoingInside(bool closeConnection)
             }
             else
             {
-                mOutgoing.Skip((uint32_t)length);
+                mOutgoing.Skip(length);
 
                 if(0 != mOutgoing.Left())
                 {
-                    FlushOutgoingInside(closeConnection);
-                    return;
+                    sendSame = true;
                 }
+                else
+                {
+                    mOutgoing.Rewind();
 
-                mOutgoing.Rewind();
-
-                readOnlyPacket = mOutgoing;
-                sendAnother = !mOutgoingPackets.empty();
-                packetOk = true;
+                    readOnlyPacket = mOutgoing;
+                    sendAnother = !mOutgoingPackets.empty();
+                    packetOk = true;
+                }
             }
 
-            mSendingPacket = false;
+            mSendingPacket = sendSame;
         }
 
-        if(packetOk)
+        if(sendSame)
+        {
+            FlushOutgoingInside(closeConnection);
+        }
+        else if(packetOk)
         {
             PacketSent(readOnlyPacket);
 
@@ -562,6 +571,8 @@ std::list<ReadOnlyPacket> TcpConnection::GetCombinedPackets()
     {
         packets.push_back(mOutgoingPackets.front());
         mOutgoingPackets.pop_front();
+
+        mSendingPacket = true;
     }
 
     return packets;

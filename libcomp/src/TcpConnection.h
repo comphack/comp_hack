@@ -317,6 +317,13 @@ protected:
 
 private:
     /**
+     * Send all queued packets to the remote host.
+     * @param closeConnection If the connection should be closed after the
+     *   send queue has been emptied.
+     */
+    void FlushOutgoingInside(bool closeConnection = false);
+
+    /**
      * Used to handle a connection error code.
      * @param errorCode Error code that was encountered.
      */

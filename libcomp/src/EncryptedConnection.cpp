@@ -831,6 +831,8 @@ std::list<ReadOnlyPacket> EncryptedConnection::GetCombinedPackets()
                 mOutgoingPackets.pop_front();
             }
         }
+
+        mSendingPacket = !packets.empty();
     }
 
     return packets;

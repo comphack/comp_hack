@@ -315,6 +315,8 @@ void TcpConnection::FlushOutgoing(bool closeConnection)
     {
         PreparePackets(packets);
 
+        mOutgoing.Rewind();
+
         FlushOutgoingInside(closeConnection);
     }
 }

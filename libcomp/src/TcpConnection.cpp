@@ -364,7 +364,7 @@ void TcpConnection::FlushOutgoingInside(bool closeConnection)
             }
             else
             {
-                mOutgoing.Skip(length);
+                mOutgoing.Skip((uint32_t)length);
 
                 if(0 != mOutgoing.Left())
                 {

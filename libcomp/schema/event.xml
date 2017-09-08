@@ -14,9 +14,11 @@
             <element type="EventBase*"/>
         </member>
     </object>
-    <object name="Event" baseobject="EventSequence" persistent="false" inherited-construction="true">
+    <object name="Event" baseobject="EventSequence" persistent="false"
+        inherited-construction="true">
         <member type="string" name="ID"/>
-        <member type="enum" name="eventType" underlying="uint8_t">
+        <member type="enum" name="eventType" underlying="uint8_t" default="FORK">
+            <value>FORK</value>
             <value>MESSAGE</value>
             <value>NPC_MESSAGE</value>
             <value>EX_NPC_MESSAGE</value>

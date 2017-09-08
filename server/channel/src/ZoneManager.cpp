@@ -240,8 +240,7 @@ void ZoneManager::InstanceGlobalZones()
         auto zoneData = serverDataManager->GetZoneData(zoneID);
         if(mZones.find(zoneID) == mZones.end() && zoneData->GetGlobal())
         {
-            auto zone = CreateZoneInstance(zoneData);
-            mActiveInstances.insert(zone->GetID());
+            CreateZoneInstance(zoneData);
         }
     }
 }
@@ -296,6 +295,9 @@ bool ZoneManager::EnterZone(const std::shared_ptr<ChannelClientConnection>& clie
     {
         std::lock_guard<std::mutex> lock(mLock);
         mEntityMap[worldCID] = instanceID;
+
+        // Reactive the zone if its not active already
+        mActiveInstances.insert(instanceID);
     }
     instance->AddConnection(client);
     cState->SetZone(instance);

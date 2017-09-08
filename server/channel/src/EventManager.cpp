@@ -971,6 +971,12 @@ bool EventManager::HandleEvent(const std::shared_ptr<ChannelClientConnection>& c
             case objects::Event::EventType_t::STOP_BGM:
                 handled = StopBGM(client, instance);
                 break;
+            case objects::Event::EventType_t::FORK:
+                // Fork off to the next appropriate event but even if there are
+                // no next events listed, allow the handler to take care of it
+                HandleNext(client, instance);
+                handled = true;
+                break;
             default:
                 LOG_ERROR(libcomp::String("Failed to handle event of type %1\n"
                     ).Arg(to_underlying(eventType)));

@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <objgen>
-    <object name="ServerNPC" baseobject="ServerObjectBase" persistent="false"/>
+    <object name="ServerNPC" baseobject="ServerObject" persistent="false">
+        <member type="u8" name="State" inherited="true" default="1"/>
+    </object>
 </objgen>

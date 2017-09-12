@@ -505,8 +505,8 @@ void ZoneManager::SendPopulateZoneData(const std::shared_ptr<ChannelClientConnec
 
     // The client's partner demon will be shown elsewhere
 
-    PopEntityForZoneProduction(client, cState->GetEntityID(), 0);
-    ShowEntityToZone(client, cState->GetEntityID());
+    PopEntityForZoneProduction(zone, cState->GetEntityID(), 0);
+    ShowEntityToZone(zone, cState->GetEntityID());
 
     // Activate status effects
     cState->SetStatusEffectsActive(true, definitionManager);
@@ -540,7 +540,12 @@ void ZoneManager::SendPopulateZoneData(const std::shared_ptr<ChannelClientConnec
         reply.WriteS16Little(0);    //Unknown
 
         client->QueuePacket(reply);
-        ShowEntity(client, npcState->GetEntityID(), true);
+
+        // If an NPC's state is not 1, do not show it
+        if(npc->GetState() == 1)
+        {
+            ShowEntity(client, npcState->GetEntityID(), true);
+        }
     }
 
     for(auto objState : zone->GetServerObjects())
@@ -607,14 +612,13 @@ void ZoneManager::ShowEntity(const std::shared_ptr<
     }
 }
 
-void ZoneManager::ShowEntityToZone(const std::shared_ptr<
-    ChannelClientConnection>& client, int32_t entityID)
+void ZoneManager::ShowEntityToZone(const std::shared_ptr<Zone>& zone, int32_t entityID)
 {
     libcomp::Packet p;
     p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_SHOW_ENTITY);
     p.WriteS32Little(entityID);
 
-    BroadcastPacket(client, p, true);
+    BroadcastPacket(zone, p);
 }
 
 void ZoneManager::PopEntityForProduction(const std::shared_ptr<
@@ -635,21 +639,28 @@ void ZoneManager::PopEntityForProduction(const std::shared_ptr<
     }
 }
 
-void ZoneManager::PopEntityForZoneProduction(const std::shared_ptr<
-    ChannelClientConnection>& client, int32_t entityID, int32_t type)
+void ZoneManager::PopEntityForZoneProduction(const std::shared_ptr<Zone>& zone,
+    int32_t entityID, int32_t type)
 {
     libcomp::Packet p;
     p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_POP_ENTITY_FOR_PRODUCTION);
     p.WriteS32Little(entityID);
     p.WriteS32Little(type);
 
-    BroadcastPacket(client, p, true);
+    BroadcastPacket(zone, p);
 }
 
 void ZoneManager::RemoveEntitiesFromZone(const std::shared_ptr<Zone>& zone,
     const std::list<int32_t>& entityIDs, int32_t removalMode, bool queue)
 {
     auto clients = zone->GetConnectionList();
+    RemoveEntities(clients, entityIDs, removalMode, queue);
+}
+
+void ZoneManager::RemoveEntities(const std::list <std::shared_ptr<
+    ChannelClientConnection>> &clients, const std::list<int32_t>& entityIDs,
+    int32_t removalMode, bool queue)
+{
     for(int32_t entityID : entityIDs)
     {
         libcomp::Packet p;
@@ -1095,7 +1106,7 @@ bool ZoneManager::SpawnEnemy(const std::shared_ptr<Zone>& zone, uint32_t demonID
 }
 
 void ZoneManager::UpdateSpawnGroups(const std::shared_ptr<Zone>& zone,
-    bool refreshAll, uint64_t now)
+    bool refreshAll, uint64_t now, const std::set<uint32_t> groupIDs)
 {
     std::unordered_map<uint32_t, uint16_t> updateSpawnGroups;
     if(!refreshAll)
@@ -1118,9 +1129,11 @@ void ZoneManager::UpdateSpawnGroups(const std::shared_ptr<Zone>& zone,
         std::list<std::shared_ptr<objects::SpawnGroup>>> groups;
     for(auto sgPair : zoneDef->GetSpawnGroups())
     {
+        bool specified = groupIDs.find(sgPair.first) != groupIDs.end();
+
         auto sg = sgPair.second;
-        if(refreshAll || updateSpawnGroups.find(sgPair.first)
-            != updateSpawnGroups.end())
+        if(specified || (refreshAll && sg->GetRespawnTime() > 0.f) ||
+            updateSpawnGroups.find(sgPair.first) != updateSpawnGroups.end())
         {
             groups[sg->GetSpawnLocationGroupID()].push_back(sg);
         }
@@ -1154,8 +1167,10 @@ void ZoneManager::UpdateSpawnGroups(const std::shared_ptr<Zone>& zone,
 
                 auto rPoint = GetRandomPoint(location->GetWidth(), location->GetHeight());
 
+                // Spawn group bounding box points start in the top left corner of the
+                // rectangle and extend towards +X/-Y
                 float x = location->GetX() + rPoint.x;
-                float y = location->GetY() + rPoint.y;
+                float y = location->GetY() - rPoint.y;
                 float rot = RNG_DEC(float, 0.f, 3.16f, 2);
 
                 // Create the enemy state
@@ -1453,7 +1468,9 @@ std::shared_ptr<Zone> ZoneManager::CreateZoneInstance(
 
     for(auto npc : definition->GetNPCs())
     {
-        auto state = std::shared_ptr<NPCState>(new NPCState(npc));
+        auto copy = std::make_shared<objects::ServerNPC>(*npc);
+
+        auto state = std::shared_ptr<NPCState>(new NPCState(copy));
         state->SetCurrentX(npc->GetX());
         state->SetCurrentY(npc->GetY());
         state->SetCurrentRotation(npc->GetRotation());
@@ -1461,11 +1478,13 @@ std::shared_ptr<Zone> ZoneManager::CreateZoneInstance(
         state->SetActions(npc->GetActions());
         zone->AddNPC(state);
     }
-    
+
     for(auto obj : definition->GetObjects())
     {
+        auto copy = std::make_shared<objects::ServerObject>(*obj);
+
         auto state = std::shared_ptr<ServerObjectState>(
-            new ServerObjectState(obj));
+            new ServerObjectState(copy));
         state->SetCurrentX(obj->GetX());
         state->SetCurrentY(obj->GetY());
         state->SetCurrentRotation(obj->GetRotation());

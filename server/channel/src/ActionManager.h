@@ -128,6 +128,15 @@ private:
     bool UpdateQuest(const ActionContext& ctx);
 
     /**
+     * Spawn an enemy spawn group by ID in the client's current zone.
+     * @param client Client to perform the actions for.
+     * @param action Action to perform.
+     * @param sourceEntityID ID of the entity that is changing state.
+     * @retval false The action list should stop after this action.
+     */
+    bool Spawn(const ActionContext& ctx);
+
+    /**
      * Create one or more loot boxes at the specified location.
      * @param client Client to perform the actions for.
      * @param action Action to perform.

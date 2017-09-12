@@ -217,6 +217,7 @@ SET(${PROJECT_NAME}_SCHEMA
     schema/action.xml
     schema/action_createloot.xml
     schema/action_setnpcstate.xml
+    schema/action_spawn.xml
     schema/action_startevent.xml
     schema/action_updateflag.xml
     schema/action_updatelnc.xml
@@ -309,6 +310,8 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     ActionCreateLoot.cpp
     ActionSetNPCState.h
     ActionSetNPCState.cpp
+    ActionSpawn.h
+    ActionSpawn.cpp
     ActionStartEvent.h
     ActionStartEvent.cpp
     ActionUpdateFlag.h

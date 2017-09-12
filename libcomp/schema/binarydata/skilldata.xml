@@ -4,7 +4,20 @@
     
     <object name="MiSkillBasicData" persistent="false">
         <member type="u8" name="dependencyType"/>
-        <member type="u8" name="expertise"/>
+        <member type="enum" name="actionType" underlying="uint8_t">
+            <value num="0">ATTACK</value>
+            <value num="1">SPIN</value>
+            <value num="2">RUSH</value>
+            <value num="3">SHOT</value>
+            <value num="4">RAPID</value>
+            <value num="5">GUARD</value>
+            <value num="6">COUNTER</value>
+            <value num="7">DODGE</value>
+            <value num="8">TALK</value>
+            <value num="9">INTIMIDATE</value>
+            <value num="10">TAUNT</value>
+            <value num="11">SUPPORT</value>
+        </member>
         <member type="bool" name="combatSkill"/>
         <member type="u8" name="defensible"/>
         <member type="u8" name="family"/>

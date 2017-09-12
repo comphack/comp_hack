@@ -365,8 +365,10 @@ private:
      * Notify the client that a skill needs to charge.  The client will notify
      * the server when the specified charge time has elapsed for execution.
      * @param activated Pointer to the activated ability instance
+     * @param skillData Pointer to the skill data
      */
-    void SendChargeSkill(std::shared_ptr<objects::ActivatedAbility> activated);
+    void SendChargeSkill(std::shared_ptr<objects::ActivatedAbility> activated,
+        std::shared_ptr<objects::MiSkillData> skillData);
 
     /**
      * Notify the client that a skill is executing.

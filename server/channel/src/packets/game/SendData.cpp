@@ -120,6 +120,9 @@ void SendClientReadyData(std::shared_ptr<ChannelServer> server,
             if(zoneLobbyData)
             {
                 zoneID = zoneLobbyData->GetID();
+                xCoord = zoneLobbyData->GetStartingX();
+                yCoord = zoneLobbyData->GetStartingY();
+                rotation = zoneLobbyData->GetStartingRotation();
             }
         }
 

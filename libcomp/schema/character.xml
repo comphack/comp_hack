@@ -140,6 +140,10 @@
         <member type="array" name="CustomData" size="8">
             <element type="s32"/>
         </member>
+        <member type="map" name="FlagStates">
+            <key type="s32"/>
+            <value type="s32"/>
+        </member>
     </object>
     <object name="FriendSettings" location="world">
         <member type="Character*" name="Character" key="true" unique="true"/>

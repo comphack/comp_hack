@@ -80,11 +80,11 @@ MainWindow::MainWindow(QWidget *p) : QMainWindow(p), mDrawTarget(0), mRubberBand
     connect(ui.checkBox_Spawn, SIGNAL(toggled(bool)),
         this, SLOT(ShowToggled(bool)));
     connect(ui.scrollArea, SIGNAL(mousePressEvent(QMouseEvent*)),
-        this, SLOT(MousePressEvent()));
+        this, SLOT(mousePressEvent()));
     connect(ui.scrollArea, SIGNAL(mouseMoveEvent(QMouseEvent*)),
-        this, SLOT(MouseMoveEvent()));
+        this, SLOT(mouseMoveEvent()));
     connect(ui.scrollArea, SIGNAL(mouseReleaseEvent(QMouseEvent*)),
-        this, SLOT(MouseReleaseEvent()));
+        this, SLOT(mouseReleaseEvent()));
     connect(ui.comboBox_SpawnEdit, SIGNAL(currentIndexChanged(const QString&)),
         this, SLOT(ComboBox_SpawnEdit_IndexChanged(const QString&)));
     connect(ui.actionRemove_Selected_Locations, SIGNAL(triggered()),
@@ -280,7 +280,7 @@ void MainWindow::Refresh()
     DrawMap();
 }
 
-void MainWindow::MousePressEvent(QMouseEvent* event)
+void MainWindow::mousePressEvent(QMouseEvent* event)
 {
     mOrigin = event->pos();
     if(!mRubberBand)
@@ -291,7 +291,7 @@ void MainWindow::MousePressEvent(QMouseEvent* event)
     mRubberBand->show();
 }
 
-void MainWindow::MouseMoveEvent(QMouseEvent* event)
+void MainWindow::mouseMoveEvent(QMouseEvent* event)
 {
     if(mRubberBand)
     {
@@ -299,7 +299,7 @@ void MainWindow::MouseMoveEvent(QMouseEvent* event)
     }
 }
 
-void MainWindow::MouseReleaseEvent(QMouseEvent* event)
+void MainWindow::mouseReleaseEvent(QMouseEvent* event)
 {
     if(mRubberBand)
     {

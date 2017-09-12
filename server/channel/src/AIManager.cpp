@@ -480,8 +480,10 @@ bool AIManager::UpdateEnemyState(const std::shared_ptr<EnemyState>& eState, uint
                 auto point = server->GetZoneManager()->GetRandomPoint(
                     spawnLocation->GetWidth(), spawnLocation->GetHeight());
 
+                // Spawn group bounding box points start in the top left corner of the
+                // rectangle and extend towards +X/-Y
                 float x = (float)(spawnLocation->GetX() + point.x);
-                float y = (float)(spawnLocation->GetY() + point.y);
+                float y = (float)(spawnLocation->GetY() - point.y);
 
                 Point source(eState->GetCurrentX(), eState->GetCurrentY());
                 Point dest(x, y);

@@ -2,12 +2,13 @@
 <objgen>
     <object name="ServerObjectBase" baseobject="ObjectPosition" persistent="false">
         <member type="u32" name="ID"/>
-        <member type="list" name="Actions">
-            <element type="Action*"/>
-        </member>
     </object>
     <object name="ServerObject" baseobject="ServerObjectBase" persistent="false">
         <member type="u8" name="State"/>
+        <member type="s32" name="ActorID"/>
+        <member type="list" name="Actions">
+            <element type="Action*"/>
+        </member>
     </object>
     <object name="ServerBazaar" baseobject="ServerObjectBase" persistent="false">
         <member type="set" name="MarketIDs">

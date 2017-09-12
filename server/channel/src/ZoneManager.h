@@ -134,12 +134,10 @@ public:
 
     /**
      * Tell all game clients in a zone to show an entity.
-     * @param client Pointer to the client connection with an entity
-     *  to show to other clients in the same zone.
+     * @param zone Pointer to the zone to show the entities to
      * @param entityID ID of the entity to show
      */
-    void ShowEntityToZone(const std::shared_ptr<
-        ChannelClientConnection>& client, int32_t entityID);
+    void ShowEntityToZone(const std::shared_ptr<Zone>& zone, int32_t entityID);
 
     /**
      * Tell the game client to prepare an entity for display.
@@ -154,19 +152,18 @@ public:
 
     /**
      * Tell all game clients to prepare an entity for display.
-     * @param client Pointer to the client connection with an entity
-     *  to prep to other clients in the same zone
+     * @param zone Pointer to the zone to prep to show entities to
      * @param entityID ID of the entity to prep
      * @param type Client-side entity type identifier
      */
-    void PopEntityForZoneProduction(const std::shared_ptr<
-        ChannelClientConnection>& client, int32_t entityID, int32_t type);
+    void PopEntityForZoneProduction(const std::shared_ptr<Zone>& zone, int32_t entityID,
+        int32_t type);
 
     /**
      * Tell all game clients in a zone to remove an entity.
      * @param zone Pointer to the zone to remove the entities from
      * @param entityIDs IDs of the entities to remove
-     * @param removeMode Optional preset removal mode
+     * @param removalMode Optional preset removal mode
      *  0) Immediate removal
      *  2) Store partner demon
      *  3) Demon egg contract complete
@@ -183,8 +180,20 @@ public:
      * @param queue true if the packet should be queued
      */
     void RemoveEntitiesFromZone(const std::shared_ptr<Zone>& zone,
-        const std::list<int32_t>& entityIDs, int32_t removeMode = 0,
+        const std::list<int32_t>& entityIDs, int32_t removalMode = 0,
         bool queue = false);
+
+    /**
+     * Tell the specified game clients to remove an entity.
+     * @param client List of pointers to client connections
+     * @param entityIDs IDs of the entities to remove
+     * @param removalMode Optional preset removal mode. See
+     *  ZoneManager::RemoveEntitiesFromZone for options
+     * @param queue true if the packet should be queued
+     */
+    void RemoveEntities(const std::list<std::shared_ptr<
+        ChannelClientConnection>>& clients, const std::list<int32_t>& entityIDs,
+        int32_t removalMode = 0, bool queue = false);
 
     /**
      * Schedule the delayed removal of one or more entities in the specified zone.
@@ -271,9 +280,10 @@ public:
      * @param refreshAll true if each group should be filled, false if only
      *  spawn groups with an elapsed refresh timer should be updated
      * @param now Current server time
+     * @param groupIDs Optional specific group IDs to spawn
      */
     void UpdateSpawnGroups(const std::shared_ptr<Zone>& zone, bool refreshAll,
-        uint64_t now = 0);
+        uint64_t now = 0, const std::set<uint32_t> groupIDs = {});
 
     /**
      * Updates the current states of entities in the zone.  Enemy AI is

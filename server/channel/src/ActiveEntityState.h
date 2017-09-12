@@ -229,6 +229,14 @@ public:
     float GetDistance(float x, float y, bool squared = false);
 
     /**
+     * Get the entity's adjusted movement speed.
+     * @param altSpeed true if the alternate speed used for combat should
+     *  be retrieved instead of the default run speed
+     * @return Movement speed of the entity
+     */
+    float GetMovementSpeed(bool altSpeed = false);
+
+    /**
      * Update the entity's current position and rotation values based
      * upon the source/destination ticks and the current time.  If now
      * matches the last refresh time, no work is done.

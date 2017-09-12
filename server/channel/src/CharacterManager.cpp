@@ -136,7 +136,7 @@ void CharacterManager::SendCharacterData(const std::shared_ptr<
 
     reply.WriteS16(-5600); // Unknown
     reply.WriteS16(5600); // Unknown
-    
+
     auto statusEffects = cState->GetCurrentStatusEffectStates(
         mServer.lock()->GetDefinitionManager());
 
@@ -279,7 +279,7 @@ void CharacterManager::SendOtherCharacterData(const std::list<std::shared_ptr<
     reply.WriteS16Little(cs->GetMP());
     reply.WriteS8(cs->GetLevel());
     reply.WriteS16Little(c->GetLNC());
-    
+
     auto statusEffects = cState->GetCurrentStatusEffectStates(
         mServer.lock()->GetDefinitionManager());
 
@@ -336,7 +336,7 @@ void CharacterManager::SendOtherCharacterData(const std::list<std::shared_ptr<
     reply.WriteS8(0);   // Unknown
     reply.WriteS32(0);  // Unknown
     reply.WriteS8(0);   // Unknown
-    
+
     /// @todo: Virtual Appearance
     size_t vaCount = 0;
     reply.WriteS32(static_cast<int32_t>(vaCount));
@@ -383,7 +383,7 @@ void CharacterManager::SendPartnerData(const std::shared_ptr<
     reply.WriteS16Little(def->GetBasic()->GetLNC());
 
     GetEntityStatsPacketData(reply, ds, dState, 0);
-    
+
     auto statusEffects = dState->GetCurrentStatusEffectStates(
         mServer.lock()->GetDefinitionManager());
 
@@ -505,7 +505,7 @@ void CharacterManager::SendOtherPartnerData(const std::list<std::shared_ptr<
     reply.WriteS16Little(dState->GetMaxHP());
     reply.WriteS16Little(ds->GetHP());
     reply.WriteS8(ds->GetLevel());
-    
+
     auto statusEffects = dState->GetCurrentStatusEffectStates(
         mServer.lock()->GetDefinitionManager());
 
@@ -975,7 +975,7 @@ void CharacterManager::SendDemonBoxData(const std::shared_ptr<
         reply.WriteS32Little(expiration == 0 || box == nullptr
             ? -1 : ChannelServer::GetExpirationInSeconds(expiration));
         reply.WriteS32Little(count);
-    
+
         if(box)
         {
             for(size_t i = 0; i < maxSlots; i++)
@@ -1065,7 +1065,7 @@ void CharacterManager::SendItemBoxData(const std::shared_ptr<
     }
     reply.WriteS8((int8_t)box->GetType());
     reply.WriteS64(box->GetBoxID());
-    
+
     if(updateMode)
     {
         reply.WriteU32((uint32_t)slots.size());
@@ -1294,7 +1294,7 @@ bool CharacterManager::AddRemoveItems(const std::shared_ptr<
                         auto item = GenerateItem(itemID, delta);
                         item->SetItemBox(itemBox);
                         item->SetBoxSlot((int8_t)freeSlot);
-                    
+
                         if(!itemBox->SetItems(freeSlot, item))
                         {
                             return false;
@@ -1374,7 +1374,7 @@ bool CharacterManager::AddRemoveItems(const std::shared_ptr<
                 if(item->GetStackSize() <= (quantity - removed))
                 {
                     removed = (uint16_t)(removed + item->GetStackSize());
-                
+
                     if(!itemBox->SetItems((size_t)slot, NULLUUID))
                     {
                         return false;
@@ -1504,7 +1504,7 @@ void CharacterManager::SendLootItemData(const std::list<std::shared_ptr<
         }
         p.WriteS8(3);
     }
-    
+
     for(auto client : clients)
     {
         auto state = client->GetClientState();
@@ -1702,6 +1702,13 @@ std::shared_ptr<objects::Demon> CharacterManager::ContractDemon(
 
     auto demon = ContractDemon(character, demonData);
 
+    if(!demon)
+    {
+        LOG_ERROR("Failed to contract demon!\n");
+
+        return {};
+    }
+
     auto demonID = mServer.lock()->GetNextObjectID();
     state->SetObjectID(demon->GetUUID(), demonID);
 
@@ -1743,12 +1750,16 @@ std::shared_ptr<objects::Demon> CharacterManager::ContractDemon(
     //Return false if no slot is open
     if(compSlot == -1)
     {
+        LOG_ERROR("No free slot to contract demon.\n");
+
         return nullptr;
     }
 
     auto d = GenerateDemon(demonData);
     if(!d)
     {
+        LOG_ERROR("Failed to generate demon.\n");
+
         return nullptr;
     }
 
@@ -1777,6 +1788,8 @@ std::shared_ptr<objects::Demon> CharacterManager::GenerateDemon(
     //Was valid demon data supplied?
     if(nullptr == demonData)
     {
+        LOG_ERROR("Data for demon not found.\n");
+
         return nullptr;
     }
 
@@ -2201,13 +2214,13 @@ bool CharacterManager::LearnSkill(const std::shared_ptr<channel::ChannelClientCo
                 skills.push_back(s->GetSkill());
             }
         }
-        
+
         if(std::find(skills.begin(), skills.end(), skillID) != skills.end())
         {
             // Skill already exists
             return true;
         }
-        
+
         demon->AppendAcquiredSkills(skillID);
 
         SendPartnerData(client);
@@ -2568,7 +2581,7 @@ bool CharacterManager::AddRemoveOpponent(bool add, const std::shared_ptr<
         {
             return true;
         }
-        
+
         // If either are a client entity, get both the character
         // and partner demon
         std::list<std::shared_ptr<ActiveEntityState>> e1s;
@@ -2607,7 +2620,7 @@ bool CharacterManager::AddRemoveOpponent(bool add, const std::shared_ptr<
                         activatedEnemies.push_back(enemy);
                     }
                 }
-        
+
                 opponentCount = e2->AddRemoveOpponent(true, e1->GetEntityID());
                 if(opponentCount == 1)
                 {
@@ -2778,7 +2791,7 @@ void CharacterManager::CalculateDemonBaseStats(
     int8_t level = ds->GetLevel();
     uint8_t boostLevel = static_cast<uint8_t>((level + 3) / 4);
     uint8_t boostStage = static_cast<uint8_t>((boostLevel - 1) / 5);
-    
+
 	/*
 	 * A | 1
 	 * A | 5,  9,  13, 17, 21,
@@ -3123,7 +3136,7 @@ void CharacterManager::GetEntityStatsPacketData(libcomp::Packet& p,
         {
             // Non-adjusted recalc format makes no sense
             if(baseOnly) break;
-            
+
             p.WriteS16Little(static_cast<int16_t>(
                 state->GetSTR() - coreStats->GetSTR()));
             p.WriteS16Little(static_cast<int16_t>(

@@ -58,7 +58,7 @@ IF(WIN32)
     SET(CPACK_PACKAGE_VERSION_MAJOR 0)
     SET(CPACK_PACKAGE_VERSION_MINOR 9)
     SET(CPACK_PACKAGE_VERSION_PATCH 0)
-    SET(CPACK_PACKAGE_EXECUTABLES "comp_capgrep;Capture Analysis;logger;Capture Logger;map;Enemy Mapping")
+    SET(CPACK_PACKAGE_EXECUTABLES "comp_capgrep;Capture Analysis;comp_logger;Capture Logger;comp_map;Enemy Mapping")
 
     SET(CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS_SKIP TRUE)
 

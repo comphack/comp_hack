@@ -34,6 +34,7 @@
 #include <ServerConstants.h>
 
 // Standard C++11 Includes
+#include <limits>
 #include <math.h>
 
 // channel Includes
@@ -2645,7 +2646,7 @@ bool CharacterManager::AddRemoveOpponent(bool add, const std::shared_ptr<
             libcomp::Packet p;
             p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_BATTLE_STARTED);
             p.WriteS32Little(entity->GetEntityID());
-            p.WriteFloat(300.f);    // Combat run speed
+            p.WriteFloat(entity->GetMovementSpeed(true));
             packets.push_back(p);
         }
 
@@ -2708,7 +2709,7 @@ bool CharacterManager::AddRemoveOpponent(bool add, const std::shared_ptr<
             libcomp::Packet p;
             p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_BATTLE_STOPPED);
             p.WriteS32Little(entity->GetEntityID());
-            p.WriteFloat(300.f);    // Run speed
+            p.WriteFloat(entity->GetMovementSpeed(false));
             packets.push_back(p);
         }
     }
@@ -2941,64 +2942,79 @@ void CharacterManager::CalculateDependentStats(
     libcomp::EnumMap<CorrectTbl, int16_t>& stats, int8_t level, bool isDemon)
 {
     /// @todo: fix: close but not quite right
+    libcomp::EnumMap<CorrectTbl, int16_t> adjusted;
     if(isDemon)
     {
         // Round up each part
-        stats[CorrectTbl::HP_MAX] = (int16_t)(stats[CorrectTbl::HP_MAX] +
+        adjusted[CorrectTbl::HP_MAX] = (int16_t)(stats[CorrectTbl::HP_MAX] +
             (int16_t)ceill(stats[CorrectTbl::HP_MAX] * 0.03 * level) +
             (int16_t)ceill(stats[CorrectTbl::STR] * 0.3) +
             (int16_t)ceill(((stats[CorrectTbl::HP_MAX] * 0.01) + 0.5) * stats[CorrectTbl::VIT]));
-        stats[CorrectTbl::MP_MAX] = (int16_t)(stats[CorrectTbl::MP_MAX] +
+        adjusted[CorrectTbl::MP_MAX] = (int16_t)(stats[CorrectTbl::MP_MAX] +
             (int16_t)ceill(stats[CorrectTbl::MP_MAX] * 0.03 * level) +
             (int16_t)ceill(stats[CorrectTbl::MAGIC] * 0.3) +
             (int16_t)ceill(((stats[CorrectTbl::MP_MAX] * 0.01) + 0.5) * stats[CorrectTbl::INT]));
 
         // Round the result, adjusting by 0.5
-        stats[CorrectTbl::CLSR] = (int16_t)(stats[CorrectTbl::CLSR] +
+        adjusted[CorrectTbl::CLSR] = (int16_t)(stats[CorrectTbl::CLSR] +
             (int16_t)roundl((stats[CorrectTbl::STR] * 0.5) + 0.5 + (level * 0.1)));
-        stats[CorrectTbl::LNGR] = (int16_t)(stats[CorrectTbl::LNGR] +
+        adjusted[CorrectTbl::LNGR] = (int16_t)(stats[CorrectTbl::LNGR] +
             (int16_t)roundl((stats[CorrectTbl::SPEED] * 0.5) + 0.5 + (level * 0.1)));
-        stats[CorrectTbl::SPELL] = (int16_t)(stats[CorrectTbl::SPELL] +
+        adjusted[CorrectTbl::SPELL] = (int16_t)(stats[CorrectTbl::SPELL] +
             (int16_t)roundl((stats[CorrectTbl::MAGIC] * 0.5) + 0.5 + (level * 0.1)));
-        stats[CorrectTbl::SUPPORT] = (int16_t)(stats[CorrectTbl::SUPPORT] +
+        adjusted[CorrectTbl::SUPPORT] = (int16_t)(stats[CorrectTbl::SUPPORT] +
             (int16_t)roundl((stats[CorrectTbl::INT] * 0.5) + 0.5 + (level * 0.1)));
-        stats[CorrectTbl::PDEF] = (int16_t)(stats[CorrectTbl::PDEF] +
+        adjusted[CorrectTbl::PDEF] = (int16_t)(stats[CorrectTbl::PDEF] +
             (int16_t)roundl((stats[CorrectTbl::VIT] * 0.1) + 0.5 + (level * 0.1)));
-        stats[CorrectTbl::MDEF] = (int16_t)(stats[CorrectTbl::MDEF] +
+        adjusted[CorrectTbl::MDEF] = (int16_t)(stats[CorrectTbl::MDEF] +
             (int16_t)roundl((stats[CorrectTbl::INT] * 0.1) + 0.5 + (level * 0.1)));
     }
     else
     {
         // Round each part
-        stats[CorrectTbl::HP_MAX] = (int16_t)(stats[CorrectTbl::HP_MAX] +
+        adjusted[CorrectTbl::HP_MAX] = (int16_t)(stats[CorrectTbl::HP_MAX] +
             (int16_t)roundl(stats[CorrectTbl::HP_MAX] * 0.03 * level) +
             (int16_t)roundl(stats[CorrectTbl::STR] * 0.3) +
             (int16_t)roundl(((stats[CorrectTbl::HP_MAX] * 0.01) + 0.5) * stats[CorrectTbl::VIT]));
-        stats[CorrectTbl::MP_MAX] = (int16_t)(stats[CorrectTbl::MP_MAX] +
+        adjusted[CorrectTbl::MP_MAX] = (int16_t)(stats[CorrectTbl::MP_MAX] +
             (int16_t)roundl(stats[CorrectTbl::MP_MAX] * 0.03 * level) +
             (int16_t)roundl(stats[CorrectTbl::MAGIC] * 0.3) +
             (int16_t)roundl(((stats[CorrectTbl::MP_MAX] * 0.01) + 0.5) * stats[CorrectTbl::INT]));
 
         // Round the results down
-        stats[CorrectTbl::CLSR] = (int16_t)(stats[CorrectTbl::CLSR] +
+        adjusted[CorrectTbl::CLSR] = (int16_t)(stats[CorrectTbl::CLSR] +
             (int16_t)floorl((stats[CorrectTbl::STR] * 0.5) + (level * 0.1)));
-        stats[CorrectTbl::LNGR] = (int16_t)(stats[CorrectTbl::LNGR] +
+        adjusted[CorrectTbl::LNGR] = (int16_t)(stats[CorrectTbl::LNGR] +
             (int16_t)floorl((stats[CorrectTbl::SPEED] * 0.5) + (level * 0.1)));
-        stats[CorrectTbl::SPELL] = (int16_t)(stats[CorrectTbl::SPELL] +
+        adjusted[CorrectTbl::SPELL] = (int16_t)(stats[CorrectTbl::SPELL] +
             (int16_t)floorl((stats[CorrectTbl::MAGIC] * 0.5) + (level * 0.1)));
-        stats[CorrectTbl::SUPPORT] = (int16_t)(stats[CorrectTbl::SUPPORT] +
+        adjusted[CorrectTbl::SUPPORT] = (int16_t)(stats[CorrectTbl::SUPPORT] +
             (int16_t)floorl((stats[CorrectTbl::INT] * 0.5) + (level * 0.1)));
-        stats[CorrectTbl::PDEF] = (int16_t)(stats[CorrectTbl::PDEF] +
+        adjusted[CorrectTbl::PDEF] = (int16_t)(stats[CorrectTbl::PDEF] +
             (int16_t)floorl((stats[CorrectTbl::VIT] * 0.1) + (level * 0.1)));
-        stats[CorrectTbl::MDEF] = (int16_t)(stats[CorrectTbl::MDEF] +
+        adjusted[CorrectTbl::MDEF] = (int16_t)(stats[CorrectTbl::MDEF] +
             (int16_t)floorl((stats[CorrectTbl::INT] * 0.1) + (level * 0.1)));
     }
 
     // Always round down
-    stats[CorrectTbl::HP_REGEN] = (int16_t)(stats[CorrectTbl::HP_REGEN] +
+    adjusted[CorrectTbl::HP_REGEN] = (int16_t)(stats[CorrectTbl::HP_REGEN] +
         (int16_t)floorl(((stats[CorrectTbl::VIT] * 3) + stats[CorrectTbl::HP_MAX]) * 0.01));
-    stats[CorrectTbl::MP_REGEN] = (int16_t)(stats[CorrectTbl::MP_REGEN] +
+    adjusted[CorrectTbl::MP_REGEN] = (int16_t)(stats[CorrectTbl::MP_REGEN] +
         (int16_t)floorl(((stats[CorrectTbl::INT] * 3) + stats[CorrectTbl::MP_MAX]) * 0.01));
+
+    for(auto pair : adjusted)
+    {
+        // Since any negative value used for a calculation here is not valid, any result
+        // in a negative value should be treated as an overflow and be set to max
+        if(pair.second < 0)
+        {
+            stats[pair.first] = std::numeric_limits<int16_t>::max();
+        }
+        else
+        {
+            stats[pair.first] = pair.second;
+        }
+    }
 }
 
 void CharacterManager::AdjustStatBounds(libcomp::EnumMap<CorrectTbl, int16_t>& stats)

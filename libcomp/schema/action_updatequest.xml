@@ -4,5 +4,9 @@
         <member type="enum" name="actionType" inherited="true" default="UPDATE_QUEST"/>
         <member type="s16" name="questID"/>
         <member type="s8" name="phase"/>
+        <member type="map" name="flagStates">
+            <key type="s32"/>
+            <value type="s32"/>
+        </member>
     </object>
 </objgen>

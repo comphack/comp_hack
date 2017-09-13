@@ -348,14 +348,22 @@ bool ChatManager::GMCommand_Contract(const std::shared_ptr<
         auto devilData = definitionManager->GetDevilData(name);
         if(devilData == nullptr)
         {
-            return false;
+            return SendChatMessage(client, ChatType_t::CHAT_SELF,
+                libcomp::String("Invalid demon name: %1").Arg(name));
         }
         demonID = devilData->GetBasic()->GetID();
     }
 
-    auto demon = characterManager->ContractDemon(client,
-        definitionManager->GetDevilData(demonID), 0);
-    return demon != nullptr;
+    auto devilData = definitionManager->GetDevilData(demonID);
+    if(devilData == nullptr)
+    {
+        return SendChatMessage(client, ChatType_t::CHAT_SELF,
+            libcomp::String("Invalid demon ID: %1").Arg(demonID));
+    }
+
+    auto demon = characterManager->ContractDemon(client, devilData, 0);
+    return demon != nullptr || SendChatMessage(client, ChatType_t::CHAT_SELF,
+            "Demon could not be contracted");
 }
 
 bool ChatManager::GMCommand_Crash(const std::shared_ptr<
@@ -378,8 +386,8 @@ bool ChatManager::GMCommand_Effect(const std::shared_ptr<
 
     if(!GetIntegerArg<uint32_t>(effectID, argsCopy))
     {
-        return SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(
-            "@effect requires an effect ID\n"));
+        return SendChatMessage(client, ChatType_t::CHAT_SELF,
+            "@effect requires an effect ID");
     }
 
     auto server = mServer.lock();
@@ -389,7 +397,7 @@ bool ChatManager::GMCommand_Effect(const std::shared_ptr<
     if(!def)
     {
         return SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(
-            "Invalid effect ID supplied: %1\n").Arg(effectID));
+            "Invalid effect ID supplied: %1").Arg(effectID));
     }
 
     // If the next arg starts with a '+', mark as an add instead of replace
@@ -409,8 +417,8 @@ bool ChatManager::GMCommand_Effect(const std::shared_ptr<
 
     if(!GetIntegerArg<uint8_t>(stack, argsCopy))
     {
-        return SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(
-            "@effect requires a stack count\n"));
+        return SendChatMessage(client, ChatType_t::CHAT_SELF,
+            "@effect requires a stack count");
     }
 
     auto state = client->GetClientState();
@@ -440,8 +448,8 @@ bool ChatManager::GMCommand_Enemy(const std::shared_ptr<
     // enemy+x+y, enemy+x+y+rot
     if(argsCopy.empty() || argsCopy.size() > 5)
     {
-        return SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(
-            "@enemy requires one to five args"));
+        return SendChatMessage(client, ChatType_t::CHAT_SELF,
+            "@enemy requires one to five args");
     }
 
     auto state = client->GetClientState();
@@ -636,8 +644,8 @@ bool ChatManager::GMCommand_Kick(const std::shared_ptr<
 
     if(!GetStringArg(kickedPlayer, argsCopy) || argsCopy.size() > 1)
     {
-         return SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(
-            "@kick requires one argument, <username>"));
+         return SendChatMessage(client, ChatType_t::CHAT_SELF,
+            "@kick requires one argument, <username>");
     }
 
     auto server = mServer.lock();
@@ -692,7 +700,7 @@ bool ChatManager::GMCommand_Kill(const std::shared_ptr<
         if(!targetState)
         {
             return SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(
-                "Invalid character name supplied for the current zone: %1\n").Arg(name));
+                "Invalid character name supplied for the current zone: %1").Arg(name));
         }
     }
 
@@ -906,7 +914,7 @@ bool ChatManager::GMCommand_Post(const std::shared_ptr<
     if(worldData->PostCount() >= MAX_POST_ITEM_COUNT)
     {
         return SendChatMessage(client, ChatType_t::CHAT_SELF,
-            "There is no more room in the Post!\n");
+            "There is no more room in the Post!");
     }
 
     auto postItem = libcomp::PersistentObject::New<objects::PostItem>(true);
@@ -938,19 +946,19 @@ bool ChatManager::GMCommand_Quest(const std::shared_ptr<
     if(!questData)
     {
         return SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(
-            "Invalid quest ID specified: %1\n").Arg(questID));
+            "Invalid quest ID specified: %1").Arg(questID));
     }
 
     int8_t phase;
     if(!GetIntegerArg<int8_t>(phase, argsCopy))
     {
         return SendChatMessage(client, ChatType_t::CHAT_SELF,
-            "No phase specified for @quest command\n");
+            "No phase specified for @quest command");
     }
-    else if(phase < -1 || (int8_t)questData->GetPhaseCount() < phase)
+    else if(phase < -2 || (int8_t)questData->GetPhaseCount() < phase)
     {
         return SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(
-            "Invalid phase '%1' supplied for quest: %2\n").Arg(phase).Arg(questID));
+            "Invalid phase '%1' supplied for quest: %2").Arg(phase).Arg(questID));
     }
 
     server->GetEventManager()->UpdateQuest(client, (int16_t)questID, phase, true);
@@ -1019,13 +1027,14 @@ bool ChatManager::GMCommand_Speed(const std::shared_ptr<
 
     libcomp::String target;
     bool isDemon = GetStringArg(target, argsCopy) && target.ToLower() == "demon";
-    auto entityID = isDemon ? state->GetDemonState()->GetEntityID()
-        : state->GetCharacterState()->GetEntityID();
+    auto entity = isDemon
+        ? std::dynamic_pointer_cast<ActiveEntityState>(state->GetDemonState())
+        : std::dynamic_pointer_cast<ActiveEntityState>(state->GetCharacterState());
 
     libcomp::Packet p;
     p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_RUN_SPEED);
-    p.WriteS32Little(entityID);
-    p.WriteFloat(static_cast<float>(300.0f * scaling));
+    p.WriteS32Little(entity->GetEntityID());
+    p.WriteFloat(static_cast<float>(entity->GetMovementSpeed() * scaling));
 
     client->SendPacket(p);
 

@@ -196,7 +196,8 @@ bool EventManager::HandleResponse(const std::shared_ptr<ChannelClientConnection>
 }
 
 bool EventManager::UpdateQuest(const std::shared_ptr<ChannelClientConnection>& client,
-    int16_t questID, int8_t phase, bool forceUpdate)
+    int16_t questID, int8_t phase, bool forceUpdate, const std::unordered_map<
+    int32_t, int32_t>& updateFlags)
 {
     auto server = mServer.lock();
     auto characterManager = server->GetCharacterManager();
@@ -209,7 +210,8 @@ bool EventManager::UpdateQuest(const std::shared_ptr<ChannelClientConnection>& c
             .Arg(questID));
         return false;
     }
-    else if(phase < -1 || phase > (int8_t)questData->GetPhaseCount())
+    else if((phase < -1 && ! forceUpdate) || phase < -2 ||
+        phase > (int8_t)questData->GetPhaseCount())
     {
         LOG_ERROR(libcomp::String("Invalid phase '%1' supplied for quest: %2\n")
             .Arg(phase).Arg(questID));
@@ -230,6 +232,7 @@ bool EventManager::UpdateQuest(const std::shared_ptr<ChannelClientConnection>& c
 
     auto dbChanges = libcomp::DatabaseChangeSet::Create(state->GetAccountUID());
     auto quest = character->GetQuests(questID).Get();
+    bool sendUpdate = phase != -2;
     if(phase == -1)
     {
         // Completing a quest
@@ -249,6 +252,23 @@ bool EventManager::UpdateQuest(const std::shared_ptr<ChannelClientConnection>& c
             dbChanges->Update(character);
             dbChanges->Delete(quest);
         }
+    }
+    else if(phase == -2)
+    {
+        // Removing a quest
+        progress->SetCompletedQuests(index, (uint8_t)(~shiftVal & indexVal));
+        dbChanges->Update(progress);
+
+        if(quest)
+        {
+            character->RemoveQuests(questID);
+            dbChanges->Update(character);
+            dbChanges->Delete(quest);
+
+            SendActiveQuestList(client);
+        }
+
+        SendCompletedQuestList(client);
     }
     else if(!quest)
     {
@@ -273,20 +293,41 @@ bool EventManager::UpdateQuest(const std::shared_ptr<ChannelClientConnection>& c
         quest->SetQuestID(questID);
         quest->SetCharacter(character);
         quest->SetPhase(phase);
+        quest->SetFlagStates(updateFlags);
 
         character->SetQuests(questID, quest);
         dbChanges->Insert(quest);
         dbChanges->Update(character);
     }
-    else
+    else if(phase == 0)
     {
-        // Updating a quest
-        if(quest->GetPhase() <= phase)
+        // If the quest already existed and we're not setting the phase,
+        // check if we're setting the flags instead
+        if(updateFlags.size() > 0)
         {
-            // Not explicitly an error but nothing to do
+            sendUpdate = false;
+
+            for(auto pair : updateFlags)
+            {
+                quest->SetFlagStates(pair.first, pair.second);
+            }
+
+            dbChanges->Update(quest);
+        }
+        else
+        {
             return true;
         }
-        else if(!forceUpdate && quest->GetPhase() != (int8_t)(phase - 1))
+    }
+    else
+    {
+        // Updating a quest phase
+        if(quest->GetPhase() >= phase)
+        {
+            // Nothing to do but not an error
+            return true;
+        }
+        if(!forceUpdate && quest->GetPhase() != (int8_t)(phase - 1))
         {
             LOG_ERROR(libcomp::String("Invalid quest phase update requested"
                 " for quest '%1': %2\n").Arg(questID).Arg(phase));
@@ -294,6 +335,12 @@ bool EventManager::UpdateQuest(const std::shared_ptr<ChannelClientConnection>& c
         }
 
         quest->SetPhase(phase);
+        
+        // Keep the last phase's flags but set any that are new
+        for(auto pair : updateFlags)
+        {
+            quest->SetFlagStates(pair.first, pair.second);
+        }
 
         // Reset all the custom data
         for(size_t i = 0; i < quest->CustomDataCount(); i++)
@@ -306,14 +353,17 @@ bool EventManager::UpdateQuest(const std::shared_ptr<ChannelClientConnection>& c
 
     server->GetWorldDatabase()->QueueChangeSet(dbChanges);
 
-    UpdateQuestTargetEnemies(client);
+    if(sendUpdate)
+    {
+        UpdateQuestTargetEnemies(client);
 
-    libcomp::Packet p;
-    p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_QUEST_PHASE_UPDATE);
-    p.WriteS16Little(questID);
-    p.WriteS8(phase);
+        libcomp::Packet p;
+        p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_QUEST_PHASE_UPDATE);
+        p.WriteS16Little(questID);
+        p.WriteS8(phase);
 
-    client->SendPacket(p);
+        client->SendPacket(p);
+    }
 
     return true;
 }
@@ -474,13 +524,83 @@ bool EventManager::EvaluateEventCondition(const std::shared_ptr<
             return negate != (quest == nullptr && (!completed || questData->GetType() == 1)
                 && EvaluateQuestConditions(client, condition->GetQuestID()));
         }
-    case objects::EventCondition::Type_t::QUEST_PHASE_EQUALS:
-        return negate != (quest && quest->GetPhase() == condition->GetPhase());
-    case objects::EventCondition::Type_t::QUEST_PHASE_GTE:
-        return negate != (quest && quest->GetPhase() >= condition->GetPhase());
+    case objects::EventCondition::Type_t::QUEST_PHASE:
+        return negate != (quest &&
+            ((condition->GetCompareMode() == objects::EventCondition::CompareMode_t::EQUAL &&
+                quest->GetPhase() == condition->GetPhase()) ||
+            (condition->GetCompareMode() == objects::EventCondition::CompareMode_t::GTE &&
+                quest->GetPhase() >= condition->GetPhase()) ||
+            (condition->GetCompareMode() == objects::EventCondition::CompareMode_t::LT &&
+                quest->GetPhase() < condition->GetPhase())));
     case objects::EventCondition::Type_t::QUEST_PHASE_REQUIREMENTS:
         return negate != (quest &&
             EvaluateQuestPhaseRequirements(client, questID, condition->GetPhase()));
+    case objects::EventCondition::Type_t::QUEST_FLAGS:
+        if(!quest || (condition->GetPhase() > -1 &&
+            quest->GetPhase() != condition->GetPhase()))
+        {
+            return negate;
+        }
+        else
+        {
+            bool result = true;
+            switch(condition->GetCompareMode())
+            {
+            case objects::EventCondition::CompareMode_t::EXISTS:
+                for(auto pair : condition->GetFlagStates())
+                {
+                    if(!quest->FlagStatesKeyExists(pair.first))
+                    {
+                        result &= negate;
+                    }
+                }
+                break;
+            case objects::EventCondition::CompareMode_t::LT_OR_NAN:
+                // Flag specific less than or not a number (does not exist)
+                for(auto pair : condition->GetFlagStates())
+                {
+                    if(quest->FlagStatesKeyExists(pair.first) &&
+                        quest->GetFlagStates(pair.first) >= pair.second)
+                    {
+                        result &= negate;
+                    }
+                }
+                break;
+            case objects::EventCondition::CompareMode_t::LT:
+                for(auto pair : condition->GetFlagStates())
+                {
+                    if(!quest->FlagStatesKeyExists(pair.first) ||
+                        quest->GetFlagStates(pair.first) >= pair.second)
+                    {
+                        result &= negate;
+                    }
+                }
+                break;
+            case objects::EventCondition::CompareMode_t::GTE:
+                for(auto pair : condition->GetFlagStates())
+                {
+                    if(!quest->FlagStatesKeyExists(pair.first) ||
+                        quest->GetFlagStates(pair.first) < pair.second)
+                    {
+                        result &= negate;
+                    }
+                }
+                break;
+            case objects::EventCondition::CompareMode_t::EQUAL:
+            default:
+                for(auto pair : condition->GetFlagStates())
+                {
+                    if(!quest->FlagStatesKeyExists(pair.first) ||
+                        quest->GetFlagStates(pair.first) != pair.second)
+                    {
+                        result &= negate;
+                    }
+                }
+                break;
+            }
+
+            return result;
+        }
     default:
         break;
     }
@@ -892,6 +1012,48 @@ void EventManager::UpdateQuestTargetEnemies(
             }
         }
     }
+}
+
+void EventManager::SendActiveQuestList(
+    const std::shared_ptr<ChannelClientConnection>& client)
+{
+    auto state = client->GetClientState();
+    auto cState = state->GetCharacterState();
+    auto character = cState->GetEntity();
+    auto questMap = character->GetQuests();
+
+    libcomp::Packet reply;
+    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_QUEST_ACTIVE_LIST);
+
+    reply.WriteS8((int8_t)questMap.size());
+    for(auto kv : questMap)
+    {
+        auto quest = kv.second;
+        auto customData = quest->GetCustomData();
+
+        reply.WriteS16Little(quest->GetQuestID());
+        reply.WriteS8(quest->GetPhase());
+
+        reply.WriteArray(&customData, (uint32_t)customData.size() * sizeof(int32_t));
+    }
+
+    client->SendPacket(reply);
+}
+
+void EventManager::SendCompletedQuestList(
+    const std::shared_ptr<ChannelClientConnection>& client)
+{
+    auto state = client->GetClientState();
+    auto cState = state->GetCharacterState();
+    auto character = cState->GetEntity();
+    auto completedQuests = character->GetProgress()->GetCompletedQuests();
+    
+    libcomp::Packet reply;
+    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_QUEST_COMPLETED_LIST);
+    reply.WriteU16Little((uint16_t)completedQuests.size());
+    reply.WriteArray(&completedQuests, (uint32_t)completedQuests.size());
+
+    client->SendPacket(reply);
 }
 
 bool EventManager::HandleEvent(const std::shared_ptr<ChannelClientConnection>& client,

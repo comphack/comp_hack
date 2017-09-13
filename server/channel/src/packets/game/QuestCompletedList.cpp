@@ -27,12 +27,9 @@
 #include "Packets.h"
 
 // libcomp Includes
+#include <ManagerPacket.h>
 #include <Packet.h>
 #include <PacketCodes.h>
-
-// object Includes
-#include <Character.h>
-#include <CharacterProgress.h>
 
 // channel Includes
 #include "ChannelServer.h"
@@ -43,25 +40,15 @@ bool Parsers::QuestCompletedList::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {
-    (void)pPacketManager;
-
     if(p.Size() != 0)
     {
         return false;
     }
 
     auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-    auto state = client->GetClientState();
-    auto cState = state->GetCharacterState();
-    auto character = cState->GetEntity();
-    auto completedQuests = character->GetProgress()->GetCompletedQuests();
-    
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_QUEST_COMPLETED_LIST);
-    reply.WriteU16Little((uint16_t)completedQuests.size());
-    reply.WriteArray(&completedQuests, (uint32_t)completedQuests.size());
+    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
 
-    client->SendPacket(reply);
+    server->GetEventManager()->SendCompletedQuestList(client);
 
     return true;
 }

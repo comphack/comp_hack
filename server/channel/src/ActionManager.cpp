@@ -38,12 +38,14 @@
 #include <Action.h>
 #include <ActionCreateLoot.h>
 #include <ActionSetNPCState.h>
+#include <ActionSpawn.h>
 #include <ActionStartEvent.h>
 #include <ActionUpdateFlag.h>
 #include <ActionUpdateLNC.h>
 #include <ActionUpdateQuest.h>
 #include <ActionZoneChange.h>
 #include <ObjectPosition.h>
+#include <ServerNPC.h>
 #include <ServerObject.h>
 #include <ServerZone.h>
 
@@ -72,6 +74,8 @@ ActionManager::ActionManager(const std::weak_ptr<ChannelServer>& server)
         &ActionManager::UpdateLNC;
     mActionHandlers[objects::Action::ActionType_t::UPDATE_QUEST] =
         &ActionManager::UpdateQuest;
+    mActionHandlers[objects::Action::ActionType_t::SPAWN] =
+        &ActionManager::Spawn;
     mActionHandlers[objects::Action::ActionType_t::CREATE_LOOT] =
         &ActionManager::CreateLoot;
 }
@@ -180,21 +184,85 @@ bool ActionManager::SetNPCState(const ActionContext& ctx)
 {
     auto act = std::dynamic_pointer_cast<objects::ActionSetNPCState>(ctx.Action);
 
+    if(act->GetSourceClientOnly() && ctx.Client == nullptr)
+    {
+        LOG_ERROR("Source client NPC state change requested but no"
+            " source client exists in the current context!\n");
+        return false;
+    }
+
     auto server = mServer.lock();
     auto zoneManager = server->GetZoneManager();
 
-    auto oNPC = ctx.CurrentZone
-        ? ctx.CurrentZone->GetServerObject(ctx.SourceEntityID) : nullptr;
-    if(oNPC)
+    std::shared_ptr<ServerObjectState> oNPC;
+    if(ctx.CurrentZone)
     {
-        oNPC->GetEntity()->SetState(act->GetState());
+        if(act->GetActorID() > 0)
+        {
+            oNPC = std::dynamic_pointer_cast<ServerObjectState>(
+                ctx.CurrentZone->GetActor(act->GetActorID()));
+        }
+        else
+        {
+            oNPC = ctx.CurrentZone->GetServerObject(ctx.SourceEntityID);
+        }
+    }
 
-        libcomp::Packet p;
-        p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_NPC_STATE_CHANGE);
-        p.WriteS32Little(ctx.SourceEntityID);
-        p.WriteU8(act->GetState());
+    if(oNPC && (act->GetSourceClientOnly() ||
+        act->GetState() != oNPC->GetEntity()->GetState()))
+    {
+        auto entity = oNPC->GetEntity();
+        if(!act->GetSourceClientOnly())
+        {
+            entity->SetState(act->GetState());
+        }
 
-        zoneManager->BroadcastPacket(ctx.CurrentZone, p);
+        auto npc = std::dynamic_pointer_cast<objects::ServerNPC>(entity);
+        if(npc)
+        {
+            if(act->GetSourceClientOnly())
+            {
+                if(act->GetState() == 1)
+                {
+                    zoneManager->ShowEntity(ctx.Client, oNPC->GetEntityID());
+                }
+                else
+                {
+                    std::list<std::shared_ptr<
+                        ChannelClientConnection>> clients = { ctx.Client };
+                    std::list<int32_t> entityIDs = { oNPC->GetEntityID()  };
+                    zoneManager->RemoveEntities(clients, entityIDs);
+                }
+            }
+            else
+            {
+                if(act->GetState() == 1)
+                {
+                    zoneManager->ShowEntityToZone(ctx.CurrentZone, oNPC->GetEntityID());
+                }
+                else
+                {
+                    std::list<int32_t> entityIDs = { oNPC->GetEntityID() };
+                    zoneManager->RemoveEntitiesFromZone(ctx.CurrentZone, entityIDs);
+                }
+            }
+        }
+        else
+        {
+            libcomp::Packet p;
+            p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_NPC_STATE_CHANGE);
+            p.WriteS32Little(oNPC->GetEntityID());
+            p.WriteU8(act->GetState());
+
+            if(act->GetSourceClientOnly())
+            {
+                ctx.Client->SendPacket(p);
+            }
+            else
+            {
+                zoneManager->BroadcastPacket(ctx.CurrentZone, p);
+            }
+        }
     }
     else
     {
@@ -277,9 +345,52 @@ bool ActionManager::UpdateQuest(const ActionContext& ctx)
     auto server = mServer.lock();
     auto eventManager = server->GetEventManager();
 
-    eventManager->UpdateQuest(ctx.Client, act->GetQuestID(), act->GetPhase());
+    eventManager->UpdateQuest(ctx.Client, act->GetQuestID(), act->GetPhase(), false,
+        act->GetFlagStates());
 
     return true;
+}
+
+bool ActionManager::Spawn(const ActionContext& ctx)
+{
+    auto act = std::dynamic_pointer_cast<objects::ActionSpawn>(ctx.Action);
+    auto server = mServer.lock();
+    auto zoneManager = server->GetZoneManager();
+
+    std::set<uint32_t> groupIDs;
+    for(uint32_t groupID : act->GetSpawnGroupIDs())
+    {
+        switch(act->GetConditions())
+        {
+        case objects::ActionSpawn::Conditions_t::ONE_TIME:
+            if(!ctx.CurrentZone->GroupHasSpawned(groupID, false))
+            {
+                groupIDs.insert(groupID);
+            }
+            break;
+        case objects::ActionSpawn::Conditions_t::NONE_EXIST:
+            if(!ctx.CurrentZone->GroupHasSpawned(groupID, true))
+            {
+                groupIDs.insert(groupID);
+            }
+            break;
+        case objects::ActionSpawn::Conditions_t::NONE:
+        default:
+            groupIDs.insert(groupID);
+            break;
+        }
+    }
+
+    if(groupIDs.size() > 0)
+    {
+        zoneManager->UpdateSpawnGroups(ctx.CurrentZone, true, 0, groupIDs);
+
+        return true;
+    }
+    else
+    {
+        return false;
+    }
 }
 
 bool ActionManager::CreateLoot(const ActionContext& ctx)

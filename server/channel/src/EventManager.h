@@ -101,10 +101,13 @@ public:
      *  Otherwise the quest will move to that phase.
      * @param forceUpdate Optional parameter to bypass quest state based
      *  restrictions and force the quest into the specified state
+     * @param updateFlags Optional parameter to set flags on the next or current
+     *  phase
      * @return true on success (or no phase update needed), false on failure
      */
     bool UpdateQuest(const std::shared_ptr<ChannelClientConnection>& client,
-        int16_t questID, int8_t phase, bool forceUpdate = false);
+        int16_t questID, int8_t phase, bool forceUpdate = false,
+        const std::unordered_map<int32_t, int32_t>& updateFlags = {});
 
     /**
      * Update the client's quest kill counts
@@ -170,6 +173,20 @@ public:
      * @param client Pointer to the client to update
      */
     void UpdateQuestTargetEnemies(
+        const std::shared_ptr<ChannelClientConnection>& client);
+
+    /**
+     * Send the client's active quest list
+     * @param client Pointer to the client
+     */
+    void SendActiveQuestList(
+        const std::shared_ptr<ChannelClientConnection>& client);
+
+    /**
+     * Send the client's completed quest list
+     * @param client Pointer to the client
+     */
+    void SendCompletedQuestList(
         const std::shared_ptr<ChannelClientConnection>& client);
 
 private:

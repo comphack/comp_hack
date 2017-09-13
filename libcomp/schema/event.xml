@@ -42,13 +42,24 @@
             <value>NORMAL</value>
             <value>MAX_QUESTS</value>
             <value>QUEST_AVAILABLE</value>
-            <value>QUEST_PHASE_EQUALS</value>
-            <value>QUEST_PHASE_GTE</value>
+            <value>QUEST_PHASE</value>
             <value>QUEST_PHASE_REQUIREMENTS</value>
+            <value>QUEST_FLAGS</value>
+        </member>
+        <member type="enum" name="compareMode" underlying="uint8_t">
+            <value>EQUAL</value>
+            <value>EXISTS</value>
+            <value>LT_OR_NAN</value>
+            <value>LT</value>
+            <value>GTE</value>
         </member>
         <member type="bool" name="negate"/>
         <member type="EventConditionData*" name="data"/>
         <member type="s16" name="questID" default="-1"/>
         <member type="s8" name="phase" default="-1"/>
+        <member type="map" name="flagStates">
+            <key type="s32"/>
+            <value type="s32"/>
+        </member>
     </object>
 </objgen>

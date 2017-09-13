@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="ActionSpawn" baseobject="Action" persistent="false">
+        <member type="enum" name="actionType" inherited="true" default="SPAWN"/>
+        <member type="set" name="spawnGroupIDs">
+            <element type="u32"/>
+        </member>
+        <member type="enum" name="conditions" default="NONE">
+            <value>NONE</value>
+            <value>ONE_TIME</value>
+            <value>NONE_EXIST</value>
+        </member>
+    </object>
+</objgen>

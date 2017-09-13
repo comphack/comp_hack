@@ -79,6 +79,7 @@
 #include <Party.h>
 #include <ServerZone.h>
 #include <Spawn.h>
+#include <SpawnGroup.h>
 
 // channel Includes
 #include "ChannelServer.h"
@@ -206,7 +207,7 @@ bool SkillManager::ActivateSkill(const std::shared_ptr<ActiveEntityState> source
 
     source->SetActivatedAbility(activated);
 
-    SendChargeSkill(activated);
+    SendChargeSkill(activated, def);
 
     uint8_t activationType = def->GetBasic()->GetActivationType();
     bool executeNow = (activationType == 3 || activationType == 4)
@@ -358,24 +359,39 @@ bool SkillManager::ExecuteSkill(std::shared_ptr<ActiveEntityState> source,
         std::unordered_map<uint32_t, uint16_t> itemCosts;
         if(functionID == SVR_CONST.SKILL_SUMMON_DEMON)
         {
-            /*auto demon = std::dynamic_pointer_cast<objects::Demon>(
-                libcomp::PersistentObject::GetObjectByUUID(state->GetObjectUUID(targetObjectID)));
-            if(demon == nullptr)
+            if(client)
             {
-                return false;
+                auto state = client->GetClientState();
+                auto character = state->GetCharacterState()->GetEntity();
+
+                auto demon = std::dynamic_pointer_cast<objects::Demon>(
+                    libcomp::PersistentObject::GetObjectByUUID(state->GetObjectUUID(
+                    activated->GetActivationObjectID())));
+                if(demon == nullptr)
+                {
+                    LOG_ERROR("Attempted to summon a demon that does not exist.\n");
+                    return false;
+                }
+
+                // Calculate MAG cost
+                uint32_t demonType = demon->GetType();
+                auto demonStats = demon->GetCoreStats().Get();
+                auto demonData = definitionManager->GetDevilData(demonType);
+
+                int16_t characterLNC = character->GetLNC();
+                int16_t demonLNC = demonData->GetBasic()->GetLNC();
+                int8_t level = demonStats->GetLevel();
+                uint8_t magMod = demonData->GetSummonData()->GetMagModifier();
+
+                double lncAdjust = characterLNC == 0
+                    ? pow(demonLNC, 2.0f)
+                    : (pow(abs(characterLNC), -0.06f) * pow(characterLNC - demonLNC, 2.0f));
+                double magAdjust = (double)(level * magMod);
+
+                double mag = (magAdjust * lncAdjust / 18000000.0) + (magAdjust * 0.25);
+
+                itemCosts[SVR_CONST.ITEM_MAGNETITE] = (uint16_t)round(mag);
             }
-
-            uint32_t demonType = demon->GetType();
-            auto demonStats = demon->GetCoreStats().Get();
-            auto demonData = definitionManager->GetDevilData(demonType);
-
-            int16_t characterLNC = character->GetLNC();
-            int16_t demonLNC = demonData->GetBasic()->GetLNC();
-            uint8_t magModifier = demonData->GetSummonData()->GetMagModifier();*/
-
-            /// @todo: calculate MAG
-
-            itemCosts[800] = 1;
         }
         else
         {
@@ -1642,6 +1658,7 @@ void SkillManager::HandleKills(std::shared_ptr<ActiveEntityState> source,
         std::unordered_map<std::shared_ptr<LootBoxState>,
             std::shared_ptr<EnemyState>> lStates;
         std::unordered_map<uint32_t, int32_t> questKills;
+        std::set<uint32_t> spawnGroupIDs;
         for(auto eState : enemiesKilled)
         {
             auto enemy = eState->GetEntity();
@@ -1671,6 +1688,8 @@ void SkillManager::HandleKills(std::shared_ptr<ActiveEntityState> source,
                     questKills[dType] = (questKills[dType] + 1);
                 }
             }
+
+            spawnGroupIDs.insert(enemy->GetSpawnGroupID());
         }
 
         // For each loot body generate and send loot and show the body
@@ -1793,6 +1812,19 @@ void SkillManager::HandleKills(std::shared_ptr<ActiveEntityState> source,
         {
             server->GetEventManager()->UpdateQuestKillCount(sourceClient,
                 questKills);
+        }
+
+        // Spawn group defeat actions for all empty groups
+        spawnGroupIDs.erase(0);
+        for(uint32_t spawnGroupID : spawnGroupIDs)
+        {
+            auto sg = zone->GetDefinition()->GetSpawnGroups(spawnGroupID);
+            if(sg && sg->DefeatActionsCount() > 0 &&
+                !zone->GroupHasSpawned(spawnGroupID, true))
+            {
+                server->GetActionManager()->PerformActions(sourceClient,
+                    sg->GetDefeatActions(), 0);
+            }
         }
 
         ChannelClientConnection::FlushAllOutgoing(zConnections);
@@ -2865,7 +2897,8 @@ bool SkillManager::Traesto(const std::shared_ptr<objects::ActivatedAbility>& act
     return mServer.lock()->GetZoneManager()->EnterZone(client, zoneID, xCoord, yCoord, 0, true);
 }
 
-void SkillManager::SendChargeSkill(std::shared_ptr<objects::ActivatedAbility> activated)
+void SkillManager::SendChargeSkill(std::shared_ptr<objects::ActivatedAbility> activated,
+    std::shared_ptr<objects::MiSkillData> skillData)
 {
     auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated->GetSourceEntity());
     auto zone = source ? source->GetZone() : nullptr;
@@ -2877,7 +2910,7 @@ void SkillManager::SendChargeSkill(std::shared_ptr<objects::ActivatedAbility> ac
 
         libcomp::Packet p;
         p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_SKILL_CHARGING);
-        p.WriteS32Little(activated->GetSourceEntity()->GetEntityID());
+        p.WriteS32Little(source->GetEntityID());
         p.WriteU32Little(activated->GetSkillID());
         p.WriteS8((int8_t)activated->GetActivationID());
 
@@ -2886,8 +2919,39 @@ void SkillManager::SendChargeSkill(std::shared_ptr<objects::ActivatedAbility> ac
 
         p.WriteU8(0);   //Unknown
         p.WriteU8(0);   //Unknown
-        p.WriteFloat(300.0f);   //Run speed during charge
-        p.WriteFloat(300.0f);   //Run speed after charge
+
+        float chargeSpeed = 0.f, chargeCompleteSpeed = 0.f;
+
+        // Send movement speed based off skill action type
+        switch(skillData->GetBasic()->GetActionType())
+        {
+        case objects::MiSkillBasicData::ActionType_t::SPIN:
+        case objects::MiSkillBasicData::ActionType_t::RAPID:
+        case objects::MiSkillBasicData::ActionType_t::COUNTER:
+        case objects::MiSkillBasicData::ActionType_t::DODGE:
+            // No movement during or after
+            break;
+        case objects::MiSkillBasicData::ActionType_t::SHOT:
+        case objects::MiSkillBasicData::ActionType_t::TALK:
+        case objects::MiSkillBasicData::ActionType_t::INTIMIDATE:
+        case objects::MiSkillBasicData::ActionType_t::SUPPORT:
+            // Move after only
+            chargeCompleteSpeed = source->GetMovementSpeed();
+            break;
+        case objects::MiSkillBasicData::ActionType_t::GUARD:
+            // Move during and after charge (1/2 normal speed)
+            chargeSpeed = chargeCompleteSpeed = (source->GetMovementSpeed() * 0.5f);
+            break;
+        case objects::MiSkillBasicData::ActionType_t::ATTACK:
+        case objects::MiSkillBasicData::ActionType_t::RUSH:
+        default:
+            // Move during and after charge (normal speed)
+            chargeSpeed = chargeCompleteSpeed = source->GetMovementSpeed();
+            break;
+        }
+
+        p.WriteFloat(chargeSpeed);
+        p.WriteFloat(chargeCompleteSpeed);
 
         ChannelClientConnection::SendRelativeTimePacket(zConnections, p, timeMap);
     }
@@ -2907,7 +2971,7 @@ void SkillManager::SendExecuteSkill(std::shared_ptr<objects::ActivatedAbility> a
 
         int32_t targetedEntityID = activated->GetEntityTargeted()
             ? (int32_t)activated->GetTargetObjectID()
-            : activated->GetSourceEntity()->GetEntityID();
+            : source->GetEntityID();
 
         uint32_t cdTime = conditionData->GetCooldownTime();
         uint32_t stiffness = dischargeData->GetStiffness();
@@ -2920,7 +2984,7 @@ void SkillManager::SendExecuteSkill(std::shared_ptr<objects::ActivatedAbility> a
 
         libcomp::Packet p;
         p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_SKILL_EXECUTING);
-        p.WriteS32Little(activated->GetSourceEntity()->GetEntityID());
+        p.WriteS32Little(source->GetEntityID());
         p.WriteU32Little(activated->GetSkillID());
         p.WriteS8((int8_t)activated->GetActivationID());
         p.WriteS32Little(targetedEntityID);
@@ -2956,12 +3020,12 @@ void SkillManager::SendCompleteSkill(std::shared_ptr<objects::ActivatedAbility> 
     {
         libcomp::Packet p;
         p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_SKILL_COMPLETED);
-        p.WriteS32Little(activated->GetSourceEntity()->GetEntityID());
+        p.WriteS32Little(source->GetEntityID());
         p.WriteU32Little(activated->GetSkillID());
         p.WriteS8((int8_t)activated->GetActivationID());
         p.WriteFloat(0);   //Unknown
         p.WriteU8(1);   //Unknown
-        p.WriteFloat(300.0f);   //Run speed
+        p.WriteFloat(source->GetMovementSpeed());
         p.WriteU8(cancelled ? 1 : 0);
 
         ChannelClientConnection::BroadcastPacket(zConnections, p);

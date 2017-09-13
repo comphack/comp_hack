@@ -190,6 +190,13 @@ public:
     std::shared_ptr<objects::EntityStateObject> GetEntity(int32_t id);
 
     /**
+     * Get an entity instance with a specified actor ID.
+     * @param actorID Actor ID of the entity.
+     * @return Pointer to the entity instance.
+     */
+    std::shared_ptr<objects::EntityStateObject> GetActor(int32_t actorID);
+
+    /**
      * Get an enemy instance by it's ID.
      * @param id Instance ID of the enemy.
      * @return Pointer to the enemy instance.
@@ -267,6 +274,16 @@ public:
         GetUpdatedStatusEffectEntities(uint32_t now);
 
     /**
+     * Check if a spawn group has ever been spawned in this zone or is
+     * currently spawned.
+     * @param spawnGroupID Group ID of the spawn to check
+     * @param aliveOnly Only count living entities in the group
+     * @return true if the group has already been spawned or contains,
+     *  a living enemy, false otherwise
+     */
+    bool GroupHasSpawned(uint32_t spawnGroupID, bool aliveOnly);
+
+    /**
      * Get the set of spawn groups that have room for another enemy spawn
      * that have also had their respawn time elapsed.
      * @param now System time representing the current server time
@@ -320,7 +337,8 @@ private:
     /// List of pointers to enemies instantiated for the zone
     std::list<std::shared_ptr<EnemyState>> mEnemies;
 
-    /// Map of spawn group IDs to pointers to enemies created from that group
+    /// Map of spawn group IDs to pointers to enemies created from that group.
+    /// Keys are never removed from this group so one time spawns can be cheked.
     std::unordered_map<uint32_t, std::list<std::shared_ptr<EnemyState>>> mSpawnGroups;
 
     /// List of pointers to NPCs instantiated for the zone
@@ -334,6 +352,10 @@ private:
 
     /// Map of entities in the zone by their ID
     std::unordered_map<int32_t, std::shared_ptr<objects::EntityStateObject>> mAllEntities;
+
+    /// Map of entities in the zone with a specified actor ID for used
+    /// when referencing in actions or events
+    std::unordered_map<int32_t, std::shared_ptr<objects::EntityStateObject>> mActors;
 
     /// Map of system times to active entities with status effects that need
     /// handling at that time

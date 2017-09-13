@@ -31,6 +31,8 @@
 
 // object Includes
 #include <Loot.h>
+#include <ServerNPC.h>
+#include <ServerObject.h>
 #include <ServerZone.h>
 #include <SpawnGroup.h>
 
@@ -222,12 +224,24 @@ void Zone::AddNPC(const std::shared_ptr<NPCState>& npc)
 {
     mNPCs.push_back(npc);
     RegisterEntityState(npc);
+
+    int32_t actorID = npc->GetEntity()->GetActorID();
+    if(actorID)
+    {
+        mActors[actorID] = npc;
+    }
 }
 
 void Zone::AddObject(const std::shared_ptr<ServerObjectState>& object)
 {
     mObjects.push_back(object);
     RegisterEntityState(object);
+    
+    int32_t actorID = object->GetEntity()->GetActorID();
+    if(actorID)
+    {
+        mActors[actorID] = object;
+    }
 }
 
 std::unordered_map<int32_t,
@@ -332,6 +346,12 @@ std::shared_ptr<objects::EntityStateObject> Zone::GetEntity(int32_t id)
     return {};
 }
 
+std::shared_ptr<objects::EntityStateObject> Zone::GetActor(int32_t actorID)
+{
+    auto it = mActors.find(actorID);
+    return it != mActors.end() ? it->second : nullptr;
+}
+
 std::shared_ptr<NPCState> Zone::GetNPC(int32_t id)
 {
     return std::dynamic_pointer_cast<NPCState>(GetEntity(id));
@@ -389,6 +409,30 @@ std::list<std::shared_ptr<ActiveEntityState>>
     }
 
     return result;
+}
+
+bool Zone::GroupHasSpawned(uint32_t spawnGroupID, bool aliveOnly)
+{
+    std::lock_guard<std::mutex> lock(mLock);
+    auto it = mSpawnGroups.find(spawnGroupID);
+    if(it == mSpawnGroups.end())
+    {
+        return false;
+    }
+    else if(!aliveOnly)
+    {
+        return true;
+    }
+
+    for(auto eState : it->second)
+    {
+        if(eState->IsAlive())
+        {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 std::unordered_map<uint32_t, uint16_t> Zone::GetReinforceableSpawnGroups(

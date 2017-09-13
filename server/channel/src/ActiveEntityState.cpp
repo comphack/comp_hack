@@ -34,6 +34,7 @@
 
 // C++ Standard Includes
 #include <cmath>
+#include <limits>
 
 // objects Includes
 #include <Character.h>
@@ -132,8 +133,8 @@ void ActiveEntityState::Move(float xPos, float yPos, uint64_t now)
         SetOriginTicks(now);
 
         uint64_t addMicro = (uint64_t)(
-            (double)(GetDistance(xPos, yPos) / 300.f) *
-            1000000.0);
+            (double)(GetDistance(xPos, yPos) /
+            GetMovementSpeed(mOpponentIDs.size() > 0)) * 1000000.0);
 
         SetDestinationX(xPos);
         SetDestinationY(yPos);
@@ -151,7 +152,11 @@ void ActiveEntityState::Rotate(float rot, uint64_t now)
         SetOriginTicks(now);
 
         SetDestinationRotation(CorrectRotation(rot));
-        SetDestinationTicks(now + 500000);  /// @todo: modify for speed
+
+        // One complete rotation takes 1650ms at 300.0f speed
+        uint64_t addMicro = (uint64_t)(495000.0f /
+            GetMovementSpeed(mOpponentIDs.size() > 0)) * 1000;
+        SetDestinationTicks(now + addMicro);
     }
 }
 
@@ -230,6 +235,12 @@ float ActiveEntityState::GetDistance(float x, float y, bool squared)
     float dSquared = (float)(std::pow((GetCurrentX() - x), 2)
         + std::pow((GetCurrentY() - y), 2));
     return squared ? dSquared : std::sqrt(dSquared);
+}
+
+float ActiveEntityState::GetMovementSpeed(bool altSpeed)
+{
+    return (float)(GetCorrectValue(
+        altSpeed ? CorrectTbl::MOVE1 : CorrectTbl::MOVE2) * 10.f);
 }
 
 void ActiveEntityState::RefreshCurrentPosition(uint64_t now)
@@ -1791,6 +1802,9 @@ void ActiveEntityState::AdjustStats(
         }
         else
         {
+            bool allowNegate = false;
+
+            int16_t adjusted = stats[tblID];
             switch(ct->GetType())
             {
             case 1:
@@ -1799,19 +1813,41 @@ void ActiveEntityState::AdjustStats(
                 if(ct->GetValue() == 0)
                 {
                     removed.insert(tblID);
-                    stats[tblID] = 0;
+                    adjusted = 0;
+                    allowNegate = true;
                 }
                 else
                 {
-                    stats[tblID] = (int16_t)(stats[tblID] +
-                        (int16_t)(stats[tblID] * (ct->GetValue() * 0.01)));
+                    adjusted = (int16_t)(adjusted +
+                        (int16_t)(adjusted * (ct->GetValue() * 0.01)));
+                    allowNegate = ct->GetValue() < 0;
                 }
                 break;
             case 0:
-                stats[tblID] = (int16_t)(stats[tblID] + ct->GetValue());
+                adjusted = (int16_t)(adjusted + ct->GetValue());
+                allowNegate = (ct->GetValue() < 0) != (stats[tblID] < 0);
                 break;
             default:
                 break;
+            }
+
+            // Prevent overflow
+            if(!allowNegate && (stats[tblID] < 0) != (adjusted < 0))
+            {
+                if(adjusted >= 0)
+                {
+                    // Negative overflow
+                    stats[tblID] = std::numeric_limits<int16_t>::min();
+                }
+                else
+                {
+                    // Positive overflow
+                    stats[tblID] = std::numeric_limits<int16_t>::max();
+                }
+            }
+            else
+            {
+                stats[tblID] = adjusted;
             }
         }
     }

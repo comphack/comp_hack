@@ -50,6 +50,7 @@ bool Parsers::FixObjectPosition::Parse(libcomp::ManagerPacket *pPacketManager,
     auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
     auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
     auto state = client->GetClientState();
+    auto zoneManager = server->GetZoneManager();
 
     int32_t entityID = p.ReadS32Little();
 
@@ -86,15 +87,19 @@ bool Parsers::FixObjectPosition::Parse(libcomp::ManagerPacket *pPacketManager,
     reply.WriteFloat(destY);
     reply.WriteFloat(stop);
 
-    server->GetZoneManager()->BroadcastPacket(client, reply, false);
+    zoneManager->BroadcastPacket(client, reply, false);
 
     auto dState = std::dynamic_pointer_cast<DemonState>(eState);
     if(nullptr != dState)
     {
         // If a demon is being placed, it will have already been described to the
         // the client by this point so create and show it now.
-        server->GetZoneManager()->PopEntityForZoneProduction(client, dState->GetEntityID(), 2);
-        server->GetZoneManager()->ShowEntityToZone(client, dState->GetEntityID());
+        auto zone = zoneManager->GetZoneInstance(client);
+        if(zone)
+        {
+            zoneManager->PopEntityForZoneProduction(zone, dState->GetEntityID(), 2);
+            zoneManager->ShowEntityToZone(zone, dState->GetEntityID());
+        }
     }
 
     return true;

@@ -65,9 +65,9 @@ protected slots:
     void ShowToggled(bool checked);
     void Refresh();
 
-    void MousePressEvent(QMouseEvent* event);
-    void MouseMoveEvent(QMouseEvent* event);
-    void MouseReleaseEvent(QMouseEvent* event);
+    void mousePressEvent(QMouseEvent* event);
+    void mouseMoveEvent(QMouseEvent* event);
+    void mouseReleaseEvent(QMouseEvent* event);
 
     void ComboBox_SpawnEdit_IndexChanged(const QString& str);
     void SpawnLocationRemoveSelected();

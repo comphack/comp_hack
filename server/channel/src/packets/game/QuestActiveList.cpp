@@ -27,12 +27,9 @@
 #include "Packets.h"
 
 // libcomp Includes
+#include <ManagerPacket.h>
 #include <Packet.h>
 #include <PacketCodes.h>
-
-// object Includes
-#include <Character.h>
-#include <Quest.h>
 
 // channel Includes
 #include "ChannelServer.h"
@@ -43,35 +40,15 @@ bool Parsers::QuestActiveList::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {
-    (void)pPacketManager;
-
     if(p.Size() != 0)
     {
         return false;
     }
 
     auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-    auto state = client->GetClientState();
-    auto cState = state->GetCharacterState();
-    auto character = cState->GetEntity();
-    auto questMap = character->GetQuests();
-    
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_QUEST_ACTIVE_LIST);
+    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
 
-    reply.WriteS8((int8_t)questMap.size());
-    for(auto kv : questMap)
-    {
-        auto quest = kv.second;
-        auto customData = quest->GetCustomData();
-
-        reply.WriteS16Little(quest->GetQuestID());
-        reply.WriteS8(quest->GetPhase());
-
-        reply.WriteArray(&customData, (uint32_t)customData.size() * sizeof(int32_t));
-    }
-
-    connection->SendPacket(reply);
+    server->GetEventManager()->SendActiveQuestList(client);
 
     return true;
 }

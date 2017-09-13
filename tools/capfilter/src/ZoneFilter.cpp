@@ -67,7 +67,7 @@ class MappedEvent
 {
 public:
     MappedEvent(const std::shared_ptr<objects::Event>& e,
-        std::shared_ptr<objects::ServerObjectBase> obj)
+        std::shared_ptr<objects::ServerObject> obj)
     {
         event = e;
         source = obj;
@@ -75,7 +75,7 @@ public:
     }
 
     int32_t mergeCount;
-    std::shared_ptr<objects::ServerObjectBase> source;
+    std::shared_ptr<objects::ServerObject> source;
     std::shared_ptr<objects::Event> event;
     std::weak_ptr<MappedEvent> previous;
     std::unordered_map<int32_t, std::shared_ptr<MappedEvent>> next;
@@ -106,7 +106,7 @@ class ZoneInstance
 public:
     libcomp::String filePath;
     std::unordered_map<int32_t,
-        std::shared_ptr<objects::ServerObjectBase>> entities;
+        std::shared_ptr<objects::ServerObject>> entities;
     std::list<std::shared_ptr<MappedEvent>> events;
 
     int32_t eventResponse = -1;
@@ -372,6 +372,7 @@ bool ZoneFilter::ProcessCommand(const libcomp::String& capturePath,
             float originY = packet.ReadFloat();
             float originRotation = packet.ReadFloat();
             int32_t marketCount = packet.ReadS32Little();
+            (void)entityId;
             (void)zoneInstance;
 
             std::set<uint32_t> marketIDs;
@@ -417,8 +418,6 @@ bool ZoneFilter::ProcessCommand(const libcomp::String& capturePath,
                 // the lowest one
                 b->SetID(*marketIDs.begin());
             }
-
-            instance->entities[entityId] = b;
         }
         break;
     case to_underlying(ChannelToClientPacketCode_t::PACKET_SKILL_COMPLETED):
@@ -484,7 +483,7 @@ bool ZoneFilter::ProcessCommand(const libcomp::String& capturePath,
                 auto entity = instance->entities[entityID];
 
                 // Don't add multiple actions automatically
-                if(entity->ActionsCount() == 0 && npcEntityID == entityID)
+                if(entity && entity->ActionsCount() == 0 && npcEntityID == entityID)
                 {
                     auto action = std::make_shared<
                         objects::ActionSetNPCState>();
@@ -2284,7 +2283,7 @@ void ZoneFilter::BindZoneChangeEvent(uint32_t zoneID, float x, float y,
         auto entity = instance->entities[entityID];
 
         // Don't add multiple actions automatically
-        if(entity->ActionsCount() == 0)
+        if(entity && entity->ActionsCount() == 0)
         {
             entity->AppendActions(it->second);
         }

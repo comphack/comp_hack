@@ -84,7 +84,8 @@ bool Parsers::CharacterList::Parse(libcomp::ManagerPacket *pPacketManager,
         auto characterList = objects::Character::LoadCharacterListByAccount(worldDB, account);
         for(auto character : characterList)
         {
-            bool loaded = character->LoadCoreStats(worldDB) != nullptr;
+            // Always reload
+            bool loaded = character->GetCoreStats().Get(worldDB, true) != nullptr;
 
             if(loaded)
             {
@@ -230,6 +231,12 @@ bool Parsers::CharacterList::Parse(libcomp::ManagerPacket *pPacketManager,
 
         // Unknown value
         reply.WriteBlank(4);
+
+        // Since this is the only place we need to retrieve stats
+        // on this server, unload it and if the character is not cached
+        // somewhere aside from the stats lookup, let it unload now
+        libcomp::ObjectReference<objects::EntityStats>::Unload(
+            character->GetCoreStats().GetUUID());
     }
 
     connection->SendPacket(reply);

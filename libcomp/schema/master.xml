@@ -39,7 +39,9 @@
 
     <!-- Actions -->
     <include path="action.xml"/>
+    <include path="action_addremoveitems.xml"/>
     <include path="action_createloot.xml"/>
+    <include path="action_grantxp.xml"/>
     <include path="action_setnpcstate.xml"/>
     <include path="action_spawn.xml"/>
     <include path="action_startevent.xml"/>

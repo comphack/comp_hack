@@ -90,10 +90,13 @@ public:
     /**
      * Get the entity state associated to an entity ID for this client.
      * @param entityID Entity ID associated to this client to retrieve
+     * @param readyOnly Optional parameter to only return entities
+     *  currently active, defaults to true
      * @return Pointer to the matching entity state, null if no match
      *  exists
      */
-    std::shared_ptr<ActiveEntityState> GetEntityState(int32_t entityID);
+    std::shared_ptr<ActiveEntityState> GetEntityState(int32_t entityID,
+        bool readyOnly = true);
 
     /**
      * Registers the client state with the static entity map for access by

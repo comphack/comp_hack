@@ -509,7 +509,7 @@ public:
         // float constants should end with an 'f'.
         if(typeid(T) == typeid(float))
         {
-            if("0" == ss.str())
+            if(ss.str().find(".") == std::string::npos)
             {
                 ss << ".0f";
             }

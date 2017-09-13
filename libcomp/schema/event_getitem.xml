@@ -6,5 +6,6 @@
             <key type="u32"/>   <!-- Item Type -->
             <value type="u16"/> <!-- Quantity -->
         </member>
+        <member type="string" name="onFailure"/>
     </object>
 </objgen>

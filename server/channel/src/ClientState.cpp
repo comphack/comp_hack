@@ -83,12 +83,14 @@ std::shared_ptr<DemonState> ClientState::GetDemonState()
     return mDemonState;
 }
 
-std::shared_ptr<ActiveEntityState> ClientState::GetEntityState(int32_t entityID)
+std::shared_ptr<ActiveEntityState> ClientState::GetEntityState(int32_t entityID,
+    bool readyOnly)
 {
-    std::list<std::shared_ptr<ActiveEntityState>> states = { mCharacterState, mDemonState };
+    std::list<std::shared_ptr<ActiveEntityState>> states = { mCharacterState,
+        mDemonState };
     for(auto state : states)
     {
-        if(state->GetEntityID() == entityID && state->Ready())
+        if(state->GetEntityID() == entityID && (!readyOnly || state->Ready()))
         {
             return state;
         }

@@ -5,11 +5,18 @@
             <value>ZONE_CHANGE</value>
             <value>START_EVENT</value>
             <value>SET_NPC_STATE</value>
+            <value>ADD_REMOVE_ITEMS</value>
+            <value>GRANT_XP</value>
             <value>UPDATE_FLAG</value>
             <value>UPDATE_LNC</value>
             <value>UPDATE_QUEST</value>
             <value>SPAWN</value>
             <value>CREATE_LOOT</value>
+        </member>
+        <member type="enum" name="sourceContext" default="SOURCE">
+            <value>SOURCE</value>
+            <value>PARTY</value>
+            <value>ZONE</value>
         </member>
     </object>
 </objgen>

@@ -1346,21 +1346,36 @@ bool EventManager::GetItems(const std::shared_ptr<ChannelClientConnection>& clie
     const std::shared_ptr<objects::EventInstance>& instance)
 {
     auto e = std::dynamic_pointer_cast<objects::EventGetItem>(instance->GetEvent());
+    auto items = e->GetItems();
+    auto server = mServer.lock();
 
-    libcomp::Packet p;
-    p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_EVENT_GET_ITEMS);
-    p.WriteS8((int8_t)e->ItemsCount());
-    for(auto entry : e->GetItems())
+    bool doNext = true;
+    if(server->GetCharacterManager()->AddRemoveItems(client, items, true))
     {
-        p.WriteU32Little(entry.first);      // Item type
-        p.WriteU16Little(entry.second);     // Item quantity
+        libcomp::Packet p;
+        p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_EVENT_GET_ITEMS);
+        p.WriteS8((int8_t)items.size());
+        for(auto entry : e->GetItems())
+        {
+            p.WriteU32Little(entry.first);      // Item type
+            p.WriteU16Little(entry.second);     // Item quantity
+        }
+
+        client->SendPacket(p);
+    }
+    else if(!e->GetOnFailure().IsEmpty())
+    {
+        if(!HandleEvent(client, e->GetOnFailure(), instance->GetSourceEntityID()))
+        {
+            EndEvent(client);
+        }
+        doNext = false;
     }
 
-    /// @todo: add items
-
-    client->SendPacket(p);
-
-    HandleNext(client, instance);
+    if(doNext)
+    {
+        HandleNext(client, instance);
+    }
 
     return true;
 }

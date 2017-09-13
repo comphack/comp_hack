@@ -958,7 +958,7 @@ void CharacterManager::SendDemonBoxData(const std::shared_ptr<
         // Just send the specified slots
         reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_DEMON_BOX_UPDATE);
 
-        reply.WriteS8(0);
+        reply.WriteS8(boxID);
         reply.WriteS32Little((int32_t)slots.size());
         for(int8_t slot : slots)
         {

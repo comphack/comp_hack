@@ -80,116 +80,126 @@ bool Parsers::DepoRent::Parse(libcomp::ManagerPacket *pPacketManager,
         { SVR_CONST.RENTAL_DEMON_60, 60 },
         { SVR_CONST.RENTAL_DEMON_90, 90 }
     };
-    
+
+    bool isItemDepo = false;
+    int32_t delta = 0;
+    bool success = false;
+
     auto item = std::dynamic_pointer_cast<objects::Item>(
         libcomp::PersistentObject::GetObjectByUUID(state->GetObjectUUID(itemID)));
     if(nullptr == item)
     {
         LOG_ERROR("Depo rental failed due to unknown purchase item ID.\n");
-        return true;
-    }
-
-    auto itemDayIter = itemDayMap.find(item->GetType());
-    auto demonDayIter = demonDayMap.find(item->GetType());
-
-    std::shared_ptr<objects::ItemBox> itemDepo;
-    std::shared_ptr<objects::DemonBox> demonDepo;
-
-    bool isNew = false;
-    uint8_t dayCount = 0;
-    auto dbChanges = libcomp::DatabaseChangeSet::Create(state->GetAccountUID());
-    bool isItemDepo = itemDayIter != itemDayMap.end();
-    if(isItemDepo)
-    {
-        itemDepo = worldData->GetItemBoxes((size_t)boxID).Get();
-        if(itemDepo == nullptr)
-        {
-            itemDepo = libcomp::PersistentObject::New<objects::ItemBox>();
-            itemDepo->SetType(objects::ItemBox::Type_t::ITEM_DEPO);
-            itemDepo->SetBoxID(boxID);
-            itemDepo->SetAccount(state->GetAccountUID());
-
-            itemDepo->Register(itemDepo);
-            worldData->SetItemBoxes((size_t)boxID, itemDepo);
-
-            dbChanges->Insert(itemDepo);
-            dbChanges->Update(worldData);
-            isNew = true;
-        }
-
-        dayCount = itemDayIter->second;
-    }
-    else if(demonDayIter != demonDayMap.end())
-    {
-        auto demonBoxID = (int8_t)boxID;
-
-        demonDepo = worldData->GetDemonBoxes((size_t)(demonBoxID-1)).Get();
-        if(demonDepo == nullptr)
-        {
-            demonDepo = libcomp::PersistentObject::New<objects::DemonBox>();
-            demonDepo->SetBoxID(demonBoxID);
-            demonDepo->SetAccount(state->GetAccountUID());
-
-            demonDepo->Register(demonDepo);
-            worldData->SetDemonBoxes((size_t)(demonBoxID-1), demonDepo);
-
-            dbChanges->Insert(demonDepo);
-            dbChanges->Update(worldData);
-            isNew = true;
-        }
-
-        dayCount = demonDayIter->second;
     }
     else
     {
-        LOG_ERROR("Depo rental failed due to unknown/invalid purchase item type.\n");
-        return true;
-    }
+        auto itemDayIter = itemDayMap.find(item->GetType());
+        auto demonDayIter = demonDayMap.find(item->GetType());
 
+        std::shared_ptr<objects::ItemBox> itemDepo;
+        std::shared_ptr<objects::DemonBox> demonDepo;
 
-    // Set the expiration timestamp to the specified offset past the current time
-    auto timestamp = (uint32_t)time(0);
-    int32_t delta = (int32_t)(dayCount * 24 * 60 * 60);
-    uint32_t expirationTime = (uint32_t)(timestamp + (uint32_t)delta);
-
-    if(isItemDepo)
-    {
-        itemDepo->SetRentalExpiration(expirationTime);
-
-        if(!isNew)
+        bool isNew = false;
+        uint8_t dayCount = 0;
+        auto dbChanges = libcomp::DatabaseChangeSet::Create(state->GetAccountUID());
+        isItemDepo = itemDayIter != itemDayMap.end();
+        if(isItemDepo)
         {
-            dbChanges->Update(itemDepo);
+            itemDepo = worldData->GetItemBoxes((size_t)boxID).Get();
+            if(itemDepo == nullptr)
+            {
+                itemDepo = libcomp::PersistentObject::New<objects::ItemBox>();
+                itemDepo->SetType(objects::ItemBox::Type_t::ITEM_DEPO);
+                itemDepo->SetBoxID(boxID);
+                itemDepo->SetAccount(state->GetAccountUID());
+
+                itemDepo->Register(itemDepo);
+                worldData->SetItemBoxes((size_t)boxID, itemDepo);
+
+                dbChanges->Insert(itemDepo);
+                dbChanges->Update(worldData);
+                isNew = true;
+            }
+
+            dayCount = itemDayIter->second;
+
+            success = true;
+        }
+        else if(demonDayIter != demonDayMap.end())
+        {
+            auto demonBoxID = (int8_t)boxID;
+
+            demonDepo = worldData->GetDemonBoxes((size_t)(demonBoxID-1)).Get();
+            if(demonDepo == nullptr)
+            {
+                demonDepo = libcomp::PersistentObject::New<objects::DemonBox>();
+                demonDepo->SetBoxID(demonBoxID);
+                demonDepo->SetAccount(state->GetAccountUID());
+
+                demonDepo->Register(demonDepo);
+                worldData->SetDemonBoxes((size_t)(demonBoxID-1), demonDepo);
+
+                dbChanges->Insert(demonDepo);
+                dbChanges->Update(worldData);
+                isNew = true;
+            }
+
+            dayCount = demonDayIter->second;
+
+            success = true;
+        }
+        else
+        {
+            LOG_ERROR("Depo rental failed due to unknown/invalid purchase item type.\n");
+        }
+
+        if(success)
+        {
+            // Set the expiration timestamp to the specified offset past the current time
+            auto timestamp = (uint32_t)time(0);
+            delta = (int32_t)(dayCount * 24 * 60 * 60);
+            uint32_t expirationTime = (uint32_t)(timestamp + (uint32_t)delta);
+
+            if(isItemDepo)
+            {
+                itemDepo->SetRentalExpiration(expirationTime);
+
+                if(!isNew)
+                {
+                    dbChanges->Update(itemDepo);
+                }
+            }
+            else
+            {
+                demonDepo->SetRentalExpiration(expirationTime);
+
+                if(!isNew)
+                {
+                    dbChanges->Update(demonDepo);
+                }
+            }
+
+            // Update the used item's box
+            auto itemBox = item->GetItemBox().Get();
+            itemBox->SetItems((size_t)item->GetBoxSlot(), NULLUUID);
+            dbChanges->Update(itemBox);
+            dbChanges->Delete(item);
+
+            std::list<uint16_t> slots = { (uint16_t)item->GetBoxSlot() };
+            server->GetCharacterManager()->SendItemBoxData(client, itemBox, slots);
+
+            server->GetWorldDatabase()->QueueChangeSet(dbChanges);
         }
     }
-    else
-    {
-        demonDepo->SetRentalExpiration(expirationTime);
-
-        if(!isNew)
-        {
-            dbChanges->Update(demonDepo);
-        }
-    }
-
-    // Update the used item's box
-    auto itemBox = item->GetItemBox().Get();
-    itemBox->SetItems((size_t)item->GetBoxSlot(), NULLUUID);
-    dbChanges->Update(itemBox);
-    dbChanges->Delete(item);
-
-    std::list<uint16_t> slots = { (uint16_t)item->GetBoxSlot() };
-    server->GetCharacterManager()->SendItemBoxData(client, itemBox, slots);
 
     libcomp::Packet reply;
     reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_DEPO_RENT);
     reply.WriteS8(isItemDepo ? 0 : 1);
     reply.WriteS64Little(boxID);
-    reply.WriteS32Little(0);    // Unknown
+    reply.WriteS32Little(success ? 0 : -1);
     reply.WriteS32Little(delta);
 
     client->SendPacket(reply);
-
-    server->GetWorldDatabase()->QueueChangeSet(dbChanges);
 
     return true;
 }

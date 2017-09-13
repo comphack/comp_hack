@@ -101,6 +101,24 @@ private:
     bool SetNPCState(const ActionContext& ctx);
 
     /**
+     * Add or remove items to the client character's inventory.
+     * @param client Client to perform the actions for.
+     * @param action Action to perform.
+     * @param sourceEntityID ID of the entity that is changing state.
+     * @retval false The action list should stop after this action.
+     */
+    bool AddRemoveItems(const ActionContext& ctx);
+
+    /**
+     * Grant XP to the source client character and/or partner demon.
+     * @param client Client to perform the actions for.
+     * @param action Action to perform.
+     * @param sourceEntityID ID of the entity that is changing state.
+     * @retval false The action list should stop after this action.
+     */
+    bool GrantXP(const ActionContext& ctx);
+
+    /**
      * Update flags related to character maps, valuables or plugins.
      * @param client Client to perform the actions for.
      * @param action Action to perform.

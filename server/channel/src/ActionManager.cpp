@@ -36,7 +36,9 @@
 
 // object Includes
 #include <Action.h>
+#include <ActionAddRemoveItems.h>
 #include <ActionCreateLoot.h>
+#include <ActionGrantXP.h>
 #include <ActionSetNPCState.h>
 #include <ActionSpawn.h>
 #include <ActionStartEvent.h>
@@ -45,6 +47,7 @@
 #include <ActionUpdateQuest.h>
 #include <ActionZoneChange.h>
 #include <ObjectPosition.h>
+#include <Party.h>
 #include <ServerNPC.h>
 #include <ServerObject.h>
 #include <ServerZone.h>
@@ -68,6 +71,10 @@ ActionManager::ActionManager(const std::weak_ptr<ChannelServer>& server)
         &ActionManager::StartEvent;
     mActionHandlers[objects::Action::ActionType_t::SET_NPC_STATE] =
         &ActionManager::SetNPCState;
+    mActionHandlers[objects::Action::ActionType_t::ADD_REMOVE_ITEMS] =
+        &ActionManager::AddRemoveItems;
+    mActionHandlers[objects::Action::ActionType_t::GRANT_XP] =
+        &ActionManager::GrantXP;
     mActionHandlers[objects::Action::ActionType_t::UPDATE_FLAG] =
         &ActionManager::UpdateFlag;
     mActionHandlers[objects::Action::ActionType_t::UPDATE_LNC] =
@@ -120,9 +127,76 @@ void ActionManager::PerformActions(
             LOG_ERROR(libcomp::String("Failed to parse action of type %1\n"
                 ).Arg(to_underlying(action->GetActionType())));
         }
-        else if(!it->second(*this, ctx))
+        else
         {
-            break;
+            auto srcCtx = action->GetSourceContext();
+            if(srcCtx != objects::Action::SourceContext_t::SOURCE)
+            {
+                auto connectionManager = mServer.lock()->GetManagerConnection();
+
+                // Execute once per source context character and quit if any fail
+                bool failure = false;
+                std::set<int32_t> worldCIDs;
+                switch(srcCtx)
+                {
+                case objects::Action::SourceContext_t::PARTY:
+                    {
+                        auto sourceClient = client ? client : connectionManager
+                            ->GetEntityClient(sourceEntityID, false);
+                        if(!sourceClient)
+                        {
+                            failure = true;
+                            break;
+                        }
+
+                        auto party = sourceClient->GetClientState()->GetParty();
+                        if(party)
+                        {
+                            worldCIDs = party->GetMemberIDs();
+                        }
+                    }
+                    break;
+                case objects::Action::SourceContext_t::ZONE:
+                    {
+                        auto clients = ctx.CurrentZone->GetConnectionList();
+                        for(auto c : clients)
+                        {
+                            worldCIDs.insert(c->GetClientState()->GetWorldCID());
+                        }
+                    }
+                    break;
+                default:
+                    break;
+                }
+
+                if(!failure)
+                {
+                    for(auto worldCID : worldCIDs)
+                    {
+                        auto charClient = connectionManager->
+                            GetEntityClient(worldCID, true);
+                        auto cState = charClient ? charClient->GetClientState()
+                            ->GetCharacterState() : nullptr;
+                        if(cState && cState->GetZone() == ctx.CurrentZone)
+                        {
+                            ActionContext copyCtx = ctx;
+                            copyCtx.Client = charClient;
+                            copyCtx.SourceEntityID = cState->GetEntityID();
+
+                            failure |= !it->second(*this, copyCtx);
+                        }
+                    }
+                }
+
+                if(failure)
+                {
+                    break;
+                }
+            }
+            else if(!it->second(*this, ctx))
+            {
+                break;
+            }
         }
     }
 }
@@ -177,6 +251,67 @@ bool ActionManager::ZoneChange(const ActionContext& ctx)
         return false;
     }
     
+    return true;
+}
+
+bool ActionManager::AddRemoveItems(const ActionContext& ctx)
+{
+    if(!ctx.Client)
+    {
+        LOG_ERROR("Attempted to add or remove items with no associated"
+            " client connection\n");
+        return false;
+    }
+
+    auto act = std::dynamic_pointer_cast<objects::ActionAddRemoveItems>(ctx.Action);
+
+    auto characterManager = mServer.lock()->GetCharacterManager();
+    auto state = ctx.Client->GetClientState();
+    auto cState = state->GetCharacterState();
+    auto items = act->GetItems();
+
+    if(!characterManager->AddRemoveItems(ctx.Client, items, act->GetAdd()))
+    {
+        return !act->GetStopOnFailure();
+    }
+
+    return true;
+}
+
+bool ActionManager::GrantXP(const ActionContext& ctx)
+{
+    if(!ctx.Client)
+    {
+        LOG_ERROR("Attempted to grant XP with no associated"
+            " client connection\n");
+        return false;
+    }
+
+    auto act = std::dynamic_pointer_cast<objects::ActionGrantXP>(ctx.Action);
+
+    auto characterManager = mServer.lock()->GetCharacterManager();
+    auto state = ctx.Client->GetClientState();
+
+    std::list<std::shared_ptr<ActiveEntityState>> entityStates;
+    if(act->GetIncludeCharacter())
+    {
+        entityStates.push_back(state->GetCharacterState());
+    }
+
+    if(act->GetIncludePartner())
+    {
+        entityStates.push_back(state->GetDemonState());
+    }
+
+    for(auto eState : entityStates)
+    {
+        if(eState->Ready())
+        {
+            characterManager->ExperienceGain(ctx.Client, (uint64_t)act->GetXP(),
+                eState->GetEntityID());
+        }
+    }
+
     return true;
 }
 

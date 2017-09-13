@@ -305,48 +305,119 @@ bool SkillManager::ExecuteSkill(std::shared_ptr<ActiveEntityState> source,
     }
 
     // Verify the target now
-    switch(skillData->GetTarget()->GetType())
+    auto targetType = skillData->GetTarget()->GetType();
+    if(targetType != objects::MiTargetData::Type_t::NONE &&
+        targetType != objects::MiTargetData::Type_t::OBJECT)
     {
-    case objects::MiTargetData::Type_t::ALLY:
-    case objects::MiTargetData::Type_t::DEAD_ALLY:
-    case objects::MiTargetData::Type_t::PARTNER:
-    case objects::MiTargetData::Type_t::PARTY:
-    case objects::MiTargetData::Type_t::ENEMY:
-    case objects::MiTargetData::Type_t::DEAD_PARTNER:
-    case objects::MiTargetData::Type_t::OTHER_PLAYER:
-    case objects::MiTargetData::Type_t::OTHER_DEMON:
-    case objects::MiTargetData::Type_t::ALLY_PLAYER:
-    case objects::MiTargetData::Type_t::ALLY_DEMON:
-    case objects::MiTargetData::Type_t::PLAYER:
+        auto targetEntityID = (int32_t)activated->GetTargetObjectID();
+
+        if(targetEntityID <= 0)
         {
-            auto targetEntityID = (int32_t)activated->GetTargetObjectID();
-
-            if(targetEntityID == -1)
-            {
-                //No target
-                break;
-            }
-
-            auto zone = source->GetZone();
-            if(nullptr == zone)
-            {
-                LOG_ERROR("Skill activation attempted outside of a zone.\n");
-                return false;
-            }
-
-            auto targetEntity = zone->GetActiveEntity(targetEntityID);
-            if(nullptr == targetEntity || !targetEntity->Ready())
-            {
-                LOG_ERROR(libcomp::String("Invalid target ID encountered: %1\n")
-                    .Arg(targetEntityID));
-                return false;
-            }
-
-            activated->SetEntityTargeted(true);
+            //No target
+            return false;
         }
-        break;
-    default:
-        break;
+
+        auto zone = source->GetZone();
+        if(nullptr == zone)
+        {
+            LOG_ERROR("Skill activation attempted outside of a zone.\n");
+            return false;
+        }
+
+        auto targetEntity = zone->GetActiveEntity(targetEntityID);
+        if(nullptr == targetEntity || !targetEntity->Ready())
+        {
+            LOG_ERROR(libcomp::String("Invalid target ID encountered: %1\n")
+                .Arg(targetEntityID));
+            return false;
+        }
+
+        bool targetAlive = targetEntity->IsAlive();
+        bool allies = targetEntity->GetFaction() == source->GetFaction();
+        auto targetEntityType = targetEntity->GetEntityType();
+        auto sourceState = ClientState::GetEntityClientState(source->GetEntityID());
+        auto targetState = ClientState::GetEntityClientState(targetEntity->GetEntityID());
+        switch(targetType)
+        {
+        case objects::MiTargetData::Type_t::ALLY:
+            if(!allies || !targetAlive)
+            {
+                return false;
+            }
+            break;
+        case objects::MiTargetData::Type_t::DEAD_ALLY:
+            if(!allies || targetAlive)
+            {
+                return false;
+            }
+            break;
+        case objects::MiTargetData::Type_t::PARTNER:
+            if(!sourceState || sourceState->GetCharacterState() != source ||
+                sourceState->GetDemonState() != targetEntity || !targetAlive)
+            {
+                return false;
+            }
+            break;
+        case objects::MiTargetData::Type_t::PARTY:
+            if(!sourceState || sourceState->GetPartyID() == 0 || !targetState ||
+                sourceState->GetPartyID() != targetState->GetPartyID() || !targetAlive)
+            {
+                return false;
+            }
+            break;
+        case objects::MiTargetData::Type_t::ENEMY:
+            if(allies || !targetAlive)
+            {
+                return false;
+            }
+            break;
+        case objects::MiTargetData::Type_t::DEAD_PARTNER:
+            if(!sourceState || sourceState->GetCharacterState() != source ||
+                sourceState->GetDemonState() != targetEntity || targetAlive)
+            {
+                return false;
+            }
+            break;
+        case objects::MiTargetData::Type_t::OTHER_PLAYER:
+            if(targetEntityType != objects::EntityStateObject::EntityType_t::CHARACTER ||
+                sourceState == targetState || !allies || !targetAlive)
+            {
+                return false;
+            }
+            break;
+        case objects::MiTargetData::Type_t::OTHER_DEMON:
+            if(targetEntityType != objects::EntityStateObject::EntityType_t::PARTNER_DEMON ||
+                (sourceState && sourceState->GetDemonState() != targetEntity) || !allies ||
+                !targetAlive)
+            {
+                return false;
+            }
+            break;
+        case objects::MiTargetData::Type_t::ALLY_PLAYER:
+            if(targetEntityType != objects::EntityStateObject::EntityType_t::CHARACTER ||
+                !allies || !targetAlive)
+            {
+                return false;
+            }
+            break;
+        case objects::MiTargetData::Type_t::ALLY_DEMON:
+            if(targetEntityType != objects::EntityStateObject::EntityType_t::PARTNER_DEMON ||
+                !allies || !targetAlive)
+            {
+                return false;
+            }
+            break;
+        case objects::MiTargetData::Type_t::PLAYER:
+            if(!sourceState || sourceState->GetCharacterState() != targetEntity)
+            {
+                return false;
+            }
+            break;
+        default:
+            break;
+        }
+
+        activated->SetEntityTargeted(true);
     }
 
     // Check costs and pay costs (skip for switch deactivation)
@@ -1695,116 +1766,114 @@ void SkillManager::HandleKills(std::shared_ptr<ActiveEntityState> source,
         // For each loot body generate and send loot and show the body
         // After this schedule all of the bodies for cleanup after their
         // loot time passes
-        if(lStates.size() > 0)
+        uint64_t now = ChannelServer::GetServerTime();
+        int16_t luck = source->GetLUCK();
+
+        auto firstClient = zConnections.size() > 0 ? zConnections.front() : nullptr;
+        auto sourceParty = sourceState->GetParty();
+        std::set<int32_t> sourcePartyMembers = sourceParty
+            ? sourceParty->GetMemberIDs() : std::set<int32_t>();
+
+        std::unordered_map<uint64_t, std::list<int32_t>> lootTimeEntityIDs;
+        std::unordered_map<uint64_t, std::list<int32_t>> delayedLootEntityIDs;
+        for(auto lPair : lStates)
         {
-            uint64_t now = ChannelServer::GetServerTime();
-            int16_t luck = source->GetLUCK();
+            auto lState = lPair.first;
+            auto eState = lPair.second;
 
-            auto firstClient = zConnections.size() > 0 ? zConnections.front() : nullptr;
-            auto sourceParty = sourceState->GetParty();
-            std::set<int32_t> sourcePartyMembers = sourceParty
-                ? sourceParty->GetMemberIDs() : std::set<int32_t>();
+            int32_t lootEntityID = lState->GetEntityID();
 
-            std::unordered_map<uint64_t, std::list<int32_t>> lootTimeEntityIDs;
-            std::unordered_map<uint64_t, std::list<int32_t>> delayedLootEntityIDs;
-            for(auto lPair : lStates)
+            auto lootBody = lState->GetEntity();
+            auto enemy = lootBody->GetEnemy();
+            auto spawn = enemy->GetSpawnSource();
+            auto damageSources = enemy->GetDamageSources();
+
+            auto drops = GetItemDrops(enemy->GetType(), spawn);
+
+            // Create loot based off drops and send if any was added
+            uint64_t lootTime = 0;
+            if(characterManager->CreateLootFromDrops(lootBody, drops, luck))
             {
-                auto lState = lPair.first;
-                auto eState = lPair.second;
-
-                int32_t lootEntityID = lState->GetEntityID();
-
-                auto lootBody = lState->GetEntity();
-                auto enemy = lootBody->GetEnemy();
-                auto spawn = enemy->GetSpawnSource();
-
-                auto drops = GetItemDrops(enemy->GetType(), spawn);
-
-                // Create loot based off drops and send if any was added
-                uint64_t lootTime = 0;
-                if(characterManager->CreateLootFromDrops(lootBody, drops, luck))
-                {
-                    // Bodies remain lootable for 120 seconds with loot
-                    lootTime = (uint64_t)(now + 120000000);
+                // Bodies remain lootable for 120 seconds with loot
+                lootTime = (uint64_t)(now + 120000000);
                     
-                    std::set<int32_t> validLooterIDs = { sourceState->GetWorldCID() };
-                    if(sourceParty)
+                std::set<int32_t> validLooterIDs = { sourceState->GetWorldCID() };
+                if(sourceParty)
+                {
+                    bool timedAdjust = true;
+                    switch(sourceParty->GetDropRule())
                     {
-                        bool timedAdjust = true;
-                        switch(sourceParty->GetDropRule())
+                    case objects::Party::DropRule_t::DAMAGE_RACE:
                         {
-                        case objects::Party::DropRule_t::DAMAGE_RACE:
+                            // Highest damage dealer member wins
+                            std::map<uint64_t, int32_t> damageMap;
+                            for(auto pair : damageSources)
                             {
-                                // Highest damage dealer member wins
-                                std::map<uint64_t, int32_t> damageMap;
-                                for(auto pair : enemy->GetDamageSources())
-                                {
-                                    damageMap[pair.second] = pair.first;
-                                }
+                                damageMap[pair.second] = pair.first;
+                            }
 
-                                if(damageMap.size() > 0)
-                                {
-                                    validLooterIDs = { damageMap.rbegin()->second };
-                                }
-                            }
-                            break;
-                        case objects::Party::DropRule_t::RANDOM_LOOT:
+                            if(damageMap.size() > 0)
                             {
-                                // Randomly pick a member
-                                auto it = sourcePartyMembers.begin();
-                                size_t offset = (size_t)RNG(uint16_t, 0,
-                                    (uint16_t)(sourcePartyMembers.size() - 1));
-                                std::advance(it, offset);
-
-                                validLooterIDs = { *it };
+                                validLooterIDs = { damageMap.rbegin()->second };
                             }
-                            break;
-                        case objects::Party::DropRule_t::FREE_LOOT:
-                            {
-                                // Every member is valid
-                                validLooterIDs = sourcePartyMembers;
-                                timedAdjust = false;
-                            }
-                            break;
-                        default:
-                            break;
                         }
-
-                        if(timedAdjust)
+                        break;
+                    case objects::Party::DropRule_t::RANDOM_LOOT:
                         {
-                            // The last 60 seconds are fair game for everyone
-                            uint64_t delayedlootTime = (uint64_t)(now + 60000000);
-                            delayedLootEntityIDs[delayedlootTime].push_back(lootEntityID);
+                            // Randomly pick a member
+                            auto it = sourcePartyMembers.begin();
+                            size_t offset = (size_t)RNG(uint16_t, 0,
+                                (uint16_t)(sourcePartyMembers.size() - 1));
+                            std::advance(it, offset);
+
+                            validLooterIDs = { *it };
                         }
+                        break;
+                    case objects::Party::DropRule_t::FREE_LOOT:
+                        {
+                            // Every member is valid
+                            validLooterIDs = sourcePartyMembers;
+                            timedAdjust = false;
+                        }
+                        break;
+                    default:
+                        break;
                     }
 
-                    lootBody->SetValidLooterIDs(validLooterIDs);
-                }
-                else
-                {
-                    // Bodies remain lootable for 10 seconds without loot
-                    lootTime = (uint64_t)(now + 10000000);
+                    if(timedAdjust)
+                    {
+                        // The last 60 seconds are fair game for everyone
+                        uint64_t delayedlootTime = (uint64_t)(now + 60000000);
+                        delayedLootEntityIDs[delayedlootTime].push_back(lootEntityID);
+                    }
                 }
 
-                lootBody->SetLootTime(lootTime);
-                lootTimeEntityIDs[lootTime].push_back(lootEntityID);
-
-                if(firstClient)
-                {
-                    zoneManager->SendLootBoxData(firstClient, lState, eState,
-                        true, true);
-                }
+                lootBody->SetValidLooterIDs(validLooterIDs);
             }
-
-            for(auto pair : lootTimeEntityIDs)
+            else
             {
-                zoneManager->ScheduleEntityRemoval(pair.first, zone, pair.second, 13);
+                // Bodies remain lootable for 10 seconds without loot
+                lootTime = (uint64_t)(now + 10000000);
             }
 
-            for(auto pair : delayedLootEntityIDs)
+            lootBody->SetLootTime(lootTime);
+            lootTimeEntityIDs[lootTime].push_back(lootEntityID);
+
+            if(firstClient)
             {
-                ScheduleFreeLoot(pair.first, zone, pair.second, sourcePartyMembers);
+                zoneManager->SendLootBoxData(firstClient, lState, eState,
+                    true, true);
             }
+        }
+
+        for(auto pair : lootTimeEntityIDs)
+        {
+            zoneManager->ScheduleEntityRemoval(pair.first, zone, pair.second, 13);
+        }
+
+        for(auto pair : delayedLootEntityIDs)
+        {
+            ScheduleFreeLoot(pair.first, zone, pair.second, sourcePartyMembers);
         }
 
         // Update quest kill counts
@@ -1828,6 +1897,182 @@ void SkillManager::HandleKills(std::shared_ptr<ActiveEntityState> source,
         }
 
         ChannelClientConnection::FlushAllOutgoing(zConnections);
+
+        // Loop through one last time and send all XP gained
+        for(auto eState : enemiesKilled)
+        {
+            auto enemy = eState->GetEntity();
+            HandleKillXP(enemy, zone);
+        }
+    }
+}
+
+void SkillManager::HandleKillXP(const std::shared_ptr<objects::Enemy>& enemy,
+    const std::shared_ptr<Zone>& zone)
+{
+    auto spawn = enemy->GetSpawnSource();
+
+    int64_t totalXP = 0;
+    if(spawn)
+    {
+        totalXP = spawn->GetXP();
+    }
+    else
+    {
+        // All non-spawn enemies have a calculated value
+        /// @todo: verify
+        totalXP = (int64_t)(enemy->GetCoreStats()->GetLevel() * 20);
+    }
+
+    if(totalXP <= 0)
+    {
+        return;
+    }
+    else
+    {
+        // Apply zone XP multiplier
+        totalXP = (int64_t)((double)totalXP *
+            (double)zone->GetDefinition()->GetXPMultiplier());
+    }
+
+    // Determine XP distribution
+    // -Individuals/single parties gain max XP
+    // -Multiple individuals/parties have XP distributed by damage dealt
+    // -Party members gain alloted XP - ((number of members in the zone - 1) * 10%)
+    std::unordered_map<int32_t, uint64_t> playerDamage;
+    std::unordered_map<uint32_t, uint64_t> partyDamage;
+    std::unordered_map<uint32_t, std::shared_ptr<objects::Party>> parties;
+
+    uint64_t totalDamage = 0;
+    auto damageSources = enemy->GetDamageSources();
+    for(auto damagePair : damageSources)
+    {
+        totalDamage = (uint64_t)(totalDamage + damagePair.second);
+    }
+
+    auto server = mServer.lock();
+    auto characterManager = server->GetCharacterManager();
+    auto managerConnection = server->GetManagerConnection();
+
+    std::unordered_map<int32_t,
+        std::shared_ptr<ChannelClientConnection>> clientMap;
+    for(auto damagePair : damageSources)
+    {
+        auto c = managerConnection->GetEntityClient(damagePair.first, true);
+        if(c)
+        {
+            clientMap[damagePair.first] = c;
+
+            uint64_t dmg = damagePair.second;
+            auto s = c->GetClientState();
+            auto party = s->GetParty();
+            if(party)
+            {
+                uint32_t partyID = party->GetID();
+                if(partyDamage.find(partyID) == partyDamage.end())
+                {
+                    parties[partyID] = party;
+                    partyDamage[partyID] = dmg;
+                }
+                else
+                {
+                    partyDamage[partyID] = partyDamage[partyID] + dmg;
+                }
+            }
+            else
+            {
+                if(s->GetCharacterState()->GetZone() == zone)
+                {
+                    playerDamage[s->GetWorldCID()] = dmg;
+                }
+                else
+                {
+                    // Since the player is not still in the zone,
+                    // reduce the total damage since the player will not
+                    // receive any XP
+                    totalDamage = (totalDamage - dmg);
+                }
+            }
+        }
+    }
+
+    // Find all party members that are active in the zone
+    std::unordered_map<uint32_t, std::set<int32_t>> membersInZone;
+    for(auto pPair : partyDamage)
+    {
+        for(int32_t memberID : parties[pPair.first]->GetMemberIDs())
+        {
+            auto c = clientMap[memberID];
+            if(c == nullptr)
+            {
+                c = server->GetManagerConnection()
+                    ->GetEntityClient(memberID, true);
+                clientMap[memberID] = c;
+            }
+
+            if(c)
+            {
+                auto s = c->GetClientState();
+                if(s->GetCharacterState()->GetZone() == zone)
+                {
+                    membersInZone[pPair.first].insert(memberID);
+                }
+            }
+        }
+
+        // No party members are in the zone
+        if(membersInZone[pPair.first].size() == 0)
+        {
+            // Since no one in the party is still in the zone,
+            // reduce the total damage since no member will
+            // receive any XP
+            totalDamage = (totalDamage - pPair.second);
+        }
+    }
+
+    // Calculate the XP gains based on damage dealt by players
+    // and parties still in the zone
+    std::unordered_map<int32_t, int64_t> xpMap;
+    for(auto pair : playerDamage)
+    {
+        xpMap[pair.first] = (int64_t)ceil((double)totalXP *
+            (double)pair.second / (double)totalDamage);
+    }
+
+    for(auto pair : membersInZone)
+    {
+        double xp = (double)totalXP *
+            (double)partyDamage[pair.first] / (double)totalDamage;
+
+        int64_t partyXP = (int64_t)ceil(xp * 1.0 -
+            ((double)(membersInZone.size() - 1) * 0.1));
+
+        for(auto memberID : pair.second)
+        {
+            xpMap[memberID] = partyXP;
+        }
+    }
+
+    // Apply the adjusted XP values to each player
+    for(auto xpPair : xpMap)
+    {
+        auto c = clientMap[xpPair.first];
+        if(c == nullptr) continue;
+
+        auto s = c->GetClientState();
+        std::list<std::shared_ptr<ActiveEntityState>>
+            clientStates = { s->GetCharacterState() };
+        clientStates.push_back(s->GetDemonState());
+        for(auto cState : clientStates)
+        {
+            if(!cState->Ready()) continue;
+
+            int64_t finalXP = (int64_t)ceil((double)xpPair.second * (
+                (double)cState->GetCorrectValue(CorrectTbl::RATE_XP) * 0.01));
+
+            characterManager->ExperienceGain(c, (uint64_t)finalXP,
+                cState->GetEntityID());
+        }
     }
 }
 
@@ -2571,7 +2816,8 @@ void SkillManager::FinalizeSkillExecution(const std::shared_ptr<ChannelClientCon
 
     SendExecuteSkill(activated, skillData);
 
-    if(client)
+    if(client && source->GetEntityType() ==
+        objects::EntityStateObject::EntityType_t::CHARACTER)
     {
         characterManager->UpdateExpertise(client, activated->GetSkillID());
     }
@@ -2580,7 +2826,7 @@ void SkillManager::FinalizeSkillExecution(const std::shared_ptr<ChannelClientCon
     source->SetActivatedAbility(nullptr);
     SendCompleteSkill(activated, false);
 
-    if (client)
+    if(client)
     {
         // Cancel any status effects that expire on skill execution
         characterManager->CancelStatusEffects(client, EFFECT_CANCEL_SKILL);

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="ActionGrantXP" baseobject="Action" persistent="false">
+        <member type="enum" name="actionType" inherited="true" default="GRANT_XP"/>
+        <member type="s64" name="XP"/>
+        <member type="bool" name="includeCharacter" default="true"/>
+        <member type="bool" name="includePartner" default="false"/>
+    </object>
+</objgen>

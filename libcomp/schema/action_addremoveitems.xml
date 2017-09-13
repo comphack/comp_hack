@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="ActionAddRemoveItems" baseobject="Action" persistent="false">
+        <member type="enum" name="actionType" inherited="true" default="ADD_REMOVE_ITEMS"/>
+        <member type="bool" name="add"/>
+        <member type="bool" name="stopOnFailure"/>
+        <member type="map" name="items">
+            <key type="u32"/>   <!-- Item Type -->
+            <value type="u16"/> <!-- Quantity -->
+        </member>
+    </object>
+</objgen>

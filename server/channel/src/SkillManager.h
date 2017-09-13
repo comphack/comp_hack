@@ -33,6 +33,7 @@
 namespace objects
 {
 class ActivatedAbility;
+class Enemy;
 class ItemDrop;
 class MiSkillData;
 class Spawn;
@@ -155,6 +156,15 @@ private:
     void HandleKills(const std::shared_ptr<ActiveEntityState> source,
         const std::shared_ptr<Zone>& zone,
         const std::set<std::shared_ptr<ActiveEntityState>> killed);
+
+    /**
+     * Distribute all XP from a defeated enemy to each player that caused damage
+     * to it, adjusting for active party members and players still in the zone.
+     * @param enemy Pointer to the enemy that was killed
+     * @param zone Pointer ot the zone where the enemy was killed
+     */
+    void HandleKillXP(const std::shared_ptr<objects::Enemy>& enemy,
+        const std::shared_ptr<Zone>& zone);
 
     /**
      * Handle the outcome of a negotation ending from a skill's execution

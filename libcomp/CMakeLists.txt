@@ -215,7 +215,9 @@ SET(${PROJECT_NAME}_SCHEMA
     schema/account.xml
     schema/accountlogin.xml
     schema/action.xml
+    schema/action_addremoveitems.xml
     schema/action_createloot.xml
+    schema/action_grantxp.xml
     schema/action_setnpcstate.xml
     schema/action_spawn.xml
     schema/action_startevent.xml
@@ -306,8 +308,12 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     AccountWorldData.cpp
     Action.h
     Action.cpp
+    ActionAddRemoveItems.h
+    ActionAddRemoveItems.cpp
     ActionCreateLoot.h
     ActionCreateLoot.cpp
+    ActionGrantXP.h
+    ActionGrantXP.cpp
     ActionSetNPCState.h
     ActionSetNPCState.cpp
     ActionSpawn.h

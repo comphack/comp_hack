@@ -55,12 +55,17 @@ bool Parsers::Move::Parse(libcomp::ManagerPacket *pPacketManager,
 
     int32_t entityID = p.ReadS32Little();
 
-    auto eState = state->GetEntityState(entityID);
+    auto eState = state->GetEntityState(entityID, false);
     if(nullptr == eState)
     {
         LOG_ERROR(libcomp::String("Invalid entity ID received from a move request: %1\n")
             .Arg(entityID));
         return false;
+    }
+    else if(!eState->Ready())
+    {
+        // Nothing to do, the entity is not currently active
+        return true;
     }
 
     float destX = p.ReadFloat();

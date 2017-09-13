@@ -10,6 +10,7 @@
         <member type="list" name="Gifts">
             <element type="ItemDrop*"/>
         </member>
+        <member type="s64" name="XP" default="-1"/>
     </object>
     <object name="ItemDrop" persistent="false">
         <member type="u32" name="ItemType"/>

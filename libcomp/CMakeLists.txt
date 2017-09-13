@@ -94,6 +94,7 @@ SET(${PROJECT_NAME}_SRCS
     src/TcpConnection.cpp
     src/TcpServer.cpp
     #src/ThreadManager.cpp
+    src/WindowsService.cpp
     src/Worker.cpp
 )
 
@@ -189,6 +190,7 @@ SET(${PROJECT_NAME}_HDRS
     src/TcpConnection.h
     src/TcpServer.h
     #src/ThreadManager.h
+    src/WindowsService.h
     src/Worker.h
 
     # These were generated and are not worth reading.

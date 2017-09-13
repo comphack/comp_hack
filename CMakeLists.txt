@@ -39,6 +39,72 @@ SET(CMAKE_MODULE_PATH
     ${CMAKE_SOURCE_DIR}/coveralls-cmake/cmake
 )
 
+IF(WIN32)
+    SET(COMP_INSTALL_DIR "/")
+    SET(CPACK_GENERATOR "ZIP;WIX")
+
+    #SET(CPACK_WIX_ROOT "C:\\Program Files (x86)\\WiX Toolset v3.11")
+    SET(CPACK_WIX_UPGRADE_GUID "A253D8BE-ED6C-43EF-A1C5-F378F269C9E4")
+    SET(CPACK_WIX_PRODUCT_ICON "${CMAKE_SOURCE_DIR}/tools/bdpatch/res/bdpatch.ico")
+    SET(CPACK_WIX_PROGRAM_MENU_FOLDER "COMP_hack")
+    SET(CPACK_WIX_PROPERTY_ARPHELPLINK "https://github.com/comphack/comp_hack")
+    SET(CPACK_WIX_PATCH_FILE "${CMAKE_SOURCE_DIR}/contrib/services.wxs")
+    SET(CPACK_PACKAGE_INSTALL_DIRECTORY "COMP_hack")
+    SET(CPACK_PACKAGE_NAME "COMP_hack Server (Pixie RC1)")
+    SET(CPACK_PACKAGE_VENDOR "COMP_hack Team")
+    SET(CPACK_PACKAGE_CONTACT "compomega@tutanota.com")
+    SET(CPACK_PACKAGE_FILE_NAME "comp_hack-0.9-pixie-rc1")
+    SET(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_SOURCE_DIR}/LICENSE.txt")
+    SET(CPACK_PACKAGE_VERSION_MAJOR 0)
+    SET(CPACK_PACKAGE_VERSION_MINOR 9)
+    SET(CPACK_PACKAGE_VERSION_PATCH 0)
+    SET(CPACK_PACKAGE_EXECUTABLES "comp_capgrep;Capture Analysis;logger;Capture Logger;map;Enemy Mapping")
+
+    SET(CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS_SKIP TRUE)
+
+    INCLUDE(InstallRequiredSystemLibraries)
+
+    INSTALL(
+        PROGRAMS ${CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS}
+        DESTINATION /
+    )
+
+    FIND_PACKAGE(Qt5Widgets REQUIRED)
+
+    IF(Qt5Widgets_FOUND AND WIN32 AND TARGET Qt5::qmake AND NOT TARGET Qt5::windeployqt)
+        GET_TARGET_PROPERTY(_qt5_qmake_location Qt5::qmake IMPORTED_LOCATION)
+
+        EXECUTE_PROCESS(
+            COMMAND "${_qt5_qmake_location}" -query QT_INSTALL_PREFIX
+            RESULT_VARIABLE return_code
+            OUTPUT_VARIABLE qt5_install_prefix
+            OUTPUT_STRIP_TRAILING_WHITESPACE)
+
+        SET(imported_location "${qt5_install_prefix}/bin/windeployqt.exe")
+
+        IF(EXISTS ${imported_location})
+            ADD_EXECUTABLE(Qt5::windeployqt IMPORTED)
+
+            SET_TARGET_PROPERTIES(Qt5::windeployqt PROPERTIES
+                IMPORTED_LOCATION ${imported_location})
+        ENDIF()
+    ENDIF()
+
+    INSTALL(FILES
+        "${CMAKE_SOURCE_DIR}/contrib/winconfig/lobby.xml"
+        "${CMAKE_SOURCE_DIR}/contrib/winconfig/channel.xml"
+        "${CMAKE_SOURCE_DIR}/contrib/winconfig/world.xml"
+        "${CMAKE_SOURCE_DIR}/contrib/winconfig/setup.xml"
+        "${CMAKE_SOURCE_DIR}/contrib/testing/constants.xml"
+        DESTINATION config)
+ELSE()
+    SET(COMP_INSTALL_DIR "bin")
+    SET(CPACK_GENERATOR "TGZ;TBZ2;DEB")
+ENDIF()
+
+# Enable the CPack module for building installers.
+INCLUDE(CPack)
+
 # Utilities to add and remove compiler flags.
 INCLUDE(${COMP_MODULE_PATH}/flags.cmake)
 
@@ -47,6 +113,12 @@ INCLUDE(${COMP_MODULE_PATH}/msvc.cmake)
 
 # Option for the static runtime on Windows.
 OPTION(USE_STATIC_RUNTIME "Use the static MSVC runtime." OFF)
+
+IF(WIN32)
+    OPTION(GENERATE_DOCUMENTATION "Generate documentation for the project." OFF)
+ELSE()
+    OPTION(GENERATE_DOCUMENTATION "Generate documentation for the project." ON)
+ENDIF()
 
 # Make sure MSVC uses the right runtime.
 IF(USE_STATIC_RUNTIME)
@@ -214,6 +286,24 @@ MACRO(COVERALLS_SOURCES)
     ENDFOREACH()
 ENDMACRO()
 
+MACRO(ADD_QT_DEPS target)
+    # See: https://stackoverflow.com/questions/41193584/deploy-all-qt-dependencies-when-building
+    IF(TARGET Qt5::windeployqt)
+        ADD_CUSTOM_COMMAND(TARGET ${target}
+            POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E remove_directory "${CMAKE_CURRENT_BINARY_DIR}/windeployqt"
+            COMMAND set PATH=%PATH%$<SEMICOLON>${qt5_install_prefix}/bin
+            COMMAND Qt5::windeployqt --dir "${CMAKE_CURRENT_BINARY_DIR}/windeployqt" "$<TARGET_FILE_DIR:${target}>/$<TARGET_FILE_NAME:${target}>"
+        )
+
+        INSTALL(
+            DIRECTORY
+            "${CMAKE_CURRENT_BINARY_DIR}/windeployqt/"
+            DESTINATION /
+        )
+    ENDIF()
+ENDMACRO()
+
 # This macro will create a target to generate the documentation using the
 # specified Doxyfile.in file.
 MACRO(GENERATE_DOCS doxyfile)
@@ -221,7 +311,7 @@ MACRO(GENERATE_DOCS doxyfile)
     FIND_PACKAGE(Doxygen)
 
     # Only do something if we have Doxygen.
-    If(DOXYGEN_FOUND)
+    If(DOXYGEN_FOUND AND GENERATE_DOCUMENTATION)
         # Replace CMake variables in the input Doxyfile.
         CONFIGURE_FILE(${doxyfile} ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile @ONLY)
 
@@ -244,7 +334,7 @@ MACRO(GENERATE_DOCS doxyfile)
         GET_PROPERTY(targets GLOBAL PROPERTY DOC_TARGETS)
         SET_PROPERTY(GLOBAL PROPERTY DOC_TARGETS
             doc-${PROJECT_NAME} ${targets})
-    ENDIF(DOXYGEN_FOUND)
+    ENDIF(DOXYGEN_FOUND AND GENERATE_DOCUMENTATION)
 ENDMACRO(GENERATE_DOCS doxyfile)
 
 # When building Windows executables, this macro packs the executable. This

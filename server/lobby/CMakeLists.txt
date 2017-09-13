@@ -99,7 +99,7 @@ SET(${PROJECT_NAME}_PACKETS
     src/packets/game/DeleteCharacter.cpp     # 0x000F
     src/packets/game/QueryPurchaseTicket.cpp # 0x0011
     src/packets/game/PurchaseTicket.cpp      # 0x0013
-    
+
     #Internal packets
     src/packets/internal/SetWorldInfo.cpp      # 0x1002
     src/packets/internal/SetChannelInfo.cpp    # 0x1003
@@ -145,7 +145,7 @@ TARGET_LINK_LIBRARIES(${PROJECT_NAME} ${CMAKE_THREAD_LIBS_INIT} comp tinyxml2
 
 UPX_WRAP(${PROJECT_NAME})
 
-INSTALL(TARGETS ${PROJECT_NAME} DESTINATION bin)
+INSTALL(TARGETS ${PROJECT_NAME} DESTINATION ${COMP_INSTALL_DIR})
 
 RSPEC_TESTS(
     LobbyAPI

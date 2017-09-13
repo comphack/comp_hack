@@ -29,6 +29,7 @@
 #include "Constants.h"
 #include "Log.h"
 #include "TcpConnection.h"
+#include "WindowsService.h"
 
 using namespace libcomp;
 
@@ -128,6 +129,10 @@ int TcpServer::Run()
 void TcpServer::ServerReady()
 {
     LOG_INFO("Server ready!\n");
+
+#ifdef _WIN32
+    gService.Started();
+#endif // _WIN32
 }
 
 std::shared_ptr<TcpConnection> TcpServer::CreateConnection(

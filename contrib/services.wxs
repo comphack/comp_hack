@@ -1,0 +1,45 @@
+<CPackWiXPatch>
+    <CPackWiXFragment Id="CM_CP_comp_lobby.exe">
+        <ServiceInstall
+            Id="comp_lobby"
+            Type="ownProcess"
+            Name="comp_lobby"
+            DisplayName="COMP_hack Lobby Server"
+            Description="Lobby server (must be started first)"
+            Start="auto"
+            Account="[SERVICEACCOUNT]"
+            Password="[SERVICEPASSWORD]"
+            ErrorControl="normal">
+             <ServiceDependency Id="LmHosts"/>
+        </ServiceInstall>
+    </CPackWiXFragment>
+    <CPackWiXFragment Id="CM_CP_comp_world.exe">
+        <ServiceInstall
+            Id="comp_world"
+            Type="ownProcess"
+            Name="comp_world"
+            DisplayName="COMP_hack World Server"
+            Description="World server (must be started second)"
+            Start="auto"
+            Account="[SERVICEACCOUNT]"
+            Password="[SERVICEPASSWORD]"
+            ErrorControl="normal">
+             <ServiceDependency Id="comp_lobby"/>
+        </ServiceInstall>
+    </CPackWiXFragment>
+    <CPackWiXFragment Id="CM_CP_comp_channel.exe">
+        <ServiceInstall
+            Id="comp_channel"
+            Type="ownProcess"
+            Name="comp_channel"
+            DisplayName="COMP_hack Channel Server"
+            Description="Channel server (must be started last)"
+            Start="auto"
+            Account="[SERVICEACCOUNT]"
+            Password="[SERVICEPASSWORD]"
+            ErrorControl="normal">
+             <ServiceDependency Id="comp_world"/>
+        </ServiceInstall>
+        <!-- <ServiceControl Id="comp_channel" Start="install" Stop="both" Remove="uninstall" Name="comp_channel" Wait="yes"/> -->
+    </CPackWiXFragment>
+</CPackWiXPatch>

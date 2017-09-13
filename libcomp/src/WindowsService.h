@@ -1,14 +1,14 @@
 /**
- * @file libcomp/src/Shutdown.h
+ * @file libcomp/src/WindowsService.h
  * @ingroup libcomp
  *
  * @author COMP Omega <compomega@tutanota.com>
  *
- * @brief Shutdown signal handler.
+ * @brief Class to expose the server as a Windows service.
  *
  * This file is part of the COMP_hack Library (libcomp).
  *
- * Copyright (C) 2012-2016 COMP_hack Team <compomega@tutanota.com>
+ * Copyright (C) 2012-2017 COMP_hack Team <compomega@tutanota.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as
@@ -24,34 +24,37 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef LIBCOMP_SRC_SHUTDOWN_H
-#define LIBCOMP_SRC_SHUTDOWN_H
+#ifndef LIBCOMP_SRC_WINDOWSSERVICE_H
+#define LIBCOMP_SRC_WINDOWSSERVICE_H
 
-void ShutdownSignalHandler(int sig);
+#if defined(_WIN32)
+
+// Windows Includes
+#include <windows.h>
 
 namespace libcomp
 {
 
-class BaseServer;
+extern char *SERVICE_NAME;
 
-namespace Shutdown
+class WindowsService
 {
+public:
+    WindowsService();
 
-/**
- * Configure a server at runtime to to handle any type of termination
- * that should result in executing the @ref BaseServer::Shutdown.
- * @param pServer The server to handle messages for
- */
-void Configure(libcomp::BaseServer *pServer);
+    int Run(int argc, const char *argv[]);
+    void HandleCtrlCode(DWORD CtrlCode);
+    void Started();
 
-/**
- * Clean up the server reference and delete any threads used to handle
- * program termination.
- */
-void Complete();
+private:
+    SERVICE_STATUS mStatus = {0};
+    SERVICE_STATUS_HANDLE mStatusHandle;
+};
 
-} // namespace Shutdown
+extern WindowsService gService;
 
 } // namespace libcomp
 
-#endif // LIBCOMP_SRC_SHUTDOWN_H
+#endif // defined(_WIN32)
+
+#endif // LIBCOMP_SRC_WINDOWSSERVICE_H

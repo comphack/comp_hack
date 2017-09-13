@@ -38,7 +38,7 @@ static libcomp::BaseServer *gServer = nullptr;
 
 static std::list<std::thread*> gShutdownThreads;
 
-static void ShutdownSignalHandler(int sig)
+void ShutdownSignalHandler(int sig)
 {
     (void)sig;
 

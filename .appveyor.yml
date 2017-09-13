@@ -29,14 +29,14 @@ build_script:
   - cmake -DCMAKE_INSTALL_PREFIX="%appveyor_build_folder%\build\install" -DCMAKE_CONFIGURATION_TYPES="%configuration%" -G"%generator%" ..
 #  - msbuild comp_hack.sln /property:Configuration="%configuration%" /property:Platform="%msplatform%"
   - cmake --build . --target package
-  - mkdir comp_hack-pixie-%appveyor_build_number%
-  - move bin\%configuration%\*.exe comp_hack-pixie-%appveyor_build_number%\
-  - move bin\%configuration%\*.pdb comp_hack-pixie-%appveyor_build_number%\
-  - set PATH=%PATH%;%CMAKE_PREFIX_PATH%\bin
-  - windeployqt comp_hack-pixie-%appveyor_build_number%\comp_updater.exe
-  - windeployqt comp_hack-pixie-%appveyor_build_number%\comp_capgrep.exe
-  - windeployqt comp_hack-pixie-%appveyor_build_number%\comp_logger.exe
-  - 7z a comp_hack-pixie-%appveyor_build_number%.zip comp_hack-pixie-%appveyor_build_number%
+#  - mkdir comp_hack-pixie-%appveyor_build_number%
+#  - move bin\%configuration%\*.exe comp_hack-pixie-%appveyor_build_number%\
+#  - move bin\%configuration%\*.pdb comp_hack-pixie-%appveyor_build_number%\
+#  - set PATH=%PATH%;%CMAKE_PREFIX_PATH%\bin
+#  - windeployqt comp_hack-pixie-%appveyor_build_number%\comp_updater.exe
+#  - windeployqt comp_hack-pixie-%appveyor_build_number%\comp_capgrep.exe
+#  - windeployqt comp_hack-pixie-%appveyor_build_number%\comp_logger.exe
+#  - 7z a comp_hack-pixie-%appveyor_build_number%.zip comp_hack-pixie-%appveyor_build_number%
 
 artifacts:
   - path: build\comp_hack-*.msi
@@ -54,6 +54,7 @@ deploy:
   on:
     branch: develop
     platform: x86
-    configuration: RelWithDebInfo
+#    configuration: RelWithDebInfo
+    configuration: Release
 
 skip_tags: true

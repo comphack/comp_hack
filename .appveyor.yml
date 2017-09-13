@@ -27,7 +27,7 @@ before_build:
 
 build_script:
   - cmake -DCMAKE_INSTALL_PREFIX="%appveyor_build_folder%\build\install" -DCMAKE_CONFIGURATION_TYPES="%configuration%" -G"%generator%" ..
-  - msbuild comp_hack.sln /property:Configuration="%configuration%" /property:Platform="%msplatform%"
+#  - msbuild comp_hack.sln /property:Configuration="%configuration%" /property:Platform="%msplatform%"
   - cmake --build . --target package
   - mkdir comp_hack-pixie-%appveyor_build_number%
   - move bin\%configuration%\*.exe comp_hack-pixie-%appveyor_build_number%\

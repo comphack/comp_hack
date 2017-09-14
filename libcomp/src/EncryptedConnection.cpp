@@ -830,6 +830,11 @@ std::list<ReadOnlyPacket> EncryptedConnection::GetCombinedPackets()
                 packets.push_back(mOutgoingPackets.front());
                 mOutgoingPackets.pop_front();
             }
+            else
+            {
+                // Stop parsing new packets.
+                break;
+            }
         }
 
         mSendingPacket = !packets.empty();

@@ -48,7 +48,7 @@ deploy:
   provider: GitHub
   auth_token:
     secure: /xJRd5oxBbWa7IDdzPFbollIUAc7uqashBu8crIATrv4iUJX//DvzrGSFCaDdFsj
-  artifact: /build\\comp_hack-.*\.msi/
+  artifact: build\comp_hack-0.8.9-pixie-beta.msi
   draft: false
   prerelease: true
   on:

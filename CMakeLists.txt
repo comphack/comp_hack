@@ -130,6 +130,14 @@ ELSE()
     MSVC_RUNTIME(DYNAMIC)
 ENDIF()
 
+IF(WIN32)
+    OPTION(WINDOWS_SERVICE "Build the servers as a Windows service." OFF)
+
+    IF(WINDOWS_SERVICE)
+        ADD_DEFINITIONS(-DWIN32_SERV=1)
+    ENDIF()
+ENDIF()
+
 # http://stackoverflow.com/questions/14933172/
 IF("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
     # Require at least GCC 4.9.

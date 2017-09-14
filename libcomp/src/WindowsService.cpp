@@ -26,7 +26,7 @@
 
 #include "WindowsService.h"
 
-#if defined(_WIN32)
+#if defined(_WIN32) && defined(WIN32_SERV)
 
 // libcomp Includes
 #include "Shutdown.h"
@@ -182,4 +182,4 @@ int main(int argc, const char *argv[])
     return 0;
 }
 
-#endif // defined(_WIN32)
+#endif // defined(_WIN32) && defined(WIN32_SERV)

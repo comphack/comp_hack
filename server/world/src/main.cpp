@@ -35,11 +35,11 @@
 #include <ServerCommandLineParser.h>
 #include <Shutdown.h>
 
-#ifdef _WIN32
+#if defined(_WIN32) && defined(WIN32_SERV)
 int ApplicationMain(int argc, const char *argv[])
 #else
 int main(int argc, const char *argv[])
-#endif // _WIN32
+#endif // defined(_WIN32) && defined(WIN32_SERV)
 {
     libcomp::Exception::RegisterSignalHandler();
 

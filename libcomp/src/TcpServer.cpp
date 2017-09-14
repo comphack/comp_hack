@@ -130,9 +130,9 @@ void TcpServer::ServerReady()
 {
     LOG_INFO("Server ready!\n");
 
-#ifdef _WIN32
+#if defined(_WIN32) && defined(WIN32_SERV)
     gService.Started();
-#endif // _WIN32
+#endif // defined(_WIN32) && defined(WIN32_SERV)
 }
 
 std::shared_ptr<TcpConnection> TcpServer::CreateConnection(

@@ -27,7 +27,7 @@
 #ifndef LIBCOMP_SRC_WINDOWSSERVICE_H
 #define LIBCOMP_SRC_WINDOWSSERVICE_H
 
-#if defined(_WIN32)
+#if defined(_WIN32) && defined(WIN32_SERV)
 
 // Windows Includes
 #include <windows.h>
@@ -55,6 +55,6 @@ extern WindowsService gService;
 
 } // namespace libcomp
 
-#endif // defined(_WIN32)
+#endif // defined(_WIN32) && defined(WIN32_SERV)
 
 #endif // LIBCOMP_SRC_WINDOWSSERVICE_H

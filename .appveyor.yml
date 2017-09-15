@@ -28,7 +28,7 @@ before_build:
 build_script:
   - cmake -DWINDOWS_SERVICE=ON -DCMAKE_INSTALL_PREFIX="%appveyor_build_folder%\build\install" -DCMAKE_CUSTOM_CONFIGURATION_TYPES="%configuration%" -DCMAKE_BUILD_TYPE="%configuration%" -G"%generator%" ..
 #  - msbuild comp_hack.sln /property:Configuration="%configuration%" /property:Platform="%msplatform%"
-  - cmake --build . --target package
+  - cmake --build . --config %configuration% --target package
 #  - mkdir comp_hack-pixie-%appveyor_build_number%
 #  - move bin\%configuration%\*.exe comp_hack-pixie-%appveyor_build_number%\
 #  - move bin\%configuration%\*.pdb comp_hack-pixie-%appveyor_build_number%\

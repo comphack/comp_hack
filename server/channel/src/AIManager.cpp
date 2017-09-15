@@ -391,7 +391,7 @@ bool AIManager::UpdateState(const std::shared_ptr<ActiveEntityState>& eState,
             break;
         case AICommandType_t::USE_SKILL:
             {
-                // If hit strunned
+                // Do nothing if hit stunned
                 if(eState->GetStatusTimes(STATUS_HIT_STUN) ||
                     eState->GetStatusTimes(STATUS_KNOCKBACK))
                 {
@@ -403,27 +403,47 @@ bool AIManager::UpdateState(const std::shared_ptr<ActiveEntityState>& eState,
                 auto server = mServer.lock();
                 auto skillManager = server->GetSkillManager();
 
+                bool valid = true;
+
                 auto activated = cmdSkill->GetActivatedAbility();
-                if(activated)
+                if(cmdSkill->GetTargetObjectID() > 0)
                 {
-                    // Execute the skill
-                    if(skillManager->ExecuteSkill(eState, activated->GetActivationID(),
-                        activated->GetTargetObjectID(), true))
+                    auto targetEntity = eState->GetZone()->GetActiveEntity(
+                        (int32_t)cmdSkill->GetTargetObjectID());
+                    if(!targetEntity || !targetEntity->IsAlive())
                     {
-                        // Queue a wait command
-                        QueueWaitCommand(aiState, 5);
+                        // Target invalid or dead, cancel the skill and move on
+                        if(activated)
+                        {
+                            skillManager->CancelSkill(eState, activated->GetActivationID());
+                        }
+                        valid = false;
+                    }
+                }
+
+                if(valid)
+                {
+                    if(activated)
+                    {
+                        // Execute the skill
+                        if(skillManager->ExecuteSkill(eState, activated->GetActivationID(),
+                            activated->GetTargetObjectID(), true))
+                        {
+                            // Queue a wait command
+                            QueueWaitCommand(aiState, 5);
+                        }
+                        else
+                        {
+                            /// @todo: if charged and the target has run away, pursue or cancel
+                            skillManager->CancelSkill(eState, activated->GetActivationID());
+                        }
                     }
                     else
                     {
-                        /// @todo: if charged and the target has run away, pursue or cancel
-                        skillManager->CancelSkill(eState, activated->GetActivationID());
+                        // Activate the skill
+                        skillManager->ActivateSkill(eState, cmdSkill->GetSkillID(),
+                            cmdSkill->GetTargetObjectID(), true);
                     }
-                }
-                else
-                {
-                    // Activate the skill
-                    skillManager->ActivateSkill(eState, cmdSkill->GetSkillID(),
-                        cmdSkill->GetTargetObjectID(), true);
                 }
 
                 aiState->PopCommand();
@@ -507,15 +527,18 @@ bool AIManager::UpdateEnemyState(const std::shared_ptr<EnemyState>& eState, uint
             int32_t targetEntityID = aiState->GetTarget();
             auto target = targetEntityID > 0
                 ? zone->GetActiveEntity(targetEntityID) : nullptr;
-            if(!target)
+            if(!target || !target->IsAlive() || !target->Ready())
             {
+                target = nullptr;
+
                 /// @todo: add better target selection logic
                 auto opponentIDs = eState->GetOpponentIDs();
                 auto inRange = zone->GetActiveEntitiesInRadius(
                     eState->GetCurrentX(), eState->GetCurrentY(), 3000.0);
                 for(auto entity : inRange)
                 {
-                    if(opponentIDs.find(entity->GetEntityID()) != opponentIDs.end())
+                    if(opponentIDs.find(entity->GetEntityID()) != opponentIDs.end()
+                        && entity->IsAlive() && entity->Ready())
                     {
                         target = entity;
                         targetEntityID = entity->GetEntityID();
@@ -526,9 +549,9 @@ bool AIManager::UpdateEnemyState(const std::shared_ptr<EnemyState>& eState, uint
 
                 if(!target)
                 {
-                    // No target could be found, return to default status
-                    // and quit
-                    aiState->SetStatus(aiState->GetDefaultStatus());
+                    // No target could be found, stop combat
+                    mServer.lock()->GetCharacterManager()->AddRemoveOpponent(false,
+                        eState, nullptr);
                     return false;
                 }
             }

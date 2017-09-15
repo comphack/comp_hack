@@ -292,6 +292,8 @@ bool ChannelServer::Initialize()
         to_underlying(ClientToChannelPacketCode_t::PACKET_SYNC_CHARACTER));
     clientPacketManager->AddParser<Parsers::MapFlag>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_MAP_FLAG));
+    clientPacketManager->AddParser<Parsers::Analyze>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_ANALYZE_DEMON));
     clientPacketManager->AddParser<Parsers::DemonCompendium>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_DEMON_COMPENDIUM));
     clientPacketManager->AddParser<Parsers::DungeonRecords>(

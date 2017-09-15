@@ -6,7 +6,7 @@
         <member type="bool" name="stopOnFailure"/>
         <member type="map" name="items">
             <key type="u32"/>   <!-- Item Type -->
-            <value type="u16"/> <!-- Quantity -->
+            <value type="u32"/> <!-- Quantity -->
         </member>
     </object>
 </objgen>

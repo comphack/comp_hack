@@ -546,7 +546,16 @@ bool ChatManager::GMCommand_ExpertiseUpdate(const std::shared_ptr<
         return false;
     }
 
-    server->GetCharacterManager()->UpdateExpertise(client, skillID);
+    float multiplier = 1.0f;
+    GetDecimalArg<float>(multiplier, argsCopy);
+    if(multiplier <= 0.f)
+    {
+        // Don't bother with an error, just reset
+        multiplier = 1.0f;
+    }
+
+    server->GetCharacterManager()->UpdateExpertise(client, skillID,
+        multiplier);
 
     return true;
 }
@@ -621,14 +630,14 @@ bool ChatManager::GMCommand_Item(const std::shared_ptr<
         }
     }
 
-    uint16_t stackSize;
+    uint32_t stackSize;
 
-    if(!GetIntegerArg<uint16_t>(stackSize, argsCopy))
+    if(!GetIntegerArg<uint32_t>(stackSize, argsCopy))
     {
         stackSize = 1;
     }
 
-    std::unordered_map<uint32_t, uint16_t> itemMap;
+    std::unordered_map<uint32_t, uint32_t> itemMap;
     itemMap[itemID] = stackSize;
 
     return server->GetCharacterManager()

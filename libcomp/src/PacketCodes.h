@@ -161,6 +161,7 @@ enum class ClientToChannelPacketCode_t : uint16_t
     PACKET_SYNC_CHARACTER = 0x017E,  //!< Request to sync the player character's basic information.
     PACKET_PARTNER_DEMON_AI_SET = 0x0181,  //!< Request to update the current partner demon's AI attack settings.
     PACKET_MAP_FLAG = 0x0197,  //!< Request to receive map information.
+    PACKET_ANALYZE_DEMON = 0x0199,  //!< Request to analyze another player's partner demon.
     PACKET_DEMON_COMPENDIUM = 0x019B,  //!< Request for the Demon Compendium.
     PACKET_DUNGEON_RECORDS = 0x01C4,  //!< Request for the current player's dungeon challenge records.
     PACKET_CLAN_EMBLEM_UPDATE = 0x01E1, //!< Request to update the player character's clan's emblem.
@@ -215,11 +216,11 @@ enum class ChannelToClientPacketCode_t : uint16_t
     PACKET_ZONE_CHANGE = 0x0023,  //!< Information about a character's zone.
     PACKET_SYNC_TIME = 0x0025,  //!< Message containing the current server time.
     PACKET_CHAT = 0x0028, //!< Response from chat request.
-    PACKET_SKILL_CHARGING = 0x0033, //!< Response from skill activation request to charge a skill.
-    PACKET_SKILL_COMPLETED = 0x0034, //!< Response from skill activation request to complete a skill.
-    PACKET_SKILL_EXECUTING = 0x0036, //!< Response from skill activation request to execute a skill.
-    PACKET_SKILL_FAILED = 0x0037,  //!< Response from skill activation request that execution has failed.
-    PACKET_SKILL_REPORTS = 0x0038,  //!< Response from skill activation reporting what has been updated.
+    PACKET_SKILL_ACTIVATED = 0x0033, //!< Notification that a skill has been activated.
+    PACKET_SKILL_COMPLETED = 0x0034, //!< Notification that a skill has completed execution.
+    PACKET_SKILL_EXECUTED = 0x0036, //!< Notification that a skill has executed once.
+    PACKET_SKILL_FAILED = 0x0037,  //!< Notification that a skill's execution has failed.
+    PACKET_SKILL_REPORTS = 0x0038,  //!< Message with information about entities affected by a skill's execution.
     PACKET_SKILL_SWITCH = 0x0039,   //!< Notification that a switch skill has been enabled or disabled.
     PACKET_BATTLE_STARTED = 0x003B, //!< Notifies the client that an entity has entered into a battle.
     PACKET_BATTLE_STOPPED = 0x003C, //!< Notifies the client that an entity is no longer in battle.
@@ -350,6 +351,7 @@ enum class ChannelToClientPacketCode_t : uint16_t
     PACKET_STATUS_ICON = 0x0195,  //!< Message containing the icon to show for the client's character.
     PACKET_STATUS_ICON_OTHER = 0x0196,  //!< Message containing the icon to show for another player's character.
     PACKET_MAP_FLAG = 0x0198,  //!< Message containing map information.
+    PACKET_ANALYZE_DEMON = 0x019A,  //!< Response to the request to analyze another player's partner demon.
     PACKET_DEMON_COMPENDIUM = 0x019C,  //!< Response containing the Demon Compendium.
     PACKET_DEMON_FAMILIARITY_UPDATE = 0x01A5,  //!< Notification that the current partner demon's familiarity has updated.
     PACKET_DUNGEON_CHALLENGES = 0x01C5,  //!< Response containing the current player's dungeon challenge records.

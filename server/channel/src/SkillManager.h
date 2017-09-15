@@ -372,12 +372,13 @@ private:
         const std::shared_ptr<ChannelClientConnection>& client);
 
     /**
-     * Notify the client that a skill needs to charge.  The client will notify
-     * the server when the specified charge time has elapsed for execution.
+     * Notify the client that a skill has been activated.  The client will notify
+     * the server when the specified charge time has elapsed for execution if
+     * applicable.
      * @param activated Pointer to the activated ability instance
      * @param skillData Pointer to the skill data
      */
-    void SendChargeSkill(std::shared_ptr<objects::ActivatedAbility> activated,
+    void SendActivateSkill(std::shared_ptr<objects::ActivatedAbility> activated,
         std::shared_ptr<objects::MiSkillData> skillData);
 
     /**
@@ -391,10 +392,12 @@ private:
     /**
      * Notify the client that a skill is complete.
      * @param activated Pointer to the activated ability instance
-     * @param cancelled true if the skill was cancelled
+     * @param mode Preset complete mode
+     *  0) Completed normally
+     *  1) Cancelled
      */
     void SendCompleteSkill(std::shared_ptr<objects::ActivatedAbility> activated,
-        bool cancelled);
+        uint8_t mode);
 
     /// Pointer to the channel server
     std::weak_ptr<ChannelServer> mServer;

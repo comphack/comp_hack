@@ -133,7 +133,7 @@ bool Parsers::ReviveCharacter::Parse(libcomp::ManagerPacket *pPacketManager,
         break;
     case 107:   // Item revival
         {
-            std::unordered_map<uint32_t, uint16_t> itemMap;
+            std::unordered_map<uint32_t, uint32_t> itemMap;
             itemMap[SVR_CONST.ITEM_BALM_OF_LIFE] = 1;
 
             if(characterManager->AddRemoveItems(client, itemMap, false))
@@ -196,8 +196,15 @@ bool Parsers::ReviveCharacter::Parse(libcomp::ManagerPacket *pPacketManager,
 
     if(newZoneID)
     {
-        reply.Clear();
         zoneManager->EnterZone(client, newZoneID, newX, newY, newRot, true);
+
+        // Send the revival info to players in the new zone
+        reply.Clear();
+        characterManager->GetEntityRevivalPacket(reply, cState, responseType1);
+        zoneManager->BroadcastPacket(client, reply, false);
+
+        // Complete the revival
+        reply.Clear();
         characterManager->GetEntityRevivalPacket(reply, cState, responseType2);
         zoneManager->BroadcastPacket(client, reply);
     }

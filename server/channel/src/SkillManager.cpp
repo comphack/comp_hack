@@ -207,7 +207,7 @@ bool SkillManager::ActivateSkill(const std::shared_ptr<ActiveEntityState> source
 
     source->SetActivatedAbility(activated);
 
-    SendChargeSkill(activated, def);
+    SendActivateSkill(activated, def);
 
     uint8_t activationType = def->GetBasic()->GetActivationType();
     bool executeNow = (activationType == 3 || activationType == 4)
@@ -421,13 +421,13 @@ bool SkillManager::ExecuteSkill(std::shared_ptr<ActiveEntityState> source,
     }
 
     // Check costs and pay costs (skip for switch deactivation)
+    int16_t hpCost = 0, mpCost = 0;
+    uint16_t bulletCost = 0;
+    std::unordered_map<uint32_t, uint32_t> itemCosts;
     if(!freeCast && (skillCategory == 1 || (skillCategory == 2 &&
         !source->ActiveSwitchSkillsContains(skillID))))
     {
-        int16_t hpCost = 0, mpCost = 0;
         uint16_t hpCostPercent = 0, mpCostPercent = 0;
-        uint16_t bulletCost = 0;
-        std::unordered_map<uint32_t, uint16_t> itemCosts;
         if(functionID == SVR_CONST.SKILL_SUMMON_DEMON)
         {
             if(client)
@@ -461,7 +461,7 @@ bool SkillManager::ExecuteSkill(std::shared_ptr<ActiveEntityState> source,
 
                 double mag = (magAdjust * lncAdjust / 18000000.0) + (magAdjust * 0.25);
 
-                itemCosts[SVR_CONST.ITEM_MAGNETITE] = (uint16_t)round(mag);
+                itemCosts[SVR_CONST.ITEM_MAGNETITE] = (uint32_t)round(mag);
             }
         }
         else
@@ -506,7 +506,7 @@ bool SkillManager::ExecuteSkill(std::shared_ptr<ActiveEntityState> source,
                         {
                             itemCosts[itemID] = 0;
                         }
-                        itemCosts[itemID] = (uint16_t)(itemCosts[itemID] + num);
+                        itemCosts[itemID] = (uint32_t)(itemCosts[itemID] + num);
                     }
                     break;
                 case objects::MiCostTbl::Type_t::BULLET:
@@ -535,12 +535,10 @@ bool SkillManager::ExecuteSkill(std::shared_ptr<ActiveEntityState> source,
 
         auto sourceStats = source->GetCoreStats();
         bool canPay = ((hpCost == 0) || hpCost < sourceStats->GetHP()) &&
-            ((mpCost == 0) || mpCost < sourceStats->GetMP());
+            ((mpCost == 0) || mpCost <= sourceStats->GetMP());
 
         auto characterManager = server->GetCharacterManager();
 
-        int64_t targetItem = 0;
-        std::pair<uint32_t, int64_t> bulletIDs;
         if(itemCosts.size() > 0)
         {
             if(client)
@@ -553,15 +551,10 @@ bool SkillManager::ExecuteSkill(std::shared_ptr<ActiveEntityState> source,
                 {
                     auto existingItems = characterManager->GetExistingItems(character,
                         itemCost.first);
-                    uint16_t itemCount = 0;
+                    uint32_t itemCount = 0;
                     for(auto item : existingItems)
                     {
-                        itemCount = (uint16_t)(itemCount + item->GetStackSize());
-                        if(state->GetObjectID(item->GetUUID()) ==
-                            activated->GetActivationObjectID())
-                        {
-                            targetItem = activated->GetActivationObjectID();
-                        }
+                        itemCount = (uint32_t)(itemCount + item->GetStackSize());
                     }
 
                     if(itemCount < itemCost.second)
@@ -579,11 +572,6 @@ bool SkillManager::ExecuteSkill(std::shared_ptr<ActiveEntityState> source,
                     {
                         canPay = false;
                     }
-                    else
-                    {
-                        bulletIDs = std::pair<uint32_t, int64_t>(bullets->GetType(),
-                            state->GetObjectID(bullets->GetUUID()));
-                    }
                 }
             }
             else
@@ -599,35 +587,10 @@ bool SkillManager::ExecuteSkill(std::shared_ptr<ActiveEntityState> source,
             return false;
         }
 
-        // Pay the costs
-        bool hpMpCost = hpCost > 0 || mpCost > 0;
-        if(hpMpCost)
-        {
-            source->SetHPMP((int16_t)-hpCost, (int16_t)-mpCost, true);
-            activated->SetHPCost(hpCost);
-            activated->SetMPCost(mpCost);
-        }
-
-        if(client)
-        {
-            if(hpMpCost)
-            {
-                std::set<std::shared_ptr<ActiveEntityState>> displayStateModified;
-                displayStateModified.insert(source);
-                characterManager->UpdateWorldDisplayState(displayStateModified);
-            }
-
-            if(bulletCost > 0)
-            {
-                itemCosts[bulletIDs.first] = bulletCost;
-                targetItem = bulletIDs.second;
-            }
-
-            if(itemCosts.size() > 0)
-            {
-                characterManager->AddRemoveItems(client, itemCosts, false, targetItem);
-            }
-        }
+        activated->SetHPCost(hpCost);
+        activated->SetMPCost(mpCost);
+        activated->SetBulletCost(bulletCost);
+        activated->SetItemCosts(itemCosts);
     }
 
     activated->SetExecutionTime(ChannelServer::GetServerTime());
@@ -660,7 +623,7 @@ bool SkillManager::ExecuteSkill(std::shared_ptr<ActiveEntityState> source,
     }
     else
     {
-        SendCompleteSkill(activated, true);
+        SendCompleteSkill(activated, 1);
         source->SetActivatedAbility(nullptr);
     }
 
@@ -679,7 +642,7 @@ bool SkillManager::CancelSkill(const std::shared_ptr<ActiveEntityState> source,
     }
     else
     {
-        SendCompleteSkill(activated, true);
+        SendCompleteSkill(activated, 1);
         source->SetActivatedAbility(nullptr);
         return true;
     }
@@ -764,11 +727,11 @@ bool SkillManager::ExecuteNormalSkill(const std::shared_ptr<ChannelClientConnect
         // Complete the skill, calculate damage and effects when the projectile hits
         FinalizeSkillExecution(client, activated, skillData);
 
-        /// @todo: figure out activate to projectile spawned delay for more accuracy
         // Projectile speed is measured in how many 10ths of a unit the projectile will
-        // traverse per millisecond
+        // traverse per millisecond (with a half second delay for the default cast to projectile
+        // move speed)
         uint64_t addMicro = (uint64_t)((double)distance / (projectileSpeed * 10)) * 1000000;
-        uint64_t processTime = activated->GetExecutionTime() + addMicro;
+        uint64_t processTime = (activated->GetExecutionTime() + addMicro) + 500000ULL;
 
         server->ScheduleWork(processTime, [](const std::shared_ptr<ChannelServer> pServer,
             const std::shared_ptr<objects::ActivatedAbility> pActivated)
@@ -825,7 +788,7 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
 
             if(skill.EffectiveDependencyType == 4)
             {
-                switch (weaponDef->GetBasic()->GetWeaponType())
+                switch(weaponDef->GetBasic()->GetWeaponType())
                 {
                 case objects::MiItemBasicData::WeaponType_t::LONG_RANGE:
                     skill.EffectiveDependencyType = 1;
@@ -1247,7 +1210,7 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
                 if(addStatus->GetOnKnockback() && !(target.DamageFlags1 & FLAG1_KNOCKBACK)) continue;
 
                 int32_t successRate = (int32_t)addStatus->GetSuccessRate();
-                if(successRate >= 100 || RNG(int32_t, 0, 99) <= successRate)
+                if(successRate >= 100 || RNG(int32_t, 1, 100) <= successRate)
                 {
                     auto statusDef = definitionManager->GetStatusData(
                         addStatus->GetStatusID());
@@ -1312,7 +1275,7 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
             }
 
             /// @todo: properly handle negotiation chances and outcome
-            bool success = RNG(uint16_t, 0, 100) <= 90;
+            bool success = RNG(uint16_t, 1, 100) <= 90;
             int16_t aff = (int16_t)(talkPoints.first +
                 (success ? talkAffSuccess : talkAffFailure));
             int16_t fear = (int16_t)(talkPoints.second +
@@ -1913,7 +1876,7 @@ void SkillManager::HandleKillXP(const std::shared_ptr<objects::Enemy>& enemy,
     auto spawn = enemy->GetSpawnSource();
 
     int64_t totalXP = 0;
-    if(spawn)
+    if(spawn && spawn->GetXP() >= 0)
     {
         totalXP = spawn->GetXP();
     }
@@ -2451,7 +2414,7 @@ bool SkillManager::CalculateDamage(const std::shared_ptr<ActiveEntityState>& sou
                 if(critRate > 0)
                 {
                     /// @todo: implement limit break
-                    if(RNG(int16_t, 0, 100) <= critRate)
+                    if(RNG(int16_t, 1, 100) <= critRate)
                     {
                         critLevel = 1;
                     }
@@ -2699,39 +2662,83 @@ int32_t SkillManager::CalculateDamage_MaxPercent(uint16_t mod, uint8_t& damageTy
 
 bool SkillManager::SetNRA(SkillTargetResult& target, ProcessingSkill& skill)
 {
-    // Calculate affinity checks for both base and effective values if they differ
+    // Calculate affinity checks for physical vs magic and both base and effective
+    // values if they differ
     std::list<CorrectTbl> affinities;
-    if(skill.BaseAffinity != skill.EffectiveAffinity)
+    if(skill.EffectiveAffinity != 11)
     {
-        affinities.push_back((CorrectTbl)(skill.BaseAffinity + NRA_OFFSET));
+        // Gather based on dependency type and base affinity if not almighty
+        switch(skill.EffectiveDependencyType)
+        {
+        case 0:
+        case 1:
+        case 6:
+        case 9:
+        case 10:
+        case 12:
+            affinities.push_back(CorrectTbl::NRA_PHYS);
+            break;
+        case 2:
+        case 7:
+        case 8:
+        case 11:
+            affinities.push_back(CorrectTbl::NRA_MAGIC);
+            break;
+        case 3: // Support needs to be explicitly set
+        case 5:
+        default:
+            break;
+        }
+
+        if(skill.BaseAffinity != skill.EffectiveAffinity)
+        {
+            affinities.push_back((CorrectTbl)(skill.BaseAffinity + NRA_OFFSET));
+        }
     }
+
     affinities.push_back((CorrectTbl)(skill.EffectiveAffinity + NRA_OFFSET));
 
-    for(CorrectTbl affinity : affinities)
+    uint8_t resultIdx = 0;
+    for(auto nraIdx : target.EntityState->PopNRAShields(affinities))
     {
-        for(auto nraIdx : { NRA_ABSORB, NRA_REFLECT, NRA_NULL })
+        if(nraIdx > resultIdx)
         {
-            int16_t chance = target.EntityState->GetNRAChance((uint8_t)nraIdx, affinity);
-            if(chance > 0 && RNG(int16_t, 0, 100) <= chance)
+            resultIdx = nraIdx;
+        }
+    }
+
+    if(resultIdx == 0)
+    {
+        // Check NRA chances
+        for(CorrectTbl affinity : affinities)
+        {
+            for(auto nraIdx : { NRA_ABSORB, NRA_REFLECT, NRA_NULL })
             {
-                switch(nraIdx)
+                int16_t chance = target.EntityState->GetNRAChance((uint8_t)nraIdx,
+                    affinity);
+                if(chance > 0 && RNG(int16_t, 1, 100) <= chance)
                 {
-                case NRA_NULL:
-                    target.DamageFlags1 |= FLAG1_BLOCK;
-                    return false;
-                case NRA_ABSORB:
-                    target.DamageFlags1 |= FLAG1_ABSORB;
-                    return false;
-                case NRA_REFLECT:
-                default:
-                    target.DamageFlags1 |= FLAG1_REFLECT;
-                    return true;
+                    resultIdx = (uint8_t)nraIdx;
+                    break;
                 }
             }
         }
     }
 
-    return false;
+    switch(resultIdx)
+    {
+    case NRA_NULL:
+        target.DamageFlags1 |= FLAG1_BLOCK;
+        return false;
+    case NRA_ABSORB:
+        target.DamageFlags1 |= FLAG1_ABSORB;
+        return false;
+    case NRA_REFLECT:
+        target.DamageFlags1 |= FLAG1_REFLECT;
+        return true;
+    default:
+        return false;
+    }
 }
 
 uint8_t SkillManager::CalculateStatusEffectStack(int8_t minStack, int8_t maxStack) const
@@ -2799,6 +2806,47 @@ void SkillManager::FinalizeSkillExecution(const std::shared_ptr<ChannelClientCon
     auto zone = source->GetZone();
     auto characterManager = mServer.lock()->GetCharacterManager();
 
+    // No pay the costs
+    int16_t hpCost = activated->GetHPCost();
+    int16_t mpCost = activated->GetMPCost();
+    bool hpMpCost = hpCost > 0 || mpCost > 0;
+    if(hpMpCost)
+    {
+        source->SetHPMP((int16_t)-hpCost, (int16_t)-mpCost, true);
+    }
+
+    if(client)
+    {
+        if(hpMpCost)
+        {
+            std::set<std::shared_ptr<ActiveEntityState>> displayStateModified;
+            displayStateModified.insert(source);
+            characterManager->UpdateWorldDisplayState(displayStateModified);
+        }
+
+        auto itemCosts = activated->GetItemCosts();
+        uint16_t bulletCost = activated->GetBulletCost();
+
+        int64_t targetItem = activated->GetActivationObjectID();
+        if(bulletCost > 0)
+        {
+            auto state = client->GetClientState();
+            auto character = state->GetCharacterState()->GetEntity();
+            auto bullets = character->GetEquippedItems((size_t)
+                objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_BULLETS);
+            if(bullets)
+            {
+                itemCosts[bullets->GetType()] = (uint32_t)bulletCost;
+                targetItem = state->GetObjectID(bullets.GetUUID());
+            }
+        }
+
+        if(itemCosts.size() > 0)
+        {
+            characterManager->AddRemoveItems(client, itemCosts, false, targetItem);
+        }
+    }
+
     if(skillData->GetBasic()->GetCombatSkill() && activated->GetEntityTargeted() && zone)
     {
         // Start combat if the target exists
@@ -2822,9 +2870,14 @@ void SkillManager::FinalizeSkillExecution(const std::shared_ptr<ChannelClientCon
         characterManager->UpdateExpertise(client, activated->GetSkillID());
     }
 
-    // Clean up and send the skill complete
-    source->SetActivatedAbility(nullptr);
-    SendCompleteSkill(activated, false);
+    // Update the execution count and remove and complete it from the entity
+    // if its at max
+    activated->SetExecuteCount((uint8_t)(activated->GetExecuteCount() + 1));
+    if(activated->GetExecuteCount() >= skillData->GetCast()->GetBasic()->GetUseCount())
+    {
+        source->SetActivatedAbility(nullptr);
+        SendCompleteSkill(activated, 0);
+    }
 
     if(client)
     {
@@ -3143,7 +3196,7 @@ bool SkillManager::Traesto(const std::shared_ptr<objects::ActivatedAbility>& act
     return mServer.lock()->GetZoneManager()->EnterZone(client, zoneID, xCoord, yCoord, 0, true);
 }
 
-void SkillManager::SendChargeSkill(std::shared_ptr<objects::ActivatedAbility> activated,
+void SkillManager::SendActivateSkill(std::shared_ptr<objects::ActivatedAbility> activated,
     std::shared_ptr<objects::MiSkillData> skillData)
 {
     auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated->GetSourceEntity());
@@ -3155,7 +3208,7 @@ void SkillManager::SendChargeSkill(std::shared_ptr<objects::ActivatedAbility> ac
         std::unordered_map<uint32_t, uint64_t> timeMap;
 
         libcomp::Packet p;
-        p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_SKILL_CHARGING);
+        p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_SKILL_ACTIVATED);
         p.WriteS32Little(source->GetEntityID());
         p.WriteU32Little(activated->GetSkillID());
         p.WriteS8((int8_t)activated->GetActivationID());
@@ -3163,7 +3216,8 @@ void SkillManager::SendChargeSkill(std::shared_ptr<objects::ActivatedAbility> ac
         timeMap[11] = activated->GetChargedTime();
         p.WriteFloat(0.f);
 
-        p.WriteU8(0);   //Unknown
+        uint8_t useCount = skillData->GetCast()->GetBasic()->GetUseCount();
+        p.WriteU8(useCount);
         p.WriteU8(0);   //Unknown
 
         float chargeSpeed = 0.f, chargeCompleteSpeed = 0.f;
@@ -3229,7 +3283,7 @@ void SkillManager::SendExecuteSkill(std::shared_ptr<objects::ActivatedAbility> a
         std::unordered_map<uint32_t, uint64_t> timeMap;
 
         libcomp::Packet p;
-        p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_SKILL_EXECUTING);
+        p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_SKILL_EXECUTED);
         p.WriteS32Little(source->GetEntityID());
         p.WriteU32Little(activated->GetSkillID());
         p.WriteS8((int8_t)activated->GetActivationID());
@@ -3256,7 +3310,7 @@ void SkillManager::SendExecuteSkill(std::shared_ptr<objects::ActivatedAbility> a
 }
 
 void SkillManager::SendCompleteSkill(std::shared_ptr<objects::ActivatedAbility> activated,
-    bool cancelled)
+    uint8_t mode)
 {
     auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated->GetSourceEntity());
     auto zone = source ? source->GetZone() : nullptr;
@@ -3272,7 +3326,7 @@ void SkillManager::SendCompleteSkill(std::shared_ptr<objects::ActivatedAbility> 
         p.WriteFloat(0);   //Unknown
         p.WriteU8(1);   //Unknown
         p.WriteFloat(source->GetMovementSpeed());
-        p.WriteU8(cancelled ? 1 : 0);
+        p.WriteU8(mode);
 
         ChannelClientConnection::BroadcastPacket(zConnections, p);
     }

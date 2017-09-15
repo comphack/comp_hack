@@ -530,8 +530,8 @@ void CharacterManager::SendOtherPartnerData(const std::list<std::shared_ptr<
 
     reply.WriteU8(0);   //Unknown bool
 
-    reply.WriteS16Little(0);    //Unknown
-    reply.WriteS16Little(0);    //Unknown
+    reply.WriteS16Little(dState->GetMaxMP());
+    reply.WriteS16Little(ds->GetMP());
     reply.WriteU16Little(d->GetFamiliarity());
     reply.WriteU8(0);   //Unknown
 
@@ -856,10 +856,28 @@ void CharacterManager::SummonDemon(const std::shared_ptr<
         UpdateFamiliarity(client, 2, true, false);
     }
 
+    // If HP/MP adjustments occur and the max value increases, keep
+    // the same percentage of HP/MP after recalc
+    auto cs = demon->GetCoreStats();
+    int16_t maxHP = cs->GetMaxHP();
+    int16_t maxMP = cs->GetMaxMP();
+    float hpPercent = (float)cs->GetHP() / (float)cs->GetMaxHP();
+    float mpPercent = (float)cs->GetMP() / (float)cs->GetMaxMP();
+
     dState->RecalculateStats(definitionManager);
     dState->SetStatusEffectsActive(true, definitionManager);
     dState->SetDestinationX(cState->GetDestinationX());
     dState->SetDestinationY(cState->GetDestinationY());
+
+    if(dState->GetMaxHP() > maxHP)
+    {
+        cs->SetHP((int16_t)((float)dState->GetMaxHP() * hpPercent));
+    }
+
+    if(dState->GetMaxMP() > maxMP)
+    {
+        cs->SetMP((int16_t)((float)dState->GetMaxMP() * mpPercent));
+    }
 
     libcomp::Packet reply;
     reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_PARTNER_SUMMONED);
@@ -922,11 +940,17 @@ void CharacterManager::StoreDemon(const std::shared_ptr<
     //Remove the entity from each client's zone
     zoneManager->RemoveEntitiesFromZone(zone, removeIDs, removeMode);
 
-    if(updatePartyState && state->GetPartyID())
+    if(updatePartyState)
     {
-        libcomp::Packet request;
-        state->GetPartyDemonPacket(request);
-        mServer.lock()->GetManagerConnection()->GetWorldConnection()->SendPacket(request);
+        // Send new HP/MP display
+        SendDemonBoxData(client, 0, std::set<int8_t>{ demon->GetBoxSlot() });
+
+        if(state->GetPartyID())
+        {
+            libcomp::Packet request;
+            state->GetPartyDemonPacket(request);
+            mServer.lock()->GetManagerConnection()->GetWorldConnection()->SendPacket(request);
+        }
     }
 }
 
@@ -1201,7 +1225,7 @@ std::shared_ptr<objects::Item> CharacterManager::GenerateItem(
 
 bool CharacterManager::AddRemoveItems(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
-    std::unordered_map<uint32_t, uint16_t> itemCounts, bool add,
+    std::unordered_map<uint32_t, uint32_t> itemCounts, bool add,
     int64_t skillTargetID)
 {
     auto state = client->GetClientState();
@@ -1217,7 +1241,7 @@ bool CharacterManager::AddRemoveItems(const std::shared_ptr<
     for(auto itemPair : itemCounts)
     {
         uint32_t itemID = itemPair.first;
-        uint16_t quantity = itemPair.second;
+        uint32_t quantity = itemPair.second;
 
         auto def = server->GetDefinitionManager()->GetItemData(itemID);
         if(nullptr == def)
@@ -1226,10 +1250,10 @@ bool CharacterManager::AddRemoveItems(const std::shared_ptr<
         }
 
         auto existing = GetExistingItems(character, itemID);
-        auto maxStack = def->GetPossession()->GetStackSize();
+        uint32_t maxStack = (uint32_t)def->GetPossession()->GetStackSize();
         if(add)
         {
-            uint16_t quantityLeft = quantity;
+            uint32_t quantityLeft = quantity;
             for(auto item : existing)
             {
                 auto free = maxStack - item->GetStackSize();
@@ -1239,7 +1263,7 @@ bool CharacterManager::AddRemoveItems(const std::shared_ptr<
                 }
                 else
                 {
-                    quantityLeft = (uint16_t)(quantityLeft - free);
+                    quantityLeft = (uint32_t)(quantityLeft - free);
                 }
 
                 if(quantityLeft == 0)
@@ -1259,20 +1283,20 @@ bool CharacterManager::AddRemoveItems(const std::shared_ptr<
 
             if(quantityLeft <= (freeSlots.size() * maxStack))
             {
-                uint16_t added = 0;
+                uint32_t added = 0;
                 for(auto item : existing)
                 {
-                    uint16_t free = (uint16_t)(maxStack - item->GetStackSize());
+                    uint32_t free = (uint32_t)(maxStack - item->GetStackSize());
                     if(added < quantity && free > 0)
                     {
-                        uint16_t delta = (uint16_t)(quantity - added);
+                        uint32_t delta = (uint32_t)(quantity - added);
                         if(free < delta)
                         {
                             delta = free;
                         }
                         item->SetStackSize((uint16_t)(item->GetStackSize() + delta));
                         updatedSlots.push_back((uint16_t)item->GetBoxSlot());
-                        added = (uint16_t)(added + delta);
+                        added = (uint32_t)(added + delta);
                     }
 
                     if(added == quantity)
@@ -1285,14 +1309,14 @@ bool CharacterManager::AddRemoveItems(const std::shared_ptr<
                 {
                     for(auto freeSlot : freeSlots)
                     {
-                        uint16_t delta = maxStack;
+                        uint32_t delta = maxStack;
                         if((delta + added) > quantity)
                         {
-                            delta = (uint16_t)(quantity - added);
+                            delta = (uint32_t)(quantity - added);
                         }
-                        added = (uint16_t)(added + delta);
+                        added = (uint32_t)(added + delta);
 
-                        auto item = GenerateItem(itemID, delta);
+                        auto item = GenerateItem(itemID, (uint16_t)delta);
                         item->SetItemBox(itemBox);
                         item->SetBoxSlot((int8_t)freeSlot);
 
@@ -1321,7 +1345,7 @@ bool CharacterManager::AddRemoveItems(const std::shared_ptr<
             // Items should be remove from the end of the list first
             existing.reverse();
 
-            uint16_t quantityLeft = quantity;
+            uint32_t quantityLeft = quantity;
             for(auto item : existing)
             {
                 if(item->GetStackSize() > quantityLeft)
@@ -1330,7 +1354,7 @@ bool CharacterManager::AddRemoveItems(const std::shared_ptr<
                 }
                 else
                 {
-                    quantityLeft = (uint16_t)(quantityLeft - item->GetStackSize());
+                    quantityLeft = (uint32_t)(quantityLeft - item->GetStackSize());
                 }
 
                 if(quantityLeft == 0)
@@ -1360,7 +1384,7 @@ bool CharacterManager::AddRemoveItems(const std::shared_ptr<
 
             auto equipType = def->GetBasic()->GetEquipType();
 
-            uint16_t removed = 0;
+            uint32_t removed = 0;
             for(auto item : existing)
             {
                 // Unequip anything we're removing
@@ -1374,7 +1398,7 @@ bool CharacterManager::AddRemoveItems(const std::shared_ptr<
                 auto slot = item->GetBoxSlot();
                 if(item->GetStackSize() <= (quantity - removed))
                 {
-                    removed = (uint16_t)(removed + item->GetStackSize());
+                    removed = (uint32_t)(removed + item->GetStackSize());
 
                     if(!itemBox->SetItems((size_t)slot, NULLUUID))
                     {
@@ -2066,7 +2090,7 @@ void CharacterManager::LevelUp(const std::shared_ptr<
 }
 
 void CharacterManager::UpdateExpertise(const std::shared_ptr<
-    channel::ChannelClientConnection>& client, uint32_t skillID)
+    channel::ChannelClientConnection>& client, uint32_t skillID, float multiplier)
 {
     auto server = mServer.lock();
     auto definitionManager = server->GetDefinitionManager();
@@ -2126,7 +2150,7 @@ void CharacterManager::UpdateExpertise(const std::shared_ptr<
         /// @todo: validate
         int32_t gain = (int32_t)((float)(3954.482803f /
             (((float)expertise->GetPoints() * 0.01f) + 158.1808409f)
-            * expertGrowth->GetGrowthRate()) * 100.f);
+            * expertGrowth->GetGrowthRate()) * 100.f * multiplier);
 
         // Don't exceed the max total points
         if((currentPoints + gain) > maxTotalPoints)
@@ -2611,6 +2635,8 @@ bool CharacterManager::AddRemoveOpponent(bool add, const std::shared_ptr<
         {
             for(auto e2 : e2s)
             {
+                if(!e2->Ready()) continue;
+
                 size_t opponentCount = e1->AddRemoveOpponent(true, e2->GetEntityID());
                 if(opponentCount == 1)
                 {

@@ -113,7 +113,7 @@ bool Parsers::ClanUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
                         libcomp::PersistentObject::GetObjectByUUID(
                         state->GetObjectUUID(activatedAbility->GetTargetObjectID())));
 
-                    std::unordered_map<uint32_t, uint16_t> itemMap;
+                    std::unordered_map<uint32_t, uint32_t> itemMap;
                     itemMap[item ? item->GetType() : 0] = 1;
 
                     server->GetCharacterManager()->AddRemoveItems(client, itemMap, false,

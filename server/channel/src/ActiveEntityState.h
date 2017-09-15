@@ -495,6 +495,18 @@ public:
     int16_t GetNRAChance(uint8_t nraIdx, CorrectTbl type);
 
     /**
+     * Decrease the corresponding NRA affinity shield effect stacks and
+     * return the NRA correct table indexes that apply. Index values are
+     *  1) Null
+     *  2) Reflect
+     *  3) Absorb
+     *  Defines exist in the Constants header for each of these.
+     * @param types Correct table types of the affinity to retrieve
+     * @return Set of all corresponding NRA indexes that existed as shield effects
+     */
+    std::set<uint8_t> PopNRAShields(const std::list<CorrectTbl>& types);
+
+    /**
      * Get the next activated ability ID from 1 to 128.
      * @return The next activated ability ID for the client
      */
@@ -660,6 +672,13 @@ protected:
 
     /// Map of affinity absorb chances by correct table ID
     libcomp::EnumMap<CorrectTbl, int16_t> mAbsorbMap;
+
+    /// Map of effect type IDs to NRA types and NRA indexes. This represents
+    /// a 100% NRA result whenever a skill of the corresponding type is used
+    /// which will decrease the effect stack until being cancelled out should
+    /// it occur before the effect's expiration time.
+    std::unordered_map<uint32_t,
+        libcomp::EnumMap<CorrectTbl, std::set<uint8_t>>> mNRAShields;
 
     /// true if the status effects have been activated for the current zone
     bool mEffectsActive;

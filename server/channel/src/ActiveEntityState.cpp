@@ -547,6 +547,7 @@ void ActiveEntityState::SetStatusEffects(
 {
     std::lock_guard<std::mutex> lock(mLock);
     mStatusEffects.clear();
+    mNRAShields.clear();
     mTimeDamageEffects.clear();
     mCancelConditions.clear();
     mNextEffectTimes.clear();
@@ -900,6 +901,7 @@ std::set<uint32_t> ActiveEntityState::AddStatusEffects(const AddStatusEffectMap&
 
 void ActiveEntityState::ExpireStatusEffects(const std::set<uint32_t>& effectTypes)
 {
+    bool expired = false;
     std::lock_guard<std::mutex> lock(mLock);
     for(uint32_t effectType : effectTypes)
     {
@@ -907,6 +909,7 @@ void ActiveEntityState::ExpireStatusEffects(const std::set<uint32_t>& effectType
         if(it != mStatusEffects.end())
         {
             mStatusEffects.erase(effectType);
+            mNRAShields.erase(effectType);
             mTimeDamageEffects.erase(effectType);
             for(auto cPair : mCancelConditions)
             {
@@ -918,8 +921,14 @@ void ActiveEntityState::ExpireStatusEffects(const std::set<uint32_t>& effectType
                 // Non-system time 3 indicates removes
                 SetNextEffectTime(effectType, 0);
                 mNextEffectTimes[3].insert(effectType);
+                expired = true;
             }
         }
+    }
+
+    if(expired)
+    {
+        RegisterNextEffectTime();
     }
 }
 
@@ -1219,8 +1228,53 @@ int16_t ActiveEntityState::GetNRAChance(uint8_t nraIdx, CorrectTbl type)
         return 0;
     }
 
+    std::lock_guard<std::mutex> lock(mLock);
     auto it = map->find(type);
     return it != map->end() ? it->second : 0;
+}
+
+std::set<uint8_t> ActiveEntityState::PopNRAShields(const std::list<
+    CorrectTbl>& types)
+{
+    std::set<uint8_t> result;
+    std::set<uint32_t> adjustEffects;
+    std::set<uint32_t> expireEffects;
+    {
+        std::lock_guard<std::mutex> lock(mLock);
+        for(auto pair : mNRAShields)
+        {
+            for(auto type : types)
+            {
+                if(pair.second.find(type) != pair.second.end())
+                {
+                    for(auto idx : pair.second[type])
+                    {
+                        result.insert(idx);
+                    }
+                    adjustEffects.insert(pair.first);
+                }
+            }
+        }
+
+        for(uint32_t effectID : adjustEffects)
+        {
+            auto effect = mStatusEffects[effectID];
+
+            uint8_t newStack = (uint8_t)(effect->GetStack() - 1);
+            effect->SetStack(newStack);
+            if(newStack == 0)
+            {
+                expireEffects.insert(effectID);
+            }
+        }
+    }
+
+    if(expireEffects.size() > 0)
+    {
+        ExpireStatusEffects(expireEffects);
+    }
+
+    return result;
 }
 
 uint8_t ActiveEntityState::GetNextActivatedAbilityID()
@@ -1284,14 +1338,30 @@ void ActiveEntityState::ActivateStatusEffect(
     }
 
     // Add to timed damage effect set if T-Damage is specified
+    auto basic = se->GetBasic();
     auto damage = se->GetEffect()->GetDamage();
     if(damage->GetHPDamage() || damage->GetMPDamage())
     {
         // Ignore if the damage applies as part of the skill only
-        auto basic = se->GetBasic();
         if(!(basic->GetStackType() == 1 && basic->GetApplicationLogic() == 0))
         {
             mTimeDamageEffects.insert(effectType);
+        }
+    }
+
+    // If the stack type is a counter and the effect is re-applied each time
+    // check for NRA shields
+    if(basic->GetStackType() == 0 && basic->GetApplicationLogic() == 3)
+    {
+        auto common = se->GetCommon();
+        for(auto ct : common->GetCorrectTbl())
+        {
+            if((uint8_t)ct->GetID() >= (uint8_t)CorrectTbl::NRA_WEAPON &&
+                (uint8_t)ct->GetID() <= (uint8_t)CorrectTbl::NRA_MAGIC)
+            {
+                mNRAShields[effectType][ct->GetID()].insert(
+                    (uint8_t)ct->GetValue());
+            }
         }
     }
 }
@@ -1604,6 +1674,17 @@ uint8_t ActiveEntityStateImp<objects::Demon>::RecalculateStats(
         }
     }
 
+    auto demonData = definitionManager->GetDevilData(mEntity->GetType());
+
+    auto growth = demonData->GetGrowth();
+    for(uint32_t traitID : growth->GetTraits())
+    {
+        if(traitID)
+        {
+            InsertCurrentSkills(traitID);
+        }
+    }
+
     bool skillsChanged = previousSkills.size() != CurrentSkillsCount();
     if(!skillsChanged)
     {
@@ -1653,6 +1734,14 @@ uint8_t ActiveEntityStateImp<objects::Enemy>::RecalculateStats(
                 {
                     InsertCurrentSkills(skillID);
                 }
+            }
+        }
+
+        for(uint32_t traitID : growth->GetTraits())
+        {
+            if(traitID)
+            {
+                InsertCurrentSkills(traitID);
             }
         }
 
@@ -1952,9 +2041,14 @@ void ActiveEntityState::GetAdditionalCorrectTbls(
     // 2) Gather status effect adjustments
     for(auto ePair : GetStatusEffects())
     {
+        bool skipNRA = mNRAShields.find(ePair.first) != mNRAShields.end();
+
         auto statusData = definitionManager->GetStatusData(ePair.first);
         for(auto ct : statusData->GetCommon()->GetCorrectTbl())
         {
+            if(skipNRA && (uint8_t)ct->GetID() >= (uint8_t)CorrectTbl::NRA_WEAPON &&
+                (uint8_t)ct->GetID() <= (uint8_t)CorrectTbl::NRA_MAGIC) continue;
+
             uint8_t multiplier = (statusData->GetBasic()->GetStackType() == 2)
                 ? ePair.second->GetStack() : 1;
             for(uint8_t i = 0; i < multiplier; i++)

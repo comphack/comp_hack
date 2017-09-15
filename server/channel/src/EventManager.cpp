@@ -1346,8 +1346,14 @@ bool EventManager::GetItems(const std::shared_ptr<ChannelClientConnection>& clie
     const std::shared_ptr<objects::EventInstance>& instance)
 {
     auto e = std::dynamic_pointer_cast<objects::EventGetItem>(instance->GetEvent());
-    auto items = e->GetItems();
     auto server = mServer.lock();
+
+    // Cast to the correct stack size when adding
+    std::unordered_map<uint32_t, uint32_t> items;
+    for(auto entry : e->GetItems())
+    {
+        items[entry.first] = (uint32_t)entry.second;
+    }
 
     bool doNext = true;
     if(server->GetCharacterManager()->AddRemoveItems(client, items, true))

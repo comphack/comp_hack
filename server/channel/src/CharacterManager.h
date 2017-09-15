@@ -305,7 +305,7 @@ public:
      */
     bool AddRemoveItems(const std::shared_ptr<
         channel::ChannelClientConnection>& client, 
-        std::unordered_map<uint32_t, uint16_t> itemCounts, bool add,
+        std::unordered_map<uint32_t, uint32_t> itemCounts, bool add,
         int64_t skillTargetID = 0);
 
     /**
@@ -462,9 +462,11 @@ public:
      * @param client Pointer to the client connection
      * @param skillID Skill ID that will have it's corresponding
      *  expertise updated if it is enabled
+     * @param multiplier Expertise point multiplier
      */
     void UpdateExpertise(const std::shared_ptr<
-        channel::ChannelClientConnection>& client, uint32_t skillID);
+        channel::ChannelClientConnection>& client, uint32_t skillID,
+        float multiplier = 1.0f);
 
     /**
      * Update the specified entity to learn a skill by ID.

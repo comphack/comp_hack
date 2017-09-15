@@ -75,7 +75,7 @@ bool Parsers::LootItem::Parse(libcomp::ManagerPacket *pPacketManager,
 
     uint32_t demonType = 0;
     std::list<int8_t> lootedSlots;
-    std::unordered_map<uint32_t, uint16_t> lootedItems;
+    std::unordered_map<uint32_t, uint32_t> lootedItems;
     if(lBox && (lBox->ValidLooterIDsCount() == 0 ||
         lBox->ValidLooterIDsContains(state->GetWorldCID())))
     {
@@ -161,11 +161,11 @@ bool Parsers::LootItem::Parse(libcomp::ManagerPacket *pPacketManager,
 
                     if(lootedItems.find(loot->GetType()) == lootedItems.end())
                     {
-                        lootedItems[loot->GetType()] = loot->GetCount();
+                        lootedItems[loot->GetType()] = (uint32_t)loot->GetCount();
                     }
                     else
                     {
-                        lootedItems[loot->GetType()] = (uint16_t)(
+                        lootedItems[loot->GetType()] = (uint32_t)(
                             lootedItems[loot->GetType()] + loot->GetCount());
                     }
                 }

@@ -62,6 +62,12 @@ void LoginHandler::SetConfig(const std::shared_ptr<
     objects::LobbyConfig>& config)
 {
     mConfig = config;
+
+    if(!mConfig->GetWebRoot().IsEmpty())
+    {
+        mVfs.AddVFSDir(new ttvfs::DiskDir(mConfig->GetWebRoot().C(),
+            new ttvfs::DiskLoader), "");
+    }
 }
 
 LoginHandler::ReplacementVariables::ReplacementVariables() : birthday("1"),
@@ -299,6 +305,15 @@ bool LoginHandler::HandlePage(CivetServer *pServer,
     {
         mg_printf(pConnection, "HTTP/1.1 200 OK\r\n"
             "Content-Type: image/png; charset=UTF-8\r\n"
+            "Content-Length: %u\r\n"
+            "Connection: close\r\n"
+            "\r\n", (unsigned int)pageData.size());
+        mg_write(pConnection, &pageData[0], pageData.size());
+    }
+    else if(".css" == uri.Right(strlen(".css")))
+    {
+        mg_printf(pConnection, "HTTP/1.1 200 OK\r\n"
+            "Content-Type: text/css\r\n"
             "Content-Length: %u\r\n"
             "Connection: close\r\n"
             "\r\n", (unsigned int)pageData.size());

@@ -150,8 +150,12 @@ bool ServerConstants::Initialize(const String& filePath)
         sConstants.SKILL_ITEM_FAM_UP);
     success &= LoadInteger(constants["SKILL_MOOCH"],
         sConstants.SKILL_MOOCH);
+    success &= LoadInteger(constants["SKILL_REST"],
+        sConstants.SKILL_REST);
     success &= LoadInteger(constants["SKILL_STORE_DEMON"],
         sConstants.SKILL_STORE_DEMON);
+    success &= LoadInteger(constants["SKILL_SUICIDE"],
+        sConstants.SKILL_SUICIDE);
     success &= LoadInteger(constants["SKILL_SUMMON_DEMON"],
         sConstants.SKILL_SUMMON_DEMON);
     success &= LoadInteger(constants["SKILL_TRAESTO"],

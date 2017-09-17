@@ -241,13 +241,14 @@ void AIManager::Move(const std::shared_ptr<ActiveEntityState>& eState,
 bool AIManager::UpdateState(const std::shared_ptr<ActiveEntityState>& eState,
     uint64_t now)
 {
+    eState->RefreshCurrentPosition(now);
+
     auto aiState = eState->GetAIState();
     if(!aiState || (aiState->IsIdle() && !aiState->IsOverriden("idle")))
     {
         return false;
     }
 
-    eState->RefreshCurrentPosition(now);
     eState->ExpireStatusTimes(now);
 
     // If the entity cannot act or is waiting, quit here
@@ -423,11 +424,14 @@ bool AIManager::UpdateState(const std::shared_ptr<ActiveEntityState>& eState,
 
                 if(valid)
                 {
+                    auto ctx = std::make_shared<SkillExecutionContext>();
+                    ctx->FreeCast = true;
+
                     if(activated)
                     {
                         // Execute the skill
                         if(skillManager->ExecuteSkill(eState, activated->GetActivationID(),
-                            activated->GetTargetObjectID(), true))
+                            activated->GetTargetObjectID(), ctx))
                         {
                             // Queue a wait command
                             QueueWaitCommand(aiState, 5);
@@ -442,7 +446,7 @@ bool AIManager::UpdateState(const std::shared_ptr<ActiveEntityState>& eState,
                     {
                         // Activate the skill
                         skillManager->ActivateSkill(eState, cmdSkill->GetSkillID(),
-                            cmdSkill->GetTargetObjectID(), true);
+                            cmdSkill->GetTargetObjectID(), ctx);
                     }
                 }
 
@@ -555,6 +559,8 @@ bool AIManager::UpdateEnemyState(const std::shared_ptr<EnemyState>& eState, uint
                     return false;
                 }
             }
+
+            target->RefreshCurrentPosition(now);
 
             auto activated = eState->GetActivatedAbility();
             if(activated)

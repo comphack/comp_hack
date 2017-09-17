@@ -173,6 +173,12 @@ public:
     const std::shared_ptr<ActiveEntityState> GetActiveEntity(int32_t entityID);
 
     /**
+     * Get all active entities in the zone
+     * @return List of pointers to all active entities
+     */
+    const std::list<std::shared_ptr<ActiveEntityState>> GetActiveEntities();
+
+    /**
      * Get all active entities in the zone within a supplied radius
      * @param x X coordinate of the center of the radius
      * @param y Y coordinate of the center of the radius

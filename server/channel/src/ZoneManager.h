@@ -196,6 +196,16 @@ public:
         int32_t removalMode = 0, bool queue = false);
 
     /**
+     * Stop and fix an entity at their current position for the specified
+     * amount of time.
+     * @param eState Pointer to the entity to stop
+     * @param fixUntil Server timestamp of when the entity can move again
+     * @param now Current server time
+     */
+    void FixCurrentPosition(const std::shared_ptr<ActiveEntityState>& eState,
+        uint64_t fixUntil, uint64_t now = 0);
+
+    /**
      * Schedule the delayed removal of one or more entities in the specified zone.
      * @param time Server time to schedule entity removal for
      * @param zone Pointer to the zone the entities belong to
@@ -340,10 +350,19 @@ public:
      *  false if it should move toward it
      * @param now Server time to use as the origin ticks
      * @param endTime Server time to use as the destination ticks
+     * @return Point the entity will move to
      */
-    void MoveRelative(const std::shared_ptr<ActiveEntityState>& eState,
+    Point MoveRelative(const std::shared_ptr<ActiveEntityState>& eState,
         float targetX, float targetY, float distance, bool away,
         uint64_t now, uint64_t endTime);
+
+    /**
+     * Determine if the specified point is within a polygon defined by vertices
+     * @param p Point to check
+     * @param vertices List of points representing a polygon's vertices
+     * @return true if the point is within the polygon, false if it is not
+     */
+    static bool PointInPolygon(const Point& p, const std::list<Point> vertices);
 
 private:
     /**

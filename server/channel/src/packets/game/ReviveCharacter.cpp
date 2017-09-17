@@ -176,7 +176,8 @@ bool Parsers::ReviveCharacter::Parse(libcomp::ManagerPacket *pPacketManager,
 
     if(hpRestore > 0.f)
     {
-        cState->SetHPMP((int16_t)floorl(cState->GetMaxHP() * hpRestore), -1, false);
+        cState->SetHPMP((int32_t)floorl((float)cState->GetMaxHP() * hpRestore),
+            -1, false);
         state->SetAcceptRevival(false);
     }
 

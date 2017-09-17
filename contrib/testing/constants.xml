@@ -25,8 +25,10 @@
     <constant name="RENTAL_ITEM_60">902</constant>
     <constant name="RENTAL_ITEM_90">903</constant>
     <constant name="SKILL_TRAESTO">101</constant>
+    <constant name="SKILL_SUICIDE">103</constant>
     <constant name="SKILL_SUMMON_DEMON">200</constant>
     <constant name="SKILL_STORE_DEMON">201</constant>
+    <constant name="SKILL_REST">202</constant>
     <constant name="SKILL_EQUIP_ITEM">203</constant>
     <constant name="SKILL_FAM_UP">207</constant>
     <constant name="SKILL_MOOCH">209</constant>

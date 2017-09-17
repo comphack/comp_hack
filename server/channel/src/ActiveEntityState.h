@@ -81,8 +81,11 @@ const uint8_t STATUS_KNOCKBACK = 0x04;
 /// Entity is charging a skill
 const uint8_t STATUS_CHARGING = 0x08;
 
+/// Entity is using the rest command
+const uint8_t STATUS_RESTING = 0x10;
+
 /// Entity is waiting (used by AI controlled entity)
-const uint8_t STATUS_WAITING = 0x10;
+const uint8_t STATUS_WAITING = 0x20;
 
 namespace libcomp
 {
@@ -230,7 +233,7 @@ public:
 
     /**
      * Get the entity's adjusted movement speed.
-     * @param altSpeed true if the alternate speed used for combat should
+     * @param altSpeed true if the alternate speed used for walking should
      *  be retrieved instead of the default run speed
      * @return Movement speed of the entity
      */
@@ -330,7 +333,7 @@ public:
      *  will be whether the entity's HP has overflowed.  If one of those params
      *  is false, the returned value represents if the HP or MP were changed
      */
-    bool SetHPMP(int16_t hp, int16_t mp, bool adjust, bool canOverflow = false);
+    bool SetHPMP(int32_t hp, int32_t mp, bool adjust, bool canOverflow = false);
 
     /**
      * Set the HP and/or MP of the entity to either a specified or adjusted
@@ -350,8 +353,8 @@ public:
      *  will be whether the entity's HP has overflowed.  If one of those params
      *  is false, the returned value represents if the HP or MP were changed
      */
-    bool SetHPMP(int16_t hp, int16_t mp, bool adjust, bool canOverflow,
-        int16_t& hpAdjusted, int16_t& mpAdjusted);
+    bool SetHPMP(int32_t hp, int32_t mp, bool adjust, bool canOverflow,
+        int32_t& hpAdjusted, int32_t& mpAdjusted);
 
     /**
      * Get the current status effect map
@@ -628,12 +631,14 @@ protected:
      * a change occurred.
      * @param stats Map of correct table IDs to calculated stats to set on the
      *  entity
+     * @param extraHP Extra HP amount to add to the base MaxHP. Used by enemies.
      * @return 1 if the calculation resulted in a change to the stats that should
      *  be sent to the client, 2 if one of the changes should be communicated to
      *  the world (for party members etc), 0 if no change resulted from the
      *  recalculation
      */
-    uint8_t CompareAndResetStats(libcomp::EnumMap<CorrectTbl, int16_t>& stats);
+    uint8_t CompareAndResetStats(libcomp::EnumMap<CorrectTbl, int16_t>& stats,
+        int32_t extraHP = 0);
 
     /// Map of active status effects by effect type ID
     std::unordered_map<uint32_t,

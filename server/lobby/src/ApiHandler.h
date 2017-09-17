@@ -88,7 +88,23 @@ protected:
     bool Account_GetDetails(const JsonBox::Object& request,
         JsonBox::Object& response,
         const std::shared_ptr<ApiSession>& session);
+    bool Account_ChangePassword(const JsonBox::Object& request,
+        JsonBox::Object& response,
+        const std::shared_ptr<ApiSession>& session);
     bool Account_Register(const JsonBox::Object& request,
+        JsonBox::Object& response,
+        const std::shared_ptr<ApiSession>& session);
+
+    bool Admin_GetAccounts(const JsonBox::Object& request,
+        JsonBox::Object& response,
+        const std::shared_ptr<ApiSession>& session);
+    bool Admin_GetAccount(const JsonBox::Object& request,
+        JsonBox::Object& response,
+        const std::shared_ptr<ApiSession>& session);
+    bool Admin_DeleteAccount(const JsonBox::Object& request,
+        JsonBox::Object& response,
+        const std::shared_ptr<ApiSession>& session);
+    bool Admin_UpdateAccount(const JsonBox::Object& request,
         JsonBox::Object& response,
         const std::shared_ptr<ApiSession>& session);
 

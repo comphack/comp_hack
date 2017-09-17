@@ -52,7 +52,12 @@ ApiHandler::ApiHandler(const std::shared_ptr<objects::LobbyConfig>& config,
     mParsers["/auth/get_challenge"] = &ApiHandler::Auth_Token;
     mParsers["/account/get_cp"] = &ApiHandler::Account_GetCP;
     mParsers["/account/get_details"] = &ApiHandler::Account_GetDetails;
+    mParsers["/account/change_password"] = &ApiHandler::Account_ChangePassword;
     mParsers["/account/register"] = &ApiHandler::Account_Register;
+    mParsers["/admin/get_accounts"] = &ApiHandler::Admin_GetAccounts;
+    mParsers["/admin/get_account"] = &ApiHandler::Admin_GetAccount;
+    mParsers["/admin/delete_account"] = &ApiHandler::Admin_DeleteAccount;
+    mParsers["/admin/update_account"] = &ApiHandler::Admin_UpdateAccount;
 }
 
 ApiHandler::~ApiHandler()
@@ -93,7 +98,8 @@ bool ApiHandler::Auth_Token(const JsonBox::Object& request,
         db, username);
 
     // We must have a valid account for this to work.
-    if(!session->account)
+    if(!session->account || !session->account->GetEnabled() ||
+        !session->account->GetIsGM())
     {
         session->Reset();
         return false;
@@ -115,7 +121,7 @@ bool ApiHandler::Account_GetCP(const JsonBox::Object& request,
     JsonBox::Object& response, const std::shared_ptr<ApiSession>& session)
 {
     (void)request;
-    
+
     // Find the account for the given username.
     auto account = objects::Account::LoadAccountByUsername(
         GetDatabase(), session->username);
@@ -152,8 +158,87 @@ bool ApiHandler::Account_GetDetails(const JsonBox::Object& request,
     response["user_level"] = (int)account->GetUserLevel();
     response["enabled"] = account->GetEnabled();
     response["gm"] = account->GetIsGM();
+    response["banned"] = account->GetIsBanned();
     response["last_login"] = (int)account->GetLastLogin();
-    response["character_count"] = (int)account->CharactersCount();
+
+    int count = 0;
+
+    for(size_t i = 0; i < account->CharactersCount(); ++i)
+    {
+        if(account->GetCharacters(i))
+        {
+            count++;
+        }
+    }
+
+    response["character_count"] = count;
+
+    return true;
+}
+
+bool ApiHandler::Account_ChangePassword(const JsonBox::Object& request,
+    JsonBox::Object& response, const std::shared_ptr<ApiSession>& session)
+{
+    libcomp::String password;
+
+    auto db = GetDatabase();
+
+    // Find the account for the given username.
+    auto account = objects::Account::LoadAccountByUsername(
+        db, session->username);
+
+    if(!account)
+    {
+        response["error"] = "Account not found.";
+
+        return true;
+    }
+
+    auto it = request.find("password");
+
+    if(it != request.end())
+    {
+        password = it->second.getString();
+
+        if(!password.Matches("^[a-zA-Z0-9\\\\\\(\\)\\[\\]\\/{}~`'\"<>"
+            ".,_|!@#$%^&*+=-]{6,16}$"))
+        {
+            response["error"] = "Bad password";
+
+            return true;
+        }
+        else
+        {
+            libcomp::String salt = libcomp::Decrypt::GenerateRandom(10);
+
+            // Hash the password for database storage.
+            password = libcomp::Decrypt::HashPassword(password, salt);
+
+            account->SetPassword(password);
+            account->SetSalt(salt);
+        }
+    }
+    else
+    {
+        response["error"] = "Password is missing.";
+
+        return true;
+    }
+
+    bool didUpdate = account->Update(db);
+
+    // Clear the session and make the user re-authenticate.
+    session->username.Clear();
+    session->account.reset();
+
+    if(didUpdate)
+    {
+        response["error"] = "Success";
+    }
+    else
+    {
+        response["error"] = "Failed to update password.";
+    }
 
     return true;
 }
@@ -262,6 +347,311 @@ bool ApiHandler::Account_Register(const JsonBox::Object& request,
     else
     {
         response["error"] = "Success";
+    }
+
+    return true;
+}
+
+bool ApiHandler::Admin_GetAccounts(const JsonBox::Object& request,
+    JsonBox::Object& response, const std::shared_ptr<ApiSession>& session)
+{
+    (void)request;
+    (void)session;
+
+    auto accounts = libcomp::PersistentObject::LoadAll<objects::Account>(
+        GetDatabase());
+
+    JsonBox::Array accountObjects;
+
+    for(auto account : accounts)
+    {
+        JsonBox::Object obj;
+
+        obj["cp"] = (int)account->GetCP();
+        obj["username"] = account->GetUsername().ToUtf8();
+        obj["disp_name"] = account->GetDisplayName().ToUtf8();
+        obj["email"] = account->GetEmail().ToUtf8();
+        obj["ticket_count"] = (int)account->GetTicketCount();
+        obj["user_level"] = (int)account->GetUserLevel();
+        obj["enabled"] = account->GetEnabled();
+        obj["gm"] = account->GetIsGM();
+        obj["banned"] = account->GetIsBanned();
+        obj["last_login"] = (int)account->GetLastLogin();
+
+        int count = 0;
+
+        for(size_t i = 0; i < account->CharactersCount(); ++i)
+        {
+            if(account->GetCharacters(i))
+            {
+                count++;
+            }
+        }
+
+        obj["character_count"] = count;
+
+        accountObjects.push_back(obj);
+    }
+
+    std::sort(accountObjects.begin(), accountObjects.end(),
+        [](const JsonBox::Value& a,const JsonBox::Value& b)
+        {
+            return a.getObject().at("username").getString() <
+                b.getObject().at("username").getString();
+        });
+
+    response["accounts"] = accountObjects;
+
+    return true;
+}
+
+bool ApiHandler::Admin_GetAccount(const JsonBox::Object& request,
+    JsonBox::Object& response, const std::shared_ptr<ApiSession>& session)
+{
+    (void)session;
+
+    libcomp::String username;
+
+    auto it = request.find("username");
+
+    if(it != request.end())
+    {
+        username = it->second.getString();
+    }
+    else
+    {
+        return false;
+    }
+
+    // Find the account for the given username.
+    auto account = objects::Account::LoadAccountByUsername(
+        GetDatabase(), username);
+
+    if(!account)
+    {
+        return false;
+    }
+
+    response["cp"] = (int)account->GetCP();
+    response["username"] = account->GetUsername().ToUtf8();
+    response["disp_name"] = account->GetDisplayName().ToUtf8();
+    response["email"] = account->GetEmail().ToUtf8();
+    response["ticket_count"] = (int)account->GetTicketCount();
+    response["user_level"] = (int)account->GetUserLevel();
+    response["enabled"] = account->GetEnabled();
+    response["gm"] = account->GetIsGM();
+    response["banned"] = account->GetIsBanned();
+    response["last_login"] = (int)account->GetLastLogin();
+
+    int count = 0;
+
+    for(size_t i = 0; i < account->CharactersCount(); ++i)
+    {
+        if(account->GetCharacters(i))
+        {
+            count++;
+        }
+    }
+
+    response["character_count"] = count;
+
+    return true;
+}
+
+bool ApiHandler::Admin_DeleteAccount(const JsonBox::Object& request,
+    JsonBox::Object& response, const std::shared_ptr<ApiSession>& session)
+{
+    (void)response;
+
+    libcomp::String username;
+
+    auto it = request.find("username");
+
+    if(it != request.end())
+    {
+        username = it->second.getString();
+    }
+    else
+    {
+        return false;
+    }
+
+    auto db = GetDatabase();
+    auto account = objects::Account::LoadAccountByUsername(db, username);
+
+    if(!account)
+    {
+        return false;
+    }
+
+    bool didDelete = account->Delete(db);
+
+    if(session->username == username)
+    {
+        session->username.Clear();
+        session->account.reset();
+    }
+
+    return didDelete;
+}
+
+bool ApiHandler::Admin_UpdateAccount(const JsonBox::Object& request,
+    JsonBox::Object& response, const std::shared_ptr<ApiSession>& session)
+{
+    libcomp::String username, password;
+
+    auto it = request.find("username");
+
+    if(it != request.end())
+    {
+        username = it->second.getString();
+    }
+    else
+    {
+        response["error"] = "Username not found.";
+
+        return true;
+    }
+
+    auto db = GetDatabase();
+    auto account = objects::Account::LoadAccountByUsername(db, username);
+
+    if(!account)
+    {
+        response["error"] = "Account not found.";
+
+        return true;
+    }
+
+    it = request.find("password");
+
+    if(it != request.end())
+    {
+        password = it->second.getString();
+
+        if(!password.Matches("^[a-zA-Z0-9\\\\\\(\\)\\[\\]\\/{}~`'\"<>"
+            ".,_|!@#$%^&*+=-]{6,16}$"))
+        {
+            response["error"] = "Bad password";
+
+            return true;
+        }
+        else
+        {
+            libcomp::String salt = libcomp::Decrypt::GenerateRandom(10);
+
+            // Hash the password for database storage.
+            password = libcomp::Decrypt::HashPassword(password, salt);
+
+            account->SetPassword(password);
+            account->SetSalt(salt);
+        }
+    }
+
+    it = request.find("disp_name");
+
+    if(it != request.end())
+    {
+        account->SetDisplayName(it->second.getString());
+    }
+
+    it = request.find("gm");
+
+    if(it != request.end())
+    {
+        account->SetIsGM(it->second.getBoolean());
+    }
+
+    it = request.find("cp");
+
+    if(it != request.end())
+    {
+        int cp = it->second.getInteger();
+
+        if(0 > cp)
+        {
+            response["error"] = "CP must be a positive integer or zero.";
+
+            return true;
+        }
+
+        account->SetCP((uint32_t)cp);
+    }
+
+    int count = 0;
+
+    for(size_t i = 0; i < account->CharactersCount(); ++i)
+    {
+        if(account->GetCharacters(i))
+        {
+            count++;
+        }
+    }
+
+    it = request.find("ticket_count");
+
+    if(it != request.end())
+    {
+        int ticket_count = it->second.getInteger();
+
+        if((ticket_count + count) > (int)account->CharactersCount() ||
+            0 > ticket_count)
+        {
+            response["error"] = "Ticket count must be a positive integer or "
+                "zero. Ticket count must not be more than the number of "
+                "free character slots.";
+
+            return true;
+        }
+
+        account->SetTicketCount((uint8_t)ticket_count);
+    }
+
+    it = request.find("user_level");
+
+    if(it != request.end())
+    {
+        int user_level = it->second.getInteger();
+
+        if(0 > user_level || 1000 < user_level)
+        {
+            response["error"] = "User level must be in the range [0, 1000].";
+
+            return true;
+        }
+
+        account->SetUserLevel(user_level);
+    }
+
+    it = request.find("enabled");
+
+    if(it != request.end())
+    {
+        account->SetEnabled(it->second.getBoolean());
+    }
+
+    it = request.find("banned");
+
+    if(it != request.end())
+    {
+        account->SetIsBanned(it->second.getBoolean());
+    }
+
+    bool didUpdate = account->Update(db);
+
+    if(session->username == username)
+    {
+        session->username.Clear();
+        session->account.reset();
+    }
+
+    if(didUpdate)
+    {
+        response["error"] = "Success";
+    }
+    else
+    {
+        response["error"] = "Failed to update account.";
     }
 
     return true;
@@ -421,9 +811,11 @@ bool ApiHandler::handlePost(CivetServer *pServer,
         }
     }
 
-    if("/auth/get_challenge" != method &&
+    if(("/auth/get_challenge" != method &&
         "/account/register" != method &&
-        !Authenticate(obj, response, session))
+        !Authenticate(obj, response, session)) ||
+        ("/admin/" == method.Left(strlen("/admin/")) && (!session->account ||
+        !session->account->GetIsGM())))
     {
         mg_printf(pConnection, "HTTP/1.1 401 Unauthorized\r\n"
             "Connection: close\r\n\r\n");

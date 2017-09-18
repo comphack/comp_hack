@@ -1,0 +1,48 @@
+<!--
+@file contrib/webroot/accountmanager/home.html
+@ingroup accountmanager
+
+@author COMP Omega <compomega@tutanota.com>
+
+This file is part of the Account Manager.
+
+Copyright (C) 2012-2017 COMP_hack Team <compomega@tutanota.com>
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as
+published by the Free Software Foundation, either version 3 of the
+License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+-->
+<button id="register_button">Register</button>
+<button id="logout_button">Logout</button>
+<hr/>
+<p>Welcome <span id="welcome"></span>!</p>
+<h3>Your Account</h3>
+<p><b>Username:&nbsp;</b><span id="username"></span></p>
+<p><b>Email:&nbsp;</b><span id="email"></span></p>
+<p><b>Character Tickets:&nbsp;</b><span id="ticket_count"></span></p>
+<p><b>User Level:&nbsp;</b><span id="user_level"></span></p>
+<p><b>Last Login:&nbsp;</b><span id="last_login"></span></p>
+<p><b>Character Count:&nbsp;</b><span id="character_count"></span></p>
+<p><b>CP:&nbsp;</b><span id="cp"></span></p>
+<div id="account_list"></div>
+<h3>Change Password</h3>
+<form id="change_password" action="index.html">
+    <p>
+        <b>Password:</b>&nbsp;<input id="new_password" type="password" value="">
+    </p>
+    <p>
+        <b>Verify Password:</b>&nbsp;<input id="verify_password" type="password" value="">
+    </p>
+    <p>
+        <input type="submit" value="Update Password">
+    </p>
+</form>

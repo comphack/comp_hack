@@ -60,6 +60,7 @@
         <member name="CharacterTicketCost">0</member>
         <member name="WebListeningPort">10999</member>
         <!-- <member name="WebCertificate">/etc/comp_hack/server.pem</member> -->
+        <!-- <member name="WebRoot">/var/www</member> -->
         <member name="ClientVersion">1.666</member>
     </object>
 </objgen>

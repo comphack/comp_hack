@@ -249,7 +249,7 @@ String String::Mid(size_t position, size_t count) const
         size_t length;
 
         // Sanity check the count does not go past the end of the string.
-        if((count + position) >= d->mLength)
+        if((count + position) >= d->mLength || 0 == count)
         {
             count = 0;
 

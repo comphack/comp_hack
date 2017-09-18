@@ -13,5 +13,6 @@
         </member>
         <member name="DataStoreSync">false</member>
         <member name="LogFile">C:/COMP_hack/Logs/lobby.log</member>
+        <member name="WebRoot">C:/COMP_hack/Website</member>
     </object>
 </objgen>

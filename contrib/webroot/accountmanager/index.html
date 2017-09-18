@@ -1,0 +1,549 @@
+<!doctype html>
+<!--
+@file contrib/webroot/accountmanager/index.html
+@ingroup accountmanager
+
+@author COMP Omega <compomega@tutanota.com>
+
+This file is part of the Account Manager.
+
+Copyright (C) 2012-2017 COMP_hack Team <compomega@tutanota.com>
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as
+published by the Free Software Foundation, either version 3 of the
+License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+-->
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Account Registration</title>
+    <link rel="stylesheet" href="jquery-ui-1.12.1.trontastic/jquery-ui.css">
+    <style type="text/css">
+        body{
+                color: white;
+                background-color: black;
+                font-family: "Trebuchet MS", sans-serif;
+                margin: 10px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        table, th, td {
+            border: 1px solid white;
+        }
+
+        th {
+            background: #222222;
+        }
+    </style>
+</head>
+<body>
+    <!-- <script type="text/javascript" src="jquery-3.2.1.min.js"></script> -->
+    <script type="text/javascript" src="jquery-ui-1.12.1.trontastic/external/jquery/jquery.js"></script>
+    <script type="text/javascript" src="jquery-ui-1.12.1.trontastic/jquery-ui.js"></script>
+    <script type="text/javascript" src="jsSHA-2.3.1/src/sha512.js"></script>
+    <script>
+
+    var SERVER_URL = "http://127.0.0.1:10999";
+
+    var api;
+    var activePage;
+    var authenticated = false;
+    var account = { };
+    var accountNames = [ ];
+
+    function API(server, username, password) {
+        this.server = server;
+        this.username = username;
+        this.password = password;
+    }
+
+    API.prototype.Register = function(username, email, password, callback) {
+        var request = {
+            username: username,
+            email: email,
+            password: password,
+        };
+
+        var uri = this.server + '/api/account/register';
+        var data = JSON.stringify(request);
+
+        $.ajax({
+            url: uri,
+            method: 'POST',
+            contentType: 'application/json',
+            data: data,
+            dataType: 'json'
+        }).then(function(data) {
+            if(callback) {
+                callback(data);
+            }
+        });
+    }
+
+    API.prototype.Authenticate = function(callback) {
+        var apiThis = this;
+
+        var request = {
+            username: this.username
+        };
+
+        var uri = this.server + '/api/auth/get_challenge';
+        var data = JSON.stringify(request);
+
+        $.ajax({
+            url: uri,
+            method: 'POST',
+            contentType: 'application/json',
+            data: data,
+            dataType: 'json'
+        }).then(function(data) {
+            if('salt' in data && 'challenge' in data) {
+                apiThis.salt = data['salt'];
+
+                var shaObj = new jsSHA('SHA-512', 'TEXT');
+                shaObj.update(apiThis.password + apiThis.salt);
+
+                apiThis.password_hash = shaObj.getHash('HEX');
+
+                shaObj = new jsSHA('SHA-512', 'TEXT');
+                shaObj.update(apiThis.password_hash + data['challenge']);
+
+                apiThis.challenge = shaObj.getHash('HEX');
+
+                if(callback) {
+                    callback(data);
+                }
+            }
+            else {
+                alert('Internal error.');
+            }
+        }, function(jqXHR, textStatus, errorThrown) {
+            alert('Invalid username/password combination.');
+        });
+    }
+
+    API.prototype.Request = function(api_method, userRequest, callback) {
+        var apiThis = this;
+
+        var request = {
+            challenge: this.challenge
+        };
+
+        if(userRequest) {
+            $.extend(request, userRequest);
+        }
+
+        var uri = this.server + api_method;
+        var data = JSON.stringify(request);
+
+        $.ajax({
+            url: uri,
+            method: 'POST',
+            contentType: 'application/json',
+            data: data,
+            dataType: 'json'
+        }).then(function(data) {
+            if('challenge' in data) {
+                authenticated = true;
+
+                shaObj = new jsSHA('SHA-512', 'TEXT');
+                shaObj.update(apiThis.password_hash + data['challenge']);
+
+                apiThis.challenge = shaObj.getHash('HEX');
+
+                if(callback) {
+                    callback(data);
+                }
+            }
+            else {
+                alert('Internal error.');
+            }
+        }, function(jqXHR, textStatus, errorThrown) {
+            if(authenticated) {
+                alert('Internal error (bad API request).');
+            } else {
+                alert('Invalid username/password combination.');
+            }
+        });
+    }
+
+    function DefaultUI() {
+        $('button').button();
+        $('input').addClass("ui-widget ui-widget-content ui-corner-all");
+        $('input[type=submit]').button();
+        $('input[type=checkbox]').checkboxradio();
+    }
+
+    function RegisterPage() {
+        $.ajax({
+            url: 'register.html',
+            cache: true
+        }).then(function(data) {
+            $('#page').html(data);
+
+            DefaultUI();
+
+            $('#register').submit(function(event) {
+                var registerApi = new API(SERVER_URL);
+                registerApi.Register($('#username').val(), $('#email').val(),
+                    $('#password').val(), function(data)
+                {
+                    if('error' in data) {
+                        alert(data['error']);
+
+                        if('Success' == data['error']) {
+                            $('#username').val('');
+                            $('#email').val('');
+                            $('#password').val('');
+                        }
+                    } else {
+                        alert(JSON.stringify(data));
+                    }
+                });
+
+                event.preventDefault();
+            });
+            $('#home_button').click(function(event) {
+                if(authenticated) {
+                    HomePage();
+                } else {
+                    LoginPage();
+                }
+
+                event.preventDefault();
+            });
+        });
+    }
+
+    function UpdateAccount(username) {
+        var request = {
+            username: username,
+            gm: $('#edit_gm').prop('checked'),
+            enabled: $('#edit_enabled').prop('checked'),
+            banned: $('#edit_banned').prop('checked'),
+            disp_name: $('#edit_disp_name').val(),
+            cp: parseInt($('#edit_cp').val()),
+            user_level: parseInt($('#edit_user_level').val()),
+            ticket_count: parseInt($('#edit_ticket_count').val())
+        };
+
+        var password = $('#edit_password').val();
+
+        if(password.length) {
+            request.password = password;
+        }
+
+        var onUpdateFunction;
+
+        if(username == account.username) {
+            onUpdateFunction = function(data) {
+                authenticated = false;
+                api = null;
+
+                LoginPage();
+            }
+        } else {
+            onUpdateFunction = function(data) {
+                HomePage();
+            }
+        }
+
+        api.Request('/api/admin/update_account', request, function(data) {
+            if('error' in data) {
+                if('Success' != data['error']) {
+                    alert(data['error']);
+                } else {
+                    onUpdateFunction();
+                }
+            } else {
+                alert('Internal error.');
+            }
+        });
+    }
+
+    function EditPage(username) {
+        $.ajax({
+            url: 'edit.html',
+            cache: true
+        }).then(function(data) {
+            $('#page').html(data);
+
+            DefaultUI();
+
+            $('#home_button').click(function(event) {
+                if(authenticated) {
+                    HomePage();
+                } else {
+                    LoginPage();
+                }
+
+                event.preventDefault();
+            });
+
+            api.Request('/api/admin/get_account', {
+                username: username
+            }, function(data) {
+                if('username' in data) {
+                    $('#edit_username').text(data['username']);
+                }
+                if('email' in data) {
+                    $('#edit_email').text(data['email']);
+                }
+                if('gm' in data) {
+                    $('#edit_gm').prop('checked', data['gm']);
+                    $('#edit_gm').button('refresh');
+                }
+                if('enabled' in data) {
+                    $('#edit_enabled').prop('checked', data['enabled']);
+                    $('#edit_enabled').button('refresh');
+                }
+                if('banned' in data) {
+                    $('#edit_banned').prop('checked', data['banned']);
+                    $('#edit_banned').button('refresh');
+                }
+                if('disp_name' in data) {
+                    $('#edit_disp_name').val(data['disp_name']);
+                }
+                if('cp' in data) {
+                    $('#edit_cp').val(data['cp']);
+                }
+                if('ticket_count' in data) {
+                    $('#edit_ticket_count').val(data['ticket_count']);
+                }
+                if('user_level' in data) {
+                    $('#edit_user_level').val(data['user_level']);
+                }
+
+                $('#edit').submit(function(event) {
+                    UpdateAccount(username);
+
+                    event.preventDefault();
+                })
+            });
+        });
+    }
+
+    function ListAccounts(accounts) {
+        var html = '';
+
+        var i = 0;
+
+        accountNames = [ ];
+
+        $.each(accounts, function(index, account) {
+            html += '<tr>';
+            html += '<td>' + account.username + '</td>';
+            html += '<td>' + account.disp_name + '</td>';
+            html += '<td>' + account.email + '</td>';
+            html += '<td>' + account.ticket_count + '</td>';
+            html += '<td>' + account.user_level + '</td>';
+            html += '<td>' + (account.enabled ? 'Yes' : 'No') + '</td>';
+            html += '<td>' + (account.gm ? 'Yes' : 'No') + '</td>';
+            html += '<td>' + (account.banned ? 'Yes' : 'No') + '</td>';
+            html += '<td>' + (new Date(1000 *
+                account.last_login)).toString() + '</td>';
+            html += '<td>' + account.character_count + '</td>';
+            html += '<td align="center"><button id="edit_account_' + i + '">Edit</button></td>';
+            html += '<td align="center"><button id="delete_account_' + i + '">Delete</button></td>';
+            html += '</tr>';
+
+            accountNames.push(account.username);
+
+            i++;
+        });
+
+        $('#account_table').find('tbody').append(html);
+
+        for(var j = 0; j < i; j++) {
+            $('#edit_account_' + j).button().click(function(event) {
+                EditPage($(this).attr('account_username'));
+            }).attr('account_username', accountNames[j]);
+            $('#delete_account_' + j).button().click(function(event) {
+                var delete_username = $(this).attr('account_username');
+
+                if(confirm('Are you sure you want to delete the account \'' +
+                    delete_username + '\'? ' +
+                    'This action cannot be undone.'))
+                {
+                    var onDeleteFunction;
+
+                    if(delete_username == account.username) {
+                        onDeleteFunction = function(data) {
+                            authenticated = false;
+                            api = null;
+
+                            LoginPage();
+                        }
+                    } else {
+                        onDeleteFunction = function(data) {
+                            HomePage();
+                        }
+                    }
+
+                    api.Request('/api/admin/delete_account', {
+                        username: delete_username
+                    }, onDeleteFunction);
+                }
+            }).attr('account_username', accountNames[j]);
+        }
+    }
+
+    function HomePage() {
+        $.ajax({
+            url: 'home.html',
+            cache: true
+        }).then(function(data) {
+            $('#page').html(data);
+
+            DefaultUI();
+
+            $('#username').text(account.username);
+            $('#email').text(account.email);
+            $('#ticket_count').text(account.ticket_count);
+            $('#user_level').text(account.user_level);
+            $('#last_login').text(account.last_login.toString());
+            $('#character_count').text(account.character_count);
+            $('#cp').text('' + account.cp);
+            $('#welcome').text(account.disp_name);
+
+            if(account.gm) {
+                $.ajax({
+                    url: 'account_list.html',
+                    cache: true
+                }).then(function(data) {
+                    $('#account_list').html(data);
+
+                    api.Request('/api/admin/get_accounts', {}, function(data) {
+                        if('accounts' in data) {
+                            ListAccounts(data['accounts']);
+                        }
+                    });
+                });
+            }
+
+            $('#register_button').click(function(event){
+                RegisterPage();
+
+                event.preventDefault();
+            });
+            $('#logout_button').click(function(event){
+                authenticated = false;
+                api = null;
+
+                LoginPage();
+
+                event.preventDefault();
+            });
+            $('#change_password').submit(function(event) {
+                var password1 = $('#new_password').val();
+                var password2 = $('#verify_password').val();
+
+                if(password1 != password2) {
+                    alert('Passwords do not match!');
+
+                    $('#new_password').val('');
+                    $('#verify_password').val('');
+                } else {
+                    api.Request('/api/account/change_password', {
+                        password: $('#new_password').val()
+                    }, function(data) {
+                        if('error' in data) {
+                            if('Success' == data['error']) {
+                                LoginPage();
+                            } else {
+                                alert(data['error']);
+
+                                $('#new_password').val('');
+                                $('#verify_password').val('');
+                            }
+                        } else {
+                            alert('Internal error.');
+
+                            $('#new_password').val('');
+                            $('#verify_password').val('');
+                        }
+                    });
+                }
+                event.preventDefault();
+            })
+        });
+    }
+
+    function LoginPage() {
+        $.ajax({
+            url: 'login.html',
+            cache: true
+        }).then(function(data) {
+            $('#page').html(data);
+
+            DefaultUI();
+
+            $('#register_button').click(function(event){
+                RegisterPage();
+
+                event.preventDefault();
+            });
+            $('#login').submit(function(event) {
+                api = new API(SERVER_URL, $('#username').val(),
+                    $('#password').val());
+                api.Authenticate(function(data) {
+                    api.Request('/api/account/get_details', {}, function(data) {
+                        if('gm' in data) {
+                            account.gm = data['gm'];
+                        }
+                        if('cp' in data) {
+                            account.cp = data['cp'];
+                        }
+                        if('username' in data) {
+                            account.username = data['username'];
+                        }
+                        if('disp_name' in data) {
+                            account.disp_name = data['disp_name'];
+                        }
+                        if('email' in data) {
+                            account.email = data['email'];
+                        }
+                        if('ticket_count' in data) {
+                            account.ticket_count = data['ticket_count'];
+                        }
+                        if('user_level' in data) {
+                            account.user_level = data['user_level'];
+                        }
+                        if('last_login' in data) {
+                            account.last_login = new Date(1000 *
+                                data['last_login']);
+                        }
+                        if('character_count' in data) {
+                            account.character_count = data['character_count'];
+                        }
+
+                        HomePage();
+                    });
+                });
+
+                event.preventDefault();
+            });
+        });
+    }
+
+    $(document).ready(function() {
+        LoginPage();
+    });
+
+    </script>
+    <div id="page"></div>
+</body>
+</html>

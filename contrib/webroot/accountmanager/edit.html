@@ -1,0 +1,65 @@
+<!--
+@file contrib/webroot/accountmanager/edit.html
+@ingroup accountmanager
+
+@author COMP Omega <compomega@tutanota.com>
+
+This file is part of the Account Manager.
+
+Copyright (C) 2012-2017 COMP_hack Team <compomega@tutanota.com>
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as
+published by the Free Software Foundation, either version 3 of the
+License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+-->
+<button id="home_button">Home</button>
+<hr/>
+<form id="edit" action="index.html">
+    <p>
+        <b>Username:&nbsp;</b>
+        <span id="edit_username"></span>
+    </p>
+    <p>
+        <b>Email:&nbsp;</b>
+        <span id="edit_email"></span>
+    </p>
+    <p>
+        <label for="edit_gm">GM</label>
+        <input type="checkbox" name="edit_gm" id="edit_gm">
+    </p>
+    <p>
+        <label for="edit_enabled">Enabled</label>
+        <input type="checkbox" name="edit_enabled" id="edit_enabled">
+    </p>
+    <p>
+        <label for="edit_banned">Banned</label>
+        <input type="checkbox" name="edit_banned" id="edit_banned">
+    </p>
+    <p>
+        <b>Display Name:</b>&nbsp;<input id="edit_disp_name" type="text" value="">
+    </p>
+    <p>
+        <b>CP:</b>&nbsp;<input id="edit_cp" type="text" value="">
+    </p>
+    <p>
+        <b>Ticket Count:</b>&nbsp;<input id="edit_ticket_count" type="text" value="">
+    </p>
+    <p>
+        <b>User Level:</b>&nbsp;<input id="edit_user_level" type="text" value="">
+    </p>
+    <p>
+        <b>Password:</b>&nbsp;<input id="edit_password" type="password" value="">
+    </p>
+    <p>
+        <input type="submit" value="Update Account">
+    </p>
+</form>

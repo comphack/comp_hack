@@ -68,8 +68,11 @@ protected:
     /// have been handled elsewhere
     bool ApplyStatusEffects = true;
 
-    /// Designates a skill that is being countered.
-    channel::ProcessingSkill* CounteredSkill = 0;
+    /// Designates a skill that is being countered
+    std::shared_ptr<channel::ProcessingSkill> CounteredSkill;
+
+    /// List of skills that are countering the current skill context
+    std::list<std::shared_ptr<channel::ProcessingSkill>> CounteringSkills;
 };
 
 /**
@@ -161,7 +164,7 @@ private:
         const std::shared_ptr<SkillExecutionContext>& ctx);
 
     /**
-     * Process the results of a normal skill. If the skill involves a projectile
+     * Process the results of a skill. If the skill involves a projectile
      * this will be scheduled to execute after skill execution, otherwise it will
      * execute immediately.
      * @param activated Pointer to the activated ability instance
@@ -169,7 +172,14 @@ private:
      * @return true if the skill processed successfully, false otherwise
      */
     bool ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility> activated,
-        const std::shared_ptr<SkillExecutionContext>& ctx);
+        std::shared_ptr<SkillExecutionContext> ctx);
+
+    /**
+     * Finalize skill processing and send the skill effect reports.
+     * @param pSkill Current skill processing state
+     * @param ctx Special execution state for the skill
+     */
+    void ProcessSkillResultFinal(const std::shared_ptr<channel::ProcessingSkill>& pSkill);
 
     /**
      * Calculate and set the offense value of a damage dealing skill.
@@ -184,43 +194,43 @@ private:
      * Determine how each targeted entity reacts to being hit by a skill. This
      * assumes NRA has already adjusted who will is a target.
      * @param source Pointer to the state of the source entity
-     * @param activated Pointer to the activated ability instance
-     * @param targets List target results associated to the skill
-     * @param skill Current skill processing state
+     * @param pSkill Current skill processing state
      */
     void CheckSkillHits(const std::shared_ptr<ActiveEntityState>& source,
-        const std::shared_ptr<objects::ActivatedAbility>& activated,
-        std::list<SkillTargetResult>& targets, ProcessingSkill& skill);
+        const std::shared_ptr<channel::ProcessingSkill>& pSkill);
 
     /**
      * Execute or cancel the guard skill currently being used by the
      * supplied target from being hit by the source entity
      * @param source Pointer to the state of the source entity
      * @param target Pointer ot the stare of the target entity
-     * @param skill Skill processing state of the skill being guarded
+     * @param pSkill Skill processing state of the skill being guarded
      */
     void HandleGuard(const std::shared_ptr<ActiveEntityState>& source,
-        SkillTargetResult& target, ProcessingSkill& skill);
+        SkillTargetResult& target, const std::shared_ptr<
+        channel::ProcessingSkill>& pSkill);
 
     /**
      * Execute or cancel the counter skill currently being used by the
      * supplied target from being hit by the source entity
      * @param source Pointer to the state of the source entity
      * @param target Pointer ot the stare of the target entity
-     * @param skill Skill processing state of the skill being counterd
+     * @param pSkill Skill processing state of the skill being counterd
      */
     void HandleCounter(const std::shared_ptr<ActiveEntityState>& source,
-        SkillTargetResult& target, ProcessingSkill& skill);
+        SkillTargetResult& target, const std::shared_ptr<
+        channel::ProcessingSkill>& pSkill);
 
     /**
      * Execute or cancel the dodge skill currently being used by the
      * supplied target from being hit by the source entity
      * @param source Pointer to the state of the source entity
      * @param target Pointer ot the stare of the target entity
-     * @param skill Skill processing state of the skill being dodged
+     * @param pSkill Skill processing state of the skill being dodged
      */
     void HandleDodge(const std::shared_ptr<ActiveEntityState>& source,
-        SkillTargetResult& target, ProcessingSkill& skill);
+        SkillTargetResult& target, const std::shared_ptr<
+        channel::ProcessingSkill>& pSkill);
 
     /**
      * Handle all logic related to kills that occurred from a skill's execution.
@@ -265,14 +275,11 @@ private:
     /**
      * Calculate skill damage or healing using the correct formula
      * @param source Pointer to the entity that activated the skill
-     * @param activated Pointer to the activated ability instance
-     * @param targets List target results associated to the skill
      * @param skill Current skill processing state
      * @return true if the calculation succeeded, false otherwise
      */
     bool CalculateDamage(const std::shared_ptr<ActiveEntityState>& source,
-        const std::shared_ptr<objects::ActivatedAbility>& activated,
-        std::list<SkillTargetResult>& targets, ProcessingSkill& skill);
+        ProcessingSkill& skill);
 
     /**
      * Calculate skill damage or healing using the default formula

@@ -1467,6 +1467,30 @@ bool ZoneManager::PointInPolygon(const Point& p, const std::list<Point> vertices
     return (crosses % 2) == 1;
 }
 
+std::list<std::shared_ptr<ActiveEntityState>> ZoneManager::GetEntitiesInFoV(
+    const std::list<std::shared_ptr<ActiveEntityState>>& entities,
+    float x, float y, float rot, float maxAngle)
+{
+    std::list<std::shared_ptr<ActiveEntityState>> results;
+
+    // Max and min radians of the arc's circle
+    float maxRotL = rot + maxAngle;
+    float maxRotR = rot - maxAngle;
+
+    for(auto e : entities)
+    {
+        float eRot = (float)atan2((float)(y - e->GetCurrentY()),
+            (float)(x - e->GetCurrentX()));
+
+        if(maxRotL >= eRot && maxRotR <= eRot)
+        {
+            results.push_back(e);
+        }
+    }
+
+    return results;
+}
+
 std::shared_ptr<Zone> ZoneManager::GetZone(uint32_t zoneID,
     const std::shared_ptr<ChannelClientConnection>& client)
 {

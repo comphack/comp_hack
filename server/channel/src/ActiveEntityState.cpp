@@ -129,12 +129,17 @@ void ActiveEntityState::Move(float xPos, float yPos, uint64_t now)
     {
         SetOriginX(GetCurrentX());
         SetOriginY(GetCurrentY());
-        SetOriginRotation(GetCurrentRotation());
         SetOriginTicks(now);
+
+        // Rotate instantly
+        float destRot = (float)atan2(GetCurrentY() - yPos,
+            GetCurrentX() - xPos);
+        SetOriginRotation(destRot);
+        SetDestinationRotation(destRot);
 
         uint64_t addMicro = (uint64_t)(
             (double)(GetDistance(xPos, yPos) /
-            GetMovementSpeed(mOpponentIDs.size() > 0)) * 1000000.0);
+            GetMovementSpeed()) * 1000000.0);
 
         SetDestinationX(xPos);
         SetDestinationY(yPos);

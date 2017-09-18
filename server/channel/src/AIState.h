@@ -70,6 +70,7 @@ enum AIStatus_t : uint8_t
 {
     IDLE = 0,   //!< Entity is either stationary or otherwise not active
     WANDERING,  //!< Enemy entity is wandering around its spawn location
+    AGGRO,  //!< Entity is not in combat yet but is pursuing a target
     COMBAT, //!< Entity is engaged in combat with one or more opponent
 };
 
@@ -95,6 +96,12 @@ public:
      * @return Status of the AI state
      */
     AIStatus_t GetStatus() const;
+
+    /**
+     * Get the previous status
+     * @return Previous status of the AI state
+     */
+    AIStatus_t GetPreviousStatus() const;
 
     /**
      * Get the default status
@@ -270,6 +277,9 @@ private:
 
     /// Current AI status of the entity
     AIStatus_t mStatus;
+
+    /// Previous AI status of the entity
+    AIStatus_t mPreviousStatus;
 
     /// Default AI status of the entity
     AIStatus_t mDefaultStatus;

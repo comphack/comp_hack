@@ -364,6 +364,20 @@ public:
      */
     static bool PointInPolygon(const Point& p, const std::list<Point> vertices);
 
+    /**
+     * Filter the list of supplied entities to only those visible in the
+     * specified field of view
+     * @param entities List of entities to filter to visible only
+     * @param x X coordinate of the FoV origin
+     * @param y Y coordinate of the FoV origin
+     * @param rot Rotation in radians for the center of the FoV
+     * @param maxAngle Maximum angle in radians for either side of the FoV
+     * @return Filtered list of entities visible
+     */
+    static std::list<std::shared_ptr<ActiveEntityState>> GetEntitiesInFoV(
+        const std::list<std::shared_ptr<ActiveEntityState>>& entities,
+        float x, float y, float rot, float maxAngle);
+
 private:
     /**
      * Create an enemy in the specified zone instance at set coordinates

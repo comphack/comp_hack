@@ -1,0 +1,13 @@
+[Unit]
+Description=SMT Private Server World
+Requires=comp_lobby.service
+After=comp_lobby.service
+
+[Service]
+Type=notify
+User=comphack
+Group=comphack
+ExecStart=/usr/bin/comp_world
+
+[Install]
+WantedBy=multi-user.target

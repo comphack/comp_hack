@@ -1,0 +1,13 @@
+[Unit]
+Description=SMT Private Server Lobby
+Requires=systemd-networkd.socket
+After=systemd-networkd.socket
+
+[Service]
+Type=notify
+User=comphack
+Group=comphack
+ExecStart=/usr/bin/comp_lobby
+
+[Install]
+WantedBy=multi-user.target

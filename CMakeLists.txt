@@ -647,9 +647,9 @@ IF(NOT WIN32)
     INSTALL(DIRECTORY ${CMAKE_SOURCE_DIR}/contrib/webroot
         DESTINATION ${CMAKE_INSTALL_LOCALSTATEDIR}/lib/comp_hack)
     INSTALL(DIRECTORY ${CMAKE_SOURCE_DIR}/contrib/nixconfig/
-        DESTINATION ${CMAKE_INSTALL_LOCALSTATEDIR}/comp_hack)
+        DESTINATION ${CMAKE_INSTALL_SYSCONFDIR}/comp_hack)
     INSTALL(FILES ${CMAKE_SOURCE_DIR}/contrib/testing/constants.xml
-        DESTINATION ${CMAKE_INSTALL_LOCALSTATEDIR}/comp_hack)
+        DESTINATION ${CMAKE_INSTALL_SYSCONFDIR}/comp_hack)
 ENDIF(NOT WIN32)
 
 # Copy all contrib/testing to the bin directory.

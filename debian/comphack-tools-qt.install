@@ -1,5 +1,5 @@
-bin/comp_capgrep
-bin/comp_logger
-bin/comp_map
-share/applications
-share/icons
+usr/bin/comp_capgrep
+usr/bin/comp_logger
+usr/bin/comp_map
+usr/share/applications
+usr/share/icons

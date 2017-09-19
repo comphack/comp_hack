@@ -1,0 +1,17 @@
+#!/bin/sh
+
+#DEBHELPER#
+
+set -e
+
+USERNAME="comphack"
+
+adduser --system $USERNAME
+
+mkdir -p /var/log/comp_hack
+chown $USERNAME:$USERNAME /var/log/comp_hack
+mkdir -p /var/lib/comp_hack/database
+chown $USERNAME:$USERNAME /var/lib/comp_hack/database
+
+echo "You must now complete configuration of the server."
+echo "Once done you may start it with: sudo systemctl start comp_channel"

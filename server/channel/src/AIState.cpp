@@ -50,8 +50,8 @@ namespace libcomp
 }
 
 AIState::AIState() : mTargetEntityID(0), mSkillSettings(AI_SKILL_TYPES_ALL),
-    mStatus(AIStatus_t::IDLE), mDefaultStatus(AIStatus_t::IDLE),
-    mStatusChanged(false), mSkillsMapped(false)
+    mStatus(AIStatus_t::IDLE), mPreviousStatus(AIStatus_t::IDLE),
+    mDefaultStatus(AIStatus_t::IDLE), mStatusChanged(false), mSkillsMapped(false)
 {
     mLock = new std::mutex();
 }
@@ -66,6 +66,11 @@ AIStatus_t AIState::GetStatus() const
     return mStatus;
 }
 
+AIStatus_t AIState::GetPreviousStatus() const
+{
+    return mPreviousStatus;
+}
+
 AIStatus_t AIState::GetDefaultStatus() const
 {
     return mDefaultStatus;
@@ -75,6 +80,7 @@ void AIState::SetStatus(AIStatus_t status, bool isDefault)
 {
     mStatusChanged = mStatus != status;
 
+    mPreviousStatus = mStatus;
     mStatus = status;
 
     if(isDefault)

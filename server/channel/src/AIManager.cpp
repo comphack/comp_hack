@@ -171,7 +171,7 @@ void AIManager::UpdateActiveStates(const std::shared_ptr<Zone>& zone,
                     p.WriteFloat(enemy->GetDestinationY());
                     p.WriteFloat(enemy->GetOriginX());
                     p.WriteFloat(enemy->GetOriginY());
-                    p.WriteFloat(1.f);      /// @todo: correct rate per second
+                    p.WriteFloat(enemy->GetMovementSpeed());
 
                     timeMap[p.Size()] = now;
                     timeMap[p.Size() + 4] = enemy->GetDestinationTicks();
@@ -241,31 +241,43 @@ void AIManager::Move(const std::shared_ptr<ActiveEntityState>& eState,
 bool AIManager::UpdateState(const std::shared_ptr<ActiveEntityState>& eState,
     uint64_t now)
 {
+    eState->RefreshCurrentPosition(now);
+
     auto aiState = eState->GetAIState();
     if(!aiState || (aiState->IsIdle() && !aiState->IsOverriden("idle")))
     {
         return false;
     }
 
-    eState->RefreshCurrentPosition(now);
     eState->ExpireStatusTimes(now);
 
-    // If the entity cannot act or is waiting, quit here
+    // If the entity cannot act or is waiting, stop if moving and quit here
     if(!eState->CanAct() || eState->GetStatusTimes(STATUS_WAITING))
     {
+        if(eState->IsMoving() && !eState->GetStatusTimes(STATUS_KNOCKBACK))
+        {
+            eState->Stop(now);
+            return true;
+        }
+
         return false;
     }
 
     if(aiState->StatusChanged())
     {
-        auto cmd = aiState->GetCurrentCommand();
-        aiState->ClearCommands();
-
-        // If the current command was a use skill, let it complete and
-        // fail if it needs to
-        if(cmd && cmd->GetType() == AICommandType_t::USE_SKILL)
+        // Do not clear actions if going from aggro to combat
+        if(!(aiState->GetStatus() == AIStatus_t::COMBAT &&
+            aiState->GetPreviousStatus() == AIStatus_t::AGGRO))
         {
-            aiState->QueueCommand(cmd);
+            auto cmd = aiState->GetCurrentCommand();
+            aiState->ClearCommands();
+
+            // If the current command was a use skill, let it complete and
+            // fail if it needs to
+            if(cmd && cmd->GetType() == AICommandType_t::USE_SKILL)
+            {
+                aiState->QueueCommand(cmd);
+            }
         }
 
         aiState->ResetStatusChanged();
@@ -282,6 +294,9 @@ bool AIManager::UpdateState(const std::shared_ptr<ActiveEntityState>& eState,
             break;
         case AIStatus_t::WANDERING:
             actionName = "wander";
+            break;
+        case AIStatus_t::AGGRO:
+            actionName = "aggro";
             break;
         case AIStatus_t::COMBAT:
             actionName = "combat";
@@ -423,14 +438,17 @@ bool AIManager::UpdateState(const std::shared_ptr<ActiveEntityState>& eState,
 
                 if(valid)
                 {
+                    auto ctx = std::make_shared<SkillExecutionContext>();
+                    ctx->FreeCast = true;
+
                     if(activated)
                     {
                         // Execute the skill
                         if(skillManager->ExecuteSkill(eState, activated->GetActivationID(),
-                            activated->GetTargetObjectID(), true))
+                            activated->GetTargetObjectID(), ctx))
                         {
                             // Queue a wait command
-                            QueueWaitCommand(aiState, 5);
+                            QueueWaitCommand(aiState, RNG(uint32_t, 4, 6));
                         }
                         else
                         {
@@ -442,7 +460,7 @@ bool AIManager::UpdateState(const std::shared_ptr<ActiveEntityState>& eState,
                     {
                         // Activate the skill
                         skillManager->ActivateSkill(eState, cmdSkill->GetSkillID(),
-                            cmdSkill->GetTargetObjectID(), true);
+                            cmdSkill->GetTargetObjectID(), ctx);
                     }
                 }
 
@@ -487,193 +505,322 @@ bool AIManager::UpdateState(const std::shared_ptr<ActiveEntityState>& eState,
 
 bool AIManager::UpdateEnemyState(const std::shared_ptr<EnemyState>& eState, uint64_t now)
 {
+    auto server = mServer.lock();
+
     auto aiState = eState->GetAIState();
-    switch(aiState->GetStatus())
+    if(aiState->GetTarget() == 0 && eState->GetOpponentIDs().size() == 0)
     {
-    case AIStatus_t::WANDERING:
+        Retarget(eState, now);
+    }
+
+    if(aiState->GetStatus() == AIStatus_t::WANDERING)
+    {
+        auto spawnLocation = eState->GetEntity()->GetSpawnLocation();
+
+        if(spawnLocation && eState->CanMove())
         {
-            auto spawnLocation = eState->GetEntity()->GetSpawnLocation();
+            auto point = server->GetZoneManager()->GetRandomPoint(
+                spawnLocation->GetWidth(), spawnLocation->GetHeight());
 
-            if(spawnLocation && eState->CanMove())
+            // Spawn group bounding box points start in the top left corner of the
+            // rectangle and extend towards +X/-Y
+            float x = (float)(spawnLocation->GetX() + point.x);
+            float y = (float)(spawnLocation->GetY() - point.y);
+
+            Point source(eState->GetCurrentX(), eState->GetCurrentY());
+            Point dest(x, y);
+
+            auto command = GetMoveCommand(eState->GetZone(), source, dest);
+            if(command)
             {
-                auto server = mServer.lock();
-                auto point = server->GetZoneManager()->GetRandomPoint(
-                    spawnLocation->GetWidth(), spawnLocation->GetHeight());
-
-                // Spawn group bounding box points start in the top left corner of the
-                // rectangle and extend towards +X/-Y
-                float x = (float)(spawnLocation->GetX() + point.x);
-                float y = (float)(spawnLocation->GetY() - point.y);
-
-                Point source(eState->GetCurrentX(), eState->GetCurrentY());
-                Point dest(x, y);
-
-                auto command = GetMoveCommand(eState->GetZone(), source, dest);
-                if(command)
-                {
-                    aiState->QueueCommand(command);
-                }
+                aiState->QueueCommand(command);
             }
-
-            /// @todo: determine what this should be per demon type
-            QueueWaitCommand(aiState, RNG(uint32_t, 3, 9));
-
-            return true;
         }
-        break;
-    case AIStatus_t::COMBAT:
+
+        /// @todo: determine what this should be per demon type
+        QueueWaitCommand(aiState, RNG(uint32_t, 3, 9));
+
+        return true;
+    }
+
+    // If not wandering, handle aggro and combat somewhat similarly
+    bool inCombat = aiState->GetStatus() == AIStatus_t::COMBAT;
+
+    auto zone = eState->GetZone();
+    int32_t targetEntityID = aiState->GetTarget();
+    auto target = targetEntityID > 0
+        ? zone->GetActiveEntity(targetEntityID) : nullptr;
+    if(!target || !target->IsAlive() || !target->Ready())
+    {
+        if(inCombat)
         {
-            auto zone = eState->GetZone();
-            int32_t targetEntityID = aiState->GetTarget();
-            auto target = targetEntityID > 0
-                ? zone->GetActiveEntity(targetEntityID) : nullptr;
-            if(!target || !target->IsAlive() || !target->Ready())
+            // Try to find another opponent
+            target = Retarget(eState, now);
+        }
+        else
+        {
+            // Reset to default state and quit
+            aiState->SetStatus(aiState->GetDefaultStatus());
+            return false;
+        }
+    }
+            
+    float targetDist = 0.f, targetX = 0.f, targetY = 0.f;
+    if(target)
+    {
+        target->RefreshCurrentPosition(now);
+        targetX = target->GetCurrentX();
+        targetY = target->GetCurrentY();
+        targetDist = eState->GetDistance(targetX, targetY);
+    }
+
+    bool targetChanged = false;
+    if(targetDist >= 5000.0)
+    {
+        // De-aggro on that one target and find a new one
+        server->GetCharacterManager()->AddRemoveOpponent(false,
+            eState, target);
+
+        target = Retarget(eState, now);
+        targetChanged = true;
+    }
+
+    auto activated = eState->GetActivatedAbility();
+    if(!target)
+    {
+        // No target could be found, stop combat and quit
+        if(activated)
+        {
+            server->GetSkillManager()->CancelSkill(eState, activated->GetActivationID());
+        }
+
+        server->GetCharacterManager()->AddRemoveOpponent(false,
+            eState, nullptr);
+
+        return false;
+    }
+    else if(targetChanged)
+    {
+        target->RefreshCurrentPosition(now);
+        targetX = target->GetCurrentX();
+        targetY = target->GetCurrentY();
+        targetDist = eState->GetDistance(targetX, targetY);
+    }
+
+    targetEntityID = target->GetEntityID();
+
+    if(activated)
+    {
+        auto skillManager = server->GetSkillManager();
+
+        // Skill charged, cancel, execute or move within range
+        int64_t activationTarget = activated->GetActivationObjectID();
+        if(activationTarget && targetEntityID != (int32_t)activationTarget)
+        {
+            // Target changed, cancel skill
+            /// @todo: implement target switching
+            skillManager->CancelSkill(eState, activated->GetActivationID());
+            return false;
+        }
+
+        auto definitionManager = server->GetDefinitionManager();
+        auto skillData = definitionManager->GetSkillData(activated->GetSkillID());
+        uint16_t maxTargetRange = (uint16_t)(400 + (skillData->GetTarget()->GetRange() * 10));
+
+        if(targetDist > maxTargetRange)
+        {
+            // Move within range
+            Point source(eState->GetCurrentX(), eState->GetCurrentY());
+
+            auto zoneManager = server->GetZoneManager();
+            auto point = zoneManager->GetLinearPoint(source.x, source.y,
+                targetX, targetY, (float)(targetDist - (float)maxTargetRange - 10.f), false);
+
+            auto cmd = GetMoveCommand(zone, source, point);
+            if(cmd)
             {
-                target = nullptr;
-
-                /// @todo: add better target selection logic
-                auto opponentIDs = eState->GetOpponentIDs();
-                auto inRange = zone->GetActiveEntitiesInRadius(
-                    eState->GetCurrentX(), eState->GetCurrentY(), 3000.0);
-                for(auto entity : inRange)
-                {
-                    if(opponentIDs.find(entity->GetEntityID()) != opponentIDs.end()
-                        && entity->IsAlive() && entity->Ready())
-                    {
-                        target = entity;
-                        targetEntityID = entity->GetEntityID();
-                        aiState->SetTarget(targetEntityID);
-                        break;
-                    }
-                }
-
-                if(!target)
-                {
-                    // No target could be found, stop combat
-                    mServer.lock()->GetCharacterManager()->AddRemoveOpponent(false,
-                        eState, nullptr);
-                    return false;
-                }
-            }
-
-            auto activated = eState->GetActivatedAbility();
-            if(activated)
-            {
-                auto server = mServer.lock();
-                auto skillManager = server->GetSkillManager();
-
-                // Skill charged, cancel, execute or move within range
-                int64_t activationTarget = activated->GetActivationObjectID();
-                if(activationTarget && targetEntityID != (int32_t)activationTarget)
-                {
-                    // Target changed, cancel skill
-                    /// @todo: implement target switching
-                    skillManager->CancelSkill(eState, activated->GetActivationID());
-                    return false;
-                }
-
-                auto definitionManager = server->GetDefinitionManager();
-                auto skillData = definitionManager->GetSkillData(activated->GetSkillID());
-                uint16_t maxTargetRange = (uint16_t)(400 + (skillData->GetTarget()->GetRange() * 10));
-
-                target->RefreshCurrentPosition(now);
-
-                float targetX = target->GetCurrentX();
-                float targetY = target->GetCurrentY();
-                float dist = eState->GetDistance(targetX, targetY, false);
-
-                if(dist > maxTargetRange)
-                {
-                    // Move within range
-                    Point source(eState->GetCurrentX(), eState->GetCurrentY());
-
-                    auto zoneManager = server->GetZoneManager();
-                    auto point = zoneManager->GetLinearPoint(source.x, source.y,
-                        targetX, targetY, (float)(dist - (float)maxTargetRange), false);
-
-                    auto cmd = GetMoveCommand(zone, source, point);
-                    if(cmd)
-                    {
-                        aiState->QueueCommand(cmd);
-                    }
-                    else
-                    {
-                        skillManager->CancelSkill(eState, activated->GetActivationID());
-                    }
-                }
-                else
-                {
-                    // Execute the skill
-                    auto cmd = std::make_shared<AIUseSkillCommand>(activated);
-                    aiState->QueueCommand(cmd);
-                }
+                aiState->QueueCommand(cmd);
             }
             else
             {
-                int16_t rCommand = RNG(int16_t, 1, 10);
+                skillManager->CancelSkill(eState, activated->GetActivationID());
+            }
+        }
+        else
+        {
+            // Execute the skill
+            auto cmd = std::make_shared<AIUseSkillCommand>(activated);
+            aiState->QueueCommand(cmd);
+        }
+    }
+    else
+    {
+        int16_t rCommand = RNG(int16_t, 1, 10);
 
-                if(rCommand == 1)
+        if(rCommand == 1)
+        {
+            // 10% chance to just wait
+            QueueWaitCommand(aiState, RNG(uint32_t, 1, 3));
+        }
+        else
+        {
+            if(targetDist > 300.f)
+            {
+                // Run up to the target but don't do anything yet
+                Point source(eState->GetCurrentX(), eState->GetCurrentY());
+
+                auto zoneManager = server->GetZoneManager();
+                auto point = zoneManager->GetLinearPoint(source.x, source.y,
+                    targetX, targetY, targetDist, false);
+
+                auto cmd = GetMoveCommand(zone, source, point, 250.f);
+                if(cmd)
                 {
-                    // 10% chance to just wait
-                    QueueWaitCommand(aiState, RNG(uint32_t, 1, 3));
+                    aiState->QueueCommand(cmd);
                 }
                 else
                 {
-                    target->RefreshCurrentPosition(now);
+                    // If the enemy can't move to the target, retarget
+                    // and wait
+                    Retarget(eState, now);
+                    QueueWaitCommand(aiState, 2);
+                }
+            }
+            else if(eState->CurrentSkillsCount() > 0)
+            {
+                RefreshSkillMap(eState, aiState);
 
-                    float targetX = target->GetCurrentX();
-                    float targetY = target->GetCurrentY();
-                    float dist = eState->GetDistance(targetX, targetY, false);
-
-                    if(dist > 300.f)
+                auto skillMap = aiState->GetSkillMap();
+                if(skillMap.size() > 0)
+                {
+                    /// @todo: change skill selection logic
+                    uint16_t priorityType = RNG(uint16_t, AI_SKILL_TYPE_CLSR, AI_SKILL_TYPE_LNGR);
+                    for(uint16_t skillType : { priorityType,
+                        priorityType == AI_SKILL_TYPE_LNGR ? AI_SKILL_TYPE_CLSR : AI_SKILL_TYPE_LNGR })
                     {
-                        // Run up to the target but don't do anything yet
-                        Point source(eState->GetCurrentX(), eState->GetCurrentY());
-
-                        auto zoneManager = mServer.lock()->GetZoneManager();
-                        auto point = zoneManager->GetLinearPoint(source.x, source.y,
-                            targetX, targetY, dist, false);
-
-                        auto cmd = GetMoveCommand(zone, source, point, 250.f);
-                        if(cmd)
+                        if(skillMap[skillType].size() > 0)
                         {
+                            size_t randIdx = (size_t)
+                                RNG(uint16_t, 0, (uint16_t)(skillMap[skillType].size() - 1));
+
+                            uint32_t skillID = skillMap[skillType][randIdx];
+                            auto cmd = std::make_shared<AIUseSkillCommand>(skillID,
+                                (int64_t)targetEntityID);
                             aiState->QueueCommand(cmd);
-                        }
-                    }
-                    else if(eState->CurrentSkillsCount() > 0)
-                    {
-                        RefreshSkillMap(eState, aiState);
-
-                        auto skillMap = aiState->GetSkillMap();
-                        if(skillMap.size() > 0)
-                        {
-                            /// @todo: change skill selection logic
-                            uint16_t priorityType = RNG(uint16_t, AI_SKILL_TYPE_CLSR, AI_SKILL_TYPE_LNGR);
-                            for(uint16_t skillType : { priorityType,
-                                priorityType == AI_SKILL_TYPE_LNGR ? AI_SKILL_TYPE_CLSR : AI_SKILL_TYPE_LNGR })
-                            {
-                                if(skillMap[skillType].size() > 0)
-                                {
-                                    size_t randIdx = (size_t)
-                                        RNG(uint16_t, 0, (uint16_t)(skillMap[skillType].size() - 1));
-
-                                    uint32_t skillID = skillMap[skillType][randIdx];
-                                    auto cmd = std::make_shared<AIUseSkillCommand>(skillID,
-                                        (int64_t)target->GetEntityID());
-                                    aiState->QueueCommand(cmd);
-                                }
-                            }
                         }
                     }
                 }
             }
         }
-        break;
-    default:
-        break;
     }
 
     return false;
+}
+
+std::shared_ptr<ActiveEntityState> AIManager::Retarget(const std::shared_ptr<EnemyState>& eState,
+    uint64_t now)
+{
+    std::shared_ptr<ActiveEntityState> target;
+
+    auto aiState = eState->GetAIState();
+    aiState->SetTarget(0);
+
+    auto zone = eState->GetZone();
+    float sourceX = eState->GetCurrentX();
+    float sourceY = eState->GetCurrentY();
+
+    auto opponentIDs = eState->GetOpponentIDs();
+    std::list<std::shared_ptr<ActiveEntityState>> possibleTargets;
+    if(opponentIDs.size() > 0)
+    {
+        // Currently in combat, only pull from opponents
+        auto inRange = zone->GetActiveEntitiesInRadius(
+            sourceX, sourceY, 4000.0);
+
+        for(auto entity : inRange)
+        {
+            if(opponentIDs.find(entity->GetEntityID()) != opponentIDs.end()
+                && entity->IsAlive() && entity->Ready())
+            {
+                possibleTargets.push_back(entity);
+            }
+        }
+    }
+    else
+    {
+        // Not in combat, find a target to pursue
+
+        // Default to 3000 units and 80 degree FoV angle (in radians)
+        /// @todo: use different value settings for different enemies
+        double maxAggroDistance = 3000.0;
+        float fovAngle = 1.395f;
+
+        auto geometry = zone->GetGeometry();
+
+        // Get all active entities in range
+        auto inRange = zone->GetActiveEntitiesInRadius(sourceX,
+            sourceY, maxAggroDistance);
+
+        // Remove allies and entities not ready yet
+        inRange.remove_if([eState](
+            const std::shared_ptr<ActiveEntityState>& entity)
+            {
+                return entity->GetFaction() == eState->GetFaction() ||
+                    !entity->Ready();
+            });
+        
+        if(inRange.size() > 0)
+        {
+            // Targets found, check if they're visible
+            for(auto entity : inRange)
+            {
+                entity->RefreshCurrentPosition(now);
+            }
+
+            // Filter the set down to only entities in the FoV
+            inRange = ZoneManager::GetEntitiesInFoV(inRange, sourceX,
+                sourceY, eState->GetCurrentRotation(), fovAngle);
+
+            for(auto entity : inRange)
+            {
+                // Possible target found, check line of sight
+                bool add = true;
+                if(geometry)
+                {
+                    Line path(Point(sourceX, sourceY),
+                        Point(entity->GetCurrentX(), entity->GetCurrentY()));
+
+                    Point collidePoint;
+                    add = !geometry->Collides(path, collidePoint);
+                }
+
+                if(add)
+                {
+                    possibleTargets.push_back(entity);
+
+                    if(aiState->GetStatus() == AIStatus_t::WANDERING)
+                    {
+                        aiState->SetStatus(AIStatus_t::AGGRO);
+                    }
+                }
+            }
+        }
+    }
+
+    if(possibleTargets.size() > 0)
+    {
+        /// @todo: add better target selection logic
+        auto targetIter = possibleTargets.begin();
+        size_t randomIdx = (size_t)RNG(int32_t, 0,
+            (int32_t)(possibleTargets.size() - 1));
+        std::advance(targetIter, randomIdx);
+
+        target = *targetIter;
+
+        aiState->SetTarget(target ? target->GetEntityID() : 0);
+    }
+
+    return target;
 }
 
 void AIManager::RefreshSkillMap(const std::shared_ptr<ActiveEntityState>& eState,

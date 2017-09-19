@@ -83,10 +83,10 @@ void QueuePartyMemberInfo(std::shared_ptr<ChannelClientConnection> client,
             member->GetName(), true);
         reply.WriteU8(memberInfo.IsLeader ? 1 : 0);
         reply.WriteU8(member->GetLevel());
-        reply.WriteU16Little(member->GetHP());
-        reply.WriteU16Little(member->GetMaxHP());
-        reply.WriteU16Little(member->GetMP());
-        reply.WriteU16Little(member->GetMaxMP());
+        reply.WriteU16Little((uint16_t)member->GetHP());
+        reply.WriteU16Little((uint16_t)member->GetMaxHP());
+        reply.WriteU16Little((uint16_t)member->GetMP());
+        reply.WriteU16Little((uint16_t)member->GetMaxMP());
 
         // Seemingly unused, maybe this was previously status effects?
         int8_t unusedCount = 0;
@@ -98,8 +98,8 @@ void QueuePartyMemberInfo(std::shared_ptr<ChannelClientConnection> client,
 
         reply.WriteS32Little(localDemonEntityID);
         reply.WriteU32Little(partyDemon->GetDemonType());
-        reply.WriteU16Little(partyDemon->GetHP());
-        reply.WriteU16Little(partyDemon->GetMaxHP());
+        reply.WriteU16Little((uint16_t)partyDemon->GetHP());
+        reply.WriteU16Little((uint16_t)partyDemon->GetMaxHP());
 
         reply.WriteS32Little((int32_t)memberInfo.ZoneID);
 

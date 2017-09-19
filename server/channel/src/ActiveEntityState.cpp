@@ -129,12 +129,17 @@ void ActiveEntityState::Move(float xPos, float yPos, uint64_t now)
     {
         SetOriginX(GetCurrentX());
         SetOriginY(GetCurrentY());
-        SetOriginRotation(GetCurrentRotation());
         SetOriginTicks(now);
+
+        // Rotate instantly
+        float destRot = (float)atan2(GetCurrentY() - yPos,
+            GetCurrentX() - xPos);
+        SetOriginRotation(destRot);
+        SetDestinationRotation(destRot);
 
         uint64_t addMicro = (uint64_t)(
             (double)(GetDistance(xPos, yPos) /
-            GetMovementSpeed(mOpponentIDs.size() > 0)) * 1000000.0);
+            GetMovementSpeed()) * 1000000.0);
 
         SetDestinationX(xPos);
         SetDestinationY(yPos);
@@ -204,7 +209,7 @@ bool ActiveEntityState::CanMove()
     if(statusTimes.size() > 0)
     {
         for(uint8_t lockState : { STATUS_CHARGING, STATUS_KNOCKBACK,
-            STATUS_HIT_STUN, STATUS_IMMOBILE })
+            STATUS_HIT_STUN, STATUS_IMMOBILE, STATUS_RESTING })
         {
             if(statusTimes.find(lockState) != statusTimes.end())
             {
@@ -218,13 +223,13 @@ bool ActiveEntityState::CanMove()
 
 float ActiveEntityState::CorrectRotation(float rot)
 {
-    if(rot > 3.16f)
+    if(rot > 3.14f)
     {
-        return rot - 6.32f;
+        return rot - 6.28f;
     }
-    else if(rot < -3.16f)
+    else if(rot < -3.14f)
     {
-        return -rot - 3.16f;
+        return -rot - 3.14f;
     }
 
     return rot;
@@ -247,6 +252,14 @@ void ActiveEntityState::RefreshCurrentPosition(uint64_t now)
 {
     if(now != mLastRefresh)
     {
+        uint64_t destTicks = GetDestinationTicks();
+        if(destTicks < mLastRefresh)
+        {
+            // If the entity hasn't moved more, quit now
+            mLastRefresh = now;
+            return;
+        }
+
         mLastRefresh = now;
 
         float currentX = GetCurrentX();
@@ -266,8 +279,6 @@ void ActiveEntityState::RefreshCurrentPosition(uint64_t now)
             // Already up to date
             return;
         }
-
-        uint64_t destTicks = GetDestinationTicks();
 
         if(now >= destTicks)
         {
@@ -324,7 +335,7 @@ void ActiveEntityState::ExpireStatusTimes(uint64_t now)
     {
         for(auto pair : statusTimes)
         {
-            if(pair.second <= now)
+            if(pair.second != 0 && pair.second <= now)
             {
                 RemoveStatusTimes(pair.first);
             }
@@ -429,15 +440,15 @@ void ActiveEntityState::SetZone(const std::shared_ptr<Zone>& zone, bool updatePr
     RegisterNextEffectTime();
 }
 
-bool ActiveEntityState::SetHPMP(int16_t hp, int16_t mp, bool adjust,
+bool ActiveEntityState::SetHPMP(int32_t hp, int32_t mp, bool adjust,
     bool canOverflow)
 {
-    int16_t hpAdjusted, mpAdjusted;
+    int32_t hpAdjusted, mpAdjusted;
     return SetHPMP(hp, mp, adjust, canOverflow, hpAdjusted, mpAdjusted);
 }
 
-bool ActiveEntityState::SetHPMP(int16_t hp, int16_t mp, bool adjust,
-    bool canOverflow, int16_t& hpAdjusted, int16_t& mpAdjusted)
+bool ActiveEntityState::SetHPMP(int32_t hp, int32_t mp, bool adjust,
+    bool canOverflow, int32_t& hpAdjusted, int32_t& mpAdjusted)
 {
     hpAdjusted = mpAdjusted = 0;
 
@@ -450,7 +461,7 @@ bool ActiveEntityState::SetHPMP(int16_t hp, int16_t mp, bool adjust,
     std::lock_guard<std::mutex> lock(mLock);
     auto maxHP = GetMaxHP();
     auto maxMP = GetMaxMP();
-    
+
     // If the amount of damage dealt can overflow, do not
     // use the actual damage dealt, allow it to go
     // over the actual amount dealt
@@ -462,8 +473,8 @@ bool ActiveEntityState::SetHPMP(int16_t hp, int16_t mp, bool adjust,
 
     if(adjust)
     {
-        hp = (int16_t)(cs->GetHP() + hp);
-        mp = (int16_t)(cs->GetMP() + mp);
+        hp = (int32_t)(cs->GetHP() + hp);
+        mp = (int32_t)(cs->GetMP() + mp);
 
         if(!canOverflow)
         {
@@ -514,7 +525,7 @@ bool ActiveEntityState::SetHPMP(int16_t hp, int16_t mp, bool adjust,
         
         if(!canOverflow)
         {
-            hpAdjusted = (int16_t)(newHP - cs->GetHP());
+            hpAdjusted = (int32_t)(newHP - cs->GetHP());
         }
 
         cs->SetHP(newHP);
@@ -527,7 +538,7 @@ bool ActiveEntityState::SetHPMP(int16_t hp, int16_t mp, bool adjust,
         
         if(!canOverflow)
         {
-            mpAdjusted = (int16_t)(newMP - cs->GetMP());
+            mpAdjusted = (int32_t)(newMP - cs->GetMP());
         }
 
         cs->SetMP(newMP);
@@ -2108,7 +2119,13 @@ uint8_t ActiveEntityState::RecalculateDemonStats(
     CharacterManager::CalculateDependentStats(stats, cs->GetLevel(), true);
     AdjustStats(correctTbls, stats, false);
 
-    return CompareAndResetStats(stats);
+    int32_t extraHP = 0;
+    if(GetEntityType() == objects::EntityStateObject::EntityType_t::ENEMY)
+    {
+        extraHP = demonData->GetBattleData()->GetEnemyHP(0);
+    }
+
+    return CompareAndResetStats(stats, extraHP);
 }
 
 uint8_t ActiveEntityState::CalculateLNCType(int16_t lncPoints) const
@@ -2157,21 +2174,25 @@ const std::set<CorrectTbl> VISIBLE_STATS =
         CorrectTbl::MDEF
     };
 
-uint8_t ActiveEntityState::CompareAndResetStats(libcomp::EnumMap<CorrectTbl, int16_t>& stats)
+uint8_t ActiveEntityState::CompareAndResetStats(libcomp::EnumMap<CorrectTbl, int16_t>& stats,
+    int32_t extraHP)
 {
     uint8_t result = 0;
 
     auto cs = GetCoreStats();
-    int16_t hp = cs->GetHP();
-    int16_t mp = cs->GetMP();
-    if(hp > stats[CorrectTbl::HP_MAX])
+    int32_t hp = cs->GetHP();
+    int32_t mp = cs->GetMP();
+    int32_t newMaxHP = (int32_t)(extraHP + (int32_t)stats[CorrectTbl::HP_MAX]);
+    int32_t newMaxMP = (int32_t)stats[CorrectTbl::MP_MAX];
+
+    if(hp > newMaxHP)
     {
-        hp = stats[CorrectTbl::HP_MAX];
+        hp = newMaxHP;
     }
 
-    if(mp > stats[CorrectTbl::MP_MAX])
+    if(mp > newMaxMP)
     {
-        mp = stats[CorrectTbl::MP_MAX];
+        mp = newMaxMP;
     }
 
     for(auto statPair : stats)
@@ -2181,8 +2202,8 @@ uint8_t ActiveEntityState::CompareAndResetStats(libcomp::EnumMap<CorrectTbl, int
 
     if(hp != cs->GetHP()
         || mp != cs->GetMP()
-        || GetMaxHP() != stats[CorrectTbl::HP_MAX]
-        || GetMaxMP() != stats[CorrectTbl::MP_MAX])
+        || GetMaxHP() != newMaxHP
+        || GetMaxMP() != newMaxMP)
     {
         result = ENTITY_CALC_STAT_WORLD |
             ENTITY_CALC_STAT_LOCAL;
@@ -2205,8 +2226,8 @@ uint8_t ActiveEntityState::CompareAndResetStats(libcomp::EnumMap<CorrectTbl, int
 
     cs->SetHP(hp);
     cs->SetMP(mp);
-    SetMaxHP(stats[CorrectTbl::HP_MAX]);
-    SetMaxMP(stats[CorrectTbl::MP_MAX]);
+    SetMaxHP(newMaxHP);
+    SetMaxMP(newMaxMP);
     SetSTR(stats[CorrectTbl::STR]);
     SetMAGIC(stats[CorrectTbl::MAGIC]);
     SetVIT(stats[CorrectTbl::VIT]);

@@ -45,8 +45,8 @@
             <value type="u64"/>
         </member>
 
-        <member type="s16" name="MaxHP"/>
-        <member type="s16" name="MaxMP"/>
+        <member type="s32" name="MaxHP"/>
+        <member type="s32" name="MaxMP"/>
         <member type="s16" name="STR"/>
         <member type="s16" name="MAGIC"/>
         <member type="s16" name="VIT"/>
@@ -88,8 +88,8 @@
         <member type="u64" name="ChargedTime"/>
         <member type="u8" name="ExecuteCount"/>
 
-        <member type="s16" name="HPCost"/>
-        <member type="s16" name="MPCost"/>
+        <member type="s32" name="HPCost"/>
+        <member type="s32" name="MPCost"/>
         <member type="u16" name="BulletCost"/>
 
         <member type="map" name="ItemCosts">

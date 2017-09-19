@@ -283,10 +283,10 @@ bool Parsers::CharacterLogin::Parse(libcomp::ManagerPacket *pPacketManager,
             packet.WritePacketCode(ChannelToClientPacketCode_t::PACKET_PARTY_MEMBER_UPDATE);
             packet.WriteS32Little(localEntityID);
             packet.WriteU8(member->GetLevel());
-            packet.WriteU16Little(member->GetHP());
-            packet.WriteU16Little(member->GetMaxHP());
-            packet.WriteU16Little(member->GetMP());
-            packet.WriteU16Little(member->GetMaxMP());
+            packet.WriteU16Little((uint16_t)member->GetHP());
+            packet.WriteU16Little((uint16_t)member->GetMaxHP());
+            packet.WriteU16Little((uint16_t)member->GetMP());
+            packet.WriteU16Little((uint16_t)member->GetMaxMP());
 
             int8_t unknownCount = 0;
             packet.WriteS8(unknownCount);
@@ -309,8 +309,8 @@ bool Parsers::CharacterLogin::Parse(libcomp::ManagerPacket *pPacketManager,
             packet.WriteS32Little(localEntityID);
             packet.WriteS32Little(localDemonEntityID);
             packet.WriteU32Little(partyDemon->GetDemonType());
-            packet.WriteU16Little(partyDemon->GetHP());
-            packet.WriteU16Little(partyDemon->GetMaxHP());
+            packet.WriteU16Little((uint16_t)partyDemon->GetHP());
+            packet.WriteU16Little((uint16_t)partyDemon->GetMaxHP());
             packet.WriteS32Little(login->GetWorldCID());
 
             ChannelClientConnection::BroadcastPacket(sameZoneConnections, packet);

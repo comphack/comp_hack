@@ -266,14 +266,31 @@ const std::shared_ptr<ActiveEntityState> Zone::GetActiveEntity(int32_t entityID)
     return std::dynamic_pointer_cast<ActiveEntityState>(GetEntity(entityID));
 }
 
+const std::list<std::shared_ptr<ActiveEntityState>> Zone::GetActiveEntities()
+{
+    std::list<std::shared_ptr<ActiveEntityState>> results;
+
+    std::lock_guard<std::mutex> lock(mLock);
+    for(auto ePair : mAllEntities)
+    {
+        auto active = std::dynamic_pointer_cast<ActiveEntityState>(ePair.second);
+        if(active)
+        {
+            results.push_back(active);
+        }
+    }
+
+    return results;
+}
 
 const std::list<std::shared_ptr<ActiveEntityState>>
     Zone::GetActiveEntitiesInRadius(float x, float y, double radius)
 {
+    std::list<std::shared_ptr<ActiveEntityState>> results;
+
     float rSquared = (float)std::pow(radius, 2);
 
     std::lock_guard<std::mutex> lock(mLock);
-    std::list<std::shared_ptr<ActiveEntityState>> results;
     for(auto ePair : mAllEntities)
     {
         auto active = std::dynamic_pointer_cast<ActiveEntityState>(ePair.second);

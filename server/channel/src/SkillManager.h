@@ -50,6 +50,32 @@ class AIState;
 class ChannelServer;
 
 /**
+ * Container for skill execution contextual parameters.
+ */
+class SkillExecutionContext
+{
+friend class SkillManager;
+
+public:
+    /// true if the skill should not cost anything, false if normal costs
+    /// apply
+    bool FreeCast = false;
+
+protected:
+    /* The following options are for internal processing use only */
+
+    /// true if status effects will be processed normally, false if they
+    /// have been handled elsewhere
+    bool ApplyStatusEffects = true;
+
+    /// Designates a skill that is being countered
+    std::shared_ptr<channel::ProcessingSkill> CounteredSkill;
+
+    /// List of skills that are countering the current skill context
+    std::list<std::shared_ptr<channel::ProcessingSkill>> CounteringSkills;
+};
+
+/**
  * Manager to handle skill focused actions.
  */
 class SkillManager
@@ -74,24 +100,24 @@ public:
      * @param source Pointer of the entity that activated the skill
      * @param skillID ID of the skill to activate
      * @param targetObjectID ID of the object being targeted by the skill
-     * @param freeCast true if no costs need to be paid, false if they need to be
-     *  paid normally, defaults to false
+     * @param ctx Special execution state for the skill (ex: free cast, counter)
      * @return true if the skill was activated successfully, false otherwise
      */
     bool ActivateSkill(const std::shared_ptr<ActiveEntityState> source,
-        uint32_t skillID, int64_t targetObjectID, bool freeCast = false);
+        uint32_t skillID, int64_t targetObjectID,
+        const std::shared_ptr<SkillExecutionContext>& ctx = 0);
 
     /**
      * Execute the skill of a character or demon.
      * @param source Pointer of the entity that is executing the skill
      * @param activationID ID of the activated ability instance
      * @param targetObjectID ID of the object being targeted by the skill
-     * @param freeCast true if no costs need to be paid, false if they need to be
-     *  paid normally, defaults to false
+     * @param ctx Special execution state for the skill (ex: free cast, counter)
      * @return true if the skill was executed successfully, false otherwise
      */
     bool ExecuteSkill(const std::shared_ptr<ActiveEntityState> source,
-        uint8_t activationID, int64_t targetObjectID, bool freeCast = false);
+        uint8_t activationID, int64_t targetObjectID,
+        const std::shared_ptr<SkillExecutionContext>& ctx = 0);
 
     /**
      * Cancel the activated skill of a character or demon.
@@ -119,33 +145,92 @@ private:
      * @param activated Pointer to the activated ability instance
      * @param client Pointer to the client connection, can be null if not coming
      *  from a player entity
-     * @param freeCast true if no costs need to be paid, false if they need to be
-     *  paid normally
+     * @param ctx Special execution state for the skill
      * @return true if the skill was executed successfully, false otherwise
      */
     bool ExecuteSkill(std::shared_ptr<ActiveEntityState> source,
         std::shared_ptr<objects::ActivatedAbility> activated,
-        const std::shared_ptr<ChannelClientConnection> client, bool freeCast);
+        const std::shared_ptr<ChannelClientConnection> client,
+        const std::shared_ptr<SkillExecutionContext>& ctx);
 
     /**
      * Execute a normal skill, not handled by a special handler.
      * @param client Pointer to the client connection that activated the skill
      * @param activated Pointer to the activated ability instance
+     * @param ctx Special execution state for the skill
      */
     bool ExecuteNormalSkill(const std::shared_ptr<ChannelClientConnection> client,
-        std::shared_ptr<objects::ActivatedAbility> activated);
+        std::shared_ptr<objects::ActivatedAbility> activated,
+        const std::shared_ptr<SkillExecutionContext>& ctx);
 
     /**
-     * Process the results of a normal skill. If the skill involves a projectile
+     * Process the results of a skill. If the skill involves a projectile
      * this will be scheduled to execute after skill execution, otherwise it will
      * execute immediately.
      * @param activated Pointer to the activated ability instance
-     * @param applyStatusEffects false if the status effects are handled
-     *  in a special way outside of normal method
+     * @param ctx Special execution state for the skill
      * @return true if the skill processed successfully, false otherwise
      */
     bool ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility> activated,
-        bool applyStatusEffects = true);
+        std::shared_ptr<SkillExecutionContext> ctx);
+
+    /**
+     * Finalize skill processing and send the skill effect reports.
+     * @param pSkill Current skill processing state
+     * @param ctx Special execution state for the skill
+     */
+    void ProcessSkillResultFinal(const std::shared_ptr<channel::ProcessingSkill>& pSkill);
+
+    /**
+     * Calculate and set the offense value of a damage dealing skill.
+     * @param source Pointer to the state of the source entity
+     * @param skill Current skill processing state
+     * @return Calculated offsense value of the skill
+     */
+    uint16_t CalculateOffenseValue(const std::shared_ptr<ActiveEntityState>& source,
+        ProcessingSkill& skill);
+
+    /**
+     * Determine how each targeted entity reacts to being hit by a skill. This
+     * assumes NRA has already adjusted who will is a target.
+     * @param source Pointer to the state of the source entity
+     * @param pSkill Current skill processing state
+     */
+    void CheckSkillHits(const std::shared_ptr<ActiveEntityState>& source,
+        const std::shared_ptr<channel::ProcessingSkill>& pSkill);
+
+    /**
+     * Execute or cancel the guard skill currently being used by the
+     * supplied target from being hit by the source entity
+     * @param source Pointer to the state of the source entity
+     * @param target Pointer ot the stare of the target entity
+     * @param pSkill Skill processing state of the skill being guarded
+     */
+    void HandleGuard(const std::shared_ptr<ActiveEntityState>& source,
+        SkillTargetResult& target, const std::shared_ptr<
+        channel::ProcessingSkill>& pSkill);
+
+    /**
+     * Execute or cancel the counter skill currently being used by the
+     * supplied target from being hit by the source entity
+     * @param source Pointer to the state of the source entity
+     * @param target Pointer ot the stare of the target entity
+     * @param pSkill Skill processing state of the skill being counterd
+     */
+    void HandleCounter(const std::shared_ptr<ActiveEntityState>& source,
+        SkillTargetResult& target, const std::shared_ptr<
+        channel::ProcessingSkill>& pSkill);
+
+    /**
+     * Execute or cancel the dodge skill currently being used by the
+     * supplied target from being hit by the source entity
+     * @param source Pointer to the state of the source entity
+     * @param target Pointer ot the stare of the target entity
+     * @param pSkill Skill processing state of the skill being dodged
+     */
+    void HandleDodge(const std::shared_ptr<ActiveEntityState>& source,
+        SkillTargetResult& target, const std::shared_ptr<
+        channel::ProcessingSkill>& pSkill);
 
     /**
      * Handle all logic related to kills that occurred from a skill's execution.
@@ -190,17 +275,15 @@ private:
     /**
      * Calculate skill damage or healing using the correct formula
      * @param source Pointer to the entity that activated the skill
-     * @param activated Pointer to the activated ability instance
-     * @param targets List target results associated to the skill
      * @param skill Current skill processing state
      * @return true if the calculation succeeded, false otherwise
      */
     bool CalculateDamage(const std::shared_ptr<ActiveEntityState>& source,
-        const std::shared_ptr<objects::ActivatedAbility>& activated,
-        std::list<SkillTargetResult>& targets, ProcessingSkill& skill);
+        ProcessingSkill& skill);
 
     /**
      * Calculate skill damage or healing using the default formula
+     * @param source Pointer to the entity that activated the skill
      * @param mod Base modifier damage value
      * @param damageType Type of damage being dealt
      * @param off Offensive value of the source
@@ -213,8 +296,9 @@ private:
      *  2) Limit break
      * @return Calculated damage or healing
      */
-    int32_t CalculateDamage_Normal(uint16_t mod, uint8_t& damageType,
-        uint16_t off, uint16_t def, float resist, float boost, uint8_t critLevel);
+    int32_t CalculateDamage_Normal(const std::shared_ptr<ActiveEntityState>& source,
+        uint16_t mod, uint8_t& damageType, uint16_t off, uint16_t def, float resist,
+        float boost, uint8_t critLevel);
 
     /**
      * Calculate skill damage or healing based on a static value
@@ -231,7 +315,7 @@ private:
      * @return Calculated damage or healing
      */
     int32_t CalculateDamage_Percent(uint16_t mod, uint8_t& damageType,
-        int16_t current);
+        int32_t current);
 
     /**
      * Calculate skill damage or healing based on a max relative value
@@ -241,7 +325,17 @@ private:
      * @return Calculated damage or healing
      */
     int32_t CalculateDamage_MaxPercent(uint16_t mod, uint8_t& damageType,
-        int16_t max);
+        int32_t max);
+
+    /**
+     * Get the skill target that hits the source entity or create it if it does
+     * not already exist
+     * @param source Pointer to the entity that activated the skill
+     * @param targets List target results associated to the skill
+     * @return Pointer to the skill target representing the source entity
+     */
+    SkillTargetResult* GetSelfTarget(const std::shared_ptr<ActiveEntityState>& source,
+        std::list<SkillTargetResult>& targets);
 
     /**
      * Set null, reflect or absorb on the skill target
@@ -300,28 +394,34 @@ private:
      * Placeholder function for a skill actually handled outside of the
      * SkillManager.
      * @param activated Pointer to the activated ability instance
+     * @param ctx Special execution state for the skill
      * @param client Pointer to the client connection that activated the skill,
      *  can be null for non-player entity sources
      */
     bool SpecialSkill(const std::shared_ptr<objects::ActivatedAbility>& activated,
+        const std::shared_ptr<SkillExecutionContext>& ctx,
         const std::shared_ptr<ChannelClientConnection>& client);
 
     /**
      * Execute the "equip item" skill.
      * @param activated Pointer to the activated ability instance
+     * @param ctx Special execution state for the skill
      * @param client Pointer to the client connection that activated the skill,
      *  this will always fail if it is null
      */
     bool EquipItem(const std::shared_ptr<objects::ActivatedAbility>& activated,
+        const std::shared_ptr<SkillExecutionContext>& ctx,
         const std::shared_ptr<ChannelClientConnection>& client);
 
     /**
      * Execute a familiarity boosting skill.
      * @param activated Pointer to the activated ability instance
+     * @param ctx Special execution state for the skill
      * @param client Pointer to the client connection that activated the skill,
      *  this will always fail if it is null
      */
     bool FamiliarityUp(const std::shared_ptr<objects::ActivatedAbility>& activated,
+        const std::shared_ptr<SkillExecutionContext>& ctx,
         const std::shared_ptr<ChannelClientConnection>& client);
 
     /**
@@ -329,46 +429,67 @@ private:
      * different from the standard skill ones as they can adjust a delta percent
      * instead of a fixed value.
      * @param activated Pointer to the activated ability instance
+     * @param ctx Special execution state for the skill
      * @param client Pointer to the client connection that activated the skill,
      *  this will always fail if it is null
      */
     bool FamiliarityUpItem(const std::shared_ptr<objects::ActivatedAbility>& activated,
+        const std::shared_ptr<SkillExecutionContext>& ctx,
         const std::shared_ptr<ChannelClientConnection>& client);
 
     /**
      * Execute the "Mooch" skill.
      * @param activated Pointer to the activated ability instance
+     * @param ctx Special execution state for the skill
      * @param client Pointer to the client connection that activated the skill,
      *  this will always fail if it is null
      */
     bool Mooch(const std::shared_ptr<objects::ActivatedAbility>& activated,
+        const std::shared_ptr<SkillExecutionContext>& ctx,
+        const std::shared_ptr<ChannelClientConnection>& client);
+
+    /**
+     * Handle the "Rest" skill.
+     * @param activated Pointer to the activated ability instance
+     * @param ctx Special execution state for the skill
+     * @param client Pointer to the client connection that activated the skill,
+     *  this will always fail if it is null
+     */
+    bool Rest(const std::shared_ptr<objects::ActivatedAbility>& activated,
+        const std::shared_ptr<SkillExecutionContext>& ctx,
         const std::shared_ptr<ChannelClientConnection>& client);
 
     /**
      * Execute the "summon demon" skill.
      * @param activated Pointer to the activated ability instance
+     * @param ctx Special execution state for the skill
      * @param client Pointer to the client connection that activated the skill,
      *  this will always fail if it is null
      */
     bool SummonDemon(const std::shared_ptr<objects::ActivatedAbility>& activated,
+        const std::shared_ptr<SkillExecutionContext>& ctx,
         const std::shared_ptr<ChannelClientConnection>& client);
 
     /**
      * Execute the "store demon" skill.
      * @param activated Pointer to the activated ability instance
+     * @param ctx Special execution state for the skill
      * @param client Pointer to the client connection that activated the skill,
      *  this will always fail if it is null
      */
     bool StoreDemon(const std::shared_ptr<objects::ActivatedAbility>& activated,
+        const std::shared_ptr<SkillExecutionContext>& ctx,
         const std::shared_ptr<ChannelClientConnection>& client);
 
     /**
      * Execute the skill "Traesto" which returns the user to their homepoint.
      * @param activated Pointer to the activated ability instance
+     * @param ctx Special execution state for the skill
      * @param client Pointer to the client connection that activated the skill,
      *  this will always fail if it is null
      */
     bool Traesto(const std::shared_ptr<objects::ActivatedAbility>& activated,
+        const std::shared_ptr<SkillExecutionContext>& ctx,
         const std::shared_ptr<ChannelClientConnection>& client);
 
     /**
@@ -402,10 +523,11 @@ private:
     /// Pointer to the channel server
     std::weak_ptr<ChannelServer> mServer;
 
-    /// List of skill function IDs mapped to manager functions.
+    /// Map of skill function IDs mapped to manager functions.
     std::unordered_map<uint16_t, std::function<bool(SkillManager&,
         const std::shared_ptr<objects::ActivatedAbility>&,
-        const std::shared_ptr<channel::ChannelClientConnection>&)>> mSkillFunctions;
+        const std::shared_ptr<SkillExecutionContext>&,
+        const std::shared_ptr<ChannelClientConnection>&)>> mSkillFunctions;
 };
 
 } // namespace channel

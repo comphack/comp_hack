@@ -148,7 +148,7 @@
             <value num="2">DMG_STATIC</value>
             <value num="3">DMG_PERCENT</value>
             <value num="5">UNKNOWN_5</value>
-            <value num="6">UNKNOWN_6</value>
+            <value num="6">DMG_COUNTER</value>
             <value num="7">DMG_SOURCE_PERCENT</value>
             <value num="9">HEAL_NORMAL</value>
             <value num="10">HEAL_STATIC</value>

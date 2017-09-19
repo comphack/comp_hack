@@ -115,7 +115,7 @@ bool Parsers::Move::Parse(libcomp::ManagerPacket *pPacketManager,
     eState->SetDestinationTicks(stopTime);
 
     float originRot = eState->GetCurrentRotation();
-    float destRot = (float)atan2(destY, destX);
+    float destRot = (float)atan2(originY - destY, originX - destX);
     eState->SetOriginRotation(originRot);
     eState->SetDestinationRotation(destRot);
 

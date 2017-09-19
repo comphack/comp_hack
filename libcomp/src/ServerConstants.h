@@ -135,11 +135,17 @@ struct Data
     /// Function ID of familiarity boosting item skills
     uint16_t SKILL_ITEM_FAM_UP;
 
-    /// Function ID of farmiliarity lowering "Mooch" skills
+    /// Function ID of familiarity lowering "Mooch" skills
     uint16_t SKILL_MOOCH;
+
+    /// Function ID of rest skills
+    uint16_t SKILL_REST;
 
     /// Function ID of skills that store the demon in the COMP
     uint16_t SKILL_STORE_DEMON;
+
+    /// Function ID of skills that kill the user as an effect
+    uint16_t SKILL_SUICIDE;
 
     /// Function ID of skills that summon a demon from the COMP
     uint16_t SKILL_SUMMON_DEMON;

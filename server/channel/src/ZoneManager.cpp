@@ -689,6 +689,41 @@ void ZoneManager::RemoveEntities(const std::list <std::shared_ptr<
     }
 }
 
+void ZoneManager::FixCurrentPosition(const std::shared_ptr<ActiveEntityState>& eState,
+    uint64_t fixUntil, uint64_t now)
+{
+    auto zone = eState->GetZone();
+    if(zone)
+    {
+        if(now == 0)
+        {
+            now = ChannelServer::GetServerTime();
+        }
+
+        eState->RefreshCurrentPosition(now);
+        eState->Stop(now);
+
+        float x = eState->GetCurrentX();
+        float y = eState->GetCurrentY();
+        float rot = eState->GetCurrentRotation();
+
+
+        libcomp::Packet p;
+        p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_FIX_POSITION);
+        p.WriteS32Little(eState->GetEntityID());
+        p.WriteFloat(x);
+        p.WriteFloat(y);
+        p.WriteFloat(rot);
+
+        std::unordered_map<uint32_t, uint64_t> timeMap;
+        timeMap[16] = now;
+        timeMap[20] = fixUntil;
+
+        auto zConnections = zone->GetConnectionList();
+        ChannelClientConnection::SendRelativeTimePacket(zConnections, p, timeMap);
+    }
+}
+
 void ZoneManager::ScheduleEntityRemoval(uint64_t time, const std::shared_ptr<Zone>& zone,
     const std::list<int32_t>& entityIDs, int32_t removeMode)
 {
@@ -819,8 +854,8 @@ void ZoneManager::SendEnemyData(const std::shared_ptr<ChannelClientConnection>& 
     p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_ENEMY_DATA);
     p.WriteS32Little(enemyState->GetEntityID());
     p.WriteS32Little((int32_t)enemyState->GetEntity()->GetType());
-    p.WriteS32Little((int32_t)stats->GetMaxHP());
-    p.WriteS32Little((int32_t)stats->GetHP());
+    p.WriteS32Little(enemyState->GetMaxHP());
+    p.WriteS32Little(stats->GetHP());
     p.WriteS8(stats->GetLevel());
     p.WriteS32Little((int32_t)zone->GetID());
     p.WriteS32Little((int32_t)zoneData->GetID());
@@ -940,8 +975,8 @@ void ZoneManager::UpdateStatusEffectStates(const std::shared_ptr<Zone>& zone,
         if(hpTDamage != 0 || mpTDamage != 0)
         {
             auto cs = entity->GetCoreStats();
-            int16_t hpAdjusted, mpAdjusted;
-            if(entity->SetHPMP((int16_t)-hpTDamage, (int16_t)-mpTDamage, true,
+            int32_t hpAdjusted, mpAdjusted;
+            if(entity->SetHPMP(-hpTDamage, -mpTDamage, true,
                 false, hpAdjusted, mpAdjusted))
             {
                 if(hpAdjusted < 0)
@@ -1171,7 +1206,7 @@ void ZoneManager::UpdateSpawnGroups(const std::shared_ptr<Zone>& zone,
                 // rectangle and extend towards +X/-Y
                 float x = location->GetX() + rPoint.x;
                 float y = location->GetY() - rPoint.y;
-                float rot = RNG_DEC(float, 0.f, 3.16f, 2);
+                float rot = RNG_DEC(float, 0.f, 3.14f, 2);
 
                 // Create the enemy state
                 auto eState = CreateEnemy(zone, spawn->GetEnemyType(),
@@ -1259,6 +1294,9 @@ std::shared_ptr<EnemyState> ZoneManager::CreateEnemy(
     eState->SetZone(zone);
 
     eState->RecalculateStats(definitionManager);
+
+    // Reset HP to max to account for extra HP boosts
+    enemyStats->SetHP(eState->GetMaxHP());
 
     return eState;
 }
@@ -1359,7 +1397,7 @@ Point ZoneManager::GetLinearPoint(float sourceX, float sourceY,
     return dest;
 }
 
-void ZoneManager::MoveRelative(const std::shared_ptr<ActiveEntityState>& eState,
+Point ZoneManager::MoveRelative(const std::shared_ptr<ActiveEntityState>& eState,
     float targetX, float targetY, float distance, bool away,
     uint64_t now, uint64_t endTime)
 {
@@ -1389,6 +1427,68 @@ void ZoneManager::MoveRelative(const std::shared_ptr<ActiveEntityState>& eState,
         eState->SetDestinationY(point.y);
         eState->SetDestinationTicks(endTime);
     }
+
+    return point;
+}
+
+bool ZoneManager::PointInPolygon(const Point& p, const std::list<Point> vertices)
+{
+    auto p1 = vertices.begin();
+    auto p2 = vertices.begin();
+    p2++;
+
+    uint32_t crosses = 0;
+    size_t count = vertices.size();
+    for(size_t i = 0; i < count; i++)
+    {
+        // Check if the point is on the vertex
+        if(p.x == p1->x && p.y == p2->y)
+        {
+            return true;
+        }
+
+        if(((p1->y >= p.y) != (p2->y >= p.y)) &&
+            (p.x <= (p2->x - p1->x) * (p.y - p1->y) /
+                (p2->y - p1->y) + p1->x))
+        {
+            crosses++;
+        }
+
+        p1++;
+        p2++;
+
+        if(p2 == vertices.end())
+        {
+            // One left, loop back to the start
+            p2 = vertices.begin();
+        }
+    }
+
+    return (crosses % 2) == 1;
+}
+
+std::list<std::shared_ptr<ActiveEntityState>> ZoneManager::GetEntitiesInFoV(
+    const std::list<std::shared_ptr<ActiveEntityState>>& entities,
+    float x, float y, float rot, float maxAngle)
+{
+    std::list<std::shared_ptr<ActiveEntityState>> results;
+
+    // Max and min radians of the arc's circle
+    float maxRotL = rot + maxAngle;
+    float maxRotR = rot - maxAngle;
+
+    for(auto e : entities)
+    {
+        float eRot = (float)atan2((float)(y - e->GetCurrentY()),
+            (float)(x - e->GetCurrentX()));
+
+        if(maxRotL >= eRot && maxRotR <= eRot)
+        {
+            results.push_back(e);
+        }
+    }
+
+    return results;
 }
 
 std::shared_ptr<Zone> ZoneManager::GetZone(uint32_t zoneID,

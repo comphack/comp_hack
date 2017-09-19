@@ -69,8 +69,8 @@ bool Parsers::SyncCharacter::Parse(libcomp::ManagerPacket *pPacketManager,
     libcomp::Packet reply;
     reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_SYNC_CHARACTER);
     reply.WriteS32Little(entityID);
-    reply.WriteS16Little(cs->GetHP());
-    reply.WriteS16Little(cs->GetMP());
+    reply.WriteS16Little((int16_t)cs->GetHP());
+    reply.WriteS16Little((int16_t)cs->GetMP());
     reply.WriteU32Little(static_cast<uint32_t>(statusEffects.size()));
     for (auto ePair : statusEffects)
     {

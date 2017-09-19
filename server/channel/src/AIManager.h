@@ -139,6 +139,15 @@ private:
     bool UpdateEnemyState(const std::shared_ptr<EnemyState>& eState, uint64_t now);
 
     /**
+     * Clear an enemy's AIState current target and find the next target to focus on
+     * @param eState Pointer to the AI controlled enemy state
+     * @param now Current timestamp of the server
+     * @return Pointer to the entity being targeted
+     */
+    std::shared_ptr<ActiveEntityState> Retarget(const std::shared_ptr<EnemyState>& eState,
+        uint64_t now);
+
+    /**
      * Refresh the skill map of the AIState if needed
      * @param eState Pointer to the entity state to update
      * @param aiState Pointer to the AIState

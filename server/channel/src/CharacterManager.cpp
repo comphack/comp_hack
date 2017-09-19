@@ -124,10 +124,10 @@ void CharacterManager::SendCharacterData(const std::shared_ptr<
     }
 
     //Character status
-    reply.WriteS16Little(cState->GetMaxHP());
-    reply.WriteS16Little(cState->GetMaxMP());
-    reply.WriteS16Little(cs->GetHP());
-    reply.WriteS16Little(cs->GetMP());
+    reply.WriteS16Little((int16_t)cState->GetMaxHP());
+    reply.WriteS16Little((int16_t)cState->GetMaxMP());
+    reply.WriteS16Little((int16_t)cs->GetHP());
+    reply.WriteS16Little((int16_t)cs->GetMP());
     reply.WriteS64Little(cs->GetXP());
     reply.WriteS32Little(c->GetPoints());
     reply.WriteS8(cs->GetLevel());
@@ -274,10 +274,10 @@ void CharacterManager::SendOtherCharacterData(const std::list<std::shared_ptr<
         }
     }
 
-    reply.WriteS16Little(cState->GetMaxHP());
-    reply.WriteS16Little(cState->GetMaxMP());
-    reply.WriteS16Little(cs->GetHP());
-    reply.WriteS16Little(cs->GetMP());
+    reply.WriteS16Little((int16_t)cState->GetMaxHP());
+    reply.WriteS16Little((int16_t)cState->GetMaxMP());
+    reply.WriteS16Little((int16_t)cs->GetHP());
+    reply.WriteS16Little((int16_t)cs->GetMP());
     reply.WriteS8(cs->GetLevel());
     reply.WriteS16Little(c->GetLNC());
 
@@ -375,10 +375,10 @@ void CharacterManager::SendPartnerData(const std::shared_ptr<
     reply.WriteS8(d->GetBoxSlot());
     reply.WriteS64Little(state->GetObjectID(d->GetUUID()));
     reply.WriteU32Little(d->GetType());
-    reply.WriteS16Little(dState->GetMaxHP());
-    reply.WriteS16Little(dState->GetMaxMP());
-    reply.WriteS16Little(ds->GetHP());
-    reply.WriteS16Little(ds->GetMP());
+    reply.WriteS16Little((int16_t)dState->GetMaxHP());
+    reply.WriteS16Little((int16_t)dState->GetMaxMP());
+    reply.WriteS16Little((int16_t)ds->GetHP());
+    reply.WriteS16Little((int16_t)ds->GetMP());
     reply.WriteS64Little(ds->GetXP());
     reply.WriteS8(ds->GetLevel());
     reply.WriteS16Little(def->GetBasic()->GetLNC());
@@ -503,8 +503,8 @@ void CharacterManager::SendOtherPartnerData(const std::list<std::shared_ptr<
     reply.WriteS32Little(dState->GetEntityID());
     reply.WriteU32Little(d->GetType());
     reply.WriteS32Little(otherState->GetCharacterState()->GetEntityID());
-    reply.WriteS16Little(dState->GetMaxHP());
-    reply.WriteS16Little(ds->GetHP());
+    reply.WriteS16Little((int16_t)dState->GetMaxHP());
+    reply.WriteS16Little((int16_t)ds->GetHP());
     reply.WriteS8(ds->GetLevel());
 
     auto statusEffects = dState->GetCurrentStatusEffectStates(
@@ -530,8 +530,8 @@ void CharacterManager::SendOtherPartnerData(const std::list<std::shared_ptr<
 
     reply.WriteU8(0);   //Unknown bool
 
-    reply.WriteS16Little(dState->GetMaxMP());
-    reply.WriteS16Little(ds->GetMP());
+    reply.WriteS16Little((int16_t)dState->GetMaxMP());
+    reply.WriteS16Little((int16_t)ds->GetMP());
     reply.WriteU16Little(d->GetFamiliarity());
     reply.WriteU8(0);   //Unknown
 
@@ -563,10 +563,10 @@ void CharacterManager::SendDemonData(const std::shared_ptr<
     reply.WriteS64Little(demonID);
     reply.WriteU32Little(d->GetType());
 
-    reply.WriteS16Little(cs->GetMaxHP());
-    reply.WriteS16Little(cs->GetMaxMP());
-    reply.WriteS16Little(cs->GetHP());
-    reply.WriteS16Little(cs->GetMP());
+    reply.WriteS16Little((int16_t)cs->GetMaxHP());
+    reply.WriteS16Little((int16_t)cs->GetMaxMP());
+    reply.WriteS16Little((int16_t)cs->GetHP());
+    reply.WriteS16Little((int16_t)cs->GetMP());
     reply.WriteS64Little(cs->GetXP());
     reply.WriteS8(cs->GetLevel());
 
@@ -745,7 +745,7 @@ void CharacterManager::SendEntityStats(std::shared_ptr<
 
     GetEntityStatsPacketData(p, eState->GetCoreStats(), eState, 3);
 
-    p.WriteS32Little((int32_t)eState->GetMaxHP());
+    p.WriteS32Little(eState->GetMaxHP());
 
     server->GetZoneManager()->BroadcastPacket(client, p, includeSelf);
 }
@@ -761,8 +761,8 @@ bool CharacterManager::GetEntityRevivalPacket(libcomp::Packet& p,
         p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_REVIVE_ENTITY);
         p.WriteS32Little(eState->GetEntityID());
         p.WriteS8(action);
-        p.WriteS32Little(cs->GetHP());
-        p.WriteS32Little(cs->GetMP());
+        p.WriteS32Little((int16_t)cs->GetHP());
+        p.WriteS32Little((int16_t)cs->GetMP());
         p.WriteS64Little(syncXP ? cs->GetXP() : 0);
 
         return true;
@@ -859,8 +859,8 @@ void CharacterManager::SummonDemon(const std::shared_ptr<
     // If HP/MP adjustments occur and the max value increases, keep
     // the same percentage of HP/MP after recalc
     auto cs = demon->GetCoreStats();
-    int16_t maxHP = cs->GetMaxHP();
-    int16_t maxMP = cs->GetMaxMP();
+    int32_t maxHP = cs->GetMaxHP();
+    int32_t maxMP = cs->GetMaxMP();
     float hpPercent = (float)cs->GetHP() / (float)cs->GetMaxHP();
     float mpPercent = (float)cs->GetMP() / (float)cs->GetMaxMP();
 
@@ -871,12 +871,12 @@ void CharacterManager::SummonDemon(const std::shared_ptr<
 
     if(dState->GetMaxHP() > maxHP)
     {
-        cs->SetHP((int16_t)((float)dState->GetMaxHP() * hpPercent));
+        cs->SetHP((int32_t)((float)dState->GetMaxHP() * hpPercent));
     }
 
     if(dState->GetMaxMP() > maxMP)
     {
-        cs->SetMP((int16_t)((float)dState->GetMaxMP() * mpPercent));
+        cs->SetMP((int32_t)((float)dState->GetMaxMP() * mpPercent));
     }
 
     libcomp::Packet reply;
@@ -1639,8 +1639,8 @@ void CharacterManager::EquipItem(const std::shared_ptr<
         reply.WriteU32Little(equip->GetType());
     }
 
-    reply.WriteS16Little(cState->GetMaxHP());
-    reply.WriteS16Little(cState->GetMaxMP());
+    reply.WriteS16Little((int16_t)cState->GetMaxHP());
+    reply.WriteS16Little((int16_t)cState->GetMaxMP());
 
     server->GetZoneManager()->BroadcastPacket(client, reply, false);
 }
@@ -2035,8 +2035,8 @@ void CharacterManager::ExperienceGain(const std::shared_ptr<
             reply.WriteS32(0);  //Unknown
             reply.WriteS8(level);
             reply.WriteS64(xpDelta);
-            reply.WriteS16Little(stats->GetHP());
-            reply.WriteS16Little(stats->GetMP());
+            reply.WriteS16Little((int16_t)stats->GetHP());
+            reply.WriteS16Little((int16_t)stats->GetMP());
             reply.WriteS32Little(points);
         }
 
@@ -2110,6 +2110,13 @@ void CharacterManager::UpdateExpertise(const std::shared_ptr<
 
     int32_t maxTotalPoints = 1700000 + (int32_t)(floorl((float)stats->GetLevel() * 0.1) *
         1000 * 100);
+
+    if(stats->GetLevel() == 99)
+    {
+        // Level 99 awards a bonus 1000.00 points available
+        maxTotalPoints = maxTotalPoints + 100000;
+    }
+
     int32_t currentPoints = 0;
     for(auto expertise : character->GetExpertises())
     {
@@ -2672,7 +2679,7 @@ bool CharacterManager::AddRemoveOpponent(bool add, const std::shared_ptr<
             libcomp::Packet p;
             p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_BATTLE_STARTED);
             p.WriteS32Little(entity->GetEntityID());
-            p.WriteFloat(entity->GetMovementSpeed(true));
+            p.WriteFloat(entity->GetMovementSpeed());
             packets.push_back(p);
         }
 
@@ -2735,7 +2742,7 @@ bool CharacterManager::AddRemoveOpponent(bool add, const std::shared_ptr<
             libcomp::Packet p;
             p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_BATTLE_STOPPED);
             p.WriteS32Little(entity->GetEntityID());
-            p.WriteFloat(entity->GetMovementSpeed(false));
+            p.WriteFloat(entity->GetMovementSpeed());
             packets.push_back(p);
         }
     }
@@ -2952,7 +2959,7 @@ libcomp::EnumMap<CorrectTbl, int16_t> CharacterManager::GetCharacterBaseStatMap(
     stats[CorrectTbl::SUMMON_SPEED] = 100;
     stats[CorrectTbl::KNOCKBACK_RESIST] = 100;
     stats[CorrectTbl::COOLDOWN_TIME] = 100;
-    stats[CorrectTbl::BOOST_LB_DAMAGE] = 100;
+    stats[CorrectTbl::LB_DAMAGE] = 100;
 
     // Default all the rates to 100%
     for(uint8_t i = (uint8_t)CorrectTbl::RATE_XP;
@@ -3090,10 +3097,10 @@ void CharacterManager::GetDemonPacketData(libcomp::Packet& p,
     {
         auto cs = demon->GetCoreStats();
         p.WriteU32Little(demon->GetType());
-        p.WriteS16Little(cs->GetMaxHP());
-        p.WriteS16Little(cs->GetMaxMP());
-        p.WriteS16Little(cs->GetHP());
-        p.WriteS16Little(cs->GetMP());
+        p.WriteS16Little((int16_t)cs->GetMaxHP());
+        p.WriteS16Little((int16_t)cs->GetMaxMP());
+        p.WriteS16Little((int16_t)cs->GetHP());
+        p.WriteS16Little((int16_t)cs->GetMP());
         p.WriteS8(cs->GetLevel());
         p.WriteU8(demon->GetLocked() ? 1 : 0);
 
@@ -3191,8 +3198,8 @@ void CharacterManager::GetEntityStatsPacketData(libcomp::Packet& p,
                 state->GetSPEED() - coreStats->GetSPEED()));
             p.WriteS16Little(static_cast<int16_t>(
                 state->GetLUCK() - coreStats->GetLUCK()));
-            p.WriteS16Little(state->GetMaxHP());
-            p.WriteS16Little(state->GetMaxMP());
+            p.WriteS16Little((int16_t)state->GetMaxHP());
+            p.WriteS16Little((int16_t)state->GetMaxMP());
             p.WriteS16Little(static_cast<int16_t>(
                 state->GetCLSR() - coreStats->GetCLSR()));
             p.WriteS16Little(static_cast<int16_t>(

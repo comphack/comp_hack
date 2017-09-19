@@ -73,8 +73,8 @@ bool Parsers::LootDemonEggData::Parse(libcomp::ManagerPacket *pPacketManager,
         libcomp::Packet reply;
         reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_LOOT_DEMON_EGG_DATA);
         reply.WriteU32Little(demonType);
-        reply.WriteS16Little(cs->GetMaxHP());
-        reply.WriteS16Little(cs->GetMaxMP());
+        reply.WriteS16Little((int16_t)cs->GetMaxHP());
+        reply.WriteS16Little((int16_t)cs->GetMaxMP());
         reply.WriteS8(cs->GetLevel());
         characterManager->GetEntityStatsPacketData(reply, cs, nullptr, 0);
 

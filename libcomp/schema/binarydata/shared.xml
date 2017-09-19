@@ -218,11 +218,11 @@
             <!-- 自爆高揚 - Self-Destruct Boost -->
             <value num="116">BOOST_SUICIDE</value>
             <!-- リミットブレイク発生確率 - Limit Break Chance -->
-            <value num="117">BOOST_LB_CHANCE</value>
+            <value num="117">LB_CHANCE</value>
             <!-- リミットブレイク威力補正 - Limit Break Damage -->
-            <value num="118">BOOST_LB_DAMAGE</value>
-            <!-- 最終クリティカル率補正 - Total Crit Chance -->
-            <value num="119">CRIT_CHANCE_TOTAL</value>
+            <value num="118">LB_DAMAGE</value>
+            <!-- 最終クリティカル率補正 - Final Crit Chance -->
+            <value num="119">FINAL_CRIT_CHANCE</value>
             <!-- 防御拡張２ - Defense Expansion 2 -->
             <value num="120">DEFENSE_EXPAND_2</value>
         </member>

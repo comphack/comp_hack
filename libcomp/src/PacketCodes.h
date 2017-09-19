@@ -212,7 +212,8 @@ enum class ChannelToClientPacketCode_t : uint16_t
     PACKET_SHOW_ENTITY = 0x001A,  //!< Message to display a game entity.
     PACKET_REMOVE_ENTITY = 0x001B,  //!< Message to remove a game entity.
     PACKET_MOVE = 0x001D,  //!< Message containing entity or object movement information.
-    PACKET_WARP = 0x0022,  //!< Message continaing entity or object warping information.
+    PACKET_FIX_POSITION = 0x0021,  //!< Message forcing an entity to stay in a set location for a set time.
+    PACKET_WARP = 0x0022,  //!< Message containing entity or object warping information.
     PACKET_ZONE_CHANGE = 0x0023,  //!< Information about a character's zone.
     PACKET_SYNC_TIME = 0x0025,  //!< Message containing the current server time.
     PACKET_CHAT = 0x0028, //!< Response from chat request.

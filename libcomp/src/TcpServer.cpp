@@ -31,6 +31,10 @@
 #include "TcpConnection.h"
 #include "WindowsService.h"
 
+#ifdef HAVE_SYSTEMD
+#include <systemd/sd-daemon.h>
+#endif // HAVE_SYSTEMD
+
 using namespace libcomp;
 
 TcpServer::TcpServer(const String& listenAddress, uint16_t port) :
@@ -129,6 +133,10 @@ int TcpServer::Run()
 void TcpServer::ServerReady()
 {
     LOG_INFO("Server ready!\n");
+
+#ifdef HAVE_SYSTEMD
+    sd_notify(0, "READY=1");
+#endif // HAVE_SYSTEMD
 
 #if defined(_WIN32) && defined(WIN32_SERV)
     gService.Started();

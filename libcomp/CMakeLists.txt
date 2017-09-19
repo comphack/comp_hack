@@ -706,6 +706,7 @@ SET_TARGET_PROPERTIES(comp PROPERTIES FOLDER "Libraries")
 TARGET_INCLUDE_DIRECTORIES(comp PUBLIC
     ${LIBCOMP_INCLUDES}
     ${ASIO_INCLUDE_DIRS}
+    ${SYSTEMD_INCLUDE_DIRS}
 )
 
 TARGET_INCLUDE_DIRECTORIES(comp PRIVATE
@@ -714,7 +715,7 @@ TARGET_INCLUDE_DIRECTORIES(comp PRIVATE
 
 TARGET_LINK_LIBRARIES(comp mariadbclient ${OPENSSL_LIBRARIES} ${ZLIB_LIBRARIES}
     ${SYSTEM_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} objgen sqlite3
-    squirrel sqstdlib ttvfs ttvfs_zip tinyxml2 physfs)
+    squirrel sqstdlib ttvfs ttvfs_zip tinyxml2 physfs ${SYSTEMD_LIBRARIES})
 
 ADD_DEPENDENCIES(comp asio sqrat gsl)
 

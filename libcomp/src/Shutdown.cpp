@@ -34,6 +34,10 @@
 #include <signal.h>
 #include <thread>
 
+#ifdef HAVE_SYSTEMD
+#include <systemd/sd-daemon.h>
+#endif // HAVE_SYSTEMD
+
 static libcomp::BaseServer *gServer = nullptr;
 
 static std::list<std::thread*> gShutdownThreads;
@@ -43,6 +47,10 @@ void ShutdownSignalHandler(int sig)
     (void)sig;
 
     static int killCount = 0;
+
+#ifdef HAVE_SYSTEMD
+    sd_notify(0, "STOPPING=1");
+#endif // HAVE_SYSTEMD
 
     if(0 < killCount)
     {

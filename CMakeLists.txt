@@ -107,6 +107,10 @@ ELSE()
     SET(CPACK_GENERATOR "TGZ;TBZ2;DEB")
 ENDIF()
 
+IF(NOT WIN32)
+    INCLUDE(GNUInstallDirs)
+ENDIF(NOT WIN32)
+
 # Enable the CPack module for building installers.
 INCLUDE(CPack)
 
@@ -584,6 +588,14 @@ MACRO(RSPEC_TESTS)
     ENDFOREACH(test ${ARGN})
 ENDMACRO(RSPEC_TESTS)
 
+IF(NOT WIN32 AND NOT BSD)
+    FIND_PACKAGE(Systemd QUIET)
+
+    IF(SYSTEMD_FOUND)
+        ADD_COMPILER_FLAGS(AUTO ${SYSTEMD_DEFINITIONS} -DHAVE_SYSTEMD=1)
+    ENDIF(SYSTEMD_FOUND)
+ENDIF(NOT WIN32 AND NOT BSD)
+
 ADD_SUBDIRECTORY(libcomp)
 #ADD_SUBDIRECTORY(chanman)
 
@@ -605,7 +617,7 @@ ENDIF(NOT WIN32)
 
 # Add all the documentation targets to a single target "doc".
 GET_PROPERTY(targets GLOBAL PROPERTY DOC_TARGETS)
-ADD_CUSTOM_TARGET(doc DEPENDS ${targets})
+ADD_CUSTOM_TARGET(doc ALL DEPENDS ${targets})
 SET_TARGET_PROPERTIES(doc PROPERTIES FOLDER "SpecialTargets")
 ADD_SUBDIRECTORY(docs)
 
@@ -617,19 +629,27 @@ ENDIF(NOT BSD)
 # for the application menu launcher icons.
 IF(NOT WIN32)
     INSTALL(FILES icons/16x16/comp_hack.png
-        DESTINATION share/icons/hicolor/16x16/apps)
+        DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/icons/hicolor/16x16/apps)
     INSTALL(FILES icons/22x22/comp_hack.png
-        DESTINATION share/icons/hicolor/22x22/apps)
+        DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/icons/hicolor/22x22/apps)
     INSTALL(FILES icons/24x24/comp_hack.png
-        DESTINATION share/icons/hicolor/24x24/apps)
+        DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/icons/hicolor/24x24/apps)
     INSTALL(FILES icons/32x32/comp_hack.png
-        DESTINATION share/icons/hicolor/32x32/apps)
+        DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/icons/hicolor/32x32/apps)
     INSTALL(FILES icons/48x48/comp_hack.png
-        DESTINATION share/icons/hicolor/48x48/apps)
+        DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/icons/hicolor/48x48/apps)
     INSTALL(FILES icons/64x64/comp_hack.png
-        DESTINATION share/icons/hicolor/64x64/apps)
+        DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/icons/hicolor/64x64/apps)
     INSTALL(FILES icons/64x64/comp_hack.png
-        DESTINATION share/app-install/icons)
+        DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/app-install/icons)
+    INSTALL(DIRECTORY ${CMAKE_SOURCE_DIR}/contrib/systemd/
+        DESTINATION ${CMAKE_INSTALL_SYSCONFDIR}/systemd/system)
+    INSTALL(DIRECTORY ${CMAKE_SOURCE_DIR}/contrib/webroot
+        DESTINATION ${CMAKE_INSTALL_LOCALSTATEDIR}/lib/comp_hack)
+    INSTALL(DIRECTORY ${CMAKE_SOURCE_DIR}/contrib/nixconfig/
+        DESTINATION ${CMAKE_INSTALL_SYSCONFDIR}/comp_hack)
+    INSTALL(FILES ${CMAKE_SOURCE_DIR}/contrib/testing/constants.xml
+        DESTINATION ${CMAKE_INSTALL_SYSCONFDIR}/comp_hack)
 ENDIF(NOT WIN32)
 
 # Copy all contrib/testing to the bin directory.
@@ -639,3 +659,11 @@ FILE(COPY "${CMAKE_SOURCE_DIR}/contrib/testing"
 IF(COVERALLS)
     coveralls_setup("${COVERALLS_SRCS}" ON)
 ENDIF(COVERALLS)
+
+# Make sure we have Doxygen.
+FIND_PACKAGE(Doxygen)
+
+If(DOXYGEN_FOUND AND GENERATE_DOCUMENTATION)
+    INSTALL(DIRECTORY ${CMAKE_BINARY_DIR}/api
+        DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/doc/comp_hack)
+ENDIF(DOXYGEN_FOUND AND GENERATE_DOCUMENTATION)

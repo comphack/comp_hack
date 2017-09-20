@@ -1,0 +1,10 @@
+usr/bin/comp_bdpatch
+usr/bin/comp_capfilter
+usr/bin/comp_logger_headless
+usr/bin/comp_decrypt
+usr/bin/comp_encrypt
+usr/bin/comp_manager
+usr/bin/comp_objgen
+usr/bin/comp_patcher
+usr/bin/comp_rehash
+usr/bin/comp_updater_headless

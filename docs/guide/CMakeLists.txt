@@ -57,7 +57,7 @@ MACRO(XMLTO_XHTML imgdir fragment out mode in)
 			${CMAKE_CURRENT_SOURCE_DIR}/${in} ${ARGN} guide-images
 			WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/${inpath}
 			COMMENT "Generating docbook ${mode} documentation" VERBATIM)
-		ADD_CUSTOM_TARGET(guide DEPENDS ${CMAKE_BINARY_DIR}/${out}/index.html)
+		ADD_CUSTOM_TARGET(guide ALL DEPENDS ${CMAKE_BINARY_DIR}/${out}/index.html)
 
 		FILE(MAKE_DIRECTORY ${out})
 	ENDIF(XMLTO_FOUND)
@@ -69,3 +69,8 @@ XMLTO_XHTML(
 	static config.xsl guide xhtml book.xml
 	${GUIDE_XML_SRCS}
 )
+
+IF(XMLTO_FOUND)
+    INSTALL(DIRECTORY ${CMAKE_BINARY_DIR}/guide
+        DESTINATION share/doc/comp_hack)
+ENDIF(XMLTO_FOUND)

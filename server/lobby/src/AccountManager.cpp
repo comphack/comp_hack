@@ -41,6 +41,10 @@
 // lobby Includes
 #include "LobbyServer.h"
 
+#ifdef HAVE_SYSTEMD
+#include <systemd/sd-daemon.h>
+#endif // HAVE_SYSTEMD
+
 using namespace lobby;
 
 bool AccountManager::IsLoggedIn(const libcomp::String& username)
@@ -108,6 +112,11 @@ bool AccountManager::LoginUser(const libcomp::String& username,
         result = res.second;
     }
 
+#ifdef HAVE_SYSTEMD
+    sd_notifyf(0, "STATUS=Server is up with %d connected user(s).",
+        (int)mAccountMap.size());
+#endif // HAVE_SYSTEMD
+
     return result;
 }
 
@@ -159,6 +168,11 @@ bool AccountManager::LogoutUser(const libcomp::String& username, int8_t world)
 
         result = true;
     }
+
+#ifdef HAVE_SYSTEMD
+    sd_notifyf(0, "STATUS=Server is up with %d connected user(s).",
+        (int)mAccountMap.size());
+#endif // HAVE_SYSTEMD
 
     return result;
 }

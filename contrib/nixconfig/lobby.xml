@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object>
+        <member name="DatabaseType">SQLITE3</member>
+        <member name="SQLite3Config">
+            <object>
+                <member name="FileDirectory">/var/lib/comp_hack/database/</member>
+            </object>
+        </member>
+        <member name="DiffieHellmanKeyPair">940134C09FB9BABE187BCE1030E6364530F0966E951F358CE581139FF8189D65E4C24C75FA21D2DCB58280146F435ECB8857D9CF8F0147099A40D2089107647232E82606CBBF767BD202A50A00F080F242C7FFC7B2D4F6D0CCAD33CF2B5FBCDBC0F5B9189D5BD937AA94DD7E238312F3EFF5D6247CEB5C2CAE1D8F5357FA6F8B</member>
+        <member name="DataStore">
+            <element>/var/lib/comp_hack/data</element>
+        </member>
+        <member name="DataStoreSync">false</member>
+        <member name="LogFile">/var/log/comp_hack/lobby.log</member>
+        <member name="WebRoot">/var/lib/comp_hack/webroot</member>
+    </object>
+</objgen>

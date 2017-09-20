@@ -1,0 +1,13 @@
+[Unit]
+Description=SMT Private Server Channel
+Requires=comp_world.service
+After=comp_world.service
+
+[Service]
+Type=notify
+User=comphack
+Group=comphack
+ExecStart=/usr/bin/comp_channel
+
+[Install]
+WantedBy=multi-user.target

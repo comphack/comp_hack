@@ -1,0 +1,8 @@
+etc/comp_hack
+etc/systemd/system/comp_lobby.service
+etc/systemd/system/comp_world.service
+etc/systemd/system/comp_channel.service
+usr/bin/comp_lobby
+usr/bin/comp_channel
+usr/bin/comp_world
+var/lib/comp_hack/webroot

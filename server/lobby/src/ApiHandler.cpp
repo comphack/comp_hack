@@ -76,6 +76,7 @@ bool ApiHandler::Auth_Token(const JsonBox::Object& request,
     }
 
     libcomp::String username = it->second.getString();
+    username = username.ToLower();
 
     // Make sure the username did not change.
     if(!session->username.IsEmpty() && session->username != username)
@@ -255,6 +256,7 @@ bool ApiHandler::Account_Register(const JsonBox::Object& request,
     if(it != request.end())
     {
         username = it->second.getString();
+        username = username.ToLower();
     }
 
     it = request.find("email");
@@ -417,6 +419,7 @@ bool ApiHandler::Admin_GetAccount(const JsonBox::Object& request,
     if(it != request.end())
     {
         username = it->second.getString();
+        username = username.ToLower();
     }
     else
     {
@@ -470,6 +473,7 @@ bool ApiHandler::Admin_DeleteAccount(const JsonBox::Object& request,
     if(it != request.end())
     {
         username = it->second.getString();
+        username = username.ToLower();
     }
     else
     {
@@ -505,6 +509,7 @@ bool ApiHandler::Admin_UpdateAccount(const JsonBox::Object& request,
     if(it != request.end())
     {
         username = it->second.getString();
+        username = username.ToLower();
     }
     else
     {

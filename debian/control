@@ -10,7 +10,7 @@ Package: comphack
 Architecture: any
 Depends: ${misc:Depends}, ${shlibs:Depends}
 Recommends: comphack-tools
-Suggests: comphack-tools-qt comphack-doc
+Suggests: comphack-tools-qt, comphack-doc
 Description: SMT Private Server
 
 Package: comphack-tools
@@ -20,7 +20,7 @@ Description: SMT Private Server Tools
 
 Package: comphack-tools-qt
 Architecture: any
-Depends: libqt5gui5, libqt5widgets5, libqt5core5a, libqt5network5, libqt5xml5, {misc:Depends}, ${shlibs:Depends}
+Depends: libqt5gui5, libqt5widgets5, libqt5core5a, libqt5network5, libqt5xml5, ${misc:Depends}, ${shlibs:Depends}
 Description: SMT Private Server Qt-based Tools
 
 Package: comphack-doc

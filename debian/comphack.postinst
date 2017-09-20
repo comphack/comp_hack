@@ -6,7 +6,7 @@ set -e
 
 USERNAME="comphack"
 
-adduser --system $USERNAME
+adduser --system --group --no-create-home --shell /bin/false $USERNAME
 
 mkdir -p /var/log/comp_hack
 chown $USERNAME:$USERNAME /var/log/comp_hack

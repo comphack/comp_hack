@@ -589,7 +589,7 @@ MACRO(RSPEC_TESTS)
 ENDMACRO(RSPEC_TESTS)
 
 IF(NOT WIN32 AND NOT BSD)
-    FIND_PACKAGE(Systemd)
+    FIND_PACKAGE(Systemd QUIET)
 
     IF(SYSTEMD_FOUND)
         ADD_COMPILER_FLAGS(AUTO ${SYSTEMD_DEFINITIONS} -DHAVE_SYSTEMD=1)
@@ -628,20 +628,20 @@ ENDIF(NOT BSD)
 # On Linux system, install the icons where they can be found. These are used
 # for the application menu launcher icons.
 IF(NOT WIN32)
-#    INSTALL(FILES icons/16x16/comp_hack.png
-#        DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/icons/hicolor/16x16/apps)
-#    INSTALL(FILES icons/22x22/comp_hack.png
-#        DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/icons/hicolor/22x22/apps)
-#    INSTALL(FILES icons/24x24/comp_hack.png
-#        DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/icons/hicolor/24x24/apps)
-#    INSTALL(FILES icons/32x32/comp_hack.png
-#        DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/icons/hicolor/32x32/apps)
-#    INSTALL(FILES icons/48x48/comp_hack.png
-#        DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/icons/hicolor/48x48/apps)
-#    INSTALL(FILES icons/64x64/comp_hack.png
-#        DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/icons/hicolor/64x64/apps)
-#    INSTALL(FILES icons/64x64/comp_hack.png
-#        DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/app-install/icons)
+    INSTALL(FILES icons/16x16/comp_hack.png
+        DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/icons/hicolor/16x16/apps)
+    INSTALL(FILES icons/22x22/comp_hack.png
+        DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/icons/hicolor/22x22/apps)
+    INSTALL(FILES icons/24x24/comp_hack.png
+        DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/icons/hicolor/24x24/apps)
+    INSTALL(FILES icons/32x32/comp_hack.png
+        DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/icons/hicolor/32x32/apps)
+    INSTALL(FILES icons/48x48/comp_hack.png
+        DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/icons/hicolor/48x48/apps)
+    INSTALL(FILES icons/64x64/comp_hack.png
+        DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/icons/hicolor/64x64/apps)
+    INSTALL(FILES icons/64x64/comp_hack.png
+        DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/app-install/icons)
     INSTALL(DIRECTORY ${CMAKE_SOURCE_DIR}/contrib/systemd/
         DESTINATION ${CMAKE_INSTALL_SYSCONFDIR}/systemd/system)
     INSTALL(DIRECTORY ${CMAKE_SOURCE_DIR}/contrib/webroot

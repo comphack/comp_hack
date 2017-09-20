@@ -48,6 +48,7 @@
     <include path="action_updateflag.xml"/>
     <include path="action_updatelnc.xml"/>
     <include path="action_updatequest.xml"/>
+    <include path="action_updatezoneflags.xml"/>
     <include path="action_zonechange.xml"/>
 
     <!-- Events -->

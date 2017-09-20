@@ -105,7 +105,7 @@ public:
      */
     bool ActivateSkill(const std::shared_ptr<ActiveEntityState> source,
         uint32_t skillID, int64_t targetObjectID,
-        const std::shared_ptr<SkillExecutionContext>& ctx = 0);
+        std::shared_ptr<SkillExecutionContext> ctx = 0);
 
     /**
      * Execute the skill of a character or demon.
@@ -117,7 +117,7 @@ public:
      */
     bool ExecuteSkill(const std::shared_ptr<ActiveEntityState> source,
         uint8_t activationID, int64_t targetObjectID,
-        const std::shared_ptr<SkillExecutionContext>& ctx = 0);
+        std::shared_ptr<SkillExecutionContext> ctx = 0);
 
     /**
      * Cancel the activated skill of a character or demon.
@@ -151,7 +151,7 @@ private:
     bool ExecuteSkill(std::shared_ptr<ActiveEntityState> source,
         std::shared_ptr<objects::ActivatedAbility> activated,
         const std::shared_ptr<ChannelClientConnection> client,
-        const std::shared_ptr<SkillExecutionContext>& ctx);
+        std::shared_ptr<SkillExecutionContext> ctx);
 
     /**
      * Execute a normal skill, not handled by a special handler.

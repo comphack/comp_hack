@@ -226,6 +226,7 @@ SET(${PROJECT_NAME}_SCHEMA
     schema/action_updateflag.xml
     schema/action_updatelnc.xml
     schema/action_updatequest.xml
+    schema/action_updatezoneflags.xml
     schema/action_zonechange.xml
     schema/character.xml
     schema/clan.xml
@@ -328,6 +329,8 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     ActionUpdateLNC.cpp
     ActionUpdateQuest.h
     ActionUpdateQuest.cpp
+    ActionUpdateZoneFlags.h
+    ActionUpdateZoneFlags.cpp
     ActionZoneChange.h
     ActionZoneChange.cpp
     Clan.h

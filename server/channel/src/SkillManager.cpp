@@ -196,7 +196,7 @@ SkillManager::~SkillManager()
 }
 
 bool SkillManager::ActivateSkill(const std::shared_ptr<ActiveEntityState> source,
-    uint32_t skillID, int64_t targetObjectID, const std::shared_ptr<SkillExecutionContext>& ctx)
+    uint32_t skillID, int64_t targetObjectID, std::shared_ptr<SkillExecutionContext> ctx)
 {
     auto server = mServer.lock();
     auto definitionManager = server->GetDefinitionManager();
@@ -256,7 +256,7 @@ bool SkillManager::ActivateSkill(const std::shared_ptr<ActiveEntityState> source
 }
 
 bool SkillManager::ExecuteSkill(const std::shared_ptr<ActiveEntityState> source,
-    uint8_t activationID, int64_t targetObjectID, const std::shared_ptr<SkillExecutionContext>& ctx)
+    uint8_t activationID, int64_t targetObjectID, std::shared_ptr<SkillExecutionContext> ctx)
 {
     auto client = mServer.lock()->GetManagerConnection()->GetEntityClient(
         source->GetEntityID());
@@ -288,7 +288,7 @@ bool SkillManager::ExecuteSkill(const std::shared_ptr<ActiveEntityState> source,
 bool SkillManager::ExecuteSkill(std::shared_ptr<ActiveEntityState> source,
     std::shared_ptr<objects::ActivatedAbility> activated,
     const std::shared_ptr<ChannelClientConnection> client,
-    const std::shared_ptr<SkillExecutionContext>& ctx)
+    std::shared_ptr<SkillExecutionContext> ctx)
 {
     auto server = mServer.lock();
     auto definitionManager = server->GetDefinitionManager();
@@ -620,6 +620,12 @@ bool SkillManager::ExecuteSkill(std::shared_ptr<ActiveEntityState> source,
 
     activated->SetExecutionTime(ChannelServer::GetServerTime());
 
+    // Make sure we have an execution context
+    if(!ctx)
+    {
+        ctx = std::make_shared<SkillExecutionContext>();
+    }
+
     // Execute the skill
     auto fIter = mSkillFunctions.find(functionID);
     if(fIter == mSkillFunctions.end())
@@ -788,12 +794,6 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
     if(!zone)
     {
         return false;
-    }
-
-    // Make sure we have an execution context
-    if(!ctx)
-    {
-        ctx = std::make_shared<SkillExecutionContext>();
     }
 
     auto server = mServer.lock();
@@ -1764,19 +1764,18 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<channel::Proces
                 if(extendHitStun)
                 {
                     // Apply extended hit stop and determine what else may be needed
-                    uint64_t extededHitStop = hitStopTime + (knockedBack ? 500000UL : 0UL);
                     hitTimings[0] = knockedBack ? now : completeTime;
-                    hitTimings[1] = extededHitStop;
+                    hitTimings[1] = hitStopTime;
 
                     if(!target.AilmentDamageType)
                     {
                         // End after hit stop
-                        hitTimings[2] = extededHitStop;
+                        hitTimings[2] = hitStopTime;
                     }
                     else
                     {
                         // Apply ailment damage after hit stop
-                        hitTimings[2] = extededHitStop + target.AilmentDamageTime;
+                        hitTimings[2] = hitStopTime + target.AilmentDamageTime;
                     }
                 }
                 else

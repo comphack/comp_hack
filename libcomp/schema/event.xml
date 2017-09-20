@@ -40,6 +40,7 @@
     <object name="EventCondition" persistent="false">
         <member type="enum" name="type" underlying="uint8_t">
             <value>NORMAL</value>
+            <value>ZONE_FLAGS</value>
             <value>MAX_QUESTS</value>
             <value>QUEST_AVAILABLE</value>
             <value>QUEST_PHASE</value>

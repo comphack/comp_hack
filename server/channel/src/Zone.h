@@ -299,6 +299,21 @@ public:
     std::unordered_map<uint32_t, uint16_t> GetReinforceableSpawnGroups(uint64_t now);
 
     /**
+     * Get the state of a zone flag.
+     * @param key Lookup key for the flag
+     * @param value Output value for the flag if it exists
+     * @return true if the flag exists, false if it does not
+     */
+    bool GetFlagState(int32_t key, int32_t& value);
+
+    /**
+     * Set the state of a zone flag.
+     * @param key Lookup key for the flag
+     * @param value Value to set for the flag
+     */
+    void SetFlagState(int32_t key, int32_t value);
+
+    /**
      * Take loot out of the specified loot box. This should be the only way
      * loot is removed from a box as it uses a mutex lock to ensure that the
      * loot is not duplicated for two different people. This currently does NOT
@@ -370,6 +385,9 @@ private:
     /// Map of server times to spawn group IDs that need to be reinforced
     /// at that time
     std::map<uint64_t, std::set<uint32_t>> mSpawnGroupReinforceTimes;
+
+    /// General use flags and associated values used for event sequences etc
+    std::unordered_map<int32_t, int32_t> mFlagStates;
 
     /// Geometry information bound to the zone
     std::shared_ptr<ZoneGeometry> mGeometry;

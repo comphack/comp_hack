@@ -50,7 +50,9 @@ class MainWindow : public QMainWindow
     Q_OBJECT
 
 public:
-    explicit MainWindow(QWidget *parent = 0);
+    explicit MainWindow(std::shared_ptr<libcomp::DataStore> datastore,
+        std::shared_ptr<libcomp::DefinitionManager> definitions,
+        QWidget *parent = 0);
     ~MainWindow();
 
 protected slots:
@@ -98,8 +100,8 @@ private:
     float mOffsetX;
     float mOffsetY;
 
-    libcomp::DataStore mDatastore;
-    libcomp::DefinitionManager mDefinitions;
+    std::shared_ptr<libcomp::DataStore> mDatastore;
+    std::shared_ptr<libcomp::DefinitionManager> mDefinitions;
     objects::ServerZone mZone;
     std::shared_ptr<objects::MiZoneData> mZoneData;
     std::shared_ptr<objects::QmpFile> mQmpFile;

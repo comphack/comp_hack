@@ -132,9 +132,14 @@ void HandleShopPurchase(const std::shared_ptr<ChannelServer> server,
         price = 1;
     }
 
-    price = price * quantity;
-
+    // CP purchases are only partially defined in the server files
     bool cpPurchase = product->GetCPCost() > 0;
+    if(cpPurchase)
+    {
+        quantity = (int32_t)product->GetStack();
+    }
+
+    price = price * quantity;
 
     uint16_t stackDecrease = 0;
     std::shared_ptr<objects::Item> updateItem;

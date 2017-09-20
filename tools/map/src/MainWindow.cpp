@@ -48,8 +48,10 @@
 #include <SpawnLocation.h>
 #include <SpawnLocationGroup.h>
 
-MainWindow::MainWindow(QWidget *p) : QMainWindow(p), mDrawTarget(0), mRubberBand(0),
-    mDatastore("comp_map")
+MainWindow::MainWindow(std::shared_ptr<libcomp::DataStore> datastore,
+    std::shared_ptr<libcomp::DefinitionManager> definitions, QWidget *p)
+    : QMainWindow(p), mDrawTarget(0), mRubberBand(0),
+    mDatastore(datastore), mDefinitions(definitions)
 {
     ui.setupUi(this);
 
@@ -89,25 +91,6 @@ MainWindow::MainWindow(QWidget *p) : QMainWindow(p), mDrawTarget(0), mRubberBand
         this, SLOT(ComboBox_SpawnEdit_IndexChanged(const QString&)));
     connect(ui.actionRemove_Selected_Locations, SIGNAL(triggered()),
         this, SLOT(SpawnLocationRemoveSelected()));
-
-    QSettings settings("map.ini", QSettings::IniFormat);
-
-    QString settingVal = settings.value("datastore", "error").toString();
-
-    if(!mDatastore.AddSearchPath(settingVal.toStdString()))
-    {
-        throw std::runtime_error("Failed to add datastore search path from map.ini.");
-    }
-
-    if(!mDefinitions.LoadZoneData(&mDatastore))
-    {
-        throw std::runtime_error("Failed to load zone data.");
-    }
-
-    if(!mDefinitions.LoadDevilData(&mDatastore))
-    {
-        throw std::runtime_error("Failed to load devil data.");
-    }
 
     mZoomScale = 20;
 }
@@ -460,13 +443,13 @@ bool MainWindow::LoadMapFromZone(QString path)
         return false;
     }
 
-    mZoneData = mDefinitions.GetZoneData(mZone.GetID());
+    mZoneData = mDefinitions->GetZoneData(mZone.GetID());
     if(!mZoneData)
     {
         return false;
     }
 
-    mQmpFile = mDefinitions.LoadQmpFile(mZoneData->GetFile()->GetQmpFile(), &mDatastore);
+    mQmpFile = mDefinitions->LoadQmpFile(mZoneData->GetFile()->GetQmpFile(), &*mDatastore);
     if(!mQmpFile)
     {
         return false;
@@ -562,7 +545,7 @@ void MainWindow::BindSpawns()
     for(auto sPair : mZone.GetSpawns())
     {
         auto s = sPair.second;
-        auto def = mDefinitions.GetDevilData(s->GetEnemyType());
+        auto def = mDefinitions->GetDevilData(s->GetEnemyType());
 
         ui.tableWidget_Spawn->setItem(i, 0, GetTableWidget(libcomp::String("%1")
             .Arg(s->GetID()).C()));

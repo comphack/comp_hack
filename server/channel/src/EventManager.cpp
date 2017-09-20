@@ -159,7 +159,17 @@ bool EventManager::HandleResponse(const std::shared_ptr<ChannelClientConnection>
         case objects::Event::EventType_t::PROMPT:
             {
                 auto e = std::dynamic_pointer_cast<objects::EventPrompt>(event);
-                auto choice = e->GetChoices((size_t)responseID);
+
+                int32_t adjustedResponseID = responseID;
+                for(size_t i = 0; i < e->ChoicesCount() && i <= (size_t)adjustedResponseID; i++)
+                {
+                    if(current->DisabledChoicesContains((uint8_t)i))
+                    {
+                        adjustedResponseID++;
+                    }
+                }
+
+                auto choice = e->GetChoices((size_t)adjustedResponseID);
                 if(choice == nullptr)
                 {
                     LOG_ERROR(libcomp::String("Invalid choice %1 selected for event %2\n"
@@ -486,10 +496,34 @@ bool EventManager::EvaluateEventCondition(const std::shared_ptr<
     objects::EventCondition>& condition)
 {
     bool negate = condition->GetNegate();
-    if(condition->GetType() == objects::EventCondition::Type_t::NORMAL)
+    switch(condition->GetType())
     {
+    case objects::EventCondition::Type_t::NORMAL:
         // Evaluate the event specific condition
         return negate != EvaluateCondition(client, condition->GetData());
+    case objects::EventCondition::Type_t::ZONE_FLAGS:
+        {
+            auto zone = mServer.lock()->GetZoneManager()->GetZoneInstance(client);
+            if(!zone)
+            {
+                return false;
+            }
+
+            std::unordered_map<int32_t, int32_t> flagStates;
+            for(auto pair : condition->GetFlagStates())
+            {
+                int32_t val;
+                if(zone->GetFlagState(pair.first, val))
+                {
+                    flagStates[pair.first] = val;
+                }
+            }
+
+            return EvaluateFlagStates(flagStates, condition);
+        }
+        break;
+    default:
+        break;
     }
 
     auto state = client->GetClientState();
@@ -543,70 +577,80 @@ bool EventManager::EvaluateEventCondition(const std::shared_ptr<
         }
         else
         {
-            bool result = true;
-            switch(condition->GetCompareMode())
-            {
-            case objects::EventCondition::CompareMode_t::EXISTS:
-                for(auto pair : condition->GetFlagStates())
-                {
-                    if(!quest->FlagStatesKeyExists(pair.first))
-                    {
-                        result &= negate;
-                    }
-                }
-                break;
-            case objects::EventCondition::CompareMode_t::LT_OR_NAN:
-                // Flag specific less than or not a number (does not exist)
-                for(auto pair : condition->GetFlagStates())
-                {
-                    if(quest->FlagStatesKeyExists(pair.first) &&
-                        quest->GetFlagStates(pair.first) >= pair.second)
-                    {
-                        result &= negate;
-                    }
-                }
-                break;
-            case objects::EventCondition::CompareMode_t::LT:
-                for(auto pair : condition->GetFlagStates())
-                {
-                    if(!quest->FlagStatesKeyExists(pair.first) ||
-                        quest->GetFlagStates(pair.first) >= pair.second)
-                    {
-                        result &= negate;
-                    }
-                }
-                break;
-            case objects::EventCondition::CompareMode_t::GTE:
-                for(auto pair : condition->GetFlagStates())
-                {
-                    if(!quest->FlagStatesKeyExists(pair.first) ||
-                        quest->GetFlagStates(pair.first) < pair.second)
-                    {
-                        result &= negate;
-                    }
-                }
-                break;
-            case objects::EventCondition::CompareMode_t::EQUAL:
-            default:
-                for(auto pair : condition->GetFlagStates())
-                {
-                    if(!quest->FlagStatesKeyExists(pair.first) ||
-                        quest->GetFlagStates(pair.first) != pair.second)
-                    {
-                        result &= negate;
-                    }
-                }
-                break;
-            }
-
-            return result;
+            auto flagStates = quest->GetFlagStates();
+            return EvaluateFlagStates(flagStates, condition);
         }
+        break;
     default:
         break;
     }
 
     // Always return false when invalid
     return false;
+}
+
+bool EventManager::EvaluateFlagStates(const std::unordered_map<int32_t,
+    int32_t>& flagStates, const std::shared_ptr<objects::EventCondition>& condition)
+{
+    bool negate = condition->GetNegate();
+
+    bool result = true;
+    switch(condition->GetCompareMode())
+    {
+    case objects::EventCondition::CompareMode_t::EXISTS:
+        for(auto pair : condition->GetFlagStates())
+        {
+            if(flagStates.find(pair.first) == flagStates.end())
+            {
+                result &= negate;
+            }
+        }
+        break;
+    case objects::EventCondition::CompareMode_t::LT_OR_NAN:
+        // Flag specific less than or not a number (does not exist)
+        for(auto pair : condition->GetFlagStates())
+        {
+            auto it = flagStates.find(pair.first);
+            if(it != flagStates.end() && it->second >= pair.second)
+            {
+                result &= negate;
+            }
+        }
+        break;
+    case objects::EventCondition::CompareMode_t::LT:
+        for(auto pair : condition->GetFlagStates())
+        {
+            auto it = flagStates.find(pair.first);
+            if(it == flagStates.end() || it->second >= pair.second)
+            {
+                result &= negate;
+            }
+        }
+        break;
+    case objects::EventCondition::CompareMode_t::GTE:
+        for(auto pair : condition->GetFlagStates())
+        {
+            auto it = flagStates.find(pair.first);
+            if(it == flagStates.end() || it->second < pair.second)
+            {
+                result &= negate;
+            }
+        }
+        break;
+    case objects::EventCondition::CompareMode_t::EQUAL:
+    default:
+        for(auto pair : condition->GetFlagStates())
+        {
+            auto it = flagStates.find(pair.first);
+            if(it == flagStates.end() || it->second != pair.second)
+            {
+                result &= negate;
+            }
+        }
+        break;
+    }
+
+    return result;
 }
 
 bool EventManager::EvaluateEventConditions(const std::shared_ptr<
@@ -1283,14 +1327,22 @@ bool EventManager::Prompt(const std::shared_ptr<ChannelClientConnection>& client
     p.WriteS32Little(instance->GetSourceEntityID());
     p.WriteS32Little(e->GetMessageID());
 
+    instance->ClearDisabledChoices();
+
     std::vector<std::shared_ptr<objects::EventChoice>> choices;
-    for(auto choice : e->GetChoices())
+    for(size_t i = 0; i < e->ChoicesCount(); i++)
     {
+        auto choice = e->GetChoices(i);
+
         auto conditions = choice->GetConditions();
         if(choice->GetMessageID() != 0 &&
             (conditions.size() == 0 || EvaluateEventConditions(client, conditions)))
         {
             choices.push_back(choice);
+        }
+        else
+        {
+            instance->InsertDisabledChoices((uint8_t)i);
         }
     }
 

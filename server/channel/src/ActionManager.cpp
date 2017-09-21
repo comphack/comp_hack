@@ -45,6 +45,7 @@
 #include <ActionUpdateFlag.h>
 #include <ActionUpdateLNC.h>
 #include <ActionUpdateQuest.h>
+#include <ActionUpdateZoneFlags.h>
 #include <ActionZoneChange.h>
 #include <ObjectPosition.h>
 #include <Party.h>
@@ -81,6 +82,8 @@ ActionManager::ActionManager(const std::weak_ptr<ChannelServer>& server)
         &ActionManager::UpdateLNC;
     mActionHandlers[objects::Action::ActionType_t::UPDATE_QUEST] =
         &ActionManager::UpdateQuest;
+    mActionHandlers[objects::Action::ActionType_t::UPDATE_ZONE_FLAGS] =
+        &ActionManager::UpdateZoneFlags;
     mActionHandlers[objects::Action::ActionType_t::SPAWN] =
         &ActionManager::Spawn;
     mActionHandlers[objects::Action::ActionType_t::CREATE_LOOT] =
@@ -482,6 +485,43 @@ bool ActionManager::UpdateQuest(const ActionContext& ctx)
 
     eventManager->UpdateQuest(ctx.Client, act->GetQuestID(), act->GetPhase(), false,
         act->GetFlagStates());
+
+    return true;
+}
+
+bool ActionManager::UpdateZoneFlags(const ActionContext& ctx)
+{
+    auto act = std::dynamic_pointer_cast<objects::ActionUpdateZoneFlags>(ctx.Action);
+    switch(act->GetSetMode())
+    {
+    case objects::ActionUpdateZoneFlags::SetMode_t::UPDATE:
+        for(auto pair : act->GetFlagStates())
+        {
+            ctx.CurrentZone->SetFlagState(pair.first, pair.second);
+        }
+        break;
+    case objects::ActionUpdateZoneFlags::SetMode_t::INCREMENT:
+    case objects::ActionUpdateZoneFlags::SetMode_t::DECREMENT:
+        {
+            bool incr = act->GetSetMode() ==
+                objects::ActionUpdateZoneFlags::SetMode_t::INCREMENT;
+
+            int32_t val;
+            for(auto pair : act->GetFlagStates())
+            {
+                if(ctx.CurrentZone->GetFlagState(pair.first, val))
+                {
+                    val = 0;
+                }
+
+                val = val + (incr ? 1 : -1);
+                ctx.CurrentZone->SetFlagState(pair.first, val);
+            }
+        }
+        break;
+    default:
+        break;
+    }
 
     return true;
 }

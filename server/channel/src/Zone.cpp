@@ -511,6 +511,25 @@ std::unordered_map<uint32_t, uint16_t> Zone::GetReinforceableSpawnGroups(
     return result;
 }
 
+bool Zone::GetFlagState(int32_t key, int32_t& value)
+{
+    std::lock_guard<std::mutex> lock(mLock);
+    auto it = mFlagStates.find(key);
+    if(it != mFlagStates.end())
+    {
+        value = it->second;
+        return true;
+    }
+
+    return false;
+}
+
+void Zone::SetFlagState(int32_t key, int32_t value)
+{
+    std::lock_guard<std::mutex> lock(mLock);
+    mFlagStates[key] = value;
+}
+
 std::unordered_map<size_t, std::shared_ptr<objects::Loot>>
     Zone::TakeLoot(std::shared_ptr<LootBoxState> lState, std::set<int8_t> slots,
     size_t freeSlots, std::unordered_map<uint32_t, uint16_t> stacksFree)

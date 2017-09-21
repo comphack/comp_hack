@@ -486,7 +486,7 @@ bool CharacterManager::PartyJoin(std::shared_ptr<objects::PartyCharacter> member
             request.WriteU8(0);
 
             SendToRelatedCharacters(request, member->GetWorldCID(),
-                1, false, false, true);
+                1, RELATED_PARTY);
         }
 
         libcomp::Packet relay;

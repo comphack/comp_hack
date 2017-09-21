@@ -75,90 +75,77 @@ public:
 private:
     /**
      * Start an event sequence for the client.
-     * @param client Client to perform the actions for.
-     * @param action Action to perform.
-     * @param sourceEntityID ID of the entity to use as the event source.
+     * @param ctx ActionContext for the executing source information.
      * @retval false The action list should stop after this action.
      */
     bool StartEvent(const ActionContext& ctx);
 
     /**
      * Perform the zone change action on behalf of the client.
-     * @param client Client to perform the actions for.
-     * @param action Action to perform.
-     * @param sourceEntityID ID of the entity causing the zone change.
+     * @param ctx ActionContext for the executing source information.
      * @retval false The action list should stop after this action.
      */
     bool ZoneChange(const ActionContext& ctx);
 
     /**
      * Change the state of the source entity in the zone.
-     * @param client Client to perform the actions for.
-     * @param action Action to perform.
-     * @param sourceEntityID ID of the entity that is changing state.
+     * @param ctx ActionContext for the executing source information.
      * @retval false The action list should stop after this action.
      */
     bool SetNPCState(const ActionContext& ctx);
 
     /**
      * Add or remove items to the client character's inventory.
-     * @param client Client to perform the actions for.
-     * @param action Action to perform.
-     * @param sourceEntityID ID of the entity that is changing state.
+     * @param ctx ActionContext for the executing source information.
      * @retval false The action list should stop after this action.
      */
     bool AddRemoveItems(const ActionContext& ctx);
 
     /**
      * Grant XP to the source client character and/or partner demon.
-     * @param client Client to perform the actions for.
-     * @param action Action to perform.
-     * @param sourceEntityID ID of the entity that is changing state.
+     * @param ctx ActionContext for the executing source information.
      * @retval false The action list should stop after this action.
      */
     bool GrantXP(const ActionContext& ctx);
 
     /**
      * Update flags related to character maps, valuables or plugins.
-     * @param client Client to perform the actions for.
-     * @param action Action to perform.
-     * @param sourceEntityID ID of the source entity.
+     * @param ctx ActionContext for the executing source information.
      * @retval false The action list should stop after this action.
      */
     bool UpdateFlag(const ActionContext& ctx);
 
     /**
      * Update the client character's LNC alignment.
-     * @param client Client to perform the actions for.
-     * @param action Action to perform.
-     * @param sourceEntityID ID of the source entity.
+     * @param ctx ActionContext for the executing source information.
      * @retval false The action list should stop after this action.
      */
     bool UpdateLNC(const ActionContext& ctx);
 
     /**
      * Update a quest related to the current character.
-     * @param client Client to perform the actions for.
-     * @param action Action to perform.
-     * @param sourceEntityID ID of the source entity.
+     * @param ctx ActionContext for the executing source information.
      * @retval false The action list should stop after this action.
      */
     bool UpdateQuest(const ActionContext& ctx);
 
     /**
+     * Update one or more flags in the current zone.
+     * @param ctx ActionContext for the executing source information.
+     * @retval false The action list should stop after this action.
+     */
+    bool UpdateZoneFlags(const ActionContext& ctx);
+
+    /**
      * Spawn an enemy spawn group by ID in the client's current zone.
-     * @param client Client to perform the actions for.
-     * @param action Action to perform.
-     * @param sourceEntityID ID of the entity that is changing state.
+     * @param ctx ActionContext for the executing source information.
      * @retval false The action list should stop after this action.
      */
     bool Spawn(const ActionContext& ctx);
 
     /**
      * Create one or more loot boxes at the specified location.
-     * @param client Client to perform the actions for.
-     * @param action Action to perform.
-     * @param sourceEntityID ID of the source entity.
+     * @param ctx ActionContext for the executing source information.
      * @retval false The action list should stop after this action.
      */
     bool CreateLoot(const ActionContext& ctx);

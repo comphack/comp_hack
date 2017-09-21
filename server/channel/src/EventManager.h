@@ -191,6 +191,15 @@ public:
 
 private:
     /**
+     * Evaluate a set of flag states for a standard condition
+     * @param flagStates Map of flag states to evaluate
+     * @param condition Standard condition to evaluate
+     * @return true if the flag states evaluate to true, otherwise false
+     */
+    bool EvaluateFlagStates(const std::unordered_map<int32_t, int32_t>& flagStates,
+        const std::shared_ptr<objects::EventCondition>& condition);
+
+    /**
      * Handle an event instance by branching into the appropriate handler
      * function after updating the character's overhead icon if needed
      * @param client Pointer to the client the event affects

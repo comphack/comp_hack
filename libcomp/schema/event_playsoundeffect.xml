@@ -3,6 +3,6 @@
     <object name="EventPlaySoundEffect" baseobject="Event" persistent="false">
         <member type="enum" name="eventType" inherited="true" default="PLAY_SOUND_EFFECT"/>
         <member type="s32" name="soundID"/>
-        <member type="s32" name="unknown"/>
+        <member type="s32" name="delay"/>
     </object>
 </objgen>

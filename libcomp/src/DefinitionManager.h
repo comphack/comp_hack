@@ -54,6 +54,7 @@ class MiONPCData;
 class MiQuestData;
 class MiShopProductData;
 class MiSkillData;
+class MiSpotData;
 class MiStatusData;
 class MiTriUnionSpecialData;
 class MiZoneData;
@@ -178,9 +179,17 @@ public:
     const std::shared_ptr<objects::MiSkillData> GetSkillData(uint32_t id);
 
     /**
+     * Get the spot data corresponding to a dynamic map ID
+     * @param dynamicMapID ID of the spot data to retrieve
+     * @return Map of spot definitions by spot ID for the specified dynamic map
+     */
+    const std::unordered_map<uint32_t,
+        std::shared_ptr<objects::MiSpotData>> GetSpotData(uint32_t dynamicMapID);
+
+    /**
      * Get the status definition corresponding to an ID
      * @param id Status ID to retrieve
-     * @return Pointer to the matching skill definition, null if it does not exist
+     * @return Pointer to the matching status definition, null if it does not exist
      */
     const std::shared_ptr<objects::MiStatusData> GetStatusData(uint32_t id);
 
@@ -348,12 +357,15 @@ private:
      * @param tablesExpected Number of tables expected in the file
      *  format
      * @param records Output list to load records into
+     * @param printResults Optional parameter to disable success/fail
+     *  debug messages
      * @return true if the file was loaded, false if it was not
      */
     template <class T>
     bool LoadBinaryData(gsl::not_null<DataStore*> pDataStore,
         const libcomp::String& binaryFile, bool decrypt,
-        uint16_t tablesExpected, std::list<std::shared_ptr<T>>& records)
+        uint16_t tablesExpected, std::list<std::shared_ptr<T>>& records,
+        bool printResults = true)
     {
         std::vector<char> data;
 
@@ -397,7 +409,10 @@ private:
 
             if(!entry->Load(ois))
             {
-                PrintLoadResult(binaryFile, false, entryCount, records.size());
+                if(printResults)
+                {
+                    PrintLoadResult(binaryFile, false, entryCount, records.size());
+                }
                 return false;
             }
 
@@ -405,7 +420,10 @@ private:
 	    }
 
         bool success = entryCount == records.size() && ois.stream.good();
-        PrintLoadResult(binaryFile, success, entryCount, records.size());
+        if(printResults)
+        {
+            PrintLoadResult(binaryFile, success, entryCount, records.size());
+        }
 
         return success;
     }
@@ -513,6 +531,10 @@ private:
     /// Map of skill definitions by ID
     std::unordered_map<uint32_t,
         std::shared_ptr<objects::MiSkillData>> mSkillData;
+
+    /// Map of filename to map of spots by ID
+    std::unordered_map<std::string,
+        std::unordered_map<uint32_t, std::shared_ptr<objects::MiSpotData>>> mSpotData;
 
     /// Map of status definitions by ID
     std::unordered_map<uint32_t,

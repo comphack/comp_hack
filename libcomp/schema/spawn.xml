@@ -20,6 +20,9 @@
     </object>
     <object name="SpawnLocationGroup" persistent="false">
         <member type="u32" name="ID"/>
+        <member type="set" name="SpotIDs">
+            <element type="u32"/>
+        </member>
         <member type="list" name="Locations">
             <element type="SpawnLocation*"/>
         </member>

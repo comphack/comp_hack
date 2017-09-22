@@ -32,6 +32,9 @@
 #include <PacketCodes.h>
 #include <ServerConstants.h>
 
+// Standard C++11 Includes
+#include <math.h>
+
 // object Includes
 #include <Account.h>
 #include <Item.h>
@@ -131,8 +134,9 @@ void HandleShopSale(const std::shared_ptr<ChannelServer> server,
     freeSlots.unique();
     freeSlots.sort();
 
-    uint16_t macca = (uint16_t)(saleAmount % ITEM_MACCA_NOTE_AMOUNT);
-    uint16_t notes = (uint16_t)((saleAmount - macca) % ITEM_MACCA_NOTE_AMOUNT);
+    int32_t macca = (int32_t)(saleAmount % (uint64_t)ITEM_MACCA_NOTE_AMOUNT);
+    int32_t notes = (int32_t)floorl((double)(saleAmount - (uint64_t)macca) /
+        (double)ITEM_MACCA_NOTE_AMOUNT);
 
     auto maxNoteStack = defnitionManager->GetItemData(SVR_CONST.ITEM_MACCA_NOTE)
         ->GetPossession()->GetStackSize();
@@ -141,12 +145,12 @@ void HandleShopSale(const std::shared_ptr<ChannelServer> server,
     {
         if(notes == 0) break;
 
-        uint16_t stackLeft = (uint16_t)(maxNoteStack - item->GetStackSize());
+        int32_t stackLeft = (int32_t)(maxNoteStack - item->GetStackSize());
         if(stackLeft <= 0) continue;
 
-        uint16_t stackAdd = (notes <= stackLeft) ? notes : stackLeft;
+        int32_t stackAdd = (notes <= stackLeft) ? notes : stackLeft;
         stackAdjustItems[item] = (uint16_t)(item->GetStackSize() + stackAdd);
-        notes = (uint16_t)(notes - stackAdd);
+        notes = (int32_t)(notes - stackAdd);
     }
 
     for(auto item : characterManager->GetExistingItems(character,
@@ -154,28 +158,28 @@ void HandleShopSale(const std::shared_ptr<ChannelServer> server,
     {
         if(macca == 0) break;
 
-        uint16_t stackLeft = (uint16_t)(ITEM_MACCA_NOTE_AMOUNT - item->GetStackSize());
+        int32_t stackLeft = (int32_t)(ITEM_MACCA_NOTE_AMOUNT - item->GetStackSize());
         if(stackLeft <= 0) continue;
 
-        uint16_t stackAdd = (macca <= stackLeft) ? macca : stackLeft;
+        int32_t stackAdd = (macca <= stackLeft) ? macca : stackLeft;
         stackAdjustItems[item] = (uint16_t)(item->GetStackSize() + stackAdd);
-        macca = (uint16_t)(macca - stackAdd);
+        macca = (int32_t)(macca - stackAdd);
     }
 
     // Add whatever amount is left as new items
     std::list<std::shared_ptr<objects::Item>> insertItems;
     while(notes > 0)
     {
-        uint16_t stack = (notes > maxNoteStack) ? maxNoteStack : notes;
+        uint16_t stack = (notes > maxNoteStack) ? maxNoteStack : (uint16_t)notes;
         insertItems.push_back(characterManager->GenerateItem(
             SVR_CONST.ITEM_MACCA_NOTE, stack));
-        notes = (uint16_t)(notes - stack);
+        notes = (int32_t)(notes - stack);
     }
 
     if(macca > 0)
     {
         insertItems.push_back(characterManager->GenerateItem(
-            SVR_CONST.ITEM_MACCA, macca));
+            SVR_CONST.ITEM_MACCA, (uint16_t)macca));
     }
 
     if(freeSlots.size() < insertItems.size())

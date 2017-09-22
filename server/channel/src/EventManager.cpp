@@ -1462,13 +1462,24 @@ bool EventManager::Homepoint(const std::shared_ptr<ChannelClientConnection>& cli
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
     auto character = cState->GetEntity();
-    auto zone = cState->GetZone();
 
-    /// @todo: check for invalid zone types or positions
-
-    auto zoneID = zone->GetDefinition()->GetID();
-    auto xCoord = cState->GetCurrentX();
-    auto yCoord = cState->GetCurrentY();
+    uint32_t zoneID = 0;
+    float xCoord = 0.f;
+    float yCoord = 0.f;
+    if(e->GetZoneID() > 0)
+    {
+        zoneID = e->GetZoneID();
+        xCoord = e->GetX();
+        yCoord = e->GetY();
+    }
+    else
+    {
+        // Use current position
+        auto zone = cState->GetZone();
+        zoneID = zone->GetDefinition()->GetID();
+        xCoord = cState->GetCurrentX();
+        yCoord = cState->GetCurrentY();
+    }
 
     character->SetHomepointZone(zoneID);
     character->SetHomepointX(xCoord);
@@ -1553,7 +1564,7 @@ bool EventManager::PlaySoundEffect(const std::shared_ptr<ChannelClientConnection
     libcomp::Packet p;
     p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_EVENT_PLAY_SOUND_EFFECT);
     p.WriteS32Little(e->GetSoundID());
-    p.WriteS32Little(e->GetUnknown());
+    p.WriteS32Little(e->GetDelay());
 
     client->SendPacket(p);
 

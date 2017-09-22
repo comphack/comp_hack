@@ -47,6 +47,7 @@
 #include <ActionUpdateQuest.h>
 #include <ActionUpdateZoneFlags.h>
 #include <ActionZoneChange.h>
+#include <MiSpotData.h>
 #include <ObjectPosition.h>
 #include <Party.h>
 #include <ServerNPC.h>
@@ -243,6 +244,26 @@ bool ActionManager::ZoneChange(const ActionContext& ctx)
     float y = act->GetDestinationY();
     float rotation = act->GetDestinationRotation();
 
+    uint32_t spotID = act->GetSpotID();
+    if(spotID > 0)
+    {
+        // If a spot is specified, get a random point in that spot instead
+        auto definitionManager = server->GetDefinitionManager();
+        auto serverDataManager = server->GetServerDataManager();
+        auto zoneDef = serverDataManager->GetZoneData(zoneID);
+
+        uint32_t dynamicMapID = zoneDef ? zoneDef->GetDynamicMapID() : 0;
+        auto spots = definitionManager->GetSpotData(dynamicMapID);
+        auto spotIter = spots.find(spotID);
+        if(spotIter != spots.end())
+        {
+            Point p = zoneManager->GetRandomSpotPoint(spotIter->second);
+            x = p.x;
+            y = p.y;
+            rotation = spotIter->second->GetRotation();
+        }
+    }
+
     // Enter the new zone and always leave the old zone even if its the same.
     if(!zoneManager->EnterZone(ctx.Client, zoneID, x, y, rotation, true))
     {
@@ -332,43 +353,57 @@ bool ActionManager::SetNPCState(const ActionContext& ctx)
     auto server = mServer.lock();
     auto zoneManager = server->GetZoneManager();
 
-    std::shared_ptr<ServerObjectState> oNPC;
-    if(ctx.CurrentZone)
+    std::shared_ptr<objects::EntityStateObject> oNPCState;
+    if(act->GetActorID() > 0)
     {
-        if(act->GetActorID() > 0)
-        {
-            oNPC = std::dynamic_pointer_cast<ServerObjectState>(
-                ctx.CurrentZone->GetActor(act->GetActorID()));
-        }
-        else
-        {
-            oNPC = ctx.CurrentZone->GetServerObject(ctx.SourceEntityID);
-        }
+        oNPCState = ctx.CurrentZone->GetActor(act->GetActorID());
+    }
+    else if(act->GetActorID() < 0)
+    {
+        oNPCState = ctx.CurrentZone->GetServerObject(ctx.SourceEntityID);
+    }
+
+    std::shared_ptr<objects::ServerObject> oNPC;
+    switch(oNPCState->GetEntityType())
+    {
+    case objects::EntityStateObject::EntityType_t::NPC:
+        oNPC = std::dynamic_pointer_cast<NPCState>(oNPCState)->GetEntity();
+        break;
+    case objects::EntityStateObject::EntityType_t::OBJECT:
+        oNPC = std::dynamic_pointer_cast<ServerObjectState>(oNPCState)->GetEntity();
+        break;
+    default:
+        break;
     }
 
     if(oNPC && (act->GetSourceClientOnly() ||
-        act->GetState() != oNPC->GetEntity()->GetState()))
+        act->GetState() != oNPC->GetState()))
     {
-        auto entity = oNPC->GetEntity();
-        if(!act->GetSourceClientOnly())
+        if(act->GetFrom() >= 0 && oNPC->GetState() != (uint8_t)act->GetFrom())
         {
-            entity->SetState(act->GetState());
+            // Stop all actions past this point
+            return false;
         }
 
-        auto npc = std::dynamic_pointer_cast<objects::ServerNPC>(entity);
+        if(!act->GetSourceClientOnly())
+        {
+            oNPC->SetState(act->GetState());
+        }
+
+        auto npc = std::dynamic_pointer_cast<objects::ServerNPC>(oNPC);
         if(npc)
         {
             if(act->GetSourceClientOnly())
             {
                 if(act->GetState() == 1)
                 {
-                    zoneManager->ShowEntity(ctx.Client, oNPC->GetEntityID());
+                    zoneManager->ShowEntity(ctx.Client, oNPCState->GetEntityID());
                 }
                 else
                 {
                     std::list<std::shared_ptr<
                         ChannelClientConnection>> clients = { ctx.Client };
-                    std::list<int32_t> entityIDs = { oNPC->GetEntityID()  };
+                    std::list<int32_t> entityIDs = { oNPCState->GetEntityID()  };
                     zoneManager->RemoveEntities(clients, entityIDs);
                 }
             }
@@ -376,11 +411,11 @@ bool ActionManager::SetNPCState(const ActionContext& ctx)
             {
                 if(act->GetState() == 1)
                 {
-                    zoneManager->ShowEntityToZone(ctx.CurrentZone, oNPC->GetEntityID());
+                    zoneManager->ShowEntityToZone(ctx.CurrentZone, oNPCState->GetEntityID());
                 }
                 else
                 {
-                    std::list<int32_t> entityIDs = { oNPC->GetEntityID() };
+                    std::list<int32_t> entityIDs = { oNPCState->GetEntityID() };
                     zoneManager->RemoveEntitiesFromZone(ctx.CurrentZone, entityIDs);
                 }
             }
@@ -389,7 +424,7 @@ bool ActionManager::SetNPCState(const ActionContext& ctx)
         {
             libcomp::Packet p;
             p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_NPC_STATE_CHANGE);
-            p.WriteS32Little(oNPC->GetEntityID());
+            p.WriteS32Little(oNPCState->GetEntityID());
             p.WriteU8(act->GetState());
 
             if(act->GetSourceClientOnly())
@@ -401,10 +436,6 @@ bool ActionManager::SetNPCState(const ActionContext& ctx)
                 zoneManager->BroadcastPacket(ctx.CurrentZone, p);
             }
         }
-    }
-    else
-    {
-        return false;
     }
 
     return true;

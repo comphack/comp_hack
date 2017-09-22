@@ -111,9 +111,11 @@ public:
      * Remove a client connection from a zone
      * @param client Client connection to remove from any associated zone
      * @param logOut If true, special logout actions will be performed
+     * @param newZoneID ID of the next zone the client is moving to, used
+     *  for retaining zone instances that are not being cleaned up
      */
     void LeaveZone(const std::shared_ptr<ChannelClientConnection>& client,
-        bool logOut);
+        bool logOut, uint32_t newZoneID = 0);
 
     /**
      * Send data about entities that exist in a zone to a new connection and
@@ -325,6 +327,13 @@ public:
     Point GetRandomPoint(float width, float height) const;
 
     /**
+     * Get a random point within the supplied zone spot.
+     * @param spot Pointer to the spot to get a random point within
+     * @return X, Y coordinates of the random point
+     */
+    Point GetRandomSpotPoint(const std::shared_ptr<objects::MiSpotData>& spot) const;
+
+    /**
      * Get a point directly away or directly towards two specified points.
      * @param sourceX Point 1 X coordinate
      * @param sourceY Point 1 Y coordinate
@@ -379,6 +388,15 @@ public:
         float x, float y, float rot, float maxAngle);
 
 private:
+    /**
+     * Rotate a point around an origin point by the specified radians amount
+     * @param p Point to rotate
+     * @param origin Origin point to rotate around
+     * @param radians Number of radians to rotate around the origin
+     * @return Transformed rotation point
+     */
+    static Point RotatePoint(const Point& p, const Point& origin, float radians);
+
     /**
      * Create an enemy in the specified zone instance at set coordinates
      * @param zone Pointer to the zone instance where the enemy should be spawned
@@ -449,6 +467,10 @@ private:
     /// Map of QMP filenames to the geometry structures built from them
     std::unordered_map<std::string,
         std::shared_ptr<ZoneGeometry>> mZoneGeometry;
+
+    /// Map of dynamic map IDs to geometry information built from their
+    /// corresponding binary definitions
+    std::unordered_map<uint32_t, std::shared_ptr<DynamicMap>> mDynamicMaps;
 
     /// Set of all zone instances that should be considered active when
     /// updating states. When an instnace is removed from this set but

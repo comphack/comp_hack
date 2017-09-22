@@ -8,6 +8,7 @@
         <member type="Spawn*" name="SpawnSource" nulldefault="true"/>
         <member type="SpawnLocation*" name="SpawnLocation"
             nulldefault="true"/>
+        <member type="u32" name="SpawnSpotID"/>
         <member type="u32" name="SpawnGroupID"/>
 
         <!-- Sub-sections -->

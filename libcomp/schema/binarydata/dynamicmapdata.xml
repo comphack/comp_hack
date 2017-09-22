@@ -2,7 +2,7 @@
 <objgen>
     <object name="MiDynamicMapData" persistent="false" scriptenabled="true">
         <member type="u32" name="id" caps="true"/>
-        <member type="string" length="36" name="unk1"/>
+        <member type="string" length="36" name="spotDataFile"/>
         <member type="string" length="36" name="unk2"/>
         <member type="string" length="36" name="unk3"/>
         <member type="string" length="36" name="unk4"/>

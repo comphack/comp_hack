@@ -358,9 +358,15 @@ bool ActionManager::SetNPCState(const ActionContext& ctx)
     {
         oNPCState = ctx.CurrentZone->GetActor(act->GetActorID());
     }
-    else if(act->GetActorID() < 0)
+    else
     {
         oNPCState = ctx.CurrentZone->GetServerObject(ctx.SourceEntityID);
+    }
+
+    if(!oNPCState)
+    {
+        LOG_ERROR("SetNPCState attempted on invalid target\n");
+        return false;
     }
 
     std::shared_ptr<objects::ServerObject> oNPC;

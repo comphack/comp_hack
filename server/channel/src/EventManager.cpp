@@ -40,6 +40,7 @@
 // object Includes
 #include <Account.h>
 #include <CharacterProgress.h>
+#include <DemonBox.h>
 #include <EventChoice.h>
 #include <EventCondition.h>
 #include <EventConditionData.h>
@@ -63,6 +64,7 @@
 #include <EventState.h>
 #include <Expertise.h>
 #include <Item.h>
+#include <ItemBox.h>
 #include <MiExpertData.h>
 #include <MiQuestData.h>
 #include <MiQuestPhaseData.h>
@@ -714,13 +716,13 @@ bool EventManager::EvaluateCondition(const std::shared_ptr<ChannelClientConnecti
             auto items = characterManager->GetExistingItems(character,
                 (uint32_t)condition->GetValue1());
 
-            uint16_t count = 0;
+            uint32_t count = 0;
             for(auto item : items)
             {
-                count = (uint16_t)(count + item->GetStackSize());
+                count = (uint32_t)(count + (uint32_t)item->GetStackSize());
             }
 
-            return count >= (uint16_t)condition->GetValue2();
+            return count >= (uint32_t)condition->GetValue2();
         }
     case objects::EventConditionData::Type_t::VALUABLE:
         {
@@ -928,6 +930,76 @@ bool EventManager::EvaluateCondition(const std::shared_ptr<ChannelClientConnecti
 
             return demon != nullptr &&
                 demon->GetType() == (uint32_t)condition->GetValue1();
+        }
+    // Custom conditions below this point
+    case objects::EventConditionData::Type_t::CONTRACTED:
+        {
+            // Demon of type [value 1] exists in the COMP
+            auto character = cState->GetEntity();
+            auto progress = character->GetProgress();
+            auto comp = character->GetCOMP().Get();
+
+            std::set<uint32_t> demonIDs;
+            size_t maxSlots = (size_t)progress->GetMaxCOMPSlots();
+            for(size_t i = 0; i < maxSlots; i++)
+            {
+                auto slot = comp->GetDemons(i);
+                if(!slot.IsNull())
+                {
+                    demonIDs.insert(slot->GetType());
+                }
+            }
+
+            return demonIDs.find((uint32_t)condition->GetValue1()) !=
+                demonIDs.end();
+        }
+    case objects::EventConditionData::Type_t::COMP_FREE:
+        {
+            // COMP has [value 1] to [value 2] slots free (or count
+            // explicitly equals [value 1] if [value 2] is 0)
+            auto character = cState->GetEntity();
+            auto progress = character->GetProgress();
+            auto comp = character->GetCOMP().Get();
+
+            int32_t freeCount = 0;
+            size_t maxSlots = (size_t)progress->GetMaxCOMPSlots();
+            for(size_t i = 0; i < maxSlots; i++)
+            {
+                auto slot = comp->GetDemons(i);
+                if(slot.IsNull())
+                {
+                    freeCount++;
+                }
+            }
+
+            if(condition->GetValue2() == 0)
+            {
+                return freeCount == condition->GetValue1();
+            }
+            else
+            {
+                return freeCount >= condition->GetValue1() &&
+                    freeCount <= condition->GetValue2();
+            }
+        }
+    case objects::EventConditionData::Type_t::INVENTORY_FREE:
+        {
+            // Inventory has enough space free for [value 1] stacks
+            // of items
+            auto character = cState->GetEntity();
+            auto inventory = character->GetItemBoxes(0);
+
+            int32_t freeCount = 0;
+            for(size_t i = 0; i < 50; i++)
+            {
+                auto item = inventory->GetItems(i);
+                if(item.IsNull())
+                {
+                    freeCount++;
+                }
+            }
+
+            return freeCount >= condition->GetValue1();
         }
     case objects::EventConditionData::Type_t::NONE:
     default:

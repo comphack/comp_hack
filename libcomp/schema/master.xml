@@ -45,6 +45,7 @@
     <include path="action_setnpcstate.xml"/>
     <include path="action_spawn.xml"/>
     <include path="action_startevent.xml"/>
+    <include path="action_updatecomp.xml"/>
     <include path="action_updateflag.xml"/>
     <include path="action_updatelnc.xml"/>
     <include path="action_updatequest.xml"/>

@@ -6,6 +6,7 @@
             <value>START_EVENT</value>
             <value>SET_NPC_STATE</value>
             <value>ADD_REMOVE_ITEMS</value>
+            <value>UPDATE_COMP</value>
             <value>GRANT_XP</value>
             <value>UPDATE_FLAG</value>
             <value>UPDATE_LNC</value>

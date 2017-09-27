@@ -55,6 +55,11 @@ public:
         QWidget *parent = 0);
     ~MainWindow();
 
+protected:
+    void mousePressEvent(QMouseEvent* event);
+    void mouseMoveEvent(QMouseEvent* event);
+    void mouseReleaseEvent(QMouseEvent* event);
+
 protected slots:
     void ShowOpenDialog();
     void ShowSaveDialog();
@@ -66,10 +71,6 @@ protected slots:
     void ClearPoints();
     void ShowToggled(bool checked);
     void Refresh();
-
-    void mousePressEvent(QMouseEvent* event);
-    void mouseMoveEvent(QMouseEvent* event);
-    void mouseReleaseEvent(QMouseEvent* event);
 
     void ComboBox_SpawnEdit_IndexChanged(const QString& str);
     void SpawnLocationRemoveSelected();

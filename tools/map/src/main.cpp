@@ -33,10 +33,21 @@ int main(int argc, char *argv[])
 {
     QApplication app(argc, argv);
 
+    // These settings are used to specify how the settings are stored. On
+    // Windows, there settings are stored in the registry at
+    // HKEY_CURRENT_USER\Software\COMP_hack\COMP_hack Map
+    // On Linux, these settings will be stored in the file
+    // $HOME/.config/COMP_hack/COMP_hack Map.conf
+    // Consult the QSettings documentation in the Qt API reference for more
+    // information on how the settings work (and where they are on Mac OS X).
+    app.setOrganizationName("COMP_hack");
+    app.setOrganizationDomain("comp.hack");
+    app.setApplicationName("COMP_hack Map");
+
     auto datastore = std::make_shared<libcomp::DataStore>("comp_map");
     auto defintions = std::make_shared<libcomp::DefinitionManager>();
-    
-    QSettings settings("map.ini", QSettings::IniFormat);
+
+    QSettings settings;
 
     QString settingVal = settings.value("datastore", "error").toString();
 

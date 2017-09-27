@@ -81,12 +81,6 @@ MainWindow::MainWindow(std::shared_ptr<libcomp::DataStore> datastore,
         this, SLOT(ShowToggled(bool)));
     connect(ui.checkBox_Spawn, SIGNAL(toggled(bool)),
         this, SLOT(ShowToggled(bool)));
-    connect(ui.scrollArea, SIGNAL(mousePressEvent(QMouseEvent*)),
-        this, SLOT(mousePressEvent()));
-    connect(ui.scrollArea, SIGNAL(mouseMoveEvent(QMouseEvent*)),
-        this, SLOT(mouseMoveEvent()));
-    connect(ui.scrollArea, SIGNAL(mouseReleaseEvent(QMouseEvent*)),
-        this, SLOT(mouseReleaseEvent()));
     connect(ui.comboBox_SpawnEdit, SIGNAL(currentIndexChanged(const QString&)),
         this, SLOT(ComboBox_SpawnEdit_IndexChanged(const QString&)));
     connect(ui.actionRemove_Selected_Locations, SIGNAL(triggered()),
@@ -217,7 +211,7 @@ void MainWindow::PlotPoints()
 
             p.Y = parts[1].ToDecimal<float>(&parsed);
             if(!parsed) continue;
-            
+
             std::string label;
             if(parts.size() > 2)
             {
@@ -328,7 +322,7 @@ void MainWindow::mouseReleaseEvent(QMouseEvent* event)
         x1 = x2;
         x2 = tempX;
     }
-    
+
     if(y1 > y2)
     {
         int32_t tempY = y1;
@@ -736,7 +730,7 @@ void MainWindow::DrawMap()
 
     painter.drawEllipse(QPoint(Scale(mZone.GetStartingX()), Scale(-mZone.GetStartingY())),
         3, 3);
-    
+
     // Draw NPCs
     if(ui.checkBox_NPC->isChecked())
     {
@@ -790,7 +784,7 @@ void MainWindow::DrawMap()
     {
         painter.setPen(QPen(Qt::red));
         painter.setBrush(QBrush(Qt::red));
-        
+
         uint32_t locKey = static_cast<uint32_t>(-1);
         QString selectedLGroup = ui.comboBox_SpawnEdit->currentText();
         bool allLocs = selectedLGroup == "All";

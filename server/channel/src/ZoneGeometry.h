@@ -34,6 +34,12 @@
 // Standard C++11 includes
 #include <array>
 #include <list>
+#include <unordered_map>
+
+namespace objects
+{
+class MiSpotData;
+}
 
 namespace channel
 {
@@ -153,18 +159,11 @@ public:
     bool Collides(const Line& path, Point& point,
         Line& surface) const;
 
-    /// ID of the shape generated from a QMP file
-    uint32_t ShapeID;
+    /// List of all lines that make up the shape.
+    std::list<Line> Lines;
 
-    /// Unique instance ID for the same shape ID from a QMP file
-    uint32_t InstanceID;
-
-    /// Name of the element representation from a QMP file
-    libcomp::String ElementName;
-
-    /// List of all lines that make up the shape. Since player movement
-    /// uses arbitrary Z coordinates, these can be though of as surfaces
-    std::list<Line> Surfaces;
+    /// Lines poitns as vertices.
+    std::list<Point> Vertices;
 
     /// true if the shape is one or many line segments with no enclosure
     /// false if the shape is a solid enclosure
@@ -174,6 +173,42 @@ public:
     /// shape. This is useful in determining if a shape could be collided
     /// with instead of checking each surface individually
     std::array<Point, 2> Boundaries;
+};
+
+/**
+ * Represents a shape created from QMP file collisions.
+ */
+class ZoneQmpShape : public ZoneShape
+{
+public:
+    /**
+     * Create a new QMP shape
+     */
+    ZoneQmpShape();
+
+    /// ID of the shape generated from a QMP file
+    uint32_t ShapeID;
+
+    /// Unique instance ID for the same shape ID from a QMP file
+    uint32_t InstanceID;
+
+    /// Name of the element representation from a QMP file
+    libcomp::String ElementName;
+};
+
+/**
+ * Represents a shape created from zone spot data.
+ */
+class ZoneSpotShape : public ZoneShape
+{
+public:
+    /**
+     * Create a new spot based shape
+     */
+    ZoneSpotShape();
+
+    /// Pointer to the binary data spot definition
+    std::shared_ptr<objects::MiSpotData> Definition;
 };
 
 /**
@@ -210,6 +245,20 @@ public:
 
     /// List of all shapes
     std::list<std::shared_ptr<ZoneShape>> Shapes;
+};
+
+/**
+ * Container for dynamic map geometry information.
+ */
+class DynamicMap
+{
+public:
+    /// Map of spots by spot ID
+    std::unordered_map<uint32_t, std::shared_ptr<ZoneSpotShape>> Spots;
+
+    /// Map of spot types to list of spots
+    std::unordered_map<uint8_t,
+        std::list<std::shared_ptr<ZoneSpotShape>>> SpotTypes;
 };
 
 } // namespace channel

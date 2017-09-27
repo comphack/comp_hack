@@ -50,6 +50,7 @@
 #include <MiShopProductData.h>
 #include <MiSkillData.h>
 #include <MiSkillItemStatusCommonData.h>
+#include <MiSpotData.h>
 #include <MiStatusData.h>
 #include <MiTriUnionSpecialData.h>
 #include <MiUnionData.h>
@@ -148,6 +149,26 @@ const std::shared_ptr<objects::MiShopProductData> DefinitionManager::GetShopProd
 const std::shared_ptr<objects::MiSkillData> DefinitionManager::GetSkillData(uint32_t id)
 {
     return GetRecordByID<objects::MiSkillData>(id, mSkillData);
+}
+
+const std::unordered_map<uint32_t,
+    std::shared_ptr<objects::MiSpotData>> DefinitionManager::GetSpotData(uint32_t dynamicMapID)
+{
+    std::unordered_map<uint32_t, std::shared_ptr<objects::MiSpotData>> result;
+
+    auto dynamicMap = GetDynamicMapData(dynamicMapID);
+    if(dynamicMap)
+    {
+        std::string filename(dynamicMap->GetSpotDataFile().C());
+
+        auto it = mSpotData.find(filename);
+        if(it != mSpotData.end())
+        {
+            result = it->second;
+        }
+    }
+
+    return result;
 }
 
 const std::shared_ptr<objects::MiStatusData> DefinitionManager::GetStatusData(uint32_t id)
@@ -309,9 +330,40 @@ bool DefinitionManager::LoadDynamicMapData(gsl::not_null<DataStore*> pDataStore)
     std::list<std::shared_ptr<objects::MiDynamicMapData>> records;
     bool success = LoadBinaryData<objects::MiDynamicMapData>(pDataStore,
         "Client/DynamicMapData.bin", false, 0, records);
+
+    uint16_t spotLoadCount = 0;
     for(auto record : records)
     {
         mDynamicMapData[record->GetID()] = record;
+
+        std::string filename(record->GetSpotDataFile().C());
+        if(filename.length() > 0 && mSpotData.find(filename) == mSpotData.end())
+        {
+            spotLoadCount++;
+
+            std::list<std::shared_ptr<objects::MiSpotData>> spotRecords;
+            bool spotSuccess = LoadBinaryData<objects::MiSpotData>(pDataStore,
+                libcomp::String("Client/%1").Arg(filename), false, 0, spotRecords,
+                false);
+            if(spotSuccess)
+            {
+                for(auto spotRecord : spotRecords)
+                {
+                    mSpotData[filename][spotRecord->GetID()] = spotRecord;
+                }
+            }
+        }
+    }
+
+    if(spotLoadCount != (uint16_t)mSpotData.size())
+    {
+        LOG_WARNING(libcomp::String("Loaded %1/%2 map spot definition files.\n")
+            .Arg(mSpotData.size()).Arg(spotLoadCount));
+    }
+    else
+    {
+        LOG_DEBUG(libcomp::String("Loaded %1/%2 map spot definition files.\n")
+            .Arg(spotLoadCount).Arg(spotLoadCount));
     }
 
     return success;

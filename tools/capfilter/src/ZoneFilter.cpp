@@ -959,13 +959,13 @@ bool ZoneFilter::ProcessEventCommands(const libcomp::String& capturePath,
             instance->lastTrigger = instance->secondLastTrigger = nullptr;
 
             auto soundID = packet.ReadS32Little();
-            auto unknown = packet.ReadS32Little();
+            auto delay = packet.ReadS32Little();
 
             auto se = std::make_shared<objects::EventPlaySoundEffect>();
             instance->currentSequence = std::make_shared<MappedEvent>(se, nullptr);
 
             se->SetSoundID(soundID);
-            se->SetUnknown(unknown);
+            se->SetDelay(delay);
 
             // Sound effect events don't wait for a response
             instance->eventResponse = 0;
@@ -2724,7 +2724,7 @@ bool ZoneFilter::MergeEventSoundEffects(std::shared_ptr<MappedEvent> e1,
     auto c1 = std::dynamic_pointer_cast<objects::EventPlaySoundEffect>(e1->event);
     auto c2 = std::dynamic_pointer_cast<objects::EventPlaySoundEffect>(e2->event);
     if(c1->GetSoundID() != c2->GetSoundID() ||
-        c1->GetUnknown() != c2->GetUnknown())
+        c1->GetDelay() != c2->GetDelay())
     {
         return false;
     }

@@ -107,6 +107,18 @@ public:
     void SetGeometry(const std::shared_ptr<ZoneGeometry>& geometry);
 
     /**
+     * Get the dynamic map information bound to the zone
+     * @return Dynamic map information bound to the zone
+     */
+    const std::shared_ptr<DynamicMap> GetDynamicMap() const;
+
+    /**
+     * Set the dynamic map information bound to the zone
+     * @param map Dynamic maps information bound to the zone
+     */
+    void SetDynamicMap(const std::shared_ptr<DynamicMap>& map);
+
+    /**
      * Add a client connection to the zone and register its world CID
      * @param client Pointer to a client connection to add
      */
@@ -391,6 +403,9 @@ private:
 
     /// Geometry information bound to the zone
     std::shared_ptr<ZoneGeometry> mGeometry;
+
+    /// Dynamic map information bound to the zone
+    std::shared_ptr<DynamicMap> mDynamicMap;
 
     /// Unique instance ID of the zone
     uint32_t mID;

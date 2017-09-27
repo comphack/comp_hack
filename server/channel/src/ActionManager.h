@@ -78,84 +78,91 @@ private:
      * @param ctx ActionContext for the executing source information.
      * @retval false The action list should stop after this action.
      */
-    bool StartEvent(const ActionContext& ctx);
+    bool StartEvent(ActionContext& ctx);
 
     /**
      * Perform the zone change action on behalf of the client.
      * @param ctx ActionContext for the executing source information.
      * @retval false The action list should stop after this action.
      */
-    bool ZoneChange(const ActionContext& ctx);
+    bool ZoneChange(ActionContext& ctx);
 
     /**
      * Change the state of the source entity in the zone.
      * @param ctx ActionContext for the executing source information.
      * @retval false The action list should stop after this action.
      */
-    bool SetNPCState(const ActionContext& ctx);
+    bool SetNPCState(ActionContext& ctx);
 
     /**
      * Add or remove items to the client character's inventory.
      * @param ctx ActionContext for the executing source information.
      * @retval false The action list should stop after this action.
      */
-    bool AddRemoveItems(const ActionContext& ctx);
+    bool AddRemoveItems(ActionContext& ctx);
+
+    /**
+     * Add/remove demons from the COMP and/or set the max slots available.
+     * @param ctx ActionContext for the executing source information.
+     * @retval false The action list should stop after this action.
+     */
+    bool UpdateCOMP(ActionContext& ctx);
 
     /**
      * Grant XP to the source client character and/or partner demon.
      * @param ctx ActionContext for the executing source information.
      * @retval false The action list should stop after this action.
      */
-    bool GrantXP(const ActionContext& ctx);
+    bool GrantXP(ActionContext& ctx);
 
     /**
      * Update flags related to character maps, valuables or plugins.
      * @param ctx ActionContext for the executing source information.
      * @retval false The action list should stop after this action.
      */
-    bool UpdateFlag(const ActionContext& ctx);
+    bool UpdateFlag(ActionContext& ctx);
 
     /**
      * Update the client character's LNC alignment.
      * @param ctx ActionContext for the executing source information.
      * @retval false The action list should stop after this action.
      */
-    bool UpdateLNC(const ActionContext& ctx);
+    bool UpdateLNC(ActionContext& ctx);
 
     /**
      * Update a quest related to the current character.
      * @param ctx ActionContext for the executing source information.
      * @retval false The action list should stop after this action.
      */
-    bool UpdateQuest(const ActionContext& ctx);
+    bool UpdateQuest(ActionContext& ctx);
 
     /**
      * Update one or more flags in the current zone.
      * @param ctx ActionContext for the executing source information.
      * @retval false The action list should stop after this action.
      */
-    bool UpdateZoneFlags(const ActionContext& ctx);
+    bool UpdateZoneFlags(ActionContext& ctx);
 
     /**
      * Spawn an enemy spawn group by ID in the client's current zone.
      * @param ctx ActionContext for the executing source information.
      * @retval false The action list should stop after this action.
      */
-    bool Spawn(const ActionContext& ctx);
+    bool Spawn(ActionContext& ctx);
 
     /**
      * Create one or more loot boxes at the specified location.
      * @param ctx ActionContext for the executing source information.
      * @retval false The action list should stop after this action.
      */
-    bool CreateLoot(const ActionContext& ctx);
+    bool CreateLoot(ActionContext& ctx);
 
     /// Pointer to the channel server.
     std::weak_ptr<ChannelServer> mServer;
 
     /// List of action parsers.
     libcomp::EnumMap<objects::Action::ActionType_t, std::function<bool(
-        ActionManager&, const ActionContext&)>> mActionHandlers;
+        ActionManager&, ActionContext&)>> mActionHandlers;
 };
 
 } // namespace channel

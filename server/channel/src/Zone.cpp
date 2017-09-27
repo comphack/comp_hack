@@ -75,6 +75,16 @@ void Zone::SetGeometry(const std::shared_ptr<ZoneGeometry>& geometry)
     mGeometry = geometry;
 }
 
+const std::shared_ptr<DynamicMap> Zone::GetDynamicMap() const
+{
+    return mDynamicMap;
+}
+
+void Zone::SetDynamicMap(const std::shared_ptr<DynamicMap>& map)
+{
+    mDynamicMap = map;
+}
+
 void Zone::AddConnection(const std::shared_ptr<ChannelClientConnection>& client)
 {
     auto state = client->GetClientState();

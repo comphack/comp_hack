@@ -515,20 +515,30 @@ bool AIManager::UpdateEnemyState(const std::shared_ptr<EnemyState>& eState, uint
 
     if(aiState->GetStatus() == AIStatus_t::WANDERING)
     {
-        auto spawnLocation = eState->GetEntity()->GetSpawnLocation();
+        auto entity = eState->GetEntity();
+        auto spawnLocation = entity->GetSpawnLocation();
+        uint32_t spotID = entity->GetSpawnSpotID();
 
-        if(spawnLocation && eState->CanMove())
+        if((spawnLocation || spotID > 0) && eState->CanMove())
         {
-            auto point = server->GetZoneManager()->GetRandomPoint(
-                spawnLocation->GetWidth(), spawnLocation->GetHeight());
+            Point dest;
+            if(spawnLocation)
+            {
+                auto point = server->GetZoneManager()->GetRandomPoint(
+                    spawnLocation->GetWidth(), spawnLocation->GetHeight());
 
-            // Spawn group bounding box points start in the top left corner of the
-            // rectangle and extend towards +X/-Y
-            float x = (float)(spawnLocation->GetX() + point.x);
-            float y = (float)(spawnLocation->GetY() - point.y);
+                // Spawn location group bounding box points start in the top left
+                // corner of the rectangle and extend towards +X/-Y
+                dest.x = (float)(spawnLocation->GetX() + point.x);
+                dest.y = (float)(spawnLocation->GetY() - point.y);
+            }
+            else
+            {
+                dest = server->GetZoneManager()->GetRandomSpotPoint(
+                    eState->GetZone()->GetDynamicMap()->Spots[spotID]->Definition);
+            }
 
             Point source(eState->GetCurrentX(), eState->GetCurrentY());
-            Point dest(x, y);
 
             auto command = GetMoveCommand(eState->GetZone(), source, dest);
             if(command)

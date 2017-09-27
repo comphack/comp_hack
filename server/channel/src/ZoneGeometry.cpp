@@ -104,7 +104,7 @@ bool Line::Intersect(const Line& other, Point& point, float& dist) const
     return true;
 }
 
-ZoneShape::ZoneShape() : ShapeID(0), InstanceID(0), IsLine(true)
+ZoneShape::ZoneShape() : IsLine(true)
 {
 }
 
@@ -122,7 +122,7 @@ bool ZoneShape::Collides(const Line& path, Point& point, Line& surface) const
 
     float dist = 0.f;
     std::map<float, std::pair<const Line*, Point>> collisions;
-    for(const Line& s : Surfaces)
+    for(const Line& s : Lines)
     {
         if(s.Intersect(path, point, dist))
         {
@@ -143,6 +143,14 @@ bool ZoneShape::Collides(const Line& path, Point& point, Line& surface) const
     {
         return false;
     }
+}
+
+ZoneQmpShape::ZoneQmpShape() : ShapeID(0), InstanceID(0)
+{
+}
+
+ZoneSpotShape::ZoneSpotShape()
+{
 }
 
 bool ZoneGeometry::Collides(const Line& path, Point& point, Line& surface,

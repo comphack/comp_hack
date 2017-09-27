@@ -2,6 +2,7 @@
 <objgen>
     <object name="ActionZoneChange" baseobject="Action" persistent="false">
         <member type="u32" name="zoneID"/>
+        <member type="u32" name="spotID"/>
         <member type="f32" name="destinationX"/>
         <member type="f32" name="destinationY"/>
         <member type="f32" name="destinationRotation"/>

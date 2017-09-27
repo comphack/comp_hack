@@ -176,12 +176,12 @@ void HandleShopPurchase(const std::shared_ptr<ChannelServer> server,
         macca.reverse();
         maccaNotes.reverse();
 
-        uint16_t priceLeft = (uint16_t)price;
+        int32_t priceLeft = price;
         for(auto m : macca)
         {
             if (priceLeft == 0) break;
 
-            auto stack = m->GetStackSize();
+            auto stack = (int32_t)m->GetStackSize();
             if(stack > priceLeft)
             {
                 stackDecrease = (uint16_t)(stack - priceLeft);
@@ -190,7 +190,7 @@ void HandleShopPurchase(const std::shared_ptr<ChannelServer> server,
             }
             else
             {
-                priceLeft = (uint16_t)(priceLeft - stack);
+                priceLeft = (int32_t)(priceLeft - stack);
                 deleteItems.push_back(m);
             }
         }
@@ -200,25 +200,34 @@ void HandleShopPurchase(const std::shared_ptr<ChannelServer> server,
             if (priceLeft == 0) break;
 
             auto stack = m->GetStackSize();
-            uint16_t stackAmount = (uint16_t)(stack * ITEM_MACCA_NOTE_AMOUNT);
+            int32_t stackAmount = (int32_t)(stack * ITEM_MACCA_NOTE_AMOUNT);
             if(stackAmount > priceLeft)
             {
-                auto delta = stackAmount - priceLeft;
-                uint16_t maccaLeft = (uint16_t)(delta % ITEM_MACCA_NOTE_AMOUNT);
+                int32_t maccaLeft = stackAmount - priceLeft;
 
-                stackDecrease = (uint16_t)(stack - (delta - maccaLeft) / ITEM_MACCA_NOTE_AMOUNT);
+                stackDecrease = (uint16_t)(maccaLeft / ITEM_MACCA_NOTE_AMOUNT);
+                maccaLeft = (int32_t)(maccaLeft % ITEM_MACCA_NOTE_AMOUNT);
                 priceLeft = 0;
-                updateItem = m;
+
+                if(stackDecrease == 0)
+                {
+                    deleteItems.push_back(m);
+                }
+                else
+                {
+                    updateItem = m;
+                }
 
                 if(maccaLeft)
                 {
                     insertItems.push_back(
-                        characterManager->GenerateItem(SVR_CONST.ITEM_MACCA, maccaLeft));
+                        characterManager->GenerateItem(SVR_CONST.ITEM_MACCA,
+                            (uint16_t)maccaLeft));
                 }
             }
             else
             {
-                priceLeft = (uint16_t)(priceLeft - stack);
+                priceLeft = (int32_t)(priceLeft - stackAmount);
                 deleteItems.push_back(m);
             }
         }
@@ -244,8 +253,8 @@ void HandleShopPurchase(const std::shared_ptr<ChannelServer> server,
     freeSlots.unique();
     freeSlots.sort();
 
-    uint16_t qtyLeft = (uint16_t)quantity;
-    uint16_t maxStack = def->GetPossession()->GetStackSize();
+    int32_t qtyLeft = (int32_t)quantity;
+    int32_t maxStack = (int32_t)def->GetPossession()->GetStackSize();
 
     // Update existing stacks first if we aren't adding a full stack
     std::map<std::shared_ptr<objects::Item>, uint16_t> stackAdjustItems;
@@ -259,19 +268,19 @@ void HandleShopPurchase(const std::shared_ptr<ChannelServer> server,
             uint16_t stackLeft = (uint16_t)(maxStack - item->GetStackSize());
             if(stackLeft <= 0) continue;
 
-            uint16_t stackAdd = (qtyLeft <= stackLeft) ? qtyLeft : stackLeft;
+            uint16_t stackAdd = (uint16_t)((qtyLeft <= stackLeft) ? qtyLeft : stackLeft);
             stackAdjustItems[item] = (uint16_t)(item->GetStackSize() + stackAdd);
-            qtyLeft = (uint16_t)(qtyLeft - stackAdd);
+            qtyLeft = (int32_t)(qtyLeft - stackAdd);
         }
     }
 
     // If there are still more to create, add as new items
     while(qtyLeft > 0)
     {
-        uint16_t stack = (qtyLeft > maxStack) ? maxStack : qtyLeft;
+        uint16_t stack = (uint16_t)((qtyLeft > maxStack) ? maxStack : qtyLeft);
         insertItems.push_back(characterManager->GenerateItem(
             product->GetItem(), stack));
-        qtyLeft = (uint16_t)(qtyLeft - stack);
+        qtyLeft = (int32_t)(qtyLeft - stack);
     }
 
     if(freeSlots.size() < insertItems.size())

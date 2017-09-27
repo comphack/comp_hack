@@ -70,28 +70,53 @@ bool Parsers::SpotTriggered::Parse(libcomp::ManagerPacket *pPacketManager,
         connection);
     auto server = std::dynamic_pointer_cast<ChannelServer>(
         pPacketManager->GetServer());
+    auto zoneManager = server->GetZoneManager();
     auto entity = state(connection)->GetCharacterState();
-    auto zone = server->GetZoneManager()->GetZoneInstance(client);
+    auto zone = zoneManager->GetZoneInstance(client);
     auto zoneDef = zone->GetDefinition();
 
     // Ignore spot triggers that are not for the current character and in the
-    // correct zone.
+    // correct zone or ones with no dynamic map loaded.
     if(entity->GetEntityID() != static_cast<int32_t>(entityID) ||
         zoneDef->GetID() != zoneID)
     {
         return true;
     }
 
-    /// @todo Implement better checks or do spots server-side only.
+    auto dynamicMap = zone->GetDynamicMap();
+    if(!dynamicMap)
+    {
+        LOG_ERROR(libcomp::String("Dynamic map information could not be found"
+            " for zone %1 with dynamic map ID %2.\n").Arg(zoneID)
+            .Arg(zoneDef->GetDynamicMapID()));
+        return true;
+    }
 
-    LOG_DEBUG(libcomp::String("Triggered spot %1 @ (%2, %3)\n").Arg(
-        spotID).Arg(x).Arg(y));
+    auto spotIter = dynamicMap->Spots.find(spotID);
+    if(spotIter == dynamicMap->Spots.end())
+    {
+        LOG_ERROR(libcomp::String("Invalid spot %1 sent for zone %2.\n").Arg(
+            spotID).Arg(zoneID));
+        return true;
+    }
+
+    bool entered = zoneManager->PointInPolygon(Point(x, y),
+        spotIter->second->Vertices);
+
+    LOG_DEBUG(libcomp::String("%1 spot %2 @ (%3, %4)\n").Arg(
+        entered ? "Entered" : "Exited").Arg(spotID).Arg(x).Arg(y));
 
     // Lookup the spot and see if it has actions.
     auto spot = zoneDef->GetSpots(spotID);
 
     if(spot)
     {
+        // Fire events if correct trigger action occurred
+        if(entered == spot->GetTriggerOnLeave())
+        {
+            return true;
+        }
+
         // Get the action list.
         auto pActionList = new ActionList;
         pActionList->actions = spot->GetActions();
@@ -121,7 +146,7 @@ bool Parsers::SpotTriggered::Parse(libcomp::ManagerPacket *pPacketManager,
     }
     else
     {
-        LOG_WARNING(libcomp::String("Unknown spot %1 for zone %2.\n").Arg(
+        LOG_WARNING(libcomp::String("Undefined spot %1 for zone %2.\n").Arg(
             spotID).Arg(zoneID));
     }
 

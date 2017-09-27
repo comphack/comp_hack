@@ -19,6 +19,10 @@
             <value num="22">EXPERTISE_ABOVE</value>
             <value num="23">SI_EQUIPPED</value>
             <value num="24">SUMMONED</value>
+            <!-- Custom types below -->
+            <value num="101">CONTRACTED</value>
+            <value num="102">COMP_FREE</value>
+            <value num="103">INVENTORY_FREE</value>
         </member>
         <member type="s32" name="value1"/>
         <member type="s32" name="value2"/>

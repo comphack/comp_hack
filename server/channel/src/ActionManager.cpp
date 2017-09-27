@@ -42,11 +42,15 @@
 #include <ActionSetNPCState.h>
 #include <ActionSpawn.h>
 #include <ActionStartEvent.h>
+#include <ActionUpdateCOMP.h>
 #include <ActionUpdateFlag.h>
 #include <ActionUpdateLNC.h>
 #include <ActionUpdateQuest.h>
 #include <ActionUpdateZoneFlags.h>
 #include <ActionZoneChange.h>
+#include <CharacterProgress.h>
+#include <DemonBox.h>
+#include <MiSpotData.h>
 #include <ObjectPosition.h>
 #include <Party.h>
 #include <ServerNPC.h>
@@ -74,6 +78,8 @@ ActionManager::ActionManager(const std::weak_ptr<ChannelServer>& server)
         &ActionManager::SetNPCState;
     mActionHandlers[objects::Action::ActionType_t::ADD_REMOVE_ITEMS] =
         &ActionManager::AddRemoveItems;
+    mActionHandlers[objects::Action::ActionType_t::UPDATE_COMP] =
+        &ActionManager::UpdateCOMP;
     mActionHandlers[objects::Action::ActionType_t::GRANT_XP] =
         &ActionManager::GrantXP;
     mActionHandlers[objects::Action::ActionType_t::UPDATE_FLAG] =
@@ -204,7 +210,7 @@ void ActionManager::PerformActions(
     }
 }
 
-bool ActionManager::StartEvent(const ActionContext& ctx)
+bool ActionManager::StartEvent(ActionContext& ctx)
 {
     if(!ctx.Client)
     {
@@ -223,7 +229,7 @@ bool ActionManager::StartEvent(const ActionContext& ctx)
     return true;
 }
 
-bool ActionManager::ZoneChange(const ActionContext& ctx)
+bool ActionManager::ZoneChange(ActionContext& ctx)
 {
     if(!ctx.Client)
     {
@@ -243,6 +249,26 @@ bool ActionManager::ZoneChange(const ActionContext& ctx)
     float y = act->GetDestinationY();
     float rotation = act->GetDestinationRotation();
 
+    uint32_t spotID = act->GetSpotID();
+    if(spotID > 0)
+    {
+        // If a spot is specified, get a random point in that spot instead
+        auto definitionManager = server->GetDefinitionManager();
+        auto serverDataManager = server->GetServerDataManager();
+        auto zoneDef = serverDataManager->GetZoneData(zoneID);
+
+        uint32_t dynamicMapID = zoneDef ? zoneDef->GetDynamicMapID() : 0;
+        auto spots = definitionManager->GetSpotData(dynamicMapID);
+        auto spotIter = spots.find(spotID);
+        if(spotIter != spots.end())
+        {
+            Point p = zoneManager->GetRandomSpotPoint(spotIter->second);
+            x = p.x;
+            y = p.y;
+            rotation = spotIter->second->GetRotation();
+        }
+    }
+
     // Enter the new zone and always leave the old zone even if its the same.
     if(!zoneManager->EnterZone(ctx.Client, zoneID, x, y, rotation, true))
     {
@@ -253,11 +279,14 @@ bool ActionManager::ZoneChange(const ActionContext& ctx)
 
         return false;
     }
-    
+
+    // Update to point to the new zone
+    ctx.CurrentZone = zoneManager->GetZoneInstance(ctx.Client);
+
     return true;
 }
 
-bool ActionManager::AddRemoveItems(const ActionContext& ctx)
+bool ActionManager::AddRemoveItems(ActionContext& ctx)
 {
     if(!ctx.Client)
     {
@@ -281,7 +310,175 @@ bool ActionManager::AddRemoveItems(const ActionContext& ctx)
     return true;
 }
 
-bool ActionManager::GrantXP(const ActionContext& ctx)
+bool ActionManager::UpdateCOMP(ActionContext& ctx)
+{
+    if(!ctx.Client)
+    {
+        LOG_ERROR("Attempted to update COMP with no associated"
+            " client connection\n");
+        return false;
+    }
+
+    auto act = std::dynamic_pointer_cast<objects::ActionUpdateCOMP>(ctx.Action);
+
+    auto server = mServer.lock();
+    auto characterManager = server->GetCharacterManager();
+    auto state = ctx.Client->GetClientState();
+    auto cState = state->GetCharacterState();
+    auto character = cState->GetEntity();
+    auto dState = state->GetDemonState();
+    auto progress = character->GetProgress().Get();
+    auto comp = character->GetCOMP().Get();
+
+    // First increase the COMP
+    uint8_t maxSlots = progress->GetMaxCOMPSlots();
+    if(act->GetMaxSlots() > 0 && act->GetMaxSlots() > progress->GetMaxCOMPSlots())
+    {
+        maxSlots = act->GetMaxSlots();
+    }
+
+    size_t freeCount = 0;
+    for(uint8_t i = 0; i < maxSlots; i++)
+    {
+        auto slot = comp->GetDemons((size_t)i);
+        if(slot.IsNull())
+        {
+            freeCount++;
+        }
+    }
+
+    // Second remove demons to free up more slots
+    std::unordered_map<uint32_t, std::list<std::shared_ptr<objects::Demon>>> remove;
+    if(act->RemoveDemonsCount() > 0)
+    {
+        for(uint8_t i = 0; i < maxSlots; i++)
+        {
+            auto slot = comp->GetDemons((size_t)i);
+            if(!slot.IsNull())
+            {
+                // If there are more than one specified, the ones near the
+                // start of the COMP will be removed first
+                uint32_t type = slot->GetType();
+                if(act->RemoveDemonsKeyExists(type))
+                {
+                    if(act->GetRemoveDemons(type) == 0)
+                    {
+                        // Special case, must be summoned demon
+                        if(dState->GetEntity() == slot.Get())
+                        {
+                            remove[type].push_back(slot.Get());
+                        }
+                    }
+                    else if(act->GetRemoveDemons(type) > (uint8_t)remove[type].size())
+                    {
+                        remove[type].push_back(slot.Get());
+                    }
+                }
+            }
+        }
+
+        for(auto pair : act->GetRemoveDemons())
+        {
+            if((pair.second == 0 && remove[pair.first].size() != 1) ||
+                (pair.second != 0 && (uint8_t)remove[pair.first].size() < pair.second))
+            {
+                LOG_ERROR("One or more demons does not exist for COMP removal"
+                    " request\n");
+                return false;
+            }
+            else
+            {
+                freeCount = (uint8_t)(freeCount + pair.second);
+            }
+        }
+    }
+
+    // Last add demons
+    std::unordered_map<std::shared_ptr<objects::MiDevilData>, uint8_t> add;
+    if(act->AddDemonsCount() > 0)
+    {
+        auto definitionManager = server->GetDefinitionManager();
+        for(auto pair : act->GetAddDemons())
+        {
+            auto demonData = definitionManager->GetDevilData(pair.first);
+            if(demonData == nullptr)
+            {
+                LOG_ERROR(libcomp::String("Invalid demon ID encountered: %1\n")
+                    .Arg(pair.first));
+                return false;
+            }
+
+            if(freeCount < pair.second)
+            {
+                LOG_ERROR("Not enough slots free for COMP add request\n");
+                return false;
+            }
+
+            freeCount = (uint8_t)(freeCount - pair.second);
+
+            add[demonData] = pair.second;
+        }
+    }
+
+    // Apply the changes
+    if(maxSlots > progress->GetMaxCOMPSlots())
+    {
+        progress->SetMaxCOMPSlots(maxSlots);
+        if(!progress->Update(server->GetWorldDatabase()))
+        {
+            LOG_ERROR("Failed to increase COMP size\n");
+            return false;
+        }
+    }
+
+    if(remove.size() > 0)
+    {
+        auto dbChanges = libcomp::DatabaseChangeSet::Create(state->GetAccountUID());
+        dbChanges->Update(comp);
+
+        std::set<int8_t> slots;
+        for(auto pair : remove)
+        {
+            for(auto demon : pair.second)
+            {
+                int8_t slot = demon->GetBoxSlot();
+                if(dState->GetEntity() == demon)
+                {
+                    characterManager->StoreDemon(ctx.Client);
+                }
+
+                slots.insert(slot);
+                comp->SetDemons((size_t)slot, NULLUUID);
+                characterManager->DeleteDemon(demon, dbChanges);
+            }
+        }
+
+        characterManager->SendDemonBoxData(ctx.Client, comp->GetBoxID(), slots);
+
+        server->GetWorldDatabase()->QueueChangeSet(dbChanges);
+    }
+
+    if(add.size() > 0)
+    {
+        for(auto pair : add)
+        {
+            for(uint8_t i = 0; i < pair.second; i++)
+            {
+                if(!characterManager->ContractDemon(ctx.Client, pair.first, 0))
+                {
+                    // Not really a good way to recover from this
+                    LOG_ERROR("Failed to contract one or more demons for"
+                        " COMP add request\n");
+                    return false;
+                }
+            }
+        }
+    }
+
+    return true;
+}
+
+bool ActionManager::GrantXP(ActionContext& ctx)
 {
     if(!ctx.Client)
     {
@@ -318,7 +515,7 @@ bool ActionManager::GrantXP(const ActionContext& ctx)
     return true;
 }
 
-bool ActionManager::SetNPCState(const ActionContext& ctx)
+bool ActionManager::SetNPCState(ActionContext& ctx)
 {
     auto act = std::dynamic_pointer_cast<objects::ActionSetNPCState>(ctx.Action);
 
@@ -332,43 +529,63 @@ bool ActionManager::SetNPCState(const ActionContext& ctx)
     auto server = mServer.lock();
     auto zoneManager = server->GetZoneManager();
 
-    std::shared_ptr<ServerObjectState> oNPC;
-    if(ctx.CurrentZone)
+    std::shared_ptr<objects::EntityStateObject> oNPCState;
+    if(act->GetActorID() > 0)
     {
-        if(act->GetActorID() > 0)
-        {
-            oNPC = std::dynamic_pointer_cast<ServerObjectState>(
-                ctx.CurrentZone->GetActor(act->GetActorID()));
-        }
-        else
-        {
-            oNPC = ctx.CurrentZone->GetServerObject(ctx.SourceEntityID);
-        }
+        oNPCState = ctx.CurrentZone->GetActor(act->GetActorID());
+    }
+    else
+    {
+        oNPCState = ctx.CurrentZone->GetServerObject(ctx.SourceEntityID);
+    }
+
+    if(!oNPCState)
+    {
+        LOG_ERROR("SetNPCState attempted on invalid target\n");
+        return false;
+    }
+
+    std::shared_ptr<objects::ServerObject> oNPC;
+    switch(oNPCState->GetEntityType())
+    {
+    case objects::EntityStateObject::EntityType_t::NPC:
+        oNPC = std::dynamic_pointer_cast<NPCState>(oNPCState)->GetEntity();
+        break;
+    case objects::EntityStateObject::EntityType_t::OBJECT:
+        oNPC = std::dynamic_pointer_cast<ServerObjectState>(oNPCState)->GetEntity();
+        break;
+    default:
+        break;
     }
 
     if(oNPC && (act->GetSourceClientOnly() ||
-        act->GetState() != oNPC->GetEntity()->GetState()))
+        act->GetState() != oNPC->GetState()))
     {
-        auto entity = oNPC->GetEntity();
-        if(!act->GetSourceClientOnly())
+        if(act->GetFrom() >= 0 && oNPC->GetState() != (uint8_t)act->GetFrom())
         {
-            entity->SetState(act->GetState());
+            // Stop all actions past this point
+            return false;
         }
 
-        auto npc = std::dynamic_pointer_cast<objects::ServerNPC>(entity);
+        if(!act->GetSourceClientOnly())
+        {
+            oNPC->SetState(act->GetState());
+        }
+
+        auto npc = std::dynamic_pointer_cast<objects::ServerNPC>(oNPC);
         if(npc)
         {
             if(act->GetSourceClientOnly())
             {
                 if(act->GetState() == 1)
                 {
-                    zoneManager->ShowEntity(ctx.Client, oNPC->GetEntityID());
+                    zoneManager->ShowEntity(ctx.Client, oNPCState->GetEntityID());
                 }
                 else
                 {
                     std::list<std::shared_ptr<
                         ChannelClientConnection>> clients = { ctx.Client };
-                    std::list<int32_t> entityIDs = { oNPC->GetEntityID()  };
+                    std::list<int32_t> entityIDs = { oNPCState->GetEntityID()  };
                     zoneManager->RemoveEntities(clients, entityIDs);
                 }
             }
@@ -376,11 +593,11 @@ bool ActionManager::SetNPCState(const ActionContext& ctx)
             {
                 if(act->GetState() == 1)
                 {
-                    zoneManager->ShowEntityToZone(ctx.CurrentZone, oNPC->GetEntityID());
+                    zoneManager->ShowEntityToZone(ctx.CurrentZone, oNPCState->GetEntityID());
                 }
                 else
                 {
-                    std::list<int32_t> entityIDs = { oNPC->GetEntityID() };
+                    std::list<int32_t> entityIDs = { oNPCState->GetEntityID() };
                     zoneManager->RemoveEntitiesFromZone(ctx.CurrentZone, entityIDs);
                 }
             }
@@ -389,7 +606,7 @@ bool ActionManager::SetNPCState(const ActionContext& ctx)
         {
             libcomp::Packet p;
             p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_NPC_STATE_CHANGE);
-            p.WriteS32Little(oNPC->GetEntityID());
+            p.WriteS32Little(oNPCState->GetEntityID());
             p.WriteU8(act->GetState());
 
             if(act->GetSourceClientOnly())
@@ -402,15 +619,11 @@ bool ActionManager::SetNPCState(const ActionContext& ctx)
             }
         }
     }
-    else
-    {
-        return false;
-    }
 
     return true;
 }
 
-bool ActionManager::UpdateFlag(const ActionContext& ctx)
+bool ActionManager::UpdateFlag(ActionContext& ctx)
 {
     if(!ctx.Client)
     {
@@ -441,7 +654,7 @@ bool ActionManager::UpdateFlag(const ActionContext& ctx)
     return true;
 }
 
-bool ActionManager::UpdateLNC(const ActionContext& ctx)
+bool ActionManager::UpdateLNC(ActionContext& ctx)
 {
     if(!ctx.Client)
     {
@@ -470,7 +683,7 @@ bool ActionManager::UpdateLNC(const ActionContext& ctx)
     return true;
 }
 
-bool ActionManager::UpdateQuest(const ActionContext& ctx)
+bool ActionManager::UpdateQuest(ActionContext& ctx)
 {
     if(!ctx.Client)
     {
@@ -489,7 +702,7 @@ bool ActionManager::UpdateQuest(const ActionContext& ctx)
     return true;
 }
 
-bool ActionManager::UpdateZoneFlags(const ActionContext& ctx)
+bool ActionManager::UpdateZoneFlags(ActionContext& ctx)
 {
     auto act = std::dynamic_pointer_cast<objects::ActionUpdateZoneFlags>(ctx.Action);
     switch(act->GetSetMode())
@@ -526,7 +739,7 @@ bool ActionManager::UpdateZoneFlags(const ActionContext& ctx)
     return true;
 }
 
-bool ActionManager::Spawn(const ActionContext& ctx)
+bool ActionManager::Spawn(ActionContext& ctx)
 {
     auto act = std::dynamic_pointer_cast<objects::ActionSpawn>(ctx.Action);
     auto server = mServer.lock();
@@ -568,7 +781,7 @@ bool ActionManager::Spawn(const ActionContext& ctx)
     }
 }
 
-bool ActionManager::CreateLoot(const ActionContext& ctx)
+bool ActionManager::CreateLoot(ActionContext& ctx)
 {
     auto act = std::dynamic_pointer_cast<objects::ActionCreateLoot>(ctx.Action);
     auto server = mServer.lock();

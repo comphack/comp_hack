@@ -2,9 +2,12 @@
 <objgen>
     <object name="ServerZoneSpot" persistent="false">
         <member type="u32" name="ID"/>
+        <member type="bool" name="TriggerOnLeave"/>
         <member type="list" name="Actions">
             <element type="Action*"/>
         </member>
+        <member type="SpawnLocation*" name="SpawnArea"
+            nulldefault="true"/>
     </object>
     <object name="ServerZone" persistent="false">
         <member type="u32" name="ID"/>

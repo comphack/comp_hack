@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="ActionUpdateCOMP" baseobject="Action" persistent="false">
+        <member type="enum" name="actionType" inherited="true" default="UPDATE_COMP"/>
+        <member type="u8" name="maxSlots" max="10"/>
+        <member type="map" name="addDemons">
+            <key type="u32"/>
+            <value type="u8"/>
+        </member>
+        <member type="map" name="removeDemons">
+            <key type="u32"/>
+            <value type="u8"/>
+        </member>
+    </object>
+</objgen>

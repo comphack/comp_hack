@@ -74,6 +74,10 @@ int main(int argc, char *argv[])
     {
         err = "Failed to load zone data.";
     }
+    else if(!defintions->LoadDynamicMapData(&*datastore))
+    {
+        err = "Failed to load dynamic map data.";
+    }
     else if(!defintions->LoadDevilData(&*datastore))
     {
         err = "Failed to load devil data.";

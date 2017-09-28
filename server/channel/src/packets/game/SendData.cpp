@@ -113,9 +113,9 @@ void SendClientReadyData(std::shared_ptr<ChannelServer> server,
         if(zoneID != 0)
         {
             auto serverDataManager = server->GetServerDataManager();
-            auto zoneData = serverDataManager->GetZoneData(zoneID);
+            auto zoneData = serverDataManager->GetZoneData(zoneID, 0);
             auto zoneLobbyData = zoneData && !zoneData->GetGlobal()
-                ? serverDataManager->GetZoneData(zoneData->GetGroupID())
+                ? serverDataManager->GetZoneData(zoneData->GetGroupID(), 0)
                 : nullptr;
             if(zoneLobbyData)
             {
@@ -136,7 +136,7 @@ void SendClientReadyData(std::shared_ptr<ChannelServer> server,
             rotation = 0;
         }
 
-        if(!zoneManager->EnterZone(client, zoneID, xCoord, yCoord, rotation))
+        if(!zoneManager->EnterZone(client, zoneID, 0, xCoord, yCoord, rotation))
         {
             LOG_ERROR(libcomp::String("Failed to add client to zone"
                 " %1. Closing the connection.\n").Arg(zoneID));

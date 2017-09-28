@@ -84,15 +84,18 @@ public:
     /**
      * Get a server zone by definition ID
      * @param id Definition ID of a zone to load
+     * @param dynamicMapID Dynamic map ID of the zone to load
      * @return Pointer to the server zone matching the specified id
      */
-    const std::shared_ptr<objects::ServerZone> GetZoneData(uint32_t id);
+    const std::shared_ptr<objects::ServerZone> GetZoneData(uint32_t id,
+        uint32_t dynamicMapID);
 
     /**
-     * Get all server zone defintion IDs registered with the manager
+     * Get all server zone defintion IDs with corresponding dynamic map IDs
+     * registered with the manager
      * @return Set of all zone definition IDs registered with the manager
      */
-    const std::set<uint32_t> GetAllZoneIDs();
+    const std::unordered_map<uint32_t, std::set<uint32_t>> GetAllZoneIDs();
 
     /**
      * Get an event by definition ID
@@ -204,7 +207,6 @@ private:
      */
     template <class T>
     bool LoadObject(const tinyxml2::XMLDocument& doc, const tinyxml2::XMLElement *objNode);
-    
 
     /**
      * Load all script files in the specified datastore
@@ -226,9 +228,9 @@ private:
      */
     bool LoadAIScript(const libcomp::String& path, const libcomp::String& source);
 
-    /// Map of server zone defintions by zone definition ID
+    /// Map of server zone defintions by zone definition and dynamic map ID
     std::unordered_map<uint32_t,
-        std::shared_ptr<objects::ServerZone>> mZoneData;
+        std::unordered_map<uint32_t, std::shared_ptr<objects::ServerZone>>> mZoneData;
     
     /// Map of events by definition ID
     std::unordered_map<std::string,

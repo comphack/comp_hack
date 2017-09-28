@@ -39,6 +39,7 @@
 #include <math.h>
 
 // object Includes
+#include <ActionSpawn.h>
 #include <ActivatedAbility.h>
 #include <Item.h>
 #include <ItemBox.h>
@@ -1152,6 +1153,8 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
         if(isPrimaryTarget && (initialFlags1 & FLAG1_REFLECT) == 0)
         {
             target.Flags1 = initialFlags1;
+            target.HitAvoided = (initialFlags1 & FLAG1_REFLECT) != 0 ||
+                (initialFlags1 & FLAG1_BLOCK) != 0;
         }
         else if(SetNRA(target, skill) && !isSource)
         {
@@ -2239,7 +2242,7 @@ void SkillManager::HandleKills(std::shared_ptr<ActiveEntityState> source,
         std::unordered_map<std::shared_ptr<LootBoxState>,
             std::shared_ptr<EnemyState>> lStates;
         std::unordered_map<uint32_t, int32_t> questKills;
-        std::set<uint32_t> spawnGroupIDs;
+        std::set<uint32_t> encounterIDs;
         for(auto eState : enemiesKilled)
         {
             auto enemy = eState->GetEntity();
@@ -2270,7 +2273,7 @@ void SkillManager::HandleKills(std::shared_ptr<ActiveEntityState> source,
                 }
             }
 
-            spawnGroupIDs.insert(enemy->GetSpawnGroupID());
+            encounterIDs.insert(enemy->GetEncounterID());
         }
 
         // For each loot body generate and send loot and show the body
@@ -2393,16 +2396,17 @@ void SkillManager::HandleKills(std::shared_ptr<ActiveEntityState> source,
                 questKills);
         }
 
-        // Spawn group defeat actions for all empty groups
-        spawnGroupIDs.erase(0);
-        for(uint32_t spawnGroupID : spawnGroupIDs)
+        // Perform defeat actions for all empty encounters
+        encounterIDs.erase(0);
+
+        std::shared_ptr<objects::ActionSpawn> defeatActionSource;
+        for(uint32_t encounterID : encounterIDs)
         {
-            auto sg = zone->GetDefinition()->GetSpawnGroups(spawnGroupID);
-            if(sg && sg->DefeatActionsCount() > 0 &&
-                !zone->GroupHasSpawned(spawnGroupID, true))
+            if(zone->EncounterDefeated(encounterID, defeatActionSource))
             {
                 server->GetActionManager()->PerformActions(sourceClient,
-                    sg->GetDefeatActions(), 0);
+                    defeatActionSource->GetDefeatActions(),
+                    source->GetEntityID());
             }
         }
 
@@ -3194,6 +3198,11 @@ int32_t SkillManager::CalculateDamage_Percent(uint16_t mod, uint8_t& damageType,
         damageType = DAMAGE_TYPE_GENERIC;
     }
 
+    if(amount > 9999)
+    {
+        amount = 9999;
+    }
+
     return amount;
 }
 
@@ -3206,6 +3215,11 @@ int32_t SkillManager::CalculateDamage_MaxPercent(uint16_t mod, uint8_t& damageTy
     {
         amount = (int32_t)ceil((float)max * ((float)mod * 0.01f));
         damageType = DAMAGE_TYPE_GENERIC;
+    }
+
+    if(amount > 9999)
+    {
+        amount = 9999;
     }
 
     return amount;
@@ -3285,11 +3299,16 @@ bool SkillManager::SetNRA(SkillTargetResult& target, ProcessingSkill& skill)
             {
                 int16_t chance = target.EntityState->GetNRAChance((uint8_t)nraIdx,
                     affinity);
-                if(chance > 0 && RNG(int16_t, 1, 100) <= chance)
+                if(chance >= 100 || (chance > 0 && RNG(int16_t, 1, 100) <= chance))
                 {
                     resultIdx = (uint8_t)nraIdx;
                     break;
                 }
+            }
+
+            if(resultIdx > 0)
+            {
+                break;
             }
         }
     }
@@ -3833,7 +3852,7 @@ bool SkillManager::Traesto(const std::shared_ptr<objects::ActivatedAbility>& act
 
     ProcessSkillResult(activated, ctx);
 
-    return mServer.lock()->GetZoneManager()->EnterZone(client, zoneID, xCoord, yCoord, 0, true);
+    return mServer.lock()->GetZoneManager()->EnterZone(client, zoneID, 0, xCoord, yCoord, 0, true);
 }
 
 void SkillManager::SendActivateSkill(std::shared_ptr<objects::ActivatedAbility> activated,

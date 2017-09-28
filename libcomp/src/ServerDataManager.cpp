@@ -45,17 +45,36 @@ ServerDataManager::~ServerDataManager()
 {
 }
 
-const std::shared_ptr<objects::ServerZone> ServerDataManager::GetZoneData(uint32_t id)
+const std::shared_ptr<objects::ServerZone> ServerDataManager::GetZoneData(uint32_t id,
+    uint32_t dynamicMapID)
 {
-    return GetObjectByID<uint32_t, objects::ServerZone>(id, mZoneData);
+    auto iter = mZoneData.find(id);
+    if(iter != mZoneData.end())
+    {
+        if(dynamicMapID != 0)
+        {
+            auto dIter = iter->second.find(dynamicMapID);
+            return (dIter != iter->second.end()) ? dIter->second : nullptr;
+        }
+        else
+        {
+            // Return first
+            return iter->second.begin()->second;
+        }
+    }
+
+    return nullptr;
 }
 
-const std::set<uint32_t> ServerDataManager::GetAllZoneIDs()
+const std::unordered_map<uint32_t, std::set<uint32_t>> ServerDataManager::GetAllZoneIDs()
 {
-    std::set<uint32_t> zoneIDs;
+    std::unordered_map<uint32_t, std::set<uint32_t>> zoneIDs;
     for(auto pair : mZoneData)
     {
-        zoneIDs.insert(pair.first);
+        for(auto dPair : pair.second)
+        {
+            zoneIDs[pair.first].insert(dPair.first);
+        }
     }
 
     return zoneIDs;
@@ -160,13 +179,16 @@ namespace libcomp
         }
 
         auto id = zone->GetID();
-        if(mZoneData.find(id) != mZoneData.end())
+        auto dynamicMapID = zone->GetDynamicMapID();
+        if(mZoneData.find(id) != mZoneData.end() &&
+            mZoneData[id].find(dynamicMapID) != mZoneData[id].end())
         {
-            LOG_ERROR(libcomp::String("Duplicate zone encountered: %1\n").Arg(id));
+            LOG_ERROR(libcomp::String("Duplicate zone encountered: %1%2\n").Arg(id)
+                .Arg(id != dynamicMapID ? libcomp::String(" (%1)").Arg(dynamicMapID) : ""));
             return false;
         }
 
-        mZoneData[id] = zone;
+        mZoneData[id][dynamicMapID] = zone;
 
         return true;
     }

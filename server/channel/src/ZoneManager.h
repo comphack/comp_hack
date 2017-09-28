@@ -95,6 +95,8 @@ public:
      * Associate a client connection to a zone
      * @param client Client connection to connect to a zone
      * @param zoneID Definition ID of a zone to add the client to
+     * @param dynamicMapID Dynamic Map ID of the zone to add the client to.
+     *  if specified as 0, the first instance of the zone will be used
      * @param xCoord X-coordinate to send character to.
      * @param yCoord Y-coordinate to send character to.
      * @param rotation Character rotation upon entering the zone.
@@ -104,8 +106,8 @@ public:
      *  did not
      */
     bool EnterZone(const std::shared_ptr<ChannelClientConnection>& client,
-        uint32_t zoneID, float xCoord, float yCoord, float rotation,
-        bool forceLeave = false);
+        uint32_t zoneID, uint32_t dynamicMapID, float xCoord, float yCoord,
+        float rotation, bool forceLeave = false);
 
     /**
      * Remove a client connection from a zone
@@ -113,9 +115,11 @@ public:
      * @param logOut If true, special logout actions will be performed
      * @param newZoneID ID of the next zone the client is moving to, used
      *  for retaining zone instances that are not being cleaned up
+     * @param newDynamicMapID Dynamic map ID of the next zone the client
+     *  is moving to
      */
     void LeaveZone(const std::shared_ptr<ChannelClientConnection>& client,
-        bool logOut, uint32_t newZoneID = 0);
+        bool logOut, uint32_t newZoneID = 0, uint32_t newDynamicMapID = 0);
 
     /**
      * Send data about entities that exist in a zone to a new connection and
@@ -292,10 +296,11 @@ public:
      * @param refreshAll true if each group should be filled, false if only
      *  spawn groups with an elapsed refresh timer should be updated
      * @param now Current server time
-     * @param groupIDs Optional specific group IDs to spawn
+     * @param actionSource Optional action source of the spawn
+     * @return true if any enemy was spawned, false if no enemy was spawned
      */
-    void UpdateSpawnGroups(const std::shared_ptr<Zone>& zone, bool refreshAll,
-        uint64_t now = 0, const std::set<uint32_t> groupIDs = {});
+    bool UpdateSpawnGroups(const std::shared_ptr<Zone>& zone, bool refreshAll,
+        uint64_t now = 0, std::shared_ptr<objects::ActionSpawn> actionSource = nullptr);
 
     /**
      * Updates the current states of entities in the zone.  Enemy AI is
@@ -440,26 +445,36 @@ private:
      * Get a zone instance by zone definition ID. This function is responsible for
      * deciding if a non-public zone should have an additional instance created.
      * @param zoneID Zone definition ID to get an instance for
+     * @param dynamicMapID Dynamic Map ID of the zone to to get an instance for
      * @param client Pointer to the client connection to use to decide whether
      *  a new instance should be created if the zone is private
      * @return Pointer to a matching zone instance
      */
-    std::shared_ptr<Zone> GetZone(uint32_t zoneID,
+    std::shared_ptr<Zone> GetZone(uint32_t zoneID, uint32_t dynamicMapID,
         const std::shared_ptr<ChannelClientConnection>& client);
 
     /**
      * Create a new zone instance based off of the supplied definition
      * @param definition Pointer to a zone definition
+     * @param ownerID World CID of the character who will own the instance
      * @return Pointer to a new zone instance
      */
     std::shared_ptr<Zone> CreateZoneInstance(
-        const std::shared_ptr<objects::ServerZone>& definition);
+        const std::shared_ptr<objects::ServerZone>& definition,
+        int32_t ownerID = 0);
 
     /// Map of zone intances by instance ID
     std::unordered_map<uint32_t, std::shared_ptr<Zone>> mZones;
 
-    /// Map of zone definition IDs to zone instance IDs
-    std::unordered_map<uint32_t, std::set<uint32_t>> mZoneMap;
+    /// Map of zone definition IDs to map of zone instance IDs by
+    /// dynamic map ID
+    std::unordered_map<uint32_t,
+        std::unordered_map<uint32_t, std::set<uint32_t>>> mZoneMap;
+
+    /// Map of zone instance IDs by owner world CID. Used to
+    /// persist zones until the last member of a party leaves the
+    /// final zone in a group.
+    std::unordered_map<int32_t, std::set<uint32_t>> mZoneOwnerMap;
 
     /// Map of world CIDs to zone instance IDs
     std::unordered_map<int32_t, uint32_t> mEntityMap;

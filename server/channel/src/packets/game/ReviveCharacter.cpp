@@ -197,7 +197,7 @@ bool Parsers::ReviveCharacter::Parse(libcomp::ManagerPacket *pPacketManager,
 
     if(newZoneID)
     {
-        zoneManager->EnterZone(client, newZoneID, newX, newY, newRot, true);
+        zoneManager->EnterZone(client, newZoneID, 0, newX, newY, newRot, true);
 
         // Send the revival info to players in the new zone
         reply.Clear();

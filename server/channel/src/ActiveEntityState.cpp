@@ -1973,8 +1973,8 @@ void ActiveEntityState::UpdateNRAChances(libcomp::EnumMap<CorrectTbl, int16_t>& 
         {
             // Natural NRA is stored as NRA index in the 1s place and
             // perccentage of success as the rest
-            float shift = (float)(val * 0.1f);
-            uint8_t nraIdx = (uint8_t)((shift - (float)floorl(val / 10)) * 10);
+            double shift = (double)(val * 0.1);
+            uint8_t nraIdx = (uint8_t)((shift - (double)floorl((double)val / 10.0)) * 10.0);
             val = (int16_t)floorl(val / 10);
             switch(nraIdx)
             {

@@ -42,6 +42,7 @@
 
 namespace objects
 {
+class ActionSpawn;
 class LootBox;
 class ServerNPC;
 class ServerObject;
@@ -302,6 +303,30 @@ public:
     bool GroupHasSpawned(uint32_t spawnGroupID, bool aliveOnly);
 
     /**
+     * Create an encounter from a group of enemies and register them with
+     * the zone. Encounter information will be retained until a check via
+     * EncounterDefeated is called.
+     * @param enemies List of the enemies to add to the encounter
+     * @param spawnSource Optional pointer to spawn action that created the
+     *  encounter. If this is specified, it will be returned as the
+     *  defeatActionSource when calling EncounterDefeated
+     */
+    void CreateEncounter(const std::list<std::shared_ptr<EnemyState>>& enemies,
+        std::shared_ptr<objects::ActionSpawn> spawnSource = nullptr);
+
+    /**
+     * Determine if an enemy encounter has been defeated and clean up the
+     * encounter information for the zone.
+     * @param encounterID ID of the encounter
+     * @param defeatActionSource Output parameter to contain the original
+     *  spawn action source that can contain defeat actions to execute
+     * @return true if the encounter has been defeated, false if at least
+     *  one enemy from the group is still alive
+     */
+    bool EncounterDefeated(uint32_t encounterID,
+        std::shared_ptr<objects::ActionSpawn>& defeatActionSource);
+
+    /**
      * Get the set of spawn groups that have room for another enemy spawn
      * that have also had their respawn time elapsed.
      * @param now System time representing the current server time
@@ -371,8 +396,15 @@ private:
     std::list<std::shared_ptr<EnemyState>> mEnemies;
 
     /// Map of spawn group IDs to pointers to enemies created from that group.
-    /// Keys are never removed from this group so one time spawns can be cheked.
+    /// Keys are never removed from this group so one time spawns can be checked.
     std::unordered_map<uint32_t, std::list<std::shared_ptr<EnemyState>>> mSpawnGroups;
+
+    /// Map of encounter IDs to enemies that belong to that encounter.
+    std::unordered_map<uint32_t, std::set<std::shared_ptr<EnemyState>>> mEncounters;
+
+    /// Map of encounter IDs to spawn actions that created the encounter
+    std::unordered_map<uint32_t,
+        std::shared_ptr<objects::ActionSpawn>> mEncounterSpawnSources;
 
     /// List of pointers to NPCs instantiated for the zone
     std::list<std::shared_ptr<NPCState>> mNPCs;
@@ -413,6 +445,9 @@ private:
     /// If the zone is private, this is the world CID of the character who
     /// instantiated it
     int32_t mOwnerID;
+
+    /// Next ID to use for encounters registered for the zone
+    uint32_t mNextEncounterID;
 
     /// Server lock for shared resources
     std::mutex mLock;

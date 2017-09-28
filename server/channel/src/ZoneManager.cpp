@@ -36,6 +36,7 @@
 // objects Include
 #include <Account.h>
 #include <AccountLogin.h>
+#include <ActionSpawn.h>
 #include <CharacterLogin.h>
 #include <Enemy.h>
 #include <EntityStats.h>
@@ -92,11 +93,12 @@ void ZoneManager::LoadGeometry()
     auto definitionManager = server->GetDefinitionManager();
     auto serverDataManager = server->GetServerDataManager();
 
-    std::set<uint32_t> zoneIDs = serverDataManager->GetAllZoneIDs();
+    auto zoneIDs = serverDataManager->GetAllZoneIDs();
 
     // Build zone geometry from QMP files
-    for(uint32_t zoneID : zoneIDs)
+    for(auto zonePair : zoneIDs)
     {
+        uint32_t zoneID = zonePair.first;
         auto zoneData = definitionManager->GetZoneData(zoneID);
 
         libcomp::String filename = zoneData->GetFile()->GetQmpFile();
@@ -236,84 +238,87 @@ void ZoneManager::LoadGeometry()
     // Build any existing zone spots as polygons
     // Loop through a second time instead of handling in the first loop
     // because dynamic map/QMP file combos are not the same on all zones
-    for(uint32_t zoneID : zoneIDs)
+    for(auto zonePair : zoneIDs)
     {
+        uint32_t zoneID = zonePair.first;
         auto zoneData = definitionManager->GetZoneData(zoneID);
-        auto serverZone = serverDataManager->GetZoneData(zoneID);
-        if(serverZone)
+
+        for(auto dynamicMapID : zonePair.second)
         {
-            auto dynamicMap = definitionManager->GetDynamicMapData(
-                serverZone->GetDynamicMapID());
-            if(dynamicMap &&
-                mDynamicMaps.find(serverZone->GetDynamicMapID()) == mDynamicMaps.end())
+            auto serverZone = serverDataManager->GetZoneData(zoneID, dynamicMapID);
+            if(zoneData && serverZone)
             {
-                auto dMap = std::make_shared<DynamicMap>();
-                auto spots = definitionManager->GetSpotData(dynamicMap->GetID());
-                for(auto spotPair : spots)
+                auto dynamicMap = definitionManager->GetDynamicMapData(dynamicMapID);
+                if(dynamicMap && mDynamicMaps.find(dynamicMapID) == mDynamicMaps.end())
                 {
-                    Point center(spotPair.second->GetCenterX(),
-                        spotPair.second->GetCenterY());
-                    float rot = spotPair.second->GetRotation();
-
-                    float x1 = center.x - spotPair.second->GetSpanX();
-                    float y1 = center.y - spotPair.second->GetSpanY();
-
-                    float x2 = center.x + spotPair.second->GetSpanX();
-                    float y2 = center.y + spotPair.second->GetSpanY();
-
-                    // Build the unrotated rectangle
-                    std::vector<Point> points;
-                    points.push_back(Point(x1, y1));
-                    points.push_back(Point(x2, y1));
-                    points.push_back(Point(x2, y2));
-                    points.push_back(Point(x1, y2));
-
-                    auto shape = std::make_shared<ZoneSpotShape>();
-
-                    // Rotate each point around the center
-                    for(auto& p : points)
+                    auto dMap = std::make_shared<DynamicMap>();
+                    auto spots = definitionManager->GetSpotData(dynamicMapID);
+                    for(auto spotPair : spots)
                     {
-                        p = RotatePoint(p, center, rot);
-                        shape->Vertices.push_back(p);
-                    }
+                        Point center(spotPair.second->GetCenterX(),
+                            spotPair.second->GetCenterY());
+                        float rot = spotPair.second->GetRotation();
 
-                    shape->Definition = spotPair.second;
-                    shape->Lines.push_back(Line(points[0], points[1]));
-                    shape->Lines.push_back(Line(points[1], points[2]));
-                    shape->Lines.push_back(Line(points[2], points[3]));
-                    shape->Lines.push_back(Line(points[3], points[0]));
-                    
-                    // Determine the boundaries of the completed shape
-                    std::list<float> xVals;
-                    std::list<float> yVals;
+                        float x1 = center.x - spotPair.second->GetSpanX();
+                        float y1 = center.y - spotPair.second->GetSpanY();
 
-                    for(Line& line : shape->Lines)
-                    {
-                        for(const Point& p : { line.first, line.second })
+                        float x2 = center.x + spotPair.second->GetSpanX();
+                        float y2 = center.y + spotPair.second->GetSpanY();
+
+                        // Build the unrotated rectangle
+                        std::vector<Point> points;
+                        points.push_back(Point(x1, y1));
+                        points.push_back(Point(x2, y1));
+                        points.push_back(Point(x2, y2));
+                        points.push_back(Point(x1, y2));
+
+                        auto shape = std::make_shared<ZoneSpotShape>();
+
+                        // Rotate each point around the center
+                        for(auto& p : points)
                         {
-                            xVals.push_back(p.x);
-                            yVals.push_back(p.y);
+                            p = RotatePoint(p, center, rot);
+                            shape->Vertices.push_back(p);
                         }
+
+                        shape->Definition = spotPair.second;
+                        shape->Lines.push_back(Line(points[0], points[1]));
+                        shape->Lines.push_back(Line(points[1], points[2]));
+                        shape->Lines.push_back(Line(points[2], points[3]));
+                        shape->Lines.push_back(Line(points[3], points[0]));
+                    
+                        // Determine the boundaries of the completed shape
+                        std::list<float> xVals;
+                        std::list<float> yVals;
+
+                        for(Line& line : shape->Lines)
+                        {
+                            for(const Point& p : { line.first, line.second })
+                            {
+                                xVals.push_back(p.x);
+                                yVals.push_back(p.y);
+                            }
+                        }
+
+                        xVals.sort([](const float& a, const float& b)
+                            {
+                                return a < b;
+                            });
+
+                        yVals.sort([](const float& a, const float& b)
+                            {
+                                return a < b;
+                            });
+
+                        shape->Boundaries[0] = Point(xVals.front(), yVals.front());
+                        shape->Boundaries[1] = Point(xVals.back(), yVals.back());
+
+                        dMap->Spots[spotPair.first] = shape;
+                        dMap->SpotTypes[spotPair.second->GetType()].push_back(shape);
                     }
 
-                    xVals.sort([](const float& a, const float& b)
-                        {
-                            return a < b;
-                        });
-
-                    yVals.sort([](const float& a, const float& b)
-                        {
-                            return a < b;
-                        });
-
-                    shape->Boundaries[0] = Point(xVals.front(), yVals.front());
-                    shape->Boundaries[1] = Point(xVals.back(), yVals.back());
-
-                    dMap->Spots[spotPair.first] = shape;
-                    dMap->SpotTypes[spotPair.second->GetType()].push_back(shape);
+                    mDynamicMaps[dynamicMapID] = dMap;
                 }
-
-                mDynamicMaps[serverZone->GetDynamicMapID()] = dMap;
             }
         }
     }
@@ -324,13 +329,19 @@ void ZoneManager::InstanceGlobalZones()
     auto server = mServer.lock();
     auto serverDataManager = server->GetServerDataManager();
 
-    std::set<uint32_t> zoneIDs = serverDataManager->GetAllZoneIDs();
-    for(uint32_t zoneID : zoneIDs)
+    auto zoneIDs = serverDataManager->GetAllZoneIDs();
+    for(auto zonePair : zoneIDs)
     {
-        auto zoneData = serverDataManager->GetZoneData(zoneID);
-        if(mZones.find(zoneID) == mZones.end() && zoneData->GetGlobal())
+        uint32_t zoneID = zonePair.first;
+        for(auto dynamicMapID : zonePair.second)
         {
-            CreateZoneInstance(zoneData);
+            auto zoneData = serverDataManager->GetZoneData(zoneID, dynamicMapID);
+            if(mZoneMap.find(zoneID) == mZoneMap.end() &&
+                mZoneMap[zoneID].find(dynamicMapID) == mZoneMap[zoneID].end() &&
+                zoneData->GetGlobal())
+            {
+                CreateZoneInstance(zoneData);
+            }
         }
     }
 }
@@ -355,9 +366,10 @@ std::shared_ptr<Zone> ZoneManager::GetZoneInstance(int32_t worldCID)
 }
 
 bool ZoneManager::EnterZone(const std::shared_ptr<ChannelClientConnection>& client,
-    uint32_t zoneID, float xCoord, float yCoord, float rotation, bool forceLeave)
+    uint32_t zoneID, uint32_t dynamicMapID, float xCoord, float yCoord, float rotation,
+    bool forceLeave)
 {
-    auto instance = GetZone(zoneID, client);
+    auto instance = GetZone(zoneID, dynamicMapID, client);
     if(instance == nullptr)
     {
         return false;
@@ -371,12 +383,15 @@ bool ZoneManager::EnterZone(const std::shared_ptr<ChannelClientConnection>& clie
     auto currentZone = cState->GetZone();
     if(forceLeave || (currentZone && currentZone != instance))
     {
-        LeaveZone(client, false, zoneID);
+        LeaveZone(client, false, zoneID, dynamicMapID);
 
         // Pull a fresh version of the zone in case it was cleaned up
-        instance = GetZone(zoneID, client);
+        instance = GetZone(zoneID, dynamicMapID, client);
         if(instance == nullptr)
         {
+            // Force the client out of any current zone so private
+            // instances don't get stuck
+            LeaveZone(client, false, 0, 0);
             return false;
         }
     }
@@ -461,11 +476,12 @@ bool ZoneManager::EnterZone(const std::shared_ptr<ChannelClientConnection>& clie
 }
 
 void ZoneManager::LeaveZone(const std::shared_ptr<ChannelClientConnection>& client,
-    bool logOut, uint32_t newZoneID)
+    bool logOut, uint32_t newZoneID, uint32_t newDynamicMapID)
 {
     auto server = mServer.lock();
     auto characterManager = server->GetCharacterManager();
     auto definitionManager = server->GetDefinitionManager();
+    auto serverDataManager = server->GetServerDataManager();
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
     auto dState = state->GetDemonState();
@@ -513,25 +529,74 @@ void ZoneManager::LeaveZone(const std::shared_ptr<ChannelClientConnection>& clie
                 // Always "freeze" the instance
                 mActiveInstances.erase(instanceID);
 
-                // Remove the instance if its not global
                 auto def = zone->GetDefinition();
-                if(!def->GetGlobal() && newZoneID != def->GetID())
-                {
-                    zone->Cleanup();
-                    mZones.erase(instanceID);
+                auto nextZone = serverDataManager->GetZoneData(newZoneID,
+                    newDynamicMapID);
 
-                    auto zoneDefID = def->GetID();
-                    std::set<uint32_t>& instances = mZoneMap[zoneDefID];
-                    instances.erase(instanceID);
-                    if(instances.size() == 0)
+                // If the current zone is global, the next zone is the same
+                // or the next zone is in the same zone group, do not remove it
+                bool keepZone = def->GetGlobal() || def == nextZone ||
+                    (def && nextZone && def->GetGroupID() == nextZone->GetGroupID());
+
+                std::list<std::shared_ptr<Zone>> cleanupZones;
+                cleanupZones.push_back(zone);
+                if(!def->GetGlobal() && !keepZone)
+                {
+                    int32_t ownerID = zone->GetOwnerID();
+                    for(uint32_t privateID : mZoneOwnerMap[ownerID])
                     {
-                        mZoneMap.erase(zoneDefID);
-                        instanceRemoved = true;
+                        auto z = mZones[privateID];
+                        if(z->GetDefinition()->GetGroupID() == def->GetGroupID())
+                        {
+                            if(z->GetConnections().size() == 0)
+                            {
+                                cleanupZones.push_back(z);
+                            }
+                            else
+                            {
+                                keepZone = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                if(!keepZone)
+                {
+                    for(auto z : cleanupZones)
+                    {
+                        z->Cleanup();
+                        mZones.erase(z->GetID());
+
+                        auto d = z->GetDefinition();
+                        auto zoneDefID = d->GetID();
+                        auto dynamicMapID = d->GetDynamicMapID();
+
+                        auto& instanceMap = mZoneMap[zoneDefID];
+                        auto& instances = instanceMap[dynamicMapID];
+
+                        instances.erase(z->GetID());
+                        if(instances.size() == 0)
+                        {
+                            instanceMap.erase(dynamicMapID);
+                            if(instanceMap.size() == 0)
+                            {
+                                mZoneMap.erase(zoneDefID);
+                            }
+                            instanceRemoved = true;
+                        }
+
+                        int32_t ownerID = z->GetOwnerID();
+                        mZoneOwnerMap[ownerID].erase(z->GetID());
+                        if(mZoneOwnerMap[ownerID].size() == 0)
+                        {
+                            mZoneOwnerMap.erase(ownerID);
+                        }
                     }
                 }
                 else
                 {
-                    // Stop all AI in place if global
+                    // Stop all AI in place
                     uint64_t now = ChannelServer::GetServerTime();
                     for(auto eState : zone->GetEnemies())
                     {
@@ -1230,8 +1295,8 @@ bool ZoneManager::SpawnEnemy(const std::shared_ptr<Zone>& zone, uint32_t demonID
     return true;
 }
 
-void ZoneManager::UpdateSpawnGroups(const std::shared_ptr<Zone>& zone,
-    bool refreshAll, uint64_t now, const std::set<uint32_t> groupIDs)
+bool ZoneManager::UpdateSpawnGroups(const std::shared_ptr<Zone>& zone,
+    bool refreshAll, uint64_t now, std::shared_ptr<objects::ActionSpawn> actionSource)
 {
     std::unordered_map<uint32_t, uint16_t> updateSpawnGroups;
     if(!refreshAll)
@@ -1244,7 +1309,34 @@ void ZoneManager::UpdateSpawnGroups(const std::shared_ptr<Zone>& zone,
         updateSpawnGroups = zone->GetReinforceableSpawnGroups(now);
         if(updateSpawnGroups.size() == 0)
         {
-            return;
+            return false;
+        }
+    }
+
+    std::set<uint32_t> groupIDs;
+    if(actionSource)
+    {
+        for(uint32_t groupID : actionSource->GetSpawnGroupIDs())
+        {
+            switch(actionSource->GetConditions())
+            {
+            case objects::ActionSpawn::Conditions_t::ONE_TIME:
+                if(!zone->GroupHasSpawned(groupID, false))
+                {
+                    groupIDs.insert(groupID);
+                }
+                break;
+            case objects::ActionSpawn::Conditions_t::NONE_EXIST:
+                if(!zone->GroupHasSpawned(groupID, true))
+                {
+                    groupIDs.insert(groupID);
+                }
+                break;
+            case objects::ActionSpawn::Conditions_t::NONE:
+            default:
+                groupIDs.insert(groupID);
+                break;
+            }
         }
     }
 
@@ -1334,7 +1426,7 @@ void ZoneManager::UpdateSpawnGroups(const std::shared_ptr<Zone>& zone,
                     {
                         LOG_ERROR(libcomp::String("Failed to spawn %1 at unknown"
                             " spot %2\n").Arg(spawn->GetID()).Arg(spotID));
-                        return;
+                        return false;
                     }
                 }
                 else
@@ -1376,6 +1468,8 @@ void ZoneManager::UpdateSpawnGroups(const std::shared_ptr<Zone>& zone,
 
     if(eStates.size() > 0)
     {
+        bool setActionSource = actionSource && actionSource->DefeatActionsCount() > 0;
+
         auto server = mServer.lock();
         auto aiManager = server->GetAIManager();
         for(auto eState : eStates)
@@ -1386,7 +1480,15 @@ void ZoneManager::UpdateSpawnGroups(const std::shared_ptr<Zone>& zone,
                 eState->GetAIState()->SetStatus(AIStatus_t::WANDERING, true);
             }
 
-            zone->AddEnemy(eState);
+            if(!setActionSource)
+            {
+                zone->AddEnemy(eState);
+            }
+        }
+
+        if(setActionSource)
+        {
+            zone->CreateEncounter(eStates, actionSource);
         }
 
         // Send to clients already in the zone if they exist
@@ -1404,7 +1506,11 @@ void ZoneManager::UpdateSpawnGroups(const std::shared_ptr<Zone>& zone,
                 client.second->FlushOutgoing();
             }
         }
+
+        return true;
     }
+
+    return false;
 }
 
 Point ZoneManager::RotatePoint(const Point& p, const Point& origin, float radians)
@@ -1665,14 +1771,13 @@ std::list<std::shared_ptr<ActiveEntityState>> ZoneManager::GetEntitiesInFoV(
 }
 
 std::shared_ptr<Zone> ZoneManager::GetZone(uint32_t zoneID,
-    const std::shared_ptr<ChannelClientConnection>& client)
+    uint32_t dynamicMapID, const std::shared_ptr<ChannelClientConnection>& client)
 {
     auto state = client->GetClientState();
     auto party = state->GetParty();
 
     auto server = mServer.lock();
-    auto zoneDefinition = server->GetServerDataManager()
-        ->GetZoneData(zoneID);
+    auto serverDataManager = server->GetServerDataManager();
 
     std::set<int32_t> validOwnerIDs = { state->GetWorldCID() };
     if(party)
@@ -1689,14 +1794,23 @@ std::shared_ptr<Zone> ZoneManager::GetZone(uint32_t zoneID,
         auto iter = mZoneMap.find(zoneID);
         if(iter != mZoneMap.end())
         {
-            for(uint32_t instanceID : iter->second)
+            for(auto dPair : iter->second)
             {
-                auto instance = mZones[instanceID];
-                if(instance && (zoneDefinition->GetGlobal() ||
-                    validOwnerIDs.find(instance->GetOwnerID()) != validOwnerIDs.end()))
+                // If dynamicMapID is 0, check all valid instances and take the first
+                // one that applies
+                if(dynamicMapID == 0 || dPair.first == dynamicMapID)
                 {
-                    zone = instance;
-                    break;
+                    auto zoneDefinition = serverDataManager->GetZoneData(zoneID, dPair.first);
+                    for(uint32_t instanceID : dPair.second)
+                    {
+                        auto instance = mZones[instanceID];
+                        if(instance && (zoneDefinition->GetGlobal() ||
+                            validOwnerIDs.find(instance->GetOwnerID()) != validOwnerIDs.end()))
+                        {
+                            zone = instance;
+                            break;
+                        }
+                    }
                 }
             }
         }
@@ -1704,15 +1818,15 @@ std::shared_ptr<Zone> ZoneManager::GetZone(uint32_t zoneID,
 
     if(nullptr == zone)
     {
-        zone = CreateZoneInstance(zoneDefinition);
-        zone->SetOwnerID(state->GetWorldCID());
+        auto zoneDefinition = serverDataManager->GetZoneData(zoneID, dynamicMapID);
+        zone = CreateZoneInstance(zoneDefinition, state->GetWorldCID());
     }
 
     return zone;
 }
 
 std::shared_ptr<Zone> ZoneManager::CreateZoneInstance(
-    const std::shared_ptr<objects::ServerZone>& definition)
+    const std::shared_ptr<objects::ServerZone>& definition, int32_t ownerID)
 {
     if(nullptr == definition)
     {
@@ -1775,7 +1889,13 @@ std::shared_ptr<Zone> ZoneManager::CreateZoneInstance(
     {
         std::lock_guard<std::mutex> lock(mLock);
         mZones[id] = zone;
-        mZoneMap[definition->GetID()].insert(id);
+        mZoneMap[definition->GetID()][definition->GetDynamicMapID()].insert(id);
+
+        if(ownerID > 0)
+        {
+            zone->SetOwnerID(ownerID);
+            mZoneOwnerMap[ownerID].insert(id);
+        }
     }
 
     // Run all setup actions

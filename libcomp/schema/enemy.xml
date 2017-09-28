@@ -10,6 +10,7 @@
             nulldefault="true"/>
         <member type="u32" name="SpawnSpotID"/>
         <member type="u32" name="SpawnGroupID"/>
+        <member type="u32" name="EncounterID"/>
 
         <!-- Sub-sections -->
         <member type="EntityStats*" name="CoreStats"/>

@@ -1104,9 +1104,10 @@ bool ChatManager::GMCommand_Zone(const std::shared_ptr<
     auto server = mServer.lock();
     auto zoneManager = server->GetZoneManager();
     uint32_t zoneID = 0;
-    float xCoord = 0.0f;
-    float yCoord = 0.0f;
-    float rotation = 0.0f;
+    uint32_t dynamicMapID = 0;
+    float xCoord = 0.f;
+    float yCoord = 0.f;
+    float rotation = 0.f;
     std::list<libcomp::String> argsCopy = args;
 
     if(args.empty())
@@ -1128,17 +1129,24 @@ bool ChatManager::GMCommand_Zone(const std::shared_ptr<
                 libcomp::String("You are in zone %1").Arg(zoneData->GetID()));
         }
     }
-    else if(1 == args.size() || 3 == args.size())
+    else if(4 >= args.size())
     {
-        // Parse the zone ID.
+        bool getDynamicMapID = args.size() == 2 || args.size() == 4;
+
+        // Parse the zone ID and dynamic map ID.
         bool parseOk = GetIntegerArg<uint32_t>(zoneID, argsCopy);
+        if(parseOk && getDynamicMapID)
+        {
+            parseOk = GetIntegerArg<uint32_t>(dynamicMapID, argsCopy);
+        }
 
         std::shared_ptr<objects::ServerZone> zoneData;
 
         // If the zone ID argument is right, look for the zone.
         if(parseOk)
         {
-            zoneData = server->GetServerDataManager()->GetZoneData(zoneID);
+            zoneData = server->GetServerDataManager()->GetZoneData(zoneID,
+                dynamicMapID);
         }
 
         // If the ID did not parse or the zone does not exist, stop here.
@@ -1149,9 +1157,8 @@ bool ChatManager::GMCommand_Zone(const std::shared_ptr<
                 "try again.");
         }
 
-        if(1 == args.size())
+        if(argsCopy.size() < 2)
         {
-            // Load the defaults.
             xCoord = zoneData->GetStartingX();
             yCoord = zoneData->GetStartingY();
             rotation = zoneData->GetStartingRotation();
@@ -1164,7 +1171,8 @@ bool ChatManager::GMCommand_Zone(const std::shared_ptr<
                 "command with proper inputs.");
         }
 
-        zoneManager->EnterZone(client, zoneID, xCoord, yCoord, rotation);
+        zoneManager->EnterZone(client, zoneID, dynamicMapID,
+            xCoord, yCoord, rotation);
         
         return true;
     }

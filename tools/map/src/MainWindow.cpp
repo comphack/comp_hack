@@ -25,7 +25,8 @@
 
 #include "MainWindow.h"
 
-#include <stdexcept>
+ // C++ Standard Includes
+#include <cmath>
 
 #include <QFileDialog>
 #include <QIODevice>
@@ -37,10 +38,13 @@
 #include <QToolTip>
 
 #include <MiDevilData.h>
+#include <MiGrowthData.h>
 #include <MiNPCBasicData.h>
+#include <MiSpotData.h>
 #include <MiZoneFileData.h>
 #include <QmpBoundary.h>
 #include <QmpBoundaryLine.h>
+#include <QmpElement.h>
 #include <ServerNPC.h>
 #include <ServerObject.h>
 #include <Spawn.h>
@@ -432,6 +436,16 @@ bool MainWindow::LoadMapFromZone(QString path)
         return false;
     }
 
+    // Reset all fields
+    mZone.ClearBazaars();
+    mZone.ClearNPCs();
+    mZone.ClearObjects();
+    mZone.ClearSetupActions();
+    mZone.ClearSpawnGroups();
+    mZone.ClearSpawnLocationGroups();
+    mZone.ClearSpawns();
+    mZone.ClearSpots();
+
     if(!mZone.Load(doc, *objNode))
     {
         return false;
@@ -449,7 +463,8 @@ bool MainWindow::LoadMapFromZone(QString path)
         return false;
     }
 
-    setWindowTitle(libcomp::String("COMP_hack Map Manager - %1").Arg(mZone.GetID()).C());
+    setWindowTitle(libcomp::String("COMP_hack Map Manager - %1 (%2)")
+        .Arg(mZone.GetID()).Arg(mZone.GetDynamicMapID()).C());
 
     mPoints.clear();
 
@@ -528,11 +543,12 @@ void MainWindow::BindSpawns()
 {
     // Set up the Spawn table
     ui.tableWidget_Spawn->clear();
-    ui.tableWidget_Spawn->setColumnCount(4);
+    ui.tableWidget_Spawn->setColumnCount(5);
     ui.tableWidget_Spawn->setHorizontalHeaderItem(0, GetTableWidget("ID"));
     ui.tableWidget_Spawn->setHorizontalHeaderItem(1, GetTableWidget("Type"));
     ui.tableWidget_Spawn->setHorizontalHeaderItem(2, GetTableWidget("Variant"));
     ui.tableWidget_Spawn->setHorizontalHeaderItem(3, GetTableWidget("Name"));
+    ui.tableWidget_Spawn->setHorizontalHeaderItem(4, GetTableWidget("Level"));
 
     ui.tableWidget_Spawn->setRowCount((int)mZone.SpawnsCount());
     int i = 0;
@@ -549,6 +565,8 @@ void MainWindow::BindSpawns()
             .Arg(s->GetVariantType()).C()));
         ui.tableWidget_Spawn->setItem(i, 3, GetTableWidget(libcomp::String("%1")
             .Arg(def ? def->GetBasic()->GetName() : "?").C()));
+        ui.tableWidget_Spawn->setItem(i, 4, GetTableWidget(libcomp::String("%1")
+            .Arg(def ? def->GetGrowth()->GetBaseLevel() : 0).C()));
         i++;
     }
 
@@ -702,8 +720,11 @@ void MainWindow::DrawMap()
     QPainter painter(&pic);
 
     // Draw geometry
-    painter.setPen(QPen(Qt::black));
-    painter.setBrush(QBrush(Qt::black));
+    std::unordered_map<uint32_t, uint8_t> elems;
+    for(auto elem : mQmpFile->GetElements())
+    {
+        elems[elem->GetID()] = elem->GetUnknown();
+    }
 
     std::set<float> xVals;
     std::set<float> yVals;
@@ -711,6 +732,23 @@ void MainWindow::DrawMap()
     {
         for(auto line : boundary->GetLines())
         {
+            switch(elems[line->GetElementID()])
+            {
+            case 1:
+                // Lines
+                painter.setPen(QPen(Qt::blue));
+                painter.setBrush(QBrush(Qt::blue));
+                break;
+            case 2:
+                // Toggleable
+                painter.setPen(QPen(Qt::green));
+                painter.setBrush(QBrush(Qt::green));
+                break;
+            default:
+                painter.setPen(QPen(Qt::black));
+                painter.setBrush(QBrush(Qt::black));
+                break;
+            }
             xVals.insert((float)line->GetX1());
             xVals.insert((float)line->GetX2());
             yVals.insert((float)line->GetY1());
@@ -719,6 +757,54 @@ void MainWindow::DrawMap()
             painter.drawLine(Scale(line->GetX1()), Scale(-line->GetY1()),
                 Scale(line->GetX2()), Scale(-line->GetY2()));
         }
+    }
+
+    // Draw spots
+    painter.setPen(QPen(Qt::darkGreen));
+    painter.setBrush(QBrush(Qt::darkGreen));
+
+    QFont font = painter.font();
+    font.setPixelSize(10);
+    painter.setFont(font);
+
+    auto spots = mDefinitions->GetSpotData(mZone.GetDynamicMapID());
+    for(auto spotPair : spots)
+    {
+        float xc = spotPair.second->GetCenterX();
+        float yc = -spotPair.second->GetCenterY();
+        float rot = -spotPair.second->GetRotation();
+
+        float x1 = xc - spotPair.second->GetSpanX();
+        float y1 = yc + spotPair.second->GetSpanY();
+
+        float x2 = xc + spotPair.second->GetSpanX();
+        float y2 = yc - spotPair.second->GetSpanY();
+
+        std::vector<std::pair<float, float>> points;
+        points.push_back(std::pair<float, float>(x1, y1));
+        points.push_back(std::pair<float, float>(x2, y1));
+        points.push_back(std::pair<float, float>(x2, y2));
+        points.push_back(std::pair<float, float>(x1, y2));
+
+        for(auto& p : points)
+        {
+            float x = p.first;
+            float y = p.second;
+            p.first = (float)(((x - xc) * cos(rot)) - ((y - yc) * sin(rot)) + xc);
+            p.second = (float)(((x - xc) * sin(rot)) + ((y - yc) * cos(rot)) + yc);
+        }
+
+        painter.drawLine(Scale(points[0].first), Scale(points[0].second),
+            Scale(points[1].first), Scale(points[1].second));
+        painter.drawLine(Scale(points[1].first), Scale(points[1].second),
+            Scale(points[2].first), Scale(points[2].second));
+        painter.drawLine(Scale(points[2].first), Scale(points[2].second),
+            Scale(points[3].first), Scale(points[3].second));
+        painter.drawLine(Scale(points[3].first), Scale(points[3].second),
+            Scale(points[0].first), Scale(points[0].second));
+
+        painter.drawText(QPoint(Scale(x1), Scale(y2)),
+            libcomp::String("[%1] %2").Arg(spotPair.second->GetType()).Arg(spotPair.first).C());
     }
 
     // Draw the starting point
@@ -743,6 +829,9 @@ void MainWindow::DrawMap()
             yVals.insert(npc->GetY());
             painter.drawEllipse(QPoint(Scale(npc->GetX()), Scale(-npc->GetY())),
                 3, 3);
+
+            painter.drawText(QPoint(Scale(npc->GetX() + 20.f), Scale(-npc->GetY())),
+                libcomp::String("%1").Arg(npc->GetID()).C());
         }
     }
 
@@ -758,6 +847,9 @@ void MainWindow::DrawMap()
             yVals.insert(obj->GetY());
             painter.drawEllipse(QPoint(Scale(obj->GetX()), Scale(-obj->GetY())),
                 3, 3);
+
+            painter.drawText(QPoint(Scale(obj->GetX() + 20.f), Scale(-obj->GetY())),
+                libcomp::String("%1").Arg(obj->GetID()).C());
         }
     }
 

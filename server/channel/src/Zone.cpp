@@ -42,7 +42,7 @@
 using namespace channel;
 
 Zone::Zone(uint32_t id, const std::shared_ptr<objects::ServerZone>& definition)
-    : mServerZone(definition), mID(id), mOwnerID(0)
+    : mServerZone(definition), mID(id), mOwnerID(0), mNextEncounterID(1)
 {
 }
 
@@ -457,6 +457,66 @@ bool Zone::GroupHasSpawned(uint32_t spawnGroupID, bool aliveOnly)
         {
             return true;
         }
+    }
+
+    return false;
+}
+
+void Zone::CreateEncounter(const std::list<std::shared_ptr<EnemyState>>& enemies,
+    std::shared_ptr<objects::ActionSpawn> spawnSource)
+{
+    if(enemies.size() > 0)
+    {
+        std::lock_guard<std::mutex> lock(mLock);
+
+        uint32_t encounterID = mNextEncounterID++;
+        for(auto enemy : enemies)
+        {
+            enemy->GetEntity()->SetEncounterID(encounterID);
+            mEncounters[encounterID].insert(enemy);
+        }
+
+        if(spawnSource)
+        {
+            mEncounterSpawnSources[encounterID] = spawnSource;
+        }
+    }
+
+    for(auto enemy : enemies)
+    {
+        AddEnemy(enemy);
+    }
+}
+
+bool Zone::EncounterDefeated(uint32_t encounterID,
+    std::shared_ptr<objects::ActionSpawn>& defeatActionSource)
+{
+    std::lock_guard<std::mutex> lock(mLock);
+    auto it = mEncounters.find(encounterID);
+    if(it != mEncounters.end())
+    {
+        for(auto eState : it->second)
+        {
+            if(eState->IsAlive())
+            {
+                return false;
+            }
+        }
+
+        mEncounters.erase(encounterID);
+        
+        auto dIter = mEncounterSpawnSources.find(encounterID);
+        if(dIter != mEncounterSpawnSources.end())
+        {
+            defeatActionSource = dIter->second;
+        }
+        else
+        {
+            defeatActionSource = nullptr;
+        }
+        mEncounterSpawnSources.erase(encounterID);
+
+        return true;
     }
 
     return false;

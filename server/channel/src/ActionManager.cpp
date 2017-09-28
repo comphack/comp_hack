@@ -245,6 +245,7 @@ bool ActionManager::ZoneChange(ActionContext& ctx)
 
     // Where is the character going?
     uint32_t zoneID = act->GetZoneID();
+    uint32_t dynamicMapID = act->GetDynamicMapID();
     float x = act->GetDestinationX();
     float y = act->GetDestinationY();
     float rotation = act->GetDestinationRotation();
@@ -255,9 +256,8 @@ bool ActionManager::ZoneChange(ActionContext& ctx)
         // If a spot is specified, get a random point in that spot instead
         auto definitionManager = server->GetDefinitionManager();
         auto serverDataManager = server->GetServerDataManager();
-        auto zoneDef = serverDataManager->GetZoneData(zoneID);
+        auto zoneDef = serverDataManager->GetZoneData(zoneID, dynamicMapID);
 
-        uint32_t dynamicMapID = zoneDef ? zoneDef->GetDynamicMapID() : 0;
         auto spots = definitionManager->GetSpotData(dynamicMapID);
         auto spotIter = spots.find(spotID);
         if(spotIter != spots.end())
@@ -270,7 +270,8 @@ bool ActionManager::ZoneChange(ActionContext& ctx)
     }
 
     // Enter the new zone and always leave the old zone even if its the same.
-    if(!zoneManager->EnterZone(ctx.Client, zoneID, x, y, rotation, true))
+    if(!zoneManager->EnterZone(ctx.Client, zoneID, dynamicMapID,
+        x, y, rotation, true))
     {
         LOG_ERROR(libcomp::String("Failed to add client to zone"
             " %1. Closing the connection.\n").Arg(zoneID));
@@ -745,40 +746,7 @@ bool ActionManager::Spawn(ActionContext& ctx)
     auto server = mServer.lock();
     auto zoneManager = server->GetZoneManager();
 
-    std::set<uint32_t> groupIDs;
-    for(uint32_t groupID : act->GetSpawnGroupIDs())
-    {
-        switch(act->GetConditions())
-        {
-        case objects::ActionSpawn::Conditions_t::ONE_TIME:
-            if(!ctx.CurrentZone->GroupHasSpawned(groupID, false))
-            {
-                groupIDs.insert(groupID);
-            }
-            break;
-        case objects::ActionSpawn::Conditions_t::NONE_EXIST:
-            if(!ctx.CurrentZone->GroupHasSpawned(groupID, true))
-            {
-                groupIDs.insert(groupID);
-            }
-            break;
-        case objects::ActionSpawn::Conditions_t::NONE:
-        default:
-            groupIDs.insert(groupID);
-            break;
-        }
-    }
-
-    if(groupIDs.size() > 0)
-    {
-        zoneManager->UpdateSpawnGroups(ctx.CurrentZone, true, 0, groupIDs);
-
-        return true;
-    }
-    else
-    {
-        return false;
-    }
+    return zoneManager->UpdateSpawnGroups(ctx.CurrentZone, true, 0, act);
 }
 
 bool ActionManager::CreateLoot(ActionContext& ctx)

@@ -120,6 +120,12 @@ INCLUDE(${COMP_MODULE_PATH}/flags.cmake)
 # Utilities for building with MSVC.
 INCLUDE(${COMP_MODULE_PATH}/msvc.cmake)
 
+# Option to disable build warnings/errors.
+OPTION(NO_WARNINGS "Disable the compiler warnings and errors." OFF)
+
+# Option to disable all tests.
+OPTION(DISABLE_TESTING "Disable all tests." OFF)
+
 # Option for the static runtime on Windows.
 OPTION(USE_STATIC_RUNTIME "Use the static MSVC runtime." OFF)
 
@@ -210,7 +216,9 @@ ADD_DEFINITIONS(
 SET(SQLITE3_INCLUDE_DIRS "${CMAKE_SOURCE_DIR}/deps/sqlite3")
 
 # Enable testing.
-INCLUDE(CTest)
+IF(NOT DISABLE_TESTING)
+    INCLUDE(CTest)
+ENDIF(NOT DISABLE_TESTING)
 
 # Determine if the system is big or little endian.
 INCLUDE(TestBigEndian)
@@ -256,8 +264,12 @@ ADD_COMPILER_FLAGS(AUTO /EHsc)
 ADD_COMPILER_FLAGS_DEBUG(AUTO -DCOMP_HACK_DEBUG)
 
 # If we are using gcc/clang/mingw, enable warnings under debug mode.
-ADD_COMPILER_FLAGS(AUTO -Werror -Wall -Wextra -Wshadow
-    -Wconversion -Wsign-conversion -g)
+IF(NO_WARNINGS)
+    ADD_COMPILER_FLAGS(AUTO -g)
+ELSE()
+    ADD_COMPILER_FLAGS(AUTO -Werror -Wall -Wextra -Wshadow
+        -Wconversion -Wsign-conversion -g)
+ENDIF()
 
 # Warning level 4 and treat warnings as errors (MSVC).
 # ADD_COMPILER_FLAGS(AUTO /W4 /WX)

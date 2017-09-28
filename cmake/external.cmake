@@ -24,7 +24,11 @@ IF(WIN32)
     SET(CMAKE_RELWITHDEBINFO_OPTIONS -DCMAKE_RELWITHDEBINFO_POSTFIX=_reldeb)
 ENDIF(WIN32)
 
-IF(GIT_DEPENDENCIES)
+IF(EXISTS "${CMAKE_SOURCE_DIR}/deps/GSL.zip")
+    SET(GSL_URL
+        URL "${CMAKE_SOURCE_DIR}/deps/GSL.zip"
+    )
+ELSEIF(GIT_DEPENDENCIES)
     SET(GSL_URL
         GIT_REPOSITORY https://github.com/Microsoft/GSL.git
         GIT_TAG master
@@ -65,7 +69,11 @@ SET(GSL_INCLUDE_DIRS "${SOURCE_DIR}/include")
 
 FILE(MAKE_DIRECTORY "${GSL_INCLUDE_DIRS}")
 
-IF(GIT_DEPENDENCIES)
+IF(EXISTS "${CMAKE_SOURCE_DIR}/deps/zlib.zip")
+    SET(ZLIB_URL
+        URL "${CMAKE_SOURCE_DIR}/deps/zlib.zip"
+    )
+ELSEIF(GIT_DEPENDENCIES)
     SET(ZLIB_URL
         GIT_REPOSITORY https://github.com/comphack/zlib.git
         GIT_TAG comp_hack
@@ -122,7 +130,11 @@ ENDIF()
 SET_TARGET_PROPERTIES(zlib PROPERTIES
     INTERFACE_INCLUDE_DIRECTORIES "${ZLIB_INCLUDES}")
 
-IF(GIT_DEPENDENCIES)
+IF(EXISTS "${CMAKE_SOURCE_DIR}/deps/openssl.zip")
+    SET(OPENSSL_URL
+        URL "${CMAKE_SOURCE_DIR}/deps/openssl.zip"
+    )
+ELSEIF(GIT_DEPENDENCIES)
     SET(OPENSSL_URL
         GIT_REPOSITORY https://github.com/comphack/openssl.git
         GIT_TAG comp_hack
@@ -214,7 +226,11 @@ ELSE()
         INTERFACE_INCLUDE_DIRECTORIES "${OPENSSL_INCLUDE_DIR}")
 ENDIF()
 
-IF(GIT_DEPENDENCIES)
+IF(EXISTS "${CMAKE_SOURCE_DIR}/deps/mariadb.zip")
+    SET(MARIADB_URL
+        URL "${CMAKE_SOURCE_DIR}/deps/mariadb.zip"
+    )
+ELSEIF(GIT_DEPENDENCIES)
     SET(MARIADB_URL
         GIT_REPOSITORY https://github.com/comphack/mariadb.git
         GIT_TAG comp_hack
@@ -271,7 +287,11 @@ ENDIF()
 SET_TARGET_PROPERTIES(mariadbclient PROPERTIES
     INTERFACE_INCLUDE_DIRECTORIES "${MARIADB_INCLUDE_DIRS}")
 
-IF(GIT_DEPENDENCIES)
+IF(EXISTS "${CMAKE_SOURCE_DIR}/deps/ttvfs.zip")
+    SET(TTVFS_URL
+        URL "${CMAKE_SOURCE_DIR}/deps/ttvfs.zip"
+    )
+ELSEIF(GIT_DEPENDENCIES)
     SET(TTVFS_URL
         GIT_REPOSITORY https://github.com/comphack/ttvfs.git
         GIT_TAG comp_hack
@@ -368,7 +388,11 @@ SET_TARGET_PROPERTIES(ttvfs_zip PROPERTIES
 
 SET(TTVFS_GEN_PATH "${INSTALL_DIR}/bin/ttvfs_gen")
 
-IF(GIT_DEPENDENCIES)
+IF(EXISTS "${CMAKE_SOURCE_DIR}/deps/physfs.zip")
+    SET(PHYSFS_URL
+        URL "${CMAKE_SOURCE_DIR}/deps/physfs.zip"
+    )
+ELSEIF(GIT_DEPENDENCIES)
     SET(PHYSFS_URL
         GIT_REPOSITORY https://github.com/comphack/physfs.git
         GIT_TAG comp_hack
@@ -423,7 +447,11 @@ ENDIF()
 SET_TARGET_PROPERTIES(physfs PROPERTIES
     INTERFACE_INCLUDE_DIRECTORIES "${PHYSFS_INCLUDE_DIRS}")
 
-IF(GIT_DEPENDENCIES)
+IF(EXISTS "${CMAKE_SOURCE_DIR}/deps/sqrat.zip")
+    SET(SQRAT_URL
+        URL "${CMAKE_SOURCE_DIR}/deps/sqrat.zip"
+    )
+ELSEIF(GIT_DEPENDENCIES)
     SET(SQRAT_URL
         GIT_REPOSITORY https://github.com/comphack/sqrat.git
         GIT_TAG comp_hack
@@ -459,7 +487,11 @@ SET(SQRAT_DEFINES "-DSCRAT_USE_CXX11_OPTIMIZATIONS=1")
 
 FILE(MAKE_DIRECTORY "${SQRAT_INCLUDE_DIRS}")
 
-IF(GIT_DEPENDENCIES)
+IF(EXISTS "${CMAKE_SOURCE_DIR}/deps/civetweb.zip")
+    SET(CIVET_URL
+        URL "${CMAKE_SOURCE_DIR}/deps/civetweb.zip"
+    )
+ELSEIF(GIT_DEPENDENCIES)
     SET(CIVET_URL
         GIT_REPOSITORY https://github.com/comphack/civetweb.git
         GIT_TAG comp_hack
@@ -537,7 +569,11 @@ ENDIF()
 SET_TARGET_PROPERTIES(civetweb-cxx PROPERTIES
     INTERFACE_INCLUDE_DIRECTORIES "${CIVETWEB_INCLUDE_DIRS}")
 
-IF(GIT_DEPENDENCIES)
+IF(EXISTS "${CMAKE_SOURCE_DIR}/deps/squirrel3.zip")
+    SET(SQUIRREL_URL
+        URL "${CMAKE_SOURCE_DIR}/deps/squirrel3.zip"
+    )
+ELSEIF(GIT_DEPENDENCIES)
     SET(SQUIRREL_URL
         GIT_REPOSITORY https://github.com/comphack/squirrel3.git
         GIT_TAG comp_hack
@@ -613,7 +649,11 @@ ENDIF()
 SET_TARGET_PROPERTIES(sqstdlib PROPERTIES INTERFACE_INCLUDE_DIRECTORIES
     "${SQUIRREL_INCLUDE_DIRS};${SQRAT_INCLUDE_DIRS}")
 
-IF(GIT_DEPENDENCIES)
+IF(EXISTS "${CMAKE_SOURCE_DIR}/deps/asio.zip")
+    SET(ASIO_URL
+        URL "${CMAKE_SOURCE_DIR}/deps/asio.zip"
+    )
+ELSEIF(GIT_DEPENDENCIES)
     SET(ASIO_URL
         GIT_REPOSITORY https://github.com/comphack/asio.git
         GIT_TAG comp_hack
@@ -652,7 +692,11 @@ SET(ASIO_INCLUDE_DIRS "${INSTALL_DIR}/src/asio/asio/include")
 
 FILE(MAKE_DIRECTORY "${ASIO_INCLUDE_DIRS}")
 
-IF(GIT_DEPENDENCIES)
+IF(EXISTS "${CMAKE_SOURCE_DIR}/deps/tinyxml2.zip")
+    SET(TINYXML2_URL
+        URL "${CMAKE_SOURCE_DIR}/deps/tinyxml2.zip"
+    )
+ELSEIF(GIT_DEPENDENCIES)
     SET(TINYXML2_URL
         GIT_REPOSITORY https://github.com/comphack/tinyxml2.git
         GIT_TAG comp_hack
@@ -707,7 +751,11 @@ ENDIF()
 SET_TARGET_PROPERTIES(tinyxml2 PROPERTIES
     INTERFACE_INCLUDE_DIRECTORIES "${TINYXML2_INCLUDE_DIRS}")
 
-IF(GIT_DEPENDENCIES)
+IF(EXISTS "${CMAKE_SOURCE_DIR}/deps/googletest.zip")
+    SET(GOOGLETEST_URL
+        URL "${CMAKE_SOURCE_DIR}/deps/googletest.zip"
+    )
+ELSEIF(GIT_DEPENDENCIES)
     SET(GOOGLETEST_URL
         GIT_REPOSITORY https://github.com/comphack/googletest.git
         GIT_TAG comp_hack
@@ -804,7 +852,11 @@ SET_TARGET_PROPERTIES(gmock_main PROPERTIES
 
 SET(GMOCK_DIR "${INSTALL_DIR}")
 
-IF(GIT_DEPENDENCIES)
+IF(EXISTS "${CMAKE_SOURCE_DIR}/deps/JsonBox.zip")
+    SET(JSONBOX_URL
+        URL "${CMAKE_SOURCE_DIR}/deps/JsonBox.zip"
+    )
+ELSEIF(GIT_DEPENDENCIES)
     SET(JSONBOX_URL
         GIT_REPOSITORY https://github.com/comphack/JsonBox.git
         GIT_TAG comp_hack

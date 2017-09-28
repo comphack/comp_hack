@@ -258,7 +258,7 @@ bool ActionManager::ZoneChange(ActionContext& ctx)
         auto serverDataManager = server->GetServerDataManager();
         auto zoneDef = serverDataManager->GetZoneData(zoneID, dynamicMapID);
 
-        auto spots = definitionManager->GetSpotData(dynamicMapID);
+        auto spots = definitionManager->GetSpotData(zoneDef->GetDynamicMapID());
         auto spotIter = spots.find(spotID);
         if(spotIter != spots.end())
         {

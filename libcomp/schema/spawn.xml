@@ -39,5 +39,8 @@
         <member type="u32" name="SpawnLocationGroupID"/>
         <member type="u16" name="MaxCount"/>
         <member type="float" name="RespawnTime"/>
+        <member type="set" name="SubGroups">
+            <element type="u32"/>
+        </member>
     </object>
 </objgen>

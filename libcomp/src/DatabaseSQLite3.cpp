@@ -577,21 +577,31 @@ bool DatabaseSQLite3::VerifyAndSetupSchema(bool recreateTables)
 
         if(archiving)
         {
-            LOG_DEBUG(String("Archiving table '%1'...\n")
-                .Arg(metaObject.GetName()));
-            
-            /// @todo: do this properly
-            if(Execute(String("DROP TABLE %1;").Arg(objName)))
+            if(mConfig->GetAutoSchemaUpdate())
             {
-                LOG_DEBUG("Archiving complete\n");
+                LOG_DEBUG(String("Archiving table '%1'...\n")
+                    .Arg(metaObject.GetName()));
+            
+                /// @todo: do this properly
+                if(Execute(String("DROP TABLE %1;").Arg(objName)))
+                {
+                    LOG_DEBUG("Archiving complete\n");
+                }
+                else
+                {
+                    LOG_ERROR("Archiving failed\n");
+                    return false;
+                }
+
+                creating = true;
             }
             else
             {
-                LOG_ERROR("Archiving failed\n");
+                LOG_ERROR(String("The schema for '%1' does not match"
+                    " and cannot be used until it has been corrected!\n")
+                    .Arg(metaObject.GetName()));
                 return false;
             }
-
-            creating = true;
         }
             
         if(creating)

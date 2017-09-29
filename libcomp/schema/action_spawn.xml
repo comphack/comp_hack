@@ -8,6 +8,7 @@
         <member type="enum" name="conditions" default="NONE">
             <value>NONE</value>
             <value>ONE_TIME</value>
+            <value>ONE_TIME_RANDOM</value>
             <value>NONE_EXIST</value>
         </member>
         <member type="list" name="defeatActions">

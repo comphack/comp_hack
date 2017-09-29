@@ -2222,11 +2222,6 @@ void SkillManager::HandleKills(std::shared_ptr<ActiveEntityState> source,
         auto sourceClient = server->GetManagerConnection()->
             GetEntityClient(source->GetEntityID());
         auto sourceState = sourceClient ? sourceClient->GetClientState() : nullptr;
-        if(!sourceState)
-        {
-            // Not a player, nothing left to do
-            return;
-        }
 
         // Gather all enemy entity IDs
         std::list<int32_t> enemyIDs;
@@ -2283,7 +2278,7 @@ void SkillManager::HandleKills(std::shared_ptr<ActiveEntityState> source,
         int16_t luck = source->GetLUCK();
 
         auto firstClient = zConnections.size() > 0 ? zConnections.front() : nullptr;
-        auto sourceParty = sourceState->GetParty();
+        auto sourceParty = sourceState ? sourceState->GetParty() : nullptr;
         std::set<int32_t> sourcePartyMembers = sourceParty
             ? sourceParty->GetMemberIDs() : std::set<int32_t>();
 
@@ -2305,7 +2300,7 @@ void SkillManager::HandleKills(std::shared_ptr<ActiveEntityState> source,
 
             // Create loot based off drops and send if any was added
             uint64_t lootTime = 0;
-            if(characterManager->CreateLootFromDrops(lootBody, drops, luck))
+            if(sourceState && characterManager->CreateLootFromDrops(lootBody, drops, luck))
             {
                 // Bodies remain lootable for 120 seconds with loot
                 lootTime = (uint64_t)(now + 120000000);
@@ -2390,7 +2385,7 @@ void SkillManager::HandleKills(std::shared_ptr<ActiveEntityState> source,
         }
 
         // Update quest kill counts
-        if(questKills.size() > 0)
+        if(sourceClient && questKills.size() > 0)
         {
             server->GetEventManager()->UpdateQuestKillCount(sourceClient,
                 questKills);
@@ -2406,7 +2401,7 @@ void SkillManager::HandleKills(std::shared_ptr<ActiveEntityState> source,
             {
                 server->GetActionManager()->PerformActions(sourceClient,
                     defeatActionSource->GetDefeatActions(),
-                    source->GetEntityID());
+                    source->GetEntityID(), zone);
             }
         }
 

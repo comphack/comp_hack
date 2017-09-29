@@ -486,14 +486,25 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
         {
             auto def = definitionManager->GetItemData(equip->GetType());
             auto poss = def->GetPossession();
-            equip->SetDurability(poss->GetDurability());
+            equip->SetDurability((uint16_t)
+                ((uint16_t)poss->GetDurability() * 1000));
             equip->SetMaxDurability((int8_t)poss->GetDurability());
 
             auto slot = equipmentBoxSlot++;
             equip->SetItemBox(defaultBox);
             equip->SetBoxSlot((int8_t)slot);
             defaultBox->SetItems(slot, equip);
+
+            if(!equip->Update(db))
+            {
+                return false;
+            }
         }
+    }
+
+    if(newCharacter && !defaultBox->Update(db))
+    {
+        return false;
     }
 
     // Materials

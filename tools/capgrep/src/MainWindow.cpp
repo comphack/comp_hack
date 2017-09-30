@@ -55,9 +55,10 @@
 
 #include <zlib.h>
 
-static const uint32_t FORMAT_MAGIC = 0x4B434148; // HACK
-static const uint32_t FORMAT_VER1  = 0x00010000; // Major, Minor, Patch (1.0.0)
-static const uint32_t FORMAT_VER2  = 0x00010100; // Major, Minor, Patch (1.1.0)
+static const uint32_t FORMAT_MAGIC  = 0x4B434148; // HACK
+static const uint32_t FORMAT_MAGIC2 = 0x504D4F43; // COMP
+static const uint32_t FORMAT_VER1   = 0x00010000; // Major, Minor, Patch (1.0.0)
+static const uint32_t FORMAT_VER2   = 0x00010100; // Major, Minor, Patch (1.1.0)
 
 static int uncompressChunk(const void *src, void *dest,
     int in_size, int chunk_size)
@@ -588,8 +589,8 @@ void MainWindow::loadCaptures(const QStringList& inPaths)
         file->read((char*)&magic, 4);
         file->read((char*)&ver, 4);
 
-        if(magic != FORMAT_MAGIC || (ver != FORMAT_VER1 &&
-            ver != FORMAT_VER2))
+        if((magic != FORMAT_MAGIC && magic != FORMAT_MAGIC2) ||
+            (ver != FORMAT_VER1 && ver != FORMAT_VER2))
         {
             foreach(CaptureLoadData *cap, capData)
             {
@@ -768,14 +769,16 @@ void MainWindow::loadCapture(const QString& path)
     log.read((char*)&magic, 4);
     log.read((char*)&ver, 4);
 
-    if(magic != FORMAT_MAGIC || (ver != FORMAT_VER1 &&
-        ver != FORMAT_VER2))
+    if((magic != FORMAT_MAGIC && magic != FORMAT_MAGIC2) ||
+        (ver != FORMAT_VER1 && ver != FORMAT_VER2))
     {
         QMessageBox::critical(this, tr("Capture File Error"),
             tr("Invalid or corrupt capture file."));
 
         return;
     }
+
+    bool isLobby = (FORMAT_MAGIC2 == magic);
 
     uint64_t stamp = 0;
     uint64_t micro = 0;
@@ -824,7 +827,7 @@ void MainWindow::loadCapture(const QString& path)
         p.Clear();
         p.WriteArray(pBuffer, sz);
 
-        createPacketData(packetData, source, stamp, micro, p);
+        createPacketData(packetData, source, stamp, micro, p, isLobby);
     }
 
     log.close();
@@ -846,7 +849,7 @@ void MainWindow::addPacket(uint8_t source, uint64_t stamp, uint64_t micro,
     QList<PacketData*> packetData;
 
     // Create the PacketData objects
-    createPacketData(packetData, source, stamp, micro, p, state);
+    createPacketData(packetData, source, stamp, micro, p, false, state);
 
     // Add the PacketData objects into the list model
     mModel->addPacketData(packetData);
@@ -854,7 +857,7 @@ void MainWindow::addPacket(uint8_t source, uint64_t stamp, uint64_t micro,
 
 void MainWindow::createPacketData(QList<PacketData*>& packetData,
     uint8_t source, uint64_t stamp, uint64_t micro, libcomp::Packet& p,
-    CaptureLoadState *state)
+    bool isLobby, CaptureLoadState *state)
 {
     if(!state)
         state = &mDefaultState;
@@ -872,7 +875,7 @@ void MainWindow::createPacketData(QList<PacketData*>& packetData,
     p.Seek(8);
 
     // Check for compression
-    if(p.ReadU32Big() == 0x677A6970)
+    if(!isLobby && p.ReadU32Big() == 0x677A6970)
     {
         int32_t uncompressed_size = p.ReadS32Little();
         int32_t compressed_size = p.ReadS32Little();
@@ -902,7 +905,7 @@ void MainWindow::createPacketData(QList<PacketData*>& packetData,
     }
 
     p.Rewind();
-    p.Skip(24);
+    p.Skip(isLobby ? 8 : 24);
 
     while(p.Left() >= 6)
     {
@@ -1336,7 +1339,8 @@ void MainWindow::updateHexValues()
 void MainWindow::showOpenDialog()
 {
     QString path = QFileDialog::getOpenFileName(this, tr("Open Capture File"),
-        QString(), tr("COMP_hack Channel Capture (*.hack)"));
+        QString(), tr("COMP_hack Channel Capture (*.hack)\n"
+            "COMP_hack Lobby Capture (*.comp)"));
 
     if( path.isEmpty() )
         return;

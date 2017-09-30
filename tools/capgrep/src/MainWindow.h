@@ -109,7 +109,7 @@ protected slots:
         libcomp::Packet& p, CaptureLoadState *state = 0);
     void createPacketData(QList<PacketData*>& packetData, uint8_t source,
         uint64_t stamp, uint64_t micro, libcomp::Packet& p,
-        CaptureLoadState *state = 0);
+        bool isLobby, CaptureLoadState *state = 0);
 
     void packetLimitChanged(int limit);
 

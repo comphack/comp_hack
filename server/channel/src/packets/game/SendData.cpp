@@ -35,6 +35,7 @@
 #include <PacketCodes.h>
 
 // object includes
+#include <Account.h>
 #include <ServerZone.h>
 #include <ChannelConfig.h>
 
@@ -51,6 +52,7 @@ void SendClientReadyData(std::shared_ptr<ChannelServer> server,
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
     auto character = cState->GetEntity();
+    auto account = character->GetAccount();
 
     // Send world time
     {
@@ -130,7 +132,7 @@ void SendClientReadyData(std::shared_ptr<ChannelServer> server,
         if(zoneID == 0)
         {
             /// @todo: make this configurable?
-            zoneID = 0x00004E85;
+            zoneID = 90105;
             xCoord = 0;
             yCoord = 0;
             rotation = 0;

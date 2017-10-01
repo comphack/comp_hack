@@ -349,24 +349,6 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
             return false;
         }
 
-        //Hacks to add MAG, a test demon and some starting skills
-        auto mag = characterManager->GenerateItem(SVR_CONST.ITEM_MAGNETITE,
-            5000);
-        mag->SetItemBox(box);
-        mag->SetBoxSlot(49);
-
-        if(!mag->Insert(db) || !box->SetItems(49, mag))
-        {
-            return false;
-        }
-
-        auto demon = characterManager->ContractDemon(character.Get(),
-            definitionManager->GetDevilData(0x0239));    //Jack Frost
-        if(nullptr == demon)
-        {
-            return false;
-        }
-
         for(auto skillID : SVR_CONST.DEFAULT_SKILLS)
         {
             character->InsertLearnedSkills(skillID);

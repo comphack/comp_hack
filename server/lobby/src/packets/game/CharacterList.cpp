@@ -68,8 +68,8 @@ bool Parsers::CharacterList::Parse(libcomp::ManagerPacket *pPacketManager,
     reply.WritePacketCode(
         LobbyToClientPacketCode_t::PACKET_CHARACTER_LIST);
 
-    // Time of last login (time_t).
-    reply.WriteU32Little((uint32_t)time(0));
+    // Time of last login.
+    reply.WriteU32Little(account->GetLastLogin());
 
     // Number of character tickets.
     reply.WriteU8(account->GetTicketCount());
@@ -178,14 +178,16 @@ bool Parsers::CharacterList::Parse(libcomp::ManagerPacket *pPacketManager,
         // Time when the character will be deleted.
         reply.WriteU32Little(character->GetKillTime());
 
-        // Cutscene to play on login (0 for none).
-        reply.WriteU32Little(0x001EFC77);
+        auto level = stats->GetLevel();
+
+        // Total play time? (0 shows opening cutscene)
+        /// @todo: verify/implement properly
+        reply.WriteU32Little(level == -1 ? 0 : 1);
 
         // Last channel used???
         reply.WriteS8(-1);
 
         // Level.
-        auto level = stats->GetLevel();
         reply.WriteS8(static_cast<int8_t>(level != -1 ? level : 1));
 
         // Skin type.

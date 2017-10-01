@@ -127,7 +127,7 @@ bool SetWorldInfoFromPacket(libcomp::ManagerPacket *pPacketManager,
 
     if(!server->RegisterServer(channelID))
     {
-        LOG_CRITICAL("The server failed to register with the lobby's database.\n");
+        LOG_CRITICAL("The server failed to register with the world's database.\n");
         return false;
     }
 

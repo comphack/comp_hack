@@ -917,7 +917,8 @@ String DatabaseSQLite3::GetFilepath() const
     auto directory = config->GetFileDirectory();
     auto filename = config->GetDatabaseName();
 
-    return String("%1%2.sqlite3").Arg(directory).Arg(filename);
+    return String("%1%2%3.sqlite3").Arg(directory)
+        .Arg(directory.Right(1) == "/" ? "" : "/").Arg(filename);
 }
 
 String DatabaseSQLite3::GetVariableType(const std::shared_ptr

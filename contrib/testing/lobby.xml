@@ -29,6 +29,7 @@
                 <!--<member name="FileDirectory"/>-->
                 <member name="MockData">true</member>
                 <member name="MockDataFilename">test_lobby_setup.xml</member>
+                <member name="AutoSchemaUpdate">true</member>
             </object>
         </member>
         <member name="MariaDBConfig">
@@ -42,18 +43,7 @@
                 <member name="Password">un1tt3st</member>
                 <member name="MockData">true</member>
                 <member name="MockDataFilename">test_lobby_setup.xml</member>
-            </object>
-        </member>
-        <member name="CassandraConfig">
-            <object>
-                <member name="IP">127.0.0.1</member>
-                <member name="Keyspace">comp_hack</member>
-                <member name="DatabaseType">comp_hack</member>
-                <member name="DefaultDatabaseType">comp_hack</member>
-                <!--<member name="Username"/>-->
-                <!--<member name="Password"/>-->
-                <member name="MockData">true</member>
-                <member name="MockDataFilename">test_lobby_setup.xml</member>
+                <member name="AutoSchemaUpdate">true</member>
             </object>
         </member>
         <member name="CharacterDeletionDelay">1440</member>    <!-- In minutes, 24 hours by default -->

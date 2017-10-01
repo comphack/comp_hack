@@ -71,6 +71,8 @@ bool ApiHandler::Auth_Token(const JsonBox::Object& request,
 
     if(it == request.end())
     {
+        LOG_ERROR("get_challenge request missing a username.\n");
+
         session->Reset();
         return false;
     }
@@ -81,6 +83,9 @@ bool ApiHandler::Auth_Token(const JsonBox::Object& request,
     // Make sure the username did not change.
     if(!session->username.IsEmpty() && session->username != username)
     {
+        LOG_ERROR(libcomp::String("Session username has change from "
+            "'%1' to '%2'.\n").Arg(session->username).Arg(username));
+
         session->Reset();
     }
 
@@ -90,6 +95,8 @@ bool ApiHandler::Auth_Token(const JsonBox::Object& request,
     // Sanity in an insane world.
     if(!db)
     {
+        LOG_ERROR("Failed to get the database.\n");
+
         session->Reset();
         return false;
     }
@@ -99,9 +106,11 @@ bool ApiHandler::Auth_Token(const JsonBox::Object& request,
         db, username);
 
     // We must have a valid account for this to work.
-    if(!session->account || !session->account->GetEnabled() ||
-        !session->account->GetIsGM())
+    if(!session->account || !session->account->GetEnabled())
     {
+        LOG_ERROR(libcomp::String("Invalid account (is it disabled?): "
+            "%1\n").Arg(username));
+
         session->Reset();
         return false;
     }
@@ -320,11 +329,11 @@ bool ApiHandler::Account_Register(const JsonBox::Object& request,
 
     libcomp::String displayName = username;
     libcomp::String salt = libcomp::Decrypt::GenerateRandom(10);
-    uint32_t cp = 1000000;
-    uint8_t ticketCount = 20;
-    int32_t userLevel = 1000;
-    bool enabled = true;
-    bool isGM = true;
+    uint32_t cp = mConfig->GetRegistrationCP();
+    uint8_t ticketCount = mConfig->GetRegistrationTicketCount();
+    int32_t userLevel = mConfig->GetRegistrationUserLevel();
+    bool enabled = mConfig->GetRegistrationAccountEnabled();
+    bool isGM = mConfig->GetRegistrationIsGM();
 
     // Hash the password for database storage.
     password = libcomp::Decrypt::HashPassword(password, salt);
@@ -339,8 +348,7 @@ bool ApiHandler::Account_Register(const JsonBox::Object& request,
     account->SetTicketCount(ticketCount);
     account->SetUserLevel(userLevel);
     account->SetEnabled(enabled);
-    account->Register(std::dynamic_pointer_cast<
-        libcomp::PersistentObject>(account));
+    account->Register(account);
 
     if(!account->Insert(db))
     {

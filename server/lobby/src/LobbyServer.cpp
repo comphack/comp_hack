@@ -308,10 +308,13 @@ void LobbyServer::PromptCreateAccount()
     libcomp::String email = "no.thanks@bother_me_not.net";
     libcomp::String displayName = "AnonymousCoward";
     libcomp::String salt = libcomp::Decrypt::GenerateRandom(10);
-    uint32_t cp = 1000000;
-    uint8_t ticketCount = 1;
-    int32_t userLevel = 1000;
-    bool enabled = true;
+
+    auto conf = std::dynamic_pointer_cast<objects::LobbyConfig>(mConfig);
+
+    uint32_t cp = conf->GetRegistrationCP();
+    uint8_t ticketCount = conf->GetRegistrationTicketCount();
+    int32_t userLevel = conf->GetRegistrationUserLevel();
+    bool enabled = conf->GetRegistrationAccountEnabled();
 
     do
     {

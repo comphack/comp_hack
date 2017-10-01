@@ -30,6 +30,21 @@
 namespace libcomp
 {
 
+/// Last year the code was changed.
+#define VERSION_YEAR  (2017)
+
+/// Major release (1 = pixie.)
+#define VERSION_MAJOR (1)
+
+/// Minor release (1 = SP1).
+#define VERSION_MINOR (0)
+
+/// Patch version (a hotfix).
+#define VERSION_PATCH (0)
+
+/// Codename for the version.
+#define VERSION_CODENAME "Pixie"
+
 /// HACK format magic.
 #define HACK_FORMAT_MAGIC (0x4B434148)
 

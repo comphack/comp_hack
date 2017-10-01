@@ -29,6 +29,7 @@
 #include "WorldServer.h"
 
 // libcomp Includes
+#include <Constants.h>
 #include <Exception.h>
 #include <Log.h>
 #include <PersistentObject.h>
@@ -45,8 +46,11 @@ int main(int argc, const char *argv[])
 
     libcomp::Log::GetSingletonPtr()->AddStandardOutputHook();
 
-    LOG_INFO("COMP_hack World Server v0.0.1 build 1\n");
-    LOG_INFO("Copyright (C) 2010-2016 COMP_hack Team\n\n");
+    LOG_INFO(libcomp::String("COMP_hack World Server v%1.%2.%3 (%4)\n").Arg(
+        VERSION_MAJOR).Arg(VERSION_MINOR).Arg(VERSION_PATCH).Arg(
+        VERSION_CODENAME));
+    LOG_INFO(libcomp::String("Copyright (C) 2010-%1 COMP_hack Team\n\n").Arg(
+        VERSION_YEAR));
 
     std::string configPath = libcomp::BaseServer::GetDefaultConfigPath() +
         "world.xml";

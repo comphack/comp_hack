@@ -277,10 +277,10 @@ gsl::not_null<DataStore*> BaseServer::GetDataStore()
 int BaseServer::Run()
 {
     // Run the asycn worker in its own thread.
-    mQueueWorker.Start();
+    mQueueWorker.Start("async_worker");
 
     // Run the main worker in this thread, blocking until done.
-    mMainWorker.Start(true);
+    mMainWorker.Start("main_worker", true);
 
     // Stop the network service (this will kill any existing connections).
     mService.stop();
@@ -430,7 +430,7 @@ void BaseServer::CreateWorkers()
     for(unsigned int i = 0; i < numberOfWorkers; i++)
     {
         auto worker = std::shared_ptr<Worker>(new Worker);
-        worker->Start();
+        worker->Start(libcomp::String("worker%1").Arg(i));
         mWorkers.push_back(worker);
     }
 }

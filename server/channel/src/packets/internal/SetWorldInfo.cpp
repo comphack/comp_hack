@@ -70,7 +70,7 @@ std::shared_ptr<libcomp::Database> ParseDatabase(const std::shared_ptr<ChannelSe
             " that matches the configured type.\n");
         return nullptr;
     }
-    
+
     libcomp::EnumMap<objects::ServerConfig::DatabaseType_t,
         std::shared_ptr<objects::DatabaseConfig>> configMap;
     configMap[databaseType] = dbConfig;
@@ -103,7 +103,7 @@ bool SetWorldInfoFromPacket(libcomp::ManagerPacket *pPacketManager,
         return false;
     }
     server->SetWorldDatabase(worldDatabase);
-    
+
     auto lobbyDatabase = ParseDatabase(server, p);
     if(nullptr == lobbyDatabase)
     {
@@ -150,6 +150,7 @@ bool SetWorldInfoFromPacket(libcomp::ManagerPacket *pPacketManager,
 
     // Now that we've connected to the world successfully, hit the first server tick
     // to start the main loop in addition to any recurring scheduled work
+    server->StartGameTick();
     server->Tick();
 
     if(conf->GetTimeout() > 0)

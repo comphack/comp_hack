@@ -49,7 +49,7 @@ ChannelServer::ChannelServer(const char *szProgram,
     libcomp::BaseServer(szProgram, config, commandLine), mAccountManager(0),
     mActionManager(0), mAIManager(0), mCharacterManager(0), mChatManager(0),
     mEventManager(0), mSkillManager(0), mZoneManager(0), mDefinitionManager(0),
-    mServerDataManager(0), mMaxEntityID(0), mMaxObjectID(0)
+    mServerDataManager(0), mMaxEntityID(0), mMaxObjectID(0), mTickRunning(true)
 {
 }
 
@@ -394,6 +394,18 @@ bool ChannelServer::Initialize()
     return true;
 }
 
+void ChannelServer::Shutdown()
+{
+    mTickRunning = false;
+
+    if(mTickThread.joinable())
+    {
+        mTickThread.join();
+    }
+
+    BaseServer::Shutdown();
+}
+
 ChannelServer::~ChannelServer()
 {
     if(mTickThread.joinable())
@@ -696,8 +708,6 @@ void ChannelServer::Tick()
             }
         }
     }
-
-    QueueNextTick();
 }
 
 std::shared_ptr<libcomp::TcpConnection> ChannelServer::CreateConnection(
@@ -745,20 +755,25 @@ ServerTime ChannelServer::GetServerTimeHighResolution()
         .time_since_epoch().count();
 }
 
-void ChannelServer::QueueNextTick()
+void ChannelServer::StartGameTick()
 {
-    if(mTickThread.joinable())
-    {
-        mTickThread.join();
-    }
-
     mTickThread = std::thread([this](std::shared_ptr<
-        libcomp::MessageQueue<libcomp::Message::Message*>> queue)
+        libcomp::MessageQueue<libcomp::Message::Message*>> queue,
+        volatile bool *pTickRunning)
     {
-        const static int tickDelta = 100;
-        std::this_thread::sleep_for(std::chrono::milliseconds(tickDelta));
-        queue->Enqueue(new libcomp::Message::Tick);
-    }, mQueueWorker.GetMessageQueue());
+#if !defined(_WIN32)
+        pthread_setname_np(pthread_self(), "tick");
+#endif // !defined(_WIN32)
+
+        const static int TICK_DELTA = 100;
+        auto tickDelta = std::chrono::milliseconds(TICK_DELTA);
+
+        while(pTickRunning)
+        {
+            std::this_thread::sleep_for(tickDelta);
+            queue->Enqueue(new libcomp::Message::Tick);
+        }
+    }, mQueueWorker.GetMessageQueue(), &mTickRunning);
 }
 
 bool ChannelServer::SendSystemMessage(const std::shared_ptr<

@@ -53,7 +53,7 @@ void Worker::AddManager(const std::shared_ptr<Manager>& manager)
     }
 }
 
-void Worker::Start(bool blocking)
+void Worker::Start(const libcomp::String& name, bool blocking)
 {
     if(blocking)
     {
@@ -69,8 +69,14 @@ void Worker::Start(bool blocking)
     else
     {
         mThread = new std::thread([this](std::shared_ptr<MessageQueue<
-            Message::Message*>> messageQueue)
+            Message::Message*>> messageQueue, const libcomp::String& _name)
         {
+            (void)_name;
+
+#if !defined(_WIN32)
+            pthread_setname_np(pthread_self(), _name.C());
+#endif // !defined(_WIN32)
+
             mRunning = true;
 
             while(mRunning)
@@ -79,7 +85,7 @@ void Worker::Start(bool blocking)
             }
 
             mRunning = false;
-        }, mMessageQueue);
+        }, mMessageQueue, name);
     }
 }
 

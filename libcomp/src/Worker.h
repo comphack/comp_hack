@@ -73,7 +73,7 @@ public:
      * @param blocking If false a new thread will be started
      *  to run this function asynchronously
      */
-    void Start(bool blocking = false);
+    void Start(const libcomp::String& name, bool blocking = false);
 
     /**
      * Wait for a message to enter the queue then handle it

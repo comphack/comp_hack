@@ -41,6 +41,9 @@ TcpServer::TcpServer(const String& listenAddress, uint16_t port) :
     mAcceptor(mService), mDiffieHellman(nullptr),
     mListenAddress(listenAddress), mPort(port)
 {
+#if !defined(_WIN32)
+    pthread_setname_np(pthread_self(), "server");
+#endif // !defined(_WIN32)
 }
 
 TcpServer::~TcpServer()
@@ -104,6 +107,10 @@ int TcpServer::Start()
 
     mServiceThread = std::thread([this]()
     {
+#if !defined(_WIN32)
+        pthread_setname_np(pthread_self(), "asio");
+#endif // !defined(_WIN32)
+
         mService.run();
     });
 

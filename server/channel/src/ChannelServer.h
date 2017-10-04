@@ -87,6 +87,12 @@ public:
     virtual bool Initialize();
 
     /**
+     * Call the Shutdown function on each worker.  This should be called
+     * only before preparing to stop the application.
+     */
+    virtual void Shutdown();
+
+    /**
      * Get the current time relative to the server.
      * @return Current time relative to the server
      */
@@ -259,6 +265,11 @@ public:
     void Tick();
 
     /**
+     * Generates server game ticks.
+     */
+    void StartGameTick();
+
+    /**
     * Sends an announcement to each client connected to world
     * Color can be chosen out of four colors:
     * @param client, client that sent announcement packet to channel
@@ -314,12 +325,6 @@ protected:
      * @return Current time relative to the server
      */
     static ServerTime GetServerTimeHighResolution();
-
-    /**
-     * Queues up a time based event to insert a system message
-     * that triggers a server tick.
-     */
-    void QueueNextTick();
 
     /// Function pointer to the most accurate time detection code
     /// available for the current machine.
@@ -389,6 +394,9 @@ protected:
 
     /// Server lock for shared resources
     std::mutex mLock;
+
+    /// If the tick thread should continue running.
+    volatile bool mTickRunning;
 };
 
 } // namespace channel

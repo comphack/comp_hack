@@ -140,7 +140,7 @@ void LobbyLogin(std::shared_ptr<WorldServer> server,
                 }
             }
 
-            // If the character is already logged in somehow, send a 
+            // If the character is already logged in somehow, send a
             // disconnect request (should cover dead connections)
             if(cLogin->GetChannelID() >= 0)
             {
@@ -272,7 +272,8 @@ void ChannelLogin(std::shared_ptr<WorldServer> server,
         {
             cLogin->SetWorldID((int8_t)server->GetRegisteredWorld()->GetID());
             cLogin->SetStatus(objects::CharacterLogin::Status_t::ONLINE);
-            login->SavePacket(reply, false);
+
+            reply.WriteS8(1); // Success
 
             // Update the lobby with the new connection info
             auto lobbyConnection = server->GetLobbyConnection();
@@ -283,7 +284,17 @@ void ChannelLogin(std::shared_ptr<WorldServer> server,
             login->SavePacket(lobbyMessage, false);
             lobbyConnection->SendPacket(lobbyMessage);
         }
+        else
+        {
+            reply.WriteS8(0); // Failure
+        }
     }
+    else
+    {
+        reply.WriteS8(0); // Failure
+    }
+
+    login->SavePacket(reply, false);
 
     connection->SendPacket(reply);
 }

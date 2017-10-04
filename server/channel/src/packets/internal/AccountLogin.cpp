@@ -57,6 +57,14 @@ bool Parsers::AccountLogin::Parse(libcomp::ManagerPacket *pPacketManager,
 {
     (void)connection;
 
+    if(0 == p.Left())
+    {
+        LOG_ERROR("Invalid response received for AccountLogin.\n");
+        return false;
+    }
+
+    int8_t errorCode = p.ReadS8();
+
     objects::AccountLogin response;
     if(!response.LoadPacket(p, false))
     {
@@ -89,6 +97,12 @@ bool Parsers::AccountLogin::Parse(libcomp::ManagerPacket *pPacketManager,
     if(nullptr == client)
     {
         return false;
+    }
+
+    if(1 != errorCode)
+    {
+        client->Close();
+        return true;
     }
 
     auto login = client->GetClientState()->GetAccountLogin();

@@ -1,5 +1,23 @@
-comphack (0.8.9.6) xenial; urgency=low
+comphack (1.0.0.3) xenial; urgency=low
 
-  * Initial upload!
+  * Forgot to download the dependencies.
 
- -- COMP Omega <compomega@tutanota.com>  Mon, 18 Sep 2017 18:43:10 -0600
+ -- COMP Omega <compomega@tutanota.com>  Sun, 01 Oct 2017 23:07:51 -0600
+
+comphack (1.0.0.2) xenial; urgency=low
+
+  * Fixed the debian package build dependencies.
+
+ -- COMP Omega <compomega@tutanota.com>  Sun, 01 Oct 2017 22:38:31 -0600
+
+comphack (1.0.0.1) xenial; urgency=low
+
+  * Fixed a debian package build issue.
+
+ -- COMP Omega <compomega@tutanota.com>  Sun, 01 Oct 2017 13:14:10 -0600
+
+comphack (1.0.0) xenial; urgency=low
+
+  * Initial server release.
+
+ -- COMP Omega <compomega@tutanota.com>  Sun, 01 Oct 2017 13:10:27 -0600

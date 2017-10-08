@@ -408,6 +408,8 @@ void ChannelServer::Shutdown()
 
 ChannelServer::~ChannelServer()
 {
+    mTickRunning = false;
+
     if(mTickThread.joinable())
     {
         mTickThread.join();
@@ -768,7 +770,7 @@ void ChannelServer::StartGameTick()
         const static int TICK_DELTA = 100;
         auto tickDelta = std::chrono::milliseconds(TICK_DELTA);
 
-        while(pTickRunning)
+        while(*pTickRunning)
         {
             std::this_thread::sleep_for(tickDelta);
             queue->Enqueue(new libcomp::Message::Tick);

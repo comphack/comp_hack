@@ -34,12 +34,15 @@
             <value num="11">WILD_BIRD</value>
             <value num="12">YOMA</value>
             <value num="13">EARTH_ELEMENT</value>
-            <value num="14">ELEMENTAL</value>
+            <value num="14">GOD_SPIRIT</value>
             <value num="15">OTHER</value>
             <value num="51">REAPER</value>
             <value num="52">HOLY_BEAST</value>
             <value num="53">BEAST</value>
             <value num="54">FAIRY</value>
+            <value num="55">ELEMENTAL</value>
+            <value num="56">MAJIN</value>
+            <value num="57">MITAMA</value>
             <value num="58">DEMIGOD</value>
             <value num="59">WILDER</value>
             <value num="60">DRAGON_KING</value>

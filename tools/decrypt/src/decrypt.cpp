@@ -39,10 +39,19 @@ int main(int argc, char *argv[])
         return EXIT_FAILURE;
     }
 
-    std::vector<char> data = libcomp::Decrypt::DecryptFile(argv[1]);
+    std::vector<char> data = libcomp::Decrypt::LoadFile(argv[1]);
 
     if(data.empty())
     {
+        std::cerr << "Failed to load input file." << std::endl;
+
+        return EXIT_FAILURE;
+    }
+
+    if(!libcomp::Decrypt::DecryptFile(data))
+    {
+        std::cerr << "Failed to decrypt file." << std::endl;
+
         return EXIT_FAILURE;
     }
 
@@ -50,5 +59,12 @@ int main(int argc, char *argv[])
     out.open(argv[2], std::ofstream::out | std::ofstream::binary);
     out.write(&data[0], static_cast<std::streamsize>(data.size()));
 
-    return out.good() ? EXIT_SUCCESS : EXIT_FAILURE;
+    if(!out.good())
+    {
+        std::cerr << "Failed to write output file." << std::endl;
+
+        return EXIT_FAILURE;
+    }
+
+    return EXIT_SUCCESS;
 }

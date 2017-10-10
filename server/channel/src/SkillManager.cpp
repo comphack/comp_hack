@@ -1373,7 +1373,7 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<channel::Proces
 
                     uint8_t stack = CalculateStatusEffectStack(addStatus->GetMinStack(),
                         addStatus->GetMaxStack());
-                    if(stack == 0 && !addStatus->GetIsReplace()) continue;
+                    if(!statusDef || (stack == 0 && !addStatus->GetIsReplace())) continue;
 
                     target.AddedStatuses[addStatus->GetStatusID()] =
                         std::pair<uint8_t, bool>(stack, addStatus->GetIsReplace());

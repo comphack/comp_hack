@@ -170,6 +170,9 @@ void LobbyLogin(std::shared_ptr<WorldServer> server,
 
             login->SetCharacterLogin(cLogin);
             login->SavePacket(channelReply, false);
+
+            LOG_DEBUG(libcomp::String("Logging in account '%1' with session key"
+                " %2\n").Arg(account->GetUsername()).Arg(login->GetSessionKey()));
         }
     }
 
@@ -213,7 +216,8 @@ void ChannelLogin(std::shared_ptr<WorldServer> server,
     else if(login->GetSessionKey() != sesssionKey)
     {
         LOG_ERROR(libcomp::String("Invalid session key provided for"
-            " account with username '%1'\n").Arg(username));
+            " account with username '%1': Expected %2, found %3\n")
+            .Arg(username).Arg(login->GetSessionKey()).Arg(sesssionKey));
         ok = false;
     }
 

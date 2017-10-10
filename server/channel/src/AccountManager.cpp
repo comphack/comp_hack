@@ -88,6 +88,9 @@ void AccountManager::HandleLoginRequest(const std::shared_ptr<
 
         server->GetManagerConnection()->SetClientConnection(client);
 
+        LOG_DEBUG(libcomp::String("Logging in account '%1' with session key"
+            " %2\n").Arg(username).Arg(login->GetSessionKey()));
+
         libcomp::Packet request;
         request.WritePacketCode(InternalPacketCode_t::PACKET_ACCOUNT_LOGIN);
         request.WriteU32(sessionKey);
@@ -242,13 +245,6 @@ void AccountManager::Logout(const std::shared_ptr<
 
         libcomp::ObjectReference<
             objects::Account>::Unload(account->GetUUID());
-
-        libcomp::Packet p;
-        p.WritePacketCode(InternalPacketCode_t::PACKET_ACCOUNT_LOGOUT);
-        p.WriteU32Little((uint32_t)LogoutPacketAction_t::LOGOUT_DISCONNECT);
-        p.WriteString16Little(
-            libcomp::Convert::Encoding_t::ENCODING_UTF8, account->GetUsername());
-        managerConnection->GetWorldConnection()->SendPacket(p);
     }
 }
 

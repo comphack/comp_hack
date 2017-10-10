@@ -95,8 +95,9 @@ void UpdateAccountLogin(std::shared_ptr<LobbyServer> server,
     if(nullptr != clientConnection && currentWorldID == -1)
     {
         // Initial login response from the world
-        LOG_DEBUG(libcomp::String("Login character with UUID '%1' into world %2, channel %3\n"
-            ).Arg(character.GetUUID().ToString()).Arg(worldID).Arg(channelID));
+        LOG_DEBUG(libcomp::String("Login character with UUID '%1' into world %2, channel %3"
+            " using session key: %4\n").Arg(character.GetUUID().ToString()).Arg(worldID)
+            .Arg(channelID).Arg(login->GetSessionKey()));
 
         libcomp::Packet reply;
         reply.WritePacketCode(LobbyToClientPacketCode_t::PACKET_START_GAME);

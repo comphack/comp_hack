@@ -193,6 +193,15 @@ void ManagerConnection::RemoveClientConnection(const std::shared_ptr<
 
     if(removed)
     {
+        // Inform the world that the connection has closed, whether they've
+        // been logged in successfully or not yet
+        libcomp::Packet p;
+        p.WritePacketCode(InternalPacketCode_t::PACKET_ACCOUNT_LOGOUT);
+        p.WriteU32Little((uint32_t)LogoutPacketAction_t::LOGOUT_DISCONNECT);
+        p.WriteString16Little(
+            libcomp::Convert::Encoding_t::ENCODING_UTF8, username);
+        GetWorldConnection()->SendPacket(p);
+
         auto server = std::dynamic_pointer_cast<ChannelServer>(
             mServer.lock());
         auto accountManager = server->GetAccountManager();

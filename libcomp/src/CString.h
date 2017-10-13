@@ -455,26 +455,30 @@ public:
         T value = 0;
         bool ok = true;
         int base = 10;
-        std::smatch match;
         std::string s = ToUtf8();
+        std::string sign;
 
-        if(std::regex_match(s, match, std::regex(
-            "^([+-])?0x([0-9a-fA-F]+)$")))
+        if(!s.empty() && ('-' == s[0] || '+' == s[0]))
+        {
+            sign = s[0];
+
+            s = s.substr(1);
+        }
+
+        if(2 <= s.size() && '0' == s[0] && 'x' == s[1])
         {
             base = 16;
-            s = std::string(match[1]) + std::string(match[2]);
+
+            s = s.substr(2);
         }
-        else if(std::regex_match(s, match, std::regex(
-            "^([+-])?0([0-7]+)$")))
+        else if(1 < s.size() && '0' == s[0])
         {
             base = 8;
-            s = std::string(match[1]) + std::string(match[2]);
+
+            s = s.substr(1);
         }
-        else if(!std::regex_match(s, match, std::regex(
-            "^[+-]?(([1-9][0-9]*)|0)$")))
-        {
-            ok = false;
-        }
+
+        s = sign + s;
 
         bool negative = !s.empty() && '-' == s[0];
 

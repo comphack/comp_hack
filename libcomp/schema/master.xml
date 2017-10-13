@@ -70,6 +70,7 @@
     <include path="binarydata/ceventmessagedata.xml"/>
     <include path="binarydata/citemdata.xml"/>
     <include path="binarydata/cmessagedata.xml"/>
+    <include path="binarydata/cmodifiedeffectdata.xml"/>
     <include path="binarydata/cmultitalkdata.xml"/>
     <include path="binarydata/cpolygonmoviedata.xml"/>
     <include path="binarydata/cquest.xml"/>

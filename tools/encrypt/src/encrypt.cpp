@@ -38,6 +38,21 @@ int main(int argc, char *argv[])
         return EXIT_FAILURE;
     }
 
-    return libcomp::Decrypt::EncryptFile(argv[2], libcomp::Decrypt::LoadFile(
-        argv[1])) ? EXIT_SUCCESS : EXIT_FAILURE;
+    std::vector<char> data = libcomp::Decrypt::LoadFile(argv[1]);
+
+    if(data.empty())
+    {
+        std::cerr << "Failed to load input file." << std::endl;
+
+        return EXIT_FAILURE;
+    }
+
+    if(!libcomp::Decrypt::EncryptFile(argv[2], data))
+    {
+        std::cerr << "Failed to write output file." << std::endl;
+
+        return EXIT_FAILURE;
+    }
+
+    return EXIT_SUCCESS;
 }

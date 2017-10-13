@@ -26,6 +26,9 @@
 
 #include "AccountManager.h"
 
+// libcomp Includes
+#include <Randomizer.h>
+
 // object Includes
 #include <Account.h>
 #include <Character.h>
@@ -35,7 +38,6 @@ using namespace world;
 
 AccountManager::AccountManager()
 {
-    mMaxSessionKey = 0;
 }
 
 bool AccountManager::IsLoggedIn(const libcomp::String& username,
@@ -75,7 +77,7 @@ bool AccountManager::LoginUser(std::shared_ptr<objects::AccountLogin> login)
                 new objects::AccountLogin);
         }
 
-        login->SetSessionKey(mMaxSessionKey++);
+        login->SetSessionKey(RNG(uint32_t, 1, (uint32_t)0x7FFFFFFF));
 
         auto res = mAccountMap.insert(std::make_pair(lookup, login));
 
@@ -152,7 +154,7 @@ std::list<std::shared_ptr<objects::AccountLogin>>
 void AccountManager::UpdateSessionKey(std::shared_ptr<objects::AccountLogin> login)
 {
     std::lock_guard<std::mutex> lock(mLock);
-    login->SetSessionKey(mMaxSessionKey++);
+    login->SetSessionKey(RNG(uint32_t, 1, (uint32_t)0x7FFFFFFF));
 }
 
 void AccountManager::PushChannelSwitch(const libcomp::String& username, int8_t channel)

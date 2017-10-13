@@ -154,10 +154,6 @@ private:
     /// channel upon next disconnect from a channel
     std::unordered_map<libcomp::String, int8_t> mChannelSwitches;
 
-    /// Highest session key divvied out. This can break if you log in
-    /// 2,147,483,649 times without restarting the server :P
-    uint32_t mMaxSessionKey;
-
     /// Server lock for shared resources
     std::mutex mLock;
 };

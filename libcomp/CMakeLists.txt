@@ -269,6 +269,7 @@ SET(${PROJECT_NAME}_SCHEMA
     schema/binarydata/ceventmessagedata.xml
     schema/binarydata/citemdata.xml
     schema/binarydata/cmessagedata.xml
+    schema/binarydata/cmodifiedeffectdata.xml
     schema/binarydata/cmultitalkdata.xml
     schema/binarydata/cpolygonmoviedata.xml
     schema/binarydata/cquest.xml
@@ -698,6 +699,8 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     MiZoneOtherData.cpp
     MiZoneSkyData.h
     MiZoneSkyData.cpp
+    MiCModifiedEffectData.h
+    MiCModifiedEffectData.cpp
 )
 
 COVERALLS_SOURCES(${${PROJECT_NAME}_SRCS})

@@ -40,6 +40,8 @@
 
 #include <MiCMessageData.h>
 
+#include <MiCModifiedEffectData.h>
+
 #include <MiCMultiTalkData.h>
 #include <MiMultiTalkCmdTbl.h>
 
@@ -369,20 +371,21 @@ int Usage(const char *szAppName)
     std::cerr << std::endl;
     std::cerr << "TYPE indicates the format of the BinaryData and can "
         << "be one of:" << std::endl;
-    std::cerr << "  ceventmessage Format for CEventMessageData.sbin" << std::endl;
-    std::cerr << "  citem         Format for CItemData.sbin" << std::endl;
-    std::cerr << "  cmultitalk    Format for CMultiTalkData.sbin" << std::endl;
-    std::cerr << "  cmessage      Format for CMessageData.sbin" << std::endl;
-    std::cerr << "  cpolygonmovie Format for CPolygonMoveData.sbin" << std::endl;
-    std::cerr << "  cquest        Format for CQuestData.sbin" << std::endl;
-    std::cerr << "  ctalkmessage  Format for CTalkMessageData.sbin" << std::endl;
-    std::cerr << "  czonerelation Format for CZoneRelationData.sbin" << std::endl;
-    std::cerr << "  devil         Format for DevilData.sbin" << std::endl;
-    std::cerr << "  dynamicmap    Format for DynamicMapData.bin" << std::endl;
-    std::cerr << "  hnpc          Format for hNPCData.sbin" << std::endl;
-    std::cerr << "  onpc          Format for oNPCData.sbin" << std::endl;
-    std::cerr << "  spot          Format for SpotData.bin" << std::endl;
-    std::cerr << "  zone          Format for ZoneData.sbin" << std::endl;
+    std::cerr << "  ceventmessage   Format for CEventMessageData.sbin" << std::endl;
+    std::cerr << "  citem           Format for CItemData.sbin" << std::endl;
+    std::cerr << "  cmultitalk      Format for CMultiTalkData.sbin" << std::endl;
+    std::cerr << "  cmessage        Format for CMessageData.sbin" << std::endl;
+    std::cerr << "  cmodifiedeffect Format for CMessageData.sbin" << std::endl;
+    std::cerr << "  cpolygonmovie   Format for CPolygonMoveData.sbin" << std::endl;
+    std::cerr << "  cquest          Format for CQuestData.sbin" << std::endl;
+    std::cerr << "  ctalkmessage    Format for CTalkMessageData.sbin" << std::endl;
+    std::cerr << "  czonerelation   Format for CZoneRelationData.sbin" << std::endl;
+    std::cerr << "  devil           Format for DevilData.sbin" << std::endl;
+    std::cerr << "  dynamicmap      Format for DynamicMapData.bin" << std::endl;
+    std::cerr << "  hnpc            Format for hNPCData.sbin" << std::endl;
+    std::cerr << "  onpc            Format for oNPCData.sbin" << std::endl;
+    std::cerr << "  spot            Format for SpotData.bin" << std::endl;
+    std::cerr << "  zone            Format for ZoneData.sbin" << std::endl;
     std::cerr << std::endl;
     std::cerr << "Mode 'load' will take the input BinaryData file and "
         << "write the output XML file." << std::endl;
@@ -468,6 +471,21 @@ int main(int argc, char *argv[])
             [](const std::shared_ptr<libcomp::Object>& obj)
             {
                 return std::dynamic_pointer_cast<objects::MiCMessageData>(
+                    obj)->GetID();
+            }
+        );
+    }
+    else if("cmodifiedeffect" == bdType)
+    {
+        pSet = new BinaryDataSet(
+            []()
+            {
+                return std::make_shared<objects::MiCModifiedEffectData>();
+            },
+
+            [](const std::shared_ptr<libcomp::Object>& obj)
+            {
+                return std::dynamic_pointer_cast<objects::MiCModifiedEffectData>(
                     obj)->GetID();
             }
         );

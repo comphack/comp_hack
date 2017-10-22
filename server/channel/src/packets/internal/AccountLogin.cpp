@@ -76,7 +76,7 @@ bool Parsers::AccountLogin::Parse(libcomp::ManagerPacket *pPacketManager,
     auto worldDB = server->GetWorldDatabase();
 
     // This user should already be cached since its the same one we passed in
-    auto account = response.GetAccount().Get(worldDB);
+    auto account = response.GetAccount().Get(server->GetLobbyDatabase());
     if(nullptr == account)
     {
         LOG_ERROR("Unknown account returned from AccountLogin response.\n");

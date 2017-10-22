@@ -214,11 +214,21 @@ std::list<std::shared_ptr<objects::CharacterLogin>>
     std::list<libobjgen::UUID> targetUUIDs;
     if(relatedTypes & RELATED_FRIENDS)
     {
+        auto uuid = cLogin->GetCharacter().GetUUID();
         auto fSettings = objects::FriendSettings::LoadFriendSettingsByCharacter(
-            worldDB, cLogin->GetCharacter().GetUUID());
-        for(auto f : fSettings->GetFriends())
+            worldDB, uuid);
+
+        if(fSettings)
         {
-            targetUUIDs.push_back(f.GetUUID());
+            for(auto f : fSettings->GetFriends())
+            {
+                targetUUIDs.push_back(f.GetUUID());
+            }
+        }
+        else
+        {
+            LOG_ERROR(libcomp::String("Failed to get friend settings. "
+                "Character UUID: %1\n").Arg(uuid.ToString()));
         }
     }
 
@@ -322,12 +332,12 @@ bool CharacterManager::GetStatusPacket(libcomp::Packet& p,
     p.WritePacketCode(InternalPacketCode_t::PACKET_CHARACTER_LOGIN);
     p.WriteU8(updateFlags);
     cLogin->SavePacket(p, false);
-        
+
     if(updateFlags & (uint8_t)CharacterLoginStateFlag_t::CHARLOGIN_PARTY_INFO)
     {
         member->SavePacket(p, true);
     }
-        
+
     if(updateFlags & (uint8_t)CharacterLoginStateFlag_t::CHARLOGIN_PARTY_DEMON_INFO)
     {
         member->GetDemon()->SavePacket(p, true);
@@ -558,7 +568,7 @@ void CharacterManager::PartyLeave(std::shared_ptr<objects::CharacterLogin> cLogi
                 nullptr, *memberIDs.begin());
         }
     }
-    
+
     if(requestConnection)
     {
         requestConnection->FlushOutgoing();
@@ -669,7 +679,7 @@ void CharacterManager::PartyLeaderUpdate(uint32_t partyID, int32_t sourceCID,
 
         SendToCharacters(request, partyLogins, 1);
     }
-    
+
     if(requestConnection)
     {
         requestConnection->FlushOutgoing();
@@ -728,7 +738,7 @@ void CharacterManager::SendPartyInfo(uint32_t partyID, const std::list<int32_t>&
     {
         request.WriteU8(1); // Party set
         party->SavePacket(request);
-        
+
         for(auto cid : party->GetMemberIDs())
         {
             logins.push_back(GetCharacterLogin(cid));
@@ -930,7 +940,7 @@ void CharacterManager::ClanLeave(std::shared_ptr<objects::CharacterLogin> cLogin
 
         std::list<int32_t> cids = { cLogin->GetWorldCID() };
         SendClanInfo(0, 0x0F, cids);
-        
+
         if(member->GetMemberType() == objects::ClanMember::MemberType_t::MASTER)
         {
             // Need to set the new master
@@ -1341,17 +1351,17 @@ void CharacterManager::SendClanMemberInfo(std::shared_ptr<objects::CharacterLogi
         relay.WriteS32Little(clanInfo->GetID());
         relay.WriteS32Little(cLogin->GetWorldCID());
         relay.WriteS8((int8_t)updateFlags);
-        
+
         if(updateFlags & (uint8_t)CharacterLoginStateFlag_t::CHARLOGIN_STATUS)
         {
             relay.WriteS8((int8_t)cLogin->GetStatus());
         }
-        
+
         if(updateFlags & (uint8_t)CharacterLoginStateFlag_t::CHARLOGIN_ZONE)
         {
             relay.WriteS32Little(cLogin->GetZoneID() ? (int32_t)cLogin->GetZoneID() : -1);
         }
-        
+
         if(updateFlags & (uint8_t)CharacterLoginStateFlag_t::CHARLOGIN_CHANNEL)
         {
             relay.WriteS8(cLogin->GetChannelID() ? cLogin->GetChannelID() : -1);

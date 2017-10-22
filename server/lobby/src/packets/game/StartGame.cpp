@@ -70,6 +70,14 @@ bool Parsers::StartGame::Parse(libcomp::ManagerPacket *pPacketManager,
 
     auto server = std::dynamic_pointer_cast<LobbyServer>(pPacketManager->GetServer());
     auto world = server->GetWorldByID((uint8_t)worldID);
+
+    if(!world)
+    {
+        LOG_ERROR(libcomp::String("User '%1' tried to loging to world %2 but "
+            "that world is not active.\n").Arg(username).Arg(worldID));
+
+        return false;
+    }
     auto accountManager = server->GetAccountManager();
 
     int8_t loginWorldID;
@@ -77,6 +85,7 @@ bool Parsers::StartGame::Parse(libcomp::ManagerPacket *pPacketManager,
     {
         LOG_ERROR(libcomp::String("User '%1' attempted to start a game but is not"
             " currently logged into the lobby.\n").Arg(username));
+
         return false;
     }
 

@@ -250,6 +250,7 @@ DH* TcpServer::LoadDiffieHellman(const String& prime)
     if(DH_KEY_HEX_SIZE == prime.Length())
     {
         pDiffieHellman = DH_new();
+        pDiffieHellman->priv_key = nullptr;
 
         if(nullptr != pDiffieHellman)
         {
@@ -258,10 +259,23 @@ DH* TcpServer::LoadDiffieHellman(const String& prime)
                 nullptr == pDiffieHellman->p || nullptr == pDiffieHellman->g ||
                 DH_SHARED_DATA_SIZE != DH_size(pDiffieHellman))
             {
+                LOG_DEBUG(libcomp::String("prime=%1\n").Arg(prime));
+                LOG_DEBUG(libcomp::String("DH_SHARED_DATA_SIZE=%1/%2\n").Arg(
+                    DH_SHARED_DATA_SIZE).Arg(DH_size(pDiffieHellman)));
+
                 DH_free(pDiffieHellman);
                 pDiffieHellman = nullptr;
             }
         }
+        else
+        {
+            LOG_ERROR("Failed to alloc diffie hellman\n");
+        }
+    }
+    else
+    {
+        LOG_ERROR(libcomp::String("DH_KEY_HEX_SIZE=%1/%2").Arg(
+            DH_KEY_HEX_SIZE).Arg(prime.Length()));
     }
 
     return pDiffieHellman;

@@ -141,8 +141,8 @@ ELSEIF(GIT_DEPENDENCIES)
     )
 ELSE()
     SET(OPENSSL_URL
-        URL https://github.com/comphack/openssl/archive/comp_hack-20170520.zip
-        URL_HASH SHA1=604d510caef8fb1abe762e11507a003800b0d83f
+        URL https://github.com/comphack/openssl/archive/comp_hack-20171022.zip
+        URL_HASH SHA1=dc7e9144926c3da7fdd0c9da89c69e998c60d0eb
     )
 ENDIF()
 

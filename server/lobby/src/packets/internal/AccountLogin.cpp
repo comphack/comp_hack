@@ -56,7 +56,7 @@ void UpdateAccountLogin(std::shared_ptr<LobbyServer> server,
     auto channelID = cLogin->GetChannelID();
     if(0 > worldID || 0 > channelID)
     {
-        LOG_ERROR("Invalid channel or world ID received for AccountLogin.\n");
+        LOG_ERROR(libcomp::String("Invalid channel (%1) or world (%2) ID received for AccountLogin.\n").Arg(channelID).Arg(worldID));
         return;
     }
 

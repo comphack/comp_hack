@@ -125,6 +125,9 @@ int TcpServer::Start()
 
 void TcpServer::RemoveConnection(std::shared_ptr<TcpConnection>& connection)
 {
+    // Lock the muxtex.
+    std::lock_guard<std::mutex> lock(mConnectionsLock);
+
     auto iter = std::find(mConnections.begin(), mConnections.end(), connection);
     if(iter != mConnections.end())
     {
@@ -179,7 +182,12 @@ void TcpServer::AcceptHandler(asio::error_code errorCode,
                 return;
             }
 
-            mConnections.push_back(connection);
+            {
+                // Lock the muxtex.
+                std::lock_guard<std::mutex> lock(mConnectionsLock);
+
+                mConnections.push_back(connection);
+            }
 
             // This is actually using a different socket because the
             // CreateConnection() call will use std::move on the socket which

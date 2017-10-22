@@ -37,6 +37,7 @@
 
 // Standard C++ Includes
 #include <memory>
+#include <mutex>
 #include <thread>
 
 // OpenSSL Includes
@@ -170,6 +171,9 @@ protected:
      */
     void AcceptHandler(asio::error_code errorCode,
         asio::ip::tcp::socket& socket);
+
+    /// Lock for the connection list.
+    std::mutex mConnectionsLock;
 
     /// List of connections managed by this server.
     std::list<std::shared_ptr<TcpConnection>> mConnections;

@@ -61,6 +61,9 @@ TcpConnection::TcpConnection(asio::ip::tcp::socket& socket,
 
 TcpConnection::~TcpConnection()
 {
+    LOG_DEBUG(libcomp::String(String("Deleting connection '%1'\n").Arg(
+        GetName())));
+
     if(nullptr != mDiffieHellman)
     {
         DH_free(mDiffieHellman);
@@ -95,6 +98,9 @@ bool TcpConnection::Close()
 {
     if(mStatus != STATUS_NOT_CONNECTED)
     {
+        LOG_DEBUG(libcomp::String(String("Closing connection '%1'\n").Arg(
+            GetName())));
+
         mStatus = STATUS_NOT_CONNECTED;
         mSocket.close();
         return true;
@@ -418,8 +424,8 @@ void TcpConnection::SocketError(const String& errorMessage)
 {
     if(!errorMessage.IsEmpty())
     {
-        LOG_ERROR(String("Socket error for client from %1:  %2\n").Arg(
-            GetRemoteAddress()).Arg(errorMessage));
+        LOG_ERROR(String("Socket error for client '%1' from %2:  %3\n").Arg(
+            GetName()).Arg(GetRemoteAddress()).Arg(errorMessage));
     }
 
     Close();
@@ -431,6 +437,8 @@ void TcpConnection::ConnectionFailed()
 
 void TcpConnection::ConnectionSuccess()
 {
+    LOG_DEBUG(libcomp::String(String("Connection '%1' is now connected "
+        "to remote\n").Arg(GetName())));
 }
 
 void TcpConnection::PacketSent(ReadOnlyPacket& packet)
@@ -585,4 +593,14 @@ std::list<ReadOnlyPacket> TcpConnection::GetCombinedPackets()
     }
 
     return packets;
+}
+
+String TcpConnection::GetName() const
+{
+    return mName;
+}
+
+void TcpConnection::SetName(const String& name)
+{
+    mName = name;
 }

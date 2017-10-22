@@ -256,8 +256,13 @@ std::shared_ptr<ManagerConnection> LobbyServer::GetManagerConnection() const
 std::shared_ptr<libcomp::TcpConnection> LobbyServer::CreateConnection(
     asio::ip::tcp::socket& socket)
 {
+    static int connectionID = 0;
+
     auto connection = std::make_shared<LobbyClientConnection>(
         socket, CopyDiffieHellman(GetDiffieHellman()));
+
+    // Set a unique connection ID for the name of the connection.
+    connection->SetName(libcomp::String("client:%1").Arg(connectionID++));
 
     if(AssignMessageQueue(connection))
     {

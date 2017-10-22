@@ -136,6 +136,9 @@ bool LobbyConnection::ParseExtensionConnection(libcomp::Packet& packet)
             // This is a ping, issue a pong.
             LOG_DEBUG("Got a PING from the client.\n");
 
+            // Set the name of the connection.
+            SetName("ping");
+
             libcomp::Packet reply;
 
             reply.WriteU32Big(2);
@@ -170,6 +173,9 @@ bool LobbyConnection::ParseExtensionConnection(libcomp::Packet& packet)
 
             uint16_t worldServerPort = static_cast<uint16_t>(
                 (first >> 16) & 0xFFFF);
+
+            // Set the name of the connection to the world's port.
+            SetName(String("world_port:%1").Arg(worldServerPort));
 
             SendMessage([&](const std::shared_ptr<libcomp::TcpConnection>&){
                 return new libcomp::Message::WorldNotification(

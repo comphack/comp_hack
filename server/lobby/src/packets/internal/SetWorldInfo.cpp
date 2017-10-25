@@ -84,7 +84,7 @@ bool SetWorldInfoFromPacket(libcomp::ManagerPacket *pPacketManager,
             " that matches the configured type.\n");
         return false;
     }
-    
+
     libcomp::EnumMap<objects::ServerConfig::DatabaseType_t,
         std::shared_ptr<objects::DatabaseConfig>> configMap;
     configMap[databaseType] = dbConfig;
@@ -102,6 +102,9 @@ bool SetWorldInfoFromPacket(libcomp::ManagerPacket *pPacketManager,
     {
         return false;
     }
+
+    connection->SetName(libcomp::String("world:%1:%2").Arg(svr->GetID()).Arg(
+        svr->GetName()));
 
     LOG_DEBUG(libcomp::String("Updating World Server: (%1) %2\n")
         .Arg(svr->GetID()).Arg(svr->GetName()));

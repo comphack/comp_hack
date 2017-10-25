@@ -73,6 +73,9 @@ bool Parsers::SetChannelInfo::Parse(libcomp::ManagerPacket *pPacketManager,
 
     auto svr = objects::RegisteredChannel::LoadRegisteredChannelByID(worldDB, channelID);
 
+    connection->SetName(libcomp::String("%1:%2:%3").Arg(
+        connection->GetName()).Arg(svr->GetID()).Arg(svr->GetName()));
+
     LOG_DEBUG(libcomp::String("Updating Channel Server: (%1) %2\n")
         .Arg(svr->GetID())
         .Arg(svr->GetName()));
@@ -94,7 +97,7 @@ bool Parsers::SetChannelInfo::Parse(libcomp::ManagerPacket *pPacketManager,
     //Forward the information to the lobby and other channels
     std::list<std::shared_ptr<libcomp::TcpConnection>> connections;
     connections.push_back(server->GetLobbyConnection());
-    
+
     for(auto kv : server->GetChannels())
     {
         if(kv.first != connection)

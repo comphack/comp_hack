@@ -125,6 +125,9 @@ int TcpServer::Start()
 
 void TcpServer::RemoveConnection(std::shared_ptr<TcpConnection>& connection)
 {
+    // Lock the muxtex.
+    std::lock_guard<std::mutex> lock(mConnectionsLock);
+
     auto iter = std::find(mConnections.begin(), mConnections.end(), connection);
     if(iter != mConnections.end())
     {
@@ -179,7 +182,12 @@ void TcpServer::AcceptHandler(asio::error_code errorCode,
                 return;
             }
 
-            mConnections.push_back(connection);
+            {
+                // Lock the muxtex.
+                std::lock_guard<std::mutex> lock(mConnectionsLock);
+
+                mConnections.push_back(connection);
+            }
 
             // This is actually using a different socket because the
             // CreateConnection() call will use std::move on the socket which
@@ -242,6 +250,7 @@ DH* TcpServer::LoadDiffieHellman(const String& prime)
     if(DH_KEY_HEX_SIZE == prime.Length())
     {
         pDiffieHellman = DH_new();
+        pDiffieHellman->priv_key = nullptr;
 
         if(nullptr != pDiffieHellman)
         {
@@ -250,10 +259,23 @@ DH* TcpServer::LoadDiffieHellman(const String& prime)
                 nullptr == pDiffieHellman->p || nullptr == pDiffieHellman->g ||
                 DH_SHARED_DATA_SIZE != DH_size(pDiffieHellman))
             {
+                LOG_DEBUG(libcomp::String("prime=%1\n").Arg(prime));
+                LOG_DEBUG(libcomp::String("DH_SHARED_DATA_SIZE=%1/%2\n").Arg(
+                    DH_SHARED_DATA_SIZE).Arg(DH_size(pDiffieHellman)));
+
                 DH_free(pDiffieHellman);
                 pDiffieHellman = nullptr;
             }
         }
+        else
+        {
+            LOG_ERROR("Failed to alloc diffie hellman\n");
+        }
+    }
+    else
+    {
+        LOG_ERROR(libcomp::String("DH_KEY_HEX_SIZE=%1/%2").Arg(
+            DH_KEY_HEX_SIZE).Arg(prime.Length()));
     }
 
     return pDiffieHellman;

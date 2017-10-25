@@ -61,6 +61,9 @@ TcpConnection::TcpConnection(asio::ip::tcp::socket& socket,
 
 TcpConnection::~TcpConnection()
 {
+    LOG_DEBUG(libcomp::String(String("Deleting connection '%1'\n").Arg(
+        GetName())));
+
     if(nullptr != mDiffieHellman)
     {
         DH_free(mDiffieHellman);
@@ -95,6 +98,9 @@ bool TcpConnection::Close()
 {
     if(mStatus != STATUS_NOT_CONNECTED)
     {
+        LOG_DEBUG(libcomp::String(String("Closing connection '%1'\n").Arg(
+            GetName())));
+
         mStatus = STATUS_NOT_CONNECTED;
         mSocket.close();
         return true;
@@ -323,9 +329,18 @@ void TcpConnection::FlushOutgoing(bool closeConnection)
 
 void TcpConnection::FlushOutgoingInside(bool closeConnection)
 {
+    // Don't send anything if we are not connected.
+    if(STATUS_NOT_CONNECTED == mStatus)
+    {
+        return;
+    }
+
+    // Get a shared pointer to the connection so it outlives the callback.
+    auto self = shared_from_this();
+
     mSocket.async_send(asio::buffer(mOutgoing.ConstData() +
         mOutgoing.Tell(), mOutgoing.Left()), 0, [closeConnection,
-        this](asio::error_code errorCode, std::size_t length)
+        self](asio::error_code errorCode, std::size_t length)
     {
         bool sendSame = false;
         bool sendAnother = false;
@@ -334,72 +349,72 @@ void TcpConnection::FlushOutgoingInside(bool closeConnection)
         ReadOnlyPacket readOnlyPacket;
 
         // Ignore errors and everything else, just close the connection.
-        if(closeConnection && mOutgoing.Left() == length)
+        if(closeConnection && self->mOutgoing.Left() == length)
         {
 #ifdef COMP_HACK_DEBUG
             LOG_DEBUG("Closing connection after sending packet.\n");
 #endif // COMP_HACK_DEBUG
 
             std::lock_guard<std::mutex> outgoingGuard(
-                mOutgoingMutex);
+                self->mOutgoingMutex);
 
-            mSendingPacket = false;
+            self->mSendingPacket = false;
 
-            SocketError();
+            self->SocketError();
             return;
         }
 
         if(errorCode)
         {
             std::lock_guard<std::mutex> outgoingGuard(
-                mOutgoingMutex);
+                self->mOutgoingMutex);
 
-            mSendingPacket = false;
+            self->mSendingPacket = false;
 
-            SocketError();
+            self->SocketError();
         }
         else
         {
-            std::lock_guard<std::mutex> outgoingGuard(mOutgoingMutex);
+            std::lock_guard<std::mutex> outgoingGuard(self->mOutgoingMutex);
 
-            uint32_t outgoingSize = mOutgoing.Size();
+            uint32_t outgoingSize = self->mOutgoing.Size();
 
-            if(0 == outgoingSize || length > mOutgoing.Left())
+            if(0 == outgoingSize || length > self->mOutgoing.Left())
             {
-                SocketError();
+                self->SocketError();
             }
             else
             {
-                mOutgoing.Skip((uint32_t)length);
+                self->mOutgoing.Skip((uint32_t)length);
 
-                if(0 != mOutgoing.Left())
+                if(0 != self->mOutgoing.Left())
                 {
                     sendSame = true;
                 }
                 else
                 {
-                    mOutgoing.Rewind();
+                    self->mOutgoing.Rewind();
 
-                    readOnlyPacket = mOutgoing;
-                    sendAnother = !mOutgoingPackets.empty();
+                    readOnlyPacket = self->mOutgoing;
+                    sendAnother = !self->mOutgoingPackets.empty();
                     packetOk = true;
                 }
             }
 
-            mSendingPacket = sendSame;
+            self->mSendingPacket = sendSame;
         }
 
         if(sendSame)
         {
-            FlushOutgoingInside(closeConnection);
+            self->FlushOutgoingInside(closeConnection);
         }
         else if(packetOk)
         {
-            PacketSent(readOnlyPacket);
+            self->PacketSent(readOnlyPacket);
 
             if(sendAnother)
             {
-                FlushOutgoing();
+                self->FlushOutgoing();
             }
         }
     });
@@ -409,8 +424,8 @@ void TcpConnection::SocketError(const String& errorMessage)
 {
     if(!errorMessage.IsEmpty())
     {
-        LOG_ERROR(String("Socket error for client from %1:  %2\n").Arg(
-            GetRemoteAddress()).Arg(errorMessage));
+        LOG_ERROR(String("Socket error for client '%1' from %2:  %3\n").Arg(
+            GetName()).Arg(GetRemoteAddress()).Arg(errorMessage));
     }
 
     Close();
@@ -422,6 +437,8 @@ void TcpConnection::ConnectionFailed()
 
 void TcpConnection::ConnectionSuccess()
 {
+    LOG_DEBUG(libcomp::String(String("Connection '%1' is now connected "
+        "to remote\n").Arg(GetName())));
 }
 
 void TcpConnection::PacketSent(ReadOnlyPacket& packet)
@@ -576,4 +593,14 @@ std::list<ReadOnlyPacket> TcpConnection::GetCombinedPackets()
     }
 
     return packets;
+}
+
+String TcpConnection::GetName() const
+{
+    return mName;
+}
+
+void TcpConnection::SetName(const String& name)
+{
+    mName = name;
 }

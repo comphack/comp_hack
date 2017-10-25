@@ -238,6 +238,17 @@ public:
     String GetRemoteAddress() const;
 
     /**
+     * Get the debug name for the connection.
+     */
+    String GetName() const;
+
+    /**
+     * Set the debug name for the connection.
+     * @param name Debug name to set.
+     */
+    void SetName(const String& name);
+
+    /**
      * Called when a connection has been established.
      */
     virtual void ConnectionSuccess();
@@ -356,6 +367,9 @@ private:
 
     /// Cached address of the remote host.
     String mRemoteAddress;
+
+    /// Debug name for the connection.
+    String mName;
 
 protected:
     /// Mutex to ensure the outgoing packet code is executed from one thread.

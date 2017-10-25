@@ -72,6 +72,10 @@ bool Parsers::Login::Parse(libcomp::ManagerPacket *pPacketManager,
         return false;
     }
 
+    // Update the connection name with the username of the account.
+    connection->SetName(libcomp::String("%1:%2").Arg(
+        connection->GetName()).Arg(obj.GetUsername()));
+
     objects::PacketLoginReply reply;
     reply.SetCommandCode(to_underlying(
         LobbyToClientPacketCode_t::PACKET_LOGIN));

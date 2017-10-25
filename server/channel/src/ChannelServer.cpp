@@ -376,6 +376,7 @@ bool ChannelServer::Initialize()
     // Now connect to the world server.
     auto worldConnection = std::make_shared<
         libcomp::InternalConnection>(mService);
+    worldConnection->SetName("world");
     worldConnection->SetMessageQueue(mMainWorker.GetMessageQueue());
 
     mManagerConnection->SetWorldConnection(worldConnection);
@@ -715,9 +716,12 @@ void ChannelServer::Tick()
 std::shared_ptr<libcomp::TcpConnection> ChannelServer::CreateConnection(
     asio::ip::tcp::socket& socket)
 {
+    static int connectionID = 0;
+
     auto connection = std::make_shared<channel::ChannelClientConnection>(
         socket, CopyDiffieHellman(GetDiffieHellman()));
     connection->SetServerConfig(mConfig);
+    connection->SetName(libcomp::String("client:%1").Arg(connectionID++));
 
     if(AssignMessageQueue(connection))
     {

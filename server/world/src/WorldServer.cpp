@@ -145,6 +145,7 @@ void WorldServer::FinishInitialize()
         libcomp::Message::Message*>>();
 
     lobbyConnection->SetMessageQueue(messageQueue);
+    lobbyConnection->SetName("lobby_notify");
 
     lobbyConnection->Connect(conf->GetLobbyIP(), conf->GetLobbyPort(), false);
 
@@ -393,6 +394,8 @@ void WorldServer::GetRelayPacket(libcomp::Packet& p, int32_t targetCID,
 std::shared_ptr<libcomp::TcpConnection> WorldServer::CreateConnection(
     asio::ip::tcp::socket& socket)
 {
+    static int connectionID = 0;
+
     auto connection = std::make_shared<libcomp::InternalConnection>(
         socket, CopyDiffieHellman(GetDiffieHellman()));
 
@@ -401,9 +404,13 @@ std::shared_ptr<libcomp::TcpConnection> WorldServer::CreateConnection(
         // Assign this to the main worker.
         connection->SetMessageQueue(mMainWorker.GetMessageQueue());
         connection->ConnectionSuccess();
+        connection->SetName(libcomp::String("%1:lobby").Arg(connectionID++));
     }
     else if(true)  /// @todo: ensure that channels can start connecting
     {
+        connection->SetName(libcomp::String("%1:channel").Arg(
+            connectionID++));
+
         if(AssignMessageQueue(connection))
         {
             connection->ConnectionSuccess();

@@ -88,6 +88,8 @@ bool ManagerConnection::ProcessMessage(const libcomp::Message::Message *pMessage
                 auto worldConnection = std::make_shared<
                     libcomp::InternalConnection>(*mService);
 
+                worldConnection->SetName(libcomp::String("world:%1:%2").Arg(
+                    address).Arg(port));
                 worldConnection->SetMessageQueue(mMessageQueue);
 
                 // Connect and stay connected until either of us shutdown
@@ -103,7 +105,7 @@ bool ManagerConnection::ProcessMessage(const libcomp::Message::Message *pMessage
                     mUnregisteredWorlds.push_back(world);
                     return true;
                 }
-        
+
                 LOG_ERROR(libcomp::String("World connection failed: %1:%2\n").Arg(address).Arg(port));
             }
             break;
@@ -145,7 +147,7 @@ bool ManagerConnection::ProcessMessage(const libcomp::Message::Message *pMessage
             }
             break;
     }
-    
+
     return false;
 }
 
@@ -313,7 +315,7 @@ void ManagerConnection::RemoveWorld(std::shared_ptr<lobby::World>& world)
             svr->SetStatus(objects::RegisteredWorld::Status_t::INACTIVE);
             svr->Update(db);
         }
-        
+
         iter = std::find(mUnregisteredWorlds.begin(), mUnregisteredWorlds.end(), world);
         if(iter != mUnregisteredWorlds.end())
         {

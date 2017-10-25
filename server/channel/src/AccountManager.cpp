@@ -98,6 +98,11 @@ void AccountManager::HandleLoginRequest(const std::shared_ptr<
 
         worldConnection->SendPacket(request);
     }
+    else
+    {
+        LOG_ERROR(libcomp::String("Account '%1' not found. "
+            "Can't log them in.\n").Arg(username));
+    }
 }
 
 void AccountManager::HandleLoginResponse(const std::shared_ptr<
@@ -300,7 +305,7 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
             objects::CharacterProgress>(true);
         progress->SetCharacter(character);
         progress->SetMaps(0, 0x7E);
-        
+
         // Max COMP slots if the account is a GM
         if(isGM)
         {
@@ -320,6 +325,8 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
         if(!fSettings->Insert(db) ||
             !character->SetFriendSettings(fSettings))
         {
+            LOG_ERROR("Failed to create friend settings.\n");
+
             return false;
         }
 
@@ -360,7 +367,7 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
             return false;
         }
     }
-    
+
     // Load or create the account world data
     auto worldData = objects::AccountWorldData
         ::LoadAccountWorldDataByAccount(db, account);
@@ -412,7 +419,7 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
     {
         allBoxes.push_back(itemBox);
     }
-    
+
     for(auto itemBox : worldData->GetItemBoxes())
     {
         allBoxes.push_back(itemBox);
@@ -506,7 +513,7 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
     std::list<std::list<
         libcomp::ObjectReference<objects::StatusEffect>>> statusEffectSets;
     statusEffectSets.push_back(character->GetStatusEffects());
-    
+
     // Demon boxes, demons and stats
     std::list<libcomp::ObjectReference<objects::DemonBox>> demonBoxes;
     demonBoxes.push_back(character->GetCOMP());
@@ -523,7 +530,7 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
         {
             return false;
         }
-            
+
         for(auto demon : box->GetDemons())
         {
             if(demon.IsNull()) continue;
@@ -547,7 +554,7 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
             statusEffectSets.push_back(demon->GetStatusEffects());
         }
     }
-    
+
     // Status effects
     for(auto seSet : statusEffectSets)
     {
@@ -667,7 +674,7 @@ bool AccountManager::LogoutCharacter(channel::ClientState* state,
             demonBoxes.push_back(box.Get());
         }
     }
-    
+
     for(auto box : demonBoxes)
     {
         if(!box) continue;
@@ -694,7 +701,7 @@ bool AccountManager::LogoutCharacter(channel::ClientState* state,
         ok &= Cleanup<objects::DemonBox>(box, worldDB, doSave,
             !delay);
     }
-    
+
     // Status effects
     for(auto seSet : statusEffectSets)
     {

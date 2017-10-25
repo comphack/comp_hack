@@ -201,10 +201,16 @@ void ChannelLogin(std::shared_ptr<WorldServer> server,
         LOG_ERROR("No username passed to AccountLogin from the channel.\n");
         return;
     }
-    else if(nullptr == login || nullptr == cLogin)
+    else if(nullptr == login)
     {
         LOG_ERROR(libcomp::String("Account with username '%1'"
-            " is not logged in to this world.\n").Arg(username));
+            " is not logged in to this world (bad login).\n").Arg(username));
+        ok = false;
+    }
+    else if(nullptr == cLogin)
+    {
+        LOG_ERROR(libcomp::String("Account with username '%1'"
+            " is not logged in to this world (bad cLogin).\n").Arg(username));
         ok = false;
     }
     else if(channel->GetID() != (uint8_t)cLogin->GetChannelID())
@@ -292,13 +298,13 @@ void ChannelLogin(std::shared_ptr<WorldServer> server,
         {
             reply.WriteS8(0); // Failure
         }
+
+        login->SavePacket(reply, false);
     }
     else
     {
         reply.WriteS8(0); // Failure
     }
-
-    login->SavePacket(reply, false);
 
     connection->SendPacket(reply);
 }

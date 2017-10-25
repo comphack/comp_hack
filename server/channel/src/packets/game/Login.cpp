@@ -54,6 +54,9 @@ bool Parsers::Login::Parse(libcomp::ManagerPacket *pPacketManager,
     libcomp::String username = p.ReadString16(libcomp::Convert::ENCODING_UTF8, true);
     uint32_t sessionKey = p.ReadU32Little();
 
+    connection->SetName(libcomp::String("%1:%2").Arg(
+        connection->GetName()).Arg(username));
+
     auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
     auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
 

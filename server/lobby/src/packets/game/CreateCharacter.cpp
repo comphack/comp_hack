@@ -77,6 +77,15 @@ bool Parsers::CreateCharacter::Parse(libcomp::ManagerPacket *pPacketManager,
     auto lobbyConnection = std::dynamic_pointer_cast<LobbyClientConnection>(connection);
     auto lobbyDB = server->GetMainDatabase();
     auto world = server->GetWorldByID(worldID);
+
+    if(!world)
+    {
+        LOG_ERROR(libcomp::String("Tried to create character on world with "
+            "ID %1 but that world was not found.\n").Arg(worldID));
+
+        return false;
+    }
+
     auto worldDB = world->GetWorldDatabase();
     auto account = lobbyConnection->GetClientState()->GetAccount().Get();
     auto characters = account->GetCharacters();

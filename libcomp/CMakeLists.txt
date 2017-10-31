@@ -337,6 +337,10 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     ActionUpdateZoneFlags.cpp
     ActionZoneChange.h
     ActionZoneChange.cpp
+    BazaarData.h
+    BazaarData.cpp
+    BazaarItem.h
+    BazaarItem.cpp
     Clan.h
     Clan.cpp
     ClanInfo.h

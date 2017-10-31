@@ -26,6 +26,7 @@
         <member type="EventSequence*" name="State"/>
         <member type="s32" name="SourceEntityID"/>
         <member type="u8" name="Index"/>
+        <member type="u32" name="ShopID"/>
         <member type="set" name="DisabledChoices">
             <element type="u8"/>
         </member>

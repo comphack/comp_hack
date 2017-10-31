@@ -44,6 +44,8 @@ class Packet;
 namespace channel
 {
 
+class BazaarState;
+
 typedef float ClientTime;
 typedef uint64_t ServerTime;
 typedef ActiveEntityStateImp<objects::Character> CharacterState;
@@ -97,6 +99,14 @@ public:
      */
     std::shared_ptr<ActiveEntityState> GetEntityState(int32_t entityID,
         bool readyOnly = true);
+
+    /**
+     * Get the bazaar associated to the client account's open market if
+     * one exists and the client is currently in the same zone as the bazaar.
+     * @return Pointer to the matching bazaar state, null if no match
+     *  exists
+     */
+    std::shared_ptr<BazaarState> GetBazaarState();
 
     /**
      * Registers the client state with the static entity map for access by

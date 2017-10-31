@@ -193,6 +193,12 @@ void Zone::RemoveEntity(int32_t entityID, bool updateSpawns)
     UnregisterEntityState(entityID);
 }
 
+void Zone::AddBazaar(const std::shared_ptr<BazaarState>& bazaar)
+{
+    mBazaars.push_back(bazaar);
+    RegisterEntityState(bazaar);
+}
+
 void Zone::AddEnemy(const std::shared_ptr<EnemyState>& enemy)
 {
     {
@@ -311,6 +317,16 @@ const std::list<std::shared_ptr<ActiveEntityState>>
     }
 
     return results;
+}
+
+std::shared_ptr<BazaarState> Zone::GetBazaar(int32_t id)
+{
+    return std::dynamic_pointer_cast<BazaarState>(GetEntity(id));
+}
+
+const std::list<std::shared_ptr<BazaarState>> Zone::GetBazaars() const
+{
+    return mBazaars;
 }
 
 std::shared_ptr<EnemyState> Zone::GetEnemy(int32_t id)

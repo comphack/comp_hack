@@ -88,6 +88,19 @@ bool EventManager::HandleEvent(
     const std::shared_ptr<ChannelClientConnection>& client,
     const libcomp::String& eventID, int32_t sourceEntityID)
 {
+    auto instance = PrepareEvent(client, eventID, sourceEntityID);
+    if(instance)
+    {
+        return HandleEvent(client, instance);
+    }
+
+    return false;
+}
+
+std::shared_ptr<objects::EventInstance> EventManager::PrepareEvent(
+    const std::shared_ptr<ChannelClientConnection>& client,
+    const libcomp::String& eventID, int32_t sourceEntityID)
+{
     auto server = mServer.lock();
     auto serverDataManager = server->GetServerDataManager();
 
@@ -96,7 +109,7 @@ bool EventManager::HandleEvent(
     {
         LOG_ERROR(libcomp::String("Invalid event ID encountered %1\n"
             ).Arg(eventID));
-        return false;
+        return nullptr;
     }
     else
     {
@@ -114,7 +127,7 @@ bool EventManager::HandleEvent(
 
         eState->SetCurrent(instance);
 
-        return HandleEvent(client, instance);
+        return instance;
     }
 }
 
@@ -1175,6 +1188,12 @@ void EventManager::SendCompletedQuestList(
 bool EventManager::HandleEvent(const std::shared_ptr<ChannelClientConnection>& client,
     const std::shared_ptr<objects::EventInstance>& instance)
 {
+    if(instance == nullptr)
+    {
+        // End the event sequence
+        return EndEvent(client);
+    }
+
     instance->SetState(instance->GetEvent());
 
     bool handled = false;
@@ -1452,12 +1471,15 @@ bool EventManager::OpenMenu(const std::shared_ptr<ChannelClientConnection>& clie
 {
     auto e = std::dynamic_pointer_cast<objects::EventOpenMenu>(instance->GetEvent());
     auto state = client->GetClientState();
+    auto eState = state->GetEventState();
+
+    int32_t overrideShopID = (int32_t)eState->GetCurrent()->GetShopID();
 
     libcomp::Packet p;
     p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_EVENT_OPEN_MENU);
     p.WriteS32Little(instance->GetSourceEntityID());
     p.WriteS32Little(e->GetMenuType());
-    p.WriteS32Little(e->GetShopID());
+    p.WriteS32Little(overrideShopID != 0 ? overrideShopID : e->GetShopID());
     p.WriteString16Little(state->GetClientStringEncoding(),
         libcomp::String(), true);
 

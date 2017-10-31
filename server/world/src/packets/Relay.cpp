@@ -36,6 +36,7 @@
 #include <PacketCodes.h>
 
 // object Includes
+#include <Account.h>
 #include <Character.h>
 #include <CharacterLogin.h>
 
@@ -103,6 +104,31 @@ bool Parsers::Relay::Parse(libcomp::ManagerPacket *pPacketManager,
                 {
                     // CID isn't valid, ignore
                 }
+            }
+        }
+        break;
+    case PacketRelayMode_t::RELAY_ACCOUNT:
+        {
+            reportOffline = true;
+
+            auto accountUIDStr = p.ReadString16Little(
+                libcomp::Convert::Encoding_t::ENCODING_UTF8, true);
+
+            libobjgen::UUID accountUID(accountUIDStr.C());
+            auto account = std::dynamic_pointer_cast<objects::Account>(
+                libcomp::PersistentObject::GetObjectByUUID(accountUID));
+
+            auto login = account ? server->GetAccountManager()->GetUserLogin(
+                account->GetUsername()) : nullptr;
+            auto targetLogin = login ? login->GetCharacterLogin() : nullptr;
+            if(targetLogin)
+            {
+                targetLogins.push_back(targetLogin);
+            }
+            else
+            {
+                // Account either doesn't exist or hasn't logged in, report failure
+                reportFailed.push_back(accountUIDStr);
             }
         }
         break;

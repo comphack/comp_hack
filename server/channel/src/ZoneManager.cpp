@@ -36,10 +36,12 @@
 // objects Include
 #include <Account.h>
 #include <AccountLogin.h>
+#include <AccountWorldData.h>
 #include <ActionSpawn.h>
 #include <CharacterLogin.h>
 #include <Enemy.h>
 #include <EntityStats.h>
+#include <Item.h>
 #include <ItemDrop.h>
 #include <MiDevilData.h>
 #include <MiDynamicMapData.h>
@@ -410,6 +412,7 @@ bool ZoneManager::EnterZone(const std::shared_ptr<ChannelClientConnection>& clie
 
     auto server = mServer.lock();
     auto ticks = server->GetServerTime();
+    auto zoneDef = instance->GetDefinition();
 
     // Move the entity to the new location.
     cState->SetOriginX(xCoord);
@@ -435,8 +438,6 @@ bool ZoneManager::EnterZone(const std::shared_ptr<ChannelClientConnection>& clie
     dState->SetCurrentX(xCoord);
     dState->SetCurrentY(yCoord);
     dState->SetCurrentRotation(rotation);
-
-    auto zoneDef = instance->GetDefinition();
 
     libcomp::Packet reply;
     reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_ZONE_CHANGE);
@@ -464,7 +465,7 @@ bool ZoneManager::EnterZone(const std::shared_ptr<ChannelClientConnection>& clie
     }
     else
     {
-        // Send normal zone chang info
+        // Send normal zone change info
         request.WriteU8((uint8_t)CharacterLoginStateFlag_t::CHARLOGIN_ZONE);
     }
     request.WriteU32Little(zoneID);
@@ -721,6 +722,40 @@ void ZoneManager::SendPopulateZoneData(const std::shared_ptr<ChannelClientConnec
 
         client->QueuePacket(reply);
         ShowEntity(client, objState->GetEntityID(), true);
+    }
+
+    for(auto bState : zone->GetBazaars())
+    {
+        auto bazaar = bState->GetEntity();
+
+        libcomp::Packet reply;
+        reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_BAZAAR_DATA);
+        reply.WriteS32Little(bState->GetEntityID());
+        reply.WriteS32Little((int32_t)zone->GetID());
+        reply.WriteS32Little((int32_t)zoneData->GetID());
+        reply.WriteFloat(bState->GetCurrentX());
+        reply.WriteFloat(bState->GetCurrentY());
+        reply.WriteFloat(bState->GetCurrentRotation());
+        reply.WriteS32Little((int32_t)bazaar->MarketIDsCount());
+
+        for(uint32_t marketID : bazaar->GetMarketIDs())
+        {
+            auto market = bState->GetCurrentMarket(marketID);
+            if(market && market->GetState() ==
+                objects::BazaarData::State_t::BAZAAR_INACTIVE)
+            {
+                market = nullptr;
+            }
+
+            reply.WriteU32Little(marketID);
+            reply.WriteS32Little(market ? (int32_t)market->GetState() : 0);
+            reply.WriteS32Little(market ? market->GetNPCType() : -1);
+            reply.WriteString16Little(state->GetClientStringEncoding(),
+                market ? market->GetComment() : "", true);
+        }
+
+        client->QueuePacket(reply);
+        ShowEntity(client, bState->GetEntityID(), true);
     }
 
     for(auto lState : zone->GetLootBoxes())
@@ -996,6 +1031,104 @@ void ZoneManager::SendLootBoxData(const std::shared_ptr<ChannelClientConnection>
     if(!queue)
     {
         ChannelClientConnection::FlushAllOutgoing(clients);
+    }
+}
+
+void ZoneManager::SendBazaarMarketData(const std::shared_ptr<Zone>& zone,
+    const std::shared_ptr<BazaarState>& bState, uint32_t marketID)
+{
+    auto market = bState->GetCurrentMarket(marketID);
+
+    libcomp::Packet p;
+    p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_BAZAAR_NPC_CHANGED);
+    p.WriteS32Little(bState->GetEntityID());
+    p.WriteS32Little((int32_t)marketID);
+    p.WriteS32Little(market ? (int32_t)market->GetNPCType() : -1);
+    p.WriteS32Little(market ? 1 : 0); // State: 0 = vacant, 1 = ready, 2 = pending?
+    p.WriteString16Little(libcomp::Convert::ENCODING_CP932,
+        market ? market->GetComment() : "", true);
+
+    BroadcastPacket(zone, p);
+}
+
+void ZoneManager::ExpireBazaarMarkets(const std::shared_ptr<Zone>& zone,
+    const std::shared_ptr<BazaarState>& bState)
+{
+    auto server = mServer.lock();
+
+    uint32_t now = (uint32_t)std::time(0);
+    uint32_t currentExpiration = bState->GetNextExpiration();
+
+    std::list<std::shared_ptr<objects::BazaarData>> expired;
+    for(uint32_t marketID : bState->GetEntity()->GetMarketIDs())
+    {
+        auto market = bState->GetCurrentMarket(marketID);
+        if(market && market->GetExpiration() <= now)
+        {
+            market->SetState(objects::BazaarData::State_t::BAZAAR_INACTIVE);
+            bState->SetCurrentMarket(marketID, nullptr);
+
+            // Send the close notification
+            auto sellerAccount = market->GetAccount().Get();
+            auto sellerClient = sellerAccount ? server->GetManagerConnection()
+                ->GetClientConnection(sellerAccount->GetUsername()) : nullptr;
+
+            libcomp::Packet p;
+            if(sellerClient == nullptr)
+            {
+                // Relay the packet through the world
+                p.WritePacketCode(InternalPacketCode_t::PACKET_RELAY);
+                p.WriteS32Little(0);
+                p.WriteU8((uint8_t)PacketRelayMode_t::RELAY_ACCOUNT);
+                p.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_UTF8,
+                    market->GetAccount().GetUUID().ToString(), true);
+            }
+
+            p.WritePacketCode(
+                ChannelToClientPacketCode_t::PACKET_BAZAAR_MARKET_CLOSE);
+            p.WriteS32Little(0);
+
+            if(sellerClient)
+            {
+                // Send directly
+                sellerClient->SendPacket(p);
+            }
+            else
+            {
+                // Relay
+                server->GetManagerConnection()->GetWorldConnection()->SendPacket(p);
+            }
+
+            SendBazaarMarketData(zone, bState, marketID);
+
+            expired.push_back(market);
+        }
+    }
+
+    if(expired.size() > 0)
+    {
+        auto dbChanges = libcomp::DatabaseChangeSet::Create();
+        for(auto market : expired)
+        {
+            dbChanges->Update(market);
+        }
+
+        server->GetWorldDatabase()->QueueChangeSet(dbChanges);
+    }
+
+    uint32_t nextExpiration = bState->SetNextExpiration();
+    if(nextExpiration != 0 && nextExpiration != currentExpiration)
+    {
+        // If the next run is sooner than what is scheduled, schedule again
+        ServerTime nextTime = ChannelServer::GetServerTime() +
+            ((uint64_t)(nextExpiration - now) * 1000000ULL);
+
+        server->ScheduleWork(nextTime, [](ZoneManager* zoneManager,
+            const std::shared_ptr<Zone> pZone,
+            const std::shared_ptr<BazaarState>& pState)
+            {
+                zoneManager->ExpireBazaarMarkets(pZone, pState);
+            }, this, zone, bState);
     }
 }
 
@@ -1954,6 +2087,40 @@ std::shared_ptr<Zone> ZoneManager::CreateZoneInstance(
         state->SetEntityID(server->GetNextEntityID());
         state->SetActions(obj->GetActions());
         zone->AddObject(state);
+    }
+
+    if(definition->BazaarsCount() > 0)
+    {
+        std::list<std::shared_ptr<objects::BazaarData>> activeMarkets;
+        for(auto m : objects::BazaarData::LoadBazaarDataListByZone(
+            server->GetWorldDatabase(), definition->GetID()))
+        {
+            if(m->GetState() == objects::BazaarData::State_t::BAZAAR_ACTIVE)
+            {
+                activeMarkets.push_back(m);
+            }
+        }
+
+        for(auto bazaar : definition->GetBazaars())
+        {
+            auto state = std::shared_ptr<BazaarState>(new BazaarState(bazaar));
+            state->SetCurrentX(bazaar->GetX());
+            state->SetCurrentY(bazaar->GetY());
+            state->SetCurrentRotation(bazaar->GetRotation());
+            state->SetEntityID(server->GetNextEntityID());
+
+            for(auto m : activeMarkets)
+            {
+                if(bazaar->MarketIDsContains(m->GetMarketID()))
+                {
+                    state->SetCurrentMarket(m->GetMarketID(), m);
+                }
+            }
+
+            zone->AddBazaar(state);
+
+            ExpireBazaarMarkets(zone, state);
+        }
     }
 
     {

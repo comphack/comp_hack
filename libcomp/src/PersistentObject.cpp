@@ -36,6 +36,8 @@
 // All libcomp PersistentObject Includes
 #include "Account.h"
 #include "AccountWorldData.h"
+#include "BazaarData.h"
+#include "BazaarItem.h"
 #include "Character.h"
 #include "CharacterProgress.h"
 #include "Clan.h"
@@ -323,6 +325,12 @@ bool PersistentObject::Initialize()
 
     RegisterType(typeid(objects::AccountWorldData), objects::AccountWorldData::GetMetadata(),
         []() {  return (PersistentObject*)new objects::AccountWorldData(); });
+
+    RegisterType(typeid(objects::BazaarData), objects::BazaarData::GetMetadata(),
+        []() {  return (PersistentObject*)new objects::BazaarData(); });
+
+    RegisterType(typeid(objects::BazaarItem), objects::BazaarItem::GetMetadata(),
+        []() {  return (PersistentObject*)new objects::BazaarItem(); });
 
     RegisterType(typeid(objects::Character), objects::Character::GetMetadata(),
         []() {  return (PersistentObject*)new objects::Character(); });

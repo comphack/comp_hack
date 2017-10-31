@@ -262,6 +262,22 @@ bool ChannelServer::Initialize()
         to_underlying(ClientToChannelPacketCode_t::PACKET_QUEST_ACTIVE_LIST));
     clientPacketManager->AddParser<Parsers::QuestCompletedList>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_QUEST_COMPLETED_LIST));
+    clientPacketManager->AddParser<Parsers::BazaarMarketOpen>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_BAZAAR_MARKET_OPEN));
+    clientPacketManager->AddParser<Parsers::BazaarMarketClose>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_BAZAAR_MARKET_CLOSE));
+    clientPacketManager->AddParser<Parsers::BazaarMarketInfo>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_BAZAAR_MARKET_INFO));
+    clientPacketManager->AddParser<Parsers::BazaarItemAdd>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_BAZAAR_ITEM_ADD));
+    clientPacketManager->AddParser<Parsers::BazaarItemDrop>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_BAZAAR_ITEM_DROP));
+    clientPacketManager->AddParser<Parsers::BazaarItemUpdate>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_BAZAAR_ITEM_UPDATE));
+    clientPacketManager->AddParser<Parsers::BazaarItemBuy>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_BAZAAR_ITEM_BUY));
+    clientPacketManager->AddParser<Parsers::BazaarMarketSales>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_BAZAAR_MARKET_SALES));
     clientPacketManager->AddParser<Parsers::ClanDisband>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_CLAN_DISBAND));
     clientPacketManager->AddParser<Parsers::ClanInvite>(
@@ -288,8 +304,22 @@ bool ChannelServer::Initialize()
         to_underlying(ClientToChannelPacketCode_t::PACKET_CLAN_DATA));
     clientPacketManager->AddParser<Parsers::ClanForm>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_CLAN_FORM));
+    clientPacketManager->AddParser<Parsers::BazaarState>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_BAZAAR_STATE));
+    clientPacketManager->AddParser<Parsers::BazaarClerkSet>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_BAZAAR_CLERK_SET));
+    clientPacketManager->AddParser<Parsers::BazaarPrice>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_BAZAAR_PRICE));
+    clientPacketManager->AddParser<Parsers::BazaarMarketInfoSelf>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_BAZAAR_MARKET_INFO_SELF));
     clientPacketManager->AddParser<Parsers::SyncCharacter>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_SYNC_CHARACTER));
+    clientPacketManager->AddParser<Parsers::BazaarInteract>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_BAZAAR_INTERACT));
+    clientPacketManager->AddParser<Parsers::BazaarMarketEnd>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_BAZAAR_MARKET_END));
+    clientPacketManager->AddParser<Parsers::BazaarMarketComment>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_BAZAAR_MARKET_COMMENT));
     clientPacketManager->AddParser<Parsers::MapFlag>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_MAP_FLAG));
     clientPacketManager->AddParser<Parsers::Analyze>(

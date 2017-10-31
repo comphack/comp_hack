@@ -32,6 +32,7 @@
 
 // channel Includes
 #include "ActiveEntityState.h"
+#include "BazaarState.h"
 #include "ChannelClientConnection.h"
 #include "EnemyState.h"
 #include "EntityState.h"
@@ -132,6 +133,12 @@ public:
     void RemoveConnection(const std::shared_ptr<ChannelClientConnection>& client);
 
     /**
+     * Add a bazaar to the zone
+     * @param bazaar Pointer to the bazaar to add
+     */
+    void AddBazaar(const std::shared_ptr<BazaarState>& bazaar);
+
+    /**
      * Remove an entity from the zone. For player entities, use RemoveConnection
      * instead.
      * @param entityID ID of the entity to remove
@@ -207,6 +214,19 @@ public:
      * @return Pointer to the entity instance.
      */
     std::shared_ptr<objects::EntityStateObject> GetEntity(int32_t id);
+
+    /**
+     * Get a bazaar instance by it's ID.
+     * @param id Instance ID of the bazaar.
+     * @return Pointer to the bazaar instance.
+     */
+    std::shared_ptr<BazaarState> GetBazaar(int32_t id);
+
+    /**
+     * Get all bazaar instances in the zone
+     * @return List of all bazaar instances in the zone
+     */
+    const std::list<std::shared_ptr<BazaarState>> GetBazaars() const;
 
     /**
      * Get an entity instance with a specified actor ID.
@@ -391,6 +411,9 @@ private:
 
     /// Map of world CIDs to client connections
     std::unordered_map<int32_t, std::shared_ptr<ChannelClientConnection>> mConnections;
+
+    /// List of pointers to bazaars instantiated for the zone
+    std::list<std::shared_ptr<BazaarState>> mBazaars;
 
     /// List of pointers to enemies instantiated for the zone
     std::list<std::shared_ptr<EnemyState>> mEnemies;

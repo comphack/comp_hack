@@ -42,6 +42,7 @@ SET(${PROJECT_NAME}_SRCS
     src/AICommand.cpp
     src/AIManager.cpp
     src/AIState.cpp
+    src/BazaarState.cpp
     src/ChannelClientConnection.cpp
     src/ChannelServer.cpp
     src/CharacterManager.cpp
@@ -68,6 +69,7 @@ SET(${PROJECT_NAME}_HDRS
     src/AICommand.h
     src/AIManager.h
     src/AIState.h
+    src/BazaarState.h
     src/ChannelClientConnection.h
     src/ChannelServer.h
     src/CharacterManager.h
@@ -210,6 +212,14 @@ SET(${PROJECT_NAME}_PACKETS
     src/packets/game/LootTreasureBox.cpp        # 0x0107
     src/packets/game/QuestActiveList.cpp        # 0x010B
     src/packets/game/QuestCompletedList.cpp     # 0x010C
+    src/packets/game/BazaarMarketOpen.cpp       # 0x0113
+    src/packets/game/BazaarMarketClose.cpp      # 0x0115
+    src/packets/game/BazaarMarketInfo.cpp       # 0x0117
+    src/packets/game/BazaarItemAdd.cpp          # 0x0119
+    src/packets/game/BazaarItemDrop.cpp         # 0x011B
+    src/packets/game/BazaarItemUpdate.cpp       # 0x011D
+    src/packets/game/BazaarItemBuy.cpp          # 0x011F
+    src/packets/game/BazaarMarketSales.cpp      # 0x0122
     src/packets/game/ClanDisband.cpp            # 0x0138
     src/packets/game/ClanInvite.cpp             # 0x013B
     src/packets/game/ClanJoin.cpp               # 0x013E
@@ -223,7 +233,14 @@ SET(${PROJECT_NAME}_PACKETS
     src/packets/game/ClanList.cpp               # 0x0152
     src/packets/game/ClanData.cpp               # 0x0154
     src/packets/game/ClanForm.cpp               # 0x0156
+    src/packets/game/BazaarState.cpp            # 0x015F
+    src/packets/game/BazaarClerkSet.cpp         # 0x0161
+    src/packets/game/BazaarPrice.cpp            # 0x0164
+    src/packets/game/BazaarMarketInfoSelf.cpp   # 0x0166
     src/packets/game/SyncCharacter.cpp          # 0x017E
+    src/packets/game/BazaarInteract.cpp         # 0x0184
+    src/packets/game/BazaarMarketEnd.cpp        # 0x0188
+    src/packets/game/BazaarMarketComment.cpp    # 0x018B
     src/packets/game/PartnerDemonAISet.cpp      # 0x0181
     src/packets/game/MapFlag.cpp                # 0x0197
     src/packets/game/DemonCompendium.cpp        # 0x019B

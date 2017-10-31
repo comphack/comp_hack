@@ -239,6 +239,25 @@ public:
         bool sendToAll, bool queue = false);
 
     /**
+     * Send information about the current market matching the supplied ID in a
+     * bazaar to clients in the same zone
+     * @param zone Pointer to the zone to send the data to
+     * @param bState Entity state of the bazaar
+     * @param marketID Market ID to send information about
+     */
+    void SendBazaarMarketData(const std::shared_ptr<Zone>& zone,
+        const std::shared_ptr<BazaarState>& bState, uint32_t marketID);
+
+    /**
+     * Expire and inactivate markets that are no longer active in the specified
+     * zone for associated to the specified bazaar
+     * @param zone Pointer to a zone containing bazaars
+     * @param bState Entity state of the bazaar
+     */
+    void ExpireBazaarMarkets(const std::shared_ptr<Zone>& zone,
+        const std::shared_ptr<BazaarState>& bState);
+
+    /**
      * Send a packet to every connection in the zone or all but the client specified
      * @param client Client connection to use as the "source" connection
      * @param p Packet to send to the zone

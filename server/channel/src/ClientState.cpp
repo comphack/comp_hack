@@ -35,6 +35,8 @@
 
 // object Includes
 #include <AccountLogin.h>
+#include <AccountWorldData.h>
+#include <BazaarData.h>
 #include <CharacterLogin.h>
 
 // channel Includes
@@ -93,6 +95,28 @@ std::shared_ptr<ActiveEntityState> ClientState::GetEntityState(int32_t entityID,
         if(state->GetEntityID() == entityID && (!readyOnly || state->Ready()))
         {
             return state;
+        }
+    }
+
+    return nullptr;
+}
+
+std::shared_ptr<BazaarState> ClientState::GetBazaarState()
+{
+    auto zone = mCharacterState->GetZone();
+
+    auto worldData = GetAccountWorldData().Get();
+    auto bazaarData = worldData->GetBazaarData().Get();
+    uint32_t marketID = bazaarData ? bazaarData->GetMarketID() : 0;
+
+    if(zone && marketID != 0)
+    {
+        for(auto bState : zone->GetBazaars())
+        {
+            if(bState->GetCurrentMarket(marketID) == bazaarData)
+            {
+                return bState;
+            }
         }
     }
 

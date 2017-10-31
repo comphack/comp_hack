@@ -35,6 +35,8 @@
 #include <Account.h>
 #include <AccountLogin.h>
 #include <AccountWorldData.h>
+#include <BazaarData.h>
+#include <BazaarItem.h>
 #include <CharacterLogin.h>
 #include <CharacterProgress.h>
 #include <Clan.h>
@@ -400,6 +402,29 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
     }
 
     state->SetAccountWorldData(worldData);
+
+    // Bazaar
+    if(!worldData->GetBazaarData().IsNull())
+    {
+        if(!worldData->LoadBazaarData(db))
+        {
+            return false;
+        }
+
+        // Items
+        for(auto bItem : worldData->GetBazaarData()->GetItems())
+        {
+            if(bItem.IsNull()) continue;
+
+            if(!bItem.Get(db) || !bItem->LoadItem(db))
+            {
+                return false;
+            }
+
+            state->SetObjectID(bItem->GetItem().GetUUID(),
+                server->GetNextObjectID());
+        }
+    }
 
     // Progress
     if(!character->LoadProgress(db))

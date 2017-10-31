@@ -145,6 +145,15 @@ enum class ClientToChannelPacketCode_t : uint16_t
     PACKET_LOOT_TREASURE_BOX = 0x0107,  //!< Request for the list of items inside a treasure loot box.
     PACKET_QUEST_ACTIVE_LIST = 0x010B,  //!< Request for the player's active quest list.
     PACKET_QUEST_COMPLETED_LIST = 0x010C,  //!< Request for the player's completed quest list.
+    PACKET_BAZAAR_MARKET_OPEN = 0x0113, //!< Request to open a market at a bazaar.
+    PACKET_BAZAAR_MARKET_CLOSE = 0x0115,    //!< Request to close the player's current open bazaar market.
+    PACKET_BAZAAR_MARKET_INFO = 0x0117, //!< Request for details about a specific bazaar market.
+    PACKET_BAZAAR_ITEM_ADD = 0x0119,    //!< Request to add an item to the player's bazaar market.
+    PACKET_BAZAAR_ITEM_DROP = 0x011B,   //!< Request to drop an item from the player's bazaar market.
+    PACKET_BAZAAR_ITEM_UPDATE = 0x011D, //!< Request to update an item in the player's bazaar market.
+    PACKET_BAZAAR_ITEM_BUY = 0x011F,    //!< Request to buy an item from a bazaar market.
+    PACKET_BAZAAR_MARKET_SALES = 0x0122,    //!< Request to take sales macca from the player's bazaar market.
+    PACKET_BAZAAR_ITEM_EXCHANGE = 0x0124,   //!< Unknown. Request to exchange one item for another.
     PACKET_CLAN_DISBAND = 0x0138,   //!< Request to disband the player character's clan.
     PACKET_CLAN_INVITE = 0x013B,    //!< Request to invite a character to the player character's clan.
     PACKET_CLAN_JOIN = 0x013E,  //!< Request to accept an invite to join a clan.
@@ -158,7 +167,14 @@ enum class ClientToChannelPacketCode_t : uint16_t
     PACKET_CLAN_LIST = 0x0152,  //!< Request for member information from the current player character's clan.
     PACKET_CLAN_DATA = 0x0154,  //!< Request to update clan member information about the current player character.
     PACKET_CLAN_FORM = 0x0156,  //!< Request to form a new clan from a clan formation item.
+    PACKET_BAZAAR_STATE = 0x015F,   //!< Request for the current zone's bazaar cost and duration.
+    PACKET_BAZAAR_CLERK_SET = 0x0161,   //!< Request to set the player's bazaar clerk NPC.
+    PACKET_BAZAAR_PRICE = 0x0164,   //!< Request to get a suggested sales price for a bazaar item.
+    PACKET_BAZAAR_MARKET_INFO_SELF = 0x0166,    //!< Request for details about the player's bazaar market.
     PACKET_SYNC_CHARACTER = 0x017E,  //!< Request to sync the player character's basic information.
+    PACKET_BAZAAR_INTERACT = 0x0184,    //!< Request to interact with a specific bazaar market.
+    PACKET_BAZAAR_MARKET_END = 0x0188,  //!< Request to stop interacting with a bazaar market.
+    PACKET_BAZAAR_MARKET_COMMENT = 0x018B,  //!< Request to update the player's bazaar market comment.
     PACKET_PARTNER_DEMON_AI_SET = 0x0181,  //!< Request to update the current partner demon's AI attack settings.
     PACKET_MAP_FLAG = 0x0197,  //!< Request to receive map information.
     PACKET_ANALYZE_DEMON = 0x0199,  //!< Request to analyze another player's partner demon.
@@ -321,6 +337,16 @@ enum class ChannelToClientPacketCode_t : uint16_t
     PACKET_QUEST_COMPLETED_LIST = 0x010E,  //!< Response containing the player's completed quest list.
     PACKET_QUEST_PHASE_UPDATE = 0x010F,    //!< Notification that a quest's phase has been updated.
     PACKET_QUEST_KILL_COUNT_UPDATE = 0x0110,    //!< Notification that a quest's kill counts have been updated.
+    PACKET_BAZAAR_MARKET_OPEN = 0x0114, //!< Response to the request to open a market at a bazaar.
+    PACKET_BAZAAR_MARKET_CLOSE = 0x0116,    //!< Notification (and response) to close the player's current open bazaar market.
+    PACKET_BAZAAR_MARKET_INFO = 0x0118, //!< Message containing details about a specific bazaar market.
+    PACKET_BAZAAR_ITEM_ADD = 0x011A,    //!< Response to the request to add an item to the player's bazaar market.
+    PACKET_BAZAAR_ITEM_DROP = 0x011C,   //!< Response to the request to drop an item from the player's bazaar market.
+    PACKET_BAZAAR_ITEM_UPDATE = 0x011E, //!< Response to the request to update an item in the player's bazaar market.
+    PACKET_BAZAAR_ITEM_BUY = 0x0120,    //!< Response to the request to buy an item from a bazaar market.
+    PACKET_BAZAAR_ITEM_SOLD = 0x0121,   //!< Notification that an item in the player's bazaar market has been sold.
+    PACKET_BAZAAR_MARKET_SALES = 0x0123,    //!< Response to the request to take sales macca from the player's bazaar market.
+    PACKET_BAZAAR_ITEM_EXCHANGE = 0x0125,   //!< Unknown. Response to the request to exchange one item for another.
     PACKET_LNC_POINTS = 0x0126,    //!< Message containing a character's LNC alignment value.
     PACKET_EVENT_STAGE_EFFECT = 0x0127,  //!< Request to the client to render a stage effect.
     PACKET_CLAN_FORM = 0x0137,   //!< Response to the request to form a new clan from a clan formation item.
@@ -343,10 +369,17 @@ enum class ChannelToClientPacketCode_t : uint16_t
     PACKET_CLAN_LIST = 0x0153, //!< Response to the request for member information from the current player character's clan.
     PACKET_CLAN_DATA = 0x0155, //!< Notification that a player character's clan's member info has updated
     PACKET_EVENT_DIRECTION = 0x015D,  //!< Request to the client to signify a direction to the player.
+    PACKET_BAZAAR_STATE = 0x0160,   //!< Response to the request for the current zone's bazaar cost and duration.
+    PACKET_BAZAAR_CLERK_SET = 0x0162,   //!< Response to the request to set the player's bazaar clerk NPC.
+    PACKET_BAZAAR_SOLD_OUT = 0x0163,    //!< Unknown. Notification (to?) that all items have sold out for a bazaar market.
+    PACKET_BAZAAR_PRICE = 0x0165,   //!< Response to the request to get a suggested sales price for a bazaar item.
+    PACKET_BAZAAR_MARKET_INFO_SELF = 0x0167,    //!< Message containing details about a the player's bazaar market.
     PACKET_CLAN_NAME_UPDATED = 0x0169,  //!< Notification that a character's clan name has updated.
     PACKET_SYSTEM_MSG = 0x0171, //!< Message containing announcement ticker data. 
     PACKET_SYNC_CHARACTER = 0x017F,  //!< Response to the request to sync the player character's basic information.
     PACKET_BAZAAR_DATA = 0x0183,  //!< Message containing data about a bazaar in a zone.
+    PACKET_BAZAAR_NPC_CHANGED = 0x0185, //!< Notification that a bazaar market clerk NPC has changed.
+    PACKET_BAZAAR_MARKET_COMMENT = 0x018C,  //!< Response to the request to update the player's bazaar market comment.
     PACKET_SKILL_LIST_UPDATED = 0x0187, //!< Notification that a player's skill list has been updated.
     PACKET_CONTRACT_COMPLETED = 0x018D,  //!< Notification that a player has contracted a demon from a demon egg.
     PACKET_STATUS_ICON = 0x0195,  //!< Message containing the icon to show for the client's character.
@@ -448,11 +481,12 @@ enum class InternalPacketAction_t : uint8_t
 enum class PacketRelayMode_t : uint8_t
 {
     RELAY_FAILURE = 0,  //!< Response back to the world containing CIDs that were not in the channel to attempt a retry.
-    RELAY_CHARACTER,  //!< Request to relay a message to a character by name.
-    RELAY_CIDS,  //!< Request to relay a message to one or more characters by world CID.
-    RELAY_PARTY,  //!< Request to relay a message to all current members of a party.
-    RELAY_CLAN,  //!< Request to relay a message to all online clan members.
-    RELAY_TEAM,  //!< Request to relay a message to all current team members.
+    RELAY_ACCOUNT,  //!< Requst to relay a message to a account by UUID.
+    RELAY_CHARACTER,    //!< Request to relay a message to a character by name.
+    RELAY_CIDS, //!< Request to relay a message to one or more characters by world CID.
+    RELAY_PARTY,    //!< Request to relay a message to all current members of a party.
+    RELAY_CLAN, //!< Request to relay a message to all online clan members.
+    RELAY_TEAM, //!< Request to relay a message to all current team members.
 };
 
 /**

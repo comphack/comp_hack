@@ -30,10 +30,37 @@
         <member type="array" name="ItemBoxes" size="10">
             <element type="ItemBox*"/>
         </member>
+
+        <member type="BazaarData*" name="BazaarData"/>
     </object>
     <object name="PostItem" location="world">
         <member type="u32" name="Type"/>
         <member type="Account*" name="Account" key="true" unique="false"/>
         <member type="u32" name="Timestamp"/>
+    </object>
+    <object name="BazaarData" location="world">
+        <member type="Account*" name="Account" key="true" unique="true"/>
+        <member type="Character*" name="Character"/>
+        <member type="u32" name="Zone" key="true" unique="false"/>
+        <member type="u32" name="MarketID"/>
+        <member type="string" name="Comment"/>
+        <member type="s16" name="NPCType"/>
+        <member type="enum" name="State" underlying="int8_t">
+            <value num="0">BAZAAR_INACTIVE</value>
+            <value num="1">BAZAAR_ACTIVE</value>
+            <value num="2">BAZAAR_PREPARING</value>
+        </member>
+        <member type="u32" name="Expiration"/>
+        <member type="array" name="Items" size="15">
+            <element type="BazaarItem*"/>
+        </member>
+    </object>
+    <object name="BazaarItem" location="world">
+        <member type="Item*" name="Item" key="true" unique="true"/>
+        <member type="Account*" name="Account" key="true" unique="false"/>
+        <member type="u32" name="Type"/>
+        <member type="u16" name="StackSize"/>
+        <member type="u32" name="Cost"/>
+        <member type="bool" name="Sold"/>
     </object>
 </objgen>

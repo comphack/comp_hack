@@ -82,6 +82,18 @@ public:
         const libcomp::String& eventID, int32_t sourceEntityID);
 
     /**
+     * Prepare a new event based upon the supplied ID, relative to an
+     * optional entity
+     * @param client Pointer to the client the event affects
+     * @param eventID ID of the event to handle
+     * @param sourceEntityID Optional source of an event to focus on
+     * @return Pointer to the new EventInstance or nullptr on failure
+     */
+    std::shared_ptr<objects::EventInstance> PrepareEvent(
+        const std::shared_ptr<ChannelClientConnection>& client,
+        const libcomp::String& eventID, int32_t sourceEntityID);
+
+    /**
      * React to a response based on the current event of a client
      * @param client Pointer to the client sending the response
      * @param responseID Value representing the player's response
@@ -189,16 +201,6 @@ public:
     void SendCompletedQuestList(
         const std::shared_ptr<ChannelClientConnection>& client);
 
-private:
-    /**
-     * Evaluate a set of flag states for a standard condition
-     * @param flagStates Map of flag states to evaluate
-     * @param condition Standard condition to evaluate
-     * @return true if the flag states evaluate to true, otherwise false
-     */
-    bool EvaluateFlagStates(const std::unordered_map<int32_t, int32_t>& flagStates,
-        const std::shared_ptr<objects::EventCondition>& condition);
-
     /**
      * Handle an event instance by branching into the appropriate handler
      * function after updating the character's overhead icon if needed
@@ -208,6 +210,16 @@ private:
      */
     bool HandleEvent(const std::shared_ptr<ChannelClientConnection>& client,
         const std::shared_ptr<objects::EventInstance>& instance);
+
+private:
+    /**
+     * Evaluate a set of flag states for a standard condition
+     * @param flagStates Map of flag states to evaluate
+     * @param condition Standard condition to evaluate
+     * @return true if the flag states evaluate to true, otherwise false
+     */
+    bool EvaluateFlagStates(const std::unordered_map<int32_t, int32_t>& flagStates,
+        const std::shared_ptr<objects::EventCondition>& condition);
 
     /**
      * Progress or pop to the next sequential event if one exists. If

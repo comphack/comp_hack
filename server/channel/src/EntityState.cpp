@@ -28,6 +28,7 @@
 
 // channel Includes
 #include <LootBox.h>
+#include <ServerBazaar.h>
 #include <ServerNPC.h>
 #include <ServerObject.h>
 
@@ -48,6 +49,14 @@ EntityState<objects::ServerNPC>::EntityState(
     : mEntity(entity)
 {
     SetEntityType(objects::EntityStateObject::EntityType_t::NPC);
+}
+
+template<>
+EntityState<objects::ServerBazaar>::EntityState(
+    const std::shared_ptr<objects::ServerBazaar>& entity)
+    : mEntity(entity)
+{
+    SetEntityType(objects::EntityStateObject::EntityType_t::BAZAAR);
 }
 
 template<>

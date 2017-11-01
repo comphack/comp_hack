@@ -309,6 +309,55 @@ public:
         int64_t skillTargetID = 0);
 
     /**
+     * Get the total macca amount from the supplied character's inventory
+     * @param character Pointer to the character to calculate macca for
+     * @return Total macca
+     */
+    uint64_t GetTotalMacca(const std::shared_ptr<objects::Character>& character);
+
+    /**
+     * Pay a specified macca amount
+     * @param client Pointer to the client connection to pay macca
+     * @param amount Amount of macca to pay
+     * @return true if the amount was paid, false it was not
+     */
+    bool PayMacca(const std::shared_ptr<
+        channel::ChannelClientConnection>& client, uint64_t amount);
+
+    /**
+     * Calculate the item updates needed to pay a specified macca amount
+     * @param client Pointer to the client connection to pay macca
+     * @param amount Amount of macca to pay
+     * @param insertItems Output list of new items to insert
+     * @param deleteItems Output list of items to delete
+     * @param stackAdjustItems Output map of items to adjust the stack size of
+     * @return true if the amount can be paid, false it cannot
+     */
+    bool CalculateMaccaPayment(const std::shared_ptr<
+        channel::ChannelClientConnection>& client, uint64_t amount,
+        std::list<std::shared_ptr<objects::Item>>& insertItems,
+        std::list<std::shared_ptr<objects::Item>>& deleteItems,
+        std::unordered_map<std::shared_ptr<objects::Item>, uint16_t>& stackAdjustItems);
+
+    /**
+     * Update or validate a set of item changes to be applied simultaneously,
+     * accounting for deletes that will clear up slots for inserts etc.
+     * @param client Pointer to the client connection to apply the changes to
+     * @param validateOnly true if the update should just be checked, false if
+     *  the changes should actually be applied
+     * @param insertItems List of new items to insert
+     * @param deleteItems List of items to delete
+     * @param stackAdjustItems Map of items to adjust the stack size of
+     * @return true if the changes could be applied (or validated), false if
+     *  they cannot
+     */
+    bool UpdateItems(const std::shared_ptr<
+        channel::ChannelClientConnection>& client, bool validateOnly,
+        std::list<std::shared_ptr<objects::Item>>& insertItems,
+        std::list<std::shared_ptr<objects::Item>>& deleteItems,
+        std::unordered_map<std::shared_ptr<objects::Item>, uint16_t> stackAdjustItems);
+
+    /**
      * Create loot from drops based upon the supplied luck value (can be 0)
      * and add them to the supplied loot box.
      * @param box Pointer to the loot box

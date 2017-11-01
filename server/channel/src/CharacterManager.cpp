@@ -1434,6 +1434,232 @@ bool CharacterManager::AddRemoveItems(const std::shared_ptr<
     return true;
 }
 
+uint64_t CharacterManager::GetTotalMacca(const std::shared_ptr<
+    objects::Character>& character)
+{
+    auto macca = GetExistingItems(character, SVR_CONST.ITEM_MACCA,
+        character->GetItemBoxes(0).Get());
+    auto maccaNotes = GetExistingItems(character,
+        SVR_CONST.ITEM_MACCA_NOTE, character->GetItemBoxes(0).Get());
+
+    uint64_t totalMacca = 0;
+    for(auto m : macca)
+    {
+        totalMacca += m->GetStackSize();
+    }
+
+    for(auto m : maccaNotes)
+    {
+        totalMacca += (uint64_t)(m->GetStackSize() * ITEM_MACCA_NOTE_AMOUNT);
+    }
+
+    return totalMacca;
+}
+
+bool CharacterManager::PayMacca(const std::shared_ptr<
+    channel::ChannelClientConnection>& client, uint64_t amount)
+{
+    auto state = client->GetClientState();
+    auto cState = state->GetCharacterState();
+    auto character = cState->GetEntity();
+    auto inventory = character->GetItemBoxes(0).Get();
+
+    std::list<std::shared_ptr<objects::Item>> insertItems;
+    std::list<std::shared_ptr<objects::Item>> deleteItems;
+    std::unordered_map<std::shared_ptr<objects::Item>, uint16_t> stackAdjustItems;
+
+    return CalculateMaccaPayment(client, amount, insertItems, deleteItems, stackAdjustItems)
+        && UpdateItems(client, false, insertItems, deleteItems, stackAdjustItems);
+}
+
+bool CharacterManager::CalculateMaccaPayment(const std::shared_ptr<
+    channel::ChannelClientConnection>& client, uint64_t amount,
+    std::list<std::shared_ptr<objects::Item>>& insertItems,
+    std::list<std::shared_ptr<objects::Item>>& deleteItems,
+    std::unordered_map<std::shared_ptr<objects::Item>, uint16_t>& stackAdjustItems)
+{
+    auto state = client->GetClientState();
+    auto cState = state->GetCharacterState();
+    auto character = cState->GetEntity();
+    auto inventory = character->GetItemBoxes(0).Get();
+
+    auto macca = GetExistingItems(character, SVR_CONST.ITEM_MACCA, inventory);
+    auto maccaNotes = GetExistingItems(character, SVR_CONST.ITEM_MACCA_NOTE,
+        inventory);
+    
+    uint64_t totalMacca = 0;
+    for(auto m : macca)
+    {
+        totalMacca += m->GetStackSize();
+    }
+
+    for(auto m : maccaNotes)
+    {
+        totalMacca += (uint64_t)(m->GetStackSize() * ITEM_MACCA_NOTE_AMOUNT);
+    }
+
+    if(totalMacca < amount)
+    {
+        return false;
+    }
+
+    // Remove last first, starting with macca
+    macca.reverse();
+    maccaNotes.reverse();
+
+    uint16_t stackDecrease = 0;
+    std::shared_ptr<objects::Item> updateItem;
+
+    uint64_t amountLeft = amount;
+    for(auto m : macca)
+    {
+        if(amountLeft == 0) break;
+
+        auto stack = (uint64_t)m->GetStackSize();
+        if(stack > amountLeft)
+        {
+            stackDecrease = (uint16_t)(stack - amountLeft);
+            amountLeft = 0;
+            updateItem = m;
+        }
+        else
+        {
+            amountLeft = (uint64_t)(amountLeft - stack);
+            deleteItems.push_back(m);
+        }
+    }
+
+    for(auto m : maccaNotes)
+    {
+        if(amountLeft == 0) break;
+
+        auto stack = m->GetStackSize();
+        uint64_t stackAmount = (uint64_t)(stack * ITEM_MACCA_NOTE_AMOUNT);
+        if(stackAmount > amountLeft)
+        {
+            int32_t maccaLeft = (int32_t)(stackAmount - amountLeft);
+
+            stackDecrease = (uint16_t)(maccaLeft / ITEM_MACCA_NOTE_AMOUNT);
+            maccaLeft = (int32_t)(maccaLeft % ITEM_MACCA_NOTE_AMOUNT);
+            amountLeft = 0;
+
+            if(stackDecrease == 0)
+            {
+                deleteItems.push_back(m);
+            }
+            else
+            {
+                updateItem = m;
+            }
+
+            if(maccaLeft)
+            {
+                insertItems.push_back(
+                    GenerateItem(SVR_CONST.ITEM_MACCA, (uint16_t)maccaLeft));
+            }
+        }
+        else
+        {
+            amountLeft = (uint64_t)(amountLeft - stackAmount);
+            deleteItems.push_back(m);
+        }
+    }
+
+    if(updateItem)
+    {
+        stackAdjustItems[updateItem] = stackDecrease;
+    }
+
+    return true;
+}
+
+bool CharacterManager::UpdateItems(const std::shared_ptr<
+    channel::ChannelClientConnection>& client, bool validateOnly,
+    std::list<std::shared_ptr<objects::Item>>& insertItems,
+    std::list<std::shared_ptr<objects::Item>>& deleteItems,
+    std::unordered_map<std::shared_ptr<objects::Item>, uint16_t> stackAdjustItems)
+{
+    auto state = client->GetClientState();
+    auto cState = state->GetCharacterState();
+    auto character = cState->GetEntity();
+    auto inventory = character->GetItemBoxes(0).Get();
+
+    std::list<int8_t> freeSlots;
+    for(int8_t i = 0; i < 50; i++)
+    {
+        if(inventory->GetItems((size_t)i).IsNull())
+        {
+            freeSlots.push_back(i);
+        }
+    }
+
+    for(auto item : deleteItems)
+    {
+        freeSlots.push_back(item->GetBoxSlot());
+    }
+
+    freeSlots.unique();
+    freeSlots.sort();
+
+    if(freeSlots.size() < insertItems.size())
+    {
+        return false;
+    }
+    else if(validateOnly)
+    {
+        return true;
+    }
+
+    auto changes = libcomp::DatabaseChangeSet::Create();
+    std::list<uint16_t> updatedSlots;
+
+    // Delete the items consumed by the payment
+    for(auto item : deleteItems)
+    {
+        auto slot = item->GetBoxSlot();
+        inventory->SetItems((size_t)slot, NULLUUID);
+        changes->Delete(item);
+        updatedSlots.push_back((uint16_t)slot);
+    }
+
+    // Insert the new items
+    for(auto item : insertItems)
+    {
+        auto slot = freeSlots.front();
+        freeSlots.erase(freeSlots.begin());
+
+        item->SetItemBox(inventory);
+        item->SetBoxSlot(slot);
+        inventory->SetItems((size_t)slot, item);
+        changes->Insert(item);
+        updatedSlots.push_back((uint16_t)slot);
+    }
+
+    // Increase the stacks of existing items of the same type
+    for(auto iPair : stackAdjustItems)
+    {
+        auto item = iPair.first;
+        item->SetStackSize(iPair.second);
+        changes->Update(item);
+        updatedSlots.push_back((uint16_t)item->GetBoxSlot());
+    }
+
+    changes->Update(inventory);
+
+    // Process all changes as a transaction
+    auto worldDB = mServer.lock()->GetWorldDatabase();
+    if(!worldDB->ProcessChangeSet(changes))
+    {
+        return false;
+    }
+
+    updatedSlots.unique();
+    updatedSlots.sort();
+    SendItemBoxData(client, inventory, updatedSlots);
+
+    return true;
+}
+
 bool CharacterManager::CreateLootFromDrops(const std::shared_ptr<objects::LootBox>& box,
     const std::list<std::shared_ptr<objects::ItemDrop>>& drops, int16_t luck, bool minLast)
 {

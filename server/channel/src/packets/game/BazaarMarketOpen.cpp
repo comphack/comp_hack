@@ -70,14 +70,14 @@ bool Parsers::BazaarMarketOpen::Parse(libcomp::ManagerPacket *pPacketManager,
     bool success = marketID != 0 && bazaar;
     if(success && maccaCost > 0)
     {
-        /// @todo: pay cost
+        success = server->GetCharacterManager()->PayMacca(client, (uint64_t)maccaCost);
     }
 
     libcomp::Packet reply;
     reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_BAZAAR_MARKET_OPEN);
     if(success)
     {
-        uint32_t timeLeft = zone->GetDefinition()->GetBazaarMarketTime();
+        uint32_t timeLeft = (uint32_t)(zone->GetDefinition()->GetBazaarMarketTime() * 60);
         uint32_t timestamp = (uint32_t)time(0);
         uint32_t expirationTime = (uint32_t)(timestamp + (uint32_t)timeLeft);
 

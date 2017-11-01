@@ -78,11 +78,11 @@ bool Parsers::BazaarMarketComment::Parse(libcomp::ManagerPacket *pPacketManager,
             server->GetWorldDatabase()->QueueUpdate(bazaarData);
         }
 
-        reply.WriteS32Little(0);
+        reply.WriteS32Little(0);    // Success
     }
     else
     {
-        reply.WriteS32Little(-1);
+        reply.WriteS32Little(-1);   // Failure
     }
 
     client->SendPacket(reply);

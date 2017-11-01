@@ -141,123 +141,23 @@ void HandleShopPurchase(const std::shared_ptr<ChannelServer> server,
 
     price = price * quantity;
 
-    uint16_t stackDecrease = 0;
-    std::shared_ptr<objects::Item> updateItem;
     std::list<std::shared_ptr<objects::Item>> insertItems;
     std::list<std::shared_ptr<objects::Item>> deleteItems;
-    if(!cpPurchase)
+    std::unordered_map<std::shared_ptr<objects::Item>, uint16_t> stackAdjustItems;
+
+    if(!cpPurchase && !characterManager->CalculateMaccaPayment(client, (uint64_t)price,
+        insertItems, deleteItems, stackAdjustItems))
     {
-        // Macca purchase
-        auto macca = characterManager->GetExistingItems(character, SVR_CONST.ITEM_MACCA,
-            character->GetItemBoxes(0).Get());
-        auto maccaNotes = characterManager->GetExistingItems(character,
-            SVR_CONST.ITEM_MACCA_NOTE, character->GetItemBoxes(0).Get());
-
-        uint64_t totalMacca = 0;
-        for(auto m : macca)
-        {
-            totalMacca += m->GetStackSize();
-        }
-
-        for(auto m : maccaNotes)
-        {
-            totalMacca += (uint64_t)(m->GetStackSize() * ITEM_MACCA_NOTE_AMOUNT);
-        }
-
-        if((uint64_t)price > totalMacca)
-        {
-            LOG_ERROR(libcomp::String("Attempted to buy an item the player could"
-                " not afford: %1\n").Arg(state->GetAccountUID().ToString()));
-            SendShopPurchaseReply(client, shopID, productID, -2, false);
-            return;
-        }
-
-        // Remove last first, starting with macca
-        macca.reverse();
-        maccaNotes.reverse();
-
-        int32_t priceLeft = price;
-        for(auto m : macca)
-        {
-            if (priceLeft == 0) break;
-
-            auto stack = (int32_t)m->GetStackSize();
-            if(stack > priceLeft)
-            {
-                stackDecrease = (uint16_t)(stack - priceLeft);
-                priceLeft = 0;
-                updateItem = m;
-            }
-            else
-            {
-                priceLeft = (int32_t)(priceLeft - stack);
-                deleteItems.push_back(m);
-            }
-        }
-
-        for(auto m : maccaNotes)
-        {
-            if (priceLeft == 0) break;
-
-            auto stack = m->GetStackSize();
-            int32_t stackAmount = (int32_t)(stack * ITEM_MACCA_NOTE_AMOUNT);
-            if(stackAmount > priceLeft)
-            {
-                int32_t maccaLeft = stackAmount - priceLeft;
-
-                stackDecrease = (uint16_t)(maccaLeft / ITEM_MACCA_NOTE_AMOUNT);
-                maccaLeft = (int32_t)(maccaLeft % ITEM_MACCA_NOTE_AMOUNT);
-                priceLeft = 0;
-
-                if(stackDecrease == 0)
-                {
-                    deleteItems.push_back(m);
-                }
-                else
-                {
-                    updateItem = m;
-                }
-
-                if(maccaLeft)
-                {
-                    insertItems.push_back(
-                        characterManager->GenerateItem(SVR_CONST.ITEM_MACCA,
-                            (uint16_t)maccaLeft));
-                }
-            }
-            else
-            {
-                priceLeft = (int32_t)(priceLeft - stackAmount);
-                deleteItems.push_back(m);
-            }
-        }
+        LOG_ERROR(libcomp::String("Attempted to buy an item the player could"
+            " not afford: %1\n").Arg(state->GetAccountUID().ToString()));
+        SendShopPurchaseReply(client, shopID, productID, -2, false);
+        return;
     }
-
-    // Determine how many slots are free and how many are needed.
-    // Natively shops will only sell a full stack at a time but this
-    // logic handles more complex possibilities just in case.
-    std::list<int8_t> freeSlots;
-    for(int8_t i = 0; i < 50; i++)
-    {
-        if(inventory->GetItems((size_t)i).IsNull())
-        {
-            freeSlots.push_back(i);
-        }
-    }
-
-    for(auto item : deleteItems)
-    {
-        freeSlots.push_back(item->GetBoxSlot());
-    }
-
-    freeSlots.unique();
-    freeSlots.sort();
 
     int32_t qtyLeft = (int32_t)quantity;
     int32_t maxStack = (int32_t)def->GetPossession()->GetStackSize();
 
     // Update existing stacks first if we aren't adding a full stack
-    std::map<std::shared_ptr<objects::Item>, uint16_t> stackAdjustItems;
     if(qtyLeft < maxStack)
     {
         for(auto item : characterManager->GetExistingItems(character,
@@ -283,7 +183,8 @@ void HandleShopPurchase(const std::shared_ptr<ChannelServer> server,
         qtyLeft = (int32_t)(qtyLeft - stack);
     }
 
-    if(freeSlots.size() < insertItems.size())
+    if(!characterManager->UpdateItems(client, true, insertItems, deleteItems,
+        stackAdjustItems))
     {
         SendShopPurchaseReply(client, shopID, productID, -1, false);
         return;
@@ -310,59 +211,10 @@ void HandleShopPurchase(const std::shared_ptr<ChannelServer> server,
         }
     }
 
-    auto changes = libcomp::DatabaseChangeSet::Create();
-    std::list<uint16_t> updatedSlots;
-
-    // Delete the items consumed by the payment
-    for(auto item : deleteItems)
-    {
-        auto slot = item->GetBoxSlot();
-        inventory->SetItems((size_t)slot, NULLUUID);
-        changes->Delete(item);
-        updatedSlots.push_back((uint16_t)slot);
-    }
-
-    // Insert the new items
-    for(auto item : insertItems)
-    {
-        auto slot = freeSlots.front();
-        freeSlots.erase(freeSlots.begin());
-
-        item->SetItemBox(inventory);
-        item->SetBoxSlot(slot);
-        inventory->SetItems((size_t)slot, item);
-        changes->Insert(item);
-        updatedSlots.push_back((uint16_t)slot);
-    }
-
-    // Update the decreased payment item
-    if(updateItem)
-    {
-        updateItem->SetStackSize(stackDecrease);
-        changes->Update(updateItem);
-        updatedSlots.push_back((uint16_t)updateItem->GetBoxSlot());
-    }
-
-    // Increase the stacks of existing items of the same type
-    for(auto iPair : stackAdjustItems)
-    {
-        auto item = iPair.first;
-        item->SetStackSize(iPair.second);
-        changes->Update(item);
-        updatedSlots.push_back((uint16_t)item->GetBoxSlot());
-    }
-
-    changes->Update(inventory);
-
-    // Process all changes as a transaction
-    auto worldDB = server->GetWorldDatabase();
-    if(worldDB->ProcessChangeSet(changes))
+    if(characterManager->UpdateItems(client, false, insertItems, deleteItems,
+        stackAdjustItems))
     {
         SendShopPurchaseReply(client, shopID, productID, 0, true);
-
-        updatedSlots.unique();
-        updatedSlots.sort();
-        characterManager->SendItemBoxData(client, inventory, updatedSlots);
     }
     else
     {

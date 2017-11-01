@@ -18,8 +18,8 @@
         <member type="float" name="StartingY"/>
         <member type="float" name="StartingRotation"/>
         <member type="float" name="XPMultiplier" default="1.0"/>
-        <member type="u32" name="BazaarMarketCost" default="1200"/>
-        <member type="u32" name="BazaarMarketTime" default="210"/>
+        <member type="u32" name="BazaarMarketCost" default="100"/>
+        <member type="u32" name="BazaarMarketTime" default="60"/>
         <member type="list" name="NPCs">
             <element type="ServerNPC*"/>
         </member>

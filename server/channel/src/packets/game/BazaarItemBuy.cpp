@@ -82,11 +82,15 @@ bool Parsers::BazaarItemBuy::Parse(libcomp::ManagerPacket *pPacketManager,
 
     std::shared_ptr<objects::BazaarItem> bItem;
 
+    int32_t errorCode = -1; // Generic error
+
     bool success = false;
     if(bState && item)
     {
-        auto inventory = cState->GetEntity()->GetItemBoxes(0).Get();
-        /// @todo: check macca total before trying to buy
+        auto character = cState->GetEntity();
+        auto inventory = character->GetItemBoxes(0).Get();
+
+        uint64_t totalMacca = server->GetCharacterManager()->GetTotalMacca(character);
 
         int8_t destSlot = -1;
         bItem = bState->TryBuyItem(state, marketID, slot, itemID, price);
@@ -104,43 +108,57 @@ bool Parsers::BazaarItemBuy::Parse(libcomp::ManagerPacket *pPacketManager,
             }
         }
 
-        if(destSlot != -1 && bState->BuyItem(bItem))
+        if(totalMacca < (uint64_t)bItem->GetCost())
         {
-            /// @todo: spend macca
-
-            auto dbChanges = libcomp::DatabaseChangeSet::Create();
-
-            inventory->SetItems((size_t)destSlot, item);
-            item->SetItemBox(inventory);
-            item->SetBoxSlot(destSlot);
-
-            dbChanges->Update(bItem);
-            dbChanges->Update(inventory);
-            dbChanges->Update(item);
-            
-            if(!server->GetWorldDatabase()->ProcessChangeSet(dbChanges))
+            // No new error code for this one
+        }
+        else if(destSlot == -1)
+        {
+            errorCode = -2; // Not enough space
+        }
+        else if(bState->BuyItem(bItem))
+        {
+            if(!server->GetCharacterManager()->PayMacca(client, (uint64_t)bItem->GetCost()))
             {
-                LOG_ERROR(libcomp::String("BazaarItemBuy failed to save: %1\n")
-                    .Arg(state->GetAccountUID().ToString()));
-                state->SetLogoutSave(false);
-                client->Close();
-                return true;
+                // Undo sale
+                bItem->SetSold(false);
             }
+            else
+            {
+                auto dbChanges = libcomp::DatabaseChangeSet::Create();
 
-            reply.WriteS8(destSlot);
-            reply.WriteS32Little(0);    // Success
-            success = true;
+                inventory->SetItems((size_t)destSlot, item);
+                item->SetItemBox(inventory);
+                item->SetBoxSlot(destSlot);
 
-            std::list<uint16_t> updatedSlots = { (uint16_t)destSlot };
-            server->GetCharacterManager()->SendItemBoxData(client,
-                inventory, updatedSlots);
+                dbChanges->Update(bItem);
+                dbChanges->Update(inventory);
+                dbChanges->Update(item);
+
+                if(!server->GetWorldDatabase()->ProcessChangeSet(dbChanges))
+                {
+                    LOG_ERROR(libcomp::String("BazaarItemBuy failed to save: %1\n")
+                        .Arg(state->GetAccountUID().ToString()));
+                    state->SetLogoutSave(false);
+                    client->Close();
+                    return true;
+                }
+
+                reply.WriteS8(destSlot);
+                reply.WriteS32Little(0);    // Success
+                success = true;
+
+                std::list<uint16_t> updatedSlots = { (uint16_t)destSlot };
+                server->GetCharacterManager()->SendItemBoxData(client,
+                    inventory, updatedSlots);
+            }
         }
     }
 
     if(!success)
     {
         reply.WriteS8(-1);
-        reply.WriteS32Little(-1);    // Failure
+        reply.WriteS32Little(errorCode);
     }
     else
     {

@@ -217,6 +217,9 @@ namespace libcomp
 /// Macca note value
 #define ITEM_MACCA_NOTE_AMOUNT (50000)
 
+/// Mag presser value
+#define ITEM_MAG_PRESSER_AMOUNT (50000)
+
 /// Mode specifier for affinity nullification in the correct table
 #define NRA_NULL (1)
 

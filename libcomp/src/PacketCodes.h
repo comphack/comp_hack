@@ -184,6 +184,7 @@ enum class ClientToChannelPacketCode_t : uint16_t
     PACKET_DEMON_FAMILIARITY = 0x01E6,  //!< Request to sync the familiarity of every demon in the player's COMP.
     PACKET_MATERIAL_BOX = 0x0205,  //!< Request for info about the materials container.
     PACKET_ANALYZE = 0x0209,  //!< Request to analyze another player character.
+    PACKET_ITEM_EXPAND = 0x0210,    //!< Request to expand a compressed item.
     PACKET_FUSION_GAUGE = 0x0217,   //!< Request for the player's fusion gauge state.
     PACKET_TITLE_LIST = 0x021B,   //!< Request for the list of available titles.
     PACKET_PARTNER_DEMON_QUEST_LIST = 0x022D,   //!< Request for the player's partner demon quest list.
@@ -399,6 +400,7 @@ enum class ChannelToClientPacketCode_t : uint16_t
     PACKET_MATERIAL_BOX = 0x0206,  //!< Response containing info about the materials container.
     PACKET_EQUIPMENT_ANALYZE = 0x020A, //!< Message containing another player character's current equipment for "analyze".
     PACKET_OTHER_CHARACTER_EQUIPMENT_CHANGED = 0x020B, //!< Notifies the client that another character's equipment has changed.
+    PACKET_ITEM_EXPAND = 0x0211,    //!< Response to the request to expand a compressed item.
     PACKET_EVENT_SPECIAL_DIRECTION = 0x0216,  //!< Request to the client to signify a special direction to the player.
     PACKET_FUSION_GAUGE = 0x0218,   //!< Response containing the player's fusion gauge state.
     PACKET_TITLE_LIST = 0x021C,   //!< Response containing the list of available titles.

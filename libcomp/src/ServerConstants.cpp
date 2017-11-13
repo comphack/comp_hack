@@ -108,34 +108,10 @@ bool ServerConstants::Initialize(const String& filePath)
         sConstants.ITEM_MACCA_NOTE);
     success &= LoadInteger(constants["ITEM_MAGNETITE"],
         sConstants.ITEM_MAGNETITE);
+    success &= LoadInteger(constants["ITEM_MAG_PRESSER"],
+        sConstants.ITEM_MAG_PRESSER);
     success &= LoadInteger(constants["ITEM_BALM_OF_LIFE"],
         sConstants.ITEM_BALM_OF_LIFE);
-
-    // Load depo rental constants
-    success &= LoadInteger(constants["RENTAL_DEMON_1"],
-        sConstants.RENTAL_DEMON_1);
-    success &= LoadInteger(constants["RENTAL_DEMON_3"],
-        sConstants.RENTAL_DEMON_3);
-    success &= LoadInteger(constants["RENTAL_DEMON_7"],
-        sConstants.RENTAL_DEMON_7);
-    success &= LoadInteger(constants["RENTAL_DEMON_30"],
-        sConstants.RENTAL_DEMON_30);
-    success &= LoadInteger(constants["RENTAL_DEMON_60"],
-        sConstants.RENTAL_DEMON_60);
-    success &= LoadInteger(constants["RENTAL_DEMON_90"],
-        sConstants.RENTAL_DEMON_90);
-    success &= LoadInteger(constants["RENTAL_ITEM_1"],
-        sConstants.RENTAL_ITEM_1);
-    success &= LoadInteger(constants["RENTAL_ITEM_3"],
-        sConstants.RENTAL_ITEM_3);
-    success &= LoadInteger(constants["RENTAL_ITEM_7"],
-        sConstants.RENTAL_ITEM_7);
-    success &= LoadInteger(constants["RENTAL_ITEM_30"],
-        sConstants.RENTAL_ITEM_30);
-    success &= LoadInteger(constants["RENTAL_ITEM_60"],
-        sConstants.RENTAL_ITEM_60);
-    success &= LoadInteger(constants["RENTAL_ITEM_90"],
-        sConstants.RENTAL_ITEM_90);
 
     // Load skill constants
     success &= LoadInteger(constants["SKILL_CLAN_FORM"],
@@ -169,9 +145,10 @@ bool ServerConstants::Initialize(const String& filePath)
     success &= LoadInteger(constants["STATUS_SUMMON_SYNC_3"],
         sConstants.STATUS_SUMMON_SYNC_3);
 
-    if(success && complexConstants.find("DEFAULT_SKILLS") != complexConstants.end())
+    auto complexIter = complexConstants.find("DEFAULT_SKILLS");
+    if(success && complexIter != complexConstants.end())
     {
-        const tinyxml2::XMLElement* pElement = complexConstants["DEFAULT_SKILLS"];
+        const tinyxml2::XMLElement* pElement = complexIter->second;
         if(std::string(pElement->Value()) != "element")
         {
             success = false;
@@ -205,56 +182,22 @@ bool ServerConstants::Initialize(const String& filePath)
         success = false;
     }
 
-    if(success && complexConstants.find("CLAN_FORM_MAP") != complexConstants.end())
+    complexIter = complexConstants.find("CLAN_FORM_MAP");
+    if(success && complexIter != complexConstants.end())
     {
-        const tinyxml2::XMLElement* pPair = complexConstants["CLAN_FORM_MAP"];
-        if(std::string(pPair->Value()) != "pair")
-        {
-            success = false;
-        }
-        else
-        {
-            while(pPair)
-            {
-                const tinyxml2::XMLElement* pKey = pPair->FirstChildElement("key");
-                const tinyxml2::XMLElement* pVal = pPair->FirstChildElement("value");
-
-                std::string keyStr(pKey && pKey->FirstChild()->ToText()
-                    ? pKey->FirstChild()->ToText()->Value() : "");
-                std::string valStr(pVal && pVal->FirstChild()->ToText()
-                    ? pVal->FirstChild()->ToText()->Value() : "");
-                if(!keyStr.empty() || !valStr.empty())
-                {
-                    uint32_t key = 0;
-                    uint32_t val = 0;
-                    if(LoadInteger(keyStr, key) && LoadInteger(valStr, val))
-                    {
-                        sConstants.CLAN_FORM_MAP[key] = val;
-                    }
-                    else
-                    {
-                        success = false;
-                        break;
-                    }
-                }
-                else
-                {
-                    success = false;
-                    break;
-                }
-
-                pPair = pPair->NextSiblingElement("pair");
-            }
-        }
+        std::unordered_map<std::string, std::string> map;
+        success = LoadKeyValueStrings(complexIter->second, map) &&
+            LoadIntegerMap(map, sConstants.CLAN_FORM_MAP);
     }
     else
     {
         success = false;
     }
 
-    if(success && complexConstants.find("CLAN_LEVEL_SKILLS") != complexConstants.end())
+    complexIter = complexConstants.find("CLAN_LEVEL_SKILLS");
+    if(success && complexIter != complexConstants.end())
     {
-        const tinyxml2::XMLElement* pElement = complexConstants["CLAN_LEVEL_SKILLS"];
+        const tinyxml2::XMLElement* pElement = complexIter->second;
         if(std::string(pElement->Value()) != "element")
         {
             success = false;
@@ -306,6 +249,30 @@ bool ServerConstants::Initialize(const String& filePath)
         success = false;
     }
 
+    complexIter = complexConstants.find("DEPO_MAP_DEMON");
+    if(success && complexIter != complexConstants.end())
+    {
+        std::unordered_map<std::string, std::string> map;
+        success = LoadKeyValueStrings(complexIter->second, map) &&
+            LoadIntegerMap(map, sConstants.DEPO_MAP_DEMON);
+    }
+    else
+    {
+        success = false;
+    }
+
+    complexIter = complexConstants.find("DEPO_MAP_ITEM");
+    if(success && complexIter != complexConstants.end())
+    {
+        std::unordered_map<std::string, std::string> map;
+        success = LoadKeyValueStrings(complexIter->second, map) &&
+            LoadIntegerMap(map, sConstants.DEPO_MAP_ITEM);
+    }
+    else
+    {
+        success = false;
+    }
+
     return success;
 }
 
@@ -318,4 +285,51 @@ bool ServerConstants::LoadString(const std::string& value, String& prop)
 {
     prop = value;
     return !value.empty();
+}
+
+bool ServerConstants::LoadKeyValueStrings(const tinyxml2::XMLElement* elem,
+    std::unordered_map<std::string, std::string>& map)
+{
+    if(elem)
+    {
+        const tinyxml2::XMLElement* pPair = elem;
+        if(std::string(pPair->Value()) != "pair")
+        {
+            return false;
+        }
+        else
+        {
+            while(pPair)
+            {
+                const tinyxml2::XMLElement* pKey = pPair->FirstChildElement("key");
+                const tinyxml2::XMLElement* pVal = pPair->FirstChildElement("value");
+
+                std::string keyStr(pKey && pKey->FirstChild()->ToText()
+                    ? pKey->FirstChild()->ToText()->Value() : "");
+                std::string valStr(pVal && pVal->FirstChild()->ToText()
+                    ? pVal->FirstChild()->ToText()->Value() : "");
+                if(!keyStr.empty() || !valStr.empty())
+                {
+                    if(map.find(keyStr) != map.end())
+                    {
+                        return false;
+                    }
+
+                    map[keyStr] = valStr;
+                }
+                else
+                {
+                    return false;
+                }
+
+                pPair = pPair->NextSiblingElement("pair");
+            }
+        }
+    }
+    else
+    {
+        return false;
+    }
+
+    return true;
 }

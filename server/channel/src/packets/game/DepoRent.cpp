@@ -63,24 +63,6 @@ bool Parsers::DepoRent::Parse(libcomp::ManagerPacket *pPacketManager,
     int64_t boxID = p.ReadS64Little();
     int64_t itemID = p.ReadS64Little();
 
-    const static std::unordered_map<uint32_t, uint8_t> itemDayMap = {
-        { SVR_CONST.RENTAL_ITEM_1, 1 },
-        { SVR_CONST.RENTAL_ITEM_3, 3 },
-        { SVR_CONST.RENTAL_ITEM_7, 7 },
-        { SVR_CONST.RENTAL_ITEM_30, 30 },
-        { SVR_CONST.RENTAL_ITEM_60, 60 },
-        { SVR_CONST.RENTAL_ITEM_90, 90 }
-    };
-
-    const static std::unordered_map<uint32_t, uint8_t> demonDayMap = {
-        { SVR_CONST.RENTAL_DEMON_1, 1 },
-        { SVR_CONST.RENTAL_DEMON_3, 3 },
-        { SVR_CONST.RENTAL_DEMON_7, 7 },
-        { SVR_CONST.RENTAL_DEMON_30, 30 },
-        { SVR_CONST.RENTAL_DEMON_60, 60 },
-        { SVR_CONST.RENTAL_DEMON_90, 90 }
-    };
-
     bool isItemDepo = false;
     int32_t delta = 0;
     bool success = false;
@@ -93,16 +75,16 @@ bool Parsers::DepoRent::Parse(libcomp::ManagerPacket *pPacketManager,
     }
     else
     {
-        auto itemDayIter = itemDayMap.find(item->GetType());
-        auto demonDayIter = demonDayMap.find(item->GetType());
+        auto itemDayIter = SVR_CONST.DEPO_MAP_ITEM.find(item->GetType());
+        auto demonDayIter = SVR_CONST.DEPO_MAP_DEMON.find(item->GetType());
 
         std::shared_ptr<objects::ItemBox> itemDepo;
         std::shared_ptr<objects::DemonBox> demonDepo;
 
         bool isNew = false;
-        uint8_t dayCount = 0;
+        uint32_t dayCount = 0;
         auto dbChanges = libcomp::DatabaseChangeSet::Create(state->GetAccountUID());
-        isItemDepo = itemDayIter != itemDayMap.end();
+        isItemDepo = itemDayIter != SVR_CONST.DEPO_MAP_ITEM.end();
         if(isItemDepo)
         {
             itemDepo = worldData->GetItemBoxes((size_t)boxID).Get();
@@ -125,7 +107,7 @@ bool Parsers::DepoRent::Parse(libcomp::ManagerPacket *pPacketManager,
 
             success = true;
         }
-        else if(demonDayIter != demonDayMap.end())
+        else if(demonDayIter != SVR_CONST.DEPO_MAP_DEMON.end())
         {
             auto demonBoxID = (int8_t)boxID;
 

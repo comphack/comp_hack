@@ -336,6 +336,8 @@ bool ChannelServer::Initialize()
         to_underlying(ClientToChannelPacketCode_t::PACKET_MATERIAL_BOX));
     clientPacketManager->AddParser<Parsers::Analyze>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_ANALYZE));
+    clientPacketManager->AddParser<Parsers::ItemExpand>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_ITEM_EXPAND));
     clientPacketManager->AddParser<Parsers::FusionGauge>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_FUSION_GAUGE));
     clientPacketManager->AddParser<Parsers::TitleList>(

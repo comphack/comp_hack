@@ -249,6 +249,7 @@ SET(${PROJECT_NAME}_PACKETS
     src/packets/game/DemonFamiliarity.cpp       # 0x01E6
     src/packets/game/MaterialBox.cpp            # 0x0205
     src/packets/game/Analyze.cpp                # 0x0209
+    src/packets/game/ItemExpand.cpp             # 0x0210
     src/packets/game/FusionGauge.cpp            # 0x0217
     src/packets/game/TitleList.cpp              # 0x021B
     src/packets/game/PartnerDemonQuestList.cpp  # 0x022D

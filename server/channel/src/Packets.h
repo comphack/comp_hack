@@ -149,6 +149,7 @@ PACKET_PARSER_DECL(ClanEmblemUpdate);       // 0x01E1
 PACKET_PARSER_DECL(DemonFamiliarity);       // 0x01E6
 PACKET_PARSER_DECL(MaterialBox);            // 0x0205
 PACKET_PARSER_DECL(Analyze);                // 0x0209
+PACKET_PARSER_DECL(ItemExpand);             // 0x0210
 PACKET_PARSER_DECL(FusionGauge);            // 0x0217
 PACKET_PARSER_DECL(TitleList);              // 0x021B
 PACKET_PARSER_DECL(PartnerDemonQuestList);  // 0x022D

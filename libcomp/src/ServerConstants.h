@@ -36,6 +36,11 @@
 #include <set>
 #include <unordered_map>
 
+namespace tinyxml2
+{
+class XMLElement;
+}
+
 namespace libcomp
 {
 
@@ -84,44 +89,11 @@ struct Data
     /// Item ID of item type: Magnetite (マグネタイト)
     uint32_t ITEM_MAGNETITE;
 
+    /// Item ID of item type: Magnetite Presser (ＭＡＧプレッサーα)
+    uint32_t ITEM_MAG_PRESSER;
+
     /// Item ID of item type: Balm of Life (反魂香)
     uint32_t ITEM_BALM_OF_LIFE;
-
-    /// Item ID of the 1 day demon box rental ticket
-    uint32_t RENTAL_DEMON_1;
-
-    /// Item ID of the 3 day demon box rental ticket
-    uint32_t RENTAL_DEMON_3;
-
-    /// Item ID of the 7 day demon box rental ticket
-    uint32_t RENTAL_DEMON_7;
-
-    /// Item ID of the 30 day demon box rental ticket
-    uint32_t RENTAL_DEMON_30;
-
-    /// Item ID of the 60 day demon box rental ticket
-    uint32_t RENTAL_DEMON_60;
-
-    /// Item ID of the 90 day demon box rental ticket
-    uint32_t RENTAL_DEMON_90;
-
-    /// Item ID of the 1 day item box rental ticket
-    uint32_t RENTAL_ITEM_1;
-
-    /// Item ID of the 3 day item box rental ticket
-    uint32_t RENTAL_ITEM_3;
-
-    /// Item ID of the 7 day item box rental ticket
-    uint32_t RENTAL_ITEM_7;
-
-    /// Item ID of the 30 day item box rental ticket
-    uint32_t RENTAL_ITEM_30;
-
-    /// Item ID of the 60 day item box rental ticket
-    uint32_t RENTAL_ITEM_60;
-
-    /// Item ID of the 90 day item box rental ticket
-    uint32_t RENTAL_ITEM_90;
 
     /// Function ID of clan formation item skills
     uint16_t SKILL_CLAN_FORM;
@@ -170,6 +142,12 @@ struct Data
 
     /// Array of skill IDs gained at clan levels 1-10
     std::array<std::set<uint32_t>, 10> CLAN_LEVEL_SKILLS;
+
+    /// Item IDs of demon box rental tickets to their corresponding day lengths
+    std::unordered_map<uint32_t, uint32_t> DEPO_MAP_DEMON;
+
+    /// Item IDs of item box rental tickets to their corresponding day lengths
+    std::unordered_map<uint32_t, uint32_t> DEPO_MAP_ITEM;
 };
 
 public:
@@ -196,6 +174,16 @@ private:
      * @return true on success, false on failure
      */
     static bool LoadString(const std::string& value, String& prop);
+
+    /**
+     * Utility function to load key value string pairs from the
+     * constants read from the XML file
+     * @param elem Pointer to the pair list parent element
+     * @param map String to string map to assign the value to
+     * @return true on success, false on failure
+     */
+    static bool LoadKeyValueStrings(const tinyxml2::XMLElement* elem,
+        std::unordered_map<std::string, std::string>& map);
 
     /**
      * Utility function to load a string from the constants read
@@ -235,6 +223,34 @@ private:
         }
 
         return success;
+    }
+
+    /**
+     * Utility function to load a map of string to string pairs from
+     * the constants read from the XML file and convert to integer types
+     * @param valueMap Value map assigned to a constant
+     * @param propMap Integer map reference to assign the values to
+     * @return true on success, false on failure
+     */
+    template<typename K, typename V>
+    static bool LoadIntegerMap(const std::unordered_map<std::string,
+        std::string>& valueMap, std::unordered_map<K, V>& propMap)
+    {
+        for(auto pair : valueMap)
+        {
+            K key = 0;
+            V val = 0;
+            if(LoadInteger(pair.first, key) && LoadInteger(pair.second, val))
+            {
+                propMap[key] = val;
+            }
+            else
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /// Container for all server side constants

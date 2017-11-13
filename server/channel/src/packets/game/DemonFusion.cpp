@@ -37,6 +37,7 @@
 #include <math.h>
 
 // object Includes
+#include <CharacterProgress.h>
 #include <DemonBox.h>
 #include <InheritedSkill.h>
 #include <MiAcquisitionData.h>
@@ -101,9 +102,6 @@ bool ProcessDemonFusion(const std::shared_ptr<ChannelServer>& server,
 
         if(sourceCount != 2) continue;
 
-        /// @todo: support plugins
-        if(special->GetPluginID() > 0) continue;
-
         // Map of source ID to its "variant allowed" value
         std::unordered_map<uint32_t, bool> sourceMap;
         sourceMap[special->GetSourceID1()] = special->GetVariant1Allowed() == 1;
@@ -133,6 +131,19 @@ bool ProcessDemonFusion(const std::shared_ptr<ChannelServer>& server,
                 match = false;
                 break;
             }
+        }
+
+        if(match && special->GetPluginID() > 0)
+        {
+            // Check that the player has the plugin
+            size_t index;
+            uint8_t shiftVal;
+            characterManager->ConvertIDToMaskValues((uint16_t)special->GetPluginID(),
+                index, shiftVal);
+
+            uint8_t indexVal = character->GetProgress()->GetPlugins(index);
+
+            match = (indexVal & shiftVal) != 0;
         }
 
         if(match)

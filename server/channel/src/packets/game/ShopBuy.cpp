@@ -142,11 +142,10 @@ void HandleShopPurchase(const std::shared_ptr<ChannelServer> server,
     price = price * quantity;
 
     std::list<std::shared_ptr<objects::Item>> insertItems;
-    std::list<std::shared_ptr<objects::Item>> deleteItems;
     std::unordered_map<std::shared_ptr<objects::Item>, uint16_t> stackAdjustItems;
 
     if(!cpPurchase && !characterManager->CalculateMaccaPayment(client, (uint64_t)price,
-        insertItems, deleteItems, stackAdjustItems))
+        insertItems, stackAdjustItems))
     {
         LOG_ERROR(libcomp::String("Attempted to buy an item the player could"
             " not afford: %1\n").Arg(state->GetAccountUID().ToString()));
@@ -169,7 +168,13 @@ void HandleShopPurchase(const std::shared_ptr<ChannelServer> server,
             if(stackLeft <= 0) continue;
 
             uint16_t stackAdd = (uint16_t)((qtyLeft <= stackLeft) ? qtyLeft : stackLeft);
-            stackAdjustItems[item] = (uint16_t)(item->GetStackSize() + stackAdd);
+
+            if(stackAdjustItems.find(item) == stackAdjustItems.end())
+            {
+                stackAdjustItems[item] = item->GetStackSize();
+            }
+
+            stackAdjustItems[item] = (uint16_t)(stackAdjustItems[item] + stackAdd);
             qtyLeft = (int32_t)(qtyLeft - stackAdd);
         }
     }
@@ -183,8 +188,7 @@ void HandleShopPurchase(const std::shared_ptr<ChannelServer> server,
         qtyLeft = (int32_t)(qtyLeft - stack);
     }
 
-    if(!characterManager->UpdateItems(client, true, insertItems, deleteItems,
-        stackAdjustItems))
+    if(!characterManager->UpdateItems(client, true, insertItems, stackAdjustItems))
     {
         SendShopPurchaseReply(client, shopID, productID, -1, false);
         return;
@@ -211,8 +215,7 @@ void HandleShopPurchase(const std::shared_ptr<ChannelServer> server,
         }
     }
 
-    if(characterManager->UpdateItems(client, false, insertItems, deleteItems,
-        stackAdjustItems))
+    if(characterManager->UpdateItems(client, false, insertItems, stackAdjustItems))
     {
         SendShopPurchaseReply(client, shopID, productID, 0, true);
     }

@@ -43,6 +43,7 @@
 
 // object Includes
 #include <AccountWorldData.h>
+#include <ChannelConfig.h>
 #include <CharacterProgress.h>
 #include <Clan.h>
 #include <DemonBox.h>
@@ -1237,22 +1238,83 @@ bool CharacterManager::AddRemoveItems(const std::shared_ptr<
     auto dbChanges = libcomp::DatabaseChangeSet::Create(
         state->GetAccountUID());
 
-    std::list<uint16_t> updatedSlots;
-    for(auto itemPair : itemCounts)
+    bool autoCompress = add && std::dynamic_pointer_cast<
+        objects::ChannelConfig>(server->GetConfig())->GetAutoCompressCurrency();
+    if(autoCompress)
     {
-        uint32_t itemID = itemPair.first;
+        // Compress macca
+        auto it = itemCounts.find(SVR_CONST.ITEM_MACCA);
+        if(it != itemCounts.end() && it->second >= ITEM_MACCA_NOTE_AMOUNT)
+        {
+            uint32_t maccaCount = it->second;
+            uint32_t noteCount = (uint32_t)(maccaCount / ITEM_MACCA_NOTE_AMOUNT);
+            maccaCount = (uint32_t)(maccaCount - (uint32_t)(noteCount *
+                ITEM_MACCA_NOTE_AMOUNT));
+
+            if(noteCount > 0)
+            {
+                itemCounts[SVR_CONST.ITEM_MACCA_NOTE] = noteCount;
+            }
+
+            if(maccaCount == 0)
+            {
+                itemCounts.erase(SVR_CONST.ITEM_MACCA);
+            }
+            else
+            {
+                itemCounts[SVR_CONST.ITEM_MACCA] = maccaCount;
+            }
+        }
+        
+        // Compress mag
+        it = itemCounts.find(SVR_CONST.ITEM_MAGNETITE);
+        if(it != itemCounts.end() && it->second >= ITEM_MAG_PRESSER_AMOUNT)
+        {
+            uint32_t magCount = it->second;
+            uint32_t presserCount = (uint32_t)(magCount / ITEM_MAG_PRESSER_AMOUNT);
+            magCount = (uint32_t)(magCount - (uint32_t)(presserCount *
+                ITEM_MAG_PRESSER_AMOUNT));
+
+            if(presserCount > 0)
+            {
+                itemCounts[SVR_CONST.ITEM_MAG_PRESSER] = presserCount;
+            }
+
+            if(magCount == 0)
+            {
+                itemCounts.erase(SVR_CONST.ITEM_MAGNETITE);
+            }
+            else
+            {
+                itemCounts[SVR_CONST.ITEM_MAGNETITE] = magCount;
+            }
+        }
+    }
+
+    // Loop until we're done
+    std::list<uint16_t> updatedSlots;
+    while(itemCounts.size() > 0)
+    {
+        auto itemPair = *itemCounts.begin();
+
+        uint32_t itemType = itemPair.first;
         uint32_t quantity = itemPair.second;
 
-        auto def = server->GetDefinitionManager()->GetItemData(itemID);
+        itemCounts.erase(itemType);
+
+        auto def = server->GetDefinitionManager()->GetItemData(itemType);
         if(nullptr == def)
         {
             return false;
         }
 
-        auto existing = GetExistingItems(character, itemID);
+        auto existing = GetExistingItems(character, itemType);
         uint32_t maxStack = (uint32_t)def->GetPossession()->GetStackSize();
         if(add)
         {
+            bool compressible = autoCompress && (itemType == SVR_CONST.ITEM_MACCA ||
+                itemType == SVR_CONST.ITEM_MAGNETITE);
+
             uint32_t quantityLeft = quantity;
             for(auto item : existing)
             {
@@ -1287,15 +1349,64 @@ bool CharacterManager::AddRemoveItems(const std::shared_ptr<
                 for(auto item : existing)
                 {
                     uint32_t free = (uint32_t)(maxStack - item->GetStackSize());
+
                     if(added < quantity && free > 0)
                     {
+                        if(compressible)
+                        {
+                            uint32_t increaseItem = 0;
+                            if(itemType == SVR_CONST.ITEM_MACCA &&
+                                (uint32_t)(item->GetStackSize() + (quantity - added))
+                                >= ITEM_MACCA_NOTE_AMOUNT)
+                            {
+                                increaseItem = SVR_CONST.ITEM_MACCA_NOTE;
+                            }
+                            else if(itemType == SVR_CONST.ITEM_MAGNETITE &&
+                                (uint32_t)(item->GetStackSize() + (quantity - added))
+                                >= ITEM_MAG_PRESSER_AMOUNT)
+                            {
+                                increaseItem = SVR_CONST.ITEM_MAG_PRESSER;
+                            }
+
+                            if(increaseItem)
+                            {
+                                // Remove the current item and add the compressed item
+                                // to the set
+                                itemBox->SetItems((size_t)item->GetBoxSlot(), NULLUUID);
+                                updatedSlots.push_back((uint16_t)item->GetBoxSlot());
+                                dbChanges->Delete(item);
+
+                                // Free up the slot and re-sort
+                                freeSlots.push_back((size_t)item->GetBoxSlot());
+                                freeSlots.unique();
+                                freeSlots.sort();
+
+                                added = (uint32_t)(added + free);
+
+                                if(itemCounts.find(increaseItem) == itemCounts.end())
+                                {
+                                    itemCounts[increaseItem] = 1;
+                                }
+                                else
+                                {
+                                    itemCounts[increaseItem] = (uint32_t)(
+                                        itemCounts[increaseItem] + 1);
+                                }
+
+                                continue;
+                            }
+                        }
+
                         uint32_t delta = (uint32_t)(quantity - added);
                         if(free < delta)
                         {
                             delta = free;
                         }
+
                         item->SetStackSize((uint16_t)(item->GetStackSize() + delta));
                         updatedSlots.push_back((uint16_t)item->GetBoxSlot());
+                        dbChanges->Update(item);
+
                         added = (uint32_t)(added + delta);
                     }
 
@@ -1316,7 +1427,7 @@ bool CharacterManager::AddRemoveItems(const std::shared_ptr<
                         }
                         added = (uint32_t)(added + delta);
 
-                        auto item = GenerateItem(itemID, (uint16_t)delta);
+                        auto item = GenerateItem(itemType, (uint16_t)delta);
                         item->SetItemBox(itemBox);
                         item->SetBoxSlot((int8_t)freeSlot);
 
@@ -1324,6 +1435,7 @@ bool CharacterManager::AddRemoveItems(const std::shared_ptr<
                         {
                             return false;
                         }
+
                         updatedSlots.push_back((uint16_t)freeSlot);
                         dbChanges->Insert(item);
 
@@ -1465,17 +1577,15 @@ bool CharacterManager::PayMacca(const std::shared_ptr<
     auto inventory = character->GetItemBoxes(0).Get();
 
     std::list<std::shared_ptr<objects::Item>> insertItems;
-    std::list<std::shared_ptr<objects::Item>> deleteItems;
     std::unordered_map<std::shared_ptr<objects::Item>, uint16_t> stackAdjustItems;
 
-    return CalculateMaccaPayment(client, amount, insertItems, deleteItems, stackAdjustItems)
-        && UpdateItems(client, false, insertItems, deleteItems, stackAdjustItems);
+    return CalculateMaccaPayment(client, amount, insertItems, stackAdjustItems)
+        && UpdateItems(client, false, insertItems, stackAdjustItems);
 }
 
 bool CharacterManager::CalculateMaccaPayment(const std::shared_ptr<
     channel::ChannelClientConnection>& client, uint64_t amount,
     std::list<std::shared_ptr<objects::Item>>& insertItems,
-    std::list<std::shared_ptr<objects::Item>>& deleteItems,
     std::unordered_map<std::shared_ptr<objects::Item>, uint16_t>& stackAdjustItems)
 {
     auto state = client->GetClientState();
@@ -1525,7 +1635,7 @@ bool CharacterManager::CalculateMaccaPayment(const std::shared_ptr<
         else
         {
             amountLeft = (uint64_t)(amountLeft - stack);
-            deleteItems.push_back(m);
+            stackAdjustItems[m] = 0;
         }
     }
 
@@ -1545,7 +1655,7 @@ bool CharacterManager::CalculateMaccaPayment(const std::shared_ptr<
 
             if(stackDecrease == 0)
             {
-                deleteItems.push_back(m);
+                stackAdjustItems[m] = 0;
             }
             else
             {
@@ -1561,7 +1671,7 @@ bool CharacterManager::CalculateMaccaPayment(const std::shared_ptr<
         else
         {
             amountLeft = (uint64_t)(amountLeft - stackAmount);
-            deleteItems.push_back(m);
+            stackAdjustItems[m] = 0;
         }
     }
 
@@ -1576,7 +1686,6 @@ bool CharacterManager::CalculateMaccaPayment(const std::shared_ptr<
 bool CharacterManager::UpdateItems(const std::shared_ptr<
     channel::ChannelClientConnection>& client, bool validateOnly,
     std::list<std::shared_ptr<objects::Item>>& insertItems,
-    std::list<std::shared_ptr<objects::Item>>& deleteItems,
     std::unordered_map<std::shared_ptr<objects::Item>, uint16_t> stackAdjustItems)
 {
     auto state = client->GetClientState();
@@ -1593,9 +1702,13 @@ bool CharacterManager::UpdateItems(const std::shared_ptr<
         }
     }
 
-    for(auto item : deleteItems)
+    // Determine new free slots from deletes
+    for(auto pair : stackAdjustItems)
     {
-        freeSlots.push_back(item->GetBoxSlot());
+        if(pair.second == 0)
+        {
+            freeSlots.push_back(pair.first->GetBoxSlot());
+        }
     }
 
     freeSlots.unique();
@@ -1613,16 +1726,26 @@ bool CharacterManager::UpdateItems(const std::shared_ptr<
     auto changes = libcomp::DatabaseChangeSet::Create();
     std::list<uint16_t> updatedSlots;
 
-    // Delete the items consumed by the payment
-    for(auto item : deleteItems)
+    for(auto iPair : stackAdjustItems)
     {
-        auto slot = item->GetBoxSlot();
-        inventory->SetItems((size_t)slot, NULLUUID);
-        changes->Delete(item);
-        updatedSlots.push_back((uint16_t)slot);
+        auto item = iPair.first;
+        if(iPair.second == 0)
+        {
+            // Delete the item
+            auto slot = item->GetBoxSlot();
+            inventory->SetItems((size_t)slot, NULLUUID);
+            changes->Delete(item);
+            updatedSlots.push_back((uint16_t)slot);
+        }
+        else
+        {
+            // Update the stack size
+            item->SetStackSize(iPair.second);
+            changes->Update(item);
+            updatedSlots.push_back((uint16_t)item->GetBoxSlot());
+        }
     }
 
-    // Insert the new items
     for(auto item : insertItems)
     {
         auto slot = freeSlots.front();
@@ -1633,15 +1756,6 @@ bool CharacterManager::UpdateItems(const std::shared_ptr<
         inventory->SetItems((size_t)slot, item);
         changes->Insert(item);
         updatedSlots.push_back((uint16_t)slot);
-    }
-
-    // Increase the stacks of existing items of the same type
-    for(auto iPair : stackAdjustItems)
-    {
-        auto item = iPair.first;
-        item->SetStackSize(iPair.second);
-        changes->Update(item);
-        updatedSlots.push_back((uint16_t)item->GetBoxSlot());
     }
 
     changes->Update(inventory);

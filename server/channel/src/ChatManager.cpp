@@ -76,6 +76,7 @@ ChatManager::ChatManager(const std::weak_ptr<ChannelServer>& server)
     mGMands["levelup"] = &ChatManager::GMCommand_LevelUp;
     mGMands["lnc"] = &ChatManager::GMCommand_LNC;
     mGMands["map"] = &ChatManager::GMCommand_Map;
+    mGMands["plugin"] = &ChatManager::GMCommand_Plugin;
     mGMands["pos"] = &ChatManager::GMCommand_Position;
     mGMands["post"] = &ChatManager::GMCommand_Post;
     mGMands["quest"] = &ChatManager::GMCommand_Quest;
@@ -83,6 +84,7 @@ ChatManager::ChatManager(const std::weak_ptr<ChannelServer>& server)
     mGMands["spawn"] = &ChatManager::GMCommand_Spawn;
     mGMands["speed"] = &ChatManager::GMCommand_Speed;
     mGMands["tickermessage"] = &ChatManager::GMCommand_TickerMessage;
+    mGMands["valuable"] = &ChatManager::GMCommand_Valuable;
     mGMands["version"] = &ChatManager::GMCommand_Version;
     mGMands["xp"] = &ChatManager::GMCommand_XP;
     mGMands["zone"] = &ChatManager::GMCommand_Zone;
@@ -831,6 +833,28 @@ bool ChatManager::GMCommand_Map(const std::shared_ptr<
     return true;
 }
 
+bool ChatManager::GMCommand_Plugin(const std::shared_ptr<
+    channel::ChannelClientConnection>& client,
+    const std::list<libcomp::String>& args)
+{
+    std::list<libcomp::String> argsCopy = args;
+
+    uint16_t pluginID;
+    if(!GetIntegerArg<uint16_t>(pluginID, argsCopy))
+    {
+        return false;
+    }
+
+    if(!mServer.lock()->GetCharacterManager()->AddPlugin(client,
+        pluginID))
+    {
+        return SendChatMessage(client, ChatType_t::CHAT_SELF,
+            "Invalid plugin ID supplied for @plugin command");
+    }
+
+    return true;
+}
+
 bool ChatManager::GMCommand_Position(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
@@ -1078,6 +1102,28 @@ bool ChatManager::GMCommand_TickerMessage(const std::shared_ptr<
     return true;
 }
 
+bool ChatManager::GMCommand_Valuable(const std::shared_ptr<
+    channel::ChannelClientConnection>& client,
+    const std::list<libcomp::String>& args)
+{
+    std::list<libcomp::String> argsCopy = args;
+
+    uint16_t valuableID;
+    if(!GetIntegerArg<uint16_t>(valuableID, argsCopy))
+    {
+        return false;
+    }
+
+    bool remove = argsCopy.size() > 0 && argsCopy.front() == "remove";
+    if(!mServer.lock()->GetCharacterManager()->AddRemoveValuable(client,
+        valuableID, remove))
+    {
+        return SendChatMessage(client, ChatType_t::CHAT_SELF,
+            "Invalid valuable ID supplied for @plugin command");
+    }
+
+    return true;
+}
 
 bool ChatManager::GMCommand_Version(const std::shared_ptr<
     channel::ChannelClientConnection>& client,

@@ -11,19 +11,8 @@
     <constant name="ITEM_MACCA">799</constant>
     <constant name="ITEM_MACCA_NOTE">699</constant>
     <constant name="ITEM_MAGNETITE">800</constant>
+    <constant name="ITEM_MAG_PRESSER">27375</constant>
     <constant name="ITEM_BALM_OF_LIFE">101</constant>
-    <constant name="RENTAL_DEMON_1">12761</constant>
-    <constant name="RENTAL_DEMON_3">12762</constant>
-    <constant name="RENTAL_DEMON_7">12763</constant>
-    <constant name="RENTAL_DEMON_30">904</constant>
-    <constant name="RENTAL_DEMON_60">905</constant>
-    <constant name="RENTAL_DEMON_90">906</constant>
-    <constant name="RENTAL_ITEM_1">12758</constant>
-    <constant name="RENTAL_ITEM_3">12759</constant>
-    <constant name="RENTAL_ITEM_7">12760</constant>
-    <constant name="RENTAL_ITEM_30">901</constant>
-    <constant name="RENTAL_ITEM_60">902</constant>
-    <constant name="RENTAL_ITEM_90">903</constant>
     <constant name="SKILL_TRAESTO">101</constant>
     <constant name="SKILL_SUICIDE">103</constant>
     <constant name="SKILL_SUMMON_DEMON">200</constant>
@@ -118,5 +107,109 @@
         <element>7018,7019</element>
         <element>7020,7021</element>
         <element>7022,7023,7024</element>
+    </constant>
+    <constant name="DEPO_MAP_DEMON">
+        <pair>
+            <key>12761</key>
+            <value>1</value>
+        </pair>
+        <pair>
+            <key>12762</key>
+            <value>3</value>
+        </pair>
+        <pair>
+            <key>12763</key>
+            <value>7</value>
+        </pair>
+        <pair>
+            <key>904</key>
+            <value>30</value>
+        </pair>
+        <pair>
+            <key>905</key>
+            <value>60</value>
+        </pair>
+        <pair>
+            <key>906</key>
+            <value>90</value>
+        </pair>
+        <pair>
+            <key>21980</key>
+            <value>1</value>
+        </pair>
+        <pair>
+            <key>21981</key>
+            <value>3</value>
+        </pair>
+        <pair>
+            <key>12859</key>
+            <value>3</value>
+        </pair>
+        <pair>
+            <key>21982</key>
+            <value>7</value>
+        </pair>
+        <pair>
+            <key>910</key>
+            <value>30</value>
+        </pair>
+        <pair>
+            <key>911</key>
+            <value>60</value>
+        </pair>
+        <pair>
+            <key>912</key>
+            <value>90</value>
+        </pair>
+    </constant>
+    <constant name="DEPO_MAP_ITEM">
+        <pair>
+            <key>12758</key>
+            <value>1</value>
+        </pair>
+        <pair>
+            <key>12759</key>
+            <value>3</value>
+        </pair>
+        <pair>
+            <key>12760</key>
+            <value>7</value>
+        </pair>
+        <pair>
+            <key>901</key>
+            <value>30</value>
+        </pair>
+        <pair>
+            <key>902</key>
+            <value>60</value>
+        </pair>
+        <pair>
+            <key>903</key>
+            <value>90</value>
+        </pair>
+        <pair>
+            <key>21977</key>
+            <value>1</value>
+        </pair>
+        <pair>
+            <key>21978</key>
+            <value>3</value>
+        </pair>
+        <pair>
+            <key>21979</key>
+            <value>7</value>
+        </pair>
+        <pair>
+            <key>907</key>
+            <value>30</value>
+        </pair>
+        <pair>
+            <key>908</key>
+            <value>60</value>
+        </pair>
+        <pair>
+            <key>909</key>
+            <value>90</value>
+        </pair>
     </constant>
 </constants>

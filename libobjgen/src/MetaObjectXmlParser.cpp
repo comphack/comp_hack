@@ -675,7 +675,7 @@ std::shared_ptr<MetaVariable> MetaObjectXmlParser::GetVariable(const tinyxml2::X
             bool genericReference = refType.empty();
             if(genericReference)
             {
-                persistentRefType = mObject->IsPersistent();
+                persistentRefType = mObject->IsPersistent() || memberType == "pref";
                 ref->SetPersistentReference(persistentRefType);
                 ref->SetGeneric();
             }

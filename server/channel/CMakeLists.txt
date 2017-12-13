@@ -1,6 +1,6 @@
 # This file is part of COMP_hack.
 #
-# Copyright (C) 2010-2016 COMP_hack Team <compomega@tutanota.com>
+# Copyright (C) 2010-2017 COMP_hack Team <compomega@tutanota.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -45,6 +45,7 @@ SET(${PROJECT_NAME}_SRCS
     src/BazaarState.cpp
     src/ChannelClientConnection.cpp
     src/ChannelServer.cpp
+    src/ChannelSyncManager.cpp
     src/CharacterManager.cpp
     src/ChatManager.cpp
     src/ClientState.cpp
@@ -72,6 +73,7 @@ SET(${PROJECT_NAME}_HDRS
     src/BazaarState.h
     src/ChannelClientConnection.h
     src/ChannelServer.h
+    src/ChannelSyncManager.h
     src/CharacterManager.h
     src/ChatManager.h
     src/ClientState.h
@@ -220,6 +222,13 @@ SET(${PROJECT_NAME}_PACKETS
     src/packets/game/BazaarItemUpdate.cpp       # 0x011D
     src/packets/game/BazaarItemBuy.cpp          # 0x011F
     src/packets/game/BazaarMarketSales.cpp      # 0x0122
+    src/packets/game/SearchEntrySelf.cpp        # 0x0128
+    src/packets/game/SearchList.cpp             # 0x012A
+    src/packets/game/SearchEntryData.cpp        # 0x012C
+    src/packets/game/SearchEntryRegister.cpp    # 0x012E
+    src/packets/game/SearchEntryUpdate.cpp      # 0x0130
+    src/packets/game/SearchEntryRemove.cpp      # 0x0132
+    src/packets/game/SearchAppReply.cpp         # 0x0135
     src/packets/game/ClanDisband.cpp            # 0x0138
     src/packets/game/ClanInvite.cpp             # 0x013B
     src/packets/game/ClanJoin.cpp               # 0x013E
@@ -233,6 +242,7 @@ SET(${PROJECT_NAME}_PACKETS
     src/packets/game/ClanList.cpp               # 0x0152
     src/packets/game/ClanData.cpp               # 0x0154
     src/packets/game/ClanForm.cpp               # 0x0156
+    src/packets/game/ItemPrice.cpp              # 0x0157
     src/packets/game/BazaarState.cpp            # 0x015F
     src/packets/game/BazaarClerkSet.cpp         # 0x0161
     src/packets/game/BazaarPrice.cpp            # 0x0164
@@ -275,10 +285,11 @@ SET(${PROJECT_NAME}_PACKETS
     src/packets/internal/AccountLogin.cpp          # 0x1004
     src/packets/internal/AccountLogout.cpp         # 0x1005
     src/packets/internal/Relay.cpp                 # 0x1006
-    src/packets/internal/CharacterLogin.cpp        # 0x1007
-    src/packets/internal/FriendsUpdate.cpp         # 0x1008
-    src/packets/internal/PartyUpdate.cpp           # 0x1009
-    src/packets/internal/ClanUpdate.cpp            # 0x100A
+    src/packets/internal/DataSync.cpp              # 0x1007
+    src/packets/internal/CharacterLogin.cpp        # 0x1008
+    src/packets/internal/FriendsUpdate.cpp         # 0x1009
+    src/packets/internal/PartyUpdate.cpp           # 0x100A
+    src/packets/internal/ClanUpdate.cpp            # 0x100B
 )
 
 COVERALLS_SOURCES(

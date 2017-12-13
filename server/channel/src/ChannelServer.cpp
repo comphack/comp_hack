@@ -89,6 +89,8 @@ bool ChannelServer::Initialize()
         to_underlying(InternalPacketCode_t::PACKET_ACCOUNT_LOGOUT));
     internalPacketManager->AddParser<Parsers::Relay>(
         to_underlying(InternalPacketCode_t::PACKET_RELAY));
+    internalPacketManager->AddParser<Parsers::DataSync>(
+        to_underlying(InternalPacketCode_t::PACKET_DATA_SYNC));
     internalPacketManager->AddParser<Parsers::CharacterLogin>(
         to_underlying(InternalPacketCode_t::PACKET_CHARACTER_LOGIN));
     internalPacketManager->AddParser<Parsers::FriendsUpdate>(
@@ -278,6 +280,20 @@ bool ChannelServer::Initialize()
         to_underlying(ClientToChannelPacketCode_t::PACKET_BAZAAR_ITEM_BUY));
     clientPacketManager->AddParser<Parsers::BazaarMarketSales>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_BAZAAR_MARKET_SALES));
+    clientPacketManager->AddParser<Parsers::SearchEntrySelf>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_SEARCH_ENTRY_SELF));
+    clientPacketManager->AddParser<Parsers::SearchList>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_SEARCH_LIST));
+    clientPacketManager->AddParser<Parsers::SearchEntryData>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_SEARCH_ENTRY_DATA));
+    clientPacketManager->AddParser<Parsers::SearchEntryRegister>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_SEARCH_ENTRY_REGISTER));
+    clientPacketManager->AddParser<Parsers::SearchEntryUpdate>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_SEARCH_ENTRY_UPDATE));
+    clientPacketManager->AddParser<Parsers::SearchEntryRemove>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_SEARCH_ENTRY_REMOVE));
+    clientPacketManager->AddParser<Parsers::SearchAppReply>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_SEARCH_APPLICATION_REPLY));
     clientPacketManager->AddParser<Parsers::ClanDisband>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_CLAN_DISBAND));
     clientPacketManager->AddParser<Parsers::ClanInvite>(
@@ -304,6 +320,8 @@ bool ChannelServer::Initialize()
         to_underlying(ClientToChannelPacketCode_t::PACKET_CLAN_DATA));
     clientPacketManager->AddParser<Parsers::ClanForm>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_CLAN_FORM));
+    clientPacketManager->AddParser<Parsers::ItemPrice>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_ITEM_PRICE));
     clientPacketManager->AddParser<Parsers::BazaarState>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_BAZAAR_STATE));
     clientPacketManager->AddParser<Parsers::BazaarClerkSet>(
@@ -401,6 +419,7 @@ bool ChannelServer::Initialize()
     mChatManager = new ChatManager(channelPtr);
     mEventManager = new EventManager(channelPtr);
     mSkillManager = new SkillManager(channelPtr);
+    mSyncManager = new ChannelSyncManager(channelPtr);
     mZoneManager = new ZoneManager(channelPtr);
 
     mZoneManager->LoadGeometry();
@@ -448,16 +467,17 @@ ChannelServer::~ChannelServer()
         mTickThread.join();
     }
 
-    delete[] mAccountManager;
-    delete[] mActionManager;
-    delete[] mAIManager;
-    delete[] mCharacterManager;
-    delete[] mChatManager;
-    delete[] mEventManager;
-    delete[] mSkillManager;
-    delete[] mZoneManager;
-    delete[] mDefinitionManager;
-    delete[] mServerDataManager;
+    delete mAccountManager;
+    delete mActionManager;
+    delete mAIManager;
+    delete mCharacterManager;
+    delete mChatManager;
+    delete mEventManager;
+    delete mSkillManager;
+    delete mSyncManager;
+    delete mZoneManager;
+    delete mDefinitionManager;
+    delete mServerDataManager;
 }
 
 ServerTime ChannelServer::GetServerTime()
@@ -654,6 +674,11 @@ libcomp::DefinitionManager* ChannelServer::GetDefinitionManager() const
 libcomp::ServerDataManager* ChannelServer::GetServerDataManager() const
 {
     return mServerDataManager;
+}
+
+ChannelSyncManager* ChannelServer::GetChannelSyncManager() const
+{
+    return mSyncManager;
 }
 
 int32_t ChannelServer::GetNextEntityID()

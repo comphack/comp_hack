@@ -143,6 +143,7 @@ void ManagerConnection::RemoveConnection(std::shared_ptr<libcomp::InternalConnec
             {
                 auto accountManager = worldServer->GetAccountManager();
                 auto characterManager = worldServer->GetCharacterManager();
+                auto syncManager = worldServer->GetWorldSyncManager();
                 auto loggedOut = accountManager->LogoutUsersOnChannel(channelID);
 
                 if(loggedOut.size() > 0)
@@ -150,6 +151,7 @@ void ManagerConnection::RemoveConnection(std::shared_ptr<libcomp::InternalConnec
                     LOG_WARNING(libcomp::String("%1 user(s) forcefully logged out"
                         " from channel %2.\n").Arg(loggedOut.size()).Arg(channelID));
 
+                    bool flushSyncData = false;
                     std::list<std::shared_ptr<objects::CharacterLogin>> cLogOuts;
                     for(auto logOut : loggedOut)
                     {
@@ -157,7 +159,15 @@ void ManagerConnection::RemoveConnection(std::shared_ptr<libcomp::InternalConnec
 
                         characterManager->PartyLeave(cLogin, nullptr, true);
 
+                        flushSyncData |= syncManager->CleanUpCharacterLogin(
+                            cLogin->GetWorldCID());
+
                         cLogOuts.push_back(cLogin);
+                    }
+
+                    if(flushSyncData)
+                    {
+                        syncManager->SyncOutgoing();
                     }
 
                     characterManager->SendStatusToRelatedCharacters(cLogOuts,

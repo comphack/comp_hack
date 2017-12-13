@@ -43,6 +43,7 @@
 // world Includes
 #include "AccountManager.h"
 #include "CharacterManager.h"
+#include "WorldSyncManager.h"
 
 namespace world
 {
@@ -179,7 +180,13 @@ public:
      * Get the character manager for the server.
      * @return Character manager for the server.
      */
-    CharacterManager* GetCharacterManager();
+    CharacterManager* GetCharacterManager() const;
+
+    /**
+     * Get a pointer to the data sync manager.
+     * @return Pointer to the WorldSyncManager
+     */
+    WorldSyncManager* GetWorldSyncManager() const;
 
     /**
      * Build the data-less relay packet from and targetting the supplied
@@ -236,6 +243,9 @@ protected:
 
     /// Character manager for the server.
     CharacterManager* mCharacterManager;
+
+    /// Data sync manager for the server.
+    WorldSyncManager* mSyncManager;
 };
 
 } // namespace world

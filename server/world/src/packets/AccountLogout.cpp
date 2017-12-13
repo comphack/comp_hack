@@ -125,8 +125,11 @@ bool Parsers::AccountLogout::Parse(libcomp::ManagerPacket *pPacketManager,
         {
             LOG_DEBUG(libcomp::String("Logging out user: '%1'\n").Arg(username));
             auto loggedOut = accountManager->LogoutUser(username, channelID);
-            
+
             characterManager->PartyLeave(cLogin, nullptr, true);
+
+            server->GetWorldSyncManager()->CleanUpCharacterLogin(
+                cLogin->GetWorldCID(), true);
 
             std::list<std::shared_ptr<objects::CharacterLogin>> cLogOuts;
             cLogOuts.push_back(cLogin);

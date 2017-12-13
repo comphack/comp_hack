@@ -335,6 +335,7 @@ std::shared_ptr<MetaVariable> MetaVariable::CreateType(
         nameToMetaType["string"] = MetaVariableType_t::TYPE_STRING;
 
         nameToMetaType["ref"] = MetaVariableType_t::TYPE_REF;
+        nameToMetaType["pref"] = MetaVariableType_t::TYPE_REF;
     }
 
     auto iter = nameToMetaType.find(typeName);

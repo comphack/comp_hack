@@ -55,6 +55,7 @@ SET(${PROJECT_NAME}_SRCS
     src/DatabaseSQLite3.cpp
     src/DataFile.cpp
     src/DataStore.cpp
+    src/DataSyncManager.cpp
     src/Decrypt.cpp
     src/DefinitionManager.cpp
     src/DynamicObject.cpp
@@ -136,6 +137,7 @@ SET(${PROJECT_NAME}_HDRS
     src/DatabaseSQLite3.h
     src/DataFile.h
     src/DataStore.h
+    src/DataSyncManager.h
     src/Decrypt.h
     src/DefinitionManager.h
     src/DynamicObject.h
@@ -262,6 +264,7 @@ SET(${PROJECT_NAME}_SCHEMA
     schema/server_shop.xml
     schema/server_zone.xml
     schema/serverconfig.xml
+    schema/search.xml
     schema/spawn.xml
     schema/test.xml
 
@@ -457,6 +460,8 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     RegisteredChannel.cpp
     RegisteredWorld.h
     RegisteredWorld.cpp
+    SearchEntry.h
+    SearchEntry.cpp
     ServerBazaar.h
     ServerBazaar.cpp
     ServerCommandLine.h

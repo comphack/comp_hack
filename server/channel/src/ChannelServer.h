@@ -41,6 +41,7 @@
 #include "AccountManager.h"
 #include "ActionManager.h"
 #include "AIManager.h"
+#include "ChannelSyncManager.h"
 #include "CharacterManager.h"
 #include "ChatManager.h"
 #include "DefinitionManager.h"
@@ -246,6 +247,12 @@ public:
     libcomp::ServerDataManager* GetServerDataManager() const;
 
     /**
+     * Get a pointer to the data sync manager.
+     * @return Pointer to the ChannelSyncManager
+     */
+    ChannelSyncManager* GetChannelSyncManager() const;
+
+    /**
      * Increments and returns the next available entity ID.
      * @return Next game entity ID for the channel
      */
@@ -382,6 +389,9 @@ protected:
 
     /// Pointer to the Server Data Manager.
     libcomp::ServerDataManager *mServerDataManager;
+
+    /// Data sync manager for the server.
+    ChannelSyncManager* mSyncManager;
 
     /// Highest entity ID currently assigned
     int32_t mMaxEntityID;

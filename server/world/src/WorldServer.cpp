@@ -77,6 +77,12 @@ bool WorldServer::Initialize()
     }
 
     mCharacterManager = new CharacterManager(self);
+    mSyncManager = new WorldSyncManager(self);
+
+    if(!mSyncManager->Initialize())
+    {
+        return false;
+    }
 
     return true;
 }
@@ -119,6 +125,8 @@ void WorldServer::FinishInitialize()
         InternalPacketCode_t::PACKET_ACCOUNT_LOGOUT));
     packetManager->AddParser<Parsers::Relay>(to_underlying(
         InternalPacketCode_t::PACKET_RELAY));
+    packetManager->AddParser<Parsers::DataSync>(to_underlying(
+        InternalPacketCode_t::PACKET_DATA_SYNC));
     packetManager->AddParser<Parsers::CharacterLogin>(to_underlying(
         InternalPacketCode_t::PACKET_CHARACTER_LOGIN));
     packetManager->AddParser<Parsers::FriendsUpdate>(to_underlying(
@@ -185,6 +193,7 @@ void WorldServer::FinishInitialize()
 WorldServer::~WorldServer()
 {
     delete mCharacterManager;
+    delete mSyncManager;
 }
 
 const std::shared_ptr<objects::RegisteredWorld> WorldServer::GetRegisteredWorld() const
@@ -359,9 +368,14 @@ AccountManager* WorldServer::GetAccountManager()
     return &mAccountManager;
 }
 
-CharacterManager* WorldServer::GetCharacterManager()
+CharacterManager* WorldServer::GetCharacterManager() const
 {
     return mCharacterManager;
+}
+
+WorldSyncManager* WorldServer::GetWorldSyncManager() const
+{
+    return mSyncManager;
 }
 
 uint32_t WorldServer::GetRelayPacket(libcomp::Packet& p,
@@ -411,7 +425,11 @@ std::shared_ptr<libcomp::TcpConnection> WorldServer::CreateConnection(
         connection->SetName(libcomp::String("%1:channel").Arg(
             connectionID++));
 
-        if(AssignMessageQueue(connection))
+        // Register the channel connection with the sync manager
+        const std::set<std::string> channelSyncTypes = { "SearchEntry" };
+
+        if(AssignMessageQueue(connection) &&
+            mSyncManager->RegisterConnection(connection, channelSyncTypes))
         {
             connection->ConnectionSuccess();
         }

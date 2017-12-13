@@ -488,8 +488,22 @@ std::string MetaVariableReference::GetXmlLoadCode(const Generator& generator,
     replacements["@VAR_CODE_TYPE@"] = GetCodeType();
     replacements["@DOC@"] = doc;
     replacements["@NODE@"] = node;
-    replacements["@CONSTRUCT_VALUE@"] = GetConstructValue();
     replacements["@REF_TYPE@"] = GetReferenceType(true);
+
+    std::map<std::string, std::string> subReplacements;
+    subReplacements["@CONSTRUCT_VALUE@"] = GetConstructValue();
+    subReplacements["@REF_TYPE@"] = GetReferenceType(true);
+
+    if(IsGeneric())
+    {
+        replacements["@CONSTRUCT_CODE@"] = generator.ParseTemplate(tabLevel,
+            "VariableReferenceXmlConstructDefault", subReplacements);
+    }
+    else
+    {
+        replacements["@CONSTRUCT_CODE@"] = generator.ParseTemplate(tabLevel,
+            "VariableReferenceXmlConstructInherited", subReplacements);
+    }
 
     if(mPersistentReference)
     {

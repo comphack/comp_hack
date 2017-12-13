@@ -79,7 +79,7 @@ void SendClientReadyData(std::shared_ptr<ChannelServer> server,
 
         client->QueuePacket(p);
     }
-      
+
     auto conf = std::dynamic_pointer_cast<objects::ChannelConfig>(server->GetConfig());
     libcomp::String systemMessage = conf->GetSystemMessage();
 
@@ -87,7 +87,7 @@ void SendClientReadyData(std::shared_ptr<ChannelServer> server,
     {
         server->SendSystemMessage(client,systemMessage,0,false);
     }
-    
+
     /// @todo: send "world bonus" [0x0405]
     /// @todo: send player skill updates (toggleable abilities for example) [0x03B8]
 
@@ -158,7 +158,14 @@ void SendClientReadyData(std::shared_ptr<ChannelServer> server,
     }
 
     /// @todo: send skill cost rate [0x019E]
-    /// @todo: send "connected commu SV" [0x015A]
+
+    {
+        libcomp::Packet p;
+        p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_COMM_SERVER_STATE);
+        p.WriteS32Little(1);    // Connected
+
+        client->QueuePacket(p);
+    }
 
     client->FlushOutgoing();
 }

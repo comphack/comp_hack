@@ -99,6 +99,11 @@ void LobbyLogin(std::shared_ptr<WorldServer> server,
             accountManager->PopChannelSwitch(login->GetAccount()
                 ->GetUsername(), channelID);
 
+            // Clear any sync records that should have been removed on
+            // log-out, just in case
+            server->GetWorldSyncManager()->CleanUpCharacterLogin(
+                cLogin->GetWorldCID(), true);
+
             auto worldID = std::dynamic_pointer_cast<objects::WorldConfig>(
                 server->GetConfig())->GetID();
             channelID = (int8_t)loginChannel->GetID();

@@ -131,6 +131,13 @@ bool SetWorldInfoFromPacket(libcomp::ManagerPacket *pPacketManager,
         return false;
     }
 
+    // Initialize the sync manager now that we have the DBs, shutdown if it fails
+    if(!server->GetChannelSyncManager()->Initialize())
+    {
+        server->Shutdown();
+        return true;
+    }
+
     // Build all global zone instances now that we've connected properly
     server->GetZoneManager()->InstanceGlobalZones();
 

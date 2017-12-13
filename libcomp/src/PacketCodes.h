@@ -154,6 +154,13 @@ enum class ClientToChannelPacketCode_t : uint16_t
     PACKET_BAZAAR_ITEM_BUY = 0x011F,    //!< Request to buy an item from a bazaar market.
     PACKET_BAZAAR_MARKET_SALES = 0x0122,    //!< Request to take sales macca from the player's bazaar market.
     PACKET_BAZAAR_ITEM_EXCHANGE = 0x0124,   //!< Unknown. Request to exchange one item for another.
+    PACKET_SEARCH_ENTRY_SELF = 0x0128,  //!< Request for the player's current search entries of a specified type.
+    PACKET_SEARCH_LIST = 0x012A,    //!< Request to list search entries of a specified type that can be filtered.
+    PACKET_SEARCH_ENTRY_DATA = 0x012C,  //!< Request for detailed information about a specific search entry.
+    PACKET_SEARCH_ENTRY_REGISTER = 0x012E,  //!< Request to register a new search entry.
+    PACKET_SEARCH_ENTRY_UPDATE = 0x0130,    //!< Request to update an existing search entry.
+    PACKET_SEARCH_ENTRY_REMOVE = 0x0132,    //!< Request to remove an existing search entry.
+    PACKET_SEARCH_APPLICATION_REPLY = 0x0135,   //!< Request to perform an action based on a search entry application.
     PACKET_CLAN_DISBAND = 0x0138,   //!< Request to disband the player character's clan.
     PACKET_CLAN_INVITE = 0x013B,    //!< Request to invite a character to the player character's clan.
     PACKET_CLAN_JOIN = 0x013E,  //!< Request to accept an invite to join a clan.
@@ -167,6 +174,7 @@ enum class ClientToChannelPacketCode_t : uint16_t
     PACKET_CLAN_LIST = 0x0152,  //!< Request for member information from the current player character's clan.
     PACKET_CLAN_DATA = 0x0154,  //!< Request to update clan member information about the current player character.
     PACKET_CLAN_FORM = 0x0156,  //!< Request to form a new clan from a clan formation item.
+    PACKET_ITEM_PRICE = 0x0157, //!< Request for an item price estimate based off several criteria.
     PACKET_BAZAAR_STATE = 0x015F,   //!< Request for the current zone's bazaar cost and duration.
     PACKET_BAZAAR_CLERK_SET = 0x0161,   //!< Request to set the player's bazaar clerk NPC.
     PACKET_BAZAAR_PRICE = 0x0164,   //!< Request to get a suggested sales price for a bazaar item.
@@ -199,7 +207,7 @@ enum class ClientToChannelPacketCode_t : uint16_t
     PACKET_DEMON_DEPO_REMOTE = 0x02EF,  //!< Request to open the remote demon depo.
     PACKET_COMMON_SWITCH_INFO = 0x02F4,  //!< Unknown. Request for "common switch" information.
     PACKET_CASINO_COIN_TOTAL = 0x02FA,   //!< Request for the current character's casino coin total.
-    PACKET_SEARCH_ENTRY_INFO = 0x03A3,  //!< Unknown. Request for the current player's search entries.
+    PACKET_SEARCH_ENTRY_INFO = 0x03A3,  //!< Request for the current player's search entries.
     PACKET_HOURAI_DATA = 0x03A5,  //!< Request for Club Hourai related information.
     PACKET_CULTURE_DATA = 0x03AC,  //!< Unknown. Request for culture information.
     PACKET_DEMON_DEPO_LIST = 0x03F5,  //!< Request to list the client account's demon depositories.
@@ -350,6 +358,14 @@ enum class ChannelToClientPacketCode_t : uint16_t
     PACKET_BAZAAR_ITEM_EXCHANGE = 0x0125,   //!< Unknown. Response to the request to exchange one item for another.
     PACKET_LNC_POINTS = 0x0126,    //!< Message containing a character's LNC alignment value.
     PACKET_EVENT_STAGE_EFFECT = 0x0127,  //!< Request to the client to render a stage effect.
+    PACKET_SEARCH_ENTRY_SELF = 0x0129,  //!< Response containing the player's current search entries of a specified type.
+    PACKET_SEARCH_LIST = 0x012B,    //!< Response containing a filtered list of search entries of a specified type.
+    PACKET_SEARCH_ENTRY_DATA = 0x012D,  //!< Response containing detailed information about a specific search entry.
+    PACKET_SEARCH_ENTRY_REGISTER = 0x012F,  //!< Response to the request to register a new search entry.
+    PACKET_SEARCH_ENTRY_UPDATE = 0x0131,    //!< Response to the request to update an existing search entry.
+    PACKET_SEARCH_ENTRY_REMOVE = 0x0133,    //!< Response to the request to remove an existing search entry.
+    PACKET_SEARCH_APPLICATION = 0x0134, //!< Notification that a search entry application has been modified.
+    PACKET_SEARCH_APPLICATION_REPLY= 0x0136,    //!< Response to the request to perform an action based on a search entry application.
     PACKET_CLAN_FORM = 0x0137,   //!< Response to the request to form a new clan from a clan formation item.
     PACKET_CLAN_DISBAND = 0x0139,  //!< Response to the request to disband the player character's clan.
     PACKET_CLAN_DISBANDED = 0x013A,    //!< Notification that the player character's clan has disbanded.
@@ -369,6 +385,8 @@ enum class ChannelToClientPacketCode_t : uint16_t
     PACKET_CLAN_INFO = 0x0151,  //!< Response containing the current player's clan information.
     PACKET_CLAN_LIST = 0x0153, //!< Response to the request for member information from the current player character's clan.
     PACKET_CLAN_DATA = 0x0155, //!< Notification that a player character's clan's member info has updated
+    PACKET_ITEM_PRICE = 0x0158, //!< Response containing an item price estimate based off several criteria.
+    PACKET_COMM_SERVER_STATE = 0x015A, //!< Notification of the client state relative to the "comm server" (world).
     PACKET_EVENT_DIRECTION = 0x015D,  //!< Request to the client to signify a direction to the player.
     PACKET_BAZAAR_STATE = 0x0160,   //!< Response to the request for the current zone's bazaar cost and duration.
     PACKET_BAZAAR_CLERK_SET = 0x0162,   //!< Response to the request to set the player's bazaar clerk NPC.
@@ -417,7 +435,7 @@ enum class ChannelToClientPacketCode_t : uint16_t
     PACKET_DEMON_DEPO_REMOTE = 0x02F0,  //!< Response to the request to open the remote demon depos.
     PACKET_COMMON_SWITCH_INFO = 0x02F5,  //!< Unknown. Response containing "common switch" information.
     PACKET_CASINO_COIN_TOTAL = 0x02FB,   //!< Message containing the current character's casino coin total.
-    PACKET_SEARCH_ENTRY_INFO = 0x03A4,  //!< Unknown. Response containing the current player's search entries.
+    PACKET_SEARCH_ENTRY_INFO = 0x03A4,  //!< Response containing the current player's search entries.
     PACKET_HOURAI_DATA = 0x03A6,  //!< Response containing Club Hourai related information.
     PACKET_CULTURE_DATA = 0x03AD,  //!< Unknown. Response containing culture information.
     PACKET_DEMON_DEPO_LIST = 0x03F6,  //!< Response to the request to open the demon depo.
@@ -448,10 +466,11 @@ enum class InternalPacketCode_t : uint16_t
     PACKET_ACCOUNT_LOGIN = 0x1004,  //!< Pass login information between the servers.
     PACKET_ACCOUNT_LOGOUT = 0x1005, //!< Pass logout information between the servers.
     PACKET_RELAY = 0x1006,  //!< Relay a channel to client message from one player to another between servers.
-    PACKET_CHARACTER_LOGIN = 0x1007,    //!< Pass character login information between the servers.
-    PACKET_FRIENDS_UPDATE = 0x1008, //!< Pass friend information between the servers.
-    PACKET_PARTY_UPDATE = 0x1009,   //!< Pass party information between the servers.
-    PACKET_CLAN_UPDATE = 0x100A,    //!< Pass clan information between the servers.
+    PACKET_DATA_SYNC = 0x1007,  //!< Sync records between the servers.
+    PACKET_CHARACTER_LOGIN = 0x1008,    //!< Pass character login information between the servers.
+    PACKET_FRIENDS_UPDATE = 0x1009, //!< Pass friend information between the servers.
+    PACKET_PARTY_UPDATE = 0x100A,   //!< Pass party information between the servers.
+    PACKET_CLAN_UPDATE = 0x100B,    //!< Pass clan information between the servers.
 };
 
 /**

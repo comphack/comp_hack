@@ -8,7 +8,7 @@
  *
  * This file is part of the channel Server (channel).
  *
- * Copyright (C) 2012-2016 COMP_hack Team <compomega@tutanota.com>
+ * Copyright (C) 2012-2017 COMP_hack Team <compomega@tutanota.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as
@@ -120,6 +120,13 @@ PACKET_PARSER_DECL(BazaarItemDrop);         // 0x011B
 PACKET_PARSER_DECL(BazaarItemUpdate);       // 0x011D
 PACKET_PARSER_DECL(BazaarItemBuy);          // 0x011F
 PACKET_PARSER_DECL(BazaarMarketSales);      // 0x0122
+PACKET_PARSER_DECL(SearchEntrySelf);        // 0x0128
+PACKET_PARSER_DECL(SearchList);             // 0x012A
+PACKET_PARSER_DECL(SearchEntryData);        // 0x012C
+PACKET_PARSER_DECL(SearchEntryRegister);    // 0x012E
+PACKET_PARSER_DECL(SearchEntryUpdate);      // 0x0130
+PACKET_PARSER_DECL(SearchEntryRemove);      // 0x0132
+PACKET_PARSER_DECL(SearchAppReply);         // 0x0135
 PACKET_PARSER_DECL(ClanDisband);            // 0x0138
 PACKET_PARSER_DECL(ClanInvite);             // 0x013B
 PACKET_PARSER_DECL(ClanJoin);               // 0x013E
@@ -133,6 +140,7 @@ PACKET_PARSER_DECL(ClanInfo);               // 0x0150
 PACKET_PARSER_DECL(ClanList);               // 0x0152
 PACKET_PARSER_DECL(ClanData);               // 0x0154
 PACKET_PARSER_DECL(ClanForm);               // 0x0156
+PACKET_PARSER_DECL(ItemPrice);              // 0x0157
 PACKET_PARSER_DECL(BazaarState);            // 0x015F
 PACKET_PARSER_DECL(BazaarClerkSet);         // 0x0161
 PACKET_PARSER_DECL(BazaarPrice);            // 0x0164
@@ -174,10 +182,11 @@ PACKET_PARSER_DECL(SetOtherChannelInfo); // 0x1003
 PACKET_PARSER_DECL(AccountLogin);        // 0x1004
 PACKET_PARSER_DECL(AccountLogout);       // 0x1005
 PACKET_PARSER_DECL(Relay);               // 0x1006
-PACKET_PARSER_DECL(CharacterLogin);      // 0x1007
-PACKET_PARSER_DECL(FriendsUpdate);       // 0x1008
-PACKET_PARSER_DECL(PartyUpdate);         // 0x1009
-PACKET_PARSER_DECL(ClanUpdate);          // 0x100A
+PACKET_PARSER_DECL(DataSync);            // 0x1007
+PACKET_PARSER_DECL(CharacterLogin);      // 0x1008
+PACKET_PARSER_DECL(FriendsUpdate);       // 0x1009
+PACKET_PARSER_DECL(PartyUpdate);         // 0x100A
+PACKET_PARSER_DECL(ClanUpdate);          // 0x100B
 
 } // namespace Parsers
 

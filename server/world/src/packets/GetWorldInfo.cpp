@@ -134,7 +134,17 @@ bool Parsers::GetWorldInfo::Parse(libcomp::ManagerPacket *pPacketManager,
         }
     }
 
-    connection->SendPacket(reply);
+    connection->QueuePacket(reply);
+
+    if(!fromLobby)
+    {
+        // Send existing world level data
+        auto iConnection = std::dynamic_pointer_cast<libcomp::InternalConnection>(
+            connection);
+        server->GetWorldSyncManager()->SyncExistingChannelRecords(iConnection);
+    }
+
+    connection->FlushOutgoing();
 
     return true;
 }

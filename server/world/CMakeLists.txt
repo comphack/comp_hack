@@ -1,6 +1,6 @@
 # This file is part of COMP_hack.
 #
-# Copyright (C) 2010-2016 COMP_hack Team <compomega@tutanota.com>
+# Copyright (C) 2010-2017 COMP_hack Team <compomega@tutanota.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -33,6 +33,7 @@ SET(${PROJECT_NAME}_SRCS
     src/CharacterManager.cpp
     src/ManagerConnection.cpp
     src/WorldServer.cpp
+    src/WorldSyncManager.cpp
     src/main.cpp
 )
 
@@ -41,6 +42,7 @@ SET(${PROJECT_NAME}_HDRS
     src/CharacterManager.h
     src/ManagerConnection.h
     src/WorldServer.h
+    src/WorldSyncManager.h
 )
 
 SET(${PROJECT_NAME}_SCHEMA
@@ -73,10 +75,11 @@ SET(${PROJECT_NAME}_PACKETS
     src/packets/AccountLogin.cpp               # 0x1004
     src/packets/AccountLogout.cpp              # 0x1005
     src/packets/Relay.cpp                      # 0x1006
-    src/packets/CharacterLogin.cpp             # 0x1007
-    src/packets/FriendsUpdate.cpp              # 0x1008
-    src/packets/PartyUpdate.cpp                # 0x1009
-    src/packets/ClanUpdate.cpp                 # 0x100A
+    src/packets/DataSync.cpp                   # 0x1007
+    src/packets/CharacterLogin.cpp             # 0x1008
+    src/packets/FriendsUpdate.cpp              # 0x1009
+    src/packets/PartyUpdate.cpp                # 0x100A
+    src/packets/ClanUpdate.cpp                 # 0x100B
 )
 
 COVERALLS_SOURCES(

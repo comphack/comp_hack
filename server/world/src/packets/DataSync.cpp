@@ -1,10 +1,11 @@
 /**
- * @file server/world/src/Packets.h
+ * @file server/world/src/packets/DataSync.cpp
  * @ingroup world
  *
  * @author HACKfrost
  *
- * @brief Classes used to parse internal world packets.
+ * @brief Request from the lobby or channel servers to synchronize one or more
+ *  data records between the servers.
  *
  * This file is part of the World Server (world).
  *
@@ -24,31 +25,32 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef SERVER_WORLD_SRC_PACKETS_H
-#define SERVER_WORLD_SRC_PACKETS_H
+#include "Packets.h"
+
+// libcomp Includes
+#include <ManagerPacket.h>
 
 // world Includes
-#include "PacketParser.h"
+#include "WorldServer.h"
 
-namespace world
+using namespace world;
+
+bool Parsers::DataSync::Parse(libcomp::ManagerPacket *pPacketManager,
+    const std::shared_ptr<libcomp::TcpConnection>& connection,
+    libcomp::ReadOnlyPacket& p) const
 {
+    (void)connection;
 
-namespace Parsers
-{
+    auto server = std::dynamic_pointer_cast<WorldServer>(pPacketManager->GetServer());
+    auto syncManager = server->GetWorldSyncManager();
 
-PACKET_PARSER_DECL(GetWorldInfo);      // 0x1001
-PACKET_PARSER_DECL(SetChannelInfo);    // 0x1003
-PACKET_PARSER_DECL(AccountLogin);      // 0x1004
-PACKET_PARSER_DECL(AccountLogout);     // 0x1005
-PACKET_PARSER_DECL(Relay);             // 0x1006
-PACKET_PARSER_DECL(DataSync);          // 0x1007
-PACKET_PARSER_DECL(CharacterLogin);    // 0x1008
-PACKET_PARSER_DECL(FriendsUpdate);     // 0x1009
-PACKET_PARSER_DECL(PartyUpdate);       // 0x100A
-PACKET_PARSER_DECL(ClanUpdate);        // 0x100B
+    if(!syncManager->SyncIncoming(p))
+    {
+        return false;
+    }
 
-} // namespace Parsers
+    // Sync any records that need to relay back
+    syncManager->SyncOutgoing();
 
-} // namespace world
-
-#endif // SERVER_WORLD_SRC_PACKETS_H
+    return true;
+}

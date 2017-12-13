@@ -238,6 +238,63 @@ namespace libcomp
 /// LNC alignment: Chaos
 #define LNC_CHAOS (4)
 
+/// Search data index for the requestor's goal
+#define SEARCH_IDX_GOAL (1)
+
+/// Search data index for the requestor's contextual location
+#define SEARCH_IDX_LOCATION (2)
+
+/// Search data index for the desired party size for recruitment
+#define SEARCH_IDX_PARTY_SIZE (3)
+
+/// Search data index for a specific play style
+#define SEARCH_IDX_PLAYSTYLE (4)
+
+/// Search data index for a preferred start time of day for playing
+#define SEARCH_IDX_TIME_FROM (5)
+
+/// Search data index for a preferred end time of day for playing
+#define SEARCH_IDX_TIME_TO (6)
+
+/// Search data index for a preferred game series
+#define SEARCH_IDX_PREF_SERIES (7)
+
+/// Search data index for a preferred demon type
+#define SEARCH_IDX_PREF_DEMON (8)
+
+/// Search data index for a preferred demon race
+#define SEARCH_IDX_PREF_DEMON_RACE (9)
+
+/// Search data index for a clan recruitment image
+#define SEARCH_IDX_CLAN_IMAGE (10)
+
+/// Search data index for an item type being traded
+#define SEARCH_IDX_ITEM_TYPE (11)
+
+/// Search data index for an item's main category
+#define SEARCH_IDX_MAIN_CATEGORY (12)
+
+/// Search data index for an item's sub category
+#define SEARCH_IDX_SUB_CATEGORY (13)
+
+/// Search data index for an item's price
+#define SEARCH_IDX_PRICE (14)
+
+/// Search data index for an item's durability
+#define SEARCH_IDX_DURABILITY (15)
+
+/// Search data index for an item's slot count
+#define SEARCH_IDX_SLOT_COUNT (16)
+
+/// Search data index for the first item mod slot
+#define SEARCH_BASE_MOD_SLOT (100)
+
+/// Search string index for the requestor's comment
+#define SEARCH_IDX_COMMENT (1)
+
+/// Search string index for a clan recruitment catchphrase
+#define SEARCH_IDX_CLAN_CATCHPHRASE (2)
+
 /// Experience required to proceed from the indexed level to the next
 const unsigned long long LEVEL_XP_REQUIREMENTS[] = {
     0ULL,               // 0->1

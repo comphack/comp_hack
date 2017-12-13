@@ -429,6 +429,26 @@ bool CharacterManager::PartyJoin(std::shared_ptr<objects::PartyCharacter> member
                     responseCode = 200; // Success
                 }
             }
+            else if(partyID == 0)
+            {
+                // If the target doesn't have a party and the requestor did not
+                // supply the party ID, handle like an invite from the requestor
+                AddToParty(member, 0);
+                auto channel = mServer.lock()->GetChannelConnectionByID(targetLogin->GetChannelID());
+                if(channel)
+                {
+                    libcomp::Packet relay;
+                    WorldServer::GetRelayPacket(relay, targetLogin->GetWorldCID());
+                    relay.WritePacketCode(ChannelToClientPacketCode_t::PACKET_PARTY_INVITED);
+                    relay.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_CP932,
+                        member->GetName(), true);
+                    relay.WriteU32Little(0);
+
+                    channel->SendPacket(relay);
+
+                    return true;
+                }
+            }
         }
 
         libcomp::Packet relay;

@@ -297,16 +297,26 @@ bool Parsers::ClanUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
 
             libcomp::String targetName = p.ReadString16Little(
                 libcomp::Convert::Encoding_t::ENCODING_UTF8, true);
-
-            if((InternalPacketAction_t)mode == InternalPacketAction_t::PACKET_ACTION_YN_REQUEST)
+            
+            // Clan invite accept
+            if(clanID == 0 && !targetName.IsEmpty())
             {
-                // Clan invite
-                ClanInvite(server, connection, clanID, cLogin, targetName);
+                // Only the target name is known, get the clan ID
+                auto targetLogin = characterManager->GetCharacterLogin(targetName);
+                clanID = targetLogin ? targetLogin->GetClanID() : 0;
             }
-            else
+
+            if(clanID)
             {
-                // Clan invite accept
-                characterManager->ClanJoin(cLogin, clanID);
+                if((InternalPacketAction_t)mode == InternalPacketAction_t::PACKET_ACTION_YN_REQUEST)
+                {
+                    // Clan invite
+                    ClanInvite(server, connection, clanID, cLogin, targetName);
+                }
+                else
+                {
+                    characterManager->ClanJoin(cLogin, clanID);
+                }
             }
 
             return true;

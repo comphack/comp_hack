@@ -4,7 +4,8 @@
  *
  * @author HACKfrost
  *
- * @brief 
+ * @brief Channel specific implementation of the DataSyncManager in
+ * charge of performing server side update operations.
  *
  * This file is part of the Channel Server (channel).
  *

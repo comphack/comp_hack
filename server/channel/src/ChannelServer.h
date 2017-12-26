@@ -48,6 +48,7 @@
 #include "EventManager.h"
 #include "ServerDataManager.h"
 #include "SkillManager.h"
+#include "TokuseiManager.h"
 #include "ZoneManager.h"
 
 namespace channel
@@ -253,6 +254,12 @@ public:
     ChannelSyncManager* GetChannelSyncManager() const;
 
     /**
+     * Get a pointer to the tokusei manager.
+     * @return Pointer to the TokuseiManager
+     */
+    TokuseiManager* GetTokuseiManager() const;
+
+    /**
      * Increments and returns the next available entity ID.
      * @return Next game entity ID for the channel
      */
@@ -392,6 +399,9 @@ protected:
 
     /// Data sync manager for the server.
     ChannelSyncManager* mSyncManager;
+
+    /// Tokusei manager for the server.
+    TokuseiManager* mTokuseiManager;
 
     /// Highest entity ID currently assigned
     int32_t mMaxEntityID;

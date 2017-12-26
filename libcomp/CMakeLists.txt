@@ -267,6 +267,7 @@ SET(${PROJECT_NAME}_SCHEMA
     schema/search.xml
     schema/spawn.xml
     schema/test.xml
+    schema/tokusei.xml
 
     # BinaryData Files
     schema/binarydata/ceventmessagedata.xml
@@ -281,6 +282,7 @@ SET(${PROJECT_NAME}_SCHEMA
     schema/binarydata/devildata.xml
     schema/binarydata/devillvupratedata.xml
     schema/binarydata/dynamicmapdata.xml
+    schema/binarydata/equipmentsetdata.xml
     schema/binarydata/expertdata.xml
     schema/binarydata/hnpcdata.xml
     schema/binarydata/itemdata.xml
@@ -288,6 +290,7 @@ SET(${PROJECT_NAME}_SCHEMA
     schema/binarydata/questdata.xml
     schema/binarydata/shared.xml
     schema/binarydata/shopproductdata.xml
+    schema/binarydata/sitemdata.xml
     schema/binarydata/skilldata.xml
     schema/binarydata/spotdata.xml
     schema/binarydata/statusdata.xml
@@ -496,6 +499,18 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     SpawnLocationGroup.cpp
     TestObject.h
     TestObject.cpp
+    Tokusei.h
+    Tokusei.cpp
+    TokuseiAspect.h
+    TokuseiAspect.cpp
+    TokuseiAttributes.h
+    TokuseiAttributes.cpp
+    TokuseiCondition.h
+    TokuseiCondition.cpp
+    TokuseiCorrectTbl.h
+    TokuseiCorrectTbl.cpp
+    TokuseiSkillCondition.h
+    TokuseiSkillCondition.cpp
 
     # BinaryData Files
     MiAcquisitionData.cpp
@@ -596,6 +611,8 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     MiEffectData.h
     MiEffectiveRangeData.cpp
     MiEffectiveRangeData.h
+    MiEquipmentSetData.cpp
+    MiEquipmentSetData.h
     EventConditionData.cpp
     EventConditionData.h
     MiExpertClassData.cpp
@@ -654,6 +671,8 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     MiRelationZoneIDData.cpp
     MiShopProductData.cpp
     MiShopProductData.h
+    MiSItemData.h
+    MiSItemData.cpp
     MiSkillBasicData.cpp
     MiSkillBasicData.h
     MiSkillCharasticData.cpp

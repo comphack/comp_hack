@@ -819,6 +819,7 @@ void CharacterManager::SummonDemon(const std::shared_ptr<
 
     auto server = mServer.lock();
     auto definitionManager = server->GetDefinitionManager();
+    auto tokuseiManager = server->GetTokuseiManager();
     auto def = definitionManager->GetDevilData(demon->GetType());
     if(!def)
     {
@@ -865,7 +866,6 @@ void CharacterManager::SummonDemon(const std::shared_ptr<
     float hpPercent = (float)cs->GetHP() / (float)cs->GetMaxHP();
     float mpPercent = (float)cs->GetMP() / (float)cs->GetMaxMP();
 
-    dState->RecalculateStats(definitionManager);
     dState->SetStatusEffectsActive(true, definitionManager);
     dState->SetDestinationX(cState->GetDestinationX());
     dState->SetDestinationY(cState->GetDestinationY());
@@ -879,6 +879,32 @@ void CharacterManager::SummonDemon(const std::shared_ptr<
     {
         cs->SetMP((int32_t)((float)dState->GetMaxMP() * mpPercent));
     }
+
+    // Apply initial tokusei calculation
+    tokuseiManager->Recalculate(cState, true,
+        std::set<int32_t>{ dState->GetEntityID() });
+
+    // Apply any extra summon status effects
+    for(auto eState : { std::dynamic_pointer_cast<ActiveEntityState>(cState),
+        std::dynamic_pointer_cast<ActiveEntityState>(dState) })
+    {
+        AddStatusEffectMap m;
+        for(double val : tokuseiManager->GetAspectValueList(eState,
+            TokuseiAspectType::SUMMON_STATUS))
+        {
+            m[(uint32_t)val] = std::pair<uint8_t, bool>(1, true);
+        }
+
+        if(m.size() > 0)
+        {
+            eState->AddStatusEffects(m, definitionManager);
+            tokuseiManager->Recalculate(cState, true,
+                std::set<int32_t>{ dState->GetEntityID() });
+        }
+    }
+
+    // Perform final summon recalculation
+    dState->RecalculateStats(definitionManager);
 
     libcomp::Packet reply;
     reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_PARTNER_SUMMONED);
@@ -1914,7 +1940,8 @@ void CharacterManager::EquipItem(const std::shared_ptr<
     auto slot = objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_NONE;
 
     auto server = mServer.lock();
-    auto def = server->GetDefinitionManager()->GetItemData(equip->GetType());
+    auto definitionManager = server->GetDefinitionManager();
+    auto def = definitionManager->GetItemData(equip->GetType());
     if (nullptr != def)
     {
         slot = def->GetBasic()->GetEquipType();
@@ -1938,6 +1965,12 @@ void CharacterManager::EquipItem(const std::shared_ptr<
     }
     character->SetEquippedItems((size_t)slot, equipSlot);
 
+    // Determine which complete sets are equipped now
+    cState->SetEquippedSets(definitionManager);
+
+    // Recalculate tokusei and stats to reflect equipment changes
+    server->GetTokuseiManager()->Recalculate(cState, true,
+        std::set<int32_t>{ cState->GetEntityID() });
     RecalculateStats(client, cState->GetEntityID(), false);
 
     libcomp::Packet reply;
@@ -2054,6 +2087,9 @@ void CharacterManager::UpdateLNC(const std::shared_ptr<
     reply.WriteS16Little(character->GetLNC());
 
     client->SendPacket(reply);
+
+    server->GetTokuseiManager()->Recalculate(cState,
+        std::set<TokuseiConditionType> { TokuseiConditionType::LNC });
 }
 
 std::shared_ptr<objects::Demon> CharacterManager::ContractDemon(
@@ -2203,6 +2239,7 @@ void CharacterManager::UpdateFamiliarity(const std::shared_ptr<
     bool isAdjust, bool sendPacket)
 {
     auto state = client->GetClientState();
+    auto cState = state->GetCharacterState();
     auto dState = state->GetDemonState();
     auto demon = dState->GetEntity();
 
@@ -2213,8 +2250,27 @@ void CharacterManager::UpdateFamiliarity(const std::shared_ptr<
 
     uint16_t current = demon->GetFamiliarity();
     int32_t newFamiliarity = isAdjust ? 0 : (int32_t)familiarity;
-    if(isAdjust)
+    if(isAdjust && familiarity != 0)
     {
+        auto tokuseiManager = mServer.lock()->GetTokuseiManager();
+
+        // Since familiarity rate adjustments cannot be bound to
+        // skills, scale all incoming adjustments here
+        if(familiarity > 0)
+        {
+            // Familiarity up adjustments are on the character
+            familiarity = (int32_t)((double)familiarity *
+                (1.0 + tokuseiManager->GetAspectSum(cState,
+                    TokuseiAspectType::FAMILIARITY_UP_RATE) * 0.01));
+        }
+        else
+        {
+            // Familiarity down adjustments are on the demon
+            familiarity = (int32_t)((double)familiarity *
+                (1.0 + tokuseiManager->GetAspectSum(dState,
+                    TokuseiAspectType::FAMILIARITY_DOWN_RATE) * 0.01));
+        }
+
         newFamiliarity = current + familiarity;
     }
 
@@ -2236,6 +2292,9 @@ void CharacterManager::UpdateFamiliarity(const std::shared_ptr<
         int8_t newRank = GetFamiliarityRank((uint16_t)newFamiliarity);
 
         demon->SetFamiliarity((uint16_t)newFamiliarity);
+
+        server->GetTokuseiManager()->Recalculate(cState,
+            std::set<TokuseiConditionType> { TokuseiConditionType::PARTNER_FAMILIARITY });
 
         // Rank adjustments will change base stats
         if(oldRank != newRank)
@@ -2471,6 +2530,12 @@ void CharacterManager::UpdateExpertise(const std::shared_ptr<
         return;
     }
 
+    if(multiplier <= 0.f)
+    {
+        // Value not overridden, use 100% + adjustments
+        multiplier = (float)cState->GetCorrectValue(CorrectTbl::RATE_EXPERTISE) * 0.01f;
+    }
+
     std::list<std::pair<int8_t, int32_t>> updated;
     auto dbChanges = libcomp::DatabaseChangeSet::Create(state->GetAccountUID());
     for(auto expertGrowth : skill->GetExpertGrowth())
@@ -2548,6 +2613,11 @@ void CharacterManager::UpdateExpertise(const std::shared_ptr<
         client->SendPacket(reply);
 
         server->GetWorldDatabase()->QueueChangeSet(dbChanges);
+
+        //Expertises can be used as multipliers and conditions, always recalc
+        server->GetTokuseiManager()->Recalculate(cState, true,
+            std::set<int32_t>{ cState->GetEntityID() });
+        RecalculateStats(client, cState->GetEntityID());
     }
 }
 
@@ -2621,6 +2691,8 @@ bool CharacterManager::LearnSkill(const std::shared_ptr<channel::ChannelClientCo
         server->GetWorldDatabase()->QueueUpdate(character, state->GetAccountUID());
     }
 
+    server->GetTokuseiManager()->Recalculate(eState, true,
+        std::set<int32_t>{ eState->GetEntityID() });
     RecalculateStats(client, entityID);
 
     return true;
@@ -3300,6 +3372,7 @@ libcomp::EnumMap<CorrectTbl, int16_t> CharacterManager::GetCharacterBaseStatMap(
     stats[CorrectTbl::KNOCKBACK_RESIST] = 100;
     stats[CorrectTbl::COOLDOWN_TIME] = 100;
     stats[CorrectTbl::LB_DAMAGE] = 100;
+    stats[CorrectTbl::CHANT_TIME] = 100;
 
     // Default all the rates to 100%
     for(uint8_t i = (uint8_t)CorrectTbl::RATE_XP;
@@ -3409,7 +3482,8 @@ void CharacterManager::AdjustStatBounds(libcomp::EnumMap<CorrectTbl, int16_t>& s
             { CorrectTbl::PDEF, 0 },
             { CorrectTbl::MDEF, 0 },
             { CorrectTbl::HP_REGEN, 0 },
-            { CorrectTbl::MP_REGEN, 0 }
+            { CorrectTbl::MP_REGEN, 0 },
+            { CorrectTbl::CHANT_TIME, 5 }
         };
 
     for(auto pair : minStats)

@@ -182,6 +182,7 @@ bool Parsers::ClanUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
                     character->SetClan(clan);
                     worldDB->QueueUpdate(character);
 
+                    server->GetTokuseiManager()->Recalculate(cState);
                     characterManager->RecalculateStats(client, cState->GetEntityID());
                 }
             }
@@ -245,6 +246,7 @@ bool Parsers::ClanUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
 
                     if(!clanUpdated)
                     {
+                        server->GetTokuseiManager()->Recalculate(cState);
                         characterManager->RecalculateStats(client, cState->GetEntityID());
                     }
                 }

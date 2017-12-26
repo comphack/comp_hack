@@ -29,6 +29,7 @@
 
 // channel Includes
 #include "ActiveEntityState.h"
+#include "CharacterState.h"
 
 // objects Includes
 #include <Character.h>
@@ -48,7 +49,6 @@ class BazaarState;
 
 typedef float ClientTime;
 typedef uint64_t ServerTime;
-typedef ActiveEntityStateImp<objects::Character> CharacterState;
 typedef ActiveEntityStateImp<objects::Demon> DemonState;
 
 /**

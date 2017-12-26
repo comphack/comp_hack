@@ -30,13 +30,13 @@
 #include <Constants.h>
 #include <DefinitionManager.h>
 #include <ServerConstants.h>
-#include <ServerDataManager.h>
 
 // C++ Standard Includes
 #include <cmath>
 #include <limits>
 
 // objects Includes
+#include <CalculatedEntityState.h>
 #include <Character.h>
 #include <Clan.h>
 #include <Demon.h>
@@ -56,11 +56,15 @@
 #include <MiSkillItemStatusCommonData.h>
 #include <MiStatusBasicData.h>
 #include <MiStatusData.h>
+#include <Tokusei.h>
+#include <TokuseiAspect.h>
+#include <TokuseiCorrectTbl.h>
 
 // channel Includes
 #include "AIState.h"
 #include "ChannelServer.h"
 #include "CharacterManager.h"
+#include "TokuseiManager.h"
 #include "Zone.h"
 
 using namespace channel;
@@ -113,9 +117,11 @@ ActiveEntityState::ActiveEntityState(const ActiveEntityState& other)
     (void)other;
 }
 
-int16_t ActiveEntityState::GetCorrectValue(CorrectTbl tableID)
+int16_t ActiveEntityState::GetCorrectValue(CorrectTbl tableID,
+    std::shared_ptr<objects::CalculatedEntityState> calcState)
 {
-    return GetCorrectTbl((size_t)tableID);
+    return (calcState ? calcState : GetCalculatedState())
+        ->GetCorrectTbl((size_t)tableID);
 }
 
 const libobjgen::UUID ActiveEntityState::GetEntityUUID()
@@ -1221,27 +1227,25 @@ size_t ActiveEntityState::AddRemoveOpponent(bool add, int32_t opponentID)
     return mOpponentIDs.size();
 }
 
-int16_t ActiveEntityState::GetNRAChance(uint8_t nraIdx, CorrectTbl type)
+int16_t ActiveEntityState::GetNRAChance(uint8_t nraIdx, CorrectTbl type,
+    std::shared_ptr<objects::CalculatedEntityState> calcState)
 {
-    libcomp::EnumMap<CorrectTbl, int16_t>* map;
+    if(calcState == nullptr)
+    {
+        calcState = GetCalculatedState();
+    }
+
     switch(nraIdx)
     {
     case NRA_NULL:
-        map = &mNullMap;
-        break;
+        return calcState->GetNullChances((int16_t)type);
     case NRA_REFLECT:
-        map = &mReflectMap;
-        break;
+        return calcState->GetReflectChances((int16_t)type);
     case NRA_ABSORB:
-        map = &mAbsorbMap;
-        break;
+        return calcState->GetAbsorbChances((int16_t)type);
     default:
         return 0;
     }
-
-    std::lock_guard<std::mutex> lock(mLock);
-    auto it = map->find(type);
-    return it != map->end() ? it->second : 0;
 }
 
 std::set<uint8_t> ActiveEntityState::PopNRAShields(const std::list<
@@ -1448,7 +1452,23 @@ uint32_t ActiveEntityState::GetCurrentExpiration(
 }
 
 // "Abstract implementations" required for Sqrat usage
-uint8_t ActiveEntityState::RecalculateStats(libcomp::DefinitionManager* definitionManager)
+uint8_t ActiveEntityState::RecalculateStats(libcomp::DefinitionManager* definitionManager,
+    std::shared_ptr<objects::CalculatedEntityState> calcState)
+{
+    (void)definitionManager;
+    (void)calcState;
+    return 0;
+}
+
+std::set<uint32_t> ActiveEntityState::GetAllSkills(
+    libcomp::DefinitionManager* definitionManager, bool includeTokusei)
+{
+    (void)definitionManager;
+    (void)includeTokusei;
+    return std::set<uint32_t>();
+}
+
+uint8_t ActiveEntityState::GetLNCType(libcomp::DefinitionManager* definitionManager)
 {
     (void)definitionManager;
     return 0;
@@ -1530,6 +1550,10 @@ void ActiveEntityStateImp<objects::Demon>::SetEntity(
 
     SetStatusEffects(effects);
 
+    auto calcState = GetCalculatedState();
+    calcState->ClearActiveTokuseiTriggers();
+    calcState->ClearEffectiveTokusei();
+
     // Reset knockback and let refresh correct
     SetKnockbackResist(0);
     mInitialCalc = false;
@@ -1573,8 +1597,129 @@ const libobjgen::UUID ActiveEntityStateImp<objects::Enemy>::GetEntityUUID()
 }
 
 template<>
+std::set<uint32_t> ActiveEntityStateImp<objects::Character>::GetAllSkills(
+    libcomp::DefinitionManager* definitionManager, bool includeTokusei)
+{
+    std::set<uint32_t> skillIDs;
+    
+    if(mEntity)
+    {
+        skillIDs = mEntity->GetLearnedSkills();
+
+        auto clan = mEntity->GetClan().Get();
+        if(clan)
+        {
+            int8_t clanLevel = clan->GetLevel();
+            for(int8_t i = 0; i < clanLevel; i++)
+            {
+                for(uint32_t clanSkillID : SVR_CONST.CLAN_LEVEL_SKILLS[(size_t)i])
+                {
+                    skillIDs.insert(clanSkillID);
+                }
+            }
+        }
+
+        if(includeTokusei)
+        {
+            for(uint32_t skillID : GetEffectiveTokuseiSkills(definitionManager))
+            {
+                skillIDs.insert(skillID);
+            }
+        }
+    }
+
+    return skillIDs;
+}
+
+template<>
+std::set<uint32_t> ActiveEntityStateImp<objects::Demon>::GetAllSkills(
+    libcomp::DefinitionManager* definitionManager, bool includeTokusei)
+{
+    std::set<uint32_t> skillIDs;
+
+    if(mEntity)
+    {
+        for(uint32_t skillID : mEntity->GetLearnedSkills())
+        {
+            if(skillID)
+            {
+                skillIDs.insert(skillID);
+            }
+        }
+
+        auto demonData = definitionManager->GetDevilData(mEntity->GetType());
+
+        auto growth = demonData->GetGrowth();
+        for(uint32_t traitID : growth->GetTraits())
+        {
+            if(traitID)
+            {
+                skillIDs.insert(traitID);
+            }
+        }
+
+        if(includeTokusei)
+        {
+            for(uint32_t skillID : GetEffectiveTokuseiSkills(definitionManager))
+            {
+                skillIDs.insert(skillID);
+            }
+        }
+    }
+
+    return skillIDs;
+}
+
+template<>
+std::set<uint32_t> ActiveEntityStateImp<objects::Enemy>::GetAllSkills(
+    libcomp::DefinitionManager* definitionManager, bool includeTokusei)
+{
+    std::set<uint32_t> skillIDs;
+
+    if(mEntity)
+    {
+        auto demonData = definitionManager->GetDevilData(mEntity->GetType());
+
+        auto previousSkills = GetCurrentSkills();
+        ClearCurrentSkills();
+
+        auto growth = demonData->GetGrowth();
+        for(auto skillSet : { growth->GetSkills(),
+            growth->GetEnemyOnlySkills() })
+        {
+            for(uint32_t skillID : skillSet)
+            {
+                if(skillID)
+                {
+                    skillIDs.insert(skillID);
+                }
+            }
+        }
+
+        for(uint32_t traitID : growth->GetTraits())
+        {
+            if(traitID)
+            {
+                skillIDs.insert(traitID);
+            }
+        }
+
+        if(includeTokusei)
+        {
+            for(uint32_t skillID : GetEffectiveTokuseiSkills(definitionManager))
+            {
+                skillIDs.insert(skillID);
+            }
+        }
+    }
+
+    return skillIDs;
+}
+
+template<>
 uint8_t ActiveEntityStateImp<objects::Character>::RecalculateStats(
-    libcomp::DefinitionManager* definitionManager)
+    libcomp::DefinitionManager* definitionManager,
+    std::shared_ptr<objects::CalculatedEntityState> calcState)
 {
     uint8_t result = 0;
 
@@ -1583,50 +1728,36 @@ uint8_t ActiveEntityStateImp<objects::Character>::RecalculateStats(
     auto c = GetEntity();
     auto cs = c->GetCoreStats().Get();
 
-    // Calculate current skills
-    auto previousSkills = GetCurrentSkills();
-    ClearCurrentSkills();
-
-    // 1) Reset to learned skills
-    SetCurrentSkills(c->GetLearnedSkills());
-
-    // 2) Add clan skills
-    auto clan = c->GetClan().Get();
-    if(clan)
+    bool selfState = calcState == nullptr;
+    if(selfState)
     {
-        int8_t clanLevel = clan->GetLevel();
-        for(int8_t i = 0; i < clanLevel; i++)
+        calcState = GetCalculatedState();
+
+        // Calculate current skills, only matters if calculating
+        // for the default entity state
+        auto previousSkills = GetCurrentSkills();
+        SetCurrentSkills(GetAllSkills(definitionManager, true));
+
+        bool skillsChanged = previousSkills.size() != CurrentSkillsCount();
+        if(!skillsChanged)
         {
-            for(uint32_t clanSkillID : SVR_CONST.CLAN_LEVEL_SKILLS[(size_t)i])
+            for(uint32_t skillID : previousSkills)
             {
-                InsertCurrentSkills(clanSkillID);
+                if(!CurrentSkillsContains(skillID))
+                {
+                    skillsChanged = true;
+                    break;
+                }
             }
         }
+        result = skillsChanged ? ENTITY_CALC_SKILL : 0x00;
+
+        // Remove any switch skills no longer available
+        RemoveInactiveSwitchSkills();
     }
-
-    // 3) Add party/partner tokusei skills
-    /// @todo
-
-    // 4) Remove any switch skills no longer available
-    RemoveInactiveSwitchSkills();
-
-    // 5) Check for skill set changes
-    bool skillsChanged = previousSkills.size() != CurrentSkillsCount();
-    if(!skillsChanged)
-    {
-        for(uint32_t skillID : previousSkills)
-        {
-            if(!CurrentSkillsContains(skillID))
-            {
-                skillsChanged = true;
-                break;
-            }
-        }
-    }
-    result = skillsChanged ? ENTITY_CALC_SKILL : 0x00;
 
     auto stats = CharacterManager::GetCharacterBaseStatMap(cs);
-    if(!mInitialCalc)
+    if(selfState && !mInitialCalc)
     {
         SetKnockbackResist((float)stats[CorrectTbl::KNOCKBACK_RESIST]);
         mInitialCalc = true;
@@ -1655,106 +1786,45 @@ uint8_t ActiveEntityStateImp<objects::Character>::RecalculateStats(
         }
     }
 
-    GetAdditionalCorrectTbls(definitionManager, correctTbls);
+    GetAdditionalCorrectTbls(definitionManager, calcState, correctTbls);
 
-    UpdateNRAChances(stats, nraTbls);
-    AdjustStats(correctTbls, stats, true);
+    UpdateNRAChances(stats, calcState, nraTbls);
+    AdjustStats(correctTbls, stats, calcState, true);
     CharacterManager::CalculateDependentStats(stats, cs->GetLevel(), false);
-    AdjustStats(correctTbls, stats, false);
+    AdjustStats(correctTbls, stats, calcState, false);
 
-    return result | CompareAndResetStats(stats);
+    if(selfState)
+    {
+        return result | CompareAndResetStats(stats);
+    }
+    else
+    {
+        for(auto statPair : stats)
+        {
+            calcState->SetCorrectTbl((size_t)statPair.first, statPair.second);
+        }
+
+        return result;
+    }
 }
 
 template<>
 uint8_t ActiveEntityStateImp<objects::Demon>::RecalculateStats(
-    libcomp::DefinitionManager* definitionManager)
+    libcomp::DefinitionManager* definitionManager,
+    std::shared_ptr<objects::CalculatedEntityState> calcState)
 {
     if(!mEntity)
     {
         return true;
     }
 
-    auto previousSkills = GetCurrentSkills();
-    ClearCurrentSkills();
-
-    for(uint32_t skillID : mEntity->GetLearnedSkills())
+    if(calcState == nullptr)
     {
-        if(skillID)
-        {
-            InsertCurrentSkills(skillID);
-        }
-    }
-
-    auto demonData = definitionManager->GetDevilData(mEntity->GetType());
-
-    auto growth = demonData->GetGrowth();
-    for(uint32_t traitID : growth->GetTraits())
-    {
-        if(traitID)
-        {
-            InsertCurrentSkills(traitID);
-        }
-    }
-
-    bool skillsChanged = previousSkills.size() != CurrentSkillsCount();
-    if(!skillsChanged)
-    {
-        for(uint32_t skillID : previousSkills)
-        {
-            if(!CurrentSkillsContains(skillID))
-            {
-                skillsChanged = true;
-                break;
-            }
-        }
-    }
-
-    if(skillsChanged && mAIState)
-    {
-        mAIState->ResetSkillsMapped();
-    }
-
-    return RecalculateDemonStats(definitionManager, mEntity->GetType());
-}
-
-template<>
-uint8_t ActiveEntityStateImp<objects::Enemy>::RecalculateStats(
-    libcomp::DefinitionManager* definitionManager)
-{
-    if(!mEntity)
-    {
-        return true;
-    }
-
-    uint32_t demonID = mEntity->GetType();
-    if(!mInitialCalc)
-    {
-        // Calculate initial demon and enemy skills
-        auto demonData = definitionManager->GetDevilData(demonID);
+        // Calculating default entity state
+        calcState = GetCalculatedState();
 
         auto previousSkills = GetCurrentSkills();
-        ClearCurrentSkills();
-
-        auto growth = demonData->GetGrowth();
-        for(auto skillSet : { growth->GetSkills(),
-            growth->GetEnemyOnlySkills() })
-        {
-            for(uint32_t skillID : skillSet)
-            {
-                if(skillID)
-                {
-                    InsertCurrentSkills(skillID);
-                }
-            }
-        }
-
-        for(uint32_t traitID : growth->GetTraits())
-        {
-            if(traitID)
-            {
-                InsertCurrentSkills(traitID);
-            }
-        }
+        SetCurrentSkills(GetAllSkills(definitionManager, true));
 
         bool skillsChanged = previousSkills.size() != CurrentSkillsCount();
         if(!skillsChanged)
@@ -1775,7 +1845,50 @@ uint8_t ActiveEntityStateImp<objects::Enemy>::RecalculateStats(
         }
     }
 
-    return RecalculateDemonStats(definitionManager, demonID);
+    return RecalculateDemonStats(definitionManager, calcState, mEntity->GetType());
+}
+
+template<>
+uint8_t ActiveEntityStateImp<objects::Enemy>::RecalculateStats(
+    libcomp::DefinitionManager* definitionManager,
+    std::shared_ptr<objects::CalculatedEntityState> calcState)
+{
+    if(!mEntity)
+    {
+        return true;
+    }
+    
+    if(calcState == nullptr)
+    {
+        // Calculating default entity state
+        calcState = GetCalculatedState();
+
+        if(!mInitialCalc)
+        {
+            auto previousSkills = GetCurrentSkills();
+            SetCurrentSkills(GetAllSkills(definitionManager, true));
+
+            bool skillsChanged = previousSkills.size() != CurrentSkillsCount();
+            if(!skillsChanged)
+            {
+                for(uint32_t skillID : previousSkills)
+                {
+                    if(!CurrentSkillsContains(skillID))
+                    {
+                        skillsChanged = true;
+                        break;
+                    }
+                }
+            }
+
+            if(skillsChanged && mAIState)
+            {
+                mAIState->ResetSkillsMapped();
+            }
+        }
+    }
+
+    return RecalculateDemonStats(definitionManager, calcState, mEntity->GetType());
 }
 
 template<>
@@ -1831,7 +1944,8 @@ const std::set<CorrectTbl> BASE_STATS =
 
 void ActiveEntityState::AdjustStats(
     const std::list<std::shared_ptr<objects::MiCorrectTbl>>& adjustments,
-    libcomp::EnumMap<CorrectTbl, int16_t>& stats, bool baseMode)
+    libcomp::EnumMap<CorrectTbl, int16_t>& stats,
+    std::shared_ptr<objects::CalculatedEntityState> calcState, bool baseMode)
 {
     std::set<CorrectTbl> removed;
     for(auto ct : adjustments)
@@ -1843,27 +1957,43 @@ void ActiveEntityState::AdjustStats(
 
         // If a value is reduced to 0%, leave it
         if(removed.find(tblID) != removed.end()) continue;
-        
+
+        uint8_t effectiveType = ct->GetType();
+        int32_t effectiveValue = (int32_t)ct->GetValue();
+        if(effectiveType >= 100)
+        {
+            // This is actually a TokuseiCorrectTbl, check for attributes
+            // like multipliers etc and adjust the value accordingly
+            effectiveType = (uint8_t)(effectiveType - 100);
+
+            auto tct = std::dynamic_pointer_cast<objects::TokuseiCorrectTbl>(ct);
+            if(tct)
+            {
+                effectiveValue = (int32_t)TokuseiManager::CalculateAttributeValue(
+                    this, tct->GetValue(), effectiveValue, tct->GetAttributes());
+            }
+        }
+
         if((uint8_t)tblID >= (uint8_t)CorrectTbl::NRA_WEAPON &&
             (uint8_t)tblID <= (uint8_t)CorrectTbl::NRA_MAGIC)
         {
             // NRA is calculated differently from everything else
-            if(ct->GetType() == 0)
+            if(effectiveType)
             {
                 // For type 0, the NRA value becomes 100% and CANNOT be reduced.
-                switch(ct->GetValue())
+                switch(effectiveValue)
                 {
                 case NRA_NULL:
                     removed.insert(tblID);
-                    mNullMap[tblID] = 100;
+                    calcState->SetNullChances((int16_t)tblID, 100);
                     break;
                 case NRA_REFLECT:
                     removed.insert(tblID);
-                    mReflectMap[tblID] = 100;
+                    calcState->SetReflectChances((int16_t)tblID, 100);
                     break;
                 case NRA_ABSORB:
                     removed.insert(tblID);
-                    mAbsorbMap[tblID] = 100;
+                    calcState->SetAbsorbChances((int16_t)tblID, 100);
                     break;
                 default:
                     break;
@@ -1873,30 +2003,22 @@ void ActiveEntityState::AdjustStats(
             {
                 // For other types, reduce the value by 2 to get the NRA index
                 // and add the value supplied.
-                libcomp::EnumMap<CorrectTbl, int16_t>* m = nullptr;
-                switch(ct->GetType())
+                switch(effectiveType)
                 {
                 case (NRA_NULL + 2):
-                    m = &mNullMap;
+                    calcState->SetNullChances((int16_t)tblID, (int16_t)(
+                        calcState->GetNullChances((int16_t)tblID) + effectiveValue));
                     break;
                 case (NRA_REFLECT + 2):
-                    m = &mReflectMap;
+                    calcState->SetReflectChances((int16_t)tblID, (int16_t)(
+                        calcState->GetReflectChances((int16_t)tblID) + effectiveValue));
                     break;
                 case (NRA_ABSORB + 2):
-                    m = &mAbsorbMap;
+                    calcState->SetAbsorbChances((int16_t)tblID, (int16_t)(
+                        calcState->GetAbsorbChances((int16_t)tblID) + effectiveValue));
                     break;
                 default:
                     break;
-                }
-
-                if(m)
-                {
-                    if(m->find(tblID) == m->end())
-                    {
-                        (*m)[tblID] = 0;
-                    }
-
-                    (*m)[tblID] = (int16_t)((*m)[tblID] + ct->GetValue());
                 }
             }
         }
@@ -1905,12 +2027,12 @@ void ActiveEntityState::AdjustStats(
             bool allowNegate = false;
 
             int16_t adjusted = stats[tblID];
-            switch(ct->GetType())
+            switch(effectiveType)
             {
             case 1:
                 // Percentage sets can either be an immutable set to zero
                 // or an increase/decrease by a set amount
-                if(ct->GetValue() == 0)
+                if(effectiveValue == 0)
                 {
                     removed.insert(tblID);
                     adjusted = 0;
@@ -1919,13 +2041,13 @@ void ActiveEntityState::AdjustStats(
                 else
                 {
                     adjusted = (int16_t)(adjusted +
-                        (int16_t)(adjusted * (ct->GetValue() * 0.01)));
+                        (int16_t)(adjusted * (effectiveValue * 0.01)));
                     allowNegate = ct->GetValue() < 0;
                 }
                 break;
             case 0:
-                adjusted = (int16_t)(adjusted + ct->GetValue());
-                allowNegate = (ct->GetValue() < 0) != (stats[tblID] < 0);
+                adjusted = (int16_t)(adjusted + effectiveValue);
+                allowNegate = (effectiveValue < 0) != (stats[tblID] < 0);
                 break;
             default:
                 break;
@@ -1956,12 +2078,12 @@ void ActiveEntityState::AdjustStats(
 }
 
 void ActiveEntityState::UpdateNRAChances(libcomp::EnumMap<CorrectTbl, int16_t>& stats,
+    std::shared_ptr<objects::CalculatedEntityState> calcState,
     const std::list<std::shared_ptr<objects::MiCorrectTbl>>& adjustments)
 {
-    // Clear existing values
-    mNullMap.clear();
-    mReflectMap.clear();
-    mAbsorbMap.clear();
+    std::unordered_map<int16_t, int16_t> mNullMap;
+    std::unordered_map<int16_t, int16_t> mReflectMap;
+    std::unordered_map<int16_t, int16_t> mAbsorbMap;
     
     // Set from base
     for(uint8_t x = (uint8_t)CorrectTbl::NRA_WEAPON;
@@ -1979,13 +2101,13 @@ void ActiveEntityState::UpdateNRAChances(libcomp::EnumMap<CorrectTbl, int16_t>& 
             switch(nraIdx)
             {
                 case NRA_NULL:
-                    mNullMap[tblID] = val;
+                    mNullMap[(int16_t)tblID] = val;
                     break;
                 case NRA_REFLECT:
-                    mReflectMap[tblID] = val;
+                    mReflectMap[(int16_t)tblID] = val;
                     break;
                 case NRA_ABSORB:
-                    mAbsorbMap[tblID] = val;
+                    mAbsorbMap[(int16_t)tblID] = val;
                     break;
                 default:
                     break;
@@ -1997,7 +2119,7 @@ void ActiveEntityState::UpdateNRAChances(libcomp::EnumMap<CorrectTbl, int16_t>& 
     // relative value to add
     for(auto ct : adjustments)
     {
-        auto tblID = ct->GetID();
+        int16_t tblID = (int16_t)ct->GetID();
         switch(ct->GetType())
         {
         case NRA_NULL:
@@ -2013,10 +2135,15 @@ void ActiveEntityState::UpdateNRAChances(libcomp::EnumMap<CorrectTbl, int16_t>& 
             break;
         }
     }
+
+    calcState->SetNullChances(mNullMap);
+    calcState->SetReflectChances(mReflectMap);
+    calcState->SetAbsorbChances(mAbsorbMap);
 }
 
 void ActiveEntityState::GetAdditionalCorrectTbls(
     libcomp::DefinitionManager* definitionManager,
+    std::shared_ptr<objects::CalculatedEntityState> calcState,
     std::list<std::shared_ptr<objects::MiCorrectTbl>>& adjustments)
 {
     // 1) Gather skill adjustments
@@ -2052,14 +2179,9 @@ void ActiveEntityState::GetAdditionalCorrectTbls(
     // 2) Gather status effect adjustments
     for(auto ePair : GetStatusEffects())
     {
-        bool skipNRA = mNRAShields.find(ePair.first) != mNRAShields.end();
-
         auto statusData = definitionManager->GetStatusData(ePair.first);
         for(auto ct : statusData->GetCommon()->GetCorrectTbl())
         {
-            if(skipNRA && (uint8_t)ct->GetID() >= (uint8_t)CorrectTbl::NRA_WEAPON &&
-                (uint8_t)ct->GetID() <= (uint8_t)CorrectTbl::NRA_MAGIC) continue;
-
             uint8_t multiplier = (statusData->GetBasic()->GetStackType() == 2)
                 ? ePair.second->GetStack() : 1;
             for(uint8_t i = 0; i < multiplier; i++)
@@ -2069,8 +2191,27 @@ void ActiveEntityState::GetAdditionalCorrectTbls(
         }
     }
 
-    // 3) Gather tokusei direct adjustments
-    /// @todo
+    // 3) Gather tokusei effective adjustments
+    for(auto tPair : calcState->GetEffectiveTokusei())
+    {
+        auto tokusei = definitionManager->GetTokuseiData(tPair.first);
+        if(tokusei && tokusei->CorrectValuesCount() > 0)
+        {
+            // Add the entries once for each source applying them
+            for(uint16_t i = 0; i < tPair.second; i++)
+            {
+                for(auto ct : tokusei->GetCorrectValues())
+                {
+                    adjustments.push_back(ct);
+                }
+
+                for(auto ct : tokusei->GetTokuseiCorrectValues())
+                {
+                    adjustments.push_back(ct);
+                }
+            }
+        }
+    }
 
     // Sort the adjustments, set to 0% first, non-zero percents next, numeric last
     adjustments.sort([](const std::shared_ptr<objects::MiCorrectTbl>& a,
@@ -2083,7 +2224,8 @@ void ActiveEntityState::GetAdditionalCorrectTbls(
 }
 
 uint8_t ActiveEntityState::RecalculateDemonStats(
-    libcomp::DefinitionManager* definitionManager, uint32_t demonID)
+    libcomp::DefinitionManager* definitionManager,
+    std::shared_ptr<objects::CalculatedEntityState> calcState, uint32_t demonID)
 {
     std::lock_guard<std::mutex> lock(mLock);
 
@@ -2105,19 +2247,21 @@ uint8_t ActiveEntityState::RecalculateDemonStats(
     stats[CorrectTbl::SPEED] = cs->GetSPEED();
     stats[CorrectTbl::LUCK] = cs->GetLUCK();
 
-    if(!mInitialCalc)
+    bool selfState = calcState == GetCalculatedState();
+
+    if(selfState && !mInitialCalc)
     {
         SetKnockbackResist((float)stats[CorrectTbl::KNOCKBACK_RESIST]);
         mInitialCalc = true;
     }
 
     std::list<std::shared_ptr<objects::MiCorrectTbl>> correctTbls;
-    GetAdditionalCorrectTbls(definitionManager, correctTbls);
+    GetAdditionalCorrectTbls(definitionManager, calcState, correctTbls);
 
-    UpdateNRAChances(stats);
-    AdjustStats(correctTbls, stats, true);
+    UpdateNRAChances(stats, calcState);
+    AdjustStats(correctTbls, stats, calcState, true);
     CharacterManager::CalculateDependentStats(stats, cs->GetLevel(), true);
-    AdjustStats(correctTbls, stats, false);
+    AdjustStats(correctTbls, stats, calcState, false);
 
     int32_t extraHP = 0;
     if(GetEntityType() == objects::EntityStateObject::EntityType_t::ENEMY)
@@ -2125,7 +2269,19 @@ uint8_t ActiveEntityState::RecalculateDemonStats(
         extraHP = demonData->GetBattleData()->GetEnemyHP(0);
     }
 
-    return CompareAndResetStats(stats, extraHP);
+    if(selfState)
+    {
+        return CompareAndResetStats(stats, extraHP);
+    }
+    else
+    {
+        for(auto statPair : stats)
+        {
+            calcState->SetCorrectTbl((size_t)statPair.first, statPair.second);
+        }
+
+        return 0;
+    }
 }
 
 uint8_t ActiveEntityState::CalculateLNCType(int16_t lncPoints) const
@@ -2154,6 +2310,29 @@ void ActiveEntityState::RemoveInactiveSwitchSkills()
             RemoveActiveSwitchSkills(skillID);
         }
     }
+}
+
+std::set<uint32_t> ActiveEntityState::GetEffectiveTokuseiSkills(
+    libcomp::DefinitionManager* definitionManager)
+{
+    std::set<uint32_t> skillIDs;
+
+    for(auto tPair : GetCalculatedState()->GetEffectiveTokusei())
+    {
+        auto tokusei = definitionManager->GetTokuseiData(tPair.first);
+        if(tokusei)
+        {
+            for(auto aspect : tokusei->GetAspects())
+            {
+                if(aspect->GetType() == TokuseiAspectType::SKILL_ADD)
+                {
+                    skillIDs.insert((uint32_t)aspect->GetValue());
+                }
+            }
+        }
+    }
+
+    return skillIDs;
 }
 
 const std::set<CorrectTbl> VISIBLE_STATS =
@@ -2195,9 +2374,10 @@ uint8_t ActiveEntityState::CompareAndResetStats(libcomp::EnumMap<CorrectTbl, int
         mp = newMaxMP;
     }
 
+    auto calcState = GetCalculatedState();
     for(auto statPair : stats)
     {
-        SetCorrectTbl((size_t)statPair.first, statPair.second);
+        calcState->SetCorrectTbl((size_t)statPair.first, statPair.second);
     }
 
     if(hp != cs->GetHP()

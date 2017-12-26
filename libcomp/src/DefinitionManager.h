@@ -47,18 +47,21 @@ class MiCZoneRelationData;
 class MiDevilData;
 class MiDevilLVUpRateData;
 class MiDynamicMapData;
+class MiEquipmentSetData;
 class MiExpertData;
 class MiHNPCData;
 class MiItemData;
 class MiONPCData;
 class MiQuestData;
 class MiShopProductData;
+class MiSItemData;
 class MiSkillData;
 class MiSpotData;
 class MiStatusData;
 class MiTriUnionSpecialData;
 class MiZoneData;
 class QmpFile;
+class Tokusei;
 }
 
 namespace libcomp
@@ -110,6 +113,22 @@ public:
      *  does not exist
      */
     const std::shared_ptr<objects::MiDynamicMapData> GetDynamicMapData(uint32_t id);
+
+    /**
+     * Get the equipment set information corresponding to an ID
+     * @param id Equipment set ID to retrieve
+     * @return Pointer to the matching equipment set information, null
+     *  if it does not exist
+     */
+    const std::shared_ptr<objects::MiEquipmentSetData> GetEquipmentSetData(uint32_t id);
+
+    /**
+     * Get the equipment set information corresponding to a piece of equipment in the set
+     * @param equipmentID Equipment ID to retrieve sets for
+     * @return List of pointers to the matching equipment set information
+     */
+    std::list<std::shared_ptr<objects::MiEquipmentSetData>> GetEquipmentSetDataByItem(
+        uint32_t equipmentID);
 
     /**
      * Get the character expertise information corresponding to an ID
@@ -172,6 +191,13 @@ public:
     const std::shared_ptr<objects::MiShopProductData> GetShopProductData(uint32_t id);
 
     /**
+     * Get the s-item definition corresponding to an ID
+     * @param id S-item ID to retrieve
+     * @return Pointer to the matching s-item definition, null if it does not exist
+     */
+    const std::shared_ptr<objects::MiSItemData> GetSItemData(uint32_t id);
+
+    /**
      * Get the skill definition corresponding to an ID
      * @param id Skill ID to retrieve
      * @return Pointer to the matching skill definition, null if it does not exist
@@ -216,6 +242,20 @@ public:
      *  not exist
      */
     const std::shared_ptr<objects::MiCZoneRelationData> GetZoneRelationData(uint32_t id);
+
+    /**
+     * Get a tokusei by definition ID
+     * @param id Definition ID of a tokusei to load
+     * @return Pointer to the tokusei matching the specified id
+     */
+    const std::shared_ptr<objects::Tokusei> GetTokuseiData(int32_t id);
+
+    /**
+     * Get all tokusei definitions by ID
+     * @return Map of all tokusei definitions by ID
+     */
+    const std::unordered_map<int32_t,
+        std::shared_ptr<objects::Tokusei>> GetAllTokuseiData();
 
     /**
      * Get the default skills to add to a newly created character
@@ -266,6 +306,13 @@ public:
     bool LoadDynamicMapData(gsl::not_null<DataStore*> pDataStore);
 
     /**
+     * Load the equipment set binary data definitions
+     * @param pDataStore Pointer to the datastore to load binary file from
+     * @return true on success, false on failure
+     */
+    bool LoadEquipmentSetData(gsl::not_null<DataStore*> pDataStore);
+
+    /**
      * Load the character expertise binary data definitions
      * @param pDataStore Pointer to the datastore to load binary file from
      * @return true on success, false on failure
@@ -308,6 +355,13 @@ public:
     bool LoadShopProductData(gsl::not_null<DataStore*> pDataStore);
 
     /**
+     * Load the s-item binary data definitions
+     * @param pDataStore Pointer to the datastore to load binary file from
+     * @return true on success, false on failure
+     */
+    bool LoadSItemData(gsl::not_null<DataStore*> pDataStore);
+
+    /**
      * Load the skill binary data definitions
      * @param pDataStore Pointer to the datastore to load binary file from
      * @return true on success, false on failure
@@ -345,6 +399,13 @@ public:
      */
     std::shared_ptr<objects::QmpFile> LoadQmpFile(const libcomp::String& fileName,
         gsl::not_null<DataStore*> pDataStore);
+
+    /**
+     * Register a server side definition into the manager from an external source.
+     * @param record Pointer to the record of the templated type
+     * @return true if the record was registered successfully, false if it was not
+     */
+    template <class T> bool RegisterServerSideDefinition(const std::shared_ptr<T>& record);
 
 private:
     /**
@@ -499,6 +560,13 @@ private:
     std::unordered_map<uint32_t,
         std::shared_ptr<objects::MiDynamicMapData>> mDynamicMapData;
 
+    /// Map of equipment set information by ID
+    std::unordered_map<uint32_t,
+        std::shared_ptr<objects::MiEquipmentSetData>> mEquipmentSetData;
+
+    /// Map of equipment IDs to set IDs they belong to
+    std::unordered_map<uint32_t, std::list<uint32_t>> mEquipmentSetLookup;
+
     /// Map of character expertise information by ID
     std::unordered_map<uint32_t,
         std::shared_ptr<objects::MiExpertData>> mExpertData;
@@ -528,6 +596,10 @@ private:
     std::unordered_map<uint32_t,
         std::shared_ptr<objects::MiShopProductData>> mShopProductData;
 
+    /// Map of s-item definitions by ID
+    std::unordered_map<uint32_t,
+        std::shared_ptr<objects::MiSItemData>> mSItemData;
+
     /// Map of skill definitions by ID
     std::unordered_map<uint32_t,
         std::shared_ptr<objects::MiSkillData>> mSkillData;
@@ -555,6 +627,10 @@ private:
     /// Map of zone relational information by ID
     std::unordered_map<uint32_t,
         std::shared_ptr<objects::MiCZoneRelationData>> mZoneRelationData;
+
+    /// Map of tokusei definitions by ID
+    std::unordered_map<int32_t,
+        std::shared_ptr<objects::Tokusei>> mTokuseiData;
 };
 
 } // namspace libcomp

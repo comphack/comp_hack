@@ -26,6 +26,7 @@
     <include path="registeredworld.xml"/>
     <include path="search.xml"/>
     <include path="spawn.xml"/>
+    <include path="tokusei.xml"/>
 
     <!-- Lobby Packets -->
     <include path="packet_login.xml"/>
@@ -80,6 +81,7 @@
     <include path="binarydata/devildata.xml"/>
     <include path="binarydata/devillvupratedata.xml"/>
     <include path="binarydata/dynamicmapdata.xml"/>
+    <include path="binarydata/equipmentsetdata.xml"/>
     <include path="binarydata/expertdata.xml"/>
     <include path="binarydata/hnpcdata.xml"/>
     <include path="binarydata/itemdata.xml"/>
@@ -87,6 +89,7 @@
     <include path="binarydata/questdata.xml"/>
     <include path="binarydata/shared.xml"/>
     <include path="binarydata/shopproductdata.xml"/>
+    <include path="binarydata/sitemdata.xml"/>
     <include path="binarydata/skilldata.xml"/>
     <include path="binarydata/spotdata.xml"/>
     <include path="binarydata/statusdata.xml"/>

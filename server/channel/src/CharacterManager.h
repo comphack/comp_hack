@@ -509,11 +509,14 @@ public:
      * @param client Pointer to the client connection
      * @param skillID Skill ID that will have it's corresponding
      *  expertise updated if it is enabled
-     * @param multiplier Expertise point multiplier
+     * @param multiplier Expertise point multiplier, defaults to -1
+     *  to differentiate from explicitly being set to 1. If this is
+     *  not set, the character's expertise acquisition rate will be
+     *  used.
      */
     void UpdateExpertise(const std::shared_ptr<
         channel::ChannelClientConnection>& client, uint32_t skillID,
-        float multiplier = 1.0f);
+        float multiplier = -1.0f);
 
     /**
      * Update the specified entity to learn a skill by ID.

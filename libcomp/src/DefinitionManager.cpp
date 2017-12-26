@@ -37,6 +37,7 @@
 #include <MiDevilData.h>
 #include <MiDevilLVUpRateData.h>
 #include <MiDynamicMapData.h>
+#include <MiEquipmentSetData.h>
 #include <MiExpertClassData.h>
 #include <MiExpertData.h>
 #include <MiExpertRankData.h>
@@ -48,6 +49,7 @@
 #include <MiONPCData.h>
 #include <MiQuestData.h>
 #include <MiShopProductData.h>
+#include <MiSItemData.h>
 #include <MiSkillData.h>
 #include <MiSkillItemStatusCommonData.h>
 #include <MiSpotData.h>
@@ -57,6 +59,7 @@
 #include <MiZoneData.h>
 #include <MiZoneBasicData.h>
 #include <QmpFile.h>
+#include <Tokusei.h>
 
 using namespace libcomp;
 
@@ -92,6 +95,32 @@ const std::shared_ptr<objects::MiDevilLVUpRateData> DefinitionManager::GetDevilL
 const std::shared_ptr<objects::MiDynamicMapData> DefinitionManager::GetDynamicMapData(uint32_t id)
 {
     return GetRecordByID<objects::MiDynamicMapData>(id, mDynamicMapData);
+}
+
+const std::shared_ptr<objects::MiEquipmentSetData> DefinitionManager::GetEquipmentSetData(uint32_t id)
+{
+    return GetRecordByID<objects::MiEquipmentSetData>(id, mEquipmentSetData);
+}
+
+std::list<std::shared_ptr<objects::MiEquipmentSetData>> DefinitionManager::GetEquipmentSetDataByItem(
+    uint32_t equipmentID)
+{
+    std::list<std::shared_ptr<objects::MiEquipmentSetData>> retval;
+
+    auto it = mEquipmentSetLookup.find(equipmentID);
+    if(it != mEquipmentSetLookup.end())
+    {
+        for(auto setID : it->second)
+        {
+            auto equipmentSet = GetEquipmentSetData(setID);
+            if(equipmentSet)
+            {
+                retval.push_back(equipmentSet);
+            }
+        }
+    }
+
+    return retval;
 }
 
 const std::shared_ptr<objects::MiExpertData> DefinitionManager::GetExpertClassData(uint32_t id)
@@ -144,6 +173,11 @@ const std::shared_ptr<objects::MiQuestData> DefinitionManager::GetQuestData(uint
 const std::shared_ptr<objects::MiShopProductData> DefinitionManager::GetShopProductData(uint32_t id)
 {
     return GetRecordByID<objects::MiShopProductData>(id, mShopProductData);
+}
+
+const std::shared_ptr<objects::MiSItemData> DefinitionManager::GetSItemData(uint32_t id)
+{
+    return GetRecordByID<objects::MiSItemData>(id, mSItemData);
 }
 
 const std::shared_ptr<objects::MiSkillData> DefinitionManager::GetSkillData(uint32_t id)
@@ -203,6 +237,18 @@ const std::shared_ptr<objects::MiCZoneRelationData> DefinitionManager::GetZoneRe
     return GetRecordByID<objects::MiCZoneRelationData>(id, mZoneRelationData);
 }
 
+const std::shared_ptr<objects::Tokusei> DefinitionManager::GetTokuseiData(int32_t id)
+{
+    auto iter = mTokuseiData.find(id);
+    return (iter != mTokuseiData.end()) ? iter->second : nullptr;
+}
+
+const std::unordered_map<int32_t,
+    std::shared_ptr<objects::Tokusei>> DefinitionManager::GetAllTokuseiData()
+{
+    return mTokuseiData;
+}
+
 const std::list<uint32_t> DefinitionManager::GetDefaultCharacterSkills()
 {
     return mDefaultCharacterSkills;
@@ -216,12 +262,14 @@ bool DefinitionManager::LoadAllData(gsl::not_null<DataStore*> pDataStore)
     success &= LoadDevilData(pDataStore);
     success &= LoadDevilLVUpRateData(pDataStore);
     success &= LoadDynamicMapData(pDataStore);
+    success &= LoadEquipmentSetData(pDataStore);
     success &= LoadExpertClassData(pDataStore);
     success &= LoadHNPCData(pDataStore);
     success &= LoadItemData(pDataStore);
     success &= LoadONPCData(pDataStore);
     success &= LoadQuestData(pDataStore);
     success &= LoadShopProductData(pDataStore);
+    success &= LoadSItemData(pDataStore);
     success &= LoadSkillData(pDataStore);
     success &= LoadStatusData(pDataStore);
     success &= LoadTriUnionSpecialData(pDataStore);
@@ -369,6 +417,33 @@ bool DefinitionManager::LoadDynamicMapData(gsl::not_null<DataStore*> pDataStore)
     return success;
 }
 
+bool DefinitionManager::LoadEquipmentSetData(
+    gsl::not_null<DataStore*> pDataStore)
+{
+    std::list<std::shared_ptr<objects::MiEquipmentSetData>> records;
+    bool success = LoadBinaryData<objects::MiEquipmentSetData>(pDataStore,
+        "Shield/EquipmentSetData.sbin", true, 0, records);
+    for(auto record : records)
+    {
+        bool equipmentFound = false;
+        for(uint32_t equipmentID : record->GetEquipment())
+        {
+            if(equipmentID)
+            {
+                mEquipmentSetLookup[equipmentID].push_back(record->GetID());
+                equipmentFound = true;
+            }
+        }
+
+        if(equipmentFound)
+        {
+            mEquipmentSetData[record->GetID()] = record;
+        }
+    }
+
+    return success;
+}
+
 bool DefinitionManager::LoadExpertClassData(
     gsl::not_null<DataStore*> pDataStore)
 {
@@ -454,6 +529,27 @@ bool DefinitionManager::LoadShopProductData(gsl::not_null<DataStore*> pDataStore
     for(auto record : records)
     {
         mShopProductData[record->GetID()] = record;
+    }
+
+    return success;
+}
+
+bool DefinitionManager::LoadSItemData(gsl::not_null<DataStore*> pDataStore)
+{
+    std::list<std::shared_ptr<objects::MiSItemData>> records;
+    bool success = LoadBinaryData<objects::MiSItemData>(pDataStore,
+        "Shield/SItemData.sbin", true, 0, records);
+    for(auto record : records)
+    {
+        // Only store it if a tokusei is set
+        for(auto tokuseiID : record->GetTokusei())
+        {
+            if(tokuseiID != 0)
+            {
+                mSItemData[record->GetID()] = record;
+                break;
+            }
+        }
     }
 
     return success;
@@ -549,6 +645,25 @@ std::shared_ptr<objects::QmpFile> DefinitionManager::LoadQmpFile(
     }
 
     return file;
+}
+
+namespace libcomp
+{
+    template<>
+    bool DefinitionManager::RegisterServerSideDefinition<objects::Tokusei>(
+        const std::shared_ptr<objects::Tokusei>& record)
+    {
+        int32_t id = record->GetID();
+        if(mTokuseiData.find(id) != mTokuseiData.end())
+        {
+            LOG_ERROR(libcomp::String("Duplicate tokusei encountered: %1\n").Arg(id));
+            return false;
+        }
+
+        mTokuseiData[id] = record;
+
+        return true;
+    }
 }
 
 bool DefinitionManager::LoadBinaryDataHeader(libcomp::ObjectInStream& ois,

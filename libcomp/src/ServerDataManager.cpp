@@ -27,6 +27,7 @@
 #include "ServerDataManager.h"
 
 // libcomp Includes
+#include "DefinitionManager.h"
 #include "Log.h"
 #include "ScriptEngine.h"
 
@@ -34,6 +35,7 @@
 #include "Event.h"
 #include "ServerShop.h"
 #include "ServerZone.h"
+#include "Tokusei.h"
 
 using namespace libcomp;
 
@@ -95,27 +97,41 @@ const std::shared_ptr<ServerAIScript> ServerDataManager::GetAIScript(const libco
     return GetObjectByID<std::string, ServerAIScript>(name.C(), mAIScripts);
 }
 
-bool ServerDataManager::LoadData(gsl::not_null<DataStore*> pDataStore)
+bool ServerDataManager::LoadData(gsl::not_null<DataStore*> pDataStore,
+    DefinitionManager* definitionManager)
 {
     bool failure = false;
 
+    if(definitionManager)
+    {
+        if(!failure)
+        {
+            LOG_DEBUG("Loading tokusei server definitions...\n");
+            failure = !LoadObjects<objects::Tokusei>(pDataStore, "/tokusei", definitionManager);
+        }
+    }
+
     if(!failure)
     {
+        LOG_DEBUG("Loading zone server definitions...\n");
         failure = !LoadObjects<objects::ServerZone>(pDataStore, "/zones");
     }
 
     if(!failure)
     {
+        LOG_DEBUG("Loading event server definitions...\n");
         failure = !LoadObjects<objects::Event>(pDataStore, "/events");
     }
 
     if(!failure)
     {
+        LOG_DEBUG("Loading shop server definitions...\n");
         failure = !LoadObjects<objects::ServerShop>(pDataStore, "/shops");
     }
 
     if(!failure)
     {
+        LOG_DEBUG("Loading AI server definitions...\n");
         failure = !LoadScripts(pDataStore, "/ai", &ServerDataManager::LoadAIScript);
     }
 
@@ -170,8 +186,10 @@ namespace libcomp
 
     template<>
     bool ServerDataManager::LoadObject<objects::ServerZone>(const tinyxml2::XMLDocument& doc,
-        const tinyxml2::XMLElement *objNode)
+        const tinyxml2::XMLElement *objNode, DefinitionManager* definitionManager)
     {
+        (void)definitionManager;
+
         auto zone = std::shared_ptr<objects::ServerZone>(new objects::ServerZone);
         if(!zone->Load(doc, *objNode))
         {
@@ -195,8 +213,10 @@ namespace libcomp
 
     template<>
     bool ServerDataManager::LoadObject<objects::Event>(const tinyxml2::XMLDocument& doc,
-        const tinyxml2::XMLElement *objNode)
+        const tinyxml2::XMLElement *objNode, DefinitionManager* definitionManager)
     {
+        (void)definitionManager;
+
         auto event = objects::Event::InheritedConstruction(objNode->Attribute("name"));
         if(event == nullptr || !event->Load(doc, *objNode))
         {
@@ -217,8 +237,10 @@ namespace libcomp
 
     template<>
     bool ServerDataManager::LoadObject<objects::ServerShop>(const tinyxml2::XMLDocument& doc,
-        const tinyxml2::XMLElement *objNode)
+        const tinyxml2::XMLElement *objNode, DefinitionManager* definitionManager)
     {
+        (void)definitionManager;
+
         auto shop = std::shared_ptr<objects::ServerShop>(new objects::ServerShop);
         if(!shop->Load(doc, *objNode))
         {
@@ -235,6 +257,19 @@ namespace libcomp
         mShopData[id] = shop;
 
         return true;
+    }
+
+    template<>
+    bool ServerDataManager::LoadObject<objects::Tokusei>(const tinyxml2::XMLDocument& doc,
+        const tinyxml2::XMLElement *objNode, DefinitionManager* definitionManager)
+    {
+        auto tokusei = std::shared_ptr<objects::Tokusei>(new objects::Tokusei);
+        if(!tokusei->Load(doc, *objNode))
+        {
+            return false;
+        }
+
+        return definitionManager && definitionManager->RegisterServerSideDefinition(tokusei);
     }
 }
 

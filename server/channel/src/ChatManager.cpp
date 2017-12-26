@@ -435,6 +435,8 @@ bool ChatManager::GMCommand_Effect(const std::shared_ptr<
     m[effectID] = std::pair<uint8_t, bool>(stack, !isAdd);
     eState->AddStatusEffects(m, definitionManager);
 
+    server->GetTokuseiManager()->Recalculate(eState, true,
+        std::set<int32_t>{ eState->GetEntityID() });
     server->GetCharacterManager()->RecalculateStats(client, eState->GetEntityID());
 
     return true;
@@ -548,12 +550,12 @@ bool ChatManager::GMCommand_ExpertiseUpdate(const std::shared_ptr<
         return false;
     }
 
-    float multiplier = 1.0f;
+    float multiplier = -1.0f;
     GetDecimalArg<float>(multiplier, argsCopy);
     if(multiplier <= 0.f)
     {
         // Don't bother with an error, just reset
-        multiplier = 1.0f;
+        multiplier = -1.0f;
     }
 
     server->GetCharacterManager()->UpdateExpertise(client, skillID,
@@ -737,6 +739,9 @@ bool ChatManager::GMCommand_Kill(const std::shared_ptr<
         std::set<std::shared_ptr<ActiveEntityState>> entities;
         entities.insert(targetState);
         characterManager->UpdateWorldDisplayState(entities);
+
+        server->GetTokuseiManager()->Recalculate(cState,
+            std::set<TokuseiConditionType> { TokuseiConditionType::CURRENT_HP });
     }
 
     return true;

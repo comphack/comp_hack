@@ -49,10 +49,13 @@ namespace objects
 class Event;
 class ServerShop;
 class ServerZone;
+class Tokusei;
 }
 
 namespace libcomp
 {
+
+class DefinitionManager;
 
 /**
  * Container for AI script information.
@@ -121,9 +124,13 @@ public:
     /**
      * Load all server data defintions in the data store
      * @param pDataStore Pointer to the datastore to load binary files from
+     * @param definitionManager Pointer to the definition manager which
+     *  will be loaded with any server side definitions. Loading of these
+     *  definitions will be skipped if this is null.
      * @return true on success, false on failure
      */
-    bool LoadData(gsl::not_null<DataStore*> pDataStore);
+    bool LoadData(gsl::not_null<DataStore*> pDataStore,
+        DefinitionManager* definitionManager);
 
 private:
     /**
@@ -149,12 +156,15 @@ private:
     /**
      * Load all objects from files in a datastore path
      * @param pDataStore Pointer to the datastore to use
+     * @param definitionManager Pointer to the definition manager which
+     *  will be loaded with any server side definitions
      * @param datastorePath Path within the data store to load files from
      * @return true on success, false on failure
      */
     template <class T>
     bool LoadObjects(gsl::not_null<DataStore*> pDataStore,
-        const libcomp::String& datastorePath)
+        const libcomp::String& datastorePath,
+        DefinitionManager* definitionManager = nullptr)
     {
         std::list<libcomp::String> files;
         std::list<libcomp::String> dirs;
@@ -182,7 +192,7 @@ private:
 
                 while(nullptr != objNode)
                 {
-                    if(!LoadObject<T>(objsDoc, objNode))
+                    if(!LoadObject<T>(objsDoc, objNode, definitionManager))
                     {
                         LOG_ERROR(libcomp::String("Failed to load XML file: %1\n").Arg(path));
                         return false;
@@ -203,10 +213,13 @@ private:
      * Load an object of the templated type from an XML node
      * @param doc XML document being loaded from
      * @param objNode XML node being loaded from
+     * @param definitionManager Pointer to the definition manager which
+     *  will be loaded with any server side definitions
      * @return true on success, false on failure
      */
     template <class T>
-    bool LoadObject(const tinyxml2::XMLDocument& doc, const tinyxml2::XMLElement *objNode);
+    bool LoadObject(const tinyxml2::XMLDocument& doc, const tinyxml2::XMLElement *objNode,
+        DefinitionManager* definitionManager = nullptr);
 
     /**
      * Load all script files in the specified datastore

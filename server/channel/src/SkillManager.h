@@ -37,6 +37,7 @@ class Enemy;
 class ItemDrop;
 class MiSkillData;
 class Spawn;
+class TokuseiSkillCondition;
 }
 
 namespace channel
@@ -67,6 +68,9 @@ protected:
     /// true if status effects will be processed normally, false if they
     /// have been handled elsewhere
     bool ApplyStatusEffects = true;
+
+    /// Designates the skill that is being processed
+    std::shared_ptr<channel::ProcessingSkill> Skill;
 
     /// Designates a skill that is being countered
     std::shared_ptr<channel::ProcessingSkill> CounteredSkill;
@@ -177,18 +181,68 @@ private:
     /**
      * Finalize skill processing and send the skill effect reports.
      * @param pSkill Current skill processing state
-     * @param ctx Special execution state for the skill
      */
     void ProcessSkillResultFinal(const std::shared_ptr<channel::ProcessingSkill>& pSkill);
 
     /**
+     * Get a processing skill set with default values from the supplied
+     * ability and context. If the context already has a processing skill
+     * set, it will be returned instead.
+     * @param activated Pointer to the activated ability instance
+     * @param ctx Special execution state for the skill
+     * @return Pointer to a processing skill contextual to the values supplied
+     */
+    std::shared_ptr<ProcessingSkill> GetProcessingSkill(
+        std::shared_ptr<objects::ActivatedAbility> activated,
+        std::shared_ptr<SkillExecutionContext> ctx);
+
+    /**
+     * Get a CalculatedEntityState based upon the skill being executed and
+     * the state of the entity as either the source or a target of the skill.
+     * @param eState Pointer to the entity to get a CalculatedEntityState for
+     * @param pSkill Current skill processing state
+     * @param isTarget false if the entity is the source of the skill, false
+     *  if the entity is a target
+     * @param otherState Pointer to the source entity if a target is being
+     *  calculated or the target in question if the source is being calculated.
+     *  If the skill is still being checked validity, supplying no entity
+     *  for this while calculating against the source is valid.
+     * @return Pointer to the CalculatedEntityState to use relative to the
+     *  supplied parameters. If the effects calculated for the entity do not
+     *  differ from one already on the entity or used as the source execution
+     *  context, the same one will be returned.
+     */
+    std::shared_ptr<objects::CalculatedEntityState> GetCalculatedState(
+        const std::shared_ptr<ActiveEntityState>& eState,
+        const std::shared_ptr<ProcessingSkill>& pSkill, bool isTarget,
+        const std::shared_ptr<ActiveEntityState>& otherState);
+
+    /**
+     * Evaluate a TokuseiSkillCondition relative to the current skill and
+     * supplied entities.
+     * @param eState Pointer to the entity the effect applies to
+     * @param condition Pointer to the condition definition
+     * @param pSkill Current skill processing state
+     * @param otherState Pointer to the source entity if a target is being
+     *  calculated or the target in question if the source is being calculated.
+     *  If the skill is still being checked validity, supplying no entity
+     *  for this while calculating against the source is valid.
+     * @return true if the condition evaluates to true
+     */
+    bool EvaluateTokuseiSkillCondition(const std::shared_ptr<ActiveEntityState>& eState,
+        const std::shared_ptr<objects::TokuseiSkillCondition>& condition,
+        const std::shared_ptr<ProcessingSkill>& pSkill,
+        const std::shared_ptr<ActiveEntityState>& otherState);
+
+    /**
      * Calculate and set the offense value of a damage dealing skill.
      * @param source Pointer to the state of the source entity
+     * @param target Pointer to the state of the target entity
      * @param skill Current skill processing state
      * @return Calculated offsense value of the skill
      */
     uint16_t CalculateOffenseValue(const std::shared_ptr<ActiveEntityState>& source,
-        ProcessingSkill& skill);
+        const std::shared_ptr<ActiveEntityState>& target, ProcessingSkill& skill);
 
     /**
      * Determine how each targeted entity reacts to being hit by a skill. This
@@ -268,9 +322,11 @@ private:
      * Toggle a switch skill, not handled by a special handler.
      * @param client Pointer to the client connection that activated the skill
      * @param activated Pointer to the activated ability instance
+     * @param ctx Special execution state for the skill
      */
     bool ToggleSwitchSkill(const std::shared_ptr<ChannelClientConnection> client,
-        std::shared_ptr<objects::ActivatedAbility> activated);
+        std::shared_ptr<objects::ActivatedAbility> activated,
+        const std::shared_ptr<SkillExecutionContext>& ctx);
 
     /**
      * Calculate skill damage or healing using the correct formula
@@ -284,21 +340,21 @@ private:
     /**
      * Calculate skill damage or healing using the default formula
      * @param source Pointer to the entity that activated the skill
+     * @param target Pointer to the entity that will receive damage
+     * @param skill Current skill processing state
      * @param mod Base modifier damage value
      * @param damageType Type of damage being dealt
-     * @param off Offensive value of the source
-     * @param def Defensive value of the target
      * @param resist Resistence to the skill affinity
-     * @param boost Boost level to apply to the skill affinity
      * @param critLevel Critical level adjustment. Valid values are:
      *  0) No critical adjustment
      *  1) Critical hit
      *  2) Limit break
+     * @param isHeal true if healing "damage" should be applied instead
      * @return Calculated damage or healing
      */
     int32_t CalculateDamage_Normal(const std::shared_ptr<ActiveEntityState>& source,
-        uint16_t mod, uint8_t& damageType, uint16_t off, uint16_t def, float resist,
-        float boost, uint8_t critLevel);
+        SkillTargetResult& target, ProcessingSkill& skill, uint16_t mod,
+        uint8_t& damageType, float resist, uint8_t critLevel, bool isHeal);
 
     /**
      * Calculate skill damage or healing based on a static value
@@ -383,10 +439,12 @@ private:
      * Execute post execution steps like notifying the client that the skill
      * has executed and updating any related expertises.
      * @param client Pointer to the client connection that activated the skill
+     * @param ctx Special execution state for the skill
      * @param activated Pointer to the activated ability instance
      * @param skillData Pointer to the skill data
      */
     void FinalizeSkillExecution(const std::shared_ptr<ChannelClientConnection> client,
+        const std::shared_ptr<SkillExecutionContext>& ctx,
         std::shared_ptr<objects::ActivatedAbility> activated,
         std::shared_ptr<objects::MiSkillData> skillData);
 
@@ -505,10 +563,11 @@ private:
     /**
      * Notify the client that a skill is executing.
      * @param activated Pointer to the activated ability instance
-     * @param skillData Pointer to the skill data
+     * @param cooldownTime Server time when the skill cooldown will end
+     * @param lockOutTime Server time when the skill lockout will end
      */
     void SendExecuteSkill(std::shared_ptr<objects::ActivatedAbility> activated,
-        std::shared_ptr<objects::MiSkillData> skillData);
+        uint64_t cooldownTime, uint64_t lockOutTime);
 
     /**
      * Notify the client that a skill is complete.

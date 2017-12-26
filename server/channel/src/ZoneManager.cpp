@@ -439,6 +439,8 @@ bool ZoneManager::EnterZone(const std::shared_ptr<ChannelClientConnection>& clie
     dState->SetCurrentY(yCoord);
     dState->SetCurrentRotation(rotation);
 
+    server->GetTokuseiManager()->RecalculateParty(state->GetParty());
+
     libcomp::Packet reply;
     reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_ZONE_CHANGE);
     reply.WriteS32Little((int32_t)zoneDef->GetID());
@@ -620,6 +622,14 @@ void ZoneManager::LeaveZone(const std::shared_ptr<ChannelClientConnection>& clie
         auto demonID = dState->GetEntityID();
         std::list<int32_t> entityIDs = { characterID, demonID };
         RemoveEntitiesFromZone(zone, entityIDs);
+    }
+
+    if(newZoneID == 0)
+    {
+        // Not entering another zone, recalculate tokusei for
+        // remaining party member effects
+        server->GetTokuseiManager()->RecalculateParty(
+            state->GetParty());
     }
 
     // If logging out, cancel zone out and log out effects (zone out effects
@@ -1280,6 +1290,11 @@ void ZoneManager::UpdateStatusEffectStates(const std::shared_ptr<Zone>& zone,
                 p.WriteS32Little(hpAdjusted);
                 p.WriteS32Little(mpAdjusted);
                 zonePackets.push_back(p);
+
+                server->GetTokuseiManager()->Recalculate(entity,
+                    std::set<TokuseiConditionType>
+                    { TokuseiConditionType::CURRENT_HP,
+                      TokuseiConditionType::CURRENT_MP });
             }
         }
         
@@ -1309,6 +1324,8 @@ void ZoneManager::UpdateStatusEffectStates(const std::shared_ptr<Zone>& zone,
     {
         // Make sure T-damage is sent first
         // Status add/update and world update handled when applying changes
+        server->GetTokuseiManager()->Recalculate(entity, true,
+            std::set<int32_t>{ entity->GetEntityID() });
         if(characterManager->RecalculateStats(nullptr, entity->GetEntityID()) &
             ENTITY_CALC_STAT_WORLD)
         {
@@ -1510,7 +1527,7 @@ bool ZoneManager::UpdateSpawnGroups(const std::shared_ptr<Zone>& zone,
         bool specified = groupIDs.find(sgPair.first) != groupIDs.end();
 
         auto sg = sgPair.second;
-        if(specified || (refreshAll && sg->GetRespawnTime() > 0.f) ||
+        if(specified || (!actionSource && refreshAll && sg->GetRespawnTime() > 0.f) ||
             updateSpawnGroups.find(sgPair.first) != updateSpawnGroups.end())
         {
             groups[sg->GetSpawnLocationGroupID()].push_back(sg);
@@ -1762,6 +1779,7 @@ std::shared_ptr<EnemyState> ZoneManager::CreateEnemy(
     eState->SetStatusEffectsActive(true, definitionManager);
     eState->SetZone(zone);
 
+    server->GetTokuseiManager()->Recalculate(eState);
     eState->RecalculateStats(definitionManager);
 
     // Reset HP to max to account for extra HP boosts

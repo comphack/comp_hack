@@ -175,6 +175,8 @@
             <value num="92">RATE_SUPPORT_TAKEN</value>
             <!-- 被回復量 - Healing "Damage" Received -->
             <value num="93">RATE_HEAL_TAKEN</value>
+            <!-- 武器高揚 - Weapon Boost -->
+            <value num="95">BOOST_WEAPON</value>
             <!-- 斬撃高揚 - Slash Boost -->
             <value num="96">BOOST_SLASH</value>
             <!-- 突撃高揚 - Thrust Boost -->
@@ -225,6 +227,8 @@
             <value num="119">FINAL_CRIT_CHANCE</value>
             <!-- 防御拡張２ - Defense Expansion 2 -->
             <value num="120">DEFENSE_EXPAND_2</value>
+            <!-- 詠唱時間 - Skill Chant Time -->
+            <value num="125">CHANT_TIME</value>
         </member>
         <member type="u8" name="Type"/>
         <member type="s16" name="Value"/>

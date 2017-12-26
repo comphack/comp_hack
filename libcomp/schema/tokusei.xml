@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="TokuseiCondition" persistent="false">
+        <member type="enum" name="Type" underlying="int8_t">
+            <value>NONE</value>
+            <value>CURRENT_HP</value>
+            <value>CURRENT_MP</value>
+            <value>DIGITALIZED</value>
+            <value>EQUIPPED</value>
+            <value>EQUIPPED_WEAPON_TYPE</value>
+            <value>LNC</value>
+            <value>GENDER</value>
+            <value>SKILL_STATE</value>
+            <value>STATUS_ACTIVE</value>
+
+            <!-- Partner -->
+            <value>PARTNER_TYPE</value>
+            <value>PARTNER_FAMILY</value>
+            <value>PARTNER_RACE</value>
+            <value>PARTNER_FAMILIARITY</value>
+
+            <!-- Party -->
+            <value>PARTY_DEMON_TYPE</value>
+
+            <!-- Time -->
+            <value>ACTUAL_TIME</value>
+            <value>GAME_TIME</value>
+            <value>MOON_PHASE</value>
+        </member>
+        <member type="s32" name="Value"/>
+        <member type="enum" name="Comparator" underlying="int8_t">
+            <value>EQUALS</value>
+            <value>NOT_EQUAL</value>
+            <value>GTE</value>
+            <value>LTE</value>
+        </member>
+        <member type="u8" name="OptionGroupID"/>
+    </object>
+    <object name="TokuseiSkillCondition" persistent="false" baseobject="TokuseiCondition">
+        <member type="enum" name="Type" inherited="true" default="SKILL_STATE"/>
+        <member type="bool" name="TargetCondition" default="false"/>
+        <member type="enum" name="SkillConditionType" underlying="int8_t">
+            <value>ANY_SKILL</value>
+            <value>EXPLICIT_SKILL</value>
+            <value>AFFINITY</value>
+            <value>ACTION_TYPE</value>
+            <value>SKILL_CLASS</value>
+            <value>DEMON_TYPE</value>
+            <value>DEMON_FAMILY</value>
+            <value>DEMON_RACE</value>
+            <value>DEMON_TITLE</value>
+            <value>DEMON_PARTNER_MATCH</value>
+            <value>ENEMY_GENDER</value>
+            <value>ENEMY_LNC</value>
+        </member>
+    </object>
+    <object name="TokuseiAttributes" persistent="false">
+        <member type="enum" name="Multiplier" underlying="int8_t">
+            <value>NONE</value>
+            <value>LEVEL</value>
+            <value>EXPERTISE</value>
+            <value>CORRECT_TABLE</value>
+            <value>CORRECT_TABLE_DIVIDE</value>
+            <value>BASE_AND_LEVEL</value>
+            <value>PARTY_SIZE</value>
+        </member>
+        <member type="s32" name="MultiplierValue"/>
+        <member type="u8" name="Precision" default="0"/>
+        <member type="string" name="ScriptID"/>
+    </object>
+    <object name="TokuseiCorrectTbl" baseobject="MiCorrectTbl"
+        persistent="false">
+        <member type="u8" name="Type" inherited="true" default="100"/>
+        <member type="TokuseiAttributes*" name="Attributes"
+            nulldefault="true"/>
+    </object>
+    <object name="TokuseiAspect" persistent="false">
+        <member type="enum" name="Type" underlying="int8_t">
+            <value>SKILL_ADD</value>
+
+            <!-- Rates -->
+            <value>BETHEL_RATE</value>
+            <value>FAMILIARITY_UP_RATE</value>
+            <value>FAMILIARITY_DOWN_RATE</value>
+            <value>SOUL_POINT_RATE</value>
+            <value>TALK_RATE</value>
+
+            <!-- Skill Processing -->
+            <value>DAMAGE_DEALT</value>
+            <value>DAMAGE_TAKEN</value>
+            <value>HP_COST_ADJUST</value>
+            <value>KNOCKBACK_STATUS_ADD</value>
+            <value>LIMIT_BREAK_MAX</value>
+            <value>MP_COST_ADJUST</value>
+            <value>SKILL_STACK_ADJUST</value>
+            <value>SKILL_TARGET_OUTCOME</value>
+            <value>STATUS_INFLICT_ADJUST</value>
+            <value>WEAPON_AFFINITY_OVERRIDE</value>
+
+            <!-- Action Nullification -->
+            <value>CAST_INTERRUPT_NULL</value>
+            <value>HITSTUN_NULL</value>
+            <value>KNOCKBACK_NULL</value>
+            <value>STATUS_NULL</value>
+
+            <!-- Tech Damage -->
+            <value>TECH_ATTACK_RATE</value>
+            <value>TECH_ATTACK_POWER</value>
+
+            <!-- Pursuit Damage -->
+            <value>PURSUIT_RATE</value>
+            <value>PURSUIT_POWER</value>
+
+            <!-- Digitalize -->
+            <value>DIGITALIZE_LENGTH</value>
+            <value>DIGITALIZE_POINT_RATE</value>
+
+            <!-- Misc -->
+            <value>AFFINITY_CAP_MAX</value>
+            <value>CLENCH_CHANCE</value>
+            <value>CONSTANT_STATUS</value>
+            <value>KNOCKBACK_RECOVERY</value>
+            <value>SUMMON_STATUS</value>
+        </member>
+        <member type="s32" name="Value"/>
+        <member type="s32" name="Modifier"/>
+        <member type="TokuseiAttributes*" name="Attributes"
+            nulldefault="true"/>
+    </object>
+    <object name="Tokusei" persistent="false">
+        <member type="s32" name="ID"/>
+        <member type="enum" name="TargetType" underlying="int8_t">
+            <value>SELF</value>
+            <value>PARTNER</value>
+            <value>SUMMONER</value>
+            <value>PARTY</value>
+        </member>
+        <member type="list" name="Conditions">
+            <element type="TokuseiCondition*"/>
+        </member>
+        <member type="list" name="SkillConditions">
+            <element type="TokuseiSkillCondition*"/>
+        </member>
+        <member type="list" name="CorrectValues">
+            <element type="MiCorrectTbl*"/>
+        </member>
+        <member type="list" name="TokuseiCorrectValues">
+            <element type="TokuseiCorrectTbl*"/>
+        </member>
+        <member type="list" name="Aspects">
+            <element type="TokuseiAspect*"/>
+        </member>
+    </object>
+</objgen>

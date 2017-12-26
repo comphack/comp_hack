@@ -71,7 +71,7 @@ bool ChannelServer::Initialize()
     }
 
     mServerDataManager = new libcomp::ServerDataManager();
-    if(!mServerDataManager->LoadData(GetDataStore()))
+    if(!mServerDataManager->LoadData(GetDataStore(), mDefinitionManager))
     {
         return false;
     }
@@ -420,8 +420,14 @@ bool ChannelServer::Initialize()
     mEventManager = new EventManager(channelPtr);
     mSkillManager = new SkillManager(channelPtr);
     mSyncManager = new ChannelSyncManager(channelPtr);
-    mZoneManager = new ZoneManager(channelPtr);
 
+	mTokuseiManager = new TokuseiManager(channelPtr);
+    if(!mTokuseiManager->Initialize())
+    {
+        return false;
+    }
+
+    mZoneManager = new ZoneManager(channelPtr);
     mZoneManager->LoadGeometry();
 
     // Now connect to the world server.
@@ -475,6 +481,7 @@ ChannelServer::~ChannelServer()
     delete mEventManager;
     delete mSkillManager;
     delete mSyncManager;
+	delete mTokuseiManager;
     delete mZoneManager;
     delete mDefinitionManager;
     delete mServerDataManager;
@@ -679,6 +686,11 @@ libcomp::ServerDataManager* ChannelServer::GetServerDataManager() const
 ChannelSyncManager* ChannelServer::GetChannelSyncManager() const
 {
     return mSyncManager;
+}
+
+TokuseiManager* ChannelServer::GetTokuseiManager() const
+{
+    return mTokuseiManager;
 }
 
 int32_t ChannelServer::GetNextEntityID()

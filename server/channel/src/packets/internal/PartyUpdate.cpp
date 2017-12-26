@@ -227,6 +227,22 @@ bool Parsers::PartyUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
                     state->SetParty(nullptr);
                 }
             }
+
+            // Recalculate all tokusei effects
+            auto tokuseiManager = server->GetTokuseiManager();
+
+            std::set<int32_t> recalcEntities;
+            for(auto client : clients)
+            {
+                auto cState = client->GetClientState()->GetCharacterState();
+                if(recalcEntities.find(cState->GetEntityID()) == recalcEntities.end())
+                {
+                    for(auto pair : tokuseiManager->Recalculate(cState, true))
+                    {
+                        recalcEntities.insert(pair.first);
+                    }
+                }
+            }
         }
         break;
     case InternalPacketAction_t::PACKET_ACTION_GROUP_LEAVE:

@@ -214,5 +214,12 @@ bool Parsers::ReviveCharacter::Parse(libcomp::ManagerPacket *pPacketManager,
         client->FlushOutgoing();
     }
 
+    if(hpRestore > 0.f)
+    {
+        // If the character was revived, check HP baed effects
+        server->GetTokuseiManager()->Recalculate(cState,
+            std::set<TokuseiConditionType> { TokuseiConditionType::CURRENT_HP });
+    }
+
     return true;
 }

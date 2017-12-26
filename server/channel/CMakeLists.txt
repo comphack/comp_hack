@@ -48,6 +48,7 @@ SET(${PROJECT_NAME}_SRCS
     src/ChannelSyncManager.cpp
     src/CharacterManager.cpp
     src/ChatManager.cpp
+    src/CharacterState.cpp
     src/ClientState.cpp
     src/EnemyState.cpp
     src/EntityState.cpp
@@ -57,6 +58,7 @@ SET(${PROJECT_NAME}_SRCS
     src/ManagerConnection.cpp
     src/ManagerSystem.cpp
     src/SkillManager.cpp
+    src/TokuseiManager.cpp
     src/Zone.cpp
     src/ZoneGeometry.cpp
     src/ZoneManager.cpp
@@ -76,6 +78,7 @@ SET(${PROJECT_NAME}_HDRS
     src/ChannelSyncManager.h
     src/CharacterManager.h
     src/ChatManager.h
+    src/CharacterState.h
     src/ClientState.h
     src/EnemyState.h
     src/EntityState.h
@@ -86,6 +89,7 @@ SET(${PROJECT_NAME}_HDRS
     src/ManagerSystem.h
     src/Packets.h
     src/SkillManager.h
+    src/TokuseiManager.h
     src/Zone.h
     src/ZoneGeometry.h
     src/ZoneManager.h
@@ -116,6 +120,8 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     ActivatedAbility.cpp
     ActiveEntityStateObject.h
     ActiveEntityStateObject.cpp
+    CalculatedEntityState.h
+    CalculatedEntityState.cpp
     ChannelConfig.h
     ChannelConfig.cpp
     ClientStateObject.h

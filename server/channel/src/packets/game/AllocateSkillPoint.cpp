@@ -87,6 +87,8 @@ void AllocatePoint(const std::shared_ptr<ChannelServer> server,
 
     character->SetPoints(static_cast<int32_t>(character->GetPoints() - pointCost));
 
+    server->GetTokuseiManager()->Recalculate(cState);
+
     auto characterManager = server->GetCharacterManager();
     characterManager->RecalculateStats(client, cState->GetEntityID(), false);
 

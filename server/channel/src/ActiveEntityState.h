@@ -35,6 +35,7 @@
 #include <EntityStats.h>
 #include <MiCorrectTbl.h>
 #include <StatusEffect.h>
+#include <TokuseiCondition.h>
 
 // Standard C++11 includes
 #include <map>
@@ -90,7 +91,6 @@ const uint8_t STATUS_WAITING = 0x20;
 namespace libcomp
 {
 class DefinitionManager;
-class ServerDataManager;
 }
 
 typedef objects::MiCorrectTbl::ID_t CorrectTbl;
@@ -127,22 +127,49 @@ public:
     /**
      * Get the adjusted correct table value associated to the entity.
      * @param tableID ID of the correct table value to retrieve
+     * @param calcState Override CalculatedEntityState to use instead of
+     *  the entity's default
      * @return Adjusted correct table value
      */
-    int16_t GetCorrectValue(CorrectTbl tableID);
+    int16_t GetCorrectValue(CorrectTbl tableID,
+        std::shared_ptr<objects::CalculatedEntityState> calcState = nullptr);
 
     /**
      * Recalculate the entity's stats, adjusted by equipment and
      * effects.
      * @param definitionManager Pointer to the DefinitionManager to use when
      *  determining how effects and items interact with the entity
+     * @param calcState Override CalculatedEntityState to use instead of the
+     *  entity's default. If a value is supplied for this, the entity's stats
+     *  will not be updated as a result of the calculation, instead the
+     *  supplied state will be updated to simulate "effective stats".
      * @return Flags indicating if the calculation resulted in a change that
      *  should be communicated to the client or world:
      *  0x01) ENTITY_CALC_STAT_LOCAL = locallly visible stats were changed
      *  0x02) ENTITY_CALC_STAT_WORLD = stats changed that are visible to the world
      *  0x04) ENTITY_CALC_SKILL = skill set has changed (character only)
      */
-    virtual uint8_t RecalculateStats(libcomp::DefinitionManager* definitionManager);
+    virtual uint8_t RecalculateStats(libcomp::DefinitionManager* definitionManager,
+        std::shared_ptr<objects::CalculatedEntityState> calcState = nullptr);
+
+    /**
+     * Get a numeric representation (also stored in constants) of the
+     * entity's current alignment
+     * @param definitionManager Pointer to the definition manager to use
+     *  for entities with a static LNC value
+     * @return Numeric representation of the entity's current alignment
+     */
+    virtual uint8_t GetLNCType(libcomp::DefinitionManager* definitionManager = nullptr);
+
+    /**
+     * Get all skills that the entity currently has available.
+     * @param definitionManager Pointer to the definition manager to use
+     *  for skill source definitions
+     * @param includeTokusei false if tokusei skills should not be included
+     * @return Set of all skill IDs the entity currently has available
+     */
+    virtual std::set<uint32_t> GetAllSkills(libcomp::DefinitionManager* definitionManager,
+        bool includeTokusei);
 
     /**
      * Get the core stats associated to the active entity.
@@ -492,10 +519,13 @@ public:
      *  3) Absorb
      *  Defines exist in the Constants header for each of these.
      * @param type Correct table type of the affinity to retrieve
+     * @param calcState Override CalculatedEntityState to use instead of the
+     *  entity's default
      * @return Integer representation of the chance to avoid affinity damage, 0
      *  if the supplied values are invalid
      */
-    int16_t GetNRAChance(uint8_t nraIdx, CorrectTbl type);
+    int16_t GetNRAChance(uint8_t nraIdx, CorrectTbl type,
+        std::shared_ptr<objects::CalculatedEntityState> calcState = nullptr);
 
     /**
      * Decrease the corresponding NRA affinity shield effect stacks and
@@ -572,22 +602,28 @@ protected:
      * @param adjustments List of adjustments to the correct table values supplied
      * @param stats Output map parameter of base or calculated stats to adjust for
      *  the current entity
+     * @param calcState Override CalculatedEntityState to use instead of the
+     *  entity's default
      * @param baseMode If true only base stat correct table types will be adjusted,
      *  if false only the non-base stat correct table types will be adjusted and NRA
      *  values will be updated immediately.
      */
     void AdjustStats(const std::list<std::shared_ptr<objects::MiCorrectTbl>>& adjustments,
-        libcomp::EnumMap<CorrectTbl, int16_t>& stats, bool baseMode);
+        libcomp::EnumMap<CorrectTbl, int16_t>& stats,
+        std::shared_ptr<objects::CalculatedEntityState> calcState, bool baseMode);
 
     /**
      * Update the entity's calculated NRA chances for each affinity from base and
      * equipment values. NRA chances will further be modified for status effects
      * within AdjustStats during the calculated stat mode.
      * @param stats Map containing the base NRA values
+     * @param calcState Override CalculatedEntityState to use instead of the
+     *  entity's default
      * @param adjustments List of adjustments to the correct table values supplied
      *  by equipment
      */
     void UpdateNRAChances(libcomp::EnumMap<CorrectTbl, int16_t>& stats,
+        std::shared_ptr<objects::CalculatedEntityState> calcState,
         const std::list<std::shared_ptr<objects::MiCorrectTbl>>& adjustments = {});
 
     /**
@@ -595,22 +631,27 @@ protected:
      * and status effects.
      * @param definitionManager Pointer to the DefinitionManager to use when
      *  determining how the skills and effects behave
+     * @param calcState Override CalculatedEntityState to use instead of the
+     *  entity's default
      * @param adjustments Output list parameter to add the adjustments to
      */
     void GetAdditionalCorrectTbls(libcomp::DefinitionManager* definitionManager,
+        std::shared_ptr<objects::CalculatedEntityState> calcState,
         std::list<std::shared_ptr<objects::MiCorrectTbl>>& adjustments);
 
     /**
      * Recalculate a demon or enemy entity's stats.
      * @param definitionManager Pointer to the DefinitionManager to use when
      *  determining how effects and items interact with the entity
+     * @param calcState Override CalculatedEntityState to use instead of the
+     *  entity's default
      * @param demonID Demon type ID of the entity
      * @return 1 if the calculation resulted in a change to the stats that should
      *  be sent to the client, 2 if one of the changes should be communicated to
      *  the world (for party members etc), 0 otherwise
      */
     uint8_t RecalculateDemonStats(libcomp::DefinitionManager* definitionManager,
-        uint32_t demonID);
+        std::shared_ptr<objects::CalculatedEntityState> calcState, uint32_t demonID);
 
     /**
      * Calculate the numeric representation (also stored in constants)
@@ -625,6 +666,15 @@ protected:
      * to the entity.
      */
     void RemoveInactiveSwitchSkills();
+
+    /**
+     * Get the set of skill IDs granted by effective tokusei.
+     * @param definitionManager Pointer to the definition manager to use
+     *  for tokusei definitions
+     * @result Set of skill IDs granted by effective tokusei
+     */
+    std::set<uint32_t> GetEffectiveTokuseiSkills(
+        libcomp::DefinitionManager* definitionManager);
 
     /**
      * Compare and set the entity's current stats and also keep track of if
@@ -668,15 +718,6 @@ protected:
     /// fighting. If an entity is in this set, this entity should be in their
     /// set as well.
     std::set<int32_t> mOpponentIDs;
-
-    /// Map of affinity null chances by correct table ID
-    libcomp::EnumMap<CorrectTbl, int16_t> mNullMap;
-
-    /// Map of affinity reflect chances by correct table ID
-    libcomp::EnumMap<CorrectTbl, int16_t> mReflectMap;
-
-    /// Map of affinity absorb chances by correct table ID
-    libcomp::EnumMap<CorrectTbl, int16_t> mAbsorbMap;
 
     /// Map of effect type IDs to NRA types and NRA indexes. This represents
     /// a 100% NRA result whenever a skill of the corresponding type is used
@@ -749,16 +790,13 @@ public:
         return mEntity ? mEntity->GetCoreStats().Get() : nullptr;
     }
 
-    virtual uint8_t RecalculateStats(libcomp::DefinitionManager* definitionManager);
+    virtual uint8_t RecalculateStats(libcomp::DefinitionManager* definitionManager,
+        std::shared_ptr<objects::CalculatedEntityState> calcState = nullptr);
 
-    /**
-     * Get a numeric representation (also stored in constants) of the
-     * entity's current alignment
-     * @param definitionManager Pointer to the definition manager to use
-     *  for entities with a static LNC value
-     * @return Numeric representation of the entity's current alignment
-     */
-    uint8_t GetLNCType(libcomp::DefinitionManager* definitionManager = nullptr);
+    virtual std::set<uint32_t> GetAllSkills(libcomp::DefinitionManager* definitionManager,
+        bool includeTokusei);
+
+    virtual uint8_t GetLNCType(libcomp::DefinitionManager* definitionManager = nullptr);
 
     virtual bool Ready()
     {

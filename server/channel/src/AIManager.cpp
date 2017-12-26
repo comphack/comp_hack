@@ -406,9 +406,10 @@ bool AIManager::UpdateState(const std::shared_ptr<ActiveEntityState>& eState,
             break;
         case AICommandType_t::USE_SKILL:
             {
-                // Do nothing if hit stunned
+                // Do nothing if hit stunned or still charging
                 if(eState->GetStatusTimes(STATUS_HIT_STUN) ||
-                    eState->GetStatusTimes(STATUS_KNOCKBACK))
+                    eState->GetStatusTimes(STATUS_KNOCKBACK) ||
+                    eState->GetStatusTimes(STATUS_CHARGING))
                 {
                     return false;
                 }

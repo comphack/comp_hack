@@ -21,6 +21,35 @@
             <element type="Action*"/>
         </member>
     </object>
+    <object name="CalculatedEntityState" scriptenabled="true" persistent="false">
+        <member type="array" name="CorrectTbl" size="128">
+            <element type="s16"/>
+        </member>
+        <member type="map" name="NullChances">
+            <key type="s16"/>
+            <value type="s16"/>
+        </member>
+        <member type="map" name="ReflectChances">
+            <key type="s16"/>
+            <value type="s16"/>
+        </member>
+        <member type="map" name="AbsorbChances">
+            <key type="s16"/>
+            <value type="s16"/>
+        </member>
+
+        <member type="set" name="ActiveTokuseiTriggers">
+            <element type="s8"/>
+        </member>
+        <member type="map" name="EffectiveTokusei">
+            <key type="s32"/>
+            <value type="u16"/>
+        </member>
+        <member type="map" name="PendingSkillTokusei">
+            <key type="s32"/>
+            <value type="u16"/>
+        </member>
+    </object>
     <object name="ActiveEntityStateObject" baseobject="EntityStateObject"
     scriptenabled="true" persistent="false">
         <member type="bool" name="IsActive" inherited="true" default="true"/>
@@ -60,9 +89,8 @@
         <member type="s16" name="SUPPORT"/>
         <member type="s16" name="PDEF"/>
         <member type="s16" name="MDEF"/>
-        <member type="array" name="CorrectTbl" size="128">
-            <element type="s16"/>
-        </member>
+        <member type="CalculatedEntityState*" name="CalculatedState"/>
+
         <member type="ActivatedAbility*" name="ActivatedAbility"
             nulldefault="true"/>
 

@@ -100,7 +100,8 @@ bool Parsers::ItemMove::Parse(libcomp::ManagerPacket *pPacketManager,
             return true;
         }
 
-        if(destBox != sourceBox)
+        bool sameBox = destBox == sourceBox;
+        if(!sameBox)
         {
             characterManager->UnequipItem(client, item);
         }
@@ -126,6 +127,25 @@ bool Parsers::ItemMove::Parse(libcomp::ManagerPacket *pPacketManager,
         }
 
         server->GetWorldDatabase()->QueueChangeSet(dbChanges);
+
+        // The client will handle moves just fine on its own for the most part but
+        // certain simultaneous actions will cause some weirdness without sending
+        // the updated slots back
+        std::list<uint16_t> slots = { (uint16_t)sourceSlot };
+        if(sameBox)
+        {
+            slots.push_back((uint16_t)destSlot);
+        }
+
+        characterManager->SendItemBoxData(client, sourceBox, slots);
+
+        if(!sameBox)
+        {
+            slots.clear();
+            slots.push_back((uint16_t)destSlot);
+
+            characterManager->SendItemBoxData(client, destBox, slots);
+        }
     }
     else
     {

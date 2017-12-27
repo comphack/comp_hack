@@ -54,6 +54,7 @@
 #include <Loot.h>
 #include <MiAcquisitionSkillData.h>
 #include <MiCancelData.h>
+#include <MiCategoryData.h>
 #include <MiDevilBattleData.h>
 #include <MiDevilData.h>
 #include <MiDevilFamiliarityData.h>
@@ -67,6 +68,7 @@
 #include <MiNPCBasicData.h>
 #include <MiPossessionData.h>
 #include <MiSkillData.h>
+#include <MiSkillItemStatusCommonData.h>
 #include <MiStatusData.h>
 #include <ServerZone.h>
 #include <StatusEffect.h>
@@ -2105,6 +2107,11 @@ void CharacterManager::UpdateExpertise(const std::shared_ptr<
     {
         LOG_WARNING(libcomp::String("Unknown skill ID encountered in"
             " UpdateExpertise: %1").Arg(skillID));
+        return;
+    }
+    else if(skill->GetCommon()->GetCategory()->GetMainCategory() == 2)
+    {
+        // Switch skills should never grant expertise
         return;
     }
 

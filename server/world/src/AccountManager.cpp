@@ -33,6 +33,7 @@
 #include <Account.h>
 #include <Character.h>
 #include <CharacterLogin.h>
+#include <FriendSettings.h>
 
 using namespace world;
 
@@ -187,6 +188,9 @@ void AccountManager::Cleanup(const std::shared_ptr<objects::AccountLogin>& login
     cLogin->SetWorldID(-1);
     cLogin->SetChannelID(-1);
     cLogin->SetZoneID(0);
-    Cleanup<objects::Character>(cLogin->GetCharacter().Get());
+
+    // Leave the character once loaded but drop other data referenced by it
+    Cleanup<objects::FriendSettings>(cLogin->GetCharacter()
+        ->GetFriendSettings().Get());
     Cleanup<objects::Account>(login->GetAccount().Get());
 }

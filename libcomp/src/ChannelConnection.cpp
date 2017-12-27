@@ -27,6 +27,7 @@
 #include "ChannelConnection.h"
 
 // libcomp Includes
+#include "Constants.h"
 #include "Decrypt.h"
 #include "Log.h"
 
@@ -273,5 +274,5 @@ bool ChannelConnection::DecompressPacket(libcomp::Packet& packet,
 
 uint32_t ChannelConnection::GetHeaderSize()
 {
-    return 6 * sizeof(uint32_t);
+    return CHANNEL_HEADER_SIZE;
 }

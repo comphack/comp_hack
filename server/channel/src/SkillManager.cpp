@@ -1805,7 +1805,7 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<channel::Proces
 
         // If the new list size + the header size is larger than the max
         // packet size, move on to the next batch
-        if((currentBatchSize + currentTargetSize + 15) > MAX_CHANNEL_PACKET_SIZE)
+        if((uint32_t)(currentBatchSize + currentTargetSize + 15) > MAX_CHANNEL_PACKET_SIZE)
         {
             targetBatches.push_back(currentBatch);
             currentBatch.clear();

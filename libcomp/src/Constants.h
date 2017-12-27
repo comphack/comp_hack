@@ -90,8 +90,11 @@ namespace libcomp
 /// Maximum number of bytes in a packet.
 #define MAX_PACKET_SIZE (16384)
 
+/// Size of the channel packet header.
+#define CHANNEL_HEADER_SIZE (6 * sizeof(uint32_t))
+
 /// Maximum number of bytes in a packet minus the channel header size.
-#define MAX_CHANNEL_PACKET_SIZE (16360)
+#define MAX_CHANNEL_PACKET_SIZE (MAX_PACKET_SIZE - CHANNEL_HEADER_SIZE)
 
 /// Maximum number of calls to trace when generating the backtrace.
 #define MAX_BACKTRACE_DEPTH (100)

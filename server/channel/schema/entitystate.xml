@@ -115,6 +115,8 @@
         <member type="u64" name="ActivationTime"/>
         <member type="u64" name="ExecutionTime"/>
         <member type="u64" name="ChargedTime"/>
+        <member type="u64" name="CooldownTime"/>
+        <member type="u64" name="LockOutTime"/>
         <member type="u8" name="ExecuteCount"/>
 
         <member type="s32" name="HPCost"/>

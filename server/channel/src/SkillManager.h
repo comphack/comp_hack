@@ -200,7 +200,7 @@ private:
      * Get a CalculatedEntityState based upon the skill being executed and
      * the state of the entity as either the source or a target of the skill.
      * @param eState Pointer to the entity to get a CalculatedEntityState for
-     * @param pSkill Current skill processing state
+     * @param skill Current skill processing state
      * @param isTarget false if the entity is the source of the skill, false
      *  if the entity is a target
      * @param otherState Pointer to the source entity if a target is being
@@ -213,16 +213,15 @@ private:
      *  context, the same one will be returned.
      */
     std::shared_ptr<objects::CalculatedEntityState> GetCalculatedState(
-        const std::shared_ptr<ActiveEntityState>& eState,
-        const std::shared_ptr<ProcessingSkill>& pSkill, bool isTarget,
-        const std::shared_ptr<ActiveEntityState>& otherState);
+        const std::shared_ptr<ActiveEntityState>& eState, ProcessingSkill& skill,
+        bool isTarget, const std::shared_ptr<ActiveEntityState>& otherState);
 
     /**
      * Evaluate a TokuseiSkillCondition relative to the current skill and
      * supplied entities.
      * @param eState Pointer to the entity the effect applies to
      * @param condition Pointer to the condition definition
-     * @param pSkill Current skill processing state
+     * @param skill Current skill processing state
      * @param otherState Pointer to the source entity if a target is being
      *  calculated or the target in question if the source is being calculated.
      *  If the skill is still being checked validity, supplying no entity
@@ -231,8 +230,7 @@ private:
      */
     bool EvaluateTokuseiSkillCondition(const std::shared_ptr<ActiveEntityState>& eState,
         const std::shared_ptr<objects::TokuseiSkillCondition>& condition,
-        const std::shared_ptr<ProcessingSkill>& pSkill,
-        const std::shared_ptr<ActiveEntityState>& otherState);
+        ProcessingSkill& skill, const std::shared_ptr<ActiveEntityState>& otherState);
 
     /**
      * Calculate and set the offense value of a damage dealing skill.
@@ -563,11 +561,8 @@ private:
     /**
      * Notify the client that a skill is executing.
      * @param activated Pointer to the activated ability instance
-     * @param cooldownTime Server time when the skill cooldown will end
-     * @param lockOutTime Server time when the skill lockout will end
      */
-    void SendExecuteSkill(std::shared_ptr<objects::ActivatedAbility> activated,
-        uint64_t cooldownTime, uint64_t lockOutTime);
+    void SendExecuteSkill(std::shared_ptr<objects::ActivatedAbility> activated);
 
     /**
      * Notify the client that a skill is complete.

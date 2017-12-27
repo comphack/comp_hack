@@ -48,7 +48,7 @@ ChannelConnection::~ChannelConnection()
 
 void ChannelConnection::PreparePackets(std::list<ReadOnlyPacket>& packets)
 {
-    static const uint32_t headerSize = 6 * sizeof(uint32_t);
+    static const uint32_t headerSize = GetHeaderSize();
 
     if(STATUS_ENCRYPTED == mStatus)
     {
@@ -269,4 +269,9 @@ bool ChannelConnection::DecompressPacket(libcomp::Packet& packet,
     dataStart += static_cast<uint32_t>(sizeof(uint32_t) * 4);
 
     return true;
+}
+
+uint32_t ChannelConnection::GetHeaderSize()
+{
+    return 6 * sizeof(uint32_t);
 }

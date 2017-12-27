@@ -778,7 +778,7 @@ void EncryptedConnection::PreparePackets(std::list<ReadOnlyPacket>& packets)
         Packet finalPacket;
 
         // Reserve space for the sizes.
-        finalPacket.WriteBlank(2 * sizeof(uint32_t));
+        finalPacket.WriteBlank(GetHeaderSize());
 
         // Now add the packet data.
         for(auto& packet : packets)
@@ -815,7 +815,7 @@ std::list<ReadOnlyPacket> EncryptedConnection::GetCombinedPackets()
 
     if(!mSendingPacket)
     {
-        uint32_t totalSize = 2 * sizeof(uint32_t);
+        uint32_t totalSize = GetHeaderSize();
 
         while(!mOutgoingPackets.empty() && totalSize < MAX_PACKET_SIZE)
         {
@@ -841,4 +841,9 @@ std::list<ReadOnlyPacket> EncryptedConnection::GetCombinedPackets()
     }
 
     return packets;
+}
+
+uint32_t EncryptedConnection::GetHeaderSize()
+{
+    return 2 * sizeof(uint32_t);
 }

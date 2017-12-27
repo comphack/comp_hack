@@ -63,6 +63,8 @@ protected:
 
     virtual bool DecompressPacket(libcomp::Packet& packet,
         uint32_t& paddedSize, uint32_t& realSize, uint32_t& dataStart);
+
+    virtual uint32_t GetHeaderSize();
 };
 
 } // namespace libcomp

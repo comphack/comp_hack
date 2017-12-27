@@ -323,6 +323,12 @@ protected:
      */
     virtual std::list<ReadOnlyPacket> GetCombinedPackets();
 
+    /**
+     * Returns the size of the combined packet header.
+     * @return Size of the combined packet header.
+     */
+    virtual uint32_t GetHeaderSize();
+
     /// Active parse being used for received packets.
     PacketParser_t mPacketParser;
 

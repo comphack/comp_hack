@@ -238,7 +238,7 @@ bool SkillManager::ActivateSkill(const std::shared_ptr<ActiveEntityState> source
     if(chargeTime > 0)
     {
         auto pSkill = GetProcessingSkill(activated, nullptr);
-        auto calcState = GetCalculatedState(source, pSkill, false, nullptr);
+        auto calcState = GetCalculatedState(source, *pSkill, false, nullptr);
 
         int16_t chargeAdjust = source->GetCorrectValue(
             CorrectTbl::CHANT_TIME, calcState);
@@ -482,7 +482,7 @@ bool SkillManager::ExecuteSkill(std::shared_ptr<ActiveEntityState> source,
     }
 
     auto pSkill = GetProcessingSkill(activated, ctx);
-    pSkill->SourceExecutionState = GetCalculatedState(source, pSkill, false, nullptr);
+    pSkill->SourceExecutionState = GetCalculatedState(source, *pSkill, false, nullptr);
 
     // Check costs and pay costs (skip for switch deactivation)
     int32_t hpCost = 0, mpCost = 0;
@@ -916,8 +916,8 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
 
             SkillTargetResult target;
             target.EntityState = targetEntity;
-            target.CalcState = GetCalculatedState(targetEntity, pSkill, true, source);
-            GetCalculatedState(source, pSkill, false, targetEntity);
+            target.CalcState = GetCalculatedState(targetEntity, skill, true, source);
+            GetCalculatedState(source, skill, false, targetEntity);
 
             if(SetNRA(target, skill))
             {
@@ -1168,9 +1168,9 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
         SkillTargetResult target;
         target.PrimaryTarget = isPrimaryTarget;
         target.EntityState = effectiveTarget;
-        target.CalcState = GetCalculatedState(effectiveTarget, pSkill, true,
+        target.CalcState = GetCalculatedState(effectiveTarget, skill, true,
             source);
-        GetCalculatedState(source, pSkill, false, effectiveTarget);
+        GetCalculatedState(source, skill, false, effectiveTarget);
 
         // Set NRA
         // If the primary target is still in the set and a reflect did not
@@ -1205,8 +1205,8 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
         target.EntityState = source;
 
         // Calculate the effects done to and from the source itself
-        target.CalcState = GetCalculatedState(source, pSkill, true, source);
-        GetCalculatedState(source, pSkill, false, source);
+        target.CalcState = GetCalculatedState(source, skill, true, source);
+        GetCalculatedState(source, skill, false, source);
 
         skill.Targets.push_back(target);
         SetNRA(target, skill);
@@ -1216,16 +1216,6 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
     if(skill.Targets.size() == 0)
     {
         return true;
-    }
-
-    auto damageData = skillData->GetDamage();
-    bool hasBattleDamage = damageData->GetBattleDamage()->GetFormula()
-        != objects::MiBattleDamageData::Formula_t::NONE;
-
-    // Calculate damage before determining if it hits in case a counter occurs
-    if(hasBattleDamage)
-    {
-        CalculateOffenseValue(source, primaryTarget, skill);
     }
 
     // If this is a counter, defer final processing to the skill being
@@ -1356,7 +1346,7 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<channel::Proces
     {
         if(target.HitAvoided) continue;
 
-        auto targetCalc = skill.TargetCalcStates[target.EntityState->GetEntityID()];
+        auto targetCalc = GetCalculatedState(target.EntityState, skill, true, source);
 
         target.EntityState->RefreshCurrentPosition(now);
         cancellations[target.EntityState] = 0;
@@ -1401,7 +1391,7 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<channel::Proces
         {
             auto statusAdjusts = tokuseiManager->GetAspectMap(source,
                 TokuseiAspectType::STATUS_INFLICT_ADJUST,
-                skill.SourceCalcStates[target.EntityState->GetEntityID()]);
+                GetCalculatedState(source, skill, false, target.EntityState));
 
             for(auto addStatus : addStatuses)
             {
@@ -1616,8 +1606,8 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<channel::Proces
             double talkSuccess = 90.0;
             if(talkType != 0)
             {
-                auto calcState = pSkill
-                    ->SourceCalcStates[target.EntityState->GetEntityID()];
+                auto calcState = GetCalculatedState(source, skill, false,
+                    target.EntityState);
 
                 auto adjust = tokuseiManager->GetAspectMap(source,
                     TokuseiAspectType::TALK_RATE,
@@ -1794,210 +1784,255 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<channel::Proces
     auto primaryTarget = skill.PrimaryTarget;
     auto effectiveTarget = primaryTarget ? primaryTarget : effectiveSource;
 
-    std::unordered_map<uint32_t, uint64_t> timeMap;
     uint64_t hitTimings[3];
     uint64_t completeTime = now +
         (skill.Definition->GetDischarge()->GetStiffness() * 1000);
     uint64_t hitStopTime = now +
         (skill.Definition->GetDamage()->GetHitStopTime() * 1000);
 
-    libcomp::Packet p;
-    p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_SKILL_REPORTS);
-    p.WriteS32Little(source->GetEntityID());
-    p.WriteU32Little(skill.SkillID);
-    p.WriteS8((int8_t)activated->GetActivationID());
+    auto zConnections = zone->GetConnectionList();
+    std::unordered_map<uint32_t, uint64_t> timeMap;
 
-    p.WriteU32Little((uint32_t)skill.Targets.size());
+    // The skill report packet can easily go over the max packet size so
+    // the targets in the results need to be batched
+    std::list<std::list<SkillTargetResult*>> targetBatches;
+    std::list<SkillTargetResult*> currentBatch;
+    int32_t currentBatchSize = 0;
     for(SkillTargetResult& target : skill.Targets)
     {
-        p.WriteS32Little(target.EntityState->GetEntityID());
-        p.WriteS32Little(abs(target.Damage1));
-        p.WriteU8(target.Damage1Type);
-        p.WriteS32Little(abs(target.Damage2));
-        p.WriteU8(target.Damage2Type);
-        p.WriteU16Little(target.Flags1);
+        int32_t currentTargetSize = (int32_t)(64 + (target.AddedStatuses.size() * 9)
+            + (target.CancelledStatuses.size() * 4));
 
-        p.WriteU8(target.AilmentDamageType);
-        p.WriteS32Little(abs(target.AilmentDamage));
-
-        bool rushing = false, knockedBack = false;
-        if((target.Flags1 & FLAG1_KNOCKBACK) && kbType != 2)
+        // If the new list size + the header size is larger than the max
+        // packet size, move on to the next batch
+        if((currentBatchSize + currentTargetSize + 15) > MAX_CHANNEL_PACKET_SIZE)
         {
-            uint8_t kbEffectiveType = kbType;
-            if(kbType == 1 && target.PrimaryTarget)
-            {
-                // Targets of AOE knockback are treated like default knockback
-                kbEffectiveType = 0;
-            }
-
-            // Ignore knockback type 2 which is "None"
-            Point kbPoint(target.EntityState->GetCurrentX(),
-                target.EntityState->GetCurrentY());
-            switch(kbEffectiveType)
-            {
-            case 1:
-                {
-                    // Away from the effective target (ex: AOE explosion)
-                    kbPoint = zoneManager->MoveRelative(target.EntityState,
-                        effectiveTarget->GetCurrentX(), effectiveTarget->GetCurrentY(), kbDistance,
-                        true, now, hitStopTime);
-                }
-                break;
-            case 4:
-                /// @todo: To the front of the source
-                break;
-            case 5:
-                /// @todo: To the source
-                break;
-            case 0:
-            case 3: /// @todo: technically this has more spread than 0
-            default:
-                // Default if not specified, directly away from source
-                kbPoint = zoneManager->MoveRelative(target.EntityState, effectiveSource->GetCurrentX(),
-                    effectiveSource->GetCurrentY(), kbDistance, true, now, hitStopTime);
-                break;
-            }
-
-            target.EntityState->SetStatusTimes(STATUS_KNOCKBACK,
-                target.EntityState->GetDestinationTicks());
-
-            p.WriteFloat(kbPoint.x);
-            p.WriteFloat(kbPoint.y);
-
-            knockedBack = true;
-        }
-        else if(target.EntityState == source && doRush)
-        {
-            // Set the new location of the rush user
-            float dist = source->GetDistance(primaryTarget->GetCurrentX(),
-                primaryTarget->GetCurrentY());
-
-            Point rushPoint = zoneManager->MoveRelative(source, primaryTarget->GetCurrentX(),
-                primaryTarget->GetCurrentY(), dist + 250.f, false, now, completeTime);
-
-            p.WriteFloat(rushPoint.x);
-            p.WriteFloat(rushPoint.y);
-
-            rushing = true;
+            targetBatches.push_back(currentBatch);
+            currentBatch.clear();
+            currentBatchSize = currentTargetSize;
         }
         else
         {
-            p.WriteBlank(8);
+            currentBatchSize += currentTargetSize;
         }
 
-        p.WriteFloat(0);    // Unknown
+        currentBatch.push_back(&target);
+    }
 
-        // Calculate hit timing
-        hitTimings[0] = hitTimings[1] = hitTimings[2] = 0;
-        if(rushing)
+    // If we get here with an empty target list, send the empty list
+    targetBatches.push_back(currentBatch);
+
+    for(auto it = targetBatches.begin(); it != targetBatches.end(); it++)
+    {
+        if(it != targetBatches.begin())
         {
-            hitTimings[0] = now;
-            hitTimings[1] = now + 200000;
+            timeMap.clear();
+
+            // An execute packet must be sent once per report (even if its
+            // identical) or the client starts ignoring the reports
+            SendExecuteSkill(pSkill->Activated);
         }
-        else if(target.Damage1Type == DAMAGE_TYPE_GENERIC)
+
+        libcomp::Packet p;
+        p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_SKILL_REPORTS);
+        p.WriteS32Little(source->GetEntityID());
+        p.WriteU32Little(skill.SkillID);
+        p.WriteS8((int8_t)activated->GetActivationID());
+
+        p.WriteU32Little((uint32_t)it->size());
+        for(SkillTargetResult* skillTarget : *it)
         {
-            if(target.Damage1)
+            SkillTargetResult& target = *skillTarget;
+
+            p.WriteS32Little(target.EntityState->GetEntityID());
+            p.WriteS32Little(abs(target.Damage1));
+            p.WriteU8(target.Damage1Type);
+            p.WriteS32Little(abs(target.Damage2));
+            p.WriteU8(target.Damage2Type);
+            p.WriteU16Little(target.Flags1);
+
+            p.WriteU8(target.AilmentDamageType);
+            p.WriteS32Little(abs(target.AilmentDamage));
+
+            bool rushing = false, knockedBack = false;
+            if((target.Flags1 & FLAG1_KNOCKBACK) && kbType != 2)
             {
-                // Damage dealt, determine stun time
-                bool extendHitStun = target.AilmentDamageType != 0 || knockedBack;
-                if(extendHitStun)
+                uint8_t kbEffectiveType = kbType;
+                if(kbType == 1 && target.PrimaryTarget)
                 {
-                    // Apply extended hit stop and determine what else may be needed
-                    hitTimings[0] = knockedBack ? now : completeTime;
-                    hitTimings[1] = hitStopTime;
-
-                    if(!target.AilmentDamageType)
-                    {
-                        // End after hit stop
-                        hitTimings[2] = hitStopTime;
-                    }
-                    else
-                    {
-                        // Apply ailment damage after hit stop
-                        hitTimings[2] = hitStopTime + target.AilmentDamageTime;
-                    }
-                }
-                else
-                {
-                    // Normal hit stop
-                    hitTimings[2] = hitStopTime;
+                    // Targets of AOE knockback are treated like default knockback
+                    kbEffectiveType = 0;
                 }
 
-                target.EntityState->SetStatusTimes(STATUS_HIT_STUN,
-                    hitTimings[2]);
+                // Ignore knockback type 2 which is "None"
+                Point kbPoint(target.EntityState->GetCurrentX(),
+                    target.EntityState->GetCurrentY());
+                switch(kbEffectiveType)
+                {
+                case 1:
+                    {
+                        // Away from the effective target (ex: AOE explosion)
+                        kbPoint = zoneManager->MoveRelative(target.EntityState,
+                            effectiveTarget->GetCurrentX(), effectiveTarget->GetCurrentY(),
+                            kbDistance, true, now, hitStopTime);
+                    }
+                    break;
+                case 4:
+                    /// @todo: To the front of the source
+                    break;
+                case 5:
+                    /// @todo: To the source
+                    break;
+                case 0:
+                case 3: /// @todo: technically this has more spread than 0
+                default:
+                    // Default if not specified, directly away from source
+                    kbPoint = zoneManager->MoveRelative(target.EntityState, effectiveSource
+                        ->GetCurrentX(), effectiveSource->GetCurrentY(), kbDistance, true, now,
+                        hitStopTime);
+                    break;
+                }
+
+                target.EntityState->SetStatusTimes(STATUS_KNOCKBACK,
+                    target.EntityState->GetDestinationTicks());
+
+                p.WriteFloat(kbPoint.x);
+                p.WriteFloat(kbPoint.y);
+
+                knockedBack = true;
+            }
+            else if(target.EntityState == source && doRush)
+            {
+                // Set the new location of the rush user
+                float dist = source->GetDistance(primaryTarget->GetCurrentX(),
+                    primaryTarget->GetCurrentY());
+
+                Point rushPoint = zoneManager->MoveRelative(source, primaryTarget->GetCurrentX(),
+                    primaryTarget->GetCurrentY(), dist + 250.f, false, now, completeTime);
+
+                p.WriteFloat(rushPoint.x);
+                p.WriteFloat(rushPoint.y);
+
+                rushing = true;
             }
             else
             {
-                // No damage, just result displays
-                hitTimings[2] = completeTime;
+                p.WriteBlank(8);
             }
-        }
 
-        for(size_t i = 0; i < 3; i++)
-        {
-            if(hitTimings[i])
+            p.WriteFloat(0);    // Unknown
+
+            // Calculate hit timing
+            hitTimings[0] = hitTimings[1] = hitTimings[2] = 0;
+            if(rushing)
             {
-                timeMap[(uint32_t)(p.Size() + (4 * i))] = hitTimings[i];
+                hitTimings[0] = now;
+                hitTimings[1] = now + 200000;
             }
-        }
-
-        // Double back at the end and write client specific times
-        p.WriteBlank(12);
-
-        p.WriteU8(target.TalkFlags);
-
-        std::list<std::shared_ptr<objects::StatusEffect>> addedStatuses;
-        std::set<uint32_t> cancelledStatuses;
-        if(target.AddedStatuses.size() > 0)
-        {
-            // Make sure the added statuses didn't get removed/re-added
-            // already for some reason
-            auto effects = target.EntityState->GetStatusEffects();
-            for(auto added : target.AddedStatuses)
+            else if(target.Damage1Type == DAMAGE_TYPE_GENERIC)
             {
-                if(effects.find(added.first) != effects.end())
+                if(target.Damage1)
                 {
-                    addedStatuses.push_back(effects[added.first]);
+                    // Damage dealt, determine stun time
+                    bool extendHitStun = target.AilmentDamageType != 0 || knockedBack;
+                    if(extendHitStun)
+                    {
+                        // Apply extended hit stop and determine what else may be needed
+                        hitTimings[0] = knockedBack ? now : completeTime;
+                        hitTimings[1] = hitStopTime;
+
+                        if(!target.AilmentDamageType)
+                        {
+                            // End after hit stop
+                            hitTimings[2] = hitStopTime;
+                        }
+                        else
+                        {
+                            // Apply ailment damage after hit stop
+                            hitTimings[2] = hitStopTime + target.AilmentDamageTime;
+                        }
+                    }
+                    else
+                    {
+                        // Normal hit stop
+                        hitTimings[2] = hitStopTime;
+                    }
+
+                    target.EntityState->SetStatusTimes(STATUS_HIT_STUN,
+                        hitTimings[2]);
+                }
+                else
+                {
+                    // No damage, just result displays
+                    hitTimings[2] = completeTime;
                 }
             }
 
-            for(auto cancelled : target.CancelledStatuses)
+            for(size_t i = 0; i < 3; i++)
             {
-                if(effects.find(cancelled) == effects.end())
+                if(hitTimings[i])
                 {
-                    cancelledStatuses.insert(cancelled);
+                    timeMap[(uint32_t)(p.Size() + (4 * i))] = hitTimings[i];
                 }
             }
+
+            // Double back at the end and write client specific times
+            p.WriteBlank(12);
+
+            p.WriteU8(target.TalkFlags);
+
+            std::list<std::shared_ptr<objects::StatusEffect>> addedStatuses;
+            std::set<uint32_t> cancelledStatuses;
+            if(target.AddedStatuses.size() > 0)
+            {
+                // Make sure the added statuses didn't get removed/re-added
+                // already for some reason
+                auto effects = target.EntityState->GetStatusEffects();
+                for(auto added : target.AddedStatuses)
+                {
+                    if(effects.find(added.first) != effects.end())
+                    {
+                        addedStatuses.push_back(effects[added.first]);
+                    }
+                }
+
+                for(auto cancelled : target.CancelledStatuses)
+                {
+                    if(effects.find(cancelled) == effects.end())
+                    {
+                        cancelledStatuses.insert(cancelled);
+                    }
+                }
+            }
+
+            p.WriteU32Little((uint32_t)addedStatuses.size());
+            p.WriteU32Little((uint32_t)cancelledStatuses.size());
+
+            for(auto effect : addedStatuses)
+            {
+                p.WriteU32Little(effect->GetEffect());
+                p.WriteS32Little((int32_t)effect->GetExpiration());
+                p.WriteU8(effect->GetStack());
+            }
+
+            for(auto cancelled : cancelledStatuses)
+            {
+                p.WriteU32Little(cancelled);
+            }
+
+            p.WriteU16Little(target.Flags2);
+            p.WriteS32Little(target.TechnicalDamage);
+            p.WriteS32Little(target.PursuitDamage);
         }
 
-        p.WriteU32Little((uint32_t)addedStatuses.size());
-        p.WriteU32Little((uint32_t)cancelledStatuses.size());
-
-        for(auto effect : addedStatuses)
-        {
-            p.WriteU32Little(effect->GetEffect());
-            p.WriteS32Little((int32_t)effect->GetExpiration());
-            p.WriteU8(effect->GetStack());
-        }
-
-        for(auto cancelled : cancelledStatuses)
-        {
-            p.WriteU32Little(cancelled);
-        }
-
-        p.WriteU16Little(target.Flags2);
-        p.WriteS32Little(target.TechnicalDamage);
-        p.WriteS32Little(target.PursuitDamage);
+        ChannelClientConnection::SendRelativeTimePacket(zConnections, p, timeMap);
     }
-
-    auto zConnections = zone->GetConnectionList();
-    ChannelClientConnection::SendRelativeTimePacket(zConnections, p, timeMap);
 
     if(revived.size() > 0)
     {
         for(auto entity : revived)
         {
-            p.Clear();
+            libcomp::Packet p;
             if(characterManager->GetEntityRevivalPacket(p, entity, 6))
             {
                 zoneManager->BroadcastPacket(zone, p);
@@ -2084,14 +2119,17 @@ std::shared_ptr<ProcessingSkill> SkillManager::GetProcessingSkill(
 
 
 std::shared_ptr<objects::CalculatedEntityState> SkillManager::GetCalculatedState(
-    const std::shared_ptr<ActiveEntityState>& eState,
-    const std::shared_ptr<ProcessingSkill>& pSkill, bool isTarget,
-    const std::shared_ptr<ActiveEntityState>& otherState)
+    const std::shared_ptr<ActiveEntityState>& eState, ProcessingSkill& skill,
+    bool isTarget, const std::shared_ptr<ActiveEntityState>& otherState)
 {
     std::shared_ptr<objects::CalculatedEntityState> calcState;
     if(isTarget)
     {
-        calcState = pSkill->TargetCalcStates[eState->GetEntityID()];
+        calcState = skill.TargetCalcStates[eState->GetEntityID()];
+    }
+    else if(otherState)
+    {
+        calcState = skill.SourceCalcStates[otherState->GetEntityID()];
     }
 
     if(!calcState)
@@ -2100,10 +2138,10 @@ std::shared_ptr<objects::CalculatedEntityState> SkillManager::GetCalculatedState
         auto definitionManager = server->GetDefinitionManager();
 
         // Determine which tokusei are active and don't need to be calculated again
-        if(!isTarget && otherState && pSkill->SourceExecutionState)
+        if(!isTarget && otherState && skill.SourceExecutionState)
         {
             // If we're calculating for a skill target, start with the execution state
-            calcState = pSkill->SourceExecutionState;
+            calcState = skill.SourceExecutionState;
         }
         else
         {
@@ -2125,7 +2163,7 @@ std::shared_ptr<objects::CalculatedEntityState> SkillManager::GetCalculatedState
                 {
                     if(condition->GetTargetCondition() != isTarget ||
                         !EvaluateTokuseiSkillCondition(eState, condition,
-                        pSkill, otherState))
+                        skill, otherState))
                     {
                         add = false;
                         break;
@@ -2151,11 +2189,11 @@ std::shared_ptr<objects::CalculatedEntityState> SkillManager::GetCalculatedState
 
         if(isTarget)
         {
-            pSkill->TargetCalcStates[eState->GetEntityID()] = calcState;
+            skill.TargetCalcStates[eState->GetEntityID()] = calcState;
         }
         else if(otherState)
         {
-            pSkill->SourceCalcStates[otherState->GetEntityID()] = calcState;
+            skill.SourceCalcStates[otherState->GetEntityID()] = calcState;
         }
     }
 
@@ -2163,8 +2201,8 @@ std::shared_ptr<objects::CalculatedEntityState> SkillManager::GetCalculatedState
 }
 
 bool SkillManager::EvaluateTokuseiSkillCondition(const std::shared_ptr<ActiveEntityState>& eState,
-    const std::shared_ptr<objects::TokuseiSkillCondition>& condition,
-    const std::shared_ptr<ProcessingSkill>& pSkill, const std::shared_ptr<ActiveEntityState>& otherState)
+    const std::shared_ptr<objects::TokuseiSkillCondition>& condition, ProcessingSkill& skill,
+    const std::shared_ptr<ActiveEntityState>& otherState)
 {
     // TokuseiSkillCondition comparators can only be equals or not equal
     bool negate = condition->GetComparator() != objects::TokuseiCondition::Comparator_t::NOT_EQUAL;
@@ -2176,18 +2214,18 @@ bool SkillManager::EvaluateTokuseiSkillCondition(const std::shared_ptr<ActiveEnt
         return true;
     case objects::TokuseiSkillCondition::SkillConditionType_t::EXPLICIT_SKILL:
         // Current skill is the specified skill
-        return (pSkill->SkillID == (uint32_t)condition->GetValue()) == !negate;
+        return (skill.SkillID == (uint32_t)condition->GetValue()) == !negate;
     case objects::TokuseiSkillCondition::SkillConditionType_t::ACTION_TYPE:
         // Current skill is the specified action type
-        return ((int32_t)pSkill->Definition->GetBasic()->GetActionType() ==
+        return ((int32_t)skill.Definition->GetBasic()->GetActionType() ==
             condition->GetValue()) == !negate;
     case objects::TokuseiSkillCondition::SkillConditionType_t::AFFINITY:
         // Current skill is the specified affinity type
-        return ((int32_t)pSkill->BaseAffinity == condition->GetValue() ||
-            (int32_t)pSkill->EffectiveAffinity == condition->GetValue()) == !negate;
+        return ((int32_t)skill.BaseAffinity == condition->GetValue() ||
+            (int32_t)skill.EffectiveAffinity == condition->GetValue()) == !negate;
     case objects::TokuseiSkillCondition::SkillConditionType_t::SKILL_CLASS:
         // Current skill is magic, physical or misc
-        switch(pSkill->EffectiveDependencyType)
+        switch(skill.EffectiveDependencyType)
         {
         case 2:
         case 7:
@@ -2338,8 +2376,7 @@ uint16_t SkillManager::CalculateOffenseValue(const std::shared_ptr<ActiveEntityS
         return skill.OffenseValues[target->GetEntityID()];
     }
 
-    auto damageData = skill.Definition->GetDamage()->GetBattleDamage();
-    auto calcState = skill.SourceCalcStates[target->GetEntityID()];
+    auto calcState = GetCalculatedState(source, skill, false, target);
 
     uint8_t rateBoostIdx = 0;
     uint16_t off = 0;
@@ -2414,12 +2451,14 @@ uint16_t SkillManager::CalculateOffenseValue(const std::shared_ptr<ActiveEntityS
             (calcState->GetCorrectTbl((size_t)rateBoostIdx) * 0.01));
     }
 
-    if(skill.ExecutionContext && skill.ExecutionContext->CounteredSkill)
+    if(skill.ExecutionContext->CounteredSkill)
     {
         // If countering, modify the offensive value with the offense value
         // of the original skill used
-        off = (uint16_t)(off + (skill.ExecutionContext->CounteredSkill
-            ->OffenseValues[source->GetEntityID()] * 2));
+        uint16_t counterOff = CalculateOffenseValue(target, source,
+            *skill.ExecutionContext->CounteredSkill);
+
+        off = (uint16_t)(off + (counterOff * 2));
     }
 
     skill.OffenseValues[target->GetEntityID()] = off;
@@ -3319,8 +3358,8 @@ bool SkillManager::CalculateDamage(const std::shared_ptr<ActiveEntityState>& sou
         case objects::MiBattleDamageData::Formula_t::DMG_COUNTER:
         case objects::MiBattleDamageData::Formula_t::HEAL_NORMAL:
             {
-                auto calcState = skill.SourceCalcStates[target.EntityState->GetEntityID()];
-                auto targetState = skill.TargetCalcStates[target.EntityState->GetEntityID()];
+                auto calcState = GetCalculatedState(source, skill, false, target.EntityState);
+                auto targetState = GetCalculatedState(target.EntityState, skill, true, source);
 
                 int16_t sourceLuck = source->GetCorrectValue(CorrectTbl::LUCK, calcState);
                 int16_t critValue = (int16_t)(source->GetCorrectValue(CorrectTbl::CRITICAL, calcState) +
@@ -3532,8 +3571,8 @@ int32_t SkillManager::CalculateDamage_Normal(const std::shared_ptr<
 
     if(mod != 0)
     {
-        auto calcState = skill.SourceCalcStates[target.EntityState->GetEntityID()];
-        auto targetState = skill.TargetCalcStates[target.EntityState->GetEntityID()];
+        auto calcState = GetCalculatedState(source, skill, false, target.EntityState);
+        auto targetState = GetCalculatedState(target.EntityState, skill, true, source);
 
         uint16_t off = CalculateOffenseValue(source, target.EntityState, skill);
         if(isHeal)
@@ -3997,7 +4036,7 @@ void SkillManager::FinalizeSkillExecution(const std::shared_ptr<ChannelClientCon
         calcState));
 
     bool moreUses = activated->GetExecuteCount() < maxStacks;
-    uint64_t lockOutTime = currentTime + (uint64_t)(stiffness * 1000) + 1000000UL;
+    uint64_t lockOutTime = currentTime + (uint64_t)(stiffness * 1000);
 
     uint64_t cooldownTime = currentTime;
     if(cdTime && !moreUses)
@@ -4006,7 +4045,10 @@ void SkillManager::FinalizeSkillExecution(const std::shared_ptr<ChannelClientCon
             (source->GetCorrectValue(CorrectTbl::COOLDOWN_TIME, calcState) * 0.01));
     }
 
-    SendExecuteSkill(activated, cooldownTime, lockOutTime);
+    activated->SetLockOutTime(lockOutTime);
+    activated->SetCooldownTime(cooldownTime);
+
+    SendExecuteSkill(activated);
 
     if(client && source->GetEntityType() ==
         objects::EntityStateObject::EntityType_t::CHARACTER)
@@ -4472,8 +4514,7 @@ void SkillManager::SendActivateSkill(std::shared_ptr<objects::ActivatedAbility> 
     }
 }
 
-void SkillManager::SendExecuteSkill(std::shared_ptr<objects::ActivatedAbility> activated,
-    uint64_t cooldownTime, uint64_t lockOutTime)
+void SkillManager::SendExecuteSkill(std::shared_ptr<objects::ActivatedAbility> activated)
 {
     auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated->GetSourceEntity());
     auto zone = source ? source->GetZone() : nullptr;
@@ -4494,9 +4535,9 @@ void SkillManager::SendExecuteSkill(std::shared_ptr<objects::ActivatedAbility> a
         p.WriteS8((int8_t)activated->GetActivationID());
         p.WriteS32Little(targetedEntityID);
 
-        timeMap[15] = cooldownTime;
+        timeMap[15] = activated->GetCooldownTime();
         p.WriteFloat(0.f);
-        timeMap[19] = lockOutTime;
+        timeMap[19] = activated->GetLockOutTime();
         p.WriteFloat(0.f);
 
         p.WriteU32Little((uint32_t)activated->GetHPCost());

@@ -190,6 +190,7 @@ enum class ClientToChannelPacketCode_t : uint16_t
     PACKET_DUNGEON_RECORDS = 0x01C4,  //!< Request for the current player's dungeon challenge records.
     PACKET_CLAN_EMBLEM_UPDATE = 0x01E1, //!< Request to update the player character's clan's emblem.
     PACKET_DEMON_FAMILIARITY = 0x01E6,  //!< Request to sync the familiarity of every demon in the player's COMP.
+    PACKET_EQUIPMENT_MODIFY = 0x0203,  //!< Request to modify an equipment item slot.
     PACKET_MATERIAL_BOX = 0x0205,  //!< Request for info about the materials container.
     PACKET_ANALYZE = 0x0209,  //!< Request to analyze another player character.
     PACKET_ITEM_EXPAND = 0x0210,    //!< Request to expand a compressed item.
@@ -210,6 +211,7 @@ enum class ClientToChannelPacketCode_t : uint16_t
     PACKET_SEARCH_ENTRY_INFO = 0x03A3,  //!< Request for the current player's search entries.
     PACKET_HOURAI_DATA = 0x03A5,  //!< Request for Club Hourai related information.
     PACKET_CULTURE_DATA = 0x03AC,  //!< Unknown. Request for culture information.
+    PACKET_EQUIPMENT_MOD_EDIT = 0x03CB,  //!< Request to edit a previously applied equipment modification.
     PACKET_DEMON_DEPO_LIST = 0x03F5,  //!< Request to list the client account's demon depositories.
     PACKET_BLACKLIST = 0x0408,  //!< Request for the current player's blacklist.
     PACKET_DIGITALIZE_POINTS = 0x0414,  //!< Request for the current player's digitalize point information.
@@ -415,6 +417,7 @@ enum class ChannelToClientPacketCode_t : uint16_t
     PACKET_DEMON_FAMILIARITY = 0x01E7,  //!< Response to the request for the familiarity values of each demon in the COMP.
     PACKET_EVENT_EX_NPC_MESSAGE = 0x01E9,  //!< Request to the client to display an extended NPC event message.
     PACKET_EVENT_PLAY_SOUND_EFFECT = 0x01FB,  //!< Request to the client to play a sound effect as part of an event.
+    PACKET_EQUIPMENT_MODIFY = 0x0204,  //!< Response to the request to modify an equipment item slot.
     PACKET_MATERIAL_BOX = 0x0206,  //!< Response containing info about the materials container.
     PACKET_EQUIPMENT_ANALYZE = 0x020A, //!< Message containing another player character's current equipment for "analyze".
     PACKET_OTHER_CHARACTER_EQUIPMENT_CHANGED = 0x020B, //!< Notifies the client that another character's equipment has changed.
@@ -433,10 +436,12 @@ enum class ChannelToClientPacketCode_t : uint16_t
     PACKET_EVENT_STOP_BGM = 0x0295,   //!< Request to the client to stop playing specific background music as part of an event.
     PACKET_ITEM_DEPO_REMOTE = 0x0297,  //!< Response to the request to open the remote item depos.
     PACKET_DEMON_DEPO_REMOTE = 0x02F0,  //!< Response to the request to open the remote demon depos.
+    PACKET_EXPERTISE_EXTENSION = 0x02F1, //!< Notification of the client character's extertise extension count.
     PACKET_COMMON_SWITCH_INFO = 0x02F5,  //!< Unknown. Response containing "common switch" information.
     PACKET_CASINO_COIN_TOTAL = 0x02FB,   //!< Message containing the current character's casino coin total.
     PACKET_SEARCH_ENTRY_INFO = 0x03A4,  //!< Response containing the current player's search entries.
     PACKET_HOURAI_DATA = 0x03A6,  //!< Response containing Club Hourai related information.
+    PACKET_EQUIPMENT_MOD_EDIT = 0x03CC,  //!< Response to the request to edit a previously applied equipment modification.
     PACKET_CULTURE_DATA = 0x03AD,  //!< Unknown. Response containing culture information.
     PACKET_DEMON_DEPO_LIST = 0x03F6,  //!< Response to the request to open the demon depo.
     PACKET_BLACKLIST = 0x0409,  //!< Response containing the current player's blacklist.

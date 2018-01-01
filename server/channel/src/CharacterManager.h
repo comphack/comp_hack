@@ -519,6 +519,14 @@ public:
         float multiplier = -1.0f);
 
     /**
+     * Send the character's current expertise extension amount.
+     * @param client Pointer to the client connection containing
+     *  the character
+     */
+    void SendExertiseExtension(const std::shared_ptr<
+        channel::ChannelClientConnection>& client);
+
+    /**
      * Update the specified entity to learn a skill by ID.
      * @param client Pointer to the client connection
      * @param entityID ID of the entity to learn the skill

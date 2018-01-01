@@ -263,6 +263,7 @@ SET(${PROJECT_NAME}_PACKETS
     src/packets/game/DungeonRecords.cpp         # 0x01C4
     src/packets/game/ClanEmblemUpdate.cpp       # 0x01E1
     src/packets/game/DemonFamiliarity.cpp       # 0x01E6
+    src/packets/game/EquipmentMod.cpp           # 0x0203
     src/packets/game/MaterialBox.cpp            # 0x0205
     src/packets/game/Analyze.cpp                # 0x0209
     src/packets/game/ItemExpand.cpp             # 0x0210
@@ -280,6 +281,7 @@ SET(${PROJECT_NAME}_PACKETS
     src/packets/game/SearchEntryInfo.cpp        # 0x03A3
     src/packets/game/HouraiData.cpp             # 0x03A5
     src/packets/game/CultureData.cpp            # 0x03AC
+    src/packets/game/EquipmentModEdit.cpp       # 0x03CB
     src/packets/game/DemonDepoList.cpp          # 0x03F5
     src/packets/game/Blacklist.cpp              # 0x0408
     src/packets/game/DigitalizePoints.cpp       # 0x0414

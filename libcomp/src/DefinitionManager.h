@@ -51,6 +51,11 @@ class MiEquipmentSetData;
 class MiExpertData;
 class MiHNPCData;
 class MiItemData;
+class MiModificationData;
+class MiModificationExtEffectData;
+class MiModificationExtRecipeData;
+class MiModificationTriggerData;
+class MiModifiedEffectData;
 class MiONPCData;
 class MiQuestData;
 class MiShopProductData;
@@ -167,6 +172,70 @@ public:
      * @return Pointer to the matching item definition, null if it does not exist
      */
     const std::shared_ptr<objects::MiItemData> GetItemData(const libcomp::String& name);
+
+    /**
+     * Get the item modification definition corresponding to an ID
+     * @param id Item modification ID to retrieve
+     * @return Pointer to the matching item modification definition, null if it
+     *  does not exist
+     */
+    const std::shared_ptr<objects::MiModificationData> GetModificationData(uint32_t id);
+
+    /**
+     * Get the item modification definition corresponding to an item ID
+     * @param itemID Item ID to retrieve the modification from
+     * @return Pointer to the matching item modification definition, null if it
+     *  does not exist
+     */
+    const std::shared_ptr<objects::MiModificationData> GetModificationDataByItemID(
+        uint32_t itemID);
+
+    /**
+     * Get the item modification extra effect definition corresponding to a group ID,
+     * slot and subID
+     * @param groupID Item modification extra effect groupID
+     * @param groupID Item modification extra effect slot
+     * @param groupID Item modification extra effect subID
+     * @return Pointer to the matching item modification extra effect definition,
+     *  null if it does not exist
+     */
+    const std::shared_ptr<objects::MiModificationExtEffectData>
+        GetModificationExtEffectData(uint8_t groupID, uint8_t slot, uint16_t subID);
+
+    /**
+     * Get the item modification extra recipe definition corresponding to an ID
+     * @param id Item modification extra recipe ID to retrieve
+     * @return Pointer to the matching item modification extra recipe definition,
+     *  null if it does not exist
+     */
+    const std::shared_ptr<objects::MiModificationExtRecipeData>
+        GetModificationExtRecipeData(uint32_t id);
+
+    /**
+     * Get the item modification extra recipe definition corresponding to an item ID
+     * @param itemID Item ID to retrieve the modification from
+     * @return Pointer to the matching item modification extra recipe definition,
+     *  null if it does not exist
+     */
+    const std::shared_ptr<objects::MiModificationExtRecipeData>
+        GetModificationExtRecipeDataByItemID(uint32_t itemID);
+
+    /**
+     * Get the item modification trigger definition corresponding to an ID
+     * @param id Item modification trigger ID to retrieve
+     * @return Pointer to the matching item modification trigger definition, null if it
+     *  does not exist
+     */
+    const std::shared_ptr<objects::MiModificationTriggerData> GetModificationTriggerData(
+        uint16_t id);
+
+    /**
+     * Get the item modification effect definition corresponding to an ID
+     * @param id Item modification effect ID to retrieve
+     * @return Pointer to the matching item modification effect definition, null if it
+     *  does not exist
+     */
+    const std::shared_ptr<objects::MiModifiedEffectData> GetModifiedEffectData(uint16_t id);
 
     /**
      * Get the server object NPC definition corresponding to an ID
@@ -332,6 +401,41 @@ public:
      * @return true on success, false on failure
      */
     bool LoadItemData(gsl::not_null<DataStore*> pDataStore);
+
+    /**
+     * Load the item modification binary data definitions
+     * @param pDataStore Pointer to the datastore to load binary file from
+     * @return true on success, false on failure
+     */
+    bool LoadModificationData(gsl::not_null<DataStore*> pDataStore);
+
+    /**
+     * Load the item modification extra effect binary data definitions
+     * @param pDataStore Pointer to the datastore to load binary file from
+     * @return true on success, false on failure
+     */
+    bool LoadModificationExtEffectData(gsl::not_null<DataStore*> pDataStore);
+
+    /**
+     * Load the item modification extra recipe binary data definitions
+     * @param pDataStore Pointer to the datastore to load binary file from
+     * @return true on success, false on failure
+     */
+    bool LoadModificationExtRecipeData(gsl::not_null<DataStore*> pDataStore);
+
+    /**
+     * Load the item modification trigger binary data definitions
+     * @param pDataStore Pointer to the datastore to load binary file from
+     * @return true on success, false on failure
+     */
+    bool LoadModificationTriggerData(gsl::not_null<DataStore*> pDataStore);
+
+    /**
+     * Load the item modification effect binary data definitions
+     * @param pDataStore Pointer to the datastore to load binary file from
+     * @return true on success, false on failure
+     */
+    bool LoadModifiedEffectData(gsl::not_null<DataStore*> pDataStore);
 
     /**
      * Load the server object NPC binary data definitions
@@ -526,9 +630,9 @@ private:
      * @return Pointer to the record in the map matching the
      *  supplied ID, null if it does not exist
      */
-    template <class T>
-    std::shared_ptr<T> GetRecordByID(uint32_t id,
-        std::unordered_map<uint32_t, std::shared_ptr<T>>& data)
+    template <class X, class T>
+    std::shared_ptr<T> GetRecordByID(X id,
+        std::unordered_map<X, std::shared_ptr<T>>& data)
     {
         auto iter = data.find(id);
         if(iter != data.end())
@@ -583,6 +687,34 @@ private:
     /// Map of item definitions by ID
     std::unordered_map<uint32_t,
         std::shared_ptr<objects::MiItemData>> mItemData;
+
+    /// Map of item modification definitions by ID
+    std::unordered_map<uint32_t,
+        std::shared_ptr<objects::MiModificationData>> mModificationData;
+
+    /// Map of item modification definition IDs by item ID
+    std::unordered_map<uint32_t, uint32_t> mModificationLookup;
+
+    /// Map of item modification extra effect definitions by their group ID,
+    /// slot then sub ID. Because there are no unique IDs for this object, this is how
+    /// the data must be identified.
+    std::unordered_map<uint8_t, std::unordered_map<uint8_t, std::unordered_map<uint16_t,
+        std::shared_ptr<objects::MiModificationExtEffectData>>>> mModificationExtEffectData;
+
+    /// Map of item modification extra recipe definitions by ID
+    std::unordered_map<uint32_t,
+        std::shared_ptr<objects::MiModificationExtRecipeData>> mModificationExtRecipeData;
+
+    /// Map of item modification extra recipe definition IDs by item ID
+    std::unordered_map<uint32_t, uint32_t> mModificationExtRecipeLookup;
+
+    /// Map of item modification trigger definitions by ID
+    std::unordered_map<uint16_t,
+        std::shared_ptr<objects::MiModificationTriggerData>> mModificationTriggerData;
+
+    /// Map of item modification effect definitions by ID
+    std::unordered_map<uint16_t,
+        std::shared_ptr<objects::MiModifiedEffectData>> mModifiedEffectData;
 
     /// Map of server object NPC definitions by ID
     std::unordered_map<uint32_t,

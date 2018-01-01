@@ -35,7 +35,11 @@
 #include <Account.h>
 #include <AccountLogin.h>
 #include <AccountWorldData.h>
+#include <ChannelConfig.h>
 #include <Character.h>
+#include <Item.h>
+#include <ItemBox.h>
+#include <MiItemBasicData.h>
 #include <MiItemData.h>
 #include <MiDevilData.h>
 #include <MiNPCBasicData.h>
@@ -45,7 +49,6 @@
 #include <MiZoneData.h>
 #include <PostItem.h>
 #include <ServerZone.h>
-#include <ChannelConfig.h>
 
 // channel Includes
 #include <ChannelServer.h>
@@ -67,8 +70,10 @@ ChatManager::ChatManager(const std::weak_ptr<ChannelServer>& server)
     mGMands["crash"] = &ChatManager::GMCommand_Crash;
     mGMands["effect"] = &ChatManager::GMCommand_Effect;
     mGMands["enemy"] = &ChatManager::GMCommand_Enemy;
+    mGMands["expertisemax"] = &ChatManager::GMCommand_ExpertiseExtend;
     mGMands["expertiseup"] = &ChatManager::GMCommand_ExpertiseUpdate;
     mGMands["familiarity"] = &ChatManager::GMCommand_Familiarity;
+    mGMands["goto"] = &ChatManager::GMCommand_Goto;
     mGMands["homepoint"] = &ChatManager::GMCommand_Homepoint;
     mGMands["item"] = &ChatManager::GMCommand_Item;
     mGMands["kick"] = &ChatManager::GMCommand_Kick;
@@ -81,6 +86,7 @@ ChatManager::ChatManager(const std::weak_ptr<ChannelServer>& server)
     mGMands["post"] = &ChatManager::GMCommand_Post;
     mGMands["quest"] = &ChatManager::GMCommand_Quest;
     mGMands["skill"] = &ChatManager::GMCommand_Skill;
+    mGMands["slotadd"] = &ChatManager::GMCommand_SlotAdd;
     mGMands["spawn"] = &ChatManager::GMCommand_Spawn;
     mGMands["speed"] = &ChatManager::GMCommand_Speed;
     mGMands["tickermessage"] = &ChatManager::GMCommand_TickerMessage;
@@ -536,6 +542,45 @@ bool ChatManager::GMCommand_Enemy(const std::shared_ptr<
     return zoneManager->SpawnEnemy(zone, demonID, x, y, rot, aiType);
 }
 
+bool ChatManager::GMCommand_ExpertiseExtend(const std::shared_ptr<
+    channel::ChannelClientConnection>& client,
+    const std::list<libcomp::String>& args)
+{
+    std::list<libcomp::String> argsCopy = args;
+
+    uint8_t val = 1;
+    if(argsCopy.size() != 0 && !GetIntegerArg<uint8_t>(val, argsCopy))
+    {
+        return false;
+    }
+
+    auto state = client->GetClientState();
+    auto cState = state->GetCharacterState();
+    auto character = cState->GetEntity();
+
+    if(character)
+    {
+        int8_t newVal = (int8_t)((character->GetExpertiseExtension() + val) > 127
+            ? 127 : (character->GetExpertiseExtension() + val));
+
+        if(newVal != character->GetExpertiseExtension())
+        {
+            auto server = mServer.lock();
+            auto characterManager = server->GetCharacterManager();
+
+            character->SetExpertiseExtension(newVal);
+
+            characterManager->SendExertiseExtension(client);
+            server->GetWorldDatabase()->QueueUpdate(character,
+                state->GetAccountUID());
+        }
+
+        return true;
+    }
+
+    return false;
+}
+
 bool ChatManager::GMCommand_ExpertiseUpdate(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
@@ -581,6 +626,94 @@ bool ChatManager::GMCommand_Familiarity(const std::shared_ptr<
         client, familiarity);
 
     return true;
+}
+
+bool ChatManager::GMCommand_Goto(const std::shared_ptr<
+    channel::ChannelClientConnection>& client,
+    const std::list<libcomp::String>& args)
+{
+    std::list<libcomp::String> argsCopy = args;
+
+    bool toSelf = false;
+    libcomp::String name;
+    if(argsCopy.size() > 0 && !GetStringArg(name, argsCopy))
+    {
+        return false;
+    }
+
+    if(name == "self")
+    {
+        toSelf = true;
+        if(!GetStringArg(name, argsCopy))
+        {
+            return false;
+        }
+    }
+
+    auto server = mServer.lock();
+    auto worldDB = server->GetWorldDatabase();
+    auto zoneManager = server->GetZoneManager();
+
+    std::shared_ptr<ChannelClientConnection> oClient;
+    if(name.IsEmpty())
+    {
+        oClient = client;
+    }
+    else
+    {
+        auto oTarget = objects::Character::LoadCharacterByName(worldDB, name);
+        auto oTargetAccount = oTarget ? oTarget->GetAccount().Get() : nullptr;
+        oClient = oTargetAccount ? server->GetManagerConnection()->
+            GetClientConnection(oTargetAccount->GetUsername()) : nullptr;
+
+        auto oTargetCState = oClient->GetClientState()->GetCharacterState();
+        if(oTargetCState->GetEntity()->GetName() != name)
+        {
+            // Not the current character
+            oClient = nullptr;
+        }
+    }
+
+    if(oClient)
+    {
+        auto oTargetState = oClient->GetClientState();
+        auto oTargetCState = oTargetState->GetCharacterState();
+        if(client->GetClientState()->GetCharacterState()->GetZone() ==
+            oTargetCState->GetZone())
+        {
+            auto fromCState = toSelf ? oTargetCState : client->GetClientState()
+                ->GetCharacterState();
+            auto fromDState = toSelf ? oTargetState->GetDemonState()
+                : client->GetClientState()->GetDemonState();
+            auto toCState = toSelf
+                ? client->GetClientState()->GetCharacterState() : oTargetCState;
+
+            float destX = toCState->GetCurrentX();
+            float destY = toCState->GetCurrentY();
+
+            zoneManager->Warp(client, fromCState, destX, destY,
+                toCState->GetDestinationRotation());
+            if(fromDState->GetEntity())
+            {
+                zoneManager->Warp(client, fromDState, destX, destY,
+                    toCState->GetDestinationRotation());
+            }
+
+            return true;
+        }
+        else
+        {
+            return SendChatMessage(client, ChatType_t::CHAT_SELF,
+                libcomp::String("Player '%1' does not exist in the"
+                " same zone").Arg(name));
+        }
+    }
+    else
+    {
+        return SendChatMessage(client, ChatType_t::CHAT_SELF,
+            libcomp::String("Character '%1' is not currently logged"
+                " into this channel").Arg(name));
+    }
 }
 
 bool ChatManager::GMCommand_Homepoint(const std::shared_ptr<
@@ -1035,6 +1168,63 @@ bool ChatManager::GMCommand_Skill(const std::shared_ptr<
 
     return mServer.lock()->GetCharacterManager()->LearnSkill(
         client, entityID, skillID);
+}
+
+bool ChatManager::GMCommand_SlotAdd(const std::shared_ptr<
+    channel::ChannelClientConnection>& client,
+    const std::list<libcomp::String>& args)
+{
+    std::list<libcomp::String> argsCopy = args;
+
+    int8_t equipType;
+    if(!GetIntegerArg<int8_t>(equipType, argsCopy) ||
+        (equipType != (int8_t)objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_TOP &&
+        equipType != (int8_t)objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_BOTTOM &&
+        equipType != (int8_t)objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_WEAPON))
+    {
+        return SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(
+            "Invalid equipment type specified for @slotadd command. Supported types are:"
+            " top (%1), bottom (%2) and weapon (%3)")
+            .Arg((int8_t)objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_TOP)
+            .Arg((int8_t)objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_BOTTOM)
+            .Arg((int8_t)objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_WEAPON));
+    }
+
+    auto server = mServer.lock();
+    auto state = client->GetClientState();
+    auto cState = state->GetCharacterState();
+    auto character = cState->GetEntity();
+    auto item = character ? character->GetEquippedItems((size_t)equipType).Get() : nullptr;
+
+    if(!item)
+    {
+        return SendChatMessage(client, ChatType_t::CHAT_SELF,
+            "The specified item type is not equipped");
+    }
+
+    size_t openSlot = 0;
+    for(uint32_t modSlot : item->GetModSlots())
+    {
+        if(modSlot == 0)
+        {
+            break;
+        }
+
+        openSlot++;
+    }
+
+    if(openSlot < item->ModSlotsCount())
+    {
+        item->SetModSlots(openSlot, MOD_SLOT_NULL_EFFECT);
+
+        std::list<uint16_t> slots = { (uint16_t)item->GetBoxSlot() };
+        server->GetCharacterManager()->SendItemBoxData(client, item->GetItemBox().Get(),
+            slots);
+
+        server->GetWorldDatabase()->QueueUpdate(item, state->GetAccountUID());
+    }
+
+    return true;
 }
 
 bool ChatManager::GMCommand_Spawn(const std::shared_ptr<

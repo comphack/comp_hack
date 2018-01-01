@@ -155,6 +155,7 @@ PACKET_PARSER_DECL(DemonCompendium);        // 0x019B
 PACKET_PARSER_DECL(DungeonRecords);         // 0x01C4
 PACKET_PARSER_DECL(ClanEmblemUpdate);       // 0x01E1
 PACKET_PARSER_DECL(DemonFamiliarity);       // 0x01E6
+PACKET_PARSER_DECL(EquipmentMod);           // 0x0203
 PACKET_PARSER_DECL(MaterialBox);            // 0x0205
 PACKET_PARSER_DECL(Analyze);                // 0x0209
 PACKET_PARSER_DECL(ItemExpand);             // 0x0210
@@ -172,6 +173,7 @@ PACKET_PARSER_DECL(CasinoCoinTotal);        // 0x02FA
 PACKET_PARSER_DECL(SearchEntryInfo);        // 0x03A3
 PACKET_PARSER_DECL(HouraiData);             // 0x03A5
 PACKET_PARSER_DECL(CultureData);            // 0x03AC
+PACKET_PARSER_DECL(EquipmentModEdit);       // 0x03CB
 PACKET_PARSER_DECL(DemonDepoList);          // 0x03F5
 PACKET_PARSER_DECL(Blacklist);              // 0x0408
 PACKET_PARSER_DECL(DigitalizePoints);       // 0x0414

@@ -301,6 +301,9 @@ namespace libcomp
 /// Search string index for a clan recruitment catchphrase
 #define SEARCH_IDX_CLAN_CATCHPHRASE (2)
 
+/// Indicates that an equipment mod slot has no effect but is useable
+#define MOD_SLOT_NULL_EFFECT (0x00FF)
+
 /// Experience required to proceed from the indexed level to the next
 const unsigned long long LEVEL_XP_REQUIREMENTS[] = {
     0ULL,               // 0->1

@@ -71,6 +71,7 @@
 #include <MiSkillData.h>
 #include <MiSkillItemStatusCommonData.h>
 #include <MiStatusData.h>
+#include <MiUseRestrictionsData.h>
 #include <ServerZone.h>
 #include <StatusEffect.h>
 #include <TradeSession.h>
@@ -215,7 +216,7 @@ void CharacterManager::SendCharacterData(const std::shared_ptr<
 
     reply.WriteS8(0);   // Unknown
     reply.WriteS8(0);   // Unknown
-    reply.WriteS8(0);   // Unknown
+    reply.WriteS8(c->GetExpertiseExtension());
 
     /// @todo: Virtual Appearance
     size_t vaCount = 0;
@@ -1239,9 +1240,15 @@ std::shared_ptr<objects::Item> CharacterManager::GenerateItem(
     }
 
     auto poss = def->GetPossession();
+    auto restr = def->GetRestriction();
 
     auto item = libcomp::PersistentObject::New<
         objects::Item>();
+
+    for(uint8_t i = 0; i < restr->GetModSlots() && i < 5; i++)
+    {
+        item->SetModSlots((size_t)i, MOD_SLOT_NULL_EFFECT);
+    }
 
     item->SetType(itemID);
     item->SetStackSize(stackSize);
@@ -2515,7 +2522,7 @@ void CharacterManager::UpdateExpertise(const std::shared_ptr<
     }
 
     int32_t maxTotalPoints = 1700000 + (int32_t)(floorl((float)stats->GetLevel() * 0.1) *
-        1000 * 100);
+        1000 * 100) + ((int32_t)character->GetExpertiseExtension() * 1000 * 100);
 
     if(stats->GetLevel() == 99)
     {
@@ -2625,6 +2632,23 @@ void CharacterManager::UpdateExpertise(const std::shared_ptr<
         server->GetTokuseiManager()->Recalculate(cState, true,
             std::set<int32_t>{ cState->GetEntityID() });
         RecalculateStats(client, cState->GetEntityID());
+    }
+}
+
+void CharacterManager::SendExertiseExtension(const std::shared_ptr<
+    channel::ChannelClientConnection>& client)
+{
+    auto state = client->GetClientState();
+    auto cState = state->GetCharacterState();
+    auto character = cState->GetEntity();
+
+    if(character)
+    {
+        libcomp::Packet p;
+        p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_EXPERTISE_EXTENSION);
+        p.WriteS8(character->GetExpertiseExtension());
+
+        client->SendPacket(p);
     }
 }
 

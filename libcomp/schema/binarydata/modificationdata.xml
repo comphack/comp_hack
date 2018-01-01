@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <!-- originally named MiCIconData -->
+    <object name="MiModificationData" persistent="false">
+        <member type="u32" name="ID"/>
+        <member type="u16" name="effectID"/>
+        <member type="u8" name="slot"/>
+        <member type="u8" name="unused1"/>
+        <member type="u16" name="greatFailItemCount"/>
+        <member type="u16" name="unused2"/>
+        <member type="u32" name="greatFailItemType"/>
+        <member type="u32" name="itemID"/>
+        <member type="s16" name="successRate"/>
+        <member type="s16" name="failRate"/>
+        <member type="s16" name="greatSuccessRate"/>
+        <member type="s16" name="greatFailRate"/>
+    </object>
+    <object name="MiModificationTriggerData" persistent="false">
+        <member type="u16" name="ID"/>
+        <member type="u16" name="unused"/>
+        <member type="array" name="rateScaling" size="8">
+            <element type="u16"/>
+        </member>
+    </object>
+    <object name="MiModifiedEffectData" persistent="false">
+        <member type="u16" name="ID"/>
+        <member type="u16" name="unk1"/>
+        <member type="s8" name="unk2"/>
+        <member type="s8" name="type"/>
+        <member type="s8" name="sequenceID"/>
+        <member type="u8" name="sequenceID2"/>
+        <member type="u32" name="tokusei"/>
+    </object>
+    <object name="MiModificationExtRecipeData" persistent="false">
+        <member type="u32" name="ID"/>
+        <member type="u8" name="groupID"/>
+        <member type="u8" name="slot"/>
+        <member type="u16" name="effectSubID"/>
+        <member type="u32" name="itemID"/>
+        <member type="s16" name="successRate"/>
+        <member type="s16" name="failRate"/>
+        <member type="s16" name="greatSuccessRate"/>
+        <member type="s16" name="greatFailRate"/>
+        <member type="u32" name="unused1"/>
+        <member type="u32" name="unused2"/>
+    </object>
+    <object name="MiModificationExtEffectData" persistent="false">
+        <member type="u8" name="groupID"/>
+        <member type="u8" name="slot"/>
+        <member type="u16" name="subID"/>
+        <member type="array" name="rateScaling" size="8">
+            <element type="u16"/>
+        </member>
+        <member type="s16" name="type"/>
+        <member type="s16" name="sequenceID"/>
+        <member type="u32" name="tokusei"/>
+        <member type="s32" name="sequenceID2"/>
+        <member type="string" name="shortDesc" length="100"/>
+        <member type="string" name="fullDesc" length="872"/>
+    </object>
+</objgen>

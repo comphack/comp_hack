@@ -350,6 +350,8 @@ bool ChannelServer::Initialize()
         to_underlying(ClientToChannelPacketCode_t::PACKET_CLAN_EMBLEM_UPDATE));
     clientPacketManager->AddParser<Parsers::DemonFamiliarity>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_DEMON_FAMILIARITY));
+    clientPacketManager->AddParser<Parsers::EquipmentMod>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_EQUIPMENT_MODIFY));
     clientPacketManager->AddParser<Parsers::MaterialBox>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_MATERIAL_BOX));
     clientPacketManager->AddParser<Parsers::Analyze>(
@@ -384,6 +386,8 @@ bool ChannelServer::Initialize()
         to_underlying(ClientToChannelPacketCode_t::PACKET_HOURAI_DATA));
     clientPacketManager->AddParser<Parsers::CultureData>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_CULTURE_DATA));
+    clientPacketManager->AddParser<Parsers::EquipmentModEdit>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_EQUIPMENT_MOD_EDIT));
     clientPacketManager->AddParser<Parsers::DemonDepoList>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_DEMON_DEPO_LIST));
     clientPacketManager->AddParser<Parsers::Blacklist>(

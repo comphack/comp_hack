@@ -118,8 +118,8 @@ bool ServerConstants::Initialize(const String& filePath)
         sConstants.SKILL_CLAN_FORM);
     success &= LoadInteger(constants["SKILL_EQUIP_ITEM"],
         sConstants.SKILL_EQUIP_ITEM);
-    success &= LoadInteger(constants["SKILL_EQUIP_ITEM"],
-        sConstants.SKILL_EQUIP_ITEM);
+    success &= LoadInteger(constants["SKILL_EQUIP_MOD_EDIT"],
+        sConstants.SKILL_EQUIP_MOD_EDIT);
     success &= LoadInteger(constants["SKILL_FAM_UP"],
         sConstants.SKILL_FAM_UP);
     success &= LoadInteger(constants["SKILL_ITEM_FAM_UP"],
@@ -148,37 +148,34 @@ bool ServerConstants::Initialize(const String& filePath)
     auto complexIter = complexConstants.find("DEFAULT_SKILLS");
     if(success && complexIter != complexConstants.end())
     {
-        const tinyxml2::XMLElement* pElement = complexIter->second;
-        if(std::string(pElement->Value()) != "element")
+        std::list<String> strList;
+        if(!LoadStringList(complexIter->second, strList))
         {
+            LOG_ERROR("Failed to load DEFAULT_SKILLS\n");
             success = false;
         }
         else
         {
-            while(pElement)
+            for(auto elemStr : strList)
             {
-                libcomp::String elemStr(pElement && pElement->FirstChild()->ToText()
-                    ? pElement->FirstChild()->ToText()->Value() : "");
-                if(!elemStr.IsEmpty())
+                uint32_t entry = 0;
+                if(LoadInteger(elemStr.C(), entry))
                 {
-                    uint32_t entry = 0;
-                    if(LoadInteger(elemStr.C(), entry))
-                    {
-                        sConstants.DEFAULT_SKILLS.insert(entry);
-                    }
-                    else
-                    {
-                        success = false;
-                        break;
-                    }
+                    sConstants.DEFAULT_SKILLS.insert(entry);
                 }
-
-                pElement = pElement->NextSiblingElement("element");
+                else
+                {
+                    LOG_ERROR("Failed to load an element in"
+                        " DEFAULT_SKILLS\n");
+                    success = false;
+                    break;
+                }
             }
         }
     }
     else
     {
+        LOG_ERROR("DEFAULT_SKILLS not found\n");
         success = false;
     }
 
@@ -191,61 +188,59 @@ bool ServerConstants::Initialize(const String& filePath)
     }
     else
     {
+        LOG_ERROR("CLAN_FORM_MAP not found\n");
         success = false;
     }
 
     complexIter = complexConstants.find("CLAN_LEVEL_SKILLS");
     if(success && complexIter != complexConstants.end())
     {
-        const tinyxml2::XMLElement* pElement = complexIter->second;
-        if(std::string(pElement->Value()) != "element")
+        std::list<String> strList;
+        if(!LoadStringList(complexIter->second, strList))
         {
+            LOG_ERROR("Failed to load CLAN_LEVEL_SKILLS\n");
             success = false;
         }
         else
         {
-            size_t idx = 0;
-            while(pElement)
+            if(strList.size() != 10)
             {
-                if(idx == 10)
+                LOG_ERROR("CLAN_LEVEL_SKILLS must specify skills for all"
+                    " 10 levels\n");
+                success = false;
+            }
+            else
+            {
+                size_t idx = 0;
+                for(auto elemStr : strList)
                 {
-                    success = false;
-                    break;
-                }
-
-                sConstants.CLAN_LEVEL_SKILLS[idx].clear();
-
-                libcomp::String elemStr(pElement && pElement->FirstChild()->ToText()
-                    ? pElement->FirstChild()->ToText()->Value() : "");
-                if(!elemStr.IsEmpty())
-                {
-                    for(auto elem : elemStr.Split(","))
+                    if(!elemStr.IsEmpty())
                     {
-                        uint32_t entry = 0;
-                        if(LoadInteger(elem.C(), entry))
+                        for(auto elem : elemStr.Split(","))
                         {
-                            sConstants.CLAN_LEVEL_SKILLS[idx].insert(entry);
-                        }
-                        else
-                        {
-                            success = false;
-                            break;
+                            uint32_t entry = 0;
+                            if(LoadInteger(elem.C(), entry))
+                            {
+                                sConstants.CLAN_LEVEL_SKILLS[idx].insert(entry);
+                            }
+                            else
+                            {
+                                LOG_ERROR("Failed to load an element in"
+                                    " CLAN_LEVEL_SKILLS\n");
+                                success = false;
+                                break;
+                            }
                         }
                     }
+
+                    idx++;
                 }
-
-                pElement = pElement->NextSiblingElement("element");
-                idx++;
-            }
-
-            if(idx < 9)
-            {
-                success = false;
             }
         }
     }
     else
     {
+        LOG_ERROR("CLAN_LEVEL_SKILLS not found\n");
         success = false;
     }
 
@@ -258,6 +253,7 @@ bool ServerConstants::Initialize(const String& filePath)
     }
     else
     {
+        LOG_ERROR("DEPO_MAP_DEMON not found\n");
         success = false;
     }
 
@@ -270,6 +266,119 @@ bool ServerConstants::Initialize(const String& filePath)
     }
     else
     {
+        LOG_ERROR("DEPO_MAP_ITEM not found\n");
+        success = false;
+    }
+
+    complexIter = complexConstants.find("EQUIP_MOD_EDIT_ITEMS");
+    if(success && complexIter != complexConstants.end())
+    {
+        std::list<String> strList;
+        if(!LoadStringList(complexIter->second, strList))
+        {
+            LOG_ERROR("Failed to load EQUIP_MOD_EDIT_ITEMS\n");
+            success = false;
+        }
+        else
+        {
+            if(strList.size() != 11)
+            {
+                LOG_ERROR("EQUIP_MOD_EDIT_ITEMS must specify items for each"
+                    " of the 11 types\n");
+                success = false;
+            }
+            else
+            {
+                size_t idx = 0;
+                for(auto elemStr : strList)
+                {
+                    if(!elemStr.IsEmpty())
+                    {
+                        for(auto elem : elemStr.Split(","))
+                        {
+                            uint32_t entry = 0;
+                            if(LoadInteger(elem.C(), entry))
+                            {
+                                sConstants.EQUIP_MOD_EDIT_ITEMS[idx].push_back(entry);
+                            }
+                            else
+                            {
+                                LOG_ERROR("Failed to load an element in"
+                                    " EQUIP_MOD_EDIT_ITEMS\n");
+                                success = false;
+                                break;
+                            }
+                        }
+                    }
+
+                    idx++;
+                }
+            }
+        }
+    }
+    else
+    {
+        LOG_ERROR("EQUIP_MOD_EDIT_ITEMS not found\n");
+        success = false;
+    }
+    
+    complexIter = complexConstants.find("SLOT_MOD_ITEMS");
+    if(success && complexIter != complexConstants.end())
+    {
+        std::list<String> strList;
+        if(!LoadStringList(complexIter->second, strList))
+        {
+            LOG_ERROR("Failed to load SLOT_MOD_ITEMS\n");
+            success = false;
+        }
+        else
+        {
+            if(strList.size() != 2)
+            {
+                LOG_ERROR("SLOT_MOD_ITEMS must specify items for both"
+                    " of the 2 types\n");
+                success = false;
+            }
+            else
+            {
+                size_t idx = 0;
+                for(auto elemStr : strList)
+                {
+                    if(!elemStr.IsEmpty())
+                    {
+                        for(auto elem : elemStr.Split(","))
+                        {
+                            uint32_t entry = 0;
+                            if(LoadInteger(elem.C(), entry))
+                            {
+                                sConstants.SLOT_MOD_ITEMS[idx].push_back(entry);
+                            }
+                            else
+                            {
+                                LOG_ERROR("Failed to load an element in"
+                                    " SLOT_MOD_ITEMS\n");
+                                success = false;
+                                break;
+                            }
+                        }
+
+                        if(sConstants.SLOT_MOD_ITEMS[idx].size() > 8)
+                        {
+                            LOG_ERROR("Each SLOT_MOD_ITEMS list must not exceed"
+                                "the binary file array size of 8 possible items\n");
+                            success = false;
+                            break;
+                        }
+                    }
+
+                    idx++;
+                }
+            }
+        }
+    }
+    else
+    {
+        LOG_ERROR("SLOT_MOD_ITEMS not found\n");
         success = false;
     }
 
@@ -285,6 +394,35 @@ bool ServerConstants::LoadString(const std::string& value, String& prop)
 {
     prop = value;
     return !value.empty();
+}
+
+bool ServerConstants::LoadStringList(const tinyxml2::XMLElement* elem,
+    std::list<String>& prop)
+{
+    if(elem)
+    {
+        const tinyxml2::XMLElement* pElement = elem;
+        if(std::string(pElement->Value()) != "element")
+        {
+            return false;
+        }
+        else
+        {
+            while(pElement)
+            {
+                libcomp::String elemStr(pElement && pElement->FirstChild()->ToText()
+                    ? pElement->FirstChild()->ToText()->Value() : "");
+                if(!elemStr.IsEmpty())
+                {
+                    prop.push_back(elemStr);
+                }
+
+                pElement = pElement->NextSiblingElement("element");
+            }
+        }
+    }
+
+    return true;
 }
 
 bool ServerConstants::LoadKeyValueStrings(const tinyxml2::XMLElement* elem,

@@ -180,6 +180,16 @@ private:
         const std::list<libcomp::String>& args);
 
     /**
+     * GM command to extend a character's max expertise points available.
+     * @param client Pointer to the client that sent the command
+     * @param args List of arguments for the command
+     * @return true if the command was handled properly, else false
+     */
+    bool GMCommand_ExpertiseExtend(const std::shared_ptr<
+        channel::ChannelClientConnection>& client,
+        const std::list<libcomp::String>& args);
+
+    /**
      * GM command to update a character's expertise as if a skill
      * were used.
      * @param client Pointer to the client that sent the command
@@ -198,6 +208,16 @@ private:
      * @return true if the command was handled properly, else false
      */
     bool GMCommand_Familiarity(const std::shared_ptr<
+        channel::ChannelClientConnection>& client,
+        const std::list<libcomp::String>& args);
+
+    /**
+     * GM command to move one player to another player.
+     * @param client Pointer to the client that sent the command
+     * @param args List of arguments for the command
+     * @return true if the command was handled properly, else false
+     */
+    bool GMCommand_Goto(const std::shared_ptr<
         channel::ChannelClientConnection>& client,
         const std::list<libcomp::String>& args);
 
@@ -321,6 +341,17 @@ private:
      * @return true if the command was handled properly, else false
      */
     bool GMCommand_Skill(const std::shared_ptr<
+        channel::ChannelClientConnection>& client,
+        const std::list<libcomp::String>& args);
+
+    /**
+     * GM command to add a mod slot to an item equipped by the client's
+     * character.
+     * @param client Pointer to the client that sent the command
+     * @param args List of arguments for the command
+     * @return true if the command was handled properly, else false
+     */
+    bool GMCommand_SlotAdd(const std::shared_ptr<
         channel::ChannelClientConnection>& client,
         const std::list<libcomp::String>& args);
 

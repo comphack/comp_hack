@@ -41,6 +41,8 @@
 #include <MiEquipmentSetData.h>
 #include <MiItemBasicData.h>
 #include <MiItemData.h>
+#include <MiModificationExtEffectData.h>
+#include <MiModifiedEffectData.h>
 #include <MiNPCBasicData.h>
 #include <MiSkillCharasticData.h>
 #include <MiSkillData.h>
@@ -559,11 +561,11 @@ std::list<std::shared_ptr<objects::Tokusei>> TokuseiManager::GetDirectTokusei(
     std::list<int32_t> tokuseiIDs;
     if(eState->GetEntityType() == objects::EntityStateObject::EntityType_t::CHARACTER)
     {
-        // Characters have extra tokusei from equipment and equipment sets
+        // Characters have extra tokusei from equipment, equipment sets and
+        // equipment modifications
         auto cState = std::dynamic_pointer_cast<CharacterState>(eState);
         auto character = cState->GetEntity();
 
-        std::set<std::shared_ptr<objects::MiEquipmentSetData>> activeSets;
         for(size_t i = 0; i < 15; i++)
         {
             auto equip = character->GetEquippedItems(i).Get();
@@ -575,6 +577,38 @@ std::list<std::shared_ptr<objects::Tokusei>> TokuseiManager::GetDirectTokusei(
                     for(int32_t tokuseiID : sItemData->GetTokusei())
                     {
                         tokuseiIDs.push_back(tokuseiID);
+                    }
+                }
+
+                // Check for mod slot effects
+                bool isWeapon = i ==
+                    (size_t)objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_WEAPON;
+                for(size_t k = 0; k < equip->ModSlotsCount(); k++)
+                {
+                    uint16_t effectID = equip->GetModSlots(k);
+                    if(effectID != 0 && effectID != MOD_SLOT_NULL_EFFECT)
+                    {
+                        uint32_t tokuseiID = 0;
+                        if(isWeapon)
+                        {
+                            auto effectData = definitionManager->GetModifiedEffectData(
+                                effectID);
+                            tokuseiID = effectData ? effectData->GetTokusei() : 0;
+                        }
+                        else
+                        {
+                            auto itemData = definitionManager->GetItemData(
+                                equip->GetType());
+                            auto effectData = definitionManager->GetModificationExtEffectData(
+                                itemData->GetCommon()->GetCategory()->GetSubCategory(),
+                                (uint8_t)i, effectID);
+                            tokuseiID = effectData ? effectData->GetTokusei() : 0;
+                        }
+
+                        if(tokuseiID != 0)
+                        {
+                            tokuseiIDs.push_back((int32_t)tokuseiID);
+                        }
                     }
                 }
             }
@@ -794,7 +828,8 @@ bool TokuseiManager::EvaluateTokuseiCondition(const std::shared_ptr<ActiveEntity
         }
         else
         {
-            bool containsLNC = (eState->GetLNCType() & condition->GetValue()) != 0;
+            bool containsLNC = (eState->GetLNCType(mServer.lock()
+                ->GetDefinitionManager()) & condition->GetValue()) != 0;
             return containsLNC == (condition->GetComparator() ==
                 objects::TokuseiCondition::Comparator_t::EQUALS);
         }

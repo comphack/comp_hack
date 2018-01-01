@@ -23,6 +23,7 @@
     <constant name="SKILL_MOOCH">209</constant>
     <constant name="SKILL_CLAN_FORM">304</constant>
     <constant name="SKILL_ITEM_FAM_UP">316</constant>
+    <constant name="SKILL_EQUIP_MOD_EDIT">329</constant>
     <constant name="STATUS_SUMMON_SYNC_1">194</constant>
     <constant name="STATUS_SUMMON_SYNC_2">364</constant>
     <constant name="STATUS_SUMMON_SYNC_3">365</constant>
@@ -211,5 +212,22 @@
             <key>909</key>
             <value>90</value>
         </pair>
+    </constant>
+    <constant name="EQUIP_MOD_EDIT_ITEMS">
+        <element>12453,12454,12455,12546,21426,22262</element>
+        <element>12456,12457,12458,12547,21989,22263</element>
+        <element>12459,12460,12461,12548,21990,22264</element>
+        <element>42031,42032,42033</element>
+        <element>12501,12502,12503</element>
+        <element>12504,12505,12506</element>
+        <element>12486,12491,12496</element>
+        <element>12487,12492,12497</element>
+        <element>12488,12493,12498</element>
+        <element>12489,12494,12499</element>
+        <element>12490,12495,12500</element>
+    </constant>
+    <constant name="SLOT_MOD_ITEMS">
+        <element>42005,42006,42007,42008,42022,42029,42082</element>
+        <element>42031,42032,42033</element>
     </constant>
 </constants>

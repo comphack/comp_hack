@@ -286,6 +286,7 @@ SET(${PROJECT_NAME}_SCHEMA
     schema/binarydata/expertdata.xml
     schema/binarydata/hnpcdata.xml
     schema/binarydata/itemdata.xml
+    schema/binarydata/modificationdata.xml
     schema/binarydata/onpcdata.xml
     schema/binarydata/questdata.xml
     schema/binarydata/shared.xml
@@ -641,6 +642,16 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     MiItemPvPData.cpp
     MiKnockBackData.cpp
     MiKnockBackData.h
+    MiModificationData.cpp
+    MiModificationData.h
+    MiModificationExtEffectData.cpp
+    MiModificationExtEffectData.h
+    MiModificationExtRecipeData.cpp
+    MiModificationExtRecipeData.h
+    MiModificationTriggerData.cpp
+    MiModificationTriggerData.h
+    MiModifiedEffectData.cpp
+    MiModifiedEffectData.h
     MiNegotiationDamageData.cpp
     MiNegotiationDamageData.h
     MiNegotiationData.cpp

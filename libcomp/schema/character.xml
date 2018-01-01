@@ -23,6 +23,7 @@
         <!-- Character specific attributes -->
         <member type="s16" name="LNC" caps="true" min="-10000" max="10000"/>
         <member type="s32" name="Points"/>
+        <member type="s8" name="ExpertiseExtension"/>
         <member type="DemonBox*" name="COMP" caps="true"/>
         <member type="Demon*" name="ActiveDemon"/>
         <member type="u32" name="HomepointZone"/>

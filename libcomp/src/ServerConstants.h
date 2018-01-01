@@ -101,6 +101,9 @@ struct Data
     /// Function ID of equipment changing skills
     uint16_t SKILL_EQUIP_ITEM;
 
+    /// Function ID skills that edit equipment modifications
+    uint16_t SKILL_EQUIP_MOD_EDIT;
+
     /// Function ID of familiarity boosting skills
     uint16_t SKILL_FAM_UP;
 
@@ -148,6 +151,14 @@ struct Data
 
     /// Item IDs of item box rental tickets to their corresponding day lengths
     std::unordered_map<uint32_t, uint32_t> DEPO_MAP_ITEM;
+
+    /// Array of item IDs used for the EQUIP_MOD_EDIT function ID skill
+    std::array<std::list<uint32_t>, 11> EQUIP_MOD_EDIT_ITEMS;
+
+    /// Array of item IDs used for slot modification, indexed in the same order
+    /// as the RateScaling field on MiModificationTriggerData and
+    /// MiModificationExtEffectData
+    std::array<std::list<uint32_t>, 2> SLOT_MOD_ITEMS;
 };
 
 public:
@@ -174,6 +185,16 @@ private:
      * @return true on success, false on failure
      */
     static bool LoadString(const std::string& value, String& prop);
+
+    /**
+     * Utility function to load a lis of strings from the constants read
+     * from the XML file
+     * @param elem Pointer to the string list parent element
+     * @param prop List of strings reference to assign the value to
+     * @return true on success, false on failure
+     */
+    static bool LoadStringList(const tinyxml2::XMLElement* elem,
+        std::list<String>& prop);
 
     /**
      * Utility function to load key value string pairs from the

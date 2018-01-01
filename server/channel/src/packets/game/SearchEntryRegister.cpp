@@ -284,12 +284,12 @@ bool Parsers::SearchEntryRegister::Parse(libcomp::ManagerPacket *pPacketManager,
 
                 int16_t unknown5 = p.ReadS16Little();
 
-                int16_t modSlots[5];
-                modSlots[0] = p.ReadS16Little();
-                modSlots[1] = p.ReadS16Little();
-                modSlots[2] = p.ReadS16Little();
-                modSlots[3] = p.ReadS16Little();
-                modSlots[4] = p.ReadS16Little();
+                uint16_t modSlots[5];
+                modSlots[0] = p.ReadU16Little();
+                modSlots[1] = p.ReadU16Little();
+                modSlots[2] = p.ReadU16Little();
+                modSlots[3] = p.ReadU16Little();
+                modSlots[4] = p.ReadU16Little();
 
                 int8_t mainCategory = p.ReadS8();
                 int32_t unknown6 = p.ReadS32Little();
@@ -309,11 +309,11 @@ bool Parsers::SearchEntryRegister::Parse(libcomp::ManagerPacket *pPacketManager,
                 entry->SetData(SEARCH_IDX_PRICE, price);
                 entry->SetData(SEARCH_IDX_LOCATION, location);
                 entry->SetData(SEARCH_IDX_DURABILITY, durability);
-                entry->SetData(SEARCH_BASE_MOD_SLOT, modSlots[0]);
-                entry->SetData(SEARCH_BASE_MOD_SLOT + 1, modSlots[1]);
-                entry->SetData(SEARCH_BASE_MOD_SLOT + 2, modSlots[2]);
-                entry->SetData(SEARCH_BASE_MOD_SLOT + 3, modSlots[3]);
-                entry->SetData(SEARCH_BASE_MOD_SLOT + 4, modSlots[4]);
+                entry->SetData(SEARCH_BASE_MOD_SLOT, (int32_t)modSlots[0]);
+                entry->SetData(SEARCH_BASE_MOD_SLOT + 1, (int32_t)modSlots[1]);
+                entry->SetData(SEARCH_BASE_MOD_SLOT + 2, (int32_t)modSlots[2]);
+                entry->SetData(SEARCH_BASE_MOD_SLOT + 3, (int32_t)modSlots[3]);
+                entry->SetData(SEARCH_BASE_MOD_SLOT + 4, (int32_t)modSlots[4]);
                 entry->SetTextData(SEARCH_IDX_COMMENT, comment);
 
                 success = true;

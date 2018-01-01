@@ -45,6 +45,11 @@
 #include <MiHNPCBasicData.h>
 #include <MiHNPCData.h>
 #include <MiItemData.h>
+#include <MiModificationData.h>
+#include <MiModificationExtEffectData.h>
+#include <MiModificationExtRecipeData.h>
+#include <MiModificationTriggerData.h>
+#include <MiModifiedEffectData.h>
 #include <MiNPCBasicData.h>
 #include <MiONPCData.h>
 #include <MiQuestData.h>
@@ -73,7 +78,7 @@ DefinitionManager::~DefinitionManager()
 
 const std::shared_ptr<objects::MiDevilData> DefinitionManager::GetDevilData(uint32_t id)
 {
-    return GetRecordByID<objects::MiDevilData>(id, mDevilData);
+    return GetRecordByID(id, mDevilData);
 }
 
 const std::shared_ptr<objects::MiDevilData> DefinitionManager::GetDevilData(const libcomp::String& name)
@@ -89,17 +94,17 @@ const std::shared_ptr<objects::MiDevilData> DefinitionManager::GetDevilData(cons
 
 const std::shared_ptr<objects::MiDevilLVUpRateData> DefinitionManager::GetDevilLVUpRateData(uint32_t id)
 {
-    return GetRecordByID<objects::MiDevilLVUpRateData>(id, mDevilLVUpRateData);
+    return GetRecordByID(id, mDevilLVUpRateData);
 }
 
 const std::shared_ptr<objects::MiDynamicMapData> DefinitionManager::GetDynamicMapData(uint32_t id)
 {
-    return GetRecordByID<objects::MiDynamicMapData>(id, mDynamicMapData);
+    return GetRecordByID(id, mDynamicMapData);
 }
 
 const std::shared_ptr<objects::MiEquipmentSetData> DefinitionManager::GetEquipmentSetData(uint32_t id)
 {
-    return GetRecordByID<objects::MiEquipmentSetData>(id, mEquipmentSetData);
+    return GetRecordByID(id, mEquipmentSetData);
 }
 
 std::list<std::shared_ptr<objects::MiEquipmentSetData>> DefinitionManager::GetEquipmentSetDataByItem(
@@ -125,7 +130,7 @@ std::list<std::shared_ptr<objects::MiEquipmentSetData>> DefinitionManager::GetEq
 
 const std::shared_ptr<objects::MiExpertData> DefinitionManager::GetExpertClassData(uint32_t id)
 {
-    return GetRecordByID<objects::MiExpertData>(id, mExpertData);
+    return GetRecordByID(id, mExpertData);
 }
 
 const std::list<std::pair<uint8_t, uint32_t>> DefinitionManager::GetFusionRanges(uint8_t raceID)
@@ -141,12 +146,75 @@ const std::list<std::pair<uint8_t, uint32_t>> DefinitionManager::GetFusionRanges
 
 const std::shared_ptr<objects::MiHNPCData> DefinitionManager::GetHNPCData(uint32_t id)
 {
-    return GetRecordByID<objects::MiHNPCData>(id, mHNPCData);
+    return GetRecordByID(id, mHNPCData);
 }
 
 const std::shared_ptr<objects::MiItemData> DefinitionManager::GetItemData(uint32_t id)
 {
-    return GetRecordByID<objects::MiItemData>(id, mItemData);
+    return GetRecordByID(id, mItemData);
+}
+
+const std::shared_ptr<objects::MiModificationData> DefinitionManager::GetModificationData(uint32_t id)
+{
+    return GetRecordByID(id, mModificationData);
+}
+
+const std::shared_ptr<objects::MiModificationData> DefinitionManager::GetModificationDataByItemID(
+    uint32_t itemID)
+{
+    auto iter = mModificationLookup.find(itemID);
+    if(iter != mModificationLookup.end())
+    {
+        return GetRecordByID(iter->second, mModificationData);
+    }
+
+    return nullptr;
+}
+
+const std::shared_ptr<objects::MiModificationExtEffectData>
+    DefinitionManager::GetModificationExtEffectData(uint8_t groupID, uint8_t slot, uint16_t subID)
+{
+    auto iter1 = mModificationExtEffectData.find(groupID);
+    if(iter1 != mModificationExtEffectData.end())
+    {
+        auto iter2 = iter1->second.find(slot);
+        if(iter2 != iter1->second.end())
+        {
+            return GetRecordByID(subID, iter2->second);
+        }
+    }
+
+    return nullptr;
+}
+
+const std::shared_ptr<objects::MiModificationExtRecipeData>
+    DefinitionManager::GetModificationExtRecipeData(uint32_t id)
+{
+    return GetRecordByID(id, mModificationExtRecipeData);
+}
+
+const std::shared_ptr<objects::MiModificationExtRecipeData>
+    DefinitionManager::GetModificationExtRecipeDataByItemID(uint32_t itemID)
+{
+    auto iter = mModificationExtRecipeLookup.find(itemID);
+    if(iter != mModificationExtRecipeLookup.end())
+    {
+        return GetRecordByID(iter->second, mModificationExtRecipeData);
+    }
+
+    return nullptr;
+}
+
+const std::shared_ptr<objects::MiModificationTriggerData> DefinitionManager::GetModificationTriggerData(
+    uint16_t id)
+{
+    return GetRecordByID(id, mModificationTriggerData);
+}
+
+const std::shared_ptr<objects::MiModifiedEffectData> DefinitionManager::GetModifiedEffectData(
+    uint16_t id)
+{
+    return GetRecordByID(id, mModifiedEffectData);
 }
 
 const std::shared_ptr<objects::MiItemData> DefinitionManager::GetItemData(const libcomp::String& name)
@@ -154,7 +222,7 @@ const std::shared_ptr<objects::MiItemData> DefinitionManager::GetItemData(const 
     auto iter = mCItemNameLookup.find(name);
     if(iter != mCItemNameLookup.end())
     {
-        return GetRecordByID<objects::MiItemData>(iter->second, mItemData);
+        return GetRecordByID(iter->second, mItemData);
     }
 
     return nullptr;
@@ -162,27 +230,27 @@ const std::shared_ptr<objects::MiItemData> DefinitionManager::GetItemData(const 
 
 const std::shared_ptr<objects::MiONPCData> DefinitionManager::GetONPCData(uint32_t id)
 {
-    return GetRecordByID<objects::MiONPCData>(id, mONPCData);
+    return GetRecordByID(id, mONPCData);
 }
 
 const std::shared_ptr<objects::MiQuestData> DefinitionManager::GetQuestData(uint32_t id)
 {
-    return GetRecordByID<objects::MiQuestData>(id, mQuestData);
+    return GetRecordByID(id, mQuestData);
 }
 
 const std::shared_ptr<objects::MiShopProductData> DefinitionManager::GetShopProductData(uint32_t id)
 {
-    return GetRecordByID<objects::MiShopProductData>(id, mShopProductData);
+    return GetRecordByID(id, mShopProductData);
 }
 
 const std::shared_ptr<objects::MiSItemData> DefinitionManager::GetSItemData(uint32_t id)
 {
-    return GetRecordByID<objects::MiSItemData>(id, mSItemData);
+    return GetRecordByID(id, mSItemData);
 }
 
 const std::shared_ptr<objects::MiSkillData> DefinitionManager::GetSkillData(uint32_t id)
 {
-    return GetRecordByID<objects::MiSkillData>(id, mSkillData);
+    return GetRecordByID(id, mSkillData);
 }
 
 const std::unordered_map<uint32_t,
@@ -207,7 +275,7 @@ const std::unordered_map<uint32_t,
 
 const std::shared_ptr<objects::MiStatusData> DefinitionManager::GetStatusData(uint32_t id)
 {
-    return GetRecordByID<objects::MiStatusData>(id, mStatusData);
+    return GetRecordByID(id, mStatusData);
 }
 
 
@@ -229,18 +297,17 @@ const std::list<std::shared_ptr<objects::MiTriUnionSpecialData>>
 
 const std::shared_ptr<objects::MiZoneData> DefinitionManager::GetZoneData(uint32_t id)
 {
-    return GetRecordByID<objects::MiZoneData>(id, mZoneData);
+    return GetRecordByID(id, mZoneData);
 }
 
 const std::shared_ptr<objects::MiCZoneRelationData> DefinitionManager::GetZoneRelationData(uint32_t id)
 {
-    return GetRecordByID<objects::MiCZoneRelationData>(id, mZoneRelationData);
+    return GetRecordByID(id, mZoneRelationData);
 }
 
 const std::shared_ptr<objects::Tokusei> DefinitionManager::GetTokuseiData(int32_t id)
 {
-    auto iter = mTokuseiData.find(id);
-    return (iter != mTokuseiData.end()) ? iter->second : nullptr;
+    return GetRecordByID(id, mTokuseiData);
 }
 
 const std::unordered_map<int32_t,
@@ -266,6 +333,11 @@ bool DefinitionManager::LoadAllData(gsl::not_null<DataStore*> pDataStore)
     success &= LoadExpertClassData(pDataStore);
     success &= LoadHNPCData(pDataStore);
     success &= LoadItemData(pDataStore);
+    success &= LoadModificationData(pDataStore);
+    success &= LoadModificationExtEffectData(pDataStore);
+    success &= LoadModificationExtRecipeData(pDataStore);
+    success &= LoadModificationTriggerData(pDataStore);
+    success &= LoadModifiedEffectData(pDataStore);
     success &= LoadONPCData(pDataStore);
     success &= LoadQuestData(pDataStore);
     success &= LoadShopProductData(pDataStore);
@@ -490,6 +562,80 @@ bool DefinitionManager::LoadItemData(gsl::not_null<DataStore*> pDataStore)
     for(auto record : records)
     {
         mItemData[record->GetCommon()->GetID()] = record;
+    }
+    
+    return success;
+}
+
+bool DefinitionManager::LoadModificationData(gsl::not_null<DataStore*> pDataStore)
+{
+    std::list<std::shared_ptr<objects::MiModificationData>> records;
+    bool success = LoadBinaryData<objects::MiModificationData>(pDataStore,
+        "Shield/ModificationData.sbin", true, 0, records);
+    for(auto record : records)
+    {
+        uint32_t id = record->GetID();
+        mModificationData[id] = record;
+        mModificationLookup[record->GetItemID()] = id;
+    }
+    
+    return success;
+}
+
+bool DefinitionManager::LoadModificationExtEffectData(gsl::not_null<DataStore*> pDataStore)
+{
+    std::list<std::shared_ptr<objects::MiModificationExtEffectData>> records;
+    bool success = LoadBinaryData<objects::MiModificationExtEffectData>(pDataStore,
+        "Shield/ModificationExtEffectData.sbin", true, 0, records);
+    for(auto record : records)
+    {
+        mModificationExtEffectData[record->GetGroupID()]
+            [record->GetSlot()][record->GetSubID()] = record;
+    }
+    
+    return success;
+}
+
+bool DefinitionManager::LoadModificationExtRecipeData(gsl::not_null<DataStore*> pDataStore)
+{
+    std::list<std::shared_ptr<objects::MiModificationExtRecipeData>> records;
+    bool success = LoadBinaryData<objects::MiModificationExtRecipeData>(pDataStore,
+        "Shield/ModificationExtRecipeData.sbin", true, 0, records);
+    for(auto record : records)
+    {
+        uint32_t itemID = record->GetItemID();
+        if(itemID == static_cast<uint32_t>(-1)) continue;
+
+        uint32_t id = record->GetID();
+        mModificationExtRecipeData[id] = record;
+        mModificationExtRecipeLookup[itemID] = id;
+    }
+    
+    return success;
+}
+
+bool DefinitionManager::LoadModificationTriggerData(gsl::not_null<
+    DataStore*> pDataStore)
+{
+    std::list<std::shared_ptr<objects::MiModificationTriggerData>> records;
+    bool success = LoadBinaryData<objects::MiModificationTriggerData>(pDataStore,
+        "Shield/ModificationTriggerData.sbin", true, 0, records);
+    for(auto record : records)
+    {
+        mModificationTriggerData[record->GetID()] = record;
+    }
+    
+    return success;
+}
+
+bool DefinitionManager::LoadModifiedEffectData(gsl::not_null<DataStore*> pDataStore)
+{
+    std::list<std::shared_ptr<objects::MiModifiedEffectData>> records;
+    bool success = LoadBinaryData<objects::MiModifiedEffectData>(pDataStore,
+        "Shield/ModifiedEffectData.sbin", true, 0, records);
+    for(auto record : records)
+    {
+        mModifiedEffectData[record->GetID()] = record;
     }
     
     return success;

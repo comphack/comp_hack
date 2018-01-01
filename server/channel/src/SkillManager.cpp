@@ -193,6 +193,7 @@ SkillManager::SkillManager(const std::weak_ptr<ChannelServer>& server)
 {
     mSkillFunctions[SVR_CONST.SKILL_CLAN_FORM] = &SkillManager::SpecialSkill;
     mSkillFunctions[SVR_CONST.SKILL_EQUIP_ITEM] = &SkillManager::EquipItem;
+    mSkillFunctions[SVR_CONST.SKILL_EQUIP_MOD_EDIT] = &SkillManager::SpecialSkill;
     mSkillFunctions[SVR_CONST.SKILL_FAM_UP] = &SkillManager::FamiliarityUp;
     mSkillFunctions[SVR_CONST.SKILL_ITEM_FAM_UP] = &SkillManager::FamiliarityUpItem;
     mSkillFunctions[SVR_CONST.SKILL_MOOCH] = &SkillManager::Mooch;
@@ -2283,7 +2284,8 @@ bool SkillManager::EvaluateTokuseiSkillCondition(const std::shared_ptr<ActiveEnt
     case objects::TokuseiSkillCondition::SkillConditionType_t::ENEMY_LNC:
         // Enemy's LNC matches the specified type (can be any target type)
         return otherState &&
-            ((otherState->GetLNCType() & condition->GetValue()) != 0) == !negate;
+            ((otherState->GetLNCType(mServer.lock()
+                ->GetDefinitionManager()) & condition->GetValue()) != 0) == !negate;
     default:
         break;
     }

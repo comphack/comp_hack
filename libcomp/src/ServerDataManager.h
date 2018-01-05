@@ -156,9 +156,9 @@ private:
     /**
      * Load all objects from files in a datastore path
      * @param pDataStore Pointer to the datastore to use
+     * @param datastorePath Path within the data store to load files from
      * @param definitionManager Pointer to the definition manager which
      *  will be loaded with any server side definitions
-     * @param datastorePath Path within the data store to load files from
      * @return true on success, false on failure
      */
     template <class T>
@@ -175,36 +175,55 @@ private:
 
         for(auto path : files)
         {
-            if(path.Matches("^.*\\.xml$"))
+            if(path.Matches("^.*\\.xml$") && !LoadObjectsFromFile<T>(
+                pDataStore, path, definitionManager))
             {
-                tinyxml2::XMLDocument objsDoc;
-
-                std::vector<char> data = pDataStore->ReadFile(path);
-
-                if(data.empty() || tinyxml2::XML_SUCCESS !=
-                    objsDoc.Parse(&data[0], data.size()))
-                {
-                    return false;
-                }
-                
-                const tinyxml2::XMLElement *rootNode = objsDoc.RootElement();
-                const tinyxml2::XMLElement *objNode = rootNode->FirstChildElement("object");
-
-                while(nullptr != objNode)
-                {
-                    if(!LoadObject<T>(objsDoc, objNode, definitionManager))
-                    {
-                        LOG_ERROR(libcomp::String("Failed to load XML file: %1\n").Arg(path));
-                        return false;
-                    }
-
-                    objNode = objNode->NextSiblingElement("object");
-                }
-
-                LOG_DEBUG(libcomp::String("Loaded XML file: %1\n").Arg(path));
+                return false;
             }
         }
 
+        return true;
+    }
+
+    /**
+     * Load all objects from a specific file in a datastore path
+     * @param pDataStore Pointer to the datastore to use
+     * @param filePath File path within the data store to load from
+     * @param definitionManager Pointer to the definition manager which
+     *  will be loaded with any server side definitions
+     * @return true on success, false on failure
+     */
+    template <class T>
+    bool LoadObjectsFromFile(gsl::not_null<DataStore*> pDataStore,
+        const libcomp::String& filePath,
+        DefinitionManager* definitionManager = nullptr)
+    {
+        tinyxml2::XMLDocument objsDoc;
+
+        std::vector<char> data = pDataStore->ReadFile(filePath);
+
+        if(data.empty() || tinyxml2::XML_SUCCESS !=
+            objsDoc.Parse(&data[0], data.size()))
+        {
+            return false;
+        }
+
+        const tinyxml2::XMLElement *rootNode = objsDoc.RootElement();
+        const tinyxml2::XMLElement *objNode = rootNode->FirstChildElement("object");
+
+        while(nullptr != objNode)
+        {
+            if(!LoadObject<T>(objsDoc, objNode, definitionManager))
+            {
+                LOG_ERROR(libcomp::String("Failed to load XML file: %1\n")
+                    .Arg(filePath));
+                return false;
+            }
+
+            objNode = objNode->NextSiblingElement("object");
+        }
+
+        LOG_DEBUG(libcomp::String("Loaded XML file: %1\n").Arg(filePath));
 
         return true;
     }

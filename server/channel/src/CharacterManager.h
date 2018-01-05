@@ -406,17 +406,14 @@ public:
         const std::shared_ptr<objects::Item>& item);
 
     /**
-     * End the current trade session for the client with various outcome
-     * types. The trade logic is handled elsewhere and the other
-     * participant in the trade must be notified via this function as well.
-     * @param client Client to notify of the end of a trade
-     * @param outcome Defaults to cancelled
-     *  0 = trade success
-     *  2 = player can't hold more items
-     *  3 = other player can't hold more items
-     *  anything else = trade cancelled
+     * End the current exchange session for the client with various outcome
+     * types. All exchange logic is handled elsewhere and the other
+     * participants must be notified via this function as well.
+     * @param client Client to notify of the end of an exchange
+     * @param outcome Defaults to being ended by player, options are
+     *  contextual to the exchange type
      */
-    void EndTrade(const std::shared_ptr<
+    void EndExchange(const std::shared_ptr<
         channel::ChannelClientConnection>& client, int32_t outcome = 1);
 
     /**
@@ -519,6 +516,16 @@ public:
         float multiplier = -1.0f);
 
     /**
+     * Determine the character's current expertise rank for the
+     * specified ID. This includes chain expertise calculations.
+     * @param cState Pointer to the CharacterState
+     * @param expertiseID ID of the expertise to calculate
+     * @return Rank of the supplied expertise ID
+     */
+    uint8_t GetExpertiseRank(const std::shared_ptr<CharacterState>& cState,
+        uint32_t expertiseID);
+
+    /**
      * Send the character's current expertise extension amount.
      * @param client Pointer to the client connection containing
      *  the character
@@ -537,6 +544,25 @@ public:
     bool LearnSkill(const std::shared_ptr<
         channel::ChannelClientConnection>& client, int32_t entityID,
         uint32_t skillID);
+
+    /**
+     * Determine various elements of the outcome of a synth exchange
+     * but do not perform the synth itself. Supports demon crystallization
+     * as well as tarot and soul enchantment.
+     * @param synthState Pointer to the synth character's ClientState
+     * @param exchangeSession Pointer to the synth exchange session
+     * @param outcomeItemType Output parameter for the new item that will result
+     *  from the synth, -1 for none
+     * @param successRates Output parameter containing any success rates
+     *  associated with the operation
+     * @param effectID Output parameter only used by enchantment to contain
+     *  the effect that will be applied
+     * @return true if the calculation succeeded, false if an error occured
+     */
+    bool GetSynthOutcome(ClientState* synthState,
+        const std::shared_ptr<objects::PlayerExchangeSession>& exchangeSession,
+        uint32_t& outcomeItemType, std::list<int32_t>& successRates,
+        int16_t* effectID = 0);
 
     /**
      * Convert the supplied ID to its corresponding flag array index
@@ -704,6 +730,16 @@ public:
     void GetDemonPacketData(libcomp::Packet& p, 
         const std::shared_ptr<channel::ChannelClientConnection>& client,
         const std::shared_ptr<objects::DemonBox>& box, int8_t slot);
+
+    /**
+     * Add data to a packet containing varying degrees of item details.
+     * @param p Packet to populate with item data
+     * @param item Pointer to the item
+     * @param detailLevel Detail level to add to the packet ranging from
+     *  0 (least) to 2 (most). Defaults to 2.
+     */
+    void GetItemDetailPacketData(libcomp::Packet& p, const std::shared_ptr<
+        objects::Item>& item, uint8_t detailLevel = 2);
 
     /**
      * Add the core stat data from the supplied EntityStats instance

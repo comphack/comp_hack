@@ -273,33 +273,36 @@ bool ServerConstants::Initialize(const String& filePath)
     complexIter = complexConstants.find("EQUIP_MOD_EDIT_ITEMS");
     if(success && complexIter != complexConstants.end())
     {
-        std::list<String> strList;
-        if(!LoadStringList(complexIter->second, strList))
+        std::unordered_map<std::string, std::string> map;
+        success = LoadKeyValueStrings(complexIter->second, map);
+        for(auto pair : map)
         {
-            LOG_ERROR("Failed to load EQUIP_MOD_EDIT_ITEMS\n");
-            success = false;
-        }
-        else
-        {
-            if(strList.size() != 11)
+            uint32_t key;
+            if(!LoadInteger(pair.first, key))
             {
-                LOG_ERROR("EQUIP_MOD_EDIT_ITEMS must specify items for each"
-                    " of the 11 types\n");
+                LOG_ERROR("Failed to load EQUIP_MOD_EDIT_ITEMS key\n");
+                success = false;
+            }
+            else if(sConstants.EQUIP_MOD_EDIT_ITEMS.find(key) !=
+                sConstants.EQUIP_MOD_EDIT_ITEMS.end())
+            {
+                LOG_ERROR("Duplicate EQUIP_MOD_EDIT_ITEMS key encountered\n");
                 success = false;
             }
             else
             {
-                size_t idx = 0;
-                for(auto elemStr : strList)
+                if(!pair.second.empty())
                 {
-                    if(!elemStr.IsEmpty())
+                    auto params = libcomp::String(pair.second).Split(",");
+                    if(params.size() == 3)
                     {
-                        for(auto elem : elemStr.Split(","))
+                        size_t idx = 0;
+                        for(auto param : params)
                         {
-                            uint32_t entry = 0;
-                            if(LoadInteger(elem.C(), entry))
+                            int32_t p = 0;
+                            if(LoadInteger(param.C(), p))
                             {
-                                sConstants.EQUIP_MOD_EDIT_ITEMS[idx].push_back(entry);
+                                sConstants.EQUIP_MOD_EDIT_ITEMS[key][idx] = p;
                             }
                             else
                             {
@@ -308,11 +311,22 @@ bool ServerConstants::Initialize(const String& filePath)
                                 success = false;
                                 break;
                             }
+
+                            idx++;
                         }
                     }
-
-                    idx++;
+                    else
+                    {
+                        LOG_ERROR("EQUIP_MOD_EDIT_ITEMS entry with param"
+                            " count other than 3\n");
+                        success = false;
+                    }
                 }
+            }
+
+            if(!success)
+            {
+                break;
             }
         }
     }
@@ -379,6 +393,117 @@ bool ServerConstants::Initialize(const String& filePath)
     else
     {
         LOG_ERROR("SLOT_MOD_ITEMS not found\n");
+        success = false;
+    }
+
+    complexIter = complexConstants.find("SYNTH_ADJUSTMENTS");
+    if(success && complexIter != complexConstants.end())
+    {
+        std::unordered_map<std::string, std::string> map;
+        success = LoadKeyValueStrings(complexIter->second, map);
+        for(auto pair : map)
+        {
+            uint32_t key;
+            if(!LoadInteger(pair.first, key))
+            {
+                LOG_ERROR("Failed to load SYNTH_ADJUSTMENTS key\n");
+                success = false;
+            }
+            else if(sConstants.SYNTH_ADJUSTMENTS.find(key) !=
+                sConstants.SYNTH_ADJUSTMENTS.end())
+            {
+                LOG_ERROR("Duplicate SYNTH_ADJUSTMENTS key encountered\n");
+                success = false;
+            }
+            else
+            {
+                if(!pair.second.empty())
+                {
+                    auto params = libcomp::String(pair.second).Split(",");
+                    if(params.size() == 3)
+                    {
+                        size_t idx = 0;
+                        for(auto param : params)
+                        {
+                            int32_t p = 0;
+                            if(LoadInteger(param.C(), p))
+                            {
+                                sConstants.SYNTH_ADJUSTMENTS[key][idx] = p;
+                            }
+                            else
+                            {
+                                LOG_ERROR("Failed to load an element in"
+                                    " SYNTH_ADJUSTMENTS\n");
+                                success = false;
+                                break;
+                            }
+
+                            idx++;
+                        }
+                    }
+                    else
+                    {
+                        LOG_ERROR("SYNTH_ADJUSTMENTS entry with param"
+                            " count other than 3\n");
+                        success = false;
+                    }
+                }
+            }
+
+            if(!success)
+            {
+                break;
+            }
+        }
+    }
+    else
+    {
+        LOG_ERROR("SYNTH_ADJUSTMENTS not found\n");
+        success = false;
+    }
+    
+    complexIter = complexConstants.find("SYNTH_SKILLS");
+    if(success && complexIter != complexConstants.end())
+    {
+        std::list<String> strList;
+        if(!LoadStringList(complexIter->second, strList))
+        {
+            LOG_ERROR("Failed to load SYNTH_SKILLS\n");
+            success = false;
+        }
+        else
+        {
+            if(strList.size() != 3)
+            {
+                LOG_ERROR("SYNTH_SKILLS must specify all three skill IDs\n");
+                success = false;
+            }
+            else
+            {
+                size_t idx = 0;
+                for(auto elem : strList)
+                {
+                    uint32_t skillID = 0;
+                    if(LoadInteger(elem.C(), skillID))
+                    {
+                        sConstants.SYNTH_SKILLS[idx] = skillID;
+                    }
+                    else
+                    {
+                        LOG_ERROR("Failed to load a skill ID in"
+                            " SLOT_MOD_ITEMS\n");
+                        success = false;
+                        break;
+                    }
+
+                    idx++;
+                }
+            }
+        }
+    }
+    else
+    {
+        LOG_ERROR("SYNTH_SKILLS not found\n");
         success = false;
     }
 

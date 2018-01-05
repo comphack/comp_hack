@@ -42,11 +42,14 @@
 
 namespace objects
 {
+class EnchantSetData;
+class EnchantSpecialData;
 class MiCItemData;
 class MiCZoneRelationData;
 class MiDevilData;
 class MiDevilLVUpRateData;
 class MiDynamicMapData;
+class MiEnchantData;
 class MiEquipmentSetData;
 class MiExpertData;
 class MiHNPCData;
@@ -118,6 +121,39 @@ public:
      *  does not exist
      */
     const std::shared_ptr<objects::MiDynamicMapData> GetDynamicMapData(uint32_t id);
+
+    /**
+     * Get the enchantment definition corresponding to an ID
+     * @param id Enchantment ID to retrieve
+     * @return Pointer to the matching enchantment definition, null
+     *  if it does not exist
+     */
+    const std::shared_ptr<objects::MiEnchantData> GetEnchantData(int16_t id);
+
+    /**
+     * Get a map of all enchantment definitions by ID
+     * @return Map of all enchantment definitions by ID
+     */
+    std::unordered_map<int16_t,
+        std::shared_ptr<objects::MiEnchantData>> GetAllEnchantData();
+
+    /**
+     * Get the enchantment definition corresponding to a demon ID
+     * @param demonID Demon ID to retrieve a definition from
+     * @return Pointer to the matching enchantment definition, null
+     *  if it does not exist
+     */
+    const std::shared_ptr<objects::MiEnchantData> GetEnchantDataByDemonID(
+        uint32_t demonID);
+
+    /**
+     * Get the enchantment definition corresponding to an item ID
+     * @param itemID Item ID to retrieve a definition from
+     * @return Pointer to the matching enchantment definition, null
+     *  if it does not exist
+     */
+    const std::shared_ptr<objects::MiEnchantData> GetEnchantDataByItemID(
+        uint32_t itemID);
 
     /**
      * Get the equipment set information corresponding to an ID
@@ -313,6 +349,43 @@ public:
     const std::shared_ptr<objects::MiCZoneRelationData> GetZoneRelationData(uint32_t id);
 
     /**
+     * Get an enchant set by definition ID
+     * @param id Definition ID of an enchant set to load
+     * @return Pointer to the enchant set matching the specified id
+     */
+    const std::shared_ptr<objects::EnchantSetData> GetEnchantSetData(uint32_t id);
+
+    /**
+     * Get the enchant set information corresponding to an effect
+     * @param effectID Effect ID to retrieve sets for
+     * @return List of pointers to the matching enchant set information
+     */
+    std::list<std::shared_ptr<objects::EnchantSetData>> GetEnchantSetDataByEffect(
+        int16_t effectID);
+
+    /**
+     * Get all enchant set definitions by ID
+     * @return Map of all enchant set definitions by ID
+     */
+    const std::unordered_map<uint32_t,
+        std::shared_ptr<objects::EnchantSetData>> GetAllEnchantSetData();
+
+    /**
+     * Get a special enchant by definition ID
+     * @param id Definition ID of a special enchant to load
+     * @return Pointer to the special enchant matching the specified id
+     */
+    const std::shared_ptr<objects::EnchantSpecialData> GetEnchantSpecialData(uint32_t id);
+
+    /**
+     * Get the special enchant information corresponding to an input item type
+     * @param itemID Input item ID to retrieve special enchants for
+     * @return List of pointers to the matching special enchant information
+     */
+    std::list<std::shared_ptr<objects::EnchantSpecialData>> GetEnchantSpecialDataByInputItem(
+        uint32_t itemID);
+
+    /**
      * Get a tokusei by definition ID
      * @param id Definition ID of a tokusei to load
      * @return Pointer to the tokusei matching the specified id
@@ -373,6 +446,13 @@ public:
      * @return true on success, false on failure
      */
     bool LoadDynamicMapData(gsl::not_null<DataStore*> pDataStore);
+
+    /**
+     * Load the enchantment binary data definitions
+     * @param pDataStore Pointer to the datastore to load binary file from
+     * @return true on success, false on failure
+     */
+    bool LoadEnchantData(gsl::not_null<DataStore*> pDataStore);
 
     /**
      * Load the equipment set binary data definitions
@@ -664,6 +744,16 @@ private:
     std::unordered_map<uint32_t,
         std::shared_ptr<objects::MiDynamicMapData>> mDynamicMapData;
 
+    /// Map of enchantment definitions by ID
+    std::unordered_map<int16_t,
+        std::shared_ptr<objects::MiEnchantData>> mEnchantData;
+
+    /// Map of enchantment IDs by demon ID
+    std::unordered_map<uint32_t, int16_t> mEnchantDemonLookup;
+
+    /// Map of enchantment IDs by item ID
+    std::unordered_map<uint32_t, int16_t> mEnchantItemLookup;
+
     /// Map of equipment set information by ID
     std::unordered_map<uint32_t,
         std::shared_ptr<objects::MiEquipmentSetData>> mEquipmentSetData;
@@ -759,6 +849,20 @@ private:
     /// Map of zone relational information by ID
     std::unordered_map<uint32_t,
         std::shared_ptr<objects::MiCZoneRelationData>> mZoneRelationData;
+
+    /// Map of enchant set definitions by ID
+    std::unordered_map<uint32_t,
+        std::shared_ptr<objects::EnchantSetData>> mEnchantSetData;
+
+    /// Map of enchant set definition IDs by effect ID
+    std::unordered_map<int16_t, std::list<uint32_t>> mEnchantSetLookup;
+
+    /// Map of enchant special definitions by ID
+    std::unordered_map<uint32_t,
+        std::shared_ptr<objects::EnchantSpecialData>> mEnchantSpecialData;
+
+    /// Map of enchant special definition IDs by input item ID
+    std::unordered_map<uint32_t, std::list<uint32_t>> mEnchantSpecialLookup;
 
     /// Map of tokusei definitions by ID
     std::unordered_map<int32_t,

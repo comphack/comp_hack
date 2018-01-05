@@ -1790,7 +1790,10 @@ uint8_t ActiveEntityStateImp<objects::Character>::RecalculateStats(
 
     UpdateNRAChances(stats, calcState, nraTbls);
     AdjustStats(correctTbls, stats, calcState, true);
+    BaseStatsCalculated(definitionManager, calcState, stats, correctTbls);
+
     CharacterManager::CalculateDependentStats(stats, cs->GetLevel(), false);
+
     AdjustStats(correctTbls, stats, calcState, false);
 
     if(selfState)
@@ -2077,6 +2080,19 @@ void ActiveEntityState::AdjustStats(
     CharacterManager::AdjustStatBounds(stats);
 }
 
+void ActiveEntityState::BaseStatsCalculated(libcomp::DefinitionManager* definitionManager,
+    std::shared_ptr<objects::CalculatedEntityState> calcState,
+    libcomp::EnumMap<CorrectTbl, int16_t>& stats,
+    std::list<std::shared_ptr<objects::MiCorrectTbl>>& adjustments)
+{
+    (void)definitionManager;
+    (void)stats;
+    (void)adjustments;
+
+    calcState->SetEffectiveTokuseiFinal(calcState->GetEffectiveTokusei());
+    calcState->SetPendingSkillTokuseiFinal(calcState->GetPendingSkillTokusei());
+}
+
 void ActiveEntityState::UpdateNRAChances(libcomp::EnumMap<CorrectTbl, int16_t>& stats,
     std::shared_ptr<objects::CalculatedEntityState> calcState,
     const std::list<std::shared_ptr<objects::MiCorrectTbl>>& adjustments)
@@ -2217,9 +2233,9 @@ void ActiveEntityState::GetAdditionalCorrectTbls(
     adjustments.sort([](const std::shared_ptr<objects::MiCorrectTbl>& a,
         const std::shared_ptr<objects::MiCorrectTbl>& b)
     {
-        return a->GetType() == 1 &&
+        return (a->GetType() == 1 || a->GetType() == 101) &&
             (a->GetValue() == 0 ||
-            b->GetType() != 1);
+            (b->GetType() != 1 && b->GetType() != 101));
     });
 }
 
@@ -2260,7 +2276,10 @@ uint8_t ActiveEntityState::RecalculateDemonStats(
 
     UpdateNRAChances(stats, calcState);
     AdjustStats(correctTbls, stats, calcState, true);
+    BaseStatsCalculated(definitionManager, calcState, stats, correctTbls);
+
     CharacterManager::CalculateDependentStats(stats, cs->GetLevel(), true);
+
     AdjustStats(correctTbls, stats, calcState, false);
 
     int32_t extraHP = 0;

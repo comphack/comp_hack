@@ -194,6 +194,9 @@ void HandleShopSale(const std::shared_ptr<ChannelServer> server,
     // Delete the full stacks of items sold
     for(auto item : deleteItems)
     {
+        // Unequip if equipped
+        characterManager->UnequipItem(client, item);
+
         auto slot = item->GetBoxSlot();
         inventory->SetItems((size_t)slot, NULLUUID);
         changes->Delete(item);

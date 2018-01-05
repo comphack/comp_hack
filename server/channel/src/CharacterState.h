@@ -28,12 +28,19 @@
 #define SERVER_CHANNEL_SRC_CHARACTERSTATE_H
 
 // objects Includes
-#include <ActiveEntityState.h>
 #include <Character.h>
+
+// channel Includes
+#include <ActiveEntityState.h>
 
 namespace libcomp
 {
 class DefinitionManager;
+}
+
+namespace objects
+{
+class MiSpecialConditionData;
 }
 
 namespace channel
@@ -56,22 +63,49 @@ public:
     virtual ~CharacterState() { }
 
     /**
-     * Get the equipment set IDs of the character's current equipment
-     * @return Equipment set IDs of the character's current equipment
+     * Get the tokusei effects IDs from the character's current equipment
+     * @return Tokusei effect IDs from the character's current equipment
      */
-    std::set<uint32_t> GetEquippedSets() const;
+    std::list<int32_t> GetEquipmentTokuseiIDs() const;
 
     /**
-     * Determine and set the equipment set IDs of the character's
+     * Get the conditional tokusei effect definitions from the character's
      * current equipment
-     * @param definitionManager Pointer to the definition manager to use
-     *  when determining which equipment sets are equipped
+     * @return Conditional tokusei effect definitions from the character's
+     *  current equipment
      */
-    void SetEquippedSets(libcomp::DefinitionManager* definitionManager);
+    std::list<std::shared_ptr<
+        objects::MiSpecialConditionData>> GetConditionalTokusei() const;
+
+    /**
+     * Determine the tokusei effects gained for the character based upon
+     * their current equipment
+     * @param definitionManager Pointer to the definition manager to use
+     *  for determining equipment effects
+     */
+    void RecalcEquipState(libcomp::DefinitionManager* definitionManager);
+
+protected:
+    virtual void BaseStatsCalculated(libcomp::DefinitionManager* definitionManager,
+        std::shared_ptr<objects::CalculatedEntityState> calcState,
+        libcomp::EnumMap<CorrectTbl, int16_t>& stats,
+        std::list<std::shared_ptr<objects::MiCorrectTbl>>& adjustments);
 
 private:
-    /// Equipment set IDs of the character's current equipment
-    std::set<uint32_t> mEquippedSets;
+    /// Tokusei effect IDs available due to the character's current
+    /// equipment. Sources contain mod slots, equipment sets and
+    /// enchantments. Can contain duplicates.
+    std::list<int32_t> mEquipmentTokuseiIDs;
+
+    /// List of tokusei conditions that apply based upon the state
+    /// of the character other than base stats
+    std::list<std::shared_ptr<
+        objects::MiSpecialConditionData>> mConditionalTokusei;
+
+    /// List of tokusei conditions that apply based upon the state
+    /// of the character's base stats
+    std::list<std::shared_ptr<
+        objects::MiSpecialConditionData>> mStatConditionalTokusei;
 };
 
 } // namespace channel

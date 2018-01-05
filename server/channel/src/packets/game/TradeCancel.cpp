@@ -32,9 +32,7 @@
 #include <PacketCodes.h>
 
 // object Includes
-#include <Account.h>
-#include <Character.h>
-#include <TradeSession.h>
+#include <PlayerExchangeSession.h>
 
 // channel Includes
 #include "ChannelServer.h"
@@ -57,18 +55,17 @@ bool Parsers::TradeCancel::Parse(libcomp::ManagerPacket *pPacketManager,
     auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
+    auto exchangeSession = state->GetExchangeSession();
 
-    auto otherCState = std::dynamic_pointer_cast<CharacterState>(
-        state->GetTradeSession()->GetOtherCharacterState());
-    auto otherChar = otherCState != nullptr ? otherCState->GetEntity() : nullptr;
-    auto otherClient = otherChar != nullptr ?
-        server->GetManagerConnection()->GetClientConnection(
-            otherChar->GetAccount()->GetUsername()) : nullptr;
+    characterManager->EndExchange(client, 1);
 
-    characterManager->EndTrade(client, 1);
+    auto otherCState = exchangeSession ? std::dynamic_pointer_cast<CharacterState>(
+        exchangeSession->GetOtherCharacterState()) : nullptr;
+    auto otherClient = otherCState ? server->GetManagerConnection()->GetEntityClient(
+        otherCState->GetEntityID(), false) : nullptr;
     if(otherClient)
     {
-        characterManager->EndTrade(otherClient, 1);
+        characterManager->EndExchange(otherClient, 1);
     }
 
     return true;

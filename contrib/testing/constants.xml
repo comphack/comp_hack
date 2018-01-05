@@ -76,6 +76,7 @@
         <element>11916</element>
     </constant>
     <constant name="CLAN_FORM_MAP">
+        <!-- Format: item => clan base -->
         <pair>
             <key>1001</key>
             <value>20101</value>
@@ -98,6 +99,7 @@
         </pair>
     </constant>
     <constant name="CLAN_LEVEL_SKILLS">
+        <!-- Format: skills gained by clan level -->
         <element>7001</element>
         <element>7002,7003</element>
         <element>7004,7005,7006</element>
@@ -110,6 +112,7 @@
         <element>7022,7023,7024</element>
     </constant>
     <constant name="DEPO_MAP_DEMON">
+        <!-- Format: item => rental days -->
         <pair>
             <key>12761</key>
             <value>1</value>
@@ -164,6 +167,7 @@
         </pair>
     </constant>
     <constant name="DEPO_MAP_ITEM">
+        <!-- Format: item => rental days -->
         <pair>
             <key>12758</key>
             <value>1</value>
@@ -214,20 +218,208 @@
         </pair>
     </constant>
     <constant name="EQUIP_MOD_EDIT_ITEMS">
-        <element>12453,12454,12455,12546,21426,22262</element>
-        <element>12456,12457,12458,12547,21989,22263</element>
-        <element>12459,12460,12461,12548,21990,22264</element>
-        <element>42031,42032,42033</element>
-        <element>12501,12502,12503</element>
-        <element>12504,12505,12506</element>
-        <element>12486,12491,12496</element>
-        <element>12487,12492,12497</element>
-        <element>12488,12493,12498</element>
-        <element>12489,12494,12499</element>
-        <element>12490,12495,12500</element>
+        <!-- Format: item => mode, sub-mode, success rate -->
+        <pair>
+            <key>12453</key>
+            <value>0,0,2000</value>
+        </pair>
+        <pair>
+            <key>12454</key>
+            <value>0,0,3333</value>
+        </pair>
+        <pair>
+            <key>12455</key>
+            <value>0,0,5000</value>
+        </pair>
+        <pair>
+            <key>12546</key>
+            <value>0,0,7000</value>
+        </pair>
+        <pair>
+            <key>21426</key>
+            <value>0,0,5000</value>
+        </pair>
+        <pair>
+            <key>22262</key>
+            <value>0,0,10000</value>
+        </pair>
+        <pair>
+            <key>12486</key>
+            <value>1,0,6000</value>
+        </pair>
+        <pair>
+            <key>12491</key>
+            <value>1,0,6666</value>
+        </pair>
+        <pair>
+            <key>12496</key>
+            <value>1,0,7500</value>
+        </pair>
+        <pair>
+            <key>12487</key>
+            <value>1,1,2000</value>
+        </pair>
+        <pair>
+            <key>12492</key>
+            <value>1,1,2222</value>
+        </pair>
+        <pair>
+            <key>12497</key>
+            <value>1,1,2500</value>
+        </pair>
+        <pair>
+            <key>12488</key>
+            <value>1,2,1000</value>
+        </pair>
+        <pair>
+            <key>12493</key>
+            <value>1,2,1111</value>
+        </pair>
+        <pair>
+            <key>12498</key>
+            <value>1,2,1250</value>
+        </pair>
+        <pair>
+            <key>12489</key>
+            <value>1,3,300</value>
+        </pair>
+        <pair>
+            <key>12494</key>
+            <value>1,3,333</value>
+        </pair>
+        <pair>
+            <key>12499</key>
+            <value>1,3,375</value>
+        </pair>
+        <pair>
+            <key>12490</key>
+            <value>1,4,300</value>
+        </pair>
+        <pair>
+            <key>12495</key>
+            <value>1,4,333</value>
+        </pair>
+        <pair>
+            <key>12500</key>
+            <value>1,4,375</value>
+        </pair>
+        <pair>
+            <key>12456</key>
+            <value>2,1,400</value>
+        </pair>
+        <pair>
+            <key>12457</key>
+            <value>2,1,800</value>
+        </pair>
+        <pair>
+            <key>12458</key>
+            <value>2,1,1200</value>
+        </pair>
+        <pair>
+            <key>12547</key>
+            <value>2,1,1600</value>
+        </pair>
+        <pair>
+            <key>21989</key>
+            <value>2,1,1200</value>
+        </pair>
+        <pair>
+            <key>22263</key>
+            <value>2,1,10000</value>
+        </pair>
+        <pair>
+            <key>12459</key>
+            <value>2,0,200</value>
+        </pair>
+        <pair>
+            <key>12460</key>
+            <value>2,0,400</value>
+        </pair>
+        <pair>
+            <key>12461</key>
+            <value>2,0,600</value>
+        </pair>
+        <pair>
+            <key>12548</key>
+            <value>2,0,1200</value>
+        </pair>
+        <pair>
+            <key>21990</key>
+            <value>2,0,600</value>
+        </pair>
+        <pair>
+            <key>22264</key>
+            <value>2,0,10000</value>
+        </pair>
+        <pair>
+            <key>12501</key>
+            <value>3,1,2400</value>
+        </pair>
+        <pair>
+            <key>12502</key>
+            <value>3,1,2800</value>
+        </pair>
+        <pair>
+            <key>12503</key>
+            <value>3,1,3200</value>
+        </pair>
+        <pair>
+            <key>12504</key>
+            <value>3,0,2200</value>
+        </pair>
+        <pair>
+            <key>12505</key>
+            <value>3,0,2400</value>
+        </pair>
+        <pair>
+            <key>12506</key>
+            <value>3,0,2600</value>
+        </pair>
     </constant>
     <constant name="SLOT_MOD_ITEMS">
+        <!-- Format: mod items (weapon, then armor) -->
         <element>42005,42006,42007,42008,42022,42029,42082</element>
         <element>42031,42032,42033</element>
+    </constant>
+    <constant name="SYNTH_ADJUSTMENTS">
+        <!-- Format: item/skill => function, 2 contextual params -->
+        <pair>
+            <key>395</key>
+            <value>0,10,1</value>
+        </pair>
+        <pair>
+            <key>396</key>
+            <value>0,15,0</value>
+        </pair>
+        <pair>
+            <key>397</key>
+            <value>0,15,1</value>
+        </pair>
+        <pair>
+            <key>398</key>
+            <value>0,5,0</value>
+        </pair>
+        <pair>
+            <key>489</key>
+            <value>0,15,1</value>
+        </pair>
+        <pair>
+            <key>1056</key>
+            <value>0,15,0</value>
+        </pair>
+        <pair>
+            <key>20011</key>
+            <value>1,20,0</value>
+        </pair>
+        <pair>
+            <key>20012</key>
+            <value>1,10,0</value>
+        </pair>
+    </constant>
+    <constant name="SYNTH_SKILLS">
+        <!-- Format: crystallize, tarot, then soul skills -->
+        <element>5721</element>
+        <element>5722</element>
+        <element>5723</element>
     </constant>
 </constants>

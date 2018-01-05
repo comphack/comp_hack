@@ -31,7 +31,7 @@
             <value>EQUIP_TYPE_WEAPON</value>
             <value>EQUIP_TYPE_BULLETS</value>
         </member>
-        <member type="u32" name="unk4"/>
+        <member type="u32" name="flags"/>
     </object>
     <object name="MiPossessionData" persistent="false" scriptenabled="true">
         <member type="u8" name="possess1"/>

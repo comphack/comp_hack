@@ -30,13 +30,17 @@
 #include "Log.h"
 
 // object Includes
+#include <EnchantSetData.h>
+#include <EnchantSpecialData.h>
 #include <MiCItemBaseData.h>
 #include <MiCItemData.h>
 #include <MiCZoneRelationData.h>
 #include <MiDCategoryData.h>
+#include <MiDevilCrystalData.h>
 #include <MiDevilData.h>
 #include <MiDevilLVUpRateData.h>
 #include <MiDynamicMapData.h>
+#include <MiEnchantData.h>
 #include <MiEquipmentSetData.h>
 #include <MiExpertClassData.h>
 #include <MiExpertData.h>
@@ -100,6 +104,39 @@ const std::shared_ptr<objects::MiDevilLVUpRateData> DefinitionManager::GetDevilL
 const std::shared_ptr<objects::MiDynamicMapData> DefinitionManager::GetDynamicMapData(uint32_t id)
 {
     return GetRecordByID(id, mDynamicMapData);
+}
+
+const std::shared_ptr<objects::MiEnchantData> DefinitionManager::GetEnchantData(int16_t id)
+{
+    return GetRecordByID(id, mEnchantData);
+}
+
+std::unordered_map<int16_t,
+    std::shared_ptr<objects::MiEnchantData>> DefinitionManager::GetAllEnchantData()
+{
+    return mEnchantData;
+}
+
+const std::shared_ptr<objects::MiEnchantData> DefinitionManager::GetEnchantDataByDemonID(uint32_t demonID)
+{
+    auto iter = mEnchantDemonLookup.find(demonID);
+    if(iter != mEnchantDemonLookup.end())
+    {
+        return GetEnchantData(iter->second);
+    }
+
+    return nullptr;
+}
+
+const std::shared_ptr<objects::MiEnchantData> DefinitionManager::GetEnchantDataByItemID(uint32_t itemID)
+{
+    auto iter = mEnchantItemLookup.find(itemID);
+    if(iter != mEnchantItemLookup.end())
+    {
+        return GetEnchantData(iter->second);
+    }
+
+    return nullptr;
 }
 
 const std::shared_ptr<objects::MiEquipmentSetData> DefinitionManager::GetEquipmentSetData(uint32_t id)
@@ -305,6 +342,64 @@ const std::shared_ptr<objects::MiCZoneRelationData> DefinitionManager::GetZoneRe
     return GetRecordByID(id, mZoneRelationData);
 }
 
+const std::shared_ptr<objects::EnchantSetData>  DefinitionManager::GetEnchantSetData(uint32_t id)
+{
+    return GetRecordByID(id, mEnchantSetData);
+}
+
+std::list<std::shared_ptr<objects::EnchantSetData>>  DefinitionManager::GetEnchantSetDataByEffect(
+    int16_t effectID)
+{
+    std::list<std::shared_ptr<objects::EnchantSetData>> retval;
+
+    auto it = mEnchantSetLookup.find(effectID);
+    if(it != mEnchantSetLookup.end())
+    {
+        for(auto setID : it->second)
+        {
+            auto enchantSet = GetEnchantSetData(setID);
+            if(enchantSet)
+            {
+                retval.push_back(enchantSet);
+            }
+        }
+    }
+
+    return retval;
+}
+
+const std::unordered_map<uint32_t,
+    std::shared_ptr<objects::EnchantSetData>> DefinitionManager::GetAllEnchantSetData()
+{
+    return mEnchantSetData;
+}
+
+const std::shared_ptr<objects::EnchantSpecialData>  DefinitionManager::GetEnchantSpecialData(uint32_t id)
+{
+    return GetRecordByID(id, mEnchantSpecialData);
+}
+
+std::list<std::shared_ptr<objects::EnchantSpecialData>>
+    DefinitionManager::GetEnchantSpecialDataByInputItem(uint32_t itemID)
+{
+    std::list<std::shared_ptr<objects::EnchantSpecialData>> retval;
+
+    auto it = mEnchantSpecialLookup.find(itemID);
+    if(it != mEnchantSpecialLookup.end())
+    {
+        for(auto specialID : it->second)
+        {
+            auto specialSet = GetEnchantSpecialData(specialID);
+            if(specialSet)
+            {
+                retval.push_back(specialSet);
+            }
+        }
+    }
+
+    return retval;
+}
+
 const std::shared_ptr<objects::Tokusei> DefinitionManager::GetTokuseiData(int32_t id)
 {
     return GetRecordByID(id, mTokuseiData);
@@ -329,6 +424,7 @@ bool DefinitionManager::LoadAllData(gsl::not_null<DataStore*> pDataStore)
     success &= LoadDevilData(pDataStore);
     success &= LoadDevilLVUpRateData(pDataStore);
     success &= LoadDynamicMapData(pDataStore);
+    success &= LoadEnchantData(pDataStore);
     success &= LoadEquipmentSetData(pDataStore);
     success &= LoadExpertClassData(pDataStore);
     success &= LoadHNPCData(pDataStore);
@@ -489,6 +585,25 @@ bool DefinitionManager::LoadDynamicMapData(gsl::not_null<DataStore*> pDataStore)
     return success;
 }
 
+bool DefinitionManager::LoadEnchantData(gsl::not_null<DataStore*> pDataStore)
+{
+    std::list<std::shared_ptr<objects::MiEnchantData>> records;
+    bool success = LoadBinaryData<objects::MiEnchantData>(pDataStore,
+        "Shield/EnchantData.sbin", true, 0, records);
+    for(auto record : records)
+    {
+        int16_t id = record->GetID();
+        uint32_t demonID = record->GetDevilCrystal()->GetDemonID();
+        uint32_t itemID = record->GetDevilCrystal()->GetItemID();
+
+        mEnchantData[id] = record;
+        mEnchantDemonLookup[demonID] = id;
+        mEnchantItemLookup[itemID] = id;
+    }
+    
+    return success;
+}
+
 bool DefinitionManager::LoadEquipmentSetData(
     gsl::not_null<DataStore*> pDataStore)
 {
@@ -526,7 +641,7 @@ bool DefinitionManager::LoadExpertClassData(
     {
         mExpertData[record->GetID()] = record;
 
-        if(!record->GetDisabled())
+        if(!record->GetIsChain())
         {
             auto class0Data = record->GetClassData(0);
             auto rank0Data = class0Data->GetRankData(0);
@@ -795,6 +910,47 @@ std::shared_ptr<objects::QmpFile> DefinitionManager::LoadQmpFile(
 
 namespace libcomp
 {
+    template<>
+    bool DefinitionManager::RegisterServerSideDefinition<objects::EnchantSetData>(
+        const std::shared_ptr<objects::EnchantSetData>& record)
+    {
+        uint32_t id = record->GetID();
+        if(mEnchantSetData.find(id) != mEnchantSetData.end())
+        {
+            LOG_ERROR(libcomp::String("Duplicate enchant set encountered: %1\n").Arg(id));
+            return false;
+        }
+
+        mEnchantSetData[id] = record;
+
+        for(int16_t effectID : record->GetEffects())
+        {
+            if(effectID != 0)
+            {
+                mEnchantSetLookup[effectID].push_back(id);
+            }
+        }
+
+        return true;
+    }
+
+    template<>
+    bool DefinitionManager::RegisterServerSideDefinition<objects::EnchantSpecialData>(
+        const std::shared_ptr<objects::EnchantSpecialData>& record)
+    {
+        uint32_t id = record->GetID();
+        if(mEnchantSpecialData.find(id) != mEnchantSpecialData.end())
+        {
+            LOG_ERROR(libcomp::String("Duplicate enchant special encountered: %1\n").Arg(id));
+            return false;
+        }
+
+        mEnchantSpecialData[id] = record;
+        mEnchantSpecialLookup[record->GetInputItem()].push_back(id);
+
+        return true;
+    }
+
     template<>
     bool DefinitionManager::RegisterServerSideDefinition<objects::Tokusei>(
         const std::shared_ptr<objects::Tokusei>& record)

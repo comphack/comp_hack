@@ -55,6 +55,7 @@ bool Parsers::BazaarItemBuy::Parse(libcomp::ManagerPacket *pPacketManager,
     }
 
     auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+    auto characterManager = server->GetCharacterManager();
     auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
@@ -90,7 +91,7 @@ bool Parsers::BazaarItemBuy::Parse(libcomp::ManagerPacket *pPacketManager,
         auto character = cState->GetEntity();
         auto inventory = character->GetItemBoxes(0).Get();
 
-        uint64_t totalMacca = server->GetCharacterManager()->GetTotalMacca(character);
+        uint64_t totalMacca = characterManager->GetTotalMacca(character);
 
         int8_t destSlot = -1;
         bItem = bState->TryBuyItem(state, marketID, slot, itemID, price);
@@ -176,34 +177,11 @@ bool Parsers::BazaarItemBuy::Parse(libcomp::ManagerPacket *pPacketManager,
         relay.WriteS64Little(-1);
 
         relay.WriteS32Little((int32_t)bItem->GetCost());
+
         relay.WriteU32Little(bItem->GetType());
         relay.WriteU16Little(bItem->GetStackSize());
 
-        relay.WriteU16Little(item->GetDurability());
-        relay.WriteS8(item->GetMaxDurability());
-
-        relay.WriteS16Little(item->GetTarot());
-        relay.WriteS16Little(item->GetSoul());
-
-        for(auto modSlot : item->GetModSlots())
-        {
-            relay.WriteU16Little(modSlot);
-        }
-
-        relay.WriteS32Little(0);    // Unknown
-
-        auto basicEffect = item->GetBasicEffect();
-        relay.WriteU32Little(basicEffect ? basicEffect
-            : static_cast<uint32_t>(-1));
-
-        auto specialEffect = item->GetSpecialEffect();
-        relay.WriteU32Little(specialEffect ? specialEffect
-            : static_cast<uint32_t>(-1));
-
-        for(auto bonus : item->GetFuseBonuses())
-        {
-            relay.WriteS8(bonus);
-        }
+        characterManager->GetItemDetailPacketData(relay, item, 1);
 
         // Purchased by
         relay.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_CP932,

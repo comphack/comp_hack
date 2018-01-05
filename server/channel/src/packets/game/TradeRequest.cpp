@@ -32,9 +32,7 @@
 #include <PacketCodes.h>
 
 // object Includes
-#include <Account.h>
-#include <Character.h>
-#include <TradeSession.h>
+#include <PlayerExchangeSession.h>
 
 // channel Includes
 #include "ChannelServer.h"
@@ -62,21 +60,8 @@ bool Parsers::TradeRequest::Parse(libcomp::ManagerPacket *pPacketManager,
     libcomp::Packet reply;
     reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_TRADE_REQUEST);
 
-    bool cancel = false;
-    if(!otherClient)
-    {
-        cancel = true;
-    }
-    else
-    {
-        auto otherSession = otherClient->GetClientState()->GetTradeSession();
-        if(otherSession->GetOtherCharacterState() != nullptr)
-        {
-            cancel = true;
-        }
-    }
-
-    if(cancel)
+    if(!otherClient || state->GetExchangeSession() ||
+        otherClient->GetClientState()->GetExchangeSession())
     {
         reply.WriteS32Little(-1);
         client->SendPacket(reply);
@@ -86,11 +71,17 @@ bool Parsers::TradeRequest::Parse(libcomp::ManagerPacket *pPacketManager,
     auto otherState = otherClient->GetClientState();
 
     // Set the trade session info
-    auto tradeSession = state->GetTradeSession();
-    tradeSession->SetOtherCharacterState(otherState->GetCharacterState());
+    auto exchangeSession = std::make_shared<objects::PlayerExchangeSession>();
+    exchangeSession->SetSourceEntityID(cState->GetEntityID());
+    exchangeSession->SetType(objects::PlayerExchangeSession::Type_t::TRADE);
+    exchangeSession->SetOtherCharacterState(otherState->GetCharacterState());
+    state->SetExchangeSession(exchangeSession);
 
-    auto otherTradeSession = otherState->GetTradeSession();
-    otherTradeSession->SetOtherCharacterState(cState);
+    auto otherSession = std::make_shared<objects::PlayerExchangeSession>();
+    exchangeSession->SetSourceEntityID(otherState->GetCharacterState()->GetEntityID());
+    otherSession->SetType(objects::PlayerExchangeSession::Type_t::TRADE);
+    otherSession->SetOtherCharacterState(cState);
+    otherState->SetExchangeSession(otherSession);
 
     reply.WriteS32Little(0);
 

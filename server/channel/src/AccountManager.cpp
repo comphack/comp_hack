@@ -53,7 +53,6 @@
 #include <MiPossessionData.h>
 #include <Quest.h>
 #include <ServerZone.h>
-#include <TradeSession.h>
 
 // channel Includes
 #include "ChannelServer.h"
@@ -134,7 +133,7 @@ void AccountManager::HandleLoginResponse(const std::shared_ptr<
         dState->SetEntityID(server->GetNextEntityID());
 
         // Initialize some run-time data
-        cState->SetEquippedSets(server->GetDefinitionManager());
+        cState->RecalcEquipState(server->GetDefinitionManager());
 
         // Recalculating the character will recalculate the partner too
         server->GetTokuseiManager()->Recalculate(cState, true,

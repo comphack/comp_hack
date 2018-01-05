@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="MiSpecialConditionData" persistent="false">
+        <member type="s16" name="type"/>
+        <member type="u16" name="unused"/>
+        <member type="array" name="params" size="2">
+            <element type="s16"/>
+        </member>
+        <member type="array" name="tokusei" size="2">
+            <element type="u32"/>
+        </member>
+    </object>
+    <object name="MiEnchantCharasticData" persistent="false">
+        <member type="string" length="36" name="name"/>
+        <member type="string" length="1028" name="desc"/>
+        <member type="u8" name="equipLevel"/>
+        <member type="u8" name="unused1"/>
+        <member type="u16" name="unused2"/>
+        <member type="s16" name="difficulty"/>
+        <member type="u16" name="equipTypes"/>
+        <member type="array" name="tokusei" size="2">
+            <element type="u32"/>
+        </member>
+        <member type="array" name="conditions" size="2">
+            <element type="MiSpecialConditionData*"/>
+        </member>
+    </object>
+    <object name="MiDevilCrystalData" persistent="false">
+        <member type="u32" name="demonID"/>
+        <member type="u32" name="itemID"/>
+        <member type="s16" name="difficulty"/>
+        <member type="s16" name="usage"/>
+        <member type="MiEnchantCharasticData*" name="tarot"/>
+        <member type="MiEnchantCharasticData*" name="soul"/>
+    </object>
+    <object name="MiEnchantData" persistent="false">
+        <member type="s16" name="ID"/>
+        <member type="u16" name="unused"/>
+        <member type="MiDevilCrystalData*" name="devilCrystal"/>
+    </object>
+    <!-- The following types are inferred server side structures -->
+    <object name="EnchantSetData" persistent="false">
+        <member type="u32" name="ID"/>
+        <member type="set" name="effects">
+            <element type="s16"/>
+        </member>
+        <member type="list" name="tokusei">
+            <element type="u32"/>
+        </member>
+        <member type="list" name="conditions">
+            <element type="MiSpecialConditionData*"/>
+        </member>
+    </object>
+    <object name="EnchantSpecialData" persistent="false">
+        <member type="u32" name="ID"/>
+        <member type="u32" name="inputItem"/>
+        <member type="s16" name="tarot"/>
+        <member type="s16" name="soul"/>
+        <member type="u32" name="resultItem"/>
+        <member type="s16" name="difficulty"/>
+    </object>
+</objgen>

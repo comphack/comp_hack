@@ -282,6 +282,7 @@ SET(${PROJECT_NAME}_SCHEMA
     schema/binarydata/devildata.xml
     schema/binarydata/devillvupratedata.xml
     schema/binarydata/dynamicmapdata.xml
+    schema/binarydata/enchantdata.xml
     schema/binarydata/equipmentsetdata.xml
     schema/binarydata/expertdata.xml
     schema/binarydata/hnpcdata.xml
@@ -592,6 +593,8 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     MiDCategoryData.h
     MiDevilBattleData.cpp
     MiDevilBattleData.h
+    MiDevilCrystalData.h
+    MiDevilCrystalData.cpp
     MiDevilData.cpp
     MiDevilData.h
     MiDevilFamiliarityData.cpp
@@ -612,10 +615,20 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     MiEffectData.h
     MiEffectiveRangeData.cpp
     MiEffectiveRangeData.h
+    MiEnchantCharasticData.h
+    MiEnchantCharasticData.cpp
+    MiEnchantData.h
+    MiEnchantData.cpp
+    EnchantSetData.h
+    EnchantSetData.cpp
+    EnchantSpecialData.h
+    EnchantSpecialData.cpp
     MiEquipmentSetData.cpp
     MiEquipmentSetData.h
     EventConditionData.cpp
     EventConditionData.h
+    MiExpertChainData.cpp
+    MiExpertChainData.h
     MiExpertClassData.cpp
     MiExpertClassData.h
     MiExpertData.cpp
@@ -624,8 +637,6 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     MiExpertGrowthTbl.h
     MiExpertRankData.cpp
     MiExpertRankData.h
-    MiExpertUnkData.cpp
-    MiExpertUnkData.h
     MiGrowthData.cpp
     MiGrowthData.h
     MiHNPCAppearanceData.cpp
@@ -698,6 +709,8 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     MiSkillSpecialParams.h
     MiSkillTbl.h
     MiSkillTbl.cpp
+    MiSpecialConditionData.h
+    MiSpecialConditionData.cpp
     MiStatusBasicData.cpp
     MiStatusBasicData.h
     MiStatusData.cpp

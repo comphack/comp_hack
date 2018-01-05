@@ -33,21 +33,22 @@
 // object Includes
 #include <CalculatedEntityState.h>
 #include <Clan.h>
+#include <EnchantSetData.h>
 #include <Expertise.h>
 #include <Item.h>
 #include <MiCategoryData.h>
 #include <MiDCategoryData.h>
+#include <MiDevilCrystalData.h>
 #include <MiDevilData.h>
-#include <MiEquipmentSetData.h>
+#include <MiEnchantCharasticData.h>
+#include <MiEnchantData.h>
 #include <MiItemBasicData.h>
 #include <MiItemData.h>
-#include <MiModificationExtEffectData.h>
-#include <MiModifiedEffectData.h>
 #include <MiNPCBasicData.h>
 #include <MiSkillCharasticData.h>
 #include <MiSkillData.h>
 #include <MiSkillItemStatusCommonData.h>
-#include <MiSItemData.h>
+#include <MiSpecialConditionData.h>
 #include <Party.h>
 #include <Tokusei.h>
 #include <TokuseiAttributes.h>
@@ -79,6 +80,7 @@ bool TokuseiManager::Initialize()
     auto server = mServer.lock();
     auto definitionManager = server->GetDefinitionManager();
 
+    std::set<int32_t> skillGrantTokusei;
     auto allTokusei = definitionManager->GetAllTokuseiData();
     for(auto tPair : allTokusei)
     {
@@ -105,6 +107,7 @@ bool TokuseiManager::Initialize()
                     return false;
                 }
 
+                skillGrantTokusei.insert(tPair.first);
                 skillIDs.insert((uint32_t)aspect->GetValue());
             }
         }
@@ -116,19 +119,13 @@ bool TokuseiManager::Initialize()
             {
                 for(int32_t tokuseiID : skillData->GetCharastic()->GetCharastic())
                 {
-                    auto it = allTokusei.find(tokuseiID);
-                    if(it != allTokusei.end())
+                    auto it = skillGrantTokusei.find(tokuseiID);
+                    if(it != skillGrantTokusei.end())
                     {
-                        for(auto aspect : it->second->GetAspects())
-                        {
-                            if(aspect->GetType() == TokuseiAspectType::SKILL_ADD)
-                            {
-                                LOG_ERROR(libcomp::String("Skill granted from tokusei '%1'"
-                                    " contains a nested skill granting effect: '%2'\n")
-                                    .Arg(skillID).Arg(tokuseiID));
-                                return false;
-                            }
-                        }
+                        LOG_ERROR(libcomp::String("Skill granted from tokusei '%1'"
+                            " contains a nested skill granting effect: '%2'\n")
+                            .Arg(skillID).Arg(tokuseiID));
+                        return false;
                     }
                 }
             }
@@ -206,6 +203,106 @@ bool TokuseiManager::Initialize()
             {
                 LOG_ERROR(libcomp::String("Skill tokusei encounterd with an invalid"
                     " rate adjustment: %1\n").Arg(tPair.first));
+                return false;
+            }
+        }
+    }
+
+    // Verify conditional enchantment tokusei which are restricted from
+    // doing any of the following when based upon core stat conditions:
+    // 1) Contains additional non-skill processing conditions
+    // 2) Affects a target other than the source
+    // 3) Modifies core stats by a percentage (numeric is okay)
+    // 4) Adds skills
+    // This is critical in enforcing a reasonable tokusei calculation process
+    // as all non-core stat conditions can be evaluated at tokusei recalc time.
+    std::set<int32_t> baseStatTokuseiIDs;
+    for(auto ePair : definitionManager->GetAllEnchantData())
+    {
+        for(auto cData : { ePair.second->GetDevilCrystal()->GetSoul(),
+            ePair.second->GetDevilCrystal()->GetTarot() })
+        {
+            for(auto conditionData : cData->GetConditions())
+            {
+                int32_t conditionType = (int32_t)conditionData->GetType();
+                if(conditionType >= (10 + (int32_t)CorrectTbl::STR) &&
+                    conditionType < (10 + (int32_t)CorrectTbl::LUCK))
+                {
+                    for(uint32_t tokuseiID : conditionData->GetTokusei())
+                    {
+                        if(tokuseiID != 0)
+                        {
+                            baseStatTokuseiIDs.insert((int32_t)tokuseiID);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    for(auto ePair : definitionManager->GetAllEnchantSetData())
+    {
+        for(auto conditionData : ePair.second->GetConditions())
+        {
+            int32_t conditionType = (int32_t)conditionData->GetType();
+            if(conditionType >= (10 + (int32_t)CorrectTbl::STR) &&
+                conditionType < (10 + (int32_t)CorrectTbl::LUCK))
+            {
+                for(uint32_t tokuseiID : conditionData->GetTokusei())
+                {
+                    if(tokuseiID != 0)
+                    {
+                        baseStatTokuseiIDs.insert((int32_t)tokuseiID);
+                    }
+                }
+            }
+        }
+    }
+
+    for(int32_t tokuseiID : baseStatTokuseiIDs)
+    {
+        auto it = allTokusei.find(tokuseiID);
+        if(it != allTokusei.end())
+        {
+            auto tokuseiData = it->second;
+
+            if(tokuseiData->ConditionsCount() > 0)
+            {
+                LOG_ERROR(libcomp::String("Stat conditional enchantment tokusei"
+                    " encountered with non-skill conditions: %1\n").Arg(it->first));
+                return false;
+            }
+
+            if(tokuseiData->GetTargetType() !=
+                objects::Tokusei::TargetType_t::SELF)
+            {
+                LOG_ERROR(libcomp::String("Stat conditional enchantment tokusei"
+                    " encountered with non-source target type: %1\n").Arg(it->first));
+                return false;
+            }
+
+            auto cTables = tokuseiData->GetCorrectValues();
+            for(auto ct : tokuseiData->GetTokuseiCorrectValues())
+            {
+                cTables.push_back(ct);
+            }
+
+            for(auto ct : cTables)
+            {
+                if(ct->GetID() <= CorrectTbl::LUCK &&
+                    (ct->GetType() == 1 || ct->GetType() == 101))
+                {
+                    LOG_ERROR(libcomp::String("Stat conditional enchantment tokusei"
+                        " encountered with percentage core stat adjustment: %1\n")
+                        .Arg(it->first));
+                    return false;
+                }
+            }
+
+            if(skillGrantTokusei.find(it->first) != skillGrantTokusei.end())
+            {
+                LOG_ERROR(libcomp::String("Skill granting stat conditional enchantment"
+                    " tokusei encountered: %1\n").Arg(it->first));
                 return false;
             }
         }
@@ -417,28 +514,46 @@ std::unordered_map<int32_t, bool> TokuseiManager::Recalculate(const std::list<st
     std::list<std::shared_ptr<ActiveEntityState>> updatedEntities;
     for(auto eState : entities)
     {
-        auto& selfMap = newMaps[eState->GetEntityID()][false];
-        auto currentTokusei = eState->GetCalculatedState()->GetEffectiveTokusei();
-        if(currentTokusei.size() != selfMap.size())
+        bool updated = false;
+
+        auto calcState = eState->GetCalculatedState();
+        for(bool skillMode : { false, true })
         {
-            updatedEntities.push_back(eState);
-        }
-        else
-        {
-            for(auto pair : selfMap)
+            auto& selfMap = newMaps[eState->GetEntityID()][skillMode];
+            auto currentTokusei = skillMode ? calcState->GetPendingSkillTokusei()
+                : calcState->GetEffectiveTokusei();
+            if(currentTokusei.size() != selfMap.size())
             {
-                if(currentTokusei.find(pair.first) == currentTokusei.end() ||
-                    currentTokusei[pair.first] != pair.second)
+                updated = true;
+            }
+            else
+            {
+                for(auto pair : selfMap)
                 {
-                    updatedEntities.push_back(eState);
-                    break;
+                    if(currentTokusei.find(pair.first) == currentTokusei.end() ||
+                        currentTokusei[pair.first] != pair.second)
+                    {
+                        updated = true;
+                        break;
+                    }
                 }
+            }
+
+            if(updated)
+            {
+                break;
             }
         }
 
-        eState->GetCalculatedState()->SetEffectiveTokusei(selfMap);
-        eState->GetCalculatedState()->SetPendingSkillTokusei(
-            newMaps[eState->GetEntityID()][true]);
+        if(updated)
+        {
+            calcState->SetEffectiveTokusei(newMaps[eState->GetEntityID()][false]);
+            calcState->SetPendingSkillTokusei(newMaps[eState->GetEntityID()][true]);
+            calcState->ClearEffectiveTokuseiFinal();
+            calcState->ClearPendingSkillTokuseiFinal();
+
+            updatedEntities.push_back(eState);
+        }
     }
 
     if(recalcStats)
@@ -561,68 +676,61 @@ std::list<std::shared_ptr<objects::Tokusei>> TokuseiManager::GetDirectTokusei(
     std::list<int32_t> tokuseiIDs;
     if(eState->GetEntityType() == objects::EntityStateObject::EntityType_t::CHARACTER)
     {
-        // Characters have extra tokusei from equipment, equipment sets and
-        // equipment modifications
+        auto characterManager = server->GetCharacterManager();
         auto cState = std::dynamic_pointer_cast<CharacterState>(eState);
         auto character = cState->GetEntity();
+        auto cs = cState->GetCoreStats();
 
-        for(size_t i = 0; i < 15; i++)
+        // Default to tokusei from equipment
+        tokuseiIDs = cState->GetEquipmentTokuseiIDs();
+
+        // Add any conditional tokusei
+        for(auto condition : cState->GetConditionalTokusei())
         {
-            auto equip = character->GetEquippedItems(i).Get();
-            if(equip)
+            bool add = false;
+
+            int16_t p1 = condition->GetParams(0);
+            int16_t p2 = condition->GetParams(1);
+
+            int16_t conditionType = condition->GetType();
+            if(conditionType == 1)
             {
-                auto sItemData = definitionManager->GetSItemData(equip->GetType());
-                if(sItemData)
+                // Level check
+                add = (p1 == 0 || (int16_t)cs->GetLevel() >= p1) &&
+                    (p2 == 0 || (int16_t)cs->GetLevel() <= p2);
+            }
+            else if(conditionType == 2)
+            {
+                // LNC check (inverted format)
+                switch(cState->GetLNCType())
                 {
-                    for(int32_t tokuseiID : sItemData->GetTokusei())
-                    {
-                        tokuseiIDs.push_back(tokuseiID);
-                    }
-                }
-
-                // Check for mod slot effects
-                bool isWeapon = i ==
-                    (size_t)objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_WEAPON;
-                for(size_t k = 0; k < equip->ModSlotsCount(); k++)
-                {
-                    uint16_t effectID = equip->GetModSlots(k);
-                    if(effectID != 0 && effectID != MOD_SLOT_NULL_EFFECT)
-                    {
-                        uint32_t tokuseiID = 0;
-                        if(isWeapon)
-                        {
-                            auto effectData = definitionManager->GetModifiedEffectData(
-                                effectID);
-                            tokuseiID = effectData ? effectData->GetTokusei() : 0;
-                        }
-                        else
-                        {
-                            auto itemData = definitionManager->GetItemData(
-                                equip->GetType());
-                            auto effectData = definitionManager->GetModificationExtEffectData(
-                                itemData->GetCommon()->GetCategory()->GetSubCategory(),
-                                (uint8_t)i, effectID);
-                            tokuseiID = effectData ? effectData->GetTokusei() : 0;
-                        }
-
-                        if(tokuseiID != 0)
-                        {
-                            tokuseiIDs.push_back((int32_t)tokuseiID);
-                        }
-                    }
+                case LNC_LAW:
+                    add = ((p1 & 0x0004) != 0);
+                    break;
+                case LNC_NEUTRAL:
+                    add = ((p1 & 0x0002) != 0);
+                    break;
+                case LNC_CHAOS:
+                    add = ((p1 & 0x0001) != 0);
+                default:
+                    break;
                 }
             }
-        }
-
-        for(auto equippedSetID : cState->GetEquippedSets())
-        {
-            auto equippedSet = definitionManager->GetEquipmentSetData(
-                equippedSetID);
-            if(equippedSet)
+            else if(conditionType >= 100 && conditionType <= 158)
             {
-                for(uint32_t tokuseiID : equippedSet->GetTokusei())
+                // Expertise #(type - 100) rank check
+                add = characterManager->GetExpertiseRank(cState,
+                    (uint32_t)(conditionType - 100)) >= (uint8_t)p1;
+            }
+
+            if(add)
+            {
+                for(auto tokuseiID : condition->GetTokusei())
                 {
-                    tokuseiIDs.push_back((int32_t)tokuseiID);
+                    if(tokuseiID != 0)
+                    {
+                        tokuseiIDs.push_back((int32_t)tokuseiID);
+                    }
                 }
             }
         }
@@ -1142,7 +1250,7 @@ double TokuseiManager::GetAspectSum(const std::shared_ptr<ActiveEntityState>& eS
             calcState = eState->GetCalculatedState();
         }
 
-        auto effectiveTokusei = calcState->GetEffectiveTokusei();
+        auto effectiveTokusei = calcState->GetEffectiveTokuseiFinal();
         for(auto pair : effectiveTokusei)
         {
             auto tokusei = definitionManager->GetTokuseiData(pair.first);
@@ -1194,7 +1302,7 @@ std::unordered_map<int32_t, double> TokuseiManager::GetAspectMap(
             calcState = eState->GetCalculatedState();
         }
 
-        auto effectiveTokusei = calcState->GetEffectiveTokusei();
+        auto effectiveTokusei = calcState->GetEffectiveTokuseiFinal();
         for(auto pair : effectiveTokusei)
         {
             auto tokusei = definitionManager->GetTokuseiData(pair.first);
@@ -1244,7 +1352,7 @@ std::list<double> TokuseiManager::GetAspectValueList(const std::shared_ptr<
             calcState = eState->GetCalculatedState();
         }
 
-        auto effectiveTokusei = calcState->GetEffectiveTokusei();
+        auto effectiveTokusei = calcState->GetEffectiveTokuseiFinal();
         for(auto pair : effectiveTokusei)
         {
             auto tokusei = definitionManager->GetTokuseiData(pair.first);

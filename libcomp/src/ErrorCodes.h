@@ -61,4 +61,19 @@ enum class ErrorCodes_t : int32_t
     CONNECTION_TIMEOUT = -103, //!< Connection has timed out
 };
 
+/**
+ * Error codes used for player interaction "entrust" actions by the game client.
+ */
+enum class EntrustErrorCodes_t : int32_t
+{
+    SUCCESS = 0,    //!< No error
+    SYSTEM_ERROR = -1, //!< Generic system error
+    INVALID_CHAR_STATE = -2,    //!< Character is not in a state to preform action
+    TOO_FAR = -4,   //!< Too far from target
+    NONTRADE_ITEMS = -5,    //!< Rewards contain non-trade items
+    INVENTORY_SPACE_NEEDED = -6,    //!< More inventory space needed
+    INVALID_DEMON_STATE = -8,   //!< Demon is not in a state to perform action
+    INVALID_DEMON_TARGET = -9,  //!< Demon is not a valid target
+};
+
 #endif // LIBCOMP_SRC_ERRORCODES_H

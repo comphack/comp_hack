@@ -50,6 +50,7 @@
 #include <MiZoneData.h>
 #include <MiZoneFileData.h>
 #include <Party.h>
+#include <PlayerExchangeSession.h>
 #include <QmpBoundary.h>
 #include <QmpBoundaryLine.h>
 #include <QmpElement.h>
@@ -64,7 +65,6 @@
 #include <SpawnGroup.h>
 #include <SpawnLocation.h>
 #include <SpawnLocationGroup.h>
-#include <TradeSession.h>
 
 // channel Includes
 #include "AIState.h"
@@ -491,23 +491,26 @@ void ZoneManager::LeaveZone(const std::shared_ptr<ChannelClientConnection>& clie
     auto worldCID = state->GetWorldCID();
 
     // Detach from zone specific state info
-    if(state->GetTradeSession()->GetOtherCharacterState() != nullptr)
+    auto exchangeSession = state->GetExchangeSession();
+    if(exchangeSession)
     {
-        auto connectionManager = server->GetManagerConnection();
-
         auto otherCState = std::dynamic_pointer_cast<CharacterState>(
-            state->GetTradeSession()->GetOtherCharacterState());
-        auto otherChar = otherCState->GetEntity();
-        auto otherClient = otherChar != nullptr ? 
-            connectionManager->GetClientConnection(
-                otherChar->GetAccount()->GetUsername()) : nullptr;
-
-        if(otherClient)
+            exchangeSession->GetOtherCharacterState());
+        if(otherCState != cState ||
+            exchangeSession->GetSourceEntityID() != cState->GetEntityID())
         {
-            characterManager->EndTrade(otherClient);
+            auto connectionManager = server->GetManagerConnection();
+            auto otherClient = connectionManager->GetEntityClient(
+                otherCState != cState ? otherCState->GetEntityID()
+                : exchangeSession->GetSourceEntityID(), false);
+
+            if(otherClient)
+            {
+                characterManager->EndExchange(otherClient);
+            }
         }
 
-        characterManager->EndTrade(client);
+        characterManager->EndExchange(client);
     }
 
     // Remove any opponents

@@ -1,14 +1,15 @@
 /**
- * @file server/channel/src/packets/game/TradeLock.cpp
+ * @file server/channel/src/packets/game/EntrustRewardFinish.cpp
  * @ingroup channel
  *
  * @author HACKfrost
  *
- * @brief Request from the client to lock the trade for acceptance.
+ * @brief Request from the client by the entrust target to finish
+ *  rewards and await confirmation.
  *
  * This file is part of the Channel Server (channel).
  *
- * Copyright (C) 2012-2016 COMP_hack Team <compomega@tutanota.com>
+ * Copyright (C) 2012-2018 COMP_hack Team <compomega@tutanota.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as
@@ -32,60 +33,57 @@
 #include <PacketCodes.h>
 
 // object Includes
-#include <Account.h>
-#include <Character.h>
 #include <PlayerExchangeSession.h>
 
 // channel Includes
 #include "ChannelServer.h"
-#include "ClientState.h"
 
 using namespace channel;
 
-bool Parsers::TradeLock::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::EntrustRewardFinish::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {
-    if(p.Size() != 0)
+    if(p.Size() != 4)
     {
         return false;
     }
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-    auto characterManager = server->GetCharacterManager();
+    int32_t choice = p.ReadS32Little();
 
+    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
     auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
     auto exchangeSession = state->GetExchangeSession();
 
-    bool success = false;
+    auto otherClient = exchangeSession &&
+        exchangeSession->GetSourceEntityID() != cState->GetEntityID()
+        ? server->GetManagerConnection()->GetEntityClient(
+            exchangeSession->GetSourceEntityID(), false) : nullptr;
 
-    auto otherCState = exchangeSession ? std::dynamic_pointer_cast<CharacterState>(
-        exchangeSession->GetOtherCharacterState()) : nullptr;
-    auto otherClient = otherCState ? server->GetManagerConnection()->GetEntityClient(
-        otherCState->GetEntityID(), false) : nullptr;
+    libcomp::Packet reply;
+    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_ENTRUST_REWARD_FINISH);
+    reply.WriteS8((int8_t)choice);
+
     if(otherClient)
     {
         exchangeSession->SetLocked(true);
+        otherClient->SendPacketCopy(reply);
 
-        libcomp::Packet notify;
-        notify.WritePacketCode(ChannelToClientPacketCode_t::PACKET_TRADE_LOCKED);
-
-        otherClient->SendPacket(notify);
-
-        success = true;
+        reply.WriteS32Little(0);
     }
     else
     {
-        characterManager->EndExchange(client);
+        reply.WriteS32Little(-1);
     }
 
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_TRADE_LOCK);
-    reply.WriteS32Little(success ? 0 : -1);
-
     client->SendPacket(reply);
+
+    if(exchangeSession && !otherClient)
+    {
+        server->GetCharacterManager()->EndExchange(client, 0);
+    }
 
     return true;
 }

@@ -47,6 +47,7 @@
 #include <CharacterProgress.h>
 #include <Clan.h>
 #include <DemonBox.h>
+#include <EnchantSpecialData.h>
 #include <Expertise.h>
 #include <InheritedSkill.h>
 #include <Item.h>
@@ -57,10 +58,14 @@
 #include <MiCancelData.h>
 #include <MiCategoryData.h>
 #include <MiDevilBattleData.h>
+#include <MiDevilCrystalData.h>
 #include <MiDevilData.h>
 #include <MiDevilFamiliarityData.h>
 #include <MiDevilLVUpData.h>
 #include <MiDevilLVUpRateData.h>
+#include <MiEnchantCharasticData.h>
+#include <MiEnchantData.h>
+#include <MiExpertChainData.h>
 #include <MiExpertData.h>
 #include <MiExpertGrowthTbl.h>
 #include <MiGrowthData.h>
@@ -71,10 +76,11 @@
 #include <MiSkillData.h>
 #include <MiSkillItemStatusCommonData.h>
 #include <MiStatusData.h>
+#include <MiUnionData.h>
 #include <MiUseRestrictionsData.h>
+#include <PlayerExchangeSession.h>
 #include <ServerZone.h>
 #include <StatusEffect.h>
-#include <TradeSession.h>
 
 using namespace channel;
 
@@ -1146,9 +1152,9 @@ void CharacterManager::SendItemBoxData(const std::shared_ptr<
     auto server = mServer.lock();
     for(uint16_t slot : slots)
     {
-        auto item = box->GetItems((size_t)slot);
+        auto item = box->GetItems((size_t)slot).Get();
 
-        if(item.IsNull())
+        if(!item)
         {
             if(updateMode)
             {
@@ -1162,46 +1168,16 @@ void CharacterManager::SendItemBoxData(const std::shared_ptr<
         {
             reply.WriteU16Little(slot);
 
-            int64_t objectID = state->GetObjectID(item.GetUUID());
+            int64_t objectID = state->GetObjectID(item->GetUUID());
             if(objectID == 0)
             {
                 objectID = server->GetNextObjectID();
-                state->SetObjectID(item.GetUUID(), objectID);
+                state->SetObjectID(item->GetUUID(), objectID);
             }
             reply.WriteS64Little(objectID);
         }
 
-        reply.WriteU32Little(item->GetType());
-        reply.WriteU16Little(item->GetStackSize());
-        reply.WriteU16Little(item->GetDurability());
-        reply.WriteS8(item->GetMaxDurability());
-
-        reply.WriteS16Little(item->GetTarot());
-        reply.WriteS16Little(item->GetSoul());
-
-        for(auto modSlot : item->GetModSlots())
-        {
-            reply.WriteU16Little(modSlot);
-        }
-
-        reply.WriteS32Little(0);    //Unknown
-        /*reply.WriteU8(0);   //Unknown
-        reply.WriteS16Little(0);   //Unknown
-        reply.WriteS16Little(0);   //Unknown
-        reply.WriteU8(0); // Failed Item Fuse 0 = OK | 1 = FAIL*/
-
-        auto basicEffect = item->GetBasicEffect();
-        reply.WriteU32Little(basicEffect ? basicEffect
-            : static_cast<uint32_t>(-1));
-
-        auto specialEffect = item->GetSpecialEffect();
-        reply.WriteU32Little(specialEffect ? specialEffect
-            : static_cast<uint32_t>(-1));
-
-        for(auto bonus : item->GetFuseBonuses())
-        {
-            reply.WriteS8(bonus);
-        }
+        GetItemDetailPacketData(reply, item);
     }
 
     client->SendPacket(reply);
@@ -1975,7 +1951,7 @@ void CharacterManager::EquipItem(const std::shared_ptr<
     character->SetEquippedItems((size_t)slot, equipSlot);
 
     // Determine which complete sets are equipped now
-    cState->SetEquippedSets(definitionManager);
+    cState->RecalcEquipState(definitionManager);
 
     // Recalculate tokusei and stats to reflect equipment changes
     server->GetTokuseiManager()->Recalculate(cState, true,
@@ -2052,21 +2028,45 @@ bool CharacterManager::UnequipItem(const std::shared_ptr<
     return false;
 }
 
-void  CharacterManager::EndTrade(const std::shared_ptr<
+void  CharacterManager::EndExchange(const std::shared_ptr<
     channel::ChannelClientConnection>& client, int32_t outcome)
 {
     auto state = client->GetClientState();
+    auto exchange = state->GetExchangeSession();
 
-    // Reset the session
-    auto newSession = std::make_shared<objects::TradeSession>();
-    newSession->SetOtherCharacterState(nullptr);
-    state->SetTradeSession(newSession);
+    if(exchange)
+    {
+        switch(exchange->GetType())
+        {
+        case objects::PlayerExchangeSession::Type_t::TRADE:
+            {
+                libcomp::Packet p;
+                p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_TRADE_ENDED);
+                p.WriteS32Little(outcome);
 
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_TRADE_ENDED);
-    reply.WriteS32Little(outcome);
-    client->QueuePacket(reply);
-    SetStatusIcon(client, 0);
+                client->QueuePacket(p);
+            }
+            break;
+        case objects::PlayerExchangeSession::Type_t::CRYSTALLIZE:
+        case objects::PlayerExchangeSession::Type_t::ENCHANT_SOUL:
+        case objects::PlayerExchangeSession::Type_t::ENCHANT_TAROT:
+            {
+                libcomp::Packet p;
+                p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_ENTRUST_FINISH);
+                p.WriteS32Little(outcome);
+
+                client->QueuePacket(p);
+            }
+            break;
+        default:
+            break;
+        }
+
+        state->SetExchangeSession(nullptr);
+        SetStatusIcon(client, 0);
+
+        client->FlushOutgoing();
+    }
 }
 
 void CharacterManager::UpdateLNC(const std::shared_ptr<
@@ -2635,6 +2635,44 @@ void CharacterManager::UpdateExpertise(const std::shared_ptr<
     }
 }
 
+uint8_t CharacterManager::GetExpertiseRank(const std::shared_ptr<
+    CharacterState>& cState, uint32_t expertiseID)
+{
+    auto server = mServer.lock();
+    auto definitionManager = server->GetDefinitionManager();
+
+    int32_t pointSum = 0;
+
+    auto expData = definitionManager->GetExpertClassData(expertiseID);
+    if(expData)
+    {
+        if(expData->GetIsChain())
+        {
+            for(uint8_t i = 0; i < expData->GetChainCount(); i++)
+            {
+                auto chainData = expData->GetChainData((size_t)i);
+
+                float percent = chainData->GetChainPercent();
+                if(percent > 0.f)
+                {
+                    auto exp = cState->GetEntity()->GetExpertises(
+                        (size_t)chainData->GetID());
+                    pointSum = pointSum + (int32_t)(
+                        (float)(exp ? exp->GetPoints() : 0) * percent);
+                }
+            }
+        }
+        else
+        {
+            auto exp = cState->GetEntity()->GetExpertises(
+                (size_t)expertiseID);
+            pointSum = (int32_t)(exp ? exp->GetPoints() : 0);
+        }
+    }
+
+    return (uint8_t)floor((float)pointSum * 0.0001f);
+}
+
 void CharacterManager::SendExertiseExtension(const std::shared_ptr<
     channel::ChannelClientConnection>& client)
 {
@@ -2725,6 +2763,212 @@ bool CharacterManager::LearnSkill(const std::shared_ptr<channel::ChannelClientCo
     server->GetTokuseiManager()->Recalculate(eState, true,
         std::set<int32_t>{ eState->GetEntityID() });
     RecalculateStats(client, entityID);
+
+    return true;
+}
+
+bool CharacterManager::GetSynthOutcome(ClientState* synthState,
+    const std::shared_ptr<objects::PlayerExchangeSession>& exchangeSession,
+    uint32_t& outcomeItemType, std::list<int32_t>& successRates, int16_t* effectID)
+{
+    successRates.clear();
+    outcomeItemType = static_cast<uint32_t>(-1);
+
+    if(!synthState || !exchangeSession)
+    {
+        return false;
+    }
+
+    auto server = mServer.lock();
+    auto definitionManager = server->GetDefinitionManager();
+    auto cState = synthState->GetCharacterState();
+    auto dState = synthState->GetDemonState();
+
+    bool isSoul = exchangeSession->GetType() ==
+        objects::PlayerExchangeSession::Type_t::ENCHANT_SOUL;
+    bool isTarot = exchangeSession->GetType() ==
+        objects::PlayerExchangeSession::Type_t::ENCHANT_TAROT;
+
+    std::list<double> rates;
+    if(isSoul || isTarot)
+    {
+        auto inputItem = exchangeSession->GetItems(0).Get();
+        auto crystal = exchangeSession->GetItems(1).Get();
+        auto boostItem = exchangeSession->GetItems(2).Get();
+
+        if(crystal && inputItem)
+        {
+            auto enchantData = definitionManager->GetEnchantDataByItemID(
+                crystal->GetType());
+            auto itemData = definitionManager->GetItemData(inputItem->GetType());
+            if(!enchantData || !itemData || !effectID)
+            {
+                return false;
+            }
+
+            *effectID = enchantData->GetID();
+
+            double expRank = (double)GetExpertiseRank(cState, 49);
+
+            double boostRate = 0.0;
+            if(boostItem)
+            {
+                auto it = SVR_CONST.SYNTH_ADJUSTMENTS.find(boostItem->GetType());
+                if(it != SVR_CONST.SYNTH_ADJUSTMENTS.end() && it->second[0] == 0)
+                {
+                    boostRate = (double)it->second[1];
+                }
+            }
+
+            // If the input is a CP item, the rate increases
+            double cpBoost = (itemData->GetBasic()->GetFlags() & 0x20) != 0
+                ? 20.0 : 0.0;
+
+            double demonBoost = 0.0;
+            if(dState->Ready())
+            {
+                int16_t intel = dState->GetINTEL();
+                int16_t luck = dState->GetLUCK();
+                for(auto pair : SVR_CONST.SYNTH_ADJUSTMENTS)
+                {
+                    // Skill adjustments
+                    if(pair.second[0] == 1 && dState->CurrentSkillsContains(
+                        (uint32_t)pair.first))
+                    {
+                        demonBoost = demonBoost +
+                            (double)(intel + luck) / (double)pair.second[1];
+                    }
+                }
+            }
+
+            double rate = 0.0;
+            if(isTarot)
+            {
+                auto tarotData = enchantData->GetDevilCrystal()->GetTarot();
+                double diff = (double)tarotData->GetDifficulty();
+
+                rate = floor((double)cState->GetINTEL() / 5.0 +
+                    (double)cState->GetLUCK() / 10.0 + expRank / 2.0 + (30.0 - diff) +
+                    cpBoost + demonBoost + boostRate);
+            }
+            else
+            {
+                auto soulData = enchantData->GetDevilCrystal()->GetSoul();
+                double diff = (double)soulData->GetDifficulty();
+
+                rate = floor((double)cState->GetINTEL() / 10.0 +
+                    (double)cState->GetLUCK() / 5.0 + expRank + (20 - diff) +
+                    cpBoost + demonBoost + boostRate);
+            }
+
+            rates.push_back(rate);
+            rate = 0.0;
+
+            // Determine special enchant result
+            auto specialEnchants = definitionManager->GetEnchantSpecialDataByInputItem(
+                inputItem->GetType());
+            for(auto specialEnchant : specialEnchants)
+            {
+                double diff = (double)specialEnchant->GetDifficulty();
+
+                bool match = false;
+                if(isTarot)
+                {
+                    if(inputItem->GetSoul() == specialEnchant->GetSoul() &&
+                        *effectID == specialEnchant->GetTarot())
+                    {
+                        rate = floor((double)cState->GetINTEL() / 5.0 +
+                            (double)cState->GetLUCK() / 10.0 + expRank / 2.0 +
+                            (30.0 - diff) + cpBoost + demonBoost + boostRate);
+
+                        match = true;
+                    }
+                }
+                else
+                {
+                    if(inputItem->GetTarot() == specialEnchant->GetTarot() &&
+                        *effectID == specialEnchant->GetSoul())
+                    {
+                        rate = floor((double)cState->GetINTEL() / 10.0 +
+                            (double)cState->GetLUCK() / 5.0 + expRank + (20 - diff) +
+                            cpBoost + demonBoost + boostRate);
+
+                        match = true;
+                    }
+                }
+
+                if(match)
+                {
+                    outcomeItemType = specialEnchant->GetResultItem();
+                    rates.push_back(rate);
+
+                    // There should never be multiple but break just in case
+                    break;
+                }
+            }
+        }
+    }
+    else if(exchangeSession->GetType() ==
+        objects::PlayerExchangeSession::Type_t::CRYSTALLIZE)
+    {
+        auto inputItem = exchangeSession->GetItems(0).Get();
+
+        auto targetCState = std::dynamic_pointer_cast<CharacterState>(
+            exchangeSession->GetOtherCharacterState());
+        auto targetDemon = targetCState
+            ? targetCState->GetEntity()->GetActiveDemon().Get() : nullptr;
+        if(targetDemon && inputItem)
+        {
+            auto demonData = definitionManager->GetDevilData(targetDemon->GetType());
+            auto enchantData = demonData? definitionManager->GetEnchantDataByDemonID(
+                demonData->GetUnionData()->GetBaseDemonID()) : nullptr;
+            if(!enchantData || !demonData)
+            {
+                return false;
+            }
+
+            outcomeItemType = enchantData->GetDevilCrystal()->GetItemID();
+
+            double diff = (double)enchantData->GetDevilCrystal()->GetDifficulty();
+
+            double expRank = (double)GetExpertiseRank(cState, 49);
+
+            double fam = (double)targetDemon->GetFamiliarity();
+
+            rates.push_back(floor((double)cState->GetINTEL() / 10.0 +
+                (double)cState->GetLUCK() / 10.0 + expRank / 2.0 + (100.0 - diff) +
+                (fam - 10000.0) / 100.0));
+        }
+    }
+    else
+    {
+        return false;
+    }
+
+    int8_t phase = 0;
+    int8_t hour = 0;
+    int8_t min = 0;
+    server->GetWorldClockTime(phase, hour, min);
+
+    for(double& rate : rates)
+    {
+        if(phase == 8)
+        {
+            // Full moon boosts success rates
+            rate = floor(rate * 1.2);
+        }
+
+        if(rate < 0.0)
+        {
+            rate = 0.0;
+        }
+        else if(rate > 100.0)
+        {
+            rate = 100.0;
+        }
+
+        successRates.push_back((int32_t)rate);
+    }
 
     return true;
 }
@@ -3563,6 +3807,71 @@ void CharacterManager::GetDemonPacketData(libcomp::Packet& p,
 
         //Effect length in seconds
         p.WriteS32Little(0);
+    }
+}
+
+void CharacterManager::GetItemDetailPacketData(libcomp::Packet& p,
+    const std::shared_ptr<objects::Item>& item, uint8_t detailLevel)
+{
+    if(item)
+    {   
+        if(detailLevel >= 1)
+        {
+            if(detailLevel >= 2)
+            {
+                p.WriteU32Little(item->GetType());
+                p.WriteU16Little(item->GetStackSize());
+            }
+
+            p.WriteU16Little(item->GetDurability());
+            p.WriteS8(item->GetMaxDurability());
+        }
+
+        p.WriteS16Little(item->GetTarot());
+        p.WriteS16Little(item->GetSoul());
+
+        for(auto modSlot : item->GetModSlots())
+        {
+            p.WriteU16Little(modSlot);
+        }
+
+        if(detailLevel >= 1)
+        {
+            p.WriteS32Little(0);    // Rental expiration time (absolute)
+        }
+
+        auto basicEffect = item->GetBasicEffect();
+        p.WriteU32Little(basicEffect ? basicEffect
+            : static_cast<uint32_t>(-1));
+
+        auto specialEffect = item->GetSpecialEffect();
+        p.WriteU32Little(specialEffect ? specialEffect
+            : static_cast<uint32_t>(-1));
+
+        for(auto bonus : item->GetFuseBonuses())
+        {
+            p.WriteS8(bonus);
+        }
+    }
+    else
+    {
+        switch(detailLevel)
+        {
+        case 2:
+            p.WriteBlank(27);
+            break;
+        case 1:
+            p.WriteBlank(21);
+            break;
+        case 0:
+        default:
+            p.WriteBlank(14);
+            break;
+        }
+
+        p.WriteU32Little(static_cast<uint32_t>(-1));
+        p.WriteU32Little(static_cast<uint32_t>(-1));
+        p.WriteBlank(3);
     }
 }
 

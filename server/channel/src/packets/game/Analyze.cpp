@@ -44,14 +44,16 @@ bool Parsers::Analyze::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-
     if(p.Size() != 4 && p.Size() != 6)
     {
         return false;
     }
 
     int32_t targetEntityID = p.ReadS32Little();
+
+    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+    auto characterManager = server->GetCharacterManager();
 
     auto targetState = ClientState::GetEntityClientState(targetEntityID);
     auto entityState = targetState ? targetState->GetEntityState(targetEntityID) : nullptr;
@@ -76,36 +78,7 @@ bool Parsers::Analyze::Parse(libcomp::ManagerPacket *pPacketManager,
             auto equip = cState
                 ? cState->GetEntity()->GetEquippedItems((size_t)slot).Get() : nullptr;
 
-            if(equip)
-            {
-                reply.WriteS16Little(equip->GetTarot());
-                reply.WriteS16Little(equip->GetSoul());
-
-                for(auto modSlot : equip->GetModSlots())
-                {
-                    reply.WriteU16Little(modSlot);
-                }
-
-                auto basicEffect = equip->GetBasicEffect();
-                reply.WriteU32Little(basicEffect ? basicEffect
-                    : static_cast<uint32_t>(-1));
-
-                auto specialEffect = equip->GetSpecialEffect();
-                reply.WriteU32Little(specialEffect ? specialEffect
-                    : static_cast<uint32_t>(-1));
-
-                for(auto bonus : equip->GetFuseBonuses())
-                {
-                    reply.WriteS8(bonus);
-                }
-            }
-            else
-            {
-                reply.WriteBlank(14);
-                reply.WriteU32Little(static_cast<uint32_t>(-1));
-                reply.WriteU32Little(static_cast<uint32_t>(-1));
-                reply.WriteBlank(3);
-            }
+            characterManager->GetItemDetailPacketData(reply, equip, 0);
         }
 
         connection->SendPacket(reply);

@@ -81,6 +81,7 @@
     <include path="binarydata/devildata.xml"/>
     <include path="binarydata/devillvupratedata.xml"/>
     <include path="binarydata/dynamicmapdata.xml"/>
+    <include path="binarydata/enchantdata.xml"/>
     <include path="binarydata/equipmentsetdata.xml"/>
     <include path="binarydata/expertdata.xml"/>
     <include path="binarydata/hnpcdata.xml"/>

@@ -8,7 +8,8 @@
         <member type="AccountLogin*" name="AccountLogin"/>
         <member type="AccountWorldData*" name="AccountWorldData"/>
         <member type="EventState*" name="EventState"/>
-        <member type="TradeSession*" name="TradeSession"/>
+        <member type="PlayerExchangeSession*" name="ExchangeSession"
+            nulldefault="true"/>
         <member type="Party*" name="Party" nulldefault="true"/>
         <member type="s8" name="StatusIcon"/>
         <member type="set" name="QuestTargetEnemies">
@@ -31,7 +32,14 @@
             <element type="u8"/>
         </member>
     </object>
-    <object name="TradeSession" persistent="false">
+    <object name="PlayerExchangeSession" persistent="false">
+        <member type="s32" name="SourceEntityID"/>
+        <member type="enum" name="Type" underlying="int8_t">
+            <value>TRADE</value>
+            <value>CRYSTALLIZE</value>
+            <value>ENCHANT_TAROT</value>
+            <value>ENCHANT_SOUL</value>
+        </member>
         <member type="EntityStateObject*" name="OtherCharacterState"
             nulldefault="true"/>
         <member type="bool" name="Locked"/>

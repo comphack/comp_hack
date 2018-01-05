@@ -344,6 +344,26 @@ bool ChannelServer::Initialize()
         to_underlying(ClientToChannelPacketCode_t::PACKET_ANALYZE_DEMON));
     clientPacketManager->AddParser<Parsers::DemonCompendium>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_DEMON_COMPENDIUM));
+    clientPacketManager->AddParser<Parsers::EntrustRequest>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_ENTRUST_REQUEST));
+    clientPacketManager->AddParser<Parsers::EntrustAccept>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_ENTRUST_ACCEPT));
+    clientPacketManager->AddParser<Parsers::EntrustRewardUpdate>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_ENTRUST_REWARD_UPDATE));
+    clientPacketManager->AddParser<Parsers::EntrustRewardFinish>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_ENTRUST_REWARD_FINISH));
+    clientPacketManager->AddParser<Parsers::EntrustRewardAccept>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_ENTRUST_REWARD_ACCEPT));
+    clientPacketManager->AddParser<Parsers::EntrustFinish>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_ENTRUST_FINISH));
+    clientPacketManager->AddParser<Parsers::DemonCrystallizeItem>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_DEMON_CRYSTALLIZE_ITEM_UPDATE));
+    clientPacketManager->AddParser<Parsers::DemonCrystallize>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_DEMON_CRYSTALLIZE));
+    clientPacketManager->AddParser<Parsers::EnchantItem>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_ENCHANT_ITEM_UPDATE));
+    clientPacketManager->AddParser<Parsers::Enchant>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_ENCHANT));
     clientPacketManager->AddParser<Parsers::DungeonRecords>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_DUNGEON_RECORDS));
     clientPacketManager->AddParser<Parsers::ClanEmblemUpdate>(

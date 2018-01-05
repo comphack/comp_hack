@@ -67,29 +67,10 @@ bool Parsers::EquipmentModEdit::Parse(libcomp::ManagerPacket *pPacketManager,
         libcomp::PersistentObject::GetObjectByUUID(state->GetObjectUUID(itemID)));
 
     bool valid = false;
-    uint8_t type = 0;
-    uint8_t offset = 0;
-    for(auto& itemSet : SVR_CONST.EQUIP_MOD_EDIT_ITEMS)
+    auto defIter = SVR_CONST.EQUIP_MOD_EDIT_ITEMS.find(item ? item->GetType() : 0);
+    if(defIter != SVR_CONST.EQUIP_MOD_EDIT_ITEMS.end())
     {
-        offset = 0;
-
-        for(uint32_t itemType : itemSet)
-        {
-            if(itemType == modItemType)
-            {
-                valid = true;
-                break;
-            }
-
-            offset++;
-        }
-
-        if(valid)
-        {
-            break;
-        }
-
-        type++;
+        valid = true;
     }
 
     const int32_t RESULT_CODE_ERROR = -1;
@@ -105,22 +86,18 @@ bool Parsers::EquipmentModEdit::Parse(libcomp::ManagerPacket *pPacketManager,
     int32_t mode = 0;
     uint32_t subMode = 0;
 
-    const uint16_t successRates[3][6] = {
-            { 2000, 3333, 5000, 7000, 5000, 10000 }, // Mod slot
-            { 400, 800, 1200, 1600, 1200, 10000 },   // Tarot
-            { 200, 400, 600, 1200, 600, 10000 }      // Soul
-        };
-
     if(valid)
     {
-        switch(type)
-        {
-        case 0:
-            // Mod slot add
-            if(offset < 6)
-            {
-                mode = MODE_ADD_SLOT;
+        int32_t successRate = defIter->second[2];
 
+        mode = defIter->second[0];
+        subMode = (uint32_t)defIter->second[1];
+
+        switch(mode)
+        {
+        case MODE_ADD_SLOT:
+            {
+                subMode = 0;
                 for(uint32_t modSlot : item->GetModSlots())
                 {
                     if(modSlot == 0)
@@ -139,27 +116,27 @@ bool Parsers::EquipmentModEdit::Parse(libcomp::ManagerPacket *pPacketManager,
 
                 // Start with the base success rate and lower for
                 // the later slots
-                uint16_t successRate = successRates[0][(size_t)offset];
-                switch(offset)
+                switch(subMode)
                 {
                 case 1:
-                    successRate = (uint16_t)(successRate / 3);
+                    successRate = (int32_t)(successRate / 3);
                     break;
                 case 2:
-                    successRate = (uint16_t)(successRate / 6);
+                    successRate = (int32_t)(successRate / 6);
                     break;
                 case 3:
                 case 4:
-                    successRate = (uint16_t)(successRate / 20);
+                    successRate = (int32_t)(successRate / 20);
                     break;
                 default:
                     break;
                 }
 
-                if(RNG(uint16_t, 1, 10000) <= successRate)
+                if(RNG(int32_t, 1, 10000) <= successRate)
                 {
-                    item->SetModSlots((size_t)subMode, MOD_SLOT_NULL_EFFECT);
                     responseCode = RESULT_CODE_SUCCESS;
+
+                    item->SetModSlots((size_t)subMode, MOD_SLOT_NULL_EFFECT);
                 }
                 else
                 {
@@ -167,82 +144,45 @@ bool Parsers::EquipmentModEdit::Parse(libcomp::ManagerPacket *pPacketManager,
                 }
             }
             break;
-        case 1:
-            // Tarot add
-            if(offset < 6)
+        case MODE_EMPTY_SLOT:
+        case MODE_ADD_SOUL_TAROT:
+        case MODE_EMPTY_SOUL_TAROT:
+            if(RNG(int32_t, 1, 10000) <= successRate)
             {
-                /// @todo
-                mode = MODE_ADD_SOUL_TAROT;
-                subMode = 1;
-            }
-            break;
-        case 2:
-            // Soul add
-            if(offset < 6)
-            {
-                /// @todo
-                mode = MODE_ADD_SOUL_TAROT;
-                subMode = 0;
-            }
-            break;
-        case 3:
-            // Tarot empty
-            if(offset < 3)
-            {
-                /// @todo
-                mode = MODE_EMPTY_SOUL_TAROT;
-                subMode = 1;
-            }
-            break;
-        case 4:
-            // Soul empty
-            if(offset < 3)
-            {
-                /// @todo
-                mode = MODE_EMPTY_SOUL_TAROT;
-                subMode = 0;
-            }
-            break;
-        case 5:
-        case 6:
-        case 7:
-        case 8:
-        case 9:
-            // Mod slot empty
-            if(offset < 3)
-            {
-                mode = MODE_EMPTY_SLOT;
-                subMode = (uint32_t)(type - 5);
+                responseCode = RESULT_CODE_SUCCESS;
 
-                // Start with the base success rate, decrease the failure rate
-                // by 50%, then lower for the later slots
-                uint16_t successRate = successRates[0][(size_t)offset];
-                successRate = (uint16_t)(successRate + (10000 - successRate) / 2);
-                switch(offset)
+                switch(mode)
                 {
-                case 1:
-                    successRate = (uint16_t)(successRate / 3);
+                case MODE_EMPTY_SLOT:
+                    item->SetModSlots((size_t)subMode, MOD_SLOT_NULL_EFFECT);
                     break;
-                case 2:
-                    successRate = (uint16_t)(successRate / 6);
+                case MODE_ADD_SOUL_TAROT:
+                    if(subMode == 0)
+                    {
+                        /// @todo: enable tarot
+                    }
+                    else
+                    {
+                        /// @todo: enable soul
+                    }
                     break;
-                case 3:
-                case 4:
-                    successRate = (uint16_t)(successRate / 20);
+                case MODE_EMPTY_SOUL_TAROT:
+                    if(subMode == 0)
+                    {
+                        item->SetTarot(0);
+                    }
+                    else
+                    {
+                        item->SetSoul(0);
+                    }
                     break;
                 default:
                     break;
                 }
-
-                if(RNG(uint16_t, 1, 10000) <= successRate)
-                {
-                    item->SetModSlots((size_t)subMode, MOD_SLOT_NULL_EFFECT);
-                    responseCode = RESULT_CODE_SUCCESS;
-                }
-                else
-                {
-                    responseCode = RESULT_CODE_FAIL;
-                }
+            }
+            else
+            {
+                responseCode = RESULT_CODE_FAIL;
             }
             break;
         default:

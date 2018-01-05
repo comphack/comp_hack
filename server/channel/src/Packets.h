@@ -152,6 +152,16 @@ PACKET_PARSER_DECL(BazaarMarketComment);    // 0x018B
 PACKET_PARSER_DECL(PartnerDemonAISet);      // 0x0181
 PACKET_PARSER_DECL(MapFlag);                // 0x0197
 PACKET_PARSER_DECL(DemonCompendium);        // 0x019B
+PACKET_PARSER_DECL(EntrustRequest);         // 0x01AA
+PACKET_PARSER_DECL(EntrustAccept);          // 0x01AD
+PACKET_PARSER_DECL(EntrustRewardUpdate);    // 0x01AF
+PACKET_PARSER_DECL(EntrustRewardFinish);    // 0x01B2
+PACKET_PARSER_DECL(EntrustRewardAccept);    // 0x01B4
+PACKET_PARSER_DECL(EntrustFinish);          // 0x01B6
+PACKET_PARSER_DECL(DemonCrystallizeItem);   // 0x01B8
+PACKET_PARSER_DECL(DemonCrystallize);       // 0x01BB
+PACKET_PARSER_DECL(EnchantItem);            // 0x01BE
+PACKET_PARSER_DECL(Enchant);                // 0x01C1
 PACKET_PARSER_DECL(DungeonRecords);         // 0x01C4
 PACKET_PARSER_DECL(ClanEmblemUpdate);       // 0x01E1
 PACKET_PARSER_DECL(DemonFamiliarity);       // 0x01E6

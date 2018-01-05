@@ -937,8 +937,8 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
         }
         break;
     case objects::MiTargetData::Type_t::OBJECT:
-        LOG_ERROR("Skill object targets are not currently supported: %1\n");
-        return false;
+        // Nothing special to do (for now)
+        break;
     default:
         LOG_ERROR(libcomp::String("Unknown target type encountered: %1\n")
             .Arg((uint8_t)skillData->GetTarget()->GetType()));
@@ -2150,8 +2150,8 @@ std::shared_ptr<objects::CalculatedEntityState> SkillManager::GetCalculatedState
             calcState = eState->GetCalculatedState();
         }
 
-        auto effectiveTokusei = calcState->GetEffectiveTokusei();
-        auto pendingSkillTokusei = calcState->GetPendingSkillTokusei();
+        auto effectiveTokusei = calcState->GetEffectiveTokuseiFinal();
+        auto pendingSkillTokusei = calcState->GetPendingSkillTokuseiFinal();
 
         bool modified = false;
         for(auto pair : pendingSkillTokusei)
@@ -2183,7 +2183,7 @@ std::shared_ptr<objects::CalculatedEntityState> SkillManager::GetCalculatedState
         {
             // If the tokusei set was modified, calculate skill specific stats
             calcState = std::make_shared<objects::CalculatedEntityState>();
-            calcState->SetEffectiveTokusei(effectiveTokusei);
+            calcState->SetEffectiveTokuseiFinal(effectiveTokusei);
 
             eState->RecalculateStats(definitionManager, calcState);
         }
@@ -3436,14 +3436,9 @@ bool SkillManager::CalculateDamage(const std::shared_ptr<ActiveEntityState>& sou
                             {
                                 target.Flags2 |= FLAG2_INTENSIVE_BREAK;
                             }
-                            else if(target.Damage1 > 9999 ||
-                                target.Damage2 > 9999)
-                            {
-                                target.Flags2 |= FLAG2_LIMIT_BREAK;
-                            }
                             else
                             {
-                                target.Flags1 |= FLAG1_CRITICAL;
+                                target.Flags2 |= FLAG2_LIMIT_BREAK;
                             }
                             break;
                         default:

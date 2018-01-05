@@ -136,8 +136,8 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     Loot.cpp
     LootBox.h
     LootBox.cpp
-    TradeSession.h
-    TradeSession.cpp
+    PlayerExchangeSession.h
+    PlayerExchangeSession.cpp
 )
 
 SOURCE_GROUP("Source Files\\Packets\\Game" src/packets/game/*)
@@ -260,6 +260,16 @@ SET(${PROJECT_NAME}_PACKETS
     src/packets/game/PartnerDemonAISet.cpp      # 0x0181
     src/packets/game/MapFlag.cpp                # 0x0197
     src/packets/game/DemonCompendium.cpp        # 0x019B
+    src/packets/game/EntrustRequest.cpp         # 0x01AA
+    src/packets/game/EntrustAccept.cpp          # 0x01AD
+    src/packets/game/EntrustRewardUpdate.cpp    # 0x01AF
+    src/packets/game/EntrustRewardFinish.cpp    # 0x01B2
+    src/packets/game/EntrustRewardAccept.cpp    # 0x01B4
+    src/packets/game/EntrustFinish.cpp          # 0x01B6
+    src/packets/game/DemonCrystallizeItem.cpp   # 0x01B8
+    src/packets/game/DemonCrystallize.cpp       # 0x01BB
+    src/packets/game/EnchantItem.cpp            # 0x01BE
+    src/packets/game/Enchant.cpp                # 0x01C1
     src/packets/game/DungeonRecords.cpp         # 0x01C4
     src/packets/game/ClanEmblemUpdate.cpp       # 0x01E1
     src/packets/game/DemonFamiliarity.cpp       # 0x01E6

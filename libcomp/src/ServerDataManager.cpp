@@ -32,10 +32,12 @@
 #include "ScriptEngine.h"
 
 // object Includes
-#include "Event.h"
-#include "ServerShop.h"
-#include "ServerZone.h"
-#include "Tokusei.h"
+#include <EnchantSetData.h>
+#include <EnchantSpecialData.h>
+#include <Event.h>
+#include <ServerShop.h>
+#include <ServerZone.h>
+#include <Tokusei.h>
 
 using namespace libcomp;
 
@@ -106,8 +108,23 @@ bool ServerDataManager::LoadData(gsl::not_null<DataStore*> pDataStore,
     {
         if(!failure)
         {
+            LOG_DEBUG("Loading enchant set server definitions...\n");
+            failure = !LoadObjectsFromFile<objects::EnchantSetData>(
+                pDataStore, "/data/enchantset.xml", definitionManager);
+        }
+
+        if(!failure)
+        {
+            LOG_DEBUG("Loading enchant special server definitions...\n");
+            failure = !LoadObjectsFromFile<objects::EnchantSpecialData>(
+                pDataStore, "/data/enchantspecial.xml", definitionManager);
+        }
+
+        if(!failure)
+        {
             LOG_DEBUG("Loading tokusei server definitions...\n");
-            failure = !LoadObjects<objects::Tokusei>(pDataStore, "/tokusei", definitionManager);
+            failure = !LoadObjects<objects::Tokusei>(pDataStore,
+                "/tokusei", definitionManager);
         }
     }
 
@@ -257,6 +274,32 @@ namespace libcomp
         mShopData[id] = shop;
 
         return true;
+    }
+
+    template<>
+    bool ServerDataManager::LoadObject<objects::EnchantSetData>(const tinyxml2::XMLDocument& doc,
+        const tinyxml2::XMLElement *objNode, DefinitionManager* definitionManager)
+    {
+        auto eSet = std::shared_ptr<objects::EnchantSetData>(new objects::EnchantSetData);
+        if(!eSet->Load(doc, *objNode))
+        {
+            return false;
+        }
+
+        return definitionManager && definitionManager->RegisterServerSideDefinition(eSet);
+    }
+
+    template<>
+    bool ServerDataManager::LoadObject<objects::EnchantSpecialData>(const tinyxml2::XMLDocument& doc,
+        const tinyxml2::XMLElement *objNode, DefinitionManager* definitionManager)
+    {
+        auto eSpecial = std::shared_ptr<objects::EnchantSpecialData>(new objects::EnchantSpecialData);
+        if(!eSpecial->Load(doc, *objNode))
+        {
+            return false;
+        }
+
+        return definitionManager && definitionManager->RegisterServerSideDefinition(eSpecial);
     }
 
     template<>

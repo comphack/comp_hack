@@ -1,14 +1,15 @@
 /**
- * @file server/channel/src/packets/game/TradeAccept.cpp
+ * @file server/channel/src/packets/game/EntrustRewardAccept.cpp
  * @ingroup channel
  *
  * @author HACKfrost
  *
- * @brief Request from the client to accept a trade request.
+ * @brief Request from the client by the entrust source to confirm
+ *  the exchange.
  *
  * This file is part of the Channel Server (channel).
  *
- * Copyright (C) 2012-2016 COMP_hack Team <compomega@tutanota.com>
+ * Copyright (C) 2012-2018 COMP_hack Team <compomega@tutanota.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as
@@ -36,11 +37,10 @@
 
 // channel Includes
 #include "ChannelServer.h"
-#include "ClientState.h"
 
 using namespace channel;
 
-bool Parsers::TradeAccept::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::EntrustRewardAccept::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {
@@ -50,53 +50,41 @@ bool Parsers::TradeAccept::Parse(libcomp::ManagerPacket *pPacketManager,
     }
 
     auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-    auto characterManager = server->GetCharacterManager();
-
     auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
     auto exchangeSession = state->GetExchangeSession();
 
-    auto otherCState = exchangeSession ? std::dynamic_pointer_cast<CharacterState>(
-        exchangeSession->GetOtherCharacterState()) : nullptr;
-    auto otherClient = otherCState ? server->GetManagerConnection()->GetEntityClient(
-        otherCState->GetEntityID(), false) : nullptr;
-
-    bool cancel = false;
-    if(!otherClient)
-    {
-        cancel = true;
-    }
-    else
-    {
-        auto otherSession = otherClient->GetClientState()->GetExchangeSession();
-        if(!otherSession || otherSession->GetOtherCharacterState() != cState)
-        {
-            cancel = true;
-        }
-    }
-
     libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_TRADE_ACCEPT);
+    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_ENTRUST_REWARD_ACCEPT);
 
-    if(cancel)
+    if(!exchangeSession)
     {
-        state->SetExchangeSession(nullptr);
-
-        // Rejected
         reply.WriteS32Little(-1);
+
         client->SendPacket(reply);
+
         return true;
     }
 
-    // Accepted
-    reply.WriteS32Little(0);
+    int32_t otherEntityID = exchangeSession->GetOtherCharacterState()->GetEntityID();
+    auto otherClient = otherEntityID != cState->GetEntityID()
+        ? server->GetManagerConnection()->GetEntityClient(otherEntityID, false) : nullptr;
 
-    characterManager->SetStatusIcon(otherClient, 8);
+    bool success = exchangeSession->GetLocked() && otherClient;
+    reply.WriteS32Little(success ? 0 : -1);
 
-    client->QueuePacketCopy(reply);
-    otherClient->SendPacket(reply);
-    characterManager->SetStatusIcon(client, 8);
+    if(success)
+    {
+        otherClient->SendPacketCopy(reply);
+    }
+
+    client->SendPacket(reply);
+
+    if(!otherClient)
+    {
+        server->GetCharacterManager()->EndExchange(client, 0);
+    }
 
     return true;
 }

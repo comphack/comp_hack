@@ -152,13 +152,19 @@ struct Data
     /// Item IDs of item box rental tickets to their corresponding day lengths
     std::unordered_map<uint32_t, uint32_t> DEPO_MAP_ITEM;
 
-    /// Array of item IDs used for the EQUIP_MOD_EDIT function ID skill
-    std::array<std::list<uint32_t>, 11> EQUIP_MOD_EDIT_ITEMS;
+    /// Item IDs with parameters used for the EQUIP_MOD_EDIT function ID skill
+    std::unordered_map<uint32_t, std::array<int32_t, 3>> EQUIP_MOD_EDIT_ITEMS;
 
     /// Array of item IDs used for slot modification, indexed in the same order
     /// as the RateScaling field on MiModificationTriggerData and
     /// MiModificationExtEffectData
     std::array<std::list<uint32_t>, 2> SLOT_MOD_ITEMS;
+
+    /// Item/skill IDs with parameters used for synth calculations
+    std::unordered_map<uint32_t, std::array<int32_t, 3>> SYNTH_ADJUSTMENTS;
+
+    /// Synth skill IDs for demon crystallization, tarot enchant and soul enchant
+    std::array<uint32_t, 3> SYNTH_SKILLS;
 };
 
 public:

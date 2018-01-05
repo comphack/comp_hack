@@ -55,6 +55,7 @@ bool Parsers::BazaarMarketInfo::Parse(libcomp::ManagerPacket *pPacketManager,
     }
 
     auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+    auto characterManager = server->GetCharacterManager();
     auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
@@ -131,44 +132,12 @@ bool Parsers::BazaarMarketInfo::Parse(libcomp::ManagerPacket *pPacketManager,
 
                     reply.WriteS64Little(objectID);
                     reply.WriteS32Little((int32_t)(available ? bItem->GetCost() : 0));
+
                     reply.WriteU32Little(bItem->GetType());
                     reply.WriteU16Little(bItem->GetStackSize());
 
-                    if(available)
-                    {
-                        reply.WriteU16Little(item->GetDurability());
-                        reply.WriteS8(item->GetMaxDurability());
-
-                        reply.WriteS16Little(item->GetTarot());
-                        reply.WriteS16Little(item->GetSoul());
-
-                        for(auto modSlot : item->GetModSlots())
-                        {
-                            reply.WriteU16Little(modSlot);
-                        }
-
-                        reply.WriteS32Little(0);    // Unknown
-
-                        auto basicEffect = item->GetBasicEffect();
-                        reply.WriteU32Little(basicEffect ? basicEffect
-                            : static_cast<uint32_t>(-1));
-
-                        auto specialEffect = item->GetSpecialEffect();
-                        reply.WriteU32Little(specialEffect ? specialEffect
-                            : static_cast<uint32_t>(-1));
-
-                        for(auto bonus : item->GetFuseBonuses())
-                        {
-                            reply.WriteS8(bonus);
-                        }
-                    }
-                    else
-                    {
-                        reply.WriteBlank(21);
-                        reply.WriteU32Little(static_cast<uint32_t>(-1));
-                        reply.WriteU32Little(static_cast<uint32_t>(-1));
-                        reply.WriteBlank(3);
-                    }
+                    characterManager->GetItemDetailPacketData(reply, available
+                        ? item : nullptr, 1);
                 }
             }
         }

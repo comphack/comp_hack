@@ -30,8 +30,6 @@ build_script:
   - 7z x external.zip
   - del external.zip
   - mv external* binaries
-  - dir
-  - dir binaries
   - cmake -DWINDOWS_SERVICE=ON -DCMAKE_INSTALL_PREFIX="%appveyor_build_folder%\build\install" -DCMAKE_CUSTOM_CONFIGURATION_TYPES="%configuration%" -G"%generator%" ..
 #  - msbuild comp_hack.sln /property:Configuration="%configuration%" /property:Platform="%msplatform%"
   - cmake --build . --config %configuration% --target package

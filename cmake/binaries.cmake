@@ -15,6 +15,21 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+# Add these targets to prevent problems during a build.
+ADD_CUSTOM_TARGET(gsl)
+ADD_CUSTOM_TARGET(zlib-lib)
+ADD_CUSTOM_TARGET(openssl)
+ADD_CUSTOM_TARGET(mariadb)
+ADD_CUSTOM_TARGET(ttvfs-ex)
+ADD_CUSTOM_TARGET(physfs-lib)
+ADD_CUSTOM_TARGET(sqrat)
+ADD_CUSTOM_TARGET(civet)
+ADD_CUSTOM_TARGET(squirrel3)
+ADD_CUSTOM_TARGET(asio)
+ADD_CUSTOM_TARGET(tinyxml2-ex)
+ADD_CUSTOM_TARGET(googletest)
+ADD_CUSTOM_TARGET(jsonbox-ex)
+
 SET(SOURCE_DIR "${CMAKE_SOURCE_DIR}/binaries/gsl")
 
 SET(GSL_INCLUDE_DIRS "${SOURCE_DIR}/include")

@@ -190,7 +190,15 @@ ELSE()
 ENDIF()
 
 # Include all build code for external projects.
-INCLUDE(${COMP_MODULE_PATH}/external.cmake)
+IF(EXISTS "${CMAKE_SOURCE_DIR}/binaries")
+    MESSAGE("-- Using pre-built binaries.")
+
+    INCLUDE(${COMP_MODULE_PATH}/binaries.cmake)
+ELSE()
+    MESSAGE("-- Building external binaries.")
+
+    INCLUDE(${COMP_MODULE_PATH}/external.cmake)
+ENDIF()
 
 # PDB not found for library.
 ADD_LINKER_FLAGS(AUTO /ignore:4099)

@@ -1,7 +1,7 @@
 version: "{branch}-{build}"
 test: off
 
-os: 
+os:
   - Visual Studio 2015
 
 platform:
@@ -26,6 +26,10 @@ before_build:
   - cd build
 
 build_script:
+  - appveyor DownloadFile https://github.com/comphack/external/releases/download/external-5/external-0.1.1-win32.zip -FileName external.zip
+  - 7z x external.zip
+  - del external.zip
+  - mv external* ..\binaries
   - cmake -DWINDOWS_SERVICE=ON -DCMAKE_INSTALL_PREFIX="%appveyor_build_folder%\build\install" -DCMAKE_CUSTOM_CONFIGURATION_TYPES="%configuration%" -G"%generator%" ..
 #  - msbuild comp_hack.sln /property:Configuration="%configuration%" /property:Platform="%msplatform%"
   - cmake --build . --config %configuration% --target package

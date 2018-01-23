@@ -57,6 +57,9 @@ public:
     bool IsPersistentReference() const;
     bool SetPersistentReference(bool persistentReference);
 
+    bool IsScriptReference() const;
+    bool SetScriptReference(bool scriptReference);
+
     bool IsGeneric() const;
     void SetGeneric();
 
@@ -117,6 +120,7 @@ private:
     std::string mNamespace;
     uint16_t mDynamicSizeCount;
     bool mPersistentReference;
+    bool mScriptReference;
     bool mNullDefault;
 
     std::list<std::shared_ptr<MetaVariable>> mDefaultedVariables;

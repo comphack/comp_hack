@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <objgen>
-    <object name="Character" location="world">
+    <object name="Character" location="world" scriptenabled="true">
         <member type="string" name="Name" size="32" key="true" unique="true"/>
         <member type="Account*" name="Account" key="true" unique="false"/>
         <member type="u8" name="CID" caps="true" max="19"/>
@@ -27,8 +27,7 @@
         <member type="DemonBox*" name="COMP" caps="true"/>
         <member type="Demon*" name="ActiveDemon"/>
         <member type="u32" name="HomepointZone"/>
-        <member type="float" name="HomepointX"/>
-        <member type="float" name="HomepointY"/>
+        <member type="u32" name="HomepointSpotID"/>
         <member type="u32" name="LogoutZone"/>
         <member type="float" name="LogoutX"/>
         <member type="float" name="LogoutY"/>
@@ -69,7 +68,7 @@
         <member type="CharacterProgress*" name="Progress"/>
         <member type="FriendSettings*" name="FriendSettings"/>
     </object>
-    <object name="EntityStats" location="world">
+    <object name="EntityStats" location="world" scriptenabled="true">
         <member type="ref" name="Entity" key="true" unique="true"/>
         <member type="s8" name="Level" default="-1"/>
         <member type="s64" name="XP" caps="true"/>
@@ -134,7 +133,7 @@
             <element type="u32"/>
         </member>
     </object>
-    <object name="Quest" location="world">
+    <object name="Quest" location="world" scriptenabled="true">
         <member type="s16" name="QuestID"/>
         <member type="Character*" name="Character" key="true" unique="false"/>
         <member type="s8" name="Phase"/>

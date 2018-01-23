@@ -29,6 +29,8 @@
 // libobjgen Includes
 #include "MetaObject.h"
 #include "MetaVariable.h"
+#include "MetaVariableEnum.h"
+#include "MetaVariableReference.h"
 
 // Standard C++ Includes
 #include <sstream>
@@ -63,7 +65,12 @@ std::string GeneratorSource::Generate(const MetaObject& obj)
     }
     ss << std::endl;
 
-    std::set<std::string> references = obj.GetReferencesTypes(true);
+    std::list<std::shared_ptr<MetaVariableReference>> references;
+    for(auto var : obj.GetReferences())
+    {
+        references.push_back(std::dynamic_pointer_cast<
+            MetaVariableReference>(var));
+    }
 
     if(!references.empty())
     {
@@ -71,8 +78,8 @@ std::string GeneratorSource::Generate(const MetaObject& obj)
 
         for(auto ref : references)
         {
-            ss << "#include <" << Generator::GetObjectName(ref) <<
-                ".h>" << std::endl;
+            ss << "#include <" << Generator::GetObjectName(
+                ref->GetReferenceType(true)) << ".h>" << std::endl;
         }
 
         ss << std::endl;
@@ -499,6 +506,19 @@ std::string GeneratorSource::Generate(const MetaObject& obj)
 
     if(scriptEnabled)
     {
+        // The script bindings will not cover things such as lists of script
+        // enabled objects, so load these separately
+        std::set<std::string> scriptReferences;
+        for(auto ref : references)
+        {
+            if(ref->IsScriptAccessible())
+            {
+                scriptReferences.insert(ref->GetReferenceType());
+            }
+        }
+
+        scriptReferences.erase(obj.GetName());
+
         std::stringstream bindingType;
         std::stringstream dependencies;
         if(!baseObject.empty())
@@ -512,10 +532,10 @@ std::string GeneratorSource::Generate(const MetaObject& obj)
             bindingType << "Class<" << obj.GetName() << ">";
         }
 
-        if(references.size() > 0)
+        if(scriptReferences.size() > 0)
         {
             dependencies << "// Include references" << std::endl;
-            for(auto ref : references)
+            for(auto ref : scriptReferences)
             {
                 if(ref != obj.GetName())
                 {
@@ -536,6 +556,42 @@ std::string GeneratorSource::Generate(const MetaObject& obj)
         replacements["@OBJECT_STRING_NAME@"] = Escape(obj.GetName());
         replacements["@BINDINGS@"] = bindingsStr;
         replacements["@DEPENDENCIES@"] = dependencies.str();
+
+        std::stringstream additions;
+
+        // Register enums with the constants table
+        for(auto it = obj.VariablesBegin(); it != obj.VariablesEnd(); ++it)
+        {
+            auto var = *it;
+
+            if(var->GetMetaType() == MetaVariable::MetaVariableType_t::TYPE_ENUM)
+            {
+                auto eVar = std::dynamic_pointer_cast<MetaVariableEnum>(var);
+
+                additions << "{" << std::endl
+                    << Tab() << "Sqrat::Enumeration e(mVM);" << std::endl;
+                for(auto enumValPair : eVar->GetValues())
+                {
+                    additions << Tab() << "e.Const(" << Escape(enumValPair.first)
+                        << ", (" << eVar->GetUnderlyingType() << ")"
+                        << eVar->GetCodeType() << "::" << enumValPair.first
+                        << ");" << std::endl;
+                }
+
+                additions << std::endl << Tab() << "Sqrat::ConstTable(mVM).Enum(\""
+                    << obj.GetName() << "_" << eVar->GetName() << "_t\", e);"
+                    << std::endl << "}" << std::endl << std::endl;
+            }
+        }
+
+        if(obj.IsPersistent())
+        {
+            // Need to generate ObjectReference binding
+            additions << ParseTemplate(0,
+                "VariablePersistentReferenceScriptBinding", replacements);
+        }
+
+        replacements["@ADDITIONS@"] = additions.str();
 
         ss << ParseTemplate(0, "VariableAccessScriptBindings", replacements)
             << std::endl;

@@ -57,7 +57,7 @@ namespace libcomp
     template<>
     ScriptEngine& ScriptEngine::Using<AIManager>()
     {
-        if(!BindingExists("AIManager"))
+        if(!BindingExists("AIManager", true))
         {
             Using<ActiveEntityState>();
 

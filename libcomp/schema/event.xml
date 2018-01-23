@@ -13,54 +13,111 @@
         <member type="list" name="branches">
             <element type="EventBase*"/>
         </member>
+        <member type="string" name="branchScriptID"/>
+        <member type="list" name="branchScriptParams">
+            <element type="string"/>
+        </member>
     </object>
     <object name="Event" baseobject="EventSequence" persistent="false"
         inherited-construction="true">
         <member type="string" name="ID"/>
         <member type="enum" name="eventType" underlying="uint8_t" default="FORK">
             <value>FORK</value>
-            <value>MESSAGE</value>
             <value>NPC_MESSAGE</value>
             <value>EX_NPC_MESSAGE</value>
             <value>MULTITALK</value>
             <value>PROMPT</value>
             <value>PERFORM_ACTIONS</value>
             <value>OPEN_MENU</value>
-            <value>HOMEPOINT</value>
-            <value>GET_ITEMS</value>
             <value>PLAY_SCENE</value>
-            <value>STAGE_EFFECT</value>
             <value>DIRECTION</value>
-            <value>SPECIAL_DIRECTION</value>
-            <value>PLAY_SOUND_EFFECT</value>
-            <value>PLAY_BGM</value>
-            <value>STOP_BGM</value>
         </member>
     </object>
-    <object name="EventCondition" persistent="false">
-        <member type="enum" name="type" underlying="uint8_t">
-            <value>NORMAL</value>
-            <value>ZONE_FLAGS</value>
-            <value>MAX_QUESTS</value>
+    <!-- Structure must match MiQuestUpperCondition usage -->
+    <object name="EventConditionData" persistent="false">
+        <member type="enum" name="type" underlying="uint32_t">
+            <!-- Standard quest use types -->
+            <value num="0">NONE</value>
+            <value num="1">LEVEL</value>
+            <value num="2">LNC_TYPE</value>
+            <value num="3">ITEM</value>
+            <value num="4">VALUABLE</value>
+            <value num="9">QUEST_COMPLETE</value>
+            <value num="12">TIMESPAN</value>
+            <value num="13">TIMESPAN_WEEK</value>
+            <value num="15">MOON_PHASE</value>
+            <value num="16">MAP</value>
+            <value num="17">QUEST_ACTIVE</value>
+            <value num="18">QUEST_SEQUENCE</value>
+            <value num="21">EXPERTISE_NOT_MAX</value>
+            <value num="22">EXPERTISE</value>
+            <value num="23">SI_EQUIPPED</value>
+            <value num="24">SUMMONED</value>
+
+            <!-- Custom types -->
+            <value num="101">SCRIPT</value>
+
             <value>QUEST_AVAILABLE</value>
             <value>QUEST_PHASE</value>
             <value>QUEST_PHASE_REQUIREMENTS</value>
+            <value>QUESTS_ACTIVE</value>
+
+            <value>CLAN_HOME</value>
+            <value>COMP_DEMON</value>
+            <value>COMP_FREE</value>
+            <value>DEMON_BOOK</value>
+            <value>EXPERTISE_ACTIVE</value>
+            <value>EQUIPPED</value>
+            <value>GENDER</value>
+            <value>INVENTORY_FREE</value>
+            <value>LNC</value>
+            <value>NPC_STATE</value>
+            <value>PARTNER_ALIVE</value>
+            <value>PARTNER_FAMILIARITY</value>
+            <value>PARTNER_LEVEL</value>
+            <value>PARTNER_LOCKED</value>
+            <value>PARTNER_SKILL_LEARNED</value>
+            <value>PARTNER_STAT_VALUE</value>
+            <value>PARTY_SIZE</value>
+            <value>PLUGIN</value>
+            <value>SKILL_LEARNED</value>
+            <value>STAT_VALUE</value>
+            <value>STATUS_ACTIVE</value>
+            <value>TIMESPAN_DATETIME</value>
+
+            <!-- Custom flag types -->
+            <value num="1001">ZONE_FLAGS</value>
             <value>QUEST_FLAGS</value>
         </member>
+        <member type="s32" name="value1"/>
+        <member type="s32" name="value2"/>
+    </object>
+    <object name="EventCondition" baseobject="EventConditionData" persistent="false"
+        inherited-construction="true">
         <member type="enum" name="compareMode" underlying="uint8_t">
-            <value>EQUAL</value>
-            <value>EXISTS</value>
-            <value>LT_OR_NAN</value>
-            <value>LT</value>
-            <value>GTE</value>
+            <value num="0x00">DEFAULT_COMPARE</value>
+            <value num="0x01">EQUAL</value>
+            <value num="0x02">EXISTS</value>
+            <value num="0x04">LT_OR_NAN</value>
+            <value num="0x08">LT</value>
+            <value num="0x10">GTE</value>
+            <value num="0x20">BETWEEN</value>
         </member>
         <member type="bool" name="negate"/>
-        <member type="EventConditionData*" name="data"/>
-        <member type="s16" name="questID" default="-1"/>
-        <member type="s8" name="phase" default="-1"/>
+    </object>
+    <object name="EventFlagCondition" baseobject="EventCondition" persistent="false"
+        inherited-construction="true">
         <member type="map" name="flagStates">
             <key type="s32"/>
             <value type="s32"/>
+        </member>
+    </object>
+    <object name="EventScriptCondition" baseobject="EventCondition" persistent="false"
+        inherited-construction="true">
+        <member type="enum" name="type" inherited="true" default="SCRIPT"/>
+        <member type="string" name="scriptID"/>
+        <member type="list" name="params">
+            <element type="string"/>
         </member>
     </object>
 </objgen>

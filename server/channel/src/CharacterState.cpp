@@ -29,6 +29,7 @@
 // libcomp Includes
 #include <Constants.h>
 #include <DefinitionManager.h>
+#include <ScriptEngine.h>
 
 // objects Includes
 #include <CalculatedEntityState.h>
@@ -52,6 +53,30 @@
 #include <TokuseiCorrectTbl.h>
 
 using namespace channel;
+
+namespace libcomp
+{
+    template<>
+    ScriptEngine& ScriptEngine::Using<CharacterState>()
+    {
+        if(!BindingExists("CharacterState", true))
+        {
+            Using<ActiveEntityState>();
+            Using<objects::Character>();
+
+            Sqrat::DerivedClass<CharacterState,
+                ActiveEntityState> binding(mVM, "CharacterState");
+            binding
+                .Func<std::shared_ptr<objects::Character>
+                    (CharacterState::*)()>(
+                    "GetEntity", &CharacterState::GetEntity);
+
+            Bind<CharacterState>("CharacterState", binding);
+        }
+
+        return *this;
+    }
+}
 
 CharacterState::CharacterState()
 {

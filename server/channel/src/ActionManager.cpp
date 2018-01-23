@@ -31,16 +31,27 @@
 #include <Log.h>
 #include <PacketCodes.h>
 
+// Standard C++11 Includes
+#include <math.h>
+
 // channel Includes
 #include "ChannelServer.h"
 
 // object Includes
 #include <Action.h>
 #include <ActionAddRemoveItems.h>
+#include <ActionAddRemoveStatus.h>
 #include <ActionCreateLoot.h>
+#include <ActionDisplayMessage.h>
+#include <ActionGrantSkills.h>
 #include <ActionGrantXP.h>
+#include <ActionPlayBGM.h>
+#include <ActionPlaySoundEffect.h>
+#include <ActionSetHomepoint.h>
 #include <ActionSetNPCState.h>
 #include <ActionSpawn.h>
+#include <ActionSpecialDirection.h>
+#include <ActionStageEffect.h>
 #include <ActionStartEvent.h>
 #include <ActionUpdateCOMP.h>
 #include <ActionUpdateFlag.h>
@@ -50,9 +61,11 @@
 #include <ActionZoneChange.h>
 #include <CharacterProgress.h>
 #include <DemonBox.h>
+#include <DropSet.h>
 #include <MiSpotData.h>
 #include <ObjectPosition.h>
 #include <Party.h>
+#include <Quest.h>
 #include <ServerNPC.h>
 #include <ServerObject.h>
 #include <ServerZone.h>
@@ -74,6 +87,8 @@ ActionManager::ActionManager(const std::weak_ptr<ChannelServer>& server)
         &ActionManager::ZoneChange;
     mActionHandlers[objects::Action::ActionType_t::START_EVENT] =
         &ActionManager::StartEvent;
+    mActionHandlers[objects::Action::ActionType_t::SET_HOMEPOINT] =
+        &ActionManager::SetHomepoint;
     mActionHandlers[objects::Action::ActionType_t::SET_NPC_STATE] =
         &ActionManager::SetNPCState;
     mActionHandlers[objects::Action::ActionType_t::ADD_REMOVE_ITEMS] =
@@ -82,6 +97,16 @@ ActionManager::ActionManager(const std::weak_ptr<ChannelServer>& server)
         &ActionManager::UpdateCOMP;
     mActionHandlers[objects::Action::ActionType_t::GRANT_XP] =
         &ActionManager::GrantXP;
+    mActionHandlers[objects::Action::ActionType_t::DISPLAY_MESSAGE] =
+        &ActionManager::DisplayMessage;
+    mActionHandlers[objects::Action::ActionType_t::STAGE_EFFECT] =
+        &ActionManager::StageEffect;
+    mActionHandlers[objects::Action::ActionType_t::SPECIAL_DIRECTION] =
+        &ActionManager::SpecialDirection;
+    mActionHandlers[objects::Action::ActionType_t::PLAY_BGM] =
+        &ActionManager::PlayBGM;
+    mActionHandlers[objects::Action::ActionType_t::PLAY_SOUND_EFFECT] =
+        &ActionManager::PlaySoundEffect;
     mActionHandlers[objects::Action::ActionType_t::UPDATE_FLAG] =
         &ActionManager::UpdateFlag;
     mActionHandlers[objects::Action::ActionType_t::UPDATE_LNC] =
@@ -287,6 +312,59 @@ bool ActionManager::ZoneChange(ActionContext& ctx)
     return true;
 }
 
+bool ActionManager::SetHomepoint(ActionContext& ctx)
+{
+    if(!ctx.Client)
+    {
+        LOG_ERROR("Attempted to execute a set homepoint action with no"
+            " associated client connection\n");
+        return false;
+    }
+
+    auto act = std::dynamic_pointer_cast<objects::ActionSetHomepoint>(ctx.Action);
+    
+    auto state = ctx.Client->GetClientState();
+    auto cState = state->GetCharacterState();
+    auto character = cState->GetEntity();
+
+    uint32_t zoneID = act->GetZoneID();
+    uint32_t spotID = act->GetSpotID();
+
+    auto zoneDef = mServer.lock()->GetServerDataManager()->GetZoneData(zoneID, 0);
+    if(zoneID == 0 || !zoneDef)
+    {
+        LOG_ERROR("Attempted to execute a set homepoint action with an"
+            " invalid zone ID specified\n");
+        return false;
+    }
+
+    float xCoord = 0.f;
+    float yCoord = 0.f;
+    float rot = 0.f;
+    if(!mServer.lock()->GetZoneManager()->GetSpotPosition(zoneDef->GetDynamicMapID(),
+        spotID, xCoord, yCoord, rot))
+    {
+        LOG_ERROR("Attempted to execute a set homepoint action with an"
+            " invalid spot ID specified\n");
+        return false;
+    }
+
+    character->SetHomepointZone(zoneID);
+    character->SetHomepointSpotID(spotID);
+
+    libcomp::Packet p;
+    p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_EVENT_HOMEPOINT_UPDATE);
+    p.WriteS32Little((int32_t)zoneID);
+    p.WriteFloat(xCoord);
+    p.WriteFloat(yCoord);
+
+    ctx.Client->SendPacket(p);
+
+    mServer.lock()->GetWorldDatabase()->QueueUpdate(character, state->GetAccountUID());
+
+    return true;
+}
+
 bool ActionManager::AddRemoveItems(ActionContext& ctx)
 {
     if(!ctx.Client)
@@ -298,14 +376,101 @@ bool ActionManager::AddRemoveItems(ActionContext& ctx)
 
     auto act = std::dynamic_pointer_cast<objects::ActionAddRemoveItems>(ctx.Action);
 
-    auto characterManager = mServer.lock()->GetCharacterManager();
+    auto server = mServer.lock();
+    auto characterManager = server->GetCharacterManager();
     auto state = ctx.Client->GetClientState();
     auto cState = state->GetCharacterState();
     auto items = act->GetItems();
 
-    if(!characterManager->AddRemoveItems(ctx.Client, items, act->GetAdd()))
+    std::unordered_map<uint32_t, uint32_t> adds;
+    std::unordered_map<uint32_t, uint32_t> removes;
+    for(auto itemPair : items)
     {
-        return !act->GetStopOnFailure();
+        if(itemPair.second < 0)
+        {
+            removes[itemPair.first] = (uint32_t)(-itemPair.second);
+        }
+        else if(itemPair.second > 0)
+        {
+            adds[itemPair.first] = (uint32_t)itemPair.second;
+        }
+    }
+
+    if(!characterManager->AddRemoveItems(ctx.Client, adds, true) ||
+        !characterManager->AddRemoveItems(ctx.Client, removes, false))
+    {
+        if(act->GetStopOnFailure())
+        {
+            if(!act->GetOnFailureEvent().IsEmpty())
+            {
+                server->GetEventManager()->HandleEvent(ctx.Client, act->GetOnFailureEvent(),
+                    ctx.SourceEntityID);
+            }
+
+            return false;
+        }
+
+        return true;
+    }
+
+    if(adds.size() > 0 && act->GetNotify())
+    {
+        libcomp::Packet p;
+        p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_EVENT_GET_ITEMS);
+        p.WriteS8((int8_t)adds.size());
+        for(auto entry : adds)
+        {
+            p.WriteU32Little(entry.first);              // Type
+            p.WriteU16Little((uint16_t)entry.second);   // Quantity
+        }
+
+        ctx.Client->SendPacket(p);
+    }
+
+    return true;
+}
+
+bool ActionManager::AddRemoveStatus(ActionContext& ctx)
+{
+    if(!ctx.Client)
+    {
+        LOG_ERROR("Attempted to add or remove a status effect with"
+            " no associated client connection\n");
+        return false;
+    }
+
+    auto act = std::dynamic_pointer_cast<objects::ActionAddRemoveStatus>(ctx.Action);
+
+    auto state = ctx.Client->GetClientState();
+    auto server = mServer.lock();
+    auto definitionManager = server->GetDefinitionManager();
+    auto tokuseiManager = server->GetTokuseiManager();
+
+    AddStatusEffectMap statuses;
+    for(auto pair : act->GetStatusStacks())
+    {
+        statuses[pair.first] =
+            std::pair<uint8_t, bool>(pair.second, act->GetIsReplace());
+    }
+
+    if(statuses.size() > 0)
+    {
+        if(act->GetTargetType() == objects::ActionAddRemoveStatus::TargetType_t::CHARACTER ||
+            act->GetTargetType() ==
+            objects::ActionAddRemoveStatus::TargetType_t::CHARACTER_AND_PARTNER)
+        {
+            state->GetCharacterState()->AddStatusEffects(statuses, definitionManager);
+        }
+
+        if(act->GetTargetType() == objects::ActionAddRemoveStatus::TargetType_t::PARTNER ||
+            act->GetTargetType() ==
+            objects::ActionAddRemoveStatus::TargetType_t::CHARACTER_AND_PARTNER)
+        {
+            state->GetDemonState()->AddStatusEffects(statuses, definitionManager);
+        }
+
+        // Recalculate the character and demon
+        tokuseiManager->Recalculate(state->GetCharacterState(), true);
     }
 
     return true;
@@ -494,12 +659,14 @@ bool ActionManager::GrantXP(ActionContext& ctx)
     auto state = ctx.Client->GetClientState();
 
     std::list<std::shared_ptr<ActiveEntityState>> entityStates;
-    if(act->GetIncludeCharacter())
+    if(act->GetTargetType() == objects::ActionGrantXP::TargetType_t::CHARACTER ||
+        act->GetTargetType() == objects::ActionGrantXP::TargetType_t::CHARACTER_AND_PARTNER)
     {
         entityStates.push_back(state->GetCharacterState());
     }
 
-    if(act->GetIncludePartner())
+    if(act->GetTargetType() == objects::ActionGrantXP::TargetType_t::PARTNER ||
+        act->GetTargetType() == objects::ActionGrantXP::TargetType_t::CHARACTER_AND_PARTNER)
     {
         entityStates.push_back(state->GetDemonState());
     }
@@ -508,10 +675,222 @@ bool ActionManager::GrantXP(ActionContext& ctx)
     {
         if(eState->Ready())
         {
-            characterManager->ExperienceGain(ctx.Client, (uint64_t)act->GetXP(),
+            int64_t xp = act->GetXP();
+            if(act->GetAdjustable())
+            {
+                xp = (int64_t)ceil((double)xp *
+                    ((double)eState->GetCorrectValue(CorrectTbl::RATE_XP) * 0.01));
+            }
+
+            characterManager->ExperienceGain(ctx.Client, (uint64_t)xp,
                 eState->GetEntityID());
         }
     }
+
+    return true;
+}
+
+bool ActionManager::GrantSkills(ActionContext& ctx)
+{
+    if(!ctx.Client)
+    {
+        LOG_ERROR("Attempted to grant skills with no associated"
+            " client connection\n");
+        return false;
+    }
+
+    auto act = std::dynamic_pointer_cast<objects::ActionGrantSkills>(ctx.Action);
+
+    auto characterManager = mServer.lock()->GetCharacterManager();
+    auto state = ctx.Client->GetClientState();
+
+    std::shared_ptr<ActiveEntityState> eState;
+    switch(act->GetTargetType())
+    {
+    case objects::ActionGrantSkills::TargetType_t::CHARACTER:
+        eState = state->GetCharacterState();
+        if(act->GetSkillPoints() > 0)
+        {
+            characterManager->UpdateSkillPoints(ctx.Client,
+                act->GetSkillPoints());
+        }
+
+        if(act->ExpertisePointsCount() > 0)
+        {
+            std::list<std::pair<uint8_t, int32_t>> expPoints;
+            for(auto pair : act->GetExpertisePoints())
+            {
+                expPoints.push_back(std::pair<uint8_t, int32_t>(pair.first,
+                    pair.second));
+            }
+
+            characterManager->UpdateExpertisePoints(ctx.Client, expPoints);
+        }
+        break;
+    case objects::ActionGrantSkills::TargetType_t::PARTNER:
+        eState = state->GetDemonState();
+        if(act->GetSkillPoints() > 0)
+        {
+            LOG_ERROR("Attempted to grant skill points to a partner demon\n");
+            return false;
+        }
+
+        if(act->ExpertisePointsCount() > 0)
+        {
+            LOG_ERROR("Attempted to grant expertise points to a partner demon\n");
+            return false;
+        }
+        break;
+    }
+
+    if(eState->Ready())
+    {
+        for(uint32_t skillID : act->GetSkillIDs())
+        {
+            characterManager->LearnSkill(ctx.Client, eState->GetEntityID(),
+                skillID);
+        }
+    }
+
+    return true;
+}
+
+bool ActionManager::DisplayMessage(ActionContext& ctx)
+{
+    if(!ctx.Client)
+    {
+        LOG_ERROR("Attempted to execute a display message action with no"
+            " associated client connection\n");
+        return false;
+    }
+
+    auto act = std::dynamic_pointer_cast<objects::ActionDisplayMessage>(ctx.Action);
+
+    libcomp::Packet p;
+    p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_EVENT_MESSAGE);
+
+    for(auto msg : act->GetMessageIDs())
+    {
+        p.Seek(2);
+        p.WriteS32Little(msg);
+
+        ctx.Client->QueuePacketCopy(p);
+    }
+
+    ctx.Client->FlushOutgoing();
+
+    return true;
+}
+
+bool ActionManager::StageEffect(ActionContext& ctx)
+{
+    if(!ctx.Client)
+    {
+        LOG_ERROR("Attempted to execute a stage effect action with no"
+            " associated client connection\n");
+        return false;
+    }
+
+    auto act = std::dynamic_pointer_cast<objects::ActionStageEffect>(ctx.Action);
+
+    libcomp::Packet p;
+    p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_EVENT_STAGE_EFFECT);
+    p.WriteS32Little(act->GetMessageID());
+    p.WriteS8(act->GetEffect1());
+
+    bool effect2Set = act->GetEffect2() != 0;
+    p.WriteS8(effect2Set ? 1 : 0);
+    if(effect2Set)
+    {
+        p.WriteS32Little(act->GetEffect2());
+    }
+
+    ctx.Client->QueuePacket(p);
+
+    if(act->GetIncludeMessage())
+    {
+        p.Clear();
+        p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_EVENT_MESSAGE);
+        p.WriteS32Little(act->GetMessageID());
+
+        ctx.Client->QueuePacket(p);
+    }
+
+    ctx.Client->FlushOutgoing();
+
+    return true;
+}
+
+bool ActionManager::SpecialDirection(ActionContext& ctx)
+{
+    if(!ctx.Client)
+    {
+        LOG_ERROR("Attempted to execute a special direction action with no"
+            " associated client connection\n");
+        return false;
+    }
+
+    auto act = std::dynamic_pointer_cast<objects::ActionSpecialDirection>(ctx.Action);
+
+    libcomp::Packet p;
+    p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_EVENT_SPECIAL_DIRECTION);
+    p.WriteU8(act->GetSpecial1());
+    p.WriteU8(act->GetSpecial2());
+    p.WriteS32Little(act->GetDirection());
+
+    ctx.Client->SendPacket(p);
+
+    return true;
+}
+
+bool ActionManager::PlayBGM(ActionContext& ctx)
+{
+    if(!ctx.Client)
+    {
+        LOG_ERROR("Attempted to execute a play BGM action with no"
+            " associated client connection\n");
+        return false;
+    }
+
+    auto act = std::dynamic_pointer_cast<objects::ActionPlayBGM>(ctx.Action);
+
+    libcomp::Packet p;
+
+    if(act->GetIsStop())
+    {
+        p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_EVENT_STOP_BGM);
+        p.WriteS32Little(act->GetMusicID());
+    }
+    else
+    {
+        p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_EVENT_PLAY_BGM);
+        p.WriteS32Little(act->GetMusicID());
+        p.WriteS32Little(act->GetFadeInDelay());
+        p.WriteS32Little(act->GetUnknown());
+    }
+
+    ctx.Client->SendPacket(p);
+
+    return true;
+}
+
+bool ActionManager::PlaySoundEffect(ActionContext& ctx)
+{
+    if(!ctx.Client)
+    {
+        LOG_ERROR("Attempted to execute a play sound effect action with no"
+            " associated client connection\n");
+        return false;
+    }
+
+    auto act = std::dynamic_pointer_cast<objects::ActionPlaySoundEffect>(ctx.Action);
+    
+    libcomp::Packet p;
+    p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_EVENT_PLAY_SOUND_EFFECT);
+    p.WriteS32Little(act->GetSoundID());
+    p.WriteS32Little(act->GetDelay());
+
+    ctx.Client->SendPacket(p);
 
     return true;
 }
@@ -697,10 +1076,47 @@ bool ActionManager::UpdateQuest(ActionContext& ctx)
     auto server = mServer.lock();
     auto eventManager = server->GetEventManager();
 
-    eventManager->UpdateQuest(ctx.Client, act->GetQuestID(), act->GetPhase(), false,
-        act->GetFlagStates());
+    auto flagStates = act->GetFlagStates();
+    if(flagStates.size() > 0 &&
+        act->GetFlagSetMode() != objects::ActionUpdateQuest::FlagSetMode_t::UPDATE)
+    {
+        auto character = ctx.Client->GetClientState()->GetCharacterState()->GetEntity();
+        auto quest = character->GetQuests(act->GetQuestID()).Get();
+        auto existing = quest ? quest->GetFlagStates() : std::unordered_map<int32_t, int32_t>();
 
-    return true;
+        switch(act->GetFlagSetMode())
+        {
+        case objects::ActionUpdateQuest::FlagSetMode_t::INCREMENT:
+            for(auto pair : flagStates)
+            {
+                auto it = existing.find(pair.first);
+                if(it != existing.end())
+                {
+                    pair.second = it->second + pair.second;
+                }
+            }
+            break;
+        case objects::ActionUpdateQuest::FlagSetMode_t::DECREMENT:
+            for(auto pair : flagStates)
+            {
+                auto it = existing.find(pair.first);
+                if(it != existing.end())
+                {
+                    pair.second = it->second - pair.second;
+                }
+                else
+                {
+                    pair.second = -pair.second;
+                }
+            }
+            break;
+        default:
+            break;
+        }
+    }
+
+    return eventManager->UpdateQuest(ctx.Client, act->GetQuestID(), act->GetPhase(), false,
+        flagStates);
 }
 
 bool ActionManager::UpdateZoneFlags(ActionContext& ctx)
@@ -723,7 +1139,7 @@ bool ActionManager::UpdateZoneFlags(ActionContext& ctx)
             int32_t val;
             for(auto pair : act->GetFlagStates())
             {
-                if(ctx.CurrentZone->GetFlagState(pair.first, val))
+                if(!ctx.CurrentZone->GetFlagState(pair.first, val))
                 {
                     val = 0;
                 }
@@ -752,9 +1168,14 @@ bool ActionManager::Spawn(ActionContext& ctx)
 bool ActionManager::CreateLoot(ActionContext& ctx)
 {
     auto act = std::dynamic_pointer_cast<objects::ActionCreateLoot>(ctx.Action);
+
     auto server = mServer.lock();
     auto characterManager = server->GetCharacterManager();
+    auto serverDataManager = server->GetServerDataManager();
     auto zoneManager = server->GetZoneManager();
+
+    auto zone = ctx.CurrentZone;
+    uint32_t dynamicMapID = zone->GetDefinition()->GetDynamicMapID();
 
     std::list<std::shared_ptr<objects::ObjectPosition>> locations;
     switch(act->GetPosition())
@@ -764,7 +1185,7 @@ bool ActionManager::CreateLoot(ActionContext& ctx)
         break;
     case objects::ActionCreateLoot::Position_t::SOURCE_RELATIVE:
         {
-            auto source = ctx.CurrentZone->GetEntity(ctx.SourceEntityID);
+            auto source = zone->GetEntity(ctx.SourceEntityID);
             if(!source)
             {
                 LOG_ERROR("Attempted to create source relative loot without"
@@ -810,16 +1231,36 @@ bool ActionManager::CreateLoot(ActionContext& ctx)
         lBox->SetLootTime(lootTime);
 
         auto drops = act->GetDrops();
+        for(uint32_t dropSetID : act->GetDropSetIDs())
+        {
+            auto dropSet = serverDataManager->GetDropSetData(dropSetID);
+            if(dropSet)
+            {
+                for(auto drop : dropSet->GetDrops())
+                {
+                    drops.push_back(drop);
+                }
+            }
+        }
+
         characterManager->CreateLootFromDrops(lBox, drops, 0, true);
 
         auto lState = std::make_shared<LootBoxState>(lBox);
-        lState->SetCurrentX(loc->GetX());
-        lState->SetCurrentY(loc->GetY());
-        lState->SetCurrentRotation(loc->GetRotation());
+
+        float x = loc->GetX();
+        float y = loc->GetY();
+        float rot = loc->GetRotation();
+        zoneManager->GetSpotPosition(dynamicMapID, loc->GetSpotID(),
+            x, y, rot);
+
+        lState->SetCurrentX(x);
+        lState->SetCurrentY(y);
+        lState->SetCurrentRotation(rot);
+
         lState->SetEntityID(server->GetNextEntityID());
         entityIDs.push_back(lState->GetEntityID());
 
-        ctx.CurrentZone->AddLootBox(lState);
+        zone->AddLootBox(lState);
 
         if(firstClient)
         {
@@ -830,8 +1271,7 @@ bool ActionManager::CreateLoot(ActionContext& ctx)
     
     if(lootTime != 0)
     {
-        zoneManager->ScheduleEntityRemoval(lootTime, ctx.CurrentZone,
-            entityIDs);
+        zoneManager->ScheduleEntityRemoval(lootTime, zone, entityIDs);
     }
 
     ChannelClientConnection::FlushAllOutgoing(zConnections);

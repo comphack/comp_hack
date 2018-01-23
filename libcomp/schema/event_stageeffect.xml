@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<objgen>
-    <object name="EventStageEffect" baseobject="Event" persistent="false">
-        <member type="enum" name="eventType" inherited="true" default="STAGE_EFFECT"/>
-        <member type="s32" name="messageID"/>
-        <member type="s8" name="effect1"/>
-        <member type="s32" name="effect2"/>
-    </object>
-</objgen>

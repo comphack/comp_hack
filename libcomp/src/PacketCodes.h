@@ -470,6 +470,7 @@ enum class ChannelToClientPacketCode_t : uint16_t
     PACKET_EQUIPMENT_MOD_EDIT = 0x03CC,  //!< Response to the request to edit a previously applied equipment modification.
     PACKET_CULTURE_DATA = 0x03AD,  //!< Unknown. Response containing culture information.
     PACKET_DEMON_DEPO_LIST = 0x03F6,  //!< Response to the request to open the demon depo.
+    PACKET_SKILL_POINT_UPDATE = 0x0404,  //!< Notification that the player character's available skill points have updated.
     PACKET_BLACKLIST = 0x0409,  //!< Response containing the current player's blacklist.
     PACKET_DIGITALIZE_POINTS = 0x0415,  //!< Response containing the current player's digitalize point information.
     PACKET_DIGITALIZE_ASSIST = 0x0419,  //!< Response containing the current player's digitalize assist information.

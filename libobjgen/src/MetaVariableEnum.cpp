@@ -151,7 +151,8 @@ bool MetaVariableEnum::IsCoreType() const
 
 bool MetaVariableEnum::IsScriptAccessible() const
 {
-    return false;
+    // Limited use but available
+    return true;
 }
 
 bool MetaVariableEnum::IsValid() const
@@ -480,6 +481,44 @@ std::string MetaVariableEnum::GetDatabaseLoadCode(const Generator& generator,
         replacements);
 }
 
+std::string MetaVariableEnum::GetAccessDeclarations(const Generator& generator,
+    const MetaObject& object, const std::string& name, size_t tabLevel) const
+{
+    std::stringstream ss;
+    ss << MetaVariable::GetAccessDeclarations(generator,
+        object, name, tabLevel);
+
+    std::map<std::string, std::string> replacements;
+    replacements["@VAR_NAME@"] = name;
+    replacements["@VAR_TYPE@"] = GetCodeType();
+    replacements["@UNDERLYING_TYPE@"] = mUnderlyingType;
+    replacements["@VAR_CAMELCASE_NAME@"] = generator.GetCapitalName(*this);
+
+    ss << generator.ParseTemplate(tabLevel,
+        "VariableEnumAccessDeclarations", replacements) << std::endl;
+
+    return ss.str();
+}
+
+std::string MetaVariableEnum::GetAccessFunctions(const Generator& generator,
+    const MetaObject& object, const std::string& name) const
+{
+    std::stringstream ss;
+    ss << MetaVariable::GetAccessFunctions(generator, object, name);
+
+    std::map<std::string, std::string> replacements;
+    replacements["@VAR_NAME@"] = name;
+    replacements["@VAR_TYPE@"] = GetCodeType();
+    replacements["@UNDERLYING_TYPE@"] = mUnderlyingType;
+    replacements["@OBJECT_NAME@"] = object.GetName();
+    replacements["@VAR_CAMELCASE_NAME@"] = generator.GetCapitalName(*this);
+
+    ss << std::endl << generator.ParseTemplate(0, "VariableEnumAccessFunctions",
+        replacements) << std::endl;
+
+    return ss.str();
+}
+
 std::string MetaVariableEnum::GetUtilityDeclarations(const Generator& generator,
     const std::string& name, size_t tabLevel) const
 {
@@ -527,6 +566,26 @@ std::string MetaVariableEnum::GetUtilityFunctions(const Generator& generator,
 
     ss << std::endl << generator.ParseTemplate(0, "VariableEnumUtilityFunctions",
         replacements) << std::endl;
+
+    return ss.str();
+}
+
+std::string MetaVariableEnum::GetAccessScriptBindings(const Generator& generator,
+    const MetaObject& object, const std::string& name,
+    size_t tabLevel) const
+{
+    (void)name;
+
+    std::stringstream ss;
+
+    std::map<std::string, std::string> replacements;
+    replacements["@VAR_TYPE@"] = GetCodeType();
+    replacements["@UNDERLYING_TYPE@"] = mUnderlyingType;
+    replacements["@OBJECT_NAME@"] = object.GetName();
+    replacements["@VAR_CAMELCASE_NAME@"] = generator.GetCapitalName(*this);
+
+    ss << generator.ParseTemplate(tabLevel,
+        "VariableEnumAccessScriptBindings", replacements) << std::endl;
 
     return ss.str();
 }

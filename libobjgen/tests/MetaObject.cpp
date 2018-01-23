@@ -296,7 +296,7 @@ TEST(MetaObjectXmlParser, ScriptEnabledCheck)
     tinyxml2::XMLDocument doc;
     doc.Parse(xml);
 
-    const tinyxml2::XMLElement *pObjectXml = doc.RootElement()->FirstChildElement("object");
+    tinyxml2::XMLElement *pObjectXml = doc.RootElement()->FirstChildElement("object");
 
     while(nullptr != pObjectXml)
     {
@@ -313,6 +313,7 @@ TEST(MetaObjectXmlParser, ScriptEnabledCheck)
     parser = MetaObjectXmlParser();
 
     pObjectXml = doc.RootElement()->FirstChildElement("object");
+    pObjectXml->SetAttribute("scriptenabled", "true");
 
     while(nullptr != pObjectXml)
     {
@@ -320,17 +321,27 @@ TEST(MetaObjectXmlParser, ScriptEnabledCheck)
         pObjectXml = pObjectXml->NextSiblingElement("object");
     }
 
-    auto obj = parser.GetKnownObject("Object1");
-    obj->SetScriptEnabled(true);
+    //Object2 should build but there will be no script enabled reference to Object3
+    ASSERT_TRUE(parser.FinalizeObjectAndReferences("Object2"));
 
-    ASSERT_FALSE(parser.FinalizeObjectAndReferences("Object2"));
+    auto obj = parser.GetKnownObject("Object2");
+    auto obj3Var = obj->GetVariable("Object3");
+    ASSERT_TRUE(obj3Var &&
+        obj3Var->GetMetaType() == libobjgen::MetaVariable::MetaVariableType_t::TYPE_REF);
+
+    auto obj3Ref = std::dynamic_pointer_cast<libobjgen::MetaVariableReference>(obj3Var);
+    ASSERT_FALSE(obj3Ref->IsScriptReference());
 
     //Reset and make the referenced object script enabled as well
     parser = MetaObjectXmlParser();
 
+    pObjectXml = doc.RootElement()->FirstChildElement("object")
+        ->NextSiblingElement("object")->NextSiblingElement("object");
+    pObjectXml->SetAttribute("scriptenabled", "true");
+
     pObjectXml = doc.RootElement()->FirstChildElement("object");
 
-    while (nullptr != pObjectXml)
+    while(nullptr != pObjectXml)
     {
         ASSERT_TRUE(parser.LoadTypeInformation(doc, *pObjectXml));
         pObjectXml = pObjectXml->NextSiblingElement("object");
@@ -339,7 +350,16 @@ TEST(MetaObjectXmlParser, ScriptEnabledCheck)
     obj = parser.GetKnownObject("Object3");
     obj->SetScriptEnabled(true);
 
-    ASSERT_FALSE(parser.FinalizeObjectAndReferences("Object2"));
+    //Object2 should now build and also have a script enabled reference to Object3
+    ASSERT_TRUE(parser.FinalizeObjectAndReferences("Object2"));
+
+    obj = parser.GetKnownObject("Object2");
+    obj3Var = obj->GetVariable("Object3");
+    ASSERT_TRUE(obj3Var &&
+        obj3Var->GetMetaType() == libobjgen::MetaVariable::MetaVariableType_t::TYPE_REF);
+
+    obj3Ref = std::dynamic_pointer_cast<libobjgen::MetaVariableReference>(obj3Var);
+    ASSERT_TRUE(obj3Ref->IsScriptReference());
 }
 
 TEST(MetaObjectXmlParser, ParseAllObjectAttributes)

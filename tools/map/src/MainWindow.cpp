@@ -572,47 +572,41 @@ void MainWindow::BindSpawns()
 
     ui.tableWidget_Spawn->resizeColumnsToContents();
 
-    std::set<uint32_t> spawnLocationGroupIDs;
-
     // Set up the Spawn Group table
     ui.tableWidget_SpawnGroup->clear();
-    ui.tableWidget_SpawnGroup->setColumnCount(5);
+    ui.tableWidget_SpawnGroup->setColumnCount(3);
     ui.tableWidget_SpawnGroup->setHorizontalHeaderItem(0, GetTableWidget("GroupID"));
     ui.tableWidget_SpawnGroup->setHorizontalHeaderItem(1, GetTableWidget("SpawnID"));
-    ui.tableWidget_SpawnGroup->setHorizontalHeaderItem(2, GetTableWidget("LGroupID"));
-    ui.tableWidget_SpawnGroup->setHorizontalHeaderItem(3, GetTableWidget("MaxCount"));
-    ui.tableWidget_SpawnGroup->setHorizontalHeaderItem(4, GetTableWidget("RespawnTime"));
+    ui.tableWidget_SpawnGroup->setHorizontalHeaderItem(3, GetTableWidget("Count"));
 
     ui.tableWidget_SpawnGroup->setRowCount((int)mZone.SpawnGroupsCount());
     i = 0;
     for(auto sgPair : mZone.GetSpawnGroups())
     {
         auto sg = sgPair.second;
-        ui.tableWidget_SpawnGroup->setItem(i, 0, GetTableWidget(libcomp::String("%1")
-            .Arg(sg->GetID()).C()));
-        ui.tableWidget_SpawnGroup->setItem(i, 1, GetTableWidget(libcomp::String("%1")
-            .Arg(sg->GetSpawnID()).C()));
-        ui.tableWidget_SpawnGroup->setItem(i, 2, GetTableWidget(libcomp::String("%1")
-            .Arg(sg->GetSpawnLocationGroupID()).C()));
-        ui.tableWidget_SpawnGroup->setItem(i, 3, GetTableWidget(libcomp::String("%1")
-            .Arg(sg->GetMaxCount()).C()));
-        ui.tableWidget_SpawnGroup->setItem(i, 4, GetTableWidget(libcomp::String("%1")
-            .Arg(sg->GetRespawnTime()).C()));
-        i++;
-
-        spawnLocationGroupIDs.insert(sg->GetSpawnLocationGroupID());
+        for(auto sPair : sg->GetSpawns())
+        {
+            ui.tableWidget_SpawnGroup->setItem(i, 0, GetTableWidget(libcomp::String("%1")
+                .Arg(sg->GetID()).C()));
+            ui.tableWidget_SpawnGroup->setItem(i, 1, GetTableWidget(libcomp::String("%1")
+                .Arg(sPair.first).C()));
+            ui.tableWidget_SpawnGroup->setItem(i, 3, GetTableWidget(libcomp::String("%1")
+                .Arg(sPair.second).C()));
+            i++;
+        }
     }
 
     ui.tableWidget_SpawnGroup->resizeColumnsToContents();
 
     // Set up the Spawn Location table
     ui.tableWidget_SpawnLocation->clear();
-    ui.tableWidget_SpawnLocation->setColumnCount(5);
+    ui.tableWidget_SpawnLocation->setColumnCount(6);
     ui.tableWidget_SpawnLocation->setHorizontalHeaderItem(0, GetTableWidget("LGroupID"));
     ui.tableWidget_SpawnLocation->setHorizontalHeaderItem(1, GetTableWidget("X"));
     ui.tableWidget_SpawnLocation->setHorizontalHeaderItem(2, GetTableWidget("Y"));
     ui.tableWidget_SpawnLocation->setHorizontalHeaderItem(3, GetTableWidget("Width"));
     ui.tableWidget_SpawnLocation->setHorizontalHeaderItem(4, GetTableWidget("Height"));
+    ui.tableWidget_SpawnLocation->setHorizontalHeaderItem(5, GetTableWidget("RespawnTime"));
 
     uint32_t locKey = static_cast<uint32_t>(-1);
     QString selectedLGroup = ui.comboBox_SpawnEdit->currentText();
@@ -654,10 +648,10 @@ void MainWindow::BindSpawns()
                     .Arg(loc->GetWidth()).C()));
                 ui.tableWidget_SpawnLocation->setItem(i, 4, GetTableWidget(libcomp::String("%1")
                     .Arg(loc->GetHeight()).C()));
+                ui.tableWidget_SpawnLocation->setItem(i, 5, GetTableWidget(libcomp::String("%1")
+                    .Arg(grp->GetRespawnTime()).C()));
                 i++;
             }
-
-            spawnLocationGroupIDs.insert(grp->GetID());
         }
     }
 

@@ -30,12 +30,14 @@
 // libcomp Includes
 #include <Log.h>
 #include <PacketCodes.h>
+#include <Randomizer.h>
 
 // Standard C++11 Includes
 #include <math.h>
 
 // channel Includes
 #include "ChannelServer.h"
+#include "CharacterState.h"
 
 // object Includes
 #include <Account.h>
@@ -46,34 +48,41 @@
 #include <EventConditionData.h>
 #include <EventDirection.h>
 #include <EventExNPCMessage.h>
-#include <EventGetItem.h>
-#include <EventHomepoint.h>
+#include <EventFlagCondition.h>
 #include <EventInstance.h>
-#include <EventMessage.h>
 #include <EventMultitalk.h>
 #include <EventNPCMessage.h>
 #include <EventOpenMenu.h>
 #include <EventPerformActions.h>
-#include <EventPlayBGM.h>
 #include <EventPlayScene.h>
-#include <EventPlaySoundEffect.h>
 #include <EventPrompt.h>
-#include <EventSpecialDirection.h>
-#include <EventStageEffect.h>
-#include <EventStopBGM.h>
+#include <EventScriptCondition.h>
 #include <EventState.h>
 #include <Expertise.h>
 #include <Item.h>
 #include <ItemBox.h>
+#include <MiDevilData.h>
 #include <MiExpertData.h>
+#include <MiItemBasicData.h>
+#include <MiItemData.h>
 #include <MiQuestData.h>
 #include <MiQuestPhaseData.h>
 #include <MiQuestUpperCondition.h>
+#include <MiUnionData.h>
+#include <Party.h>
 #include <Quest.h>
 #include <QuestPhaseRequirement.h>
+#include <ServerNPC.h>
+#include <ServerObject.h>
 #include <ServerZone.h>
 
 using namespace channel;
+
+const uint16_t EVENT_COMPARE_NUMERIC = (uint16_t)EventCompareMode::EQUAL |
+    (uint16_t)EventCompareMode::LT | (uint16_t)EventCompareMode::GTE;
+
+const uint16_t EVENT_COMPARE_NUMERIC2 = EVENT_COMPARE_NUMERIC |
+    (uint16_t)EventCompareMode::BETWEEN;
 
 EventManager::EventManager(const std::weak_ptr<ChannelServer>& server)
     : mServer(server)
@@ -158,7 +167,7 @@ bool EventManager::HandleResponse(const std::shared_ptr<ChannelClientConnection>
             }
             else
             {
-                auto e = std::dynamic_pointer_cast<objects::EventMessage>(event);
+                auto e = std::dynamic_pointer_cast<objects::EventNPCMessage>(event);
 
                 // If there are still more messages, increment and continue the same event
                 if(current->GetIndex() < (e->MessageIDsCount() - 1))
@@ -513,49 +522,184 @@ bool EventManager::EvaluateEventCondition(const std::shared_ptr<
     bool negate = condition->GetNegate();
     switch(condition->GetType())
     {
-    case objects::EventCondition::Type_t::NORMAL:
-        // Evaluate the event specific condition
-        return negate != EvaluateCondition(client, condition->GetData());
-    case objects::EventCondition::Type_t::ZONE_FLAGS:
+    case objects::EventCondition::Type_t::SCRIPT:
         {
-            auto zone = mServer.lock()->GetZoneManager()->GetZoneInstance(client);
-            if(!zone)
+            auto scriptCondition = std::dynamic_pointer_cast<
+                objects::EventScriptCondition>(condition);
+            if(!scriptCondition)
             {
+                LOG_ERROR("Invalid event condition of type 'SCRIPT' encountered\n");
                 return false;
             }
 
-            std::unordered_map<int32_t, int32_t> flagStates;
-            for(auto pair : condition->GetFlagStates())
+            auto serverDataManager = mServer.lock()->GetServerDataManager();
+            auto script = serverDataManager->GetScript(scriptCondition->GetScriptID());
+            if(script && script->Type.ToLower() == "eventcondition")
             {
-                int32_t val;
-                if(zone->GetFlagState(pair.first, val))
+                auto engine = std::make_shared<libcomp::ScriptEngine>();
+                engine->Using<CharacterState>();
+                engine->Using<DemonState>();
+                engine->Using<libcomp::Randomizer>();
+
+                if(engine->Eval(script->Source))
                 {
-                    flagStates[pair.first] = val;
+                    Sqrat::Function f(Sqrat::RootTable(engine->GetVM()), "check");
+
+                    Sqrat::Array sqParams(engine->GetVM());
+                    for(libcomp::String p : scriptCondition->GetParams())
+                    {
+                        sqParams.Append(p);
+                    }
+
+                    auto state = client->GetClientState();
+                    auto scriptResult = !f.IsNull()
+                        ? f.Evaluate<int32_t>(
+                            state->GetCharacterState(),
+                            state->GetDemonState(),
+                            scriptCondition->GetValue1(),
+                            scriptCondition->GetValue2(),
+                            sqParams) : 0;
+                    if(scriptResult)
+                    {
+                        return negate != (*scriptResult == 0);
+                    }
                 }
             }
-
-            return EvaluateFlagStates(flagStates, condition);
+            else
+            {
+                LOG_ERROR(libcomp::String("Invalid event condition script ID: %1\n")
+                    .Arg(scriptCondition->GetScriptID()));
+            }
         }
         break;
+    case objects::EventCondition::Type_t::ZONE_FLAGS:
+        {
+            auto zone = mServer.lock()->GetZoneManager()->GetZoneInstance(client);
+            if(zone)
+            {
+                auto flagCon = std::dynamic_pointer_cast<
+                    objects::EventFlagCondition>(condition);
+
+                std::unordered_map<int32_t, int32_t> flagStates;
+                if(flagCon)
+                {
+                    for(auto pair : flagCon->GetFlagStates())
+                    {
+                        int32_t val;
+                        if(zone->GetFlagState(pair.first, val))
+                        {
+                            flagStates[pair.first] = val;
+                        }
+                    }
+                }
+
+                return negate != EvaluateFlagStates(flagStates, flagCon);
+            }
+        }
+        break;
+    case objects::EventCondition::Type_t::PARTNER_ALIVE:
+    case objects::EventCondition::Type_t::PARTNER_FAMILIARITY:
+    case objects::EventCondition::Type_t::PARTNER_LEVEL:
+    case objects::EventCondition::Type_t::PARTNER_LOCKED:
+    case objects::EventCondition::Type_t::PARTNER_SKILL_LEARNED:
+    case objects::EventCondition::Type_t::PARTNER_STAT_VALUE:
+        return negate != EvaluatePartnerCondition(client, condition);
+    case objects::EventCondition::Type_t::QUEST_AVAILABLE:
+    case objects::EventCondition::Type_t::QUEST_PHASE:
+    case objects::EventCondition::Type_t::QUEST_PHASE_REQUIREMENTS:
+    case objects::EventCondition::Type_t::QUEST_FLAGS:
+        return negate != EvaluateQuestCondition(client, condition);
+    default:
+        return negate != EvaluateCondition(client, condition);
+    }
+
+    // Always return false when invalid
+    return false;
+}
+
+bool EventManager::EvaluatePartnerCondition(const std::shared_ptr<
+    ChannelClientConnection>& client, const std::shared_ptr<
+    objects::EventCondition>& condition)
+{
+    auto state = client->GetClientState();
+    auto dState = state->GetDemonState();
+    auto demon = dState->GetEntity();
+
+    if(!demon)
+    {
+        return false;
+    }
+    
+    auto compareMode = condition->GetCompareMode();
+    switch(condition->GetType())
+    {
+    case objects::EventCondition::Type_t::PARTNER_ALIVE:
+        {
+            // Partner is alive
+            return (compareMode == EventCompareMode::EQUAL ||
+                compareMode == EventCompareMode::DEFAULT_COMPARE) && dState->IsAlive();
+        }
+    case objects::EventCondition::Type_t::PARTNER_FAMILIARITY:
+        {
+            // Partner familiarity compares to [value 1] (and [value 2])
+            return Compare((int32_t)demon->GetFamiliarity(), condition->GetValue1(),
+                condition->GetValue2(), compareMode, EventCompareMode::GTE,
+                EVENT_COMPARE_NUMERIC2);
+        }
+    case objects::EventCondition::Type_t::PARTNER_LEVEL:
+        {
+            // Partner level compares to [value 1] (and [value 2])
+            auto stats = demon->GetCoreStats();
+
+            return Compare(stats->GetLevel(), condition->GetValue1(),
+                condition->GetValue2(), compareMode, EventCompareMode::GTE,
+                EVENT_COMPARE_NUMERIC2);
+        }
+    case objects::EventCondition::Type_t::PARTNER_LOCKED:
+        {
+            // Partner is locked
+            return (compareMode == EventCompareMode::EQUAL ||
+                compareMode == EventCompareMode::DEFAULT_COMPARE) && demon->GetLocked();
+        }
+    case objects::EventCondition::Type_t::PARTNER_SKILL_LEARNED:
+        {
+            // Partner currently knows skill with ID [value 1]
+            return (compareMode == EventCompareMode::EQUAL ||
+                compareMode == EventCompareMode::DEFAULT_COMPARE) &&
+                dState->CurrentSkillsContains((uint32_t)condition->GetValue1());
+        }
+    case objects::EventCondition::Type_t::PARTNER_STAT_VALUE:
+        {
+            // Partner stat at correct index [value 1] compares to [value 2]
+            return Compare((int32_t)dState->GetCorrectValue(
+                (CorrectTbl)condition->GetValue1()), condition->GetValue2(), 0,
+                compareMode, EventCompareMode::GTE, EVENT_COMPARE_NUMERIC);
+        }
     default:
         break;
     }
 
+    return false;
+}
+
+bool EventManager::EvaluateQuestCondition(const std::shared_ptr<
+    ChannelClientConnection>& client, const std::shared_ptr<
+    objects::EventCondition>& condition)
+{
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
     auto character = cState->GetEntity();
 
-    int16_t questID = condition->GetQuestID();
+    int16_t questID = (int16_t)condition->GetValue1();
     auto quest = character->GetQuests(questID).Get();
 
     auto server = mServer.lock();
     auto definitionManager = server->GetDefinitionManager();
     auto questData = definitionManager->GetQuestData((uint32_t)questID);
 
+    auto compareMode = condition->GetCompareMode();
     switch(condition->GetType())
     {
-    case objects::EventCondition::Type_t::MAX_QUESTS:
-        return negate != (character->QuestsCount() >= QUEST_ACTIVE_MAX);
     case objects::EventCondition::Type_t::QUEST_AVAILABLE:
         {
             // If the quest is active or completed and not-repeatable, it is not available
@@ -570,102 +714,176 @@ bool EventManager::EvaluateEventCondition(const std::shared_ptr<
             uint8_t indexVal = progress->GetCompletedQuests(index);
             bool completed = (shiftVal & indexVal) != 0;
 
-            return negate != (quest == nullptr && (!completed || questData->GetType() == 1)
-                && EvaluateQuestConditions(client, condition->GetQuestID()));
+            return quest == nullptr && (!completed || questData->GetType() == 1)
+                && EvaluateQuestConditions(client, questID);
         }
     case objects::EventCondition::Type_t::QUEST_PHASE:
-        return negate != (quest &&
-            ((condition->GetCompareMode() == objects::EventCondition::CompareMode_t::EQUAL &&
-                quest->GetPhase() == condition->GetPhase()) ||
-            (condition->GetCompareMode() == objects::EventCondition::CompareMode_t::GTE &&
-                quest->GetPhase() >= condition->GetPhase()) ||
-            (condition->GetCompareMode() == objects::EventCondition::CompareMode_t::LT &&
-                quest->GetPhase() < condition->GetPhase())));
-    case objects::EventCondition::Type_t::QUEST_PHASE_REQUIREMENTS:
-        return negate != (quest &&
-            EvaluateQuestPhaseRequirements(client, questID, condition->GetPhase()));
-    case objects::EventCondition::Type_t::QUEST_FLAGS:
-        if(!quest || (condition->GetPhase() > -1 &&
-            quest->GetPhase() != condition->GetPhase()))
+        if(quest)
         {
-            return negate;
+            return Compare((int32_t)quest->GetPhase(), condition->GetValue2(), 0,
+                compareMode, EventCompareMode::EQUAL, EVENT_COMPARE_NUMERIC);
+        }
+        else if(compareMode == EventCompareMode::GTE)
+        {
+            // Count complete as true
+            size_t index;
+            uint8_t shiftVal;
+            server->GetCharacterManager()->ConvertIDToMaskValues((uint16_t)questID,
+                index, shiftVal);
+
+            uint8_t indexVal = character->GetProgress()->GetCompletedQuests(index);
+
+            return (indexVal & shiftVal) != 0;
+        }
+        else
+        {
+            return compareMode == EventCompareMode::LT ||
+                compareMode == EventCompareMode::LT_OR_NAN;
+        }
+    case objects::EventCondition::Type_t::QUEST_PHASE_REQUIREMENTS:
+        return quest && EvaluateQuestPhaseRequirements(client, questID,
+            (int8_t)condition->GetValue2());
+    case objects::EventCondition::Type_t::QUEST_FLAGS:
+        if(!quest || ((int8_t)condition->GetValue2() > -1 &&
+            quest->GetPhase() != (int8_t)condition->GetValue2()))
+        {
+            return false;
         }
         else
         {
             auto flagStates = quest->GetFlagStates();
-            return EvaluateFlagStates(flagStates, condition);
+            auto flagCon = std::dynamic_pointer_cast<objects::EventFlagCondition>(condition);
+
+            return EvaluateFlagStates(flagStates, flagCon);
         }
         break;
     default:
         break;
     }
 
-    // Always return false when invalid
     return false;
 }
 
 bool EventManager::EvaluateFlagStates(const std::unordered_map<int32_t,
-    int32_t>& flagStates, const std::shared_ptr<objects::EventCondition>& condition)
+    int32_t>& flagStates, const std::shared_ptr<
+    objects::EventFlagCondition>& condition)
 {
-    bool negate = condition->GetNegate();
+    if(!condition)
+    {
+        LOG_ERROR("Invalid event flag condition encountered\n");
+        return false;
+    }
 
     bool result = true;
     switch(condition->GetCompareMode())
     {
-    case objects::EventCondition::CompareMode_t::EXISTS:
+    case EventCompareMode::EXISTS:
         for(auto pair : condition->GetFlagStates())
         {
             if(flagStates.find(pair.first) == flagStates.end())
             {
-                result &= negate;
+                result = false;
+                break;
             }
         }
         break;
-    case objects::EventCondition::CompareMode_t::LT_OR_NAN:
+    case EventCompareMode::LT_OR_NAN:
         // Flag specific less than or not a number (does not exist)
         for(auto pair : condition->GetFlagStates())
         {
             auto it = flagStates.find(pair.first);
             if(it != flagStates.end() && it->second >= pair.second)
             {
-                result &= negate;
+                result = false;
+                break;
             }
         }
         break;
-    case objects::EventCondition::CompareMode_t::LT:
+    case EventCompareMode::LT:
         for(auto pair : condition->GetFlagStates())
         {
             auto it = flagStates.find(pair.first);
             if(it == flagStates.end() || it->second >= pair.second)
             {
-                result &= negate;
+                result = false;
+                break;
             }
         }
         break;
-    case objects::EventCondition::CompareMode_t::GTE:
+    case EventCompareMode::GTE:
         for(auto pair : condition->GetFlagStates())
         {
             auto it = flagStates.find(pair.first);
             if(it == flagStates.end() || it->second < pair.second)
             {
-                result &= negate;
+                result = false;
+                break;
             }
         }
         break;
-    case objects::EventCondition::CompareMode_t::EQUAL:
+    case EventCompareMode::DEFAULT_COMPARE:
+    case EventCompareMode::EQUAL:
     default:
         for(auto pair : condition->GetFlagStates())
         {
             auto it = flagStates.find(pair.first);
             if(it == flagStates.end() || it->second != pair.second)
             {
-                result &= negate;
+                result = false;
+                break;
             }
         }
         break;
     }
 
     return result;
+}
+
+bool EventManager::Compare(int32_t value1, int32_t value2, int32_t value3,
+    EventCompareMode compareMode, EventCompareMode defaultCompare,
+    uint16_t validCompareSetting)
+{
+    if(compareMode == EventCompareMode::DEFAULT_COMPARE)
+    {
+        if(defaultCompare == EventCompareMode::DEFAULT_COMPARE)
+        {
+            LOG_ERROR("Default comparison specified for non-defaulted"
+                " comparison\n");
+            return false;
+        }
+
+        compareMode = defaultCompare;
+    }
+
+    if(compareMode == EventCompareMode::EXISTS)
+    {
+        LOG_ERROR("EXISTS mode is not valid for generic comparison\n");
+        return false;
+    }
+
+    if((validCompareSetting & (uint16_t)compareMode) == 0)
+    {
+        LOG_ERROR(libcomp::String("Invalid comparison mode attempted: %1\n")
+            .Arg((int32_t)compareMode));
+        return false;
+    }
+
+    switch(compareMode)
+    {
+    case EventCompareMode::EQUAL:
+        return value1 == value2;
+    case EventCompareMode::LT_OR_NAN:
+        LOG_WARNING("LT_OR_NAN mode used generic comparison\n");
+        return value1 < value2;
+    case EventCompareMode::LT:
+        return value1 < value2;
+    case EventCompareMode::GTE:
+        return value1 >= value2;
+    case EventCompareMode::BETWEEN:
+        return value1 >= value2 && value1 <= value3;
+    default:
+        return false;
+    }
 }
 
 bool EventManager::EvaluateEventConditions(const std::shared_ptr<
@@ -684,36 +902,40 @@ bool EventManager::EvaluateEventConditions(const std::shared_ptr<
 }
 
 bool EventManager::EvaluateCondition(const std::shared_ptr<ChannelClientConnection>& client,
-    const std::shared_ptr<objects::EventConditionData>& condition)
+    const std::shared_ptr<objects::EventConditionData>& condition,
+    EventCompareMode compareMode)
 {
-    auto server = mServer.lock();
-    auto characterManager = server->GetCharacterManager();
-    auto state = client->GetClientState();
-    auto cState = state->GetCharacterState();
-
     switch(condition->GetType())
     {
     case objects::EventConditionData::Type_t::LEVEL:
         {
-            // Character level >= [value 1]
-            auto character = cState->GetEntity();
+            // Character level compares to [value 1] (and [value 2])
+            auto character = client->GetClientState()->GetCharacterState()->GetEntity();
             auto stats = character->GetCoreStats();
-            return stats->GetLevel() >= condition->GetValue1();
+
+            return Compare(stats->GetLevel(), condition->GetValue1(),
+                condition->GetValue2(), compareMode, EventCompareMode::GTE,
+                EVENT_COMPARE_NUMERIC2);
         }
-    case objects::EventConditionData::Type_t::LNC:
+    case objects::EventConditionData::Type_t::LNC_TYPE:
+        if(compareMode != EventCompareMode::EQUAL && compareMode != EventCompareMode::DEFAULT_COMPARE)
         {
-            // Character LNC matches [value 1]
-            int32_t lncType = (int32_t)cState->GetLNCType();
+            return false;
+        }
+        else
+        {
+            // Character LNC type matches [value 1]
+            int32_t lncType = (int32_t)client->GetClientState()->GetCharacterState()->GetLNCType();
             int32_t val1 = condition->GetValue1();
             if(val1 == 1)
             {
-                // Not chaos
+                // Not chaoss
                 return lncType == LNC_LAW || lncType == LNC_NEUTRAL;
             }
             else if(val1 == 3)
             {
                 // Not law
-                return lncType == LNC_NEUTRAL || lncType == LNC_CHAOS;
+                return lncType == LNC_NEUTRAL || lncType == LNC_CHAOS;;
             }
             else
             {
@@ -723,57 +945,73 @@ bool EventManager::EvaluateCondition(const std::shared_ptr<ChannelClientConnecti
         }
     case objects::EventConditionData::Type_t::ITEM:
         {
-            // Item of type = [value 1] with quantity of at least
+            // Item of type = [value 1] quantity compares to
             // [value 2] in the character's inventory
-            auto character = cState->GetEntity();
-            auto items = characterManager->GetExistingItems(character,
+            auto character = client->GetClientState()->GetCharacterState()->GetEntity();
+            auto items = mServer.lock()->GetCharacterManager()->GetExistingItems(character,
                 (uint32_t)condition->GetValue1());
 
-            uint32_t count = 0;
+            uint16_t count = 0;
             for(auto item : items)
             {
-                count = (uint32_t)(count + (uint32_t)item->GetStackSize());
+                count = (uint16_t)(count + (uint16_t)item->GetStackSize());
             }
 
-            return count >= (uint32_t)condition->GetValue2();
+            return Compare((int32_t)count, condition->GetValue2(), 0,
+                compareMode, EventCompareMode::GTE, EVENT_COMPARE_NUMERIC);
         }
     case objects::EventConditionData::Type_t::VALUABLE:
+        if(compareMode != EventCompareMode::EQUAL && compareMode != EventCompareMode::DEFAULT_COMPARE)
+        {
+            return false;
+        }
+        else
         {
             // Valuable flag [value 1] = [value 2]
-            auto character = cState->GetEntity();
+            auto character = client->GetClientState()->GetCharacterState()->GetEntity();
             auto progress = character->GetProgress().Get();
 
             uint16_t valuableID = (uint16_t)condition->GetValue1();
 
             size_t index;
             uint8_t shiftVal;
-            characterManager->ConvertIDToMaskValues(valuableID, index, shiftVal);
+            mServer.lock()->GetCharacterManager()->ConvertIDToMaskValues(valuableID, index, shiftVal);
 
             uint8_t indexVal = progress->GetValuables(index);
 
             return ((indexVal & shiftVal) == 0) == (condition->GetValue2() == 0);
         }
     case objects::EventConditionData::Type_t::QUEST_COMPLETE:
+        if(compareMode != EventCompareMode::EQUAL && compareMode != EventCompareMode::DEFAULT_COMPARE)
+        {
+            return false;
+        }
+        else
         {
             // Complete quest flag [value 1] = [value 2]
-            auto character = cState->GetEntity();
+            auto character = client->GetClientState()->GetCharacterState()->GetEntity();
             auto progress = character->GetProgress().Get();
 
             uint16_t questID = (uint16_t)condition->GetValue1();
 
             size_t index;
             uint8_t shiftVal;
-            characterManager->ConvertIDToMaskValues(questID, index, shiftVal);
+            mServer.lock()->GetCharacterManager()->ConvertIDToMaskValues(questID, index, shiftVal);
 
             uint8_t indexVal = progress->GetCompletedQuests(index);
 
             return ((indexVal & shiftVal) == 0) == (condition->GetValue2() == 0);
         }
     case objects::EventConditionData::Type_t::TIMESPAN:
+        if(compareMode != EventCompareMode::BETWEEN && compareMode != EventCompareMode::DEFAULT_COMPARE)
+        {
+            return false;
+        }
+        else
         {
             // Server time between [value 1] and [value 2] (format: HHmm)
             int8_t phase, hour, min;
-            server->GetWorldClockTime(phase, hour, min);
+            mServer.lock()->GetWorldClockTime(phase, hour, min);
 
             int8_t minHours = (int8_t)floorl((float)condition->GetValue1() * 0.01);
             int8_t minMinutes = (int8_t)(condition->GetValue1() - (minHours * 100));
@@ -797,74 +1035,122 @@ bool EventManager::EvaluateCondition(const std::shared_ptr<ChannelClientConnecti
                 return minSum <= serverSum && serverSum <= maxSum;
             }
         }
-    case objects::EventConditionData::Type_t::TIMESPAN_REAL:
+    case objects::EventConditionData::Type_t::TIMESPAN_WEEK:
+        if(compareMode != EventCompareMode::BETWEEN && compareMode != EventCompareMode::DEFAULT_COMPARE)
+        {
+            return false;
+        }
+        else
         {
             // System time between [value 1] and [value 2] (format: ddHHmm)
             // Days are represented as Sunday = 0, Monday = 1, etc
+            // If 7 is specified for both days, any day is valid
             time_t systemTime(0);
             tm* t = gmtime(&systemTime);
             auto systemDay = t->tm_wday;
             auto systemHour = t->tm_hour;
             auto systemMinutes = t->tm_min;
 
-            int8_t minDays = (int8_t)floorl((float)condition->GetValue1() * 0.0001);
-            int8_t minHours = (int8_t)floorl((float)(condition->GetValue1() -
-                (minDays * 10000)) * 0.01);
-            int8_t minMinutes = (int8_t)floorl((float)(condition->GetValue1() -
-                (minDays * 10000) - (minHours * 100)) * 0.01);
+            int32_t val1 = condition->GetValue1();
+            int32_t val2 = condition->GetValue2();
 
-            int8_t maxDays = (int8_t)floorl((float)condition->GetValue2() * 0.0001);
-            int8_t maxHours = (int8_t)floorl((float)(condition->GetValue2() -
-                (maxDays * 10000)) * 0.01);
-            int8_t maxMinutes = (int8_t)floorl((float)(condition->GetValue2() -
-                (maxDays * 10000) - (maxHours * 100)) * 0.01);
+            int8_t minDays = (int8_t)floorl((float)val1 * 0.0001);
+            int8_t minHours = (int8_t)floorl((float)(val1 - (minDays * 10000)) * 0.01);
+            int8_t minMinutes = (int8_t)floorl((float)(val1 - (minDays * 10000)
+                - (minHours * 100)) * 0.01);
 
-            uint16_t systemSum = (uint16_t)((systemDay * 24 * 60 * 60) +
+            int8_t maxDays = (int8_t)floorl((float)val2 * 0.0001);
+            int8_t maxHours = (int8_t)floorl((float)(val2 - (maxDays * 10000)) * 0.01);
+            int8_t maxMinutes = (int8_t)floorl((float)(val2 - (maxDays * 10000)
+                - (maxHours * 100)) * 0.01);
+
+            bool skipDay = minDays == 7 && maxDays == 7;
+
+            uint16_t systemSum = (uint16_t)(((skipDay ? 0 : systemDay) * 24 * 60 * 60) +
                 (systemHour * 60) + systemMinutes);
-            uint16_t minSum = (uint16_t)((minDays * 24 * 60 * 60) +
+            uint16_t minSum = (uint16_t)(((skipDay ? 0 : minDays) * 24 * 60 * 60) +
                 (minHours * 60) + minMinutes);
-            uint16_t maxSum = (uint16_t)((maxDays * 24 * 60 * 60) +
+            uint16_t maxSum = (uint16_t)(((skipDay ? 0 : maxDays) * 24 * 60 * 60) +
                 (maxHours * 60) + maxMinutes);
 
-            return minSum <= systemSum && systemSum <= maxSum;
+            if(maxSum < minSum)
+            {
+                // Compare, adjusting for week rollover (ex: Friday through Sunday)
+                return systemSum >= minSum || systemSum <= maxSum;
+            }
+            else
+            {
+                // Compare normally
+                return minSum <= systemSum && systemSum <= maxSum;
+            }
         }
     case objects::EventConditionData::Type_t::MOON_PHASE:
         {
             // Server moon phase = [value 1]
             int8_t phase, hour, min;
-            server->GetWorldClockTime(phase, hour, min);
+            mServer.lock()->GetWorldClockTime(phase, hour, min);
 
-            return phase == condition->GetValue1();
+            if(compareMode == EventCompareMode::BETWEEN)
+            {
+                // Compare, adjusting for week rollover (ex: 14 through 2)
+                return phase >= (int8_t)condition->GetValue1() ||
+                    phase <= (int8_t)condition->GetValue2();
+            }
+            else if(compareMode == EventCompareMode::EXISTS)
+            {
+                // Value is flag mask, check if the current phase is contained
+                return ((condition->GetValue1() >> phase) & 0x01) != 0;
+            }
+            else
+            {
+                return Compare((int32_t)phase, condition->GetValue1(), 0, compareMode,
+                    EventCompareMode::EQUAL, EVENT_COMPARE_NUMERIC);
+            }
         }
     case objects::EventConditionData::Type_t::MAP:
+        if(compareMode != EventCompareMode::EQUAL && compareMode != EventCompareMode::DEFAULT_COMPARE)
+        {
+            return false;
+        }
+        else
         {
             // Map flag [value 1] = [value 2]
-            auto character = cState->GetEntity();
+            auto character = client->GetClientState()->GetCharacterState()->GetEntity();
             auto progress = character->GetProgress().Get();
 
             uint16_t mapID = (uint16_t)condition->GetValue1();
 
             size_t index;
             uint8_t shiftVal;
-            characterManager->ConvertIDToMaskValues(mapID, index, shiftVal);
+            mServer.lock()->GetCharacterManager()->ConvertIDToMaskValues(mapID, index, shiftVal);
 
             uint8_t indexVal = progress->GetMaps(index);
 
             return ((indexVal & shiftVal) == 0) == (condition->GetValue2() == 0);
         }
     case objects::EventConditionData::Type_t::QUEST_ACTIVE:
+        if(compareMode != EventCompareMode::EQUAL && compareMode != EventCompareMode::DEFAULT_COMPARE)
+        {
+            return false;
+        }
+        else
         {
             // Quest ID [value 1] active check = [value 2] (1 for active, 0 for not active)
-            auto character = cState->GetEntity();
+            auto character = client->GetClientState()->GetCharacterState()->GetEntity();
 
             return character->GetQuests(
                 (int16_t)condition->GetValue1()).IsNull() == (condition->GetValue2() == 0);
         }
     case objects::EventConditionData::Type_t::QUEST_SEQUENCE:
+        if(compareMode != EventCompareMode::EQUAL && compareMode != EventCompareMode::DEFAULT_COMPARE)
+        {
+            return false;
+        }
+        else
         {
             // Quest ID [value 1] is on its final phase (since this will progress the story)
             int16_t prevQuestID = (int16_t)condition->GetValue1();
-            auto character = cState->GetEntity();
+            auto character = client->GetClientState()->GetCharacterState()->GetEntity();
             auto prevQuest = character->GetQuests(prevQuestID).Get();
 
             if(prevQuest == nullptr)
@@ -872,7 +1158,7 @@ bool EventManager::EvaluateCondition(const std::shared_ptr<ChannelClientConnecti
                 return false;
             }
 
-            auto definitionManager = server->GetDefinitionManager();
+            auto definitionManager = mServer.lock()->GetDefinitionManager();
             auto prevQuestData = definitionManager->GetQuestData((uint32_t)prevQuestID);
 
             if(prevQuestData == nullptr)
@@ -886,9 +1172,14 @@ bool EventManager::EvaluateCondition(const std::shared_ptr<ChannelClientConnecti
             return prevQuestData->GetPhaseCount() == (uint32_t)(prevQuest->GetPhase() + 1);
         }
     case objects::EventConditionData::Type_t::EXPERTISE_NOT_MAX:
+        if(compareMode != EventCompareMode::EQUAL && compareMode != EventCompareMode::DEFAULT_COMPARE)
+        {
+            return false;
+        }
+        else
         {
             // Expertise ID [value 1] is not maxed out
-            auto definitionManager = server->GetDefinitionManager();
+            auto definitionManager = mServer.lock()->GetDefinitionManager();
             auto expDef = definitionManager->GetExpertClassData((uint32_t)condition->GetValue1());
             if(expDef == nullptr)
             {
@@ -897,58 +1188,99 @@ bool EventManager::EvaluateCondition(const std::shared_ptr<ChannelClientConnecti
                 return false;
             }
 
-            auto character = cState->GetEntity();
+            auto character = client->GetClientState()->GetCharacterState()->GetEntity();
             auto exp = character->GetExpertises((size_t)condition->GetValue1()).Get();
             int32_t maxPoints = (expDef->GetMaxClass() * 100 * 1000)
                 + (expDef->GetMaxRank() * 100 * 100);
 
             return exp == nullptr || (exp->GetPoints() < maxPoints);
         }
-    case objects::EventConditionData::Type_t::EXPERTISE_ABOVE:
+    case objects::EventConditionData::Type_t::EXPERTISE:
         {
-            // Expertise ID [value 1] points >= [value 2] (points or class check)
-            auto character = cState->GetEntity();
+            // Expertise ID [value 1] compares to [value 2] (points or class check)
+            auto character = client->GetClientState()->GetCharacterState()->GetEntity();
             auto exp = character->GetExpertises((size_t)condition->GetValue1()).Get();
 
-            if(exp == nullptr)
-            {
-                // 0 points allocated to expertise
-                return false;
-            }
-
             int32_t val = condition->GetValue2();
+            int32_t compareTo = exp ? exp->GetPoints() : 0;
             if(val <= 10)
             {
                 // Class check
-                int32_t currentClass = (int32_t)floorl((float)exp->GetPoints() * 0.00001f);
-                return currentClass >= val;
+                compareTo = (int32_t)floorl((float)compareTo * 0.00001f);
             }
-            else
-            {
-                // Check points
-                return exp->GetPoints() >= val;
-            }
+
+            return Compare(compareTo, val, 0, compareMode, EventCompareMode::GTE,
+                EVENT_COMPARE_NUMERIC);
         }
     case objects::EventConditionData::Type_t::SI_EQUIPPED:
         {
-            LOG_ERROR("Currently unsupported soul infusion equipment check encountered"
-                " in EvaluateCondition: %1\n");
+            LOG_ERROR("Currently unsupported SI_EQUIPPED condition encountered"
+                " in EvaluateCondition\n");
             return false;
         }
     case objects::EventConditionData::Type_t::SUMMONED:
         {
             // Partner demon of type [value 1] is currently summoned
-            auto dState = state->GetDemonState();
+            // If [value 2] = 1, the base demon type will be checked instead
+            // Compare mode EXISTS ignores the type altogether
+            auto dState = client->GetClientState()->GetDemonState();
             auto demon = dState->GetEntity();
 
-            return demon != nullptr &&
-                demon->GetType() == (uint32_t)condition->GetValue1();
+            if(compareMode != EventCompareMode::EXISTS)
+            {
+                return demon != nullptr;
+            }
+
+            if(compareMode != EventCompareMode::EQUAL &&
+                compareMode != EventCompareMode::DEFAULT_COMPARE)
+            {
+                return false;
+            }
+
+            if(demon)
+            {
+                if(condition->GetValue1() == -1)
+                {
+                    return true;
+                }
+                else if(condition->GetValue2() == 1)
+                {
+                    auto demonData = dState->GetDevilData();
+                    return demonData && demonData->GetUnionData()->GetBaseDemonID() ==
+                        (uint32_t)condition->GetValue1();
+                }
+                else
+                {
+                    return demon->GetType() == (uint32_t)condition->GetValue1();
+                }
+            }
+            else
+            {
+                return false;
+            }
         }
     // Custom conditions below this point
-    case objects::EventConditionData::Type_t::CONTRACTED:
+    case objects::EventCondition::Type_t::CLAN_HOME:
+        if(compareMode != EventCompareMode::EQUAL && compareMode != EventCompareMode::DEFAULT_COMPARE)
+        {
+            return false;
+        }
+        else
+        {
+            // Character homepoint zone = [value 1]
+            auto character = client->GetClientState()->GetCharacterState()->GetEntity();
+
+            return character->GetHomepointZone() == (uint32_t)condition->GetValue1();
+        }
+    case objects::EventConditionData::Type_t::COMP_DEMON:
+        if(compareMode != EventCompareMode::EXISTS && compareMode != EventCompareMode::DEFAULT_COMPARE)
+        {
+            return false;
+        }
+        else
         {
             // Demon of type [value 1] exists in the COMP
-            auto character = cState->GetEntity();
+            auto character = client->GetClientState()->GetCharacterState()->GetEntity();
             auto progress = character->GetProgress();
             auto comp = character->GetCOMP().Get();
 
@@ -968,9 +1300,8 @@ bool EventManager::EvaluateCondition(const std::shared_ptr<ChannelClientConnecti
         }
     case objects::EventConditionData::Type_t::COMP_FREE:
         {
-            // COMP has [value 1] to [value 2] slots free (or count
-            // explicitly equals [value 1] if [value 2] is 0)
-            auto character = cState->GetEntity();
+            // COMP slots free compares to [value 1] (and [value 2])
+            auto character = client->GetClientState()->GetCharacterState()->GetEntity();
             auto progress = character->GetProgress();
             auto comp = character->GetCOMP().Get();
 
@@ -985,21 +1316,55 @@ bool EventManager::EvaluateCondition(const std::shared_ptr<ChannelClientConnecti
                 }
             }
 
-            if(condition->GetValue2() == 0)
-            {
-                return freeCount == condition->GetValue1();
-            }
-            else
-            {
-                return freeCount >= condition->GetValue1() &&
-                    freeCount <= condition->GetValue2();
-            }
+            return Compare(freeCount, condition->GetValue1(), condition->GetValue2(),
+                compareMode, EventCompareMode::EQUAL, EVENT_COMPARE_NUMERIC2);
+        }
+    case objects::EventCondition::Type_t::DEMON_BOOK:
+        {
+            LOG_ERROR("Currently unsupported DEMON_BOOK condition encountered"
+                " in EvaluateCondition\n");
+            return false;
+        }
+    case objects::EventCondition::Type_t::EXPERTISE_ACTIVE:
+        if(compareMode != EventCompareMode::EQUAL && compareMode != EventCompareMode::DEFAULT_COMPARE)
+        {
+            return false;
+        }
+        else
+        {
+            // Expertise ID [value 1] is active ([value 2] != 1) or locked ([value 2] = 1)
+            auto character = client->GetClientState()->GetCharacterState()->GetEntity();
+
+            auto exp = character->GetExpertises((size_t)condition->GetValue1()).Get();
+            return condition->GetValue2() == 1 ? (!exp || exp->GetDisabled()) : (exp && !exp->GetDisabled());
+        }
+    case objects::EventCondition::Type_t::EQUIPPED:
+        {
+            // Character has item type [value 1] equipped
+            auto character = client->GetClientState()->GetCharacterState()->GetEntity();
+
+            auto itemData = mServer.lock()->GetDefinitionManager()->GetItemData((uint32_t)condition->GetValue1());
+            auto equip = itemData
+                ? character->GetEquippedItems((size_t)itemData->GetBasic()->GetEquipType()).Get() : nullptr;
+            return equip && equip->GetType() == (uint32_t)condition->GetValue1();
+        }
+    case objects::EventCondition::Type_t::GENDER:
+        if(compareMode != EventCompareMode::EQUAL && compareMode != EventCompareMode::DEFAULT_COMPARE)
+        {
+            return false;
+        }
+        else
+        {
+            // Character gender = [value 1]
+            auto character = client->GetClientState()->GetCharacterState()->GetEntity();
+
+            return (int32_t)character->GetGender() == condition->GetValue1();
         }
     case objects::EventConditionData::Type_t::INVENTORY_FREE:
         {
-            // Inventory has enough space free for [value 1] stacks
-            // of items
-            auto character = cState->GetEntity();
+            // Inventory slots free compares to [value 1] (and [value 2])
+            // (does not acocunt for stacks that can be added to)
+            auto character = client->GetClientState()->GetCharacterState()->GetEntity();
             auto inventory = character->GetItemBoxes(0);
 
             int32_t freeCount = 0;
@@ -1012,7 +1377,155 @@ bool EventManager::EvaluateCondition(const std::shared_ptr<ChannelClientConnecti
                 }
             }
 
-            return freeCount >= condition->GetValue1();
+            return Compare(freeCount, condition->GetValue1(), condition->GetValue2(),
+                compareMode, EventCompareMode::GTE, EVENT_COMPARE_NUMERIC2);
+        }
+    case objects::EventCondition::Type_t::LNC:
+        {
+            // Character LNC points compares to [value 1] (and [value 2])
+            auto character = client->GetClientState()->GetCharacterState()->GetEntity();
+
+            return Compare((int32_t)character->GetLNC(), condition->GetValue1(),
+                condition->GetValue2(), compareMode, EventCompareMode::BETWEEN,
+                EVENT_COMPARE_NUMERIC2);
+        }
+    case objects::EventCondition::Type_t::NPC_STATE:
+        {
+            // NPC in the same zone with actor ID [value 1] state compares to [value 2]
+            auto npc = client->GetClientState()->GetCharacterState()->GetZone()
+                ->GetActor(condition->GetValue1());
+
+            uint8_t npcState = 0;
+            if(!npc)
+            {
+                return false;
+            }
+
+            switch(npc->GetEntityType())
+            {
+            case objects::EntityStateObject::EntityType_t::NPC:
+                npcState = std::dynamic_pointer_cast<NPCState>(npc)
+                    ->GetEntity()->GetState();
+                break;
+            case objects::EntityStateObject::EntityType_t::OBJECT:
+                npcState = std::dynamic_pointer_cast<ServerObjectState>(npc)
+                    ->GetEntity()->GetState();
+                break;
+            default:
+                return false;
+            }
+
+            return npc && Compare((int32_t)npcState, condition->GetValue2(),
+                0, compareMode, EventCompareMode::EQUAL, EVENT_COMPARE_NUMERIC);
+        }
+    case objects::EventCondition::Type_t::PARTY_SIZE:
+        {
+            // Party size compares to [value 1] (and [value 2])
+            // (no party counts as 0, not 1)
+            auto party = client->GetClientState()->GetParty();
+            if(compareMode == EventCompareMode::EXISTS)
+            {
+                return party != nullptr;
+            }
+
+            return Compare((int32_t)(party ? party->MemberIDsCount() : 0),
+                condition->GetValue1(), condition->GetValue2(), compareMode,
+                EventCompareMode::BETWEEN, EVENT_COMPARE_NUMERIC2);
+        }
+    case objects::EventCondition::Type_t::PLUGIN:
+        if(compareMode != EventCompareMode::EQUAL && compareMode != EventCompareMode::DEFAULT_COMPARE)
+        {
+            return false;
+        }
+        else
+        {
+            // Plugin flag [value 1] = [value 2]
+            auto character = client->GetClientState()->GetCharacterState()->GetEntity();
+            auto progress = character->GetProgress().Get();
+
+            uint16_t pluginID = (uint16_t)condition->GetValue1();
+
+            size_t index;
+            uint8_t shiftVal;
+            mServer.lock()->GetCharacterManager()->ConvertIDToMaskValues(pluginID, index, shiftVal);
+
+            uint8_t indexVal = progress->GetPlugins(index);
+
+            return ((indexVal & shiftVal) == 0) == (condition->GetValue2() == 0);
+        }
+    case objects::EventCondition::Type_t::SKILL_LEARNED:
+        {
+            // Character currently knows skill with ID [value 1]
+            return (compareMode == EventCompareMode::EQUAL ||
+                compareMode == EventCompareMode::DEFAULT_COMPARE) &&
+                client->GetClientState()->GetCharacterState()->CurrentSkillsContains(
+                    (uint32_t)condition->GetValue1());
+        }
+    case objects::EventCondition::Type_t::STAT_VALUE:
+        {
+            // Character stat at correct index [value 1] compares to [value 2]
+            return Compare((int32_t)client->GetClientState()->GetCharacterState()->GetCorrectValue(
+                (CorrectTbl)condition->GetValue1()), condition->GetValue2(), 0,
+                compareMode, EventCompareMode::GTE, EVENT_COMPARE_NUMERIC);
+        }
+    case objects::EventCondition::Type_t::STATUS_ACTIVE:
+        if(compareMode != EventCompareMode::EXISTS && compareMode != EventCompareMode::DEFAULT_COMPARE)
+        {
+            return false;
+        }
+        else
+        {
+            // Character ([value 2] = 0) or demon ([value 2] != 0) has status effect [value 1]
+            auto eState = condition->GetValue2() == 0
+                ? std::dynamic_pointer_cast<ActiveEntityState>(
+                    client->GetClientState()->GetCharacterState())
+                : std::dynamic_pointer_cast<ActiveEntityState>(
+                    client->GetClientState()->GetDemonState());
+
+            auto statusEffects = eState->GetStatusEffects();
+            return statusEffects.find((uint32_t)condition->GetValue1()) != statusEffects.end();
+        }
+    case objects::EventCondition::Type_t::TIMESPAN_DATETIME:
+        if(compareMode != EventCompareMode::BETWEEN && compareMode != EventCompareMode::DEFAULT_COMPARE)
+        {
+            return false;
+        }
+        else
+        {
+            // System time between [value 1] and [value 2] (format: MMddHHmm)
+            // Month is represented as January = 1, February = 2, etc
+            time_t systemTime(0);
+            tm* t = gmtime(&systemTime);
+            auto systemMonth = t->tm_mon + 1;
+            auto systemDay = t->tm_mday;
+            auto systemHour = t->tm_hour;
+            auto systemMinutes = t->tm_min;
+
+            int32_t minVal = condition->GetValue1();
+            int32_t maxVal = condition->GetValue2();
+
+            int32_t systemSum = (systemMonth * 1000000) + (systemDay * 10000)
+                + (systemHour * 100) + systemMinutes;
+
+            if(maxVal < minVal)
+            {
+                // Compare, adjusting for year rollover (ex: Dec 31st to Jan 1st)
+                return systemSum >= minVal || systemSum <= maxVal;
+            }
+            else
+            {
+                // Compare normally
+                return minVal <= systemSum && systemSum <= maxVal;
+            }
+        }
+    case objects::EventCondition::Type_t::QUESTS_ACTIVE:
+        {
+            // Active quest count compares to [value 1] (and [value 2])
+            auto character = client->GetClientState()->GetCharacterState()->GetEntity();
+
+            return Compare((int32_t)character->QuestsCount(), condition->GetValue1(),
+                condition->GetValue2(), compareMode, EventCompareMode::EQUAL,
+                EVENT_COMPARE_NUMERIC2);
         }
     case objects::EventConditionData::Type_t::NONE:
     default:
@@ -1212,10 +1725,6 @@ bool EventManager::HandleEvent(const std::shared_ptr<ChannelClientConnection>& c
         auto eventType = event->GetEventType();
         switch(eventType)
         {
-            case objects::Event::EventType_t::MESSAGE:
-                server->GetCharacterManager()->SetStatusIcon(client, 4);
-                handled = Message(client, instance);
-                break;
             case objects::Event::EventType_t::NPC_MESSAGE:
                 server->GetCharacterManager()->SetStatusIcon(client, 4);
                 handled = NPCMessage(client, instance);
@@ -1243,30 +1752,9 @@ bool EventManager::HandleEvent(const std::shared_ptr<ChannelClientConnection>& c
                 server->GetCharacterManager()->SetStatusIcon(client, 4);
                 handled = OpenMenu(client, instance);
                 break;
-            case objects::Event::EventType_t::GET_ITEMS:
-                handled = GetItems(client, instance);
-                break;
-            case objects::Event::EventType_t::HOMEPOINT:
-                handled = Homepoint(client, instance);
-                break;
-            case objects::Event::EventType_t::STAGE_EFFECT:
-                handled = StageEffect(client, instance);
-                break;
             case objects::Event::EventType_t::DIRECTION:
                 server->GetCharacterManager()->SetStatusIcon(client, 4);
                 handled = Direction(client, instance);
-                break;
-            case objects::Event::EventType_t::SPECIAL_DIRECTION:
-                handled = SpecialDirection(client, instance);
-                break;
-            case objects::Event::EventType_t::PLAY_SOUND_EFFECT:
-                handled = PlaySoundEffect(client, instance);
-                break;
-            case objects::Event::EventType_t::PLAY_BGM:
-                handled = PlayBGM(client, instance);
-                break;
-            case objects::Event::EventType_t::STOP_BGM:
-                handled = StopBGM(client, instance);
                 break;
             case objects::Event::EventType_t::FORK:
                 // Fork off to the next appropriate event but even if there are
@@ -1298,14 +1786,66 @@ void EventManager::HandleNext(const std::shared_ptr<ChannelClientConnection>& cl
     auto iState = current->GetState();
     auto nextEventID = iState->GetNext();
 
-    for(auto branch : iState->GetBranches())
+    if(iState->BranchesCount() > 0)
     {
-        auto conditions = branch->GetConditions();
-        if(conditions.size() > 0 && EvaluateEventConditions(client, conditions))
+        libcomp::String branchScriptID = iState->GetBranchScriptID();
+        if(!branchScriptID.IsEmpty())
         {
-            // Use the branch instead (first to pass is used)
-            nextEventID = branch->GetNext();
-            break;
+            // Branch based on an index result of a script representing
+            // the branch number to use
+            auto serverDataManager = mServer.lock()->GetServerDataManager();
+            auto script = serverDataManager->GetScript(branchScriptID);
+            if(script && script->Type.ToLower() == "eventbranchlogic")
+            {
+                auto engine = std::make_shared<libcomp::ScriptEngine>();
+                engine->Using<CharacterState>();
+                engine->Using<DemonState>();
+                engine->Using<libcomp::Randomizer>();
+
+                if(engine->Eval(script->Source))
+                {
+                    Sqrat::Function f(Sqrat::RootTable(engine->GetVM()), "check");
+
+                    Sqrat::Array sqParams(engine->GetVM());
+                    for(libcomp::String p : iState->GetBranchScriptParams())
+                    {
+                        sqParams.Append(p);
+                    }
+
+                    auto scriptResult = !f.IsNull()
+                        ? f.Evaluate<size_t>(
+                            state->GetCharacterState(),
+                            state->GetDemonState(),
+                            sqParams) : 0;
+                    if(scriptResult)
+                    {
+                        size_t idx = *scriptResult;
+                        if(idx < iState->BranchesCount())
+                        {
+                            nextEventID = iState->GetBranches(idx)->GetNext();
+                        }
+                    }
+                }
+            }
+            else
+            {
+                LOG_ERROR(libcomp::String("Invalid event branch script ID: %1\n")
+                    .Arg(branchScriptID));
+            }
+        }
+        else
+        {
+            // Branch based on conditions
+            for(auto branch : iState->GetBranches())
+            {
+                auto conditions = branch->GetConditions();
+                if(conditions.size() > 0 && EvaluateEventConditions(client, conditions))
+                {
+                    // Use the branch instead (first to pass is used)
+                    nextEventID = branch->GetNext();
+                    break;
+                }
+            }
         }
     }
 
@@ -1327,29 +1867,6 @@ void EventManager::HandleNext(const std::shared_ptr<ChannelClientConnection>& cl
     {
         HandleEvent(client, nextEventID, current->GetSourceEntityID());
     }
-}
-
-bool EventManager::Message(const std::shared_ptr<ChannelClientConnection>& client,
-    const std::shared_ptr<objects::EventInstance>& instance)
-{
-    auto e = std::dynamic_pointer_cast<objects::EventMessage>(instance->GetEvent());
-
-    libcomp::Packet p;
-    p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_EVENT_MESSAGE);
-
-    for(auto msg : e->GetMessageIDs())
-    {
-        p.Seek(2);
-        p.WriteS32Little(msg);
-
-        client->QueuePacketCopy(p);
-    }
-
-    client->FlushOutgoing();
-
-    HandleNext(client, instance);
-
-    return true;
 }
 
 bool EventManager::NPCMessage(const std::shared_ptr<ChannelClientConnection>& client,
@@ -1488,50 +2005,6 @@ bool EventManager::OpenMenu(const std::shared_ptr<ChannelClientConnection>& clie
     return true;
 }
 
-bool EventManager::GetItems(const std::shared_ptr<ChannelClientConnection>& client,
-    const std::shared_ptr<objects::EventInstance>& instance)
-{
-    auto e = std::dynamic_pointer_cast<objects::EventGetItem>(instance->GetEvent());
-    auto server = mServer.lock();
-
-    // Cast to the correct stack size when adding
-    std::unordered_map<uint32_t, uint32_t> items;
-    for(auto entry : e->GetItems())
-    {
-        items[entry.first] = (uint32_t)entry.second;
-    }
-
-    bool doNext = true;
-    if(server->GetCharacterManager()->AddRemoveItems(client, items, true))
-    {
-        libcomp::Packet p;
-        p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_EVENT_GET_ITEMS);
-        p.WriteS8((int8_t)items.size());
-        for(auto entry : e->GetItems())
-        {
-            p.WriteU32Little(entry.first);      // Item type
-            p.WriteU16Little(entry.second);     // Item quantity
-        }
-
-        client->SendPacket(p);
-    }
-    else if(!e->GetOnFailure().IsEmpty())
-    {
-        if(!HandleEvent(client, e->GetOnFailure(), instance->GetSourceEntityID()))
-        {
-            EndEvent(client);
-        }
-        doNext = false;
-    }
-
-    if(doNext)
-    {
-        HandleNext(client, instance);
-    }
-
-    return true;
-}
-
 bool EventManager::PerformActions(const std::shared_ptr<ChannelClientConnection>& client,
     const std::shared_ptr<objects::EventInstance>& instance)
 {
@@ -1548,76 +2021,6 @@ bool EventManager::PerformActions(const std::shared_ptr<ChannelClientConnection>
     return true;
 }
 
-bool EventManager::Homepoint(const std::shared_ptr<ChannelClientConnection>& client,
-    const std::shared_ptr<objects::EventInstance>& instance)
-{
-    auto e = std::dynamic_pointer_cast<objects::EventHomepoint>(instance->GetEvent());
-
-    auto state = client->GetClientState();
-    auto cState = state->GetCharacterState();
-    auto character = cState->GetEntity();
-
-    uint32_t zoneID = 0;
-    float xCoord = 0.f;
-    float yCoord = 0.f;
-    if(e->GetZoneID() > 0)
-    {
-        zoneID = e->GetZoneID();
-        xCoord = e->GetX();
-        yCoord = e->GetY();
-    }
-    else
-    {
-        // Use current position
-        auto zone = cState->GetZone();
-        zoneID = zone->GetDefinition()->GetID();
-        xCoord = cState->GetCurrentX();
-        yCoord = cState->GetCurrentY();
-    }
-
-    character->SetHomepointZone(zoneID);
-    character->SetHomepointX(xCoord);
-    character->SetHomepointY(yCoord);
-
-    libcomp::Packet p;
-    p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_EVENT_HOMEPOINT_UPDATE);
-    p.WriteS32Little((int32_t)zoneID);
-    p.WriteFloat(xCoord);
-    p.WriteFloat(yCoord);
-
-    client->SendPacket(p);
-
-    mServer.lock()->GetWorldDatabase()->QueueUpdate(character, state->GetAccountUID());
-
-    HandleNext(client, instance);
-
-    return true;
-}
-
-bool EventManager::StageEffect(const std::shared_ptr<ChannelClientConnection>& client,
-    const std::shared_ptr<objects::EventInstance>& instance)
-{
-    auto e = std::dynamic_pointer_cast<objects::EventStageEffect>(instance->GetEvent());
-
-    libcomp::Packet p;
-    p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_EVENT_STAGE_EFFECT);
-    p.WriteS32Little(e->GetMessageID());
-    p.WriteS8(e->GetEffect1());
-
-    bool effect2Set = e->GetEffect2() != 0;
-    p.WriteS8(effect2Set ? 1 : 0);
-    if(effect2Set)
-    {
-        p.WriteS32Little(e->GetEffect2());
-    }
-
-    client->SendPacket(p);
-
-    HandleNext(client, instance);
-
-    return true;
-}
-
 bool EventManager::Direction(const std::shared_ptr<ChannelClientConnection>& client,
     const std::shared_ptr<objects::EventInstance>& instance)
 {
@@ -1628,76 +2031,6 @@ bool EventManager::Direction(const std::shared_ptr<ChannelClientConnection>& cli
     p.WriteS32Little(e->GetDirection());
 
     client->SendPacket(p);
-
-    return true;
-}
-
-bool EventManager::SpecialDirection(const std::shared_ptr<ChannelClientConnection>& client,
-    const std::shared_ptr<objects::EventInstance>& instance)
-{
-    auto e = std::dynamic_pointer_cast<objects::EventSpecialDirection>(instance->GetEvent());
-
-    libcomp::Packet p;
-    p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_EVENT_SPECIAL_DIRECTION);
-    p.WriteU8(e->GetSpecial1());
-    p.WriteU8(e->GetSpecial2());
-    p.WriteS32Little(e->GetDirection());
-
-    client->SendPacket(p);
-
-    HandleNext(client, instance);
-
-    return true;
-}
-
-bool EventManager::PlaySoundEffect(const std::shared_ptr<ChannelClientConnection>& client,
-    const std::shared_ptr<objects::EventInstance>& instance)
-{
-    auto e = std::dynamic_pointer_cast<objects::EventPlaySoundEffect>(instance->GetEvent());
-
-    libcomp::Packet p;
-    p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_EVENT_PLAY_SOUND_EFFECT);
-    p.WriteS32Little(e->GetSoundID());
-    p.WriteS32Little(e->GetDelay());
-
-    client->SendPacket(p);
-
-    HandleNext(client, instance);
-
-    return true;
-}
-
-bool EventManager::PlayBGM(const std::shared_ptr<ChannelClientConnection>& client,
-    const std::shared_ptr<objects::EventInstance>& instance)
-{
-    auto e = std::dynamic_pointer_cast<objects::EventPlayBGM>(instance->GetEvent());
-
-    libcomp::Packet p;
-    p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_EVENT_PLAY_BGM);
-    p.WriteS32Little(e->GetMusicID());
-    p.WriteS32Little(e->GetFadeInDelay());
-    p.WriteS32Little(e->GetUnknown());
-
-    client->SendPacket(p);
-
-    HandleNext(client, instance);
-
-    return true;
-}
-
-
-bool EventManager::StopBGM(const std::shared_ptr<ChannelClientConnection>& client,
-    const std::shared_ptr<objects::EventInstance>& instance)
-{
-    auto e = std::dynamic_pointer_cast<objects::EventStopBGM>(instance->GetEvent());
-
-    libcomp::Packet p;
-    p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_EVENT_STOP_BGM);
-    p.WriteS32Little(e->GetMusicID());
-
-    client->SendPacket(p);
-
-    HandleNext(client, instance);
 
     return true;
 }

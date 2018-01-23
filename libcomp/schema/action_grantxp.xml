@@ -2,8 +2,12 @@
 <objgen>
     <object name="ActionGrantXP" baseobject="Action" persistent="false">
         <member type="enum" name="actionType" inherited="true" default="GRANT_XP"/>
+        <member type="enum" name="targetType" underlying="uint8_t">
+            <value>CHARACTER</value>
+            <value>PARTNER</value>
+            <value>CHARACTER_AND_PARTNER</value>
+        </member>
         <member type="s64" name="XP"/>
-        <member type="bool" name="includeCharacter" default="true"/>
-        <member type="bool" name="includePartner" default="false"/>
+        <member type="bool" name="adjustable"/>
     </object>
 </objgen>

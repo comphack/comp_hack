@@ -46,6 +46,7 @@
 
 namespace objects
 {
+class DropSet;
 class Event;
 class ServerShop;
 class ServerZone;
@@ -60,11 +61,12 @@ class DefinitionManager;
 /**
  * Container for AI script information.
  */
-struct ServerAIScript
+struct ServerScript
 {
     String Name;
     String Path;
     String Source;
+    String Type;
 };
 
 /**
@@ -115,11 +117,25 @@ public:
     const std::shared_ptr<objects::ServerShop> GetShopData(uint32_t id);
 
     /**
+     * Get a drop set by definition ID
+     * @param id Definition ID of a drop set to load
+     * @return Pointer to the drop set matching the specified id
+     */
+    const std::shared_ptr<objects::DropSet> GetDropSetData(uint32_t id);
+
+    /**
+     * Get a miscellaneous script by name
+     * @param name Name of the script to load
+     * @return Pointer to the script definition
+     */
+    const std::shared_ptr<ServerScript> GetScript(const libcomp::String& name);
+
+    /**
      * Get an AI script by name
      * @param name Name of the script to load
      * @return Pointer to the script definition
      */
-    const std::shared_ptr<ServerAIScript> GetAIScript(const libcomp::String& name);
+    const std::shared_ptr<ServerScript> GetAIScript(const libcomp::String& name);
 
     /**
      * Load all server data defintions in the data store
@@ -202,7 +218,14 @@ private:
 
         std::vector<char> data = pDataStore->ReadFile(filePath);
 
-        if(data.empty() || tinyxml2::XML_SUCCESS !=
+        if(data.empty())
+        {
+            LOG_WARNING(libcomp::String("File does not exist or is"
+                " empty: %1\n").Arg(filePath));
+            return true;
+        }
+
+        if(tinyxml2::XML_SUCCESS !=
             objsDoc.Parse(&data[0], data.size()))
         {
             return false;
@@ -253,12 +276,12 @@ private:
             const libcomp::String&, const libcomp::String&)> handler);
 
     /**
-     * Verify and store a successfully loaded AI script
-     * @param path Path to the AI script file
-     * @param source Source contained within the AI script file
+     * Store a successfully loaded (non-AI) script
+     * @param path Path to the script file
+     * @param source Source contained within the script file
      * @return true on success, false on failure
      */
-    bool LoadAIScript(const libcomp::String& path, const libcomp::String& source);
+    bool LoadScript(const libcomp::String& path, const libcomp::String& source);
 
     /// Map of server zone defintions by zone definition and dynamic map ID
     std::unordered_map<uint32_t,
@@ -272,8 +295,15 @@ private:
     std::unordered_map<uint32_t,
         std::shared_ptr<objects::ServerShop>> mShopData;
 
+    /// Map of drop sets by definition ID
+    std::unordered_map<uint32_t,
+        std::shared_ptr<objects::DropSet>> mDropSetData;
+
+    /// Map of miscellaneous (non-AI) scripts by name
+    std::unordered_map<std::string, std::shared_ptr<ServerScript>> mScripts;
+
     /// Map of AI scripts by name
-    std::unordered_map<std::string, std::shared_ptr<ServerAIScript>> mAIScripts;
+    std::unordered_map<std::string, std::shared_ptr<ServerScript>> mAIScripts;
 };
 
 } // namspace libcomp

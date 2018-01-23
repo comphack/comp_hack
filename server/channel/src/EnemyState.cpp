@@ -26,7 +26,33 @@
 
 #include "EnemyState.h"
 
+// libcomp Includes
+#include <ScriptEngine.h>
+
 using namespace channel;
+
+namespace libcomp
+{
+    template<>
+    ScriptEngine& ScriptEngine::Using<EnemyState>()
+    {
+        if(!BindingExists("EnemyState", true))
+        {
+            Using<ActiveEntityState>();
+            Using<objects::Enemy>();
+
+            Sqrat::DerivedClass<EnemyState,
+                ActiveEntityState> binding(mVM, "EnemyState");
+            binding
+                .Func<std::shared_ptr<objects::Enemy>
+                    (EnemyState::*)()>("GetEntity", &EnemyState::GetEntity);
+
+            Bind<EnemyState>("EnemyState", binding);
+        }
+
+        return *this;
+    }
+}
 
 EnemyState::EnemyState()
 {

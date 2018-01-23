@@ -223,7 +223,7 @@ private:
 
     /**
      * GM command to set the client character's homepoint to their
-     * current position.
+     * current zone's first spawn in point encountered.
      * @param client Pointer to the client that sent the command
      * @param args List of arguments for the command
      * @return true if the command was handled properly, else false
@@ -341,6 +341,17 @@ private:
      * @return true if the command was handled properly, else false
      */
     bool GMCommand_Skill(const std::shared_ptr<
+        channel::ChannelClientConnection>& client,
+        const std::list<libcomp::String>& args);
+
+    /**
+     * GM command to have the client's character gain allocatable
+     * skill points.
+     * @param client Pointer to the client that sent the command
+     * @param args List of arguments for the command
+     * @return true if the command was handled properly, else false
+     */
+    bool GMCommand_SkillPoint(const std::shared_ptr<
         channel::ChannelClientConnection>& client,
         const std::list<libcomp::String>& args);
 

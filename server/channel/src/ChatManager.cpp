@@ -45,6 +45,7 @@
 #include <MiNPCBasicData.h>
 #include <MiQuestData.h>
 #include <MiSkillItemStatusCommonData.h>
+#include <MiSpotData.h>
 #include <MiZoneBasicData.h>
 #include <MiZoneData.h>
 #include <PostItem.h>
@@ -86,6 +87,7 @@ ChatManager::ChatManager(const std::weak_ptr<ChannelServer>& server)
     mGMands["post"] = &ChatManager::GMCommand_Post;
     mGMands["quest"] = &ChatManager::GMCommand_Quest;
     mGMands["skill"] = &ChatManager::GMCommand_Skill;
+    mGMands["skillpoint"] = &ChatManager::GMCommand_SkillPoint;
     mGMands["slotadd"] = &ChatManager::GMCommand_SlotAdd;
     mGMands["spawn"] = &ChatManager::GMCommand_Spawn;
     mGMands["speed"] = &ChatManager::GMCommand_Speed;
@@ -722,11 +724,38 @@ bool ChatManager::GMCommand_Homepoint(const std::shared_ptr<
 {
     (void)args;
 
-    auto server = mServer.lock();
-    server->GetEventManager()->HandleEvent(client,
-        SVR_CONST.EVENT_MENU_HOMEPOINT, 0);
+    auto state = client->GetClientState();
+    auto cState = state->GetCharacterState();
+    auto character = cState->GetEntity();
 
-    return true;
+    auto zoneDef = cState->GetZone()->GetDefinition();
+    auto spots = mServer.lock()->GetDefinitionManager()
+        ->GetSpotData(zoneDef->GetDynamicMapID());
+    for(auto spotPair : spots)
+    {
+        // Take the first zone-in point found
+        if(spotPair.second->GetType() == 3)
+        {
+            character->SetHomepointZone(zoneDef->GetID());
+            character->SetHomepointSpotID(spotPair.first);
+
+            libcomp::Packet p;
+            p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_EVENT_HOMEPOINT_UPDATE);
+            p.WriteS32Little((int32_t)zoneDef->GetID());
+            p.WriteFloat(spotPair.second->GetCenterX());
+            p.WriteFloat(spotPair.second->GetCenterY());
+
+            client->SendPacket(p);
+
+            mServer.lock()->GetWorldDatabase()->QueueUpdate(character,
+                state->GetAccountUID());
+
+            return true;
+        }
+    }
+
+    return SendChatMessage(client, ChatType_t::CHAT_SELF,
+        "No valid spot ID found for the current zone");
 }
 
 bool ChatManager::GMCommand_Item(const std::shared_ptr<
@@ -1168,6 +1197,24 @@ bool ChatManager::GMCommand_Skill(const std::shared_ptr<
 
     return mServer.lock()->GetCharacterManager()->LearnSkill(
         client, entityID, skillID);
+}
+
+bool ChatManager::GMCommand_SkillPoint(const std::shared_ptr<
+    channel::ChannelClientConnection>& client,
+    const std::list<libcomp::String>& args)
+{
+    std::list<libcomp::String> argsCopy = args;
+
+    int32_t pointCount;
+    if(!GetIntegerArg<int32_t>(pointCount, argsCopy) || pointCount < 0)
+    {
+        return false;
+    }
+
+    mServer.lock()->GetCharacterManager()->UpdateSkillPoints(
+        client, pointCount);
+
+    return true;
 }
 
 bool ChatManager::GMCommand_SlotAdd(const std::shared_ptr<

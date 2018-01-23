@@ -99,9 +99,12 @@ private:
     /**
      * Check if an object has already been bound.
      * @param name The name of the binding to check
-     * @return true if it has been bound already, false if it has not
+     * @param lockBinding Optional parameter to mark the binding as known
+     *  now instead of waiting until calling @ref ScriptEngine::Bind. Useful
+     *  for static functions or when circular references can occur.
+     * @return true if it was bound already, false if it was not
      */
-    bool BindingExists(const std::string& name);
+    bool BindingExists(const std::string& name, bool lockBinding = false);
 
     /// The Sqrat VM
     HSQUIRRELVM mVM;

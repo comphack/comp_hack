@@ -33,16 +33,19 @@
 
 // object Includes
 #include <Event.h>
+#include <EventCondition.h>
 
 // channel Includes
 #include "ChannelClientConnection.h"
 
 namespace objects
 {
-class EventCondition;
 class EventConditionData;
+class EventFlagCondition;
 class EventInstance;
 }
+
+typedef objects::EventCondition::CompareMode_t EventCompareMode;
 
 namespace channel
 {
@@ -142,7 +145,7 @@ public:
     /**
      * Evaluate an event condition
      * @param client Pointer to the client to evaluate contextually to
-     * @param conditions List of event conditions to evaluate
+     * @param condition Event condition to evaluate
      * @return true if the event condition evaluates to true, otherwise false
      */
     bool EvaluateEventCondition(const std::shared_ptr<ChannelClientConnection>& client,
@@ -164,7 +167,8 @@ public:
      * @return true if standard condition evaluates to true, otherwise false
      */
     bool EvaluateCondition(const std::shared_ptr<ChannelClientConnection>& client,
-        const std::shared_ptr<objects::EventConditionData>& condition);
+        const std::shared_ptr<objects::EventConditionData>& condition,
+        EventCompareMode compareMode = EventCompareMode::DEFAULT_COMPARE);
 
     /**
      * Evaluate each of the requirements to complete the current quest phase
@@ -213,13 +217,51 @@ public:
 
 private:
     /**
+     * Evaluate a partner demon based event condition
+     * @param client Pointer to the client to evaluate contextually to
+     * @param condition Event condition to evaluate
+     * @return true if the event condition evaluates to true, otherwise false
+     */
+    bool EvaluatePartnerCondition(const std::shared_ptr<ChannelClientConnection>& client,
+        const std::shared_ptr<objects::EventCondition>& condition);
+
+    /**
+     * Evaluate a quest based event condition
+     * @param client Pointer to the client to evaluate contextually to
+     * @param condition Event condition to evaluate
+     * @return true if the event condition evaluates to true, otherwise false
+     */
+    bool EvaluateQuestCondition(const std::shared_ptr<ChannelClientConnection>& client,
+        const std::shared_ptr<objects::EventCondition>& condition);
+
+    /**
      * Evaluate a set of flag states for a standard condition
      * @param flagStates Map of flag states to evaluate
-     * @param condition Standard condition to evaluate
+     * @param condition Condition to evaluate
      * @return true if the flag states evaluate to true, otherwise false
      */
     bool EvaluateFlagStates(const std::unordered_map<int32_t, int32_t>& flagStates,
-        const std::shared_ptr<objects::EventCondition>& condition);
+        const std::shared_ptr<objects::EventFlagCondition>& condition);
+
+    /**
+     * Compare values using the supplied compare mode from an event
+     * condition
+     * @param value1 First (or LHS) comparison value
+     * @param value2 Second (or RHS) comparison value
+     * @param value3 Third optional comparison value (mostly used for
+     *  "between" comparisons)
+     * @param compareMode Compare mode to use when evaluating the values
+     * @param defaultCompare Default compare mode to use if the compareMode
+     *  parameter evaluates to DEFAULT_COMPARE. If both equal this value
+     *  the comparison automatically fails
+     * @param validCompareSetting Valid comparison flags corresponding to
+     *  the numeric values associated to EventCompareMode
+     * @return true if the condition evalaultes to true, false if the condition
+     *  evaluates to false or if an error occurred
+     */
+    bool Compare(int32_t value1, int32_t value2, int32_t value3,
+        EventCompareMode compareMode, EventCompareMode defaultCompare =
+        EventCompareMode::DEFAULT_COMPARE, uint16_t validCompareSetting = 63);
 
     /**
      * Progress or pop to the next sequential event if one exists. If
@@ -229,15 +271,6 @@ private:
      */
     void HandleNext(const std::shared_ptr<ChannelClientConnection>& client,
         const std::shared_ptr<objects::EventInstance>& current);
-
-    /**
-     * Send a message to the client
-     * @param client Pointer to the client the event affects
-     * @param instance Current event instance to process relative to
-     * @return true on success, false on failure
-     */
-    bool Message(const std::shared_ptr<ChannelClientConnection>& client,
-        const std::shared_ptr<objects::EventInstance>& instance);
 
     /**
      * Send an NPC based message to the client
@@ -295,15 +328,6 @@ private:
         const std::shared_ptr<objects::EventInstance>& instance);
 
     /**
-     * Inform the player that items have been obtained
-     * @param client Pointer to the client the event affects
-     * @param instance Current event instance to process relative to
-     * @return true on success, false on failure
-     */
-    bool GetItems(const std::shared_ptr<ChannelClientConnection>& client,
-        const std::shared_ptr<objects::EventInstance>& instance);
-
-    /**
      * Perform one or many actions from the same types of options
      * configured for object interaction
      * @param client Pointer to the client the event affects
@@ -314,66 +338,12 @@ private:
         const std::shared_ptr<objects::EventInstance>& instance);
 
     /**
-     * Inform the client that their character homepoint has been updated
-     * @param client Pointer to the client the event affects
-     * @param instance Current event instance to process relative to
-     * @return true on success, false on failure
-     */
-    bool Homepoint(const std::shared_ptr<ChannelClientConnection>& client,
-        const std::shared_ptr<objects::EventInstance>& instance);
-
-    /**
-     * Render a stage effect on the client
-     * @param client Pointer to the client the event affects
-     * @param instance Current event instance to process relative to
-     * @return true on success, false on failure
-     */
-    bool StageEffect(const std::shared_ptr<ChannelClientConnection>& client,
-        const std::shared_ptr<objects::EventInstance>& instance);
-
-    /**
      * Signify a direction to the player
      * @param client Pointer to the client the event affects
      * @param instance Current event instance to process relative to
      * @return true on success, false on failure
      */
     bool Direction(const std::shared_ptr<ChannelClientConnection>& client,
-        const std::shared_ptr<objects::EventInstance>& instance);
-
-    /**
-     * Signify a special direction to the player
-     * @param client Pointer to the client the event affects
-     * @param instance Current event instance to process relative to
-     * @return true on success, false on failure
-     */
-    bool SpecialDirection(const std::shared_ptr<ChannelClientConnection>& client,
-        const std::shared_ptr<objects::EventInstance>& instance);
-
-    /**
-     * Play a sound effect clientside
-     * @param client Pointer to the client the event affects
-     * @param instance Current event instance to process relative to
-     * @return true on success, false on failure
-     */
-    bool PlaySoundEffect(const std::shared_ptr<ChannelClientConnection>& client,
-        const std::shared_ptr<objects::EventInstance>& instance);
-
-    /**
-     * Play a BGM track clientside
-     * @param client Pointer to the client the event affects
-     * @param instance Current event instance to process relative to
-     * @return true on success, false on failure
-     */
-    bool PlayBGM(const std::shared_ptr<ChannelClientConnection>& client,
-        const std::shared_ptr<objects::EventInstance>& instance);
-
-    /**
-     * Stop a BGM track clientside
-     * @param client Pointer to the client the event affects
-     * @param instance Current event instance to process relative to
-     * @return true on success, false on failure
-     */
-    bool StopBGM(const std::shared_ptr<ChannelClientConnection>& client,
         const std::shared_ptr<objects::EventInstance>& instance);
 
     /**

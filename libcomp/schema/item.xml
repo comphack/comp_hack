@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <objgen>
-    <object name="Item" location="world">
+    <object name="Item" location="world" scriptenabled="true">
         <member type="u32" name="Type"/>
         <member type="ItemBox*" name="ItemBox"/>
         <member type="s8" name="BoxSlot" default="-1"/>
@@ -33,5 +33,17 @@
             <element type="Item*"/>
         </member>
         <member type="u32" name="RentalExpiration"/>
+    </object>
+    <object name="ItemDrop" persistent="false">
+        <member type="u32" name="ItemType"/>
+        <member type="float" name="Rate"/>
+        <member type="u16" name="MinStack" default="1"/>
+        <member type="u16" name="MaxStack" default="1"/>
+    </object>
+    <object name="DropSet" persistent="false">
+        <member type="u32" name="ID"/>
+        <member type="list" name="Drops">
+            <element type="ItemDrop*"/>
+        </member>
     </object>
 </objgen>

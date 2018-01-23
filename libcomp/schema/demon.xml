@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <objgen>
-    <object name="Demon" location="world">
+    <object name="Demon" location="world" scriptenabled="true">
         <member type="u32" name="Type"/>
         <member type="DemonBox*" name="DemonBox"/>
         <member type="s8" name="BoxSlot" default="-1"/>

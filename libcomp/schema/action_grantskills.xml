@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="ActionGrantSkills" baseobject="Action" persistent="false">
+        <member type="enum" name="actionType" inherited="true" default="GRANT_SKILLS"/>
+        <member type="enum" name="targetType" underlying="uint8_t">
+            <value>CHARACTER</value>
+            <value>PARTNER</value>
+        </member>
+        <member type="u16" name="skillPoints"/>
+        <member type="set" name="skillIDs">
+            <element type="u32"/>
+        </member>
+        <member type="map" name="expertisePoints">
+            <key type="u8"/>
+            <value type="s32"/>
+        </member>
+    </object>
+</objgen>

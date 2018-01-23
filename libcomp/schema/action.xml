@@ -4,10 +4,18 @@
         <member type="enum" name="actionType" default="ZONE_CHANGE">
             <value>ZONE_CHANGE</value>
             <value>START_EVENT</value>
+            <value>SET_HOMEPOINT</value>
             <value>SET_NPC_STATE</value>
             <value>ADD_REMOVE_ITEMS</value>
+            <value>ADD_REMOVE_STATUS</value>
             <value>UPDATE_COMP</value>
+            <value>GRANT_SKILLS</value>
             <value>GRANT_XP</value>
+            <value>DISPLAY_MESSAGE</value>
+            <value>STAGE_EFFECT</value>
+            <value>SPECIAL_DIRECTION</value>
+            <value>PLAY_BGM</value>
+            <value>PLAY_SOUND_EFFECT</value>
             <value>UPDATE_FLAG</value>
             <value>UPDATE_LNC</value>
             <value>UPDATE_QUEST</value>

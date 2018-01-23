@@ -97,10 +97,18 @@ public:
     virtual std::string GetDatabaseLoadCode(const Generator& generator,
         const std::string& name, size_t tabLevel = 1) const;
 
+    virtual std::string GetAccessDeclarations(const Generator& generator,
+        const MetaObject& object, const std::string& name,
+        size_t tabLevel = 1) const;
+    virtual std::string GetAccessFunctions(const Generator& generator,
+        const MetaObject& object, const std::string& name) const;
     virtual std::string GetUtilityDeclarations(const Generator& generator,
         const std::string& name, size_t tabLevel = 1) const;
     virtual std::string GetUtilityFunctions(const Generator& generator,
         const MetaObject& object, const std::string& name) const;
+    virtual std::string GetAccessScriptBindings(const Generator& generator,
+        const MetaObject& object, const std::string& name,
+        size_t tabLevel = 1) const;
 
 private:
     bool NumericValueIsValid(const std::string& num) const;

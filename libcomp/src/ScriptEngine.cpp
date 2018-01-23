@@ -149,7 +149,13 @@ HSQUIRRELVM ScriptEngine::GetVM()
     return mVM;
 }
 
-bool ScriptEngine::BindingExists(const std::string& name)
+bool ScriptEngine::BindingExists(const std::string& name, bool lockBinding)
 {
-    return mBindings.find(name) != mBindings.end();
+    bool result = mBindings.find(name) != mBindings.end();
+    if(!result && lockBinding)
+    {
+        mBindings.insert(name);
+    }
+
+    return result;
 }

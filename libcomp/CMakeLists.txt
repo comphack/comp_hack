@@ -220,10 +220,18 @@ SET(${PROJECT_NAME}_SCHEMA
     schema/accountlogin.xml
     schema/action.xml
     schema/action_addremoveitems.xml
+    schema/action_addremovestatus.xml
     schema/action_createloot.xml
+    schema/action_displaymessage.xml
+    schema/action_grantskills.xml
     schema/action_grantxp.xml
+    schema/action_homepoint.xml
+    schema/action_playbgm.xml
+    schema/action_playsoundeffect.xml
     schema/action_setnpcstate.xml
     schema/action_spawn.xml
+    schema/action_specialdirection.xml
+    schema/action_stageeffect.xml
     schema/action_startevent.xml
     schema/action_updatecomp.xml
     schema/action_updateflag.xml
@@ -240,16 +248,11 @@ SET(${PROJECT_NAME}_SCHEMA
     schema/enemy.xml
     schema/event.xml
     schema/event_direction.xml
-    schema/event_getitem.xml
-    schema/event_homepoint.xml
     schema/event_message.xml
     schema/event_openmenu.xml
     schema/event_performactions.xml
-    schema/event_playbgm.xml
     schema/event_playscene.xml
-    schema/event_playsoundeffect.xml
     schema/event_prompt.xml
-    schema/event_stageeffect.xml
     schema/item.xml
     schema/packet_login.xml
     schema/packet_login_reply.xml
@@ -323,14 +326,30 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     Action.cpp
     ActionAddRemoveItems.h
     ActionAddRemoveItems.cpp
+    ActionAddRemoveStatus.h
+    ActionAddRemoveStatus.cpp
     ActionCreateLoot.h
     ActionCreateLoot.cpp
+    ActionDisplayMessage.h
+    ActionDisplayMessage.cpp
+    ActionGrantSkills.h
+    ActionGrantSkills.cpp
     ActionGrantXP.h
     ActionGrantXP.cpp
+    ActionPlayBGM.h
+    ActionPlayBGM.cpp
+    ActionPlaySoundEffect.h
+    ActionPlaySoundEffect.cpp
+    ActionSetHomepoint.h
+    ActionSetHomepoint.cpp
     ActionSetNPCState.h
     ActionSetNPCState.cpp
     ActionSpawn.h
     ActionSpawn.cpp
+    ActionSpecialDirection.h
+    ActionSpecialDirection.cpp
+    ActionStageEffect.h
+    ActionStageEffect.cpp
     ActionStartEvent.h
     ActionStartEvent.cpp
     ActionUpdateCOMP.h
@@ -371,6 +390,8 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     Demon.cpp
     DemonBox.h
     DemonBox.cpp
+    DropSet.h
+    DropSet.cpp
     Enemy.h
     Enemy.cpp
     EntityStats.h
@@ -387,12 +408,8 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     EventDirection.cpp
     EventExNPCMessage.h
     EventExNPCMessage.cpp
-    EventGetItem.h
-    EventGetItem.cpp
-    EventHomepoint.h
-    EventHomepoint.cpp
-    EventMessage.h
-    EventMessage.cpp
+    EventFlagCondition.h
+    EventFlagCondition.cpp
     EventMultitalk.h
     EventMultitalk.cpp
     EventNPCMessage.h
@@ -401,22 +418,14 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     EventOpenMenu.cpp
     EventPerformActions.h
     EventPerformActions.cpp
-    EventPlayBGM.h
-    EventPlayBGM.cpp
     EventPlayScene.h
     EventPlayScene.cpp
-    EventPlaySoundEffect.h
-    EventPlaySoundEffect.cpp
     EventPrompt.h
     EventPrompt.cpp
+    EventScriptCondition.h
+    EventScriptCondition.cpp
     EventSequence.h
     EventSequence.cpp
-    EventSpecialDirection.h
-    EventSpecialDirection.cpp
-    EventStageEffect.h
-    EventStageEffect.cpp
-    EventStopBGM.h
-    EventStopBGM.cpp
     Expertise.h
     Expertise.cpp
     FriendSettings.h

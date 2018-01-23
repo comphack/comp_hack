@@ -92,8 +92,7 @@ bool Parsers::DemonCrystallize::Parse(libcomp::ManagerPacket *pPacketManager,
     auto targetDemon = targetDState->GetEntity();
     auto targetInventory = targetCState->GetEntity()->GetItemBoxes(0).Get();
 
-    auto demonData = targetDemon
-        ? definitionManager->GetDevilData(targetDemon->GetType()) : nullptr;
+    auto demonData = targetDState->GetDevilData();
     auto enchantData = demonData ? definitionManager->GetEnchantDataByDemonID(
         demonData->GetUnionData()->GetBaseDemonID()) : nullptr;
 

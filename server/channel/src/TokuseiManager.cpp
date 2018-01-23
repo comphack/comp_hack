@@ -936,8 +936,7 @@ bool TokuseiManager::EvaluateTokuseiCondition(const std::shared_ptr<ActiveEntity
         }
         else
         {
-            bool containsLNC = (eState->GetLNCType(mServer.lock()
-                ->GetDefinitionManager()) & condition->GetValue()) != 0;
+            bool containsLNC = (eState->GetLNCType() & condition->GetValue()) != 0;
             return containsLNC == (condition->GetComparator() ==
                 objects::TokuseiCondition::Comparator_t::EQUALS);
         }
@@ -946,7 +945,8 @@ bool TokuseiManager::EvaluateTokuseiCondition(const std::shared_ptr<ActiveEntity
         // Entity is the specified gender
         {
             int32_t gender = (int32_t)objects::MiNPCBasicData::Gender_t::NONE;
-            uint32_t demonID = 0;
+
+            auto devilData = eState->GetDevilData();
             switch(eState->GetEntityType())
             {
             case objects::EntityStateObject::EntityType_t::CHARACTER:
@@ -954,25 +954,14 @@ bool TokuseiManager::EvaluateTokuseiCondition(const std::shared_ptr<ActiveEntity
                     ->GetEntity()->GetGender();
                 break;
             case objects::EntityStateObject::EntityType_t::PARTNER_DEMON:
-                demonID = std::dynamic_pointer_cast<DemonState>(eState)
-                    ->GetEntity()->GetType();
-                break;
             case objects::EntityStateObject::EntityType_t::ENEMY:
-                demonID = std::dynamic_pointer_cast<EnemyState>(eState)
-                    ->GetEntity()->GetType();
-                break;
-            default:
-                return false;
-            }
-
-            if(demonID)
-            {
-                auto devilData = mServer.lock()->GetDefinitionManager()
-                    ->GetDevilData(demonID);
                 if(devilData)
                 {
                     gender = (int32_t)devilData->GetBasic()->GetGender();
                 }
+                break;
+            default:
+                return false;
             }
 
             return Compare(gender, condition, false);
@@ -1078,10 +1067,13 @@ bool TokuseiManager::EvaluateTokuseiCondition(const std::shared_ptr<ActiveEntity
     }
 
     std::shared_ptr<objects::Demon> partner;
+    std::shared_ptr<objects::MiDevilData> demonData;
     auto state = ClientState::GetEntityClientState(eState->GetEntityID(), false);
     if(state && state->GetCharacterState() == eState && state->GetDemonState()->Ready())
     {
-        partner = state->GetDemonState()->GetEntity();
+        auto dState = state->GetDemonState();
+        partner = dState->GetEntity();
+        demonData = dState->GetDevilData();
     }
 
     if(partner == nullptr)
@@ -1094,8 +1086,6 @@ bool TokuseiManager::EvaluateTokuseiCondition(const std::shared_ptr<ActiveEntity
         return Compare((int32_t)partner->GetFamiliarity(), condition, true);
     }
 
-    auto demonData = mServer.lock()->GetDefinitionManager()->GetDevilData(
-        partner->GetType());
     if(!demonData || numericCompare)
     {
         return false;

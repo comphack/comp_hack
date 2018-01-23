@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="ActionAddRemoveStatus" baseobject="Action" persistent="false">
+        <member type="enum" name="actionType" inherited="true" default="ADD_REMOVE_STATUS"/>
+        <member type="enum" name="targetType" underlying="uint8_t">
+            <value>CHARACTER</value>
+            <value>PARTNER</value>
+            <value>CHARACTER_AND_PARTNER</value>
+        </member>
+        <member type="bool" name="isReplace"/>
+        <member type="map" name="statusStacks">
+            <key type="u32"/>   <!-- Status Type -->
+            <value type="u8"/>  <!-- Stack size -->
+        </member>
+    </object>
+</objgen>

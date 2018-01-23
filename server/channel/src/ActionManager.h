@@ -81,11 +81,19 @@ private:
     bool StartEvent(ActionContext& ctx);
 
     /**
-     * Perform the zone change action on behalf of the client.
+     * Perform the zone change action on behalf of the client. If
+     * no zoneID is specified, they will be sent to their homepoint.
      * @param ctx ActionContext for the executing source information.
      * @retval false The action list should stop after this action.
      */
     bool ZoneChange(ActionContext& ctx);
+
+    /**
+     * Set the homepoint for the client character.
+     * @param ctx ActionContext for the executing source information.
+     * @retval false The action list should stop after this action.
+     */
+    bool SetHomepoint(ActionContext& ctx);
 
     /**
      * Change the state of the source entity in the zone.
@@ -102,6 +110,14 @@ private:
     bool AddRemoveItems(ActionContext& ctx);
 
     /**
+     * Add or remove status effects to the client's character or
+     * partner demon.
+     * @param ctx ActionContext for the executing source information.
+     * @retval false The action list should stop after this action.
+     */
+    bool AddRemoveStatus(ActionContext& ctx);
+
+    /**
      * Add/remove demons from the COMP and/or set the max slots available.
      * @param ctx ActionContext for the executing source information.
      * @retval false The action list should stop after this action.
@@ -114,6 +130,50 @@ private:
      * @retval false The action list should stop after this action.
      */
     bool GrantXP(ActionContext& ctx);
+
+    /**
+     * Grant skills or skill points to the source client character
+     * or partner demon.
+     * @param ctx ActionContext for the executing source information.
+     * @retval false The action list should stop after this action.
+     */
+    bool GrantSkills(ActionContext& ctx);
+
+    /**
+     * Display a message for the client that no response is returned from.
+     * @param ctx ActionContext for the executing source information.
+     * @retval false The action list should stop after this action.
+     */
+    bool DisplayMessage(ActionContext& ctx);
+
+    /**
+     * Display a stage effect for the client that no response is
+     * returned from.
+     * @param ctx ActionContext for the executing source information.
+     * @retval false The action list should stop after this action.
+     */
+    bool StageEffect(ActionContext& ctx);
+
+    /**
+     * Display a special direction effect for the client.
+     * @param ctx ActionContext for the executing source information.
+     * @retval false The action list should stop after this action.
+     */
+    bool SpecialDirection(ActionContext& ctx);
+
+    /**
+     * Play or stop a BGM for the client.
+     * @param ctx ActionContext for the executing source information.
+     * @retval false The action list should stop after this action.
+     */
+    bool PlayBGM(ActionContext& ctx);
+
+    /**
+     * Play a sound effect for the client.
+     * @param ctx ActionContext for the executing source information.
+     * @retval false The action list should stop after this action.
+     */
+    bool PlaySoundEffect(ActionContext& ctx);
 
     /**
      * Update flags related to character maps, valuables or plugins.

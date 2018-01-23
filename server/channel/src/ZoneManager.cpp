@@ -1432,7 +1432,7 @@ std::list<std::shared_ptr<ChannelClientConnection>> ZoneManager::GetZoneConnecti
 bool ZoneManager::SpawnEnemy(const std::shared_ptr<Zone>& zone, uint32_t demonID,
     float x, float y, float rot, const libcomp::String& aiType)
 {
-    auto eState = CreateEnemy(zone, demonID, 0, x, y, rot);
+    auto eState = CreateEnemy(zone, demonID, nullptr, x, y, rot);
 
     auto server = mServer.lock();
     server->GetAIManager()->Prepare(eState, aiType);
@@ -1452,266 +1452,368 @@ bool ZoneManager::SpawnEnemy(const std::shared_ptr<Zone>& zone, uint32_t demonID
 bool ZoneManager::UpdateSpawnGroups(const std::shared_ptr<Zone>& zone,
     bool refreshAll, uint64_t now, std::shared_ptr<objects::ActionSpawn> actionSource)
 {
-    std::unordered_map<uint32_t, uint16_t> updateSpawnGroups;
-    if(!refreshAll)
+    auto dynamicMap = zone->GetDynamicMap();
+    auto zoneDef = zone->GetDefinition();
+
+    // Location ID then group ID (true) or group ID then spot ID (false)
+    std::list<std::pair<bool, std::pair<uint32_t, uint32_t>>> groups;
+    if(actionSource)
     {
+        std::list<std::pair<bool, std::pair<uint32_t, uint32_t>>> checking;
+        if(actionSource->SpawnLocationGroupIDsCount() > 0)
+        {
+            for(uint32_t slgID : actionSource->GetSpawnLocationGroupIDs())
+            {
+                std::pair<bool, std::pair<uint32_t, uint32_t>> p(true,
+                    std::pair<uint32_t, uint32_t>(slgID, 0));
+                checking.push_back(p);
+            }
+        }
+
+        for(auto gPair : actionSource->GetSpawnGroupIDs())
+        {
+            std::pair<bool, std::pair<uint32_t, uint32_t>> p(false,
+                std::pair<uint32_t, uint32_t>(gPair.first, gPair.second));
+            checking.push_back(p);
+        }
+
+        bool spawnValidated = false;
+        if(actionSource->GetSpotID() != 0 &&
+            (actionSource->GetMode() == objects::ActionSpawn::Mode_t::ONE_TIME ||
+             actionSource->GetMode() == objects::ActionSpawn::Mode_t::ONE_TIME_RANDOM))
+        {
+            if(zone->SpawnedAtSpot(actionSource->GetSpotID()))
+            {
+                // Nothing to do, spawns have already happened at the
+                // explicit spot
+                return false;
+            }
+
+            spawnValidated = true;
+        }
+
+        for(auto cPair : checking)
+        {
+            auto& gPair = cPair.second;
+
+            bool add = false;
+            if(spawnValidated)
+            {
+                add = true;
+            }
+            else
+            {
+                switch(actionSource->GetMode())
+                {
+                case objects::ActionSpawn::Mode_t::ONE_TIME:
+                    add = !zone->GroupHasSpawned(gPair.first, cPair.first,
+                        false);
+                    break;
+                case objects::ActionSpawn::Mode_t::ONE_TIME_RANDOM:
+                    if(!zone->GroupHasSpawned(gPair.first, cPair.first,
+                        false))
+                    {
+                        add = true;
+                    }
+                    else
+                    {
+                        // Stop here if any have spawned
+                        return false;
+                    }
+                    break;
+                case objects::ActionSpawn::Mode_t::NONE_EXIST:
+                    add = !zone->GroupHasSpawned(gPair.first, cPair.first,
+                        true);
+                    break;
+                case objects::ActionSpawn::Mode_t::NORMAL:
+                default:
+                    add = true;
+                    break;
+                }
+            }
+
+            if(add)
+            {
+                groups.push_back(cPair);
+            }
+        }
+
+        if(actionSource->GetMode() ==
+            objects::ActionSpawn::Mode_t::ONE_TIME_RANDOM &&
+            groups.size() > 1)
+        {
+            auto it = groups.begin();
+
+            size_t randomIdx = (size_t)RNG(int32_t, 0,
+                (int32_t)(groups.size()-1));
+            std::advance(it, randomIdx);
+
+            auto g = *it;
+            groups.clear();
+            groups.push_back(g);
+        }
+    }
+    else if(refreshAll)
+    {
+        // All spawn location groups will be refreshed
+        for(auto slgPair : zoneDef->GetSpawnLocationGroups())
+        {
+            if(slgPair.second->GetRespawnTime() > 0)
+            {
+                std::pair<bool, std::pair<uint32_t, uint32_t>> p(true,
+                    std::pair<uint32_t, uint32_t>(slgPair.first, 0));
+                groups.push_back(p);
+            }
+        }
+    }
+    else
+    {
+        // Determine normal spawns needed
         if(now == 0)
         {
             now = ChannelServer::GetServerTime();
         }
 
-        updateSpawnGroups = zone->GetReinforceableSpawnGroups(now);
-        if(updateSpawnGroups.size() == 0)
+        auto slgIDs = zone->GetRespawnLocations(now);
+        if(slgIDs.size() == 0)
         {
             return false;
         }
-    }
 
-    std::set<uint32_t> groupIDs;
-    if(actionSource)
-    {
-        for(uint32_t groupID : actionSource->GetSpawnGroupIDs())
+        for(uint32_t slgID : slgIDs)
         {
-            switch(actionSource->GetConditions())
-            {
-            case objects::ActionSpawn::Conditions_t::ONE_TIME:
-                if(!zone->GroupHasSpawned(groupID, false))
-                {
-                    groupIDs.insert(groupID);
-                }
-                break;
-            case objects::ActionSpawn::Conditions_t::ONE_TIME_RANDOM:
-                if(!zone->GroupHasSpawned(groupID, false))
-                {
-                    groupIDs.insert(groupID);
-                }
-                else
-                {
-                    // Stop here if any have spawned
-                    return false;
-                }
-                break;
-            case objects::ActionSpawn::Conditions_t::NONE_EXIST:
-                if(!zone->GroupHasSpawned(groupID, true))
-                {
-                    groupIDs.insert(groupID);
-                }
-                break;
-            case objects::ActionSpawn::Conditions_t::NONE:
-            default:
-                groupIDs.insert(groupID);
-                break;
-            }
-        }
-
-        if(actionSource->GetConditions() ==
-            objects::ActionSpawn::Conditions_t::ONE_TIME_RANDOM &&
-            groupIDs.size() > 1)
-        {
-            auto it = groupIDs.begin();
-
-            size_t randomIdx = (size_t)RNG(int32_t, 0,
-                (int32_t)(groupIDs.size()-1));
-            std::advance(it, randomIdx);
-
-            uint32_t groupID = *it;
-            groupIDs.clear();
-            groupIDs.insert(groupID);
+            std::pair<bool, std::pair<uint32_t, uint32_t>> p(true,
+                std::pair<uint32_t, uint32_t>(slgID, 0));
+            groups.push_back(p);
         }
     }
 
-    auto dynamicMap = zone->GetDynamicMap();
-    auto zoneDef = zone->GetDefinition();
+    bool containsSimpleSpawns = false;
+    bool mergeEncounter = actionSource && actionSource->DefeatActionsCount() > 0;
 
-    std::unordered_map<uint32_t,
-        std::list<std::shared_ptr<objects::SpawnGroup>>> groups;
-    for(auto sgPair : zoneDef->GetSpawnGroups())
-    {
-        bool specified = groupIDs.find(sgPair.first) != groupIDs.end();
-
-        auto sg = sgPair.second;
-        if(specified || (!actionSource && refreshAll && sg->GetRespawnTime() > 0.f) ||
-            updateSpawnGroups.find(sgPair.first) != updateSpawnGroups.end())
-        {
-            groups[sg->GetSpawnLocationGroupID()].push_back(sg);
-        }
-    }
-
-    std::list<std::shared_ptr<EnemyState>> eStates;
+    std::list<std::list<std::shared_ptr<EnemyState>>> eStateGroups;
     for(auto groupPair : groups)
     {
-        auto slg = zoneDef->GetSpawnLocationGroups(groupPair.first);
-        if(!slg)
+        uint32_t sgID = groupPair.first
+            ? groupPair.second.second : groupPair.second.first;
+        uint32_t slgID = groupPair.first ? groupPair.second.first : 0;
+        uint32_t spotID = !groupPair.first ? groupPair.second.second : 0;
+
+        std::set<uint32_t> spotIDs;
+        std::list<std::shared_ptr<objects::SpawnLocation>> locations;
+        if(actionSource && actionSource->GetSpotID() != 0)
         {
-            LOG_WARNING(libcomp::String("Skipping invalid spawn location"
-                " group %1\n")
-                .Arg(groupPair.first));
-            continue;
+            // Explicit spot set on the action
+            spotID = actionSource->GetSpotID();
         }
 
-        std::set<uint32_t> spotIDs = slg->GetSpotIDs();
-        auto locations = slg->GetLocations();
+        if(slgID)
+        {
+            auto slg = zoneDef->GetSpawnLocationGroups(slgID);
+            if(!slg)
+            {
+                LOG_WARNING(libcomp::String("Skipping invalid spawn location"
+                    " group %1\n")
+                    .Arg(groupPair.first));
+                continue;
+            }
+
+            if(!spotID)
+            {
+                spotIDs = slg->GetSpotIDs();
+            }
+
+            locations = slg->GetLocations();
+
+            // Get the random group now
+            auto groupIDs = slg->GetGroupIDs();
+            auto gIter = groupIDs.begin();
+            if(groupIDs.size() > 1)
+            {
+                size_t randomIdx = (size_t)RNG(int32_t, 0,
+                    (int32_t)(groupIDs.size()-1));
+                std::advance(gIter, randomIdx);
+            }
+
+            sgID = *gIter;
+        }
+
+        if(spotID)
+        {
+            spotIDs.insert(spotID);
+        }
 
         bool useSpotID = dynamicMap && spotIDs.size() > 0;
 
         if(!useSpotID && locations.size() == 0) continue;
 
-        // Create each enemy at a random location in the group
-        for(auto sg : groupPair.second)
+        auto sg = sgID > 0 ? zoneDef->GetSpawnGroups(sgID) : nullptr;
+        if(!sg)
         {
-            std::list<std::shared_ptr<objects::SpawnGroup>> groupSet;
-            if(sg->SubGroupsCount() == 0)
+            LOG_WARNING(libcomp::String("Skipping invalid spawn group %1\n")
+                .Arg(sgID));
+            continue;
+        }
+
+        std::list<std::shared_ptr<EnemyState>>* eStateGroup = 0;
+        if(mergeEncounter)
+        {
+            // If the enemies should all be considered a single encounter,
+            // add them all to the same grouping
+            if(eStateGroups.size() == 0)
             {
-                // Normal group
-                groupSet.push_back(sg);
+                eStateGroups.push_front(
+                    std::list<std::shared_ptr<EnemyState>>());
+            }
+            eStateGroup = &eStateGroups.front();
+        }
+        else if(sg->DefeatActionsCount() == 0)
+        {
+            if(!containsSimpleSpawns)
+            {
+                eStateGroups.push_front(
+                    std::list<std::shared_ptr<EnemyState>>());
+                containsSimpleSpawns = true;
+            }
+            eStateGroup = &eStateGroups.front();
+        }
+        else
+        {
+            eStateGroups.push_back(
+                std::list<std::shared_ptr<EnemyState>>());
+            eStateGroup = &eStateGroups.back();
+        }
+
+        // Create each enemy at a random position in the same location
+        std::shared_ptr<channel::ZoneSpotShape> spot;
+        std::shared_ptr<objects::SpawnLocation> location;
+        if(useSpotID)
+        {
+            if(!spotID)
+            {
+                auto spotIter = spotIDs.begin();
+                if(spotIDs.size() > 1)
+                {
+                    size_t randomIdx = (size_t)RNG(int32_t, 0,
+                        (int32_t)(spotIDs.size()-1));
+                    std::advance(spotIter, randomIdx);
+                }
+
+                spotID = *spotIter;
+            }
+
+            auto spotPair = dynamicMap->Spots.find(spotID);
+            if(spotPair != dynamicMap->Spots.end())
+            {
+                spot = spotPair->second;
+
+                // If the spot is defined with a spawn area, use that as
+                // the AI wandering region
+                auto serverSpot = zoneDef->GetSpots(spotID);
+                if(serverSpot)
+                {
+                    location = serverSpot->GetSpawnArea();
+                }
             }
             else
             {
-                // Spawn group set, add sub-groups
-                if(sg->GetRespawnTime() > 0)
+                LOG_ERROR(libcomp::String("Failed to spawn group %1 at"
+                    " unknown spot %2\n").Arg(sgID).Arg(spotID));
+                continue;
+            }
+        }
+        else
+        {
+            auto locIter = locations.begin();
+            if(locations.size() > 1)
+            {
+                size_t randomIdx = (size_t)RNG(int32_t, 0,
+                    (int32_t)(locations.size()-1));
+                std::advance(locIter, randomIdx);
+            }
+
+            location = *locIter;
+        }
+
+        for(auto sPair : sg->GetSpawns())
+        {
+            auto spawn = zoneDef->GetSpawns(sPair.first);
+            for(uint16_t i = 0; i < sPair.second; i++)
+            {
+                float x = 0.f, y = 0.f;
+                if(useSpotID)
                 {
-                    // Not allowed
-                    /// @todo: move to zone loading check
-                    LOG_ERROR(libcomp::String("Skipping spawn group %1 which contains"
-                        " sub-groups and has a respawn time which is not supported\n")
-                        .Arg(sg->GetID()));
+                    // Get a random point in the polygon
+                    Point p = GetRandomSpotPoint(spot->Definition);
+                    Point center(spot->Definition->GetCenterX(),
+                        spot->Definition->GetCenterY());
+
+                    // Make sure a straight line can be drawn from the center
+                    // point so the enemy is not spawned outside of the zone
+                    Point collision;
+                    Line fromCenter(center, p);
+                    if(zone->GetGeometry()->Collides(fromCenter, collision))
+                    {
+                        // Back it off slightly
+                        p = GetLinearPoint(collision.x, collision.y,
+                            center.x, center.y, 10.f, false);
+                    }
+
+                    x = p.x;
+                    y = p.y;
                 }
                 else
                 {
-                    for(uint32_t subGroupID : sg->GetSubGroups())
-                    {
-                        auto sg2 = zoneDef->GetSpawnGroups(subGroupID);
-                        if(sg2 && sg2->GetSpawnID())
-                        {
-                            groupSet.push_back(sg2);
-                        }
-                    }
+                    // Spawn location bounding box points start in the top left corner of the
+                    // rectangle and extend towards +X/-Y
+                    auto rPoint = GetRandomPoint(location->GetWidth(), location->GetHeight());
+                    x = location->GetX() + rPoint.x;
+                    y = location->GetY() - rPoint.y;
                 }
-            }
-            
-            for(auto sge : groupSet)
-            {
-                auto spawn = zoneDef->GetSpawns(sge->GetSpawnID());
 
-                uint16_t count = refreshAll ? sge->GetMaxCount() : 1;
-                for(uint16_t i = 0; i < count; i++)
-                {
-                    uint32_t spotID = 0;
-                    std::shared_ptr<objects::SpawnLocation> location;
+                float rot = RNG_DEC(float, 0.f, 3.14f, 2);
 
-                    float x = 0.f, y = 0.f;
-                    if(useSpotID)
-                    {
-                        auto spotIter = spotIDs.begin();
-                        if(spotIDs.size() > 1)
-                        {
-                            size_t randomIdx = (size_t)RNG(int32_t, 0,
-                                (int32_t)(spotIDs.size()-1));
-                            std::advance(spotIter, randomIdx);
-                        }
+                // Create the enemy state
+                auto eState = CreateEnemy(zone, spawn->GetEnemyType(), spawn, x, y, rot);
 
-                        spotID = *spotIter;
+                // Set the spawn information
+                auto enemy = eState->GetEntity();
+                enemy->SetSpawnSource(spawn);
+                enemy->SetSpawnLocation(location);
+                enemy->SetSpawnSpotID(spotID);
+                enemy->SetSpawnGroupID(sgID);
+                enemy->SetSpawnLocationGroupID(slgID);
 
-                        auto spot = dynamicMap->Spots.find(spotID);
-                        if(spot != dynamicMap->Spots.end())
-                        {
-                            // Get a random point in the polygon
-                            Point p = GetRandomSpotPoint(spot->second->Definition);
-                            Point center(spot->second->Definition->GetCenterX(),
-                                spot->second->Definition->GetCenterY());
-
-                            // Make sure a straight line can be drawn from the center
-                            // point so the enemy is not spawned outside of the zone
-                            Point collision;
-                            Line fromCenter(center, p);
-                            if(zone->GetGeometry()->Collides(fromCenter, collision))
-                            {
-                                // Back it off slightly
-                                p = GetLinearPoint(collision.x, collision.y,
-                                    center.x, center.y, 10.f, false);
-                            }
-
-                            x = p.x;
-                            y = p.y;
-
-                            // If the spot is defined with a spawn area, use that as
-                            // the AI wandering region
-                            auto serverSpot = zoneDef->GetSpots(spotID);
-                            if(serverSpot)
-                            {
-                                location = serverSpot->GetSpawnArea();
-                            }
-                        }
-                        else
-                        {
-                            LOG_ERROR(libcomp::String("Failed to spawn %1 at unknown"
-                                " spot %2\n").Arg(spawn->GetID()).Arg(spotID));
-                            return false;
-                        }
-                    }
-                    else
-                    {
-                        auto locIter = locations.begin();
-                        if(locations.size() > 1)
-                        {
-                            size_t randomIdx = (size_t)RNG(int32_t, 0,
-                                (int32_t)(locations.size()-1));
-                            std::advance(locIter, randomIdx);
-                        }
-
-                        location = *locIter;
-
-                        // Spawn location bounding box points start in the top left corner of the
-                        // rectangle and extend towards +X/-Y
-                        auto rPoint = GetRandomPoint(location->GetWidth(), location->GetHeight());
-                        x = location->GetX() + rPoint.x;
-                        y = location->GetY() - rPoint.y;
-                    }
-
-                    float rot = RNG_DEC(float, 0.f, 3.14f, 2);
-
-                    // Create the enemy state
-                    auto eState = CreateEnemy(zone, spawn->GetEnemyType(),
-                        spawn->GetVariantType(), x, y, rot);
-
-                    // Set the spawn information
-                    auto enemy = eState->GetEntity();
-                    enemy->SetSpawnSource(spawn);
-                    enemy->SetSpawnLocation(location);
-                    enemy->SetSpawnSpotID(spotID);
-
-                    // Use the effective spawn group, not the actual if they differ
-                    enemy->SetSpawnGroupID(sg->GetID());
-
-                    eStates.push_back(eState);
-                }
+                eStateGroup->push_back(eState);
             }
         }
     }
 
-    if(eStates.size() > 0)
+    if(eStateGroups.size() > 0)
     {
-        bool setActionSource = actionSource && actionSource->DefeatActionsCount() > 0;
-
         auto server = mServer.lock();
         auto aiManager = server->GetAIManager();
-        for(auto eState : eStates)
+        for(auto& eStateGroup : eStateGroups)
         {
-            if(aiManager->Prepare(eState))
+            bool encounterSpawn = !containsSimpleSpawns || eStateGroup != eStateGroups.front();
+            for(auto eState : eStateGroup)
             {
-                /// @todo: change this for enemies that don't wander
-                eState->GetAIState()->SetStatus(AIStatus_t::WANDERING, true);
+                if(aiManager->Prepare(eState))
+                {
+                    /// @todo: change this for enemies that don't wander
+                    eState->GetAIState()->SetStatus(AIStatus_t::WANDERING, true);
+                }
+
+                if(!encounterSpawn)
+                {
+                    zone->AddEnemy(eState);
+                }
             }
 
-            if(!setActionSource)
+            if(encounterSpawn)
             {
-                zone->AddEnemy(eState);
+                zone->CreateEncounter(eStateGroup, actionSource);
             }
-        }
-
-        if(setActionSource)
-        {
-            zone->CreateEncounter(eStates, actionSource);
         }
 
         // Send to clients already in the zone if they exist
@@ -1719,9 +1821,13 @@ bool ZoneManager::UpdateSpawnGroups(const std::shared_ptr<Zone>& zone,
         if(clients.size() > 0)
         {
             auto firstClient = clients.begin()->second;
-            for(auto eState : eStates)
+            for(auto& eStateGroup : eStateGroups)
             {
-                SendEnemyData(firstClient, eState, zone, true, true);
+                for(auto eState : eStateGroup)
+                {
+                    SendEnemyData(firstClient, eState, zone,
+                        true, true);
+                }
             }
 
             for(auto client : clients)
@@ -1745,8 +1851,8 @@ Point ZoneManager::RotatePoint(const Point& p, const Point& origin, float radian
         (float)((xDelta * sin(radians)) + (yDelta * cos(radians))) + origin.y);
 }
 
-std::shared_ptr<EnemyState> ZoneManager::CreateEnemy(
-    const std::shared_ptr<Zone>& zone, uint32_t demonID, uint32_t variantType,
+std::shared_ptr<EnemyState> ZoneManager::CreateEnemy(const std::shared_ptr<Zone>& zone,
+    uint32_t demonID, const std::shared_ptr<objects::Spawn>& spawn,
     float x, float y, float rot)
 {
     auto server = mServer.lock();
@@ -1760,10 +1866,11 @@ std::shared_ptr<EnemyState> ZoneManager::CreateEnemy(
 
     auto enemy = std::shared_ptr<objects::Enemy>(new objects::Enemy);
     enemy->SetType(demonID);
-    enemy->SetVariantType(variantType);
+    enemy->SetVariantType(spawn ? spawn->GetVariantType() : 0);
 
     auto enemyStats = libcomp::PersistentObject::New<objects::EntityStats>();
-    enemyStats->SetLevel((int8_t)def->GetGrowth()->GetBaseLevel());
+    enemyStats->SetLevel(spawn && spawn->GetLevel() > 0 ? spawn->GetLevel()
+        : (int8_t)def->GetGrowth()->GetBaseLevel());
     server->GetCharacterManager()->CalculateDemonBaseStats(nullptr, enemyStats, def);
     enemy->SetCoreStats(enemyStats);
 
@@ -1778,7 +1885,7 @@ std::shared_ptr<EnemyState> ZoneManager::CreateEnemy(
     eState->SetCurrentX(x);
     eState->SetCurrentY(y);
     eState->SetCurrentRotation(rot);
-    eState->SetEntity(enemy);
+    eState->SetEntity(enemy, def);
     eState->SetStatusEffectsActive(true, definitionManager);
     eState->SetZone(zone);
 
@@ -1851,6 +1958,28 @@ void ZoneManager::Warp(const std::shared_ptr<ChannelClientConnection>& client,
 
     auto connections = server->GetZoneManager()->GetZoneConnections(client, true);
     ChannelClientConnection::SendRelativeTimePacket(connections, p, timeMap);
+}
+
+bool ZoneManager::GetSpotPosition(uint32_t dynamicMapID, uint32_t spotID, float& x,
+    float& y, float& rot) const
+{
+    if(spotID == 0 || dynamicMapID == 0)
+    {
+        return false;
+    }
+
+    auto spots = mServer.lock()->GetDefinitionManager()->GetSpotData(dynamicMapID);
+    auto spotIter = spots.find(spotID);
+    if(spotIter != spots.end())
+    {
+        x = spotIter->second->GetCenterX();
+        y = spotIter->second->GetCenterY();
+        rot = spotIter->second->GetRotation();
+
+        return true;
+    }
+
+    return false;
 }
 
 Point ZoneManager::GetRandomPoint(float width, float height) const
@@ -2088,9 +2217,17 @@ std::shared_ptr<Zone> ZoneManager::CreateZoneInstance(
         auto copy = std::make_shared<objects::ServerNPC>(*npc);
 
         auto state = std::shared_ptr<NPCState>(new NPCState(copy));
-        state->SetCurrentX(npc->GetX());
-        state->SetCurrentY(npc->GetY());
-        state->SetCurrentRotation(npc->GetRotation());
+
+        float x = npc->GetX();
+        float y = npc->GetY();
+        float rot = npc->GetRotation();
+        GetSpotPosition(definition->GetDynamicMapID(), npc->GetSpotID(),
+            x, y, rot);
+
+        state->SetCurrentX(x);
+        state->SetCurrentY(y);
+        state->SetCurrentRotation(rot);
+
         state->SetEntityID(server->GetNextEntityID());
         state->SetActions(npc->GetActions());
         zone->AddNPC(state);
@@ -2102,9 +2239,17 @@ std::shared_ptr<Zone> ZoneManager::CreateZoneInstance(
 
         auto state = std::shared_ptr<ServerObjectState>(
             new ServerObjectState(copy));
-        state->SetCurrentX(obj->GetX());
-        state->SetCurrentY(obj->GetY());
-        state->SetCurrentRotation(obj->GetRotation());
+
+        float x = obj->GetX();
+        float y = obj->GetY();
+        float rot = obj->GetRotation();
+        GetSpotPosition(definition->GetDynamicMapID(), obj->GetSpotID(),
+            x, y, rot);
+
+        state->SetCurrentX(x);
+        state->SetCurrentY(y);
+        state->SetCurrentRotation(rot);
+
         state->SetEntityID(server->GetNextEntityID());
         state->SetActions(obj->GetActions());
         zone->AddObject(state);
@@ -2125,9 +2270,17 @@ std::shared_ptr<Zone> ZoneManager::CreateZoneInstance(
         for(auto bazaar : definition->GetBazaars())
         {
             auto state = std::shared_ptr<BazaarState>(new BazaarState(bazaar));
-            state->SetCurrentX(bazaar->GetX());
-            state->SetCurrentY(bazaar->GetY());
-            state->SetCurrentRotation(bazaar->GetRotation());
+
+            float x = bazaar->GetX();
+            float y = bazaar->GetY();
+            float rot = bazaar->GetRotation();
+            GetSpotPosition(definition->GetDynamicMapID(), bazaar->GetSpotID(),
+                x, y, rot);
+
+            state->SetCurrentX(x);
+            state->SetCurrentY(y);
+            state->SetCurrentRotation(rot);
+
             state->SetEntityID(server->GetNextEntityID());
 
             for(auto m : activeMarkets)

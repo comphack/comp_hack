@@ -155,11 +155,9 @@ public:
     /**
      * Get a numeric representation (also stored in constants) of the
      * entity's current alignment
-     * @param definitionManager Pointer to the definition manager to use
-     *  for entities with a static LNC value
      * @return Numeric representation of the entity's current alignment
      */
-    virtual uint8_t GetLNCType(libcomp::DefinitionManager* definitionManager = nullptr);
+    virtual uint8_t GetLNCType();
 
     /**
      * Get all skills that the entity currently has available.
@@ -664,13 +662,12 @@ protected:
      *  determining how effects and items interact with the entity
      * @param calcState Override CalculatedEntityState to use instead of the
      *  entity's default
-     * @param demonID Demon type ID of the entity
      * @return 1 if the calculation resulted in a change to the stats that should
      *  be sent to the client, 2 if one of the changes should be communicated to
      *  the world (for party members etc), 0 otherwise
      */
     uint8_t RecalculateDemonStats(libcomp::DefinitionManager* definitionManager,
-        std::shared_ptr<objects::CalculatedEntityState> calcState, uint32_t demonID);
+        std::shared_ptr<objects::CalculatedEntityState> calcState);
 
     /**
      * Calculate the numeric representation (also stored in constants)
@@ -799,8 +796,11 @@ public:
     /**
      * Set the active entity
      * @param entity Pointer to the active entity
+     * @param devilData Pointer to the MiDevilData definition
+     *  null is expected for characters
      */
-    void SetEntity(const std::shared_ptr<T>& entity);
+    void SetEntity(const std::shared_ptr<T>& entity,
+        const std::shared_ptr<objects::MiDevilData>& devilData);
 
     virtual const libobjgen::UUID GetEntityUUID();
 
@@ -815,7 +815,7 @@ public:
     virtual std::set<uint32_t> GetAllSkills(libcomp::DefinitionManager* definitionManager,
         bool includeTokusei);
 
-    virtual uint8_t GetLNCType(libcomp::DefinitionManager* definitionManager = nullptr);
+    virtual uint8_t GetLNCType();
 
     virtual bool Ready()
     {

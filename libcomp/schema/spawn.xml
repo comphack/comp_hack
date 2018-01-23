@@ -4,22 +4,45 @@
         <member type="u32" name="ID"/>
         <member type="u32" name="EnemyType"/>
         <member type="u32" name="VariantType"/>
+        <member type="bool" name="IsBoss"/>
         <member type="list" name="Drops">
             <element type="ItemDrop*"/>
+        </member>
+        <member type="list" name="DropSetIDs">
+            <element type="u32"/>
         </member>
         <member type="list" name="Gifts">
             <element type="ItemDrop*"/>
         </member>
+        <member type="s8" name="Level" default="-1"/>
         <member type="s64" name="XP" default="-1"/>
     </object>
-    <object name="ItemDrop" persistent="false">
-        <member type="u32" name="ItemType"/>
-        <member type="float" name="Rate"/>
-        <member type="u16" name="MinStack"/>
-        <member type="u16" name="MaxStack"/>
+    <object name="SpawnGroup" persistent="false">
+        <member type="u32" name="ID"/>
+        <member type="map" name="Spawns">
+            <key type="u32"/>   <!-- Spawn ID -->
+            <value type="u16"/> <!-- Count -->
+        </member>
+        <member type="map" name="TimeRestriction">
+            <key type="u16"/>   <!-- From -->
+            <value type="u16"/> <!-- To -->
+        </member>
+        <member type="u16" name="MoonRestriction"/>
+        <member type="u16" name="DayRestriction"/>
+
+        <member type="list" name="SpawnActions">
+            <element type="Action*"/>
+        </member>
+        <member type="list" name="DefeatActions">
+            <element type="Action*"/>
+        </member>
     </object>
     <object name="SpawnLocationGroup" persistent="false">
         <member type="u32" name="ID"/>
+        <member type="list" name="GroupIDs">
+            <element type="u32"/>
+        </member>
+        <member type="float" name="RespawnTime"/>
         <member type="set" name="SpotIDs">
             <element type="u32"/>
         </member>
@@ -32,15 +55,5 @@
         <member type="float" name="Y"/>
         <member type="float" name="Width"/>
         <member type="float" name="Height"/>
-    </object>
-    <object name="SpawnGroup" persistent="false">
-        <member type="u32" name="ID"/>
-        <member type="u32" name="SpawnID"/>
-        <member type="u32" name="SpawnLocationGroupID"/>
-        <member type="u16" name="MaxCount"/>
-        <member type="float" name="RespawnTime"/>
-        <member type="set" name="SubGroups">
-            <element type="u32"/>
-        </member>
     </object>
 </objgen>

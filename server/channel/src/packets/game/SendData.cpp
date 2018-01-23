@@ -48,6 +48,7 @@ void SendClientReadyData(std::shared_ptr<ChannelServer> server,
     const std::shared_ptr<ChannelClientConnection> client)
 {
     auto characterManager = server->GetCharacterManager();
+    auto serverDataManager = server->GetServerDataManager();
     auto zoneManager = server->GetZoneManager();
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
@@ -106,15 +107,18 @@ void SendClientReadyData(std::shared_ptr<ChannelServer> server,
         if(zoneID == 0)
         {
             zoneID = character->GetHomepointZone();
-            xCoord = character->GetHomepointX();
-            yCoord = character->GetHomepointY();
-            rotation = 0;
+
+            auto zoneData = server->GetServerDataManager()->GetZoneData(zoneID, 0);
+            if(zoneData)
+            {
+                zoneManager->GetSpotPosition(zoneData->GetDynamicMapID(),
+                    character->GetHomepointSpotID(), xCoord, yCoord, rotation);
+            }
         }
 
         // Make sure the player can start in the zone
         if(zoneID != 0)
         {
-            auto serverDataManager = server->GetServerDataManager();
             auto zoneData = serverDataManager->GetZoneData(zoneID, 0);
             auto zoneLobbyData = zoneData && !zoneData->GetGlobal()
                 ? serverDataManager->GetZoneData(zoneData->GetGroupID(), 0)

@@ -74,9 +74,6 @@ struct Data
     /// Demon depo menu event ID
     String EVENT_MENU_DEMON_DEPO;
 
-    /// Homepoint update prompt menu event ID
-    String EVENT_MENU_HOMEPOINT;
-
     /// Item depo menu event ID
     String EVENT_MENU_ITEM_DEPO;
 

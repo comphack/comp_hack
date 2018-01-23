@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="ActionStageEffect" baseobject="Action" persistent="false">
+        <member type="enum" name="actionType" inherited="true" default="STAGE_EFFECT"/>
+        <member type="s32" name="messageID"/>
+        <member type="s8" name="effect1"/>
+        <member type="s32" name="effect2"/>
+        <member type="bool" name="includeMessage"/>
+    </object>
+</objgen>

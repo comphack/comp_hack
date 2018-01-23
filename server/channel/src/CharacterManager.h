@@ -502,7 +502,7 @@ public:
         int32_t entityID);
 
     /**
-     * Update a client's character's exptertise for a given skill.
+     * Update a client's character's expertise for a given skill.
      * @param client Pointer to the client connection
      * @param skillID Skill ID that will have it's corresponding
      *  expertise updated if it is enabled
@@ -514,6 +514,19 @@ public:
     void UpdateExpertise(const std::shared_ptr<
         channel::ChannelClientConnection>& client, uint32_t skillID,
         float multiplier = -1.0f);
+
+    /**
+     * Update a client's character's expertise for a set of expertise IDs.
+     * If an expertise is supplied that is not enabled it will still be
+     * updated.
+     * @param client Pointer to the client connection
+     * @param pointMap Map of expertise IDs to points that will be added.
+     *  The order the expertise are passed in is the order they will be
+     *  processed in in case the limit is reached.
+     */
+    void UpdateExpertisePoints(const std::shared_ptr<
+        channel::ChannelClientConnection>& client,
+        const std::list<std::pair<uint8_t, int32_t>>& pointMap);
 
     /**
      * Determine the character's current expertise rank for the
@@ -532,6 +545,14 @@ public:
      */
     void SendExertiseExtension(const std::shared_ptr<
         channel::ChannelClientConnection>& client);
+
+    /**
+     * Increase the client's character available skill points.
+     * @param client Pointer to the client connection
+     * @param points Number of points to gain
+     */
+    void UpdateSkillPoints(const std::shared_ptr<
+        channel::ChannelClientConnection>& client, int32_t points);
 
     /**
      * Update the specified entity to learn a skill by ID.

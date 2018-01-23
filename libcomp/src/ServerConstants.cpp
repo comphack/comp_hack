@@ -86,8 +86,6 @@ bool ServerConstants::Initialize(const String& filePath)
     // Load event constants
     success &= LoadString(constants["EVENT_MENU_DEMON_DEPO"],
         sConstants.EVENT_MENU_DEMON_DEPO);
-    success &= LoadString(constants["EVENT_MENU_HOMEPOINT"],
-        sConstants.EVENT_MENU_HOMEPOINT);
     success &= LoadString(constants["EVENT_MENU_ITEM_DEPO"],
         sConstants.EVENT_MENU_ITEM_DEPO);
 

@@ -35,15 +35,47 @@
 #include <ServerObject.h>
 #include <ServerZone.h>
 #include <SpawnGroup.h>
+#include <SpawnLocationGroup.h>
 
 // channel Includes
 #include <ChannelServer.h>
 
 using namespace channel;
 
+namespace libcomp
+{
+    template<>
+    ScriptEngine& ScriptEngine::Using<Zone>()
+    {
+        if(!BindingExists("DemonState", true))
+        {
+            Using<ActiveEntityState>();
+            Using<objects::Demon>();
+
+            Sqrat::Class<Zone> binding(mVM, "Zone");
+            binding
+                .Func<int32_t (Zone::*)(int32_t, int32_t)>(
+                    "GetFlagState", &Zone::GetFlagStateValue);
+
+            Bind<Zone>("Zone", binding);
+        }
+
+        return *this;
+    }
+}
+
+Zone::Zone()
+{
+}
+
 Zone::Zone(uint32_t id, const std::shared_ptr<objects::ServerZone>& definition)
     : mServerZone(definition), mID(id), mOwnerID(0), mNextEncounterID(1)
 {
+}
+
+Zone::Zone(const Zone& other)
+{
+    (void)other;
 }
 
 Zone::~Zone()
@@ -159,32 +191,42 @@ void Zone::RemoveEntity(int32_t entityID, bool updateSpawns)
 
         if(removeEnemy)
         {
-            uint32_t spawnGroupID = removeEnemy ? removeEnemy->GetSpawnGroupID() : 0;
-            if(spawnGroupID)
+            uint32_t sgID = removeEnemy ? removeEnemy->GetSpawnGroupID() : 0;
+            uint32_t slgID = removeEnemy ? removeEnemy->GetSpawnLocationGroupID() : 0;
+            if(sgID)
             {
-                mSpawnGroups[spawnGroupID].remove_if([removeEnemy](
+                mSpawnGroups[sgID].remove_if([removeEnemy](
+                    const std::shared_ptr<EnemyState>& e)
+                    {
+                        return e->GetEntity() == removeEnemy;
+                    });
+            }
+
+            if(slgID)
+            {
+                mSpawnLocationGroups[slgID].remove_if([removeEnemy](
                     const std::shared_ptr<EnemyState>& e)
                     {
                         return e->GetEntity() == removeEnemy;
                     });
 
-                auto spawnGroup = mServerZone->GetSpawnGroups(spawnGroupID);
-                if(spawnGroup->GetRespawnTime() > 0.f &&
-                    (uint16_t)mSpawnGroups[spawnGroupID].size() < spawnGroup->GetMaxCount())
+                auto slg = mServerZone->GetSpawnLocationGroups(slgID);
+                if(slg->GetRespawnTime() > 0.f &&
+                    mSpawnLocationGroups[slgID].size() == 0)
                 {
                     // Update the reinforce time for the group, exit if found
-                    for(auto rPair : mSpawnGroupReinforceTimes)
+                    for(auto rPair : mRespawnTimes)
                     {
-                        if(rPair.second.find(spawnGroupID) != rPair.second.end())
+                        if(rPair.second.find(slgID) != rPair.second.end())
                         {
                             return;
                         }
                     }
 
                     uint64_t rTime = ChannelServer::GetServerTime()
-                        + (uint64_t)(spawnGroup->GetRespawnTime() * 1000000);
+                        + (uint64_t)(slg->GetRespawnTime() * 1000000);
 
-                    mSpawnGroupReinforceTimes[rTime].insert(spawnGroupID);
+                    mRespawnTimes[rTime].insert(slgID);
                 }
             }
         }
@@ -205,21 +247,30 @@ void Zone::AddEnemy(const std::shared_ptr<EnemyState>& enemy)
         std::lock_guard<std::mutex> lock(mLock);
         mEnemies.push_back(enemy);
 
-        auto spawnGroupID = enemy->GetEntity()->GetSpawnGroupID();
-        auto spawnGroup = spawnGroupID > 0
-            ? mServerZone->GetSpawnGroups(spawnGroupID) : nullptr;
-        if(spawnGroup)
+        uint32_t spotID = enemy->GetEntity()->GetSpawnSpotID();
+        if(spotID != 0)
         {
-            mSpawnGroups[spawnGroupID].push_back(enemy);
+            mSpotsSpawned.insert(spotID);
+        }
 
-            // If the last one was spawned, remove it from the
-            // reinforce times so the counter resets
-            if(spawnGroup->GetRespawnTime() > 0.f &&
-                (uint16_t)mSpawnGroups.size() == spawnGroup->GetMaxCount())
+        auto sgID = enemy->GetEntity()->GetSpawnGroupID();
+        if(mServerZone->SpawnGroupsKeyExists(sgID))
+        {
+            mSpawnGroups[sgID].push_back(enemy);
+        }
+
+        auto slgID = enemy->GetEntity()->GetSpawnLocationGroupID();
+        auto slg = mServerZone->GetSpawnLocationGroups(slgID);
+        if(slg)
+        {
+            mSpawnLocationGroups[slgID].push_back(enemy);
+
+            // Be sure to clear the respawn time
+            if(slg->GetRespawnTime() > 0.f)
             {
-                for(auto pair : mSpawnGroupReinforceTimes)
+                for(auto pair : mRespawnTimes)
                 {
-                    pair.second.erase(spawnGroupID);
+                    pair.second.erase(slgID);
                 }
             }
         }
@@ -454,11 +505,13 @@ std::list<std::shared_ptr<ActiveEntityState>>
     return result;
 }
 
-bool Zone::GroupHasSpawned(uint32_t spawnGroupID, bool aliveOnly)
+bool Zone::GroupHasSpawned(uint32_t groupID, bool isLocation, bool aliveOnly)
 {
     std::lock_guard<std::mutex> lock(mLock);
-    auto it = mSpawnGroups.find(spawnGroupID);
-    if(it == mSpawnGroups.end())
+
+    auto& m = isLocation ? mSpawnLocationGroups : mSpawnGroups;
+    auto it = m.find(groupID);
+    if(it == m.end())
     {
         return false;
     }
@@ -476,6 +529,12 @@ bool Zone::GroupHasSpawned(uint32_t spawnGroupID, bool aliveOnly)
     }
 
     return false;
+}
+
+bool Zone::SpawnedAtSpot(uint32_t spotID)
+{
+    std::lock_guard<std::mutex> lock(mLock);
+    return mSpotsSpawned.find(spotID) != mSpotsSpawned.end();
 }
 
 void Zone::CreateEncounter(const std::list<std::shared_ptr<EnemyState>>& enemies,
@@ -520,7 +579,7 @@ bool Zone::EncounterDefeated(uint32_t encounterID,
         }
 
         mEncounters.erase(encounterID);
-        
+
         auto dIter = mEncounterSpawnSources.find(encounterID);
         if(dIter != mEncounterSpawnSources.end())
         {
@@ -538,60 +597,33 @@ bool Zone::EncounterDefeated(uint32_t encounterID,
     return false;
 }
 
-std::unordered_map<uint32_t, uint16_t> Zone::GetReinforceableSpawnGroups(
-    uint64_t now)
+std::set<uint32_t> Zone::GetRespawnLocations(uint64_t now)
 {
-    std::unordered_map<uint32_t, uint16_t> result;
+    std::set<uint32_t> result;
 
     std::set<uint64_t> passed;
-    std::map<uint64_t, std::set<uint32_t>> nextReinforceTimes;
 
     std::lock_guard<std::mutex> lock(mLock);
-    for(auto pair : mSpawnGroupReinforceTimes)
+    for(auto pair : mRespawnTimes)
     {
         if(pair.first > now) break;
 
         passed.insert(pair.first);
 
-        for(uint32_t spawnGroupID : pair.second)
+        for(uint32_t slgID : pair.second)
         {
-            // Make sure we don't add the group twice
-            if(result.find(spawnGroupID) == result.end())
+            // Make sure we don't add the location twice
+            if(result.find(slgID) == result.end() &&
+                mSpawnLocationGroups[slgID].size() == 0)
             {
-                auto spawnGroup = mServerZone->GetSpawnGroups(spawnGroupID);
-                uint16_t activeCount = (uint16_t)mSpawnGroups[spawnGroupID].size();
-
-                if(spawnGroup->GetMaxCount() > activeCount)
-                {
-                    uint16_t count = (uint16_t)(
-                        spawnGroup->GetMaxCount() - activeCount);
-                    result[spawnGroupID] = count;
-
-                    if(count > 1 && spawnGroup->GetRespawnTime() > 0.f)
-                    {
-                        // Set the next reinforce time, this will be cleared
-                        // if the full group is spawned
-                        uint64_t rTime = now + (uint64_t)(
-                            spawnGroup->GetRespawnTime() * 1000000);
-
-                        nextReinforceTimes[rTime].insert(spawnGroupID);
-                    }
-                }
+                result.insert(slgID);
             }
         }
     }
 
     for(auto p : passed)
     {
-        mSpawnGroupReinforceTimes.erase(p);
-    }
-
-    for(auto pair : nextReinforceTimes)
-    {
-        for(auto spawnGroupID : pair.second)
-        {
-            mSpawnGroupReinforceTimes[pair.first].insert(spawnGroupID);
-        }
+        mRespawnTimes.erase(p);
     }
 
     return result;
@@ -608,6 +640,17 @@ bool Zone::GetFlagState(int32_t key, int32_t& value)
     }
 
     return false;
+}
+
+int32_t Zone::GetFlagStateValue(int32_t key, int32_t nullDefault)
+{
+    int32_t result;
+    if(!GetFlagState(key, result))
+    {
+        result = nullDefault;
+    }
+
+    return result;
 }
 
 void Zone::SetFlagState(int32_t key, int32_t value)
@@ -676,4 +719,5 @@ void Zone::Cleanup()
     mObjects.clear();
     mAllEntities.clear();
     mSpawnGroups.clear();
+    mSpawnLocationGroups.clear();
 }

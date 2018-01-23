@@ -37,6 +37,12 @@ namespace libcomp
 class Packet;
 }
 
+namespace objects
+{
+class ActionSpawn;
+class Spawn;
+}
+
 namespace channel
 {
 
@@ -342,6 +348,21 @@ public:
         float rot);
 
     /**
+     * Get the X/Y coordinates and rotation of the center point of a spot.
+     * @param dynamaicMapID Dynamic map ID of the zone containing the spot
+     * @param spotID Spot ID to find the center of
+     * @param x Default X position to use if the spot is not found, changes
+     *  to the spot center X coordinate if found
+     * @param y Default Y position to use if the spot is not found, changes
+     *  to the spot center Y coordinate if found
+     * @param rot Default rotation to use if the spot is not found, changes
+     *  to the spot rotation if found
+     * @return true if the spot was found, false it was not
+     */
+    bool GetSpotPosition(uint32_t dynamicMapID, uint32_t spotID, float& x,
+        float& y, float& rot) const;
+
+    /**
      * Get a random point within the specified width and height representing
      * a rectangular area in a zone.
      * @param width Width of the area to generate a random point within
@@ -425,14 +446,15 @@ private:
      * Create an enemy in the specified zone instance at set coordinates
      * @param zone Pointer to the zone instance where the enemy should be spawned
      * @param demonID Demon/enemy type ID to spawn
-     * @param variantType Variant type of the demon
+     * @param spawn Optional pointer to the enemy's spawn definition
      * @param x X coordinate to render the enemy at
      * @param y Y coordinate to render the enemy at
      * @param rot Rotation to render the enemy with
      * @return Pointer to the new enemy state
      */
     std::shared_ptr<EnemyState> CreateEnemy(const std::shared_ptr<Zone>& zone,
-        uint32_t demonID, uint32_t variantType, float x, float y, float rot);
+        uint32_t demonID, const std::shared_ptr<objects::Spawn>& spawn,
+        float x, float y, float rot);
 
     /**
      * Send entity information about an enemy in a zone

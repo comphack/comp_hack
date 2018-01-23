@@ -133,14 +133,28 @@ public:
     }
 
     /**
+     * Get the pointer to the referenced object.  If the object
+     * is persistent and has not be loaded from the database yet
+     * this will not load it however if it is already cached at
+     * a server level, it will be cached here as well.
+     * @return Pointer to the referenced object
+     */
+    const std::shared_ptr<T> Get()
+    {
+        LoadReference();
+
+        return GetReference();
+    }
+
+    /**
      * Get the pointer to the referenced object.  This will
      * cause the reference to load from the database if the
-     * database is specified and only the UUID is set.
+     * UUID is set and has not been loaded from the DB already.
      * @param db Database to load from
      * @param reload Forces a reload from the DB if true
      * @return Pointer to the referenced object
      */
-    const std::shared_ptr<T> Get(const std::shared_ptr<Database>& db = nullptr,
+    const std::shared_ptr<T> Get(const std::shared_ptr<Database>& db,
         bool reload = false)
     {
         LoadReference(db, reload);

@@ -42,6 +42,7 @@
 #include <ActionSpawn.h>
 #include <ActivatedAbility.h>
 #include <CalculatedEntityState.h>
+#include <DropSet.h>
 #include <Item.h>
 #include <ItemBox.h>
 #include <ItemDrop.h>
@@ -1575,7 +1576,7 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<channel::Proces
             }
 
             auto talkPoints = eState->GetTalkPoints(source->GetEntityID());
-            auto demonData = definitionManager->GetDevilData(enemy->GetType());
+            auto demonData = eState->GetDevilData();
             auto negData = demonData->GetNegotiation();
             uint8_t affThreshold = (uint8_t)(100 - negData->GetAffabilityThreshold());
             uint8_t fearThreshold = (uint8_t)(100 - negData->GetFearThreshold());
@@ -2258,25 +2259,16 @@ bool SkillManager::EvaluateTokuseiSkillCondition(const std::shared_ptr<ActiveEnt
         else
         {
             int32_t gender = (int32_t)objects::MiNPCBasicData::Gender_t::NONE;
-            if(otherState->GetEntityType() == objects::EntityStateObject::EntityType_t::CHARACTER)
+
+            auto demonData = otherState->GetDevilData();
+            if(demonData)
+            {
+                gender = demonData ? (int32_t)demonData->GetBasic()->GetGender() : gender;
+            }
+            else if(otherState->GetEntityType() == objects::EntityStateObject::EntityType_t::CHARACTER)
             {
                 auto character = std::dynamic_pointer_cast<CharacterState>(otherState)->GetEntity();
                 gender = character ? (int32_t)character->GetGender() : gender;
-            }
-            else if(otherState->GetEntityType() == objects::EntityStateObject::EntityType_t::ENEMY)
-            {
-                auto enemy = std::dynamic_pointer_cast<EnemyState>(otherState)->GetEntity();
-                auto demonData = enemy ? mServer.lock()->GetDefinitionManager()
-                    ->GetDevilData(enemy->GetType()) : nullptr;
-                gender = demonData ? (int32_t)demonData->GetBasic()->GetGender() : gender;
-            }
-            else if(otherState->GetEntityType() ==
-                objects::EntityStateObject::EntityType_t::PARTNER_DEMON)
-            {
-                auto demon = std::dynamic_pointer_cast<DemonState>(otherState)->GetEntity();
-                auto demonData = demon ? mServer.lock()->GetDefinitionManager()
-                    ->GetDevilData(demon->GetType()) : nullptr;
-                gender = demonData ? (int32_t)demonData->GetBasic()->GetGender() : gender;
             }
 
             return (gender == condition->GetValue()) == !negate;
@@ -2284,28 +2276,13 @@ bool SkillManager::EvaluateTokuseiSkillCondition(const std::shared_ptr<ActiveEnt
     case objects::TokuseiSkillCondition::SkillConditionType_t::ENEMY_LNC:
         // Enemy's LNC matches the specified type (can be any target type)
         return otherState &&
-            ((otherState->GetLNCType(mServer.lock()
-                ->GetDefinitionManager()) & condition->GetValue()) != 0) == !negate;
+            ((otherState->GetLNCType() & condition->GetValue()) != 0) == !negate;
     default:
         break;
     }
 
     // The remaining conditions depend on the other entity being a demon
-    std::shared_ptr<objects::MiDevilData> demonData;
-    if(otherState)
-    {
-        if(otherState->GetEntityType() == objects::EntityStateObject::EntityType_t::ENEMY)
-        {
-            auto enemy = std::dynamic_pointer_cast<EnemyState>(otherState)->GetEntity();
-            demonData = enemy ? mServer.lock()->GetDefinitionManager()->GetDevilData(enemy->GetType()) : nullptr;
-        }
-        else if(otherState->GetEntityType() == objects::EntityStateObject::EntityType_t::PARTNER_DEMON)
-        {
-            auto demon = std::dynamic_pointer_cast<DemonState>(otherState)->GetEntity();
-            demonData = demon ? mServer.lock()->GetDefinitionManager()->GetDevilData(demon->GetType()) : nullptr;
-        }
-    }
-
+    auto demonData = otherState ? otherState->GetDevilData() : nullptr;
     if(!demonData)
     {
         // Rather than return the negation value, this case will always fail as it is an error
@@ -2333,9 +2310,7 @@ bool SkillManager::EvaluateTokuseiSkillCondition(const std::shared_ptr<ActiveEnt
             auto state = ClientState::GetEntityClientState(eState->GetEntityID(), false);
             if(state && state->GetCharacterState() == eState && state->GetDemonState()->Ready())
             {
-                auto partner = state->GetDemonState()->GetEntity();
-                partnerData = partner ? mServer.lock()->GetDefinitionManager()
-                    ->GetDevilData(partner->GetType()) : nullptr;
+                partnerData = state->GetDemonState()->GetDevilData();
             }
 
             if(!partnerData)
@@ -2616,7 +2591,6 @@ void SkillManager::HandleKills(std::shared_ptr<ActiveEntityState> source,
 {
     auto server = mServer.lock();
     auto characterManager = server->GetCharacterManager();
-    auto definitionManager = server->GetDefinitionManager();
     auto zoneManager = server->GetZoneManager();
 
     auto zConnections = zone->GetConnectionList();
@@ -2644,13 +2618,11 @@ void SkillManager::HandleKills(std::shared_ptr<ActiveEntityState> source,
             { -100, -100 }  // Type 16
         };
 
-    uint32_t sourceDemonType = (source->GetEntityType() ==
-        objects::EntityStateObject::EntityType_t::PARTNER_DEMON)
-        ? std::dynamic_pointer_cast<DemonState>(source)->GetEntity()->GetType()
-        : 0;
-    auto sourceDemonFType = sourceDemonType
-        ? definitionManager->GetDevilData(sourceDemonType)->GetFamiliarity()
-        ->GetFamiliarityType() : 0;
+    auto sourceDevilData = source->GetDevilData();
+    uint32_t sourceDemonType = sourceDevilData
+        ? sourceDevilData->GetBasic()->GetID() : 0;
+    int32_t sourceDemonFType = sourceDevilData
+        ? sourceDevilData->GetFamiliarity()->GetFamiliarityType() : 0;
 
     std::unordered_map<int32_t, int32_t> adjustments;
     std::list<std::shared_ptr<EnemyState>> enemiesKilled;
@@ -2742,7 +2714,7 @@ void SkillManager::HandleKills(std::shared_ptr<ActiveEntityState> source,
         std::unordered_map<std::shared_ptr<LootBoxState>,
             std::shared_ptr<EnemyState>> lStates;
         std::unordered_map<uint32_t, int32_t> questKills;
-        std::set<uint32_t> encounterIDs;
+        std::unordered_map<uint32_t, uint32_t> encounterIDs;
         for(auto eState : enemiesKilled)
         {
             auto enemy = eState->GetEntity();
@@ -2773,7 +2745,7 @@ void SkillManager::HandleKills(std::shared_ptr<ActiveEntityState> source,
                 }
             }
 
-            encounterIDs.insert(enemy->GetEncounterID());
+            encounterIDs[enemy->GetEncounterID()] = enemy->GetSpawnGroupID();
         }
 
         // For each loot body generate and send loot and show the body
@@ -2899,14 +2871,26 @@ void SkillManager::HandleKills(std::shared_ptr<ActiveEntityState> source,
         // Perform defeat actions for all empty encounters
         encounterIDs.erase(0);
 
-        std::shared_ptr<objects::ActionSpawn> defeatActionSource;
-        for(uint32_t encounterID : encounterIDs)
+        for(auto ePair : encounterIDs)
         {
-            if(zone->EncounterDefeated(encounterID, defeatActionSource))
+            std::shared_ptr<objects::ActionSpawn> defeatActionSource;
+            if(zone->EncounterDefeated(ePair.first, defeatActionSource))
             {
-                server->GetActionManager()->PerformActions(sourceClient,
-                    defeatActionSource->GetDefeatActions(),
-                    source->GetEntityID(), zone);
+                // If the defeatActionSource has actions, those override the group's default
+                if(defeatActionSource && defeatActionSource->DefeatActionsCount() > 0)
+                {
+                    server->GetActionManager()->PerformActions(sourceClient,
+                        defeatActionSource->GetDefeatActions(), source->GetEntityID(), zone);
+                }
+                else
+                {
+                    auto group = zone->GetDefinition()->GetSpawnGroups(ePair.second);
+                    if(group && group->DefeatActionsCount() > 0)
+                    {
+                        server->GetActionManager()->PerformActions(sourceClient,
+                            group->GetDefeatActions(), source->GetEntityID(), zone);
+                    }
+                }
             }
         }
 
@@ -3890,17 +3874,36 @@ std::list<std::shared_ptr<objects::ItemDrop>> SkillManager::GetItemDrops(
 {
     (void)enemyType;
 
+    if(giftMode)
+    {
+        return spawn->GetGifts();
+    }
+
+    // Add specific spawn drops, then drop sets, then global drops
     std::list<std::shared_ptr<objects::ItemDrop>> drops;
-
-    /// @todo: add global/family drops
-
     if(spawn)
     {
-        for(auto drop : giftMode ? spawn->GetGifts() : spawn->GetDrops())
+        auto serverDataManager = mServer.lock()->GetServerDataManager();
+
+        for(auto drop : spawn->GetDrops())
         {
             drops.push_back(drop);
         }
+
+        for(uint32_t dropSetID : spawn->GetDropSetIDs())
+        {
+            auto dropSet = serverDataManager->GetDropSetData(dropSetID);
+            if(dropSet)
+            {
+                for(auto drop : dropSet->GetDrops())
+                {
+                    drops.push_back(drop);
+                }
+            }
+        }
     }
+
+    /// @todo: add global drops
 
     return drops;
 }
@@ -4118,8 +4121,9 @@ bool SkillManager::FamiliarityUp(const std::shared_ptr<objects::ActivatedAbility
     auto cState = state->GetCharacterState();
     auto dState = state->GetDemonState();
     auto demon = dState->GetEntity();
+    auto demonData = dState->GetDevilData();
 
-    if(!demon)
+    if(!demon || !demonData)
     {
         return false;
     }
@@ -4139,11 +4143,9 @@ bool SkillManager::FamiliarityUp(const std::shared_ptr<objects::ActivatedAbility
         }
     }
 
-    auto demonData = definitionManager->GetDevilData(demon->GetType());
-    int32_t fType = demonData
-        ? demonData->GetFamiliarity()->GetFamiliarityType() : 0;
+    int32_t fType = demonData->GetFamiliarity()->GetFamiliarityType();
 
-    if(!demonData || fType > 16)
+    if(fType > 16)
     {
         return false;
     }
@@ -4173,7 +4175,7 @@ bool SkillManager::FamiliarityUp(const std::shared_ptr<objects::ActivatedAbility
 
     /// @todo: receive items from demon
 
-    bool sameLNC = cState->GetLNCType() == dState->GetLNCType(definitionManager);
+    bool sameLNC = cState->GetLNCType() == dState->GetLNCType();
 
     int32_t fPoints = (int32_t)fTypeMap[(size_t)fType][sameLNC ? 0 : 1];
     server->GetCharacterManager()->UpdateFamiliarity(client, fPoints, true);
@@ -4214,8 +4216,9 @@ bool SkillManager::FamiliarityUpItem(const std::shared_ptr<objects::ActivatedAbi
     auto state = client->GetClientState();
     auto dState = state->GetDemonState();
     auto demon = dState->GetEntity();
+    auto demonData = dState->GetDevilData();
 
-    if(!demon)
+    if(!demon || !demonData)
     {
         return false;
     }
@@ -4224,7 +4227,6 @@ bool SkillManager::FamiliarityUpItem(const std::shared_ptr<objects::ActivatedAbi
     auto definitionManager = server->GetDefinitionManager();
     auto skillData = definitionManager->GetSkillData(activated->GetSkillID());
 
-    auto demonData = definitionManager->GetDevilData(demon->GetType());
     auto special = skillData->GetSpecial();
 
     int32_t maxFamiliarity = special->GetSpecialParams(0);
@@ -4434,10 +4436,7 @@ bool SkillManager::Traesto(const std::shared_ptr<objects::ActivatedAbility>& act
     auto cState = state->GetCharacterState();
     auto character = cState->GetEntity();
 
-    auto zoneID = character->GetHomepointZone();
-    auto xCoord = character->GetHomepointX();
-    auto yCoord = character->GetHomepointY();
-
+    uint32_t zoneID = character->GetHomepointZone();
     if(zoneID == 0)
     {
         LOG_ERROR(libcomp::String("Character with no homepoint set attempted to use"
@@ -4445,9 +4444,23 @@ bool SkillManager::Traesto(const std::shared_ptr<objects::ActivatedAbility>& act
         return false;
     }
 
+    float xCoord = 0.f;
+    float yCoord = 0.f;
+    float rot = 0.f;
+
+    auto zoneDef = mServer.lock()->GetServerDataManager()->GetZoneData(
+        character->GetHomepointZone(), 0);
+    if(!zoneDef && !mServer.lock()->GetZoneManager()->GetSpotPosition(
+        zoneDef->GetDynamicMapID(), character->GetHomepointSpotID(), xCoord, yCoord, rot))
+    {
+        LOG_ERROR(libcomp::String("Character with an invalid homepoint set attempted"
+            " to use Traesto: %1\n").Arg(character->GetName()));
+        return false;
+    }
+
     ProcessSkillResult(activated, ctx);
 
-    return mServer.lock()->GetZoneManager()->EnterZone(client, zoneID, 0, xCoord, yCoord, 0, true);
+    return mServer.lock()->GetZoneManager()->EnterZone(client, zoneID, 0, xCoord, yCoord, rot, true);
 }
 
 void SkillManager::SendActivateSkill(std::shared_ptr<objects::ActivatedAbility> activated,

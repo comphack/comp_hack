@@ -358,22 +358,6 @@ bool MetaObjectXmlParser::FinalizeObjectAndReferences(const std::string& object)
 
             return false;
         }
-
-        for(auto ref : refs)
-        {
-            auto refType = ref->GetReferenceType();
-            if(!GetKnownObject(refType)->IsScriptEnabled())
-            {
-                std::stringstream ss;
-                ss << "Script enabled object references"
-                    " an object that is not script enabled: "
-                    << object;
-
-                mError = ss.str();
-
-                return false;
-            }
-        }
     }
 
     // Now that everything in the chain is loaded up and we know there are no
@@ -706,8 +690,11 @@ std::shared_ptr<MetaVariable> MetaObjectXmlParser::GetVariable(const tinyxml2::X
                 }
                 else
                 {
-                    persistentRefType = mKnownObjects[refType]->IsPersistent();
+                    auto refObject = mKnownObjects[refType];
+                    persistentRefType = refObject->IsPersistent();
+
                     ref->SetPersistentReference(persistentRefType);
+                    ref->SetScriptReference(refObject->IsScriptEnabled());
                     if(!persistentRefType && mKnownObjects[szName]->IsPersistent())
                     {
                         std::stringstream ss;

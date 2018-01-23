@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="ActionPlayBGM" baseobject="Action" persistent="false">
+        <member type="enum" name="actionType" inherited="true" default="PLAY_BGM"/>
+        <member type="bool" name="isStop"/>
+        <member type="s32" name="musicID"/>
+        <member type="s32" name="fadeInDelay"/>
+        <member type="s32" name="unknown"/>
+    </object>
+</objgen>

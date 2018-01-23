@@ -2,14 +2,20 @@
 <objgen>
     <object name="ActionSpawn" baseobject="Action" persistent="false">
         <member type="enum" name="actionType" inherited="true" default="SPAWN"/>
-        <member type="set" name="spawnGroupIDs">
+        <member type="list" name="spawnLocationGroupIDs">
             <element type="u32"/>
         </member>
-        <member type="enum" name="conditions" default="NONE">
-            <value>NONE</value>
+        <member type="u32" name="spotID"/>  <!-- Overrides random spot -->
+        <member type="map" name="spawnGroupIDs">
+            <key type="u32"/>   <!-- Group ID -->
+            <value type="u32"/> <!-- Spot ID -->
+        </member>
+        <member type="enum" name="mode" default="NORMAL">
+            <value>NORMAL</value>
             <value>ONE_TIME</value>
             <value>ONE_TIME_RANDOM</value>
             <value>NONE_EXIST</value>
+            <value>DESPAWN</value>
         </member>
         <member type="list" name="defeatActions">
             <element type="Action*"/>

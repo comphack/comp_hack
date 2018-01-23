@@ -5,6 +5,9 @@
         <member type="list" name="drops">
             <element type="ItemDrop*"/>
         </member>
+        <member type="list" name="dropSetIDs">
+            <element type="u32"/>
+        </member>
         <member type="bool" name="isBossBox"/>
         <member type="float" name="expirationTime"/>
         <member type="enum" name="position" underlying="int8_t">

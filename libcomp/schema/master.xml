@@ -42,11 +42,19 @@
     <!-- Actions -->
     <include path="action.xml"/>
     <include path="action_addremoveitems.xml"/>
+    <include path="action_addremovestatus.xml"/>
     <include path="action_createloot.xml"/>
+    <include path="action_displaymessage.xml"/>
+    <include path="action_grantskills.xml"/>
     <include path="action_grantxp.xml"/>
+    <include path="action_homepoint.xml"/>
+    <include path="action_playbgm.xml"/>
+    <include path="action_playsoundeffect.xml"/>
     <include path="action_setnpcstate.xml"/>
     <include path="action_spawn.xml"/>
+    <include path="action_specialdirection.xml"/>
     <include path="action_startevent.xml"/>
+    <include path="action_stageeffect.xml"/>
     <include path="action_updatecomp.xml"/>
     <include path="action_updateflag.xml"/>
     <include path="action_updatelnc.xml"/>
@@ -57,16 +65,11 @@
     <!-- Events -->
     <include path="event.xml"/>
     <include path="event_direction.xml"/>
-    <include path="event_getitem.xml"/>
-    <include path="event_homepoint.xml"/>
     <include path="event_message.xml"/>
     <include path="event_openmenu.xml"/>
     <include path="event_performactions.xml"/>
-    <include path="event_playbgm.xml"/>
     <include path="event_playscene.xml"/>
-    <include path="event_playsoundeffect.xml"/>
     <include path="event_prompt.xml"/>
-    <include path="event_stageeffect.xml"/>
 
     <!-- BinaryData Files -->
     <include path="binarydata/ceventmessagedata.xml"/>

@@ -74,16 +74,19 @@ namespace libcomp
     template<>
     ScriptEngine& ScriptEngine::Using<ActiveEntityState>()
     {
-        if(!BindingExists("ActiveEntityState"))
+        if(!BindingExists("ActiveEntityState", true))
         {
             Using<AIState>();
             Using<objects::ActiveEntityStateObject>();
+            Using<Zone>();
 
             // Active entities can rotate or stop directly from the script
             // but movement must be handled via the AIManager
             Sqrat::DerivedClass<ActiveEntityState,
                 objects::ActiveEntityStateObject> binding(mVM, "ActiveEntityState");
             binding
+                .Func<std::shared_ptr<Zone> (ActiveEntityState::*)() const>(
+                    "GetZone", &ActiveEntityState::GetZone)
                 .Func<void (ActiveEntityState::*)(float, uint64_t)>(
                     "Rotate", &ActiveEntityState::Rotate)
                 .Func<void (ActiveEntityState::*)(uint64_t)>(
@@ -100,6 +103,27 @@ namespace libcomp
                     "SetActionTime", &ActiveEntityState::SetActionTime);
 
             Bind<ActiveEntityState>("ActiveEntityState", binding);
+        }
+
+        return *this;
+    }
+
+    template<>
+    ScriptEngine& ScriptEngine::Using<ActiveEntityStateImp<objects::Demon>>()
+    {
+        if(!BindingExists("DemonState", true))
+        {
+            Using<ActiveEntityState>();
+            Using<objects::Demon>();
+
+            Sqrat::DerivedClass<ActiveEntityStateImp<objects::Demon>,
+                ActiveEntityState> binding(mVM, "DemonState");
+            binding
+                .Func<std::shared_ptr<objects::Demon>
+                    (ActiveEntityStateImp<objects::Demon>::*)()>(
+                    "GetEntity", &ActiveEntityStateImp<objects::Demon>::GetEntity);
+
+            Bind<ActiveEntityStateImp<objects::Demon>>("DemonState", binding);
         }
 
         return *this;
@@ -1468,9 +1492,8 @@ std::set<uint32_t> ActiveEntityState::GetAllSkills(
     return std::set<uint32_t>();
 }
 
-uint8_t ActiveEntityState::GetLNCType(libcomp::DefinitionManager* definitionManager)
+uint8_t ActiveEntityState::GetLNCType()
 {
-    (void)definitionManager;
     return 0;
 }
 
@@ -1510,8 +1533,11 @@ ActiveEntityStateImp<objects::Enemy>::ActiveEntityStateImp()
 
 template<>
 void ActiveEntityStateImp<objects::Character>::SetEntity(
-    const std::shared_ptr<objects::Character>& entity)
+    const std::shared_ptr<objects::Character>& entity,
+    const std::shared_ptr<objects::MiDevilData>& devilData)
 {
+    (void)devilData;
+
     {
         std::lock_guard<std::mutex> lock(mLock);
         mEntity = entity;
@@ -1534,7 +1560,8 @@ void ActiveEntityStateImp<objects::Character>::SetEntity(
 
 template<>
 void ActiveEntityStateImp<objects::Demon>::SetEntity(
-    const std::shared_ptr<objects::Demon>& entity)
+    const std::shared_ptr<objects::Demon>& entity,
+    const std::shared_ptr<objects::MiDevilData>& devilData)
 {
     {
         std::lock_guard<std::mutex> lock(mLock);
@@ -1549,6 +1576,7 @@ void ActiveEntityStateImp<objects::Demon>::SetEntity(
     }
 
     SetStatusEffects(effects);
+    SetDevilData(devilData);
 
     auto calcState = GetCalculatedState();
     calcState->ClearActiveTokuseiTriggers();
@@ -1561,7 +1589,8 @@ void ActiveEntityStateImp<objects::Demon>::SetEntity(
 
 template<>
 void ActiveEntityStateImp<objects::Enemy>::SetEntity(
-    const std::shared_ptr<objects::Enemy>& entity)
+    const std::shared_ptr<objects::Enemy>& entity,
+    const std::shared_ptr<objects::MiDevilData>& devilData)
 {
     {
         std::lock_guard<std::mutex> lock(mLock);
@@ -1572,6 +1601,8 @@ void ActiveEntityStateImp<objects::Enemy>::SetEntity(
     {
         mAlive = entity->GetCoreStats()->GetHP() > 0;
     }
+
+    SetDevilData(devilData);
 
     // Reset knockback and let refresh correct
     SetKnockbackResist(0);
@@ -1647,7 +1678,7 @@ std::set<uint32_t> ActiveEntityStateImp<objects::Demon>::GetAllSkills(
             }
         }
 
-        auto demonData = definitionManager->GetDevilData(mEntity->GetType());
+        auto demonData = GetDevilData();
 
         auto growth = demonData->GetGrowth();
         for(uint32_t traitID : growth->GetTraits())
@@ -1678,10 +1709,7 @@ std::set<uint32_t> ActiveEntityStateImp<objects::Enemy>::GetAllSkills(
 
     if(mEntity)
     {
-        auto demonData = definitionManager->GetDevilData(mEntity->GetType());
-
-        auto previousSkills = GetCurrentSkills();
-        ClearCurrentSkills();
+        auto demonData = GetDevilData();
 
         auto growth = demonData->GetGrowth();
         for(auto skillSet : { growth->GetSkills(),
@@ -1848,7 +1876,7 @@ uint8_t ActiveEntityStateImp<objects::Demon>::RecalculateStats(
         }
     }
 
-    return RecalculateDemonStats(definitionManager, calcState, mEntity->GetType());
+    return RecalculateDemonStats(definitionManager, calcState);
 }
 
 template<>
@@ -1865,53 +1893,48 @@ uint8_t ActiveEntityStateImp<objects::Enemy>::RecalculateStats(
     {
         // Calculating default entity state
         calcState = GetCalculatedState();
+    }
 
-        if(!mInitialCalc)
+    if(!mInitialCalc)
+    {
+        auto previousSkills = GetCurrentSkills();
+        SetCurrentSkills(GetAllSkills(definitionManager, true));
+
+        bool skillsChanged = previousSkills.size() != CurrentSkillsCount();
+        if(!skillsChanged)
         {
-            auto previousSkills = GetCurrentSkills();
-            SetCurrentSkills(GetAllSkills(definitionManager, true));
-
-            bool skillsChanged = previousSkills.size() != CurrentSkillsCount();
-            if(!skillsChanged)
+            for(uint32_t skillID : previousSkills)
             {
-                for(uint32_t skillID : previousSkills)
+                if(!CurrentSkillsContains(skillID))
                 {
-                    if(!CurrentSkillsContains(skillID))
-                    {
-                        skillsChanged = true;
-                        break;
-                    }
+                    skillsChanged = true;
+                    break;
                 }
             }
+        }
 
-            if(skillsChanged && mAIState)
-            {
-                mAIState->ResetSkillsMapped();
-            }
+        if(skillsChanged && mAIState)
+        {
+            mAIState->ResetSkillsMapped();
         }
     }
 
-    return RecalculateDemonStats(definitionManager, calcState, mEntity->GetType());
+    return RecalculateDemonStats(definitionManager, calcState);
 }
 
 template<>
-uint8_t ActiveEntityStateImp<objects::Character>::GetLNCType(
-    libcomp::DefinitionManager* definitionManager)
+uint8_t ActiveEntityStateImp<objects::Character>::GetLNCType()
 {
-    (void)definitionManager;
-
     return CalculateLNCType(mEntity->GetLNC());
 }
 
 template<>
-uint8_t ActiveEntityStateImp<objects::Demon>::GetLNCType(
-    libcomp::DefinitionManager* definitionManager)
+uint8_t ActiveEntityStateImp<objects::Demon>::GetLNCType()
 {
     int16_t lncPoints = 0;
-    if(mEntity)
+    auto demonData = GetDevilData();
+    if(mEntity && demonData)
     {
-        auto demonData = definitionManager->GetDevilData(
-            mEntity->GetType());
         lncPoints = demonData->GetBasic()->GetLNC();
     }
 
@@ -1919,14 +1942,12 @@ uint8_t ActiveEntityStateImp<objects::Demon>::GetLNCType(
 }
 
 template<>
-uint8_t ActiveEntityStateImp<objects::Enemy>::GetLNCType(
-    libcomp::DefinitionManager* definitionManager)
+uint8_t ActiveEntityStateImp<objects::Enemy>::GetLNCType()
 {
     int16_t lncPoints = 0;
-    if(mEntity)
+    auto demonData = GetDevilData();
+    if(mEntity && demonData)
     {
-        auto demonData = definitionManager->GetDevilData(
-            mEntity->GetType());
         lncPoints = demonData->GetBasic()->GetLNC();
     }
 
@@ -2241,11 +2262,11 @@ void ActiveEntityState::GetAdditionalCorrectTbls(
 
 uint8_t ActiveEntityState::RecalculateDemonStats(
     libcomp::DefinitionManager* definitionManager,
-    std::shared_ptr<objects::CalculatedEntityState> calcState, uint32_t demonID)
+    std::shared_ptr<objects::CalculatedEntityState> calcState)
 {
     std::lock_guard<std::mutex> lock(mLock);
 
-    auto demonData = definitionManager->GetDevilData(demonID);
+    auto demonData = GetDevilData();
     auto battleData = demonData->GetBattleData();
     auto cs = GetCoreStats();
 

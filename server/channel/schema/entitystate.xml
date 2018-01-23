@@ -61,6 +61,7 @@
     <object name="ActiveEntityStateObject" baseobject="EntityStateObject"
     scriptenabled="true" persistent="false">
         <member type="bool" name="IsActive" inherited="true" default="true"/>
+        <member type="MiDevilData*" name="DevilData" nulldefault="true"/>
         <member type="enum" name="Faction" underlying="int8_t">
             <value>PLAYER</value>
             <value>ENEMY</value>

@@ -40,6 +40,7 @@ MetaVariableReference::MetaVariableReference()
 {
     mNamespace = "objects";
     mPersistentReference = false;
+    mScriptReference = false;
     mNullDefault = false;
     mDynamicSizeCount = 0;
 }
@@ -108,6 +109,17 @@ bool MetaVariableReference::SetPersistentReference(bool persistentReference)
     return true;
 }
 
+bool MetaVariableReference::IsScriptReference() const
+{
+    return mScriptReference;
+}
+
+bool MetaVariableReference::SetScriptReference(bool scriptReference)
+{
+    mScriptReference = scriptReference;
+    return true;
+}
+
 bool MetaVariableReference::IsGeneric() const
 {
     return mNamespace == "libcomp" &&
@@ -155,7 +167,7 @@ bool MetaVariableReference::IsCoreType() const
 
 bool MetaVariableReference::IsScriptAccessible() const
 {
-    return true;
+    return mScriptReference;
 }
 
 bool MetaVariableReference::IsValid() const
@@ -176,6 +188,8 @@ bool MetaVariableReference::Load(std::istream& stream)
         sizeof(mDynamicSizeCount));
     stream.read(reinterpret_cast<char*>(&mPersistentReference),
         sizeof(mPersistentReference));
+    stream.read(reinterpret_cast<char*>(&mScriptReference),
+        sizeof(mScriptReference));
     stream.read(reinterpret_cast<char*>(&mNullDefault),
         sizeof(mNullDefault));
 
@@ -200,6 +214,8 @@ bool MetaVariableReference::Save(std::ostream& stream) const
             sizeof(mDynamicSizeCount));
         stream.write(reinterpret_cast<const char*>(&mPersistentReference),
             sizeof(mPersistentReference));
+        stream.write(reinterpret_cast<const char*>(&mScriptReference),
+            sizeof(mScriptReference));
         stream.write(reinterpret_cast<const char*>(&mNullDefault),
             sizeof(mNullDefault));
 

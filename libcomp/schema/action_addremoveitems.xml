@@ -2,11 +2,12 @@
 <objgen>
     <object name="ActionAddRemoveItems" baseobject="Action" persistent="false">
         <member type="enum" name="actionType" inherited="true" default="ADD_REMOVE_ITEMS"/>
-        <member type="bool" name="add"/>
-        <member type="bool" name="stopOnFailure"/>
+        <member type="bool" name="notify"/>
+        <member type="bool" name="stopOnFailure" default="true"/>
+        <member type="string" name="onFailureEvent"/>
         <member type="map" name="items">
             <key type="u32"/>   <!-- Item Type -->
-            <value type="u32"/> <!-- Quantity -->
+            <value type="s32"/> <!-- Quantity -->
         </member>
     </object>
 </objgen>

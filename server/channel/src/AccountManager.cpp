@@ -122,25 +122,29 @@ void AccountManager::HandleLoginResponse(const std::shared_ptr<
 
     if(InitializeCharacter(character, state))
     {
+        auto definitionManager = server->GetDefinitionManager();
+        auto demon = character->GetActiveDemon().Get();
+
         // Get entity IDs for the character and demon
         auto cState = state->GetCharacterState();
-        cState->SetEntity(character.Get());
+        cState->SetEntity(character.Get(), nullptr);
         cState->SetEntityID(server->GetNextEntityID());
 
         // If we don't have an active demon, set up the state anyway
         auto dState = state->GetDemonState();
-        dState->SetEntity(character->GetActiveDemon().Get());
+        dState->SetEntity(demon, demon
+            ? definitionManager->GetDevilData(demon->GetType()) : nullptr);
         dState->SetEntityID(server->GetNextEntityID());
 
         // Initialize some run-time data
-        cState->RecalcEquipState(server->GetDefinitionManager());
+        cState->RecalcEquipState(definitionManager);
 
         // Recalculating the character will recalculate the partner too
         server->GetTokuseiManager()->Recalculate(cState, true,
             std::set<int32_t>{ cState->GetEntityID(), dState->GetEntityID() });
 
-        cState->RecalculateStats(server->GetDefinitionManager());
-        dState->RecalculateStats(server->GetDefinitionManager());
+        cState->RecalculateStats(definitionManager);
+        dState->RecalculateStats(definitionManager);
 
         // Prepare active quests
         server->GetEventManager()->UpdateQuestTargetEnemies(client);

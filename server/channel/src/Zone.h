@@ -67,11 +67,25 @@ class Zone
 {
 public:
     /**
+     * Create a new zone instance. While not useful this constructor is
+     * necessary for the script bindings.
+     */
+    Zone();
+
+    /**
      * Create a new zone instance.
      * @param id Unique instance ID of the zone
      * @param definition Pointer to the ServerZone definition
      */
     Zone(uint32_t id, const std::shared_ptr<objects::ServerZone>& definition);
+
+    /**
+     * Explicitly defined copy constructor necessary due to removal
+     * of implicit constructor from non-copyable mutex member. This should
+     * never actually be used.
+     * @param other The other zone to copy
+     */
+    Zone(const Zone& other);
 
     /**
      * Clean up the zone instance.
@@ -313,14 +327,21 @@ public:
         GetUpdatedStatusEffectEntities(uint32_t now);
 
     /**
-     * Check if a spawn group has ever been spawned in this zone or is
-     * currently spawned.
-     * @param spawnGroupID Group ID of the spawn to check
+     * Check if a spawn group/location group has ever been spawned in this
+     * zone or is currently spawned.
+     * @param groupID Group ID of the spawn to check
      * @param aliveOnly Only count living entities in the group
      * @return true if the group has already been spawned or contains,
      *  a living enemy, false otherwise
      */
-    bool GroupHasSpawned(uint32_t spawnGroupID, bool aliveOnly);
+    bool GroupHasSpawned(uint32_t groupID, bool isLocation, bool aliveOnly);
+
+    /**
+     * Check if an enemy has ever spawned at the specified spot.
+     * @param spotID Spot ID of the spawn to check
+     * @return true if an enemy has ever spawned at the spot
+     */
+    bool SpawnedAtSpot(uint32_t spotID);
 
     /**
      * Create an encounter from a group of enemies and register them with
@@ -347,13 +368,11 @@ public:
         std::shared_ptr<objects::ActionSpawn>& defeatActionSource);
 
     /**
-     * Get the set of spawn groups that have room for another enemy spawn
-     * that have also had their respawn time elapsed.
+     * Get the set of spawn location groups that need to be respawned.
      * @param now System time representing the current server time
-     * @return Map of spawn group IDs to the difference between the number
-     *  of enemies still alive and the max allowed number
+     * @return Set of spawn location group IDs to respawn
      */
-    std::unordered_map<uint32_t, uint16_t> GetReinforceableSpawnGroups(uint64_t now);
+    std::set<uint32_t> GetRespawnLocations(uint64_t now);
 
     /**
      * Get the state of a zone flag.
@@ -362,6 +381,17 @@ public:
      * @return true if the flag exists, false if it does not
      */
     bool GetFlagState(int32_t key, int32_t& value);
+
+    /**
+     * Get the state of a zone flag, returning the null default
+     * if it does not exist.
+     * @param key Lookup key for the flag
+     * @param nullDefault Default value to return if the flag is
+     *  not set
+     * @return Value of the specified flag or the nullDefault value
+     *  if it does not exist
+     */
+    int32_t GetFlagStateValue(int32_t key, int32_t nullDefault);
 
     /**
      * Set the state of a zone flag.
@@ -422,12 +452,19 @@ private:
     /// Keys are never removed from this group so one time spawns can be checked.
     std::unordered_map<uint32_t, std::list<std::shared_ptr<EnemyState>>> mSpawnGroups;
 
+    /// Map of spawn location group IDs to pointers to enemies created from the groups.
+    /// Keys are never removed from this group so one time spawns can be checked.
+    std::unordered_map<uint32_t, std::list<std::shared_ptr<EnemyState>>> mSpawnLocationGroups;
+
     /// Map of encounter IDs to enemies that belong to that encounter.
     std::unordered_map<uint32_t, std::set<std::shared_ptr<EnemyState>>> mEncounters;
 
     /// Map of encounter IDs to spawn actions that created the encounter
     std::unordered_map<uint32_t,
         std::shared_ptr<objects::ActionSpawn>> mEncounterSpawnSources;
+
+    /// Set of all spot IDs that have had an enemy spawned
+    std::set<uint32_t> mSpotsSpawned;
 
     /// List of pointers to NPCs instantiated for the zone
     std::list<std::shared_ptr<NPCState>> mNPCs;
@@ -449,9 +486,9 @@ private:
     /// handling at that time
     std::map<uint32_t, std::set<int32_t>> mNextEntityStatusTimes;
 
-    /// Map of server times to spawn group IDs that need to be reinforced
+    /// Map of server times to spawn location group IDs that need to be respawned
     /// at that time
-    std::map<uint64_t, std::set<uint32_t>> mSpawnGroupReinforceTimes;
+    std::map<uint64_t, std::set<uint32_t>> mRespawnTimes;
 
     /// General use flags and associated values used for event sequences etc
     std::unordered_map<int32_t, int32_t> mFlagStates;

@@ -32,6 +32,7 @@
 #include "ScriptEngine.h"
 
 // object Includes
+#include <DropSet.h>
 #include <EnchantSetData.h>
 #include <EnchantSpecialData.h>
 #include <Event.h>
@@ -94,9 +95,19 @@ const std::shared_ptr<objects::ServerShop> ServerDataManager::GetShopData(uint32
     return GetObjectByID<uint32_t, objects::ServerShop>(id, mShopData);
 }
 
-const std::shared_ptr<ServerAIScript> ServerDataManager::GetAIScript(const libcomp::String& name)
+const std::shared_ptr<objects::DropSet> ServerDataManager::GetDropSetData(uint32_t id)
 {
-    return GetObjectByID<std::string, ServerAIScript>(name.C(), mAIScripts);
+    return GetObjectByID<uint32_t, objects::DropSet>(id, mDropSetData);
+}
+
+const std::shared_ptr<ServerScript> ServerDataManager::GetScript(const libcomp::String& name)
+{
+    return GetObjectByID<std::string, ServerScript>(name.C(), mScripts);
+}
+
+const std::shared_ptr<ServerScript> ServerDataManager::GetAIScript(const libcomp::String& name)
+{
+    return GetObjectByID<std::string, ServerScript>(name.C(), mAIScripts);
 }
 
 bool ServerDataManager::LoadData(gsl::not_null<DataStore*> pDataStore,
@@ -106,6 +117,13 @@ bool ServerDataManager::LoadData(gsl::not_null<DataStore*> pDataStore,
 
     if(definitionManager)
     {
+        if(!failure)
+        {
+            LOG_DEBUG("Loading drop set server definitions...\n");
+            failure = !LoadObjectsFromFile<objects::DropSet>(
+                pDataStore, "/data/dropset.xml", definitionManager);
+        }
+
         if(!failure)
         {
             LOG_DEBUG("Loading enchant set server definitions...\n");
@@ -131,25 +149,28 @@ bool ServerDataManager::LoadData(gsl::not_null<DataStore*> pDataStore,
     if(!failure)
     {
         LOG_DEBUG("Loading zone server definitions...\n");
-        failure = !LoadObjects<objects::ServerZone>(pDataStore, "/zones");
+        failure = !LoadObjects<objects::ServerZone>(pDataStore, "/zones",
+            definitionManager);
     }
 
     if(!failure)
     {
         LOG_DEBUG("Loading event server definitions...\n");
-        failure = !LoadObjects<objects::Event>(pDataStore, "/events");
+        failure = !LoadObjects<objects::Event>(pDataStore, "/events",
+            definitionManager);
     }
 
     if(!failure)
     {
         LOG_DEBUG("Loading shop server definitions...\n");
-        failure = !LoadObjects<objects::ServerShop>(pDataStore, "/shops");
+        failure = !LoadObjects<objects::ServerShop>(pDataStore, "/shops",
+            definitionManager);
     }
 
     if(!failure)
     {
-        LOG_DEBUG("Loading AI server definitions...\n");
-        failure = !LoadScripts(pDataStore, "/ai", &ServerDataManager::LoadAIScript);
+        LOG_DEBUG("Loading server scripts...\n");
+        failure = !LoadScripts(pDataStore, "/scripts", &ServerDataManager::LoadScript);
     }
 
     return !failure;
@@ -189,13 +210,14 @@ bool ServerDataManager::LoadScripts(gsl::not_null<DataStore*> pDataStore,
 namespace libcomp
 {
     template<>
-    ScriptEngine& ScriptEngine::Using<ServerAIScript>()
+    ScriptEngine& ScriptEngine::Using<ServerScript>()
     {
-        if(!BindingExists("ServerAIScript"))
+        if(!BindingExists("ServerScript", true))
         {
-            Sqrat::Class<ServerAIScript> binding(mVM, "ServerAIScript");
-            binding.Var("Name", &ServerAIScript::Name);
-            Bind<ServerAIScript>("ServerAIScript", binding);
+            Sqrat::Class<ServerScript> binding(mVM, "ServerScript");
+            binding.Var("Name", &ServerScript::Name);
+            binding.Var("Type", &ServerScript::Type);
+            Bind<ServerScript>("ServerScript", binding);
         }
 
         return *this;
@@ -205,8 +227,6 @@ namespace libcomp
     bool ServerDataManager::LoadObject<objects::ServerZone>(const tinyxml2::XMLDocument& doc,
         const tinyxml2::XMLElement *objNode, DefinitionManager* definitionManager)
     {
-        (void)definitionManager;
-
         auto zone = std::shared_ptr<objects::ServerZone>(new objects::ServerZone);
         if(!zone->Load(doc, *objNode))
         {
@@ -215,6 +235,14 @@ namespace libcomp
 
         auto id = zone->GetID();
         auto dynamicMapID = zone->GetDynamicMapID();
+
+        if(definitionManager && !definitionManager->GetZoneData(id))
+        {
+            LOG_WARNING(libcomp::String("Skipping unknown zone: %1%2\n").Arg(id)
+                .Arg(id != dynamicMapID ? libcomp::String(" (%1)").Arg(dynamicMapID) : ""));
+            return true;
+        }
+
         if(mZoneData.find(id) != mZoneData.end() &&
             mZoneData[id].find(dynamicMapID) != mZoneData[id].end())
         {
@@ -277,6 +305,30 @@ namespace libcomp
     }
 
     template<>
+    bool ServerDataManager::LoadObject<objects::DropSet>(const tinyxml2::XMLDocument& doc,
+        const tinyxml2::XMLElement *objNode, DefinitionManager* definitionManager)
+    {
+        (void)definitionManager;
+
+        auto dropSet = std::shared_ptr<objects::DropSet>(new objects::DropSet);
+        if(dropSet == nullptr || !dropSet->Load(doc, *objNode))
+        {
+            return false;
+        }
+    
+        uint32_t id = dropSet->GetID();
+        if(mDropSetData.find(id) != mDropSetData.end())
+        {
+            LOG_ERROR(libcomp::String("Duplicate drop set encountered: %1\n").Arg(id));
+            return false;
+        }
+
+        mDropSetData[id] = dropSet;
+
+        return true;
+    }
+
+    template<>
     bool ServerDataManager::LoadObject<objects::EnchantSetData>(const tinyxml2::XMLDocument& doc,
         const tinyxml2::XMLElement *objNode, DefinitionManager* definitionManager)
     {
@@ -316,14 +368,14 @@ namespace libcomp
     }
 }
 
-bool ServerDataManager::LoadAIScript(const libcomp::String& path,
+bool ServerDataManager::LoadScript(const libcomp::String& path,
     const libcomp::String& source)
 {
     ScriptEngine engine;
-    engine.Using<ServerAIScript>();
+    engine.Using<ServerScript>();
     if(!engine.Eval(source))
     {
-        LOG_ERROR(libcomp::String("Improperly formatted AI script encountered: %1\n")
+        LOG_ERROR(libcomp::String("Improperly formatted script encountered: %1\n")
             .Arg(path));
         return false;
     }
@@ -332,25 +384,71 @@ bool ServerDataManager::LoadAIScript(const libcomp::String& path,
     auto fDef = root.GetFunction("define");
     if(fDef.IsNull())
     {
-        LOG_ERROR(libcomp::String("Invalid AI script encountered: %1\n").Arg(path));
+        LOG_ERROR(libcomp::String("Invalid script encountered: %1\n").Arg(path));
         return false;
     }
 
-    auto script = std::make_shared<ServerAIScript>();
+    auto script = std::make_shared<ServerScript>();
     auto result = fDef.Evaluate<int>(script);
-    if(!result || *result != 0 || script->Name.IsEmpty())
+    if(!result || *result != 0 || script->Name.IsEmpty() || script->Type.IsEmpty())
     {
-        LOG_ERROR(libcomp::String("AI script is not properly defined: %1\n").Arg(path));
+        LOG_ERROR(libcomp::String("Script is not properly defined: %1\n").Arg(path));
         return false;
     }
+
     script->Path = path;
     script->Source = source;
 
-    if(mAIScripts.find(script->Name.C()) != mAIScripts.end())
+    if(script->Type.ToLower() == "ai")
     {
-        LOG_ERROR(libcomp::String("Duplicate AI script encountered: %1\n").Arg(script->Name.C()));
-        return false;
+        if(mAIScripts.find(script->Name.C()) != mAIScripts.end())
+        {
+            LOG_ERROR(libcomp::String("Duplicate AI script encountered: %1\n")
+                .Arg(script->Name.C()));
+            return false;
+        }
+        
+        fDef = root.GetFunction("prepare");
+        if(fDef.IsNull())
+        {
+            LOG_ERROR(libcomp::String("AI script encountered"
+                " with no 'prepare' function: %1\n").Arg(script->Name.C()));
+            return false;
+        }
+
+        mAIScripts[script->Name.C()] = script;
     }
-    mAIScripts[script->Name.C()] = script;
+    else
+    {
+        if(mScripts.find(script->Name.C()) != mScripts.end())
+        {
+            LOG_ERROR(libcomp::String("Duplicate script encountered: %1\n")
+                .Arg(script->Name.C()));
+            return false;
+        }
+
+        mScripts[script->Name.C()] = script;
+
+        // Check supported types here
+        if(script->Type.ToLower() == "eventcondition" ||
+            script->Type.ToLower() == "eventbranchlogic")
+        {
+            fDef = root.GetFunction("check");
+            if(fDef.IsNull())
+            {
+                LOG_ERROR(libcomp::String("EventCondition script encountered"
+                    " with no 'check' function: %1\n")
+                    .Arg(script->Name.C()));
+                return false;
+            }
+        }
+        else
+        {
+            LOG_ERROR(libcomp::String("Invalid script type encountered: %1\n")
+                .Arg(script->Type.C()));
+            return false;
+        }
+    }
+
     return true;
 }

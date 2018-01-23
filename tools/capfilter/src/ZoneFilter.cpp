@@ -31,7 +31,14 @@
 #include <math.h>
 
 // object Includes
+#include <ActionAddRemoveItems.h>
+#include <ActionDisplayMessage.h>
+#include <ActionPlayBGM.h>
+#include <ActionPlaySoundEffect.h>
+#include <ActionSetHomepoint.h>
 #include <ActionSetNPCState.h>
+#include <ActionSpecialDirection.h>
+#include <ActionStageEffect.h>
 #include <ActionStartEvent.h>
 #include <ActionUpdateFlag.h>
 #include <ActionUpdateLNC.h>
@@ -40,20 +47,12 @@
 #include <EventChoice.h>
 #include <EventDirection.h>
 #include <EventExNPCMessage.h>
-#include <EventGetItem.h>
-#include <EventHomepoint.h>
-#include <EventMessage.h>
 #include <EventMultitalk.h>
 #include <EventNPCMessage.h>
 #include <EventOpenMenu.h>
 #include <EventPerformActions.h>
-#include <EventPlayBGM.h>
 #include <EventPlayScene.h>
-#include <EventPlaySoundEffect.h>
 #include <EventPrompt.h>
-#include <EventSpecialDirection.h>
-#include <EventStageEffect.h>
-#include <EventStopBGM.h>
 #include <MiCZoneRelationData.h>
 #include <MiRelationZoneIDData.h>
 #include <MiHNPCData.h>
@@ -527,6 +526,7 @@ bool ZoneFilter::ProcessEventCommands(const libcomp::String& capturePath,
     bool endEvent = false;
     bool resetResponse = instance && instance->eventResponse != -1;
     auto sequence = instance ? instance->currentSequence : nullptr;
+    std::list<std::shared_ptr<objects::Action>> actions;
     switch(commandCode)
     {
     case to_underlying(ClientToChannelPacketCode_t::PACKET_OBJECT_INTERACTION):
@@ -584,21 +584,29 @@ bool ZoneFilter::ProcessEventCommands(const libcomp::String& capturePath,
 
             auto messageID = packet.ReadS32Little();
 
-            auto msg = instance->currentSequence != nullptr
-                ? std::dynamic_pointer_cast<objects::EventMessage>(
+            std::shared_ptr<objects::ActionDisplayMessage> action;
+
+            actions.push_back(action);
+
+            auto pa = instance->currentSequence != nullptr
+                ? std::dynamic_pointer_cast<objects::EventPerformActions>(
                     instance->currentSequence->event)
                 : nullptr;
-            if(!msg || std::dynamic_pointer_cast<objects::EventNPCMessage>(msg))
+            if(pa && pa->ActionsCount() > 0)
             {
-                msg = std::make_shared<objects::EventMessage>();
-                instance->currentSequence = std::make_shared<MappedEvent>(msg, nullptr);
+                action = std::dynamic_pointer_cast<objects::ActionDisplayMessage>(*pa->ActionsEnd());
             }
 
-            msg->AppendMessageIDs(messageID);
-
-            // Normal messages don't wait for a response
-            instance->eventResponse = 0;
-            resetResponse = false;
+            if(!action)
+            {
+                action = std::make_shared<objects::ActionDisplayMessage>();
+                action->AppendMessageIDs(messageID);
+            }
+            else
+            {
+                action->AppendMessageIDs(messageID);
+                return true;
+            }
         }
         break;
     case to_underlying(ChannelToClientPacketCode_t::PACKET_EVENT_NPC_MESSAGE):
@@ -845,20 +853,17 @@ bool ZoneFilter::ProcessEventCommands(const libcomp::String& capturePath,
             instance->lastTrigger = instance->secondLastTrigger = nullptr;
 
             auto itemCount = packet.ReadS8();
-            std::unordered_map<uint32_t, uint16_t> items;
+            std::unordered_map<uint32_t, int32_t> items;
 
             for(int8_t i = 0; i < itemCount; i++)
             {
-                items[packet.ReadU32Little()] = packet.ReadU16Little();
+                items[packet.ReadU32Little()] = (int32_t)packet.ReadU16Little();
             }
 
-            auto getItems = std::make_shared<objects::EventGetItem>();
-            instance->currentSequence = std::make_shared<MappedEvent>(getItems, nullptr);
+            auto getItems = std::make_shared<objects::ActionAddRemoveItems>();
+            getItems->SetNotify(true);
             getItems->SetItems(items);
-
-            // Get item events don't wait for a response
-            instance->eventResponse = 0;
-            resetResponse = false;
+            actions.push_back(getItems);
         }
         break;
     case to_underlying(ChannelToClientPacketCode_t::PACKET_EVENT_HOMEPOINT_UPDATE):
@@ -866,10 +871,8 @@ bool ZoneFilter::ProcessEventCommands(const libcomp::String& capturePath,
             instance->lastTrigger = instance->secondLastTrigger = nullptr;
 
             /// @todo: read zone/X/Y?
-            auto home = std::make_shared<objects::EventHomepoint>();
-
-            instance->currentSequence = std::make_shared<MappedEvent>(home, nullptr);
-            endEvent = true;
+            auto home = std::make_shared<objects::ActionSetHomepoint>();
+            actions.push_back(home);
         }
         break;
     case to_underlying(ChannelToClientPacketCode_t::PACKET_EVENT_STAGE_EFFECT):
@@ -889,16 +892,13 @@ bool ZoneFilter::ProcessEventCommands(const libcomp::String& capturePath,
             bool effect2Set = packet.Left() > 0 ? packet.ReadS8() == 1 : false;
             auto effect2 = (packet.Left() > 3 && effect2Set) ? packet.ReadS32() : 0;
 
-            auto effect = std::make_shared<objects::EventStageEffect>();
-            instance->currentSequence = std::make_shared<MappedEvent>(effect, nullptr);
+            auto effect = std::make_shared<objects::ActionStageEffect>();
 
             effect->SetMessageID(messageID);
             effect->SetEffect1(effect1);
             effect->SetEffect2(effect2);
 
-            // Stage effects don't wait for a response
-            instance->eventResponse = 0;
-            resetResponse = false;
+            actions.push_back(effect);
         }
         break;
     case to_underlying(ChannelToClientPacketCode_t::PACKET_EVENT_DIRECTION):
@@ -929,22 +929,17 @@ bool ZoneFilter::ProcessEventCommands(const libcomp::String& capturePath,
                 return false;
             }
 
-            instance->lastTrigger = instance->secondLastTrigger = nullptr;
-
             auto special1 = packet.ReadU8();
             auto special2 = packet.ReadU8();
             auto direction = packet.ReadS32Little();
 
-            auto dir = std::make_shared<objects::EventSpecialDirection>();
-            instance->currentSequence = std::make_shared<MappedEvent>(dir, nullptr);
+            auto dir = std::make_shared<objects::ActionSpecialDirection>();
 
             dir->SetSpecial1(special1);
             dir->SetSpecial2(special2);
             dir->SetDirection(direction);
 
-            // Special direction events don't wait for a response
-            instance->eventResponse = 0;
-            resetResponse = false;
+            actions.push_back(dir);
         }
         break;
     case to_underlying(ChannelToClientPacketCode_t::PACKET_EVENT_PLAY_SOUND_EFFECT):
@@ -956,20 +951,15 @@ bool ZoneFilter::ProcessEventCommands(const libcomp::String& capturePath,
                 return false;
             }
 
-            instance->lastTrigger = instance->secondLastTrigger = nullptr;
-
             auto soundID = packet.ReadS32Little();
             auto delay = packet.ReadS32Little();
 
-            auto se = std::make_shared<objects::EventPlaySoundEffect>();
-            instance->currentSequence = std::make_shared<MappedEvent>(se, nullptr);
+            auto se = std::make_shared<objects::ActionPlaySoundEffect>();
 
             se->SetSoundID(soundID);
             se->SetDelay(delay);
 
-            // Sound effect events don't wait for a response
-            instance->eventResponse = 0;
-            resetResponse = false;
+            actions.push_back(se);
         }
         break;
     case to_underlying(ChannelToClientPacketCode_t::PACKET_EVENT_PLAY_BGM):
@@ -981,22 +971,18 @@ bool ZoneFilter::ProcessEventCommands(const libcomp::String& capturePath,
                 return false;
             }
 
-            instance->lastTrigger = instance->secondLastTrigger = nullptr;
-
             auto musicID = packet.ReadS32Little();
             auto fadeIn = packet.ReadS32Little();
             auto unknown = packet.ReadS32Little();
 
-            auto dir = std::make_shared<objects::EventPlayBGM>();
-            instance->currentSequence = std::make_shared<MappedEvent>(dir, nullptr);
+            auto bgm = std::make_shared<objects::ActionPlayBGM>();
 
-            dir->SetMusicID(musicID);
-            dir->SetFadeInDelay(fadeIn);
-            dir->SetUnknown(unknown);
+            bgm->SetIsStop(false);
+            bgm->SetMusicID(musicID);
+            bgm->SetFadeInDelay(fadeIn);
+            bgm->SetUnknown(unknown);
 
-            // Play BGM events don't wait for a response
-            instance->eventResponse = 0;
-            resetResponse = false;
+            actions.push_back(bgm);
         }
         break;
     case to_underlying(ChannelToClientPacketCode_t::PACKET_EVENT_STOP_BGM):
@@ -1008,18 +994,14 @@ bool ZoneFilter::ProcessEventCommands(const libcomp::String& capturePath,
                 return false;
             }
 
-            instance->lastTrigger = instance->secondLastTrigger = nullptr;
-
             auto musicID = packet.ReadS32Little();
 
-            auto dir = std::make_shared<objects::EventStopBGM>();
-            instance->currentSequence = std::make_shared<MappedEvent>(dir, nullptr);
+            auto bgm = std::make_shared<objects::ActionPlayBGM>();
 
-            dir->SetMusicID(musicID);
+            bgm->SetIsStop(true);
+            bgm->SetMusicID(musicID);
 
-            // Play BGM events don't wait for a response
-            instance->eventResponse = 0;
-            resetResponse = false;
+            actions.push_back(bgm);
         }
         break;
     case to_underlying(ClientToChannelPacketCode_t::PACKET_EVENT_RESPONSE):
@@ -1070,7 +1052,6 @@ bool ZoneFilter::ProcessEventCommands(const libcomp::String& capturePath,
                 return false;
             }
 
-            bool newEvent = false;
             auto arr = packet.ReadArray(packet.Left());
             libcomp::String flags(&arr[0], arr.size());
             if(currentFlags->IsEmpty())
@@ -1089,78 +1070,43 @@ bool ZoneFilter::ProcessEventCommands(const libcomp::String& capturePath,
                 auto d1 = currentFlags->Data();
                 auto d2 = flags.Data();
 
-                // Get the last event sequence started which may be the current one
-                if(instance->lastSequence)
+                size_t flagSize = d1.size();
+                for(size_t i = 0; i < flagSize; i++)
                 {
-                    auto seq = instance->lastSequence;
-
-                    std::shared_ptr<objects::EventPerformActions> paEvent;
-                    if(seq->event->GetEventType() ==
-                        objects::Event::EventType_t::PERFORM_ACTIONS)
+                    if(d1[i] != d2[i])
                     {
-                        paEvent = std::dynamic_pointer_cast<
-                            objects::EventPerformActions>(seq->event);
-                    }
-
-                    size_t flagSize = d1.size();
-                    for(size_t i = 0; i < flagSize; i++)
-                    {
-                        if(d1[i] != d2[i])
+                        uint16_t offset = (uint16_t)(i * 8);
+                        for(uint8_t k = 0; k < 8; k++)
                         {
-                            uint16_t offset = (uint16_t)(i * 8);
-                            for(uint8_t k = 0; k < 8; k++)
+                            uint8_t mask = (uint8_t)(1 << k);
+
+                            std::shared_ptr<objects::ActionUpdateFlag> action;
+                            if(!(d1[i] & mask) && (d2[i] & mask))
                             {
-                                uint8_t mask = (uint8_t)(1 << k);
-
-                                std::shared_ptr<objects::ActionUpdateFlag> action;
-                                if(!(d1[i] & mask) && (d2[i] & mask))
+                                // Add
+                                action = std::make_shared<objects::ActionUpdateFlag>();
+                                action->SetRemove(false);
+                            }
+                            else if((d1[i] & mask) && !(d2[i] & mask))
+                            {
+                                // Remove
+                                if(flagType == objects::ActionUpdateFlag::FlagType_t::MAP)
                                 {
-                                    // Add
-                                    action = std::make_shared<
-                                        objects::ActionUpdateFlag>();
-                                    action->SetRemove(false);
-                                }
-                                else if((d1[i] & mask) && !(d2[i] & mask))
-                                {
-                                    // Remove
-                                    if(flagType == objects::ActionUpdateFlag::FlagType_t::MAP)
-                                    {
-                                        std::cerr << "Map remove encountered." << std::endl;
+                                    std::cerr << "Map remove encountered." << std::endl;
 
-                                        return false;
-                                    }
-
-                                    action = std::make_shared<
-                                        objects::ActionUpdateFlag>();
-                                    action->SetRemove(true);
+                                    return false;
                                 }
 
-                                if(action)
-                                {
-                                    action->SetFlagType(flagType);
-                                    action->SetID((uint16_t)(offset + k));
+                                action = std::make_shared<objects::ActionUpdateFlag>();
+                                action->SetRemove(true);
+                            }
 
-                                    if(!paEvent)
-                                    {
-                                        newEvent = true;
-                                        if(!sequence)
-                                        {
-                                            sequence = instance->lastSequence;
-                                        }
+                            if(action)
+                            {
+                                action->SetFlagType(flagType);
+                                action->SetID((uint16_t)(offset + k));
 
-                                        paEvent = std::make_shared<objects::EventPerformActions>();
-                                        instance->currentSequence = std::make_shared<
-                                            MappedEvent>(paEvent, nullptr);
-
-                                        if(instance->eventResponse == -1)
-                                        {
-                                            instance->eventResponse = instance->lastEventResponse != -1
-                                                ? instance->lastEventResponse : 0;
-                                        }
-                                    }
-
-                                    paEvent->AppendActions(action);
-                                }
+                                actions.push_back(action);
                             }
                         }
                     }
@@ -1168,13 +1114,6 @@ bool ZoneFilter::ProcessEventCommands(const libcomp::String& capturePath,
 
                 *currentFlags = flags;
             }
-
-            if(!newEvent)
-            {
-                return true;
-            }
-
-            resetResponse = false;
         }
         break;
     case to_underlying(ChannelToClientPacketCode_t::PACKET_LNC_POINTS):
@@ -1186,57 +1125,17 @@ bool ZoneFilter::ProcessEventCommands(const libcomp::String& capturePath,
                 return true;
             }
 
-            bool newEvent = false;
             int16_t lnc = packet.ReadS16Little();
             if(lnc != mCurrentLNC)
             {
-                // Get the last event sequence started which may be the current one
-                if(instance->lastSequence)
-                {
-                    auto seq = instance->lastSequence;
+                auto action = std::make_shared<
+                    objects::ActionUpdateLNC>();
+                action->SetValue((int16_t)(lnc - mCurrentLNC));
 
-                    std::shared_ptr<objects::EventPerformActions> paEvent;
-                    if(seq->event->GetEventType() ==
-                        objects::Event::EventType_t::PERFORM_ACTIONS)
-                    {
-                        paEvent = std::dynamic_pointer_cast<
-                            objects::EventPerformActions>(seq->event);
-                    }
-                    else
-                    {
-                        newEvent = true;
-                        if(!sequence)
-                        {
-                            sequence = instance->lastSequence;
-                        }
-
-                        paEvent = std::make_shared<objects::EventPerformActions>();
-                        instance->currentSequence = std::make_shared<
-                            MappedEvent>(paEvent, nullptr);
-
-                        if(instance->eventResponse == -1)
-                        {
-                            instance->eventResponse = instance->lastEventResponse != -1
-                                ? instance->lastEventResponse : 0;
-                        }
-                    }
-
-                    auto action = std::make_shared<
-                        objects::ActionUpdateLNC>();
-                    action->SetValue((int16_t)(lnc - mCurrentLNC));
-
-                    paEvent->AppendActions(action);
-                }
+                actions.push_back(action);
 
                 mCurrentLNC = lnc;
             }
-
-            if(!newEvent)
-            {
-                return true;
-            }
-
-            resetResponse = false;
         }
         break;
     case to_underlying(ChannelToClientPacketCode_t::PACKET_QUEST_PHASE_UPDATE):
@@ -1244,54 +1143,65 @@ bool ZoneFilter::ProcessEventCommands(const libcomp::String& capturePath,
             int16_t questID = packet.ReadS16Little();
             int8_t phase = packet.ReadS8();
 
-            // Get the last event sequence started which may be the current one
-            if(instance->lastSequence)
-            {
-                auto seq = instance->lastSequence;
+            auto action = std::make_shared<
+                objects::ActionUpdateQuest>();
+            action->SetQuestID(questID);
+            action->SetPhase(phase);
 
-                std::shared_ptr<objects::EventPerformActions> paEvent;
-                if(seq->event->GetEventType() ==
-                    objects::Event::EventType_t::PERFORM_ACTIONS)
-                {
-                    paEvent = std::dynamic_pointer_cast<
-                        objects::EventPerformActions>(seq->event);
-                }
-                else
-                {
-                    if(!sequence)
-                    {
-                        sequence = instance->lastSequence;
-                    }
-
-                    paEvent = std::make_shared<objects::EventPerformActions>();
-                    instance->currentSequence = std::make_shared<
-                        MappedEvent>(paEvent, nullptr);
-
-                    if(instance->eventResponse == -1)
-                    {
-                        instance->eventResponse = instance->lastEventResponse != -1
-                            ? instance->lastEventResponse : 0;
-                    }
-                }
-
-                auto action = std::make_shared<
-                    objects::ActionUpdateQuest>();
-                action->SetQuestID(questID);
-                action->SetPhase(phase);
-
-                paEvent->AppendActions(action);
-            }
-            else
-            {
-                return true;
-            }
-
-            resetResponse = false;
+            actions.push_back(action);
         }
         break;
     default:
         return true;
         break;
+    }
+
+    if(actions.size() > 0)
+    {
+        // Get the last event sequence started which may be the current one
+        bool newEvent = false;
+        if(instance->lastSequence)
+        {
+            auto seq = instance->lastSequence;
+
+            std::shared_ptr<objects::EventPerformActions> paEvent;
+            if(seq->event->GetEventType() ==
+                objects::Event::EventType_t::PERFORM_ACTIONS)
+            {
+                paEvent = std::dynamic_pointer_cast<
+                    objects::EventPerformActions>(seq->event);
+            }
+            else
+            {
+                newEvent = true;
+                if(!sequence)
+                {
+                    sequence = instance->lastSequence;
+                }
+
+                paEvent = std::make_shared<objects::EventPerformActions>();
+                instance->currentSequence = std::make_shared<
+                    MappedEvent>(paEvent, nullptr);
+
+                if(instance->eventResponse == -1)
+                {
+                    instance->eventResponse = instance->lastEventResponse != -1
+                        ? instance->lastEventResponse : 0;
+                }
+            }
+
+            for(auto action : actions)
+            {
+                paEvent->AppendActions(action);
+            }
+        }
+
+        if(!newEvent)
+        {
+            return true;
+        }
+
+        resetResponse = false;
     }
 
     instance->lastEventPacketNumber = instance->packetNumber;
@@ -1660,9 +1570,6 @@ bool ZoneFilter::PostProcess()
             auto e = mappedEvent->event;
             switch(e->GetEventType())
             {
-                case objects::Event::EventType_t::MESSAGE:
-                    eventID = "Z%1_MS%2";
-                    break;
                 case objects::Event::EventType_t::NPC_MESSAGE:
                     eventID = "Z%1_NM%2";
                     break;
@@ -1681,29 +1588,8 @@ bool ZoneFilter::PostProcess()
                 case objects::Event::EventType_t::OPEN_MENU:
                     eventID = "Z%1_ME%2";
                     break;
-                case objects::Event::EventType_t::GET_ITEMS:
-                    eventID = "Z%1_IT%2";
-                    break;
-                case objects::Event::EventType_t::HOMEPOINT:
-                    eventID = "Z%1_HP%2";
-                    break;
-                case objects::Event::EventType_t::STAGE_EFFECT:
-                    eventID = "Z%1_SE%2";
-                    break;
                 case objects::Event::EventType_t::DIRECTION:
                     eventID = "Z%1_DR%2";
-                    break;
-                case objects::Event::EventType_t::SPECIAL_DIRECTION:
-                    eventID = "Z%1_SD%2";
-                    break;
-                case objects::Event::EventType_t::PLAY_SOUND_EFFECT:
-                    eventID = "Z%1_SE%2";
-                    break;
-                case objects::Event::EventType_t::PLAY_BGM:
-                    eventID = "Z%1_PM%2";
-                    break;
-                case objects::Event::EventType_t::STOP_BGM:
-                    eventID = "Z%1_SM%2";
                     break;
                 case objects::Event::EventType_t::PERFORM_ACTIONS:
                     eventID = "Z%1_PA%2";
@@ -2388,8 +2274,6 @@ bool ZoneFilter::MergeEvents(std::shared_ptr<MappedEvent> e1,
 
     switch(e1->event->GetEventType())
     {
-        case objects::Event::EventType_t::MESSAGE:
-            return MergeEventMessages(e1, e2, checkOnly, flat, seen);
         case objects::Event::EventType_t::NPC_MESSAGE:
             return MergeEventNPCMessages(e1, e2, checkOnly, flat, seen);
         case objects::Event::EventType_t::EX_NPC_MESSAGE:
@@ -2400,53 +2284,15 @@ bool ZoneFilter::MergeEvents(std::shared_ptr<MappedEvent> e1,
             return MergeEventPrompts(e1, e2, checkOnly, flat, seen);
         case objects::Event::EventType_t::PLAY_SCENE:
             return MergeEventPlayScenes(e1, e2, checkOnly, flat, seen);
-        case objects::Event::EventType_t::PLAY_SOUND_EFFECT:
-            return MergeEventSoundEffects(e1, e2, checkOnly, flat, seen);
-        case objects::Event::EventType_t::PLAY_BGM:
-            return MergeEventPlayBGMs(e1, e2, checkOnly, flat, seen);
-        case objects::Event::EventType_t::STOP_BGM:
-            return MergeEventStopBGMs(e1, e2, checkOnly, flat, seen);
         case objects::Event::EventType_t::OPEN_MENU:
             return MergeEventMenus(e1, e2, checkOnly, flat, seen);
-        case objects::Event::EventType_t::GET_ITEMS:
-            return MergeEventGetItems(e1, e2, checkOnly, flat, seen);
-        case objects::Event::EventType_t::HOMEPOINT:
-            // Homepoint requests currently cannot differ
-            return true;
-        case objects::Event::EventType_t::STAGE_EFFECT:
-            return MergeEventStageEffects(e1, e2, checkOnly, flat, seen);
         case objects::Event::EventType_t::DIRECTION:
             return MergeEventDirections(e1, e2, checkOnly, flat, seen);
-        case objects::Event::EventType_t::SPECIAL_DIRECTION:
-            return MergeEventSpecialDirections(e1, e2, checkOnly, flat, seen);
         case objects::Event::EventType_t::PERFORM_ACTIONS:
             return MergeEventPerformActions(e1, e2, checkOnly, flat, seen);
         default:
             return false;
     }
-}
-
-bool ZoneFilter::MergeEventMessages(std::shared_ptr<MappedEvent> e1,
-    std::shared_ptr<MappedEvent> e2, bool checkOnly, bool flat,
-    std::set<std::shared_ptr<MappedEvent>> seen)
-{
-    auto c1 = std::dynamic_pointer_cast<objects::EventMessage>(e1->event);
-    auto c2 = std::dynamic_pointer_cast<objects::EventMessage>(e2->event);
-    if(c1->MessageIDsCount() != c2->MessageIDsCount())
-    {
-        return false;
-    }
-
-    size_t messageCount = c1->MessageIDsCount();
-    for(size_t i = 0; i < messageCount; i++)
-    {
-        if(c1->GetMessageIDs(i) != c2->GetMessageIDs(i))
-        {
-            return false;
-        }
-    }
-
-    return MergeNextGeneric(e1, e2, checkOnly, flat, seen);
 }
 
 bool ZoneFilter::MergeEventNPCMessages(std::shared_ptr<MappedEvent> e1,
@@ -2648,45 +2494,6 @@ bool ZoneFilter::MergeEventMenus(std::shared_ptr<MappedEvent> e1,
     return MergeNextGeneric(e1, e2, checkOnly, flat, seen);
 }
 
-bool ZoneFilter::MergeEventGetItems(std::shared_ptr<MappedEvent> e1,
-    std::shared_ptr<MappedEvent> e2, bool checkOnly, bool flat,
-    std::set<std::shared_ptr<MappedEvent>> seen)
-{
-    auto c1 = std::dynamic_pointer_cast<objects::EventGetItem>(e1->event);
-    auto c2 = std::dynamic_pointer_cast<objects::EventGetItem>(e2->event);
-    if(c1->ItemsCount() != c2->ItemsCount())
-    {
-        return false;
-    }
-
-    for(auto item : c1->GetItems())
-    {
-        if(!c2->ItemsKeyExists(item.first) ||
-            c2->GetItems(item.first) != item.second)
-        {
-            return false;
-        }
-    }
-
-    return MergeNextGeneric(e1, e2, checkOnly, flat, seen);
-}
-
-bool ZoneFilter::MergeEventStageEffects(std::shared_ptr<MappedEvent> e1,
-    std::shared_ptr<MappedEvent> e2, bool checkOnly, bool flat,
-    std::set<std::shared_ptr<MappedEvent>> seen)
-{
-    auto c1 = std::dynamic_pointer_cast<objects::EventStageEffect>(e1->event);
-    auto c2 = std::dynamic_pointer_cast<objects::EventStageEffect>(e2->event);
-    if(c1->GetMessageID() != c2->GetMessageID() ||
-        c1->GetEffect1() != c2->GetEffect1() ||
-        c1->GetEffect2() != c2->GetEffect2())
-    {
-        return false;
-    }
-
-    return MergeNextGeneric(e1, e2, checkOnly, flat, seen);
-}
-
 bool ZoneFilter::MergeEventDirections(std::shared_ptr<MappedEvent> e1,
     std::shared_ptr<MappedEvent> e2, bool checkOnly, bool flat,
     std::set<std::shared_ptr<MappedEvent>> seen)
@@ -2694,67 +2501,6 @@ bool ZoneFilter::MergeEventDirections(std::shared_ptr<MappedEvent> e1,
     auto c1 = std::dynamic_pointer_cast<objects::EventDirection>(e1->event);
     auto c2 = std::dynamic_pointer_cast<objects::EventDirection>(e2->event);
     if(c1->GetDirection() != c2->GetDirection())
-    {
-        return false;
-    }
-
-    return MergeNextGeneric(e1, e2, checkOnly, flat, seen);
-}
-
-bool ZoneFilter::MergeEventSpecialDirections(std::shared_ptr<MappedEvent> e1,
-    std::shared_ptr<MappedEvent> e2, bool checkOnly, bool flat,
-    std::set<std::shared_ptr<MappedEvent>> seen)
-{
-    auto c1 = std::dynamic_pointer_cast<objects::EventSpecialDirection>(e1->event);
-    auto c2 = std::dynamic_pointer_cast<objects::EventSpecialDirection>(e2->event);
-    if(c1->GetDirection() != c2->GetDirection() ||
-        c1->GetSpecial1() != c2->GetSpecial1() ||
-        c1->GetSpecial2() != c2->GetSpecial2())
-    {
-        return false;
-    }
-
-    return MergeNextGeneric(e1, e2, checkOnly, flat, seen);
-}
-
-bool ZoneFilter::MergeEventSoundEffects(std::shared_ptr<MappedEvent> e1,
-    std::shared_ptr<MappedEvent> e2, bool checkOnly, bool flat,
-    std::set<std::shared_ptr<MappedEvent>> seen)
-{
-    auto c1 = std::dynamic_pointer_cast<objects::EventPlaySoundEffect>(e1->event);
-    auto c2 = std::dynamic_pointer_cast<objects::EventPlaySoundEffect>(e2->event);
-    if(c1->GetSoundID() != c2->GetSoundID() ||
-        c1->GetDelay() != c2->GetDelay())
-    {
-        return false;
-    }
-
-    return MergeNextGeneric(e1, e2, checkOnly, flat, seen);
-}
-
-bool ZoneFilter::MergeEventPlayBGMs(std::shared_ptr<MappedEvent> e1,
-    std::shared_ptr<MappedEvent> e2, bool checkOnly, bool flat,
-    std::set<std::shared_ptr<MappedEvent>> seen)
-{
-    auto c1 = std::dynamic_pointer_cast<objects::EventPlayBGM>(e1->event);
-    auto c2 = std::dynamic_pointer_cast<objects::EventPlayBGM>(e2->event);
-    if(c1->GetMusicID() != c2->GetMusicID() ||
-        c1->GetFadeInDelay() != c2->GetFadeInDelay() ||
-        c1->GetUnknown() != c2->GetUnknown())
-    {
-        return false;
-    }
-
-    return MergeNextGeneric(e1, e2, checkOnly, flat, seen);
-}
-
-bool ZoneFilter::MergeEventStopBGMs(std::shared_ptr<MappedEvent> e1,
-    std::shared_ptr<MappedEvent> e2, bool checkOnly, bool flat,
-    std::set<std::shared_ptr<MappedEvent>> seen)
-{
-    auto c1 = std::dynamic_pointer_cast<objects::EventStopBGM>(e1->event);
-    auto c2 = std::dynamic_pointer_cast<objects::EventStopBGM>(e2->event);
-    if(c1->GetMusicID() != c2->GetMusicID())
     {
         return false;
     }
@@ -2785,12 +2531,103 @@ bool ZoneFilter::MergeEventPerformActions(std::shared_ptr<MappedEvent> e1,
 
         switch(a1->GetActionType())
         {
+        case objects::Action::ActionType_t::ADD_REMOVE_ITEMS:
+            {
+                auto ac1 = std::dynamic_pointer_cast<objects::ActionAddRemoveItems>(a1);
+                auto ac2 = std::dynamic_pointer_cast<objects::ActionAddRemoveItems>(a2);
+                if(ac1->ItemsCount() != ac2->ItemsCount())
+                {
+                    return false;
+                }
+
+                for(auto item : ac1->GetItems())
+                {
+                    if(!ac2->ItemsKeyExists(item.first) ||
+                        ac2->GetItems(item.first) != item.second)
+                    {
+                        return false;
+                    }
+                }
+            }
+            break;
+        case objects::Action::ActionType_t::DISPLAY_MESSAGE:
+            {
+                auto ac1 = std::dynamic_pointer_cast<objects::ActionDisplayMessage>(a1);
+                auto ac2 = std::dynamic_pointer_cast<objects::ActionDisplayMessage>(a2);
+
+                if(ac1->MessageIDsCount() != ac2->MessageIDsCount())
+                {
+                    return false;
+                }
+
+                size_t messageCount = ac1->MessageIDsCount();
+                for(size_t k = 0; k < messageCount; k++)
+                {
+                    if(ac1->GetMessageIDs(k) != ac2->GetMessageIDs(k))
+                    {
+                        return false;
+                    }
+                }
+            }
+            break;
+        case objects::Action::ActionType_t::PLAY_BGM:
+            {
+                auto ac1 = std::dynamic_pointer_cast<objects::ActionPlayBGM>(a1);
+                auto ac2 = std::dynamic_pointer_cast<objects::ActionPlayBGM>(a2);
+
+                if(ac1->GetIsStop() != ac2->GetIsStop() ||
+                    ac1->GetMusicID() != ac2->GetMusicID() ||
+                    ac1->GetFadeInDelay() != ac2->GetFadeInDelay() ||
+                    ac1->GetUnknown() != ac2->GetUnknown())
+                {
+                    return false;
+                }
+            }
+            break;
+        case objects::Action::ActionType_t::PLAY_SOUND_EFFECT:
+            {
+                auto ac1 = std::dynamic_pointer_cast<objects::ActionPlaySoundEffect>(a1);
+                auto ac2 = std::dynamic_pointer_cast<objects::ActionPlaySoundEffect>(a2);
+
+                if(ac1->GetSoundID() != ac2->GetSoundID() ||
+                    ac1->GetDelay() != ac2->GetDelay())
+                {
+                    return false;
+                }
+            }
+            break;
         case objects::Action::ActionType_t::SET_NPC_STATE:
             {
                 auto ac1 = std::dynamic_pointer_cast<objects::ActionSetNPCState>(a1);
                 auto ac2 = std::dynamic_pointer_cast<objects::ActionSetNPCState>(a2);
 
                 if(ac1->GetState() != ac2->GetState())
+                {
+                    return false;
+                }
+            }
+            break;
+        case objects::Action::ActionType_t::STAGE_EFFECT:
+            {
+                auto ac1 = std::dynamic_pointer_cast<objects::ActionStageEffect>(a1);
+                auto ac2 = std::dynamic_pointer_cast<objects::ActionStageEffect>(a2);
+
+                if(ac1->GetMessageID() != ac2->GetMessageID() ||
+                    ac1->GetEffect1() != ac2->GetEffect1() ||
+                    ac1->GetEffect2() != ac2->GetEffect2())
+                {
+                    return false;
+                }
+            }
+            break;
+        case objects::Action::ActionType_t::SPECIAL_DIRECTION:
+            {
+                auto ac1 = std::dynamic_pointer_cast<objects::ActionSpecialDirection>(a1);
+                auto ac2 = std::dynamic_pointer_cast<objects::ActionSpecialDirection>(a2);
+
+                if(ac1->GetDirection() != ac2->GetDirection() ||
+                    ac1->GetSpecial1() != ac2->GetSpecial1() ||
+                    ac1->GetSpecial2() != ac2->GetSpecial2())
                 {
                     return false;
                 }

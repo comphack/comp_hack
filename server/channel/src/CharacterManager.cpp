@@ -216,9 +216,15 @@ void CharacterManager::SendCharacterData(const std::shared_ptr<
     reply.WriteU8(0);   //Unknown bool
 
     // Homepoint
+    float homeX = 0.f;
+    float homeY = 0.f;
+    float homeRot = 0.f;
+    mServer.lock()->GetZoneManager()->GetSpotPosition(
+        zoneDef->GetDynamicMapID(), c->GetHomepointSpotID(), homeX, homeY, homeRot);
+
     reply.WriteS32Little((int32_t)c->GetHomepointZone());
-    reply.WriteFloat(c->GetHomepointX());
-    reply.WriteFloat(c->GetHomepointY());
+    reply.WriteFloat(homeX);
+    reply.WriteFloat(homeY);
 
     reply.WriteS8(0);   // Unknown
     reply.WriteS8(0);   // Unknown
@@ -375,8 +381,7 @@ void CharacterManager::SendPartnerData(const std::shared_ptr<
     }
 
     auto server = mServer.lock();
-    auto definitionManager = server->GetDefinitionManager();
-    auto def = definitionManager->GetDevilData(d->GetType());
+    auto def = dState->GetDevilData();
     auto ds = d->GetCoreStats().Get();
 
     libcomp::Packet reply;
@@ -836,10 +841,10 @@ void CharacterManager::SummonDemon(const std::shared_ptr<
     }
 
     character->SetActiveDemon(demon);
-    dState->SetEntity(demon);
+    dState->SetEntity(demon, def);
 
     // If the character and demon share alignment, apply summon sync
-    if(cState->GetLNCType() == dState->GetLNCType(definitionManager))
+    if(cState->GetLNCType() == dState->GetLNCType())
     {
         uint32_t syncStatusType = 0;
         if(demon->GetFamiliarity() == MAX_FAMILIARITY)
@@ -968,7 +973,7 @@ void CharacterManager::StoreDemon(const std::shared_ptr<
     dState->ExpireStatusEffects(summonSyncs);
 
     UpdateStatusEffects(dState, true);
-    dState->SetEntity(nullptr);
+    dState->SetEntity(nullptr, nullptr);
     character->SetActiveDemon(NULLUUID);
 
     std::list<int32_t> removeIDs = { dState->GetEntityID() };
@@ -1791,23 +1796,45 @@ bool CharacterManager::CreateLootFromDrops(const std::shared_ptr<objects::LootBo
     auto server = mServer.lock();
     auto definitionManager = server->GetDefinitionManager();
 
-    std::list<std::shared_ptr<objects::Loot>> lootItems;
+    // Loop through the drops and sum up stacks
+    std::unordered_map<uint32_t, uint16_t> itemStacks;
     for(auto drop : drops)
     {
         // Each point of luck adds 0.2% chance to get the drop
         uint16_t dropRate = (uint16_t)((drop->GetRate() * 100)
             + (float)(luck * 20));
         if(RNG(uint16_t, 0, 10000) < dropRate ||
-            (minLast && lootItems.size() == 0 && drops.back() == drop))
+            (minLast && itemStacks.size() == 0 && drops.back() == drop))
         {
-            auto itemDef = definitionManager->GetItemData(
-                drop->GetItemType());
             uint16_t minStack = drop->GetMinStack();
             uint16_t maxStack = drop->GetMaxStack();
 
             // The drop rate is affected by luck but the stack size is not
             uint16_t stackSize = RNG(uint16_t, minStack, maxStack);
 
+            auto it = itemStacks.find(drop->GetItemType());
+            if(it != itemStacks.end())
+            {
+                it->second = (uint16_t)(it->second + stackSize);
+            }
+            else
+            {
+                itemStacks[drop->GetItemType()] = stackSize;
+            }
+        }
+    }
+
+    // Loop back through and create the items with the combined stacks
+    std::list<std::shared_ptr<objects::Loot>> lootItems;
+    for(auto drop : drops)
+    {
+        auto it = itemStacks.find(drop->GetItemType());
+        if(it != itemStacks.end())
+        {
+            auto itemDef = definitionManager->GetItemData(
+                drop->GetItemType());
+
+            uint16_t stackSize = it->second;
             uint16_t maxStackSize = itemDef->GetPossession()->GetStackSize();
             uint8_t stackCount = (uint8_t)ceill((double)stackSize /
                 (double)maxStackSize);
@@ -1829,6 +1856,9 @@ bool CharacterManager::CreateLootFromDrops(const std::shared_ptr<objects::LootBo
             {
                 break;
             }
+
+            // Remove it from the set so its not generated twice
+            itemStacks.erase(it);
         }
     }
 
@@ -2330,7 +2360,6 @@ void CharacterManager::ExperienceGain(const std::shared_ptr<
     channel::ChannelClientConnection>& client, uint64_t xpGain, int32_t entityID)
 {
     auto server = mServer.lock();
-    auto definitionManager = server->GetDefinitionManager();
 
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
@@ -2345,12 +2374,11 @@ void CharacterManager::ExperienceGain(const std::shared_ptr<
     }
 
     bool isDemon = false;
-    std::shared_ptr<objects::MiDevilData> demonData;
+    auto demonData = eState->GetDevilData();
     int32_t fType = 0;
     if(eState == dState)
     {
         isDemon = true;
-        demonData = definitionManager->GetDevilData(demon->GetType());
         fType = demonData->GetFamiliarity()->GetFamiliarityType();
     }
 
@@ -2506,7 +2534,6 @@ void CharacterManager::UpdateExpertise(const std::shared_ptr<
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
     auto character = cState->GetEntity();
-    auto stats = character->GetCoreStats();
 
     auto skill = definitionManager->GetSkillData(skillID);
     if(nullptr == skill)
@@ -2520,6 +2547,52 @@ void CharacterManager::UpdateExpertise(const std::shared_ptr<
         // Switch skills should never grant expertise
         return;
     }
+
+    if(multiplier <= 0.f)
+    {
+        // Value not overridden, use 100% + adjustments
+        multiplier = (float)cState->GetCorrectValue(CorrectTbl::RATE_EXPERTISE) * 0.01f;
+    }
+
+    std::list<std::pair<uint8_t, int32_t>> pointMap;
+    for(auto expertGrowth : skill->GetExpertGrowth())
+    {
+        auto expertise = character->GetExpertises(expertGrowth->GetExpertiseID()).Get();
+
+        // If it hasn't been created, it is disabled
+        if(nullptr == expertise || expertise->GetDisabled()) continue;
+
+        auto expDef = definitionManager->GetExpertClassData(expertGrowth->GetExpertiseID());
+        if(expDef)
+        {
+            // Calculate the point gain
+            /// @todo: validate
+            int32_t gain = (int32_t)((float)(3954.482803f /
+                (((float)expertise->GetPoints() * 0.01f) + 158.1808409f)
+                * expertGrowth->GetGrowthRate()) * 100.f * multiplier);
+
+            pointMap.push_back(std::pair<uint8_t, int32_t>(
+                expertGrowth->GetExpertiseID(), gain));
+        }
+    }
+
+    if(pointMap.size() > 0)
+    {
+        UpdateExpertisePoints(client, pointMap);
+    }
+}
+
+void CharacterManager::UpdateExpertisePoints(const std::shared_ptr<
+    channel::ChannelClientConnection>& client,
+    const std::list<std::pair<uint8_t, int32_t>>& pointMap)
+{
+    auto server = mServer.lock();
+    auto definitionManager = server->GetDefinitionManager();
+
+    auto state = client->GetClientState();
+    auto cState = state->GetCharacterState();
+    auto character = cState->GetEntity();
+    auto stats = character->GetCoreStats();
 
     int32_t maxTotalPoints = 1700000 + (int32_t)(floorl((float)stats->GetLevel() * 0.1) *
         1000 * 100) + ((int32_t)character->GetExpertiseExtension() * 1000 * 100);
@@ -2539,44 +2612,35 @@ void CharacterManager::UpdateExpertise(const std::shared_ptr<
         }
     }
 
-    if(maxTotalPoints <= currentPoints)
-    {
-        return;
-    }
-
-    if(multiplier <= 0.f)
-    {
-        // Value not overridden, use 100% + adjustments
-        multiplier = (float)cState->GetCorrectValue(CorrectTbl::RATE_EXPERTISE) * 0.01f;
-    }
-
     std::list<std::pair<int8_t, int32_t>> updated;
     auto dbChanges = libcomp::DatabaseChangeSet::Create(state->GetAccountUID());
-    for(auto expertGrowth : skill->GetExpertGrowth())
+    for(auto pointPair : pointMap)
     {
-        auto expertise = character->GetExpertises(expertGrowth->GetExpertiseID()).Get();
+        auto expDef = definitionManager->GetExpertClassData(pointPair.first);
 
-        // If it hasn't been created, it is disabled
-        if(nullptr == expertise || expertise->GetDisabled()) continue;
+        if(!expDef) continue;
 
-        auto expDef = definitionManager->GetExpertClassData(expertGrowth->GetExpertiseID());
+        auto expertise = character->GetExpertises(pointPair.first).Get();
+        if(!expertise)
+        {
+            // Create the expertise
+            expertise = libcomp::PersistentObject::New<objects::Expertise>(true);
+            expertise->SetCharacter(character);
+            character->SetExpertises(pointPair.first, expertise);
 
-        // Should never happen
-        if(nullptr == expDef) continue;
+            dbChanges->Insert(expertise);
+            dbChanges->Update(character);
+        }
 
         int32_t maxPoints = (expDef->GetMaxClass() * 100 * 1000)
             + (expDef->GetMaxRank() * 100 * 100);
 
-        int32_t points = expertise->GetPoints();
-        int8_t currentRank = (int8_t)floorl((float)points * 0.0001f);
+        int32_t expPoints = expertise->GetPoints();
+        int8_t currentRank = (int8_t)floorl((float)expPoints * 0.0001f);
 
-        if(points == maxPoints) continue;
+        if(expPoints == maxPoints) continue;
 
-        // Calculate the point gain
-        /// @todo: validate
-        int32_t gain = (int32_t)((float)(3954.482803f /
-            (((float)expertise->GetPoints() * 0.01f) + 158.1808409f)
-            * expertGrowth->GetGrowthRate()) * 100.f * multiplier);
+        int32_t gain = pointPair.second;
 
         // Don't exceed the max total points
         if((currentPoints + gain) > maxTotalPoints)
@@ -2588,18 +2652,18 @@ void CharacterManager::UpdateExpertise(const std::shared_ptr<
 
         currentPoints = currentPoints + gain;
 
-        points += gain;
+        expPoints += gain;
 
-        if(points > maxPoints)
+        if(expPoints > maxPoints)
         {
-            points = maxPoints;
+            expPoints = maxPoints;
         }
 
-        expertise->SetPoints(points);
-        updated.push_back(std::pair<int8_t, int32_t>((int8_t)expDef->GetID(), points));
+        expertise->SetPoints(expPoints);
+        updated.push_back(std::pair<int8_t, int32_t>((int8_t)pointPair.first, expPoints));
         dbChanges->Update(expertise);
 
-        int8_t newRank = (int8_t)((float)points * 0.0001f);
+        int8_t newRank = (int8_t)((float)expPoints * 0.0001f);
         if(currentRank != newRank)
         {
             libcomp::Packet reply;
@@ -2687,6 +2751,27 @@ void CharacterManager::SendExertiseExtension(const std::shared_ptr<
         p.WriteS8(character->GetExpertiseExtension());
 
         client->SendPacket(p);
+    }
+}
+
+void CharacterManager::UpdateSkillPoints(const std::shared_ptr<
+    channel::ChannelClientConnection>& client, int32_t points)
+{
+    auto state = client->GetClientState();
+    auto cState = state->GetCharacterState();
+    auto character = cState->GetEntity();
+
+    if(character)
+    {
+        character->SetPoints(character->GetPoints() + points);
+
+        libcomp::Packet p;
+        p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_SKILL_POINT_UPDATE);
+        p.WriteS32Little(character->GetPoints());
+
+        client->SendPacket(p);
+
+        mServer.lock()->GetWorldDatabase()->QueueUpdate(character, state->GetAccountUID());
     }
 }
 

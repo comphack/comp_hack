@@ -2,6 +2,7 @@
 <objgen>
     <object name="ActionUpdateZoneFlags" baseobject="Action" persistent="false">
         <member type="enum" name="actionType" inherited="true" default="UPDATE_ZONE_FLAGS"/>
+        <member type="bool" name="updateInstance"/>
         <member type="enum" name="setMode" underlying="uint8_t">
             <value>UPDATE</value>
             <value>INCREMENT</value>

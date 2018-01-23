@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <objgen>
-    <object name="Enemy" persistent="false">
+    <object name="Enemy" persistent="false" scriptenabled="true">
         <member type="u32" name="Type"/>
         <member type="u32" name="VariantType"/>
 
@@ -10,6 +10,7 @@
             nulldefault="true"/>
         <member type="u32" name="SpawnSpotID"/>
         <member type="u32" name="SpawnGroupID"/>
+        <member type="u32" name="SpawnLocationGroupID"/>
         <member type="u32" name="EncounterID"/>
 
         <!-- Sub-sections -->

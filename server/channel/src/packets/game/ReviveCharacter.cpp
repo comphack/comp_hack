@@ -103,9 +103,13 @@ bool Parsers::ReviveCharacter::Parse(libcomp::ManagerPacket *pPacketManager,
 
             // Change zone
             newZoneID = character->GetHomepointZone();
-            newX = character->GetHomepointX();
-            newY = character->GetHomepointY();
-            newRot = 0.f;
+
+            auto zoneDef = server->GetServerDataManager()->GetZoneData(newZoneID, 0);
+            if(zoneDef)
+            {
+                zoneManager->GetSpotPosition(zoneDef->GetDynamicMapID(),
+                    character->GetHomepointSpotID(), newX, newY, newRot);
+            }
         }
         break;
     case 105:   // Dungeon entrance

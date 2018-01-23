@@ -28,11 +28,33 @@
 
 // libcomp Includes
 #include "Decrypt.h"
+#include "ScriptEngine.h"
 
 using namespace libcomp;
 
 thread_local std::mt19937 Randomizer::sGen;
 thread_local std::mt19937_64 Randomizer::sGen64;
+
+namespace libcomp
+{
+    template<>
+    ScriptEngine& ScriptEngine::Using<Randomizer>()
+    {
+        if(!BindingExists("Randomizer", true))
+        {
+            Sqrat::Class<Randomizer> binding(mVM, "Randomizer");
+            binding
+                .StaticFunc<int32_t(*)(int32_t, int32_t)>(
+                    "RNG", &Randomizer::GetRandomNumber<int32_t>)
+                .StaticFunc<int64_t(*)(int64_t, int64_t)>(
+                    "RNG64", &Randomizer::GetRandomNumber64<int64_t>);
+
+            Bind<Randomizer>("Randomizer", binding);
+        }
+
+        return *this;
+    }
+}
 
 void Randomizer::SeedRNG()
 {

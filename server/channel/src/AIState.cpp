@@ -32,7 +32,7 @@ namespace libcomp
     template<>
     ScriptEngine& ScriptEngine::Using<AIState>()
     {
-        if(!BindingExists("AIState"))
+        if(!BindingExists("AIState", true))
         {
             Sqrat::Class<AIState> binding(mVM, "AIState");
             binding

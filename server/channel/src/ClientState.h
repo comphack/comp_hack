@@ -163,6 +163,12 @@ public:
     const libobjgen::UUID GetAccountUID() const;
 
     /**
+     * Get the user level of the account associated to the client.
+     * @return User level of the account associated to the client
+     */
+    int32_t GetUserLevel() const;
+
+    /**
      * Get the current world CID associated to the logged in
      * character.
      * @return Current character's world CID

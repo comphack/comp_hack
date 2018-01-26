@@ -10,9 +10,7 @@
         <member type="u8" name="TicketCount"/>
         <member type="s32" name="UserLevel"/>
         <member type="bool" name="Enabled"/>
-        <member type="bool" name="IsGM" default="false"/>
         <member type="u32" name="LastLogin"/>
-        <member type="bool" name="IsBanned" default="false"/>
 
         <member type="array" name="Characters" size="20">
             <element type="Character*"/>

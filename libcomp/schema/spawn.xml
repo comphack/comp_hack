@@ -16,6 +16,13 @@
         </member>
         <member type="s8" name="Level" default="-1"/>
         <member type="s64" name="XP" default="-1"/>
+
+        <member type="u8" name="Aggression" default="100"/>
+        <member type="string" name="AIScriptID"/>
+
+        <member type="u8" name="TalkResist"/>
+        <!-- Flags: 1 = Can join, 2 = Can gift -->
+        <member type="u8" name="TalkResults" default="3"/>
     </object>
     <object name="SpawnGroup" persistent="false">
         <member type="u32" name="ID"/>

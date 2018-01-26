@@ -307,20 +307,11 @@ bool EventManager::UpdateQuest(const std::shared_ptr<ChannelClientConnection>& c
     else if(!quest)
     {
         // Starting a quest
-        if(!forceUpdate)
+        if(!forceUpdate && completed && questData->GetType() != 1)
         {
-            if(phase != 0)
-            {
-                LOG_ERROR(libcomp::String("Non-zero quest phase requested for update"
-                    " on quest '%1' which has not been started\n").Arg(questID));
-                return false;
-            }
-            else if(completed && questData->GetType() != 1)
-            {
-                LOG_ERROR(libcomp::String("Already completed non-repeatable quest '%1'"
-                    " cannot be started again\n").Arg(questID));
-                return false;
-            }
+            LOG_ERROR(libcomp::String("Already completed non-repeatable quest '%1'"
+                " cannot be started again\n").Arg(questID));
+            return false;
         }
 
         quest = libcomp::PersistentObject::New<objects::Quest>(true);
@@ -356,16 +347,10 @@ bool EventManager::UpdateQuest(const std::shared_ptr<ChannelClientConnection>& c
     else
     {
         // Updating a quest phase
-        if(quest->GetPhase() >= phase)
+        if(!forceUpdate && quest->GetPhase() >= phase)
         {
             // Nothing to do but not an error
             return true;
-        }
-        if(!forceUpdate && quest->GetPhase() != (int8_t)(phase - 1))
-        {
-            LOG_ERROR(libcomp::String("Invalid quest phase update requested"
-                " for quest '%1': %2\n").Arg(questID).Arg(phase));
-            return false;
         }
 
         quest->SetPhase(phase);
@@ -610,7 +595,8 @@ bool EventManager::EvaluateEventCondition(const std::shared_ptr<
     case objects::EventCondition::Type_t::QUEST_FLAGS:
         return negate != EvaluateQuestCondition(client, condition);
     default:
-        return negate != EvaluateCondition(client, condition);
+        return negate != EvaluateCondition(client, condition,
+            condition->GetCompareMode());
     }
 
     // Always return false when invalid
@@ -929,7 +915,7 @@ bool EventManager::EvaluateCondition(const std::shared_ptr<ChannelClientConnecti
             int32_t val1 = condition->GetValue1();
             if(val1 == 1)
             {
-                // Not chaoss
+                // Not chaos
                 return lncType == LNC_LAW || lncType == LNC_NEUTRAL;
             }
             else if(val1 == 3)
@@ -1226,7 +1212,7 @@ bool EventManager::EvaluateCondition(const std::shared_ptr<ChannelClientConnecti
             auto dState = client->GetClientState()->GetDemonState();
             auto demon = dState->GetEntity();
 
-            if(compareMode != EventCompareMode::EXISTS)
+            if(compareMode == EventCompareMode::EXISTS)
             {
                 return demon != nullptr;
             }
@@ -1239,11 +1225,7 @@ bool EventManager::EvaluateCondition(const std::shared_ptr<ChannelClientConnecti
 
             if(demon)
             {
-                if(condition->GetValue1() == -1)
-                {
-                    return true;
-                }
-                else if(condition->GetValue2() == 1)
+                if(condition->GetValue2() == 1)
                 {
                     auto demonData = dState->GetDevilData();
                     return demonData && demonData->GetUnionData()->GetBaseDemonID() ==

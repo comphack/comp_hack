@@ -48,6 +48,10 @@
         </member>
         <member name="CharacterDeletionDelay">1440</member>    <!-- In minutes, 24 hours by default -->
         <member name="CharacterTicketCost">0</member>
+        <member name="RegistrationCP">0"</member>
+        <member name="RegistrationTicketCount">1</member>
+        <member name="RegistrationUserLevel">1000</member>
+        <member name="RegistrationAccountEnabled">true</member>
         <member name="WebListeningPort">10999</member>
         <!-- <member name="WebCertificate">/etc/comp_hack/server.pem</member> -->
         <!-- <member name="WebRoot">/var/www</member> -->

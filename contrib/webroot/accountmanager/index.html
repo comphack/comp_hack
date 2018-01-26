@@ -231,9 +231,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
     function UpdateAccount(username) {
         var request = {
             username: username,
-            gm: $('#edit_gm').prop('checked'),
             enabled: $('#edit_enabled').prop('checked'),
-            banned: $('#edit_banned').prop('checked'),
             disp_name: $('#edit_disp_name').val(),
             cp: parseInt($('#edit_cp').val()),
             user_level: parseInt($('#edit_user_level').val()),
@@ -302,17 +300,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
                 if('email' in data) {
                     $('#edit_email').text(data['email']);
                 }
-                if('gm' in data) {
-                    $('#edit_gm').prop('checked', data['gm']);
-                    $('#edit_gm').button('refresh');
-                }
                 if('enabled' in data) {
                     $('#edit_enabled').prop('checked', data['enabled']);
                     $('#edit_enabled').button('refresh');
-                }
-                if('banned' in data) {
-                    $('#edit_banned').prop('checked', data['banned']);
-                    $('#edit_banned').button('refresh');
                 }
                 if('disp_name' in data) {
                     $('#edit_disp_name').val(data['disp_name']);
@@ -351,8 +341,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
             html += '<td>' + account.ticket_count + '</td>';
             html += '<td>' + account.user_level + '</td>';
             html += '<td>' + (account.enabled ? 'Yes' : 'No') + '</td>';
-            html += '<td>' + (account.gm ? 'Yes' : 'No') + '</td>';
-            html += '<td>' + (account.banned ? 'Yes' : 'No') + '</td>';
             html += '<td>' + (new Date(1000 *
                 account.last_login)).toString() + '</td>';
             html += '<td>' + account.character_count + '</td>';
@@ -419,7 +407,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
             $('#cp').text('' + account.cp);
             $('#welcome').text(account.disp_name);
 
-            if(account.gm) {
+            if(account.user_level == 1000) {
                 $.ajax({
                     url: 'account_list.html',
                     cache: true
@@ -501,9 +489,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
                     $('#password').val());
                 api.Authenticate(function(data) {
                     api.Request('/api/account/get_details', {}, function(data) {
-                        if('gm' in data) {
-                            account.gm = data['gm'];
-                        }
                         if('cp' in data) {
                             account.cp = data['cp'];
                         }

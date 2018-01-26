@@ -32,6 +32,7 @@
 // object Includes
 #include <EnchantSetData.h>
 #include <EnchantSpecialData.h>
+#include <MiAIData.h>
 #include <MiCItemBaseData.h>
 #include <MiCItemData.h>
 #include <MiCZoneRelationData.h>
@@ -78,6 +79,11 @@ DefinitionManager::DefinitionManager()
 
 DefinitionManager::~DefinitionManager()
 {
+}
+
+const std::shared_ptr<objects::MiAIData> DefinitionManager::GetAIData(uint32_t id)
+{
+    return GetRecordByID(id, mAIData);
 }
 
 const std::shared_ptr<objects::MiDevilData> DefinitionManager::GetDevilData(uint32_t id)
@@ -420,6 +426,7 @@ bool DefinitionManager::LoadAllData(gsl::not_null<DataStore*> pDataStore)
 {
     LOG_INFO("Loading binary data definitions...\n");
     bool success = true;
+    success &= LoadAIData(pDataStore);
     success &= LoadCItemData(pDataStore);
     success &= LoadDevilData(pDataStore);
     success &= LoadDevilLVUpRateData(pDataStore);
@@ -450,6 +457,19 @@ bool DefinitionManager::LoadAllData(gsl::not_null<DataStore*> pDataStore)
     else
     {
         LOG_CRITICAL("Definition loading failed.\n");
+    }
+
+    return success;
+}
+
+bool DefinitionManager::LoadAIData(gsl::not_null<DataStore*> pDataStore)
+{
+    std::list<std::shared_ptr<objects::MiAIData>> records;
+    bool success = LoadBinaryData<objects::MiAIData>(pDataStore,
+        "Shield/AIData.sbin", true, 0, records);
+    for(auto record : records)
+    {
+        mAIData[record->GetID()] = record;
     }
 
     return success;

@@ -1115,8 +1115,8 @@ bool ActionManager::UpdateQuest(ActionContext& ctx)
         }
     }
 
-    return eventManager->UpdateQuest(ctx.Client, act->GetQuestID(), act->GetPhase(), false,
-        flagStates);
+    return eventManager->UpdateQuest(ctx.Client, act->GetQuestID(), act->GetPhase(),
+        act->GetForceUpdate(), flagStates);
 }
 
 bool ActionManager::UpdateZoneFlags(ActionContext& ctx)

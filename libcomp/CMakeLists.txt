@@ -273,6 +273,7 @@ SET(${PROJECT_NAME}_SCHEMA
     schema/tokusei.xml
 
     # BinaryData Files
+    schema/binarydata/aidata.xml
     schema/binarydata/ceventmessagedata.xml
     schema/binarydata/citemdata.xml
     schema/binarydata/cmessagedata.xml
@@ -530,6 +531,8 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     MiAcquisitionSkillData.h
     MiAddStatusTbl.cpp
     MiAddStatusTbl.h
+    MiAIData.cpp
+    MiAIData.h
     MiAIRelationData.cpp
     MiAIRelationData.h
     MiBattleDamageData.cpp
@@ -646,6 +649,8 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     MiExpertGrowthTbl.h
     MiExpertRankData.cpp
     MiExpertRankData.h
+    MiFindInfo.cpp
+    MiFindInfo.h
     MiGrowthData.cpp
     MiGrowthData.h
     MiHNPCAppearanceData.cpp

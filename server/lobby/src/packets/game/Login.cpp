@@ -98,7 +98,7 @@ bool Parsers::Login::Parse(libcomp::ManagerPacket *pPacketManager,
     {
         return LoginError(connection, ErrorCodes_t::BAD_USERNAME_PASSWORD);
     }
-    else if(account->GetIsBanned())
+    else if(!account->GetEnabled())
     {
         return LoginError(connection, ErrorCodes_t::ACCOUNT_DISABLED);
     }

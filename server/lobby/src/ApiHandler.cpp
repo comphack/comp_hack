@@ -167,8 +167,6 @@ bool ApiHandler::Account_GetDetails(const JsonBox::Object& request,
     response["ticket_count"] = (int)account->GetTicketCount();
     response["user_level"] = (int)account->GetUserLevel();
     response["enabled"] = account->GetEnabled();
-    response["gm"] = account->GetIsGM();
-    response["banned"] = account->GetIsBanned();
     response["last_login"] = (int)account->GetLastLogin();
 
     int count = 0;
@@ -333,7 +331,6 @@ bool ApiHandler::Account_Register(const JsonBox::Object& request,
     uint8_t ticketCount = mConfig->GetRegistrationTicketCount();
     int32_t userLevel = mConfig->GetRegistrationUserLevel();
     bool enabled = mConfig->GetRegistrationAccountEnabled();
-    bool isGM = mConfig->GetRegistrationIsGM();
 
     // Hash the password for database storage.
     password = libcomp::Decrypt::HashPassword(password, salt);
@@ -343,7 +340,6 @@ bool ApiHandler::Account_Register(const JsonBox::Object& request,
     account->SetEmail(email);
     account->SetPassword(password);
     account->SetSalt(salt);
-    account->SetIsGM(isGM);
     account->SetCP(cp);
     account->SetTicketCount(ticketCount);
     account->SetUserLevel(userLevel);
@@ -384,8 +380,6 @@ bool ApiHandler::Admin_GetAccounts(const JsonBox::Object& request,
         obj["ticket_count"] = (int)account->GetTicketCount();
         obj["user_level"] = (int)account->GetUserLevel();
         obj["enabled"] = account->GetEnabled();
-        obj["gm"] = account->GetIsGM();
-        obj["banned"] = account->GetIsBanned();
         obj["last_login"] = (int)account->GetLastLogin();
 
         int count = 0;
@@ -450,8 +444,6 @@ bool ApiHandler::Admin_GetAccount(const JsonBox::Object& request,
     response["ticket_count"] = (int)account->GetTicketCount();
     response["user_level"] = (int)account->GetUserLevel();
     response["enabled"] = account->GetEnabled();
-    response["gm"] = account->GetIsGM();
-    response["banned"] = account->GetIsBanned();
     response["last_login"] = (int)account->GetLastLogin();
 
     int count = 0;
@@ -568,13 +560,6 @@ bool ApiHandler::Admin_UpdateAccount(const JsonBox::Object& request,
         account->SetDisplayName(it->second.getString());
     }
 
-    it = request.find("gm");
-
-    if(it != request.end())
-    {
-        account->SetIsGM(it->second.getBoolean());
-    }
-
     it = request.find("cp");
 
     if(it != request.end())
@@ -641,13 +626,6 @@ bool ApiHandler::Admin_UpdateAccount(const JsonBox::Object& request,
     if(it != request.end())
     {
         account->SetEnabled(it->second.getBoolean());
-    }
-
-    it = request.find("banned");
-
-    if(it != request.end())
-    {
-        account->SetIsBanned(it->second.getBoolean());
     }
 
     bool didUpdate = account->Update(db);
@@ -828,7 +806,7 @@ bool ApiHandler::handlePost(CivetServer *pServer,
         "/account/register" != method &&
         !Authenticate(obj, response, session)) ||
         ("/admin/" == method.Left(strlen("/admin/")) && (!session->account ||
-        !session->account->GetIsGM())))
+        session->account->GetUserLevel() < 1000)))
     {
         mg_printf(pConnection, "HTTP/1.1 401 Unauthorized\r\n"
             "Connection: close\r\n\r\n");

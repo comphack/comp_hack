@@ -305,7 +305,7 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
     auto definitionManager = server->GetDefinitionManager();
     if(newCharacter)
     {
-        bool isGM = account->GetIsGM();
+        bool isGM = account->GetUserLevel() > 0;
 
         auto cs = character->GetCoreStats().Get();
         cs->SetLevel(1);

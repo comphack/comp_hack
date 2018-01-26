@@ -224,6 +224,18 @@ private:
     bool Compare(int32_t value, std::shared_ptr<objects::TokuseiCondition> condition,
         bool numericCompare) const;
 
+    /**
+     * Compare the supplied two values.
+     * @param value1 LHS value to compare
+     * @param value2 RHS value to compare
+     * @param condition Tokusei condition to use the comparator from
+     * @param numericCompare If false and a numeric comparator type is on the condition
+     *  this will always return false
+     * @return false if the condition does not evaluate to true
+     */
+    bool Compare(int32_t value1, int32_t value2, std::shared_ptr<
+        objects::TokuseiCondition> condition, bool numericCompare) const;
+
     /// Pointer to the channel server.
     std::weak_ptr<ChannelServer> mServer;
 };

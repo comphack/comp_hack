@@ -36,6 +36,11 @@
 // Standard C++11 includes
 #include <mutex>
 
+namespace objects
+{
+class MiAIData;
+}
+
 namespace channel
 {
 
@@ -135,16 +140,55 @@ public:
     void ResetStatusChanged();
 
     /**
+     * Bind an AI script to the AI controlled entity
+     * @param aiScript Script to bind to the AI controlled entity
+     */
+    void SetAI(const std::shared_ptr<objects::MiAIData>& aiData,
+        const std::shared_ptr<libcomp::ScriptEngine>& aiScript,
+        uint8_t aggression = 100);
+
+    /**
+     * Get the base AI definition
+     * @return Pointer to the base AI definition bound the the
+     *  entity or null if not bound
+     */
+    std::shared_ptr<objects::MiAIData> GetAIData() const;
+
+    /**
      * Get the bound AI script
-     * @return Point to the bound AI script or null if not bound
+     * @return Pointer to the bound AI script or null if not bound
      */
     std::shared_ptr<libcomp::ScriptEngine> GetScript() const;
 
     /**
-     * Bind an AI script to the AI controlled entity
-     * @param aiScript Script to bind to the AI controlled entity
+     * Get the AI aggression level representing how often it
+     * should choose to aggro when checking for targets
+     * @return AI aggression level
      */
-    void SetScript(const std::shared_ptr<libcomp::ScriptEngine>& aiScript);
+    uint8_t GetAggression() const;
+
+    /**
+     * Get AI "think speed" representing the millisecond interval all
+     * non-skill actions act upon. If no base AI definition is assigned,
+     * 2000 milliseconds will be used.
+     * @return AI think speed in milliseconds
+     */
+    int32_t GetThinkSpeed() const;
+
+    /**
+     * Get the AI's aggro value from its base AI definition represnting
+     * day, night and enemy casting distances and FoVs
+     * @param mode AI aggro type:
+     *  0) Normal
+     *  1) Night
+     *  2) Enemy skill casting (any time)
+     * @param fov true if the FoV value corresponding to the mode should
+     *  be retrieved, false if the distance should be retrieved
+     * @param defaultVal Default value to return should the requested
+     *  value not exist
+     * @return Aggro distance or FoV corresponding to the requested mode
+     */
+    float GetAggroValue(uint8_t mode, bool fov, float defaultVal);
 
     /**
      * Get the current command or next command that has not been started
@@ -265,8 +309,15 @@ private:
     /// Map of AI skill types to active skill IDs the entity can use
     std::unordered_map<uint16_t, std::vector<uint32_t>> mSkillMap;
 
+    /// Pointer to the base AI definition for the AI controlled entity
+    std::shared_ptr<objects::MiAIData> mAIData;
+
     /// Pointer to the AI script to use for the AI controlled entity
     std::shared_ptr<libcomp::ScriptEngine> mAIScript;
+
+    /// Aggression level to use when determining if the entity should
+    /// target an enemy in view when searching
+    uint8_t mAggression;
 
     /// Entity ID of another entity in the zone being targeted independent
     /// of a skill being used

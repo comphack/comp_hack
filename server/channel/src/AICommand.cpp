@@ -144,7 +144,7 @@ AIUseSkillCommand::AIUseSkillCommand(
     if(activated)
     {
         mSkillID = activated->GetSkillID();
-        mTargetObjectID = activated->GetActivationObjectID();
+        mTargetObjectID = activated->GetTargetObjectID();
     }
 }
 

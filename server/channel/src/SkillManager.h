@@ -136,11 +136,12 @@ public:
      * Notify the client that a skill failed activation or execution.
      * @param source Pointer of the entity that the skill failed for
      * @param skillID ID of the skill to activate
-     * @param client Optional parameter, pointer to the client connection
-     *  that should be sent the failure instead of the entire zone
+     * @param client Pointer to the client connection that should be sent
+     *  the failure instead of the entire zone
+     * @param errorCode Error code to send (defaults to generic, no message)
      */
     void SendFailure(const std::shared_ptr<ActiveEntityState> source, uint32_t skillID,
-        const std::shared_ptr<ChannelClientConnection> client = nullptr);
+        const std::shared_ptr<ChannelClientConnection> client, uint8_t errorCode = 0);
 
 private:
     /**
@@ -190,11 +191,13 @@ private:
      * set, it will be returned instead.
      * @param activated Pointer to the activated ability instance
      * @param ctx Special execution state for the skill
+     * @param client Client associated to the skill being processed (can be null)
      * @return Pointer to a processing skill contextual to the values supplied
      */
     std::shared_ptr<ProcessingSkill> GetProcessingSkill(
         std::shared_ptr<objects::ActivatedAbility> activated,
-        std::shared_ptr<SkillExecutionContext> ctx);
+        std::shared_ptr<SkillExecutionContext> ctx,
+        const std::shared_ptr<ChannelClientConnection> client);
 
     /**
      * Get a CalculatedEntityState based upon the skill being executed and
@@ -342,6 +345,7 @@ private:
      * @param skill Current skill processing state
      * @param mod Base modifier damage value
      * @param damageType Type of damage being dealt
+     * @param affinity Target specific affinity type for the skill
      * @param resist Resistence to the skill affinity
      * @param critLevel Critical level adjustment. Valid values are:
      *  0) No critical adjustment
@@ -352,7 +356,8 @@ private:
      */
     int32_t CalculateDamage_Normal(const std::shared_ptr<ActiveEntityState>& source,
         SkillTargetResult& target, ProcessingSkill& skill, uint16_t mod,
-        uint8_t& damageType, float resist, uint8_t critLevel, bool isHeal);
+        uint8_t& damageType, uint8_t affinity, float resist, uint8_t critLevel,
+        bool isHeal);
 
     /**
      * Calculate skill damage or healing based on a static value
@@ -400,6 +405,18 @@ private:
     bool SetNRA(SkillTargetResult& target, ProcessingSkill& skill);
 
     /**
+     * Get the result of the skill target's null, reflect or absorb checks
+     * @param target Target to determine NRA for
+     * @param skill Current skill processing state
+     * @param effectiveAffinity Target specific affinity type for the skill
+     * @param effectiveOnly If true only the supplied affinity will be checked,
+     *  otherwise the dependency type and base affinities will be checked as well
+     * @return NRA index value or 0 for none
+     */
+    uint8_t GetNRAResult(SkillTargetResult& target, ProcessingSkill& skill,
+        uint8_t effectiveAffinity, bool effectiveOnly = false);
+
+    /**
      * Get a random stack size for a status effect being applied
      * @param minStack Minimum size of the stack
      * @param maxStack Maximum size of the stack
@@ -439,12 +456,10 @@ private:
      * @param client Pointer to the client connection that activated the skill
      * @param ctx Special execution state for the skill
      * @param activated Pointer to the activated ability instance
-     * @param skillData Pointer to the skill data
      */
     void FinalizeSkillExecution(const std::shared_ptr<ChannelClientConnection> client,
         const std::shared_ptr<SkillExecutionContext>& ctx,
-        std::shared_ptr<objects::ActivatedAbility> activated,
-        std::shared_ptr<objects::MiSkillData> skillData);
+        std::shared_ptr<objects::ActivatedAbility> activated);
 
     /**
      * Placeholder function for a skill actually handled outside of the

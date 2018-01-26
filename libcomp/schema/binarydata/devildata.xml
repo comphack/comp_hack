@@ -67,7 +67,7 @@
         <member type="u16" name="unused"/>
     </object>
     <object name="MiAIRelationData" persistent="false">
-        <member type="u16" name="ai1"/>
+        <member type="u16" name="type"/>
         <member type="u16" name="ai2"/>
         <member type="u16" name="ai3"/>
         <member type="u16" name="ai4"/>

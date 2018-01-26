@@ -736,6 +736,14 @@ std::list<std::shared_ptr<objects::Tokusei>> TokuseiManager::GetDirectTokusei(
         }
     }
 
+    for(auto pair : eState->GetAdditionalTokusei())
+    {
+        for(uint16_t i = 0; i < pair.second; i++)
+        {
+            tokuseiIDs.push_back(pair.first);
+        }
+    }
+
     // Add each tokusei already identified to the result set and add any skills
     // added by these effects
     for(int32_t tokuseiID : tokuseiIDs)
@@ -926,6 +934,25 @@ bool TokuseiManager::EvaluateTokuseiCondition(const std::shared_ptr<ActiveEntity
 
             return equipped == (condition->GetComparator() ==
                 objects::TokuseiCondition::Comparator_t::EQUALS);
+        }
+        break;
+    case TokuseiConditionType::EXPERTISE:
+        // Entity is a character and has the specified expertise rank value
+        if(eState->GetEntityType() != objects::EntityStateObject::EntityType_t::CHARACTER)
+        {
+            return false;
+        }
+        else
+        {
+            auto cState = std::dynamic_pointer_cast<CharacterState>(eState);
+
+            // The 2 smallest digits are the expertise ID, the rest are the rank value
+            int32_t expertiseID = (int32_t)(condition->GetValue() % 100);
+            int32_t rankCompare = (int32_t)((condition->GetValue() - expertiseID) / 100);
+            uint8_t rank = mServer.lock()->GetCharacterManager()->GetExpertiseRank(cState,
+                (uint32_t)expertiseID);
+
+            return Compare(rankCompare, (int32_t)rank, condition, true);
         }
         break;
     case TokuseiConditionType::LNC:
@@ -1370,19 +1397,25 @@ std::list<double> TokuseiManager::GetAspectValueList(const std::shared_ptr<
 bool TokuseiManager::Compare(int32_t value, std::shared_ptr<
     objects::TokuseiCondition> condition, bool numericCompare) const
 {
+    return Compare(value, condition->GetValue(), condition, numericCompare);
+}
+
+bool TokuseiManager::Compare(int32_t value1, int32_t value2, std::shared_ptr<
+    objects::TokuseiCondition> condition, bool numericCompare) const
+{
     switch(condition->GetComparator())
     {
     case objects::TokuseiCondition::Comparator_t::EQUALS:
-        return value == condition->GetValue();
+        return value1 == value2;
         break;
     case objects::TokuseiCondition::Comparator_t::NOT_EQUAL:
-        return value != condition->GetValue();
+        return value1 != value2;
         break;
     case objects::TokuseiCondition::Comparator_t::LTE:
-        return numericCompare && value <= condition->GetValue();
+        return numericCompare && value1 <= value2;
         break;
     case objects::TokuseiCondition::Comparator_t::GTE:
-        return numericCompare && value >= condition->GetValue();
+        return numericCompare && value1 >= value2;
         break;
     default:
         break;

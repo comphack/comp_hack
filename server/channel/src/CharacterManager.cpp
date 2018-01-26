@@ -73,6 +73,7 @@
 #include <MiItemData.h>
 #include <MiNPCBasicData.h>
 #include <MiPossessionData.h>
+#include <MiRentalData.h>
 #include <MiSkillData.h>
 #include <MiSkillItemStatusCommonData.h>
 #include <MiStatusData.h>
@@ -1235,6 +1236,14 @@ std::shared_ptr<objects::Item> CharacterManager::GenerateItem(
     item->SetStackSize(stackSize);
     item->SetDurability(poss->GetDurability());
     item->SetMaxDurability((int8_t)poss->GetDurability());
+
+    int32_t rentalTime = def->GetRental()->GetRental();
+    if(rentalTime > 0)
+    {
+        item->SetRentalExpiration((uint32_t)(
+            (int32_t)std::time(0) + rentalTime));
+    }
+
     item->Register(item);
 
     return item;
@@ -1748,6 +1757,8 @@ bool CharacterManager::UpdateItems(const std::shared_ptr<
         if(iPair.second == 0)
         {
             // Delete the item
+            UnequipItem(client, item);
+
             auto slot = item->GetBoxSlot();
             inventory->SetItems((size_t)slot, NULLUUID);
             changes->Delete(item);
@@ -3922,7 +3933,7 @@ void CharacterManager::GetItemDetailPacketData(libcomp::Packet& p,
 
         if(detailLevel >= 1)
         {
-            p.WriteS32Little(0);    // Rental expiration time (absolute)
+            p.WriteS32Little((int32_t)item->GetRentalExpiration());
         }
 
         auto basicEffect = item->GetBasicEffect();

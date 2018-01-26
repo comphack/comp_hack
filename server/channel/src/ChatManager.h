@@ -334,6 +334,18 @@ private:
         const std::list<libcomp::String>& args);
 
     /**
+     * GM command to throw away an item in the client or target
+     * character's inventory. Useful for destroying items that cannot
+     * be stored or thrown away.
+     * @param client Pointer to the client that sent the command
+     * @param args List of arguments for the command
+     * @return true if the command was handled properly, else false
+     */
+    bool GMCommand_Scrap(const std::shared_ptr<
+        channel::ChannelClientConnection>& client,
+        const std::list<libcomp::String>& args);
+
+    /**
      * GM command to have the client's character or partner demon
      * learn a skill.
      * @param client Pointer to the client that sent the command
@@ -398,6 +410,17 @@ private:
         const std::list<libcomp::String>& args);
 
     /**
+     * GM command to add a tokusei to the client's character or partner
+     * demon, detached from any item, skill or status effect.
+     * @param client Pointer to the client that sent the command
+     * @param args List of arguments for the command
+     * @return true if the command was handled problerly, else false
+     */
+    bool GMCommand_Tokusei(const std::shared_ptr<
+        channel::ChannelClientConnection>& client,
+        const std::list<libcomp::String>& args);
+
+    /**
      * GM command to set a character's current valuables.
      * @param client Pointer to the client that sent the command
      * @param args List of arguments for the command
@@ -436,6 +459,17 @@ private:
     bool GMCommand_XP(const std::shared_ptr<
         channel::ChannelClientConnection>& client,
         const std::list<libcomp::String>& args);
+
+    /**
+     * Determine if the client has appropriate user level necessary
+     * to execute a GMand. If the client's level is too low, a message
+     * will be returned informing them of the error.
+     * @param client Pointer to the client that sent the command
+     * @param requiredLevel User level required to execute the GMand
+     * @return true if the client has the necessary user level
+     */
+    bool HaveUserLevel(const std::shared_ptr<
+        channel::ChannelClientConnection>& client, int32_t requiredLevel);
 
     /**
      * Get the next argument from the supplied argument list as a string.

@@ -10,7 +10,6 @@
         <member name="TicketCount">1</member>
         <member name="UserLevel">1000</member>
         <member name="Enabled">true</member>
-        <member name="IsGM">true</member>
     </object>
     <object name="Account">
         <member name="UID">00000000-0000-0000-0000-000000000a02</member>
@@ -22,6 +21,5 @@
         <member name="TicketCount">1</member>
         <member name="UserLevel">1000</member>
         <member name="Enabled">true</member>
-        <member name="IsGM">true</member>
     </object>
 </objgen>

@@ -79,7 +79,7 @@ public:
      * @return true on sucess, false upon failure
      */
     bool Prepare(const std::shared_ptr<ActiveEntityState>& eState,
-        const libcomp::String& aiType = "");
+        const libcomp::String& aiType, uint8_t aggression = 100);
 
     /**
      * Update the AI state of all active AI controlled entities in the
@@ -123,29 +123,34 @@ private:
      * related actions.
      * @param eState Pointer to the entity state to update
      * @param now Current timestamp of the server
+     * @param isNight Night time indicator which affects targetting
      * @return true if the entity state should be communicated to the zone,
      *  false otherwise
      */
-    bool UpdateState(const std::shared_ptr<ActiveEntityState>& eState, uint64_t now);
+    bool UpdateState(const std::shared_ptr<ActiveEntityState>& eState, uint64_t now,
+        bool isNight);
 
     /**
      * Update the state of an enemy, processing AI directly or queuing commands
      * to be procssed on next update
      * @param eState Pointer to the enemy state to update
      * @param now Current timestamp of the server
+     * @param isNight Night time indicator which affects targetting
      * @return true if the enemy state should be communicated to the zone,
      *  false otherwise
      */
-    bool UpdateEnemyState(const std::shared_ptr<EnemyState>& eState, uint64_t now);
+    bool UpdateEnemyState(const std::shared_ptr<EnemyState>& eState, uint64_t now,
+        bool isNight);
 
     /**
      * Clear an enemy's AIState current target and find the next target to focus on
      * @param eState Pointer to the AI controlled enemy state
      * @param now Current timestamp of the server
+     * @param isNight Night time indicator which affects targetting
      * @return Pointer to the entity being targeted
      */
     std::shared_ptr<ActiveEntityState> Retarget(const std::shared_ptr<EnemyState>& eState,
-        uint64_t now);
+        uint64_t now, bool isNight);
 
     /**
      * Refresh the skill map of the AIState if needed
@@ -201,7 +206,7 @@ private:
 
     /**
      * Get a new wait command
-     * @param waitTime Number of seconds the entity should wait when
+     * @param waitTime Number of milliseconds the entity should wait when
      *  the command is processed
      * @return Pointer to the new move command
      */

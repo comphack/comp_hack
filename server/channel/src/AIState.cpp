@@ -26,6 +26,9 @@
 
 #include "AIState.h"
 
+#include <MiAIData.h>
+#include <MiFindInfo.h>
+
 using namespace channel;
 namespace libcomp
 {
@@ -104,14 +107,48 @@ void AIState::ResetStatusChanged()
     mStatusChanged = false;
 }
 
+std::shared_ptr<objects::MiAIData> AIState::GetAIData() const
+{
+    return mAIData;
+}
+
 std::shared_ptr<libcomp::ScriptEngine> AIState::GetScript() const
 {
     return mAIScript;
 }
 
-void AIState::SetScript(const std::shared_ptr<libcomp::ScriptEngine>& aiScript)
+uint8_t AIState::GetAggression() const
 {
+    return mAggression;
+}
+
+int32_t AIState::GetThinkSpeed() const
+{
+    return mAIData ? mAIData->GetThinkSpeed() : 2000;
+}
+
+float AIState::GetAggroValue(uint8_t mode, bool fov, float defaultVal)
+{
+    if(mAIData && mode < 3)
+    {
+        auto fInfo = mode == 0 ? mAIData->GetAggroNormal()
+            : (mode == 1 ? mAIData->GetAggroNight() : mAIData->GetAggroCast());
+
+        return fov
+            ? ((float)fInfo->GetFOV() / 360.f * 3.14f)
+            : (400.f + (float)fInfo->GetDistance() * 10.f);
+    }
+
+    return defaultVal;
+}
+
+void AIState::SetAI(const std::shared_ptr<objects::MiAIData>& aiData,
+    const std::shared_ptr<libcomp::ScriptEngine>& aiScript,
+    uint8_t aggression)
+{
+    mAIData = aiData;
     mAIScript = aiScript;
+    mAggression = aggression;
 }
 
 std::shared_ptr<AICommand> AIState::GetCurrentCommand() const

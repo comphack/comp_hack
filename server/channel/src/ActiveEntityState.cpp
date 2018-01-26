@@ -646,7 +646,7 @@ std::set<uint32_t> ActiveEntityState::AddStatusEffects(const AddStatusEffectMap&
                 doReplace = isReplace && ((existing->GetStack() < stack) || !stack);
                 break;
             case 1:
-                // Always set/add stack, reset time only if stack
+                // Always set/add stack, reset time only on replace and if stack
                 // represents time (misc)
                 if(isReplace)
                 {
@@ -662,9 +662,10 @@ std::set<uint32_t> ActiveEntityState::AddStatusEffects(const AddStatusEffectMap&
                 }
                 break;
             case 2:
-                // Always reset time, add old stack on add (ex: -kajas)
-                addStack = !isReplace;
+                // Always reset time, always add (ex: -kajas)
+                addStack = true;
                 resetTime = true;
+                doReplace = false;
                 break;
             case 3:
                 // Always reapply time and stack (ex: -karns)
@@ -923,7 +924,10 @@ std::set<uint32_t> ActiveEntityState::AddStatusEffects(const AddStatusEffectMap&
                     ActivateStatusEffect(effect, definitionManager, now);
                 }
 
-                if(queueChanges)
+                // If changes are being queued or an effect other than the one
+                // we expected to add was affected (ex: inverse cancels), queue
+                // the change up
+                if(queueChanges || effectType != effect->GetEffect())
                 {
                     // Add non-system time for add or update
                     mNextEffectTimes[add ? 1 : 2].insert(effect->GetEffect());
@@ -1581,6 +1585,7 @@ void ActiveEntityStateImp<objects::Demon>::SetEntity(
     auto calcState = GetCalculatedState();
     calcState->ClearActiveTokuseiTriggers();
     calcState->ClearEffectiveTokusei();
+    ClearAdditionalTokusei();
 
     // Reset knockback and let refresh correct
     SetKnockbackResist(0);

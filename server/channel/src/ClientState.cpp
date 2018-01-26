@@ -34,6 +34,7 @@
 #include <PacketCodes.h>
 
 // object Includes
+#include <Account.h>
 #include <AccountLogin.h>
 #include <AccountWorldData.h>
 #include <BazaarData.h>
@@ -222,6 +223,12 @@ const libobjgen::UUID ClientState::GetAccountUID() const
 {
     return mCharacterState->Ready() ?
         mCharacterState->GetEntity()->GetAccount().GetUUID() : NULLUUID;
+}
+
+int32_t ClientState::GetUserLevel() const
+{
+    return mCharacterState->Ready() ?
+        mCharacterState->GetEntity()->GetAccount()->GetUserLevel() : 0;
 }
 
 int32_t ClientState::GetWorldCID() const

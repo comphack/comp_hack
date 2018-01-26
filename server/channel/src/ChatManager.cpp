@@ -86,12 +86,14 @@ ChatManager::ChatManager(const std::weak_ptr<ChannelServer>& server)
     mGMands["pos"] = &ChatManager::GMCommand_Position;
     mGMands["post"] = &ChatManager::GMCommand_Post;
     mGMands["quest"] = &ChatManager::GMCommand_Quest;
+    mGMands["scrap"] = &ChatManager::GMCommand_Scrap;
     mGMands["skill"] = &ChatManager::GMCommand_Skill;
     mGMands["skillpoint"] = &ChatManager::GMCommand_SkillPoint;
     mGMands["slotadd"] = &ChatManager::GMCommand_SlotAdd;
     mGMands["spawn"] = &ChatManager::GMCommand_Spawn;
     mGMands["speed"] = &ChatManager::GMCommand_Speed;
     mGMands["tickermessage"] = &ChatManager::GMCommand_TickerMessage;
+    mGMands["tokusei"] = &ChatManager::GMCommand_Tokusei;
     mGMands["valuable"] = &ChatManager::GMCommand_Valuable;
     mGMands["version"] = &ChatManager::GMCommand_Version;
     mGMands["xp"] = &ChatManager::GMCommand_XP;
@@ -286,6 +288,11 @@ bool ChatManager::GMCommand_Announce(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
 {
+    if(!HaveUserLevel(client, 100))
+    {
+        return true;
+    }
+
     std::list<libcomp::String> argsCopy = args;
     int8_t color = 0;
 
@@ -306,6 +313,11 @@ bool ChatManager::GMCommand_Ban(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
 {
+    if(!HaveUserLevel(client, 400))
+    {
+        return true;
+    }
+
     std::list<libcomp::String> argsCopy = args;
     libcomp::String bannedPlayer;
 
@@ -323,9 +335,15 @@ bool ChatManager::GMCommand_Ban(const std::shared_ptr<
     auto targetClient = targetAccount ? server->GetManagerConnection()->GetClientConnection(
         targetAccount->GetUsername()) : nullptr;
 
+    if(targetAccount && client->GetClientState()->GetUserLevel() < targetAccount->GetUserLevel())
+    {
+        return SendChatMessage(client, ChatType_t::CHAT_SELF,
+            "Your user level is lower than the user you tried to ban.");
+    }
+
     if(targetClient != nullptr) 
     {
-        targetAccount->SetIsBanned(true);
+        targetAccount->SetEnabled(false);
         targetAccount->Update(lobbyDB);
         targetClient->Close();
 
@@ -339,6 +357,11 @@ bool ChatManager::GMCommand_Contract(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
 {
+    if(!HaveUserLevel(client, 250))
+    {
+        return true;
+    }
+
     std::list<libcomp::String> argsCopy = args;
 
     auto server = mServer.lock();
@@ -380,6 +403,11 @@ bool ChatManager::GMCommand_Crash(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
 {
+    if(!HaveUserLevel(client, 950))
+    {
+        return true;
+    }
+
     (void)client;
     (void)args;
 
@@ -390,6 +418,11 @@ bool ChatManager::GMCommand_Effect(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
 {
+    if(!HaveUserLevel(client, 250))
+    {
+        return true;
+    }
+
     std::list<libcomp::String> argsCopy = args;
 
     uint32_t effectID;
@@ -454,6 +487,11 @@ bool ChatManager::GMCommand_Enemy(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
 {
+    if(!HaveUserLevel(client, 400))
+    {
+        return true;
+    }
+
     std::list<libcomp::String> argsCopy = args;
 
     // Valid params: enemy, enemy+AI, enemy+AI+x+y, enemy+AI+x+y+rot,
@@ -548,6 +586,11 @@ bool ChatManager::GMCommand_ExpertiseExtend(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
 {
+    if(!HaveUserLevel(client, 250))
+    {
+        return true;
+    }
+
     std::list<libcomp::String> argsCopy = args;
 
     uint8_t val = 1;
@@ -587,6 +630,11 @@ bool ChatManager::GMCommand_ExpertiseUpdate(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
 {
+    if(!HaveUserLevel(client, 250))
+    {
+        return true;
+    }
+
     std::list<libcomp::String> argsCopy = args;
 
     auto server = mServer.lock();
@@ -615,6 +663,11 @@ bool ChatManager::GMCommand_Familiarity(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
 {
+    if(!HaveUserLevel(client, 250))
+    {
+        return true;
+    }
+
     std::list<libcomp::String> argsCopy = args;
 
     uint16_t familiarity;
@@ -634,6 +687,11 @@ bool ChatManager::GMCommand_Goto(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
 {
+    if(!HaveUserLevel(client, 400))
+    {
+        return true;
+    }
+
     std::list<libcomp::String> argsCopy = args;
 
     bool toSelf = false;
@@ -722,6 +780,11 @@ bool ChatManager::GMCommand_Homepoint(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
 {
+    if(!HaveUserLevel(client, 1))
+    {
+        return true;
+    }
+
     (void)args;
 
     auto state = client->GetClientState();
@@ -762,6 +825,11 @@ bool ChatManager::GMCommand_Item(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
 {
+    if(!HaveUserLevel(client, 250))
+    {
+        return true;
+    }
+
     std::list<libcomp::String> argsCopy = args;
 
     auto server = mServer.lock();
@@ -814,6 +882,11 @@ bool ChatManager::GMCommand_Kick(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
 {
+    if(!HaveUserLevel(client, 400))
+    {
+        return true;
+    }
+
     std::list<libcomp::String> argsCopy = args;
     libcomp::String kickedPlayer;
 
@@ -830,6 +903,12 @@ bool ChatManager::GMCommand_Kick(const std::shared_ptr<
     auto targetClient = targetAccount ? server->GetManagerConnection()->GetClientConnection(
         targetAccount->GetUsername()) : nullptr;
 
+    if(targetAccount && client->GetClientState()->GetUserLevel() < targetAccount->GetUserLevel())
+    {
+        return SendChatMessage(client, ChatType_t::CHAT_SELF,
+            "Your user level is lower than the user you tried to kick.");
+    }
+
     if(targetClient != nullptr) 
     {
         targetClient->Close();
@@ -844,6 +923,11 @@ bool ChatManager::GMCommand_Kill(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
 {
+    if(!HaveUserLevel(client, 500))
+    {
+        return true;
+    }
+
     std::list<libcomp::String> argsCopy = args;
 
     auto state = client->GetClientState();
@@ -913,6 +997,11 @@ bool ChatManager::GMCommand_LevelUp(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
 {
+    if(!HaveUserLevel(client, 250))
+    {
+        return true;
+    }
+
     std::list<libcomp::String> argsCopy = args;
 
     int8_t lvl;
@@ -968,6 +1057,11 @@ bool ChatManager::GMCommand_LNC(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
 {
+    if(!HaveUserLevel(client, 1))
+    {
+        return true;
+    }
+
     std::list<libcomp::String> argsCopy = args;
 
     int16_t lnc;
@@ -986,6 +1080,11 @@ bool ChatManager::GMCommand_Map(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
 {
+    if(!HaveUserLevel(client, 1))
+    {
+        return true;
+    }
+
     std::list<libcomp::String> argsCopy = args;
 
     uint16_t mapID;
@@ -1004,6 +1103,11 @@ bool ChatManager::GMCommand_Plugin(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
 {
+    if(!HaveUserLevel(client, 250))
+    {
+        return true;
+    }
+
     std::list<libcomp::String> argsCopy = args;
 
     uint16_t pluginID;
@@ -1026,6 +1130,11 @@ bool ChatManager::GMCommand_Position(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
 {
+    if(!HaveUserLevel(client, 200))
+    {
+        return true;
+    }
+
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
     auto server = mServer.lock();
@@ -1072,6 +1181,11 @@ bool ChatManager::GMCommand_Post(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
 {
+    if(!HaveUserLevel(client, 750))
+    {
+        return true;
+    }
+
     std::list<libcomp::String> argsCopy = args;
 
     auto targetAccount = client->GetClientState()->GetAccountUID();
@@ -1134,6 +1248,11 @@ bool ChatManager::GMCommand_Quest(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
 {
+    if(!HaveUserLevel(client, 200))
+    {
+        return true;
+    }
+
     std::list<libcomp::String> argsCopy = args;
 
     auto server = mServer.lock();
@@ -1166,10 +1285,97 @@ bool ChatManager::GMCommand_Quest(const std::shared_ptr<
     return true;
 }
 
+bool ChatManager::GMCommand_Scrap(const std::shared_ptr<
+    channel::ChannelClientConnection>& client,
+    const std::list<libcomp::String>& args)
+{
+    if(!HaveUserLevel(client, 700))
+    {
+        return true;
+    }
+
+    std::list<libcomp::String> argsCopy = args;
+
+    uint8_t slotNum = 0;
+    if(GetIntegerArg<uint8_t>(slotNum, argsCopy))
+    {
+        if(slotNum == 0 || slotNum > 50)
+        {
+            return SendChatMessage(client, ChatType_t::CHAT_SELF,
+                "@scrap slot numbers must be between 1 and 50");
+        }
+    }
+    else
+    {
+        slotNum = 50;
+    }
+
+    auto targetClient = client;
+
+    libcomp::String name;
+    if(GetStringArg(name, argsCopy))
+    {
+        targetClient = nullptr;
+
+        auto zoneManager = mServer.lock()->GetZoneManager();
+        for(auto zConnection : zoneManager->GetZoneConnections(client, true))
+        {
+            auto zChar = zConnection->GetClientState()
+                ->GetCharacterState()->GetEntity();
+
+            if(zChar && zChar->GetName() == name)
+            {
+                targetClient = zConnection;
+                break;
+            }
+        }
+
+        if(!targetClient)
+        {
+            return SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(
+                "Invalid character name supplied for the current zone: %1").Arg(name));
+        }
+    }
+
+    if(targetClient)
+    {
+        auto cState = targetClient->GetClientState()->GetCharacterState();
+        auto character = cState->GetEntity();
+        auto inventory = character ? character->GetItemBoxes(0).Get() : nullptr;
+        auto item = inventory ? inventory->GetItems((size_t)(slotNum - 1)).Get() : nullptr;
+        if(item)
+        {
+            std::list<std::shared_ptr<objects::Item>> insertItems;
+            std::unordered_map<std::shared_ptr<objects::Item>, uint16_t> stackAdjustItems;
+            stackAdjustItems[item] = 0;
+
+            if(mServer.lock()->GetCharacterManager()->UpdateItems(targetClient,
+                false, insertItems, stackAdjustItems))
+            {
+                return SendChatMessage(client, ChatType_t::CHAT_SELF,
+                    libcomp::String("Item %1 in slot %2 scrapped")
+                    .Arg(item->GetType()).Arg(slotNum));
+            }
+        }
+        else
+        {
+            return SendChatMessage(client, ChatType_t::CHAT_SELF,
+                libcomp::String("No item in slot %1").Arg(slotNum));
+        }
+    }
+
+    return SendChatMessage(client, ChatType_t::CHAT_SELF, "Could not scrap item");
+}
+
 bool ChatManager::GMCommand_Skill(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
 {
+    if(!HaveUserLevel(client, 250))
+    {
+        return true;
+    }
+
     std::list<libcomp::String> argsCopy = args;
 
     auto server = mServer.lock();
@@ -1203,6 +1409,11 @@ bool ChatManager::GMCommand_SkillPoint(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
 {
+    if(!HaveUserLevel(client, 250))
+    {
+        return true;
+    }
+
     std::list<libcomp::String> argsCopy = args;
 
     int32_t pointCount;
@@ -1221,6 +1432,11 @@ bool ChatManager::GMCommand_SlotAdd(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
 {
+    if(!HaveUserLevel(client, 650))
+    {
+        return true;
+    }
+
     std::list<libcomp::String> argsCopy = args;
 
     int8_t equipType;
@@ -1278,6 +1494,11 @@ bool ChatManager::GMCommand_Spawn(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
 {
+    if(!HaveUserLevel(client, 950))
+    {
+        return true;
+    }
+
     (void)args;
 
     auto server = mServer.lock();
@@ -1292,6 +1513,11 @@ bool ChatManager::GMCommand_Speed(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
 {
+    if(!HaveUserLevel(client, 200))
+    {
+        return true;
+    }
+
     std::list<libcomp::String> argsCopy = args;
 
     auto server = mServer.lock();
@@ -1319,8 +1545,12 @@ bool ChatManager::GMCommand_Speed(const std::shared_ptr<
 bool ChatManager::GMCommand_TickerMessage(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
-
 {
+    if(!HaveUserLevel(client, 100))
+    {
+        return true;
+    }
+
     auto server = mServer.lock();
     auto conf = std::dynamic_pointer_cast<objects::ChannelConfig>(server->GetConfig());
     std::list<libcomp::String> argsCopy = args;
@@ -1344,10 +1574,83 @@ bool ChatManager::GMCommand_TickerMessage(const std::shared_ptr<
     return true;
 }
 
+bool ChatManager::GMCommand_Tokusei(const std::shared_ptr<
+    channel::ChannelClientConnection>& client,
+    const std::list<libcomp::String>& args)
+{
+    if(!HaveUserLevel(client, 250))
+    {
+        return true;
+    }
+
+    std::list<libcomp::String> argsCopy = args;
+    
+    bool isClear = false;
+    if(argsCopy.size() > 0 && argsCopy.front() == "clear")
+    {
+        isClear = true;
+    }
+
+    auto server = mServer.lock();
+
+    int32_t tokuseiID;
+    if(!isClear)
+    {
+        if(!GetIntegerArg<int32_t>(tokuseiID, argsCopy))
+        {
+            return SendChatMessage(client, ChatType_t::CHAT_SELF,
+                "@tokusei requires a tokusei ID or \"clear\"");
+        }
+
+        auto definitionManager = server->GetDefinitionManager();
+        auto def = definitionManager->GetTokuseiData(tokuseiID);
+
+        if(!def)
+        {
+            return SendChatMessage(client, ChatType_t::CHAT_SELF,
+                libcomp::String("Invalid tokusei ID supplied: %1")
+                .Arg(tokuseiID));
+        }
+    }
+
+    uint16_t count = 1;
+    if(!isClear && !GetIntegerArg<uint16_t>(count, argsCopy))
+    {
+        return SendChatMessage(client, ChatType_t::CHAT_SELF,
+            "@tokusei requires an effect count if not clearing");
+    }
+
+    auto state = client->GetClientState();
+
+    libcomp::String target;
+    bool isDemon = GetStringArg(target, argsCopy) && target.ToLower() == "demon";
+    auto eState = isDemon
+        ? std::dynamic_pointer_cast<ActiveEntityState>(state->GetDemonState())
+        : std::dynamic_pointer_cast<ActiveEntityState>(state->GetCharacterState());
+
+    if(isClear)
+    {
+        eState->ClearAdditionalTokusei();
+    }
+    else
+    {
+        eState->SetAdditionalTokusei(tokuseiID, count);
+    }
+
+    server->GetTokuseiManager()->Recalculate(state->GetCharacterState(), true);
+
+    return true;
+}
+
 bool ChatManager::GMCommand_Valuable(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
 {
+    if(!HaveUserLevel(client, 200))
+    {
+        return true;
+    }
+
     std::list<libcomp::String> argsCopy = args;
 
     uint16_t valuableID;
@@ -1371,6 +1674,11 @@ bool ChatManager::GMCommand_Version(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
 {
+    if(!HaveUserLevel(client, 1))
+    {
+        return true;
+    }
+
     (void)args;
 
     SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(
@@ -1387,6 +1695,11 @@ bool ChatManager::GMCommand_Zone(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
 {
+    if(!HaveUserLevel(client, 200))
+    {
+        return true;
+    }
+
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
     auto server = mServer.lock();
@@ -1475,6 +1788,11 @@ bool ChatManager::GMCommand_XP(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
 {
+    if(!HaveUserLevel(client, 250))
+    {
+        return true;
+    }
+
     std::list<libcomp::String> argsCopy = args;
 
     uint64_t xpGain;
@@ -1492,6 +1810,21 @@ bool ChatManager::GMCommand_XP(const std::shared_ptr<
         : state->GetCharacterState()->GetEntityID();
 
     mServer.lock()->GetCharacterManager()->ExperienceGain(client, xpGain, entityID);
+
+    return true;
+}
+
+bool ChatManager::HaveUserLevel(const std::shared_ptr<
+    channel::ChannelClientConnection>& client, int32_t requiredLevel)
+{
+    int32_t currentLevel = client->GetClientState()->GetUserLevel();
+    if(currentLevel < requiredLevel)
+    {
+        SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(
+            "Requested GMand requires a user level of at least %1."
+            " Your level is only %2.").Arg(requiredLevel).Arg(currentLevel));
+        return false;
+    }
 
     return true;
 }

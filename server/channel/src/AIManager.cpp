@@ -33,10 +33,14 @@
 
 // object Includes
 #include <ActivatedAbility.h>
+#include <MiAIData.h>
+#include <MiAIRelationData.h>
 #include <MiBattleDamageData.h>
 #include <MiCategoryData.h>
 #include <MiDamageData.h>
+#include <MiDevilData.h>
 #include <MiEffectiveRangeData.h>
+#include <MiFindInfo.h>
 #include <MiSkillBasicData.h>
 #include <MiSkillData.h>
 #include <MiSkillItemStatusCommonData.h>
@@ -94,11 +98,21 @@ AIManager::~AIManager()
 }
 
 bool AIManager::Prepare(const std::shared_ptr<ActiveEntityState>& eState,
-    const libcomp::String& aiType)
+    const libcomp::String& aiType, uint8_t aggression)
 {
     auto aiState = std::make_shared<AIState>();
     eState->SetAIState(aiState);
 
+    auto demonData = eState->GetDevilData();
+    auto aiData = demonData ? mServer.lock()->GetDefinitionManager()->GetAIData(
+        demonData->GetAI()->GetType()) : nullptr;
+    if(!aiData)
+    {
+        LOG_ERROR("Active entity with invalid base AI data value specified\n");
+        return false;
+    }
+
+    std::shared_ptr<libcomp::ScriptEngine> aiEngine;
     if(!aiType.IsEmpty())
     {
         auto it = sPreparedScripts.find(aiType.C());
@@ -108,32 +122,45 @@ bool AIManager::Prepare(const std::shared_ptr<ActiveEntityState>& eState,
                 ->GetAIScript(aiType);
             if(!script)
             {
+                LOG_ERROR(libcomp::String("AI type '%1' does not exist\n")
+                    .Arg(aiType));
                 return false;
             }
 
-            auto engine = std::make_shared<libcomp::ScriptEngine>();
-            engine->Using<AIManager>();
+            aiEngine = std::make_shared<libcomp::ScriptEngine>();
+            aiEngine->Using<AIManager>();
 
-            if(!engine->Eval(script->Source))
+            if(!aiEngine->Eval(script->Source))
             {
+                LOG_ERROR(libcomp::String("AI type '%1' is not a valid AI script\n")
+                    .Arg(aiType));
                 return false;
             }
 
-            sPreparedScripts[aiType.C()] = engine;
-            aiState->SetScript(engine);
+            sPreparedScripts[aiType.C()] = aiEngine;
         }
         else
         {
-            aiState->SetScript(it->second);
+            aiEngine = it->second;
         }
 
         Sqrat::Function f(Sqrat::RootTable(aiState->GetScript()->GetVM()), "prepare");
         if(!f.IsNull())
         {
             auto result = !f.IsNull() ? f.Evaluate<int>(eState, this) : 0;
-            return result && (*result == 0);
+            if(!result || (*result != 0))
+            {
+                LOG_ERROR(libcomp::String("Failed to prepare AI type '%1'\n")
+                    .Arg(aiType));
+                return false;
+            }
         }
     }
+
+    aiState->SetAI(aiData, aiEngine, aggression);
+
+    // The first command all AI perform is a wait command
+    QueueWaitCommand(aiState, (uint32_t)aiState->GetThinkSpeed());
 
     return true;
 }
@@ -141,10 +168,13 @@ bool AIManager::Prepare(const std::shared_ptr<ActiveEntityState>& eState,
 void AIManager::UpdateActiveStates(const std::shared_ptr<Zone>& zone,
     uint64_t now)
 {
+    /// @todo
+    bool isNight = false;
+
     std::list<std::shared_ptr<EnemyState>> updated;
     for(auto enemy : zone->GetEnemies())
     {
-        if(UpdateState(enemy, now))
+        if(UpdateState(enemy, now, isNight))
         {
             updated.push_back(enemy);
         }
@@ -239,7 +269,7 @@ void AIManager::Move(const std::shared_ptr<ActiveEntityState>& eState,
 }
 
 bool AIManager::UpdateState(const std::shared_ptr<ActiveEntityState>& eState,
-    uint64_t now)
+    uint64_t now, bool isNight)
 {
     eState->RefreshCurrentPosition(now);
 
@@ -341,7 +371,7 @@ bool AIManager::UpdateState(const std::shared_ptr<ActiveEntityState>& eState,
             case objects::EntityStateObject::EntityType_t::ENEMY:
                 {
                     auto enemyState = std::dynamic_pointer_cast<EnemyState>(eState);
-                    return UpdateEnemyState(enemyState, now);
+                    return UpdateEnemyState(enemyState, now, isNight);
                 }
             case objects::EntityStateObject::EntityType_t::PARTNER_DEMON: // Maybe someday
                 /// @todo: handle ally NPCs
@@ -449,7 +479,8 @@ bool AIManager::UpdateState(const std::shared_ptr<ActiveEntityState>& eState,
                             activated->GetTargetObjectID(), ctx))
                         {
                             // Queue a wait command
-                            QueueWaitCommand(aiState, RNG(uint32_t, 4, 6));
+                            QueueWaitCommand(aiState, (uint32_t)(aiState->GetThinkSpeed()
+                                * RNG(int32_t, 1, 3)));
                         }
                         else
                         {
@@ -504,14 +535,15 @@ bool AIManager::UpdateState(const std::shared_ptr<ActiveEntityState>& eState,
     return false;
 }
 
-bool AIManager::UpdateEnemyState(const std::shared_ptr<EnemyState>& eState, uint64_t now)
+bool AIManager::UpdateEnemyState(const std::shared_ptr<EnemyState>& eState, uint64_t now,
+    bool isNight)
 {
     auto server = mServer.lock();
 
     auto aiState = eState->GetAIState();
     if(aiState->GetTarget() == 0 && eState->GetOpponentIDs().size() == 0)
     {
-        Retarget(eState, now);
+        Retarget(eState, now, isNight);
     }
 
     if(aiState->GetStatus() == AIStatus_t::WANDERING)
@@ -548,8 +580,7 @@ bool AIManager::UpdateEnemyState(const std::shared_ptr<EnemyState>& eState, uint
             }
         }
 
-        /// @todo: determine what this should be per demon type
-        QueueWaitCommand(aiState, RNG(uint32_t, 3, 9));
+        QueueWaitCommand(aiState, (uint32_t)(aiState->GetThinkSpeed() * RNG(int32_t, 1, 6)));
 
         return true;
     }
@@ -566,7 +597,7 @@ bool AIManager::UpdateEnemyState(const std::shared_ptr<EnemyState>& eState, uint
         if(inCombat)
         {
             // Try to find another opponent
-            target = Retarget(eState, now);
+            target = Retarget(eState, now, isNight);
         }
         else
         {
@@ -585,14 +616,15 @@ bool AIManager::UpdateEnemyState(const std::shared_ptr<EnemyState>& eState, uint
         targetDist = eState->GetDistance(targetX, targetY);
     }
 
+    // If the target is 1.5x the aggro distance, de-aggro
     bool targetChanged = false;
-    if(targetDist >= 5000.0)
+    if(targetDist >= aiState->GetAggroValue(isNight ? 1 : 0, false, 2000.f) * 1.5f)
     {
         // De-aggro on that one target and find a new one
         server->GetCharacterManager()->AddRemoveOpponent(false,
             eState, target);
 
-        target = Retarget(eState, now);
+        target = Retarget(eState, now, isNight);
         targetChanged = true;
     }
 
@@ -625,7 +657,7 @@ bool AIManager::UpdateEnemyState(const std::shared_ptr<EnemyState>& eState, uint
         auto skillManager = server->GetSkillManager();
 
         // Skill charged, cancel, execute or move within range
-        int64_t activationTarget = activated->GetActivationObjectID();
+        int64_t activationTarget = activated->GetTargetObjectID();
         if(activationTarget && targetEntityID != (int32_t)activationTarget)
         {
             // Target changed, cancel skill
@@ -671,7 +703,8 @@ bool AIManager::UpdateEnemyState(const std::shared_ptr<EnemyState>& eState, uint
         if(rCommand == 1)
         {
             // 10% chance to just wait
-            QueueWaitCommand(aiState, RNG(uint32_t, 1, 3));
+            QueueWaitCommand(aiState, (uint32_t)(aiState->GetThinkSpeed()
+                * RNG(int32_t, 1, 2)));
         }
         else
         {
@@ -693,8 +726,8 @@ bool AIManager::UpdateEnemyState(const std::shared_ptr<EnemyState>& eState, uint
                 {
                     // If the enemy can't move to the target, retarget
                     // and wait
-                    Retarget(eState, now);
-                    QueueWaitCommand(aiState, 2);
+                    Retarget(eState, now, isNight);
+                    QueueWaitCommand(aiState, (uint32_t)aiState->GetThinkSpeed());
                 }
             }
             else if(eState->CurrentSkillsCount() > 0)
@@ -729,7 +762,7 @@ bool AIManager::UpdateEnemyState(const std::shared_ptr<EnemyState>& eState, uint
 }
 
 std::shared_ptr<ActiveEntityState> AIManager::Retarget(const std::shared_ptr<EnemyState>& eState,
-    uint64_t now)
+    uint64_t now, bool isNight)
 {
     std::shared_ptr<ActiveEntityState> target;
 
@@ -744,9 +777,13 @@ std::shared_ptr<ActiveEntityState> AIManager::Retarget(const std::shared_ptr<Ene
     std::list<std::shared_ptr<ActiveEntityState>> possibleTargets;
     if(opponentIDs.size() > 0)
     {
+        float aggroNormal = aiState->GetAggroValue(isNight ? 1 : 0, false, 2000.f);
+        float aggroCast = aiState->GetAggroValue(2, false, 2000.f);
+        float aggroMax = aggroNormal > aggroCast ? aggroNormal : aggroCast;
+
         // Currently in combat, only pull from opponents
         auto inRange = zone->GetActiveEntitiesInRadius(
-            sourceX, sourceY, 4000.0);
+            sourceX, sourceY, aggroMax);
 
         for(auto entity : inRange)
         {
@@ -761,38 +798,76 @@ std::shared_ptr<ActiveEntityState> AIManager::Retarget(const std::shared_ptr<Ene
     {
         // Not in combat, find a target to pursue
 
-        // Default to 3000 units and 80 degree FoV angle (in radians)
-        /// @todo: use different value settings for different enemies
-        double maxAggroDistance = 3000.0;
-        float fovAngle = 1.395f;
-
-        auto geometry = zone->GetGeometry();
-
-        // Get all active entities in range
-        auto inRange = zone->GetActiveEntitiesInRadius(sourceX,
-            sourceY, maxAggroDistance);
-
-        // Remove allies and entities not ready yet
-        inRange.remove_if([eState](
-            const std::shared_ptr<ActiveEntityState>& entity)
-            {
-                return entity->GetFaction() == eState->GetFaction() ||
-                    !entity->Ready();
-            });
-        
-        if(inRange.size() > 0)
+        // If the entity has a low aggression level, check if targetting should occur
+        uint8_t aggression = aiState->GetAggression();
+        if(aggression < 100 && RNG(int32_t, 1, 100) > aggression)
         {
-            // Targets found, check if they're visible
-            for(auto entity : inRange)
+            return nullptr;
+        }
+
+        int32_t aggroLevelLimit = eState->GetCoreStats()->GetLevel() +
+            aiState->GetAIData()->GetAggroLevelLimit();
+
+        // Get aggro values, default to 2000 units and 80 degree FoV angle (in radians)
+        std::pair<float, float> aggroNormal(aiState->GetAggroValue(isNight ? 1 : 0, false,
+            2000.f), aiState->GetAggroValue(isNight ? 1 : 0, true, 1.395f));
+        std::pair<float, float> aggroCast(aiState->GetAggroValue(2, false, 2000.f),
+            aiState->GetAggroValue(2, true, 1.395f));
+
+        // Get all active entities in range and FoV (cast aggro first,
+        // leaving in doubles for higher chances when closer)
+        bool castingOnly = true;
+
+        std::list<std::shared_ptr<ActiveEntityState>> inFoV;
+        for(auto aggro : { aggroCast, aggroNormal })
+        {
+            auto filtered = zone->GetActiveEntitiesInRadius(sourceX,
+                sourceY, (double)aggro.first);
+
+            // Remove allies, entities not ready yet or in an invalid state
+            filtered.remove_if([eState, castingOnly](
+                const std::shared_ptr<ActiveEntityState>& entity)
+                {
+                    return entity->GetFaction() == eState->GetFaction() ||
+                        (castingOnly && !entity->GetStatusTimes(STATUS_CHARGING)) ||
+                        !entity->Ready();
+                });
+
+            // If the aggro level limit could potentially exclude a target
+            // filter them out now
+            if(aggroLevelLimit < 99)
             {
-                entity->RefreshCurrentPosition(now);
+                filtered.remove_if([aggroLevelLimit](
+                    const std::shared_ptr<ActiveEntityState>& entity)
+                    {
+                        auto cs = entity->GetCoreStats();
+                        return !cs || (int32_t)cs->GetLevel() > aggroLevelLimit;
+                    });
             }
 
-            // Filter the set down to only entities in the FoV
-            inRange = ZoneManager::GetEntitiesInFoV(inRange, sourceX,
-                sourceY, eState->GetCurrentRotation(), fovAngle);
+            if(filtered.size() > 0)
+            {
+                // Targets found, check if they're visible
+                for(auto entity : filtered)
+                {
+                    entity->RefreshCurrentPosition(now);
+                }
 
-            for(auto entity : inRange)
+                // Filter the set down to only entities in the FoV
+                for(auto fovEntity : ZoneManager::GetEntitiesInFoV(filtered, sourceX,
+                    sourceY, eState->GetCurrentRotation(), aggro.second))
+                {
+                    inFoV.push_back(fovEntity);
+                }
+            }
+
+            castingOnly = false;
+        }
+
+        if(inFoV.size() > 0)
+        {
+            auto geometry = zone->GetGeometry();
+            for(auto entity : inFoV)
             {
                 // Possible target found, check line of sight
                 bool add = true;
@@ -1012,7 +1087,7 @@ std::shared_ptr<AIMoveCommand> AIManager::GetMoveCommand(const std::shared_ptr<
 std::shared_ptr<AICommand> AIManager::GetWaitCommand(uint32_t waitTime) const
 {
     auto cmd = std::make_shared<AICommand>();
-    cmd->SetDelay((uint64_t)waitTime * 1000000);
+    cmd->SetDelay((uint64_t)waitTime * 1000);
 
     return cmd;
 }

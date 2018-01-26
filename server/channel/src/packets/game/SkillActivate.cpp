@@ -27,8 +27,12 @@
 #include "Packets.h"
 
 // libcomp Includes
+#include <ErrorCodes.h>
 #include <Log.h>
 #include <ManagerPacket.h>
+
+// object Includes
+#include <Item.h>
 
 // channel Includes
 #include "ChannelServer.h"
@@ -73,8 +77,24 @@ bool Parsers::SkillActivate::Parse(libcomp::ManagerPacket *pPacketManager,
             //Nothing special to do
             break;
         case ACTIVATION_DEMON:
-        case ACTIVATION_ITEM:
             targetObjectID = p.ReadS64Little();
+            break;
+        case ACTIVATION_ITEM:
+            {
+                targetObjectID = p.ReadS64Little();
+                auto item = std::dynamic_pointer_cast<objects::Item>(
+                    libcomp::PersistentObject::GetObjectByUUID(
+                        state->GetObjectUUID(targetObjectID)));
+
+                // If the item is invalid or it is an expired rental, fail the skill
+                if(!item || (item->GetRentalExpiration() > 0 &&
+                    item->GetRentalExpiration() < (uint32_t)std::time(0)))
+                {
+                    skillManager->SendFailure(source, skillID, client,
+                        (uint8_t)SkillErrorCodes_t::ITEM_USE);
+                    return true;
+                }
+            }
             break;
         case ACTIVATION_TARGET:
             targetObjectID = (int64_t)p.ReadS32Little();

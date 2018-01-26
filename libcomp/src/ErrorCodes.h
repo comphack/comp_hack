@@ -62,6 +62,55 @@ enum class ErrorCodes_t : int32_t
 };
 
 /**
+ * Error codes used for skill failure by the game client. Most will print a message
+ * in the player's chat window but they can include action requests.
+ */
+enum class SkillErrorCodes_t : uint8_t
+{
+    GENERIC = 0,    //!< Generic error has occurred, no message
+    GENERIC_USE = 2,    //!< Cannot be used
+    GENERIC_COST = 3,   //!< Cannot be paid for
+    COOLING_DOWN = 5,   //!< Cool down has not completed
+    ACTION_RETRY = 6,   //!< No message, request that client pursue and retry
+    CONDITION_RESTRICT = 10,    //!< Skill is not in a useable state
+    LOCATION_RESTRICT = 11, //!< Cannot be used in the current location
+    ITEM_USE = 12,  //!< Item cannot have its skill used
+    TALK_INVALID = 21,  //!< Target cannot be talked to
+    TALK_LEVEL = 22,    //!< Target's level is too high and cannot be talked
+    TALK_WONT_LISTEN = 23,  //!< Target refuses to listen to talk skills
+    SUMMON_INVALID = 26,    //!< Demon cannot be summoned
+    SUMMON_LEVEL = 28,  //!< Demon's level is too high and cannot be summoned
+    TARGET_INVALID = 35,    //!< Target invalid for skill
+    LNC_DIFFERENCE = 36,    //!< LNC differs
+    MOUNT_ITEM_MISSING = 37,    //!< Character does not have the right mount item
+    MOUNT_ITEM_DURABILITY = 38, //!< Mount iem's durability is zero
+    MOUNT_SUMMON_RESTRICT = 39, //!< Attempted to summon while on mount
+    MOUNT_DEMON_INVALID = 40,   //!< Partner demon cannot act as mount
+    MOUNT_TOO_FAR = 41, //!< Partner mount target is too far away
+    MOUNT_DEMON_CONDITION = 42, //!< Partner mount target condition is not valid
+    MOUNT_OTHER_SKILL_RESTRICT = 44,    //!< Attempted to use non-mount skill while on mount
+    MOUNT_MOVE_RESTRICT = 45,   //!< Cannot move so mounting not allowed
+    PARTNER_MISSING = 46,   //!< No partner demon summoned
+    PARTNER_FAMILIARITY = 47,   //!< Partner demon familiarity too low
+    PARTNER_DEAD = 50,  //!< Partner demon is dead
+    PARTNER_FAMILIARITY_ITEM = 52,  //!< Partner demon familiarity too low for item
+    PARTNER_TOO_FAR = 53,   //!< Partner demon is too far away
+    DEVIL_FUSION_RESTRICT = 54, //!< Devil fusion cannot be used in current location
+    MOOCH_PARTNER_MISSING = 55, //!< No partner demon summoned so mooch cannot be used
+    MOOCH_PARTNER_FAMILIARITY = 56, //!< Partner demon familiarity too low for mooch
+    MOOCH_PARTNER_DEAD = 59,    //!< Partner demon is dead so mooch cannot be used
+    MOOCH_PARTNER_TOO_FAR = 60, //!< Partner demon is too far away for mooch
+    INVENTORY_SPACE_PRESENT = 61,   //!< Inventory space needed to recieve demon present
+    INVENTORY_SPACE = 63,   //!< Inventory space needed to receive item
+    NOTHING_HAPPNED_NOW = 68,   //!< Nothing happened currently
+    NOTHING_HAPPNED_HERE = 69,  //!< Nothing happened in the current place
+    TIME_RESTRICT = 71, //!< Time invalid for use
+    ZONE_INVALID = 72,  //!< Target zone is not valid
+    PARTNER_INCOMPATIBLE = 75,  //!< Partner demon is incompatible
+    RESTRICED_USE = 76, //!< Skill use restricted
+};
+
+/**
  * Error codes used for player interaction "entrust" actions by the game client.
  */
 enum class EntrustErrorCodes_t : int32_t

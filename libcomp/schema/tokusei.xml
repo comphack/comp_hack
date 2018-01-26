@@ -8,6 +8,7 @@
             <value>DIGITALIZED</value>
             <value>EQUIPPED</value>
             <value>EQUIPPED_WEAPON_TYPE</value>
+            <value>EXPERTISE</value>
             <value>LNC</value>
             <value>GENDER</value>
             <value>SKILL_STATE</value>
@@ -92,7 +93,9 @@
             <value>KNOCKBACK_STATUS_ADD</value>
             <value>LIMIT_BREAK_MAX</value>
             <value>MP_COST_ADJUST</value>
+            <value>PURSUIT_AFFINITY_OVERRIDE</value>
             <value>SKILL_STACK_ADJUST</value>
+            <value>SKILL_ITEM_STACK_ADJUST</value>
             <value>SKILL_TARGET_OUTCOME</value>
             <value>STATUS_INFLICT_ADJUST</value>
             <value>WEAPON_AFFINITY_OVERRIDE</value>

@@ -44,6 +44,7 @@ namespace objects
 {
 class EnchantSetData;
 class EnchantSpecialData;
+class MiAIData;
 class MiCItemData;
 class MiCZoneRelationData;
 class MiDevilData;
@@ -91,6 +92,13 @@ public:
      * Clean up the DefinitionManager.
      */
     ~DefinitionManager();
+
+    /**
+     * Get the client-side AI definition corresponding to an ID
+     * @param id Client-side AI to retrieve
+     * @return Pointer to the matching client-side AI definition, null if it does not exist
+     */
+    const std::shared_ptr<objects::MiAIData> GetAIData(uint32_t id);
 
     /**
      * Get the devil definition corresponding to an ID
@@ -413,6 +421,13 @@ public:
     bool LoadAllData(gsl::not_null<DataStore*> pDataStore);
 
     /**
+     * Load the client-side AI binary data definitions
+     * @param pDataStore Pointer to the datastore to load binary file from
+     * @return true on success, false on failure
+     */
+    bool LoadAIData(gsl::not_null<DataStore*> pDataStore);
+
+    /**
      * Load the client item binary data definitions
      * @param pDataStore Pointer to the datastore to load binary file from
      * @return true on success, false on failure
@@ -725,6 +740,10 @@ private:
 
     /// List of default skill IDs characters are created with
     std::list<uint32_t> mDefaultCharacterSkills;
+
+    /// Map of client-side AI definitions by ID
+    std::unordered_map<uint32_t,
+        std::shared_ptr<objects::MiAIData>> mAIData;
 
     /// Map of item names to IDs
     std::unordered_map<libcomp::String, uint32_t> mCItemNameLookup;

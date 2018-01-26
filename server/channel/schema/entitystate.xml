@@ -112,6 +112,11 @@
         <member type="set" name="ActiveSwitchSkills">
             <element type="u32"/>
         </member>
+
+        <member type="map" name="AdditionalTokusei">
+            <key type="s32"/>
+            <value type="u16"/>
+        </member>
     </object>
     <object name="ActivatedAbility" scriptenabled="true" persistent="false">
         <member type="u32" name="SkillID"/>

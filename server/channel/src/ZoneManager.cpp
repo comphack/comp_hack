@@ -43,6 +43,7 @@
 #include <EntityStats.h>
 #include <Item.h>
 #include <ItemDrop.h>
+#include <MiAIData.h>
 #include <MiDevilData.h>
 #include <MiDynamicMapData.h>
 #include <MiGrowthData.h>
@@ -1798,7 +1799,8 @@ bool ZoneManager::UpdateSpawnGroups(const std::shared_ptr<Zone>& zone,
             bool encounterSpawn = !containsSimpleSpawns || eStateGroup != eStateGroups.front();
             for(auto eState : eStateGroup)
             {
-                if(aiManager->Prepare(eState))
+                auto spawn = eState->GetEntity()->GetSpawnSource();
+                if(aiManager->Prepare(eState, spawn->GetAIScriptID(), spawn->GetAggression()))
                 {
                     /// @todo: change this for enemies that don't wander
                     eState->GetAIState()->SetStatus(AIStatus_t::WANDERING, true);

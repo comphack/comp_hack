@@ -4,6 +4,7 @@
         <member type="enum" name="actionType" inherited="true" default="UPDATE_QUEST"/>
         <member type="s16" name="questID"/>
         <member type="s8" name="phase"/>
+        <member type="bool" name="forceUpdate"/>
         <member type="enum" name="flagSetMode" underlying="uint8_t">
             <value>UPDATE</value>
             <value>INCREMENT</value>

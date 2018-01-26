@@ -19,6 +19,7 @@
         <member type="array" name="FuseBonuses" size="3">
             <element type="s8"/>
         </member>
+        <member type="u32" name="RentalExpiration"/>
     </object>
     <object name="ItemBox" location="world">
         <member type="s64" name="BoxID"/>

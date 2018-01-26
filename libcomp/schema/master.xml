@@ -72,6 +72,7 @@
     <include path="event_prompt.xml"/>
 
     <!-- BinaryData Files -->
+    <include path="binarydata/aidata.xml"/>
     <include path="binarydata/ceventmessagedata.xml"/>
     <include path="binarydata/citemdata.xml"/>
     <include path="binarydata/cmessagedata.xml"/>

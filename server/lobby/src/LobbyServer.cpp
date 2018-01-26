@@ -506,7 +506,6 @@ void LobbyServer::PromptCreateAccount()
     account->SetEmail(email);
     account->SetPassword(password);
     account->SetSalt(salt);
-    account->SetIsGM(true);
     account->SetCP(cp);
     account->SetTicketCount(ticketCount);
     account->SetUserLevel(userLevel);

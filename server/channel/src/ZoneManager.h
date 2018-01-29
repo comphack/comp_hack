@@ -4,11 +4,11 @@
  *
  * @author HACKfrost
  *
- * @brief Manages zone instance objects and connections.
+ * @brief Manages zone objects and connections.
  *
  * This file is part of the Channel Server (channel).
  *
- * Copyright (C) 2012-2016 COMP_hack Team <compomega@tutanota.com>
+ * Copyright (C) 2012-2018 COMP_hack Team <compomega@tutanota.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as
@@ -31,6 +31,7 @@
 #include "ChannelClientConnection.h"
 #include "Zone.h"
 #include "ZoneGeometry.h"
+#include "ZoneInstance.h"
 
 namespace libcomp
 {
@@ -82,20 +83,20 @@ public:
     void InstanceGlobalZones();
 
     /**
-     * Get the zone instance associated to a client connection
+     * Get the zone associated to a client connection
      * @param client Client connection connected to a zone
-     * @return Pointer to a zone instance
+     * @return Pointer to a zone
      */
-    std::shared_ptr<Zone> GetZoneInstance(const std::shared_ptr<
+    std::shared_ptr<Zone> GetCurrentZone(const std::shared_ptr<
         ChannelClientConnection>& client);
 
     /**
-     * Get the zone instance associated to a character entity ID
+     * Get the zone associated to a character entity ID
      * @param worldCID World CID of the character associated to a client
      *  connection
-     * @return Pointer to a zone instance
+     * @return Pointer to a zone
      */
-    std::shared_ptr<Zone> GetZoneInstance(int32_t worldCID);
+    std::shared_ptr<Zone> GetCurrentZone(int32_t worldCID);
 
     /**
      * Associate a client connection to a zone
@@ -126,6 +127,36 @@ public:
      */
     void LeaveZone(const std::shared_ptr<ChannelClientConnection>& client,
         bool logOut, uint32_t newZoneID = 0, uint32_t newDynamicMapID = 0);
+
+    /**
+     * Create a zone instance with access granted for the client's current
+     * party
+     * @param client Client connection to create a zone instance for
+     * @param instanceID Definition ID of the instance to create
+     * @return Pointer to the new zone instance, null if it failed to create
+     */
+    std::shared_ptr<ZoneInstance> CreateInstance(const std::shared_ptr<
+        ChannelClientConnection>& client, uint32_t instanceID);
+
+    /**
+     * Get the zone instance the supplied client has access to. If an instance
+     * is prepared that the character has not entered yet, it will be returned.
+     * If not and the client is currently in a zone instance, that will be
+     * returned instead.
+     * @param client Client connection to create a zone instance for
+     * @return Pointer to the zone instance, null if none exist
+     */
+    std::shared_ptr<ZoneInstance> GetInstanceAccess(const std::shared_ptr<
+        ChannelClientConnection>& client);
+
+    /**
+     * Remove access to a zone instance by unique ID. If any characters are
+     * in the zones, they will not be kicked and the instance will be cleaned
+     * up when the last player leaves.
+     * @param instanceID Unique ID of the instance to clean up
+     * @return true if the instance was clenaed up, false it was not
+     */
+    bool ClearInstanceAccess(uint32_t instanceID);
 
     /**
      * Send data about entities that exist in a zone to a new connection and
@@ -302,8 +333,8 @@ public:
         bool includeSelf = true);
 
     /**
-     * Spawn an enemy in the specified zone instance at set coordinates
-     * @param zone Pointer to the zone instance where the enemy should be spawned
+     * Spawn an enemy in the specified zone at set coordinates
+     * @param zone Pointer to the zone where the enemy should be spawned
      * @param demonID Demon/enemy type ID to spawn
      * @param x X coordinate to render the enemy at
      * @param y Y coordinate to render the enemy at
@@ -316,8 +347,8 @@ public:
         float y, float rot, const libcomp::String& aiType = "");
 
     /**
-     * Update the specified zone instance's SpawnLocationGroups
-     * @param zone Pointer to the zone instance where the groups should be updated
+     * Update the specified zone's SpawnLocationGroups
+     * @param zone Pointer to the zone where the groups should be updated
      * @param refreshAll true if each group should be filled, false if only
      *  spawn groups with an elapsed refresh timer should be updated
      * @param now Current server time
@@ -443,8 +474,8 @@ private:
     static Point RotatePoint(const Point& p, const Point& origin, float radians);
 
     /**
-     * Create an enemy in the specified zone instance at set coordinates
-     * @param zone Pointer to the zone instance where the enemy should be spawned
+     * Create an enemy in the specified zone at set coordinates
+     * @param zone Pointer to the zone where the enemy should be spawned
      * @param demonID Demon/enemy type ID to spawn
      * @param spawn Optional pointer to the enemy's spawn definition
      * @param x X coordinate to render the enemy at
@@ -461,7 +492,7 @@ private:
      * @param client Pointer to the client connection to send to or use as
      *  an identifier for the zone to send to
      * @param enemyState Enemy state to use to report enemy data to the clients
-     * @param zone Pointer to the zone instance where the enemy exists
+     * @param zone Pointer to the zone where the enemy exists
      * @param sendToAll true if all clients in the zone should be sent the data
      *  false if just the supplied client should be sent to
      * @param queue true if the message should be queued, false if
@@ -483,41 +514,44 @@ private:
         uint32_t now);
 
     /**
-     * Get a zone instance by zone definition ID. This function is responsible for
-     * deciding if a non-public zone should have an additional instance created.
-     * @param zoneID Zone definition ID to get an instance for
-     * @param dynamicMapID Dynamic Map ID of the zone to to get an instance for
+     * Get a zone by zone definition ID. This function is responsible for
+     * deciding if a non-public zone should have an additional zone created.
+     * @param zoneID Zone definition ID to get a zone for
+     * @param dynamicMapID Dynamic Map ID of the zone to to get a zone for
      * @param client Pointer to the client connection to use to decide whether
-     *  a new instance should be created if the zone is private
-     * @return Pointer to a matching zone instance
+     *  a new zone should be created if the zone is private
+     * @param currentInstanceID Optional instance ID of the zone being moved from
+     * @return Pointer to a matching zone
      */
     std::shared_ptr<Zone> GetZone(uint32_t zoneID, uint32_t dynamicMapID,
-        const std::shared_ptr<ChannelClientConnection>& client);
+        const std::shared_ptr<ChannelClientConnection>& client,
+        uint32_t currentInstanceID = 0);
 
     /**
-     * Create a new zone instance based off of the supplied definition
+     * Create a new zone based off of the supplied definition
      * @param definition Pointer to a zone definition
-     * @param ownerID World CID of the character who will own the instance
-     * @return Pointer to a new zone instance
+     * @return Pointer to a new zone
      */
-    std::shared_ptr<Zone> CreateZoneInstance(
-        const std::shared_ptr<objects::ServerZone>& definition,
-        int32_t ownerID = 0);
+    std::shared_ptr<Zone> CreateZone(
+        const std::shared_ptr<objects::ServerZone>& definition);
 
-    /// Map of zone intances by instance ID
+    /// Map of zones by unique ID
     std::unordered_map<uint32_t, std::shared_ptr<Zone>> mZones;
 
-    /// Map of zone definition IDs to map of zone instance IDs by
+    /// Map of global zone definition IDs to map of zone unique IDs by
     /// dynamic map ID
     std::unordered_map<uint32_t,
-        std::unordered_map<uint32_t, std::set<uint32_t>>> mZoneMap;
+        std::unordered_map<uint32_t, uint32_t>> mGlobalZoneMap;
 
-    /// Map of zone instance IDs by owner world CID. Used to
-    /// persist zones until the last member of a party leaves the
-    /// final zone in a group.
-    std::unordered_map<int32_t, std::set<uint32_t>> mZoneOwnerMap;
+    /// Map of zone instances by unique ID
+    std::unordered_map<uint32_t, std::shared_ptr<ZoneInstance>> mZoneInstances;
 
-    /// Map of world CIDs to zone instance IDs
+    /// Map of world CIDs to the zone instances they have access to. The
+    /// moment a character enters the zone, they are removed from this map
+    /// as they are not able to intentionally re-enter
+    std::unordered_map<int32_t, uint32_t> mZoneInstanceAccess;
+
+    /// Map of world CIDs to zone unique IDs
     std::unordered_map<int32_t, uint32_t> mEntityMap;
 
     /// Map of QMP filenames to the geometry structures built from them
@@ -528,16 +562,19 @@ private:
     /// corresponding binary definitions
     std::unordered_map<uint32_t, std::shared_ptr<DynamicMap>> mDynamicMaps;
 
-    /// Set of all zone instances that should be considered active when
-    /// updating states. When an instnace is removed from this set but
+    /// Set of all zones that should be considered active when
+    /// updating states. When a zone is removed from this set but
     /// not removed entirely, its AI etc will be frozen until a player
     /// enters the zone again.
-    std::set<uint32_t> mActiveInstances;
+    std::set<uint32_t> mActiveZones;
 
     /// Pointer to the channel server
     std::weak_ptr<ChannelServer> mServer;
 
-    /// Next available zone instance ID
+    /// Next available zone unique ID
+    uint32_t mNextZoneID;
+
+    /// Next available zone instance unique ID
     uint32_t mNextZoneInstanceID;
 
     /// Server lock for shared resources

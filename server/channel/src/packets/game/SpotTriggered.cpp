@@ -72,7 +72,7 @@ bool Parsers::SpotTriggered::Parse(libcomp::ManagerPacket *pPacketManager,
         pPacketManager->GetServer());
     auto zoneManager = server->GetZoneManager();
     auto entity = state(connection)->GetCharacterState();
-    auto zone = zoneManager->GetZoneInstance(client);
+    auto zone = zoneManager->GetCurrentZone(client);
     auto zoneDef = zone->GetDefinition();
 
     // Ignore spot triggers that are not for the current character and in the

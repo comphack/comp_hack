@@ -69,6 +69,7 @@
             <value>EXPERTISE_ACTIVE</value>
             <value>EQUIPPED</value>
             <value>GENDER</value>
+            <value>INSTANCE_ACCESS</value>
             <value>INVENTORY_FREE</value>
             <value>LNC</value>
             <value>NPC_STATE</value>
@@ -87,6 +88,9 @@
 
             <!-- Custom flag types -->
             <value num="1001">ZONE_FLAGS</value>
+            <value>ZONE_CHARACTER_FLAGS</value>
+            <value>ZONE_INSTANCE_FLAGS</value>
+            <value>ZONE_INSTANCE_CHARACTER_FLAGS</value>
             <value>QUEST_FLAGS</value>
         </member>
         <member type="s32" name="value1"/>

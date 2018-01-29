@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="ActionZoneInstance" baseobject="Action" persistent="false">
+        <member type="enum" name="actionType" inherited="true" default="ZONE_INSTANCE"/>
+        <member type="u32" name="instanceID"/>
+        <member type="enum" name="mode" underlying="uint8_t">
+            <value>CREATE</value>
+            <value>JOIN</value>
+            <value>REMOVE</value>
+        </member>
+    </object>
+</objgen>

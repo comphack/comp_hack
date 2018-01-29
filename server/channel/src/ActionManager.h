@@ -9,7 +9,7 @@
  *
  * This file is part of the Channel Server (channel).
  *
- * Copyright (C) 2012-2017 COMP_hack Team <compomega@tutanota.com>
+ * Copyright (C) 2012-2018 COMP_hack Team <compomega@tutanota.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as
@@ -202,6 +202,13 @@ private:
      * @retval false The action list should stop after this action.
      */
     bool UpdateZoneFlags(ActionContext& ctx);
+
+    /**
+     * Update the instance related to the current character.
+     * @param ctx ActionContext for the executing source information.
+     * @retval false The action list should stop after this action.
+     */
+    bool UpdateZoneInstance(ActionContext& ctx);
 
     /**
      * Spawn an enemy spawn group by ID in the client's current zone.

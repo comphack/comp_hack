@@ -239,6 +239,7 @@ SET(${PROJECT_NAME}_SCHEMA
     schema/action_updatequest.xml
     schema/action_updatezoneflags.xml
     schema/action_zonechange.xml
+    schema/action_zoneinstance.xml
     schema/character.xml
     schema/clan.xml
     schema/databaseconfig.xml
@@ -363,6 +364,8 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     ActionUpdateQuest.cpp
     ActionUpdateZoneFlags.h
     ActionUpdateZoneFlags.cpp
+    ActionZoneInstance.h
+    ActionZoneInstance.cpp
     ActionZoneChange.h
     ActionZoneChange.cpp
     BazaarData.h
@@ -497,6 +500,8 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     ServerShopTab.cpp
     ServerZone.h
     ServerZone.cpp
+    ServerZoneInstance.h
+    ServerZoneInstance.cpp
     ServerZoneSpot.h
     ServerZoneSpot.cpp
     StatusEffect.h

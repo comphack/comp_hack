@@ -8,7 +8,7 @@
  *
  * This file is part of the Channel Server (channel).
  *
- * Copyright (C) 2012-2016 COMP_hack Team <compomega@tutanota.com>
+ * Copyright (C) 2012-2018 COMP_hack Team <compomega@tutanota.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as
@@ -203,7 +203,7 @@ private:
      * Get a CalculatedEntityState based upon the skill being executed and
      * the state of the entity as either the source or a target of the skill.
      * @param eState Pointer to the entity to get a CalculatedEntityState for
-     * @param skill Current skill processing state
+     * @param pSkill Pointer to the current skill processing state
      * @param isTarget false if the entity is the source of the skill, false
      *  if the entity is a target
      * @param otherState Pointer to the source entity if a target is being
@@ -216,7 +216,8 @@ private:
      *  context, the same one will be returned.
      */
     std::shared_ptr<objects::CalculatedEntityState> GetCalculatedState(
-        const std::shared_ptr<ActiveEntityState>& eState, ProcessingSkill& skill,
+        const std::shared_ptr<ActiveEntityState>& eState,
+        const std::shared_ptr<channel::ProcessingSkill>& pSkill,
         bool isTarget, const std::shared_ptr<ActiveEntityState>& otherState);
 
     /**
@@ -224,7 +225,7 @@ private:
      * supplied entities.
      * @param eState Pointer to the entity the effect applies to
      * @param condition Pointer to the condition definition
-     * @param skill Current skill processing state
+     * @param pSkill Pointer to the current skill processing state
      * @param otherState Pointer to the source entity if a target is being
      *  calculated or the target in question if the source is being calculated.
      *  If the skill is still being checked validity, supplying no entity
@@ -233,17 +234,19 @@ private:
      */
     bool EvaluateTokuseiSkillCondition(const std::shared_ptr<ActiveEntityState>& eState,
         const std::shared_ptr<objects::TokuseiSkillCondition>& condition,
-        ProcessingSkill& skill, const std::shared_ptr<ActiveEntityState>& otherState);
+        const std::shared_ptr<channel::ProcessingSkill>& pSkill,
+        const std::shared_ptr<ActiveEntityState>& otherState);
 
     /**
      * Calculate and set the offense value of a damage dealing skill.
      * @param source Pointer to the state of the source entity
      * @param target Pointer to the state of the target entity
-     * @param skill Current skill processing state
+     * @param pSkill Pointer to the current skill processing state
      * @return Calculated offsense value of the skill
      */
     uint16_t CalculateOffenseValue(const std::shared_ptr<ActiveEntityState>& source,
-        const std::shared_ptr<ActiveEntityState>& target, ProcessingSkill& skill);
+        const std::shared_ptr<ActiveEntityState>& target,
+        const std::shared_ptr<channel::ProcessingSkill>& pSkill);
 
     /**
      * Determine how each targeted entity reacts to being hit by a skill. This
@@ -332,17 +335,17 @@ private:
     /**
      * Calculate skill damage or healing using the correct formula
      * @param source Pointer to the entity that activated the skill
-     * @param skill Current skill processing state
+     * @param pSkill Pointer to the current skill processing state
      * @return true if the calculation succeeded, false otherwise
      */
     bool CalculateDamage(const std::shared_ptr<ActiveEntityState>& source,
-        ProcessingSkill& skill);
+        const std::shared_ptr<channel::ProcessingSkill>& pSkill);
 
     /**
      * Calculate skill damage or healing using the default formula
      * @param source Pointer to the entity that activated the skill
      * @param target Pointer to the entity that will receive damage
-     * @param skill Current skill processing state
+     * @param pSkill Pointer to the current skill processing state
      * @param mod Base modifier damage value
      * @param damageType Type of damage being dealt
      * @param affinity Target specific affinity type for the skill
@@ -355,9 +358,9 @@ private:
      * @return Calculated damage or healing
      */
     int32_t CalculateDamage_Normal(const std::shared_ptr<ActiveEntityState>& source,
-        SkillTargetResult& target, ProcessingSkill& skill, uint16_t mod,
-        uint8_t& damageType, uint8_t affinity, float resist, uint8_t critLevel,
-        bool isHeal);
+        SkillTargetResult& target, const std::shared_ptr<
+        channel::ProcessingSkill>& pSkill, uint16_t mod, uint8_t& damageType,
+        uint8_t affinity, float resist, uint8_t critLevel, bool isHeal);
 
     /**
      * Calculate skill damage or healing based on a static value

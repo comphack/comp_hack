@@ -8,7 +8,7 @@
  *
  * This file is part of the Channel Server (channel).
  *
- * Copyright (C) 2012-2016 COMP_hack Team <compomega@tutanota.com>
+ * Copyright (C) 2012-2018 COMP_hack Team <compomega@tutanota.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as
@@ -50,6 +50,7 @@
 #include <MiZoneData.h>
 #include <PostItem.h>
 #include <ServerZone.h>
+#include <ServerZoneInstance.h>
 
 // channel Includes
 #include <ChannelServer.h>
@@ -76,6 +77,7 @@ ChatManager::ChatManager(const std::weak_ptr<ChannelServer>& server)
     mGMands["familiarity"] = &ChatManager::GMCommand_Familiarity;
     mGMands["goto"] = &ChatManager::GMCommand_Goto;
     mGMands["homepoint"] = &ChatManager::GMCommand_Homepoint;
+    mGMands["instance"] = &ChatManager::GMCommand_Instance;
     mGMands["item"] = &ChatManager::GMCommand_Item;
     mGMands["kick"] = &ChatManager::GMCommand_Kick;
     mGMands["kill"] = &ChatManager::GMCommand_Kill;
@@ -572,7 +574,7 @@ bool ChatManager::GMCommand_Enemy(const std::shared_ptr<
     }
 
     auto def = definitionManager->GetDevilData(demonID);
-    auto zone = zoneManager->GetZoneInstance(client);
+    auto zone = zoneManager->GetCurrentZone(client);
 
     if(nullptr == def)
     {
@@ -819,6 +821,59 @@ bool ChatManager::GMCommand_Homepoint(const std::shared_ptr<
 
     return SendChatMessage(client, ChatType_t::CHAT_SELF,
         "No valid spot ID found for the current zone");
+}
+
+bool ChatManager::GMCommand_Instance(const std::shared_ptr<
+    channel::ChannelClientConnection>& client,
+    const std::list<libcomp::String>& args)
+{
+    if(!HaveUserLevel(client, 200))
+    {
+        return true;
+    }
+
+    std::list<libcomp::String> argsCopy = args;
+
+    uint32_t instanceID;
+
+    if(!GetIntegerArg<uint32_t>(instanceID, argsCopy))
+    {
+        return SendChatMessage(client, ChatType_t::CHAT_SELF,
+            "@instance requires a zone instance ID");
+    }
+
+    auto server = mServer.lock();
+    auto serverDataManager = server->GetServerDataManager();
+    auto zoneManager = server->GetZoneManager();
+
+    auto instDef = serverDataManager->GetZoneInstanceData(instanceID);
+    if(!instDef)
+    {
+        return SendChatMessage(client, ChatType_t::CHAT_SELF,
+            libcomp::String("Invalid instance ID supplied: %1").Arg(instanceID));
+    }
+
+    auto instance = zoneManager->CreateInstance(client, instanceID);
+    bool success = instance != nullptr;
+    if(success)
+    {
+        uint32_t firstZoneID = *instDef->ZoneIDsBegin();
+        uint32_t firstDynamicMapID = *instDef->DynamicMapIDsBegin();
+
+        auto zoneDef = server->GetServerDataManager()->GetZoneData(
+            firstZoneID, firstDynamicMapID);
+        success = zoneManager->EnterZone(client, firstZoneID,
+            firstDynamicMapID, zoneDef->GetStartingX(),
+            zoneDef->GetStartingY(), zoneDef->GetStartingRotation());
+    }
+
+    if(!success)
+    {
+        return SendChatMessage(client, ChatType_t::CHAT_SELF,
+            libcomp::String("Failed to add to instance: %1").Arg(instanceID));
+    }
+
+    return true;
 }
 
 bool ChatManager::GMCommand_Item(const std::shared_ptr<
@@ -1503,7 +1558,7 @@ bool ChatManager::GMCommand_Spawn(const std::shared_ptr<
 
     auto server = mServer.lock();
     auto zoneManager = server->GetZoneManager();
-    auto zone = zoneManager->GetZoneInstance(client);
+    auto zone = zoneManager->GetCurrentZone(client);
 
     zoneManager->UpdateSpawnGroups(zone, true);
     return true;
@@ -1772,8 +1827,13 @@ bool ChatManager::GMCommand_Zone(const std::shared_ptr<
                 "command with proper inputs.");
         }
 
-        zoneManager->EnterZone(client, zoneID, dynamicMapID,
-            xCoord, yCoord, rotation);
+        if(!zoneManager->EnterZone(client, zoneID, dynamicMapID,
+            xCoord, yCoord, rotation))
+        {
+            return SendChatMessage(client, ChatType_t::CHAT_SELF,
+                libcomp::String("Failed to enter zone: %1 (%2)")
+                .Arg(zoneID).Arg(dynamicMapID));
+        }
         
         return true;
     }

@@ -60,6 +60,7 @@ SET(${PROJECT_NAME}_SRCS
     src/SkillManager.cpp
     src/TokuseiManager.cpp
     src/Zone.cpp
+    src/ZoneInstance.cpp
     src/ZoneGeometry.cpp
     src/ZoneManager.cpp
     src/main.cpp
@@ -91,6 +92,7 @@ SET(${PROJECT_NAME}_HDRS
     src/SkillManager.h
     src/TokuseiManager.h
     src/Zone.h
+    src/ZoneInstance.h
     src/ZoneGeometry.h
     src/ZoneManager.h
 )

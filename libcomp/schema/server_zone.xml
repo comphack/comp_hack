@@ -49,4 +49,14 @@
             <element type="Action*"/>
         </member>
     </object>
+    <object name="ServerZoneInstance" persistent="false">
+        <member type="u32" name="ID"/>
+        <member type="u32" name="LobbyID"/>
+        <member type="list" name="ZoneIDs">
+            <element type="u32"/>
+        </member>
+        <member type="list" name="DynamicMapIDs">
+            <element type="u32"/>
+        </member>
+    </object>
 </objgen>

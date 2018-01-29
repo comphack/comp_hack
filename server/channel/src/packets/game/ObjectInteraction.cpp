@@ -67,7 +67,7 @@ bool Parsers::ObjectInteraction::Parse(libcomp::ManagerPacket *pPacketManager,
         connection);
     auto server = std::dynamic_pointer_cast<ChannelServer>(
         pPacketManager->GetServer());
-    auto zone = server->GetZoneManager()->GetZoneInstance(client);
+    auto zone = server->GetZoneManager()->GetCurrentZone(client);
     auto zoneDef = zone->GetDefinition();
 
     std::list<std::shared_ptr<objects::Action>> actions;

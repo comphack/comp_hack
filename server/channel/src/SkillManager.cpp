@@ -8,7 +8,7 @@
  *
  * This file is part of the Channel Server (channel).
  *
- * Copyright (C) 2012-2016 COMP_hack Team <compomega@tutanota.com>
+ * Copyright (C) 2012-2018 COMP_hack Team <compomega@tutanota.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as
@@ -247,7 +247,7 @@ bool SkillManager::ActivateSkill(const std::shared_ptr<ActiveEntityState> source
     if(chargeTime > 0)
     {
         auto pSkill = GetProcessingSkill(activated, nullptr, client);
-        auto calcState = GetCalculatedState(source, *pSkill, false, nullptr);
+        auto calcState = GetCalculatedState(source, pSkill, false, nullptr);
 
         int16_t chargeAdjust = source->GetCorrectValue(
             CorrectTbl::CHANT_TIME, calcState);
@@ -502,7 +502,7 @@ bool SkillManager::ExecuteSkill(std::shared_ptr<ActiveEntityState> source,
     }
 
     auto pSkill = GetProcessingSkill(activated, ctx, client);
-    pSkill->SourceExecutionState = GetCalculatedState(source, *pSkill, false, nullptr);
+    pSkill->SourceExecutionState = GetCalculatedState(source, pSkill, false, nullptr);
 
     // Check costs and pay costs (skip for switch deactivation)
     int32_t hpCost = 0, mpCost = 0;
@@ -837,7 +837,13 @@ bool SkillManager::ExecuteNormalSkill(const std::shared_ptr<ChannelClientConnect
     {
         // Non-projectile skill, calculate damage and effects immediately
         FinalizeSkillExecution(client, ctx, activated);
-        return ProcessSkillResult(activated, ctx);
+        if(!ProcessSkillResult(activated, ctx))
+        {
+            SendFailure(source, skillID, client);
+            return false;
+        }
+
+        return true;
     }
     else
     {
@@ -848,6 +854,7 @@ bool SkillManager::ExecuteNormalSkill(const std::shared_ptr<ChannelClientConnect
         // If it isn't valid at this point, fail the skill
         if(!target)
         {
+            SendFailure(source, skillID, client);
             return false;
         }
 
@@ -861,6 +868,7 @@ bool SkillManager::ExecuteNormalSkill(const std::shared_ptr<ChannelClientConnect
         if((float)maxTargetRange < distance)
         {
             // Out of range, fail execution
+            SendFailure(source, skillID, client);
             return false;
         }
 
@@ -900,7 +908,7 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
     auto skillData = definitionManager->GetSkillData(skillID);
 
     auto pSkill = GetProcessingSkill(activated, ctx, nullptr);
-    ProcessingSkill& skill = *pSkill;
+    ProcessingSkill& skill = *pSkill.get();
 
     // Get the target of the spell
     uint16_t initialFlags1 = 0;
@@ -946,8 +954,8 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
 
             SkillTargetResult target;
             target.EntityState = targetEntity;
-            target.CalcState = GetCalculatedState(targetEntity, skill, true, source);
-            GetCalculatedState(source, skill, false, targetEntity);
+            target.CalcState = GetCalculatedState(targetEntity, pSkill, true, source);
+            GetCalculatedState(source, pSkill, false, targetEntity);
 
             if(SetNRA(target, skill))
             {
@@ -960,8 +968,8 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
                 // Determine NRA for reflect
                 SkillTargetResult selfTarget;
                 selfTarget.EntityState = source;
-                selfTarget.CalcState = GetCalculatedState(source, skill, true, source);
-                GetCalculatedState(source, skill, false, source);
+                selfTarget.CalcState = GetCalculatedState(source, pSkill, true, source);
+                GetCalculatedState(source, pSkill, false, source);
                 SetNRA(selfTarget, skill);
 
                 initialFlags1 = selfTarget.Flags1;
@@ -1208,9 +1216,9 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
         SkillTargetResult target;
         target.PrimaryTarget = isPrimaryTarget;
         target.EntityState = effectiveTarget;
-        target.CalcState = GetCalculatedState(effectiveTarget, skill, true,
+        target.CalcState = GetCalculatedState(effectiveTarget, pSkill, true,
             source);
-        GetCalculatedState(source, skill, false, effectiveTarget);
+        GetCalculatedState(source, pSkill, false, effectiveTarget);
 
         // Set NRA
         // If the primary target is still in the set and a reflect did not
@@ -1245,8 +1253,8 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
         target.EntityState = source;
 
         // Calculate the effects done to and from the source itself
-        target.CalcState = GetCalculatedState(source, skill, true, source);
-        GetCalculatedState(source, skill, false, source);
+        target.CalcState = GetCalculatedState(source, pSkill, true, source);
+        GetCalculatedState(source, pSkill, false, source);
 
         skill.Targets.push_back(target);
         SetNRA(target, skill);
@@ -1285,9 +1293,10 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
     return true;
 }
 
-void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<channel::ProcessingSkill>& pSkill)
+void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill>& pSkill)
 {
-    auto skill = *pSkill;
+    ProcessingSkill& skill = *pSkill.get();
+
     auto activated = skill.Activated;
     auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated->GetSourceEntity());
     auto zone = source->GetZone();
@@ -1303,7 +1312,7 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<channel::Proces
     if(hasBattleDamage)
     {
         auto battleDamage = damageData->GetBattleDamage();
-        if(!CalculateDamage(source, skill))
+        if(!CalculateDamage(source, pSkill))
         {
             LOG_ERROR(libcomp::String("Damage failed to calculate: %1\n")
                 .Arg(skill.SkillID));
@@ -1386,7 +1395,7 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<channel::Proces
     {
         if(target.HitAvoided) continue;
 
-        auto targetCalc = GetCalculatedState(target.EntityState, skill, true, source);
+        auto targetCalc = GetCalculatedState(target.EntityState, pSkill, true, source);
 
         target.EntityState->RefreshCurrentPosition(now);
         cancellations[target.EntityState] = 0;
@@ -1431,7 +1440,7 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<channel::Proces
         {
             auto statusAdjusts = tokuseiManager->GetAspectMap(source,
                 TokuseiAspectType::STATUS_INFLICT_ADJUST,
-                GetCalculatedState(source, skill, false, target.EntityState));
+                GetCalculatedState(source, pSkill, false, target.EntityState));
 
             for(auto addStatus : addStatuses)
             {
@@ -1646,7 +1655,7 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<channel::Proces
             double talkSuccess = spawn ? (double)(100 - spawn->GetTalkResist()) : 0.0;
             if(talkType != 0 && talkSuccess != 0.0)
             {
-                auto calcState = GetCalculatedState(source, skill, false,
+                auto calcState = GetCalculatedState(source, pSkill, false,
                     target.EntityState);
 
                 auto adjust = tokuseiManager->GetAspectMap(source,
@@ -2241,9 +2250,12 @@ std::shared_ptr<ProcessingSkill> SkillManager::GetProcessingSkill(
 
 
 std::shared_ptr<objects::CalculatedEntityState> SkillManager::GetCalculatedState(
-    const std::shared_ptr<ActiveEntityState>& eState, ProcessingSkill& skill,
+    const std::shared_ptr<ActiveEntityState>& eState,
+    const std::shared_ptr<ProcessingSkill>& pSkill,
     bool isTarget, const std::shared_ptr<ActiveEntityState>& otherState)
 {
+    ProcessingSkill& skill = *pSkill.get();
+
     std::shared_ptr<objects::CalculatedEntityState> calcState;
     if(isTarget)
     {
@@ -2285,7 +2297,7 @@ std::shared_ptr<objects::CalculatedEntityState> SkillManager::GetCalculatedState
                 {
                     if(condition->GetTargetCondition() != isTarget ||
                         !EvaluateTokuseiSkillCondition(eState, condition,
-                        skill, otherState))
+                        pSkill, otherState))
                     {
                         add = false;
                         break;
@@ -2323,9 +2335,12 @@ std::shared_ptr<objects::CalculatedEntityState> SkillManager::GetCalculatedState
 }
 
 bool SkillManager::EvaluateTokuseiSkillCondition(const std::shared_ptr<ActiveEntityState>& eState,
-    const std::shared_ptr<objects::TokuseiSkillCondition>& condition, ProcessingSkill& skill,
+    const std::shared_ptr<objects::TokuseiSkillCondition>& condition,
+    const std::shared_ptr<ProcessingSkill>& pSkill,
     const std::shared_ptr<ActiveEntityState>& otherState)
 {
+    ProcessingSkill& skill = *pSkill.get();
+
     // TokuseiSkillCondition comparators can only be equals or not equal
     bool negate = condition->GetComparator() != objects::TokuseiCondition::Comparator_t::NOT_EQUAL;
 
@@ -2466,8 +2481,10 @@ bool SkillManager::EvaluateTokuseiSkillCondition(const std::shared_ptr<ActiveEnt
 }
 
 uint16_t SkillManager::CalculateOffenseValue(const std::shared_ptr<ActiveEntityState>& source,
-    const std::shared_ptr<ActiveEntityState>& target, ProcessingSkill& skill)
+    const std::shared_ptr<ActiveEntityState>& target,
+    const std::shared_ptr<ProcessingSkill>& pSkill)
 {
+    ProcessingSkill& skill = *pSkill.get();
     if(skill.OffenseValues.find(target->GetEntityID()) != skill.OffenseValues.end())
     {
         return skill.OffenseValues[target->GetEntityID()];
@@ -2483,7 +2500,7 @@ uint16_t SkillManager::CalculateOffenseValue(const std::shared_ptr<ActiveEntityS
     }
     else
     {
-        auto calcState = GetCalculatedState(source, skill, false, target);
+        auto calcState = GetCalculatedState(source, pSkill, false, target);
 
         int16_t clsr = calcState->GetCorrectTbl((size_t)CorrectTbl::CLSR);
         int16_t lngr = calcState->GetCorrectTbl((size_t)CorrectTbl::LNGR);
@@ -2558,7 +2575,7 @@ uint16_t SkillManager::CalculateOffenseValue(const std::shared_ptr<ActiveEntityS
         // If countering, modify the offensive value with the offense value
         // of the original skill used
         uint16_t counterOff = CalculateOffenseValue(target, source,
-            *skill.ExecutionContext->CounteredSkill);
+            skill.ExecutionContext->CounteredSkill);
 
         off = (uint16_t)(off + (counterOff * 2));
     }
@@ -2569,7 +2586,7 @@ uint16_t SkillManager::CalculateOffenseValue(const std::shared_ptr<ActiveEntityS
 }
 
 void SkillManager::CheckSkillHits(const std::shared_ptr<ActiveEntityState>& source,
-    const std::shared_ptr<channel::ProcessingSkill>& pSkill)
+    const std::shared_ptr<ProcessingSkill>& pSkill)
 {
     auto server = mServer.lock();
     auto definitionManager = server->GetDefinitionManager();
@@ -2601,7 +2618,7 @@ void SkillManager::CheckSkillHits(const std::shared_ptr<ActiveEntityState>& sour
 }
 
 void SkillManager::HandleGuard(const std::shared_ptr<ActiveEntityState>& source,
-    SkillTargetResult& target, const std::shared_ptr<channel::ProcessingSkill>& pSkill)
+    SkillTargetResult& target, const std::shared_ptr<ProcessingSkill>& pSkill)
 {
     auto tActivated = target.EntityState->GetActivatedAbility();
     if(!tActivated)
@@ -2641,7 +2658,7 @@ void SkillManager::HandleGuard(const std::shared_ptr<ActiveEntityState>& source,
 }
 
 void SkillManager::HandleCounter(const std::shared_ptr<ActiveEntityState>& source,
-    SkillTargetResult& target, const std::shared_ptr<channel::ProcessingSkill>& pSkill)
+    SkillTargetResult& target, const std::shared_ptr<ProcessingSkill>& pSkill)
 {
     auto tActivated = target.EntityState->GetActivatedAbility();
     if(!tActivated)
@@ -2679,7 +2696,7 @@ void SkillManager::HandleCounter(const std::shared_ptr<ActiveEntityState>& sourc
 }
 
 void SkillManager::HandleDodge(const std::shared_ptr<ActiveEntityState>& source,
-    SkillTargetResult& target, const std::shared_ptr<channel::ProcessingSkill>& pSkill)
+    SkillTargetResult& target, const std::shared_ptr<ProcessingSkill>& pSkill)
 {
     auto tActivated = target.EntityState->GetActivatedAbility();
     if(!tActivated)
@@ -3446,8 +3463,10 @@ bool SkillManager::ToggleSwitchSkill(const std::shared_ptr<ChannelClientConnecti
 }
 
 bool SkillManager::CalculateDamage(const std::shared_ptr<ActiveEntityState>& source,
-    ProcessingSkill& skill)
+    const std::shared_ptr<ProcessingSkill>& pSkill)
 {
+    ProcessingSkill& skill = *pSkill.get();
+
     auto damageData = skill.Definition->GetDamage()->GetBattleDamage();
     auto formula = damageData->GetFormula();
 
@@ -3474,8 +3493,8 @@ bool SkillManager::CalculateDamage(const std::shared_ptr<ActiveEntityState>& sou
         case objects::MiBattleDamageData::Formula_t::DMG_COUNTER:
         case objects::MiBattleDamageData::Formula_t::HEAL_NORMAL:
             {
-                auto calcState = GetCalculatedState(source, skill, false, target.EntityState);
-                auto targetState = GetCalculatedState(target.EntityState, skill, true, source);
+                auto calcState = GetCalculatedState(source, pSkill, false, target.EntityState);
+                auto targetState = GetCalculatedState(target.EntityState, pSkill, true, source);
 
                 int16_t sourceLuck = source->GetCorrectValue(CorrectTbl::LUCK, calcState);
                 int16_t critValue = (int16_t)(source->GetCorrectValue(CorrectTbl::CRITICAL, calcState) +
@@ -3530,9 +3549,9 @@ bool SkillManager::CalculateDamage(const std::shared_ptr<ActiveEntityState>& sou
                     resist = 0;
                 }
 
-                target.Damage1 = CalculateDamage_Normal(source, target, skill, mod1,
+                target.Damage1 = CalculateDamage_Normal(source, target, pSkill, mod1,
                     target.Damage1Type, skill.EffectiveAffinity, resist, critLevel, isHeal);
-                target.Damage2 = CalculateDamage_Normal(source, target, skill, mod2,
+                target.Damage2 = CalculateDamage_Normal(source, target, pSkill, mod2,
                     target.Damage2Type, skill.EffectiveAffinity, resist, critLevel, isHeal);
 
                 // Set crits, protect, weakpoint, if not healing
@@ -3615,7 +3634,7 @@ bool SkillManager::CalculateDamage(const std::shared_ptr<ActiveEntityState>& sou
 
                                 uint8_t damageType;
                                 target.PursuitDamage = CalculateDamage_Normal(source, target,
-                                    skill, mod1, damageType, target.PursuitAffinity, resist,
+                                    pSkill, mod1, damageType, target.PursuitAffinity, resist,
                                     critLevel, false);
                             }
                         }
@@ -3772,22 +3791,23 @@ bool SkillManager::CalculateDamage(const std::shared_ptr<ActiveEntityState>& sou
 }
 
 int32_t SkillManager::CalculateDamage_Normal(const std::shared_ptr<
-    ActiveEntityState>& source, SkillTargetResult& target, ProcessingSkill& skill,
-    uint16_t mod, uint8_t& damageType, uint8_t affinity, float resist, uint8_t critLevel,
-    bool isHeal)
+    ActiveEntityState>& source, SkillTargetResult& target,
+    const std::shared_ptr<ProcessingSkill>& pSkill, uint16_t mod,
+    uint8_t& damageType, uint8_t affinity, float resist, uint8_t critLevel, bool isHeal)
 {
     int32_t amount = 0;
 
     if(mod != 0)
     {
+        ProcessingSkill& skill = *pSkill.get();
         auto damageData = skill.Definition->GetDamage()->GetBattleDamage();
         bool isSimpleDamage = damageData->GetFormula() ==
             objects::MiBattleDamageData::Formula_t::DMG_NORMAL_SIMPLE;
 
-        auto calcState = GetCalculatedState(source, skill, false, target.EntityState);
-        auto targetState = GetCalculatedState(target.EntityState, skill, true, source);
+        auto calcState = GetCalculatedState(source, pSkill, false, target.EntityState);
+        auto targetState = GetCalculatedState(target.EntityState, pSkill, true, source);
 
-        uint16_t off = CalculateOffenseValue(source, target.EntityState, skill);
+        uint16_t off = CalculateOffenseValue(source, target.EntityState, pSkill);
         if(isHeal)
         {
             off = (uint16_t)(off *
@@ -4344,14 +4364,18 @@ bool SkillManager::EquipItem(const std::shared_ptr<objects::ActivatedAbility>& a
     const std::shared_ptr<SkillExecutionContext>& ctx,
     const std::shared_ptr<ChannelClientConnection>& client)
 {
+    auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated->GetSourceEntity());
+
     if(!client)
     {
+        SendFailure(source, activated->GetSkillID(), nullptr);
         return false;
     }
 
     auto itemID = activated->GetTargetObjectID();
     if(itemID <= 0)
     {
+        SendFailure(source, activated->GetSkillID(), client);
         return false;
     }
 
@@ -4364,12 +4388,13 @@ bool SkillManager::FamiliarityUp(const std::shared_ptr<objects::ActivatedAbility
     const std::shared_ptr<SkillExecutionContext>& ctx,
     const std::shared_ptr<ChannelClientConnection>& client)
 {
+    auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated->GetSourceEntity());
+
     if(!client)
     {
+        SendFailure(source, activated->GetSkillID(), nullptr);
         return false;
     }
-
-    auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated->GetSourceEntity());
 
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
@@ -4402,6 +4427,7 @@ bool SkillManager::FamiliarityUp(const std::shared_ptr<objects::ActivatedAbility
     {
         if(statusEffects.find(addStatus->GetStatusID()) != statusEffects.end())
         {
+            SendFailure(source, activated->GetSkillID(), client);
             return false;
         }
     }
@@ -4410,6 +4436,7 @@ bool SkillManager::FamiliarityUp(const std::shared_ptr<objects::ActivatedAbility
 
     if(fType > 16)
     {
+        SendFailure(source, activated->GetSkillID(), client);
         return false;
     }
 
@@ -4471,12 +4498,13 @@ bool SkillManager::FamiliarityUpItem(const std::shared_ptr<objects::ActivatedAbi
     const std::shared_ptr<SkillExecutionContext>& ctx,
     const std::shared_ptr<ChannelClientConnection>& client)
 {
+    auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated->GetSourceEntity());
+
     if(!client)
     {
+        SendFailure(source, activated->GetSkillID(), nullptr);
         return false;
     }
-
-    auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated->GetSourceEntity());
 
     auto state = client->GetClientState();
     auto dState = state->GetDemonState();
@@ -4516,26 +4544,24 @@ bool SkillManager::FamiliarityUpItem(const std::shared_ptr<objects::ActivatedAbi
     }
 
     uint16_t currentVal = demon->GetFamiliarity();
-    if(maxFamiliarity <= (int32_t)currentVal)
+    if(maxFamiliarity > (int32_t)currentVal)
     {
-        return true;
+        int32_t fPoints = 0;
+        if(maxFamiliarity && deltaPercent)
+        {
+            fPoints = (int32_t)ceill(
+                floorl((float)(maxFamiliarity - currentVal) * deltaPercent * 0.01f) - 1);
+        }
+
+        if(minIncrease && fPoints < minIncrease)
+        {
+            fPoints = minIncrease;
+        }
+
+        /// @todo: receive items from demon
+
+        server->GetCharacterManager()->UpdateFamiliarity(client, fPoints, true);
     }
-
-    int32_t fPoints = 0;
-    if(maxFamiliarity && deltaPercent)
-    {
-        fPoints = (int32_t)ceill(
-            floorl((float)(maxFamiliarity - currentVal) * deltaPercent * 0.01f) - 1);
-    }
-
-    if(minIncrease && fPoints < minIncrease)
-    {
-        fPoints = minIncrease;
-    }
-
-    /// @todo: receive items from demon
-
-    server->GetCharacterManager()->UpdateFamiliarity(client, fPoints, true);
 
     return ProcessSkillResult(activated, ctx);
 }
@@ -4544,12 +4570,13 @@ bool SkillManager::Mooch(const std::shared_ptr<objects::ActivatedAbility>& activ
     const std::shared_ptr<SkillExecutionContext>& ctx,
     const std::shared_ptr<ChannelClientConnection>& client)
 {
+    auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated->GetSourceEntity());
+
     if(!client)
     {
+        SendFailure(source, activated->GetSkillID(), nullptr);
         return false;
     }
-
-    auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated->GetSourceEntity());
 
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
@@ -4661,12 +4688,13 @@ bool SkillManager::SummonDemon(const std::shared_ptr<objects::ActivatedAbility>&
 {
     (void)ctx;
 
+    auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated->GetSourceEntity());
+
     if(!client)
     {
+        SendFailure(source, activated->GetSkillID(), nullptr);
         return false;
     }
-
-    auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated->GetSourceEntity());
 
     auto demonID = activated->GetTargetObjectID();
     if(demonID <= 0)
@@ -4690,12 +4718,13 @@ bool SkillManager::StoreDemon(const std::shared_ptr<objects::ActivatedAbility>& 
 {
     (void)ctx;
 
+    auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated->GetSourceEntity());
+
     if(!client)
     {
+        SendFailure(source, activated->GetSkillID(), nullptr);
         return false;
     }
-
-    auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated->GetSourceEntity());
 
     auto demonID = activated->GetTargetObjectID();
     if(demonID <= 0)
@@ -4717,12 +4746,13 @@ bool SkillManager::Traesto(const std::shared_ptr<objects::ActivatedAbility>& act
     const std::shared_ptr<SkillExecutionContext>& ctx,
     const std::shared_ptr<ChannelClientConnection>& client)
 {
+    auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated->GetSourceEntity());
+
     if(!client)
     {
+        SendFailure(source, activated->GetSkillID(), nullptr);
         return false;
     }
-
-    auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated->GetSourceEntity());
 
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();

@@ -4,11 +4,11 @@
  *
  * @author HACKfrost
  *
- * @brief Represents an instance of a zone.
+ * @brief Represents a global or instanced zone on the channel.
  *
  * This file is part of the Channel Server (channel).
  *
- * Copyright (C) 2012-2016 COMP_hack Team <compomega@tutanota.com>
+ * Copyright (C) 2012-2018 COMP_hack Team <compomega@tutanota.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as
@@ -54,27 +54,28 @@ namespace channel
 {
 
 class ChannelClientConnection;
+class ZoneInstance;
 
 typedef EntityState<objects::LootBox> LootBoxState;
 typedef EntityState<objects::ServerNPC> NPCState;
 typedef EntityState<objects::ServerObject> ServerObjectState;
 
 /**
- * Represents an instance of a zone containing client connections, objects,
+ * Represents a server zone containing client connections, objects,
  * enemies, etc.
  */
 class Zone
 {
 public:
     /**
-     * Create a new zone instance. While not useful this constructor is
+     * Create a new zone. While not useful this constructor is
      * necessary for the script bindings.
      */
     Zone();
 
     /**
-     * Create a new zone instance.
-     * @param id Unique instance ID of the zone
+     * Create a new zone.
+     * @param id Unique server ID of the zone
      * @param definition Pointer to the ServerZone definition
      */
     Zone(uint32_t id, const std::shared_ptr<objects::ServerZone>& definition);
@@ -88,27 +89,15 @@ public:
     Zone(const Zone& other);
 
     /**
-     * Clean up the zone instance.
+     * Clean up the zone.
      */
     ~Zone();
 
     /**
-     * Get the unique instance ID of the zone
-     * @return Unique instance ID of the zone
+     * Get the unique server ID of the zone
+     * @return Unique server ID of the zone
      */
     uint32_t GetID();
-
-    /**
-     * Get the owner ID of the zone (only applies to non-global zones)
-     * @return Owner ID of the zone
-     */
-    int32_t GetOwnerID() const;
-
-    /**
-     * Set the owner ID of the zone (only applies to non-global zones)
-     * @param ownerID Owner ID of the zone
-     */
-    void SetOwnerID(int32_t ownerID);
 
     /**
      * Get the geometry information bound to the zone
@@ -121,6 +110,18 @@ public:
      * @param geometry Geometry information bound to the zone
      */
     void SetGeometry(const std::shared_ptr<ZoneGeometry>& geometry);
+
+    /**
+     * Get the instance the zone belongs to if on exists
+     * @return Instance the zone belongs to
+     */
+    std::shared_ptr<ZoneInstance> GetInstance() const;
+
+    /**
+     * Set the instance the zone belongs to
+     * @param instance Instance the zone belongs to
+     */
+    void SetInstance(const std::shared_ptr<ZoneInstance>& instance);
 
     /**
      * Get the dynamic map information bound to the zone
@@ -378,9 +379,11 @@ public:
      * Get the state of a zone flag.
      * @param key Lookup key for the flag
      * @param value Output value for the flag if it exists
+     * @param worldCID CID of the character the flag belongs to, 0
+     *  if it affects the entire instance
      * @return true if the flag exists, false if it does not
      */
-    bool GetFlagState(int32_t key, int32_t& value);
+    bool GetFlagState(int32_t key, int32_t& value, int32_t worldCID);
 
     /**
      * Get the state of a zone flag, returning the null default
@@ -388,17 +391,22 @@ public:
      * @param key Lookup key for the flag
      * @param nullDefault Default value to return if the flag is
      *  not set
+     * @param worldCID CID of the character the flag belongs to, 0
+     *  if it affects the entire instance
      * @return Value of the specified flag or the nullDefault value
      *  if it does not exist
      */
-    int32_t GetFlagStateValue(int32_t key, int32_t nullDefault);
+    int32_t GetFlagStateValue(int32_t key, int32_t nullDefault,
+        int32_t worldCID);
 
     /**
      * Set the state of a zone flag.
      * @param key Lookup key for the flag
      * @param value Value to set for the flag
+     * @param worldCID CID of the character the flag belongs to, 0
+     *  if it affects the entire instance
      */
-    void SetFlagState(int32_t key, int32_t value);
+    void SetFlagState(int32_t key, int32_t value, int32_t worldCID);
 
     /**
      * Take loot out of the specified loot box. This should be the only way
@@ -491,7 +499,8 @@ private:
     std::map<uint64_t, std::set<uint32_t>> mRespawnTimes;
 
     /// General use flags and associated values used for event sequences etc
-    std::unordered_map<int32_t, int32_t> mFlagStates;
+    /// keyed on 0 for all characters or world CID if for a specific one
+    std::unordered_map<int32_t, std::unordered_map<int32_t, int32_t>> mFlagStates;
 
     /// Geometry information bound to the zone
     std::shared_ptr<ZoneGeometry> mGeometry;
@@ -499,12 +508,11 @@ private:
     /// Dynamic map information bound to the zone
     std::shared_ptr<DynamicMap> mDynamicMap;
 
-    /// Unique instance ID of the zone
-    uint32_t mID;
+    /// Zone instance pointer for non-global zones
+    std::shared_ptr<ZoneInstance> mZoneInstance;
 
-    /// If the zone is private, this is the world CID of the character who
-    /// instantiated it
-    int32_t mOwnerID;
+    /// Unique server ID of the zone
+    uint32_t mID;
 
     /// Next ID to use for encounters registered for the zone
     uint32_t mNextEncounterID;

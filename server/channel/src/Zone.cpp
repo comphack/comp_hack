@@ -4,11 +4,11 @@
  *
  * @author HACKfrost
  *
- * @brief Represents an instance of a zone.
+ * @brief Represents a global or instanced zone on the channel.
  *
  * This file is part of the Channel Server (channel).
  *
- * Copyright (C) 2012-2016 COMP_hack Team <compomega@tutanota.com>
+ * Copyright (C) 2012-2018 COMP_hack Team <compomega@tutanota.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as
@@ -47,15 +47,18 @@ namespace libcomp
     template<>
     ScriptEngine& ScriptEngine::Using<Zone>()
     {
-        if(!BindingExists("DemonState", true))
+        if(!BindingExists("Zone", true))
         {
             Using<ActiveEntityState>();
             Using<objects::Demon>();
+            Using<ZoneInstance>();
 
             Sqrat::Class<Zone> binding(mVM, "Zone");
             binding
-                .Func<int32_t (Zone::*)(int32_t, int32_t)>(
-                    "GetFlagState", &Zone::GetFlagStateValue);
+                .Func<int32_t (Zone::*)(int32_t, int32_t, int32_t)>(
+                    "GetFlagState", &Zone::GetFlagStateValue)
+                .Func<std::shared_ptr<ZoneInstance>(Zone::*)() const>(
+                    "GetZoneInstance", &Zone::GetInstance);
 
             Bind<Zone>("Zone", binding);
         }
@@ -69,7 +72,7 @@ Zone::Zone()
 }
 
 Zone::Zone(uint32_t id, const std::shared_ptr<objects::ServerZone>& definition)
-    : mServerZone(definition), mID(id), mOwnerID(0), mNextEncounterID(1)
+    : mServerZone(definition), mID(id), mNextEncounterID(1)
 {
 }
 
@@ -87,16 +90,6 @@ uint32_t Zone::GetID()
     return mID;
 }
 
-int32_t Zone::GetOwnerID() const
-{
-    return mOwnerID;
-}
-
-void Zone::SetOwnerID(int32_t ownerID)
-{
-    mOwnerID = ownerID;
-}
-
 const std::shared_ptr<ZoneGeometry> Zone::GetGeometry() const
 {
     return mGeometry;
@@ -105,6 +98,16 @@ const std::shared_ptr<ZoneGeometry> Zone::GetGeometry() const
 void Zone::SetGeometry(const std::shared_ptr<ZoneGeometry>& geometry)
 {
     mGeometry = geometry;
+}
+
+std::shared_ptr<ZoneInstance> Zone::GetInstance() const
+{
+    return mZoneInstance;
+}
+
+void Zone::SetInstance(const std::shared_ptr<ZoneInstance>& instance)
+{
+    mZoneInstance = instance;
 }
 
 const std::shared_ptr<DynamicMap> Zone::GetDynamicMap() const
@@ -138,6 +141,7 @@ void Zone::RemoveConnection(const std::shared_ptr<ChannelClientConnection>& clie
 
     auto cEntityID = cState->GetEntityID();
     auto dEntityID = dState->GetEntityID();
+    int32_t worldCID = state->GetWorldCID();
 
     UnregisterEntityState(cEntityID);
     UnregisterEntityState(dEntityID);
@@ -147,6 +151,13 @@ void Zone::RemoveConnection(const std::shared_ptr<ChannelClientConnection>& clie
 
     std::lock_guard<std::mutex> lock(mLock);
     mConnections.erase(state->GetWorldCID());
+
+    // If this zone is not part of an instance, clear the character
+    // specific flags
+    if(mZoneInstance)
+    {
+        mFlagStates.erase(worldCID);
+    }
 }
 
 void Zone::RemoveEntity(int32_t entityID, bool updateSpawns)
@@ -629,23 +640,28 @@ std::set<uint32_t> Zone::GetRespawnLocations(uint64_t now)
     return result;
 }
 
-bool Zone::GetFlagState(int32_t key, int32_t& value)
+bool Zone::GetFlagState(int32_t key, int32_t& value, int32_t worldCID)
 {
     std::lock_guard<std::mutex> lock(mLock);
-    auto it = mFlagStates.find(key);
+    auto it = mFlagStates.find(worldCID);
     if(it != mFlagStates.end())
     {
-        value = it->second;
-        return true;
+        auto it2 = mFlagStates[worldCID].find(key);
+        if(it2 != mFlagStates[worldCID].end())
+        {
+            value = it2->second;
+            return true;
+        }
     }
 
     return false;
 }
 
-int32_t Zone::GetFlagStateValue(int32_t key, int32_t nullDefault)
+int32_t Zone::GetFlagStateValue(int32_t key, int32_t nullDefault,
+    int32_t worldCID)
 {
     int32_t result;
-    if(!GetFlagState(key, result))
+    if(!GetFlagState(key, result, worldCID))
     {
         result = nullDefault;
     }
@@ -653,10 +669,10 @@ int32_t Zone::GetFlagStateValue(int32_t key, int32_t nullDefault)
     return result;
 }
 
-void Zone::SetFlagState(int32_t key, int32_t value)
+void Zone::SetFlagState(int32_t key, int32_t value, int32_t worldCID)
 {
     std::lock_guard<std::mutex> lock(mLock);
-    mFlagStates[key] = value;
+    mFlagStates[worldCID][key] = value;
 }
 
 std::unordered_map<size_t, std::shared_ptr<objects::Loot>>
@@ -720,4 +736,6 @@ void Zone::Cleanup()
     mAllEntities.clear();
     mSpawnGroups.clear();
     mSpawnLocationGroups.clear();
+
+    mZoneInstance = nullptr;
 }

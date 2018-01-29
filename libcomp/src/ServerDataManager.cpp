@@ -8,7 +8,7 @@
  *
  * This file is part of the COMP_hack Library (libcomp).
  *
- * Copyright (C) 2012-2016 COMP_hack Team <compomega@tutanota.com>
+ * Copyright (C) 2012-2018 COMP_hack Team <compomega@tutanota.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as
@@ -38,6 +38,7 @@
 #include <Event.h>
 #include <ServerShop.h>
 #include <ServerZone.h>
+#include <ServerZoneInstance.h>
 #include <Tokusei.h>
 
 using namespace libcomp;
@@ -83,6 +84,23 @@ const std::unordered_map<uint32_t, std::set<uint32_t>> ServerDataManager::GetAll
     }
 
     return zoneIDs;
+}
+
+const std::shared_ptr<objects::ServerZoneInstance> ServerDataManager::GetZoneInstanceData(
+    uint32_t id)
+{
+    return GetObjectByID<uint32_t, objects::ServerZoneInstance>(id, mZoneInstanceData);
+}
+
+const std::set<uint32_t> ServerDataManager::GetAllZoneInstanceIDs()
+{
+    std::set<uint32_t> instanceIDs;
+    for(auto pair : mZoneInstanceData)
+    {
+        instanceIDs.insert(pair.first);
+    }
+
+    return instanceIDs;
 }
 
 const std::shared_ptr<objects::Event> ServerDataManager::GetEventData(const libcomp::String& id)
@@ -158,6 +176,13 @@ bool ServerDataManager::LoadData(gsl::not_null<DataStore*> pDataStore,
         LOG_DEBUG("Loading event server definitions...\n");
         failure = !LoadObjects<objects::Event>(pDataStore, "/events",
             definitionManager);
+    }
+
+    if(!failure)
+    {
+        LOG_DEBUG("Loading zone instance server definitions...\n");
+        failure = !LoadObjectsFromFile<objects::ServerZoneInstance>(
+            pDataStore, "/data/zoneinstance.xml", definitionManager);
     }
 
     if(!failure)
@@ -276,6 +301,58 @@ namespace libcomp
         }
 
         mEventData[id] = event;
+
+        return true;
+    }
+
+    template<>
+    bool ServerDataManager::LoadObject<objects::ServerZoneInstance>(const tinyxml2::XMLDocument& doc,
+        const tinyxml2::XMLElement *objNode, DefinitionManager* definitionManager)
+    {
+        auto inst = std::shared_ptr<objects::ServerZoneInstance>(new objects::ServerZoneInstance);
+        if(!inst->Load(doc, *objNode))
+        {
+            return false;
+        }
+
+        auto id = inst->GetID();
+        if(definitionManager && !definitionManager->GetZoneData(inst->GetLobbyID()))
+        {
+            LOG_WARNING(libcomp::String("Skipping zone instance with unknown lobby: %1\n")
+                .Arg(inst->GetLobbyID()));
+            return true;
+        }
+
+        // Zone and dynamic map IDs should be parallel lists
+        size_t zoneIDCount = inst->ZoneIDsCount();
+        if(zoneIDCount != inst->DynamicMapIDsCount())
+        {
+            LOG_ERROR(libcomp::String("Zone instance encountered with zone and dynamic"
+                " map counts that do not match\n"));
+            return false;
+        }
+
+        for(size_t i = 0; i < zoneIDCount; i++)
+        {
+            uint32_t zoneID = inst->GetZoneIDs(i);
+            uint32_t dynamicMapID = inst->GetDynamicMapIDs(i);
+
+            if(mZoneData.find(zoneID) == mZoneData.end() ||
+                mZoneData[zoneID].find(dynamicMapID) == mZoneData[zoneID].end())
+            {
+                LOG_ERROR(libcomp::String("Invalid zone encountered for instance: %1 (%2)\n")
+                    .Arg(zoneID).Arg(dynamicMapID));
+                return false;
+            }
+        }
+
+        if(mZoneInstanceData.find(id) != mZoneInstanceData.end())
+        {
+            LOG_ERROR(libcomp::String("Duplicate zone instance encountered: %1\n").Arg(id));
+            return false;
+        }
+
+        mZoneInstanceData[id] = inst;
 
         return true;
     }

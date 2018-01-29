@@ -8,7 +8,7 @@
  *
  * This file is part of the COMP_hack Library (libcomp).
  *
- * Copyright (C) 2012-2016 COMP_hack Team <compomega@tutanota.com>
+ * Copyright (C) 2012-2018 COMP_hack Team <compomega@tutanota.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as
@@ -50,6 +50,7 @@ class DropSet;
 class Event;
 class ServerShop;
 class ServerZone;
+class ServerZoneInstance;
 class Tokusei;
 }
 
@@ -88,8 +89,8 @@ public:
 
     /**
      * Get a server zone by definition ID
-     * @param id Definition ID of a zone to load
-     * @param dynamicMapID Dynamic map ID of the zone to load
+     * @param id Definition ID of a zone to retrieve
+     * @param dynamicMapID Dynamic map ID of the zone to retrieve
      * @return Pointer to the server zone matching the specified id
      */
     const std::shared_ptr<objects::ServerZone> GetZoneData(uint32_t id,
@@ -101,6 +102,20 @@ public:
      * @return Set of all zone definition IDs registered with the manager
      */
     const std::unordered_map<uint32_t, std::set<uint32_t>> GetAllZoneIDs();
+
+    /**
+     * Get a server zone instance by definition ID
+     * @param id Definition ID of a zone instance to retrieve
+     * @return Pointer to the server zone instance matching the specified id
+     */
+    const std::shared_ptr<objects::ServerZoneInstance> GetZoneInstanceData(
+        uint32_t id);
+
+    /**
+     * Get all server zone instance defintion IDs registered with the manager
+     * @return Set of all zone instance definition IDs registered with the manager
+     */
+    const std::set<uint32_t> GetAllZoneInstanceIDs();
 
     /**
      * Get an event by definition ID
@@ -286,7 +301,11 @@ private:
     /// Map of server zone defintions by zone definition and dynamic map ID
     std::unordered_map<uint32_t,
         std::unordered_map<uint32_t, std::shared_ptr<objects::ServerZone>>> mZoneData;
-    
+
+    /// Map of server zone instance defintions by definition ID
+    std::unordered_map<uint32_t, std::shared_ptr<
+        objects::ServerZoneInstance>> mZoneInstanceData;
+
     /// Map of events by definition ID
     std::unordered_map<std::string,
         std::shared_ptr<objects::Event>> mEventData;

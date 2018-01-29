@@ -9,7 +9,7 @@
  *
  * This file is part of the Channel Server (channel).
  *
- * Copyright (C) 2012-2017 COMP_hack Team <compomega@tutanota.com>
+ * Copyright (C) 2012-2018 COMP_hack Team <compomega@tutanota.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as
@@ -58,6 +58,7 @@
 #include <ActionUpdateLNC.h>
 #include <ActionUpdateQuest.h>
 #include <ActionUpdateZoneFlags.h>
+#include <ActionZoneInstance.h>
 #include <ActionZoneChange.h>
 #include <CharacterProgress.h>
 #include <DemonBox.h>
@@ -69,6 +70,7 @@
 #include <ServerNPC.h>
 #include <ServerObject.h>
 #include <ServerZone.h>
+#include <ServerZoneInstance.h>
 
 using namespace channel;
 
@@ -115,6 +117,8 @@ ActionManager::ActionManager(const std::weak_ptr<ChannelServer>& server)
         &ActionManager::UpdateQuest;
     mActionHandlers[objects::Action::ActionType_t::UPDATE_ZONE_FLAGS] =
         &ActionManager::UpdateZoneFlags;
+    mActionHandlers[objects::Action::ActionType_t::ZONE_INSTANCE] =
+        &ActionManager::UpdateZoneInstance;
     mActionHandlers[objects::Action::ActionType_t::SPAWN] =
         &ActionManager::Spawn;
     mActionHandlers[objects::Action::ActionType_t::CREATE_LOOT] =
@@ -141,7 +145,7 @@ void ActionManager::PerformActions(
     else if(ctx.Client)
     {
         ctx.CurrentZone = mServer.lock()->GetZoneManager()
-            ->GetZoneInstance(ctx.Client);
+            ->GetCurrentZone(ctx.Client);
     }
     else
     {
@@ -299,15 +303,12 @@ bool ActionManager::ZoneChange(ActionContext& ctx)
         x, y, rotation, true))
     {
         LOG_ERROR(libcomp::String("Failed to add client to zone"
-            " %1. Closing the connection.\n").Arg(zoneID));
-
-        ctx.Client->Close();
-
+            " %1 (%2).\n").Arg(zoneID).Arg(dynamicMapID));
         return false;
     }
 
     // Update to point to the new zone
-    ctx.CurrentZone = zoneManager->GetZoneInstance(ctx.Client);
+    ctx.CurrentZone = zoneManager->GetCurrentZone(ctx.Client);
 
     return true;
 }
@@ -1122,38 +1123,168 @@ bool ActionManager::UpdateQuest(ActionContext& ctx)
 bool ActionManager::UpdateZoneFlags(ActionContext& ctx)
 {
     auto act = std::dynamic_pointer_cast<objects::ActionUpdateZoneFlags>(ctx.Action);
-    switch(act->GetSetMode())
-    {
-    case objects::ActionUpdateZoneFlags::SetMode_t::UPDATE:
-        for(auto pair : act->GetFlagStates())
-        {
-            ctx.CurrentZone->SetFlagState(pair.first, pair.second);
-        }
-        break;
-    case objects::ActionUpdateZoneFlags::SetMode_t::INCREMENT:
-    case objects::ActionUpdateZoneFlags::SetMode_t::DECREMENT:
-        {
-            bool incr = act->GetSetMode() ==
-                objects::ActionUpdateZoneFlags::SetMode_t::INCREMENT;
 
-            int32_t val;
+    // Determine if it affects the current character or the whole zone
+    int32_t worldCID = 0;
+    switch(act->GetType())
+    {
+    case objects::ActionUpdateZoneFlags::Type_t::ZONE_CHARACTER:
+    case objects::ActionUpdateZoneFlags::Type_t::ZONE_INSTANCE_CHARACTER:
+        worldCID = ctx.Client->GetClientState()->GetWorldCID();
+        break;
+    default:
+        break;
+    }
+
+    switch (act->GetType())
+    {
+    case objects::ActionUpdateZoneFlags::Type_t::ZONE:
+    case objects::ActionUpdateZoneFlags::Type_t::ZONE_CHARACTER:
+        switch(act->GetSetMode())
+        {
+        case objects::ActionUpdateZoneFlags::SetMode_t::UPDATE:
             for(auto pair : act->GetFlagStates())
             {
-                if(!ctx.CurrentZone->GetFlagState(pair.first, val))
-                {
-                    val = 0;
-                }
-
-                val = val + (incr ? 1 : -1);
-                ctx.CurrentZone->SetFlagState(pair.first, val);
+                ctx.CurrentZone->SetFlagState(pair.first, pair.second, worldCID);
             }
+            break;
+        case objects::ActionUpdateZoneFlags::SetMode_t::INCREMENT:
+        case objects::ActionUpdateZoneFlags::SetMode_t::DECREMENT:
+            {
+                bool incr = act->GetSetMode() ==
+                    objects::ActionUpdateZoneFlags::SetMode_t::INCREMENT;
+
+                int32_t val;
+                for(auto pair : act->GetFlagStates())
+                {
+                    if(!ctx.CurrentZone->GetFlagState(pair.first, val, worldCID))
+                    {
+                        val = 0;
+                    }
+
+                    val = val + (incr ? 1 : -1);
+                    ctx.CurrentZone->SetFlagState(pair.first, val, worldCID);
+                }
+            }
+            break;
+        default:
+            break;
+        }
+        break;
+    case objects::ActionUpdateZoneFlags::Type_t::ZONE_INSTANCE:
+    case objects::ActionUpdateZoneFlags::Type_t::ZONE_INSTANCE_CHARACTER:
+        {
+            auto instance = ctx.CurrentZone->GetInstance();
+            if(instance == nullptr)
+            {
+                return false;
+            }
+
+            switch(act->GetSetMode())
+            {
+            case objects::ActionUpdateZoneFlags::SetMode_t::UPDATE:
+                for(auto pair : act->GetFlagStates())
+                {
+                    instance->SetFlagState(pair.first, pair.second, worldCID);
+                }
+                break;
+            case objects::ActionUpdateZoneFlags::SetMode_t::INCREMENT:
+            case objects::ActionUpdateZoneFlags::SetMode_t::DECREMENT:
+                {
+                    bool incr = act->GetSetMode() ==
+                        objects::ActionUpdateZoneFlags::SetMode_t::INCREMENT;
+
+                    int32_t val;
+                    for(auto pair : act->GetFlagStates())
+                    {
+                        if(!instance->GetFlagState(pair.first, val, worldCID))
+                        {
+                            val = 0;
+                        }
+
+                        val = val + (incr ? 1 : -1);
+                        instance->SetFlagState(pair.first, val, worldCID);
+                    }
+                }
+                break;
+            default:
+                break;
+            }
+        }
+        break;
+    }
+
+    return true;
+}
+
+bool ActionManager::UpdateZoneInstance(ActionContext& ctx)
+{
+    if(!ctx.Client)
+    {
+        LOG_ERROR("Attempted to execute a zone instance update action with no"
+            " associated client connection\n");
+        return false;
+    }
+
+    auto act = std::dynamic_pointer_cast<objects::ActionZoneInstance>(ctx.Action);
+    auto server = mServer.lock();
+    auto zoneManager = server->GetZoneManager();
+
+    switch(act->GetMode())
+    {
+    case objects::ActionZoneInstance::Mode_t::CREATE:
+        {
+            auto serverDataManager = server->GetServerDataManager();
+            auto instDef = serverDataManager->GetZoneInstanceData(act->GetInstanceID());
+            if(!instDef)
+            {
+                LOG_ERROR(libcomp::String("Invalid zone instance ID could not"
+                    " be created: %1\n").Arg(act->GetInstanceID()));
+                return false;
+            }
+
+            return zoneManager->CreateInstance(ctx.Client, act->GetInstanceID()) != nullptr;
+        }
+    case objects::ActionZoneInstance::Mode_t::JOIN:
+        {
+            auto instance = zoneManager->GetInstanceAccess(ctx.Client);
+            auto def = instance ? instance->GetDefinition() : nullptr;
+            if(instance && (act->GetInstanceID() == 0 ||
+                def->GetID() == act->GetInstanceID()))
+            {
+                uint32_t firstZoneID = *def->ZoneIDsBegin();
+                uint32_t firstDynamicMapID = *def->DynamicMapIDsBegin();
+
+                auto zoneDef = server->GetServerDataManager()->GetZoneData(
+                    firstZoneID, firstDynamicMapID);
+                return zoneManager->EnterZone(ctx.Client, firstZoneID,
+                    firstDynamicMapID, zoneDef->GetStartingX(),
+                    zoneDef->GetStartingY(), zoneDef->GetStartingRotation());
+            }
+
+            return false;
+        }
+        break;
+    case objects::ActionZoneInstance::Mode_t::REMOVE:
+        {
+            auto state = ctx.Client->GetClientState();
+            auto zone = state->GetCharacterState()->GetZone();
+            auto currentInst = zone ? zone->GetInstance() : nullptr;
+
+            auto instance = zoneManager->GetInstanceAccess(ctx.Client);
+            if(instance && instance == currentInst)
+            {
+                zoneManager->ClearInstanceAccess(instance->GetID());
+            }
+
+            return true;
         }
         break;
     default:
         break;
     }
 
-    return true;
+    return false;
 }
 
 bool ActionManager::Spawn(ActionContext& ctx)

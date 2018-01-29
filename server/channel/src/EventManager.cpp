@@ -38,6 +38,7 @@
 // channel Includes
 #include "ChannelServer.h"
 #include "CharacterState.h"
+#include "ZoneInstance.h"
 
 // object Includes
 #include <Account.h>
@@ -75,6 +76,7 @@
 #include <ServerNPC.h>
 #include <ServerObject.h>
 #include <ServerZone.h>
+#include <ServerZoneInstance.h>
 
 using namespace channel;
 
@@ -558,20 +560,61 @@ bool EventManager::EvaluateEventCondition(const std::shared_ptr<
         }
         break;
     case objects::EventCondition::Type_t::ZONE_FLAGS:
+    case objects::EventCondition::Type_t::ZONE_CHARACTER_FLAGS:
+    case objects::EventCondition::Type_t::ZONE_INSTANCE_FLAGS:
+    case objects::EventCondition::Type_t::ZONE_INSTANCE_CHARACTER_FLAGS:
         {
-            auto zone = mServer.lock()->GetZoneManager()->GetZoneInstance(client);
-            if(zone)
+            int32_t worldCID = 0;
+            bool instanceCheck = false;
+            switch(condition->GetType())
             {
-                auto flagCon = std::dynamic_pointer_cast<
-                    objects::EventFlagCondition>(condition);
+            case objects::EventCondition::Type_t::ZONE_FLAGS:
+                break;
+            case objects::EventCondition::Type_t::ZONE_CHARACTER_FLAGS:
+                worldCID = client->GetClientState()->GetWorldCID();
+                break;
+            case objects::EventCondition::Type_t::ZONE_INSTANCE_FLAGS:
+                instanceCheck = true;
+                break;
+            case objects::EventCondition::Type_t::ZONE_INSTANCE_CHARACTER_FLAGS:
+                instanceCheck = true;
+                worldCID = client->GetClientState()->GetWorldCID();
+                break;
+            default:
+                break;
+            }
 
+            auto zone = mServer.lock()->GetZoneManager()->GetCurrentZone(client);
+            auto flagCon = std::dynamic_pointer_cast<
+                objects::EventFlagCondition>(condition);
+            if(zone && flagCon)
+            {
                 std::unordered_map<int32_t, int32_t> flagStates;
-                if(flagCon)
+                if(instanceCheck)
+                {
+                    auto inst = zone->GetInstance();
+                    if(inst)
+                    {
+                        for(auto pair : flagCon->GetFlagStates())
+                        {
+                            int32_t val;
+                            if(inst->GetFlagState(pair.first, val, worldCID))
+                            {
+                                flagStates[pair.first] = val;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        return false;
+                    }
+                }
+                else
                 {
                     for(auto pair : flagCon->GetFlagStates())
                     {
                         int32_t val;
-                        if(zone->GetFlagState(pair.first, val))
+                        if(zone->GetFlagState(pair.first, val, worldCID))
                         {
                             flagStates[pair.first] = val;
                         }
@@ -1341,6 +1384,43 @@ bool EventManager::EvaluateCondition(const std::shared_ptr<ChannelClientConnecti
             auto character = client->GetClientState()->GetCharacterState()->GetEntity();
 
             return (int32_t)character->GetGender() == condition->GetValue1();
+        }
+    case objects::EventCondition::Type_t::INSTANCE_ACCESS:
+        {
+            // Character has access to instance of type compares to type [value 1]
+            // or any belonging to the current zone if EXISTS
+            auto instance = mServer.lock()->GetZoneManager()->GetInstanceAccess(client);
+
+            if(compareMode == EventCompareMode::EXISTS)
+            {
+                if(!instance)
+                {
+                    return false;
+                }
+
+                auto zone = client->GetClientState()->GetCharacterState()->GetZone();
+                auto currentInstance = zone->GetInstance();
+
+                auto def = instance->GetDefinition();
+                auto currentDef = currentInstance
+                    ? currentInstance->GetDefinition() : nullptr;
+                auto currentZoneDef = zone->GetDefinition();
+
+                // true if the instance is the same, the lobby is the same or they
+                // are in the lobby
+                return instance == currentInstance ||
+                    (currentDef && def->GetLobbyID() == currentDef->GetLobbyID()) ||
+                    def->GetLobbyID() == currentZoneDef->GetID();
+            }
+
+            if(compareMode != EventCompareMode::EQUAL &&
+                compareMode != EventCompareMode::DEFAULT_COMPARE)
+            {
+                return false;
+            }
+
+            auto def = instance ? instance->GetDefinition() : nullptr;
+            return (int32_t)(def ? def->GetID() : 0) == condition->GetValue1();
         }
     case objects::EventConditionData::Type_t::INVENTORY_FREE:
         {

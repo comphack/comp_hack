@@ -78,6 +78,8 @@ void DemonSkillUpdate(const std::shared_ptr<ChannelServer> server,
         state->GetAccountUID());
     changes->Update(demon);
 
+    bool recalc = false;
+
     uint32_t currentSkillID = demon->GetLearnedSkills((size_t)skillSlot);
     demon->SetLearnedSkills((size_t)skillSlot, skillID);
     if(action == ACTION_LEARN_ACQUIRED)
@@ -107,6 +109,8 @@ void DemonSkillUpdate(const std::shared_ptr<ChannelServer> server,
             }
             iSkillIdx++;
         }
+
+        recalc = true;
     }
     else if(action == ACTION_MOVE)
     {
@@ -134,6 +138,13 @@ void DemonSkillUpdate(const std::shared_ptr<ChannelServer> server,
     client->SendPacket(reply);
 
     server->GetWorldDatabase()->QueueChangeSet(changes);
+
+    if(recalc)
+    {
+        server->GetTokuseiManager()->Recalculate(state->GetCharacterState(), true,
+            std::set<int32_t>{ dState->GetEntityID() });
+        server->GetCharacterManager()->RecalculateStats(client, dState->GetEntityID());
+    }
 }
 
 bool Parsers::UpdateDemonSkill::Parse(libcomp::ManagerPacket *pPacketManager,

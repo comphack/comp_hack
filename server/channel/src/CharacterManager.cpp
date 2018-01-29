@@ -960,7 +960,7 @@ void CharacterManager::StoreDemon(const std::shared_ptr<
     auto server = mServer.lock();
     auto definitionManager = server->GetDefinitionManager();
     auto zoneManager = server->GetZoneManager();
-    auto zone = zoneManager->GetZoneInstance(client);
+    auto zone = zoneManager->GetCurrentZone(client);
 
     dState->SetStatusEffectsActive(false, definitionManager);
 

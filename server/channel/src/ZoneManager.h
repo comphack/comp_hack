@@ -154,7 +154,7 @@ public:
      * in the zones, they will not be kicked and the instance will be cleaned
      * up when the last player leaves.
      * @param instanceID Unique ID of the instance to clean up
-     * @return true if the instance was clenaed up, false it was not
+     * @return true if the instance was cleaned up, false it was not
      */
     bool ClearInstanceAccess(uint32_t instanceID);
 
@@ -463,7 +463,6 @@ public:
         const std::list<std::shared_ptr<ActiveEntityState>>& entities,
         float x, float y, float rot, float maxAngle);
 
-private:
     /**
      * Rotate a point around an origin point by the specified radians amount
      * @param p Point to rotate
@@ -473,6 +472,7 @@ private:
      */
     static Point RotatePoint(const Point& p, const Point& origin, float radians);
 
+private:
     /**
      * Create an enemy in the specified zone at set coordinates
      * @param zone Pointer to the zone where the enemy should be spawned
@@ -534,6 +534,14 @@ private:
      */
     std::shared_ptr<Zone> CreateZone(
         const std::shared_ptr<objects::ServerZone>& definition);
+
+    /**
+     * Remove a zone instance by unique ID if no characters have access
+     * and no characters are currently in any zone.
+     * @param instanceID Unique ID of the instance to remove
+     * @return true if the instance was removed, false it was not
+     */
+    bool RemoveInstance(uint32_t instanceID);
 
     /// Map of zones by unique ID
     std::unordered_map<uint32_t, std::shared_ptr<Zone>> mZones;

@@ -1979,7 +1979,9 @@ bool EventManager::Multitalk(const std::shared_ptr<ChannelClientConnection>& cli
 
     libcomp::Packet p;
     p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_EVENT_MULTITALK);
-    p.WriteS32Little(instance->GetSourceEntityID());
+    p.WriteS32Little(e->GetPlayerSource()
+        ? client->GetClientState()->GetCharacterState()->GetEntityID()
+        : instance->GetSourceEntityID());
     p.WriteS32Little(e->GetMessageID());
 
     client->SendPacket(p);
@@ -1994,7 +1996,9 @@ bool EventManager::Prompt(const std::shared_ptr<ChannelClientConnection>& client
 
     libcomp::Packet p;
     p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_EVENT_PROMPT);
-    p.WriteS32Little(instance->GetSourceEntityID());
+    p.WriteS32Little(e->GetPlayerSource()
+        ? client->GetClientState()->GetCharacterState()->GetEntityID()
+        : instance->GetSourceEntityID());
     p.WriteS32Little(e->GetMessageID());
 
     instance->ClearDisabledChoices();

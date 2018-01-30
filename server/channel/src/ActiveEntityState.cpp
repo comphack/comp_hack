@@ -2007,7 +2007,7 @@ void ActiveEntityState::AdjustStats(
             (uint8_t)tblID <= (uint8_t)CorrectTbl::NRA_MAGIC)
         {
             // NRA is calculated differently from everything else
-            if(effectiveType)
+            if(effectiveType == 0)
             {
                 // For type 0, the NRA value becomes 100% and CANNOT be reduced.
                 switch(effectiveValue)
@@ -2136,7 +2136,7 @@ void ActiveEntityState::UpdateNRAChances(libcomp::EnumMap<CorrectTbl, int16_t>& 
         if(val > 0)
         {
             // Natural NRA is stored as NRA index in the 1s place and
-            // perccentage of success as the rest
+            // percentage of success as the rest
             double shift = (double)(val * 0.1);
             uint8_t nraIdx = (uint8_t)((shift - (double)floorl((double)val / 10.0)) * 10.0);
             val = (int16_t)floorl(val / 10);

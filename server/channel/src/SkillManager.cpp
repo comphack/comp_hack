@@ -108,12 +108,19 @@ const uint16_t FLAG1_DODGED = 1 << 5;
 const uint16_t FLAG1_CRITICAL = 1 << 6;
 const uint16_t FLAG1_WEAKPOINT = 1 << 7;
 const uint16_t FLAG1_KNOCKBACK = 1 << 8;
-const uint16_t FLAG1_REVIVAL = 1 << 9;
-const uint16_t FLAG1_ABSORB = 1 << 10;  //Only displayed with DAMAGE_TYPE_HEALING
-const uint16_t FLAG1_REFLECT = 1 << 11; //Only displayed with DAMAGE_TYPE_NONE
-const uint16_t FLAG1_BLOCK = 1 << 12;   //Only dsiplayed with DAMAGE_TYPE_NONE
 const uint16_t FLAG1_RUSH_MOVEMENT = 1 << 14;
 const uint16_t FLAG1_PROTECT = 1 << 15;
+
+// Only displayed with DAMAGE_TYPE_HEALING
+const uint16_t FLAG1_REVIVAL = 1 << 9;
+const uint16_t FLAG1_ABSORB = 1 << 10;
+
+// Only displayed with DAMAGE_TYPE_NONE
+const uint16_t FLAG1_REFLECT_PHYS = 1 << 9;
+const uint16_t FLAG1_BLOCK_PHYS = 1 << 10;
+const uint16_t FLAG1_REFLECT_MAGIC = 1 << 11;
+const uint16_t FLAG1_BLOCK_MAGIC = 1 << 12;
+//const uint16_t FLAG1_REFLECT_UNUSED = 1 << 13;
 
 const uint16_t FLAG2_LIMIT_BREAK = 1 << 5;
 const uint16_t FLAG2_IMPOSSIBLE = 1 << 6;
@@ -174,6 +181,7 @@ public:
     std::shared_ptr<ActiveEntityState> EntityState;
     std::shared_ptr<objects::CalculatedEntityState> CalcState;
     bool PrimaryTarget = false;
+    bool IndirectTarget = false;
     int32_t Damage1 = 0;
     uint8_t Damage1Type = DAMAGE_TYPE_NONE;
     int32_t Damage2 = 0;
@@ -190,6 +198,11 @@ public:
     AddStatusEffectMap AddedStatuses;
     std::set<uint32_t> CancelledStatuses;
     bool HitAvoided = false;
+    uint8_t HitNull = 0;    // 0: None, 1: Physical, 2: Magic
+    uint8_t HitReflect = 0; // 0: None, 1: Physical, 2: Magic
+    bool HitAbsorb = false;
+    bool CanHitstun = false;
+    bool CanKnockback = false;
     uint16_t GuardModifier = 0;
 };
 
@@ -910,8 +923,10 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
     auto pSkill = GetProcessingSkill(activated, ctx, nullptr);
     ProcessingSkill& skill = *pSkill.get();
 
-    // Get the target of the spell
-    uint16_t initialFlags1 = 0;
+    // Get the target of the spell, keeping track of initial NRA
+    uint8_t initialHitNull = 0;
+    uint8_t initialHitReflect = 0;
+    bool initialHitAbsorb = false;
     switch(skillData->GetTarget()->GetType())
     {
     case objects::MiTargetData::Type_t::NONE:
@@ -972,13 +987,19 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
                 GetCalculatedState(source, pSkill, false, source);
                 SetNRA(selfTarget, skill);
 
-                initialFlags1 = selfTarget.Flags1;
+                initialHitNull = selfTarget.HitNull;
+                initialHitReflect = selfTarget.HitReflect;
+                initialHitAbsorb = selfTarget.HitAbsorb;
             }
             else
             {
                 skill.PrimaryTarget = targetEntity;
 
-                initialFlags1 = target.Flags1;
+                initialHitNull = target.HitNull;
+                initialHitAbsorb = target.HitAbsorb;
+
+                // If it had been reflected we wouldn't be here!
+                initialHitReflect = 0;
             }
         }
         break;
@@ -1017,7 +1038,7 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
             break;
         case objects::MiEffectiveRangeData::AreaType_t::TARGET_RADIUS:
             // If the primary target is set and NRA did not occur, gather other targets
-            if(primaryTarget && initialFlags1 == 0)
+            if(primaryTarget && !initialHitNull && !initialHitReflect && !initialHitAbsorb)
             {
                 effectiveTargets = zone->GetActiveEntitiesInRadius(
                     primaryTarget->GetCurrentX(), primaryTarget->GetCurrentY(),
@@ -1126,6 +1147,13 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
         }
     }
 
+    // Remove all targets that are not ready
+    effectiveTargets.remove_if([](
+        const std::shared_ptr<ActiveEntityState>& target)
+        {
+            return !target->Ready();
+        });
+
     // Make sure the primary target isn't in here twice and it is also
     // at the front of the list
     if(primaryTarget)
@@ -1226,11 +1254,11 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
         // If an AOE target that is not the source is in the set, increase
         // the number of AOE reflections as needed
         bool isSource = effectiveTarget == source;
-        if(isPrimaryTarget && (initialFlags1 & FLAG1_REFLECT) == 0)
+        if(isPrimaryTarget && !initialHitReflect)
         {
-            target.Flags1 = initialFlags1;
-            target.HitAvoided = (initialFlags1 & FLAG1_REFLECT) != 0 ||
-                (initialFlags1 & FLAG1_BLOCK) != 0;
+            target.HitNull = initialHitNull;
+            target.HitAbsorb = initialHitAbsorb;
+            target.HitAvoided = initialHitNull != 0;
         }
         else if(SetNRA(target, skill) && !isSource)
         {
@@ -1319,12 +1347,45 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
             return;
         }
 
+        // Now that damage has been calculated, merge final NRA flags in
+        for(SkillTargetResult& target : skill.Targets)
+        {
+            switch(target.HitNull)
+            {
+            case 1:
+                target.Flags1 |= FLAG1_BLOCK_PHYS;
+                break;
+            case 2:
+                target.Flags1 |= FLAG1_BLOCK_MAGIC;
+                break;
+            default:
+                break;
+            }
+
+            switch(target.HitReflect)
+            {
+            case 1:
+                target.Flags1 |= FLAG1_REFLECT_PHYS;
+                break;
+            case 2:
+                target.Flags1 |= FLAG1_REFLECT_MAGIC;
+                break;
+            default:
+                break;
+            }
+
+            if(target.HitAbsorb)
+            {
+                target.Flags1 |= FLAG1_ABSORB;
+            }
+        }
+
         // Now that damage is calculated, apply drain
         uint8_t hpDrainPercent = battleDamage->GetHPDrainPercent();
         uint8_t mpDrainPercent = battleDamage->GetMPDrainPercent();
         if(hpDrainPercent > 0 || mpDrainPercent > 0)
         {
-            auto selfTarget = GetSelfTarget(source, skill.Targets);
+            auto selfTarget = GetSelfTarget(source, skill.Targets, true);
 
             int32_t hpDrain = 0, mpDrain = 0;
             for(SkillTargetResult& target : skill.Targets)
@@ -1436,7 +1497,7 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
         // Determine which status effects to apply
         std::set<uint32_t> cancelOnKill;
         if(!(skill.ExecutionContext && !skill.ExecutionContext->ApplyStatusEffects) &&
-            (target.Flags1 & (FLAG1_BLOCK | FLAG1_REFLECT | FLAG1_ABSORB)) == 0)
+            !target.IndirectTarget && !target.HitNull && !target.HitReflect && !target.HitAbsorb)
         {
             auto statusAdjusts = tokuseiManager->GetAspectMap(source,
                 TokuseiAspectType::STATUS_INFLICT_ADJUST,
@@ -1504,6 +1565,13 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
             }
         }
 
+        // Perform knockback if there is normal damage but no damage potential
+        // or if damage was dealt
+        auto battleDamage = damageData->GetBattleDamage();
+        bool applyKnockback = battleDamage->GetFormula()
+            == objects::MiBattleDamageData::Formula_t::DMG_NORMAL &&
+            battleDamage->GetModifier1() == 0 &&
+            battleDamage->GetModifier2() == 0;
         if(hpDamage != 0 || mpDamage != 0)
         {
             bool targetAlive = target.EntityState->IsAlive();
@@ -1552,18 +1620,19 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
 
             if(hpAdjusted < 0)
             {
-                if(kbMod)
-                {
-                    float kb = target.EntityState->UpdateKnockback(now, kbMod);
-                    if(kb == 0.f)
-                    {
-                        target.Flags1 |= FLAG1_KNOCKBACK;
-                        cancellations[target.EntityState] |= EFFECT_CANCEL_KNOCKBACK;
-                    }
-                }
+                int32_t hitstunNull = (int32_t)tokuseiManager->GetAspectSum(source,
+                    TokuseiAspectType::HITSTUN_NULL, targetCalc) * 100;
+                target.CanHitstun = hitstunNull != 10000 &&
+                    (hitstunNull < 0 || RNG(int32_t, 1, 10000) > hitstunNull);
+
+                applyKnockback = true;
 
                 cancellations[target.EntityState] |= EFFECT_CANCEL_HIT |
                     EFFECT_CANCEL_DAMAGE;
+            }
+            else
+            {
+                applyKnockback = false;
             }
 
             switch(target.EntityState->GetEntityType())
@@ -1604,6 +1673,24 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
                     break;
                 default:
                     break;
+            }
+        }
+
+        if(applyKnockback && kbMod)
+        {
+            int32_t kbNull = (int32_t)tokuseiManager->GetAspectSum(source,
+                TokuseiAspectType::KNOCKBACK_NULL, targetCalc) * 100;
+            target.CanKnockback = kbNull != 10000 &&
+                (kbNull < 0 || RNG(int32_t, 1, 10000) > kbNull);
+
+            if(target.CanKnockback)
+            {
+                float kb = target.EntityState->UpdateKnockback(now, kbMod);
+                if(kb == 0.f)
+                {
+                    target.Flags1 |= FLAG1_KNOCKBACK;
+                    cancellations[target.EntityState] |= EFFECT_CANCEL_KNOCKBACK;
+                }
             }
         }
 
@@ -1764,23 +1851,38 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
     {
         if(cancelPair.second)
         {
-            cancelPair.first->CancelStatusEffects(cancelPair.second);
+            auto eState = cancelPair.first;
+            uint8_t cancelFlags = cancelPair.second;
+
+            cancelPair.first->CancelStatusEffects(cancelFlags);
 
             // Check for skills that need to be cancelled
-            if(cancelPair.second & (EFFECT_CANCEL_DAMAGE | EFFECT_CANCEL_KNOCKBACK))
+            if(cancelFlags & (EFFECT_CANCEL_DAMAGE | EFFECT_CANCEL_KNOCKBACK))
             {
-                auto tActivated = cancelPair.first->GetActivatedAbility();
+                auto tActivated = eState->GetActivatedAbility();
                 auto tSkillData = tActivated
                     ? definitionManager->GetSkillData(tActivated->GetSkillID()) : nullptr;
                 if(tSkillData)
                 {
                     auto tCancel = tSkillData->GetCast()->GetCancel();
-                    if(((cancelPair.second & EFFECT_CANCEL_DAMAGE) != 0 &&
+                    bool applyInterrupt = ((cancelFlags & EFFECT_CANCEL_DAMAGE) != 0 &&
                         tCancel->GetDamageCancel()) ||
-                        ((cancelPair.second & EFFECT_CANCEL_KNOCKBACK) != 0 &&
-                        tCancel->GetKnockbackCancel()))
+                        ((cancelFlags & EFFECT_CANCEL_KNOCKBACK) != 0 &&
+                            tCancel->GetKnockbackCancel());
+
+                    if(applyInterrupt)
                     {
-                        CancelSkill(cancelPair.first, tActivated->GetActivationID());
+                        int32_t interruptNull = (int32_t)tokuseiManager->GetAspectSum(
+                            source, TokuseiAspectType::CAST_INTERRUPT_NULL,
+                            GetCalculatedState(eState, pSkill, true, source)) * 100;
+
+                        bool cancelInterrupt = interruptNull >= 10000 ||
+                            (interruptNull > 0 && RNG(int32_t, 1, 10000) <= interruptNull);
+
+                        if(!cancelInterrupt)
+                        {
+                            CancelSkill(eState, tActivated->GetActivationID());
+                        }
                     }
                 }
             }
@@ -1859,7 +1961,7 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
         objects::MiSkillBasicData::ActionType_t::RUSH && skill.PrimaryTarget;
     if(doRush)
     {
-        SkillTargetResult* selfTarget = GetSelfTarget(source, skill.Targets);
+        SkillTargetResult* selfTarget = GetSelfTarget(source, skill.Targets, true);
         selfTarget->Flags1 |= FLAG1_RUSH_MOVEMENT;
     }
 
@@ -1961,10 +2063,29 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
                     }
                     break;
                 case 4:
-                    /// @todo: To the front of the source
+                    if(target.EntityState != effectiveTarget)
+                    {
+                        // Move to the same spot as the target entity
+                        target.EntityState->SetOriginX(target.EntityState->GetCurrentX());
+                        target.EntityState->SetOriginY(target.EntityState->GetCurrentY());
+                        target.EntityState->SetOriginTicks(now);
+
+                        target.EntityState->SetDestinationX(effectiveTarget->GetCurrentX());
+                        target.EntityState->SetDestinationY(effectiveTarget->GetCurrentY());
+                        target.EntityState->SetDestinationTicks(hitStopTime);
+                    }
                     break;
                 case 5:
-                    /// @todo: To the source
+                    {
+                        // Oosition becomes source position
+                        target.EntityState->SetOriginX(target.EntityState->GetCurrentX());
+                        target.EntityState->SetOriginY(target.EntityState->GetCurrentY());
+                        target.EntityState->SetOriginTicks(now);
+
+                        target.EntityState->SetDestinationX(source->GetCurrentX());
+                        target.EntityState->SetDestinationY(source->GetCurrentY());
+                        target.EntityState->SetDestinationTicks(hitStopTime);
+                    }
                     break;
                 case 0:
                 case 3: /// @todo: technically this has more spread than 0
@@ -2012,7 +2133,7 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
                 hitTimings[0] = now;
                 hitTimings[1] = now + 200000;
             }
-            else if(target.Damage1Type == DAMAGE_TYPE_GENERIC)
+            else if(target.Damage1Type == DAMAGE_TYPE_GENERIC || knockedBack)
             {
                 if(target.Damage1)
                 {
@@ -2037,9 +2158,21 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
                     }
                     else
                     {
-                        // Normal hit stop
-                        hitTimings[2] = hitStopTime;
+                        // Normal hit stop (or complete only if hit stun nulled)
+                        hitTimings[2] = target.CanHitstun ? hitStopTime : completeTime;
                     }
+
+                    if(target.CanHitstun)
+                    {
+                        target.EntityState->SetStatusTimes(STATUS_HIT_STUN,
+                            hitTimings[2]);
+                    }
+                }
+                else if(knockedBack)
+                {
+                    // Normal hit stop time to finish knockback
+                    hitTimings[0] = now;
+                    hitTimings[2] = hitTimings[1] = hitStopTime;
 
                     target.EntityState->SetStatusTimes(STATUS_HIT_STUN,
                         hitTimings[2]);
@@ -2627,8 +2760,7 @@ void SkillManager::HandleGuard(const std::shared_ptr<ActiveEntityState>& source,
     }
 
     uint8_t activationID = tActivated->GetActivationID();
-    bool cancel = !pSkill->Definition->GetBasic()->GetDefensible();
-    if(!cancel)
+    if(pSkill->Definition->GetBasic()->GetDefensible())
     {
         auto server = mServer.lock();
         auto definitionManager = server->GetDefinitionManager();
@@ -2637,24 +2769,23 @@ void SkillManager::HandleGuard(const std::shared_ptr<ActiveEntityState>& source,
         {
         case objects::MiSkillBasicData::ActionType_t::ATTACK:
         case objects::MiSkillBasicData::ActionType_t::SPIN:
-            target.Flags1 |= FLAG1_GUARDED;
-            target.GuardModifier = tSkillData->GetDamage()->GetBattleDamage()->GetModifier1();
-            ExecuteSkill(target.EntityState, activationID, (int64_t)source->GetEntityID());
+            if(tActivated->GetChargedTime() <= pSkill->Activated->GetExecutionTime())
+            {
+                target.Flags1 |= FLAG1_GUARDED;
+                target.GuardModifier = tSkillData->GetDamage()->GetBattleDamage()->GetModifier1();
+                ExecuteSkill(target.EntityState, activationID, (int64_t)source->GetEntityID());
+                return;
+            }
             break;
         case objects::MiSkillBasicData::ActionType_t::RUSH:
             /// @todo: Same as not guarding but with special animation
-            cancel = true;
             break;
         default:
-            cancel = true;
             break;
         }
     }
 
-    if(cancel)
-    {
-        CancelSkill(target.EntityState, tActivated->GetActivationID());
-    }
+    CancelSkill(target.EntityState, tActivated->GetActivationID());
 }
 
 void SkillManager::HandleCounter(const std::shared_ptr<ActiveEntityState>& source,
@@ -2676,6 +2807,7 @@ void SkillManager::HandleCounter(const std::shared_ptr<ActiveEntityState>& sourc
         {
         case objects::MiSkillBasicData::ActionType_t::ATTACK:
         case objects::MiSkillBasicData::ActionType_t::RUSH:
+            if(tActivated->GetChargedTime() <= pSkill->Activated->GetExecutionTime())
             {
                 target.Flags1 |= FLAG1_GUARDED;
                 target.HitAvoided = true;
@@ -2683,16 +2815,14 @@ void SkillManager::HandleCounter(const std::shared_ptr<ActiveEntityState>& sourc
                 counterCtx->CounteredSkill = pSkill;
                 ExecuteSkill(target.EntityState, activationID, (int64_t)source->GetEntityID(),
                     counterCtx);
+                return;
             }
-            return;
         default:
             break;
         }
     }
 
     CancelSkill(target.EntityState, activationID);
-
-    return;
 }
 
 void SkillManager::HandleDodge(const std::shared_ptr<ActiveEntityState>& source,
@@ -2714,11 +2844,14 @@ void SkillManager::HandleDodge(const std::shared_ptr<ActiveEntityState>& source,
         {
         case objects::MiSkillBasicData::ActionType_t::SHOT:
         case objects::MiSkillBasicData::ActionType_t::RAPID:
-            target.Flags1 |= FLAG1_DODGED;
-            target.Damage1Type = target.Damage2Type = DAMAGE_TYPE_MISS;
-            target.HitAvoided = true;
-            ExecuteSkill(target.EntityState, activationID, (int64_t)source->GetEntityID());
-            return;
+            if(tActivated->GetChargedTime() <= pSkill->Activated->GetExecutionTime())
+            {
+                target.Flags1 |= FLAG1_DODGED;
+                target.Damage1Type = target.Damage2Type = DAMAGE_TYPE_MISS;
+                target.HitAvoided = true;
+                ExecuteSkill(target.EntityState, activationID, (int64_t)source->GetEntityID());
+                return;
+            }
         default:
             break;
         }
@@ -3482,7 +3615,7 @@ bool SkillManager::CalculateDamage(const std::shared_ptr<ActiveEntityState>& sou
     {
         if(target.HitAvoided) continue;
 
-        bool effectiveHeal = isHeal || (target.Flags1 & FLAG1_ABSORB);
+        bool effectiveHeal = isHeal || target.HitAbsorb;
 
         switch(formula)
         {
@@ -3543,7 +3676,7 @@ bool SkillManager::CalculateDamage(const std::shared_ptr<ActiveEntityState>& sou
 
                 float resist = (float)
                     (targetState->GetCorrectTbl((size_t)resistCorrectType) * 0.01);
-                if(target.Flags1 & FLAG1_ABSORB)
+                if(target.HitAbsorb)
                 {
                     // Resistance is not applied during absorption
                     resist = 0;
@@ -3623,7 +3756,7 @@ bool SkillManager::CalculateDamage(const std::shared_ptr<ActiveEntityState>& sou
                         if(target.PursuitAffinity != skill.EffectiveAffinity)
                         {
                             // Check NRA for pursuit affinity and stop if it is prevented
-                            if(GetNRAResult(target, skill, target.PursuitAffinity, true) == 0)
+                            if(!GetNRAResult(target, skill, target.PursuitAffinity, true))
                             {
                                 // Calculate the new enemy resistence and determine damage
                                 resistCorrectType = (CorrectTbl)(
@@ -3739,12 +3872,13 @@ bool SkillManager::CalculateDamage(const std::shared_ptr<ActiveEntityState>& sou
         }
 
         // Reduce for AOE and make sure at least 1 damage was dealt to each specified type
+        float aoeReduction = (float)damageData->GetAoeReduction();
         if(mod1)
         {
-            if(!target.PrimaryTarget && damageData->GetAoeReduction())
+            if(!target.PrimaryTarget && aoeReduction)
             {
                 target.Damage1 = (uint16_t)((float)target.Damage1 *
-                    (float)(1.f - (0.01f * (float)damageData->GetAoeReduction())));
+                    (float)(1.f - (0.01f * aoeReduction)));
             }
 
             if(target.Damage1 == 0)
@@ -3755,10 +3889,10 @@ bool SkillManager::CalculateDamage(const std::shared_ptr<ActiveEntityState>& sou
     
         if(mod2)
         {
-            if(!target.PrimaryTarget && damageData->GetAoeReduction())
+            if(!target.PrimaryTarget && aoeReduction)
             {
                 target.Damage2 = (uint16_t)((float)target.Damage2 *
-                    (float)(1.f - (0.01f * (float)damageData->GetAoeReduction())));
+                    (float)(1.f - (0.01f * aoeReduction)));
             }
 
             if(target.Damage2 == 0)
@@ -3781,7 +3915,7 @@ bool SkillManager::CalculateDamage(const std::shared_ptr<ActiveEntityState>& sou
 
     if(skill.IsSuicide)
     {
-        auto selfTarget = GetSelfTarget(source, skill.Targets);
+        auto selfTarget = GetSelfTarget(source, skill.Targets, true);
 
         selfTarget->Damage1 = source->GetCoreStats()->GetHP();
         selfTarget->Damage1Type = DAMAGE_TYPE_GENERIC;
@@ -4010,7 +4144,7 @@ int32_t SkillManager::CalculateDamage_MaxPercent(uint16_t mod, uint8_t& damageTy
 }
 
 SkillTargetResult* SkillManager::GetSelfTarget(const std::shared_ptr<ActiveEntityState>& source,
-    std::list<SkillTargetResult>& targets)
+    std::list<SkillTargetResult>& targets, bool indirectDefault)
 {
     for(SkillTargetResult& target : targets)
     {
@@ -4023,6 +4157,7 @@ SkillTargetResult* SkillManager::GetSelfTarget(const std::shared_ptr<ActiveEntit
     // Does not exist so create it
     SkillTargetResult target;
     target.EntityState = source;
+    target.IndirectTarget = indirectDefault;
     targets.push_back(target);
     return &targets.back();
 }
@@ -4033,16 +4168,42 @@ bool SkillManager::SetNRA(SkillTargetResult& target, ProcessingSkill& skill)
     switch(resultIdx)
     {
     case NRA_NULL:
-        target.Flags1 |= FLAG1_BLOCK;
+        switch(skill.EffectiveDependencyType)
+        {
+        case 0:
+        case 1:
+        case 6:
+        case 9:
+        case 10:
+        case 12:
+            target.HitNull = 1;	// Physical null
+            break;
+        default:
+            target.HitNull = 2; // Magic null
+            break;
+        }
         target.HitAvoided = true;
-        return false;
-    case NRA_ABSORB:
-        target.Flags1 |= FLAG1_ABSORB;
         return false;
     case NRA_REFLECT:
-        target.Flags1 |= FLAG1_REFLECT;
+        switch(skill.EffectiveDependencyType)
+        {
+        case 0:
+        case 1:
+        case 6:
+        case 9:
+        case 10:
+        case 12:
+            target.HitReflect = 1;  // Physical reflect
+            break;
+        default:
+            target.HitReflect = 2;  // Magic reflect
+            break;
+        }
         target.HitAvoided = true;
         return true;
+    case NRA_ABSORB:
+        target.HitAbsorb = true;
+        return false;
     default:
         return false;
     }
@@ -4211,7 +4372,7 @@ void SkillManager::FinalizeSkillExecution(const std::shared_ptr<ChannelClientCon
     auto characterManager = server->GetCharacterManager();
     auto tokuseiManager = server->GetTokuseiManager();
 
-    // No pay the costs
+    // Now pay the costs
     int32_t hpCost = activated->GetHPCost();
     int32_t mpCost = activated->GetMPCost();
     bool hpMpCost = hpCost > 0 || mpCost > 0;

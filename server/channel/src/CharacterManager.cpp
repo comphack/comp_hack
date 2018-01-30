@@ -772,14 +772,12 @@ bool CharacterManager::GetEntityRevivalPacket(libcomp::Packet& p,
     auto cs = eState->GetCoreStats();
     if(cs)
     {
-        bool syncXP = cs->GetLevel() >= 10;
-
         p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_REVIVE_ENTITY);
         p.WriteS32Little(eState->GetEntityID());
         p.WriteS8(action);
         p.WriteS32Little((int16_t)cs->GetHP());
         p.WriteS32Little((int16_t)cs->GetMP());
-        p.WriteS64Little(syncXP ? cs->GetXP() : 0);
+        p.WriteS64Little(cs->GetXP());
 
         return true;
     }

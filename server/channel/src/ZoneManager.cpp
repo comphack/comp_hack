@@ -564,76 +564,14 @@ void ZoneManager::LeaveZone(const std::shared_ptr<ChannelClientConnection>& clie
                     }
                 }
 
-                // If an instance zone is being left, check to see if all zones
-                // have been evacuated before removing any
-                std::list<std::shared_ptr<Zone>> cleanupZones;
+                // If an instance zone is being left see if it
+                // is empty and can be removed
                 if(!keepZone && instance)
                 {
-                    cleanupZones.push_back(zone);
-                }
-                else
-                {
-                    uint32_t instID = mZoneInstanceAccess[worldCID];
-                    mZoneInstanceAccess.erase(worldCID);
-
-                    if(instID != 0)
-                    {
-                        /// @todo: clear if no other access exists and its empty
-                    }
+                    instanceRemoved = RemoveInstance(instance->GetID());
                 }
 
-                if(cleanupZones.size() > 0)
-                {
-                    auto instZones = instance->GetZones();
-                    for(auto iPair : instZones)
-                    {
-                        for(auto zPair : iPair.second)
-                        {
-                            auto z = zPair.second;
-                            if(z->GetConnections().size() == 0)
-                            {
-                                cleanupZones.push_back(z);
-                            }
-                            else
-                            {
-                                keepZone = true;
-                                break;
-                            }
-                        }
-                    }
-
-                    if(!keepZone)
-                    {
-                        // Since the zones will all be cleaned up, drop
-                        // the instance and remove all access
-                        for(int32_t accessCID : instance->GetAccessCIDs())
-                        {
-                            auto it = mZoneInstanceAccess.find(accessCID);
-                            if(it != mZoneInstanceAccess.end() &&
-                                it->second == instance->GetID())
-                            {
-                                mZoneInstanceAccess.erase(it);
-                            }
-                        }
-
-                        LOG_DEBUG(libcomp::String("Cleaning up zone"
-                            " instance: %1\n").Arg(instance->GetID()));
-
-                        mZoneInstances.erase(instance->GetID());
-                    }
-                }
-
-                if(!keepZone)
-                {
-                    for(auto z : cleanupZones)
-                    {
-                        z->Cleanup();
-                        mZones.erase(z->GetID());
-
-                        instanceRemoved = true;
-                    }
-                }
-                else
+                if(keepZone)
                 {
                     // Stop all AI in place
                     uint64_t now = ChannelServer::GetServerTime();
@@ -673,6 +611,18 @@ void ZoneManager::LeaveZone(const std::shared_ptr<ChannelClientConnection>& clie
     {
         characterManager->CancelStatusEffects(client, EFFECT_CANCEL_LOGOUT
             | EFFECT_CANCEL_ZONEOUT);
+
+        auto accessIter = mZoneInstanceAccess.find(worldCID);
+        if(accessIter != mZoneInstanceAccess.end())
+        {
+            uint32_t instanceID = accessIter->second;
+            mZoneInstanceAccess.erase(accessIter);
+
+            if(instanceID != 0)
+            {
+                RemoveInstance(instanceID);
+            }
+        }
     }
 
     // Deactivate and save the updated status effects
@@ -718,7 +668,8 @@ std::shared_ptr<ZoneInstance> ZoneManager::CreateInstance(const std::shared_ptr<
     }
 
     mZoneInstances[id] = instance;
-    LOG_DEBUG(libcomp::String("Creating zone instance: %1\n").Arg(id));
+    LOG_DEBUG(libcomp::String("Creating zone instance: %1 (%2)\n")
+        .Arg(id).Arg(def->GetID()));
 
     return instance;
 }
@@ -766,7 +717,8 @@ bool ZoneManager::ClearInstanceAccess(uint32_t instanceID)
         }
     }
 
-    /// @todo: remove if empty
+    // If the instance is empty, remove it
+    RemoveInstance(instanceID);
 
     return removed;
 }
@@ -2493,4 +2445,58 @@ std::shared_ptr<Zone> ZoneManager::CreateZone(
     UpdateSpawnGroups(zone, true);
 
     return zone;
+}
+
+bool ZoneManager::RemoveInstance(uint32_t instanceID)
+{
+    auto instIter = mZoneInstances.find(instanceID);
+    if(instIter == mZoneInstances.end())
+    {
+        return false;
+    }
+
+    auto instance = instIter->second;
+    auto instZones = instance->GetZones();
+
+    std::list<std::shared_ptr<Zone>> cleanupZones;
+    for(auto iPair : instZones)
+    {
+        for(auto zPair : iPair.second)
+        {
+            auto z = zPair.second;
+            if(z->GetConnections().size() == 0)
+            {
+                cleanupZones.push_back(z);
+            }
+            else
+            {
+                return false;
+            }
+        }
+    }
+
+    // Since the zones will all be cleaned up, drop
+    // the instance and remove all access
+    for(int32_t accessCID : instance->GetAccessCIDs())
+    {
+        auto it = mZoneInstanceAccess.find(accessCID);
+        if(it != mZoneInstanceAccess.end() &&
+            it->second == instance->GetID())
+        {
+            mZoneInstanceAccess.erase(it);
+        }
+    }
+
+    LOG_DEBUG(libcomp::String("Cleaning up zone instance: %1 (%2)\n")
+        .Arg(instance->GetID()).Arg(instance->GetDefinition()->GetID()));
+
+    mZoneInstances.erase(instance->GetID());
+
+    for(auto z : cleanupZones)
+    {
+        z->Cleanup();
+        mZones.erase(z->GetID());
+    }
+
+    return true;
 }

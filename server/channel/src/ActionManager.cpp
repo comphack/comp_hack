@@ -518,6 +518,20 @@ bool ActionManager::UpdateCOMP(ActionContext& ctx)
     std::unordered_map<uint32_t, std::list<std::shared_ptr<objects::Demon>>> remove;
     if(act->RemoveDemonsCount() > 0)
     {
+        if(act->RemoveDemonsKeyExists(0))
+        {
+            if(dState->GetEntity())
+            {
+                remove[0].push_back(dState->GetEntity());
+            }
+            else
+            {
+                LOG_ERROR("Attempted to remove partner demon but no"
+                    " demon was summoned for COMP removal request\n");
+                return false;
+            }
+        }
+
         for(uint8_t i = 0; i < maxSlots; i++)
         {
             auto slot = comp->GetDemons((size_t)i);
@@ -531,9 +545,21 @@ bool ActionManager::UpdateCOMP(ActionContext& ctx)
                     if(act->GetRemoveDemons(type) == 0)
                     {
                         // Special case, must be summoned demon
-                        if(dState->GetEntity() == slot.Get())
+                        if(remove.find(0) != remove.end())
+                        {
+                            LOG_ERROR("Attempted to remove partner demon twice"
+                                " for COMP removal request\n");
+                            return false;
+                        }
+                        else if(dState->GetEntity() == slot.Get())
                         {
                             remove[type].push_back(slot.Get());
+                        }
+                        else
+                        {
+                            LOG_ERROR("Attempted to remove specific partner demon that"
+                                " was not summoned for COMP removal request\n");
+                            return false;
                         }
                     }
                     else if(act->GetRemoveDemons(type) > (uint8_t)remove[type].size())

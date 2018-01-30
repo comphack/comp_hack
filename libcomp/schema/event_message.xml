@@ -19,5 +19,6 @@
     <object name="EventMultitalk" baseobject="Event" persistent="false">
         <member type="enum" name="eventType" inherited="true" default="MULTITALK"/>
         <member type="s32" name="messageID"/>
+        <member type="bool" name="playerSource"/>
     </object>
 </objgen>

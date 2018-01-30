@@ -728,8 +728,10 @@ bool ChatManager::GMCommand_Goto(const std::shared_ptr<
         oClient = oTargetAccount ? server->GetManagerConnection()->
             GetClientConnection(oTargetAccount->GetUsername()) : nullptr;
 
-        auto oTargetCState = oClient->GetClientState()->GetCharacterState();
-        if(oTargetCState->GetEntity()->GetName() != name)
+        auto oTargetCState = oClient ?
+            oClient->GetClientState()->GetCharacterState() : nullptr;
+        auto oChar = oTargetCState ? oTargetCState->GetEntity() : nullptr;
+        if(!oChar || oChar->GetName() != name)
         {
             // Not the current character
             oClient = nullptr;
@@ -738,17 +740,16 @@ bool ChatManager::GMCommand_Goto(const std::shared_ptr<
 
     if(oClient)
     {
+        auto cState = client->GetClientState()->GetCharacterState();
         auto oTargetState = oClient->GetClientState();
         auto oTargetCState = oTargetState->GetCharacterState();
-        if(client->GetClientState()->GetCharacterState()->GetZone() ==
-            oTargetCState->GetZone())
+        if(oTargetCState && cState->GetZone() == oTargetCState->GetZone())
         {
-            auto fromCState = toSelf ? oTargetCState : client->GetClientState()
-                ->GetCharacterState();
+            auto fromCState = toSelf ? oTargetCState : cState;
             auto fromDState = toSelf ? oTargetState->GetDemonState()
                 : client->GetClientState()->GetDemonState();
             auto toCState = toSelf
-                ? client->GetClientState()->GetCharacterState() : oTargetCState;
+                ? cState : oTargetCState;
 
             float destX = toCState->GetCurrentX();
             float destY = toCState->GetCurrentY();

@@ -394,10 +394,12 @@ private:
      * not already exist
      * @param source Pointer to the entity that activated the skill
      * @param targets List target results associated to the skill
+     * @param indirectOnly If true and the target does not already exist, it will
+     *  be created as an indirect target
      * @return Pointer to the skill target representing the source entity
      */
     SkillTargetResult* GetSelfTarget(const std::shared_ptr<ActiveEntityState>& source,
-        std::list<SkillTargetResult>& targets);
+        std::list<SkillTargetResult>& targets, bool indirectDefault);
 
     /**
      * Set null, reflect or absorb on the skill target

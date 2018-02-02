@@ -222,6 +222,12 @@ public:
     static bool SaveBinaryData(std::ostream& stream,
         const std::list<std::shared_ptr<Object>>& objs);
 
+    /**
+     * Save the object into XML and return it as a string.
+     * @returns An XML string for the object.
+     */
+    std::string GetXml() const;
+
 protected:
     /**
      * Utility function to get a child XML element from a parent node

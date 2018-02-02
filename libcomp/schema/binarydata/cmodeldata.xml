@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="MiCModelBase" persistent="false">
+        <member type="u32" name="ID"/>
+        <member type="u32" name="IconID"/>
+        <member type="f32" name="unk2"/>
+        <member type="f32" name="unk3"/>
+        <member type="u8" name="unk4"/>
+        <member type="u8" name="unk5"/>
+        <member type="u16" name="unk6"/>
+        <member type="string" length="36" name="Model" encoding="utf8"/>
+        <member type="string" length="36" name="Texture" encoding="cp932"/>
+        <member type="array" size="3" name="unk7">
+            <element type="u8"/>
+        </member>
+        <member type="u8" name="unk8"/>
+        <member type="u32" name="unk9"/>
+        <member type="u32" name="unk10"/>
+    </object>
+    <object name="MiCModelView" persistent="false">
+        <member type="f32" name="unk1"/>
+        <member type="f32" name="unk2"/>
+        <member type="s16" name="unk3"/>
+        <member type="s16" name="unk4"/>
+        <member type="s16" name="unk5"/>
+        <member type="s16" name="unk6"/>
+        <member type="s16" name="unk7"/>
+        <member type="s16" name="unk8"/>
+        <member type="f32" name="unk9"/>
+        <member type="f32" name="unk10"/>
+        <member type="f32" name="unk11"/>
+        <member type="f32" name="unk12"/>
+        <member type="f32" name="unk13"/>
+        <member type="f32" name="unk14"/>
+        <member type="f32" name="unk15"/>
+        <member type="f32" name="unk16"/>
+    </object>
+    <object name="MiCModelMotionMap" persistent="false">
+        <member type="u32" name="unk1"/>
+        <member type="f32" name="unk2"/>
+        <member type="u32" name="unk3"/>
+        <member type="f32" name="unk4"/>
+        <member type="f32" name="unk5"/>
+        <member type="u8" name="unk6"/>
+        <member type="u8" name="unk7"/>
+        <member type="u16" name="unk8"/>
+        <member type="f32" name="unk9"/>
+        <member type="f32" name="unk10"/>
+    </object>
+    <object name="MiCModelData" persistent="false">
+        <member type="MiCModelBase*" name="base"/>
+        <member type="MiCModelView*" name="view"/>
+
+        <member type="list" name="motion">
+            <element type="MiCModelMotionMap*"/>
+        </member>
+    </object>
+</objgen>

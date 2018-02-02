@@ -293,3 +293,21 @@ bool Object::SaveBinaryData(std::ostream& stream,
 
     return true;
 }
+
+std::string Object::GetXml() const
+{
+    tinyxml2::XMLDocument doc;
+
+    tinyxml2::XMLElement *pRoot = doc.NewElement("objects");
+    doc.InsertEndChild(pRoot);
+
+    if(!Save(doc, *pRoot))
+    {
+        return {};
+    }
+
+    tinyxml2::XMLPrinter printer;
+    doc.Print(&printer);
+
+    return printer.CStr();
+}

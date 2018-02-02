@@ -35,10 +35,15 @@
 // object Includes
 #include <MiCEventMessageData.h>
 
+#include <MiCIconData.h>
+
 #include <MiCItemBaseData.h>
 #include <MiCItemData.h>
 
 #include <MiCMessageData.h>
+
+#include <MiCModelData.h>
+#include <MiCModelBase.h>
 
 #include <MiCModifiedEffectData.h>
 
@@ -372,9 +377,11 @@ int Usage(const char *szAppName)
     std::cerr << "TYPE indicates the format of the BinaryData and can "
         << "be one of:" << std::endl;
     std::cerr << "  ceventmessage   Format for CEventMessageData.sbin" << std::endl;
+    std::cerr << "  cicon           Format for CIconData.bin" << std::endl;
     std::cerr << "  citem           Format for CItemData.sbin" << std::endl;
     std::cerr << "  cmultitalk      Format for CMultiTalkData.sbin" << std::endl;
     std::cerr << "  cmessage        Format for CMessageData.sbin" << std::endl;
+    std::cerr << "  cmodel          Format for CModelData.sbin" << std::endl;
     std::cerr << "  cmodifiedeffect Format for CMessageData.sbin" << std::endl;
     std::cerr << "  cpolygonmovie   Format for CPolygonMoveData.sbin" << std::endl;
     std::cerr << "  cquest          Format for CQuestData.sbin" << std::endl;
@@ -430,6 +437,21 @@ int main(int argc, char *argv[])
             }
         );
     }
+    else if("cicon" == bdType)
+    {
+        pSet = new BinaryDataSet(
+            []()
+            {
+                return std::make_shared<objects::MiCIconData>();
+            },
+
+            [](const std::shared_ptr<libcomp::Object>& obj)
+            {
+                return std::dynamic_pointer_cast<objects::MiCIconData>(
+                    obj)->GetID();
+            }
+        );
+    }
     else if("citem" == bdType)
     {
         pSet = new BinaryDataSet(
@@ -472,6 +494,21 @@ int main(int argc, char *argv[])
             {
                 return std::dynamic_pointer_cast<objects::MiCMessageData>(
                     obj)->GetID();
+            }
+        );
+    }
+    else if("cmodel" == bdType)
+    {
+        pSet = new BinaryDataSet(
+            []()
+            {
+                return std::make_shared<objects::MiCModelData>();
+            },
+
+            [](const std::shared_ptr<libcomp::Object>& obj)
+            {
+                return std::dynamic_pointer_cast<objects::MiCModelData>(
+                    obj)->GetBase()->GetID();
             }
         );
     }

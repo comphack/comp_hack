@@ -37,6 +37,7 @@
 #include "EncryptedConnection.h"
 #include "ServerConfig.h"
 #include "TcpServer.h"
+#include "TimerManager.h"
 #include "Worker.h"
 
 namespace libcomp
@@ -126,6 +127,12 @@ public:
      * @returns Pointer to the data store. This shold never be deleted.
      */
     gsl::not_null<DataStore*> GetDataStore();
+
+    /**
+     * Get the timer manager for the server.
+     * @returns Pointer to the timer manager. This shold never be deleted.
+     */
+    gsl::not_null<TimerManager*> GetTimerManager();
 
     /**
      * Call the Shutdown function on each worker.  This should be called
@@ -263,6 +270,9 @@ protected:
 
     /// Data store for the server.
     libcomp::DataStore mDataStore;
+
+    /// Manager for timer events.
+    libcomp::TimerManager mTimerManager;
 
     /// Custom config path to use during execution.
     static std::string sConfigPath;

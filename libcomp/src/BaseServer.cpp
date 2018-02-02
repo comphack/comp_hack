@@ -274,6 +274,11 @@ gsl::not_null<DataStore*> BaseServer::GetDataStore()
     return &mDataStore;
 }
 
+gsl::not_null<TimerManager*> BaseServer::GetTimerManager()
+{
+    return &mTimerManager;
+}
+
 int BaseServer::Run()
 {
     // Run the asycn worker in its own thread.

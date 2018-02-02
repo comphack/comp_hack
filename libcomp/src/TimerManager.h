@@ -42,8 +42,9 @@ namespace libcomp
 
 class TimerEvent;
 
-struct TimerEventComp
+class TimerEventComp
 {
+public:
     bool operator()(const TimerEvent *lhs, const TimerEvent *rhs) const;
 };
 

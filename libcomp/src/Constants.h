@@ -8,7 +8,7 @@
  *
  * This file is part of the COMP_hack Library (libcomp).
  *
- * Copyright (C) 2012-2016 COMP_hack Team <compomega@tutanota.com>
+ * Copyright (C) 2012-2018 COMP_hack Team <compomega@tutanota.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as
@@ -31,19 +31,19 @@ namespace libcomp
 {
 
 /// Last year the code was changed.
-#define VERSION_YEAR  (2017)
+#define VERSION_YEAR  (2018)
 
 /// Major release (1 = pixie.)
 #define VERSION_MAJOR (1)
 
 /// Minor release (1 = SP1).
-#define VERSION_MINOR (0)
+#define VERSION_MINOR (8)
 
 /// Patch version (a hotfix).
-#define VERSION_PATCH (0)
+#define VERSION_PATCH (9)
 
 /// Codename for the version.
-#define VERSION_CODENAME "Pixie"
+#define VERSION_CODENAME "Kodama (Unstable)"
 
 /// HACK format magic.
 #define HACK_FORMAT_MAGIC (0x4B434148)

@@ -279,6 +279,8 @@ SET(${PROJECT_NAME}_PACKETS
     src/packets/game/MaterialBox.cpp            # 0x0205
     src/packets/game/Analyze.cpp                # 0x0209
     src/packets/game/ItemExpand.cpp             # 0x0210
+    src/packets/game/CompShopOpen.cpp           # 0x0212
+    src/packets/game/CompShopList.cpp           # 0x0214
     src/packets/game/FusionGauge.cpp            # 0x0217
     src/packets/game/TitleList.cpp              # 0x021B
     src/packets/game/PartnerDemonQuestList.cpp  # 0x022D
@@ -295,6 +297,7 @@ SET(${PROJECT_NAME}_PACKETS
     src/packets/game/CultureData.cpp            # 0x03AC
     src/packets/game/EquipmentModEdit.cpp       # 0x03CB
     src/packets/game/DemonDepoList.cpp          # 0x03F5
+    src/packets/game/Barter.cpp                 # 0x03FE
     src/packets/game/Blacklist.cpp              # 0x0408
     src/packets/game/DigitalizePoints.cpp       # 0x0414
     src/packets/game/DigitalizeAssist.cpp       # 0x0418

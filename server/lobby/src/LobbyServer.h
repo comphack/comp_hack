@@ -47,6 +47,8 @@ class SetupConfig;
 namespace lobby
 {
 
+class LobbySyncManager;
+
 class LobbyServer : public libcomp::BaseServer
 {
 public:
@@ -137,6 +139,12 @@ public:
     AccountManager* GetAccountManager();
 
     /**
+     * Get a pointer to the data sync manager.
+     * @return Pointer to the LobbySyncManager
+     */
+    LobbySyncManager* GetLobbySyncManager() const;
+
+    /**
      * Get the session manager for the server.
      * @return Session manager for the server.
      */
@@ -196,6 +204,9 @@ protected:
 
     /// Account manager for the server.
     AccountManager mAccountManager;
+
+    /// Data sync manager for the server.
+    LobbySyncManager* mSyncManager;
 
     /// Session manager for the server.
     SessionManager mSessionManager;

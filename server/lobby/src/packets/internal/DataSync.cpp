@@ -1,14 +1,15 @@
 /**
- * @file server/channel/src/packets/game/CashBalance.cpp
- * @ingroup channel
+ * @file server/lobby/src/packets/internal/DataSync.cpp
+ * @ingroup lobby
  *
  * @author HACKfrost
  *
- * @brief Request from the current account's total CP.
+ * @brief Request from the world servers to synchronize one or more
+ *  data records between the servers.
  *
- * This file is part of the Channel Server (channel).
+ * This file is part of the Lobby Server (lobby).
  *
- * Copyright (C) 2012-2016 COMP_hack Team <compomega@tutanota.com>
+ * Copyright (C) 2012-2018 COMP_hack Team <compomega@tutanota.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as
@@ -28,27 +29,29 @@
 
 // libcomp Includes
 #include <ManagerPacket.h>
-#include <Packet.h>
-#include <PacketCodes.h>
 
-// channel Includes
-#include "ChannelServer.h"
+// lobby Includes
+#include "LobbyServer.h"
+#include "LobbySyncManager.h"
 
-using namespace channel;
+using namespace lobby;
 
-bool Parsers::CashBalance::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::DataSync::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {
-    if(p.Size() != 0)
+    (void)connection;
+
+    auto server = std::dynamic_pointer_cast<LobbyServer>(pPacketManager->GetServer());
+    auto syncManager = server->GetLobbySyncManager();
+
+    if(!syncManager->SyncIncoming(p))
     {
         return false;
     }
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-
-    server->GetAccountManager()->SendCPBalance(client);
+    // Sync any records that need to relay back
+    syncManager->SyncOutgoing();
 
     return true;
 }

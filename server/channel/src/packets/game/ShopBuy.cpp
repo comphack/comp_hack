@@ -39,6 +39,7 @@
 #include <MiItemData.h>
 #include <MiPossessionData.h>
 #include <MiShopProductData.h>
+#include <PostItem.h>
 #include <ServerShop.h>
 #include <ServerShopProduct.h>
 #include <ServerShopTab.h>
@@ -132,79 +133,97 @@ void HandleShopPurchase(const std::shared_ptr<ChannelServer> server,
         price = 1;
     }
 
-    // CP purchases are only partially defined in the server files
     bool cpPurchase = product->GetCPCost() > 0;
-    if(cpPurchase)
+
+    bool success = false;
+    if(!cpPurchase)
     {
-        quantity = (int32_t)product->GetStack();
-    }
+        // Non-CP purchases go to the inventory
+        std::list<std::shared_ptr<objects::Item>> insertItems;
+        std::unordered_map<std::shared_ptr<objects::Item>, uint16_t> stackAdjustItems;
 
-    price = price * quantity;
+        price = price * quantity;
 
-    std::list<std::shared_ptr<objects::Item>> insertItems;
-    std::unordered_map<std::shared_ptr<objects::Item>, uint16_t> stackAdjustItems;
-
-    if(!cpPurchase && !characterManager->CalculateMaccaPayment(client, (uint64_t)price,
-        insertItems, stackAdjustItems))
-    {
-        LOG_ERROR(libcomp::String("Attempted to buy an item the player could"
-            " not afford: %1\n").Arg(state->GetAccountUID().ToString()));
-        SendShopPurchaseReply(client, shopID, productID, -2, false);
-        return;
-    }
-
-    int32_t qtyLeft = (int32_t)quantity;
-    int32_t maxStack = (int32_t)def->GetPossession()->GetStackSize();
-
-    // Update existing stacks first if we aren't adding a full stack
-    if(qtyLeft < maxStack)
-    {
-        for(auto item : characterManager->GetExistingItems(character,
-            product->GetItem(), inventory))
+        if(!characterManager->CalculateMaccaPayment(client, (uint64_t)price,
+            insertItems, stackAdjustItems))
         {
-            if(qtyLeft == 0) break;
-
-            uint16_t stackLeft = (uint16_t)(maxStack - item->GetStackSize());
-            if(stackLeft <= 0) continue;
-
-            uint16_t stackAdd = (uint16_t)((qtyLeft <= stackLeft) ? qtyLeft : stackLeft);
-
-            if(stackAdjustItems.find(item) == stackAdjustItems.end())
-            {
-                stackAdjustItems[item] = item->GetStackSize();
-            }
-
-            stackAdjustItems[item] = (uint16_t)(stackAdjustItems[item] + stackAdd);
-            qtyLeft = (int32_t)(qtyLeft - stackAdd);
+            LOG_ERROR(libcomp::String("Attempted to buy an item the player could"
+                " not afford: %1\n").Arg(state->GetAccountUID().ToString()));
+            SendShopPurchaseReply(client, shopID, productID, -2, false);
+            return;
         }
-    }
 
-    // If there are still more to create, add as new items
-    while(qtyLeft > 0)
-    {
-        uint16_t stack = (uint16_t)((qtyLeft > maxStack) ? maxStack : qtyLeft);
-        insertItems.push_back(characterManager->GenerateItem(
-            product->GetItem(), stack));
-        qtyLeft = (int32_t)(qtyLeft - stack);
-    }
+        int32_t qtyLeft = (int32_t)quantity;
+        int32_t maxStack = (int32_t)def->GetPossession()->GetStackSize();
 
-    if(!characterManager->UpdateItems(client, true, insertItems, stackAdjustItems))
-    {
-        SendShopPurchaseReply(client, shopID, productID, -1, false);
-        return;
-    }
+        // Update existing stacks first if we aren't adding a full stack
+        if(qtyLeft < maxStack)
+        {
+            for(auto item : characterManager->GetExistingItems(character,
+                product->GetItem(), inventory))
+            {
+                if(qtyLeft == 0) break;
 
-    // Purchase is valid
-    if(cpPurchase)
+                uint16_t stackLeft = (uint16_t)(maxStack - item->GetStackSize());
+                if(stackLeft <= 0) continue;
+
+                uint16_t stackAdd = (uint16_t)((qtyLeft <= stackLeft) ? qtyLeft : stackLeft);
+
+                if(stackAdjustItems.find(item) == stackAdjustItems.end())
+                {
+                    stackAdjustItems[item] = item->GetStackSize();
+                }
+
+                stackAdjustItems[item] = (uint16_t)(stackAdjustItems[item] + stackAdd);
+                qtyLeft = (int32_t)(qtyLeft - stackAdd);
+            }
+        }
+
+        // If there are still more to create, add as new items
+        while(qtyLeft > 0)
+        {
+            uint16_t stack = (uint16_t)((qtyLeft > maxStack) ? maxStack : qtyLeft);
+            insertItems.push_back(characterManager->GenerateItem(
+                product->GetItem(), stack));
+            qtyLeft = (int32_t)(qtyLeft - stack);
+        }
+
+        success = characterManager->UpdateItems(client, false, insertItems,
+            stackAdjustItems);
+    }
+    else
     {
+        // CP purchases always go to the post instead of the inventory
+        auto lobbyDB = server->GetLobbyDatabase();
+
+        quantity = (int32_t)product->GetStack();
+
+        auto postItems = objects::PostItem::LoadPostItemListByAccount(
+            lobbyDB, character->GetAccount());
+        if(((int32_t)postItems.size() + quantity) >= MAX_POST_ITEM_COUNT)
+        {
+            SendShopPurchaseReply(client, shopID, productID, -1, false);
+            return;
+        }
+
         auto account = libcomp::PersistentObject::LoadObjectByUUID<objects::Account>(
             server->GetLobbyDatabase(), character->GetAccount().GetUUID(), true);
-        auto lobbyDB = server->GetLobbyDatabase();
 
         auto opChangeset = std::make_shared<libcomp::DBOperationalChangeSet>();
         auto expl = std::make_shared<libcomp::DBExplicitUpdate>(account);
         expl->Subtract<int64_t>("CP", price);
         opChangeset->AddOperation(expl);
+
+        uint32_t timestamp = (uint32_t)std::time(0);
+        for(int32_t i = 0; i < quantity; i++)
+        {
+            auto postItem = libcomp::PersistentObject::New<objects::PostItem>(true);
+            postItem->SetType(product->GetItem());
+            postItem->SetTimestamp(timestamp);
+            postItem->SetAccount(account);
+
+            opChangeset->Insert(postItem);
+        }
 
         if(!lobbyDB->ProcessChangeSet(opChangeset))
         {
@@ -213,33 +232,19 @@ void HandleShopPurchase(const std::shared_ptr<ChannelServer> server,
             SendShopPurchaseReply(client, shopID, productID, -2, false);
             return;
         }
-    }
-
-    if(characterManager->UpdateItems(client, false, insertItems, stackAdjustItems))
-    {
-        SendShopPurchaseReply(client, shopID, productID, 0, true);
-    }
-    else
-    {
-        if(cpPurchase)
+        else
         {
-            // Roll back the CP cost
-            auto account = character->GetAccount().Get();
-            auto lobbyDB = server->GetLobbyDatabase();
+            success = true;
 
-            auto opChangeset = std::make_shared<libcomp::DBOperationalChangeSet>();
-            auto expl = std::make_shared<libcomp::DBExplicitUpdate>(account);
-            expl->Add<int64_t>("CP", price);
-            opChangeset->AddOperation(expl);
-
-            if(!lobbyDB->ProcessChangeSet(opChangeset))
+            auto syncManager = server->GetChannelSyncManager();
+            if(syncManager->UpdateRecord(account, "Account"))
             {
-                // Hopefully this never happens
-                LOG_CRITICAL("Account CP decrease could not be rolled back following"
-                    " a failed NPC shop purchase!\n");
+                syncManager->SyncOutgoing();
             }
         }
     }
+
+    SendShopPurchaseReply(client, shopID, productID, success  ? 0 : -1, false);
 }
 
 bool Parsers::ShopBuy::Parse(libcomp::ManagerPacket *pPacketManager,

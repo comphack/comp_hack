@@ -79,26 +79,20 @@ bool WorldServer::Initialize()
     mCharacterManager = new CharacterManager(self);
     mSyncManager = new WorldSyncManager(self);
 
-    if(!mSyncManager->Initialize())
-    {
-        return false;
-    }
-
     return true;
 }
 
 void WorldServer::FinishInitialize()
 {
     auto conf = std::dynamic_pointer_cast<objects::WorldConfig>(mConfig);
+    auto self = shared_from_this();
 
-    mManagerConnection = std::make_shared<ManagerConnection>(
-        shared_from_this());
+    mManagerConnection = std::make_shared<ManagerConnection>(self);
 
     auto connectionManager = std::dynamic_pointer_cast<libcomp::Manager>(mManagerConnection);
 
     // Build the lobby manager
-    auto packetManager = std::make_shared<libcomp::ManagerPacket>(
-        shared_from_this());
+    auto packetManager = std::make_shared<libcomp::ManagerPacket>(self);
     packetManager->AddParser<Parsers::GetWorldInfo>(to_underlying(
         InternalPacketCode_t::PACKET_GET_WORLD_INFO));
     packetManager->AddParser<Parsers::SetChannelInfo>(to_underlying(
@@ -107,14 +101,15 @@ void WorldServer::FinishInitialize()
         InternalPacketCode_t::PACKET_ACCOUNT_LOGIN));
     packetManager->AddParser<Parsers::AccountLogout>(to_underlying(
         InternalPacketCode_t::PACKET_ACCOUNT_LOGOUT));
+    packetManager->AddParser<Parsers::DataSync>(to_underlying(
+        InternalPacketCode_t::PACKET_DATA_SYNC));
 
     // Add the managers to the main worker.
     mMainWorker.AddManager(packetManager);
     mMainWorker.AddManager(connectionManager);
 
     // Build the channel manager
-    packetManager = std::make_shared<libcomp::ManagerPacket>(
-        shared_from_this());
+    packetManager = std::make_shared<libcomp::ManagerPacket>(self);
     packetManager->AddParser<Parsers::GetWorldInfo>(to_underlying(
         InternalPacketCode_t::PACKET_GET_WORLD_INFO));
     packetManager->AddParser<Parsers::SetChannelInfo>(to_underlying(

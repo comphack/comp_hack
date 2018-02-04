@@ -8,6 +8,8 @@
         <member type="u16" name="WorldPort" default="18666"/>
         <member type="u16" name="Timeout"/>
         <member type="string" name="SystemMessage" default=""/>
+        <member type="string" name="COMPShopMessage"
+           default="Welcome to the COMP Shop!"/>
         <member type="bool" name="AutoCompressCurrency"/>
     </object>
 </objgen>

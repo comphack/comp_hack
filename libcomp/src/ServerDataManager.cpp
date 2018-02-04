@@ -113,6 +113,11 @@ const std::shared_ptr<objects::ServerShop> ServerDataManager::GetShopData(uint32
     return GetObjectByID<uint32_t, objects::ServerShop>(id, mShopData);
 }
 
+std::list<uint32_t> ServerDataManager::GetCompShopIDs() const
+{
+    return mCompShopIDs;
+}
+
 const std::shared_ptr<objects::DropSet> ServerDataManager::GetDropSetData(uint32_t id)
 {
     return GetObjectByID<uint32_t, objects::DropSet>(id, mDropSetData);
@@ -377,6 +382,11 @@ namespace libcomp
         }
 
         mShopData[id] = shop;
+
+        if(shop->GetType() == objects::ServerShop::Type_t::COMP_SHOP)
+        {
+            mCompShopIDs.push_back(id);
+        }
 
         return true;
     }

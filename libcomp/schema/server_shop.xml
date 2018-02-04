@@ -2,6 +2,11 @@
 <objgen>
     <object name="ServerShop" persistent="false">
         <member type="s32" name="ShopID"/>
+        <member type="string" name="Name"/>
+        <member type="enum" name="Type" underlying="uint8_t">
+            <value>NORMAL</value>
+            <value>COMP_SHOP</value>
+        </member>
         <member type="s32" name="Shop1"/>
         <member type="s32" name="Shop2"/>
         <member type="s32" name="Shop3"/>

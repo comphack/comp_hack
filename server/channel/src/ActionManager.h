@@ -190,6 +190,13 @@ private:
     bool UpdateLNC(ActionContext& ctx);
 
     /**
+     * Update various point values associated to the client.
+     * @param ctx ActionContext for the executing source information.
+     * @retval false The action list should stop after this action.
+     */
+    bool UpdatePoints(ActionContext& ctx);
+
+    /**
      * Update a quest related to the current character.
      * @param ctx ActionContext for the executing source information.
      * @retval false The action list should stop after this action.

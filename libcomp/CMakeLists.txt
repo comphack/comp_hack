@@ -238,6 +238,7 @@ SET(${PROJECT_NAME}_SCHEMA
     schema/action_updatecomp.xml
     schema/action_updateflag.xml
     schema/action_updatelnc.xml
+    schema/action_updatepoints.xml
     schema/action_updatequest.xml
     schema/action_updatezoneflags.xml
     schema/action_zonechange.xml
@@ -297,6 +298,7 @@ SET(${PROJECT_NAME}_SCHEMA
     schema/binarydata/hnpcdata.xml
     schema/binarydata/itemdata.xml
     schema/binarydata/modificationdata.xml
+    schema/binarydata/npcbarterdata.xml
     schema/binarydata/onpcdata.xml
     schema/binarydata/questdata.xml
     schema/binarydata/shared.xml
@@ -364,6 +366,8 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     ActionUpdateFlag.cpp
     ActionUpdateLNC.h
     ActionUpdateLNC.cpp
+    ActionUpdatePoints.h
+    ActionUpdatePoints.cpp
     ActionUpdateQuest.h
     ActionUpdateQuest.cpp
     ActionUpdateZoneFlags.h
@@ -692,6 +696,10 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     MiNegotiationData.h
     MiNextEpisodeInfo.cpp
     MiNextEpisodeInfo.h
+    MiNPCBarterData.cpp
+    MiNPCBarterData.h
+    MiNPCBarterItemData.cpp
+    MiNPCBarterItemData.h
     MiNPCBasicData.cpp
     MiNPCBasicData.h
     MiONPCData.cpp

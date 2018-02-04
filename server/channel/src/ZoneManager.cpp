@@ -1700,15 +1700,18 @@ bool ZoneManager::UpdateSpawnGroups(const std::shared_ptr<Zone>& zone,
 
             // Get the random group now
             auto groupIDs = slg->GetGroupIDs();
-            auto gIter = groupIDs.begin();
-            if(groupIDs.size() > 1)
+            if(groupIDs.size() > 0)
             {
-                size_t randomIdx = (size_t)RNG(int32_t, 0,
-                    (int32_t)(groupIDs.size()-1));
-                std::advance(gIter, randomIdx);
-            }
+                auto gIter = groupIDs.begin();
+                if(groupIDs.size() > 1)
+                {
+                    size_t randomIdx = (size_t)RNG(int32_t, 0,
+                        (int32_t)(groupIDs.size()-1));
+                    std::advance(gIter, randomIdx);
+                }
 
-            sgID = *gIter;
+                sgID = *gIter;
+            }
         }
 
         if(spotID)

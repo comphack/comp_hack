@@ -285,16 +285,21 @@ public:
 
     /**
     * Sends an announcement to each client connected to world
-    * Color can be chosen out of four colors:
-    * @param client, client that sent announcement packet to channel
-    * @param message, content of message that will be announced
-    * @param color, color of the ticker message, red, white, blue, purple
-    * @param bool, if true, the packet will be broadcasted to everyone in the current zone
-    * @return True if the message was successfully sent, false otherwise.
+    * @param client Client that sent announcement packet to channel
+    * @param message Content of message that will be announced
+    * @param type Type of message to send
+    *  0) Red ticker message
+    *  1) White ticker message
+    *  2) Blue ticker message
+    *  3) Purple ticker message
+    *  4) COMP shop description
+    * @param broadcast If true, the packet will be broadcasted to everyone in
+    *  the current zone
+    * @return true if the message was successfully sent, false otherwise.
     */
     bool SendSystemMessage(const std::shared_ptr<
         channel::ChannelClientConnection>& client,
-        libcomp::String message, int8_t color, bool);
+        libcomp::String message, int8_t type, bool broadcast);
 
     /**
      * Schedule code work to be queued by the next server tick that occurs

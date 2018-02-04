@@ -52,6 +52,9 @@ ChannelSyncManager::~ChannelSyncManager()
 
 bool ChannelSyncManager::Initialize()
 {
+    auto server = mServer.lock();
+    auto lobbyDB = server->GetLobbyDatabase();
+
     // Build the configs
     auto cfg = std::make_shared<ObjectConfig>(
         "SearchEntry", false);
@@ -61,10 +64,14 @@ bool ChannelSyncManager::Initialize()
 
     mRegisteredTypes["SearchEntry"] = cfg;
 
-    // Add the world connection
-    const std::set<std::string> worldTypes = { "SearchEntry" };
+    cfg = std::make_shared<ObjectConfig>("Account", false, lobbyDB);
 
-    auto worldConnection = mServer.lock()->GetManagerConnection()
+    mRegisteredTypes["Account"] = cfg;
+
+    // Add the world connection
+    const std::set<std::string> worldTypes = { "Account", "SearchEntry" };
+
+    auto worldConnection = server->GetManagerConnection()
         ->GetWorldConnection();
     return RegisterConnection(worldConnection, worldTypes);
 }
@@ -87,10 +94,12 @@ std::list<std::shared_ptr<objects::SearchEntry>> ChannelSyncManager::GetSearchEn
 namespace channel
 {
 template<>
-bool ChannelSyncManager::Update<objects::SearchEntry>(const libcomp::String& type,
-    const std::shared_ptr<libcomp::Object>& obj, bool isRemove)
+int8_t ChannelSyncManager::Update<objects::SearchEntry>(const libcomp::String& type,
+    const std::shared_ptr<libcomp::Object>& obj, bool isRemove,
+    const libcomp::String& source)
 {
     (void)type;
+    (void)source;
 
     bool success = false;
 
@@ -250,6 +259,6 @@ bool ChannelSyncManager::Update<objects::SearchEntry>(const libcomp::String& typ
         }
     }
 
-    return success;
+    return success ? SYNC_UPDATED : SYNC_FAILED;
 }
 }

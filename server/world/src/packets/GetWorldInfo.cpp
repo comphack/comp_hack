@@ -92,6 +92,16 @@ bool Parsers::GetWorldInfo::Parse(libcomp::ManagerPacket *pPacketManager,
             LOG_CRITICAL("The server failed to register with the lobby's database."
                 " Notifying the lobby of the failure.\n");
         }
+
+        // Initialize the sync manager
+        auto syncManager = server->GetWorldSyncManager();
+
+        const std::set<std::string> lobbyTypes = { "Account" };
+        if(!syncManager->Initialize() ||
+            !syncManager->RegisterConnection(server->GetLobbyConnection(), lobbyTypes))
+        {
+            LOG_CRITICAL("Failed to initialize the sync manager!\n");
+        }
     }
 
     // Reply with a packet containing the world ID and the database

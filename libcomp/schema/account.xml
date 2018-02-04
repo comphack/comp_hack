@@ -16,12 +16,14 @@
             <element type="Character*"/>
         </member>
     </object>
+    <object name="PostItem">
+        <member type="u32" name="Type"/>
+        <member type="Account*" name="Account" key="true" unique="false"/>
+        <member type="u32" name="Timestamp"/>
+    </object>
     <object name="AccountWorldData" location="world">
         <member type="Account*" name="Account" key="true" unique="true"/>
 
-        <member type="list" name="Post">
-            <element type="PostItem*"/>
-        </member>
         <member type="array" name="DemonBoxes" size="10">
             <element type="DemonBox*"/>
         </member>
@@ -30,11 +32,6 @@
         </member>
 
         <member type="BazaarData*" name="BazaarData"/>
-    </object>
-    <object name="PostItem" location="world">
-        <member type="u32" name="Type"/>
-        <member type="Account*" name="Account" key="true" unique="false"/>
-        <member type="u32" name="Timestamp"/>
     </object>
     <object name="BazaarData" location="world">
         <member type="Account*" name="Account" key="true" unique="true"/>

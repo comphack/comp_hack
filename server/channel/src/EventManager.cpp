@@ -1996,7 +1996,7 @@ bool EventManager::Prompt(const std::shared_ptr<ChannelClientConnection>& client
 
     libcomp::Packet p;
     p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_EVENT_PROMPT);
-    p.WriteS32Little(e->GetPlayerSource()
+    p.WriteS32Little(instance->GetSourceEntityID() == 0
         ? client->GetClientState()->GetCharacterState()->GetEntityID()
         : instance->GetSourceEntityID());
     p.WriteS32Little(e->GetMessageID());

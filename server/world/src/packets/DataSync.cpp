@@ -39,12 +39,12 @@ bool Parsers::DataSync::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {
-    (void)connection;
-
     auto server = std::dynamic_pointer_cast<WorldServer>(pPacketManager->GetServer());
     auto syncManager = server->GetWorldSyncManager();
 
-    if(!syncManager->SyncIncoming(p))
+    libcomp::String source = server->GetLobbyConnection() == connection
+        ? "lobby" : "channel";
+    if(!syncManager->SyncIncoming(p, source))
     {
         return false;
     }

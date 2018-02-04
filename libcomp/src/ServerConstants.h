@@ -71,6 +71,9 @@ struct Data
     /// Demon ID of elemental type: Erthys (アーシーズ)
     uint32_t ELEMENTAL_4_ERTHYS;
 
+    /// COMP shop menu event ID
+    String EVENT_MENU_COMP_SHOP;
+
     /// Demon depo menu event ID
     String EVENT_MENU_DEMON_DEPO;
 

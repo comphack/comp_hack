@@ -1,14 +1,14 @@
 /**
- * @file server/channel/src/packets/game/CashBalance.cpp
+ * @file server/channel/src/packets/game/CompShopOpen.cpp
  * @ingroup channel
  *
  * @author HACKfrost
  *
- * @brief Request from the current account's total CP.
+ * @brief
  *
  * This file is part of the Channel Server (channel).
  *
- * Copyright (C) 2012-2016 COMP_hack Team <compomega@tutanota.com>
+ * Copyright (C) 2012-2018 COMP_hack Team <compomega@tutanota.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as
@@ -30,13 +30,15 @@
 #include <ManagerPacket.h>
 #include <Packet.h>
 #include <PacketCodes.h>
+#include <ServerConstants.h>
 
 // channel Includes
 #include "ChannelServer.h"
+#include "ChannelClientConnection.h"
 
 using namespace channel;
 
-bool Parsers::CashBalance::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::CompShopOpen::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {
@@ -48,6 +50,9 @@ bool Parsers::CashBalance::Parse(libcomp::ManagerPacket *pPacketManager,
     auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
     auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
 
+    server->GetEventManager()->HandleEvent(client, SVR_CONST.EVENT_MENU_COMP_SHOP, 0);
+
+    // Resend the current CP balance
     server->GetAccountManager()->SendCPBalance(client);
 
     return true;

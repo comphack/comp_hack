@@ -82,11 +82,18 @@ void SendClientReadyData(std::shared_ptr<ChannelServer> server,
     }
 
     auto conf = std::dynamic_pointer_cast<objects::ChannelConfig>(server->GetConfig());
-    libcomp::String systemMessage = conf->GetSystemMessage();
 
+    // Send any server system messages
+    libcomp::String systemMessage = conf->GetSystemMessage();
     if(!systemMessage.IsEmpty()) 
     {
-        server->SendSystemMessage(client,systemMessage,0,false);
+        server->SendSystemMessage(client, systemMessage, 0, false);
+    }
+
+    libcomp::String compShopMessage = conf->GetCOMPShopMessage();
+    if(!compShopMessage.IsEmpty())
+    {
+        server->SendSystemMessage(client, compShopMessage, 4, false);
     }
 
     /// @todo: send "world bonus" [0x0405]

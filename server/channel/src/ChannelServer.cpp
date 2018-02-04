@@ -378,6 +378,10 @@ bool ChannelServer::Initialize()
         to_underlying(ClientToChannelPacketCode_t::PACKET_ANALYZE));
     clientPacketManager->AddParser<Parsers::ItemExpand>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_ITEM_EXPAND));
+    clientPacketManager->AddParser<Parsers::CompShopOpen>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_COMP_SHOP_OPEN));
+    clientPacketManager->AddParser<Parsers::CompShopList>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_COMP_SHOP_LIST));
     clientPacketManager->AddParser<Parsers::FusionGauge>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_FUSION_GAUGE));
     clientPacketManager->AddParser<Parsers::TitleList>(
@@ -410,6 +414,8 @@ bool ChannelServer::Initialize()
         to_underlying(ClientToChannelPacketCode_t::PACKET_EQUIPMENT_MOD_EDIT));
     clientPacketManager->AddParser<Parsers::DemonDepoList>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_DEMON_DEPO_LIST));
+    clientPacketManager->AddParser<Parsers::Barter>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_BARTER));
     clientPacketManager->AddParser<Parsers::Blacklist>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_BLACKLIST));
     clientPacketManager->AddParser<Parsers::DigitalizePoints>(
@@ -877,13 +883,14 @@ void ChannelServer::StartGameTick()
 
 bool ChannelServer::SendSystemMessage(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
-    libcomp::String message, int8_t color, bool sendToAll)
+    libcomp::String message, int8_t type, bool sendToAll)
 {
     libcomp::Packet p;
     p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_SYSTEM_MSG);
-    p.WriteS8(color);
-    p.WriteS8(0); // Unknown for now, possibly speed?
-    p.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_CP932, message, true);
+    p.WriteS8(type);
+    p.WriteS8(0); // Appears to be some kind of sub-mode that is not used
+    p.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_CP932,
+        message, true);
 
     if(!sendToAll)
     {

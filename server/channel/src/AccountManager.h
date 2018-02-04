@@ -121,6 +121,23 @@ public:
     void Authenticate(const std::shared_ptr<
         channel::ChannelClientConnection>& client);
 
+    /**
+     * Increase the account's current CP balance.
+     * @param account Pointer to the account to update
+     * @param addAmount Amount of CP to add to the account
+     * @return true if the amount was updated, false if it
+     *  could not be updated
+     */
+    bool IncreaseCP(const std::shared_ptr<
+        objects::Account>& account, int64_t addAmount);
+
+    /**
+     * Send the account's current CP balance.
+     * @param client Pointer to the client connection
+     */
+    void SendCPBalance(const std::shared_ptr<
+        channel::ChannelClientConnection>& client);
+
 private:
     /**
      * Create character data if not initialized or load

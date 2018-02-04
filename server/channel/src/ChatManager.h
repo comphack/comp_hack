@@ -117,6 +117,15 @@ public:
         const std::list<libcomp::String>& args);
 
 private:
+    /**
+     * GM command to add CP to a target account.
+     * @param client Pointer to the client that sent the command
+     * @param args List of arguments for the command
+     * @return true if the command was handled properly, else false
+     */
+    bool GMCommand_AddCP(const std::shared_ptr<
+        channel::ChannelClientConnection>& client,
+        const std::list<libcomp::String>& args);
 
     /**
      * GM command to announce message to server .

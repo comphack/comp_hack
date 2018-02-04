@@ -93,10 +93,12 @@ public:
      * @param obj Pointer to the record definition
      * @param isRemove true if the record is being removed, false if it is
      *  either an insert or an update
-     * @return true if the update succeeded, false if an error was encountered
+     * @param source Identifier for the server sending the updates
+     * @return Response codes matching the internal DataSyncManager set
      */
-    template<class T> bool Update(const libcomp::String& type,
-        const std::shared_ptr<libcomp::Object>& obj, bool isRemove);
+    template<class T> int8_t Update(const libcomp::String& type,
+        const std::shared_ptr<libcomp::Object>& obj, bool isRemove,
+        const libcomp::String& source);
 
 private:
     /// Map of all search entries on the world server by type

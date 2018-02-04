@@ -34,6 +34,7 @@ SET(${PROJECT_NAME}_SRCS
     src/ClientState.cpp
     src/LobbyClientConnection.cpp
     src/LobbyServer.cpp
+    src/LobbySyncManager.cpp
     src/LoginWebHandler.cpp
     src/ManagerClientPacket.cpp
     src/ManagerConnection.cpp
@@ -52,6 +53,7 @@ SET(${PROJECT_NAME}_HDRS
     src/ClientState.h
     src/LobbyClientConnection.h
     src/LobbyServer.h
+    src/LobbySyncManager.h
     src/LoginWebHandler.h
     src/ManagerClientPacket.h
     src/ManagerConnection.h
@@ -105,6 +107,7 @@ SET(${PROJECT_NAME}_PACKETS
     src/packets/internal/SetChannelInfo.cpp    # 0x1003
     src/packets/internal/AccountLogin.cpp      # 0x1004
     src/packets/internal/AccountLogout.cpp     # 0x1005
+    src/packets/internal/DataSync.cpp          # 0x1007
 )
 
 ADD_CUSTOM_COMMAND(

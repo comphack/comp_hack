@@ -66,6 +66,7 @@ using namespace channel;
 ChatManager::ChatManager(const std::weak_ptr<ChannelServer>& server)
     : mServer(server)
 {
+    mGMands["addcp"] = &ChatManager::GMCommand_AddCP;
     mGMands["announce"] = &ChatManager::GMCommand_Announce;
     mGMands["ban"] = &ChatManager::GMCommand_Ban;
     mGMands["contract"] = &ChatManager::GMCommand_Contract;
@@ -285,6 +286,83 @@ bool ChatManager::ExecuteGMCommand(const std::shared_ptr<
     return false;
 }
 
+
+bool ChatManager::GMCommand_AddCP(const std::shared_ptr<
+    channel::ChannelClientConnection>& client,
+    const std::list<libcomp::String>& args)
+{
+    if(!HaveUserLevel(client, 950))
+    {
+        return true;
+    }
+
+    std::list<libcomp::String> argsCopy = args;
+
+    auto targetClient = client;
+    auto targetAccount = client->GetClientState()->GetAccountLogin()
+        ->GetAccount().Get();
+    auto server = mServer.lock();
+
+    int64_t amount = 0;
+    if(!GetIntegerArg<int64_t>(amount, argsCopy) || amount <= 0)
+    {
+        return SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(
+            "@addcp requires a positive amount be specified"));
+    }
+
+    libcomp::String name;
+    if(GetStringArg(name, argsCopy))
+    {
+        auto worldDB = server->GetWorldDatabase();
+
+        targetClient = nullptr;
+        targetAccount = nullptr;
+
+        auto target = objects::Character::LoadCharacterByName(worldDB, name);
+        targetAccount = target ? target->GetAccount().Get(worldDB) : nullptr;
+        targetClient = targetAccount ? server->GetManagerConnection()->GetClientConnection(
+            targetAccount->GetUsername()) : nullptr;
+
+        if(!targetAccount)
+        {
+            return SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(
+                "Invalid character name supplied for add CP command: %1").Arg(name));
+        }
+    }
+
+    auto accountManager = server->GetAccountManager();
+    if(accountManager->IncreaseCP(targetAccount, amount))
+    {
+        if(targetClient)
+        {
+            if(targetClient != client)
+            {
+                // Notify the other player
+                auto character = client->GetClientState()->GetCharacterState()
+                    ->GetEntity();
+                SendChatMessage(targetClient, ChatType_t::CHAT_SELF,
+                    libcomp::String("You have received %1 CP from %2!\n")
+                    .Arg(amount).Arg(character ? character->GetName() : "a GM"));
+            }
+            else
+            {
+                SendChatMessage(targetClient, ChatType_t::CHAT_SELF,
+                    libcomp::String("Your available CP has increased by %1!\n")
+                    .Arg(amount));
+            }
+
+            accountManager->SendCPBalance(targetClient);
+        }
+    }
+    else
+    {
+        return SendChatMessage(client, ChatType_t::CHAT_SELF,
+            libcomp::String("Failed to add CP to target character"
+                " account: %1\n").Arg(name));
+    }
+
+    return true;
+}
 
 bool ChatManager::GMCommand_Announce(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
@@ -1246,6 +1324,7 @@ bool ChatManager::GMCommand_Post(const std::shared_ptr<
 
     auto targetAccount = client->GetClientState()->GetAccountUID();
     auto server = mServer.lock();
+    auto lobbyDB = server->GetLobbyDatabase();
     auto worldDB = server->GetWorldDatabase();
     auto definitionManager = server->GetDefinitionManager();
     
@@ -1272,16 +1351,9 @@ bool ChatManager::GMCommand_Post(const std::shared_ptr<
             "Invalid post target character specified: %1\n").Arg(name));
     }
 
-    auto worldData = objects::AccountWorldData::LoadAccountWorldDataByAccount(
-        worldDB, targetAccount);
-
-    if(!worldData)
-    {
-        return SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(
-            "No world data exists for account: %1\n").Arg(targetAccount.ToString()));
-    }
-
-    if(worldData->PostCount() >= MAX_POST_ITEM_COUNT)
+    auto postItems = objects::PostItem::LoadPostItemListByAccount(
+        lobbyDB, targetAccount);
+    if(postItems.size() >= MAX_POST_ITEM_COUNT)
     {
         return SendChatMessage(client, ChatType_t::CHAT_SELF,
             "There is no more room in the Post!");
@@ -1292,10 +1364,7 @@ bool ChatManager::GMCommand_Post(const std::shared_ptr<
     postItem->SetTimestamp((uint32_t)std::time(0));
     postItem->SetAccount(targetAccount);
 
-    worldData->AppendPost(postItem);
-
-    postItem->Insert(worldDB);
-    worldData->Update(worldDB);
+    postItem->Insert(lobbyDB);
 
     return true;
 }
@@ -1720,7 +1789,7 @@ bool ChatManager::GMCommand_Valuable(const std::shared_ptr<
         valuableID, remove))
     {
         return SendChatMessage(client, ChatType_t::CHAT_SELF,
-            "Invalid valuable ID supplied for @plugin command");
+            "Invalid valuable ID supplied for @valuable command");
     }
 
     return true;

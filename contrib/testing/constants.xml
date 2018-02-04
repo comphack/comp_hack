@@ -7,6 +7,7 @@
     <constant name="ELEMENTAL_4_ERTHYS">584</constant>
     <constant name="EVENT_MENU_DEMON_DEPO">event_demonDepo</constant>
     <constant name="EVENT_MENU_ITEM_DEPO">event_itemDepo</constant>
+    <constant name="EVENT_MENU_COMP_SHOP">event_compShop</constant>
     <constant name="ITEM_MACCA">799</constant>
     <constant name="ITEM_MACCA_NOTE">699</constant>
     <constant name="ITEM_MAGNETITE">800</constant>

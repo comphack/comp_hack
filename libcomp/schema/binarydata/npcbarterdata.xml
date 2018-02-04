@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="MiNPCBarterItemData" persistent="false">
+        <member type="enum" name="type" underlying="uint8_t">
+            <value num="0">NONE</value>
+            <value num="1">ITEM</value>
+            <value num="2">SOUL_POINT</value>
+            <value num="4">EVENT_COUNTER</value>
+            <value num="5">CASINO_RESTRICTION</value>
+            <value num="8">BETHEL</value>
+            <value num="11">SKILL_CHARACTER</value>
+            <value num="12">SKILL_DEMON</value>
+            <value num="14">PLUGIN</value>
+            <value num="15">COIN</value>
+        </member>
+        <member type="u8" name="unused1"/>
+        <member type="u16" name="unused2"/>
+        <member type="s32" name="subtype"/>
+        <member type="s32" name="amount"/>
+    </object>
+    <object name="MiNPCBarterData" persistent="false">
+        <member type="u16" name="ID"/>
+        <member type="u16" name="unk1"/>
+        <member type="array" size="4" name="resultItems">
+            <element type="MiNPCBarterItemData*"/>
+        </member>
+        <member type="array" size="10" name="tradeItems">
+            <element type="MiNPCBarterItemData*"/>
+        </member>
+    </object>
+</objgen>

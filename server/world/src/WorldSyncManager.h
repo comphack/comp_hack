@@ -8,7 +8,7 @@
  *
  * This file is part of the World Server (world).
  *
- * Copyright (C) 2012-2017 COMP_hack Team <compomega@tutanota.com>
+ * Copyright (C) 2012-2018 COMP_hack Team <compomega@tutanota.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as
@@ -47,12 +47,6 @@ class WorldSyncManager : public libcomp::DataSyncManager
 {
 public:
     /**
-     * Create a new WorldSyncManager with no associated server. This should not
-     * be used but is necessary for use with Sqrat.
-     */
-    WorldSyncManager();
-
-    /**
      * Create a new WorldSyncManager
      * @param server Pointer back to the channel server this belongs to.
      */
@@ -77,10 +71,12 @@ public:
      * @param obj Pointer to the record definition
      * @param isRemove true if the record is being removed, false if it is
      *  either an insert or an update
-     * @return true if the update succeeded, false if an error was encountered
+     * @param source Source server identifier
+     * @return Response codes matching the internal DataSyncManager set
      */
-    template<class T> bool Update(const libcomp::String& type,
-        const std::shared_ptr<libcomp::Object>& obj, bool isRemove);
+    template<class T> int8_t Update(const libcomp::String& type,
+        const std::shared_ptr<libcomp::Object>& obj, bool isRemove,
+        const libcomp::String& source);
 
     virtual bool RemoveRecord(const std::shared_ptr<libcomp::Object>& record,
         const libcomp::String& type);

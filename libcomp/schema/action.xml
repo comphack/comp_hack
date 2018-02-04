@@ -18,6 +18,7 @@
             <value>PLAY_SOUND_EFFECT</value>
             <value>UPDATE_FLAG</value>
             <value>UPDATE_LNC</value>
+            <value>UPDATE_POINTS</value>
             <value>UPDATE_QUEST</value>
             <value>UPDATE_ZONE_FLAGS</value>
             <value>ZONE_INSTANCE</value>

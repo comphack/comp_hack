@@ -132,6 +132,12 @@ public:
     const std::shared_ptr<objects::ServerShop> GetShopData(uint32_t id);
 
     /**
+     * Get a list of all COMP shop definition IDs
+     * @return List of COMP shop definition IDs
+     */
+    std::list<uint32_t> GetCompShopIDs() const;
+
+    /**
      * Get a drop set by definition ID
      * @param id Definition ID of a drop set to load
      * @return Pointer to the drop set matching the specified id
@@ -313,6 +319,9 @@ private:
     /// Map of shops by definition ID
     std::unordered_map<uint32_t,
         std::shared_ptr<objects::ServerShop>> mShopData;
+
+    /// List of all COMP shop definition IDs
+    std::list<uint32_t> mCompShopIDs;
 
     /// Map of drop sets by definition ID
     std::unordered_map<uint32_t,

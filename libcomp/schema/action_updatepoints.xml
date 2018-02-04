@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="ActionUpdatePoints" baseobject="Action" persistent="false">
+        <member type="enum" name="actionType" inherited="true" default="UPDATE_POINTS"/>
+        <member type="enum" name="pointType" underlying="uint8_t">
+            <value>CP</value>
+            <value>SOUL_POINTS</value>
+            <value>DIGITALIZE_POINTS</value>
+        </member>
+        <member type="s64" name="value"/>
+        <member type="bool" name="isSet"/>
+    </object>
+</objgen>

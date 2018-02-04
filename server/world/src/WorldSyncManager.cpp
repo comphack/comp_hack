@@ -8,7 +8,7 @@
  *
  * This file is part of the World Server (world).
  *
- * Copyright (C) 2012-2017 COMP_hack Team <compomega@tutanota.com>
+ * Copyright (C) 2012-2018 COMP_hack Team <compomega@tutanota.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as
@@ -32,11 +32,14 @@
 // Standard C++11 Includes
 #include <algorithm>
 
-using namespace world;
+// object Includes
+#include <Account.h>
+#include <CharacterLogin.h>
 
-WorldSyncManager::WorldSyncManager()
-{
-}
+// world Includes
+#include <WorldServer.h>
+
+using namespace world;
 
 WorldSyncManager::WorldSyncManager(const std::weak_ptr<
     WorldServer>& server) : mServer(server)
@@ -49,6 +52,8 @@ WorldSyncManager::~WorldSyncManager()
 
 bool WorldSyncManager::Initialize()
 {
+    auto lobbyDB = mServer.lock()->GetLobbyDatabase();
+
     // Build the configs
     auto cfg = std::make_shared<ObjectConfig>(
         "SearchEntry", true);
@@ -58,16 +63,67 @@ bool WorldSyncManager::Initialize()
 
     mRegisteredTypes["SearchEntry"] = cfg;
 
+    cfg = std::make_shared<ObjectConfig>(
+        "Account", false, lobbyDB);
+    cfg->UpdateHandler = &DataSyncManager::Update<WorldSyncManager,
+        objects::Account>;
+
+    mRegisteredTypes["Account"] = cfg;
+
     return true;
 }
 
 namespace world
 {
 template<>
-bool WorldSyncManager::Update<objects::SearchEntry>(const libcomp::String& type,
-    const std::shared_ptr<libcomp::Object>& obj, bool isRemove)
+int8_t WorldSyncManager::Update<objects::Account>(const libcomp::String& type,
+    const std::shared_ptr<libcomp::Object>& obj, bool isRemove,
+    const libcomp::String& source)
 {
     (void)type;
+    (void)isRemove;
+
+    auto entry = std::dynamic_pointer_cast<objects::Account>(obj);
+
+    libcomp::Packet p;
+
+    if(source == "lobby")
+    {
+        // Send to the channel where the account is logged in
+        auto server = mServer.lock();
+        auto accountManager = server->GetAccountManager();
+
+        auto accountLogin = accountManager->GetUserLogin(entry->GetUsername());
+        auto cLogin = accountLogin ? accountLogin->GetCharacterLogin() : nullptr;
+        int8_t channelID = cLogin ? cLogin->GetChannelID() : -1;
+
+        if(channelID >= 0)
+        {
+            auto channel = server->GetChannelConnectionByID(channelID);
+            if (channel)
+            {
+                WriteOutgoingRecord(p, true, "Account", entry);
+                channel->SendPacket(p);
+            }
+        }
+    }
+    else
+    {
+        // Send to the lobby
+        WriteOutgoingRecord(p, true, "Account", entry);
+        mServer.lock()->GetLobbyConnection()->SendPacket(p);
+    }
+
+    return SYNC_HANDLED;
+}
+
+template<>
+int8_t WorldSyncManager::Update<objects::SearchEntry>(const libcomp::String& type,
+    const std::shared_ptr<libcomp::Object>& obj, bool isRemove,
+    const libcomp::String& source)
+{
+    (void)type;
+    (void)source;
 
     auto entry = std::dynamic_pointer_cast<objects::SearchEntry>(obj);
     
@@ -94,7 +150,7 @@ bool WorldSyncManager::Update<objects::SearchEntry>(const libcomp::String& type,
                 AdjustSearchEntryCount(entry->GetSourceCID(), entry->GetType(), true);
             }
 
-            return true;
+            return SYNC_UPDATED;
         }
 
         it++;
@@ -104,7 +160,7 @@ bool WorldSyncManager::Update<objects::SearchEntry>(const libcomp::String& type,
     {
         LOG_WARNING(libcomp::String("No SearchEntry with ID '%1' found"
             " for sync removal\n").Arg(entry->GetEntryID()));
-        return false;
+        return SYNC_FAILED;
     }
     else
     {
@@ -120,7 +176,7 @@ bool WorldSyncManager::Update<objects::SearchEntry>(const libcomp::String& type,
 
         mSearchEntries.push_front(entry);
 
-        return true;
+        return SYNC_UPDATED;
     }
 }
 }

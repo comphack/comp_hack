@@ -60,6 +60,7 @@ class MiModificationExtEffectData;
 class MiModificationExtRecipeData;
 class MiModificationTriggerData;
 class MiModifiedEffectData;
+class MiNPCBarterData;
 class MiONPCData;
 class MiQuestData;
 class MiShopProductData;
@@ -280,6 +281,13 @@ public:
      *  does not exist
      */
     const std::shared_ptr<objects::MiModifiedEffectData> GetModifiedEffectData(uint16_t id);
+
+    /**
+     * Get the NPC barter definition corresponding to an ID
+     * @param id NPC barter ID to retrieve
+     * @return Pointer to the matching NPC barer definition, null if it does not exist
+     */
+    const std::shared_ptr<objects::MiNPCBarterData> GetNPCBarterData(uint16_t id);
 
     /**
      * Get the server object NPC definition corresponding to an ID
@@ -531,6 +539,13 @@ public:
      * @return true on success, false on failure
      */
     bool LoadModifiedEffectData(gsl::not_null<DataStore*> pDataStore);
+
+    /**
+     * Load the NPC barter binary data definitions
+     * @param pDataStore Pointer to the datastore to load binary file from
+     * @return true on success, false on failure
+     */
+    bool LoadNPCBarterData(gsl::not_null<DataStore*> pDataStore);
 
     /**
      * Load the server object NPC binary data definitions
@@ -824,6 +839,10 @@ private:
     /// Map of item modification effect definitions by ID
     std::unordered_map<uint16_t,
         std::shared_ptr<objects::MiModifiedEffectData>> mModifiedEffectData;
+
+    /// Map of NPC barter definitions by ID
+    std::unordered_map<uint16_t,
+        std::shared_ptr<objects::MiNPCBarterData>> mNPCBarterData;
 
     /// Map of server object NPC definitions by ID
     std::unordered_map<uint32_t,

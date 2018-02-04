@@ -128,7 +128,8 @@ void DataSyncManager::SyncOutgoing()
     mOutboundRemoves.clear();
 }
 
-bool DataSyncManager::SyncIncoming(libcomp::ReadOnlyPacket& p)
+bool DataSyncManager::SyncIncoming(libcomp::ReadOnlyPacket& p,
+    const libcomp::String& source)
 {
     if(p.Left() < 6)
     {
@@ -153,17 +154,20 @@ bool DataSyncManager::SyncIncoming(libcomp::ReadOnlyPacket& p)
     bool isPersistent = false;
     auto typeHash = PersistentObject::GetTypeHashByName(type, isPersistent);
     
-    if(!isPersistent && !configIter->second->BuildHandler)
+    if(!isPersistent)
     {
-        LOG_ERROR(libcomp::String("Non-persistent object type without a"
-            " registered build handler encountered: %1\n").Arg(type));
-        return false;
-    }
-    else if(!configIter->second->UpdateHandler)
-    {
-        LOG_ERROR(libcomp::String("Object type without a registered"
-            " update handler encountered: %1\n").Arg(type));
-        return false;
+        if(!configIter->second->BuildHandler)
+        {
+            LOG_ERROR(libcomp::String("Non-persistent object type without a"
+                " registered build handler encountered: %1\n").Arg(type));
+            return false;
+        }
+        else if(!configIter->second->UpdateHandler)
+        {
+            LOG_ERROR(libcomp::String("Object type without a registered"
+                " update handler encountered: %1\n").Arg(type));
+            return false;
+        }
     }
 
     if(p.Left() < 4)
@@ -188,8 +192,10 @@ bool DataSyncManager::SyncIncoming(libcomp::ReadOnlyPacket& p)
             {
                 auto obj = PersistentObject::LoadObjectByUUID(typeHash,
                     mRegisteredTypes[type]->DB, uid, true);
-
-                records.push_back(obj);
+                if(obj)
+                {
+                    records.push_back(obj);
+                }
             }
             else
             {
@@ -216,25 +222,28 @@ bool DataSyncManager::SyncIncoming(libcomp::ReadOnlyPacket& p)
         }
     }
 
-    for(auto obj : records)
+    if(configIter->second->UpdateHandler)
     {
-        if(configIter->second->UpdateHandler(*this, lType,
-            obj, false))
+        for(auto obj : records)
         {
-            if(configIter->second->ServerOwned)
+            if(configIter->second->UpdateHandler(*this, lType,
+                obj, false, source))
             {
-                // Queue up to report to the other server(s)
-                mOutboundUpdates[type].insert(obj);
+                if(configIter->second->ServerOwned)
+                {
+                    // Queue up to report to the other server(s)
+                    mOutboundUpdates[type].insert(obj);
+                }
             }
-        }
-        else
-        {
-            LOG_ERROR(libcomp::String("Failed to sync update of record"
-                " of type: %1\n").Arg(type));
+            else
+            {
+                LOG_ERROR(libcomp::String("Failed to sync update of record"
+                    " of type: %1\n").Arg(type));
+            }
         }
     }
 
-    if(p.Size() < 2)
+    if(p.Left() < 2)
     {
         return false;
     }
@@ -289,21 +298,25 @@ bool DataSyncManager::SyncIncoming(libcomp::ReadOnlyPacket& p)
         }
     }
 
-    for(auto obj : records)
+    if(configIter->second->UpdateHandler)
     {
-        if(configIter->second->UpdateHandler(*this, lType,
-            obj, true))
+        for(auto obj : records)
         {
-            if(configIter->second->ServerOwned)
+            int8_t result = configIter->second->UpdateHandler(*this, lType,
+                obj, true, source);
+            if(result == SYNC_UPDATED)
             {
-                // Queue up to report to the other server(s)
-                mOutboundRemoves[type].insert(obj);
+                if(configIter->second->ServerOwned)
+                {
+                    // Queue up to report to the other server(s)
+                    mOutboundRemoves[type].insert(obj);
+                }
             }
-        }
-        else
-        {
-            LOG_ERROR(libcomp::String("Failed to sync removal of record"
-                " of type: %1\n").Arg(type));
+            else if(result == SYNC_FAILED)
+            {
+                LOG_ERROR(libcomp::String("Failed to sync removal of record"
+                    " of type: %1\n").Arg(type));
+            }
         }
     }
 
@@ -318,10 +331,15 @@ bool DataSyncManager::UpdateRecord(const std::shared_ptr<libcomp::Object>& recor
     auto configIter = mRegisteredTypes.find(type.C());
     if(record != nullptr && configIter != mRegisteredTypes.end())
     {
-        if(configIter->second->ServerOwned)
+        if(configIter->second->ServerOwned &&
+            configIter->second->UpdateHandler)
         {
-            configIter->second->UpdateHandler(*this, type, record,
-                false);
+            int8_t result = configIter->second->UpdateHandler(*this, type,
+                record, false, "");
+            if(result == SYNC_HANDLED)
+            {
+                return false;
+            }
         }
 
         for(auto pair : mConnections)
@@ -345,10 +363,15 @@ bool DataSyncManager::RemoveRecord(const std::shared_ptr<libcomp::Object>& recor
     auto configIter = mRegisteredTypes.find(type.C());
     if(record != nullptr && configIter != mRegisteredTypes.end())
     {
-        if(configIter->second->ServerOwned)
+        if(configIter->second->ServerOwned &&
+            configIter->second->UpdateHandler)
         {
-            configIter->second->UpdateHandler(*this, type, record,
-                true);
+            int8_t result = configIter->second->UpdateHandler(*this, type,
+                record, true, "");
+            if(result == SYNC_HANDLED)
+            {
+                return false;
+            }
         }
 
         for(auto pair : mConnections)
@@ -384,6 +407,31 @@ void DataSyncManager::QueueOutgoing(const libcomp::String& type,
     WriteOutgoingRecords(p, isPersistent, removes);
 
     connection->QueuePacket(p);
+}
+
+void DataSyncManager::WriteOutgoingRecord(libcomp::Packet& p, bool isPersistent,
+    const libcomp::String& type, const std::shared_ptr<libcomp::Object>& record)
+{
+    p.WritePacketCode(InternalPacketCode_t::PACKET_DATA_SYNC);
+
+    p.WriteString16Little(libcomp::Convert::ENCODING_UTF8, type, true);
+    p.WriteU16Little(1);
+
+    if(isPersistent)
+    {
+        // Write the UUID
+        auto pObj = std::dynamic_pointer_cast<
+            PersistentObject>(record);
+        p.WriteString16Little(libcomp::Convert::ENCODING_UTF8,
+            pObj->GetUUID().ToString(), true);
+    }
+    else
+    {
+        // Write the datastream
+        record->SavePacket(p, false);
+    }
+
+    p.WriteU16Little(0);    // No deletes
 }
 
 void DataSyncManager::WriteOutgoingRecords(libcomp::Packet& p,

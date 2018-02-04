@@ -28,6 +28,7 @@
 
 // lobby Includes
 #include "LobbyClientConnection.h"
+#include "LobbySyncManager.h"
 #include "ManagerClientPacket.h"
 #include "Packets.h"
 
@@ -58,7 +59,7 @@ LobbyServer::LobbyServer(const char *szProgram,
 
 bool LobbyServer::Initialize()
 {
-    auto self = shared_from_this();
+    auto self = std::dynamic_pointer_cast<LobbyServer>(shared_from_this());
 
     if(!BaseServer::Initialize())
     {
@@ -101,6 +102,13 @@ bool LobbyServer::Initialize()
     mManagerConnection = std::make_shared<ManagerConnection>(
         self, &mService, mMainWorker.GetMessageQueue());
 
+    mSyncManager = new LobbySyncManager(self);
+
+    if(!mSyncManager->Initialize())
+    {
+        return false;
+    }
+
     // Reset the RegisteredWorld table and pull information from
     // known worlds into the connection manager
     if(!ResetRegisteredWorlds())
@@ -120,6 +128,8 @@ bool LobbyServer::Initialize()
         to_underlying(InternalPacketCode_t::PACKET_ACCOUNT_LOGIN));
     internalPacketManager->AddParser<Parsers::AccountLogout>(
         to_underlying(InternalPacketCode_t::PACKET_ACCOUNT_LOGOUT));
+    internalPacketManager->AddParser<Parsers::DataSync>(to_underlying(
+        InternalPacketCode_t::PACKET_DATA_SYNC));
 
     //Add the managers to the main worker.
     mMainWorker.AddManager(internalPacketManager);
@@ -529,6 +539,11 @@ bool LobbyServer::Setup()
 AccountManager* LobbyServer::GetAccountManager()
 {
     return &mAccountManager;
+}
+
+LobbySyncManager* LobbyServer::GetLobbySyncManager() const
+{
+    return mSyncManager;
 }
 
 SessionManager* LobbyServer::GetSessionManager()

@@ -55,6 +55,7 @@
 #include <MiModificationExtRecipeData.h>
 #include <MiModificationTriggerData.h>
 #include <MiModifiedEffectData.h>
+#include <MiNPCBarterData.h>
 #include <MiNPCBasicData.h>
 #include <MiONPCData.h>
 #include <MiQuestData.h>
@@ -271,6 +272,11 @@ const std::shared_ptr<objects::MiItemData> DefinitionManager::GetItemData(const 
     return nullptr;
 }
 
+const std::shared_ptr<objects::MiNPCBarterData> DefinitionManager::GetNPCBarterData(uint16_t id)
+{
+    return GetRecordByID(id, mNPCBarterData);
+}
+
 const std::shared_ptr<objects::MiONPCData> DefinitionManager::GetONPCData(uint32_t id)
 {
     return GetRecordByID(id, mONPCData);
@@ -441,6 +447,7 @@ bool DefinitionManager::LoadAllData(gsl::not_null<DataStore*> pDataStore)
     success &= LoadModificationExtRecipeData(pDataStore);
     success &= LoadModificationTriggerData(pDataStore);
     success &= LoadModifiedEffectData(pDataStore);
+    success &= LoadNPCBarterData(pDataStore);
     success &= LoadONPCData(pDataStore);
     success &= LoadQuestData(pDataStore);
     success &= LoadShopProductData(pDataStore);
@@ -771,6 +778,19 @@ bool DefinitionManager::LoadModifiedEffectData(gsl::not_null<DataStore*> pDataSt
     for(auto record : records)
     {
         mModifiedEffectData[record->GetID()] = record;
+    }
+    
+    return success;
+}
+
+bool DefinitionManager::LoadNPCBarterData(gsl::not_null<DataStore*> pDataStore)
+{
+    std::list<std::shared_ptr<objects::MiNPCBarterData>> records;
+    bool success = LoadBinaryData<objects::MiNPCBarterData>(pDataStore,
+        "Shield/NPCBarterData.sbin", true, 0, records);
+    for(auto record : records)
+    {
+        mNPCBarterData[record->GetID()] = record;
     }
     
     return success;

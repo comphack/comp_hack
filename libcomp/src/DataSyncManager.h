@@ -87,9 +87,12 @@ public:
     /**
      * Update all data read from the supplied packet on this server and relay
      * to other servers if this is the master server for the type.
+     * @param p Packet to read incoming record updates from
+     * @param source Identifier for the server sending the updates
      * @return true if the packet was read without issue
      */
-    bool SyncIncoming(libcomp::ReadOnlyPacket& p);
+    bool SyncIncoming(libcomp::ReadOnlyPacket& p,
+        const libcomp::String& source = "");
 
     /**
      * Update a specific record on the server if this is the master server
@@ -130,20 +133,37 @@ public:
      * @param record Pointer to the record being updated
      * @param isRemove true if the change is a remove, false if it is
      *  an insert or an update
+     * @param source Identifier for the server sending the updates
      * @return true if the update was performed without issue
      */
-    template<class D, class T> bool Update(const libcomp::String& type,
-       const std::shared_ptr<libcomp::Object>& obj, bool isRemove)
+    template<class D, class T> int8_t Update(const libcomp::String& type,
+       const std::shared_ptr<libcomp::Object>& obj, bool isRemove,
+        const libcomp::String& source)
     {
         if(std::is_base_of<DataSyncManager, D>::value)
         {
-            return ((D*)this)->template Update<T>(type, obj, isRemove);
+            return ((D*)this)->template Update<T>(type, obj, isRemove,
+                source);
         }
 
-        return false;
+        return SYNC_FAILED;
     }
 
 protected:
+    /// Internal sync manager code indicating that the update handler
+    /// completed without error and the record should be queued for
+    /// sync if applicable.
+    const static int8_t SYNC_UPDATED = 0;
+
+    /// Internal sync manager code indicating that the update handler
+    /// completed without error and the record should NOT be queued
+    /// for sync if applicable.
+    const static int8_t SYNC_HANDLED = 1;
+
+    /// Internal sync manager code indicating that the update handler
+    /// failed to complete successfully.
+    const static int8_t SYNC_FAILED = -1;
+
     /**
      * Container class for a specific object's synchronization configuration
      * for the server.
@@ -184,12 +204,20 @@ protected:
         bool ServerOwned;
 
         /// Pointer to the function to use when the record is being updated.
-        /// This is not used when the object type is persistent.
-        std::function<bool(DataSyncManager&, const libcomp::String&,
-            const std::shared_ptr<libcomp::Object>&, bool)> UpdateHandler;
+        /// Parameters are as follows:
+        /// 1) Object type name
+        /// 2) Pointer to the object record
+        /// 3) Indicator that the update is actually a rmove
+        /// 4) Identification string for the server sending an update
+        /// The return value should use the codes in this header
+        /// This is not necessary when the object type is persistent.
+        std::function<int8_t(DataSyncManager&, const libcomp::String&,
+            const std::shared_ptr<libcomp::Object>&, bool,
+            const libcomp::String&)> UpdateHandler;
 
         /// Pointer to the function to use when creating a new record of
         /// the specified type
+        /// This is not used when the object type is persistent.
         std::function<std::shared_ptr<libcomp::Object>(
             DataSyncManager&)> BuildHandler;
     };
@@ -206,6 +234,19 @@ protected:
         const std::shared_ptr<InternalConnection>& connection,
         const std::set<std::shared_ptr<libcomp::Object>>& updates,
         const std::set<std::shared_ptr<libcomp::Object>>& removes);
+
+    /**
+     * Write complete outgoing record packet to send from one record.
+     * @param p Packet to write the changes to
+     * @param isPersistent true if the object's UUID should be written
+     *  to the packet, false if the entire object definition should be
+     *  written instead
+     * @param type Type name of the object being synchronized
+     * @param record Record to write to the packet
+     */
+    void WriteOutgoingRecord(libcomp::Packet& p, bool isPersistent,
+        const libcomp::String& type, const std::shared_ptr<
+        libcomp::Object>& record);
 
     /// Map of registered synchronized types by name
     std::unordered_map<std::string,

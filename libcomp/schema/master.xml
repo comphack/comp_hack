@@ -58,6 +58,7 @@
     <include path="action_updatecomp.xml"/>
     <include path="action_updateflag.xml"/>
     <include path="action_updatelnc.xml"/>
+    <include path="action_updatepoints.xml"/>
     <include path="action_updatequest.xml"/>
     <include path="action_updatezoneflags.xml"/>
     <include path="action_zonechange.xml"/>
@@ -94,6 +95,7 @@
     <include path="binarydata/hnpcdata.xml"/>
     <include path="binarydata/itemdata.xml"/>
     <include path="binarydata/modificationdata.xml"/>
+    <include path="binarydata/npcbarterdata.xml"/>
     <include path="binarydata/onpcdata.xml"/>
     <include path="binarydata/questdata.xml"/>
     <include path="binarydata/shared.xml"/>

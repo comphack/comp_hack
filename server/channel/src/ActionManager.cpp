@@ -38,6 +38,8 @@
 #include "ChannelServer.h"
 
 // object Includes
+#include <Account.h>
+#include <AccountLogin.h>
 #include <Action.h>
 #include <ActionAddRemoveItems.h>
 #include <ActionAddRemoveStatus.h>
@@ -56,6 +58,7 @@
 #include <ActionUpdateCOMP.h>
 #include <ActionUpdateFlag.h>
 #include <ActionUpdateLNC.h>
+#include <ActionUpdatePoints.h>
 #include <ActionUpdateQuest.h>
 #include <ActionUpdateZoneFlags.h>
 #include <ActionZoneInstance.h>
@@ -113,6 +116,8 @@ ActionManager::ActionManager(const std::weak_ptr<ChannelServer>& server)
         &ActionManager::UpdateFlag;
     mActionHandlers[objects::Action::ActionType_t::UPDATE_LNC] =
         &ActionManager::UpdateLNC;
+    mActionHandlers[objects::Action::ActionType_t::UPDATE_POINTS] =
+        &ActionManager::UpdatePoints;
     mActionHandlers[objects::Action::ActionType_t::UPDATE_QUEST] =
         &ActionManager::UpdateQuest;
     mActionHandlers[objects::Action::ActionType_t::UPDATE_ZONE_FLAGS] =
@@ -279,22 +284,72 @@ bool ActionManager::ZoneChange(ActionContext& ctx)
     float y = act->GetDestinationY();
     float rotation = act->GetDestinationRotation();
 
+    auto currentInstance = ctx.CurrentZone ? ctx.CurrentZone->GetInstance() : nullptr;
+
     uint32_t spotID = act->GetSpotID();
+    if(!zoneID && !spotID)
+    {
+        // Spot 0, zone 0 is a request to go to the homepoint
+        auto character = ctx.Client->GetClientState()->GetCharacterState()->GetEntity();
+        zoneID = character ? character->GetHomepointZone() : 0;
+        spotID = character ? character->GetHomepointSpotID() : 0;
+
+        if(!zoneID)
+        {
+            LOG_ERROR("Attempted to move to the homepoint but no"
+                " homepoint is set\n");
+            return false;
+        }
+    }
+    else if(zoneID && !dynamicMapID && currentInstance)
+    {
+        // Get the dynamic map ID from the instance
+        auto instDef = currentInstance->GetDefinition();
+        for(size_t i = 0; i < instDef->ZoneIDsCount(); i++)
+        {
+            if(instDef->GetZoneIDs(i) == zoneID)
+            {
+                dynamicMapID = instDef->GetDynamicMapIDs(i);
+                break;
+            }
+        }
+    }
+
     if(spotID > 0)
     {
         // If a spot is specified, get a random point in that spot instead
-        auto definitionManager = server->GetDefinitionManager();
-        auto serverDataManager = server->GetServerDataManager();
-        auto zoneDef = serverDataManager->GetZoneData(zoneID, dynamicMapID);
+        std::shared_ptr<objects::ServerZone> zoneDef;
 
-        auto spots = definitionManager->GetSpotData(zoneDef->GetDynamicMapID());
-        auto spotIter = spots.find(spotID);
-        if(spotIter != spots.end())
+        if(zoneID == 0)
         {
-            Point p = zoneManager->GetRandomSpotPoint(spotIter->second);
-            x = p.x;
-            y = p.y;
-            rotation = spotIter->second->GetRotation();
+            // Request is actually to move within the zone
+            zoneDef = ctx.CurrentZone->GetDefinition();
+            zoneID = zoneDef->GetID();
+        }
+        else
+        {
+            auto serverDataManager = server->GetServerDataManager();
+            zoneDef = serverDataManager->GetZoneData(zoneID, dynamicMapID);
+        }
+
+        if(zoneDef)
+        {
+            auto definitionManager = server->GetDefinitionManager();
+            auto spots = definitionManager->GetSpotData(zoneDef->GetDynamicMapID());
+            auto spotIter = spots.find(spotID);
+            if(spotIter != spots.end())
+            {
+                Point p = zoneManager->GetRandomSpotPoint(spotIter->second);
+                x = p.x;
+                y = p.y;
+                rotation = spotIter->second->GetRotation();
+            }
+        }
+        else
+        {
+            LOG_ERROR(libcomp::String("Invalid zone requested for spot ID"
+                " move %1 (%2), #3.\n").Arg(zoneID).Arg(dynamicMapID).Arg(spotID));
+            return false;
         }
     }
 
@@ -948,7 +1003,8 @@ bool ActionManager::SetNPCState(ActionContext& ctx)
 
     if(!oNPCState)
     {
-        LOG_ERROR("SetNPCState attempted on invalid target\n");
+        LOG_ERROR(libcomp::String("SetNPCState attempted on invalid target: %1\n")
+            .Arg(act->GetActorID()));
         return false;
     }
 
@@ -1086,6 +1142,58 @@ bool ActionManager::UpdateLNC(ActionContext& ctx)
     }
 
     characterManager->UpdateLNC(ctx.Client, lnc);
+
+    return true;
+}
+
+bool ActionManager::UpdatePoints(ActionContext& ctx)
+{
+    if(!ctx.Client)
+    {
+        LOG_ERROR("Attempted to execute an update points action with no"
+            " associated client connection\n");
+        return false;
+    }
+
+    auto act = std::dynamic_pointer_cast<objects::ActionUpdatePoints>(ctx.Action);
+    switch(act->GetPointType())
+    {
+    case objects::ActionUpdatePoints::PointType_t::CP:
+        if(act->GetIsSet() || act->GetValue() < 0)
+        {
+            LOG_ERROR("Attempts to explicitly set or decrease the player's CP"
+                " are not allowed!\n");
+            return false;
+        }
+        else
+        {
+            auto server = mServer.lock();
+
+            auto account = ctx.Client->GetClientState()
+                ->GetAccountLogin()->GetAccount().Get();
+            
+            auto accountManager = server->GetAccountManager();
+            if(accountManager->IncreaseCP(account, act->GetValue()))
+            {
+                accountManager->SendCPBalance(ctx.Client);
+            }
+        }
+        break;
+    case objects::ActionUpdatePoints::PointType_t::DIGITALIZE_POINTS:
+        {
+            LOG_ERROR("Attempted to add digitalize points which are not"
+                " supported yet!\n");
+        }
+        break;
+    case objects::ActionUpdatePoints::PointType_t::SOUL_POINTS:
+        {
+            LOG_ERROR("Attempted to add soul points which are not"
+                " supported yet!\n");
+        }
+        break;
+    default:
+        break;
+    }
 
     return true;
 }

@@ -139,17 +139,17 @@ void AccountManager::HandleLoginResponse(const std::shared_ptr<
         // Initialize some run-time data
         cState->RecalcEquipState(definitionManager);
 
+        // Prepare active quests
+        server->GetEventManager()->UpdateQuestTargetEnemies(client);
+
+        state->Register();
+
         // Recalculating the character will recalculate the partner too
         server->GetTokuseiManager()->Recalculate(cState, true,
             std::set<int32_t>{ cState->GetEntityID(), dState->GetEntityID() });
 
         cState->RecalculateStats(definitionManager);
         dState->RecalculateStats(definitionManager);
-
-        // Prepare active quests
-        server->GetEventManager()->UpdateQuestTargetEnemies(client);
-
-        state->Register();
 
         reply.WriteU32Little(1);
 
@@ -283,6 +283,53 @@ void AccountManager::Authenticate(const std::shared_ptr<
     {
         reply.WriteU32Little(static_cast<uint32_t>(-1));
     }
+
+    client->SendPacket(reply);
+}
+
+bool AccountManager::IncreaseCP(const std::shared_ptr<
+    objects::Account>& account, int64_t addAmount)
+{
+    if(addAmount <= 0)
+    {
+        return false;
+    }
+
+    auto server = mServer.lock();
+    auto lobbyDB = server->GetLobbyDatabase();
+
+    auto opChangeset = std::make_shared<libcomp::DBOperationalChangeSet>();
+    auto expl = std::make_shared<libcomp::DBExplicitUpdate>(account);
+    expl->Add<int64_t>("CP", addAmount);
+    opChangeset->AddOperation(expl);
+
+    if(lobbyDB->ProcessChangeSet(opChangeset))
+    {
+        auto syncManager = server->GetChannelSyncManager();
+        if(syncManager->UpdateRecord(account, "Account"))
+        {
+            syncManager->SyncOutgoing();
+        }
+
+        return true;
+    }
+
+    return false;
+}
+
+void AccountManager::SendCPBalance(const std::shared_ptr<
+    channel::ChannelClientConnection>& client)
+{
+    auto state = client->GetClientState();
+
+    // Always reload the account to get the latest CP value
+    auto account = libcomp::PersistentObject::LoadObjectByUUID<objects::Account>(
+        mServer.lock()->GetLobbyDatabase(), state->GetAccountUID(), true);
+
+    libcomp::Packet reply;
+    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_CASH_BALANCE);
+    reply.WriteS32Little((int32_t)account->GetCP());
+    reply.WriteS32Little(0);
 
     client->SendPacket(reply);
 }

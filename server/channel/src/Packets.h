@@ -169,6 +169,8 @@ PACKET_PARSER_DECL(EquipmentMod);           // 0x0203
 PACKET_PARSER_DECL(MaterialBox);            // 0x0205
 PACKET_PARSER_DECL(Analyze);                // 0x0209
 PACKET_PARSER_DECL(ItemExpand);             // 0x0210
+PACKET_PARSER_DECL(CompShopOpen);           // 0x0212
+PACKET_PARSER_DECL(CompShopList);           // 0x0214
 PACKET_PARSER_DECL(FusionGauge);            // 0x0217
 PACKET_PARSER_DECL(TitleList);              // 0x021B
 PACKET_PARSER_DECL(PartnerDemonQuestList);  // 0x022D
@@ -185,6 +187,7 @@ PACKET_PARSER_DECL(HouraiData);             // 0x03A5
 PACKET_PARSER_DECL(CultureData);            // 0x03AC
 PACKET_PARSER_DECL(EquipmentModEdit);       // 0x03CB
 PACKET_PARSER_DECL(DemonDepoList);          // 0x03F5
+PACKET_PARSER_DECL(Barter);                 // 0x03FE
 PACKET_PARSER_DECL(Blacklist);              // 0x0408
 PACKET_PARSER_DECL(DigitalizePoints);       // 0x0414
 PACKET_PARSER_DECL(DigitalizeAssist);       // 0x0418

@@ -40,6 +40,8 @@
 #include <MiDevilCrystalData.h>
 #include <MiDevilData.h>
 #include <MiDevilLVUpRateData.h>
+#include <MiDisassemblyData.h>
+#include <MiDisassemblyTriggerData.h>
 #include <MiDynamicMapData.h>
 #include <MiEnchantData.h>
 #include <MiEquipmentSetData.h>
@@ -106,6 +108,34 @@ const std::shared_ptr<objects::MiDevilData> DefinitionManager::GetDevilData(cons
 const std::shared_ptr<objects::MiDevilLVUpRateData> DefinitionManager::GetDevilLVUpRateData(uint32_t id)
 {
     return GetRecordByID(id, mDevilLVUpRateData);
+}
+
+const std::shared_ptr<objects::MiDisassemblyData> DefinitionManager::GetDisassemblyData(uint32_t id)
+{
+    return GetRecordByID(id, mDisassemblyData);
+}
+
+const std::shared_ptr<objects::MiDisassemblyData> DefinitionManager::GetDisassemblyDataByItemID(
+    uint32_t itemID)
+{
+    auto iter = mDisassemblyLookup.find(itemID);
+    if(iter != mDisassemblyLookup.end())
+    {
+        return GetRecordByID(iter->second, mDisassemblyData);
+    }
+
+    return nullptr;
+}
+
+const std::shared_ptr<objects::MiDisassemblyTriggerData> DefinitionManager::GetDisassemblyTriggerData(
+    uint32_t id)
+{
+    return GetRecordByID(id, mDisassemblyTriggerData);
+}
+
+const std::list<uint32_t> DefinitionManager::GetDisassembledItemIDs()
+{
+    return mDisassembledItemIDs;
 }
 
 const std::shared_ptr<objects::MiDynamicMapData> DefinitionManager::GetDynamicMapData(uint32_t id)
@@ -436,6 +466,8 @@ bool DefinitionManager::LoadAllData(gsl::not_null<DataStore*> pDataStore)
     success &= LoadCItemData(pDataStore);
     success &= LoadDevilData(pDataStore);
     success &= LoadDevilLVUpRateData(pDataStore);
+    success &= LoadDisassemblyData(pDataStore);
+    success &= LoadDisassemblyTriggerData(pDataStore);
     success &= LoadDynamicMapData(pDataStore);
     success &= LoadEnchantData(pDataStore);
     success &= LoadEquipmentSetData(pDataStore);
@@ -563,6 +595,36 @@ bool DefinitionManager::LoadDevilLVUpRateData(
     for(auto record : records)
     {
         mDevilLVUpRateData[record->GetID()] = record;
+    }
+    
+    return success;
+}
+
+bool DefinitionManager::LoadDisassemblyData(gsl::not_null<DataStore*> pDataStore)
+{
+    std::list<std::shared_ptr<objects::MiDisassemblyData>> records;
+    bool success = LoadBinaryData<objects::MiDisassemblyData>(pDataStore,
+        "Shield/DisassemblyData.sbin", true, 0, records);
+    for(auto record : records)
+    {
+        uint32_t id = record->GetID();
+        mDisassemblyData[id] = record;
+        mDisassemblyLookup[record->GetItemID()] = id;
+    }
+    
+    return success;
+}
+
+bool DefinitionManager::LoadDisassemblyTriggerData(gsl::not_null<
+    DataStore*> pDataStore)
+{
+    std::list<std::shared_ptr<objects::MiDisassemblyTriggerData>> records;
+    bool success = LoadBinaryData<objects::MiDisassemblyTriggerData>(pDataStore,
+        "Shield/DisassemblyTriggerData.sbin", true, 0, records);
+    for(auto record : records)
+    {
+        mDisassemblyTriggerData[record->GetID()] = record;
+        mDisassembledItemIDs.push_back(record->GetID());
     }
     
     return success;

@@ -21,6 +21,9 @@
         <member type="list" name="Previous">
             <element type="EventInstance*"/>
         </member>
+        <member type="list" name="Queued">
+            <element type="string"/>
+        </member>
     </object>
     <object name="EventInstance" persistent="false">
         <member type="Event*" name="Event"/>

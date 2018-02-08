@@ -57,6 +57,7 @@ SET(${PROJECT_NAME}_SRCS
     src/ManagerClientPacket.cpp
     src/ManagerConnection.cpp
     src/ManagerSystem.cpp
+    src/PlasmaState.cpp
     src/SkillManager.cpp
     src/TokuseiManager.cpp
     src/Zone.cpp
@@ -89,6 +90,7 @@ SET(${PROJECT_NAME}_HDRS
     src/ManagerConnection.h
     src/ManagerSystem.h
     src/Packets.h
+    src/PlasmaState.h
     src/SkillManager.h
     src/TokuseiManager.h
     src/Zone.h
@@ -275,9 +277,17 @@ SET(${PROJECT_NAME}_PACKETS
     src/packets/game/DungeonRecords.cpp         # 0x01C4
     src/packets/game/ClanEmblemUpdate.cpp       # 0x01E1
     src/packets/game/DemonFamiliarity.cpp       # 0x01E6
+    src/packets/game/PlasmaStart.cpp            # 0x01EB
+    src/packets/game/PlasmaResult.cpp           # 0x01ED
+    src/packets/game/PlasmaEnd.cpp              # 0x01EF
+    src/packets/game/PlasmaItemData.cpp         # 0x01F1
+    src/packets/game/PlasmaItem.cpp             # 0x01F3
+    src/packets/game/ItemDisassemble.cpp        # 0x01FC
     src/packets/game/EquipmentMod.cpp           # 0x0203
     src/packets/game/MaterialBox.cpp            # 0x0205
     src/packets/game/Analyze.cpp                # 0x0209
+    src/packets/game/MaterialExtract.cpp        # 0x020C
+    src/packets/game/MaterialInsert.cpp         # 0x020E
     src/packets/game/ItemExpand.cpp             # 0x0210
     src/packets/game/CompShopOpen.cpp           # 0x0212
     src/packets/game/CompShopList.cpp           # 0x0214

@@ -28,6 +28,7 @@
 
 // channel Includes
 #include <LootBox.h>
+#include <PlasmaSpawn.h>
 #include <ServerBazaar.h>
 #include <ServerNPC.h>
 #include <ServerObject.h>
@@ -65,6 +66,14 @@ EntityState<objects::LootBox>::EntityState(
     : mEntity(entity)
 {
     SetEntityType(objects::EntityStateObject::EntityType_t::LOOT_BOX);
+}
+
+template<>
+EntityState<objects::PlasmaSpawn>::EntityState(
+    const std::shared_ptr<objects::PlasmaSpawn>& entity)
+    : mEntity(entity)
+{
+    SetEntityType(objects::EntityStateObject::EntityType_t::PLASMA);
 }
 
 }

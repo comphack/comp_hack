@@ -11,6 +11,7 @@
             <value>ENEMY</value>
             <value>BAZAAR</value>
             <value>LOOT_BOX</value>
+            <value>PLASMA</value>
         </member>
 
         <member type="float" name="CurrentX"/>

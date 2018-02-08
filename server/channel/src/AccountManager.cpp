@@ -575,15 +575,6 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
         return false;
     }
 
-    // Materials
-    for(auto material : character->GetMaterials())
-    {
-        if(!material.IsNull() && !material.Get(db))
-        {
-            return false;
-        }
-    }
-
     // Expertises
     for(auto expertise : character->GetExpertises())
     {
@@ -725,13 +716,6 @@ bool AccountManager::LogoutCharacter(channel::ClientState* state,
                 doSave, !delay);
         }
         ok &= Cleanup<objects::ItemBox>(itemBox, worldDB,
-            doSave, !delay);
-    }
-
-    // Save materials
-    for(auto material : character->GetMaterials())
-    {
-        ok &= Cleanup<objects::Item>(material.Get(), worldDB,
             doSave, !delay);
     }
 

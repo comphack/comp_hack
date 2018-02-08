@@ -165,9 +165,17 @@ PACKET_PARSER_DECL(Enchant);                // 0x01C1
 PACKET_PARSER_DECL(DungeonRecords);         // 0x01C4
 PACKET_PARSER_DECL(ClanEmblemUpdate);       // 0x01E1
 PACKET_PARSER_DECL(DemonFamiliarity);       // 0x01E6
+PACKET_PARSER_DECL(PlasmaStart);            // 0x01EB
+PACKET_PARSER_DECL(PlasmaResult);           // 0x01ED
+PACKET_PARSER_DECL(PlasmaEnd);              // 0x01EF
+PACKET_PARSER_DECL(PlasmaItemData);         // 0x01F1
+PACKET_PARSER_DECL(PlasmaItem);             // 0x01F3
+PACKET_PARSER_DECL(ItemDisassemble);        // 0x01FC
 PACKET_PARSER_DECL(EquipmentMod);           // 0x0203
 PACKET_PARSER_DECL(MaterialBox);            // 0x0205
 PACKET_PARSER_DECL(Analyze);                // 0x0209
+PACKET_PARSER_DECL(MaterialExtract);        // 0x020C
+PACKET_PARSER_DECL(MaterialInsert);         // 0x020E
 PACKET_PARSER_DECL(ItemExpand);             // 0x0210
 PACKET_PARSER_DECL(CompShopOpen);           // 0x0212
 PACKET_PARSER_DECL(CompShopList);           // 0x0214

@@ -49,6 +49,8 @@ class MiCItemData;
 class MiCZoneRelationData;
 class MiDevilData;
 class MiDevilLVUpRateData;
+class MiDisassemblyData;
+class MiDisassemblyTriggerData;
 class MiDynamicMapData;
 class MiEnchantData;
 class MiEquipmentSetData;
@@ -122,6 +124,38 @@ public:
      *  does not exist
      */
     const std::shared_ptr<objects::MiDevilLVUpRateData> GetDevilLVUpRateData(uint32_t id);
+
+    /**
+     * Get the item disassembly definition corresponding to an ID
+     * @param id Item disassembly ID to retrieve
+     * @return Pointer to the matching item disassembly definition, null if it
+     *  does not exist
+     */
+    const std::shared_ptr<objects::MiDisassemblyData> GetDisassemblyData(uint32_t id);
+
+    /**
+     * Get the item disassembly definition corresponding to an item ID
+     * @param itemID Item ID to retrieve the disassembly from
+     * @return Pointer to the matching item disassembly definition, null if it
+     *  does not exist
+     */
+    const std::shared_ptr<objects::MiDisassemblyData> GetDisassemblyDataByItemID(
+        uint32_t itemID);
+
+    /**
+     * Get the item disassembly trigger definition corresponding to an ID
+     * @param id Item disassembly trigger ID to retrieve
+     * @return Pointer to the matching item disassembly trigger definition, null if it
+     *  does not exist
+     */
+    const std::shared_ptr<objects::MiDisassemblyTriggerData> GetDisassemblyTriggerData(
+        uint32_t id);
+
+    /**
+     * Get all item IDs associated to disassembled items
+     * @return List of all disassembled item IDs
+     */
+    const std::list<uint32_t> GetDisassembledItemIDs();
 
     /**
      * Get the dynamic map information corresponding to an ID
@@ -464,6 +498,20 @@ public:
     bool LoadDevilLVUpRateData(gsl::not_null<DataStore*> pDataStore);
 
     /**
+     * Load the item disassembly binary data definitions
+     * @param pDataStore Pointer to the datastore to load binary file from
+     * @return true on success, false on failure
+     */
+    bool LoadDisassemblyData(gsl::not_null<DataStore*> pDataStore);
+
+    /**
+     * Load the item disassembly trigger binary data definitions
+     * @param pDataStore Pointer to the datastore to load binary file from
+     * @return true on success, false on failure
+     */
+    bool LoadDisassemblyTriggerData(gsl::not_null<DataStore*> pDataStore);
+
+    /**
      * Load the dynamic map information binary data definitions
      * @param pDataStore Pointer to the datastore to load binary file from
      * @return true on success, false on failure
@@ -773,6 +821,20 @@ private:
     /// Map of devil level up information by devil ID
     std::unordered_map<uint32_t,
         std::shared_ptr<objects::MiDevilLVUpRateData>> mDevilLVUpRateData;
+
+    /// Map of item disassembly definitions by ID
+    std::unordered_map<uint32_t,
+        std::shared_ptr<objects::MiDisassemblyData>> mDisassemblyData;
+
+    /// Map of item disassembly definition IDs by item ID
+    std::unordered_map<uint32_t, uint32_t> mDisassemblyLookup;
+
+    /// Map of item disassembly trigger definitions by ID
+    std::unordered_map<uint32_t,
+        std::shared_ptr<objects::MiDisassemblyTriggerData>> mDisassemblyTriggerData;
+
+    /// List of all disassembled item IDs (or "elements")
+    std::list<uint32_t> mDisassembledItemIDs;
 
     /// Map of dynamic map information by ID
     std::unordered_map<uint32_t,

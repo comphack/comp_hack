@@ -629,6 +629,15 @@ public:
         bool remove);
 
     /**
+     * Determine if the specified character has the specified valuable
+     * @param character Pointer to the character to check
+     * @param valuableID ID of the valuable to look for
+     * @return true if the valuable has been obtained
+     */
+    bool HasValuable(const std::shared_ptr<objects::Character>& character,
+        uint16_t valuableID);
+
+    /**
      * Send the client character's obtained valuables stored as an array of flags
      * @param client Pointer to the client connection
      */
@@ -652,6 +661,15 @@ public:
      */
     void SendPluginFlags(const std::shared_ptr<
         ChannelClientConnection>& client);
+
+    /**
+     * Send the client character's material container contents
+     * @param client Pointer to the client connection
+     * @param updates If specified only the material types that match will
+     *  be sent as an update, otherwise the full box set be sent
+     */
+    void SendMaterials(const std::shared_ptr<
+        ChannelClientConnection>& client, std::set<uint32_t> updates = {});
 
     /**
      * Update the status effects assigned directly on a character or demon

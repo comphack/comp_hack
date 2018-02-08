@@ -291,6 +291,7 @@ SET(${PROJECT_NAME}_SCHEMA
     schema/binarydata/czonerelationdata.xml
     schema/binarydata/devildata.xml
     schema/binarydata/devillvupratedata.xml
+    schema/binarydata/disassemblydata.xml
     schema/binarydata/dynamicmapdata.xml
     schema/binarydata/enchantdata.xml
     schema/binarydata/equipmentsetdata.xml
@@ -466,6 +467,8 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     PartyCharacter.cpp
     PartyMember.h
     PartyMember.cpp
+    PlasmaSpawn.h
+    PlasmaSpawn.cpp
     PostItem.h
     PostItem.cpp
     QmpFile.h
@@ -522,6 +525,8 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     SpawnLocation.cpp
     SpawnLocationGroup.h
     SpawnLocationGroup.cpp
+    SpawnRestriction.h
+    SpawnRestriction.cpp
     TestObject.h
     TestObject.cpp
     Tokusei.h
@@ -630,6 +635,12 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     MiDevilLVUpRateData.h
     MiDevilReunionConditionData.cpp
     MiDevilReunionConditionData.h
+    MiDisassemblyData.cpp
+    MiDisassemblyData.h
+    MiDisassemblyMaterialData.cpp
+    MiDisassemblyMaterialData.h
+    MiDisassemblyTriggerData.cpp
+    MiDisassemblyTriggerData.h
     MiDischargeData.cpp
     MiDischargeData.h
     MiDoTDamageData.cpp

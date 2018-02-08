@@ -96,7 +96,7 @@ bool Parsers::LootItem::Parse(libcomp::ManagerPacket *pPacketManager,
             {
                 std::set<int8_t> slots = { 0 };
 
-                auto lootMap = zone->TakeLoot(lState, slots, freeSlots);
+                auto lootMap = zone->TakeLoot(lBox, slots, freeSlots);
                 for(auto lPair : lootMap)
                 {
                     // Should only be one
@@ -152,7 +152,7 @@ bool Parsers::LootItem::Parse(libcomp::ManagerPacket *pPacketManager,
                     slots.insert(slotID);
                 }
 
-                auto lootMap = zone->TakeLoot(lState, slots, freeSlots,
+                auto lootMap = zone->TakeLoot(lBox, slots, freeSlots,
                     stacksFree);
                 for(auto lPair : lootMap)
                 {
@@ -185,7 +185,7 @@ bool Parsers::LootItem::Parse(libcomp::ManagerPacket *pPacketManager,
         for(auto slot : lootedSlots)
         {
             reply.WriteS8(slot);
-            reply.WriteS8(0);   // Unknown
+            reply.WriteS8(0);   // Target box slot, doesn't seem to actually matter
         }
 
         auto zConnections = zone->GetConnectionList();

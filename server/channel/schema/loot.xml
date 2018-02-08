@@ -7,6 +7,7 @@
             <value num="1">EGG</value>
             <value num="2">BOSS_BOX</value>
             <value num="3">TREASURE_BOX</value>
+            <value num="4">PLASMA</value>
         </member>
         <member type="Enemy*" name="Enemy"/>
         <member type="array" name="Loot" size="12">

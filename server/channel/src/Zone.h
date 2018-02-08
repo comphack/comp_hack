@@ -54,6 +54,7 @@ namespace channel
 {
 
 class ChannelClientConnection;
+class PlasmaState;
 class ZoneInstance;
 
 typedef EntityState<objects::LootBox> LootBoxState;
@@ -136,6 +137,12 @@ public:
     void SetDynamicMap(const std::shared_ptr<DynamicMap>& map);
 
     /**
+     * Check if the zone has respawnable entities associated to it
+     * @return true if the zone has respawnable entities associated to it
+     */
+    bool HasRespawns() const;
+
+    /**
      * Add a client connection to the zone and register its world CID
      * @param client Pointer to a client connection to add
      */
@@ -185,6 +192,12 @@ public:
      * @param object Pointer to the object to add
      */
     void AddObject(const std::shared_ptr<ServerObjectState>& object);
+
+    /**
+     * Add a plasma grouping to the zone
+     * @param object Pointer to the plasma to add
+     */
+    void AddPlasma(const std::shared_ptr<PlasmaState>& plasma);
 
     /**
      * Get all client connections in the zone mapped by world CID
@@ -288,6 +301,20 @@ public:
      * @return List of all NPC instances in the zone
      */
     const std::list<std::shared_ptr<NPCState>> GetNPCs() const;
+
+    /**
+     * Get a plasma instance by it's definition ID.
+     * @param id Definition ID of the plasma.
+     * @return Pointer to the plasma instance.
+     */
+    std::shared_ptr<PlasmaState> GetPlasma(uint32_t id);
+
+    /**
+     * Get all plasma instances in the zone
+     * @return List of all plasma instances in the zone
+     */
+    const std::unordered_map<uint32_t,
+        std::shared_ptr<PlasmaState>> GetPlasma() const;
 
     /**
      * Get an object instance by it's ID.
@@ -414,7 +441,7 @@ public:
      * loot is not duplicated for two different people. This currently does NOT
      * support splitting stacks within the loot box when the box being moved to
      * becomes full.
-     * @param lState Entity state of the loot box
+     * @param lBox Pointer to the loot box
      * @param slots Loot slots being requested or empty to request all
      * @param freeSlots Contextual number of free slots signifying how many
      *  loot items can be taken
@@ -423,7 +450,7 @@ public:
      * @return Map of slot IDs to the loot taken
      */
     std::unordered_map<size_t, std::shared_ptr<objects::Loot>>
-        TakeLoot(std::shared_ptr<LootBoxState> lState, std::set<int8_t> slots,
+        TakeLoot(std::shared_ptr<objects::LootBox> lBox, std::set<int8_t> slots,
             size_t freeSlots, std::unordered_map<uint32_t, uint16_t> stacksFree = {});
 
     /**
@@ -483,6 +510,9 @@ private:
     /// List of pointers to lootable boxes for the zone
     std::list<std::shared_ptr<LootBoxState>> mLootBoxes;
 
+    /// Map of plasma states by definition ID
+    std::unordered_map<uint32_t, std::shared_ptr<PlasmaState>> mPlasma;
+
     /// Map of entities in the zone by their ID
     std::unordered_map<int32_t, std::shared_ptr<objects::EntityStateObject>> mAllEntities;
 
@@ -516,6 +546,9 @@ private:
 
     /// Next ID to use for encounters registered for the zone
     uint32_t mNextEncounterID;
+
+    /// Quick reference flag to determine if the zone has respwa
+    bool mHasRespawns;
 
     /// Server lock for shared resources
     std::mutex mLock;

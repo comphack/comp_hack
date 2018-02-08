@@ -51,12 +51,12 @@
 #include <MiZoneData.h>
 #include <MiZoneFileData.h>
 #include <Party.h>
+#include <PlasmaSpawn.h>
 #include <PlayerExchangeSession.h>
 #include <QmpBoundary.h>
 #include <QmpBoundaryLine.h>
 #include <QmpElement.h>
 #include <QmpFile.h>
-#include <ServerObject.h>
 #include <ServerBazaar.h>
 #include <ServerNPC.h>
 #include <ServerObject.h>
@@ -71,6 +71,7 @@
 // channel Includes
 #include "AIState.h"
 #include "ChannelServer.h"
+#include "PlasmaState.h"
 #include "Zone.h"
 #include "ZoneInstance.h"
 
@@ -771,18 +772,18 @@ void ZoneManager::SendPopulateZoneData(const std::shared_ptr<ChannelClientConnec
     {
         auto npc = npcState->GetEntity();
 
-        libcomp::Packet reply;
-        reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_NPC_DATA);
-        reply.WriteS32Little(npcState->GetEntityID());
-        reply.WriteU32Little(npc->GetID());
-        reply.WriteS32Little((int32_t)zone->GetID());
-        reply.WriteS32Little((int32_t)zoneData->GetID());
-        reply.WriteFloat(npcState->GetCurrentX());
-        reply.WriteFloat(npcState->GetCurrentY());
-        reply.WriteFloat(npcState->GetCurrentRotation());
-        reply.WriteS16Little(0);    //Unknown
+        libcomp::Packet p;
+        p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_NPC_DATA);
+        p.WriteS32Little(npcState->GetEntityID());
+        p.WriteU32Little(npc->GetID());
+        p.WriteS32Little((int32_t)zone->GetID());
+        p.WriteS32Little((int32_t)zoneData->GetID());
+        p.WriteFloat(npcState->GetCurrentX());
+        p.WriteFloat(npcState->GetCurrentY());
+        p.WriteFloat(npcState->GetCurrentRotation());
+        p.WriteS16Little(0);    //Unknown
 
-        client->QueuePacket(reply);
+        client->QueuePacket(p);
 
         // If an NPC's state is not 1, do not show it
         if(npc->GetState() == 1)
@@ -795,34 +796,70 @@ void ZoneManager::SendPopulateZoneData(const std::shared_ptr<ChannelClientConnec
     {
         auto obj = objState->GetEntity();
 
-        libcomp::Packet reply;
-        reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_OBJECT_NPC_DATA);
-        reply.WriteS32Little(objState->GetEntityID());
-        reply.WriteU32Little(obj->GetID());
-        reply.WriteU8(obj->GetState());
-        reply.WriteS32Little((int32_t)zone->GetID());
-        reply.WriteS32Little((int32_t)zoneData->GetID());
-        reply.WriteFloat(objState->GetCurrentX());
-        reply.WriteFloat(objState->GetCurrentY());
-        reply.WriteFloat(objState->GetCurrentRotation());
+        libcomp::Packet p;
+        p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_OBJECT_NPC_DATA);
+        p.WriteS32Little(objState->GetEntityID());
+        p.WriteU32Little(obj->GetID());
+        p.WriteU8(obj->GetState());
+        p.WriteS32Little((int32_t)zone->GetID());
+        p.WriteS32Little((int32_t)zoneData->GetID());
+        p.WriteFloat(objState->GetCurrentX());
+        p.WriteFloat(objState->GetCurrentY());
+        p.WriteFloat(objState->GetCurrentRotation());
 
-        client->QueuePacket(reply);
+        client->QueuePacket(p);
         ShowEntity(client, objState->GetEntityID(), true);
+    }
+
+    for(auto plasmaPair : zone->GetPlasma())
+    {
+        auto pState = plasmaPair.second;
+        auto pSpawn = pState->GetEntity();
+
+        libcomp::Packet p;
+        p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_PLASMA_DATA);
+        p.WriteS32Little(pState->GetEntityID());
+        p.WriteS32Little((int32_t)zone->GetID());
+        p.WriteS32Little((int32_t)zoneData->GetID());
+        p.WriteFloat(pState->GetCurrentX());
+        p.WriteFloat(pState->GetCurrentY());
+        p.WriteFloat(pState->GetCurrentRotation());
+        p.WriteS8((int8_t)pSpawn->GetColor());
+        p.WriteS8((int8_t)pSpawn->GetPickTime());
+        p.WriteS8((int8_t)pSpawn->GetPickSpeed());
+        p.WriteU16Little(pSpawn->GetPickSize());
+
+        auto activePoints = pState->GetActivePoints();
+
+        uint8_t pointCount = (uint8_t)activePoints.size();
+        p.WriteS8((int8_t)pointCount);
+        for(auto point : activePoints)
+        {
+            p.WriteS8((int8_t)point->GetID());
+            p.WriteS32Little(point->GetState(state->GetWorldCID()));
+
+            p.WriteFloat(point->GetX());
+            p.WriteFloat(point->GetY());
+            p.WriteFloat(point->GetRotation());
+        }
+
+        client->QueuePacket(p);
+        ShowEntity(client, pState->GetEntityID(), true);
     }
 
     for(auto bState : zone->GetBazaars())
     {
         auto bazaar = bState->GetEntity();
 
-        libcomp::Packet reply;
-        reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_BAZAAR_DATA);
-        reply.WriteS32Little(bState->GetEntityID());
-        reply.WriteS32Little((int32_t)zone->GetID());
-        reply.WriteS32Little((int32_t)zoneData->GetID());
-        reply.WriteFloat(bState->GetCurrentX());
-        reply.WriteFloat(bState->GetCurrentY());
-        reply.WriteFloat(bState->GetCurrentRotation());
-        reply.WriteS32Little((int32_t)bazaar->MarketIDsCount());
+        libcomp::Packet p;
+        p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_BAZAAR_DATA);
+        p.WriteS32Little(bState->GetEntityID());
+        p.WriteS32Little((int32_t)zone->GetID());
+        p.WriteS32Little((int32_t)zoneData->GetID());
+        p.WriteFloat(bState->GetCurrentX());
+        p.WriteFloat(bState->GetCurrentY());
+        p.WriteFloat(bState->GetCurrentRotation());
+        p.WriteS32Little((int32_t)bazaar->MarketIDsCount());
 
         for(uint32_t marketID : bazaar->GetMarketIDs())
         {
@@ -833,14 +870,14 @@ void ZoneManager::SendPopulateZoneData(const std::shared_ptr<ChannelClientConnec
                 market = nullptr;
             }
 
-            reply.WriteU32Little(marketID);
-            reply.WriteS32Little(market ? (int32_t)market->GetState() : 0);
-            reply.WriteS32Little(market ? market->GetNPCType() : -1);
-            reply.WriteString16Little(state->GetClientStringEncoding(),
+            p.WriteU32Little(marketID);
+            p.WriteS32Little(market ? (int32_t)market->GetState() : 0);
+            p.WriteS32Little(market ? market->GetNPCType() : -1);
+            p.WriteString16Little(state->GetClientStringEncoding(),
                 market ? market->GetComment() : "", true);
         }
 
-        client->QueuePacket(reply);
+        client->QueuePacket(p);
         ShowEntity(client, bState->GetEntityID(), true);
     }
 
@@ -1919,6 +1956,80 @@ bool ZoneManager::UpdateSpawnGroups(const std::shared_ptr<Zone>& zone,
     return false;
 }
 
+bool ZoneManager::UpdatePlasma(const std::shared_ptr<Zone>& zone, uint64_t now)
+{
+    if(zone->GetDefinition()->PlasmaSpawnsCount() == 0)
+    {
+        return false;
+    }
+
+    auto spots = mServer.lock()->GetDefinitionManager()
+        ->GetSpotData(zone->GetDefinition()->GetDynamicMapID());
+    for(auto plasmaPair : zone->GetPlasma())
+    {
+        auto pState = plasmaPair.second;
+        auto pSpawn = pState->GetEntity();
+
+        if(pState->HasStateChangePoints(true, now))
+        {
+            auto spotIter = spots.find(pSpawn->GetSpotID());
+
+            auto hiddenPoints = pState->PopRespawnPoints(now);
+
+            libcomp::Packet notify;
+            notify.WritePacketCode(ChannelToClientPacketCode_t::PACKET_PLASMA_REPOP);
+            notify.WriteS32Little(pState->GetEntityID());
+            notify.WriteS8((int8_t)hiddenPoints.size());
+
+            for(auto point : hiddenPoints)
+            {
+                if(spotIter != spots.end())
+                {
+                    Point rPoint = GetRandomSpotPoint(spotIter->second);
+                    point->SetX(rPoint.x);
+                    point->SetY(rPoint.y);
+                }
+                else
+                {
+                    // Default to the explicit location
+                    point->SetX(pState->GetCurrentX());
+                    point->SetY(pState->GetCurrentY());
+                }
+
+                point->Refresh();
+
+                notify.WriteS8((int8_t)point->GetID());
+                notify.WriteS32Little(point->GetState());
+
+                notify.WriteFloat(point->GetX());
+                notify.WriteFloat(point->GetY());
+                notify.WriteFloat(point->GetRotation());
+            }
+
+            BroadcastPacket(zone, notify);
+        }
+        
+        if(pState->HasStateChangePoints(false, now))
+        {
+            std::list<uint32_t> pointIDs;
+            for(auto hidePoint : pState->PopHidePoints(now))
+            {
+                pointIDs.push_back(hidePoint->GetID());
+            }
+
+            if(pointIDs.size() > 0)
+            {
+                libcomp::Packet notify;
+                pState->GetPointStatusData(notify, pointIDs);
+
+                BroadcastPacket(zone, notify);
+            }
+        }
+    }
+
+    return true;
+}
+
 Point ZoneManager::RotatePoint(const Point& p, const Point& origin, float radians)
 {
     float xDelta = p.x - origin.x;
@@ -1977,32 +2088,38 @@ std::shared_ptr<EnemyState> ZoneManager::CreateEnemy(const std::shared_ptr<Zone>
 
 void ZoneManager::UpdateActiveZoneStates()
 {
-    std::list<std::shared_ptr<Zone>> instances;
+    std::list<std::shared_ptr<Zone>> zones;
     {
         std::lock_guard<std::mutex> lock(mLock);
         for(auto uniqueID : mActiveZones)
         {
-            instances.push_back(mZones[uniqueID]);
+            zones.push_back(mZones[uniqueID]);
         }
     }
 
     // Spin through entities with updated status effects
     uint32_t systemTime = (uint32_t)std::time(0);
-    for(auto instance : instances)
+    for(auto zone : zones)
     {
-        UpdateStatusEffectStates(instance, systemTime);
+        UpdateStatusEffectStates(zone, systemTime);
     }
 
     auto serverTime = ChannelServer::GetServerTime();
     auto aiManager = mServer.lock()->GetAIManager();
 
-    for(auto instance : instances)
+    for(auto zone : zones)
     {
         // Update active AI controlled entities
-        aiManager->UpdateActiveStates(instance, serverTime);
+        aiManager->UpdateActiveStates(zone, serverTime);
 
-        // Spawn new enemies next (since they should not immediately act)
-        UpdateSpawnGroups(instance, false, serverTime);
+        if(zone->HasRespawns())
+        {
+            // Spawn new enemies next (since they should not immediately act)
+            UpdateSpawnGroups(zone, false, serverTime);
+
+            // Now update plasma spawns
+            UpdatePlasma(zone, serverTime);
+        }
     }
 }
 
@@ -2390,6 +2507,32 @@ std::shared_ptr<Zone> ZoneManager::CreateZone(
         state->SetEntityID(server->GetNextEntityID());
         state->SetActions(obj->GetActions());
         zone->AddObject(state);
+    }
+
+    if(definition->PlasmaSpawnsCount() > 0)
+    {
+        for(auto plasmaPair : definition->GetPlasmaSpawns())
+        {
+            auto pSpawn = plasmaPair.second;
+            auto state = std::shared_ptr<PlasmaState>(new PlasmaState(pSpawn));
+
+            float x = pSpawn->GetX();
+            float y = pSpawn->GetY();
+            float rot = pSpawn->GetRotation();
+            GetSpotPosition(definition->GetDynamicMapID(), pSpawn->GetSpotID(),
+                x, y, rot);
+
+            state->SetCurrentX(x);
+            state->SetCurrentY(y);
+            state->SetCurrentRotation(rot);
+
+            state->CreatePoints();
+
+            state->SetEntityID(server->GetNextEntityID());
+            zone->AddPlasma(state);
+        }
+
+        UpdatePlasma(zone);
     }
 
     if(definition->BazaarsCount() > 0)

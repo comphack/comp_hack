@@ -370,12 +370,28 @@ bool ChannelServer::Initialize()
         to_underlying(ClientToChannelPacketCode_t::PACKET_CLAN_EMBLEM_UPDATE));
     clientPacketManager->AddParser<Parsers::DemonFamiliarity>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_DEMON_FAMILIARITY));
+    clientPacketManager->AddParser<Parsers::PlasmaStart>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_PLASMA_START));
+    clientPacketManager->AddParser<Parsers::PlasmaResult>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_PLASMA_RESULT));
+    clientPacketManager->AddParser<Parsers::PlasmaEnd>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_PLASMA_END));
+    clientPacketManager->AddParser<Parsers::PlasmaItemData>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_PLASMA_ITEM_DATA));
+    clientPacketManager->AddParser<Parsers::PlasmaItem>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_PLASMA_ITEM));
+    clientPacketManager->AddParser<Parsers::ItemDisassemble>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_ITEM_DISASSEMBLE));
     clientPacketManager->AddParser<Parsers::EquipmentMod>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_EQUIPMENT_MODIFY));
     clientPacketManager->AddParser<Parsers::MaterialBox>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_MATERIAL_BOX));
     clientPacketManager->AddParser<Parsers::Analyze>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_ANALYZE));
+    clientPacketManager->AddParser<Parsers::MaterialExtract>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_MATERIAL_EXTRACT));
+    clientPacketManager->AddParser<Parsers::MaterialInsert>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_MATERIAL_INSERT));
     clientPacketManager->AddParser<Parsers::ItemExpand>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_ITEM_EXPAND));
     clientPacketManager->AddParser<Parsers::CompShopOpen>(

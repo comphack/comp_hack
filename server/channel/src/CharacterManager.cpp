@@ -3154,6 +3154,20 @@ bool CharacterManager::AddRemoveValuable(const std::shared_ptr<
     return true;
 }
 
+bool CharacterManager::HasValuable(const std::shared_ptr<objects::Character>& character,
+    uint16_t valuableID)
+{
+    auto progress = character ? character->GetProgress().Get() : nullptr;
+
+    size_t index;
+    uint8_t shiftVal;
+    ConvertIDToMaskValues(valuableID, index, shiftVal);
+
+    uint8_t indexVal = progress ? progress->GetValuables(index) : 0;
+
+    return (indexVal & shiftVal) != 0;
+}
+
 void CharacterManager::SendValuableFlags(const std::shared_ptr<ChannelClientConnection>& client)
 {
     auto state = client->GetClientState();
@@ -3201,7 +3215,8 @@ bool CharacterManager::AddPlugin(const std::shared_ptr<
     return true;
 }
 
-void CharacterManager::SendPluginFlags(const std::shared_ptr<ChannelClientConnection>& client)
+void CharacterManager::SendPluginFlags(const std::shared_ptr<
+    ChannelClientConnection>& client)
 {
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
@@ -3215,6 +3230,50 @@ void CharacterManager::SendPluginFlags(const std::shared_ptr<ChannelClientConnec
     reply.WriteArray(&plugins, (uint32_t)plugins.size());
 
     client->SendPacket(reply);
+}
+
+void CharacterManager::SendMaterials(const std::shared_ptr<
+    ChannelClientConnection>& client, std::set<uint32_t> updates)
+{
+    auto state = client->GetClientState();
+    auto cState = state->GetCharacterState();
+    auto character = cState->GetEntity();
+    auto materials = character->GetMaterials();
+
+    libcomp::Packet p;
+    if(updates.size() == 0)
+    {
+        p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_MATERIAL_BOX);
+
+        // All materials have a dissasembly entry
+        auto disassemblyTypes = mServer.lock()->GetDefinitionManager()
+            ->GetDisassembledItemIDs();
+
+        int32_t materialCount = (int32_t)disassemblyTypes.size();
+        p.WriteS32Little(materialCount);
+        for(uint32_t materialType : disassemblyTypes)
+        {
+            auto it = materials.find(materialType);
+
+            p.WriteU32Little(materialType);
+            p.WriteS32Little(it != materials.end() ? it->second : 0);
+        }
+    }
+    else
+    {
+        p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_MATERIAL_BOX_UPDATED);
+
+        p.WriteS32Little((int32_t)updates.size());
+        for(uint32_t materialType : updates)
+        {
+            auto it = materials.find(materialType);
+
+            p.WriteU32Little(materialType);
+            p.WriteS32Little(it != materials.end() ? it->second : 0);
+        }
+    }
+
+    client->SendPacket(p);
 }
 
 bool CharacterManager::UpdateStatusEffects(const std::shared_ptr<

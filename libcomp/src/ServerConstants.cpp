@@ -145,6 +145,10 @@ bool ServerConstants::Initialize(const String& filePath)
     success &= LoadInteger(constants["STATUS_SUMMON_SYNC_3"],
         sConstants.STATUS_SUMMON_SYNC_3);
 
+    // Load valuable constants
+    success &= LoadInteger(constants["VALUABLE_MATERIAL_TANK"],
+        sConstants.VALUABLE_MATERIAL_TANK);
+
     auto complexIter = complexConstants.find("DEFAULT_SKILLS");
     if(success && complexIter != complexConstants.end())
     {
@@ -267,6 +271,51 @@ bool ServerConstants::Initialize(const String& filePath)
     else
     {
         LOG_ERROR("DEPO_MAP_ITEM not found\n");
+        success = false;
+    }
+
+    complexIter = complexConstants.find("DISASSEMBLY_ITEMS");
+    if(success && complexIter != complexConstants.end())
+    {
+        std::list<String> strList;
+        if(!LoadStringList(complexIter->second, strList))
+        {
+            LOG_ERROR("Failed to load DISASSEMBLY_ITEMS\n");
+            success = false;
+        }
+        else
+        {
+            if(strList.size() != 6)
+            {
+                LOG_ERROR("DISASSEMBLY_ITEMS must specify all 6 item types\n");
+                success = false;
+            }
+            else
+            {
+                size_t idx = 0;
+                for(auto elem : strList)
+                {
+                    uint32_t skillID = 0;
+                    if(LoadInteger(elem.C(), skillID))
+                    {
+                        sConstants.DISASSEMBLY_ITEMS[idx] = skillID;
+                    }
+                    else
+                    {
+                        LOG_ERROR("Failed to load an item type in"
+                            " DISASSEMBLY_ITEMS\n");
+                        success = false;
+                        break;
+                    }
+
+                    idx++;
+                }
+            }
+        }
+    }
+    else
+    {
+        LOG_ERROR("DISASSEMBLY_ITEMS not found\n");
         success = false;
     }
 

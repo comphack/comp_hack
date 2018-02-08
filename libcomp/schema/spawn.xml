@@ -30,12 +30,8 @@
             <key type="u32"/>   <!-- Spawn ID -->
             <value type="u16"/> <!-- Count -->
         </member>
-        <member type="map" name="TimeRestriction">
-            <key type="u16"/>   <!-- From -->
-            <value type="u16"/> <!-- To -->
-        </member>
-        <member type="u16" name="MoonRestriction"/>
-        <member type="u16" name="DayRestriction"/>
+        <member type="SpawnRestriction*" name="Restrictions"
+            nulldefault="true"/>
 
         <member type="list" name="SpawnActions">
             <element type="Action*"/>
@@ -62,5 +58,25 @@
         <member type="float" name="Y"/>
         <member type="float" name="Width"/>
         <member type="float" name="Height"/>
+    </object>
+    <object name="PlasmaSpawn" baseobject="ServerObjectBase"
+        persistent="false">
+        <member type="u8" name="PointCount"/>
+        <member type="u8" name="Color"/>
+        <member type="u8" name="PickTime"/>
+        <member type="u8" name="PickSpeed"/>
+        <member type="u16" name="PickSize"/>
+        <member type="float" name="RespawnTime"/>
+        <member type="u32" name="DropSetID"/>
+        <member type="SpawnRestriction*" name="Restrictions"
+            nulldefault="true"/>
+    </object>
+    <object name="SpawnRestriction" persistent="false">
+        <member type="map" name="TimeRestriction">
+            <key type="u16"/>   <!-- From -->
+            <value type="u16"/> <!-- To -->
+        </member>
+        <member type="u16" name="MoonRestriction" default="0xFFFF"/>
+        <member type="u8" name="DayRestriction" default="0x8F"/>
     </object>
 </objgen>

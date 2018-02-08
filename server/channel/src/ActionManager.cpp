@@ -98,8 +98,12 @@ ActionManager::ActionManager(const std::weak_ptr<ChannelServer>& server)
         &ActionManager::SetNPCState;
     mActionHandlers[objects::Action::ActionType_t::ADD_REMOVE_ITEMS] =
         &ActionManager::AddRemoveItems;
+    mActionHandlers[objects::Action::ActionType_t::ADD_REMOVE_STATUS] =
+        &ActionManager::AddRemoveStatus;
     mActionHandlers[objects::Action::ActionType_t::UPDATE_COMP] =
         &ActionManager::UpdateCOMP;
+    mActionHandlers[objects::Action::ActionType_t::GRANT_SKILLS] =
+        &ActionManager::GrantSkills;
     mActionHandlers[objects::Action::ActionType_t::GRANT_XP] =
         &ActionManager::GrantXP;
     mActionHandlers[objects::Action::ActionType_t::DISPLAY_MESSAGE] =
@@ -1440,7 +1444,6 @@ bool ActionManager::CreateLoot(ActionContext& ctx)
     auto zoneManager = server->GetZoneManager();
 
     auto zone = ctx.CurrentZone;
-    uint32_t dynamicMapID = zone->GetDefinition()->GetDynamicMapID();
 
     std::list<std::shared_ptr<objects::ObjectPosition>> locations;
     switch(act->GetPosition())
@@ -1477,9 +1480,11 @@ bool ActionManager::CreateLoot(ActionContext& ctx)
             (uint64_t)((double)act->GetExpirationTime() * 1000000.0));
     }
 
-    auto zConnections = ctx.CurrentZone->GetConnectionList();
+    auto zConnections = zone->GetConnectionList();
     auto firstClient = zConnections.size() > 0 ? zConnections.front()
         : nullptr;
+
+    auto zoneSpots = zone->GetDynamicMap()->Spots;
 
     std::list<int32_t> entityIDs;
     for(auto loc : locations)
@@ -1515,8 +1520,16 @@ bool ActionManager::CreateLoot(ActionContext& ctx)
         float x = loc->GetX();
         float y = loc->GetY();
         float rot = loc->GetRotation();
-        zoneManager->GetSpotPosition(dynamicMapID, loc->GetSpotID(),
-            x, y, rot);
+
+        // If a spot is specified, get a random point within it
+        auto spotIter = zoneSpots.find(loc->GetSpotID());
+        if(spotIter != zoneSpots.end())
+        {
+            Point p = zoneManager->GetRandomSpotPoint(spotIter->second
+                ->Definition);
+            x = p.x;
+            y = p.y;
+        }
 
         lState->SetCurrentX(x);
         lState->SetCurrentY(y);

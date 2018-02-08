@@ -43,8 +43,9 @@
         <member type="array" name="EquippedItems" size="15">
             <element type="Item*"/>
         </member>
-        <member type="array" name="Materials" size="52">
-            <element type="Item*"/>
+        <member type="map" name="Materials">
+            <key type="u32"/>
+            <value type="u16"/>
         </member>
         <member type="array" name="ItemBoxes" size="5">
             <element type="ItemBox*"/>

@@ -359,6 +359,14 @@ public:
         uint64_t now = 0, std::shared_ptr<objects::ActionSpawn> actionSource = nullptr);
 
     /**
+     * Update the specified zone's PlasmaSpawns
+     * @param zone Pointer to the zone where the plasma should be updated
+     * @param now Current server time
+     * @return true if any plasma was spawned or despawned
+     */
+    bool UpdatePlasma(const std::shared_ptr<Zone>& zone, uint64_t now = 0);
+
+    /**
      * Updates the current states of entities in the zone.  Enemy AI is
      * processed from here as well as updating the current state of moving
      * entities.

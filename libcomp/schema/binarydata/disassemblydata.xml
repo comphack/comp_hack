@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="MiDisassemblyMaterialData" persistent="false">
+        <member type="u32" name="type"/>
+        <member type="u16" name="amount"/>
+        <member type="s16" name="successRate"/>
+    </object>
+    <object name="MiDisassemblyData" persistent="false">
+        <member type="u32" name="ID"/>
+        <member type="u32" name="itemID"/>
+        <member type="u8" name="unused1"/>
+        <member type="u8" name="unused2"/>
+        <member type="u16" name="unused3"/>
+        <member type="array" name="materials" size="8">
+            <element type="MiDisassemblyMaterialData*"/>
+        </member>
+    </object>
+    <object name="MiDisassemblyTriggerData" persistent="false">
+        <member type="u32" name="ID"/>
+        <member type="array" name="rateScaling" size="8">
+            <element type="u16"/>
+        </member>
+    </object>
+</objgen>

@@ -998,17 +998,11 @@ bool EventManager::EvaluateCondition(const std::shared_ptr<ChannelClientConnecti
         {
             // Valuable flag [value 1] = [value 2]
             auto character = client->GetClientState()->GetCharacterState()->GetEntity();
-            auto progress = character->GetProgress().Get();
 
             uint16_t valuableID = (uint16_t)condition->GetValue1();
 
-            size_t index;
-            uint8_t shiftVal;
-            mServer.lock()->GetCharacterManager()->ConvertIDToMaskValues(valuableID, index, shiftVal);
-
-            uint8_t indexVal = progress->GetValuables(index);
-
-            return ((indexVal & shiftVal) == 0) == (condition->GetValue2() == 0);
+            return mServer.lock()->GetCharacterManager()->HasValuable(character, valuableID) != 
+                (condition->GetValue2() == 0);
         }
     case objects::EventConditionData::Type_t::QUEST_COMPLETE:
         if(compareMode != EventCompareMode::EQUAL && compareMode != EventCompareMode::DEFAULT_COMPARE)
@@ -1451,6 +1445,15 @@ bool EventManager::EvaluateCondition(const std::shared_ptr<ChannelClientConnecti
                 condition->GetValue2(), compareMode, EventCompareMode::BETWEEN,
                 EVENT_COMPARE_NUMERIC2);
         }
+    case objects::EventConditionData::Type_t::MATERIAL:
+        {
+            // Material type [value 1] compares to [value 2]
+            auto character = client->GetClientState()->GetCharacterState()->GetEntity();
+
+            return Compare((int32_t)character->GetMaterials((uint32_t)condition->GetValue1()),
+                condition->GetValue2(), 0, compareMode, EventCompareMode::GTE,
+                EVENT_COMPARE_NUMERIC);
+        }
     case objects::EventCondition::Type_t::NPC_STATE:
         {
             // NPC in the same zone with actor ID [value 1] state compares to [value 2]
@@ -1846,7 +1849,8 @@ void EventManager::HandleNext(const std::shared_ptr<ChannelClientConnection>& cl
     auto eState = state->GetEventState();
     auto event = current->GetEvent();
     auto iState = current->GetState();
-    auto nextEventID = iState->GetNext();
+    libcomp::String nextEventID = iState->GetNext();
+    libcomp::String queueEventID = iState->GetQueueNext();
 
     if(iState->BranchesCount() > 0)
     {
@@ -1884,7 +1888,9 @@ void EventManager::HandleNext(const std::shared_ptr<ChannelClientConnection>& cl
                         size_t idx = *scriptResult;
                         if(idx < iState->BranchesCount())
                         {
-                            nextEventID = iState->GetBranches(idx)->GetNext();
+                            auto branch = iState->GetBranches(idx);
+                            nextEventID = branch->GetNext();
+                            queueEventID = branch->GetQueueNext();
                         }
                     }
                 }
@@ -1905,10 +1911,16 @@ void EventManager::HandleNext(const std::shared_ptr<ChannelClientConnection>& cl
                 {
                     // Use the branch instead (first to pass is used)
                     nextEventID = branch->GetNext();
+                    queueEventID = branch->GetQueueNext();
                     break;
                 }
             }
         }
+    }
+
+    if(!queueEventID.IsEmpty())
+    {
+        eState->AppendQueued(queueEventID);
     }
 
     if(nextEventID.IsEmpty())
@@ -1916,12 +1928,23 @@ void EventManager::HandleNext(const std::shared_ptr<ChannelClientConnection>& cl
         auto previous = eState->PreviousCount() > 0 ? eState->GetPrevious().back() : nullptr;
         if(previous != nullptr && (iState->GetPop() || iState->GetPopNext()))
         {
+            // Return to pop event
             eState->RemovePrevious(eState->PreviousCount() - 1);
             eState->SetCurrent(previous);
             HandleEvent(client, previous);
         }
+        else if(eState->QueuedCount() > 0)
+        {
+            // Process the first queued event
+            queueEventID = eState->GetQueued(0);
+            eState->RemoveQueued(0);
+
+            // Queued events have no source associated to them
+            HandleEvent(client, queueEventID, 0);
+        }
         else
         {
+            // End the sequence
             EndEvent(client);
         }
     }

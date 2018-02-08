@@ -2,6 +2,7 @@
 <objgen>
     <object name="EventBase" persistent="false">
         <member type="string" name="next"/>
+        <member type="string" name="queueNext"/>
         <member type="string" name="conditionID"/>  <!-- todo: remove after events are merged -->
         <member type="list" name="conditions">
             <element type="EventCondition*"/>
@@ -72,6 +73,7 @@
             <value>INSTANCE_ACCESS</value>
             <value>INVENTORY_FREE</value>
             <value>LNC</value>
+            <value>MATERIAL</value>
             <value>NPC_STATE</value>
             <value>PARTNER_ALIVE</value>
             <value>PARTNER_FAMILIARITY</value>

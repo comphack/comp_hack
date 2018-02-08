@@ -31,6 +31,7 @@
 
 // object Includes
 #include <Loot.h>
+#include <PlasmaState.h>
 #include <ServerNPC.h>
 #include <ServerObject.h>
 #include <ServerZone.h>
@@ -74,6 +75,19 @@ Zone::Zone()
 Zone::Zone(uint32_t id, const std::shared_ptr<objects::ServerZone>& definition)
     : mServerZone(definition), mID(id), mNextEncounterID(1)
 {
+    mHasRespawns = definition->PlasmaSpawnsCount() > 0;
+
+    if(!mHasRespawns)
+    {
+        for(auto slgPair : definition->GetSpawnLocationGroups())
+        {
+            if(slgPair.second->GetRespawnTime())
+            {
+                mHasRespawns = true;
+                break;
+            }
+        }
+    }
 }
 
 Zone::Zone(const Zone& other)
@@ -113,6 +127,11 @@ void Zone::SetInstance(const std::shared_ptr<ZoneInstance>& instance)
 const std::shared_ptr<DynamicMap> Zone::GetDynamicMap() const
 {
     return mDynamicMap;
+}
+
+bool Zone::HasRespawns() const
+{
+    return mHasRespawns;
 }
 
 void Zone::SetDynamicMap(const std::shared_ptr<DynamicMap>& map)
@@ -322,6 +341,12 @@ void Zone::AddObject(const std::shared_ptr<ServerObjectState>& object)
     }
 }
 
+void Zone::AddPlasma(const std::shared_ptr<PlasmaState>& plasma)
+{
+    mPlasma[plasma->GetEntity()->GetID()] = plasma;
+    RegisterEntityState(plasma);
+}
+
 std::unordered_map<int32_t,
     std::shared_ptr<ChannelClientConnection>> Zone::GetConnections()
 {
@@ -414,6 +439,18 @@ const std::list<std::shared_ptr<LootBoxState>> Zone::GetLootBoxes() const
 const std::list<std::shared_ptr<NPCState>> Zone::GetNPCs() const
 {
     return mNPCs;
+}
+
+std::shared_ptr<PlasmaState> Zone::GetPlasma(uint32_t id)
+{
+    auto it = mPlasma.find(id);
+    return it != mPlasma.end() ? it->second : nullptr;
+}
+
+const std::unordered_map<uint32_t,
+    std::shared_ptr<PlasmaState>> Zone::GetPlasma() const
+{
+    return mPlasma;
 }
 
 const std::list<std::shared_ptr<ServerObjectState>> Zone::GetServerObjects() const
@@ -676,14 +713,13 @@ void Zone::SetFlagState(int32_t key, int32_t value, int32_t worldCID)
 }
 
 std::unordered_map<size_t, std::shared_ptr<objects::Loot>>
-    Zone::TakeLoot(std::shared_ptr<LootBoxState> lState, std::set<int8_t> slots,
+    Zone::TakeLoot(std::shared_ptr<objects::LootBox> lBox, std::set<int8_t> slots,
     size_t freeSlots, std::unordered_map<uint32_t, uint16_t> stacksFree)
 {
     std::unordered_map<size_t, std::shared_ptr<objects::Loot>> result;
     size_t ignoreCount = 0;
 
     std::lock_guard<std::mutex> lock(mLock);
-    auto lBox = lState->GetEntity();
     auto loot = lBox->GetLoot();
     for(size_t i = 0; (size_t)(result.size() - ignoreCount) < freeSlots &&
         i < lBox->LootCount(); i++)
@@ -713,7 +749,7 @@ std::unordered_map<size_t, std::shared_ptr<objects::Loot>>
             }
         }
     }
-    lState->GetEntity()->SetLoot(loot);
+    lBox->SetLoot(loot);
 
     return result;
 }

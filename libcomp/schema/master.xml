@@ -88,6 +88,7 @@
     <include path="binarydata/czonerelationdata.xml"/>
     <include path="binarydata/devildata.xml"/>
     <include path="binarydata/devillvupratedata.xml"/>
+    <include path="binarydata/disassemblydata.xml"/>
     <include path="binarydata/dynamicmapdata.xml"/>
     <include path="binarydata/enchantdata.xml"/>
     <include path="binarydata/equipmentsetdata.xml"/>

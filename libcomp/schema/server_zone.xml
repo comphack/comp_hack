@@ -29,6 +29,10 @@
         <member type="list" name="Bazaars">
             <element type="ServerBazaar*"/>
         </member>
+        <member type="map" name="PlasmaSpawns">
+            <key type="u32"/>
+            <value type="PlasmaSpawn*"/>
+        </member>
         <member type="map" name="Spawns">
             <key type="u32"/>
             <value type="Spawn*"/>

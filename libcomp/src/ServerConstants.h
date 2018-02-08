@@ -137,6 +137,9 @@ struct Data
     /// Status effect ID of summon sync level 3
     uint32_t STATUS_SUMMON_SYNC_3;
 
+    /// Valuable ID of the material tank that stores disassembled items
+    uint16_t VALUABLE_MATERIAL_TANK;
+
     /// Default skills to add to a new character
     std::set<uint32_t> DEFAULT_SKILLS;
 
@@ -151,6 +154,9 @@ struct Data
 
     /// Item IDs of item box rental tickets to their corresponding day lengths
     std::unordered_map<uint32_t, uint32_t> DEPO_MAP_ITEM;
+
+    /// Item IDs of items used to disassembly materials
+    std::array<uint32_t, 6> DISASSEMBLY_ITEMS;
 
     /// Item IDs with parameters used for the EQUIP_MOD_EDIT function ID skill
     std::unordered_map<uint32_t, std::array<int32_t, 3>> EQUIP_MOD_EDIT_ITEMS;

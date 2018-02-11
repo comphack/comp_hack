@@ -2,7 +2,7 @@
 <!--
 	License here
 -->
-<!DOCTYPE book PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN" 
+<!DOCTYPE book PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN"
 	"http://www.oasis-open.org/docbook/xml/4.5/docbookx.dtd">
 <book>
 
@@ -22,6 +22,8 @@
 	<year>2014</year>
 	<year>2015</year>
 	<year>2016</year>
+	<year>2017</year>
+	<year>2018</year>
 	<holder>COMP_hack Team</holder>
 </copyright>
 <edition>1st Edition</edition>

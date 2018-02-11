@@ -1,0 +1,191 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE section PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN"
+    "http://www.oasis-open.org/docbook/xml/4.5/docbookx.dtd">
+<section>
+<title>Common Server Configuration</title>
+
+<para>These settings apply to all three server configurations.</para>
+
+<section>
+<title>DiffieHellmanKeyPair</title>
+<para><emphasis role="strong">Type:</emphasis> string</para>
+<para><emphasis role="strong">Default:</emphasis> <emphasis>blank</emphasis></para>
+<para>This is the public key pair used for encrypting new client connections. Leave this option out and the server will generate a new pair for your server to add to the configuration.</para>
+
+<section>
+<title>Example</title>
+<para><![CDATA[<member name="DiffieHellmanKeyPair">940134C09FB9BABE187BCE1030E63...</member>]]></para>
+</section><!-- Example -->
+
+</section><!-- DiffieHellmanKeyPair -->
+
+<section>
+<title>Port</title>
+<para><emphasis role="strong">Type:</emphasis> integer</para>
+<para><emphasis role="strong">Default:</emphasis> 10666 (lobby), 18666 (channel) or 14666 (channel)</para>
+<para>Main port for the server to listen for connections on. For the lobby and channel these should be open to the internet for clients. For the world server this port should be blocked by your firewall. For the lobby this is usually 10666. For the channel this is usually 14666, 15666, etc. For the world this is usually 18666.</para>
+
+<section>
+<title>Example</title>
+<para><![CDATA[<member name="Port">10666</member>]]></para>
+</section><!-- Example -->
+
+</section><!-- Port -->
+
+<section>
+<title>DatabaseType</title>
+<para><emphasis role="strong">Type:</emphasis> enumeration</para>
+<para><emphasis role="strong">Default:</emphasis> MARIADB</para>
+<para>The type of database being used. Must be either <emphasis>MARIADB</emphasis> or <emphasis>SQLITE3</emphasis>. <emphasis>MARIADB</emphasis> is strongly recommended for production servers and testing.</para>
+
+<section>
+<title>Example</title>
+<para><![CDATA[<member name="DatabaseType">MARIADB</member>]]></para>
+</section><!-- Example -->
+
+</section><!-- DatabaseType -->
+
+<section>
+<title>MultithreadMode</title>
+<para><emphasis role="strong">Type:</emphasis> boolean</para>
+<para><emphasis role="strong">Default:</emphasis> true</para>
+<para>Just leave it on unless your computer is an 8086.</para>
+
+<section>
+<title>Example</title>
+<para><![CDATA[<member name="MultithreadMode">true</member>]]></para>
+</section><!-- Example -->
+
+</section><!-- MultithreadMode -->
+
+<section>
+<title>DataStore</title>
+<para><emphasis role="strong">Type:</emphasis> string</para>
+<para><emphasis role="strong">Default:</emphasis> <emphasis>blank</emphasis></para>
+<para>Location of the game data directory.</para>
+
+<section>
+<title>Example</title>
+<para><![CDATA[<member name="DataStore">/var/lib/comp_hack</member>]]></para>
+</section><!-- Example -->
+
+</section><!-- DataStore -->
+
+<section>
+<title>DataStoreSync</title>
+<para><emphasis role="strong">Type:</emphasis> boolean</para>
+<para><emphasis role="strong">Default:</emphasis> true</para>
+<para>This feature is not implemented yet but it would sync the data store between servers (if they were on different systems and need this).</para>
+
+<section>
+<title>Example</title>
+<para><![CDATA[<member name="DataStoreSync">true</member>]]></para>
+</section><!-- Example -->
+
+</section><!-- DataStoreSync -->
+
+<section>
+<title>LogFile</title>
+<para><emphasis role="strong">Type:</emphasis> string</para>
+<para><emphasis role="strong">Default:</emphasis> <emphasis>blank</emphasis></para>
+<para>Path to the log file.</para>
+
+<section>
+<title>Example</title>
+<para><![CDATA[<member name="LogFile">/var/log/comp_hack/lobby.log</member>]]></para>
+</section><!-- Example -->
+
+</section><!-- LogFile -->
+
+<section>
+<title>LogFileTimestamp</title>
+<para><emphasis role="strong">Type:</emphasis> boolean</para>
+<para><emphasis role="strong">Default:</emphasis> true</para>
+<para>Indicates if the log file should include timestamps.</para>
+
+<section>
+<title>Example</title>
+<para><![CDATA[<member name="LogFileTimestamp">true</member>]]></para>
+</section><!-- Example -->
+
+</section><!-- LogFileTimestamp -->
+
+<section>
+<title>LogFileAppend</title>
+<para><emphasis role="strong">Type:</emphasis> boolean</para>
+<para><emphasis role="strong">Default:</emphasis> true</para>
+<para>Appends to an existing log file if it exists. If disabled, the log file is replaced.</para>
+
+<section>
+<title>Example</title>
+<para><![CDATA[<member name="LogFileAppend">true</member>]]></para>
+</section><!-- Example -->
+
+</section><!-- LogFileAppend -->
+
+<section>
+<title>LogDebug</title>
+<para><emphasis role="strong">Type:</emphasis> boolean</para>
+<para><emphasis role="strong">Default:</emphasis> true</para>
+<para>Indicates if debug log messages should be produced.</para>
+
+<section>
+<title>Example</title>
+<para><![CDATA[<member name="LogDebug">true</member>]]></para>
+</section><!-- Example -->
+
+</section><!-- LogDebug -->
+
+<section>
+<title>LogInfo</title>
+<para><emphasis role="strong">Type:</emphasis> boolean</para>
+<para><emphasis role="strong">Default:</emphasis> true</para>
+<para>Indicates if debug log messages should be produced.</para>
+
+<section>
+<title>Example</title>
+<para><![CDATA[<member name="LogInfo">true</member>]]></para>
+</section><!-- Example -->
+
+</section><!-- LogInfo -->
+
+<section>
+<title>LogWarning</title>
+<para><emphasis role="strong">Type:</emphasis> boolean</para>
+<para><emphasis role="strong">Default:</emphasis> true</para>
+<para>Indicates if debug log messages should be produced.</para>
+
+<section>
+<title>Example</title>
+<para><![CDATA[<member name="LogWarning">true</member>]]></para>
+</section><!-- Example -->
+
+</section><!-- LogWarning -->
+
+<section>
+<title>LogError</title>
+<para><emphasis role="strong">Type:</emphasis> boolean</para>
+<para><emphasis role="strong">Default:</emphasis> true</para>
+<para>Indicates if debug log messages should be produced.</para>
+
+<section>
+<title>Example</title>
+<para><![CDATA[<member name="LogError">true</member>]]></para>
+</section><!-- Example -->
+
+</section><!-- LogError -->
+
+<section>
+<title>LogCritical</title>
+<para><emphasis role="strong">Type:</emphasis> boolean</para>
+<para><emphasis role="strong">Default:</emphasis> true</para>
+<para>Indicates if debug log messages should be produced.</para>
+
+<section>
+<title>Example</title>
+<para><![CDATA[<member name="LogCritical">true</member>]]></para>
+</section><!-- Example -->
+
+</section><!-- LogCritical -->
+
+</section>

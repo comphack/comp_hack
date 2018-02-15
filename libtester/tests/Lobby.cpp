@@ -77,7 +77,7 @@ TEST(Lobby, BadUsername)
             new libtester::LobbyClient);
 
         client->Login("h@k3r", LOGIN_PASSWORD,
-            ErrorCodes_t::BAD_USERNAME_PASSWORD);
+            ErrorCodes_t::SUCCESS, ErrorCodes_t::BAD_USERNAME_PASSWORD);
     });
 }
 
@@ -227,7 +227,7 @@ TEST(Lobby, DoubleLogin)
 
         client->Login(LOGIN_USERNAME, LOGIN_PASSWORD);
         client2->Login(LOGIN_USERNAME, LOGIN_PASSWORD,
-            ErrorCodes_t::ACCOUNT_STILL_LOGGED_IN);
+            ErrorCodes_t::SUCCESS, ErrorCodes_t::ACCOUNT_STILL_LOGGED_IN);
         client.reset();
         client3->Login(LOGIN_USERNAME, LOGIN_PASSWORD);
     });

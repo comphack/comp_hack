@@ -104,7 +104,12 @@ void LobbyLogin(std::shared_ptr<WorldServer> server,
             channelID = (int8_t)loginChannel->GetID();
 
             // Login now to get the session key
-            accountManager->LoginUser(login);
+            if(!accountManager->LoginUser(login))
+            {
+                LOG_ERROR(libcomp::String("Failed to login character '%1'. "
+                    "Here is the state of the login object now:\n").Arg(
+                    account->GetUsername()).Arg(login->GetXml()));
+            }
 
             // Get the cached character login or register a new one
             cLogin = characterManager->RegisterCharacter(cLogin);

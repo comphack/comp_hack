@@ -125,7 +125,7 @@ int TcpServer::Start()
 
 void TcpServer::RemoveConnection(std::shared_ptr<TcpConnection>& connection)
 {
-    // Lock the muxtex.
+    // Lock the mutex.
     std::lock_guard<std::mutex> lock(mConnectionsLock);
 
     auto iter = std::find(mConnections.begin(), mConnections.end(), connection);

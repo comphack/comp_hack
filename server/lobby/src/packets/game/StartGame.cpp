@@ -96,6 +96,9 @@ bool Parsers::StartGame::Parse(libcomp::ManagerPacket *pPacketManager,
     auto login = accountManager->GetUserLogin(username);
     login->GetCharacterLogin()->SetCharacter(account->GetCharacters(cid));
 
+    LOG_DEBUG(libcomp::String("StartGame is sending the following login "
+        "object to the world:\n%1\n").Arg(login->GetXml()));
+
     libcomp::Packet request;
     request.WritePacketCode(InternalPacketCode_t::PACKET_ACCOUNT_LOGIN);
     login->SavePacket(request, false);

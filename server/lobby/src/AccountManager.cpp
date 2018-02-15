@@ -8,7 +8,7 @@
  *
  * This file is part of the Lobby Server (lobby).
  *
- * Copyright (C) 2012-2016 COMP_hack Team <compomega@tutanota.com>
+ * Copyright (C) 2012-2018 COMP_hack Team <compomega@tutanota.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as
@@ -27,7 +27,9 @@
 #include "AccountManager.h"
 
 // libcomp Includes
+#include <Decrypt.h>
 #include <Log.h>
+#include <ServerConstants.h>
 
 // Standard C++11 Includes
 #include <ctime>
@@ -47,6 +49,233 @@
 
 using namespace lobby;
 
+AccountManager::AccountManager(LobbyServer *pServer) : mServer(pServer)
+{
+}
+
+ErrorCodes_t AccountManager::WebAuthLogin(const libcomp::String& username,
+    const libcomp::String& password, uint32_t clientVersion,
+    libcomp::String& sid)
+{
+    /// @todo Check if the server is full and return SERVER_FULL.
+
+    LOG_DEBUG(libcomp::String("Attempting to perform a web auth login for "
+        "account '%1'.\n").Arg(username));
+
+    // Trust nothing.
+    if(!mServer)
+    {
+        LOG_DEBUG(libcomp::String("Web auth login for account '%1' failed "
+            "with a system error.\n").Arg(username));
+
+        return ErrorCodes_t::SYSTEM_ERROR;
+    }
+
+    // Get the server config object.
+    auto config = std::dynamic_pointer_cast<objects::LobbyConfig>(
+        mServer->GetConfig());
+
+    if(!config)
+    {
+        LOG_DEBUG(libcomp::String("Web auth login for account '%1' failed "
+            "with a system error.\n").Arg(username));
+
+        return ErrorCodes_t::SYSTEM_ERROR;
+    }
+
+    // Get the client version required for login.
+    uint32_t requiredClientVersion = static_cast<uint32_t>(
+        config->GetClientVersion() * 1000.0f);
+
+    // Check the client version first.
+    if(requiredClientVersion != clientVersion)
+    {
+        LOG_DEBUG(libcomp::String("Web auth login for account '%1' failed "
+            "with a wrong client version. Expected version %2.%3 but "
+            "got version %4.%5.\n").Arg(username).Arg(
+            requiredClientVersion / 1000).Arg(
+            requiredClientVersion % 1000).Arg(
+            clientVersion / 1000).Arg(clientVersion % 1000));
+
+        return ErrorCodes_t::WRONG_CLIENT_VERSION;
+    }
+
+    // Lock the accounts now so this is thread safe.
+    std::lock_guard<std::mutex> lock(mAccountLock);
+
+    // Get the login object for this username.
+    auto login = GetOrCreateLogin(username);
+
+    // This should never happen.
+    if(!login)
+    {
+        LOG_DEBUG(libcomp::String("Web auth login for account '%1' failed "
+            "with a system error.\n").Arg(username));
+
+        return ErrorCodes_t::SYSTEM_ERROR;
+    }
+
+    // Get the account database entry.
+    auto account = login->GetAccount();
+
+    // If the account was not loaded it's a bad username.
+    if(!account)
+    {
+        LOG_DEBUG(libcomp::String("Web auth login for account '%1' failed "
+            "with a bad username (no account data found).\n").Arg(username));
+
+        // Remove the entry to save memory (esp. if someone is being a dick).
+        EraseLogin(username);
+
+        return ErrorCodes_t::BAD_USERNAME_PASSWORD;
+    }
+
+    // Get the account login state as we will need it in a second.
+    auto state = login->GetState();
+
+    // Tell them nothing about the account until they authenticate.
+    if(account->GetPassword() != libcomp::Decrypt::HashPassword(password,
+        account->GetSalt()))
+    {
+        LOG_DEBUG(libcomp::String("Web auth login for account '%1' failed "
+            "with a bad password.\n").Arg(username));
+
+        // Only erase the login if it was offline. This should prevent
+        // a malicious user from blocking/corrupting a legitimate login.
+        if(objects::AccountLogin::State_t::OFFLINE == state)
+        {
+            EraseLogin(username);
+        }
+
+        return ErrorCodes_t::BAD_USERNAME_PASSWORD;
+    }
+
+    // Now check to see if the account is already online. We will accept
+    // a re-submit of the web authentication. In this case the most recent
+    // submission and session ID will be used for authentication.
+    if(objects::AccountLogin::State_t::OFFLINE != state &&
+        objects::AccountLogin::State_t::LOBBY_WAIT != state)
+    {
+        LOG_DEBUG(libcomp::String("Web auth login for account '%1' failed "
+            "because it is already online.\n").Arg(username));
+
+        // Do not erase the login as it's not ours.
+        return ErrorCodes_t::ACCOUNT_STILL_LOGGED_IN;
+    }
+
+    // Now that we know the account is not online check it is enabled.
+    if(!account->GetEnabled() || account->GetIsBanned())
+    {
+        LOG_DEBUG(libcomp::String("Web auth login for account '%1' failed "
+            "due to being disabled/banned.\n").Arg(username));
+
+        // The hammer of justice is swift.
+        EraseLogin(username);
+
+        return ErrorCodes_t::ACCOUNT_DISABLED;
+    }
+
+    // We are now ready. Generate the session ID and transition login state.
+    sid = libcomp::Decrypt::GenerateRandom(300).ToLower();
+    login->SetState(objects::AccountLogin::State_t::LOBBY_WAIT);
+    login->SetSessionID(sid);
+
+    // Set the session to expire.
+    mServer->GetTimerManager()->ScheduleEventIn(static_cast<int>(
+        SVR_CONST.WEBAUTH_TIMEOUT), [this](const libcomp::String& _username,
+        const libcomp::String& _sid)
+    {
+        ExpireSession(_username, _sid);
+    }, username, sid);
+
+    LOG_DEBUG(libcomp::String("Web auth login for account '%1' has "
+            "now passed web authentication.\n").Arg(username));
+
+    return ErrorCodes_t::SUCCESS;
+}
+
+void AccountManager::ExpireSession(const libcomp::String& username,
+    const libcomp::String& sid)
+{
+    // Convert the username to lowercase for lookup.
+    libcomp::String lookup = username.ToLower();
+
+    // Lock the accounts now so this is thread safe.
+    std::lock_guard<std::mutex> lock(mAccountLock);
+
+    // Look for the account in the map.
+    auto pair = mAccountMap.find(lookup);
+
+    // If it's there we have a previous login attempt.
+    if(mAccountMap.end() != pair)
+    {
+        auto account = pair->second;
+
+        // Check the account is waiting and matches the session ID.
+        if(account && objects::AccountLogin::State_t::LOBBY_WAIT ==
+            account->GetState() && sid == account->GetSessionID())
+        {
+            LOG_DEBUG(libcomp::String("Session for username '%1' has "
+                "expired.\n").Arg(username));
+
+            // It's still set to expire so do so.
+            mAccountMap.erase(pair);
+        }
+    }
+}
+
+std::shared_ptr<objects::AccountLogin> AccountManager::GetOrCreateLogin(
+    const libcomp::String& username)
+{
+    std::shared_ptr<objects::AccountLogin> login;
+
+    // Convert the username to lowercase for lookup.
+    libcomp::String lookup = username.ToLower();
+
+    // Look for the account in the map.
+    auto pair = mAccountMap.find(lookup);
+
+    // If it's there we have a previous login attempt.
+    if(mAccountMap.end() == pair)
+    {
+        // Create a new login object.
+        login = std::shared_ptr<objects::AccountLogin>(
+            new objects::AccountLogin);
+
+        auto res = mAccountMap.insert(std::make_pair(lookup, login));
+
+        // This pair is the iterator (first) and a bool indicating it was
+        // inserted into the map (second).
+        if(!res.second || !mServer)
+        {
+            login.reset();
+        }
+        else
+        {
+            // Load the account from the database and set the initial state
+            // to offline.
+            login->SetState(objects::AccountLogin::State_t::OFFLINE);
+            login->SetAccount(objects::Account::LoadAccountByUsername(
+                mServer->GetMainDatabase(), lookup));
+        }
+    }
+    else
+    {
+        // Return the existing login object.
+        login = pair->second;
+    }
+
+    return login;
+}
+
+void AccountManager::EraseLogin(const libcomp::String& username)
+{
+    // Convert the username to lowercase for lookup.
+    libcomp::String lookup = username.ToLower();
+
+    mAccountMap.erase(lookup);
+}
+
 bool AccountManager::IsLoggedIn(const libcomp::String& username)
 {
     bool result = false;
@@ -54,6 +283,10 @@ bool AccountManager::IsLoggedIn(const libcomp::String& username)
     libcomp::String lookup = username.ToLower();
 
     std::lock_guard<std::mutex> lock(mAccountLock);
+
+    LOG_DEBUG(libcomp::String("Looking for account '%1'\n").Arg(username));
+
+    PrintAccounts();
 
     auto pair = mAccountMap.find(lookup);
 
@@ -73,6 +306,10 @@ bool AccountManager::IsLoggedIn(const libcomp::String& username,
     libcomp::String lookup = username.ToLower();
 
     std::lock_guard<std::mutex> lock(mAccountLock);
+
+    LOG_DEBUG(libcomp::String("Looking for account '%1'\n").Arg(username));
+
+    PrintAccounts();
 
     auto pair = mAccountMap.find(lookup);
 
@@ -110,7 +347,23 @@ bool AccountManager::LoginUser(const libcomp::String& username,
         // This pair is the iterator (first) and a bool indicating it was
         // inserted into the map (second).
         result = res.second;
+
+        if(nullptr == login)
+        {
+            LOG_DEBUG(libcomp::String("Logged in account '%1' with new object.\n"));
+        }
+        else
+        {
+            LOG_DEBUG(libcomp::String("Logged in account '%1' with old object.\n"));
+        }
     }
+    else
+    {
+        LOG_DEBUG(libcomp::String("Failed to login account '%1' because it "
+            "is already logged in.\n").Arg(username));
+    }
+
+    PrintAccounts();
 
 #ifdef HAVE_SYSTEMD
     sd_notifyf(0, "STATUS=Server is up with %d connected user(s).",
@@ -131,11 +384,22 @@ bool AccountManager::UpdateSessionID(const libcomp::String& username,
 
     auto pair = mAccountMap.find(lookup);
 
-    if(mAccountMap.end() == pair)
+    if(mAccountMap.end() != pair)
     {
         pair->second->SetSessionID(sid);
+
+        LOG_DEBUG(libcomp::String("Updated session ID for account "
+            "'%1' to %2\n").Arg(username).Arg(sid));
+
         result = true;
     }
+    else
+    {
+        LOG_DEBUG(libcomp::String("Failed to update session ID for "
+            "account '%1' to %2\n").Arg(username).Arg(sid));
+    }
+
+    PrintAccounts();
 
     return result;
 }
@@ -166,8 +430,17 @@ bool AccountManager::LogoutUser(const libcomp::String& username, int8_t world)
     {
         (void)mAccountMap.erase(pair);
 
+        LOG_DEBUG(libcomp::String("Logged out account '%1'\n").Arg(username));
+
         result = true;
     }
+    else
+    {
+        LOG_DEBUG(libcomp::String("Account '%1' is not logged in so it "
+            "was not logged out.\n").Arg(username));
+    }
+
+    PrintAccounts();
 
 #ifdef HAVE_SYSTEMD
     sd_notifyf(0, "STATUS=Server is up with %d connected user(s).",
@@ -307,4 +580,50 @@ bool AccountManager::DeleteCharacter(const libcomp::String& username, uint8_t ci
     }
 
     return false;
+}
+
+void AccountManager::PrintAccounts() const
+{
+    LOG_DEBUG("----------------------------------------\n");
+
+    for(auto a : mAccountMap)
+    {
+        auto login = a.second;
+
+        libcomp::String state;
+
+        switch(login->GetState())
+        {
+            case objects::AccountLogin::State_t::OFFLINE:
+                state = "OFFLINE";
+                break;
+            case objects::AccountLogin::State_t::LOBBY_WAIT:
+                state = "LOBBY_WAIT";
+                break;
+            case objects::AccountLogin::State_t::LOBBY:
+                state = "LOBBY";
+                break;
+            case objects::AccountLogin::State_t::LOBBY_TO_CHANNEL:
+                state = "LOBBY_TO_CHANNEL";
+                break;
+            case objects::AccountLogin::State_t::CHANNEL_TO_LOBBY:
+                state = "CHANNEL_TO_LOBBY";
+                break;
+            case objects::AccountLogin::State_t::CHANNEL:
+                state = "CHANNEL";
+                break;
+            case objects::AccountLogin::State_t::CHANNEL_TO_CHANNEL:
+                state = "CHANNEL_TO_CHANNEL";
+                break;
+            default:
+                state = "ERROR";
+                break;
+        }
+
+        LOG_DEBUG(libcomp::String("Account:     %1\n").Arg(a.first));
+        LOG_DEBUG(libcomp::String("State:       %1\n").Arg(state));
+        LOG_DEBUG(libcomp::String("Session ID:  %1\n").Arg(login->GetSessionID()));
+        LOG_DEBUG(libcomp::String("Session Key: %1\n").Arg(login->GetSessionKey()));
+        LOG_DEBUG("----------------------------------------\n");
+    }
 }

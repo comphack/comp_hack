@@ -5,6 +5,15 @@
         <member type="CharacterLogin*" name="CharacterLogin"/>
         <member type="string" name="SessionID" size="300"/>
         <member type="u32" name="SessionKey"/>
+        <member type="enum" name="State" underlying="int8_t">
+            <value>OFFLINE</value><!-- This is not the account you are looking for. -->
+            <value>LOBBY_WAIT</value><!-- Requested login from webauth but has not authenticated with lobby yet. -->
+            <value>LOBBY</value><!-- Client is active in the lobby. -->
+            <value>LOBBY_TO_CHANNEL</value><!-- Client is in lobby and has selected start game. -->
+            <value>CHANNEL_TO_LOBBY</value><!-- Client is in channel and has selected logout to lobby. -->
+            <value>CHANNEL</value><!-- Client is in the channel. This is the normal 'online' state. -->
+            <value>CHANNEL_TO_CHANNEL</value><!-- Client is switching to another channel. -->
+        </member>
     </object>
     <object name="CharacterLogin" persistent="false">
         <member type="s32" name="WorldCID"/>

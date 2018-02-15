@@ -142,6 +142,12 @@ public:
      */
     SessionManager* GetSessionManager();
 
+    /**
+     * Get the same fake salt for an account that does not exist.
+     * @return A fake salt for an account that does not exist.
+     */
+    libcomp::String GetFakeAccountSalt(const libcomp::String& username);
+
 protected:
     /**
      * Set up required test data for unit testing, removing the
@@ -199,6 +205,12 @@ protected:
 
     /// Session manager for the server.
     SessionManager mSessionManager;
+
+    /// Lock for the fake salts.
+    std::mutex mFakeSaltsLock;
+
+    /// Mapping of fake salts for usernames that do not exist.
+    std::unordered_map<libcomp::String, libcomp::String> mFakeSalts;
 };
 
 } // namespace lobby

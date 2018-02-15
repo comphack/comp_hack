@@ -34,6 +34,7 @@ SET(${PROJECT_NAME}_SRCS
     src/ClientState.cpp
     src/LobbyClientConnection.cpp
     src/LobbyServer.cpp
+    src/LoginHandlerThread.cpp
     src/LoginWebHandler.cpp
     src/ManagerClientPacket.cpp
     src/ManagerConnection.cpp
@@ -52,6 +53,7 @@ SET(${PROJECT_NAME}_HDRS
     src/ClientState.h
     src/LobbyClientConnection.h
     src/LobbyServer.h
+    src/LoginHandlerThread.h
     src/LoginWebHandler.h
     src/ManagerClientPacket.h
     src/ManagerConnection.h
@@ -64,6 +66,7 @@ SET(${PROJECT_NAME}_HDRS
 SET(${PROJECT_NAME}_SCHEMA
     schema/clientstate.xml
     schema/lobbyconfig.xml
+    schema/loginscript.xml
 )
 
 SOURCE_GROUP("objgen" ${CMAKE_CURRENT_BINARY_DIR}/objgen/*)
@@ -84,6 +87,10 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     ClientStateObject.cpp
     LobbyConfig.h
     LobbyConfig.cpp
+    LoginScriptRequest.h
+    LoginScriptRequest.cpp
+    LoginScriptReply.h
+    LoginScriptReply.cpp
 )
 
 SOURCE_GROUP("Source Files\\Packets\\Game" src/packets/game/*)

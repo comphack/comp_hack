@@ -8,7 +8,7 @@
  *
  * This file is part of the Lobby Server (lobby).
  *
- * Copyright (C) 2012-2016 COMP_hack Team <compomega@tutanota.com>
+ * Copyright (C) 2012-2018 COMP_hack Team <compomega@tutanota.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as
@@ -29,6 +29,7 @@
 
 // libcomp Includes
 #include <CString.h>
+#include <ErrorCodes.h>
 
 // Standard C++11 Includes
 #include <mutex>
@@ -48,6 +49,58 @@ class LobbyServer;
 class AccountManager
 {
 public:
+    /**
+     * Construct the account manager.
+     * @param Pointer to the lobby server this account manager is part of.
+     * @note The server must remain valid during any account manager request.
+     */
+    explicit AccountManager(LobbyServer *pServer);
+
+    /**
+     * Transitions the user login state from OFFLINE to LOBBY_WAIT. This
+     * operation provides a session ID for the user to pass to a lobby server
+     * connection. If the user does not login within a specified period of
+     * time the session ID is invalidated and the user transitions back to
+     * the OFFLINE state.
+     * @param username Username of the account to authenticate.
+     * @param password Password of the account to authenticate.
+     * @param clientVersion Client version converted into an integer.
+     * @param sid Reference to a string to save the session ID into.
+     * @returns Error code indicating the success or failure of this
+     * operation. This function can return one of:
+     * - SUCCESS (login was valid and a session ID was generated)
+     * - SYSTEM_ERROR (some internal error occurred)
+     * - BAD_USERNAME_PASSWORD
+     * - ACCOUNT_STILL_LOGGED_IN (account not in OFFLINE or LOBBY_WAIT)
+     * - SERVER_FULL (too many accounts are online)
+     * - WRONG_CLIENT_VERSION
+     * - ACCOUNT_DISABLED (your account has been disabled/banned)
+     * @note This function is thread safe.
+     */
+    ErrorCodes_t WebAuthLogin(const libcomp::String& username,
+        const libcomp::String& password, uint32_t clientVersion,
+        libcomp::String& sid);
+
+    ErrorCodes_t LobbyLogin(const libcomp::String& username,
+        const libcomp::String& sid);
+
+    ErrorCodes_t LobbyLogin(const libcomp::String& username,
+        const libcomp::String& password, uint32_t challenge);
+
+    /**
+     * Expire a session key. If the session key is not matched or the account
+     * is not awaiting login anymore (LOBBY_WAIT state) this is ignored.
+     * @param username Username for account the session key was create for.
+     * @param sid Session ID that has expired.
+     * @note This function is thread safe.
+     */
+    void ExpireSession(const libcomp::String& username,
+        const libcomp::String& sid);
+
+    //////////////////////////////////////////////////////////////////////////
+    // OLD SHIT HERE!
+    //////////////////////////////////////////////////////////////////////////
+
     /**
      * Check if a user is logged in.
      * @param username Username for the account to check.
@@ -112,7 +165,7 @@ public:
      */
     std::list<libcomp::String> LogoutUsersInWorld(int8_t world,
         int8_t channel = -1);
-    
+
     /**
      * Mark or clear a character by CID for deletion.  This assumes the character
      * has already been loaded and will not load them if they are not.
@@ -147,7 +200,35 @@ public:
     bool DeleteCharacter(const libcomp::String& username,
         uint8_t cid, std::shared_ptr<LobbyServer>& server);
 
+protected:
+    /**
+     * Return the existing login object for the given username or create a
+     * new login object if one does not already exist.
+     * @param username Username for the login object to return.
+     * @returns The login object for the given username or null on error.
+     * @note This function is NOT thread safe. You MUST lock access first!
+     */
+    std::shared_ptr<objects::AccountLogin> GetOrCreateLogin(
+        const libcomp::String& username);
+
+    /**
+     * This will remove a login entry for the account map. Accounts not in
+     * the map are considered OFFLINE.
+     * @param username Username of the account to remove from the login map.
+     * @note This function is NOT thread safe. You MUST lock access first!
+     */
+    void EraseLogin(const libcomp::String& username);
+
+    /**
+     * Print the status of the accounts managed by this object.
+     * @note This function is NOT thread safe. You MUST lock access first!
+     */
+    void PrintAccounts() const;
+
 private:
+    /// Pointer to the lobby server.
+    LobbyServer *mServer;
+
     /// Mutex to lock access to the account map.
     std::mutex mAccountLock;
 

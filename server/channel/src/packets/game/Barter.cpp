@@ -4,7 +4,7 @@
  *
  * @author HACKfrost
  *
- * @brief
+ * @brief Request from the client to barter for items or other materials.
  *
  * This file is part of the Channel Server (channel).
  *
@@ -53,6 +53,7 @@ void HandleBarter(const std::shared_ptr<ChannelServer> server,
 
     auto barterData = definitionManager->GetNPCBarterData(barterID);
 
+    int32_t spAdjust = 0;
     std::unordered_map<uint32_t, int32_t> itemAdjustments;
 
     bool failed = barterData == nullptr;
@@ -78,7 +79,7 @@ void HandleBarter(const std::shared_ptr<ChannelServer> server,
                 }
                 break;
             case objects::MiNPCBarterItemData::Type_t::SOUL_POINT:
-                /// @todo: for now just don't pay soul points
+                spAdjust = (int32_t)(spAdjust - itemData->GetAmount());
                 break;
             case objects::MiNPCBarterItemData::Type_t::BETHEL:
                 /// @todo: for now just don't pay bethel
@@ -126,7 +127,7 @@ void HandleBarter(const std::shared_ptr<ChannelServer> server,
                 }
                 break;
             case objects::MiNPCBarterItemData::Type_t::SOUL_POINT:
-                /// @todo: for now just don't receive soul points
+                spAdjust = (int32_t)(spAdjust + itemData->GetAmount());
                 break;
             case objects::MiNPCBarterItemData::Type_t::EVENT_COUNTER:
                 /// @todo: for now just don't set event counter
@@ -157,7 +158,6 @@ void HandleBarter(const std::shared_ptr<ChannelServer> server,
                 break;
             case objects::MiNPCBarterItemData::Type_t::COIN:
                 /// @todo: for now just don't receive coins
-                break;
                 break;
             default:
                 break;
@@ -270,6 +270,11 @@ void HandleBarter(const std::shared_ptr<ChannelServer> server,
         // Now apply the rest of the updates
         if(!failed)
         {
+            if(spAdjust != 0)
+            {
+                characterManager->UpdateSoulPoints(client, spAdjust, true);
+            }
+
             if(characterSkills.size() > 0)
             {
                 int32_t characterEntityID = state->GetCharacterState()

@@ -289,6 +289,7 @@ SET(${PROJECT_NAME}_SCHEMA
     schema/binarydata/cquest.xml
     schema/binarydata/ctalkmessagedata.xml
     schema/binarydata/czonerelationdata.xml
+    schema/binarydata/devilbookdata.xml
     schema/binarydata/devildata.xml
     schema/binarydata/devillvupratedata.xml
     schema/binarydata/disassemblydata.xml
@@ -623,6 +624,8 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     MiDCategoryData.h
     MiDevilBattleData.cpp
     MiDevilBattleData.h
+    MiDevilBookData.cpp
+    MiDevilBookData.h
     MiDevilCrystalData.h
     MiDevilCrystalData.cpp
     MiDevilData.cpp

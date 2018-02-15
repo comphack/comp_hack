@@ -40,6 +40,7 @@
 // channel Includes
 #include "AIState.h"
 #include "ChannelServer.h"
+#include "FusionManager.h"
 
 // object Includes
 #include <AccountWorldData.h>
@@ -231,13 +232,15 @@ void CharacterManager::SendCharacterData(const std::shared_ptr<
     reply.WriteS8(0);   // Unknown
     reply.WriteS8(c->GetExpertiseExtension());
 
-    /// @todo: Virtual Appearance
-    size_t vaCount = 0;
-    reply.WriteS32(static_cast<int32_t>(vaCount));
-    for(size_t i = 0; i < vaCount; i++)
+    reply.WriteS32((int32_t)c->EquippedVACount());
+    for(uint8_t i = 0; i < 15; i++)
     {
-        reply.WriteS8(0);   // Equipment Slot
-        reply.WriteU32Little(0);    // VA Item Type
+        uint32_t va = c->GetEquippedVA(i);
+        if(va)
+        {
+            reply.WriteS8((int8_t)i);
+            reply.WriteU32Little(va);
+        }
     }
 
     client->SendPacket(reply);
@@ -355,13 +358,15 @@ void CharacterManager::SendOtherCharacterData(const std::list<std::shared_ptr<
     reply.WriteS32(0);  // Unknown
     reply.WriteS8(0);   // Unknown
 
-    /// @todo: Virtual Appearance
-    size_t vaCount = 0;
-    reply.WriteS32(static_cast<int32_t>(vaCount));
-    for(size_t i = 0; i < vaCount; i++)
+    reply.WriteS32((int32_t)c->EquippedVACount());
+    for(uint8_t i = 0; i < 15; i++)
     {
-        reply.WriteS8(0);   // Equipment Slot
-        reply.WriteU32Little(0);    // VA Item Type
+        uint32_t va = c->GetEquippedVA(i);
+        if(va)
+        {
+            reply.WriteS8((int8_t)i);
+            reply.WriteU32Little(va);
+        }
     }
 
     ChannelClientConnection::BroadcastPacket(clients, reply);
@@ -1207,6 +1212,33 @@ std::list<std::shared_ptr<objects::Item>> CharacterManager::GetExistingItems(
     }
 
     return existing;
+}
+
+std::set<size_t> CharacterManager::GetFreeSlots(
+    const std::shared_ptr<ChannelClientConnection>& client,
+    std::shared_ptr<objects::ItemBox> box)
+{
+    std::set<size_t> slots;
+    if(box == nullptr)
+    {
+        auto cState = client->GetClientState()->GetCharacterState();
+        auto character = cState->GetEntity();
+        box = character ? character->GetItemBoxes(0).Get() : nullptr;
+    }
+
+    if(box)
+    {
+        for(size_t i = 0; i < 50; i++)
+        {
+            auto item = box->GetItems(i);
+            if(item.IsNull())
+            {
+                slots.insert(i);
+            }
+        }
+    }
+
+    return slots;
 }
 
 std::shared_ptr<objects::Item> CharacterManager::GenerateItem(
@@ -2067,7 +2099,7 @@ bool CharacterManager::UnequipItem(const std::shared_ptr<
     return false;
 }
 
-void  CharacterManager::EndExchange(const std::shared_ptr<
+void CharacterManager::EndExchange(const std::shared_ptr<
     channel::ChannelClientConnection>& client, int32_t outcome)
 {
     auto state = client->GetClientState();
@@ -2097,6 +2129,10 @@ void  CharacterManager::EndExchange(const std::shared_ptr<
                 client->QueuePacket(p);
             }
             break;
+        case objects::PlayerExchangeSession::Type_t::TRIFUSION_GUEST:
+        case objects::PlayerExchangeSession::Type_t::TRIFUSION_HOST:
+            mServer.lock()->GetFusionManager()->EndExchange(client);
+            return;
         default:
             break;
         }
@@ -2232,7 +2268,8 @@ std::shared_ptr<objects::Demon> CharacterManager::ContractDemon(
 }
 
 std::shared_ptr<objects::Demon> CharacterManager::GenerateDemon(
-    const std::shared_ptr<objects::MiDevilData>& demonData)
+    const std::shared_ptr<objects::MiDevilData>& demonData,
+    uint16_t familiarity)
 {
     //Was valid demon data supplied?
     if(nullptr == demonData)
@@ -2248,6 +2285,7 @@ std::shared_ptr<objects::Demon> CharacterManager::GenerateDemon(
     auto d = libcomp::PersistentObject::New<
         objects::Demon>(true);
     d->SetType(demonData->GetBasic()->GetID());
+    d->SetFamiliarity(familiarity);
 
     auto ds = libcomp::PersistentObject::New<
         objects::EntityStats>(true);
@@ -2365,6 +2403,61 @@ void CharacterManager::UpdateFamiliarity(const std::shared_ptr<
     }
 }
 
+void CharacterManager::UpdateSoulPoints(const std::shared_ptr<
+    channel::ChannelClientConnection>& client, int32_t points,
+    bool isAdjust)
+{
+    auto state = client->GetClientState();
+    auto cState = state->GetCharacterState();
+    auto dState = state->GetDemonState();
+    auto demon = dState->GetEntity();
+
+    if(!demon)
+    {
+        return;
+    }
+
+    int32_t current = demon->GetSoulPoints();
+    int32_t newPoints = isAdjust ? 0 : (int32_t)points;
+    if(isAdjust && points != 0)
+    {
+        auto tokuseiManager = mServer.lock()->GetTokuseiManager();
+
+        // Soul point rate is on the character
+        points = (int32_t)((double)points *
+            (1.0 + tokuseiManager->GetAspectSum(cState,
+                TokuseiAspectType::SOUL_POINT_RATE) * 0.01));
+
+        newPoints = current + points;
+    }
+
+    if(newPoints > MAX_SOUL_POINTS)
+    {
+        newPoints = MAX_SOUL_POINTS;
+    }
+
+    if(newPoints < 0)
+    {
+        newPoints = 0;
+    }
+
+    if(current != newPoints)
+    {
+        auto server = mServer.lock();
+
+        demon->SetSoulPoints(newPoints);
+
+        libcomp::Packet p;
+        p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_SOUL_POINT_UPDATE);
+        p.WriteS32Little(dState->GetEntityID());
+        p.WriteS32Little(newPoints);
+
+        client->SendPacket(p);
+
+        server->GetWorldDatabase()->QueueUpdate(demon, state->GetAccountUID());
+    }
+}
+
 void CharacterManager::ExperienceGain(const std::shared_ptr<
     channel::ChannelClientConnection>& client, uint64_t xpGain, int32_t entityID)
 {
@@ -2377,7 +2470,7 @@ void CharacterManager::ExperienceGain(const std::shared_ptr<
     auto demon = dState->GetEntity();
 
     auto eState = state->GetEntityState(entityID);
-    if(nullptr == eState)
+    if(!eState->Ready() || !eState->IsAlive())
     {
         return;
     }
@@ -3274,6 +3367,23 @@ void CharacterManager::SendMaterials(const std::shared_ptr<
     }
 
     client->SendPacket(p);
+}
+
+void CharacterManager::SendDevilBook(const std::shared_ptr<
+    ChannelClientConnection>& client)
+{
+    auto state = client->GetClientState();
+    auto cState = state->GetCharacterState();
+    auto character = cState->GetEntity();
+    auto devilBook = character->GetProgress()->GetDevilBook();
+
+    libcomp::Packet reply;
+    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_DEMON_COMPENDIUM);
+    reply.WriteS8(0);   // Unknown
+    reply.WriteU16Little((uint16_t)devilBook.size());
+    reply.WriteArray(&devilBook, (uint32_t)devilBook.size());
+
+    client->SendPacket(reply);
 }
 
 bool CharacterManager::UpdateStatusEffects(const std::shared_ptr<

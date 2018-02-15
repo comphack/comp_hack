@@ -32,6 +32,7 @@
         <member type="float" name="LogoutX"/>
         <member type="float" name="LogoutY"/>
         <member type="float" name="LogoutRotation"/>
+        <member type="u32" name="PreviousZone"/>
         <member type="s32" name="LoginPoints"/>
         <member type="u32" name="LastLogin"/>
         <member type="Clan*" name="Clan"/>
@@ -43,12 +44,19 @@
         <member type="array" name="EquippedItems" size="15">
             <element type="Item*"/>
         </member>
+        <member type="map" name="EquippedVA">
+            <key type="u8" max="24"/>
+            <value type="u32"/>
+        </member>
         <member type="map" name="Materials">
             <key type="u32"/>
             <value type="u16"/>
         </member>
         <member type="array" name="ItemBoxes" size="5">
             <element type="ItemBox*"/>
+        </member>
+        <member type="array" name="VACloset" size="50">
+            <element type="u32"/>
         </member>
         <member type="array" name="Expertises" size="38">
             <element type="Expertise*"/>

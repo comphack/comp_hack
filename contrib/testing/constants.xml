@@ -13,6 +13,11 @@
     <constant name="ITEM_MAGNETITE">800</constant>
     <constant name="ITEM_MAG_PRESSER">27375</constant>
     <constant name="ITEM_BALM_OF_LIFE">101</constant>
+    <constant name="ITEM_KREUZ">12198</constant>
+    <constant name="ITEM_RBLOODSTONE">12203</constant>
+    <constant name="MENU_FUSION_KZ">800</constant>
+    <constant name="MENU_TRIFUSION">179</constant>
+    <constant name="MENU_TRIFUSION_KZ">801</constant>
     <constant name="SKILL_TRAESTO">101</constant>
     <constant name="SKILL_SUICIDE">103</constant>
     <constant name="SKILL_SUMMON_DEMON">200</constant>
@@ -22,11 +27,14 @@
     <constant name="SKILL_FAM_UP">207</constant>
     <constant name="SKILL_MOOCH">209</constant>
     <constant name="SKILL_CLAN_FORM">304</constant>
+    <constant name="SKILL_DCM">310</constant>
     <constant name="SKILL_ITEM_FAM_UP">316</constant>
     <constant name="SKILL_EQUIP_MOD_EDIT">329</constant>
     <constant name="STATUS_SUMMON_SYNC_1">194</constant>
     <constant name="STATUS_SUMMON_SYNC_2">364</constant>
     <constant name="STATUS_SUMMON_SYNC_3">365</constant>
+    <constant name="VALUABLE_DEVIL_BOOK_V1">250</constant>
+    <constant name="VALUABLE_DEVIL_BOOK_V2">251</constant>
     <constant name="VALUABLE_MATERIAL_TANK">239</constant>
 
     <!-- Complex types -->
@@ -111,6 +119,94 @@
         <element>7018,7019</element>
         <element>7020,7021</element>
         <element>7022,7023,7024</element>
+    </constant>
+    <constant name="DEMON_BOOK_BONUS">
+        <!-- Format: entry count => tokusei ID list -->
+        <!-- This replaces the partially functional DevilBookBonusData.sbin -->
+        <pair>
+            <key>0</key>
+            <value>20000000,20000001</value>
+        </pair>
+        <pair>
+            <key>15</key>
+            <value>20000002</value>
+        </pair>
+        <pair>
+            <key>30</key>
+            <value>20000003</value>
+        </pair>
+        <pair>
+            <key>45</key>
+            <value>20000004</value>
+        </pair>
+        <pair>
+            <key>60</key>
+            <value>20000005</value>
+        </pair>
+        <pair>
+            <key>75</key>
+            <value>20000006</value>
+        </pair>
+        <pair>
+            <key>90</key>
+            <value>20000007</value>
+        </pair>
+        <pair>
+            <key>105</key>
+            <value>20000008</value>
+        </pair>
+        <pair>
+            <key>120</key>
+            <value>20000009</value>
+        </pair>
+        <pair>
+            <key>135</key>
+            <value>20000010</value>
+        </pair>
+        <pair>
+            <key>150</key>
+            <value>20000011</value>
+        </pair>
+        <pair>
+            <key>160</key>
+            <value>20000012</value>
+        </pair>
+        <pair>
+            <key>170</key>
+            <value>20000013</value>
+        </pair>
+        <pair>
+            <key>180</key>
+            <value>20000014</value>
+        </pair>
+        <pair>
+            <key>190</key>
+            <value>20000015</value>
+        </pair>
+        <pair>
+            <key>200</key>
+            <value>20000016</value>
+        </pair>
+        <pair>
+            <key>220</key>
+            <value>20000017</value>
+        </pair>
+        <pair>
+            <key>240</key>
+            <value>20000018</value>
+        </pair>
+        <pair>
+            <key>260</key>
+            <value>20000019</value>
+        </pair>
+        <pair>
+            <key>280</key>
+            <value>20000020</value>
+        </pair>
+        <pair>
+            <key>300</key>
+            <value>20000021</value>
+        </pair>
     </constant>
     <constant name="DEPO_MAP_DEMON">
         <!-- Format: item => rental days -->
@@ -431,5 +527,59 @@
         <element>5721</element>
         <element>5722</element>
         <element>5723</element>
+    </constant>
+    <constant name="TRIFUSION_SPECIAL_DARK">
+        <!-- Format: min level => demon type -->
+        <pair>
+            <key>0</key>
+            <value>1048</value>
+        </pair>
+        <pair>
+            <key>9</key>
+            <value>1005</value>
+        </pair>
+        <pair>
+            <key>24</key>
+            <value>1047</value>
+        </pair>
+        <pair>
+            <key>27</key>
+            <value>1046</value>
+        </pair>
+        <pair>
+            <key>48</key>
+            <value>1003</value>
+        </pair>
+        <pair>
+            <key>69</key>
+            <value>1045</value>
+        </pair>
+        <pair>
+            <key>75</key>
+            <value>1044</value>
+        </pair>
+        <pair>
+            <key>84</key>
+            <value>1043</value>
+        </pair>
+        <pair>
+            <key>90</key>
+            <value>1042</value>
+        </pair>
+    </constant>
+    <constant name="TRIFUSION_SPECIAL_ELEMENTAL">
+        <!-- Format: element type 1, element type 2, 3 valid races, result type -->
+        <element>581,582,54,11,59,1065</element>
+        <element>581,583,13,61,102,88</element>
+        <element>581,584,12,106,60,524</element>
+        <element>582,583,9,1,0,182</element>
+        <element>582,584,9,1,0,128</element>
+        <element>583,584,12,106,60,1145</element>
+    </constant>
+    <constant name="VA_ADD_ITEM">
+        <!-- Format: item ID -->
+        <element>21936</element>
+        <element>21937</element>
+        <element>21938</element>
     </constant>
 </constants>

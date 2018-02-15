@@ -236,6 +236,12 @@ int32_t ClientState::GetWorldCID() const
     return GetAccountLogin()->GetCharacterLogin()->GetWorldCID();
 }
 
+std::shared_ptr<Zone> ClientState::GetZone() const
+{
+    return mCharacterState->Ready() ?
+        mCharacterState->GetZone() : nullptr;
+}
+
 uint32_t ClientState::GetPartyID() const
 {
     return GetAccountLogin()->GetCharacterLogin()->GetPartyID();

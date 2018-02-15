@@ -307,6 +307,14 @@ void CharacterState::BaseStatsCalculated(libcomp::DefinitionManager* definitionM
     libcomp::EnumMap<CorrectTbl, int16_t>& stats,
     std::list<std::shared_ptr<objects::MiCorrectTbl>>& adjustments)
 {
+    if(calcState != GetCalculatedState())
+    {
+        // Do not calculate again, just use the base calculation mode
+        ActiveEntityState::BaseStatsCalculated(definitionManager,
+            calcState, stats, adjustments);
+        return;
+    }
+
     auto effectiveTokusei = calcState->GetEffectiveTokusei();
     auto pendingSkillTokusei = calcState->GetPendingSkillTokusei();
 

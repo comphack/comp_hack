@@ -163,6 +163,12 @@ PACKET_PARSER_DECL(DemonCrystallize);       // 0x01BB
 PACKET_PARSER_DECL(EnchantItem);            // 0x01BE
 PACKET_PARSER_DECL(Enchant);                // 0x01C1
 PACKET_PARSER_DECL(DungeonRecords);         // 0x01C4
+PACKET_PARSER_DECL(TriFusionJoin);          // 0x01CD
+PACKET_PARSER_DECL(TriFusionDemonUpdate);   // 0x01D0
+PACKET_PARSER_DECL(TriFusionRewardUpdate);  // 0x01D3
+PACKET_PARSER_DECL(TriFusionRewardAccept);  // 0x01D6
+PACKET_PARSER_DECL(TriFusionAccept);        // 0x01D9
+PACKET_PARSER_DECL(TriFusionLeave);         // 0x01DE
 PACKET_PARSER_DECL(ClanEmblemUpdate);       // 0x01E1
 PACKET_PARSER_DECL(DemonFamiliarity);       // 0x01E6
 PACKET_PARSER_DECL(PlasmaStart);            // 0x01EB
@@ -190,6 +196,7 @@ PACKET_PARSER_DECL(ItemDepoRemote);         // 0x0296
 PACKET_PARSER_DECL(DemonDepoRemote);        // 0x02EF
 PACKET_PARSER_DECL(CommonSwitchInfo);       // 0x02F4
 PACKET_PARSER_DECL(CasinoCoinTotal);        // 0x02FA
+PACKET_PARSER_DECL(TriFusionSolo);          // 0x0384
 PACKET_PARSER_DECL(SearchEntryInfo);        // 0x03A3
 PACKET_PARSER_DECL(HouraiData);             // 0x03A5
 PACKET_PARSER_DECL(CultureData);            // 0x03AC
@@ -199,6 +206,11 @@ PACKET_PARSER_DECL(Barter);                 // 0x03FE
 PACKET_PARSER_DECL(Blacklist);              // 0x0408
 PACKET_PARSER_DECL(DigitalizePoints);       // 0x0414
 PACKET_PARSER_DECL(DigitalizeAssist);       // 0x0418
+PACKET_PARSER_DECL(VABox);                  // 0x041E
+PACKET_PARSER_DECL(VABoxAdd);               // 0x0420
+PACKET_PARSER_DECL(VABoxRemove);            // 0x0422
+PACKET_PARSER_DECL(VAChange);               // 0x0424
+PACKET_PARSER_DECL(VABoxMove);              // 0x0427
 
 PACKET_PARSER_DECL(SetWorldInfo);        // 0x1002
 PACKET_PARSER_DECL(SetOtherChannelInfo); // 0x1003

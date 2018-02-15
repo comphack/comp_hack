@@ -112,10 +112,24 @@ bool ServerConstants::Initialize(const String& filePath)
         sConstants.ITEM_MAG_PRESSER);
     success &= LoadInteger(constants["ITEM_BALM_OF_LIFE"],
         sConstants.ITEM_BALM_OF_LIFE);
+    success &= LoadInteger(constants["ITEM_KREUZ"],
+        sConstants.ITEM_KREUZ);
+    success &= LoadInteger(constants["ITEM_RBLOODSTONE"],
+        sConstants.ITEM_RBLOODSTONE);
+
+    // Load menu constants
+    success &= LoadInteger(constants["MENU_FUSION_KZ"],
+        sConstants.MENU_FUSION_KZ);
+    success &= LoadInteger(constants["MENU_TRIFUSION"],
+        sConstants.MENU_TRIFUSION);
+    success &= LoadInteger(constants["MENU_TRIFUSION_KZ"],
+        sConstants.MENU_TRIFUSION_KZ);
 
     // Load skill constants
     success &= LoadInteger(constants["SKILL_CLAN_FORM"],
         sConstants.SKILL_CLAN_FORM);
+    success &= LoadInteger(constants["SKILL_DCM"],
+        sConstants.SKILL_DCM);
     success &= LoadInteger(constants["SKILL_EQUIP_ITEM"],
         sConstants.SKILL_EQUIP_ITEM);
     success &= LoadInteger(constants["SKILL_EQUIP_MOD_EDIT"],
@@ -146,6 +160,10 @@ bool ServerConstants::Initialize(const String& filePath)
         sConstants.STATUS_SUMMON_SYNC_3);
 
     // Load valuable constants
+    success &= LoadInteger(constants["VALUABLE_DEVIL_BOOK_V1"],
+        sConstants.VALUABLE_DEVIL_BOOK_V1);
+    success &= LoadInteger(constants["VALUABLE_DEVIL_BOOK_V2"],
+        sConstants.VALUABLE_DEVIL_BOOK_V2);
     success &= LoadInteger(constants["VALUABLE_MATERIAL_TANK"],
         sConstants.VALUABLE_MATERIAL_TANK);
 
@@ -245,6 +263,60 @@ bool ServerConstants::Initialize(const String& filePath)
     else
     {
         LOG_ERROR("CLAN_LEVEL_SKILLS not found\n");
+        success = false;
+    }
+
+    complexIter = complexConstants.find("DEMON_BOOK_BONUS");
+    if(success && complexIter != complexConstants.end())
+    {
+        std::unordered_map<std::string, std::string> map;
+        success = LoadKeyValueStrings(complexIter->second, map);
+        for(auto pair : map)
+        {
+            uint16_t key;
+            if(!LoadInteger(pair.first, key))
+            {
+                LOG_ERROR("Failed to load DEMON_BOOK_BONUS key\n");
+                success = false;
+            }
+            else if(sConstants.DEMON_BOOK_BONUS.find(key) !=
+                sConstants.DEMON_BOOK_BONUS.end())
+            {
+                LOG_ERROR("Duplicate DEMON_BOOK_BONUS key encountered\n");
+                success = false;
+            }
+            else
+            {
+                if(!pair.second.empty())
+                {
+                    auto params = libcomp::String(pair.second).Split(",");
+                    for(auto param : params)
+                    {
+                        int32_t p = 0;
+                        if(LoadInteger(param.C(), p))
+                        {
+                            sConstants.DEMON_BOOK_BONUS[key].insert(p);
+                        }
+                        else
+                        {
+                            LOG_ERROR("Failed to load an element in"
+                                " DEMON_BOOK_BONUS\n");
+                            success = false;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if(!success)
+            {
+                break;
+            }
+        }
+    }
+    else
+    {
+        LOG_ERROR("DEMON_BOOK_BONUS not found\n");
         success = false;
     }
 
@@ -553,6 +625,152 @@ bool ServerConstants::Initialize(const String& filePath)
     else
     {
         LOG_ERROR("SYNTH_SKILLS not found\n");
+        success = false;
+    }
+
+    complexIter = complexConstants.find("TRIFUSION_SPECIAL_DARK");
+    if(success && complexIter != complexConstants.end())
+    {
+        std::unordered_map<std::string, std::string> map;
+        success = LoadKeyValueStrings(complexIter->second, map);
+        for(auto pair : map)
+        {
+            uint8_t key;
+            if(!LoadInteger(pair.first, key))
+            {
+                LOG_ERROR("Failed to load TRIFUSION_SPECIAL_DARK key\n");
+                success = false;
+            }
+            else
+            {
+                uint32_t val = 0;
+                if(LoadInteger(pair.second, val))
+                {
+                    sConstants.TRIFUSION_SPECIAL_DARK.push_back(
+                        std::pair<uint8_t, uint32_t>(key, val));
+                }
+                else
+                {
+                    LOG_ERROR("Failed to load an element in"
+                        " TRIFUSION_SPECIAL_DARK\n");
+                    success = false;
+                    break;
+                }
+            }
+
+            if(!success)
+            {
+                break;
+            }
+        }
+
+        sConstants.TRIFUSION_SPECIAL_DARK.sort([](
+            const std::pair<uint8_t, uint32_t>& a,
+            const std::pair<uint8_t, uint32_t>& b)
+            {
+                return a.first < b.first;
+            });
+    }
+    else
+    {
+        LOG_ERROR("TRIFUSION_SPECIAL_DARK not found\n");
+        success = false;
+    }
+
+    complexIter = complexConstants.find("TRIFUSION_SPECIAL_ELEMENTAL");
+    if(success && complexIter != complexConstants.end())
+    {
+        std::list<String> strList;
+        if(!LoadStringList(complexIter->second, strList))
+        {
+            LOG_ERROR("Failed to load TRIFUSION_SPECIAL_ELEMENTAL\n");
+            success = false;
+        }
+        else
+        {
+            if(strList.size() != 6)
+            {
+                LOG_ERROR("TRIFUSION_SPECIAL_ELEMENTAL must specify all 6"
+                    " two elemental combinations\n");
+                success = false;
+            }
+            else
+            {
+                size_t idx = 0;
+                for(auto elem : strList)
+                {
+                    auto params = elem.Split(",");
+                    if(params.size() != 6)
+                    {
+                        LOG_ERROR("TRIFUSION_SPECIAL_ELEMENTAL row encountered"
+                            " with argument list count not equal to 6\n");
+                        success = false;
+                    }
+                    else
+                    {
+                        size_t subIdx = 0;
+                        for(auto subElem : strList)
+                        {
+                            uint32_t arg = 0;
+                            if(LoadInteger(subElem.C(), arg))
+                            {
+                                sConstants.TRIFUSION_SPECIAL_ELEMENTAL[idx]
+                                    [subIdx] = arg;
+                            }
+                            else
+                            {
+                                LOG_ERROR("Failed to load an argument in"
+                                    " TRIFUSION_SPECIAL_ELEMENTAL\n");
+                                success = false;
+                                break;
+                            }
+
+                            subIdx++;
+                        }
+                    }
+
+                    idx++;
+                }
+            }
+        }
+    }
+    else
+    {
+        LOG_ERROR("TRIFUSION_SPECIAL_ELEMENTAL not found\n");
+        success = false;
+    }
+
+    complexIter = complexConstants.find("VA_ADD_ITEM");
+    if(success && complexIter != complexConstants.end())
+    {
+        std::list<String> strList;
+        if(!LoadStringList(complexIter->second, strList))
+        {
+            LOG_ERROR("Failed to load VA_ADD_ITEM\n");
+            success = false;
+        }
+        else
+        {
+            for(auto elemStr : strList)
+            {
+                uint32_t entry = 0;
+                if(LoadInteger(elemStr.C(), entry))
+                {
+                    sConstants.VA_ADD_ITEM.insert(entry);
+                }
+                else
+                {
+                    LOG_ERROR("Failed to load an element in"
+                        " VA_ADD_ITEM\n");
+                    success = false;
+                    break;
+                }
+            }
+        }
+    }
+    else
+    {
+        LOG_ERROR("VA_ADD_ITEM not found\n");
         success = false;
     }
 

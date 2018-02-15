@@ -398,6 +398,16 @@ private:
         const std::list<libcomp::String>& args);
 
     /**
+     * GM command to have the client's partner demon gain soul points.
+     * @param client Pointer to the client that sent the command
+     * @param args List of arguments for the command
+     * @return true if the command was handled properly, else false
+     */
+    bool GMCommand_SoulPoints(const std::shared_ptr<
+        channel::ChannelClientConnection>& client,
+        const std::list<libcomp::String>& args);
+
+    /**
      * GM command to refresh all the spawn groups in the client's zone.
      * @param client Pointer to the client that sent the command
      * @param args List of arguments for the command

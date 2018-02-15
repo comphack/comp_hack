@@ -34,6 +34,7 @@
 
 // channel Includes
 #include "ChannelClientConnection.h"
+#include "FusionManager.h"
 #include "ManagerClientPacket.h"
 #include "Packets.h"
 
@@ -366,6 +367,18 @@ bool ChannelServer::Initialize()
         to_underlying(ClientToChannelPacketCode_t::PACKET_ENCHANT));
     clientPacketManager->AddParser<Parsers::DungeonRecords>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_DUNGEON_RECORDS));
+    clientPacketManager->AddParser<Parsers::TriFusionJoin>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_TRIFUSION_JOIN));
+    clientPacketManager->AddParser<Parsers::TriFusionDemonUpdate>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_TRIFUSION_DEMON_UPDATE));
+    clientPacketManager->AddParser<Parsers::TriFusionRewardUpdate>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_TRIFUSION_REWARD_UPDATE));
+    clientPacketManager->AddParser<Parsers::TriFusionRewardAccept>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_TRIFUSION_REWARD_ACCEPT));
+    clientPacketManager->AddParser<Parsers::TriFusionAccept>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_TRIFUSION_ACCEPT));
+    clientPacketManager->AddParser<Parsers::TriFusionLeave>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_TRIFUSION_LEAVE));
     clientPacketManager->AddParser<Parsers::ClanEmblemUpdate>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_CLAN_EMBLEM_UPDATE));
     clientPacketManager->AddParser<Parsers::DemonFamiliarity>(
@@ -420,6 +433,8 @@ bool ChannelServer::Initialize()
         to_underlying(ClientToChannelPacketCode_t::PACKET_COMMON_SWITCH_INFO));
     clientPacketManager->AddParser<Parsers::CasinoCoinTotal>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_CASINO_COIN_TOTAL));
+    clientPacketManager->AddParser<Parsers::TriFusionSolo>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_TRIFUSION_SOLO));
     clientPacketManager->AddParser<Parsers::SearchEntryInfo>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_SEARCH_ENTRY_INFO));
     clientPacketManager->AddParser<Parsers::HouraiData>(
@@ -438,6 +453,16 @@ bool ChannelServer::Initialize()
         to_underlying(ClientToChannelPacketCode_t::PACKET_DIGITALIZE_POINTS));
     clientPacketManager->AddParser<Parsers::DigitalizeAssist>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_DIGITALIZE_ASSIST));
+    clientPacketManager->AddParser<Parsers::VABox>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_VA_BOX));
+    clientPacketManager->AddParser<Parsers::VABoxAdd>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_VA_BOX_ADD));
+    clientPacketManager->AddParser<Parsers::VABoxRemove>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_VA_BOX_REMOVE));
+    clientPacketManager->AddParser<Parsers::VAChange>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_VA_CHANGE));
+    clientPacketManager->AddParser<Parsers::VABoxMove>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_VA_BOX_MOVE));
 
     // Map the Unsupported packet parser to unsupported packets or packets that
     // the server does not need to react to
@@ -464,6 +489,7 @@ bool ChannelServer::Initialize()
     mCharacterManager = new CharacterManager(channelPtr);
     mChatManager = new ChatManager(channelPtr);
     mEventManager = new EventManager(channelPtr);
+    mFusionManager = new FusionManager(channelPtr);
     mSkillManager = new SkillManager(channelPtr);
     mSyncManager = new ChannelSyncManager(channelPtr);
 
@@ -525,6 +551,7 @@ ChannelServer::~ChannelServer()
     delete mCharacterManager;
     delete mChatManager;
     delete mEventManager;
+    delete mFusionManager;
     delete mSkillManager;
     delete mSyncManager;
 	delete mTokuseiManager;
@@ -707,6 +734,11 @@ ChatManager* ChannelServer::GetChatManager() const
 EventManager* ChannelServer::GetEventManager() const
 {
     return mEventManager;
+}
+
+FusionManager* ChannelServer::GetFusionManager() const
+{
+    return mFusionManager;
 }
 
 SkillManager* ChannelServer::GetSkillManager() const

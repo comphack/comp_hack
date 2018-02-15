@@ -108,6 +108,9 @@ namespace libcomp
 /// Maximum demon familiarity.
 #define MAX_FAMILIARITY (10000)
 
+/// Maximum demon soul points.
+#define MAX_SOUL_POINTS (100000)
+
 /// Number of expertise.
 #define EXPERTISE_COUNT (38)
 

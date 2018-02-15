@@ -43,6 +43,7 @@
 #include <ActionSpawn.h>
 #include <ActivatedAbility.h>
 #include <CalculatedEntityState.h>
+#include <CharacterProgress.h>
 #include <DropSet.h>
 #include <Item.h>
 #include <ItemBox.h>
@@ -60,6 +61,7 @@
 #include <MiCostTbl.h>
 #include <MiDamageData.h>
 #include <MiDCategoryData.h>
+#include <MiDevilBookData.h>
 #include <MiDevilData.h>
 #include <MiDevilFamiliarityData.h>
 #include <MiDischargeData.h>
@@ -210,6 +212,7 @@ SkillManager::SkillManager(const std::weak_ptr<ChannelServer>& server)
     : mServer(server)
 {
     mSkillFunctions[SVR_CONST.SKILL_CLAN_FORM] = &SkillManager::SpecialSkill;
+    mSkillFunctions[SVR_CONST.SKILL_DCM] = &SkillManager::DCM;
     mSkillFunctions[SVR_CONST.SKILL_EQUIP_ITEM] = &SkillManager::EquipItem;
     mSkillFunctions[SVR_CONST.SKILL_EQUIP_MOD_EDIT] = &SkillManager::SpecialSkill;
     mSkillFunctions[SVR_CONST.SKILL_FAM_UP] = &SkillManager::FamiliarityUp;
@@ -2416,6 +2419,10 @@ std::shared_ptr<objects::CalculatedEntityState> SkillManager::GetCalculatedState
             calcState = eState->GetCalculatedState();
         }
 
+        // Keep track of tokusei that are not valid for the skill conditions but
+        // CAN become active given the correct target (only valid for source)
+        std::unordered_map<int32_t, uint16_t> stillPendingSkillTokusei;
+
         auto effectiveTokusei = calcState->GetEffectiveTokuseiFinal();
         auto pendingSkillTokusei = calcState->GetPendingSkillTokuseiFinal();
 
@@ -2426,11 +2433,12 @@ std::shared_ptr<objects::CalculatedEntityState> SkillManager::GetCalculatedState
             if(tokusei)
             {
                 bool add = true;
+                bool canAdd = true;
                 for(auto condition : tokusei->GetSkillConditions())
                 {
-                    if(condition->GetTargetCondition() != isTarget ||
-                        !EvaluateTokuseiSkillCondition(eState, condition,
-                        pSkill, otherState))
+                    canAdd &= condition->GetTargetCondition() == isTarget;
+                    if(!canAdd || !EvaluateTokuseiSkillCondition(eState,
+                        condition, pSkill, otherState))
                     {
                         add = false;
                         break;
@@ -2442,6 +2450,10 @@ std::shared_ptr<objects::CalculatedEntityState> SkillManager::GetCalculatedState
                     effectiveTokusei[tokusei->GetID()] = pair.second;
                     modified = true;
                 }
+                else if(canAdd)
+                {
+                    stillPendingSkillTokusei[tokusei->GetID()] = pair.second;
+                }
             }
         }
 
@@ -2449,7 +2461,8 @@ std::shared_ptr<objects::CalculatedEntityState> SkillManager::GetCalculatedState
         {
             // If the tokusei set was modified, calculate skill specific stats
             calcState = std::make_shared<objects::CalculatedEntityState>();
-            calcState->SetEffectiveTokuseiFinal(effectiveTokusei);
+            calcState->SetEffectiveTokusei(effectiveTokusei);
+            calcState->SetPendingSkillTokusei(stillPendingSkillTokusei);
 
             eState->RecalculateStats(definitionManager, calcState);
         }
@@ -4301,17 +4314,31 @@ std::list<std::shared_ptr<objects::ItemDrop>> SkillManager::GetItemDrops(
 {
     (void)enemyType;
 
+    auto serverDataManager = mServer.lock()->GetServerDataManager();
+
+    std::list<std::shared_ptr<objects::ItemDrop>> drops;
     if(giftMode)
     {
-        return spawn->GetGifts();
+        for(auto drop : spawn->GetGifts())
+        {
+            drops.push_back(drop);
+        }
+
+        for(uint32_t dropSetID : spawn->GetGiftSetIDs())
+        {
+            auto dropSet = serverDataManager->GetDropSetData(dropSetID);
+            if(dropSet)
+            {
+                for(auto drop : dropSet->GetDrops())
+                {
+                    drops.push_back(drop);
+                }
+            }
+        }
     }
-
-    // Add specific spawn drops, then drop sets, then global drops
-    std::list<std::shared_ptr<objects::ItemDrop>> drops;
-    if(spawn)
+    else if(spawn)
     {
-        auto serverDataManager = mServer.lock()->GetServerDataManager();
-
+        // Add specific spawn drops, then drop sets, then global drops
         for(auto drop : spawn->GetDrops())
         {
             drops.push_back(drop);
@@ -4519,6 +4546,95 @@ bool SkillManager::SpecialSkill(const std::shared_ptr<objects::ActivatedAbility>
     (void)client;
 
     return true;
+}
+
+bool SkillManager::DCM(const std::shared_ptr<objects::ActivatedAbility>& activated,
+    const std::shared_ptr<SkillExecutionContext>& ctx,
+    const std::shared_ptr<ChannelClientConnection>& client)
+{
+    auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated->GetSourceEntity());
+
+    if(!client)
+    {
+        SendFailure(source, activated->GetSkillID(), nullptr);
+        return false;
+    }
+
+    auto state = client->GetClientState();
+    auto cState = state->GetCharacterState();
+    auto dState = state->GetDemonState();
+    auto demon = dState->GetEntity();
+    auto demonData = dState->GetDevilData();
+
+    if(!demon || !demonData)
+    {
+        SendFailure(source, activated->GetSkillID(), client,
+            (uint8_t)SkillErrorCodes_t::PARTNER_MISSING);
+        return false;
+    }
+
+    if(!dState->IsAlive())
+    {
+        SendFailure(source, activated->GetSkillID(), client,
+            (uint8_t)SkillErrorCodes_t::PARTNER_DEAD);
+        return false;
+    }
+
+    auto server = mServer.lock();
+    auto characterManager = server->GetCharacterManager();
+    auto definitionManager = server->GetDefinitionManager();
+
+    auto bookData = definitionManager->GetDevilBookData(demon->GetType());
+    if(!bookData)
+    {
+        SendFailure(source, activated->GetSkillID(), client,
+            (uint8_t)SkillErrorCodes_t::GENERIC_USE);
+        return false;
+    }
+
+    std::unordered_map<uint32_t, uint32_t> removeItems;
+    removeItems[bookData->GetEntryID()] = 1;
+    if(ProcessSkillResult(activated, ctx) && characterManager->AddRemoveItems(client,
+        removeItems, false, activated->GetActivationObjectID()))
+    {
+        auto character = cState->GetEntity();
+        auto progress = character->GetProgress().Get();
+
+        size_t index;
+        uint8_t shiftVal;
+        characterManager->ConvertIDToMaskValues((uint16_t)bookData->GetShiftValue(),
+            index, shiftVal);
+
+        uint8_t currentVal = progress->GetDevilBook(index);
+        uint8_t newVal = (uint8_t)(currentVal | shiftVal);
+
+        if(newVal != currentVal)
+        {
+            progress->SetDevilBook(index, newVal);
+
+            server->GetWorldDatabase()->QueueUpdate(progress, state->GetAccountUID());
+
+            server->GetCharacterManager()->SendDevilBook(client);
+
+            if(dState->UpdateSharedState(character, definitionManager))
+            {
+                // If this resulted in an update, recalculate tokusei
+                server->GetTokuseiManager()->Recalculate(cState, true,
+                    std::set<int32_t>{ dState->GetEntityID() });
+            }
+
+            // Always recalculate stats
+            characterManager->RecalculateStats(client, dState->GetEntityID());
+        }
+
+        return true;
+    }
+    else
+    {
+        SendFailure(source, activated->GetSkillID(), client,
+            (uint8_t)SkillErrorCodes_t::GENERIC_USE);
+        return false;
+    }
 }
 
 bool SkillManager::EquipItem(const std::shared_ptr<objects::ActivatedAbility>& activated,

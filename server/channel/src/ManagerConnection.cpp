@@ -36,6 +36,7 @@
 #include <Account.h>
 #include <AccountLogin.h>
 #include <ChannelConfig.h>
+#include <Party.h>
 
 // channel Includes
 #include "ChannelServer.h"
@@ -250,6 +251,39 @@ std::list<std::shared_ptr<ChannelClientConnection>>
 
     success = true;
     return results;
+}
+
+std::list<std::shared_ptr<ChannelClientConnection>>
+    ManagerConnection::GetPartyConnections(const std::shared_ptr<
+    ChannelClientConnection>& client, bool includeSelf, bool zoneRestrict)
+{
+    std::list<std::shared_ptr<ChannelClientConnection>> result;
+
+    auto state = client->GetClientState();
+    if(includeSelf)
+    {
+        result.push_back(client);
+    }
+
+    auto party = state->GetParty();
+    if(party)
+    {
+        auto sourceZone = state->GetZone();
+        for(auto memberID : party->GetMemberIDs())
+        {
+            auto memberClient = GetEntityClient(memberID, true);
+            if(memberClient && memberClient != client)
+            {
+                auto memberState = memberClient->GetClientState();
+                if(!zoneRestrict || memberState->GetZone() == sourceZone)
+                {
+                    result.push_back(memberClient);
+                }
+            }
+        }
+    }
+
+    return result;
 }
 
 bool ManagerConnection::ScheduleClientTimeoutHandler(uint16_t timeout)

@@ -50,9 +50,11 @@ SET(${PROJECT_NAME}_SRCS
     src/ChatManager.cpp
     src/CharacterState.cpp
     src/ClientState.cpp
+    src/DemonState.cpp
     src/EnemyState.cpp
     src/EntityState.cpp
     src/EventManager.cpp
+    src/FusionManager.cpp
     src/FusionTables.cpp
     src/ManagerClientPacket.cpp
     src/ManagerConnection.cpp
@@ -82,9 +84,11 @@ SET(${PROJECT_NAME}_HDRS
     src/ChatManager.h
     src/CharacterState.h
     src/ClientState.h
+    src/DemonState.h
     src/EnemyState.h
     src/EntityState.h
     src/EventManager.h
+    src/FusionManager.h
     src/FusionTables.h
     src/ManagerClientPacket.h
     src/ManagerConnection.h
@@ -142,6 +146,8 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     LootBox.cpp
     PlayerExchangeSession.h
     PlayerExchangeSession.cpp
+    TriFusionHostSession.h
+    TriFusionHostSession.cpp
 )
 
 SOURCE_GROUP("Source Files\\Packets\\Game" src/packets/game/*)
@@ -275,6 +281,12 @@ SET(${PROJECT_NAME}_PACKETS
     src/packets/game/EnchantItem.cpp            # 0x01BE
     src/packets/game/Enchant.cpp                # 0x01C1
     src/packets/game/DungeonRecords.cpp         # 0x01C4
+    src/packets/game/TriFusionJoin.cpp          # 0x01CD
+    src/packets/game/TriFusionDemonUpdate.cpp   # 0x01D0
+    src/packets/game/TriFusionRewardUpdate.cpp  # 0x01D3
+    src/packets/game/TriFusionRewardAccept.cpp  # 0x01D6
+    src/packets/game/TriFusionAccept.cpp        # 0x01D9
+    src/packets/game/TriFusionLeave.cpp         # 0x01DE
     src/packets/game/ClanEmblemUpdate.cpp       # 0x01E1
     src/packets/game/DemonFamiliarity.cpp       # 0x01E6
     src/packets/game/PlasmaStart.cpp            # 0x01EB
@@ -302,6 +314,7 @@ SET(${PROJECT_NAME}_PACKETS
     src/packets/game/DemonDepoRemote.cpp        # 0x02EF
     src/packets/game/CommonSwitchInfo.cpp       # 0x02F4
     src/packets/game/CasinoCoinTotal.cpp        # 0x02FA
+    src/packets/game/TriFusionSolo.cpp          # 0x0384
     src/packets/game/SearchEntryInfo.cpp        # 0x03A3
     src/packets/game/HouraiData.cpp             # 0x03A5
     src/packets/game/CultureData.cpp            # 0x03AC
@@ -311,6 +324,11 @@ SET(${PROJECT_NAME}_PACKETS
     src/packets/game/Blacklist.cpp              # 0x0408
     src/packets/game/DigitalizePoints.cpp       # 0x0414
     src/packets/game/DigitalizeAssist.cpp       # 0x0418
+    src/packets/game/VABox.cpp                  # 0x041E
+    src/packets/game/VABoxAdd.cpp               # 0x0420
+    src/packets/game/VABoxRemove.cpp            # 0x0422
+    src/packets/game/VAChange.cpp               # 0x0424
+    src/packets/game/VABoxMove.cpp              # 0x0427
 
     #Internal packets
     src/packets/internal/SetWorldInfo.cpp          # 0x1002

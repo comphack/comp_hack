@@ -1,10 +1,10 @@
-﻿/**
- * @file server/channel/src/packets/game/DemonFusion.cpp
+/**
+ * @file server/channel/src/packets/game/VABox.cpp
  * @ingroup channel
  *
  * @author HACKfrost
  *
- * @brief Request from the client to fuse a new demon.
+ * @brief Request from the client for all items contained in the VA closet.
  *
  * This file is part of the Channel Server (channel).
  *
@@ -27,42 +27,55 @@
 #include "Packets.h"
 
 // libcomp Includes
-#include <ManagerPacket.h>
 #include <Packet.h>
 #include <PacketCodes.h>
 
 // channel Includes
+#include "ChannelClientConnection.h"
 #include "ChannelServer.h"
-#include "FusionManager.h"
 
 using namespace channel;
 
-bool Parsers::DemonFusion::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::VABox::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {
-    if(p.Size() != 28)
+    (void)pPacketManager;
+
+    if(p.Size() != 4)
     {
         return false;
     }
 
-    int32_t fusionType = p.ReadS32Little();
-    int64_t demonID1 = p.ReadS64Little();
-    int64_t demonID2 = p.ReadS64Little();
-    int64_t unknown = p.ReadS64Little();
-    (void)fusionType;
-    (void)unknown;
+    int32_t unused = p.ReadS32Little();
+    (void)unused;
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
     auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+    auto state = client->GetClientState();
+    auto cState = state->GetCharacterState();
+    auto character = cState->GetEntity();
 
-    server->QueueWork([](const std::shared_ptr<ChannelServer> pServer,
-        const std::shared_ptr<ChannelClientConnection> pClient,
-        int64_t pDemonID1, int64_t pDemonID2)
+    std::set<size_t> slots;
+    for(size_t i = 0; i < 50; i++)
+    {
+        if(character->GetVACloset(i) != 0)
         {
-            pServer->GetFusionManager()->HandleFusion(pClient, pDemonID1,
-                pDemonID2);
-        }, server, client, demonID1, demonID2);
+            slots.insert(i);
+        }
+    }
+
+    libcomp::Packet reply;
+    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_VA_BOX);
+    reply.WriteS32Little(0);
+    reply.WriteS32Little(0);
+    reply.WriteS32Little((int32_t)slots.size());
+    for(size_t slot : slots)
+    {
+        reply.WriteS8((int8_t)slot);
+        reply.WriteU32Little(character->GetVACloset(slot));
+    }
+
+    client->SendPacket(reply);
 
     return true;
 }

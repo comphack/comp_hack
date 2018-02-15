@@ -496,8 +496,8 @@ void ZoneManager::LeaveZone(const std::shared_ptr<ChannelClientConnection>& clie
     {
         auto otherCState = std::dynamic_pointer_cast<CharacterState>(
             exchangeSession->GetOtherCharacterState());
-        if(otherCState != cState ||
-            exchangeSession->GetSourceEntityID() != cState->GetEntityID())
+        if(otherCState && (otherCState != cState ||
+            exchangeSession->GetSourceEntityID() != cState->GetEntityID()))
         {
             auto connectionManager = server->GetManagerConnection();
             auto otherClient = connectionManager->GetEntityClient(
@@ -517,6 +517,7 @@ void ZoneManager::LeaveZone(const std::shared_ptr<ChannelClientConnection>& clie
     characterManager->AddRemoveOpponent(false, cState, nullptr);
     characterManager->AddRemoveOpponent(false, dState, nullptr);
 
+    uint32_t previousZoneID = 0;
     bool instanceRemoved = false;
     std::shared_ptr<Zone> zone = nullptr;
     {
@@ -527,16 +528,17 @@ void ZoneManager::LeaveZone(const std::shared_ptr<ChannelClientConnection>& clie
             uint32_t uniqueID = iter->second;
             zone = mZones[uniqueID];
 
+            auto def = zone->GetDefinition();
+
             mEntityMap.erase(worldCID);
             zone->RemoveConnection(client);
+            previousZoneID = def->GetID();
 
             // Determine actions needed if the last connection has left
             if(zone->GetConnections().size() == 0)
             {
                 // Always "freeze" the zone
                 mActiveZones.erase(uniqueID);
-
-                auto def = zone->GetDefinition();
 
                 auto instance = zone->GetInstance();
                 auto instDef = instance ? instance->GetDefinition() : nullptr;
@@ -604,6 +606,11 @@ void ZoneManager::LeaveZone(const std::shared_ptr<ChannelClientConnection>& clie
         // remaining party member effects
         server->GetTokuseiManager()->RecalculateParty(
             state->GetParty());
+    }
+    else
+    {
+        // Set the previous zone
+        cState->GetEntity()->SetPreviousZone(previousZoneID);
     }
 
     // If logging out, cancel zone out and log out effects (zone out effects
@@ -1865,7 +1872,9 @@ bool ZoneManager::UpdateSpawnGroups(const std::shared_ptr<Zone>& zone,
                     // point so the enemy is not spawned outside of the zone
                     Point collision;
                     Line fromCenter(center, p);
-                    if(zone->GetGeometry()->Collides(fromCenter, collision))
+
+                    auto geometry = zone->GetGeometry();
+                    if(geometry && geometry->Collides(fromCenter, collision))
                     {
                         // Back it off slightly
                         p = GetLinearPoint(collision.x, collision.y,

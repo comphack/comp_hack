@@ -37,6 +37,7 @@
 #include <MiCItemData.h>
 #include <MiCZoneRelationData.h>
 #include <MiDCategoryData.h>
+#include <MiDevilBookData.h>
 #include <MiDevilCrystalData.h>
 #include <MiDevilData.h>
 #include <MiDevilLVUpRateData.h>
@@ -87,6 +88,17 @@ DefinitionManager::~DefinitionManager()
 const std::shared_ptr<objects::MiAIData> DefinitionManager::GetAIData(uint32_t id)
 {
     return GetRecordByID(id, mAIData);
+}
+
+const std::shared_ptr<objects::MiDevilBookData> DefinitionManager::GetDevilBookData(uint32_t id)
+{
+    return GetRecordByID(id, mDevilBookData);
+}
+
+std::unordered_map<uint32_t,
+    std::shared_ptr<objects::MiDevilBookData>> DefinitionManager::GetDevilBookData()
+{
+    return mDevilBookData;
 }
 
 const std::shared_ptr<objects::MiDevilData> DefinitionManager::GetDevilData(uint32_t id)
@@ -465,6 +477,7 @@ bool DefinitionManager::LoadAllData(gsl::not_null<DataStore*> pDataStore)
     success &= LoadAIData(pDataStore);
     success &= LoadCItemData(pDataStore);
     success &= LoadDevilData(pDataStore);
+    success &= LoadDevilBookData(pDataStore);
     success &= LoadDevilLVUpRateData(pDataStore);
     success &= LoadDisassemblyData(pDataStore);
     success &= LoadDisassemblyTriggerData(pDataStore);
@@ -545,6 +558,19 @@ bool DefinitionManager::LoadCZoneRelationData(gsl::not_null<DataStore*> pDataSto
     return success;
 }
 
+bool DefinitionManager::LoadDevilBookData(gsl::not_null<DataStore*> pDataStore)
+{
+    std::list<std::shared_ptr<objects::MiDevilBookData>> records;
+    bool success = LoadBinaryData<objects::MiDevilBookData>(pDataStore,
+        "Shield/DevilbookData.sbin", true, 0, records);
+    for(auto record : records)
+    {
+        mDevilBookData[record->GetID()] = record;
+    }
+    
+    return success;
+}
+
 bool DefinitionManager::LoadDevilData(gsl::not_null<DataStore*> pDataStore)
 {
     std::list<std::shared_ptr<objects::MiDevilData>> records;
@@ -568,7 +594,7 @@ bool DefinitionManager::LoadDevilData(gsl::not_null<DataStore*> pDataStore)
         {
             mFusionRanges[(uint8_t)record->GetCategory()->GetRace()].
                 push_back(std::pair<uint8_t, uint32_t>(
-                (uint8_t)(record->GetGrowth()->GetBaseLevel() * 2 - 1), id));
+                (uint8_t)record->GetGrowth()->GetBaseLevel(), id));
         }
     }
 

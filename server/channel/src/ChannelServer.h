@@ -57,6 +57,8 @@ namespace channel
 typedef uint64_t ServerTime;
 typedef ServerTime (*GET_SERVER_TIME)();
 
+class FusionManager;
+
 /**
  * Channel server that handles client packets in game.
  */
@@ -224,6 +226,12 @@ public:
     EventManager* GetEventManager() const;
 
     /**
+     * Get a pointer to the fusion manager.
+     * @return Pointer to the FusionManager
+     */
+    FusionManager* GetFusionManager() const;
+
+    /**
      * Get a pointer to the skill manager.
      * @return Pointer to the SkillManager
      */
@@ -389,6 +397,9 @@ protected:
 
     /// Pointer to the Event Manager.
     EventManager *mEventManager;
+
+    /// Pointer to the Fusion Manager.
+    FusionManager *mFusionManager;
 
     /// Pointer to the Skill Manager.
     SkillManager *mSkillManager;

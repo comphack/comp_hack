@@ -47,6 +47,7 @@ class EnchantSpecialData;
 class MiAIData;
 class MiCItemData;
 class MiCZoneRelationData;
+class MiDevilBookData;
 class MiDevilData;
 class MiDevilLVUpRateData;
 class MiDisassemblyData;
@@ -102,6 +103,20 @@ public:
      * @return Pointer to the matching client-side AI definition, null if it does not exist
      */
     const std::shared_ptr<objects::MiAIData> GetAIData(uint32_t id);
+
+    /**
+     * Get the devil book definition corresponding to an ID
+     * @param id Devil book ID to retrieve
+     * @return Pointer to the matching devil book definition, null if it does not exist
+     */
+    const std::shared_ptr<objects::MiDevilBookData> GetDevilBookData(uint32_t id);
+
+    /**
+     * Get all devil book definitions by definition ID
+     * @return Map of devil book definitions by ID
+     */
+    std::unordered_map<uint32_t,
+        std::shared_ptr<objects::MiDevilBookData>> GetDevilBookData();
 
     /**
      * Get the devil definition corresponding to an ID
@@ -484,6 +499,13 @@ public:
     bool LoadCZoneRelationData(gsl::not_null<DataStore*> pDataStore);
 
     /**
+     * Load the devil book binary data definitions
+     * @param pDataStore Pointer to the datastore to load binary file from
+     * @return true on success, false on failure
+     */
+    bool LoadDevilBookData(gsl::not_null<DataStore*> pDataStore);
+
+    /**
      * Load the devil binary data definitions
      * @param pDataStore Pointer to the datastore to load binary file from
      * @return true on success, false on failure
@@ -810,6 +832,10 @@ private:
 
     /// Map of item names to IDs
     std::unordered_map<libcomp::String, uint32_t> mCItemNameLookup;
+
+    /// Map of devil book definitions by ID
+    std::unordered_map<uint32_t,
+        std::shared_ptr<objects::MiDevilBookData>> mDevilBookData;
 
     /// Map of devil definitions by ID
     std::unordered_map<uint32_t,

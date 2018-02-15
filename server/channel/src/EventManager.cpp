@@ -31,6 +31,7 @@
 #include <Log.h>
 #include <PacketCodes.h>
 #include <Randomizer.h>
+#include <ServerConstants.h>
 
 // Standard C++11 Includes
 #include <math.h>
@@ -62,6 +63,7 @@
 #include <Expertise.h>
 #include <Item.h>
 #include <ItemBox.h>
+#include <MiDevilBookData.h>
 #include <MiDevilData.h>
 #include <MiExpertData.h>
 #include <MiItemBasicData.h>
@@ -77,6 +79,7 @@
 #include <ServerObject.h>
 #include <ServerZone.h>
 #include <ServerZoneInstance.h>
+#include <TriFusionHostSession.h>
 
 using namespace channel;
 
@@ -631,6 +634,7 @@ bool EventManager::EvaluateEventCondition(const std::shared_ptr<
     case objects::EventCondition::Type_t::PARTNER_LOCKED:
     case objects::EventCondition::Type_t::PARTNER_SKILL_LEARNED:
     case objects::EventCondition::Type_t::PARTNER_STAT_VALUE:
+    case objects::EventCondition::Type_t::SOUL_POINTS:
         return negate != EvaluatePartnerCondition(client, condition);
     case objects::EventCondition::Type_t::QUEST_AVAILABLE:
     case objects::EventCondition::Type_t::QUEST_PHASE:
@@ -704,6 +708,14 @@ bool EventManager::EvaluatePartnerCondition(const std::shared_ptr<
                 (CorrectTbl)condition->GetValue1()), condition->GetValue2(), 0,
                 compareMode, EventCompareMode::GTE, EVENT_COMPARE_NUMERIC);
         }
+    case objects::EventCondition::Type_t::SOUL_POINTS:
+        {
+            // Partner soul point amount compares to [value 1] (and [value 2])
+            return Compare(demon->GetSoulPoints(), condition->GetValue1(),
+                condition->GetValue2(), compareMode, EventCompareMode::GTE,
+                EVENT_COMPARE_NUMERIC2);
+        }
+        break;
     default:
         break;
     }
@@ -1339,10 +1351,45 @@ bool EventManager::EvaluateCondition(const std::shared_ptr<ChannelClientConnecti
                 compareMode, EventCompareMode::EQUAL, EVENT_COMPARE_NUMERIC2);
         }
     case objects::EventCondition::Type_t::DEMON_BOOK:
+        if(compareMode == EventCompareMode::EXISTS)
         {
-            LOG_ERROR("Currently unsupported DEMON_BOOK condition encountered"
-                " in EvaluateCondition\n");
+            // Demon ID ([value 2] = 0) or base demon ID ([value 2] != 0) matching [value 1]
+            // exists in the compendium
+            auto server = mServer.lock();
+            auto characterManager = server->GetCharacterManager();
+            auto definitionManager = server->GetDefinitionManager();
+
+            auto character = client->GetClientState()->GetCharacterState()->GetEntity();
+            auto progress = character->GetProgress();
+
+            uint32_t demonType = (uint32_t)condition->GetValue1();
+            bool baseMode = condition->GetValue2() != 0;
+
+            for(auto dbPair : definitionManager->GetDevilBookData())
+            {
+                if((baseMode && dbPair.second->GetBaseID1() == demonType) ||
+                    (!baseMode && dbPair.second->GetID() == demonType))
+                {
+                    size_t index;
+                    uint8_t shiftValue;
+                    characterManager->ConvertIDToMaskValues(
+                        (uint16_t)dbPair.second->GetShiftValue(), index, shiftValue);
+                    if((progress->GetDevilBook(index) & shiftValue) != 0)
+                    {
+                        return true;
+                    }
+                }
+            }
+
             return false;
+        }
+        else
+        {
+            // Compendium entry count compares to [value 1] (and [value 2])
+            auto dState = client->GetClientState()->GetDemonState();
+
+            return Compare((int32_t)dState->GetCompendiumCount(), condition->GetValue1(),
+                condition->GetValue2(), compareMode, EventCompareMode::GTE, EVENT_COMPARE_NUMERIC2);
         }
     case objects::EventCondition::Type_t::EXPERTISE_ACTIVE:
         if(compareMode != EventCompareMode::EQUAL && compareMode != EventCompareMode::DEFAULT_COMPARE)
@@ -2079,12 +2126,18 @@ bool EventManager::OpenMenu(const std::shared_ptr<ChannelClientConnection>& clie
     auto state = client->GetClientState();
     auto eState = state->GetEventState();
 
+    int32_t menuType = e->GetMenuType();
+    if(menuType == (int32_t)SVR_CONST.MENU_TRIFUSION && !HandleTriFusion(client))
+    {
+        return false;
+    }
+
     int32_t overrideShopID = (int32_t)eState->GetCurrent()->GetShopID();
 
     libcomp::Packet p;
     p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_EVENT_OPEN_MENU);
     p.WriteS32Little(instance->GetSourceEntityID());
-    p.WriteS32Little(e->GetMenuType());
+    p.WriteS32Little(menuType);
     p.WriteS32Little(overrideShopID != 0 ? overrideShopID : e->GetShopID());
     p.WriteString16Little(state->GetClientStringEncoding(),
         libcomp::String(), true);
@@ -2138,6 +2191,67 @@ bool EventManager::EndEvent(const std::shared_ptr<ChannelClientConnection>& clie
 
     auto server = mServer.lock();
     server->GetCharacterManager()->SetStatusIcon(client);
+
+    return true;
+}
+
+bool EventManager::HandleTriFusion(const std::shared_ptr<
+    ChannelClientConnection>& client)
+{
+    auto state = client->GetClientState();
+
+    if(state->GetExchangeSession())
+    {
+        // There is already an exchange session
+        return false;
+    }
+
+    auto partyClients = mServer.lock()->GetManagerConnection()
+        ->GetPartyConnections(client, true, true);
+
+    ClientState* tfSessionOwner;
+    std::shared_ptr<objects::TriFusionHostSession> tfSession;
+    for(auto pClient : partyClients)
+    {
+        if(pClient == client) continue;
+
+        auto pState = pClient->GetClientState();
+        tfSession = std::dynamic_pointer_cast<
+            objects::TriFusionHostSession>(pState->GetExchangeSession());
+        if(tfSession)
+        {
+            tfSessionOwner = pState;
+            break;
+        }
+    }
+
+    if(tfSession)
+    {
+        // Request to prompt the client to join
+        libcomp::Packet request;
+        request.WritePacketCode(
+            ChannelToClientPacketCode_t::PACKET_TRIFUSION_START);
+        request.WriteS32Little(tfSessionOwner->GetCharacterState()->GetEntityID());
+
+        client->QueuePacket(request);
+    }
+    else
+    {
+        // Send special notification to all party members in the zone 
+        // (including self)
+        tfSession = std::make_shared<objects::TriFusionHostSession>();
+        tfSession->SetSourceEntityID(state->GetCharacterState()
+            ->GetEntityID());
+
+        state->SetExchangeSession(tfSession);
+
+        libcomp::Packet notify;
+        notify.WritePacketCode(
+            ChannelToClientPacketCode_t::PACKET_TRIFUSION_STARTED);
+        notify.WriteS32Little(state->GetCharacterState()->GetEntityID());
+
+        ChannelClientConnection::BroadcastPacket(partyClients, notify);
+    }
 
     return true;
 }

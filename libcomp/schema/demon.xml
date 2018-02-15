@@ -5,7 +5,7 @@
         <member type="DemonBox*" name="DemonBox"/>
         <member type="s8" name="BoxSlot" default="-1"/>
         <member type="u16" name="AttackSettings"/>
-        <member type="s32" name="SoulPoints"/>
+        <member type="s32" name="SoulPoints" max="100000"/>
         <member type="u16" name="Familiarity" max="10000"/>
         <member type="u8" name="Loyalty"/>
         <!--<member type="u8" name="Unknown1"/>

@@ -198,6 +198,12 @@ enum class ClientToChannelPacketCode_t : uint16_t
     PACKET_ENCHANT_ITEM_UPDATE = 0x01BE,    //!< Request to update an item used for enchantment.
     PACKET_ENCHANT = 0x01C1,    //!< Request to perform an enchantment.
     PACKET_DUNGEON_RECORDS = 0x01C4,  //!< Request for the current player's dungeon challenge records.
+    PACKET_TRIFUSION_JOIN = 0x01CD, //!< Request to join a tri-fusion session in progress.
+    PACKET_TRIFUSION_DEMON_UPDATE = 0x01D0, //!< Request to update the demons involved in a tri-fusion.
+    PACKET_TRIFUSION_REWARD_UPDATE = 0x01D3,    //!< Request to update the rewards given for a tri-fusion success.
+    PACKET_TRIFUSION_REWARD_ACCEPT = 0x01D6,    //!< Request to accept or reject the rewards being set for a tri-fusion.
+    PACKET_TRIFUSION_ACCEPT = 0x01D9,   //!< Request to accept (or execute) a tri-fusion.
+    PACKET_TRIFUSION_LEAVE = 0x01DE,    //!< Request to leave a tri-fusion session.
     PACKET_CLAN_EMBLEM_UPDATE = 0x01E1, //!< Request to update the player character's clan's emblem.
     PACKET_DEMON_FAMILIARITY = 0x01E6,  //!< Request to sync the familiarity of every demon in the player's COMP.
     PACKET_PLASMA_START = 0x01EB,  //!< Request to start the plasma picking minigame for a specific point.
@@ -228,6 +234,7 @@ enum class ClientToChannelPacketCode_t : uint16_t
     PACKET_DEMON_DEPO_REMOTE = 0x02EF,  //!< Request to open the remote demon depo.
     PACKET_COMMON_SWITCH_INFO = 0x02F4,  //!< Unknown. Request for "common switch" information.
     PACKET_CASINO_COIN_TOTAL = 0x02FA,   //!< Request for the current character's casino coin total.
+    PACKET_TRIFUSION_SOLO = 0x0384, //!< Request to perform a solo tri-fusion.
     PACKET_SEARCH_ENTRY_INFO = 0x03A3,  //!< Request for the current player's search entries.
     PACKET_HOURAI_DATA = 0x03A5,  //!< Request for Club Hourai related information.
     PACKET_CULTURE_DATA = 0x03AC,  //!< Unknown. Request for culture information.
@@ -237,6 +244,11 @@ enum class ClientToChannelPacketCode_t : uint16_t
     PACKET_BLACKLIST = 0x0408,  //!< Request for the current player's blacklist.
     PACKET_DIGITALIZE_POINTS = 0x0414,  //!< Request for the current player's digitalize point information.
     PACKET_DIGITALIZE_ASSIST = 0x0418,  //!< Request for the current player's digitalize assist information.
+    PACKET_VA_BOX = 0x041E, //!< Request to list all VA items in the VA closet.
+    PACKET_VA_BOX_ADD = 0x0420, //!< Request to create a VA item and add it to the closet.
+    PACKET_VA_BOX_REMOVE = 0x0422,  //!< Request to remove a VA item from the closet.
+    PACKET_VA_CHANGE = 0x0424,  //!< Request to change the current character's VA.
+    PACKET_VA_BOX_MOVE = 0x0427,    //!< Request to move a VA item in the closet.
 };
 
 /**
@@ -429,6 +441,7 @@ enum class ChannelToClientPacketCode_t : uint16_t
     PACKET_MAP_FLAG = 0x0198,  //!< Message containing map information.
     PACKET_ANALYZE_DEMON = 0x019A,  //!< Response to the request to analyze another player's partner demon.
     PACKET_DEMON_COMPENDIUM = 0x019C,  //!< Response containing the Demon Compendium.
+    PACKET_DEMON_COMPENDIUM_ADD = 0x019D,   //!< Notification that the Demon Compendium has been updated.
     PACKET_DEMON_FAMILIARITY_UPDATE = 0x01A5,  //!< Notification that the current partner demon's familiarity has updated.
     PACKET_ENTRUST_REQUEST = 0x01AB,  //!< Response to the request to start a player exchange "entrust" session.
     PACKET_ENTRUST_REQUESTED = 0x01AC,    //!< Notification for an entrust target that a session is being requested.
@@ -447,11 +460,28 @@ enum class ChannelToClientPacketCode_t : uint16_t
     PACKET_ENCHANT = 0x01C2,    //!< Response to the request to perform an enchantment.
     PACKET_ENCHANTED = 0x01C3,  //!< Notification that an enchantment has been performed.
     PACKET_DUNGEON_CHALLENGES = 0x01C5,  //!< Response containing the current player's dungeon challenge records.
+    PACKET_TRIFUSION_STARTED = 0x01CB,  //!< Notification that a party member in the same zone has started a tri-fusion session.
+    PACKET_TRIFUSION_START = 0x01CC,    //!< Request to the client to start a tri-fusion session.
+    PACKET_TRIFUSION_JOIN = 0x01CE, //!< Response to the request to join a tri-fusion session in progress.
+    PACKET_TRIFUSION_PARTICIPANT = 0x01CF,  //!< Message containing information about a character joining a tri-fusion session.
+    PACKET_TRIFUSION_DEMON_UPDATE = 0x01D1, //!< Response to the request to update the demons involved in a tri-fusion.
+    PACKET_TRIFUSION_DEMON_UPDATED = 0x01D2,    //!< Notification that the demons involved in a tri-fusion have been updated.
+    PACKET_TRIFUSION_REWARD_UPDATE = 0x01D4,    //!< Response to the request to update the rewards given for a tri-fusion success.
+    PACKET_TRIFUSION_REWARD_UPDATED = 0x01D5,   //!< Notification that the rewards for a tri-fusion success have been updated.
+    PACKET_TRIFUSION_REWARD_ACCEPT = 0x01D7,    //!< Response to the request to accept or reject the rewards being set for a tri-fusion.
+    PACKET_TRIFUSION_REWARD_ACCEPTED = 0x01D8,  //!< Notification that the rewards being set for a tri-fusion have been acceped or rejected.
+    PACKET_TRIFUSION_ACCEPT = 0x01DA,   //!< Response to the request to accept (or execute) a tri-fusion.
+    PACKET_TRIFUSION_ACCEPTED = 0x01DB, //!< Notification that the tri-fusion has been accepted by a player
+    PACKET_TRIFUSION = 0x01DC,  //!< Message containing the result of a normal tri-fusion.
+    PACKET_TRIFUSION_UPDATE = 0x01DD,   //!< Notification that a demon invovled in a tri-fusion has been updated.
+    PACKET_TRIFUSION_LEFT = 0x01DF, //!< Notification that a character has left the tri-fusion session.
+    PACKET_TRIFUSION_END = 0x01E0,  //!< Notification that a tri-fusion session has ended.
     PACKET_CLAN_EMBLEM_UPDATE = 0x01E2,    //!< Response to the request to update the player character's clan's emblem.
     PACKET_CLAN_EMBLEM_UPDATED = 0x01E3,   //!< Notification that a character's clan emblem has updated.
     PACKET_CLAN_LEVEL_UPDATED = 0x01E4,    //!< Notification that a character's clan level has updated.
     PACKET_CLAN_UPDATE = 0x01E5,   //!< Notification to a character that their visible clan info has been updated.
     PACKET_DEMON_FAMILIARITY = 0x01E7,  //!< Response to the request for the familiarity values of each demon in the COMP.
+    PACKET_TRIFUSION_DEMON_CRYSTAL = 0x01E8,    //!< Notification that a successful tri-fusion has resulted in a demon crystal.
     PACKET_EVENT_EX_NPC_MESSAGE = 0x01E9,  //!< Request to the client to display an extended NPC event message.
     PACKET_PLASMA_DATA = 0x01EA,   //!< Message containing data about a plasma spawn in a zone.
     PACKET_PLASMA_START = 0x01EC,  //!< Response to the request to start the plasma picking minigame for a specific point.
@@ -485,10 +515,12 @@ enum class ChannelToClientPacketCode_t : uint16_t
     PACKET_EVENT_PLAY_BGM = 0x0294,   //!< Request to the client to play background music as part of an event.
     PACKET_EVENT_STOP_BGM = 0x0295,   //!< Request to the client to stop playing specific background music as part of an event.
     PACKET_ITEM_DEPO_REMOTE = 0x0297,  //!< Response to the request to open the remote item depos.
+	PACKET_SOUL_POINT_UPDATE = 0x029B,  //!< Notification that the clien't partner demon's soul points have updated.
     PACKET_DEMON_DEPO_REMOTE = 0x02F0,  //!< Response to the request to open the remote demon depos.
     PACKET_EXPERTISE_EXTENSION = 0x02F1, //!< Notification of the client character's extertise extension count.
     PACKET_COMMON_SWITCH_INFO = 0x02F5,  //!< Unknown. Response containing "common switch" information.
     PACKET_CASINO_COIN_TOTAL = 0x02FB,   //!< Message containing the current character's casino coin total.
+    PACKET_TRIFUSION_SOLO = 0x0385, //!< Message containing the result of a solo tri-fusion.
     PACKET_SEARCH_ENTRY_INFO = 0x03A4,  //!< Response containing the current player's search entries.
     PACKET_HOURAI_DATA = 0x03A6,  //!< Response containing Club Hourai related information.
     PACKET_EQUIPMENT_MOD_EDIT = 0x03CC,  //!< Response to the request to edit a previously applied equipment modification.
@@ -499,6 +531,12 @@ enum class ChannelToClientPacketCode_t : uint16_t
     PACKET_BLACKLIST = 0x0409,  //!< Response containing the current player's blacklist.
     PACKET_DIGITALIZE_POINTS = 0x0415,  //!< Response containing the current player's digitalize point information.
     PACKET_DIGITALIZE_ASSIST = 0x0419,  //!< Response containing the current player's digitalize assist information.
+	PACKET_VA_BOX = 0x041F, //!< Response to the request to list all VA items in the VA closet.
+	PACKET_VA_BOX_ADD = 0x0421, //!< Response to the request to create a VA item and add it to the closet.
+	PACKET_VA_BOX_REMOVE = 0x0423,  //!< Response to the request to remove a VA item from the closet.
+	PACKET_VA_CHANGE = 0x0425,  //!< Reponse to the request to change the current character's VA.
+	PACKET_VA_CHANGED = 0x0426, //!< Notification that a character's VA has changed.
+	PACKET_VA_BOX_MOVE = 0x0428,    //!< Response to the request to move a VA item in the closet.
 };
 
 /**

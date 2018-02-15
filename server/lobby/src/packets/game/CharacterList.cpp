@@ -231,8 +231,17 @@ bool Parsers::CharacterList::Parse(libcomp::ManagerPacket *pPacketManager,
             }
         }
 
-        // Unknown value
-        reply.WriteBlank(4);
+        // VA
+        reply.WriteS32((int32_t)character->EquippedVACount());
+        for(uint8_t i = 0; i < 15; i++)
+        {
+            uint32_t va = character->GetEquippedVA(i);
+            if(va)
+            {
+                reply.WriteS8((int8_t)i);
+                reply.WriteU32Little(va);
+            }
+        }
 
         // Since this is the only place we need to retrieve stats
         // on this server, unload it and if the character is not cached

@@ -93,6 +93,7 @@ ChatManager::ChatManager(const std::weak_ptr<ChannelServer>& server)
     mGMands["skill"] = &ChatManager::GMCommand_Skill;
     mGMands["skillpoint"] = &ChatManager::GMCommand_SkillPoint;
     mGMands["slotadd"] = &ChatManager::GMCommand_SlotAdd;
+    mGMands["sp"] = &ChatManager::GMCommand_SoulPoints;
     mGMands["spawn"] = &ChatManager::GMCommand_Spawn;
     mGMands["speed"] = &ChatManager::GMCommand_Speed;
     mGMands["tickermessage"] = &ChatManager::GMCommand_TickerMessage;
@@ -1611,6 +1612,29 @@ bool ChatManager::GMCommand_SlotAdd(const std::shared_ptr<
 
         server->GetWorldDatabase()->QueueUpdate(item, state->GetAccountUID());
     }
+
+    return true;
+}
+
+bool ChatManager::GMCommand_SoulPoints(const std::shared_ptr<
+    channel::ChannelClientConnection>& client,
+    const std::list<libcomp::String>& args)
+{
+    if(!HaveUserLevel(client, 250))
+    {
+        return true;
+    }
+
+    std::list<libcomp::String> argsCopy = args;
+
+    int32_t pointCount;
+    if(!GetIntegerArg<int32_t>(pointCount, argsCopy) || pointCount < 0)
+    {
+        return false;
+    }
+
+    mServer.lock()->GetCharacterManager()->UpdateSoulPoints(
+        client, pointCount, true);
 
     return true;
 }

@@ -479,6 +479,17 @@ private:
         const std::shared_ptr<ChannelClientConnection>& client);
 
     /**
+     * Execute the "demonic compendium memory" skill.
+     * @param activated Pointer to the activated ability instance
+     * @param ctx Special execution state for the skill
+     * @param client Pointer to the client connection that activated the skill,
+     *  this will always fail if it is null
+     */
+    bool DCM(const std::shared_ptr<objects::ActivatedAbility>& activated,
+        const std::shared_ptr<SkillExecutionContext>& ctx,
+        const std::shared_ptr<ChannelClientConnection>& client);
+
+    /**
      * Execute the "equip item" skill.
      * @param activated Pointer to the activated ability instance
      * @param ctx Special execution state for the skill

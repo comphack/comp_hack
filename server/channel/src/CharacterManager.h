@@ -8,7 +8,7 @@
  *
  * This file is part of the Channel Server (channel).
  *
- * Copyright (C) 2012-2016 COMP_hack Team <compomega@tutanota.com>
+ * Copyright (C) 2012-2018 COMP_hack Team <compomega@tutanota.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as
@@ -282,6 +282,18 @@ public:
         uint32_t itemID, std::shared_ptr<objects::ItemBox> box = nullptr);
 
     /**
+     * Get all the free slots within the supplied item box.
+     * @param client Pointer to the client connection containing
+     *  the box
+     * @param box Box to return slots for, if null the inventory
+     *  will be used
+     * @return Set of all free slots in the box
+     */
+    std::set<size_t> GetFreeSlots(const std::shared_ptr<
+        ChannelClientConnection>& client,
+        std::shared_ptr<objects::ItemBox> box = nullptr);
+
+    /**
      * Generate an item with the specified stack size.  The stack size
      * will not be checked for the maximum allowed value.
      * @param itemID Item ID to generate an item from
@@ -454,10 +466,12 @@ public:
      * Create a demon.
      * @param demonData Pointer to a demon's definition that represents
      *  the demon to create
+     * @param familiarity Optional default demon familiarity points
      * @return Pointer to the newly created demon
      */
     std::shared_ptr<objects::Demon> GenerateDemon(
-        const std::shared_ptr<objects::MiDevilData>& demonData);
+        const std::shared_ptr<objects::MiDevilData>& demonData,
+        uint16_t familiarity = 0);
 
     /**
      * Get a demon's familiarity rank from their current familiarity points.
@@ -479,6 +493,17 @@ public:
     void UpdateFamiliarity(const std::shared_ptr<
         channel::ChannelClientConnection>& client, int32_t familiarity,
         bool isAdjust = false, bool sendPacket = true);
+
+    /**
+     * Update the current partner demon's soul points.
+     * @param client Pointer to the client connection
+     * @param points Set or adjusted soul points to update the demon with
+     * @param isAdjust true if the points value should be added
+     *  to the current value, false if it should replace the curent value
+     */
+    void UpdateSoulPoints(const std::shared_ptr<
+        channel::ChannelClientConnection>& client, int32_t points,
+        bool isAdjust = false);
 
     /**
      * Update the client's character or demon's experience and level
@@ -670,6 +695,13 @@ public:
      */
     void SendMaterials(const std::shared_ptr<
         ChannelClientConnection>& client, std::set<uint32_t> updates = {});
+
+    /**
+     * Send the client character's demonic compendium list
+     * @param client Pointer to the client connection
+     */
+    void SendDevilBook(const std::shared_ptr<
+        ChannelClientConnection>& client);
 
     /**
      * Update the status effects assigned directly on a character or demon

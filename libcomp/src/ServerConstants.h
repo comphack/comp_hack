@@ -95,8 +95,26 @@ struct Data
     /// Item ID of item type: Balm of Life (反魂香)
     uint32_t ITEM_BALM_OF_LIFE;
 
+    /// Item ID of item type: Kreuz (クロイツ)
+    uint32_t ITEM_KREUZ;
+
+    /// Item ID of item type: Rakutavi's Bloodstone (ラクタヴィの血石)
+    uint32_t ITEM_RBLOODSTONE;
+
+    /// Menu ID of the demon fusion (kreuz) process
+    uint32_t MENU_FUSION_KZ;
+
+    /// Menu ID of the Tri-Fusion process
+    uint32_t MENU_TRIFUSION;
+
+    /// Menu ID of the Tri-Fusion (solo) process
+    uint32_t MENU_TRIFUSION_KZ;
+
     /// Function ID of clan formation item skills
     uint16_t SKILL_CLAN_FORM;
+
+    /// Function ID for the demonic compendium add skill
+    uint16_t SKILL_DCM;
 
     /// Function ID of equipment changing skills
     uint16_t SKILL_EQUIP_ITEM;
@@ -137,6 +155,12 @@ struct Data
     /// Status effect ID of summon sync level 3
     uint32_t STATUS_SUMMON_SYNC_3;
 
+    /// Valuable ID of the demonic compendium V1
+    uint16_t VALUABLE_DEVIL_BOOK_V1;
+
+    /// Valuable ID of the demonic compendium V2
+    uint16_t VALUABLE_DEVIL_BOOK_V2;
+
     /// Valuable ID of the material tank that stores disassembled items
     uint16_t VALUABLE_MATERIAL_TANK;
 
@@ -148,6 +172,10 @@ struct Data
 
     /// Array of skill IDs gained at clan levels 1-10
     std::array<std::set<uint32_t>, 10> CLAN_LEVEL_SKILLS;
+
+    /// Map of the number of entries in the compendium required to gain the
+    /// specified tokusei IDs
+    std::unordered_map<uint16_t, std::set<int32_t>> DEMON_BOOK_BONUS;
 
     /// Item IDs of demon box rental tickets to their corresponding day lengths
     std::unordered_map<uint32_t, uint32_t> DEPO_MAP_DEMON;
@@ -171,6 +199,17 @@ struct Data
 
     /// Synth skill IDs for demon crystallization, tarot enchant and soul enchant
     std::array<uint32_t, 3> SYNTH_SKILLS;
+
+    /// Level ranges to use for TriFusion of 3 "dark" family demons
+    std::list<std::pair<uint8_t, uint32_t>> TRIFUSION_SPECIAL_DARK;
+
+    /// Set of dual elemental TriFusion special results listed by the two
+    /// involved elemental types, then up to 3 valid races for the third demon
+    /// and ending with the resulting demon type
+    std::array<std::array<uint32_t, 6>, 6> TRIFUSION_SPECIAL_ELEMENTAL;
+
+    /// Item IDs that allow creation of VA items from a normal one
+    std::set<uint32_t> VA_ADD_ITEM;
 };
 
 public:

@@ -42,6 +42,8 @@
             <value>CRYSTALLIZE</value>
             <value>ENCHANT_TAROT</value>
             <value>ENCHANT_SOUL</value>
+            <value>TRIFUSION_HOST</value>
+            <value>TRIFUSION_GUEST</value>
         </member>
         <member type="EntityStateObject*" name="OtherCharacterState"
             nulldefault="true"/>
@@ -49,6 +51,16 @@
         <member type="bool" name="Finished"/>
         <member type="array" name="Items" size="30">
             <element type="Item*"/>
+        </member>
+    </object>
+    <object name="TriFusionHostSession" baseobject="PlayerExchangeSession"
+        persistent="false">
+        <member type="enum" name="Type" inherited="true" default="TRIFUSION_HOST"/>
+        <member type="array" name="Demons" size="3">
+            <element type="Demon*"/>
+        </member>
+        <member type="list" name="Guests">
+            <element type="EntityStateObject*"/>
         </member>
     </object>
 </objgen>

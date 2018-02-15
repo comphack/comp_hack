@@ -107,27 +107,6 @@ namespace libcomp
 
         return *this;
     }
-
-    template<>
-    ScriptEngine& ScriptEngine::Using<ActiveEntityStateImp<objects::Demon>>()
-    {
-        if(!BindingExists("DemonState", true))
-        {
-            Using<ActiveEntityState>();
-            Using<objects::Demon>();
-
-            Sqrat::DerivedClass<ActiveEntityStateImp<objects::Demon>,
-                ActiveEntityState> binding(mVM, "DemonState");
-            binding
-                .Func<std::shared_ptr<objects::Demon>
-                    (ActiveEntityStateImp<objects::Demon>::*)()>(
-                    "GetEntity", &ActiveEntityStateImp<objects::Demon>::GetEntity);
-
-            Bind<ActiveEntityStateImp<objects::Demon>>("DemonState", binding);
-        }
-
-        return *this;
-    }
 }
 
 ActiveEntityState::ActiveEntityState() : mCurrentZone(0),

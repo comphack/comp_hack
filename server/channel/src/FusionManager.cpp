@@ -1,0 +1,1400 @@
+/**
+ * @file server/channel/src/FusionManager.cpp
+ * @ingroup channel
+ *
+ * @author HACKfrost
+ *
+ * @brief
+ *
+ * This file is part of the Channel Server (channel).
+ *
+ * Copyright (C) 2012-2017 COMP_hack Team <compomega@tutanota.com>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as
+ * published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#include "FusionManager.h"
+
+// libcomp Includes
+#include <Log.h>
+#include <Packet.h>
+#include <PacketCodes.h>
+#include <Randomizer.h>
+#include <ServerConstants.h>
+
+// Standard C++11 Includes
+#include <math.h>
+
+// object Includes
+#include <Account.h>
+#include <Character.h>
+#include <CharacterProgress.h>
+#include <Demon.h>
+#include <DemonBox.h>
+#include <InheritedSkill.h>
+#include <Item.h>
+#include <ItemBox.h>
+#include <MiAcquisitionData.h>
+#include <MiDCategoryData.h>
+#include <MiDevilCrystalData.h>
+#include <MiDevilData.h>
+#include <MiEnchantData.h>
+#include <MiGrowthData.h>
+#include <MiNPCBasicData.h>
+#include <MiSkillData.h>
+#include <MiTriUnionSpecialData.h>
+#include <MiUnionData.h>
+#include <TriFusionHostSession.h>
+
+// channel Includes
+#include "ChannelServer.h"
+#include "FusionTables.h"
+
+using namespace channel;
+
+FusionManager::FusionManager(const std::weak_ptr<
+    ChannelServer>& server) : mServer(server)
+{
+}
+
+FusionManager::~FusionManager()
+{
+}
+
+bool FusionManager::HandleFusion(
+    const std::shared_ptr<ChannelClientConnection>& client,
+    int64_t demonID1, int64_t demonID2, uint32_t costItemType)
+{
+    std::shared_ptr<objects::Demon> resultDemon;
+    int8_t result = ProcessFusion(client, demonID1, demonID2, -1,
+        costItemType, resultDemon);
+
+    libcomp::Packet reply;
+    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_DEMON_FUSION);
+    reply.WriteS32Little(result == 0 ? 0 : 1);
+    reply.WriteU32Little(resultDemon ? resultDemon->GetType() : 0);
+
+    client->SendPacket(reply);
+
+    return result == 0;
+}
+
+bool FusionManager::HandleTriFusion(
+    const std::shared_ptr<ChannelClientConnection>& client,
+    int64_t demonID1, int64_t demonID2, int64_t demonID3, bool soloFusion)
+{
+    // Pull the demons involved local for use in notifications as they will
+    // be deleted upon success
+    auto state = client->GetClientState();
+    auto demon1 = std::dynamic_pointer_cast<objects::Demon>(
+        libcomp::PersistentObject::GetObjectByUUID(state->GetObjectUUID(demonID1)));
+    auto demon2 = std::dynamic_pointer_cast<objects::Demon>(
+        libcomp::PersistentObject::GetObjectByUUID(state->GetObjectUUID(demonID2)));
+    auto demon3 = std::dynamic_pointer_cast<objects::Demon>(
+        libcomp::PersistentObject::GetObjectByUUID(state->GetObjectUUID(demonID3)));
+
+    auto server = mServer.lock();
+    auto managerConnection = server->GetManagerConnection();
+
+    std::unordered_map<std::shared_ptr<objects::Demon>,
+        std::shared_ptr<ChannelClientConnection>> dClientMap;
+    for(auto demon : { demon1, demon2, demon3 })
+    {
+        if(demon)
+        {
+            auto dBox = demon->GetDemonBox().Get();
+            auto account = dBox->GetAccount().Get();
+            auto dClient = managerConnection->GetClientConnection(
+                account->GetUsername());
+            if(dClient)
+            {
+                dClientMap[demon] = dClient;
+            }
+        }
+    }
+
+    uint32_t costItemType = soloFusion
+        ? SVR_CONST.ITEM_KREUZ : SVR_CONST.ITEM_MACCA;
+
+    std::shared_ptr<objects::Demon> resultDemon;
+    int8_t result = ProcessFusion(client, demonID1, demonID2, demonID3,
+        costItemType, resultDemon);
+
+    if(soloFusion)
+    {
+        libcomp::Packet reply;
+        reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_TRIFUSION_SOLO);
+        reply.WriteS8(result == 0 ? 0 : 1);
+        reply.WriteU32Little(resultDemon ? resultDemon->GetType() : 0);
+
+        client->SendPacket(reply);
+    }
+    else
+    {
+        auto cState = state->GetCharacterState();
+        auto tfSession = std::dynamic_pointer_cast<
+            objects::TriFusionHostSession>(state->GetExchangeSession());
+
+        if(!tfSession)
+        {
+            // Weird but not an error
+            return true;
+        }
+
+        std::set<int32_t> participantIDs;
+        participantIDs.insert(tfSession->GetSourceEntityID());
+        for(auto pState : tfSession->GetGuests())
+        {
+            participantIDs.insert(pState->GetEntityID());
+        }
+
+        std::list<std::shared_ptr<ChannelClientConnection>> pClients;
+        for(int32_t pID : participantIDs)
+        {
+            auto pClient = managerConnection->GetEntityClient(pID,
+                false);
+            if(pClient)
+            {
+                pClients.push_back(pClient);
+            }
+        }
+
+        libcomp::Packet notify;
+        notify.WritePacketCode(ChannelToClientPacketCode_t::PACKET_TRIFUSION);
+        notify.WriteS8(result == 0 ? 0 : 1);
+        notify.WriteU32Little(result == 0 ? resultDemon->GetType() : 0);
+        notify.WriteU32Little(static_cast<uint32_t>(-1));   // Unknown
+
+        ChannelClientConnection::BroadcastPacket(pClients, notify);
+
+        if(result == 0)
+        {
+            // Handle crystals and rewards
+            auto characterManager = server->GetCharacterManager();
+            auto definitionManager = server->GetDefinitionManager();
+
+            std::list<uint16_t> updatedSourceSlots;
+            std::unordered_map<std::shared_ptr<ChannelClientConnection>,
+                std::set<size_t>> freeSlots;
+            std::unordered_map<std::shared_ptr<ChannelClientConnection>,
+                std::unordered_map<int8_t, std::shared_ptr<objects::Item>>> newItemMap;
+            for(auto pClient : pClients)
+            {
+                auto pState = pClient->GetClientState();
+                freeSlots[pClient] = characterManager->GetFreeSlots(pClient);
+
+                auto exchange = pState->GetExchangeSession();
+
+                if(!exchange) continue;
+
+                for(size_t i = 0; i < 4; i++)
+                {
+                    // Add the items to the first available slots (do not combine)
+                    auto item = exchange->GetItems(i).Get();
+                    if(item && freeSlots[pClient].size() > 0)
+                    {
+                        size_t slot = *freeSlots[pClient].begin();
+                        freeSlots[pClient].erase(slot);
+
+                        updatedSourceSlots.push_back((uint16_t)item->GetBoxSlot());
+                        newItemMap[pClient][(int8_t)slot] = item;
+                    }
+                }
+            }
+
+            for(auto dPair : dClientMap)
+            {
+                // Every player has a flat 10% chance of getting their
+                // demon back as a crystal
+                auto pClient = dPair.second;
+                auto dEnchantData = definitionManager->GetEnchantDataByDemonID(
+                    dPair.first->GetType());
+                if(freeSlots[pClient].size() > 0 && dEnchantData && RNG(int16_t, 1, 10) == 1)
+                {
+                    uint32_t crystalItem = dEnchantData->GetDevilCrystal()
+                        ->GetItemID();
+                    if(crystalItem)
+                    {
+                        auto crystal = characterManager->GenerateItem(crystalItem, 1);
+
+                        size_t slot = *freeSlots[pClient].begin();
+                        freeSlots[pClient].erase(slot);
+                        newItemMap[pClient][(int8_t)slot] = crystal;
+
+                        notify.Clear();
+                        notify.WritePacketCode(
+                            ChannelToClientPacketCode_t::PACKET_TRIFUSION_DEMON_CRYSTAL);
+                        notify.WriteU32Little(crystalItem);
+
+                        pClient->QueuePacket(notify);
+                    }
+                }
+            }
+
+            if(newItemMap.size() > 0)
+            {
+                // Items updated
+                std::unordered_map<std::shared_ptr<ChannelClientConnection>,
+                    std::list<uint16_t>> updatedSlots;
+
+                auto changes = libcomp::DatabaseChangeSet::Create(
+                    state->GetAccountUID());
+                for(auto clientPair : freeSlots)
+                {
+                    auto pClient = clientPair.first;
+
+                    // Skip the source first
+                    if(pClient == client)
+                    {
+                        updatedSlots[pClient] = updatedSourceSlots;
+                    }
+
+                    if(newItemMap[pClient].size() > 0)
+                    {
+                        auto pCharacter = pClient->GetClientState()
+                            ->GetCharacterState()->GetEntity();
+                        auto targetBox = pCharacter->GetItemBoxes(0).Get();
+                        for(auto itemPair : newItemMap[pClient])
+                        {
+                            auto item = itemPair.second;
+                            auto sourceBox = item->GetItemBox().Get();
+                            if(sourceBox)
+                            {
+                                characterManager->UnequipItem(client, item);
+                                sourceBox->SetItems((size_t)item->GetBoxSlot(), NULLUUID);
+                                changes->Update(item);
+                                changes->Update(sourceBox);
+                            }
+                            else
+                            {
+                                changes->Insert(item);
+                            }
+
+                            changes->Update(targetBox);
+
+                            item->SetBoxSlot(itemPair.first);
+                            item->SetItemBox(targetBox);
+                            targetBox->SetItems((size_t)itemPair.first, item);
+                            updatedSlots[pClient].push_back((uint16_t)itemPair.first);
+                        }
+                    }
+                }
+
+                if(!server->GetWorldDatabase()->ProcessChangeSet(changes))
+                {
+                    LOG_ERROR(libcomp::String("TriFusion items failed to save for"
+                        " account '%1'. Disconnecting all participants to avoid"
+                        " additional errors.\n").Arg(state->GetAccountUID().ToString()));
+                    for(auto pClient : pClients)
+                    {
+                        pClient->GetClientState()->SetLogoutSave(false);
+                        pClient->Close();
+                    }
+
+                    return false;
+                }
+
+                // Now send the updates
+                for(auto updatePair : updatedSlots)
+                {
+                    auto pCharacter = updatePair.first->GetClientState()
+                        ->GetCharacterState()->GetEntity();
+                    auto box = pCharacter->GetItemBoxes(0).Get();
+                    characterManager->SendItemBoxData(updatePair.first, box,
+                        updatePair.second);
+                }
+            }
+
+            // Update the demons available in case another fusion is chained
+            auto cs = resultDemon->GetCoreStats().Get();
+
+            std::unordered_map<uint32_t, std::shared_ptr<objects::Demon>> dMap;
+
+            notify.Clear();
+            notify.WritePacketCode(
+                ChannelToClientPacketCode_t::PACKET_TRIFUSION_UPDATE);
+            notify.WriteS32Little(cState->GetEntityID());
+
+            dMap[notify.Size()] = resultDemon;
+            notify.WriteS64Little(0);
+
+            notify.WriteU32Little(resultDemon->GetType());
+            notify.WriteS8(cs ? cs->GetLevel() : 0);
+            notify.WriteU16Little(resultDemon->GetFamiliarity());
+
+            std::list<uint32_t> skillIDs;
+            for(uint32_t skillID : resultDemon->GetLearnedSkills())
+            {
+                if(skillID != 0)
+                {
+                    skillIDs.push_back(skillID);
+                }
+            }
+
+            notify.WriteS8((int8_t)skillIDs.size());
+            for(uint32_t skillID : skillIDs)
+            {
+                notify.WriteU32Little(skillID);
+            }
+
+            // Write removed demons
+            for(auto d : { demon1, demon2, demon3 })
+            {
+                auto dBox = d->GetDemonBox().Get();
+                auto c = dBox ? dBox->GetCharacter().Get() : nullptr;
+
+                int32_t ownerEntityID = 0;
+                for(auto pClient : pClients)
+                {
+                    auto pCState = pClient->GetClientState()->GetCharacterState();
+                    if(pCState->GetEntity() == c)
+                    {
+                        ownerEntityID = pCState->GetEntityID();
+                    }
+                }
+
+                notify.WriteS32Little(ownerEntityID);
+                dMap[notify.Size()] = d;
+                notify.WriteS64Little(0);
+            }
+
+            // Create a copy for each participant with local object IDs
+            for(auto pClient : pClients)
+            {
+                auto pState = pClient->GetClientState();
+
+                libcomp::Packet nCopy(notify);
+                for(auto dPair : dMap)
+                {
+                    auto d = dPair.second;
+
+                    int64_t objID = pState->GetObjectID(d->GetUUID());
+                    if(objID == 0)
+                    {
+                        objID = server->GetNextObjectID();
+                        pState->SetObjectID(d->GetUUID(), objID);
+                    }
+
+                    nCopy.Seek(dPair.first);
+                    nCopy.WriteS64Little(objID);
+                }
+
+                pClient->SendPacket(nCopy);
+            }
+        }
+    }
+
+    return result == 0;
+}
+
+uint32_t FusionManager::GetResultDemon(const std::shared_ptr<
+    ChannelClientConnection>& client, int64_t demonID1, int64_t demonID2,
+    int64_t demonID3)
+{
+    bool triFusion = demonID3 > 0;
+
+    auto state = client->GetClientState();
+    auto cState = state->GetCharacterState();
+    auto dState = state->GetDemonState();
+    auto character = cState->GetEntity();
+
+    auto server = mServer.lock();
+    auto characterManager = server->GetCharacterManager();
+    auto definitionManager = server->GetDefinitionManager();
+
+    auto demon1 = std::dynamic_pointer_cast<objects::Demon>(
+        libcomp::PersistentObject::GetObjectByUUID(state->GetObjectUUID(demonID1)));
+    auto demon2 = std::dynamic_pointer_cast<objects::Demon>(
+        libcomp::PersistentObject::GetObjectByUUID(state->GetObjectUUID(demonID2)));
+    auto demon3 = demonID3 > 0 ? std::dynamic_pointer_cast<objects::Demon>(
+        libcomp::PersistentObject::GetObjectByUUID(state->GetObjectUUID(demonID3)))
+        : nullptr;
+
+    // Fail if any demon is missing or the same one is supplied twice
+    if(!demon1 || !demon2 || (triFusion && !demon3) || demon1 == demon2
+        || demon1 == demon3 || demon2 == demon3)
+    {
+        return 0;
+    }
+
+    uint32_t demonType1 = demon1->GetType();
+    uint32_t demonType2 = demon2->GetType();
+    uint32_t demonType3 = demon3 ? demon3->GetType() : 0;
+
+    auto def1 = std::pair<uint8_t, std::shared_ptr<objects::MiDevilData>>(
+            (uint8_t)demon1->GetCoreStats()->GetLevel(),
+            definitionManager->GetDevilData(demonType1));
+    auto def2 = std::pair<uint8_t, std::shared_ptr<objects::MiDevilData>>(
+            (uint8_t)demon2->GetCoreStats()->GetLevel(),
+            definitionManager->GetDevilData(demonType2));
+    auto def3 = std::pair<uint8_t, std::shared_ptr<objects::MiDevilData>>(
+            demon3 ? (uint8_t)demon3->GetCoreStats()->GetLevel() : 0,
+            demonType3 ? definitionManager->GetDevilData(demonType3) : nullptr);
+    if(!def1.second || !def2.second || (triFusion && !def3.second))
+    {
+        return 0;
+    }
+
+    uint32_t baseDemonType1 = def1.second->GetUnionData()->GetBaseDemonID();
+    uint32_t baseDemonType2 = def2.second->GetUnionData()->GetBaseDemonID();
+    uint32_t baseDemonType3 = def3.second
+        ? def3.second->GetUnionData()->GetBaseDemonID() : 0;
+    if(baseDemonType1 == baseDemonType2 || baseDemonType1 == baseDemonType3 ||
+        baseDemonType2 == baseDemonType3)
+    {
+        return 0;
+    }
+
+    auto specialFusions = definitionManager->GetTriUnionSpecialData(demonType1);
+    for(auto special : specialFusions)
+    {
+        // Map of source ID to its "variant allowed" value
+        std::unordered_map<uint32_t, bool> sourceMap;
+        sourceMap[special->GetSourceID1()] = special->GetVariant1Allowed() == 1;
+        sourceMap[special->GetSourceID2()] = special->GetVariant2Allowed() == 1;
+        sourceMap[special->GetSourceID3()] = special->GetVariant3Allowed() == 1;
+
+        bool match = true;
+        for(auto sourcePair : sourceMap)
+        {
+            uint32_t sourceID = sourcePair.first;
+            if(!sourceID) continue;
+
+            if(sourcePair.second)
+            {
+                auto specialDef = definitionManager->GetDevilData(sourceID);
+                auto sourceBaseDemonType = specialDef->GetUnionData()
+                    ->GetBaseDemonID();
+                if(baseDemonType1 != sourceBaseDemonType &&
+                    baseDemonType2 != sourceBaseDemonType &&
+                    baseDemonType3 != sourceBaseDemonType)
+                {
+                    match = false;
+                    break;
+                }
+            }
+            else if(sourceID != demonType1 && sourceID != demonType2 &&
+                sourceID != demonType3)
+            {
+                match = false;
+                break;
+            }
+        }
+
+        if(match && special->GetPluginID() > 0)
+        {
+            // Check that the player has the plugin
+            size_t index;
+            uint8_t shiftVal;
+            characterManager->ConvertIDToMaskValues(
+                (uint16_t)special->GetPluginID(), index, shiftVal);
+
+            uint8_t indexVal = character->GetProgress()->GetPlugins(index);
+
+            match = (indexVal & shiftVal) != 0;
+        }
+
+        if(match)
+        {
+            return special->GetResultID();
+        }
+    }
+
+    const uint8_t eRace = (uint8_t)objects::MiDCategoryData::Race_t::ELEMENTAL;
+
+    if(triFusion)
+    {
+        // Sort by level and priority for logic purposes
+        std::list<std::pair<uint8_t,
+            std::shared_ptr<objects::MiDevilData>>> defs = { def1, def2, def3 };
+        defs.sort([](auto& a, auto& b)
+            {
+                if(a.second->GetGrowth()->GetBaseLevel() !=
+                    b.second->GetGrowth()->GetBaseLevel())
+                {
+                    // Higher base level first
+                    return a.second->GetGrowth()->GetBaseLevel() >
+                        b.second->GetGrowth()->GetBaseLevel();
+                }
+                else
+                {
+                    // Higher priority first
+                    uint8_t ra = (uint8_t)a.second->GetCategory()->GetRace();
+                    uint8_t rb = (uint8_t)b.second->GetCategory()->GetRace();
+
+                    size_t pa = 0;
+                    size_t pb = 0;
+
+                    for(size_t i = 0; i < 34; i++)
+                    {
+                        if(TRIFUSION_RACE_PRIORITY[i] == ra)
+                        {
+                            break;
+                        }
+
+                        pa++;
+                    }
+
+                    for(size_t i = 0; i < 34; i++)
+                    {
+                        if(TRIFUSION_RACE_PRIORITY[i] == rb)
+                        {
+                            break;
+                        }
+
+                        pb++;
+                    }
+
+                    return pa < pb;
+                }
+            });
+
+        def1 = defs.front();
+        defs.pop_front();
+        def2 = defs.front();
+        defs.pop_front();
+        def3 = defs.front();
+        defs.pop_front();
+
+        uint8_t f1 = (uint8_t)def1.second->GetCategory()->GetFamily();
+        uint8_t f2 = (uint8_t)def2.second->GetCategory()->GetFamily();
+        uint8_t f3 = (uint8_t)def3.second->GetCategory()->GetFamily();
+
+        uint8_t race1 = (uint8_t)def1.second->GetCategory()->GetRace();
+        uint8_t race2 = (uint8_t)def2.second->GetCategory()->GetRace();
+        uint8_t race3 = (uint8_t)def3.second->GetCategory()->GetRace();
+
+        std::shared_ptr<objects::MiDevilData> resultDef;
+
+        const uint8_t eFam = (uint8_t)objects::MiDCategoryData::Family_t::ELEMENTAL;
+        const uint8_t gFam = (uint8_t)objects::MiDCategoryData::Family_t::GOD;
+        const uint8_t dRace1 = (uint8_t)objects::MiDCategoryData::Race_t::HAUNT;
+        const uint8_t dRace2 = (uint8_t)objects::MiDCategoryData::Race_t::FOUL;
+
+        uint8_t darkCount = (uint8_t)((race1 == dRace1 || race1 == dRace2 ? 1 : 0) +
+            (race2 == dRace1 || race2 == dRace2 ? 1 : 0) +
+            (race3 == dRace1 || race3 == dRace2 ? 1 : 0));
+        uint8_t elementalCount = (uint8_t)((f1 == eFam ? 1 : 0) +
+            (f2 == eFam ? 1 : 0) + (f3 == eFam ? 1 : 0));
+        uint8_t godCount = (uint8_t)((f1 == gFam ? 1 : 0) +
+            (f2 == gFam ? 1 : 0) + (f3 == gFam ? 1 : 0));
+        if(darkCount > 0)
+        {
+            if(darkCount == 1)
+            {
+                // Fuse non-dark demons then fuse with dark
+                auto otherDef1 = (race1 != dRace1 && race1 != dRace2) ? def1 : def2;
+                auto otherDef2 = (race3 != dRace1 && race3 != dRace2) ? def3 : def2;
+                auto darkDef = (race1 == dRace1 || race1 == dRace2)
+                                ? def1 : ((race2 == dRace1 || race2 == dRace2)
+                                    ? def2 : def3);
+
+                bool found1, found2;
+                size_t race1Idx = GetRaceIndex((uint8_t)otherDef1.second
+                    ->GetCategory()->GetRace(), found1);
+                size_t race2Idx = GetRaceIndex((uint8_t)otherDef2.second
+                    ->GetCategory()->GetRace(), found2);
+
+                if(!found1 || !found2)
+                {
+                    LOG_ERROR("Invalid single dark, dual fusion race"
+                        " encountered for trifusion\n");
+                    return 0;
+                }
+
+                uint8_t resultRace = FUSION_RACE_MAP[race1Idx + 1][race2Idx];
+                resultDef = GetResultDemon(resultRace,
+                    GetAdjustedLevelSum(otherDef1.first, otherDef2.first));
+
+                race1Idx = GetRaceIndex(resultRace, found1);
+                race2Idx = GetRaceIndex((uint8_t)darkDef.second
+                    ->GetCategory()->GetRace(), found2);
+
+                if(!found1 || !found2)
+                {
+                    LOG_ERROR("Invalid single dark, 2nd dual fusion race"
+                        " encountered for trifusion\n");
+                    return 0;
+                }
+                else if(!resultDef)
+                {
+                    return 0;
+                }
+
+                resultRace = FUSION_RACE_MAP[race1Idx + 1][race2Idx];
+                resultDef = GetResultDemon(resultRace,
+                    GetAdjustedLevelSum(darkDef.first,
+                        resultDef->GetGrowth()->GetBaseLevel()));
+            }
+            else if(darkCount == 2)
+            {
+                // Fuse non-dark demon with top priority dark demon, then
+                // fuse with the low priority dark demon
+                auto darkDef1 = (race1 == dRace1 || race1 == dRace2) ? def1 : def2;
+                auto darkDef2 = (race3 == dRace1 || race3 == dRace2) ? def3 : def2;
+                auto otherDef = (race1 != dRace1 && race1 != dRace2)
+                                ? def1 : ((race2 != dRace1 && race2 != dRace2)
+                                    ? def2 : def3);
+
+                bool found1, found2;
+                size_t race1Idx = GetRaceIndex((uint8_t)darkDef1.second
+                    ->GetCategory()->GetRace(), found1);
+                size_t race2Idx = GetRaceIndex((uint8_t)otherDef.second
+                    ->GetCategory()->GetRace(), found2);
+
+                if(!found1 || !found2)
+                {
+                    LOG_ERROR("Invalid double dark, dual fusion race"
+                        " encountered for trifusion\n");
+                    return 0;
+                }
+
+                uint8_t resultRace = FUSION_RACE_MAP[race1Idx + 1][race2Idx];
+                resultDef = GetResultDemon(resultRace,
+                    GetAdjustedLevelSum(darkDef1.first, otherDef.first));
+
+                race1Idx = GetRaceIndex(resultRace, found1);
+                race2Idx = GetRaceIndex((uint8_t)darkDef2.second
+                    ->GetCategory()->GetRace(), found2);
+
+                if(!found1 || !found2 || !resultDef)
+                {
+                    LOG_ERROR("Invalid double dark, 2nd dual fusion race"
+                        " encountered for trifusion\n");
+                    return 0;
+                }
+
+                resultRace = FUSION_RACE_MAP[race1Idx + 1][race2Idx];
+                resultDef = GetResultDemon(resultRace,
+                    GetAdjustedLevelSum(darkDef2.first,
+                    resultDef->GetGrowth()->GetBaseLevel()));
+            }
+            else
+            {
+                // Get corrected level sum and return explicit level
+                // range demon
+                uint16_t levelSum = (uint16_t)(demon1->GetCoreStats()->GetLevel() +
+                    demon2->GetCoreStats()->GetLevel() +
+                    demon3->GetCoreStats()->GetLevel());
+
+                uint32_t resultID = SVR_CONST.TRIFUSION_SPECIAL_DARK.front().second;
+                for(auto pair : SVR_CONST.TRIFUSION_SPECIAL_DARK)
+                {
+                    if((uint16_t)pair.first > levelSum)
+                    {
+                        break;
+                    }
+
+                    resultID = pair.second;
+                }
+
+                return resultID;
+            }
+        }
+        else if(elementalCount == 3)
+        {
+            LOG_ERROR("Attempted to fuse 3 elementals\n");
+            return 0;
+        }
+        else if(elementalCount == 2)
+        {
+            // Special logic fusion based on 2 elemental types and
+            // a set of race types
+            uint32_t otherRace = 0;
+            uint32_t elemType1 = 0, elemType2 = 0;
+            if(f1 != eFam)
+            {
+                otherRace = (uint32_t)def1.second->GetCategory()->GetRace();
+                elemType1 = def2.second->GetBasic()->GetID();
+                elemType2 = def3.second->GetBasic()->GetID();
+            }
+            else if(f2 != eFam)
+            {
+                elemType1 = def1.second->GetBasic()->GetID();
+                otherRace = (uint32_t)def2.second->GetCategory()->GetRace();
+                elemType2 = def3.second->GetBasic()->GetID();
+            }
+            else
+            {
+                elemType1 = def1.second->GetBasic()->GetID();
+                elemType2 = def2.second->GetBasic()->GetID();
+                otherRace = (uint32_t)def3.second->GetCategory()->GetRace();
+            }
+
+            for(auto elemSpecial : SVR_CONST.TRIFUSION_SPECIAL_ELEMENTAL)
+            {
+                // Check explicit elemental types
+                if((elemSpecial[0] == elemType1 && elemSpecial[1] == elemType2) ||
+                    (elemSpecial[0] == elemType2 && elemSpecial[1] == elemType1))
+                {
+                    // Check valid races
+                    if(otherRace == elemSpecial[2] ||
+                        otherRace == elemSpecial[3] ||
+                        otherRace == elemSpecial[4])
+                    {
+                        // Match found
+                        return elemSpecial[5];
+                    }
+                }
+            }
+
+            LOG_ERROR("Invalid double elemental trifusion encountered\n");
+            return 0;
+        }
+        else if(elementalCount == 1)
+        {
+            // Fuse the non-elementals and scale using elemental level too
+            auto otherDef1 = f1 != eFam ? def1 : def2;
+            auto otherDef2 = f3 != eFam ? def3 : def2;
+            auto elemDef = f1 == eFam ? def1 : (f2 == eFam ? def2 : def3);
+
+            bool found1, found2;
+            size_t race1Idx = GetRaceIndex((uint8_t)otherDef1.second
+                ->GetCategory()->GetRace(), found1);
+            size_t race2Idx = GetRaceIndex((uint8_t)otherDef2.second
+                ->GetCategory()->GetRace(), found2);
+
+            if(!found1 || !found2)
+            {
+                LOG_ERROR("Invalid single element, dual fusion race"
+                    " encountered for trifusion\n");
+                return 0;
+            }
+
+            uint8_t resultRace = FUSION_RACE_MAP[race1Idx + 1][race2Idx];
+            resultDef = GetResultDemon(resultRace,
+                GetAdjustedLevelSum(otherDef1.first, otherDef2.first));
+            if(resultRace == eRace)
+            {
+                LOG_ERROR("Single element, dual fusion race for"
+                    " trifusion resulted in a second elemental\n");
+                return 0;
+            }
+
+            if(resultDef)
+            {
+                resultDef = GetResultDemon(resultRace,
+                    GetAdjustedLevelSum(elemDef.first,
+                        resultDef->GetGrowth()->GetBaseLevel()));
+            }
+        }
+        else
+        {
+            // Perform normal TriFusion
+            int8_t finalLevelAdjust = 0;
+
+            // Existence of a god type boosts the fusion level by 4
+            if(godCount > 0)
+            {
+                finalLevelAdjust = 4;
+            }
+
+            // All neutral demons lowers level by 4
+            int16_t lnc1 = def1.second->GetBasic()->GetLNC();
+            int16_t lnc2 = def2.second->GetBasic()->GetLNC();
+            int16_t lnc3 = def3.second->GetBasic()->GetLNC();
+            if((lnc1 < 5000 && lnc1 > -5000) &&
+                (lnc2 < 5000 && lnc2 > -5000) &&
+                (lnc3 < 5000 && lnc3 > -5000))
+            {
+                finalLevelAdjust = (int8_t)(finalLevelAdjust - 4);
+            }
+
+            uint16_t levelSum = (uint16_t)(def1.first + def2.first + def3.first);
+            int8_t adjustedLevelSum = (int8_t)(((float)levelSum / 3.f) +
+                1.f + (float)finalLevelAdjust);
+
+            race1 = (uint8_t)def1.second->GetCategory()->GetRace();
+            race2 = (uint8_t)def2.second->GetCategory()->GetRace();
+            race3 = (uint8_t)def3.second->GetCategory()->GetRace();
+
+            // Apply special logic if the top 2 races or families match
+            if(race1 == race2 || f1 == f2)
+            {
+                bool found1, found2, found3;
+                size_t race1Idx = GetRaceIndex(race1, found1);
+                size_t race2Idx = GetRaceIndex(race2, found2);
+                size_t race3Idx = GetRaceIndex(race3, found3);
+
+                if(!found1 || !found2 || !found3)
+                {
+                    LOG_ERROR("Invalid dual fusion race"
+                        " encountered for trifusion\n");
+                    return 0;
+                }
+
+                // Perform "nested" fusion with high priority fused
+                // first, then result fused to low priority
+                uint8_t resultRace = FUSION_RACE_MAP[race1Idx + 1][race2Idx];
+                if(resultRace == eRace)
+                {
+                    // Elemental mid-point fusion overrides normal race fusion result
+                    auto elemType = GetElementalType((size_t)(resultRace - 1));
+
+                    uint32_t result = GetElementalFuseResult(elemType,
+                        race3, def3.second->GetBasic()->GetID(), true);
+                    if(result == 0)
+                    {
+                        LOG_ERROR(libcomp::String("Invalid elemental fusion request"
+                            " during TriFusion mid-point fusion: %1, %2, %3\n")
+                            .Arg(demonType1).Arg(demonType2).Arg(demonType3));
+                    }
+
+                    return result;
+                }
+
+                race1Idx = GetRaceIndex(resultRace, found1);
+                if(found1)
+                {
+                    resultRace = FUSION_RACE_MAP[race1Idx + 1][race3Idx];
+                    resultDef = GetResultDemon(resultRace, adjustedLevelSum);
+                }
+                else
+                {
+                    LOG_ERROR("Invalid nested dual fusion race"
+                        " encountered for trifusion\n");
+                    return 0;
+                }
+            }
+            else if(f1 >= 2 && f1 <= 9 && f2 >= 2 && f2 <= 9 &&
+                f3 >= 2 && f3 <= 9)
+            {
+                // Top 2 races and families do not match and no special
+                // conditions found, use lookup table
+                size_t fIdx1 = (size_t)((f1 > f2 ? f2 : f1) - 2);
+                size_t fIdx2 = (size_t)((f1 > f2 ? f1 : f2) - 3);
+                size_t fIdx3 = (size_t)(f3 - 2);
+
+                uint8_t resultRace = TRIFUSION_FAMILY_MAP[fIdx1][fIdx2][fIdx3];
+
+                resultDef = GetResultDemon(resultRace, adjustedLevelSum);
+            }
+        }
+
+        return resultDef ? resultDef->GetBasic()->GetID() : 0;
+    }
+
+    // Perform a 2-way standard fusion
+    uint8_t resultRace = 0;
+    uint8_t race1 = (uint8_t)def1.second->GetCategory()->GetRace();
+    uint8_t race2 = (uint8_t)def2.second->GetCategory()->GetRace();
+
+    // Get the race axis mappings from the first map row
+    bool found1, found2;
+    size_t race1Idx = GetRaceIndex(race1, found1);
+    size_t race2Idx = GetRaceIndex(race2, found2);
+
+    if(race1 == eRace || race2 == eRace)
+    {
+        // Elemental source fusion
+
+        if(race1 == race2)
+        {
+            /// @todo: support mitama result fusions
+            LOG_ERROR("Mitama fusion is not supported yet\n");
+            return 0;
+        }
+
+        uint32_t demonType = 0, elementalType = 0;
+        uint8_t race = 0;
+        if(race1 == eRace)
+        {
+            elementalType = baseDemonType1;
+            demonType = baseDemonType2;
+            race = race2;
+        }
+        else
+        {
+            elementalType = baseDemonType2;
+            demonType = baseDemonType1;
+            race = race1;
+        }
+
+        uint32_t result = GetElementalFuseResult(elementalType, race,
+            demonType);
+        if(result == 0)
+        {
+            LOG_ERROR(libcomp::String("Invalid elemental fusion request"
+                " of demon IDs  %1 and %2 received from account: %3\n")
+                .Arg(demonType1).Arg(demonType2)
+                .Arg(state->GetAccountUID().ToString()));
+        }
+
+        return result;
+    }
+    else
+    {
+        if(!found1 || !found2)
+        {
+            LOG_ERROR(libcomp::String("Invalid fusion request of demon IDs"
+                " %1 and %2 received from account: %3\n").Arg(demonType1)
+                .Arg(demonType2).Arg(state->GetAccountUID().ToString()));
+            return 0;
+        }
+
+        resultRace = FUSION_RACE_MAP[(size_t)(race1Idx + 1)][race2Idx];
+        if(resultRace == 0)
+        {
+            LOG_ERROR(libcomp::String("Invalid fusion result of demon IDs"
+                " %1 and %2 requested from account: %3\n").Arg(demonType1)
+                .Arg(demonType2).Arg(state->GetAccountUID().ToString()));
+            return 0;
+        }
+
+        if(race1 == race2)
+        {
+            // Elemental resulting fusion
+            return GetElementalType((size_t)(resultRace - 1));
+        }
+    }
+
+    if(resultRace != 0)
+    {
+        auto resultDef = GetResultDemon(resultRace,
+            GetAdjustedLevelSum((uint8_t)demon1->GetCoreStats()->GetLevel(),
+                (uint8_t)demon2->GetCoreStats()->GetLevel()));
+        return resultDef ? resultDef->GetBasic()->GetID() : 0;
+    }
+
+    return 0;
+}
+
+
+void FusionManager::EndExchange(const std::shared_ptr<
+    channel::ChannelClientConnection>& client)
+{
+    auto state = client->GetClientState();
+    auto exchange = state->GetExchangeSession();
+
+    if(exchange)
+    {
+        auto server = mServer.lock();
+        auto characterManager = server->GetCharacterManager();
+        auto managerConnection = server->GetManagerConnection();
+
+        switch(exchange->GetType())
+        {
+        case objects::PlayerExchangeSession::Type_t::TRIFUSION_GUEST:
+        case objects::PlayerExchangeSession::Type_t::TRIFUSION_HOST:
+            {
+                auto cState = state->GetCharacterState();
+
+                // Notify the whole party in the zone that the player left
+                libcomp::Packet p;
+                p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_TRIFUSION_LEFT);
+                p.WriteS32Little(cState->GetEntityID());
+
+                auto partyClients = managerConnection->GetPartyConnections(client,
+                    true, true);
+
+                ChannelClientConnection::BroadcastPacket(partyClients, p);
+
+                // End the TriFusion for self or everyone
+                libcomp::Packet request;
+                request.WritePacketCode(
+                    ChannelToClientPacketCode_t::PACKET_TRIFUSION_END);
+                request.WriteS8(1);   // Cancelled
+
+                if(exchange->GetType() ==
+                    objects::PlayerExchangeSession::Type_t::TRIFUSION_HOST)
+                {
+                    // End for all
+                    for(auto pClient : partyClients)
+                    {
+                        auto pState = pClient->GetClientState();
+                        auto pExchange = pState->GetExchangeSession();
+                        if(pExchange && pExchange->GetType() ==
+                            objects::PlayerExchangeSession::Type_t::TRIFUSION_GUEST)
+                        {
+                            pState->SetExchangeSession(nullptr);
+                            characterManager->SetStatusIcon(pClient, 0);
+                        }
+                    }
+
+                    ChannelClientConnection::BroadcastPacket(partyClients,
+                        request);
+                }
+                else
+                {
+                    // End for self
+                    client->QueuePacket(request);
+
+                    // Now remove from participants
+                    auto otherCState = std::dynamic_pointer_cast<CharacterState>(
+                        exchange->GetOtherCharacterState());
+                    auto otherClient = otherCState ? managerConnection->GetEntityClient(
+                        otherCState->GetEntityID(), false) : nullptr;
+                    auto otherState = otherClient ? otherClient->GetClientState() : nullptr;
+                    auto tfSession = otherState ? std::dynamic_pointer_cast<
+                        objects::TriFusionHostSession>(otherState->GetExchangeSession())
+                        : nullptr;
+
+                    if(tfSession)
+                    {
+                        for(size_t i = 0; i < tfSession->GuestsCount(); i++)
+                        {
+                            if(tfSession->GetGuests(i) == cState)
+                            {
+                                tfSession->RemoveGuests(i);
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+            break;
+        default:
+            break;
+        }
+
+        state->SetExchangeSession(nullptr);
+        characterManager->SetStatusIcon(client, 0);
+
+        client->FlushOutgoing();
+    }
+}
+
+int8_t FusionManager::ProcessFusion(
+    const std::shared_ptr<ChannelClientConnection>& client, int64_t demonID1,
+    int64_t demonID2, int64_t demonID3, uint32_t costItemType,
+    std::shared_ptr<objects::Demon>& resultDemon)
+{
+    auto state = client->GetClientState();
+
+    auto demon1 = std::dynamic_pointer_cast<objects::Demon>(
+        libcomp::PersistentObject::GetObjectByUUID(state->GetObjectUUID(demonID1)));
+    auto demon2 = std::dynamic_pointer_cast<objects::Demon>(
+        libcomp::PersistentObject::GetObjectByUUID(state->GetObjectUUID(demonID2)));
+    auto demon3 = demonID3 > 0 ? std::dynamic_pointer_cast<objects::Demon>(
+        libcomp::PersistentObject::GetObjectByUUID(state->GetObjectUUID(demonID3)))
+        : nullptr;
+    if(!demon1 || !demon2 || (demonID3 > 0 && !demon3))
+    {
+        return -1;
+    }
+
+    uint32_t resultDemonType = GetResultDemon(client, demonID1, demonID2,
+        demonID3);
+    if(resultDemonType == 0)
+    {
+        return -2;
+    }
+
+    // Result demon identified, check success rate, pay cost and fuse
+    auto cState = state->GetCharacterState();
+    auto character = cState->GetEntity();
+
+    auto server = mServer.lock();
+    auto characterManager = server->GetCharacterManager();
+    auto definitionManager = server->GetDefinitionManager();
+    auto managerConnection = server->GetManagerConnection();
+
+    auto demonData = definitionManager->GetDevilData(resultDemonType);
+    if(costItemType == 0 || costItemType == SVR_CONST.ITEM_MACCA)
+    {
+        /// @todo: calculate macca cost
+    }
+    else if(costItemType == SVR_CONST.ITEM_KREUZ)
+    {
+        /// @todo: calculate kreuz cost
+    }
+    else
+    {
+        LOG_ERROR(libcomp::String("Invalid cost item type supplied"
+            " for demon fusion: %1\n").Arg(resultDemonType));
+        return -3;
+    }
+    
+    std::unordered_map<std::shared_ptr<objects::Demon>,
+        std::shared_ptr<ChannelClientConnection>> dMap;
+    for(auto demon : { demon1, demon2, demon3 })
+    {
+        if(demon)
+        {
+            auto dBox = demon->GetDemonBox().Get();
+            auto account = dBox->GetAccount().Get();
+            auto dClient = managerConnection->GetClientConnection(
+                account->GetUsername());
+            if(dClient)
+            {
+                dMap[demon] = dClient;
+            }
+        }
+    }
+
+    uint8_t baseLevel = demonData->GetGrowth()->GetBaseLevel();
+    uint8_t difficulty = demonData->GetUnionData()->GetFusionDifficulty();
+    double successRate = ceil((140 - (difficulty * 2.5)) +
+        (difficulty - baseLevel * 1.5) + (difficulty * 0.5));
+
+    /// @todo: figure out fusion success adjustments from familiarity
+
+    /// @todo: use/adjust success, then remove this
+    LOG_WARNING(libcomp::String("Success rate: %1\n").Arg(successRate));
+
+    // Calculate familiarity and put either demon back in the COMP
+    // if they're out
+    uint16_t familiarity = 0;
+    for(auto demon : { demon1, demon2, demon3 })
+    {
+        if(demon)
+        {
+            // Add 25% familiarity for double, 20% for triple
+            familiarity = (uint16_t)(familiarity +
+                ((float)demon->GetFamiliarity() * (demon3 ? 0.2f : 0.25f)));
+
+            auto it = dMap.find(demon);
+            if(it != dMap.end())
+            {
+                auto dClient = it->second;
+                auto dState = dClient->GetClientState()->GetDemonState();
+                if(dState->GetEntity() == demon)
+                {
+                    characterManager->StoreDemon(dClient, true, 12);
+                }
+            }
+        }
+    }
+
+    // Create the new demon
+    resultDemon = characterManager->GenerateDemon(demonData,
+        familiarity);
+        
+    auto inheritRestrictions = demonData->GetGrowth()->
+        GetInheritanceRestrictions();
+    std::map<uint32_t, std::shared_ptr<objects::MiSkillData>> inherited;
+    for(auto source : { demon1, demon2, demon3 })
+    {
+        if(source)
+        {
+            for(auto learned : source->GetLearnedSkills())
+            {
+                if(learned == 0) continue;
+
+                auto lData = definitionManager->GetSkillData(learned);
+
+                // Check inheritance flags for valid skills
+                auto r = lData->GetAcquisition()->GetInheritanceRestriction();
+                if((inheritRestrictions & (uint16_t)(1 << r)) == 0) continue;
+
+                inherited[learned] = lData;
+            }
+        }
+    }
+
+    // Remove skills the result demon already knows
+    for(auto skillID : demonData->GetGrowth()->GetSkills())
+    {
+        inherited.erase(skillID);
+    }
+
+    // Correct the COMP
+    auto comp = character->GetCOMP().Get();
+
+    resultDemon->SetDemonBox(comp);
+    resultDemon->SetBoxSlot(demon1->GetBoxSlot());
+    comp->SetDemons((size_t)demon1->GetBoxSlot(), resultDemon);
+
+    // Prepare the updates and generate the inherited skills
+    auto changes = libcomp::DatabaseChangeSet::Create(
+        character->GetAccount().GetUUID());
+    changes->Insert(resultDemon);
+    changes->Insert(resultDemon->GetCoreStats().Get());
+
+    for(auto iPair : inherited)
+    {
+        /// @todo: get confirmed inheritance percentages,
+        /// double if both sources have it
+        auto iSkill = libcomp::PersistentObject::New<
+            objects::InheritedSkill>(true);
+        iSkill->SetSkill(iPair.first);
+        iSkill->SetProgress(10000);
+        iSkill->SetDemon(resultDemon);
+        resultDemon->AppendInheritedSkills(iSkill);
+
+        changes->Insert(iSkill);
+    }
+
+    state->SetObjectID(resultDemon->GetUUID(),
+        server->GetNextObjectID());
+
+    changes->Update(comp);
+    characterManager->DeleteDemon(demon1, changes);
+    characterManager->DeleteDemon(demon2, changes);
+
+    if(demon3)
+    {
+        characterManager->DeleteDemon(demon3, changes);
+    }
+
+    // Send the new COMP slot info
+    for(auto demon : { demon1, demon2, demon3 })
+    {
+        if(demon)
+        {
+            auto it = dMap.find(demon);
+            if(it != dMap.end())
+            {
+                auto dClient = it->second;
+                characterManager->SendDemonBoxData(dClient,
+                    0, { demon->GetBoxSlot() });
+            }
+        }
+    }
+
+    server->GetWorldDatabase()->QueueChangeSet(changes);
+
+    return 0;
+}
+
+int8_t FusionManager::GetAdjustedLevelSum(uint8_t level1, uint8_t level2,
+    int8_t finalLevelAdjust)
+{
+    uint8_t levelSum = (uint8_t)(level1 + level2);
+    return (int8_t)(((float)levelSum / 2.f) + 1.f + (float)finalLevelAdjust);
+}
+
+std::shared_ptr<objects::MiDevilData> FusionManager::GetResultDemon(
+    uint8_t race, int8_t adjustedLevelSum)
+{
+    // Normal race selection adjusted for level range
+    auto definitionManager = mServer.lock()->GetDefinitionManager();
+    auto fusionRanges = definitionManager->GetFusionRanges(race);
+    if(fusionRanges.size() == 0)
+    {
+        LOG_ERROR(libcomp::String("No valid fusion range found"
+            " for race ID: %1\n").Arg(race));
+        return 0;
+    }
+
+    // Traverse the pre-sorted list and take the highest range accessible
+    uint32_t resultID = fusionRanges.front().second;
+    for(auto pair : fusionRanges)
+    {
+        resultID = pair.second;
+
+        if(pair.first >= adjustedLevelSum)
+        {
+            break;
+        }
+    }
+
+    return resultID ? definitionManager->GetDevilData(resultID) : nullptr;
+}
+
+uint32_t FusionManager::GetElementalType(size_t elementalIndex) const
+{
+    const static uint32_t FUSION_ELEMENTAL_TYPES[] =
+        {
+            SVR_CONST.ELEMENTAL_1_FLAEMIS,
+            SVR_CONST.ELEMENTAL_2_AQUANS,
+            SVR_CONST.ELEMENTAL_3_AEROS,
+            SVR_CONST.ELEMENTAL_4_ERTHYS
+        };
+
+    return elementalIndex < 4 ? FUSION_ELEMENTAL_TYPES[elementalIndex] : 0;
+}
+
+uint32_t FusionManager::GetElementalFuseResult(uint32_t elementalType,
+    uint8_t otherRace, uint32_t otherType, bool adjustMinRank)
+{
+    bool raceFound = false;
+    size_t raceIdx = GetRaceIndex(otherRace, raceFound);
+
+    bool elementalFound = false;
+    size_t elementalIdx = GetElementalIndex(elementalType, elementalFound);
+    if(!elementalFound || !raceFound ||
+        FUSION_ELEMENTAL_ADJUST[raceIdx][elementalIdx] == 0)
+    {
+        return 0;
+    }
+
+    bool up = FUSION_ELEMENTAL_ADJUST[raceIdx][elementalIdx] == 1;
+    uint32_t result = RankUpDown(otherRace, otherType, up);
+    if(!up && adjustMinRank)
+    {
+        uint32_t rankDown = RankUpDown(otherRace, result, false);
+        if(rankDown == result)
+        {
+            // Min rank must be one below lowest
+            result = RankUpDown(otherRace, result, true);
+        }
+    }
+
+    return result;
+}
+
+size_t FusionManager::GetRaceIndex(uint8_t raceID, bool& found)
+{
+    found = false;
+
+    for(size_t i = 0; i < 34; i++)
+    {
+        if(FUSION_RACE_MAP[0][i] == raceID)
+        {
+            found = true;
+            return i;
+        }
+    }
+
+    return false;
+}
+
+size_t FusionManager::GetElementalIndex(uint32_t elemType, bool& found)
+{
+    found = false;
+
+    for(size_t i = 0; i < 4; i++)
+    {
+        if(GetElementalType(i) == elemType)
+        {
+            found = true;
+            return i;
+        }
+    }
+
+    return 0;
+}
+
+uint32_t FusionManager::RankUpDown(uint8_t raceID, uint32_t demonType,
+    bool up)
+{
+    auto fusionRanges = mServer.lock()->GetDefinitionManager()
+        ->GetFusionRanges(raceID);
+
+    // Default to the current demon for up/down fusion at limit already
+    for(auto it = fusionRanges.begin(); it != fusionRanges.end(); it++)
+    {
+        if(it->second == demonType)
+        {
+            if(up)
+            {
+                it++;
+                if(it != fusionRanges.end())
+                {
+                    return it->second;
+                }
+            }
+            else if(it != fusionRanges.begin())
+            {
+                it--;
+                return it->second;
+            }
+
+            break;
+        }
+    }
+
+    return demonType;
+}

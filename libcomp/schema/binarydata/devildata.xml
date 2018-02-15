@@ -18,7 +18,22 @@
         <member type="u32" name="modelID"/>
     </object>
     <object name="MiDCategoryData" persistent="false">
-        <member type="u8" name="family"/>
+        <member type="enum" name="family" underlying="uint8_t">
+            <value num="0">NONE</value>
+            <value num="1">HUMAN</value>
+            <value num="2">GOD</value>
+            <value num="3">AERIAL</value>
+            <value num="4">GUARDIAN</value>
+            <value num="5">DEMONIAC</value>
+            <value num="6">DRAGON</value>
+            <value num="7">MAGICA</value>
+            <value num="8">BIRD</value>
+            <value num="9">BEAST</value>
+            <value num="10">EVIL_SPIRIT</value>
+            <value num="11">FOUL</value>
+            <value num="12">ELEMENTAL</value>
+            <value num="13">MACHINE</value>
+        </member>
         <member type="enum" name="race" underlying="uint8_t">
             <value num="0">NONE</value>
             <value num="1">SERAPHIM</value>

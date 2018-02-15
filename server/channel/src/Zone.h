@@ -101,6 +101,12 @@ public:
     uint32_t GetID();
 
     /**
+     * Get the defintion ID of the zone
+     * @return Defintion ID of the zone
+     */
+    uint32_t GetDefinitionID();
+
+    /**
      * Get the geometry information bound to the zone
      * @return Geometry information bound to the zone
      */

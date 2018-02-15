@@ -56,6 +56,8 @@ namespace libcomp
 
             Sqrat::Class<Zone> binding(mVM, "Zone");
             binding
+                .Func<uint32_t(Zone::*)()>(
+                    "GetDefinitionID", &Zone::GetDefinitionID)
                 .Func<int32_t (Zone::*)(int32_t, int32_t, int32_t)>(
                     "GetFlagState", &Zone::GetFlagStateValue)
                 .Func<std::shared_ptr<ZoneInstance>(Zone::*)() const>(
@@ -102,6 +104,11 @@ Zone::~Zone()
 uint32_t Zone::GetID()
 {
     return mID;
+}
+
+uint32_t Zone::GetDefinitionID()
+{
+    return mServerZone ? mServerZone->GetID() : 0;
 }
 
 const std::shared_ptr<ZoneGeometry> Zone::GetGeometry() const

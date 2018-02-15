@@ -84,6 +84,7 @@
             <value>PARTY_SIZE</value>
             <value>PLUGIN</value>
             <value>SKILL_LEARNED</value>
+            <value>SOUL_POINTS</value>
             <value>STAT_VALUE</value>
             <value>STATUS_ACTIVE</value>
             <value>TIMESPAN_DATETIME</value>

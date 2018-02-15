@@ -14,6 +14,9 @@
         <member type="list" name="Gifts">
             <element type="ItemDrop*"/>
         </member>
+        <member type="list" name="GiftSetIDs">
+            <element type="u32"/>
+        </member>
         <member type="s8" name="Level" default="-1"/>
         <member type="s64" name="XP" default="-1"/>
 

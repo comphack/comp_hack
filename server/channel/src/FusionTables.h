@@ -29,10 +29,10 @@
 #ifndef SERVER_CHANNEL_SRC_FUSIONTABLES_H
 #define SERVER_CHANNEL_SRC_FUSIONTABLES_H
 
- // 34x34 2-Way Fusion table of race IDs to resulting race ID or
- // elemental ID index (when source IDs match, no enum used)
- // The first row represents the positioning of each input race
- // on both the row (starting at 1) and column.
+// 34x34 2-Way Fusion table of race IDs to resulting race ID or
+// elemental ID index (when source IDs match, no enum used)
+// The first row represents the positioning of each input race
+// on both the row (starting at 1) and column.
 extern uint8_t FUSION_RACE_MAP[35][34];
 
 // Set of fusion level up (1), level down (-1) or null (0) fusion
@@ -41,5 +41,16 @@ extern uint8_t FUSION_RACE_MAP[35][34];
 // and the column index used here should match the elemental demon
 // index in SVR_CONST (ex: SVR_CONST.ELEMENTAL_1_FLAEMIS).
 extern int8_t FUSION_ELEMENTAL_ADJUST[34][4];
+
+// Trifusion race priority order to use when determining which
+// of two identical base level demons being fused together should
+// be considered the "first" one.
+extern uint8_t TRIFUSION_RACE_PRIORITY[34];
+
+// Normal trifusion family lookup table to use when determining the
+// race outcome of a fusion not overridden by a previous rule. The
+// first two indexes of the array should be the top priority demon
+// families and the last one should be the lower priority demon.
+extern uint8_t TRIFUSION_FAMILY_MAP[7][7][8];
 
 #endif // SERVER_CHANNEL_SRC_FUSIONTABLES_H

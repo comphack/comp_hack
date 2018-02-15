@@ -104,17 +104,17 @@ public:
     /**
      * Set an active client connection after its account has
      * been detected.
-     * @param connection Pointer to the client connection
+     * @param client Pointer to the client connection
      */
     void SetClientConnection(const std::shared_ptr<
-        ChannelClientConnection>& connection);
+        ChannelClientConnection>& client);
 
     /**
      * Remove a client connection.
-     * @param connection Pointer to the client connection
+     * @param client Pointer to the client connection
      */
     void RemoveClientConnection(const std::shared_ptr<
-        ChannelClientConnection>& connection);
+        ChannelClientConnection>& client);
 
     /**
      * Get the client connection associated to the supplied entity ID.
@@ -139,6 +139,20 @@ public:
      */
     std::list<std::shared_ptr<ChannelClientConnection>>
         GatherWorldTargetClients(libcomp::ReadOnlyPacket& p, bool& success);
+
+    /**
+     * Get all connections associated to the supplied connection's party
+     * currently on the channel, optionally restricted to the same zone
+     * @param client Pointer to the source client connection
+     * @param includeSelf If true the source connection will be included
+     *  in the returned set
+     * @param zoneRestrict If true the connections will be restricted to
+     *  only entities in the same zone
+     * @return List of client connections in the same party
+     */
+    std::list<std::shared_ptr<ChannelClientConnection>>
+        GetPartyConnections(const std::shared_ptr<
+        ChannelClientConnection>& client, bool includeSelf, bool zoneRestrict);
 
     /**
      * Schedule future server work to execute HandleClientTimeouts every

@@ -86,6 +86,7 @@
     <include path="binarydata/cquest.xml"/>
     <include path="binarydata/ctalkmessagedata.xml"/>
     <include path="binarydata/czonerelationdata.xml"/>
+    <include path="binarydata/devilbookdata.xml"/>
     <include path="binarydata/devildata.xml"/>
     <include path="binarydata/devillvupratedata.xml"/>
     <include path="binarydata/disassemblydata.xml"/>

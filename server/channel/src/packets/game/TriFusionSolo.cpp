@@ -1,10 +1,10 @@
-﻿/**
- * @file server/channel/src/packets/game/DemonFusion.cpp
+/**
+ * @file server/channel/src/packets/game/TriFusionSolo.cpp
  * @ingroup channel
  *
  * @author HACKfrost
  *
- * @brief Request from the client to fuse a new demon.
+ * @brief Request from the client to perform a solo tri-fusion.
  *
  * This file is part of the Channel Server (channel).
  *
@@ -27,6 +27,7 @@
 #include "Packets.h"
 
 // libcomp Includes
+#include <Log.h>
 #include <ManagerPacket.h>
 #include <Packet.h>
 #include <PacketCodes.h>
@@ -37,11 +38,11 @@
 
 using namespace channel;
 
-bool Parsers::DemonFusion::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::TriFusionSolo::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {
-    if(p.Size() != 28)
+    if(p.Size() != 31)
     {
         return false;
     }
@@ -49,20 +50,29 @@ bool Parsers::DemonFusion::Parse(libcomp::ManagerPacket *pPacketManager,
     int32_t fusionType = p.ReadS32Little();
     int64_t demonID1 = p.ReadS64Little();
     int64_t demonID2 = p.ReadS64Little();
-    int64_t unknown = p.ReadS64Little();
+    int64_t demonID3 = p.ReadS64Little();
+    uint16_t fusionItemType = p.ReadU16Little();
+    uint8_t unknown = p.ReadU8();
     (void)fusionType;
     (void)unknown;
+
+    if(fusionItemType != 1)
+    {
+        LOG_ERROR(libcomp::String("Invalid solo TriFusion item type"
+            " supplied: %1\n").Arg(fusionItemType));
+        return false;
+    }
 
     auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
     auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
 
     server->QueueWork([](const std::shared_ptr<ChannelServer> pServer,
         const std::shared_ptr<ChannelClientConnection> pClient,
-        int64_t pDemonID1, int64_t pDemonID2)
+        int64_t pDemonID1, int64_t pDemonID2, int64_t pDemonID3)
         {
-            pServer->GetFusionManager()->HandleFusion(pClient, pDemonID1,
-                pDemonID2);
-        }, server, client, demonID1, demonID2);
+            pServer->GetFusionManager()->HandleTriFusion(pClient, pDemonID1,
+                pDemonID2, pDemonID3, true);
+        }, server, client, demonID1, demonID2, demonID3);
 
     return true;
 }

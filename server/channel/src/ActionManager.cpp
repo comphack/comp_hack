@@ -1191,8 +1191,8 @@ bool ActionManager::UpdatePoints(ActionContext& ctx)
         break;
     case objects::ActionUpdatePoints::PointType_t::SOUL_POINTS:
         {
-            LOG_ERROR("Attempted to add soul points which are not"
-                " supported yet!\n");
+            mServer.lock()->GetCharacterManager()->UpdateSoulPoints(
+                ctx.Client, (int32_t)act->GetValue(), !act->GetIsSet());
         }
         break;
     default:

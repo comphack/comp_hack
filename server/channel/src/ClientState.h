@@ -30,6 +30,7 @@
 // channel Includes
 #include "ActiveEntityState.h"
 #include "CharacterState.h"
+#include "DemonState.h"
 
 // objects Includes
 #include <Character.h>
@@ -46,10 +47,10 @@ namespace channel
 {
 
 class BazaarState;
+class Zone;
 
 typedef float ClientTime;
 typedef uint64_t ServerTime;
-typedef ActiveEntityStateImp<objects::Demon> DemonState;
 
 /**
  * Contains the state of a game client currently connected to the
@@ -174,6 +175,12 @@ public:
      * @return Current character's world CID
      */
     int32_t GetWorldCID() const;
+
+    /**
+     * Get the character's current zone.
+     * @return Current character's zone
+     */
+    std::shared_ptr<Zone> GetZone() const;
 
     /**
      * Get the current party ID associated to the logged in

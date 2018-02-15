@@ -674,66 +674,79 @@ std::list<std::shared_ptr<objects::Tokusei>> TokuseiManager::GetDirectTokusei(
     // pulling the skill tokusei
 
     std::list<int32_t> tokuseiIDs;
-    if(eState->GetEntityType() == objects::EntityStateObject::EntityType_t::CHARACTER)
+    switch(eState->GetEntityType())
     {
-        auto characterManager = server->GetCharacterManager();
-        auto cState = std::dynamic_pointer_cast<CharacterState>(eState);
-        auto character = cState->GetEntity();
-        auto cs = cState->GetCoreStats();
-
-        // Default to tokusei from equipment
-        tokuseiIDs = cState->GetEquipmentTokuseiIDs();
-
-        // Add any conditional tokusei
-        for(auto condition : cState->GetConditionalTokusei())
+    case objects::EntityStateObject::EntityType_t::CHARACTER:
         {
-            bool add = false;
+            auto characterManager = server->GetCharacterManager();
+            auto cState = std::dynamic_pointer_cast<CharacterState>(eState);
+            auto character = cState->GetEntity();
+            auto cs = cState->GetCoreStats();
 
-            int16_t p1 = condition->GetParams(0);
-            int16_t p2 = condition->GetParams(1);
+            // Default to tokusei from equipment
+            tokuseiIDs = cState->GetEquipmentTokuseiIDs();
 
-            int16_t conditionType = condition->GetType();
-            if(conditionType == 1)
+            // Add any conditional tokusei
+            for(auto condition : cState->GetConditionalTokusei())
             {
-                // Level check
-                add = (p1 == 0 || (int16_t)cs->GetLevel() >= p1) &&
-                    (p2 == 0 || (int16_t)cs->GetLevel() <= p2);
-            }
-            else if(conditionType == 2)
-            {
-                // LNC check (inverted format)
-                switch(cState->GetLNCType())
+                bool add = false;
+
+                int16_t p1 = condition->GetParams(0);
+                int16_t p2 = condition->GetParams(1);
+
+                int16_t conditionType = condition->GetType();
+                if(conditionType == 1)
                 {
-                case LNC_LAW:
-                    add = ((p1 & 0x0004) != 0);
-                    break;
-                case LNC_NEUTRAL:
-                    add = ((p1 & 0x0002) != 0);
-                    break;
-                case LNC_CHAOS:
-                    add = ((p1 & 0x0001) != 0);
-                default:
-                    break;
+                    // Level check
+                    add = (p1 == 0 || (int16_t)cs->GetLevel() >= p1) &&
+                        (p2 == 0 || (int16_t)cs->GetLevel() <= p2);
                 }
-            }
-            else if(conditionType >= 100 && conditionType <= 158)
-            {
-                // Expertise #(type - 100) rank check
-                add = characterManager->GetExpertiseRank(cState,
-                    (uint32_t)(conditionType - 100)) >= (uint8_t)p1;
-            }
-
-            if(add)
-            {
-                for(auto tokuseiID : condition->GetTokusei())
+                else if(conditionType == 2)
                 {
-                    if(tokuseiID != 0)
+                    // LNC check (inverted format)
+                    switch(cState->GetLNCType())
                     {
-                        tokuseiIDs.push_back((int32_t)tokuseiID);
+                    case LNC_LAW:
+                        add = ((p1 & 0x0004) != 0);
+                        break;
+                    case LNC_NEUTRAL:
+                        add = ((p1 & 0x0002) != 0);
+                        break;
+                    case LNC_CHAOS:
+                        add = ((p1 & 0x0001) != 0);
+                    default:
+                        break;
+                    }
+                }
+                else if(conditionType >= 100 && conditionType <= 158)
+                {
+                    // Expertise #(type - 100) rank check
+                    add = characterManager->GetExpertiseRank(cState,
+                        (uint32_t)(conditionType - 100)) >= (uint8_t)p1;
+                }
+
+                if(add)
+                {
+                    for(auto tokuseiID : condition->GetTokusei())
+                    {
+                        if(tokuseiID != 0)
+                        {
+                            tokuseiIDs.push_back((int32_t)tokuseiID);
+                        }
                     }
                 }
             }
         }
+        break;
+    case objects::EntityStateObject::EntityType_t::PARTNER_DEMON:
+        {
+            auto dState = std::dynamic_pointer_cast<DemonState>(eState);
+
+            tokuseiIDs = dState->GetCompendiumTokuseiIDs();
+        }
+        break;
+    default:
+        break;
     }
 
     for(auto pair : eState->GetAdditionalTokusei())
@@ -1243,6 +1256,17 @@ double TokuseiManager::CalculateAttributeValue(ActiveEntityState* eState, int32_
                 }
 
                 result = (double)(result * (double)memberCount);
+            }
+            break;
+        case objects::TokuseiAttributes::Multiplier_t::DEMON_BOOK_DIVIDE:
+            // Divide the value by the number of unique entries in the compendium
+            {
+                auto state = ClientState::GetEntityClientState(eState->GetEntityID(), false);
+                auto dState = state ? state->GetDemonState() : nullptr;
+
+                result = dState
+                    ? (result * floor((double)dState->GetCompendiumCount() / (double)multValue))
+                    : 0.0;
             }
             break;
         default:

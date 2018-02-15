@@ -354,6 +354,13 @@ private:
      */
     bool EndEvent(const std::shared_ptr<ChannelClientConnection>& client);
 
+    /**
+     * Execute the appropriate (party) tri-fusion event responses
+     * @param client Pointer to the client the event affects
+     * @return true on success, false on failure
+     */
+    bool HandleTriFusion(const std::shared_ptr<ChannelClientConnection>& client);
+
     /// Pointer to the channel server.
     std::weak_ptr<ChannelServer> mServer;
 };

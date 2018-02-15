@@ -1,10 +1,10 @@
-﻿/**
- * @file server/channel/src/packets/game/DemonFusion.cpp
+/**
+ * @file server/channel/src/packets/game/TriFusionLeave.cpp
  * @ingroup channel
  *
  * @author HACKfrost
  *
- * @brief Request from the client to fuse a new demon.
+ * @brief Request from the client to leave a tri-fusion session.
  *
  * This file is part of the Channel Server (channel).
  *
@@ -33,36 +33,23 @@
 
 // channel Includes
 #include "ChannelServer.h"
-#include "FusionManager.h"
 
 using namespace channel;
 
-bool Parsers::DemonFusion::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::TriFusionLeave::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {
-    if(p.Size() != 28)
+    if(p.Size() != 0)
     {
         return false;
     }
 
-    int32_t fusionType = p.ReadS32Little();
-    int64_t demonID1 = p.ReadS64Little();
-    int64_t demonID2 = p.ReadS64Little();
-    int64_t unknown = p.ReadS64Little();
-    (void)fusionType;
-    (void)unknown;
-
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
     auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+    auto characterManager = server->GetCharacterManager();
 
-    server->QueueWork([](const std::shared_ptr<ChannelServer> pServer,
-        const std::shared_ptr<ChannelClientConnection> pClient,
-        int64_t pDemonID1, int64_t pDemonID2)
-        {
-            pServer->GetFusionManager()->HandleFusion(pClient, pDemonID1,
-                pDemonID2);
-        }, server, client, demonID1, demonID2);
+    characterManager->EndExchange(client, 0);
 
     return true;
 }

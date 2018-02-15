@@ -144,6 +144,8 @@ void AccountManager::HandleLoginResponse(const std::shared_ptr<
 
         state->Register();
 
+        dState->UpdateSharedState(character.Get(), definitionManager);
+
         // Recalculating the character will recalculate the partner too
         server->GetTokuseiManager()->Recalculate(cState, true,
             std::set<int32_t>{ cState->GetEntityID(), dState->GetEntityID() });

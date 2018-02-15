@@ -64,6 +64,7 @@
             <value>CORRECT_TABLE_DIVIDE</value>
             <value>BASE_AND_LEVEL</value>
             <value>PARTY_SIZE</value>
+            <value>DEMON_BOOK_DIVIDE</value>
         </member>
         <member type="s32" name="MultiplierValue"/>
         <member type="u8" name="Precision" default="0"/>
@@ -124,6 +125,7 @@
             <value>CONSTANT_STATUS</value>
             <value>KNOCKBACK_RECOVERY</value>
             <value>SUMMON_STATUS</value>
+            <value>SUMMON_SYNC_EXTEND</value>
         </member>
         <member type="s32" name="Value"/>
         <member type="s32" name="Modifier"/>

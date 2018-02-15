@@ -727,7 +727,10 @@ private:
 
         if(data.empty())
         {
-            PrintLoadResult(binaryFile, false, 0, 0);
+            if(printResults)
+            {
+                PrintLoadResult(binaryFile, false, 0, 0);
+            }
             return false;
         }
 

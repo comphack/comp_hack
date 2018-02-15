@@ -233,7 +233,7 @@ void CharacterManager::SendCharacterData(const std::shared_ptr<
     reply.WriteS8(c->GetExpertiseExtension());
 
     reply.WriteS32((int32_t)c->EquippedVACount());
-    for(uint8_t i = 0; i < 15; i++)
+    for(uint8_t i = 0; i < MAX_VA_INDEX; i++)
     {
         uint32_t va = c->GetEquippedVA(i);
         if(va)
@@ -359,7 +359,7 @@ void CharacterManager::SendOtherCharacterData(const std::list<std::shared_ptr<
     reply.WriteS8(0);   // Unknown
 
     reply.WriteS32((int32_t)c->EquippedVACount());
-    for(uint8_t i = 0; i < 15; i++)
+    for(uint8_t i = 0; i < MAX_VA_INDEX; i++)
     {
         uint32_t va = c->GetEquippedVA(i);
         if(va)

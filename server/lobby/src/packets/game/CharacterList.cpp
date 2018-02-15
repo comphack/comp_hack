@@ -232,8 +232,8 @@ bool Parsers::CharacterList::Parse(libcomp::ManagerPacket *pPacketManager,
         }
 
         // VA
-        reply.WriteS32((int32_t)character->EquippedVACount());
-        for(uint8_t i = 0; i < 15; i++)
+        reply.WriteS32Little((int32_t)character->EquippedVACount());
+        for(uint8_t i = 0; i < MAX_VA_INDEX; i++)
         {
             uint32_t va = character->GetEquippedVA(i);
             if(va)

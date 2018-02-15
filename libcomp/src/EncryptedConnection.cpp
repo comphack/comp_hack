@@ -419,8 +419,8 @@ void EncryptedConnection::ParseServerEncryptionStart(libcomp::Packet& packet)
             // Get ready for the next packet.
             packet.Clear();
 
-            // Wait for the client public.
-            if(!RequestPacket(DH_KEY_HEX_SIZE + sizeof(uint32_t)))
+            // Wait for the client public size (then the public).
+            if(!RequestPacket(sizeof(uint32_t)))
             {
                 SocketError("Failed to request more data.");
             }
@@ -452,10 +452,12 @@ bool EncryptedConnection::ParseExtensionConnection(libcomp::Packet& packet)
 void EncryptedConnection::ParseServerEncryptionFinish(libcomp::Packet& packet)
 {
     // Check if we have all the data.
-    if((DH_KEY_HEX_SIZE + sizeof(uint32_t)) > packet.Size())
+    if(sizeof(uint32_t) > packet.Size() ||
+        (sizeof(uint32_t) + packet.PeekU32Big()) > packet.Size())
     {
         // Keep reading the packet.
-        if(!RequestPacket(DH_KEY_HEX_SIZE + sizeof(uint32_t) - packet.Size()))
+        if(!RequestPacket(packet.PeekU32Big() + sizeof(uint32_t) -
+            packet.Size()))
         {
             SocketError("Failed to request more data.");
         }
@@ -466,7 +468,7 @@ void EncryptedConnection::ParseServerEncryptionFinish(libcomp::Packet& packet)
         bool status = true;
 
         // Check the size of the client public.
-        if(status && DH_KEY_HEX_SIZE != packet.PeekU32Big())
+        if(status && DH_KEY_HEX_SIZE < packet.PeekU32Big())
         {
             SocketError("Failed to parse encryption client public.");
             status = false;
@@ -511,7 +513,7 @@ void EncryptedConnection::ParseServerEncryptionFinish(libcomp::Packet& packet)
                 ConnectionEncrypted();
             }
         }
-        else
+        else if(status)
         {
             // Get ready for the next packet.
             packet.Clear();

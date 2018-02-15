@@ -562,7 +562,7 @@ bool DefinitionManager::LoadDevilBookData(gsl::not_null<DataStore*> pDataStore)
 {
     std::list<std::shared_ptr<objects::MiDevilBookData>> records;
     bool success = LoadBinaryData<objects::MiDevilBookData>(pDataStore,
-        "Shield/DevilbookData.sbin", true, 0, records);
+        "Shield/DevilBookData.sbin", true, 0, records);
     for(auto record : records)
     {
         mDevilBookData[record->GetID()] = record;

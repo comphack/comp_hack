@@ -31,6 +31,7 @@
 #include "LobbyServer.h"
 
 // libcomp Includes
+#include <Decrypt.h>
 #include <ErrorCodes.h>
 #include <Log.h>
 #include <Packet.h>
@@ -128,9 +129,12 @@ bool Parsers::Login::Parse(libcomp::ManagerPacket *pPacketManager,
         server->GetManagerConnection()->SetClientConnection(
             std::dynamic_pointer_cast<LobbyClientConnection>(connection));
 
+        uint32_t challenge = libcomp::Decrypt::GenerateSessionKey();
+        state(connection)->SetChallenge(challenge);
+
         reply.SetResponseCode(to_underlying(
             ErrorCodes_t::SUCCESS));
-        reply.SetChallenge(0xCAFEBABE); /// @todo generate, save, and use.
+        reply.SetChallenge(challenge);
         reply.SetSalt(account->GetSalt());
 
         state(connection)->SetLoggedIn(true);

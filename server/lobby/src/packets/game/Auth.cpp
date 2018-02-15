@@ -140,7 +140,11 @@ static bool NoWebAuthParse(libcomp::ManagerPacket *pPacketManager,
     int8_t loginWorldID;
     bool isLoggedIn = accountManager->IsLoggedIn(username, loginWorldID);
 
-    if(hash != account->GetPassword())
+    libcomp::String challenge = libcomp::Decrypt::HashPassword(
+        account->GetPassword(), libcomp::String("%1").Arg(
+            state(connection)->GetChallenge()));
+
+    if(hash != challenge)
     {
         LOG_ERROR(libcomp::String("User '%1' password hash provided by the "
             "client was not valid: %2\n").Arg(username).Arg(hash));
@@ -171,7 +175,8 @@ bool Parsers::Auth::Parse(libcomp::ManagerPacket *pPacketManager,
         return NoWebAuthParse(pPacketManager, connection, p);
     }
 
-    auto server = std::dynamic_pointer_cast<LobbyServer>(pPacketManager->GetServer());
+    auto server = std::dynamic_pointer_cast<LobbyServer>(
+        pPacketManager->GetServer());
     auto account = state(connection)->GetAccount();
     auto username = account->GetUsername();
     auto accountManager = server->GetAccountManager();

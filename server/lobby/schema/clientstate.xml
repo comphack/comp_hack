@@ -4,5 +4,6 @@
         <member type="bool" name="Authenticated"/>
         <member type="bool" name="LoggedIn"/>
         <member type="Account*" name="Account"/>
+        <member type="u32" name="Challenge"/>
     </object>
 </objgen>

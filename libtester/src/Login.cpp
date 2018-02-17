@@ -45,7 +45,7 @@ bool Login::WebLogin(const libcomp::String& username,
     asio::io_service service;
 
     libcomp::String httpRequest = libcomp::String(
-        "POST /index.html HTTP/1.1\r\n"
+        "POST /index.nut HTTP/1.1\r\n"
         "Accept: image/gif, image/jpeg, image/pjpeg, "
             "application/x-ms-application, application/xaml+xml, "
             "application/x-ms-xbap, */*\r\n"

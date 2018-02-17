@@ -81,11 +81,49 @@ public:
         const libcomp::String& password, uint32_t clientVersion,
         libcomp::String& sid);
 
+    /**
+     * Transitions the user login state from LOBBY_WAIT to LOBBY. This
+     * operation provides a session ID for the user to pass to a lobby server
+     * connection.
+     * @param username Username of the account to authenticate.
+     * @param sid Session ID given by the web authentication.
+     * @param sid2 Session ID to give back to the client.
+     * @returns Error code indicating the success or failure of this
+     * operation. This function can return one of:
+     * - SUCCESS (login was valid and a session ID was generated)
+     * - SYSTEM_ERROR (some internal error occurred)
+     * - BAD_USERNAME_PASSWORD
+     * - ACCOUNT_STILL_LOGGED_IN (account not in OFFLINE or LOBBY_WAIT)
+     * @note This function is thread safe.
+     */
     ErrorCodes_t LobbyLogin(const libcomp::String& username,
-        const libcomp::String& sid);
+        const libcomp::String& sid, libcomp::String& sid2);
 
+    /**
+     * Transitions the user login state from OFFLINE to LOBBY. It is assumed
+     * the client version and the password hash has already been checked by
+     * the classic login packet handlers.
+     * @param username Username of the account to authenticate.
+     * @param sid2 Session ID to give back to the client.
+     * @returns Error code indicating the success or failure of this
+     * operation. This function can return one of:
+     * - SUCCESS (login was valid and a session ID was generated)
+     * - SYSTEM_ERROR (some internal error occurred)
+     * - BAD_USERNAME_PASSWORD
+     * - ACCOUNT_STILL_LOGGED_IN (account not in OFFLINE or LOBBY_WAIT)
+     * - SERVER_FULL (too many accounts are online)
+     * - ACCOUNT_DISABLED (your account has been disabled/banned)
+     * @note This function is thread safe.
+     */
     ErrorCodes_t LobbyLogin(const libcomp::String& username,
-        const libcomp::String& password, uint32_t challenge);
+        libcomp::String& sid2);
+
+    /**
+     * Transitions the user to the OFFLINE state.
+     * @param username Username of the account to log out.
+     * @note This function is thread safe.
+     */
+    void LogoutUser(const libcomp::String& username);
 
     /**
      * Expire a session key. If the session key is not matched or the account
@@ -153,7 +191,7 @@ public:
      * @return true if the user was logged out; false if the user is not
      * logged in to the specified world.
      */
-    bool LogoutUser(const libcomp::String& username, int8_t world = -1);
+    bool LogoutUser(const libcomp::String& username, int8_t world);
 
     /**
      * Log out all users in a given world (and optionally on a specific

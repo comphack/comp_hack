@@ -46,12 +46,11 @@
 using namespace lobby;
 
 static bool LoginError(const std::shared_ptr<
-    libcomp::TcpConnection>& connection)
+    libcomp::TcpConnection>& connection, ErrorCodes_t errorCode)
 {
-    /// @todo Return different error codes like an account is banned.
     libcomp::Packet reply;
     reply.WritePacketCode(LobbyToClientPacketCode_t::PACKET_AUTH);
-    reply.WriteS32Little(to_underlying(ErrorCodes_t::BAD_USERNAME_PASSWORD));
+    reply.WriteS32Little(to_underlying(errorCode));
 
     connection->SendPacket(reply);
 
@@ -59,147 +58,125 @@ static bool LoginError(const std::shared_ptr<
 }
 
 static bool CompleteLogin(
-    const std::shared_ptr<libcomp::TcpConnection>& connection,
     const std::shared_ptr<LobbyServer>& server,
-    const libcomp::ObjectReference<objects::Account>& account,
-    const libcomp::String& username,
-    const libcomp::String& sid2,
-    bool isLoggedIn, int8_t loginWorldID)
+    const std::shared_ptr<libcomp::TcpConnection>& connection,
+    const libcomp::String& sid,
+    const libcomp::String& username)
 {
+    libcomp::String sid2;
+
     auto accountManager = server->GetAccountManager();
 
-    if(!isLoggedIn || loginWorldID != -1)
+    ErrorCodes_t errorCode;
+
+    if(sid.IsEmpty())
     {
-        if(isLoggedIn)
-        {
-            accountManager->LogoutUser(username, loginWorldID);
-        }
-
-        auto login = accountManager->GetUserLogin(username);
-        if(nullptr == login)
-        {
-            login = std::shared_ptr<objects::AccountLogin>(new objects::AccountLogin);
-            login->SetAccount(account);
-        }
-        else
-        {
-            login->SetCharacterLogin(std::make_shared<objects::CharacterLogin>());
-        }
-
-        if(!accountManager->LoginUser(username, login))
-        {
-            LOG_ERROR(libcomp::String("User '%1' could not be logged in.\n").Arg(username));
-            return false;
-        }
+        // Login from NoWebAuth
+        errorCode = accountManager->LobbyLogin(username, sid2);
+    }
+    else
+    {
+        // Login from WebAuth
+        errorCode = accountManager->LobbyLogin(username, sid, sid2);
     }
 
-    state(connection)->SetAuthenticated(true);
+    if(ErrorCodes_t::SUCCESS == errorCode)
+    {
+        LOG_DEBUG(libcomp::String("New SID for user '%1': %2\n"
+            ).Arg(username).Arg(sid2));
 
-    libcomp::Packet reply;
-    reply.WritePacketCode(LobbyToClientPacketCode_t::PACKET_AUTH);
+        state(connection)->SetAuthenticated(true);
 
-    // Status code (see the Login handler for a list).
-    reply.WriteS32Little(to_underlying(ErrorCodes_t::SUCCESS));
+        // Register the client so they logout on disconnect.
+        server->GetManagerConnection()->SetClientConnection(
+            std::dynamic_pointer_cast<LobbyClientConnection>(connection));
 
-    accountManager->UpdateSessionID(username, sid2);
+        libcomp::Packet reply;
+        reply.WritePacketCode(LobbyToClientPacketCode_t::PACKET_AUTH);
+        reply.WriteS32Little(to_underlying(ErrorCodes_t::SUCCESS));
+        reply.WriteString16Little(libcomp::Convert::ENCODING_UTF8,
+            sid2, true);
 
-    LOG_DEBUG(libcomp::String("New SID: %1\n").Arg(sid2));
-
-    // Write a new session ID to be used when the client switches channels.
-    reply.WriteString16Little(libcomp::Convert::ENCODING_UTF8, sid2, true);
-
-    connection->SendPacket(reply);
+        connection->SendPacket(reply);
+    }
+    else
+    {
+        return LoginError(connection, errorCode);
+    }
 
     return true;
 }
 
-static bool NoWebAuthParse(libcomp::ManagerPacket *pPacketManager,
+static bool NoWebAuthParse(const std::shared_ptr<LobbyServer>& server,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p)
+    libcomp::ReadOnlyPacket& p, const libcomp::String& username)
 {
-    if(p.Size() != 131 || p.PeekU16Little() != 129)
-    {
-        return false;
-    }
-
+    // Get the hash provided by the client.
     libcomp::String hash = p.ReadString16Little(
         libcomp::Convert::ENCODING_UTF8, true).ToLower();
 
     // Authentication hash provided by the patched client.
     LOG_DEBUG(libcomp::String("Hash: %1\n").Arg(hash));
 
-    /// @todo retrieve the challenge and add to hash before checking.
-
-    auto server = std::dynamic_pointer_cast<LobbyServer>(pPacketManager->GetServer());
+    // Get the account so we may check the password hash.
     auto account = state(connection)->GetAccount();
-    auto username = account->GetUsername();
-    auto accountManager = server->GetAccountManager();
-    auto sessionManager = server->GetSessionManager();
 
-    libcomp::String sid2;
-    int8_t loginWorldID;
-    bool isLoggedIn = accountManager->IsLoggedIn(username, loginWorldID);
+    // Make sure the account is valid first.
+    if(!account)
+    {
+        return LoginError(connection, ErrorCodes_t::BAD_USERNAME_PASSWORD);
+    }
 
+    // Calculate the password hash with the challenge given.
     libcomp::String challenge = libcomp::Decrypt::HashPassword(
         account->GetPassword(), libcomp::String("%1").Arg(
             state(connection)->GetChallenge()));
 
+    // The hash from the client must match for a proper authentication.
     if(hash != challenge)
     {
         LOG_ERROR(libcomp::String("User '%1' password hash provided by the "
             "client was not valid: %2\n").Arg(username).Arg(hash));
-        accountManager->LogoutUser(username, loginWorldID);
-        return LoginError(connection);
+
+        return LoginError(connection, ErrorCodes_t::BAD_USERNAME_PASSWORD);
     }
 
-    auto sids = sessionManager->GenerateSIDs(username);
+    return CompleteLogin(server, connection, libcomp::String(), username);
+}
 
-    if(!sessionManager->CheckSID(username, sids.first, sid2))
-    {
-        LOG_ERROR(libcomp::String("User '%1' session ID provided by the server"
-            " was not valid: %2\n").Arg(username).Arg(sids.first));
-        accountManager->LogoutUser(username, loginWorldID);
-        return LoginError(connection);
-    }
+static bool WebAuthParse(const std::shared_ptr<LobbyServer>& server,
+    const std::shared_ptr<libcomp::TcpConnection>& connection,
+    libcomp::ReadOnlyPacket& p, const libcomp::String& username)
+{
+    // Authentication token (session ID) provided by the web server.
+    libcomp::String sid = p.ReadString16Little(
+        libcomp::Convert::ENCODING_UTF8, true).ToLower();
 
-    return CompleteLogin(connection, server, account, username, sid2,
-        isLoggedIn, loginWorldID);
+    LOG_DEBUG(libcomp::String("SID for user '%1': %2\n"
+        ).Arg(username).Arg(sid));
+
+    return CompleteLogin(server, connection, sid, username);
 }
 
 bool Parsers::Auth::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {
-    if(p.Size() != 303 || p.PeekU16Little() != 301)
-    {
-        return NoWebAuthParse(pPacketManager, connection, p);
-    }
+    auto username = state(connection)->GetUsername();
 
     auto server = std::dynamic_pointer_cast<LobbyServer>(
         pPacketManager->GetServer());
-    auto account = state(connection)->GetAccount();
-    auto username = account->GetUsername();
-    auto accountManager = server->GetAccountManager();
-    auto sessionManager = server->GetSessionManager();
 
-    // Authentication token (session ID) provided by the web server.
-    libcomp::String sid = p.ReadString16Little(
-        libcomp::Convert::ENCODING_UTF8, true).ToLower();
-
-    LOG_DEBUG(libcomp::String("SID: %1\n").Arg(sid));
-
-    libcomp::String sid2;
-    int8_t loginWorldID;
-    bool isLoggedIn = accountManager->IsLoggedIn(username, loginWorldID);
-
-    if(!sessionManager->CheckSID(username, sid, sid2))
+    if(p.Size() == 131 || p.PeekU16Little() == 129)
     {
-        LOG_ERROR(libcomp::String("User '%1' session ID provided by the client"
-            " was not valid: %2\n").Arg(username).Arg(sid));
-        accountManager->LogoutUser(username, loginWorldID);
-        return LoginError(connection);
+        return NoWebAuthParse(server, connection, p, username);
     }
-
-    return CompleteLogin(connection, server, account, username, sid2,
-        isLoggedIn, loginWorldID);
+    else if(p.Size() == 303 || p.PeekU16Little() == 301)
+    {
+        return WebAuthParse(server, connection, p, username);
+    }
+    else
+    {
+        return false;
+    }
 }

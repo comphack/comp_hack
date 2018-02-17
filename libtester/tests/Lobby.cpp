@@ -246,6 +246,10 @@ TEST(Lobby, DoubleWebAuth)
         client2->WebLogin(LOGIN_USERNAME, LOGIN_PASSWORD,
             libcomp::String(), true);
         client.reset();
+
+        // Wait for the account to settle.
+        std::this_thread::sleep_for(std::chrono::seconds(2));
+
         client2->WebLogin(LOGIN_USERNAME, LOGIN_PASSWORD);
     });
 }

@@ -194,6 +194,133 @@ ErrorCodes_t AccountManager::WebAuthLogin(const libcomp::String& username,
     return ErrorCodes_t::SUCCESS;
 }
 
+ErrorCodes_t AccountManager::LobbyLogin(const libcomp::String& username,
+    const libcomp::String& sid, libcomp::String& sid2)
+{
+    // Lock the accounts now so this is thread safe.
+    std::lock_guard<std::mutex> lock(mAccountLock);
+
+    // Get the login object for this username.
+    auto login = GetOrCreateLogin(username);
+
+    // This should never happen.
+    if(!login)
+    {
+        LOG_DEBUG(libcomp::String("ogin (via web auth) for account '%1' "
+            "failed with a system error.\n").Arg(username));
+
+        return ErrorCodes_t::SYSTEM_ERROR;
+    }
+
+    // The provided SID must match the one given by the server.
+    if(sid != login->GetSessionID())
+    {
+        LOG_DEBUG(libcomp::String("Login (via web auth) for account '%1' "
+            "failed because it did not provide a correct SID.\n").Arg(
+            username));
+
+        return ErrorCodes_t::BAD_USERNAME_PASSWORD;
+    }
+
+    // For web authentication we must be in the lobby wait state.
+    if(objects::AccountLogin::State_t::LOBBY_WAIT != login->GetState())
+    {
+        LOG_DEBUG(libcomp::String("Login (via web auth) for account '%1' "
+            "failed because it did not request web auth.\n").Arg(username));
+
+        return ErrorCodes_t::ACCOUNT_STILL_LOGGED_IN;
+    }
+
+    // We are now ready. Generate the session ID and transition to logged in.
+    sid2 = libcomp::Decrypt::GenerateRandom(300).ToLower();
+    login->SetState(objects::AccountLogin::State_t::LOBBY);
+    login->SetSessionID(sid2);
+
+    return ErrorCodes_t::SUCCESS;
+}
+
+ErrorCodes_t AccountManager::LobbyLogin(const libcomp::String& username,
+    libcomp::String& sid2)
+{
+    /// @todo Check if the server is full and return SERVER_FULL.
+
+    // We assume here the login code has checked the client version and
+    // password hash. We still check if the account can login though.
+    LOG_DEBUG(libcomp::String("Attempting to perform a classic login for "
+        "account '%1'.\n").Arg(username));
+
+    // Lock the accounts now so this is thread safe.
+    std::lock_guard<std::mutex> lock(mAccountLock);
+
+    // Get the login object for this username.
+    auto login = GetOrCreateLogin(username);
+
+    // This should never happen.
+    if(!login)
+    {
+        LOG_DEBUG(libcomp::String("ogin (via web auth) for account '%1' "
+            "failed with a system error.\n").Arg(username));
+
+        return ErrorCodes_t::SYSTEM_ERROR;
+    }
+
+    // Get the account database entry.
+    auto account = login->GetAccount();
+
+    // If the account was not loaded it's a bad username.
+    if(!account)
+    {
+        LOG_DEBUG(libcomp::String("Classic login for account '%1' failed "
+            "with a bad username (no account data found).\n").Arg(username));
+
+        // Remove the entry to save memory (esp. if someone is being a dick).
+        EraseLogin(username);
+
+        return ErrorCodes_t::BAD_USERNAME_PASSWORD;
+    }
+
+    // Now check to see if the account is already online.
+    if(objects::AccountLogin::State_t::OFFLINE != login->GetState())
+    {
+        LOG_DEBUG(libcomp::String("Classic login for account '%1' failed "
+            "because it is already online.\n").Arg(username));
+
+        // Do not erase the login as it's not ours.
+        return ErrorCodes_t::ACCOUNT_STILL_LOGGED_IN;
+    }
+
+    // Now that we know the account is not online check it is enabled.
+    if(!account->GetEnabled() || account->GetIsBanned())
+    {
+        LOG_DEBUG(libcomp::String("Classic login for account '%1' failed "
+            "due to being disabled/banned.\n").Arg(username));
+
+        // The hammer of justice is swift.
+        EraseLogin(username);
+
+        return ErrorCodes_t::ACCOUNT_DISABLED;
+    }
+
+    // We are now ready. Generate the session ID and transition to logged in.
+    sid2 = libcomp::Decrypt::GenerateRandom(300).ToLower();
+    login->SetState(objects::AccountLogin::State_t::LOBBY);
+    login->SetSessionID(sid2);
+
+    return ErrorCodes_t::SUCCESS;
+}
+
+void AccountManager::LogoutUser(const libcomp::String& username)
+{
+    LOG_DEBUG(libcomp::String("Logging out account '%1'.\n").Arg(username));
+
+    // Lock the accounts now so this is thread safe.
+    std::lock_guard<std::mutex> lock(mAccountLock);
+
+    // Remove the entry to save memory. If it has to be created again the
+    // account will be in the OFFLINE state.
+    EraseLogin(username);
+}
+
 void AccountManager::ExpireSession(const libcomp::String& username,
     const libcomp::String& sid)
 {

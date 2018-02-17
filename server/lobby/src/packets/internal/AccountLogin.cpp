@@ -89,7 +89,6 @@ void UpdateAccountLogin(std::shared_ptr<LobbyServer> server,
         return;
     }
 
-    int8_t timeout = 0;
     auto clientConnection = server->GetManagerConnection()->GetClientConnection(
         account->GetUsername());
     if(nullptr != clientConnection && currentWorldID == -1)
@@ -113,29 +112,14 @@ void UpdateAccountLogin(std::shared_ptr<LobbyServer> server,
         reply.WriteU8(character->GetCID());
 
         clientConnection->SendPacket(reply);
-
-        // 10 seconds until the connection to the channel is considered a failure
-        timeout = 10;
     }
-    
+
     // Always refresh the connection
     if(!accountManager->LogoutUser(username, currentWorldID))
     {
         return;
     }
     accountManager->LoginUser(username, login);
-
-    auto sessionManager = server->GetSessionManager();
-    if(timeout)
-    {
-        // Set a session expiration time
-        sessionManager->ExpireSession(username, timeout);
-    }
-    else
-    {
-        // Clear the session expiration
-        sessionManager->RefreshSession(username);
-    }
 }
 
 bool Parsers::AccountLogin::Parse(libcomp::ManagerPacket *pPacketManager,

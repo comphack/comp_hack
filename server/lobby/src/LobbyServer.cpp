@@ -532,11 +532,6 @@ AccountManager* LobbyServer::GetAccountManager()
     return &mAccountManager;
 }
 
-SessionManager* LobbyServer::GetSessionManager()
-{
-    return &mSessionManager;
-}
-
 bool LobbyServer::ResetRegisteredWorlds()
 {
     //Set all the default World information

@@ -38,7 +38,6 @@ SET(${PROJECT_NAME}_SRCS
     src/LoginWebHandler.cpp
     src/ManagerClientPacket.cpp
     src/ManagerConnection.cpp
-    src/SessionManager.cpp
     src/World.cpp
     src/main.cpp
 )
@@ -57,7 +56,6 @@ SET(${PROJECT_NAME}_HDRS
     src/LoginWebHandler.h
     src/ManagerClientPacket.h
     src/ManagerConnection.h
-    src/SessionManager.h
     src/World.h
 
     ${CMAKE_CURRENT_BINARY_DIR}/res/login/ResourceLogin.h

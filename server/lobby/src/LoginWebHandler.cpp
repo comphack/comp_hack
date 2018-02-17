@@ -29,7 +29,6 @@
 // lobby Includes
 #include "AccountManager.h"
 #include "ResourceLogin.h"
-#include "SessionManager.h"
 
 // libcomp Includes
 #include <Decrypt.h>
@@ -48,7 +47,7 @@ using namespace lobby;
 thread_local LoginHandlerThread LoginHandler::mThreadHandler;
 
 LoginHandler::LoginHandler(const std::shared_ptr<libcomp::Database>& database)
-    : mDatabase(database), mAccountManager(nullptr), mSessionManager(nullptr)
+    : mDatabase(database), mAccountManager(nullptr)
 {
     mVfs.AddArchiveLoader(new ttvfs::VFSZipArchiveLoader);
 
@@ -401,9 +400,4 @@ std::vector<char> LoginHandler::LoadVfsFile(const libcomp::String& path)
 void LoginHandler::SetAccountManager(AccountManager *pManager)
 {
     mAccountManager = pManager;
-}
-
-void LoginHandler::SetSessionManager(SessionManager *pManager)
-{
-    mSessionManager = pManager;
 }

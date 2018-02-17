@@ -53,7 +53,6 @@ namespace lobby
 {
 
 class AccountManager;
-class SessionManager;
 
 class LoginHandler : public CivetHandler
 {
@@ -71,8 +70,6 @@ public:
 
     void SetAccountManager(AccountManager *pManager);
 
-    void SetSessionManager(SessionManager *pManager);
-
 private:
     std::shared_ptr<objects::LoginScriptRequest> ParsePost(
         CivetServer *pServer, struct mg_connection *pConnection);
@@ -88,7 +85,6 @@ private:
     std::shared_ptr<objects::LobbyConfig> mConfig;
 
     AccountManager *mAccountManager;
-    SessionManager *mSessionManager;
 
     static thread_local LoginHandlerThread mThreadHandler;
 };

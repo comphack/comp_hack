@@ -63,12 +63,10 @@ bool Parsers::AccountLogout::Parse(libcomp::ManagerPacket *pPacketManager,
     }
 
     auto cLogin = login->GetCharacterLogin();
-    int8_t expiration = 0;
     if(channelSwitch)
     {
         cLogin->SetChannelID(p.ReadS8());
         login->SetSessionKey(p.ReadU32Little());
-        expiration = 10;
     }
     else
     {
@@ -77,13 +75,7 @@ bool Parsers::AccountLogout::Parse(libcomp::ManagerPacket *pPacketManager,
         {
             LOG_DEBUG(libcomp::String("Logging out user: '%1'\n").Arg(username));
             accountManager->LogoutUser(username, cLogin->GetWorldID());
-            expiration = 60;
         }
-    }
-
-    if(expiration)
-    {
-        server->GetSessionManager()->ExpireSession(username, expiration);
     }
 
     return true;

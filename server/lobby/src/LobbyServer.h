@@ -34,7 +34,6 @@
 // lobby Includes
 #include "AccountManager.h"
 #include "ManagerConnection.h"
-#include "SessionManager.h"
 #include "World.h"
 
 namespace objects
@@ -137,12 +136,6 @@ public:
     AccountManager* GetAccountManager();
 
     /**
-     * Get the session manager for the server.
-     * @return Session manager for the server.
-     */
-    SessionManager* GetSessionManager();
-
-    /**
      * Get the same fake salt for an account that does not exist.
      * @return A fake salt for an account that does not exist.
      */
@@ -202,9 +195,6 @@ protected:
 
     /// Account manager for the server.
     AccountManager mAccountManager;
-
-    /// Session manager for the server.
-    SessionManager mSessionManager;
 
     /// Lock for the fake salts.
     std::mutex mFakeSaltsLock;

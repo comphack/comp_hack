@@ -38,6 +38,13 @@
 // object Includes
 #include <AccountLogin.h>
 
+namespace objects
+{
+
+class Character;
+
+} // namespace objects
+
 namespace lobby
 {
 
@@ -118,12 +125,21 @@ public:
     ErrorCodes_t LobbyLogin(const libcomp::String& username,
         libcomp::String& sid2);
 
+    std::shared_ptr<objects::AccountLogin> StartChannelLogin(
+        const libcomp::String& username,
+        const libcomp::ObjectReference<objects::Character>& character);
+    ErrorCodes_t SwitchToChannel(const libcomp::String& username,
+        int8_t worldID, int8_t channelID);
+    ErrorCodes_t CompleteChannelLogin(const libcomp::String& username,
+        int8_t worldID, int8_t channelID);
+
     /**
      * Transitions the user to the OFFLINE state.
      * @param username Username of the account to log out.
+     * @returns true if the account was logged out; false otherwise.
      * @note This function is thread safe.
      */
-    void LogoutUser(const libcomp::String& username);
+    bool Logout(const libcomp::String& username);
 
     /**
      * Expire a session key. If the session key is not matched or the account
@@ -182,16 +198,6 @@ public:
      */
     std::shared_ptr<objects::AccountLogin> GetUserLogin(
         const libcomp::String& username);
-
-    /**
-     * Mark the user logged out of the given world.
-     * @param username Username for the account to log out.
-     * @param world World the user is logged into or -1 if they are in the
-     * lobby server.
-     * @return true if the user was logged out; false if the user is not
-     * logged in to the specified world.
-     */
-    bool LogoutUser(const libcomp::String& username, int8_t world);
 
     /**
      * Log out all users in a given world (and optionally on a specific

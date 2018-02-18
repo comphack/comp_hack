@@ -390,7 +390,7 @@ void ManagerConnection::RemoveClientConnection(const std::shared_ptr<
         if(accountManager->IsLoggedIn(username, worldID) && worldID == -1)
         {
             LOG_DEBUG(libcomp::String("Logging out user: '%1'\n").Arg(username));
-            accountManager->LogoutUser(username, worldID);
+            accountManager->Logout(username);
         }
     }
 }

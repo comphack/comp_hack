@@ -206,7 +206,7 @@ ErrorCodes_t AccountManager::LobbyLogin(const libcomp::String& username,
     // This should never happen.
     if(!login)
     {
-        LOG_DEBUG(libcomp::String("ogin (via web auth) for account '%1' "
+        LOG_DEBUG(libcomp::String("Login (via web auth) for account '%1' "
             "failed with a system error.\n").Arg(username));
 
         return ErrorCodes_t::SYSTEM_ERROR;
@@ -218,6 +218,8 @@ ErrorCodes_t AccountManager::LobbyLogin(const libcomp::String& username,
         LOG_DEBUG(libcomp::String("Login (via web auth) for account '%1' "
             "failed because it did not provide a correct SID.\n").Arg(
             username));
+        LOG_DEBUG(libcomp::String("Theirs: %1\n").Arg(sid));
+        LOG_DEBUG(libcomp::String("Ours:   %1\n").Arg(login->GetSessionID()));
 
         return ErrorCodes_t::BAD_USERNAME_PASSWORD;
     }
@@ -258,7 +260,7 @@ ErrorCodes_t AccountManager::LobbyLogin(const libcomp::String& username,
     // This should never happen.
     if(!login)
     {
-        LOG_DEBUG(libcomp::String("ogin (via web auth) for account '%1' "
+        LOG_DEBUG(libcomp::String("Login (via web auth) for account '%1' "
             "failed with a system error.\n").Arg(username));
 
         return ErrorCodes_t::SYSTEM_ERROR;
@@ -279,8 +281,12 @@ ErrorCodes_t AccountManager::LobbyLogin(const libcomp::String& username,
         return ErrorCodes_t::BAD_USERNAME_PASSWORD;
     }
 
+    // Get the account login state as we will need it in a second.
+    auto state = login->GetState();
+
     // Now check to see if the account is already online.
-    if(objects::AccountLogin::State_t::OFFLINE != login->GetState())
+    if(objects::AccountLogin::State_t::OFFLINE != state &&
+        objects::AccountLogin::State_t::LOBBY_WAIT != state)
     {
         LOG_DEBUG(libcomp::String("Classic login for account '%1' failed "
             "because it is already online.\n").Arg(username));
@@ -309,16 +315,169 @@ ErrorCodes_t AccountManager::LobbyLogin(const libcomp::String& username,
     return ErrorCodes_t::SUCCESS;
 }
 
-void AccountManager::LogoutUser(const libcomp::String& username)
+std::shared_ptr<objects::AccountLogin> AccountManager::StartChannelLogin(
+    const libcomp::String& username,
+    const libcomp::ObjectReference<objects::Character>& character)
+{
+    // Lock the accounts now so this is thread safe.
+    std::lock_guard<std::mutex> lock(mAccountLock);
+
+    // Get the login object for this username.
+    auto login = GetOrCreateLogin(username);
+
+    // This should never happen.
+    if(!login)
+    {
+        LOG_DEBUG(libcomp::String("Login to channel for account '%1' "
+            "failed with a system error.\n").Arg(username));
+
+        return {};
+    }
+
+    // Now check to see if the account is online.
+    if(objects::AccountLogin::State_t::LOBBY != login->GetState())
+    {
+        LOG_DEBUG(libcomp::String("Login to channel for account '%1' failed "
+            "because it is not in the lobby state.\n").Arg(username));
+
+        return {};
+    }
+
+    auto cLogin = login->GetCharacterLogin();
+    cLogin->SetCharacter(character);
+
+    return login;
+}
+
+ErrorCodes_t AccountManager::SwitchToChannel(const libcomp::String& username,
+    int8_t worldID, int8_t channelID)
+{
+    LOG_DEBUG(libcomp::String("Attempting to perform a login to channel %1 "
+        "on world %2 for account '%3'.\n").Arg(channelID).Arg(
+        worldID).Arg(username));
+
+    // Lock the accounts now so this is thread safe.
+    std::lock_guard<std::mutex> lock(mAccountLock);
+
+    // Get the login object for this username.
+    auto login = GetOrCreateLogin(username);
+
+    // This should never happen.
+    if(!login)
+    {
+        LOG_DEBUG(libcomp::String("Login to channel for account '%1' "
+            "failed with a system error.\n").Arg(username));
+
+        return ErrorCodes_t::SYSTEM_ERROR;
+    }
+
+    // Now check to see if the account is online.
+    if(objects::AccountLogin::State_t::LOBBY != login->GetState())
+    {
+        LOG_DEBUG(libcomp::String("Login to channel for account '%1' failed "
+            "because it is not in the lobby state.\n").Arg(username));
+
+        return ErrorCodes_t::SYSTEM_ERROR;
+    }
+
+    // Update the state of the login.
+    login->SetState(objects::AccountLogin::State_t::LOBBY_TO_CHANNEL);
+
+    auto cLogin = login->GetCharacterLogin();
+    cLogin->SetWorldID(worldID);
+    cLogin->SetChannelID(channelID);
+
+    return ErrorCodes_t::SUCCESS;
+}
+
+ErrorCodes_t AccountManager::CompleteChannelLogin(
+    const libcomp::String& username, int8_t worldID, int8_t channelID)
+{
+    LOG_DEBUG(libcomp::String("Attempting to complete a login to channel %1 "
+        "on world %2 for account '%3'.\n").Arg(channelID).Arg(
+        worldID).Arg(username));
+
+    // Lock the accounts now so this is thread safe.
+    std::lock_guard<std::mutex> lock(mAccountLock);
+
+    // Get the login object for this username.
+    auto login = GetOrCreateLogin(username);
+
+    // This should never happen.
+    if(!login)
+    {
+        LOG_DEBUG(libcomp::String("Login to channel for account '%1' "
+            "failed with a system error.\n").Arg(username));
+
+        return ErrorCodes_t::SYSTEM_ERROR;
+    }
+
+    // Now check to see if the account is online.
+    if(objects::AccountLogin::State_t::LOBBY_TO_CHANNEL != login->GetState())
+    {
+        LOG_DEBUG(libcomp::String("Login to channel for account '%1' failed "
+            "because it is not in the lobby to channel state.\n").Arg(
+            username));
+
+        return ErrorCodes_t::SYSTEM_ERROR;
+    }
+
+    auto cLogin = login->GetCharacterLogin();
+
+    // Check the world and channel match.
+    if(cLogin->GetWorldID() != worldID ||
+        cLogin->GetChannelID() != channelID)
+    {
+        LOG_DEBUG(libcomp::String("Login to channel for account '%1' failed "
+            "because the completion is for a different world or channel.\n"
+            ).Arg(username));
+
+        return ErrorCodes_t::SYSTEM_ERROR;
+    }
+
+    // Update the state of the login.
+    login->SetState(objects::AccountLogin::State_t::CHANNEL);
+
+    return ErrorCodes_t::SUCCESS;
+}
+
+bool AccountManager::Logout(const libcomp::String& username)
 {
     LOG_DEBUG(libcomp::String("Logging out account '%1'.\n").Arg(username));
 
     // Lock the accounts now so this is thread safe.
     std::lock_guard<std::mutex> lock(mAccountLock);
 
-    // Remove the entry to save memory. If it has to be created again the
-    // account will be in the OFFLINE state.
-    EraseLogin(username);
+    // Get the login object for this username.
+    auto login = GetOrCreateLogin(username);
+
+    // This should never happen but if it does ignore it.
+    if(!login)
+    {
+        return false;
+    }
+
+    // If the account is offline ignore this logout.
+    if(objects::AccountLogin::State_t::OFFLINE == login->GetState())
+    {
+        // Remove the entry to save memory.
+        EraseLogin(username);
+
+        return false;
+    }
+
+    // Set the session to expire.
+    mServer->GetTimerManager()->ScheduleEventIn(static_cast<int>(
+        SVR_CONST.WEBAUTH_TIMEOUT), [this](const libcomp::String& _username,
+        const libcomp::String& _sid)
+    {
+        ExpireSession(_username, _sid);
+    }, username, login->GetSessionID());
+
+    // Let the account return to the lobby (if they did a logout to lobby).
+    login->SetState(objects::AccountLogin::State_t::LOBBY_WAIT);
+
+    return true;
 }
 
 void AccountManager::ExpireSession(const libcomp::String& username,
@@ -540,41 +699,6 @@ std::shared_ptr<objects::AccountLogin> AccountManager::GetUserLogin(
 
     auto pair = mAccountMap.find(lookup);
     return pair != mAccountMap.end() ? pair->second : nullptr;
-}
-
-bool AccountManager::LogoutUser(const libcomp::String& username, int8_t world)
-{
-    bool result = false;
-
-    libcomp::String lookup = username.ToLower();
-
-    std::lock_guard<std::mutex> lock(mAccountLock);
-
-    auto pair = mAccountMap.find(lookup);
-
-    if(mAccountMap.end() != pair && world == pair->second->
-        GetCharacterLogin()->GetWorldID())
-    {
-        (void)mAccountMap.erase(pair);
-
-        LOG_DEBUG(libcomp::String("Logged out account '%1'\n").Arg(username));
-
-        result = true;
-    }
-    else
-    {
-        LOG_DEBUG(libcomp::String("Account '%1' is not logged in so it "
-            "was not logged out.\n").Arg(username));
-    }
-
-    PrintAccounts();
-
-#ifdef HAVE_SYSTEMD
-    sd_notifyf(0, "STATUS=Server is up with %d connected user(s).",
-        (int)mAccountMap.size());
-#endif // HAVE_SYSTEMD
-
-    return result;
 }
 
 std::list<libcomp::String> AccountManager::LogoutUsersInWorld(int8_t world,

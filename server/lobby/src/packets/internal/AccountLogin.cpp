@@ -112,14 +112,13 @@ void UpdateAccountLogin(std::shared_ptr<LobbyServer> server,
         reply.WriteU8(character->GetCID());
 
         clientConnection->SendPacket(reply);
-    }
 
-    // Always refresh the connection
-    if(!accountManager->LogoutUser(username, currentWorldID))
-    {
-        return;
+        accountManager->SwitchToChannel(username, worldID, channelID);
     }
-    accountManager->LoginUser(username, login);
+    else
+    {
+        accountManager->CompleteChannelLogin(username, worldID, channelID);
+    }
 }
 
 bool Parsers::AccountLogin::Parse(libcomp::ManagerPacket *pPacketManager,

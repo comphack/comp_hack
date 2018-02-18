@@ -74,7 +74,7 @@ bool Parsers::AccountLogout::Parse(libcomp::ManagerPacket *pPacketManager,
         if(cLogin->GetWorldID() != -1)
         {
             LOG_DEBUG(libcomp::String("Logging out user: '%1'\n").Arg(username));
-            accountManager->LogoutUser(username, cLogin->GetWorldID());
+            accountManager->Logout(username);
         }
     }
 

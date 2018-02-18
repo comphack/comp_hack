@@ -244,10 +244,17 @@ bool SkillManager::ActivateSkill(const std::shared_ptr<ActiveEntityState> source
     auto client = server->GetManagerConnection()->GetEntityClient(
         source->GetEntityID());
 
+    auto activated = source->GetActivatedAbility();
+    if(activated)
+    {
+        // Cancel existing first
+        CancelSkill(source, activated->GetActivationID());
+    }
+
     auto cast = def->GetCast();
     auto activatedTime = ChannelServer::GetServerTime();
 
-    auto activated = std::shared_ptr<objects::ActivatedAbility>(
+    activated = std::shared_ptr<objects::ActivatedAbility>(
         new objects::ActivatedAbility);
     activated->SetSkillID(skillID);
     activated->SetSourceEntity(source);
@@ -4553,6 +4560,13 @@ bool SkillManager::SetSkillCompleteState(const std::shared_ptr<
 
     uint64_t currentTime = activated->GetExecutionTime();
 
+    uint8_t execCount = activated->GetExecuteCount();
+    if(executed)
+    {
+        execCount = (uint8_t)(execCount + 1);
+        activated->SetExecuteCount(execCount);
+    }
+
     auto calcState = GetCalculatedState(source, pSkill, false, nullptr);
 
     // Stack adjust is affected by 2 sources if not an item skill or just
@@ -4563,7 +4577,6 @@ bool SkillManager::SetSkillCompleteState(const std::shared_ptr<
         (!pSkill->IsItemSkill ? tokuseiManager->GetAspectSum(source,
             TokuseiAspectType::SKILL_STACK_ADJUST, calcState) : 0));
 
-    uint8_t execCount = activated->GetExecuteCount();
     bool moreUses = execCount < maxStacks;
 
     // If the skill was executed, set lockout time and increase
@@ -4582,18 +4595,16 @@ bool SkillManager::SetSkillCompleteState(const std::shared_ptr<
                 currentTime);
         }
 
-        activated->SetExecuteCount((uint8_t)(activated->GetExecuteCount() + 1));
-
         activated->SetLockOutTime(lockOutTime);
     }
 
     // Set the cooldown if no remaining uses are available
     uint32_t cdTime = skillData->GetCondition()->GetCooldownTime();
 
-    uint64_t cooldownTime = currentTime;
+    uint64_t cooldownTime = 0;
     if(cdTime && (!moreUses || (execCount > 0 && !executed)))
     {
-        cooldownTime = cooldownTime + (uint64_t)((double)(cdTime * 1000) *
+        cooldownTime = currentTime + (uint64_t)((double)(cdTime * 1000) *
             (source->GetCorrectValue(CorrectTbl::COOLDOWN_TIME, calcState) * 0.01));
     }
 

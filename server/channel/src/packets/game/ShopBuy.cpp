@@ -36,6 +36,7 @@
 #include <Account.h>
 #include <Item.h>
 #include <ItemBox.h>
+#include <MiItemBasicData.h>
 #include <MiItemData.h>
 #include <MiPossessionData.h>
 #include <MiShopProductData.h>
@@ -133,7 +134,10 @@ void HandleShopPurchase(const std::shared_ptr<ChannelServer> server,
         price = 1;
     }
 
-    bool cpPurchase = product->GetCPCost() > 0;
+    // Initially it was thought that the CP cost on MiShopProductData indicated
+    // if the item had a CP cost or not but there are entries that sell for CP
+    // in the UI with a cost of zero here so use the flag on the item instead
+    bool cpPurchase = (def->GetBasic()->GetFlags() & 0x20) != 0;
 
     bool success = false;
     if(!cpPurchase)

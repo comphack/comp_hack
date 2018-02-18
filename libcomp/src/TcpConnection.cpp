@@ -501,8 +501,7 @@ String TcpConnection::GenerateDiffieHellmanPublic(DH *pDiffieHellman)
 
         if(nullptr != pHexResult)
         {
-            publicKey = String(pHexResult).RightJustified(
-                DH_KEY_HEX_SIZE, '0');
+            publicKey = String(pHexResult);
 
             OPENSSL_free(pHexResult);
         }
@@ -520,8 +519,7 @@ std::vector<char> TcpConnection::GenerateDiffieHellmanSharedData(
 
     if(nullptr != pDiffieHellman && nullptr != pDiffieHellman->p &&
         nullptr != pDiffieHellman->g &&  nullptr != pDiffieHellman->pub_key &&
-        DH_SHARED_DATA_SIZE == DH_size(pDiffieHellman) &&
-        DH_KEY_HEX_SIZE == otherPublic.Length())
+        DH_SHARED_DATA_SIZE == DH_size(pDiffieHellman))
     {
         BIGNUM *pOtherPublic = nullptr;
 
@@ -532,7 +530,7 @@ std::vector<char> TcpConnection::GenerateDiffieHellmanSharedData(
             data.insert(data.begin(),
                 reinterpret_cast<const char*>(sharedData),
                 reinterpret_cast<const char*>(sharedData) +
-                DH_SHARED_DATA_SIZE);
+                BF_NET_KEY_BYTE_SIZE);
         }
 
         if(nullptr != pOtherPublic)

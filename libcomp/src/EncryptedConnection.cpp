@@ -336,8 +336,7 @@ void EncryptedConnection::ParseClientEncryptionStart(libcomp::Packet& packet)
             std::vector<char> sharedData = GenerateDiffieHellmanSharedData(
                 mDiffieHellman, serverPublic);
 
-            if(DH_KEY_HEX_SIZE != clientPublic.Length() ||
-                DH_SHARED_DATA_SIZE != sharedData.size())
+            if(BF_NET_KEY_BYTE_SIZE != sharedData.size())
             {
                 // Get ready for the next packet.
                 packet.Clear();
@@ -410,7 +409,8 @@ void EncryptedConnection::ParseServerEncryptionStart(libcomp::Packet& packet)
             reply.WriteString32Big(libcomp::Convert::ENCODING_UTF8,
                 GetDiffieHellmanPrime(mDiffieHellman));
             reply.WriteString32Big(libcomp::Convert::ENCODING_UTF8,
-                GenerateDiffieHellmanPublic(mDiffieHellman));
+                GenerateDiffieHellmanPublic(mDiffieHellman).RightJustified(
+                DH_KEY_HEX_SIZE, '0'));
 
             SendPacket(reply);
 
@@ -488,7 +488,7 @@ void EncryptedConnection::ParseServerEncryptionFinish(libcomp::Packet& packet)
             std::vector<char> sharedData = GenerateDiffieHellmanSharedData(
                 mDiffieHellman, clientPublic);
 
-            if(DH_SHARED_DATA_SIZE != sharedData.size())
+            if(BF_NET_KEY_BYTE_SIZE != sharedData.size())
             {
                 // Get ready for the next packet.
                 packet.Clear();

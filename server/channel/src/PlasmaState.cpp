@@ -31,6 +31,8 @@
 #include <PacketCodes.h>
 
 // objects Includes
+#include <Loot.h>
+#include <LootBox.h>
 #include <PlasmaSpawn.h>
 
 // channel Includes
@@ -281,6 +283,28 @@ std::shared_ptr<PlasmaPoint> PlasmaState::SetPickResult(uint32_t pointID,
     }
 
     return point;
+}
+
+bool PlasmaState::HideIfEmpty(const std::shared_ptr<PlasmaPoint>& point)
+{
+    std::lock_guard<std::mutex> lock(mLock);
+    auto it = point ? mPoints.find(point->GetID()) : mPoints.end();
+    if(it != mPoints.end() && it->second == point)
+    {
+        for(auto l : point->GetLoot()->GetLoot())
+        {
+            if(l && l->GetCount() > 0)
+            {
+                return false;
+            }
+        }
+
+        HidePoint(point);
+
+        return true;
+    }
+
+    return false;
 }
 
 bool PlasmaState::SetLoot(uint32_t pointID, int32_t looterID,

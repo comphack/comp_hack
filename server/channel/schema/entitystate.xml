@@ -133,6 +133,8 @@
         <member type="u64" name="CooldownTime"/>
         <member type="u64" name="LockOutTime"/>
         <member type="u8" name="ExecuteCount"/>
+        <member type="float" name="ChargeMoveSpeed"/>
+        <member type="float" name="ChargeCompleteMoveSpeed"/>
 
         <member type="s32" name="HPCost"/>
         <member type="s32" name="MPCost"/>

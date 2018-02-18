@@ -202,11 +202,10 @@ void AIManager::UpdateActiveStates(const std::shared_ptr<Zone>& zone,
                     p.WriteFloat(enemy->GetOriginX());
                     p.WriteFloat(enemy->GetOriginY());
                     p.WriteFloat(enemy->GetMovementSpeed());
+                    p.WriteFloat(ChannelServer::ToSyncTime(now));
+                    p.WriteFloat(ChannelServer::ToSyncTime(enemy->GetDestinationTicks()));
 
-                    timeMap[p.Size()] = now;
-                    timeMap[p.Size() + 4] = enemy->GetDestinationTicks();
-                    ChannelClientConnection::SendRelativeTimePacket(zConnections, p,
-                        timeMap, true);
+                    ChannelClientConnection::BroadcastPacket(zConnections, p, true);
                 }
                 else if(enemy->IsRotating())
                 {
@@ -214,11 +213,10 @@ void AIManager::UpdateActiveStates(const std::shared_ptr<Zone>& zone,
                     p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_ROTATE);
                     p.WriteS32Little(enemy->GetEntityID());
                     p.WriteFloat(enemy->GetDestinationRotation());
+                    p.WriteFloat(ChannelServer::ToSyncTime(now));
+                    p.WriteFloat(ChannelServer::ToSyncTime(enemy->GetDestinationTicks()));
 
-                    timeMap[p.Size()] = now;
-                    timeMap[p.Size() + 4] = enemy->GetDestinationTicks();
-                    ChannelClientConnection::SendRelativeTimePacket(zConnections, p,
-                        timeMap, true);
+                    ChannelClientConnection::BroadcastPacket(zConnections, p, true);
                 }
                 else
                 {
@@ -229,10 +227,9 @@ void AIManager::UpdateActiveStates(const std::shared_ptr<Zone>& zone,
                     p.WriteS32Little(enemy->GetEntityID());
                     p.WriteFloat(enemy->GetDestinationX());
                     p.WriteFloat(enemy->GetDestinationY());
+                    p.WriteFloat(ChannelServer::ToSyncTime(enemy->GetDestinationTicks()));
 
-                    timeMap[p.Size()] = enemy->GetDestinationTicks();
-                    ChannelClientConnection::SendRelativeTimePacket(zConnections, p,
-                        timeMap, true);
+                    ChannelClientConnection::BroadcastPacket(zConnections, p, true);
                 }
             }
         }

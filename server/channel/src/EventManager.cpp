@@ -100,11 +100,13 @@ EventManager::~EventManager()
 
 bool EventManager::HandleEvent(
     const std::shared_ptr<ChannelClientConnection>& client,
-    const libcomp::String& eventID, int32_t sourceEntityID)
+    const libcomp::String& eventID, int32_t sourceEntityID,
+    uint32_t actionGroupID)
 {
     auto instance = PrepareEvent(client, eventID, sourceEntityID);
     if(instance)
     {
+        instance->SetActionGroupID(actionGroupID);
         return HandleEvent(client, instance);
     }
 
@@ -158,6 +160,9 @@ bool EventManager::HandleResponse(const std::shared_ptr<ChannelClientConnection>
     {
         LOG_ERROR(libcomp::String("Option selected for unknown event: %1\n"
             ).Arg(character->GetAccount()->GetUsername()));
+
+        // End the event in case the client thinks something is actually happening
+        EndEvent(client);
         return false;
     }
 
@@ -1997,7 +2002,8 @@ void EventManager::HandleNext(const std::shared_ptr<ChannelClientConnection>& cl
     }
     else
     {
-        HandleEvent(client, nextEventID, current->GetSourceEntityID());
+        HandleEvent(client, nextEventID, current->GetSourceEntityID(),
+            current->GetActionGroupID());
     }
 }
 
@@ -2156,7 +2162,8 @@ bool EventManager::PerformActions(const std::shared_ptr<ChannelClientConnection>
     auto actionManager = server->GetActionManager();
     auto actions = e->GetActions();
 
-    actionManager->PerformActions(client, actions, instance->GetSourceEntityID());
+    actionManager->PerformActions(client, actions, instance->GetSourceEntityID(),
+        nullptr, instance->GetActionGroupID());
 
     HandleNext(client, instance);
 

@@ -44,6 +44,8 @@
 
 using namespace channel;
 
+ServerTime ChannelServer::sStartTime = 0;
+
 ChannelServer::ChannelServer(const char *szProgram,
     std::shared_ptr<objects::ServerConfig> config,
     std::shared_ptr<libcomp::ServerCommandLineParser> commandLine) :
@@ -521,6 +523,8 @@ bool ChannelServer::Initialize()
         return false;
     }
 
+    sStartTime = GetServerTime();
+
     return true;
 }
 
@@ -563,6 +567,16 @@ ChannelServer::~ChannelServer()
 ServerTime ChannelServer::GetServerTime()
 {
     return sGetServerTime();
+}
+
+float ChannelServer::ToSyncTime(ServerTime relativeTo)
+{
+    if(relativeTo < sStartTime)
+    {
+        return 0.f;
+    }
+
+    return (float)((double)(relativeTo - sStartTime) * 0.000001);
 }
 
 int32_t ChannelServer::GetExpirationInSeconds(uint32_t fixedTime, uint32_t relativeTo)

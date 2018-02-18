@@ -36,6 +36,7 @@
 #include <limits>
 
 // objects Includes
+#include <ActivatedAbility.h>
 #include <CalculatedEntityState.h>
 #include <Character.h>
 #include <Clan.h>
@@ -214,6 +215,7 @@ bool ActiveEntityState::CanMove()
         return false;
     }
 
+    bool charging = false;
     auto statusTimes = GetStatusTimes();
     if(statusTimes.size() > 0)
     {
@@ -222,9 +224,24 @@ bool ActiveEntityState::CanMove()
         {
             if(statusTimes.find(lockState) != statusTimes.end())
             {
-                return false;
+                if(lockState == STATUS_CHARGING)
+                {
+                    charging = true;
+                }
+                else
+                {
+                    return false;
+                }
             }
         }
+    }
+
+    auto activated = GetActivatedAbility();
+    if(activated &&
+        ((charging && activated->GetChargeMoveSpeed() == 0.f) ||
+         (!charging && activated->GetChargeCompleteMoveSpeed() == 0.f)))
+    {
+        return false;
     }
 
     return true;
@@ -303,8 +320,9 @@ void ActiveEntityState::RefreshCurrentPosition(uint64_t now)
             uint64_t originTicks = GetOriginTicks();
 
             uint64_t elapsed = now - originTicks;
-            uint64_t total = destTicks - originTicks;
-            if(total == 0)
+            uint64_t total = (destTicks > originTicks)
+                ? destTicks - originTicks : 0;
+            if(total == 0 || now < originTicks)
             {
                 SetCurrentX(destX);
                 SetCurrentY(destY);

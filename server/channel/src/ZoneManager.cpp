@@ -43,6 +43,7 @@
 #include <EntityStats.h>
 #include <Item.h>
 #include <ItemDrop.h>
+#include <LootBox.h>
 #include <MiAIData.h>
 #include <MiDevilData.h>
 #include <MiDynamicMapData.h>
@@ -1028,20 +1029,16 @@ void ZoneManager::FixCurrentPosition(const std::shared_ptr<ActiveEntityState>& e
         float y = eState->GetCurrentY();
         float rot = eState->GetCurrentRotation();
 
-
         libcomp::Packet p;
         p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_FIX_POSITION);
         p.WriteS32Little(eState->GetEntityID());
         p.WriteFloat(x);
         p.WriteFloat(y);
         p.WriteFloat(rot);
+        p.WriteFloat(ChannelServer::ToSyncTime(now));
+        p.WriteFloat(ChannelServer::ToSyncTime(fixUntil));
 
-        std::unordered_map<uint32_t, uint64_t> timeMap;
-        timeMap[16] = now;
-        timeMap[20] = fixUntil;
-
-        auto zConnections = zone->GetConnectionList();
-        ChannelClientConnection::SendRelativeTimePacket(zConnections, p, timeMap);
+        BroadcastPacket(zone, p);
     }
 }
 
@@ -2155,12 +2152,9 @@ void ZoneManager::Warp(const std::shared_ptr<ChannelClientConnection>& client,
     p.WriteFloat(yPos);
     p.WriteFloat(0.0f);  // Unknown
     p.WriteFloat(rot);
+    p.WriteFloat(ChannelServer::ToSyncTime(timestamp));
 
-    std::unordered_map<uint32_t, uint64_t> timeMap;
-    timeMap[p.Size()] = timestamp;
-
-    auto connections = server->GetZoneManager()->GetZoneConnections(client, true);
-    ChannelClientConnection::SendRelativeTimePacket(connections, p, timeMap);
+    BroadcastPacket(client, p);
 }
 
 bool ZoneManager::GetSpotPosition(uint32_t dynamicMapID, uint32_t spotID, float& x,

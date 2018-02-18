@@ -55,6 +55,7 @@
 #include <ItemBox.h>
 #include <ItemDrop.h>
 #include <Loot.h>
+#include <LootBox.h>
 #include <MiAcquisitionSkillData.h>
 #include <MiCancelData.h>
 #include <MiCategoryData.h>
@@ -1963,7 +1964,7 @@ void CharacterManager::SendLootItemData(const std::list<std::shared_ptr<
             p.Seek(2);
             p.WriteS32Little(cState->GetEntityID());
             p.Seek(10);
-            p.WriteFloat(state->ToClientTime(lootBox->GetLootTime()));
+            p.WriteFloat(ChannelServer::ToSyncTime(lootBox->GetLootTime()));
 
             if(queue)
             {

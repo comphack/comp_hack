@@ -66,6 +66,7 @@
 #include <CharacterProgress.h>
 #include <DemonBox.h>
 #include <DropSet.h>
+#include <LootBox.h>
 #include <MiSpotData.h>
 #include <ObjectPosition.h>
 #include <Party.h>
@@ -82,6 +83,7 @@ struct channel::ActionContext
     std::shared_ptr<ChannelClientConnection> Client;
     std::shared_ptr<objects::Action> Action;
     int32_t SourceEntityID = 0;
+    uint32_t GroupID = 0;
     std::shared_ptr<Zone> CurrentZone;
 };
 
@@ -141,11 +143,13 @@ ActionManager::~ActionManager()
 void ActionManager::PerformActions(
     const std::shared_ptr<ChannelClientConnection>& client,
     const std::list<std::shared_ptr<objects::Action>>& actions,
-    int32_t sourceEntityID, const std::shared_ptr<Zone>& zone)
+    int32_t sourceEntityID, const std::shared_ptr<Zone>& zone,
+    uint32_t groupID)
 {
     ActionContext ctx;
     ctx.Client = client;
     ctx.SourceEntityID = sourceEntityID;
+    ctx.GroupID = groupID;
 
     if(zone)
     {
@@ -262,7 +266,8 @@ bool ActionManager::StartEvent(ActionContext& ctx)
     auto server = mServer.lock();
     auto eventManager = server->GetEventManager();
 
-    eventManager->HandleEvent(ctx.Client, act->GetEventID(), ctx.SourceEntityID);
+    eventManager->HandleEvent(ctx.Client, act->GetEventID(), ctx.SourceEntityID,
+        ctx.GroupID);
     
     return true;
 }
@@ -1538,7 +1543,7 @@ bool ActionManager::CreateLoot(ActionContext& ctx)
         lState->SetEntityID(server->GetNextEntityID());
         entityIDs.push_back(lState->GetEntityID());
 
-        zone->AddLootBox(lState);
+        zone->AddLootBox(lState, ctx.GroupID);
 
         if(firstClient)
         {

@@ -531,7 +531,8 @@ bool DatabaseSQLite3::VerifyAndSetupSchema(bool recreateTables)
         }
 
         bool creating = false;
-        bool archiving = false;
+        bool recreating = false;
+        bool updating = false;
         std::set<std::string> needsIndex;
         auto tableIter = fieldMap.find(objName);
         if(tableIter == fieldMap.end())
@@ -540,56 +541,51 @@ bool DatabaseSQLite3::VerifyAndSetupSchema(bool recreateTables)
         }
         else
         {
-            archiving = recreateTables;
+            recreating = recreateTables;
 
             std::unordered_map<std::string,
                 String> columns = tableIter->second;
-            if(columns.size() - 1 != vars.size()
-                || columns.find("UID") == columns.end())
+
+            auto indexes = indexedFields[objName];
+            columns.erase("UID");
+            for(auto var : vars)
             {
-                archiving = true;
-            }
-            else
-            {
-                auto indexes = indexedFields[objName];
-                columns.erase("UID");
-                for(auto var : vars)
+                auto name = var->GetName();
+                auto type = GetVariableType(var);
+
+                if(columns.find(name) == columns.end())
                 {
-                    auto name = var->GetName();
-                    auto type = GetVariableType(var);
+                    updating = true;
+                }
+                else if(columns[name] != type)
+                {
+                    recreating = true;
+                }
 
-                    if(columns.find(name) == columns.end()
-                        || columns[name] != type)
-                    {
-                        archiving = true;
-                    }
-
-                    auto indexName = String("idx_%1_%2")
-                        .Arg(objName).Arg(name).ToUtf8();
-                    if(var->IsLookupKey() &&
-                        indexes.find(indexName) == indexes.end())
-                    {
-                        needsIndex.insert(name);
-                    }
+                auto indexName = String("idx_%1_%2")
+                    .Arg(objName).Arg(name).ToUtf8();
+                if(var->IsLookupKey() &&
+                    indexes.find(indexName) == indexes.end())
+                {
+                    needsIndex.insert(name);
                 }
             }
         }
 
-        if(archiving)
+        if(recreating)
         {
             if(mConfig->GetAutoSchemaUpdate())
             {
-                LOG_DEBUG(String("Archiving table '%1'...\n")
+                LOG_DEBUG(String("Dropping table '%1'...\n")
                     .Arg(metaObject.GetName()));
             
-                /// @todo: do this properly
                 if(Execute(String("DROP TABLE %1;").Arg(objName)))
                 {
-                    LOG_DEBUG("Archiving complete\n");
+                    LOG_DEBUG("Re-creation complete\n");
                 }
                 else
                 {
-                    LOG_ERROR("Archiving failed\n");
+                    LOG_ERROR("Re-creation failed\n");
                     return false;
                 }
 
@@ -635,6 +631,70 @@ bool DatabaseSQLite3::VerifyAndSetupSchema(bool recreateTables)
                 return false;
             }
         }
+        else if(updating)
+        {
+            LOG_DEBUG(String("Updating table '%1'...\n")
+                .Arg(metaObject.GetName()));
+
+            auto objColumns = fieldMap[objName];
+
+            bool hashExists;
+            size_t typeHash = PersistentObject::GetTypeHashByName(
+                metaObject.GetName(), hashExists);
+            
+            auto emptyObj = PersistentObject::New(typeHash);
+
+            std::unordered_map<std::string, DatabaseBind*> defaultVals;
+            for(auto val : emptyObj->GetMemberBindValues(true))
+            {
+                defaultVals[val->GetColumn().C()] = val;
+            }
+
+            for(size_t i = 0; i < vars.size(); i++)
+            {
+                auto var = vars[i];
+                auto col = defaultVals[var->GetName()];
+                String type = GetVariableType(var);
+                if(col && objColumns.find(var->GetName()) == objColumns.end())
+                {
+                    if(Execute(String("ALTER TABLE %1 ADD %2 %3;")
+                        .Arg(objName).Arg(var->GetName()).Arg(type)))
+                    {
+                        LOG_DEBUG(String("Created column '%1'\n")
+                            .Arg(var->GetName()));
+                    }
+                    else
+                    {
+                        LOG_ERROR(String("Failed to create column '%1'\n")
+                            .Arg(var->GetName()));
+                        return false;
+                    }
+
+                    q = Prepare(String("UPDATE %1 SET %2 = :%3;")
+                                    .Arg(metaObject.GetName())
+                                    .Arg(col->GetColumn())
+                                    .Arg(col->GetColumn()));
+                    if(!col->Bind(q))
+                    {
+                        LOG_DEBUG(
+                            String("Failed to bind default value for column '%1'\n")
+                                .Arg(col->GetColumn()));
+                    }
+
+                    if(q.Execute())
+                    {
+                        LOG_DEBUG(String("Created and applied default value to"
+                            " column '%1'\n").Arg(col->GetColumn()));
+                    }
+                    else
+                    {
+                        LOG_ERROR(String("Failed to apply default value to column '%1'\n")
+                            .Arg(col->GetColumn()));
+                        return false;
+                    }
+                }
+            }
+        }
         
         //If we made the table or are missing an index, make them now
         if(needsIndex.size() > 0 || creating)
@@ -669,7 +729,7 @@ bool DatabaseSQLite3::VerifyAndSetupSchema(bool recreateTables)
             }
         }
 
-        if(!creating && !archiving && needsIndex.size() == 0)
+        if(!creating && !recreating && !updating && needsIndex.size() == 0)
         {
             LOG_DEBUG(String("'%1': Verified\n")
                 .Arg(metaObject.GetName()));

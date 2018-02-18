@@ -137,6 +137,13 @@ bool Parsers::PlasmaItem::Parse(libcomp::ManagerPacket *pPacketManager,
                         lootedItems[loot->GetType()] + loot->GetCount());
                 }
             }
+
+            if(pState->HideIfEmpty(point))
+            {
+                libcomp::Packet notify;
+                pState->GetPointStatusData(notify, (uint32_t)point->GetID());
+                server->GetZoneManager()->BroadcastPacket(client, notify, true);
+            }
         }
     }
 

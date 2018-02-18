@@ -26,6 +26,8 @@
 
 #include "ChannelClientConnection.h"
 
+#include "ChannelServer.h"
+
 using namespace channel;
 
 ChannelClientConnection::ChannelClientConnection(asio::ip::tcp::socket& socket,
@@ -54,15 +56,25 @@ uint64_t ChannelClientConnection::GetTimeout() const
 }
 
 void ChannelClientConnection::BroadcastPacket(const std::list<std::shared_ptr<
-    ChannelClientConnection>>& clients, libcomp::Packet& packet)
+    ChannelClientConnection>>& clients, libcomp::Packet& packet, bool queue)
 {
-    std::list<std::shared_ptr<libcomp::TcpConnection>> connections;
-    for(auto client : clients)
+    if(queue)
     {
-        connections.push_back(client);
+        for(auto client : clients)
+        {
+            client->QueuePacketCopy(packet);
+        }
     }
+    else
+    {
+        std::list<std::shared_ptr<libcomp::TcpConnection>> connections;
+        for(auto client : clients)
+        {
+            connections.push_back(client);
+        }
 
-    libcomp::TcpConnection::BroadcastPacket(connections, packet);
+        libcomp::TcpConnection::BroadcastPacket(connections, packet);
+    }
 }
 
 void ChannelClientConnection::BroadcastPackets(const std::list<std::shared_ptr<
@@ -85,32 +97,5 @@ void ChannelClientConnection::FlushAllOutgoing(const std::list<std::shared_ptr<
     for(auto client : clients)
     {
         client->FlushOutgoing();
-    }
-}
-
-void ChannelClientConnection::SendRelativeTimePacket(
-    const std::list<std::shared_ptr<ChannelClientConnection>>& clients,
-    libcomp::Packet& packet, const std::unordered_map<uint32_t, uint64_t>& timeMap,
-    bool queue)
-{
-    for(auto client : clients)
-    {
-        libcomp::Packet pCopy(packet);
-
-        auto state = client->GetClientState();
-        for(auto tPair : timeMap)
-        {
-            pCopy.Seek(tPair.first);
-            pCopy.WriteFloat(state->ToClientTime(tPair.second));
-        }
-
-        if(queue)
-        {
-            client->QueuePacket(pCopy);
-        }
-        else
-        {
-            client->SendPacket(pCopy);
-        }
     }
 }

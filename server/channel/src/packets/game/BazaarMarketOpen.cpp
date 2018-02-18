@@ -57,6 +57,8 @@ bool Parsers::BazaarMarketOpen::Parse(libcomp::ManagerPacket *pPacketManager,
     int32_t maccaCost = p.ReadS32Little();
 
     auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+    auto zoneManager = server->GetZoneManager();
+
     auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
@@ -97,6 +99,7 @@ bool Parsers::BazaarMarketOpen::Parse(libcomp::ManagerPacket *pPacketManager,
 
         bazaarData->SetCharacter(cState->GetEntity());
         bazaarData->SetZone(zone->GetDefinition()->GetID());
+        bazaarData->SetChannelID(server->GetRegisteredChannel()->GetID());
         bazaarData->SetMarketID(marketID);
         bazaarData->SetState(objects::BazaarData::State_t::BAZAAR_PREPARING);
 
@@ -127,10 +130,10 @@ bool Parsers::BazaarMarketOpen::Parse(libcomp::ManagerPacket *pPacketManager,
 
         bazaar->SetCurrentMarket(marketID, bazaarData);
 
-        server->GetZoneManager()->SendBazaarMarketData(zone, bazaar, marketID);
+        zoneManager->SendBazaarMarketData(zone, bazaar, marketID);
 
         // Refresh markets in the same bazaar
-        server->GetZoneManager()->ExpireBazaarMarkets(zone, bazaar);
+        zoneManager->ExpireBazaarMarkets(zone, bazaar);
 
         reply.WriteS32Little((int32_t)timeLeft);
         reply.WriteS32Little(0);        // Success

@@ -99,12 +99,10 @@ bool Parsers::Rotate::Parse(libcomp::ManagerPacket *pPacketManager,
         reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_ROTATE);
         reply.WriteS32Little(entityID);
         reply.WriteFloat(rotation);
+        reply.WriteFloat(start);
+        reply.WriteFloat(stop);
 
-        std::unordered_map<uint32_t, uint64_t> timeMap;
-        timeMap[reply.Size()] = startTime;
-        timeMap[reply.Size() + 4] = stopTime;
-
-        ChannelClientConnection::SendRelativeTimePacket(zoneConnections, reply, timeMap);
+        ChannelClientConnection::BroadcastPacket(zoneConnections, reply);
     }
 
     return true;

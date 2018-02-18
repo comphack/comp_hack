@@ -235,14 +235,6 @@ public:
     void SyncReceived();
 
     /**
-     * Convert time relative to the server to time relative to the
-     * game client.
-     * @param time Time relative to the server
-     * @return Time relative to the client
-     */
-    ClientTime ToClientTime(ServerTime time) const;
-
-    /**
      * Convert time relative to the game client to time relative
      * to the server.
      * @param time Time relative to the client
@@ -295,6 +287,10 @@ private:
     /// Current time of the server set upon starting the client
     /// communication.
     ServerTime mStartTime;
+
+    /// Current time of the server relative to the client set
+    /// upon starting the client communication.
+    ClientTime mClientStartOffset;
 
     /// Next available local object ID
     int32_t mNextLocalObjectID;

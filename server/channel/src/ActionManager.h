@@ -67,10 +67,12 @@ public:
      * @param actions List of actions to perform.
      * @param sourceEntityID ID of the entity performing the actions.
      * @param zone Pointer to the current zone the action is being performed in
+     * @param groupID Optional action group ID used for specific action logic
      */
     void PerformActions(const std::shared_ptr<ChannelClientConnection>& client,
         const std::list<std::shared_ptr<objects::Action>>& actions,
-        int32_t sourceEntityID, const std::shared_ptr<Zone>& zone = nullptr);
+        int32_t sourceEntityID, const std::shared_ptr<Zone>& zone = nullptr,
+        uint32_t groupID = 0);
 
 private:
     /**

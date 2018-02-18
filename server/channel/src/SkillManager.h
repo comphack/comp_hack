@@ -77,6 +77,10 @@ protected:
 
     /// List of skills that are countering the current skill context
     std::list<std::shared_ptr<channel::ProcessingSkill>> CounteringSkills;
+
+    /// List of skill contexts created as a result of this one, typically
+    /// as a result of a counter
+    std::list<std::shared_ptr<channel::SkillExecutionContext>> SubContexts;
 };
 
 /**
@@ -270,7 +274,13 @@ private:
 
     /**
      * Execute or cancel the counter skill currently being used by the
-     * supplied target from being hit by the source entity
+     * supplied target from being hit by the source entity. Countering
+     * skills activate manually from the source and are actually executed
+     * in the middle of the skill being countered. The countering skill
+     * will have its CounteredSkill property set on the context and the
+     * skill being countered will have the countering skill added to its
+     * CounteringSkills list, since technically multiple skills can
+     * counter one.
      * @param source Pointer to the state of the source entity
      * @param target Pointer ot the stare of the target entity
      * @param pSkill Skill processing state of the skill being counterd
@@ -465,6 +475,16 @@ private:
     void FinalizeSkillExecution(const std::shared_ptr<ChannelClientConnection> client,
         const std::shared_ptr<SkillExecutionContext>& ctx,
         std::shared_ptr<objects::ActivatedAbility> activated);
+
+    /**
+     * Mark all information pertaining to a skill completing either through
+     * execution or cancellation with more uses available.
+     * @param pSkill Pointer to the skill being processed
+     * @param executed true if the skill was executed, false if it is being cancelled
+     * @return true if the skill can be used again, false if it cannot
+     */
+    bool SetSkillCompleteState(const std::shared_ptr<channel::ProcessingSkill>& pSkill,
+        bool executed);
 
     /**
      * Placeholder function for a skill actually handled outside of the

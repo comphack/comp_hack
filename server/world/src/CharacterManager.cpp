@@ -294,10 +294,13 @@ void CharacterManager::SendStatusToRelatedCharacters(
                 (friendUpdate ? RELATED_FRIENDS : 0) | (partyUpdate ? RELATED_PARTY : 0));
 
             // If all that is being sent is zone visible stats, restrict to the same zone
+            // If the zone is contained in the change, relay it to the player
             bool partyStatsOnly = zoneRestrict &&
                 (0 == (outFlags & (uint8_t)(~((uint8_t)CharacterLoginStateFlag_t::CHARLOGIN_PARTY_INFO) |
                 (uint8_t)CharacterLoginStateFlag_t::CHARLOGIN_PARTY_DEMON_INFO)));
-            SendToRelatedCharacters(reply, cLogin->GetWorldCID(), 1, relatedTypes, false, partyStatsOnly);
+            bool containsZone = 0 != (outFlags & (uint8_t)CharacterLoginStateFlag_t::CHARLOGIN_ZONE);
+            SendToRelatedCharacters(reply, cLogin->GetWorldCID(), 1, relatedTypes, containsZone,
+                partyStatsOnly);
         }
     }
 }

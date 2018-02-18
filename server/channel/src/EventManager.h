@@ -79,10 +79,14 @@ public:
      * @param client Pointer to the client the event affects
      * @param eventID ID of the event to handle
      * @param sourceEntityID Optional source of an event to focus on
+     * @param actionGroupID Optional action group ID, set when performing
+     *  a "start event" action so any later sets can pick up where the
+     *  others left off
      * @return true on success, false on failure
      */
     bool HandleEvent(const std::shared_ptr<ChannelClientConnection>& client,
-        const libcomp::String& eventID, int32_t sourceEntityID);
+        const libcomp::String& eventID, int32_t sourceEntityID,
+        uint32_t actionGroupID = 0);
 
     /**
      * Prepare a new event based upon the supplied ID, relative to an

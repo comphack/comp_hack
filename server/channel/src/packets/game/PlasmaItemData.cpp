@@ -100,7 +100,7 @@ bool Parsers::PlasmaItemData::Parse(libcomp::ManagerPacket *pPacketManager,
 
         if(success)
         {
-            reply.WriteFloat(state->ToClientTime(loot->GetLootTime()));
+            reply.WriteFloat(ChannelServer::ToSyncTime(loot->GetLootTime()));
 
             for(auto lItem : loot->GetLoot())
             {

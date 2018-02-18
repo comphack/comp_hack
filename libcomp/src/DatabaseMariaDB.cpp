@@ -534,7 +534,8 @@ bool DatabaseMariaDB::VerifyAndSetupSchema(bool recreateTables)
         }
 
         bool creating = false;
-        bool archiving = false;
+        bool recreating = false;
+        bool updating = false;
         std::set<std::string> needsIndex;
         auto tableIter = fieldMap.find(objNameLower);
         if(tableIter == fieldMap.end())
@@ -543,63 +544,61 @@ bool DatabaseMariaDB::VerifyAndSetupSchema(bool recreateTables)
         }
         else
         {
-            archiving = recreateTables;
+            recreating = recreateTables;
 
             std::unordered_map<std::string,
                 String> columns = tableIter->second;
-            if(columns.size() - 1 != vars.size()
-                || columns.find("uid") == columns.end())
+
+            auto indexes = indexedFields[objNameLower];
+            columns.erase("uid");
+            for(auto var : vars)
             {
-                archiving = true;
-            }
-            else
-            {
-                auto indexes = indexedFields[objNameLower];
-                columns.erase("uid");
-                for(auto var : vars)
+                auto name = String(var->GetName())
+                    .ToLower().ToUtf8();
+                auto type = GetVariableType(var);
+
+                // Do not compare on size specifiers
+                if(type.Contains("("))
                 {
-                    auto name = String(var->GetName())
-                        .ToLower().ToUtf8();
-                    auto type = GetVariableType(var);
-                    
-                    // Do not compare on size specifiers
-                    if(type.Contains("("))
-                    {
-                        type = type.Split("(").front();
-                    }
+                    type = type.Split("(").front();
+                }
 
-                    if(columns.find(name) == columns.end()
-                        || columns[name] != type)
-                    {
-                        archiving = true;
-                    }
+                if(columns.find(name) == columns.end())
+                {
+                    updating = true;
+                }
+                else if(columns[name] != type)
+                {
+                    recreating = true;
+                }
 
-                    auto indexName = String("idx_%1_%2")
-                        .Arg(objNameLower).Arg(name).ToUtf8();
-                    if(var->IsLookupKey() &&
-                        indexes.find(indexName) == indexes.end())
-                    {
-                        needsIndex.insert(var->GetName());
-                    }
+                auto indexName = String("idx_%1_%2")
+                    .Arg(objNameLower).Arg(name).ToUtf8();
+                if(var->IsLookupKey() &&
+                    indexes.find(indexName) == indexes.end())
+                {
+                    needsIndex.insert(var->GetName());
                 }
             }
         }
 
-        if(archiving)
+        if(recreating)
         {
             if(mConfig->GetAutoSchemaUpdate())
             {
                 LOG_DEBUG(String("Archiving table '%1'...\n")
                     .Arg(metaObject.GetName()));
 
-                /// @todo: do this properly
-                if (Execute(String("DROP TABLE `%1`;").Arg(objName)))
+                LOG_DEBUG(String("Dropping table '%1'...\n")
+                    .Arg(metaObject.GetName()));
+            
+                if(Execute(String("DROP TABLE `%1`;").Arg(objName)))
                 {
-                    LOG_DEBUG("Archiving complete\n");
+                    LOG_DEBUG("Re-creation complete\n");
                 }
                 else
                 {
-                    LOG_ERROR("Archiving failed\n");
+                    LOG_ERROR("Re-creation failed\n");
                     return false;
                 }
 
@@ -613,7 +612,7 @@ bool DatabaseMariaDB::VerifyAndSetupSchema(bool recreateTables)
                 return false;
             }
         }
-            
+
         if(creating)
         {
             LOG_DEBUG(String("Creating table '%1'...\n")
@@ -643,6 +642,70 @@ bool DatabaseMariaDB::VerifyAndSetupSchema(bool recreateTables)
             {
                 LOG_ERROR("Creation failed\n");
                 return false;
+            }
+        }
+        else if(updating)
+        {
+            LOG_DEBUG(String("Updating table '%1'...\n")
+                .Arg(metaObject.GetName()));
+
+            auto objColumns = fieldMap[objNameLower];
+
+            bool hashExists;
+            size_t typeHash = PersistentObject::GetTypeHashByName(
+                metaObject.GetName(), hashExists);
+            
+            auto emptyObj = PersistentObject::New(typeHash);
+
+            std::unordered_map<std::string, DatabaseBind*> defaultVals;
+            for(auto val : emptyObj->GetMemberBindValues(true))
+            {
+                defaultVals[val->GetColumn().C()] = val;
+            }
+
+            for(size_t i = 0; i < vars.size(); i++)
+            {
+                auto var = vars[i];
+                auto col = defaultVals[var->GetName()];
+                String type = GetVariableType(var);
+                if(col && objColumns.find(String(var->GetName())
+                    .ToLower().C()) == objColumns.end())
+                {
+                    if(Execute(String("ALTER TABLE `%1` ADD `%2` %3;")
+                        .Arg(objName).Arg(var->GetName()).Arg(type)))
+                    {
+                        LOG_DEBUG(String("Created column '%1'\n")
+                            .Arg(var->GetName()));
+                    }
+                    else
+                    {
+                        LOG_ERROR(String("Failed to create column '%1'\n")
+                            .Arg(var->GetName()));
+                        return false;
+                    }
+
+                    q = Prepare(String("UPDATE `%1` SET `%2` = :%3;")
+                                    .Arg(metaObject.GetName())
+                                    .Arg(col->GetColumn())
+                                    .Arg(col->GetColumn()));
+                    if(!col->Bind(q))
+                    {
+                        LOG_DEBUG(String("Failed to bind default value for column '%1'\n")
+                                .Arg(col->GetColumn()));
+                    }
+
+                    if(q.Execute())
+                    {
+                        LOG_DEBUG(String("Applied default value to column '%1'\n")
+                            .Arg(col->GetColumn()));
+                    }
+                    else
+                    {
+                        LOG_ERROR(String("Failed to apply default value to column '%1'\n")
+                            .Arg(col->GetColumn()));
+                        return false;
+                    }
+                }
             }
         }
         
@@ -687,7 +750,7 @@ bool DatabaseMariaDB::VerifyAndSetupSchema(bool recreateTables)
             }
         }
 
-        if(!creating && !archiving && needsIndex.size() == 0)
+        if(!creating && !recreating && !updating && needsIndex.size() == 0)
         {
             LOG_DEBUG(String("'%1': Verified\n")
                 .Arg(metaObject.GetName()));
@@ -1045,3 +1108,4 @@ String DatabaseMariaDB::GetLastError()
 
     return "Invalid connection.";
 }
+

@@ -194,6 +194,14 @@ public:
         int32_t looterID, int8_t result);
 
     /**
+     * Hide the supplied plasma point  if the point's loot box is empty.
+     * @param point Pointer to the plasma point to hide
+     * @return true if the point was empty and was marked as hidden,
+     *  false if it was not empty
+     */
+    bool HideIfEmpty(const std::shared_ptr<PlasmaPoint>& point);
+
+    /**
      * Set the loot associated to a specific point
      * @param pointID ID of the point to update
      * @param looterID ID of the character who is updating the

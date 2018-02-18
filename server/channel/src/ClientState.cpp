@@ -316,22 +316,14 @@ void ClientState::SyncReceived()
     if(mStartTime == 0)
     {
         mStartTime = ChannelServer::GetServerTime();
+        mClientStartOffset = ChannelServer::ToSyncTime(mStartTime);
     }
-}
-
-ClientTime ClientState::ToClientTime(ServerTime time) const
-{
-    if(time <= mStartTime)
-    {
-        return 0.0f;
-    }
-
-    return static_cast<ClientTime>((ClientTime)(time - mStartTime) / 1000000.0f);
 }
 
 ServerTime ClientState::ToServerTime(ClientTime time) const
 {
-    return static_cast<ServerTime>(((ServerTime)time * 1000000) + mStartTime);
+    return static_cast<ServerTime>((ServerTime)
+        ((double)(time - mClientStartOffset) * 1000000.0) + mStartTime);
 }
 
 ClientState* ClientState::GetEntityClientState(int32_t id, bool worldID)

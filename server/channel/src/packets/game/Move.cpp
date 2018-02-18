@@ -79,18 +79,15 @@ bool Parsers::Move::Parse(libcomp::ManagerPacket *pPacketManager,
     ServerTime startTime = state->ToServerTime(start);
     ServerTime stopTime = state->ToServerTime(stop);
 
-    (void)ratePerSec;
-
     /// @todo: Determine if the player's movement was valid (collisions, triggers etc)
     bool positionCorrected = false;
-    bool stopped = false;
 
     eState->ExpireStatusTimes(ChannelServer::GetServerTime());
     if(!eState->CanMove())
     {
-        stopped = positionCorrected = true;
-        destX = originX;
-        destY = originY;
+        server->GetZoneManager()->FixCurrentPosition(eState,
+            stopTime, startTime);
+        return true;
     }
 
     /*float deltaX = destX - originX;
@@ -125,17 +122,8 @@ bool Parsers::Move::Parse(libcomp::ManagerPacket *pPacketManager,
 
     /// @todo: Fire zone triggers
 
-    std::list<std::shared_ptr<ChannelClientConnection>> zoneConnections;
-    if(stopped)
-    {
-        zoneConnections.push_back(client);
-    }
-    else
-    {
-        zoneConnections = server->GetZoneManager()->GetZoneConnections(client,
-            positionCorrected);
-    }
-
+    auto zoneConnections = server->GetZoneManager()->GetZoneConnections(client,
+        positionCorrected);
     if(zoneConnections.size() > 0)
     {
         libcomp::Packet reply;
@@ -146,12 +134,10 @@ bool Parsers::Move::Parse(libcomp::ManagerPacket *pPacketManager,
         reply.WriteFloat(originX);
         reply.WriteFloat(originY);
         reply.WriteFloat(ratePerSec);
+        reply.WriteFloat(start);
+        reply.WriteFloat(stop);
 
-        std::unordered_map<uint32_t, uint64_t> timeMap;
-        timeMap[reply.Size()] = startTime;
-        timeMap[reply.Size() + 4] = stopTime;
-
-        ChannelClientConnection::SendRelativeTimePacket(zoneConnections, reply, timeMap);
+        ChannelClientConnection::BroadcastPacket(zoneConnections, reply);
     }
 
     return true;

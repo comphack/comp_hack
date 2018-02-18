@@ -31,6 +31,7 @@
 
 // object Includes
 #include <Loot.h>
+#include <LootBox.h>
 #include <PlasmaState.h>
 #include <ServerNPC.h>
 #include <ServerObject.h>
@@ -219,6 +220,26 @@ void Zone::RemoveEntity(int32_t entityID, bool updateSpawns)
                         return e->GetEntityID() == entityID;
                     });
 
+                if(lState->GetEntity()->GetType() == objects::LootBox::Type_t::BOSS_BOX)
+                {
+                    // Remove from the boss box group if it exists
+                    for(auto pair : mBossBoxGroups)
+                    {
+                        if(pair.second.find(lState->GetEntityID()) != pair.second.end())
+                        {
+                            pair.second.erase(lState->GetEntityID());
+                            if(pair.second.size() == 0)
+                            {
+                                // Remove the group if its empty now
+                                mBossBoxGroups.erase(pair.first);
+                                mBossBoxOwners.erase(pair.first);
+                            }
+
+                            break;
+                        }
+                    }
+                }
+
                 removeEnemy = lState->GetEntity()->GetEnemy();
             }
             break;
@@ -315,11 +336,18 @@ void Zone::AddEnemy(const std::shared_ptr<EnemyState>& enemy)
     RegisterEntityState(enemy);
 }
 
-void Zone::AddLootBox(const std::shared_ptr<LootBoxState>& box)
+void Zone::AddLootBox(const std::shared_ptr<LootBoxState>& box,
+    uint32_t bossGroupID)
 {
     {
         std::lock_guard<std::mutex> lock(mLock);
         mLootBoxes.push_back(box);
+
+        if(bossGroupID > 0 &&
+            box->GetEntity()->GetType() == objects::LootBox::Type_t::BOSS_BOX)
+        {
+            mBossBoxGroups[bossGroupID].insert(box->GetEntityID());
+        }
     }
     RegisterEntityState(box);
 }
@@ -441,6 +469,46 @@ std::shared_ptr<LootBoxState> Zone::GetLootBox(int32_t id)
 const std::list<std::shared_ptr<LootBoxState>> Zone::GetLootBoxes() const
 {
     return mLootBoxes;
+}
+
+bool Zone::ClaimBossBox(int32_t id, int32_t looterID)
+{
+    auto lState = GetLootBox(id);
+    auto lBox = lState ? lState->GetEntity() : nullptr;
+    if(!lState || (lBox->ValidLooterIDsCount() > 0 &&
+        !lBox->ValidLooterIDsContains(looterID)))
+    {
+        return false;
+    }
+
+    std::lock_guard<std::mutex> lock(mLock);
+    uint32_t groupID = 0;
+    for(auto pair : mBossBoxGroups)
+    {
+        if(pair.second.find(lState->GetEntityID()) != pair.second.end())
+        {
+            groupID = pair.first;
+            break;
+        }
+    }
+
+    if(groupID == 0 || lBox->ValidLooterIDsContains(looterID))
+    {
+        return true;
+    }
+
+    if(mBossBoxOwners[groupID].find(looterID) == mBossBoxOwners[groupID].end())
+    {
+        // No boss box from this group looted yet
+        std::set<int32_t> looterIDs = { looterID };
+        lState->GetEntity()->SetValidLooterIDs(looterIDs);
+
+        mBossBoxOwners[groupID].insert(looterID);
+
+        return true;
+    }
+
+    return false;
 }
 
 const std::list<std::shared_ptr<NPCState>> Zone::GetNPCs() const

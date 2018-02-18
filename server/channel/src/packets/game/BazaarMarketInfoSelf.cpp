@@ -69,7 +69,7 @@ bool Parsers::BazaarMarketInfoSelf::Parse(libcomp::ManagerPacket *pPacketManager
     reply.WriteS32Little(0);    // Success
     reply.WriteString16Little(libcomp::Convert::ENCODING_CP932,
         character ? character->GetName() : "", true);
-    reply.WriteS8(0);           // Channel ID
+    reply.WriteS8(bazaarData ? (int8_t)bazaarData->GetChannelID() : -1);
     reply.WriteU32Little(bazaarData ? bazaarData->GetZone() : 0);
     reply.WriteU32Little(bazaarData ? bazaarData->GetMarketID() : 0);
     reply.WriteU32Little(bazaarData ? bazaarData->GetMarketID() : 0);   // Unique ID?

@@ -78,9 +78,12 @@ public:
      * Broadcast the supplied packet to each client connection in the list.
      * @param clients List of client connections to send the packet to
      * @param packet Packet to send to the supplied clients
+     * @param queue Optional parameter to queue packets for the supplied connections
+     *  instead of sending immediately
      */
     static void BroadcastPacket(const std::list<std::shared_ptr<
-        ChannelClientConnection>>& clients, libcomp::Packet& packet);
+        ChannelClientConnection>>& clients, libcomp::Packet& packet,
+        bool queue = false);
 
     /**
      * Broadcast the supplied list of packets to each client connection in the list.
@@ -96,20 +99,6 @@ public:
      */
     static void FlushAllOutgoing(const std::list<std::shared_ptr<
         ChannelClientConnection>>& clients);
-
-    /**
-     * Send (or queue) a packet to a list of client connections. Server
-     * tick times are converted to relative client times before sending.
-     * @param clients List of client connections to send the packet to
-     * @param packet Packet to send to the supplied clients
-     * @param timeMap Map of packet positions to server times to transform
-     * @param queue Optional parameter to queue packets for the supplied connections
-     *  instead of sending immediately
-     */
-    static void SendRelativeTimePacket(
-        const std::list<std::shared_ptr<ChannelClientConnection>>& clients,
-        libcomp::Packet& p, const std::unordered_map<uint32_t, uint64_t>& timeMap,
-        bool queue = false);
 
 private:
     /// State of the client

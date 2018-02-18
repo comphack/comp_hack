@@ -27,9 +27,6 @@
 #ifndef SERVER_CHANNEL_SRC_ZONE_H
 #define SERVER_CHANNEL_SRC_ZONE_H
 
- // object Includes
-#include <LootBox.h>
-
 // channel Includes
 #include "ActiveEntityState.h"
 #include "BazaarState.h"
@@ -44,6 +41,7 @@
 namespace objects
 {
 class ActionSpawn;
+class Loot;
 class LootBox;
 class ServerNPC;
 class ServerObject;
@@ -184,8 +182,11 @@ public:
     /**
      * Add a loot body to the zone
      * @param box Pointer to the loot box to add
+     * @param bossGroupID Optional ID of the group to bind looting to
+     *  for boss boxes
      */
-    void AddLootBox(const std::shared_ptr<LootBoxState>& box);
+    void AddLootBox(const std::shared_ptr<LootBoxState>& box,
+        uint32_t bossGroupID = 0);
 
     /**
      * Add an NPC to the zone
@@ -294,6 +295,16 @@ public:
      * @return List of all loot box instances in the zone
      */
     const std::list<std::shared_ptr<LootBoxState>> GetLootBoxes() const;
+
+    /**
+     * Mark a boss box as belonging to the specified entity if
+     * the box is not already claimed and the entity has not
+     * already claimed the box
+     * @param id Instance ID of the boss box.
+     * @param looterID ID of the entity claiming the box
+     * @return true if the box was claimed, false if it was not
+     */
+    bool ClaimBossBox(int32_t id, int32_t looterID);
 
     /**
      * Get an NPC instance by it's ID.
@@ -515,6 +526,12 @@ private:
 
     /// List of pointers to lootable boxes for the zone
     std::list<std::shared_ptr<LootBoxState>> mLootBoxes;
+
+    /// Map of boss box group IDs to the boxes included
+    std::unordered_map<uint32_t, std::set<int32_t>> mBossBoxGroups;
+
+    /// Map of boss box group IDs to entities that have claimed part of the group
+    std::unordered_map<uint32_t, std::set<int32_t>> mBossBoxOwners;
 
     /// Map of plasma states by definition ID
     std::unordered_map<uint32_t, std::shared_ptr<PlasmaState>> mPlasma;

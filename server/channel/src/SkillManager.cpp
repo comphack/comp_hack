@@ -278,6 +278,40 @@ bool SkillManager::ActivateSkill(const std::shared_ptr<ActiveEntityState> source
     auto chargedTime = activatedTime + (chargeTime * 1000);
 
     activated->SetChargedTime(chargedTime);
+
+    float chargeSpeed = 0.f, chargeCompleteSpeed = 0.f;
+
+    // Send movement speed based off skill action type
+    switch(def->GetBasic()->GetActionType())
+    {
+    case objects::MiSkillBasicData::ActionType_t::SPIN:
+    case objects::MiSkillBasicData::ActionType_t::RAPID:
+    case objects::MiSkillBasicData::ActionType_t::COUNTER:
+    case objects::MiSkillBasicData::ActionType_t::DODGE:
+        // No movement during or after
+        break;
+    case objects::MiSkillBasicData::ActionType_t::SHOT:
+    case objects::MiSkillBasicData::ActionType_t::TALK:
+    case objects::MiSkillBasicData::ActionType_t::INTIMIDATE:
+    case objects::MiSkillBasicData::ActionType_t::SUPPORT:
+        // Move after only
+        chargeCompleteSpeed = source->GetMovementSpeed();
+        break;
+    case objects::MiSkillBasicData::ActionType_t::GUARD:
+        // Move during and after charge (1/2 normal speed)
+        chargeSpeed = chargeCompleteSpeed = (source->GetMovementSpeed() * 0.5f);
+        break;
+    case objects::MiSkillBasicData::ActionType_t::ATTACK:
+    case objects::MiSkillBasicData::ActionType_t::RUSH:
+    default:
+        // Move during and after charge (normal speed)
+        chargeSpeed = chargeCompleteSpeed = source->GetMovementSpeed();
+        break;
+    }
+
+    activated->SetChargeMoveSpeed(chargeSpeed);
+    activated->SetChargeCompleteMoveSpeed(chargeCompleteSpeed);
+
     source->SetActivatedAbility(activated);
 
     SendActivateSkill(activated, def);
@@ -796,6 +830,13 @@ bool SkillManager::CancelSkill(const std::shared_ptr<ActiveEntityState> source,
             Rest(activated, nullptr, nullptr);
         }
 
+        // If any executions have occurred, the cooldown needs to be activated
+        if(activated->GetExecuteCount() > 0)
+        {
+            auto pSkill = GetProcessingSkill(activated, nullptr, nullptr);
+            SetSkillCompleteState(pSkill, false);
+        }
+
         SendCompleteSkill(activated, 1);
         source->SetActivatedAbility(nullptr);
         return true;
@@ -1291,12 +1332,6 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
         SetNRA(target, skill);
     }
 
-    // Exit if nothing will be affected by damage or effects
-    if(skill.Targets.size() == 0)
-    {
-        return true;
-    }
-
     // If this is a counter, defer final processing to the skill being
     // countered (see below)
     if(ctx->CounteredSkill)
@@ -1317,8 +1352,15 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
             for(auto counteringSkill : ctx->CounteringSkills)
             {
                 ProcessSkillResultFinal(counteringSkill);
+
+                // Now that we're done make sure we clean up context pointer
+                counteringSkill->ExecutionContext = nullptr;
             }
         }
+
+        // Clean up the related contexts as they are no longer needed
+        ctx->CounteringSkills.clear();
+        ctx->SubContexts.clear();
     }
 
     return true;
@@ -1334,6 +1376,27 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
     if(!zone)
     {
         // Somehow the source left the zone, quit out
+        return;
+    }
+
+    auto server = mServer.lock();
+    auto characterManager = server->GetCharacterManager();
+    auto definitionManager = server->GetDefinitionManager();
+    auto tokuseiManager = server->GetTokuseiManager();
+    auto zoneManager = server->GetZoneManager();
+
+    // Quit here if nothing will be affected by damage or effects
+    if(skill.Targets.size() == 0)
+    {
+        libcomp::Packet p;
+        p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_SKILL_REPORTS);
+        p.WriteS32Little(source->GetEntityID());
+        p.WriteU32Little(skill.SkillID);
+        p.WriteS8(0);
+        p.WriteU32Little(0);
+
+        zoneManager->BroadcastPacket(zone, p);
+
         return;
     }
 
@@ -1418,12 +1481,6 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
             }
         }
     }
-
-    auto server = mServer.lock();
-    auto characterManager = server->GetCharacterManager();
-    auto definitionManager = server->GetDefinitionManager();
-    auto tokuseiManager = server->GetTokuseiManager();
-    auto zoneManager = server->GetZoneManager();
 
     // Get knockback info
     auto skillKnockback = damageData->GetKnockBack();
@@ -1979,7 +2036,6 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
         (skill.Definition->GetDamage()->GetHitStopTime() * 1000);
 
     auto zConnections = zone->GetConnectionList();
-    std::unordered_map<uint32_t, uint64_t> timeMap;
 
     // The skill report packet can easily go over the max packet size so
     // the targets in the results need to be batched
@@ -2014,8 +2070,6 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
     {
         if(it != targetBatches.begin())
         {
-            timeMap.clear();
-
             // An execute packet must be sent once per report (even if its
             // identical) or the client starts ignoring the reports
             SendExecuteSkill(pSkill->Activated);
@@ -2189,14 +2243,8 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
 
             for(size_t i = 0; i < 3; i++)
             {
-                if(hitTimings[i])
-                {
-                    timeMap[(uint32_t)(p.Size() + (4 * i))] = hitTimings[i];
-                }
+                p.WriteFloat(ChannelServer::ToSyncTime(hitTimings[i]));
             }
-
-            // Double back at the end and write client specific times
-            p.WriteBlank(12);
 
             p.WriteU8(target.TalkFlags);
 
@@ -2244,7 +2292,7 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
             p.WriteS32Little(target.PursuitDamage);
         }
 
-        ChannelClientConnection::SendRelativeTimePacket(zConnections, p, timeMap);
+        ChannelClientConnection::BroadcastPacket(zConnections, p);
     }
 
     if(revived.size() > 0)
@@ -2824,8 +2872,11 @@ void SkillManager::HandleCounter(const std::shared_ptr<ActiveEntityState>& sourc
             {
                 target.Flags1 |= FLAG1_GUARDED;
                 target.HitAvoided = true;
+
                 auto counterCtx = std::make_shared<SkillExecutionContext>();
                 counterCtx->CounteredSkill = pSkill;
+                pSkill->ExecutionContext->SubContexts.push_back(counterCtx);
+
                 ExecuteSkill(target.EntityState, activationID, (int64_t)source->GetEntityID(),
                     counterCtx);
                 return;
@@ -3168,7 +3219,8 @@ void SkillManager::HandleKills(std::shared_ptr<ActiveEntityState> source,
                 if(defeatActionSource && defeatActionSource->DefeatActionsCount() > 0)
                 {
                     server->GetActionManager()->PerformActions(sourceClient,
-                        defeatActionSource->GetDefeatActions(), source->GetEntityID(), zone);
+                        defeatActionSource->GetDefeatActions(), source->GetEntityID(),
+                        zone, ePair.first);
                 }
                 else
                 {
@@ -3176,7 +3228,8 @@ void SkillManager::HandleKills(std::shared_ptr<ActiveEntityState> source,
                     if(group && group->DefeatActionsCount() > 0)
                     {
                         server->GetActionManager()->PerformActions(sourceClient,
-                            group->GetDefeatActions(), source->GetEntityID(), zone);
+                            group->GetDefeatActions(), source->GetEntityID(), zone,
+                            ePair.first);
                     }
                 }
             }
@@ -4455,64 +4508,14 @@ void SkillManager::FinalizeSkillExecution(const std::shared_ptr<ChannelClientCon
         }
     }
 
-    auto discharge = skillData->GetDischarge();
-    uint64_t fixPosTime = activated->GetExecutionTime() +
-        (uint64_t)(discharge->GetStiffness() * 1000);
-    source->SetStatusTimes(STATUS_IMMOBILE, fixPosTime);
-
-    if(source->IsMoving())
-    {
-        server->GetZoneManager()->FixCurrentPosition(source, fixPosTime,
-            activated->GetExecutionTime());
-    }
-
-    activated->SetExecuteCount((uint8_t)(activated->GetExecuteCount() + 1));
-
-    // Set the cooldown and lock-out times and determine if there are any
-    // remaining stacks available
-    auto conditionData = skillData->GetCondition();
-    auto dischargeData = skillData->GetDischarge();
-
-    uint32_t cdTime = conditionData->GetCooldownTime();
-    uint32_t stiffness = dischargeData->GetStiffness();
-    uint64_t currentTime = activated->GetExecutionTime();
-
-    std::shared_ptr<objects::CalculatedEntityState> calcState;
-    if(ctx && ctx->Skill)
-    {
-        calcState = ctx->Skill->SourceExecutionState;
-    }
-    else
-    {
-        calcState = source->GetCalculatedState();
-    }
-
-    // Stack adjust is affected by 2 sources if not an item skill or just
-    // explicit item including adjustments if it is an item skill
-    uint8_t maxStacks = (uint8_t)(skillData->GetCast()->GetBasic()->GetUseCount() +
-        tokuseiManager->GetAspectSum(source,
-            TokuseiAspectType::SKILL_ITEM_STACK_ADJUST, calcState) +
-        (!pSkill->IsItemSkill ? tokuseiManager->GetAspectSum(source,
-            TokuseiAspectType::SKILL_STACK_ADJUST, calcState) : 0));
-
-    bool moreUses = activated->GetExecuteCount() < maxStacks;
-    uint64_t lockOutTime = currentTime + (uint64_t)(stiffness * 1000);
-
-    uint64_t cooldownTime = currentTime;
-    if(cdTime && !moreUses)
-    {
-        cooldownTime = cooldownTime + (uint64_t)((double)(cdTime * 1000) *
-            (source->GetCorrectValue(CorrectTbl::COOLDOWN_TIME, calcState) * 0.01));
-    }
-
-    activated->SetLockOutTime(lockOutTime);
-    activated->SetCooldownTime(cooldownTime);
+    bool end = SetSkillCompleteState(pSkill, true);
 
     SendExecuteSkill(activated);
 
     if(client && source->GetEntityType() ==
         objects::EntityStateObject::EntityType_t::CHARACTER)
     {
+        auto calcState = GetCalculatedState(source, pSkill, false, nullptr);
         float multiplier = (float)(1.f + source->GetCorrectValue(CorrectTbl::RATE_EXPERTISE,
             calcState) * 0.01f);
         characterManager->UpdateExpertise(client, activated->GetSkillID(), multiplier);
@@ -4520,7 +4523,7 @@ void SkillManager::FinalizeSkillExecution(const std::shared_ptr<ChannelClientCon
 
     // Update the execution count and remove and complete it from the entity
     // if its at max and not a guard
-    if(!moreUses)
+    if(end)
     {
         source->SetActivatedAbility(nullptr);
         SendCompleteSkill(activated, 0);
@@ -4535,6 +4538,68 @@ void SkillManager::FinalizeSkillExecution(const std::shared_ptr<ChannelClientCon
     {
         source->CancelStatusEffects(EFFECT_CANCEL_SKILL);
     }
+}
+
+bool SkillManager::SetSkillCompleteState(const std::shared_ptr<
+    channel::ProcessingSkill>& pSkill, bool executed)
+{
+    auto activated = pSkill->Activated;
+    auto source = std::dynamic_pointer_cast<ActiveEntityState>(
+        activated->GetSourceEntity());
+    auto skillData = pSkill->Definition;
+
+    auto server = mServer.lock();
+    auto tokuseiManager = server->GetTokuseiManager();
+
+    uint64_t currentTime = activated->GetExecutionTime();
+
+    auto calcState = GetCalculatedState(source, pSkill, false, nullptr);
+
+    // Stack adjust is affected by 2 sources if not an item skill or just
+    // explicit item including adjustments if it is an item skill
+    uint8_t maxStacks = (uint8_t)(skillData->GetCast()->GetBasic()->GetUseCount() +
+        tokuseiManager->GetAspectSum(source,
+            TokuseiAspectType::SKILL_ITEM_STACK_ADJUST, calcState) +
+        (!pSkill->IsItemSkill ? tokuseiManager->GetAspectSum(source,
+            TokuseiAspectType::SKILL_STACK_ADJUST, calcState) : 0));
+
+    uint8_t execCount = activated->GetExecuteCount();
+    bool moreUses = execCount < maxStacks;
+
+    // If the skill was executed, set lockout time and increase
+    // the execution count
+    if(executed)
+    {
+        auto dischargeData = skillData->GetDischarge();
+        uint32_t stiffness = dischargeData->GetStiffness();
+
+        uint64_t lockOutTime = currentTime + (uint64_t)(stiffness * 1000);
+        source->SetStatusTimes(STATUS_IMMOBILE, lockOutTime);
+
+        if(source->IsMoving())
+        {
+            server->GetZoneManager()->FixCurrentPosition(source, lockOutTime,
+                currentTime);
+        }
+
+        activated->SetExecuteCount((uint8_t)(activated->GetExecuteCount() + 1));
+
+        activated->SetLockOutTime(lockOutTime);
+    }
+
+    // Set the cooldown if no remaining uses are available
+    uint32_t cdTime = skillData->GetCondition()->GetCooldownTime();
+
+    uint64_t cooldownTime = currentTime;
+    if(cdTime && (!moreUses || (execCount > 0 && !executed)))
+    {
+        cooldownTime = cooldownTime + (uint64_t)((double)(cdTime * 1000) *
+            (source->GetCorrectValue(CorrectTbl::COOLDOWN_TIME, calcState) * 0.01));
+    }
+
+    activated->SetCooldownTime(cooldownTime);
+
+    return !executed || !moreUses;
 }
 
 bool SkillManager::SpecialSkill(const std::shared_ptr<objects::ActivatedAbility>& activated,
@@ -5071,55 +5136,22 @@ void SkillManager::SendActivateSkill(std::shared_ptr<objects::ActivatedAbility> 
         ? zone->GetConnectionList() : std::list<std::shared_ptr<ChannelClientConnection>>();
     if(zConnections.size() > 0)
     {
-        std::unordered_map<uint32_t, uint64_t> timeMap;
-
         libcomp::Packet p;
         p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_SKILL_ACTIVATED);
         p.WriteS32Little(source->GetEntityID());
         p.WriteU32Little(activated->GetSkillID());
         p.WriteS8((int8_t)activated->GetActivationID());
 
-        timeMap[11] = activated->GetChargedTime();
-        p.WriteFloat(0.f);
+        p.WriteFloat(ChannelServer::ToSyncTime(activated->GetChargedTime()));
 
         uint8_t useCount = skillData->GetCast()->GetBasic()->GetUseCount();
         p.WriteU8(useCount);
-        p.WriteU8(0);   //Unknown
+        p.WriteU8(2);   //Unknown
 
-        float chargeSpeed = 0.f, chargeCompleteSpeed = 0.f;
+        p.WriteFloat(activated->GetChargeMoveSpeed());
+        p.WriteFloat(activated->GetChargeCompleteMoveSpeed());
 
-        // Send movement speed based off skill action type
-        switch(skillData->GetBasic()->GetActionType())
-        {
-        case objects::MiSkillBasicData::ActionType_t::SPIN:
-        case objects::MiSkillBasicData::ActionType_t::RAPID:
-        case objects::MiSkillBasicData::ActionType_t::COUNTER:
-        case objects::MiSkillBasicData::ActionType_t::DODGE:
-            // No movement during or after
-            break;
-        case objects::MiSkillBasicData::ActionType_t::SHOT:
-        case objects::MiSkillBasicData::ActionType_t::TALK:
-        case objects::MiSkillBasicData::ActionType_t::INTIMIDATE:
-        case objects::MiSkillBasicData::ActionType_t::SUPPORT:
-            // Move after only
-            chargeCompleteSpeed = source->GetMovementSpeed();
-            break;
-        case objects::MiSkillBasicData::ActionType_t::GUARD:
-            // Move during and after charge (1/2 normal speed)
-            chargeSpeed = chargeCompleteSpeed = (source->GetMovementSpeed() * 0.5f);
-            break;
-        case objects::MiSkillBasicData::ActionType_t::ATTACK:
-        case objects::MiSkillBasicData::ActionType_t::RUSH:
-        default:
-            // Move during and after charge (normal speed)
-            chargeSpeed = chargeCompleteSpeed = source->GetMovementSpeed();
-            break;
-        }
-
-        p.WriteFloat(chargeSpeed);
-        p.WriteFloat(chargeCompleteSpeed);
-
-        ChannelClientConnection::SendRelativeTimePacket(zConnections, p, timeMap);
+        ChannelClientConnection::BroadcastPacket(zConnections, p);
     }
 }
 
@@ -5135,8 +5167,6 @@ void SkillManager::SendExecuteSkill(std::shared_ptr<objects::ActivatedAbility> a
             ? (int32_t)activated->GetTargetObjectID()
             : source->GetEntityID();
 
-        std::unordered_map<uint32_t, uint64_t> timeMap;
-
         libcomp::Packet p;
         p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_SKILL_EXECUTED);
         p.WriteS32Little(source->GetEntityID());
@@ -5144,10 +5174,8 @@ void SkillManager::SendExecuteSkill(std::shared_ptr<objects::ActivatedAbility> a
         p.WriteS8((int8_t)activated->GetActivationID());
         p.WriteS32Little(targetedEntityID);
 
-        timeMap[15] = activated->GetCooldownTime();
-        p.WriteFloat(0.f);
-        timeMap[19] = activated->GetLockOutTime();
-        p.WriteFloat(0.f);
+        p.WriteFloat(ChannelServer::ToSyncTime(activated->GetCooldownTime()));
+        p.WriteFloat(ChannelServer::ToSyncTime(activated->GetLockOutTime()));
 
         p.WriteU32Little((uint32_t)activated->GetHPCost());
         p.WriteU32Little((uint32_t)activated->GetMPCost());
@@ -5160,7 +5188,7 @@ void SkillManager::SendExecuteSkill(std::shared_ptr<objects::ActivatedAbility> a
         p.WriteU8(0);   //Unknown
         p.WriteU8(0xFF);   //Unknown
 
-        ChannelClientConnection::SendRelativeTimePacket(zConnections, p, timeMap);
+        ChannelClientConnection::BroadcastPacket(zConnections, p);
     }
 }
 
@@ -5178,8 +5206,10 @@ void SkillManager::SendCompleteSkill(std::shared_ptr<objects::ActivatedAbility> 
         p.WriteS32Little(source->GetEntityID());
         p.WriteU32Little(activated->GetSkillID());
         p.WriteS8((int8_t)activated->GetActivationID());
-        p.WriteFloat(0);   //Unknown
-        p.WriteU8(1);   //Unknown
+
+        // Write the cooldown time if cancelling in case its set (mostly for multi-use skills)
+        p.WriteFloat(ChannelServer::ToSyncTime(mode == 1 ? activated->GetCooldownTime() : 0));
+        p.WriteU8(1);   // Unknown, always the same
         p.WriteFloat(source->GetMovementSpeed());
         p.WriteU8(mode);
 

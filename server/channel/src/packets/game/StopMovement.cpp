@@ -82,6 +82,7 @@ bool Parsers::StopMovement::Parse(libcomp::ManagerPacket *pPacketManager,
     eState->SetDestinationY(destY);
     eState->SetCurrentY(destY);
 
+    eState->SetOriginTicks(stopTime);
     eState->SetDestinationTicks(stopTime);
 
     auto zoneConnections = server->GetZoneManager()->GetZoneConnections(client, false);
@@ -92,11 +93,9 @@ bool Parsers::StopMovement::Parse(libcomp::ManagerPacket *pPacketManager,
         reply.WriteS32Little(entityID);
         reply.WriteFloat(destX);
         reply.WriteFloat(destY);
+        reply.WriteFloat(stop);
 
-        std::unordered_map<uint32_t, uint64_t> timeMap;
-        timeMap[reply.Size()] = stopTime;
-
-        ChannelClientConnection::SendRelativeTimePacket(zoneConnections, reply, timeMap);
+        ChannelClientConnection::BroadcastPacket(zoneConnections, reply);
     }
 
     return true;

@@ -38,6 +38,7 @@
         <member type="Character*" name="Character"/>
         <member type="u32" name="Zone" key="true" unique="false"/>
         <member type="u32" name="MarketID"/>
+        <member type="u8" name="ChannelID"/>
         <member type="string" name="Comment"/>
         <member type="s16" name="NPCType"/>
         <member type="enum" name="State" underlying="int8_t">

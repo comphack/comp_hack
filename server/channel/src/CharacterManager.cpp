@@ -1964,7 +1964,7 @@ void CharacterManager::SendLootItemData(const std::list<std::shared_ptr<
             p.Seek(2);
             p.WriteS32Little(cState->GetEntityID());
             p.Seek(10);
-            p.WriteFloat(ChannelServer::ToSyncTime(lootBox->GetLootTime()));
+            p.WriteFloat(state->ToClientTime(lootBox->GetLootTime()));
 
             if(queue)
             {

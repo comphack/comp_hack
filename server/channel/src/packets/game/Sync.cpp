@@ -47,11 +47,10 @@ bool Parsers::Sync::Parse(libcomp::ManagerPacket *pPacketManager,
 
     auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
     auto state = client->GetClientState();
-    state->SyncReceived();
 
     uint32_t timeFromClient = p.ReadU32Little();
     ServerTime currentServerTime = ChannelServer::GetServerTime();
-    ClientTime currentClientTime = ChannelServer::ToSyncTime(currentServerTime);
+    ClientTime currentClientTime = state->ToClientTime(currentServerTime);
 
     // Respond with the time received from the client (appears to be based off
     // the executing system time) then the amount of time elapsed since the

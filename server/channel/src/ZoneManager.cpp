@@ -1035,10 +1035,13 @@ void ZoneManager::FixCurrentPosition(const std::shared_ptr<ActiveEntityState>& e
         p.WriteFloat(x);
         p.WriteFloat(y);
         p.WriteFloat(rot);
-        p.WriteFloat(ChannelServer::ToSyncTime(now));
-        p.WriteFloat(ChannelServer::ToSyncTime(fixUntil));
 
-        BroadcastPacket(zone, p);
+        RelativeTimeMap timeMap;
+        timeMap[p.Size()] = now;
+        timeMap[p.Size() + 4] = fixUntil;
+
+        auto zConnections = zone->GetConnectionList();
+        ChannelClientConnection::SendRelativeTimePacket(zConnections, p, timeMap);
     }
 }
 
@@ -2152,9 +2155,12 @@ void ZoneManager::Warp(const std::shared_ptr<ChannelClientConnection>& client,
     p.WriteFloat(yPos);
     p.WriteFloat(0.0f);  // Unknown
     p.WriteFloat(rot);
-    p.WriteFloat(ChannelServer::ToSyncTime(timestamp));
 
-    BroadcastPacket(client, p);
+    RelativeTimeMap timeMap;
+    timeMap[p.Size()] = timestamp;
+
+    auto connections = server->GetZoneManager()->GetZoneConnections(client, true);
+    ChannelClientConnection::SendRelativeTimePacket(connections, p, timeMap);
 }
 
 bool ZoneManager::GetSpotPosition(uint32_t dynamicMapID, uint32_t spotID, float& x,

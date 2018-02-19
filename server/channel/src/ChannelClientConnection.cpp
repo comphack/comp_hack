@@ -99,3 +99,30 @@ void ChannelClientConnection::FlushAllOutgoing(const std::list<std::shared_ptr<
         client->FlushOutgoing();
     }
 }
+
+void ChannelClientConnection::SendRelativeTimePacket(
+    const std::list<std::shared_ptr<ChannelClientConnection>>& clients,
+    libcomp::Packet& packet, const RelativeTimeMap& timeMap,
+    bool queue)
+{
+    for(auto client : clients)
+    {
+        libcomp::Packet pCopy(packet);
+
+        auto state = client->GetClientState();
+        for(auto tPair : timeMap)
+        {
+            pCopy.Seek(tPair.first);
+            pCopy.WriteFloat(state->ToClientTime(tPair.second));
+        }
+
+        if(queue)
+        {
+            client->QueuePacket(pCopy);
+        }
+        else
+        {
+            client->SendPacket(pCopy);
+        }
+    }
+}

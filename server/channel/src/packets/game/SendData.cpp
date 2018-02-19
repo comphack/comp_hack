@@ -72,7 +72,7 @@ void SendClientReadyData(std::shared_ptr<ChannelServer> server,
     // Send sync time relative to the client
     {
         ServerTime currentServerTime = ChannelServer::GetServerTime();
-        ClientTime currentClientTime = ChannelServer::ToSyncTime(currentServerTime);
+        ClientTime currentClientTime = state->ToClientTime(currentServerTime);
 
         libcomp::Packet p;
         p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_SYNC_TIME);

@@ -2043,6 +2043,7 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
         (skill.Definition->GetDamage()->GetHitStopTime() * 1000);
 
     auto zConnections = zone->GetConnectionList();
+    RelativeTimeMap timeMap;
 
     // The skill report packet can easily go over the max packet size so
     // the targets in the results need to be batched
@@ -2077,6 +2078,8 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
     {
         if(it != targetBatches.begin())
         {
+            timeMap.clear();
+
             // An execute packet must be sent once per report (even if its
             // identical) or the client starts ignoring the reports
             SendExecuteSkill(pSkill->Activated);
@@ -2250,8 +2253,14 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
 
             for(size_t i = 0; i < 3; i++)
             {
-                p.WriteFloat(ChannelServer::ToSyncTime(hitTimings[i]));
+                if(hitTimings[i])
+                {
+                    timeMap[(uint32_t)(p.Size() + (4 * i))] = hitTimings[i];
+                }
             }
+
+            // Double back at the end and write client specific times
+            p.WriteBlank(12);
 
             p.WriteU8(target.TalkFlags);
 
@@ -2299,7 +2308,7 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
             p.WriteS32Little(target.PursuitDamage);
         }
 
-        ChannelClientConnection::BroadcastPacket(zConnections, p);
+        ChannelClientConnection::SendRelativeTimePacket(zConnections, p, timeMap);
     }
 
     if(revived.size() > 0)
@@ -5147,13 +5156,16 @@ void SkillManager::SendActivateSkill(std::shared_ptr<objects::ActivatedAbility> 
         ? zone->GetConnectionList() : std::list<std::shared_ptr<ChannelClientConnection>>();
     if(zConnections.size() > 0)
     {
+        RelativeTimeMap timeMap;
+
         libcomp::Packet p;
         p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_SKILL_ACTIVATED);
         p.WriteS32Little(source->GetEntityID());
         p.WriteU32Little(activated->GetSkillID());
         p.WriteS8((int8_t)activated->GetActivationID());
 
-        p.WriteFloat(ChannelServer::ToSyncTime(activated->GetChargedTime()));
+        timeMap[11] = activated->GetChargedTime();
+        p.WriteFloat(0.f);
 
         uint8_t useCount = skillData->GetCast()->GetBasic()->GetUseCount();
         p.WriteU8(useCount);
@@ -5162,7 +5174,7 @@ void SkillManager::SendActivateSkill(std::shared_ptr<objects::ActivatedAbility> 
         p.WriteFloat(activated->GetChargeMoveSpeed());
         p.WriteFloat(activated->GetChargeCompleteMoveSpeed());
 
-        ChannelClientConnection::BroadcastPacket(zConnections, p);
+        ChannelClientConnection::SendRelativeTimePacket(zConnections, p, timeMap);
     }
 }
 
@@ -5178,6 +5190,8 @@ void SkillManager::SendExecuteSkill(std::shared_ptr<objects::ActivatedAbility> a
             ? (int32_t)activated->GetTargetObjectID()
             : source->GetEntityID();
 
+        RelativeTimeMap timeMap;
+
         libcomp::Packet p;
         p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_SKILL_EXECUTED);
         p.WriteS32Little(source->GetEntityID());
@@ -5185,8 +5199,10 @@ void SkillManager::SendExecuteSkill(std::shared_ptr<objects::ActivatedAbility> a
         p.WriteS8((int8_t)activated->GetActivationID());
         p.WriteS32Little(targetedEntityID);
 
-        p.WriteFloat(ChannelServer::ToSyncTime(activated->GetCooldownTime()));
-        p.WriteFloat(ChannelServer::ToSyncTime(activated->GetLockOutTime()));
+        timeMap[15] = activated->GetCooldownTime();
+        p.WriteFloat(0.f);
+        timeMap[19] = activated->GetLockOutTime();
+        p.WriteFloat(0.f);
 
         p.WriteU32Little((uint32_t)activated->GetHPCost());
         p.WriteU32Little((uint32_t)activated->GetMPCost());
@@ -5199,7 +5215,7 @@ void SkillManager::SendExecuteSkill(std::shared_ptr<objects::ActivatedAbility> a
         p.WriteU8(0);   //Unknown
         p.WriteU8(0xFF);   //Unknown
 
-        ChannelClientConnection::BroadcastPacket(zConnections, p);
+        ChannelClientConnection::SendRelativeTimePacket(zConnections, p, timeMap);
     }
 }
 
@@ -5212,6 +5228,8 @@ void SkillManager::SendCompleteSkill(std::shared_ptr<objects::ActivatedAbility> 
         ? zone->GetConnectionList() : std::list<std::shared_ptr<ChannelClientConnection>>();
     if(zConnections.size() > 0)
     {
+        RelativeTimeMap timeMap;
+
         libcomp::Packet p;
         p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_SKILL_COMPLETED);
         p.WriteS32Little(source->GetEntityID());
@@ -5219,11 +5237,22 @@ void SkillManager::SendCompleteSkill(std::shared_ptr<objects::ActivatedAbility> 
         p.WriteS8((int8_t)activated->GetActivationID());
 
         // Write the cooldown time if cancelling in case its set (mostly for multi-use skills)
-        p.WriteFloat(ChannelServer::ToSyncTime(mode == 1 ? activated->GetCooldownTime() : 0));
+        uint64_t cooldown = mode == 1 ? activated->GetCooldownTime() : 0;
+        timeMap[p.Size()] = cooldown;
+        p.WriteFloat(0.f);
+
         p.WriteU8(1);   // Unknown, always the same
         p.WriteFloat(source->GetMovementSpeed());
         p.WriteU8(mode);
 
-        ChannelClientConnection::BroadcastPacket(zConnections, p);
+        if(cooldown)
+        {
+            // Relative times are only needed if a cooldown is set
+            ChannelClientConnection::SendRelativeTimePacket(zConnections, p, timeMap);
+        }
+        else
+        {
+            ChannelClientConnection::BroadcastPacket(zConnections, p);
+        }
     }
 }

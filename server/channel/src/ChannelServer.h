@@ -103,14 +103,6 @@ public:
     static ServerTime GetServerTime();
 
     /**
-     * Convert a system timestamp to a client relative sync time. This is
-     * crucial for displaying movement properly across clients.
-     * @param relativeTo Server time to convert
-     * @return Sync time relative to the server
-     */
-    static float ToSyncTime(ServerTime relativeTo);
-
-    /**
      * Get the amount of time left in an expiration relative to the server,
      * in seconds.
      * @return Time until expiration relative to the server, in seconds
@@ -364,9 +356,6 @@ protected:
     /// Function pointer to the most accurate time detection code
     /// available for the current machine.
     static GET_SERVER_TIME sGetServerTime;
-
-    /// Timestamp set upon initialization
-    static ServerTime sStartTime;
 
     /// Timestamp ordered map of prepared Execute messages and timestamps
     /// associated to when they should be queued following a server tick

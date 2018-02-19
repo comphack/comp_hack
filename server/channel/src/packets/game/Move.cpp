@@ -134,10 +134,12 @@ bool Parsers::Move::Parse(libcomp::ManagerPacket *pPacketManager,
         reply.WriteFloat(originX);
         reply.WriteFloat(originY);
         reply.WriteFloat(ratePerSec);
-        reply.WriteFloat(start);
-        reply.WriteFloat(stop);
 
-        ChannelClientConnection::BroadcastPacket(zoneConnections, reply);
+        RelativeTimeMap timeMap;
+        timeMap[reply.Size()] = startTime;
+        timeMap[reply.Size() + 4] = stopTime;
+
+        ChannelClientConnection::SendRelativeTimePacket(zoneConnections, reply, timeMap);
     }
 
     return true;

@@ -228,11 +228,12 @@ public:
     void GetPartyDemonPacket(libcomp::Packet& p) const;
 
     /**
-     * Handle any actions needed when the game client pings the
-     * server with a sync request.  If the start time has not been
-     * set, it will be set here.
+     * Convert time relative to the server to time relative to the
+     * game client.
+     * @param time Time relative to the server
+     * @return Time relative to the client
      */
-    void SyncReceived();
+    ClientTime ToClientTime(ServerTime time) const;
 
     /**
      * Convert time relative to the game client to time relative
@@ -284,13 +285,9 @@ private:
     /// The IDs listed here are only relevant to this client
     std::unordered_map<int32_t, libobjgen::UUID> mLocalObjectUUIDs;
 
-    /// Current time of the server set upon starting the client
-    /// communication.
+    /// Current time of the server set upon creating the client
+    /// state.
     ServerTime mStartTime;
-
-    /// Current time of the server relative to the client set
-    /// upon starting the client communication.
-    ClientTime mClientStartOffset;
 
     /// Next available local object ID
     int32_t mNextLocalObjectID;

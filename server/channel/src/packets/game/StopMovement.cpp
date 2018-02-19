@@ -93,9 +93,11 @@ bool Parsers::StopMovement::Parse(libcomp::ManagerPacket *pPacketManager,
         reply.WriteS32Little(entityID);
         reply.WriteFloat(destX);
         reply.WriteFloat(destY);
-        reply.WriteFloat(stop);
 
-        ChannelClientConnection::BroadcastPacket(zoneConnections, reply);
+        RelativeTimeMap timeMap;
+        timeMap[reply.Size()] = stopTime;
+
+        ChannelClientConnection::SendRelativeTimePacket(zoneConnections, reply, timeMap);
     }
 
     return true;

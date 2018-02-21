@@ -39,6 +39,7 @@ class ChannelClient : public TestClient
 {
 public:
     ChannelClient();
+    ChannelClient(const ChannelClient& other);
     ~ChannelClient();
 
     bool WaitForPacket(ChannelToClientPacketCode_t code,

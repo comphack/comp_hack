@@ -631,6 +631,7 @@ ADD_SUBDIRECTORY(server)
 # Windows does not have the server spawning code.
 IF(NOT WIN32)
     ADD_SUBDIRECTORY(libtester)
+    ADD_SUBDIRECTORY(client)
 ENDIF(NOT WIN32)
 
 #ADD_SUBDIRECTORY(updater)

@@ -54,8 +54,9 @@ class ScriptEngine
 public:
     /**
      * Create the VM.
+     * @param useRawPrint Set this to not prefix messages with "SQUIRREL: ".
      */
-    ScriptEngine();
+    ScriptEngine(bool useRawPrint = false);
 
     /**
      * Clean up the VM.

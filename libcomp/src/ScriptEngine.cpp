@@ -95,7 +95,60 @@ static void SquirrelErrorFunction(HSQUIRRELVM vm, const SQChar *szFormat, ...)
     delete[] szBuffer;
 }
 
-ScriptEngine::ScriptEngine()
+static void SquirrelPrintFunctionRaw(HSQUIRRELVM vm,
+    const SQChar *szFormat, ...)
+{
+    (void)vm;
+
+    va_list args;
+
+    va_start(args, szFormat);
+    int bytesNeeded = vsnprintf(NULL, 0, szFormat, args);
+    va_end(args);
+
+    char *szBuffer = new char[bytesNeeded + 1];
+    szBuffer[0] = 0;
+
+    va_start(args, szFormat);
+    vsnprintf(szBuffer, (size_t)bytesNeeded + 1, szFormat, args);
+    va_end(args);
+
+    std::list<String> messages = String(szBuffer).Split("\n");
+
+    LOG_INFO(szBuffer);
+
+    delete[] szBuffer;
+}
+
+static void SquirrelErrorFunctionRaw(HSQUIRRELVM vm,
+    const SQChar *szFormat, ...)
+{
+    (void)vm;
+
+    va_list args;
+
+    va_start(args, szFormat);
+    int bytesNeeded = vsnprintf(NULL, 0, szFormat, args);
+    va_end(args);
+
+    char *szBuffer = new char[bytesNeeded + 1];
+    szBuffer[0] = 0;
+
+    va_start(args, szFormat);
+    vsnprintf(szBuffer, (size_t)bytesNeeded + 1, szFormat, args);
+    va_end(args);
+
+    std::list<String> messages = String(szBuffer).Split("\n");
+
+    for(String msg : messages)
+    {
+        LOG_ERROR(msg + "\n");
+    }
+
+    delete[] szBuffer;
+}
+
+ScriptEngine::ScriptEngine(bool useRawPrint)
 {
     mVM = sq_open(SQUIRREL_STACK_SIZE);
 
@@ -107,10 +160,19 @@ ScriptEngine::ScriptEngine()
             (void)vm;
 
             LOG_ERROR(String("Failed to compile Squirrel script: "
-                "%1:%2:%3:  %4").Arg(szSource).Arg((int64_t)line).Arg(
+                "%1:%2:%3:  %4\n").Arg(szSource).Arg((int64_t)line).Arg(
                 (int64_t)column).Arg(szDescription));
         });
-    sq_setprintfunc(mVM, &SquirrelPrintFunction, &SquirrelErrorFunction);
+    if(useRawPrint)
+    {
+        sq_setprintfunc(mVM, &SquirrelPrintFunctionRaw,
+            &SquirrelErrorFunctionRaw);
+    }
+    else
+    {
+        sq_setprintfunc(mVM, &SquirrelPrintFunction,
+            &SquirrelErrorFunction);
+    }
 
     sq_pushroottable(mVM);
     sqstd_register_bloblib(mVM);

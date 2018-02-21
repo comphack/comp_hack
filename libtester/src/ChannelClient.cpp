@@ -37,6 +37,7 @@
 
 // libcomp Includes
 #include <ChannelConnection.h>
+#include <ScriptEngine.h>
 
 // object Includes
 #include <PacketLogin.h>
@@ -48,6 +49,13 @@ using namespace libtester;
 ChannelClient::ChannelClient() : TestClient(), mEntityID(-1)
 {
     SetConnection(std::make_shared<libcomp::ChannelConnection>(mService));
+}
+
+ChannelClient::ChannelClient(const ChannelClient& other)
+{
+    (void)other;
+
+    assert(false);
 }
 
 ChannelClient::~ChannelClient()
@@ -148,3 +156,21 @@ int32_t ChannelClient::GetEntityID() const
 {
     return mEntityID;
 }
+
+namespace libcomp
+{
+    template<>
+    ScriptEngine& ScriptEngine::Using<ChannelClient>()
+    {
+        if(!BindingExists("ChannelClient"))
+        {
+
+            Sqrat::Class<ChannelClient> binding(mVM, "ChannelClient");
+            binding.Func("Login", &ChannelClient::Login);
+
+            Bind<ChannelClient>("ChannelClient", binding);
+        }
+
+        return *this;
+    } // Using
+} // namespace libcomp

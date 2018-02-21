@@ -268,6 +268,15 @@ public:
     uint8_t PeekU8();
 
     /**
+     * Read a 8-bit signed integer from the packet but do not advance the
+     * current position in the packet. Useful for determining a length (e.g. of
+     * a string) or version of the packet before actually doing read code.
+     * @returns Value at the current position in the packet.
+     * @sa ReadS8
+     */
+    int8_t PeekS8();
+
+    /**
      * Read a 16-bit unsigned integer in host byte order from the packet but do
      * not advance the current position in the packet. Useful for determining a
      * length (e.g. of a string) or version of the packet before actually doing
@@ -278,6 +287,18 @@ public:
      * @sa PeekU16Little
      */
     uint16_t PeekU16();
+
+    /**
+     * Read a 16-bit signed integer in host byte order from the packet but do
+     * not advance the current position in the packet. Useful for determining a
+     * length (e.g. of a string) or version of the packet before actually doing
+     * read code.
+     * @returns Value at the current position in the packet.
+     * @sa ReadS16
+     * @sa PeekS16Big
+     * @sa PeekS16Little
+     */
+    int16_t PeekS16();
 
     /**
      * Read a 16-bit unsigned integer in big endian byte order from the packet
@@ -292,6 +313,18 @@ public:
     uint16_t PeekU16Big();
 
     /**
+     * Read a 16-bit signed integer in big endian byte order from the packet
+     * but do not advance the current position in the packet. Useful for
+     * determining a length (e.g. of a string) or version of the packet before
+     * actually doing read code.
+     * @returns Value at the current position in the packet.
+     * @sa ReadS16
+     * @sa PeekS16
+     * @sa PeekS16Little
+     */
+    int16_t PeekS16Big();
+
+    /**
      * Read a 16-bit unsigned integer in little endian byte order from the
      * packet but do not advance the current position in the packet. Useful for
      * determining a length (e.g. of a string) or version of the packet before
@@ -302,6 +335,18 @@ public:
      * @sa PeekU16Big
      */
     uint16_t PeekU16Little();
+
+    /**
+     * Read a 16-bit signed integer in little endian byte order from the
+     * packet but do not advance the current position in the packet. Useful for
+     * determining a length (e.g. of a string) or version of the packet before
+     * actually doing read code.
+     * @returns Value at the current position in the packet.
+     * @sa ReadS16
+     * @sa PeekS16
+     * @sa PeekS16Big
+     */
+    int16_t PeekS16Little();
 
     /**
      * Read a 32-bit unsigned integer in host byte order from the packet but do
@@ -316,6 +361,18 @@ public:
     uint32_t PeekU32();
 
     /**
+     * Read a 32-bit signed integer in host byte order from the packet but do
+     * not advance the current position in the packet. Useful for determining a
+     * length (e.g. of a string) or version of the packet before actually doing
+     * read code.
+     * @returns Value at the current position in the packet.
+     * @sa ReadS32
+     * @sa PeekS32Big
+     * @sa PeekS32Little
+     */
+    int32_t PeekS32();
+
+    /**
      * Read a 32-bit unsigned integer in big endian byte order from the packet
      * but do not advance the current position in the packet. Useful for
      * determining a length (e.g. of a string) or version of the packet before
@@ -328,6 +385,18 @@ public:
     uint32_t PeekU32Big();
 
     /**
+     * Read a 32-bit signed integer in big endian byte order from the packet
+     * but do not advance the current position in the packet. Useful for
+     * determining a length (e.g. of a string) or version of the packet before
+     * actually doing read code.
+     * @returns Value at the current position in the packet.
+     * @sa ReadS32
+     * @sa PeekS32
+     * @sa PeekS32Little
+     */
+    int32_t PeekS32Big();
+
+    /**
      * Read a 32-bit unsigned integer in little endian byte order from the
      * packet but do not advance the current position in the packet. Useful for
      * determining a length (e.g. of a string) or version of the packet before
@@ -338,6 +407,18 @@ public:
      * @sa PeekU32Big
      */
     uint32_t PeekU32Little();
+
+    /**
+     * Read a 32-bit signed integer in little endian byte order from the
+     * packet but do not advance the current position in the packet. Useful for
+     * determining a length (e.g. of a string) or version of the packet before
+     * actually doing read code.
+     * @returns Value at the current position in the packet.
+     * @sa ReadS32
+     * @sa PeekS32
+     * @sa PeekS32Big
+     */
+    int32_t PeekS32Little();
 
     /**
      * Read a 8-bit unsigned integer from the packet and advance the current

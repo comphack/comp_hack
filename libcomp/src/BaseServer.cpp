@@ -287,6 +287,9 @@ int BaseServer::Run()
     // Run the main worker in this thread, blocking until done.
     mMainWorker.Start("main_worker", true);
 
+    // Cleanup for any other tasks that should run in the main thread.
+    Cleanup();
+
     // Stop the network service (this will kill any existing connections).
     mService.stop();
 
@@ -595,4 +598,8 @@ bool BaseServer::InsertDataFromFile(const libcomp::String& filePath,
 
     // Allow no records as a means to clear out the DB on restart
     return true;
+}
+
+void BaseServer::Cleanup()
+{
 }

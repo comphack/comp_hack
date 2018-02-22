@@ -93,6 +93,12 @@ public:
     virtual void Shutdown();
 
     /**
+     * This is called before Run() ends giving a derived class the chance to
+     * do additional cleanup.
+     */
+    virtual void Cleanup();
+
+    /**
      * Get the current time relative to the server.
      * @return Current time relative to the server
      */

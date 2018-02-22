@@ -105,6 +105,9 @@ namespace libcomp
 /// Maximum supported character level.
 #define MAX_LEVEL (99)
 
+/// Maximum point value for an inherited skill before it can be learned.
+#define MAX_INHERIT_SKILL (10000)
+
 /// Maximum demon familiarity.
 #define MAX_FAMILIARITY (10000)
 
@@ -113,6 +116,12 @@ namespace libcomp
 
 /// Number of expertise.
 #define EXPERTISE_COUNT (38)
+
+/// ID of the "Fusion" expertise
+#define EXPERTISE_FUSION (17)
+
+/// ID of the "Demonology" expertise
+#define EXPERTISE_DEMONOLOGY (18)
 
 /// Time until the client is expected to timeout and disconnect (in seconds).
 #define TIMEOUT_CLIENT (15)

@@ -191,6 +191,7 @@ void ActionManager::PerformActions(
                 switch(srcCtx)
                 {
                 case objects::Action::SourceContext_t::PARTY:
+                case objects::Action::SourceContext_t::PARTY_OR_SOURCE:
                     {
                         auto sourceClient = client ? client : connectionManager
                             ->GetEntityClient(sourceEntityID, false);
@@ -204,6 +205,12 @@ void ActionManager::PerformActions(
                         if(party)
                         {
                             worldCIDs = party->GetMemberIDs();
+                        }
+
+                        if(srcCtx == objects::Action::SourceContext_t::PARTY_OR_SOURCE)
+                        {
+                            worldCIDs.insert(sourceClient->GetClientState()
+                                ->GetWorldCID());
                         }
                     }
                     break;
@@ -563,9 +570,13 @@ bool ActionManager::UpdateCOMP(ActionContext& ctx)
 
     // First increase the COMP
     uint8_t maxSlots = progress->GetMaxCOMPSlots();
-    if(act->GetMaxSlots() > 0 && act->GetMaxSlots() > progress->GetMaxCOMPSlots())
+    if(act->GetAddSlot() > 0)
     {
-        maxSlots = act->GetMaxSlots();
+        maxSlots = (uint8_t)(maxSlots + act->GetAddSlot());
+        if(maxSlots > 10)
+        {
+            maxSlots = 10;
+        }
     }
 
     size_t freeCount = 0;
@@ -686,6 +697,12 @@ bool ActionManager::UpdateCOMP(ActionContext& ctx)
             LOG_ERROR("Failed to increase COMP size\n");
             return false;
         }
+
+        libcomp::Packet p;
+        p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_COMP_SIZE_UPDATED);
+        p.WriteU8(maxSlots);
+
+        ctx.Client->QueuePacket(p);
     }
 
     if(remove.size() > 0)
@@ -731,6 +748,8 @@ bool ActionManager::UpdateCOMP(ActionContext& ctx)
             }
         }
     }
+
+    ctx.Client->FlushOutgoing();
 
     return true;
 }

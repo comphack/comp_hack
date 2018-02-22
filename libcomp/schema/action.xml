@@ -28,6 +28,7 @@
         <member type="enum" name="sourceContext" default="SOURCE">
             <value>SOURCE</value>
             <value>PARTY</value>
+            <value>PARTY_OR_SOURCE</value>
             <value>ZONE</value>
         </member>
     </object>

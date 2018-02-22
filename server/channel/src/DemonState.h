@@ -34,6 +34,7 @@
 namespace objects
 {
 class Character;
+class InheritedSkill;
 }
 
 namespace channel
@@ -79,7 +80,39 @@ public:
     bool UpdateSharedState(const std::shared_ptr<objects::Character>& character,
         libcomp::DefinitionManager* definitionManager);
 
+    /**
+     * Get list of skills currently being learned by affinity ID
+     * @param affinity Affinity ID to retrieve skills for
+     * @return List of InheritedSkills being learned
+     */
+    std::list<std::shared_ptr<objects::InheritedSkill>>
+        GetLearningSkills(uint8_t affinity);
+
+    /**
+     * Update the set of InheritedSkills being learned either by
+     * specific affinity or all currently associated to the entity
+     * @param affinity Affinity ID to refresh
+     * @param definitionManager Pointer to the definition manager to use
+     *  when determining skill affinity
+     */
+    void RefreshLearningSkills(uint8_t affinity,
+        libcomp::DefinitionManager* definitionManager);
+
+    /**
+     * Update an InheritedSkill skill's progress points
+     * @param iSkill Pointer to the InheritedSkill from the demon
+     * @param points Number of progress points to add to the skill
+     * @return Final progress point count for the skill
+     */
+    int16_t UpdateLearningSkill(const std::shared_ptr<
+        objects::InheritedSkill>& iSkill, uint16_t points);
+
 private:
+    /// Map of inherited skills not yet maxed by affinity ID. This
+    /// map is refreshed by calling RefreshLearningSkills
+    std::unordered_map<uint8_t, std::list<
+        std::shared_ptr<objects::InheritedSkill>>> mLearningSkills;
+
     /// Tokusei effect IDs available due to the character's demonic
     /// compendium completion level
     std::list<int32_t> mCompendiumTokuseiIDs;

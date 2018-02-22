@@ -52,6 +52,7 @@ class ItemBox;
 class ItemDrop;
 class MiDevilData;
 class MiDevilLVUpData;
+class MiItemData;
 }
 
 typedef objects::MiCorrectTbl::ID_t CorrectTbl;
@@ -418,6 +419,14 @@ public:
         const std::shared_ptr<objects::Item>& item);
 
     /**
+     * Check if the specified item definition belongs to a CP item
+     * @param Pointer to the item definition
+     * @return true if the definition belongs to a CP item, false if
+     *  it does not
+     */
+    bool IsCPItem(const std::shared_ptr<objects::MiItemData>& itemData) const;
+
+    /**
      * End the current exchange session for the client with various outcome
      * types. All exchange logic is handled elsewhere and the other
      * participants must be notified via this function as well.
@@ -444,23 +453,28 @@ public:
      *  the demon to create
      * @param sourceEntityID Entity ID of the demon egg used to contract
      *  the demon
+     * @param familiarity Optional familiarity level on the contracted
+     *  demon, defaults to 0
      * @return Pointer to the newly created demon
      */
     std::shared_ptr<objects::Demon> ContractDemon(
         const std::shared_ptr<channel::ChannelClientConnection>& client,
         const std::shared_ptr<objects::MiDevilData>& demonData,
-        int32_t sourceEntityID);
+        int32_t sourceEntityID, uint16_t familiarity = 0);
 
     /**
      * Create a demon and add it to a character's COMP.
      * @param character Pointer to the character that should receive the demon
      * @param demonData Pointer to a demon's definition that represents
      *  the demon to create
+     * @param familiarity Optional familiarity level on the contracted
+     *  demon, defaults to 0
      * @return Pointer to the newly created demon
      */
     std::shared_ptr<objects::Demon> ContractDemon(
         const std::shared_ptr<objects::Character>& character,
-        const std::shared_ptr<objects::MiDevilData>& demonData);
+        const std::shared_ptr<objects::MiDevilData>& demonData,
+        uint16_t familiarity = 0);
 
     /**
      * Create a demon.
@@ -562,6 +576,15 @@ public:
      */
     uint8_t GetExpertiseRank(const std::shared_ptr<CharacterState>& cState,
         uint32_t expertiseID);
+
+    /**
+     * Get the maximum number of expertise points available to the
+     * supplied characater.
+     * @param character Pointer to the character
+     * @return Maximum expertise points available to the character
+     */
+    int32_t GetMaxExpertisePoints(const std::shared_ptr<
+        objects::Character>& character);
 
     /**
      * Send the character's current expertise extension amount.

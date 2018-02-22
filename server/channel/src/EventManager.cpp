@@ -1216,6 +1216,27 @@ bool EventManager::EvaluateCondition(const std::shared_ptr<ChannelClientConnecti
         {
             return false;
         }
+        else if(condition->GetValue2() > 0)
+        {
+            // Ignore [value 1] and check if the number of points left to gain is greater than
+            // [value 2]
+            auto character = client->GetClientState()->GetCharacterState()->GetEntity();
+
+            int32_t maxTotalPoints = mServer.lock()->GetCharacterManager()
+                ->GetMaxExpertisePoints(character);
+
+            int32_t currentPoints = 0;
+            for(auto expertise : character->GetExpertises())
+            {
+                if(!expertise.IsNull())
+                {
+                    currentPoints = currentPoints + expertise->GetPoints();
+                }
+            }
+
+            return Compare(condition->GetValue2(), maxTotalPoints - currentPoints, 0, compareMode,
+                EventCompareMode::GTE, EVENT_COMPARE_NUMERIC);
+        }
         else
         {
             // Expertise ID [value 1] is not maxed out

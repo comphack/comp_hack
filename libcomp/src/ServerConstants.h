@@ -9,7 +9,7 @@
  *
  * This file is part of the COMP_hack Library (libcomp).
  *
- * Copyright (C) 2012-2016 COMP_hack Team <compomega@tutanota.com>
+ * Copyright (C) 2012-2018 COMP_hack Team <compomega@tutanota.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as
@@ -188,6 +188,12 @@ struct Data
 
     /// Item IDs with parameters used for the EQUIP_MOD_EDIT function ID skill
     std::unordered_map<uint32_t, std::array<int32_t, 3>> EQUIP_MOD_EDIT_ITEMS;
+
+    /// Passive fusion skill IDs to result race filters and success boosts
+    std::unordered_map<uint32_t, std::array<int8_t, 2>> FUSION_BOOST_SKILLS;
+
+    /// Fusion status effect IDs to success boosts
+    std::unordered_map<uint32_t, uint8_t> FUSION_BOOST_STATUSES;
 
     /// Array of item IDs used for slot modification, indexed in the same order
     /// as the RateScaling field on MiModificationTriggerData and

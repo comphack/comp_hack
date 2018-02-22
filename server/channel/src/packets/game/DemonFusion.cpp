@@ -30,6 +30,12 @@
 #include <ManagerPacket.h>
 #include <Packet.h>
 #include <PacketCodes.h>
+#include <ServerConstants.h>
+
+// object Includes
+#include <EventInstance.h>
+#include <EventOpenMenu.h>
+#include <EventState.h>
 
 // channel Includes
 #include "ChannelServer.h"
@@ -55,14 +61,31 @@ bool Parsers::DemonFusion::Parse(libcomp::ManagerPacket *pPacketManager,
 
     auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
     auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+    auto state = client->GetClientState();
+    auto eState = state->GetEventState();
+    auto current = eState ? eState->GetCurrent() : nullptr;
+
+    uint32_t costItemType = SVR_CONST.ITEM_MACCA;
+
+    // If the current menu the player is interacting with is the kreuz fusion
+    // menu, update the cost item type
+    if(current)
+    {
+        auto menu = std::dynamic_pointer_cast<objects::EventOpenMenu>(
+            current->GetEvent());
+        if(menu && (uint32_t)menu->GetMenuType() == SVR_CONST.MENU_FUSION_KZ)
+        {
+            costItemType = SVR_CONST.ITEM_KREUZ;
+        }
+    }
 
     server->QueueWork([](const std::shared_ptr<ChannelServer> pServer,
         const std::shared_ptr<ChannelClientConnection> pClient,
-        int64_t pDemonID1, int64_t pDemonID2)
+        int64_t pDemonID1, int64_t pDemonID2, uint32_t pCostItemType)
         {
             pServer->GetFusionManager()->HandleFusion(pClient, pDemonID1,
-                pDemonID2);
-        }, server, client, demonID1, demonID2);
+                pDemonID2, pCostItemType);
+        }, server, client, demonID1, demonID2, costItemType);
 
     return true;
 }

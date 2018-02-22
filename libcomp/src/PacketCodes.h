@@ -299,6 +299,7 @@ enum class ChannelToClientPacketCode_t : uint16_t
     PACKET_EXPERTISE_RANK_UP = 0x004E, //!< Notifies the client that a character's expertise has ranked up.
     PACKET_TOGGLE_EXPERTISE = 0x0050, //!< Notifies the client to enable or disable an expertise.
     PACKET_LEARN_SKILL = 0x0052, //!< Notifies the client that a character has learned a skill.
+    PACKET_INHERIT_SKILL_UPDATED = 0x0053,  //!< Notifies the client that the parner demon's inherited skills have been updated.
     PACKET_UPDATE_DEMON_SKILL = 0x0055, //!< Notifies the client that the partner demon's learned skill set has been updated.
     PACKET_KEEP_ALIVE = 0x0057,  //!< Response to keep the client connection alive.
     PACKET_FIX_OBJECT_POSITION = 0x0059,  //!< Response to fix a game object's position.
@@ -431,6 +432,7 @@ enum class ChannelToClientPacketCode_t : uint16_t
     PACKET_CLAN_NAME_UPDATED = 0x0169,  //!< Notification that a character's clan name has updated.
     PACKET_SYSTEM_MSG = 0x0171, //!< Message containing announcement ticker data. 
     PACKET_SYNC_CHARACTER = 0x017F,  //!< Response to the request to sync the player character's basic information.
+    PACKET_COMP_SIZE_UPDATED = 0x0182,  //!< Notifies the client that their COMP size has changed.
     PACKET_BAZAAR_DATA = 0x0183,  //!< Message containing data about a bazaar in a zone.
     PACKET_BAZAAR_NPC_CHANGED = 0x0185, //!< Notification that a bazaar market clerk NPC has changed.
     PACKET_BAZAAR_MARKET_COMMENT = 0x018C,  //!< Response to the request to update the player's bazaar market comment.

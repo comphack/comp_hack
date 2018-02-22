@@ -164,7 +164,8 @@ bool Parsers::TriFusionJoin::Parse(libcomp::ManagerPacket *pPacketManager,
 
             client->QueuePacket(notify);
 
-            exp = state->GetCharacterState()->GetEntity()->GetExpertises(17);
+            exp = state->GetCharacterState()->GetEntity()
+                ->GetExpertises(EXPERTISE_FUSION);
 
             // Notify existing participant of new participant
             notify.Clear();

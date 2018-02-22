@@ -27,6 +27,7 @@
 #include "DemonState.h"
 
 // libcomp Includes
+#include <Constants.h>
 #include <DefinitionManager.h>
 #include <ScriptEngine.h>
 #include <ServerConstants.h>
@@ -35,7 +36,10 @@
 #include <Character.h>
 #include <CharacterProgress.h>
 #include <DemonBox.h>
+#include <InheritedSkill.h>
 #include <MiDevilBookData.h>
+#include <MiSkillData.h>
+#include <MiSkillItemStatusCommonData.h>
 
 using namespace channel;
 
@@ -144,4 +148,77 @@ bool DemonState::UpdateSharedState(const std::shared_ptr<objects::Character>& ch
     }
 
     return true;
+}
+
+std::list<std::shared_ptr<objects::InheritedSkill>>
+    DemonState::GetLearningSkills(uint8_t affinity)
+{
+    std::lock_guard<std::mutex> lock(mLock);
+    auto it = mLearningSkills.find(affinity);
+    return it != mLearningSkills.end()
+        ? it->second : std::list<std::shared_ptr<objects::InheritedSkill>>();
+}
+
+void DemonState::RefreshLearningSkills(uint8_t affinity,
+    libcomp::DefinitionManager* definitionManager)
+{
+    auto demon = GetEntity();
+    std::lock_guard<std::mutex> lock(mLock);
+    if(affinity == 0)
+    {
+        // Refresh all
+        mLearningSkills.clear();
+            
+        if(!demon) return;
+
+        for(auto iSkill : demon->GetInheritedSkills())
+        {
+            if(iSkill->GetProgress() < MAX_INHERIT_SKILL)
+            {
+                auto iSkillData = definitionManager->GetSkillData(
+                    iSkill->GetSkill());
+                mLearningSkills[iSkillData->GetCommon()
+                    ->GetAffinity()].push_back(iSkill.Get());
+            }
+        }
+    }
+    else
+    {
+        // Refresh specific
+        mLearningSkills.erase(affinity);
+
+        // Shouldn't be used this way but whatever
+        if(!demon) return;
+
+        for(auto iSkill : demon->GetInheritedSkills())
+        {
+            if(iSkill->GetProgress() < MAX_INHERIT_SKILL)
+            {
+                auto iSkillData = definitionManager->GetSkillData(
+                    iSkill->GetSkill());
+                if(iSkillData->GetCommon()->GetAffinity() == affinity)
+                {
+                    mLearningSkills[affinity].push_back(iSkill.Get());
+                }
+            }
+        }
+    }
+}
+
+int16_t DemonState::UpdateLearningSkill(const std::shared_ptr<
+    objects::InheritedSkill>& iSkill, uint16_t points)
+{
+    std::lock_guard<std::mutex> lock(mLock);
+
+    int16_t progress = iSkill->GetProgress();
+    progress = (int16_t)(progress + points);
+
+    if(progress > MAX_INHERIT_SKILL)
+    {
+        progress = MAX_INHERIT_SKILL;
+    }
+
+    iSkill->SetProgress(progress);
+
+    return progress;
 }

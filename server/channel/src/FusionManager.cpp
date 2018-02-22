@@ -4,11 +4,11 @@
  *
  * @author HACKfrost
  *
- * @brief
+ * @brief Manager class used to handle all demon fusion based actions.
  *
  * This file is part of the Channel Server (channel).
  *
- * Copyright (C) 2012-2017 COMP_hack Team <compomega@tutanota.com>
+ * Copyright (C) 2012-2018 COMP_hack Team <compomega@tutanota.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as
@@ -53,6 +53,7 @@
 #include <MiGrowthData.h>
 #include <MiNPCBasicData.h>
 #include <MiSkillData.h>
+#include <MiSkillItemStatusCommonData.h>
 #include <MiTriUnionSpecialData.h>
 #include <MiUnionData.h>
 #include <TriFusionHostSession.h>
@@ -421,9 +422,10 @@ uint32_t FusionManager::GetResultDemon(const std::shared_ptr<
         libcomp::PersistentObject::GetObjectByUUID(state->GetObjectUUID(demonID3)))
         : nullptr;
 
-    // Fail if any demon is missing or the same one is supplied twice
-    if(!demon1 || !demon2 || (triFusion && !demon3) || demon1 == demon2
-        || demon1 == demon3 || demon2 == demon3)
+    // Fail if any demon is missing or the same one is supplied twice for a
+    // normal fusion
+    if(!demon1 || !demon2 || (triFusion && !demon3) ||
+        (!triFusion && demon1 == demon2))
     {
         return 0;
     }
@@ -450,45 +452,112 @@ uint32_t FusionManager::GetResultDemon(const std::shared_ptr<
     uint32_t baseDemonType2 = def2.second->GetUnionData()->GetBaseDemonID();
     uint32_t baseDemonType3 = def3.second
         ? def3.second->GetUnionData()->GetBaseDemonID() : 0;
-    if(baseDemonType1 == baseDemonType2 || baseDemonType1 == baseDemonType3 ||
-        baseDemonType2 == baseDemonType3)
-    {
-        return 0;
-    }
 
     auto specialFusions = definitionManager->GetTriUnionSpecialData(demonType1);
     for(auto special : specialFusions)
     {
+        if(triFusion != (special->GetSourceID3() > 0)) continue;
+
         // Map of source ID to its "variant allowed" value
-        std::unordered_map<uint32_t, bool> sourceMap;
-        sourceMap[special->GetSourceID1()] = special->GetVariant1Allowed() == 1;
-        sourceMap[special->GetSourceID2()] = special->GetVariant2Allowed() == 1;
-        sourceMap[special->GetSourceID3()] = special->GetVariant3Allowed() == 1;
+        std::array<std::pair<uint32_t, bool>, 3> sources;
+        sources[0] = std::pair<uint32_t, bool>(special->GetSourceID1(),
+            special->GetVariant1Allowed() == 1);
+        sources[1] = std::pair<uint32_t, bool>(special->GetSourceID2(),
+            special->GetVariant2Allowed() == 1);
+        sources[2] = std::pair<uint32_t, bool>(special->GetSourceID3(),
+            special->GetVariant3Allowed() == 1);
+
+        // Store each demon number that matches the corresponding source
+        std::array<std::set<uint8_t>, 3> matches;
 
         bool match = true;
-        for(auto sourcePair : sourceMap)
+        for(size_t i = 0; i < 3; i++)
         {
+            std::pair<uint32_t, bool>& sourcePair = sources[i];
+
             uint32_t sourceID = sourcePair.first;
             if(!sourceID) continue;
 
             if(sourcePair.second)
             {
+                // Match against base demon
                 auto specialDef = definitionManager->GetDevilData(sourceID);
                 auto sourceBaseDemonType = specialDef->GetUnionData()
                     ->GetBaseDemonID();
-                if(baseDemonType1 != sourceBaseDemonType &&
-                    baseDemonType2 != sourceBaseDemonType &&
-                    baseDemonType3 != sourceBaseDemonType)
+                if(baseDemonType1 == sourceBaseDemonType)
                 {
-                    match = false;
-                    break;
+                    matches[i].insert(1);
+                }
+
+                if(baseDemonType2 == sourceBaseDemonType)
+                {
+                    matches[i].insert(2);
+                }
+
+                if(baseDemonType3 == sourceBaseDemonType)
+                {
+                    matches[i].insert(3);
                 }
             }
-            else if(sourceID != demonType1 && sourceID != demonType2 &&
-                sourceID != demonType3)
+            else
             {
+                // Match against exact demon
+                if(demonType1 == sourceID)
+                {
+                    matches[i].insert(1);
+                }
+
+                if(demonType2 == sourceID)
+                {
+                    matches[i].insert(2);
+                }
+
+                if(demonType3 == sourceID)
+                {
+                    matches[i].insert(3);
+                }
+            }
+
+            if(matches[i].size() == 0)
+            {
+                // No match found for the current source demon
                 match = false;
                 break;
+            }
+        }
+
+        if(match)
+        {
+            // If one of each required type is found, check to make sure
+            // there is a valid combination available (vital when fusing
+            // two of the same type or a variant and a specific demon with
+            // the same base type)
+            match = false;
+            for(uint8_t m1 : matches[0])
+            {
+                for(uint8_t m2 : matches[1])
+                {
+                    if(triFusion)
+                    {
+                        for(uint8_t m3 : matches[2])
+                        {
+                            if(m1 != m2 && m1 != m3 && m2 != m3)
+                            {
+                                match = true;
+                                break;
+                            }
+                        }
+
+                        if(match) break;
+                    }
+                    else if(m1 != m2)
+                    {
+                        match = true;
+                        break;
+                    }
+                }
+
+                if(match) break;
             }
         }
 
@@ -1091,7 +1160,7 @@ int8_t FusionManager::ProcessFusion(
         return -2;
     }
 
-    // Result demon identified, check success rate, pay cost and fuse
+    // Result demon identified, pay cost, check success rate and fuse
     auto cState = state->GetCharacterState();
     auto character = cState->GetEntity();
 
@@ -1101,13 +1170,49 @@ int8_t FusionManager::ProcessFusion(
     auto managerConnection = server->GetManagerConnection();
 
     auto demonData = definitionManager->GetDevilData(resultDemonType);
+    double baseLevel = (double)demonData->GetGrowth()->GetBaseLevel();
+
+    std::unordered_map<uint32_t, uint32_t> itemCost;
     if(costItemType == 0 || costItemType == SVR_CONST.ITEM_MACCA)
     {
-        /// @todo: calculate macca cost
+        uint32_t maccaCost = 0;
+        if(demonID3 > 0)
+        {
+            // Tri-Fusion macca cost
+            maccaCost = (uint32_t)floor(1.5 * pow(baseLevel, 2));
+        }
+        else
+        {
+            // Normal fusion macca cost
+            maccaCost = (uint32_t)floor(0.5 * pow(baseLevel, 2));
+        }
+
+        if(maccaCost > 0)
+        {
+            itemCost[SVR_CONST.ITEM_MACCA] = maccaCost;
+        }
     }
     else if(costItemType == SVR_CONST.ITEM_KREUZ)
     {
-        /// @todo: calculate kreuz cost
+        uint32_t kreuzCost = 0;
+        if(demonID3 > 0)
+        {
+            // Tri-Fusion kreuz cost
+            kreuzCost = (uint32_t)ceil(baseLevel / 1.25);
+
+            // Tri-Fusion kreuz fusion also costs one bloodstone
+            itemCost[SVR_CONST.ITEM_RBLOODSTONE] = 1;
+        }
+        else
+        {
+            // Normal fusion kreuz cost
+            kreuzCost = (uint32_t)ceil(0.0001 * pow(baseLevel, 3));
+        }
+
+        if(kreuzCost > 0)
+        {
+            itemCost[SVR_CONST.ITEM_KREUZ] = kreuzCost;
+        }
     }
     else
     {
@@ -1115,7 +1220,16 @@ int8_t FusionManager::ProcessFusion(
             " for demon fusion: %1\n").Arg(resultDemonType));
         return -3;
     }
-    
+
+    // Costs get paid regardless of outcome
+    if(itemCost.size() > 0 && !characterManager->AddRemoveItems(client,
+        itemCost, false))
+    {
+        LOG_ERROR("Failed to pay fusion item cost\n");
+        return -4;
+    }
+
+    // Map each demon to the appropriate participant client
     std::unordered_map<std::shared_ptr<objects::Demon>,
         std::shared_ptr<ChannelClientConnection>> dMap;
     for(auto demon : { demon1, demon2, demon3 })
@@ -1133,15 +1247,138 @@ int8_t FusionManager::ProcessFusion(
         }
     }
 
-    uint8_t baseLevel = demonData->GetGrowth()->GetBaseLevel();
-    uint8_t difficulty = demonData->GetUnionData()->GetFusionDifficulty();
-    double successRate = ceil((140 - (difficulty * 2.5)) +
-        (difficulty - baseLevel * 1.5) + (difficulty * 0.5));
+    double difficulty = (double)demonData->GetUnionData()->GetFusionDifficulty();
 
-    /// @todo: figure out fusion success adjustments from familiarity
+    // Tri-Fusion success uses the same formula as normal fusion but gets a flat 12% boost
+    double successRate = ceil((140.0 - (difficulty * 2.5)) +
+        (difficulty - (baseLevel * 1.5)) + (difficulty * 0.5) + (demonID3 > 0 ? 12.0 : 0.0));
+    if(demonID3 > 0)
+    {
+        // Tri-Fusion success rate gets adjusted by familiarity sum / 4000
+        double adjust = floor((double)(demon1->GetFamiliarity() +
+            demon2->GetFamiliarity() + demon3->GetFamiliarity()) / 4000.0);
+        successRate += adjust;
+    }
+    else if(costItemType == SVR_CONST.ITEM_KREUZ)
+    {
+        // Dual kreuz fusion is an automatic 100% success
+        successRate = 100.0;
+    }
+    else
+    {
+        // Normal fusion success rate gets adjusted by each demon's
+        // level and familiarity rank using a lookup table
+        std::list<std::pair<uint8_t, uint8_t>> famMap;
+        famMap.push_back(std::pair<uint8_t, uint8_t>(
+            (uint8_t)demon1->GetCoreStats()->GetLevel(),
+            (uint8_t)characterManager->GetFamiliarityRank(
+                demon1->GetFamiliarity())));
+        famMap.push_back(std::pair<uint8_t, uint8_t>(
+            (uint8_t)demon2->GetCoreStats()->GetLevel(),
+            (uint8_t)characterManager->GetFamiliarityRank(
+                demon2->GetFamiliarity())));
 
-    /// @todo: use/adjust success, then remove this
-    LOG_WARNING(libcomp::String("Success rate: %1\n").Arg(successRate));
+        for(auto pair : famMap)
+        {
+            if(pair.second >= 1 && pair.second <= 4)
+            {
+                uint8_t adjust = 0;
+                for(size_t i = 0; i < 5; i++)
+                {
+                    if(FUSION_FAMILIARITY_BONUS[i][0] > pair.first)
+                    {
+                        break;
+                    }
+
+                    adjust = FUSION_FAMILIARITY_BONUS[i][pair.second];
+                }
+
+                successRate = (successRate + (double)adjust);
+            }
+        }
+    }
+
+    // Apply expertise success bonuses from all participants
+    std::unordered_map<int32_t, uint16_t> expertiseBoost;
+    for(auto dPair : dMap)
+    {
+        auto dClient = dPair.second;
+        auto dState = dClient->GetClientState();
+        auto dCState = dState->GetCharacterState();
+
+        int32_t entityID = dCState->GetEntityID();
+        if(expertiseBoost.find(entityID) == expertiseBoost.end())
+        {
+            uint16_t boost = 0;
+
+            uint8_t fRank = characterManager->GetExpertiseRank(dCState,
+                EXPERTISE_FUSION);
+            if(client == dClient)
+            {
+                uint8_t dRank = characterManager->GetExpertiseRank(dCState,
+                    EXPERTISE_DEMONOLOGY);
+                if(demonID3 > 0)
+                {
+                    // Host adds fusion rank / 30, demonology rank / 25
+                    boost = (uint16_t)(floor((double)fRank / 30.0) +
+                        floor((double)dRank / 25.0));
+                }
+                else
+                {
+                    // Add fusion rank / 30, demonology rank / 5
+                    boost = (uint16_t)(floor((double)fRank / 30.0) +
+                        floor((double)dRank / 5.0));
+                }
+            }
+            else
+            {
+                if(demonID3 > 0)
+                {
+                    // Guest adds fusion rank / 25
+                    boost = (uint16_t)floor((double)fRank / 25.0);
+                }
+            }
+
+            successRate = (double)(successRate + (double)boost);
+            expertiseBoost[entityID] = boost;
+        }
+    }
+
+    // Apply extra boosts for dual fusion
+    if(demonID3 <= 0)
+    {
+        // Apply passive skill boosts
+        for(auto pair : SVR_CONST.FUSION_BOOST_SKILLS)
+        {
+            // Apply boost if the source character has the passive and there
+            // is either no race filter or the filter matches the result demon
+            if(cState->ActiveSwitchSkillsContains(pair.first) &&
+                (pair.second[0] == -1 ||
+                pair.second[0] == (uint8_t)demonData->GetCategory()->GetRace()))
+            {
+                successRate = (double)(successRate + (double)pair.second[1]);
+            }
+        }
+
+        // Apply status boosts
+        auto statusEffects = cState->GetStatusEffects();
+        for(auto pair : SVR_CONST.FUSION_BOOST_STATUSES)
+        {
+            if(statusEffects.find(pair.first) != statusEffects.end())
+            {
+                successRate = (double)(successRate + (double)pair.second);
+            }
+        }
+    }
+
+    // Fusion is ready to be attempted, check for normal failure
+    if(successRate <= 0.0 || (successRate < 100.0 &&
+        RNG(uint16_t, 1, 10000) > (uint16_t)(successRate * 100.0)))
+    {
+        return 1;
+    }
+
+    // Fusion success past this point, create the demon and update all old data
 
     // Calculate familiarity and put either demon back in the COMP
     // if they're out
@@ -1174,6 +1411,7 @@ int8_t FusionManager::ProcessFusion(
     auto inheritRestrictions = demonData->GetGrowth()->
         GetInheritanceRestrictions();
     std::map<uint32_t, std::shared_ptr<objects::MiSkillData>> inherited;
+    std::unordered_map<uint32_t, int32_t> inheritedSkillCounts;
     for(auto source : { demon1, demon2, demon3 })
     {
         if(source)
@@ -1189,6 +1427,15 @@ int8_t FusionManager::ProcessFusion(
                 if((inheritRestrictions & (uint16_t)(1 << r)) == 0) continue;
 
                 inherited[learned] = lData;
+
+                if(inheritedSkillCounts.find(learned) == inheritedSkillCounts.end())
+                {
+                    inheritedSkillCounts[learned] = 1;
+                }
+                else
+                {
+                    inheritedSkillCounts[learned]++;
+                }
             }
         }
     }
@@ -1212,18 +1459,33 @@ int8_t FusionManager::ProcessFusion(
     changes->Insert(resultDemon);
     changes->Insert(resultDemon->GetCoreStats().Get());
 
-    for(auto iPair : inherited)
+    uint8_t iType = demonData->GetGrowth()->GetInheritanceType();
+    if(iType <= 21)
     {
-        /// @todo: get confirmed inheritance percentages,
-        /// double if both sources have it
-        auto iSkill = libcomp::PersistentObject::New<
-            objects::InheritedSkill>(true);
-        iSkill->SetSkill(iPair.first);
-        iSkill->SetProgress(10000);
-        iSkill->SetDemon(resultDemon);
-        resultDemon->AppendInheritedSkills(iSkill);
+        for(auto iPair : inherited)
+        {
+            // Add inherited skills, double or triple if two or
+            // three sources learned it respectively
+            uint8_t affinity = iPair.second->GetCommon()->GetAffinity();
+            uint8_t baseValue = INHERITENCE_SKILL_MAP
+                [(size_t)(affinity - 1)][iType];
+            int32_t multiplier = inheritedSkillCounts[iPair.first] * 100;
 
-        changes->Insert(iSkill);
+            int16_t progress = (int16_t)(baseValue * multiplier);
+            if(progress > MAX_INHERIT_SKILL)
+            {
+                progress = MAX_INHERIT_SKILL;
+            }
+
+            auto iSkill = libcomp::PersistentObject::New<
+                objects::InheritedSkill>(true);
+            iSkill->SetSkill(iPair.first);
+            iSkill->SetProgress(progress);
+            iSkill->SetDemon(resultDemon);
+            resultDemon->AppendInheritedSkills(iSkill);
+
+            changes->Insert(iSkill);
+        }
     }
 
     state->SetObjectID(resultDemon->GetUUID(),

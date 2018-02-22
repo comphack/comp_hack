@@ -847,6 +847,7 @@ void CharacterManager::SummonDemon(const std::shared_ptr<
 
     character->SetActiveDemon(demon);
     dState->SetEntity(demon, def);
+    dState->RefreshLearningSkills(0, definitionManager);
 
     // If the character and demon share alignment, apply summon sync
     if(cState->GetLNCType() == dState->GetLNCType())
@@ -979,6 +980,8 @@ void CharacterManager::StoreDemon(const std::shared_ptr<
 
     UpdateStatusEffects(dState, true);
     dState->SetEntity(nullptr, nullptr);
+    dState->RefreshLearningSkills(0, definitionManager);
+
     character->SetActiveDemon(NULLUUID);
 
     std::list<int32_t> removeIDs = { dState->GetEntityID() };
@@ -1842,10 +1845,24 @@ bool CharacterManager::CreateLootFromDrops(const std::shared_ptr<objects::LootBo
     std::unordered_map<uint32_t, uint16_t> itemStacks;
     for(auto drop : drops)
     {
-        // Each point of luck adds 0.2% chance to get the drop
-        uint16_t dropRate = (uint16_t)((drop->GetRate() * 100)
-            + (float)(luck * 20));
-        if(RNG(uint16_t, 0, 10000) < dropRate ||
+        double baseRate = (double)drop->GetRate();
+        uint32_t dropRate = (uint32_t)baseRate;
+        if(luck > 0)
+        {
+            // Scale drop rates based on luck, more for high drop rates and higher luck.
+            // Estimates roughly to:
+            // 75% base -> 76.47% at 10 luck, 87.26% at 30 luck, 100+% at 44+ luck
+            // 50% base -> 51.83% at 20 luck, 57.05% at 40 luck, 100+% at 114+ luck
+            // 10% base -> 10.57% at 40 luck, 22.7% at 200 luck, 100+% at 600+ luck
+            // 1% base -> 3.33% at 300 luck, 6.83% at 500 luck, 12.78% at 750 luck
+            // 0.1% base -> 0.89% at 600 luck, 1.39% at 800 luck, 1.95% at 999 luck
+            double deltaDiff = (double)(100.0 - baseRate);
+            dropRate = (uint32_t)(baseRate * (100.f +
+                100.f * (float)(((double)luck / 30.0) * 10.0 * (double)luck) /
+                (1000.0 + 7.0 * (double)luck + (deltaDiff * deltaDiff))));
+        }
+
+        if(dropRate >= 10000 || RNG(uint16_t, 1, 10000) <= dropRate ||
             (minLast && itemStacks.size() == 0 && drops.back() == drop))
         {
             uint16_t minStack = drop->GetMinStack();
@@ -2100,6 +2117,11 @@ bool CharacterManager::UnequipItem(const std::shared_ptr<
     return false;
 }
 
+bool CharacterManager::IsCPItem(const std::shared_ptr<objects::MiItemData>& itemData) const
+{
+    return itemData && (itemData->GetBasic()->GetFlags() & 0x40) != 0;
+}
+
 void CharacterManager::EndExchange(const std::shared_ptr<
     channel::ChannelClientConnection>& client, int32_t outcome)
 {
@@ -2180,13 +2202,13 @@ void CharacterManager::UpdateLNC(const std::shared_ptr<
 std::shared_ptr<objects::Demon> CharacterManager::ContractDemon(
     const std::shared_ptr<channel::ChannelClientConnection>& client,
     const std::shared_ptr<objects::MiDevilData>& demonData,
-    int32_t sourceEntityID)
+    int32_t sourceEntityID, uint16_t familiarity)
 {
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
     auto character = cState->GetEntity();
 
-    auto demon = ContractDemon(character, demonData);
+    auto demon = ContractDemon(character, demonData, familiarity);
 
     if(!demon)
     {
@@ -2216,7 +2238,8 @@ std::shared_ptr<objects::Demon> CharacterManager::ContractDemon(
 
 std::shared_ptr<objects::Demon> CharacterManager::ContractDemon(
     const std::shared_ptr<objects::Character>& character,
-    const std::shared_ptr<objects::MiDevilData>& demonData)
+    const std::shared_ptr<objects::MiDevilData>& demonData,
+    uint16_t familiarity)
 {
     auto comp = character->GetCOMP().Get();
     auto progress = character->GetProgress();
@@ -2241,7 +2264,7 @@ std::shared_ptr<objects::Demon> CharacterManager::ContractDemon(
         return nullptr;
     }
 
-    auto d = GenerateDemon(demonData);
+    auto d = GenerateDemon(demonData, familiarity);
     if(!d)
     {
         LOG_ERROR("Failed to generate demon.\n");
@@ -2695,16 +2718,8 @@ void CharacterManager::UpdateExpertisePoints(const std::shared_ptr<
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
     auto character = cState->GetEntity();
-    auto stats = character->GetCoreStats();
 
-    int32_t maxTotalPoints = 1700000 + (int32_t)(floorl((float)stats->GetLevel() * 0.1) *
-        1000 * 100) + ((int32_t)character->GetExpertiseExtension() * 1000 * 100);
-
-    if(stats->GetLevel() == 99)
-    {
-        // Level 99 awards a bonus 1000.00 points available
-        maxTotalPoints = maxTotalPoints + 100000;
-    }
+    int32_t maxTotalPoints = GetMaxExpertisePoints(character);
 
     int32_t currentPoints = 0;
     for(auto expertise : character->GetExpertises())
@@ -2838,6 +2853,23 @@ uint8_t CharacterManager::GetExpertiseRank(const std::shared_ptr<
     }
 
     return (uint8_t)floor((float)pointSum * 0.0001f);
+}
+
+int32_t CharacterManager::GetMaxExpertisePoints(const std::shared_ptr<
+    objects::Character>& character)
+{
+    auto stats = character->GetCoreStats();
+
+    int32_t maxPoints = 1700000 + (int32_t)(floorl((float)stats->GetLevel() * 0.1) *
+        1000 * 100) + ((int32_t)character->GetExpertiseExtension() * 1000 * 100);
+
+    if(stats->GetLevel() == 99)
+    {
+        // Level 99 awards a bonus 1000.00 points available
+        maxPoints = maxPoints + 100000;
+    }
+
+    return maxPoints;
 }
 
 void CharacterManager::SendExertiseExtension(const std::shared_ptr<
@@ -3009,8 +3041,7 @@ bool CharacterManager::GetSynthOutcome(ClientState* synthState,
             }
 
             // If the input is a CP item, the rate increases
-            double cpBoost = (itemData->GetBasic()->GetFlags() & 0x20) != 0
-                ? 20.0 : 0.0;
+            double cpBoost = IsCPItem(itemData) ? 20.0 : 0.0;
 
             double demonBoost = 0.0;
             if(dState->Ready())

@@ -197,6 +197,9 @@ ErrorCodes_t AccountManager::WebAuthLogin(const libcomp::String& username,
 ErrorCodes_t AccountManager::LobbyLogin(const libcomp::String& username,
     const libcomp::String& sid, libcomp::String& sid2)
 {
+    LOG_DEBUG(libcomp::String("Attempting to perform a login with SID for "
+        "account '%1'.\n").Arg(username));
+
     // Lock the accounts now so this is thread safe.
     std::lock_guard<std::mutex> lock(mAccountLock);
 

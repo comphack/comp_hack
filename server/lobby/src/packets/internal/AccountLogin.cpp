@@ -9,7 +9,7 @@
  *
  * This file is part of the Lobby Server (lobby).
  *
- * Copyright (C) 2012-2016 COMP_hack Team <compomega@tutanota.com>
+ * Copyright (C) 2012-2018 COMP_hack Team <compomega@tutanota.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as
@@ -54,29 +54,36 @@ void UpdateAccountLogin(std::shared_ptr<LobbyServer> server,
     auto character = cLogin->GetCharacter();
     auto worldID = cLogin->GetWorldID();
     auto channelID = cLogin->GetChannelID();
+
     if(0 > worldID || 0 > channelID)
     {
-        LOG_ERROR(libcomp::String("Invalid channel (%1) or world (%2) ID received for AccountLogin.\n").Arg(channelID).Arg(worldID));
+        LOG_ERROR(libcomp::String("Invalid channel (%1) or world (%2) "
+            "ID received for AccountLogin.\n").Arg(channelID).Arg(worldID));
+
         return;
     }
 
     auto world = server->GetWorldByID((uint8_t)worldID);
-    if(nullptr == world)
+
+    if(!world)
     {
         return;
     }
 
-    // Should be the same one we passed in
+    // Should be the same one we passed in.
     auto account = login->GetAccount().Get(server->GetMainDatabase());
-    if(nullptr == account)
+
+    if(!account)
     {
         return;
     }
 
     auto channel = world->GetChannelByID((uint8_t)channelID);
-    if(nullptr == account || nullptr == channel)
+
+    if(!channel)
     {
         LOG_ERROR("Unknown channel ID returned from the world.\n");
+
         return;
     }
 
@@ -84,6 +91,7 @@ void UpdateAccountLogin(std::shared_ptr<LobbyServer> server,
     auto accountManager = server->GetAccountManager();
 
     int8_t currentWorldID;
+
     if(!accountManager->IsLoggedIn(username, currentWorldID))
     {
         return;
@@ -91,32 +99,31 @@ void UpdateAccountLogin(std::shared_ptr<LobbyServer> server,
 
     auto clientConnection = server->GetManagerConnection()->GetClientConnection(
         account->GetUsername());
-    if(nullptr != clientConnection && currentWorldID == -1)
+
+    if(clientConnection && currentWorldID == -1)
     {
-        // Initial login response from the world
-        LOG_DEBUG(libcomp::String("Login character with UUID '%1' into world %2, channel %3"
-            " using session key: %4\n").Arg(character.GetUUID().ToString()).Arg(worldID)
-            .Arg(channelID).Arg(login->GetSessionKey()));
+        // Initial login response from the world.
+        LOG_DEBUG(libcomp::String("Login character with UUID '%1' into "
+            "world %2, channel %3 using session key: %4\n").Arg(
+            character.GetUUID().ToString()).Arg(worldID).Arg(
+            channelID).Arg(login->GetSessionKey()));
 
         libcomp::Packet reply;
         reply.WritePacketCode(LobbyToClientPacketCode_t::PACKET_START_GAME);
-
-        // Current session key
         reply.WriteU32Little(login->GetSessionKey());
-
-        // Server address
         reply.WriteString16Little(libcomp::Convert::ENCODING_UTF8,
-            libcomp::String("%1:%2").Arg(channel->GetIP()).Arg(channel->GetPort()), true);
-
-        // Character (account) ID
+            libcomp::String("%1:%2").Arg(channel->GetIP()).Arg(
+            channel->GetPort()), true);
         reply.WriteU8(character->GetCID());
 
         clientConnection->SendPacket(reply);
 
+        // Switch channels now.
         accountManager->SwitchToChannel(username, worldID, channelID);
     }
     else
     {
+        // We are now in the channel so update the login state.
         accountManager->CompleteChannelLogin(username, worldID, channelID);
     }
 }
@@ -127,14 +134,32 @@ bool Parsers::AccountLogin::Parse(libcomp::ManagerPacket *pPacketManager,
 {
     (void)connection;
 
-    auto response = std::shared_ptr<objects::AccountLogin>(new objects::AccountLogin);
+    auto response = std::shared_ptr<objects::AccountLogin>(
+        new objects::AccountLogin);
+
     if(!response->LoadPacket(p, false))
     {
-        LOG_ERROR("Invalid response received for AccountLogin.\n");
-        return false;
+        p.Rewind();
+
+        if(sizeof(int8_t) == p.Size() && 0 == p.PeekS8())
+        {
+            // This error is expected, ignore it.
+            return true;
+        }
+        else
+        {
+            LOG_ERROR("Invalid response received for "
+                "AccountLogin (lobby).\n");
+
+            p.HexDump();
+
+            return false;
+        }
     }
 
-    auto server = std::dynamic_pointer_cast<LobbyServer>(pPacketManager->GetServer());
+    auto server = std::dynamic_pointer_cast<LobbyServer>(
+        pPacketManager->GetServer());
+
     server->QueueWork(UpdateAccountLogin, server, response);
 
     return true;

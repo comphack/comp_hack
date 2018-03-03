@@ -55,12 +55,14 @@ public:
         bool expectError = false);
     void CreateCharacter(const libcomp::String& name);
     void StartGame();
+    void SetWaitForLogout(bool wait);
 
     int32_t GetSessionKey() const;
 
 private:
     libcomp::String mSID1, mSID2;
     int32_t mSessionKey;
+    bool mWaitForLogout;
 };
 
 } // namespace libtester

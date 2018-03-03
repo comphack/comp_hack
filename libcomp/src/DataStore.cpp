@@ -45,6 +45,9 @@ DataStore::DataStore(const char *szProgram)
     {
         LOG_CRITICAL("Failed to init PhysFS!\n");
     }
+
+    // Allow symlinks in the datastore directory.
+    PHYSFS_permitSymbolicLinks(1);
 }
 
 DataStore::~DataStore()

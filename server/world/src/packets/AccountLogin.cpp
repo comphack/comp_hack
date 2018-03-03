@@ -33,8 +33,8 @@
 #include <PacketCodes.h>
 #include <ReadOnlyPacket.h>
 
-// C++ 11 Standard Includes
-#include <math.h>
+// Standard C Includes
+#include <cmath>
 
 // object Includes
 #include <Account.h>
@@ -56,127 +56,136 @@ void LobbyLogin(std::shared_ptr<WorldServer> server,
     const std::shared_ptr<libcomp::InternalConnection> connection,
     std::shared_ptr<objects::AccountLogin> login)
 {
-    //The lobby is requesting a channel to log into
+    // The lobby is requesting a channel to log into.
     bool ok = true;
 
     auto cLogin = login->GetCharacterLogin();
     auto lobbyDB = server->GetLobbyDatabase();
     auto worldDB = server->GetWorldDatabase();
     auto account = login->GetAccount().Get(lobbyDB, true);
-    if(nullptr == account)
+
+    if(!account)
     {
         LOG_ERROR(libcomp::String("Invalid account sent to world"
             " AccountLogin: %1\n").Arg(
-                login->GetAccount().GetUUID().ToString()));
+            login->GetAccount().GetUUID().ToString()));
+
         ok = false;
     }
     else
     {
         auto cUUID = cLogin->GetCharacter().GetUUID();
-        if(cUUID.IsNull() ||
-            nullptr == cLogin->GetCharacter().Get(worldDB, true))
+
+        if(cUUID.IsNull() || !cLogin->GetCharacter().Get(worldDB, true))
         {
             LOG_ERROR(libcomp::String("Character UUID '%1' is not valid"
                 " for this world.\n").Arg(cUUID.ToString()));
+
             ok = false;
         }
     }
 
-    libcomp::Packet channelReply;
-    channelReply.WritePacketCode(
-        InternalPacketCode_t::PACKET_ACCOUNT_LOGIN);
+    libcomp::Packet reply;
+    reply.WritePacketCode(InternalPacketCode_t::PACKET_ACCOUNT_LOGIN);
 
-    if(ok)
+    auto loginChannel = server->GetLoginChannel();
+
+    if(ok && loginChannel)
     {
-        auto loginChannel = server->GetLoginChannel();
-        if(nullptr != loginChannel)
+        int8_t channelID;
+        auto accountManager = server->GetAccountManager();
+        auto characterManager = server->GetCharacterManager();
+
+        // Remove any channel switches stored for whatever reason
+        accountManager->PopChannelSwitch(login->GetAccount()
+            ->GetUsername(), channelID);
+
+        auto worldID = std::dynamic_pointer_cast<objects::WorldConfig>(
+            server->GetConfig())->GetID();
+        channelID = (int8_t)loginChannel->GetID();
+
+        // Login now to get the session key
+        if(!accountManager->LoginUser(login))
         {
-            int8_t channelID;
-            auto accountManager = server->GetAccountManager();
-            auto characterManager = server->GetCharacterManager();
+            LOG_ERROR(libcomp::String("Failed to login character '%1'. "
+                "Here is the state of the login object now:\n").Arg(
+                account->GetUsername()).Arg(login->GetXml()));
+        }
 
-            // Remove any channel switches stored for whatever reason
-            accountManager->PopChannelSwitch(login->GetAccount()
-                ->GetUsername(), channelID);
+        // Get the cached character login or register a new one
+        cLogin = characterManager->RegisterCharacter(cLogin);
 
-            auto worldID = std::dynamic_pointer_cast<objects::WorldConfig>(
-                server->GetConfig())->GetID();
-            channelID = (int8_t)loginChannel->GetID();
-
-            // Login now to get the session key
-            accountManager->LoginUser(login);
-
-            // Get the cached character login or register a new one
-            cLogin = characterManager->RegisterCharacter(cLogin);
-
-            auto character = cLogin->GetCharacter().Get();
-            if(!character->GetClan().IsNull())
+        auto character = cLogin->GetCharacter().Get();
+        if(!character->GetClan().IsNull())
+        {
+            // Load the clan
+            auto clan = character->GetClan().Get();
+            if(!clan)
             {
-                // Load the clan
-                auto clan = character->GetClan().Get();
-                if(!clan)
-                {
-                    clan = libcomp::PersistentObject::LoadObjectByUUID<
-                        objects::Clan>(worldDB, character->GetClan().GetUUID());
-                }
+                clan = libcomp::PersistentObject::LoadObjectByUUID<
+                    objects::Clan>(worldDB, character->GetClan().GetUUID());
+            }
 
-                if(clan)
+            if(clan)
+            {
+                // Load the members and store in the CharacterManager
+                auto members = objects::ClanMember::LoadClanMemberListByClan(worldDB, clan);
+                auto clanInfo = characterManager->GetClan(clan->GetUUID());
+                if(clanInfo)
                 {
-                    // Load the members and store in the CharacterManager
-                    auto members = objects::ClanMember::LoadClanMemberListByClan(worldDB, clan);
-                    auto clanInfo = characterManager->GetClan(clan->GetUUID());
-                    if(clanInfo)
-                    {
-                        cLogin->SetClanID(clanInfo->GetID());
-                    }
-                    else
-                    {
-                        ok = false;
-                    }
+                    cLogin->SetClanID(clanInfo->GetID());
                 }
                 else
                 {
                     ok = false;
                 }
             }
-
-            // If the character is already logged in somehow, send a
-            // disconnect request (should cover dead connections)
-            if(cLogin->GetChannelID() >= 0)
+            else
             {
-                auto channel = server->GetChannelConnectionByID(
-                    cLogin->GetChannelID());
-                if(channel)
-                {
-                    libcomp::Packet p;
-                    p.WritePacketCode(
-                        InternalPacketCode_t::PACKET_ACCOUNT_LOGOUT);
-                    p.WriteS32Little(cLogin->GetWorldCID());
-                    p.WriteU32Little(
-                        (uint32_t)LogoutPacketAction_t::LOGOUT_DISCONNECT);
-                    channel->SendPacket(p);
-                }
+                ok = false;
             }
-
-            cLogin->SetWorldID((int8_t)worldID);
-            cLogin->SetChannelID(channelID);
-
-            // Check if they were part of a party that was disbanded
-            if(cLogin->GetPartyID() &&
-                !characterManager->GetParty(cLogin->GetPartyID()))
-            {
-                cLogin->SetPartyID(0);
-            }
-
-            login->SetCharacterLogin(cLogin);
-            login->SavePacket(channelReply, false);
-
-            LOG_DEBUG(libcomp::String("Logging in account '%1' with session key"
-                " %2\n").Arg(account->GetUsername()).Arg(login->GetSessionKey()));
         }
+
+        // If the character is already logged in somehow, send a
+        // disconnect request (should cover dead connections)
+        if(cLogin->GetChannelID() >= 0)
+        {
+            auto channel = server->GetChannelConnectionByID(
+                cLogin->GetChannelID());
+            if(channel)
+            {
+                libcomp::Packet p;
+                p.WritePacketCode(
+                    InternalPacketCode_t::PACKET_ACCOUNT_LOGOUT);
+                p.WriteS32Little(cLogin->GetWorldCID());
+                p.WriteU32Little(
+                    (uint32_t)LogoutPacketAction_t::LOGOUT_DISCONNECT);
+                channel->SendPacket(p);
+            }
+        }
+
+        cLogin->SetWorldID((int8_t)worldID);
+        cLogin->SetChannelID(channelID);
+
+        // Check if they were part of a party that was disbanded
+        if(cLogin->GetPartyID() &&
+            !characterManager->GetParty(cLogin->GetPartyID()))
+        {
+            cLogin->SetPartyID(0);
+        }
+
+        login->SetCharacterLogin(cLogin);
+        login->SavePacket(reply, false);
+
+        LOG_DEBUG(libcomp::String("Logging in account '%1' with session key"
+            " %2\n").Arg(account->GetUsername()).Arg(login->GetSessionKey()));
+    }
+    else
+    {
+        reply.WriteS8(0); // Failure
     }
 
-    connection->SendPacket(channelReply);
+    connection->SendPacket(reply);
 }
 
 void ChannelLogin(std::shared_ptr<WorldServer> server,
@@ -313,12 +322,16 @@ bool Parsers::AccountLogin::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {
-    auto server = std::dynamic_pointer_cast<WorldServer>(pPacketManager->GetServer());
-    auto iConnection = std::dynamic_pointer_cast<libcomp::InternalConnection>(connection);
+    auto server = std::dynamic_pointer_cast<WorldServer>(
+        pPacketManager->GetServer());
+    auto iConnection = std::dynamic_pointer_cast<
+        libcomp::InternalConnection>(connection);
 
     if(connection == server->GetLobbyConnection())
     {
-        auto login = std::shared_ptr<objects::AccountLogin>(new objects::AccountLogin);
+        auto login = std::shared_ptr<objects::AccountLogin>(
+            new objects::AccountLogin);
+
         if(!login->LoadPacket(p, false))
         {
             return false;
@@ -329,9 +342,12 @@ bool Parsers::AccountLogin::Parse(libcomp::ManagerPacket *pPacketManager,
     else
     {
         uint32_t sesssionKey = p.ReadU32();
+
         libcomp::String username = p.ReadString16Little(
             libcomp::Convert::Encoding_t::ENCODING_UTF8, true);
-        server->QueueWork(ChannelLogin, server, iConnection, sesssionKey, username);
+
+        server->QueueWork(ChannelLogin, server, iConnection,
+            sesssionKey, username);
     }
 
     return true;

@@ -45,7 +45,7 @@ bool Login::WebLogin(const libcomp::String& username,
     asio::io_service service;
 
     libcomp::String httpRequest = libcomp::String(
-        "POST /index.html HTTP/1.1\r\n"
+        "POST /index.nut HTTP/1.1\r\n"
         "Accept: image/gif, image/jpeg, image/pjpeg, "
             "application/x-ms-application, application/xaml+xml, "
             "application/x-ms-xbap, */*\r\n"
@@ -70,7 +70,7 @@ bool Login::WebLogin(const libcomp::String& username,
         "content=\"text\\/html; charset=UTF-8\"><\\/head><body>"
         "login...<!-- ID:\"([^\"]+)\" 1stSID:\"([a-f0-9]{300})\" "
         "2ndSID:\"([a-f0-9]{300})\" isIdSave:\"([01])\" "
-        "existBirthday:\"([01])\" --><\\/body><\\/html>$");
+        "existBirthday:\"([01])\" --><\\/body><\\/html>\n$");
 
     std::shared_ptr<libtester::HttpConnection> connection(
         new libtester::HttpConnection(service));
@@ -134,7 +134,7 @@ bool Login::WebLogin(const libcomp::String& username,
                         sid1 = match.str(3);
                         sid2 = match.str(4);
 
-                        if("788" == contentLength && username == replyUsername)
+                        if("789" == contentLength && username == replyUsername)
                         {
                             result = true;
                         }

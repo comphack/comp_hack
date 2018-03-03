@@ -50,7 +50,7 @@ bool ServerConstants::Initialize(const String& filePath)
         LOG_ERROR("Server contants XML is not valid.");
         return false;
     }
-    
+
     // Read all constants as strings
     std::unordered_map<std::string, std::string> constants;
     std::unordered_map<std::string, const tinyxml2::XMLElement*> complexConstants;
@@ -168,6 +168,10 @@ bool ServerConstants::Initialize(const String& filePath)
         sConstants.STATUS_SUMMON_SYNC_2);
     success &= LoadInteger(constants["STATUS_SUMMON_SYNC_3"],
         sConstants.STATUS_SUMMON_SYNC_3);
+
+    // Load login constants.
+    success &= LoadInteger(constants["WEBAUTH_TIMEOUT"],
+        sConstants.WEBAUTH_TIMEOUT);
 
     if(success && complexConstants.find("DEFAULT_SKILLS") != complexConstants.end())
     {

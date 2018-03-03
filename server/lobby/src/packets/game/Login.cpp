@@ -8,7 +8,7 @@
  *
  * This file is part of the Lobby Server (lobby).
  *
- * Copyright (C) 2012-2016 COMP_hack Team <compomega@tutanota.com>
+ * Copyright (C) 2012-2018 COMP_hack Team <compomega@tutanota.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as
@@ -31,6 +31,7 @@
 #include "LobbyServer.h"
 
 // libcomp Includes
+#include <Decrypt.h>
 #include <ErrorCodes.h>
 #include <Log.h>
 #include <Packet.h>
@@ -47,7 +48,6 @@ using namespace lobby;
 static bool LoginError(const std::shared_ptr<
     libcomp::TcpConnection>& connection, ErrorCodes_t errorCode)
 {
-    /// @todo Return different error codes like an account is banned.
     libcomp::Packet reply;
     reply.WritePacketCode(LobbyToClientPacketCode_t::PACKET_LOGIN);
     reply.WriteS32Little(to_underlying(errorCode));
@@ -65,9 +65,7 @@ bool Parsers::Login::Parse(libcomp::ManagerPacket *pPacketManager,
 
     objects::PacketLogin obj;
 
-    auto conf = config(pPacketManager);
-
-    if(!obj.LoadPacket(p) || nullptr == conf)
+    if(!obj.LoadPacket(p))
     {
         return false;
     }
@@ -76,17 +74,8 @@ bool Parsers::Login::Parse(libcomp::ManagerPacket *pPacketManager,
     connection->SetName(libcomp::String("%1:%2").Arg(
         connection->GetName()).Arg(obj.GetUsername()));
 
-    objects::PacketLoginReply reply;
-    reply.SetCommandCode(to_underlying(
-        LobbyToClientPacketCode_t::PACKET_LOGIN));
-
-    auto server = std::dynamic_pointer_cast<LobbyServer>(pPacketManager->GetServer());
-    auto accountManager = server->GetAccountManager();
-    auto mainDB = server->GetMainDatabase();
-
-    /// @todo Ask the world server is the user is already logged in.
-    auto account = objects::Account::LoadAccountByUsername(mainDB, obj.GetUsername());
-
+    // Check the client version.
+    auto conf = config(pPacketManager);
     uint32_t clientVersion = static_cast<uint32_t>(
         conf->GetClientVersion() * 1000.0f);
 
@@ -94,46 +83,43 @@ bool Parsers::Login::Parse(libcomp::ManagerPacket *pPacketManager,
     {
         return LoginError(connection, ErrorCodes_t::WRONG_CLIENT_VERSION);
     }
-    else if(nullptr == account)
+
+    // Save the username for later.
+    state(connection)->SetUsername(obj.GetUsername());
+
+    // Generate a challenge for the client.
+    uint32_t challenge = libcomp::Decrypt::GenerateSessionKey();
+
+    // Get a reference to the server.
+    auto server = std::dynamic_pointer_cast<LobbyServer>(
+        pPacketManager->GetServer());
+
+    // Get the account from the database.
+    auto account = objects::Account::LoadAccountByUsername(
+        server->GetMainDatabase(), obj.GetUsername());
+
+    // Save the account information.
+    state(connection)->SetAccount(account);
+
+    // Save the challenge for authentication.
+    state(connection)->SetChallenge(challenge);
+
+    // Send the reply.
+    objects::PacketLoginReply reply;
+    reply.SetCommandCode(to_underlying(
+        LobbyToClientPacketCode_t::PACKET_LOGIN));
+    reply.SetResponseCode(to_underlying(
+        ErrorCodes_t::SUCCESS));
+    reply.SetChallenge(challenge);
+
+    // If the account exists, use the salt; otherwise, use a random one.
+    if(account)
     {
-        return LoginError(connection, ErrorCodes_t::BAD_USERNAME_PASSWORD);
-    }
-    else if(account->GetIsBanned())
-    {
-        return LoginError(connection, ErrorCodes_t::ACCOUNT_DISABLED);
+        reply.SetSalt(account->GetSalt());
     }
     else
     {
-        auto username = obj.GetUsername();
-        auto sessionManager = server->GetSessionManager();
-
-        // If an expired session exists, expire it and log the user out
-        if(sessionManager->HasExpiredSession(username))
-        {
-            int8_t loginWorldID;
-            accountManager->IsLoggedIn(username, loginWorldID);
-            sessionManager->ExpireSession(username);
-            accountManager->LogoutUser(username, loginWorldID);
-        }
-
-        auto login = std::shared_ptr<objects::AccountLogin>(new objects::AccountLogin);
-        login->SetAccount(account);
-
-        if(!accountManager->LoginUser(username, login))
-        {
-            return LoginError(connection, ErrorCodes_t::ACCOUNT_STILL_LOGGED_IN);
-        }
-
-        state(connection)->SetAccount(account);
-        server->GetManagerConnection()->SetClientConnection(
-            std::dynamic_pointer_cast<LobbyClientConnection>(connection));
-
-        reply.SetResponseCode(to_underlying(
-            ErrorCodes_t::SUCCESS));
-        reply.SetChallenge(0xCAFEBABE); /// @todo generate, save, and use.
-        reply.SetSalt(account->GetSalt());
-
-        state(connection)->SetLoggedIn(true);
+        reply.SetSalt(server->GetFakeAccountSalt(obj.GetUsername()));
     }
 
     return connection->SendObject(reply);

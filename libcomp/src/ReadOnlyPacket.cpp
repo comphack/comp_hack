@@ -349,6 +349,23 @@ uint8_t ReadOnlyPacket::PeekU8()
     return value;
 }
 
+int8_t ReadOnlyPacket::PeekS8()
+{
+    // Check if there is enough data left in the ReadOnlypacket to read the value; if
+    // not, throw an exception.
+    if((mPosition + 1) > mSize)
+    {
+        PACKET_EXCEPTION("Attempted to read 1 byte from the ReadOnlypacket; however, "
+            "this would read past the end of the ReadOnlypacket.", this);
+    }
+
+    // Copy the value into a variable to return.
+    int8_t value;
+    memcpy(&value, mData + mPosition, 1);
+
+    return value;
+}
+
 uint16_t ReadOnlyPacket::PeekU16()
 {
     // Check if there is enough data left in the ReadOnlypacket to read the value; if
@@ -366,16 +383,45 @@ uint16_t ReadOnlyPacket::PeekU16()
     return value;
 }
 
+int16_t ReadOnlyPacket::PeekS16()
+{
+    // Check if there is enough data left in the ReadOnlypacket to read the value; if
+    // not, throw an exception.
+    if((mPosition + 2) > mSize)
+    {
+        PACKET_EXCEPTION("Attempted to read 2 bytes from the ReadOnlypacket; however, "
+            "this would read past the end of the ReadOnlypacket.", this);
+    }
+
+    // Copy the value into a variable to return.
+    int16_t value;
+    memcpy(&value, mData + mPosition, 2);
+
+    return value;
+}
+
 uint16_t ReadOnlyPacket::PeekU16Big()
 {
     // Return the value converted from big endian byte order.
     return be16toh(PeekU16());
 }
 
+int16_t ReadOnlyPacket::PeekS16Big()
+{
+    // Return the value converted from big endian byte order.
+    return (int16_t)be16toh(PeekS16());
+}
+
 uint16_t ReadOnlyPacket::PeekU16Little()
 {
     // Return the value converted from little endian byte order.
     return le16toh(PeekU16());
+}
+
+int16_t ReadOnlyPacket::PeekS16Little()
+{
+    // Return the value converted from little endian byte order.
+    return (int16_t)le16toh(PeekS16());
 }
 
 uint32_t ReadOnlyPacket::PeekU32()
@@ -395,16 +441,45 @@ uint32_t ReadOnlyPacket::PeekU32()
     return value;
 }
 
+int32_t ReadOnlyPacket::PeekS32()
+{
+    // Check if there is enough data left in the ReadOnlypacket to read the value; if
+    // not, throw an exception.
+    if((mPosition + 4) > mSize)
+    {
+        PACKET_EXCEPTION("Attempted to read 4 bytes from the ReadOnlypacket; however, "
+            "this would read past the end of the ReadOnlypacket.", this);
+    }
+
+    // Copy the value into a variable to return.
+    int32_t value;
+    memcpy(&value, mData + mPosition, 4);
+
+    return value;
+}
+
 uint32_t ReadOnlyPacket::PeekU32Big()
 {
     // Return the value converted from big endian byte order.
     return be32toh(PeekU32());
 }
 
+int32_t ReadOnlyPacket::PeekS32Big()
+{
+    // Return the value converted from big endian byte order.
+    return (int32_t)be32toh((uint32_t)PeekS32());
+}
+
 uint32_t ReadOnlyPacket::PeekU32Little()
 {
     // Return the value converted from little endian byte order.
     return le32toh(PeekU32());
+}
+
+int32_t ReadOnlyPacket::PeekS32Little()
+{
+    // Return the value converted from little endian byte order.
+    return (int32_t)le32toh(PeekS32());
 }
 
 uint8_t ReadOnlyPacket::ReadU8()

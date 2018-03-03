@@ -40,6 +40,7 @@
 
 #include <climits>
 #include <cstdlib>
+#include <exception>
 #include <iomanip>
 #include <sstream>
 
@@ -306,4 +307,17 @@ static void SignalHandler(int sig)
 void Exception::RegisterSignalHandler()
 {
     signal(SIGSEGV, SignalHandler);
+
+    std::set_terminate([]() {
+        Exception e("Unhandled Exception", __FILE__, __LINE__);
+
+        LOG_CRITICAL("The server has crashed. A backtrace will follow.\n");
+
+        for(libcomp::String s : e.Backtrace())
+        {
+            LOG_CRITICAL(libcomp::String("Backtrace: %1\n").Arg(s));
+        }
+
+        exit(EXIT_FAILURE);
+    });
 }

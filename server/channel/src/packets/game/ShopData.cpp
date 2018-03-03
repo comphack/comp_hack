@@ -66,16 +66,35 @@ bool Parsers::ShopData::Parse(libcomp::ManagerPacket *pPacketManager,
         return true;
     }
 
+    /// @todo: convert to more friendly explicit format once these are all understood
+    /*// (needs 1 additional byte)
+    const uint8_t FLAG_MULTIPLIER = 1;
+
+    // Product will diplay as new and will also show on the "NEW" tab (if it exists)
+    const uint8_t FLAG_IS_NEW = 2;
+
+    const uint8_t FLAG_UNKNOWN_8 = 8;
+
+    // (needs 2 additional bytes)
+    const uint8_t FLAG_UNKNOWN_32 = 32;
+
+    // Product is only visible during specific moon phases (added as additional bytes)
+    const uint8_t FLAG_MOON_PHASE_RESTRICT = 64;
+
+    // (needs 2 additional bytes)
+    const uint8_t FLAG_UNKNOWN_128 = 128;*/
+
     libcomp::Packet reply;
     reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_SHOP_DATA);
     reply.WriteS32Little(shopID);
     reply.WriteS32Little(1);    /// @todo: change cacheID when trends are working
-    reply.WriteS32Little(shopData->GetShop1());
-    reply.WriteS32Little(shopData->GetShop2());
-    reply.WriteS32Little(shopData->GetShop3());
-    reply.WriteU16Little(shopData->GetShop4());
-    reply.WriteS8(shopData->GetShop5());
-    reply.WriteS8(shopData->GetShop6());
+
+    reply.WriteU16Little(shopData->GetShop1());
+    reply.WriteFloat(shopData->GetRepairCostMultiplier());
+    reply.WriteFloat(shopData->GetRepairRate());
+    reply.WriteU8(shopData->GetLNCAdjust() ? 1 : 0);
+    reply.WriteFloat(shopData->GetLNCCenter());
+    reply.WriteU8(shopData->GetShop5());
 
     auto tabs = shopData->GetTabs();
     reply.WriteS8((int8_t)tabs.size());

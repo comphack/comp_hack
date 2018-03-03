@@ -80,6 +80,7 @@ enum class ClientToChannelPacketCode_t : uint16_t
     PACKET_SKILL_ACTIVATE = 0x0030, //!< Request to activate a player or demon skill.
     PACKET_SKILL_EXECUTE = 0x0031, //!< Request to execute a skill that has finished charging.
     PACKET_SKILL_CANCEL = 0x0032, //!< Request to execute a skill that has finished charging.
+    PACKET_EXPERTISE_DOWN = 0x0042, //!< Request to lower a character's expertise rank or class.
     PACKET_ALLOCATE_SKILL_POINT = 0x0049, //!< Request to allocate a skill point for a character.
     PACKET_TOGGLE_EXPERTISE = 0x004F, //!< Request to enable or disable an expertise.
     PACKET_LEARN_SKILL = 0x0051, //!< Request for a character to learn a skill.
@@ -137,6 +138,7 @@ enum class ClientToChannelPacketCode_t : uint16_t
     PACKET_DEMON_FUSION = 0x00EF,  //!< Request to fuse two demons into a new demon.
     PACKET_LOOT_DEMON_EGG_DATA = 0x00F1,    //!< Request for information about the demon in a demon egg.
     PACKET_SYNC = 0x00F3,  //!< Request to retrieve the server time.
+    PACKET_SHOP_REPAIR = 0x00F6,    //!< Request to repair an item at a shop.
     PACKET_ROTATE = 0x00F8,  //!< Request to rotate an entity or object.
     PACKET_LOOT_BOSS_BOX = 0x00FC,  //!< Request for the list of items inside a boss loot box.
     PACKET_UNION_FLAG = 0x0100,  //!< Request to receive union information.
@@ -179,14 +181,17 @@ enum class ClientToChannelPacketCode_t : uint16_t
     PACKET_BAZAAR_CLERK_SET = 0x0161,   //!< Request to set the player's bazaar clerk NPC.
     PACKET_BAZAAR_PRICE = 0x0164,   //!< Request to get a suggested sales price for a bazaar item.
     PACKET_BAZAAR_MARKET_INFO_SELF = 0x0166,    //!< Request for details about the player's bazaar market.
-    PACKET_SYNC_CHARACTER = 0x017E,  //!< Request to sync the player character's basic information.
+    PACKET_WARP = 0x016A,   //!< Request to warp the player to the specified warp point.
+    PACKET_SYNC_CHARACTER = 0x017E,  //!< Request to sync a client entity's basic information.
     PACKET_BAZAAR_INTERACT = 0x0184,    //!< Request to interact with a specific bazaar market.
+    PACKET_SKILL_FORGET = 0x0186,   //!< Request to forget a specific character skill.
     PACKET_BAZAAR_MARKET_END = 0x0188,  //!< Request to stop interacting with a bazaar market.
     PACKET_BAZAAR_MARKET_COMMENT = 0x018B,  //!< Request to update the player's bazaar market comment.
     PACKET_PARTNER_DEMON_AI_SET = 0x0181,  //!< Request to update the current partner demon's AI attack settings.
     PACKET_MAP_FLAG = 0x0197,  //!< Request to receive map information.
     PACKET_ANALYZE_DEMON = 0x0199,  //!< Request to analyze another player's partner demon.
     PACKET_DEMON_COMPENDIUM = 0x019B,  //!< Request for the Demon Compendium.
+    PACKET_ITEM_REPAIR_MAX = 0x019F,    //!< Request to repair an item's max durability.
     PACKET_ENTRUST_REQUEST = 0x01AA,  //!< Request to start a player exchange "entrust" session.
     PACKET_ENTRUST_ACCEPT = 0x01AD, //!< Request to accept an entrust request.
     PACKET_ENTRUST_REWARD_UPDATE = 0x01AF,  //!< Request to update the reward items given out upon entrust complete.
@@ -217,7 +222,7 @@ enum class ClientToChannelPacketCode_t : uint16_t
     PACKET_ANALYZE = 0x0209,  //!< Request to analyze another player character.
     PACKET_MATERIAL_EXTRACT = 0x020C,  //!< Request to extract materials from the container.
     PACKET_MATERIAL_INSERT = 0x020E,   //!< Request to insert materials into the container.
-    PACKET_ITEM_EXPAND = 0x0210,    //!< Request to expand a compressed item.
+    PACKET_ITEM_EXCHANGE = 0x0210,    //!< Request to exchange an item for something else.
     PACKET_COMP_SHOP_OPEN = 0x0212, //!< Request to open the COMP shop menu.
     PACKET_COMP_SHOP_LIST = 0x0214, //!< Request to list all the available COMP shops.
     PACKET_FUSION_GAUGE = 0x0217,   //!< Request for the player's fusion gauge state.
@@ -368,6 +373,7 @@ enum class ChannelToClientPacketCode_t : uint16_t
     PACKET_PARTY_MEMBER_ICON = 0x00EA,  //!< Notification that a current party member's icon state has changed.
     PACKET_DEMON_FUSION = 0x00F0,  //!< Response containing the results of a two-way fusion.
     PACKET_LOOT_DEMON_EGG_DATA = 0x00F2,    //!< Response to the request for information about the demon in a demon egg.
+    PACKET_SHOP_REPAIR = 0x00F7,    //!< Response to the request to repair an item at a shop.
     PACKET_PARTY_KICK = 0x00EC,  //!< Notification that a player has been kicked from the current party.
     PACKET_SYNC = 0x00F4,  //!< Response containing the server time.
     PACKET_ROTATE = 0x00F9,    //!< Message containing entity or object rotation information.
@@ -378,6 +384,7 @@ enum class ChannelToClientPacketCode_t : uint16_t
     PACKET_DEPO_RENT = 0x0105,  //!< Response to renting a client account item or demon depository.
     PACKET_EVENT_HOMEPOINT_UPDATE = 0x0106,  //!< Message indicating that the player's homepoint has been updated.
     PACKET_LOOT_TREASURE_BOX = 0x0108,  //!< Response to the request for the list of items inside a treasure loot box.
+    PACKET_EXPERTISE_DOWN = 0x0109, //!< Notification that one of the player character's expertise has been lowered.
     PACKET_QUEST_ACTIVE_LIST = 0x010D,  //!< Response containing the player's active quest list.
     PACKET_QUEST_COMPLETED_LIST = 0x010E,  //!< Response containing the player's completed quest list.
     PACKET_QUEST_PHASE_UPDATE = 0x010F,    //!< Notification that a quest's phase has been updated.
@@ -430,8 +437,9 @@ enum class ChannelToClientPacketCode_t : uint16_t
     PACKET_BAZAAR_PRICE = 0x0165,   //!< Response to the request to get a suggested sales price for a bazaar item.
     PACKET_BAZAAR_MARKET_INFO_SELF = 0x0167,    //!< Message containing details about a the player's bazaar market.
     PACKET_CLAN_NAME_UPDATED = 0x0169,  //!< Notification that a character's clan name has updated.
+    PACKET_RESET_SKILL_POINTS = 0x0170, //!< Notification that the player character's skill points have been reset.
     PACKET_SYSTEM_MSG = 0x0171, //!< Message containing announcement ticker data. 
-    PACKET_SYNC_CHARACTER = 0x017F,  //!< Response to the request to sync the player character's basic information.
+    PACKET_SYNC_CHARACTER = 0x017F,  //!< Response to the request to sync a client entity's basic information.
     PACKET_COMP_SIZE_UPDATED = 0x0182,  //!< Notifies the client that their COMP size has changed.
     PACKET_BAZAAR_DATA = 0x0183,  //!< Message containing data about a bazaar in a zone.
     PACKET_BAZAAR_NPC_CHANGED = 0x0185, //!< Notification that a bazaar market clerk NPC has changed.
@@ -444,6 +452,7 @@ enum class ChannelToClientPacketCode_t : uint16_t
     PACKET_ANALYZE_DEMON = 0x019A,  //!< Response to the request to analyze another player's partner demon.
     PACKET_DEMON_COMPENDIUM = 0x019C,  //!< Response containing the Demon Compendium.
     PACKET_DEMON_COMPENDIUM_ADD = 0x019D,   //!< Notification that the Demon Compendium has been updated.
+    PACKET_ITEM_REPAIR_MAX = 0x01A0,    //!< Response to the request to repair an item's max durability.
     PACKET_DEMON_FAMILIARITY_UPDATE = 0x01A5,  //!< Notification that the current partner demon's familiarity has updated.
     PACKET_ENTRUST_REQUEST = 0x01AB,  //!< Response to the request to start a player exchange "entrust" session.
     PACKET_ENTRUST_REQUESTED = 0x01AC,    //!< Notification for an entrust target that a session is being requested.
@@ -502,10 +511,11 @@ enum class ChannelToClientPacketCode_t : uint16_t
     PACKET_OTHER_CHARACTER_EQUIPMENT_CHANGED = 0x020B, //!< Notifies the client that another character's equipment has changed.
     PACKET_MATERIAL_EXTRACT = 0x020D,  //!< Response to the request to extract materials from the container.
     PACKET_MATERIAL_INSERT = 0x020F,   //!< Response to the request to insert materials into the container.
-    PACKET_ITEM_EXPAND = 0x0211,    //!< Response to the request to expand a compressed item.
+    PACKET_ITEM_EXCHANGE = 0x0211,    //!< Response to the request to exchange an item for something else.
     PACKET_COMP_SHOP_LIST = 0x0215, //!< Response to the request to list all the available COMP shops.
     PACKET_EVENT_SPECIAL_DIRECTION = 0x0216,  //!< Request to the client to signify a special direction to the player.
     PACKET_FUSION_GAUGE = 0x0218,   //!< Response containing the player's fusion gauge state.
+    PACKET_DEMON_PRESENT = 0x0219,  //!< Notification that the player has received a partner demon present.
     PACKET_TITLE_LIST = 0x021C,   //!< Response containing the list of available titles.
     PACKET_PARTNER_DEMON_QUEST_LIST = 0x022E,   //!< Response containing the player's partner demon quest list.
     PACKET_LOCK_DEMON = 0x0234,  //!< Response to lock a demon in the COMP.

@@ -139,6 +139,7 @@ void AccountManager::HandleLoginResponse(const std::shared_ptr<
 
         // Initialize some run-time data
         cState->RecalcEquipState(definitionManager);
+        cState->RecalcDisabledSkills(definitionManager);
 
         // Prepare active quests
         server->GetEventManager()->UpdateQuestTargetEnemies(client);

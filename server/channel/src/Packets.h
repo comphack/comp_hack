@@ -49,6 +49,7 @@ PACKET_PARSER_DECL(Tell);                   // 0x0027
 PACKET_PARSER_DECL(SkillActivate);          // 0x0030
 PACKET_PARSER_DECL(SkillExecute);           // 0x0031
 PACKET_PARSER_DECL(SkillCancel);            // 0x0032
+PACKET_PARSER_DECL(ExpertiseDown);          // 0x0042
 PACKET_PARSER_DECL(AllocateSkillPoint);     // 0x0049
 PACKET_PARSER_DECL(ToggleExpertise);        // 0x004F
 PACKET_PARSER_DECL(LearnSkill);             // 0x0051
@@ -104,6 +105,7 @@ PACKET_PARSER_DECL(PartyKick);              // 0x00EB
 PACKET_PARSER_DECL(DemonFusion);            // 0x00EF
 PACKET_PARSER_DECL(LootDemonEggData);       // 0x00F1
 PACKET_PARSER_DECL(Sync);                   // 0x00F3
+PACKET_PARSER_DECL(ShopRepair);             // 0x00F6
 PACKET_PARSER_DECL(Rotate);                 // 0x00F8
 PACKET_PARSER_DECL(LootBossBox);            // 0x00FC
 PACKET_PARSER_DECL(UnionFlag);              // 0x0100
@@ -145,13 +147,16 @@ PACKET_PARSER_DECL(BazaarState);            // 0x015F
 PACKET_PARSER_DECL(BazaarClerkSet);         // 0x0161
 PACKET_PARSER_DECL(BazaarPrice);            // 0x0164
 PACKET_PARSER_DECL(BazaarMarketInfoSelf);   // 0x0166
+PACKET_PARSER_DECL(Warp);                   // 0x016A
 PACKET_PARSER_DECL(SyncCharacter);          // 0x017E
 PACKET_PARSER_DECL(BazaarInteract);         // 0x0184
+PACKET_PARSER_DECL(SkillForget);            // 0x0186
 PACKET_PARSER_DECL(BazaarMarketEnd);        // 0x0188
 PACKET_PARSER_DECL(BazaarMarketComment);    // 0x018B
 PACKET_PARSER_DECL(PartnerDemonAISet);      // 0x0181
 PACKET_PARSER_DECL(MapFlag);                // 0x0197
 PACKET_PARSER_DECL(DemonCompendium);        // 0x019B
+PACKET_PARSER_DECL(ItemRepairMax);          // 0x019F
 PACKET_PARSER_DECL(EntrustRequest);         // 0x01AA
 PACKET_PARSER_DECL(EntrustAccept);          // 0x01AD
 PACKET_PARSER_DECL(EntrustRewardUpdate);    // 0x01AF
@@ -182,7 +187,7 @@ PACKET_PARSER_DECL(MaterialBox);            // 0x0205
 PACKET_PARSER_DECL(Analyze);                // 0x0209
 PACKET_PARSER_DECL(MaterialExtract);        // 0x020C
 PACKET_PARSER_DECL(MaterialInsert);         // 0x020E
-PACKET_PARSER_DECL(ItemExpand);             // 0x0210
+PACKET_PARSER_DECL(ItemExchange);           // 0x0210
 PACKET_PARSER_DECL(CompShopOpen);           // 0x0212
 PACKET_PARSER_DECL(CompShopList);           // 0x0214
 PACKET_PARSER_DECL(FusionGauge);            // 0x0217

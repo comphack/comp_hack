@@ -135,6 +135,8 @@ bool ChannelServer::Initialize()
         to_underlying(ClientToChannelPacketCode_t::PACKET_SKILL_EXECUTE));
     clientPacketManager->AddParser<Parsers::SkillCancel>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_SKILL_CANCEL));
+    clientPacketManager->AddParser<Parsers::ExpertiseDown>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_EXPERTISE_DOWN));
     clientPacketManager->AddParser<Parsers::AllocateSkillPoint>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_ALLOCATE_SKILL_POINT));
     clientPacketManager->AddParser<Parsers::ToggleExpertise>(
@@ -247,6 +249,8 @@ bool ChannelServer::Initialize()
         to_underlying(ClientToChannelPacketCode_t::PACKET_LOOT_DEMON_EGG_DATA));
     clientPacketManager->AddParser<Parsers::Sync>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_SYNC));
+    clientPacketManager->AddParser<Parsers::ShopRepair>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_SHOP_REPAIR));
     clientPacketManager->AddParser<Parsers::PartnerDemonAISet>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_PARTNER_DEMON_AI_SET));
     clientPacketManager->AddParser<Parsers::Rotate>(
@@ -331,10 +335,14 @@ bool ChannelServer::Initialize()
         to_underlying(ClientToChannelPacketCode_t::PACKET_BAZAAR_PRICE));
     clientPacketManager->AddParser<Parsers::BazaarMarketInfoSelf>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_BAZAAR_MARKET_INFO_SELF));
+    clientPacketManager->AddParser<Parsers::Warp>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_WARP));
     clientPacketManager->AddParser<Parsers::SyncCharacter>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_SYNC_CHARACTER));
     clientPacketManager->AddParser<Parsers::BazaarInteract>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_BAZAAR_INTERACT));
+    clientPacketManager->AddParser<Parsers::SkillForget>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_SKILL_FORGET));
     clientPacketManager->AddParser<Parsers::BazaarMarketEnd>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_BAZAAR_MARKET_END));
     clientPacketManager->AddParser<Parsers::BazaarMarketComment>(
@@ -345,6 +353,8 @@ bool ChannelServer::Initialize()
         to_underlying(ClientToChannelPacketCode_t::PACKET_ANALYZE_DEMON));
     clientPacketManager->AddParser<Parsers::DemonCompendium>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_DEMON_COMPENDIUM));
+    clientPacketManager->AddParser<Parsers::ItemRepairMax>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_ITEM_REPAIR_MAX));
     clientPacketManager->AddParser<Parsers::EntrustRequest>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_ENTRUST_REQUEST));
     clientPacketManager->AddParser<Parsers::EntrustAccept>(
@@ -405,8 +415,8 @@ bool ChannelServer::Initialize()
         to_underlying(ClientToChannelPacketCode_t::PACKET_MATERIAL_EXTRACT));
     clientPacketManager->AddParser<Parsers::MaterialInsert>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_MATERIAL_INSERT));
-    clientPacketManager->AddParser<Parsers::ItemExpand>(
-        to_underlying(ClientToChannelPacketCode_t::PACKET_ITEM_EXPAND));
+    clientPacketManager->AddParser<Parsers::ItemExchange>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_ITEM_EXCHANGE));
     clientPacketManager->AddParser<Parsers::CompShopOpen>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_COMP_SHOP_OPEN));
     clientPacketManager->AddParser<Parsers::CompShopList>(

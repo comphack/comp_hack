@@ -272,7 +272,19 @@ bool Parsers::Enchant::Parse(libcomp::ManagerPacket *pPacketManager,
         {
             if(!success)
             {
-                /// @todo: drop durability
+                switch(exchangeSession->GetType())
+                {
+                case objects::PlayerExchangeSession::Type_t::ENCHANT_TAROT:
+                    characterManager->UpdateDurability(client, updateItem,
+                        -5000);
+                    break;
+                case objects::PlayerExchangeSession::Type_t::ENCHANT_SOUL:
+                    characterManager->UpdateDurability(client, updateItem,
+                        -10000);
+                    break;
+                default:
+                    break;
+                }
             }
 
             targetSlots.push_back((uint16_t)updateItem->GetBoxSlot());

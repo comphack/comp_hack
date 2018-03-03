@@ -167,6 +167,7 @@ SET(${PROJECT_NAME}_PACKETS
     src/packets/game/SkillActivate.cpp          # 0x0030
     src/packets/game/SkillExecute.cpp           # 0x0031
     src/packets/game/SkillCancel.cpp            # 0x0032
+    src/packets/game/ExpertiseDown.cpp          # 0x0042
     src/packets/game/AllocateSkillPoint.cpp     # 0x0049
     src/packets/game/ToggleExpertise.cpp        # 0x004F
     src/packets/game/LearnSkill.cpp             # 0x0051
@@ -222,6 +223,7 @@ SET(${PROJECT_NAME}_PACKETS
     src/packets/game/DemonFusion.cpp            # 0x00EF
     src/packets/game/LootDemonEggData.cpp       # 0x00F1
     src/packets/game/Sync.cpp                   # 0x00F3
+    src/packets/game/ShopRepair.cpp             # 0x00F6
     src/packets/game/Rotate.cpp                 # 0x00F8
     src/packets/game/LootBossBox.cpp            # 0x00FC
     src/packets/game/UnionFlag.cpp              # 0x0100
@@ -263,13 +265,16 @@ SET(${PROJECT_NAME}_PACKETS
     src/packets/game/BazaarClerkSet.cpp         # 0x0161
     src/packets/game/BazaarPrice.cpp            # 0x0164
     src/packets/game/BazaarMarketInfoSelf.cpp   # 0x0166
+    src/packets/game/Warp.cpp                   # 0x016A
     src/packets/game/SyncCharacter.cpp          # 0x017E
     src/packets/game/BazaarInteract.cpp         # 0x0184
+    src/packets/game/SkillForget.cpp            # 0x0186
     src/packets/game/BazaarMarketEnd.cpp        # 0x0188
     src/packets/game/BazaarMarketComment.cpp    # 0x018B
     src/packets/game/PartnerDemonAISet.cpp      # 0x0181
     src/packets/game/MapFlag.cpp                # 0x0197
     src/packets/game/DemonCompendium.cpp        # 0x019B
+    src/packets/game/ItemRepairMax.cpp          # 0x019F
     src/packets/game/EntrustRequest.cpp         # 0x01AA
     src/packets/game/EntrustAccept.cpp          # 0x01AD
     src/packets/game/EntrustRewardUpdate.cpp    # 0x01AF
@@ -300,7 +305,7 @@ SET(${PROJECT_NAME}_PACKETS
     src/packets/game/Analyze.cpp                # 0x0209
     src/packets/game/MaterialExtract.cpp        # 0x020C
     src/packets/game/MaterialInsert.cpp         # 0x020E
-    src/packets/game/ItemExpand.cpp             # 0x0210
+    src/packets/game/ItemExchange.cpp           # 0x0210
     src/packets/game/CompShopOpen.cpp           # 0x0212
     src/packets/game/CompShopList.cpp           # 0x0214
     src/packets/game/FusionGauge.cpp            # 0x0217

@@ -4,9 +4,9 @@
  *
  * @author HACKfrost
  *
- * @brief Request from the client to sync the player character data. This
- *  happens if the client expected an expiration to take place that the
- *  server never sent.
+ * @brief Request from the client to sync the player character (or partner
+ *  demon) data. This happens if the client expected an expiration to take
+ *  place that the server never sent.
  *
  * This file is part of the Channel Server (channel).
  *
@@ -53,17 +53,17 @@ bool Parsers::SyncCharacter::Parse(libcomp::ManagerPacket *pPacketManager,
     auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
     auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
     auto state = client->GetClientState();
-    auto cState = state->GetCharacterState();
-    auto cs = cState->GetCoreStats();
+    auto eState = state->GetEntityState(entityID);
 
-    if(cState->GetEntityID() != entityID)
+    if(eState == nullptr)
     {
-        LOG_ERROR(libcomp::String("Character not belonging to the client"
+        LOG_ERROR(libcomp::String("Entity not belonging to the client"
             " requested for SyncCharacter: %1\n").Arg(entityID));
         return true;
     }
 
-    auto statusEffects = cState->GetCurrentStatusEffectStates(
+    auto cs = eState->GetCoreStats();
+    auto statusEffects = eState->GetCurrentStatusEffectStates(
         server->GetDefinitionManager());
 
     libcomp::Packet reply;

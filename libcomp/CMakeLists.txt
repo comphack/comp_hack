@@ -296,6 +296,7 @@ SET(${PROJECT_NAME}_SCHEMA
     schema/binarydata/dynamicmapdata.xml
     schema/binarydata/enchantdata.xml
     schema/binarydata/equipmentsetdata.xml
+    schema/binarydata/exchangedata.xml
     schema/binarydata/expertdata.xml
     schema/binarydata/hnpcdata.xml
     schema/binarydata/itemdata.xml
@@ -308,8 +309,10 @@ SET(${PROJECT_NAME}_SCHEMA
     schema/binarydata/sitemdata.xml
     schema/binarydata/skilldata.xml
     schema/binarydata/spotdata.xml
+    schema/binarydata/sstatusdata.xml
     schema/binarydata/statusdata.xml
     schema/binarydata/triunionspecialdata.xml
+    schema/binarydata/warppointdata.xml
     schema/binarydata/zonedata.xml
 )
 
@@ -404,6 +407,8 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     Demon.cpp
     DemonBox.h
     DemonBox.cpp
+    DemonPresent.h
+    DemonPresent.cpp
     DropSet.h
     DropSet.cpp
     Enemy.h
@@ -666,6 +671,12 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     MiEquipmentSetData.h
     EventConditionData.cpp
     EventConditionData.h
+    MiExchangeData.cpp
+    MiExchangeData.h
+    MiExchangeObjectData.cpp
+    MiExchangeObjectData.h
+    MiExchangeOptionData.cpp
+    MiExchangeOptionData.h
     MiExpertChainData.cpp
     MiExpertChainData.h
     MiExpertClassData.cpp
@@ -756,6 +767,8 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     MiSkillTbl.cpp
     MiSpecialConditionData.h
     MiSpecialConditionData.cpp
+    MiSStatusData.cpp
+    MiSStatusData.h
     MiStatusBasicData.cpp
     MiStatusBasicData.h
     MiStatusData.cpp
@@ -774,6 +787,8 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     MiUseRestrictionsData.cpp
     MiSpotData.h
     MiSpotData.cpp
+    MiWarpPointData.cpp
+    MiWarpPointData.h
     MiZoneBasicData.h
     MiZoneBasicData.cpp
     MiZoneBGMData.h

@@ -46,6 +46,7 @@
 #include <MiDynamicMapData.h>
 #include <MiEnchantData.h>
 #include <MiEquipmentSetData.h>
+#include <MiExchangeData.h>
 #include <MiExpertClassData.h>
 #include <MiExpertData.h>
 #include <MiExpertRankData.h>
@@ -67,8 +68,10 @@
 #include <MiSkillData.h>
 #include <MiSkillItemStatusCommonData.h>
 #include <MiSpotData.h>
+#include <MiSStatusData.h>
 #include <MiStatusData.h>
 #include <MiTriUnionSpecialData.h>
+#include <MiWarpPointData.h>
 #include <MiUnionData.h>
 #include <MiZoneData.h>
 #include <MiZoneBasicData.h>
@@ -212,6 +215,11 @@ std::list<std::shared_ptr<objects::MiEquipmentSetData>> DefinitionManager::GetEq
     }
 
     return retval;
+}
+
+const std::shared_ptr<objects::MiExchangeData> DefinitionManager::GetExchangeData(uint32_t id)
+{
+    return GetRecordByID(id, mExchangeData);
 }
 
 const std::shared_ptr<objects::MiExpertData> DefinitionManager::GetExpertClassData(uint32_t id)
@@ -364,11 +372,15 @@ const std::unordered_map<uint32_t,
     return result;
 }
 
+const std::shared_ptr<objects::MiSStatusData> DefinitionManager::GetSStatusData(uint32_t id)
+{
+    return GetRecordByID(id, mSStatusData);
+}
+
 const std::shared_ptr<objects::MiStatusData> DefinitionManager::GetStatusData(uint32_t id)
 {
     return GetRecordByID(id, mStatusData);
 }
-
 
 const std::list<std::shared_ptr<objects::MiTriUnionSpecialData>>
     DefinitionManager::GetTriUnionSpecialData(uint32_t sourceDemonTypeID)
@@ -384,6 +396,11 @@ const std::list<std::shared_ptr<objects::MiTriUnionSpecialData>>
     }
 
     return result;
+}
+
+const std::shared_ptr<objects::MiWarpPointData> DefinitionManager::GetWarpPointData(uint32_t id)
+{
+    return GetRecordByID(id, mWarpPointData);
 }
 
 const std::shared_ptr<objects::MiZoneData> DefinitionManager::GetZoneData(uint32_t id)
@@ -484,6 +501,7 @@ bool DefinitionManager::LoadAllData(gsl::not_null<DataStore*> pDataStore)
     success &= LoadDynamicMapData(pDataStore);
     success &= LoadEnchantData(pDataStore);
     success &= LoadEquipmentSetData(pDataStore);
+    success &= LoadExchangeData(pDataStore);
     success &= LoadExpertClassData(pDataStore);
     success &= LoadHNPCData(pDataStore);
     success &= LoadItemData(pDataStore);
@@ -500,6 +518,7 @@ bool DefinitionManager::LoadAllData(gsl::not_null<DataStore*> pDataStore)
     success &= LoadSkillData(pDataStore);
     success &= LoadStatusData(pDataStore);
     success &= LoadTriUnionSpecialData(pDataStore);
+    success &= LoadWarpPointData(pDataStore);
     success &= LoadZoneData(pDataStore);
 
     if(success)
@@ -741,6 +760,20 @@ bool DefinitionManager::LoadEquipmentSetData(
         {
             mEquipmentSetData[record->GetID()] = record;
         }
+    }
+
+    return success;
+}
+
+bool DefinitionManager::LoadExchangeData(
+    gsl::not_null<DataStore*> pDataStore)
+{
+    std::list<std::shared_ptr<objects::MiExchangeData>> records;
+    bool success = LoadBinaryData<objects::MiExchangeData>(pDataStore,
+        "Shield/ExchangeData.sbin", true, 0, records);
+    for(auto record : records)
+    {
+        mExchangeData[record->GetID()] = record;
     }
 
     return success;
@@ -993,6 +1026,20 @@ bool DefinitionManager::LoadTriUnionSpecialData(gsl::not_null<DataStore*> pDataS
     return success;
 }
 
+bool DefinitionManager::LoadWarpPointData(
+    gsl::not_null<DataStore*> pDataStore)
+{
+    std::list<std::shared_ptr<objects::MiWarpPointData>> records;
+    bool success = LoadBinaryData<objects::MiWarpPointData>(pDataStore,
+        "Shield/WarpPointData.sbin", true, 0, records);
+    for(auto record : records)
+    {
+        mWarpPointData[record->GetID()] = record;
+    }
+
+    return success;
+}
+
 bool DefinitionManager::LoadZoneData(gsl::not_null<DataStore*> pDataStore)
 {
     std::list<std::shared_ptr<objects::MiZoneData>> records;
@@ -1075,6 +1122,22 @@ namespace libcomp
 
         mEnchantSpecialData[id] = record;
         mEnchantSpecialLookup[record->GetInputItem()].push_back(id);
+
+        return true;
+    }
+
+    template<>
+    bool DefinitionManager::RegisterServerSideDefinition<objects::MiSStatusData>(
+        const std::shared_ptr<objects::MiSStatusData>& record)
+    {
+        uint32_t id = record->GetID();
+        if(mSStatusData.find(id) != mSStatusData.end())
+        {
+            LOG_ERROR(libcomp::String("Duplicate s-status encountered: %1\n").Arg(id));
+            return false;
+        }
+
+        mSStatusData[id] = record;
 
         return true;
     }

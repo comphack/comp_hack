@@ -236,6 +236,9 @@ private:
     bool Compare(int32_t value1, int32_t value2, std::shared_ptr<
         objects::TokuseiCondition> condition, bool numericCompare) const;
 
+    /// Quick access mapping of constant status effect IDs to their source tokusei IDs
+    std::unordered_map<uint32_t, std::set<int32_t>> mStatusEffectTokusei;
+
     /// Pointer to the channel server.
     std::weak_ptr<ChannelServer> mServer;
 };

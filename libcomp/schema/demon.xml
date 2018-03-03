@@ -49,4 +49,16 @@
         </member>
         <member type="u32" name="RentalExpiration"/>
     </object>
+    <object name="DemonPresent" persistent="false">
+        <member type="u32" name="ID"/>
+        <member type="list" name="CommonItems">
+            <element type="u32"/>
+        </member>
+        <member type="list" name="UncommonItems">
+            <element type="u32"/>
+        </member>
+        <member type="list" name="RareItems">
+            <element type="u32"/>
+        </member>
+    </object>
 </objgen>

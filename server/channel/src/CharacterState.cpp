@@ -35,12 +35,16 @@
 #include <CalculatedEntityState.h>
 #include <EnchantSetData.h>
 #include <EnchantSpecialData.h>
+#include <Expertise.h>
 #include <Item.h>
 #include <MiCategoryData.h>
 #include <MiDevilCrystalData.h>
 #include <MiEnchantCharasticData.h>
 #include <MiEnchantData.h>
 #include <MiEquipmentSetData.h>
+#include <MiExpertClassData.h>
+#include <MiExpertData.h>
+#include <MiExpertRankData.h>
 #include <MiItemBasicData.h>
 #include <MiItemData.h>
 #include <MiItemBasicData.h>
@@ -51,6 +55,9 @@
 #include <MiSpecialConditionData.h>
 #include <Tokusei.h>
 #include <TokuseiCorrectTbl.h>
+
+// C++ Standard Includes
+#include <cmath>
 
 using namespace channel;
 
@@ -112,7 +119,7 @@ void CharacterState::RecalcEquipState(libcomp::DefinitionManager* definitionMana
     for(size_t i = 0; i < 15; i++)
     {
         auto equip = character->GetEquippedItems(i).Get();
-        if(!equip) continue;
+        if(!equip || equip->GetDurability() == 0) continue;
 
         // Get item direct effects
         auto sItemData = definitionManager->GetSItemData(equip->GetType());
@@ -300,6 +307,69 @@ void CharacterState::RecalcEquipState(libcomp::DefinitionManager* definitionMana
             break;
         }
     }
+}
+
+bool CharacterState::RecalcDisabledSkills(libcomp::DefinitionManager* definitionManager)
+{
+    auto character = GetEntity();
+    if(!character)
+    {
+        return false;
+    }
+
+    std::lock_guard<std::mutex> lock(mLock);
+
+    // Find all skills the character has learned that they do not have the expertise
+    // that would grant access to them
+    std::set<uint32_t> disabledSkills;
+    std::set<uint32_t> currentDisabledSkills = GetDisabledSkills();
+    ClearDisabledSkills();
+
+    std::set<uint32_t> learnedSkills = character->GetLearnedSkills();
+
+    bool newSkillDisabled = false;
+
+    uint32_t maxExpertise = (uint32_t)(EXPERTISE_COUNT + CHAIN_EXPERTISE_COUNT);
+    for(uint32_t i = 0; i < maxExpertise; i++)
+    {
+        auto expertData = definitionManager->GetExpertClassData(i);
+
+        auto exp = character->GetExpertises((size_t)i);
+        int32_t points = exp ? exp->GetPoints() : 0;
+        uint32_t currentRank = (uint32_t)floor((float)points * 0.0001f);
+
+        if(expertData)
+        {
+            uint32_t cls = (uint32_t)(currentRank / 10);
+            uint32_t rank = (uint32_t)(currentRank % 10);
+            for(auto classData : expertData->GetClassData())
+            {
+                if(classData->GetID() < cls) continue;
+
+                for(uint32_t k = (uint32_t)(rank + 1); k < 10; k++)
+                {
+                    auto rankData = classData->GetRankData(k);
+                    if(rankData)
+                    {
+                        for(uint32_t skillID : rankData->GetSkill())
+                        {
+                            if(skillID &&
+                                learnedSkills.find(skillID) != learnedSkills.end())
+                            {
+                                disabledSkills.insert(skillID);
+                                newSkillDisabled |= currentDisabledSkills.find(skillID)
+                                    == currentDisabledSkills.end();
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    SetDisabledSkills(disabledSkills);
+
+    return newSkillDisabled || disabledSkills.size() != currentDisabledSkills.size();
 }
 
 void CharacterState::BaseStatsCalculated(libcomp::DefinitionManager* definitionManager,

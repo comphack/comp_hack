@@ -84,7 +84,7 @@ bool ShopFilter::ProcessCommand(const libcomp::String& capturePath,
             int32_t cacheID = packet.ReadS32Little();
             (void)cacheID;
 
-            if(packet.Left() < 15)
+            if(packet.Left() < 17)
             {
                 return true;
             }
@@ -92,19 +92,12 @@ bool ShopFilter::ProcessCommand(const libcomp::String& capturePath,
             auto shop = std::make_shared<objects::ServerShop>();
             shop->SetShopID(shopID);
 
-            shop->SetShop1(packet.ReadS32Little());
-
-            // Affects price discount, ignore until this is understood
-            int32_t s2 = packet.ReadS32Little();
-            int32_t s3 = packet.ReadS32Little();
-            (void)s2;
-            (void)s3;
-
-            shop->SetShop2(0);
-            shop->SetShop3(0);
-            shop->SetShop4(packet.ReadU16Little());
-            shop->SetShop5(packet.ReadS8());
-            shop->SetShop6(packet.ReadS8());
+            shop->SetShop1(packet.ReadU16Little());
+            shop->SetRepairCostMultiplier(packet.ReadFloat());
+            shop->SetRepairRate(packet.ReadFloat());
+            shop->SetLNCAdjust(packet.ReadU8() == 1);
+            shop->SetLNCCenter(packet.ReadFloat());
+            shop->SetShop5(packet.ReadU8());
 
             int8_t tabCount = packet.ReadS8();
             for(int8_t i = 0; i < tabCount; i++)
@@ -195,8 +188,10 @@ bool ShopFilter::ProcessCommand(const libcomp::String& capturePath,
                             return true;
                         }
 
-                        price = shopProd->GetCPCost() != 0
-                            ? (int32_t)shopProd->GetCPCost() : item->GetBasic()->GetBuyPrice();
+                        if(shopProd->GetCPCost() != 0)
+                        {
+                            price = item->GetBasic()->GetBuyPrice();
+                        }
                     }
 
                     product->SetFlags(flags);

@@ -6,7 +6,7 @@
         <member type="u32" name="baseID"/>
         <member type="s32" name="buyPrice"/>
         <member type="s32" name="sellPrice"/>
-        <member type="s32" name="unk1"/>
+        <member type="s32" name="repairPrice"/>
         <member type="s16" name="appearanceID"/>
         <member type="enum" name="weaponType" underlying="uint8_t">
             <value>CLOSE_RANGE</value>

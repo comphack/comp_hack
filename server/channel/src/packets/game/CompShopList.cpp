@@ -79,7 +79,7 @@ bool Parsers::CompShopList::Parse(libcomp::ManagerPacket *pPacketManager,
             reply.WriteU32Little(compShopID);
 
             // Notify if more exist
-            reply.WriteS32Little((size_t)(idx + 1) == compShopIDs.size()
+            reply.WriteS32Little((size_t)idx == compShopIDs.size()
                 ? -1 : (int32_t)idx);
         }
     }

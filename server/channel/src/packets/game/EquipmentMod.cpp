@@ -336,7 +336,10 @@ bool Parsers::EquipmentMod::Parse(libcomp::ManagerPacket *pPacketManager,
             }
             else
             {
-                /// @todo: drop durability
+                // Drop durability but don't destroy the item
+                characterManager->UpdateDurability(client, equipmentItem,
+                    -5000);
+
                 resultCode = RESULT_CODE_FAIL;
             }
 

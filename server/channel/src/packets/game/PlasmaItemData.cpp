@@ -89,7 +89,7 @@ bool Parsers::PlasmaItemData::Parse(libcomp::ManagerPacket *pPacketManager,
                 loot->SetType(objects::LootBox::Type_t::PLASMA);
 
                 characterManager->CreateLootFromDrops(loot, dropSet->GetDrops(),
-                    0, true);
+                    cState->GetLUCK(), true);
 
                 success = pState->SetLoot((uint32_t)pointID, state->GetWorldCID(),
                     loot);

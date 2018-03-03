@@ -114,14 +114,26 @@ namespace libcomp
 /// Maximum demon soul points.
 #define MAX_SOUL_POINTS (100000)
 
-/// Number of expertise.
-#define EXPERTISE_COUNT (38)
+/// Number of expertise (includes unused).
+#define EXPERTISE_COUNT (39)
 
-/// ID of the "Fusion" expertise
+/// Number of chain expertise (includes unused).
+#define CHAIN_EXPERTISE_COUNT (20)
+
+/// ID of the "Fusion" expertise.
 #define EXPERTISE_FUSION (17)
 
-/// ID of the "Demonology" expertise
+/// ID of the "Demonology" expertise.
 #define EXPERTISE_DEMONOLOGY (18)
+
+/// ID of the "Weapon knowledge" expertise.
+#define EXPERTISE_WEAPON_KNOWLEDGE (19)
+
+/// ID of the "Survival" expertise.
+#define EXPERTISE_SURVIVAL (20)
+
+/// ID of the "Gun knowledge" expertise.
+#define EXPERTISE_GUN_KNOWLEDGE (34)
 
 /// Time until the client is expected to timeout and disconnect (in seconds).
 #define TIMEOUT_CLIENT (15)
@@ -319,6 +331,9 @@ namespace libcomp
 
 /// Indicates that an equipment mod slot has no effect but is useable
 #define MOD_SLOT_NULL_EFFECT (0x00FF)
+
+/// Indicates that a weapon mod slot causes repair costs to be reduced
+#define MOD_SLOT_REPAIR_REDUCTION_TYPE (10)
 
 /// Experience required to proceed from the indexed level to the next
 const unsigned long long LEVEL_XP_REQUIREMENTS[] = {

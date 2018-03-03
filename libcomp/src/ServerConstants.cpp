@@ -120,12 +120,16 @@ bool ServerConstants::Initialize(const String& filePath)
     // Load menu constants
     success &= LoadInteger(constants["MENU_FUSION_KZ"],
         sConstants.MENU_FUSION_KZ);
+    success &= LoadInteger(constants["MENU_REPAIR_KZ"],
+        sConstants.MENU_REPAIR_KZ);
     success &= LoadInteger(constants["MENU_TRIFUSION"],
         sConstants.MENU_TRIFUSION);
     success &= LoadInteger(constants["MENU_TRIFUSION_KZ"],
         sConstants.MENU_TRIFUSION_KZ);
 
     // Load skill constants
+    success &= LoadInteger(constants["SKILL_CAMEO"],
+        sConstants.SKILL_CAMEO);
     success &= LoadInteger(constants["SKILL_CLAN_FORM"],
         sConstants.SKILL_CLAN_FORM);
     success &= LoadInteger(constants["SKILL_DCM"],
@@ -134,14 +138,30 @@ bool ServerConstants::Initialize(const String& filePath)
         sConstants.SKILL_EQUIP_ITEM);
     success &= LoadInteger(constants["SKILL_EQUIP_MOD_EDIT"],
         sConstants.SKILL_EQUIP_MOD_EDIT);
+    success &= LoadInteger(constants["SKILL_EXPERT_CLASS_DOWN"],
+        sConstants.SKILL_EXPERT_CLASS_DOWN);
+    success &= LoadInteger(constants["SKILL_EXPERT_FORGET"],
+        sConstants.SKILL_EXPERT_FORGET);
+    success &= LoadInteger(constants["SKILL_EXPERT_FORGET_ALL"],
+        sConstants.SKILL_EXPERT_FORGET_ALL);
+    success &= LoadInteger(constants["SKILL_EXPERT_RANK_DOWN"],
+        sConstants.SKILL_EXPERT_RANK_DOWN);
     success &= LoadInteger(constants["SKILL_FAM_UP"],
         sConstants.SKILL_FAM_UP);
     success &= LoadInteger(constants["SKILL_ITEM_FAM_UP"],
         sConstants.SKILL_ITEM_FAM_UP);
     success &= LoadInteger(constants["SKILL_MOOCH"],
         sConstants.SKILL_MOOCH);
+    success &= LoadInteger(constants["SKILL_MAX_DURABILITY_FIXED"],
+        sConstants.SKILL_MAX_DURABILITY_FIXED);
+    success &= LoadInteger(constants["SKILL_MAX_DURABILITY_RANDOM"],
+        sConstants.SKILL_MAX_DURABILITY_RANDOM);
+    success &= LoadInteger(constants["SKILL_RESPEC"],
+        sConstants.SKILL_RESPEC);
     success &= LoadInteger(constants["SKILL_REST"],
         sConstants.SKILL_REST);
+    success &= LoadInteger(constants["SKILL_SPECIAL_REQUEST"],
+        sConstants.SKILL_SPECIAL_REQUEST);
     success &= LoadInteger(constants["SKILL_STORE_DEMON"],
         sConstants.SKILL_STORE_DEMON);
     success &= LoadInteger(constants["SKILL_SUICIDE"],
@@ -150,6 +170,12 @@ bool ServerConstants::Initialize(const String& filePath)
         sConstants.SKILL_SUMMON_DEMON);
     success &= LoadInteger(constants["SKILL_TRAESTO"],
         sConstants.SKILL_TRAESTO);
+    success &= LoadInteger(constants["SKILL_WARP"],
+        sConstants.SKILL_WARP);
+    success &= LoadInteger(constants["SKILL_XP_PARTNER"],
+        sConstants.SKILL_XP_PARTNER);
+    success &= LoadInteger(constants["SKILL_XP_SELF"],
+        sConstants.SKILL_XP_SELF);
 
     // Load status effect constants
     success &= LoadInteger(constants["STATUS_SUMMON_SYNC_1"],
@@ -166,6 +192,14 @@ bool ServerConstants::Initialize(const String& filePath)
         sConstants.VALUABLE_DEVIL_BOOK_V2);
     success &= LoadInteger(constants["VALUABLE_MATERIAL_TANK"],
         sConstants.VALUABLE_MATERIAL_TANK);
+
+    String listStr;
+    success &= LoadString(constants["SKILL_TRAESTO_ARCADIA"], listStr) &&
+        ToIntegerArray(sConstants.SKILL_TRAESTO_ARCADIA, listStr.Split(","));
+    success &= LoadString(constants["SKILL_TRAESTO_KAKYOJO"], listStr) &&
+        ToIntegerArray(sConstants.SKILL_TRAESTO_KAKYOJO, listStr.Split(","));
+    success &= LoadString(constants["SKILL_TRAESTO_SOUHONZAN"], listStr) &&
+        ToIntegerArray(sConstants.SKILL_TRAESTO_SOUHONZAN, listStr.Split(","));
 
     auto complexIter = complexConstants.find("DEFAULT_SKILLS");
     if(success && complexIter != complexConstants.end())
@@ -198,6 +232,19 @@ bool ServerConstants::Initialize(const String& filePath)
     else
     {
         LOG_ERROR("DEFAULT_SKILLS not found\n");
+        success = false;
+    }
+
+    complexIter = complexConstants.find("CAMEO_MAP");
+    if(success && complexIter != complexConstants.end())
+    {
+        std::unordered_map<std::string, std::string> map;
+        success = LoadKeyValueStrings(complexIter->second, map) &&
+            LoadIntegerMap(map, sConstants.CAMEO_MAP);
+    }
+    else
+    {
+        LOG_ERROR("CAMEO_MAP not found\n");
         success = false;
     }
 
@@ -412,37 +459,8 @@ bool ServerConstants::Initialize(const String& filePath)
             }
             else
             {
-                if(!pair.second.empty())
-                {
-                    auto params = libcomp::String(pair.second).Split(",");
-                    if(params.size() == 3)
-                    {
-                        size_t idx = 0;
-                        for(auto param : params)
-                        {
-                            int32_t p = 0;
-                            if(LoadInteger(param.C(), p))
-                            {
-                                sConstants.EQUIP_MOD_EDIT_ITEMS[key][idx] = p;
-                            }
-                            else
-                            {
-                                LOG_ERROR("Failed to load an element in"
-                                    " EQUIP_MOD_EDIT_ITEMS\n");
-                                success = false;
-                                break;
-                            }
-
-                            idx++;
-                        }
-                    }
-                    else
-                    {
-                        LOG_ERROR("EQUIP_MOD_EDIT_ITEMS entry with param"
-                            " count other than 3\n");
-                        success = false;
-                    }
-                }
+                success &= ToIntegerArray(sConstants.EQUIP_MOD_EDIT_ITEMS[key],
+                    libcomp::String(pair.second).Split(","));
             }
 
             if(!success)
@@ -478,37 +496,8 @@ bool ServerConstants::Initialize(const String& filePath)
             }
             else
             {
-                if(!pair.second.empty())
-                {
-                    auto params = libcomp::String(pair.second).Split(",");
-                    if(params.size() == 2)
-                    {
-                        size_t idx = 0;
-                        for(auto param : params)
-                        {
-                            int8_t p = 0;
-                            if(LoadInteger(param.C(), p))
-                            {
-                                sConstants.FUSION_BOOST_SKILLS[key][idx] = p;
-                            }
-                            else
-                            {
-                                LOG_ERROR("Failed to load an element in"
-                                    " FUSION_BOOST_SKILLS\n");
-                                success = false;
-                                break;
-                            }
-
-                            idx++;
-                        }
-                    }
-                    else
-                    {
-                        LOG_ERROR("FUSION_BOOST_SKILLS entry with param"
-                            " count other than 2\n");
-                        success = false;
-                    }
-                }
+                success &= ToIntegerArray(sConstants.FUSION_BOOST_SKILLS[key],
+                    libcomp::String(pair.second).Split(","));
             }
 
             if(!success)
@@ -617,37 +606,8 @@ bool ServerConstants::Initialize(const String& filePath)
             }
             else
             {
-                if(!pair.second.empty())
-                {
-                    auto params = libcomp::String(pair.second).Split(",");
-                    if(params.size() == 3)
-                    {
-                        size_t idx = 0;
-                        for(auto param : params)
-                        {
-                            int32_t p = 0;
-                            if(LoadInteger(param.C(), p))
-                            {
-                                sConstants.SYNTH_ADJUSTMENTS[key][idx] = p;
-                            }
-                            else
-                            {
-                                LOG_ERROR("Failed to load an element in"
-                                    " SYNTH_ADJUSTMENTS\n");
-                                success = false;
-                                break;
-                            }
-
-                            idx++;
-                        }
-                    }
-                    else
-                    {
-                        LOG_ERROR("SYNTH_ADJUSTMENTS entry with param"
-                            " count other than 3\n");
-                        success = false;
-                    }
-                }
+                success &= ToIntegerArray(sConstants.SYNTH_ADJUSTMENTS[key],
+                    libcomp::String(pair.second).Split(","));
             }
 
             if(!success)
@@ -778,37 +738,9 @@ bool ServerConstants::Initialize(const String& filePath)
                 size_t idx = 0;
                 for(auto elem : strList)
                 {
-                    auto params = elem.Split(",");
-                    if(params.size() != 6)
-                    {
-                        LOG_ERROR("TRIFUSION_SPECIAL_ELEMENTAL row encountered"
-                            " with argument list count not equal to 6\n");
-                        success = false;
-                    }
-                    else
-                    {
-                        size_t subIdx = 0;
-                        for(auto subElem : strList)
-                        {
-                            uint32_t arg = 0;
-                            if(LoadInteger(subElem.C(), arg))
-                            {
-                                sConstants.TRIFUSION_SPECIAL_ELEMENTAL[idx]
-                                    [subIdx] = arg;
-                            }
-                            else
-                            {
-                                LOG_ERROR("Failed to load an argument in"
-                                    " TRIFUSION_SPECIAL_ELEMENTAL\n");
-                                success = false;
-                                break;
-                            }
-
-                            subIdx++;
-                        }
-                    }
-
-                    idx++;
+                    success &= ToIntegerArray(
+                        sConstants.TRIFUSION_SPECIAL_ELEMENTAL[idx++],
+                        elem.Split(","));
                 }
             }
         }

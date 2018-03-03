@@ -104,11 +104,17 @@ struct Data
     /// Menu ID of the demon fusion (kreuz) process
     uint32_t MENU_FUSION_KZ;
 
+    /// Menu ID of an item repair (kreuz) shop
+    uint32_t MENU_REPAIR_KZ;
+
     /// Menu ID of the Tri-Fusion process
     uint32_t MENU_TRIFUSION;
 
     /// Menu ID of the Tri-Fusion (solo) process
     uint32_t MENU_TRIFUSION_KZ;
+
+    /// Function ID of "cameo" skills
+    uint16_t SKILL_CAMEO;
 
     /// Function ID of clan formation item skills
     uint16_t SKILL_CLAN_FORM;
@@ -122,6 +128,18 @@ struct Data
     /// Function ID skills that edit equipment modifications
     uint16_t SKILL_EQUIP_MOD_EDIT;
 
+    /// Function ID of expertise class down skills
+    uint16_t SKILL_EXPERT_CLASS_DOWN;
+
+    /// Function ID of expertise skill forget skills
+    uint16_t SKILL_EXPERT_FORGET;
+
+    /// Function ID of expertise all skill forget skills
+    uint16_t SKILL_EXPERT_FORGET_ALL;
+
+    /// Function ID of expertise rank down skills
+    uint16_t SKILL_EXPERT_RANK_DOWN;
+
     /// Function ID of familiarity boosting skills
     uint16_t SKILL_FAM_UP;
 
@@ -131,8 +149,21 @@ struct Data
     /// Function ID of familiarity lowering "Mooch" skills
     uint16_t SKILL_MOOCH;
 
+    /// Function ID of fixed point max durability increase skills
+    uint16_t SKILL_MAX_DURABILITY_FIXED;
+
+    /// Function ID of random range point max durability increase skills
+    uint16_t SKILL_MAX_DURABILITY_RANDOM;
+
+    /// Function ID of character skill point reallocation skills
+    uint16_t SKILL_RESPEC;
+
     /// Function ID of rest skills
     uint16_t SKILL_REST;
+
+    /// Function ID of skills that simply execute and send a special
+    /// request packet after completion
+    uint16_t SKILL_SPECIAL_REQUEST;
 
     /// Function ID of skills that store the demon in the COMP
     uint16_t SKILL_STORE_DEMON;
@@ -145,6 +176,27 @@ struct Data
 
     /// Function ID of homepoint warp "Traesto" skills
     uint16_t SKILL_TRAESTO;
+
+    /// Function ID of "Arcadia" warp skills paired with the zone
+    /// ID and zone in spot ID
+    std::array<uint32_t, 3> SKILL_TRAESTO_ARCADIA;
+
+    /// Function ID of "Kakyojo" warp skills paired with the zone
+    /// ID and zone in spot ID
+    std::array<uint32_t, 3> SKILL_TRAESTO_KAKYOJO;
+
+    /// Function ID of "Souhonzan" warp skills paired with the zone
+    /// ID and zone in spot ID
+    std::array<uint32_t, 3> SKILL_TRAESTO_SOUHONZAN;
+
+    /// Function ID of zone targeting warp skills
+    uint16_t SKILL_WARP;
+
+    /// Function ID of partner demon granting XP skills
+    uint16_t SKILL_XP_PARTNER;
+
+    /// Function ID of self granting XP skills
+    uint16_t SKILL_XP_SELF;
 
     /// Status effect ID of summon sync level 1
     uint32_t STATUS_SUMMON_SYNC_1;
@@ -166,6 +218,9 @@ struct Data
 
     /// Default skills to add to a new character
     std::set<uint32_t> DEFAULT_SKILLS;
+
+    /// Map of cameo item IDs to transformation status effect IDs
+    std::unordered_map<uint32_t, uint32_t> CAMEO_MAP;
 
     /// Map of clan formation item IDs to their corresponding home base zones
     std::unordered_map<uint32_t, uint32_t> CLAN_FORM_MAP;
@@ -244,7 +299,7 @@ private:
     static bool LoadString(const std::string& value, String& prop);
 
     /**
-     * Utility function to load a lis of strings from the constants read
+     * Utility function to load a list of strings from the constants read
      * from the XML file
      * @param elem Pointer to the string list parent element
      * @param prop List of strings reference to assign the value to
@@ -252,6 +307,37 @@ private:
      */
     static bool LoadStringList(const tinyxml2::XMLElement* elem,
         std::list<String>& prop);
+
+    /**
+     * Utility function to load a list of strings into an array
+     * @param prop Array of integers to assign the value to
+     * @param values List of strings reference to pull the values from
+     * @return true on success, false on failure
+     */
+    template<typename T, std::size_t SIZE>
+    static bool ToIntegerArray(std::array<T, SIZE>& prop,
+        std::list<String> values)
+    {
+        if(SIZE != values.size())
+        {
+            return false;
+        }
+
+        bool success;
+        size_t idx = 0;
+        for(auto str : values)
+        {
+            T val = str.ToInteger<T>(&success);
+            if(!success)
+            {
+                return false;
+            }
+
+            prop[idx++] = val;
+        }
+
+        return true;
+    }
 
     /**
      * Utility function to load key value string pairs from the

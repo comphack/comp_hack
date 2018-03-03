@@ -16,6 +16,7 @@
     <constant name="ITEM_KREUZ">12198</constant>
     <constant name="ITEM_RBLOODSTONE">12203</constant>
     <constant name="MENU_FUSION_KZ">800</constant>
+    <constant name="MENU_REPAIR_KZ">765</constant>
     <constant name="MENU_TRIFUSION">179</constant>
     <constant name="MENU_TRIFUSION_KZ">801</constant>
     <constant name="SKILL_TRAESTO">101</constant>
@@ -26,10 +27,25 @@
     <constant name="SKILL_EQUIP_ITEM">203</constant>
     <constant name="SKILL_FAM_UP">207</constant>
     <constant name="SKILL_MOOCH">209</constant>
+    <constant name="SKILL_EXPERT_RANK_DOWN">300</constant>
     <constant name="SKILL_CLAN_FORM">304</constant>
+    <constant name="SKILL_RESPEC">305</constant>
+    <constant name="SKILL_WARP">306</constant>
+    <constant name="SKILL_EXPERT_FORGET">307</constant>
+    <constant name="SKILL_EXPERT_FORGET_ALL">308</constant>
+    <constant name="SKILL_EXPERT_CLASS_DOWN">309</constant>
     <constant name="SKILL_DCM">310</constant>
+    <constant name="SKILL_TRAESTO_ARCADIA">311,100101,50000</constant>
+    <constant name="SKILL_TRAESTO_SOUHONZAN">312,130101,50000</constant>
+    <constant name="SKILL_MAX_DURABILITY_FIXED">313</constant>
+    <constant name="SKILL_MAX_DURABILITY_RANDOM">314</constant>
     <constant name="SKILL_ITEM_FAM_UP">316</constant>
+    <constant name="SKILL_SPECIAL_REQUEST">318</constant>
+    <constant name="SKILL_CAMEO">319</constant>
+    <constant name="SKILL_TRAESTO_KAKYOJO">325,230101,50003</constant>
+    <constant name="SKILL_XP_SELF">327</constant>
     <constant name="SKILL_EQUIP_MOD_EDIT">329</constant>
+    <constant name="SKILL_XP_PARTNER">334</constant>
     <constant name="STATUS_SUMMON_SYNC_1">194</constant>
     <constant name="STATUS_SUMMON_SYNC_2">364</constant>
     <constant name="STATUS_SUMMON_SYNC_3">365</constant>
@@ -83,6 +99,13 @@
         <element>11901</element>
         <element>11902</element>
         <element>11916</element>
+    </constant>
+    <constant name="CAMEO_MAP">
+        <!-- Format: item => status effect -->
+        <pair>
+            <key>9505</key>
+            <value>3003</value>
+        </pair>
     </constant>
     <constant name="CLAN_FORM_MAP">
         <!-- Format: item => clan base -->

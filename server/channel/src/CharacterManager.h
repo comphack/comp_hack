@@ -419,6 +419,46 @@ public:
         const std::shared_ptr<objects::Item>& item);
 
     /**
+     * Update the current or max durability of the supplied item by
+     * the specified amount. The item will be saved and the client will
+     * be notified only if a visible value is updated.
+     * @param client Pointer to the client connection
+     * @param item Pointer to the item to adjust
+     * @param points Durability points to adjust by
+     * @param isAdjust true if the points supplied should be adjusted
+     *  from the existing value, false if it should be explicitly set
+     * @param updateMax true if the max durability is being updated,
+     *  false if the current durability is being updated
+     * @param sendPacket true if the client should be notified upon
+     *  visible update, false if this will be handled elseswhere
+     * @return true if visible durability was updated, false it was not
+     */
+    bool UpdateDurability(const std::shared_ptr<
+        channel::ChannelClientConnection>& client,
+        const std::shared_ptr<objects::Item>& item, int32_t points,
+        bool isAdjust = true, bool updateMax = false, bool sendPacket = true);
+
+    /**
+     * Update the current or max durability of the supplied items by
+     * the specified amounts. The item will be saved and the client will
+     * be notified only if a visible value is updated.
+     * @param client Pointer to the client connection
+     * @param items Map of pointers to the items to adjust to their point
+     *  values to be adjusted by
+     * @param isAdjust true if the points supplied should be adjusted
+     *  from the existing value, false if it should be explicitly set
+     * @param updateMax true if the max durability is being updated,
+     *  false if the current durability is being updated
+     * @param sendPacket true if the client should be notified upon
+     *  visible update, false if this will be handled elseswhere
+     * @return true if visible durability was updated, false it was not
+     */
+    bool UpdateDurability(const std::shared_ptr<
+        channel::ChannelClientConnection>& client,
+        const std::unordered_map<std::shared_ptr<objects::Item>, int32_t>& items,
+        bool isAdjust = true, bool updateMax = false, bool sendPacket = true);
+
+    /**
      * Check if the specified item definition belongs to a CP item
      * @param Pointer to the item definition
      * @return true if the definition belongs to a CP item, false if

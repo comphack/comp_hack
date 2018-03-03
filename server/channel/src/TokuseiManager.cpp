@@ -49,6 +49,7 @@
 #include <MiSkillData.h>
 #include <MiSkillItemStatusCommonData.h>
 #include <MiSpecialConditionData.h>
+#include <MiSStatusData.h>
 #include <Party.h>
 #include <Tokusei.h>
 #include <TokuseiAttributes.h>
@@ -110,6 +111,11 @@ bool TokuseiManager::Initialize()
                 skillGrantTokusei.insert(tPair.first);
                 skillIDs.insert((uint32_t)aspect->GetValue());
             }
+            else if(aspect->GetType() == TokuseiAspectType::CONSTANT_STATUS)
+            {
+                // Also keep track of constant status effect sources
+                mStatusEffectTokusei[(uint32_t)aspect->GetValue()].insert(tPair.first);
+            }
         }
 
         for(uint32_t skillID : skillIDs)
@@ -159,11 +165,13 @@ bool TokuseiManager::Initialize()
             }
 
             // Make sure no skill based effects increase rates that are side-effects
-            // rather than directly affecting the skill outcome
+            // rather than directly affecting the skill outcome and also do not grant
+            // constant status effects
             bool invalidSkillRate = false;
             for(auto aspect : tPair.second->GetAspects())
             {
                 if(aspect->GetType() == TokuseiAspectType::BETHEL_RATE ||
+                    aspect->GetType() == TokuseiAspectType::CONSTANT_STATUS ||
                     aspect->GetType() == TokuseiAspectType::FAMILIARITY_UP_RATE ||
                     aspect->GetType() == TokuseiAspectType::FAMILIARITY_DOWN_RATE ||
                     aspect->GetType() == TokuseiAspectType::SOUL_POINT_RATE)
@@ -360,7 +368,6 @@ std::unordered_map<int32_t, bool> TokuseiManager::Recalculate(const std::shared_
     return Recalculate(entities, recalcStats, ignoreStatRecalc);
 }
 
-
 std::unordered_map<int32_t, bool> TokuseiManager::Recalculate(const std::list<std::shared_ptr<
     ActiveEntityState>>& entities, bool recalcStats, std::set<int32_t> ignoreStatRecalc)
 {
@@ -547,10 +554,46 @@ std::unordered_map<int32_t, bool> TokuseiManager::Recalculate(const std::list<st
 
         if(updated)
         {
-            calcState->SetEffectiveTokusei(newMaps[eState->GetEntityID()][false]);
+            auto& effective = newMaps[eState->GetEntityID()][false];
+            calcState->SetEffectiveTokusei(effective);
             calcState->SetPendingSkillTokusei(newMaps[eState->GetEntityID()][true]);
             calcState->ClearEffectiveTokuseiFinal();
             calcState->ClearPendingSkillTokuseiFinal();
+
+            // Update constant status effects
+            AddStatusEffectMap m;
+
+            auto currentEffects = eState->GetStatusEffects();
+            for(auto statusPair : mStatusEffectTokusei)
+            {
+                bool exists = currentEffects.find(statusPair.first) !=
+                    currentEffects.end();
+
+                bool apply = false;
+                for(int32_t source : statusPair.second)
+                {
+                    if(effective.find(source) != effective.end())
+                    {
+                        apply = true;
+                        break;
+                    }
+                }
+
+                if(apply && !exists)
+                {
+                    m[statusPair.first] = std::pair<uint8_t, bool>(1, true);
+                }
+                else if(!apply && exists)
+                {
+                    m[statusPair.first] = std::pair<uint8_t, bool>(0, true);
+                }
+            }
+
+            if(m.size() > 0)
+            {
+                eState->AddStatusEffects(m,
+                    mServer.lock()->GetDefinitionManager());
+            }
 
             updatedEntities.push_back(eState);
         }
@@ -669,6 +712,12 @@ std::list<std::shared_ptr<objects::Tokusei>> TokuseiManager::GetDirectTokusei(
     // Get non-tokusei skills
     std::set<uint32_t> skillIDs = eState->GetAllSkills(definitionManager, false);
 
+    // Remove disabled skills
+    for(uint32_t skillID : eState->GetDisabledSkills())
+    {
+        skillIDs.erase(skillID);
+    }
+
     // Since skill granting tokusei only affect the source entity and cannot be
     // conditional, gather other skill IDs granted by tokusei effects before
     // pulling the skill tokusei
@@ -749,6 +798,20 @@ std::list<std::shared_ptr<objects::Tokusei>> TokuseiManager::GetDirectTokusei(
         break;
     }
 
+    // Get S-status effect tokusei
+    for(auto pair : eState->GetStatusEffects())
+    {
+        auto sStatus = definitionManager->GetSStatusData(pair.first);
+        if(sStatus)
+        {
+            for(int32_t tokuseiID : sStatus->GetTokusei())
+            {
+                tokuseiIDs.push_back(tokuseiID);
+            }
+        }
+    }
+
+    // Get any extra tokusei
     for(auto pair : eState->GetAdditionalTokusei())
     {
         for(uint16_t i = 0; i < pair.second; i++)

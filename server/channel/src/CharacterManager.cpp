@@ -8,7 +8,7 @@
  *
  * This file is part of the Channel Server (channel).
  *
- * Copyright (C) 2012-2016 COMP_hack Team <compomega@tutanota.com>
+ * Copyright (C) 2012-2018 COMP_hack Team <compomega@tutanota.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as
@@ -1268,7 +1268,7 @@ std::shared_ptr<objects::Item> CharacterManager::GenerateItem(
 
     item->SetType(itemID);
     item->SetStackSize(stackSize);
-    item->SetDurability(poss->GetDurability());
+    item->SetDurability((uint16_t)(poss->GetDurability() * 1000));
     item->SetMaxDurability((int8_t)poss->GetDurability());
 
     int32_t rentalTime = def->GetRental()->GetRental();
@@ -1846,7 +1846,7 @@ bool CharacterManager::CreateLootFromDrops(const std::shared_ptr<objects::LootBo
     for(auto drop : drops)
     {
         double baseRate = (double)drop->GetRate();
-        uint32_t dropRate = (uint32_t)baseRate;
+        uint32_t dropRate = (uint32_t)(baseRate * 100.0);
         if(luck > 0)
         {
             // Scale drop rates based on luck, more for high drop rates and higher luck.
@@ -2005,11 +2005,12 @@ void CharacterManager::EquipItem(const std::shared_ptr<
         libcomp::PersistentObject::GetObjectByUUID(
             state->GetObjectUUID(itemID)));
 
-    if(nullptr == equip ||
-        equip->GetItemBox().Get() != character->GetItemBoxes(0).Get())
+    if(nullptr == equip)
     {
         return;
     }
+
+    bool inInventory = equip->GetItemBox().Get() == character->GetItemBoxes(0).Get();
 
     auto slot = objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_NONE;
 
@@ -2030,13 +2031,20 @@ void CharacterManager::EquipItem(const std::shared_ptr<
     auto equipSlot = character->GetEquippedItems((size_t)slot);
     if(equipSlot.Get() == equip)
     {
+        // Unequip from anywhere
         equipSlot.SetReference(nullptr);
         unequip = true;
+    }
+    else if(!inInventory)
+    {
+        // Only equip from inventory
+        return;
     }
     else
     {
         equipSlot.SetReference(equip);
     }
+
     character->SetEquippedItems((size_t)slot, equipSlot);
 
     // Determine which complete sets are equipped now
@@ -2115,6 +2123,158 @@ bool CharacterManager::UnequipItem(const std::shared_ptr<
     }
 
     return false;
+}
+
+bool CharacterManager::UpdateDurability(const std::shared_ptr<
+    channel::ChannelClientConnection>& client,
+    const std::shared_ptr<objects::Item>& item, int32_t points,
+    bool isAdjust, bool updateMax, bool sendPacket)
+{
+    if(!item)
+    {
+        return false;
+    }
+
+    std::unordered_map<std::shared_ptr<objects::Item>, int32_t> items;
+    items[item] = points;
+
+    return UpdateDurability(client, items, isAdjust, updateMax, sendPacket);
+}
+
+bool CharacterManager::UpdateDurability(const std::shared_ptr<
+    channel::ChannelClientConnection>& client,
+    const std::unordered_map<std::shared_ptr<objects::Item>, int32_t>& items,
+    bool isAdjust, bool updateMax, bool sendPacket)
+{
+    if(!client || items.size() == 0)
+    {
+        return false;
+    }
+
+    auto server = mServer.lock();
+
+    auto state = client->GetClientState();
+    auto cState = state->GetCharacterState();
+
+    bool recalc = false;
+    bool updated = false;
+    for(auto itemPair : items)
+    {
+        auto item = itemPair.first;
+        int32_t points = itemPair.second;
+
+        bool update = false;
+        if(updateMax)
+        {
+            int8_t current = item->GetMaxDurability();
+
+            auto itemData = server->GetDefinitionManager()
+                ->GetItemData(item->GetType());
+            int32_t maxDurability = itemData ?
+                (int32_t)itemData->GetPossession()->GetDurability() : 0;
+
+            int32_t newValue = isAdjust ? (current + points) : points;
+            if(newValue < 0)
+            {
+                newValue = 0;
+            }
+            else if(newValue > maxDurability)
+            {
+                newValue = maxDurability;
+            }
+
+            if(newValue == 0)
+            {
+                // Item is broken, remove it
+                UnequipItem(client, item);
+                item->SetDurability(0);
+                item->SetMaxDurability(0);
+
+                std::list<std::shared_ptr<objects::Item>> empty;
+                std::unordered_map<std::shared_ptr<
+                    objects::Item>, uint16_t> updateItems;
+                updateItems[item] = 0;
+
+                return UpdateItems(client, false, empty, updateItems);
+            }
+            else if(newValue != (int32_t)current)
+            {
+                // Max durability reduced
+                item->SetMaxDurability((int8_t)newValue);
+
+                // Reduce current durability if higher than new max
+                if(item->GetDurability() > (uint16_t)(newValue * 1000))
+                {
+                    item->SetDurability((uint16_t)(newValue * 1000));
+                }
+                else if(newValue > (int32_t)current)
+                {
+                    // Increase the current durability by the proportional amount
+                    uint16_t durability = item->GetDurability();
+                    item->SetDurability((uint16_t)(durability +
+                        (newValue - current) * 1000));
+                }
+
+                // Always update when changing max durability
+                update = true;
+            }
+        }
+        else
+        {
+            uint16_t current = item->GetDurability();
+
+            if(points < 0 && current == 0)
+            {
+                // Cannot reduce further
+                return false;
+            }
+
+            int32_t newValue = isAdjust ? (current + points) : points;
+            if(newValue < 0)
+            {
+                newValue = 0;
+            }
+            else if(newValue > item->GetMaxDurability() * 1000)
+            {
+                newValue = (item->GetMaxDurability() * 1000);
+            }
+
+            if(newValue != (int32_t)current)
+            {
+                item->SetDurability((uint16_t)newValue);
+
+                //Only update if the visible durability changes
+                update = ceil(newValue * 0.001) != ceil(current * 0.001);
+
+                // If changing to/from 0, reclaculate stats and tokusei
+                recalc = (newValue == 0) != (current == 0);
+            }
+        }
+
+        if(update)
+        {
+            if(sendPacket)
+            {
+                SendItemBoxData(client, item->GetItemBox().Get(),
+                    { (uint16_t)item->GetBoxSlot() });
+            }
+
+            server->GetWorldDatabase()->QueueUpdate(item, state->GetAccountUID());
+
+            updated = true;
+        }
+    }
+
+    if(recalc)
+    {
+        // Enable/disable tokusei on equipment including set bonuses
+        cState->RecalcEquipState(server->GetDefinitionManager());
+        server->GetTokuseiManager()->Recalculate(cState, true,
+            std::set<int32_t>{ cState->GetEntityID() });
+        RecalculateStats(client, cState->GetEntityID());
+    }
+
+    return updated;
 }
 
 bool CharacterManager::IsCPItem(const std::shared_ptr<objects::MiItemData>& itemData) const
@@ -2411,19 +2571,20 @@ void CharacterManager::UpdateFamiliarity(const std::shared_ptr<
         {
             CalculateDemonBaseStats(dState->GetEntity());
             RecalculateStats(client, dState->GetEntityID());
+
+            // Only update the DB and clients if the rank changed
+            if(sendPacket)
+            {
+                libcomp::Packet p;
+                p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_DEMON_FAMILIARITY_UPDATE);
+                p.WriteS32Little(dState->GetEntityID());
+                p.WriteU16Little((uint16_t)newFamiliarity);
+
+                server->GetZoneManager()->BroadcastPacket(client, p);
+            }
+
+            server->GetWorldDatabase()->QueueUpdate(demon, state->GetAccountUID());
         }
-
-        if(sendPacket)
-        {
-            libcomp::Packet p;
-            p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_DEMON_FAMILIARITY_UPDATE);
-            p.WriteS32Little(dState->GetEntityID());
-            p.WriteU16Little((uint16_t)newFamiliarity);
-
-            server->GetZoneManager()->BroadcastPacket(client, p);
-        }
-
-        server->GetWorldDatabase()->QueueUpdate(demon, state->GetAccountUID());
     }
 }
 
@@ -2730,6 +2891,8 @@ void CharacterManager::UpdateExpertisePoints(const std::shared_ptr<
         }
     }
 
+    bool rankedUp = false;
+
     std::list<std::pair<int8_t, int32_t>> updated;
     auto dbChanges = libcomp::DatabaseChangeSet::Create(state->GetAccountUID());
     for(auto pointPair : pointMap)
@@ -2791,6 +2954,8 @@ void CharacterManager::UpdateExpertisePoints(const std::shared_ptr<
             reply.WriteS8(newRank);
 
             server->GetZoneManager()->BroadcastPacket(client, reply);
+
+            rankedUp = true;
         }
     }
 
@@ -2809,8 +2974,12 @@ void CharacterManager::UpdateExpertisePoints(const std::shared_ptr<
         client->SendPacket(reply);
 
         server->GetWorldDatabase()->QueueChangeSet(dbChanges);
+    }
 
+    if(rankedUp)
+    {
         //Expertises can be used as multipliers and conditions, always recalc
+        cState->RecalcDisabledSkills(definitionManager);
         server->GetTokuseiManager()->Recalculate(cState, true,
             std::set<int32_t>{ cState->GetEntityID() });
         RecalculateStats(client, cState->GetEntityID());
@@ -3021,7 +3190,8 @@ bool CharacterManager::GetSynthOutcome(ClientState* synthState,
             auto enchantData = definitionManager->GetEnchantDataByItemID(
                 crystal->GetType());
             auto itemData = definitionManager->GetItemData(inputItem->GetType());
-            if(!enchantData || !itemData || !effectID)
+            if(!enchantData || !itemData || !effectID ||
+                inputItem->GetDurability() == 0)
             {
                 return false;
             }
@@ -3428,9 +3598,6 @@ bool CharacterManager::UpdateStatusEffects(const std::shared_ptr<
         return false;
     }
 
-    auto server = mServer.lock();
-    auto definitionManager = server->GetDefinitionManager();
-
     auto changes = libcomp::DatabaseChangeSet::Create(cState
             ? cState->GetEntity()->GetAccount().GetUUID()
             : dState->GetEntity()->GetDemonBox()->GetAccount().GetUUID());
@@ -3469,33 +3636,35 @@ bool CharacterManager::UpdateStatusEffects(const std::shared_ptr<
         auto effect = effectMap[effectType];
 
         // If the effect can expire but somehow was not removed yet, remove it
-        auto def = definitionManager->GetStatusData(effectType);
-        bool expire = def->GetCancel()->GetDuration() > 0
-            && effect->GetExpiration() == 0;
-
-        if(expire)
-        {
-            removed.insert(effectType);
-        }
-        else
-        {
-            updated.push_back(effect);
-        }
-
-        if(!ePair.second)
+        bool expire = !effect->GetIsConstant() && effect->GetExpiration() == 0;
+        
+        // Do not save constant effects
+        if(!effect->GetIsConstant())
         {
             if(expire)
             {
-                changes->Delete(effect);
+                removed.insert(effectType);
             }
             else
             {
-                changes->Update(effect);
+                updated.push_back(effect);
             }
-        }
-        else if(!expire)
-        {
-            changes->Insert(effect);
+
+            if(!ePair.second)
+            {
+                if(expire)
+                {
+                    changes->Delete(effect);
+                }
+                else
+                {
+                    changes->Update(effect);
+                }
+            }
+            else if(!expire)
+            {
+                changes->Insert(effect);
+            }
         }
     }
 
@@ -3515,7 +3684,7 @@ bool CharacterManager::UpdateStatusEffects(const std::shared_ptr<
         changes->Update(dState->GetEntity());
     }
 
-    auto db = server->GetWorldDatabase();
+    auto db = mServer.lock()->GetWorldDatabase();
     if(queueSave)
     {
         return db->QueueChangeSet(changes);

@@ -153,6 +153,24 @@ public:
         std::shared_ptr<objects::CalculatedEntityState> calcState = nullptr);
 
     /**
+     * Recalculate the set of skills available ot the entity that are currently
+     * disabled.
+     * @param definitionManager Pointer to the DefinitionManager to use when
+     *  determining skill definitions
+     * @return true if the set of disabled skills has been updated, false if it
+     *  has not
+     */
+    virtual bool RecalcDisabledSkills(libcomp::DefinitionManager* definitionManager);
+
+    /**
+     * Check if the entity has the supplied skill learned and not currently
+     * disabled.
+     * @param skillID ID of the skill to check
+     * @return true if the skill is available, false if it is not
+     */
+    bool SkillAvailable(uint32_t skillID);
+
+    /**
      * Get a numeric representation (also stored in constants) of the
      * entity's current alignment
      * @return Numeric representation of the entity's current alignment

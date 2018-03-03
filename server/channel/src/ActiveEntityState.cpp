@@ -851,6 +851,7 @@ std::set<uint32_t> ActiveEntityState::AddStatusEffects(const AddStatusEffectMap&
             effect->SetEntity(GetEntityUUID());
             effect->SetEffect(effectType);
             effect->SetStack(stack);
+            effect->SetIsConstant(cancel->GetDuration() == 0);
         }
 
         // Perform insert or edit modifications
@@ -1361,7 +1362,10 @@ void ActiveEntityState::ActivateStatusEffect(
             }
             break;
         default:
-            mNextEffectTimes[effect->GetExpiration()].insert(effectType);
+            if(!effect->GetIsConstant())
+            {
+                mNextEffectTimes[effect->GetExpiration()].insert(effectType);
+            }
             break;
     }
 
@@ -1476,6 +1480,11 @@ uint32_t ActiveEntityState::GetCurrentExpiration(
     return exp;
 }
 
+bool ActiveEntityState::SkillAvailable(uint32_t skillID)
+{
+    return CurrentSkillsContains(skillID) && !DisabledSkillsContains(skillID);
+}
+
 // "Abstract implementations" required for Sqrat usage
 uint8_t ActiveEntityState::RecalculateStats(libcomp::DefinitionManager* definitionManager,
     std::shared_ptr<objects::CalculatedEntityState> calcState)
@@ -1483,6 +1492,12 @@ uint8_t ActiveEntityState::RecalculateStats(libcomp::DefinitionManager* definiti
     (void)definitionManager;
     (void)calcState;
     return 0;
+}
+
+bool ActiveEntityState::RecalcDisabledSkills(libcomp::DefinitionManager* definitionManager)
+{
+    (void)definitionManager;
+    return false;
 }
 
 std::set<uint32_t> ActiveEntityState::GetAllSkills(
@@ -1798,7 +1813,7 @@ uint8_t ActiveEntityStateImp<objects::Character>::RecalculateStats(
     std::list<std::shared_ptr<objects::MiCorrectTbl>> nraTbls;
     for(auto equip : c->GetEquippedItems())
     {
-        if(!equip.IsNull())
+        if(!equip.IsNull() && equip->GetDurability() > 0)
         {
             auto itemData = definitionManager->GetItemData(equip->GetType());
             for(auto ct : itemData->GetCommon()->GetCorrectTbl())
@@ -2206,7 +2221,7 @@ void ActiveEntityState::GetAdditionalCorrectTbls(
             break;
         }
 
-        if(include)
+        if(include && !DisabledSkillsContains(skillID))
         {
             for(auto ct : common->GetCorrectTbl())
             {

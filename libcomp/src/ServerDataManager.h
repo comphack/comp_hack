@@ -46,12 +46,12 @@
 
 namespace objects
 {
+class DemonPresent;
 class DropSet;
 class Event;
 class ServerShop;
 class ServerZone;
 class ServerZoneInstance;
-class Tokusei;
 }
 
 namespace libcomp
@@ -136,6 +136,13 @@ public:
      * @return List of COMP shop definition IDs
      */
     std::list<uint32_t> GetCompShopIDs() const;
+
+    /**
+     * Get a demon present entry by definition ID
+     * @param id Definition ID of a demon present entry to load
+     * @return Pointer to the demon present entry matching the specified id
+     */
+    const std::shared_ptr<objects::DemonPresent> GetDemonPresentData(uint32_t id);
 
     /**
      * Get a drop set by definition ID
@@ -322,6 +329,10 @@ private:
 
     /// List of all COMP shop definition IDs
     std::list<uint32_t> mCompShopIDs;
+
+    /// Map of demon present entries by definition ID
+    std::unordered_map<uint32_t,
+        std::shared_ptr<objects::DemonPresent>> mDemonPresentData;
 
     /// Map of drop sets by definition ID
     std::unordered_map<uint32_t,

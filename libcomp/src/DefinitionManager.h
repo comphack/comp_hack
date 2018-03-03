@@ -55,6 +55,7 @@ class MiDisassemblyTriggerData;
 class MiDynamicMapData;
 class MiEnchantData;
 class MiEquipmentSetData;
+class MiExchangeData;
 class MiExpertData;
 class MiHNPCData;
 class MiItemData;
@@ -70,8 +71,10 @@ class MiShopProductData;
 class MiSItemData;
 class MiSkillData;
 class MiSpotData;
+class MiSStatusData;
 class MiStatusData;
 class MiTriUnionSpecialData;
+class MiWarpPointData;
 class MiZoneData;
 class QmpFile;
 class Tokusei;
@@ -230,6 +233,14 @@ public:
         uint32_t equipmentID);
 
     /**
+     * Get the item exchange data corresponding to an ID
+     * @param id Exchange ID to retrieve
+     * @return Pointer to the matching item exchange information, null
+     *  if it does not exist
+     */
+    const std::shared_ptr<objects::MiExchangeData> GetExchangeData(uint32_t id);
+
+    /**
      * Get the character expertise information corresponding to an ID
      * @param id Expertise ID to retrieve
      * @return Pointer to the matching character expertise information, null
@@ -383,6 +394,13 @@ public:
         std::shared_ptr<objects::MiSpotData>> GetSpotData(uint32_t dynamicMapID);
 
     /**
+     * Get the s-status definition corresponding to an ID
+     * @param id S-status ID to retrieve
+     * @return Pointer to the matching s-status definition, null if it does not exist
+     */
+    const std::shared_ptr<objects::MiSStatusData> GetSStatusData(uint32_t id);
+
+    /**
      * Get the status definition corresponding to an ID
      * @param id Status ID to retrieve
      * @return Pointer to the matching status definition, null if it does not exist
@@ -397,6 +415,14 @@ public:
      */
     const std::list<std::shared_ptr<objects::MiTriUnionSpecialData>>
         GetTriUnionSpecialData(uint32_t sourceDemonTypeID);
+
+    /**
+     * Get the warp point corresponding to an ID
+     * @param id Warp point ID to retrieve
+     * @return Pointer to the matching warp point information, null
+     *  if it does not exist
+     */
+    const std::shared_ptr<objects::MiWarpPointData> GetWarpPointData(uint32_t id);
 
     /**
      * Get the zone definition corresponding to an ID
@@ -555,6 +581,13 @@ public:
     bool LoadEquipmentSetData(gsl::not_null<DataStore*> pDataStore);
 
     /**
+     * Load the item exchange binary data definitions
+     * @param pDataStore Pointer to the datastore to load binary file from
+     * @return true on success, false on failure
+     */
+    bool LoadExchangeData(gsl::not_null<DataStore*> pDataStore);
+
+    /**
      * Load the character expertise binary data definitions
      * @param pDataStore Pointer to the datastore to load binary file from
      * @return true on success, false on failure
@@ -665,6 +698,13 @@ public:
      * @return true on success, false on failure
      */
     bool LoadTriUnionSpecialData(gsl::not_null<DataStore*> pDataStore);
+
+    /**
+     * Load the warp point binary data definitions
+     * @param pDataStore Pointer to the datastore to load binary file from
+     * @return true on success, false on failure
+     */
+    bool LoadWarpPointData(gsl::not_null<DataStore*> pDataStore);
 
     /**
      * Load the zone binary data definitions
@@ -887,6 +927,10 @@ private:
     /// Map of equipment IDs to set IDs they belong to
     std::unordered_map<uint32_t, std::list<uint32_t>> mEquipmentSetLookup;
 
+    /// Map of item exchange data by ID
+    std::unordered_map<uint32_t,
+        std::shared_ptr<objects::MiExchangeData>> mExchangeData;
+
     /// Map of character expertise information by ID
     std::unordered_map<uint32_t,
         std::shared_ptr<objects::MiExpertData>> mExpertData;
@@ -960,6 +1004,10 @@ private:
     std::unordered_map<std::string,
         std::unordered_map<uint32_t, std::shared_ptr<objects::MiSpotData>>> mSpotData;
 
+    /// Map of s-status definitions by ID
+    std::unordered_map<uint32_t,
+        std::shared_ptr<objects::MiSStatusData>> mSStatusData;
+
     /// Map of status definitions by ID
     std::unordered_map<uint32_t,
         std::shared_ptr<objects::MiStatusData>> mStatusData;
@@ -971,6 +1019,10 @@ private:
     /// Map of source demon IDs to special fusions they belong to
     std::unordered_map<uint32_t,
         std::list<uint32_t>> mTriUnionSpecialDataBySourceID;
+
+    /// Map of warp point definitions by ID
+    std::unordered_map<uint32_t,
+        std::shared_ptr<objects::MiWarpPointData>> mWarpPointData;
 
     /// Map of zone definitions by ID
     std::unordered_map<uint32_t,

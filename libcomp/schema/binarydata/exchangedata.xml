@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="MiExchangeObjectData" persistent="false">
+        <member type="u32" name="ID"/>
+        <member type="u16" name="stackSize"/>
+        <member type="u16" name="unused"/>
+    </object>
+    <object name="MiExchangeOptionData" persistent="false">
+        <member type="string" length="68" name="name"/>
+        <member type="array" size="8" name="items">
+            <element type="MiExchangeObjectData*"/>
+        </member>
+    </object>
+    <object name="MiExchangeData" persistent="false">
+        <member type="u32" name="ID"/>
+        <member type="array" size="10" name="options">
+            <element type="MiExchangeOptionData*"/>
+        </member>
+    </object>
+</objgen>

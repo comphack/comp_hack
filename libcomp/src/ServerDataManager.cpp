@@ -32,10 +32,12 @@
 #include "ScriptEngine.h"
 
 // object Includes
+#include <DemonPresent.h>
 #include <DropSet.h>
 #include <EnchantSetData.h>
 #include <EnchantSpecialData.h>
 #include <Event.h>
+#include <MiSStatusData.h>
 #include <ServerShop.h>
 #include <ServerZone.h>
 #include <ServerZoneInstance.h>
@@ -118,6 +120,11 @@ std::list<uint32_t> ServerDataManager::GetCompShopIDs() const
     return mCompShopIDs;
 }
 
+const std::shared_ptr<objects::DemonPresent> ServerDataManager::GetDemonPresentData(uint32_t id)
+{
+    return GetObjectByID<uint32_t, objects::DemonPresent>(id, mDemonPresentData);
+}
+
 const std::shared_ptr<objects::DropSet> ServerDataManager::GetDropSetData(uint32_t id)
 {
     return GetObjectByID<uint32_t, objects::DropSet>(id, mDropSetData);
@@ -142,6 +149,13 @@ bool ServerDataManager::LoadData(gsl::not_null<DataStore*> pDataStore,
     {
         if(!failure)
         {
+            LOG_DEBUG("Loading demon present server definitions...\n");
+            failure = !LoadObjectsFromFile<objects::DemonPresent>(
+                pDataStore, "/data/demonpresent.xml", definitionManager);
+        }
+
+        if(!failure)
+        {
             LOG_DEBUG("Loading drop set server definitions...\n");
             failure = !LoadObjectsFromFile<objects::DropSet>(
                 pDataStore, "/data/dropset.xml", definitionManager);
@@ -159,6 +173,13 @@ bool ServerDataManager::LoadData(gsl::not_null<DataStore*> pDataStore,
             LOG_DEBUG("Loading enchant special server definitions...\n");
             failure = !LoadObjectsFromFile<objects::EnchantSpecialData>(
                 pDataStore, "/data/enchantspecial.xml", definitionManager);
+        }
+
+        if(!failure)
+        {
+            LOG_DEBUG("Loading s-status server definitions...\n");
+            failure = !LoadObjectsFromFile<objects::MiSStatusData>(
+                pDataStore, "/data/sstatus.xml", definitionManager);
         }
 
         if(!failure)
@@ -392,13 +413,37 @@ namespace libcomp
     }
 
     template<>
+    bool ServerDataManager::LoadObject<objects::DemonPresent>(const tinyxml2::XMLDocument& doc,
+        const tinyxml2::XMLElement *objNode, DefinitionManager* definitionManager)
+    {
+        (void)definitionManager;
+
+        auto present = std::shared_ptr<objects::DemonPresent>(new objects::DemonPresent);
+        if(!present->Load(doc, *objNode))
+        {
+            return false;
+        }
+    
+        uint32_t id = present->GetID();
+        if(mDemonPresentData.find(id) != mDemonPresentData.end())
+        {
+            LOG_ERROR(libcomp::String("Duplicate demon present entry encountered: %1\n").Arg(id));
+            return false;
+        }
+
+        mDemonPresentData[id] = present;
+
+        return true;
+    }
+
+    template<>
     bool ServerDataManager::LoadObject<objects::DropSet>(const tinyxml2::XMLDocument& doc,
         const tinyxml2::XMLElement *objNode, DefinitionManager* definitionManager)
     {
         (void)definitionManager;
 
         auto dropSet = std::shared_ptr<objects::DropSet>(new objects::DropSet);
-        if(dropSet == nullptr || !dropSet->Load(doc, *objNode))
+        if(!dropSet->Load(doc, *objNode))
         {
             return false;
         }
@@ -439,6 +484,19 @@ namespace libcomp
         }
 
         return definitionManager && definitionManager->RegisterServerSideDefinition(eSpecial);
+    }
+
+    template<>
+    bool ServerDataManager::LoadObject<objects::MiSStatusData>(const tinyxml2::XMLDocument& doc,
+        const tinyxml2::XMLElement *objNode, DefinitionManager* definitionManager)
+    {
+        auto sStatus = std::shared_ptr<objects::MiSStatusData>(new objects::MiSStatusData);
+        if(!sStatus->Load(doc, *objNode))
+        {
+            return false;
+        }
+
+        return definitionManager && definitionManager->RegisterServerSideDefinition(sStatus);
     }
 
     template<>

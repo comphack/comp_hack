@@ -1352,7 +1352,7 @@ int8_t FusionManager::ProcessFusion(
         {
             // Apply boost if the source character has the passive and there
             // is either no race filter or the filter matches the result demon
-            if(cState->ActiveSwitchSkillsContains(pair.first) &&
+            if(cState->SkillAvailable(pair.first) &&
                 (pair.second[0] == -1 ||
                 pair.second[0] == (uint8_t)demonData->GetCategory()->GetRace()))
             {

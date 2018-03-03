@@ -7,12 +7,12 @@
             <value>NORMAL</value>
             <value>COMP_SHOP</value>
         </member>
-        <member type="s32" name="Shop1"/>
-        <member type="s32" name="Shop2"/>
-        <member type="s32" name="Shop3"/>
-        <member type="u16" name="Shop4"/>
-        <member type="s8" name="Shop5"/>
-        <member type="s8" name="Shop6"/>
+        <member type="u16" name="Shop1"/>
+        <member type="float" name="RepairCostMultiplier"/>
+        <member type="float" name="RepairRate"/>
+        <member type="bool" name="LNCAdjust"/>
+        <member type="float" name="LNCCenter"/>
+        <member type="u8" name="Shop5"/>
         <member type="list" name="Tabs">
             <element type="ServerShopTab*"/>
         </member>

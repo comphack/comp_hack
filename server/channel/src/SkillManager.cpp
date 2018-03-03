@@ -44,6 +44,7 @@
 #include <ActivatedAbility.h>
 #include <CalculatedEntityState.h>
 #include <CharacterProgress.h>
+#include <DemonPresent.h>
 #include <DropSet.h>
 #include <InheritedSkill.h>
 #include <Item.h>
@@ -54,6 +55,7 @@
 #include <MiAcquisitionData.h>
 #include <MiAddStatusTbl.h>
 #include <MiBattleDamageData.h>
+#include <MiBreakData.h>
 #include <MiCancelData.h>
 #include <MiCastBasicData.h>
 #include <MiCastCancelData.h>
@@ -70,6 +72,10 @@
 #include <MiDoTDamageData.h>
 #include <MiEffectData.h>
 #include <MiEffectiveRangeData.h>
+#include <MiExpertClassData.h>
+#include <MiExpertData.h>
+#include <MiExpertRankData.h>
+#include <MiGrowthData.h>
 #include <MiItemBasicData.h>
 #include <MiItemData.h>
 #include <MiKnockBackData.h>
@@ -85,6 +91,7 @@
 #include <MiStatusBasicData.h>
 #include <MiSummonData.h>
 #include <MiTargetData.h>
+#include <MiUnionData.h>
 #include <Party.h>
 #include <ServerZone.h>
 #include <Spawn.h>
@@ -213,16 +220,34 @@ public:
 SkillManager::SkillManager(const std::weak_ptr<ChannelServer>& server)
     : mServer(server)
 {
-    mSkillFunctions[SVR_CONST.SKILL_CLAN_FORM] = &SkillManager::SpecialSkill;
+    // Map unique function skills
+    mSkillFunctions[SVR_CONST.SKILL_CAMEO] = &SkillManager::Cameo;
     mSkillFunctions[SVR_CONST.SKILL_DCM] = &SkillManager::DCM;
     mSkillFunctions[SVR_CONST.SKILL_EQUIP_ITEM] = &SkillManager::EquipItem;
-    mSkillFunctions[SVR_CONST.SKILL_EQUIP_MOD_EDIT] = &SkillManager::SpecialSkill;
+    mSkillFunctions[SVR_CONST.SKILL_EXPERT_FORGET_ALL] = &SkillManager::ForgetAllExpertiseSkills;
     mSkillFunctions[SVR_CONST.SKILL_FAM_UP] = &SkillManager::FamiliarityUp;
     mSkillFunctions[SVR_CONST.SKILL_ITEM_FAM_UP] = &SkillManager::FamiliarityUpItem;
     mSkillFunctions[SVR_CONST.SKILL_MOOCH] = &SkillManager::Mooch;
+    mSkillFunctions[SVR_CONST.SKILL_RESPEC] = &SkillManager::Respec;
     mSkillFunctions[SVR_CONST.SKILL_SUMMON_DEMON] = &SkillManager::SummonDemon;
     mSkillFunctions[SVR_CONST.SKILL_STORE_DEMON] = &SkillManager::StoreDemon;
     mSkillFunctions[SVR_CONST.SKILL_TRAESTO] = &SkillManager::Traesto;
+    mSkillFunctions[(uint16_t)SVR_CONST.SKILL_TRAESTO_ARCADIA[0]] = &SkillManager::Traesto;
+    mSkillFunctions[(uint16_t)SVR_CONST.SKILL_TRAESTO_KAKYOJO[0]] = &SkillManager::Traesto;
+    mSkillFunctions[(uint16_t)SVR_CONST.SKILL_TRAESTO_SOUHONZAN[0]] = &SkillManager::Traesto;
+    mSkillFunctions[SVR_CONST.SKILL_XP_PARTNER] = &SkillManager::XPUp;
+    mSkillFunctions[SVR_CONST.SKILL_XP_SELF] = &SkillManager::XPUp;
+
+    // Map skills that will send a follow up packet after processing
+    mSkillFunctions[SVR_CONST.SKILL_CLAN_FORM] = &SkillManager::SpecialSkill;
+    mSkillFunctions[SVR_CONST.SKILL_EQUIP_MOD_EDIT] = &SkillManager::SpecialSkill;
+    mSkillFunctions[SVR_CONST.SKILL_EXPERT_CLASS_DOWN] = &SkillManager::SpecialSkill;
+    mSkillFunctions[SVR_CONST.SKILL_EXPERT_FORGET] = &SkillManager::SpecialSkill;
+    mSkillFunctions[SVR_CONST.SKILL_EXPERT_RANK_DOWN] = &SkillManager::SpecialSkill;
+    mSkillFunctions[SVR_CONST.SKILL_MAX_DURABILITY_FIXED] = &SkillManager::SpecialSkill;
+    mSkillFunctions[SVR_CONST.SKILL_MAX_DURABILITY_RANDOM] = &SkillManager::SpecialSkill;
+    mSkillFunctions[SVR_CONST.SKILL_SPECIAL_REQUEST] = &SkillManager::SpecialSkill;
+    mSkillFunctions[SVR_CONST.SKILL_WARP] = &SkillManager::SpecialSkill;
 
     // Make sure anything not set is not pulled in to the mapping
     mSkillFunctions.erase(0);
@@ -233,7 +258,8 @@ SkillManager::~SkillManager()
 }
 
 bool SkillManager::ActivateSkill(const std::shared_ptr<ActiveEntityState> source,
-    uint32_t skillID, int64_t targetObjectID, std::shared_ptr<SkillExecutionContext> ctx)
+    uint32_t skillID, int64_t targetObjectID,
+    std::shared_ptr<SkillExecutionContext> ctx)
 {
     auto server = mServer.lock();
     auto definitionManager = server->GetDefinitionManager();
@@ -325,7 +351,7 @@ bool SkillManager::ActivateSkill(const std::shared_ptr<ActiveEntityState> source
 
     SendActivateSkill(activated, def);
     
-    auto functionID = def->GetDamage()->GetFunctionID();
+    uint16_t functionID = def->GetDamage()->GetFunctionID();
     if(functionID == SVR_CONST.SKILL_REST)
     {
         return Rest(activated, ctx, nullptr);
@@ -980,6 +1006,7 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
     uint8_t initialHitNull = 0;
     uint8_t initialHitReflect = 0;
     bool initialHitAbsorb = false;
+    bool targetChanged = false;
     switch(skillData->GetTarget()->GetType())
     {
     case objects::MiTargetData::Type_t::NONE:
@@ -1043,6 +1070,7 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
                 initialHitNull = selfTarget.HitNull;
                 initialHitReflect = selfTarget.HitReflect;
                 initialHitAbsorb = selfTarget.HitAbsorb;
+                targetChanged = true;
             }
             else
             {
@@ -1086,8 +1114,11 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
             effectiveTargets.push_back(effectiveSource);
             break;
         case objects::MiEffectiveRangeData::AreaType_t::SOURCE_RADIUS:
-            effectiveTargets = zone->GetActiveEntitiesInRadius(
-                effectiveSource->GetCurrentX(), effectiveSource->GetCurrentY(), aoeRange);
+            if(!targetChanged)
+            {
+                effectiveTargets = zone->GetActiveEntitiesInRadius(
+                    effectiveSource->GetCurrentX(), effectiveSource->GetCurrentY(), aoeRange);
+            }
             break;
         case objects::MiEffectiveRangeData::AreaType_t::TARGET_RADIUS:
             // If the primary target is set and NRA did not occur, gather other targets
@@ -1101,6 +1132,7 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
         case objects::MiEffectiveRangeData::AreaType_t::FRONT_1:
         case objects::MiEffectiveRangeData::AreaType_t::FRONT_2:
         case objects::MiEffectiveRangeData::AreaType_t::FRONT_3:
+            if(!targetChanged)
             {
                 /// @todo: figure out how these 3 differ
 
@@ -1127,7 +1159,7 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
             }
             break;
         case objects::MiEffectiveRangeData::AreaType_t::STRAIGHT_LINE:
-            if(primaryTarget)
+            if(!targetChanged && primaryTarget)
             {
                 // Create a rotated rectangle to represent the line with
                 // a designated width equal to the AoE range
@@ -1513,7 +1545,11 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
     source->RefreshCurrentPosition(now);
 
     // By default add the skill source to a possible entity set that can
-    // learn inherited skills and let the function sort it out
+    // have durability adjusted or learn inherited skills and let the
+    // corresponding functions sort it out
+    std::set<std::shared_ptr<ActiveEntityState>> durabilityHit;
+    durabilityHit.insert(source);
+
     std::set<std::shared_ptr<ActiveEntityState>> learningSkills;
     learningSkills.insert(source);
 
@@ -1528,12 +1564,21 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
         std::set<TokuseiConditionType>> recalcEntities;
     for(SkillTargetResult& target : skill.Targets)
     {
-        // Even if the hit is avoided, anything that touches the entity will
-        // update inheriting skills
-        if(target.EntityState->GetEntityType() ==
-            objects::EntityStateObject::EntityType_t::PARTNER_DEMON)
+        switch(target.EntityState->GetEntityType())
         {
+        case objects::EntityStateObject::EntityType_t::CHARACTER:
+            if(!target.HitAvoided)
+            {
+                durabilityHit.insert(target.EntityState);
+            }
+            break;
+        case objects::EntityStateObject::EntityType_t::PARTNER_DEMON:
+            // Even if the hit is avoided, anything that touches the entity will
+            // update inheriting skills
             learningSkills.insert(target.EntityState);
+            break;
+        default:
+            break;
         }
 
         if(target.HitAvoided) continue;
@@ -2324,6 +2369,12 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
         }
 
         ChannelClientConnection::SendRelativeTimePacket(zConnections, p, timeMap);
+    }
+
+    // Update inherited skills
+    for(auto entity : durabilityHit)
+    {
+        HandleDurabilityDamage(entity, pSkill);
     }
 
     // Update inherited skills
@@ -3724,6 +3775,114 @@ void SkillManager::HandleSkillLearning(const std::shared_ptr<ActiveEntityState> 
     }
 }
 
+void SkillManager::HandleDurabilityDamage(const std::shared_ptr<ActiveEntityState> entity,
+    const std::shared_ptr<channel::ProcessingSkill>& pSkill)
+{
+    auto cState = std::dynamic_pointer_cast<CharacterState>(entity);
+    auto character = cState ? cState->GetEntity() : nullptr;
+    if(!cState || !character || !cState->Ready())
+    {
+        return;
+    }
+
+    const size_t WEAPON_IDX = (size_t)objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_WEAPON;
+
+    auto server = mServer.lock();
+    auto characterManager = server->GetCharacterManager();
+
+    auto client = server->GetManagerConnection()->GetEntityClient(cState->GetEntityID(), false);
+    if(!client)
+    {
+        return;
+    }
+
+    bool isSource = pSkill->Activated->GetSourceEntity() == entity;
+    if(isSource)
+    {
+        // Decrease weapon durability by value * 2 (do not scale for target count hit)
+        std::shared_ptr<objects::Item> weapon = character->GetEquippedItems(WEAPON_IDX).Get();
+        if(!weapon)
+        {
+            return;
+        }
+
+        uint16_t weaponDamage = pSkill->Definition->GetDamage()->GetBreakData()->GetWeapon();
+
+        double knowledgeRank = 0;
+        switch(pSkill->EffectiveDependencyType)
+        {
+        case 0:
+        case 9:
+        case 12:
+            knowledgeRank = (double)characterManager->GetExpertiseRank(cState,
+                EXPERTISE_WEAPON_KNOWLEDGE);
+            break;
+        case 1:
+        case 6:
+        case 10:
+            knowledgeRank = (double)characterManager->GetExpertiseRank(cState,
+                EXPERTISE_GUN_KNOWLEDGE);
+            break;
+        default:
+            break;
+        }
+
+        int32_t durabilityLoss = weaponDamage * 2;
+        if(knowledgeRank)
+        {
+            // Decrease damage by a maximum of approximately 30%
+            /// @todo: close but not quite right
+            durabilityLoss = (int32_t)floor(pow(knowledgeRank, 2) / 450.0 -
+                (0.4275 * knowledgeRank) + (double)durabilityLoss);
+        }
+
+        characterManager->UpdateDurability(client, weapon, -durabilityLoss);
+    }
+    else
+    {
+        // Decrease armor durability on everything equipped but the weapon by value
+        std::list<std::shared_ptr<objects::Item>> otherEquipment;
+        for(size_t i = 0; i < 15; i++)
+        {
+            if(i != WEAPON_IDX)
+            {
+                auto equip = character->GetEquippedItems(i).Get();
+                if(equip)
+                {
+                    otherEquipment.push_back(equip);
+                }
+            }
+        }
+
+        if(otherEquipment.size() == 0)
+        {
+            return;
+        }
+
+        uint16_t armorDamage = pSkill->Definition->GetDamage()->GetBreakData()->GetArmor();
+
+        double survivalRank = (double)characterManager->GetExpertiseRank(cState,
+            EXPERTISE_SURVIVAL);
+
+        int32_t durabilityLoss = (int32_t)armorDamage;
+        if(survivalRank)
+        {
+            // Decrease damage to a maximum of approximately 60%
+            /// @todo: needs more research
+            durabilityLoss = (int32_t)ceil(((double)durabilityLoss - 1.0) *
+                (1.0 + ((0.002 * pow(survivalRank, 2)) - (0.215 * survivalRank)) / 10.0));
+        }
+
+        std::unordered_map<std::shared_ptr<objects::Item>, int32_t> equipMap;
+        for(auto equip : otherEquipment)
+        {
+            equipMap[equip] = -durabilityLoss;
+        }
+
+        characterManager->UpdateDurability(client, equipMap);
+    }
+}
+
 bool SkillManager::ToggleSwitchSkill(const std::shared_ptr<ChannelClientConnection> client,
     std::shared_ptr<objects::ActivatedAbility> activated,
     const std::shared_ptr<SkillExecutionContext>& ctx)
@@ -4730,6 +4889,66 @@ bool SkillManager::SpecialSkill(const std::shared_ptr<objects::ActivatedAbility>
     return true;
 }
 
+bool SkillManager::Cameo(const std::shared_ptr<objects::ActivatedAbility>& activated,
+    const std::shared_ptr<SkillExecutionContext>& ctx,
+    const std::shared_ptr<ChannelClientConnection>& client)
+{
+    auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated->GetSourceEntity());
+
+    if(!client)
+    {
+        SendFailure(source, activated->GetSkillID(), nullptr);
+        return false;
+    }
+
+    auto state = client->GetClientState();
+    auto cState = state->GetCharacterState();
+    auto character = cState->GetEntity();
+
+    if(!cState->Ready() || !cState->IsAlive())
+    {
+        SendFailure(source, activated->GetSkillID(), client,
+            (uint8_t)SkillErrorCodes_t::TARGET_INVALID);
+        return false;
+    }
+
+    // Drop the durability of the equipped ring by 1000 points, fail if we can't
+    auto item = character->GetEquippedItems(
+        (size_t)objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_RING).Get();
+
+    auto transformIter = item ? SVR_CONST.CAMEO_MAP.find(item->GetType())
+        : SVR_CONST.CAMEO_MAP.end();
+    if(!item || transformIter == SVR_CONST.CAMEO_MAP.end() || item->GetDurability() < 1000)
+    {
+        SendFailure(source, activated->GetSkillID(), client,
+            (uint8_t)SkillErrorCodes_t::ITEM_USE);
+        return false;
+    }
+
+    auto server = mServer.lock();
+    auto characterManager = server->GetCharacterManager();
+
+    AddStatusEffectMap m;
+    m[transformIter->second] = std::pair<uint8_t, bool>(1, true);
+
+    cState->AddStatusEffects(m, server->GetDefinitionManager());
+    server->GetTokuseiManager()->Recalculate(cState,
+        std::set<TokuseiConditionType> { TokuseiConditionType::STATUS_ACTIVE });
+
+    if(ProcessSkillResult(activated, ctx))
+    {
+        characterManager->UpdateDurability(client, item, -1000);
+    }
+    else
+    {
+        SendFailure(source, activated->GetSkillID(), client,
+            (uint8_t)SkillErrorCodes_t::GENERIC_USE);
+        return false;
+    }
+
+    return true;
+}
+
 bool SkillManager::DCM(const std::shared_ptr<objects::ActivatedAbility>& activated,
     const std::shared_ptr<SkillExecutionContext>& ctx,
     const std::shared_ptr<ChannelClientConnection>& client)
@@ -4838,9 +5057,16 @@ bool SkillManager::EquipItem(const std::shared_ptr<objects::ActivatedAbility>& a
         return false;
     }
 
+    if(!ProcessSkillResult(activated, ctx))
+    {
+        SendFailure(source, activated->GetSkillID(), client,
+            (uint8_t)SkillErrorCodes_t::GENERIC_USE);
+        return false;
+    }
+
     mServer.lock()->GetCharacterManager()->EquipItem(client, itemID);
 
-    return ProcessSkillResult(activated, ctx);
+    return true;
 }
 
 bool SkillManager::FamiliarityUp(const std::shared_ptr<objects::ActivatedAbility>& activated,
@@ -4876,8 +5102,24 @@ bool SkillManager::FamiliarityUp(const std::shared_ptr<objects::ActivatedAbility
     }
 
     auto server = mServer.lock();
+    auto characterManager = server->GetCharacterManager();
     auto definitionManager = server->GetDefinitionManager();
     auto skillData = definitionManager->GetSkillData(activated->GetSkillID());
+    
+    // Present is retrieved after updating the familiarity for an update but
+    // the skill errors if any present will be given based on the starting
+    // familiarity level and there is no inventory space open
+    int8_t rarity;
+    uint16_t currentVal = demon->GetFamiliarity();
+    if(characterManager->GetFamiliarityRank(currentVal) >= 3 &&
+        GetDemonPresent(demon->GetType(), demon->GetCoreStats()->GetLevel(),
+            MAX_FAMILIARITY, rarity) != 0 &&
+        characterManager->GetFreeSlots(client).size() == 0)
+    {
+        SendFailure(source, activated->GetSkillID(), client,
+            (uint8_t)SkillErrorCodes_t::INVENTORY_SPACE);
+        return false;
+    }
 
     // Skills of this type add a "cooldown status effect". If the player character
     // already has it, do not allow the skill's usage
@@ -4896,6 +5138,15 @@ bool SkillManager::FamiliarityUp(const std::shared_ptr<objects::ActivatedAbility
     if(fType > 16)
     {
         SendFailure(source, activated->GetSkillID(), client);
+        return false;
+    }
+
+    // Process the skill without status effects
+    ctx->ApplyStatusEffects = false;
+    if(!ProcessSkillResult(activated, ctx))
+    {
+        SendFailure(source, activated->GetSkillID(), client,
+            (uint8_t)SkillErrorCodes_t::GENERIC_USE);
         return false;
     }
 
@@ -4922,12 +5173,10 @@ bool SkillManager::FamiliarityUp(const std::shared_ptr<objects::ActivatedAbility
             { 5000, 5000 } // Type 16
         };
 
-    /// @todo: receive items from demon
-
     bool sameLNC = cState->GetLNCType() == dState->GetLNCType();
 
     int32_t fPoints = (int32_t)fTypeMap[(size_t)fType][sameLNC ? 0 : 1];
-    server->GetCharacterManager()->UpdateFamiliarity(client, fPoints, true);
+    characterManager->UpdateFamiliarity(client, fPoints, true);
 
     // Apply the status effects
     AddStatusEffectMap m;
@@ -4948,9 +5197,16 @@ bool SkillManager::FamiliarityUp(const std::shared_ptr<objects::ActivatedAbility
             std::set<TokuseiConditionType> { TokuseiConditionType::STATUS_ACTIVE });
     }
 
-    // Process the skill without status effects
-    ctx->ApplyStatusEffects = false;
-    return ProcessSkillResult(activated, ctx);
+    // Re-pull the present type and give it to the character
+    if(characterManager->GetFamiliarityRank(demon->GetFamiliarity()) >= 3)
+    {
+        uint32_t presentType = GetDemonPresent(demon->GetType(),
+            demon->GetCoreStats()->GetLevel(), demon->GetFamiliarity(), rarity);
+        GiveDemonPresent(client, demon->GetType(), presentType, rarity,
+            activated->GetSkillID());
+    }
+
+    return true;
 }
 
 bool SkillManager::FamiliarityUpItem(const std::shared_ptr<objects::ActivatedAbility>& activated,
@@ -5002,6 +5258,13 @@ bool SkillManager::FamiliarityUpItem(const std::shared_ptr<objects::ActivatedAbi
         return false;
     }
 
+    if(!ProcessSkillResult(activated, ctx))
+    {
+        SendFailure(source, activated->GetSkillID(), client,
+            (uint8_t)SkillErrorCodes_t::GENERIC_USE);
+        return false;
+    }
+
     uint16_t currentVal = demon->GetFamiliarity();
     if(maxFamiliarity > (int32_t)currentVal)
     {
@@ -5017,12 +5280,79 @@ bool SkillManager::FamiliarityUpItem(const std::shared_ptr<objects::ActivatedAbi
             fPoints = minIncrease;
         }
 
-        /// @todo: receive items from demon
-
         server->GetCharacterManager()->UpdateFamiliarity(client, fPoints, true);
     }
 
-    return ProcessSkillResult(activated, ctx);
+    return true;
+}
+
+bool SkillManager::ForgetAllExpertiseSkills(
+    const std::shared_ptr<objects::ActivatedAbility>& activated,
+    const std::shared_ptr<SkillExecutionContext>& ctx,
+    const std::shared_ptr<ChannelClientConnection>& client)
+{
+    auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated->GetSourceEntity());
+
+    if(!client)
+    {
+        SendFailure(source, activated->GetSkillID(), nullptr);
+        return false;
+    }
+
+    if(!ProcessSkillResult(activated, ctx))
+    {
+        SendFailure(source, activated->GetSkillID(), client,
+            (uint8_t)SkillErrorCodes_t::GENERIC_USE);
+        return false;
+    }
+
+    auto state = client->GetClientState();
+    auto cState = state->GetCharacterState();
+    auto character = cState->GetEntity();
+
+    auto server = mServer.lock();
+    auto definitionManager = server->GetDefinitionManager();
+
+    std::set<uint32_t> learnedSkills = character->GetLearnedSkills();
+
+    std::set<uint32_t> keepSkills;
+    for(uint32_t keepSkill : definitionManager->GetDefaultCharacterSkills())
+    {
+        keepSkills.insert(keepSkill);
+    }
+
+    uint32_t maxExpertise = (uint32_t)(EXPERTISE_COUNT + CHAIN_EXPERTISE_COUNT);
+    for(uint32_t i = 0; i < maxExpertise; i++)
+    {
+        auto expertData = definitionManager->GetExpertClassData(i);
+        if(expertData)
+        {
+            for(auto classData : expertData->GetClassData())
+            {
+                for(auto rankData : classData->GetRankData())
+                {
+                    for(uint32_t skillID : rankData->GetSkill())
+                    {
+                        if(skillID && keepSkills.find(skillID) == keepSkills.end())
+                        {
+                            learnedSkills.erase(skillID);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    character->SetLearnedSkills(learnedSkills);
+
+    cState->RecalcDisabledSkills(definitionManager);
+    server->GetTokuseiManager()->Recalculate(cState, true,
+        std::set<int32_t>{ cState->GetEntityID() });
+    server->GetCharacterManager()->RecalculateStats(client, cState->GetEntityID());
+
+    server->GetWorldDatabase()->QueueUpdate(character, state->GetAccountUID());
+
+    return true;
 }
 
 bool SkillManager::Mooch(const std::shared_ptr<objects::ActivatedAbility>& activated,
@@ -5050,8 +5380,36 @@ bool SkillManager::Mooch(const std::shared_ptr<objects::ActivatedAbility>& activ
     }
 
     auto server = mServer.lock();
+    auto characterManager = server->GetCharacterManager();
     auto definitionManager = server->GetDefinitionManager();
     auto skillData = definitionManager->GetSkillData(activated->GetSkillID());
+
+    if(characterManager->GetFamiliarityRank(demon->GetFamiliarity()) < 3)
+    {
+        SendFailure(source, activated->GetSkillID(), client,
+            (uint8_t)SkillErrorCodes_t::PARTNER_FAMILIARITY);
+        return false;
+    }
+
+    // Present is retrieved prior to updating the familiarity for a drop
+    int8_t rarity;
+    uint16_t familiarity = demon->GetFamiliarity();
+    uint32_t presentType = GetDemonPresent(demon->GetType(),
+        demon->GetCoreStats()->GetLevel(), familiarity, rarity);
+
+    // If a present will be given and there are no free slots, error the skill
+    if(presentType == 0)
+    {
+        SendFailure(source, activated->GetSkillID(), client,
+            (uint8_t)SkillErrorCodes_t::GENERIC_USE);
+        return false;
+    }
+    else if(characterManager->GetFreeSlots(client).size() == 0)
+    {
+        SendFailure(source, activated->GetSkillID(), client,
+            (uint8_t)SkillErrorCodes_t::INVENTORY_SPACE);
+        return false;
+    }
 
     // Skills of this type add a "cooldown status effect". If the player character
     // already has it, do not allow the skill's usage
@@ -5066,7 +5424,14 @@ bool SkillManager::Mooch(const std::shared_ptr<objects::ActivatedAbility>& activ
         }
     }
 
-    /// @todo: receive items from demon
+    // Process the skill without status effects
+    ctx->ApplyStatusEffects = false;
+    if(!ProcessSkillResult(activated, ctx))
+    {
+        SendFailure(source, activated->GetSkillID(), client,
+            (uint8_t)SkillErrorCodes_t::GENERIC_USE);
+        return false;
+    }
 
     server->GetCharacterManager()->UpdateFamiliarity(client, -2000, true);
 
@@ -5089,9 +5454,110 @@ bool SkillManager::Mooch(const std::shared_ptr<objects::ActivatedAbility>& activ
             std::set<TokuseiConditionType> { TokuseiConditionType::STATUS_ACTIVE });
     }
 
-    // Process the skill without status effects
-    ctx->ApplyStatusEffects = false;
-    return ProcessSkillResult(activated, ctx);
+    GiveDemonPresent(client, demon->GetType(), presentType, rarity,
+        activated->GetSkillID());
+
+    return true;
+}
+
+bool SkillManager::Respec(const std::shared_ptr<objects::ActivatedAbility>& activated,
+    const std::shared_ptr<SkillExecutionContext>& ctx,
+    const std::shared_ptr<ChannelClientConnection>& client)
+{
+    auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated->GetSourceEntity());
+
+    if(!client)
+    {
+        SendFailure(source, activated->GetSkillID(), nullptr);
+        return false;
+    }
+
+    auto state = client->GetClientState();
+    auto cState = state->GetCharacterState();
+    auto character = cState->GetEntity();
+    auto cs = character->GetCoreStats().Get();
+
+    std::list<int16_t> statVals;
+    statVals.push_back(cs->GetSTR());
+    statVals.push_back(cs->GetMAGIC());
+    statVals.push_back(cs->GetVIT());
+    statVals.push_back(cs->GetINTEL());
+    statVals.push_back(cs->GetSPEED());
+    statVals.push_back(cs->GetLUCK());
+
+    // Loop through each stat and "de-allocate" them
+    int32_t respecPoints = 0;
+    for(int16_t stat : statVals)
+    {
+        if(stat > 1)
+        {
+            int32_t delta = (stat % 10) + 1;
+            if(stat < 10)
+            {
+                delta -= 2;
+            }
+
+            int32_t sum = (int32_t)(floor(stat / 10) + 1) * delta;
+            for(int32_t i = (int32_t)floor(stat / 10) - 1; i >= 0; i--)
+            {
+                if(i == 0)
+                {
+                    // Skip the first point
+                    sum += 8;
+                }
+                else
+                {
+                    sum += (i + 1) * 10;
+                }
+            }
+
+            respecPoints += sum;
+        }
+    }
+
+    if(ProcessSkillResult(activated, ctx))
+    {
+        // Reset all stats back to 1 and set the new point value
+        cs->SetSTR(1);
+        cs->SetMAGIC(1);
+        cs->SetVIT(1);
+        cs->SetINTEL(1);
+        cs->SetSPEED(1);
+        cs->SetLUCK(1);
+
+        character->SetPoints(respecPoints + character->GetPoints());
+
+        auto server = mServer.lock();
+        auto characterManager = server->GetCharacterManager();
+
+        libcomp::Packet p;
+        p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_RESET_SKILL_POINTS);
+        p.WriteS32Little(cState->GetEntityID());
+        characterManager->GetEntityStatsPacketData(p, cs, cState, 1);
+        p.WriteS32Little(respecPoints);
+
+        client->QueuePacket(p);
+
+        server->GetTokuseiManager()->Recalculate(cState, true,
+            std::set<int32_t>{ cState->GetEntityID() });
+        characterManager->RecalculateStats(client, cState->GetEntityID());
+
+        client->FlushOutgoing();
+
+        auto dbChanges = libcomp::DatabaseChangeSet::Create(state->GetAccountUID());
+        dbChanges->Update(character);
+        dbChanges->Update(cs);
+
+        server->GetWorldDatabase()->QueueChangeSet(dbChanges);
+
+        return true;
+    }
+    else
+    {
+        SendFailure(source, activated->GetSkillID(), client,
+            (uint8_t)SkillErrorCodes_t::GENERIC_USE);
+        return false;
+    }
 }
 
 bool SkillManager::Rest(const std::shared_ptr<objects::ActivatedAbility>& activated,
@@ -5138,7 +5604,7 @@ bool SkillManager::Rest(const std::shared_ptr<objects::ActivatedAbility>& activa
         source->SetStatusTimes(STATUS_RESTING, 0);
     }
 
-    return true;
+    return ProcessSkillResult(activated, ctx);
 }
 
 bool SkillManager::SummonDemon(const std::shared_ptr<objects::ActivatedAbility>& activated,
@@ -5165,6 +5631,8 @@ bool SkillManager::SummonDemon(const std::shared_ptr<objects::ActivatedAbility>&
             (uint8_t)SkillErrorCodes_t::SUMMON_INVALID);
         return false;
     }
+
+    ProcessSkillResult(activated, ctx);
 
     mServer.lock()->GetCharacterManager()->SummonDemon(client, demonID);
 
@@ -5196,6 +5664,8 @@ bool SkillManager::StoreDemon(const std::shared_ptr<objects::ActivatedAbility>& 
         return false;
     }
 
+    ProcessSkillResult(activated, ctx);
+
     mServer.lock()->GetCharacterManager()->StoreDemon(client);
 
     return true;
@@ -5213,12 +5683,42 @@ bool SkillManager::Traesto(const std::shared_ptr<objects::ActivatedAbility>& act
         return false;
     }
 
-    auto state = client->GetClientState();
-    auto cState = state->GetCharacterState();
-    auto character = cState->GetEntity();
+    auto server = mServer.lock();
+    auto definitionManager = server->GetDefinitionManager();
+    auto zoneManager = server->GetZoneManager();
 
-    uint32_t zoneID = character->GetHomepointZone();
-    if(zoneID == 0)
+    auto skillData = definitionManager->GetSkillData(activated->GetSkillID());
+
+    uint32_t zoneID = 0;
+    uint32_t spotID = 0;
+
+    uint16_t functionID = skillData->GetDamage()->GetFunctionID();
+    if(functionID == SVR_CONST.SKILL_TRAESTO)
+    {
+        auto state = client->GetClientState();
+        auto cState = state->GetCharacterState();
+        auto character = cState->GetEntity();
+
+        zoneID = character->GetHomepointZone();
+        spotID = character->GetHomepointSpotID();
+    }
+    else if(functionID == (uint16_t)SVR_CONST.SKILL_TRAESTO_ARCADIA[0])
+    {
+        zoneID = SVR_CONST.SKILL_TRAESTO_ARCADIA[1];
+        spotID = SVR_CONST.SKILL_TRAESTO_ARCADIA[2];
+    }
+    else if(functionID == (uint16_t)SVR_CONST.SKILL_TRAESTO_KAKYOJO[0])
+    {
+        zoneID = SVR_CONST.SKILL_TRAESTO_KAKYOJO[1];
+        spotID = SVR_CONST.SKILL_TRAESTO_KAKYOJO[2];
+    }
+    else if(functionID == (uint16_t)SVR_CONST.SKILL_TRAESTO_SOUHONZAN[0])
+    {
+        zoneID = SVR_CONST.SKILL_TRAESTO_SOUHONZAN[1];
+        spotID = SVR_CONST.SKILL_TRAESTO_SOUHONZAN[2];
+    }
+
+    if(zoneID == 0 || spotID == 0)
     {
         SendFailure(source, activated->GetSkillID(), client,
             (uint8_t)SkillErrorCodes_t::ZONE_INVALID);
@@ -5229,19 +5729,217 @@ bool SkillManager::Traesto(const std::shared_ptr<objects::ActivatedAbility>& act
     float yCoord = 0.f;
     float rot = 0.f;
 
-    auto zoneDef = mServer.lock()->GetServerDataManager()->GetZoneData(
-        character->GetHomepointZone(), 0);
-    if(!zoneDef && !mServer.lock()->GetZoneManager()->GetSpotPosition(
-        zoneDef->GetDynamicMapID(), character->GetHomepointSpotID(), xCoord, yCoord, rot))
+    auto zoneDef = server->GetServerDataManager()->GetZoneData(zoneID, 0);
+    uint32_t dynamicMapID = zoneDef ? zoneDef->GetDynamicMapID() : 0;
+
+    if(!zoneDef && !zoneManager->GetSpotPosition(dynamicMapID, spotID, xCoord,
+        yCoord, rot))
     {
         SendFailure(source, activated->GetSkillID(), client,
             (uint8_t)SkillErrorCodes_t::ZONE_INVALID);
         return false;
     }
 
-    ProcessSkillResult(activated, ctx);
+    if(ProcessSkillResult(activated, ctx) && zoneManager->EnterZone(client,
+        zoneID, zoneDef->GetDynamicMapID(), xCoord, yCoord, rot, true))
+    {
+        return true;
+    }
+    else
+    {
+        SendFailure(source, activated->GetSkillID(), client,
+            (uint8_t)SkillErrorCodes_t::GENERIC_USE);
+        return false;
+    }
+}
 
-    return mServer.lock()->GetZoneManager()->EnterZone(client, zoneID, 0, xCoord, yCoord, rot, true);
+bool SkillManager::XPUp(const std::shared_ptr<objects::ActivatedAbility>& activated,
+    const std::shared_ptr<SkillExecutionContext>& ctx,
+    const std::shared_ptr<ChannelClientConnection>& client)
+{
+    auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated->GetSourceEntity());
+
+    if(!client)
+    {
+        SendFailure(source, activated->GetSkillID(), nullptr);
+        return false;
+    }
+
+    auto state = client->GetClientState();
+
+    auto server = mServer.lock();
+    auto definitionManager = server->GetDefinitionManager();
+    auto characterManager = server->GetCharacterManager();
+
+    auto skillData = definitionManager->GetSkillData(activated->GetSkillID());
+
+    std::shared_ptr<ActiveEntityState> eState;
+
+    uint16_t functionID = skillData->GetDamage()->GetFunctionID();
+    if(functionID == SVR_CONST.SKILL_XP_SELF)
+    {
+        eState = state->GetCharacterState();
+    }
+    else if(functionID == SVR_CONST.SKILL_XP_PARTNER)
+    {
+        eState = state->GetDemonState();
+    }
+
+    if(!eState || !eState->Ready())
+    {
+        SendFailure(source, activated->GetSkillID(), client,
+            (uint8_t)SkillErrorCodes_t::TARGET_INVALID);
+        return false;
+    }
+
+    if(ProcessSkillResult(activated, ctx))
+    {
+        characterManager->ExperienceGain(client, (uint64_t)skillData
+            ->GetSpecial()->GetSpecialParams(0), eState->GetEntityID());
+        return true;
+    }
+    else
+    {
+        SendFailure(source, activated->GetSkillID(), client,
+            (uint8_t)SkillErrorCodes_t::GENERIC_USE);
+        return false;
+    }
+}
+
+uint32_t SkillManager::GetDemonPresent(uint32_t demonType, int8_t level,
+    uint16_t familiarity, int8_t& rarity) const
+{
+    auto server = mServer.lock();
+    auto characterManager = server->GetCharacterManager();
+
+    // Presents are only given for the top 2 ranks
+    if(characterManager->GetFamiliarityRank(familiarity) < 3)
+    {
+        return 0;
+    }
+
+    auto definitionManager = server->GetDefinitionManager();
+    auto serverDataManager = server->GetServerDataManager();
+
+    auto demonDef = definitionManager->GetDevilData(demonType);
+    uint32_t baseType = demonDef ? demonDef->GetUnionData()->GetBaseDemonID() : 0;
+
+    auto baseDef = baseType ? definitionManager->GetDevilData(baseType) : nullptr;
+
+    auto presentDef = baseType
+        ? serverDataManager->GetDemonPresentData(baseType) : nullptr;
+    if(baseDef && presentDef)
+    {
+        // Attempt to pull presents from rares then uncommons, then commons
+        std::array<std::list<uint32_t>, 3> presents;
+        presents[0] = presentDef->GetRareItems();
+        presents[1] = presentDef->GetUncommonItems();
+        presents[2] = presentDef->GetCommonItems();
+
+        uint8_t baseLevel = baseDef->GetGrowth()->GetBaseLevel();
+
+        // Rates for uncommons and rares start at 0% at base level and increase
+        // to a maximum of 25% and 15% respectively up to max level
+        double rng = 0.0;
+        double rateSum = 0.0;
+        for(size_t i = 0; i < 3; i++)
+        {
+            bool useSet = false;
+            if(i == 2)
+            {
+                // If we get to the common set, use by default
+                useSet = true;
+            }
+            else if(level - baseLevel > 0)
+            {
+                uint8_t minLevel = 0;
+                double maxRate = 0.0;
+                if(i == 0)
+                {
+                    // Rare set
+                    minLevel = (uint8_t)(baseLevel + ceil((100.0 - (double)baseLevel) / 5.0));
+                    maxRate = 15.0;
+                }
+                else
+                {
+                    // Uncommon set
+                    minLevel = (uint8_t)(baseLevel + ceil((100.0 - (double)baseLevel) / 10.0));
+                    maxRate = 25.0;
+                }
+
+                if(minLevel <= (uint8_t)level)
+                {
+                    double rate = (((double)(level - minLevel) + 1.0) /
+                        (100.0 - (double)minLevel) * maxRate) + rateSum;
+
+                    if(rate > 0.0)
+                    {
+                        if(rng == 0.0)
+                        {
+                            rng = (double)RNG(uint16_t, 1, 10000) * 0.01;
+                        }
+
+                        if(rng <= rate)
+                        {
+                            useSet = true;
+                        }
+                    }
+
+                    // Don't run RNG multiple times (not getting a rare technically
+                    // increases your odds of getting an uncommon)
+                    rateSum += rate;
+                }
+            }
+
+            // Use an even distribution between all items in the same set
+            if(useSet && presents[i].size() > 0)
+            {
+                rarity = (int8_t)(2 - i);
+                if(presents[i].size() == 1)
+                {
+                    return presents[i].front();
+                }
+                else
+                {
+                    auto it = presents[i].begin();
+
+                    size_t randomIdx = (size_t)RNG(int32_t, 0,
+                        (int32_t)(presents[i].size() - 1));
+                    std::advance(it, randomIdx);
+
+                    return *it;
+                }
+            }
+        }
+    }
+
+    return 0;
+}
+
+void SkillManager::GiveDemonPresent(const std::shared_ptr<ChannelClientConnection>& client,
+    uint32_t demonType, uint32_t itemType, int8_t rarity, uint32_t skillID)
+{
+    if(!client || itemType == 0)
+    {
+        return;
+    }
+
+    auto characterManager = mServer.lock()->GetCharacterManager();
+
+    std::unordered_map<uint32_t, uint32_t> items;
+    items[itemType] = 1;
+
+    if(characterManager->AddRemoveItems(client, items, true))
+    {
+        libcomp::Packet p;
+        p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_DEMON_PRESENT);
+        p.WriteU32Little(itemType);
+        p.WriteS32Little((int32_t)rarity);
+        p.WriteU32Little(skillID);
+        p.WriteU32Little(demonType);
+
+        client->SendPacket(p);
+    }
 }
 
 void SkillManager::SendActivateSkill(std::shared_ptr<objects::ActivatedAbility> activated,

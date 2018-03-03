@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="MiWarpPointData" persistent="false">
+        <member type="u32" name="ID"/>
+        <member type="u32" name="spotID"/>
+        <member type="u32" name="zoneID"/>
+        <member type="float" name="x"/>
+        <member type="float" name="y"/>
+        <member type="float" name="rotation"/>
+        <member type="string" length="64" name="name"/>
+        <member type="u32" name="warp3"/>
+        <member type="u32" name="warp4"/>
+        <member type="u32" name="warp5"/>
+        <member type="u32" name="warp6"/>
+        <member type="u32" name="warp7"/>
+        <member type="u32" name="warp8"/>
+        <member type="u32" name="warp9"/>
+        <member type="u32" name="warp10"/>
+    </object>
+</objgen>

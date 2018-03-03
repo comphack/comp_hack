@@ -206,7 +206,7 @@ bool Parsers::EquipmentModEdit::Parse(libcomp::ManagerPacket *pPacketManager,
         }
         else
         {
-            /// @todo: drop durability
+            characterManager->UpdateDurability(client, item, -5000);
         }
     }
 

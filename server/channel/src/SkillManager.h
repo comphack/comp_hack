@@ -343,6 +343,16 @@ private:
         const std::shared_ptr<channel::ProcessingSkill>& pSkill);
 
     /**
+     * Update item durability on the supplied entity if its entity is a
+     * character. This should be called for all source entities and only targets
+     * that have not avoided the hit.
+     * @param entity Pointer to the entity to update
+     * @param pSkill Pointer to the current skill processing state
+     */
+    void HandleDurabilityDamage(const std::shared_ptr<ActiveEntityState> entity,
+        const std::shared_ptr<channel::ProcessingSkill>& pSkill);
+
+    /**
      * Toggle a switch skill, not handled by a special handler.
      * @param client Pointer to the client connection that activated the skill
      * @param activated Pointer to the activated ability instance
@@ -509,6 +519,17 @@ private:
         const std::shared_ptr<ChannelClientConnection>& client);
 
     /**
+     * Execute the "cameo" transformation skill.
+     * @param activated Pointer to the activated ability instance
+     * @param ctx Special execution state for the skill
+     * @param client Pointer to the client connection that activated the skill,
+     *  this will always fail if it is null
+     */
+    bool Cameo(const std::shared_ptr<objects::ActivatedAbility>& activated,
+        const std::shared_ptr<SkillExecutionContext>& ctx,
+        const std::shared_ptr<ChannelClientConnection>& client);
+
+    /**
      * Execute the "demonic compendium memory" skill.
      * @param activated Pointer to the activated ability instance
      * @param ctx Special execution state for the skill
@@ -555,6 +576,18 @@ private:
         const std::shared_ptr<ChannelClientConnection>& client);
 
     /**
+     * Execute a skill that causes all character expertise skills to be forgotten.
+     * @param activated Pointer to the activated ability instance
+     * @param ctx Special execution state for the skill
+     * @param client Pointer to the client connection that activated the skill,
+     *  this will always fail if it is null
+     */
+    bool ForgetAllExpertiseSkills(
+        const std::shared_ptr<objects::ActivatedAbility>& activated,
+        const std::shared_ptr<SkillExecutionContext>& ctx,
+        const std::shared_ptr<ChannelClientConnection>& client);
+
+    /**
      * Execute the "Mooch" skill.
      * @param activated Pointer to the activated ability instance
      * @param ctx Special execution state for the skill
@@ -562,6 +595,17 @@ private:
      *  this will always fail if it is null
      */
     bool Mooch(const std::shared_ptr<objects::ActivatedAbility>& activated,
+        const std::shared_ptr<SkillExecutionContext>& ctx,
+        const std::shared_ptr<ChannelClientConnection>& client);
+
+    /**
+     * Execute a skill that causes all character skill points to be reset.
+     * @param activated Pointer to the activated ability instance
+     * @param ctx Special execution state for the skill
+     * @param client Pointer to the client connection that activated the skill,
+     *  this will always fail if it is null
+     */
+    bool Respec(const std::shared_ptr<objects::ActivatedAbility>& activated,
         const std::shared_ptr<SkillExecutionContext>& ctx,
         const std::shared_ptr<ChannelClientConnection>& client);
 
@@ -599,7 +643,7 @@ private:
         const std::shared_ptr<ChannelClientConnection>& client);
 
     /**
-     * Execute the skill "Traesto" which returns the user to their homepoint.
+     * Execute the skill "Traesto" which returns the user to a preset zone.
      * @param activated Pointer to the activated ability instance
      * @param ctx Special execution state for the skill
      * @param client Pointer to the client connection that activated the skill,
@@ -608,6 +652,42 @@ private:
     bool Traesto(const std::shared_ptr<objects::ActivatedAbility>& activated,
         const std::shared_ptr<SkillExecutionContext>& ctx,
         const std::shared_ptr<ChannelClientConnection>& client);
+
+    /**
+     * Execute a skill that grants XP to the character or partner demon
+     * @param activated Pointer to the activated ability instance
+     * @param ctx Special execution state for the skill
+     * @param client Pointer to the client connection that activated the skill,
+     *  this will always fail if it is null
+     */
+    bool XPUp(const std::shared_ptr<objects::ActivatedAbility>& activated,
+        const std::shared_ptr<SkillExecutionContext>& ctx,
+        const std::shared_ptr<ChannelClientConnection>& client);
+
+    /**
+     * Determine what item should be given as present from a partner demon as the
+     * result of a familiarity adjusting skill.
+     * @param demonType Partner demon type
+     * @param level Partner demon level
+     * @param familiarity Partner demon current familiarity
+     * @param rarity Output parameter to store the rarity level of the item if
+     *  one is returned
+     * @return Item type to give as a present or zero if none will be given
+     */
+    uint32_t GetDemonPresent(uint32_t demonType, int8_t level, uint16_t familiarity,
+        int8_t& rarity) const;
+
+    /**
+     * Give a demon present to the player character as the result of a familiarity
+     * adjusting skill.
+     * @param client Pointer to the client connection
+     * @param demonType Partner demon type
+     * @param itemType Present item type
+     * @param rarity Rarity level of the present being given
+     * @param skillID ID of the skill that caused the present to be given
+     */
+    void GiveDemonPresent(const std::shared_ptr<ChannelClientConnection>& client,
+        uint32_t demonType, uint32_t itemType, int8_t rarity, uint32_t skillID);
 
     /**
      * Notify the client that a skill has been activated.  The client will notify

@@ -110,6 +110,9 @@
         <member type="set" name="AddedSkills">
             <element type="u32"/>
         </member>
+        <member type="set" name="DisabledSkills">
+            <element type="u32"/>
+        </member>
         <member type="set" name="ActiveSwitchSkills">
             <element type="u32"/>
         </member>

@@ -93,6 +93,7 @@
     <include path="binarydata/dynamicmapdata.xml"/>
     <include path="binarydata/enchantdata.xml"/>
     <include path="binarydata/equipmentsetdata.xml"/>
+    <include path="binarydata/exchangedata.xml"/>
     <include path="binarydata/expertdata.xml"/>
     <include path="binarydata/hnpcdata.xml"/>
     <include path="binarydata/itemdata.xml"/>
@@ -105,7 +106,9 @@
     <include path="binarydata/sitemdata.xml"/>
     <include path="binarydata/skilldata.xml"/>
     <include path="binarydata/spotdata.xml"/>
+    <include path="binarydata/sstatusdata.xml"/>
     <include path="binarydata/statusdata.xml"/>
     <include path="binarydata/triunionspecialdata.xml"/>
+    <include path="binarydata/warppointdata.xml"/>
     <include path="binarydata/zonedata.xml"/>
 </objgen>

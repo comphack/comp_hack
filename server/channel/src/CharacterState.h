@@ -85,6 +85,8 @@ public:
      */
     void RecalcEquipState(libcomp::DefinitionManager* definitionManager);
 
+    virtual bool RecalcDisabledSkills(libcomp::DefinitionManager* definitionManager);
+
 protected:
     virtual void BaseStatsCalculated(libcomp::DefinitionManager* definitionManager,
         std::shared_ptr<objects::CalculatedEntityState> calcState,

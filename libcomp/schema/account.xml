@@ -9,7 +9,7 @@
         <member type="u32" name="CP" caps="true"/>
         <member type="u8" name="TicketCount"/>
         <member type="s32" name="UserLevel"/>
-        <member type="bool" name="Enabled"/>
+        <member type="bool" name="Enabled" default="true"/>
         <member type="u32" name="LastLogin"/>
 
         <member type="array" name="Characters" size="20">

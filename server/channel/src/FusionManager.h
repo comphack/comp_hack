@@ -8,7 +8,7 @@
  *
  * This file is part of the Channel Server (channel).
  *
- * Copyright (C) 2012-2017 COMP_hack Team <compomega@tutanota.com>
+ * Copyright (C) 2012-2018 COMP_hack Team <compomega@tutanota.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as
@@ -117,10 +117,12 @@ private:
      * @param resultDemon Output parameter to return the resulting demon in
      * @return Error code associated to the reason why any failure may have
      *  ocurred:
+     *  1 = Normal failure
      *  0 = No failure
      *  -1 = Generic/criteria error
      *  -2 = Calculated fusion failed
      *  -3 = Supplied cost type is not valid
+     *  -4 = Cost could not be paid
      */
     int8_t ProcessFusion(const std::shared_ptr<
         ChannelClientConnection>& client, int64_t demonID1, int64_t demonID2,

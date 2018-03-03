@@ -2,7 +2,7 @@
 <objgen>
     <object name="ActionUpdateCOMP" baseobject="Action" persistent="false">
         <member type="enum" name="actionType" inherited="true" default="UPDATE_COMP"/>
-        <member type="u8" name="maxSlots" max="10"/>
+        <member type="u8" name="addSlot"/>
         <member type="map" name="addDemons">
             <key type="u32"/>
             <value type="u8"/>

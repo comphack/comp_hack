@@ -333,6 +333,16 @@ private:
         uint8_t>> talkDone);
 
     /**
+     * Update InheritedSkills on the supplied entity if its entity type
+     * is partner demon. This should be called once for each entity touched
+     * by the processing skill, regardless of if anything happened to it.
+     * @param entity Pointer to the entity to update
+     * @param pSkill Pointer to the current skill processing state
+     */
+    void HandleSkillLearning(const std::shared_ptr<ActiveEntityState> entity,
+        const std::shared_ptr<channel::ProcessingSkill>& pSkill);
+
+    /**
      * Toggle a switch skill, not handled by a special handler.
      * @param client Pointer to the client connection that activated the skill
      * @param activated Pointer to the activated ability instance

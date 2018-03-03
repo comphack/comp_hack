@@ -42,6 +42,11 @@ extern uint8_t FUSION_RACE_MAP[35][34];
 // index in SVR_CONST (ex: SVR_CONST.ELEMENTAL_1_FLAEMIS).
 extern int8_t FUSION_ELEMENTAL_ADJUST[34][4];
 
+// Bonus success rates granted by an individual component of two
+// way fusion based upon level range (min level in first column)
+// and familiarity rank starting at rank +1 (4001 points).
+extern uint8_t FUSION_FAMILIARITY_BONUS[5][5];
+
 // Trifusion race priority order to use when determining which
 // of two identical base level demons being fused together should
 // be considered the "first" one.
@@ -52,5 +57,12 @@ extern uint8_t TRIFUSION_RACE_PRIORITY[34];
 // first two indexes of the array should be the top priority demon
 // families and the last one should be the lower priority demon.
 extern uint8_t TRIFUSION_FAMILY_MAP[7][7][8];
+
+// Inheritence type to skill type lookup table to use when determining
+// the base level of inheritence of each skill transferred to a fusion
+// result demon. Columns correspond to their respecitve inheritence
+// type values. Each row corresponds to their respective affinity
+// value - 1.
+extern uint8_t INHERITENCE_SKILL_MAP[21][21];
 
 #endif // SERVER_CHANNEL_SRC_FUSIONTABLES_H

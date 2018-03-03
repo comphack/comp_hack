@@ -135,6 +135,7 @@ void AccountManager::HandleLoginResponse(const std::shared_ptr<
         dState->SetEntity(demon, demon
             ? definitionManager->GetDevilData(demon->GetType()) : nullptr);
         dState->SetEntityID(server->GetNextEntityID());
+        dState->RefreshLearningSkills(0, definitionManager);
 
         // Initialize some run-time data
         cState->RecalcEquipState(definitionManager);

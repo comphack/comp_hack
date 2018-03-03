@@ -9,7 +9,7 @@
  *
  * This file is part of the COMP_hack Library (libcomp).
  *
- * Copyright (C) 2012-2016 COMP_hack Team <compomega@tutanota.com>
+ * Copyright (C) 2012-2018 COMP_hack Team <compomega@tutanota.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as
@@ -456,7 +456,86 @@ bool ServerConstants::Initialize(const String& filePath)
         LOG_ERROR("EQUIP_MOD_EDIT_ITEMS not found\n");
         success = false;
     }
-    
+
+    complexIter = complexConstants.find("FUSION_BOOST_SKILLS");
+    if(success && complexIter != complexConstants.end())
+    {
+        std::unordered_map<std::string, std::string> map;
+        success = LoadKeyValueStrings(complexIter->second, map);
+        for(auto pair : map)
+        {
+            uint32_t key;
+            if(!LoadInteger(pair.first, key))
+            {
+                LOG_ERROR("Failed to load FUSION_BOOST_SKILLS key\n");
+                success = false;
+            }
+            else if(sConstants.FUSION_BOOST_SKILLS.find(key) !=
+                sConstants.FUSION_BOOST_SKILLS.end())
+            {
+                LOG_ERROR("Duplicate FUSION_BOOST_SKILLS key encountered\n");
+                success = false;
+            }
+            else
+            {
+                if(!pair.second.empty())
+                {
+                    auto params = libcomp::String(pair.second).Split(",");
+                    if(params.size() == 2)
+                    {
+                        size_t idx = 0;
+                        for(auto param : params)
+                        {
+                            int8_t p = 0;
+                            if(LoadInteger(param.C(), p))
+                            {
+                                sConstants.FUSION_BOOST_SKILLS[key][idx] = p;
+                            }
+                            else
+                            {
+                                LOG_ERROR("Failed to load an element in"
+                                    " FUSION_BOOST_SKILLS\n");
+                                success = false;
+                                break;
+                            }
+
+                            idx++;
+                        }
+                    }
+                    else
+                    {
+                        LOG_ERROR("FUSION_BOOST_SKILLS entry with param"
+                            " count other than 2\n");
+                        success = false;
+                    }
+                }
+            }
+
+            if(!success)
+            {
+                break;
+            }
+        }
+    }
+    else
+    {
+        LOG_ERROR("FUSION_BOOST_SKILLS not found\n");
+        success = false;
+    }
+
+    complexIter = complexConstants.find("FUSION_BOOST_STATUSES");
+    if(success && complexIter != complexConstants.end())
+    {
+        std::unordered_map<std::string, std::string> map;
+        success = LoadKeyValueStrings(complexIter->second, map) &&
+            LoadIntegerMap(map, sConstants.FUSION_BOOST_STATUSES);
+    }
+    else
+    {
+        LOG_ERROR("FUSION_BOOST_STATUSES not found\n");
+        success = false;
+    }
+
     complexIter = complexConstants.find("SLOT_MOD_ITEMS");
     if(success && complexIter != complexConstants.end())
     {

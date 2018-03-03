@@ -45,11 +45,13 @@
 #include <CalculatedEntityState.h>
 #include <CharacterProgress.h>
 #include <DropSet.h>
+#include <InheritedSkill.h>
 #include <Item.h>
 #include <ItemBox.h>
 #include <ItemDrop.h>
 #include <Loot.h>
 #include <LootBox.h>
+#include <MiAcquisitionData.h>
 #include <MiAddStatusTbl.h>
 #include <MiBattleDamageData.h>
 #include <MiCancelData.h>
@@ -1510,6 +1512,11 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
     uint64_t now = ChannelServer::GetServerTime();
     source->RefreshCurrentPosition(now);
 
+    // By default add the skill source to a possible entity set that can
+    // learn inherited skills and let the function sort it out
+    std::set<std::shared_ptr<ActiveEntityState>> learningSkills;
+    learningSkills.insert(source);
+
     // Apply calculation results, keeping track of entities that may
     // need to update the world with their modified state
     std::set<std::shared_ptr<ActiveEntityState>> revived;
@@ -1521,6 +1528,14 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
         std::set<TokuseiConditionType>> recalcEntities;
     for(SkillTargetResult& target : skill.Targets)
     {
+        // Even if the hit is avoided, anything that touches the entity will
+        // update inheriting skills
+        if(target.EntityState->GetEntityType() ==
+            objects::EntityStateObject::EntityType_t::PARTNER_DEMON)
+        {
+            learningSkills.insert(target.EntityState);
+        }
+
         if(target.HitAvoided) continue;
 
         auto targetCalc = GetCalculatedState(target.EntityState, pSkill, true, source);
@@ -2311,23 +2326,29 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
         ChannelClientConnection::SendRelativeTimePacket(zConnections, p, timeMap);
     }
 
-    if(revived.size() > 0)
+    // Update inherited skills
+    for(auto entity : learningSkills)
     {
-        for(auto entity : revived)
+        HandleSkillLearning(entity, pSkill);
+    }
+
+    // Report each revived entity
+    for(auto entity : revived)
+    {
+        libcomp::Packet p;
+        if(characterManager->GetEntityRevivalPacket(p, entity, 6))
         {
-            libcomp::Packet p;
-            if(characterManager->GetEntityRevivalPacket(p, entity, 6))
-            {
-                zoneManager->BroadcastPacket(zone, p);
-            }
+            zoneManager->BroadcastPacket(zone, p);
         }
     }
 
+    // Set all killed entities
     if(killed.size() > 0)
     {
         HandleKills(source, zone, killed);
     }
 
+    // Report all updates to the world
     if(displayStateModified.size() > 0)
     {
         characterManager->UpdateWorldDisplayState(displayStateModified);
@@ -3625,6 +3646,82 @@ void SkillManager::HandleNegotiations(const std::shared_ptr<ActiveEntityState> s
     }
 
     ChannelClientConnection::FlushAllOutgoing(zConnections);
+}
+
+void SkillManager::HandleSkillLearning(const std::shared_ptr<ActiveEntityState> entity,
+    const std::shared_ptr<channel::ProcessingSkill>& pSkill)
+{
+    double iMod1 = (double)pSkill->Definition->GetAcquisition()->GetInheritanceModifier();
+
+    auto dState = std::dynamic_pointer_cast<DemonState>(entity);
+    if(!dState || !dState->Ready() || iMod1 <= 0)
+    {
+        return;
+    }
+
+    bool isSource = pSkill->Activated->GetSourceEntity() == entity;
+    auto learningSkills = dState->GetLearningSkills(pSkill->EffectiveAffinity);
+    if(learningSkills.size() == 0)
+    {
+        return;
+    }
+
+    auto server = mServer.lock();
+    auto definitionManager = server->GetDefinitionManager();
+    auto managerConnection = server->GetManagerConnection();
+
+    auto dbChanges = libcomp::DatabaseChangeSet::Create();
+
+    std::list<std::pair<uint32_t, int16_t>> updateMap;
+    for(auto iSkill : learningSkills)
+    {
+        auto iSkillData = definitionManager->GetSkillData(iSkill->GetSkill());
+        auto iMod2 = iSkillData
+            ? (double)iSkillData->GetAcquisition()->GetInheritanceModifier() : 0.0;
+        if(iMod2 > 0.0)
+        {
+            uint16_t updateProgress = 0;
+            if(isSource)
+            {
+                updateProgress = (uint16_t)floor(pow((iMod1 * 40.0)/iMod2, 2) * 0.25);
+            }
+            else
+            {
+                updateProgress = (uint16_t)floor(pow((iMod1 * 40.0)/iMod2, 2));
+            }
+
+            if(updateProgress > 0)
+            {
+                int16_t progress = dState->UpdateLearningSkill(iSkill, updateProgress);
+                updateMap.push_back(std::pair<uint32_t, int16_t>(iSkill->GetSkill(), progress));
+
+                dbChanges->Update(iSkill);
+            }
+        }
+    }
+
+    if(updateMap.size() > 0)
+    {
+        auto dClient = managerConnection->GetEntityClient(dState->GetEntityID(), false);
+        if(dClient)
+        {
+            libcomp::Packet p;
+            p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_INHERIT_SKILL_UPDATED);
+            p.WriteS32Little(dState->GetEntityID());
+            p.WriteS32Little((int32_t)updateMap.size());
+            for(auto pair : updateMap)
+            {
+                p.WriteU32Little(pair.first);
+                p.WriteS32Little((int32_t)pair.second);
+            }
+
+            dClient->SendPacket(p);
+        }
+
+        dState->RefreshLearningSkills(pSkill->EffectiveAffinity, definitionManager);
+
+        server->GetWorldDatabase()->QueueChangeSet(dbChanges);
+    }
 }
 
 bool SkillManager::ToggleSwitchSkill(const std::shared_ptr<ChannelClientConnection> client,

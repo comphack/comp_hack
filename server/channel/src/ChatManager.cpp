@@ -475,7 +475,8 @@ bool ChatManager::GMCommand_Contract(const std::shared_ptr<
             libcomp::String("Invalid demon ID: %1").Arg(demonID));
     }
 
-    auto demon = characterManager->ContractDemon(client, devilData, 0);
+    auto demon = characterManager->ContractDemon(client, devilData, 0,
+        MAX_FAMILIARITY);
     return demon != nullptr || SendChatMessage(client, ChatType_t::CHAT_SELF,
             "Demon could not be contracted");
 }

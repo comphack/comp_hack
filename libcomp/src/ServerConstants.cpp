@@ -50,7 +50,7 @@ bool ServerConstants::Initialize(const String& filePath)
         LOG_ERROR("Server contants XML is not valid.");
         return false;
     }
-    
+
     // Read all constants as strings
     std::unordered_map<std::string, std::string> constants;
     std::unordered_map<std::string, const tinyxml2::XMLElement*> complexConstants;

@@ -73,6 +73,7 @@ void ChannelClient::Login(const libcomp::String& username,
         std::shared_ptr<libtester::LobbyClient> client(
             new libtester::LobbyClient);
 
+        client->SetWaitForLogout(true);
         client->Login(username, password);
 
         if(!characterName.IsEmpty())

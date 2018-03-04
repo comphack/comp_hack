@@ -62,6 +62,7 @@ SET(${PROJECT_NAME}_SRCS
     src/DynamicVariable.cpp
     src/DynamicVariableFactory.cpp
     src/EncryptedConnection.cpp
+    src/ErrorCodes.cpp
     src/Exception.cpp
     src/InternalConnection.cpp
     src/LobbyConnection.cpp

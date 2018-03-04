@@ -27,6 +27,9 @@
 #ifndef LIBCOMP_SRC_ERRORCODES_H
 #define LIBCOMP_SRC_ERRORCODES_H
 
+// libcomp Includes
+#include <CString.h>
+
 // Standard C++11 Includes
 #include <stdint.h>
 
@@ -60,6 +63,8 @@ enum class ErrorCodes_t : int32_t
     ACCOUNT_LOCKED_B = -102, //!< Account locked by antitheft function
     CONNECTION_TIMEOUT = -103, //!< Connection has timed out
 };
+
+libcomp::String ErrorCodeString(ErrorCodes_t error);
 
 /**
  * Error codes used for skill failure by the game client. Most will print a message

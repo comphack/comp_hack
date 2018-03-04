@@ -76,6 +76,7 @@ bool WorldServer::Initialize()
         return false;
     }
 
+    mAccountManager = new AccountManager(self);
     mCharacterManager = new CharacterManager(self);
     mSyncManager = new WorldSyncManager(self);
 
@@ -187,6 +188,7 @@ void WorldServer::FinishInitialize()
 
 WorldServer::~WorldServer()
 {
+    delete mAccountManager;
     delete mCharacterManager;
     delete mSyncManager;
 }
@@ -360,7 +362,7 @@ bool WorldServer::RegisterServer()
 
 AccountManager* WorldServer::GetAccountManager()
 {
-    return &mAccountManager;
+    return mAccountManager;
 }
 
 CharacterManager* WorldServer::GetCharacterManager() const

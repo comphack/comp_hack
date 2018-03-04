@@ -104,8 +104,8 @@ bool Parsers::StartGame::Parse(libcomp::ManagerPacket *pPacketManager,
         return false;
     }
 
-    LOG_DEBUG(libcomp::String("StartGame is sending the following login "
-        "object to the world:\n%1\n").Arg(login->GetXml()));
+    /*LOG_DEBUG(libcomp::String("StartGame is sending the following login "
+        "object to the world:\n%1\n").Arg(login->GetXml()));*/
 
     // Let the world know what we want to do.
     libcomp::Packet request;

@@ -65,12 +65,14 @@ bool Parsers::AccountLogout::Parse(libcomp::ManagerPacket *pPacketManager,
     auto cLogin = login->GetCharacterLogin();
     if(channelSwitch)
     {
-        cLogin->SetChannelID(p.ReadS8());
-        login->SetSessionKey(p.ReadU32Little());
+        int8_t channelID = p.ReadS8();
+        uint32_t sessionKey = p.ReadU32Little();
 
-        // Set channel to channel state but do not set expiration as the world is
-        // responsible for completing this connection or disconnecting on timeout
-        login->SetState(objects::AccountLogin::State_t::CHANNEL_TO_CHANNEL);
+        if(!accountManager->ChannelToChannelSwitch(username, channelID, sessionKey))
+        {
+            LOG_ERROR(libcomp::String("Failed to set channel to channel switch for"
+                " account: '%1'\n").Arg(username));
+        }
     }
     else
     {

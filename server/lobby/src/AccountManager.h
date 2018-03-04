@@ -172,6 +172,18 @@ public:
         int8_t worldID, int8_t channelID);
 
     /**
+     * Transitions the user login state from CHANNEL to CHANNEL_TO_CHANNEL,
+     * and update the session key.
+     * @param username Username of the account to update.
+     * @param channelID ID of the channel the account was switched to.
+     * @param sesssionKey New session key set by the world
+     * @returns true upon successful update, false if an error occurred
+     * @note This function is thread safe.
+     */
+    bool ChannelToChannelSwitch(const libcomp::String& username,
+        int8_t channelID, uint32_t sessionKey);
+
+    /**
      * Transitions the user to the OFFLINE state.
      * @param username Username of the account to log out.
      * @returns true if the account was logged out; false otherwise.
@@ -270,6 +282,18 @@ protected:
      * @note This function is NOT thread safe. You MUST lock access first!
      */
     void EraseLogin(const libcomp::String& username);
+
+    /**
+     * Print the status of the accounts managed by this object.
+     * @note This function is NOT thread safe. You MUST lock access first!
+     */
+    void PrintAccounts() const;
+
+    /**
+     * Update the server debug state for systems configured to display it.
+     * @note This function is NOT thread safe. You MUST lock access first!
+     */
+    void UpdateDebugStatus() const;
 
 private:
     /// Pointer to the lobby server.

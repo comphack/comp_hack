@@ -35,7 +35,9 @@
 #include <Account.h>
 #include <Character.h>
 #include <CharacterLogin.h>
+#include <EntityStats.h>
 #include <FriendSettings.h>
+#include <WorldConfig.h>
 
 // world Includes
 #include <WorldServer.h>
@@ -88,6 +90,120 @@ bool AccountManager::LobbyLogin(std::shared_ptr<objects::AccountLogin> login)
     }
 
     return result;
+}
+
+bool AccountManager::ChannelLogin(std::shared_ptr<objects::AccountLogin> login)
+{
+    auto server = mServer.lock();
+    auto lobbyDB = server->GetLobbyDatabase();
+    auto worldDB = server->GetWorldDatabase();
+
+    auto cLogin = login->GetCharacterLogin();
+    auto character = cLogin->GetCharacter().Get();
+    auto account = login->LoadAccount(worldDB);
+
+    uint32_t lastLogin = character->GetLastLogin();
+    auto now = std::time(0);
+
+    // Get the beginning of today (UTC)
+    std::tm localTime = *std::localtime(&now);
+    localTime.tm_hour = 0;
+    localTime.tm_min = 0;
+    localTime.tm_sec = 0;
+
+    uint32_t today = (uint32_t)std::mktime(&localTime);
+    if(today > lastLogin)
+    {
+        // This is the character's first login of the day, increase
+        // their login points
+        auto stats = character->LoadCoreStats(worldDB);
+
+        if(stats->GetLevel() > 0)
+        {
+            int32_t points = character->GetLoginPoints();
+            points = points + (int32_t)ceil((float)stats->GetLevel() * 0.2);
+            character->SetLoginPoints(points);
+
+            // If the character is in a clan, queue up a recalculation of
+            // the clan level and sending of the character updates
+            if(cLogin->GetClanID())
+            {
+                server->QueueWork([](std::shared_ptr<WorldServer> pServer,
+                    std::shared_ptr<objects::CharacterLogin> pLogin, int32_t pClanID)
+                {
+                    auto characterManager = pServer->GetCharacterManager();
+                    characterManager->SendClanMemberInfo(pLogin);
+                    characterManager->RecalculateClanLevel(pClanID);
+                }, server, cLogin, cLogin->GetClanID());
+            }
+        }
+    }
+
+    character->SetLastLogin((uint32_t)now);
+    account->SetLastLogin((uint32_t)now);
+
+    if(!character->Update(worldDB) || !account->Update(lobbyDB))
+    {
+        LOG_ERROR(libcomp::String("Failed to update character and account"
+            " during channel login request for account: %1.\n")
+            .Arg(account->GetUsername()));
+        return false;
+    }
+
+    // Now that the login actions are complete, update the account and character
+    // states
+    std::lock_guard<std::mutex> lock(mLock);
+
+    login->SetState(objects::AccountLogin::State_t::CHANNEL);
+    cLogin->SetWorldID((int8_t)server->GetRegisteredWorld()->GetID());
+    cLogin->SetStatus(objects::CharacterLogin::Status_t::ONLINE);
+
+    return true;
+}
+
+bool AccountManager::SwitchChannel(std::shared_ptr<
+    objects::AccountLogin> login, int8_t channelID)
+{
+    auto username = login->GetAccount()->GetUsername();
+
+    std::lock_guard<std::mutex> lock(mLock);
+    if(login->GetState() != objects::AccountLogin::State_t::CHANNEL)
+    {
+        LOG_ERROR(libcomp::String("Channel switch for account '%1' failed "
+            "because it is not in the channel state.\n")
+            .Arg(username));
+        return false;
+    }
+
+    PushChannelSwitch(username, channelID);
+
+    auto cLogin = login->GetCharacterLogin();
+
+    // Mark the expected location for when the connection returns
+    cLogin->SetChannelID(channelID);
+
+    // Set the session key now but only update the lobby if the channel
+    // switch actually occurs
+    UpdateSessionKey(login);
+
+    // Update the state regardless of if the channel honors its own request
+    // so the timeout can occur
+    login->SetState(objects::AccountLogin::State_t::CHANNEL_TO_CHANNEL);
+
+    auto server = mServer.lock();
+    auto config = std::dynamic_pointer_cast<objects::WorldConfig>(
+        server->GetConfig());
+
+    // Schedule channel switch timeout
+    server->GetTimerManager()->ScheduleEventIn(static_cast<int>(
+        config->GetChannelConnectionTimeOut()), [server]
+        (const std::shared_ptr<WorldServer> pServer,
+            const libcomp::String& pUsername, uint32_t pKey)
+    {
+        pServer->GetAccountManager()->ExpireSession(pUsername, pKey);
+    }, server, login->GetAccount()->GetUsername(), login->GetSessionKey());
+
+    return true;
 }
 
 std::shared_ptr<objects::AccountLogin> AccountManager::GetUserLogin(
@@ -224,14 +340,12 @@ std::list<std::shared_ptr<objects::AccountLogin>>
 
 void AccountManager::UpdateSessionKey(std::shared_ptr<objects::AccountLogin> login)
 {
-    std::lock_guard<std::mutex> lock(mLock);
     login->SetSessionKey(RNG(uint32_t, 1, (uint32_t)0x7FFFFFFF));
 }
 
 void AccountManager::PushChannelSwitch(const libcomp::String& username, int8_t channel)
 {
     libcomp::String lookup = username.ToLower();
-    std::lock_guard<std::mutex> lock(mLock);
     mChannelSwitches[lookup] = channel;
 }
 

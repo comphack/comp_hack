@@ -73,6 +73,25 @@ public:
     bool LobbyLogin(std::shared_ptr<objects::AccountLogin> login);
 
     /**
+     * Update the supplied login, set the login state to CHANNEL and the
+     * character status to ONLINE. Also perform any "on login" actions.
+     * @param login Login information associated to the account.
+     * @return true if the account was successfully updated; false if an
+     *  error occurred.
+     */
+    bool ChannelLogin(std::shared_ptr<objects::AccountLogin> login);
+
+    /**
+     * Transition the login from CHANNEL to CHANNEL_TO_CHANNEL and sechedule
+     * a timeout.
+     * @param login Login information associated to the account.
+     * @param channelID New channel ID, the connection will be moved to
+     * @return true if the update succeeded, false if it did not
+     */
+    bool SwitchChannel(std::shared_ptr<objects::AccountLogin> login,
+        int8_t channelID);
+
+    /**
      * Get the current user login state independent of world.
      * @param username Username for the account to login.
      * @return Pointer to the login state; null if it does not exist.
@@ -112,23 +131,6 @@ public:
         LogoutUsersOnChannel(int8_t channel);
 
     /**
-     * Update the session key of the supplied login.  The lobby must be
-     * notified of this update or the login information will become out
-     * of sync.
-     * @param login Pointer to the account login to update
-     */
-    void UpdateSessionKey(std::shared_ptr<objects::AccountLogin> login);
-
-    /**
-     * "Push" a channel switch signifier to the manager for the specified
-     * account. The next logout request will pop this value and await a
-     * reconnect to the specified channel rather than log the account out.
-     * @param username Username of the account that will switch channels
-     * @param channel Channel being switched to
-     */
-    void PushChannelSwitch(const libcomp::String& username, int8_t channel);
-
-    /**
      * "Pop" any existing channel switch signifier from the manager for
      * the specified account and return the channel ID value.
      * @param username Username of the account set to switch channels
@@ -140,11 +142,28 @@ public:
 
 private:
     /**
+     * Update the session key of the supplied login.  The lobby must be
+     * notified of this update or the login information will become out
+     * of sync.
+     * @param login Pointer to the account login to update
+     */
+    void UpdateSessionKey(std::shared_ptr<objects::AccountLogin> login);
+
+    /**
      * Utility function to free up references to an AccountLogin loaded
      * by the world.
      * @param login Pointer to the AcccountLogin to clean up
      */
     void Cleanup(const std::shared_ptr<objects::AccountLogin>& login);
+
+    /**
+     * "Push" a channel switch signifier to the manager for the specified
+     * account. The next logout request will pop this value and await a
+     * reconnect to the specified channel rather than log the account out.
+     * @param username Username of the account that will switch channels
+     * @param channel Channel being switched to
+     */
+    void PushChannelSwitch(const libcomp::String& username, int8_t channel);
 
     /**
      * Utility function to free up references to a PersistentObject loaded

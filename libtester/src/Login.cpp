@@ -134,7 +134,7 @@ bool Login::WebLogin(const libcomp::String& username,
                         sid1 = match.str(3);
                         sid2 = match.str(4);
 
-                        if("789" == contentLength && username == replyUsername)
+                        if("788" == contentLength && username == replyUsername)
                         {
                             result = true;
                         }

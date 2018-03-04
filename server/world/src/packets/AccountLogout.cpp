@@ -49,8 +49,6 @@ bool Parsers::AccountLogout::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {
-    (void)connection;
-
     LogoutPacketAction_t action = (LogoutPacketAction_t)p.ReadU32Little();
     libcomp::String username = p.ReadString16Little(
         libcomp::Convert::Encoding_t::ENCODING_UTF8, true);
@@ -70,40 +68,24 @@ bool Parsers::AccountLogout::Parse(libcomp::ManagerPacket *pPacketManager,
     if(action == LogoutPacketAction_t::LOGOUT_CHANNEL_SWITCH)
     {
         channelID = p.ReadS8();
-        accountManager->PushChannelSwitch(username, channelID);
-
-        auto config = std::dynamic_pointer_cast<objects::WorldConfig>(
-            server->GetConfig());
-
-        // Mark the expected location for when the connection returns
-        cLogin->SetChannelID(channelID);
-
-        // Set the session key now but only update the lobby if the channel
-        // switch actually occurs
-        accountManager->UpdateSessionKey(login);
-
-        // Update the state regardless of if the channel honors its own request
-        // so the timeout can occur
-        login->SetState(objects::AccountLogin::State_t::CHANNEL_TO_CHANNEL);
-
-        // Schedule channel switch timeout
-        server->GetTimerManager()->ScheduleEventIn(static_cast<int>(
-            config->GetChannelConnectionTimeOut()), [server]
-            (const std::shared_ptr<WorldServer> pServer,
-             const libcomp::String& pUsername, uint32_t pKey)
+        if(accountManager->SwitchChannel(login, channelID))
         {
-            pServer->GetAccountManager()->ExpireSession(pUsername, pKey);
-        }, server, login->GetAccount()->GetUsername(), login->GetSessionKey());
+            libcomp::Packet reply;
+            reply.WritePacketCode(
+                InternalPacketCode_t::PACKET_ACCOUNT_LOGOUT);
+            reply.WriteS32Little(cLogin->GetWorldCID());
+            reply.WriteU32Little(
+                (uint32_t)LogoutPacketAction_t::LOGOUT_CHANNEL_SWITCH);
+            reply.WriteS8(channelID);
+            reply.WriteU32Little(login->GetSessionKey());
 
-        libcomp::Packet reply;
-        reply.WritePacketCode(
-            InternalPacketCode_t::PACKET_ACCOUNT_LOGOUT);
-        reply.WriteS32Little(cLogin->GetWorldCID());
-        reply.WriteU32Little(
-            (uint32_t)LogoutPacketAction_t::LOGOUT_CHANNEL_SWITCH);
-        reply.WriteS8(channelID);
-        reply.WriteU32Little(login->GetSessionKey());
-        connection->SendPacket(reply);
+            connection->SendPacket(reply);
+        }
+        else
+        {
+            server->GetCharacterManager()->RequestChannelDisconnect(
+                cLogin->GetWorldCID());
+        }
     }
     else if(p.Left() > 0 && p.PeekU8() == 1)
     {

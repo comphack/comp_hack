@@ -105,6 +105,14 @@ public:
         const libcomp::String& characterName);
 
     /**
+     * Match the supplied world CID with a registered character login and
+     * send a request to the channel they are currently logged into to
+     * disconnect that account
+     * @param worldCID World CID associated to the character
+     */
+    void RequestChannelDisconnect(int32_t worldCID);
+
+    /**
      * Send a packet to the specified logins
      * @param p Packet to send
      * @param cLogins CharacterLogins to map channel connections to when sending

@@ -67,6 +67,10 @@ bool Parsers::AccountLogout::Parse(libcomp::ManagerPacket *pPacketManager,
     {
         cLogin->SetChannelID(p.ReadS8());
         login->SetSessionKey(p.ReadU32Little());
+
+        // Set channel to channel state but do not set expiration as the world is
+        // responsible for completing this connection or disconnecting on timeout
+        login->SetState(objects::AccountLogin::State_t::CHANNEL_TO_CHANNEL);
     }
     else
     {

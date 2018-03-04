@@ -182,7 +182,7 @@ ErrorCodes_t AccountManager::WebAuthLogin(const libcomp::String& username,
 
     // Set the session to expire.
     mServer->GetTimerManager()->ScheduleEventIn(static_cast<int>(
-        SVR_CONST.WEBAUTH_TIMEOUT), [this](const libcomp::String& _username,
+        config->GetWebAuthTimeOut()), [this](const libcomp::String& _username,
         const libcomp::String& _sid)
     {
         ExpireSession(_username, _sid);
@@ -320,7 +320,7 @@ ErrorCodes_t AccountManager::LobbyLogin(const libcomp::String& username,
 
 std::shared_ptr<objects::AccountLogin> AccountManager::StartChannelLogin(
     const libcomp::String& username,
-    const libcomp::ObjectReference<objects::Character>& character)
+    const std::shared_ptr<objects::Character>& character)
 {
     // Lock the accounts now so this is thread safe.
     std::lock_guard<std::mutex> lock(mAccountLock);
@@ -448,6 +448,9 @@ bool AccountManager::Logout(const libcomp::String& username)
 {
     LOG_DEBUG(libcomp::String("Logging out account '%1'.\n").Arg(username));
 
+    auto config = std::dynamic_pointer_cast<objects::LobbyConfig>(
+        mServer->GetConfig());
+
     // Lock the accounts now so this is thread safe.
     std::lock_guard<std::mutex> lock(mAccountLock);
 
@@ -471,11 +474,18 @@ bool AccountManager::Logout(const libcomp::String& username)
 
     // Set the session to expire.
     mServer->GetTimerManager()->ScheduleEventIn(static_cast<int>(
-        SVR_CONST.WEBAUTH_TIMEOUT), [this](const libcomp::String& _username,
+        config->GetWebAuthTimeOut()), [this](const libcomp::String& _username,
         const libcomp::String& _sid)
     {
         ExpireSession(_username, _sid);
     }, username, login->GetSessionID());
+
+    // Reset the character information
+    auto cLogin = login->GetCharacterLogin();
+    cLogin->SetCharacter(NULLUUID);
+    cLogin->SetWorldID(-1);
+    cLogin->SetChannelID(-1);
+    cLogin->SetZoneID(0);
 
     // Let the account return to the lobby (if they did a logout to lobby).
     login->SetState(objects::AccountLogin::State_t::LOBBY_WAIT);
@@ -565,28 +575,6 @@ void AccountManager::EraseLogin(const libcomp::String& username)
     mAccountMap.erase(lookup);
 }
 
-bool AccountManager::IsLoggedIn(const libcomp::String& username)
-{
-    bool result = false;
-
-    libcomp::String lookup = username.ToLower();
-
-    std::lock_guard<std::mutex> lock(mAccountLock);
-
-    LOG_DEBUG(libcomp::String("Looking for account '%1'\n").Arg(username));
-
-    PrintAccounts();
-
-    auto pair = mAccountMap.find(lookup);
-
-    if(mAccountMap.end() != pair)
-    {
-        result = true;
-    }
-
-    return result;
-}
-
 bool AccountManager::IsLoggedIn(const libcomp::String& username,
     int8_t& world)
 {
@@ -596,10 +584,6 @@ bool AccountManager::IsLoggedIn(const libcomp::String& username,
 
     std::lock_guard<std::mutex> lock(mAccountLock);
 
-    LOG_DEBUG(libcomp::String("Looking for account '%1'\n").Arg(username));
-
-    PrintAccounts();
-
     auto pair = mAccountMap.find(lookup);
 
     if(mAccountMap.end() != pair)
@@ -608,87 +592,6 @@ bool AccountManager::IsLoggedIn(const libcomp::String& username,
 
         world = pair->second->GetCharacterLogin()->GetWorldID();
     }
-
-    return result;
-}
-
-bool AccountManager::LoginUser(const libcomp::String& username,
-    std::shared_ptr<objects::AccountLogin> login)
-{
-    bool result = false;
-
-    libcomp::String lookup = username.ToLower();
-
-    std::lock_guard<std::mutex> lock(mAccountLock);
-
-    auto pair = mAccountMap.find(lookup);
-
-    if(mAccountMap.end() == pair)
-    {
-        if(nullptr == login)
-        {
-            login = std::shared_ptr<objects::AccountLogin>(
-                new objects::AccountLogin);
-        }
-
-        auto res = mAccountMap.insert(std::make_pair(lookup, login));
-
-        // This pair is the iterator (first) and a bool indicating it was
-        // inserted into the map (second).
-        result = res.second;
-
-        if(nullptr == login)
-        {
-            LOG_DEBUG(libcomp::String("Logged in account '%1' with new object.\n"));
-        }
-        else
-        {
-            LOG_DEBUG(libcomp::String("Logged in account '%1' with old object.\n"));
-        }
-    }
-    else
-    {
-        LOG_DEBUG(libcomp::String("Failed to login account '%1' because it "
-            "is already logged in.\n").Arg(username));
-    }
-
-    PrintAccounts();
-
-#ifdef HAVE_SYSTEMD
-    sd_notifyf(0, "STATUS=Server is up with %d connected user(s).",
-        (int)mAccountMap.size());
-#endif // HAVE_SYSTEMD
-
-    return result;
-}
-
-bool AccountManager::UpdateSessionID(const libcomp::String& username,
-    const libcomp::String& sid)
-{
-    bool result = false;
-
-    libcomp::String lookup = username.ToLower();
-
-    std::lock_guard<std::mutex> lock(mAccountLock);
-
-    auto pair = mAccountMap.find(lookup);
-
-    if(mAccountMap.end() != pair)
-    {
-        pair->second->SetSessionID(sid);
-
-        LOG_DEBUG(libcomp::String("Updated session ID for account "
-            "'%1' to %2\n").Arg(username).Arg(sid));
-
-        result = true;
-    }
-    else
-    {
-        LOG_DEBUG(libcomp::String("Failed to update session ID for "
-            "account '%1' to %2\n").Arg(username).Arg(sid));
-    }
-
-    PrintAccounts();
 
     return result;
 }
@@ -834,50 +737,4 @@ bool AccountManager::DeleteCharacter(const libcomp::String& username, uint8_t ci
     }
 
     return false;
-}
-
-void AccountManager::PrintAccounts() const
-{
-    LOG_DEBUG("----------------------------------------\n");
-
-    for(auto a : mAccountMap)
-    {
-        auto login = a.second;
-
-        libcomp::String state;
-
-        switch(login->GetState())
-        {
-            case objects::AccountLogin::State_t::OFFLINE:
-                state = "OFFLINE";
-                break;
-            case objects::AccountLogin::State_t::LOBBY_WAIT:
-                state = "LOBBY_WAIT";
-                break;
-            case objects::AccountLogin::State_t::LOBBY:
-                state = "LOBBY";
-                break;
-            case objects::AccountLogin::State_t::LOBBY_TO_CHANNEL:
-                state = "LOBBY_TO_CHANNEL";
-                break;
-            case objects::AccountLogin::State_t::CHANNEL_TO_LOBBY:
-                state = "CHANNEL_TO_LOBBY";
-                break;
-            case objects::AccountLogin::State_t::CHANNEL:
-                state = "CHANNEL";
-                break;
-            case objects::AccountLogin::State_t::CHANNEL_TO_CHANNEL:
-                state = "CHANNEL_TO_CHANNEL";
-                break;
-            default:
-                state = "ERROR";
-                break;
-        }
-
-        LOG_DEBUG(libcomp::String("Account:     %1\n").Arg(a.first));
-        LOG_DEBUG(libcomp::String("State:       %1\n").Arg(state));
-        LOG_DEBUG(libcomp::String("Session ID:  %1\n").Arg(login->GetSessionID()));
-        LOG_DEBUG(libcomp::String("Session Key: %1\n").Arg(login->GetSessionKey()));
-        LOG_DEBUG("----------------------------------------\n");
-    }
 }

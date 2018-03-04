@@ -394,6 +394,9 @@ std::vector<char> LoginHandler::LoadVfsFile(const libcomp::String& path)
         return std::vector<char>();
     }
 
+    // Make sure it ends with a null terminator
+    data.push_back(0);
+
     return data;
 }
 

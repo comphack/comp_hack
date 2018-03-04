@@ -162,9 +162,6 @@ struct Data
     /// Status effect ID of summon sync level 3
     uint32_t STATUS_SUMMON_SYNC_3;
 
-    /// Number of seconds until the web auth session ID expires.
-    uint32_t WEBAUTH_TIMEOUT;
-
     /// Default skills to add to a new character
     std::set<uint32_t> DEFAULT_SKILLS;
 

@@ -125,11 +125,49 @@ public:
     ErrorCodes_t LobbyLogin(const libcomp::String& username,
         libcomp::String& sid2);
 
+    /**
+     * Set the character associated to the supplied account in preparation
+     * for world communication and channel connection.
+     * @param username Username of the account to set the character on.
+     * @param character Pointer to the character to set on the account.
+     * @returns Pointer to the matching AccountLogin or null if it does
+     *  not exist
+     * @note This function is thread safe.
+     */
     std::shared_ptr<objects::AccountLogin> StartChannelLogin(
         const libcomp::String& username,
-        const libcomp::ObjectReference<objects::Character>& character);
+        const std::shared_ptr<objects::Character>& character);
+
+    /**
+     * Transitions the user login state from LOBBY to LOBBY_TO_CHANNEL,
+     * set the supplied world and channel IDs and await world communication
+     * that the player has successfully entered the channel. A timeout should
+     * be used in conjunction with this to ensure the account does not
+     * get stuck.
+     * @param username Username of the account to update.
+     * @param worldID ID of the world the account is being moved to.
+     * @param channelID ID of the channel the account is being moved to.
+     * @returns Error code indicating the success or failure of this
+     * operation. This function can return one of:
+     * - SUCCESS (change was valid and login information was updated)
+     * - SYSTEM_ERROR (some internal error occurred)
+     * @note This function is thread safe.
+     */
     ErrorCodes_t SwitchToChannel(const libcomp::String& username,
         int8_t worldID, int8_t channelID);
+
+    /**
+     * Transitions the user login state from LOBBY_TO_CHANNEL to CHANNEL,
+     * completing a sucessful channel login.
+     * @param username Username of the account to update.
+     * @param worldID ID of the world the account was connected to.
+     * @param channelID ID of the channel the account was connected to.
+     * @returns Error code indicating the success or failure of this
+     * operation. This function can return one of:
+     * - SUCCESS (change was valid and login information was updated)
+     * - SYSTEM_ERROR (some internal error occurred)
+     * @note This function is thread safe.
+     */
     ErrorCodes_t CompleteChannelLogin(const libcomp::String& username,
         int8_t worldID, int8_t channelID);
 
@@ -151,17 +189,6 @@ public:
     void ExpireSession(const libcomp::String& username,
         const libcomp::String& sid);
 
-    //////////////////////////////////////////////////////////////////////////
-    // OLD SHIT HERE!
-    //////////////////////////////////////////////////////////////////////////
-
-    /**
-     * Check if a user is logged in.
-     * @param username Username for the account to check.
-     * @return true if the user is logged in; false otherwise.
-     */
-    bool IsLoggedIn(const libcomp::String& username);
-
     /**
      * Check if a user is logged in.
      * @param username Username for the account to check.
@@ -171,25 +198,6 @@ public:
      */
     bool IsLoggedIn(const libcomp::String& username,
         int8_t& world);
-
-    /**
-     * Mark the user logged into the given world.
-     * @param username Username for the account to login.
-     * @param login Login information associated to the account.
-     * @return true if the user was logged in; false if the user is already
-     * logged in to another world.
-     */
-    bool LoginUser(const libcomp::String& username,
-        std::shared_ptr<objects::AccountLogin> login = nullptr);
-
-    /*
-     * Updates the session ID of the login associated to a username.
-     * @param username Username for the logged in account.
-     * @param sid Session ID to update.
-     * @return true if the user is logged in; false if not
-     */
-    bool UpdateSessionID(const libcomp::String& username,
-        const libcomp::String& sid);
 
     /**
      * Get the current user login state independent of world.
@@ -262,12 +270,6 @@ protected:
      * @note This function is NOT thread safe. You MUST lock access first!
      */
     void EraseLogin(const libcomp::String& username);
-
-    /**
-     * Print the status of the accounts managed by this object.
-     * @note This function is NOT thread safe. You MUST lock access first!
-     */
-    void PrintAccounts() const;
 
 private:
     /// Pointer to the lobby server.

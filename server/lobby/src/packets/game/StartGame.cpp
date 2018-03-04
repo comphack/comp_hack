@@ -85,7 +85,7 @@ bool Parsers::StartGame::Parse(libcomp::ManagerPacket *pPacketManager,
 
     // We need all this jazz too.
     auto accountManager = server->GetAccountManager();
-    auto character = account->GetCharacters(cid);
+    auto character = account->GetCharacters(cid).Get();
 
     // What? Go away hacker.
     if(!character)

@@ -169,10 +169,6 @@ bool ServerConstants::Initialize(const String& filePath)
     success &= LoadInteger(constants["STATUS_SUMMON_SYNC_3"],
         sConstants.STATUS_SUMMON_SYNC_3);
 
-    // Load login constants.
-    success &= LoadInteger(constants["WEBAUTH_TIMEOUT"],
-        sConstants.WEBAUTH_TIMEOUT);
-
     if(success && complexConstants.find("DEFAULT_SKILLS") != complexConstants.end())
     {
         const tinyxml2::XMLElement* pElement = complexConstants["DEFAULT_SKILLS"];

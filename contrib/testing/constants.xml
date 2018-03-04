@@ -37,7 +37,6 @@
     <constant name="STATUS_SUMMON_SYNC_1">194</constant>
     <constant name="STATUS_SUMMON_SYNC_2">364</constant>
     <constant name="STATUS_SUMMON_SYNC_3">365</constant>
-    <constant name="WEBAUTH_TIMEOUT">15</constant>
 
     <!-- Complex types -->
     <constant name="DEFAULT_SKILLS">

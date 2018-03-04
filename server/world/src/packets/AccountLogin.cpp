@@ -88,28 +88,39 @@ void LobbyLogin(std::shared_ptr<WorldServer> server,
     libcomp::Packet reply;
     reply.WritePacketCode(InternalPacketCode_t::PACKET_ACCOUNT_LOGIN);
 
+    auto config = std::dynamic_pointer_cast<objects::WorldConfig>(
+        server->GetConfig());
+    auto characterManager = server->GetCharacterManager();
+
+    uint8_t worldID = 0;
+    int8_t channelID = 0;
     auto loginChannel = server->GetLoginChannel();
 
-    if(ok && loginChannel)
+    ok = loginChannel != nullptr;
+    if(ok)
     {
-        int8_t channelID;
         auto accountManager = server->GetAccountManager();
-        auto characterManager = server->GetCharacterManager();
 
         // Remove any channel switches stored for whatever reason
         accountManager->PopChannelSwitch(login->GetAccount()
             ->GetUsername(), channelID);
 
-        auto worldID = std::dynamic_pointer_cast<objects::WorldConfig>(
-            server->GetConfig())->GetID();
-        channelID = (int8_t)loginChannel->GetID();
-
         // Login now to get the session key
-        if(!accountManager->LoginUser(login))
+        if(!accountManager->LobbyLogin(login))
         {
             LOG_ERROR(libcomp::String("Failed to login character '%1'. "
                 "Here is the state of the login object now:\n").Arg(
                 account->GetUsername()).Arg(login->GetXml()));
+            ok = false;
+        }
+    }
+
+    if(ok)
+    {
+        worldID = config->GetID();
+        if(channelID == 0)
+        {
+            channelID = (int8_t)loginChannel->GetID();
         }
 
         // Get the cached character login or register a new one
@@ -148,22 +159,11 @@ void LobbyLogin(std::shared_ptr<WorldServer> server,
 
         // If the character is already logged in somehow, send a
         // disconnect request (should cover dead connections)
-        if(cLogin->GetChannelID() >= 0)
-        {
-            auto channel = server->GetChannelConnectionByID(
-                cLogin->GetChannelID());
-            if(channel)
-            {
-                libcomp::Packet p;
-                p.WritePacketCode(
-                    InternalPacketCode_t::PACKET_ACCOUNT_LOGOUT);
-                p.WriteS32Little(cLogin->GetWorldCID());
-                p.WriteU32Little(
-                    (uint32_t)LogoutPacketAction_t::LOGOUT_DISCONNECT);
-                channel->SendPacket(p);
-            }
-        }
+        characterManager->RequestChannelDisconnect(cLogin->GetWorldCID());
+    }
 
+    if(ok)
+    {
         cLogin->SetWorldID((int8_t)worldID);
         cLogin->SetChannelID(channelID);
 
@@ -179,6 +179,15 @@ void LobbyLogin(std::shared_ptr<WorldServer> server,
 
         LOG_DEBUG(libcomp::String("Logging in account '%1' with session key"
             " %2\n").Arg(account->GetUsername()).Arg(login->GetSessionKey()));
+
+        // Schedule channel login timeout
+        server->GetTimerManager()->ScheduleEventIn(static_cast<int>(
+            config->GetChannelConnectionTimeOut()), [server]
+            (const std::shared_ptr<WorldServer> pServer,
+             const libcomp::String& pUsername, uint32_t pKey)
+        {
+            pServer->GetAccountManager()->ExpireSession(pUsername, pKey);
+        }, server, account->GetUsername(), login->GetSessionKey());
     }
     else
     {
@@ -213,7 +222,8 @@ void ChannelLogin(std::shared_ptr<WorldServer> server,
     else if(nullptr == login)
     {
         LOG_ERROR(libcomp::String("Account with username '%1'"
-            " is not logged in to this world (bad login).\n").Arg(username));
+            " is not logged in to this world or has an expired session.\n")
+            .Arg(username));
         ok = false;
     }
     else if(nullptr == cLogin)
@@ -289,6 +299,7 @@ void ChannelLogin(std::shared_ptr<WorldServer> server,
 
         if(character->Update(worldDB) && account->Update(lobbyDB))
         {
+            login->SetState(objects::AccountLogin::State_t::CHANNEL);
             cLogin->SetWorldID((int8_t)server->GetRegisteredWorld()->GetID());
             cLogin->SetStatus(objects::CharacterLogin::Status_t::ONLINE);
 

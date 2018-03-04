@@ -27,6 +27,8 @@
 #include "AccountManager.h"
 
 // libcomp Includes
+#include <Log.h>
+#include <PacketCodes.h>
 #include <Randomizer.h>
 
 // object Includes
@@ -35,9 +37,13 @@
 #include <CharacterLogin.h>
 #include <FriendSettings.h>
 
+// world Includes
+#include <WorldServer.h>
+
 using namespace world;
 
-AccountManager::AccountManager()
+AccountManager::AccountManager(const std::weak_ptr<WorldServer>& server)
+    : mServer(server)
 {
 }
 
@@ -61,7 +67,7 @@ bool AccountManager::IsLoggedIn(const libcomp::String& username,
     return result;
 }
 
-bool AccountManager::LoginUser(std::shared_ptr<objects::AccountLogin> login)
+bool AccountManager::LobbyLogin(std::shared_ptr<objects::AccountLogin> login)
 {
     bool result = false;
 
@@ -72,12 +78,6 @@ bool AccountManager::LoginUser(std::shared_ptr<objects::AccountLogin> login)
 
     if(mAccountMap.end() == pair)
     {
-        if(nullptr == login)
-        {
-            login = std::shared_ptr<objects::AccountLogin>(
-                new objects::AccountLogin);
-        }
-
         login->SetSessionKey(RNG(uint32_t, 1, (uint32_t)0x7FFFFFFF));
 
         auto res = mAccountMap.insert(std::make_pair(lookup, login));
@@ -103,6 +103,8 @@ std::shared_ptr<objects::AccountLogin> AccountManager::GetUserLogin(
 std::shared_ptr<objects::AccountLogin> AccountManager::LogoutUser(
     const libcomp::String& username, int8_t channel)
 {
+    LOG_DEBUG(libcomp::String("Logging out user: '%1'\n").Arg(username));
+
     std::shared_ptr<objects::AccountLogin> result;
 
     libcomp::String lookup = username.ToLower();
@@ -110,15 +112,83 @@ std::shared_ptr<objects::AccountLogin> AccountManager::LogoutUser(
     std::lock_guard<std::mutex> lock(mLock);
     auto pair = mAccountMap.find(lookup);
 
-    if(mAccountMap.end() != pair && channel == pair->second->
-        GetCharacterLogin()->GetChannelID())
+    if (mAccountMap.end() != pair && (channel == -1 ||
+        channel == pair->second->GetCharacterLogin()->GetChannelID()))
     {
         result = pair->second;
         Cleanup(result);
-        (void)mAccountMap.erase(pair);
+        mAccountMap.erase(pair);
+
+        auto cLogin = result->GetCharacterLogin();
+
+        if(cLogin && !cLogin->GetCharacter().IsNull())
+        {
+            auto server = mServer.lock();
+            auto characterManager = server->GetCharacterManager();
+
+            characterManager->PartyLeave(cLogin, nullptr, true);
+
+            // Notify existing players
+            std::list<std::shared_ptr<objects::CharacterLogin>> cLogOuts;
+            cLogOuts.push_back(cLogin);
+
+            characterManager->SendStatusToRelatedCharacters(cLogOuts,
+                (uint8_t)CharacterLoginStateFlag_t::CHARLOGIN_BASIC);
+
+            // Notify the lobby
+            libcomp::Packet lobbyMessage;
+            lobbyMessage.WritePacketCode(
+                InternalPacketCode_t::PACKET_ACCOUNT_LOGOUT);
+            lobbyMessage.WriteString16Little(
+                libcomp::Convert::Encoding_t::ENCODING_UTF8, username);
+            server->GetLobbyConnection()->SendPacket(lobbyMessage);
+        }
     }
 
     return result;
+}
+
+bool AccountManager::ExpireSession(const libcomp::String& username,
+    uint32_t key)
+{
+    bool expire = false;
+    std::shared_ptr<objects::AccountLogin> login;
+
+    libcomp::String lookup = username.ToLower();
+    {
+        std::lock_guard<std::mutex> lock(mLock);
+
+        auto pair = mAccountMap.find(lookup);
+
+        if(mAccountMap.end() != pair)
+        {
+            login = pair->second;
+
+            // Check the account is waiting and matches the session key.
+            if(login && objects::AccountLogin::State_t::CHANNEL !=
+                login->GetState() && key == login->GetSessionKey())
+            {
+                LOG_DEBUG(libcomp::String("Session for username '%1' has "
+                    "expired.\n").Arg(username));
+                expire = true;
+            }
+        }
+    }
+
+    if(expire)
+    {
+        // Perform log out from any channel
+        auto cLogin = login->GetCharacterLogin();
+        if(cLogin)
+        {
+            mServer.lock()->GetCharacterManager()
+                ->RequestChannelDisconnect(cLogin->GetWorldCID());
+        }
+
+        LogoutUser(username, -1);
+    }
+
+    return expire;
 }
 
 std::list<std::shared_ptr<objects::AccountLogin>>

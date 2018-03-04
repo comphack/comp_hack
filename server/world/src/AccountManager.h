@@ -39,6 +39,8 @@
 namespace world
 {
 
+class WorldServer;
+
 /**
  * Manages logged in user accounts.
  */
@@ -47,8 +49,10 @@ class AccountManager
 public:
     /**
      * Create a new account manager
+     * @param server Pointer back to the world server this
+     *  belongs to
      */
-    AccountManager();
+    AccountManager(const std::weak_ptr<WorldServer>& server);
 
     /**
      * Check if a user is logged in.
@@ -61,12 +65,12 @@ public:
         int8_t& channel);
 
     /**
-     * Mark the user logged into the given channel.
+     * Register the supplied login with the world if it has not been already.
      * @param login Login information associated to the account.
      * @return true if the user was logged in; false if the user is already
-     * logged in to another channel.
+     *  logged in.
      */
-    bool LoginUser(std::shared_ptr<objects::AccountLogin> login);
+    bool LobbyLogin(std::shared_ptr<objects::AccountLogin> login);
 
     /**
      * Get the current user login state independent of world.
@@ -86,6 +90,17 @@ public:
      */
     std::shared_ptr<objects::AccountLogin> LogoutUser(
         const libcomp::String& username, int8_t channel = -1);
+
+    /**
+     * Expire the user session and log out the account. If the session key
+     * is not matched or the account has completed its channel login
+     * (CHANNEL state) this is ignored.
+     * @param username Username for account to check.
+     * @param key Session key that has expired.
+     * @result true if the session was expired, false if it was not
+     */
+    bool ExpireSession(const libcomp::String& username,
+        uint32_t key);
 
     /**
      * Log out all users on a given channel. This should only be called
@@ -145,6 +160,9 @@ private:
             obj->Unregister();
         }
     }
+
+    /// Pointer back to theworld server this belongs to
+    std::weak_ptr<WorldServer> mServer;
 
     /// Map of account login information by username
     std::unordered_map<libcomp::String,

@@ -168,10 +168,11 @@ public:
      * Remove an entity from the zone. For player entities, use RemoveConnection
      * instead.
      * @param entityID ID of the entity to remove
-     * @param updateSpawns Optional parameter to update spawn groups
-     *  now instead of waiting for the cleanup of loot boxes etc
+     * @param spawnDelay Optional parameter to update spawn groups with
+     *  a timed delay (in seconds) instead of right away, should the group be
+     *  empty after the change
      */
-    void RemoveEntity(int32_t entityID, bool updateSpawns = false);
+    void RemoveEntity(int32_t entityID, uint32_t spawnDelay = 0);
 
     /**
      * Add an enemy to the zone

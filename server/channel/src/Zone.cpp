@@ -187,7 +187,7 @@ void Zone::RemoveConnection(const std::shared_ptr<ChannelClientConnection>& clie
     }
 }
 
-void Zone::RemoveEntity(int32_t entityID, bool updateSpawns)
+void Zone::RemoveEntity(int32_t entityID, uint32_t spawnDelay)
 {
     auto state = GetEntity(entityID);
 
@@ -205,11 +205,8 @@ void Zone::RemoveEntity(int32_t entityID, bool updateSpawns)
                         return e->GetEntityID() == entityID;
                     });
 
-                if(updateSpawns)
-                {
-                    removeEnemy = std::dynamic_pointer_cast<EnemyState>(state)
-                        ->GetEntity();
-                }
+                removeEnemy = std::dynamic_pointer_cast<EnemyState>(state)
+                    ->GetEntity();
             }
             break;
         case objects::EntityStateObject::EntityType_t::LOOT_BOX:
@@ -239,8 +236,6 @@ void Zone::RemoveEntity(int32_t entityID, bool updateSpawns)
                         }
                     }
                 }
-
-                removeEnemy = lState->GetEntity()->GetEnemy();
             }
             break;
         default:
@@ -282,7 +277,8 @@ void Zone::RemoveEntity(int32_t entityID, bool updateSpawns)
                     }
 
                     uint64_t rTime = ChannelServer::GetServerTime()
-                        + (uint64_t)(slg->GetRespawnTime() * 1000000);
+                        + (uint64_t)((double)slg->GetRespawnTime() *
+                            1000000.0 + (double)(spawnDelay * 1000));
 
                     mRespawnTimes[rTime].insert(slgID);
                 }

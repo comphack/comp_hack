@@ -180,9 +180,16 @@ bool Parsers::ReviveCharacter::Parse(libcomp::ManagerPacket *pPacketManager,
 
     if(hpRestore > 0.f)
     {
-        cState->SetHPMP((int32_t)floorl((float)cState->GetMaxHP() * hpRestore),
-            -1, false);
-        state->SetAcceptRevival(false);
+        if(cState->SetHPMP((int32_t)floorl((float)cState->GetMaxHP() *
+            hpRestore), -1, false))
+        {
+            std::set<std::shared_ptr<ActiveEntityState>> displayState;
+            displayState.insert(cState);
+
+            characterManager->UpdateWorldDisplayState(displayState);
+
+            state->SetAcceptRevival(false);
+        }
     }
 
     libcomp::Packet reply;

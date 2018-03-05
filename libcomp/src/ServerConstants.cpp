@@ -239,8 +239,49 @@ bool ServerConstants::Initialize(const String& filePath)
     if(success && complexIter != complexConstants.end())
     {
         std::unordered_map<std::string, std::string> map;
-        success = LoadKeyValueStrings(complexIter->second, map) &&
-            LoadIntegerMap(map, sConstants.CAMEO_MAP);
+        success = LoadKeyValueStrings(complexIter->second, map);
+        for(auto pair : map)
+        {
+            uint16_t key;
+            if(!LoadInteger(pair.first, key))
+            {
+                LOG_ERROR("Failed to load CAMEO_MAP key\n");
+                success = false;
+            }
+            else if(sConstants.CAMEO_MAP.find(key) !=
+                sConstants.CAMEO_MAP.end())
+            {
+                LOG_ERROR("Duplicate CAMEO_MAP key encountered\n");
+                success = false;
+            }
+            else
+            {
+                if(!pair.second.empty())
+                {
+                    auto params = libcomp::String(pair.second).Split(",");
+                    for(auto param : params)
+                    {
+                        uint32_t p = 0;
+                        if(LoadInteger(param.C(), p))
+                        {
+                            sConstants.CAMEO_MAP[key].push_back(p);
+                        }
+                        else
+                        {
+                            LOG_ERROR("Failed to load an element in"
+                                " CAMEO_MAP\n");
+                            success = false;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if(!success)
+            {
+                break;
+            }
+        }
     }
     else
     {

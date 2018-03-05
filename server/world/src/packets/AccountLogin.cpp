@@ -265,17 +265,21 @@ void ChannelLogin(std::shared_ptr<WorldServer> server,
 
             login->SavePacket(lobbyMessage, false);
             lobbyConnection->SendPacket(lobbyMessage);
+
+            login->SavePacket(reply, false);
         }
         else
         {
-            reply.WriteS8(0); // Failure
+            ok = false;
         }
-
-        login->SavePacket(reply, false);
     }
-    else
+
+    if(!ok)
     {
-        reply.WriteS8(0); // Failure
+        // Faiure, send the username back to disconnect
+        reply.WriteS8(0);
+        reply.WriteString16Little(libcomp::Convert::ENCODING_UTF8,
+            username, true);
     }
 
     connection->SendPacket(reply);

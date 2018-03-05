@@ -63,53 +63,71 @@ bool Parsers::AccountLogin::Parse(libcomp::ManagerPacket *pPacketManager,
         return false;
     }
 
+    auto server = std::dynamic_pointer_cast<ChannelServer>(
+        pPacketManager->GetServer());
+
     int8_t errorCode = p.ReadS8();
-
-    objects::AccountLogin response;
-    if(!response.LoadPacket(p, false))
+    if(errorCode == 1)
     {
-        LOG_ERROR("Invalid response received for AccountLogin.\n");
-        return false;
+        // No error
+        objects::AccountLogin response;
+        if(!response.LoadPacket(p, false))
+        {
+            LOG_ERROR("Invalid response received for AccountLogin.\n");
+            return false;
+        }
+
+        auto worldDB = server->GetWorldDatabase();
+
+        // This user should already be cached since its the same one we
+        // passed in
+        auto account = response.GetAccount().Get(server->GetLobbyDatabase());
+        if(nullptr == account)
+        {
+            LOG_ERROR("Unknown account returned from AccountLogin"
+                " response.\n");
+            return true;
+        }
+
+        // The character should be cached as well
+        auto character = response.GetCharacterLogin() != nullptr
+            ? response.GetCharacterLogin()->GetCharacter().Get(worldDB)
+            : nullptr;
+        if(nullptr == character)
+        {
+            LOG_ERROR("Invalid character returned from AccountLogin"
+                " response.\n");
+            return true;
+        }
+
+        auto username = account->GetUsername();
+        auto client = server->GetManagerConnection()
+            ->GetClientConnection(username);
+        if(nullptr == client)
+        {
+            // Already disconnected, nevermind
+            return true;
+        }
+
+        auto login = client->GetClientState()->GetAccountLogin();
+        login->SetSessionID(response.GetSessionID());
+        login->SetCharacterLogin(response.GetCharacterLogin());
+
+        server->QueueWork(HandleLoginResponse, server->GetAccountManager(),
+            client);
     }
-
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-    auto worldDB = server->GetWorldDatabase();
-
-    // This user should already be cached since its the same one we passed in
-    auto account = response.GetAccount().Get(server->GetLobbyDatabase());
-    if(nullptr == account)
+    else
     {
-        LOG_ERROR("Unknown account returned from AccountLogin response.\n");
-        return true;
+        // Failure, disconnect the client if they're here
+        auto username = p.ReadString16Little(
+            libcomp::Convert::Encoding_t::ENCODING_UTF8, true);
+        auto client = server->GetManagerConnection()
+            ->GetClientConnection(username);
+        if(nullptr != client)
+        {
+            client->Close();
+        }
     }
-
-    // The character should be cached as well
-    auto character = response.GetCharacterLogin() != nullptr
-        ? response.GetCharacterLogin()->GetCharacter().Get(worldDB) : nullptr;
-    if(nullptr == character)
-    {
-        LOG_ERROR("Invalid character returned from AccountLogin response.\n");
-        return true;
-    }
-
-    auto username = account->GetUsername();
-    auto client = server->GetManagerConnection()->GetClientConnection(username);
-    if(nullptr == client)
-    {
-        return true;
-    }
-
-    if(1 != errorCode)
-    {
-        client->Close();
-        return true;
-    }
-
-    auto login = client->GetClientState()->GetAccountLogin();
-    login->SetSessionID(response.GetSessionID());
-    login->SetCharacterLogin(response.GetCharacterLogin());
-
-    server->QueueWork(HandleLoginResponse, server->GetAccountManager(), client);
 
     return true;
 }

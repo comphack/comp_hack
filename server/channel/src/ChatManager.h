@@ -41,7 +41,7 @@ class ChannelServer;
  */
 enum ChatType_t : uint16_t
 {
-   
+
     CHAT_PARTY = 41,
     CHAT_SHOUT = 44,
     CHAT_SAY = 45,
@@ -137,7 +137,7 @@ private:
         channel::ChannelClientConnection>& client,
         const std::list<libcomp::String>& args);
 
-    /** 
+    /**
      * GM command to ban a player currently on the channel
      * @param client Pointer to the client that sent the command
      * @param args List of arguments for the command
@@ -231,6 +231,16 @@ private:
         const std::list<libcomp::String>& args);
 
     /**
+     * GM command to display help for other commands.
+     * @param client Pointer to the client that sent the command
+     * @param args List of arguments for the command
+     * @return true if the command was handled properly, else false
+     */
+    bool GMCommand_Help(const std::shared_ptr<
+        channel::ChannelClientConnection>& client,
+        const std::list<libcomp::String>& args);
+
+    /**
      * GM command to set the client character's homepoint to their
      * current zone's first spawn in point encountered.
      * @param client Pointer to the client that sent the command
@@ -260,8 +270,8 @@ private:
     bool GMCommand_Item(const std::shared_ptr<
         channel::ChannelClientConnection>& client,
         const std::list<libcomp::String>& args);
-    
-    /** 
+
+    /**
      * GM command to kick a player from the channel
      * @param client Pointer to the client that sent the command
      * @param args List of arguments for the command

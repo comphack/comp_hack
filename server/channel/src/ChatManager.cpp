@@ -77,6 +77,7 @@ ChatManager::ChatManager(const std::weak_ptr<ChannelServer>& server)
     mGMands["expertiseup"] = &ChatManager::GMCommand_ExpertiseUpdate;
     mGMands["familiarity"] = &ChatManager::GMCommand_Familiarity;
     mGMands["goto"] = &ChatManager::GMCommand_Goto;
+    mGMands["help"] = &ChatManager::GMCommand_Help;
     mGMands["homepoint"] = &ChatManager::GMCommand_Homepoint;
     mGMands["instance"] = &ChatManager::GMCommand_Instance;
     mGMands["item"] = &ChatManager::GMCommand_Item;
@@ -287,7 +288,6 @@ bool ChatManager::ExecuteGMCommand(const std::shared_ptr<
     return false;
 }
 
-
 bool ChatManager::GMCommand_AddCP(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
@@ -407,7 +407,7 @@ bool ChatManager::GMCommand_Ban(const std::shared_ptr<
          return SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(
             "@ban requires one argument, <username>"));
     }
-    
+
     auto server = mServer.lock();
     auto worldDB = server->GetWorldDatabase();
     auto lobbyDB = server->GetLobbyDatabase();
@@ -422,7 +422,7 @@ bool ChatManager::GMCommand_Ban(const std::shared_ptr<
             "Your user level is lower than the user you tried to ban.");
     }
 
-    if(targetClient != nullptr) 
+    if(targetClient != nullptr)
     {
         targetAccount->SetEnabled(false);
         targetAccount->Update(lobbyDB);
@@ -859,6 +859,243 @@ bool ChatManager::GMCommand_Goto(const std::shared_ptr<
     }
 }
 
+bool ChatManager::GMCommand_Help(const std::shared_ptr<
+    channel::ChannelClientConnection>& client,
+    const std::list<libcomp::String>& args)
+{
+    static std::map<std::string, std::vector<std::string>> usage = {
+        { "addcp", {
+            "@addcp AMOUNT [NAME]",
+            "Gives AMOUNT of CP to the character NAME or to yourself",
+            "if no NAME is specified.",
+        } },
+        { "announce", {
+            "@announce COLOR MESSAGE...",
+            "Announce a ticker MESSAGE with the specified COLOR.",
+        } },
+        { "ban", {
+            "@ban NAME",
+            "Bans the account which owns the character NAME.",
+        } },
+        { "contract", {
+            "@contract ID|NAME",
+            "Adds demon given by it's ID or NAME to your COMP.",
+        } },
+        { "crash", {
+            "@crash",
+            "Causes the server to crash for testing the database.",
+        } },
+        { "effect", {
+            "@effect ID [+]STACK [DEMON]",
+            "Add or sets the stack count for status effect with",
+            "the given ID for the player or demon if DEMON is set",
+            "to 'demon'."
+        } },
+        { "enemy", {
+            "@enemy ID|NAME [AI [X Y [ROT]]]",
+            "Spawns the enemy with the given ID or NAME at the",
+            "position of the character or at the position X, Y",
+            "with the rotation ROT. If AI is specified that AI",
+            "type is used instead of the default."
+        } },
+        { "expertisemax", {
+            "@expertisemax STACKS",
+            "Adds STACKS * 1000 points to the expertise cap.",
+            "Maximum expertise cap is 154,000."
+        } },
+        { "expertiseup", {
+            "@expertiseup ID [MULTIPLIER]",
+            "Raises the expertise as if the skill with ID was used.",
+            "If MULTIPLIER is specified the expertise gain is ",
+            "multiplied by MULTIPLIER."
+        } },
+        { "familiarity", {
+            "@familiarity VALUE",
+            "Updates the current partner's familiarity to the given",
+            "VALUE which can be in the range [0-10000]."
+        } },
+        { "goto", {
+            "@goto [SELF] NAME",
+            "If SELF is set to 'self' the player is moved to the",
+            "character with the given name. If not set, the character",
+            "with the given name is moved to the player."
+        } },
+        { "help", {
+            "@help [GMAND]",
+            "Lists the GMands supported by the server or prints the",
+            "description of the GMAND specified."
+        } },
+        { "homepoint", {
+            "@homepoint",
+            "Sets your current position as your homepoint.",
+        } },
+        { "instance ID", {
+            "@instance",
+            "Creates a dungeon instance given the specified ",
+            "instance ID. This ID must be in the XML data.",
+        } },
+        { "item", {
+            "@item ID|NAME [QTY]",
+            "Adds the item given by the ID or NAME in the specified",
+            "quantity to the player's inventory. The NAME may be",
+            "'macca' or 'mag' instead."
+        } },
+        { "kick", {
+            "@kick NAME",
+            "Kicks the character with the given NAME from the server.",
+        } },
+        { "kill", {
+            "@kill [NAME]",
+            "Kills the character with the given NAME or your player",
+            "if no NAME is specified."
+        } },
+        { "levelup", {
+            "@levelup LEVEL [DEMON]",
+            "Levels up the player to the specified LEVEL or the",
+            "player's current partner if DEMON is set to 'demon'."
+        } },
+        { "lnc", {
+            "@lnc VALUE",
+            "Sets the player's LNC to the given VALUE. VALUE should",
+            "be in the range [-10000, 10000]."
+        } },
+        { "map", {
+            "@map ID",
+            "Adds map for the player with the given ID.",
+        } },
+        { "plugin", {
+            "@plugin ID",
+            "Adds plugin for the player with the given ID.",
+        } },
+        { "pos", {
+            "@pos [X Y]",
+            "Prints out the X, Y position of the player or moves",
+            "the player to the given X, Y position."
+        } },
+        { "post", {
+            "@post ID [NAME]",
+            "Adds the post item given by the ID to the character",
+            "specified by NAME's post. If NAME is not specified",
+            "the player's post is used."
+        } },
+        { "quest", {
+            "@quest ID PHASE",
+            "Sets the phase of the quest given by the ID to the phase",
+            "PHASE. A phase of -1 is complete and -2 is a reset."
+        } },
+        { "scrap", {
+            "@scrap SLOT [NAME]",
+            "Removes the item in slot SLOT from the character's",
+            "inventory whose NAME is specified. The SLOT is a value",
+            "in the range [0, 49] and if the NAME is not specified",
+            "the player's inventory is used."
+        } },
+        { "skill", {
+            "@skill ID DEMON",
+            "Grants the skill with the specified ID to the player or",
+            "the player's partner if DEMON is set to 'demon'."
+        } },
+        { "skillpoint", {
+            "@skillpoint PTS",
+            "Adds the specified number of skill points PTS to the",
+            "available skill points for allocation."
+        } },
+        { "slotadd", {
+            "@slotadd LOCATION",
+            "Adds a slot to the specified equipment LOCATION.",
+            "LOCATION may be 3 for top, 5 for bottom or 13 for weapon."
+        } },
+        { "sp", {
+            "@sp PTS",
+            "Updates the player's partner to have PTS SP.",
+        } },
+        { "spawn", {
+            "@spawn",
+            "Spawn the max number of enemies in each spawn group",
+            "in the current zone.",
+        } },
+        { "speed", {
+            "@speed MULTIPLIER [DEMON]",
+            "Multiplies the speed of the player by MULTIPLIER or",
+            "the demon if DEMON is set to 'demon'."
+        } },
+        { "tickermessage", {
+            "@tickermessage MESSAGE...",
+            "Sends the ticker message MESSAGE to all players.",
+        } },
+        { "tokusei", {
+            "@tokusei CLEAR|ID [STACK] [DEMON]",
+            "Adds STACK of a tokusei given by the specified ID",
+            "to the player or the player's demon if DEMON is set",
+            "to 'demon'. STACK must be specified if CLEAR is not",
+            "set to 'clear'. DEMON may not be specified if CLEAR",
+            "is set."
+        } },
+        { "valuable", {
+            "@valuable ID [REMOVE]",
+            "Grants the player the valuable with the given ID. If",
+            "REMOVE is set to 'remove' the valuable is removed."
+        } },
+        { "version", {
+            "@version",
+            "Prints version information for the running server.",
+        } },
+        { "xp", {
+            "@xp PTS [DEMON]",
+            "Grants the player PTS XP or the demon if DEMON is",
+            "set to 'demon'."
+        } },
+        { "zone", {
+            "@zone ID",
+            "Moves the player to the zone specified by ID.",
+        } },
+    };
+
+    if(!HaveUserLevel(client, 1))
+    {
+        return true;
+    }
+
+    libcomp::String command;
+
+    if(1 < args.size())
+    {
+        command = "help";
+    }
+    else if(!args.empty())
+    {
+        command = args.front().ToLower();
+    }
+
+    if(command.IsEmpty())
+    {
+        for(auto cmd : usage)
+        {
+            SendChatMessage(client, ChatType_t::CHAT_SELF,
+                cmd.second.front());
+        }
+    }
+    else
+    {
+        auto cmd = usage.find(command.ToUtf8());
+
+        if(usage.end() != cmd)
+        {
+            for(auto line : cmd->second)
+            {
+                SendChatMessage(client, ChatType_t::CHAT_SELF, line);
+            }
+        }
+        else
+        {
+            SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(
+                "The command '%1' does not exist.").Arg(command));
+        }
+    }
+
+    return true;
+}
+
 bool ChatManager::GMCommand_Homepoint(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
@@ -1045,7 +1282,7 @@ bool ChatManager::GMCommand_Kick(const std::shared_ptr<
             "Your user level is lower than the user you tried to kick.");
     }
 
-    if(targetClient != nullptr) 
+    if(targetClient != nullptr)
     {
         targetClient->Close();
 
@@ -1298,7 +1535,7 @@ bool ChatManager::GMCommand_Position(const std::shared_ptr<
             zoneManager->Warp(client, dState, destX, destY,
                 dState->GetDestinationRotation());
         }
-        
+
         return true;
     }
     else if(!args.empty() && args.size() != 2)
@@ -1329,7 +1566,7 @@ bool ChatManager::GMCommand_Post(const std::shared_ptr<
     auto lobbyDB = server->GetLobbyDatabase();
     auto worldDB = server->GetWorldDatabase();
     auto definitionManager = server->GetDefinitionManager();
-    
+
     uint32_t itemID;
 
     if(!GetIntegerArg<uint32_t>(itemID, argsCopy) ||
@@ -1346,7 +1583,7 @@ bool ChatManager::GMCommand_Post(const std::shared_ptr<
         auto target = objects::Character::LoadCharacterByName(worldDB, name);
         targetAccount = target ? target->GetAccount().GetUUID() : NULLUUID;
     }
-    
+
     if(targetAccount.IsNull())
     {
         return SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(
@@ -1384,7 +1621,7 @@ bool ChatManager::GMCommand_Quest(const std::shared_ptr<
 
     auto server = mServer.lock();
     auto definitionManager = server->GetDefinitionManager();
-    
+
     uint32_t questID;
     bool validQuestID = GetIntegerArg<uint32_t>(questID, argsCopy);
     auto questData = validQuestID
@@ -1706,7 +1943,7 @@ bool ChatManager::GMCommand_TickerMessage(const std::shared_ptr<
     std::list<libcomp::String> argsCopy = args;
     int8_t mode = 0;
 
-    if(!GetIntegerArg(mode, argsCopy) || argsCopy.size() < 1)   
+    if(!GetIntegerArg(mode, argsCopy) || argsCopy.size() < 1)
     {
         return SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(
             "Syntax invalid, try @tickermessage <mode> <message>"));
@@ -1714,10 +1951,10 @@ bool ChatManager::GMCommand_TickerMessage(const std::shared_ptr<
 
     libcomp::String message = libcomp::String::Join(argsCopy, " ");
 
-    if (mode == 1) 
+    if (mode == 1)
     {
         server->SendSystemMessage(client, message, 0, true);
-    }  
+    }
 
     conf->SetSystemMessage(message);
 
@@ -1734,7 +1971,7 @@ bool ChatManager::GMCommand_Tokusei(const std::shared_ptr<
     }
 
     std::list<libcomp::String> argsCopy = args;
-    
+
     bool isClear = false;
     if(argsCopy.size() > 0 && argsCopy.front() == "clear")
     {
@@ -1929,7 +2166,7 @@ bool ChatManager::GMCommand_Zone(const std::shared_ptr<
                 libcomp::String("Failed to enter zone: %1 (%2)")
                 .Arg(zoneID).Arg(dynamicMapID));
         }
-        
+
         return true;
     }
     else

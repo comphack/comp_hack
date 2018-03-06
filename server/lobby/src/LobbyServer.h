@@ -34,7 +34,6 @@
 // lobby Includes
 #include "AccountManager.h"
 #include "ManagerConnection.h"
-#include "SessionManager.h"
 #include "World.h"
 
 namespace objects
@@ -145,10 +144,10 @@ public:
     LobbySyncManager* GetLobbySyncManager() const;
 
     /**
-     * Get the session manager for the server.
-     * @return Session manager for the server.
+     * Get the same fake salt for an account that does not exist.
+     * @return A fake salt for an account that does not exist.
      */
-    SessionManager* GetSessionManager();
+    libcomp::String GetFakeAccountSalt(const libcomp::String& username);
 
 protected:
     /**
@@ -208,8 +207,11 @@ protected:
     /// Data sync manager for the server.
     LobbySyncManager* mSyncManager;
 
-    /// Session manager for the server.
-    SessionManager mSessionManager;
+    /// Lock for the fake salts.
+    std::mutex mFakeSaltsLock;
+
+    /// Mapping of fake salts for usernames that do not exist.
+    std::unordered_map<libcomp::String, libcomp::String> mFakeSalts;
 };
 
 } // namespace lobby

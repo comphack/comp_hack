@@ -39,6 +39,8 @@
 namespace world
 {
 
+class WorldServer;
+
 /**
  * Manages logged in user accounts.
  */
@@ -47,8 +49,10 @@ class AccountManager
 public:
     /**
      * Create a new account manager
+     * @param server Pointer back to the world server this
+     *  belongs to
      */
-    AccountManager();
+    AccountManager(const std::weak_ptr<WorldServer>& server);
 
     /**
      * Check if a user is logged in.
@@ -61,12 +65,31 @@ public:
         int8_t& channel);
 
     /**
-     * Mark the user logged into the given channel.
+     * Register the supplied login with the world if it has not been already.
      * @param login Login information associated to the account.
      * @return true if the user was logged in; false if the user is already
-     * logged in to another channel.
+     *  logged in.
      */
-    bool LoginUser(std::shared_ptr<objects::AccountLogin> login);
+    bool LobbyLogin(std::shared_ptr<objects::AccountLogin> login);
+
+    /**
+     * Update the supplied login, set the login state to CHANNEL and the
+     * character status to ONLINE. Also perform any "on login" actions.
+     * @param login Login information associated to the account.
+     * @return true if the account was successfully updated; false if an
+     *  error occurred.
+     */
+    bool ChannelLogin(std::shared_ptr<objects::AccountLogin> login);
+
+    /**
+     * Transition the login from CHANNEL to CHANNEL_TO_CHANNEL and sechedule
+     * a timeout.
+     * @param login Login information associated to the account.
+     * @param channelID New channel ID, the connection will be moved to
+     * @return true if the update succeeded, false if it did not
+     */
+    bool SwitchChannel(std::shared_ptr<objects::AccountLogin> login,
+        int8_t channelID);
 
     /**
      * Get the current user login state independent of world.
@@ -88,6 +111,17 @@ public:
         const libcomp::String& username, int8_t channel = -1);
 
     /**
+     * Expire the user session and log out the account. If the session key
+     * is not matched or the account has completed its channel login
+     * (CHANNEL state) this is ignored.
+     * @param username Username for account to check.
+     * @param key Session key that has expired.
+     * @result true if the session was expired, false if it was not
+     */
+    bool ExpireSession(const libcomp::String& username,
+        uint32_t key);
+
+    /**
      * Log out all users on a given channel. This should only be called
      * when a channel disconnects.
      * @param channel Channel to log out all users from.
@@ -95,23 +129,6 @@ public:
      */
     std::list<std::shared_ptr<objects::AccountLogin>>
         LogoutUsersOnChannel(int8_t channel);
-
-    /**
-     * Update the session key of the supplied login.  The lobby must be
-     * notified of this update or the login information will become out
-     * of sync.
-     * @param login Pointer to the account login to update
-     */
-    void UpdateSessionKey(std::shared_ptr<objects::AccountLogin> login);
-
-    /**
-     * "Push" a channel switch signifier to the manager for the specified
-     * account. The next logout request will pop this value and await a
-     * reconnect to the specified channel rather than log the account out.
-     * @param username Username of the account that will switch channels
-     * @param channel Channel being switched to
-     */
-    void PushChannelSwitch(const libcomp::String& username, int8_t channel);
 
     /**
      * "Pop" any existing channel switch signifier from the manager for
@@ -125,11 +142,28 @@ public:
 
 private:
     /**
+     * Update the session key of the supplied login.  The lobby must be
+     * notified of this update or the login information will become out
+     * of sync.
+     * @param login Pointer to the account login to update
+     */
+    void UpdateSessionKey(std::shared_ptr<objects::AccountLogin> login);
+
+    /**
      * Utility function to free up references to an AccountLogin loaded
      * by the world.
      * @param login Pointer to the AcccountLogin to clean up
      */
     void Cleanup(const std::shared_ptr<objects::AccountLogin>& login);
+
+    /**
+     * "Push" a channel switch signifier to the manager for the specified
+     * account. The next logout request will pop this value and await a
+     * reconnect to the specified channel rather than log the account out.
+     * @param username Username of the account that will switch channels
+     * @param channel Channel being switched to
+     */
+    void PushChannelSwitch(const libcomp::String& username, int8_t channel);
 
     /**
      * Utility function to free up references to a PersistentObject loaded
@@ -145,6 +179,9 @@ private:
             obj->Unregister();
         }
     }
+
+    /// Pointer back to theworld server this belongs to
+    std::weak_ptr<WorldServer> mServer;
 
     /// Map of account login information by username
     std::unordered_map<libcomp::String,

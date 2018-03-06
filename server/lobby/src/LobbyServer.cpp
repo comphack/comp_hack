@@ -53,7 +53,7 @@ LobbyServer::LobbyServer(const char *szProgram,
     std::shared_ptr<objects::ServerConfig> config,
     std::shared_ptr<libcomp::ServerCommandLineParser> commandLine,
     bool unitTestMode) : libcomp::BaseServer(szProgram, config, commandLine),
-    mUnitTestMode(unitTestMode)
+    mUnitTestMode(unitTestMode), mAccountManager(this)
 {
 }
 
@@ -546,11 +546,6 @@ LobbySyncManager* LobbyServer::GetLobbySyncManager() const
     return mSyncManager;
 }
 
-SessionManager* LobbyServer::GetSessionManager()
-{
-    return &mSessionManager;
-}
-
 bool LobbyServer::ResetRegisteredWorlds()
 {
     //Set all the default World information
@@ -579,3 +574,26 @@ bool LobbyServer::ResetRegisteredWorlds()
 
     return true;
 }
+
+libcomp::String LobbyServer::GetFakeAccountSalt(
+    const libcomp::String& username)
+{
+    // Lock the muxtex.
+    std::lock_guard<std::mutex> lock(mFakeSaltsLock);
+
+    auto it = mFakeSalts.find(username);
+
+    if(mFakeSalts.end() == it)
+    {
+        auto salt = libcomp::Decrypt::GenerateRandom(10);
+
+        mFakeSalts[username] = salt;
+
+        return salt;
+    }
+    else
+    {
+        return it->second;
+    }
+}
+

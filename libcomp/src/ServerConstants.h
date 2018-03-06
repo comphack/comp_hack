@@ -219,8 +219,9 @@ struct Data
     /// Default skills to add to a new character
     std::set<uint32_t> DEFAULT_SKILLS;
 
-    /// Map of cameo item IDs to transformation status effect IDs
-    std::unordered_map<uint32_t, uint32_t> CAMEO_MAP;
+    /// Map of cameo item IDs to transformation status effect IDs, if
+    /// more than one status effect is listed, a random one is chosen
+    std::unordered_map<uint32_t, std::list<uint32_t>> CAMEO_MAP;
 
     /// Map of clan formation item IDs to their corresponding home base zones
     std::unordered_map<uint32_t, uint32_t> CLAN_FORM_MAP;

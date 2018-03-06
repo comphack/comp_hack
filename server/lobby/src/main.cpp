@@ -146,7 +146,6 @@ int main(int argc, const char *argv[])
 
     auto pLoginHandler = new lobby::LoginHandler(server->GetMainDatabase());
     pLoginHandler->SetAccountManager(server->GetAccountManager());
-    pLoginHandler->SetSessionManager(server->GetSessionManager());
     pLoginHandler->SetConfig(std::dynamic_pointer_cast<
         objects::LobbyConfig>(config));
 

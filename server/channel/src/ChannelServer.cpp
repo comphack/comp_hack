@@ -538,12 +538,15 @@ void ChannelServer::Shutdown()
 {
     mTickRunning = false;
 
+    BaseServer::Shutdown();
+}
+
+void ChannelServer::Cleanup()
+{
     if(mTickThread.joinable())
     {
         mTickThread.join();
     }
-
-    BaseServer::Shutdown();
 }
 
 ChannelServer::~ChannelServer()

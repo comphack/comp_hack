@@ -113,6 +113,26 @@ std::shared_ptr<objects::CharacterLogin> CharacterManager::GetCharacterLogin(
     return character ? GetCharacterLogin(character->GetUUID()) : nullptr;
 }
 
+void CharacterManager::RequestChannelDisconnect(int32_t worldCID)
+{
+    auto cLogin = GetCharacterLogin(worldCID);
+    if(cLogin && cLogin->GetChannelID() >= 0)
+    {
+        auto channel = mServer.lock()->GetChannelConnectionByID(
+            cLogin->GetChannelID());
+        if(channel)
+        {
+            libcomp::Packet p;
+            p.WritePacketCode(InternalPacketCode_t::PACKET_ACCOUNT_LOGOUT);
+            p.WriteS32Little(worldCID);
+            p.WriteU32Little((uint32_t)
+                LogoutPacketAction_t::LOGOUT_DISCONNECT);
+
+            channel->SendPacket(p);
+        }
+    }
+}
+
 bool CharacterManager::SendToCharacters(libcomp::Packet& p,
     const std::list<std::shared_ptr<objects::CharacterLogin>>& cLogins, uint32_t cidOffset)
 {

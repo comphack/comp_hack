@@ -2,7 +2,8 @@
 <objgen>
     <object name="ClientStateObject" persistent="false">
         <member type="bool" name="Authenticated"/>
-        <member type="bool" name="LoggedIn"/>
+        <member type="string" name="Username"/>
         <member type="Account*" name="Account"/>
+        <member type="u32" name="Challenge"/>
     </object>
 </objgen>

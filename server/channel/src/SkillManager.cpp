@@ -3131,7 +3131,7 @@ void SkillManager::HandleKills(std::shared_ptr<ActiveEntityState> source,
         std::list<int32_t> enemyIDs;
         for(auto eState : enemiesKilled)
         {
-            zone->RemoveEntity(eState->GetEntityID());
+            zone->RemoveEntity(eState->GetEntityID(), 1);
             enemyIDs.push_back(eState->GetEntityID());
         }
 
@@ -3539,7 +3539,7 @@ void SkillManager::HandleNegotiations(const std::shared_ptr<ActiveEntityState> s
 
             // Remove all opponents
             characterManager->AddRemoveOpponent(false, pair.first, nullptr);
-            zone->RemoveEntity(pair.first->GetEntityID(), removeMode == 8);
+            zone->RemoveEntity(pair.first->GetEntityID(), 1);
             removedEnemies[removeMode].push_back(pair.first->GetEntityID());
         }
     }
@@ -4918,7 +4918,8 @@ bool SkillManager::Cameo(const std::shared_ptr<objects::ActivatedAbility>& activ
 
     auto transformIter = item ? SVR_CONST.CAMEO_MAP.find(item->GetType())
         : SVR_CONST.CAMEO_MAP.end();
-    if(!item || transformIter == SVR_CONST.CAMEO_MAP.end() || item->GetDurability() < 1000)
+    if(!item || transformIter == SVR_CONST.CAMEO_MAP.end() ||
+        transformIter->second.size() == 0 || item->GetDurability() < 1000)
     {
         SendFailure(source, activated->GetSkillID(), client,
             (uint8_t)SkillErrorCodes_t::ITEM_USE);
@@ -4928,15 +4929,31 @@ bool SkillManager::Cameo(const std::shared_ptr<objects::ActivatedAbility>& activ
     auto server = mServer.lock();
     auto characterManager = server->GetCharacterManager();
 
-    AddStatusEffectMap m;
-    m[transformIter->second] = std::pair<uint8_t, bool>(1, true);
+    uint32_t effectID = 0;
+    if(transformIter->second.size() > 1)
+    {
+        auto effectIter = transformIter->second.begin();
+        size_t randomIdx = (size_t)RNG(int32_t, 0,
+            (int32_t)(transformIter->second.size() - 1));
+        std::advance(effectIter, randomIdx);
 
-    cState->AddStatusEffects(m, server->GetDefinitionManager());
-    server->GetTokuseiManager()->Recalculate(cState,
-        std::set<TokuseiConditionType> { TokuseiConditionType::STATUS_ACTIVE });
+        effectID = *effectIter;
+    }
+    else
+    {
+        effectID = transformIter->second.front();
+    }
+
+    AddStatusEffectMap m;
+    m[effectID] = std::pair<uint8_t, bool>(1, true);
 
     if(ProcessSkillResult(activated, ctx))
     {
+        cState->AddStatusEffects(m, server->GetDefinitionManager());
+        server->GetTokuseiManager()->Recalculate(cState,
+            std::set<TokuseiConditionType> {
+            TokuseiConditionType::STATUS_ACTIVE });
+
         characterManager->UpdateDurability(client, item, -1000);
     }
     else

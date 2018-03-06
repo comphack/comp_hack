@@ -1993,8 +1993,23 @@ bool ChatManager::GetStringArg(libcomp::String& outVal,
         return false;
     }
 
-    outVal = args.front();
+    outVal = args.front().Replace("\\\"", "\"");
     args.pop_front();
+
+    // Rebuild the full string if it starts with a double quote,
+    // end if another unescaped double quote is read
+    if(outVal.At(0) == '"')
+    {
+        while(outVal.At(outVal.Length() - 1) != '"' &&
+            (outVal.Length() < 2 || outVal.At(outVal.Length() - 2) != '\\') &&
+            !args.empty())
+        {
+            outVal += " " + args.front().Replace("\\\"", "\"");
+            args.pop_front();
+        }
+
+        outVal = outVal.Mid(1, outVal.Length() - 2);
+    }
 
     if(encoding != libcomp::Convert::Encoding_t::ENCODING_UTF8)
     {

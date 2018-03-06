@@ -141,6 +141,12 @@ public:
     virtual void Shutdown();
 
     /**
+     * This is called before Run() ends giving a derived class the chance to
+     * do additional cleanup.
+     */
+    virtual void Cleanup();
+
+    /**
      * Get the current config directory path to use. If a value is passed
      * to SetConfigPath, that will be used, if not GetDefaultConfigPath
      * will be used instead.

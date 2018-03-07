@@ -8,7 +8,7 @@
  *
  * This file is part of the Lobby Server (lobby).
  *
- * Copyright (C) 2012-2016 COMP_hack Team <compomega@tutanota.com>
+ * Copyright (C) 2012-2018 COMP_hack Team <compomega@tutanota.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as
@@ -29,6 +29,7 @@
 
 // libcomp Includes
 #include <CString.h>
+#include <ErrorCodes.h>
 
 // Standard C++11 Includes
 #include <mutex>
@@ -36,6 +37,13 @@
 
 // object Includes
 #include <AccountLogin.h>
+
+namespace objects
+{
+
+class Character;
+
+} // namespace objects
 
 namespace lobby
 {
@@ -49,11 +57,149 @@ class AccountManager
 {
 public:
     /**
-     * Check if a user is logged in.
-     * @param username Username for the account to check.
-     * @return true if the user is logged in; false otherwise.
+     * Construct the account manager.
+     * @param Pointer to the lobby server this account manager is part of.
+     * @note The server must remain valid during any account manager request.
      */
-    bool IsLoggedIn(const libcomp::String& username);
+    explicit AccountManager(LobbyServer *pServer);
+
+    /**
+     * Transitions the user login state from OFFLINE to LOBBY_WAIT. This
+     * operation provides a session ID for the user to pass to a lobby server
+     * connection. If the user does not login within a specified period of
+     * time the session ID is invalidated and the user transitions back to
+     * the OFFLINE state.
+     * @param username Username of the account to authenticate.
+     * @param password Password of the account to authenticate.
+     * @param clientVersion Client version converted into an integer.
+     * @param sid Reference to a string to save the session ID into.
+     * @returns Error code indicating the success or failure of this
+     * operation. This function can return one of:
+     * - SUCCESS (login was valid and a session ID was generated)
+     * - SYSTEM_ERROR (some internal error occurred)
+     * - BAD_USERNAME_PASSWORD
+     * - ACCOUNT_STILL_LOGGED_IN (account not in OFFLINE or LOBBY_WAIT)
+     * - SERVER_FULL (too many accounts are online)
+     * - WRONG_CLIENT_VERSION
+     * - ACCOUNT_DISABLED (your account has been disabled/banned)
+     * @note This function is thread safe.
+     */
+    ErrorCodes_t WebAuthLogin(const libcomp::String& username,
+        const libcomp::String& password, uint32_t clientVersion,
+        libcomp::String& sid);
+
+    /**
+     * Transitions the user login state from LOBBY_WAIT to LOBBY. This
+     * operation provides a session ID for the user to pass to a lobby server
+     * connection.
+     * @param username Username of the account to authenticate.
+     * @param sid Session ID given by the web authentication.
+     * @param sid2 Session ID to give back to the client.
+     * @returns Error code indicating the success or failure of this
+     * operation. This function can return one of:
+     * - SUCCESS (login was valid and a session ID was generated)
+     * - SYSTEM_ERROR (some internal error occurred)
+     * - BAD_USERNAME_PASSWORD
+     * - ACCOUNT_STILL_LOGGED_IN (account not in OFFLINE or LOBBY_WAIT)
+     * @note This function is thread safe.
+     */
+    ErrorCodes_t LobbyLogin(const libcomp::String& username,
+        const libcomp::String& sid, libcomp::String& sid2);
+
+    /**
+     * Transitions the user login state from OFFLINE to LOBBY. It is assumed
+     * the client version and the password hash has already been checked by
+     * the classic login packet handlers.
+     * @param username Username of the account to authenticate.
+     * @param sid2 Session ID to give back to the client.
+     * @returns Error code indicating the success or failure of this
+     * operation. This function can return one of:
+     * - SUCCESS (login was valid and a session ID was generated)
+     * - SYSTEM_ERROR (some internal error occurred)
+     * - BAD_USERNAME_PASSWORD
+     * - ACCOUNT_STILL_LOGGED_IN (account not in OFFLINE or LOBBY_WAIT)
+     * - SERVER_FULL (too many accounts are online)
+     * - ACCOUNT_DISABLED (your account has been disabled/banned)
+     * @note This function is thread safe.
+     */
+    ErrorCodes_t LobbyLogin(const libcomp::String& username,
+        libcomp::String& sid2);
+
+    /**
+     * Set the character associated to the supplied account in preparation
+     * for world communication and channel connection.
+     * @param username Username of the account to set the character on.
+     * @param character Pointer to the character to set on the account.
+     * @returns Pointer to the matching AccountLogin or null if it does
+     *  not exist
+     * @note This function is thread safe.
+     */
+    std::shared_ptr<objects::AccountLogin> StartChannelLogin(
+        const libcomp::String& username,
+        const std::shared_ptr<objects::Character>& character);
+
+    /**
+     * Transitions the user login state from LOBBY to LOBBY_TO_CHANNEL,
+     * set the supplied world and channel IDs and await world communication
+     * that the player has successfully entered the channel. A timeout should
+     * be used in conjunction with this to ensure the account does not
+     * get stuck.
+     * @param username Username of the account to update.
+     * @param worldID ID of the world the account is being moved to.
+     * @param channelID ID of the channel the account is being moved to.
+     * @returns Error code indicating the success or failure of this
+     * operation. This function can return one of:
+     * - SUCCESS (change was valid and login information was updated)
+     * - SYSTEM_ERROR (some internal error occurred)
+     * @note This function is thread safe.
+     */
+    ErrorCodes_t SwitchToChannel(const libcomp::String& username,
+        int8_t worldID, int8_t channelID);
+
+    /**
+     * Transitions the user login state from LOBBY_TO_CHANNEL to CHANNEL,
+     * completing a sucessful channel login.
+     * @param username Username of the account to update.
+     * @param worldID ID of the world the account was connected to.
+     * @param channelID ID of the channel the account was connected to.
+     * @returns Error code indicating the success or failure of this
+     * operation. This function can return one of:
+     * - SUCCESS (change was valid and login information was updated)
+     * - SYSTEM_ERROR (some internal error occurred)
+     * @note This function is thread safe.
+     */
+    ErrorCodes_t CompleteChannelLogin(const libcomp::String& username,
+        int8_t worldID, int8_t channelID);
+
+    /**
+     * Transitions the user login state from CHANNEL to CHANNEL_TO_CHANNEL,
+     * and update the session key.
+     * @param username Username of the account to update.
+     * @param channelID ID of the channel the account was switched to.
+     * @param sesssionKey New session key set by the world
+     * @returns true upon successful update, false if an error occurred
+     * @note This function is thread safe.
+     */
+    bool ChannelToChannelSwitch(const libcomp::String& username,
+        int8_t channelID, uint32_t sessionKey);
+
+    /**
+     * Transitions the user to the OFFLINE state.
+     * @param username Username of the account to log out.
+     * @returns true if the account was logged out; false otherwise.
+     * @note This function is thread safe.
+     */
+    bool Logout(const libcomp::String& username);
+
+    /**
+     * Expire a session key. If the session key is not matched or the account
+     * is not awaiting login anymore (LOBBY_WAIT state) this is ignored.
+     * @param username Username for account the session key was create for.
+     * @param sid Session ID that has expired.
+     * @note This function is thread safe.
+     */
+    void ExpireSession(const libcomp::String& username,
+        const libcomp::String& sid);
 
     /**
      * Check if a user is logged in.
@@ -66,41 +212,12 @@ public:
         int8_t& world);
 
     /**
-     * Mark the user logged into the given world.
-     * @param username Username for the account to login.
-     * @param login Login information associated to the account.
-     * @return true if the user was logged in; false if the user is already
-     * logged in to another world.
-     */
-    bool LoginUser(const libcomp::String& username,
-        std::shared_ptr<objects::AccountLogin> login = nullptr);
-
-    /*
-     * Updates the session ID of the login associated to a username.
-     * @param username Username for the logged in account.
-     * @param sid Session ID to update.
-     * @return true if the user is logged in; false if not
-     */
-    bool UpdateSessionID(const libcomp::String& username,
-        const libcomp::String& sid);
-
-    /**
      * Get the current user login state independent of world.
      * @param username Username for the account to login.
      * @return Pointer to the login state; null if it does not exist.
      */
     std::shared_ptr<objects::AccountLogin> GetUserLogin(
         const libcomp::String& username);
-
-    /**
-     * Mark the user logged out of the given world.
-     * @param username Username for the account to log out.
-     * @param world World the user is logged into or -1 if they are in the
-     * lobby server.
-     * @return true if the user was logged out; false if the user is not
-     * logged in to the specified world.
-     */
-    bool LogoutUser(const libcomp::String& username, int8_t world = -1);
 
     /**
      * Log out all users in a given world (and optionally on a specific
@@ -112,7 +229,7 @@ public:
      */
     std::list<libcomp::String> LogoutUsersInWorld(int8_t world,
         int8_t channel = -1);
-    
+
     /**
      * Mark or clear a character by CID for deletion.  This assumes the character
      * has already been loaded and will not load them if they are not.
@@ -147,7 +264,41 @@ public:
     bool DeleteCharacter(const libcomp::String& username,
         uint8_t cid, std::shared_ptr<LobbyServer>& server);
 
+protected:
+    /**
+     * Return the existing login object for the given username or create a
+     * new login object if one does not already exist.
+     * @param username Username for the login object to return.
+     * @returns The login object for the given username or null on error.
+     * @note This function is NOT thread safe. You MUST lock access first!
+     */
+    std::shared_ptr<objects::AccountLogin> GetOrCreateLogin(
+        const libcomp::String& username);
+
+    /**
+     * This will remove a login entry for the account map. Accounts not in
+     * the map are considered OFFLINE.
+     * @param username Username of the account to remove from the login map.
+     * @note This function is NOT thread safe. You MUST lock access first!
+     */
+    void EraseLogin(const libcomp::String& username);
+
+    /**
+     * Print the status of the accounts managed by this object.
+     * @note This function is NOT thread safe. You MUST lock access first!
+     */
+    void PrintAccounts() const;
+
+    /**
+     * Update the server debug state for systems configured to display it.
+     * @note This function is NOT thread safe. You MUST lock access first!
+     */
+    void UpdateDebugStatus() const;
+
 private:
+    /// Pointer to the lobby server.
+    LobbyServer *mServer;
+
     /// Mutex to lock access to the account map.
     std::mutex mAccountLock;
 

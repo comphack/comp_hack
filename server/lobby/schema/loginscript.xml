@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="LoginScriptRequest" persistent="false">
+        <member type="enum" name="OperationType" default="GET">
+            <value>ERROR</value>
+            <value>GET</value>
+            <value>LOGIN</value>
+            <value>QUIT</value>
+        </member>
+        <member type="s32" name="Operation"/>
+        <member type="string" name="Page"/>
+        <member type="string" name="PageError"/>
+        <member type="string" name="Username"/>
+        <member type="string" name="Password"/>
+        <member type="float" name="ClientVersion" default="1.666"/>
+        <member type="bool" name="RememberUsername" default="false"/>
+        <member type="map" name="PostVars">
+            <key type="string"/>
+            <value type="string"/>
+        </member>
+    </object>
+    <object name="LoginScriptReply" persistent="false">
+        <member type="string" name="Username"/>
+        <member type="string" name="Password"/>
+        <member type="float" name="ClientVersion" default="1.666"/>
+        <member type="bool" name="RememberUsername" default="false"/>
+        <member type="bool" name="LoginOK" default="false"/>
+        <member type="bool" name="LockControls" default="false"/>
+        <member type="string" name="ErrorMessage"/>
+        <member type="string" name="SID1"/>
+        <member type="string" name="SID2"/>
+
+        <member type="map" name="ReplaceVars">
+            <key type="string"/>
+            <value type="string"/>
+        </member>
+    </object>
+</objgen>

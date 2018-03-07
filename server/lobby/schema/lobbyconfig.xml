@@ -8,6 +8,7 @@
         <member type="float" name="ClientVersion" default="1.666"/>
         <member type="DatabaseConfigMariaDB*" name="MariaDBConfig"/>
         <member type="DatabaseConfigSQLite3*" name="SQLite3Config"/>
+        <member type="u32" name="WebAuthTimeOut" default="15"/>
         <member type="u16" name="CharacterDeletionDelay" default="1440"/>
         <member type="u32" name="CharacterTicketCost"/>
         <member type="u32" name="RegistrationCP" default="0"/>

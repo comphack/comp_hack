@@ -8,7 +8,7 @@
  *
  * This file is part of the Lobby Server (lobby).
  *
- * Copyright (C) 2012-2016 COMP_hack Team <compomega@tutanota.com>
+ * Copyright (C) 2012-2018 COMP_hack Team <compomega@tutanota.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as
@@ -30,6 +30,9 @@
 // Civet Includes
 #include <CivetServer.h>
 
+// lobby Includes
+#include "LoginHandlerThread.h"
+
 // libcomp Includes
 #include <CString.h>
 #include <Database.h>
@@ -50,7 +53,6 @@ namespace lobby
 {
 
 class AccountManager;
-class SessionManager;
 
 class LoginHandler : public CivetHandler
 {
@@ -68,36 +70,12 @@ public:
 
     void SetAccountManager(AccountManager *pManager);
 
-    void SetSessionManager(SessionManager *pManager);
-
 private:
-    class ReplacementVariables
-    {
-    public:
-        ReplacementVariables();
-
-        libcomp::String birthday;
-        libcomp::String cv;
-        libcomp::String cvDisp;
-        libcomp::String id;
-        libcomp::String idReadOnly;
-        libcomp::String idsave;
-        libcomp::String idsaveReadOnly;
-        libcomp::String msg;
-        libcomp::String pass;
-        libcomp::String passReadOnly;
-        libcomp::String sid1;
-        libcomp::String sid2;
-        libcomp::String submit;
-        bool auth;
-        bool quit;
-    };
-
-    void ParsePost(CivetServer *pServer, struct mg_connection *pConnection,
-        ReplacementVariables& postVars);
+    std::shared_ptr<objects::LoginScriptRequest> ParsePost(
+        CivetServer *pServer, struct mg_connection *pConnection);
 
     bool HandlePage(CivetServer *pServer, struct mg_connection *pConnection,
-        ReplacementVariables& postVars);
+        const std::shared_ptr<objects::LoginScriptRequest>& req);
 
     std::vector<char> LoadVfsFile(const libcomp::String& path);
 
@@ -107,7 +85,8 @@ private:
     std::shared_ptr<objects::LobbyConfig> mConfig;
 
     AccountManager *mAccountManager;
-    SessionManager *mSessionManager;
+
+    static thread_local LoginHandlerThread mThreadHandler;
 };
 
 } // namespace lobby

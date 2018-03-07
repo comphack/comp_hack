@@ -75,7 +75,7 @@ TimerManager::TimerManager() : mRunning(true)
         {
             std::unique_lock<std::mutex> lock(mEventLock);
 
-            ProcessEvents();
+            ProcessEvents(lock);
             WaitForEvent(lock);
         }
     });
@@ -95,15 +95,16 @@ TimerManager::~TimerManager()
     }
 }
 
-void TimerManager::ProcessEvents()
+void TimerManager::ProcessEvents(std::unique_lock<std::mutex>& lock)
 {
     auto now = std::chrono::steady_clock::now();
-    auto it = mEvents.begin();
 
     std::list<TimerEvent*> periodicals;
 
     while(!mEvents.empty())
     {
+        auto it = mEvents.begin();
+
         TimerEvent *pEvent = *it;
 
         if(pEvent->time > now)
@@ -112,12 +113,17 @@ void TimerManager::ProcessEvents()
         }
         else
         {
+            mEvents.erase(it++);
+
             if(pEvent->msg)
             {
+                // Unlock the mutex in the case the callback waits on another
+                // mutex that waits on the timer or the callback tries to
+                // register a new timer event. We don't like deadlocks.
+                lock.unlock();
                 pEvent->msg->Run();
+                lock.lock();
             }
-
-            mEvents.erase(it++);
 
             if(pEvent->mIsPeriodic)
             {

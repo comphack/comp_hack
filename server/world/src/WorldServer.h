@@ -232,7 +232,7 @@ protected:
     std::shared_ptr<ManagerConnection> mManagerConnection;
 
     /// Account manager for the server.
-    AccountManager mAccountManager;
+    AccountManager* mAccountManager;
 
     /// Character manager for the server.
     CharacterManager* mCharacterManager;

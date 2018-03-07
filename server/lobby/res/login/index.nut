@@ -172,7 +172,7 @@ function CheckUsername()
 // -->
 </script>
 
-<form action="index.html" method="POST" name="formlogin">
+<form action="index.nut" method="POST" name="formlogin">
 
 {COMP_HACK_SUBMIT}
 

@@ -114,7 +114,7 @@ public:
     }
 
 private:
-    void ProcessEvents();
+    void ProcessEvents(std::unique_lock<std::mutex>& lock);
     void WaitForEvent(std::unique_lock<std::mutex>& lock);
 
     volatile bool mRunning;

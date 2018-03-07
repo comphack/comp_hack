@@ -48,7 +48,8 @@ using namespace libtester;
 static const libcomp::String LOGIN_CLIENT_VERSION = "1.666";
 static const uint32_t CLIENT_VERSION = 1666;
 
-LobbyClient::LobbyClient() : TestClient(), mSessionKey(-1)
+LobbyClient::LobbyClient() : TestClient(), mSessionKey(-1),
+    mWaitForLogout(false)
 {
     SetConnection(std::make_shared<libcomp::LobbyConnection>(mService));
 }
@@ -98,6 +99,23 @@ void LobbyClient::Login(const libcomp::String& username,
 
     if(ErrorCodes_t::SUCCESS == loginErrorCode)
     {
+        int tries = 1;
+
+        while(mWaitForLogout && 100000 > tries && to_underlying(
+            ErrorCodes_t::ACCOUNT_STILL_LOGGED_IN) ==
+            (int32_t)reply.PeekU32Little())
+        {
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+
+            ClearMessages();
+            GetConnection()->SendPacket(p);
+
+            ASSERT_TRUE(WaitForPacket(
+                LobbyToClientPacketCode_t::PACKET_LOGIN, reply, waitTime));
+
+            tries++;
+        }
+
         ASSERT_EQ(reply.Left(), sizeof(int32_t) + sizeof(uint32_t) +
             sizeof(uint16_t) + 5 * 2);
         ASSERT_EQ(reply.ReadS32Little(),
@@ -115,7 +133,8 @@ void LobbyClient::Login(const libcomp::String& username,
         p.Clear();
         p.WritePacketCode(ClientToLobbyPacketCode_t::PACKET_AUTH);
         p.WriteString16Little(libcomp::Convert::ENCODING_UTF8,
-            libcomp::Decrypt::HashPassword(password, salt), true);
+            libcomp::Decrypt::HashPassword(libcomp::Decrypt::HashPassword(
+                password, salt), libcomp::String("%1").Arg(challenge)), true);
 
         ClearMessages();
         GetConnection()->SendPacket(p);
@@ -319,11 +338,14 @@ void LobbyClient::StartGame()
 
     // Save the session key.
     mSessionKey = sessionKey;
-
-    // printf("Server: %s\n", server.C());
 }
 
 int32_t LobbyClient::GetSessionKey() const
 {
     return mSessionKey;
+}
+
+void LobbyClient::SetWaitForLogout(bool wait)
+{
+    mWaitForLogout = wait;
 }

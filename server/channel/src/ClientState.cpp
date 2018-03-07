@@ -49,7 +49,7 @@ std::mutex ClientState::sLock;
 ClientState::ClientState() : objects::ClientStateObject(),
     mCharacterState(std::shared_ptr<CharacterState>(new CharacterState)),
     mDemonState(std::shared_ptr<DemonState>(new DemonState)),
-    mStartTime(0), mNextLocalObjectID(1)
+    mStartTime(ChannelServer::GetServerTime()), mNextLocalObjectID(1)
 {
 }
 
@@ -276,10 +276,6 @@ void ClientState::GetPartyDemonPacket(libcomp::Packet& p) const
 
 void ClientState::SyncReceived()
 {
-    if(mStartTime == 0)
-    {
-        mStartTime = ChannelServer::GetServerTime();
-    }
 }
 
 ClientTime ClientState::ToClientTime(ServerTime time) const
@@ -289,12 +285,12 @@ ClientTime ClientState::ToClientTime(ServerTime time) const
         return 0.0f;
     }
 
-    return static_cast<ClientTime>((ClientTime)(time - mStartTime) / 1000000.0f);
+    return static_cast<ClientTime>(time - mStartTime) / 1000000.0f;
 }
 
 ServerTime ClientState::ToServerTime(ClientTime time) const
 {
-    return static_cast<ServerTime>(((ServerTime)time * 1000000) + mStartTime);
+    return static_cast<ServerTime>(time * 1000000.0f) + mStartTime;
 }
 
 ClientState* ClientState::GetEntityClientState(int32_t id, bool worldID)

@@ -39,6 +39,7 @@ class LobbyClient : public TestClient
 {
 public:
     LobbyClient();
+    LobbyClient(const LobbyClient& other);
     ~LobbyClient();
 
     bool WaitForPacket(LobbyToClientPacketCode_t code,
@@ -49,10 +50,14 @@ public:
         const libcomp::String& password, ErrorCodes_t loginErrorCode =
             ErrorCodes_t::SUCCESS, ErrorCodes_t authErrorCode =
             ErrorCodes_t::SUCCESS, uint32_t clientVersion = 0);
+    void ClassicLogin(const libcomp::String& username,
+        const libcomp::String& password);
     void WebLogin(const libcomp::String& username,
         const libcomp::String& password = libcomp::String(),
         const libcomp::String& sid = libcomp::String(),
         bool expectError = false);
+
+    void GetCharacterList();
     void CreateCharacter(const libcomp::String& name);
     void StartGame();
     void SetWaitForLogout(bool wait);

@@ -36,6 +36,8 @@
 // libcomp Includes
 #include <Decrypt.h>
 #include <LobbyConnection.h>
+#include <Log.h>
+#include <ScriptEngine.h>
 
 // object Includes
 #include <Character.h>
@@ -52,6 +54,13 @@ LobbyClient::LobbyClient() : TestClient(), mSessionKey(-1),
     mWaitForLogout(false)
 {
     SetConnection(std::make_shared<libcomp::LobbyConnection>(mService));
+}
+
+LobbyClient::LobbyClient(const LobbyClient& other)
+{
+    (void)other;
+
+    assert(false);
 }
 
 LobbyClient::~LobbyClient()
@@ -165,6 +174,12 @@ void LobbyClient::Login(const libcomp::String& username,
     }
 }
 
+void LobbyClient::ClassicLogin(const libcomp::String& username,
+    const libcomp::String& password)
+{
+    Login(username, password);
+}
+
 void LobbyClient::WebLogin(const libcomp::String& username,
     const libcomp::String& password, const libcomp::String& sid,
     bool expectError)
@@ -246,6 +261,48 @@ void LobbyClient::WebLogin(const libcomp::String& username,
     }
 
     ASSERT_EQ(reply.Left(), 0);
+}
+
+void LobbyClient::GetCharacterList()
+{
+    double waitTime;
+
+    libcomp::Packet p;
+    p.WritePacketCode(ClientToLobbyPacketCode_t::PACKET_CHARACTER_LIST);
+
+    ClearMessages();
+    GetConnection()->SendPacket(p);
+
+    libcomp::ReadOnlyPacket reply;
+
+    ASSERT_TRUE(WaitForPacket(
+        LobbyToClientPacketCode_t::PACKET_CHARACTER_LIST,
+        reply, waitTime));
+
+    ASSERT_GE(reply.Left(), 6);
+
+    uint32_t loginTime = reply.ReadU32Little();
+    uint8_t ticketCount = reply.ReadU8();
+
+    // We don't need these.
+    (void)loginTime;
+    (void)ticketCount;
+
+    uint8_t characterCount = reply.ReadU8();
+
+    LOG_DEBUG(libcomp::String("Character Count: %1\n").Arg(characterCount));
+
+    for(uint8_t i = 0; i < characterCount; ++i)
+    {
+        uint8_t cid = reply.ReadU8();
+        uint8_t wid = reply.ReadU8();
+        (void)cid;
+        (void)wid;
+
+        libcomp::String name = reply.ReadString16Little(
+            libcomp::Convert::ENCODING_CP932);
+        LOG_DEBUG(name);
+    }
 }
 
 void LobbyClient::CreateCharacter(const libcomp::String& name)
@@ -349,3 +406,26 @@ void LobbyClient::SetWaitForLogout(bool wait)
 {
     mWaitForLogout = wait;
 }
+
+namespace libcomp
+{
+    template<>
+    ScriptEngine& ScriptEngine::Using<LobbyClient>()
+    {
+        if(!BindingExists("LobbyClient"))
+        {
+
+            Sqrat::Class<LobbyClient> binding(mVM, "LobbyClient");
+            binding.Func("ClassicLogin", &LobbyClient::ClassicLogin);
+            binding.Func("WebLogin", &LobbyClient::WebLogin);
+            binding.Func("GetCharacterList", &LobbyClient::GetCharacterList);
+            binding.Func("CreateCharacter", &LobbyClient::CreateCharacter);
+            binding.Func("StartGame", &LobbyClient::StartGame);
+            binding.Func("GetSessionKey", &LobbyClient::GetSessionKey);
+
+            Bind<LobbyClient>("LobbyClient", binding);
+        }
+
+        return *this;
+    } // Using
+} // namespace libcomp

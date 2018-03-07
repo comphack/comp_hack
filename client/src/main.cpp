@@ -26,8 +26,10 @@
 
 // libtester Includes
 #include <ChannelClient.h>
+#include <LobbyClient.h>
 
 // libcomp Includes
+#include <Decrypt.h>
 #include <Log.h>
 #include <ScriptEngine.h>
 
@@ -40,6 +42,7 @@
 
 static bool gRunning = true;
 static int gReturnCode = EXIT_SUCCESS;
+static libcomp::ScriptEngine *gEngine = nullptr;
 
 static void ScriptExit(int returnCode)
 {
@@ -47,23 +50,29 @@ static void ScriptExit(int returnCode)
     gRunning = false;
 }
 
-int main(int argc, char *argv[])
+static void ScriptInclude(const char *szPath)
 {
-    (void)argc;
-    (void)argv;
+    std::vector<char> file = libcomp::Decrypt::LoadFile(szPath);
 
-    // Enable the log so it prints to the console.
-    libcomp::Log::GetSingletonPtr()->AddStandardOutputHook();
+    if(file.empty())
+    {
+        std::cerr << "Failed to include script file: "
+            << szPath << std::endl;
 
-    // Create the script engine.
-    libcomp::ScriptEngine engine(true);
+        return;
+    }
 
-    // Register the exit function.
-    Sqrat::RootTable(engine.GetVM()).Func("exit", ScriptExit);
+    file.push_back(0);
 
-    // Register the client testing classes.
-    engine.Using<libtester::ChannelClient>();
+    if(!gEngine->Eval(&file[0], szPath))
+    {
+        std::cerr << "Failed to run script file: "
+            << szPath << std::endl;
+    }
+}
 
+void RunInteractive(libcomp::ScriptEngine& engine)
+{
     libcomp::String code, script;
 
     std::cout << "sq> ";
@@ -108,6 +117,59 @@ int main(int argc, char *argv[])
     }
 
     std::cout << "Final script: " << std::endl << script.C();
+}
+
+int main(int argc, char *argv[])
+{
+    (void)argc;
+    (void)argv;
+
+    // Enable the log so it prints to the console.
+    libcomp::Log::GetSingletonPtr()->AddStandardOutputHook();
+
+    // Create the script engine.
+    libcomp::ScriptEngine engine(true);
+
+    // Register the exit function.
+    Sqrat::RootTable(engine.GetVM()).Func("exit", ScriptExit);
+    Sqrat::RootTable(engine.GetVM()).Func("include", ScriptInclude);
+
+    // Set the global for the engine.
+    gEngine = &engine;
+
+    // Register the client testing classes.
+    engine.Using<libtester::LobbyClient>();
+    engine.Using<libtester::ChannelClient>();
+
+    if(1 >= argc)
+    {
+        RunInteractive(engine);
+    }
+    else
+    {
+        for(int i = 1; i < argc; ++i)
+        {
+            std::vector<char> file = libcomp::Decrypt::LoadFile(argv[i]);
+
+            if(file.empty())
+            {
+                std::cerr << "Failed to open script file: "
+                    << argv[i] << std::endl;
+
+                return EXIT_FAILURE;
+            }
+
+            file.push_back(0);
+
+            if(!engine.Eval(&file[0], argv[i]))
+            {
+                std::cerr << "Failed to run script file: "
+                    << argv[i] << std::endl;
+
+                return EXIT_FAILURE;
+            }
+        }
+    }
 
     return gReturnCode;
 }

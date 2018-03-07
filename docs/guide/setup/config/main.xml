@@ -1,13 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE section PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN" 
+<!DOCTYPE section PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN"
 	"http://www.oasis-open.org/docbook/xml/4.5/docbookx.dtd">
 <section>
 <title>Configuration Files</title>
- 
-<para>There are two configuration files to worry about:
+
+<para>There are three configuration files to worry about:
 <itemizedlist>
-	<listitem><para><emphasis role="bold">login.xml</emphasis> is used for the
-		login server</para></listitem>
+	<listitem><para><emphasis role="bold">lobby.xml</emphasis> is used for the
+		lobby server</para></listitem>
+	<listitem><para><emphasis role="bold">world.xml</emphasis> is used for
+		the world server</para></listitem>
 	<listitem><para><emphasis role="bold">channel.xml</emphasis> is used for
 		the channel server</para></listitem>
 </itemizedlist></para>
@@ -15,18 +17,43 @@
 will search for this configuration file in the following location:
 <itemizedlist>
 	<listitem><para><emphasis role="bold">Windows</emphasis> - the file
-		<emphasis>login.xml</emphasis> or <emphasis>channel.xml</emphasis>
+		<emphasis>lobby.xml</emphasis> or <emphasis>world.xml</emphasis> or <emphasis>channel.xml</emphasis>
 		(depending on which server) in the current working directory</para>
 		</listitem>
 	<listitem><para><emphasis role="bold">Linux</emphasis> - the <emphasis>
-		login.xml</emphasis> or <emphasis>channel.xml</emphasis> (depending on
+		lobby.xml</emphasis> or <emphasis>world.xml</emphasis> or <emphasis>channel.xml</emphasis> (depending on
 		which server) in <emphasis>/etc/comp_hack</emphasis></para></listitem>
 </itemizedlist></para>
 <para>If you don’t want to use the default name and location, you can specify
 the configuration file path on the command line:</para>
 <para><code>comp_channel /path/to/my/config.xml</code></para>
 
-<xi:include href="login.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
+<para>All three configuration files share some settings in common. Those settings are documented here.</para>
+<para>As with any xml file, it should start with this line:</para>
+<para><code>&lt;?xml version="1.0" encoding="UTF-8"?&gt;</code></para>
+<para>All settings are enclosed between the <emphasis>&lt;object&gt;</emphasis>
+and <emphasis>&lt;/object&gt;</emphasis> tags. This <emphasis>&lt;object&gt;</emphasis> section is wrapped by the tags <emphasis>&lt;objgen&gt;</emphasis> and <emphasis>&lt;/objgen&gt;</emphasis>. Inside the <emphasis>&lt;object&gt;</emphasis> section is a series of <emphasis>&lt;member&gt;</emphasis> tags for each setting. Here is an example of how this should look:</para>
+<para><programlisting>
+<![CDATA[<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object>
+        <member name="DatabaseType">SQLITE3</member>
+    </object>
+</objgen>]]>
+</programlisting></para>
+<para>Some settings may be a group of other settings. In this case the <emphasis>&lt;member&gt;</emphasis> tag encloses an <emphasis>&lt;object&gt;</emphasis> with more settings. Here is an example:</para>
+<para><programlisting>
+<![CDATA[<member name="SQLite3Config">
+    <object>
+        <member name="FileDirectory">/var/lib/comp_hack/database</member>
+    </object>
+</member>]]>
+</programlisting></para>
+<para>Each <emphasis>&lt;member&gt;</emphasis> tag has a <emphasis>name</emphasis> attribute that specifies which configuration option is being changed. What follows is a description of the configuration options. These configuration options are split into five sections. These sections cover the common configuration shared by all three server, the database configuration shared by the lobby and world servers, and any configuration specific to a server.</para>
+
+<xi:include href="common.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
+<xi:include href="lobby.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
+<xi:include href="world.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
 <xi:include href="channel.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
 
 </section>

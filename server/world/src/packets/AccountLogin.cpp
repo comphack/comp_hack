@@ -265,6 +265,8 @@ void ChannelLogin(std::shared_ptr<WorldServer> server,
 
             login->SavePacket(lobbyMessage, false);
             lobbyConnection->SendPacket(lobbyMessage);
+
+            login->SavePacket(reply, false);
         }
         else
         {
@@ -276,6 +278,14 @@ void ChannelLogin(std::shared_ptr<WorldServer> server,
     else
     {
         reply.WriteS8(0); // Failure
+    }
+
+    if(!ok)
+    {
+        // Faiure, send the username back to disconnect
+        reply.WriteS8(0);
+        reply.WriteString16Little(libcomp::Convert::ENCODING_UTF8,
+            username, true);
     }
 
     connection->SendPacket(reply);

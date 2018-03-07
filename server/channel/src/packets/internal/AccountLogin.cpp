@@ -72,8 +72,8 @@ bool Parsers::AccountLogin::Parse(libcomp::ManagerPacket *pPacketManager,
         return false;
     }
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-    auto worldDB = server->GetWorldDatabase();
+    auto server = std::dynamic_pointer_cast<ChannelServer>(
+        pPacketManager->GetServer());
 
     // This user should already be cached since its the same one we passed in
     auto account = response.GetAccount().Get(server->GetLobbyDatabase());
@@ -91,10 +91,7 @@ bool Parsers::AccountLogin::Parse(libcomp::ManagerPacket *pPacketManager,
         LOG_ERROR("Invalid character returned from AccountLogin response.\n");
         return true;
     }
-
-    auto username = account->GetUsername();
-    auto client = server->GetManagerConnection()->GetClientConnection(username);
-    if(nullptr == client)
+    else
     {
         return true;
     }

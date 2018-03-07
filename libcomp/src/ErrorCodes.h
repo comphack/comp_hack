@@ -66,6 +66,8 @@ enum class ErrorCodes_t : int32_t
 
 libcomp::String ErrorCodeString(ErrorCodes_t error);
 
+libcomp::String ErrorCodeString(ErrorCodes_t error);
+
 /**
  * Error codes used for skill failure by the game client. Most will print a message
  * in the player's chat window but they can include action requests.

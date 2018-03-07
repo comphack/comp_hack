@@ -1,0 +1,210 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE section PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN"
+    "http://www.oasis-open.org/docbook/xml/4.5/docbookx.dtd">
+<section>
+<title>Login Server Configuration</title>
+
+<para>As with any xml file, it should start with this line:</para>
+<para><code>&lt;?xml version="1.0" encoding="UTF-8"?&gt;</code></para>
+<para>All settings are enclosed between the <emphasis>&lt;config&gt;</emphasis>
+and <emphasis>&lt;/config&gt;</emphasis> tags. The first section is for the
+network connection.</para>
+<section>
+<title>Network Connection</title>
+<para><programlisting>
+<![CDATA[<connection>
+  <address>any</address>
+  <port>10666</port>
+</connection>]]>
+</programlisting></para>
+<para>The <emphasis>&lt;address&gt;</emphasis> setting is the IP address to
+listen for connections on. If <emphasis>any</emphasis> is used, the server will
+listen on all network interfaces. Otherwise, a specific IP address should be
+specified. If you only want to listen for local loopback connections,
+<emphasis>localhost</emphasis> can be used.</para>
+<para>The <emphasis>&lt;port&gt;</emphasis> setting is the network port the
+server will listen on. The default port is <emphasis>10666</emphasis>; however,
+you can change this if you wish.</para>
+</section>
+<section>
+<title>Error Logging</title>
+<para><programlisting>
+<![CDATA[<log>
+  <levels>
+    <debug>true</debug>
+    <info>true</info>
+    <warning>true</warning>
+    <error>true</error>
+    <critical>true</critical>
+  </levels>
+  <path>/var/log/comp_hack/login.log</path>
+</log>]]>
+</programlisting></para>
+<para>The log <emphasis>&lt;path&gt;</emphasis> determines where the log for
+the server is saved. This path should point to an existing directory that the
+login server can write to. The log will be overwritten each time the server is
+started. At this time, there is no appending or log rotation feature.</para>
+<para>The tags under <emphasis>&lt;levels&gt;</emphasis> determine which types
+of messages will be written to the log. Valid values are <emphasis>true
+</emphasis> or <emphasis>false</emphasis>.</para>
+</section>
+<section>
+<title>Database Connection</title>
+<para><programlisting>
+<![CDATA[<database>
+  <driver>mysql</driver>
+  <host>localhost</host>
+  <username>root</username>
+  <password>hackme</password>
+  <database>comp_hack</database>
+</database>]]>
+</programlisting></para>
+<para>The <emphasis>&lt;database&gt;</emphasis> section is used for accounts,
+post item data, the list of characters for an account, and a few other items.
+This information can be shared with the website. There are two types of
+database you may use: <emphasis>MySQL</emphasis> and <emphasis>SQLite
+</emphasis>.</para>
+<para>The <emphasis>&lt;driver&gt;</emphasis> section determines if the
+database engine is <emphasis>mysql</emphasis> or <emphasis>sqlite</emphasis>.
+</para>
+<para>The <emphasis>&lt;host&gt;</emphasis> section is the hostname or IP
+address to use when connecting to the database. This option is only used for
+<emphasis>MySQL</emphasis> databases.</para>
+<para>The <emphasis>&lt;username&gt;</emphasis> and <emphasis>&lt;password&gt;
+</emphasis> sections are used for authentication when connecting to the
+database. This option is only used for <emphasis>MySQL</emphasis> databases.
+</para>
+<para>The <emphasis>&lt;database&gt;</emphasis> section contains the name of
+the <emphasis>MySQL</emphasis> database or the path to the <emphasis>SQLite
+</emphasis> database file. If the <emphasis>SQLite</emphasis> database does not
+exist, the server will attempt to generate a default database when you first
+run the server.</para>
+</section>
+<section>
+<title>Web Authentication</title>
+<para><programlisting>
+<![CDATA[<webauth>
+  <usessl>true</usessl>
+  <pem>/etc/comp_hack/ssl/comp_hack.crt</pem>
+  <cert>/etc/comp_hack/ssl/comp_hack.crt</cert>
+  <ca>/etc/comp_hack/ssl/ca.crt</ca>
+  <address>any</address>
+  <port>10999</port>
+</webauth>]]>
+</programlisting></para>
+<para>The <emphasis>&lt;webauth&gt;</emphasis> section is used for web
+authentication in new versions of the client. New versions of the client use an
+embedded Internet Explorer window to display a webpage for the login dialog.
+After authenticating with the website, control is passed to the login server.
+COMP_hack lobby has a built in web server for authentication.</para>
+<para>The <emphasis>&lt;usessl&gt;</emphasis> section determines if SSL (https)
+should be used for the connection. You should be using SSL encryption when
+building a production server that others connect to. If you don’t use SSL
+encryption, client passwords will be sent in plain text. Non-SSL authentication
+should only be used for internal testing. The <emphasis>webaccess.sdat
+</emphasis> file should point to the login server’s IP address and web
+authentication port and use either http or https as appropriate. See the
+updater documentation for more information on this file.</para>
+<para>The <emphasis>&lt;pem&gt;</emphasis>, <emphasis>&lt;cert&gt;</emphasis>,
+and <emphasis>&lt;ca&gt;</emphasis> files are used for SSL encryption and
+should be provided by your SSL certificate authority.</para>
+<para>The <emphasis>&lt;address&gt;</emphasis> and <emphasis>&lt;port&gt;
+</emphasis> sections work just like their matching sections under
+<emphasis>&lt;connection&gt;</emphasis> except they apply to the web
+authentication component of the server.</para>
+</section>
+<section>
+<title>Internal Server Connection</title>
+<para><programlisting>
+<![CDATA[<internal>
+  <address>any</address>
+  <port>48896</port>
+  <key>hackme</key>
+</internal>]]>
+</programlisting></para>
+<para>The <emphasis>&lt;address&gt;</emphasis> and <emphasis>&lt;port&gt;
+</emphasis> sections work just like their matching sections under
+<emphasis>&lt;connection&gt;</emphasis> except they apply to the internal
+network component. The internal connection is used to communicate information
+between the login server and all related channels.</para>
+<para>The <emphasis>&lt;key&gt;</emphasis> section is used to authenticate the
+channel connections. It should be a sufficiently long and random value. Please
+note that internal connections should only happen on a local connection (either
+a LAN connection between the servers or the loopback interface) to ensure added
+security.</para>
+</section>
+<section>
+<title>Client Versions</title>
+<para><programlisting>
+<![CDATA[<versions higher="true">
+  <us>1624</us>
+  <jp>1410</jp>
+</versions>]]>
+</programlisting></para>
+<para>The versions section defines the client version required to connect to
+the server. If the <emphasis>higher</emphasis> attribute is set to true, a
+higher version number then the one listed will be allowed. This is useful if
+you do not wish to change this value often or only care about a minimum
+version. The <emphasis>&lt;us&gt;</emphasis> version is for any client that
+has a version ending in “U” like “1.624U”. The <emphasis>&lt;jp&gt;</emphasis>
+version is used for any other client.</para>
+</section>
+<section>
+<title>Binary Data</title>
+<para><programlisting>
+<![CDATA[<data lang="ja">C:\Program Files\COMP_hack\BinaryData</data>]]>
+</programlisting></para>
+<para>The <emphasis>&lt;data&gt;</emphasis> section is used for game data
+shared between the client and the server (like item data, zone data, etc.) and
+should point to the <emphasis>BinaryData</emphasis> directory of the client
+files. The <emphasis>lang</emphasis> attribute should be set to
+<emphasis>ja</emphasis> if the BinaryData is from a Japanese client.</para>
+</section>
+<section>
+<title>Playable Character Data</title>
+<para><programlisting>
+<![CDATA[<pcdata>/var/lib/comp_hack</pcdata>]]>
+</programlisting></para>
+<para>The <emphasis>&lt;pcdata&gt;</emphasis> section stores all playable
+character data. This is where the majority of account and server data is
+stored. This path should be writable by the server.</para>
+</section>
+<section>
+<title>Worlds</title>
+<para><programlisting>
+<![CDATA[<worlds>
+  <world id="0" userLevel="0">COMP_hack</world>
+  <world id="1" userLevel="100">Test World</world>
+</worlds>]]>
+</programlisting></para>
+<para>The <emphasis>&lt;worlds&gt;</emphasis> section is used to display the
+list of worlds new characters can be created on. Each <emphasis>&lt;world&gt;
+</emphasis> section contains the name of the world and should have a unique
+<emphasis>id</emphasis> attribute. IDs should start at 0 and increment by one.
+Do not have gaps in the IDs. It is recommended you list worlds in ID order to
+prevent bugs. If the <emphasis>userLevel</emphasis> attribute is set, only
+accounts that have a user level at or above this value can see and connect to
+that world. GM accounts default to a user level of 1000 and normal accounts
+have a user level of 0.</para>
+</section>
+<section>
+<title>Ticket Cost</title>
+<para><programlisting>
+<![CDATA[<ticketCost>0</ticketCost>]]>
+</programlisting></para>
+<para>The <emphasis>&lt;ticketCost&gt;</emphasis> section defines how much cash
+shop currency is required to purchase an additional character ticket. If the
+account has no characters they will still be able to create a new characters
+regardless of how many tickets they have purchased.</para>
+</section>
+<section>
+<title>Character Deletion</title>
+<para><programlisting>
+<![CDATA[<deathTime>1440</deathTime>]]>
+</programlisting></para>
+<para>The <emphasis>&lt;deathTime&gt;</emphasis> section is how many minutes
+it takes for a character marked for deletion to actually be removed from an
+account.</para>
+</section>
+
+</section>

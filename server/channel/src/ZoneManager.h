@@ -41,6 +41,7 @@ class Packet;
 namespace objects
 {
 class ActionSpawn;
+class MiZoneData;
 class Spawn;
 }
 
@@ -413,9 +414,13 @@ public:
     /**
      * Get a random point within the supplied zone spot.
      * @param spot Pointer to the spot to get a random point within
+     * @param zoneData Optional pointer to the zone definition that, when
+     *  supplied, will force the random point chosen to be in the proper
+     *  zone boundaries
      * @return X, Y coordinates of the random point
      */
-    Point GetRandomSpotPoint(const std::shared_ptr<objects::MiSpotData>& spot) const;
+    Point GetRandomSpotPoint(const std::shared_ptr<objects::MiSpotData>& spot,
+        const std::shared_ptr<objects::MiZoneData>& zoneData = nullptr);
 
     /**
      * Get a point directly away or directly towards two specified points.

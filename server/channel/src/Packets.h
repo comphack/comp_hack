@@ -148,6 +148,7 @@ PACKET_PARSER_DECL(BazaarClerkSet);         // 0x0161
 PACKET_PARSER_DECL(BazaarPrice);            // 0x0164
 PACKET_PARSER_DECL(BazaarMarketInfoSelf);   // 0x0166
 PACKET_PARSER_DECL(Warp);                   // 0x016A
+PACKET_PARSER_DECL(SkillExecuteInstant);    // 0x016C
 PACKET_PARSER_DECL(SyncCharacter);          // 0x017E
 PACKET_PARSER_DECL(BazaarInteract);         // 0x0184
 PACKET_PARSER_DECL(SkillForget);            // 0x0186

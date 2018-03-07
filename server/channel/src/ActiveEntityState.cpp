@@ -843,7 +843,10 @@ std::set<uint32_t> ActiveEntityState::AddStatusEffects(const AddStatusEffectMap&
                 }
             }
         }
-    
+
+        // Only add the effect if its stack is greater than 0
+        add &= stack > 0;
+
         if(add)
         {
             // Effect not set yet, build it now
@@ -1318,15 +1321,26 @@ std::set<uint8_t> ActiveEntityState::PopNRAShields(const std::list<
     return result;
 }
 
-uint8_t ActiveEntityState::GetNextActivatedAbilityID()
+int8_t ActiveEntityState::GetNextActivatedAbilityID()
 {
     std::lock_guard<std::mutex> lock(mLock);
-    uint8_t next = mNextActivatedAbilityID;
+    int8_t first = mNextActivatedAbilityID;
 
-    mNextActivatedAbilityID = (uint8_t)((mNextActivatedAbilityID + 1) % 128);
-    if(mNextActivatedAbilityID == 0)
+    int8_t next = -1;
+    while(next == -1 || SpecialActivationsKeyExists(next))
     {
-        mNextActivatedAbilityID = 1;
+        if(mNextActivatedAbilityID == first)
+        {
+            // All are being used, this should never happen but return
+            // a default if for some reason it does
+            return 0;
+        }
+        else
+        {
+            next = mNextActivatedAbilityID;
+            mNextActivatedAbilityID = (int8_t)(
+                (mNextActivatedAbilityID + 1) % 128);
+        }
     }
 
     return next;

@@ -50,7 +50,7 @@ bool Parsers::SkillCancel::Parse(libcomp::ManagerPacket *pPacketManager,
     auto skillManager = server->GetSkillManager();
 
     int32_t sourceEntityID = p.ReadS32Little();
-    uint8_t activationID = p.ReadU8();
+    int8_t activationID = p.ReadS8();
     
     auto source = state->GetEntityState(sourceEntityID);
     if(!source)
@@ -60,7 +60,7 @@ bool Parsers::SkillCancel::Parse(libcomp::ManagerPacket *pPacketManager,
     }
 
     server->QueueWork([](SkillManager* pSkillManager, const std::shared_ptr<
-        ActiveEntityState> pSource, uint8_t pActivationID)
+        ActiveEntityState> pSource, int8_t pActivationID)
         {
             pSkillManager->CancelSkill(pSource, pActivationID);
         }, skillManager, source, activationID);

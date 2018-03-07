@@ -229,6 +229,7 @@ SkillManager::SkillManager(const std::weak_ptr<ChannelServer>& server)
     mSkillFunctions[SVR_CONST.SKILL_ITEM_FAM_UP] = &SkillManager::FamiliarityUpItem;
     mSkillFunctions[SVR_CONST.SKILL_MOOCH] = &SkillManager::Mooch;
     mSkillFunctions[SVR_CONST.SKILL_RESPEC] = &SkillManager::Respec;
+    mSkillFunctions[SVR_CONST.SKILL_REST] = &SkillManager::Rest;
     mSkillFunctions[SVR_CONST.SKILL_SUMMON_DEMON] = &SkillManager::SummonDemon;
     mSkillFunctions[SVR_CONST.SKILL_STORE_DEMON] = &SkillManager::StoreDemon;
     mSkillFunctions[SVR_CONST.SKILL_TRAESTO] = &SkillManager::Traesto;
@@ -258,7 +259,7 @@ SkillManager::~SkillManager()
 }
 
 bool SkillManager::ActivateSkill(const std::shared_ptr<ActiveEntityState> source,
-    uint32_t skillID, int64_t targetObjectID,
+    uint32_t skillID, int64_t activationObjectID, int64_t targetObjectID,
     std::shared_ptr<SkillExecutionContext> ctx)
 {
     auto server = mServer.lock();
@@ -272,8 +273,11 @@ bool SkillManager::ActivateSkill(const std::shared_ptr<ActiveEntityState> source
     auto client = server->GetManagerConnection()->GetEntityClient(
         source->GetEntityID());
 
+    uint8_t activationType = def->GetBasic()->GetActivationType();
+    bool instantExecution = activationType == 6;
+
     auto activated = source->GetActivatedAbility();
-    if(activated)
+    if(activated && !instantExecution)
     {
         // Cancel existing first
         CancelSkill(source, activated->GetActivationID());
@@ -286,10 +290,19 @@ bool SkillManager::ActivateSkill(const std::shared_ptr<ActiveEntityState> source
         new objects::ActivatedAbility);
     activated->SetSkillID(skillID);
     activated->SetSourceEntity(source);
-    activated->SetActivationObjectID(targetObjectID);
+    activated->SetActivationObjectID(activationObjectID);
     activated->SetTargetObjectID(targetObjectID);
     activated->SetActivationTime(activatedTime);
-    activated->SetActivationID(source->GetNextActivatedAbilityID());
+
+    if(instantExecution)
+    {
+        // Instant activations are technically not activated
+        activated->SetActivationID(-1);
+    }
+    else
+    {
+        activated->SetActivationID(source->GetNextActivatedAbilityID());
+    }
 
     // If the skill needs to charge, see if any time adjustments exist.
     // This will never reduce to 0% time so storing the context is not
@@ -347,19 +360,24 @@ bool SkillManager::ActivateSkill(const std::shared_ptr<ActiveEntityState> source
     activated->SetChargeMoveSpeed(chargeSpeed);
     activated->SetChargeCompleteMoveSpeed(chargeCompleteSpeed);
 
-    source->SetActivatedAbility(activated);
-
-    SendActivateSkill(activated, def);
-    
-    uint16_t functionID = def->GetDamage()->GetFunctionID();
-    if(functionID == SVR_CONST.SKILL_REST)
+    if(!instantExecution)
     {
-        return Rest(activated, ctx, nullptr);
+        source->SetActivatedAbility(activated);
+
+        uint16_t functionID = def->GetDamage()->GetFunctionID();
+        if(functionID &&
+            mSkillFunctions.find(functionID) != mSkillFunctions.end())
+        {
+            // Set special activation and let the respective skill handle it
+            source->SetSpecialActivations(activated->GetActivationID(),
+                activated);
+        }
+
+        SendActivateSkill(activated, def);
     }
 
-    uint8_t activationType = def->GetBasic()->GetActivationType();
-    bool executeNow = (activationType == 3 || activationType == 4)
-        && chargeTime == 0;
+    bool executeNow = activationType == 6 || (chargeTime == 0 &&
+        (activationType == 3 || activationType == 4));
     if(executeNow)
     {
         if(!ExecuteSkill(source, activated, client, ctx))
@@ -376,18 +394,16 @@ bool SkillManager::ActivateSkill(const std::shared_ptr<ActiveEntityState> source
 }
 
 bool SkillManager::ExecuteSkill(const std::shared_ptr<ActiveEntityState> source,
-    uint8_t activationID, int64_t targetObjectID, std::shared_ptr<SkillExecutionContext> ctx)
+    int8_t activationID, int64_t targetObjectID, std::shared_ptr<SkillExecutionContext> ctx)
 {
     auto client = mServer.lock()->GetManagerConnection()->GetEntityClient(
         source->GetEntityID());
 
     bool success = true;
 
-    auto activated = source->GetActivatedAbility();
-    if(nullptr == activated || activationID != activated->GetActivationID())
+    auto activated = GetActivation(source, activationID);
+    if(!activated)
     {
-        LOG_ERROR(libcomp::String("Unknown activation ID encountered: %1\n")
-            .Arg(activationID));
         success = false;
     }
     else
@@ -395,7 +411,7 @@ bool SkillManager::ExecuteSkill(const std::shared_ptr<ActiveEntityState> source,
         activated->SetTargetObjectID(targetObjectID);
     }
 
-    if(!success || !ExecuteSkill(source, activated, client, ctx))
+    if(success && !ExecuteSkill(source, activated, client, ctx))
     {
         success = false;
     }
@@ -417,7 +433,7 @@ bool SkillManager::ExecuteSkill(std::shared_ptr<ActiveEntityState> source,
     {
         LOG_ERROR(libcomp::String("Unknown skill ID encountered: %1\n")
             .Arg(skillID));
-        SendFailure(source, skillID, client);
+        SendFailure(activated, client);
         return false;
     }
 
@@ -426,7 +442,7 @@ bool SkillManager::ExecuteSkill(std::shared_ptr<ActiveEntityState> source,
 
     if(skillCategory == 0)
     {
-        SendFailure(source, skillID, client);
+        SendFailure(activated, client);
         return false;
     }
 
@@ -445,7 +461,7 @@ bool SkillManager::ExecuteSkill(std::shared_ptr<ActiveEntityState> source,
             (!targetClientState->GetAcceptRevival() &&
             targetClientState->GetCharacterState()->GetEntityID() == targetEntityID)))
         {
-            SendFailure(source, skillID, client,
+            SendFailure(activated, client,
                 (uint8_t)SkillErrorCodes_t::TARGET_INVALID);
             return false;
         }
@@ -461,7 +477,7 @@ bool SkillManager::ExecuteSkill(std::shared_ptr<ActiveEntityState> source,
         if(targetEntityID <= 0)
         {
             //No target
-            SendFailure(source, skillID, client,
+            SendFailure(activated, client,
                 (uint8_t)SkillErrorCodes_t::TARGET_INVALID);
             return false;
         }
@@ -470,7 +486,7 @@ bool SkillManager::ExecuteSkill(std::shared_ptr<ActiveEntityState> source,
         if(nullptr == zone)
         {
             LOG_ERROR("Skill activation attempted outside of a zone.\n");
-            SendFailure(source, skillID, client,
+            SendFailure(activated, client,
                 (uint8_t)SkillErrorCodes_t::TARGET_INVALID);
             return false;
         }
@@ -480,7 +496,7 @@ bool SkillManager::ExecuteSkill(std::shared_ptr<ActiveEntityState> source,
         {
             LOG_ERROR(libcomp::String("Invalid target ID encountered: %1\n")
                 .Arg(targetEntityID));
-            SendFailure(source, skillID, client,
+            SendFailure(activated, client,
                 (uint8_t)SkillErrorCodes_t::TARGET_INVALID);
             return false;
         }
@@ -505,7 +521,7 @@ bool SkillManager::ExecuteSkill(std::shared_ptr<ActiveEntityState> source,
                 auto spawn = enemy ? enemy->GetSpawnSource() : nullptr;
                 if(!spawn || spawn->GetTalkResist() >= 100)
                 {
-                    SendFailure(source, skillID, client,
+                    SendFailure(activated, client,
                         (uint8_t)SkillErrorCodes_t::TALK_INVALID);
                     return false;
                 }
@@ -513,7 +529,7 @@ bool SkillManager::ExecuteSkill(std::shared_ptr<ActiveEntityState> source,
                 auto cs = targetEntity->GetCoreStats();
                 if(cs && cs->GetLevel() > source->GetCoreStats()->GetLevel())
                 {
-                    SendFailure(source, skillID, client,
+                    SendFailure(activated, client,
                         (uint8_t)SkillErrorCodes_t::TALK_LEVEL);
                     return false;
                 }
@@ -573,7 +589,7 @@ bool SkillManager::ExecuteSkill(std::shared_ptr<ActiveEntityState> source,
 
         if(targetInvalid)
         {
-            SendFailure(source, skillID, client, (uint8_t)SkillErrorCodes_t::TARGET_INVALID);
+            SendFailure(activated, client, (uint8_t)SkillErrorCodes_t::TARGET_INVALID);
             return false;
         }
 
@@ -610,7 +626,7 @@ bool SkillManager::ExecuteSkill(std::shared_ptr<ActiveEntityState> source,
                 if(demon == nullptr)
                 {
                     LOG_ERROR("Attempted to summon a demon that does not exist.\n");
-                    SendFailure(source, skillID, client,
+                    SendFailure(activated, client,
                         (uint8_t)SkillErrorCodes_t::SUMMON_INVALID);
                     return false;
                 }
@@ -668,7 +684,7 @@ bool SkillManager::ExecuteSkill(std::shared_ptr<ActiveEntityState> source,
                     if(percentCost)
                     {
                         LOG_ERROR("Item percent cost encountered.\n");
-                        SendFailure(source, skillID, client);
+                        SendFailure(activated, client);
                         return false;
                     }
                     else
@@ -685,7 +701,7 @@ bool SkillManager::ExecuteSkill(std::shared_ptr<ActiveEntityState> source,
                     if(percentCost)
                     {
                         LOG_ERROR("Bullet percent cost encountered.\n");
-                        SendFailure(source, skillID, client);
+                        SendFailure(activated, client);
                         return false;
                     }
                     else
@@ -696,7 +712,7 @@ bool SkillManager::ExecuteSkill(std::shared_ptr<ActiveEntityState> source,
                 default:
                     LOG_ERROR(libcomp::String("Unsupported cost type encountered: %1\n")
                         .Arg((uint8_t)cost->GetType()));
-                    SendFailure(source, skillID, client);
+                    SendFailure(activated, client);
                     return false;
                 }
             }
@@ -793,7 +809,7 @@ bool SkillManager::ExecuteSkill(std::shared_ptr<ActiveEntityState> source,
         // Handle costs that can't be paid as expected errors
         if(!canPay)
         {
-            SendFailure(source, skillID, client,
+            SendFailure(activated, client,
                 (uint8_t)SkillErrorCodes_t::GENERIC_COST);
             return false;
         }
@@ -821,7 +837,7 @@ bool SkillManager::ExecuteSkill(std::shared_ptr<ActiveEntityState> source,
         case 0:
             // Passive, shouldn't happen
         default:
-            SendFailure(source, skillID, client,
+            SendFailure(activated, client,
                 (uint8_t)SkillErrorCodes_t::GENERIC_USE);
             return false;
             break;
@@ -836,21 +852,23 @@ bool SkillManager::ExecuteSkill(std::shared_ptr<ActiveEntityState> source,
     }
     else
     {
-        SendCompleteSkill(activated, 1);
-        source->SetActivatedAbility(nullptr);
+        // Skip finalization if performing an instant activation
+        if(skillData->GetBasic()->GetActivationType() != 6)
+        {
+            SendCompleteSkill(activated, 1);
+            source->SetActivatedAbility(nullptr);
+        }
     }
 
     return success;
 }
 
 bool SkillManager::CancelSkill(const std::shared_ptr<ActiveEntityState> source,
-    uint8_t activationID)
+    int8_t activationID)
 {
-    auto activated = source ? source->GetActivatedAbility() : nullptr;
-    if(nullptr == activated || activationID != activated->GetActivationID())
+    auto activated = GetActivation(source, activationID);
+    if(!activated)
     {
-        LOG_ERROR(libcomp::String("Unknown activation ID encountered: %1\n")
-            .Arg(activationID));
         return false;
     }
     else
@@ -859,10 +877,14 @@ bool SkillManager::CancelSkill(const std::shared_ptr<ActiveEntityState> source,
         auto definitionManager = server->GetDefinitionManager();
         auto skillData = definitionManager->GetSkillData(activated->GetSkillID());
 
+        // If the skill is a special toggle, fire its function again
         auto functionID = skillData->GetDamage()->GetFunctionID();
-        if(functionID == SVR_CONST.SKILL_REST)
+        auto fIter = mSkillFunctions.find(functionID);
+        if(fIter != mSkillFunctions.end() &&
+            skillData->GetBasic()->GetActivationType() == 4)
         {
-            Rest(activated, nullptr, nullptr);
+            auto ctx = std::make_shared<SkillExecutionContext>();
+            fIter->second(*this, activated, ctx, nullptr);
         }
 
         // If any executions have occurred, the cooldown needs to be activated
@@ -872,8 +894,16 @@ bool SkillManager::CancelSkill(const std::shared_ptr<ActiveEntityState> source,
             SetSkillCompleteState(pSkill, false);
         }
 
+        if(source->GetSpecialActivations(activationID) == activated)
+        {
+            source->RemoveSpecialActivations(activationID);
+        }
+        else if(source->GetActivatedAbility() == activated)
+        {
+            source->SetActivatedAbility(nullptr);
+        }
+
         SendCompleteSkill(activated, 1);
-        source->SetActivatedAbility(nullptr);
         return true;
     }
 }
@@ -895,11 +925,47 @@ void SkillManager::SendFailure(const std::shared_ptr<ActiveEntityState> source,
     {
         client->SendPacket(p);
     }
-    else if(source->GetZone())
+    else if(source && source->GetZone())
     {
         auto zConnections = source->GetZone()->GetConnectionList();
         ChannelClientConnection::BroadcastPacket(zConnections, p);
     }
+}
+
+void SkillManager::SendFailure(
+    std::shared_ptr<objects::ActivatedAbility> activated,
+    const std::shared_ptr<ChannelClientConnection> client, uint8_t errorCode)
+{
+    if(activated->GetActivationID() == -1)
+    {
+        SendExecuteSkillInstant(activated, errorCode);
+    }
+    else
+    {
+        auto source = std::dynamic_pointer_cast<ActiveEntityState>(
+            activated->GetSourceEntity());
+        SendFailure(source, activated->GetSkillID(), client, errorCode);
+    }
+}
+
+std::shared_ptr<objects::ActivatedAbility> SkillManager::GetActivation(
+    const std::shared_ptr<ActiveEntityState> source, int8_t activationID) const
+{
+    auto activated = source->GetSpecialActivations(activationID);
+    if(activated)
+    {
+        return activated;
+    }
+
+    activated = source ? source->GetActivatedAbility() : nullptr;
+    if(nullptr == activated || activationID != activated->GetActivationID())
+    {
+        LOG_ERROR(libcomp::String("Unknown activation ID encountered: %1\n")
+            .Arg(activationID));
+        return nullptr;
+    }
+
+    return activated;
 }
 
 bool SkillManager::ExecuteNormalSkill(const std::shared_ptr<ChannelClientConnection> client,
@@ -931,7 +997,7 @@ bool SkillManager::ExecuteNormalSkill(const std::shared_ptr<ChannelClientConnect
         FinalizeSkillExecution(client, ctx, activated);
         if(!ProcessSkillResult(activated, ctx))
         {
-            SendFailure(source, skillID, client);
+            SendFailure(activated, client);
             return false;
         }
 
@@ -946,7 +1012,7 @@ bool SkillManager::ExecuteNormalSkill(const std::shared_ptr<ChannelClientConnect
         // If it isn't valid at this point, fail the skill
         if(!target)
         {
-            SendFailure(source, skillID, client);
+            SendFailure(activated, client);
             return false;
         }
 
@@ -960,7 +1026,7 @@ bool SkillManager::ExecuteNormalSkill(const std::shared_ptr<ChannelClientConnect
         if((float)maxTargetRange < distance)
         {
             // Out of range, fail execution
-            SendFailure(source, skillID, client);
+            SendFailure(activated, client);
             return false;
         }
 
@@ -2149,7 +2215,7 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
         p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_SKILL_REPORTS);
         p.WriteS32Little(source->GetEntityID());
         p.WriteU32Little(skill.SkillID);
-        p.WriteS8((int8_t)activated->GetActivationID());
+        p.WriteS8(activated->GetActivationID());
 
         p.WriteU32Little((uint32_t)it->size());
         for(SkillTargetResult* skillTarget : *it)
@@ -2908,7 +2974,7 @@ void SkillManager::HandleGuard(const std::shared_ptr<ActiveEntityState>& source,
         return;
     }
 
-    uint8_t activationID = tActivated->GetActivationID();
+    int8_t activationID = tActivated->GetActivationID();
     if(pSkill->Definition->GetBasic()->GetDefensible())
     {
         auto server = mServer.lock();
@@ -2946,7 +3012,7 @@ void SkillManager::HandleCounter(const std::shared_ptr<ActiveEntityState>& sourc
         return;
     }
 
-    uint8_t activationID = tActivated->GetActivationID();
+    int8_t activationID = tActivated->GetActivationID();
     if(pSkill->Definition->GetBasic()->GetDefensible())
     {
         auto server = mServer.lock();
@@ -2986,7 +3052,7 @@ void SkillManager::HandleDodge(const std::shared_ptr<ActiveEntityState>& source,
         return;
     }
 
-    uint8_t activationID = tActivated->GetActivationID();
+    int8_t activationID = tActivated->GetActivationID();
     if(pSkill->Definition->GetBasic()->GetDefensible())
     {
         auto server = mServer.lock();
@@ -4782,7 +4848,12 @@ void SkillManager::FinalizeSkillExecution(const std::shared_ptr<ChannelClientCon
 
     bool end = SetSkillCompleteState(pSkill, true);
 
-    SendExecuteSkill(activated);
+    // Do not execute or complete toggle skills
+    bool executeAndComplete = skillData->GetBasic()->GetActivationType() != 4;
+    if(executeAndComplete)
+    {
+        SendExecuteSkill(activated);
+    }
 
     if(client && source->GetEntityType() ==
         objects::EntityStateObject::EntityType_t::CHARACTER)
@@ -4797,8 +4868,15 @@ void SkillManager::FinalizeSkillExecution(const std::shared_ptr<ChannelClientCon
     // if its at max and not a guard
     if(end)
     {
-        source->SetActivatedAbility(nullptr);
-        SendCompleteSkill(activated, 0);
+        if(source->GetActivatedAbility() == activated)
+        {
+            source->SetActivatedAbility(nullptr);
+        }
+
+        if(executeAndComplete)
+        {
+            SendCompleteSkill(activated, 0);
+        }
     }
 
     if(client)
@@ -4882,9 +4960,15 @@ bool SkillManager::SpecialSkill(const std::shared_ptr<objects::ActivatedAbility>
     const std::shared_ptr<SkillExecutionContext>& ctx,
     const std::shared_ptr<ChannelClientConnection>& client)
 {
-    (void)activated;
     (void)ctx;
     (void)client;
+
+    auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated->GetSourceEntity());
+    if(source->GetSpecialActivations(activated->GetActivationID()) == activated)
+    {
+        // Clean up the special activation
+        source->RemoveSpecialActivations(activated->GetActivationID());
+    }
 
     return true;
 }
@@ -4894,10 +4978,11 @@ bool SkillManager::Cameo(const std::shared_ptr<objects::ActivatedAbility>& activ
     const std::shared_ptr<ChannelClientConnection>& client)
 {
     auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated->GetSourceEntity());
+    SpecialSkill(activated, ctx, client);
 
     if(!client)
     {
-        SendFailure(source, activated->GetSkillID(), nullptr);
+        SendFailure(activated, nullptr);
         return false;
     }
 
@@ -4907,7 +4992,7 @@ bool SkillManager::Cameo(const std::shared_ptr<objects::ActivatedAbility>& activ
 
     if(!cState->Ready() || !cState->IsAlive())
     {
-        SendFailure(source, activated->GetSkillID(), client,
+        SendFailure(activated, client,
             (uint8_t)SkillErrorCodes_t::TARGET_INVALID);
         return false;
     }
@@ -4921,7 +5006,7 @@ bool SkillManager::Cameo(const std::shared_ptr<objects::ActivatedAbility>& activ
     if(!item || transformIter == SVR_CONST.CAMEO_MAP.end() ||
         transformIter->second.size() == 0 || item->GetDurability() < 1000)
     {
-        SendFailure(source, activated->GetSkillID(), client,
+        SendFailure(activated, client,
             (uint8_t)SkillErrorCodes_t::ITEM_USE);
         return false;
     }
@@ -4958,7 +5043,7 @@ bool SkillManager::Cameo(const std::shared_ptr<objects::ActivatedAbility>& activ
     }
     else
     {
-        SendFailure(source, activated->GetSkillID(), client,
+        SendFailure(activated, client,
             (uint8_t)SkillErrorCodes_t::GENERIC_USE);
         return false;
     }
@@ -4971,10 +5056,11 @@ bool SkillManager::DCM(const std::shared_ptr<objects::ActivatedAbility>& activat
     const std::shared_ptr<ChannelClientConnection>& client)
 {
     auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated->GetSourceEntity());
+    SpecialSkill(activated, ctx, client);
 
     if(!client)
     {
-        SendFailure(source, activated->GetSkillID(), nullptr);
+        SendFailure(activated, nullptr);
         return false;
     }
 
@@ -4986,14 +5072,14 @@ bool SkillManager::DCM(const std::shared_ptr<objects::ActivatedAbility>& activat
 
     if(!demon || !demonData)
     {
-        SendFailure(source, activated->GetSkillID(), client,
+        SendFailure(activated, client,
             (uint8_t)SkillErrorCodes_t::PARTNER_MISSING);
         return false;
     }
 
     if(!dState->IsAlive())
     {
-        SendFailure(source, activated->GetSkillID(), client,
+        SendFailure(activated, client,
             (uint8_t)SkillErrorCodes_t::PARTNER_DEAD);
         return false;
     }
@@ -5005,7 +5091,7 @@ bool SkillManager::DCM(const std::shared_ptr<objects::ActivatedAbility>& activat
     auto bookData = definitionManager->GetDevilBookData(demon->GetType());
     if(!bookData)
     {
-        SendFailure(source, activated->GetSkillID(), client,
+        SendFailure(activated, client,
             (uint8_t)SkillErrorCodes_t::GENERIC_USE);
         return false;
     }
@@ -5049,7 +5135,7 @@ bool SkillManager::DCM(const std::shared_ptr<objects::ActivatedAbility>& activat
     }
     else
     {
-        SendFailure(source, activated->GetSkillID(), client,
+        SendFailure(activated, client,
             (uint8_t)SkillErrorCodes_t::GENERIC_USE);
         return false;
     }
@@ -5060,23 +5146,24 @@ bool SkillManager::EquipItem(const std::shared_ptr<objects::ActivatedAbility>& a
     const std::shared_ptr<ChannelClientConnection>& client)
 {
     auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated->GetSourceEntity());
+    SpecialSkill(activated, ctx, client);
 
     if(!client)
     {
-        SendFailure(source, activated->GetSkillID(), nullptr);
+        SendFailure(activated, nullptr);
         return false;
     }
 
     auto itemID = activated->GetTargetObjectID();
     if(itemID <= 0)
     {
-        SendFailure(source, activated->GetSkillID(), client);
+        SendFailure(activated, client);
         return false;
     }
 
     if(!ProcessSkillResult(activated, ctx))
     {
-        SendFailure(source, activated->GetSkillID(), client,
+        SendFailure(activated, client,
             (uint8_t)SkillErrorCodes_t::GENERIC_USE);
         return false;
     }
@@ -5091,10 +5178,11 @@ bool SkillManager::FamiliarityUp(const std::shared_ptr<objects::ActivatedAbility
     const std::shared_ptr<ChannelClientConnection>& client)
 {
     auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated->GetSourceEntity());
+    SpecialSkill(activated, ctx, client);
 
     if(!client)
     {
-        SendFailure(source, activated->GetSkillID(), nullptr);
+        SendFailure(activated, nullptr);
         return false;
     }
 
@@ -5106,14 +5194,14 @@ bool SkillManager::FamiliarityUp(const std::shared_ptr<objects::ActivatedAbility
 
     if(!demon || !demonData)
     {
-        SendFailure(source, activated->GetSkillID(), client,
+        SendFailure(activated, client,
             (uint8_t)SkillErrorCodes_t::PARTNER_MISSING);
         return false;
     }
 
     if(!dState->IsAlive())
     {
-        SendFailure(source, activated->GetSkillID(), client,
+        SendFailure(activated, client,
             (uint8_t)SkillErrorCodes_t::PARTNER_DEAD);
         return false;
     }
@@ -5133,7 +5221,7 @@ bool SkillManager::FamiliarityUp(const std::shared_ptr<objects::ActivatedAbility
             MAX_FAMILIARITY, rarity) != 0 &&
         characterManager->GetFreeSlots(client).size() == 0)
     {
-        SendFailure(source, activated->GetSkillID(), client,
+        SendFailure(activated, client,
             (uint8_t)SkillErrorCodes_t::INVENTORY_SPACE);
         return false;
     }
@@ -5145,7 +5233,7 @@ bool SkillManager::FamiliarityUp(const std::shared_ptr<objects::ActivatedAbility
     {
         if(statusEffects.find(addStatus->GetStatusID()) != statusEffects.end())
         {
-            SendFailure(source, activated->GetSkillID(), client);
+            SendFailure(activated, client);
             return false;
         }
     }
@@ -5154,7 +5242,7 @@ bool SkillManager::FamiliarityUp(const std::shared_ptr<objects::ActivatedAbility
 
     if(fType > 16)
     {
-        SendFailure(source, activated->GetSkillID(), client);
+        SendFailure(activated, client);
         return false;
     }
 
@@ -5162,7 +5250,7 @@ bool SkillManager::FamiliarityUp(const std::shared_ptr<objects::ActivatedAbility
     ctx->ApplyStatusEffects = false;
     if(!ProcessSkillResult(activated, ctx))
     {
-        SendFailure(source, activated->GetSkillID(), client,
+        SendFailure(activated, client,
             (uint8_t)SkillErrorCodes_t::GENERIC_USE);
         return false;
     }
@@ -5231,10 +5319,11 @@ bool SkillManager::FamiliarityUpItem(const std::shared_ptr<objects::ActivatedAbi
     const std::shared_ptr<ChannelClientConnection>& client)
 {
     auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated->GetSourceEntity());
+    SpecialSkill(activated, ctx, client);
 
     if(!client)
     {
-        SendFailure(source, activated->GetSkillID(), nullptr);
+        SendFailure(activated, nullptr);
         return false;
     }
 
@@ -5245,14 +5334,14 @@ bool SkillManager::FamiliarityUpItem(const std::shared_ptr<objects::ActivatedAbi
 
     if(!demon || !demonData)
     {
-        SendFailure(source, activated->GetSkillID(), client,
+        SendFailure(activated, client,
             (uint8_t)SkillErrorCodes_t::PARTNER_MISSING);
         return false;
     }
 
     if(!dState->IsAlive())
     {
-        SendFailure(source, activated->GetSkillID(), client,
+        SendFailure(activated, client,
             (uint8_t)SkillErrorCodes_t::PARTNER_DEAD);
         return false;
     }
@@ -5270,14 +5359,14 @@ bool SkillManager::FamiliarityUpItem(const std::shared_ptr<objects::ActivatedAbi
 
     if(raceRestrict && (int32_t)demonData->GetCategory()->GetRace() != raceRestrict)
     {
-        SendFailure(source, activated->GetSkillID(), client,
+        SendFailure(activated, client,
             (uint8_t)SkillErrorCodes_t::PARTNER_INCOMPATIBLE);
         return false;
     }
 
     if(!ProcessSkillResult(activated, ctx))
     {
-        SendFailure(source, activated->GetSkillID(), client,
+        SendFailure(activated, client,
             (uint8_t)SkillErrorCodes_t::GENERIC_USE);
         return false;
     }
@@ -5309,16 +5398,17 @@ bool SkillManager::ForgetAllExpertiseSkills(
     const std::shared_ptr<ChannelClientConnection>& client)
 {
     auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated->GetSourceEntity());
+    SpecialSkill(activated, ctx, client);
 
     if(!client)
     {
-        SendFailure(source, activated->GetSkillID(), nullptr);
+        SendFailure(activated, nullptr);
         return false;
     }
 
     if(!ProcessSkillResult(activated, ctx))
     {
-        SendFailure(source, activated->GetSkillID(), client,
+        SendFailure(activated, client,
             (uint8_t)SkillErrorCodes_t::GENERIC_USE);
         return false;
     }
@@ -5377,10 +5467,11 @@ bool SkillManager::Mooch(const std::shared_ptr<objects::ActivatedAbility>& activ
     const std::shared_ptr<ChannelClientConnection>& client)
 {
     auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated->GetSourceEntity());
+    SpecialSkill(activated, ctx, client);
 
     if(!client)
     {
-        SendFailure(source, activated->GetSkillID(), nullptr);
+        SendFailure(activated, nullptr);
         return false;
     }
 
@@ -5391,7 +5482,7 @@ bool SkillManager::Mooch(const std::shared_ptr<objects::ActivatedAbility>& activ
 
     if(!demon)
     {
-        SendFailure(source, activated->GetSkillID(), client,
+        SendFailure(activated, client,
             (uint8_t)SkillErrorCodes_t::PARTNER_MISSING);
         return false;
     }
@@ -5403,7 +5494,7 @@ bool SkillManager::Mooch(const std::shared_ptr<objects::ActivatedAbility>& activ
 
     if(characterManager->GetFamiliarityRank(demon->GetFamiliarity()) < 3)
     {
-        SendFailure(source, activated->GetSkillID(), client,
+        SendFailure(activated, client,
             (uint8_t)SkillErrorCodes_t::PARTNER_FAMILIARITY);
         return false;
     }
@@ -5417,13 +5508,13 @@ bool SkillManager::Mooch(const std::shared_ptr<objects::ActivatedAbility>& activ
     // If a present will be given and there are no free slots, error the skill
     if(presentType == 0)
     {
-        SendFailure(source, activated->GetSkillID(), client,
+        SendFailure(activated, client,
             (uint8_t)SkillErrorCodes_t::GENERIC_USE);
         return false;
     }
     else if(characterManager->GetFreeSlots(client).size() == 0)
     {
-        SendFailure(source, activated->GetSkillID(), client,
+        SendFailure(activated, client,
             (uint8_t)SkillErrorCodes_t::INVENTORY_SPACE);
         return false;
     }
@@ -5435,7 +5526,7 @@ bool SkillManager::Mooch(const std::shared_ptr<objects::ActivatedAbility>& activ
     {
         if(statusEffects.find(addStatus->GetStatusID()) != statusEffects.end())
         {
-            SendFailure(source, activated->GetSkillID(), client,
+            SendFailure(activated, client,
                 (uint8_t)SkillErrorCodes_t::GENERIC_USE);
             return false;
         }
@@ -5445,7 +5536,7 @@ bool SkillManager::Mooch(const std::shared_ptr<objects::ActivatedAbility>& activ
     ctx->ApplyStatusEffects = false;
     if(!ProcessSkillResult(activated, ctx))
     {
-        SendFailure(source, activated->GetSkillID(), client,
+        SendFailure(activated, client,
             (uint8_t)SkillErrorCodes_t::GENERIC_USE);
         return false;
     }
@@ -5482,10 +5573,11 @@ bool SkillManager::Respec(const std::shared_ptr<objects::ActivatedAbility>& acti
     const std::shared_ptr<ChannelClientConnection>& client)
 {
     auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated->GetSourceEntity());
+    SpecialSkill(activated, ctx, client);
 
     if(!client)
     {
-        SendFailure(source, activated->GetSkillID(), nullptr);
+        SendFailure(activated, nullptr);
         return false;
     }
 
@@ -5571,7 +5663,7 @@ bool SkillManager::Respec(const std::shared_ptr<objects::ActivatedAbility>& acti
     }
     else
     {
-        SendFailure(source, activated->GetSkillID(), client,
+        SendFailure(activated, client,
             (uint8_t)SkillErrorCodes_t::GENERIC_USE);
         return false;
     }
@@ -5585,6 +5677,7 @@ bool SkillManager::Rest(const std::shared_ptr<objects::ActivatedAbility>& activa
     (void)client;
 
     auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated->GetSourceEntity());
+    // Do not call SpecialSkill as this needs to persist as a special activation
 
     auto server = mServer.lock();
     auto definitionManager = server->GetDefinitionManager();
@@ -5621,20 +5714,20 @@ bool SkillManager::Rest(const std::shared_ptr<objects::ActivatedAbility>& activa
         source->SetStatusTimes(STATUS_RESTING, 0);
     }
 
-    return ProcessSkillResult(activated, ctx);
+    // Active toggle skill "Rest" only activates and cancels, it never executes
+    return true;
 }
 
 bool SkillManager::SummonDemon(const std::shared_ptr<objects::ActivatedAbility>& activated,
     const std::shared_ptr<SkillExecutionContext>& ctx,
     const std::shared_ptr<ChannelClientConnection>& client)
 {
-    (void)ctx;
-
     auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated->GetSourceEntity());
+    SpecialSkill(activated, ctx, client);
 
     if(!client)
     {
-        SendFailure(source, activated->GetSkillID(), nullptr);
+        SendFailure(activated, nullptr);
         return false;
     }
 
@@ -5644,7 +5737,7 @@ bool SkillManager::SummonDemon(const std::shared_ptr<objects::ActivatedAbility>&
         LOG_ERROR(libcomp::String("Invalid demon specified to summon: %1\n")
             .Arg(demonID));
 
-        SendFailure(source, activated->GetSkillID(), client,
+        SendFailure(activated, client,
             (uint8_t)SkillErrorCodes_t::SUMMON_INVALID);
         return false;
     }
@@ -5660,13 +5753,12 @@ bool SkillManager::StoreDemon(const std::shared_ptr<objects::ActivatedAbility>& 
     const std::shared_ptr<SkillExecutionContext>& ctx,
     const std::shared_ptr<ChannelClientConnection>& client)
 {
-    (void)ctx;
-
     auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated->GetSourceEntity());
+    SpecialSkill(activated, ctx, client);
 
     if(!client)
     {
-        SendFailure(source, activated->GetSkillID(), nullptr);
+        SendFailure(activated, nullptr);
         return false;
     }
 
@@ -5676,7 +5768,7 @@ bool SkillManager::StoreDemon(const std::shared_ptr<objects::ActivatedAbility>& 
         LOG_ERROR(libcomp::String("Invalid demon specified to store: %1\n")
             .Arg(demonID));
 
-        SendFailure(source, activated->GetSkillID(), client,
+        SendFailure(activated, client,
             (uint8_t)SkillErrorCodes_t::PARTNER_MISSING);
         return false;
     }
@@ -5693,10 +5785,11 @@ bool SkillManager::Traesto(const std::shared_ptr<objects::ActivatedAbility>& act
     const std::shared_ptr<ChannelClientConnection>& client)
 {
     auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated->GetSourceEntity());
+    SpecialSkill(activated, ctx, client);
 
     if(!client)
     {
-        SendFailure(source, activated->GetSkillID(), nullptr);
+        SendFailure(activated, nullptr);
         return false;
     }
 
@@ -5737,7 +5830,7 @@ bool SkillManager::Traesto(const std::shared_ptr<objects::ActivatedAbility>& act
 
     if(zoneID == 0 || spotID == 0)
     {
-        SendFailure(source, activated->GetSkillID(), client,
+        SendFailure(activated, client,
             (uint8_t)SkillErrorCodes_t::ZONE_INVALID);
         return false;
     }
@@ -5752,7 +5845,7 @@ bool SkillManager::Traesto(const std::shared_ptr<objects::ActivatedAbility>& act
     if(!zoneDef && !zoneManager->GetSpotPosition(dynamicMapID, spotID, xCoord,
         yCoord, rot))
     {
-        SendFailure(source, activated->GetSkillID(), client,
+        SendFailure(activated, client,
             (uint8_t)SkillErrorCodes_t::ZONE_INVALID);
         return false;
     }
@@ -5764,7 +5857,7 @@ bool SkillManager::Traesto(const std::shared_ptr<objects::ActivatedAbility>& act
     }
     else
     {
-        SendFailure(source, activated->GetSkillID(), client,
+        SendFailure(activated, client,
             (uint8_t)SkillErrorCodes_t::GENERIC_USE);
         return false;
     }
@@ -5775,10 +5868,11 @@ bool SkillManager::XPUp(const std::shared_ptr<objects::ActivatedAbility>& activa
     const std::shared_ptr<ChannelClientConnection>& client)
 {
     auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated->GetSourceEntity());
+    SpecialSkill(activated, ctx, client);
 
     if(!client)
     {
-        SendFailure(source, activated->GetSkillID(), nullptr);
+        SendFailure(activated, nullptr);
         return false;
     }
 
@@ -5804,7 +5898,7 @@ bool SkillManager::XPUp(const std::shared_ptr<objects::ActivatedAbility>& activa
 
     if(!eState || !eState->Ready())
     {
-        SendFailure(source, activated->GetSkillID(), client,
+        SendFailure(activated, client,
             (uint8_t)SkillErrorCodes_t::TARGET_INVALID);
         return false;
     }
@@ -5817,7 +5911,7 @@ bool SkillManager::XPUp(const std::shared_ptr<objects::ActivatedAbility>& activa
     }
     else
     {
-        SendFailure(source, activated->GetSkillID(), client,
+        SendFailure(activated, client,
             (uint8_t)SkillErrorCodes_t::GENERIC_USE);
         return false;
     }
@@ -5962,6 +6056,12 @@ void SkillManager::GiveDemonPresent(const std::shared_ptr<ChannelClientConnectio
 void SkillManager::SendActivateSkill(std::shared_ptr<objects::ActivatedAbility> activated,
     std::shared_ptr<objects::MiSkillData> skillData)
 {
+    // Instant executions are not technically activated
+    if(activated->GetActivationID() == -1)
+    {
+        return;
+    }
+
     auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated->GetSourceEntity());
     auto zone = source ? source->GetZone() : nullptr;
     auto zConnections = zone
@@ -5974,7 +6074,7 @@ void SkillManager::SendActivateSkill(std::shared_ptr<objects::ActivatedAbility> 
         p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_SKILL_ACTIVATED);
         p.WriteS32Little(source->GetEntityID());
         p.WriteU32Little(activated->GetSkillID());
-        p.WriteS8((int8_t)activated->GetActivationID());
+        p.WriteS8(activated->GetActivationID());
 
         timeMap[11] = activated->GetChargedTime();
         p.WriteFloat(0.f);
@@ -5992,6 +6092,13 @@ void SkillManager::SendActivateSkill(std::shared_ptr<objects::ActivatedAbility> 
 
 void SkillManager::SendExecuteSkill(std::shared_ptr<objects::ActivatedAbility> activated)
 {
+    // Instant executions use a special packet to execute
+    if(activated->GetActivationID() == -1)
+    {
+        SendExecuteSkillInstant(activated, 0);
+        return;
+    }
+
     auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated->GetSourceEntity());
     auto zone = source ? source->GetZone() : nullptr;
     auto zConnections = zone
@@ -6008,7 +6115,7 @@ void SkillManager::SendExecuteSkill(std::shared_ptr<objects::ActivatedAbility> a
         p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_SKILL_EXECUTED);
         p.WriteS32Little(source->GetEntityID());
         p.WriteU32Little(activated->GetSkillID());
-        p.WriteS8((int8_t)activated->GetActivationID());
+        p.WriteS8(activated->GetActivationID());
         p.WriteS32Little(targetedEntityID);
 
         timeMap[15] = activated->GetCooldownTime();
@@ -6031,9 +6138,56 @@ void SkillManager::SendExecuteSkill(std::shared_ptr<objects::ActivatedAbility> a
     }
 }
 
+void SkillManager::SendExecuteSkillInstant(std::shared_ptr<
+    objects::ActivatedAbility> activated, uint8_t errorCode)
+{
+    auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated->GetSourceEntity());
+    auto zone = source ? source->GetZone() : nullptr;
+    auto zConnections = zone
+        ? zone->GetConnectionList() : std::list<std::shared_ptr<ChannelClientConnection>>();
+    if(zConnections.size() > 0)
+    {
+        int32_t targetedEntityID = activated->GetEntityTargeted()
+            ? (int32_t)activated->GetTargetObjectID()
+            : source->GetEntityID();
+
+        RelativeTimeMap timeMap;
+
+        libcomp::Packet p;
+        p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_SKILL_EXECUTED_INSTANT);
+        p.WriteU8(errorCode);
+        p.WriteS32Little(source->GetEntityID());
+        p.WriteU32Little(activated->GetSkillID());
+        p.WriteS32Little(targetedEntityID);
+
+        uint64_t cooldown = errorCode == 0 ? activated->GetCooldownTime() : 0;
+        timeMap[p.Size()] = cooldown;
+        p.WriteFloat(0.f);
+
+        p.WriteU32Little((uint32_t)activated->GetHPCost());
+        p.WriteU32Little((uint32_t)activated->GetMPCost());
+
+        if(cooldown)
+        {
+            // Relative times are only needed if a cooldown is set
+            ChannelClientConnection::SendRelativeTimePacket(zConnections, p, timeMap);
+        }
+        else
+        {
+            ChannelClientConnection::BroadcastPacket(zConnections, p);
+        }
+    }
+}
+
 void SkillManager::SendCompleteSkill(std::shared_ptr<objects::ActivatedAbility> activated,
     uint8_t mode)
 {
+    // Instant executions are not completed as they are not technically activated
+    if(activated->GetActivationID() == -1)
+    {
+        return;
+    }
+
     auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated->GetSourceEntity());
     auto zone = source ? source->GetZone() : nullptr;
     auto zConnections = zone
@@ -6046,7 +6200,7 @@ void SkillManager::SendCompleteSkill(std::shared_ptr<objects::ActivatedAbility> 
         p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_SKILL_COMPLETED);
         p.WriteS32Little(source->GetEntityID());
         p.WriteU32Little(activated->GetSkillID());
-        p.WriteS8((int8_t)activated->GetActivationID());
+        p.WriteS8(activated->GetActivationID());
 
         // Write the cooldown time if cancelling in case its set (mostly for multi-use skills)
         uint64_t cooldown = mode == 1 ? activated->GetCooldownTime() : 0;

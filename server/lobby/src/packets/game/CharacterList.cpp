@@ -59,6 +59,7 @@ bool Parsers::CharacterList::Parse(libcomp::ManagerPacket *pPacketManager,
     }
 
     auto server = std::dynamic_pointer_cast<LobbyServer>(pPacketManager->GetServer());
+    auto config = std::dynamic_pointer_cast<objects::LobbyConfig>(server->GetConfig());
     auto accountManager = server->GetAccountManager();
     auto lobbyDB = server->GetMainDatabase();
     auto lobbyConnection = std::dynamic_pointer_cast<LobbyClientConnection>(connection);
@@ -182,7 +183,8 @@ bool Parsers::CharacterList::Parse(libcomp::ManagerPacket *pPacketManager,
 
         // Total play time? (0 shows opening cutscene)
         /// @todo: verify/implement properly
-        reply.WriteU32Little(level == -1 ? 0 : 1);
+        reply.WriteU32Little(level == -1 && config->GetPlayOpeningMovie()
+            ? 0 : 1);
 
         // Last channel used???
         reply.WriteS8(-1);

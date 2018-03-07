@@ -51,6 +51,11 @@
 #include "TokuseiManager.h"
 #include "ZoneManager.h"
 
+namespace objects
+{
+class Character;
+}
+
 namespace channel
 {
 
@@ -316,6 +321,12 @@ public:
         libcomp::String message, int8_t type, bool broadcast);
 
     /**
+     * Get the default character creation object map.
+     * @return Default character creation object map
+     */
+    PersistentObjectMap GetDefaultCharacterObjectMap() const;
+
+    /**
      * Schedule code work to be queued by the next server tick that occurs
      * following the specified time.
      * @param timestamp ServerTime timestamp that needs to pass for the
@@ -385,6 +396,9 @@ protected:
 
     /// List of pointers to all RegisteredChannels for the world.
     std::list<std::shared_ptr<objects::RegisteredChannel>> mAllRegisteredChannels;
+
+    /// Map of default character creation state objects
+    PersistentObjectMap mDefaultCharacterObjectMap;
 
     /// Pointer to the account manager.
     AccountManager *mAccountManager;

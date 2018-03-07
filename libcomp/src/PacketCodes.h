@@ -182,6 +182,7 @@ enum class ClientToChannelPacketCode_t : uint16_t
     PACKET_BAZAAR_PRICE = 0x0164,   //!< Request to get a suggested sales price for a bazaar item.
     PACKET_BAZAAR_MARKET_INFO_SELF = 0x0166,    //!< Request for details about the player's bazaar market.
     PACKET_WARP = 0x016A,   //!< Request to warp the player to the specified warp point.
+    PACKET_SKILL_EXECUTE_INSTANT = 0x016B,  //!< Request to execute a skill immediately, bypassing normal activation.
     PACKET_SYNC_CHARACTER = 0x017E,  //!< Request to sync a client entity's basic information.
     PACKET_BAZAAR_INTERACT = 0x0184,    //!< Request to interact with a specific bazaar market.
     PACKET_SKILL_FORGET = 0x0186,   //!< Request to forget a specific character skill.
@@ -437,6 +438,7 @@ enum class ChannelToClientPacketCode_t : uint16_t
     PACKET_BAZAAR_PRICE = 0x0165,   //!< Response to the request to get a suggested sales price for a bazaar item.
     PACKET_BAZAAR_MARKET_INFO_SELF = 0x0167,    //!< Message containing details about a the player's bazaar market.
     PACKET_CLAN_NAME_UPDATED = 0x0169,  //!< Notification that a character's clan name has updated.
+    PACKET_SKILL_EXECUTED_INSTANT = 0x016C,  //!< Notification that a skill is executing, bypassing normal activation.
     PACKET_RESET_SKILL_POINTS = 0x0170, //!< Notification that the player character's skill points have been reset.
     PACKET_SYSTEM_MSG = 0x0171, //!< Message containing announcement ticker data. 
     PACKET_SYNC_CHARACTER = 0x017F,  //!< Response to the request to sync a client entity's basic information.

@@ -70,8 +70,9 @@ bool Parsers::ClanForm::Parse(libcomp::ManagerPacket *pPacketManager,
     int8_t errorCode = 0;
 
     auto sourceState = state->GetEntityState(entityID);
-    auto activatedAbility = sourceState ? sourceState->GetActivatedAbility() : nullptr;
-    if(!activatedAbility || activatedAbility->GetActivationID() != activationID)
+    auto activatedAbility = sourceState
+        ? sourceState->GetSpecialActivations(activationID) : nullptr;
+    if(!activatedAbility)
     {
         // Request is invalid but don't kill the connection or cancel the skill
         errorCode = ERR_FAIL;
@@ -104,6 +105,9 @@ bool Parsers::ClanForm::Parse(libcomp::ManagerPacket *pPacketManager,
 
             if(baseZoneIter != SVR_CONST.CLAN_FORM_MAP.end())
             {
+                server->GetSkillManager()->ExecuteSkill(sourceState, activationID,
+                    activatedAbility->GetTargetObjectID());
+
                 libcomp::Packet request;
                 request.WritePacketCode(InternalPacketCode_t::PACKET_CLAN_UPDATE);
                 request.WriteU8((uint8_t)InternalPacketAction_t::PACKET_ACTION_ADD);
@@ -131,7 +135,7 @@ bool Parsers::ClanForm::Parse(libcomp::ManagerPacket *pPacketManager,
 
         client->SendPacket(reply);
 
-        server->GetSkillManager()->CancelSkill(sourceState, (uint8_t)activationID);
+        server->GetSkillManager()->CancelSkill(sourceState, activationID);
     }
 
     return true;

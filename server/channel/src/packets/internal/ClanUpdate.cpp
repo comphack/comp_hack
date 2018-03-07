@@ -82,7 +82,6 @@ bool Parsers::ClanUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
             auto state = client->GetClientState();
             auto cState = state->GetCharacterState();
             auto character = cState->GetEntity();
-            auto activatedAbility = cState->GetActivatedAbility();
 
             int32_t clanID = p.ReadS32Little();
             state->GetAccountLogin()->GetCharacterLogin()
@@ -104,7 +103,9 @@ bool Parsers::ClanUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
 
             // Execute or cancel the skill
             int8_t activationID = p.ReadS8();
-            if(activatedAbility && activationID == activatedAbility->GetActivationID())
+            auto activatedAbility = cState->GetSpecialActivations(activationID);
+
+            if(activatedAbility)
             {
                 if(errorCode == 0)
                 {
@@ -120,11 +121,11 @@ bool Parsers::ClanUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
                         activatedAbility->GetTargetObjectID());
 
                     server->GetSkillManager()->ExecuteSkill(cState,
-                        (uint8_t)activationID, activatedAbility->GetTargetObjectID());
+                        activationID, activatedAbility->GetTargetObjectID());
                 }
                 else
                 {
-                    server->GetSkillManager()->CancelSkill(cState, (uint8_t)activationID);
+                    server->GetSkillManager()->CancelSkill(cState, activationID);
                 }
             }
         }

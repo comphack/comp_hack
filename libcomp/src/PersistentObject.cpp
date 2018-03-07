@@ -89,11 +89,6 @@ PersistentObject::~PersistentObject()
         {
             sCached.erase(strUUID);
         }
-        else
-        {
-            LOG_ERROR(String("Uncached UUID detected during cleanup: %1\n").Arg(
-                strUUID));
-        }
     }
 }
 
@@ -112,19 +107,26 @@ bool PersistentObject::Register(const std::shared_ptr<PersistentObject>& self,
         libobjgen::UUID& uuid = self->mUUID;
 
         std::lock_guard<std::mutex> lock(mCacheLock);
-        if(uuid.IsNull())
+        if(!pUuid.IsNull() && !uuid.IsNull())
         {
-            if(!pUuid.IsNull())
+            // Unregister old UUID, keep if making a copy
+            auto it = sCached.find(uuid.ToString());
+            if(it != sCached.end() && it->second.lock() == self)
             {
-                uuid = pUuid;
-            }
-            else
-            {
-                uuid = libobjgen::UUID::Random();
-                registered = true;
+                sCached.erase(it);
             }
         }
-        
+
+        if(!pUuid.IsNull())
+        {
+            uuid = pUuid;
+        }
+        else if(uuid.IsNull())
+        {
+            uuid = libobjgen::UUID::Random();
+            registered = true;
+        }
+
         if(!registered && sCached.find(uuid.ToString()) == sCached.end())
         {
             registered = true;

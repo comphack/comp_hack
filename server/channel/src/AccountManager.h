@@ -140,8 +140,7 @@ public:
 
 private:
     /**
-     * Create character data if not initialized or load
-     * if it has been initaliazed.
+     * Create/load character data for use upon logging in.
      * @param character Character to initialize
      * @param state Pointer to the client state the character
      *  belongs to
@@ -150,6 +149,23 @@ private:
     bool InitializeCharacter(libcomp::ObjectReference<
         objects::Character>& character,
         channel::ClientState* state);
+
+    /**
+     * Create character data if not initialized.
+     * Supported objects are as follows:
+     * - Character (limited fields)
+     * - CharacterProgress (only one per file)
+     * - Item (including starting equipment)
+     * - Demon (limited to COMP slots)
+     * - EntityStats (stats/level for character, level only for demon,
+     *   must by linked via UID)
+     * - Expertise (must be linked via UID)
+     * - Hotbar (must be linked via UID)
+     * @param character Character to initialize
+     * @return true on success, false on failure
+     */
+    bool InitializeNewCharacter(std::shared_ptr<
+        objects::Character> character);
 
     /**
      * Persist character data associated to a client that is

@@ -131,7 +131,7 @@ bool Parsers::ReviveCharacter::Parse(libcomp::ManagerPacket *pPacketManager,
             auto zoneDef = zone->GetDefinition();
             newZoneID = zoneDef->GetID();
             newX = zoneDef->GetStartingX();
-            newX = zoneDef->GetStartingY();
+            newY = zoneDef->GetStartingY();
             newRot = zoneDef->GetStartingRotation();
         }
         break;

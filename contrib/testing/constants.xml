@@ -52,54 +52,9 @@
     <constant name="VALUABLE_DEVIL_BOOK_V1">250</constant>
     <constant name="VALUABLE_DEVIL_BOOK_V2">251</constant>
     <constant name="VALUABLE_MATERIAL_TANK">239</constant>
+    <constant name="ZONE_DEFAULT">90105</constant>
 
     <!-- Complex types -->
-    <constant name="DEFAULT_SKILLS">
-        <element>5125</element>
-        <element>5580</element>
-        <element>5700</element>
-        <element>5704</element>
-        <element>5705</element>
-        <element>5715</element>
-        <element>5716</element>
-        <element>5717</element>
-        <element>5718</element>
-        <element>5841</element>
-        <element>5842</element>
-        <element>5843</element>
-        <element>5890</element>
-        <element>5892</element>
-        <element>5895</element>
-        <element>5896</element>
-        <element>5897</element>
-        <element>5898</element>
-        <element>5899</element>
-        <element>5900</element>
-        <element>5901</element>
-        <element>5902</element>
-        <element>5903</element>
-        <element>5904</element>
-        <element>5905</element>
-        <element>5906</element>
-        <element>5907</element>
-        <element>5908</element>
-        <element>5909</element>
-        <element>5911</element>
-        <element>11115</element>
-        <element>11116</element>
-        <element>11117</element>
-        <element>11610</element>
-        <element>11611</element>
-        <element>11612</element>
-        <element>11636</element>
-        <element>11637</element>
-        <element>11638</element>
-        <element>11747</element>
-        <element>11748</element>
-        <element>11901</element>
-        <element>11902</element>
-        <element>11916</element>
-    </constant>
     <constant name="CAMEO_MAP">
         <!-- Format: item => status effect -->
         <pair>

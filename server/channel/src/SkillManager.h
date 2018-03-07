@@ -107,12 +107,16 @@ public:
      * it will execute automatically.
      * @param source Pointer of the entity that activated the skill
      * @param skillID ID of the skill to activate
-     * @param targetObjectID ID of the object being targeted by the skill
+     * @param activationObjectID ID of the object used as the activation target
+     * @param targetObjectID ID of the object being targeted by the skill,
+     *  typically only set for instant activation skills at this phase. If
+     *  a call to ExecuteSkill is performed after activation, the supplied
+     *  targetObjectID will override this value.
      * @param ctx Special execution state for the skill (ex: free cast, counter)
      * @return true if the skill was activated successfully, false otherwise
      */
     bool ActivateSkill(const std::shared_ptr<ActiveEntityState> source,
-        uint32_t skillID, int64_t targetObjectID,
+        uint32_t skillID, int64_t activationObjectID, int64_t targetObjectID,
         std::shared_ptr<SkillExecutionContext> ctx = 0);
 
     /**
@@ -124,7 +128,7 @@ public:
      * @return true if the skill was executed successfully, false otherwise
      */
     bool ExecuteSkill(const std::shared_ptr<ActiveEntityState> source,
-        uint8_t activationID, int64_t targetObjectID,
+        int8_t activationID, int64_t targetObjectID,
         std::shared_ptr<SkillExecutionContext> ctx = 0);
 
     /**
@@ -134,7 +138,7 @@ public:
      * @return true if the skill was cancelled successfully, false otherwise
      */
     bool CancelSkill(const std::shared_ptr<ActiveEntityState> source,
-        uint8_t activationID);
+        int8_t activationID);
 
     /**
      * Notify the client that a skill failed activation or execution.
@@ -148,6 +152,28 @@ public:
         const std::shared_ptr<ChannelClientConnection> client, uint8_t errorCode = 0);
 
 private:
+    /**
+     * Notify the client that a skill failed activation or execution.
+     * @param activated Pointer to the activated ability instance
+     * @param client Pointer to the client connection, can be null if not coming
+     *  from a player entity
+     * @param errorCode Error code to send (defaults to generic, no message)
+     */
+    void SendFailure(std::shared_ptr<objects::ActivatedAbility> activated,
+        const std::shared_ptr<ChannelClientConnection> client,
+        uint8_t errorCode = 0);
+
+    /**
+     * Get the current or past special skill activation by ID.
+     * @param source Pointer to the skill source entity
+     * @param activationID ID of the activation to retrieve
+     * @return Pointer to the matching skill activation, null if it does not
+     *  exist
+     */
+    std::shared_ptr<objects::ActivatedAbility> GetActivation(
+        const std::shared_ptr<ActiveEntityState> source,
+        int8_t activationID) const;
+
     /**
      * Pay any costs related to and execute the skill of a character or demon.
      * @param source Pointer to the state of the source entity
@@ -704,6 +730,16 @@ private:
      * @param activated Pointer to the activated ability instance
      */
     void SendExecuteSkill(std::shared_ptr<objects::ActivatedAbility> activated);
+
+    /**
+     * Notify the client that a skill is immediately executing without
+     * some normal prerequisite packets.
+     * @param activated Pointer to the activated ability instance
+     * @param errorCode If the skill execution failed an error code will
+     *  be supplied here.
+     */
+    void SendExecuteSkillInstant(std::shared_ptr<
+        objects::ActivatedAbility> activated, uint8_t errorCode);
 
     /**
      * Notify the client that a skill is complete.

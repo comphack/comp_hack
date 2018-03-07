@@ -100,6 +100,7 @@ IF(WIN32)
         "${CMAKE_SOURCE_DIR}/contrib/winconfig/channel.xml"
         "${CMAKE_SOURCE_DIR}/contrib/winconfig/world.xml"
         "${CMAKE_SOURCE_DIR}/contrib/winconfig/setup.xml"
+        "${CMAKE_SOURCE_DIR}/contrib/winconfig/newcharacter.xml"
         "${CMAKE_SOURCE_DIR}/contrib/testing/constants.xml"
         DESTINATION config)
 ELSE()

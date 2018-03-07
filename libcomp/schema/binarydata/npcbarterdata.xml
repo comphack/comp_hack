@@ -4,11 +4,12 @@
         <member type="enum" name="type" underlying="uint8_t">
             <value num="0">NONE</value>
             <value num="1">ITEM</value>
-            <value num="2">SOUL_POINT</value>
+            <value num="2">ONE_TIME_VALUABLE</value>
             <value num="4">EVENT_COUNTER</value>
             <value num="5">CASINO_RESTRICTION</value>
             <value num="8">BETHEL</value>
             <value num="11">SKILL_CHARACTER</value>
+            <value num="13">SOUL_POINT</value>
             <value num="12">SKILL_DEMON</value>
             <value num="14">PLUGIN</value>
             <value num="15">COIN</value>

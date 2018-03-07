@@ -63,6 +63,17 @@ bool ChannelServer::Initialize()
         return false;
     }
 
+    // Load newcharacter.xml for use when initializing new characters
+    std::string newCharacterPath = GetConfigPath() + "newcharacter.xml";
+    if(!LoadDataFromFile(newCharacterPath, mDefaultCharacterObjectMap, true,
+        std::set<std::string>{ "Character", "CharacterProgress", "Demon",
+            "EntityStats", "Expertise", "Hotbar", "Item" }))
+    {
+        LOG_INFO("No default character file loaded. New characters"
+            " will start with nothing but chosen equipment and base"
+            " expertise skills.\n");
+    }
+
     auto conf = std::dynamic_pointer_cast<objects::ChannelConfig>(mConfig);
 
     mDefinitionManager = new libcomp::DefinitionManager();
@@ -337,6 +348,8 @@ bool ChannelServer::Initialize()
         to_underlying(ClientToChannelPacketCode_t::PACKET_BAZAAR_MARKET_INFO_SELF));
     clientPacketManager->AddParser<Parsers::Warp>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_WARP));
+    clientPacketManager->AddParser<Parsers::SkillExecuteInstant>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_SKILL_EXECUTE_INSTANT));
     clientPacketManager->AddParser<Parsers::SyncCharacter>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_SYNC_CHARACTER));
     clientPacketManager->AddParser<Parsers::BazaarInteract>(
@@ -547,6 +560,8 @@ void ChannelServer::Cleanup()
     {
         mTickThread.join();
     }
+
+    mDefaultCharacterObjectMap.clear();
 }
 
 ChannelServer::~ChannelServer()
@@ -962,4 +977,10 @@ bool ChannelServer::SendSystemMessage(const std::shared_ptr<
         mZoneManager->BroadcastPacket(client, p);
     }
     return true;
+}
+
+ChannelServer::PersistentObjectMap
+    ChannelServer::GetDefaultCharacterObjectMap() const
+{
+    return mDefaultCharacterObjectMap;
 }

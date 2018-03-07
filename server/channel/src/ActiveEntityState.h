@@ -556,10 +556,10 @@ public:
     std::set<uint8_t> PopNRAShields(const std::list<CorrectTbl>& types);
 
     /**
-     * Get the next activated ability ID from 1 to 128.
+     * Get the next activated ability ID from 0 to 127.
      * @return The next activated ability ID for the client
      */
-    uint8_t GetNextActivatedAbilityID();
+    int8_t GetNextActivatedAbilityID();
 
 protected:
     /**
@@ -773,7 +773,7 @@ protected:
     uint64_t mLastRefresh;
 
     /// Next available activated ability ID
-    uint8_t mNextActivatedAbilityID;
+    int8_t mNextActivatedAbilityID;
 
     /// Map of timestamps associated to AI specific actions
     std::unordered_map<std::string, uint64_t> mActionTimes;

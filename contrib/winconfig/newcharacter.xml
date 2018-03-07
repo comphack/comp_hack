@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="Character">
+        <member name="HomepointZone">90105</member>
+        <member name="HomepointSpotID">50000</member>
+        <member name="LearnedSkills">
+            <element>5125</element>
+            <element>5580</element>
+            <element>5700</element>
+            <element>5704</element>
+            <element>5705</element>
+            <element>5715</element>
+            <element>5716</element>
+            <element>5717</element>
+            <element>5718</element>
+            <element>5841</element>
+            <element>5842</element>
+            <element>5843</element>
+            <element>5890</element>
+            <element>5892</element>
+            <element>5895</element>
+            <element>5896</element>
+            <element>5897</element>
+            <element>5898</element>
+            <element>5899</element>
+            <element>5900</element>
+            <element>5901</element>
+            <element>5902</element>
+            <element>5903</element>
+            <element>5904</element>
+            <element>5905</element>
+            <element>5906</element>
+            <element>5907</element>
+            <element>5908</element>
+            <element>5909</element>
+            <element>5911</element>
+            <element>11115</element>
+            <element>11116</element>
+            <element>11117</element>
+            <element>11610</element>
+            <element>11611</element>
+            <element>11612</element>
+            <element>11636</element>
+            <element>11637</element>
+            <element>11638</element>
+            <element>11747</element>
+            <element>11748</element>
+            <element>11901</element>
+            <element>11902</element>
+            <element>11916</element>
+        </member>
+        <member name="Hotbars">
+            <element>10000000-0000-0000-0000-000000000001</element>
+        </member>
+    </object>
+    <object name="Hotbar">
+        <member name="UID">10000000-0000-0000-0000-000000000001</member>
+        <member name="ItemTypes">
+            <element>1</element>
+            <element>1</element>
+            <element>1</element>
+            <element>1</element>
+            <element>2</element>
+            <element>2</element>
+            <element>2</element>
+            <element>2</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>4</element>
+            <element>2</element>
+            <element>1</element>
+        </member>
+        <member name="ItemIDs">
+            <element>9</element>
+            <element>11</element>
+            <element>10</element>
+            <element>15</element>
+            <element>5401</element>
+            <element>5407</element>
+            <element>5404</element>
+            <element>5501</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>1</element>
+            <element>5601</element>
+            <element>26</element>
+        </member>
+    </object>
+    <object name="CharacterProgress">
+        <member name="Maps">
+            <element>0x7E</element>
+        </member>
+    </object>
+    <object name="Item">
+        <member name="Type">1</member>
+        <member name="StackSize">5</member>
+    </object>
+</objgen>

@@ -68,6 +68,7 @@
 #include <DropSet.h>
 #include <LootBox.h>
 #include <MiSpotData.h>
+#include <MiZoneData.h>
 #include <ObjectPosition.h>
 #include <Party.h>
 #include <Quest.h>
@@ -253,6 +254,9 @@ void ActionManager::PerformActions(
             }
             else if(!it->second(*this, ctx))
             {
+                LOG_DEBUG(libcomp::String("Quitting mid-action execution"
+                    " following the result of action type: %1.\n")
+                    .Arg((int32_t)action->GetActionType()));
                 break;
             }
         }
@@ -351,11 +355,13 @@ bool ActionManager::ZoneChange(ActionContext& ctx)
         if(zoneDef)
         {
             auto definitionManager = server->GetDefinitionManager();
+            auto zoneData = definitionManager->GetZoneData(zoneDef->GetID());
             auto spots = definitionManager->GetSpotData(zoneDef->GetDynamicMapID());
             auto spotIter = spots.find(spotID);
             if(spotIter != spots.end())
             {
-                Point p = zoneManager->GetRandomSpotPoint(spotIter->second);
+                Point p = zoneManager->GetRandomSpotPoint(spotIter->second,
+                    zoneData);
                 x = p.x;
                 y = p.y;
                 rotation = spotIter->second->GetRotation();
@@ -1455,7 +1461,10 @@ bool ActionManager::Spawn(ActionContext& ctx)
     auto server = mServer.lock();
     auto zoneManager = server->GetZoneManager();
 
-    return zoneManager->UpdateSpawnGroups(ctx.CurrentZone, true, 0, act);
+    return zoneManager->UpdateSpawnGroups(ctx.CurrentZone, true, 0, act) ||
+        ((act->GetMode() == objects::ActionSpawn::Mode_t::ONE_TIME ||
+        act->GetMode() == objects::ActionSpawn::Mode_t::ONE_TIME_RANDOM) &&
+        ctx.CurrentZone->SpawnedAtSpot(act->GetSpotID()));
 }
 
 bool ActionManager::CreateLoot(ActionContext& ctx)

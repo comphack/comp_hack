@@ -400,10 +400,19 @@ bool ZoneManager::EnterZone(const std::shared_ptr<ChannelClientConnection>& clie
     }
 
     auto uniqueID = nextZone->GetID();
+    auto nextInstance = nextZone->GetInstance();
     {
         std::lock_guard<std::mutex> lock(mLock);
         mEntityMap[worldCID] = uniqueID;
-        mZoneInstanceAccess.erase(worldCID);
+
+        // When the player enters the instance they have access to
+        // revoke access so they cannot re-enter
+        auto accessIter = mZoneInstanceAccess.find(worldCID);
+        if(accessIter != mZoneInstanceAccess.end() &&
+            nextInstance && accessIter->second == nextInstance->GetID())
+        {
+            mZoneInstanceAccess.erase(worldCID);
+        }
 
         // Reactive the zone if its not active already
         mActiveZones.insert(uniqueID);
@@ -2191,17 +2200,49 @@ Point ZoneManager::GetRandomPoint(float width, float height) const
         RNG_DEC(float, 0.f, (float)fabs(height), 2));
 }
 
-Point ZoneManager::GetRandomSpotPoint(const std::shared_ptr<objects::MiSpotData>& spot) const
+Point ZoneManager::GetRandomSpotPoint(
+    const std::shared_ptr<objects::MiSpotData>& spot,
+    const std::shared_ptr<objects::MiZoneData>& zoneData)
 {
+    Point center(spot->GetCenterX(), spot->GetCenterY());
+
     Point untransformed = GetRandomPoint(spot->GetSpanX() * 2.f,
         spot->GetSpanY() * 2.f);
-    untransformed.x += spot->GetCenterX() - spot->GetSpanX();
-    untransformed.y += spot->GetCenterY() - spot->GetSpanY();
+    untransformed.x += center.x - spot->GetSpanX();
+    untransformed.y += center.y - spot->GetSpanY();
 
-    return spot->GetRotation() != 0.f
-        ? RotatePoint(untransformed, Point(spot->GetCenterX(), spot->GetCenterY()),
-            spot->GetRotation())
+    Point transformed = spot->GetRotation() != 0.f
+        ? RotatePoint(untransformed, center, spot->GetRotation())
         : untransformed;
+
+    if(zoneData)
+    {
+        // Ensure that the random spot is in the zone boundaries
+        std::shared_ptr<ZoneGeometry> geometry;
+
+        auto qmpFile = zoneData->GetFile()->GetQmpFile();
+        if(!qmpFile.IsEmpty())
+        {
+            std::lock_guard<std::mutex> lock(mLock);
+            auto geoIter = mZoneGeometry.find(qmpFile.C());
+            if(geoIter != mZoneGeometry.end())
+            {
+                geometry = geoIter->second;
+            }
+        }
+
+        Line centerLine(center, transformed);
+
+        Point collision;
+        if(geometry && geometry->Collides(centerLine, collision))
+        {
+            // Move off the collision point by 1
+            transformed = GetLinearPoint(collision.x, collision.y,
+                center.x, center.y, 1.f, false);
+        }
+    }
+
+    return transformed;
 }
 
 Point ZoneManager::GetLinearPoint(float sourceX, float sourceY,

@@ -1,14 +1,16 @@
 /**
- * @file server/channel/src/packets/game/SkillActivate.cpp
+ * @file server/channel/src/packets/game/SkillExecuteInstant.cpp
  * @ingroup channel
  *
  * @author HACKfrost
  *
- * @brief Request from the client to activate a character or demon skill.
+ * @brief Request from the client to execute a skill instantaneously.
+ *  If the skill supplied skill is not the correct type, it will
+ *  activate normally.
  *
  * This file is part of the Channel Server (channel).
  *
- * Copyright (C) 2012-2016 COMP_hack Team <compomega@tutanota.com>
+ * Copyright (C) 2012-2018 COMP_hack Team <compomega@tutanota.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as
@@ -30,6 +32,8 @@
 #include <ErrorCodes.h>
 #include <Log.h>
 #include <ManagerPacket.h>
+#include <Packet.h>
+#include <PacketCodes.h>
 
 // object Includes
 #include <Item.h>
@@ -39,11 +43,11 @@
 
 using namespace channel;
 
-bool Parsers::SkillActivate::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::SkillExecuteInstant::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {
-    if(p.Size() < 12)
+    if(p.Size() < 20)
     {
         return false;
     }
@@ -55,18 +59,21 @@ bool Parsers::SkillActivate::Parse(libcomp::ManagerPacket *pPacketManager,
 
     int32_t sourceEntityID = p.ReadS32Little();
     uint32_t skillID = p.ReadU32Little();
+    int32_t targetEntityID = p.ReadS32Little();
 
     uint32_t targetType = p.ReadU32Little();
     if(targetType != ACTIVATION_NOTARGET && p.Left() == 0)
     {
-        LOG_ERROR("Invalid skill target type sent from client\n");
+        LOG_ERROR("Invalid skill target type sent from client for instant"
+            " execution request.\n");
         return false;
     }
 
     auto source = state->GetEntityState(sourceEntityID);
     if(!source)
     {
-        LOG_ERROR("Invalid skill source sent from client for skill activation\n");
+        LOG_ERROR("Invalid skill source sent from client for instant"
+            " execution request.\n");
         return false;
     }
 
@@ -86,7 +93,8 @@ bool Parsers::SkillActivate::Parse(libcomp::ManagerPacket *pPacketManager,
                     libcomp::PersistentObject::GetObjectByUUID(
                         state->GetObjectUUID(targetObjectID)));
 
-                // If the item is invalid or it is an expired rental, fail the skill
+                // If the item is invalid or it is an expired rental,
+                // fail the skill
                 if(!item || (item->GetRentalExpiration() > 0 &&
                     item->GetRentalExpiration() < (uint32_t)std::time(0)))
                 {
@@ -101,7 +109,8 @@ bool Parsers::SkillActivate::Parse(libcomp::ManagerPacket *pPacketManager,
             break;
         default:
             {
-                LOG_ERROR(libcomp::String("Unknown skill target type encountered: %1\n")
+                LOG_ERROR(libcomp::String("Unknown skill target type"
+                    " encountered for instant skill execution request: %1\n")
                     .Arg(targetType));
                 skillManager->SendFailure(source, skillID, client);
                 return true;
@@ -110,10 +119,12 @@ bool Parsers::SkillActivate::Parse(libcomp::ManagerPacket *pPacketManager,
     }
 
     server->QueueWork([](SkillManager* pSkillManager, const std::shared_ptr<
-        ActiveEntityState> pSource, uint32_t pSkillID, int64_t pTargetObjectID)
+        ActiveEntityState> pSource, uint32_t pSkillID, int64_t pTargetObjectID,
+        int32_t pTargetEntityID)
         {
-            pSkillManager->ActivateSkill(pSource, pSkillID, pTargetObjectID, 0);
-        }, skillManager, source, skillID, targetObjectID);
+            pSkillManager->ActivateSkill(pSource, pSkillID, pTargetObjectID,
+                (int64_t)pTargetEntityID);
+        }, skillManager, source, skillID, targetObjectID, targetEntityID);
 
     return true;
 }

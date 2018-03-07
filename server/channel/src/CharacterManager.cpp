@@ -418,7 +418,7 @@ void CharacterManager::SendPartnerData(const std::shared_ptr<
         reply.WriteU8(ePair.first->GetStack());
     }
 
-    //Learned skill count will always be static
+    // Learned skill count will always be static
     for(size_t i = 0; i < 8; i++)
     {
         auto skillID = d->GetLearnedSkills(i);
@@ -453,9 +453,9 @@ void CharacterManager::SendPartnerData(const std::shared_ptr<
     reply.WriteFloat(dState->GetDestinationY());
     reply.WriteFloat(dState->GetDestinationRotation());
 
-    reply.WriteU8(0);   //Unknown bool
+    reply.WriteU8(0);   // Unknown bool
     reply.WriteU16Little(d->GetAttackSettings());
-    reply.WriteU8(0);   //Loyalty?
+    reply.WriteU8(0);   // Unknown
     reply.WriteU16Little(d->GetFamiliarity());
     reply.WriteU8(d->GetLocked() ? 1 : 0);
 
@@ -465,41 +465,41 @@ void CharacterManager::SendPartnerData(const std::shared_ptr<
         reply.WriteS8(d->GetReunion(i));
     }
 
-    reply.WriteS8(0);   //Unknown
+    reply.WriteS8(0);   // Unknown
     reply.WriteS32Little(d->GetSoulPoints());
 
-    reply.WriteS32Little(0);    //Force Gauge?
+    reply.WriteS32Little(0);    // Force Gauge?
     for(size_t i = 0; i < 20; i++)
     {
-        reply.WriteS32Little(0);    //Force Values?
+        reply.WriteS32Little(0);    // Force Values?
     }
 
-    //Force Stack?
+    // Force Stack?
     for(size_t i = 0; i < 8; i++)
     {
         reply.WriteU16Little(0);
     }
 
-    //Force Stack Pending?
+    // Force Stack Pending?
     reply.WriteU16Little(0);
 
-    reply.WriteU8(0);   //Unknown
-    reply.WriteU8(0);   //Mitama type
+    reply.WriteU8(0);   // Unknown
+    reply.WriteU8(0);   // Mitama type
 
-    //Reunion bonuses (12 * 8 ranks)
+    // Reunion bonuses (12 * 8 ranks)
     for(size_t i = 0; i < 96; i++)
     {
         reply.WriteU8(0);
     }
 
-    //Characteristics panel
+    // Characteristics panel
     for(size_t i = 0; i < 4; i++)
     {
-        reply.WriteS64Little(-1);    //Item object ID
-        reply.WriteU32Little(static_cast<uint32_t>(-1));    //Item type
+        reply.WriteS64Little(-1);    // Item object ID
+        reply.WriteU32Little(static_cast<uint32_t>(-1));    // Item type
     }
 
-    //Effect length in seconds
+    // Effect length in seconds
     reply.WriteS32Little(0);
 
     client->SendPacket(reply);
@@ -621,7 +621,7 @@ void CharacterManager::SendDemonData(const std::shared_ptr<
     /// here is setting the epitaph flag (both visible in COMP window)
 
     reply.WriteU16Little(d->GetAttackSettings());
-    reply.WriteU8(0);   //Loyalty?
+    reply.WriteU8(0);   // Unknown
     reply.WriteU16Little(d->GetFamiliarity());
     reply.WriteU8(d->GetLocked() ? 1 : 0);
 
@@ -631,41 +631,41 @@ void CharacterManager::SendDemonData(const std::shared_ptr<
         reply.WriteS8(d->GetReunion(i));
     }
 
-    reply.WriteS8(0);   //Unknown
+    reply.WriteS8(0);   // Unknown
     reply.WriteS32Little(d->GetSoulPoints());
 
-    reply.WriteS32Little(0);    //Force Gauge?
+    reply.WriteS32Little(0);    // Force Gauge?
     for(size_t i = 0; i < 20; i++)
     {
-        reply.WriteS32Little(0);    //Force Values?
+        reply.WriteS32Little(0);    // Force Values?
     }
 
-    //Force Stack?
+    // Force Stack?
     for(size_t i = 0; i < 8; i++)
     {
         reply.WriteU16Little(0);
     }
 
-    //Force Stack Pending?
+    // Force Stack Pending?
     reply.WriteU16Little(0);
 
-    reply.WriteU8(0);   //Unknown
-    reply.WriteU8(0);   //Mitama type
+    reply.WriteU8(0);   // Unknown
+    reply.WriteU8(0);   // Mitama type
 
-    //Reunion bonuses (12 * 8 ranks)
+    // Reunion bonuses (12 * 8 ranks)
     for(size_t i = 0; i < 96; i++)
     {
         reply.WriteU8(0);
     }
 
-    //Characteristics panel?
+    // Characteristics panel?
     for(size_t i = 0; i < 4; i++)
     {
-        reply.WriteS64Little(-1);    //Item object ID?
-        reply.WriteU32Little(static_cast<uint32_t>(-1));    //Item type?
+        reply.WriteS64Little(-1);    // Item object ID?
+        reply.WriteU32Little(static_cast<uint32_t>(-1));    // Item type?
     }
 
-    //Effect length in seconds remaining
+    // Effect length in seconds remaining
     reply.WriteS32Little(0);
 
     client->SendPacket(reply);

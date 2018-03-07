@@ -43,6 +43,7 @@
 namespace libcomp
 {
 
+class PersistentObject;
 class ServerCommandLineParser;
 
 /**
@@ -56,6 +57,10 @@ class BaseServer : public TcpServer, public Manager,
     public std::enable_shared_from_this<BaseServer>
 {
 public:
+    /// Map of PersistentObject pointers by object type name
+    typedef std::unordered_map<std::string, std::list<
+        std::shared_ptr<libcomp::PersistentObject>>> PersistentObjectMap;
+
     /**
      * Create a new base server.
      * @param szProgram First command line argument for the application.
@@ -252,12 +257,25 @@ protected:
      * @param filePath Path to the XML config file
      * @param db Pointer to the database connection
      * @param specificTypes Optional parameter to only load the specified types
-     * @return true on success, false if either no data was found or an error
-     *  occurred
+     * @return true on success, false if an error occurred
      */
     bool InsertDataFromFile(const libcomp::String& filePath,
         const std::shared_ptr<Database>& db,
-        const std::set<std::string>& specificTypes = std::set<std::string>());
+        const std::set<std::string>& specificTypes = {});
+
+    /**
+     * Dynamicaly instantiate data from an XML config file. Records will be
+     * created in the order they are listed in the file.
+     * @param filePath Path to the XML config file
+     * @param records Output map of records created by object type
+     * @param registerRecords If true the loaded records will be registered in
+     *  the cache when the UID is specified
+     * @param specificTypes Optional parameter to only load the specified types
+     * @return true on success, false if an error occurred
+     */
+    bool LoadDataFromFile(const libcomp::String& filePath,
+        PersistentObjectMap& records, bool registerRecords,
+        const std::set<std::string>& specificTypes = {});
 
     /// A shared pointer to the config used to set up the server.
     std::shared_ptr<objects::ServerConfig> mConfig;

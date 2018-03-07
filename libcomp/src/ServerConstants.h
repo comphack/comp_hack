@@ -216,8 +216,8 @@ struct Data
     /// Valuable ID of the material tank that stores disassembled items
     uint16_t VALUABLE_MATERIAL_TANK;
 
-    /// Default skills to add to a new character
-    std::set<uint32_t> DEFAULT_SKILLS;
+    /// Default zone to move players when no other zone is found
+    uint32_t ZONE_DEFAULT;
 
     /// Map of cameo item IDs to transformation status effect IDs, if
     /// more than one status effect is listed, a random one is chosen

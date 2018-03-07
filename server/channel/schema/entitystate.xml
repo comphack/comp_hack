@@ -103,6 +103,10 @@
 
         <member type="ActivatedAbility*" name="ActivatedAbility"
             nulldefault="true"/>
+        <member type="map" name="SpecialActivations">
+            <key type="s8"/>
+            <value type="ActivatedAbility*"/>
+        </member>
 
         <member type="set" name="CurrentSkills">
             <element type="u32"/>
@@ -129,7 +133,7 @@
         <member type="s64" name="ActivationObjectID"/>
         <member type="s64" name="TargetObjectID"/>
         <member type="bool" name="EntityTargeted"/>
-        <member type="u8" name="ActivationID"/>
+        <member type="s8" name="ActivationID"/>
         <member type="u64" name="ActivationTime"/>
         <member type="u64" name="ExecutionTime"/>
         <member type="u64" name="ChargedTime"/>

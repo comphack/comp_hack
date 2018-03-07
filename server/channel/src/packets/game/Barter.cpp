@@ -49,6 +49,9 @@ void HandleBarter(const std::shared_ptr<ChannelServer> server,
     const std::shared_ptr<ChannelClientConnection> client, uint16_t barterID)
 {
     auto state = client->GetClientState();
+    auto character = state->GetCharacterState()->GetEntity();
+
+    auto characterManager = server->GetCharacterManager();
     auto definitionManager = server->GetDefinitionManager();
 
     auto barterData = definitionManager->GetNPCBarterData(barterID);
@@ -79,7 +82,7 @@ void HandleBarter(const std::shared_ptr<ChannelServer> server,
                 }
                 break;
             case objects::MiNPCBarterItemData::Type_t::SOUL_POINT:
-                spAdjust = (int32_t)(spAdjust - itemData->GetAmount());
+                spAdjust = (int32_t)(spAdjust - itemData->GetSubtype());
                 break;
             case objects::MiNPCBarterItemData::Type_t::BETHEL:
                 /// @todo: for now just don't pay bethel
@@ -87,16 +90,18 @@ void HandleBarter(const std::shared_ptr<ChannelServer> server,
             case objects::MiNPCBarterItemData::Type_t::COIN:
                 /// @todo: for now just don't pay coins
                 break;
+            case objects::MiNPCBarterItemData::Type_t::NONE:
+                break;
+            case objects::MiNPCBarterItemData::Type_t::ONE_TIME_VALUABLE:
             case objects::MiNPCBarterItemData::Type_t::EVENT_COUNTER:
             case objects::MiNPCBarterItemData::Type_t::CASINO_RESTRICTION:
             case objects::MiNPCBarterItemData::Type_t::SKILL_CHARACTER:
             case objects::MiNPCBarterItemData::Type_t::SKILL_DEMON:
             case objects::MiNPCBarterItemData::Type_t::PLUGIN:
+            default:
                 LOG_ERROR(libcomp::String("Invalid barter trade item"
                     " type encountered: %1\n").Arg((uint8_t)type));
                 failed = true;
-                break;
-            default:
                 break;
             }
         }
@@ -105,6 +110,7 @@ void HandleBarter(const std::shared_ptr<ChannelServer> server,
     std::list<int32_t> characterSkills;
     std::list<int32_t> demonSkills;
     std::list<int32_t> pluginIDs;
+    std::set<uint16_t> oneTimeValuables;
     if(!failed)
     {
         for(auto itemData : barterData->GetResultItems())
@@ -126,8 +132,22 @@ void HandleBarter(const std::shared_ptr<ChannelServer> server,
                     }
                 }
                 break;
+            case objects::MiNPCBarterItemData::Type_t::ONE_TIME_VALUABLE:
+                {
+                    uint16_t valuableID = (uint16_t)itemData->GetSubtype();
+                    oneTimeValuables.insert(valuableID);
+
+                    if(characterManager->HasValuable(character, valuableID))
+                    {
+                        LOG_ERROR(libcomp::String("Player attempted to"
+                            " perform barter with  a one-time valuable they"
+                            " already have: %1\n").Arg(valuableID));
+                        failed = true;
+                    }
+                }
+                break;
             case objects::MiNPCBarterItemData::Type_t::SOUL_POINT:
-                spAdjust = (int32_t)(spAdjust + itemData->GetAmount());
+                spAdjust = (int32_t)(spAdjust + itemData->GetSubtype());
                 break;
             case objects::MiNPCBarterItemData::Type_t::EVENT_COUNTER:
                 /// @todo: for now just don't set event counter
@@ -159,7 +179,12 @@ void HandleBarter(const std::shared_ptr<ChannelServer> server,
             case objects::MiNPCBarterItemData::Type_t::COIN:
                 /// @todo: for now just don't receive coins
                 break;
+            case objects::MiNPCBarterItemData::Type_t::NONE:
+                break;
             default:
+                LOG_ERROR(libcomp::String("Invalid barter result item"
+                    " type encountered: %1\n").Arg((uint8_t)type));
+                failed = true;
                 break;
             }
         }
@@ -169,9 +194,7 @@ void HandleBarter(const std::shared_ptr<ChannelServer> server,
     {
         // If there have not been failures yet, determine item adjustments
         // and apply all changes
-        auto character = state->GetCharacterState()->GetEntity();
         auto inventory = character->GetItemBoxes(0).Get();
-        auto characterManager = server->GetCharacterManager();
 
         std::list<std::shared_ptr<objects::Item>> insertItems;
         std::unordered_map<std::shared_ptr<objects::Item>, uint16_t> stackAdjustItems;
@@ -292,18 +315,20 @@ void HandleBarter(const std::shared_ptr<ChannelServer> server,
                     ->GetEntityID();
                 for(int32_t skillID : demonSkills)
                 {
-                    failed |= !characterManager->LearnSkill(client, demonEntityID,
-                        (uint32_t)skillID);
+                    failed |= !characterManager->LearnSkill(client,
+                        demonEntityID, (uint32_t)skillID);
                 }
             }
 
-            if(pluginIDs.size() > 0)
+            for(int32_t pluginID : pluginIDs)
             {
-                for(int32_t pluginID : pluginIDs)
-                {
-                    failed |= !characterManager->AddPlugin(client,
-                        (uint16_t)pluginID);
-                }
+                failed |= !characterManager->AddPlugin(client,
+                    (uint16_t)pluginID);
+            }
+
+            for(uint16_t valuableID : oneTimeValuables)
+            {
+                failed |= characterManager->AddPlugin(client, valuableID);
             }
         }
     }
@@ -314,6 +339,13 @@ void HandleBarter(const std::shared_ptr<ChannelServer> server,
     reply.WriteU16Little(barterID);
 
     client->SendPacket(reply);
+
+    // Adding one-time valuables does not end the barter session so force
+    // it to end so pre-barter checks can run again
+    if(!failed && oneTimeValuables.size() > 0)
+    {
+        server->GetEventManager()->HandleEvent(client, nullptr);
+    }
 }
 
 bool Parsers::Barter::Parse(libcomp::ManagerPacket *pPacketManager,

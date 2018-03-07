@@ -210,12 +210,12 @@ bool Parsers::EquipmentModEdit::Parse(libcomp::ManagerPacket *pPacketManager,
         }
     }
 
-    auto activatedAbility = cState->GetActivatedAbility();
-    if(activatedAbility && activatedAbility->GetActivationID() == skillActivationID)
+    auto activatedAbility = cState->GetSpecialActivations(skillActivationID);
+    if(activatedAbility)
     {
         if(responseCode != RESULT_CODE_ERROR)
         {
-            server->GetSkillManager()->ExecuteSkill(cState, (uint8_t)skillActivationID,
+            server->GetSkillManager()->ExecuteSkill(cState, skillActivationID,
                 (int64_t)cState->GetEntityID());
         }
         else

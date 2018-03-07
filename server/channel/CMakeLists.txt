@@ -266,6 +266,7 @@ SET(${PROJECT_NAME}_PACKETS
     src/packets/game/BazaarPrice.cpp            # 0x0164
     src/packets/game/BazaarMarketInfoSelf.cpp   # 0x0166
     src/packets/game/Warp.cpp                   # 0x016A
+    src/packets/game/SkillExecuteInstant.cpp    # 0x016C
     src/packets/game/SyncCharacter.cpp          # 0x017E
     src/packets/game/BazaarInteract.cpp         # 0x0184
     src/packets/game/SkillForget.cpp            # 0x0186

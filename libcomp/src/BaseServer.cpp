@@ -523,6 +523,37 @@ bool BaseServer::InsertDataFromFile(const libcomp::String& filePath,
 
     LOG_DEBUG(libcomp::String("Inserting records from file '%1'...\n").Arg(filePath));
 
+    PersistentObjectMap records;
+    if(LoadDataFromFile(filePath, records, true, specificTypes))
+    {
+        for(auto rPair : records)
+        {
+            for(auto record : rPair.second)
+            {
+                if(!record->Insert(db))
+                {
+                    return false;
+                }
+            }
+        }
+    }
+
+    // Allow no records as a means to clear out the DB on restart
+    return true;
+}
+
+bool BaseServer::LoadDataFromFile(const libcomp::String& filePath,
+    PersistentObjectMap& records, bool registerRecords,
+    const std::set<std::string>& specificTypes)
+{
+    tinyxml2::XMLDocument doc;
+    if(tinyxml2::XML_SUCCESS != doc.LoadFile(filePath.C()))
+    {
+        return false;
+    }
+
+    LOG_DEBUG(libcomp::String("Loading records from file '%1'...\n").Arg(filePath));
+
     const tinyxml2::XMLElement *objXml = doc.RootElement()->FirstChildElement("object");
 
     while(nullptr != objXml)
@@ -573,7 +604,7 @@ bool BaseServer::InsertDataFromFile(const libcomp::String& filePath,
             if(account->GetUsername().IsEmpty() ||
                 account->GetPassword().IsEmpty())
             {
-                LOG_ERROR("Attempted to insert an account with no username"
+                LOG_ERROR("Attempted to create an account with no username"
                     " or no password.\n");
                 return false;
             }
@@ -584,19 +615,23 @@ bool BaseServer::InsertDataFromFile(const libcomp::String& filePath,
                 account->GetPassword(), salt));
         }
 
-        if(!record->Register(record, uuid) ||
-            !record->Insert(db))
+        if(!uuid.IsNull())
         {
-            return false;
+            if(!record->Register(record, uuid))
+            {
+                return false;
+            }
+            else if(!registerRecords)
+            {
+                record->Unregister();
+            }
         }
 
-        // Don't cache the records until they are needed
-        record->Unregister();
+        records[name].push_back(record);
 
         objXml = objXml->NextSiblingElement("object");
     }
 
-    // Allow no records as a means to clear out the DB on restart
     return true;
 }
 

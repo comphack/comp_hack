@@ -15,5 +15,6 @@
         <member type="u8" name="RegistrationTicketCount" default="1"/>
         <member type="s32" name="RegistrationUserLevel" default="0"/>
         <member type="bool" name="RegistrationAccountEnabled" default="true"/>
+        <member type="bool" name="PlayOpeningMovie" default="true"/>
     </object>
 </objgen>

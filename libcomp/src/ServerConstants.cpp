@@ -193,6 +193,10 @@ bool ServerConstants::Initialize(const String& filePath)
     success &= LoadInteger(constants["VALUABLE_MATERIAL_TANK"],
         sConstants.VALUABLE_MATERIAL_TANK);
 
+    // Load zone constants
+    success &= LoadInteger(constants["ZONE_DEFAULT"],
+        sConstants.ZONE_DEFAULT);
+
     String listStr;
     success &= LoadString(constants["SKILL_TRAESTO_ARCADIA"], listStr) &&
         ToIntegerArray(sConstants.SKILL_TRAESTO_ARCADIA, listStr.Split(","));
@@ -201,41 +205,7 @@ bool ServerConstants::Initialize(const String& filePath)
     success &= LoadString(constants["SKILL_TRAESTO_SOUHONZAN"], listStr) &&
         ToIntegerArray(sConstants.SKILL_TRAESTO_SOUHONZAN, listStr.Split(","));
 
-    auto complexIter = complexConstants.find("DEFAULT_SKILLS");
-    if(success && complexIter != complexConstants.end())
-    {
-        std::list<String> strList;
-        if(!LoadStringList(complexIter->second, strList))
-        {
-            LOG_ERROR("Failed to load DEFAULT_SKILLS\n");
-            success = false;
-        }
-        else
-        {
-            for(auto elemStr : strList)
-            {
-                uint32_t entry = 0;
-                if(LoadInteger(elemStr.C(), entry))
-                {
-                    sConstants.DEFAULT_SKILLS.insert(entry);
-                }
-                else
-                {
-                    LOG_ERROR("Failed to load an element in"
-                        " DEFAULT_SKILLS\n");
-                    success = false;
-                    break;
-                }
-            }
-        }
-    }
-    else
-    {
-        LOG_ERROR("DEFAULT_SKILLS not found\n");
-        success = false;
-    }
-
-    complexIter = complexConstants.find("CAMEO_MAP");
+    auto complexIter = complexConstants.find("CAMEO_MAP");
     if(success && complexIter != complexConstants.end())
     {
         std::unordered_map<std::string, std::string> map;

@@ -50,7 +50,7 @@ bool Parsers::SkillExecute::Parse(libcomp::ManagerPacket *pPacketManager,
     auto skillManager = server->GetSkillManager();
 
     int32_t sourceEntityID = p.ReadS32Little();
-    uint8_t activationID = p.ReadU8();
+    int8_t activationID = p.ReadS8();
     int64_t targetObjectID = p.Size() == 9 ? (int64_t)p.ReadS32Little() : p.ReadS64Little();
 
     auto source = state->GetEntityState(sourceEntityID);
@@ -61,7 +61,7 @@ bool Parsers::SkillExecute::Parse(libcomp::ManagerPacket *pPacketManager,
     }
 
     server->QueueWork([](SkillManager* pSkillManager, const std::shared_ptr<
-        ActiveEntityState> pSource, uint8_t pActivationID, int64_t pTargetObjectID)
+        ActiveEntityState> pSource, int8_t pActivationID, int64_t pTargetObjectID)
         {
             pSkillManager->ExecuteSkill(pSource, pActivationID, pTargetObjectID);
         }, skillManager, source, activationID, targetObjectID);

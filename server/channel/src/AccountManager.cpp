@@ -49,6 +49,7 @@
 #include <InheritedSkill.h>
 #include <Item.h>
 #include <ItemBox.h>
+#include <MiItemBasicData.h>
 #include <MiItemData.h>
 #include <MiPossessionData.h>
 #include <Quest.h>
@@ -352,84 +353,9 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
 
     auto account = character->GetAccount();
     bool newCharacter = character->GetCoreStats()->GetLevel() == -1;
-    auto characterManager = server->GetCharacterManager();
-    auto definitionManager = server->GetDefinitionManager();
-    if(newCharacter)
+    if(newCharacter && !InitializeNewCharacter(character.Get()))
     {
-        bool isGM = account->GetUserLevel() > 0;
-
-        auto cs = character->GetCoreStats().Get();
-        cs->SetLevel(1);
-        characterManager->CalculateCharacterBaseStats(cs);
-        cs->SetHP(cs->GetMaxHP());
-        cs->SetMP(cs->GetMaxMP());
-
-        // Create the character progress
-        auto progress = libcomp::PersistentObject::New<
-            objects::CharacterProgress>(true);
-        progress->SetCharacter(character);
-        progress->SetMaps(0, 0x7E);
-
-        // Max COMP slots if the account is a GM
-        if(isGM)
-        {
-            progress->SetMaxCOMPSlots(10);
-        }
-
-        if(!progress->Insert(db) ||
-            !character->SetProgress(progress))
-        {
-            return false;
-        }
-
-        auto fSettings = libcomp::PersistentObject::New<
-            objects::FriendSettings>(true);
-        fSettings->SetCharacter(character);
-
-        if(!fSettings->Insert(db) ||
-            !character->SetFriendSettings(fSettings))
-        {
-            LOG_ERROR("Failed to create friend settings.\n");
-
-            return false;
-        }
-
-        // Create the COMP
-        auto comp = libcomp::PersistentObject::New<
-            objects::DemonBox>(true);
-        comp->SetAccount(account);
-        comp->SetCharacter(character);
-
-        if(!comp->Insert(db) || !character->SetCOMP(comp))
-        {
-            return false;
-        }
-
-        // Create the inventory item box (the others can be lazy loaded later)
-        auto box = libcomp::PersistentObject::New<
-            objects::ItemBox>(true);
-        box->SetAccount(account);
-        box->SetCharacter(character);
-
-        if(!box->Insert(db) || !character->SetItemBoxes(0, box))
-        {
-            return false;
-        }
-
-        for(auto skillID : SVR_CONST.DEFAULT_SKILLS)
-        {
-            character->InsertLearnedSkills(skillID);
-        }
-
-        for(auto skillID : definitionManager->GetDefaultCharacterSkills())
-        {
-            character->InsertLearnedSkills(skillID);
-        }
-
-        if(!cs->Update(db))
-        {
-            return false;
-        }
+        return false;
     }
 
     // Load or create the account world data
@@ -536,7 +462,6 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
     }
 
     // Equipment
-    size_t equipmentBoxSlot = 0;
     auto defaultBox = character->GetItemBoxes(0);
     for(auto equip : character->GetEquippedItems())
     {
@@ -553,30 +478,6 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
             state->SetObjectID(equip->GetUUID(),
                 server->GetNextObjectID());
         }
-
-        if(newCharacter)
-        {
-            auto def = definitionManager->GetItemData(equip->GetType());
-            auto poss = def->GetPossession();
-            equip->SetDurability((uint16_t)
-                ((uint16_t)poss->GetDurability() * 1000));
-            equip->SetMaxDurability((int8_t)poss->GetDurability());
-
-            auto slot = equipmentBoxSlot++;
-            equip->SetItemBox(defaultBox);
-            equip->SetBoxSlot((int8_t)slot);
-            defaultBox->SetItems(slot, equip);
-
-            if(!equip->Update(db))
-            {
-                return false;
-            }
-        }
-    }
-
-    if(newCharacter && !defaultBox->Update(db))
-    {
-        return false;
     }
 
     // Expertises
@@ -674,6 +575,356 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
 
     return !newCharacter ||
         (character->Update(db) && defaultBox->Update(db));
+}
+
+bool AccountManager::InitializeNewCharacter(std::shared_ptr<
+    objects::Character> character)
+{
+    auto cs = character->GetCoreStats().Get();
+    if(cs->GetLevel() != -1)
+    {
+        return false;
+    }
+
+    auto server = mServer.lock();
+    auto db = server->GetWorldDatabase();
+
+    auto characterManager = server->GetCharacterManager();
+    auto definitionManager = server->GetDefinitionManager();
+
+    auto defaultObjs = server->GetDefaultCharacterObjectMap();
+
+    auto objIter = defaultObjs.find("Character");
+    auto dCharacter = std::dynamic_pointer_cast<objects::Character>
+        ((objIter != defaultObjs.end())
+            ? objIter->second.front() : nullptr);
+    if(dCharacter)
+    {
+        // Set (selective) custom character values
+        character->SetLNC(dCharacter->GetLNC());
+        character->SetPoints(dCharacter->GetPoints());
+        character->SetExpertiseExtension(
+            dCharacter->GetExpertiseExtension());
+        character->SetHomepointZone(dCharacter->GetHomepointZone());
+        character->SetHomepointSpotID(dCharacter->GetHomepointSpotID());
+        character->SetLoginPoints(dCharacter->GetLoginPoints());
+        character->SetLearnedSkills(dCharacter->GetLearnedSkills());
+        character->SetEquippedVA(dCharacter->GetEquippedVA());
+        character->SetMaterials(dCharacter->GetMaterials());
+        character->SetVACloset(dCharacter->GetVACloset());
+
+        // Set expertise defaults
+        for(size_t i = 0; i < dCharacter->ExpertisesCount(); i++)
+        {
+            auto dExp = dCharacter->GetExpertises(i).Get();
+            if(dExp)
+            {
+                auto exp = std::make_shared<objects::Expertise>(*dExp);
+                exp->Register(exp, libobjgen::UUID::Random());
+
+                if(!exp->Insert(db) || !character->SetExpertises(i, exp))
+                {
+                    return false;
+                }
+            }
+        }
+    }
+
+    // Always add default rank expertise skills
+    for(auto skillID : definitionManager->GetDefaultCharacterSkills())
+    {
+        character->InsertLearnedSkills(skillID);
+    }
+
+    // Generate stats
+    auto dStats = dCharacter
+        ? dCharacter->GetCoreStats().Get() : nullptr;
+    if(dStats)
+    {
+        // Using custom stats
+        cs->SetSTR(dStats->GetSTR());
+        cs->SetMAGIC(dStats->GetMAGIC());
+        cs->SetVIT(dStats->GetVIT());
+        cs->SetINTEL(dStats->GetINTEL());
+        cs->SetSPEED(dStats->GetSPEED());
+        cs->SetLUCK(dStats->GetLUCK());
+
+        // Correct level
+        int8_t level = dStats->GetLevel();
+        if(level < 1)
+        {
+            level = 1;
+        }
+        else if(level > 99)
+        {
+            level = 99;
+        }
+        cs->SetLevel(level);
+    }
+    else
+    {
+        // Using normal stats
+        cs->SetLevel(1);
+    }
+
+    // Calculate secondary stats and set default HP
+    characterManager->CalculateCharacterBaseStats(cs);
+    cs->SetHP(cs->GetMaxHP());
+    cs->SetMP(cs->GetMaxMP());
+
+    // Create the character progress
+    std::shared_ptr<objects::CharacterProgress> progress;
+
+    objIter = defaultObjs.find("CharacterProgress");
+    auto dProgress = std::dynamic_pointer_cast<objects::CharacterProgress>
+        ((objIter != defaultObjs.end())
+            ? objIter->second.front() : nullptr);
+    if(dProgress)
+    {
+        // Using custom progress
+        progress = std::make_shared<objects::CharacterProgress>(
+            *dProgress);
+        progress->Register(progress, libobjgen::UUID::Random());
+    }
+    else
+    {
+        // Using normal progress
+        progress = libcomp::PersistentObject::New<
+            objects::CharacterProgress>(true);
+    }
+
+    progress->SetCharacter(character);
+
+    if(!progress->Insert(db) ||
+        !character->SetProgress(progress))
+    {
+        return false;
+    }
+
+    // Create the inventory item box (the others can be lazy loaded later)
+    auto box = libcomp::PersistentObject::New<
+        objects::ItemBox>(true);
+    box->SetAccount(character->GetAccount());
+    box->SetCharacter(character);
+
+    // Load and (properly) initialize equipment
+    size_t inventorySlotUsed = 0;
+    for(auto equip : character->GetEquippedItems())
+    {
+        if(equip.IsNull()) continue;
+
+        if(!equip.Get(db))
+        {
+            return false;
+        }
+
+        auto def = definitionManager->GetItemData(equip->GetType());
+        auto poss = def->GetPossession();
+        equip->SetDurability((uint16_t)
+            ((uint16_t)poss->GetDurability() * 1000));
+        equip->SetMaxDurability((int8_t)poss->GetDurability());
+
+        size_t slot = inventorySlotUsed++;
+        equip->SetItemBox(box);
+        equip->SetBoxSlot((int8_t)slot);
+
+        if(!equip->Update(db) || !box->SetItems(slot, equip))
+        {
+            return false;
+        }
+    }
+
+    // Add any custom equipment
+    std::set<std::shared_ptr<objects::Item>> itemsAdded;
+    if(dCharacter)
+    {
+        for(size_t i = 0; i < 15; i++)
+        {
+            auto dEquip = dCharacter->GetEquippedItems(i).Get();
+            if(!dEquip) continue;
+
+            itemsAdded.insert(dEquip);
+
+            // Generate equipment then modify from custom
+            auto equipCopy = characterManager->GenerateItem(
+                dEquip->GetType(), 1);
+            equipCopy->SetTarot(dEquip->GetTarot());
+            equipCopy->SetSoul(dEquip->GetSoul());
+            equipCopy->SetBasicEffect(dEquip->GetBasicEffect());
+            equipCopy->SetSpecialEffect(dEquip->GetSpecialEffect());
+            equipCopy->SetModSlots(dEquip->GetModSlots());
+            equipCopy->SetFuseBonuses(dEquip->GetFuseBonuses());
+            equipCopy->SetRentalExpiration(dEquip->GetRentalExpiration());
+
+            auto def = definitionManager->GetItemData(equipCopy->GetType());
+
+            size_t slot = inventorySlotUsed++;
+            equipCopy->SetItemBox(box);
+            equipCopy->SetBoxSlot((int8_t)slot);
+
+            if(!equipCopy->Insert(db) || !box->SetItems(slot, equipCopy) ||
+                !character->SetEquippedItems(
+                    (size_t)def->GetBasic()->GetEquipType(), equipCopy))
+            {
+                return false;
+            }
+        }
+    }
+
+    // Add any additional items
+    for(auto dObj : defaultObjs["Item"])
+    {
+        auto dItem = std::dynamic_pointer_cast<objects::Item>(dObj);
+
+        if(itemsAdded.find(dItem) != itemsAdded.end()) continue;
+
+        if(inventorySlotUsed >= 50) break;
+
+        itemsAdded.insert(dItem);
+
+        // Generate item then modify from custom
+        auto itemCopy = characterManager->GenerateItem(
+            dItem->GetType(), dItem->GetStackSize());
+
+        itemCopy->SetTarot(dItem->GetTarot());
+        itemCopy->SetSoul(dItem->GetSoul());
+        itemCopy->SetBasicEffect(dItem->GetBasicEffect());
+        itemCopy->SetSpecialEffect(dItem->GetSpecialEffect());
+        itemCopy->SetModSlots(dItem->GetModSlots());
+        itemCopy->SetFuseBonuses(dItem->GetFuseBonuses());
+        itemCopy->SetRentalExpiration(dItem->GetRentalExpiration());
+
+        size_t slot = inventorySlotUsed++;
+        itemCopy->SetItemBox(box);
+        itemCopy->SetBoxSlot((int8_t)slot);
+
+        if(!itemCopy->Insert(db) || !box->SetItems(slot, itemCopy))
+        {
+            return false;
+        }
+    }
+
+    // Insert/set the inventory
+    if(!box->Insert(db) || !character->SetItemBoxes(0, box))
+    {
+        return false;
+    }
+
+    // Create the COMP
+    auto comp = libcomp::PersistentObject::New<
+        objects::DemonBox>(true);
+    comp->SetAccount(character->GetAccount());
+    comp->SetCharacter(character);
+
+    // Generate demons and add to the COMP
+    uint8_t compSlotUsed = 0;
+    for(auto dObj : defaultObjs["Demon"])
+    {
+        auto dDemon = std::dynamic_pointer_cast<objects::Demon>(dObj);
+
+        if(compSlotUsed >= progress->GetMaxCOMPSlots()) break;
+
+        auto devilData = definitionManager->GetDevilData(
+            dDemon->GetType());
+
+        if(!devilData) continue;
+
+        // Generate demon then modify from custom
+        auto demonCopy = characterManager->GenerateDemon(devilData);
+
+        demonCopy->SetSoulPoints(dDemon->GetSoulPoints());
+        demonCopy->SetFamiliarity(dDemon->GetFamiliarity());
+        demonCopy->SetAcquiredSkills(dDemon->GetAcquiredSkills());
+
+        // Override learned skills if any are specified
+        for(auto skillID : dDemon->GetLearnedSkills())
+        {
+            if(skillID)
+            {
+                demonCopy->SetLearnedSkills(dDemon->GetLearnedSkills());
+                break;
+            }
+        }
+
+        // If an explicit level is set, recalc (do not set stats too
+        // because these are calculated per level)
+        dStats = dDemon->GetCoreStats().Get();
+        auto copyStats = demonCopy->GetCoreStats().Get();
+        if(dStats && copyStats->GetLevel() != dStats->GetLevel())
+        {
+            // Correct level
+            int8_t level = dStats->GetLevel();
+            if(level < 1)
+            {
+                level = 1;
+            }
+            else if(level > 99)
+            {
+                level = 99;
+            }
+            copyStats->SetLevel(level);
+
+            // Recalc
+            copyStats->SetLevel(dStats->GetLevel());
+            characterManager->CalculateDemonBaseStats(demonCopy,
+                copyStats, devilData);
+        }
+
+        uint8_t slot = compSlotUsed++;
+        demonCopy->SetDemonBox(comp);
+        demonCopy->SetBoxSlot((int8_t)slot);
+
+        if(!demonCopy->Insert(db) || !copyStats->Insert(db) ||
+           !comp->SetDemons((uint8_t)slot, demonCopy))
+        {
+            return false;
+        }
+    }
+
+    // Insert/set the COMP
+    if(!comp->Insert(db) || !character->SetCOMP(comp))
+    {
+        return false;
+    }
+
+    if(dCharacter)
+    {
+        // Set hotbar defaults
+        for(size_t i = 0; i < 10; i++)
+        {
+            auto dBar = dCharacter->GetHotbars(i).Get();
+            if(dBar)
+            {
+                auto bar = std::make_shared<objects::Hotbar>(*dBar);
+                bar->Register(bar, libobjgen::UUID::Random());
+
+                if(!bar->Insert(db) || !character->SetHotbars(i, bar))
+                {
+                    return false;
+                }
+            }
+        }
+    }
+
+    // Set (non-customizable) friend settings
+    auto fSettings = libcomp::PersistentObject::New<
+        objects::FriendSettings>(true);
+    fSettings->SetCharacter(character);
+
+    if(!fSettings->Insert(db) ||
+        !character->SetFriendSettings(fSettings))
+    {
+        return false;
+    }
+
+    // Lastly update the core stats to signify that
+    // initialization has completed
+    if(!cs->Update(db))
+    {
+        return false;
+    }
+
+    return true;
 }
 
 bool AccountManager::LogoutCharacter(channel::ClientState* state,

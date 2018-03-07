@@ -75,8 +75,8 @@ bool Parsers::Warp::Parse(libcomp::ManagerPacket *pPacketManager,
     auto skillManager = server->GetSkillManager();
     auto zoneManager = server->GetZoneManager();
 
-    auto activatedAbility = sourceState->GetActivatedAbility();
-    if(!activatedAbility || activatedAbility->GetActivationID() != activationID)
+    auto activatedAbility = sourceState->GetSpecialActivations(activationID);
+    if(!activatedAbility)
     {
         LOG_ERROR("Invalid activation ID encountered for Warp request\n");
     }
@@ -96,7 +96,7 @@ bool Parsers::Warp::Parse(libcomp::ManagerPacket *pPacketManager,
             float y = warpDef->GetY();
             float rot = warpDef->GetRotation();
 
-            skillManager->ExecuteSkill(sourceState, (uint8_t)activationID,
+            skillManager->ExecuteSkill(sourceState, activationID,
                 activatedAbility->GetTargetObjectID());
 
             // Some of the warp items without expirations need to be consumed
@@ -117,7 +117,7 @@ bool Parsers::Warp::Parse(libcomp::ManagerPacket *pPacketManager,
         }
         else
         {
-            skillManager->CancelSkill(sourceState, (uint8_t)activationID);
+            skillManager->CancelSkill(sourceState, activationID);
         }
     }
 

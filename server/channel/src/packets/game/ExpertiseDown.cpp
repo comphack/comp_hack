@@ -76,9 +76,9 @@ bool Parsers::ExpertiseDown::Parse(libcomp::ManagerPacket *pPacketManager,
     auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
     auto definitionManager = server->GetDefinitionManager();
     auto skillManager = server->GetSkillManager();
-    
-    auto activatedAbility = cState->GetActivatedAbility();
-    if(!activatedAbility || activatedAbility->GetActivationID() != activationID)
+
+    auto activatedAbility = cState->GetSpecialActivations(activationID);
+    if(!activatedAbility)
     {
         LOG_ERROR("Invalid activation ID encountered for SkillForget request\n");
     }
@@ -116,7 +116,7 @@ bool Parsers::ExpertiseDown::Parse(libcomp::ManagerPacket *pPacketManager,
             {
                 points = points - remove;
 
-                skillManager->ExecuteSkill(sourceState, (uint8_t)activationID,
+                skillManager->ExecuteSkill(sourceState, activationID,
                     activatedAbility->GetTargetObjectID());
 
                 exp->SetPoints(points);
@@ -147,7 +147,7 @@ bool Parsers::ExpertiseDown::Parse(libcomp::ManagerPacket *pPacketManager,
         }
         else
         {
-            skillManager->CancelSkill(sourceState, (uint8_t)activationID);
+            skillManager->CancelSkill(sourceState, activationID);
         }
     }
 

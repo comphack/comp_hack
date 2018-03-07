@@ -80,14 +80,14 @@ bool Parsers::ItemRepairMax::Parse(libcomp::ManagerPacket *pPacketManager,
         libcomp::PersistentObject::GetObjectByUUID(state->GetObjectUUID(itemID)));
     int8_t preDurability = item ? item->GetMaxDurability() : 0;
 
-    auto activatedAbility = sourceState->GetActivatedAbility();
+    auto activatedAbility = sourceState->GetSpecialActivations(activationID);
 
     bool success = false;
     if(!item)
     {
         LOG_ERROR("Invalid item ID encountered for ItemRepairMax request\n");
     }
-    else if(!activatedAbility || activatedAbility->GetActivationID() != activationID)
+    else if(!activatedAbility)
     {
         LOG_ERROR("Invalid activation ID encountered for ItemRepairMax request\n");
     }
@@ -135,10 +135,13 @@ bool Parsers::ItemRepairMax::Parse(libcomp::ManagerPacket *pPacketManager,
 
         client->QueuePacket(reply);
 
-        server->GetSkillManager()->ExecuteSkill(sourceState, (uint8_t)activationID,
-            itemID);
+        server->GetSkillManager()->ExecuteSkill(sourceState, activationID, itemID);
 
         client->FlushOutgoing();
+    }
+    else
+    {
+        server->GetSkillManager()->CancelSkill(sourceState, activationID);
     }
 
     return true;

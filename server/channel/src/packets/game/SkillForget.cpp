@@ -70,15 +70,15 @@ bool Parsers::SkillForget::Parse(libcomp::ManagerPacket *pPacketManager,
     auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
     auto definitionManager = server->GetDefinitionManager();
     auto skillManager = server->GetSkillManager();
-    
-    auto activatedAbility = cState->GetActivatedAbility();
-    if(!activatedAbility || activatedAbility->GetActivationID() != activationID)
+
+    auto activatedAbility = cState->GetSpecialActivations(activationID);
+    if(!activatedAbility)
     {
         LOG_ERROR("Invalid activation ID encountered for SkillForget request\n");
     }
     else
     {
-        skillManager->ExecuteSkill(cState, (uint8_t)activationID,
+        skillManager->ExecuteSkill(cState, activationID,
             activatedAbility->GetTargetObjectID());
 
         character->RemoveLearnedSkills(skillID);

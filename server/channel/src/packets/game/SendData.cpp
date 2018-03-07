@@ -33,6 +33,7 @@
 #include <Log.h>
 #include <ManagerPacket.h>
 #include <PacketCodes.h>
+#include <ServerConstants.h>
 
 // object includes
 #include <Account.h>
@@ -142,11 +143,15 @@ void SendClientReadyData(std::shared_ptr<ChannelServer> server,
         // If all else fails start in the default zone
         if(zoneID == 0)
         {
-            /// @todo: make this configurable?
-            zoneID = 90105;
-            xCoord = 0;
-            yCoord = 0;
-            rotation = 0;
+            auto zoneData = serverDataManager->GetZoneData(
+                SVR_CONST.ZONE_DEFAULT, 0);
+            if(zoneData)
+            {
+                zoneID = zoneData->GetID();
+                xCoord = zoneData->GetStartingX();
+                yCoord = zoneData->GetStartingY();
+                rotation = zoneData->GetStartingRotation();
+            }
         }
 
         if(!zoneManager->EnterZone(client, zoneID, 0, xCoord, yCoord, rotation))

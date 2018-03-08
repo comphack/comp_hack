@@ -1364,11 +1364,33 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
         }
         break;
     case objects::MiEffectiveRangeData::ValidType_t::SOURCE:
-        effectiveTargets.remove_if([effectiveSource](
-            const std::shared_ptr<ActiveEntityState>& target)
+        // Only affect source and partner or summoner
+        {
+            auto sourceState = ClientState::GetEntityClientState(
+                effectiveSource->GetEntityID());
+            std::shared_ptr<ActiveEntityState> otherValid;
+            if(sourceState)
             {
-                return target != effectiveSource;
-            });
+                switch(effectiveSource->GetEntityType())
+                {
+                case objects::EntityStateObject::EntityType_t::CHARACTER:
+                    otherValid = sourceState->GetDemonState();
+                    break;
+                case objects::EntityStateObject::EntityType_t::PARTNER_DEMON:
+                    otherValid = sourceState->GetCharacterState();
+                    break;
+                default:
+                    // Shouldn't happen
+                    break;
+                }
+            }
+
+            effectiveTargets.remove_if([effectiveSource, otherValid](
+                const std::shared_ptr<ActiveEntityState>& target)
+                {
+                    return target != effectiveSource && target != otherValid;
+                });
+        }
         break;
     default:
         LOG_ERROR(libcomp::String("Unsupported skill valid target type encountered: %1\n")
@@ -5154,7 +5176,7 @@ bool SkillManager::EquipItem(const std::shared_ptr<objects::ActivatedAbility>& a
         return false;
     }
 
-    auto itemID = activated->GetTargetObjectID();
+    auto itemID = activated->GetActivationObjectID();
     if(itemID <= 0)
     {
         SendFailure(activated, client);
@@ -5731,7 +5753,7 @@ bool SkillManager::SummonDemon(const std::shared_ptr<objects::ActivatedAbility>&
         return false;
     }
 
-    auto demonID = activated->GetTargetObjectID();
+    auto demonID = activated->GetActivationObjectID();
     if(demonID <= 0)
     {
         LOG_ERROR(libcomp::String("Invalid demon specified to summon: %1\n")
@@ -5762,7 +5784,7 @@ bool SkillManager::StoreDemon(const std::shared_ptr<objects::ActivatedAbility>& 
         return false;
     }
 
-    auto demonID = activated->GetTargetObjectID();
+    auto demonID = activated->GetActivationObjectID();
     if(demonID <= 0)
     {
         LOG_ERROR(libcomp::String("Invalid demon specified to store: %1\n")

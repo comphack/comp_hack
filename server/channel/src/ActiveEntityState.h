@@ -67,8 +67,11 @@ const uint8_t ENTITY_CALC_STAT_LOCAL = 0x01;
 /// Recalculation resulted in a stat change visible to the world
 const uint8_t ENTITY_CALC_STAT_WORLD = 0x02;
 
+/// Recalculation resulted in a modified movement speed
+const uint8_t ENTITY_CALC_MOVE_SPEED = 0x04;
+
 /// Recalculation resulted in a modified skill set (characters only)
-const uint8_t ENTITY_CALC_SKILL = 0x04;
+const uint8_t ENTITY_CALC_SKILL = 0x08;
 
 /// Entity is immobile for no specific reason
 const uint8_t STATUS_IMMOBILE = 0x01;

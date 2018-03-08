@@ -2446,6 +2446,12 @@ uint8_t ActiveEntityState::CompareAndResetStats(libcomp::EnumMap<CorrectTbl, int
     }
 
     auto calcState = GetCalculatedState();
+    if(calcState->GetCorrectTbl((size_t)CorrectTbl::MOVE1) != stats[CorrectTbl::MOVE1] ||
+        calcState->GetCorrectTbl((size_t)CorrectTbl::MOVE2) != stats[CorrectTbl::MOVE2])
+    {
+        result |= ENTITY_CALC_MOVE_SPEED;
+    }
+
     for(auto statPair : stats)
     {
         calcState->SetCorrectTbl((size_t)statPair.first, statPair.second);
@@ -2456,7 +2462,7 @@ uint8_t ActiveEntityState::CompareAndResetStats(libcomp::EnumMap<CorrectTbl, int
         || GetMaxHP() != newMaxHP
         || GetMaxMP() != newMaxMP)
     {
-        result = ENTITY_CALC_STAT_WORLD |
+        result |= ENTITY_CALC_STAT_WORLD |
             ENTITY_CALC_STAT_LOCAL;
     }
     else if(GetSTR() != stats[CorrectTbl::STR]
@@ -2472,7 +2478,7 @@ uint8_t ActiveEntityState::CompareAndResetStats(libcomp::EnumMap<CorrectTbl, int
         || GetPDEF() != stats[CorrectTbl::PDEF]
         || GetMDEF() != stats[CorrectTbl::MDEF])
     {
-        result = ENTITY_CALC_STAT_LOCAL;
+        result |= ENTITY_CALC_STAT_LOCAL;
     }
 
     cs->SetHP(hp);

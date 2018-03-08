@@ -691,6 +691,16 @@ uint8_t CharacterManager::RecalculateStats(std::shared_ptr<
 
     auto definitionManager = mServer.lock()->GetDefinitionManager();
     uint8_t result = eState->RecalculateStats(definitionManager);
+    if(result & ENTITY_CALC_MOVE_SPEED)
+    {
+        libcomp::Packet p;
+        p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_RUN_SPEED);
+        p.WriteS32Little(entityID);
+        p.WriteFloat(eState->GetMovementSpeed());
+
+        mServer.lock()->GetZoneManager()->BroadcastPacket(eState->GetZone(), p);
+    }
+
     if(result & ENTITY_CALC_SKILL)
     {
         auto cState = std::dynamic_pointer_cast<CharacterState>(eState);

@@ -36,6 +36,7 @@
 #include <AccountWorldData.h>
 #include <Item.h>
 #include <ItemBox.h>
+#include <MiShopProductData.h>
 #include <PostItem.h>
 
 // channel Includes
@@ -53,6 +54,8 @@ bool Parsers::PostItem::Parse(libcomp::ManagerPacket *pPacketManager,
     }
 
     auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+    auto definitionManager = server->GetDefinitionManager();
+
     auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
     auto state = client->GetClientState();
     auto lobbyDB = server->GetLobbyDatabase();
@@ -68,8 +71,10 @@ bool Parsers::PostItem::Parse(libcomp::ManagerPacket *pPacketManager,
     {
         auto postItem = libcomp::PersistentObject::LoadObjectByUUID<objects::PostItem>(lobbyDB,
             itemUUID);
+        auto productData = postItem
+            ? definitionManager->GetShopProductData(postItem->GetType()) : nullptr;
 
-        if(postItem)
+        if(productData)
         {
             auto characterManager = server->GetCharacterManager();
 
@@ -78,7 +83,7 @@ bool Parsers::PostItem::Parse(libcomp::ManagerPacket *pPacketManager,
             // the post is more damaging to the player than a server caused duplication
             // so only delete the post item after the item has been created.
             std::unordered_map<uint32_t, uint32_t> items;
-            items[postItem->GetType()] = 1;
+            items[productData->GetItem()] = productData->GetStack();
             success = characterManager->AddRemoveItems(client, items, true);
             if(success && !postItem->Delete(lobbyDB))
             {

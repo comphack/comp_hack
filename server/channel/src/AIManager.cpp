@@ -492,7 +492,7 @@ bool AIManager::UpdateState(const std::shared_ptr<ActiveEntityState>& eState,
                     {
                         // Activate the skill
                         skillManager->ActivateSkill(eState, cmdSkill->GetSkillID(),
-                            cmdSkill->GetTargetObjectID(), 0, ctx);
+                            cmdSkill->GetTargetObjectID(), cmdSkill->GetTargetObjectID(), ctx);
                     }
                 }
 

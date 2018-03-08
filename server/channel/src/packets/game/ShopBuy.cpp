@@ -204,7 +204,7 @@ void HandleShopPurchase(const std::shared_ptr<ChannelServer> server,
 
         auto postItems = objects::PostItem::LoadPostItemListByAccount(
             lobbyDB, character->GetAccount());
-        if(((int32_t)postItems.size() + quantity) >= MAX_POST_ITEM_COUNT)
+        if(((int32_t)postItems.size() + 1) >= MAX_POST_ITEM_COUNT)
         {
             SendShopPurchaseReply(client, shopID, productID, -1, false);
             return;
@@ -219,15 +219,13 @@ void HandleShopPurchase(const std::shared_ptr<ChannelServer> server,
         opChangeset->AddOperation(expl);
 
         uint32_t timestamp = (uint32_t)std::time(0);
-        for(int32_t i = 0; i < quantity; i++)
-        {
-            auto postItem = libcomp::PersistentObject::New<objects::PostItem>(true);
-            postItem->SetType(product->GetItem());
-            postItem->SetTimestamp(timestamp);
-            postItem->SetAccount(account);
 
-            opChangeset->Insert(postItem);
-        }
+        auto postItem = libcomp::PersistentObject::New<objects::PostItem>(true);
+        postItem->SetType(product->GetID());
+        postItem->SetTimestamp(timestamp);
+        postItem->SetAccount(account);
+
+        opChangeset->Insert(postItem);
 
         if(!lobbyDB->ProcessChangeSet(opChangeset))
         {

@@ -780,6 +780,25 @@ bool AccountManager::DeleteCharacter(const libcomp::String& username, uint8_t ci
             return false;
         }
 
+        // If there is not characters left make sure the account has a
+        // character ticket.
+        int count = 0;
+
+        for(auto c : characters)
+        {
+            if(!c.IsNull())
+            {
+                count++;
+            }
+        }
+
+        if(0 == count && 0 == account->GetTicketCount())
+        {
+            account->SetTicketCount(1);
+
+            return account->Update(server->GetMainDatabase());
+        }
+
         return true;
     }
 

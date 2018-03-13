@@ -1,152 +1,100 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE section PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN" 
+<!DOCTYPE section PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN"
 	"http://www.oasis-open.org/docbook/xml/4.5/docbookx.dtd">
 <section>
 <title>Channel Server Configuration</title>
- 
+
+<para>These settings apply to only the channel server configuration.</para>
+
 <section>
-<title>Network Connection</title>
-<para><programlisting>
-<![CDATA[<connection>
-  <address>192.168.0.2</address>
-  <port>14666</port>
-</connection>]]>
-</programlisting></para>
-<para>The <emphasis>&lt;connection&gt;</emphasis> section is the same as that
-of the login server with the exception of a new section <emphasis>
-&lt;externalAddress&gt;</emphasis>. This section defines a different IP address
-to advertise to the login server. This address should be the address used by
-client to connect. If the server is behind a NAT, you want the outside
-(internet visible) IP address of the server in this field. If the server is not
-behind a NAT, you may omit this section. The <emphasis>&lt;address&gt;
-</emphasis> will be sent to and used by the login server to direct clients to
-the channel. Because of this, do not use the value <emphasis>any</emphasis>.
-</para>
-</section>
+<title>Name</title>
+<para><emphasis role="strong">Type:</emphasis> string</para>
+<para><emphasis role="strong">Default:</emphasis> <emphasis>blank</emphasis></para>
+<para>Name of the channel (shown in the old channel list).</para>
+
 <section>
-<title>Error Logging</title>
-<para><programlisting>
-<![CDATA[<log>
-  <levels>
-    <debug>true</debug>
-    <info>true</info>
-    <warning>true</warning>
-    <error>true</error>
-    <critical>true</critical>
-  </levels>
-  <path>/var/log/comp_hack/login.log</path>
-</log>]]>
-</programlisting></para>
-<para>The <emphasis>&lt;log&gt;</emphasis> section is the same as that of the
-login server (use a different log path). See the login server configuration
-documentation for more information.</para>
-</section>
+<title>Example</title>
+<para><![CDATA[<member name="Name">Test Channel</member>]]></para>
+</section><!-- Example -->
+
+</section><!-- Name -->
+
 <section>
-<title>Database Connection</title>
-<para><programlisting>
-<![CDATA[<database>
-  <driver>mysql</driver>
-  <host>localhost</host>
-  <username>root</username>
-  <password>hackme</password>
-  <database>comp_hack</database>
-</database>]]>
-</programlisting></para>
-<para>The <emphasis>&lt;database&gt;</emphasis> section is the same as the
-login server and should match exactly.</para>
-</section>
+<title>ExternalIP</title>
+<para><emphasis role="strong">Type:</emphasis> string</para>
+<para><emphasis role="strong">Default:</emphasis> <emphasis>blank</emphasis></para>
+<para>IP of the channel to give clients. If blank, the IP is auto-detected.</para>
+
 <section>
-<title>Internal Server Connection</title>
-<para><programlisting>
-<![CDATA[<internal>
-  <address>localhost</address>
-  <port>48896</port>
-  <key>hackme</key>
-</internal>]]>
-</programlisting></para>
-<para>The <emphasis>&lt;internal&gt;</emphasis> section is similar to the
-settings in the login server. The <emphasis>&lt;key&gt;</emphasis> section
-should match the key used for the login server. The
-<emphasis>&lt;port&gt;</emphasis> section should also match that of the login
-server. The <emphasis>&lt;address&gt;</emphasis> section should be the IP
-address of the login server. The value <emphasis>any</emphasis> is not valid
-here; however if the login server and channel server are on the same system,
-you can use the value <emphasis>localhost</emphasis> instead of an IP address
-(recommended for security and speed).</para>
-</section>
+<title>Example</title>
+<para><![CDATA[<member name="ExternalIP">Test Channel</member>]]></para>
+</section><!-- Example -->
+
+</section><!-- ExternalIP -->
+
 <section>
-<title>Client Versions</title>
-<para><programlisting>
-<![CDATA[<versions higher="true">
-  <us>1624</us>
-  <jp>1410</jp>
-</versions>]]>
-</programlisting></para>
-<para>The <emphasis>&lt;versions&gt;</emphasis> section is the same as the
-login server and should match exactly.</para>
-</section>
+<title>WorldIP</title>
+<para><emphasis role="strong">Type:</emphasis> string</para>
+<para><emphasis role="strong">Default:</emphasis> 127.0.0.1</para>
+<para>IP address of the world server to connect to. This defaults to 127.0.0.1 (localhost).</para>
+
 <section>
-<title>Binary Data</title>
-<para><programlisting>
-<![CDATA[<data lang="ja">C:\Program Files\COMP_hack\BinaryData</data>]]>
-</programlisting></para>
-<para>The <emphasis>&lt;data&gt;</emphasis> section is the same as the
-login server and should match exactly.</para>
-</section>
+<title>Example</title>
+<para><![CDATA[<member name="WorldIP">127.0.0.1</member>]]></para>
+</section><!-- Example -->
+
+</section><!-- WorldIP -->
+
 <section>
-<title>Playable Character Data</title>
-<para><programlisting>
-<![CDATA[<pcdata>/var/lib/comp_hack</pcdata>]]>
-</programlisting></para>
-<para>The <emphasis>&lt;pcdata&gt;</emphasis> section is the same as the
-login server and should match exactly.</para>
-</section>
+<title>WorldPort</title>
+<para><emphasis role="strong">Type:</emphasis> integer</para>
+<para><emphasis role="strong">Default:</emphasis> 18666</para>
+<para>Port of the world server to connect to. This defaults to 18666.</para>
+
 <section>
-<title>Collision Data</title>
-<para><programlisting>
-<![CDATA[<qmpdata>C:\Program Files\COMP_hack\Map\Zone\Model</qmpdata>]]>
-</programlisting></para>
-<para>The <emphasis>&lt;qmpdata&gt;</emphasis> section is the path to qmp files
-used for zone collision data. It contains the path to the directory holding
-files with the qmp extension. These files usually reside in the <emphasis>
-Map\Zone\Model</emphasis> directory of a client install.</para>
-</section>
+<title>Example</title>
+<para><![CDATA[<member name="WorldPort">18666</member>]]></para>
+</section><!-- Example -->
+
+</section><!-- WorldPort -->
+
 <section>
-<title>Server Data</title>
-<para><programlisting>
-<![CDATA[<servdata>/var/lib/comp_hack/gamedata</servdata>]]>
-</programlisting></para>
-<para>The <emphasis>&lt;servdata&gt;</emphasis> section is used for game data
-files that the server used. This includes 4 main directories: ai, convos,
-scripts, zones</para><para>These directories contain AI scripts, conversation
-xml files, JavaScript scripts, and zone xml files.</para>
-</section>
+<title>Timeout</title>
+<para><emphasis role="strong">Type:</emphasis> integer</para>
+<para><emphasis role="strong">Default:</emphasis> 0</para>
+<para>Number of seconds with no new packets until the client will timeout and be disconnected. Defaults to 0 (no timeout).</para>
+
 <section>
-<title>Connection Captures</title>
-<para><programlisting>
-<![CDATA[<captures enabled="true" live="true">/var/lib/comp_hack/captures</captures>]]>
-</programlisting></para>
-<para>The <emphasis>&lt;captures&gt;</emphasis> section is used to produce
-<emphasis>hack</emphasis> files that can be opened with the <emphasis>capgrep
-</emphasis> packet analysis tool. Captures will be written into the provided
-path if the <emphasis>enabled</emphasis> attribute is set to <emphasis>true
-</emphasis>. The path should exists and be writable by the server. If the
-<emphasis>live</emphasis> attribute is <emphasis>true</emphasis>, the server
-will attempt to connect to a local copy of capgrep that is running in live
-mode. Capgrep must be started and set to live mode before the server starts.
-All connection traffic will be sent to capgrep with this option, just like if
-you were using the <emphasis>relay</emphasis>.</para>
-</section>
+<title>Example</title>
+<para><![CDATA[<member name="Timeout">15</member>]]></para>
+</section><!-- Example -->
+
+</section><!-- Timeout -->
+
 <section>
-<title>Channel</title>
-<para><programlisting>
-<![CDATA[<channel world="0">Main Channel</channel>]]>
-</programlisting></para>
-<para>The <emphasis>&lt;channel&gt;</emphasis> section is used to define which
-channel will be provided by this channel server. The <emphasis>world</emphasis>
-attribute should match one of the world IDs defined in the login server
-configuration. Each channel on the same world should contain a unique channel
-name.</para>
-</section>
+<title>SystemMessage</title>
+<para><emphasis role="strong">Type:</emphasis> string</para>
+<para><emphasis role="strong">Default:</emphasis> <emphasis>blank</emphasis></para>
+<para>System ticker message to show client upon connection to the channel. If blank, no ticker is shown.</para>
+
+<section>
+<title>Example</title>
+<para><![CDATA[<member name="SystemMessage">Welcome to the server!</member>]]></para>
+</section><!-- Example -->
+
+</section><!-- SystemMessage -->
+
+<section>
+<title>AutoCompressCurrency</title>
+<para><emphasis role="strong">Type:</emphasis> boolean</para>
+<para><emphasis role="strong">Default:</emphasis> false</para>
+<para>When set Macca and Magnetite will combine into notes and pressures when selling items and picking up drops.</para>
+
+<section>
+<title>Example</title>
+<para><![CDATA[<member name="AutoCompressCurrency">true</member>]]></para>
+</section><!-- Example -->
+
+</section><!-- AutoCompressCurrency -->
 
 </section>

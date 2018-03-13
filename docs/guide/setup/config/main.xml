@@ -55,5 +55,8 @@ and <emphasis>&lt;/object&gt;</emphasis> tags. This <emphasis>&lt;object&gt;</em
 <xi:include href="lobby.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
 <xi:include href="world.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
 <xi:include href="channel.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
+<xi:include href="database.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
+<xi:include href="mariadb.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
+<xi:include href="sqlite3.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
 
 </section>

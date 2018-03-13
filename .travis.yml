@@ -2,8 +2,8 @@ sudo: false
 dist: trusty
 language: cpp
 
-jdk:
-  - oraclejdk8
+#jdk:
+  #- oraclejdk8
 
 cache:
   directories:
@@ -51,33 +51,35 @@ addons:
 matrix:
   include:
     - compiler: clang
+      addons:
+        apt:
+          sources:
+            - llvm-toolchain-trusty-3.8
+          packages:
+            - clang-3.8
       env:
         - COMPILER_CC=clang
         - COMPILER_CXX=clang++
         - CMAKE_GENERATOR='Unix Makefiles'
+
+    - compiler: clang
       addons:
         apt:
           sources:
             - llvm-toolchain-trusty-3.8
           packages:
             - clang-3.8
-    - compiler: clang
       env:
         - COMPILER_CC=clang
         - COMPILER_CXX=clang++
         - CMAKE_GENERATOR=Ninja
-      addons:
-        apt:
-          sources:
-            - llvm-toolchain-trusty-3.8
-          packages:
-            - clang-3.8
+
     - compiler: gcc
       addons:
         apt:
           packages:
             - g++-5
-	    env:
+      env:
         - COMPILER_CC=gcc-5
         - COMPILER_CXX=g++-5
         - CMAKE_GENERATOR='Unix Makefiles'

@@ -50,7 +50,10 @@ typedef objects::EventCondition::CompareMode_t EventCompareMode;
 namespace channel
 {
 
+struct EventContext;
+
 class ChannelServer;
+class Zone;
 
 /**
  * Manager class in charge of processing event sequences as well as quest
@@ -76,9 +79,11 @@ public:
     /**
      * Handle a new event based upon the supplied ID, relative to an
      * optional entity
-     * @param client Pointer to the client the event affects
+     * @param client Pointer to the client the event affects, can be null
      * @param eventID ID of the event to handle
      * @param sourceEntityID Optional source of an event to focus on
+     * @param zone Pointer to the zone where the event is executing. If
+     *  the client is specified this will be overridden
      * @param actionGroupID Optional action group ID, set when performing
      *  a "start event" action so any later sets can pick up where the
      *  others left off
@@ -86,7 +91,7 @@ public:
      */
     bool HandleEvent(const std::shared_ptr<ChannelClientConnection>& client,
         const libcomp::String& eventID, int32_t sourceEntityID,
-        uint32_t actionGroupID = 0);
+        const std::shared_ptr<Zone>& zone = nullptr, uint32_t actionGroupID = 0);
 
     /**
      * Prepare a new event based upon the supplied ID, relative to an
@@ -137,57 +142,6 @@ public:
         const std::unordered_map<uint32_t, int32_t>& kills);
 
     /**
-     * Evaluate each of the valid condition sets required to start a quest
-     * @param client Pointer to the client to evaluate contextually to
-     * @param questID ID of the quest being evaluated
-     * @return true if the any of the condition sets all evaluated to true, false
-     *  if no set's conditions all evaluated to true
-     */
-    bool EvaluateQuestConditions(const std::shared_ptr<ChannelClientConnection>& client,
-        int16_t questID);
-
-    /**
-     * Evaluate an event condition
-     * @param client Pointer to the client to evaluate contextually to
-     * @param condition Event condition to evaluate
-     * @return true if the event condition evaluates to true, otherwise false
-     */
-    bool EvaluateEventCondition(const std::shared_ptr<ChannelClientConnection>& client,
-        const std::shared_ptr<objects::EventCondition>& condition);
-
-    /**
-     * Evaluate a list of event conditions
-     * @param client Pointer to the client to evaluate contextually to
-     * @param condition Event condition to evaluate
-     * @return true if the event conditions evaluate to true, otherwise false
-     */
-    bool EvaluateEventConditions(const std::shared_ptr<ChannelClientConnection>& client,
-        const std::list<std::shared_ptr<objects::EventCondition>>& conditions);
-
-    /**
-     * Evaluate a standard event condition
-     * @param client Pointer to the client to evaluate contextually to
-     * @param condition Standard condition to evaluate
-     * @return true if standard condition evaluates to true, otherwise false
-     */
-    bool EvaluateCondition(const std::shared_ptr<ChannelClientConnection>& client,
-        const std::shared_ptr<objects::EventConditionData>& condition,
-        EventCompareMode compareMode = EventCompareMode::DEFAULT_COMPARE);
-
-    /**
-     * Evaluate each of the requirements to complete the current quest phase
-     * @param client Pointer to the client to evaluate contextually to
-     * @param questID ID of the quest to check
-     * @param phase Current phase ID, acts as assurance that the right phase
-     *  is being checked
-     * @return true if all of the current phase's completion requirements have
-     *  been met, false if any have not been met or the phase supplied is not
-     *  the current phase
-     */
-    bool EvaluateQuestPhaseRequirements(const std::shared_ptr<
-        ChannelClientConnection>& client, int16_t questID, int8_t phase);
-
-    /**
      * Update the registered set of enemy types that need to be killed to
      * complete the current quests for the supplied client
      * @param client Pointer to the client to update
@@ -221,6 +175,64 @@ public:
 
 private:
     /**
+     * Handle an event instance by branching into the appropriate handler
+     * function after updating the character's overhead icon if needed
+     * @param ctx Execution context of the event
+     * @return true on success, false on failure
+     */
+    bool HandleEvent(EventContext& ctx);
+
+    /**
+     * Evaluate each of the valid condition sets required to start a quest
+     * @param ctx Execution context of the event
+     * @param questID ID of the quest being evaluated
+     * @return true if the any of the condition sets all evaluated to true, false
+     *  if no set's conditions all evaluated to true
+     */
+    bool EvaluateQuestConditions(EventContext& ctx, int16_t questID);
+
+    /**
+     * Evaluate an event condition
+     * @param ctx Execution context of the event
+     * @param condition Event condition to evaluate
+     * @return true if the event condition evaluates to true, otherwise false
+     */
+    bool EvaluateEventCondition(EventContext& ctx,
+        const std::shared_ptr<objects::EventCondition>& condition);
+
+    /**
+     * Evaluate a list of event conditions
+     * @param ctx Execution context of the event
+     * @param condition Event condition to evaluate
+     * @return true if the event conditions evaluate to true, otherwise false
+     */
+    bool EvaluateEventConditions(EventContext& ctx,
+        const std::list<std::shared_ptr<objects::EventCondition>>& conditions);
+
+    /**
+     * Evaluate a standard event condition
+     * @param ctx Execution context of the event
+     * @param condition Standard condition to evaluate
+     * @return true if standard condition evaluates to true, otherwise false
+     */
+    bool EvaluateCondition(EventContext& ctx,
+        const std::shared_ptr<objects::EventConditionData>& condition,
+        EventCompareMode compareMode = EventCompareMode::DEFAULT_COMPARE);
+
+    /**
+     * Evaluate each of the requirements to complete the current quest phase
+     * @param client Pointer to the client to evaluate contextually to
+     * @param questID ID of the quest to check
+     * @param phase Current phase ID, acts as assurance that the right phase
+     *  is being checked
+     * @return true if all of the current phase's completion requirements have
+     *  been met, false if any have not been met or the phase supplied is not
+     *  the current phase
+     */
+    bool EvaluateQuestPhaseRequirements(const std::shared_ptr<
+        ChannelClientConnection>& client, int16_t questID, int8_t phase);
+
+    /**
      * Evaluate a partner demon based event condition
      * @param client Pointer to the client to evaluate contextually to
      * @param condition Event condition to evaluate
@@ -231,11 +243,11 @@ private:
 
     /**
      * Evaluate a quest based event condition
-     * @param client Pointer to the client to evaluate contextually to
+     * @param ctx Execution context of the event
      * @param condition Event condition to evaluate
      * @return true if the event condition evaluates to true, otherwise false
      */
-    bool EvaluateQuestCondition(const std::shared_ptr<ChannelClientConnection>& client,
+    bool EvaluateQuestCondition(EventContext& ctx,
         const std::shared_ptr<objects::EventCondition>& condition);
 
     /**
@@ -270,90 +282,71 @@ private:
     /**
      * Progress or pop to the next sequential event if one exists. If
      * no event is found, the event sequence is ended.
-     * @param client Pointer to the client the event affects
-     * @param current Current event instance to process relative to
+     * @param ctx Execution context of the event
      */
-    void HandleNext(const std::shared_ptr<ChannelClientConnection>& client,
-        const std::shared_ptr<objects::EventInstance>& current);
+    void HandleNext(EventContext& ctx);
 
     /**
      * Send an NPC based message to the client
-     * @param client Pointer to the client the event affects
-     * @param instance Current event instance to process relative to
+     * @param ctx Execution context of the event
      * @return true on success, false on failure
      */
-    bool NPCMessage(const std::shared_ptr<ChannelClientConnection>& client,
-        const std::shared_ptr<objects::EventInstance>& instance);
+    bool NPCMessage(EventContext& ctx);
 
     /**
      * Send an extended NPC based message to the client
-     * @param client Pointer to the client the event affects
-     * @param instance Current event instance to process relative to
+     * @param ctx Execution context of the event
      * @return true on success, false on failure
      */
-    bool ExNPCMessage(const std::shared_ptr<ChannelClientConnection>& client,
-        const std::shared_ptr<objects::EventInstance>& instance);
+    bool ExNPCMessage(EventContext& ctx);
 
     /**
      * Start a multitalk event clientside
-     * @param client Pointer to the client the event affects
-     * @param instance Current event instance to process relative to
+     * @param ctx Execution context of the event
      * @return true on success, false on failure
      */
-    bool Multitalk(const std::shared_ptr<ChannelClientConnection>& client,
-        const std::shared_ptr<objects::EventInstance>& instance);
+    bool Multitalk(EventContext& ctx);
 
     /**
      * Prompt the player to choose from set options
-     * @param client Pointer to the client the event affects
-     * @param instance Current event instance to process relative to
+     * @param ctx Execution context of the event
      * @return true on success, false on failure
      */
-    bool Prompt(const std::shared_ptr<ChannelClientConnection>& client,
-        const std::shared_ptr<objects::EventInstance>& instance);
+    bool Prompt(EventContext& ctx);
 
     /**
      * Play an in-game cinematic clientside
-     * @param client Pointer to the client the event affects
-     * @param instance Current event instance to process relative to
+     * @param ctx Execution context of the event
      * @return true on success, false on failure
      */
-    bool PlayScene(const std::shared_ptr<ChannelClientConnection>& client,
-        const std::shared_ptr<objects::EventInstance>& instance);
+    bool PlayScene(EventContext& ctx);
 
     /**
      * Open a menu to the player representing various facilities
      * and functions
-     * @param client Pointer to the client the event affects
-     * @param instance Current event instance to process relative to
+     * @param ctx Execution context of the event
      * @return true on success, false on failure
      */
-    bool OpenMenu(const std::shared_ptr<ChannelClientConnection>& client,
-        const std::shared_ptr<objects::EventInstance>& instance);
+    bool OpenMenu(EventContext& ctx);
 
     /**
      * Perform one or many actions from the same types of options
      * configured for object interaction
-     * @param client Pointer to the client the event affects
-     * @param instance Current event instance to process relative to
+     * @param ctx Execution context of the event
      * @return true on success, false on failure
      */
-    bool PerformActions(const std::shared_ptr<ChannelClientConnection>& client,
-        const std::shared_ptr<objects::EventInstance>& instance);
+    bool PerformActions(EventContext& ctx);
 
     /**
      * Signify a direction to the player
-     * @param client Pointer to the client the event affects
-     * @param instance Current event instance to process relative to
+     * @param ctx Execution context of the event
      * @return true on success, false on failure
      */
-    bool Direction(const std::shared_ptr<ChannelClientConnection>& client,
-        const std::shared_ptr<objects::EventInstance>& instance);
+    bool Direction(EventContext& ctx);
 
     /**
      * End the current event sequence
      * @param client Pointer to the client the event affects
-     * @param instance Current event instance to process relative to
      * @return true on success, false on failure
      */
     bool EndEvent(const std::shared_ptr<ChannelClientConnection>& client);

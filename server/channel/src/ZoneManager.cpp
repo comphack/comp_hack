@@ -2038,11 +2038,11 @@ bool ZoneManager::UpdateSpawnGroups(const std::shared_ptr<Zone>& zone,
 
                 eStateGroup->push_back(eState);
             }
+        }
 
-            if(sg->SpawnActionsCount() > 0)
-            {
-                spawnActionGroups.push_back(sg);
-            }
+        if(sg->SpawnActionsCount() > 0)
+        {
+            spawnActionGroups.push_back(sg);
         }
     }
 

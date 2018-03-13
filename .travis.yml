@@ -103,5 +103,5 @@ script:
   - mkdir -p build && cd build && cmake -DCOVERALLS=$COVERALLS_ENABLE -DBUILD_OPTIMIZED=OFF -G "${GENERATOR}" .. && cmake --build .
   - cmake --build . --target doc
   - cmake --build . --target guide
-  - cmake --build . --target test
-  - if [ "$CXX" != "clang++" ]; then cmake --build . --target coveralls; fi
+#  - cmake --build . --target test
+#  - if [ "$CXX" != "clang++" ]; then cmake --build . --target coveralls; fi

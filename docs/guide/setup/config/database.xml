@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE section PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN"
+	"http://www.oasis-open.org/docbook/xml/4.5/docbookx.dtd">
+<section>
+<title>Database Configuration</title>
+
+<para>These settings configure the database.</para>
+
+<section>
+<title>DatabaseName</title>
+<para><emphasis role="strong">Type:</emphasis> string</para>
+<para><emphasis role="strong">Default:</emphasis> <emphasis>comp_hack</emphasis> / <emphasis>world</emphasis></para>
+<para>Name of the database to use. This defaults to <emphasis>comp_hack</emphasis> for the lobby server and <emphasis>world</emphasis> for the world server.</para>
+
+<section>
+<title>Example</title>
+<para><![CDATA[<member name="DatabaseName">comp_hack</member>]]></para>
+</section><!-- Example -->
+
+</section><!-- DatabaseName -->
+
+<section>
+<title>MockData</title>
+<para><emphasis role="strong">Type:</emphasis> boolean</para>
+<para><emphasis role="strong">Default:</emphasis> false</para>
+<para>If the database should be pre-loaded with data.</para>
+
+<section>
+<title>Example</title>
+<para><![CDATA[<member name="MockData">comp_hack</member>]]></para>
+</section><!-- Example -->
+
+</section><!-- MockData -->
+
+<section>
+<title>MockDataFilename</title>
+<para><emphasis role="strong">Type:</emphasis> string</para>
+<para><emphasis role="strong">Default:</emphasis> <emphasis>blank</emphasis></para>
+<para>File of objects to pre-load the database with.</para>
+
+<section>
+<title>Example</title>
+<para><![CDATA[<member name="MockDataFilename">/etc/comphack/test_lobby_setup.xml</member>]]></para>
+</section><!-- Example -->
+
+</section><!-- MockDataFilename -->
+
+<section>
+<title>AutoSchemaUpdate</title>
+<para><emphasis role="strong">Type:</emphasis> boolean</para>
+<para><emphasis role="strong">Default:</emphasis> true</para>
+<para>If disabled, this will prevent the database from being updated.</para>
+
+<section>
+<title>Example</title>
+<para><![CDATA[<member name="AutoSchemaUpdate">true</member>]]></para>
+</section><!-- Example -->
+
+</section><!-- AutoSchemaUpdate -->
+
+</section>

@@ -140,7 +140,7 @@
 <title>LogInfo</title>
 <para><emphasis role="strong">Type:</emphasis> boolean</para>
 <para><emphasis role="strong">Default:</emphasis> true</para>
-<para>Indicates if debug log messages should be produced.</para>
+<para>Indicates if info log messages should be produced.</para>
 
 <section>
 <title>Example</title>
@@ -153,7 +153,7 @@
 <title>LogWarning</title>
 <para><emphasis role="strong">Type:</emphasis> boolean</para>
 <para><emphasis role="strong">Default:</emphasis> true</para>
-<para>Indicates if debug log messages should be produced.</para>
+<para>Indicates if warning log messages should be produced.</para>
 
 <section>
 <title>Example</title>
@@ -166,7 +166,7 @@
 <title>LogError</title>
 <para><emphasis role="strong">Type:</emphasis> boolean</para>
 <para><emphasis role="strong">Default:</emphasis> true</para>
-<para>Indicates if debug log messages should be produced.</para>
+<para>Indicates if error log messages should be produced.</para>
 
 <section>
 <title>Example</title>
@@ -179,7 +179,7 @@
 <title>LogCritical</title>
 <para><emphasis role="strong">Type:</emphasis> boolean</para>
 <para><emphasis role="strong">Default:</emphasis> true</para>
-<para>Indicates if debug log messages should be produced.</para>
+<para>Indicates if critical log messages should be produced.</para>
 
 <section>
 <title>Example</title>
@@ -187,5 +187,31 @@
 </section><!-- Example -->
 
 </section><!-- LogCritical -->
+
+<section>
+<title>CapturePath</title>
+<para><emphasis role="strong">Type:</emphasis> string</para>
+<para><emphasis role="strong">Default:</emphasis> <emphasis>blank</emphasis></para>
+<para>Directory to store packet captures of client sessions. If this is empty, client sessions are not saved.</para>
+
+<section>
+<title>Example</title>
+<para><![CDATA[<member name="CapturePath">/var/log/comp_hack/captures</member>]]></para>
+</section><!-- Example -->
+
+</section><!-- CapturePath -->
+
+<section>
+<title>ServerConstantsPath</title>
+<para><emphasis role="strong">Type:</emphasis> string</para>
+<para><emphasis role="strong">Default:</emphasis> <emphasis>blank</emphasis></para>
+<para>Path to the server constants.xml file. If this is blank it defaults to the same directory as the lobby, world and channel config files.</para>
+
+<section>
+<title>Example</title>
+<para><![CDATA[<member name="ServerConstantsPath">/var/log/comp_hack/captures</member>]]></para>
+</section><!-- Example -->
+
+</section><!-- ServerConstantsPath -->
 
 </section>

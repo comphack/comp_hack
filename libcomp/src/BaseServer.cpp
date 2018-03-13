@@ -615,16 +615,13 @@ bool BaseServer::LoadDataFromFile(const libcomp::String& filePath,
                 account->GetPassword(), salt));
         }
 
-        if(!uuid.IsNull())
+        if(registerRecords && !record->Register(record, uuid))
         {
-            if(!record->Register(record, uuid))
-            {
-                return false;
-            }
-            else if(!registerRecords)
-            {
-                record->Unregister();
-            }
+            return false;
+        }
+        else if(!registerRecords)
+        {
+            record->Unregister();
         }
 
         records[name].push_back(record);

@@ -72,6 +72,150 @@ class TestFailure { };
     _didUpholdConditionRef = true; })(_didUpholdCondition); \
     if(!_didUpholdCondition) { throw libtester::TestFailure(); } }
 
+#define ASSERT_TRUE_OR_RETURN(cond) { \
+    bool res = false; \
+    [&]() { \
+        ASSERT_TRUE(cond); \
+        res = true; \
+    }(); \
+\
+    if(!res) { \
+        return false; \
+    } \
+}
+
+#define ASSERT_TRUE_OR_RETURN_MSG(cond, msg) { \
+    bool res = false; \
+    [&]() { \
+        ASSERT_TRUE(cond) << msg; \
+        res = true; \
+    }(); \
+\
+    if(!res) { \
+        return false; \
+    } \
+}
+
+#define ASSERT_FALSE_OR_RETURN(cond) { \
+    bool res = false; \
+    [&]() { \
+        ASSERT_FALSE(cond); \
+        res = true; \
+    }(); \
+\
+    if(!res) { \
+        return false; \
+    } \
+}
+
+#define ASSERT_FALSE_OR_RETURN_MSG(cond, msg) { \
+    bool res = false; \
+    [&]() { \
+        ASSERT_FALSE(cond) << msg; \
+        res = true; \
+    }(); \
+\
+    if(!res) { \
+        return false; \
+    } \
+}
+
+#define ASSERT_EQ_OR_RETURN(a, b) { \
+    bool res = false; \
+    [&]() { \
+        ASSERT_EQ(a, b); \
+        res = true; \
+    }(); \
+\
+    if(!res) { \
+        return false; \
+    } \
+}
+
+#define ASSERT_EQ_OR_RETURN_MSG(a, b, msg) { \
+    bool res = false; \
+    [&]() { \
+        ASSERT_EQ(a, b) << msg; \
+        res = true; \
+    }(); \
+\
+    if(!res) { \
+        return false; \
+    } \
+}
+
+#define ASSERT_NE_OR_RETURN(a, b) { \
+    bool res = false; \
+    [&]() { \
+        ASSERT_NE(a, b); \
+        res = true; \
+    }(); \
+\
+    if(!res) { \
+        return false; \
+    } \
+}
+
+#define ASSERT_NE_OR_RETURN_MSG(a, b, msg) { \
+    bool res = false; \
+    [&]() { \
+        ASSERT_NE(a, b) << msg; \
+        res = true; \
+    }(); \
+\
+    if(!res) { \
+        return false; \
+    } \
+}
+
+#define ASSERT_GT_OR_RETURN(a, b) { \
+    bool res = false; \
+    [&]() { \
+        ASSERT_GT(a, b); \
+        res = true; \
+    }(); \
+\
+    if(!res) { \
+        return false; \
+    } \
+}
+
+#define ASSERT_GT_OR_RETURN_MSG(a, b, msg) { \
+    bool res = false; \
+    [&]() { \
+        ASSERT_GT(a, b) << msg; \
+        res = true; \
+    }(); \
+\
+    if(!res) { \
+        return false; \
+    } \
+}
+
+#define ASSERT_GE_OR_RETURN(a, b) { \
+    bool res = false; \
+    [&]() { \
+        ASSERT_GE(a, b); \
+        res = true; \
+    }(); \
+\
+    if(!res) { \
+        return false; \
+    } \
+}
+
+#define ASSERT_GE_OR_RETURN_MSG(a, b, msg) { \
+    bool res = false; \
+    [&]() { \
+        ASSERT_GE(a, b) << msg; \
+        res = true; \
+    }(); \
+\
+    if(!res) { \
+        return false; \
+    } \
+}
+
 namespace libtester
 {
 

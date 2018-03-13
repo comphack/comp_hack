@@ -51,12 +51,13 @@ static const libcomp::String LOGIN_CLIENT_VERSION = "1.666";
 static const uint32_t CLIENT_VERSION = 1666;
 
 LobbyClient::LobbyClient() : TestClient(), mSessionKey(-1),
-    mWaitForLogout(false)
+    mWaitForLogout(false), mLoginTime(0), mTicketCount(0),
+    mTicketCost(0), mCP(0)
 {
     SetConnection(std::make_shared<libcomp::LobbyConnection>(mService));
 }
 
-LobbyClient::LobbyClient(const LobbyClient& other)
+LobbyClient::LobbyClient(const LobbyClient& other) : TestClient(other)
 {
     (void)other;
 
@@ -75,7 +76,7 @@ bool LobbyClient::WaitForPacket(LobbyToClientPacketCode_t code,
         p, waitTime, timeout);
 }
 
-void LobbyClient::Login(const libcomp::String& username,
+bool LobbyClient::Login(const libcomp::String& username,
     const libcomp::String& password, ErrorCodes_t loginErrorCode,
     ErrorCodes_t authErrorCode, uint32_t clientVersion)
 {
@@ -86,8 +87,10 @@ void LobbyClient::Login(const libcomp::String& username,
         clientVersion = CLIENT_VERSION;
     }
 
-    ASSERT_TRUE(Connect(10666));
-    ASSERT_TRUE(WaitEncrypted(waitTime));
+    GetConnection()->SetName(libcomp::String("lobby_%1").Arg(username));
+
+    ASSERT_TRUE_OR_RETURN(Connect(10666));
+    ASSERT_TRUE_OR_RETURN(WaitEncrypted(waitTime));
 
     objects::PacketLogin obj;
     obj.SetClientVersion(clientVersion);
@@ -96,14 +99,14 @@ void LobbyClient::Login(const libcomp::String& username,
     libcomp::Packet p;
     p.WritePacketCode(ClientToLobbyPacketCode_t::PACKET_LOGIN);
 
-    ASSERT_TRUE(obj.SavePacket(p));
+    ASSERT_TRUE_OR_RETURN(obj.SavePacket(p));
 
     libcomp::ReadOnlyPacket reply;
 
     ClearMessages();
     GetConnection()->SendPacket(p);
 
-    ASSERT_TRUE(WaitForPacket(
+    ASSERT_TRUE_OR_RETURN(WaitForPacket(
         LobbyToClientPacketCode_t::PACKET_LOGIN, reply, waitTime));
 
     if(ErrorCodes_t::SUCCESS == loginErrorCode)
@@ -119,25 +122,25 @@ void LobbyClient::Login(const libcomp::String& username,
             ClearMessages();
             GetConnection()->SendPacket(p);
 
-            ASSERT_TRUE(WaitForPacket(
+            ASSERT_TRUE_OR_RETURN(WaitForPacket(
                 LobbyToClientPacketCode_t::PACKET_LOGIN, reply, waitTime));
 
             tries++;
         }
 
-        ASSERT_EQ(reply.Left(), sizeof(int32_t) + sizeof(uint32_t) +
-            sizeof(uint16_t) + 5 * 2);
-        ASSERT_EQ(reply.ReadS32Little(),
+        ASSERT_EQ_OR_RETURN(reply.Left(), sizeof(int32_t) +
+            sizeof(uint32_t) + sizeof(uint16_t) + 5 * 2);
+        ASSERT_EQ_OR_RETURN(reply.ReadS32Little(),
             to_underlying(ErrorCodes_t::SUCCESS));
 
         uint32_t challenge = reply.ReadU32Little();
 
-        ASSERT_NE(challenge, 0);
+        ASSERT_NE_OR_RETURN(challenge, 0);
 
         libcomp::String salt = reply.ReadString16Little(
             libcomp::Convert::ENCODING_UTF8);
 
-        ASSERT_EQ(salt.Length(), 10);
+        ASSERT_EQ_OR_RETURN(salt.Length(), 10);
 
         p.Clear();
         p.WritePacketCode(ClientToLobbyPacketCode_t::PACKET_AUTH);
@@ -148,39 +151,41 @@ void LobbyClient::Login(const libcomp::String& username,
         ClearMessages();
         GetConnection()->SendPacket(p);
 
-        ASSERT_TRUE(WaitForPacket(
+        ASSERT_TRUE_OR_RETURN(WaitForPacket(
             LobbyToClientPacketCode_t::PACKET_AUTH, reply, waitTime));
 
         if(ErrorCodes_t::SUCCESS == authErrorCode)
         {
-            ASSERT_EQ(reply.ReadS32Little(),
+            ASSERT_EQ_OR_RETURN(reply.ReadS32Little(),
                 to_underlying(ErrorCodes_t::SUCCESS));
-            ASSERT_EQ(reply.ReadString16Little(
+            ASSERT_EQ_OR_RETURN(reply.ReadString16Little(
                 libcomp::Convert::ENCODING_UTF8, true).Length(), 300);
         }
         else
         {
-            ASSERT_EQ(reply.ReadS32Little(),
+            ASSERT_EQ_OR_RETURN(reply.ReadS32Little(),
                 to_underlying(authErrorCode));
         }
 
-        ASSERT_EQ(reply.Left(), 0);
+        ASSERT_EQ_OR_RETURN(reply.Left(), 0);
     }
     else
     {
-        ASSERT_EQ(reply.Left(), sizeof(int32_t));
-        ASSERT_EQ(reply.ReadS32Little(),
+        ASSERT_EQ_OR_RETURN(reply.Left(), sizeof(int32_t));
+        ASSERT_EQ_OR_RETURN(reply.ReadS32Little(),
             to_underlying(loginErrorCode));
     }
+
+    return true;
 }
 
-void LobbyClient::ClassicLogin(const libcomp::String& username,
+bool LobbyClient::ClassicLogin(const libcomp::String& username,
     const libcomp::String& password)
 {
-    Login(username, password);
+    return Login(username, password);
 }
 
-void LobbyClient::WebLogin(const libcomp::String& username,
+bool LobbyClient::WebLogin(const libcomp::String& username,
     const libcomp::String& password, const libcomp::String& sid,
     bool expectError)
 {
@@ -188,17 +193,17 @@ void LobbyClient::WebLogin(const libcomp::String& username,
     {
         if(expectError)
         {
-            ASSERT_FALSE(libtester::Login::WebLogin(username, password,
-                LOGIN_CLIENT_VERSION, mSID1, mSID2))
-                << "Authenticated with the website when an error was expected.";
+            ASSERT_FALSE_OR_RETURN_MSG(libtester::Login::WebLogin(username,
+                password, LOGIN_CLIENT_VERSION, mSID1, mSID2),
+                "Authenticated with the website when an error was expected.");
 
-            return;
+            return true;
         }
         else
         {
-            ASSERT_TRUE(libtester::Login::WebLogin(username, password,
-                LOGIN_CLIENT_VERSION, mSID1, mSID2))
-                << "Failed to authenticate with the website.";
+            ASSERT_TRUE_OR_RETURN_MSG(libtester::Login::WebLogin(username,
+                password, LOGIN_CLIENT_VERSION, mSID1, mSID2),
+                "Failed to authenticate with the website.");
         }
     }
     else if(!sid.IsEmpty())
@@ -208,8 +213,10 @@ void LobbyClient::WebLogin(const libcomp::String& username,
 
     double waitTime;
 
-    ASSERT_TRUE(Connect(10666));
-    ASSERT_TRUE(WaitEncrypted(waitTime));
+    GetConnection()->SetName(libcomp::String("lobby_%1").Arg(username));
+
+    ASSERT_TRUE_OR_RETURN(Connect(10666));
+    ASSERT_TRUE_OR_RETURN(WaitEncrypted(waitTime));
 
     objects::PacketLogin obj;
     obj.SetClientVersion(CLIENT_VERSION);
@@ -218,18 +225,18 @@ void LobbyClient::WebLogin(const libcomp::String& username,
     libcomp::Packet p;
     p.WritePacketCode(ClientToLobbyPacketCode_t::PACKET_LOGIN);
 
-    ASSERT_TRUE(obj.SavePacket(p));
+    ASSERT_TRUE_OR_RETURN(obj.SavePacket(p));
 
     libcomp::ReadOnlyPacket reply;
 
     ClearMessages();
     GetConnection()->SendPacket(p);
 
-    ASSERT_TRUE(WaitForPacket(
+    ASSERT_TRUE_OR_RETURN(WaitForPacket(
         LobbyToClientPacketCode_t::PACKET_LOGIN, reply, waitTime));
-    ASSERT_EQ(reply.Left(), sizeof(int32_t) + sizeof(uint32_t) +
+    ASSERT_EQ_OR_RETURN(reply.Left(), sizeof(int32_t) + sizeof(uint32_t) +
             sizeof(uint16_t) + 5 * 2);
-    ASSERT_EQ(reply.ReadS32Little(),
+    ASSERT_EQ_OR_RETURN(reply.ReadS32Little(),
         to_underlying(ErrorCodes_t::SUCCESS));
 
     p.Clear();
@@ -239,33 +246,39 @@ void LobbyClient::WebLogin(const libcomp::String& username,
     ClearMessages();
     GetConnection()->SendPacket(p);
 
-    ASSERT_TRUE(WaitForPacket(LobbyToClientPacketCode_t::PACKET_AUTH,
+    ASSERT_TRUE_OR_RETURN(WaitForPacket(
+        LobbyToClientPacketCode_t::PACKET_AUTH,
         reply, waitTime));
 
     if(!expectError)
     {
-        ASSERT_EQ(reply.ReadS32Little(),
+        ASSERT_EQ_OR_RETURN(reply.ReadS32Little(),
             to_underlying(ErrorCodes_t::SUCCESS));
 
         libcomp::String newSID = reply.ReadString16Little(
             libcomp::Convert::ENCODING_UTF8, true);
 
-        ASSERT_EQ(newSID.Length(), 300);
+        ASSERT_EQ_OR_RETURN(newSID.Length(), 300);
 
         mSID1 = newSID;
     }
     else
     {
-        ASSERT_EQ(reply.ReadS32Little(),
+        ASSERT_EQ_OR_RETURN(reply.ReadS32Little(),
             to_underlying(ErrorCodes_t::BAD_USERNAME_PASSWORD));
     }
 
-    ASSERT_EQ(reply.Left(), 0);
+    ASSERT_EQ_OR_RETURN(reply.Left(), 0);
+
+    return true;
 }
 
-void LobbyClient::GetCharacterList()
+bool LobbyClient::GetCharacterList()
 {
     double waitTime;
+
+    mCharacters.clear();
+    mCharacterLookup.clear();
 
     libcomp::Packet p;
     p.WritePacketCode(ClientToLobbyPacketCode_t::PACKET_CHARACTER_LIST);
@@ -275,18 +288,18 @@ void LobbyClient::GetCharacterList()
 
     libcomp::ReadOnlyPacket reply;
 
-    ASSERT_TRUE(WaitForPacket(
+    ASSERT_TRUE_OR_RETURN(WaitForPacket(
         LobbyToClientPacketCode_t::PACKET_CHARACTER_LIST,
         reply, waitTime));
 
-    ASSERT_GE(reply.Left(), 6);
+    ASSERT_GE_OR_RETURN(reply.Left(), 6);
 
     uint32_t loginTime = reply.ReadU32Little();
     uint8_t ticketCount = reply.ReadU8();
 
     // We don't need these.
-    (void)loginTime;
-    (void)ticketCount;
+    mLoginTime = loginTime;
+    mTicketCount = ticketCount;
 
     uint8_t characterCount = reply.ReadU8();
 
@@ -294,18 +307,100 @@ void LobbyClient::GetCharacterList()
 
     for(uint8_t i = 0; i < characterCount; ++i)
     {
-        uint8_t cid = reply.ReadU8();
-        uint8_t wid = reply.ReadU8();
-        (void)cid;
-        (void)wid;
+        auto c = std::make_shared<LobbyClient::Character>();
 
-        libcomp::String name = reply.ReadString16Little(
+        c->cid = reply.ReadU8();
+        c->wid = reply.ReadU8();
+
+        c->name = reply.ReadString16Little(
             libcomp::Convert::ENCODING_CP932);
-        LOG_DEBUG(name);
+
+        c->gender = reply.ReadU8();
+        c->killTime = reply.ReadU32Little();
+        c->cutscene = reply.ReadU32Little();
+        c->lastChannel = reply.ReadS8();
+        c->level = reply.ReadS8();
+        c->skinType = reply.ReadU8();
+        c->hairType = reply.ReadU8();
+        c->eyeType = reply.ReadU8();
+        c->faceType = reply.ReadU8();
+        c->hairColor = reply.ReadU8();
+        c->leftEyeColor = reply.ReadU8();
+        c->rightEyeColor = reply.ReadU8();
+        c->unk1 = reply.ReadU8();
+        c->unk2 = reply.ReadU8();
+
+        for(int j = 0; j < 15; ++j)
+        {
+            c->equips[j] = reply.ReadU32Little();
+        }
+
+        uint32_t vaCount = reply.ReadU32Little();
+
+        for(uint32_t j = 0; j < vaCount; ++j)
+        {
+            (void)reply.ReadS8(); // index
+            c->va.push_back(reply.ReadU32Little());
+        }
+
+        mCharacters.push_back(c);
+        mCharacterLookup[c->name.ToUtf8()] = c;
+    }
+
+    ASSERT_EQ_OR_RETURN(0, reply.Left());
+
+    return true;
+}
+
+int8_t LobbyClient::GetCharacterID(const std::string& name)
+{
+    auto it = mCharacterLookup.find(name);
+
+    if(mCharacterLookup.end() == it)
+    {
+        return -1;
+    }
+    else
+    {
+        return (int8_t)it->second->cid;
     }
 }
 
-void LobbyClient::CreateCharacter(const libcomp::String& name)
+int8_t LobbyClient::GetWorldID(const std::string& name)
+{
+    auto it = mCharacterLookup.find(name);
+
+    if(mCharacterLookup.end() == it)
+    {
+        return -1;
+    }
+    else
+    {
+        return (int8_t)it->second->wid;
+    }
+}
+
+uint32_t LobbyClient::GetLoginTime() const
+{
+    return mLoginTime;
+}
+
+uint8_t LobbyClient::GetTicketCount() const
+{
+    return mTicketCount;
+}
+
+uint32_t LobbyClient::GetTicketCost() const
+{
+    return mTicketCount;
+}
+
+uint32_t LobbyClient::GetCP() const
+{
+    return mCP;
+}
+
+bool LobbyClient::CreateCharacter(const libcomp::String& name)
 {
     double waitTime;
 
@@ -346,21 +441,69 @@ void LobbyClient::CreateCharacter(const libcomp::String& name)
 
     libcomp::ReadOnlyPacket reply;
 
-    ASSERT_TRUE(WaitForPacket(
+    ASSERT_TRUE_OR_RETURN(WaitForPacket(
         LobbyToClientPacketCode_t::PACKET_CREATE_CHARACTER,
         reply, waitTime));
 
-    ASSERT_EQ(reply.Left(), 4);
-    ASSERT_EQ(reply.ReadS32Little(),
+    ASSERT_EQ_OR_RETURN(reply.Left(), 4);
+    ASSERT_EQ_OR_RETURN(reply.ReadS32Little(),
         to_underlying(ErrorCodes_t::SUCCESS));
+
+    return true;
 }
 
-void LobbyClient::StartGame()
+bool LobbyClient::DeleteCharacter(uint8_t cid)
 {
     double waitTime;
 
-    uint8_t cid = 0;
-    int8_t worldID = 0;
+    libcomp::Packet p;
+    p.WritePacketCode(ClientToLobbyPacketCode_t::PACKET_DELETE_CHARACTER);
+    p.WriteU8(cid);
+
+    ClearMessages();
+    GetConnection()->SendPacket(p);
+
+    libcomp::ReadOnlyPacket reply;
+
+    ASSERT_TRUE_OR_RETURN(WaitForPacket(
+        LobbyToClientPacketCode_t::PACKET_DELETE_CHARACTER,
+        reply, waitTime));
+
+    ASSERT_EQ_OR_RETURN(reply.Left(), 1);
+    ASSERT_EQ_OR_RETURN(reply.ReadS8(), cid);
+
+    return true;
+}
+
+bool LobbyClient::QueryTicketPurchase()
+{
+    double waitTime;
+
+    libcomp::Packet p;
+    p.WritePacketCode(ClientToLobbyPacketCode_t::
+        PACKET_QUERY_PURCHASE_TICKET);
+    p.WriteU8(1);
+
+    ClearMessages();
+    GetConnection()->SendPacket(p);
+
+    libcomp::ReadOnlyPacket reply;
+
+    ASSERT_TRUE_OR_RETURN(WaitForPacket(
+        LobbyToClientPacketCode_t::PACKET_QUERY_PURCHASE_TICKET,
+        reply, waitTime));
+
+    ASSERT_EQ_OR_RETURN(reply.Left(), 13);
+    reply.Skip(5);
+    mTicketCost = reply.ReadU32Little();
+    mCP = reply.ReadU32Little();
+
+    return true;
+}
+
+bool LobbyClient::StartGame(uint8_t cid, int8_t worldID)
+{
+    double waitTime;
 
     libcomp::Packet p;
     p.WritePacketCode(ClientToLobbyPacketCode_t::PACKET_START_GAME);
@@ -379,8 +522,8 @@ void LobbyClient::StartGame()
     int32_t sessionKey;
     uint8_t cid2;
 
-    UPHOLD_GT(reply.Left(), sizeof(sessionKey) + sizeof(uint16_t) +
-        sizeof(cid2));
+    ASSERT_GT_OR_RETURN(reply.Left(), sizeof(sessionKey) +
+        sizeof(uint16_t) + sizeof(cid2));
 
     sessionKey = reply.ReadS32Little();
 
@@ -389,12 +532,14 @@ void LobbyClient::StartGame()
 
     cid2 = reply.ReadU8();
 
-    UPHOLD_EQ(cid, cid2);
-    UPHOLD_FALSE(server.IsEmpty());
-    UPHOLD_GT(sessionKey, -1);
+    ASSERT_EQ_OR_RETURN(cid, cid2);
+    ASSERT_FALSE_OR_RETURN(server.IsEmpty());
+    ASSERT_GT_OR_RETURN(sessionKey, -1);
 
     // Save the session key.
     mSessionKey = sessionKey;
+
+    return true;
 }
 
 int32_t LobbyClient::GetSessionKey() const
@@ -414,14 +559,25 @@ namespace libcomp
     {
         if(!BindingExists("LobbyClient"))
         {
+            // Include the base class
+            Using<TestClient>();
 
-            Sqrat::Class<LobbyClient> binding(mVM, "LobbyClient");
+            Sqrat::DerivedClass<LobbyClient, TestClient> binding(
+                mVM, "LobbyClient");
             binding.Func("ClassicLogin", &LobbyClient::ClassicLogin);
             binding.Func("WebLogin", &LobbyClient::WebLogin);
             binding.Func("GetCharacterList", &LobbyClient::GetCharacterList);
             binding.Func("CreateCharacter", &LobbyClient::CreateCharacter);
+            binding.Func("DeleteCharacter", &LobbyClient::DeleteCharacter);
+            binding.Func("QueryTicketPurchase",
+                &LobbyClient::QueryTicketPurchase);
             binding.Func("StartGame", &LobbyClient::StartGame);
             binding.Func("GetSessionKey", &LobbyClient::GetSessionKey);
+            binding.Func("GetCharacterID", &LobbyClient::GetCharacterID);
+            binding.Func("GetLoginTime", &LobbyClient::GetLoginTime);
+            binding.Func("GetTicketCount", &LobbyClient::GetTicketCount);
+            binding.Func("GetTicketCost", &LobbyClient::GetTicketCost);
+            binding.Func("GetCP", &LobbyClient::GetCP);
 
             Bind<LobbyClient>("LobbyClient", binding);
         }

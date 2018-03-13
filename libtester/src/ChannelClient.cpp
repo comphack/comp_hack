@@ -46,12 +46,18 @@
 
 using namespace libtester;
 
-ChannelClient::ChannelClient() : TestClient(), mEntityID(-1)
+ChannelClient::ChannelClient() : TestClient(), mEntityID(-1),
+    mPartnerEntityID(-1), mZoneID(-1), mActivationID(-1)
 {
+    for(int i = 0; i < 10; ++i)
+    {
+        mDemonIDs[i] = -1;
+    }
+
     SetConnection(std::make_shared<libcomp::ChannelConnection>(mService));
 }
 
-ChannelClient::ChannelClient(const ChannelClient& other)
+ChannelClient::ChannelClient(const ChannelClient& other) : TestClient(other)
 {
     (void)other;
 
@@ -70,31 +76,15 @@ bool ChannelClient::WaitForPacket(ChannelToClientPacketCode_t code,
         p, waitTime, timeout);
 }
 
-void ChannelClient::Login(const libcomp::String& username,
-    const libcomp::String& password, const libcomp::String& characterName)
+bool ChannelClient::LoginWithKey(const libcomp::String& username,
+    int32_t sessionKey)
 {
     double waitTime;
 
-    int32_t sessionKey = -1;
+    GetConnection()->SetName(libcomp::String("channel_%1").Arg(username));
 
-    {
-        std::shared_ptr<libtester::LobbyClient> client(
-            new libtester::LobbyClient);
-
-        client->SetWaitForLogout(true);
-        client->Login(username, password);
-
-        if(!characterName.IsEmpty())
-        {
-            client->CreateCharacter(characterName);
-        }
-
-        client->StartGame();
-        sessionKey = client->GetSessionKey();
-    }
-
-    ASSERT_TRUE(Connect(14666));
-    ASSERT_TRUE(WaitEncrypted(waitTime));
+    ASSERT_TRUE_OR_RETURN(Connect(14666));
+    ASSERT_TRUE_OR_RETURN(WaitEncrypted(waitTime));
 
     libcomp::Packet p;
     p.WritePacketCode(ClientToChannelPacketCode_t::PACKET_LOGIN);
@@ -107,9 +97,9 @@ void ChannelClient::Login(const libcomp::String& username,
     ClearMessages();
     GetConnection()->SendPacket(p);
 
-    UPHOLD_TRUE(WaitForPacket(
+    ASSERT_TRUE_OR_RETURN(WaitForPacket(
         ChannelToClientPacketCode_t::PACKET_LOGIN, reply, waitTime));
-    UPHOLD_EQ(reply.ReadU32Little(), 1);
+    ASSERT_EQ_OR_RETURN(reply.ReadU32Little(), 1);
 
     p.Clear();
     p.WritePacketCode(ClientToChannelPacketCode_t::PACKET_AUTH);
@@ -119,12 +109,39 @@ void ChannelClient::Login(const libcomp::String& username,
     ClearMessages();
     GetConnection()->SendPacket(p);
 
-    UPHOLD_TRUE(WaitForPacket(
+    ASSERT_TRUE_OR_RETURN(WaitForPacket(
         ChannelToClientPacketCode_t::PACKET_AUTH, reply, waitTime));
-    UPHOLD_EQ(reply.ReadU32Little(), to_underlying(ErrorCodes_t::SUCCESS));
+    ASSERT_EQ_OR_RETURN(reply.ReadU32Little(),
+        to_underlying(ErrorCodes_t::SUCCESS));
+
+    return true;
 }
 
-void ChannelClient::SendData()
+bool ChannelClient::Login(const libcomp::String& username,
+    const libcomp::String& password, const libcomp::String& characterName)
+{
+    int32_t sessionKey = -1;
+
+    {
+        std::shared_ptr<libtester::LobbyClient> client(
+            new libtester::LobbyClient);
+
+        client->SetWaitForLogout(true);
+        ASSERT_TRUE_OR_RETURN(client->Login(username, password));
+
+        if(!characterName.IsEmpty())
+        {
+            ASSERT_TRUE_OR_RETURN(client->CreateCharacter(characterName));
+        }
+
+        ASSERT_TRUE_OR_RETURN(client->StartGame());
+        sessionKey = client->GetSessionKey();
+    }
+
+    return LoginWithKey(username, sessionKey);
+}
+
+bool ChannelClient::SendData()
 {
     double waitTime;
 
@@ -136,8 +153,165 @@ void ChannelClient::SendData()
     ClearMessages();
     GetConnection()->SendPacket(p);
 
-    UPHOLD_TRUE(WaitForPacket(
+    ASSERT_TRUE_OR_RETURN(WaitForPacket(
         ChannelToClientPacketCode_t::PACKET_ZONE_CHANGE, reply, waitTime));
+
+    return true;
+}
+
+bool ChannelClient::SendState()
+{
+    double waitTime;
+
+    libcomp::Packet p;
+    p.WritePacketCode(ClientToChannelPacketCode_t::PACKET_STATE);
+
+    libcomp::ReadOnlyPacket reply;
+
+    ClearMessages();
+    GetConnection()->SendPacket(p);
+
+    ASSERT_TRUE_OR_RETURN(WaitForPacket(
+        ChannelToClientPacketCode_t::PACKET_CHARACTER_DATA, reply, waitTime));
+
+    return true;
+}
+
+bool ChannelClient::SendPopulateZone()
+{
+    libcomp::Packet p;
+    p.WritePacketCode(ClientToChannelPacketCode_t::PACKET_POPULATE_ZONE);
+    p.WriteS32Little(mEntityID);
+
+    ClearMessages();
+    GetConnection()->SendPacket(p);
+
+    return true;
+}
+
+bool ChannelClient::Say(const libcomp::String& msg)
+{
+    libcomp::Packet p;
+    p.WritePacketCode(ClientToChannelPacketCode_t::PACKET_CHAT);
+    p.WriteU16Little(to_underlying(ChatType_t::CHAT_SAY));
+    p.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_UTF8,
+        msg, true);
+
+    ClearMessages();
+    GetConnection()->SendPacket(p);
+
+    return true;
+}
+
+bool ChannelClient::ActivateSkill(int32_t entityID, uint32_t skillID,
+    uint32_t targetType, int64_t demonID)
+{
+    printf("ActivateSkill(%d, %u, %u, %ld)\n", entityID, skillID,
+        targetType, demonID);
+
+    double waitTime;
+
+    libcomp::Packet p;
+    p.WritePacketCode(ClientToChannelPacketCode_t::PACKET_SKILL_ACTIVATE);
+    p.WriteS32Little(entityID);
+    p.WriteU32Little(skillID);
+    p.WriteU32Little(targetType);
+    p.WriteS64Little(demonID);
+
+    libcomp::ReadOnlyPacket reply;
+
+    ClearMessages();
+    GetConnection()->SendPacket(p);
+
+    ASSERT_TRUE_OR_RETURN(WaitForPacket(
+        ChannelToClientPacketCode_t::PACKET_SKILL_ACTIVATED,
+        reply, waitTime));
+
+    /// @todo Handle this generic.
+    (void)reply.ReadS32Little(); // entity id
+    (void)reply.ReadU32Little(); // skill id
+    mActivationID = reply.ReadS8();
+    printf("got activation: %d\n", (int)mActivationID);
+
+    return true;
+}
+
+bool ChannelClient::ExecuteSkill(int32_t entityID, int8_t activationID,
+    int64_t demonID)
+{
+    printf("ExecuteSkill(%d, %d, %ld)\n", entityID,
+        (int)mActivationID, demonID);
+
+    libcomp::Packet p;
+    p.WritePacketCode(ClientToChannelPacketCode_t::PACKET_SKILL_EXECUTE);
+    p.WriteS32Little(entityID);
+    p.WriteS8(activationID);
+    p.WriteS64Little(demonID);
+
+    ClearMessages();
+    GetConnection()->SendPacket(p);
+
+    return true;
+}
+
+bool ChannelClient::ContractDemon(uint32_t demonID)
+{
+    double waitTime;
+
+    ASSERT_TRUE_OR_RETURN(Say(libcomp::String("@contract %1").Arg(demonID)));
+
+    libcomp::ReadOnlyPacket reply;
+
+    ASSERT_TRUE_OR_RETURN(WaitForPacket(
+        ChannelToClientPacketCode_t::PACKET_DEMON_BOX_DATA,
+        reply, waitTime));
+
+    return true;
+}
+
+bool ChannelClient::SummonDemon(int64_t demonID)
+{
+    double waitTime;
+
+    const uint32_t SKILL_SUMMON_DEMON = 5704;
+
+    ASSERT_TRUE_OR_RETURN(ActivateSkill(mEntityID,
+        SKILL_SUMMON_DEMON, ACTIVATION_DEMON, demonID));
+
+    /// This skill auto-executes
+    /*ASSERT_TRUE_OR_RETURN(ExecuteSkill(mEntityID,
+        GetActivationID(), demonID));*/
+
+    libcomp::ReadOnlyPacket reply;
+
+    ASSERT_TRUE_OR_RETURN(WaitForPacket(
+        ChannelToClientPacketCode_t::PACKET_PARTNER_SUMMONED,
+        reply, waitTime));
+    /// @todo parse this packet?
+
+    libcomp::Packet p;
+    p.WritePacketCode(ClientToChannelPacketCode_t::PACKET_PARTNER_DEMON_DATA);
+
+    ClearMessages();
+    GetConnection()->SendPacket(p);
+
+    ASSERT_TRUE_OR_RETURN(WaitForPacket(
+        ChannelToClientPacketCode_t::PACKET_PARTNER_DATA,
+        reply, waitTime));
+
+    mPartnerEntityID = reply.ReadS32Little();
+
+    p.Clear();
+    p.WritePacketCode(ClientToChannelPacketCode_t::PACKET_FIX_OBJECT_POSITION);
+    p.WriteS32Little(mPartnerEntityID);
+    p.WriteFloat(0.0f); // X
+    p.WriteFloat(0.0f); // Y
+    p.WriteFloat(0.0f); // client time
+
+    ClearMessages();
+    GetConnection()->SendPacket(p);
+
+    return true;
 }
 
 void ChannelClient::HandlePacket(ChannelToClientPacketCode_t cmd,
@@ -145,8 +319,14 @@ void ChannelClient::HandlePacket(ChannelToClientPacketCode_t cmd,
 {
     switch(cmd)
     {
+        case ChannelToClientPacketCode_t::PACKET_ZONE_CHANGE:
+            HandleZoneChange(p);
+            break;
         case ChannelToClientPacketCode_t::PACKET_CHARACTER_DATA:
             HandleCharacterData(p);
+            break;
+        case ChannelToClientPacketCode_t::PACKET_DEMON_BOX_DATA:
+            HandleDemonBoxData(p);
             break;
         default:
             break;
@@ -158,6 +338,21 @@ int32_t ChannelClient::GetEntityID() const
     return mEntityID;
 }
 
+int8_t ChannelClient::GetActivationID() const
+{
+    return mActivationID;
+}
+
+int64_t ChannelClient::GetDemonID(int8_t slot) const
+{
+    if(0 > slot || 10 <= slot)
+    {
+        return -1;
+    }
+
+    return mDemonIDs[slot];
+}
+
 namespace libcomp
 {
     template<>
@@ -165,9 +360,22 @@ namespace libcomp
     {
         if(!BindingExists("ChannelClient"))
         {
+            // Include the base class
+            Using<TestClient>();
 
-            Sqrat::Class<ChannelClient> binding(mVM, "ChannelClient");
+            Sqrat::DerivedClass<ChannelClient, TestClient> binding(
+                mVM, "ChannelClient");
             binding.Func("Login", &ChannelClient::Login);
+            binding.Func("LoginWithKey", &ChannelClient::LoginWithKey);
+            binding.Func("SendData", &ChannelClient::SendData);
+            binding.Func("SendState", &ChannelClient::SendState);
+            binding.Func("SendPopulateZone",
+                &ChannelClient::SendPopulateZone);
+            binding.Func("GetEntityID", &ChannelClient::GetEntityID);
+            binding.Func("GetDemonID", &ChannelClient::GetDemonID);
+            binding.Func("ContractDemon", &ChannelClient::ContractDemon);
+            binding.Func("SummonDemon", &ChannelClient::SummonDemon);
+            binding.Func("Say", &ChannelClient::Say);
 
             Bind<ChannelClient>("ChannelClient", binding);
         }

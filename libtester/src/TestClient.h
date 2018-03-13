@@ -45,7 +45,7 @@ class TestClient
 {
 public:
     static constexpr asio::steady_timer::duration DEFAULT_TIMEOUT =
-        std::chrono::seconds(10);
+        std::chrono::seconds(60);
 
     enum class WaitStatus
     {
@@ -55,9 +55,12 @@ public:
     };
 
     TestClient();
+    TestClient(const TestClient& other);
     ~TestClient();
 
     bool Connect(uint16_t port);
+
+    void Disconnect();
 
     bool WaitEncrypted(double& waitTime, asio::steady_timer::duration
         timeout = DEFAULT_TIMEOUT);

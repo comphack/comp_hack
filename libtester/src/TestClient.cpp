@@ -37,6 +37,7 @@
 #include <MessageEncrypted.h>
 #include <MessagePacket.h>
 #include <MessageTimeout.h>
+#include <ScriptEngine.h>
 
 using namespace libtester;
 
@@ -45,6 +46,14 @@ constexpr asio::steady_timer::duration TestClient::DEFAULT_TIMEOUT;
 TestClient::TestClient() : mTimer(mService), mMessageQueue(
     new libcomp::MessageQueue<libcomp::Message::Message*>())
 {
+}
+
+TestClient::TestClient(const TestClient& other) : mTimer(mService),
+    mMessageQueue(new libcomp::MessageQueue<libcomp::Message::Message*>())
+{
+    (void)other;
+
+    assert(false);
 }
 
 TestClient::~TestClient()
@@ -77,6 +86,11 @@ bool TestClient::Connect(uint16_t port)
     });
 
     return result;
+}
+
+void TestClient::Disconnect()
+{
+    mConnection->Close();
 }
 
 std::shared_ptr<libcomp::EncryptedConnection> TestClient::GetConnection()
@@ -279,3 +293,21 @@ void TestClient::HandlePacket(ChannelToClientPacketCode_t cmd,
     (void)cmd;
     (void)p;
 }
+
+namespace libcomp
+{
+    template<>
+    ScriptEngine& ScriptEngine::Using<TestClient>()
+    {
+        if(!BindingExists("TestClient"))
+        {
+
+            Sqrat::Class<TestClient> binding(mVM, "TestClient");
+            binding.Func("Disconnect", &TestClient::Disconnect);
+
+            Bind<TestClient>("TestClient", binding);
+        }
+
+        return *this;
+    } // Using
+} // namespace libcomp

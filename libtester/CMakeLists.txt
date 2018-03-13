@@ -24,6 +24,8 @@ MESSAGE("** Configuring ${PROJECT_NAME} **")
 SET(${PROJECT_NAME}_SRCS
     src/ChannelClient.cpp
     src/ChannelClient_HandleCharacterData.cpp
+    src/ChannelClient_HandleDemonBoxData.cpp
+    src/ChannelClient_HandleZoneChange.cpp
     src/HttpConnection.cpp
     src/LobbyClient.cpp
     src/Login.cpp

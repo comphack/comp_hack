@@ -30,6 +30,9 @@
 // libtester Includes
 #include "TestClient.h"
 
+// Standard C++ Includes
+#include <unordered_map>
+
 namespace libtester
 {
 
@@ -38,6 +41,29 @@ typedef std::list<libcomp::Message::Message*> MessageList;
 class LobbyClient : public TestClient
 {
 public:
+    struct Character
+    {
+        uint8_t cid;
+        uint8_t wid;
+        libcomp::String name;
+        uint8_t gender;
+        uint32_t killTime;
+        uint32_t cutscene;
+        int8_t lastChannel;
+        int8_t level;
+        uint8_t skinType;
+        uint8_t hairType;
+        uint8_t eyeType;
+        uint8_t faceType;
+        uint8_t hairColor;
+        uint8_t leftEyeColor;
+        uint8_t rightEyeColor;
+        uint8_t unk1;
+        uint8_t unk2;
+        uint32_t equips[15];
+        std::vector<uint32_t> va;
+    };
+
     LobbyClient();
     LobbyClient(const LobbyClient& other);
     ~LobbyClient();
@@ -46,28 +72,46 @@ public:
         libcomp::ReadOnlyPacket& p, double& waitTime,
         asio::steady_timer::duration timeout = DEFAULT_TIMEOUT);
 
-    void Login(const libcomp::String& username,
+    bool Login(const libcomp::String& username,
         const libcomp::String& password, ErrorCodes_t loginErrorCode =
             ErrorCodes_t::SUCCESS, ErrorCodes_t authErrorCode =
             ErrorCodes_t::SUCCESS, uint32_t clientVersion = 0);
-    void ClassicLogin(const libcomp::String& username,
+    bool ClassicLogin(const libcomp::String& username,
         const libcomp::String& password);
-    void WebLogin(const libcomp::String& username,
+    bool WebLogin(const libcomp::String& username,
         const libcomp::String& password = libcomp::String(),
         const libcomp::String& sid = libcomp::String(),
         bool expectError = false);
 
-    void GetCharacterList();
-    void CreateCharacter(const libcomp::String& name);
-    void StartGame();
+    bool GetCharacterList();
+    bool CreateCharacter(const libcomp::String& name);
+    bool DeleteCharacter(uint8_t cid);
+    bool QueryTicketPurchase();
+    bool StartGame(uint8_t cid = 0, int8_t wid = 0);
     void SetWaitForLogout(bool wait);
 
     int32_t GetSessionKey() const;
+
+    int8_t GetCharacterID(const std::string& name);
+    int8_t GetWorldID(const std::string& name);
+
+    uint32_t GetLoginTime() const;
+    uint8_t GetTicketCount() const;
+    uint32_t GetTicketCost() const;
+    uint32_t GetCP() const;
 
 private:
     libcomp::String mSID1, mSID2;
     int32_t mSessionKey;
     bool mWaitForLogout;
+    uint32_t mLoginTime;
+    uint8_t mTicketCount;
+    uint32_t mTicketCost;
+    uint32_t mCP;
+
+    std::vector<std::shared_ptr<Character>> mCharacters;
+    std::unordered_map<std::string,
+        std::shared_ptr<Character>> mCharacterLookup;
 };
 
 } // namespace libtester

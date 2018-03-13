@@ -28,7 +28,12 @@
         <member type="enum" name="sourceContext" default="SOURCE">
             <value>SOURCE</value>
             <value>PARTY</value>
-            <value>PARTY_OR_SOURCE</value>
+            <value>ALL</value>
+        </member>
+        <member type="enum" name="location" default="ZONE">
+            <value>WORLD</value>
+            <value>CHANNEL</value>
+            <value>INSTANCE</value>
             <value>ZONE</value>
         </member>
     </object>

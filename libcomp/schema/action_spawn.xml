@@ -16,6 +16,8 @@
             <value>ONE_TIME_RANDOM</value>
             <value>NONE_EXIST</value>
             <value>DESPAWN</value>
+            <value>ENABLE_GROUP</value>
+            <value>DISABLE_GROUP</value>
         </member>
         <member type="list" name="defeatActions">
             <element type="Action*"/>

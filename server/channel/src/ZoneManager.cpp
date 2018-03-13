@@ -68,6 +68,7 @@
 #include <SpawnGroup.h>
 #include <SpawnLocation.h>
 #include <SpawnLocationGroup.h>
+#include <SpawnRestriction.h>
 
 // channel Includes
 #include "AIState.h"
@@ -82,7 +83,7 @@
 using namespace channel;
 
 ZoneManager::ZoneManager(const std::weak_ptr<ChannelServer>& server)
-    : mServer(server), mNextZoneID(1), mNextZoneInstanceID(1)
+    : mNextZoneID(1), mNextZoneInstanceID(1), mServer(server)
 {
 }
 
@@ -1327,6 +1328,38 @@ void ZoneManager::SendEnemyData(const std::shared_ptr<ChannelClientConnection>& 
     }
 }
 
+void ZoneManager::HandleDespawns(const std::shared_ptr<Zone>& zone)
+{
+    std::list<int32_t> enemyIDs;
+
+    std::set<int32_t> despawnEntities = zone->GetDespawnEntities();
+    for(int32_t entityID : despawnEntities)
+    {
+        auto eState = zone->GetActiveEntity(entityID);
+        if(eState)
+        {
+            switch(eState->GetEntityType())
+            {
+            case objects::EntityStateObject::EntityType_t::ENEMY:
+                enemyIDs.push_back(entityID);
+                break;
+            case objects::EntityStateObject::EntityType_t::PLASMA:
+                /// @todo
+                break;
+            default:
+                break;
+            }
+
+            zone->RemoveEntity(entityID);
+        }
+    }
+
+    if(enemyIDs.size() > 0)
+    {
+        RemoveEntitiesFromZone(zone, enemyIDs, 7, false);
+    }
+}
+
 void ZoneManager::UpdateStatusEffectStates(const std::shared_ptr<Zone>& zone,
     uint32_t now)
 {
@@ -1585,28 +1618,100 @@ bool ZoneManager::UpdateSpawnGroups(const std::shared_ptr<Zone>& zone,
     std::list<std::pair<bool, std::pair<uint32_t, uint32_t>>> groups;
     if(actionSource)
     {
+        auto mode = actionSource->GetMode();
+
         std::list<std::pair<bool, std::pair<uint32_t, uint32_t>>> checking;
-        if(actionSource->SpawnLocationGroupIDsCount() > 0)
+        for(uint32_t slgID : actionSource->GetSpawnLocationGroupIDs())
         {
-            for(uint32_t slgID : actionSource->GetSpawnLocationGroupIDs())
+            std::pair<bool, std::pair<uint32_t, uint32_t>> p(true,
+                std::pair<uint32_t, uint32_t>(slgID, 0));
+            checking.push_back(p);
+        }
+
+        std::set<uint32_t> disabledGroupIDs = zone->GetDisabledSpawnGroups();
+        for(auto gPair : actionSource->GetSpawnGroupIDs())
+        {
+            if(disabledGroupIDs.find(gPair.first) == disabledGroupIDs.end())
             {
-                std::pair<bool, std::pair<uint32_t, uint32_t>> p(true,
-                    std::pair<uint32_t, uint32_t>(slgID, 0));
+                std::pair<bool, std::pair<uint32_t, uint32_t>> p(false,
+                    std::pair<uint32_t, uint32_t>(gPair.first, gPair.second));
                 checking.push_back(p);
             }
         }
 
-        for(auto gPair : actionSource->GetSpawnGroupIDs())
+        // Enable/disable spawn groups and despawn all work a bit different
+        // than normal spawns
+        if(mode == objects::ActionSpawn::Mode_t::ENABLE_GROUP ||
+            mode == objects::ActionSpawn::Mode_t::DISABLE_GROUP)
         {
-            std::pair<bool, std::pair<uint32_t, uint32_t>> p(false,
-                std::pair<uint32_t, uint32_t>(gPair.first, gPair.second));
-            checking.push_back(p);
+            std::set<uint32_t> groupIDs;
+            for(auto& pair : checking)
+            {
+                // Filter just group IDs
+                if(!pair.first)
+                {
+                    groupIDs.insert(pair.second.first);
+                }
+            }
+
+            zone->EnableDisableSpawnGroups(groupIDs,
+                mode == objects::ActionSpawn::Mode_t::ENABLE_GROUP);
+            return false;
+        }
+        else if(mode == objects::ActionSpawn::Mode_t::DESPAWN)
+        {
+            // Match enemies in zone on specified locations and
+            // group/location pairs
+            for(auto eState : zone->GetEnemies())
+            {
+                auto enemy = eState->GetEntity();
+                if(enemy->GetSpawnGroupID() > 0 ||
+                    enemy->GetSpawnLocationGroupID() > 0)
+                {
+                    bool despawn = false;
+                    for(auto& pair : checking)
+                    {
+                        if(pair.first)
+                        {
+                            // Location
+                            uint32_t slgID = pair.second.first;
+                            if(enemy->GetSpawnLocationGroupID() == slgID)
+                            {
+                                despawn = true;
+                                break;
+                            }
+                        }
+                        else
+                        {
+                            // Group
+                            uint32_t sgID = pair.second.first;
+                            uint32_t slgID = pair.second.second;
+
+                            // Use specified location or any if zero
+                            if(enemy->GetSpawnGroupID() == sgID && (!slgID ||
+                                enemy->GetSpawnLocationGroupID() == slgID))
+                            {
+                                despawn = true;
+                                break;
+                            }
+                        }
+                    }
+
+                    if(despawn)
+                    {
+                        zone->MarkDespawn(eState->GetEntityID());
+                    }
+                }
+            }
+
+            return false;
         }
 
+        // Spawn is not a special type, continue processing
         bool spawnValidated = false;
         if(actionSource->GetSpotID() != 0 &&
-            (actionSource->GetMode() == objects::ActionSpawn::Mode_t::ONE_TIME ||
-             actionSource->GetMode() == objects::ActionSpawn::Mode_t::ONE_TIME_RANDOM))
+            (mode == objects::ActionSpawn::Mode_t::ONE_TIME ||
+             mode == objects::ActionSpawn::Mode_t::ONE_TIME_RANDOM))
         {
             if(zone->SpawnedAtSpot(actionSource->GetSpotID()))
             {
@@ -1629,7 +1734,7 @@ bool ZoneManager::UpdateSpawnGroups(const std::shared_ptr<Zone>& zone,
             }
             else
             {
-                switch(actionSource->GetMode())
+                switch(mode)
                 {
                 case objects::ActionSpawn::Mode_t::ONE_TIME:
                     add = !zone->GroupHasSpawned(gPair.first, cPair.first,
@@ -1664,8 +1769,7 @@ bool ZoneManager::UpdateSpawnGroups(const std::shared_ptr<Zone>& zone,
             }
         }
 
-        if(actionSource->GetMode() ==
-            objects::ActionSpawn::Mode_t::ONE_TIME_RANDOM &&
+        if(mode == objects::ActionSpawn::Mode_t::ONE_TIME_RANDOM &&
             groups.size() > 1)
         {
             auto it = groups.begin();
@@ -1714,10 +1818,17 @@ bool ZoneManager::UpdateSpawnGroups(const std::shared_ptr<Zone>& zone,
         }
     }
 
+    if(groups.size() == 0)
+    {
+        return false;
+    }
+
     bool containsSimpleSpawns = false;
     bool mergeEncounter = actionSource && actionSource->DefeatActionsCount() > 0;
+    std::set<uint32_t> disabledGroupIDs = zone->GetDisabledSpawnGroups();
 
     std::list<std::list<std::shared_ptr<EnemyState>>> eStateGroups;
+    std::list<std::shared_ptr<objects::SpawnGroup>> spawnActionGroups;
     for(auto groupPair : groups)
     {
         uint32_t sgID = groupPair.first
@@ -1752,7 +1863,15 @@ bool ZoneManager::UpdateSpawnGroups(const std::shared_ptr<Zone>& zone,
             locations = slg->GetLocations();
 
             // Get the random group now
-            auto groupIDs = slg->GetGroupIDs();
+            std::list<uint32_t> groupIDs;
+            for(uint32_t groupID : slg->GetGroupIDs())
+            {
+                if(disabledGroupIDs.find(groupID) == disabledGroupIDs.end())
+                {
+                    groupIDs.push_back(groupID);
+                }
+            }
+
             if(groupIDs.size() > 0)
             {
                 auto gIter = groupIDs.begin();
@@ -1766,6 +1885,8 @@ bool ZoneManager::UpdateSpawnGroups(const std::shared_ptr<Zone>& zone,
                 sgID = *gIter;
             }
         }
+
+        if(sgID == 0) continue;
 
         if(spotID)
         {
@@ -1917,6 +2038,11 @@ bool ZoneManager::UpdateSpawnGroups(const std::shared_ptr<Zone>& zone,
 
                 eStateGroup->push_back(eState);
             }
+
+            if(sg->SpawnActionsCount() > 0)
+            {
+                spawnActionGroups.push_back(sg);
+            }
         }
     }
 
@@ -1966,6 +2092,12 @@ bool ZoneManager::UpdateSpawnGroups(const std::shared_ptr<Zone>& zone,
             {
                 client.second->FlushOutgoing();
             }
+        }
+
+        for(auto sg : spawnActionGroups)
+        {
+            server->GetActionManager()->PerformActions(nullptr,
+                sg->GetSpawnActions(), 0, zone, sg->GetID());
         }
 
         return true;
@@ -2127,6 +2259,9 @@ void ZoneManager::UpdateActiveZoneStates()
 
     for(auto zone : zones)
     {
+        // Despawn first
+        HandleDespawns(zone);
+
         // Update active AI controlled entities
         aiManager->UpdateActiveStates(zone, serverTime);
 
@@ -2137,6 +2272,38 @@ void ZoneManager::UpdateActiveZoneStates()
 
             // Now update plasma spawns
             UpdatePlasma(zone, serverTime);
+        }
+
+        mTimeRestrictUpdatedZones.erase(zone->GetID());
+    }
+
+    // Get any updated time restricted zones and clear the list
+    // after retrieval (essentially they "unfreeze" momentarily
+    {
+        zones.clear();
+
+        std::lock_guard<std::mutex> lock(mLock);
+        if(mTimeRestrictUpdatedZones.size() > 0)
+        {
+            for(auto uniqueID : mTimeRestrictUpdatedZones)
+            {
+                zones.push_back(mZones[uniqueID]);
+            }
+
+            mTimeRestrictUpdatedZones.clear();
+        }
+    }
+
+    // Handle all time restrict updated zones
+    for(auto zone : zones)
+    {
+        // Despawn first
+        HandleDespawns(zone);
+
+        if(zone->HasRespawns())
+        {
+            // Spawn next
+            UpdateSpawnGroups(zone, false, serverTime);
         }
     }
 }
@@ -2170,6 +2337,36 @@ void ZoneManager::Warp(const std::shared_ptr<ChannelClientConnection>& client,
 
     auto connections = server->GetZoneManager()->GetZoneConnections(client, true);
     ChannelClientConnection::SendRelativeTimePacket(connections, p, timeMap);
+}
+
+void ZoneManager::HandleTimedActions(const WorldClock& clock)
+{
+    std::list<std::shared_ptr<Zone>> timeRestrictZones;
+    {
+        std::lock_guard<std::mutex> lock(mLock);
+        for(uint32_t zoneID : mAllTimeRestrictZones)
+        {
+            timeRestrictZones.push_back(mZones[zoneID]);
+        }
+    }
+
+    std::set<uint32_t> updated;
+    for(auto zone : timeRestrictZones)
+    {
+        if(zone && zone->UpdateTimedSpawns(clock))
+        {
+            updated.insert(zone->GetID());
+        }
+    }
+
+    if(updated.size() > 0)
+    {
+        std::lock_guard<std::mutex> lock(mLock);
+        for(uint32_t zoneID : updated)
+        {
+            mTimeRestrictUpdatedZones.insert(zoneID);
+        }
+    }
 }
 
 bool ZoneManager::GetSpotPosition(uint32_t dynamicMapID, uint32_t spotID, float& x,
@@ -2629,6 +2826,13 @@ std::shared_ptr<Zone> ZoneManager::CreateZone(
 
     mZones[id] = zone;
 
+    // Register time restrictions and calculate current state if any exist
+    if(RegisterTimeRestrictions(zone, definition))
+    {
+        auto clock = server->GetWorldClockTime();
+        zone->UpdateTimedSpawns(clock);
+    }
+
     // Run all setup actions
     if(definition->SetupActionsCount() > 0)
     {
@@ -2688,11 +2892,221 @@ bool ZoneManager::RemoveInstance(uint32_t instanceID)
 
     mZoneInstances.erase(instance->GetID());
 
+    std::list<WorldClockTime> removeSpawnTimes;
     for(auto z : cleanupZones)
     {
         z->Cleanup();
         mZones.erase(z->GetID());
+        mActiveZones.erase(z->GetID());
+        mTimeRestrictUpdatedZones.erase(z->GetID());
+
+        if(mAllTimeRestrictZones.find(z->GetID()) !=
+            mAllTimeRestrictZones.end())
+        {
+            for(auto tPair : mSpawnTimeRestrictZones)
+            {
+                tPair.second.erase(z->GetID());
+                if(tPair.second.size() == 0)
+                {
+                    removeSpawnTimes.push_back(tPair.first);
+                }
+            }
+
+            mAllTimeRestrictZones.erase(z->GetID());
+        }
+    }
+
+    // Clean up any time restrictions
+    if(removeSpawnTimes.size() > 0)
+    {
+        auto server = mServer.lock();
+        for(auto& t : removeSpawnTimes)
+        {
+            server->RegisterClockEvent(t, 1, true);
+        }
     }
 
     return true;
+}
+
+bool ZoneManager::RegisterTimeRestrictions(const std::shared_ptr<Zone>& zone,
+    const std::shared_ptr<objects::ServerZone>& definition)
+{
+    std::list<WorldClockTime> spawnTimes;
+    std::list<WorldClockTime> eventTimes;
+
+    // Gather spawn restrictions from spawn groups and plasma
+    std::list<std::shared_ptr<objects::SpawnRestriction>> restrictions;
+    for(auto sgPair : definition->GetSpawnGroups())
+    {
+        auto sg = sgPair.second;
+        auto restriction = sg->GetRestrictions();
+        if(restriction)
+        {
+            restrictions.push_back(restriction);
+        }
+    }
+
+    for(auto pPair : definition->GetPlasmaSpawns())
+    {
+        auto plasma = pPair.second;
+        auto restriction = plasma->GetRestrictions();
+        if(restriction)
+        {
+            restrictions.push_back(restriction);
+        }
+    }
+
+    // Build times from spawn restrictions
+    for(auto restriction : restrictions)
+    {
+        std::set<int8_t> phases;
+        if(restriction->GetMoonRestriction() != 0xFFFF)
+        {
+            for(int8_t p = 0; p < 16; p++)
+            {
+                if(((restriction->GetMoonRestriction() >> p) & 0x01) != 0)
+                {
+                    // Add the phase and next phase
+                    phases.insert(p);
+                    phases.insert((int8_t)((p + 1) % 16));
+                }
+            }
+        }
+
+        if(restriction->TimeRestrictionCount() > 0)
+        {
+            std::list<WorldClockTime> gameTimes;
+            for(auto pair : restriction->GetTimeRestriction())
+            {
+                WorldClockTime after;
+                after.Hour = (int8_t)(pair.first / 100 % 24);
+                after.Min = (int8_t)((pair.first % 100) % 60);
+                gameTimes.push_back(after);
+
+                // Actual end time is one minute later
+                WorldClockTime before;
+                before.Hour = (int8_t)(pair.second / 100 % 24);
+                before.Min = (int8_t)((pair.second % 100) % 60);
+                if(before.Min == 59)
+                {
+                    before.Min = 0;
+                    before.Hour = (int8_t)((before.Hour + 1) % 24);
+                }
+                else
+                {
+                    before.Min++;
+                }
+
+                gameTimes.push_back(before);
+            }
+
+            if(phases.size() > 0)
+            {
+                // Phase and game time
+                for(int8_t phase : phases)
+                {
+                    for(WorldClockTime t : gameTimes)
+                    {
+                        t.MoonPhase = phase;
+                        spawnTimes.push_back(t);
+                    }
+                }
+            }
+            else
+            {
+                // Game time only
+                for(WorldClockTime t : gameTimes)
+                {
+                    spawnTimes.push_back(t);
+                }
+            }
+        }
+        else if(restriction->SystemTimeRestrictionCount() > 0)
+        {
+            std::list<WorldClockTime> sysTimes;
+            for(auto pair : restriction->GetSystemTimeRestriction())
+            {
+                WorldClockTime after;
+                after.SystemHour = (int8_t)(pair.first / 100 % 24);
+                after.SystemMin = (int8_t)((pair.first % 100) % 60);
+                sysTimes.push_back(after);
+
+                // Actual end time is one minute later
+                WorldClockTime before;
+                before.SystemHour = (int8_t)(pair.second / 100 % 24);
+                before.SystemMin = (int8_t)((pair.second % 100) % 60);
+                if(before.SystemMin == 59)
+                {
+                    before.SystemMin = 0;
+                    before.SystemHour = (int8_t)((before.SystemHour + 1) % 24);
+                }
+                else
+                {
+                    before.SystemMin++;
+                }
+
+                sysTimes.push_back(before);
+            }
+
+            if(phases.size() > 0)
+            {
+                // Phase and system time
+                for(int8_t phase : phases)
+                {
+                    for(WorldClockTime t : sysTimes)
+                    {
+                        t.MoonPhase = phase;
+                        spawnTimes.push_back(t);
+                    }
+                }
+            }
+            else
+            {
+                // System time only
+                for(WorldClockTime t : sysTimes)
+                {
+                    spawnTimes.push_back(t);
+                }
+            }
+        }
+        else if(phases.size() > 0)
+        {
+            // Phase only
+            for(int8_t phase : phases)
+            {
+                WorldClockTime t;
+                t.MoonPhase = phase;
+                spawnTimes.push_back(t);
+            }
+        }
+
+        // If day or date restrictions are set, add midnight too
+        if(restriction->GetDayRestriction() != 0x8F ||
+            restriction->DateRestrictionCount() > 0)
+        {
+            WorldClockTime t;
+            t.SystemHour = 0;
+            t.SystemMin = 0;
+            spawnTimes.push_back(t);
+        }
+    }
+
+    // Register all times
+    if(spawnTimes.size() > 0 || eventTimes.size() > 0)
+    {
+        auto server = mServer.lock();
+
+        for(auto& t : spawnTimes)
+        {
+            mSpawnTimeRestrictZones[t].insert(zone->GetID());
+            server->RegisterClockEvent(t, 1, false);
+        }
+
+        mAllTimeRestrictZones.insert(zone->GetID());
+
+        return true;
+    }
+
+    return false;
 }

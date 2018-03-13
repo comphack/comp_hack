@@ -75,9 +75,18 @@
             nulldefault="true"/>
     </object>
     <object name="SpawnRestriction" persistent="false">
+        <member type="bool" name="Disabled"/>
         <member type="map" name="TimeRestriction">
-            <key type="u16"/>   <!-- From -->
-            <value type="u16"/> <!-- To -->
+            <key type="u16" min="0" max="2400"/>   <!-- From -->
+            <value type="u16" min="0" max="2400"/> <!-- To -->
+        </member>
+        <member type="map" name="SystemTimeRestriction">
+            <key type="u16" min="0" max="2400"/>   <!-- From -->
+            <value type="u16" min="0" max="2400"/> <!-- To -->
+        </member>
+        <member type="map" name="DateRestriction">
+            <key type="u16" min="0" max="1231"/>   <!-- From -->
+            <value type="u16" min="0" max="1231"/> <!-- To -->
         </member>
         <member type="u16" name="MoonRestriction" default="0xFFFF"/>
         <member type="u8" name="DayRestriction" default="0x8F"/>

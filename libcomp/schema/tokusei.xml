@@ -24,7 +24,6 @@
             <value>PARTY_DEMON_TYPE</value>
 
             <!-- Time -->
-            <value>ACTUAL_TIME</value>
             <value>GAME_TIME</value>
             <value>MOON_PHASE</value>
         </member>

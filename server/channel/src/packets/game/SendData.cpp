@@ -58,14 +58,13 @@ void SendClientReadyData(std::shared_ptr<ChannelServer> server,
 
     // Send world time
     {
-        int8_t phase, hour, min;
-        server->GetWorldClockTime(phase, hour, min);
+        auto clock = server->GetWorldClockTime();
 
         libcomp::Packet p;
         p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_WORLD_TIME);
-        p.WriteS8(phase);
-        p.WriteS8(hour);
-        p.WriteS8(min);
+        p.WriteS8(clock.MoonPhase);
+        p.WriteS8(clock.Hour);
+        p.WriteS8(clock.Min);
 
         client->QueuePacket(p);
     }

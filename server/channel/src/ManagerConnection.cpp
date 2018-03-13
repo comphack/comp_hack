@@ -286,6 +286,20 @@ std::list<std::shared_ptr<ChannelClientConnection>>
     return result;
 }
 
+void ManagerConnection::BroadcastPacketToClients(libcomp::Packet& packet)
+{
+    std::list<std::shared_ptr<ChannelClientConnection>> clients;
+    {
+        std::lock_guard<std::mutex> lock(mLock);
+        for(auto cPair : mClientConnections)
+        {
+            clients.push_back(cPair.second);
+        }
+    }
+
+    ChannelClientConnection::BroadcastPacket(clients, packet);
+}
+
 bool ManagerConnection::ScheduleClientTimeoutHandler(uint16_t timeout)
 {
     auto server = std::dynamic_pointer_cast<ChannelServer>(mServer.lock());

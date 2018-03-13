@@ -62,6 +62,7 @@ SET(${PROJECT_NAME}_SRCS
     src/PlasmaState.cpp
     src/SkillManager.cpp
     src/TokuseiManager.cpp
+    src/WorldClock.cpp
     src/Zone.cpp
     src/ZoneInstance.cpp
     src/ZoneGeometry.cpp
@@ -97,6 +98,7 @@ SET(${PROJECT_NAME}_HDRS
     src/PlasmaState.h
     src/SkillManager.h
     src/TokuseiManager.h
+    src/WorldClock.h
     src/Zone.h
     src/ZoneInstance.h
     src/ZoneGeometry.h

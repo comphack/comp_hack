@@ -1324,12 +1324,14 @@ std::set<uint8_t> ActiveEntityState::PopNRAShields(const std::list<
 int8_t ActiveEntityState::GetNextActivatedAbilityID()
 {
     std::lock_guard<std::mutex> lock(mLock);
-    int8_t first = mNextActivatedAbilityID;
 
-    int8_t next = -1;
-    while(next == -1 || SpecialActivationsKeyExists(next))
+    bool firstLoop = true;
+    int8_t first = mNextActivatedAbilityID;
+    int8_t next = mNextActivatedAbilityID;
+
+    do
     {
-        if(mNextActivatedAbilityID == first)
+        if(!firstLoop && next == first)
         {
             // All are being used, this should never happen but return
             // a default if for some reason it does
@@ -1341,7 +1343,9 @@ int8_t ActiveEntityState::GetNextActivatedAbilityID()
             mNextActivatedAbilityID = (int8_t)(
                 (mNextActivatedAbilityID + 1) % 128);
         }
-    }
+
+        firstLoop = false;
+    } while(SpecialActivationsKeyExists(next));
 
     return next;
 }

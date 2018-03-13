@@ -3344,14 +3344,11 @@ bool CharacterManager::GetSynthOutcome(ClientState* synthState,
         return false;
     }
 
-    int8_t phase = 0;
-    int8_t hour = 0;
-    int8_t min = 0;
-    server->GetWorldClockTime(phase, hour, min);
+    auto clock = server->GetWorldClockTime();
 
     for(double& rate : rates)
     {
-        if(phase == 8)
+        if(clock.MoonPhase == 8)
         {
             // Full moon boosts success rates
             rate = floor(rate * 1.2);

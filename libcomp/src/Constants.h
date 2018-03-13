@@ -114,6 +114,10 @@ namespace libcomp
 /// Maximum demon soul points.
 #define MAX_SOUL_POINTS (100000)
 
+/// First calculable new moon start time.
+/// (Adjusted from NEW MOON 00:00 on Sep 9, 2012 12:47:40 GMT)
+#define BASE_WORLD_TIME (46060)
+
 /// Number of expertise (includes unused).
 #define EXPERTISE_COUNT (39)
 

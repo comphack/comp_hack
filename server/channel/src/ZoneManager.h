@@ -49,6 +49,8 @@ namespace channel
 {
 
 class ChannelServer;
+class WorldClock;
+class WorldClockTime;
 
 /**
  * Manager to handle zone focused actions.
@@ -388,6 +390,12 @@ public:
         float rot);
 
     /**
+     * Perform time-based actions depending on the current world clock time.
+     * @param clock World clock set to the current time
+     */
+    void HandleTimedActions(const WorldClock& clock);
+
+    /**
      * Get the X/Y coordinates and rotation of the center point of a spot.
      * @param dynamaicMapID Dynamic map ID of the zone containing the spot
      * @param spotID Spot ID to find the center of
@@ -516,6 +524,12 @@ private:
         const std::shared_ptr<Zone>& zone, bool sendToAll, bool queue = false);
 
     /**
+     * Perform all necessary despawns for the supplied zone.
+     * @param zone Pointer to zone do perform despawns for
+     */
+    void HandleDespawns(const std::shared_ptr<Zone>& zone);
+
+    /**
      * Update the state of status effects in the supplied zone, adding
      * and updating existing effects, expiring old effects and applying
      * T-damage and regen to entities with applicable affects
@@ -556,6 +570,18 @@ private:
      */
     bool RemoveInstance(uint32_t instanceID);
 
+    /**
+     * Register time restricted actions for a zone with the manager
+     * such as time conditional spawn groups or plasma. Times registered
+     * with the manager are also registered with the server.
+     * @param zone Pointer to the zone to register
+     * @param definition Pointer to the zone definition
+     * @return true if any times were registered, false if no times
+     *  were registered
+     */
+    bool RegisterTimeRestrictions(const std::shared_ptr<Zone>& zone,
+        const std::shared_ptr<objects::ServerZone>& definition);
+
     /// Map of zones by unique ID
     std::unordered_map<uint32_t, std::shared_ptr<Zone>> mZones;
 
@@ -589,8 +615,19 @@ private:
     /// enters the zone again.
     std::set<uint32_t> mActiveZones;
 
-    /// Pointer to the channel server
-    std::weak_ptr<ChannelServer> mServer;
+    /// Set of all zone IDs, active or not, that have had a time restricted
+    /// update performed on them. This can be thought of as temporarily
+    /// "unfreezing" a zone if it is not currently active. Once the zone's
+    /// updates have been performed, it is removed from this set.
+    std::set<uint32_t> mTimeRestrictUpdatedZones;
+
+    /// Set of all zone IDs with at least one time restricted action bound
+    /// to them
+    std::set<uint32_t> mAllTimeRestrictZones;
+
+    /// Map of times bound to zone IDs to register with the world for world
+    /// time triggering
+    std::map<WorldClockTime, std::set<uint32_t>> mSpawnTimeRestrictZones;
 
     /// Next available zone unique ID
     uint32_t mNextZoneID;
@@ -600,6 +637,9 @@ private:
 
     /// Server lock for shared resources
     std::mutex mLock;
+
+    /// Pointer to the channel server
+    std::weak_ptr<ChannelServer> mServer;
 };
 
 } // namespace channel

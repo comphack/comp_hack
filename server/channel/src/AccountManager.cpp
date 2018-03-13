@@ -263,11 +263,15 @@ void AccountManager::Logout(const std::shared_ptr<
 
     if(!delay)
     {
-        //Remove the connection if it hasn't been removed already.
+        // Remove the connection if it hasn't been removed already.
         managerConnection->RemoveClientConnection(client);
 
         libcomp::ObjectReference<
             objects::Account>::Unload(account->GetUUID());
+
+        // Remove all secondary caching
+        server->GetTokuseiManager()->RemoveTrackingEntities(
+            state->GetWorldCID());
     }
 }
 

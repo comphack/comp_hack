@@ -46,15 +46,14 @@ bool Parsers::WorldTime::Parse(libcomp::ManagerPacket *pPacketManager,
         return false;
     }
 
-    int8_t phase, hour, min;
     auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-    server->GetWorldClockTime(phase, hour, min);
+    auto clock = server->GetWorldClockTime();
 
     libcomp::Packet reply;
     reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_WORLD_TIME);
-    reply.WriteS8(phase);
-    reply.WriteS8(hour);
-    reply.WriteS8(min);
+    reply.WriteS8(clock.MoonPhase);
+    reply.WriteS8(clock.Hour);
+    reply.WriteS8(clock.Min);
 
     connection->SendPacket(reply);
 

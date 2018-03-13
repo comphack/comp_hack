@@ -49,6 +49,8 @@ namespace channel
 {
 
 class ChannelServer;
+class WorldClock;
+class WorldClockTime;
 
 /**
  * Manages tokusei specific logic for the server and validates
@@ -147,11 +149,12 @@ public:
     /**
      * Evaluate a condition from a tokusei.
      * @param eState Pointer to the tokusei source to evaluate the conditions for
+     * @param tokuseiID ID of the source tokusei effect
      * @param condition Pointer to the condition to evaluate
      * @return true if the condition evaluates to true
      */
     bool EvaluateTokuseiCondition(const std::shared_ptr<ActiveEntityState>& eState,
-        const std::shared_ptr<objects::TokuseiCondition>& condition);
+        int32_t tokuseiID, const std::shared_ptr<objects::TokuseiCondition>& condition);
 
     /**
      * Calculate the value of an attribute driven tokusei value.
@@ -212,7 +215,41 @@ public:
     std::list<double> GetAspectValueList(const std::shared_ptr<ActiveEntityState>& eState,
         TokuseiAspectType type, std::shared_ptr<objects::CalculatedEntityState> calcState = nullptr);
 
+    /**
+     * Recalculate all time restricted tokusei based on the current world time
+     * @param clock World clock set to the current time
+     */
+    void RecalcTimedTokusei(WorldClock& clock);
+
+    /**
+     * Unregister the world CID of a character that may have had time restricted
+     * tokusei associated to one or more entity. Call this any time a player
+     * logs off just in case.
+     * @param worldCID World CID associated to a character
+     */
+    void RemoveTrackingEntities(int32_t worldCID);
+
 private:
+    /**
+     * Gather all timed tokusei conditions and register their time representations
+     * with the manager and server
+     * @param tokusei Pointer to the tokusei definition
+     * @return true if the tokusei was registered successfully, false if an error
+     *  occurred
+     */
+    bool GatherTimedTokusei(const std::shared_ptr<objects::Tokusei>& tokusei);
+
+    /**
+     * Convert a tokusei condition to a world clock time representation. Calling
+     * this function for multiple conditions will combine the times into a complex
+     * time representation.
+     * @param condition Pointer to the tokusei condition
+     * @param time Output parameter to store the time in
+     * @return true the time was adjusted correctly, false if an error occurred
+     */
+    bool BuildWorldClockTime(std::shared_ptr<objects::TokuseiCondition> condition,
+        WorldClockTime& time);
+
     /**
      * Compare the supplied value and condition value.
      * @param value LHS value to compare
@@ -238,6 +275,18 @@ private:
 
     /// Quick access mapping of constant status effect IDs to their source tokusei IDs
     std::unordered_map<uint32_t, std::set<int32_t>> mStatusEffectTokusei;
+
+    /// Map of all tokusei effect IDs that have a time restriction to a boolean
+    /// "active" indicator
+    std::unordered_map<int32_t, bool> mTimedTokusei;
+
+    /// Map of world CIDs to the set of related time restricted tokusei.
+    /// This set is updated entity direct tokusei only and does not require
+    /// that the effect is ultimately marked as effective.
+    std::unordered_map<int32_t, std::set<int32_t>> mTimedTokuseiEntities;
+
+    /// Server lock for time calculation
+    std::mutex mTimeLock;
 
     /// Pointer to the channel server.
     std::weak_ptr<ChannelServer> mServer;

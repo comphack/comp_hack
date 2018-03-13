@@ -46,6 +46,7 @@ class LootBox;
 class ServerNPC;
 class ServerObject;
 class ServerZone;
+class SpawnRestriction;
 }
 
 namespace channel
@@ -53,6 +54,7 @@ namespace channel
 
 class ChannelClientConnection;
 class PlasmaState;
+class WorldClock;
 class ZoneInstance;
 
 typedef EntityState<objects::LootBox> LootBoxState;
@@ -414,6 +416,47 @@ public:
         std::shared_ptr<objects::ActionSpawn>& defeatActionSource);
 
     /**
+     * Get the IDs of all entities in the zone marked for despawn.
+     * @return Set of all entity IDs to despawn
+     */
+    std::set<int32_t> GetDespawnEntities();
+
+    /**
+     * Get all spawn groups in this zone that have been marked as disabled
+     * either due to time restrictions or manually
+     * @return Set of disabled spawn group IDs
+     */
+    std::set<uint32_t> GetDisabledSpawnGroups();
+
+    /**
+     * Mark an entity for despawn in the zone. Once marked, it cannot
+     * be unmarked.
+     * @param entityID ID of the entity to mark for despawn
+     */
+    void MarkDespawn(int32_t entityID);
+
+    /**
+     * Update all spawn groups and plasma states that have time restrictions
+     * based upon the supplie world clock time
+     * @param clock World clock set to the current time
+     * @return true if any updates were performed that the zone manager needs
+     *  to react to, false if none occurred or they can be processed later
+     */
+    bool UpdateTimedSpawns(const WorldClock& clock);
+
+    /**
+     * Enable or disable the supplied spawn groups and also disable (or enable)
+     * any spawn location groups that now have all groups disabled (or one enabled)
+     * @param spawnGroupIDs Set of spawn group IDs to adjust
+     * @param enable true if the group should be enabled, false if it should
+     *  be disabled
+     * @return true if any updates were performed that the zone manager needs
+     *  to react to, false if none occurred or they can be processed later
+     */
+    bool EnableDisableSpawnGroups(const std::set<uint32_t>& spawnGroupIDs,
+        bool enable);
+
+    /**
      * Get the set of spawn location groups that need to be respawned.
      * @param now System time representing the current server time
      * @return Set of spawn location group IDs to respawn
@@ -489,6 +532,31 @@ private:
      */
     void UnregisterEntityState(int32_t entityID);
 
+    /**
+     * Determine based on the supplied clock time if a spawn restriction
+     * is active or not
+     * @param clock World clock set to the current time
+     * @param restriction Pointer to the spawn restriction to evaluate
+     * @return true if the current time is valid for the restriction,
+     *  false if it is not
+     */
+    bool TimeRestrictionActive(const WorldClock& clock,
+        const std::shared_ptr<objects::SpawnRestriction>& restriction);
+
+    /**
+     * Enable a set of spawn groups and update any spawn location groups
+     * that previously had all groups disabled
+     * @param spawnGroupIDs Set of spawn group IDs to enable
+     */
+    void EnableSpawnGroups(const std::set<uint32_t>& spawnGroupIDs);
+
+    /**
+     * Disable a set of spawn groups and update any spawn location groups
+     * that now have all groups disabled
+     * @param spawnGroupIDs Set of spawn group IDs to disable
+     */
+    bool DisableSpawnGroups(const std::set<uint32_t>& spawnGroupIDs);
+
     /// Pointer to the ServerZone definition
     std::shared_ptr<objects::ServerZone> mServerZone;
 
@@ -551,6 +619,16 @@ private:
     /// Map of server times to spawn location group IDs that need to be respawned
     /// at that time
     std::map<uint64_t, std::set<uint32_t>> mRespawnTimes;
+
+    /// Set of entity IDs waiting to despawn. IDs are removed from this set when
+    /// the entity is removed from the zone.
+    std::set<int32_t> mPendingDespawnEntities;
+
+    /// Set of spawn group IDs that have been disabled
+    std::set<uint32_t> mDisabledSpawnGroups;
+
+    /// Set of spawn location group IDs where all associated groups are disabled
+    std::set<uint32_t> mDisabledSpawnLocationGroups;
 
     /// General use flags and associated values used for event sequences etc
     /// keyed on 0 for all characters or world CID if for a specific one

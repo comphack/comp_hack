@@ -110,7 +110,7 @@ public:
         auto msg = new libcomp::Message::ExecuteImpl<Args...>(
             std::forward<Function>(f), std::forward<Args>(args)...);
 
-        return RegisterEvent(period, msg);
+        return RegisterPeriodicEvent(period, msg);
     }
 
 private:

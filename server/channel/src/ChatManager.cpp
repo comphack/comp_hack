@@ -101,6 +101,7 @@ ChatManager::ChatManager(const std::weak_ptr<ChannelServer>& server)
     mGMands["tokusei"] = &ChatManager::GMCommand_Tokusei;
     mGMands["valuable"] = &ChatManager::GMCommand_Valuable;
     mGMands["version"] = &ChatManager::GMCommand_Version;
+    mGMands["worldtime"] = &ChatManager::GMCommand_WorldTime;
     mGMands["xp"] = &ChatManager::GMCommand_XP;
     mGMands["zone"] = &ChatManager::GMCommand_Zone;
 }
@@ -1040,6 +1041,12 @@ bool ChatManager::GMCommand_Help(const std::shared_ptr<
             "@version",
             "Prints version information for the running server.",
         } },
+        { "worldtime",{
+            "@worldtime OFFSET",
+            "Adjusts the current channel's world clock time by",
+            "a specified OFFSET (in seconds). 2 for 1 minute,"
+            "120 for 1 hour and 1440 for 1 phase."
+        } },
         { "xp", {
             "@xp PTS [DEMON]",
             "Grants the player PTS XP or the demon if DEMON is",
@@ -1567,13 +1574,13 @@ bool ChatManager::GMCommand_Post(const std::shared_ptr<
     auto worldDB = server->GetWorldDatabase();
     auto definitionManager = server->GetDefinitionManager();
 
-    uint32_t itemID;
+    uint32_t productID;
 
-    if(!GetIntegerArg<uint32_t>(itemID, argsCopy) ||
-        !definitionManager->GetItemData(itemID))
+    if(!GetIntegerArg<uint32_t>(productID, argsCopy) ||
+        !definitionManager->GetShopProductData(productID))
     {
         return SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(
-            "Invalid item ID specified: %1\n").Arg(itemID));
+            "Invalid shop product ID specified: %1\n").Arg(productID));
     }
 
     libcomp::String name;
@@ -1599,7 +1606,7 @@ bool ChatManager::GMCommand_Post(const std::shared_ptr<
     }
 
     auto postItem = libcomp::PersistentObject::New<objects::PostItem>(true);
-    postItem->SetType(itemID);
+    postItem->SetType(productID);
     postItem->SetTimestamp((uint32_t)std::time(0));
     postItem->SetAccount(targetAccount);
 
@@ -2074,6 +2081,40 @@ bool ChatManager::GMCommand_Version(const std::shared_ptr<
         "Commit by %1 <%2> on %3").Arg(szGitAuthor).Arg(
         szGitAuthorEmail).Arg(szGitDate));
     SendChatMessage(client, ChatType_t::CHAT_SELF, szGitDescription);
+
+    return true;
+}
+
+bool ChatManager::GMCommand_WorldTime(const std::shared_ptr<
+    channel::ChannelClientConnection>& client,
+    const std::list<libcomp::String>& args)
+{
+    if(!HaveUserLevel(client, 950))
+    {
+        return true;
+    }
+
+    std::list<libcomp::String> argsCopy = args;
+
+    uint32_t offset;
+    if(!GetIntegerArg<uint32_t>(offset, argsCopy))
+    {
+        return false;
+    }
+
+    auto server = mServer.lock();
+
+    server->SetTimeOffset(offset);
+
+    auto clock = server->GetWorldClockTime();
+
+    libcomp::Packet notify;
+    notify.WritePacketCode(ChannelToClientPacketCode_t::PACKET_WORLD_TIME);
+    notify.WriteS8(clock.MoonPhase);
+    notify.WriteS8(clock.Hour);
+    notify.WriteS8(clock.Min);
+
+    server->GetManagerConnection()->BroadcastPacketToClients(notify);
 
     return true;
 }

@@ -38,9 +38,11 @@
 #include <ServerZone.h>
 #include <SpawnGroup.h>
 #include <SpawnLocationGroup.h>
+#include <SpawnRestriction.h>
 
 // channel Includes
-#include <ChannelServer.h>
+#include "ChannelServer.h"
+#include "WorldClock.h"
 
 using namespace channel;
 
@@ -62,7 +64,9 @@ namespace libcomp
                 .Func<int32_t (Zone::*)(int32_t, int32_t, int32_t)>(
                     "GetFlagState", &Zone::GetFlagStateValue)
                 .Func<std::shared_ptr<ZoneInstance>(Zone::*)() const>(
-                    "GetZoneInstance", &Zone::GetInstance);
+                    "GetZoneInstance", &Zone::GetInstance)
+                .Func<bool(Zone::*)(uint32_t, bool, bool)>(
+                    "GroupHasSpawned", &Zone::GroupHasSpawned);
 
             Bind<Zone>("Zone", binding);
         }
@@ -90,6 +94,23 @@ Zone::Zone(uint32_t id, const std::shared_ptr<objects::ServerZone>& definition)
                 break;
             }
         }
+    }
+
+    // Mark groups that start at disabled
+    std::set<uint32_t> disabledGroupIDs;
+    for(auto sgPair : definition->GetSpawnGroups())
+    {
+        auto restriction = sgPair.second
+            ? sgPair.second->GetRestrictions() : nullptr;
+        if(restriction && restriction->GetDisabled())
+        {
+            disabledGroupIDs.insert(sgPair.first);
+        }
+    }
+
+    if(disabledGroupIDs.size() > 0)
+    {
+        DisableSpawnGroups(disabledGroupIDs);
     }
 }
 
@@ -267,7 +288,7 @@ void Zone::RemoveEntity(int32_t entityID, uint32_t spawnDelay)
                 if(slg->GetRespawnTime() > 0.f &&
                     mSpawnLocationGroups[slgID].size() == 0)
                 {
-                    // Update the reinforce time for the group, exit if found
+                    // Update the respawn time for the group, exit if found
                     for(auto rPair : mRespawnTimes)
                     {
                         if(rPair.second.find(slgID) != rPair.second.end())
@@ -544,6 +565,7 @@ void Zone::UnregisterEntityState(int32_t entityID)
 {
     std::lock_guard<std::mutex> lock(mLock);
     mAllEntities.erase(entityID);
+    mPendingDespawnEntities.erase(entityID);
 }
 
 std::shared_ptr<objects::EntityStateObject> Zone::GetEntity(int32_t id)
@@ -716,6 +738,98 @@ bool Zone::EncounterDefeated(uint32_t encounterID,
     return false;
 }
 
+std::set<int32_t> Zone::GetDespawnEntities()
+{
+    std::lock_guard<std::mutex> lock(mLock);
+    return mPendingDespawnEntities;
+}
+
+std::set<uint32_t> Zone::GetDisabledSpawnGroups()
+{
+    std::lock_guard<std::mutex> lock(mLock);
+    return mDisabledSpawnGroups;
+}
+
+void Zone::MarkDespawn(int32_t entityID)
+{
+    std::lock_guard<std::mutex> lock(mLock);
+    if(mAllEntities.find(entityID) != mAllEntities.end())
+    {
+        mPendingDespawnEntities.insert(entityID);
+    }
+}
+
+bool Zone::UpdateTimedSpawns(const WorldClock& clock)
+{
+    bool updated = false;
+    std::set<uint32_t> enableSpawnGroups;
+    std::set<uint32_t> disableSpawnGroups;
+
+    std::lock_guard<std::mutex> lock(mLock);
+    for(auto sgPair : mServerZone->GetSpawnGroups())
+    {
+        auto sg = sgPair.second;
+        auto restriction = sg->GetRestrictions();
+        if(restriction)
+        {
+            if(TimeRestrictionActive(clock, restriction))
+            {
+                enableSpawnGroups.insert(sgPair.first);
+            }
+            else
+            {
+                disableSpawnGroups.insert(sgPair.first);
+            }
+        }
+    }
+
+    if(enableSpawnGroups.size() > 0)
+    {
+        EnableSpawnGroups(enableSpawnGroups);
+    }
+
+    if(disableSpawnGroups.size() > 0)
+    {
+        updated = DisableSpawnGroups(disableSpawnGroups);
+    }
+
+    for(auto pPair : mServerZone->GetPlasmaSpawns())
+    {
+        auto plasma = pPair.second;
+        auto restriction = plasma->GetRestrictions();
+        if(restriction)
+        {
+            if(TimeRestrictionActive(clock, restriction))
+            {
+                // Plasma active
+                /// @todo
+            }
+            else
+            {
+                // Plasma inactive
+                /// @todo
+            }
+        }
+    }
+
+    return updated;
+}
+
+bool Zone::EnableDisableSpawnGroups(const std::set<uint32_t>& spawnGroupIDs,
+    bool enable)
+{
+    std::lock_guard<std::mutex> lock(mLock);
+    if(enable)
+    {
+        EnableSpawnGroups(spawnGroupIDs);
+        return false;
+    }
+    else
+    {
+        return DisableSpawnGroups(spawnGroupIDs);
+    }
+}
+
 std::set<uint32_t> Zone::GetRespawnLocations(uint64_t now)
 {
     std::set<uint32_t> result;
@@ -845,4 +959,250 @@ void Zone::Cleanup()
     mSpawnLocationGroups.clear();
 
     mZoneInstance = nullptr;
+}
+
+bool Zone::TimeRestrictionActive(const WorldClock& clock,
+    const std::shared_ptr<objects::SpawnRestriction>& restriction)
+{
+    // One of each designated restriction must be valid, compare
+    // the most significant restrictions first
+    if(restriction->DateRestrictionCount() > 0)
+    {
+        bool dateActive = false;
+
+        uint16_t dateSum = (uint16_t)(clock.Month * 100 + clock.Day);
+        for(auto pair : restriction->GetDateRestriction())
+        {
+            if(pair.first > pair.second)
+            {
+                // Normal compare
+                dateActive = pair.first >= dateSum &&
+                    dateSum <= pair.second;
+            }
+            else
+            {
+                // Rollover compare
+                dateActive = pair.first >= dateSum ||
+                    dateSum <= pair.second;
+            }
+
+            if(dateActive)
+            {
+                break;
+            }
+        }
+
+        if(!dateActive)
+        {
+            return false;
+        }
+    }
+
+    if(((restriction->GetDayRestriction() >> (clock.WeekDay - 1)) & 1) == 0)
+    {
+        return false;
+    }
+
+    if(restriction->SystemTimeRestrictionCount() > 0)
+    {
+        bool timeActive = false;
+
+        uint16_t timeSum = (uint16_t)(clock.SystemHour * 100 + clock.SystemMin);
+        for(auto pair : restriction->GetSystemTimeRestriction())
+        {
+            if(pair.first > pair.second)
+            {
+                // Normal compare
+                timeActive = pair.first >= timeSum &&
+                    timeSum <= pair.second;
+            }
+            else
+            {
+                // Rollover compare
+                timeActive = pair.first >= timeSum ||
+                    timeSum <= pair.second;
+            }
+
+            if(timeActive)
+            {
+                break;
+            }
+        }
+
+        if(!timeActive)
+        {
+            return false;
+        }
+    }
+
+    if(restriction->GetMoonRestriction() != 0xFFFF &&
+        ((restriction->GetMoonRestriction() >> clock.MoonPhase) & 0x01) == 0)
+    {
+        return false;
+    }
+
+    if(restriction->TimeRestrictionCount() > 0)
+    {
+        bool timeActive = false;
+
+        uint16_t timeSum = (uint16_t)(clock.Hour * 100 + clock.Min);
+        for(auto pair : restriction->GetTimeRestriction())
+        {
+            if(pair.first > pair.second)
+            {
+                // Normal compare
+                timeActive = pair.first >= timeSum &&
+                    timeSum <= pair.second;
+            }
+            else
+            {
+                // Rollover compare
+                timeActive = pair.first >= timeSum ||
+                    timeSum <= pair.second;
+            }
+
+            if(timeActive)
+            {
+                break;
+            }
+        }
+
+        if(!timeActive)
+        {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+void Zone::EnableSpawnGroups(const std::set<uint32_t>& spawnGroupIDs)
+{
+    std::set<uint32_t> enabled;
+    for(uint32_t sgID : spawnGroupIDs)
+    {
+        if(mDisabledSpawnGroups.find(sgID) != mDisabledSpawnGroups.end())
+        {
+            enabled.insert(sgID);
+            mDisabledSpawnGroups.erase(sgID);
+        }
+    }
+
+    if(enabled.size() == 0)
+    {
+        // Nothing to do
+        return;
+    }
+
+    uint64_t now = ChannelServer::GetServerTime();
+
+    // Re-enable SLGs and reset respawns
+    enabled.clear();
+    for(uint32_t slgID : mDisabledSpawnLocationGroups)
+    {
+        auto slg = mServerZone->GetSpawnLocationGroups(slgID);
+        for(uint32_t sgID : slg->GetGroupIDs())
+        {
+            if(spawnGroupIDs.find(sgID) != spawnGroupIDs.end())
+            {
+                enabled.insert(slgID);
+
+                if(slg->GetRespawnTime() > 0.f)
+                {
+                    uint64_t rTime = now + (uint64_t)(
+                        (double)slg->GetRespawnTime() * 1000000.0);
+                    mRespawnTimes[rTime].insert(slgID);
+                }
+                break;
+            }
+        }
+    }
+
+    for(uint32_t slgID : enabled)
+    {
+        mDisabledSpawnLocationGroups.erase(slgID);
+    }
+}
+
+bool Zone::DisableSpawnGroups(const std::set<uint32_t>& spawnGroupIDs)
+{
+    bool updated = false;
+
+    std::set<uint32_t> disabled;
+    for(uint32_t sgID : spawnGroupIDs)
+    {
+        if(mDisabledSpawnGroups.find(sgID) == mDisabledSpawnGroups.end())
+        {
+            auto gIter = mSpawnGroups.find(sgID);
+            if(gIter != mSpawnGroups.end())
+            {
+                // Enemies are spawned, despawn
+                for(auto eState : gIter->second)
+                {
+                    mPendingDespawnEntities.insert(eState->GetEntityID());
+                    updated = true;
+                }
+            }
+
+            mDisabledSpawnGroups.insert(sgID);
+            disabled.insert(sgID);
+        }
+    }
+
+    if(disabled.size() == 0)
+    {
+        return false;
+    }
+
+    // Disable SLGs and clear respawns
+    disabled.clear();
+    for(auto slgPair : mServerZone->GetSpawnLocationGroups())
+    {
+        auto slg = slgPair.second;
+        if(mDisabledSpawnLocationGroups.find(slgPair.first) ==
+            mDisabledSpawnLocationGroups.end())
+        {
+            // If no spawn group is active, de-activate
+            bool disable = true;
+            for(uint32_t sgID : slg->GetGroupIDs())
+            {
+                if(mDisabledSpawnGroups.find(sgID) ==
+                    mDisabledSpawnGroups.end())
+                {
+                    disable = false;
+                    break;
+                }
+            }
+
+            if(disable)
+            {
+                disabled.insert(slg->GetID());
+            }
+        }
+    }
+
+    if(disabled.size() > 0)
+    {
+        std::set<uint64_t> clearTimes;
+        for(uint32_t slgID : disabled)
+        {
+            mDisabledSpawnLocationGroups.insert(slgID);
+            for(auto& pair : mRespawnTimes)
+            {
+                pair.second.erase(slgID);
+                if(pair.second.size() == 0)
+                {
+                    clearTimes.insert(pair.first);
+                }
+            }
+
+            for(uint64_t t : clearTimes)
+            {
+                mRespawnTimes.erase(t);
+            }
+            clearTimes.clear();
+        }
+    }
+
+    return updated;
 }

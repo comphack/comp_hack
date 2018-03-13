@@ -145,8 +145,8 @@ bool TokuseiManager::Initialize()
             bool skillSourceCondition = false;
             for(auto condition : tPair.second->GetSkillConditions())
             {
-                skillTargetCondition = condition->GetTargetCondition();
-                skillSourceCondition = !condition->GetTargetCondition();
+                skillTargetCondition |= condition->GetTargetCondition();
+                skillSourceCondition |= !condition->GetTargetCondition();
 
                 if(condition->GetComparator() != objects::TokuseiCondition::Comparator_t::EQUALS &&
                     condition->GetComparator() != objects::TokuseiCondition::Comparator_t::NOT_EQUAL)
@@ -213,6 +213,11 @@ bool TokuseiManager::Initialize()
                     " rate adjustment: %1\n").Arg(tPair.first));
                 return false;
             }
+        }
+
+        if(!GatherTimedTokusei(tPair.second))
+        {
+            return false;
         }
     }
 
@@ -319,6 +324,107 @@ bool TokuseiManager::Initialize()
     return true;
 }
 
+bool TokuseiManager::GatherTimedTokusei(const std::shared_ptr<
+    objects::Tokusei>& tokusei)
+{
+    auto server = mServer.lock();
+
+    // Verify and contruct the WorkClockTime equivalents of all timed tokusei
+    std::unordered_map<uint8_t,
+        std::list<std::shared_ptr<objects::TokuseiCondition>>> afterTime;
+    std::unordered_map<uint8_t,
+        std::list<std::shared_ptr<objects::TokuseiCondition>>> beforeTime;
+    for(auto condition : tokusei->GetConditions())
+    {
+        switch(condition->GetType())
+        {
+        case objects::TokuseiCondition::Type_t::GAME_TIME:
+        case objects::TokuseiCondition::Type_t::MOON_PHASE:
+            switch(condition->GetComparator())
+            {
+            case objects::TokuseiCondition::Comparator_t::EQUALS:
+                afterTime[condition->GetOptionGroupID()].push_back(condition);
+                beforeTime[condition->GetOptionGroupID()].push_back(condition);
+                break;
+            case objects::TokuseiCondition::Comparator_t::GTE:
+                afterTime[condition->GetOptionGroupID()].push_back(condition);
+                break;
+            case objects::TokuseiCondition::Comparator_t::LTE:
+                beforeTime[condition->GetOptionGroupID()].push_back(condition);
+                break;
+            default:
+                LOG_ERROR(libcomp::String("Invalid comparator"
+                    " encountered on time restricted tokusei '%1'\n")
+                    .Arg(tokusei->GetID()));
+                return false;
+                break;
+            }
+            break;
+        default:
+            break;
+        }
+    }
+
+    if(afterTime.size() > 0 || beforeTime.size() > 0)
+    {
+        if(afterTime.size() != beforeTime.size())
+        {
+            LOG_ERROR(libcomp::String("Encountered time"
+                " restricted tokusei with at least one condition"
+                " option group that is not a timespan: '%1'\n")
+                .Arg(tokusei->GetID()));
+            return false;
+        }
+
+        for(auto timePair : beforeTime)
+        {
+            if(afterTime[timePair.first].size() == 0)
+            {
+                LOG_ERROR(libcomp::String("Encountered time"
+                    " restricted tokusei with condition"
+                    " option group that is not a timespan: '%1' (%2)\n")
+                    .Arg(tokusei->GetID()).Arg(timePair.first));
+                return false;
+            }
+
+            bool success = true;
+
+            // Make sure the timespans are valid
+            WorldClockTime before;
+            for(auto condition : beforeTime[timePair.first])
+            {
+                success &= BuildWorldClockTime(condition, before);
+            }
+
+            WorldClockTime after;
+            for(auto condition : afterTime[timePair.first])
+            {
+                success &= BuildWorldClockTime(condition, after);
+            }
+
+            if(!success)
+            {
+                LOG_ERROR(libcomp::String("Encountered time"
+                    " restricted tokusei with invalid timespan"
+                    " option group: '%1' (%2)\n")
+                    .Arg(tokusei->GetID()).Arg(timePair.first));
+                return false;
+            }
+
+            // Update existing registered times or add new
+            for(WorldClockTime t : { before, after })
+            {
+                server->RegisterClockEvent(t, 2, 0);
+            }
+        }
+
+        // Add to the set containing all timed tokusei
+        mTimedTokusei[tokusei->GetID()] = false;
+    }
+
+    return true;
+}
+
 std::unordered_map<int32_t, bool> TokuseiManager::Recalculate(const std::shared_ptr<
     ActiveEntityState>& eState, std::set<TokuseiConditionType> changes)
 {
@@ -385,24 +491,46 @@ std::unordered_map<int32_t, bool> TokuseiManager::Recalculate(const std::list<st
     std::unordered_map<int32_t,
         std::unordered_map<bool, std::unordered_map<int32_t, uint16_t>>> otherEffects;
 
+    // Keep track of direct timed tokusei on all player entities
+    std::unordered_map<int32_t, std::set<int32_t>> playerEntityTimedTokusei;
+
     for(auto eState : entities)
     {
         result[eState->GetEntityID()] = false;
+
+        int32_t worldCID = 0;
+        auto state = ClientState::GetEntityClientState(eState->GetEntityID(),
+            false);
+        if(state)
+        {
+            worldCID = state->GetWorldCID();
+
+            // Make sure there's always an entry per player
+            playerEntityTimedTokusei[worldCID];
+        }
 
         std::set<int8_t> triggers;
 
         std::unordered_map<int32_t, bool> evaluated;
         for(auto tokusei : GetDirectTokusei(eState))
         {
+            int32_t tokuseiID = tokusei->GetID();
+
             bool add = false;
-            if(evaluated.find(tokusei->GetID()) != evaluated.end())
+            if(evaluated.find(tokuseiID) != evaluated.end())
             {
-                add = evaluated[tokusei->GetID()];
+                add = evaluated[tokuseiID];
             }
             else
             {
                 add = EvaluateTokuseiConditions(eState, tokusei);
-                evaluated[tokusei->GetID()] = add;
+                evaluated[tokuseiID] = add;
+
+                if(worldCID &&
+                    mTimedTokusei.find(tokuseiID) != mTimedTokusei.end())
+                {
+                    playerEntityTimedTokusei[worldCID].insert(tokuseiID);
+                }
 
                 for(auto condition : tokusei->GetConditions())
                 {
@@ -442,19 +570,36 @@ std::unordered_map<int32_t, bool> TokuseiManager::Recalculate(const std::list<st
 
                 if(map)
                 {
-                    if(map->find(tokusei->GetID()) == map->end())
+                    if(map->find(tokuseiID) == map->end())
                     {
-                        (*map)[tokusei->GetID()] = 1;
+                        (*map)[tokuseiID] = 1;
                     }
                     else
                     {
-                        (*map)[tokusei->GetID()]++;
+                        (*map)[tokuseiID]++;
                     }
                 }
             }
         }
 
         eState->GetCalculatedState()->SetActiveTokuseiTriggers(triggers);
+    }
+
+    // Set or clear all timed tokusei for player entities
+    if(playerEntityTimedTokusei.size() > 0)
+    {
+        std::lock_guard<std::mutex> lock(mTimeLock);
+        for(auto& ePair : playerEntityTimedTokusei)
+        {
+            if(ePair.second.size() > 0)
+            {
+                mTimedTokuseiEntities[ePair.first] = ePair.second;
+            }
+            else
+            {
+                mTimedTokuseiEntities.erase(ePair.first);
+            }
+        }
     }
 
     // Loop back through and add all party/other effects
@@ -877,6 +1022,8 @@ bool TokuseiManager::EvaluateTokuseiConditions(const std::shared_ptr<
         return false;
     }
 
+    int32_t tokuseiID = tokusei->GetID();
+
     // Compare singular (and) and option group (or) conditions and
     // only return true if the entire clause evaluates to true
     std::unordered_map<uint8_t, bool> optionGroups;
@@ -900,7 +1047,7 @@ bool TokuseiManager::EvaluateTokuseiConditions(const std::shared_ptr<
 
         if(!result)
         {
-            result = EvaluateTokuseiCondition(eState, condition);
+            result = EvaluateTokuseiCondition(eState, tokuseiID, condition);
             if(optionGroupID != 0)
             {
                 optionGroups[optionGroupID] |= result;
@@ -925,7 +1072,7 @@ bool TokuseiManager::EvaluateTokuseiConditions(const std::shared_ptr<
 
 
 bool TokuseiManager::EvaluateTokuseiCondition(const std::shared_ptr<ActiveEntityState>& eState,
-    const std::shared_ptr<objects::TokuseiCondition>& condition)
+    int32_t tokuseiID, const std::shared_ptr<objects::TokuseiCondition>& condition)
 {
     bool numericCompare = condition->GetComparator() != objects::TokuseiCondition::Comparator_t::EQUALS &&
         condition->GetComparator() != objects::TokuseiCondition::Comparator_t::NOT_EQUAL;
@@ -1086,32 +1233,12 @@ bool TokuseiManager::EvaluateTokuseiCondition(const std::shared_ptr<ActiveEntity
                 objects::TokuseiCondition::Comparator_t::EQUALS);
         }
         break;
-    case TokuseiConditionType::ACTUAL_TIME:
-        // The current actual time matches the specified time and comparison
-        return Compare((int32_t)std::time(0), condition, true);
-        break;
     case TokuseiConditionType::GAME_TIME:
-        // The current game time matches the specified time and comparison
-        {
-            int8_t phase = 0;
-            int8_t hour = 0;
-            int8_t min = 0;
-            mServer.lock()->GetWorldClockTime(phase, hour, min);
-
-            return Compare((int32_t)(hour * 100 + (int32_t)min), condition, true);
-        }
-        break;
     case TokuseiConditionType::MOON_PHASE:
-        // The current moon phase matches the specified phase and comparison
-        {
-            int8_t phase = 0;
-            int8_t hour = 0;
-            int8_t min = 0;
-            mServer.lock()->GetWorldClockTime(phase, hour, min);
-
-            return Compare((int32_t)phase, condition, true);
-        }
-        break;
+        // Toggled by the server, just return true or false
+        // (Always disable for non-player entities)
+        return mTimedTokusei[tokuseiID] && eState->GetEntityType() !=
+            objects::EntityStateObject::EntityType_t::ENEMY;
     case TokuseiConditionType::PARTY_DEMON_TYPE:
         // Entity is in a party with the specified demon type currently summoned
         if(numericCompare)
@@ -1479,6 +1606,134 @@ std::list<double> TokuseiManager::GetAspectValueList(const std::shared_ptr<
     }
 
     return result;
+}
+
+void TokuseiManager::RecalcTimedTokusei(WorldClock& clock)
+{
+    std::set<int32_t> updateCIDs;
+    {
+        std::set<int32_t> toggled;
+
+        auto definitionManager = mServer.lock()->GetDefinitionManager();
+        std::lock_guard<std::mutex> lock(mTimeLock);
+        for(auto& tPair : mTimedTokusei)
+        {
+            bool setActive = true;
+            bool isActive = tPair.second;
+
+            auto tokusei = definitionManager->GetTokuseiData(tPair.first);
+            for(auto condition : tokusei->GetConditions())
+            {
+                switch(condition->GetType())
+                {
+                case TokuseiConditionType::GAME_TIME:
+                    // The current game time matches the specified time and
+                    // comparison
+                    {
+                        setActive &= Compare((int32_t)(clock.Hour * 100 +
+                            (int32_t)clock.Min), condition, true);
+                    }
+                    break;
+                case TokuseiConditionType::MOON_PHASE:
+                    // The current moon phase matches the specified phase and
+                    // comparison
+                    {
+                        setActive &= Compare((int32_t)clock.MoonPhase,
+                            condition, true);
+                    }
+                    break;
+                default:
+                    break;
+                }
+
+                if(!setActive)
+                {
+                    break;
+                }
+            }
+
+            if(isActive != setActive)
+            {
+                tPair.second = setActive;
+                toggled.insert(tPair.first);
+            }
+        }
+
+        for(int32_t tokuseiID : toggled)
+        {
+            for(auto& pair : mTimedTokuseiEntities)
+            {
+                if(pair.second.find(tokuseiID) != pair.second.end())
+                {
+                    updateCIDs.insert(pair.first);
+                }
+            }
+        }
+    }
+
+    // Now update each player with the tokusei
+    for(int32_t worldCID : updateCIDs)
+    {
+        auto state = ClientState::GetEntityClientState(worldCID, true);
+        if(state)
+        {
+            Recalculate(state->GetCharacterState(), true);
+        }
+    }
+}
+
+void TokuseiManager::RemoveTrackingEntities(int32_t worldCID)
+{
+    std::lock_guard<std::mutex> lock(mTimeLock);
+    mTimedTokuseiEntities.erase(worldCID);
+}
+
+bool TokuseiManager::BuildWorldClockTime(std::shared_ptr<
+    objects::TokuseiCondition> condition, WorldClockTime& time)
+{
+    switch(condition->GetType())
+    {
+    case objects::TokuseiCondition::Type_t::GAME_TIME:
+        if(time.Min != -1 || time.Hour != -1)
+        {
+            // Do not set twice
+            return false;
+        }
+        else if(condition->GetValue() < 0 ||
+            condition->GetValue() > 2400 ||
+            condition->GetValue() % 100 >= 60)
+        {
+            // Make sure its in the valid range
+            return false;
+        }
+        else
+        {
+            time.Hour = (int8_t)floor(condition->GetValue() * 0.01);
+            time.Min = (int8_t)(condition->GetValue() % 100);
+            return true;
+        }
+        break;
+    case objects::TokuseiCondition::Type_t::MOON_PHASE:
+        if(time.MoonPhase != -1)
+        {
+            // Do not set twice
+            return false;
+        }
+        else if(condition->GetValue() < 0 ||
+            condition->GetValue() >= 16)
+        {
+            // Make sure its in the valid range
+            return false;
+        }
+        else
+        {
+            time.MoonPhase = (int8_t)condition->GetValue();
+            return true;
+        }
+        break;
+    default:
+        return false;
+    }
 }
 
 bool TokuseiManager::Compare(int32_t value, std::shared_ptr<

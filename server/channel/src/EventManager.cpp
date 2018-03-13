@@ -1050,8 +1050,7 @@ bool EventManager::EvaluateCondition(const std::shared_ptr<ChannelClientConnecti
         else
         {
             // Server time between [value 1] and [value 2] (format: HHmm)
-            int8_t phase, hour, min;
-            mServer.lock()->GetWorldClockTime(phase, hour, min);
+            auto clock = mServer.lock()->GetWorldClockTime();
 
             int8_t minHours = (int8_t)floorl((float)condition->GetValue1() * 0.01);
             int8_t minMinutes = (int8_t)(condition->GetValue1() - (minHours * 100));
@@ -1059,7 +1058,7 @@ bool EventManager::EvaluateCondition(const std::shared_ptr<ChannelClientConnecti
             int8_t maxHours = (int8_t)floorl((float)condition->GetValue2() * 0.01);
             int8_t maxMinutes = (int8_t)(condition->GetValue2() - (maxHours * 100));
 
-            uint16_t serverSum = (uint16_t)((hour * 60) + min);
+            uint16_t serverSum = (uint16_t)((clock.Hour * 60) + clock.Min);
             uint16_t minSum = (uint16_t)((minHours * 60) + minMinutes);
             uint16_t maxSum = (uint16_t)((maxHours * 60) + maxMinutes);
 
@@ -1085,11 +1084,7 @@ bool EventManager::EvaluateCondition(const std::shared_ptr<ChannelClientConnecti
             // System time between [value 1] and [value 2] (format: ddHHmm)
             // Days are represented as Sunday = 0, Monday = 1, etc
             // If 7 is specified for both days, any day is valid
-            time_t systemTime(0);
-            tm* t = gmtime(&systemTime);
-            auto systemDay = t->tm_wday;
-            auto systemHour = t->tm_hour;
-            auto systemMinutes = t->tm_min;
+            auto clock = mServer.lock()->GetWorldClockTime();
 
             int32_t val1 = condition->GetValue1();
             int32_t val2 = condition->GetValue2();
@@ -1106,8 +1101,9 @@ bool EventManager::EvaluateCondition(const std::shared_ptr<ChannelClientConnecti
 
             bool skipDay = minDays == 7 && maxDays == 7;
 
-            uint16_t systemSum = (uint16_t)(((skipDay ? 0 : systemDay) * 24 * 60 * 60) +
-                (systemHour * 60) + systemMinutes);
+            uint16_t systemSum = (uint16_t)(
+                ((skipDay ? 0 : (clock.WeekDay - 1)) * 24 * 60 * 60) +
+                (clock.SystemHour * 60) + clock.SystemMin);
             uint16_t minSum = (uint16_t)(((skipDay ? 0 : minDays) * 24 * 60 * 60) +
                 (minHours * 60) + minMinutes);
             uint16_t maxSum = (uint16_t)(((skipDay ? 0 : maxDays) * 24 * 60 * 60) +
@@ -1127,24 +1123,23 @@ bool EventManager::EvaluateCondition(const std::shared_ptr<ChannelClientConnecti
     case objects::EventConditionData::Type_t::MOON_PHASE:
         {
             // Server moon phase = [value 1]
-            int8_t phase, hour, min;
-            mServer.lock()->GetWorldClockTime(phase, hour, min);
+            auto clock = mServer.lock()->GetWorldClockTime();
 
             if(compareMode == EventCompareMode::BETWEEN)
             {
                 // Compare, adjusting for week rollover (ex: 14 through 2)
-                return phase >= (int8_t)condition->GetValue1() ||
-                    phase <= (int8_t)condition->GetValue2();
+                return clock.MoonPhase >= (int8_t)condition->GetValue1() ||
+                    clock.MoonPhase <= (int8_t)condition->GetValue2();
             }
             else if(compareMode == EventCompareMode::EXISTS)
             {
                 // Value is flag mask, check if the current phase is contained
-                return ((condition->GetValue1() >> phase) & 0x01) != 0;
+                return ((condition->GetValue1() >> clock.MoonPhase) & 0x01) != 0;
             }
             else
             {
-                return Compare((int32_t)phase, condition->GetValue1(), 0, compareMode,
-                    EventCompareMode::EQUAL, EVENT_COMPARE_NUMERIC);
+                return Compare((int32_t)clock.MoonPhase, condition->GetValue1(), 0,
+                    compareMode, EventCompareMode::EQUAL, EVENT_COMPARE_NUMERIC);
             }
         }
     case objects::EventConditionData::Type_t::MAP:
@@ -1480,14 +1475,10 @@ bool EventManager::EvaluateCondition(const std::shared_ptr<ChannelClientConnecti
                     def->GetLobbyID() == currentZoneDef->GetID();
             }
 
-            if(compareMode != EventCompareMode::EQUAL &&
-                compareMode != EventCompareMode::DEFAULT_COMPARE)
-            {
-                return false;
-            }
-
             auto def = instance ? instance->GetDefinition() : nullptr;
-            return (int32_t)(def ? def->GetID() : 0) == condition->GetValue1();
+            return Compare((int32_t)(def ? def->GetID() : 0), condition->GetValue1(),
+                condition->GetValue2(), compareMode, EventCompareMode::EQUAL,
+                EVENT_COMPARE_NUMERIC2);
         }
     case objects::EventConditionData::Type_t::INVENTORY_FREE:
         {
@@ -1632,18 +1623,14 @@ bool EventManager::EvaluateCondition(const std::shared_ptr<ChannelClientConnecti
         {
             // System time between [value 1] and [value 2] (format: MMddHHmm)
             // Month is represented as January = 1, February = 2, etc
-            time_t systemTime(0);
-            tm* t = gmtime(&systemTime);
-            auto systemMonth = t->tm_mon + 1;
-            auto systemDay = t->tm_mday;
-            auto systemHour = t->tm_hour;
-            auto systemMinutes = t->tm_min;
+            auto clock = mServer.lock()->GetWorldClockTime();
 
             int32_t minVal = condition->GetValue1();
             int32_t maxVal = condition->GetValue2();
 
-            int32_t systemSum = (systemMonth * 1000000) + (systemDay * 10000)
-                + (systemHour * 100) + systemMinutes;
+            int32_t systemSum = (clock.Month * 1000000) +
+                (clock.Day * 10000) + (clock.SystemHour * 100) +
+                clock.SystemMin;
 
             if(maxVal < minVal)
             {

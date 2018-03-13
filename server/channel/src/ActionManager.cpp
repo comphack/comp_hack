@@ -178,6 +178,7 @@ void ActionManager::PerformActions(
         {
             LOG_ERROR(libcomp::String("Failed to parse action of type %1\n"
                 ).Arg(to_underlying(action->GetActionType())));
+            continue;
         }
         else
         {
@@ -186,13 +187,67 @@ void ActionManager::PerformActions(
             {
                 auto connectionManager = mServer.lock()->GetManagerConnection();
 
-                // Execute once per source context character and quit if any fail
+                // Execute once per source context character and quit afterwards
+                // if any fail
                 bool failure = false;
+                bool preFiltered = false;
+
                 std::set<int32_t> worldCIDs;
                 switch(srcCtx)
                 {
+                case objects::Action::SourceContext_t::ALL:
+                    // Sub-divide by location
+                    switch(action->GetLocation())
+                    {
+                    case objects::Action::Location_t::INSTANCE:
+                        {
+                            std::list<std::shared_ptr<Zone>> zones;
+                            auto instance = ctx.CurrentZone->GetInstance();
+                            if(instance)
+                            {
+                                for(auto zPair1 : instance->GetZones())
+                                {
+                                    for(auto zPair2 : zPair1.second)
+                                    {
+                                        zones.push_back(zPair2.second);
+                                    }
+                                }
+                            }
+
+                            for(auto z : zones)
+                            {
+                                for(auto conn : z->GetConnectionList())
+                                {
+                                    auto state = conn->GetClientState();
+                                    if(state)
+                                    {
+                                        worldCIDs.insert(state->GetWorldCID());
+                                    }
+                                }
+                            }
+                        }
+                        break;
+                    case objects::Action::Location_t::ZONE:
+                        for(auto conn : ctx.CurrentZone->GetConnectionList())
+                        {
+                            auto state = conn->GetClientState();
+                            if(state)
+                            {
+                                worldCIDs.insert(state->GetWorldCID());
+                            }
+                        }
+                        break;
+                    case objects::Action::Location_t::WORLD:
+                    case objects::Action::Location_t::CHANNEL:
+                    default:
+                        // Not supported
+                        failure = true;
+                        break;
+                    }
+
+                    preFiltered = true;
+                    break;
                 case objects::Action::SourceContext_t::PARTY:
-                case objects::Action::SourceContext_t::PARTY_OR_SOURCE:
                     {
                         auto sourceClient = client ? client : connectionManager
                             ->GetEntityClient(sourceEntityID, false);
@@ -202,26 +257,15 @@ void ActionManager::PerformActions(
                             break;
                         }
 
-                        auto party = sourceClient->GetClientState()->GetParty();
+                        auto state = sourceClient->GetClientState();
+                        auto party = state->GetParty();
                         if(party)
                         {
                             worldCIDs = party->GetMemberIDs();
                         }
 
-                        if(srcCtx == objects::Action::SourceContext_t::PARTY_OR_SOURCE)
-                        {
-                            worldCIDs.insert(sourceClient->GetClientState()
-                                ->GetWorldCID());
-                        }
-                    }
-                    break;
-                case objects::Action::SourceContext_t::ZONE:
-                    {
-                        auto clients = ctx.CurrentZone->GetConnectionList();
-                        for(auto c : clients)
-                        {
-                            worldCIDs.insert(c->GetClientState()->GetWorldCID());
-                        }
+                        // Always include self in party
+                        worldCIDs.insert(state->GetWorldCID());
                     }
                     break;
                 default:
@@ -230,13 +274,55 @@ void ActionManager::PerformActions(
 
                 if(!failure)
                 {
+                    std::list<std::shared_ptr<CharacterState>> cStates;
                     for(auto worldCID : worldCIDs)
                     {
+                        auto state = ClientState::GetEntityClientState(
+                            worldCID, true);
+                        if(state)
+                        {
+                            cStates.push_back(state->GetCharacterState());
+                        }
+                    }
+
+                    if(!preFiltered)
+                    {
+                        auto ctxZone = ctx.CurrentZone;
+                        auto ctxInst = ctxZone->GetInstance();
+                        switch(action->GetLocation())
+                        {
+                        case objects::Action::Location_t::INSTANCE:
+                            cStates.remove_if([ctxInst](
+                                const std::shared_ptr<CharacterState>& cState)
+                                {
+                                    auto z = cState->GetZone();
+                                    return z == nullptr ||
+                                        z->GetInstance() != ctxInst;
+                                });
+                            break;
+                        case objects::Action::Location_t::ZONE:
+                            cStates.remove_if([ctxZone](
+                                const std::shared_ptr<CharacterState>& cState)
+                                {
+                                    return cState->GetZone() != ctxZone;
+                                });
+                            break;
+                        case objects::Action::Location_t::WORLD:
+                            /// @todo: handle cross channel actions
+                            break;
+                        case objects::Action::Location_t::CHANNEL:
+                        default:
+                            // No additional filtering
+                            break;
+                        }
+                    }
+
+                    // Now that the list is filtered, execute the actions
+                    for(auto cState : cStates)
+                    {
                         auto charClient = connectionManager->
-                            GetEntityClient(worldCID, true);
-                        auto cState = charClient ? charClient->GetClientState()
-                            ->GetCharacterState() : nullptr;
-                        if(cState && cState->GetZone() == ctx.CurrentZone)
+                            GetEntityClient(cState->GetEntityID(), false);
+                        if(charClient)
                         {
                             ActionContext copyCtx = ctx;
                             copyCtx.Client = charClient;
@@ -1461,10 +1547,22 @@ bool ActionManager::Spawn(ActionContext& ctx)
     auto server = mServer.lock();
     auto zoneManager = server->GetZoneManager();
 
-    return zoneManager->UpdateSpawnGroups(ctx.CurrentZone, true, 0, act) ||
-        ((act->GetMode() == objects::ActionSpawn::Mode_t::ONE_TIME ||
-        act->GetMode() == objects::ActionSpawn::Mode_t::ONE_TIME_RANDOM) &&
-        ctx.CurrentZone->SpawnedAtSpot(act->GetSpotID()));
+    bool spawned = zoneManager->UpdateSpawnGroups(ctx.CurrentZone, true, 0, act);
+    switch(act->GetMode())
+    {
+    case objects::ActionSpawn::Mode_t::ONE_TIME:
+    case objects::ActionSpawn::Mode_t::ONE_TIME_RANDOM:
+        // Only quit if nothing spawned and it isn't an attempt to spawn
+        // to a specific spot ID that has already spawned enemies
+        return spawned || ctx.CurrentZone->SpawnedAtSpot(act->GetSpotID());
+    case objects::ActionSpawn::Mode_t::DESPAWN:
+    case objects::ActionSpawn::Mode_t::ENABLE_GROUP:
+    case objects::ActionSpawn::Mode_t::DISABLE_GROUP:
+        // Never quit
+        return true;
+    default:
+        return spawned;
+    }
 }
 
 bool ActionManager::CreateLoot(ActionContext& ctx)

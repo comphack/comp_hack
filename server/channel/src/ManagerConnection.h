@@ -155,6 +155,13 @@ public:
         ChannelClientConnection>& client, bool includeSelf, bool zoneRestrict);
 
     /**
+     * Broadcast the supplied packet to each client connection stored.
+     * Use sparingly!
+     * @param packet Packet to send
+     */
+    void BroadcastPacketToClients(libcomp::Packet& packet);
+
+    /**
      * Schedule future server work to execute HandleClientTimeouts every
      * 10 seconds.
      * @param timeout Time in seconds that needs to pass for a client

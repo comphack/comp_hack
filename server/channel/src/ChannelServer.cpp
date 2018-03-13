@@ -32,15 +32,15 @@
 #include <MessageTick.h>
 #include <PacketCodes.h>
 
+// object Includes
+#include <Account.h>
+#include <ChannelConfig.h>
+
 // channel Includes
 #include "ChannelClientConnection.h"
 #include "FusionManager.h"
 #include "ManagerClientPacket.h"
 #include "Packets.h"
-
-// Object Includes
-#include "Account.h"
-#include "ChannelConfig.h"
 
 using namespace channel;
 
@@ -50,7 +50,8 @@ ChannelServer::ChannelServer(const char *szProgram,
     libcomp::BaseServer(szProgram, config, commandLine), mAccountManager(0),
     mActionManager(0), mAIManager(0), mCharacterManager(0), mChatManager(0),
     mEventManager(0), mSkillManager(0), mZoneManager(0), mDefinitionManager(0),
-    mServerDataManager(0), mMaxEntityID(0), mMaxObjectID(0), mTickRunning(true)
+    mServerDataManager(0), mRecalcTimeDependents(false), mMaxEntityID(0),
+    mMaxObjectID(0), mTickRunning(true)
 {
 }
 
@@ -525,6 +526,18 @@ bool ChannelServer::Initialize()
     mZoneManager = new ZoneManager(channelPtr);
     mZoneManager->LoadGeometry();
 
+    // Pull first clock time then recalc
+    auto clock = GetWorldClockTime();
+    mTokuseiManager->RecalcTimedTokusei(clock);
+
+    // Schedule the world clock to tick once every second
+    auto sch = std::chrono::milliseconds(1000);
+    mTimerManager.SchedulePeriodicEvent(sch, []
+        (ChannelServer* pServer)
+        {
+            pServer->HandleClockEvents();
+        }, this);
+
     // Now connect to the world server.
     auto worldConnection = std::make_shared<
         libcomp::InternalConnection>(mService);
@@ -603,25 +616,79 @@ int32_t ChannelServer::GetExpirationInSeconds(uint32_t fixedTime, uint32_t relat
     return (int32_t)(fixedTime > relativeTo ? fixedTime - relativeTo : 0);
 }
 
-void ChannelServer::GetWorldClockTime(int8_t& phase, int8_t& hour, int8_t& min)
+const WorldClock ChannelServer::GetWorldClockTime()
 {
-    // Use the first calculable new moon start time.
-    // (Adjusted from NEW MOON 00:00 on Sep 9, 2012 12:47:40 GMT)
-    static uint64_t baseTime = 46060;
-
     // World time is relative to seconds so no need for precision past time_t.
-    // Every 4 days, 15 full moon cycles will elapse and the same game time will
-    // occur on the same time offset.
-    uint64_t nowOffset = (uint64_t)(((uint64_t)std::time(nullptr) - baseTime) % 345600);
+    time_t systemTime = std::time(0);
+
+    // If the system time has not been updated, no need to run the
+    // calculation again
+    if((uint32_t)systemTime == mWorldClock.SystemTime)
+    {
+        return mWorldClock;
+    }
+
+    std::lock_guard<std::mutex> lock(mTimeLock);
+
+    // Check again after lock so we don't double calculate
+    if((uint32_t)systemTime == mWorldClock.SystemTime)
+    {
+        return mWorldClock;
+    }
+
+    bool eventPassed = mWorldClock.SystemTime < mNextEventTime &&
+        mNextEventTime <= (uint32_t)systemTime;
+
+    tm* t = gmtime(&systemTime);
+
+    // Set the real time values
+    WorldClock newClock;
+    newClock.WeekDay = (int8_t)(t->tm_wday + 1);
+    newClock.Month = (int8_t)(t->tm_mon + 1);
+    newClock.Day = (int8_t)t->tm_mday;
+    newClock.SystemHour = (int8_t)t->tm_hour;
+    newClock.SystemMin = (int8_t)t->tm_min;
+    newClock.SystemSec = (int8_t)t->tm_sec;
+
+    newClock.SystemTime = (uint32_t)systemTime;
+    newClock.GameOffset = mWorldClock.GameOffset;
+
+    // Now calculate the game relative times
+
+    // Every 4 days, 15 full moon cycles will elapse and the same game time
+    // will occur on the same time offset.
+    newClock.CycleOffset = (uint32_t)((newClock.SystemTime +
+        newClock.GameOffset - BASE_WORLD_TIME) % 345600);
 
     // 24 minutes = 1 game phase (16 total)
-    phase = (int8_t)((nowOffset / 1440) % 16);
+    newClock.MoonPhase = (int8_t)((newClock.CycleOffset / 1440) % 16);
 
     // 2 minutes = 1 game hour
-    hour = (int8_t)((nowOffset / 120) % 24);
+    newClock.Hour = (int8_t)((newClock.CycleOffset / 120) % 24);
 
     // 2 seconds = 1 game minute
-    min = (int8_t)((nowOffset / 2) % 60);
+    newClock.Min = (int8_t)((newClock.CycleOffset / 2) % 60);
+
+    // Replace the old clock values
+    mWorldClock = newClock;
+
+    if(eventPassed || mNextEventTime == 0)
+    {
+        mRecalcTimeDependents = true;
+        RecalcNextWorldEventTime();
+    }
+
+    return newClock;
+}
+
+void ChannelServer::SetTimeOffset(uint32_t offset)
+{
+    std::lock_guard<std::mutex> lock(mTimeLock);
+    mWorldClock.GameOffset = offset;
+
+    // Force a recalc
+    mWorldClock.SystemTime = 0;
+    mNextEventTime = 0;
 }
 
 const std::shared_ptr<objects::RegisteredChannel> ChannelServer::GetRegisteredChannel()
@@ -888,6 +955,123 @@ void ChannelServer::Tick()
     }
 }
 
+void ChannelServer::StartGameTick()
+{
+    mTickThread = std::thread([this](std::shared_ptr<
+        libcomp::MessageQueue<libcomp::Message::Message*>> queue,
+        volatile bool *pTickRunning)
+    {
+#if !defined(_WIN32)
+        pthread_setname_np(pthread_self(), "tick");
+#endif // !defined(_WIN32)
+
+        const static int TICK_DELTA = 100;
+        auto tickDelta = std::chrono::milliseconds(TICK_DELTA);
+
+        while(*pTickRunning)
+        {
+            std::this_thread::sleep_for(tickDelta);
+            queue->Enqueue(new libcomp::Message::Tick);
+        }
+    }, mQueueWorker.GetMessageQueue(), &mTickRunning);
+}
+
+bool ChannelServer::SendSystemMessage(const std::shared_ptr<
+    channel::ChannelClientConnection>& client,
+    libcomp::String message, int8_t type, bool sendToAll)
+{
+    libcomp::Packet p;
+    p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_SYSTEM_MSG);
+    p.WriteS8(type);
+    p.WriteS8(0); // Appears to be some kind of sub-mode that is not used
+    p.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_CP932,
+        message, true);
+
+    if(!sendToAll)
+    {
+        client->SendPacket(p);
+    }
+    else
+    {
+        mZoneManager->BroadcastPacket(client, p);
+    }
+    return true;
+}
+
+ChannelServer::PersistentObjectMap
+    ChannelServer::GetDefaultCharacterObjectMap() const
+{
+    return mDefaultCharacterObjectMap;
+}
+
+bool ChannelServer::RegisterClockEvent(WorldClockTime time, uint8_t type,
+    bool remove)
+{
+    if(!time.IsSet())
+    {
+        // Ignore empty
+        return false;
+    }
+    else if((time.Hour >= 0) != (time.Min >= 0) ||
+        (time.SystemHour >= 0) != (time.SystemMin >= 0))
+    {
+        // Both hour and minute of a system or world time must be
+        // set together
+        return false;
+    }
+    else if(time.Hour >= 0 && time.SystemHour >= 0)
+    {
+        // World and system time cannot both be set
+        return false;
+    }
+
+    bool recalcNext = false;
+
+    std::lock_guard<std::mutex> lock(mTimeLock);
+    if(remove)
+    {
+        mWorldClockEvents[time].erase(type);
+        if(mWorldClockEvents[time].size() == 0)
+        {
+            mWorldClockEvents.erase(time);
+            recalcNext = true;
+        }
+    }
+    else
+    {
+        recalcNext = mWorldClockEvents.find(time) == mWorldClockEvents.end();
+        mWorldClockEvents[time].insert(type);
+    }
+
+    if(recalcNext)
+    {
+        RecalcNextWorldEventTime();
+    }
+
+    return true;
+}
+
+void ChannelServer::HandleClockEvents()
+{
+    auto clock = GetWorldClockTime();
+
+    bool recalc = false;
+    {
+        std::lock_guard<std::mutex> lock(mTimeLock);
+        if(mRecalcTimeDependents)
+        {
+            recalc = true;
+            mRecalcTimeDependents = false;
+        }
+    }
+
+    if(recalc)
+    {
+        mTokuseiManager->RecalcTimedTokusei(clock);
+        mZoneManager->HandleTimedActions(clock);
+    }
+}
+
 std::shared_ptr<libcomp::TcpConnection> ChannelServer::CreateConnection(
     asio::ip::tcp::socket& socket)
 {
@@ -936,51 +1120,76 @@ ServerTime ChannelServer::GetServerTimeHighResolution()
         .time_since_epoch().count();
 }
 
-void ChannelServer::StartGameTick()
+void ChannelServer::RecalcNextWorldEventTime()
 {
-    mTickThread = std::thread([this](std::shared_ptr<
-        libcomp::MessageQueue<libcomp::Message::Message*>> queue,
-        volatile bool *pTickRunning)
+    if(mWorldClock.IsSet() && mWorldClockEvents.size() > 0)
     {
-#if !defined(_WIN32)
-        pthread_setname_np(pthread_self(), "tick");
-#endif // !defined(_WIN32)
+        uint32_t timeToMidnight = (uint32_t)(
+            ((23 - mWorldClock.SystemHour) * 3600) +
+            ((59 - mWorldClock.SystemMin) * 60) + (60 - mWorldClock.SystemSec));
 
-        const static int TICK_DELTA = 100;
-        auto tickDelta = std::chrono::milliseconds(TICK_DELTA);
+        // Midnight is always an option as day based times are not compared
+        // at that level
+        std::set<uint32_t> nextTimes = { timeToMidnight };
 
-        while(*pTickRunning)
+        uint8_t secOffset = (uint8_t)(mWorldClock.SystemSec % 2);
+
+        int32_t timeSum = mWorldClock.Hour * 120 + mWorldClock.Min * 2 +
+            secOffset;
+        int32_t sysTimeSum = mWorldClock.SystemHour * 3600 +
+            mWorldClock.SystemMin * 60 + mWorldClock.SystemSec;
+
+        for(auto& pair : mWorldClockEvents)
         {
-            std::this_thread::sleep_for(tickDelta);
-            queue->Enqueue(new libcomp::Message::Tick);
+            const WorldClockTime& t = pair.first;
+
+            // If the current time is not in the current phase,
+            // calculate next time to phase no matter what
+            bool inPhase = t.MoonPhase == -1 ||
+                t.MoonPhase == mWorldClock.MoonPhase;
+
+            uint32_t min = 0;
+            if(inPhase && t.SystemHour != -1)
+            {
+                // Time to system time
+                int32_t sysTimeSum2 = t.SystemHour * 3600 +
+                    t.SystemMin * 60;
+                min = (uint32_t)(sysTimeSum > sysTimeSum2
+                    ? (86400 - sysTimeSum + sysTimeSum2)
+                    : (sysTimeSum2 - sysTimeSum));
+            }
+            else if(inPhase && t.Hour != -1)
+            {
+                // Time to game time
+                int32_t timeSum2 = t.Hour * 120 + t.Min * 2;
+                min = (uint32_t)(timeSum > timeSum2
+                    ? (1440 - timeSum + timeSum2)
+                    : (timeSum2 - timeSum));
+            }
+            else
+            {
+                // Time to phase (full cycle if in phase)
+                uint8_t phaseDelta = (uint8_t)(
+                    mWorldClock.MoonPhase > t.MoonPhase
+                    ? (16 - mWorldClock.MoonPhase + t.MoonPhase)
+                    : t.MoonPhase - mWorldClock.MoonPhase);
+
+                // Scale to seconds and reduce by time in current phase
+                min = (uint32_t)((phaseDelta * 1440) - (timeSum % 1440));
+            }
+
+            if(min != 0)
+            {
+                nextTimes.insert(min);
+            }
         }
-    }, mQueueWorker.GetMessageQueue(), &mTickRunning);
-}
 
-bool ChannelServer::SendSystemMessage(const std::shared_ptr<
-    channel::ChannelClientConnection>& client,
-    libcomp::String message, int8_t type, bool sendToAll)
-{
-    libcomp::Packet p;
-    p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_SYSTEM_MSG);
-    p.WriteS8(type);
-    p.WriteS8(0); // Appears to be some kind of sub-mode that is not used
-    p.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_CP932,
-        message, true);
-
-    if(!sendToAll)
-    {
-        client->SendPacket(p);
+        // Offset by the first one in the set
+        mNextEventTime = (uint32_t)(
+            mWorldClock.SystemTime + *nextTimes.begin());
     }
     else
     {
-        mZoneManager->BroadcastPacket(client, p);
+        mNextEventTime = 0;
     }
-    return true;
-}
-
-ChannelServer::PersistentObjectMap
-    ChannelServer::GetDefaultCharacterObjectMap() const
-{
-    return mDefaultCharacterObjectMap;
 }

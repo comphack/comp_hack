@@ -49,6 +49,7 @@
 #include "ServerDataManager.h"
 #include "SkillManager.h"
 #include "TokuseiManager.h"
+#include "WorldClock.h"
 #include "ZoneManager.h"
 
 namespace objects
@@ -122,12 +123,17 @@ public:
         uint32_t relativeTo = 0);
 
     /**
-     * Get the world clock time of the server.
-     * @param phase Output param, world clock phase of the server
-     * @param hour Output param, world clock hours of the server
-     * @param min Output param, world clock minutes of the server
+     * Get the world clock time of the server. This is thread safe and checks
+     * to make sure it does not calculate more than is needed.
+     * @return Current world clock time
      */
-    void GetWorldClockTime(int8_t& phase, int8_t& hour, int8_t& min);
+    const WorldClock GetWorldClockTime();
+
+    /**
+     * Set a custom time offset for the world clock (in seconds)
+     * @param offset Custom time offset (in seconds)
+     */
+    void SetTimeOffset(uint32_t offset);
 
     /**
      * Get the RegisteredChannel.
@@ -327,6 +333,27 @@ public:
     PersistentObjectMap GetDefaultCharacterObjectMap() const;
 
     /**
+     * Register a timed event to occur when the world clock is updated to
+     * pass that time
+     * @param time Time to register
+     * @param type Type identifier to register the time with. This allows
+     *  multiple sources to register the same time and have the server
+     *  clean up as needed upon removal.
+     * @param remove true if the time should be removed, false if it should
+     *  should be registered
+     * @return true if the time was registered properly, false if a failure
+     *  ocurred
+     */
+    bool RegisterClockEvent(WorldClockTime time, uint8_t type, bool remove);
+
+    /**
+     * Clock event handler that is called once every second to update the
+     * the world time. If the registered "next time" is hit, the time sources
+     * will be notified to recalculate updates.
+     */
+    void HandleClockEvents();
+
+    /**
      * Schedule code work to be queued by the next server tick that occurs
      * following the specified time.
      * @param timestamp ServerTime timestamp that needs to pass for the
@@ -374,10 +401,22 @@ protected:
     /// available for the current machine.
     static GET_SERVER_TIME sGetServerTime;
 
+    /**
+     * Recalculate the next time the world clock will fire an event on.
+     * This will be stored as a system timestamp for easy comparison.
+     */
+    void RecalcNextWorldEventTime();
+
     /// Timestamp ordered map of prepared Execute messages and timestamps
     /// associated to when they should be queued following a server tick
     std::map<ServerTime,
         std::list<libcomp::Message::Execute*>> mScheduledWork;
+
+    /// Map of world clock times to the type of event that will
+    /// occur at that time. Types include:
+    /// 1) Spawn activation/deactivation
+    /// 2) Tokusei active timespans
+    std::map<WorldClockTime, std::set<uint8_t>> mWorldClockEvents;
 
     /// Pointer to the manager in charge of connection messages.
     std::shared_ptr<ManagerConnection> mManagerConnection;
@@ -439,6 +478,17 @@ protected:
     /// Tokusei manager for the server.
     TokuseiManager* mTokuseiManager;
 
+    /// Server world clock
+    WorldClock mWorldClock;
+
+    /// System time representation of the next world clock
+    /// event time that the clock needs to react to
+    uint32_t mNextEventTime;
+
+    /// true if the sources of each time registered should
+    /// should be updated based on the last clock update
+    bool mRecalcTimeDependents;
+
     /// Highest entity ID currently assigned
     int32_t mMaxEntityID;
 
@@ -450,6 +500,9 @@ protected:
 
     /// Server lock for shared resources
     std::mutex mLock;
+
+    /// Server lock for server time calculation
+    std::mutex mTimeLock;
 
     /// If the tick thread should continue running.
     volatile bool mTickRunning;

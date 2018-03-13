@@ -351,20 +351,13 @@ void ActionManager::PerformActions(
 
 bool ActionManager::StartEvent(ActionContext& ctx)
 {
-    if(!ctx.Client)
-    {
-        LOG_ERROR("Attempted to start an event with no associated"
-            " client connection\n");
-        return false;
-    }
-
     auto act = std::dynamic_pointer_cast<objects::ActionStartEvent>(ctx.Action);
 
     auto server = mServer.lock();
     auto eventManager = server->GetEventManager();
 
     eventManager->HandleEvent(ctx.Client, act->GetEventID(), ctx.SourceEntityID,
-        ctx.GroupID);
+        ctx.CurrentZone, ctx.GroupID);
     
     return true;
 }

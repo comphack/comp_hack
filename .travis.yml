@@ -32,6 +32,7 @@ matrix:
         apt:
           packages:
             - libc++1
+            - libc++abi1
             - cmake
             - libssl-dev
             - libuv-dev
@@ -46,6 +47,7 @@ matrix:
         apt:
           packages:
             - libc++1
+            - libc++abi1
             - cmake
             - libssl-dev
             - libuv-dev

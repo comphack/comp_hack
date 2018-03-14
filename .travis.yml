@@ -54,9 +54,16 @@ matrix:
       addons:
         apt:
           sources:
+            - ubuntu-toolchain-r-test
             - llvm-toolchain-trusty-3.8
           packages:
             - clang-3.8
+            - cmake
+            - libssl-dev
+            - libuv-dev
+            - libqt5webkit5-dev
+            - ninja-build
+            - unzip
       env:
         - COMPILER_CC=clang
         - COMPILER_CXX=clang++
@@ -66,9 +73,16 @@ matrix:
       addons:
         apt:
           sources:
+            - ubuntu-toolchain-r-test
             - llvm-toolchain-trusty-3.8
           packages:
             - clang-3.8
+            - cmake
+            - libssl-dev
+            - libuv-dev
+            - libqt5webkit5-dev
+            - ninja-build
+            - unzip
       env:
         - COMPILER_CC=clang
         - COMPILER_CXX=clang++
@@ -77,8 +91,16 @@ matrix:
     - compiler: gcc
       addons:
         apt:
+          sources:
+            - ubuntu-toolchain-r-test
           packages:
             - g++-5
+            - cmake
+            - libssl-dev
+            - libuv-dev
+            - libqt5webkit5-dev
+            - ninja-build
+            - unzip
       env:
         - COMPILER_CC=gcc-5
         - COMPILER_CXX=g++-5

@@ -957,7 +957,7 @@ void ChannelServer::Tick()
 
 void ChannelServer::StartGameTick()
 {
-    mTickThread = std::thread([this](std::shared_ptr<
+    mTickThread = std::thread([](std::shared_ptr<
         libcomp::MessageQueue<libcomp::Message::Message*>> queue,
         volatile bool *pTickRunning)
     {

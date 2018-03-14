@@ -31,6 +31,7 @@ matrix:
       addons:
         apt:
           packages:
+            - clang-3.8
             - libc++1
             - libc++abi1
             - cmake
@@ -38,14 +39,15 @@ matrix:
             - libuv-dev
             - libqt5webkit5-dev
       env:
-        - COMPILER_CC=clang
-        - COMPILER_CXX=clang++
+        - COMPILER_CC=clang-3.8
+        - COMPILER_CXX=clang++-3.8
         - CMAKE_GENERATOR='Unix Makefiles'
 
     - compiler: clang
       addons:
         apt:
           packages:
+            - clang-3.8
             - libc++1
             - libc++abi1
             - cmake
@@ -54,8 +56,8 @@ matrix:
             - libqt5webkit5-dev
             - ninja-build
       env:
-        - COMPILER_CC=clang
-        - COMPILER_CXX=clang++
+        - COMPILER_CC=clang-3.8
+        - COMPILER_CXX=clang++-3.8
         - CMAKE_GENERATOR=Ninja
 
     - compiler: gcc

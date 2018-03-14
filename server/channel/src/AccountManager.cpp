@@ -166,6 +166,9 @@ void AccountManager::HandleLoginResponse(const std::shared_ptr<
             " %1\n").Arg(account->GetUsername()));
         reply.WriteU32Little(static_cast<uint32_t>(-1));
 
+        state->SetLogoutSave(false);
+        LogoutCharacter(state);
+
         // Tell the world that the character login failed without performing
         // any logout save actions etc
         libcomp::Packet p;
@@ -352,6 +355,9 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
     if(character.IsNull() || !character.Get(db) ||
         !character->LoadCoreStats(db))
     {
+        LOG_ERROR(libcomp::String("Character or character stats could"
+            " not be initialized for account: %1\n")
+            .Arg(state->GetAccountUID().ToString()));
         return false;
     }
 
@@ -359,6 +365,8 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
     bool newCharacter = character->GetCoreStats()->GetLevel() == -1;
     if(newCharacter && !InitializeNewCharacter(character.Get()))
     {
+        LOG_ERROR(libcomp::String("Failed to initialize new character"
+            " for account: %1\n").Arg(state->GetAccountUID().ToString()));
         return false;
     }
 
@@ -389,6 +397,9 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
         if(!itemDepo->Insert(db) || !demonDepo->Insert(db) ||
             !worldData->Insert(db))
         {
+            LOG_ERROR(libcomp::String("AccountWorldData could not be"
+                " created during character initialization for account: %1\n")
+                .Arg(state->GetAccountUID().ToString()));
             return false;
         }
     }
@@ -400,33 +411,89 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
     {
         if(!worldData->LoadBazaarData(db))
         {
+            LOG_ERROR(libcomp::String("BazaarData could"
+                " not be initialized for account: %1\n")
+                .Arg(state->GetAccountUID().ToString()));
             return false;
         }
 
-        // Items
-        for(auto bItem : worldData->GetBazaarData()->GetItems())
-        {
-            if(bItem.IsNull()) continue;
+        auto bazaarData = worldData->GetBazaarData().Get();
 
-            if(!bItem.Get(db) || !bItem->LoadItem(db))
+        // Load all bazaar items together
+        auto allBazaarItems = objects::BazaarItem::
+            LoadBazaarItemListByAccount(db, account);
+
+        // Check to make sure all items in slots in BazaarData are valid
+        std::set<size_t> openSlots;
+        std::set<std::shared_ptr<objects::BazaarItem>> loaded;
+        for(size_t i = 0; i < 15; i++)
+        {
+            auto bItem = bazaarData->GetItems(i);
+
+            if(bItem.IsNull())
             {
-                return false;
+                openSlots.insert(i);
+                continue;
+            }
+
+            if(!bItem.Get())
+            {
+                LOG_WARNING(libcomp::String("Clearing invalid"
+                    " BazaarItem saved on BazaarData for account: %1\n")
+                    .Arg(state->GetAccountUID().ToString()));
+                bazaarData->SetItems(i, NULLUUID);
+                openSlots.insert(i);
+                continue;
             }
 
             state->SetObjectID(bItem->GetItem().GetUUID(),
                 server->GetNextObjectID());
+
+            loaded.insert(bItem.Get());
+        }
+
+        // Recover any orphaned items
+        if(openSlots.size() > 0)
+        {
+            uint8_t recovered = 0;
+            for(auto bItem : allBazaarItems)
+            {
+                if(loaded.find(bItem) == loaded.end())
+                {
+                    size_t idx = *openSlots.begin();
+                    openSlots.erase(idx);
+
+                    bazaarData->SetItems(idx, bItem);
+                    recovered++;
+
+                    if(openSlots.size() == 0) break;
+                }
+            }
+
+            if(recovered > 0)
+            {
+                LOG_WARNING(libcomp::String("Recovered %1 orphaned"
+                    " BazaarItem(s) from account: %2\n").Arg(recovered)
+                    .Arg(state->GetAccountUID().ToString()));
+            }
         }
     }
 
     // Progress
     if(!character->LoadProgress(db))
     {
+        LOG_ERROR(libcomp::String("CharacterProgress could"
+            " not be initialized for account: %1\n")
+            .Arg(state->GetAccountUID().ToString()));
         return false;
     }
 
     // Friend Settings
     if(!character->LoadFriendSettings(db))
     {
+        LOG_ERROR(libcomp::String("FriendSettings could"
+            " not be initialized for account: %1\n")
+            .Arg(state->GetAccountUID().ToString()));
         return false;
     }
 
@@ -448,25 +515,74 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
 
         if(!itemBox.Get(db))
         {
+            LOG_ERROR(libcomp::String("ItemBox could"
+                " not be initialized for account: %1\n")
+                .Arg(state->GetAccountUID().ToString()));
             return false;
         }
 
-        for(auto item : itemBox->GetItems())
-        {
-            if(item.IsNull()) continue;
+        // Load all items together
+        auto allBoxItems = objects::Item::LoadItemListByItemBox(db,
+            itemBox.Get());
 
-            if(!item.Get(db))
+        // Check to make sure all items in slots in the ItemBox are valid
+        std::set<size_t> openSlots;
+        std::set<std::shared_ptr<objects::Item>> loaded;
+        for(size_t i = 0; i < 50; i++)
+        {
+            auto item = itemBox->GetItems(i);
+
+            if(item.IsNull())
             {
-                return false;
+                openSlots.insert(i);
+                continue;
+            }
+
+            if(!item.Get(db) || item->GetItemBox().Get() != itemBox.Get())
+            {
+                LOG_WARNING(libcomp::String("Clearing invalid"
+                    " Item saved on ItemBox for account: %1\n")
+                    .Arg(state->GetAccountUID().ToString()));
+                itemBox->SetItems(i, NULLUUID);
+                openSlots.insert(i);
+                continue;
             }
 
             state->SetObjectID(item->GetUUID(),
                 server->GetNextObjectID());
+
+            loaded.insert(item.Get());
+        }
+
+        // Recover any orphaned items
+        if(openSlots.size() > 0)
+        {
+            uint8_t recovered = 0;
+            for(auto item : allBoxItems)
+            {
+                if(loaded.find(item) == loaded.end())
+                {
+                    size_t idx = *openSlots.begin();
+                    openSlots.erase(idx);
+
+                    itemBox->SetItems(idx, item);
+                    item->SetBoxSlot((int8_t)idx);
+                    recovered++;
+
+                    if(openSlots.size() == 0) break;
+                }
+            }
+
+            if(recovered > 0)
+            {
+                LOG_WARNING(libcomp::String("Recovered %1 orphaned"
+                    " Item(s) from account: %2\n").Arg(recovered)
+                    .Arg(state->GetAccountUID().ToString()));
+            }
         }
     }
 
     // Equipment
-    auto defaultBox = character->GetItemBoxes(0);
     for(auto equip : character->GetEquippedItems())
     {
         if(equip.IsNull()) continue;
@@ -476,6 +592,9 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
         {
             if(!equip.Get(db))
             {
+                LOG_ERROR(libcomp::String("Equipped Item could"
+                    " not be initialized for account: %1\n")
+                    .Arg(state->GetAccountUID().ToString()));
                 return false;
             }
 
@@ -489,13 +608,29 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
     {
         if(!expertise.IsNull() && !expertise.Get(db))
         {
+            LOG_ERROR(libcomp::String("Expertise could"
+                " not be initialized for account: %1\n")
+                .Arg(state->GetAccountUID().ToString()));
             return false;
         }
     }
 
-    std::list<std::list<
-        libcomp::ObjectReference<objects::StatusEffect>>> statusEffectSets;
-    statusEffectSets.push_back(character->GetStatusEffects());
+    // Character status effects
+    if(character->StatusEffectsCount() > 0)
+    {
+        int32_t seCount = (int32_t)character->StatusEffectsCount();
+        for(int32_t i = seCount - 1; i >= 0; i--)
+        {
+            auto effect = character->GetStatusEffects((size_t)i);
+            if(effect.IsNull() || !effect.Get(db))
+            {
+                LOG_WARNING(libcomp::String("Removing invalid"
+                    " character StatusEffect saved for account: %1\n")
+                    .Arg(state->GetAccountUID().ToString()));
+                character->RemoveStatusEffects((size_t)i);
+            }
+        }
+    }
 
     // Demon boxes, demons and stats
     std::list<libcomp::ObjectReference<objects::DemonBox>> demonBoxes;
@@ -511,6 +646,9 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
 
         if(!box.Get(db))
         {
+            LOG_ERROR(libcomp::String("DemonBox could"
+                " not be initialized for account: %1\n")
+                .Arg(state->GetAccountUID().ToString()));
             return false;
         }
 
@@ -520,6 +658,9 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
 
             if(!demon.Get(db) || !demon->LoadCoreStats(db))
             {
+                LOG_ERROR(libcomp::String("Demon or demon stats could"
+                    " not be initialized for account: %1\n")
+                    .Arg(state->GetAccountUID().ToString()));
                 return false;
             }
 
@@ -527,6 +668,9 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
             {
                 if(!iSkill.Get(db))
                 {
+                    LOG_ERROR(libcomp::String("InheritedSkill could"
+                        " not be initialized for account: %1\n")
+                        .Arg(state->GetAccountUID().ToString()));
                     return false;
                 }
             }
@@ -534,18 +678,21 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
             state->SetObjectID(demon->GetUUID(),
                 server->GetNextObjectID());
 
-            statusEffectSets.push_back(demon->GetStatusEffects());
-        }
-    }
-
-    // Status effects
-    for(auto seSet : statusEffectSets)
-    {
-        for(auto effect : seSet)
-        {
-            if(!effect.IsNull() && !effect.Get(db))
+            // Demon status effects
+            if(demon->StatusEffectsCount() > 0)
             {
-                return false;
+                int32_t seCount = (int32_t)demon->StatusEffectsCount();
+                for(int32_t i = seCount - 1; i >= 0; i--)
+                {
+                    auto effect = demon->GetStatusEffects((size_t)i);
+                    if(effect.IsNull() || !effect.Get(db))
+                    {
+                        LOG_WARNING(libcomp::String("Removing invalid"
+                            " demon StatusEffect saved for account: %1\n")
+                            .Arg(state->GetAccountUID().ToString()));
+                        demon->RemoveStatusEffects((size_t)i);
+                    }
+                }
             }
         }
     }
@@ -555,6 +702,9 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
     {
         if(!hotbar.IsNull() && !hotbar.Get(db))
         {
+            LOG_ERROR(libcomp::String("Hotbar could"
+                " not be initialized for account: %1\n")
+                .Arg(state->GetAccountUID().ToString()));
             return false;
         }
     }
@@ -564,6 +714,9 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
     {
         if(!qPair.second.IsNull() && !qPair.second.Get(db))
         {
+            LOG_ERROR(libcomp::String("Quest could"
+                " not be initialized for account: %1\n")
+                .Arg(state->GetAccountUID().ToString()));
             return false;
         }
     }
@@ -573,12 +726,14 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
     {
         if(!character->LoadClan(db))
         {
+            LOG_ERROR(libcomp::String("Clan could"
+                " not be initialized for account: %1\n")
+                .Arg(state->GetAccountUID().ToString()));
             return false;
         }
     }
 
-    return !newCharacter ||
-        (character->Update(db) && defaultBox->Update(db));
+    return !newCharacter || character->Update(db);
 }
 
 bool AccountManager::InitializeNewCharacter(std::shared_ptr<
@@ -934,28 +1089,34 @@ bool AccountManager::InitializeNewCharacter(std::shared_ptr<
 bool AccountManager::LogoutCharacter(channel::ClientState* state,
     bool delay)
 {
-    auto cState = state->GetCharacterState();
-    auto character = cState->GetEntity();
+    // Retrieve the character from the character login as it will
+    // not be set on the character state unless a successul login
+    // has already occurred
+    auto character = state->GetAccountLogin()->GetCharacterLogin()
+        ->GetCharacter().Get();
 
     bool ok = true;
     bool doSave = state->GetLogoutSave();
     auto server = mServer.lock();
     auto worldDB = server->GetWorldDatabase();
 
-    ok &= Cleanup<objects::EntityStats>(character
-        ->GetCoreStats().Get(), worldDB, doSave, !delay);
-    ok &= Cleanup<objects::CharacterProgress>(character
-        ->GetProgress().Get(), worldDB, doSave, !delay);
-    ok &= Cleanup<objects::FriendSettings>(character
-        ->GetFriendSettings().Get(), worldDB, doSave, !delay);
-
-    // Save items and boxes
     std::list<std::shared_ptr<objects::ItemBox>> allBoxes;
-    for(auto itemBox : character->GetItemBoxes())
+    if(character)
     {
-        allBoxes.push_back(itemBox.Get());
+        ok &= Cleanup<objects::EntityStats>(character
+            ->GetCoreStats().Get(), worldDB, doSave, !delay);
+        ok &= Cleanup<objects::CharacterProgress>(character
+            ->GetProgress().Get(), worldDB, doSave, !delay);
+        ok &= Cleanup<objects::FriendSettings>(character
+            ->GetFriendSettings().Get(), worldDB, doSave, !delay);
+
+        for(auto itemBox : character->GetItemBoxes())
+        {
+            allBoxes.push_back(itemBox.Get());
+        }
     }
 
+    // Save items and boxes
     auto accountWorldData = state->GetAccountWorldData().Get();
     if(accountWorldData)
     {
@@ -978,21 +1139,24 @@ bool AccountManager::LogoutCharacter(channel::ClientState* state,
             doSave, !delay);
     }
 
-    // Save expertises
-    for(auto expertise : character->GetExpertises())
+    std::list<std::shared_ptr<objects::DemonBox>> demonBoxes;
+    std::list<std::list<
+        libcomp::ObjectReference<objects::StatusEffect>>> statusEffectSets;
+    if(character)
     {
-        ok &= Cleanup<objects::Expertise>(expertise.Get(),
-            worldDB, doSave, !delay);
+        // Save expertises
+        for(auto expertise : character->GetExpertises())
+        {
+            ok &= Cleanup<objects::Expertise>(expertise.Get(),
+                worldDB, doSave, !delay);
+        }
+
+        statusEffectSets.push_back(character->GetStatusEffects());
+
+        demonBoxes.push_back(character->GetCOMP().Get());
     }
 
-    std::list<std::list<
-        libcomp::ObjectReference<objects::StatusEffect >> > statusEffectSets;
-    statusEffectSets.push_back(character->GetStatusEffects());
-
     // Save demon boxes, demons and stats
-    std::list<std::shared_ptr<objects::DemonBox>> demonBoxes;
-    demonBoxes.push_back(character->GetCOMP().Get());
-
     if(accountWorldData)
     {
         for(auto box : accountWorldData->GetDemonBoxes())
@@ -1043,20 +1207,6 @@ bool AccountManager::LogoutCharacter(channel::ClientState* state,
         }
     }
 
-    // Save hotbars
-    for(auto hotbar : character->GetHotbars())
-    {
-        ok &= Cleanup<objects::Hotbar>(hotbar.Get(),
-            worldDB, doSave, !delay);
-    }
-
-    // Save quests
-    for(auto qPair : character->GetQuests())
-    {
-        ok &= Cleanup<objects::Quest>(qPair.second.Get(),
-            worldDB, doSave, !delay);
-    }
-
     // Save world data
     ok &= Cleanup<objects::AccountWorldData>(
         accountWorldData, worldDB, doSave, !delay);
@@ -1064,8 +1214,25 @@ bool AccountManager::LogoutCharacter(channel::ClientState* state,
     // Do not save or unload clan information as it is managed
     // by the server
 
-    ok &= Cleanup<objects::Character>(character, worldDB, doSave,
-        !delay);
+    if(character)
+    {
+        // Save hotbars
+        for(auto hotbar : character->GetHotbars())
+        {
+            ok &= Cleanup<objects::Hotbar>(hotbar.Get(),
+                worldDB, doSave, !delay);
+        }
+
+        // Save quests
+        for(auto qPair : character->GetQuests())
+        {
+            ok &= Cleanup<objects::Quest>(qPair.second.Get(),
+                worldDB, doSave, !delay);
+        }
+
+        ok &= Cleanup<objects::Character>(character, worldDB, doSave,
+            !delay);
+    }
 
     return ok;
 }

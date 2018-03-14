@@ -3229,7 +3229,7 @@ void SkillManager::HandleKills(std::shared_ptr<ActiveEntityState> source,
         std::unordered_map<std::shared_ptr<LootBoxState>,
             std::shared_ptr<EnemyState>> lStates;
         std::unordered_map<uint32_t, int32_t> questKills;
-        std::unordered_map<uint32_t, uint32_t> encounterIDs;
+        std::unordered_map<uint32_t, uint32_t> encounterGroups;
         for(auto eState : enemiesKilled)
         {
             auto enemy = eState->GetEntity();
@@ -3260,7 +3260,7 @@ void SkillManager::HandleKills(std::shared_ptr<ActiveEntityState> source,
                 }
             }
 
-            encounterIDs[enemy->GetEncounterID()] = enemy->GetSpawnGroupID();
+            encounterGroups[enemy->GetEncounterID()] = enemy->GetSpawnGroupID();
         }
 
         // For each loot body generate and send loot and show the body
@@ -3384,32 +3384,7 @@ void SkillManager::HandleKills(std::shared_ptr<ActiveEntityState> source,
         }
 
         // Perform defeat actions for all empty encounters
-        encounterIDs.erase(0);
-
-        for(auto ePair : encounterIDs)
-        {
-            std::shared_ptr<objects::ActionSpawn> defeatActionSource;
-            if(zone->EncounterDefeated(ePair.first, defeatActionSource))
-            {
-                // If the defeatActionSource has actions, those override the group's default
-                if(defeatActionSource && defeatActionSource->DefeatActionsCount() > 0)
-                {
-                    server->GetActionManager()->PerformActions(sourceClient,
-                        defeatActionSource->GetDefeatActions(), source->GetEntityID(),
-                        zone, ePair.first);
-                }
-                else
-                {
-                    auto group = zone->GetDefinition()->GetSpawnGroups(ePair.second);
-                    if(group && group->DefeatActionsCount() > 0)
-                    {
-                        server->GetActionManager()->PerformActions(sourceClient,
-                            group->GetDefeatActions(), source->GetEntityID(), zone,
-                            ePair.first);
-                    }
-                }
-            }
-        }
+        HandleEncounterDefeat(source, zone, encounterGroups);
 
         ChannelClientConnection::FlushAllOutgoing(zConnections);
 
@@ -3580,14 +3555,61 @@ void SkillManager::HandleKillXP(const std::shared_ptr<objects::Enemy>& enemy,
         clientStates.push_back(s->GetDemonState());
         for(auto cState : clientStates)
         {
-            if(!cState->Ready()) continue;
+            // Demons only get XP if they are alive, characters get
+            // it regardless
+            if(cState->Ready() && (cState == s->GetCharacterState() ||
+                cState->IsAlive()))
+            {
+                int64_t finalXP = (int64_t)ceil((double)xpPair.second *
+                    ((double)cState->GetCorrectValue(CorrectTbl::RATE_XP)
+                        * 0.01));
 
-            int64_t finalXP = (int64_t)ceil((double)xpPair.second *
-                ((double)cState->GetCorrectValue(CorrectTbl::RATE_XP)
-                * 0.01));
+                characterManager->ExperienceGain(c, (uint64_t)finalXP,
+                    cState->GetEntityID());
+            }
+        }
+    }
+}
 
-            characterManager->ExperienceGain(c, (uint64_t)finalXP,
-                cState->GetEntityID());
+void SkillManager::HandleEncounterDefeat(const std::shared_ptr<
+    ActiveEntityState> source, const std::shared_ptr<Zone>& zone,
+    const std::unordered_map<uint32_t, uint32_t>& encounterGroups)
+{
+    if(encounterGroups.size() == 0 || (encounterGroups.size() == 1 &&
+        encounterGroups.find(0) != encounterGroups.end()))
+    {
+        // Nothing to do
+        return;
+    }
+
+    auto server = mServer.lock();
+    auto actionManager = server->GetActionManager();
+    auto sourceClient = server->GetManagerConnection()->
+        GetEntityClient(source->GetEntityID());
+    for(auto ePair : encounterGroups)
+    {
+        if(!ePair.first) continue;
+
+        std::shared_ptr<objects::ActionSpawn> defeatActionSource;
+        if(zone->EncounterDefeated(ePair.first, defeatActionSource))
+        {
+            // If the defeatActionSource has actions, those override the group's default
+            if(defeatActionSource && defeatActionSource->DefeatActionsCount() > 0)
+            {
+                actionManager->PerformActions(sourceClient,
+                    defeatActionSource->GetDefeatActions(), source->GetEntityID(),
+                    zone, ePair.first);
+            }
+            else
+            {
+                auto group = zone->GetDefinition()->GetSpawnGroups(ePair.second);
+                if(group && group->DefeatActionsCount() > 0)
+                {
+                    actionManager->PerformActions(sourceClient,
+                        group->GetDefeatActions(), source->GetEntityID(), zone,
+                        ePair.first);
+                }
+            }
         }
     }
 }
@@ -3602,6 +3624,7 @@ void SkillManager::HandleNegotiations(const std::shared_ptr<ActiveEntityState> s
     auto zConnections = zone->GetConnectionList();
 
     // Gather all enemy IDs that will be removed
+    std::unordered_map<uint32_t, uint32_t> encounterGroups;
     std::unordered_map<int32_t, std::list<int32_t>> removedEnemies;
     for(auto pair : talkDone)
     {
@@ -3623,6 +3646,14 @@ void SkillManager::HandleNegotiations(const std::shared_ptr<ActiveEntityState> s
                 break;
             default:
                 break;
+            }
+
+            // Get encounter information
+            auto eState = std::dynamic_pointer_cast<EnemyState>(pair.first);
+            auto enemy = eState->GetEntity();
+            if(enemy && enemy->GetEncounterID())
+            {
+                encounterGroups[enemy->GetEncounterID()] = enemy->GetSpawnGroupID();
             }
 
             // Remove all opponents
@@ -3782,6 +3813,11 @@ void SkillManager::HandleNegotiations(const std::shared_ptr<ActiveEntityState> s
         {
             ScheduleFreeLoot(pair.first, zone, pair.second, sourcePartyMembers);
         }
+    }
+
+    if(encounterGroups.size() > 0)
+    {
+        HandleEncounterDefeat(source, zone, encounterGroups);
     }
 
     ChannelClientConnection::FlushAllOutgoing(zConnections);
@@ -5753,14 +5789,24 @@ bool SkillManager::SummonDemon(const std::shared_ptr<objects::ActivatedAbility>&
         return false;
     }
 
+    auto state = client->GetClientState();
     auto demonID = activated->GetActivationObjectID();
-    if(demonID <= 0)
+    auto demon = demonID > 0 ? std::dynamic_pointer_cast<objects::Demon>(
+        libcomp::PersistentObject::GetObjectByUUID(state->GetObjectUUID(demonID))) : nullptr;
+    if(!demon)
     {
         LOG_ERROR(libcomp::String("Invalid demon specified to summon: %1\n")
             .Arg(demonID));
 
         SendFailure(activated, client,
             (uint8_t)SkillErrorCodes_t::SUMMON_INVALID);
+        return false;
+    }
+    else if(demon->GetCoreStats()->GetLevel() >
+        state->GetCharacterState()->GetCoreStats()->GetLevel())
+    {
+        SendFailure(activated, client,
+            (uint8_t)SkillErrorCodes_t::SUMMON_LEVEL);
         return false;
     }
 

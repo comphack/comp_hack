@@ -98,16 +98,13 @@ bool Parsers::ClanForm::Parse(libcomp::ManagerPacket *pPacketManager,
         {
             auto item = std::dynamic_pointer_cast<objects::Item>(
                 libcomp::PersistentObject::GetObjectByUUID(
-                state->GetObjectUUID(activatedAbility->GetTargetObjectID())));
+                state->GetObjectUUID(activatedAbility->GetActivationObjectID())));
 
             uint32_t itemID = item ? item->GetType() : 0;
             auto baseZoneIter = SVR_CONST.CLAN_FORM_MAP.find(itemID);
 
             if(baseZoneIter != SVR_CONST.CLAN_FORM_MAP.end())
             {
-                server->GetSkillManager()->ExecuteSkill(sourceState, activationID,
-                    activatedAbility->GetTargetObjectID());
-
                 libcomp::Packet request;
                 request.WritePacketCode(InternalPacketCode_t::PACKET_CLAN_UPDATE);
                 request.WriteU8((uint8_t)InternalPacketAction_t::PACKET_ACTION_ADD);

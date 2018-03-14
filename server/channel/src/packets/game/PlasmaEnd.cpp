@@ -43,9 +43,6 @@ bool Parsers::PlasmaEnd::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {
-
-    LOG_WARNING("In PlasmaEnd\n");
-
     if(p.Size() != 5)
     {
         return false;

@@ -1398,7 +1398,8 @@ int8_t FusionManager::ProcessFusion(
                 auto dState = dClient->GetClientState()->GetDemonState();
                 if(dState->GetEntity() == demon)
                 {
-                    characterManager->StoreDemon(dClient, true, 12);
+                    characterManager->StoreDemon(dClient, true,
+                        demonID3 > 0 ? 16 : 12);
                 }
             }
         }

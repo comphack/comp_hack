@@ -973,16 +973,16 @@ bool Zone::TimeRestrictionActive(const WorldClock& clock,
         uint16_t dateSum = (uint16_t)(clock.Month * 100 + clock.Day);
         for(auto pair : restriction->GetDateRestriction())
         {
-            if(pair.first > pair.second)
+            if(pair.first < pair.second)
             {
                 // Normal compare
-                dateActive = pair.first >= dateSum &&
+                dateActive = pair.first <= dateSum &&
                     dateSum <= pair.second;
             }
             else
             {
                 // Rollover compare
-                dateActive = pair.first >= dateSum ||
+                dateActive = pair.first <= dateSum ||
                     dateSum <= pair.second;
             }
 
@@ -1010,16 +1010,16 @@ bool Zone::TimeRestrictionActive(const WorldClock& clock,
         uint16_t timeSum = (uint16_t)(clock.SystemHour * 100 + clock.SystemMin);
         for(auto pair : restriction->GetSystemTimeRestriction())
         {
-            if(pair.first > pair.second)
+            if(pair.first < pair.second)
             {
                 // Normal compare
-                timeActive = pair.first >= timeSum &&
+                timeActive = pair.first <= timeSum &&
                     timeSum <= pair.second;
             }
             else
             {
                 // Rollover compare
-                timeActive = pair.first >= timeSum ||
+                timeActive = pair.first <= timeSum ||
                     timeSum <= pair.second;
             }
 
@@ -1048,16 +1048,16 @@ bool Zone::TimeRestrictionActive(const WorldClock& clock,
         uint16_t timeSum = (uint16_t)(clock.Hour * 100 + clock.Min);
         for(auto pair : restriction->GetTimeRestriction())
         {
-            if(pair.first > pair.second)
+            if(pair.first < pair.second)
             {
                 // Normal compare
-                timeActive = pair.first >= timeSum &&
+                timeActive = pair.first <= timeSum &&
                     timeSum <= pair.second;
             }
             else
             {
                 // Rollover compare
-                timeActive = pair.first >= timeSum ||
+                timeActive = pair.first <= timeSum ||
                     timeSum <= pair.second;
             }
 

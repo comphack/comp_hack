@@ -769,6 +769,7 @@ void ZoneManager::SendPopulateZoneData(const std::shared_ptr<ChannelClientConnec
 
     PopEntityForZoneProduction(zone, cState->GetEntityID(), 0);
     ShowEntityToZone(zone, cState->GetEntityID());
+    characterManager->SendMovementSpeed(client, cState, true);
 
     // Activate status effects
     cState->SetStatusEffectsActive(true, definitionManager);

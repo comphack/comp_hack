@@ -94,11 +94,12 @@ bool Parsers::FixObjectPosition::Parse(libcomp::ManagerPacket *pPacketManager,
     {
         // If a demon is being placed, it will have already been described to the
         // the client by this point so create and show it now.
-        auto zone = zoneManager->GetCurrentZone(client);
+        auto zone = dState->GetZone();
         if(zone)
         {
             zoneManager->PopEntityForZoneProduction(zone, dState->GetEntityID(), 2);
             zoneManager->ShowEntityToZone(zone, dState->GetEntityID());
+            server->GetCharacterManager()->SendMovementSpeed(client, dState, true);
         }
     }
 

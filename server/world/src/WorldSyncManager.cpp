@@ -118,6 +118,30 @@ int8_t WorldSyncManager::Update<objects::Account>(const libcomp::String& type,
 }
 
 template<>
+void WorldSyncManager::Expire<objects::SearchEntry>(int32_t entryID,
+    uint32_t expirationTime)
+{
+    std::shared_ptr<objects::SearchEntry> entry;
+    {
+        std::lock_guard<std::mutex> lock(mLock);
+        for(auto e : mSearchEntries)
+        {
+            if(e->GetEntryID() == entryID &&
+                e->GetExpirationTime() == expirationTime)
+            {
+                entry = e;
+                break;
+            }
+        }
+    }
+
+    if(entry && RemoveRecord(entry, "SearchEntry"))
+    {
+        SyncOutgoing();
+    }
+}
+
+template<>
 int8_t WorldSyncManager::Update<objects::SearchEntry>(const libcomp::String& type,
     const std::shared_ptr<libcomp::Object>& obj, bool isRemove,
     const libcomp::String& source)
@@ -175,6 +199,24 @@ int8_t WorldSyncManager::Update<objects::SearchEntry>(const libcomp::String& typ
         AdjustSearchEntryCount(entry->GetSourceCID(), entry->GetType(), true);
 
         mSearchEntries.push_front(entry);
+
+        if(entry->GetExpirationTime() != 0)
+        {
+            // Set to expire
+            uint32_t now = (uint32_t)std::time(0);
+
+            // Default to 10 minutes if the expiration is invalid or passed
+            uint32_t exp = now < entry->GetExpirationTime()
+                ? (uint32_t)(entry->GetExpirationTime() - now) : 600;
+
+            mServer.lock()->GetTimerManager()->ScheduleEventIn((int)exp, []
+                (WorldSyncManager* pSyncManager, int32_t pEntryID,
+                uint32_t pExpireTime)
+            {
+                pSyncManager->Expire<objects::SearchEntry>(
+                    pEntryID, pExpireTime);
+            }, this, entry->GetEntryID(), entry->GetExpirationTime());
+        }
 
         return SYNC_UPDATED;
     }

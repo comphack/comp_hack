@@ -139,6 +139,11 @@ namespace libcomp
 /// ID of the "Gun knowledge" expertise.
 #define EXPERTISE_GUN_KNOWLEDGE (34)
 
+/// Default movement speed (as binary data representation) to check
+/// against any player entity to signify if a differing speed needs
+/// to be communicated to the client.
+#define STAT_DEFAULT_SPEED (30)
+
 /// Time until the client is expected to timeout and disconnect (in seconds).
 #define TIMEOUT_CLIENT (15)
 
@@ -228,30 +233,6 @@ namespace libcomp
 /// Maximum cost number representation value.
 #define COST_NUMREP_MAX     (2)
 
-/// Client has not attempted to login yet.
-#define LOGIN_STATE_WAIT (0)
-
-/// Client has sent a valid account name.
-#define LOGIN_STATE_VALID_ACCT (1)
-
-/// Client has authenticated.
-#define LOGIN_STATE_AUTHENTICATED (2)
-
-/// Client has sent a P0004_sendData packet.
-#define LOGIN_STATE_GOT_SEND_DATA (3)
-
-/// Character data has been loaded by the database thread.
-#define LOGIN_STATE_HAVE_PCDATA (4)
-
-/// Client sent a P0004_sendData packet and the character data has been loaded.
-#define LOGIN_STATE_PENDING_REPLY (5)
-
-/// Client has been notified of a successful login.
-#define LOGIN_STATE_LOGGED_IN (6)
-
-/// Client is attempting to log out.
-#define LOGIN_STATE_PENDING_LOGOUT (7)
-
 /// Macca note value
 #define ITEM_MACCA_NOTE_AMOUNT (50000)
 
@@ -321,8 +302,23 @@ namespace libcomp
 /// Search data index for an item's durability
 #define SEARCH_IDX_DURABILITY (15)
 
+/// Search data index for an item's max durability
+#define SEARCH_IDX_MAX_DURABILITY (16)
+
 /// Search data index for an item's slot count
-#define SEARCH_IDX_SLOT_COUNT (16)
+#define SEARCH_IDX_SLOT_COUNT (17)
+
+/// Search data index for an item's tarot effect
+#define SEARCH_IDX_TAROT (18)
+
+/// Search data index for an item's soul effect
+#define SEARCH_IDX_SOUL (19)
+
+/// Search data index for an item's basic effect
+#define SEARCH_IDX_BASIC_EFFECT (20)
+
+/// Search data index for an item's special effect
+#define SEARCH_IDX_SPECIAL_EFFECT (21)
 
 /// Search data index for the first item mod slot
 #define SEARCH_BASE_MOD_SLOT (100)

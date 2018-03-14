@@ -223,10 +223,10 @@ bool Parsers::SearchEntryData::Parse(libcomp::ManagerPacket *pPacketManager,
 
                 reply.WriteS32Little((int32_t)entry->GetPostTime());
 
-                reply.WriteS16Little(0);    // Tarot?
-                reply.WriteS16Little(0);    // Soul?
-                reply.WriteS8((int8_t)entry->GetData(SEARCH_IDX_DURABILITY));
-                reply.WriteS16Little((int16_t)(entry->GetData(SEARCH_IDX_DURABILITY) * 1000));
+                reply.WriteS16Little((int16_t)(entry->GetData(SEARCH_IDX_TAROT)));
+                reply.WriteS16Little((int16_t)(entry->GetData(SEARCH_IDX_SOUL)));
+                reply.WriteS8((int8_t)entry->GetData(SEARCH_IDX_MAX_DURABILITY));
+                reply.WriteS16Little((int16_t)entry->GetData(SEARCH_IDX_DURABILITY));
                 reply.WriteS32Little(entry->GetData(SEARCH_IDX_PRICE));
                 reply.WriteS16Little(0);    // Unknown
 
@@ -236,8 +236,8 @@ bool Parsers::SearchEntryData::Parse(libcomp::ManagerPacket *pPacketManager,
                 reply.WriteS16Little((int16_t)entry->GetData(SEARCH_BASE_MOD_SLOT + 3));
                 reply.WriteS16Little((int16_t)entry->GetData(SEARCH_BASE_MOD_SLOT + 4));
 
-                reply.WriteS32Little(-1);   // Unknown
-                reply.WriteS32Little(-1);   // Unknown
+                reply.WriteS32Little(entry->GetData(SEARCH_IDX_BASIC_EFFECT));
+                reply.WriteS32Little(entry->GetData(SEARCH_IDX_SPECIAL_EFFECT));
             }
             break;
         case objects::SearchEntry::Type_t::TRADE_BUYING:

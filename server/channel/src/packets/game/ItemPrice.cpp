@@ -47,8 +47,6 @@ bool Parsers::ItemPrice::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {
-    LOG_WARNING("In ItemPrice\n");
-
     if(p.Size() != 42)
     {
         return false;

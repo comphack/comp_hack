@@ -190,6 +190,20 @@ public:
         channel::ChannelClientConnection>& client, int8_t icon = 0);
 
     /**
+     * Sends the specified entity's non-battle movement speed to the client
+     * @param client Pointer to the client connection
+     * @param eState Pointer to the entity
+     * @param diffOnly true if the packet should only be sent if the speed
+     *  is not equal to the entity's normal speed
+     * @param queue true if the packet should be queued, false if it
+     *  should be sent right away
+     */
+    void SendMovementSpeed(const std::shared_ptr<
+        channel::ChannelClientConnection>& client,
+        const std::shared_ptr<ActiveEntityState>& eState, bool diffOnly,
+        bool queue = false);
+
+    /**
      * Summon the demon matching the supplied ID on the client's character.
      * @param client Pointer to the client connection containing
      *  the character

@@ -241,8 +241,10 @@ std::shared_ptr<objects::AccountLogin> AccountManager::LogoutUser(
         {
             auto server = mServer.lock();
             auto characterManager = server->GetCharacterManager();
+            auto syncManager = server->GetWorldSyncManager();
 
             characterManager->PartyLeave(cLogin, nullptr, true);
+            syncManager->CleanUpCharacterLogin(cLogin->GetWorldCID());
 
             // Notify existing players
             std::list<std::shared_ptr<objects::CharacterLogin>> cLogOuts;

@@ -84,7 +84,7 @@ bool Parsers::Warp::Parse(libcomp::ManagerPacket *pPacketManager,
     {
         auto item = std::dynamic_pointer_cast<objects::Item>(
             libcomp::PersistentObject::GetObjectByUUID(
-            state->GetObjectUUID(activatedAbility->GetTargetObjectID())));
+            state->GetObjectUUID(activatedAbility->GetActivationObjectID())));
 
         auto warpDef = definitionManager->GetWarpPointData(warpPointID);
         auto skillData = definitionManager->GetSkillData(activatedAbility->GetSkillID());
@@ -97,7 +97,7 @@ bool Parsers::Warp::Parse(libcomp::ManagerPacket *pPacketManager,
             float rot = warpDef->GetRotation();
 
             skillManager->ExecuteSkill(sourceState, activationID,
-                activatedAbility->GetTargetObjectID());
+                activatedAbility->GetActivationObjectID());
 
             // Some of the warp items without expirations need to be consumed
             // but are not skill costs

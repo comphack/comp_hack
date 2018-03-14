@@ -266,10 +266,10 @@ bool Parsers::SearchEntryRegister::Parse(libcomp::ManagerPacket *pPacketManager,
             {
                 int8_t unknown1 = p.ReadS8();
                 int8_t subCategory = p.ReadS8();
-                int16_t unknown2 = p.ReadS16Little();
-                int16_t unknown3 = p.ReadS16Little();
+                int16_t tarot = p.ReadS16Little();
+                int16_t soul = p.ReadS16Little();
                 int32_t itemType = p.ReadS32Little();
-                int8_t durability = p.ReadS8();
+                int8_t maxDurability = p.ReadS8();
                 int32_t price = p.ReadS32Little();
                 int32_t unknown4 = p.ReadS32Little();
                 int32_t location = p.ReadS32Little();
@@ -282,7 +282,7 @@ bool Parsers::SearchEntryRegister::Parse(libcomp::ManagerPacket *pPacketManager,
                 libcomp::String comment = p.ReadString16Little(
                     libcomp::Convert::Encoding_t::ENCODING_CP932, true);
 
-                int16_t unknown5 = p.ReadS16Little();
+                int16_t durability = p.ReadS16Little();
 
                 uint16_t modSlots[5];
                 modSlots[0] = p.ReadU16Little();
@@ -292,16 +292,11 @@ bool Parsers::SearchEntryRegister::Parse(libcomp::ManagerPacket *pPacketManager,
                 modSlots[4] = p.ReadU16Little();
 
                 int8_t mainCategory = p.ReadS8();
-                int32_t unknown6 = p.ReadS32Little();
-                int32_t unknown7 = p.ReadS32Little();
+                int32_t basicEffect = p.ReadS32Little();
+                int32_t specialEffect = p.ReadS32Little();
 
                 (void)unknown1;
-                (void)unknown2;
-                (void)unknown3;
                 (void)unknown4;
-                (void)unknown5;
-                (void)unknown6;
-                (void)unknown7;
 
                 entry->SetData(SEARCH_IDX_ITEM_TYPE, itemType);
                 entry->SetData(SEARCH_IDX_MAIN_CATEGORY, mainCategory);
@@ -309,11 +304,18 @@ bool Parsers::SearchEntryRegister::Parse(libcomp::ManagerPacket *pPacketManager,
                 entry->SetData(SEARCH_IDX_PRICE, price);
                 entry->SetData(SEARCH_IDX_LOCATION, location);
                 entry->SetData(SEARCH_IDX_DURABILITY, durability);
+                entry->SetData(SEARCH_IDX_MAX_DURABILITY, maxDurability);
+                entry->SetData(SEARCH_IDX_TAROT, tarot);
+                entry->SetData(SEARCH_IDX_SOUL, soul);
                 entry->SetData(SEARCH_BASE_MOD_SLOT, (int32_t)modSlots[0]);
                 entry->SetData(SEARCH_BASE_MOD_SLOT + 1, (int32_t)modSlots[1]);
                 entry->SetData(SEARCH_BASE_MOD_SLOT + 2, (int32_t)modSlots[2]);
                 entry->SetData(SEARCH_BASE_MOD_SLOT + 3, (int32_t)modSlots[3]);
                 entry->SetData(SEARCH_BASE_MOD_SLOT + 4, (int32_t)modSlots[4]);
+                entry->SetData(SEARCH_IDX_BASIC_EFFECT,
+                    basicEffect > 0 ? basicEffect : -1);
+                entry->SetData(SEARCH_IDX_SPECIAL_EFFECT,
+                    specialEffect > 0 ? specialEffect : -1);
                 entry->SetTextData(SEARCH_IDX_COMMENT, comment);
 
                 success = true;

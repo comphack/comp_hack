@@ -659,10 +659,10 @@ std::set<uint32_t> ActiveEntityState::AddStatusEffects(const AddStatusEffectMap&
                 }
                 break;
             case 2:
-                // Always reset time, always add (ex: -kajas)
+                // Always reset time, always add unless stack is zero (ex: -kajas)
                 addStack = true;
                 resetTime = true;
-                doReplace = false;
+                doReplace = !stack;
                 break;
             case 3:
                 // Always reapply time and stack (ex: -karns)
@@ -905,13 +905,28 @@ std::set<uint32_t> ActiveEntityState::AddStatusEffects(const AddStatusEffectMap&
     
         if(removeEffect)
         {
-            removes.insert(removeEffect->GetEffect());
-            mStatusEffects.erase(removeEffect->GetEffect());
-            mTimeDamageEffects.erase(removeEffect->GetEffect());
-            if(mEffectsActive && queueChanges)
+            uint32_t rEffectID = removeEffect->GetEffect();
+            removes.insert(rEffectID);
+            mStatusEffects.erase(rEffectID);
+            mTimeDamageEffects.erase(rEffectID);
+            if(mEffectsActive)
             {
-                // Non-system time 3 indicates removes
-                mNextEffectTimes[3].insert(removeEffect->GetEffect());
+                // Remove any times associated to the status being removed
+                for(auto pair : mNextEffectTimes)
+                {
+                    // Skip system times
+                    if(pair.first > 3)
+                    {
+                        pair.second.erase(rEffectID);
+                    }
+                }
+
+                // Then optionally queue its removal
+                if(queueChanges)
+                {
+                    // Non-system time 3 indicates removes
+                    mNextEffectTimes[3].insert(removeEffect->GetEffect());
+                }
             }
         }
 
@@ -1482,10 +1497,10 @@ uint32_t ActiveEntityState::GetCurrentExpiration(
         case objects::MiCancelData::DurationType_t::MS_SET:
             {
                 // Convert back to milliseconds
-                exp = (uint32_t)((nextTime - now) * 1000);
-                if(effect->GetExpiration() < exp)
+                uint32_t newExp = (uint32_t)((nextTime - now) * 1000);
+                if(exp > newExp)
                 {
-                    exp = 0;
+                    exp = newExp;
                 }
             }
             break;

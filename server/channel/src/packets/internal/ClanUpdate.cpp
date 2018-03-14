@@ -112,16 +112,16 @@ bool Parsers::ClanUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
                     // Remove the item if its still there (too late if its not :P)
                     auto item = std::dynamic_pointer_cast<objects::Item>(
                         libcomp::PersistentObject::GetObjectByUUID(
-                        state->GetObjectUUID(activatedAbility->GetTargetObjectID())));
+                        state->GetObjectUUID(activatedAbility->GetActivationObjectID())));
 
                     std::unordered_map<uint32_t, uint32_t> itemMap;
                     itemMap[item ? item->GetType() : 0] = 1;
 
                     server->GetCharacterManager()->AddRemoveItems(client, itemMap, false,
-                        activatedAbility->GetTargetObjectID());
+                        activatedAbility->GetActivationObjectID());
 
                     server->GetSkillManager()->ExecuteSkill(cState,
-                        activationID, activatedAbility->GetTargetObjectID());
+                        activationID, activatedAbility->GetActivationObjectID());
                 }
                 else
                 {

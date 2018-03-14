@@ -346,6 +346,19 @@ private:
         const std::shared_ptr<Zone>& zone);
 
     /**
+     * Handle all logic related to defeating an enemy encounter through combat
+     * or talk skill outcome. Enemy despawn does not count as a defeat and should
+     * be handled separately. If the encounter is not actually defeated, nothing
+     * will be done.
+     * @param source Pointer to the source of the skill
+     * @param zone Pointer to the zone where the skill was executed
+     * @param encounterGroups Map of encounter IDs to spawn group ID
+     */
+    void HandleEncounterDefeat(const std::shared_ptr<ActiveEntityState> source,
+        const std::shared_ptr<Zone>& zone,
+        const std::unordered_map<uint32_t, uint32_t>& encounterGroups);
+
+    /**
      * Handle the outcome of a negotation ending from a skill's execution
      * including things like creating demon eggs and gift boxes or running away.
      * @param source Pointer to the source of the skill

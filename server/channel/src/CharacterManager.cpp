@@ -689,16 +689,17 @@ uint8_t CharacterManager::RecalculateStats(std::shared_ptr<
         return 0;
     }
 
-    auto definitionManager = mServer.lock()->GetDefinitionManager();
+    auto server = mServer.lock();
+    auto definitionManager = server->GetDefinitionManager();
     uint8_t result = eState->RecalculateStats(definitionManager);
-    if(result & ENTITY_CALC_MOVE_SPEED)
+    if(result & ENTITY_CALC_MOVE_SPEED && state)
     {
-        libcomp::Packet p;
-        p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_RUN_SPEED);
-        p.WriteS32Little(entityID);
-        p.WriteFloat(eState->GetMovementSpeed());
-
-        mServer.lock()->GetZoneManager()->BroadcastPacket(eState->GetZone(), p);
+        // Since speed updates are only sent to the player who
+        // owns the entity, ignore enemies etc
+        auto eClient = client
+            ? client : server->GetManagerConnection()
+            ->GetEntityClient(eState->GetEntityID(), false);
+        SendMovementSpeed(eClient, eState, false);
     }
 
     if(result & ENTITY_CALC_SKILL)
@@ -829,6 +830,30 @@ void CharacterManager::SetStatusIcon(const std::shared_ptr<ChannelClientConnecti
     mServer.lock()->GetZoneManager()->BroadcastPacket(client, p, false);
 }
 
+void CharacterManager::SendMovementSpeed(const std::shared_ptr<
+    channel::ChannelClientConnection>& client,
+    const std::shared_ptr<ActiveEntityState>& eState, bool diffOnly,
+    bool queue)
+{
+    if(eState && client && (!diffOnly ||
+        eState->GetCorrectValue(CorrectTbl::MOVE2) != STAT_DEFAULT_SPEED))
+    {
+        libcomp::Packet p;
+        p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_RUN_SPEED);
+        p.WriteS32Little(eState->GetEntityID());
+        p.WriteFloat(eState->GetMovementSpeed(false));
+
+        if(queue)
+        {
+            client->QueuePacket(p);
+        }
+        else
+        {
+            client->SendPacket(p);
+        }
+    }
+}
+
 void CharacterManager::SummonDemon(const std::shared_ptr<
     channel::ChannelClientConnection>& client, int64_t demonID, bool updatePartyState)
 {
@@ -910,9 +935,10 @@ void CharacterManager::SummonDemon(const std::shared_ptr<
         cs->SetMP((int32_t)((float)dState->GetMaxMP() * mpPercent));
     }
 
-    // Apply initial tokusei calculation
+    // Apply initial tokusei/stat calculation
     tokuseiManager->Recalculate(cState, true,
         std::set<int32_t>{ dState->GetEntityID() });
+    dState->RecalculateStats(definitionManager);
 
     // Apply any extra summon status effects
     for(auto eState : { std::dynamic_pointer_cast<ActiveEntityState>(cState),
@@ -940,7 +966,11 @@ void CharacterManager::SummonDemon(const std::shared_ptr<
     reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_PARTNER_SUMMONED);
     reply.WriteS64Little(demonID);
 
-    client->SendPacket(reply);
+    client->QueuePacket(reply);
+
+    SendMovementSpeed(client, dState, true);
+
+    client->FlushOutgoing();
 
     auto otherClients = server->GetZoneManager()
         ->GetZoneConnections(client, false);
@@ -2665,7 +2695,7 @@ void CharacterManager::ExperienceGain(const std::shared_ptr<
     auto demon = dState->GetEntity();
 
     auto eState = state->GetEntityState(entityID);
-    if(!eState->Ready() || !eState->IsAlive())
+    if(!eState->Ready())
     {
         return;
     }
@@ -2677,6 +2707,12 @@ void CharacterManager::ExperienceGain(const std::shared_ptr<
     {
         isDemon = true;
         fType = demonData->GetFamiliarity()->GetFamiliarityType();
+    }
+
+    // Demons cannot level when dead
+    if(isDemon && !dState->IsAlive())
+    {
+        return;
     }
 
     auto stats = eState->GetCoreStats();
@@ -2757,8 +2793,11 @@ void CharacterManager::ExperienceGain(const std::shared_ptr<
         {
             CalculateCharacterBaseStats(stats);
             RecalculateStats(client, entityID, false);
-            stats->SetHP(cState->GetMaxHP());
-            stats->SetMP(cState->GetMaxMP());
+            if(cState->IsAlive())
+            {
+                stats->SetHP(cState->GetMaxHP());
+                stats->SetMP(cState->GetMaxMP());
+            }
 
             int32_t points = (int32_t)(floorl((float)level / 5) + 2);
             character->SetPoints(character->GetPoints() + points);
@@ -2768,8 +2807,8 @@ void CharacterManager::ExperienceGain(const std::shared_ptr<
             reply.WriteS32(0);  //Unknown
             reply.WriteS8(level);
             reply.WriteS64(xpDelta);
-            reply.WriteS16Little((int16_t)stats->GetHP());
-            reply.WriteS16Little((int16_t)stats->GetMP());
+            reply.WriteS16Little((int16_t)stats->GetMaxHP());
+            reply.WriteS16Little((int16_t)stats->GetMaxMP());
             reply.WriteS32Little(points);
         }
 
@@ -3131,11 +3170,30 @@ bool CharacterManager::LearnSkill(const std::shared_ptr<channel::ChannelClientCo
             return true;
         }
 
-        demon->AppendAcquiredSkills(skillID);
+        auto dbChanges = libcomp::DatabaseChangeSet::Create(state->GetAccountUID());
 
-        SendPartnerData(client);
+        // Demon skills are learned as 100% progress inherited skills
+        auto iSkill = libcomp::PersistentObject::New<
+            objects::InheritedSkill>(true);
+        iSkill->SetSkill(skillID);
+        iSkill->SetProgress(MAX_INHERIT_SKILL);
+        iSkill->SetDemon(demon);
 
-        server->GetWorldDatabase()->QueueUpdate(demon, state->GetAccountUID());
+        demon->AppendInheritedSkills(iSkill);
+
+        dbChanges->Insert(iSkill);
+        dbChanges->Update(demon);
+
+        libcomp::Packet p;
+        p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_INHERIT_SKILL_UPDATED);
+        p.WriteS32Little(eState->GetEntityID());
+        p.WriteS32Little(1);
+        p.WriteU32Little(skillID);
+        p.WriteS32Little(MAX_INHERIT_SKILL);
+
+        client->SendPacket(p);
+
+        server->GetWorldDatabase()->QueueChangeSet(dbChanges);
     }
     else
     {
@@ -3157,11 +3215,11 @@ bool CharacterManager::LearnSkill(const std::shared_ptr<channel::ChannelClientCo
         client->SendPacket(reply);
 
         server->GetWorldDatabase()->QueueUpdate(character, state->GetAccountUID());
-    }
 
-    server->GetTokuseiManager()->Recalculate(eState, true,
-        std::set<int32_t>{ eState->GetEntityID() });
-    RecalculateStats(client, entityID);
+        server->GetTokuseiManager()->Recalculate(eState, true,
+            std::set<int32_t>{ eState->GetEntityID() });
+        RecalculateStats(client, entityID);
+    }
 
     return true;
 }
@@ -3630,8 +3688,19 @@ bool CharacterManager::UpdateStatusEffects(const std::shared_ptr<
         }
         else
         {
-            // Update
-            effectStates[effectType] = false;
+            auto effectIter = effectMap.find(effectType);
+            if(effectIter != effectMap.end() &&
+                effectIter->second != p.Get())
+            {
+                // Delete old, insert new
+                changes->Delete(p.Get());
+                effectStates[effectType] = true;
+            }
+            else
+            {
+                // Update
+                effectStates[effectType] = false;
+            }
         }
     }
 
@@ -4112,8 +4181,8 @@ libcomp::EnumMap<CorrectTbl, int16_t> CharacterManager::GetCharacterBaseStatMap(
     stats[CorrectTbl::MP_MAX] = 10;
     stats[CorrectTbl::HP_REGEN] = 1;
     stats[CorrectTbl::MP_REGEN] = 1;
-    stats[CorrectTbl::MOVE1] = 15;
-    stats[CorrectTbl::MOVE2] = 30;
+    stats[CorrectTbl::MOVE1] = (int16_t)(STAT_DEFAULT_SPEED / 2);
+    stats[CorrectTbl::MOVE2] = STAT_DEFAULT_SPEED;
     stats[CorrectTbl::SUMMON_SPEED] = 100;
     stats[CorrectTbl::KNOCKBACK_RESIST] = 100;
     stats[CorrectTbl::COOLDOWN_TIME] = 100;
@@ -4214,7 +4283,7 @@ void CharacterManager::AdjustStatBounds(libcomp::EnumMap<CorrectTbl, int16_t>& s
     static libcomp::EnumMap<CorrectTbl, int16_t> minStats =
         {
             { CorrectTbl::HP_MAX, 1 },
-            { CorrectTbl::MP_MAX, 0 },
+            { CorrectTbl::MP_MAX, 1 },
             { CorrectTbl::STR, 1 },
             { CorrectTbl::MAGIC, 1 },
             { CorrectTbl::VIT, 1 },

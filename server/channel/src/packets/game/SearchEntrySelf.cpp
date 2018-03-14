@@ -155,11 +155,11 @@ bool Parsers::SearchEntrySelf::Parse(libcomp::ManagerPacket *pPacketManager,
             reply.WriteS8(0);   // Unknown
             reply.WriteS8((int8_t)entry->GetData(SEARCH_IDX_SUB_CATEGORY));
 
-            reply.WriteS16Little(0);   // Unknown
-            reply.WriteS16Little(0);   // Unknown
+            reply.WriteS16Little((int16_t)(entry->GetData(SEARCH_IDX_TAROT)));
+            reply.WriteS16Little((int16_t)(entry->GetData(SEARCH_IDX_SOUL)));
 
             reply.WriteS32Little(entry->GetData(SEARCH_IDX_ITEM_TYPE));
-            reply.WriteS8((int8_t)entry->GetData(SEARCH_IDX_DURABILITY));
+            reply.WriteS8((int8_t)entry->GetData(SEARCH_IDX_MAX_DURABILITY));
             reply.WriteS32Little(entry->GetData(SEARCH_IDX_PRICE));
             reply.WriteS32Little(0);    // Unknown
             reply.WriteS32Little(entry->GetData(SEARCH_IDX_LOCATION));
@@ -167,7 +167,7 @@ bool Parsers::SearchEntrySelf::Parse(libcomp::ManagerPacket *pPacketManager,
             reply.WriteString16Little(libcomp::Convert::ENCODING_CP932,
                 entry->GetTextData(SEARCH_IDX_COMMENT), true);
 
-            reply.WriteS16Little((int16_t)(entry->GetData(SEARCH_IDX_DURABILITY) * 1000));
+            reply.WriteS16Little((int16_t)entry->GetData(SEARCH_IDX_DURABILITY));
 
             reply.WriteS16Little((int16_t)entry->GetData(SEARCH_BASE_MOD_SLOT));
             reply.WriteS16Little((int16_t)entry->GetData(SEARCH_BASE_MOD_SLOT + 1));
@@ -178,8 +178,8 @@ bool Parsers::SearchEntrySelf::Parse(libcomp::ManagerPacket *pPacketManager,
             reply.WriteS32Little((int32_t)entry->GetPostTime());
             reply.WriteS8((int8_t)entry->GetData(SEARCH_IDX_MAIN_CATEGORY));
 
-            reply.WriteS32Little(-1);    // Unknown
-            reply.WriteS32Little(-1);    // Unknown
+            reply.WriteS32Little(entry->GetData(SEARCH_IDX_BASIC_EFFECT));
+            reply.WriteS32Little(entry->GetData(SEARCH_IDX_SPECIAL_EFFECT));
         }
         break;
     case objects::SearchEntry::Type_t::TRADE_BUYING:

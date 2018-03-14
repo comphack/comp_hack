@@ -82,6 +82,14 @@ public:
         const libcomp::String& type);
 
     /**
+     * Expire the existing record with a matching entry ID and expiration time
+     * of the templated type. If either does not match, nothing will be expired.
+     * @param entryID Entry ID of the record
+     * @param expirationTime Expiration time of the record
+     */
+    template<class T> void Expire(int32_t entryID, uint32_t expirationTime);
+
+    /**
      * Perform cleanup operations based upon a character logging off (or
      * logging on) based upon world level data being synchronized.
      * @param worldCID CID of the character logging off

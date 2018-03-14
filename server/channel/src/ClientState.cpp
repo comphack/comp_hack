@@ -60,7 +60,7 @@ ClientState::~ClientState()
 {
     auto cEntityID = mCharacterState->GetEntityID();
     auto dEntityID = mDemonState->GetEntityID();
-    auto worldCID = GetAccountLogin()->GetCharacterLogin()->GetWorldCID();
+    auto worldCID = GetWorldCID();
     if(cEntityID != 0 || dEntityID != 0)
     {
         std::lock_guard<std::mutex> lock(sLock);
@@ -221,14 +221,13 @@ bool ClientState::SetObjectID(const libobjgen::UUID& uuid, int64_t objectID)
 
 const libobjgen::UUID ClientState::GetAccountUID() const
 {
-    return mCharacterState->Ready() ?
-        mCharacterState->GetEntity()->GetAccount().GetUUID() : NULLUUID;
+    return GetAccountLogin()->GetAccount().GetUUID();
 }
 
 int32_t ClientState::GetUserLevel() const
 {
-    return mCharacterState->Ready() ?
-        mCharacterState->GetEntity()->GetAccount()->GetUserLevel() : 0;
+    auto account = GetAccountLogin()->GetAccount();
+    return !account.IsNull() ? account->GetUserLevel() : 0;
 }
 
 int32_t ClientState::GetWorldCID() const
@@ -259,7 +258,7 @@ std::shared_ptr<objects::PartyCharacter> ClientState::GetPartyCharacter(
     auto cStats = character->GetCoreStats();
 
     auto member = std::make_shared<objects::PartyCharacter>();
-    member->SetWorldCID(GetAccountLogin()->GetCharacterLogin()->GetWorldCID());
+    member->SetWorldCID(GetWorldCID());
     member->SetName(character->GetName());
     member->SetLevel((uint8_t)cStats->GetLevel());
     member->SetHP((uint16_t)cStats->GetHP());
@@ -298,7 +297,7 @@ std::shared_ptr<objects::PartyMember> ClientState::GetPartyDemon() const
 void ClientState::GetPartyCharacterPacket(libcomp::Packet& p) const
 {
     p.WritePacketCode(InternalPacketCode_t::PACKET_CHARACTER_LOGIN);
-    p.WriteS32Little(GetAccountLogin()->GetCharacterLogin()->GetWorldCID());
+    p.WriteS32Little(GetWorldCID());
     p.WriteU8((uint8_t)CharacterLoginStateFlag_t::CHARLOGIN_PARTY_INFO);
     GetPartyCharacter(false)->SavePacket(p, true);
 }
@@ -306,7 +305,7 @@ void ClientState::GetPartyCharacterPacket(libcomp::Packet& p) const
 void ClientState::GetPartyDemonPacket(libcomp::Packet& p) const
 {
     p.WritePacketCode(InternalPacketCode_t::PACKET_CHARACTER_LOGIN);
-    p.WriteS32Little(GetAccountLogin()->GetCharacterLogin()->GetWorldCID());
+    p.WriteS32Little(GetWorldCID());
     p.WriteU8((uint8_t)CharacterLoginStateFlag_t::CHARLOGIN_PARTY_DEMON_INFO);
     GetPartyDemon()->SavePacket(p, true);
 }

@@ -226,8 +226,9 @@ bool DataSyncManager::SyncIncoming(libcomp::ReadOnlyPacket& p,
     {
         for(auto obj : records)
         {
-            if(configIter->second->UpdateHandler(*this, lType,
-                obj, false, source))
+            int8_t result = configIter->second->UpdateHandler(*this, lType,
+                obj, false, source);
+            if(result == SYNC_UPDATED)
             {
                 if(configIter->second->ServerOwned)
                 {

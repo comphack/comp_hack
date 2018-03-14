@@ -131,7 +131,7 @@ OPTION(DISABLE_TESTING "Disable all tests." OFF)
 OPTION(USE_STATIC_RUNTIME "Use the static MSVC runtime." OFF)
 
 # Option to use libc++ for Clang builds.
-OPTION(CLANG_LIBCXX "Use libc++ for Clang builds." ON)
+OPTION(CLANG_LIBCXX "Use libc++ for Clang builds." OFF)
 
 IF(WIN32)
     OPTION(GENERATE_DOCUMENTATION "Generate documentation for the project." OFF)

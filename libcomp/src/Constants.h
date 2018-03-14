@@ -34,16 +34,16 @@ namespace libcomp
 #define VERSION_YEAR  (2018)
 
 /// Major release (1 = pixie.)
-#define VERSION_MAJOR (1)
+#define VERSION_MAJOR (2)
 
 /// Minor release (1 = SP1).
-#define VERSION_MINOR (8)
+#define VERSION_MINOR (0)
 
 /// Patch version (a hotfix).
-#define VERSION_PATCH (9)
+#define VERSION_PATCH (0)
 
 /// Codename for the version.
-#define VERSION_CODENAME "Kodama (Unstable)"
+#define VERSION_CODENAME "Kodama"
 
 /// HACK format magic.
 #define HACK_FORMAT_MAGIC (0x4B434148)

@@ -5910,7 +5910,7 @@ bool SkillManager::Traesto(const std::shared_ptr<objects::ActivatedAbility>& act
     auto zoneDef = server->GetServerDataManager()->GetZoneData(zoneID, 0);
     uint32_t dynamicMapID = zoneDef ? zoneDef->GetDynamicMapID() : 0;
 
-    if(!zoneDef && !zoneManager->GetSpotPosition(dynamicMapID, spotID, xCoord,
+    if(!zoneDef || !zoneManager->GetSpotPosition(dynamicMapID, spotID, xCoord,
         yCoord, rot))
     {
         SendFailure(activated, client,

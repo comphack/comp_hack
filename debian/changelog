@@ -1,3 +1,9 @@
+comphack (2.0.0) xenial; urgency=low
+
+  * Kodama server release.
+
+ -- COMP Omega <compomega@tutanota.com>  Wed, 14 Mar 2018 17:42:55 -0600
+
 comphack (1.0.0.3) xenial; urgency=low
 
   * Forgot to download the dependencies.

@@ -53,6 +53,10 @@ Generator::Generator()
     }
 }
 
+Generator::~Generator()
+{
+}
+
 std::vector<char> Generator::GetTemplate(const std::string& name) const
 {
     std::vector<char> data;

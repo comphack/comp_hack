@@ -47,6 +47,7 @@ class Generator
 {
 public:
     Generator();
+    virtual ~Generator();
 
     virtual std::string Generate(const MetaObject& obj) = 0;
 

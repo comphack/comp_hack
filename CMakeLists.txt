@@ -130,6 +130,9 @@ OPTION(DISABLE_TESTING "Disable all tests." OFF)
 # Option for the static runtime on Windows.
 OPTION(USE_STATIC_RUNTIME "Use the static MSVC runtime." OFF)
 
+# Option to use libc++ for Clang builds.
+OPTION(CLANG_LIBCXX "Use libc++ for Clang builds." OFF)
+
 IF(WIN32)
     OPTION(GENERATE_DOCUMENTATION "Generate documentation for the project." OFF)
 ELSE()
@@ -160,7 +163,9 @@ IF("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
 
     ADD_COMPILER_FLAGS(AUTO -fno-strict-aliasing)
 ELSEIF("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
-    SET(SPECIAL_COMPILER_FLAGS "-stdlib=libc++")
+    IF(CLANG_LIBCXX)
+        SET(SPECIAL_COMPILER_FLAGS "-stdlib=libc++")
+    ENDIF()
 
     # Require at least Clang 3.4.
     IF(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 3.4)

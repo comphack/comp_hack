@@ -708,6 +708,11 @@ std::string MetaVariable::GetAccessScriptBindings(const Generator& generator,
         << "::Set" << generator.GetCapitalName(*this)
         << ")" << std::endl;
 
+    ss << ".Prop(" << "\"" << generator.GetCapitalName(*this) << "\", &"
+        << objName << "::Get" << generator.GetCapitalName(*this)
+        << ", &" << objName << "::Set" << generator.GetCapitalName(*this)
+        << ")" << std::endl;
+
     if(IsLookupKey())
     {
         std::stringstream f;

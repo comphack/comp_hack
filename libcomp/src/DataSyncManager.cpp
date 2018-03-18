@@ -236,7 +236,7 @@ bool DataSyncManager::SyncIncoming(libcomp::ReadOnlyPacket& p,
                     mOutboundUpdates[type].insert(obj);
                 }
             }
-            else
+            else if(result == SYNC_FAILED)
             {
                 LOG_ERROR(libcomp::String("Failed to sync update of record"
                     " of type: %1\n").Arg(type));

@@ -671,19 +671,10 @@ void CharacterManager::SendDemonData(const std::shared_ptr<
     client->SendPacket(reply);
 }
 
-uint8_t CharacterManager::RecalculateStats(std::shared_ptr<
-    ChannelClientConnection> client, int32_t entityID,
-    bool updateSourceClient)
+uint8_t CharacterManager::RecalculateStats(
+    const std::shared_ptr<ActiveEntityState>& eState,
+    std::shared_ptr<ChannelClientConnection> client, bool updateSourceClient)
 {
-    auto state = client
-        ? client->GetClientState()
-        : ClientState::GetEntityClientState(entityID, false);
-    if(!state)
-    {
-        return 0;
-    }
-
-    auto eState = state->GetEntityState(entityID);
     if(!eState || !eState->Ready())
     {
         return 0;
@@ -692,57 +683,66 @@ uint8_t CharacterManager::RecalculateStats(std::shared_ptr<
     auto server = mServer.lock();
     auto definitionManager = server->GetDefinitionManager();
     uint8_t result = eState->RecalculateStats(definitionManager);
-    if(result & ENTITY_CALC_MOVE_SPEED && state)
+
+    if(result && !client)
     {
-        // Since speed updates are only sent to the player who
-        // owns the entity, ignore enemies etc
-        auto eClient = client
-            ? client : server->GetManagerConnection()
+        client = server->GetManagerConnection()
             ->GetEntityClient(eState->GetEntityID(), false);
-        SendMovementSpeed(eClient, eState, false);
-    }
-
-    if(result & ENTITY_CALC_SKILL)
-    {
-        auto cState = std::dynamic_pointer_cast<CharacterState>(eState);
-        if(cState)
-        {
-            libcomp::Packet p;
-            p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_SKILL_LIST_UPDATED);
-            p.WriteS32Little(cState->GetEntityID());
-
-            auto skills = cState->GetCurrentSkills();
-            p.WriteU32Little((uint32_t)skills.size());
-            for(uint32_t skillID : skills)
-            {
-                p.WriteU32Little(skillID);
-            }
-
-            client->QueuePacket(p);
-        }
-    }
-
-    if(result & ENTITY_CALC_STAT_LOCAL)
-    {
-        SendEntityStats(client, entityID, updateSourceClient);
-
-        if((result & ENTITY_CALC_STAT_WORLD) && state->GetPartyID())
-        {
-            libcomp::Packet request;
-            if(std::dynamic_pointer_cast<CharacterState>(eState))
-            {
-                state->GetPartyCharacterPacket(request);
-            }
-            else
-            {
-                state->GetPartyDemonPacket(request);
-            }
-            mServer.lock()->GetManagerConnection()->GetWorldConnection()->SendPacket(request);
-        }
     }
 
     if(client)
     {
+        if(result & ENTITY_CALC_MOVE_SPEED)
+        {
+            // Since speed updates are only sent to the player who
+            // owns the entity, ignore enemies etc
+            SendMovementSpeed(client, eState, false);
+        }
+
+        if(result & ENTITY_CALC_SKILL)
+        {
+            auto cState = std::dynamic_pointer_cast<CharacterState>(eState);
+            if(cState)
+            {
+                libcomp::Packet p;
+                p.WritePacketCode(
+                    ChannelToClientPacketCode_t::PACKET_SKILL_LIST_UPDATED);
+                p.WriteS32Little(cState->GetEntityID());
+
+                auto skills = cState->GetCurrentSkills();
+                p.WriteU32Little((uint32_t)skills.size());
+                for(uint32_t skillID : skills)
+                {
+                    p.WriteU32Little(skillID);
+                }
+
+                client->QueuePacket(p);
+            }
+        }
+
+        if(result & ENTITY_CALC_STAT_LOCAL)
+        {
+            SendEntityStats(client, eState->GetEntityID(), updateSourceClient);
+
+            auto state = client->GetClientState();
+            if((result & ENTITY_CALC_STAT_WORLD) &&
+                state && state->GetPartyID())
+            {
+                libcomp::Packet request;
+                if(std::dynamic_pointer_cast<CharacterState>(eState))
+                {
+                    state->GetPartyCharacterPacket(request);
+                }
+                else
+                {
+                    state->GetPartyDemonPacket(request);
+                }
+
+                mServer.lock()->GetManagerConnection()->GetWorldConnection()
+                    ->SendPacket(request);
+            }
+        }
+
         client->FlushOutgoing();
     }
 
@@ -2093,7 +2093,7 @@ void CharacterManager::EquipItem(const std::shared_ptr<
     // Recalculate tokusei and stats to reflect equipment changes
     server->GetTokuseiManager()->Recalculate(cState, true,
         std::set<int32_t>{ cState->GetEntityID() });
-    RecalculateStats(client, cState->GetEntityID(), false);
+    RecalculateStats(cState, client, false);
 
     libcomp::Packet reply;
     reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_EQUIPMENT_CHANGED);
@@ -2311,7 +2311,7 @@ bool CharacterManager::UpdateDurability(const std::shared_ptr<
         cState->RecalcEquipState(server->GetDefinitionManager());
         server->GetTokuseiManager()->Recalculate(cState, true,
             std::set<int32_t>{ cState->GetEntityID() });
-        RecalculateStats(client, cState->GetEntityID());
+        RecalculateStats(cState, client);
     }
 
     return updated;
@@ -2610,7 +2610,7 @@ void CharacterManager::UpdateFamiliarity(const std::shared_ptr<
         if(oldRank != newRank)
         {
             CalculateDemonBaseStats(dState->GetEntity());
-            RecalculateStats(client, dState->GetEntityID());
+            RecalculateStats(dState, client);
 
             // Only update the DB and clients if the rank changed
             if(sendPacket)
@@ -2746,7 +2746,7 @@ void CharacterManager::ExperienceGain(const std::shared_ptr<
             }
 
             CalculateDemonBaseStats(dState->GetEntity());
-            RecalculateStats(client, entityID, false);
+            RecalculateStats(dState, client, false);
             stats->SetHP(dState->GetMaxHP());
             stats->SetMP(dState->GetMaxMP());
 
@@ -2792,7 +2792,7 @@ void CharacterManager::ExperienceGain(const std::shared_ptr<
         else
         {
             CalculateCharacterBaseStats(stats);
-            RecalculateStats(client, entityID, false);
+            RecalculateStats(cState, client, false);
             if(cState->IsAlive())
             {
                 stats->SetHP(cState->GetMaxHP());
@@ -3031,7 +3031,7 @@ void CharacterManager::UpdateExpertisePoints(const std::shared_ptr<
         cState->RecalcDisabledSkills(definitionManager);
         server->GetTokuseiManager()->Recalculate(cState, true,
             std::set<int32_t>{ cState->GetEntityID() });
-        RecalculateStats(client, cState->GetEntityID());
+        RecalculateStats(cState, client);
     }
 }
 
@@ -3218,7 +3218,7 @@ bool CharacterManager::LearnSkill(const std::shared_ptr<channel::ChannelClientCo
 
         server->GetTokuseiManager()->Recalculate(eState, true,
             std::set<int32_t>{ eState->GetEntityID() });
-        RecalculateStats(client, entityID);
+        RecalculateStats(eState, client);
     }
 
     return true;
@@ -4257,11 +4257,11 @@ void CharacterManager::CalculateDependentStats(
             (int16_t)floorl((stats[CorrectTbl::INT] * 0.1) + (level * 0.1)));
     }
 
-    // Always round down
+    // Calculate HP/MP regen
     adjusted[CorrectTbl::HP_REGEN] = (int16_t)(stats[CorrectTbl::HP_REGEN] +
-        (int16_t)floorl(((stats[CorrectTbl::VIT] * 3) + stats[CorrectTbl::HP_MAX]) * 0.01));
+        (int16_t)floor(((stats[CorrectTbl::VIT] * 3) + stats[CorrectTbl::HP_MAX]) * 0.01));
     adjusted[CorrectTbl::MP_REGEN] = (int16_t)(stats[CorrectTbl::MP_REGEN] +
-        (int16_t)floorl(((stats[CorrectTbl::INT] * 3) + stats[CorrectTbl::MP_MAX]) * 0.01));
+        (int16_t)floor(((stats[CorrectTbl::INT] * 3) + stats[CorrectTbl::MP_MAX]) * 0.01));
 
     for(auto pair : adjusted)
     {
@@ -4276,6 +4276,16 @@ void CharacterManager::CalculateDependentStats(
             stats[pair.first] = pair.second;
         }
     }
+
+    // Calculate incant/cooldown time decrease adjustments
+    int32_t chantAdjust = (int32_t)(stats[CorrectTbl::CHANT_TIME] -
+        (int16_t)floor(2.5 * floor(stats[CorrectTbl::INT] * 0.1) +
+            1.5 * floor(stats[CorrectTbl::SPEED] * 0.1)));
+    int32_t coolAdjust = (int32_t)(stats[CorrectTbl::COOLDOWN_TIME] -
+        (int16_t)floor(2.5 * floor(stats[CorrectTbl::VIT] * 0.1) +
+            1.5 * floor(stats[CorrectTbl::SPEED] * 0.1)));
+    stats[CorrectTbl::CHANT_TIME] = (int16_t)(chantAdjust < 0 ? 0 : chantAdjust);
+    stats[CorrectTbl::COOLDOWN_TIME] = (int16_t)(coolAdjust < 5 ? 5 : coolAdjust);
 }
 
 void CharacterManager::AdjustStatBounds(libcomp::EnumMap<CorrectTbl, int16_t>& stats)
@@ -4298,7 +4308,8 @@ void CharacterManager::AdjustStatBounds(libcomp::EnumMap<CorrectTbl, int16_t>& s
             { CorrectTbl::MDEF, 0 },
             { CorrectTbl::HP_REGEN, 0 },
             { CorrectTbl::MP_REGEN, 0 },
-            { CorrectTbl::CHANT_TIME, 5 }
+            { CorrectTbl::COOLDOWN_TIME, 5 },
+            { CorrectTbl::CHANT_TIME, 0 }
         };
 
     for(auto pair : minStats)

@@ -2022,6 +2022,7 @@ void ActiveEntityState::AdjustStats(
     std::shared_ptr<objects::CalculatedEntityState> calcState, bool baseMode)
 {
     std::set<CorrectTbl> removed;
+    libcomp::EnumMap<CorrectTbl, int32_t> percentSums;
     for(auto ct : adjustments)
     {
         auto tblID = ct->GetID();
@@ -2110,13 +2111,19 @@ void ActiveEntityState::AdjustStats(
                 {
                     removed.insert(tblID);
                     adjusted = 0;
+                    percentSums.clear();
                     allowNegate = true;
                 }
                 else
                 {
-                    adjusted = (int16_t)(adjusted +
-                        (int16_t)(adjusted * (effectiveValue * 0.01)));
-                    allowNegate = ct->GetValue() < 0;
+                    if(percentSums.find(tblID) == percentSums.end())
+                    {
+                        percentSums[tblID] = effectiveValue;
+                    }
+                    else
+                    {
+                        percentSums[tblID] += effectiveValue;
+                    }
                 }
                 break;
             case 0:
@@ -2146,6 +2153,25 @@ void ActiveEntityState::AdjustStats(
                 stats[tblID] = adjusted;
             }
         }
+    }
+
+    // Loop through and apply percent sums
+    for(auto ctPair : percentSums)
+    {
+        auto tblID = ctPair.first;
+
+        int16_t adjusted = stats[tblID];
+        if(ctPair.second <= -100)
+        {
+            adjusted = 0;
+        }
+        else
+        {
+            adjusted = (int16_t)(adjusted +
+                (int16_t)(adjusted * (ctPair.second * 0.01)));
+        }
+
+        stats[tblID] = adjusted;
     }
 
     CharacterManager::AdjustStatBounds(stats);

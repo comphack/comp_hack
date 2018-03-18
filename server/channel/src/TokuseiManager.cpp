@@ -753,7 +753,7 @@ std::unordered_map<int32_t, bool> TokuseiManager::Recalculate(const std::list<st
             if(ignoreStatRecalc.find(eState->GetEntityID()) == ignoreStatRecalc.end())
             {
                 auto client = connectionManager->GetEntityClient(eState->GetEntityID());
-                characterManager->RecalculateStats(client, eState->GetEntityID());
+                characterManager->RecalculateStats(eState, client);
 
                 result[eState->GetEntityID()] = true;
             }

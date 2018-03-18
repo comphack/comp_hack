@@ -86,7 +86,7 @@ bool Parsers::SkillForget::Parse(libcomp::ManagerPacket *pPacketManager,
         cState->RecalcDisabledSkills(definitionManager);
         server->GetTokuseiManager()->Recalculate(cState, true,
             std::set<int32_t>{ cState->GetEntityID() });
-        server->GetCharacterManager()->RecalculateStats(client, cState->GetEntityID());
+        server->GetCharacterManager()->RecalculateStats(cState, client);
 
         server->GetWorldDatabase()->QueueUpdate(character, state->GetAccountUID());
     }

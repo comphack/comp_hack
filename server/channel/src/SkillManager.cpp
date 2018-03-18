@@ -74,6 +74,7 @@
 #include <MiEffectiveRangeData.h>
 #include <MiExpertClassData.h>
 #include <MiExpertData.h>
+#include <MiExpertGrowthTbl.h>
 #include <MiExpertRankData.h>
 #include <MiGrowthData.h>
 #include <MiItemBasicData.h>
@@ -171,6 +172,7 @@ public:
     uint8_t EffectiveAffinity = 0;
     uint8_t WeaponAffinity = 0;
     uint8_t EffectiveDependencyType = 0;
+    uint8_t ExpertiseRankBoost = 0;
     uint16_t OffenseValue = 0;
     std::unordered_map<int32_t, uint16_t> OffenseValues;
     bool IsSuicide = false;
@@ -307,7 +309,8 @@ bool SkillManager::ActivateSkill(const std::shared_ptr<ActiveEntityState> source
     // If the skill needs to charge, see if any time adjustments exist.
     // This will never reduce to 0% time so storing the context is not
     // necessary.
-    uint32_t chargeTime = cast->GetBasic()->GetChargeTime();
+    uint32_t defaultChargeTime = cast->GetBasic()->GetChargeTime();
+    uint32_t chargeTime = defaultChargeTime;
     if(chargeTime > 0)
     {
         auto pSkill = GetProcessingSkill(activated, nullptr, client);
@@ -376,7 +379,7 @@ bool SkillManager::ActivateSkill(const std::shared_ptr<ActiveEntityState> source
         SendActivateSkill(activated, def);
     }
 
-    bool executeNow = activationType == 6 || (chargeTime == 0 &&
+    bool executeNow = activationType == 6 || (defaultChargeTime == 0 &&
         (activationType == 3 || activationType == 4));
     if(executeNow)
     {
@@ -2160,7 +2163,7 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
 
             if(statusChanged && !effectRecalc[pair.first->GetEntityID()])
             {
-                characterManager->RecalculateStats(nullptr, pair.first->GetEntityID());
+                characterManager->RecalculateStats(pair.first);
             }
         }
     }
@@ -2518,6 +2521,28 @@ std::shared_ptr<ProcessingSkill> SkillManager::GetProcessingSkill(
     skill->EffectiveSource = source;
     skill->IsSuicide = skillData->GetDamage()->GetFunctionID() == SVR_CONST.SKILL_SUICIDE;
 
+    auto cSource = std::dynamic_pointer_cast<CharacterState>(source);
+    if(cSource)
+    {
+        // Set the expertise boost
+        // The expertise type of a skill is determined by the first
+        // type listed in the expertise growth list
+        auto expGrowth = skillData->GetExpertGrowth();
+        if(expGrowth.size() > 0)
+        {
+            uint8_t expertiseID = expGrowth.front()->GetExpertiseID();
+            skill->ExpertiseRankBoost = server->GetCharacterManager()
+                ->GetExpertiseRank(cSource, expertiseID);
+            if(expertiseID == EXPERTISE_ATTACK)
+            {
+                // Attack expertise gains an extra bonus from regal presence
+                uint8_t boost2 = server->GetCharacterManager()
+                    ->GetExpertiseRank(cSource, EXPERTISE_CHAIN_R_PRESENCE);
+                skill->ExpertiseRankBoost = (uint8_t)(skill->ExpertiseRankBoost + boost2);
+            }
+        }
+    }
+
     if(client)
     {
         auto state = client->GetClientState();
@@ -2532,8 +2557,7 @@ std::shared_ptr<ProcessingSkill> SkillManager::GetProcessingSkill(
     // Calculate effective dependency and affinity types if "weapon" is specified
     if(skill->EffectiveDependencyType == 4 || skill->BaseAffinity == 1)
     {
-        auto cState = std::dynamic_pointer_cast<CharacterState>(source);
-        auto weapon = cState ? cState->GetEntity()->GetEquippedItems((size_t)
+        auto weapon = cSource ? cSource->GetEntity()->GetEquippedItems((size_t)
             objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_WEAPON).Get() : nullptr;
         auto weaponDef = weapon ? definitionManager->GetItemData(weapon->GetType()) : nullptr;
 
@@ -2559,7 +2583,7 @@ std::shared_ptr<ProcessingSkill> SkillManager::GetProcessingSkill(
                     objects::MiItemBasicData::WeaponType_t::LONG_RANGE)
                 {
                     // If the bullet has an affinity, use that instead
-                    auto bullet = cState ? cState->GetEntity()->GetEquippedItems((size_t)
+                    auto bullet = cSource ? cSource->GetEntity()->GetEquippedItems((size_t)
                         objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_BULLETS).Get() : nullptr;
                     auto bulletDef = bullet ? definitionManager->GetItemData(bullet->GetType()) : nullptr;
                     if(bulletDef && bulletDef->GetCommon()->GetAffinity() != 0)
@@ -2877,52 +2901,40 @@ uint16_t SkillManager::CalculateOffenseValue(const std::shared_ptr<ActiveEntityS
         int16_t spell = calcState->GetCorrectTbl((size_t)CorrectTbl::SPELL);
         int16_t support = calcState->GetCorrectTbl((size_t)CorrectTbl::SUPPORT);
 
-        uint8_t rateBoostIdx = 0;
         switch(skill.EffectiveDependencyType)
         {
         case 0:
             off = (uint16_t)clsr;
-            rateBoostIdx = (uint8_t)CorrectTbl::RATE_CLSR;
             break;
         case 1:
             off = (uint16_t)lngr;
-            rateBoostIdx = (uint8_t)CorrectTbl::RATE_LNGR;
             break;
         case 2:
             off = (uint16_t)spell;
-            rateBoostIdx = (uint8_t)CorrectTbl::RATE_SPELL;
             break;
         case 3:
             off = (uint16_t)support;
-            rateBoostIdx = (uint8_t)CorrectTbl::RATE_SUPPORT;
             break;
         case 6:
             off = (uint16_t)(lngr + spell / 2);
-            rateBoostIdx = (uint8_t)CorrectTbl::RATE_LNGR;
             break;
         case 7:
             off = (uint16_t)(spell + clsr / 2);
-            rateBoostIdx = (uint8_t)CorrectTbl::RATE_SPELL;
             break;
         case 8:
             off = (uint16_t)(spell + lngr / 2);
-            rateBoostIdx = (uint8_t)CorrectTbl::RATE_SPELL;
             break;
         case 9:
             off = (uint16_t)(clsr + lngr + spell);
-            rateBoostIdx = (uint8_t)CorrectTbl::RATE_CLSR;
             break;
         case 10:
             off = (uint16_t)(lngr + clsr + spell);
-            rateBoostIdx = (uint8_t)CorrectTbl::RATE_LNGR;
             break;
         case 11:
             off = (uint16_t)(spell + clsr + lngr);
-            rateBoostIdx = (uint8_t)CorrectTbl::RATE_SPELL;
             break;
         case 12:
             off = (uint16_t)(clsr + spell / 2);
-            rateBoostIdx = (uint8_t)CorrectTbl::RATE_CLSR;
             break;
         case 5:
         default:
@@ -2930,13 +2942,6 @@ uint16_t SkillManager::CalculateOffenseValue(const std::shared_ptr<ActiveEntityS
                 " damage calculation encountered: %1\n")
                 .Arg(skill.EffectiveDependencyType));
             return false;
-        }
-
-        // Apply source rate boosts
-        if(rateBoostIdx != 0)
-        {
-            off = (uint16_t)(off *
-                (calcState->GetCorrectTbl((size_t)rateBoostIdx) * 0.01));
         }
     }
 
@@ -4044,7 +4049,7 @@ bool SkillManager::ToggleSwitchSkill(const std::shared_ptr<ChannelClientConnecti
 
         server->GetTokuseiManager()->Recalculate(source, true,
             std::set<int32_t>{ source->GetEntityID() });
-        characterManager->RecalculateStats(client, source->GetEntityID());
+        characterManager->RecalculateStats(source, client);
 
         client->FlushOutgoing();
     }
@@ -4073,6 +4078,29 @@ bool SkillManager::CalculateDamage(const std::shared_ptr<ActiveEntityState>& sou
     uint16_t mod1 = damageData->GetModifier1();
     uint16_t mod2 = damageData->GetModifier2();
 
+    int16_t knowledgeCritBoost = 0;
+    auto sourceCState = std::dynamic_pointer_cast<CharacterState>(source);
+    if(sourceCState)
+    {
+        switch(pSkill->EffectiveDependencyType)
+        {
+        case 0:
+        case 9:
+        case 12:
+            knowledgeCritBoost = (int16_t)((float)mServer.lock()->GetCharacterManager()
+                ->GetExpertiseRank(sourceCState, EXPERTISE_WEAPON_KNOWLEDGE) * 0.5f);
+            break;
+        case 1:
+        case 6:
+        case 10:
+            knowledgeCritBoost = (int16_t)((float)mServer.lock()->GetCharacterManager()
+                ->GetExpertiseRank(sourceCState, EXPERTISE_GUN_KNOWLEDGE) * 0.5f);
+            break;
+        default:
+            break;
+        }
+    }
+
     for(SkillTargetResult& target : skill.Targets)
     {
         if(target.HitAvoided) continue;
@@ -4091,12 +4119,14 @@ bool SkillManager::CalculateDamage(const std::shared_ptr<ActiveEntityState>& sou
                 auto calcState = GetCalculatedState(source, pSkill, false, target.EntityState);
                 auto targetState = GetCalculatedState(target.EntityState, pSkill, true, source);
 
+                // Calculate crit level
                 int16_t sourceLuck = source->GetCorrectValue(CorrectTbl::LUCK, calcState);
                 int16_t critValue = (int16_t)(source->GetCorrectValue(CorrectTbl::CRITICAL, calcState) +
-                    sourceLuck);
+                    sourceLuck + knowledgeCritBoost);
                 int16_t critFinal = source->GetCorrectValue(CorrectTbl::FINAL_CRIT_CHANCE, calcState);
                 int16_t lbChance = source->GetCorrectValue(CorrectTbl::LB_CHANCE, calcState);
 
+                float critRate = 0.f;
                 uint8_t critLevel = 0;
                 if(critValue > 0)
                 {
@@ -4119,18 +4149,23 @@ bool SkillManager::CalculateDamage(const std::shared_ptr<ActiveEntityState>& sou
                     int16_t critDef2 = (int16_t)(10 + floor(
                         (float)targetState->GetCorrectTbl((size_t)CorrectTbl::CRIT_DEF) * 0.1f));
 
-                    float critRate = (float)(floor((float)critValue * 0.2f) *
-                        (1.f + ((float)critValue * 0.01f)) / (float)(critDef1 * critDef2)
+                    critRate = (float)((floor((float)critValue * 0.2f) *
+                        (1.f + ((float)critValue * 0.01f)) / (float)(critDef1 * critDef2)) * 100.f
                         + (float)critFinal);
+                }
+                else
+                {
+                    critRate = (float)critFinal;
+                }
 
-                    if(RNG(int16_t, 1, 10000) <= (int16_t)(critRate * 100.f))
+                if(critRate > 0.f &&
+                    (critRate >= 100.f || RNG(int16_t, 1, 10000) <= (int16_t)(critRate * 100.f)))
+                {
+                    critLevel = 1;
+
+                    if(lbChance > 0 && RNG(int16_t, 1, 100) <= lbChance)
                     {
-                        critLevel = 1;
-
-                        if(lbChance > 0 && RNG(int16_t, 1, 100) <= lbChance)
-                        {
-                            critLevel = 2;
-                        }
+                        critLevel = 2;
                     }
                 }
 
@@ -4404,11 +4439,6 @@ int32_t SkillManager::CalculateDamage_Normal(const std::shared_ptr<
         auto targetState = GetCalculatedState(target.EntityState, pSkill, true, source);
 
         uint16_t off = CalculateOffenseValue(source, target.EntityState, pSkill);
-        if(isHeal)
-        {
-            off = (uint16_t)(off *
-                (source->GetCorrectValue(CorrectTbl::RATE_HEAL, calcState) * 0.01));
-        }
 
         CorrectTbl boostCorrectType = (CorrectTbl)(affinity + BOOST_OFFSET);
 
@@ -4419,32 +4449,32 @@ int32_t SkillManager::CalculateDamage_Normal(const std::shared_ptr<
         }
 
         uint16_t def = 0;
-        uint8_t rateDefBoostIdx = 0;
+        uint8_t rateBoostIdx = 0;
         switch(skill.EffectiveDependencyType)
         {
         case 0:
         case 9:
         case 12:
             def = (uint16_t)targetState->GetCorrectTbl((size_t)CorrectTbl::PDEF);
-            rateDefBoostIdx = (uint8_t)CorrectTbl::RATE_CLSR_TAKEN;
+            rateBoostIdx = (uint8_t)CorrectTbl::RATE_CLSR;
             break;
         case 1:
         case 6:
         case 10:
             def = (uint16_t)targetState->GetCorrectTbl((size_t)CorrectTbl::PDEF);
-            rateDefBoostIdx = (uint8_t)CorrectTbl::RATE_LNGR_TAKEN;
+            rateBoostIdx = (uint8_t)CorrectTbl::RATE_LNGR;
             break;
         case 2:
         case 7:
         case 8:
         case 11:
             def = (uint16_t)targetState->GetCorrectTbl((size_t)CorrectTbl::MDEF);
-            rateDefBoostIdx = (uint8_t)CorrectTbl::RATE_SPELL_TAKEN;
+            rateBoostIdx = (uint8_t)CorrectTbl::RATE_SPELL;
             break;
         case 3:
             // Do not defend against support by default
             def = 0;
-            rateDefBoostIdx = (uint8_t)CorrectTbl::RATE_SUPPORT_TAKEN;
+            rateBoostIdx = (uint8_t)CorrectTbl::RATE_SUPPORT;
             break;
         case 5:
         default:
@@ -4452,17 +4482,6 @@ int32_t SkillManager::CalculateDamage_Normal(const std::shared_ptr<
         }
 
         def = (uint16_t)(def + target.GuardModifier);
-
-        int16_t dependencyTaken = 100;
-        if(rateDefBoostIdx != 0)
-        {
-            dependencyTaken = targetState->GetCorrectTbl((size_t)rateDefBoostIdx);
-        }
-
-        if(dependencyTaken < -100)
-        {
-            dependencyTaken = -100;
-        }
 
         auto tokuseiManager = mServer.lock()->GetTokuseiManager();
 
@@ -4493,14 +4512,57 @@ int32_t SkillManager::CalculateDamage_Normal(const std::shared_ptr<
             calc = (float)off * ((float)mod * 0.01f);
         }
 
-        // Add the expertise rank
-        //calc = calc + (float)exp;
+        // Add the expertise modifier
+        calc = calc + (float)skill.ExpertiseRankBoost * 0.5f;
 
         // Subtract the enemy defense, unless its a critical or limit break
         calc = calc - (float)(critLevel > 0 ? 0 : def);
 
         if(calc > 0.f)
         {
+            // Get source rate boost and target rate defense boost
+            int32_t dependencyDealt = 100;
+            int32_t dependencyTaken = 100;
+            if(rateBoostIdx != 0)
+            {
+                dependencyDealt = (int32_t)calcState->GetCorrectTbl(
+                    (size_t)rateBoostIdx);
+
+                // Apply offset to get defensive value
+                dependencyTaken = (int32_t)targetState->GetCorrectTbl((size_t)(
+                    rateBoostIdx + ((uint8_t)CorrectTbl::RATE_CLSR_TAKEN -
+                        (uint8_t)CorrectTbl::RATE_CLSR)));
+            }
+
+            // Apply heal if effective heal applies
+            if(isHeal)
+            {
+                dependencyDealt = (int32_t)(dependencyDealt +
+                    calcState->GetCorrectTbl((size_t)CorrectTbl::RATE_HEAL));
+
+                dependencyTaken = (int32_t)(dependencyTaken +
+                    targetState->GetCorrectTbl((size_t)
+                        CorrectTbl::RATE_HEAL_TAKEN));
+            }
+
+            // Adjust dependency limits
+            if(dependencyDealt < -100)
+            {
+                dependencyDealt = -100;
+            }
+
+            if(dependencyTaken < -100)
+            {
+                dependencyTaken = -100;
+            }
+
+            // Get tokusei adjustments
+            double tokuseiBoost = tokuseiManager->GetAspectSum(source,
+                TokuseiAspectType::DAMAGE_DEALT, calcState) * 0.01;
+            double tokuseiReduction = tokuseiManager->GetAspectSum(
+                target.EntityState, TokuseiAspectType::DAMAGE_TAKEN,
+                targetState) * -0.01;
+
             // Scale the current value by the critical, limit break or min to
             // max damage factor
             calc = calc * scale;
@@ -4511,24 +4573,26 @@ int32_t SkillManager::CalculateDamage_Normal(const std::shared_ptr<
             // Multiply by 100% + boost
             calc = calc * (1.f + boost);
 
-            // Multiply by 1 + remaining power boosts/100
-            calc = calc * (float)(1.0 + tokuseiManager->GetAspectSum(source,
-                TokuseiAspectType::DAMAGE_DEALT, calcState) * 0.01);
+            // Multiply by 100% + dependency damage dealt
+            calc = calc * (float)(dependencyDealt * 0.01);
 
             // Multiply by 100% + dependency damage taken
-            calc = calc * (float)(1.0 + dependencyTaken * 0.01);
+            calc = calc * (float)(dependencyTaken * 0.01);
+
+            // Multiply by 1 + remaining power boosts/100
+            calc = calc * (float)(1.0 + tokuseiBoost);
 
             // Multiply by 100% + -general damage taken
-            calc = calc * (float)(1.0 + tokuseiManager->GetAspectSum(
-                target.EntityState, TokuseiAspectType::DAMAGE_TAKEN,
-                targetState) * -0.01);
+            calc = calc * (float)(1.0 + tokuseiReduction);
 
             /// @todo: there is more to this calculation
 
-            amount = (int32_t)ceil(calc);
+            amount = (int32_t)floor(calc);
         }
-        else
+
+        if(amount < 1)
         {
+            // Apply minimum value of 1
             amount = 1;
         }
 
@@ -5186,7 +5250,7 @@ bool SkillManager::DCM(const std::shared_ptr<objects::ActivatedAbility>& activat
             }
 
             // Always recalculate stats
-            characterManager->RecalculateStats(client, dState->GetEntityID());
+            characterManager->RecalculateStats(dState, client);
         }
 
         return true;
@@ -5513,7 +5577,7 @@ bool SkillManager::ForgetAllExpertiseSkills(
     cState->RecalcDisabledSkills(definitionManager);
     server->GetTokuseiManager()->Recalculate(cState, true,
         std::set<int32_t>{ cState->GetEntityID() });
-    server->GetCharacterManager()->RecalculateStats(client, cState->GetEntityID());
+    server->GetCharacterManager()->RecalculateStats(cState, client);
 
     server->GetWorldDatabase()->QueueUpdate(character, state->GetAccountUID());
 
@@ -5707,7 +5771,7 @@ bool SkillManager::Respec(const std::shared_ptr<objects::ActivatedAbility>& acti
 
         server->GetTokuseiManager()->Recalculate(cState, true,
             std::set<int32_t>{ cState->GetEntityID() });
-        characterManager->RecalculateStats(client, cState->GetEntityID());
+        characterManager->RecalculateStats(cState, client);
 
         client->FlushOutgoing();
 

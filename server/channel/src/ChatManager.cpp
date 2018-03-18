@@ -561,7 +561,7 @@ bool ChatManager::GMCommand_Effect(const std::shared_ptr<
 
     server->GetTokuseiManager()->Recalculate(eState, true,
         std::set<int32_t>{ eState->GetEntityID() });
-    server->GetCharacterManager()->RecalculateStats(client, eState->GetEntityID());
+    server->GetCharacterManager()->RecalculateStats(eState,client);
 
     return true;
 }
@@ -1408,15 +1408,33 @@ bool ChatManager::GMCommand_LevelUp(const std::shared_ptr<
 
     if(isDemon)
     {
-        entityID = state->GetDemonState()->GetEntityID();
-        currentLevel = state->GetDemonState()->GetEntity()
-            ->GetCoreStats()->GetLevel();
+        auto dState = state->GetDemonState();
+        auto cs = dState->GetCoreStats();
+        if(cs)
+        {
+            entityID = dState->GetEntityID();
+            currentLevel = cs->GetLevel();
+        }
+        else
+        {
+            return SendChatMessage(client,
+                ChatType_t::CHAT_SELF, "No demon summoned");
+        }
     }
     else
     {
-        entityID = state->GetCharacterState()->GetEntityID();
-        currentLevel = state->GetCharacterState()->GetEntity()
-            ->GetCoreStats()->GetLevel();
+        auto cState = state->GetCharacterState();
+        auto cs = cState->GetCoreStats();
+        if(cs)
+        {
+            entityID = cState->GetEntityID();
+            currentLevel = cs->GetLevel();
+        }
+        else
+        {
+            // Really shouldn't ever happen
+            return false;
+        }
     }
 
     if(lvl == -1 && lvl != 99)
@@ -1926,12 +1944,15 @@ bool ChatManager::GMCommand_Speed(const std::shared_ptr<
         ? std::dynamic_pointer_cast<ActiveEntityState>(state->GetDemonState())
         : std::dynamic_pointer_cast<ActiveEntityState>(state->GetCharacterState());
 
-    libcomp::Packet p;
-    p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_RUN_SPEED);
-    p.WriteS32Little(entity->GetEntityID());
-    p.WriteFloat(static_cast<float>(entity->GetMovementSpeed() * scaling));
+    if(entity)
+    {
+        libcomp::Packet p;
+        p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_RUN_SPEED);
+        p.WriteS32Little(entity->GetEntityID());
+        p.WriteFloat(static_cast<float>(entity->GetMovementSpeed() * scaling));
 
-    client->SendPacket(p);
+        client->SendPacket(p);
+    }
 
     return true;
 }

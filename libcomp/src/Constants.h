@@ -124,6 +124,9 @@ namespace libcomp
 /// Number of chain expertise (includes unused).
 #define CHAIN_EXPERTISE_COUNT (20)
 
+/// ID of the "Attack" expertise.
+#define EXPERTISE_ATTACK (0)
+
 /// ID of the "Fusion" expertise.
 #define EXPERTISE_FUSION (17)
 
@@ -138,6 +141,9 @@ namespace libcomp
 
 /// ID of the "Gun knowledge" expertise.
 #define EXPERTISE_GUN_KNOWLEDGE (34)
+
+/// ID of the "Regal Presence" chain expertise.
+#define EXPERTISE_CHAIN_R_PRESENCE (57)
 
 /// Default movement speed (as binary data representation) to check
 /// against any player entity to signify if a differing speed needs

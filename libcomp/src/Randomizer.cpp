@@ -78,7 +78,7 @@ namespace libcomp
     template<>
     float Randomizer::GetRandomDecimal<float>(float minVal, float maxVal, uint8_t precision)
     {
-        uint16_t p = precision > 0 ? (uint16_t)pow(10, (uint16_t)precision-1) : 0;
+        uint16_t p = precision > 0 ? (uint16_t)pow(10, (uint16_t)precision) : 1;
 
         int32_t r = GetRandomNumber<int32_t>((int32_t)(minVal * (float)p),
             (int32_t)(maxVal * (float)p));
@@ -89,7 +89,7 @@ namespace libcomp
     template<>
     double Randomizer::GetRandomDecimal<double>(double minVal, double maxVal, uint8_t precision)
     {
-        uint16_t p = precision > 0 ? (uint16_t)pow(10, (uint16_t)precision - 1) : 0;
+        uint16_t p = precision > 0 ? (uint16_t)pow(10, (uint16_t)precision) : 1;
 
         int64_t r = GetRandomNumber64<int64_t>((int64_t)(minVal * (double)p),
             (int64_t)(maxVal * (double)p));

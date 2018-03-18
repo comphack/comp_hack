@@ -90,7 +90,7 @@ void AllocatePoint(const std::shared_ptr<ChannelServer> server,
     server->GetTokuseiManager()->Recalculate(cState);
 
     auto characterManager = server->GetCharacterManager();
-    characterManager->RecalculateStats(client, cState->GetEntityID(), false);
+    characterManager->RecalculateStats(cState, client, false);
 
     libcomp::Packet reply;
     reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_ALLOCATE_SKILL_POINT);

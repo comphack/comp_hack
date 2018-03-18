@@ -129,9 +129,9 @@ public:
      * Recalculate the stats of an entity belonging to the supplied
      * client and send any resulting changes to the zone (and world
      * if applicable).
-     * @param client Pointer to the client connection
-     * @param entityID ID of the entity associated to the client to
-     *  recalculate the stats of
+     * @param eState Pointer to the state of the entity being recalculated
+     * @param client Optional pointer to the client connection. If not
+     *  supplied but needed, it will be loaded from the entity ID
      * @param updateSourceClient true if the changes should be sent
      *  to the client itself as well, false if the client will be
      *  communicated about the changes later
@@ -139,8 +139,8 @@ public:
      *  that should be sent to the client, 2 if one of the changes should
      *  be communicated to the world (for party members etc), 0 otherwise
      */
-    uint8_t RecalculateStats(std::shared_ptr<
-        ChannelClientConnection> client, int32_t entityID,
+    uint8_t RecalculateStats(const std::shared_ptr<ActiveEntityState>& eState,
+        std::shared_ptr<ChannelClientConnection> client = nullptr,
         bool updateSourceClient = true);
 
     /**

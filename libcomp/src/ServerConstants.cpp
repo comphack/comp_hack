@@ -178,6 +178,8 @@ bool ServerConstants::Initialize(const String& filePath)
         sConstants.SKILL_XP_SELF);
 
     // Load status effect constants
+    success &= LoadInteger(constants["STATUS_DEATH"],
+        sConstants.STATUS_DEATH);
     success &= LoadInteger(constants["STATUS_SUMMON_SYNC_1"],
         sConstants.STATUS_SUMMON_SYNC_1);
     success &= LoadInteger(constants["STATUS_SUMMON_SYNC_2"],

@@ -680,9 +680,19 @@ bool ActionManager::UpdateCOMP(ActionContext& ctx)
     {
         if(act->RemoveDemonsKeyExists(0))
         {
-            if(dState->GetEntity())
+            auto d = dState->GetEntity();
+            if(d)
             {
-                remove[0].push_back(dState->GetEntity());
+                if(d->GetLocked())
+                {
+                    LOG_ERROR("Attempted to remove partner demon that"
+                        " is locked\n");
+                    return false;
+                }
+                else
+                {
+                    remove[0].push_back(d);
+                }
             }
             else
             {
@@ -695,7 +705,7 @@ bool ActionManager::UpdateCOMP(ActionContext& ctx)
         for(uint8_t i = 0; i < maxSlots; i++)
         {
             auto slot = comp->GetDemons((size_t)i);
-            if(!slot.IsNull())
+            if(!slot.IsNull() && !slot->GetLocked())
             {
                 // If there are more than one specified, the ones near the
                 // start of the COMP will be removed first
@@ -735,8 +745,8 @@ bool ActionManager::UpdateCOMP(ActionContext& ctx)
             if((pair.second == 0 && remove[pair.first].size() != 1) ||
                 (pair.second != 0 && (uint8_t)remove[pair.first].size() < pair.second))
             {
-                LOG_ERROR("One or more demons does not exist for COMP removal"
-                    " request\n");
+                LOG_ERROR("One or more demons does not exist or is locked"
+                    " for COMP removal request\n");
                 return false;
             }
             else

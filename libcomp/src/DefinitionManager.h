@@ -491,12 +491,6 @@ public:
         std::shared_ptr<objects::Tokusei>> GetAllTokuseiData();
 
     /**
-     * Get the default skills to add to a newly created character
-     * @return List of skill IDs to add to a newly created character
-     */
-    const std::list<uint32_t> GetDefaultCharacterSkills();
-
-    /**
      * Load all binary data definitions
      * @param pDataStore Pointer to the datastore to load binary files from
      * @return true on success, false on failure
@@ -866,9 +860,6 @@ private:
 
         return nullptr;
     }
-
-    /// List of default skill IDs characters are created with
-    std::list<uint32_t> mDefaultCharacterSkills;
 
     /// Map of client-side AI definitions by ID
     std::unordered_map<uint32_t,

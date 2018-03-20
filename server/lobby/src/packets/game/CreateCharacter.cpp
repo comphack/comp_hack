@@ -52,8 +52,6 @@ bool Parsers::CreateCharacter::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {
-    (void)pPacketManager;
-
     if(p.Size() < 45)
     {
         return false;
@@ -75,7 +73,6 @@ bool Parsers::CreateCharacter::Parse(libcomp::ManagerPacket *pPacketManager,
 
     auto server = std::dynamic_pointer_cast<LobbyServer>(pPacketManager->GetServer());
     auto lobbyConnection = std::dynamic_pointer_cast<LobbyClientConnection>(connection);
-    auto lobbyDB = server->GetMainDatabase();
     auto world = server->GetWorldByID(worldID);
 
     if(!world)
@@ -101,6 +98,8 @@ bool Parsers::CreateCharacter::Parse(libcomp::ManagerPacket *pPacketManager,
         nextCID++;
     }
 
+    uint8_t ticketCount = account->GetTicketCount();
+
     libcomp::Packet reply;
     reply.WritePacketCode(
         LobbyToClientPacketCode_t::PACKET_CREATE_CHARACTER);
@@ -111,7 +110,7 @@ bool Parsers::CreateCharacter::Parse(libcomp::ManagerPacket *pPacketManager,
             .Arg(account->GetUUID().ToString()));
         reply.WriteU32Little(static_cast<uint32_t>(ErrorCodes_t::NO_EMPTY_CHARACTER_SLOTS));
     }
-    else if(account->GetTicketCount() == 0)
+    else if(ticketCount == 0)
     {
         LOG_ERROR(libcomp::String("No character tickets available for account %1\n")
             .Arg(account->GetUUID().ToString()));
@@ -142,7 +141,6 @@ bool Parsers::CreateCharacter::Parse(libcomp::ManagerPacket *pPacketManager,
         uint8_t eyeType = (uint8_t)(gender == objects::Character::Gender_t::MALE ? 1 : 101);
 
         auto character = libcomp::PersistentObject::New<objects::Character>();
-        character->SetCID(nextCID);
         character->SetName(name);
         character->SetGender(gender);
         character->SetSkinType((uint8_t)skinType);
@@ -197,8 +195,6 @@ bool Parsers::CreateCharacter::Parse(libcomp::ManagerPacket *pPacketManager,
                 character->SetEquippedItems(pair.first, equip);
         }
 
-        account->SetTicketCount(static_cast<uint8_t>(account->GetTicketCount() - 1));
-
         if(!equipped)
         {
             LOG_ERROR(libcomp::String("Character item data failed to save for account %1\n")
@@ -211,11 +207,10 @@ bool Parsers::CreateCharacter::Parse(libcomp::ManagerPacket *pPacketManager,
                 .Arg(account->GetUUID().ToString()));
             reply.WriteU32Little(static_cast<uint32_t>(-1));
         }
-        else if(!account->SetCharacters(character->GetCID(), character) ||
-            !account->Update(lobbyDB))
+        else if(!account->SetTicketCount((uint8_t)(ticketCount - 1)) ||
+            !server->GetAccountManager()->SetCharacterOnAccount(account, character))
         {
-            LOG_ERROR(libcomp::String("Account character array failed to save for account %1\n")
-                .Arg(account->GetUUID().ToString()));
+            account->SetTicketCount(ticketCount);   // Put the ticket back
             reply.WriteU32Little(static_cast<uint32_t>(-1));
         }
         else

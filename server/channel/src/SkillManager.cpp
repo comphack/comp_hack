@@ -165,6 +165,7 @@ class channel::ProcessingSkill
 {
 public:
     uint32_t SkillID = 0;
+    uint32_t WeaponSource = 0;
     std::shared_ptr<objects::MiSkillData> Definition;
     std::shared_ptr<objects::ActivatedAbility> Activated;
     SkillExecutionContext* ExecutionContext = 0;
@@ -173,10 +174,12 @@ public:
     uint8_t WeaponAffinity = 0;
     uint8_t EffectiveDependencyType = 0;
     uint8_t ExpertiseRankBoost = 0;
+    uint8_t KnowledgeRank = 0;
     uint16_t OffenseValue = 0;
     std::unordered_map<int32_t, uint16_t> OffenseValues;
     bool IsSuicide = false;
     bool IsItemSkill = false;
+    bool Reflected = false;
 
     std::shared_ptr<ActiveEntityState> EffectiveSource;
     std::list<channel::SkillTargetResult> Targets;
@@ -1127,6 +1130,7 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
                 // the primary target
                 skill.PrimaryTarget = source;
                 skill.EffectiveSource = targetEntity;
+                skill.Reflected = true;
                 skill.Targets.push_back(target);
 
                 // Determine NRA for reflect
@@ -1720,27 +1724,41 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
             auto statusAdjusts = tokuseiManager->GetAspectMap(source,
                 TokuseiAspectType::STATUS_INFLICT_ADJUST,
                 GetCalculatedState(source, pSkill, false, target.EntityState));
+            auto statusNulls = tokuseiManager->GetAspectMap(target.EntityState,
+                TokuseiAspectType::STATUS_NULL, targetCalc);
 
             for(auto addStatus : addStatuses)
             {
                 if(addStatus->GetOnKnockback() && !(target.Flags1 & FLAG1_KNOCKBACK)) continue;
 
+                auto statusDef = definitionManager->GetStatusData(addStatus->GetStatusID());
+                if(!statusDef) continue;
+
+                uint8_t statusCategory = statusDef->GetCommon()->GetCategory()
+                    ->GetMainCategory();
+
                 int32_t successRate = (int32_t)addStatus->GetSuccessRate();
 
+                // Boost success by direct inflict adjust
                 auto it = statusAdjusts.find((int32_t)addStatus->GetStatusID());
                 if(it != statusAdjusts.end())
                 {
                     successRate = (int32_t)(successRate + floor(it->second));
                 }
 
-                if(successRate >= 100 || RNG(int32_t, 1, 100) <= successRate)
+                // Boost success by category inflict adjust (-category - 1)
+                it = statusAdjusts.find((int32_t)(statusCategory * -1) - 1);
+                if(it != statusAdjusts.end())
                 {
-                    auto statusDef = definitionManager->GetStatusData(
-                        addStatus->GetStatusID());
+                    successRate = (int32_t)(successRate + floor(it->second));
+                }
 
+                if(statusNulls.find((int32_t)addStatus->GetStatusID()) == statusNulls.end() &&
+                    (successRate >= 100 || RNG(int32_t, 1, 100) <= successRate))
+                {
                     uint8_t stack = CalculateStatusEffectStack(addStatus->GetMinStack(),
                         addStatus->GetMaxStack());
-                    if(!statusDef || (stack == 0 && !addStatus->GetIsReplace())) continue;
+                    if(stack == 0 && !addStatus->GetIsReplace()) continue;
 
                     target.AddedStatuses[addStatus->GetStatusID()] =
                         std::pair<uint8_t, bool>(stack, addStatus->GetIsReplace());
@@ -1783,6 +1801,16 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
             }
         }
 
+        // If death is applied, kill the target and stop additional HP damage
+        bool targetKilled = false;
+        if(target.AddedStatuses.find(SVR_CONST.STATUS_DEATH) !=
+            target.AddedStatuses.end())
+        {
+            targetKilled = target.EntityState->SetHPMP(0, -1, false, true);
+            target.Flags2 |= FLAG2_INSTANT_DEATH;
+            hpDamage = 0;
+        }
+
         // Perform knockback if there is normal damage but no damage potential
         // or if damage was dealt
         auto battleDamage = damageData->GetBattleDamage();
@@ -1793,10 +1821,27 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
         if(hpDamage != 0 || mpDamage != 0)
         {
             bool targetAlive = target.EntityState->IsAlive();
+            bool secondaryDamage = (target.Damage2 + target.TechnicalDamage +
+                target.PursuitDamage + target.AilmentDamage) > 0;
+
+            // If the target can be killed by the hit, get clench chance
+            int32_t clenchChance = 0;
+            if(hpDamage > 0 && targetAlive)
+            {
+                // Clench does not happen if secondary damage occurred,
+                // skill was reflected or suicide was applied
+                if(!secondaryDamage && !pSkill->Reflected &&
+                    (!pSkill->IsSuicide || target.EntityState != source))
+                {
+                    clenchChance = (int32_t)floor(tokuseiManager->GetAspectSum(
+                        target.EntityState, TokuseiAspectType::CLENCH_CHANCE,
+                        targetCalc) * 100.0);
+                }
+            }
 
             int32_t hpAdjusted, mpAdjusted;
             if(target.EntityState->SetHPMP(-hpDamage, -mpDamage, true,
-                true, hpAdjusted, mpAdjusted))
+                true, clenchChance, hpAdjusted, mpAdjusted))
             {
                 // Changed from alive to dead or vice versa
                 if(target.EntityState->GetEntityType() ==
@@ -1810,20 +1855,20 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
 
                 if(targetAlive)
                 {
-                    target.Flags1 |= FLAG1_LETHAL;
-                    cancellations[target.EntityState] |= EFFECT_CANCEL_DEATH;
-                    killed.insert(target.EntityState);
-
-                    for(uint32_t effectID : cancelOnKill)
-                    {
-                        target.AddedStatuses.erase(effectID);
-                    }
+                    targetKilled = true;
                 }
                 else
                 {
                     target.Flags1 |= FLAG1_REVIVAL;
                     revived.insert(target.EntityState);
                 }
+            }
+
+            // If the HP damage was changed and there are no secondary damage sources
+            // update the target damage
+            if(-hpAdjusted != hpDamage && !secondaryDamage)
+            {
+                target.Damage1 = -hpAdjusted;
             }
 
             if(hpAdjusted != 0)
@@ -1894,6 +1939,19 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
             }
         }
 
+        // Set the killed state
+        if(targetKilled)
+        {
+            target.Flags1 |= FLAG1_LETHAL;
+            cancellations[target.EntityState] |= EFFECT_CANCEL_DEATH;
+            killed.insert(target.EntityState);
+
+            for(uint32_t effectID : cancelOnKill)
+            {
+                target.AddedStatuses.erase(effectID);
+            }
+        }
+
         if(applyKnockback && kbMod)
         {
             int32_t kbNull = (int32_t)tokuseiManager->GetAspectSum(source,
@@ -1903,7 +1961,11 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
 
             if(target.CanKnockback)
             {
-                float kb = target.EntityState->UpdateKnockback(now, kbMod);
+                float kbRecoverBoost = (float)(tokuseiManager->GetAspectSum(source,
+                    TokuseiAspectType::KNOCKBACK_RECOVERY, targetCalc) * 100.0);
+
+                float kb = target.EntityState->UpdateKnockback(now, kbMod,
+                    kbRecoverBoost);
                 if(kb == 0.f)
                 {
                     target.Flags1 |= FLAG1_KNOCKBACK;
@@ -2563,6 +2625,7 @@ std::shared_ptr<ProcessingSkill> SkillManager::GetProcessingSkill(
 
         if(weaponDef)
         {
+            skill->WeaponSource = weaponDef->GetCommon()->GetID();
             if(skill->EffectiveDependencyType == 4)
             {
                 switch(weaponDef->GetBasic()->GetWeaponType())
@@ -2620,6 +2683,29 @@ std::shared_ptr<ProcessingSkill> SkillManager::GetProcessingSkill(
         if(skill->EffectiveDependencyType == 4)
         {
             skill->EffectiveDependencyType = 0;
+        }
+    }
+
+    // Set any dependency type dependent properties
+    if(cSource)
+    {
+        // Set the knowledge rank for critical and durability adjustment
+        switch(skill->EffectiveDependencyType)
+        {
+        case 0:
+        case 9:
+        case 12:
+            skill->KnowledgeRank = server->GetCharacterManager()
+                ->GetExpertiseRank(cSource, EXPERTISE_WEAPON_KNOWLEDGE);
+            break;
+        case 1:
+        case 6:
+        case 10:
+            skill->KnowledgeRank = server->GetCharacterManager()
+                ->GetExpertiseRank(cSource, EXPERTISE_GUN_KNOWLEDGE);
+            break;
+        default:
+            break;
         }
     }
 
@@ -3936,25 +4022,7 @@ void SkillManager::HandleDurabilityDamage(const std::shared_ptr<ActiveEntityStat
         }
 
         uint16_t weaponDamage = pSkill->Definition->GetDamage()->GetBreakData()->GetWeapon();
-
-        double knowledgeRank = 0;
-        switch(pSkill->EffectiveDependencyType)
-        {
-        case 0:
-        case 9:
-        case 12:
-            knowledgeRank = (double)characterManager->GetExpertiseRank(cState,
-                EXPERTISE_WEAPON_KNOWLEDGE);
-            break;
-        case 1:
-        case 6:
-        case 10:
-            knowledgeRank = (double)characterManager->GetExpertiseRank(cState,
-                EXPERTISE_GUN_KNOWLEDGE);
-            break;
-        default:
-            break;
-        }
+        double knowledgeRank = (double)pSkill->KnowledgeRank;
 
         int32_t durabilityLoss = weaponDamage * 2;
         if(knowledgeRank)
@@ -4078,29 +4146,6 @@ bool SkillManager::CalculateDamage(const std::shared_ptr<ActiveEntityState>& sou
     uint16_t mod1 = damageData->GetModifier1();
     uint16_t mod2 = damageData->GetModifier2();
 
-    int16_t knowledgeCritBoost = 0;
-    auto sourceCState = std::dynamic_pointer_cast<CharacterState>(source);
-    if(sourceCState)
-    {
-        switch(pSkill->EffectiveDependencyType)
-        {
-        case 0:
-        case 9:
-        case 12:
-            knowledgeCritBoost = (int16_t)((float)mServer.lock()->GetCharacterManager()
-                ->GetExpertiseRank(sourceCState, EXPERTISE_WEAPON_KNOWLEDGE) * 0.5f);
-            break;
-        case 1:
-        case 6:
-        case 10:
-            knowledgeCritBoost = (int16_t)((float)mServer.lock()->GetCharacterManager()
-                ->GetExpertiseRank(sourceCState, EXPERTISE_GUN_KNOWLEDGE) * 0.5f);
-            break;
-        default:
-            break;
-        }
-    }
-
     for(SkillTargetResult& target : skill.Targets)
     {
         if(target.HitAvoided) continue;
@@ -4119,55 +4164,7 @@ bool SkillManager::CalculateDamage(const std::shared_ptr<ActiveEntityState>& sou
                 auto calcState = GetCalculatedState(source, pSkill, false, target.EntityState);
                 auto targetState = GetCalculatedState(target.EntityState, pSkill, true, source);
 
-                // Calculate crit level
-                int16_t sourceLuck = source->GetCorrectValue(CorrectTbl::LUCK, calcState);
-                int16_t critValue = (int16_t)(source->GetCorrectValue(CorrectTbl::CRITICAL, calcState) +
-                    sourceLuck + knowledgeCritBoost);
-                int16_t critFinal = source->GetCorrectValue(CorrectTbl::FINAL_CRIT_CHANCE, calcState);
-                int16_t lbChance = source->GetCorrectValue(CorrectTbl::LB_CHANCE, calcState);
-
-                float critRate = 0.f;
-                uint8_t critLevel = 0;
-                if(critValue > 0)
-                {
-                    int16_t critDef1 = targetState->GetCorrectTbl((size_t)CorrectTbl::CRIT_DEF);
-                    if(sourceLuck < 50)
-                    {
-                        critDef1 = (int16_t)(critDef1 + targetState->GetCorrectTbl(
-                            (size_t)CorrectTbl::LUCK));
-                    }
-                    else if(sourceLuck < 67)
-                    {
-                        critDef1 = (int16_t)(critDef1 + 50);
-                    }
-                    else
-                    {
-                        critDef1 = (int16_t)((float)critDef1 + floor(
-                            (float)targetState->GetCorrectTbl((size_t)CorrectTbl::LUCK) * 0.75f));
-                    }
-
-                    int16_t critDef2 = (int16_t)(10 + floor(
-                        (float)targetState->GetCorrectTbl((size_t)CorrectTbl::CRIT_DEF) * 0.1f));
-
-                    critRate = (float)((floor((float)critValue * 0.2f) *
-                        (1.f + ((float)critValue * 0.01f)) / (float)(critDef1 * critDef2)) * 100.f
-                        + (float)critFinal);
-                }
-                else
-                {
-                    critRate = (float)critFinal;
-                }
-
-                if(critRate > 0.f &&
-                    (critRate >= 100.f || RNG(int16_t, 1, 10000) <= (int16_t)(critRate * 100.f)))
-                {
-                    critLevel = 1;
-
-                    if(lbChance > 0 && RNG(int16_t, 1, 100) <= lbChance)
-                    {
-                        critLevel = 2;
-                    }
-                }
+                uint8_t critLevel = !isHeal ? GetCritLevel(source, target, pSkill) : 0;
 
                 CorrectTbl resistCorrectType = (CorrectTbl)(skill.EffectiveAffinity + RES_OFFSET);
 
@@ -4184,31 +4181,30 @@ bool SkillManager::CalculateDamage(const std::shared_ptr<ActiveEntityState>& sou
                 target.Damage2 = CalculateDamage_Normal(source, target, pSkill, mod2,
                     target.Damage2Type, skill.EffectiveAffinity, resist, critLevel, isHeal);
 
-                // Set crits, protect, weakpoint, if not healing
+                // Set crit-level adjustment flags
+                switch(critLevel)
+                {
+                    case 1:
+                        target.Flags1 |= FLAG1_CRITICAL;
+                        break;
+                    case 2:
+                        if(target.Damage1 > 30000 ||
+                            target.Damage2 > 30000)
+                        {
+                            target.Flags2 |= FLAG2_INTENSIVE_BREAK;
+                        }
+                        else
+                        {
+                            target.Flags2 |= FLAG2_LIMIT_BREAK;
+                        }
+                        break;
+                    default:
+                        break;
+                }
+
+                // Set resistence flags, if not healing
                 if(!effectiveHeal)
                 {
-                    // Set crit-level adjustment flags
-                    switch(critLevel)
-                    {
-                        case 1:
-                            target.Flags1 |= FLAG1_CRITICAL;
-                            break;
-                        case 2:
-                            if(target.Damage1 > 30000 ||
-                                target.Damage2 > 30000)
-                            {
-                                target.Flags2 |= FLAG2_INTENSIVE_BREAK;
-                            }
-                            else
-                            {
-                                target.Flags2 |= FLAG2_LIMIT_BREAK;
-                            }
-                            break;
-                        default:
-                            break;
-                    }
-
-                    // Set resistence flags
                     if(resist >= 0.5f)
                     {
                         target.Flags1 |= FLAG1_PROTECT;
@@ -4421,6 +4417,75 @@ bool SkillManager::CalculateDamage(const std::shared_ptr<ActiveEntityState>& sou
     return true;
 }
 
+uint8_t SkillManager::GetCritLevel(const std::shared_ptr<ActiveEntityState>& source,
+    SkillTargetResult& target, const std::shared_ptr<
+    channel::ProcessingSkill>& pSkill)
+{
+    uint8_t critLevel = 0;
+
+    auto calcState = GetCalculatedState(source, pSkill, false,
+        target.EntityState);
+    auto targetState = GetCalculatedState(target.EntityState, pSkill, true,
+        source);
+
+    int16_t sourceLuck = source->GetCorrectValue(CorrectTbl::LUCK, calcState);
+    int16_t knowledgeCritBoost = (int16_t)(pSkill->KnowledgeRank * 0.5f);
+    int16_t critValue = source->GetCorrectValue(CorrectTbl::CRITICAL, calcState);
+    critValue = (int16_t)(critValue  + sourceLuck + knowledgeCritBoost);
+
+    int16_t critFinal = source->GetCorrectValue(CorrectTbl::FINAL_CRIT_CHANCE,
+        calcState);
+    int16_t lbChance = source->GetCorrectValue(CorrectTbl::LB_CHANCE,
+        calcState);
+
+    float critRate = 0.f;
+    if(critValue > 0)
+    {
+        int16_t critDef1 = targetState->GetCorrectTbl((size_t)
+            CorrectTbl::CRIT_DEF);
+        if(sourceLuck < 50)
+        {
+            critDef1 = (int16_t)(critDef1 + targetState->GetCorrectTbl(
+                (size_t)CorrectTbl::LUCK));
+        }
+        else if(sourceLuck < 67)
+        {
+            critDef1 = (int16_t)(critDef1 + 50);
+        }
+        else
+        {
+            critDef1 = (int16_t)((float)critDef1 + floor(
+                (float)targetState->GetCorrectTbl((size_t)CorrectTbl::LUCK) *
+                0.75f));
+        }
+
+        int16_t critDef2 = (int16_t)(10 + floor(
+            (float)targetState->GetCorrectTbl((size_t)CorrectTbl::CRIT_DEF) *
+            0.1f));
+
+        critRate = (float)((floor((float)critValue * 0.2f) *
+            (1.f + ((float)critValue * 0.01f)) / (float)(critDef1 * critDef2)) *
+            100.f + (float)critFinal);
+    }
+    else
+    {
+        critRate = (float)critFinal;
+    }
+
+    if(critRate > 0.f &&
+        (critRate >= 100.f || RNG(int16_t, 1, 10000) <= (int16_t)(critRate * 100.f)))
+    {
+        critLevel = 1;
+
+        if(lbChance > 0 && RNG(int16_t, 1, 100) <= lbChance)
+        {
+            critLevel = 2;
+        }
+    }
+
+    return critLevel;
+}
+
 int32_t SkillManager::CalculateDamage_Normal(const std::shared_ptr<
     ActiveEntityState>& source, SkillTargetResult& target,
     const std::shared_ptr<ProcessingSkill>& pSkill, uint16_t mod,
@@ -4438,6 +4503,8 @@ int32_t SkillManager::CalculateDamage_Normal(const std::shared_ptr<
         auto calcState = GetCalculatedState(source, pSkill, false, target.EntityState);
         auto targetState = GetCalculatedState(target.EntityState, pSkill, true, source);
 
+        auto tokuseiManager = mServer.lock()->GetTokuseiManager();
+
         uint16_t off = CalculateOffenseValue(source, target.EntityState, pSkill);
 
         CorrectTbl boostCorrectType = (CorrectTbl)(affinity + BOOST_OFFSET);
@@ -4446,6 +4513,16 @@ int32_t SkillManager::CalculateDamage_Normal(const std::shared_ptr<
         if(boost < -100.f)
         {
             boost = -100.f;
+        }
+        else if(boost != 0.f)
+        {
+            // Limit boost based on tokusei or 100% by default
+            double affinityMax = tokuseiManager->GetAspectSum(source,
+                TokuseiAspectType::AFFINITY_CAP_MAX, calcState);
+            if((double)(boost - 100.f) > affinityMax)
+            {
+                boost = (float)(100.0 + affinityMax);
+            }
         }
 
         uint16_t def = 0;
@@ -4482,8 +4559,6 @@ int32_t SkillManager::CalculateDamage_Normal(const std::shared_ptr<
         }
 
         def = (uint16_t)(def + target.GuardModifier);
-
-        auto tokuseiManager = mServer.lock()->GetTokuseiManager();
 
         float scale = 0.f;
         switch(critLevel)
@@ -5544,10 +5619,17 @@ bool SkillManager::ForgetAllExpertiseSkills(
 
     std::set<uint32_t> learnedSkills = character->GetLearnedSkills();
 
+    auto defaultObjs = server->GetDefaultCharacterObjectMap();
+
     std::set<uint32_t> keepSkills;
-    for(uint32_t keepSkill : definitionManager->GetDefaultCharacterSkills())
+    for(auto defaultCharObj : defaultObjs["Character"])
     {
-        keepSkills.insert(keepSkill);
+        auto defaultChar = std::dynamic_pointer_cast<
+            objects::Character>(defaultCharObj);
+        for(uint32_t keepSkill : defaultChar->GetLearnedSkills())
+        {
+            keepSkills.insert(keepSkill);
+        }
     }
 
     uint32_t maxExpertise = (uint32_t)(EXPERTISE_COUNT + CHAIN_EXPERTISE_COUNT);

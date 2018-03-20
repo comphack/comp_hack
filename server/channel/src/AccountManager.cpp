@@ -789,12 +789,6 @@ bool AccountManager::InitializeNewCharacter(std::shared_ptr<
         }
     }
 
-    // Always add default rank expertise skills
-    for(auto skillID : definitionManager->GetDefaultCharacterSkills())
-    {
-        character->InsertLearnedSkills(skillID);
-    }
-
     // Generate stats
     auto dStats = dCharacter
         ? dCharacter->GetCoreStats().Get() : nullptr;

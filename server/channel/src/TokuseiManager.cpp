@@ -165,18 +165,19 @@ bool TokuseiManager::Initialize()
             }
 
             // Make sure no skill based effects increase rates that are side-effects
-            // rather than directly affecting the skill outcome and also do not grant
-            // constant status effects
-            bool invalidSkillRate = false;
+            // rather than directly affecting the skill outcome. Also prevent
+            // aspects that need to be active outside of a skill.
+            bool invalidSkillAdjust = false;
             for(auto aspect : tPair.second->GetAspects())
             {
                 if(aspect->GetType() == TokuseiAspectType::BETHEL_RATE ||
                     aspect->GetType() == TokuseiAspectType::CONSTANT_STATUS ||
                     aspect->GetType() == TokuseiAspectType::FAMILIARITY_UP_RATE ||
                     aspect->GetType() == TokuseiAspectType::FAMILIARITY_DOWN_RATE ||
+                    aspect->GetType() == TokuseiAspectType::KNOCKBACK_RECOVERY ||
                     aspect->GetType() == TokuseiAspectType::SOUL_POINT_RATE)
                 {
-                    invalidSkillRate = true;
+                    invalidSkillAdjust = true;
                     break;
                 }
             }
@@ -193,7 +194,7 @@ bool TokuseiManager::Initialize()
             {
                 if(invalidCorrectTypes.find(ct->GetType()) != invalidCorrectTypes.end())
                 {
-                    invalidSkillRate = true;
+                    invalidSkillAdjust = true;
                     break;
                 }
             }
@@ -202,15 +203,15 @@ bool TokuseiManager::Initialize()
             {
                 if(invalidCorrectTypes.find(ct->GetType()) != invalidCorrectTypes.end())
                 {
-                    invalidSkillRate = true;
+                    invalidSkillAdjust = true;
                     break;
                 }
             }
 
-            if(invalidSkillRate)
+            if(invalidSkillAdjust)
             {
-                LOG_ERROR(libcomp::String("Skill tokusei encounterd with an invalid"
-                    " rate adjustment: %1\n").Arg(tPair.first));
+                LOG_ERROR(libcomp::String("Skill tokusei encountered with an"
+                    " unsupported skill adjustment: %1\n").Arg(tPair.first));
                 return false;
             }
         }

@@ -2517,7 +2517,22 @@ std::shared_ptr<objects::Demon> CharacterManager::GenerateDemon(
     d->SetCoreStats(ds);
 
     CalculateDemonBaseStats(d);
-    d->SetLearnedSkills(growth->GetSkills());
+
+    // Add learned skills
+    auto definitionManager = mServer.lock()->GetDefinitionManager();
+    for(size_t i = 0; i < 8; i++)
+    {
+        uint32_t skillID = growth->GetSkills(i);
+        auto skillData = skillID
+            ? definitionManager->GetSkillData(skillID) : nullptr;
+        if(skillData &&
+            skillData->GetCommon()->GetCategory()->GetMainCategory() != 2)
+        {
+            // Switch skills were never supported by the client when sent
+            // from partner demons so only add if it is not a switch skill
+            d->SetLearnedSkills(i, skillID);
+        }
+    }
 
     ds->SetEntity(d->GetUUID());
 
@@ -2746,6 +2761,8 @@ void CharacterManager::ExperienceGain(const std::shared_ptr<
             }
 
             CalculateDemonBaseStats(dState->GetEntity());
+            server->GetTokuseiManager()->Recalculate(cState, true,
+                std::set<int32_t>{ dState->GetEntityID() });
             RecalculateStats(dState, client, false);
             stats->SetHP(dState->GetMaxHP());
             stats->SetMP(dState->GetMaxMP());
@@ -2792,6 +2809,8 @@ void CharacterManager::ExperienceGain(const std::shared_ptr<
         else
         {
             CalculateCharacterBaseStats(stats);
+            server->GetTokuseiManager()->Recalculate(cState, true,
+                std::set<int32_t>{ cState->GetEntityID() });
             RecalculateStats(cState, client, false);
             if(cState->IsAlive())
             {
@@ -2807,8 +2826,8 @@ void CharacterManager::ExperienceGain(const std::shared_ptr<
             reply.WriteS32(0);  //Unknown
             reply.WriteS8(level);
             reply.WriteS64(xpDelta);
-            reply.WriteS16Little((int16_t)stats->GetMaxHP());
-            reply.WriteS16Little((int16_t)stats->GetMaxMP());
+            reply.WriteS16Little((int16_t)cState->GetMaxHP());
+            reply.WriteS16Little((int16_t)cState->GetMaxMP());
             reply.WriteS32Little(points);
         }
 
@@ -3145,6 +3164,12 @@ bool CharacterManager::LearnSkill(const std::shared_ptr<channel::ChannelClientCo
     auto dState = state->GetDemonState();
     if(eState == dState)
     {
+        if(def->GetCommon()->GetCategory()->GetMainCategory() == 2)
+        {
+            // Switch skills are not supported on partner demons
+            return false;
+        }
+
         // Check if the skill is available anywhere for the demon
         auto demon = dState->GetEntity();
         auto learnedSkills = demon->GetLearnedSkills();

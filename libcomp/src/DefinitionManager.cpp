@@ -482,11 +482,6 @@ const std::unordered_map<int32_t,
     return mTokuseiData;
 }
 
-const std::list<uint32_t> DefinitionManager::GetDefaultCharacterSkills()
-{
-    return mDefaultCharacterSkills;
-}
-
 bool DefinitionManager::LoadAllData(gsl::not_null<DataStore*> pDataStore)
 {
     LOG_INFO("Loading binary data definitions...\n");
@@ -788,17 +783,6 @@ bool DefinitionManager::LoadExpertClassData(
     for(auto record : records)
     {
         mExpertData[record->GetID()] = record;
-
-        if(!record->GetIsChain())
-        {
-            auto class0Data = record->GetClassData(0);
-            auto rank0Data = class0Data->GetRankData(0);
-            for(uint32_t i = 0; i < rank0Data->GetSkillCount(); i++)
-            {
-                mDefaultCharacterSkills.push_back(
-                    rank0Data->GetSkill((size_t)i));
-            }
-        }
     }
 
     return success;

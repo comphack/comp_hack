@@ -3,7 +3,6 @@
     <object name="Character" location="world" scriptenabled="true">
         <member type="string" name="Name" size="32" key="true" unique="true"/>
         <member type="Account*" name="Account" key="true" unique="false"/>
-        <member type="u8" name="CID" caps="true" max="19"/>
         <member type="u8" name="WorldID"/>
         <member type="u32" name="KillTime"/>
 

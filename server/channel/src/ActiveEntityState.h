@@ -332,16 +332,19 @@ public:
      * reaches or exceeds the maximum knockback resistance, the max
      * value will be used and the last update tick will be cleared.
      * @param now Current timestamp of the server
+     * @param recoveryBoost Recovery rate increase percentage
      */
-    void RefreshKnockback(uint64_t now);
+    void RefreshKnockback(uint64_t now, float recoveryBoost);
 
     /**
      * Refresh and then reduce the entity's knockback value. If the value
      * goes under zero, it will be set to zero.
      * @param now Current timestamp of the server
      * @param decrease Value to decrease the knockback value by
+     * @param recoveryBoost Recovery rate increase percentage
      */
-    float UpdateKnockback(uint64_t now, float decrease);
+    float UpdateKnockback(uint64_t now, float decrease,
+        float recoveryBoost);
 
     /**
      * Check if the entity state has everything needed to start
@@ -391,6 +394,8 @@ public:
      *  the current value instead of being set explicitly
      * @param canOverflow true if the entity can be changed from alive to
      *  dead and vice-versa
+     * @param clenchChance Chance to survive a lethal hit from more than 1
+     *  starting HP, represented as a 2 decimal precision value (10000 = 100%)
      * @param hpAdjusted If not adjusting, this will be the HP damage dealt,
      *  otherwise it matches the value supplied
      * @param mpAdjusted If not adjusting, this will be the MP damage dealt,
@@ -400,7 +405,7 @@ public:
      *  is false, the returned value represents if the HP or MP were changed
      */
     bool SetHPMP(int32_t hp, int32_t mp, bool adjust, bool canOverflow,
-        int32_t& hpAdjusted, int32_t& mpAdjusted);
+        int32_t clenchChance, int32_t& hpAdjusted, int32_t& mpAdjusted);
 
     /**
      * Get the current status effect map
@@ -581,10 +586,13 @@ protected:
      * @param definitionManager Pointer to the DefinitionManager to use when
      *  determining how the effect behaves
      * @param now Current system timestamp to use when activating the effect
+     * @param timeOnly true if only the time will be registered, should only be
+     *  used if the expiration is being updated
      */
     void ActivateStatusEffect(
         const std::shared_ptr<objects::StatusEffect>& effect,
-        libcomp::DefinitionManager* definitionManager, uint32_t now);
+        libcomp::DefinitionManager* definitionManager, uint32_t now,
+        bool timeOnly);
 
     /**
      * Set the next effect event time for a specified effect type for the entity's

@@ -993,7 +993,7 @@ bool ChannelServer::SendSystemMessage(const std::shared_ptr<
     }
     else
     {
-        mZoneManager->BroadcastPacket(client, p);
+        mManagerConnection->BroadcastPacketToClients(p);
     }
     return true;
 }

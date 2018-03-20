@@ -29,6 +29,7 @@
 // libcomp Includes
 #include <Constants.h>
 #include <DefinitionManager.h>
+#include <Randomizer.h>
 #include <ServerConstants.h>
 
 // C++ Standard Includes
@@ -398,7 +399,7 @@ void ActiveEntityState::SetActionTime(const libcomp::String& action, uint64_t ti
     mActionTimes[action.C()] = time;
 }
 
-void ActiveEntityState::RefreshKnockback(uint64_t now)
+void ActiveEntityState::RefreshKnockback(uint64_t now, float recoveryBoost)
 {
     std::lock_guard<std::mutex> lock(mLock);
 
@@ -407,7 +408,8 @@ void ActiveEntityState::RefreshKnockback(uint64_t now)
     if(kb < kbMax)
     {
         // Knockback refreshes at a rate of 15/s (or 0.015/ms)
-        kb = kb + (float)((double)(now - GetKnockbackTicks()) * 0.001 * 0.015);
+        kb = kb + (float)((double)(now - GetKnockbackTicks()) * 0.001 *
+            (0.015 * (1.0 + (double)recoveryBoost)));
         if(kb > kbMax)
         {
             kb = kbMax;
@@ -427,10 +429,11 @@ void ActiveEntityState::RefreshKnockback(uint64_t now)
     }
 }
 
-float ActiveEntityState::UpdateKnockback(uint64_t now, float decrease)
+float ActiveEntityState::UpdateKnockback(uint64_t now, float decrease,
+    float recoveryBoost)
 {
     // Always get up to date first
-    RefreshKnockback(now);
+    RefreshKnockback(now, recoveryBoost);
 
     std::lock_guard<std::mutex> lock(mLock);
 
@@ -471,11 +474,12 @@ bool ActiveEntityState::SetHPMP(int32_t hp, int32_t mp, bool adjust,
     bool canOverflow)
 {
     int32_t hpAdjusted, mpAdjusted;
-    return SetHPMP(hp, mp, adjust, canOverflow, hpAdjusted, mpAdjusted);
+    return SetHPMP(hp, mp, adjust, canOverflow, 0, hpAdjusted, mpAdjusted);
 }
 
 bool ActiveEntityState::SetHPMP(int32_t hp, int32_t mp, bool adjust,
-    bool canOverflow, int32_t& hpAdjusted, int32_t& mpAdjusted)
+    bool canOverflow, int32_t clenchChance, int32_t& hpAdjusted,
+    int32_t& mpAdjusted)
 {
     hpAdjusted = mpAdjusted = 0;
 
@@ -498,16 +502,18 @@ bool ActiveEntityState::SetHPMP(int32_t hp, int32_t mp, bool adjust,
         mpAdjusted = mp;
     }
 
+    int32_t startingHP = cs->GetHP();
+    int32_t startingMP = cs->GetMP();
     if(adjust)
     {
-        hp = (int32_t)(cs->GetHP() + hp);
-        mp = (int32_t)(cs->GetMP() + mp);
+        hp = (int32_t)(startingHP + hp);
+        mp = (int32_t)(startingMP + mp);
 
         if(!canOverflow)
         {
             // If the adjusted damage cannot overflow
             // stop it from doing so
-            if(cs->GetHP() && hp <= 0)
+            if(startingHP && hp <= 0)
             {
                 hp = 1;
             }
@@ -516,7 +522,17 @@ bool ActiveEntityState::SetHPMP(int32_t hp, int32_t mp, bool adjust,
                 hp = 0;
             }
         }
-        
+        else if(startingHP > 1 && hp <= 0 && clenchChance > 0)
+        {
+            if(clenchChance >= 10000 ||
+                RNG(int32_t, 1, 10000) <= clenchChance)
+            {
+                // Survived clench
+                hpAdjusted = -(startingHP - 1);
+                hp = 1;
+            }
+        }
+
         // Make sure we don't go under the limit
         if(hp < 0)
         {
@@ -536,23 +552,23 @@ bool ActiveEntityState::SetHPMP(int32_t hp, int32_t mp, bool adjust,
         auto newHP = hp > maxHP ? maxHP : hp;
 
         // Update if the entity is alive or not
-        if(cs->GetHP() > 0 && newHP == 0)
+        if(startingHP > 0 && newHP == 0)
         {
             mAlive = false;
             Stop(ChannelServer::GetServerTime());
             result = !returnDamaged;
         }
-        else if(cs->GetHP() == 0 && newHP > 0)
+        else if(startingHP == 0 && newHP > 0)
         {
             mAlive = true;
             result = !returnDamaged;
         }
 
-        result |= returnDamaged && newHP != cs->GetHP();
+        result |= returnDamaged && newHP != startingHP;
         
         if(!canOverflow)
         {
-            hpAdjusted = (int32_t)(newHP - cs->GetHP());
+            hpAdjusted = (int32_t)(newHP - startingHP);
         }
 
         cs->SetHP(newHP);
@@ -561,11 +577,11 @@ bool ActiveEntityState::SetHPMP(int32_t hp, int32_t mp, bool adjust,
     if(mp >= 0)
     {
         auto newMP = mp > maxMP ? maxMP : mp;
-        result |= returnDamaged && newMP != cs->GetMP();
+        result |= returnDamaged && newMP != startingMP;
         
         if(!canOverflow)
         {
-            mpAdjusted = (int32_t)(newMP - cs->GetMP());
+            mpAdjusted = (int32_t)(newMP - startingMP);
         }
 
         cs->SetMP(newMP);
@@ -858,6 +874,7 @@ std::set<uint32_t> ActiveEntityState::AddStatusEffects(const AddStatusEffectMap&
         }
 
         // Perform insert or edit modifications
+        bool activateEffect = add;
         if(effect)
         {
             if(effect->GetExpiration() == 0)
@@ -900,24 +917,25 @@ std::set<uint32_t> ActiveEntityState::AddStatusEffects(const AddStatusEffectMap&
                 }
 
                 effect->SetExpiration(expiration);
+                activateEffect = true;
             }
         }
-    
+
         if(removeEffect)
         {
-            uint32_t rEffectID = removeEffect->GetEffect();
-            removes.insert(rEffectID);
-            mStatusEffects.erase(rEffectID);
-            mTimeDamageEffects.erase(rEffectID);
+            uint32_t rEffectType = removeEffect->GetEffect();
+            removes.insert(rEffectType);
+            mStatusEffects.erase(rEffectType);
+            mTimeDamageEffects.erase(rEffectType);
             if(mEffectsActive)
             {
                 // Remove any times associated to the status being removed
-                for(auto pair : mNextEffectTimes)
+                for(auto& pair : mNextEffectTimes)
                 {
                     // Skip system times
                     if(pair.first > 3)
                     {
-                        pair.second.erase(rEffectID);
+                        pair.second.erase(rEffectType);
                     }
                 }
 
@@ -925,28 +943,29 @@ std::set<uint32_t> ActiveEntityState::AddStatusEffects(const AddStatusEffectMap&
                 if(queueChanges)
                 {
                     // Non-system time 3 indicates removes
-                    mNextEffectTimes[3].insert(removeEffect->GetEffect());
+                    mNextEffectTimes[3].insert(rEffectType);
                 }
             }
         }
 
         if(effect)
         {
-            mStatusEffects[effect->GetEffect()] = effect;
+            uint32_t modEffectType = effect->GetEffect();
+            mStatusEffects[modEffectType] = effect;
             if(mEffectsActive)
             {
-                if(add)
+                if(activateEffect)
                 {
-                    ActivateStatusEffect(effect, definitionManager, now);
+                    ActivateStatusEffect(effect, definitionManager, now, !add);
                 }
 
                 // If changes are being queued or an effect other than the one
                 // we expected to add was affected (ex: inverse cancels), queue
                 // the change up
-                if(queueChanges || effectType != effect->GetEffect())
+                if(queueChanges || effectType != modEffectType)
                 {
                     // Add non-system time for add or update
-                    mNextEffectTimes[add ? 1 : 2].insert(effect->GetEffect());
+                    mNextEffectTimes[add ? 1 : 2].insert(modEffectType);
                 }
             }
         }
@@ -1041,7 +1060,7 @@ void ActiveEntityState::SetStatusEffectsActive(bool activate,
         // Set status effect expirations
         for(auto pair : mStatusEffects)
         {
-            ActivateStatusEffect(pair.second, definitionManager, now);
+            ActivateStatusEffect(pair.second, definitionManager, now, false);
         }
 
         RegisterNextEffectTime();
@@ -1378,9 +1397,22 @@ void ActiveEntityState::SetStatusEffects(
 
 void ActiveEntityState::ActivateStatusEffect(
     const std::shared_ptr<objects::StatusEffect>& effect,
-    libcomp::DefinitionManager* definitionManager, uint32_t now)
+    libcomp::DefinitionManager* definitionManager, uint32_t now, bool timeOnly)
 {
     auto effectType = effect->GetEffect();
+
+    if(timeOnly)
+    {
+        // Remove the current expiration
+        for(auto& pair : mNextEffectTimes)
+        {
+            // Skip system times
+            if(pair.first > 3)
+            {
+                pair.second.erase(effectType);
+            }
+        }
+    }
 
     auto se = definitionManager->GetStatusData(effectType);
     auto cancel = se->GetCancel();
@@ -1400,6 +1432,12 @@ void ActiveEntityState::ActivateStatusEffect(
                 mNextEffectTimes[effect->GetExpiration()].insert(effectType);
             }
             break;
+    }
+
+    if(timeOnly)
+    {
+        // Nothing more to do
+        return;
     }
 
     // Mark the cancel conditions

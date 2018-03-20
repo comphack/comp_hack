@@ -1439,7 +1439,7 @@ void ZoneManager::UpdateStatusEffectStates(const std::shared_ptr<Zone>& zone,
             auto cs = entity->GetCoreStats();
             int32_t hpAdjusted, mpAdjusted;
             if(entity->SetHPMP(-hpTDamage, -mpTDamage, true,
-                false, hpAdjusted, mpAdjusted))
+                false, 0, hpAdjusted, mpAdjusted))
             {
                 if(hpAdjusted < 0)
                 {

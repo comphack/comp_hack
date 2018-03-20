@@ -97,7 +97,7 @@ bool Parsers::ExpertiseDown::Parse(libcomp::ManagerPacket *pPacketManager,
             if(functionID == SVR_CONST.SKILL_EXPERT_CLASS_DOWN)
             {
                 // Remove one class
-                if(points > 100000)
+                if(points >= 100000)
                 {
                     remove = remove + 100000;
                 }
@@ -105,7 +105,7 @@ bool Parsers::ExpertiseDown::Parse(libcomp::ManagerPacket *pPacketManager,
             else if(functionID == SVR_CONST.SKILL_EXPERT_RANK_DOWN)
             {
                 // Remove one rank
-                if(points > 10000)
+                if(points >= 10000)
                 {
                     remove = remove + 10000;
                 }

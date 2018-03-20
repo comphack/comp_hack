@@ -143,7 +143,7 @@ void DemonSkillUpdate(const std::shared_ptr<ChannelServer> server,
     {
         server->GetTokuseiManager()->Recalculate(state->GetCharacterState(), true,
             std::set<int32_t>{ dState->GetEntityID() });
-        server->GetCharacterManager()->RecalculateStats(client, dState->GetEntityID());
+        server->GetCharacterManager()->RecalculateStats(dState, client);
     }
 }
 

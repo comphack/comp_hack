@@ -81,6 +81,7 @@ public:
      * maximum values supplied.
      * @param minVal Minimum value that can be generated
      * @param maxVal Maximum value that can be generated
+     * @param precision Number of decimal places to round by
      * @return Random decimal number between the minimum and maximum values
      */
     template <class T>

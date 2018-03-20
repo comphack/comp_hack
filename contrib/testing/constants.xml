@@ -46,6 +46,7 @@
     <constant name="SKILL_XP_SELF">327</constant>
     <constant name="SKILL_EQUIP_MOD_EDIT">329</constant>
     <constant name="SKILL_XP_PARTNER">334</constant>
+    <constant name="STATUS_DEATH">32</constant>
     <constant name="STATUS_SUMMON_SYNC_1">194</constant>
     <constant name="STATUS_SUMMON_SYNC_2">364</constant>
     <constant name="STATUS_SUMMON_SYNC_3">365</constant>

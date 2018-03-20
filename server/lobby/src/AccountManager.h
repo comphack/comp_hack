@@ -242,27 +242,34 @@ public:
         uint8_t cid, std::shared_ptr<LobbyServer>& server);
 
     /**
+     * Set a character on the specified account's character array and save it
+     * @param account Pointer to the account to create the character on
+     * @param character Pointer to the character to create
+     * @return true if the character was created and the account was updated,
+     *  false otherwise
+     */
+    bool SetCharacterOnAccount(const std::shared_ptr<objects::Account>& account,
+        const std::shared_ptr<objects::Character>& character);
+
+    /**
      * Get characters on an account with a KillTime that has passed.
      * This assumes characters have already been loaded and will not
      * load them if they are not.
-     * @param username Username of the account that the characters belong to.
-     * @return List of CIDs for characters to delete.
+     * @param account Pointer to the account to gather deletes for.
+     * @return List of pointers to characters to delete.
      */
-    std::list<uint8_t> GetCharactersForDeletion(
-        const libcomp::String& username);
+    std::list<std::shared_ptr<objects::Character>> GetCharactersForDeletion(
+        const std::shared_ptr<objects::Account>& account);
 
     /**
      * Delete a character by CID and update the Characters array on
      * the account.  This assumes the character has already been loaded and
      * will not load them if they are not.
-     * @param username Username of the account that the character belongs to.
-     * @param cid CID of the character to delete.
-     * @param server Pointer to the lobby server.
+     * @param character Pointer to the character to delete.
      * @return true if the character was deleted and the account was updated,
      *  false otherwise.
      */
-    bool DeleteCharacter(const libcomp::String& username,
-        uint8_t cid, std::shared_ptr<LobbyServer>& server);
+    bool DeleteCharacter(const std::shared_ptr<objects::Character>& character);
 
 protected:
     /**

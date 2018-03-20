@@ -75,14 +75,15 @@ bool Parsers::CharacterList::Parse(libcomp::ManagerPacket *pPacketManager,
     // Number of character tickets.
     reply.WriteU8(account->GetTicketCount());
 
-    std::list<std::shared_ptr<objects::Character>> characters;
+    std::set<std::shared_ptr<objects::Character>> characters;
     for(auto world : server->GetWorlds())
     {
         if(world->GetRegisteredWorld()->GetStatus()
             == objects::RegisteredWorld::Status_t::INACTIVE) continue;
 
         auto worldDB = world->GetWorldDatabase();
-        auto characterList = objects::Character::LoadCharacterListByAccount(worldDB, account);
+        auto characterList = objects::Character::LoadCharacterListByAccount(
+            worldDB, account);
         for(auto character : characterList)
         {
             // Always reload
@@ -99,72 +100,54 @@ bool Parsers::CharacterList::Parse(libcomp::ManagerPacket *pPacketManager,
 
             if(!loaded)
             {
-                LOG_ERROR(libcomp::String("Character CID %1 could not be loaded fully.\n")
-                    .Arg(character->GetCID()));
+                LOG_ERROR(libcomp::String("Character could not be loaded"
+                    " fully: %1\n").Arg(character->GetUUID().ToString()));
             }
             else
             {
-                characters.push_back(character);
+                characters.insert(character);
             }
         }
     }
-    characters.sort([](const std::shared_ptr<objects::Character>& a,
-        const std::shared_ptr<objects::Character>& b) { return a->GetCID() < b->GetCID(); });
 
-    //Correct the character array if needed
+    auto deletes = accountManager->GetCharactersForDeletion(account);
+    if(deletes.size() > 0)
+    {
+        // Handle deletes before continuing
+        for(auto deleteChar : deletes)
+        {
+            accountManager->DeleteCharacter(deleteChar);
+            characters.erase(deleteChar);
+        }
+    }
+
+    // Determine how many characters in the account have been loaded
+    uint8_t charCount = 0;
     if(characters.size() > 0)
     {
-        bool updated = false;
-        for(auto character : characters)
+        for(uint8_t cid = 0; cid < MAX_CHARACTER; cid++)
         {
-            auto cid = character->GetCID();
-            auto existing = account->GetCharacters(cid).Get();
-            if(existing != nullptr)
+            auto character = account->GetCharacters(cid).Get();
+            if(character)
             {
-                if(existing->GetUUID() != character->GetUUID())
-                {
-                    LOG_ERROR(libcomp::String("Duplicate CID %1 encountered for account %2\n")
-                        .Arg(cid)
-                        .Arg(account->GetUUID().ToString()));
-                    return false;
-                }
-            }
-            else
-            {
-                account->SetCharacters(cid, character);
-                updated = true;
-            }
-        }
-
-        if(updated)
-        {
-            if(!account->Update(lobbyDB))
-            {
-                LOG_ERROR(libcomp::String("Account character map failed to save %1\n")
-                    .Arg(account->GetUUID().ToString()));
-                return false;
+                charCount++;
             }
         }
     }
 
-    auto cidsToDelete = accountManager->GetCharactersForDeletion(account->GetUsername());
-
-    characters.remove_if([cidsToDelete]
-        (const std::shared_ptr<objects::Character>& character)
-        {
-            return std::find(cidsToDelete.begin(), cidsToDelete.end(), character->GetCID())
-                != cidsToDelete.end();
-        });
-
     // Number of characters.
-    reply.WriteU8(static_cast<uint8_t>(characters.size()));
+    reply.WriteU8(charCount);
 
-    for(auto character : characters)
+    for(uint8_t cid = 0; cid < MAX_CHARACTER; cid++)
     {
+        auto character = account->GetCharacters(cid).Get();
+
+        if(!character) continue;
+
         auto stats = character->GetCoreStats();
 
         // Character ID.
-        reply.WriteU8(character->GetCID());
+        reply.WriteU8(cid);
 
         // World ID.
         reply.WriteU8(character->GetWorldID());
@@ -253,17 +236,6 @@ bool Parsers::CharacterList::Parse(libcomp::ManagerPacket *pPacketManager,
     }
 
     connection->SendPacket(reply);
-
-    for(auto cid : cidsToDelete)
-    {
-        server->QueueWork([](const libcomp::String username,
-            uint8_t c, std::shared_ptr<LobbyServer> s)
-        {
-            s->GetAccountManager()->DeleteCharacter(username,
-                c, s);
-
-        }, account->GetUsername(), cid, server);
-    }
 
     return true;
 }

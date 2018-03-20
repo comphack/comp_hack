@@ -1380,8 +1380,9 @@ int8_t FusionManager::ProcessFusion(
 
     // Fusion success past this point, create the demon and update all old data
 
-    // Calculate familiarity and put either demon back in the COMP
-    // if they're out
+    // Calculate familiarity, store demons in the COMP and determine first
+    // slot to add the new demon to
+    int8_t newSlot = 10;
     uint16_t familiarity = 0;
     for(auto demon : { demon1, demon2, demon3 })
     {
@@ -1402,13 +1403,21 @@ int8_t FusionManager::ProcessFusion(
                         demonID3 > 0 ? 16 : 12);
                 }
             }
+
+            // The first demon alwayas belongs to the "host"
+            if(demon->GetDemonBox() == demon1->GetDemonBox() &&
+                newSlot > demon->GetBoxSlot())
+            {
+                newSlot = demon->GetBoxSlot();
+            }
         }
     }
 
     // Create the new demon
     resultDemon = characterManager->GenerateDemon(demonData,
         familiarity);
-        
+
+    // Determine skill inheritance
     auto inheritRestrictions = demonData->GetGrowth()->
         GetInheritanceRestrictions();
     std::map<uint32_t, std::shared_ptr<objects::MiSkillData>> inherited;
@@ -1451,8 +1460,8 @@ int8_t FusionManager::ProcessFusion(
     auto comp = character->GetCOMP().Get();
 
     resultDemon->SetDemonBox(comp);
-    resultDemon->SetBoxSlot(demon1->GetBoxSlot());
-    comp->SetDemons((size_t)demon1->GetBoxSlot(), resultDemon);
+    resultDemon->SetBoxSlot(newSlot);
+    comp->SetDemons((size_t)newSlot, resultDemon);
 
     // Prepare the updates and generate the inherited skills
     auto changes = libcomp::DatabaseChangeSet::Create(

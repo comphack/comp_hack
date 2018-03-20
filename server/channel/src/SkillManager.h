@@ -411,6 +411,20 @@ private:
         const std::shared_ptr<channel::ProcessingSkill>& pSkill);
 
     /**
+     * Get the critical level of a skill that is being calculated for
+     * damage and has already been determined as a hit. This should not
+     * be called if the skill fundamentally will never crit such as if
+     * it is a healing skill.
+     * @param source Pointer to the entity that activated the skill
+     * @param target Pointer to the entity that will receive damage
+     * @param pSkill Pointer to the current skill processing state
+     * @return 0 for no crit, 1 for normal crit, 2 for limit break
+     */
+    uint8_t GetCritLevel(const std::shared_ptr<ActiveEntityState>& source,
+        SkillTargetResult& target, const std::shared_ptr<
+        channel::ProcessingSkill>& pSkill);
+
+    /**
      * Calculate skill damage or healing using the default formula
      * @param source Pointer to the entity that activated the skill
      * @param target Pointer to the entity that will receive damage

@@ -714,7 +714,7 @@ bool AccountManager::UpdateKillTime(const libcomp::String& username,
             else
             {
                 // Delete the character now
-                return DeleteCharacter(username, cid, server);
+                return DeleteCharacter(character.Get());
             }
         }
 
@@ -730,12 +730,50 @@ bool AccountManager::UpdateKillTime(const libcomp::String& username,
     return false;
 }
 
-std::list<uint8_t> AccountManager::GetCharactersForDeletion(const libcomp::String& username)
+bool AccountManager::SetCharacterOnAccount(
+    const std::shared_ptr<objects::Account>& account,
+    const std::shared_ptr<objects::Character>& character)
 {
-    std::list<uint8_t> cids;
+    // We need to be careful when creating characters so we
+    // do not orphan any when inserting
+    std::lock_guard<std::mutex> lock(mAccountLock);
 
-    auto login = GetUserLogin(username);
-    auto account = login->GetAccount();
+    auto characters = account->GetCharacters();
+    
+    uint8_t nextCID = 0;
+    for(; nextCID < MAX_CHARACTER; nextCID++)
+    {
+        if(characters[nextCID].IsNull())
+        {
+            // Character found
+            break;
+        }
+    }
+
+    if(nextCID == MAX_CHARACTER)
+    {
+        LOG_ERROR(libcomp::String("Character failed to be created on"
+            " account: %1\n").Arg(account->GetUUID().ToString()));
+        return false;
+    }
+
+    if(!account->SetCharacters(nextCID, character) ||
+        !account->Update(mServer->GetMainDatabase()))
+    {
+        LOG_ERROR(libcomp::String("Account character array failed to save"
+            " for account %1\n").Arg(account->GetUUID().ToString()));
+        return false;
+    }
+
+    return true;
+}
+
+std::list<std::shared_ptr<objects::Character>>
+    AccountManager::GetCharactersForDeletion(const std::shared_ptr<
+        objects::Account>& account)
+{
+    std::list<std::shared_ptr<objects::Character>> deletes;
+
     auto characters = account->GetCharacters();
 
     time_t now = time(0);
@@ -744,65 +782,91 @@ std::list<uint8_t> AccountManager::GetCharactersForDeletion(const libcomp::Strin
         if(character.Get() && character->GetKillTime() != 0 &&
             character->GetKillTime() <= (uint32_t)now)
         {
-            cids.push_back(character->GetCID());
+            deletes.push_back(character.Get());
         }
     }
 
-    return cids;
+    return deletes;
 }
 
-bool AccountManager::DeleteCharacter(const libcomp::String& username, uint8_t cid,
-    std::shared_ptr<LobbyServer>& server)
+bool AccountManager::DeleteCharacter(const std::shared_ptr<
+    objects::Character>& character)
 {
-    auto login = GetUserLogin(username);
-    auto account = login->GetAccount();
+    // We need to be careful when deleting characters so we
+    // do not orphan any when reindexing etc
+    std::lock_guard<std::mutex> lock(mAccountLock);
+
+    auto account = character->GetAccount().Get();
     auto characters = account->GetCharacters();
-    auto deleteCharacter = characters[cid];
-    if(deleteCharacter.Get())
+
+    uint8_t cid = 0;
+    for(; cid < MAX_CHARACTER; cid++)
     {
-        auto world = server->GetWorldByID(deleteCharacter->GetWorldID());
-        auto worldDB = world->GetWorldDatabase();
-
-        if(!deleteCharacter->Delete(worldDB))
+        if(characters[cid].GetUUID() == character->GetUUID())
         {
-            LOG_ERROR(libcomp::String("Character failed to delete: %1\n").Arg(
-                deleteCharacter->GetUUID().ToString()));
-            return false;
+            // Character found
+            break;
         }
-
-        characters[cid].SetReference(nullptr);
-        account->SetCharacters(characters);
-
-        if(!account->Update(server->GetMainDatabase()))
-        {
-            LOG_ERROR(libcomp::String("Account failed to update after character"
-                " deletion: %1\n").Arg(deleteCharacter->GetUUID().ToString()));
-            return false;
-        }
-
-        // If there is not characters left make sure the account has a
-        // character ticket.
-        int count = 0;
-
-        for(auto c : characters)
-        {
-            if(!c.IsNull())
-            {
-                count++;
-            }
-        }
-
-        if(0 == count && 0 == account->GetTicketCount())
-        {
-            account->SetTicketCount(1);
-
-            return account->Update(server->GetMainDatabase());
-        }
-
-        return true;
     }
 
-    return false;
+    if(cid == MAX_CHARACTER)
+    {
+        LOG_ERROR(libcomp::String("Attempted to delete a character"
+            " no longer associated to its parent account: %1\n").Arg(
+            character->GetUUID().ToString()));
+        return false;
+    }
+
+    auto world = mServer->GetWorldByID(character->GetWorldID());
+    auto worldDB = world ? world->GetWorldDatabase() : nullptr;
+
+    if(!worldDB || !character->Delete(worldDB))
+    {
+        LOG_ERROR(libcomp::String("Character failed to delete: %1\n").Arg(
+            character->GetUUID().ToString()));
+        return false;
+    }
+
+    // Bump all characters down the list
+    for(; cid < MAX_CHARACTER; cid++)
+    {
+        if(cid == (size_t)(MAX_CHARACTER - 1))
+        {
+            characters[cid].SetReference(nullptr);
+        }
+        else
+        {
+            characters[cid] = characters[(size_t)(cid + 1)];
+        }
+    }
+
+    account->SetCharacters(characters);
+
+    // If there are no characters left make sure the account has a
+    // character ticket.
+    int count = 0;
+
+    for(auto c : characters)
+    {
+        if(!c.IsNull())
+        {
+            count++;
+        }
+    }
+
+    if(0 == count && 0 == account->GetTicketCount())
+    {
+        account->SetTicketCount(1);
+    }
+
+    if(!account->Update(mServer->GetMainDatabase()))
+    {
+        LOG_ERROR(libcomp::String("Account failed to update after character"
+            " deletion: %1\n").Arg(character->GetUUID().ToString()));
+        return false;
+    }
+
+    return true;
 }
 
 void AccountManager::PrintAccounts() const

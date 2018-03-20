@@ -216,7 +216,7 @@ void Zone::RemoveEntity(int32_t entityID, uint32_t spawnDelay)
     {
         std::lock_guard<std::mutex> lock(mLock);
 
-        std::shared_ptr<objects::Enemy> removeEnemy;
+        std::shared_ptr<EnemyState> removeEnemy;
         switch(state->GetEntityType())
         {
         case objects::EntityStateObject::EntityType_t::ENEMY:
@@ -226,8 +226,7 @@ void Zone::RemoveEntity(int32_t entityID, uint32_t spawnDelay)
                         return e->GetEntityID() == entityID;
                     });
 
-                removeEnemy = std::dynamic_pointer_cast<EnemyState>(state)
-                    ->GetEntity();
+                removeEnemy = std::dynamic_pointer_cast<EnemyState>(state);
             }
             break;
         case objects::EntityStateObject::EntityType_t::LOOT_BOX:
@@ -265,23 +264,25 @@ void Zone::RemoveEntity(int32_t entityID, uint32_t spawnDelay)
 
         if(removeEnemy)
         {
-            uint32_t sgID = removeEnemy ? removeEnemy->GetSpawnGroupID() : 0;
-            uint32_t slgID = removeEnemy ? removeEnemy->GetSpawnLocationGroupID() : 0;
+            auto enemy = removeEnemy->GetEntity();
+
+            uint32_t sgID = enemy->GetSpawnGroupID();
             if(sgID)
             {
                 mSpawnGroups[sgID].remove_if([removeEnemy](
                     const std::shared_ptr<EnemyState>& e)
                     {
-                        return e->GetEntity() == removeEnemy;
+                        return e == removeEnemy;
                     });
             }
 
+            uint32_t slgID = enemy->GetSpawnLocationGroupID();
             if(slgID)
             {
                 mSpawnLocationGroups[slgID].remove_if([removeEnemy](
                     const std::shared_ptr<EnemyState>& e)
                     {
-                        return e->GetEntity() == removeEnemy;
+                        return e == removeEnemy;
                     });
 
                 auto slg = mServerZone->GetSpawnLocationGroups(slgID);
@@ -302,6 +303,19 @@ void Zone::RemoveEntity(int32_t entityID, uint32_t spawnDelay)
                             1000000.0 + (double)(spawnDelay * 1000));
 
                     mRespawnTimes[rTime].insert(slgID);
+                }
+            }
+
+            uint32_t encounterID = enemy->GetEncounterID();
+            if(encounterID)
+            {
+                // Remove if the encounter exists but do not remove
+                // the encounter itself until EcnounterDefeated is
+                // called
+                auto eIter = mEncounters.find(encounterID);
+                if(eIter != mEncounters.end())
+                {
+                    eIter->second.erase(removeEnemy);
                 }
             }
         }

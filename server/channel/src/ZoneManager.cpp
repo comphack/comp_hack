@@ -1439,7 +1439,7 @@ void ZoneManager::UpdateStatusEffectStates(const std::shared_ptr<Zone>& zone,
             auto cs = entity->GetCoreStats();
             int32_t hpAdjusted, mpAdjusted;
             if(entity->SetHPMP(-hpTDamage, -mpTDamage, true,
-                false, hpAdjusted, mpAdjusted))
+                false, 0, hpAdjusted, mpAdjusted))
             {
                 if(hpAdjusted < 0)
                 {
@@ -1483,16 +1483,15 @@ void ZoneManager::UpdateStatusEffectStates(const std::shared_ptr<Zone>& zone,
         ChannelClientConnection::BroadcastPackets(zConnections, zonePackets);
     }
 
-    for(auto entity : statusRemoved)
+    for(auto eState : statusRemoved)
     {
         // Make sure T-damage is sent first
         // Status add/update and world update handled when applying changes
-        server->GetTokuseiManager()->Recalculate(entity, true,
-            std::set<int32_t>{ entity->GetEntityID() });
-        if(characterManager->RecalculateStats(nullptr, entity->GetEntityID()) &
-            ENTITY_CALC_STAT_WORLD)
+        server->GetTokuseiManager()->Recalculate(eState, true,
+            std::set<int32_t>{ eState->GetEntityID() });
+        if(characterManager->RecalculateStats(eState) & ENTITY_CALC_STAT_WORLD)
         {
-            displayStateModified.erase(entity);
+            displayStateModified.erase(eState);
         }
     }
     

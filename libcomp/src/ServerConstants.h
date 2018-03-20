@@ -198,6 +198,9 @@ struct Data
     /// Function ID of self granting XP skills
     uint16_t SKILL_XP_SELF;
 
+    /// Status effect ID of instant death
+    uint32_t STATUS_DEATH;
+
     /// Status effect ID of summon sync level 1
     uint32_t STATUS_SUMMON_SYNC_1;
 

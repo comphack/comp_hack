@@ -85,10 +85,12 @@ void HandleBarter(const std::shared_ptr<ChannelServer> server,
                 spAdjust = (int32_t)(spAdjust - itemData->GetSubtype());
                 break;
             case objects::MiNPCBarterItemData::Type_t::BETHEL:
-                /// @todo: for now just don't pay bethel
+                LOG_ERROR("Bethel bartering not yet supported\n");
+                failed = true;
                 break;
             case objects::MiNPCBarterItemData::Type_t::COIN:
-                /// @todo: for now just don't pay coins
+                LOG_ERROR("Coin bartering not yet supported\n");
+                failed = true;
                 break;
             case objects::MiNPCBarterItemData::Type_t::NONE:
                 break;

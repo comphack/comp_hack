@@ -697,6 +697,16 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
         }
     }
 
+    // If the active demon is somehow not valid, clear it
+    if(!character->GetActiveDemon().IsNull() &&
+        character->GetActiveDemon().Get() == nullptr)
+    {
+        LOG_WARNING(libcomp::String("Unassigning unknown"
+            " active demon from character: %1\n")
+            .Arg(character->GetUUID().ToString()));
+        character->SetActiveDemon(NULLUUID);
+    }
+
     // Hotbar
     for(auto hotbar : character->GetHotbars())
     {

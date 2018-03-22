@@ -144,7 +144,7 @@ bool AIManager::Prepare(const std::shared_ptr<ActiveEntityState>& eState,
             aiEngine = it->second;
         }
 
-        Sqrat::Function f(Sqrat::RootTable(aiState->GetScript()->GetVM()), "prepare");
+        Sqrat::Function f(Sqrat::RootTable(aiEngine->GetVM()), "prepare");
         if(!f.IsNull())
         {
             auto result = !f.IsNull() ? f.Evaluate<int>(eState, this) : 0;

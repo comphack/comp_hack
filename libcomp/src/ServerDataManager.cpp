@@ -318,7 +318,13 @@ namespace libcomp
         {
             return false;
         }
-    
+
+        if(event->GetID().IsEmpty())
+        {
+            LOG_ERROR("Event with no ID encountered\n");
+            return false;
+        }
+
         auto id = std::string(event->GetID().C());
         if(mEventData.find(id) != mEventData.end())
         {

@@ -110,6 +110,11 @@ bool Parsers::ExpertiseDown::Parse(libcomp::ManagerPacket *pPacketManager,
                     remove = remove + 10000;
                 }
             }
+            else
+            {
+                // Shouldn't happen
+                remove = 0;
+            }
 
             bool success = remove > 0;
             if(success)

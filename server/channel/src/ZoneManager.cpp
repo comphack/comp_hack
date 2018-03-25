@@ -1844,9 +1844,12 @@ bool ZoneManager::UpdateSpawnGroups(const std::shared_ptr<Zone>& zone,
             spotID = actionSource->GetSpotID();
         }
 
+        std::shared_ptr<objects::SpawnLocationGroup> slg;
+
         if(slgID)
         {
-            auto slg = zoneDef->GetSpawnLocationGroups(slgID);
+            slg = zoneDef->GetSpawnLocationGroups(slgID);
+
             if(!slg)
             {
                 LOG_WARNING(libcomp::String("Skipping invalid spawn location"
@@ -1934,62 +1937,39 @@ bool ZoneManager::UpdateSpawnGroups(const std::shared_ptr<Zone>& zone,
             eStateGroup = &eStateGroups.back();
         }
 
+        bool isSpread = slg && slg->GetSpotSelection() ==
+            objects::SpawnLocationGroup::SpotSelection_t::SPREAD;
+
         // Create each enemy at a random position in the same location
         std::shared_ptr<channel::ZoneSpotShape> spot;
         std::shared_ptr<objects::SpawnLocation> location;
-        if(useSpotID)
+
+        if(!isSpread && !SelectSpotAndLocation(useSpotID, spotID, spotIDs,
+            spot, location, dynamicMap, zoneDef, locations))
         {
-            if(!spotID)
-            {
-                auto spotIter = spotIDs.begin();
-                if(spotIDs.size() > 1)
-                {
-                    size_t randomIdx = (size_t)RNG(int32_t, 0,
-                        (int32_t)(spotIDs.size()-1));
-                    std::advance(spotIter, randomIdx);
-                }
+            LOG_ERROR(libcomp::String("Failed to spawn group %1 at"
+                " unknown spot %2\n").Arg(sgID).Arg(spotID));
 
-                spotID = *spotIter;
-            }
-
-            auto spotPair = dynamicMap->Spots.find(spotID);
-            if(spotPair != dynamicMap->Spots.end())
-            {
-                spot = spotPair->second;
-
-                // If the spot is defined with a spawn area, use that as
-                // the AI wandering region
-                auto serverSpot = zoneDef->GetSpots(spotID);
-                if(serverSpot)
-                {
-                    location = serverSpot->GetSpawnArea();
-                }
-            }
-            else
-            {
-                LOG_ERROR(libcomp::String("Failed to spawn group %1 at"
-                    " unknown spot %2\n").Arg(sgID).Arg(spotID));
-                continue;
-            }
+            continue;
         }
-        else
-        {
-            auto locIter = locations.begin();
-            if(locations.size() > 1)
-            {
-                size_t randomIdx = (size_t)RNG(int32_t, 0,
-                    (int32_t)(locations.size()-1));
-                std::advance(locIter, randomIdx);
-            }
 
-            location = *locIter;
-        }
+        bool locationFailed = false;
 
         for(auto sPair : sg->GetSpawns())
         {
             auto spawn = zoneDef->GetSpawns(sPair.first);
             for(uint16_t i = 0; i < sPair.second; i++)
             {
+                if(isSpread && !SelectSpotAndLocation(useSpotID, spotID,
+                    spotIDs, spot, location, dynamicMap, zoneDef, locations))
+                {
+                    LOG_ERROR(libcomp::String("Failed to spawn group %1 at"
+                        " unknown spot %2\n").Arg(sgID).Arg(spotID));
+
+                    locationFailed = true;
+                    break;
+                }
+
                 float x = 0.f, y = 0.f;
                 if(useSpotID)
                 {
@@ -2037,7 +2017,23 @@ bool ZoneManager::UpdateSpawnGroups(const std::shared_ptr<Zone>& zone,
                 enemy->SetSpawnLocationGroupID(slgID);
 
                 eStateGroup->push_back(eState);
+
+                // If this is a spread clear the spot ID so we start again.
+                if(isSpread)
+                {
+                    spotID = 0;
+                }
             }
+
+            if(locationFailed)
+            {
+                break;
+            }
+        }
+
+        if(locationFailed)
+        {
+            continue;
         }
 
         if(sg->SpawnActionsCount() > 0)
@@ -2104,6 +2100,63 @@ bool ZoneManager::UpdateSpawnGroups(const std::shared_ptr<Zone>& zone,
     }
 
     return false;
+}
+
+bool ZoneManager::SelectSpotAndLocation(bool useSpotID, uint32_t& spotID,
+    const std::set<uint32_t>& spotIDs,
+    std::shared_ptr<channel::ZoneSpotShape>& spot,
+    std::shared_ptr<objects::SpawnLocation>& location,
+    std::shared_ptr<DynamicMap>& dynamicMap,
+    std::shared_ptr<objects::ServerZone>& zoneDef,
+    std::list<std::shared_ptr<objects::SpawnLocation>>& locations)
+{
+    if(useSpotID)
+    {
+        if(!spotID)
+        {
+            auto spotIter = spotIDs.begin();
+            if(spotIDs.size() > 1)
+            {
+                size_t randomIdx = (size_t)RNG(int32_t, 0,
+                    (int32_t)(spotIDs.size()-1));
+                std::advance(spotIter, randomIdx);
+            }
+
+            spotID = *spotIter;
+        }
+
+        auto spotPair = dynamicMap->Spots.find(spotID);
+        if(spotPair != dynamicMap->Spots.end())
+        {
+            spot = spotPair->second;
+
+            // If the spot is defined with a spawn area, use that as
+            // the AI wandering region
+            auto serverSpot = zoneDef->GetSpots(spotID);
+            if(serverSpot)
+            {
+                location = serverSpot->GetSpawnArea();
+            }
+        }
+        else
+        {
+            return false;
+        }
+    }
+    else
+    {
+        auto locIter = locations.begin();
+        if(locations.size() > 1)
+        {
+            size_t randomIdx = (size_t)RNG(int32_t, 0,
+                (int32_t)(locations.size()-1));
+            std::advance(locIter, randomIdx);
+        }
+
+        location = *locIter;
+    }
+
+    return true;
 }
 
 bool ZoneManager::UpdatePlasma(const std::shared_ptr<Zone>& zone, uint64_t now)

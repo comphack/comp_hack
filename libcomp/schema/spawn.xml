@@ -52,6 +52,10 @@
         <member type="set" name="SpotIDs">
             <element type="u32"/>
         </member>
+        <member type="enum" name="SpotSelection" default="RANDOM">
+            <value>RANDOM</value>
+            <value>SPREAD</value>
+        </member>
         <member type="list" name="Locations">
             <element type="SpawnLocation*"/>
         </member>

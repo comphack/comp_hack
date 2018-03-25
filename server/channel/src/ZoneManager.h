@@ -495,6 +495,26 @@ public:
 
 private:
     /**
+     * Select a spot for a spawn group and get it's location.
+     * @param useSpotID If the spot ID should be used.
+     * @param spotID Selected spot ID.
+     * @param spot Selected spot.
+     * @param location Location of the selected spot.
+     * @param dynamicMap Dynamic map data for the zone.
+     * @param zoneDef Definition for the zone.
+     * @param locations Spawn locations.
+     * @returns true if the spot was found; false on error.
+     * @note This is called by @ref UpdateSpawnGroups.
+     */
+    bool SelectSpotAndLocation(bool useSpotID, uint32_t& spotID,
+        const std::set<uint32_t>& spotIDs,
+        std::shared_ptr<channel::ZoneSpotShape>& spot,
+        std::shared_ptr<objects::SpawnLocation>& location,
+        std::shared_ptr<DynamicMap>& dynamicMap,
+        std::shared_ptr<objects::ServerZone>& zoneDef,
+        std::list<std::shared_ptr<objects::SpawnLocation>>& locations);
+
+    /**
      * Create an enemy in the specified zone at set coordinates
      * @param zone Pointer to the zone where the enemy should be spawned
      * @param demonID Demon/enemy type ID to spawn

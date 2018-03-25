@@ -318,7 +318,8 @@ bool LoginHandler::HandlePage(CivetServer *pServer,
     }
     else // nut or html
     {
-        libcomp::String page(&pageData[0], pageData.size());
+        pageData.push_back(0);
+        libcomp::String page(&pageData[0]);
 
         if(".nut" == uri.Right(strlen(".nut")))
         {

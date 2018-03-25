@@ -63,7 +63,7 @@ bool TimerEventComp::operator()(const TimerEvent *lhs,
     return lhs->time < rhs->time;
 }
 
-TimerManager::TimerManager() : mRunning(true)
+TimerManager::TimerManager() : mRunning(true), mProcessingEvents(false)
 {
     mRunThread = std::thread([&]()
     {
@@ -100,6 +100,8 @@ void TimerManager::ProcessEvents(std::unique_lock<std::mutex>& lock)
     auto now = std::chrono::steady_clock::now();
 
     std::list<TimerEvent*> periodicals;
+
+    mProcessingEvents = true;
 
     while(!mEvents.empty())
     {
@@ -142,6 +144,8 @@ void TimerManager::ProcessEvents(std::unique_lock<std::mutex>& lock)
     {
         mEvents.insert(pEvent);
     }
+
+    mProcessingEvents = false;
 }
 
 void TimerManager::WaitForEvent(std::unique_lock<std::mutex>& lock)
@@ -192,6 +196,14 @@ TimerEvent* TimerManager::RegisterPeriodicEvent(const std::chrono::milliseconds&
 void TimerManager::CancelEvent(TimerEvent *pEvent)
 {
     std::unique_lock<std::mutex> lock(mEventLock);
+
+    // If the event is being processed we can't cancel but if the event
+    // is periodic we can keep it from happening next time.
+    if(mProcessingEvents)
+    {
+        pEvent->mIsPeriodic = false;
+        return;
+    }
 
     auto it = mEvents.find(pEvent);
 

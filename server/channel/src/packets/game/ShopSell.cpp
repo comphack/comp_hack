@@ -258,8 +258,11 @@ bool Parsers::ShopSell::Parse(libcomp::ManagerPacket *pPacketManager,
 
     for(int32_t i = 0; i < itemCount; i++)
     {
+        auto itemID = p.ReadS64Little();
+        auto stackSize = p.ReadU32Little();
+
         itemsSold.push_back(std::pair<uint32_t, int64_t>(
-            p.ReadU32Little(), p.ReadS64Little()));
+            stackSize, itemID));
     }
 
     auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);

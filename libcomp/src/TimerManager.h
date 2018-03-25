@@ -118,6 +118,7 @@ private:
     void WaitForEvent(std::unique_lock<std::mutex>& lock);
 
     volatile bool mRunning;
+    volatile bool mProcessingEvents;
     std::multiset<TimerEvent*, TimerEventComp> mEvents;
     std::condition_variable mEventCondition;
     std::mutex mEventLock;

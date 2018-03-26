@@ -45,11 +45,17 @@ void SendStateData(std::shared_ptr<ChannelServer> server,
     const std::shared_ptr<ChannelClientConnection> client)
 {
     auto state = client->GetClientState();
+    auto cState = state->GetCharacterState();
     auto cLogin = state->GetAccountLogin()->GetCharacterLogin();
     auto characterManager = server->GetCharacterManager();
+    auto tokuseiManager = server->GetTokuseiManager();
 
     characterManager->SendCharacterData(client);
+
     characterManager->SetStatusIcon(client);
+
+    tokuseiManager->SendCostAdjustments(cState->GetEntityID(),
+        client);
 
     // If we're already in a party, send party member info to rejoin
     // the existing one if possible

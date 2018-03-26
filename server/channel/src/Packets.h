@@ -207,6 +207,7 @@ PACKET_PARSER_DECL(SearchEntryInfo);        // 0x03A3
 PACKET_PARSER_DECL(HouraiData);             // 0x03A5
 PACKET_PARSER_DECL(CultureData);            // 0x03AC
 PACKET_PARSER_DECL(EquipmentModEdit);       // 0x03CB
+PACKET_PARSER_DECL(PAttributeDeadline);     // 0x03EA
 PACKET_PARSER_DECL(DemonDepoList);          // 0x03F5
 PACKET_PARSER_DECL(Barter);                 // 0x03FE
 PACKET_PARSER_DECL(Blacklist);              // 0x0408

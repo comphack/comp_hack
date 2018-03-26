@@ -5,6 +5,7 @@
         <member type="bool" name="LoggedIn"/>
         <member type="bool" name="LogoutSave" default="true"/>
         <member type="bool" name="AcceptRevival"/>
+        <member type="u32" name="ZoneInSpotID"/>
         <member type="AccountLogin*" name="AccountLogin"/>
         <member type="AccountWorldData*" name="AccountWorldData"/>
         <member type="EventState*" name="EventState"/>
@@ -15,6 +16,12 @@
         <member type="set" name="QuestTargetEnemies">
             <element type="u32"/>
         </member>
+    </object>
+    <object name="ClientCostAdjustment" persistent="false">
+        <member type="u8" name="Category"/>
+        <member type="u32" name="Type"/>
+        <member type="u8" name="HPCost" default="100"/>
+        <member type="u8" name="MPCost" default="100"/>
     </object>
     <object name="EventState" persistent="false">
         <member type="EventInstance*" name="Current" nulldefault="true"/>

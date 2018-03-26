@@ -426,6 +426,35 @@ bool ZoneManager::EnterZone(const std::shared_ptr<ChannelClientConnection>& clie
     auto ticks = server->GetServerTime();
     auto zoneDef = nextZone->GetDefinition();
 
+    // Clear then set the zone-in spot for instances
+    state->SetZoneInSpotID(0);
+    if(nextInstance)
+    {
+        auto dynamicMap = nextZone->GetDynamicMap();
+
+        if(dynamicMap)
+        {
+            auto spots = server->GetDefinitionManager()
+                ->GetSpotData(zoneDef->GetDynamicMapID());
+            for(auto spotPair : spots)
+            {
+                auto spot = spotPair.second;
+                auto spotIter = dynamicMap->Spots.find(spotPair.first);
+
+                // Filter valid zone-in spots only
+                if(spot->GetType() == 3 && spotIter != dynamicMap->Spots.end())
+                {
+                    if(PointInPolygon(Point(xCoord, yCoord),
+                        spotIter->second->Vertices))
+                    {
+                        state->SetZoneInSpotID(spotPair.first);
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
     // Move the entity to the new location.
     cState->SetOriginX(xCoord);
     cState->SetOriginY(yCoord);
@@ -952,6 +981,14 @@ void ZoneManager::ShowEntityToZone(const std::shared_ptr<Zone>& zone, int32_t en
     p.WriteS32Little(entityID);
 
     BroadcastPacket(zone, p);
+
+    // If its an active entity, set it as displayed
+    auto activeState = zone->GetActiveEntity(entityID);
+    if(activeState)
+    {
+        activeState->SetDisplayState(
+            objects::ActiveEntityStateObject::DisplayState_t::ACTIVE);
+    }
 }
 
 void ZoneManager::PopEntityForProduction(const std::shared_ptr<
@@ -1319,7 +1356,8 @@ void ZoneManager::SendEnemyData(const std::shared_ptr<ChannelClientConnection>& 
     for(auto zClient : clients)
     {
         zClient->QueuePacketCopy(p);
-        PopEntityForProduction(zClient, enemyState->GetEntityID(), 3, true);
+        PopEntityForProduction(zClient, enemyState->GetEntityID(),
+            sendToAll ? 3 : 0, true);
         ShowEntity(zClient, enemyState->GetEntityID(), true);
     }
 

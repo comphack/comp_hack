@@ -349,9 +349,12 @@ public:
     /**
      * Check if the entity state has everything needed to start
      * being used.
+     * @param ignoreDisplayState Optional parameter to ignore the display state
+     *  of the entity and return true if the entity is at least set, defaults
+     *  to false
      * @return true if the state is ready to use, otherwise false
      */
-    virtual bool Ready();
+    virtual bool Ready(bool ignoreDisplayState = false);
 
     /**
      * Get the zone the entity currently exists in.
@@ -846,9 +849,11 @@ public:
 
     virtual uint8_t GetLNCType();
 
-    virtual bool Ready()
+    virtual bool Ready(bool ignoreDisplayState = false)
     {
-        return mEntity != nullptr;
+        return mEntity != nullptr &&
+            (ignoreDisplayState || GetDisplayState() ==
+            objects::ActiveEntityStateObject::DisplayState_t::ACTIVE);
     }
 
 private:

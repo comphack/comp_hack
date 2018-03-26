@@ -84,6 +84,7 @@
 #include <PlayerExchangeSession.h>
 #include <ServerZone.h>
 #include <StatusEffect.h>
+#include <WorldSharedConfig.h>
 
 using namespace channel;
 
@@ -245,6 +246,13 @@ void CharacterManager::SendCharacterData(const std::shared_ptr<
     }
 
     client->SendPacket(reply);
+
+    if(cState->GetDisplayState() ==
+        objects::ActiveEntityStateObject::DisplayState_t::DATA_NOT_SENT)
+    {
+        cState->SetDisplayState(
+            objects::ActiveEntityStateObject::DisplayState_t::DATA_SENT);
+    }
 }
 
 void CharacterManager::SendOtherCharacterData(const std::list<std::shared_ptr<
@@ -503,6 +511,13 @@ void CharacterManager::SendPartnerData(const std::shared_ptr<
     reply.WriteS32Little(0);
 
     client->SendPacket(reply);
+
+    if(dState->GetDisplayState() ==
+        objects::ActiveEntityStateObject::DisplayState_t::DATA_NOT_SENT)
+    {
+        dState->SetDisplayState(
+            objects::ActiveEntityStateObject::DisplayState_t::DATA_SENT);
+    }
 }
 
 void CharacterManager::SendOtherPartnerData(const std::list<std::shared_ptr<
@@ -841,7 +856,7 @@ void CharacterManager::SendMovementSpeed(const std::shared_ptr<
         libcomp::Packet p;
         p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_RUN_SPEED);
         p.WriteS32Little(eState->GetEntityID());
-        p.WriteFloat(eState->GetMovementSpeed(false));
+        p.WriteFloat(eState->GetMovementSpeed());
 
         if(queue)
         {
@@ -883,6 +898,11 @@ void CharacterManager::SummonDemon(const std::shared_ptr<
     character->SetActiveDemon(demon);
     dState->SetEntity(demon, def);
     dState->RefreshLearningSkills(0, definitionManager);
+
+    // Mark that the demon state has not been fully summoned yet so
+    // the summon effect only displays once
+    dState->SetDisplayState(
+        objects::ActiveEntityStateObject::DisplayState_t::AWAITING_SUMMON);
 
     // If the character and demon share alignment, apply summon sync
     if(cState->GetLNCType() == dState->GetLNCType())
@@ -967,8 +987,6 @@ void CharacterManager::SummonDemon(const std::shared_ptr<
     reply.WriteS64Little(demonID);
 
     client->QueuePacket(reply);
-
-    SendMovementSpeed(client, dState, true);
 
     client->FlushOutgoing();
 
@@ -1337,8 +1355,11 @@ bool CharacterManager::AddRemoveItems(const std::shared_ptr<
     auto dbChanges = libcomp::DatabaseChangeSet::Create(
         state->GetAccountUID());
 
-    bool autoCompress = add && std::dynamic_pointer_cast<
-        objects::ChannelConfig>(server->GetConfig())->GetAutoCompressCurrency();
+    static bool autoCompressCurrenty = std::dynamic_pointer_cast<
+        objects::ChannelConfig>(server->GetConfig())
+        ->GetWorldSharedConfig()->GetAutoCompressCurrency();
+
+    bool autoCompress = add && autoCompressCurrenty;
     if(autoCompress)
     {
         // Compress macca
@@ -1901,6 +1922,12 @@ bool CharacterManager::CreateLootFromDrops(const std::shared_ptr<objects::LootBo
                 100.f * (float)(((double)luck / 30.0) * 10.0 * (double)luck) /
                 (1000.0 + 7.0 * (double)luck + (deltaDiff * deltaDiff))));
         }
+
+        const static float globalDropBonus = std::dynamic_pointer_cast<
+            objects::ChannelConfig>(mServer.lock()->GetConfig())
+            ->GetWorldSharedConfig()->GetDropRateBonus();
+
+        dropRate = (uint32_t)((double)dropRate * (double)(1.f + globalDropBonus));
 
         if(dropRate >= 10000 || RNG(uint16_t, 1, 10000) <= dropRate ||
             (minLast && itemStacks.size() == 0 && drops.back() == drop))
@@ -4216,7 +4243,7 @@ libcomp::EnumMap<CorrectTbl, int16_t> CharacterManager::GetCharacterBaseStatMap(
 
     // Default all the rates to 100%
     for(uint8_t i = (uint8_t)CorrectTbl::RATE_XP;
-        i < (uint8_t)CorrectTbl::RATE_SUPPORT_TAKEN; i++)
+        i < (uint8_t)CorrectTbl::RATE_HEAL_TAKEN; i++)
     {
         stats[(CorrectTbl)i] = 100;
     }

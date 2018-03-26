@@ -6,7 +6,6 @@
             <value>CURRENT_HP</value>
             <value>CURRENT_MP</value>
             <value>DIGITALIZED</value>
-            <value>EQUIPPED</value>
             <value>EQUIPPED_WEAPON_TYPE</value>
             <value>EXPERTISE</value>
             <value>LNC</value>
@@ -45,11 +44,14 @@
             <value>AFFINITY</value>
             <value>ACTION_TYPE</value>
             <value>SKILL_CLASS</value>
+            <value>SKILL_EXPERTISE</value>
             <value>DEMON_TYPE</value>
             <value>DEMON_FAMILY</value>
             <value>DEMON_RACE</value>
             <value>DEMON_TITLE</value>
             <value>DEMON_PARTNER_MATCH</value>
+            <value>ENEMY_EQUIPPED</value>
+            <value>ENEMY_FACTION</value>
             <value>ENEMY_GENDER</value>
             <value>ENEMY_LNC</value>
         </member>
@@ -67,7 +69,6 @@
         </member>
         <member type="s32" name="MultiplierValue"/>
         <member type="u8" name="Precision" default="0"/>
-        <member type="string" name="ScriptID"/>
     </object>
     <object name="TokuseiCorrectTbl" baseobject="MiCorrectTbl"
         persistent="false">
@@ -87,21 +88,27 @@
             <value>TALK_RATE</value>
 
             <!-- Skill Processing -->
+            <value>AFFINITY_CAP_MAX</value>
+            <value>CLENCH_CHANCE</value>
+            <value>CLENCH_REFLECT_CHANCE</value>
             <value>DAMAGE_DEALT</value>
+            <value>DAMAGE_MIN</value>
             <value>DAMAGE_TAKEN</value>
             <value>HP_COST_ADJUST</value>
+            <value>KNOCKBACK_RECOVERY</value>
+            <value>KNOCKBACK_REMOVE</value>
             <value>KNOCKBACK_STATUS_ADD</value>
             <value>LIMIT_BREAK_MAX</value>
             <value>MP_COST_ADJUST</value>
             <value>PURSUIT_AFFINITY_OVERRIDE</value>
             <value>SKILL_STACK_ADJUST</value>
             <value>SKILL_ITEM_STACK_ADJUST</value>
-            <value>SKILL_TARGET_OUTCOME</value>
             <value>STATUS_INFLICT_ADJUST</value>
             <value>WEAPON_AFFINITY_OVERRIDE</value>
 
             <!-- Action Nullification -->
             <value>CAST_INTERRUPT_NULL</value>
+            <value>COMBAT_SPEED_NULL</value>
             <value>HITSTUN_NULL</value>
             <value>KNOCKBACK_NULL</value>
             <value>STATUS_NULL</value>
@@ -119,10 +126,7 @@
             <value>DIGITALIZE_POINT_RATE</value>
 
             <!-- Misc -->
-            <value>AFFINITY_CAP_MAX</value>
-            <value>CLENCH_CHANCE</value>
             <value>CONSTANT_STATUS</value>
-            <value>KNOCKBACK_RECOVERY</value>
             <value>SUMMON_STATUS</value>
             <value>SUMMON_SYNC_EXTEND</value>
         </member>

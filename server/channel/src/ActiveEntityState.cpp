@@ -171,7 +171,7 @@ void ActiveEntityState::Rotate(float rot, uint64_t now)
 
         // One complete rotation takes 1650ms at 300.0f speed
         uint64_t addMicro = (uint64_t)(495000.0f /
-            GetMovementSpeed(mOpponentIDs.size() > 0)) * 1000;
+            GetMovementSpeed()) * 1000;
         SetDestinationTicks(now + addMicro);
     }
 }
@@ -271,8 +271,28 @@ float ActiveEntityState::GetDistance(float x, float y, bool squared)
 
 float ActiveEntityState::GetMovementSpeed(bool altSpeed)
 {
-    return (float)(GetCorrectValue(
-        altSpeed ? CorrectTbl::MOVE1 : CorrectTbl::MOVE2) * 10.f);
+    int16_t speed = 0;
+    if(altSpeed)
+    {
+        // Get alternate "walk" speed
+        speed = GetCorrectValue(CorrectTbl::MOVE1);
+    }
+    else if((mOpponentIDs.size() > 0 || GetActivatedAbility() != nullptr) &&
+        !GetCalculatedState()->ExistingTokuseiAspectsContains(
+            (int8_t)TokuseiAspectType::COMBAT_SPEED_NULL))
+    {
+        // If in combat or using a skill and combat speed is not nullified
+        // (which is a non-conditional tokusei), get the combat run speed
+        // which should be equal to the default run speed of the entity
+        speed = GetCombatRunSpeed();
+    }
+    else
+    {
+        // Get the normal run speed
+        speed = GetCorrectValue(CorrectTbl::MOVE2);
+    }
+
+    return (float)(speed * 10.f);
 }
 
 void ActiveEntityState::RefreshCurrentPosition(uint64_t now)
@@ -496,7 +516,7 @@ bool ActiveEntityState::SetHPMP(int32_t hp, int32_t mp, bool adjust,
     // If the amount of damage dealt can overflow, do not
     // use the actual damage dealt, allow it to go
     // over the actual amount dealt
-    if(canOverflow)
+    if(canOverflow && adjust)
     {
         hpAdjusted = hp;
         mpAdjusted = mp;
@@ -544,9 +564,21 @@ bool ActiveEntityState::SetHPMP(int32_t hp, int32_t mp, bool adjust,
             mp = 0;
         }
     }
+    else
+    {
+        // Return exact HP/MP adjustment
+        if(hp >= 0)
+        {
+            hpAdjusted = hp - startingHP;
+        }
+
+        if(mp >= 0)
+        {
+            mpAdjusted = mp - startingMP;
+        }
+    }
 
     bool result = false;
-    bool returnDamaged = !adjust || !canOverflow;
     if(hp >= 0)
     {
         auto newHP = hp > maxHP ? maxHP : hp;
@@ -556,15 +588,15 @@ bool ActiveEntityState::SetHPMP(int32_t hp, int32_t mp, bool adjust,
         {
             mAlive = false;
             Stop(ChannelServer::GetServerTime());
-            result = !returnDamaged;
+            result = true;
         }
         else if(startingHP == 0 && newHP > 0)
         {
             mAlive = true;
-            result = !returnDamaged;
+            result = true;
         }
 
-        result |= returnDamaged && newHP != startingHP;
+        result |= !canOverflow && newHP != startingHP;
         
         if(!canOverflow)
         {
@@ -577,7 +609,7 @@ bool ActiveEntityState::SetHPMP(int32_t hp, int32_t mp, bool adjust,
     if(mp >= 0)
     {
         auto newMP = mp > maxMP ? maxMP : mp;
-        result |= returnDamaged && newMP != startingMP;
+        result |= !canOverflow && newMP != startingMP;
         
         if(!canOverflow)
         {
@@ -1589,8 +1621,10 @@ std::shared_ptr<objects::EntityStats> ActiveEntityState::GetCoreStats()
     return nullptr;
 }
 
-bool ActiveEntityState::Ready()
+bool ActiveEntityState::Ready(bool ignoreDisplayState)
 {
+    (void)ignoreDisplayState;
+
     return false;
 }
 
@@ -1636,6 +1670,14 @@ void ActiveEntityStateImp<objects::Character>::SetEntity(
         // Character should always be set but check just in case
         effects = entity->GetStatusEffects();
         mAlive = entity->GetCoreStats()->GetHP() > 0;
+
+        SetDisplayState(
+            objects::ActiveEntityStateObject::DisplayState_t::DATA_NOT_SENT);
+    }
+    else
+    {
+        SetDisplayState(
+            objects::ActiveEntityStateObject::DisplayState_t::NOT_SET);
     }
 
     SetStatusEffects(effects);
@@ -1660,6 +1702,14 @@ void ActiveEntityStateImp<objects::Demon>::SetEntity(
     {
         effects = entity->GetStatusEffects();
         mAlive = entity->GetCoreStats()->GetHP() > 0;
+
+        SetDisplayState(
+            objects::ActiveEntityStateObject::DisplayState_t::DATA_NOT_SENT);
+    }
+    else
+    {
+        SetDisplayState(
+            objects::ActiveEntityStateObject::DisplayState_t::NOT_SET);
     }
 
     SetStatusEffects(effects);
@@ -1688,6 +1738,14 @@ void ActiveEntityStateImp<objects::Enemy>::SetEntity(
     if(entity)
     {
         mAlive = entity->GetCoreStats()->GetHP() > 0;
+
+        SetDisplayState(
+            objects::ActiveEntityStateObject::DisplayState_t::DATA_NOT_SENT);
+    }
+    else
+    {
+        SetDisplayState(
+            objects::ActiveEntityStateObject::DisplayState_t::NOT_SET);
     }
 
     SetDevilData(devilData);
@@ -1876,6 +1934,7 @@ uint8_t ActiveEntityStateImp<objects::Character>::RecalculateStats(
     if(selfState && !mInitialCalc)
     {
         SetKnockbackResist((float)stats[CorrectTbl::KNOCKBACK_RESIST]);
+        SetCombatRunSpeed(stats[CorrectTbl::MOVE2]);
         mInitialCalc = true;
     }
 
@@ -2346,7 +2405,8 @@ void ActiveEntityState::GetAdditionalCorrectTbls(
     for(auto tPair : calcState->GetEffectiveTokusei())
     {
         auto tokusei = definitionManager->GetTokuseiData(tPair.first);
-        if(tokusei && tokusei->CorrectValuesCount() > 0)
+        if(tokusei && (tokusei->CorrectValuesCount() > 0 ||
+            tokusei->TokuseiCorrectValuesCount() > 0))
         {
             // Add the entries once for each source applying them
             for(uint16_t i = 0; i < tPair.second; i++)
@@ -2403,6 +2463,7 @@ uint8_t ActiveEntityState::RecalculateDemonStats(
     if(selfState && !mInitialCalc)
     {
         SetKnockbackResist((float)stats[CorrectTbl::KNOCKBACK_RESIST]);
+        SetCombatRunSpeed(stats[CorrectTbl::MOVE2]);
         mInitialCalc = true;
     }
 

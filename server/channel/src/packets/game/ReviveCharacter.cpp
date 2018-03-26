@@ -38,8 +38,11 @@
 #include <math.h>
 
 // object Includes
+#include <ChannelConfig.h>
 #include <ItemBox.h>
+#include <MiSpotData.h>
 #include <ServerZone.h>
+#include <WorldSharedConfig.h>
 
 // channel Includes
 #include "ChannelServer.h"
@@ -112,7 +115,7 @@ bool Parsers::ReviveCharacter::Parse(libcomp::ManagerPacket *pPacketManager,
             }
         }
         break;
-    case 105:   // Dungeon entrance
+    case 105:   // Dungeon entrance/last zone-in point
         {
             responseType1 = REVIVAL_REVIVE_AND_WAIT;
             responseType2 = REVIVAL_REVIVE_DONE;
@@ -126,13 +129,32 @@ bool Parsers::ReviveCharacter::Parse(libcomp::ManagerPacket *pPacketManager,
                     (double)(0.02 - (0.00005 * cs->GetLevel())));
             }
 
-            // Move to entrance
+            // Move to entrance unless a zone-in spot overrides it
             auto zone = cState->GetZone();
             auto zoneDef = zone->GetDefinition();
             newZoneID = zoneDef->GetID();
             newX = zoneDef->GetStartingX();
             newY = zoneDef->GetStartingY();
             newRot = zoneDef->GetStartingRotation();
+
+            uint32_t spotID = state->GetZoneInSpotID();
+            if(spotID)
+            {
+                auto definitionManager = server->GetDefinitionManager();
+                auto zoneData = definitionManager->GetZoneData(
+                    zoneDef->GetID());
+                auto spots = definitionManager->GetSpotData(zoneDef
+                    ->GetDynamicMapID());
+                auto spotIter = spots.find(spotID);
+                if(spotIter != spots.end())
+                {
+                    Point point = zoneManager->GetRandomSpotPoint(
+                        spotIter->second, zoneData);
+                    newX = point.x;
+                    newY = point.y;
+                    newRot = spotIter->second->GetRotation();
+                }
+            }
         }
         break;
     case 107:   // Item revival
@@ -168,7 +190,11 @@ bool Parsers::ReviveCharacter::Parse(libcomp::ManagerPacket *pPacketManager,
         break;
     }
 
-    if(xpLoss > 0)
+    const static bool deathPenaltyDisabled = std::dynamic_pointer_cast<
+        objects::ChannelConfig>(server->GetConfig())->GetWorldSharedConfig()
+        ->GetDeathPenaltyDisabled();
+
+    if(xpLoss > 0 && !deathPenaltyDisabled)
     {
         if(xpLoss > cs->GetXP())
         {

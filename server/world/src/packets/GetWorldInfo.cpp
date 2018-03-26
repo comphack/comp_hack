@@ -37,8 +37,11 @@
 #include <ReadOnlyPacket.h>
 #include <TcpConnection.h>
 
+// object Includes
+#include <WorldConfig.h>
+#include <WorldSharedConfig.h>
+
 // world Includes
-#include "WorldConfig.h"
 #include "WorldServer.h"
 
 using namespace world;
@@ -141,6 +144,7 @@ bool Parsers::GetWorldInfo::Parse(libcomp::ManagerPacket *pPacketManager,
         if(!fromLobby)
         {
             server->GetLobbyDatabase()->GetConfig()->SavePacket(reply, false);
+            config->GetWorldSharedConfig()->SavePacket(reply, false);
         }
     }
 

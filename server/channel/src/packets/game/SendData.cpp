@@ -39,6 +39,7 @@
 #include <Account.h>
 #include <ServerZone.h>
 #include <ChannelConfig.h>
+#include <WorldSharedConfig.h>
 
 // channel Includes
 #include "ChannelServer.h"
@@ -90,13 +91,26 @@ void SendClientReadyData(std::shared_ptr<ChannelServer> server,
         server->SendSystemMessage(client, systemMessage, 0, false);
     }
 
-    libcomp::String compShopMessage = conf->GetCOMPShopMessage();
+    auto worldSharedConfig = conf->GetWorldSharedConfig();
+    libcomp::String compShopMessage = worldSharedConfig->GetCOMPShopMessage();
     if(!compShopMessage.IsEmpty())
     {
         server->SendSystemMessage(client, compShopMessage, 4, false);
     }
 
-    /// @todo: send "world bonus" [0x0405]
+    // Send client recognized world bonuses
+    {
+        /// @todo: identify more of these
+        libcomp::Packet p;
+        p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_WORLD_BONUS);
+        p.WriteS32Little(1);
+
+        p.WriteS32Little(2);    // Type
+        p.WriteFloat(worldSharedConfig->GetDeathPenaltyDisabled() ? 0.f : 1.f);
+
+        client->QueuePacket(p);
+    }
+
     /// @todo: send player skill updates (toggleable abilities for example) [0x03B8]
 
     // Set character icon
@@ -171,8 +185,6 @@ void SendClientReadyData(std::shared_ptr<ChannelServer> server,
 
         client->QueuePacket(p);
     }
-
-    /// @todo: send skill cost rate [0x019E]
 
     {
         libcomp::Packet p;

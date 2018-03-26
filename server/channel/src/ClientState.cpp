@@ -39,6 +39,7 @@
 #include <AccountWorldData.h>
 #include <BazaarData.h>
 #include <CharacterLogin.h>
+#include <ClientCostAdjustment.h>
 
 // channel Includes
 #include "ChannelServer.h"
@@ -93,7 +94,8 @@ std::shared_ptr<ActiveEntityState> ClientState::GetEntityState(int32_t entityID,
         mDemonState };
     for(auto state : states)
     {
-        if(state->GetEntityID() == entityID && (!readyOnly || state->Ready()))
+        if(state->GetEntityID() == entityID && (!readyOnly ||
+            state->Ready(true)))
         {
             return state;
         }
@@ -150,7 +152,7 @@ bool ClientState::Register()
 
 int64_t ClientState::GetObjectID(const libobjgen::UUID& uuid)
 {
-    std::lock_guard<std::mutex> lock(sLock);
+    std::lock_guard<std::mutex> lock(mLock);
     auto uuidStr = uuid.ToString();
 
     auto iter = mObjectIDs.find(uuidStr);
@@ -164,7 +166,7 @@ int64_t ClientState::GetObjectID(const libobjgen::UUID& uuid)
 
 const libobjgen::UUID ClientState::GetObjectUUID(int64_t objectID)
 {
-    std::lock_guard<std::mutex> lock(sLock);
+    std::lock_guard<std::mutex> lock(mLock);
     auto iter = mObjectUUIDs.find(objectID);
     if(iter != mObjectUUIDs.end())
     {
@@ -176,7 +178,7 @@ const libobjgen::UUID ClientState::GetObjectUUID(int64_t objectID)
 
 int32_t ClientState::GetLocalObjectID(const libobjgen::UUID& uuid)
 {
-    std::lock_guard<std::mutex> lock(sLock);
+    std::lock_guard<std::mutex> lock(mLock);
     auto uuidStr = uuid.ToString();
 
     auto iter = mLocalObjectIDs.find(uuidStr);
@@ -194,7 +196,7 @@ int32_t ClientState::GetLocalObjectID(const libobjgen::UUID& uuid)
 
 const libobjgen::UUID ClientState::GetLocalObjectUUID(int32_t objectID)
 {
-    std::lock_guard<std::mutex> lock(sLock);
+    std::lock_guard<std::mutex> lock(mLock);
     auto iter = mLocalObjectUUIDs.find(objectID);
     if(iter != mLocalObjectUUIDs.end())
     {
@@ -331,4 +333,86 @@ ClientState* ClientState::GetEntityClientState(int32_t id, bool worldID)
     std::unordered_map<int32_t, ClientState*>& m = sEntityClients[worldID];
     auto it = m.find(id);
     return it != m.end() ? it->second : nullptr;
+}
+
+std::list<std::shared_ptr<objects::ClientCostAdjustment>>
+    ClientState::SetCostAdjustments(int32_t entityID, std::list<
+    std::shared_ptr<objects::ClientCostAdjustment>> adjustments)
+{
+    std::list<std::shared_ptr<objects::ClientCostAdjustment>> updates;
+
+    std::lock_guard<std::mutex> lock(mLock);
+
+    // Store old and set new
+    auto current = mCostAdjustments[entityID];
+    if(adjustments.size() == 0)
+    {
+        // No new adjustments
+        mCostAdjustments.erase(entityID);
+
+        if(current.size() == 0)
+        {
+            // No updates
+            return updates;
+        }
+    }
+    else
+    {
+        // New adjustments exist
+        mCostAdjustments[entityID] = adjustments;
+    }
+
+    // Compare and set updates
+    for(auto adjust : adjustments)
+    {
+        std::shared_ptr<objects::ClientCostAdjustment> match;
+        for(auto it = current.begin(); it != current.end(); it++)
+        {
+            if((*it)->GetCategory() == adjust->GetCategory() &&
+                (*it)->GetType() == adjust->GetType())
+            {
+                match = *it;
+                current.erase(it);
+                break;
+            }
+        }
+
+        if(match)
+        {
+            if(match->GetHPCost() != adjust->GetHPCost() ||
+                match->GetMPCost() != adjust->GetMPCost())
+            {
+                // Updated
+                updates.push_back(adjust);
+            }
+        }
+        else if(adjust->GetHPCost() != 100 || adjust->GetMPCost() != 100)
+        {
+            // Newly set
+            updates.push_back(adjust);
+        }
+    }
+
+    // Create removals from leftover changes
+    for(auto c : current)
+    {
+        if(c->GetHPCost() != 100 || c->GetMPCost() != 100)
+        {
+            auto defaultCost = std::make_shared<objects::ClientCostAdjustment>();
+            defaultCost->SetCategory(c->GetCategory());
+            defaultCost->SetType(c->GetType());
+            updates.push_back(defaultCost);
+        }
+    }
+
+    return updates;
+}
+
+std::list<std::shared_ptr<objects::ClientCostAdjustment>>
+    ClientState::GetCostAdjustments(int32_t entityID)
+{
+    std::lock_guard<std::mutex> lock(mLock);
+    auto it = mCostAdjustments.find(entityID);
+    return it != mCostAdjustments.end() ? it->second
+        : std::list<std::shared_ptr<objects::ClientCostAdjustment>>();
 }

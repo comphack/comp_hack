@@ -134,6 +134,8 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     CalculatedEntityState.cpp
     ChannelConfig.h
     ChannelConfig.cpp
+    ClientCostAdjustment.h
+    ClientCostAdjustment.cpp
     ClientStateObject.h
     ClientStateObject.cpp
     EntityStateObject.h
@@ -327,6 +329,7 @@ SET(${PROJECT_NAME}_PACKETS
     src/packets/game/HouraiData.cpp             # 0x03A5
     src/packets/game/CultureData.cpp            # 0x03AC
     src/packets/game/EquipmentModEdit.cpp       # 0x03CB
+    src/packets/game/PAttributeDeadline.cpp     # 0x03EA
     src/packets/game/DemonDepoList.cpp          # 0x03F5
     src/packets/game/Barter.cpp                 # 0x03FE
     src/packets/game/Blacklist.cpp              # 0x0408

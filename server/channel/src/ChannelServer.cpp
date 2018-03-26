@@ -467,6 +467,8 @@ bool ChannelServer::Initialize()
         to_underlying(ClientToChannelPacketCode_t::PACKET_CULTURE_DATA));
     clientPacketManager->AddParser<Parsers::EquipmentModEdit>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_EQUIPMENT_MOD_EDIT));
+    clientPacketManager->AddParser<Parsers::PAttributeDeadline>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_PATTRIBUTE_DEADLINE));
     clientPacketManager->AddParser<Parsers::DemonDepoList>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_DEMON_DEPO_LIST));
     clientPacketManager->AddParser<Parsers::Barter>(
@@ -996,6 +998,24 @@ bool ChannelServer::SendSystemMessage(const std::shared_ptr<
         mManagerConnection->BroadcastPacketToClients(p);
     }
     return true;
+}
+
+int32_t ChannelServer::GetPAttributeDeadline()
+{
+    time_t systemTime = std::time(0);
+    tm* t = gmtime(&systemTime);
+
+    int systemDay = t->tm_wday;
+    int systemHour = t->tm_hour;
+    int systemMinutes = t->tm_min;
+    int systemSeconds = t->tm_sec;
+
+    // Get the system time for midnight of the next Monday
+    int32_t deadlineDelta = ((7 - systemDay) * 86400) + ((23 - systemHour) * 3600) +
+        ((59 - systemMinutes) * 60) + systemSeconds;
+    int32_t deadline = (int32_t)systemTime + deadlineDelta;
+
+    return deadline;
 }
 
 ChannelServer::PersistentObjectMap

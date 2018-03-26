@@ -43,6 +43,11 @@ namespace libcomp
 class Packet;
 }
 
+namespace objects
+{
+class ClientCostAdjustment;
+}
+
 namespace channel
 {
 
@@ -94,7 +99,7 @@ public:
      * Get the entity state associated to an entity ID for this client.
      * @param entityID Entity ID associated to this client to retrieve
      * @param readyOnly Optional parameter to only return entities
-     *  currently active, defaults to true
+     *  currently set, defaults to false
      * @return Pointer to the matching entity state, null if no match
      *  exists
      */
@@ -255,6 +260,26 @@ public:
     static ClientState* GetEntityClientState(int32_t id,
         bool worldID = false);
 
+    /**
+     * Set a client entity's cost adjustments and return the newly modified
+     * values. If a cost adjustment was removed, a default cost will adjustment
+     * will be generated and returned.
+     * @param entityID Entity ID associated to the client
+     * @param adjustments List of cost adjustments
+     * @return List of adjustments that are now applied to the entity
+     */
+    std::list<std::shared_ptr<objects::ClientCostAdjustment>>
+        SetCostAdjustments(int32_t entityID, std::list<
+        std::shared_ptr<objects::ClientCostAdjustment>> adjustments);
+
+    /**
+     * Get a client entity's current cost adjustments
+     * @param entityID Entity ID associated to the client
+     * @return List of adjustments that are currently applied to the entity
+     */
+    std::list<std::shared_ptr<objects::ClientCostAdjustment>>
+        GetCostAdjustments(int32_t entityID);
+
 private:
     /// Static registry of all client states sorted as world (true) or
     /// local entity IDs (false) and their respective IDs
@@ -284,6 +309,10 @@ private:
     /// Map of game client object IDs to UUIDs
     /// The IDs listed here are only relevant to this client
     std::unordered_map<int32_t, libobjgen::UUID> mLocalObjectUUIDs;
+
+    /// Map of client entity IDs to cost adjustments
+    std::unordered_map<int32_t, std::list<
+        std::shared_ptr<objects::ClientCostAdjustment>>> mCostAdjustments;
 
     /// Current time of the server set upon creating the client
     /// state.

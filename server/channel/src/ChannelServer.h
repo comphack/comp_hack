@@ -327,6 +327,15 @@ public:
         libcomp::String message, int8_t type, bool broadcast);
 
     /**
+     * Get the system time deadline for all punitive attributes
+     * which matches midnight of the next Monday. Punitive atributes
+     * are used for time restricted actions such as participation in
+     * the "invoke" events.
+     * @return System time respresenting the punitive attribute deadline
+     */
+    int32_t GetPAttributeDeadline();
+
+    /**
      * Get the default character creation object map.
      * @return Default character creation object map
      */

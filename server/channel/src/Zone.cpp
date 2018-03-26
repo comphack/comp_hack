@@ -363,6 +363,9 @@ void Zone::AddEnemy(const std::shared_ptr<EnemyState>& enemy)
                 }
             }
         }
+
+        enemy->SetDisplayState(objects::ActiveEntityStateObject::
+            DisplayState_t::ACTIVE);
     }
     RegisterEntityState(enemy);
 }

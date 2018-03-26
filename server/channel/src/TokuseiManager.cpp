@@ -29,10 +29,12 @@
 
 // libcomp Includes
 #include <Log.h>
+#include <PacketCodes.h>
 
 // object Includes
 #include <CalculatedEntityState.h>
 #include <Clan.h>
+#include <ClientCostAdjustment.h>
 #include <EnchantSetData.h>
 #include <Expertise.h>
 #include <Item.h>
@@ -55,12 +57,12 @@
 #include <TokuseiAttributes.h>
 #include <TokuseiCondition.h>
 #include <TokuseiCorrectTbl.h>
-#include <TokuseiSkillCondition.h>
 
 // C++ Standard Includes
 #include <cmath>
 
 // channel Includes
+#include "ChannelClientConnection.h"
 #include "ChannelServer.h"
 #include "ServerConstants.h"
 #include "Zone.h"
@@ -113,8 +115,14 @@ bool TokuseiManager::Initialize()
             }
             else if(aspect->GetType() == TokuseiAspectType::CONSTANT_STATUS)
             {
-                // Also keep track of constant status effect sources
+                // Keep track of constant status effect sources
                 mStatusEffectTokusei[(uint32_t)aspect->GetValue()].insert(tPair.first);
+            }
+            else if(aspect->GetType() == TokuseiAspectType::HP_COST_ADJUST ||
+                aspect->GetType() == TokuseiAspectType::MP_COST_ADJUST)
+            {
+                // Keep track of cost adjustment tokusei
+                mCostAdjustmentTokusei.insert(tPair.first);
             }
         }
 
@@ -171,6 +179,7 @@ bool TokuseiManager::Initialize()
             for(auto aspect : tPair.second->GetAspects())
             {
                 if(aspect->GetType() == TokuseiAspectType::BETHEL_RATE ||
+                    aspect->GetType() == TokuseiAspectType::COMBAT_SPEED_NULL ||
                     aspect->GetType() == TokuseiAspectType::CONSTANT_STATUS ||
                     aspect->GetType() == TokuseiAspectType::FAMILIARITY_UP_RATE ||
                     aspect->GetType() == TokuseiAspectType::FAMILIARITY_DOWN_RATE ||
@@ -213,6 +222,52 @@ bool TokuseiManager::Initialize()
                 LOG_ERROR(libcomp::String("Skill tokusei encountered with an"
                     " unsupported skill adjustment: %1\n").Arg(tPair.first));
                 return false;
+            }
+
+            // Verify that cost adjustments only include a specific sub-set of
+            // condition types and comparators communicable to the client
+            if(mCostAdjustmentTokusei.find(tPair.first) !=
+                mCostAdjustmentTokusei.end())
+            {
+                std::set<uint8_t> optionGroupIDs;
+                for(auto condition : tPair.second->GetSkillConditions())
+                {
+                    auto ogID = condition->GetOptionGroupID();
+                    switch(condition->GetSkillConditionType())
+                    {
+                    case TokuseiSkillConditionType::EXPLICIT_SKILL:
+                    case TokuseiSkillConditionType::AFFINITY:
+                    case TokuseiSkillConditionType::ACTION_TYPE:
+                    case TokuseiSkillConditionType::SKILL_CLASS:
+                    case TokuseiSkillConditionType::SKILL_EXPERTISE:
+                        if(optionGroupIDs.find(ogID) != optionGroupIDs.end())
+                        {
+                            LOG_ERROR(libcomp::String("Tokusei encountered with"
+                                " cost reduction aspects and complex skill"
+                                " conditions: %1\n").Arg(tPair.first));
+                            return false;
+                        }
+                        else
+                        {
+                            optionGroupIDs.insert(ogID);
+                        }
+                        break;
+                    default:
+                        LOG_ERROR(libcomp::String("Skill tokusei encountered"
+                            " with cost reduction and unsupported skill"
+                            " condition: %1\n").Arg(tPair.first));
+                        return false;
+                    }
+
+                    if(condition->GetComparator() !=
+                        objects::TokuseiCondition::Comparator_t::EQUALS)
+                    {
+                        LOG_ERROR(libcomp::String("Skill tokusei encountered"
+                            " with cost reduction and comparator other than"
+                            " equals: %1\n").Arg(tPair.first));
+                        return false;
+                    }
+                }
             }
         }
 
@@ -495,6 +550,9 @@ std::unordered_map<int32_t, bool> TokuseiManager::Recalculate(const std::list<st
     // Keep track of direct timed tokusei on all player entities
     std::unordered_map<int32_t, std::set<int32_t>> playerEntityTimedTokusei;
 
+    // Keep track of aspects encountered to avoid having to loop multiple times
+    std::unordered_map<int32_t, std::set<int8_t>> aspectMap;
+
     for(auto eState : entities)
     {
         result[eState->GetEntityID()] = false;
@@ -531,6 +589,11 @@ std::unordered_map<int32_t, bool> TokuseiManager::Recalculate(const std::list<st
                     mTimedTokusei.find(tokuseiID) != mTimedTokusei.end())
                 {
                     playerEntityTimedTokusei[worldCID].insert(tokuseiID);
+                }
+
+                for(auto aspect : tokusei->GetAspects())
+                {
+                    aspectMap[tokuseiID].insert((int8_t)aspect->GetType());
                 }
 
                 for(auto condition : tokusei->GetConditions())
@@ -701,10 +764,28 @@ std::unordered_map<int32_t, bool> TokuseiManager::Recalculate(const std::list<st
         if(updated)
         {
             auto& effective = newMaps[eState->GetEntityID()][false];
+            auto& skillPending = newMaps[eState->GetEntityID()][true];
             calcState->SetEffectiveTokusei(effective);
-            calcState->SetPendingSkillTokusei(newMaps[eState->GetEntityID()][true]);
+            calcState->SetPendingSkillTokusei(skillPending);
             calcState->ClearEffectiveTokuseiFinal();
             calcState->ClearPendingSkillTokuseiFinal();
+
+            // Gather all possible aspects on the entity for quick
+            // reference later
+            std::set<int8_t> aspects;
+            for(auto& aPair : aspectMap)
+            {
+                if(effective.find(aPair.first) != effective.end() ||
+                    skillPending.find(aPair.first) != skillPending.end())
+                {
+                    for(int8_t aspect : aPair.second)
+                    {
+                        aspects.insert(aspect);
+                    }
+                }
+            }
+
+            eState->GetCalculatedState()->SetExistingTokuseiAspects(aspects);
 
             // Update constant status effects
             AddStatusEffectMap m;
@@ -742,6 +823,8 @@ std::unordered_map<int32_t, bool> TokuseiManager::Recalculate(const std::list<st
             }
 
             updatedEntities.push_back(eState);
+
+            RecalcCostAdjustments(eState);
         }
     }
 
@@ -1109,31 +1192,6 @@ bool TokuseiManager::EvaluateTokuseiCondition(const std::shared_ptr<ActiveEntity
         /// @todo: implement once digitalization is supported
         return false;
         break;
-    case TokuseiConditionType::EQUIPPED:
-        // Entity is a character and has the specified item equipped
-        if(numericCompare ||
-            eState->GetEntityType() != objects::EntityStateObject::EntityType_t::CHARACTER)
-        {
-            return false;
-        }
-        else
-        {
-            auto cState = std::dynamic_pointer_cast<CharacterState>(eState);
-
-            bool equipped = false;
-            for(auto equip : cState->GetEntity()->GetEquippedItems())
-            {
-                if(!equip.IsNull() && equip->GetType() == (uint32_t)condition->GetValue())
-                {
-                    equipped = true;
-                    break;
-                }
-            }
-
-            return equipped == (condition->GetComparator() ==
-                objects::TokuseiCondition::Comparator_t::EQUALS);
-        }
-        break;
     case TokuseiConditionType::EQUIPPED_WEAPON_TYPE:
         // Entity is a character and has the specified weapon type equipped
         if(numericCompare ||
@@ -1475,13 +1533,18 @@ double TokuseiManager::GetAspectSum(const std::shared_ptr<ActiveEntityState>& eS
     double sum = 0.0;
     if(eState)
     {
-        auto definitionManager = mServer.lock()->GetDefinitionManager();
-
         if(!calcState)
         {
             calcState = eState->GetCalculatedState();
         }
 
+        // If the aspect does not exist, quit here
+        if(!calcState->ExistingTokuseiAspectsContains((int8_t)type))
+        {
+            return sum;
+        }
+
+        auto definitionManager = mServer.lock()->GetDefinitionManager();
         auto effectiveTokusei = calcState->GetEffectiveTokuseiFinal();
         for(auto pair : effectiveTokusei)
         {
@@ -1527,13 +1590,18 @@ std::unordered_map<int32_t, double> TokuseiManager::GetAspectMap(
 
     if(eState)
     {
-        auto definitionManager = mServer.lock()->GetDefinitionManager();
-
         if(!calcState)
         {
             calcState = eState->GetCalculatedState();
         }
 
+        // If the aspect does not exist, quit here
+        if(!calcState->ExistingTokuseiAspectsContains((int8_t)type))
+        {
+            return result;
+        }
+
+        auto definitionManager = mServer.lock()->GetDefinitionManager();
         auto effectiveTokusei = calcState->GetEffectiveTokuseiFinal();
         for(auto pair : effectiveTokusei)
         {
@@ -1577,13 +1645,18 @@ std::list<double> TokuseiManager::GetAspectValueList(const std::shared_ptr<
     std::list<double> result;
     if(eState)
     {
-        auto definitionManager = mServer.lock()->GetDefinitionManager();
-
         if(!calcState)
         {
             calcState = eState->GetCalculatedState();
         }
 
+        // If the aspect does not exist, quit here
+        if(!calcState->ExistingTokuseiAspectsContains((int8_t)type))
+        {
+            return result;
+        }
+
+        auto definitionManager = mServer.lock()->GetDefinitionManager();
         auto effectiveTokusei = calcState->GetEffectiveTokuseiFinal();
         for(auto pair : effectiveTokusei)
         {
@@ -1687,6 +1760,211 @@ void TokuseiManager::RemoveTrackingEntities(int32_t worldCID)
 {
     std::lock_guard<std::mutex> lock(mTimeLock);
     mTimedTokuseiEntities.erase(worldCID);
+}
+
+void TokuseiManager::SendCostAdjustments(int32_t entityID,
+    const std::shared_ptr<ChannelClientConnection>& client)
+{
+    if(client)
+    {
+        auto state = client->GetClientState();
+        auto adjustments = state->GetCostAdjustments(entityID);
+        SendCostAdjustments(entityID, adjustments, client);
+    }
+}
+
+void TokuseiManager::RecalcCostAdjustments(const std::shared_ptr<
+    ActiveEntityState>& eState)
+{
+    int32_t entityID = eState->GetEntityID();
+    auto state = ClientState::GetEntityClientState(entityID, false);
+    if(!state)
+    {
+        return;
+    }
+
+    auto calcState = eState->GetCalculatedState();
+    auto definitionManager = mServer.lock()->GetDefinitionManager();
+
+    std::map<uint8_t, std::map<uint32_t,
+        std::list<std::pair<double, double>>>> defMap;
+
+    // EffectiveTokusei have no skill conditions
+    for(auto tPair : calcState->GetEffectiveTokusei())
+    {
+        if(mCostAdjustmentTokusei.find(tPair.first) !=
+            mCostAdjustmentTokusei.end())
+        {
+            auto tokusei = definitionManager->GetTokuseiData(tPair.first);
+
+            double hpCost = 0.0;
+            double mpCost = 0.0;
+            for(auto aspect : tokusei->GetAspects())
+            {
+                if(aspect->GetType() == TokuseiAspectType::HP_COST_ADJUST)
+                {
+                    hpCost = CalculateAttributeValue(eState.get(),
+                        aspect->GetValue(), 0, aspect->GetAttributes());
+                }
+                else if(aspect->GetType() == TokuseiAspectType::MP_COST_ADJUST)
+                {
+                    mpCost = CalculateAttributeValue(eState.get(),
+                        aspect->GetValue(), 0, aspect->GetAttributes());
+                }
+            }
+
+            hpCost = 100.0 + hpCost;
+            mpCost = 100.0 + mpCost;
+
+            for(uint16_t i = 0; i < tPair.second; i++)
+            {
+                defMap[0][0].push_back(std::pair<double, double>(
+                    hpCost, mpCost));
+            }
+        }
+    }
+
+    // PendingSkillTokusei have set condition types
+    for(auto tPair : calcState->GetPendingSkillTokusei())
+    {
+        if(mCostAdjustmentTokusei.find(tPair.first) !=
+            mCostAdjustmentTokusei.end())
+        {
+            auto tokusei = definitionManager->GetTokuseiData(tPair.first);
+
+            std::map<uint8_t, std::set<uint32_t>> conditions;
+            for(auto condition : tokusei->GetSkillConditions())
+            {
+                switch(condition->GetSkillConditionType())
+                {
+                case TokuseiSkillConditionType::ACTION_TYPE:
+                    conditions[1].insert((uint32_t)condition->GetValue());
+                    break;
+                case TokuseiSkillConditionType::EXPLICIT_SKILL:
+                    conditions[2].insert((uint32_t)condition->GetValue());
+                    break;
+                case TokuseiSkillConditionType::SKILL_EXPERTISE:
+                    conditions[3].insert((uint32_t)condition->GetValue());
+                    break;
+                case TokuseiSkillConditionType::SKILL_CLASS:
+                    conditions[4].insert((uint32_t)condition->GetValue());
+                    break;
+                case TokuseiSkillConditionType::AFFINITY:
+                    conditions[5].insert((uint32_t)condition->GetValue());
+                    break;
+                default:
+                    break;
+                }
+            }
+
+            double hpCost = 0.0;
+            double mpCost = 0.0;
+            for(auto aspect : tokusei->GetAspects())
+            {
+                if(aspect->GetType() == TokuseiAspectType::HP_COST_ADJUST)
+                {
+                    hpCost = CalculateAttributeValue(eState.get(),
+                        aspect->GetValue(), 0, aspect->GetAttributes());
+                }
+                else if(aspect->GetType() == TokuseiAspectType::MP_COST_ADJUST)
+                {
+                    mpCost = CalculateAttributeValue(eState.get(),
+                        aspect->GetValue(), 0, aspect->GetAttributes());
+                }
+            }
+
+            hpCost = 100.0 + hpCost;
+            mpCost = 100.0 + mpCost;
+
+            for(auto conPair : conditions)
+            {
+                for(uint32_t type : conPair.second)
+                {
+                    for(uint16_t i = 0; i < tPair.second; i++)
+                    {
+                        defMap[conPair.first][type].push_back(
+                            std::pair<double, double>(hpCost, mpCost));
+                    }
+                }
+            }
+        }
+    }
+
+    std::list<std::shared_ptr<objects::ClientCostAdjustment>> adjustments;
+    if(defMap.size() > 0)
+    {
+        // Generate ClientCostAdjustments
+        for(auto& categoryPair : defMap)
+        {
+            uint8_t category = categoryPair.first;
+            for(auto& typePair : categoryPair.second)
+            {
+                uint32_t type = typePair.first;
+
+                double hpCost = 100.0;
+                double mpCost = 100.0;
+                for(auto& costPair : typePair.second)
+                {
+                    hpCost = hpCost * (costPair.first <= 0.0
+                        ? 0.0 : (costPair.first / 100.0));
+                    mpCost = mpCost * (costPair.second <= 0.0
+                        ? 0.0 : (costPair.second / 100.0));
+                }
+
+                // Set upper limits
+                if(hpCost > 255.0)
+                {
+                    hpCost = 255.0;
+                }
+
+                if(mpCost > 255.0)
+                {
+                    mpCost = 255.0;
+                }
+
+                auto adjust = std::make_shared<objects::ClientCostAdjustment>();
+                adjust->SetCategory(category);
+                adjust->SetType(type);
+                adjust->SetHPCost((uint8_t)ceil(hpCost));
+                adjust->SetMPCost((uint8_t)ceil(mpCost));
+
+                adjustments.push_back(adjust);
+            }
+        }
+    }
+
+    // Set and send updates (if the entity is ready to have data sent)
+    auto updated = state->SetCostAdjustments(entityID, adjustments);
+    if(updated.size() > 0 && (int8_t)eState->GetDisplayState() >=
+        (int8_t)objects::ActiveEntityStateObject::DisplayState_t::DATA_SENT)
+    {
+        auto client = mServer.lock()->GetManagerConnection()
+            ->GetEntityClient(entityID);
+        SendCostAdjustments(entityID, updated, client);
+    }
+}
+
+void TokuseiManager::SendCostAdjustments(int32_t entityID,
+    std::list<std::shared_ptr<objects::ClientCostAdjustment>>& adjustments,
+    const std::shared_ptr<ChannelClientConnection>& client)
+{
+    if(client && adjustments.size() > 0)
+    {
+        libcomp::Packet p;
+        p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_SKILL_COSTS);
+        p.WriteS32Little(entityID);
+        p.WriteS32Little((int32_t)adjustments.size());
+
+        for(auto adjust : adjustments)
+        {
+            p.WriteU8(adjust->GetCategory());
+            p.WriteU32Little(adjust->GetType());
+            p.WriteU8(adjust->GetHPCost());
+            p.WriteU8(adjust->GetMPCost());
+        }
+
+        client->SendPacket(p);
+    }
 }
 
 bool TokuseiManager::BuildWorldClockTime(std::shared_ptr<

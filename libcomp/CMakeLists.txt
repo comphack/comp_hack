@@ -548,6 +548,8 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     TokuseiCorrectTbl.cpp
     TokuseiSkillCondition.h
     TokuseiSkillCondition.cpp
+    WorldSharedConfig.h
+    WorldSharedConfig.cpp
 
     # BinaryData Files
     MiAcquisitionData.cpp

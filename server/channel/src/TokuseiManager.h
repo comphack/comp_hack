@@ -31,12 +31,14 @@
 // object Includes
 #include <TokuseiAspect.h>
 #include <TokuseiCondition.h>
+#include <TokuseiSkillCondition.h>
 
 // channel Includes
 #include "ActiveEntityState.h"
 
 namespace objects
 {
+class ClientCostAdjustment;
 class Party;
 class Tokusei;
 class TokuseiAttributes;
@@ -44,10 +46,13 @@ class TokuseiAttributes;
 
 typedef objects::TokuseiAspect::Type_t TokuseiAspectType;
 typedef objects::TokuseiCondition::Type_t TokuseiConditionType;
+typedef objects::TokuseiSkillCondition
+    ::SkillConditionType_t TokuseiSkillConditionType;
 
 namespace channel
 {
 
+class ChannelClientConnection;
 class ChannelServer;
 class WorldClock;
 class WorldClockTime;
@@ -229,7 +234,35 @@ public:
      */
     void RemoveTrackingEntities(int32_t worldCID);
 
+    /**
+     * Send skill cost adjustments from tokusei for the specified entity to the
+     * client
+     * @param entityID ID of the entity with cost adjustments
+     * @param client Pointer to the client connection
+     */
+    void SendCostAdjustments(int32_t entityID, const std::shared_ptr<
+        ChannelClientConnection>& client);
+
 private:
+    /**
+     * Recalculate skill cost adjustments from tokusei for the specified
+     * entity. If the entity's data has already been sent to the client,
+     * the new costs will be sent too.
+     * @param eState Pointer to the entity to recalculate
+     */
+    void RecalcCostAdjustments(const std::shared_ptr<ActiveEntityState>& eState);
+
+    /**
+     * Send skill cost adjustments from tokusei for the specified entity to the
+     * client
+     * @param entityID ID of the entity with cost adjustments
+     * @param adjustments List of adjustments to send to the client
+     * @param client Pointer to the client connection
+     */
+    void SendCostAdjustments(int32_t entityID,
+        std::list<std::shared_ptr<objects::ClientCostAdjustment>>& adjustments,
+        const std::shared_ptr<ChannelClientConnection>& client);
+
     /**
      * Gather all timed tokusei conditions and register their time representations
      * with the manager and server
@@ -284,6 +317,9 @@ private:
     /// This set is updated entity direct tokusei only and does not require
     /// that the effect is ultimately marked as effective.
     std::unordered_map<int32_t, std::set<int32_t>> mTimedTokuseiEntities;
+
+    /// Set of all tokusei with at least one cost adjustment aspect
+    std::set<int32_t> mCostAdjustmentTokusei;
 
     /// Server lock for time calculation
     std::mutex mTimeLock;

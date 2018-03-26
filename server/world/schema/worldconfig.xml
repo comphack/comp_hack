@@ -15,5 +15,6 @@
             <member type="string" name="DatabaseName" default="world"/>
         </member>
         <member type="u32" name="ChannelConnectionTimeOut" default="15"/>
+        <member type="WorldSharedConfig*" name="WorldSharedConfig"/>
     </object>
 </objgen>

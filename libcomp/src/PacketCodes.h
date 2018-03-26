@@ -245,6 +245,7 @@ enum class ClientToChannelPacketCode_t : uint16_t
     PACKET_HOURAI_DATA = 0x03A5,  //!< Request for Club Hourai related information.
     PACKET_CULTURE_DATA = 0x03AC,  //!< Unknown. Request for culture information.
     PACKET_EQUIPMENT_MOD_EDIT = 0x03CB,  //!< Request to edit a previously applied equipment modification.
+    PACKET_PATTRIBUTE_DEADLINE = 0x03EA, //!< Request for the next punitive attribute deadline.
     PACKET_DEMON_DEPO_LIST = 0x03F5,  //!< Request to list the client account's demon depositories.
     PACKET_BARTER = 0x03FE, //!< Request to process the results of an NPC barter.
     PACKET_BLACKLIST = 0x0408,  //!< Request for the current player's blacklist.
@@ -454,6 +455,7 @@ enum class ChannelToClientPacketCode_t : uint16_t
     PACKET_ANALYZE_DEMON = 0x019A,  //!< Response to the request to analyze another player's partner demon.
     PACKET_DEMON_COMPENDIUM = 0x019C,  //!< Response containing the Demon Compendium.
     PACKET_DEMON_COMPENDIUM_ADD = 0x019D,   //!< Notification that the Demon Compendium has been updated.
+    PACKET_SKILL_COSTS = 0x019E,    //!< Notification that an entity's skill costs have been modified.
     PACKET_ITEM_REPAIR_MAX = 0x01A0,    //!< Response to the request to repair an item's max durability.
     PACKET_DEMON_FAMILIARITY_UPDATE = 0x01A5,  //!< Notification that the current partner demon's familiarity has updated.
     PACKET_ENTRUST_REQUEST = 0x01AB,  //!< Response to the request to start a player exchange "entrust" session.
@@ -539,9 +541,12 @@ enum class ChannelToClientPacketCode_t : uint16_t
     PACKET_HOURAI_DATA = 0x03A6,  //!< Response containing Club Hourai related information.
     PACKET_EQUIPMENT_MOD_EDIT = 0x03CC,  //!< Response to the request to edit a previously applied equipment modification.
     PACKET_CULTURE_DATA = 0x03AD,  //!< Unknown. Response containing culture information.
+    PACKET_PATTRIBUTE = 0x03E9,    //!< Currently unused. Notification containing punitive attribute system time information.
+    PACKET_PATTRIBUTE_DEADLINE = 0x03EB, //!< Response to the request for the next punitive attribute deadline.
     PACKET_DEMON_DEPO_LIST = 0x03F6,  //!< Response to the request to open the demon depo.
     PACKET_BARTER = 0x03FF, //!< Response containing the results of an NPC barter.
     PACKET_SKILL_POINT_UPDATE = 0x0404,  //!< Notification that the player character's available skill points have updated.
+    PACKET_WORLD_BONUS = 0x0405,  //!< Notification of the client logic adjusting world bonuses.
     PACKET_BLACKLIST = 0x0409,  //!< Response containing the current player's blacklist.
     PACKET_DIGITALIZE_POINTS = 0x0415,  //!< Response containing the current player's digitalize point information.
     PACKET_DIGITALIZE_ASSIST = 0x0419,  //!< Response containing the current player's digitalize assist information.

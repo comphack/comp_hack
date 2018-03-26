@@ -97,8 +97,14 @@ bool Parsers::FixObjectPosition::Parse(libcomp::ManagerPacket *pPacketManager,
         auto zone = dState->GetZone();
         if(zone)
         {
-            zoneManager->PopEntityForZoneProduction(zone, dState->GetEntityID(), 2);
+            bool summonWait = dState->GetDisplayState() ==
+                objects::ActiveEntityStateObject::DisplayState_t::AWAITING_SUMMON;
+
+            zoneManager->PopEntityForZoneProduction(zone, dState->GetEntityID(),
+                summonWait ? 2 : 0);
             zoneManager->ShowEntityToZone(zone, dState->GetEntityID());
+            server->GetTokuseiManager()->SendCostAdjustments(dState->GetEntityID(),
+                client);
             server->GetCharacterManager()->SendMovementSpeed(client, dState, true);
         }
     }

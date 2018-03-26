@@ -291,7 +291,7 @@ private:
      * Execute or cancel the guard skill currently being used by the
      * supplied target from being hit by the source entity
      * @param source Pointer to the state of the source entity
-     * @param target Pointer ot the stare of the target entity
+     * @param target Pointer to the state of the target entity
      * @param pSkill Skill processing state of the skill being guarded
      */
     void HandleGuard(const std::shared_ptr<ActiveEntityState>& source,
@@ -308,7 +308,7 @@ private:
      * CounteringSkills list, since technically multiple skills can
      * counter one.
      * @param source Pointer to the state of the source entity
-     * @param target Pointer ot the stare of the target entity
+     * @param target Pointer to the state of the target entity
      * @param pSkill Skill processing state of the skill being counterd
      */
     void HandleCounter(const std::shared_ptr<ActiveEntityState>& source,
@@ -319,12 +319,24 @@ private:
      * Execute or cancel the dodge skill currently being used by the
      * supplied target from being hit by the source entity
      * @param source Pointer to the state of the source entity
-     * @param target Pointer ot the stare of the target entity
+     * @param target Pointer to the state of the target entity
      * @param pSkill Skill processing state of the skill being dodged
      */
     void HandleDodge(const std::shared_ptr<ActiveEntityState>& source,
         SkillTargetResult& target, const std::shared_ptr<
         channel::ProcessingSkill>& pSkill);
+
+    /**
+     * Handle all status effect application logic for a specific target
+     * @param source Pointer to the state of the source entity
+     * @param target Pointer to the state of the target entity
+     * @param pSkill Skill processing state of the skill being executed
+     * @return Set of status effects being applied that will be cancelled
+     *  if the entity is killed as a result of the skill
+     */
+    std::set<uint32_t> HandleStatusEffects(const std::shared_ptr<
+        ActiveEntityState>& source, SkillTargetResult& target,
+        const std::shared_ptr<channel::ProcessingSkill>& pSkill);
 
     /**
      * Handle all logic related to kills that occurred from a skill's execution.
@@ -747,10 +759,8 @@ private:
      * the server when the specified charge time has elapsed for execution if
      * applicable.
      * @param activated Pointer to the activated ability instance
-     * @param skillData Pointer to the skill data
      */
-    void SendActivateSkill(std::shared_ptr<objects::ActivatedAbility> activated,
-        std::shared_ptr<objects::MiSkillData> skillData);
+    void SendActivateSkill(std::shared_ptr<objects::ActivatedAbility> activated);
 
     /**
      * Notify the client that a skill is executing.

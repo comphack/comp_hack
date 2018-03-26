@@ -39,6 +39,7 @@
 
 // object Includes
 #include <ChannelConfig.h>
+#include <WorldSharedConfig.h>
 
 // channel Includes
 #include "ChannelServer.h"
@@ -95,6 +96,8 @@ bool SetWorldInfoFromPacket(libcomp::ManagerPacket *pPacketManager,
 
     auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
     auto conf = std::dynamic_pointer_cast<objects::ChannelConfig>(server->GetConfig());
+
+    // Get the world database config
     auto worldDatabase = ParseDatabase(server, p);
     if(nullptr == worldDatabase)
     {
@@ -104,6 +107,7 @@ bool SetWorldInfoFromPacket(libcomp::ManagerPacket *pPacketManager,
     }
     server->SetWorldDatabase(worldDatabase);
 
+    // Get the lobby database config
     auto lobbyDatabase = ParseDatabase(server, p);
     if(nullptr == lobbyDatabase)
     {
@@ -112,6 +116,16 @@ bool SetWorldInfoFromPacket(libcomp::ManagerPacket *pPacketManager,
         return false;
     }
     server->SetLobbyDatabase(lobbyDatabase);
+
+    // Get the world shared config
+    auto worldSharedConfig = std::make_shared<objects::WorldSharedConfig>();
+    if(!worldSharedConfig->LoadPacket(p, false))
+    {
+        LOG_CRITICAL("World Server supplied shared configuration could not"
+            " be loaded.\n");
+        return false;
+    }
+    conf->SetWorldSharedConfig(worldSharedConfig);
 
     auto svr = objects::RegisteredWorld::LoadRegisteredWorldByID(lobbyDatabase, worldID);
     if(nullptr == svr)

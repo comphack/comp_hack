@@ -42,6 +42,9 @@
         <member type="set" name="ActiveTokuseiTriggers">
             <element type="s8"/>
         </member>
+        <member type="set" name="ExistingTokuseiAspects">
+            <element type="s8"/>
+        </member>
         <member type="map" name="EffectiveTokusei">
             <key type="s32"/>
             <value type="u16"/>
@@ -66,6 +69,13 @@
         <member type="enum" name="Faction" underlying="int8_t">
             <value>PLAYER</value>
             <value>ENEMY</value>
+        </member>
+        <member type="enum" name="DisplayState" underlying="int8_t">
+            <value>NOT_SET</value>
+            <value>AWAITING_SUMMON</value>
+            <value>DATA_NOT_SENT</value>
+            <value>DATA_SENT</value>
+            <value>ACTIVE</value>
         </member>
 
         <member type="float" name="OriginX"/>
@@ -99,6 +109,7 @@
         <member type="s16" name="SUPPORT"/>
         <member type="s16" name="PDEF"/>
         <member type="s16" name="MDEF"/>
+        <member type="s16" name="CombatRunSpeed"/>
         <member type="CalculatedEntityState*" name="CalculatedState"/>
 
         <member type="ActivatedAbility*" name="ActivatedAbility"
@@ -140,6 +151,7 @@
         <member type="u64" name="CooldownTime"/>
         <member type="u64" name="LockOutTime"/>
         <member type="u8" name="ExecuteCount"/>
+        <member type="u8" name="MaxUseCount"/>
         <member type="float" name="ChargeMoveSpeed"/>
         <member type="float" name="ChargeCompleteMoveSpeed"/>
 

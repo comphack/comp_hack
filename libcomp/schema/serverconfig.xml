@@ -24,4 +24,17 @@
         <member type="string" name="CapturePath"/>
         <member type="string" name="ServerConstantsPath"/>
     </object>
+    <object name="WorldSharedConfig" persistent="false">
+        <member type="string" name="COMPShopMessage"
+           default="Welcome to the COMP Shop!"/>
+        <member type="bool" name="AutoCompressCurrency"/>
+        <member type="bool" name="NRAStatusNull" default="true"/>
+        <member type="bool" name="DeathPenaltyDisabled"/>
+        <member type="float" name="XPBonus"/>
+        <member type="float" name="ExpertiseBonus"/>
+        <member type="float" name="DropRateBonus"/>
+        <member type="set" name="GlobalDropSetIDs">
+            <element type="u32"/>
+        </member>
+    </object>
 </objgen>

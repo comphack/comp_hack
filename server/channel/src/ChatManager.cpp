@@ -76,6 +76,7 @@ ChatManager::ChatManager(const std::weak_ptr<ChannelServer>& server)
     mGMands["expertisemax"] = &ChatManager::GMCommand_ExpertiseExtend;
     mGMands["expertiseup"] = &ChatManager::GMCommand_ExpertiseUpdate;
     mGMands["familiarity"] = &ChatManager::GMCommand_Familiarity;
+    mGMands["flag"] = &ChatManager::GMCommand_Flag;
     mGMands["goto"] = &ChatManager::GMCommand_Goto;
     mGMands["help"] = &ChatManager::GMCommand_Help;
     mGMands["homepoint"] = &ChatManager::GMCommand_Homepoint;
@@ -766,6 +767,129 @@ bool ChatManager::GMCommand_Familiarity(const std::shared_ptr<
     return true;
 }
 
+bool ChatManager::GMCommand_Flag(const std::shared_ptr<
+    channel::ChannelClientConnection>& client,
+    const std::list<libcomp::String>& args)
+{
+    if(!HaveUserLevel(client, 950))
+    {
+        return true;
+    }
+
+    std::list<libcomp::String> argsCopy = args;
+
+    libcomp::String source;
+
+    if(argsCopy.size() > 0 && !GetStringArg(source, argsCopy))
+    {
+        return false;
+    }
+
+    source = source.ToLower();
+
+    bool isInstance = "inst" == source;
+
+    if("zone" != source && !isInstance)
+    {
+        return false;
+    }
+
+    auto cState = client->GetClientState()->GetCharacterState();
+
+    if(!cState)
+    {
+        return false;
+    }
+
+    auto zone = cState->GetZone();
+
+    if(!zone)
+    {
+        return false;
+    }
+
+    auto instance = zone->GetInstance();
+
+    if(isInstance && !instance)
+    {
+        return SendChatMessage(client, ChatType_t::CHAT_SELF,
+            libcomp::String("Zone is not an instance!"));
+    }
+
+    if(argsCopy.empty())
+    {
+        // List flags.
+        auto flags = isInstance ? instance->GetFlagStates() :
+            zone->GetFlagStates();
+
+        SendChatMessage(client, ChatType_t::CHAT_SELF,
+            libcomp::String("CID, Key, Value"));
+
+        for(auto it : flags)
+        {
+            auto cid = it.first;
+
+            for(auto it2 : it.second)
+            {
+                auto key = it2.first;
+                auto val = it2.second;
+
+                SendChatMessage(client, ChatType_t::CHAT_SELF,
+                    libcomp::String("%1, %2, %3").Arg(cid).Arg(key).Arg(val));
+            }
+        }
+    }
+    else
+    {
+        int32_t cid, key;
+
+        if(argsCopy.empty() || !GetIntegerArg<int32_t>(cid, argsCopy))
+        {
+            return false;
+        }
+
+        if(argsCopy.empty() || !GetIntegerArg<int32_t>(key, argsCopy))
+        {
+            return false;
+        }
+
+        bool get = argsCopy.empty();
+
+        // Get or set flag.
+        if(get)
+        {
+            int32_t value = isInstance ?
+                instance->GetFlagStateValue(key, 0, cid) :
+                zone->GetFlagStateValue(key, 0, cid);
+
+            return SendChatMessage(client, ChatType_t::CHAT_SELF,
+                libcomp::String("Value: %1").Arg(value));
+        }
+        else // set
+        {
+            int32_t value;
+
+            if(argsCopy.empty() || !GetIntegerArg<int32_t>(value, argsCopy))
+            {
+                return false;
+            }
+
+            if(isInstance)
+            {
+                instance->SetFlagState(key, value, cid);
+            }
+            else
+            {
+                zone->SetFlagState(key, value, cid);
+            }
+
+            return true;
+        }
+    }
+
+    return true;
+}
+
 bool ChatManager::GMCommand_Goto(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
@@ -914,6 +1038,12 @@ bool ChatManager::GMCommand_Help(const std::shared_ptr<
             "@familiarity VALUE",
             "Updates the current partner's familiarity to the given",
             "VALUE which can be in the range [0-10000]."
+        } },
+        { "flag", {
+            "@flag TYPE [CID KEY [VALUE]]",
+            "List, get or set zone flags. TYPE must be 'zone' or 'inst'.",
+            "CID may be 0 for no specific character. If VALUE is not",
+            "given the key is printed out instead of set.",
         } },
         { "goto", {
             "@goto [SELF] NAME",

@@ -474,6 +474,13 @@ public:
     bool GetFlagState(int32_t key, int32_t& value, int32_t worldCID);
 
     /**
+     * Return the flag states for the zone.
+     * @return Flag states for the zone.
+     */
+    std::unordered_map<int32_t, std::unordered_map<
+        int32_t, int32_t>> GetFlagStates();
+
+    /**
      * Get the state of a zone flag, returning the null default
      * if it does not exist.
      * @param key Lookup key for the flag

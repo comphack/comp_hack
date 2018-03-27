@@ -882,18 +882,31 @@ std::set<uint32_t> Zone::GetRespawnLocations(uint64_t now)
 bool Zone::GetFlagState(int32_t key, int32_t& value, int32_t worldCID)
 {
     std::lock_guard<std::mutex> lock(mLock);
+
     auto it = mFlagStates.find(worldCID);
-    if(it != mFlagStates.end())
+
+    if(mFlagStates.end() != it)
     {
-        auto it2 = mFlagStates[worldCID].find(key);
-        if(it2 != mFlagStates[worldCID].end())
+        auto& m = it->second;
+        auto it2 = m.find(key);
+
+        if(m.end() != it2)
         {
             value = it2->second;
+
             return true;
         }
     }
 
     return false;
+}
+
+std::unordered_map<int32_t, std::unordered_map<int32_t, int32_t>>
+    Zone::GetFlagStates()
+{
+    std::lock_guard<std::mutex> lock(mLock);
+
+    return mFlagStates;
 }
 
 int32_t Zone::GetFlagStateValue(int32_t key, int32_t nullDefault,

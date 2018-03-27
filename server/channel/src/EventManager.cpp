@@ -348,7 +348,7 @@ bool EventManager::UpdateQuest(const std::shared_ptr<ChannelClientConnection>& c
 
         quest = libcomp::PersistentObject::New<objects::Quest>(true);
         quest->SetQuestID(questID);
-        quest->SetCharacter(character);
+        quest->SetCharacter(character->GetUUID());
         quest->SetPhase(phase);
         quest->SetFlagStates(updateFlags);
 

@@ -45,7 +45,7 @@
 
 using namespace lobby;
 
-static bool LoginError(const std::shared_ptr<
+static bool LoginAuthError(const std::shared_ptr<
     libcomp::TcpConnection>& connection, ErrorCodes_t errorCode)
 {
     libcomp::Packet reply;
@@ -101,7 +101,7 @@ static bool CompleteLogin(
     }
     else
     {
-        return LoginError(connection, errorCode);
+        return LoginAuthError(connection, errorCode);
     }
 
     return true;
@@ -124,7 +124,7 @@ static bool NoWebAuthParse(const std::shared_ptr<LobbyServer>& server,
     // Make sure the account is valid first.
     if(!account)
     {
-        return LoginError(connection, ErrorCodes_t::BAD_USERNAME_PASSWORD);
+        return LoginAuthError(connection, ErrorCodes_t::BAD_USERNAME_PASSWORD);
     }
 
     // Calculate the password hash with the challenge given.
@@ -138,7 +138,7 @@ static bool NoWebAuthParse(const std::shared_ptr<LobbyServer>& server,
         LOG_ERROR(libcomp::String("User '%1' password hash provided by the "
             "client was not valid: %2\n").Arg(username).Arg(hash));
 
-        return LoginError(connection, ErrorCodes_t::BAD_USERNAME_PASSWORD);
+        return LoginAuthError(connection, ErrorCodes_t::BAD_USERNAME_PASSWORD);
     }
 
     return CompleteLogin(server, connection, libcomp::String(), username);

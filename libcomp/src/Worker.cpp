@@ -27,6 +27,7 @@
 #include "Worker.h"
 
 // libcomp Includes
+#include "Exception.h"
 #include "Log.h"
 #include "MessageShutdown.h"
 
@@ -76,6 +77,8 @@ void Worker::Start(const libcomp::String& name, bool blocking)
 #if !defined(_WIN32)
             pthread_setname_np(pthread_self(), _name.C());
 #endif // !defined(_WIN32)
+
+            libcomp::Exception::RegisterSignalHandler();
 
             mRunning = true;
 

@@ -43,7 +43,7 @@
 
 using namespace channel;
 
-class ActionList
+class ActionListB
 {
 public:
     std::list<std::shared_ptr<objects::Action>> actions;
@@ -118,7 +118,7 @@ bool Parsers::SpotTriggered::Parse(libcomp::ManagerPacket *pPacketManager,
         }
 
         // Get the action list.
-        auto pActionList = new ActionList;
+        auto pActionList = new ActionListB;
         pActionList->actions = spot->GetActions();
 
         LOG_DEBUG(libcomp::String("Got spot with %1 actions.\n").Arg(
@@ -136,7 +136,7 @@ bool Parsers::SpotTriggered::Parse(libcomp::ManagerPacket *pPacketManager,
         server->QueueWork([](
             const std::shared_ptr<ChannelServer>& serverWork,
             const std::shared_ptr<ChannelClientConnection> clientWork,
-            gsl::owner<ActionList*> pActionListWork)
+            gsl::owner<ActionListB*> pActionListWork)
         {
             serverWork->GetActionManager()->PerformActions(clientWork,
                 pActionListWork->actions, 0);

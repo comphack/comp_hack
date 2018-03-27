@@ -126,20 +126,20 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     ../../libcomp/schema
 
     # Output files
+    EntityStateObject.h
+    EntityStateObject.cpp
     ActivatedAbility.h
     ActivatedAbility.cpp
-    ActiveEntityStateObject.h
-    ActiveEntityStateObject.cpp
     CalculatedEntityState.h
     CalculatedEntityState.cpp
+    ActiveEntityStateObject.h
+    ActiveEntityStateObject.cpp
     ChannelConfig.h
     ChannelConfig.cpp
     ClientCostAdjustment.h
     ClientCostAdjustment.cpp
     ClientStateObject.h
     ClientStateObject.cpp
-    EntityStateObject.h
-    EntityStateObject.cpp
     EventInstance.h
     EventInstance.cpp
     EventState.h
@@ -354,6 +354,10 @@ SET(${PROJECT_NAME}_PACKETS
     src/packets/internal/ClanUpdate.cpp            # 0x100B
 )
 
+IF(SINGLE_SOURCE_PACKETS)
+    COMBINE_PACKETS(${PROJECT_NAME}_PACKETS)
+ENDIF(SINGLE_SOURCE_PACKETS)
+
 COVERALLS_SOURCES(
     ${${PROJECT_NAME}_SRCS}
     ${${PROJECT_NAME}_PACKETS}
@@ -375,6 +379,10 @@ TARGET_INCLUDE_DIRECTORIES(${PROJECT_NAME} PRIVATE
 
 TARGET_LINK_LIBRARIES(${PROJECT_NAME} ${CMAKE_THREAD_LIBS_INIT} comp tinyxml2
     civetweb-cxx civetweb)
+
+IF(USE_COTIRE)
+    cotire(${PROJECT_NAME})
+ENDIF(USE_COTIRE)
 
 UPX_WRAP(${PROJECT_NAME})
 

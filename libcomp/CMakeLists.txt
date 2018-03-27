@@ -392,8 +392,6 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     ClanInfo.cpp
     ClanMember.h
     ClanMember.cpp
-    Character.h
-    Character.cpp
     CharacterLogin.h
     CharacterLogin.cpp
     CharacterProgress.h
@@ -404,8 +402,16 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     DatabaseConfigMariaDB.cpp
     DatabaseConfigSQLite3.h
     DatabaseConfigSQLite3.cpp
+    EntityStats.h
+    EntityStats.cpp
     Demon.h
     Demon.cpp
+    Item.h
+    Item.cpp
+    Quest.h
+    Quest.cpp
+    Character.h
+    Character.cpp
     DemonBox.h
     DemonBox.cpp
     DemonPresent.h
@@ -414,8 +420,6 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     DropSet.cpp
     Enemy.h
     Enemy.cpp
-    EntityStats.h
-    EntityStats.cpp
     Event.h
     Event.cpp
     EventBase.h
@@ -454,8 +458,6 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     Hotbar.cpp
     InheritedSkill.h
     InheritedSkill.cpp
-    Item.h
-    Item.cpp
     ItemBox.h
     ItemBox.cpp
     ItemDrop.h
@@ -490,8 +492,6 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     QmpUnknown1.cpp
     QmpUnknown2.h
     QmpUnknown2.cpp
-    Quest.h
-    Quest.cpp
     RegisteredChannel.h
     RegisteredChannel.cpp
     RegisteredWorld.h
@@ -702,8 +702,6 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     MiHNPCData.h
     MiItemBasicData.h
     MiItemBasicData.cpp
-    MiItemData.h
-    MiItemData.cpp
     MiItemPvPData.h
     MiItemPvPData.cpp
     MiKnockBackData.cpp
@@ -746,10 +744,10 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     MiRentalData.cpp
     MiRestrictionData.cpp
     MiRestrictionData.h
-    MiCZoneRelationData.h
-    MiCZoneRelationData.cpp
     MiRelationZoneIDData.h
     MiRelationZoneIDData.cpp
+    MiCZoneRelationData.h
+    MiCZoneRelationData.cpp
     MiShopProductData.cpp
     MiShopProductData.h
     MiSItemData.h
@@ -798,22 +796,22 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     MiZoneBGMData.cpp
     MiZoneCameraData.h
     MiZoneCameraData.cpp
-    MiZoneData.h
-    MiZoneData.cpp
     MiZoneFileData.h
     MiZoneFileData.cpp
     MiZoneFogData.h
     MiZoneFogData.cpp
     MiZoneGouraudData.h
     MiZoneGouraudData.cpp
-    MiZoneLensFlareData.h
-    MiZoneLensFlareData.cpp
     MiZoneLensFlareLayerData.h
     MiZoneLensFlareLayerData.cpp
+    MiZoneLensFlareData.h
+    MiZoneLensFlareData.cpp
     MiZoneOtherData.h
     MiZoneOtherData.cpp
     MiZoneSkyData.h
     MiZoneSkyData.cpp
+    MiZoneData.h
+    MiZoneData.cpp
     MiCModifiedEffectData.h
     MiCModifiedEffectData.cpp
     MiCModelData.h
@@ -826,6 +824,8 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     MiCModelMotionMap.cpp
     MiCIconData.h
     MiCIconData.cpp
+    MiItemData.h
+    MiItemData.cpp
 )
 
 COVERALLS_SOURCES(${${PROJECT_NAME}_SRCS})
@@ -865,6 +865,10 @@ IF(WIN32)
     TARGET_LINK_LIBRARIES(comp advapi32 iphlpapi psapi shell32 userenv
         ws2_32 dbghelp)
 ENDIF(WIN32)
+
+IF(USE_COTIRE)
+    cotire(comp)
+ENDIF(USE_COTIRE)
 
 # List of unit tests to add to CTest.
 SET(${PROJECT_NAME}_TEST_SRCS

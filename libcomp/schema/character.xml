@@ -144,7 +144,7 @@
     </object>
     <object name="Quest" location="world" scriptenabled="true">
         <member type="s16" name="QuestID"/>
-        <member type="Character*" name="Character" key="true" unique="false"/>
+        <member type="pref" name="Character" key="true" unique="false"/>
         <member type="s8" name="Phase"/>
         <member type="array" name="CustomData" size="8">
             <element type="s32"/>

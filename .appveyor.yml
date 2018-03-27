@@ -5,13 +5,13 @@ os:
   - Visual Studio 2015
 
 platform:
-  - x86
-#  - x64
+#  - x86
+  - x64
 
 configuration:
 #  - Debug
-  - Release
-#  - RelWithDebInfo
+#  - Release
+  - RelWithDebInfo
 
 init:
   - if platform==x64 (set CMAKE_PREFIX_PATH=C:\Qt\5.7\msvc2015_64) else (set CMAKE_PREFIX_PATH=C:\Qt\5.7\msvc2015)
@@ -26,7 +26,7 @@ before_build:
   - cd build
 
 build_script:
-  - appveyor DownloadFile https://github.com/comphack/external/releases/download/external-5/external-0.1.1-win32.zip -FileName external.zip
+  - appveyor DownloadFile https://github.com/comphack/external/releases/download/external-13/external-0.1.1-win64.zip -FileName external.zip
   - 7z x external.zip
   - del external.zip
   - mv external* ..\binaries
@@ -57,8 +57,8 @@ deploy:
   prerelease: true
   on:
     branch: develop
-    platform: x86
-#    configuration: RelWithDebInfo
-    configuration: Release
+    platform: x64
+    configuration: RelWithDebInfo
+#    configuration: Release
 
 skip_tags: true

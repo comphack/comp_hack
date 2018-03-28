@@ -1281,21 +1281,24 @@ std::set<size_t> CharacterManager::GetFreeSlots(
     std::shared_ptr<objects::ItemBox> box)
 {
     std::set<size_t> slots;
-    if(box == nullptr)
+    if(client)
     {
-        auto cState = client->GetClientState()->GetCharacterState();
-        auto character = cState->GetEntity();
-        box = character ? character->GetItemBoxes(0).Get() : nullptr;
-    }
-
-    if(box)
-    {
-        for(size_t i = 0; i < 50; i++)
+        if(box == nullptr)
         {
-            auto item = box->GetItems(i);
-            if(item.IsNull())
+            auto cState = client->GetClientState()->GetCharacterState();
+            auto character = cState->GetEntity();
+            box = character ? character->GetItemBoxes(0).Get() : nullptr;
+        }
+
+        if(box)
+        {
+            for(size_t i = 0; i < 50; i++)
             {
-                slots.insert(i);
+                auto item = box->GetItems(i);
+                if(item.IsNull())
+                {
+                    slots.insert(i);
+                }
             }
         }
     }

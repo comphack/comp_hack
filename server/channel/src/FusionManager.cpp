@@ -1172,7 +1172,8 @@ int8_t FusionManager::ProcessFusion(
     auto demonData = definitionManager->GetDevilData(resultDemonType);
     double baseLevel = (double)demonData->GetGrowth()->GetBaseLevel();
 
-    std::unordered_map<uint32_t, uint32_t> itemCost;
+    // Costs get paid regardless of outcome
+    bool paymentSuccess = true;
     if(costItemType == 0 || costItemType == SVR_CONST.ITEM_MACCA)
     {
         uint32_t maccaCost = 0;
@@ -1187,13 +1188,13 @@ int8_t FusionManager::ProcessFusion(
             maccaCost = (uint32_t)floor(0.5 * pow(baseLevel, 2));
         }
 
-        if(maccaCost > 0)
-        {
-            itemCost[SVR_CONST.ITEM_MACCA] = maccaCost;
-        }
+        paymentSuccess = maccaCost == 0 ||
+            characterManager->PayMacca(client, (uint64_t)maccaCost);
     }
     else if(costItemType == SVR_CONST.ITEM_KREUZ)
     {
+        std::unordered_map<uint32_t, uint32_t> itemCost;
+
         uint32_t kreuzCost = 0;
         if(demonID3 > 0)
         {
@@ -1213,6 +1214,9 @@ int8_t FusionManager::ProcessFusion(
         {
             itemCost[SVR_CONST.ITEM_KREUZ] = kreuzCost;
         }
+
+        paymentSuccess = itemCost.size() == 0 ||
+            characterManager->AddRemoveItems(client, itemCost, false);
     }
     else
     {
@@ -1221,9 +1225,7 @@ int8_t FusionManager::ProcessFusion(
         return -3;
     }
 
-    // Costs get paid regardless of outcome
-    if(itemCost.size() > 0 && !characterManager->AddRemoveItems(client,
-        itemCost, false))
+    if(!paymentSuccess)
     {
         LOG_ERROR("Failed to pay fusion item cost\n");
         return -4;

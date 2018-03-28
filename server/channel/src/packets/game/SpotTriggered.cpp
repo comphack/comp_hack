@@ -73,12 +73,12 @@ bool Parsers::SpotTriggered::Parse(libcomp::ManagerPacket *pPacketManager,
     auto zoneManager = server->GetZoneManager();
     auto entity = state(connection)->GetCharacterState();
     auto zone = zoneManager->GetCurrentZone(client);
-    auto zoneDef = zone->GetDefinition();
+    auto zoneDef = zone ? zone->GetDefinition() : nullptr;
 
     // Ignore spot triggers that are not for the current character and in the
     // correct zone or ones with no dynamic map loaded.
     if(entity->GetEntityID() != static_cast<int32_t>(entityID) ||
-        zoneDef->GetID() != zoneID)
+        !zoneDef || zoneDef->GetID() != zoneID)
     {
         return true;
     }

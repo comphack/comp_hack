@@ -957,8 +957,10 @@ std::set<uint32_t> ActiveEntityState::AddStatusEffects(const AddStatusEffectMap&
         {
             uint32_t rEffectType = removeEffect->GetEffect();
             removes.insert(rEffectType);
-            mStatusEffects.erase(rEffectType);
-            mTimeDamageEffects.erase(rEffectType);
+
+            std::set<uint32_t> removeEffects = { rEffectType };
+            RemoveStatusEffects(removeEffects);
+
             if(mEffectsActive)
             {
                 // Remove any times associated to the status being removed
@@ -1013,34 +1015,34 @@ std::set<uint32_t> ActiveEntityState::AddStatusEffects(const AddStatusEffectMap&
 
 void ActiveEntityState::ExpireStatusEffects(const std::set<uint32_t>& effectTypes)
 {
-    bool expired = false;
     std::lock_guard<std::mutex> lock(mLock);
+
+    std::set<uint32_t> removeEffects;
     for(uint32_t effectType : effectTypes)
     {
         auto it = mStatusEffects.find(effectType);
         if(it != mStatusEffects.end())
         {
-            mStatusEffects.erase(effectType);
-            mNRAShields.erase(effectType);
-            mTimeDamageEffects.erase(effectType);
-            for(auto cPair : mCancelConditions)
-            {
-                cPair.second.erase(effectType);
-            }
+            removeEffects.insert(effectType);
+        }
+    }
 
-            if(mEffectsActive)
+    // Effects identified, remove and update effect times (if active)
+    if(removeEffects.size() > 0)
+    {
+        RemoveStatusEffects(removeEffects);
+
+        if(mEffectsActive)
+        {
+            for(uint32_t effectType : removeEffects)
             {
                 // Non-system time 3 indicates removes
                 SetNextEffectTime(effectType, 0);
                 mNextEffectTimes[3].insert(effectType);
-                expired = true;
             }
-        }
-    }
 
-    if(expired)
-    {
-        RegisterNextEffectTime();
+            RegisterNextEffectTime();
+        }
     }
 }
 
@@ -1142,12 +1144,12 @@ bool ActiveEntityState::PopEffectTicks(libcomp::DefinitionManager* definitionMan
     {
         std::set<uint32_t> passed;
         std::unordered_map<uint32_t, uint32_t> next;
-        for(auto pair : mNextEffectTimes)
+        for(auto& pair : mNextEffectTimes)
         {
             if(pair.first > time) break;
 
             passed.insert(pair.first);
-            
+
             // Check hardcoded added, updated, removed first
             if(pair.first == 1)
             {
@@ -1192,18 +1194,11 @@ bool ActiveEntityState::PopEffectTicks(libcomp::DefinitionManager* definitionMan
                 pair.second.erase(0);
             }
 
+            // Remove effects that have ended
+            RemoveStatusEffects(pair.second);
             for(auto effectType : pair.second)
             {
-                // Effect has ended
-                auto effect = mStatusEffects[effectType];
-                mStatusEffects.erase(effectType);
-                mTimeDamageEffects.erase(effectType);
                 removed.insert(effectType);
-
-                for(auto cPair : mCancelConditions)
-                {
-                    cPair.second.erase(effectType);
-                }
             }
         }
 
@@ -1368,13 +1363,17 @@ std::set<uint8_t> ActiveEntityState::PopNRAShields(const std::list<
 
         for(uint32_t effectID : adjustEffects)
         {
-            auto effect = mStatusEffects[effectID];
-
-            uint8_t newStack = (uint8_t)(effect->GetStack() - 1);
-            effect->SetStack(newStack);
-            if(newStack == 0)
+            auto it = mStatusEffects.find(effectID);
+            if(it != mStatusEffects.end())
             {
-                expireEffects.insert(effectID);
+                auto effect = it->second;
+
+                uint8_t newStack = (uint8_t)(effect->GetStack() - 1);
+                effect->SetStack(newStack);
+                if(newStack == 0)
+                {
+                    expireEffects.insert(effectID);
+                }
             }
         }
     }
@@ -1425,6 +1424,32 @@ void ActiveEntityState::SetStatusEffects(
         l.push_back(e.Get());
     }
     SetStatusEffects(l);
+}
+
+void ActiveEntityState::RemoveStatusEffects(const std::set<uint32_t>& effectTypes)
+{
+    std::set<uint8_t> cancelTypes;
+
+    for(uint32_t effectType : effectTypes)
+    {
+        mStatusEffects.erase(effectType);
+        mNRAShields.erase(effectType);
+        mTimeDamageEffects.erase(effectType);
+        for(auto& cPair : mCancelConditions)
+        {
+            cPair.second.erase(effectType);
+            cancelTypes.insert(cPair.first);
+        }
+    }
+
+    // Clean up any now empty cancel conditions
+    for(uint8_t cancelType : cancelTypes)
+    {
+        if(mCancelConditions[cancelType].size() == 0)
+        {
+            mCancelConditions.erase(cancelType);
+        }
+    }
 }
 
 void ActiveEntityState::ActivateStatusEffect(

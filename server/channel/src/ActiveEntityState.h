@@ -581,6 +581,14 @@ protected:
         const std::list<libcomp::ObjectReference<objects::StatusEffect>>& effects);
 
     /**
+     * Remove the set of supplied status effects from all registered
+     * collections. This function should not be called directly in place of
+     * being expired first.
+     * @param effectTypes Set of effect type IDs to remove
+     */
+    void RemoveStatusEffects(const std::set<uint32_t>& effectTypes);
+
+    /**
      * Activate a status effect added to the entity's current status effect set.
      * By activating an effect, it will be registered with the ActiveEntityState
      * and its current zone via their absolute server time expiration in addition

@@ -68,7 +68,13 @@ bool Parsers::ObjectInteraction::Parse(libcomp::ManagerPacket *pPacketManager,
     auto server = std::dynamic_pointer_cast<ChannelServer>(
         pPacketManager->GetServer());
     auto zone = server->GetZoneManager()->GetCurrentZone(client);
-    auto zoneDef = zone->GetDefinition();
+    auto zoneDef = zone ? zone->GetDefinition() : nullptr;
+
+    // If the client is no longer in a valid zone, do nothing
+    if(!zoneDef)
+    {
+        return true;
+    }
 
     std::list<std::shared_ptr<objects::Action>> actions;
 

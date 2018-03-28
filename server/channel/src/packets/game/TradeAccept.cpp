@@ -92,10 +92,14 @@ bool Parsers::TradeAccept::Parse(libcomp::ManagerPacket *pPacketManager,
     // Accepted
     reply.WriteS32Little(0);
 
-    characterManager->SetStatusIcon(otherClient, 8);
-
     client->QueuePacketCopy(reply);
-    otherClient->SendPacket(reply);
+
+    if(otherClient)
+    {
+        characterManager->SetStatusIcon(otherClient, 8);
+        otherClient->SendPacket(reply);
+    }
+
     characterManager->SetStatusIcon(client, 8);
 
     return true;

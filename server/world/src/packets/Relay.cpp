@@ -58,6 +58,7 @@ bool Parsers::Relay::Parse(libcomp::ManagerPacket *pPacketManager,
         connection);
     auto server = std::dynamic_pointer_cast<WorldServer>(pPacketManager->GetServer());
     auto characterManager = server->GetCharacterManager();
+    auto db = server->GetWorldDatabase();
 
     int32_t sourceCID = p.ReadS32Little();
     PacketRelayMode_t mode = (PacketRelayMode_t)p.ReadU8();
@@ -97,7 +98,18 @@ bool Parsers::Relay::Parse(libcomp::ManagerPacket *pPacketManager,
                     }
                     else
                     {
-                        reportFailed.push_back(login->GetCharacter()->GetName());
+                        auto character = login->GetCharacter().Get(db);
+                        if(character)
+                        {
+                            reportFailed.push_back(character->GetName());
+                        }
+                        else
+                        {
+                            LOG_WARNING(libcomp::String("Failed offline relay"
+                                " attempt encountered with non-existent"
+                                " character: %1\n").Arg(login->GetCharacter()
+                                    .GetUUID().ToString()));
+                        }
                     }
                 }
                 else
@@ -207,7 +219,17 @@ bool Parsers::Relay::Parse(libcomp::ManagerPacket *pPacketManager,
             }
             else if(reportOffline)
             {
-                reportFailed.push_back(c->GetCharacter()->GetName());
+                auto character = c->GetCharacter().Get(db);
+                if(character)
+                {
+                    reportFailed.push_back(character->GetName());
+                }
+                else
+                {
+                    LOG_WARNING(libcomp::String("Failed relay attempt"
+                        " encountered with non-existent character: %1\n")
+                        .Arg(c->GetCharacter().GetUUID().ToString()));
+                }
             }
         }
 

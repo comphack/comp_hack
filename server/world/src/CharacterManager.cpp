@@ -1171,10 +1171,21 @@ void CharacterManager::RecalculateClanLevel(int32_t clanID, bool sendUpdate)
         int8_t currentLevel = clan->GetLevel();
 
         uint64_t totalPoints = 0;
-        for(auto member : clan->GetMembers())
+        for(auto memberRef : clan->GetMembers())
         {
-            totalPoints = (uint64_t)(totalPoints + (uint64_t)member->LoadCharacter(db)
-                ->GetLoginPoints());
+            auto member = memberRef.Get(db);
+            auto character = member ? member->GetCharacter().Get(db) : nullptr;
+
+            if(!character)
+            {
+                LOG_WARNING(libcomp::String("Invalid clan member encountered"
+                    " on clan '%1' with UID: %2\n").Arg(clan->GetName())
+                    .Arg(memberRef.GetUUID().ToString()));
+                continue;
+            }
+
+            totalPoints = (uint64_t)(totalPoints + (uint64_t)
+                character->GetLoginPoints());
         }
 
         uint32_t newLevel = (uint32_t)((double)totalPoints * 0.0001);

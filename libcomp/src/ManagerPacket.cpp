@@ -61,7 +61,7 @@ bool ManagerPacket::ProcessMessage(const libcomp::Message::Message *pMessage)
     {
         libcomp::ReadOnlyPacket p(pPacketMessage->GetPacket());
         p.Rewind();
-        p.HexDump();
+        //p.HexDump();
 
         CommandCode_t code = pPacketMessage->GetCommandCode();
 

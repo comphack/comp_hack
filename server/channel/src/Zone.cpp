@@ -26,6 +26,9 @@
 
 #include "Zone.h"
 
+// libcomp Includes
+#include <ScriptEngine.h>
+
 // C++ Standard Includes
 #include <cmath>
 
@@ -43,6 +46,7 @@
 // channel Includes
 #include "ChannelServer.h"
 #include "WorldClock.h"
+#include "ZoneInstance.h"
 
 using namespace channel;
 
@@ -59,14 +63,10 @@ namespace libcomp
 
             Sqrat::Class<Zone> binding(mVM, "Zone");
             binding
-                .Func<uint32_t(Zone::*)()>(
-                    "GetDefinitionID", &Zone::GetDefinitionID)
-                .Func<int32_t (Zone::*)(int32_t, int32_t, int32_t)>(
-                    "GetFlagState", &Zone::GetFlagStateValue)
-                .Func<std::shared_ptr<ZoneInstance>(Zone::*)() const>(
-                    "GetZoneInstance", &Zone::GetInstance)
-                .Func<bool(Zone::*)(uint32_t, bool, bool)>(
-                    "GroupHasSpawned", &Zone::GroupHasSpawned);
+                .Func("GetDefinitionID", &Zone::GetDefinitionID)
+                .Func("GetFlagState", &Zone::GetFlagStateValue)
+                .Func("GetZoneInstance", &Zone::GetInstance)
+                .Func("GroupHasSpawned", &Zone::GroupHasSpawned);
 
             Bind<Zone>("Zone", binding);
         }

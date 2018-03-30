@@ -41,6 +41,7 @@
 // channel Includes
 #include "ChannelServer.h"
 #include "FusionManager.h"
+#include "ManagerConnection.h"
 
 using namespace channel;
 

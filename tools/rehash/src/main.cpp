@@ -8,7 +8,7 @@
  *
  * This tool will generate a new hashlist.dat for an updater.
  *
- * Copyright (C) 2012-2016 COMP_hack Team <compomega@tutanota.com>
+ * Copyright (C) 2012-2018 COMP_hack Team <compomega@tutanota.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as

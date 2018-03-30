@@ -30,6 +30,7 @@
 
 // libcomp Includes
 #include <ErrorCodes.h>
+#include <Log.h>
 #include <ManagerPacket.h>
 #include <Packet.h>
 #include <PacketCodes.h>
@@ -40,6 +41,8 @@
 
 // channel Includes
 #include "ChannelServer.h"
+#include "CharacterManager.h"
+#include "ManagerConnection.h"
 
 using namespace channel;
 

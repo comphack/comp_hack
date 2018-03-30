@@ -8,7 +8,7 @@
  *
  * This file is part of the Lobby Server (lobby).
  *
- * Copyright (C) 2012-2016 COMP_hack Team <compomega@tutanota.com>
+ * Copyright (C) 2012-2018 COMP_hack Team <compomega@tutanota.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as
@@ -32,8 +32,6 @@
 #include <Worker.h>
 
 // lobby Includes
-#include "AccountManager.h"
-#include "ManagerConnection.h"
 #include "World.h"
 
 namespace objects
@@ -45,8 +43,10 @@ class SetupConfig;
 
 namespace lobby
 {
-
+    
+class AccountManager;
 class LobbySyncManager;
+class ManagerConnection;
 
 class LobbyServer : public libcomp::BaseServer
 {
@@ -202,7 +202,7 @@ protected:
     bool mUnitTestMode;
 
     /// Account manager for the server.
-    AccountManager mAccountManager;
+    AccountManager* mAccountManager;
 
     /// Data sync manager for the server.
     LobbySyncManager* mSyncManager;

@@ -28,10 +28,12 @@
 
 // libcomp Includes
 #include <Constants.h>
+#include <DefinitionManager.h>
 #include <Log.h>
 #include <PacketCodes.h>
 #include <Randomizer.h>
 #include <ScriptEngine.h>
+#include <ServerDataManager.h>
 
 // objects Include
 #include <Account.h>
@@ -71,9 +73,14 @@
 #include <SpawnRestriction.h>
 
 // channel Includes
+#include "ActionManager.h"
+#include "AIManager.h"
 #include "AIState.h"
 #include "ChannelServer.h"
+#include "CharacterManager.h"
+#include "ManagerConnection.h"
 #include "PlasmaState.h"
+#include "TokuseiManager.h"
 #include "Zone.h"
 #include "ZoneInstance.h"
 
@@ -2439,7 +2446,7 @@ void ZoneManager::Warp(const std::shared_ptr<ChannelClientConnection>& client,
     RelativeTimeMap timeMap;
     timeMap[p.Size()] = timestamp;
 
-    auto connections = server->GetZoneManager()->GetZoneConnections(client, true);
+    auto connections = GetZoneConnections(client, true);
     ChannelClientConnection::SendRelativeTimePacket(connections, p, timeMap);
 }
 

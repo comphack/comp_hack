@@ -33,6 +33,7 @@
 
 // channel Includes
 #include "ChannelServer.h"
+#include "CharacterManager.h"
 #include "PlasmaState.h"
 
 using namespace channel;

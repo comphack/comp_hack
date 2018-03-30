@@ -34,7 +34,9 @@
 
  // channel Includes
 #include "ChannelServer.h"
+#include "CharacterManager.h"
 #include "PlasmaState.h"
+#include "ZoneManager.h"
 
 using namespace channel;
 

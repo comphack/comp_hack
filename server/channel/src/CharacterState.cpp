@@ -8,7 +8,7 @@
  *
  * This file is part of the Channel Server (channel).
  *
- * Copyright (C) 2012-2017 COMP_hack Team <compomega@tutanota.com>
+ * Copyright (C) 2012-2018 COMP_hack Team <compomega@tutanota.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as
@@ -74,9 +74,7 @@ namespace libcomp
             Sqrat::DerivedClass<CharacterState,
                 ActiveEntityState> binding(mVM, "CharacterState");
             binding
-                .Func<std::shared_ptr<objects::Character>
-                    (CharacterState::*)()>(
-                    "GetEntity", &CharacterState::GetEntity);
+                .Func("GetEntity", &CharacterState::GetEntity);
 
             Bind<CharacterState>("CharacterState", binding);
         }

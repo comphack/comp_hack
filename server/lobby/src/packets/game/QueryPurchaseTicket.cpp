@@ -8,7 +8,7 @@
  *
  * This file is part of the Lobby Server (lobby).
  *
- * Copyright (C) 2012-2016 COMP_hack Team <compomega@tutanota.com>
+ * Copyright (C) 2012-2018 COMP_hack Team <compomega@tutanota.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as
@@ -27,16 +27,18 @@
 #include "Packets.h"
 
 // libcomp Includes
+#include <LobbyClientConnection.h>
 #include <ManagerPacket.h>
 #include <Packet.h>
 #include <PacketCodes.h>
 #include <ReadOnlyPacket.h>
 
-// lobby Includes
-#include "LobbyServer.h"
-
 // object Includes
 #include <Account.h>
+#include <LobbyConfig.h>
+
+// lobby Includes
+#include "LobbyServer.h"
 
 using namespace lobby;
 
@@ -44,8 +46,6 @@ bool Parsers::QueryPurchaseTicket::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {
-    (void)pPacketManager;
-
     if(p.Size() != 1)
     {
         return false;

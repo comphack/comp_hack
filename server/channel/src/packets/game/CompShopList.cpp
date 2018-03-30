@@ -4,7 +4,7 @@
  *
  * @author HACKfrost
  *
- * @brief
+ * @brief Request from the client for the list of COMP shops.
  *
  * This file is part of the Channel Server (channel).
  *
@@ -30,6 +30,7 @@
 #include <ManagerPacket.h>
 #include <Packet.h>
 #include <PacketCodes.h>
+#include <ServerDataManager.h>
 
 // object Includes
 #include <ServerShop.h>

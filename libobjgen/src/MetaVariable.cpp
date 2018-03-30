@@ -8,7 +8,7 @@
  *
  * This file is part of the COMP_hack Object Generator Library (libobjgen).
  *
- * Copyright (C) 2012-2016 COMP_hack Team <compomega@tutanota.com>
+ * Copyright (C) 2012-2018 COMP_hack Team <compomega@tutanota.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as
@@ -697,15 +697,12 @@ std::string MetaVariable::GetAccessScriptBindings(const Generator& generator,
     std::stringstream ss;
 
     auto objName = object.GetName();
-    ss << ".Func<" << GetCodeType() << " (" << objName
-        << "::*)() const>(" << std::endl << generator.Tab() << "\"Get"
-        << generator.GetCapitalName(*this) << "\", &" << objName
-        << "::Get" << generator.GetCapitalName(*this) << ")" << std::endl;
+    ss << ".Func(\"Get" << generator.GetCapitalName(*this) << "\", &"
+        << objName << "::Get" << generator.GetCapitalName(*this) << ")"
+        << std::endl;
 
-    ss << ".Func<bool (" << objName << "::*)(" << GetArgumentType()
-        << ")>(" << std::endl << generator.Tab() << "\"Set"
-        << generator.GetCapitalName(*this) << "\", &" << objName
-        << "::Set" << generator.GetCapitalName(*this)
+    ss << ".Func(\"Set" << generator.GetCapitalName(*this) << "\", &"
+        << objName << "::Set" << generator.GetCapitalName(*this)
         << ")" << std::endl;
 
     ss << ".Prop(" << "\"" << generator.GetCapitalName(*this) << "\", &"

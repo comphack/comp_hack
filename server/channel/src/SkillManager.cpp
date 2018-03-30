@@ -35,6 +35,7 @@
 #include <PacketCodes.h>
 #include <Randomizer.h>
 #include <ServerConstants.h>
+#include <ServerDataManager.h>
 
 // Standard C++11 Includes
 #include <math.h>
@@ -104,8 +105,14 @@
 #include <WorldSharedConfig.h>
 
 // channel Includes
+#include "ActionManager.h"
 #include "ChannelServer.h"
+#include "CharacterManager.h"
+#include "EventManager.h"
+#include "ManagerConnection.h"
+#include "TokuseiManager.h"
 #include "Zone.h"
+#include "ZoneManager.h"
 
 using namespace channel;
 
@@ -574,8 +581,9 @@ bool SkillManager::ExecuteSkill(std::shared_ptr<ActiveEntityState> source,
                 sourceState->GetDemonState() != targetEntity || !targetAlive;
             break;
         case objects::MiTargetData::Type_t::PARTY:
-            targetInvalid = !sourceState || sourceState->GetPartyID() == 0 || !targetState ||
-                sourceState->GetPartyID() != targetState->GetPartyID() || !targetAlive;
+            targetInvalid = !sourceState || !targetState || (sourceState->GetPartyID() &&
+                sourceState->GetPartyID() != targetState->GetPartyID()) ||
+                (!sourceState->GetPartyID() && sourceState != targetState)|| !targetAlive;
             break;
         case objects::MiTargetData::Type_t::ENEMY:
             targetInvalid = allies || !targetAlive;
@@ -1381,12 +1389,12 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
                 auto sourceState = ClientState::GetEntityClientState(effectiveSource->GetEntityID());
                 uint32_t sourcePartyID = sourceState ? sourceState->GetPartyID() : 0;
 
-                effectiveTargets.remove_if([sourcePartyID](
+                effectiveTargets.remove_if([sourceState, sourcePartyID](
                     const std::shared_ptr<ActiveEntityState>& target)
                     {
                         auto state = ClientState::GetEntityClientState(target->GetEntityID());
-                        return sourcePartyID == 0 || !state ||
-                            state->GetPartyID() != sourcePartyID;
+                        return !state || (!sourcePartyID && state != sourceState) ||
+                            (sourcePartyID && state->GetPartyID() != sourcePartyID);
                     });
             }
         }

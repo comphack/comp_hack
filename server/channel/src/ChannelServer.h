@@ -8,7 +8,7 @@
  *
  * This file is part of the Channel Server (channel).
  *
- * Copyright (C) 2012-2016 COMP_hack Team <compomega@tutanota.com>
+ * Copyright (C) 2012-2018 COMP_hack Team <compomega@tutanota.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as
@@ -38,19 +38,13 @@
 #include <RegisteredWorld.h>
 
 // channel Includes
-#include "AccountManager.h"
-#include "ActionManager.h"
-#include "AIManager.h"
-#include "ChannelSyncManager.h"
-#include "CharacterManager.h"
-#include "ChatManager.h"
-#include "DefinitionManager.h"
-#include "EventManager.h"
-#include "ServerDataManager.h"
-#include "SkillManager.h"
-#include "TokuseiManager.h"
 #include "WorldClock.h"
-#include "ZoneManager.h"
+
+namespace libcomp
+{
+class DefinitionManager;
+class ServerDataManager;
+}
 
 namespace objects
 {
@@ -63,7 +57,17 @@ namespace channel
 typedef uint64_t ServerTime;
 typedef ServerTime (*GET_SERVER_TIME)();
 
+class AccountManager;
+class ActionManager;
+class AIManager;
+class ChannelSyncManager;
+class CharacterManager;
+class ChatManager;
+class EventManager;
 class FusionManager;
+class SkillManager;
+class TokuseiManager;
+class ZoneManager;
 
 /**
  * Channel server that handles client packets in game.

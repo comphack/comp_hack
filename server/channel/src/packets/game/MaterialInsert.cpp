@@ -27,6 +27,7 @@
 #include "Packets.h"
 
 // libcomp Includes
+#include <DefinitionManager.h>
 #include <Log.h>
 #include <ManagerPacket.h>
 #include <Packet.h>
@@ -40,6 +41,7 @@
 
 // channel Includes
 #include "ChannelServer.h"
+#include "CharacterManager.h"
 
 using namespace channel;
 

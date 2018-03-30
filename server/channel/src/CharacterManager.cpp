@@ -28,6 +28,7 @@
 
 // libcomp Includes
 #include <Constants.h>
+#include <DefinitionManager.h>
 #include <Log.h>
 #include <PacketCodes.h>
 #include <Randomizer.h>
@@ -36,11 +37,6 @@
 // Standard C++11 Includes
 #include <limits>
 #include <math.h>
-
-// channel Includes
-#include "AIState.h"
-#include "ChannelServer.h"
-#include "FusionManager.h"
 
 // object Includes
 #include <AccountWorldData.h>
@@ -85,6 +81,14 @@
 #include <ServerZone.h>
 #include <StatusEffect.h>
 #include <WorldSharedConfig.h>
+
+// channel Includes
+#include "AIState.h"
+#include "ChannelServer.h"
+#include "FusionManager.h"
+#include "ManagerConnection.h"
+#include "TokuseiManager.h"
+#include "ZoneManager.h"
 
 using namespace channel;
 

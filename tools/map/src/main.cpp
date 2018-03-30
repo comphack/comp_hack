@@ -6,7 +6,7 @@
  *
  * @brief Main source file for the map manager.
  *
- * Copyright (C) 2012-2017 COMP_hack Team <compomega@tutanota.com>
+ * Copyright (C) 2012-2018 COMP_hack Team <compomega@tutanota.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as

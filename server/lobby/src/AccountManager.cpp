@@ -39,6 +39,7 @@
 #include <AccountLogin.h>
 #include <Character.h>
 #include <CharacterLogin.h>
+#include <LobbyConfig.h>
 
 // lobby Includes
 #include "LobbyServer.h"

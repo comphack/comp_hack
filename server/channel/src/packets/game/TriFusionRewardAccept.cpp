@@ -36,6 +36,7 @@
 
 // channel Includes
 #include "ChannelServer.h"
+#include "ManagerConnection.h"
 
 using namespace channel;
 

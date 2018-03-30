@@ -27,9 +27,11 @@
 #include "ChatManager.h"
 
 // libcomp Includes
+#include <DefinitionManager.h>
 #include <Log.h>
 #include <PacketCodes.h>
 #include <ServerConstants.h>
+#include <ServerDataManager.h>
 
 // object Includes
 #include <Account.h>
@@ -52,14 +54,19 @@
 #include <ServerZone.h>
 #include <ServerZoneInstance.h>
 
-// channel Includes
-#include <ChannelServer.h>
-#include <ClientState.h>
-#include <Git.h>
-#include <ZoneManager.h>
-
 // Standard C Includes
 #include <cstdlib>
+
+// channel Includes
+#include "AccountManager.h"
+#include "ChannelServer.h"
+#include "CharacterManager.h"
+#include "ClientState.h"
+#include "EventManager.h"
+#include "Git.h"
+#include "ManagerConnection.h"
+#include "TokuseiManager.h"
+#include "ZoneManager.h"
 
 using namespace channel;
 

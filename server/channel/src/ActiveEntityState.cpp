@@ -8,7 +8,7 @@
  *
  * This file is part of the Channel Server (channel).
  *
- * Copyright (C) 2012-2016 COMP_hack Team <compomega@tutanota.com>
+ * Copyright (C) 2012-2018 COMP_hack Team <compomega@tutanota.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as
@@ -87,22 +87,14 @@ namespace libcomp
             Sqrat::DerivedClass<ActiveEntityState,
                 objects::ActiveEntityStateObject> binding(mVM, "ActiveEntityState");
             binding
-                .Func<std::shared_ptr<Zone> (ActiveEntityState::*)() const>(
-                    "GetZone", &ActiveEntityState::GetZone)
-                .Func<void (ActiveEntityState::*)(float, uint64_t)>(
-                    "Rotate", &ActiveEntityState::Rotate)
-                .Func<void (ActiveEntityState::*)(uint64_t)>(
-                    "Stop", &ActiveEntityState::Stop)
-                .Func<bool (ActiveEntityState::*)(void) const>(
-                    "IsMoving", &ActiveEntityState::IsMoving)
-                .Func<bool (ActiveEntityState::*)(void) const>(
-                    "IsRotating", &ActiveEntityState::IsRotating)
-                .Func<std::shared_ptr<AIState>(ActiveEntityState::*)() const>(
-                    "GetAIState", &ActiveEntityState::GetAIState)
-                .Func<uint64_t (ActiveEntityState::*)(const libcomp::String&)>(
-                    "GetActionTime", &ActiveEntityState::GetActionTime)
-                .Func<void (ActiveEntityState::*)(const libcomp::String&, uint64_t)>(
-                    "SetActionTime", &ActiveEntityState::SetActionTime);
+                .Func("GetZone", &ActiveEntityState::GetZone)
+                .Func("Rotate", &ActiveEntityState::Rotate)
+                .Func("Stop", &ActiveEntityState::Stop)
+                .Func("IsMoving", &ActiveEntityState::IsMoving)
+                .Func("IsRotating", &ActiveEntityState::IsRotating)
+                .Func("GetAIState", &ActiveEntityState::GetAIState)
+                .Func("GetActionTime", &ActiveEntityState::GetActionTime)
+                .Func("SetActionTime", &ActiveEntityState::SetActionTime);
 
             Bind<ActiveEntityState>("ActiveEntityState", binding);
         }

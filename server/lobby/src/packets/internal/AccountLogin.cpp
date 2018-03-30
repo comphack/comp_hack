@@ -43,7 +43,9 @@
 #include <CharacterLogin.h>
 
 // lobby Includes
+#include "AccountManager.h"
 #include "LobbyServer.h"
+#include "ManagerConnection.h"
 
 using namespace lobby;
 

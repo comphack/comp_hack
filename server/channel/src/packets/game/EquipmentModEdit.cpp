@@ -4,11 +4,12 @@
  *
  * @author HACKfrost
  *
- * @brief
+ * @brief Request from the client adjust mod slot configurations or tarot/soul
+ *  availability.
  *
  * This file is part of the Channel Server (channel).
  *
- * Copyright (C) 2012-2017 COMP_hack Team <compomega@tutanota.com>
+ * Copyright (C) 2012-2018 COMP_hack Team <compomega@tutanota.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as
@@ -41,6 +42,8 @@
 
 // channel Includes
 #include "ChannelServer.h"
+#include "CharacterManager.h"
+#include "SkillManager.h"
 
 using namespace channel;
 

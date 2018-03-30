@@ -8,7 +8,7 @@
 *
 * This file is part of the Channel Server (channel).
 *
-* Copyright (C) 2012-2016 COMP_hack Team <compomega@tutanota.com>
+* Copyright (C) 2012-2018 COMP_hack Team <compomega@tutanota.com>
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License as
@@ -25,9 +25,6 @@
 */
 
 #include "Packets.h"
-#include "ChannelClientConnection.h"
-#include "ChatManager.h"
-#include "ChannelServer.h"
 
 // libcomp Includes
 #include <Decrypt.h>
@@ -43,6 +40,10 @@
 #include <AccountLogin.h>
 #include <Account.h>
 
+// channel Includes
+#include "ChannelClientConnection.h"
+#include "ChannelServer.h"
+#include "ChatManager.h"
 
 using namespace channel;
 

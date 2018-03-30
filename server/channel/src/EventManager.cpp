@@ -9,7 +9,7 @@
  *
  * This file is part of the Channel Server (channel).
  *
- * Copyright (C) 2012-2017 COMP_hack Team <compomega@tutanota.com>
+ * Copyright (C) 2012-2018 COMP_hack Team <compomega@tutanota.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as
@@ -28,18 +28,16 @@
 #include "EventManager.h"
 
 // libcomp Includes
+#include <DefinitionManager.h>
 #include <Log.h>
 #include <PacketCodes.h>
 #include <Randomizer.h>
+#include <ScriptEngine.h>
 #include <ServerConstants.h>
+#include <ServerDataManager.h>
 
 // Standard C++11 Includes
 #include <math.h>
-
-// channel Includes
-#include "ChannelServer.h"
-#include "CharacterState.h"
-#include "ZoneInstance.h"
 
 // object Includes
 #include <Account.h>
@@ -80,6 +78,15 @@
 #include <ServerZone.h>
 #include <ServerZoneInstance.h>
 #include <TriFusionHostSession.h>
+
+// channel Includes
+#include "ActionManager.h"
+#include "ChannelServer.h"
+#include "CharacterManager.h"
+#include "CharacterState.h"
+#include "ManagerConnection.h"
+#include "ZoneInstance.h"
+#include "ZoneManager.h"
 
 using namespace channel;
 

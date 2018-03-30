@@ -27,6 +27,7 @@
 #include "FusionManager.h"
 
 // libcomp Includes
+#include <DefinitionManager.h>
 #include <Log.h>
 #include <Packet.h>
 #include <PacketCodes.h>
@@ -60,6 +61,7 @@
 
 // channel Includes
 #include "ChannelServer.h"
+#include "CharacterManager.h"
 #include "FusionTables.h"
 
 using namespace channel;

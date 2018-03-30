@@ -4,11 +4,12 @@
  *
  * @author HACKfrost
  *
- * @brief
+ * @brief Request from the client to apply a mod slot effect on a weapon
+ *  or armor.
  *
  * This file is part of the Channel Server (channel).
  *
- * Copyright (C) 2012-2017 COMP_hack Team <compomega@tutanota.com>
+ * Copyright (C) 2012-2018 COMP_hack Team <compomega@tutanota.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as
@@ -27,6 +28,7 @@
 #include "Packets.h"
 
 // libcomp Includes
+#include <DefinitionManager.h>
 #include <Log.h>
 #include <ManagerPacket.h>
 #include <Packet.h>
@@ -52,6 +54,7 @@
 
 // channel Includes
 #include "ChannelServer.h"
+#include "CharacterManager.h"
 
 using namespace channel;
 

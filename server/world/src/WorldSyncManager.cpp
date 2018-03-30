@@ -4,7 +4,8 @@
  *
  * @author HACKfrost
  *
- * @brief 
+ * @brief World specific implementation of the DataSyncManager in
+ *  charge of performing server side update operations.
  *
  * This file is part of the World Server (world).
  *
@@ -39,7 +40,8 @@
 #include <CharacterLogin.h>
 
 // world Includes
-#include <WorldServer.h>
+#include "AccountManager.h"
+#include "WorldServer.h"
 
 using namespace world;
 

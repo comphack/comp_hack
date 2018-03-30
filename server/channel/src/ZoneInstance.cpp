@@ -47,8 +47,7 @@ namespace libcomp
 
             Sqrat::Class<ZoneInstance> binding(mVM, "ZoneInstance");
             binding
-                .Func<int32_t (ZoneInstance::*)(int32_t, int32_t, int32_t)>(
-                    "GetFlagState", &ZoneInstance::GetFlagStateValue);
+                .Func("GetFlagState", &ZoneInstance::GetFlagStateValue);
 
             Bind<ZoneInstance>("ZoneInstance", binding);
         }

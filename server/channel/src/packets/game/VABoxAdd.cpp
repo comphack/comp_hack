@@ -39,6 +39,7 @@
 
 // channel Includes
 #include "ChannelServer.h"
+#include "CharacterManager.h"
 
 using namespace channel;
 

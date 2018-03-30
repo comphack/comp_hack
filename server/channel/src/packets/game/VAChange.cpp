@@ -33,6 +33,7 @@
 
 // channel Includes
 #include "ChannelServer.h"
+#include "ZoneManager.h"
 
 using namespace channel;
 

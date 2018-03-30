@@ -8,7 +8,7 @@
  *
  * This file is part of the COMP_hack Library (libcomp).
  *
- * Copyright (C) 2012-2016 COMP_hack Team <compomega@tutanota.com>
+ * Copyright (C) 2012-2018 COMP_hack Team <compomega@tutanota.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as
@@ -44,10 +44,8 @@ namespace libcomp
         {
             Sqrat::Class<Randomizer> binding(mVM, "Randomizer");
             binding
-                .StaticFunc<int32_t(*)(int32_t, int32_t)>(
-                    "RNG", &Randomizer::GetRandomNumber<int32_t>)
-                .StaticFunc<int64_t(*)(int64_t, int64_t)>(
-                    "RNG64", &Randomizer::GetRandomNumber64<int64_t>);
+                .StaticFunc("RNG", &Randomizer::GetRandomNumber<int32_t>)
+                .StaticFunc("RNG64", &Randomizer::GetRandomNumber64<int64_t>);
 
             Bind<Randomizer>("Randomizer", binding);
         }

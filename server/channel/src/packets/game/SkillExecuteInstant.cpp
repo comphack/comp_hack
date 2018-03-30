@@ -40,6 +40,7 @@
 
 // channel Includes
 #include "ChannelServer.h"
+#include "SkillManager.h"
 
 using namespace channel;
 

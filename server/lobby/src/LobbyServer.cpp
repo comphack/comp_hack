@@ -8,7 +8,7 @@
  *
  * This file is part of the Lobby Server (lobby).
  *
- * Copyright (C) 2012-2016 COMP_hack Team <compomega@tutanota.com>
+ * Copyright (C) 2012-2018 COMP_hack Team <compomega@tutanota.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as
@@ -26,12 +26,6 @@
 
 #include "LobbyServer.h"
 
-// lobby Includes
-#include "LobbyClientConnection.h"
-#include "LobbySyncManager.h"
-#include "ManagerClientPacket.h"
-#include "Packets.h"
-
 // libcomp Includes
 #include <DatabaseConfigMariaDB.h>
 #include <DatabaseConfigSQLite3.h>
@@ -47,13 +41,21 @@
 // Standard C++11 Includes
 #include <iostream>
 
+// lobby Includes
+#include "AccountManager.h"
+#include "LobbyClientConnection.h"
+#include "LobbySyncManager.h"
+#include "ManagerClientPacket.h"
+#include "ManagerConnection.h"
+#include "Packets.h"
+
 using namespace lobby;
 
 LobbyServer::LobbyServer(const char *szProgram,
     std::shared_ptr<objects::ServerConfig> config,
     std::shared_ptr<libcomp::ServerCommandLineParser> commandLine,
     bool unitTestMode) : libcomp::BaseServer(szProgram, config, commandLine),
-    mUnitTestMode(unitTestMode), mAccountManager(this)
+    mUnitTestMode(unitTestMode)
 {
 }
 
@@ -102,6 +104,7 @@ bool LobbyServer::Initialize()
     mManagerConnection = std::make_shared<ManagerConnection>(
         self, &mService, mMainWorker.GetMessageQueue());
 
+    mAccountManager = new AccountManager(this);
     mSyncManager = new LobbySyncManager(self);
 
     if(!mSyncManager->Initialize())
@@ -115,9 +118,6 @@ bool LobbyServer::Initialize()
     {
         return false;
     }
-
-    auto connectionManager = std::dynamic_pointer_cast<libcomp::Manager>(
-        mManagerConnection);
 
     auto internalPacketManager = std::make_shared<libcomp::ManagerPacket>(self);
     internalPacketManager->AddParser<Parsers::SetWorldInfo>(
@@ -133,7 +133,7 @@ bool LobbyServer::Initialize()
 
     //Add the managers to the main worker.
     mMainWorker.AddManager(internalPacketManager);
-    mMainWorker.AddManager(connectionManager);
+    mMainWorker.AddManager(mManagerConnection);
 
     auto clientPacketManager = std::make_shared<ManagerClientPacket>(self);
     clientPacketManager->AddParser<Parsers::Login>(to_underlying(
@@ -159,7 +159,7 @@ bool LobbyServer::Initialize()
     for(auto worker : mWorkers)
     {
         worker->AddManager(clientPacketManager);
-        worker->AddManager(connectionManager);
+        worker->AddManager(mManagerConnection);
     }
 
     return true;
@@ -167,6 +167,8 @@ bool LobbyServer::Initialize()
 
 LobbyServer::~LobbyServer()
 {
+    delete mAccountManager;
+    delete mSyncManager;
 }
 
 std::list<std::shared_ptr<lobby::World>> LobbyServer::GetWorlds() const
@@ -538,7 +540,7 @@ bool LobbyServer::Setup()
 
 AccountManager* LobbyServer::GetAccountManager()
 {
-    return &mAccountManager;
+    return mAccountManager;
 }
 
 LobbySyncManager* LobbyServer::GetLobbySyncManager() const

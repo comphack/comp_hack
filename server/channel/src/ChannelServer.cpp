@@ -8,7 +8,7 @@
  *
  * This file is part of the Channel Server (channel).
  *
- * Copyright (C) 2012-2016 COMP_hack Team <compomega@tutanota.com>
+ * Copyright (C) 2012-2018 COMP_hack Team <compomega@tutanota.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as
@@ -27,20 +27,33 @@
 #include "ChannelServer.h"
 
 // libcomp Includes
+#include <DefinitionManager.h>
 #include <Log.h>
 #include <ManagerSystem.h>
 #include <MessageTick.h>
 #include <PacketCodes.h>
+#include <ServerDataManager.h>
 
 // object Includes
 #include <Account.h>
 #include <ChannelConfig.h>
 
 // channel Includes
+#include "AccountManager.h"
+#include "ActionManager.h"
+#include "AIManager.h"
 #include "ChannelClientConnection.h"
+#include "ChannelSyncManager.h"
+#include "CharacterManager.h"
+#include "ChatManager.h"
+#include "EventManager.h"
 #include "FusionManager.h"
 #include "ManagerClientPacket.h"
+#include "ManagerConnection.h"
 #include "Packets.h"
+#include "SkillManager.h"
+#include "TokuseiManager.h"
+#include "ZoneManager.h"
 
 using namespace channel;
 

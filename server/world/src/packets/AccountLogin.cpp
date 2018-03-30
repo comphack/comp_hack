@@ -8,7 +8,7 @@
  *
  * This file is part of the World Server (world).
  *
- * Copyright (C) 2012-2016 COMP_hack Team <compomega@tutanota.com>
+ * Copyright (C) 2012-2018 COMP_hack Team <compomega@tutanota.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as
@@ -47,6 +47,7 @@
 
 // world Includes
 #include "AccountManager.h"
+#include "CharacterManager.h"
 #include "WorldConfig.h"
 #include "WorldServer.h"
 

@@ -26,9 +26,6 @@
 
 #include "Packets.h"
 
-// lobby Includes
-#include "LobbyServer.h"
-
 // libcomp Includes
 #include <Decrypt.h>
 #include <ErrorCodes.h>
@@ -42,6 +39,11 @@
 #include <Account.h>
 #include <AccountLogin.h>
 #include <CharacterLogin.h>
+
+// lobby Includes
+#include "AccountManager.h"
+#include "LobbyServer.h"
+#include "ManagerConnection.h"
 
 using namespace lobby;
 

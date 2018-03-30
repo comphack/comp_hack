@@ -31,6 +31,7 @@
 #include <ManagerPacket.h>
 #include <Packet.h>
 #include <PacketCodes.h>
+#include <ServerDataManager.h>
 
 // objects Includes
 #include <DropSet.h>
@@ -40,6 +41,7 @@
 
 // channel Includes
 #include "ChannelServer.h"
+#include "CharacterManager.h"
 #include "PlasmaState.h"
 
 using namespace channel;

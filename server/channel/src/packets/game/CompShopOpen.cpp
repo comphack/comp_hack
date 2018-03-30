@@ -4,7 +4,7 @@
  *
  * @author HACKfrost
  *
- * @brief
+ * @brief Request from the client to open a COMP shop.
  *
  * This file is part of the Channel Server (channel).
  *
@@ -33,8 +33,10 @@
 #include <ServerConstants.h>
 
 // channel Includes
+#include "AccountManager.h"
 #include "ChannelServer.h"
 #include "ChannelClientConnection.h"
+#include "EventManager.h"
 
 using namespace channel;
 

@@ -8,7 +8,7 @@
  *
  * This file is part of the Channel Server (channel).
  *
- * Copyright (C) 2012-2017 COMP_hack Team <compomega@tutanota.com>
+ * Copyright (C) 2012-2018 COMP_hack Team <compomega@tutanota.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as
@@ -27,9 +27,11 @@
 #include "AIManager.h"
 
 // libcomp Includes
+#include <DefinitionManager.h>
 #include <Log.h>
 #include <PacketCodes.h>
 #include <Randomizer.h>
+#include <ServerDataManager.h>
 
 // object Includes
 #include <ActivatedAbility.h>
@@ -50,6 +52,9 @@
 // channel Includes
 #include "AICommand.h"
 #include "ChannelServer.h"
+#include "CharacterManager.h"
+#include "SkillManager.h"
+#include "ZoneManager.h"
 
 using namespace channel;
 
@@ -67,15 +72,9 @@ namespace libcomp
 
             Sqrat::Class<AIManager> binding(mVM, "AIManager");
             binding
-                .Func<void (AIManager::*)(const std::shared_ptr<
-                    ActiveEntityState>&, float, float, uint64_t)>(
-                    "Move", &AIManager::Move)
-                .Func<void (AIManager::*)(const std::shared_ptr<
-                    AIState>, const libcomp::String&)>(
-                    "QueueScriptCommand", &AIManager::QueueScriptCommand)
-                .Func<void (AIManager::*)(const std::shared_ptr<
-                    AIState>, uint32_t)>(
-                    "QueueWaitCommand", &AIManager::QueueWaitCommand);
+                .Func("Move", &AIManager::Move)
+                .Func("QueueScriptCommand", &AIManager::QueueScriptCommand)
+                .Func("QueueWaitCommand", &AIManager::QueueWaitCommand);
 
             Bind<AIManager>("AIManager", binding);
         }

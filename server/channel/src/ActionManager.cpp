@@ -28,14 +28,13 @@
 #include "ActionManager.h"
 
 // libcomp Includes
+#include <DefinitionManager.h>
 #include <Log.h>
 #include <PacketCodes.h>
+#include <ServerDataManager.h>
 
 // Standard C++11 Includes
 #include <math.h>
-
-// channel Includes
-#include "ChannelServer.h"
 
 // object Includes
 #include <Account.h>
@@ -76,6 +75,15 @@
 #include <ServerObject.h>
 #include <ServerZone.h>
 #include <ServerZoneInstance.h>
+
+// channel Includes
+#include "AccountManager.h"
+#include "ChannelServer.h"
+#include "CharacterManager.h"
+#include "EventManager.h"
+#include "ManagerConnection.h"
+#include "TokuseiManager.h"
+#include "ZoneManager.h"
 
 using namespace channel;
 

@@ -8,7 +8,7 @@
  *
  * This file is part of the Channel Server (channel).
  *
- * Copyright (C) 2012-2016 COMP_hack Team <compomega@tutanota.com>
+ * Copyright (C) 2012-2018 COMP_hack Team <compomega@tutanota.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as
@@ -44,8 +44,7 @@ namespace libcomp
             Sqrat::DerivedClass<EnemyState,
                 ActiveEntityState> binding(mVM, "EnemyState");
             binding
-                .Func<std::shared_ptr<objects::Enemy>
-                    (EnemyState::*)()>("GetEntity", &EnemyState::GetEntity);
+                .Func("GetEntity", &EnemyState::GetEntity);
 
             Bind<EnemyState>("EnemyState", binding);
         }

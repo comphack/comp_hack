@@ -255,7 +255,10 @@ bool DataSyncManager::SyncIncoming(libcomp::ReadOnlyPacket& p,
     records.clear();
     if(isPersistent)
     {
+        auto db = configIter->second->DB;
+
         // Get by UUID and clear from queues if found
+        // If the record is server owned, attempt to load it
         for(uint16_t k = 0; k < recordsCount; k++)
         {
             String uidStr(p.ReadString16Little(libcomp::Convert::ENCODING_UTF8,
@@ -264,7 +267,9 @@ bool DataSyncManager::SyncIncoming(libcomp::ReadOnlyPacket& p,
             libobjgen::UUID uid(uidStr.C());
             if(!uid.IsNull())
             {
-                auto obj = PersistentObject::GetObjectByUUID(uid);
+                auto obj = configIter->second->ServerOwned && db
+                    ? PersistentObject::LoadObjectByUUID(typeHash, db, uid)
+                    : PersistentObject::GetObjectByUUID(uid);
                 if(obj)
                 {
                     // Remove from the queues
@@ -332,7 +337,8 @@ bool DataSyncManager::UpdateRecord(const std::shared_ptr<libcomp::Object>& recor
     auto configIter = mRegisteredTypes.find(type.C());
     if(record != nullptr && configIter != mRegisteredTypes.end())
     {
-        if(configIter->second->ServerOwned &&
+        if((configIter->second->ServerOwned ||
+            configIter->second->DynamicHandler) &&
             configIter->second->UpdateHandler)
         {
             int8_t result = configIter->second->UpdateHandler(*this, type,
@@ -364,7 +370,8 @@ bool DataSyncManager::RemoveRecord(const std::shared_ptr<libcomp::Object>& recor
     auto configIter = mRegisteredTypes.find(type.C());
     if(record != nullptr && configIter != mRegisteredTypes.end())
     {
-        if(configIter->second->ServerOwned &&
+        if((configIter->second->ServerOwned ||
+            configIter->second->DynamicHandler) &&
             configIter->second->UpdateHandler)
         {
             int8_t result = configIter->second->UpdateHandler(*this, type,

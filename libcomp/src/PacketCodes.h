@@ -193,6 +193,7 @@ enum class ClientToChannelPacketCode_t : uint16_t
     PACKET_ANALYZE_DEMON = 0x0199,  //!< Request to analyze another player's partner demon.
     PACKET_DEMON_COMPENDIUM = 0x019B,  //!< Request for the Demon Compendium.
     PACKET_ITEM_REPAIR_MAX = 0x019F,    //!< Request to repair an item's max durability.
+    PACKET_APPEARANCE_ALTER = 0x01A2,   //!< Request from the client to alter the appearance of the character.
     PACKET_ENTRUST_REQUEST = 0x01AA,  //!< Request to start a player exchange "entrust" session.
     PACKET_ENTRUST_ACCEPT = 0x01AD, //!< Request to accept an entrust request.
     PACKET_ENTRUST_REWARD_UPDATE = 0x01AF,  //!< Request to update the reward items given out upon entrust complete.
@@ -457,6 +458,8 @@ enum class ChannelToClientPacketCode_t : uint16_t
     PACKET_DEMON_COMPENDIUM_ADD = 0x019D,   //!< Notification that the Demon Compendium has been updated.
     PACKET_SKILL_COSTS = 0x019E,    //!< Notification that an entity's skill costs have been modified.
     PACKET_ITEM_REPAIR_MAX = 0x01A0,    //!< Response to the request to repair an item's max durability.
+    PACKET_APPEARANCE_ALTER = 0x01A3,   //!< Response to the request from the client to alter the appearance of the character.
+    PACKET_APPEARANCE_ALTERED = 0x01A4, //!< Notification that a character has altered their appearance.
     PACKET_DEMON_FAMILIARITY_UPDATE = 0x01A5,  //!< Notification that the current partner demon's familiarity has updated.
     PACKET_ENTRUST_REQUEST = 0x01AB,  //!< Response to the request to start a player exchange "entrust" session.
     PACKET_ENTRUST_REQUESTED = 0x01AC,    //!< Notification for an entrust target that a session is being requested.

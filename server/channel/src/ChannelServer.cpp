@@ -369,6 +369,8 @@ bool ChannelServer::Initialize()
         to_underlying(ClientToChannelPacketCode_t::PACKET_DEMON_COMPENDIUM));
     clientPacketManager->AddParser<Parsers::ItemRepairMax>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_ITEM_REPAIR_MAX));
+    clientPacketManager->AddParser<Parsers::AppearanceAlter>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_APPEARANCE_ALTER));
     clientPacketManager->AddParser<Parsers::EntrustRequest>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_ENTRUST_REQUEST));
     clientPacketManager->AddParser<Parsers::EntrustAccept>(

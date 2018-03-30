@@ -36,6 +36,12 @@
 // object Includes
 #include <AccountLogin.h>
 
+namespace objects
+{
+class AccountWorldData;
+class Character;
+}
+
 namespace world
 {
 
@@ -139,6 +145,23 @@ public:
      * @return true if a channel switch is stored, false if it is not
      */
     bool PopChannelSwitch(const libcomp::String& username, int8_t& channel);
+
+    /**
+     * Perform all clean up operations related to each AccountWorldData entry
+     * with CleanupRequired currently flagged.
+     */
+    void CleanupAccountWorldData();
+
+    /**
+     * Delete a character requested from the lobby or otherwise marked for
+     * deletion by cleaning up all related character objects. If the character
+     * is somehow still logged in, a disconnect request will be sent and the
+     * character will be marked for deletion for the next time this process
+     * runs.
+     * @param character Pointer to the character to delete
+     * @return true if the delete was successful, false if the delete failed
+     */
+    bool DeleteCharacter(const std::shared_ptr<objects::Character>& character);
 
 private:
     /**

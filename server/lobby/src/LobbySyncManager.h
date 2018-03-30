@@ -37,6 +37,7 @@
 namespace objects
 {
 class Account;
+class Character;
 }
 
 namespace lobby
@@ -85,11 +86,19 @@ public:
 
 private:
     /**
-     * Sync the supplied.
-     * @return false if any errors were encountered and the server should
-     *  be shut down.
+     * Sync the supplied account.
+     * @param account Pointer to the account record to sync
      */
     void SyncAccount(const std::shared_ptr<objects::Account>& account);
+
+    /**
+     * Sync the supplied character, should be used for all delete requests.
+     * @param character Pointer to the character record to sync
+     * @param isRemove true if the update is a remove, false if it is an
+     *  insert or update
+     */
+    void SyncCharacter(const std::shared_ptr<objects::Character>& character,
+        bool isRemove);
 
     /// Pointer to the lobby server.
     std::weak_ptr<LobbyServer> mServer;

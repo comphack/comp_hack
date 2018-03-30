@@ -34,6 +34,11 @@
 // object Includes
 #include <SearchEntry.h>
 
+namespace objects
+{
+class Character;
+}
+
 namespace world
 {
 

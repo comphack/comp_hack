@@ -56,8 +56,6 @@ bool Parsers::DeleteCharacter::Parse(libcomp::ManagerPacket *pPacketManager,
 
     uint8_t cid = p.ReadU8();
 
-    LOG_DEBUG(libcomp::String("Character ID: %1\n").Arg(cid));
-
     auto server = std::dynamic_pointer_cast<LobbyServer>(pPacketManager->GetServer());
     auto config = std::dynamic_pointer_cast<objects::LobbyConfig>(server->GetConfig());
     auto lobbyConnection = std::dynamic_pointer_cast<LobbyClientConnection>(connection);

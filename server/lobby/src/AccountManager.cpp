@@ -42,6 +42,7 @@
 
 // lobby Includes
 #include "LobbyServer.h"
+#include "LobbySyncManager.h"
 
 #ifdef HAVE_SYSTEMD
 #include <systemd/sd-daemon.h>
@@ -817,16 +818,6 @@ bool AccountManager::DeleteCharacter(const std::shared_ptr<
         return false;
     }
 
-    auto world = mServer->GetWorldByID(character->GetWorldID());
-    auto worldDB = world ? world->GetWorldDatabase() : nullptr;
-
-    if(!worldDB || !character->Delete(worldDB))
-    {
-        LOG_ERROR(libcomp::String("Character failed to delete: %1\n").Arg(
-            character->GetUUID().ToString()));
-        return false;
-    }
-
     // Bump all characters down the list
     for(; cid < MAX_CHARACTER; cid++)
     {
@@ -865,6 +856,10 @@ bool AccountManager::DeleteCharacter(const std::shared_ptr<
             " deletion: %1\n").Arg(character->GetUUID().ToString()));
         return false;
     }
+
+    // Now that the account has had the character removed, send them to
+    // the world to cleanup
+    mServer->GetLobbySyncManager()->RemoveRecord(character, "Character");
 
     return true;
 }

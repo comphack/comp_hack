@@ -32,6 +32,8 @@
         </member>
 
         <member type="BazaarData*" name="BazaarData"/>
+
+        <member type="bool" name="CleanupRequired" key="true" unique="false"/>
     </object>
     <object name="BazaarData" location="world">
         <member type="Account*" name="Account" key="true" unique="true"/>

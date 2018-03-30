@@ -158,6 +158,7 @@ PACKET_PARSER_DECL(PartnerDemonAISet);      // 0x0181
 PACKET_PARSER_DECL(MapFlag);                // 0x0197
 PACKET_PARSER_DECL(DemonCompendium);        // 0x019B
 PACKET_PARSER_DECL(ItemRepairMax);          // 0x019F
+PACKET_PARSER_DECL(AppearanceAlter);        // 0x01A2
 PACKET_PARSER_DECL(EntrustRequest);         // 0x01AA
 PACKET_PARSER_DECL(EntrustAccept);          // 0x01AD
 PACKET_PARSER_DECL(EntrustRewardUpdate);    // 0x01AF

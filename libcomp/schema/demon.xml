@@ -2,7 +2,7 @@
 <objgen>
     <object name="Demon" location="world" scriptenabled="true">
         <member type="u32" name="Type"/>
-        <member type="DemonBox*" name="DemonBox"/>
+        <member type="DemonBox*" name="DemonBox" key="true" unique="false"/>
         <member type="s8" name="BoxSlot" default="-1"/>
         <member type="u16" name="AttackSettings"/>
         <member type="s32" name="SoulPoints" min="0" max="100000"/>

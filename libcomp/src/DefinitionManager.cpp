@@ -395,6 +395,25 @@ const std::list<std::shared_ptr<objects::MiTriUnionSpecialData>>
         }
     }
 
+    // Gather additional fusions from base demon ID in case a variant fusion
+    // is being performed
+    auto demonDef = GetDevilData(sourceDemonTypeID);
+    uint32_t sourceBaseDemonTypeID = demonDef
+        ? demonDef->GetUnionData()->GetBaseDemonID() : 0;
+    if(sourceBaseDemonTypeID)
+    {
+        it = mTriUnionSpecialDataBySourceID.find(sourceBaseDemonTypeID);
+        if(it != mTriUnionSpecialDataBySourceID.end())
+        {
+            for(auto specialID : it->second)
+            {
+                result.push_back(mTriUnionSpecialData[specialID]);
+            }
+        }
+    }
+
+    result.unique();
+
     return result;
 }
 

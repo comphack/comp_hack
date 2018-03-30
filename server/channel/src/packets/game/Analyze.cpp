@@ -56,15 +56,15 @@ bool Parsers::Analyze::Parse(libcomp::ManagerPacket *pPacketManager,
     auto characterManager = server->GetCharacterManager();
 
     auto targetState = ClientState::GetEntityClientState(targetEntityID);
-    auto entityState = targetState ? targetState->GetEntityState(targetEntityID) : nullptr;
+    auto entityState = targetState
+        ? targetState->GetEntityState(targetEntityID, false) : nullptr;
 
     if(p.Size() == 6)
     {
         // Character analyze
         uint16_t equipMask = p.ReadU16Little();
 
-        auto cState = std::dynamic_pointer_cast<CharacterState>(targetState
-            ->GetCharacterState());
+        auto cState = std::dynamic_pointer_cast<CharacterState>(entityState);
 
         libcomp::Packet reply;
         reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_EQUIPMENT_ANALYZE);
@@ -86,8 +86,7 @@ bool Parsers::Analyze::Parse(libcomp::ManagerPacket *pPacketManager,
     else
     {
         // Partner demon analyze
-        auto dState = std::dynamic_pointer_cast<DemonState>(targetState
-            ->GetDemonState());
+        auto dState = std::dynamic_pointer_cast<DemonState>(entityState);
 
         libcomp::Packet reply;
         reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_ANALYZE_DEMON);

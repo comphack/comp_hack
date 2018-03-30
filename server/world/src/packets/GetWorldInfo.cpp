@@ -105,6 +105,17 @@ bool Parsers::GetWorldInfo::Parse(libcomp::ManagerPacket *pPacketManager,
         {
             LOG_CRITICAL("Failed to initialize the sync manager!\n");
         }
+
+        // Cleanup AccountWorldData and schedule additional runs every hour
+        auto accountManager = server->GetAccountManager();
+        accountManager->CleanupAccountWorldData();
+
+        auto sch = std::chrono::milliseconds(3600000);
+        server->GetTimerManager()->SchedulePeriodicEvent(sch, []
+            (WorldServer* pServer)
+            {
+                pServer->GetAccountManager()->CleanupAccountWorldData();
+            }, server.get());
     }
 
     // Reply with a packet containing the world ID and the database

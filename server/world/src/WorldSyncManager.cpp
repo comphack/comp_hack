@@ -28,12 +28,14 @@
 
 // libcomp Includes
 #include <Log.h>
+#include <PacketCodes.h>
 
 // Standard C++11 Includes
 #include <algorithm>
 
 // object Includes
 #include <Account.h>
+#include <Character.h>
 #include <CharacterLogin.h>
 
 // world Includes
@@ -52,7 +54,9 @@ WorldSyncManager::~WorldSyncManager()
 
 bool WorldSyncManager::Initialize()
 {
-    auto lobbyDB = mServer.lock()->GetLobbyDatabase();
+    auto server = mServer.lock();
+    auto lobbyDB = server->GetLobbyDatabase();
+    auto worldDB = server->GetWorldDatabase();
 
     // Build the configs
     auto cfg = std::make_shared<ObjectConfig>(
@@ -69,6 +73,13 @@ bool WorldSyncManager::Initialize()
         objects::Account>;
 
     mRegisteredTypes["Account"] = cfg;
+
+    cfg = std::make_shared<ObjectConfig>(
+        "Character", true, worldDB);
+    cfg->UpdateHandler = &DataSyncManager::Update<WorldSyncManager,
+        objects::Character>;
+
+    mRegisteredTypes["Character"] = cfg;
 
     return true;
 }
@@ -112,6 +123,38 @@ int8_t WorldSyncManager::Update<objects::Account>(const libcomp::String& type,
         // Send to the lobby
         WriteOutgoingRecord(p, true, "Account", entry);
         mServer.lock()->GetLobbyConnection()->SendPacket(p);
+    }
+
+    return SYNC_HANDLED;
+}
+
+template<>
+int8_t WorldSyncManager::Update<objects::Character>(const libcomp::String& type,
+    const std::shared_ptr<libcomp::Object>& obj, bool isRemove,
+    const libcomp::String& source)
+{
+    (void)type;
+
+    auto entry = std::dynamic_pointer_cast<objects::Character>(obj);
+
+    if(isRemove)
+    {
+        // Nothing special to do if not removing
+        if(source == "lobby")
+        {
+            // Delete is valid, queue the delete
+            auto server = mServer.lock();
+            server->QueueWork([](std::shared_ptr<WorldServer> pServer,
+                std::shared_ptr<objects::Character> character)
+            {
+                pServer->GetAccountManager()->DeleteCharacter(character);
+            }, server, entry);
+        }
+        else
+        {
+            LOG_ERROR(libcomp::String("Channel requested a character delete."
+                " which will be ignored: %1\n").Arg(source));
+        }
     }
 
     return SYNC_HANDLED;

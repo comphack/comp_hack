@@ -33,10 +33,22 @@
 
 // object Includes
 #include <Account.h>
+#include <AccountWorldData.h>
 #include <Character.h>
 #include <CharacterLogin.h>
+#include <CharacterProgress.h>
+#include <ClanMember.h>
+#include <Demon.h>
+#include <DemonBox.h>
 #include <EntityStats.h>
+#include <Expertise.h>
 #include <FriendSettings.h>
+#include <Hotbar.h>
+#include <InheritedSkill.h>
+#include <Item.h>
+#include <ItemBox.h>
+#include <Quest.h>
+#include <StatusEffect.h>
 #include <WorldConfig.h>
 
 // world Includes
@@ -364,6 +376,302 @@ bool AccountManager::PopChannelSwitch(const libcomp::String& username, int8_t& c
         return true;
     }
 
+    return false;
+}
+
+void AccountManager::CleanupAccountWorldData()
+{
+    auto server = mServer.lock();
+    auto lobbyDB = server->GetLobbyDatabase();
+    auto worldDB = server->GetWorldDatabase();
+
+    auto accountWorldDataList = objects::AccountWorldData::
+        LoadAccountWorldDataListByCleanupRequired(worldDB, true);
+    if(accountWorldDataList.size() == 0)
+    {
+        return;
+    }
+
+    LOG_DEBUG(libcomp::String("Cleaning up %1 AccountWorldData record(s)\n")
+        .Arg(accountWorldDataList.size()));
+
+    for(auto accountWorldData : accountWorldDataList)
+    {
+        auto account = libcomp::PersistentObject::LoadObjectByUUID<
+            objects::Account>(lobbyDB, accountWorldData->GetAccount().GetUUID());
+
+        if(account)
+        {
+            LOG_DEBUG(libcomp::String("Cleaning up AccountWorldData associated"
+                " to account: %1\n").Arg(account->GetUUID().ToString()));
+
+            auto characters = account->GetCharacters();
+
+            // Mark the cleanup as being handled before doing any work
+            accountWorldData->SetCleanupRequired(false);
+
+            bool updateWorldData = true;
+            for(auto character : objects::Character::LoadCharacterListByAccount(
+                worldDB, account->GetUUID()))
+            {
+                // If the character has a kill time marked and they are not
+                // in the account character list, delete them
+                if(character->GetKillTime() != 0)
+                {
+                    uint8_t cid = 0;
+                    for(; cid < MAX_CHARACTER; cid++)
+                    {
+                        if(characters[cid].GetUUID() == character->GetUUID())
+                        {
+                            // Character found
+                            break;
+                        }
+                    }
+
+                    if(cid == MAX_CHARACTER)
+                    {
+                        // Not in the character list, delete it
+                        updateWorldData &= DeleteCharacter(character);
+                    }
+                }
+            }
+
+            if(updateWorldData)
+            {
+                accountWorldData->Update(worldDB);
+            }
+        }
+        else
+        {
+            LOG_ERROR(libcomp::String("AccountWorldData associated to invalid"
+                " account: %1\n").Arg(accountWorldData->GetAccount().GetUUID()
+                    .ToString()));
+        }
+    }
+}
+
+bool AccountManager::DeleteCharacter(const std::shared_ptr<
+    objects::Character>& character)
+{
+    auto server = mServer.lock();
+    auto characterManager = server->GetCharacterManager();
+
+    auto db = server->GetWorldDatabase();
+
+    LOG_DEBUG(libcomp::String("Deleting character '%1' on account: %2\n")
+        .Arg(character->GetName()).Arg(character->GetAccount().GetUUID()
+            .ToString()));
+
+    auto changes = libcomp::DatabaseChangeSet::Create();
+
+    // Always free up the friend settings and clan information immediately
+    auto cLogin = characterManager->GetCharacterLogin(
+        character->GetName());
+
+    int32_t clanID = 0;
+    auto clanMember = objects::ClanMember::LoadClanMemberByCharacter(
+        db, character);
+    if(clanMember)
+    {
+        auto clan = libcomp::PersistentObject::LoadObjectByUUID<objects::Clan>(
+            db, clanMember->GetClan().GetUUID());
+
+        bool left = false;
+        if(clan && cLogin)
+        {
+            auto clanInfo = characterManager->GetClan(clan->GetUUID());
+            if(clanInfo)
+            {
+                clanID = clanInfo->GetID();
+                characterManager->ClanLeave(cLogin, clanID, nullptr);
+                left = true;
+            }
+        }
+
+        if(!left)
+        {
+            LOG_ERROR(libcomp::String("Failed to remove %1 from their clan\n")
+                .Arg(character->GetUUID().ToString()));
+            return false;
+        }
+    }
+
+    auto friendSettings = objects::FriendSettings::
+        LoadFriendSettingsByCharacter(db, character);
+    if(friendSettings && friendSettings->FriendsCount() > 0)
+    {
+        // Drop from other friend lists but let the other player get the
+        // the update the next time they log on
+        auto charUID = character->GetUUID();
+        for(auto otherChar : friendSettings->GetFriends())
+        {
+            auto otherFriendSettings = objects::FriendSettings::
+                LoadFriendSettingsByCharacter(db, otherChar.GetUUID());
+            if(otherFriendSettings)
+            {
+                auto friends = otherFriendSettings->GetFriends();
+                friends.remove_if([charUID](
+                    const libcomp::ObjectReference<
+                        libcomp::PersistentObject>& f)
+                    {
+                        return f.GetUUID() == charUID;
+                    });
+                otherFriendSettings->SetFriends(friends);
+
+                changes->Update(otherFriendSettings);
+            }
+        }
+
+        friendSettings->ClearFriends();
+        changes->Update(friendSettings);
+    }
+
+    // If the character is somehow connected, send a disconnect request
+    // and mark the character for deletion later
+    if(cLogin && cLogin->GetChannelID() >= 0)
+    {
+        LOG_WARNING(libcomp::String("Deleting character '%1' is still logged"
+            " in on account: %2\n").Arg(character->GetName())
+            .Arg(character->GetAccount().GetUUID().ToString()));
+
+        characterManager->RequestChannelDisconnect(
+            cLogin->GetWorldCID());
+
+        // Set (min) kill time and mark the AccountWorldData
+        // to signify that the character needs to be cleaned up
+        auto accountWorldData = objects::AccountWorldData::
+            LoadAccountWorldDataByAccount(db, character->GetAccount());
+        if(accountWorldData)
+        {
+            accountWorldData->SetCleanupRequired(true);
+            changes->Update(accountWorldData);
+        }
+        else
+        {
+            LOG_ERROR(libcomp::String("Failed to delete logged in character"
+                " without associated AccountWorlData: %1\n")
+                .Arg(character->GetUUID().ToString()));
+            return false;
+        }
+
+        character->SetKillTime(1);
+        changes->Update(character);
+
+        return db->ProcessChangeSet(changes);
+    }
+
+    // Load all associated records and add them to the same transaction
+    // for deletion
+    std::list<libobjgen::UUID> entityUIDs = { character->GetUUID() };
+
+    changes->Delete(character);
+
+    // Delete items and item boxes
+    for(auto itemBox : objects::ItemBox::LoadItemBoxListByCharacter(db,
+        character))
+    {
+        for(auto item : objects::Item::LoadItemListByItemBox(db, itemBox))
+        {
+            changes->Delete(item);
+            Cleanup(item);
+        }
+
+        changes->Delete(itemBox);
+        Cleanup(itemBox);
+    }
+
+    // Delete demons, demon boxes and inherited skills
+    for(auto demonBox : objects::DemonBox::LoadDemonBoxListByCharacter(db,
+        character))
+    {
+        for(auto demon : objects::Demon::LoadDemonListByDemonBox(db, demonBox))
+        {
+            entityUIDs.push_back(demon->GetUUID());
+
+            for(auto iSkill : objects::InheritedSkill::
+                LoadInheritedSkillListByDemon(db, demon))
+            {
+                changes->Delete(iSkill);
+                Cleanup(iSkill);
+            }
+
+            changes->Delete(demon);
+            Cleanup(demon);
+        }
+
+        changes->Delete(demonBox);
+        Cleanup(demonBox);
+    }
+
+    // Delete expertise
+    for(auto expertise : objects::Expertise::LoadExpertiseListByCharacter(db,
+        character))
+    {
+        changes->Delete(expertise);
+        Cleanup(expertise);
+    }
+
+    // Delete hotbar
+    for(auto hotbar : objects::Hotbar::LoadHotbarListByCharacter(db,
+        character))
+    {
+        changes->Delete(hotbar);
+        Cleanup(hotbar);
+    }
+
+    // Delete quests
+    for(auto quest : objects::Quest::LoadQuestListByCharacter(db,
+        character->GetUUID()))
+    {
+        changes->Delete(quest);
+        Cleanup(quest);
+    }
+
+    // Delete entity stats and status effects
+    for(libobjgen::UUID entityUID : entityUIDs)
+    {
+        auto entityStats = objects::EntityStats::
+            LoadEntityStatsByEntity(db, entityUID);
+        if(entityStats)
+        {
+            changes->Delete(entityStats);
+            Cleanup(entityStats);
+        }
+
+        for(auto status : objects::StatusEffect::LoadStatusEffectListByEntity(
+            db, entityUID))
+        {
+            changes->Delete(status);
+            Cleanup(status);
+        }
+    }
+
+    // Delete character progress
+    auto progress = objects::CharacterProgress::
+        LoadCharacterProgressByCharacter(db, character);
+    if(progress)
+    {
+        changes->Delete(progress);
+        Cleanup(progress);
+    }
+
+    // Delete friend settings
+    if(friendSettings)
+    {
+        changes->Delete(friendSettings);
+        Cleanup(friendSettings);
+    }
+
+    // Process the deletes all at once
+    if(db->ProcessChangeSet(changes))
+    {
+        characterManager->UnregisterCharacter(cLogin);
+        return true;
+    }
+
+    LOG_WARNING(libcomp::String("Failed to delete character '%1'"
+        " on account: %2\n").Arg(character->GetName())
+        .Arg(character->GetAccount().GetUUID().ToString()));
     return false;
 }
 

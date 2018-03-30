@@ -482,6 +482,19 @@ bool ZoneManager::EnterZone(const std::shared_ptr<ChannelClientConnection>& clie
 
     server->GetTokuseiManager()->RecalculateParty(state->GetParty());
 
+    if(!nextInstance && currentZone)
+    {
+        // If moving to a non-instanced zone, set log out zone for the new
+        // location in case of a disconnect without saving
+        auto character = cState->GetEntity();
+        character->SetLogoutZone(zoneID);
+        character->SetLogoutX(cState->GetCurrentX());
+        character->SetLogoutY(cState->GetCurrentY());
+        character->SetLogoutRotation(cState->GetCurrentRotation());
+
+        server->GetWorldDatabase()->QueueUpdate(character);
+    }
+
     libcomp::Packet reply;
     reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_ZONE_CHANGE);
     reply.WriteS32Little((int32_t)zoneDef->GetID());

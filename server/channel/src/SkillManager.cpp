@@ -1830,7 +1830,10 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
                     // Reset accept revival
                     auto targetClientState = ClientState::GetEntityClientState(
                         target.EntityState->GetEntityID());
-                    targetClientState->SetAcceptRevival(false);
+                    if(targetClientState)
+                    {
+                        targetClientState->SetAcceptRevival(false);
+                    }
                 }
 
                 if(targetAlive)

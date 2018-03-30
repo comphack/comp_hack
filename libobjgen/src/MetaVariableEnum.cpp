@@ -391,6 +391,7 @@ std::string MetaVariableEnum::GetLoadRawCode(const Generator& generator,
     std::string code;
 
     std::map<std::string, std::string> replacements;
+    replacements["@VAR_CAMELCASE_NAME@"] = generator.GetCapitalName(*this);
     replacements["@VAR_NAME@"] = name;
     replacements["@STREAM@"] = stream;
 

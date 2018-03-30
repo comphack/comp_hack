@@ -15,21 +15,33 @@
         </member>
         <member type="enum" name="equipType" underlying="int8_t">
             <value num="-1">EQUIP_TYPE_NONE</value>
-            <value>EQUIP_TYPE_HEAD</value>
-            <value>EQUIP_TYPE_FACE</value>
-            <value>EQUIP_TYPE_NECK</value>
-            <value>EQUIP_TYPE_TOP</value>
-            <value>EQUIP_TYPE_ARMS</value>
-            <value>EQUIP_TYPE_BOTTOM</value>
-            <value>EQUIP_TYPE_FEET</value>
-            <value>EQUIP_TYPE_COMP</value>
-            <value>EQUIP_TYPE_RING</value>
-            <value>EQUIP_TYPE_EARRING</value>
-            <value>EQUIP_TYPE_EXTRA</value>
-            <value>EQUIP_TYPE_BACK</value>
-            <value>EQUIP_TYPE_TALISMAN</value>
-            <value>EQUIP_TYPE_WEAPON</value>
-            <value>EQUIP_TYPE_BULLETS</value>
+            <value num="0">EQUIP_TYPE_HEAD</value>
+            <value num="1">EQUIP_TYPE_FACE</value>
+            <value num="2">EQUIP_TYPE_NECK</value>
+            <value num="3">EQUIP_TYPE_TOP</value>
+            <value num="4">EQUIP_TYPE_ARMS</value>
+            <value num="5">EQUIP_TYPE_BOTTOM</value>
+            <value num="6">EQUIP_TYPE_FEET</value>
+            <value num="7">EQUIP_TYPE_COMP</value>
+            <value num="8">EQUIP_TYPE_RING</value>
+            <value num="9">EQUIP_TYPE_EARRING</value>
+            <value num="10">EQUIP_TYPE_EXTRA</value>
+            <value num="11">EQUIP_TYPE_BACK</value>
+            <value num="12">EQUIP_TYPE_TALISMAN</value>
+            <value num="13">EQUIP_TYPE_WEAPON</value>
+            <value num="14">EQUIP_TYPE_BULLETS</value>
+
+            <!-- Non-equipment appearance modification types below -->
+            <value num="15">VIS_SKIN_TYPE</value>
+            <value num="16">VIS_HAIR_STYLE</value>
+            <value num="17">VIS_EYE_TYPE</value>
+            <value num="18">VIS_FACE_TYPE</value>
+            <value num="19">VIS_EYE_COLOR_LEFT</value>
+            <value num="20">VIS_UNUSED1</value>
+            <value num="21">VIS_UNUSED2</value>
+            <value num="22">VIS_HAIR_COLOR</value>
+            <value num="23">VIS_EYE_COLOR_RIGHT</value>
+            <value num="24">VIS_EYE_COLOR_BOTH</value>
         </member>
         <member type="u32" name="flags"/>
     </object>

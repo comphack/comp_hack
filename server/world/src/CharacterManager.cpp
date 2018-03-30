@@ -75,6 +75,28 @@ std::shared_ptr<objects::CharacterLogin> CharacterManager::RegisterCharacter(
     return cLogin;
 }
 
+bool CharacterManager::UnregisterCharacter(std::shared_ptr<
+    objects::CharacterLogin> cLogin)
+{
+    std::lock_guard<std::mutex> lock(mLock);
+
+    // Loop through each character instead of using the lookup
+    // as the character may have already been removed
+    bool removed = false;
+    for(auto& pair : mCharacterMap)
+    {
+        if(pair.second->GetWorldCID() == cLogin->GetWorldCID())
+        {
+            mCharacterMap.erase(pair.first);
+            mCharacterCIDMap.erase(cLogin->GetWorldCID());
+            removed = true;
+            break;
+        }
+    }
+
+    return removed;
+}
+
 std::shared_ptr<objects::CharacterLogin> CharacterManager::GetCharacterLogin(
     const libobjgen::UUID& uuid)
 {

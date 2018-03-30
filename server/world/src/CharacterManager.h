@@ -72,14 +72,23 @@ public:
 
     /**
      * Register a CharacterLogin with the manager. Characters registered here will
-     * remain until the server restarts.
-     * @param cLogin CharacterLogins to register
+     * remain until the server restarts unless they are deleted.
+     * @param cLogin CharacterLogin to register
      * @return Pointer to the CharacterLogin registered with the server. null is
      *  never returned and the value sent back should always replace the value
      *  passed in to keep the servers in sync
      */
     std::shared_ptr<objects::CharacterLogin> RegisterCharacter(
         std::shared_ptr<objects::CharacterLogin> cLogin);
+
+    /**
+     * Unregister a CharacterLogin with the manager. This should only be used
+     * if the character is being deleted.
+     * @param cLogin CharacterLogin to unregister
+     * @return true if the character was removed, false if they were not
+     *  registered
+     */
+    bool UnregisterCharacter(std::shared_ptr<objects::CharacterLogin> cLogin);
 
     /**
      * Retrieve a CharacterLogin registered with the server by UUID

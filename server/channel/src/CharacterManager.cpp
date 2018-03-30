@@ -1266,10 +1266,10 @@ std::list<std::shared_ptr<objects::Item>> CharacterManager::GetExistingItems(
     std::list<std::shared_ptr<objects::Item>> existing;
     for(size_t i = 0; i < 50; i++)
     {
-        auto item = box->GetItems(i);
-        if(!item.IsNull() && item->GetType() == itemID)
+        auto item = box->GetItems(i).Get();
+        if(item && item->GetType() == itemID)
         {
-            existing.push_back(item.Get());
+            existing.push_back(item);
         }
     }
 
@@ -3486,7 +3486,7 @@ void CharacterManager::ConvertIDToMaskValues(uint16_t id, size_t& index,
     uint8_t& shiftVal)
 {
     index = (size_t)floor(id / 8);
-    shiftVal = (uint8_t)(1 << (index ? (id % (uint16_t)index) : id));
+    shiftVal = (uint8_t)(1 << (id % 8));
 }
 
 bool CharacterManager::AddMap(const std::shared_ptr<

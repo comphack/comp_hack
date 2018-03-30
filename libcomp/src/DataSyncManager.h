@@ -188,7 +188,8 @@ protected:
          */
         ObjectConfig(const libcomp::String& name, bool serverOwned,
             std::shared_ptr<Database> database = nullptr)
-            : Name(name), DB(database), ServerOwned(serverOwned)
+            : Name(name), DB(database), ServerOwned(serverOwned),
+            DynamicHandler(false)
         {
         }
 
@@ -202,6 +203,10 @@ protected:
         /// Specifies that the server this manager belongs to is the
         /// master server
         bool ServerOwned;
+
+        /// Specifies that there is a dynamic update handler that should
+        /// always be called when an update is passed to the manager
+        bool DynamicHandler;
 
         /// Pointer to the function to use when the record is being updated.
         /// Parameters are as follows:

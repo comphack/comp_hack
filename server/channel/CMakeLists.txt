@@ -280,6 +280,7 @@ SET(${PROJECT_NAME}_PACKETS
     src/packets/game/MapFlag.cpp                # 0x0197
     src/packets/game/DemonCompendium.cpp        # 0x019B
     src/packets/game/ItemRepairMax.cpp          # 0x019F
+    src/packets/game/AppearanceAlter.cpp        # 0x01A2
     src/packets/game/EntrustRequest.cpp         # 0x01AA
     src/packets/game/EntrustAccept.cpp          # 0x01AD
     src/packets/game/EntrustRewardUpdate.cpp    # 0x01AF
@@ -387,3 +388,8 @@ ENDIF(USE_COTIRE)
 UPX_WRAP(${PROJECT_NAME})
 
 INSTALL(TARGETS ${PROJECT_NAME} DESTINATION ${COMP_INSTALL_DIR})
+
+# Include the PDB file if on Windows
+IF(WIN32)
+    INSTALL(FILES $<TARGET_PDB_FILE:${PROJECT_NAME}> DESTINATION ${COMP_INSTALL_DIR})
+ENDIF(WIN32)

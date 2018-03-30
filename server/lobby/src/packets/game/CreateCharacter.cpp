@@ -59,8 +59,6 @@ bool Parsers::CreateCharacter::Parse(libcomp::ManagerPacket *pPacketManager,
 
     uint8_t worldID = p.ReadU8();
 
-    LOG_DEBUG(libcomp::String("World: %1\n").Arg(worldID));
-
     if(p.Size() != (uint32_t)(p.PeekU16Little() + 44))
     {
         return false;
@@ -68,8 +66,6 @@ bool Parsers::CreateCharacter::Parse(libcomp::ManagerPacket *pPacketManager,
 
     libcomp::String name = p.ReadString16Little(
         libcomp::Convert::ENCODING_CP932);
-
-    LOG_DEBUG(libcomp::String("Name: %1\n").Arg(name));
 
     auto server = std::dynamic_pointer_cast<LobbyServer>(pPacketManager->GetServer());
     auto lobbyConnection = std::dynamic_pointer_cast<LobbyClientConnection>(connection);
@@ -216,6 +212,9 @@ bool Parsers::CreateCharacter::Parse(libcomp::ManagerPacket *pPacketManager,
         else
         {
             reply.WriteU32Little(0);
+
+            LOG_DEBUG(libcomp::String("Created character '%1' on world: %2\n")
+                .Arg(name).Arg(worldID));
         }
     }
 

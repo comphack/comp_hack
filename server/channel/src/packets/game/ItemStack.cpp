@@ -57,50 +57,59 @@ void SplitStack(const std::shared_ptr<ChannelServer> server,
     uint16_t srcStack = sourceItem.second;
 
     auto srcItem = itemBox->GetItems(srcSlot).Get();
-    auto destItem = std::shared_ptr<objects::Item>(
-        new objects::Item(*srcItem));
-
-    bool targetSpecified = targetSlot != static_cast<uint32_t>(-1);
-    if(!targetSpecified)
+    if(srcItem)
     {
-        targetSlot = 0;
-        for(; targetSlot < 50; targetSlot++)
+        auto destItem = std::shared_ptr<objects::Item>(
+            new objects::Item(*srcItem));
+
+        bool targetSpecified = targetSlot != static_cast<uint32_t>(-1);
+        if(!targetSpecified)
         {
-            if (itemBox->GetItems(targetSlot).IsNull())
+            targetSlot = 0;
+            for(; targetSlot < 50; targetSlot++)
             {
-                break;
+                if (itemBox->GetItems(targetSlot).IsNull())
+                {
+                    break;
+                }
             }
         }
-    }
 
-    if(targetSlot == 50 || !itemBox->GetItems((size_t)targetSlot).IsNull())
+        if(targetSlot == 50 || !itemBox->GetItems((size_t)targetSlot).IsNull())
+        {
+            LOG_ERROR(libcomp::String("Split stack failed because there was"
+                " no empty slot available for character: %1\n").Arg(
+                    character->GetUUID().ToString()));
+            return;
+        }
+
+        srcItem->SetStackSize(static_cast<uint16_t>(
+            srcItem->GetStackSize() - srcStack));
+        destItem->SetStackSize(srcStack);
+        destItem->SetBoxSlot((int8_t)targetSlot);
+
+        destItem->Register(destItem);
+        itemBox->SetItems((size_t)targetSlot, destItem);
+
+        state->SetObjectID(destItem->GetUUID(),
+            server->GetNextObjectID());
+
+        std::list<uint16_t> updatedSlots = { (uint16_t)srcSlot, (uint16_t)targetSlot };
+        server->GetCharacterManager()->SendItemBoxData(client, itemBox, updatedSlots);
+
+        auto dbChanges = libcomp::DatabaseChangeSet::Create(
+            state->GetAccountUID());
+        dbChanges->Insert(destItem);
+        dbChanges->Update(srcItem);
+        dbChanges->Update(itemBox);
+        server->GetWorldDatabase()->QueueChangeSet(dbChanges);
+    }
+    else
     {
-        LOG_ERROR(libcomp::String("Split stack failed because there was"
-            " no empty slot available for character: %1\n").Arg(
-                character->GetUUID().ToString()));
-        return;
+        LOG_ERROR(libcomp::String("Split stack failed because the"
+            " source item did not exist for character: %1\n")
+            .Arg(character->GetUUID().ToString()));
     }
-
-    srcItem->SetStackSize(static_cast<uint16_t>(
-        srcItem->GetStackSize() - srcStack));
-    destItem->SetStackSize(srcStack);
-    destItem->SetBoxSlot((int8_t)targetSlot);
-
-    destItem->Register(destItem);
-    itemBox->SetItems((size_t)targetSlot, destItem);
-
-    state->SetObjectID(destItem->GetUUID(),
-        server->GetNextObjectID());
-
-    std::list<uint16_t> updatedSlots = { (uint16_t)srcSlot, (uint16_t)targetSlot };
-    server->GetCharacterManager()->SendItemBoxData(client, itemBox, updatedSlots);
-
-    auto dbChanges = libcomp::DatabaseChangeSet::Create(
-        state->GetAccountUID());
-    dbChanges->Insert(destItem);
-    dbChanges->Update(srcItem);
-    dbChanges->Update(itemBox);
-    server->GetWorldDatabase()->QueueChangeSet(dbChanges);
 }
 
 void CombineStacks(const std::shared_ptr<ChannelServer> server,
@@ -114,35 +123,44 @@ void CombineStacks(const std::shared_ptr<ChannelServer> server,
 
     auto targetItem = itemBox->GetItems(targetSlot).Get();
 
-    auto dbChanges = libcomp::DatabaseChangeSet::Create(
-        state->GetAccountUID());
-    dbChanges->Update(itemBox);
-    for(auto sourceItem : sourceItems)
+    if(targetItem)
     {
-        size_t srcSlot = (size_t)sourceItem.first;
-        uint16_t srcStack = sourceItem.second;
-
-        auto srcItem = itemBox->GetItems(srcSlot).Get();
-        srcItem->SetStackSize(static_cast<uint16_t>(
-            srcItem->GetStackSize() - srcStack));
-
-        if(srcItem->GetStackSize() == 0)
+        auto dbChanges = libcomp::DatabaseChangeSet::Create(
+            state->GetAccountUID());
+        dbChanges->Update(itemBox);
+        for(auto sourceItem : sourceItems)
         {
-            dbChanges->Delete(srcItem);
-            itemBox->SetItems(srcSlot, NULLUUID);
-        }
-        else
-        {
-            dbChanges->Update(srcItem);
+            size_t srcSlot = (size_t)sourceItem.first;
+            uint16_t srcStack = sourceItem.second;
+
+            auto srcItem = itemBox->GetItems(srcSlot).Get();
+            srcItem->SetStackSize(static_cast<uint16_t>(
+                srcItem->GetStackSize() - srcStack));
+
+            if(srcItem->GetStackSize() == 0)
+            {
+                dbChanges->Delete(srcItem);
+                itemBox->SetItems(srcSlot, NULLUUID);
+            }
+            else
+            {
+                dbChanges->Update(srcItem);
+            }
+
+            targetItem->SetStackSize(static_cast<uint16_t>(
+                targetItem->GetStackSize() + srcStack));
+
+            dbChanges->Update(targetItem);
         }
 
-        targetItem->SetStackSize(static_cast<uint16_t>(
-            targetItem->GetStackSize() + srcStack));
-
-        dbChanges->Update(targetItem);
+        server->GetWorldDatabase()->QueueChangeSet(dbChanges);
     }
-
-    server->GetWorldDatabase()->QueueChangeSet(dbChanges);
+    else
+    {
+        LOG_ERROR(libcomp::String("Combine stack failed because the"
+            " target item did not exist on character: %1\n")
+            .Arg(character->GetUUID().ToString()));
+    }
 }
 
 bool Parsers::ItemStack::Parse(libcomp::ManagerPacket *pPacketManager,

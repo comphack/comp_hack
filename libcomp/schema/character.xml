@@ -44,7 +44,7 @@
             <element type="Item*"/>
         </member>
         <member type="map" name="EquippedVA">
-            <key type="u8" max="24"/>
+            <key type="u8" max="26"/>
             <value type="u32"/>
         </member>
         <member type="map" name="Materials">

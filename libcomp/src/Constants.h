@@ -199,9 +199,9 @@ namespace libcomp
 /// How many item storage boxes are avaliable via the user interface.
 #define ITEM_BOX_COUNT (10)
 
-/// Highest Virtual Appearance type index. 0-14 matches the same
-/// equipment slot except for VA weapons which are listed from 15-24.
-#define MAX_VA_INDEX (24)
+/// Highest Virtual Appearance type index. 0-11 matches the same
+/// equipment slot. VA weapons are listed from 15-26.
+#define MAX_VA_INDEX (26)
 
 /// The skill activation contains no extra information.
 #define ACTIVATION_NOTARGET (0)

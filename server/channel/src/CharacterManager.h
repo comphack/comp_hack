@@ -622,16 +622,6 @@ public:
         const std::list<std::pair<uint8_t, int32_t>>& pointMap);
 
     /**
-     * Determine the character's current expertise rank for the
-     * specified ID. This includes chain expertise calculations.
-     * @param cState Pointer to the CharacterState
-     * @param expertiseID ID of the expertise to calculate
-     * @return Rank of the supplied expertise ID
-     */
-    uint8_t GetExpertiseRank(const std::shared_ptr<CharacterState>& cState,
-        uint32_t expertiseID);
-
-    /**
      * Get the maximum number of expertise points available to the
      * supplied characater.
      * @param character Pointer to the character

@@ -42,8 +42,10 @@
 #include <MiEnchantCharasticData.h>
 #include <MiEnchantData.h>
 #include <MiEquipmentSetData.h>
+#include <MiExpertChainData.h>
 #include <MiExpertClassData.h>
 #include <MiExpertData.h>
+#include <MiExpertGrowthTbl.h>
 #include <MiExpertRankData.h>
 #include <MiItemBasicData.h>
 #include <MiItemData.h>
@@ -307,7 +309,43 @@ void CharacterState::RecalcEquipState(libcomp::DefinitionManager* definitionMana
     }
 }
 
-bool CharacterState::RecalcDisabledSkills(libcomp::DefinitionManager* definitionManager)
+uint8_t CharacterState::GetExpertiseRank(
+    libcomp::DefinitionManager* definitionManager, uint32_t expertiseID)
+{
+    int32_t pointSum = 0;
+
+    auto expData = definitionManager->GetExpertClassData(expertiseID);
+    if(expData)
+    {
+        if(expData->GetIsChain())
+        {
+            for(uint8_t i = 0; i < expData->GetChainCount(); i++)
+            {
+                auto chainData = expData->GetChainData((size_t)i);
+
+                float percent = chainData->GetChainPercent();
+                if(percent > 0.f)
+                {
+                    auto exp = GetEntity()->GetExpertises(
+                        (size_t)chainData->GetID());
+                    pointSum = pointSum + (int32_t)(
+                        (float)(exp ? exp->GetPoints() : 0) * percent);
+                }
+            }
+        }
+        else
+        {
+            auto exp = GetEntity()->GetExpertises(
+                (size_t)expertiseID);
+            pointSum = (int32_t)(exp ? exp->GetPoints() : 0);
+        }
+    }
+
+    return (uint8_t)floor((float)pointSum * 0.0001f);
+}
+
+bool CharacterState::RecalcDisabledSkills(
+    libcomp::DefinitionManager* definitionManager)
 {
     auto character = GetEntity();
     if(!character)
@@ -317,8 +355,8 @@ bool CharacterState::RecalcDisabledSkills(libcomp::DefinitionManager* definition
 
     std::lock_guard<std::mutex> lock(mLock);
 
-    // Find all skills the character has learned that they do not have the expertise
-    // that would grant access to them
+    // Find all skills the character has learned that they do not have the
+    // expertise that would grant access to them
     std::set<uint32_t> disabledSkills;
     std::set<uint32_t> currentDisabledSkills = GetDisabledSkills();
     ClearDisabledSkills();
@@ -332,12 +370,10 @@ bool CharacterState::RecalcDisabledSkills(libcomp::DefinitionManager* definition
     {
         auto expertData = definitionManager->GetExpertClassData(i);
 
-        auto exp = character->GetExpertises((size_t)i);
-        int32_t points = exp ? exp->GetPoints() : 0;
-        uint32_t currentRank = (uint32_t)floor((float)points * 0.0001f);
-
         if(expertData)
         {
+            uint32_t currentRank = GetExpertiseRank(definitionManager, i);
+
             uint32_t cls = (uint32_t)(currentRank / 10);
             uint32_t rank = (uint32_t)(currentRank % 10);
             for(auto classData : expertData->GetClassData())

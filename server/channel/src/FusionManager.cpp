@@ -1315,11 +1315,11 @@ int8_t FusionManager::ProcessFusion(
         {
             uint16_t boost = 0;
 
-            uint8_t fRank = characterManager->GetExpertiseRank(dCState,
+            uint8_t fRank = dCState->GetExpertiseRank(definitionManager,
                 EXPERTISE_FUSION);
             if(client == dClient)
             {
-                uint8_t dRank = characterManager->GetExpertiseRank(dCState,
+                uint8_t dRank = dCState->GetExpertiseRank(definitionManager,
                     EXPERTISE_DEMONOLOGY);
                 if(demonID3 > 0)
                 {

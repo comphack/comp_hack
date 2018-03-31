@@ -85,6 +85,17 @@ public:
      */
     void RecalcEquipState(libcomp::DefinitionManager* definitionManager);
 
+    /**
+     * Determine the character's current expertise rank for the
+     * specified ID. This includes chain expertise calculations.
+     * @param definitionManager Pointer to the definition manager to use
+     *  for determining chain expertise relationships
+     * @param expertiseID ID of the expertise to calculate
+     * @return Rank of the supplied expertise ID
+     */
+    uint8_t GetExpertiseRank(libcomp::DefinitionManager* definitionManager,
+        uint32_t expertiseID);
+
     virtual bool RecalcDisabledSkills(libcomp::DefinitionManager* definitionManager);
 
 protected:

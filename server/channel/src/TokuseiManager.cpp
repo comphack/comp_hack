@@ -959,7 +959,6 @@ std::list<std::shared_ptr<objects::Tokusei>> TokuseiManager::GetDirectTokusei(
     {
     case objects::EntityStateObject::EntityType_t::CHARACTER:
         {
-            auto characterManager = server->GetCharacterManager();
             auto cState = std::dynamic_pointer_cast<CharacterState>(eState);
             auto character = cState->GetEntity();
             auto cs = cState->GetCoreStats();
@@ -1002,7 +1001,7 @@ std::list<std::shared_ptr<objects::Tokusei>> TokuseiManager::GetDirectTokusei(
                 else if(conditionType >= 100 && conditionType <= 158)
                 {
                     // Expertise #(type - 100) rank check
-                    add = characterManager->GetExpertiseRank(cState,
+                    add = cState->GetExpertiseRank(definitionManager,
                         (uint32_t)(conditionType - 100)) >= (uint8_t)p1;
                 }
 
@@ -1234,8 +1233,8 @@ bool TokuseiManager::EvaluateTokuseiCondition(const std::shared_ptr<ActiveEntity
             // The 2 smallest digits are the expertise ID, the rest are the rank value
             int32_t expertiseID = (int32_t)(condition->GetValue() % 100);
             int32_t rankCompare = (int32_t)((condition->GetValue() - expertiseID) / 100);
-            uint8_t rank = mServer.lock()->GetCharacterManager()->GetExpertiseRank(cState,
-                (uint32_t)expertiseID);
+            uint8_t rank = cState->GetExpertiseRank(
+                mServer.lock()->GetDefinitionManager(), (uint32_t)expertiseID);
 
             return Compare(rankCompare, (int32_t)rank, condition, true);
         }

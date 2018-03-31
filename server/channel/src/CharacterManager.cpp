@@ -63,7 +63,6 @@
 #include <MiDevilLVUpRateData.h>
 #include <MiEnchantCharasticData.h>
 #include <MiEnchantData.h>
-#include <MiExpertChainData.h>
 #include <MiExpertData.h>
 #include <MiExpertGrowthTbl.h>
 #include <MiGrowthData.h>
@@ -3088,44 +3087,6 @@ void CharacterManager::UpdateExpertisePoints(const std::shared_ptr<
     }
 }
 
-uint8_t CharacterManager::GetExpertiseRank(const std::shared_ptr<
-    CharacterState>& cState, uint32_t expertiseID)
-{
-    auto server = mServer.lock();
-    auto definitionManager = server->GetDefinitionManager();
-
-    int32_t pointSum = 0;
-
-    auto expData = definitionManager->GetExpertClassData(expertiseID);
-    if(expData)
-    {
-        if(expData->GetIsChain())
-        {
-            for(uint8_t i = 0; i < expData->GetChainCount(); i++)
-            {
-                auto chainData = expData->GetChainData((size_t)i);
-
-                float percent = chainData->GetChainPercent();
-                if(percent > 0.f)
-                {
-                    auto exp = cState->GetEntity()->GetExpertises(
-                        (size_t)chainData->GetID());
-                    pointSum = pointSum + (int32_t)(
-                        (float)(exp ? exp->GetPoints() : 0) * percent);
-                }
-            }
-        }
-        else
-        {
-            auto exp = cState->GetEntity()->GetExpertises(
-                (size_t)expertiseID);
-            pointSum = (int32_t)(exp ? exp->GetPoints() : 0);
-        }
-    }
-
-    return (uint8_t)floor((float)pointSum * 0.0001f);
-}
-
 int32_t CharacterManager::GetMaxExpertisePoints(const std::shared_ptr<
     objects::Character>& character)
 {
@@ -3325,7 +3286,8 @@ bool CharacterManager::GetSynthOutcome(ClientState* synthState,
 
             *effectID = enchantData->GetID();
 
-            double expRank = (double)GetExpertiseRank(cState, 49);
+            double expRank = (double)cState->GetExpertiseRank(
+                definitionManager, EXPERTISE_CHAIN_SYNTHESIS);
 
             double boostRate = 0.0;
             if(boostItem)
@@ -3447,7 +3409,8 @@ bool CharacterManager::GetSynthOutcome(ClientState* synthState,
 
             double diff = (double)enchantData->GetDevilCrystal()->GetDifficulty();
 
-            double expRank = (double)GetExpertiseRank(cState, 49);
+            double expRank = (double)cState->GetExpertiseRank(
+                definitionManager, EXPERTISE_CHAIN_SYNTHESIS);
 
             double fam = (double)targetDemon->GetFamiliarity();
 

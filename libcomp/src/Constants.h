@@ -142,6 +142,9 @@ namespace libcomp
 /// ID of the "Gun knowledge" expertise.
 #define EXPERTISE_GUN_KNOWLEDGE (34)
 
+/// ID of the "Synthesis" chain expertise.
+#define EXPERTISE_CHAIN_SYNTHESIS (49)
+
 /// ID of the "Regal Presence" chain expertise.
 #define EXPERTISE_CHAIN_R_PRESENCE (57)
 

@@ -2555,13 +2555,13 @@ std::shared_ptr<ProcessingSkill> SkillManager::GetProcessingSkill(
         skill->ExpertiseType = expGrowth.front()->GetExpertiseID();
         if(cSource)
         {
-            skill->ExpertiseRankBoost = server->GetCharacterManager()
-                ->GetExpertiseRank(cSource, skill->ExpertiseType);
+            skill->ExpertiseRankBoost = cSource->GetExpertiseRank(
+                definitionManager, skill->ExpertiseType);
             if(skill->ExpertiseType == EXPERTISE_ATTACK)
             {
                 // Attack expertise gains an extra bonus from regal presence
-                uint8_t boost2 = server->GetCharacterManager()
-                    ->GetExpertiseRank(cSource, EXPERTISE_CHAIN_R_PRESENCE);
+                uint8_t boost2 = cSource->GetExpertiseRank(definitionManager,
+                    EXPERTISE_CHAIN_R_PRESENCE);
                 skill->ExpertiseRankBoost = (uint8_t)(skill->ExpertiseRankBoost + boost2);
             }
         }
@@ -2656,14 +2656,14 @@ std::shared_ptr<ProcessingSkill> SkillManager::GetProcessingSkill(
         case 0:
         case 9:
         case 12:
-            skill->KnowledgeRank = server->GetCharacterManager()
-                ->GetExpertiseRank(cSource, EXPERTISE_WEAPON_KNOWLEDGE);
+            skill->KnowledgeRank = cSource->GetExpertiseRank(definitionManager,
+                EXPERTISE_WEAPON_KNOWLEDGE);
             break;
         case 1:
         case 6:
         case 10:
-            skill->KnowledgeRank = server->GetCharacterManager()
-                ->GetExpertiseRank(cSource, EXPERTISE_GUN_KNOWLEDGE);
+            skill->KnowledgeRank = cSource->GetExpertiseRank(definitionManager,
+                EXPERTISE_GUN_KNOWLEDGE);
             break;
         default:
             break;
@@ -4251,8 +4251,8 @@ void SkillManager::HandleDurabilityDamage(const std::shared_ptr<ActiveEntityStat
 
         uint16_t armorDamage = pSkill->Definition->GetDamage()->GetBreakData()->GetArmor();
 
-        double survivalRank = (double)characterManager->GetExpertiseRank(cState,
-            EXPERTISE_SURVIVAL);
+        double survivalRank = (double)cState->GetExpertiseRank(
+            server->GetDefinitionManager(), EXPERTISE_SURVIVAL);
 
         int32_t durabilityLoss = (int32_t)armorDamage;
         if(survivalRank)

@@ -40,7 +40,7 @@ namespace libcomp
 #define VERSION_MINOR (1)
 
 /// Patch version (a hotfix).
-#define VERSION_PATCH (0)
+#define VERSION_PATCH (1)
 
 /// Codename for the version.
 #define VERSION_CODENAME "Kodama (SP1)"

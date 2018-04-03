@@ -76,7 +76,9 @@ namespace libcomp
             Sqrat::DerivedClass<CharacterState,
                 ActiveEntityState> binding(mVM, "CharacterState");
             binding
-                .Func("GetEntity", &CharacterState::GetEntity);
+                .Func<std::shared_ptr<objects::Character>
+                (CharacterState::*)()>(
+                    "GetEntity", &CharacterState::GetEntity);
 
             Bind<CharacterState>("CharacterState", binding);
         }

@@ -56,7 +56,9 @@ namespace libcomp
             Sqrat::DerivedClass<DemonState,
                 ActiveEntityState> binding(mVM, "DemonState");
             binding
-                .Func("GetEntity", &ActiveEntityStateImp<objects::Demon>::GetEntity);
+                .Func<std::shared_ptr<objects::Demon>
+                (DemonState::*)()>(
+                    "GetEntity", &DemonState::GetEntity);
 
             Bind<DemonState>("DemonState", binding);
         }
@@ -209,11 +211,15 @@ int16_t DemonState::UpdateLearningSkill(const std::shared_ptr<
     std::lock_guard<std::mutex> lock(mLock);
 
     int16_t progress = iSkill->GetProgress();
-    progress = (int16_t)(progress + points);
 
-    if(progress > MAX_INHERIT_SKILL)
+    // Check new value before casting in case of overflow
+    if((progress + points) > MAX_INHERIT_SKILL)
     {
         progress = MAX_INHERIT_SKILL;
+    }
+    else
+    {
+        progress = (int16_t)(progress + points);
     }
 
     iSkill->SetProgress(progress);

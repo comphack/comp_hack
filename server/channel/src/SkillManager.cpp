@@ -3262,7 +3262,15 @@ std::set<uint32_t> SkillManager::HandleStatusEffects(const std::shared_ptr<
     {
         uint32_t effectID = statusPair.first;
 
-        if(statusNulls.find((int32_t)effectID) != statusNulls.end())
+        auto addStatus = addStatusDefs[effectID];
+
+        // The effect can only be nullified if it could potentially add
+        // an effect (don't null removes)
+        bool canNull = !addStatus || addStatus->GetMinStack() != 0 ||
+            addStatus->GetMaxStack() != 0;
+
+        if(canNull &&
+            statusNulls.find((int32_t)effectID) != statusNulls.end())
         {
             continue;
         }
@@ -3271,7 +3279,7 @@ std::set<uint32_t> SkillManager::HandleStatusEffects(const std::shared_ptr<
         if(!statusDef) continue;
 
         uint8_t affinity = statusDef->GetCommon()->GetAffinity();
-        if(nraStatusNull)
+        if(canNull && nraStatusNull)
         {
             // Optional server setting to nullify status effects with
             // an affinity type that the target could potentially NRA
@@ -3324,8 +3332,6 @@ std::set<uint32_t> SkillManager::HandleStatusEffects(const std::shared_ptr<
         if(successRate >= 100.0 || (successRate > 0.0 &&
             RNG(int32_t, 1, 10000) <= (int32_t)(successRate * 100.0)))
         {
-            auto addStatus = addStatusDefs[effectID];
-
             // If the status was added by the skill itself, use that for
             // application logic, otherwise default to 1 non-replace
             int8_t minStack = addStatus ? addStatus->GetMinStack() : 1;

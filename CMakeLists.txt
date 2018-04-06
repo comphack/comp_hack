@@ -718,6 +718,8 @@ IF(NOT WIN32)
         DESTINATION ${CMAKE_INSTALL_SYSCONFDIR}/comp_hack)
     INSTALL(FILES ${CMAKE_SOURCE_DIR}/contrib/testing/constants.xml
         DESTINATION ${CMAKE_INSTALL_SYSCONFDIR}/comp_hack)
+    INSTALL(FILES ${CMAKE_SOURCE_DIR}/contrib/winconfig/newcharacter.xml
+        DESTINATION ${CMAKE_INSTALL_SYSCONFDIR}/comp_hack)
 ENDIF(NOT WIN32)
 
 # Copy all contrib/testing to the bin directory.

@@ -77,7 +77,7 @@ bool Parsers::Login::Parse(libcomp::ManagerPacket *pPacketManager,
     // Check the client version.
     auto conf = config(pPacketManager);
     uint32_t clientVersion = static_cast<uint32_t>(
-        conf->GetClientVersion() * 1000.0f);
+        conf->GetClientVersion() * 1000.0f + 0.5f);
 
     if(clientVersion != obj.GetClientVersion())
     {

@@ -230,11 +230,11 @@ bool LoginHandler::HandlePage(CivetServer *pServer,
             {
                 // Get the required client version.
                 uint32_t requiredClientVersion = static_cast<uint32_t>(
-                    mConfig->GetClientVersion() * 1000.0f);
+                    mConfig->GetClientVersion() * 1000.0f + 0.5f);
 
                 // Get the actual client version.
                 uint32_t clientVersion = (uint32_t)(
-                    req->GetClientVersion() * 1000.0f);
+                    req->GetClientVersion() * 1000.0f + 0.5f);
 
                 // Check the client version even if this is not a POST so they
                 // know before login and we can deny them more login attempts
@@ -254,7 +254,8 @@ bool LoginHandler::HandlePage(CivetServer *pServer,
                 // Attempt to login for the user.
                 ErrorCodes_t error = mAccountManager->WebAuthLogin(
                     req->GetUsername(), req->GetPassword(),
-                    (uint32_t)(req->GetClientVersion() * 1000.0f), sid1);
+                    (uint32_t)(req->GetClientVersion() * 1000.0f + 0.5f),
+                    sid1);
 
                 if(ErrorCodes_t::SUCCESS != error)
                 {

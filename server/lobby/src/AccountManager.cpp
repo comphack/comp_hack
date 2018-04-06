@@ -87,7 +87,7 @@ ErrorCodes_t AccountManager::WebAuthLogin(const libcomp::String& username,
 
     // Get the client version required for login.
     uint32_t requiredClientVersion = static_cast<uint32_t>(
-        config->GetClientVersion() * 1000.0f);
+        config->GetClientVersion() * 1000.0f + 0.5f);
 
     // Check the client version first.
     if(requiredClientVersion != clientVersion)

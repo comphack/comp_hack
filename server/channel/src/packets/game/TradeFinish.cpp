@@ -169,9 +169,8 @@ bool Parsers::TradeFinish::Parse(libcomp::ManagerPacket *pPacketManager,
     {
         characterManager->UnequipItem(client, item);
 
-        auto box = item->GetItemBox();
         updatedSlots.push_back((uint16_t)item->GetBoxSlot());
-        box->SetItems((size_t)item->GetBoxSlot(), NULLUUID);
+        inventory->SetItems((size_t)item->GetBoxSlot(), NULLUUID);
     }
 
     std::list<uint16_t> otherUpdatedSlots;
@@ -179,9 +178,8 @@ bool Parsers::TradeFinish::Parse(libcomp::ManagerPacket *pPacketManager,
     {
         characterManager->UnequipItem(otherClient, item);
 
-        auto box = item->GetItemBox();
         otherUpdatedSlots.push_back((uint16_t)item->GetBoxSlot());
-        box->SetItems((size_t)item->GetBoxSlot(), NULLUUID);
+        otherInventory->SetItems((size_t)item->GetBoxSlot(), NULLUUID);
     }
 
     // Step 2: Transfer items and prepare changes
@@ -197,7 +195,7 @@ bool Parsers::TradeFinish::Parse(libcomp::ManagerPacket *pPacketManager,
             otherTradeItems.erase(otherTradeItems.begin());
             inventory->SetItems(i, item);
             item->SetBoxSlot((int8_t)i);
-            item->SetItemBox(inventory);
+            item->SetItemBox(inventory->GetUUID());
             updatedSlots.push_back((uint16_t)i);
             changes->Update(item);
         }
@@ -213,7 +211,7 @@ bool Parsers::TradeFinish::Parse(libcomp::ManagerPacket *pPacketManager,
             tradeItems.erase(tradeItems.begin());
             otherInventory->SetItems(i, item);
             item->SetBoxSlot((int8_t)i);
-            item->SetItemBox(otherInventory);
+            item->SetItemBox(otherInventory->GetUUID());
             otherUpdatedSlots.push_back((uint16_t)i);
             changes->Update(item);
         }

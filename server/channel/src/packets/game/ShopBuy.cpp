@@ -215,7 +215,7 @@ void HandleShopPurchase(const std::shared_ptr<ChannelServer> server,
         }
 
         auto account = libcomp::PersistentObject::LoadObjectByUUID<objects::Account>(
-            server->GetLobbyDatabase(), character->GetAccount().GetUUID(), true);
+            server->GetLobbyDatabase(), character->GetAccount(), true);
 
         auto opChangeset = std::make_shared<libcomp::DBOperationalChangeSet>();
         auto expl = std::make_shared<libcomp::DBExplicitUpdate>(account);

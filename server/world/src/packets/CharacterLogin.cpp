@@ -91,6 +91,13 @@ bool Parsers::CharacterLogin::Parse(libcomp::ManagerPacket *pPacketManager,
 
         uint32_t zoneID = p.ReadU32Little();
         cLogin->SetZoneID(zoneID);
+
+        // If the character is going from no zone to some zone, reload
+        // to pick up any channel login changes
+        if(zoneID && !previousZoneID)
+        {
+            cLogin->GetCharacter().Get(server->GetWorldDatabase(), true);
+        }
     }
 
     bool isRejoin = false;

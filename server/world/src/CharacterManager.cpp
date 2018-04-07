@@ -256,21 +256,31 @@ std::list<std::shared_ptr<objects::CharacterLogin>>
     std::list<libobjgen::UUID> targetUUIDs;
     if(relatedTypes & RELATED_FRIENDS)
     {
-        auto uuid = cLogin->GetCharacter().GetUUID();
-        auto fSettings = objects::FriendSettings::LoadFriendSettingsByCharacter(
-            worldDB, uuid);
+        std::shared_ptr<objects::FriendSettings> fSettings;
+        
+        // If the character is currently loaded on the server, pull the friend
+        // settings directly from it so we don't need to load every time
+        auto character = cLogin->GetCharacter().Get();
+        if(character && cLogin->GetStatus() ==
+            objects::CharacterLogin::Status_t::ONLINE)
+        {
+            fSettings = character->GetFriendSettings().Get(worldDB);
+        }
+        else
+        {
+            fSettings = objects::FriendSettings::LoadFriendSettingsByCharacter(
+                worldDB, cLogin->GetCharacter().GetUUID());
+        }
 
         if(fSettings)
         {
-            for(auto f : fSettings->GetFriends())
-            {
-                targetUUIDs.push_back(f.GetUUID());
-            }
+            targetUUIDs = fSettings->GetFriends();
         }
         else
         {
             LOG_ERROR(libcomp::String("Failed to get friend settings. "
-                "Character UUID: %1\n").Arg(uuid.ToString()));
+                "Character UUID: %1\n").Arg(cLogin->GetCharacter().GetUUID()
+                    .ToString()));
         }
     }
 
@@ -436,6 +446,7 @@ bool CharacterManager::AddToParty(std::shared_ptr<objects::PartyCharacter> membe
         login->SetPartyID(partyID);
         it->second->InsertMemberIDs(cid);
         mPartyCharacters[cid] = member;
+
         return true;
     }
 
@@ -647,23 +658,31 @@ void CharacterManager::PartyDisband(uint32_t partyID, int32_t sourceCID,
 
     uint16_t responseCode = 200;    // Success
     std::list<std::shared_ptr<objects::CharacterLogin>> partyLogins;
-    for(auto cid : party->GetMemberIDs())
-    {
-        auto login = GetCharacterLogin(cid);
-        if(login)
-        {
-            partyLogins.push_back(login);
 
-            if(RemoveFromParty(login, partyID))
+    if(partyID)
+    {
+        for(auto cid : party->GetMemberIDs())
+        {
+            auto login = GetCharacterLogin(cid);
+            if(login)
             {
-                login->SetPartyID(0);
-            }
-            else
-            {
-                responseCode = 201; // Failure
-                break;
+                partyLogins.push_back(login);
+
+                if(partyID && RemoveFromParty(login, partyID))
+                {
+                    login->SetPartyID(0);
+                }
+                else
+                {
+                    responseCode = 201; // Failure
+                    break;
+                }
             }
         }
+    }
+    else
+    {
+        responseCode = 201; // Failure
     }
 
     if(requestConnection)
@@ -926,9 +945,9 @@ bool CharacterManager::ClanJoin(std::shared_ptr<objects::CharacterLogin> cLogin,
     auto clan = clanInfo->GetClan().Get();
 
     auto newMember = libcomp::PersistentObject::New<objects::ClanMember>(true);
-    newMember->SetClan(clan);
+    newMember->SetClan(clan->GetUUID());
     newMember->SetMemberType(objects::ClanMember::MemberType_t::NORMAL);
-    newMember->SetCharacter(character);
+    newMember->SetCharacter(character->GetUUID());
 
     clan->AppendMembers(newMember);
     clanInfo->SetMemberMap(cLogin->GetWorldCID(), newMember);
@@ -1027,7 +1046,7 @@ void CharacterManager::ClanLeave(std::shared_ptr<objects::CharacterLogin> cLogin
 
             if(newMaster)
             {
-                auto newMasterLogin = GetCharacterLogin(newMaster->GetCharacter().GetUUID());
+                auto newMasterLogin = GetCharacterLogin(newMaster->GetCharacter());
 
                 auto server = mServer.lock();
                 auto worldDB = server->GetWorldDatabase();
@@ -1114,7 +1133,7 @@ void CharacterManager::ClanDisband(int32_t clanID, int32_t sourceCID,
         for(auto member : clan->GetMembers())
         {
             auto character = libcomp::PersistentObject::LoadObjectByUUID<
-                objects::Character>(worldDB, member->GetCharacter().GetUUID(), true);
+                objects::Character>(worldDB, member->GetCharacter(), true);
             character->SetClan(NULLUUID);
             dbChanges->Update(character);
             dbChanges->Delete(member.Get());
@@ -1196,7 +1215,9 @@ void CharacterManager::RecalculateClanLevel(int32_t clanID, bool sendUpdate)
         for(auto memberRef : clan->GetMembers())
         {
             auto member = memberRef.Get(db);
-            auto character = member ? member->GetCharacter().Get(db) : nullptr;
+            auto character = member
+                ? libcomp::PersistentObject::LoadObjectByUUID<
+                objects::Character>(db, member->GetCharacter()) : nullptr;
 
             if(!character)
             {
@@ -1522,7 +1543,7 @@ bool CharacterManager::RemoveFromClan(std::shared_ptr<objects::CharacterLogin> c
         std::shared_ptr<objects::ClanMember> member;
         for(auto m : clan->GetMembers())
         {
-            if(m->GetCharacter().GetUUID() == cLogin->GetCharacter().GetUUID())
+            if(m->GetCharacter() == cLogin->GetCharacter().GetUUID())
             {
                 member = m.Get();
                 clan->RemoveMembers(idx);

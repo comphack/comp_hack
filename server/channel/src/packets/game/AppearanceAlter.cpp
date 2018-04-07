@@ -69,7 +69,8 @@ bool Parsers::AppearanceAlter::Parse(libcomp::ManagerPacket *pPacketManager,
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
     auto character = cState->GetEntity();
-    auto inventory = character->GetItemBoxes(0).Get();
+    auto inventory = character
+        ? character->GetItemBoxes(0).Get() : nullptr;
 
     auto server = std::dynamic_pointer_cast<ChannelServer>(
         pPacketManager->GetServer());
@@ -83,8 +84,8 @@ bool Parsers::AppearanceAlter::Parse(libcomp::ManagerPacket *pPacketManager,
     auto itemData = item
         ? definitionManager->GetItemData(item->GetType()) : nullptr;
 
-    bool success = itemData != nullptr &&
-        item->GetItemBox().Get() == inventory;
+    bool success = itemData && inventory &&
+        item->GetItemBox() == inventory->GetUUID();
     if(success)
     {
         auto basicData = itemData->GetBasic();

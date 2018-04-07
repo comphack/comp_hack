@@ -2,7 +2,7 @@
 <objgen>
     <object name="Character" location="world" scriptenabled="true">
         <member type="string" name="Name" size="32" key="true" unique="true"/>
-        <member type="Account*" name="Account" key="true" unique="false"/>
+        <member type="pref" name="Account" key="true" unique="false"/>
         <member type="u8" name="WorldID"/>
         <member type="u32" name="KillTime"/>
 
@@ -77,7 +77,7 @@
         <member type="FriendSettings*" name="FriendSettings"/>
     </object>
     <object name="EntityStats" location="world" scriptenabled="true">
-        <member type="ref" name="Entity" key="true" unique="true"/>
+        <member type="pref" name="Entity" key="true" unique="true"/>
         <member type="s8" name="Level" default="-1"/>
         <member type="s64" name="XP" caps="true"/>
         <member type="s32" name="HP" caps="true"/>
@@ -99,13 +99,13 @@
     </object>
     <object name="StatusEffect" location="world">
         <member type="u32" name="Effect"/>
-        <member type="ref" name="Entity" key="true" unique="false"/>
+        <member type="pref" name="Entity" key="true" unique="false"/>
         <member type="u32" name="Expiration"/>
         <member type="u8" name="Stack"/>
         <member type="bool" name="IsConstant"/>
     </object>
     <object name="CharacterProgress" location="world">
-        <member type="Character*" name="Character" key="true" unique="true"/>
+        <member type="pref" name="Character" key="true" unique="true"/>
         <member type="u8" name="MaxCOMPSlots" default="6"/>
         <member type="array" name="Maps" size="32">
             <element type="u8"/>
@@ -124,18 +124,18 @@
         </member>
     </object>
     <object name="Expertise" location="world">
-        <member type="Character*" name="Character" key="true" unique="false"/>
+        <member type="pref" name="Character" key="true" unique="false"/>
         <member type="s32" name="Points"/>
         <member type="bool" name="Disabled"/>
     </object>
     <object name="Hotbar" location="world">
-        <member type="Character*" name="Character" key="true" unique="false"/>
+        <member type="pref" name="Character" key="true" unique="false"/>
         <member type="array" name="ItemTypes" size="16">
             <element type="s8"/>
         </member>
         <!-- Hotbar items associated to a persistent object type have a reference -->
         <member type="array" name="Items" size="16">
-            <element type="ref"/>
+            <element type="pref"/>
         </member>
         <!-- Hotbar items not associated to a persistent object type just have an ID -->
         <member type="array" name="ItemIDs" size="16">
@@ -155,7 +155,7 @@
         </member>
     </object>
     <object name="FriendSettings" location="world">
-        <member type="Character*" name="Character" key="true" unique="true"/>
+        <member type="pref" name="Character" key="true" unique="true"/>
         <member type="string" name="FriendMessage"/>
         <member type="list" name="Friends">
             <element type="ref"/>

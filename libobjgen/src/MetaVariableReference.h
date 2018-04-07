@@ -63,6 +63,8 @@ public:
     bool IsGeneric() const;
     void SetGeneric();
 
+    bool IsIndirect() const;
+
     bool GetNullDefault() const;
     bool SetNullDefault(bool nullDefault);
 

@@ -59,19 +59,24 @@ void DemonDismiss(const std::shared_ptr<ChannelServer> server,
         return;
     }
 
-    int8_t slot = demon->GetBoxSlot();
-    auto box = demon->GetDemonBox().Get();
     if(dState->GetEntity() == demon)
     {
         characterManager->StoreDemon(client);
     }
 
-    box->SetDemons((size_t)slot, NULLUUID);
-
-    characterManager->SendDemonBoxData(client, box->GetBoxID(), { slot });
-
     auto dbChanges = libcomp::DatabaseChangeSet::Create(state->GetAccountUID());
-    dbChanges->Update(box);
+
+    int8_t slot = demon->GetBoxSlot();
+    auto box = std::dynamic_pointer_cast<objects::DemonBox>(
+        libcomp::PersistentObject::GetObjectByUUID(demon->GetDemonBox()));
+    if(box)
+    {
+        box->SetDemons((size_t)slot, NULLUUID);
+        characterManager->SendDemonBoxData(client, box->GetBoxID(),
+            { slot });
+        dbChanges->Update(box);
+    }
+
     characterManager->DeleteDemon(demon, dbChanges);
     server->GetWorldDatabase()->QueueChangeSet(dbChanges);
 }

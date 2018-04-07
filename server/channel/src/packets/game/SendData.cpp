@@ -58,7 +58,6 @@ void SendClientReadyData(std::shared_ptr<ChannelServer> server,
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
     auto character = cState->GetEntity();
-    auto account = character->GetAccount();
 
     // Send world time
     {

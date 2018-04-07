@@ -163,13 +163,16 @@ bool Parsers::DepoRent::Parse(libcomp::ManagerPacket *pPacketManager,
             }
 
             // Update the used item's box
-            auto itemBox = item->GetItemBox().Get();
-            itemBox->SetItems((size_t)item->GetBoxSlot(), NULLUUID);
-            dbChanges->Update(itemBox);
+            auto itemBox = std::dynamic_pointer_cast<objects::ItemBox>(
+                libcomp::PersistentObject::GetObjectByUUID(item->GetItemBox()));
+            if(itemBox)
+            {
+                itemBox->SetItems((size_t)item->GetBoxSlot(), NULLUUID);
+                dbChanges->Update(itemBox);
+                server->GetCharacterManager()->SendItemBoxData(client, itemBox,
+                    { (uint16_t)item->GetBoxSlot() });
+            }
             dbChanges->Delete(item);
-
-            std::list<uint16_t> slots = { (uint16_t)item->GetBoxSlot() };
-            server->GetCharacterManager()->SendItemBoxData(client, itemBox, slots);
 
             server->GetWorldDatabase()->QueueChangeSet(dbChanges);
         }

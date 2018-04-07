@@ -65,7 +65,7 @@ void SaveHotbarItems(const std::shared_ptr<ChannelServer> server,
     if(nullptr == hotbar)
     {
         hotbar = libcomp::PersistentObject::New<objects::Hotbar>();
-        hotbar->SetCharacter(character);
+        hotbar->SetCharacter(character->GetUUID());
         hotbar->Register(hotbar);
         character->SetHotbars(page, hotbar);
 

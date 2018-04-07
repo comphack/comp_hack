@@ -692,9 +692,9 @@ bool AccountManager::UpdateKillTime(const libcomp::String& username,
         server->GetConfig());
 
     auto login = GetUserLogin(username);
-    auto account = login->GetAccount();
-    auto character = account->GetCharacters(cid);
-    if(character.Get())
+    auto account = login->GetAccount().Get();
+    auto character = account->GetCharacters(cid).Get();
+    if(character)
     {
         auto world = server->GetWorldByID(character->GetWorldID());
         auto worldDB = world->GetWorldDatabase();
@@ -716,7 +716,7 @@ bool AccountManager::UpdateKillTime(const libcomp::String& username,
             else
             {
                 // Delete the character now
-                return DeleteCharacter(character.Get());
+                return DeleteCharacter(account, character);
             }
         }
 
@@ -791,14 +791,14 @@ std::list<std::shared_ptr<objects::Character>>
     return deletes;
 }
 
-bool AccountManager::DeleteCharacter(const std::shared_ptr<
-    objects::Character>& character)
+bool AccountManager::DeleteCharacter(
+    const std::shared_ptr<objects::Account>& account,
+    const std::shared_ptr<objects::Character>& character)
 {
     // We need to be careful when deleting characters so we
     // do not orphan any when reindexing etc
     std::lock_guard<std::mutex> lock(mAccountLock);
 
-    auto account = character->GetAccount().Get();
     auto characters = account->GetCharacters();
 
     uint8_t cid = 0;

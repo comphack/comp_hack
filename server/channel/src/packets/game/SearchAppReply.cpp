@@ -92,7 +92,7 @@ bool Parsers::SearchAppReply::Parse(libcomp::ManagerPacket *pPacketManager,
             if(actionType == 0)
             {
                 auto target = libcomp::PersistentObject::LoadObjectByUUID<
-                    objects::Character>(worldDB, replyEntry->GetRelatedTo().GetUUID());
+                    objects::Character>(worldDB, replyEntry->GetRelatedTo());
 
                 if(target)
                 {
@@ -116,7 +116,7 @@ bool Parsers::SearchAppReply::Parse(libcomp::ManagerPacket *pPacketManager,
             if(actionType == 0)
             {
                 auto target = libcomp::PersistentObject::LoadObjectByUUID<
-                    objects::Character>(worldDB, replyEntry->GetRelatedTo().GetUUID());
+                    objects::Character>(worldDB, replyEntry->GetRelatedTo());
 
                 if(target)
                 {
@@ -139,7 +139,7 @@ bool Parsers::SearchAppReply::Parse(libcomp::ManagerPacket *pPacketManager,
             if(actionType == 0 && !state->GetClanID())
             {
                 auto target = libcomp::PersistentObject::LoadObjectByUUID<
-                    objects::Character>(worldDB, replyEntry->GetRelatedTo().GetUUID());
+                    objects::Character>(worldDB, replyEntry->GetRelatedTo());
 
                 if(target)
                 {

@@ -139,6 +139,11 @@ void MetaVariableReference::SetGeneric()
     }
 }
 
+bool MetaVariableReference::IsIndirect() const
+{
+    return IsGeneric() && IsPersistentReference();
+}
+
 bool MetaVariableReference::GetNullDefault() const
 {
     return mNullDefault;
@@ -279,7 +284,11 @@ bool MetaVariableReference::SetDynamicSizeCount(uint16_t dynamicSizeCount)
 
 std::string MetaVariableReference::GetCodeType() const
 {
-    if(mPersistentReference)
+    if(IsIndirect())
+    {
+        return "libobjgen::UUID";
+    }
+    else if(mPersistentReference)
     {
         return "libcomp::ObjectReference<" + GetReferenceType(true) + ">";
     }
@@ -344,9 +353,19 @@ std::string MetaVariableReference::GetConstructorCodeDefaults(const std::string&
             if(mDefaultedVariables.size() == 1 && var->GetName() == "UID" &&
                 var->GetMetaType() == MetaVariableType_t::TYPE_STRING)
             {
-                ss << Generator::Tab(tabLevel) << "libobjgen::UUID uuid(" << var->GetDefaultValueCode()
-                    << ");" << std::endl;
-                ss << Generator::Tab(tabLevel) << varName << ".SetUUID(uuid)" << std::endl;
+                if(IsIndirect())
+                {
+                    ss << Generator::Tab(tabLevel) << varName <<
+                        " = libobjgen::UUID(" << var->GetDefaultValueCode() <<
+                        ");" << std::endl;
+                }
+                else
+                {
+                    ss << Generator::Tab(tabLevel) << "libobjgen::UUID uuid("
+                        << var->GetDefaultValueCode() << ");" << std::endl;
+                    ss << Generator::Tab(tabLevel) << varName <<
+                        ".SetUUID(uuid);" << std::endl;
+                }
             }
         }
     }
@@ -386,7 +405,7 @@ std::string MetaVariableReference::GetValidCondition(const Generator& generator,
 {
     (void)generator;
 
-    if(recursive)
+    if(!IsIndirect() && recursive)
     {
         if(mPersistentReference)
         {
@@ -417,7 +436,12 @@ std::string MetaVariableReference::GetLoadCode(const Generator& generator,
     replacements["@STREAM@"] = stream;
     replacements["@CONSTRUCT_VALUE@"] = GetConstructValue();
 
-    if(mPersistentReference)
+    if(IsIndirect())
+    {
+        return generator.ParseTemplate(1, "VariableIndirectReferenceLoad",
+            replacements);
+    }
+    else if(mPersistentReference)
     {
         return generator.ParseTemplate(1, "VariablePersistentReferenceLoad",
             replacements);
@@ -442,7 +466,12 @@ std::string MetaVariableReference::GetSaveCode(const Generator& generator,
     replacements["@VAR_NAME@"] = name;
     replacements["@STREAM@"] = stream;
 
-    if(mPersistentReference)
+    if(IsIndirect())
+    {
+        return generator.ParseTemplate(1, "VariableIndirectReferenceSave",
+            replacements);
+    }
+    else if(mPersistentReference)
     {
         return generator.ParseTemplate(1, "VariablePersistentReferenceSave",
             replacements);
@@ -462,7 +491,12 @@ std::string MetaVariableReference::GetLoadRawCode(const Generator& generator,
     replacements["@STREAM@"] = stream;
     replacements["@CONSTRUCT_VALUE@"] = GetConstructValue();
 
-    if(mPersistentReference)
+    if(IsIndirect())
+    {
+        return generator.ParseTemplate(1, "VariableIndirectReferenceLoadRaw",
+            replacements);
+    }
+    else if(mPersistentReference)
     {
         return generator.ParseTemplate(1, "VariablePersistentReferenceLoadRaw",
             replacements);
@@ -481,7 +515,12 @@ std::string MetaVariableReference::GetSaveRawCode(const Generator& generator,
     replacements["@VAR_NAME@"] = name;
     replacements["@STREAM@"] = stream;
 
-    if(mPersistentReference)
+    if(IsIndirect())
+    {
+        return generator.ParseTemplate(1, "VariableIndirectReferenceSaveRaw",
+            replacements);
+    }
+    else if(mPersistentReference)
     {
         return generator.ParseTemplate(1, "VariablePersistentReferenceSaveRaw",
             replacements);
@@ -521,7 +560,12 @@ std::string MetaVariableReference::GetXmlLoadCode(const Generator& generator,
             "VariableReferenceXmlConstructInherited", subReplacements);
     }
 
-    if(mPersistentReference)
+    if(IsIndirect())
+    {
+        return generator.ParseTemplate(tabLevel, "VariableIndirectReferenceXmlLoad",
+            replacements);
+    }
+    else if(mPersistentReference)
     {
         return generator.ParseTemplate(tabLevel, "VariablePersistentReferenceXmlLoad",
             replacements);
@@ -546,7 +590,12 @@ std::string MetaVariableReference::GetXmlSaveCode(const Generator& generator,
     replacements["@DOC@"] = doc;
     replacements["@PARENT@"] = parent;
 
-    if(mPersistentReference)
+    if(IsIndirect())
+    {
+        return generator.ParseTemplate(tabLevel, "VariableIndirectReferenceXmlSave",
+            replacements);
+    }
+    else if(mPersistentReference)
     {
         return generator.ParseTemplate(tabLevel, "VariablePersistentReferenceXmlSave",
             replacements);
@@ -562,7 +611,12 @@ std::string MetaVariableReference::GetBindValueCode(const Generator& generator,
     const std::string& name, size_t tabLevel) const
 {
     std::stringstream ss;
-    ss << name << ".GetUUID()";
+    ss << name;
+
+    if(!IsIndirect())
+    {
+        ss << ".GetUUID()";
+    }
 
     std::map<std::string, std::string> replacements;
     replacements["@COLUMN_NAME@"] = generator.Escape(GetName());
@@ -580,7 +634,7 @@ std::string MetaVariableReference::GetAccessDeclarations(const Generator& genera
     ss << MetaVariable::GetAccessDeclarations(generator,
         object, name, tabLevel);
 
-    if(mPersistentReference && !IsGeneric())
+    if(mPersistentReference && !IsIndirect())
     {
         ss << generator.Tab(tabLevel) << "const std::shared_ptr<"
             << GetReferenceType(true) << "> Load" << generator.GetCapitalName(*this)
@@ -596,7 +650,7 @@ std::string MetaVariableReference::GetAccessFunctions(const Generator& generator
     std::stringstream ss;
     ss << MetaVariable::GetAccessFunctions(generator, object, name);
 
-    if(mPersistentReference && !IsGeneric())
+    if(mPersistentReference && !IsIndirect())
     {
         ss << "const std::shared_ptr<" << GetReferenceType(true) << "> "
             << object.GetName() << "::Load" << generator.GetCapitalName(*this)
@@ -619,6 +673,14 @@ std::string MetaVariableReference::GetDatabaseLoadCode(
     replacements["@VAR_NAME@"] = name;
     replacements["@COLUMN_NAME@"] = generator.Escape(GetName());
 
-    return generator.ParseTemplate(tabLevel, "VariableDatabaseRefLoad",
-        replacements);
+    if(IsIndirect())
+    {
+        return generator.ParseTemplate(tabLevel,
+            "VariableDatabaseIndirectRefLoad", replacements);
+    }
+    else
+    {
+        return generator.ParseTemplate(tabLevel, "VariableDatabaseRefLoad",
+            replacements);
+    }
 }

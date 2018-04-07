@@ -265,11 +265,13 @@ public:
      * Delete a character by CID and update the Characters array on
      * the account.  This assumes the character has already been loaded and
      * will not load them if they are not.
+     * @param account Pointer to the account to delete the character from.
      * @param character Pointer to the character to delete.
      * @return true if the character was deleted and the account was updated,
      *  false otherwise.
      */
-    bool DeleteCharacter(const std::shared_ptr<objects::Character>& character);
+    bool DeleteCharacter(const std::shared_ptr<objects::Account>& account,
+        const std::shared_ptr<objects::Character>& character);
 
 protected:
     /**

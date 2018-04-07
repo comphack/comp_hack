@@ -2833,7 +2833,7 @@ bool SkillManager::EvaluateTokuseiSkillCondition(const std::shared_ptr<ActiveEnt
         return ((int32_t)skill.ExpertiseType == condition->GetValue()) == !negate;
     case TokuseiSkillConditionType::ENEMY_EQUIPPED:
         // Enemy has the specified item equipped (must be a character)
-        if(otherState)
+        if(!otherState)
         {
             // Error
             return false;
@@ -2860,7 +2860,7 @@ bool SkillManager::EvaluateTokuseiSkillCondition(const std::shared_ptr<ActiveEnt
         break;
     case TokuseiSkillConditionType::ENEMY_FACTION:
         // Enemy is in a different faction (0) or the same faction (1)
-        if(otherState)
+        if(!otherState)
         {
             // Error
             return false;
@@ -2874,7 +2874,7 @@ bool SkillManager::EvaluateTokuseiSkillCondition(const std::shared_ptr<ActiveEnt
         break;
     case TokuseiSkillConditionType::ENEMY_GENDER:
         // Enemy's gender matches the specified type (can be any target type)
-        if(otherState)
+        if(!otherState)
         {
             // Error
             return false;

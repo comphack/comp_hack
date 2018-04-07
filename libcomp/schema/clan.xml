@@ -19,8 +19,8 @@
         <member type="u8" name="EmblemColorB2"/>
     </object>
     <object name="ClanMember" location="world">
-        <member type="Clan*" name="Clan" key="true" unique="false"/>
-        <member type="Character*" name="Character" key="true" unique="true"/>
+        <member type="pref" name="Clan" key="true" unique="false"/>
+        <member type="pref" name="Character" key="true" unique="true"/>
         <member type="string" name="ClanMessage"/>
         <member type="enum" name="MemberType" underlying="int8_t">
             <value>NORMAL</value>

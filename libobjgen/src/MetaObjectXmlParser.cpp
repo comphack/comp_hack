@@ -892,7 +892,6 @@ bool MetaObjectXmlParser::HasCircularReference(const std::shared_ptr<MetaObject>
             auto refType = ref->GetReferenceType();
             auto refObject = mKnownObjects.find(refType);
             status = refObject != mKnownObjects.end() &&
-                !refObject->second->IsPersistent() &&
                 HasCircularReference(refObject->second, referencesCopy);
 
             if(status)

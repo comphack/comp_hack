@@ -237,8 +237,6 @@ void AccountManager::Logout(const std::shared_ptr<
     channel::ChannelClientConnection>& client, bool delay)
 {
     auto server = mServer.lock();
-    auto zoneManager = server->GetZoneManager();
-    auto managerConnection = server->GetManagerConnection();
     auto state = client->GetClientState();
     auto account = state->GetAccountLogin()->GetAccount().Get();
     auto cState = state->GetCharacterState();
@@ -256,25 +254,23 @@ void AccountManager::Logout(const std::shared_ptr<
         character->SetLogoutX(cState->GetCurrentX());
         character->SetLogoutY(cState->GetCurrentY());
         character->SetLogoutRotation(cState->GetCurrentRotation());
-        zoneManager->LeaveZone(client, true);
-    }
-
-    if(!LogoutCharacter(state, delay))
-    {
-        LOG_ERROR(libcomp::String("Character %1 failed to save on account"
-            " %2.\n").Arg(character->GetUUID().ToString())
-            .Arg(account->GetUUID().ToString()));
-    }
-    else if(!delay)
-    {
-        LOG_DEBUG(libcomp::String("Logged out user: '%1'\n").Arg(
-            account->GetUsername()));
+        server->GetZoneManager()->LeaveZone(client, true);
     }
 
     if(!delay)
     {
+        if(!LogoutCharacter(state))
+        {
+            LOG_ERROR(libcomp::String("Character %1 failed to save on account"
+                " %2.\n").Arg(character->GetUUID().ToString())
+                .Arg(account->GetUUID().ToString()));
+        }
+
+        LOG_DEBUG(libcomp::String("Logged out user: '%1'\n").Arg(
+            account->GetUsername()));
+
         // Remove the connection if it hasn't been removed already.
-        managerConnection->RemoveClientConnection(client);
+        server->GetManagerConnection()->RemoveClientConnection(client);
 
         libcomp::ObjectReference<
             objects::Account>::Unload(account->GetUUID());
@@ -530,7 +526,7 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
 
         // Load all items together
         auto allBoxItems = objects::Item::LoadItemListByItemBox(db,
-            itemBox.Get());
+            itemBox.GetUUID());
 
         // Check to make sure all items in slots in the ItemBox are valid
         std::set<size_t> openSlots;
@@ -545,7 +541,7 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
                 continue;
             }
 
-            if(!item.Get(db) || item->GetItemBox().Get() != itemBox.Get())
+            if(!item.Get(db) || item->GetItemBox() != itemBox.GetUUID())
             {
                 LOG_WARNING(libcomp::String("Clearing invalid"
                     " Item saved on ItemBox for account: %1\n")
@@ -863,7 +859,7 @@ bool AccountManager::InitializeNewCharacter(std::shared_ptr<
             objects::CharacterProgress>(true);
     }
 
-    progress->SetCharacter(character);
+    progress->SetCharacter(character->GetUUID());
 
     if(!progress->Insert(db) ||
         !character->SetProgress(progress))
@@ -875,7 +871,7 @@ bool AccountManager::InitializeNewCharacter(std::shared_ptr<
     auto box = libcomp::PersistentObject::New<
         objects::ItemBox>(true);
     box->SetAccount(character->GetAccount());
-    box->SetCharacter(character);
+    box->SetCharacter(character->GetUUID());
 
     // Load and (properly) initialize equipment
     size_t inventorySlotUsed = 0;
@@ -895,7 +891,7 @@ bool AccountManager::InitializeNewCharacter(std::shared_ptr<
         equip->SetMaxDurability((int8_t)poss->GetDurability());
 
         size_t slot = inventorySlotUsed++;
-        equip->SetItemBox(box);
+        equip->SetItemBox(box->GetUUID());
         equip->SetBoxSlot((int8_t)slot);
 
         if(!equip->Update(db) || !box->SetItems(slot, equip))
@@ -929,7 +925,7 @@ bool AccountManager::InitializeNewCharacter(std::shared_ptr<
             auto def = definitionManager->GetItemData(equipCopy->GetType());
 
             size_t slot = inventorySlotUsed++;
-            equipCopy->SetItemBox(box);
+            equipCopy->SetItemBox(box->GetUUID());
             equipCopy->SetBoxSlot((int8_t)slot);
 
             if(!equipCopy->Insert(db) || !box->SetItems(slot, equipCopy) ||
@@ -965,7 +961,7 @@ bool AccountManager::InitializeNewCharacter(std::shared_ptr<
         itemCopy->SetRentalExpiration(dItem->GetRentalExpiration());
 
         size_t slot = inventorySlotUsed++;
-        itemCopy->SetItemBox(box);
+        itemCopy->SetItemBox(box->GetUUID());
         itemCopy->SetBoxSlot((int8_t)slot);
 
         if(!itemCopy->Insert(db) || !box->SetItems(slot, itemCopy))
@@ -984,7 +980,7 @@ bool AccountManager::InitializeNewCharacter(std::shared_ptr<
     auto comp = libcomp::PersistentObject::New<
         objects::DemonBox>(true);
     comp->SetAccount(character->GetAccount());
-    comp->SetCharacter(character);
+    comp->SetCharacter(character->GetUUID());
 
     // Generate demons and add to the COMP
     uint8_t compSlotUsed = 0;
@@ -1041,7 +1037,7 @@ bool AccountManager::InitializeNewCharacter(std::shared_ptr<
         }
 
         uint8_t slot = compSlotUsed++;
-        demonCopy->SetDemonBox(comp);
+        demonCopy->SetDemonBox(comp->GetUUID());
         demonCopy->SetBoxSlot((int8_t)slot);
 
         if(!demonCopy->Insert(db) || !copyStats->Insert(db) ||
@@ -1079,7 +1075,7 @@ bool AccountManager::InitializeNewCharacter(std::shared_ptr<
     // Set (non-customizable) friend settings
     auto fSettings = libcomp::PersistentObject::New<
         objects::FriendSettings>(true);
-    fSettings->SetCharacter(character);
+    fSettings->SetCharacter(character->GetUUID());
 
     if(!fSettings->Insert(db) ||
         !character->SetFriendSettings(fSettings))
@@ -1087,9 +1083,9 @@ bool AccountManager::InitializeNewCharacter(std::shared_ptr<
         return false;
     }
 
-    // Lastly update the core stats to signify that
+    // Lastly update the core stats and character to signify that
     // initialization has completed
-    if(!cs->Update(db))
+    if(!cs->Update(db) || !character->Update(db))
     {
         return false;
     }
@@ -1097,29 +1093,30 @@ bool AccountManager::InitializeNewCharacter(std::shared_ptr<
     return true;
 }
 
-bool AccountManager::LogoutCharacter(channel::ClientState* state,
-    bool delay)
+bool AccountManager::LogoutCharacter(channel::ClientState* state)
 {
+    // If something failed and the state should not save on logout
+    // quit here
+    if(!state->GetLogoutSave())
+    {
+        return true;
+    }
+
     // Retrieve the character from the character login as it will
     // not be set on the character state unless a successul login
     // has already occurred
     auto character = state->GetAccountLogin()->GetCharacterLogin()
         ->GetCharacter().Get();
 
-    bool ok = true;
-    bool doSave = state->GetLogoutSave();
-    auto server = mServer.lock();
-    auto worldDB = server->GetWorldDatabase();
+    auto dbChanges = libcomp::DatabaseChangeSet::Create(
+        character->GetAccount());
 
     std::list<std::shared_ptr<objects::ItemBox>> allBoxes;
     if(character)
     {
-        ok &= Cleanup<objects::EntityStats>(character
-            ->GetCoreStats().Get(), worldDB, doSave, !delay);
-        ok &= Cleanup<objects::CharacterProgress>(character
-            ->GetProgress().Get(), worldDB, doSave, !delay);
-        ok &= Cleanup<objects::FriendSettings>(character
-            ->GetFriendSettings().Get(), worldDB, doSave, !delay);
+        dbChanges->Update(character->GetCoreStats().Get());
+        dbChanges->Update(character->GetProgress().Get());
+        dbChanges->Update(character->GetFriendSettings().Get());
 
         for(auto itemBox : character->GetItemBoxes())
         {
@@ -1143,26 +1140,20 @@ bool AccountManager::LogoutCharacter(channel::ClientState* state,
 
         for(auto item : itemBox->GetItems())
         {
-            ok &= Cleanup<objects::Item>(item.Get(), worldDB,
-                doSave, !delay);
+            dbChanges->Update(item.Get());
         }
-        ok &= Cleanup<objects::ItemBox>(itemBox, worldDB,
-            doSave, !delay);
+
+        dbChanges->Update(itemBox);
     }
 
     std::list<std::shared_ptr<objects::DemonBox>> demonBoxes;
-    std::list<std::list<
-        libcomp::ObjectReference<objects::StatusEffect>>> statusEffectSets;
     if(character)
     {
         // Save expertises
         for(auto expertise : character->GetExpertises())
         {
-            ok &= Cleanup<objects::Expertise>(expertise.Get(),
-                worldDB, doSave, !delay);
+            dbChanges->Update(expertise.Get());
         }
-
-        statusEffectSets.push_back(character->GetStatusEffects());
 
         demonBoxes.push_back(character->GetCOMP().Get());
     }
@@ -1184,66 +1175,43 @@ bool AccountManager::LogoutCharacter(channel::ClientState* state,
         {
             if(demon.IsNull()) continue;
 
-            statusEffectSets.push_back(demon->GetStatusEffects());
-
             for(auto iSkill : demon->GetInheritedSkills())
             {
-                ok &= Cleanup<objects::InheritedSkill>(iSkill.Get(),
-                    worldDB, doSave, !delay);
+                dbChanges->Update(iSkill.Get());
             }
 
-            ok &= Cleanup<objects::EntityStats>(demon
-                ->GetCoreStats().Get(), worldDB, doSave,
-                !delay);
-            ok &= Cleanup<objects::Demon>(demon.Get(),
-                worldDB, doSave, !delay);
+            dbChanges->Update(demon->GetCoreStats().Get());
+            dbChanges->Update(demon.Get());
         }
 
-        ok &= Cleanup<objects::DemonBox>(box, worldDB, doSave,
-            !delay);
-    }
-
-    // Status effects
-    for(auto seSet : statusEffectSets)
-    {
-        for(auto effect : seSet)
-        {
-            if(!effect.IsNull())
-            {
-                // Unregister but do not save. Updating status
-                // effects requires special handling
-                ok &= Cleanup<objects::StatusEffect>(effect.Get(),
-                    worldDB, false, !delay);
-            }
-        }
+        dbChanges->Update(box);
     }
 
     // Save world data
-    ok &= Cleanup<objects::AccountWorldData>(
-        accountWorldData, worldDB, doSave, !delay);
+    dbChanges->Update(accountWorldData);
 
-    // Do not save or unload clan information as it is managed
-    // by the server
+    // Do not save status effects as those handled uniquely elsewhere
+
+    // Do not save clan information as it is managed by the server
 
     if(character)
     {
         // Save hotbars
         for(auto hotbar : character->GetHotbars())
         {
-            ok &= Cleanup<objects::Hotbar>(hotbar.Get(),
-                worldDB, doSave, !delay);
+            dbChanges->Update(hotbar.Get());
         }
 
         // Save quests
         for(auto qPair : character->GetQuests())
         {
-            ok &= Cleanup<objects::Quest>(qPair.second.Get(),
-                worldDB, doSave, !delay);
+            dbChanges->Update(qPair.second.Get());
         }
 
-        ok &= Cleanup<objects::Character>(character, worldDB, doSave,
-            !delay);
+        dbChanges->Update(character);
     }
 
-    return ok;
+    // Save all records at once
+    return mServer.lock()->GetWorldDatabase()
+        ->ProcessChangeSet(dbChanges);
 }

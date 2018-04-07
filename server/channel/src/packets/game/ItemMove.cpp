@@ -108,7 +108,7 @@ bool Parsers::ItemMove::Parse(libcomp::ManagerPacket *pPacketManager,
         }
 
         // Swap the items (the destination could be a null object or a real item)
-        item->SetItemBox(destBox);
+        item->SetItemBox(destBox->GetUUID());
         item->SetBoxSlot((int8_t)destSlot);
 
         auto otherItem = destBox->GetItems((size_t)destSlot);
@@ -122,7 +122,7 @@ bool Parsers::ItemMove::Parse(libcomp::ManagerPacket *pPacketManager,
 
         if(!otherItem.IsNull())
         {
-            otherItem->SetItemBox(sourceBox);
+            otherItem->SetItemBox(sourceBox->GetUUID());
             otherItem->SetBoxSlot((int8_t)sourceSlot);
             dbChanges->Update(otherItem.Get());
         }

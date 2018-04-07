@@ -94,7 +94,7 @@ void HandleShopSale(const std::shared_ptr<ChannelServer> server,
             libcomp::PersistentObject::GetObjectByUUID(state->GetObjectUUID(
                 pair.second)));
         auto amount = pair.first;
-        if(!item || item->GetItemBox().Get() != inventory)
+        if(!item || item->GetItemBox() != inventory->GetUUID())
         {
             SendShopSaleReply(client, shopID, -2, false);
             return;
@@ -211,7 +211,7 @@ void HandleShopSale(const std::shared_ptr<ChannelServer> server,
         auto slot = freeSlots.front();
         freeSlots.erase(freeSlots.begin());
 
-        item->SetItemBox(inventory);
+        item->SetItemBox(inventory->GetUUID());
         item->SetBoxSlot(slot);
         inventory->SetItems((size_t)slot, item);
         changes->Insert(item);

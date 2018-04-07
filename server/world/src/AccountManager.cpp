@@ -460,10 +460,10 @@ bool AccountManager::DeleteCharacter(const std::shared_ptr<
     auto characterManager = server->GetCharacterManager();
 
     auto db = server->GetWorldDatabase();
+    auto characterUUID = character->GetUUID();
 
     LOG_DEBUG(libcomp::String("Deleting character '%1' on account: %2\n")
-        .Arg(character->GetName()).Arg(character->GetAccount().GetUUID()
-            .ToString()));
+        .Arg(character->GetName()).Arg(character->GetAccount().ToString()));
 
     auto changes = libcomp::DatabaseChangeSet::Create();
 
@@ -473,11 +473,11 @@ bool AccountManager::DeleteCharacter(const std::shared_ptr<
 
     int32_t clanID = 0;
     auto clanMember = objects::ClanMember::LoadClanMemberByCharacter(
-        db, character);
+        db, characterUUID);
     if(clanMember)
     {
         auto clan = libcomp::PersistentObject::LoadObjectByUUID<objects::Clan>(
-            db, clanMember->GetClan().GetUUID());
+            db, clanMember->GetClan());
 
         bool left = false;
         if(clan && cLogin)
@@ -494,30 +494,29 @@ bool AccountManager::DeleteCharacter(const std::shared_ptr<
         if(!left)
         {
             LOG_ERROR(libcomp::String("Failed to remove %1 from their clan\n")
-                .Arg(character->GetUUID().ToString()));
+                .Arg(characterUUID.ToString()));
             return false;
         }
     }
 
     auto friendSettings = objects::FriendSettings::
-        LoadFriendSettingsByCharacter(db, character);
+        LoadFriendSettingsByCharacter(db, characterUUID);
     if(friendSettings && friendSettings->FriendsCount() > 0)
     {
         // Drop from other friend lists but let the other player get the
         // the update the next time they log on
-        auto charUID = character->GetUUID();
         for(auto otherChar : friendSettings->GetFriends())
         {
             auto otherFriendSettings = objects::FriendSettings::
-                LoadFriendSettingsByCharacter(db, otherChar.GetUUID());
+                LoadFriendSettingsByCharacter(db, otherChar);
             if(otherFriendSettings)
             {
                 auto friends = otherFriendSettings->GetFriends();
-                friends.remove_if([charUID](
+                friends.remove_if([characterUUID](
                     const libcomp::ObjectReference<
                         libcomp::PersistentObject>& f)
                     {
-                        return f.GetUUID() == charUID;
+                        return f.GetUUID() == characterUUID;
                     });
                 otherFriendSettings->SetFriends(friends);
 
@@ -535,7 +534,7 @@ bool AccountManager::DeleteCharacter(const std::shared_ptr<
     {
         LOG_WARNING(libcomp::String("Deleting character '%1' is still logged"
             " in on account: %2\n").Arg(character->GetName())
-            .Arg(character->GetAccount().GetUUID().ToString()));
+            .Arg(character->GetAccount().ToString()));
 
         characterManager->RequestChannelDisconnect(
             cLogin->GetWorldCID());
@@ -553,7 +552,7 @@ bool AccountManager::DeleteCharacter(const std::shared_ptr<
         {
             LOG_ERROR(libcomp::String("Failed to delete logged in character"
                 " without associated AccountWorlData: %1\n")
-                .Arg(character->GetUUID().ToString()));
+                .Arg(characterUUID.ToString()));
             return false;
         }
 
@@ -565,15 +564,16 @@ bool AccountManager::DeleteCharacter(const std::shared_ptr<
 
     // Load all associated records and add them to the same transaction
     // for deletion
-    std::list<libobjgen::UUID> entityUIDs = { character->GetUUID() };
+    std::list<libobjgen::UUID> entityUIDs = { characterUUID };
 
     changes->Delete(character);
 
     // Delete items and item boxes
     for(auto itemBox : objects::ItemBox::LoadItemBoxListByCharacter(db,
-        character))
+        characterUUID))
     {
-        for(auto item : objects::Item::LoadItemListByItemBox(db, itemBox))
+        for(auto item : objects::Item::LoadItemListByItemBox(db, itemBox
+            ->GetUUID()))
         {
             changes->Delete(item);
             Cleanup(item);
@@ -585,14 +585,15 @@ bool AccountManager::DeleteCharacter(const std::shared_ptr<
 
     // Delete demons, demon boxes and inherited skills
     for(auto demonBox : objects::DemonBox::LoadDemonBoxListByCharacter(db,
-        character))
+        characterUUID))
     {
-        for(auto demon : objects::Demon::LoadDemonListByDemonBox(db, demonBox))
+        for(auto demon : objects::Demon::LoadDemonListByDemonBox(db, demonBox
+            ->GetUUID()))
         {
             entityUIDs.push_back(demon->GetUUID());
 
             for(auto iSkill : objects::InheritedSkill::
-                LoadInheritedSkillListByDemon(db, demon))
+                LoadInheritedSkillListByDemon(db, demon->GetUUID()))
             {
                 changes->Delete(iSkill);
                 Cleanup(iSkill);
@@ -608,7 +609,7 @@ bool AccountManager::DeleteCharacter(const std::shared_ptr<
 
     // Delete expertise
     for(auto expertise : objects::Expertise::LoadExpertiseListByCharacter(db,
-        character))
+        characterUUID))
     {
         changes->Delete(expertise);
         Cleanup(expertise);
@@ -616,7 +617,7 @@ bool AccountManager::DeleteCharacter(const std::shared_ptr<
 
     // Delete hotbar
     for(auto hotbar : objects::Hotbar::LoadHotbarListByCharacter(db,
-        character))
+        characterUUID))
     {
         changes->Delete(hotbar);
         Cleanup(hotbar);
@@ -624,7 +625,7 @@ bool AccountManager::DeleteCharacter(const std::shared_ptr<
 
     // Delete quests
     for(auto quest : objects::Quest::LoadQuestListByCharacter(db,
-        character->GetUUID()))
+        characterUUID))
     {
         changes->Delete(quest);
         Cleanup(quest);
@@ -651,7 +652,7 @@ bool AccountManager::DeleteCharacter(const std::shared_ptr<
 
     // Delete character progress
     auto progress = objects::CharacterProgress::
-        LoadCharacterProgressByCharacter(db, character);
+        LoadCharacterProgressByCharacter(db, characterUUID);
     if(progress)
     {
         changes->Delete(progress);
@@ -674,7 +675,7 @@ bool AccountManager::DeleteCharacter(const std::shared_ptr<
 
     LOG_WARNING(libcomp::String("Failed to delete character '%1'"
         " on account: %2\n").Arg(character->GetName())
-        .Arg(character->GetAccount().GetUUID().ToString()));
+        .Arg(character->GetAccount().ToString()));
     return false;
 }
 

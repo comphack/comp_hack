@@ -131,7 +131,7 @@ bool Parsers::BazaarItemBuy::Parse(libcomp::ManagerPacket *pPacketManager,
                 auto dbChanges = libcomp::DatabaseChangeSet::Create();
 
                 inventory->SetItems((size_t)destSlot, item);
-                item->SetItemBox(inventory);
+                item->SetItemBox(inventory->GetUUID());
                 item->SetBoxSlot(destSlot);
 
                 dbChanges->Update(bItem);

@@ -72,11 +72,12 @@ bool Parsers::DemonBoxMove::Parse(libcomp::ManagerPacket *pPacketManager,
         libcomp::PersistentObject::GetObjectByUUID(state->GetObjectUUID(demonID)));
 
     int8_t srcSlot = srcDemon->GetBoxSlot();
-    auto srcBox = srcDemon->GetDemonBox().Get();
+    auto srcBox = std::dynamic_pointer_cast<objects::DemonBox>(
+        libcomp::PersistentObject::GetObjectByUUID(srcDemon->GetDemonBox()));
 
     uint8_t maxDestSlots = destBoxID == 0 ? progress->GetMaxCOMPSlots() : 50;
-    if(srcBoxID != srcBox->GetBoxID() || srcDemon != srcBox->GetDemons((size_t)srcSlot).Get()
-        || destSlot >= maxDestSlots)
+    if(!srcBox || srcBoxID != srcBox->GetBoxID() ||
+        srcDemon != srcBox->GetDemons((size_t)srcSlot).Get() || destSlot >= maxDestSlots)
     {
         LOG_ERROR(libcomp::String("Invalid arguments supplied for demon move request"
             " %1, %2, %3, %4\n").Arg(srcBoxID).Arg(demonID).Arg(destBoxID).Arg(destSlot));
@@ -105,11 +106,11 @@ bool Parsers::DemonBoxMove::Parse(libcomp::ManagerPacket *pPacketManager,
     auto destDemon = destBox->GetDemons((size_t)destSlot);
 
     srcDemon->SetBoxSlot(destSlot);
-    srcDemon->SetDemonBox(destBox);
+    srcDemon->SetDemonBox(destBox->GetUUID());
     if(!destDemon.IsNull())
     {
         destDemon->SetBoxSlot(srcSlot);
-        destDemon->SetDemonBox(srcBox);
+        destDemon->SetDemonBox(srcBox->GetUUID());
         dbChanges->Update(destDemon.Get());
     }
 

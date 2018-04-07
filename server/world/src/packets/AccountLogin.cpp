@@ -141,7 +141,8 @@ void LobbyLogin(std::shared_ptr<WorldServer> server,
             if(clan)
             {
                 // Load the members and store in the CharacterManager
-                auto members = objects::ClanMember::LoadClanMemberListByClan(worldDB, clan);
+                auto members = objects::ClanMember::LoadClanMemberListByClan(worldDB,
+                    clan->GetUUID());
                 auto clanInfo = characterManager->GetClan(clan->GetUUID());
                 if(clanInfo)
                 {

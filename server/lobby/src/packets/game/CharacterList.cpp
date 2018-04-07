@@ -84,7 +84,7 @@ bool Parsers::CharacterList::Parse(libcomp::ManagerPacket *pPacketManager,
 
         auto worldDB = world->GetWorldDatabase();
         auto characterList = objects::Character::LoadCharacterListByAccount(
-            worldDB, account);
+            worldDB, account->GetUUID());
         for(auto character : characterList)
         {
             // Always reload
@@ -117,7 +117,7 @@ bool Parsers::CharacterList::Parse(libcomp::ManagerPacket *pPacketManager,
         // Handle deletes before continuing
         for(auto deleteChar : deletes)
         {
-            accountManager->DeleteCharacter(deleteChar);
+            accountManager->DeleteCharacter(account, deleteChar);
             characters.erase(deleteChar);
         }
     }

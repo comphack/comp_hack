@@ -213,7 +213,7 @@ std::string Generator::GetPersistentRefCopyCode(
     const std::shared_ptr<MetaVariable>& var, const std::string& name)
 {
     auto ref = std::dynamic_pointer_cast<MetaVariableReference>(var);
-    if(ref && ref->IsPersistentReference())
+    if(ref && ref->IsPersistentReference() && !ref->IsIndirect())
     {
         return "auto " + name + "Copy = " + name + "; // Keep copy of references";
     }

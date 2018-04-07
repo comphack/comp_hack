@@ -292,12 +292,16 @@ bool Parsers::DemonCrystallize::Parse(libcomp::ManagerPacket *pPacketManager,
         if(success)
         {
             int8_t slot = targetDemon->GetBoxSlot();
-            auto box = targetDemon->GetDemonBox().Get();
+            auto box = std::dynamic_pointer_cast<objects::DemonBox>(
+                libcomp::PersistentObject::GetObjectByUUID(targetDemon->GetDemonBox()));
 
             characterManager->StoreDemon(targetClient, true, 15);
             characterManager->DeleteDemon(targetDemon, dbChanges);
-            characterManager->SendDemonBoxData(targetClient, box->GetBoxID(),
-                { slot });
+            if(box)
+            {
+                characterManager->SendDemonBoxData(targetClient, box->GetBoxID(),
+                    { slot });
+            }
 
             notify.WriteS32Little(0);
         }
@@ -334,7 +338,7 @@ bool Parsers::DemonCrystallize::Parse(libcomp::ManagerPacket *pPacketManager,
                     // Give it to the source
                     sourceInventory->SetItems((size_t)openSlot,
                         reward);
-                    reward->SetItemBox(sourceInventory);
+                    reward->SetItemBox(sourceInventory->GetUUID());
                     reward->SetBoxSlot(openSlot);
 
                     sourceSlots.push_back((uint16_t)openSlot);
@@ -383,7 +387,7 @@ bool Parsers::DemonCrystallize::Parse(libcomp::ManagerPacket *pPacketManager,
                     updateItem->SetBoxSlot(slot);
                 }
 
-                updateItem->SetItemBox(targetInventory);
+                updateItem->SetItemBox(targetInventory->GetUUID());
 
                 targetInventory->SetItems((size_t)slot, updateItem);
 

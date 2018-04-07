@@ -32,9 +32,12 @@
 
 namespace libcomp
 {
-
 class Database;
+}
 
+namespace objects
+{
+class Account;
 }
 
 namespace channel
@@ -172,40 +175,9 @@ private:
      * logging out.
      * @param state Pointer to the client state the character
      *  belongs to
-     * @param delay Optional parameter to perform the normal
-     *  logout save actions but do not unregister anything.
-     *  If this is specified, a second pass to this function
-     *  should be performed later.
      * @return true on success, false on failure
      */
-    bool LogoutCharacter(channel::ClientState* state,
-        bool delay = false);
-
-    /**
-     * Unload an object from references and update it in the DB.
-     * @param obj Pointer to the object to clean up
-     * @param db Pointer to the database to use
-     * @param doSave Indicates if the record should be updated
-     * @param unregister Indicates if the record should be unloaded
-     *  and unregistered
-     * @return true on success, false on failure
-     */
-    template <class T>
-    bool Cleanup(const std::shared_ptr<T>& obj,
-        const std::shared_ptr<libcomp::Database>& db,
-        bool doSave, bool unregister = true)
-    {
-        if(obj != nullptr)
-        {
-            if(unregister)
-            {
-                libcomp::ObjectReference<T>::Unload(obj->GetUUID());
-                obj->Unregister();
-            }
-            return !doSave || obj->Update(db);
-        }
-        return true;
-    }
+    bool LogoutCharacter(channel::ClientState* state);
 
     /// Pointer to the channel server
     std::weak_ptr<ChannelServer> mServer;

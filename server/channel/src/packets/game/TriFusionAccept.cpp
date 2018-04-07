@@ -113,9 +113,11 @@ bool Parsers::TriFusionAccept::Parse(libcomp::ManagerPacket *pPacketManager,
                     std::set<std::shared_ptr<objects::Character>> pCharacters;
                     for(auto d : tfSession->GetDemons())
                     {
-                        auto dBox = d ? d->GetDemonBox().Get() : nullptr;
-                        auto pCharacter = dBox
-                            ? dBox->GetCharacter().Get() : nullptr;
+                        auto dBox = std::dynamic_pointer_cast<objects::DemonBox>(
+                            libcomp::PersistentObject::GetObjectByUUID(d->GetDemonBox()));
+                        auto pCharacter = dBox ? std::dynamic_pointer_cast<objects::Character>(
+                            libcomp::PersistentObject::GetObjectByUUID(dBox->GetCharacter()))
+                            : nullptr;
 
                         if(pCharacter)
                         {

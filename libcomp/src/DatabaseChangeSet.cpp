@@ -71,20 +71,29 @@ DBStandardChangeSet::~DBStandardChangeSet()
 
 void DBStandardChangeSet::Insert(const std::shared_ptr<PersistentObject>& obj)
 {
-    mInserts.push_back(obj);
-    mInserts.unique();
+    if(obj)
+    {
+        mInserts.push_back(obj);
+        mInserts.unique();
+    }
 }
 
 void DBStandardChangeSet::Update(const std::shared_ptr<PersistentObject>& obj)
 {
-    mUpdates.push_back(obj);
-    mUpdates.unique();
+    if(obj)
+    {
+        mUpdates.push_back(obj);
+        mUpdates.unique();
+    }
 }
 
 void DBStandardChangeSet::Delete(const std::shared_ptr<PersistentObject>& obj)
 {
-    mDeletes.push_back(obj);
-    mDeletes.unique();
+    if(obj)
+    {
+        mDeletes.push_back(obj);
+        mDeletes.unique();
+    }
 }
 
 std::list<std::shared_ptr<PersistentObject>> DBStandardChangeSet::GetInserts() const
@@ -226,20 +235,29 @@ void DBOperationalChangeSet::AddOperation(const std::shared_ptr<DBOperationalCha
 
 void DBOperationalChangeSet::Insert(const std::shared_ptr<PersistentObject>& obj)
 {
-    mOperations.push_back(std::make_shared<DBOperationalChange>(obj,
-        DBOperationalChange::DBOperationType::DBOP_INSERT));
+    if(obj)
+    {
+        mOperations.push_back(std::make_shared<DBOperationalChange>(obj,
+            DBOperationalChange::DBOperationType::DBOP_INSERT));
+    }
 }
 
 void DBOperationalChangeSet::Update(const std::shared_ptr<PersistentObject>& obj)
 {
-    mOperations.push_back(std::make_shared<DBOperationalChange>(obj,
-        DBOperationalChange::DBOperationType::DBOP_UPDATE));
+    if(obj)
+    {
+        mOperations.push_back(std::make_shared<DBOperationalChange>(obj,
+            DBOperationalChange::DBOperationType::DBOP_UPDATE));
+    }
 }
 
 void DBOperationalChangeSet::Delete(const std::shared_ptr<PersistentObject>& obj)
 {
-    mOperations.push_back(std::make_shared<DBOperationalChange>(obj,
-        DBOperationalChange::DBOperationType::DBOP_DELETE));
+    if(obj)
+    {
+        mOperations.push_back(std::make_shared<DBOperationalChange>(obj,
+            DBOperationalChange::DBOperationType::DBOP_DELETE));
+    }
 }
 
 namespace libcomp

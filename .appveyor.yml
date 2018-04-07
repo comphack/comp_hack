@@ -46,19 +46,19 @@ artifacts:
   - path: build\comp_hack-*.msi
     name: comp_hack_installer
 
-deploy:
-  release: comp_hack-kodama-$(appveyor_build_number)
-  description: 'Development Build'
-  provider: GitHub
-  auth_token:
-    secure: /xJRd5oxBbWa7IDdzPFbollIUAc7uqashBu8crIATrv4iUJX//DvzrGSFCaDdFsj
-  artifact: comp_hack_installer
-  draft: false
-  prerelease: true
-  on:
-    branch: develop
-    platform: x64
-    configuration: RelWithDebInfo
+#deploy:
+#  release: comp_hack-kodama-$(appveyor_build_number)
+#  description: 'Development Build'
+#  provider: GitHub
+#  auth_token:
+#    secure: /xJRd5oxBbWa7IDdzPFbollIUAc7uqashBu8crIATrv4iUJX//DvzrGSFCaDdFsj
+#  artifact: comp_hack_installer
+#  draft: false
+#  prerelease: true
+#  on:
+#    branch: develop
+#    platform: x64
+#    configuration: RelWithDebInfo
 #    configuration: Release
 
 skip_tags: true

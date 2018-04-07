@@ -182,8 +182,8 @@ bool EventManager::HandleResponse(const std::shared_ptr<ChannelClientConnection>
 
     if(nullptr == current)
     {
-        LOG_ERROR(libcomp::String("Option selected for unknown event: %1\n"
-            ).Arg(character->GetAccount()->GetUsername()));
+        LOG_ERROR(libcomp::String("Option selected for unknown event: %1\n")
+            .Arg(state->GetAccountUID().ToString()));
 
         // End the event in case the client thinks something is actually happening
         EndEvent(client);

@@ -101,10 +101,10 @@ void FriendRequest(std::shared_ptr<WorldServer> server,
     {
         auto worldDB = server->GetWorldDatabase();
         auto sourceFSettings = objects::FriendSettings::LoadFriendSettingsByCharacter(
-            worldDB, cLogin->GetCharacter());
+            worldDB, cLogin->GetCharacter().GetUUID());
         for(auto f : sourceFSettings->GetFriends())
         {
-            if(f.GetUUID() == targetLogin->GetCharacter().GetUUID())
+            if(f == targetLogin->GetCharacter().GetUUID())
             {
                 // Already in the friends list
                 failed = true;
@@ -149,9 +149,9 @@ void FriendRequestAccepted(std::shared_ptr<WorldServer> server,
     {
         auto worldDB = server->GetWorldDatabase();
         auto sourceFSettings = objects::FriendSettings::LoadFriendSettingsByCharacter(
-            worldDB, cLogin->GetCharacter());
+            worldDB, cLogin->GetCharacter().GetUUID());
         auto targetFSettings = objects::FriendSettings::LoadFriendSettingsByCharacter(
-            worldDB, targetLogin->GetCharacter());
+            worldDB, targetLogin->GetCharacter().GetUUID());
 
         if(sourceFSettings && targetFSettings)
         {
@@ -279,7 +279,7 @@ void FriendRemoved(std::shared_ptr<WorldServer> server,
             for(size_t i = 0; i < sourceFSettings->FriendsCount(); i++)
             {
                 auto f = sourceFSettings->GetFriends(i);
-                if(f.GetUUID() == targetUUID)
+                if(f == targetUUID)
                 {
                     sourceFSettings->RemoveFriends(i);
                     break;
@@ -289,7 +289,7 @@ void FriendRemoved(std::shared_ptr<WorldServer> server,
             for(size_t i = 0; i < targetFSettings->FriendsCount(); i++)
             {
                 auto f = targetFSettings->GetFriends(i);
-                if(f.GetUUID() == sourceUUID)
+                if(f == sourceUUID)
                 {
                     targetFSettings->RemoveFriends(i);
                     break;

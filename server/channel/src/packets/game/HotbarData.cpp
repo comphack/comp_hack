@@ -60,12 +60,12 @@ void SendHotbarData(const std::shared_ptr<ChannelClientConnection> client,
     for(size_t i = 0; i < 16; i++)
     {
         auto type = hotbar != nullptr ? hotbar->GetItemTypes(i) : (int8_t)0;
-        auto item = hotbar != nullptr ? hotbar->GetItems(i).Get() : nullptr;
+        auto itemUID = hotbar != nullptr ? hotbar->GetItems(i) : NULLUUID;
         auto itemID = (int64_t)(hotbar != nullptr ? hotbar->GetItemIDs(i) : 0);
 
-        if(nullptr != item)
+        if(!itemUID.IsNull())
         {
-            itemID = state->GetObjectID(item->GetUUID());
+            itemID = state->GetObjectID(itemUID);
         }
 
         reply.WriteS8(itemID != 0 ? type : 0);

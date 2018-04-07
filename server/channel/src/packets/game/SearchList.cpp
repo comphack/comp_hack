@@ -248,7 +248,7 @@ bool Parsers::SearchList::Parse(libcomp::ManagerPacket *pPacketManager,
                 reply.WriteS8((int8_t)entry->GetData(SEARCH_IDX_LOCATION));
 
                 auto character = libcomp::PersistentObject::LoadObjectByUUID<
-                    objects::Character>(worldDB, entry->GetRelatedTo().GetUUID());
+                    objects::Character>(worldDB, entry->GetRelatedTo());
 
                 if(character)
                 {
@@ -278,7 +278,7 @@ bool Parsers::SearchList::Parse(libcomp::ManagerPacket *pPacketManager,
                 reply.WriteS8((int8_t)entry->GetData(SEARCH_IDX_PLAYSTYLE));
 
                 auto character = libcomp::PersistentObject::LoadObjectByUUID<
-                    objects::Character>(worldDB, entry->GetRelatedTo().GetUUID());
+                    objects::Character>(worldDB, entry->GetRelatedTo());
 
                 if(character)
                 {
@@ -317,13 +317,13 @@ bool Parsers::SearchList::Parse(libcomp::ManagerPacket *pPacketManager,
                 reply.WriteS8((int8_t)entry->GetData(SEARCH_IDX_PLAYSTYLE));
 
                 auto clan = libcomp::PersistentObject::LoadObjectByUUID<
-                    objects::Clan>(worldDB, entry->GetRelatedTo().GetUUID());
+                    objects::Clan>(worldDB, entry->GetRelatedTo());
 
                 if(clan)
                 {
                     std::shared_ptr<objects::ClanMember> masterMember;
                     for(auto member : objects::ClanMember::LoadClanMemberListByClan(worldDB,
-                        clan))
+                        clan->GetUUID()))
                     {
                         if(member->GetMemberType() == objects::ClanMember::MemberType_t::MASTER)
                         {
@@ -334,7 +334,7 @@ bool Parsers::SearchList::Parse(libcomp::ManagerPacket *pPacketManager,
 
                     auto master = masterMember
                         ? libcomp::PersistentObject::LoadObjectByUUID<objects::Character>(
-                            worldDB, masterMember->GetCharacter().GetUUID()) : nullptr;
+                            worldDB, masterMember->GetCharacter()) : nullptr;
                     auto masterStats = master
                         ? libcomp::PersistentObject::LoadObjectByUUID<objects::EntityStats>(
                             worldDB, master->GetCoreStats().GetUUID()) : nullptr;
@@ -379,7 +379,7 @@ bool Parsers::SearchList::Parse(libcomp::ManagerPacket *pPacketManager,
                 reply.WriteS32Little(entry->GetData(SEARCH_IDX_ITEM_TYPE));
                 
                 auto character = libcomp::PersistentObject::LoadObjectByUUID<
-                    objects::Character>(worldDB, entry->GetRelatedTo().GetUUID());
+                    objects::Character>(worldDB, entry->GetRelatedTo());
 
                 reply.WriteString16Little(libcomp::Convert::ENCODING_CP932,
                     character ? character->GetName() : "", true);
@@ -399,7 +399,7 @@ bool Parsers::SearchList::Parse(libcomp::ManagerPacket *pPacketManager,
                 reply.WriteS32Little(entry->GetData(SEARCH_IDX_ITEM_TYPE));
                 
                 auto character = libcomp::PersistentObject::LoadObjectByUUID<
-                    objects::Character>(worldDB, entry->GetRelatedTo().GetUUID());
+                    objects::Character>(worldDB, entry->GetRelatedTo());
 
                 reply.WriteString16Little(libcomp::Convert::ENCODING_CP932,
                     character ? character->GetName() : "", true);
@@ -416,7 +416,7 @@ bool Parsers::SearchList::Parse(libcomp::ManagerPacket *pPacketManager,
                 reply.WriteS8((int8_t)entry->GetData(SEARCH_IDX_GOAL));
 
                 auto character = libcomp::PersistentObject::LoadObjectByUUID<
-                    objects::Character>(worldDB, entry->GetRelatedTo().GetUUID());
+                    objects::Character>(worldDB, entry->GetRelatedTo());
 
                 if(character)
                 {
@@ -450,7 +450,7 @@ bool Parsers::SearchList::Parse(libcomp::ManagerPacket *pPacketManager,
                 reply.WriteS32Little(entry->GetEntryID());
 
                 auto character = libcomp::PersistentObject::LoadObjectByUUID<
-                    objects::Character>(worldDB, entry->GetRelatedTo().GetUUID());
+                    objects::Character>(worldDB, entry->GetRelatedTo());
 
                 reply.WriteString16Little(libcomp::Convert::ENCODING_CP932,
                     character ? character->GetName() : "", true);

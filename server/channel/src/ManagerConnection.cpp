@@ -215,10 +215,14 @@ const std::shared_ptr<ChannelClientConnection>
     ManagerConnection::GetEntityClient(int32_t id, bool worldID)
 {
     auto state = ClientState::GetEntityClientState(id, worldID);
-    auto cState = state != nullptr ? state->GetCharacterState() : nullptr;
-    return cState && cState->GetEntity() != nullptr
-        ? GetClientConnection(cState->GetEntity()->GetAccount()->GetUsername())
-        : nullptr;
+    if(state)
+    {
+        auto account = std::dynamic_pointer_cast<objects::Account>(
+            libcomp::PersistentObject::GetObjectByUUID(state->GetAccountUID()));
+        return account ? GetClientConnection(account->GetUsername()) : nullptr;
+    }
+
+    return nullptr;
 }
 
 std::list<std::shared_ptr<ChannelClientConnection>>

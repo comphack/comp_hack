@@ -94,16 +94,20 @@ bool BazaarState::AddItem(channel::ClientState* state, int8_t slot, int64_t item
             bazaarData->SetItems((size_t)slot, bItem);
 
             // Remove it from the old box
-            auto box = item->GetItemBox().Get();
-            int8_t oldSlot = item->GetBoxSlot();
-            box->SetItems((size_t)oldSlot, NULLUUID);
+            auto box = std::dynamic_pointer_cast<objects::ItemBox>(
+                libcomp::PersistentObject::GetObjectByUUID(item->GetItemBox()));
+            if(box)
+            {
+                int8_t oldSlot = item->GetBoxSlot();
+                box->SetItems((size_t)oldSlot, NULLUUID);
+                dbChanges->Update(box);
+            }
 
             item->SetBoxSlot(-1);
             item->SetItemBox(NULLUUID);
 
             dbChanges->Insert(bItem);
             dbChanges->Update(bazaarData);
-            dbChanges->Update(box);
             dbChanges->Update(item);
 
             return true;
@@ -287,7 +291,7 @@ bool BazaarState::DropItemInternal(ClientState* state, int8_t srcSlot, int64_t i
 
         inventory->SetItems((size_t)destSlot, item);
         item->SetBoxSlot(destSlot);
-        item->SetItemBox(inventory);
+        item->SetItemBox(inventory->GetUUID());
 
         dbChanges->Delete(bItem);
         dbChanges->Update(bazaarData);

@@ -147,7 +147,7 @@ bool Parsers::CreateCharacter::Parse(libcomp::ManagerPacket *pPacketManager,
         character->SetEyeType((uint8_t)eyeType);
         character->SetLeftEyeColor((uint8_t)eyeColor);
         character->SetRightEyeColor((uint8_t)eyeColor);
-        character->SetAccount(account);
+        character->SetAccount(account->GetUUID());
         character->Register(character);
 
         std::unordered_map<size_t, std::shared_ptr<objects::Item>> equipMap;
@@ -180,8 +180,7 @@ bool Parsers::CreateCharacter::Parse(libcomp::ManagerPacket *pPacketManager,
 
         auto stats = libcomp::PersistentObject::New<objects::EntityStats>();
         stats->Register(stats);
-        stats->SetEntity(std::dynamic_pointer_cast<
-            libcomp::PersistentObject>(character));
+        stats->SetEntity(character->GetUUID());
         character->SetCoreStats(stats);
 
         bool equipped = true;

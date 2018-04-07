@@ -74,7 +74,7 @@ bool Parsers::ToggleExpertise::Parse(libcomp::ManagerPacket *pPacketManager,
     {
         expertise = std::shared_ptr<objects::Expertise>(new objects::Expertise);
         expertise->Register(expertise);
-        expertise->SetCharacter(character);
+        expertise->SetCharacter(character->GetUUID());
 
         auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
         auto db = server->GetWorldDatabase();

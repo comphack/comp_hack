@@ -74,9 +74,9 @@ void ClanForm(std::shared_ptr<WorldServer> server,
         clan->SetBaseZoneID(baseZoneID);
 
         auto clanMaster = libcomp::PersistentObject::New<objects::ClanMember>(true);
-        clanMaster->SetClan(clan);
+        clanMaster->SetClan(clan->GetUUID());
         clanMaster->SetMemberType(objects::ClanMember::MemberType_t::MASTER);
-        clanMaster->SetCharacter(character);
+        clanMaster->SetCharacter(character->GetUUID());
 
         clan->AppendMembers(clanMaster);
 

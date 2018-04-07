@@ -116,10 +116,13 @@ bool FusionManager::HandleTriFusion(
     {
         if(demon)
         {
-            auto dBox = demon->GetDemonBox().Get();
-            auto account = dBox->GetAccount().Get();
-            auto dClient = managerConnection->GetClientConnection(
-                account->GetUsername());
+            auto dBox = std::dynamic_pointer_cast<objects::DemonBox>(
+                libcomp::PersistentObject::GetObjectByUUID(demon->GetDemonBox()));
+            auto account = dBox ? std::dynamic_pointer_cast<objects::Account>(
+                libcomp::PersistentObject::GetObjectByUUID(dBox->GetAccount()))
+                : nullptr;
+            auto dClient = account ? managerConnection->GetClientConnection(
+                account->GetUsername()) : nullptr;
             if(dClient)
             {
                 dClientMap[demon] = dClient;
@@ -271,7 +274,8 @@ bool FusionManager::HandleTriFusion(
                         for(auto itemPair : newItemMap[pClient])
                         {
                             auto item = itemPair.second;
-                            auto sourceBox = item->GetItemBox().Get();
+                            auto sourceBox = std::dynamic_pointer_cast<objects::ItemBox>(
+                                libcomp::PersistentObject::GetObjectByUUID(item->GetItemBox()));
                             if(sourceBox)
                             {
                                 characterManager->UnequipItem(client, item);
@@ -287,7 +291,7 @@ bool FusionManager::HandleTriFusion(
                             changes->Update(targetBox);
 
                             item->SetBoxSlot(itemPair.first);
-                            item->SetItemBox(targetBox);
+                            item->SetItemBox(targetBox->GetUUID());
                             targetBox->SetItems((size_t)itemPair.first, item);
                             updatedSlots[pClient].push_back((uint16_t)itemPair.first);
                         }
@@ -354,8 +358,11 @@ bool FusionManager::HandleTriFusion(
             // Write removed demons
             for(auto d : { demon1, demon2, demon3 })
             {
-                auto dBox = d->GetDemonBox().Get();
-                auto c = dBox ? dBox->GetCharacter().Get() : nullptr;
+                auto dBox = std::dynamic_pointer_cast<objects::DemonBox>(
+                    libcomp::PersistentObject::GetObjectByUUID(d->GetDemonBox()));
+                auto c = dBox ? std::dynamic_pointer_cast<objects::Character>(
+                    libcomp::PersistentObject::GetObjectByUUID(dBox->GetCharacter()))
+                    : nullptr;
 
                 int32_t ownerEntityID = 0;
                 for(auto pClient : pClients)
@@ -1240,10 +1247,13 @@ int8_t FusionManager::ProcessFusion(
     {
         if(demon)
         {
-            auto dBox = demon->GetDemonBox().Get();
-            auto account = dBox->GetAccount().Get();
-            auto dClient = managerConnection->GetClientConnection(
-                account->GetUsername());
+            auto dBox = std::dynamic_pointer_cast<objects::DemonBox>(
+                libcomp::PersistentObject::GetObjectByUUID(demon->GetDemonBox()));
+            auto account = dBox ? std::dynamic_pointer_cast<objects::Account>(
+                libcomp::PersistentObject::GetObjectByUUID(dBox->GetAccount()))
+                : nullptr;
+            auto dClient = account ? managerConnection->GetClientConnection(
+                account->GetUsername()) : nullptr;
             if(dClient)
             {
                 dMap[demon] = dClient;
@@ -1463,13 +1473,13 @@ int8_t FusionManager::ProcessFusion(
     // Correct the COMP
     auto comp = character->GetCOMP().Get();
 
-    resultDemon->SetDemonBox(comp);
+    resultDemon->SetDemonBox(comp->GetUUID());
     resultDemon->SetBoxSlot(newSlot);
     comp->SetDemons((size_t)newSlot, resultDemon);
 
     // Prepare the updates and generate the inherited skills
     auto changes = libcomp::DatabaseChangeSet::Create(
-        character->GetAccount().GetUUID());
+        character->GetAccount());
     changes->Insert(resultDemon);
     changes->Insert(resultDemon->GetCoreStats().Get());
 
@@ -1495,7 +1505,7 @@ int8_t FusionManager::ProcessFusion(
                 objects::InheritedSkill>(true);
             iSkill->SetSkill(iPair.first);
             iSkill->SetProgress(progress);
-            iSkill->SetDemon(resultDemon);
+            iSkill->SetDemon(resultDemon->GetUUID());
             resultDemon->AppendInheritedSkills(iSkill);
 
             changes->Insert(iSkill);

@@ -1554,7 +1554,7 @@ bool CharacterManager::AddRemoveItems(const std::shared_ptr<
                         added = (uint32_t)(added + delta);
 
                         auto item = GenerateItem(itemType, (uint16_t)delta);
-                        item->SetItemBox(itemBox);
+                        item->SetItemBox(itemBox->GetUUID());
                         item->SetBoxSlot((int8_t)freeSlot);
 
                         if(!itemBox->SetItems(freeSlot, item))
@@ -1879,7 +1879,7 @@ bool CharacterManager::UpdateItems(const std::shared_ptr<
         auto slot = freeSlots.front();
         freeSlots.erase(freeSlots.begin());
 
-        item->SetItemBox(inventory);
+        item->SetItemBox(inventory->GetUUID());
         item->SetBoxSlot(slot);
         inventory->SetItems((size_t)slot, item);
         changes->Insert(item);
@@ -2083,7 +2083,7 @@ void CharacterManager::EquipItem(const std::shared_ptr<
         return;
     }
 
-    bool inInventory = equip->GetItemBox().Get() == character->GetItemBoxes(0).Get();
+    bool inInventory = equip->GetItemBox() == character->GetItemBoxes(0).GetUUID();
 
     auto slot = objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_NONE;
 
@@ -2328,8 +2328,13 @@ bool CharacterManager::UpdateDurability(const std::shared_ptr<
         {
             if(sendPacket)
             {
-                SendItemBoxData(client, item->GetItemBox().Get(),
-                    { (uint16_t)item->GetBoxSlot() });
+                auto itemBox = std::dynamic_pointer_cast<objects::ItemBox>(
+                    libcomp::PersistentObject::GetObjectByUUID(item->GetItemBox()));
+                if(itemBox)
+                {
+                    SendItemBoxData(client, itemBox,
+                        { (uint16_t)item->GetBoxSlot() });
+                }
             }
 
             server->GetWorldDatabase()->QueueUpdate(item, state->GetAccountUID());
@@ -2507,13 +2512,13 @@ std::shared_ptr<objects::Demon> CharacterManager::ContractDemon(
 
     auto ds = d->GetCoreStats().Get();
 
-    d->SetDemonBox(comp);
+    d->SetDemonBox(comp->GetUUID());
     d->SetBoxSlot(compSlot);
 
     comp->SetDemons((size_t)compSlot, d);
 
     auto dbChanges = libcomp::DatabaseChangeSet::Create(
-        character->GetAccount().GetUUID());
+        character->GetAccount());
     dbChanges->Insert(d);
     dbChanges->Insert(ds);
     dbChanges->Update(comp);
@@ -3007,7 +3012,7 @@ void CharacterManager::UpdateExpertisePoints(const std::shared_ptr<
         {
             // Create the expertise
             expertise = libcomp::PersistentObject::New<objects::Expertise>(true);
-            expertise->SetCharacter(character);
+            expertise->SetCharacter(character->GetUUID());
             character->SetExpertises(pointPair.first, expertise);
 
             dbChanges->Insert(expertise);
@@ -3197,7 +3202,7 @@ bool CharacterManager::LearnSkill(const std::shared_ptr<channel::ChannelClientCo
             objects::InheritedSkill>(true);
         iSkill->SetSkill(skillID);
         iSkill->SetProgress(MAX_INHERIT_SKILL);
-        iSkill->SetDemon(demon);
+        iSkill->SetDemon(demon->GetUUID());
 
         demon->AppendInheritedSkills(iSkill);
 
@@ -3685,9 +3690,23 @@ bool CharacterManager::UpdateStatusEffects(const std::shared_ptr<
         return false;
     }
 
-    auto changes = libcomp::DatabaseChangeSet::Create(cState
-            ? cState->GetEntity()->GetAccount().GetUUID()
-            : dState->GetEntity()->GetDemonBox()->GetAccount().GetUUID());
+    libobjgen::UUID accountUID;
+    if(cState)
+    {
+        accountUID = cState->GetEntity()->GetAccount();
+    }
+    else
+    {
+        auto box = std::dynamic_pointer_cast<objects::DemonBox>(
+            libcomp::PersistentObject::GetObjectByUUID(
+                dState->GetEntity()->GetDemonBox()));
+        if(box)
+        {
+            accountUID = box->GetAccount();
+        }
+    }
+
+    auto changes = libcomp::DatabaseChangeSet::Create(accountUID);
 
     auto effectMap = eState->GetStatusEffects();
     std::unordered_map<uint32_t, bool> effectStates;
@@ -4571,8 +4590,9 @@ void CharacterManager::GetEntityStatsPacketData(libcomp::Packet& p,
 void CharacterManager::DeleteDemon(const std::shared_ptr<objects::Demon>& demon,
     const std::shared_ptr<libcomp::DatabaseChangeSet>& changes)
 {
-    auto box = demon->GetDemonBox().Get();
-    if(box->GetDemons((size_t)demon->GetBoxSlot()).Get() == demon)
+    auto box = std::dynamic_pointer_cast<objects::DemonBox>(
+        libcomp::PersistentObject::GetObjectByUUID(demon->GetDemonBox()));
+    if(box && box->GetDemons((size_t)demon->GetBoxSlot()).Get() == demon)
     {
         box->SetDemons((size_t)demon->GetBoxSlot(), NULLUUID);
         changes->Update(box);

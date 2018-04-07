@@ -69,7 +69,8 @@ bool Parsers::BazaarItemAdd::Parse(libcomp::ManagerPacket *pPacketManager,
     reply.WriteS32Little(price);
 
     int8_t oldSlot = item ? item->GetBoxSlot() : -1;
-    auto box = item ? item->GetItemBox().Get() : nullptr;
+    auto box = std::dynamic_pointer_cast<objects::ItemBox>(
+        libcomp::PersistentObject::GetObjectByUUID(item->GetItemBox()));
 
     auto dbChanges = libcomp::DatabaseChangeSet::Create();
     auto bState = state->GetBazaarState();
@@ -87,8 +88,11 @@ bool Parsers::BazaarItemAdd::Parse(libcomp::ManagerPacket *pPacketManager,
             return true;
         }
 
-        std::list<uint16_t> updatedSlots = { (uint16_t)oldSlot };
-        server->GetCharacterManager()->SendItemBoxData(client, box, updatedSlots);
+        if(box && oldSlot != -1)
+        {
+            server->GetCharacterManager()->SendItemBoxData(client, box,
+                { (uint16_t)oldSlot });
+        }
 
         reply.WriteS32Little(0); // Success
     }

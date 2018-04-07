@@ -29,6 +29,12 @@
 
 #include "ChannelClientConnection.h"
 
+namespace objects
+{
+class Account;
+class Character;
+}
+
 namespace channel
 {
 
@@ -530,6 +536,24 @@ private:
      */
     bool HaveUserLevel(const std::shared_ptr<
         channel::ChannelClientConnection>& client, int32_t requiredLevel);
+
+    /**
+     * Get channel accessible character, account and client pointers based
+     * upon the supplied character name. If the character's account is logged
+     * in as a different character on the channel, the client will still be
+     * returned unless otherwise specified.
+     * @param targetName Name of the character to retrieve information from
+     * @param currentOnly If true, the client will not be returned if the
+     *  account is logged into the channel but not as the specified character
+     * @param targetCharacter Output pointer to the retrieved character
+     * @param targetAccount Output pointer to the retrieved character's account
+     * @param targetClient Output pointer to the retrieved character's client
+     * @return true if the character and account exist, false if they do not
+     */
+    bool GetTargetCharacterAccount(libcomp::String& targetName,
+        bool currentOnly, std::shared_ptr<objects::Character>& targetCharacter,
+        std::shared_ptr<objects::Account>& targetAccount,
+        std::shared_ptr<channel::ChannelClientConnection>& targetClient);
 
     /**
      * Get the next argument from the supplied argument list as a string.

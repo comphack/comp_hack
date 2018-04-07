@@ -63,8 +63,9 @@ void DropItem(const std::shared_ptr<ChannelServer> server,
         return;
     }
 
-    auto itemBox = item->GetItemBox().Get();
-    if(nullptr != itemBox)
+    auto itemBox = std::dynamic_pointer_cast<objects::ItemBox>(
+        libcomp::PersistentObject::GetObjectByUUID(item->GetItemBox()));
+    if(itemBox)
     {
         server->GetCharacterManager()->UnequipItem(client, item);
         itemBox->SetItems((size_t)item->GetBoxSlot(), NULLUUID);

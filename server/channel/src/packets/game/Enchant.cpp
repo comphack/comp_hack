@@ -253,7 +253,7 @@ bool Parsers::Enchant::Parse(libcomp::ManagerPacket *pPacketManager,
                     // Give it to the source
                     sourceInventory->SetItems((size_t)openSlot,
                         reward);
-                    reward->SetItemBox(sourceInventory);
+                    reward->SetItemBox(sourceInventory->GetUUID());
                     reward->SetBoxSlot(openSlot);
 
                     sourceSlots.push_back((uint16_t)openSlot);
@@ -271,32 +271,34 @@ bool Parsers::Enchant::Parse(libcomp::ManagerPacket *pPacketManager,
             }
         }
 
-        if(updateItem)
+        if(inputItem && !success)
         {
-            if(!success)
+            // If we had an input item (we should) and the fusion failed
+            // without error, decrease durability
+            switch(exchangeSession->GetType())
             {
-                switch(exchangeSession->GetType())
-                {
-                case objects::PlayerExchangeSession::Type_t::ENCHANT_TAROT:
-                    characterManager->UpdateDurability(client, updateItem,
-                        -5000);
-                    break;
-                case objects::PlayerExchangeSession::Type_t::ENCHANT_SOUL:
-                    characterManager->UpdateDurability(client, updateItem,
-                        -10000);
-                    break;
-                default:
-                    break;
-                }
+            case objects::PlayerExchangeSession::Type_t::ENCHANT_TAROT:
+                characterManager->UpdateDurability(client, inputItem,
+                    -5000);
+                break;
+            case objects::PlayerExchangeSession::Type_t::ENCHANT_SOUL:
+                characterManager->UpdateDurability(client, inputItem,
+                    -10000);
+                break;
+            default:
+                break;
             }
-
+        }
+        else if(updateItem)
+        {
             targetSlots.push_back((uint16_t)updateItem->GetBoxSlot());
 
-            if(updateItem->GetItemBox().IsNull())
+            auto box = std::dynamic_pointer_cast<objects::ItemBox>(
+                libcomp::PersistentObject::GetObjectByUUID(inputItem->GetItemBox()));
+            if(updateItem->GetItemBox().IsNull() && box)
             {
                 // Item is new, replace old one
-                auto box = inputItem->GetItemBox().Get();
-                updateItem->SetItemBox(box);
+                updateItem->SetItemBox(box->GetUUID());
                 box->SetItems((size_t)updateItem->GetBoxSlot(), updateItem);
 
                 dbChanges->Delete(inputItem);

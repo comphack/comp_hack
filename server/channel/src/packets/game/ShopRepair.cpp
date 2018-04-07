@@ -84,7 +84,7 @@ bool Parsers::ShopRepair::Parse(libcomp::ManagerPacket *pPacketManager,
     auto itemData = item ? definitionManager->GetItemData(item->GetType()) : nullptr;
 
     bool success = false;
-    if(shop && itemData && item->GetItemBox().Get() == inventory)
+    if(shop && itemData && item->GetItemBox() == inventory->GetUUID())
     {
         bool kreuzRepair = false;
 

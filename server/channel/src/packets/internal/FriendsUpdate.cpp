@@ -66,7 +66,7 @@ void SendFriendInfo(std::shared_ptr<ChannelServer> server,
         }
 
         auto fSettings = objects::FriendSettings::LoadFriendSettingsByCharacter(
-            worldDB, character);
+            worldDB, character->GetUUID());
         if(!fSettings)
         {
             LOG_ERROR(libcomp::String("Character friend settings failed to load: %1\n")
@@ -182,7 +182,7 @@ bool Parsers::FriendsUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
             {
                 // Reload the updated friends info
                 objects::FriendSettings::LoadFriendSettingsByCharacter(
-                    server->GetWorldDatabase(), cState->GetEntity());
+                    server->GetWorldDatabase(), cState->GetEntity()->GetUUID());
 
                 if(charName == cState->GetEntity()->GetName())
                 {
@@ -209,7 +209,7 @@ bool Parsers::FriendsUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
 
             // Reload the updated friends info
             objects::FriendSettings::LoadFriendSettingsByCharacter(
-                server->GetWorldDatabase(), cState->GetEntity());
+                server->GetWorldDatabase(), cState->GetEntity()->GetUUID());
             
             if(added)
             {

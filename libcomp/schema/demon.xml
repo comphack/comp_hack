@@ -2,7 +2,7 @@
 <objgen>
     <object name="Demon" location="world" scriptenabled="true">
         <member type="u32" name="Type"/>
-        <member type="DemonBox*" name="DemonBox" key="true" unique="false"/>
+        <member type="pref" name="DemonBox" key="true" unique="false"/>
         <member type="s8" name="BoxSlot" default="-1"/>
         <member type="u16" name="AttackSettings"/>
         <member type="s32" name="SoulPoints" min="0" max="100000"/>
@@ -31,13 +31,13 @@
     </object>
     <object name="InheritedSkill" location="world">
         <member type="u32" name="Skill"/>
-        <member type="Demon*" name="Demon" key="true" unique="false"/>
+        <member type="pref" name="Demon" key="true" unique="false"/>
         <member type="s16" name="Progress"/>
     </object>
     <object name="DemonBox" location="world">
         <member type="s8" name="BoxID"/>
-        <member type="Account*" name="Account" key="true" unique="false"/>
-        <member type="Character*" name="Character" key="true" unique="false"/>
+        <member type="pref" name="Account" key="true" unique="false"/>
+        <member type="pref" name="Character" key="true" unique="false"/>
 
         <!-- The COMP only uses the first 10 elements at most -->
         <member type="array" name="Demons" size="50">

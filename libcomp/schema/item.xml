@@ -2,7 +2,7 @@
 <objgen>
     <object name="Item" location="world" scriptenabled="true">
         <member type="u32" name="Type"/>
-        <member type="ItemBox*" name="ItemBox" key="true" unique="false"/>
+        <member type="pref" name="ItemBox" key="true" unique="false"/>
         <member type="s8" name="BoxSlot" default="-1"/>
         <member type="u16" name="StackSize" default="1"/>
         <member type="u16" name="Durability"/>
@@ -28,8 +28,8 @@
             <value>UNKNOWN_1</value>
             <value>ITEM_DEPO</value>
         </member>
-        <member type="Account*" name="Account" key="true" unique="false"/>
-        <member type="Character*" name="Character" key="true" unique="false"/>
+        <member type="pref" name="Account" key="true" unique="false"/>
+        <member type="pref" name="Character" key="true" unique="false"/>
         <member type="array" name="Items" size="50">
             <element type="Item*"/>
         </member>

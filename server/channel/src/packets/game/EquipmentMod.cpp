@@ -321,9 +321,13 @@ bool Parsers::EquipmentMod::Parse(libcomp::ManagerPacket *pPacketManager,
         {
             equipmentItem->SetModSlots((size_t)slot, effectID);
 
-            std::list<uint16_t> slots = { (uint16_t)equipmentItem->GetBoxSlot() };
-            characterManager->SendItemBoxData(client, equipmentItem->GetItemBox().Get(),
-                slots);
+            auto itemBox = std::dynamic_pointer_cast<objects::ItemBox>(
+                libcomp::PersistentObject::GetObjectByUUID(equipmentItem->GetItemBox()));
+            if(itemBox)
+            {
+                characterManager->SendItemBoxData(client, itemBox,
+                    { (uint16_t)equipmentItem->GetBoxSlot() });
+            }
 
             server->GetWorldDatabase()->QueueUpdate(equipmentItem,
                 state->GetAccountUID());

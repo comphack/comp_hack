@@ -323,17 +323,9 @@ bool ChatManager::GMCommand_AddCP(const std::shared_ptr<
     libcomp::String name;
     if(GetStringArg(name, argsCopy))
     {
-        auto worldDB = server->GetWorldDatabase();
-
-        targetClient = nullptr;
-        targetAccount = nullptr;
-
-        auto target = objects::Character::LoadCharacterByName(worldDB, name);
-        targetAccount = target ? target->GetAccount().Get(worldDB) : nullptr;
-        targetClient = targetAccount ? server->GetManagerConnection()->GetClientConnection(
-            targetAccount->GetUsername()) : nullptr;
-
-        if(!targetAccount)
+        std::shared_ptr<objects::Character> targetCharacter;
+        if(!GetTargetCharacterAccount(name, false, targetCharacter,
+            targetAccount, targetClient))
         {
             return SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(
                 "Invalid character name supplied for add CP command: %1").Arg(name));
@@ -411,21 +403,20 @@ bool ChatManager::GMCommand_Ban(const std::shared_ptr<
     std::list<libcomp::String> argsCopy = args;
     libcomp::String bannedPlayer;
 
-    if (!GetStringArg(bannedPlayer, argsCopy) || argsCopy.size() > 1)
+    if(!GetStringArg(bannedPlayer, argsCopy) || argsCopy.size() > 1)
     {
          return SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(
             "@ban requires one argument, <username>"));
     }
 
-    auto server = mServer.lock();
-    auto worldDB = server->GetWorldDatabase();
-    auto lobbyDB = server->GetLobbyDatabase();
-    auto target = objects::Character::LoadCharacterByName(worldDB, bannedPlayer);
-    auto targetAccount = target ? target->GetAccount().Get() : nullptr;
-    auto targetClient = targetAccount ? server->GetManagerConnection()->GetClientConnection(
-        targetAccount->GetUsername()) : nullptr;
+    std::shared_ptr<objects::Character> target;
+    std::shared_ptr<objects::Account> targetAccount;
+    std::shared_ptr<channel::ChannelClientConnection> targetClient;
+    GetTargetCharacterAccount(bannedPlayer, false, target, targetAccount,
+        targetClient);
 
-    if(targetAccount && client->GetClientState()->GetUserLevel() < targetAccount->GetUserLevel())
+    if(targetAccount &&
+        client->GetClientState()->GetUserLevel() < targetAccount->GetUserLevel())
     {
         return SendChatMessage(client, ChatType_t::CHAT_SELF,
             "Your user level is lower than the user you tried to ban.");
@@ -434,7 +425,7 @@ bool ChatManager::GMCommand_Ban(const std::shared_ptr<
     if(targetClient != nullptr)
     {
         targetAccount->SetEnabled(false);
-        targetAccount->Update(lobbyDB);
+        targetAccount->Update(mServer.lock()->GetLobbyDatabase());
         targetClient->Close();
 
         return true;
@@ -924,10 +915,6 @@ bool ChatManager::GMCommand_Goto(const std::shared_ptr<
         }
     }
 
-    auto server = mServer.lock();
-    auto worldDB = server->GetWorldDatabase();
-    auto zoneManager = server->GetZoneManager();
-
     std::shared_ptr<ChannelClientConnection> oClient;
     if(name.IsEmpty())
     {
@@ -935,23 +922,16 @@ bool ChatManager::GMCommand_Goto(const std::shared_ptr<
     }
     else
     {
-        auto oTarget = objects::Character::LoadCharacterByName(worldDB, name);
-        auto oTargetAccount = oTarget ? oTarget->GetAccount().Get() : nullptr;
-        oClient = oTargetAccount ? server->GetManagerConnection()->
-            GetClientConnection(oTargetAccount->GetUsername()) : nullptr;
-
-        auto oTargetCState = oClient ?
-            oClient->GetClientState()->GetCharacterState() : nullptr;
-        auto oChar = oTargetCState ? oTargetCState->GetEntity() : nullptr;
-        if(!oChar || oChar->GetName() != name)
-        {
-            // Not the current character
-            oClient = nullptr;
-        }
+        std::shared_ptr<objects::Character> oTarget;
+        std::shared_ptr<objects::Account> oTargetAccount;
+        GetTargetCharacterAccount(name, true, oTarget, oTargetAccount,
+            oClient);
     }
 
     if(oClient)
     {
+        auto zoneManager = mServer.lock()->GetZoneManager();
+
         auto cState = client->GetClientState()->GetCharacterState();
         auto oTargetState = oClient->GetClientState();
         auto oTargetCState = oTargetState->GetCharacterState();
@@ -1413,14 +1393,14 @@ bool ChatManager::GMCommand_Kick(const std::shared_ptr<
             "@kick requires one argument, <username>");
     }
 
-    auto server = mServer.lock();
-    auto worldDB = server->GetWorldDatabase();
-    auto target = objects::Character::LoadCharacterByName(worldDB, kickedPlayer);
-    auto targetAccount = target ? target->GetAccount().Get() : nullptr;
-    auto targetClient = targetAccount ? server->GetManagerConnection()->GetClientConnection(
-        targetAccount->GetUsername()) : nullptr;
+    std::shared_ptr<objects::Character> target;
+    std::shared_ptr<objects::Account> targetAccount;
+    std::shared_ptr<channel::ChannelClientConnection> targetClient;
+    GetTargetCharacterAccount(kickedPlayer, false, target, targetAccount,
+        targetClient);
 
-    if(targetAccount && client->GetClientState()->GetUserLevel() < targetAccount->GetUserLevel())
+    if(targetAccount &&
+        client->GetClientState()->GetUserLevel() < targetAccount->GetUserLevel())
     {
         return SendChatMessage(client, ChatType_t::CHAT_SELF,
             "Your user level is lower than the user you tried to kick.");
@@ -1743,7 +1723,7 @@ bool ChatManager::GMCommand_Post(const std::shared_ptr<
     if(GetStringArg(name, argsCopy))
     {
         auto target = objects::Character::LoadCharacterByName(worldDB, name);
-        targetAccount = target ? target->GetAccount().GetUUID() : NULLUUID;
+        targetAccount = target ? target->GetAccount() : NULLUUID;
     }
 
     if(targetAccount.IsNull())
@@ -2006,9 +1986,13 @@ bool ChatManager::GMCommand_SlotAdd(const std::shared_ptr<
     {
         item->SetModSlots(openSlot, MOD_SLOT_NULL_EFFECT);
 
-        std::list<uint16_t> slots = { (uint16_t)item->GetBoxSlot() };
-        server->GetCharacterManager()->SendItemBoxData(client, item->GetItemBox().Get(),
-            slots);
+        auto itemBox = std::dynamic_pointer_cast<objects::ItemBox>(
+            libcomp::PersistentObject::GetObjectByUUID(item->GetItemBox()));
+        if(itemBox)
+        {
+            server->GetCharacterManager()->SendItemBoxData(client, itemBox,
+                { (uint16_t)item->GetBoxSlot() });
+        }
 
         server->GetWorldDatabase()->QueueUpdate(item, state->GetAccountUID());
     }
@@ -2418,6 +2402,41 @@ bool ChatManager::HaveUserLevel(const std::shared_ptr<
     }
 
     return true;
+}
+
+bool ChatManager::GetTargetCharacterAccount(libcomp::String& targetName,
+    bool currentOnly, std::shared_ptr<objects::Character>& targetCharacter,
+    std::shared_ptr<objects::Account>& targetAccount,
+    std::shared_ptr<channel::ChannelClientConnection>& targetClient)
+{
+    auto server = mServer.lock();
+    auto worldDB = server->GetWorldDatabase();
+
+    targetCharacter = objects::Character::LoadCharacterByName(worldDB, targetName);
+    if(targetCharacter)
+    {
+        targetAccount = libcomp::PersistentObject::LoadObjectByUUID<
+            objects::Account>(worldDB, targetCharacter->GetAccount());
+    }
+    else
+    {
+        targetAccount = nullptr;
+    }
+
+    targetClient = targetAccount ? server->GetManagerConnection()
+        ->GetClientConnection(targetAccount->GetUsername()) : nullptr;
+
+    if(currentOnly && targetClient)
+    {
+        auto state = targetClient->GetClientState();
+        auto cState = state ? state->GetCharacterState() : nullptr;
+        if(!cState || cState->GetEntity() != targetCharacter)
+        {
+            targetClient = nullptr;
+        }
+    }
+
+    return targetCharacter && targetAccount;
 }
 
 bool ChatManager::GetStringArg(libcomp::String& outVal,

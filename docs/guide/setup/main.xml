@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE chapter PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN" 
+<!DOCTYPE chapter PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN"
 	"http://www.oasis-open.org/docbook/xml/4.5/docbookx.dtd">
 <chapter>
 <title>Server Setup</title>
@@ -7,6 +7,7 @@
 <para>This is my first DocBook file.</para>
 
 <xi:include href="require/main.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
+<xi:include href="linux/main.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
 <xi:include href="config/main.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
 
 </chapter>

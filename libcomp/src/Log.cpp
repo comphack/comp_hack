@@ -30,9 +30,14 @@
 #include <cassert>
 #include <chrono>
 
+#include <cstdio>
+#include <cstdlib>
+
 #ifdef _WIN32
 #include <windows.h>
 #include <wincon.h>
+#else
+#include <unistd.h>
 #endif // _WIN32
 
 using namespace libcomp;
@@ -117,8 +122,15 @@ static void LogToStandardOutput(Log::Level_t level,
 
         std::cout << std::endl;
 #else
-        std::cout << gLogColors[level] << m.ToUtf8()
-            << "\e[0K\e[0m" << std::endl;
+        if(isatty(fileno(stdout)))
+        {
+            std::cout << gLogColors[level] << m.ToUtf8()
+                << "\e[0K\e[0m" << std::endl;
+        }
+        else
+        {
+            std::cout << m.ToUtf8() << std::endl;
+        }
 #endif // _WIN32
     }
 
@@ -134,8 +146,14 @@ static void LogToStandardOutput(Log::Level_t level,
         (void)SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE),
             FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
 #else
-        std::cout << gLogColors[level] << last.ToUtf8() << "\e[0K\e[0m";
-
+        if(isatty(fileno(stdout)))
+        {
+            std::cout << gLogColors[level] << last.ToUtf8() << "\e[0K\e[0m";
+        }
+        else
+        {
+            std::cout << last.ToUtf8();
+        }
 #endif // _WIN32
     }
 
@@ -271,44 +289,58 @@ String Log::GetLogPath() const
 
 void Log::SetLogPath(const String& path, bool truncate)
 {
-    // Set the log path.
-    mLogPath = path;
+    bool loaded = true;
 
-    // Lock the muxtex.
-    std::lock_guard<std::mutex> lock(mLock);
-
-    // Close the old log file if it's open.
-    if(nullptr != mLogFile)
     {
-        delete mLogFile;
-        mLogFile = nullptr;
-    }
+        // Lock the muxtex.
+        std::lock_guard<std::mutex> lock(mLock);
 
-    // If the log path isn't empty, log to a file. The file will be
-    // truncated and created new first if truncate is set.
-    if(!mLogPath.IsEmpty())
-    {
-        int mode = std::ofstream::out;
-        if(truncate)
-        {
-            mode |= std::ofstream::trunc;
-        }
-        else
-        {
-            mode |= std::ofstream::app;
-        }
+        // Set the log path.
+        mLogPath = path;
 
-        mLogFile = new std::ofstream();
-        mLogFile->open(mLogPath.C(), (std::ios_base::openmode)mode);
-        mLogFile->flush();
-
-        // If this failed, close it.
-        if(!mLogFile->good())
+        // Close the old log file if it's open.
+        if(nullptr != mLogFile)
         {
             delete mLogFile;
             mLogFile = nullptr;
-            mLogPath.Clear();
         }
+
+        // If the log path isn't empty, log to a file. The file will be
+        // truncated and created new first if truncate is set.
+        if(!mLogPath.IsEmpty())
+        {
+            int mode = std::ofstream::out;
+            if(truncate)
+            {
+                mode |= std::ofstream::trunc;
+            }
+            else
+            {
+                mode |= std::ofstream::app;
+            }
+
+            mLogFile = new std::ofstream();
+            mLogFile->open(mLogPath.C(), (std::ios_base::openmode)mode);
+            mLogFile->flush();
+
+            // If this failed, close it.
+            if(!mLogFile->good())
+            {
+                delete mLogFile;
+                mLogFile = nullptr;
+                mLogPath.Clear();
+                loaded = false;
+            }
+        }
+    }
+
+    if(!loaded)
+    {
+        LOG_CRITICAL("Failed to open the log file for writing.\n");
+        LOG_CRITICAL("The application will now close.\n");
+        LOG_INFO("Bye!\n");
+
+        exit(EXIT_FAILURE);
     }
 }
 

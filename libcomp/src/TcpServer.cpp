@@ -42,7 +42,8 @@ TcpServer::TcpServer(const String& listenAddress, uint16_t port) :
     mListenAddress(listenAddress), mPort(port)
 {
 #if !defined(_WIN32)
-    pthread_setname_np(pthread_self(), "server");
+    // Do not set this as it will cause the process name to change.
+    // pthread_setname_np(pthread_self(), "server");
 #endif // !defined(_WIN32)
 }
 

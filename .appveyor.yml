@@ -33,7 +33,7 @@ build_script:
   - 7z x external.zip
   - del external.zip
   - mv external* ..\binaries
-  - cmake -DWINDOWS_SERVICE=ON -DCMAKE_INSTALL_PREFIX="%appveyor_build_folder%\build\install" -DCMAKE_CUSTOM_CONFIGURATION_TYPES="%configuration%" -G"%generator%" ..
+  - cmake -DGENERATE_DOCUMENTATION=ON -DWINDOWS_SERVICE=ON -DCMAKE_INSTALL_PREFIX="%appveyor_build_folder%\build\install" -DCMAKE_CUSTOM_CONFIGURATION_TYPES="%configuration%" -G"%generator%" ..
   - cmake --build . --config %configuration% --target package
   - cmake --build . --config %configuration% --target doc
   - 7z a comp_hack-api.zip api

@@ -71,7 +71,6 @@ IF(XMLTO_FOUND)
         ${GUIDE_XML_SRCS}
     )
 
-IF(XMLTO_FOUND)
     INSTALL(DIRECTORY ${CMAKE_BINARY_DIR}/guide
         DESTINATION share/doc/comp_hack)
 ENDIF(XMLTO_FOUND)

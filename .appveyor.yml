@@ -31,34 +31,11 @@ build_script:
   - del external.zip
   - mv external* ..\binaries
   - cmake -DWINDOWS_SERVICE=ON -DCMAKE_INSTALL_PREFIX="%appveyor_build_folder%\build\install" -DCMAKE_CUSTOM_CONFIGURATION_TYPES="%configuration%" -G"%generator%" ..
-#  - msbuild comp_hack.sln /property:Configuration="%configuration%" /property:Platform="%msplatform%"
   - cmake --build . --config %configuration% --target package
-#  - mkdir comp_hack-kodama-%appveyor_build_number%
-#  - move bin\%configuration%\*.exe comp_hack-kodama-%appveyor_build_number%\
-#  - move bin\%configuration%\*.pdb comp_hack-kodama-%appveyor_build_number%\
-#  - set PATH=%PATH%;%CMAKE_PREFIX_PATH%\bin
-#  - windeployqt comp_hack-kodama-%appveyor_build_number%\comp_updater.exe
-#  - windeployqt comp_hack-kodama-%appveyor_build_number%\comp_capgrep.exe
-#  - windeployqt comp_hack-kodama-%appveyor_build_number%\comp_logger.exe
-#  - 7z a comp_hack-kodama-%appveyor_build_number%.zip comp_hack-kodama-%appveyor_build_number%
+  - 7z a comp_hack-docs.zip api guide
 
 artifacts:
   - path: build\comp_hack-*.msi
     name: comp_hack_installer
-
-#deploy:
-#  release: comp_hack-kodama-$(appveyor_build_number)
-#  description: 'Development Build'
-#  provider: GitHub
-#  auth_token:
-#    secure: /xJRd5oxBbWa7IDdzPFbollIUAc7uqashBu8crIATrv4iUJX//DvzrGSFCaDdFsj
-#  artifact: comp_hack_installer
-#  draft: false
-#  prerelease: true
-#  on:
-#    branch: develop
-#    platform: x64
-#    configuration: RelWithDebInfo
-#    configuration: Release
-
-skip_tags: true
+  - path: build\comp_hack-*.zip
+    name: comp_hack_archive

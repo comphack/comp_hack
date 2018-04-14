@@ -13,6 +13,9 @@ configuration:
 #  - Release
   - RelWithDebInfo
 
+install:
+  - choco install doxygen.portable
+
 init:
   - if platform==x64 (set CMAKE_PREFIX_PATH=C:\Qt\5.7\msvc2015_64) else (set CMAKE_PREFIX_PATH=C:\Qt\5.7\msvc2015)
   - if platform==x64 (set generator=Visual Studio 14 2015 Win64) else (set generator=Visual Studio 14 2015)

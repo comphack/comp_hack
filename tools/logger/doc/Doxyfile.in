@@ -1502,8 +1502,7 @@ SKIP_FUNCTION_MACROS   = YES
 # If a tag file is not located in the directory in which doxygen
 # is run, you must also specify the path to the tagfile here.
 
-TAGFILES               = api/libcomp.tags=../../../libcomp/html \
-	@CMAKE_SOURCE_DIR@/docs/qt.tags=http://www.qt-project.org/doc/qt-4.8/
+TAGFILES               = api/libcomp.tags=../../../libcomp/html
 
 # When a file name is specified after GENERATE_TAGFILE, doxygen will create
 # a tag file that is based on the input files it reads.

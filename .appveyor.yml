@@ -32,7 +32,7 @@ build_script:
   - mv external* ..\binaries
   - cmake -DWINDOWS_SERVICE=ON -DCMAKE_INSTALL_PREFIX="%appveyor_build_folder%\build\install" -DCMAKE_CUSTOM_CONFIGURATION_TYPES="%configuration%" -G"%generator%" ..
   - cmake --build . --config %configuration% --target package
-  - 7z a comp_hack-docs.zip api guide
+  - 7z a comp_hack-api.zip api
 
 artifacts:
   - path: build\comp_hack-*.msi

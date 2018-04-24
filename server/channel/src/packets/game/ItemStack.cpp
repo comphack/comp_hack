@@ -27,6 +27,7 @@
 #include "Packets.h"
 
 // libcomp Includes
+#include <DefinitionManager.h>
 #include <Log.h>
 #include <ManagerPacket.h>
 #include <Packet.h>
@@ -38,6 +39,8 @@
 #include <Character.h>
 #include <Item.h>
 #include <ItemBox.h>
+#include <MiItemData.h>
+#include <MiPossessionData.h>
 
 // channel Includes
 #include "ChannelServer.h"
@@ -123,9 +126,16 @@ void CombineStacks(const std::shared_ptr<ChannelServer> server,
     auto itemBox = character->GetItemBoxes(0).Get();
 
     auto targetItem = itemBox->GetItems(targetSlot).Get();
+    auto itemDef = targetItem ? server->GetDefinitionManager()
+        ->GetItemData(targetItem->GetType()) : nullptr;
 
-    if(targetItem)
+    bool valid = false;
+    if(targetItem && itemDef)
     {
+        valid = true;
+
+        uint32_t maxStack = (uint32_t)itemDef->GetPossession()->GetStackSize();
+
         auto dbChanges = libcomp::DatabaseChangeSet::Create(
             state->GetAccountUID());
         dbChanges->Update(itemBox);
@@ -135,32 +145,49 @@ void CombineStacks(const std::shared_ptr<ChannelServer> server,
             uint16_t srcStack = sourceItem.second;
 
             auto srcItem = itemBox->GetItems(srcSlot).Get();
-            srcItem->SetStackSize(static_cast<uint16_t>(
-                srcItem->GetStackSize() - srcStack));
-
-            if(srcItem->GetStackSize() == 0)
+            if(srcItem)
             {
-                dbChanges->Delete(srcItem);
-                itemBox->SetItems(srcSlot, NULLUUID);
-            }
-            else
-            {
-                dbChanges->Update(srcItem);
-            }
+                uint16_t newStack = static_cast<uint16_t>(
+                    targetItem->GetStackSize() + srcStack);
+                if(newStack > maxStack)
+                {
+                    LOG_ERROR(libcomp::String("Combine stack attempted with a"
+                        " target stack larger than the max size: %1\n")
+                        .Arg(state->GetAccountUID().ToString()));
+                    valid = false;
+                    break;
+                }
 
-            targetItem->SetStackSize(static_cast<uint16_t>(
-                targetItem->GetStackSize() + srcStack));
+                srcItem->SetStackSize(static_cast<uint16_t>(
+                    srcItem->GetStackSize() - srcStack));
 
-            dbChanges->Update(targetItem);
+                if(srcItem->GetStackSize() == 0)
+                {
+                    dbChanges->Delete(srcItem);
+                    itemBox->SetItems(srcSlot, NULLUUID);
+                }
+                else
+                {
+                    dbChanges->Update(srcItem);
+                }
+
+                targetItem->SetStackSize(newStack);
+
+                dbChanges->Update(targetItem);
+            }
         }
 
+        // Save anything that processed correctly
         server->GetWorldDatabase()->QueueChangeSet(dbChanges);
     }
-    else
+
+    if(!valid)
     {
-        LOG_ERROR(libcomp::String("Combine stack failed because the"
-            " target item did not exist on character: %1\n")
-            .Arg(character->GetUUID().ToString()));
+        LOG_ERROR(libcomp::String("Invalid combine stack request failed: %1\n")
+            .Arg(state->GetAccountUID().ToString()));
+
+        // Re-send the item box to correct the client state
+        server->GetCharacterManager()->SendItemBoxData(client, itemBox);
     }
 }
 

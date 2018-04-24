@@ -791,7 +791,7 @@ bool ZoneManager::ClearInstanceAccess(uint32_t instanceID)
     return removed;
 }
 
-void ZoneManager::SendPopulateZoneData(const std::shared_ptr<ChannelClientConnection>& client)
+bool ZoneManager::SendPopulateZoneData(const std::shared_ptr<ChannelClientConnection>& client)
 {
     auto server = mServer.lock();
     auto state = client->GetClientState();
@@ -799,6 +799,12 @@ void ZoneManager::SendPopulateZoneData(const std::shared_ptr<ChannelClientConnec
     auto dState = state->GetDemonState();
 
     auto zone = GetCurrentZone(state->GetWorldCID());
+    if(!zone)
+    {
+        // Not in a zone, quit now
+        return false;
+    }
+
     auto zoneData = zone->GetDefinition();
     auto characterManager = server->GetCharacterManager();
     auto definitionManager = server->GetDefinitionManager();
@@ -975,6 +981,8 @@ void ZoneManager::SendPopulateZoneData(const std::shared_ptr<ChannelClientConnec
             ShowEntity(client, oDemonState->GetEntityID());
         }
     }
+
+    return true;
 }
 
 void ZoneManager::ShowEntity(const std::shared_ptr<

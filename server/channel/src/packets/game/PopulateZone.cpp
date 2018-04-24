@@ -49,22 +49,34 @@ bool Parsers::PopulateZone::Parse(libcomp::ManagerPacket *pPacketManager,
         return false;
     }
 
-    int32_t characterUID = p.ReadS32Little();
+    int32_t entityID = p.ReadS32Little();
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-    int32_t clientCharacterUID = client->GetClientState()->GetCharacterState()->GetEntityID();
-    if(clientCharacterUID != characterUID)
+    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
+        connection);
+    auto state = client->GetClientState();
+    int32_t cEntityID = state->GetCharacterState()->GetEntityID();
+
+    if(entityID != cEntityID)
     {
-        LOG_ERROR(libcomp::String("Populate zone request sent with a character UID not matching"
-            " the client connection.\nClient UID: %1\nPacket UID: %2\n").Arg(clientCharacterUID)
-            .Arg(characterUID));
+        LOG_ERROR(libcomp::String("PopulateZone request sent with a character"
+            " entity ID matching the client connection: %1\n")
+            .Arg(state->GetAccountUID().ToString()));
     }
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-    server->QueueWork([](ZoneManager* manager, const std::shared_ptr<ChannelClientConnection> c)
+    auto server = std::dynamic_pointer_cast<ChannelServer>(
+        pPacketManager->GetServer());
+    server->QueueWork([](ZoneManager* manager,
+        const std::shared_ptr<ChannelClientConnection> pClient)
+                {
+                    if(!manager->SendPopulateZoneData(pClient))
                     {
-                        manager->SendPopulateZoneData(c);
-                    }, server->GetZoneManager(), client);
+                        auto pState = pClient->GetClientState();
+                        auto uuid = pState ? pState->GetAccountUID() : NULLUUID;
+                        LOG_ERROR(libcomp::String("PopulateZone response"
+                            " failed to send data for account: %1\n")
+                            .Arg(uuid.ToString()));
+                    }
+                }, server->GetZoneManager(), client);
 
     return true;
 }

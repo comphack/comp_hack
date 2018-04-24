@@ -78,19 +78,22 @@ std::shared_ptr<objects::CharacterLogin> CharacterManager::RegisterCharacter(
 bool CharacterManager::UnregisterCharacter(std::shared_ptr<
     objects::CharacterLogin> cLogin)
 {
-    std::lock_guard<std::mutex> lock(mLock);
-
-    // Loop through each character instead of using the lookup
-    // as the character may have already been removed
     bool removed = false;
-    for(auto& pair : mCharacterMap)
+    if(cLogin)
     {
-        if(pair.second->GetWorldCID() == cLogin->GetWorldCID())
+        std::lock_guard<std::mutex> lock(mLock);
+
+        // Loop through each character instead of using the lookup
+        // as the character may have already been removed
+        for(auto& pair : mCharacterMap)
         {
-            mCharacterMap.erase(pair.first);
-            mCharacterCIDMap.erase(cLogin->GetWorldCID());
-            removed = true;
-            break;
+            if(pair.second->GetWorldCID() == cLogin->GetWorldCID())
+            {
+                mCharacterMap.erase(pair.first);
+                mCharacterCIDMap.erase(cLogin->GetWorldCID());
+                removed = true;
+                break;
+            }
         }
     }
 
@@ -1281,6 +1284,9 @@ void CharacterManager::SendClanDetails(std::shared_ptr<objects::CharacterLogin> 
         {
             relay.WriteS32Little(mPair.first);
 
+            // If any data cannot be loaded from a character, send default
+            // values and move on. Any broken pointers to clan data should
+            // be handled via a cleanup process.
             auto member = mPair.second;
             auto memberLogin = GetCharacterLogin(mPair.first);
             auto memberChar = memberLogin->LoadCharacter(worldDB);
@@ -1293,15 +1299,26 @@ void CharacterManager::SendClanDetails(std::shared_ptr<objects::CharacterLogin> 
                 member->GetClanMessage(), true);
             relay.WriteU8((uint8_t)member->GetMemberType());
             relay.WriteU8(1);   // Always 1
-            relay.WriteS8((int8_t)memberLogin->GetStatus());
-            relay.WriteU8(memberLogin->GetWorldCID() == cLogin->GetWorldCID()
-                ? 1 : 0);
-            relay.WriteS8(memberLogin->GetChannelID());
-            relay.WriteS32Little(memberLogin->GetZoneID()
-                ? (int32_t)memberLogin->GetZoneID() : -1);
-            relay.WriteS32Little((int32_t)memberChar->GetLastLogin());
+
+            if(memberLogin)
+            {
+                relay.WriteS8((int8_t)memberLogin->GetStatus());
+                relay.WriteU8(memberLogin->GetWorldCID() == cLogin->GetWorldCID()
+                    ? 1 : 0);
+                relay.WriteS8(memberLogin->GetChannelID());
+                relay.WriteS32Little(memberLogin->GetZoneID()
+                    ? (int32_t)memberLogin->GetZoneID() : -1);
+                relay.WriteS32Little(memberChar
+                    ? (int32_t)memberChar->GetLastLogin() : 0);
+            }
+            else
+            {
+                relay.WriteBlank(11);
+            }
+
             relay.WriteS8(stats ? stats->GetLevel() : 0);
-            relay.WriteS32Little(memberChar->GetLoginPoints());
+            relay.WriteS32Little(memberChar
+                ? memberChar->GetLoginPoints() : 0);
         }
     }
     else

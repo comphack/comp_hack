@@ -353,6 +353,7 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
     objects::Character>& character, channel::ClientState* state)
 {
     auto server = mServer.lock();
+    auto definitionManager = server->GetDefinitionManager();
     auto db = server->GetWorldDatabase();
 
     if(character.IsNull() || !character.Get(db) ||
@@ -625,7 +626,8 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
         for(int32_t i = seCount - 1; i >= 0; i--)
         {
             auto effect = character->GetStatusEffects((size_t)i);
-            if(effect.IsNull() || !effect.Get(db))
+            if(effect.IsNull() || !effect.Get(db) ||
+                !definitionManager->GetStatusData(effect->GetEffect()))
             {
                 LOG_WARNING(libcomp::String("Removing invalid"
                     " character StatusEffect saved for account: %1\n")
@@ -634,6 +636,9 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
             }
         }
     }
+
+    // Gather all unique skill IDs on the character and demons for validation
+    std::set<uint32_t> allSkillIDs = character->GetLearnedSkills();
 
     // Demon boxes, demons and stats
     std::list<libcomp::ObjectReference<objects::DemonBox>> demonBoxes;
@@ -667,6 +672,16 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
                 return false;
             }
 
+            for(uint32_t skillID : demon->GetAcquiredSkills())
+            {
+                allSkillIDs.insert(skillID);
+            }
+
+            for(uint32_t skillID : demon->GetLearnedSkills())
+            {
+                allSkillIDs.insert(skillID);
+            }
+
             for(auto iSkill : demon->GetInheritedSkills())
             {
                 if(!iSkill.Get(db))
@@ -676,6 +691,8 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
                         .Arg(state->GetAccountUID().ToString()));
                     return false;
                 }
+
+                allSkillIDs.insert(iSkill->GetSkill());
             }
 
             state->SetObjectID(demon->GetUUID(),
@@ -688,7 +705,8 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
                 for(int32_t i = seCount - 1; i >= 0; i--)
                 {
                     auto effect = demon->GetStatusEffects((size_t)i);
-                    if(effect.IsNull() || !effect.Get(db))
+                    if(effect.IsNull() || !effect.Get(db) ||
+                        !definitionManager->GetStatusData(effect->GetEffect()))
                     {
                         LOG_WARNING(libcomp::String("Removing invalid"
                             " demon StatusEffect saved for account: %1\n")
@@ -708,6 +726,19 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
             " active demon from character: %1\n")
             .Arg(character->GetUUID().ToString()));
         character->SetActiveDemon(NULLUUID);
+    }
+
+    // Validate skills associated to the character
+    allSkillIDs.erase(0);
+    for(uint32_t skillID : allSkillIDs)
+    {
+        if(!definitionManager->GetSkillData(skillID))
+        {
+            LOG_ERROR(libcomp::String("Invalid skill ID '%1' associated to"
+                " the character or an associated demon on character: %2\n")
+                .Arg(skillID).Arg(character->GetUUID().ToString()));
+            return false;
+        }
     }
 
     // Hotbar

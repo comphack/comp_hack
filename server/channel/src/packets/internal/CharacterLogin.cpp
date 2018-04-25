@@ -108,7 +108,7 @@ bool Parsers::CharacterLogin::Parse(libcomp::ManagerPacket *pPacketManager,
     if(updateFlags & (uint8_t)CharacterLoginStateFlag_t::CHARLOGIN_FRIEND_FLAGS)
     {
         auto fSettings = objects::FriendSettings::LoadFriendSettingsByCharacter(
-            worldDB, login->GetCharacter()->GetUUID());
+            worldDB, login->GetCharacter().GetUUID());
         if(!fSettings)
         {
             LOG_ERROR(libcomp::String("Character friend settings failed to load: %1\n")

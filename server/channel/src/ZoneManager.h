@@ -165,8 +165,9 @@ public:
      * Send data about entities that exist in a zone to a new connection and
      * update any existing connections with information about the new one.
      * @param client Client connection that was added to a zone
+     * @return true if the client is in a zone, false if they are not
      */
-    void SendPopulateZoneData(const std::shared_ptr<ChannelClientConnection>& client);
+    bool SendPopulateZoneData(const std::shared_ptr<ChannelClientConnection>& client);
 
     /**
      * Tell the game client to show an entity.

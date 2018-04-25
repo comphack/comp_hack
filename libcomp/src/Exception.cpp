@@ -242,6 +242,94 @@ Exception::Exception(const String& msg, const String& f, int l) :
 #endif // _WIN32
 }
 
+#ifdef _WIN32
+LONG WINAPI TopLevelExceptionHandler(PEXCEPTION_POINTERS pExceptionInfo)
+{
+    // Source: https://stackoverflow.com/questions/28099965/
+
+    HANDLE process = GetCurrentProcess();
+    SymInitialize(process, NULL, TRUE);
+
+    // StackWalk64() may modify context record passed to it, so we will
+    // use a copy.
+    CONTEXT context_record = *pExceptionInfo->ContextRecord;
+
+    // Initialize stack walking.
+    STACKFRAME64 stack_frame;
+    memset(&stack_frame, 0, sizeof(stack_frame));
+
+#if defined(_WIN64)
+    int machine_type = IMAGE_FILE_MACHINE_AMD64;
+    stack_frame.AddrPC.Offset = context_record.Rip;
+    stack_frame.AddrFrame.Offset = context_record.Rbp;
+    stack_frame.AddrStack.Offset = context_record.Rsp;
+#else
+    int machine_type = IMAGE_FILE_MACHINE_I386;
+    stack_frame.AddrPC.Offset = context_record.Eip;
+    stack_frame.AddrFrame.Offset = context_record.Ebp;
+    stack_frame.AddrStack.Offset = context_record.Esp;
+#endif
+
+    stack_frame.AddrPC.Mode = AddrModeFlat;
+    stack_frame.AddrFrame.Mode = AddrModeFlat;
+    stack_frame.AddrStack.Mode = AddrModeFlat;
+
+    SYMBOL_INFO *symbol = (SYMBOL_INFO*)new uint8_t[
+        sizeof(SYMBOL_INFO) + 256 + 1];
+    memset(symbol, 0, sizeof(SYMBOL_INFO) + 256);
+    symbol->MaxNameLen = 255;
+    symbol->SizeOfStruct = sizeof(SYMBOL_INFO);
+
+    std::stringstream ss;
+    while(StackWalk64(machine_type,
+        GetCurrentProcess(),
+        GetCurrentThread(),
+        &stack_frame,
+        &context_record,
+        NULL,
+        &SymFunctionTableAccess64,
+        &SymGetModuleBase64,
+        NULL)) {
+
+        DWORD64 displacement = 0;
+
+        auto address = (DWORD64)stack_frame.AddrPC.Offset;
+        if(SymFromAddr(process, address, &displacement, symbol))
+        {
+            IMAGEHLP_MODULE64 moduleInfo;
+            memset(&moduleInfo, 0, sizeof(moduleInfo));
+            moduleInfo.SizeOfStruct = sizeof(moduleInfo);
+
+            if(SymGetModuleInfo64(process, symbol->ModBase, &moduleInfo))
+                ss << moduleInfo.ModuleName;
+
+            ss << "(" << symbol->Name << "+0x" << std::hex <<
+                (int64_t)displacement << ")";
+            
+            DWORD lineDisplacement;
+            IMAGEHLP_LINE64 line;
+
+            if(TRUE == SymGetLineFromAddr64(GetCurrentProcess(),
+                (ULONG64)address, &lineDisplacement, &line))
+            {
+                ss << " " << line.FileName << ":"
+                    << std::dec << line.LineNumber;
+            }
+
+            ss << std::endl;
+        }
+    }
+
+    delete symbol;
+
+    LOG_CRITICAL("The server has crashed with an unhandled exception. A"
+        " backtrace will follow.\n");
+    LOG_CRITICAL(libcomp::String("Backtrace: %1\n").Arg(ss.str()));
+
+    return EXCEPTION_CONTINUE_SEARCH;
+}
+#endif  // _WIN32
+
 int Exception::Line() const
 {
     return mLine;
@@ -306,7 +394,11 @@ static void SignalHandler(int sig)
 
 void Exception::RegisterSignalHandler()
 {
+#ifdef _WIN32
+    SetUnhandledExceptionFilter(TopLevelExceptionHandler);
+#else
     signal(SIGSEGV, SignalHandler);
+#endif
 
     std::set_terminate([]() {
         Exception e("Unhandled Exception", __FILE__, __LINE__);

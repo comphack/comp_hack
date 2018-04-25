@@ -100,8 +100,10 @@ bool Parsers::DemonCrystallize::Parse(libcomp::ManagerPacket *pPacketManager,
     auto enchantData = demonData ? definitionManager->GetEnchantDataByDemonID(
         demonData->GetUnionData()->GetBaseDemonID()) : nullptr;
 
+    auto useItem = exchangeSession->GetItems(0).Get();
+
     // If any of the core parts are missing, stop here
-    if(!targetDemon || !enchantData)
+    if(!targetDemon || !enchantData || !useItem)
     {
         responseCode = EntrustErrorCodes_t::SYSTEM_ERROR;
     }
@@ -162,8 +164,6 @@ bool Parsers::DemonCrystallize::Parse(libcomp::ManagerPacket *pPacketManager,
         }
     }
 
-    auto useItem = exchangeSession->GetItems(0).Get();
-
     // Find the existing item that will have its stack increased
     // or generate a new one. Fail if theres not enough space
     std::shared_ptr<objects::Item> updateItem;
@@ -198,7 +198,7 @@ bool Parsers::DemonCrystallize::Parse(libcomp::ManagerPacket *pPacketManager,
                 }
             }
 
-            if(useItem && useItem->GetStackSize() == 1 &&
+            if(useItem->GetStackSize() == 1 &&
                 (crystalTargetSlot == -1 || useItem->GetBoxSlot() < crystalTargetSlot))
             {
                 crystalTargetSlot = useItem->GetBoxSlot();

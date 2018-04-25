@@ -28,6 +28,7 @@
 
 // libcomp Includes
 #include <Constants.h>
+#include <Log.h>
 #include <ManagerPacket.h>
 #include <Packet.h>
 #include <PacketCodes.h>
@@ -42,11 +43,6 @@
 
 using namespace channel;
 
-int32_t GetPointCost(int16_t val)
-{
-    return (int32_t)floor((val + 1) / 10) + 1;
-}
-
 void AllocatePoint(const std::shared_ptr<ChannelServer> server,
     const std::shared_ptr<ChannelClientConnection> client,
     int8_t correctStatOffset)
@@ -56,38 +52,69 @@ void AllocatePoint(const std::shared_ptr<ChannelServer> server,
     auto character = cState->GetEntity();
     auto stats = character->GetCoreStats().Get();
 
-    int32_t pointCost = 0;
+    int32_t points = character->GetPoints();
+
+    int16_t currentStat = 0;
     switch((CorrectTbl)correctStatOffset)
     {
         case CorrectTbl::STR:
-            pointCost = GetPointCost(stats->GetSTR());
-            stats->SetSTR(static_cast<int16_t>(stats->GetSTR() + 1));
+            currentStat = stats->GetSTR();
             break;
         case CorrectTbl::MAGIC:
-            pointCost = GetPointCost(stats->GetMAGIC());
-            stats->SetMAGIC(static_cast<int16_t>(stats->GetMAGIC() + 1));
+            currentStat = stats->GetMAGIC();
             break;
         case CorrectTbl::VIT:
-            pointCost = GetPointCost(stats->GetVIT());
-            stats->SetVIT(static_cast<int16_t>(stats->GetVIT() + 1));
+            currentStat = stats->GetVIT();
             break;
         case CorrectTbl::INT:
-            pointCost = GetPointCost(stats->GetINTEL());
-            stats->SetINTEL(static_cast<int16_t>(stats->GetINTEL() + 1));
+            currentStat = stats->GetINTEL();
             break;
         case CorrectTbl::SPEED:
-            pointCost = GetPointCost(stats->GetSPEED());
-            stats->SetSPEED(static_cast<int16_t>(stats->GetSPEED() + 1));
+            currentStat = stats->GetSPEED();
             break;
         case CorrectTbl::LUCK:
-            pointCost = GetPointCost(stats->GetLUCK());
-            stats->SetLUCK(static_cast<int16_t>(stats->GetLUCK() + 1));
+            currentStat = stats->GetLUCK();
             break;
         default:
             return;
     }
 
-    character->SetPoints(static_cast<int32_t>(character->GetPoints() - pointCost));
+    int32_t pointCost = (int32_t)floor((currentStat + 1) / 10) + 1;
+    if(points < pointCost)
+    {
+        LOG_ERROR(libcomp::String("AllocateSkillPoint attempted with an"
+            " insufficient amount of stat points available: %1\n")
+            .Arg(state->GetAccountUID().ToString()));
+        state->SetLogoutSave(false);
+        client->Close();
+        return;
+    }
+    
+    switch((CorrectTbl)correctStatOffset)
+    {
+        case CorrectTbl::STR:
+            stats->SetSTR(static_cast<int16_t>(stats->GetSTR() + 1));
+            break;
+        case CorrectTbl::MAGIC:
+            stats->SetMAGIC(static_cast<int16_t>(stats->GetMAGIC() + 1));
+            break;
+        case CorrectTbl::VIT:
+            stats->SetVIT(static_cast<int16_t>(stats->GetVIT() + 1));
+            break;
+        case CorrectTbl::INT:
+            stats->SetINTEL(static_cast<int16_t>(stats->GetINTEL() + 1));
+            break;
+        case CorrectTbl::SPEED:
+            stats->SetSPEED(static_cast<int16_t>(stats->GetSPEED() + 1));
+            break;
+        case CorrectTbl::LUCK:
+            stats->SetLUCK(static_cast<int16_t>(stats->GetLUCK() + 1));
+            break;
+        default:
+            break;
+    }
+
+    character->SetPoints(static_cast<int32_t>(points - pointCost));
 
     server->GetTokuseiManager()->Recalculate(cState);
 

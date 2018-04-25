@@ -66,16 +66,6 @@ bool Parsers::CharacterList::Parse(libcomp::ManagerPacket *pPacketManager,
     auto lobbyConnection = std::dynamic_pointer_cast<LobbyClientConnection>(connection);
     auto account = lobbyConnection->GetClientState()->GetAccount().Get();
 
-    libcomp::Packet reply;
-    reply.WritePacketCode(
-        LobbyToClientPacketCode_t::PACKET_CHARACTER_LIST);
-
-    // Time of last login.
-    reply.WriteU32Little(account->GetLastLogin());
-
-    // Number of character tickets.
-    reply.WriteU8(account->GetTicketCount());
-
     std::set<std::shared_ptr<objects::Character>> characters;
     for(auto world : server->GetWorlds())
     {
@@ -122,30 +112,40 @@ bool Parsers::CharacterList::Parse(libcomp::ManagerPacket *pPacketManager,
         }
     }
 
-    // Determine how many characters in the account have been loaded
-    uint8_t charCount = 0;
-    if(characters.size() > 0)
-    {
-        for(uint8_t cid = 0; cid < MAX_CHARACTER; cid++)
-        {
-            auto character = account->GetCharacters(cid).Get();
-            if(character)
-            {
-                charCount++;
-            }
-        }
-    }
+    libcomp::Packet reply;
+    reply.WritePacketCode(
+        LobbyToClientPacketCode_t::PACKET_CHARACTER_LIST);
 
-    // Number of characters.
-    reply.WriteU8(charCount);
+    // Time of last login.
+    reply.WriteU32Little(account->GetLastLogin());
+
+    // Number of character tickets.
+    reply.WriteU8(account->GetTicketCount());
+
+    // Double back later and write the number of characters afer they
+    // have been successfully written to the packet
+    uint8_t charCount = 0;
+    reply.WriteU8(0);
 
     for(uint8_t cid = 0; cid < MAX_CHARACTER; cid++)
     {
         auto character = account->GetCharacters(cid).Get();
 
+        // Skip if the character is not in a connected world or otherwise
+        // not loaded
         if(!character) continue;
 
-        auto stats = character->GetCoreStats();
+        auto stats = character->GetCoreStats().Get();
+
+        if(!stats)
+        {
+            LOG_ERROR(libcomp::String("Character was loaded but stats are no"
+                " longer loaded: %1\n").Arg(character->GetUUID().ToString()));
+            continue;
+        }
+
+        // Increase the count to write to the packet
+        charCount++;
 
         // Character ID.
         reply.WriteU8(cid);
@@ -228,13 +228,11 @@ bool Parsers::CharacterList::Parse(libcomp::ManagerPacket *pPacketManager,
                 reply.WriteU32Little(va);
             }
         }
-
-        // Since this is the only place we need to retrieve stats
-        // on this server, unload it and if the character is not cached
-        // somewhere aside from the stats lookup, let it unload now
-        libcomp::ObjectReference<objects::EntityStats>::Unload(
-            character->GetCoreStats().GetUUID());
     }
+
+    // Now write the character count
+    reply.Seek(7);
+    reply.WriteU8(charCount);
 
     connection->SendPacket(reply);
 

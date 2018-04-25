@@ -117,6 +117,14 @@ bool AccountManager::ChannelLogin(std::shared_ptr<objects::AccountLogin> login)
     auto character = cLogin->GetCharacter().Get();
     auto account = login->LoadAccount(worldDB);
 
+    if(!character || !account)
+    {
+        LOG_ERROR(libcomp::String("CharacterLogin encountered with no account"
+            " or character loaded: %1.\n")
+            .Arg(login->GetAccount().GetUUID().ToString()));
+        return false;
+    }
+
     uint32_t lastLogin = character->GetLastLogin();
     auto now = std::time(0);
 

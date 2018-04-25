@@ -2,3 +2,4 @@ obj-*
 build*
 debian/*.log
 deps/*.zip
+binaries/

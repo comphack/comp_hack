@@ -17,9 +17,9 @@ install:
   - cinst doxygen.portable
 
 init:
-  - if platform==x64 (set CMAKE_PREFIX_PATH=C:\Qt\5.7\msvc2015_64) else (set CMAKE_PREFIX_PATH=C:\Qt\5.7\msvc2015)
-  - if platform==x64 (set generator=Visual Studio 14 2015 Win64) else (set generator=Visual Studio 14 2015)
-  - if platform==x64 (set msplatform=x64) else (set msplatform=Win32)
+  - if %platform%==x64 (set CMAKE_PREFIX_PATH=C:\Qt\5.7\msvc2015_64) else (set CMAKE_PREFIX_PATH=C:\Qt\5.7\msvc2015)
+  - if %platform%==x64 (set generator=Visual Studio 14 2015 Win64) else (set generator=Visual Studio 14 2015)
+  - if %platform%==x64 (set msplatform=x64) else (set msplatform=Win32)
 
 before_build:
   - md build
@@ -30,7 +30,7 @@ build_script:
   - echo "MS Platform   = %msplatform%"
   - echo "Configuration = %configuration%"
   - echo "Generator     = %generator%"
-  - appveyor DownloadFile https://github.com/comphack/external/releases/download/external-13/external-0.1.1-win64.zip -FileName external.zip
+  - appveyor DownloadFile https://github.com/comphack/external/releases/download/external-15/external-0.1.1-win64.zip -FileName external.zip
   - 7z x external.zip
   - del external.zip
   - mv external* ..\binaries

@@ -80,8 +80,8 @@ ELSEIF(GIT_DEPENDENCIES)
     )
 ELSE()
     SET(ZLIB_URL
-        URL https://github.com/comphack/zlib/archive/comp_hack-20180424.zip
-        URL_HASH SHA1=f164475fdb61019d2cc207bbb06aeb68f1b02641
+        URL https://github.com/comphack/zlib/archive/comp_hack-20180425.zip
+        URL_HASH SHA1=41ef62fec86b9a4408d99c2e7ee1968a5e246e3b
     )
 ENDIF()
 
@@ -237,8 +237,8 @@ ELSEIF(GIT_DEPENDENCIES)
     )
 ELSE()
     SET(MARIADB_URL
-        URL https://github.com/comphack/mariadb/archive/comp_hack-20180424.zip
-        URL_HASH SHA1=db22c7906c75bb19192ea48672703723f8fe5189
+        URL https://github.com/comphack/mariadb/archive/comp_hack-20180425.zip
+        URL_HASH SHA1=e3cccd1ce7338ecf21864c507579d24f5c9a234a
     )
 ENDIF()
 
@@ -762,8 +762,8 @@ ELSEIF(GIT_DEPENDENCIES)
     )
 ELSE()
     SET(GOOGLETEST_URL
-        URL https://github.com/comphack/googletest/archive/comp_hack-20180424.zip
-        URL_HASH SHA1=5034a45deab87f0616190cd30c25a534e84fb27f
+        URL https://github.com/comphack/googletest/archive/comp_hack-20180425.zip
+        URL_HASH SHA1=40b8e97ef07d300539bd2a5d6b1c1cfcd92deb7b
     )
 ENDIF()
 

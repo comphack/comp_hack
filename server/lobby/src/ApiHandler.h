@@ -50,6 +50,8 @@
 namespace lobby
 {
 
+class AccountManager;
+
 class ApiSession
 {
 public:
@@ -72,6 +74,8 @@ public:
     virtual bool handlePost(CivetServer *pServer,
         struct mg_connection *pConnection);
 
+    void SetAccountManager(AccountManager *pManager);
+
 protected:
     bool Authenticate(const JsonBox::Object& request,
         JsonBox::Object& response,
@@ -89,6 +93,9 @@ protected:
         JsonBox::Object& response,
         const std::shared_ptr<ApiSession>& session);
     bool Account_ChangePassword(const JsonBox::Object& request,
+        JsonBox::Object& response,
+        const std::shared_ptr<ApiSession>& session);
+    bool Account_ClientLogin(const JsonBox::Object& request,
         JsonBox::Object& response,
         const std::shared_ptr<ApiSession>& session);
     bool Account_Register(const JsonBox::Object& request,
@@ -119,6 +126,8 @@ private:
 
     std::shared_ptr<objects::LobbyConfig> mConfig;
     std::shared_ptr<lobby::LobbyServer> mServer;
+
+    AccountManager *mAccountManager;
 };
 
 } // namespace lobby

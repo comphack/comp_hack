@@ -27,12 +27,15 @@
 #include "ApiHandler.h"
 
 // libcomp Includes
+#include <AccountManager.h>
 #include <BaseServer.h>
 #include <CString.h>
 #include <DatabaseConfigMariaDB.h>
 #include <DatabaseConfigSQLite3.h>
 #include <Decrypt.h>
+#include <ErrorCodes.h>
 #include <Log.h>
+#include <PacketCodes.h>
 
 using namespace lobby;
 
@@ -47,12 +50,13 @@ void ApiSession::Reset()
 
 ApiHandler::ApiHandler(const std::shared_ptr<objects::LobbyConfig>& config,
     const std::shared_ptr<lobby::LobbyServer>& server) : mConfig(config),
-    mServer(server)
+    mServer(server), mAccountManager(nullptr)
 {
     mParsers["/auth/get_challenge"] = &ApiHandler::Auth_Token;
     mParsers["/account/get_cp"] = &ApiHandler::Account_GetCP;
     mParsers["/account/get_details"] = &ApiHandler::Account_GetDetails;
     mParsers["/account/change_password"] = &ApiHandler::Account_ChangePassword;
+    mParsers["/account/client_login"] = &ApiHandler::Account_ClientLogin;
     mParsers["/account/register"] = &ApiHandler::Account_Register;
     mParsers["/admin/get_accounts"] = &ApiHandler::Admin_GetAccounts;
     mParsers["/admin/get_account"] = &ApiHandler::Admin_GetAccount;
@@ -246,6 +250,80 @@ bool ApiHandler::Account_ChangePassword(const JsonBox::Object& request,
     else
     {
         response["error"] = "Failed to update password.";
+    }
+
+    return true;
+}
+
+bool ApiHandler::Account_ClientLogin(const JsonBox::Object& request,
+    JsonBox::Object& response, const std::shared_ptr<ApiSession>& session)
+{
+    libcomp::String password;
+
+    auto db = GetDatabase();
+
+    // Find the account for the given username.
+    auto account = objects::Account::LoadAccountByUsername(
+        db, session->username);
+
+    if(!account)
+    {
+        response["error"] = ErrorCodeString(
+            ErrorCodes_t::BAD_USERNAME_PASSWORD).ToUtf8();
+        response["error_code"] = to_underlying(
+            ErrorCodes_t::BAD_USERNAME_PASSWORD);
+
+        return true;
+    }
+
+    auto it = request.find("client_version");
+
+    if(it == request.end())
+    {
+        response["error"] = ErrorCodeString(
+            ErrorCodes_t::WRONG_CLIENT_VERSION).ToUtf8();
+        response["error_code"] = to_underlying(
+            ErrorCodes_t::WRONG_CLIENT_VERSION);
+
+        return true;
+    }
+
+    // Check the account manager.
+    if(!mAccountManager)
+    {
+        response["error"] = ErrorCodeString(
+            ErrorCodes_t::SYSTEM_ERROR).ToUtf8();
+        response["error_code"] = to_underlying(
+            ErrorCodes_t::SYSTEM_ERROR);
+
+        return true;
+    }
+
+    libcomp::String sid1;
+
+    // This session ID is never used. If you notice it being used file a bug.
+    static const libcomp::String sid2 = "deadc0dedeadc0dedeadc0dedeadc0de"
+        "deadc0dedeadc0dedeadc0dedeadc0dedeadc0dedeadc0dedeadc0dedeadc0de"
+        "deadc0dedeadc0dedeadc0dedeadc0dedeadc0dedeadc0dedeadc0dedeadc0de"
+        "deadc0dedeadc0dedeadc0dedeadc0dedeadc0dedeadc0dedeadc0dedeadc0de"
+        "deadc0dedeadc0dedeadc0dedeadc0dedeadc0dedeadc0dedeadc0dedeadc0de"
+        "deadc0dedead";
+
+    // Grab the client version as a string.
+    libcomp::String clientVersion = it->second.getString();
+
+    // Attempt to login for the user.
+    ErrorCodes_t error = mAccountManager->WebAuthLoginApi(
+        session->username, (uint32_t)(clientVersion.ToDecimal<float>() *
+            1000.0f + 0.5f), sid1);
+
+    response["error"] = ErrorCodeString(error).ToUtf8();
+    response["error_code"] = to_underlying(error);
+
+    if(ErrorCodes_t::SUCCESS == error)
+    {
+        response["sid1"] = sid1.ToUtf8();
+        response["sid2"] = sid1.ToUtf8();
     }
 
     return true;
@@ -844,3 +922,9 @@ bool ApiHandler::handlePost(CivetServer *pServer,
 
     return true;
 }
+
+void ApiHandler::SetAccountManager(AccountManager *pManager)
+{
+    mAccountManager = pManager;
+}
+

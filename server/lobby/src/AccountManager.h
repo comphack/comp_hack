@@ -73,6 +73,7 @@ public:
      * @param password Password of the account to authenticate.
      * @param clientVersion Client version converted into an integer.
      * @param sid Reference to a string to save the session ID into.
+     * @param checkPassword Do not change this (used by API version).
      * @returns Error code indicating the success or failure of this
      * operation. This function can return one of:
      * - SUCCESS (login was valid and a session ID was generated)
@@ -86,7 +87,32 @@ public:
      */
     ErrorCodes_t WebAuthLogin(const libcomp::String& username,
         const libcomp::String& password, uint32_t clientVersion,
-        libcomp::String& sid);
+        libcomp::String& sid, bool checkPassword = true);
+
+    /**
+     * Transitions the user login state from OFFLINE to LOBBY_WAIT. This
+     * operation provides a session ID for the user to pass to a lobby server
+     * connection. If the user does not login within a specified period of
+     * time the session ID is invalidated and the user transitions back to
+     * the OFFLINE state.
+     * @param username Username of the account to authenticate.
+     * @param clientVersion Client version converted into an integer.
+     * @param sid Reference to a string to save the session ID into.
+     * @returns Error code indicating the success or failure of this
+     * operation. This function can return one of:
+     * - SUCCESS (login was valid and a session ID was generated)
+     * - SYSTEM_ERROR (some internal error occurred)
+     * - BAD_USERNAME_PASSWORD
+     * - ACCOUNT_STILL_LOGGED_IN (account not in OFFLINE or LOBBY_WAIT)
+     * - SERVER_FULL (too many accounts are online)
+     * - WRONG_CLIENT_VERSION
+     * - ACCOUNT_DISABLED (your account has been disabled/banned)
+     * @note This function is thread safe.
+     * @note The password is not required because it is assumed to have been
+     *   checked by the API subsystem. Do NOT use this for normal logins.
+     */
+    ErrorCodes_t WebAuthLoginApi(const libcomp::String& username,
+        uint32_t clientVersion, libcomp::String& sid);
 
     /**
      * Transitions the user login state from LOBBY_WAIT to LOBBY. This

@@ -151,6 +151,7 @@ int main(int argc, const char *argv[])
         objects::LobbyConfig>(config));
 
     auto pApiHandler = new lobby::ApiHandler(config, server);
+    pApiHandler->SetAccountManager(server->GetAccountManager());
 
     CivetServer webServer(options);
     webServer.addHandler("/", pLoginHandler);

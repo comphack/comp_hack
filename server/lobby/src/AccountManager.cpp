@@ -57,7 +57,7 @@ AccountManager::AccountManager(LobbyServer *pServer) : mServer(pServer)
 
 ErrorCodes_t AccountManager::WebAuthLogin(const libcomp::String& username,
     const libcomp::String& password, uint32_t clientVersion,
-    libcomp::String& sid)
+    libcomp::String& sid, bool checkPassword)
 {
     /// @todo Check if the server is full and return SERVER_FULL.
 
@@ -135,21 +135,25 @@ ErrorCodes_t AccountManager::WebAuthLogin(const libcomp::String& username,
     // Get the account login state as we will need it in a second.
     auto state = login->GetState();
 
-    // Tell them nothing about the account until they authenticate.
-    if(account->GetPassword() != libcomp::Decrypt::HashPassword(password,
-        account->GetSalt()))
+    // The API version of this function does not have to check the password.
+    if(checkPassword)
     {
-        LOG_DEBUG(libcomp::String("Web auth login for account '%1' failed "
-            "with a bad password.\n").Arg(username));
-
-        // Only erase the login if it was offline. This should prevent
-        // a malicious user from blocking/corrupting a legitimate login.
-        if(objects::AccountLogin::State_t::OFFLINE == state)
+        // Tell them nothing about the account until they authenticate.
+        if(account->GetPassword() != libcomp::Decrypt::HashPassword(password,
+            account->GetSalt()))
         {
-            EraseLogin(username);
-        }
+            LOG_DEBUG(libcomp::String("Web auth login for account '%1' failed "
+                "with a bad password.\n").Arg(username));
 
-        return ErrorCodes_t::BAD_USERNAME_PASSWORD;
+            // Only erase the login if it was offline. This should prevent
+            // a malicious user from blocking/corrupting a legitimate login.
+            if(objects::AccountLogin::State_t::OFFLINE == state)
+            {
+                EraseLogin(username);
+            }
+
+            return ErrorCodes_t::BAD_USERNAME_PASSWORD;
+        }
     }
 
     // Now check to see if the account is already online. We will accept
@@ -194,6 +198,13 @@ ErrorCodes_t AccountManager::WebAuthLogin(const libcomp::String& username,
             "now passed web authentication.\n").Arg(username));*/
 
     return ErrorCodes_t::SUCCESS;
+}
+
+ErrorCodes_t AccountManager::WebAuthLoginApi(const libcomp::String& username,
+    uint32_t clientVersion, libcomp::String& sid)
+{
+    return WebAuthLogin(username, libcomp::String(),
+        clientVersion, sid, false);
 }
 
 ErrorCodes_t AccountManager::LobbyLogin(const libcomp::String& username,

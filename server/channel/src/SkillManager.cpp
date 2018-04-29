@@ -2810,6 +2810,7 @@ bool SkillManager::EvaluateTokuseiSkillCondition(const std::shared_ptr<ActiveEnt
         switch(skill.EffectiveDependencyType)
         {
         case 2:
+        case 3:
         case 7:
         case 8:
         case 11:
@@ -2823,7 +2824,6 @@ bool SkillManager::EvaluateTokuseiSkillCondition(const std::shared_ptr<ActiveEnt
         case 12:
             // Physical
             return (2 == condition->GetValue()) == !negate;
-        case 3:
         case 5:
         default:
             // Misc
@@ -4788,13 +4788,18 @@ int32_t SkillManager::CalculateDamage_Normal(const std::shared_ptr<
             rateBoostIdx = (uint8_t)CorrectTbl::RATE_SPELL;
             break;
         case 3:
-            // Do not defend against support by default
-            def = 0;
+            def = (uint16_t)targetState->GetCorrectTbl((size_t)CorrectTbl::MDEF);
             rateBoostIdx = (uint8_t)CorrectTbl::RATE_SUPPORT;
             break;
         case 5:
         default:
             break;
+        }
+
+        // Do not defend against non-combat skills
+        if(!skill.Definition->GetBasic()->GetCombatSkill())
+        {
+            def = 0;
         }
 
         def = (uint16_t)(def + target.GuardModifier);
@@ -5053,6 +5058,13 @@ bool SkillManager::SetNRA(SkillTargetResult& target, ProcessingSkill& skill)
 uint8_t SkillManager::GetNRAResult(SkillTargetResult& target, ProcessingSkill& skill,
     uint8_t effectiveAffinity, bool effectiveOnly)
 {
+    if(!skill.Definition->GetBasic()->GetCombatSkill())
+    {
+        // Non-combat skills cannot be NRA'd meaning NRA_HEAL was (apparently)
+        // never implemented originally
+        return 0;
+    }
+
     std::list<CorrectTbl> affinities;
     if(!effectiveOnly)
     {
@@ -5072,12 +5084,12 @@ uint8_t SkillManager::GetNRAResult(SkillTargetResult& target, ProcessingSkill& s
                 affinities.push_back(CorrectTbl::NRA_PHYS);
                 break;
             case 2:
+            case 3:
             case 7:
             case 8:
             case 11:
                 affinities.push_back(CorrectTbl::NRA_MAGIC);
                 break;
-            case 3: // Support needs to be explicitly set
             case 5:
             default:
                 break;

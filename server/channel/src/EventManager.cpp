@@ -1030,23 +1030,8 @@ bool EventManager::EvaluateCondition(EventContext& ctx,
         else
         {
             // Character LNC type matches [value 1]
-            int32_t lncType = (int32_t)client->GetClientState()->GetCharacterState()->GetLNCType();
-            int32_t val1 = condition->GetValue1();
-            if(val1 == 1)
-            {
-                // Not chaos
-                return lncType == LNC_LAW || lncType == LNC_NEUTRAL;
-            }
-            else if(val1 == 3)
-            {
-                // Not law
-                return lncType == LNC_NEUTRAL || lncType == LNC_CHAOS;;
-            }
-            else
-            {
-                // Explicitly law, neutral or chaos
-                return lncType == val1;
-            }
+            return client->GetClientState()->GetCharacterState()
+                ->IsLNCType((uint8_t)condition->GetValue1(), false);
         }
     case objects::EventConditionData::Type_t::ITEM:
         if(!client)

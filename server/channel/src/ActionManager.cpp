@@ -169,7 +169,8 @@ void ActionManager::PerformActions(
         ctx.CurrentZone = mServer.lock()->GetZoneManager()
             ->GetCurrentZone(ctx.Client);
     }
-    else
+
+    if(!ctx.CurrentZone)
     {
         LOG_ERROR("Configurable actions cannot be performed"
             " without supplying a curent zone or source connection\n");

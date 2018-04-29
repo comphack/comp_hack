@@ -933,7 +933,8 @@ bool SkillManager::CancelSkill(const std::shared_ptr<ActiveEntityState> source,
         {
             source->RemoveSpecialActivations(activationID);
         }
-        else if(source->GetActivatedAbility() == activated)
+
+        if(source->GetActivatedAbility() == activated)
         {
             source->SetActivatedAbility(nullptr);
         }
@@ -2899,7 +2900,7 @@ bool SkillManager::EvaluateTokuseiSkillCondition(const std::shared_ptr<ActiveEnt
     case TokuseiSkillConditionType::ENEMY_LNC:
         // Enemy's LNC matches the specified type (can be any target type)
         return otherState &&
-            ((otherState->GetLNCType() & condition->GetValue()) != 0) == !negate;
+            (otherState->IsLNCType((uint8_t)condition->GetValue(), false) == !negate);
     default:
         break;
     }
@@ -4847,26 +4848,27 @@ int32_t SkillManager::CalculateDamage_Normal(const std::shared_ptr<
                         (uint8_t)CorrectTbl::RATE_CLSR)));
             }
 
-            // Apply heal if effective heal applies
+            // Include heal if effective heal applies
             if(isHeal)
             {
-                dependencyDealt = (int32_t)(dependencyDealt +
-                    calcState->GetCorrectTbl((size_t)CorrectTbl::RATE_HEAL));
+                dependencyDealt = (int32_t)((double)dependencyDealt *
+                    ((double)calcState->GetCorrectTbl((size_t)
+                        CorrectTbl::RATE_HEAL) * 0.01));
 
-                dependencyTaken = (int32_t)(dependencyTaken +
-                    targetState->GetCorrectTbl((size_t)
-                        CorrectTbl::RATE_HEAL_TAKEN));
+                dependencyTaken = (int32_t)((double)dependencyTaken *
+                    ((double)targetState->GetCorrectTbl((size_t)
+                        CorrectTbl::RATE_HEAL_TAKEN) * 0.01));
             }
 
             // Adjust dependency limits
-            if(dependencyDealt < -100)
+            if(dependencyDealt < 0)
             {
-                dependencyDealt = -100;
+                dependencyDealt = 0;
             }
 
-            if(dependencyTaken < -100)
+            if(dependencyTaken < 0)
             {
-                dependencyTaken = -100;
+                dependencyTaken = 0;
             }
 
             // Get tokusei adjustments
@@ -4886,10 +4888,10 @@ int32_t SkillManager::CalculateDamage_Normal(const std::shared_ptr<
             // Multiply by 100% + boost
             calc = calc * (1.f + boost);
 
-            // Multiply by 100% + dependency damage dealt
+            // Multiply by dependency damage dealt %
             calc = calc * (float)(dependencyDealt * 0.01);
 
-            // Multiply by 100% + dependency damage taken
+            // Multiply by dependency damage taken %
             calc = calc * (float)(dependencyTaken * 0.01);
 
             // Multiply by 1 + remaining power boosts/100

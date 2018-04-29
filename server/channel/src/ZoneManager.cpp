@@ -2552,9 +2552,9 @@ Point ZoneManager::GetRandomSpotPoint(
         Point collision;
         if(geometry && geometry->Collides(centerLine, collision))
         {
-            // Move off the collision point by 1
+            // Move off the collision point by a small amount
             transformed = GetLinearPoint(collision.x, collision.y,
-                center.x, center.y, 1.f, false);
+                center.x, center.y, 10.f, false);
         }
     }
 

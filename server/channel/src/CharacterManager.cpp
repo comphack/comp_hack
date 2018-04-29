@@ -936,6 +936,11 @@ void CharacterManager::SummonDemon(const std::shared_ptr<
         UpdateFamiliarity(client, 2, true, false);
     }
 
+    // Apply initial tokusei/stat calculation
+    tokuseiManager->Recalculate(cState, true,
+        std::set<int32_t>{ dState->GetEntityID() });
+    dState->RecalculateStats(definitionManager);
+
     // If HP/MP adjustments occur and the max value increases, keep
     // the same percentage of HP/MP after recalc
     auto cs = demon->GetCoreStats();
@@ -957,11 +962,6 @@ void CharacterManager::SummonDemon(const std::shared_ptr<
     {
         cs->SetMP((int32_t)((float)dState->GetMaxMP() * mpPercent));
     }
-
-    // Apply initial tokusei/stat calculation
-    tokuseiManager->Recalculate(cState, true,
-        std::set<int32_t>{ dState->GetEntityID() });
-    dState->RecalculateStats(definitionManager);
 
     // Apply any extra summon status effects
     for(auto eState : { std::dynamic_pointer_cast<ActiveEntityState>(cState),
@@ -1052,8 +1052,10 @@ void CharacterManager::StoreDemon(const std::shared_ptr<
 
     if(updatePartyState)
     {
-        // Send new HP/MP display
+        // Recalc and send new HP/MP display
         SendDemonBoxData(client, 0, std::set<int8_t>{ demon->GetBoxSlot() });
+
+        server->GetTokuseiManager()->Recalculate(cState, true);
 
         if(state->GetPartyID())
         {
@@ -4232,7 +4234,7 @@ libcomp::EnumMap<CorrectTbl, int16_t> CharacterManager::GetCharacterBaseStatMap(
 
     // Default all the rates to 100%
     for(uint8_t i = (uint8_t)CorrectTbl::RATE_XP;
-        i < (uint8_t)CorrectTbl::RATE_HEAL_TAKEN; i++)
+        i <= (uint8_t)CorrectTbl::RATE_HEAL_TAKEN; i++)
     {
         stats[(CorrectTbl)i] = 100;
     }

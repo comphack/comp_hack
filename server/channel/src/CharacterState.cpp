@@ -372,33 +372,30 @@ bool CharacterState::RecalcDisabledSkills(
     {
         auto expertData = definitionManager->GetExpertClassData(i);
 
-        if(expertData)
+        if(!expertData) continue;
+
+        uint32_t currentRank = GetExpertiseRank(definitionManager, i);
+
+        uint32_t rank = 0;
+        for(auto classData : expertData->GetClassData())
         {
-            uint32_t currentRank = GetExpertiseRank(definitionManager, i);
-
-            uint32_t cls = (uint32_t)(currentRank / 10);
-            uint32_t rank = (uint32_t)(currentRank % 10);
-            for(auto classData : expertData->GetClassData())
+            for(auto rankData : classData->GetRankData())
             {
-                if(classData->GetID() < cls) continue;
-
-                for(uint32_t k = (uint32_t)(rank + 1); k < 10; k++)
+                if(rank > currentRank)
                 {
-                    auto rankData = classData->GetRankData(k);
-                    if(rankData)
+                    for(uint32_t skillID : rankData->GetSkill())
                     {
-                        for(uint32_t skillID : rankData->GetSkill())
+                        if(skillID &&
+                            learnedSkills.find(skillID) != learnedSkills.end())
                         {
-                            if(skillID &&
-                                learnedSkills.find(skillID) != learnedSkills.end())
-                            {
-                                disabledSkills.insert(skillID);
-                                newSkillDisabled |= currentDisabledSkills.find(skillID)
-                                    == currentDisabledSkills.end();
-                            }
+                            disabledSkills.insert(skillID);
+                            newSkillDisabled |= currentDisabledSkills.find(skillID)
+                                == currentDisabledSkills.end();
                         }
                     }
                 }
+
+                rank++;
             }
         }
     }

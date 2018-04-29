@@ -181,6 +181,15 @@ public:
     virtual uint8_t GetLNCType();
 
     /**
+     * Check if the entity matches the supplied LNC type.
+     * @param lncType LNC tpe to compare to. This can be in two formats based
+     *  upon the invertFlag parameter.
+     * @param invertFlag If true compare using the inverted flag format
+     * @return true if the LNC matches, false if it does not
+     */
+    bool IsLNCType(uint8_t lncType, bool invertFlag);
+
+    /**
      * Get all skills that the entity currently has available.
      * @param definitionManager Pointer to the definition manager to use
      *  for skill source definitions

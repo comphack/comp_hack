@@ -440,17 +440,20 @@ bool CharacterManager::AddToParty(std::shared_ptr<objects::PartyCharacter> membe
     auto cid = member->GetWorldCID();
     auto login = GetCharacterLogin(cid);
 
-    std::lock_guard<std::mutex> lock(mLock);
-    auto it = mParties.find(partyID);
-    if(it != mParties.end() && it->second->MemberIDsCount() < 5
-        && (login->GetPartyID() == 0 || login->GetPartyID() == partyID))
+    if(login)
     {
-        mParties[0]->RemoveMemberIDs(cid);
-        login->SetPartyID(partyID);
-        it->second->InsertMemberIDs(cid);
-        mPartyCharacters[cid] = member;
+        std::lock_guard<std::mutex> lock(mLock);
+        auto it = mParties.find(partyID);
+        if(it != mParties.end() && it->second->MemberIDsCount() < 5
+            && (login->GetPartyID() == 0 || login->GetPartyID() == partyID))
+        {
+            mParties[0]->RemoveMemberIDs(cid);
+            login->SetPartyID(partyID);
+            it->second->InsertMemberIDs(cid);
+            mPartyCharacters[cid] = member;
 
-        return true;
+            return true;
+        }
     }
 
     return false;

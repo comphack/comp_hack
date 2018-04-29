@@ -170,14 +170,22 @@ bool Parsers::Relay::Parse(libcomp::ManagerPacket *pPacketManager,
             bool includeSource = p.ReadU8() == 1;
 
             auto party = characterManager->GetParty(partyID);
-            for(auto cid : party->GetMemberIDs())
+            if(party)
             {
-                // Party members
-                auto targetLogin = characterManager->GetCharacterLogin(cid);
-                if(targetLogin && (includeSource || cid != sourceCID))
+                for(auto cid : party->GetMemberIDs())
                 {
-                    targetLogins.push_back(targetLogin);
+                    // Party members
+                    auto targetLogin = characterManager->GetCharacterLogin(cid);
+                    if(targetLogin && (includeSource || cid != sourceCID))
+                    {
+                        targetLogins.push_back(targetLogin);
+                    }
                 }
+            }
+            else
+            {
+                LOG_ERROR(libcomp::String("Attempted to relay a packet for"
+                    " a party that does not exist: %1\n").Arg(partyID));
             }
         }
         break;
@@ -187,14 +195,24 @@ bool Parsers::Relay::Parse(libcomp::ManagerPacket *pPacketManager,
             bool includeSource = p.ReadU8() == 1;
 
             auto clanInfo = characterManager->GetClan(clanID);
-            for(auto mPair : clanInfo->GetMemberMap())
+            if(clanInfo)
             {
-                // Clan members
-                auto targetLogin = characterManager->GetCharacterLogin(mPair.first);
-                if(targetLogin && (includeSource || mPair.first != sourceCID))
+                for(auto mPair : clanInfo->GetMemberMap())
                 {
-                    targetLogins.push_back(targetLogin);
+                    // Clan members
+                    auto targetLogin = characterManager->GetCharacterLogin(
+                        mPair.first);
+                    if(targetLogin &&
+                        (includeSource || mPair.first != sourceCID))
+                    {
+                        targetLogins.push_back(targetLogin);
+                    }
                 }
+            }
+            else
+            {
+                LOG_ERROR(libcomp::String("Attempted to relay a packet for"
+                    " a clan that does not exist: %1\n").Arg(clanID));
             }
         }
         break;

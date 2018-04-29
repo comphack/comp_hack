@@ -258,7 +258,7 @@ namespace libcomp
 #define NRA_ABSORB (3)
 
 /// LNC alignment: Law
-#define LNC_LAW (1)
+#define LNC_LAW (0)
 
 /// LNC alignment: Neutral
 #define LNC_NEUTRAL (2)

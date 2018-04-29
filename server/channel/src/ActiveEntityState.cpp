@@ -1605,6 +1605,50 @@ bool ActiveEntityState::SkillAvailable(uint32_t skillID)
     return CurrentSkillsContains(skillID) && !DisabledSkillsContains(skillID);
 }
 
+bool ActiveEntityState::IsLNCType(uint8_t lncType, bool invertFlag)
+{
+    uint8_t lnc = GetLNCType();
+
+    if(invertFlag)
+    {
+        // Inverted flag mode
+        // L/N/C are 4/2/1 respectively with flags allowed
+        switch(lnc)
+        {
+        case LNC_LAW:
+            return (lncType & 0x04) != 0;
+        case LNC_NEUTRAL:
+            return (lncType & 0x02) != 0;
+        case LNC_CHAOS:
+            return (lncType & 0x01) != 0;
+        default:
+            return false;
+        }
+    }
+    else
+    {
+        // Non-flag linear mode
+        // L/N/C are 0/2/4 respectively
+        // 1 is L or N
+        // 3 is N or C
+        // 5 is not N
+        if(lncType == 1)
+        {
+            return lnc == LNC_LAW || lnc == LNC_NEUTRAL;
+        }
+        else if(lncType == 3)
+        {
+            return lnc == LNC_NEUTRAL || lnc == LNC_CHAOS;
+        }
+        else if(lncType == 5)
+        {
+            return lnc == LNC_LAW || lnc == LNC_CHAOS;
+        }
+
+        return lnc == lncType;
+    }
+}
+
 // "Abstract implementations" required for Sqrat usage
 uint8_t ActiveEntityState::RecalculateStats(libcomp::DefinitionManager* definitionManager,
     std::shared_ptr<objects::CalculatedEntityState> calcState)

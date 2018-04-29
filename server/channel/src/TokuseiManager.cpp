@@ -520,7 +520,7 @@ std::unordered_map<int32_t, bool> TokuseiManager::Recalculate(const std::shared_
 
     if(doRecalc)
     {
-        return Recalculate(eState);
+        return Recalculate(eState, true);
     }
 
     return std::unordered_map<int32_t, bool>();
@@ -863,12 +863,12 @@ std::unordered_map<int32_t, bool> TokuseiManager::RecalculateParty(const std::sh
             auto state = ClientState::GetEntityClientState(memberID, true);
             auto cState = state ? state->GetCharacterState() : nullptr;
 
-            if(cState && cState->Ready() && cState->GetZone())
+            if(cState && cState->Ready(true) && cState->GetZone())
             {
                 entities.push_back(cState);
 
                 auto dState = state->GetDemonState();
-                if(dState && dState->Ready())
+                if(dState && dState->Ready(true))
                 {
                     entities.push_back(dState);
                 }
@@ -892,7 +892,7 @@ std::list<std::shared_ptr<ActiveEntityState>> TokuseiManager::GetAllTokuseiEntit
         retval.push_back(state->GetCharacterState());
 
         auto dState = state->GetDemonState();
-        if(dState && dState->Ready())
+        if(dState && dState->Ready(true))
         {
             retval.push_back(dState);
         }
@@ -910,12 +910,12 @@ std::list<std::shared_ptr<ActiveEntityState>> TokuseiManager::GetAllTokuseiEntit
                     if(state2)
                     {
                         auto cState2 = state2->GetCharacterState();
-                        if(cState2->GetZone() == zone && cState2->Ready())
+                        if(cState2->GetZone() == zone && cState2->Ready(true))
                         {
                             retval.push_back(state2->GetCharacterState());
 
                             auto dState2 = state2->GetDemonState();
-                            if(dState2 && dState2->Ready())
+                            if(dState2 && dState2->Ready(true))
                             {
                                 retval.push_back(dState2);
                             }
@@ -984,19 +984,7 @@ std::list<std::shared_ptr<objects::Tokusei>> TokuseiManager::GetDirectTokusei(
                 else if(conditionType == 2)
                 {
                     // LNC check (inverted format)
-                    switch(cState->GetLNCType())
-                    {
-                    case LNC_LAW:
-                        add = ((p1 & 0x0004) != 0);
-                        break;
-                    case LNC_NEUTRAL:
-                        add = ((p1 & 0x0002) != 0);
-                        break;
-                    case LNC_CHAOS:
-                        add = ((p1 & 0x0001) != 0);
-                    default:
-                        break;
-                    }
+                    add = cState->IsLNCType((uint8_t)p1, true);
                 }
                 else if(conditionType >= 100 && conditionType <= 158)
                 {
@@ -1103,7 +1091,7 @@ bool TokuseiManager::EvaluateTokuseiConditions(const std::shared_ptr<
     {
         return true;
     }
-    else if(!eState->Ready())
+    else if(!eState->Ready(true))
     {
         return false;
     }
@@ -1247,7 +1235,7 @@ bool TokuseiManager::EvaluateTokuseiCondition(const std::shared_ptr<ActiveEntity
         }
         else
         {
-            bool containsLNC = (eState->GetLNCType() & condition->GetValue()) != 0;
+            bool containsLNC = eState->IsLNCType((uint8_t)condition->GetValue(), false);
             return containsLNC == (condition->GetComparator() ==
                 objects::TokuseiCondition::Comparator_t::EQUALS);
         }
@@ -1360,7 +1348,8 @@ bool TokuseiManager::EvaluateTokuseiCondition(const std::shared_ptr<ActiveEntity
     std::shared_ptr<objects::Demon> partner;
     std::shared_ptr<objects::MiDevilData> demonData;
     auto state = ClientState::GetEntityClientState(eState->GetEntityID(), false);
-    if(state && state->GetCharacterState() == eState && state->GetDemonState()->Ready())
+    if(state && state->GetCharacterState() == eState &&
+        state->GetDemonState()->Ready(true))
     {
         auto dState = state->GetDemonState();
         partner = dState->GetEntity();

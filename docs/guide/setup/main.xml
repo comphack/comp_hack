@@ -4,11 +4,12 @@
 <chapter>
 <title>Server Setup</title>
 
-<para>This is my first DocBook file.</para>
+<para>This chapter described how to install and configure the server and related components.</para>
 
 <xi:include href="require/main.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
 <xi:include href="linux/main.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
 <xi:include href="updater/main.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
+<xi:include href="website/main.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
 <xi:include href="config/main.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
 
 </chapter>

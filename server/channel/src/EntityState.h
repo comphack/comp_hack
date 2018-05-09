@@ -33,6 +33,8 @@
 namespace channel
 {
 
+typedef objects::EntityStateObject::EntityType_t EntityType_t;
+
 /**
  * Contains the state of a non-active entity related to a channel.
  */

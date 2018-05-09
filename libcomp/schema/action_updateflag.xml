@@ -6,6 +6,7 @@
             <value>MAP</value>
             <value>PLUGIN</value>
             <value>VALUABLE</value>
+            <value>TIME_TRIAL</value>
         </member>
         <member type="u16" name="ID"/>
         <member type="bool" name="remove"/>

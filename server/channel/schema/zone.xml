@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="ZoneObject" persistent="false" scriptenabled="true">
+        <member type="u32" name="ID"/>
+        <member type="ServerZone*" name="Definition"
+            nulldefault="true"/>
+        <member type="list" name="ZoneInTriggers">
+            <element type="ServerZoneTrigger*"/>
+        </member>
+        <member type="list" name="ZoneOutTriggers">
+            <element type="ServerZoneTrigger*"/>
+        </member>
+        <member type="list" name="SpawnTriggers">
+            <element type="ServerZoneTrigger*"/>
+        </member>
+        <member type="list" name="DeathTriggers">
+            <element type="ServerZoneTrigger*"/>
+        </member>
+        <member type="list" name="RevivalTriggers">
+            <element type="ServerZoneTrigger*"/>
+        </member>
+        <member type="list" name="FlagSetTriggers">
+            <element type="ServerZoneTrigger*"/>
+        </member>
+        <member type="set" name="FlagSetKeys">
+            <element type="s32"/>
+        </member>
+        <member type="list" name="TimeTriggers">
+            <element type="ServerZoneTrigger*"/>
+        </member>
+    </object>
+    <object name="ZoneInstanceObject" persistent="false"
+        scriptenabled="true">
+        <member type="u32" name="ID"/>
+        <member type="ServerZoneInstance*" name="Definition"
+            nulldefault="true"/>
+        <member type="ServerZoneInstanceVariant*" name="Variant"
+            nulldefault="true"/>
+        <member type="set" name="AccessCIDs">
+            <element type="s32"/>
+        </member>
+        <member type="set" name="OriginalAccessCIDs">
+            <element type="s32"/>
+        </member>
+        <member type="MiTimeLimitData*" name="TimeLimitData"
+            nulldefault="true"/>
+        <member type="u64" name="TimerStart"/>
+        <member type="u64" name="TimerStop"/>
+        <member type="u64" name="TimerExpire"/>
+        <member type="string" name="TimerExpirationEventID"/>
+        <member type="float" name="XPMultiplier"/>
+    </object>
+</objgen>

@@ -104,7 +104,7 @@
         <member type="u8" name="Stack"/>
         <member type="bool" name="IsConstant"/>
     </object>
-    <object name="CharacterProgress" location="world">
+    <object name="CharacterProgress" location="world" scriptenabled="true">
         <member type="pref" name="Character" key="true" unique="true"/>
         <member type="u8" name="MaxCOMPSlots" default="6"/>
         <member type="array" name="Maps" size="32">
@@ -121,6 +121,20 @@
         </member>
         <member type="array" name="CompletedQuests" size="128">
             <element type="u8"/>
+        </member>
+        <member type="s8" name="TimeTrialID" default="-1"/>
+        <member type="u16" name="TimeTrialTime"/>
+        <member type="enum" name="TimeTrialResult" underlying="int8_t">
+            <value num="-1">NONE</value>
+            <value num="0">A_RANK_FIRST</value>
+            <value num="1">A_RANK</value>
+            <value num="2">B_RANK</value>
+            <value num="3">C_RANK</value>
+            <value num="4">PARTICIPATION</value>
+            <value num="5">FAILED</value>
+        </member>
+        <member type="array" name="TimeTrialRecords" size="28">
+            <element type="u16"/>
         </member>
     </object>
     <object name="Expertise" location="world">

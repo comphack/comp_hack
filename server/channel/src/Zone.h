@@ -35,6 +35,10 @@
 #include "EntityState.h"
 #include "ZoneGeometry.h"
 
+// object Includes
+#include <ServerZoneInstanceVariant.h>
+#include <ZoneObject.h>
+
 // Standard C++11 includes
 #include <map>
 
@@ -61,11 +65,13 @@ typedef EntityState<objects::LootBox> LootBoxState;
 typedef EntityState<objects::ServerNPC> NPCState;
 typedef EntityState<objects::ServerObject> ServerObjectState;
 
+typedef objects::ServerZoneInstanceVariant::InstanceType_t InstanceType_t;
+
 /**
  * Represents a server zone containing client connections, objects,
  * enemies, etc.
  */
-class Zone
+class Zone : public objects::ZoneObject
 {
 public:
     /**
@@ -95,12 +101,6 @@ public:
     ~Zone();
 
     /**
-     * Get the unique server ID of the zone
-     * @return Unique server ID of the zone
-     */
-    uint32_t GetID();
-
-    /**
      * Get the defintion ID of the zone
      * @return Defintion ID of the zone
      */
@@ -119,10 +119,16 @@ public:
     void SetGeometry(const std::shared_ptr<ZoneGeometry>& geometry);
 
     /**
-     * Get the instance the zone belongs to if on exists
+     * Get the instance the zone belongs to if one exists
      * @return Instance the zone belongs to
      */
     std::shared_ptr<ZoneInstance> GetInstance() const;
+
+    /**
+     * Get the instance variant the zone belongs to if one exists
+     * @return Instance variant the zone belongs to
+     */
+    InstanceType_t GetInstanceType() const;
 
     /**
      * Set the instance the zone belongs to
@@ -350,12 +356,6 @@ public:
     const std::list<std::shared_ptr<ServerObjectState>> GetServerObjects() const;
 
     /**
-     * Get the definition of the zone
-     * @return Pointer to the definition of the zone
-     */
-    const std::shared_ptr<objects::ServerZone> GetDefinition();
-
-    /**
      * Set the next status effect event time associated to an entity
      * in the zone
      * @param time Time of the next status effect event time
@@ -504,6 +504,13 @@ public:
     void SetFlagState(int32_t key, int32_t value, int32_t worldCID);
 
     /**
+     * Get the XP multiplier for the zone combined with any variant
+     * specific boosts.
+     * @return XP multiplier for the zone
+     */
+    float GetXPMultiplier();
+
+    /**
      * Take loot out of the specified loot box. This should be the only way
      * loot is removed from a box as it uses a mutex lock to ensure that the
      * loot is not duplicated for two different people. This currently does NOT
@@ -563,9 +570,6 @@ private:
      * @param spawnGroupIDs Set of spawn group IDs to disable
      */
     bool DisableSpawnGroups(const std::set<uint32_t>& spawnGroupIDs);
-
-    /// Pointer to the ServerZone definition
-    std::shared_ptr<objects::ServerZone> mServerZone;
 
     /// Map of world CIDs to client connections
     std::unordered_map<int32_t, std::shared_ptr<ChannelClientConnection>> mConnections;
@@ -649,9 +653,6 @@ private:
 
     /// Zone instance pointer for non-global zones
     std::shared_ptr<ZoneInstance> mZoneInstance;
-
-    /// Unique server ID of the zone
-    uint32_t mID;
 
     /// Next ID to use for encounters registered for the zone
     uint32_t mNextEncounterID;

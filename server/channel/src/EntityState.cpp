@@ -41,7 +41,7 @@ EntityState<objects::ServerObject>::EntityState(
     const std::shared_ptr<objects::ServerObject>& entity)
     : mEntity(entity)
 {
-    SetEntityType(objects::EntityStateObject::EntityType_t::OBJECT);
+    SetEntityType(EntityType_t::OBJECT);
 }
 
 template<>
@@ -49,7 +49,7 @@ EntityState<objects::ServerNPC>::EntityState(
     const std::shared_ptr<objects::ServerNPC>& entity)
     : mEntity(entity)
 {
-    SetEntityType(objects::EntityStateObject::EntityType_t::NPC);
+    SetEntityType(EntityType_t::NPC);
 }
 
 template<>
@@ -57,7 +57,7 @@ EntityState<objects::ServerBazaar>::EntityState(
     const std::shared_ptr<objects::ServerBazaar>& entity)
     : mEntity(entity)
 {
-    SetEntityType(objects::EntityStateObject::EntityType_t::BAZAAR);
+    SetEntityType(EntityType_t::BAZAAR);
 }
 
 template<>
@@ -65,7 +65,7 @@ EntityState<objects::LootBox>::EntityState(
     const std::shared_ptr<objects::LootBox>& entity)
     : mEntity(entity)
 {
-    SetEntityType(objects::EntityStateObject::EntityType_t::LOOT_BOX);
+    SetEntityType(EntityType_t::LOOT_BOX);
 }
 
 template<>
@@ -73,7 +73,7 @@ EntityState<objects::PlasmaSpawn>::EntityState(
     const std::shared_ptr<objects::PlasmaSpawn>& entity)
     : mEntity(entity)
 {
-    SetEntityType(objects::EntityStateObject::EntityType_t::PLASMA);
+    SetEntityType(EntityType_t::PLASMA);
 }
 
 }

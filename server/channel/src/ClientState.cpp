@@ -240,7 +240,7 @@ int32_t ClientState::GetWorldCID() const
 
 std::shared_ptr<Zone> ClientState::GetZone() const
 {
-    return mCharacterState->Ready() ?
+    return mCharacterState->Ready(true) ?
         mCharacterState->GetZone() : nullptr;
 }
 

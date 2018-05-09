@@ -205,6 +205,7 @@ enum class ClientToChannelPacketCode_t : uint16_t
     PACKET_ENCHANT_ITEM_UPDATE = 0x01BE,    //!< Request to update an item used for enchantment.
     PACKET_ENCHANT = 0x01C1,    //!< Request to perform an enchantment.
     PACKET_DUNGEON_RECORDS = 0x01C4,  //!< Request for the current player's dungeon challenge records.
+    PACKET_ANALYZE_DUNGEON_RECORDS = 0x01C6,  //!< Request for a different player's dungeon challenge records.
     PACKET_TRIFUSION_JOIN = 0x01CD, //!< Request to join a tri-fusion session in progress.
     PACKET_TRIFUSION_DEMON_UPDATE = 0x01D0, //!< Request to update the demons involved in a tri-fusion.
     PACKET_TRIFUSION_REWARD_UPDATE = 0x01D3,    //!< Request to update the rewards given for a tri-fusion success.
@@ -218,6 +219,7 @@ enum class ClientToChannelPacketCode_t : uint16_t
     PACKET_PLASMA_END = 0x01EF,    //!< Request to end plasma picking for a specific point.
     PACKET_PLASMA_ITEM_DATA = 0x01F1,  //!< Request for item data for a plasma point.
     PACKET_PLASMA_ITEM = 0x01F3,   //!< Request to get an item from a plasma point.
+    PACKET_TIME_LIMIT_SYNC = 0x01F9,  //!< Request sync the current time limit time.
     PACKET_ITEM_DISASSEMBLE = 0x01FC,  //!< Request to disassemble an item for materials.
     PACKET_EQUIPMENT_MODIFY = 0x0203,  //!< Request to modify an equipment item slot.
     PACKET_MATERIAL_BOX = 0x0205,  //!< Request for info about the materials container.
@@ -461,6 +463,9 @@ enum class ChannelToClientPacketCode_t : uint16_t
     PACKET_APPEARANCE_ALTER = 0x01A3,   //!< Response to the request from the client to alter the appearance of the character.
     PACKET_APPEARANCE_ALTERED = 0x01A4, //!< Notification that a character has altered their appearance.
     PACKET_DEMON_FAMILIARITY_UPDATE = 0x01A5,  //!< Notification that the current partner demon's familiarity has updated.
+    PACKET_TIME_TRIAL_UPDATE = 0x01A7,  //!< Notification that a time trial zone instance has been entered.
+    PACKET_TIME_TRIAL_END = 0x01A8,     //!< Notification that a time trial zone instance has ended.
+    PACKET_TIME_TRIAL_REPORT = 0x01A9,  //!< Notification that a time trial record has been turned in.
     PACKET_ENTRUST_REQUEST = 0x01AB,  //!< Response to the request to start a player exchange "entrust" session.
     PACKET_ENTRUST_REQUESTED = 0x01AC,    //!< Notification for an entrust target that a session is being requested.
     PACKET_ENTRUST_ACCEPT = 0x01AE, //!< Response to the request to accept an entrust request.
@@ -478,6 +483,8 @@ enum class ChannelToClientPacketCode_t : uint16_t
     PACKET_ENCHANT = 0x01C2,    //!< Response to the request to perform an enchantment.
     PACKET_ENCHANTED = 0x01C3,  //!< Notification that an enchantment has been performed.
     PACKET_DUNGEON_CHALLENGES = 0x01C5,  //!< Response containing the current player's dungeon challenge records.
+    PACKET_ANALYZE_DUNGEON_RECORDS = 0x01C7,  //!< Response to the request for a different player's dungeon challenge records.
+    PACKET_DUNGEON_RECORDS_UPDATE = 0x01C8,   //!< Notification that the player's dungeon challenge records have been updated.
     PACKET_TRIFUSION_STARTED = 0x01CB,  //!< Notification that a party member in the same zone has started a tri-fusion session.
     PACKET_TRIFUSION_START = 0x01CC,    //!< Request to the client to start a tri-fusion session.
     PACKET_TRIFUSION_JOIN = 0x01CE, //!< Response to the request to join a tri-fusion session in progress.
@@ -509,6 +516,9 @@ enum class ChannelToClientPacketCode_t : uint16_t
     PACKET_PLASMA_ITEM = 0x01F4,   //!< Response to the request to get an item from a plasma point.
     PACKET_PLASMA_STATUS = 0x01F5, //!< Notification that a plasma spawn's status has been updated.
     PACKET_PLASMA_REPOP = 0x01F6,  //!< Notification that one or more plasma point has been updated.
+    PACKET_TIME_LIMIT_UPDATE = 0x01F7,  //!< Notification that the client's zone instance has a set time limit.
+    PACKET_TIME_LIMIT_END = 0x01F8,     //!< Notification that the client's zone instance time limit has ended.
+    PACKET_TIME_LIMIT_SYNC = 0x01FA,    //!< Response to the request sync the current time limit time.
     PACKET_EVENT_PLAY_SOUND_EFFECT = 0x01FB,  //!< Request to the client to play a sound effect as part of an event.
     PACKET_ITEM_DISASSEMBLE = 0x01FD,  //!< Response to the request to disassemble an item for materials.
     PACKET_EQUIPMENT_MODIFY = 0x0204,  //!< Response to the request to modify an equipment item slot.
@@ -534,7 +544,10 @@ enum class ChannelToClientPacketCode_t : uint16_t
     PACKET_EVENT_PLAY_BGM = 0x0294,   //!< Request to the client to play background music as part of an event.
     PACKET_EVENT_STOP_BGM = 0x0295,   //!< Request to the client to stop playing specific background music as part of an event.
     PACKET_ITEM_DEPO_REMOTE = 0x0297,  //!< Response to the request to open the remote item depos.
-	PACKET_SOUL_POINT_UPDATE = 0x029B,  //!< Notification that the clien't partner demon's soul points have updated.
+	PACKET_SOUL_POINT_UPDATE = 0x029B,  //!< Notification that the client partner demon's soul points have updated.
+    PACKET_DEMON_SOLO_UPDATE = 0x029C,  //!< Notification that the client is in a demon only zone istance.
+    PACKET_DEMON_SOLO_END = 0x029D,     //!< Notification that the client's demon only challenge has ended.
+    PACKET_DEMON_SOLO_DEATH_TIME = 0x029E,  //!< Notification containing a player in a demon only dungeon's death time-out.
     PACKET_DEMON_DEPO_REMOTE = 0x02F0,  //!< Response to the request to open the remote demon depos.
     PACKET_EXPERTISE_EXTENSION = 0x02F1, //!< Notification of the client character's extertise extension count.
     PACKET_COMMON_SWITCH_INFO = 0x02F5,  //!< Unknown. Response containing "common switch" information.

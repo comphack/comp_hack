@@ -5,7 +5,7 @@
  * @author HACKfrost
  *
  * @brief Request from the client to analyze another player character or
- *  their partner demon.
+ *  their partner demon (basic details or time trial records).
  *
  * This file is part of the Channel Server (channel).
  *
@@ -28,11 +28,13 @@
 #include "Packets.h"
 
 // libcomp Includes
+#include <Log.h>
 #include <ManagerPacket.h>
 #include <Packet.h>
 #include <PacketCodes.h>
 
 // object Includes
+#include <CharacterProgress.h>
 #include <Item.h>
 
 // channel Includes
@@ -53,6 +55,8 @@ bool Parsers::Analyze::Parse(libcomp::ManagerPacket *pPacketManager,
     int32_t targetEntityID = p.ReadS32Little();
 
     auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+    auto state = client->GetClientState();
+
     auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
     auto characterManager = server->GetCharacterManager();
 
@@ -60,82 +64,132 @@ bool Parsers::Analyze::Parse(libcomp::ManagerPacket *pPacketManager,
     auto entityState = targetState
         ? targetState->GetEntityState(targetEntityID, false) : nullptr;
 
-    if(p.Size() == 6)
+    if(!entityState)
     {
-        // Character analyze
-        uint16_t equipMask = p.ReadU16Little();
-
-        auto cState = std::dynamic_pointer_cast<CharacterState>(entityState);
-
-        libcomp::Packet reply;
-        reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_EQUIPMENT_ANALYZE);
-        reply.WriteS32Little(targetEntityID);
-        reply.WriteU16Little(equipMask);
-        for(int8_t slot = 0; slot < 15; slot++)
-        {
-            // Only return the equipment requested
-            if((equipMask & (1 << slot)) == 0) continue;
-
-            auto equip = cState
-                ? cState->GetEntity()->GetEquippedItems((size_t)slot).Get() : nullptr;
-
-            characterManager->GetItemDetailPacketData(reply, equip, 0);
-        }
-
-        connection->SendPacket(reply);
+        LOG_ERROR(libcomp::String("Attempted to analyze an entity that no"
+            " longer exists: %1\n").Arg(state->GetAccountUID().ToString()));
+        return true;
     }
-    else
+
+    switch(entityState->GetEntityType())
     {
-        // Partner demon analyze
-        auto dState = std::dynamic_pointer_cast<DemonState>(entityState);
-
-        libcomp::Packet reply;
-        reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_ANALYZE_DEMON);
-        reply.WriteS32Little(targetEntityID);
-
-        auto d = dState ? dState->GetEntity() : nullptr;
-        if(d)
+    case EntityType_t::CHARACTER:
         {
-            for(size_t i = 0; i < 8; i++)
+            auto cState = std::dynamic_pointer_cast<CharacterState>(entityState);
+            auto character = cState ? cState->GetEntity() : nullptr;
+            if(p.Size() == 6)
             {
-                auto skillID = d->GetLearnedSkills(i);
-                reply.WriteU32Little(skillID == 0 ? (uint32_t)-1 : skillID);
+                // Character analyze
+                uint16_t equipMask = p.ReadU16Little();
+
+                libcomp::Packet reply;
+                reply.WritePacketCode(
+                    ChannelToClientPacketCode_t::PACKET_EQUIPMENT_ANALYZE);
+                reply.WriteS32Little(targetEntityID);
+                reply.WriteU16Little(equipMask);
+                for(int8_t slot = 0; slot < 15; slot++)
+                {
+                    // Only return the equipment requested
+                    if((equipMask & (1 << slot)) == 0) continue;
+
+                    auto equip = character ? character->GetEquippedItems(
+                            (size_t)slot).Get() : nullptr;
+
+                    characterManager->GetItemDetailPacketData(reply, equip, 0);
+                }
+
+                client->SendPacket(reply);
             }
-
-            for(size_t i = 0; i < 12; i++)
+            else
             {
-                reply.WriteS8(d->GetReunion(i));
-            }
+                // Time trial analyze
+                auto progress = character ? character->GetProgress().Get()
+                    : nullptr;
 
-            reply.WriteU8(0);   // Unknown
+                libcomp::Packet reply;
+                reply.WritePacketCode(ChannelToClientPacketCode_t::
+                    PACKET_ANALYZE_DUNGEON_RECORDS);
+                reply.WriteS32Little(targetEntityID);
 
-            //Force Stack?
-            for(size_t i = 0; i < 8; i++)
-            {
-                reply.WriteU16Little(0);
-            }
+                if(progress)
+                {
+                    reply.WriteS8(progress->GetTimeTrialID());
 
-            reply.WriteU8(0);   //Unknown
-            reply.WriteU8(0);   //Mitama type
+                    reply.WriteS8((int8_t)progress->TimeTrialRecordsCount());
+                    for (uint16_t trialTime : progress->GetTimeTrialRecords())
+                    {
+                        reply.WriteU16Little(trialTime ? trialTime
+                            : (uint16_t)-1);
+                    }
+                }
+                else
+                {
+                    reply.WriteBlank(6);
+                }
 
-            //Reunion bonuses (12 * 8 ranks)
-            for(size_t i = 0; i < 96; i++)
-            {
-                reply.WriteU8(0);
-            }
-
-            //Characteristics panel
-            for(size_t i = 0; i < 4; i++)
-            {
-                reply.WriteU32Little(static_cast<uint32_t>(-1));    //Item type
+                client->SendPacket(reply);
             }
         }
-        else
+        break;
+    case EntityType_t::PARTNER_DEMON:
         {
-            reply.WriteBlank(179);
-        }
+            // Partner demon analyze
+            auto dState = std::dynamic_pointer_cast<DemonState>(entityState);
 
-        connection->SendPacket(reply);
+            libcomp::Packet reply;
+            reply.WritePacketCode(
+                ChannelToClientPacketCode_t::PACKET_ANALYZE_DEMON);
+            reply.WriteS32Little(targetEntityID);
+
+            auto d = dState ? dState->GetEntity() : nullptr;
+            if(d)
+            {
+                for(size_t i = 0; i < 8; i++)
+                {
+                    auto skillID = d->GetLearnedSkills(i);
+                    reply.WriteU32Little(skillID == 0 ? (uint32_t)-1 : skillID);
+                }
+
+                for(size_t i = 0; i < 12; i++)
+                {
+                    reply.WriteS8(d->GetReunion(i));
+                }
+
+                reply.WriteU8(0);   // Unknown
+
+                //Force Stack?
+                for(size_t i = 0; i < 8; i++)
+                {
+                    reply.WriteU16Little(0);
+                }
+
+                reply.WriteU8(0);   //Unknown
+                reply.WriteU8(0);   //Mitama type
+
+                //Reunion bonuses (12 * 8 ranks)
+                for(size_t i = 0; i < 96; i++)
+                {
+                    reply.WriteU8(0);
+                }
+
+                //Characteristics panel
+                for(size_t i = 0; i < 4; i++)
+                {
+                    reply.WriteU32Little(static_cast<uint32_t>(-1));    //Item type
+                }
+            }
+            else
+            {
+                reply.WriteBlank(179);
+            }
+
+            client->SendPacket(reply);
+        }
+        break;
+    default:
+        LOG_ERROR(libcomp::String("Attempted to analyze an entity that is"
+            " not valid: %1\n").Arg(state->GetAccountUID().ToString()));
+        break;
     }
 
     return true;

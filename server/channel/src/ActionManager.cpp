@@ -66,15 +66,22 @@
 #include <DemonBox.h>
 #include <DropSet.h>
 #include <LootBox.h>
+#include <MiCategoryData.h>
+#include <MiItemData.h>
+#include <MiPossessionData.h>
+#include <MiSkillItemStatusCommonData.h>
 #include <MiSpotData.h>
+#include <MiTimeLimitData.h>
 #include <MiZoneData.h>
 #include <ObjectPosition.h>
 #include <Party.h>
+#include <PostItem.h>
 #include <Quest.h>
 #include <ServerNPC.h>
 #include <ServerObject.h>
 #include <ServerZone.h>
 #include <ServerZoneInstance.h>
+#include <ServerZoneTrigger.h>
 
 // channel Includes
 #include "AccountManager.h"
@@ -347,11 +354,27 @@ void ActionManager::PerformActions(
                     break;
                 }
             }
-            else if(!it->second(*this, ctx))
+            else if(!it->second(*this, ctx) && action->GetStopOnFailure())
+            {
+                if(!action->GetOnFailureEvent().IsEmpty())
+                {
+                    mServer.lock()->GetEventManager()->HandleEvent(ctx.Client,
+                        action->GetOnFailureEvent(), ctx.SourceEntityID);
+                }
+                else
+                {
+                    LOG_DEBUG(libcomp::String("Quitting mid-action execution"
+                        " following the result of action type: %1.\n")
+                        .Arg((int32_t)action->GetActionType()));
+                }
+
+                break;
+            }
+            else if(!ctx.CurrentZone)
             {
                 LOG_DEBUG(libcomp::String("Quitting mid-action execution"
-                    " following the result of action type: %1.\n")
-                    .Arg((int32_t)action->GetActionType()));
+                    " following removal of the context zone from action"
+                    " type: %1.\n").Arg((int32_t)action->GetActionType()));
                 break;
             }
         }
@@ -475,7 +498,7 @@ bool ActionManager::ZoneChange(ActionContext& ctx)
     // Update to point to the new zone
     ctx.CurrentZone = zoneManager->GetCurrentZone(ctx.Client);
 
-    return true;
+    return ctx.CurrentZone != nullptr;
 }
 
 bool ActionManager::SetHomepoint(ActionContext& ctx)
@@ -544,6 +567,7 @@ bool ActionManager::AddRemoveItems(ActionContext& ctx)
 
     auto server = mServer.lock();
     auto characterManager = server->GetCharacterManager();
+    auto definitionManager = server->GetDefinitionManager();
     auto state = ctx.Client->GetClientState();
     auto cState = state->GetCharacterState();
     auto items = act->GetItems();
@@ -562,35 +586,207 @@ bool ActionManager::AddRemoveItems(ActionContext& ctx)
         }
     }
 
-    if(!characterManager->AddRemoveItems(ctx.Client, adds, true) ||
-        !characterManager->AddRemoveItems(ctx.Client, removes, false))
+    switch(act->GetMode())
     {
-        if(act->GetStopOnFailure())
+    case objects::ActionAddRemoveItems::Mode_t::INVENTORY:
+    case objects::ActionAddRemoveItems::Mode_t::TIME_TRIAL_REWARD:
         {
-            if(!act->GetOnFailureEvent().IsEmpty())
+            bool timeTrialReward = act->GetMode() ==
+                objects::ActionAddRemoveItems::Mode_t::TIME_TRIAL_REWARD;
+            if(timeTrialReward)
             {
-                server->GetEventManager()->HandleEvent(ctx.Client, act->GetOnFailureEvent(),
-                    ctx.SourceEntityID);
+                auto character = cState->GetEntity();
+                auto progress = character ? character->GetProgress().Get()
+                    : nullptr;
+                if(!progress || progress->GetTimeTrialID() <= 0)
+                {
+                    LOG_ERROR(libcomp::String("Attempted to grant time trial"
+                        " rewards when no complete time trial exists: %1\n")
+                        .Arg(state->GetAccountUID().ToString()));
+                    return false;
+                }
             }
 
+            if(!characterManager->AddRemoveItems(ctx.Client, adds, true) ||
+                !characterManager->AddRemoveItems(ctx.Client, removes, false))
+            {
+                return false;
+            }
+
+            if(timeTrialReward)
+            {
+                // Typically only one reward is set per trial
+                uint32_t rewardItem = adds.size() > 0
+                    ? adds.begin()->first : 0;
+                uint16_t rewardItemCount = adds.size() > 0
+                    ? (uint16_t)adds.begin()->second : 0;
+
+                RecordTimeTrial(ctx, rewardItem, rewardItemCount);
+            }
+
+            if(adds.size() > 0 && (act->GetNotify() || timeTrialReward))
+            {
+                libcomp::Packet p;
+                p.WritePacketCode(
+                    ChannelToClientPacketCode_t::PACKET_EVENT_GET_ITEMS);
+                p.WriteS8((int8_t)adds.size());
+                for(auto entry : adds)
+                {
+                    p.WriteU32Little(entry.first);              // Type
+                    p.WriteU16Little((uint16_t)entry.second);   // Quantity
+                }
+
+                ctx.Client->QueuePacket(p);
+            }
+
+            ctx.Client->FlushOutgoing();
+        }
+        break;
+    case objects::ActionAddRemoveItems::Mode_t::MATERIAL_TANK:
+        {
+            // Make sure we have valid materials first
+            for(auto& itemSet : { adds, removes })
+            {
+                for(auto pair : itemSet)
+                {
+                    auto itemData = definitionManager->GetItemData(pair.first);
+                    auto categoryData = itemData
+                        ? itemData->GetCommon()->GetCategory() : nullptr;
+                    if(!categoryData || categoryData->GetMainCategory() != 1 ||
+                        categoryData->GetSubCategory() != 64)
+                    {
+                        LOG_ERROR(libcomp::String("Attempted to add or remove"
+                            " non-material item in the material tank: %1\n")
+                            .Arg(pair.first));
+                        return false;
+                    }
+                }
+            }
+
+            auto character = cState->GetEntity();
+            if(character)
+            {
+                auto materials = character->GetMaterials();
+
+                std::set<uint32_t> updates;
+                for(auto pair : adds)
+                {
+                    uint32_t itemType = pair.first;
+                    auto itemData = definitionManager->GetItemData(pair.first);
+
+                    int32_t maxStack = (int32_t)itemData->GetPossession()
+                        ->GetStackSize();
+
+                    auto it = materials.find(itemType);
+                    int32_t newStack = (int32_t)((it != materials.end()
+                        ? it->second : 0) + pair.second);
+
+                    if(newStack > maxStack)
+                    {
+                        newStack = (int32_t)maxStack;
+                    }
+
+                    materials[itemType] = (uint16_t)newStack;
+
+                    updates.insert(itemType);
+                }
+
+                for(auto pair : removes)
+                {
+                    uint32_t itemType = pair.first;
+
+                    auto it = materials.find(itemType);
+                    int32_t newStack = (int32_t)((it != materials.end()
+                        ? it->second : 0) - pair.second);
+
+                    if(newStack < 0)
+                    {
+                        // Not enough materials
+                        return false;
+                    }
+                    else if(newStack == 0)
+                    {
+                        materials.erase(itemType);
+                    }
+                    else
+                    {
+                        materials[itemType] = (uint16_t)newStack;
+                    }
+
+                    updates.insert(itemType);
+                }
+
+                character->SetMaterials(materials);
+
+                server->GetWorldDatabase()
+                    ->QueueUpdate(character, state->GetAccountUID());
+
+                characterManager->SendMaterials(ctx.Client, updates);
+            }
+            else
+            {
+                return false;
+            }
+        }
+        break;
+    case objects::ActionAddRemoveItems::Mode_t::POST:
+        if(removes.size() > 0)
+        {
+            LOG_ERROR("Attempted to remove one or more items"
+                " from a post which is not allowed.\n");
             return false;
         }
-
-        return true;
-    }
-
-    if(adds.size() > 0 && act->GetNotify())
-    {
-        libcomp::Packet p;
-        p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_EVENT_GET_ITEMS);
-        p.WriteS8((int8_t)adds.size());
-        for(auto entry : adds)
+        else
         {
-            p.WriteU32Little(entry.first);              // Type
-            p.WriteU16Little((uint16_t)entry.second);   // Quantity
-        }
+            // Make sure they're valid products first
+            for(auto pair : adds)
+            {
+                auto product = definitionManager->GetShopProductData(pair.first);
+                if(!product)
+                {
+                    LOG_ERROR(libcomp::String("Attempted to add an invalid"
+                        " product to a post: %1\n").Arg(pair.first));
+                    return false;
+                }
+            }
 
-        ctx.Client->SendPacket(p);
+            auto lobbyDB = server->GetLobbyDatabase();
+
+            auto postItems = objects::PostItem::LoadPostItemListByAccount(
+                lobbyDB, state->GetAccountUID());
+
+            auto dbChanges = libcomp::DatabaseChangeSet::Create();
+            for(auto pair : adds)
+            {
+                for(uint32_t i = 0; i < pair.second; i++)
+                {
+                    if((postItems.size() + pair.second) >= MAX_POST_ITEM_COUNT)
+                    {
+                        return false;
+                    }
+
+                    auto postItem = libcomp::PersistentObject::New<
+                        objects::PostItem>(true);
+                    postItem->SetType(pair.first);
+                    postItem->SetTimestamp((uint32_t)std::time(0));
+                    postItem->SetAccount(state->GetAccountUID());
+
+                    dbChanges->Insert(postItem);
+
+                    postItems.push_back(postItem);
+                }
+            }
+
+            if(!lobbyDB->ProcessChangeSet(dbChanges))
+            {
+                LOG_ERROR("Attempted to remove one or more items"
+                    " from a post which is not allowed.\n");
+                return false;
+            }
+        }
+        break;
+    default:
+        return false;
     }
 
     return true;
@@ -598,16 +794,9 @@ bool ActionManager::AddRemoveItems(ActionContext& ctx)
 
 bool ActionManager::AddRemoveStatus(ActionContext& ctx)
 {
-    if(!ctx.Client)
-    {
-        LOG_ERROR("Attempted to add or remove a status effect with"
-            " no associated client connection\n");
-        return false;
-    }
-
     auto act = std::dynamic_pointer_cast<objects::ActionAddRemoveStatus>(ctx.Action);
 
-    auto state = ctx.Client->GetClientState();
+    auto state = ctx.Client ? ctx.Client->GetClientState() : nullptr;
     auto server = mServer.lock();
     auto definitionManager = server->GetDefinitionManager();
     auto tokuseiManager = server->GetTokuseiManager();
@@ -621,22 +810,52 @@ bool ActionManager::AddRemoveStatus(ActionContext& ctx)
 
     if(statuses.size() > 0)
     {
-        if(act->GetTargetType() == objects::ActionAddRemoveStatus::TargetType_t::CHARACTER ||
-            act->GetTargetType() ==
-            objects::ActionAddRemoveStatus::TargetType_t::CHARACTER_AND_PARTNER)
+        bool playerEntityModified = false;
+        switch(act->GetTargetType())
         {
-            state->GetCharacterState()->AddStatusEffects(statuses, definitionManager);
+        case objects::ActionAddRemoveStatus::TargetType_t::CHARACTER:
+            if(state)
+            {
+                state->GetCharacterState()->AddStatusEffects(statuses,
+                    definitionManager);
+                playerEntityModified = true;
+            }
+            break;
+        case objects::ActionAddRemoveStatus::TargetType_t::PARTNER:
+            if(state)
+            {
+                state->GetDemonState()->AddStatusEffects(statuses,
+                    definitionManager);
+                playerEntityModified = true;
+            }
+            break;
+        case objects::ActionAddRemoveStatus::TargetType_t::CHARACTER_AND_PARTNER:
+            if(state)
+            {
+                state->GetCharacterState()->AddStatusEffects(statuses,
+                    definitionManager);
+                state->GetDemonState()->AddStatusEffects(statuses,
+                    definitionManager);
+                playerEntityModified = true;
+            }
+            break;
+        case objects::ActionAddRemoveStatus::TargetType_t::SOURCE:
+            {
+                auto eState = ctx.CurrentZone->GetActiveEntity(ctx.SourceEntityID);
+                if(eState)
+                {
+                    eState->AddStatusEffects(statuses, definitionManager);
+                    tokuseiManager->Recalculate(eState, true);
+                }
+            }
+            break;
         }
 
-        if(act->GetTargetType() == objects::ActionAddRemoveStatus::TargetType_t::PARTNER ||
-            act->GetTargetType() ==
-            objects::ActionAddRemoveStatus::TargetType_t::CHARACTER_AND_PARTNER)
+        if(playerEntityModified)
         {
-            state->GetDemonState()->AddStatusEffects(statuses, definitionManager);
+            // Recalculate the character and demon
+            tokuseiManager->Recalculate(state->GetCharacterState(), true);
         }
-
-        // Recalculate the character and demon
-        tokuseiManager->Recalculate(state->GetCharacterState(), true);
     }
 
     return true;
@@ -1143,10 +1362,10 @@ bool ActionManager::SetNPCState(ActionContext& ctx)
     std::shared_ptr<objects::ServerObject> oNPC;
     switch(oNPCState->GetEntityType())
     {
-    case objects::EntityStateObject::EntityType_t::NPC:
+    case EntityType_t::NPC:
         oNPC = std::dynamic_pointer_cast<NPCState>(oNPCState)->GetEntity();
         break;
-    case objects::EntityStateObject::EntityType_t::OBJECT:
+    case EntityType_t::OBJECT:
         oNPC = std::dynamic_pointer_cast<ServerObjectState>(oNPCState)->GetEntity();
         break;
     default:
@@ -1241,6 +1460,9 @@ bool ActionManager::UpdateFlag(ActionContext& ctx)
     case objects::ActionUpdateFlag::FlagType_t::VALUABLE:
         characterManager->AddRemoveValuable(ctx.Client, act->GetID(),
             act->GetRemove());
+        break;
+    case objects::ActionUpdateFlag::FlagType_t::TIME_TRIAL:
+        return RecordTimeTrial(ctx, 0, 0);
         break;
     default:
         return false;
@@ -1480,6 +1702,32 @@ bool ActionManager::UpdateZoneFlags(ActionContext& ctx)
         break;
     }
 
+    if(act->GetType() == objects::ActionUpdateZoneFlags::Type_t::ZONE &&
+        ctx.CurrentZone->FlagSetKeysCount() > 0)
+    {
+        // Check if any flags that have been set have action triggers
+        std::set<int32_t> triggerFlags;
+        for(auto pair : act->GetFlagStates())
+        {
+            if(ctx.CurrentZone->FlagSetKeysContains(pair.first))
+            {
+                triggerFlags.insert(pair.first);
+            }
+        }
+
+        for(int32_t triggerFlag : triggerFlags)
+        {
+            for(auto trigger : ctx.CurrentZone->GetFlagSetTriggers())
+            {
+                if(trigger->GetValue() == triggerFlag)
+                {
+                    PerformActions(ctx.Client, trigger->GetActions(),
+                        ctx.SourceEntityID, ctx.CurrentZone, 0);
+                }
+            }
+        }
+    }
+
     return true;
 }
 
@@ -1501,7 +1749,8 @@ bool ActionManager::UpdateZoneInstance(ActionContext& ctx)
     case objects::ActionZoneInstance::Mode_t::CREATE:
         {
             auto serverDataManager = server->GetServerDataManager();
-            auto instDef = serverDataManager->GetZoneInstanceData(act->GetInstanceID());
+            auto instDef = serverDataManager->GetZoneInstanceData(
+                act->GetInstanceID());
             if(!instDef)
             {
                 LOG_ERROR(libcomp::String("Invalid zone instance ID could not"
@@ -1509,7 +1758,9 @@ bool ActionManager::UpdateZoneInstance(ActionContext& ctx)
                 return false;
             }
 
-            return zoneManager->CreateInstance(ctx.Client, act->GetInstanceID()) != nullptr;
+            return zoneManager->CreateInstance(ctx.Client,
+                act->GetInstanceID(), act->GetVariantID(), act->GetTimerID(),
+                act->GetTimerExpirationEventID()) != nullptr;
         }
     case objects::ActionZoneInstance::Mode_t::JOIN:
         {
@@ -1534,7 +1785,7 @@ bool ActionManager::UpdateZoneInstance(ActionContext& ctx)
     case objects::ActionZoneInstance::Mode_t::REMOVE:
         {
             auto state = ctx.Client->GetClientState();
-            auto zone = state->GetCharacterState()->GetZone();
+            auto zone = state->GetZone();
             auto currentInst = zone ? zone->GetInstance() : nullptr;
 
             auto instance = zoneManager->GetInstanceAccess(ctx.Client);
@@ -1544,6 +1795,91 @@ bool ActionManager::UpdateZoneInstance(ActionContext& ctx)
             }
 
             return true;
+        }
+        break;
+    case objects::ActionZoneInstance::Mode_t::START_TIMER:
+        {
+            auto instance = ctx.CurrentZone->GetInstance();
+            auto def = instance ? instance->GetDefinition() : nullptr;
+
+            if(!instance || (act->GetInstanceID() &&
+                def->GetID() != act->GetInstanceID()))
+            {
+                return false;
+            }
+
+            uint32_t timerID = act->GetTimerID();
+            if(timerID)
+            {
+                switch(ctx.CurrentZone->GetInstanceType())
+                {
+                case InstanceType_t::TIME_TRIAL:
+                case InstanceType_t::DEMON_ONLY:
+                    LOG_ERROR("Attempted to start a non-default timer on"
+                        " an implicit timer instance type.\n");
+                    return false;
+                default:
+                    break;
+                }
+
+                // Stop any existing timer
+                if(instance->GetTimerStart() && !instance->GetTimerStop() &&
+                    !zoneManager->StopInstanceTimer(instance))
+                {
+                    LOG_ERROR(libcomp::String("Attempted to start an instance"
+                        " timer but the previous timer could not be stopped"
+                        " first for instance %1\n").Arg(instance->GetID()));
+                    return false;
+                }
+
+                auto definitionManager = server->GetDefinitionManager();
+                auto timeLimitDef = definitionManager->GetTimeLimitData(
+                    timerID);
+                if(timeLimitDef)
+                {
+                    instance->SetTimeLimitData(timeLimitDef);
+                    instance->SetTimerExpirationEventID(
+                        act->GetTimerExpirationEventID());
+                    instance->SetTimerStart(0);
+                    instance->SetTimerStop(0);
+                    instance->SetTimerExpire(0);
+                }
+                else
+                {
+                    LOG_ERROR(libcomp::String("Attempted to start an invalid"
+                        " instance timer: %1\n").Arg(timerID));
+                    return false;
+                }
+            }
+
+            return zoneManager->StartInstanceTimer(instance);
+        }
+        break;
+    case objects::ActionZoneInstance::Mode_t::STOP_TIMER:
+        {
+            auto instance = ctx.CurrentZone->GetInstance();
+            auto def = instance ? instance->GetDefinition() : nullptr;
+
+            if(!instance || (act->GetInstanceID() &&
+                def->GetID() != act->GetInstanceID()))
+            {
+                return false;
+            }
+
+            uint32_t timerID = act->GetTimerID();
+            if(timerID)
+            {
+                auto timeLimitData = instance->GetTimeLimitData();
+                if(!timeLimitData || timeLimitData->GetID() != timerID)
+                {
+                    LOG_ERROR(libcomp::String("Attempted to stop an"
+                        " instance timer that did not match the supplied"
+                        " timer ID: %1\n").Arg(timerID));
+                    return false;
+                }
+            }
+
+            return zoneManager->StopInstanceTimer(instance);
         }
         break;
     default:
@@ -1696,6 +2032,61 @@ bool ActionManager::CreateLoot(ActionContext& ctx)
     }
 
     ChannelClientConnection::FlushAllOutgoing(zConnections);
+
+    return true;
+}
+
+bool ActionManager::RecordTimeTrial(ActionContext& ctx, uint32_t rewardItem,
+    uint16_t rewardItemCount)
+{
+    // Push the pending time trial values to the records
+    auto state = ctx.Client->GetClientState();
+    auto cState = state ? state->GetCharacterState() : nullptr;
+    auto character = cState ? cState->GetEntity() : nullptr;
+    auto progress = character ? character->GetProgress().Get()
+        : nullptr;
+    if(progress && progress->GetTimeTrialID())
+    {
+        int8_t trialID = progress->GetTimeTrialID();
+
+        bool newRecord = false;
+
+        // If the new time was faster, store it in the records
+        uint16_t previousTime = progress->GetTimeTrialRecords(
+            (size_t)(trialID - 1));
+        if(!previousTime || previousTime > progress->GetTimeTrialTime())
+        {
+            progress->SetTimeTrialRecords((size_t)(trialID - 1),
+                progress->GetTimeTrialTime());
+            newRecord = true;
+        }
+
+        libcomp::Packet p;
+        p.WritePacketCode(
+            ChannelToClientPacketCode_t::PACKET_TIME_TRIAL_REPORT);
+        p.WriteU8(newRecord ? 1 : 0);
+        p.WriteS8(trialID);
+        p.WriteU16Little(progress->GetTimeTrialTime());
+        p.WriteU32Little(rewardItem);
+        p.WriteU16Little(rewardItemCount);
+
+        ctx.Client->SendPacket(p);
+
+        progress->SetTimeTrialID(-1);
+        progress->SetTimeTrialTime(0);
+        progress->SetTimeTrialResult(
+            objects::CharacterProgress::TimeTrialResult_t::NONE);
+
+        mServer.lock()->GetWorldDatabase()->QueueUpdate(progress,
+            state->GetAccountUID());
+    }
+    else if(ctx.Action->GetStopOnFailure())
+    {
+        LOG_ERROR(libcomp::String("Attempted to update an active time"
+            " trial record but one does not exist: %1\n")
+            .Arg(state->GetAccountUID().ToString()));
+        return false;
+    }
 
     return true;
 }

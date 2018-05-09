@@ -5,4 +5,5 @@
     <include path="clientstate.xml"/>
     <include path="entitystate.xml"/>
     <include path="loot.xml"/>
+    <include path="zone.xml"/>
 </objgen>

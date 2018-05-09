@@ -34,16 +34,16 @@ namespace libcomp
 #define VERSION_YEAR  (2018)
 
 /// Major release (1 = pixie.)
-#define VERSION_MAJOR (2)
+#define VERSION_MAJOR (3)
 
 /// Minor release (1 = SP1).
-#define VERSION_MINOR (2)
+#define VERSION_MINOR (0)
 
 /// Patch version (a hotfix).
 #define VERSION_PATCH (0)
 
 /// Codename for the version.
-#define VERSION_CODENAME "Kodama (SP2)"
+#define VERSION_CODENAME "Lilim"
 
 /// HACK format magic.
 #define HACK_FORMAT_MAGIC (0x4B434148)
@@ -104,6 +104,9 @@ namespace libcomp
 
 /// Maximum supported character level.
 #define MAX_LEVEL (99)
+
+/// Maximum player entity HP and MP.
+#define MAX_PLAYER_HP_MP (30000)
 
 /// Maximum point value for an inherited skill before it can be learned.
 #define MAX_INHERIT_SKILL (10000)

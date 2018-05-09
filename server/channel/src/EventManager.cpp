@@ -117,7 +117,7 @@ bool EventManager::HandleEvent(
     const libcomp::String& eventID, int32_t sourceEntityID,
     const std::shared_ptr<Zone>& zone, uint32_t actionGroupID)
 {
-    auto instance = PrepareEvent(client, eventID, sourceEntityID);
+    auto instance = PrepareEvent(eventID, sourceEntityID);
     if(instance)
     {
         instance->SetActionGroupID(actionGroupID);
@@ -135,7 +135,6 @@ bool EventManager::HandleEvent(
 }
 
 std::shared_ptr<objects::EventInstance> EventManager::PrepareEvent(
-    const std::shared_ptr<ChannelClientConnection>& client,
     const libcomp::String& eventID, int32_t sourceEntityID)
 {
     auto server = mServer.lock();
@@ -154,18 +153,6 @@ std::shared_ptr<objects::EventInstance> EventManager::PrepareEvent(
             new objects::EventInstance);
         instance->SetEvent(event);
         instance->SetSourceEntityID(sourceEntityID);
-
-        if(client)
-        {
-            auto state = client->GetClientState();
-            auto eState = state->GetEventState();
-            if(eState->GetCurrent() != nullptr)
-            {
-                eState->AppendPrevious(eState->GetCurrent());
-            }
-
-            eState->SetCurrent(instance);
-        }
 
         return instance;
     }
@@ -1640,11 +1627,11 @@ bool EventManager::EvaluateCondition(EventContext& ctx,
 
             switch(npc->GetEntityType())
             {
-            case objects::EntityStateObject::EntityType_t::NPC:
+            case EntityType_t::NPC:
                 npcState = std::dynamic_pointer_cast<NPCState>(npc)
                     ->GetEntity()->GetState();
                 break;
-            case objects::EntityStateObject::EntityType_t::OBJECT:
+            case EntityType_t::OBJECT:
                 npcState = std::dynamic_pointer_cast<ServerObjectState>(npc)
                     ->GetEntity()->GetState();
                 break;
@@ -1978,6 +1965,25 @@ bool EventManager::HandleEvent(EventContext& ctx)
         // End the event sequence
         return EndEvent(ctx.Client);
     }
+    else if(ctx.Client)
+    {
+        // If an event is already in progress that is not the one
+        // requested, queue the requested event and stop
+        auto state = ctx.Client->GetClientState();
+        auto eState = state->GetEventState();
+        if(eState->GetCurrent())
+        {
+            if(eState->GetCurrent() != ctx.EventInstance)
+            {
+                eState->AppendQueued(ctx.EventInstance);
+                return true;
+            }
+        }
+        else
+        {
+            eState->SetCurrent(ctx.EventInstance);
+        }
+    }
 
     ctx.EventInstance->SetState(ctx.EventInstance->GetEvent());
 
@@ -2109,8 +2115,8 @@ void EventManager::HandleNext(EventContext& ctx)
 
                     auto scriptResult = !f.IsNull()
                         ? f.Evaluate<size_t>(
-                            state->GetCharacterState(),
-                            state->GetDemonState(),
+                            state ? state->GetCharacterState() : nullptr,
+                            state ? state->GetDemonState() : nullptr,
                             ctx.CurrentZone,
                             sqParams) : 0;
                     if(scriptResult)
@@ -2151,7 +2157,12 @@ void EventManager::HandleNext(EventContext& ctx)
 
     if(!queueEventID.IsEmpty() && eState)
     {
-        eState->AppendQueued(queueEventID);
+        auto queue = PrepareEvent(queueEventID,
+            ctx.EventInstance->GetSourceEntityID());
+        if(queue)
+        {
+            eState->AppendQueued(queue);
+        }
     }
 
     if(nextEventID.IsEmpty())
@@ -2167,17 +2178,22 @@ void EventManager::HandleNext(EventContext& ctx)
                 eState->SetCurrent(previous);
 
                 ctx.EventInstance = previous;
+                eState->SetCurrent(previous);
+
                 HandleEvent(ctx);
                 return;
             }
             else if(eState->QueuedCount() > 0)
             {
                 // Process the first queued event
-                queueEventID = eState->GetQueued(0);
+                auto queued = eState->GetQueued(0);
                 eState->RemoveQueued(0);
 
-                // Queued events have no source associated to them
-                HandleEvent(ctx.Client, queueEventID, 0, ctx.CurrentZone);
+                // Push current onto previous and replace
+                eState->AppendPrevious(ctx.EventInstance);
+                eState->SetCurrent(queued);
+
+                HandleEvent(ctx.Client, queued);
                 return;
             }
         }
@@ -2187,6 +2203,13 @@ void EventManager::HandleNext(EventContext& ctx)
     }
     else
     {
+        if(eState)
+        {
+            // Push current onto previous
+            eState->AppendPrevious(ctx.EventInstance);
+            eState->SetCurrent(nullptr);
+        }
+
         HandleEvent(ctx.Client, nextEventID,
             ctx.EventInstance->GetSourceEntityID(), ctx.CurrentZone,
             ctx.EventInstance->GetActionGroupID());
@@ -2380,6 +2403,8 @@ bool EventManager::EndEvent(const std::shared_ptr<ChannelClientConnection>& clie
         auto eState = state->GetEventState();
 
         eState->SetCurrent(nullptr);
+        eState->ClearPrevious();
+        eState->ClearQueued();
 
         libcomp::Packet p;
         p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_EVENT_END);

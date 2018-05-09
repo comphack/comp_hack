@@ -406,6 +406,8 @@ bool ChannelServer::Initialize()
         to_underlying(ClientToChannelPacketCode_t::PACKET_ENCHANT));
     clientPacketManager->AddParser<Parsers::DungeonRecords>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_DUNGEON_RECORDS));
+    clientPacketManager->AddParser<Parsers::Analyze>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_ANALYZE_DUNGEON_RECORDS));
     clientPacketManager->AddParser<Parsers::TriFusionJoin>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_TRIFUSION_JOIN));
     clientPacketManager->AddParser<Parsers::TriFusionDemonUpdate>(
@@ -432,6 +434,8 @@ bool ChannelServer::Initialize()
         to_underlying(ClientToChannelPacketCode_t::PACKET_PLASMA_ITEM_DATA));
     clientPacketManager->AddParser<Parsers::PlasmaItem>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_PLASMA_ITEM));
+    clientPacketManager->AddParser<Parsers::TimeLimitSync>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_TIME_LIMIT_SYNC));
     clientPacketManager->AddParser<Parsers::ItemDisassemble>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_ITEM_DISASSEMBLE));
     clientPacketManager->AddParser<Parsers::EquipmentMod>(

@@ -568,8 +568,9 @@ public:
      * @param points Set or adjusted soul points to update the demon with
      * @param isAdjust true if the points value should be added
      *  to the current value, false if it should replace the curent value
+     * @return Adjusted SP amount gained or lossed (before limits are applied)
      */
-    void UpdateSoulPoints(const std::shared_ptr<
+    int32_t UpdateSoulPoints(const std::shared_ptr<
         channel::ChannelClientConnection>& client, int32_t points,
         bool isAdjust = false);
 
@@ -855,8 +856,10 @@ public:
      * Correct a map of calculated stat values to not exceed the maximum or
      * minimum values possible.
      * @param stats Reference to a correct table map
+     * @param limitMax If true, maximum stat limits will be adjusted as well
      */
-    static void AdjustStatBounds(libcomp::EnumMap<CorrectTbl, int16_t>& stats);
+    static void AdjustStatBounds(libcomp::EnumMap<CorrectTbl, int16_t>& stats,
+        bool limitMax);
 
     /**
      * Add data to a packet about a demon in a box.

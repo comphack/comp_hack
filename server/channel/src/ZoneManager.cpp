@@ -33,6 +33,7 @@
 #include <PacketCodes.h>
 #include <Randomizer.h>
 #include <ScriptEngine.h>
+#include <ServerConstants.h>
 #include <ServerDataManager.h>
 
 // objects Include
@@ -41,6 +42,7 @@
 #include <AccountWorldData.h>
 #include <ActionSpawn.h>
 #include <CharacterLogin.h>
+#include <CharacterProgress.h>
 #include <Enemy.h>
 #include <EntityStats.h>
 #include <Item.h>
@@ -51,6 +53,7 @@
 #include <MiDynamicMapData.h>
 #include <MiGrowthData.h>
 #include <MiSpotData.h>
+#include <MiTimeLimitData.h>
 #include <MiZoneData.h>
 #include <MiZoneFileData.h>
 #include <Party.h>
@@ -65,7 +68,10 @@
 #include <ServerObject.h>
 #include <ServerZone.h>
 #include <ServerZoneInstance.h>
+#include <ServerZoneInstanceVariant.h>
+#include <ServerZonePartial.h>
 #include <ServerZoneSpot.h>
+#include <ServerZoneTrigger.h>
 #include <Spawn.h>
 #include <SpawnGroup.h>
 #include <SpawnLocation.h>
@@ -78,6 +84,7 @@
 #include "AIState.h"
 #include "ChannelServer.h"
 #include "CharacterManager.h"
+#include "EventManager.h"
 #include "ManagerConnection.h"
 #include "PlasmaState.h"
 #include "TokuseiManager.h"
@@ -350,7 +357,7 @@ void ZoneManager::InstanceGlobalZones()
         uint32_t zoneID = zonePair.first;
         for(auto dynamicMapID : zonePair.second)
         {
-            auto zoneData = serverDataManager->GetZoneData(zoneID, dynamicMapID);
+            auto zoneData = serverDataManager->GetZoneData(zoneID, dynamicMapID, true);
             if(zoneData->GetGlobal() &&
                 (mGlobalZoneMap.find(zoneID) == mGlobalZoneMap.end() ||
                 mGlobalZoneMap[zoneID].find(dynamicMapID) == mGlobalZoneMap[zoneID].end()))
@@ -384,6 +391,20 @@ std::shared_ptr<Zone> ZoneManager::GetCurrentZone(int32_t worldCID)
 }
 
 bool ZoneManager::EnterZone(const std::shared_ptr<ChannelClientConnection>& client,
+    uint32_t zoneID, uint32_t dynamicMapID)
+{
+    auto zoneDef = mServer.lock()->GetServerDataManager()->GetZoneData(zoneID,
+        dynamicMapID);
+
+    float xCoord = zoneDef ? zoneDef->GetStartingX() : 0.f;
+    float yCoord = zoneDef ? zoneDef->GetStartingY() : 0.f;
+    float rot = zoneDef ? zoneDef->GetStartingRotation() : 0.f;
+
+    return EnterZone(client, zoneID, zoneDef ? zoneDef->GetDynamicMapID() : 0,
+        xCoord, yCoord, rot, true);
+}
+
+bool ZoneManager::EnterZone(const std::shared_ptr<ChannelClientConnection>& client,
     uint32_t zoneID, uint32_t dynamicMapID, float xCoord, float yCoord, float rotation,
     bool forceLeave)
 {
@@ -406,9 +427,38 @@ bool ZoneManager::EnterZone(const std::shared_ptr<ChannelClientConnection>& clie
     {
         LeaveZone(client, false, zoneID, dynamicMapID);
     }
+    else if(currentZone)
+    {
+        auto server = mServer.lock();
+        auto characterManager = server->GetCharacterManager();
+        auto definitionManager = server->GetDefinitionManager();
+
+        // Remove any opponents
+        characterManager->AddRemoveOpponent(false, cState, nullptr);
+        characterManager->AddRemoveOpponent(false, dState, nullptr);
+
+        // Deactivate and save the updated status effects
+        cState->SetStatusEffectsActive(false, definitionManager);
+        dState->SetStatusEffectsActive(false, definitionManager);
+
+        characterManager->UpdateStatusEffects(cState, true);
+        characterManager->UpdateStatusEffects(dState, true);
+    }
 
     auto uniqueID = nextZone->GetID();
     auto nextInstance = nextZone->GetInstance();
+
+    // Validate against instance being entered
+    if(nextZone->GetInstanceType() == InstanceType_t::DEMON_ONLY &&
+        (!dState->GetEntity() || !dState->IsAlive()))
+    {
+        LOG_ERROR(libcomp::String("Request to enter a demon only"
+            " zone received with no living demon summoned: %1\n")
+            .Arg(state->GetAccountUID().ToString()));
+        return false;
+    }
+
+    bool firstConnection = false;
     {
         std::lock_guard<std::mutex> lock(mLock);
         mEntityMap[worldCID] = uniqueID;
@@ -423,18 +473,27 @@ bool ZoneManager::EnterZone(const std::shared_ptr<ChannelClientConnection>& clie
         }
 
         // Reactive the zone if its not active already
-        mActiveZones.insert(uniqueID);
+        if(mActiveZones.find(uniqueID) == mActiveZones.end())
+        {
+            mActiveZones.insert(uniqueID);
+            firstConnection = true;
+        }
     }
+
     nextZone->AddConnection(client);
     cState->SetZone(nextZone);
     dState->SetZone(nextZone);
+
+    // Reset state values that do not persist between zones
+    state->SetAcceptRevival(false);
+    state->SetDeathTimeOut(0);
+    state->SetZoneInSpotID(0);
 
     auto server = mServer.lock();
     auto ticks = server->GetServerTime();
     auto zoneDef = nextZone->GetDefinition();
 
-    // Clear then set the zone-in spot for instances
-    state->SetZoneInSpotID(0);
+    // Set the zone-in spot for instances
     if(nextInstance)
     {
         auto dynamicMap = nextZone->GetDynamicMap();
@@ -460,6 +519,8 @@ bool ZoneManager::EnterZone(const std::shared_ptr<ChannelClientConnection>& clie
                 }
             }
         }
+
+        nextInstance->RefreshPlayerState();
     }
 
     // Move the entity to the new location.
@@ -489,6 +550,12 @@ bool ZoneManager::EnterZone(const std::shared_ptr<ChannelClientConnection>& clie
 
     server->GetTokuseiManager()->RecalculateParty(state->GetParty());
 
+    // End any previous instance specific data if leaving
+    if(currentInstance && currentInstance != nextInstance)
+    {
+        EndInstanceTimer(currentInstance, client, false, true);
+    }
+
     if(!nextInstance && currentZone)
     {
         // If moving to a non-instanced zone, set log out zone for the new
@@ -511,7 +578,14 @@ bool ZoneManager::EnterZone(const std::shared_ptr<ChannelClientConnection>& clie
     reply.WriteFloat(rotation);
     reply.WriteS32Little((int32_t)zoneDef->GetDynamicMapID());
 
-    client->SendPacket(reply);
+    client->QueuePacket(reply);
+
+    if(firstConnection && nextInstance)
+    {
+        StartInstanceTimer(nextInstance);
+    }
+
+    client->FlushOutgoing();
 
     // Tell the world that the character has changed zones
     auto cLogin = state->GetAccountLogin()->GetCharacterLogin();
@@ -589,6 +663,7 @@ void ZoneManager::LeaveZone(const std::shared_ptr<ChannelClientConnection>& clie
             zone = mZones[uniqueID];
 
             auto def = zone->GetDefinition();
+            auto instance = zone->GetInstance();
 
             mEntityMap.erase(worldCID);
             zone->RemoveConnection(client);
@@ -600,7 +675,6 @@ void ZoneManager::LeaveZone(const std::shared_ptr<ChannelClientConnection>& clie
                 // Always "freeze" the zone
                 mActiveZones.erase(uniqueID);
 
-                auto instance = zone->GetInstance();
                 auto instDef = instance ? instance->GetDefinition() : nullptr;
 
                 // If the current zone is global, the next zone is the same
@@ -643,6 +717,12 @@ void ZoneManager::LeaveZone(const std::shared_ptr<ChannelClientConnection>& clie
                         eState->Stop(now);
                     }
                 }
+            }
+
+            // Refresh the state of the instance being left
+            if(instance && !instanceRemoved)
+            {
+                instance->RefreshPlayerState();
             }
         }
         else
@@ -701,13 +781,17 @@ void ZoneManager::LeaveZone(const std::shared_ptr<ChannelClientConnection>& clie
 }
 
 std::shared_ptr<ZoneInstance> ZoneManager::CreateInstance(const std::shared_ptr<
-    ChannelClientConnection>& client, uint32_t instanceID)
+    ChannelClientConnection>& client, uint32_t instanceID, uint32_t variantID,
+    uint32_t timerID, libcomp::String timerExpirationEventID)
 {
-    auto def = mServer.lock()->GetServerDataManager()->GetZoneInstanceData(instanceID);
+    auto server = mServer.lock();
+    auto serverDataManager = server->GetServerDataManager();
+
+    auto def = serverDataManager->GetZoneInstanceData(instanceID);
     if(!def)
     {
-        LOG_ERROR(libcomp::String("Attempted to create invalid zone instance: %1\n")
-            .Arg(instanceID));
+        LOG_ERROR(libcomp::String("Attempted to create invalid zone instance"
+            ": %1\n").Arg(instanceID));
         return nullptr;
     }
 
@@ -735,11 +819,64 @@ std::shared_ptr<ZoneInstance> ZoneManager::CreateInstance(const std::shared_ptr<
         mZoneInstanceAccess[cid] = id;
     }
 
+    auto instType = InstanceType_t::NORMAL;
+    if(variantID)
+    {
+        auto variant = serverDataManager->GetZoneInstanceVariantData(
+            variantID);
+        if(!variant)
+        {
+            LOG_ERROR(libcomp::String("Invalid variant encountered during"
+                " instance creation: %1\n").Arg(variantID));
+            return nullptr;
+        }
+
+        instance->SetVariant(variant);
+        instance->SetTimerExpirationEventID(
+            variant->GetTimerExpirationEventID());
+
+        instType = variant->GetInstanceType();
+    }
+
+    if(timerID)
+    {
+        if(instType == InstanceType_t::NORMAL)
+        {
+            auto timeData = server->GetDefinitionManager()->GetTimeLimitData(
+                timerID);
+            if(timeData)
+            {
+                instance->SetTimeLimitData(timeData);
+                instance->SetTimerExpirationEventID(timerExpirationEventID);
+            }
+            else
+            {
+                LOG_ERROR(libcomp::String("Invalid timer ID specified"
+                    " for instance creation: %1\n").Arg(timerID));
+                return nullptr;
+            }
+        }
+        else
+        {
+            LOG_ERROR(libcomp::String("Attempted to specify a timer during"
+                " special instance creation: %1\n").Arg(variantID));
+            return nullptr;
+        }
+    }
+
     mZoneInstances[id] = instance;
-    LOG_DEBUG(libcomp::String("Creating zone instance: %1 (%2)\n")
-        .Arg(id).Arg(def->GetID()));
+    LOG_DEBUG(libcomp::String("Creating zone instance: %1 (%2%3)\n")
+        .Arg(id).Arg(def->GetID())
+        .Arg(variantID ? libcomp::String(": %1").Arg(variantID) : ""));
 
     return instance;
+}
+
+std::shared_ptr<ZoneInstance> ZoneManager::GetInstance(uint32_t instanceID)
+{
+    std::lock_guard<std::mutex> lock(mLock);
+    auto it = mZoneInstances.find(instanceID);
+    return it != mZoneInstances.end() ? it->second : nullptr;
 }
 
 std::shared_ptr<ZoneInstance> ZoneManager::GetInstanceAccess(const std::shared_ptr<
@@ -808,12 +945,13 @@ bool ZoneManager::SendPopulateZoneData(const std::shared_ptr<ChannelClientConnec
     auto zoneData = zone->GetDefinition();
     auto characterManager = server->GetCharacterManager();
     auto definitionManager = server->GetDefinitionManager();
-    
+
     // Send the new connection entity data to the other clients
     auto otherClients = GetZoneConnections(client, false);
     if(otherClients.size() > 0)
     {
         characterManager->SendOtherCharacterData(otherClients, state);
+
         if(dState->GetEntity())
         {
             characterManager->SendOtherPartnerData(otherClients, state);
@@ -822,16 +960,20 @@ bool ZoneManager::SendPopulateZoneData(const std::shared_ptr<ChannelClientConnec
 
     // The client's partner demon will be shown elsewhere
 
-    PopEntityForZoneProduction(zone, cState->GetEntityID(), 0);
+    // Does not appear to actually need to be sent for player characters
+    //PopEntityForZoneProduction(zone, cState->GetEntityID(), 0);
+
+    // Expire zone change status effects
+    characterManager->CancelStatusEffects(client, EFFECT_CANCEL_ZONEOUT);
+
+    HandleSpecialInstancePopulate(client, zone);
+
     ShowEntityToZone(zone, cState->GetEntityID());
     characterManager->SendMovementSpeed(client, cState, true);
 
     // Activate status effects
     cState->SetStatusEffectsActive(true, definitionManager);
     dState->SetStatusEffectsActive(true, definitionManager);
-
-    // Expire zone change status effects
-    characterManager->CancelStatusEffects(client, EFFECT_CANCEL_ZONEOUT);
 
     // It seems that if entity data is sent to the client before a previous
     // entity was processed and shown, the client will force a log-out. To
@@ -962,7 +1104,7 @@ bool ZoneManager::SendPopulateZoneData(const std::shared_ptr<ChannelClientConnec
 
     // Send all the queued NPC packets
     client->FlushOutgoing();
-    
+
     std::list<std::shared_ptr<ChannelClientConnection>> self = { client };
     for(auto oConnection : otherClients)
     {
@@ -979,6 +1121,11 @@ bool ZoneManager::SendPopulateZoneData(const std::shared_ptr<ChannelClientConnec
             characterManager->SendOtherPartnerData(self, oState);
             PopEntityForProduction(client, oDemonState->GetEntityID(), 0);
             ShowEntity(client, oDemonState->GetEntityID());
+
+            if(oState->GetDeathTimeOut())
+            {
+                UpdateDeathTimeOut(oState, 0, client);
+            }
         }
     }
 
@@ -1407,10 +1554,10 @@ void ZoneManager::HandleDespawns(const std::shared_ptr<Zone>& zone)
         {
             switch(eState->GetEntityType())
             {
-            case objects::EntityStateObject::EntityType_t::ENEMY:
+            case EntityType_t::ENEMY:
                 enemyIDs.push_back(entityID);
                 break;
-            case objects::EntityStateObject::EntityType_t::PLASMA:
+            case EntityType_t::PLASMA:
                 /// @todo
                 break;
             default:
@@ -1564,6 +1711,55 @@ void ZoneManager::UpdateStatusEffectStates(const std::shared_ptr<Zone>& zone,
     if(displayStateModified.size() > 0)
     {
         characterManager->UpdateWorldDisplayState(displayStateModified);
+    }
+}
+
+void ZoneManager::HandleSpecialInstancePopulate(
+    const std::shared_ptr<ChannelClientConnection>& client,
+    const std::shared_ptr<Zone>& zone)
+{
+    auto instance = zone->GetInstance();
+    auto instVariant = instance ? instance->GetVariant() : nullptr;
+    if(instVariant)
+    {
+        auto state = client->GetClientState();
+        auto cState = state->GetCharacterState();
+
+        switch(instVariant->GetInstanceType())
+        {
+        case InstanceType_t::TIME_TRIAL:
+            {
+                SendInstanceTimer(instance, client, true);
+            }
+            break;
+        case InstanceType_t::DEMON_ONLY:
+            {
+                // Reresh the demon-only status effect
+                /// @todo: move this with status effect rework
+                AddStatusEffectMap m;
+                m[SVR_CONST.STATUS_HIDDEN] = std::pair<uint8_t, bool>(1, true);
+
+                cState->AddStatusEffects(m,
+                    mServer.lock()->GetDefinitionManager(), 0, false);
+
+                libcomp::Packet p;
+                p.WritePacketCode(
+                    ChannelToClientPacketCode_t::PACKET_ADD_STATUS_EFFECT);
+                p.WriteS32Little(cState->GetEntityID());
+                p.WriteU32Little(1);    // Count
+
+                p.WriteU32Little(143);
+                p.WriteS32Little(0);
+                p.WriteU8(1);
+
+                BroadcastPacket(zone, p);
+
+                SendInstanceTimer(instance, client, true);
+            }
+            break;
+        default:
+            break;
+        }
     }
 }
 
@@ -2397,7 +2593,7 @@ void ZoneManager::UpdateActiveZoneStates()
     }
 
     // Get any updated time restricted zones and clear the list
-    // after retrieval (essentially they "unfreeze" momentarily
+    // after retrieval (essentially they "unfreeze" momentarily)
     {
         zones.clear();
 
@@ -2431,8 +2627,7 @@ void ZoneManager::Warp(const std::shared_ptr<ChannelClientConnection>& client,
     const std::shared_ptr<ActiveEntityState>& eState, float xPos, float yPos,
     float rot)
 {
-    auto server = mServer.lock();
-    ServerTime timestamp = server->GetServerTime();
+    ServerTime timestamp = ChannelServer::GetServerTime();
 
     eState->SetOriginX(xPos);
     eState->SetOriginY(yPos);
@@ -2488,8 +2683,751 @@ void ZoneManager::HandleTimedActions(const WorldClock& clock)
     }
 }
 
-bool ZoneManager::GetSpotPosition(uint32_t dynamicMapID, uint32_t spotID, float& x,
-    float& y, float& rot) const
+bool ZoneManager::StartInstanceTimer(const std::shared_ptr<ZoneInstance>& instance)
+{
+    if(!instance)
+    {
+        return false;
+    }
+
+    auto instVariant = instance->GetVariant();
+    auto instType = instVariant ? instVariant->GetInstanceType()
+        : InstanceType_t::NORMAL;
+
+    bool sendTimer = false;
+    int32_t scheduleExpiration = 0;
+    switch(instType)
+    {
+    case InstanceType_t::TIME_TRIAL:
+        {
+            // Timer counts up, set start time only
+            std::lock_guard<std::mutex> lock(mLock);
+            if(instance->GetTimerStart() == 0)
+            {
+                uint64_t now = ChannelServer::GetServerTime();
+                uint16_t duration = instVariant->GetTimePoints(0);
+
+                uint64_t expireTime = now + (uint64_t)duration * 1000000ULL;
+                instance->SetTimerStart(now);
+                instance->SetTimerExpire(expireTime);
+
+                scheduleExpiration = (int32_t)duration;
+            }
+        }
+        break;
+    case InstanceType_t::DEMON_ONLY:
+        {
+            // Timer counts down, set start and expire time
+            std::lock_guard<std::mutex> lock(mLock);
+            if(instance->GetTimerStart() == 0)
+            {
+                uint64_t now = ChannelServer::GetServerTime();
+                uint16_t duration = instVariant->GetTimePoints(0);
+
+                size_t partyMemberCount = instance->OriginalAccessCIDsCount();
+                if(partyMemberCount > 1)
+                {
+                    // Reduce the time by a calculated or fixed amount based
+                    // on how many party members existed on instance creation
+                    uint16_t reduction = 0;
+                    if(instVariant->TimePointsCount() == 4)
+                    {
+                        reduction = instVariant->GetTimePoints(3);
+                    }
+                    else
+                    {
+                        reduction = (uint16_t)(
+                            floor((float)duration / 600.f) * 30);
+                    }
+
+                    duration = (uint16_t)(duration - (reduction *
+                        (partyMemberCount - 1)));
+                }
+
+                uint64_t expireTime = now + (uint64_t)duration * 1000000ULL;
+                instance->SetTimerStart(now);
+                instance->SetTimerExpire(expireTime);
+
+                // Add a 1 second buffer so we don't undershoot client times
+                scheduleExpiration = (int32_t)(duration + 1);
+            }
+        }
+        break;
+    case InstanceType_t::NORMAL:
+    default:
+        {
+            auto timeLimitData = instance->GetTimeLimitData();
+            if(!timeLimitData)
+            {
+                return false;
+            }
+
+            // Timer counts down, set start and expire time from time limit
+            std::lock_guard<std::mutex> lock(mLock);
+            if(instance->GetTimerStart() == 0)
+            {
+                uint64_t now = ChannelServer::GetServerTime();
+                uint16_t duration = timeLimitData->GetDuration();
+
+                uint64_t expireTime = now + (uint64_t)duration * 1000000ULL;
+                instance->SetTimerStart(now);
+                instance->SetTimerExpire(expireTime);
+
+                // Add a 1 second buffer so we don't undershoot client times
+                scheduleExpiration = (int32_t)(duration + 1);
+                sendTimer = true;
+            }
+        }
+        break;
+    }
+
+    if(scheduleExpiration)
+    {
+        // When the instance timer expires, stop the normal timer and let it
+        // handle all time out events
+        mServer.lock()->GetTimerManager()->ScheduleEventIn(
+            (int)scheduleExpiration, []
+            (ZoneManager* pZoneManager, uint32_t pInstanceID)
+        {
+            auto pInstance = pZoneManager->GetInstance(pInstanceID);
+            if(pInstance && !pInstance->GetTimerStop() &&
+                pInstance->GetTimerExpire() <= ChannelServer::GetServerTime())
+            {
+                LOG_DEBUG(libcomp::String("Expiring instance timer: %1\n")
+                    .Arg(pInstanceID));
+                pZoneManager->StopInstanceTimer(pInstance);
+            }
+        }, this, instance->GetID());
+    }
+
+    if(sendTimer)
+    {
+        SendInstanceTimer(instance, nullptr, false);
+    }
+
+    return true;
+}
+
+bool ZoneManager::StopInstanceTimer(const std::shared_ptr<ZoneInstance>& instance)
+{
+    if(!instance)
+    {
+        return false;
+    }
+
+    auto instVariant = instance->GetVariant();
+    auto instType = instVariant ? instVariant->GetInstanceType()
+        : InstanceType_t::NORMAL;
+
+    bool expired = false;
+    switch(instType)
+    {
+    case InstanceType_t::TIME_TRIAL:
+        {
+            std::lock_guard<std::mutex> lock(mLock);
+            if(!instance->GetTimerStop())
+            {
+                uint64_t now = ChannelServer::GetServerTime();
+                instance->SetTimerStop(now);
+
+                if(instance->GetTimerExpire() <= now)
+                {
+                    // Instance timer expired (client actually handles the
+                    // time-out display)
+                    instance->SetTimerStop(instance->GetTimerExpire());
+                    expired = true;
+                }
+                else
+                {
+                    // Complete time trial
+                    for(auto client : instance->GetConnections())
+                    {
+                        EndInstanceTimer(instance, client, true);
+                    }
+                }
+            }
+        }
+        break;
+    case InstanceType_t::DEMON_ONLY:
+        {
+            std::lock_guard<std::mutex> lock(mLock);
+            if(instance->GetTimerExpire() && !instance->GetTimerStop())
+            {
+                uint64_t now = ChannelServer::GetServerTime();
+                instance->SetTimerStop(now);
+
+                if(instance->GetTimerExpire() <= now)
+                {
+                    // Instance timer expired
+                    instance->SetTimerStop(instance->GetTimerExpire());
+                    expired = true;
+
+                    for(auto client : instance->GetConnections())
+                    {
+                        EndInstanceTimer(instance, client, false);
+                    }
+
+                    // Kick everyone in 5 seconds
+                    mServer.lock()->GetTimerManager()->ScheduleEventIn(5, []
+                        (ZoneManager* pZoneManager, uint32_t pInstanceID)
+                    {
+                        auto pInstance = pZoneManager->GetInstance(pInstanceID);
+                        if(pInstance)
+                        {
+                            for(auto connection : pInstance->GetConnections())
+                            {
+                                pZoneManager->EnterZone(connection,
+                                    pInstance->GetDefinition()->GetLobbyID(), 0);
+                            }
+                        }
+                    }, this, instance->GetID());
+                }
+                else
+                {
+                    // Instance timer success
+                    for(auto client : instance->GetConnections())
+                    {
+                        EndInstanceTimer(instance, client, true);
+                    }
+                }
+            }
+        }
+        break;
+    case InstanceType_t::NORMAL:
+    default:
+        {
+            auto timeLimitData = instance->GetTimeLimitData();
+            if(!timeLimitData)
+            {
+                return false;
+            }
+
+            bool stopped = false;
+            {
+                std::lock_guard<std::mutex> lock(mLock);
+                if(!instance->GetTimerStop())
+                {
+                    uint64_t now = ChannelServer::GetServerTime();
+                    instance->SetTimerStop(now);
+
+                    stopped = true;
+                    if(instance->GetTimerExpire() <= now)
+                    {
+                        instance->SetTimerStop(instance->GetTimerExpire());
+                        expired = true;
+                    }
+                }
+            }
+
+            if(stopped && !expired)
+            {
+                for(auto client : instance->GetConnections())
+                {
+                    EndInstanceTimer(instance, client, false);
+                }
+            }
+        }
+        break;
+    }
+
+    if(expired && !instance->GetTimerExpirationEventID().IsEmpty())
+    {
+        // Fire the expiration event once per client
+        auto eventManager = mServer.lock()->GetEventManager();
+        for(auto client : instance->GetConnections())
+        {
+            auto state = client->GetClientState();
+            auto entityID = state->GetCharacterState()->GetEntityID();
+            eventManager->HandleEvent(client,
+                instance->GetTimerExpirationEventID(), entityID);
+        }
+    }
+
+    return true;
+}
+
+void ZoneManager::SendInstanceTimer(const std::shared_ptr<ZoneInstance>& instance,
+    const std::shared_ptr<ChannelClientConnection>& client, bool queue)
+{
+    if(!instance || !instance->GetTimerStart())
+    {
+        return;
+    }
+
+    auto instVariant = instance->GetVariant();
+    auto instType = instVariant ? instVariant->GetInstanceType()
+        : InstanceType_t::NORMAL;
+
+    libcomp::Packet p;
+    RelativeTimeMap timeMap;
+
+    switch(instType)
+    {
+    case InstanceType_t::TIME_TRIAL:
+        {
+            p.WritePacketCode(
+                ChannelToClientPacketCode_t::PACKET_TIME_TRIAL_UPDATE);
+            p.WriteS8((int8_t)instVariant->GetSubID());
+
+            timeMap[p.Size()] = instance->GetTimerStart();
+            p.WriteFloat(0.f);
+
+            p.WriteS32Little(0);    // Unknown
+            p.WriteBlank(32);       // Unknown array (phases?)
+            p.WriteU8(1);           // Unknown bool
+        }
+        break;
+    case InstanceType_t::DEMON_ONLY:
+        {
+            uint64_t now = ChannelServer::GetServerTime();
+
+            uint64_t expireTime = instance->GetTimerExpire();
+            float timeLeft = expireTime < now ? 0.f
+                : (float)((double)(expireTime - now) / 1000000.0);
+
+            p.WritePacketCode(
+                ChannelToClientPacketCode_t::PACKET_DEMON_SOLO_UPDATE);
+            p.WriteU32Little(instVariant->GetSubID());
+            p.WriteFloat(timeLeft);
+            p.WriteS32Little(1);
+            p.WriteS32Little(2);
+        }
+        break;
+    case InstanceType_t::NORMAL:
+    default:
+        {
+            auto timeLimitData = instance->GetTimeLimitData();
+            if(!timeLimitData || instance->GetTimerStop())
+            {
+                return;
+            }
+
+            p.WritePacketCode(
+                ChannelToClientPacketCode_t::PACKET_TIME_LIMIT_UPDATE);
+            p.WriteS8((int8_t)timeLimitData->GetID());
+
+            timeMap[p.Size()] = instance->GetTimerStart();
+            p.WriteFloat(0.f);
+
+            p.WriteU8(1);           // Unknown bool
+            p.WriteU8(0);           // Unknown bool
+        }
+    }
+
+    if(timeMap.size() > 0)
+    {
+        std::list<std::shared_ptr<ChannelClientConnection>> connections;
+        if(client)
+        {
+            connections.push_back(client);
+        }
+        else
+        {
+            connections = instance->GetConnections();
+        }
+
+        ChannelClientConnection::SendRelativeTimePacket(connections, p,
+            timeMap, queue);
+    }
+    else if(client)
+    {
+        if(queue)
+        {
+            client->QueuePacket(p);
+        }
+        else
+        {
+            client->SendPacket(p);
+        }
+    }
+    else
+    {
+        auto connections = instance->GetConnections();
+        ChannelClientConnection::BroadcastPacket(connections, p);
+    }
+}
+
+void ZoneManager::UpdateDeathTimeOut(ClientState* state, int32_t time,
+    const std::shared_ptr<ChannelClientConnection>& client)
+{
+    if(!state)
+    {
+        return;
+    }
+
+    auto zone = state->GetZone();
+    if(!zone)
+    {
+        return;
+    }
+
+    auto instance = zone ? zone->GetInstance() : nullptr;
+    auto instVariant = instance ? instance->GetVariant() : nullptr;
+
+    float timeLeft = 0.f;
+    uint64_t deathTime = state->GetDeathTimeOut();
+    if(time == -1)
+    {
+        // Removing timeout
+        state->SetDeathTimeOut(0);
+        deathTime = 0;
+    }
+    else if(time != 0)
+    {
+        // Setting timeout
+        uint64_t now = ChannelServer::GetServerTime();
+
+        deathTime = now + (uint64_t)time * (uint64_t)1000000;
+        state->SetDeathTimeOut(deathTime);
+        timeLeft = (float)time;
+
+        auto killedClient = mServer.lock()->GetManagerConnection()
+            ->GetEntityClient(state->GetCharacterState()->GetEntityID());
+        if(killedClient)
+        {
+            HandleDeathTimeOut(instance, killedClient, 0);
+        }
+    }
+    else
+    {
+        // Calculate remaining time
+        uint64_t now = ChannelServer::GetServerTime();
+
+        timeLeft = (float)((double)(now - deathTime) / 1000000.0);
+    }
+
+    libcomp::Packet p;
+    p.WritePacketCode(
+        ChannelToClientPacketCode_t::PACKET_DEMON_SOLO_DEATH_TIME);
+    p.WriteU32Little(instVariant ? instVariant->GetSubID() : 0);
+    p.WriteS32Little(state->GetDemonState()->GetEntityID());
+    p.WriteFloat(timeLeft);
+
+    if(client)
+    {
+        client->SendPacket(p);
+    }
+    else
+    {
+        BroadcastPacket(zone, p);
+    }
+}
+
+void ZoneManager::HandleDeathTimeOut(
+    const std::shared_ptr<ZoneInstance>& instance,
+    const std::shared_ptr<ChannelClientConnection>& client,
+    uint64_t deathTime)
+{
+    auto state = client->GetClientState();
+    auto zone = state->GetZone();
+    if(!zone || zone->GetInstance() != instance ||
+        (deathTime && state->GetDeathTimeOut() != deathTime))
+    {
+        // No longer valid
+        return;
+    }
+
+    if(deathTime)
+    {
+        // Disable revival and schedule removal in 5 seconds
+        state->SetAcceptRevival(false);
+
+        EndInstanceTimer(instance, client, false, false);
+
+        mServer.lock()->GetTimerManager()->ScheduleEventIn(5, []
+            (ZoneManager* pZoneManager,
+                std::shared_ptr<ChannelClientConnection> pClient,
+                uint32_t pInstanceID)
+        {
+            auto pState = pClient->GetClientState();
+            auto pZone = pState->GetZone();
+            auto pInstance = pZoneManager->GetInstance(pInstanceID);
+            if(pInstance && pZone && pZone->GetInstance() == pInstance)
+            {
+                pZoneManager->EnterZone(pClient,
+                    pInstance->GetDefinition()->GetLobbyID(), 0);
+            }
+        }, this, client, instance->GetID());
+    }
+    else
+    {
+        // Schedule the death time-out
+        uint64_t now = ChannelServer::GetServerTime();
+        deathTime = state->GetDeathTimeOut();
+
+        int timeLeft = (int)(
+            (deathTime > now ? (deathTime - now) : 0) / 1000000);
+        mServer.lock()->GetTimerManager()->ScheduleEventIn(timeLeft, []
+            (ZoneManager* pZoneManager,
+                std::shared_ptr<ChannelClientConnection> pClient,
+                uint32_t pInstanceID, uint64_t pDeathTime)
+        {
+            auto pInstance = pZoneManager->GetInstance(pInstanceID);
+            if(pInstance)
+            {
+                pZoneManager->HandleDeathTimeOut(pInstance, pClient,
+                    pDeathTime);
+            }
+        }, this, client, instance->GetID(), deathTime);
+    }
+}
+
+void ZoneManager::EndInstanceTimer(
+    const std::shared_ptr<ZoneInstance>& instance,
+    const std::shared_ptr<ChannelClientConnection>& client,
+    bool isSuccess, bool queue)
+{
+    auto state = client->GetClientState();
+    auto zone = state->GetZone();
+    if(!zone || !instance)
+    {
+        return;
+    }
+
+    auto instVariant = instance->GetVariant();
+    auto instType = instVariant ? instVariant->GetInstanceType()
+        : InstanceType_t::NORMAL;
+
+    libcomp::Packet notify;
+
+    switch(instType)
+    {
+    case InstanceType_t::TIME_TRIAL:
+        {
+            // Quit the trial if the timer has not stopped yet
+            bool quit = !instance->GetTimerStop();
+            if(isSuccess == quit)
+            {
+                return;
+            }
+
+            auto cState = state->GetCharacterState();
+            auto character = cState->GetEntity();
+            auto progress = character ? character->GetProgress().Get() : nullptr;
+            if(isSuccess && progress)
+            {
+                uint16_t timeResult = (uint16_t)((instance->GetTimerStop() -
+                    instance->GetTimerStart()) / 1000000);
+
+                // Get the best result applicable
+                int8_t result = (int8_t)
+                    objects::CharacterProgress::TimeTrialResult_t::FAILED;
+                for(size_t rank = 0; rank < 4; rank++)
+                {
+                    uint16_t timePoint = instVariant->GetTimePoints(rank);
+                    if(timeResult > timePoint ||
+                        (rank == 0 && timeResult == timePoint))
+                    {
+                        // Times that match the expiration exactly still
+                        // count as failures
+                        break;
+                    }
+
+                    result--;
+                }
+
+                if(result == (int8_t)
+                    objects::CharacterProgress::TimeTrialResult_t::FAILED)
+                {
+                    // Do nothing
+                    return;
+                }
+                else
+                {
+                    // Set the state and register the time
+                    int8_t trialID = (int8_t)instVariant->GetSubID();
+                    progress->SetTimeTrialID(trialID);
+                    progress->SetTimeTrialTime(timeResult);
+
+                    uint16_t previousTime = progress->GetTimeTrialRecords(
+                        (size_t)(trialID - 1));
+
+                    bool newBest = previousTime == 0;
+                    if(previousTime && previousTime > timeResult)
+                    {
+                        newBest = true;
+
+                        // If the previous best time was not an A-rank and the
+                        // new one is, set first A-rank
+                        if(previousTime > instVariant->GetTimePoints(3) &&
+                            result == 1)
+                        {
+                            result = (int8_t)objects::CharacterProgress::
+                                TimeTrialResult_t::A_RANK_FIRST;
+                        }
+                    }
+
+                    progress->SetTimeTrialResult(
+                        (objects::CharacterProgress::TimeTrialResult_t)result);
+
+                    if(newBest)
+                    {
+                        // Report the new best time to others in the instance
+                        std::list<std::shared_ptr<
+                            ChannelClientConnection>> connections;
+                        for(auto connection : instance->GetConnections())
+                        {
+                            if(connection != client)
+                            {
+                                connections.push_back(connection);
+                            }
+                        }
+
+                        if(connections.size() > 0)
+                        {
+                            libcomp::Packet p;
+                            p.WritePacketCode(ChannelToClientPacketCode_t::
+                                PACKET_DUNGEON_RECORDS_UPDATE);
+                            p.WriteString16Little(libcomp::Convert::ENCODING_CP932,
+                                character->GetName(), true);
+
+                            ChannelClientConnection::BroadcastPacket(connections, p);
+                        }
+                    }
+
+                    mServer.lock()->GetWorldDatabase()->QueueUpdate(progress,
+                        state->GetAccountUID());
+                }
+            }
+            else
+            {
+                quit = true;
+            }
+
+            notify.WritePacketCode(
+                ChannelToClientPacketCode_t::PACKET_TIME_TRIAL_END);
+
+            if(!quit)
+            {
+                notify.WriteS8((int8_t)instVariant->GetSubID());
+                notify.WriteFloat(state->ToClientTime(instance->GetTimerStart()));
+                notify.WriteFloat(state->ToClientTime(instance->GetTimerStop()));
+                notify.WriteS8(0);
+            }
+            else
+            {
+                notify.WriteS8(-1);
+                notify.WriteFloat(0);
+                notify.WriteFloat(0);
+                notify.WriteS8(1);
+            }
+        }
+        break;
+    case InstanceType_t::DEMON_ONLY:
+        {
+            // A player successfully completed the instance if they're in it
+            // when the timer stops before the expiration, whether they're
+            // alive or not
+            bool success = zone->GetInstance() == instance &&
+                instance->GetTimerStop() &&
+                instance->GetTimerStop() < instance->GetTimerExpire();
+            if(isSuccess != success)
+            {
+                return;
+            }
+
+            if(success && state->GetDeathTimeOut())
+            {
+                // Remove the death time-out
+                UpdateDeathTimeOut(state, -1);
+            }
+
+            float timeLeft = 0.f;
+            int32_t rank = -1;
+            int32_t spGain = 0;
+            if(success)
+            {
+                uint16_t rankA = instVariant->GetTimePoints(1);
+                uint16_t rankB = instVariant->GetTimePoints(2);
+
+                uint16_t maxAdjusted = (uint16_t)((instance->GetTimerExpire() -
+                    instance->GetTimerStart()) / 1000000ULL);
+                if(maxAdjusted != instVariant->GetTimePoints(0))
+                {
+                    double modifier = (double)maxAdjusted /
+                        (double)instVariant->GetTimePoints(0);
+                    rankA = (uint16_t)((double)rankA * modifier);
+                    rankB = (uint16_t)((double)rankB * modifier);
+                }
+
+                timeLeft = (float)((double)(instance->GetTimerExpire() -
+                    instance->GetTimerStop()) / 1000000.0);
+
+                if(timeLeft > (float)rankA)
+                {
+                    // Rank A
+                    rank = 0;
+                }
+                else if(timeLeft > (float)rankB)
+                {
+                    // Rank B
+                    rank = 1;
+                }
+                else
+                {
+                    // Rank C
+                    rank = 2;
+                }
+
+                spGain = (int32_t)instVariant->GetFixedReward();
+
+                int32_t rewardModifier = instVariant->GetRewardModifier();
+                if(rewardModifier)
+                {
+                    // Increase by 10% per additional party member, decrease by
+                    // percentage of time used
+                    size_t partyMemberCount = instance->OriginalAccessCIDsCount();
+                    double boost = (double)(partyMemberCount - 1) * 0.1;
+                    float timePercentLeft = timeLeft / (float)maxAdjusted;
+
+                    spGain = spGain + (int32_t)ceil((double)rewardModifier *
+                        (1.0 + boost) * (double)timePercentLeft);
+                }
+
+                spGain = mServer.lock()->GetCharacterManager()
+                    ->UpdateSoulPoints(client, spGain, true);
+            }
+
+            notify.WritePacketCode(
+                ChannelToClientPacketCode_t::PACKET_DEMON_SOLO_END);
+            notify.WriteU32Little(instVariant->GetSubID());
+            notify.WriteS32Little(success ? 0 : 1);
+            notify.WriteFloat(timeLeft);
+            notify.WriteS32Little(rank);
+            notify.WriteS32Little(spGain);
+        }
+        break;
+    case InstanceType_t::NORMAL:
+    default:
+        {
+            // Time limits do not have a success or fail state
+            auto timeLimitData = instance->GetTimeLimitData();
+            if(!timeLimitData)
+            {
+                return;
+            }
+
+            notify.WritePacketCode(
+                ChannelToClientPacketCode_t::PACKET_TIME_LIMIT_END);
+            notify.WriteU32Little(timeLimitData->GetID());
+            notify.WriteS8(0);  // Unknown
+            notify.WriteU8(1);  // Unknown bool
+        }
+        break;
+    }
+
+    if(queue)
+    {
+        client->QueuePacket(notify);
+    }
+    else
+    {
+        client->SendPacket(notify);
+    }
+}
+
+bool ZoneManager::GetSpotPosition(uint32_t dynamicMapID, uint32_t spotID,
+    float& x, float& y, float& rot) const
 {
     if(spotID == 0 || dynamicMapID == 0)
     {
@@ -2706,8 +3644,8 @@ std::shared_ptr<Zone> ZoneManager::GetZone(uint32_t zoneID,
             {
                 for(auto dPair : iter->second)
                 {
-                    // If dynamicMapID is 0, check all valid instances and take the first
-                    // one that applies
+                    // If dynamicMapID is 0, check all valid instances and take
+                    // the first one that applies
                     if(dynamicMapID == 0 || dPair.first == dynamicMapID)
                     {
                         zone = mZones[dPair.second];
@@ -2718,7 +3656,9 @@ std::shared_ptr<Zone> ZoneManager::GetZone(uint32_t zoneID,
 
             if(nullptr == zone)
             {
-                zone = CreateZone(zoneDefinition);
+                LOG_ERROR(libcomp::String("Global zone encountered that has"
+                    " not been instance: %1\n").Arg(zoneID));
+                return nullptr;
             }
         }
         else
@@ -2749,54 +3689,70 @@ std::shared_ptr<Zone> ZoneManager::GetZone(uint32_t zoneID,
                 return nullptr;
             }
 
-            auto instance = instIter->second;
-            zone = instance->GetZone(zoneID, dynamicMapID);
-
-            if(!zone)
-            {
-                // Zone does not already exist, ensure the zone is part of the
-                // instance definition and create it
-                auto instanceDef = instance->GetDefinition();
-
-                bool zoneValid = false;
-                for(size_t i = 0; i < instanceDef->ZoneIDsCount(); i++)
-                {
-                    uint32_t zID = instanceDef->GetZoneIDs(i);
-                    uint32_t dID = instanceDef->GetDynamicMapIDs(i);
-                    if(zID == zoneID && (dynamicMapID == 0 || dID == dynamicMapID))
-                    {
-                        if(dynamicMapID == 0)
-                        {
-                            zoneDefinition = serverDataManager->GetZoneData(zID, dID);
-                        }
-
-                        zoneValid = zoneDefinition != nullptr;
-                        break;
-                    }
-                }
-
-                if(zoneValid)
-                {
-                    zone = CreateZone(zoneDefinition);
-                    if(!instance->AddZone(zone))
-                    {
-                        LOG_ERROR(libcomp::String("Failed to add zone to"
-                            " instance: %1 (%2)\n").Arg(zoneID).Arg(dynamicMapID));
-                        zone->Cleanup();
-                        mZones.erase(zone->GetID());
-                        return nullptr;
-                    }
-
-                    zone->SetInstance(instance);
-                }
-                else
-                {
-                    LOG_ERROR(libcomp::String("Attmpted to add invalid zone to"
-                        " instance: %1 (%2)\n").Arg(zoneID).Arg(dynamicMapID));
-                    return nullptr;
-                }
-            }
+            zone = GetInstanceZone(instIter->second, zoneID, dynamicMapID);
         }
+    }
+
+    return zone;
+}
+
+std::shared_ptr<Zone> ZoneManager::GetInstanceZone(
+    std::shared_ptr<ZoneInstance> instance, uint32_t zoneID,
+    uint32_t dynamicMapID)
+{
+    auto zone = instance->GetZone(zoneID, dynamicMapID);
+    if(zone)
+    {
+        return zone;
+    }
+
+    // Ensure the zone is part of the instance definition and create it
+    auto instanceDef = instance->GetDefinition();
+    auto instVariant = instance->GetVariant();
+
+    auto server = mServer.lock();
+    auto serverDataManager = server->GetServerDataManager();
+
+    std::shared_ptr<objects::ServerZone> zoneDefinition;
+
+    for(size_t i = 0; i < instanceDef->ZoneIDsCount(); i++)
+    {
+        uint32_t zID = instanceDef->GetZoneIDs(i);
+        uint32_t dID = instanceDef->GetDynamicMapIDs(i);
+        if(zID == zoneID && (dynamicMapID == 0 || dID == dynamicMapID))
+        {
+            std::set<uint32_t> partialIDs;
+            if(instVariant)
+            {
+                partialIDs = instVariant->GetZonePartialIDs();
+            }
+
+            zoneDefinition = serverDataManager->GetZoneData(zID, dID, true,
+                partialIDs);
+
+            break;
+        }
+    }
+
+    if(zoneDefinition)
+    {
+        zone = CreateZone(zoneDefinition);
+        if(!instance->AddZone(zone))
+        {
+            LOG_ERROR(libcomp::String("Failed to add zone to"
+                " instance: %1 (%2)\n").Arg(zoneID).Arg(dynamicMapID));
+            zone->Cleanup();
+            mZones.erase(zone->GetID());
+            return nullptr;
+        }
+
+        zone->SetInstance(instance);
+    }
+    else
+    {
+        LOG_ERROR(libcomp::String("Attmpted to add invalid zone to"
+            " instance: %1 (%2)\n").Arg(zoneID).Arg(dynamicMapID));
+        return nullptr;
     }
 
     return zone;
@@ -2810,11 +3766,14 @@ std::shared_ptr<Zone> ZoneManager::CreateZone(
         return nullptr;
     }
 
+    uint32_t zoneID = definition->GetID();
+    uint32_t dynamicMapID = definition->GetDynamicMapID();
+
     uint32_t id = mNextZoneID++;
 
     auto server = mServer.lock();
     auto definitionManager = server->GetDefinitionManager();
-    auto zoneData = definitionManager->GetZoneData(definition->GetID());
+    auto zoneData = definitionManager->GetZoneData(zoneID);
 
     auto zone = std::shared_ptr<Zone>(new Zone(id, definition));
 
@@ -2826,7 +3785,7 @@ std::shared_ptr<Zone> ZoneManager::CreateZone(
         zone->SetGeometry(geoIter->second);
     }
 
-    auto it = mDynamicMaps.find(definition->GetDynamicMapID());
+    auto it = mDynamicMaps.find(dynamicMapID);
     if(it != mDynamicMaps.end())
     {
         zone->SetDynamicMap(it->second);
@@ -2841,8 +3800,15 @@ std::shared_ptr<Zone> ZoneManager::CreateZone(
         float x = npc->GetX();
         float y = npc->GetY();
         float rot = npc->GetRotation();
-        GetSpotPosition(definition->GetDynamicMapID(), npc->GetSpotID(),
-            x, y, rot);
+        if(npc->GetSpotID() && !GetSpotPosition(dynamicMapID, npc->GetSpotID(),
+            x, y, rot))
+        {
+            LOG_WARNING(libcomp::String("NPC %1 in zone %2%3 is placed in"
+                " an invalid spot and will be ignored.\n").Arg(npc->GetID())
+                .Arg(zoneID).Arg(id != dynamicMapID
+                    ? libcomp::String(" (%1)").Arg(dynamicMapID) : ""));
+            continue;
+        }
 
         state->SetCurrentX(x);
         state->SetCurrentY(y);
@@ -2863,8 +3829,15 @@ std::shared_ptr<Zone> ZoneManager::CreateZone(
         float x = obj->GetX();
         float y = obj->GetY();
         float rot = obj->GetRotation();
-        GetSpotPosition(definition->GetDynamicMapID(), obj->GetSpotID(),
-            x, y, rot);
+        if(obj->GetSpotID() && !GetSpotPosition(dynamicMapID, obj->GetSpotID(),
+            x, y, rot))
+        {
+            LOG_WARNING(libcomp::String("Object %1 in zone %2%3 is placed in"
+                " an invalid spot and will be ignored.\n").Arg(obj->GetID())
+                .Arg(zoneID).Arg(id != dynamicMapID
+                    ? libcomp::String(" (%1)").Arg(dynamicMapID) : ""));
+            continue;
+        }
 
         state->SetCurrentX(x);
         state->SetCurrentY(y);
@@ -2885,8 +3858,15 @@ std::shared_ptr<Zone> ZoneManager::CreateZone(
             float x = pSpawn->GetX();
             float y = pSpawn->GetY();
             float rot = pSpawn->GetRotation();
-            GetSpotPosition(definition->GetDynamicMapID(), pSpawn->GetSpotID(),
-                x, y, rot);
+            if(pSpawn->GetSpotID() && !GetSpotPosition(dynamicMapID,
+                pSpawn->GetSpotID(), x, y, rot))
+            {
+                LOG_WARNING(libcomp::String("Plasma %1 in zone %2%3 is placed"
+                    " in an invalid spot and will be ignored.\n")
+                    .Arg(pSpawn->GetID()).Arg(zoneID).Arg(id != dynamicMapID
+                        ? libcomp::String(" (%1)").Arg(dynamicMapID) : ""));
+                continue;
+            }
 
             state->SetCurrentX(x);
             state->SetCurrentY(y);
@@ -2905,7 +3885,7 @@ std::shared_ptr<Zone> ZoneManager::CreateZone(
     {
         std::list<std::shared_ptr<objects::BazaarData>> activeMarkets;
         for(auto m : objects::BazaarData::LoadBazaarDataListByZone(
-            server->GetWorldDatabase(), definition->GetID()))
+            server->GetWorldDatabase(), zoneID))
         {
             if(m->GetState() == objects::BazaarData::State_t::BAZAAR_ACTIVE)
             {
@@ -2920,8 +3900,15 @@ std::shared_ptr<Zone> ZoneManager::CreateZone(
             float x = bazaar->GetX();
             float y = bazaar->GetY();
             float rot = bazaar->GetRotation();
-            GetSpotPosition(definition->GetDynamicMapID(), bazaar->GetSpotID(),
-                x, y, rot);
+            if(bazaar->GetSpotID() && !GetSpotPosition(dynamicMapID,
+                bazaar->GetSpotID(), x, y, rot))
+            {
+                LOG_WARNING(libcomp::String("Bazaar %1 in zone %2%3 is placed"
+                    " in an invalid spot and will be ignored.\n")
+                    .Arg(bazaar->GetID()).Arg(zoneID).Arg(id != dynamicMapID
+                        ? libcomp::String(" (%1)").Arg(dynamicMapID) : ""));
+                continue;
+            }
 
             state->SetCurrentX(x);
             state->SetCurrentY(y);
@@ -2943,6 +3930,45 @@ std::shared_ptr<Zone> ZoneManager::CreateZone(
         }
     }
 
+    // Gather setup triggers and sort all other types from the definition
+    /// @todo: actually implement more than ON_SETUP and ON_FLAG_SET
+    std::list<std::shared_ptr<objects::ServerZoneTrigger>> setupTriggers;
+    for(auto trigger : definition->GetTriggers())
+    {
+        switch(trigger->GetTrigger())
+        {
+        case objects::ServerZoneTrigger::Trigger_t::ON_SETUP:
+            setupTriggers.push_back(trigger);
+            break;
+        case objects::ServerZoneTrigger::Trigger_t::ON_ZONE_IN:
+            zone->AppendZoneInTriggers(trigger);
+            break;
+        case objects::ServerZoneTrigger::Trigger_t::ON_ZONE_OUT:
+            zone->AppendZoneOutTriggers(trigger);
+            break;
+        case objects::ServerZoneTrigger::Trigger_t::ON_SPAWN:
+            zone->AppendSpawnTriggers(trigger);
+            break;
+        case objects::ServerZoneTrigger::Trigger_t::ON_DEATH:
+            zone->AppendDeathTriggers(trigger);
+            break;
+        case objects::ServerZoneTrigger::Trigger_t::ON_REVIVAL:
+            zone->AppendRevivalTriggers(trigger);
+            break;
+        case objects::ServerZoneTrigger::Trigger_t::ON_FLAG_SET:
+            zone->AppendFlagSetTriggers(trigger);
+            zone->InsertFlagSetKeys(trigger->GetValue());
+            break;
+        case objects::ServerZoneTrigger::Trigger_t::ON_TIME:
+        case objects::ServerZoneTrigger::Trigger_t::ON_SYSTEMTIME:
+        case objects::ServerZoneTrigger::Trigger_t::ON_MOONPHASE:
+            zone->AppendTimeTriggers(trigger);
+            break;
+        default:
+            break;
+        }
+    }
+
     mZones[id] = zone;
 
     // Register time restrictions and calculate current state if any exist
@@ -2953,11 +3979,14 @@ std::shared_ptr<Zone> ZoneManager::CreateZone(
     }
 
     // Run all setup actions
-    if(definition->SetupActionsCount() > 0)
+    if(setupTriggers.size() > 0)
     {
         auto actionManager = server->GetActionManager();
-        actionManager->PerformActions(nullptr,
-            definition->GetSetupActions(), 0, zone);
+        for(auto trigger : setupTriggers)
+        {
+            actionManager->PerformActions(nullptr,
+                trigger->GetActions(), 0, zone);
+        }
     }
 
     // Populate all spawnpoints

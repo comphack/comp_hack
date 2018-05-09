@@ -113,15 +113,10 @@ bool Parsers::SpotTriggered::Parse(libcomp::ManagerPacket *pPacketManager,
 
     if(spot)
     {
-        // Fire events if correct trigger action occurred
-        if(entered == spot->GetTriggerOnLeave())
-        {
-            return true;
-        }
-
         // Get the action list.
         auto pActionList = new ActionListB;
-        pActionList->actions = spot->GetActions();
+        pActionList->actions = entered
+            ? spot->GetActions() : spot->GetLeaveActions();
 
         LOG_DEBUG(libcomp::String("Got spot with %1 actions.\n").Arg(
             pActionList->actions.size()));

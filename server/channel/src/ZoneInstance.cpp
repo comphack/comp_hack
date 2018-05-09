@@ -30,6 +30,10 @@
 #include <Log.h>
 
 // object Includes
+#include <MiDCategoryData.h>
+#include <MiDevilData.h>
+#include <MiTimeLimitData.h>
+#include <MiUnionData.h>
 #include <ScriptEngine.h>
 #include <ServerZone.h>
 
@@ -42,12 +46,15 @@ namespace libcomp
     {
         if(!BindingExists("ZoneInstance", true))
         {
+            Using<objects::ZoneInstanceObject>();
             Using<ActiveEntityState>();
             Using<objects::Demon>();
 
-            Sqrat::Class<ZoneInstance> binding(mVM, "ZoneInstance");
+            Sqrat::DerivedClass<ZoneInstance,
+                objects::ZoneInstanceObject> binding(mVM, "ZoneInstance");
             binding
-                .Func("GetFlagState", &ZoneInstance::GetFlagStateValue);
+                .Func("GetFlagState", &ZoneInstance::GetFlagStateValue)
+                .Func("GetTimerID", &ZoneInstance::GetTimerID);
 
             Bind<ZoneInstance>("ZoneInstance", binding);
         }
@@ -63,9 +70,10 @@ ZoneInstance::ZoneInstance()
 ZoneInstance::ZoneInstance(uint32_t id, const std::shared_ptr<
     objects::ServerZoneInstance>& definition, std::set<int32_t>& accessCIDs)
 {
-    mID = id;
-    mDefinition = definition;
-    mAccessCIDs = accessCIDs;
+    SetID(id);
+    SetDefinition(definition);
+    SetAccessCIDs(accessCIDs);
+    SetOriginalAccessCIDs(accessCIDs);
 }
 
 ZoneInstance::ZoneInstance(const ZoneInstance& other)
@@ -75,20 +83,11 @@ ZoneInstance::ZoneInstance(const ZoneInstance& other)
 
 ZoneInstance::~ZoneInstance()
 {
-    if(mID != 0)
+    if(GetID() != 0)
     {
-        LOG_DEBUG(libcomp::String("Deleting zone instance: %1\n").Arg(mID));
+        LOG_DEBUG(libcomp::String("Deleting zone instance: %1\n")
+            .Arg(GetID()));
     }
-}
-
-uint32_t ZoneInstance::GetID()
-{
-    return mID;
-}
-
-const std::shared_ptr<objects::ServerZoneInstance> ZoneInstance::GetDefinition()
-{
-    return mDefinition;
 }
 
 bool ZoneInstance::AddZone(const std::shared_ptr<Zone>& zone)
@@ -141,9 +140,86 @@ std::shared_ptr<Zone> ZoneInstance::GetZone(uint32_t zoneID,
     return nullptr;
 }
 
-std::set<int32_t> ZoneInstance::GetAccessCIDs() const
+std::list<std::shared_ptr<ChannelClientConnection>> ZoneInstance::GetConnections()
 {
-    return mAccessCIDs;
+    std::list<std::shared_ptr<ChannelClientConnection>> connections;
+
+    std::list<std::shared_ptr<Zone>> zones;
+    {
+        std::lock_guard<std::mutex> lock(mLock);
+        for(auto& zPair : mZones)
+        {
+            for(auto& zPair2 : zPair.second)
+            {
+                zones.push_back(zPair2.second);
+            }
+        }
+    }
+
+    for(auto zone : zones)
+    {
+        for(auto connection : zone->GetConnectionList())
+        {
+            connections.push_back(connection);
+        }
+    }
+
+    return connections;
+}
+
+void ZoneInstance::RefreshPlayerState()
+{
+    auto variant = GetVariant();
+    if(variant && variant->GetInstanceType() == InstanceType_t::DEMON_ONLY)
+    {
+        // XP multiplier depends on the current state of demons in it
+        auto connections = GetConnections();
+
+        std::lock_guard<std::mutex> lock(mLock);
+
+        // Demon only dungeons get a flat 100% XP boost if no others apply
+        float xpMultiplier = 1.f;
+
+        if(connections.size() > 1)
+        {
+            // If more than one player is in the instance, apply link bonus
+            std::set<uint8_t> families;
+            std::set<uint8_t> races;
+            std::set<uint32_t> types;
+
+            for(auto client : connections)
+            {
+                auto state = client->GetClientState();
+                auto dState = state->GetDemonState();
+                auto demonDef = dState->GetDevilData();
+                if(demonDef)
+                {
+                    auto cat = demonDef->GetCategory();
+                    families.insert((uint8_t)cat->GetFamily());
+                    races.insert((uint8_t)cat->GetRace());
+                    types.insert(demonDef->GetUnionData()->GetBaseDemonID());
+                }
+            }
+
+            if(types.size() == 1)
+            {
+                // All same base demon type
+                xpMultiplier = 3.f;
+            }
+            else if(races.size() == 1)
+            {
+                // All same race
+                xpMultiplier = 2.f;
+            }
+            else if(families.size() == 1)
+            {
+                // All same family
+                xpMultiplier = 1.5f;
+            }
+        }
+
+        SetXPMultiplier(xpMultiplier);
+    }
 }
 
 bool ZoneInstance::GetFlagState(int32_t key, int32_t& value, int32_t worldCID)
@@ -192,4 +268,10 @@ void ZoneInstance::SetFlagState(int32_t key, int32_t value, int32_t worldCID)
 {
     std::lock_guard<std::mutex> lock(mLock);
     mFlagStates[worldCID][key] = value;
+}
+
+uint32_t ZoneInstance::GetTimerID()
+{
+    auto timeLimitData = GetTimeLimitData();
+    return timeLimitData ? timeLimitData->GetID() : 0;
 }

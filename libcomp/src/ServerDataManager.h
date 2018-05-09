@@ -52,6 +52,8 @@ class Event;
 class ServerShop;
 class ServerZone;
 class ServerZoneInstance;
+class ServerZoneInstanceVariant;
+class ServerZonePartial;
 }
 
 namespace libcomp
@@ -91,10 +93,16 @@ public:
      * Get a server zone by definition ID
      * @param id Definition ID of a zone to retrieve
      * @param dynamicMapID Dynamic map ID of the zone to retrieve
+     * @param applyPartials If true, the definition will be re-instanced and
+     *  have all self-applied ServerZonePartial definitions applied to it. If
+     *  false, the normal definition will be returned.
+     * @param extraPartialIDs If applying ServerZonePartial definitions, the
+     *  IDs supplied will be loaded as well
      * @return Pointer to the server zone matching the specified id
      */
     const std::shared_ptr<objects::ServerZone> GetZoneData(uint32_t id,
-        uint32_t dynamicMapID);
+        uint32_t dynamicMapID, bool applyPartials = false,
+        std::set<uint32_t> extraPartialIDs = {});
 
     /**
      * Get all server zone defintion IDs with corresponding dynamic map IDs
@@ -116,6 +124,22 @@ public:
      * @return Set of all zone instance definition IDs registered with the manager
      */
     const std::set<uint32_t> GetAllZoneInstanceIDs();
+
+    /**
+     * Get a server zone instance variant by definition ID
+     * @param id Definition ID of a zone instance variant to retrieve
+     * @return Pointer to the server zone instance variant matching the specified id
+     */
+    const std::shared_ptr<objects::ServerZoneInstanceVariant>
+        GetZoneInstanceVariantData(uint32_t id);
+
+    /**
+     * Get a server zone partial by definition ID
+     * @param id Definition ID of a zone partial to retrieve
+     * @return Pointer to the server zone partial matching the specified id
+     */
+    const std::shared_ptr<objects::ServerZonePartial> GetZonePartialData(
+        uint32_t id);
 
     /**
      * Get an event by definition ID
@@ -176,6 +200,20 @@ public:
     bool LoadData(gsl::not_null<DataStore*> pDataStore,
         DefinitionManager* definitionManager);
 
+    /**
+     * Apply modifications from a zone partial to an instanced zone definition.
+     * Unique IDs and NPCs/objects in the same spot that already exist on the
+     * definition will be replaced by the partial definition, including deletes.
+     * If the zone definition supplied for this function matches the pointer
+     * stored for the base definition, it will fail.
+     * @param zone Pointer to a zone definition to modify
+     * @param partialID ID of the zone partial definition to apply to the zone
+     * @return true if the modifications were successful, false if they were
+     *  not or if the supplied zone definition is not a copy of the original
+     */
+    bool ApplyZonePartial(std::shared_ptr<objects::ServerZone> zone,
+        uint32_t partialID);
+
 private:
     /**
      * Get a server object by ID from the supplied map of the specified
@@ -203,19 +241,20 @@ private:
      * @param datastorePath Path within the data store to load files from
      * @param definitionManager Pointer to the definition manager which
      *  will be loaded with any server side definitions
+     * @param recursive If true sub-directories will be loaded from as well
      * @return true on success, false on failure
      */
     template <class T>
     bool LoadObjects(gsl::not_null<DataStore*> pDataStore,
         const libcomp::String& datastorePath,
-        DefinitionManager* definitionManager = nullptr)
+        DefinitionManager* definitionManager, bool recursive)
     {
         std::list<libcomp::String> files;
         std::list<libcomp::String> dirs;
         std::list<libcomp::String> symLinks;
 
         (void)pDataStore->GetListing(datastorePath, files, dirs, symLinks,
-            true, true);
+            recursive, true);
 
         for(auto path : files)
         {
@@ -318,6 +357,18 @@ private:
     /// Map of server zone instance defintions by definition ID
     std::unordered_map<uint32_t, std::shared_ptr<
         objects::ServerZoneInstance>> mZoneInstanceData;
+
+    /// Map of server zone instance variant defintions by definition ID
+    std::unordered_map<uint32_t, std::shared_ptr<
+        objects::ServerZoneInstanceVariant>> mZoneInstanceVariantData;
+
+    /// Map of server zone partial defintions by definition ID
+    std::unordered_map<uint32_t, std::shared_ptr<
+        objects::ServerZonePartial>> mZonePartialData;
+
+    /// Map of auto apply server zone partial defintion IDs mapped to directly
+    /// on the definition by dynamic map ID
+    std::unordered_map<uint32_t, std::set<uint32_t>> mZonePartialMap;
 
     /// Map of events by definition ID
     std::unordered_map<std::string,

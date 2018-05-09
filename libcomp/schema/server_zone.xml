@@ -2,12 +2,32 @@
 <objgen>
     <object name="ServerZoneSpot" persistent="false">
         <member type="u32" name="ID"/>
-        <member type="bool" name="TriggerOnLeave"/>
         <member type="list" name="Actions">
+            <element type="Action*"/>
+        </member>
+        <member type="list" name="LeaveActions">
             <element type="Action*"/>
         </member>
         <member type="SpawnLocation*" name="SpawnArea"
             nulldefault="true"/>
+    </object>
+    <object name="ServerZoneTrigger" persistent="false">
+        <member type="enum" name="Trigger" underlying="uint8_t">
+            <value>ON_SETUP</value>
+            <value>ON_ZONE_IN</value>
+            <value>ON_ZONE_OUT</value>
+            <value>ON_SPAWN</value>
+            <value>ON_DEATH</value>
+            <value>ON_REVIVAL</value>
+            <value>ON_FLAG_SET</value>
+            <value>ON_TIME</value>
+            <value>ON_SYSTEMTIME</value>
+            <value>ON_MOONPHASE</value>
+        </member>
+        <member type="s32" name="Value"/>
+        <member type="list" name="Actions">
+            <element type="Action*"/>
+        </member>
     </object>
     <object name="ServerZone" persistent="false">
         <member type="u32" name="ID"/>
@@ -49,8 +69,40 @@
             <key type="u32"/>
             <value type="ServerZoneSpot*"/>
         </member>
-        <member type="list" name="SetupActions">
-            <element type="Action*"/>
+        <member type="list" name="Triggers">
+            <element type="ServerZoneTrigger*"/>
+        </member>
+    </object>
+    <object name="ServerZonePartial" persistent="false">
+        <member type="u32" name="ID"/>
+        <member type="set" name="DynamicMapIDs">
+            <element type="u32"/>
+        </member>
+        <member type="bool" name="AutoApply" default="true"/>
+        <member type="list" name="NPCs">
+            <element type="ServerNPC*"/>
+        </member>
+        <member type="list" name="Objects">
+            <element type="ServerObject*"/>
+        </member>
+        <member type="map" name="Spawns">
+            <key type="u32"/>
+            <value type="Spawn*"/>
+        </member>
+        <member type="map" name="SpawnGroups">
+            <key type="u32"/>
+            <value type="SpawnGroup*"/>
+        </member>
+        <member type="map" name="SpawnLocationGroups">
+            <key type="u32"/>
+            <value type="SpawnLocationGroup*"/>
+        </member>
+        <member type="map" name="Spots">
+            <key type="u32"/>
+            <value type="ServerZoneSpot*"/>
+        </member>
+        <member type="list" name="Triggers">
+            <element type="ServerZoneTrigger*"/>
         </member>
     </object>
     <object name="ServerZoneInstance" persistent="false">
@@ -62,5 +114,28 @@
         <member type="list" name="DynamicMapIDs">
             <element type="u32"/>
         </member>
+    </object>
+    <object name="ServerZoneInstanceVariant" persistent="false"
+        scriptenabled="true">
+        <member type="u32" name="ID"/>
+        <member type="u32" name="SubID"/>
+        <member type="enum" name="InstanceType" underlying="uint8_t">
+            <value>NORMAL</value>
+            <value>TIME_TRIAL</value>
+            <value>DEMON_ONLY</value>
+        </member>
+        <member type="set" name="ZonePartialIDs">
+            <element type="u32"/>
+        </member>
+        <!-- Contextual time limit for count downs, ranks for count ups -->
+        <!-- TIME_TRIAL: Participation time => Rank C => Rank B => Rank A -->
+        <!-- DEMON_ONLY: Max time => Rank A (min) => Rank B (min) =>
+             Party member reduction (optional) -->
+        <member type="list" name="TimePoints">
+            <element type="u16"/>
+        </member>
+        <member type="string" name="TimerExpirationEventID"/>
+        <member type="u32" name="FixedReward"/>
+        <member type="s32" name="RewardModifier"/>
     </object>
 </objgen>

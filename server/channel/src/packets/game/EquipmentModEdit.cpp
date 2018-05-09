@@ -70,7 +70,7 @@ bool Parsers::EquipmentModEdit::Parse(libcomp::ManagerPacket *pPacketManager,
         libcomp::PersistentObject::GetObjectByUUID(state->GetObjectUUID(itemID)));
 
     bool valid = false;
-    auto defIter = SVR_CONST.EQUIP_MOD_EDIT_ITEMS.find(item ? item->GetType() : 0);
+    auto defIter = SVR_CONST.EQUIP_MOD_EDIT_ITEMS.find(modItemType);
     if(defIter != SVR_CONST.EQUIP_MOD_EDIT_ITEMS.end())
     {
         valid = true;

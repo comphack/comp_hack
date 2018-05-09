@@ -108,6 +108,7 @@
     <include path="binarydata/spotdata.xml"/>
     <include path="binarydata/sstatusdata.xml"/>
     <include path="binarydata/statusdata.xml"/>
+    <include path="binarydata/timelimitdata.xml"/>
     <include path="binarydata/triunionspecialdata.xml"/>
     <include path="binarydata/warppointdata.xml"/>
     <include path="binarydata/zonedata.xml"/>

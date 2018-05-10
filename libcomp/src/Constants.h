@@ -37,13 +37,13 @@ namespace libcomp
 #define VERSION_MAJOR (2)
 
 /// Minor release (1 = SP1).
-#define VERSION_MINOR (2)
+#define VERSION_MINOR (8)
 
 /// Patch version (a hotfix).
-#define VERSION_PATCH (1)
+#define VERSION_PATCH (9)
 
 /// Codename for the version.
-#define VERSION_CODENAME "Kodama (SP2) Hotfix 1"
+#define VERSION_CODENAME "Lilim UNSTABLE"
 
 /// HACK format magic.
 #define HACK_FORMAT_MAGIC (0x4B434148)

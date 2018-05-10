@@ -1,3 +1,9 @@
+comphack (2.2.1) xenial; urgency=low
+
+  * Hotfix 1 for the Kodama SP2 server release.
+
+ -- COMP Omega <compomega@tutanota.com>  Wed, 09 May 2018 21:49:19 -0600
+
 comphack (2.2.0) xenial; urgency=low
 
   * Kodama SP2 server release.

@@ -75,6 +75,20 @@ public:
 
     virtual void ConnectionSuccess();
 
+    /**
+     * Set the listen port to send when in ConnectionMode_t::MODE_WORLD_UP
+     * mode.
+     * @param port Port to send after connection.
+     */
+    void SetListenPort(uint16_t port);
+
+    /**
+     * Get the listen port to send when in ConnectionMode_t::MODE_WORLD_UP
+     * mode.
+     * @returns Port to send after connection.
+     */
+    uint16_t GetListenPort() const;
+
 protected:
     virtual bool ParseExtensionConnection(libcomp::Packet& packet);
 
@@ -85,6 +99,9 @@ protected:
 
     /// The connection's connection mode.
     ConnectionMode_t mMode;
+
+    /// Port to send when in ConnectionMode_t::MODE_WORLD_UP mode.
+    uint16_t mListenPort;
 };
 
 } // namespace libcomp

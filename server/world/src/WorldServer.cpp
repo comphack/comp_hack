@@ -155,6 +155,7 @@ void WorldServer::FinishInitialize()
 
     lobbyConnection->SetMessageQueue(messageQueue);
     lobbyConnection->SetName("lobby_notify");
+    lobbyConnection->SetListenPort(conf->GetPort());
 
     lobbyConnection->Connect(conf->GetLobbyIP(), conf->GetLobbyPort(), false);
 

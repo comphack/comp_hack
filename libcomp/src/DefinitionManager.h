@@ -73,6 +73,7 @@ class MiSkillData;
 class MiSpotData;
 class MiSStatusData;
 class MiStatusData;
+class MiTimeLimitData;
 class MiTriUnionSpecialData;
 class MiWarpPointData;
 class MiZoneData;
@@ -408,6 +409,13 @@ public:
     const std::shared_ptr<objects::MiStatusData> GetStatusData(uint32_t id);
 
     /**
+     * Get the time limit definition corresponding to an ID
+     * @param id Status ID to retrieve
+     * @return Pointer to the matching time limit definition, null if it does not exist
+     */
+    const std::shared_ptr<objects::MiTimeLimitData> GetTimeLimitData(uint32_t id);
+
+    /**
      * Get the list of pointers to special fusion definitions by the ID of a source
      * demon involved
      * @param sourceDemonTypeID ID of a source demon for the special fusion
@@ -685,6 +693,13 @@ public:
      * @return true on success, false on failure
      */
     bool LoadStatusData(gsl::not_null<DataStore*> pDataStore);
+
+    /**
+     * Load the time limit data definitions
+     * @param pDataStore Pointer to the datastore to load binary file from
+     * @return true on success, false on failure
+     */
+    bool LoadTimeLimitData(gsl::not_null<DataStore*> pDataStore);
 
     /**
      * Load the special fusion binary data definitions
@@ -1002,6 +1017,10 @@ private:
     /// Map of status definitions by ID
     std::unordered_map<uint32_t,
         std::shared_ptr<objects::MiStatusData>> mStatusData;
+
+    /// Map of time limit definitions by ID
+    std::unordered_map<uint32_t,
+        std::shared_ptr<objects::MiTimeLimitData>> mTimeLimitData;
 
     /// Map of special fusion definitions by ID
     std::unordered_map<uint32_t,

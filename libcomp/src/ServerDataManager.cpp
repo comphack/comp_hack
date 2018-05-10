@@ -38,9 +38,13 @@
 #include <EnchantSpecialData.h>
 #include <Event.h>
 #include <MiSStatusData.h>
+#include <ServerNPC.h>
+#include <ServerObject.h>
 #include <ServerShop.h>
 #include <ServerZone.h>
 #include <ServerZoneInstance.h>
+#include <ServerZoneInstanceVariant.h>
+#include <ServerZonePartial.h>
 #include <Tokusei.h>
 
 using namespace libcomp;
@@ -53,25 +57,66 @@ ServerDataManager::~ServerDataManager()
 {
 }
 
-const std::shared_ptr<objects::ServerZone> ServerDataManager::GetZoneData(uint32_t id,
-    uint32_t dynamicMapID)
+const std::shared_ptr<objects::ServerZone> ServerDataManager::GetZoneData(
+    uint32_t id, uint32_t dynamicMapID, bool applyPartials,
+    std::set<uint32_t> extraPartialIDs)
 {
+    std::shared_ptr<objects::ServerZone> zone;
+
     auto iter = mZoneData.find(id);
     if(iter != mZoneData.end())
     {
         if(dynamicMapID != 0)
         {
             auto dIter = iter->second.find(dynamicMapID);
-            return (dIter != iter->second.end()) ? dIter->second : nullptr;
+            zone = (dIter != iter->second.end()) ? dIter->second : nullptr;
         }
         else
         {
             // Return first
-            return iter->second.begin()->second;
+            zone = iter->second.begin()->second;
         }
     }
 
-    return nullptr;
+    if(applyPartials && zone)
+    {
+        std::set<uint32_t> partialIDs;
+
+        // Gather all auto-applied partials
+        auto partialIter = mZonePartialMap.find(zone->GetDynamicMapID());
+        if(partialIter != mZonePartialMap.end())
+        {
+            partialIDs = partialIter->second;
+        }
+
+        // Gather and verify all extra partials
+        for(uint32_t partialID : extraPartialIDs)
+        {
+            auto partial = GetZonePartialData(partialID);
+            if(partial && !partial->GetAutoApply() &&
+                (partial->DynamicMapIDsCount() == 0 ||
+                partial->DynamicMapIDsContains(zone->GetDynamicMapID())))
+            {
+                partialIDs.insert(partialID);
+            }
+        }
+
+        if(partialIDs.size() > 0)
+        {
+            // Copy the definition and apply changes
+            zone = std::make_shared<objects::ServerZone>(*zone);
+            for(uint32_t partialID : partialIDs)
+            {
+                if(!ApplyZonePartial(zone, partialID))
+                {
+                    // Errored, no zone should be returned
+                    return nullptr;
+                }
+            }
+        }
+    }
+
+    return zone;
 }
 
 const std::unordered_map<uint32_t, std::set<uint32_t>> ServerDataManager::GetAllZoneIDs()
@@ -103,6 +148,19 @@ const std::set<uint32_t> ServerDataManager::GetAllZoneInstanceIDs()
     }
 
     return instanceIDs;
+}
+
+const std::shared_ptr<objects::ServerZoneInstanceVariant>
+    ServerDataManager::GetZoneInstanceVariantData(uint32_t id)
+{
+    return GetObjectByID<uint32_t, objects::ServerZoneInstanceVariant>(id,
+        mZoneInstanceVariantData);
+}
+
+const std::shared_ptr<objects::ServerZonePartial>
+    ServerDataManager::GetZonePartialData(uint32_t id)
+{
+    return GetObjectByID<uint32_t, objects::ServerZonePartial>(id, mZonePartialData);
 }
 
 const std::shared_ptr<objects::Event> ServerDataManager::GetEventData(const libcomp::String& id)
@@ -186,7 +244,7 @@ bool ServerDataManager::LoadData(gsl::not_null<DataStore*> pDataStore,
         {
             LOG_DEBUG("Loading tokusei server definitions...\n");
             failure = !LoadObjects<objects::Tokusei>(pDataStore,
-                "/tokusei", definitionManager);
+                "/tokusei", definitionManager, true);
         }
     }
 
@@ -194,14 +252,21 @@ bool ServerDataManager::LoadData(gsl::not_null<DataStore*> pDataStore,
     {
         LOG_DEBUG("Loading zone server definitions...\n");
         failure = !LoadObjects<objects::ServerZone>(pDataStore, "/zones",
-            definitionManager);
+            definitionManager, false);
+    }
+
+    if(!failure)
+    {
+        LOG_DEBUG("Loading zone partial server definitions...\n");
+        failure = !LoadObjects<objects::ServerZonePartial>(pDataStore,
+            "/zones/partial", definitionManager, true);
     }
 
     if(!failure)
     {
         LOG_DEBUG("Loading event server definitions...\n");
         failure = !LoadObjects<objects::Event>(pDataStore, "/events",
-            definitionManager);
+            definitionManager, true);
     }
 
     if(!failure)
@@ -213,9 +278,16 @@ bool ServerDataManager::LoadData(gsl::not_null<DataStore*> pDataStore,
 
     if(!failure)
     {
+        LOG_DEBUG("Loading zone instance variant server definitions...\n");
+        failure = !LoadObjectsFromFile<objects::ServerZoneInstanceVariant>(
+            pDataStore, "/data/zoneinstancevariant.xml", definitionManager);
+    }
+
+    if(!failure)
+    {
         LOG_DEBUG("Loading shop server definitions...\n");
         failure = !LoadObjects<objects::ServerShop>(pDataStore, "/shops",
-            definitionManager);
+            definitionManager, true);
     }
 
     if(!failure)
@@ -225,6 +297,115 @@ bool ServerDataManager::LoadData(gsl::not_null<DataStore*> pDataStore,
     }
 
     return !failure;
+}
+
+bool ServerDataManager::ApplyZonePartial(std::shared_ptr<objects::ServerZone> zone,
+    uint32_t partialID)
+{
+    if(!zone)
+    {
+        return false;
+    }
+
+    uint32_t id = zone->GetID();
+    uint32_t dynamicMapID = zone->GetDynamicMapID();
+
+    auto originDef = GetZoneData(id, dynamicMapID, false);
+    if(originDef == zone)
+    {
+        LOG_ERROR(libcomp::String("Attempted to apply partial definition to"
+            " original zone definition: %1%2\n").Arg(id).Arg(id != dynamicMapID
+                ? libcomp::String(" (%1)").Arg(dynamicMapID) : ""));
+        return false;
+    }
+
+    auto partial = GetZonePartialData(partialID);
+    if(!partial)
+    {
+        LOG_ERROR(libcomp::String("Invalid zone partial ID encountered: %1\n")
+            .Arg(partialID));
+        return false;
+    }
+
+    // Build new NPC set
+    auto npcs = zone->GetNPCs();
+    for(auto& npc : partial->GetNPCs())
+    {
+        // Remove any NPCs that share the same spot ID or are within
+        // 10 units from the new one (X or Y)
+        npcs.remove_if([npc](
+            const std::shared_ptr<objects::ServerNPC>& oNPC)
+            {
+                return (npc->GetSpotID() &&
+                    oNPC->GetSpotID() == npc->GetSpotID()) ||
+                    (!npc->GetSpotID() && !oNPC->GetSpotID() &&
+                        fabs(oNPC->GetX() - npc->GetX()) < 10.f &&
+                        fabs(oNPC->GetY() - npc->GetY()) < 10.f);
+            });
+
+        // Removes supported via 0 ID
+        if(npc->GetID())
+        {
+            npcs.push_back(npc);
+        }
+    }
+    zone->SetNPCs(npcs);
+
+    // Build new object set
+    auto objects = zone->GetObjects();
+    for(auto& obj : partial->GetObjects())
+    {
+        // Remove any objects that share the same spot ID or are within
+        // 10 units from the new one (X and Y)
+        objects.remove_if([obj](
+            const std::shared_ptr<objects::ServerObject>& oObj)
+            {
+                return (obj->GetSpotID() &&
+                    oObj->GetSpotID() == obj->GetSpotID()) ||
+                    (!obj->GetSpotID() && !oObj->GetSpotID() &&
+                        fabs(oObj->GetX() - obj->GetX()) < 10.f &&
+                        fabs(oObj->GetY() - obj->GetY()) < 10.f);
+            });
+
+        // Removes supported via 0 ID
+        if(obj->GetID())
+        {
+            objects.push_back(obj);
+        }
+    }
+    zone->SetObjects(objects);
+
+    // Update spawns
+    for(auto& sPair : partial->GetSpawns())
+    {
+        zone->SetSpawns(sPair.first, sPair.second);
+    }
+
+    // Update spawn groups
+    for(auto& sgPair : partial->GetSpawnGroups())
+    {
+        zone->SetSpawnGroups(sgPair.first, sgPair.second);
+    }
+
+    // Update spawn location groups
+    for(auto& slgPair : partial->GetSpawnLocationGroups())
+    {
+        zone->SetSpawnLocationGroups(slgPair.first, slgPair.second);
+    }
+
+    // Update spots
+    for(auto& spotPair : partial->GetSpots())
+    {
+        zone->SetSpots(spotPair.first, spotPair.second);
+    }
+
+    // Add triggers
+    for(auto& trigger : partial->GetTriggers())
+    {
+        zone->AppendTriggers(trigger);
+    }
+
+    return true;
 }
 
 bool ServerDataManager::LoadScripts(gsl::not_null<DataStore*> pDataStore,
@@ -308,6 +489,38 @@ namespace libcomp
     }
 
     template<>
+    bool ServerDataManager::LoadObject<objects::ServerZonePartial>(const tinyxml2::XMLDocument& doc,
+        const tinyxml2::XMLElement *objNode, DefinitionManager* definitionManager)
+    {
+        (void)definitionManager;
+
+        auto prt = std::shared_ptr<objects::ServerZonePartial>(new objects::ServerZonePartial);
+        if(!prt->Load(doc, *objNode))
+        {
+            return false;
+        }
+
+        auto id = prt->GetID();
+        if(mZonePartialData.find(id) != mZonePartialData.end())
+        {
+            LOG_ERROR(libcomp::String("Duplicate zone partial encountered: %1\n").Arg(id));
+            return false;
+        }
+
+        mZonePartialData[id] = prt;
+
+        if(prt->GetAutoApply())
+        {
+            for(uint32_t dynamicMapID : prt->GetDynamicMapIDs())
+            {
+                mZonePartialMap[dynamicMapID].insert(id);
+            }
+        }
+
+        return true;
+    }
+
+    template<>
     bool ServerDataManager::LoadObject<objects::Event>(const tinyxml2::XMLDocument& doc,
         const tinyxml2::XMLElement *objNode, DefinitionManager* definitionManager)
     {
@@ -385,6 +598,58 @@ namespace libcomp
         }
 
         mZoneInstanceData[id] = inst;
+
+        return true;
+    }
+
+    template<>
+    bool ServerDataManager::LoadObject<objects::ServerZoneInstanceVariant>(
+        const tinyxml2::XMLDocument& doc, const tinyxml2::XMLElement *objNode,
+        DefinitionManager* definitionManager)
+    {
+        (void)definitionManager;
+
+        auto variant = std::shared_ptr<objects::ServerZoneInstanceVariant>(
+            new objects::ServerZoneInstanceVariant);
+        if(!variant->Load(doc, *objNode))
+        {
+            return false;
+        }
+
+        auto id = variant->GetID();
+        if(mZoneInstanceVariantData.find(id) != mZoneInstanceVariantData.end())
+        {
+            LOG_ERROR(libcomp::String("Duplicate zone instance variant"
+                " encountered: %1\n").Arg(id));
+            return false;
+        }
+
+        size_t timeCount = variant->TimePointsCount();
+        switch(variant->GetInstanceType())
+        {
+        case objects::ServerZoneInstanceVariant::InstanceType_t::TIME_TRIAL:
+            if(timeCount != 4)
+            {
+                LOG_ERROR(libcomp::String("Time trial zone instance variant"
+                    " encountered without 4 time points specified: %1\n")
+                    .Arg(id));
+                return false;
+            }
+            break;
+        case objects::ServerZoneInstanceVariant::InstanceType_t::DEMON_ONLY:
+            if(timeCount != 3 && timeCount != 4)
+            {
+                LOG_ERROR(libcomp::String("Demon only zone instance variant"
+                    " encountered without 3 or 4 time points specified: %1\n")
+                    .Arg(id));
+                return false;
+            }
+            break;
+        default:
+            break;
+        }
+
+        mZoneInstanceVariantData[id] = variant;
 
         return true;
     }

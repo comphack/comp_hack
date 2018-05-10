@@ -440,7 +440,7 @@ bool MainWindow::LoadMapFromZone(QString path)
     mZone.ClearBazaars();
     mZone.ClearNPCs();
     mZone.ClearObjects();
-    mZone.ClearSetupActions();
+    mZone.ClearTriggers();
     mZone.ClearSpawnGroups();
     mZone.ClearSpawnLocationGroups();
     mZone.ClearSpawns();

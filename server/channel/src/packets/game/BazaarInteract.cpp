@@ -57,7 +57,7 @@ bool Parsers::BazaarInteract::Parse(libcomp::ManagerPacket *pPacketManager,
     auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
     auto eventManager = server->GetEventManager();
 
-    auto instance = eventManager->PrepareEvent(client, "event_bazaar", bazaarEntityID);
+    auto instance = eventManager->PrepareEvent("event_bazaar", bazaarEntityID);
 
     bool success = instance != nullptr;
     if(success)

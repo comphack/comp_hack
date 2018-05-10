@@ -1038,12 +1038,17 @@ void ActiveEntityState::ExpireStatusEffects(const std::set<uint32_t>& effectType
     }
 }
 
-void ActiveEntityState::CancelStatusEffects(uint8_t cancelFlags)
+std::set<uint32_t> ActiveEntityState::CancelStatusEffects(
+    uint8_t cancelFlags)
 {
+    bool returnCancelled = false;
+
     std::set<uint32_t> cancelled;
     if(mCancelConditions.size() > 0)
     {
         std::lock_guard<std::mutex> lock(mLock);
+
+        returnCancelled = !mEffectsActive;
         for(auto cPair : mCancelConditions)
         {
             if(cancelFlags & cPair.first)
@@ -1060,6 +1065,13 @@ void ActiveEntityState::CancelStatusEffects(uint8_t cancelFlags)
     {
         ExpireStatusEffects(cancelled);
     }
+
+    if(!returnCancelled)
+    {
+        cancelled.clear();
+    }
+
+    return cancelled;
 }
 
 void ActiveEntityState::SetStatusEffectsActive(bool activate,
@@ -1083,6 +1095,9 @@ void ActiveEntityState::SetStatusEffectsActive(bool activate,
         // Set regen
         SetNextEffectTime(0, now + 10);
 
+        // Reset cancel conditions
+        mCancelConditions.clear();
+
         // Set status effect expirations
         for(auto pair : mStatusEffects)
         {
@@ -1094,7 +1109,6 @@ void ActiveEntityState::SetStatusEffectsActive(bool activate,
     else
     {
         mTimeDamageEffects.clear();
-        mCancelConditions.clear();
         
         if(mCurrentZone)
         {
@@ -1442,6 +1456,12 @@ void ActiveEntityState::RemoveStatusEffects(const std::set<uint32_t>& effectType
             mCancelConditions.erase(cancelType);
         }
     }
+
+    if(GetIsHidden() &&
+        mStatusEffects.find(SVR_CONST.STATUS_HIDDEN) == mStatusEffects.end())
+    {
+        SetIsHidden(false);
+    }
 }
 
 void ActiveEntityState::ActivateStatusEffect(
@@ -1527,6 +1547,12 @@ void ActiveEntityState::ActivateStatusEffect(
                     (uint8_t)ct->GetValue());
             }
         }
+    }
+
+    if(!GetIsHidden() &&
+        mStatusEffects.find(SVR_CONST.STATUS_HIDDEN) != mStatusEffects.end())
+    {
+        SetIsHidden(true);
     }
 }
 
@@ -1695,21 +1721,21 @@ namespace channel
 template<>
 ActiveEntityStateImp<objects::Character>::ActiveEntityStateImp()
 {
-    SetEntityType(objects::EntityStateObject::EntityType_t::CHARACTER);
+    SetEntityType(EntityType_t::CHARACTER);
     SetFaction(objects::ActiveEntityStateObject::Faction_t::PLAYER);
 }
 
 template<>
 ActiveEntityStateImp<objects::Demon>::ActiveEntityStateImp()
 {
-    SetEntityType(objects::EntityStateObject::EntityType_t::PARTNER_DEMON);
+    SetEntityType(EntityType_t::PARTNER_DEMON);
     SetFaction(objects::ActiveEntityStateObject::Faction_t::PLAYER);
 }
 
 template<>
 ActiveEntityStateImp<objects::Enemy>::ActiveEntityStateImp()
 {
-    SetEntityType(objects::EntityStateObject::EntityType_t::ENEMY);
+    SetEntityType(EntityType_t::ENEMY);
     SetFaction(objects::ActiveEntityStateObject::Faction_t::ENEMY);
 }
 
@@ -2332,7 +2358,9 @@ void ActiveEntityState::AdjustStats(
         stats[tblID] = adjusted;
     }
 
-    CharacterManager::AdjustStatBounds(stats);
+    // Apply stat minimum bounds (and maximum if not an enemy)
+    CharacterManager::AdjustStatBounds(stats,
+        GetEntityType() != EntityType_t::ENEMY);
 }
 
 void ActiveEntityState::BaseStatsCalculated(libcomp::DefinitionManager* definitionManager,
@@ -2540,7 +2568,7 @@ uint8_t ActiveEntityState::RecalculateDemonStats(
     AdjustStats(correctTbls, stats, calcState, false);
 
     int32_t extraHP = 0;
-    if(GetEntityType() == objects::EntityStateObject::EntityType_t::ENEMY)
+    if(GetEntityType() == EntityType_t::ENEMY)
     {
         extraHP = demonData->GetBattleData()->GetEnemyHP(0);
     }

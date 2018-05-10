@@ -96,13 +96,11 @@ public:
     /**
      * Prepare a new event based upon the supplied ID, relative to an
      * optional entity
-     * @param client Pointer to the client the event affects
      * @param eventID ID of the event to handle
      * @param sourceEntityID Optional source of an event to focus on
      * @return Pointer to the new EventInstance or nullptr on failure
      */
     std::shared_ptr<objects::EventInstance> PrepareEvent(
-        const std::shared_ptr<ChannelClientConnection>& client,
         const libcomp::String& eventID, int32_t sourceEntityID);
 
     /**

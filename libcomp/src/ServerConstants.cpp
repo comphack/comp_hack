@@ -112,6 +112,8 @@ bool ServerConstants::Initialize(const String& filePath)
         sConstants.ITEM_MAG_PRESSER);
     success &= LoadInteger(constants["ITEM_BALM_OF_LIFE"],
         sConstants.ITEM_BALM_OF_LIFE);
+    success &= LoadInteger(constants["ITEM_BALM_OF_LIFE_DEMON"],
+        sConstants.ITEM_BALM_OF_LIFE_DEMON);
     success &= LoadInteger(constants["ITEM_KREUZ"],
         sConstants.ITEM_KREUZ);
     success &= LoadInteger(constants["ITEM_RBLOODSTONE"],
@@ -180,6 +182,8 @@ bool ServerConstants::Initialize(const String& filePath)
     // Load status effect constants
     success &= LoadInteger(constants["STATUS_DEATH"],
         sConstants.STATUS_DEATH);
+    success &= LoadInteger(constants["STATUS_HIDDEN"],
+        sConstants.STATUS_HIDDEN);
     success &= LoadInteger(constants["STATUS_SUMMON_SYNC_1"],
         sConstants.STATUS_SUMMON_SYNC_1);
     success &= LoadInteger(constants["STATUS_SUMMON_SYNC_2"],

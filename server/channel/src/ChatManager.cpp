@@ -39,6 +39,9 @@
 #include <AccountWorldData.h>
 #include <ChannelConfig.h>
 #include <Character.h>
+#include <Event.h>
+#include <EventInstance.h>
+#include <EventState.h>
 #include <Item.h>
 #include <ItemBox.h>
 #include <MiItemBasicData.h>
@@ -80,6 +83,7 @@ ChatManager::ChatManager(const std::weak_ptr<ChannelServer>& server)
     mGMands["crash"] = &ChatManager::GMCommand_Crash;
     mGMands["effect"] = &ChatManager::GMCommand_Effect;
     mGMands["enemy"] = &ChatManager::GMCommand_Enemy;
+    mGMands["event"] = &ChatManager::GMCommand_Event;
     mGMands["expertisemax"] = &ChatManager::GMCommand_ExpertiseExtend;
     mGMands["expertiseup"] = &ChatManager::GMCommand_ExpertiseUpdate;
     mGMands["familiarity"] = &ChatManager::GMCommand_Familiarity;
@@ -664,6 +668,79 @@ bool ChatManager::GMCommand_Enemy(const std::shared_ptr<
     return zoneManager->SpawnEnemy(zone, demonID, x, y, rot, aiType);
 }
 
+bool ChatManager::GMCommand_Event(const std::shared_ptr<
+    channel::ChannelClientConnection>& client,
+    const std::list<libcomp::String>& args)
+{
+    if(!HaveUserLevel(client, 950))
+    {
+        return true;
+    }
+
+    std::list<libcomp::String> argsCopy = args;
+
+    libcomp::String eventID;
+
+    if(argsCopy.size() > 0 && !GetStringArg(eventID, argsCopy))
+    {
+        return false;
+    }
+
+    if(eventID.IsEmpty())
+    {
+        auto state = client->GetClientState();
+        auto eState = state->GetEventState();
+        auto current = eState->GetCurrent();
+        auto event = current ? current->GetEvent() : nullptr;
+
+        if(event)
+        {
+            eventID = event->GetID();
+        }
+
+        if(eventID.IsEmpty())
+        {
+            return SendChatMessage(client, ChatType_t::CHAT_SELF,
+                libcomp::String("No event is currently active"));
+        }
+        else
+        {
+            return SendChatMessage(client, ChatType_t::CHAT_SELF,
+                libcomp::String("The active event is: %1").Arg(eventID));
+        }
+    }
+    else
+    {
+        auto server = mServer.lock();
+        auto serverDataManager = server->GetServerDataManager();
+        auto event = serverDataManager->GetEventData(eventID);
+
+        if(event)
+        {
+            auto state = client->GetClientState();
+            auto cState = state->GetCharacterState();
+
+            if(server->GetEventManager()->HandleEvent(client, eventID,
+                cState->GetEntityID()))
+            {
+                return SendChatMessage(client, ChatType_t::CHAT_SELF,
+                    libcomp::String("Event started: %1").Arg(eventID));
+            }
+            else
+            {
+                return SendChatMessage(client, ChatType_t::CHAT_SELF,
+                    libcomp::String("Event could not be started: %1")
+                    .Arg(eventID));
+            }
+        }
+        else
+        {
+            return SendChatMessage(client, ChatType_t::CHAT_SELF,
+                libcomp::String("Event does not exist: %1").Arg(eventID));
+        }
+    }
+}
+
 bool ChatManager::GMCommand_ExpertiseExtend(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
@@ -1010,6 +1087,11 @@ bool ChatManager::GMCommand_Help(const std::shared_ptr<
             "with the rotation ROT. If AI is specified that AI",
             "type is used instead of the default."
         } },
+        { "event", {
+            "@event [ID]",
+            "Starts an event specified by ID or returns the current",
+            "event if not specified.",
+        } },
         { "expertisemax", {
             "@expertisemax STACKS",
             "Adds STACKS * 1000 points to the expertise cap.",
@@ -1047,10 +1129,11 @@ bool ChatManager::GMCommand_Help(const std::shared_ptr<
             "@homepoint",
             "Sets your current position as your homepoint.",
         } },
-        { "instance ID", {
-            "@instance",
+        { "instance", {
+            "@instance ID [VARIANTID]",
             "Creates a dungeon instance given the specified ",
-            "instance ID. This ID must be in the XML data.",
+            "instance ID and optional variant ID. This IDs must be in",
+            "the XML data.",
         } },
         { "item", {
             "@item ID|NAME [QTY]",
@@ -1274,6 +1357,14 @@ bool ChatManager::GMCommand_Instance(const std::shared_ptr<
         return true;
     }
 
+    auto state = client->GetClientState();
+    auto currentZone = state->GetZone();
+    if(currentZone && currentZone->GetInstance())
+    {
+        return SendChatMessage(client, ChatType_t::CHAT_SELF,
+            "You must leave the current instance to enter another");
+    }
+
     std::list<libcomp::String> argsCopy = args;
 
     uint32_t instanceID;
@@ -1292,10 +1383,32 @@ bool ChatManager::GMCommand_Instance(const std::shared_ptr<
     if(!instDef)
     {
         return SendChatMessage(client, ChatType_t::CHAT_SELF,
-            libcomp::String("Invalid instance ID supplied: %1").Arg(instanceID));
+            libcomp::String("Invalid instance ID supplied: %1")
+            .Arg(instanceID));
     }
 
-    auto instance = zoneManager->CreateInstance(client, instanceID);
+    uint32_t variantID = 0;
+    if(argsCopy.size() > 0)
+    {
+        if(!GetIntegerArg<uint32_t>(variantID, argsCopy))
+        {
+            return SendChatMessage(client, ChatType_t::CHAT_SELF,
+                "Variant ID must be an integer");
+        }
+        else
+        {
+            auto variantDef = serverDataManager->GetZoneInstanceVariantData(
+                variantID);
+            if(!variantDef)
+            {
+                return SendChatMessage(client, ChatType_t::CHAT_SELF,
+                    libcomp::String("Invalid variant ID supplied: %1")
+                    .Arg(variantID));
+            }
+        }
+    }
+
+    auto instance = zoneManager->CreateInstance(client, instanceID, variantID);
     bool success = instance != nullptr;
     if(success)
     {
@@ -1470,7 +1583,7 @@ bool ChatManager::GMCommand_Kill(const std::shared_ptr<
         reply.WriteS8(-1);          // No activation ID
         reply.WriteU32Little(1);    // Number of targets
         reply.WriteS32Little(targetState->GetEntityID());
-        reply.WriteS32Little(9999); // Damage 1
+        reply.WriteS32Little(MAX_PLAYER_HP_MP); // Damage 1
         reply.WriteU8(0);           // Damage 1 type (generic)
         reply.WriteS32Little(0);    // Damage 2
         reply.WriteU8(2);           // Damage 2 type (none)

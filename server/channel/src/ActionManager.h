@@ -233,6 +233,16 @@ private:
      */
     bool CreateLoot(ActionContext& ctx);
 
+    /**
+     * Move the current time trial results to the record set.
+     * @param ctx ActionContext for the executing source information.
+     * @param rewardItem Item obtained from the time trial
+     * @param rewardItemCount Item count obtained form the time trial
+     * @retval false if the trial records were not updated
+     */
+    bool RecordTimeTrial(ActionContext& ctx, uint32_t rewardItem,
+        uint16_t rewardItemCount);
+
     /// Pointer to the channel server.
     std::weak_ptr<ChannelServer> mServer;
 

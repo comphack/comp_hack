@@ -7,6 +7,11 @@
             <value>CREATE</value>
             <value>JOIN</value>
             <value>REMOVE</value>
+            <value>START_TIMER</value>
+            <value>STOP_TIMER</value>
         </member>
+        <member type="u32" name="variantID"/>
+        <member type="u32" name="timerID"/>
+        <member type="string" name="timerExpirationEventID"/>
     </object>
 </objgen>

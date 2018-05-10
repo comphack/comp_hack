@@ -50,7 +50,6 @@ bool Parsers::Move::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
     auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
     auto state = client->GetClientState();
 
@@ -69,6 +68,16 @@ bool Parsers::Move::Parse(libcomp::ManagerPacket *pPacketManager,
         return true;
     }
 
+    auto zone = eState->GetZone();
+    if(!zone)
+    {
+        // Not actually in a zone
+        return true;
+    }
+
+    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+    auto zoneManager = server->GetZoneManager();
+
     float destX = p.ReadFloat();
     float destY = p.ReadFloat();
     float originX = p.ReadFloat();
@@ -86,8 +95,7 @@ bool Parsers::Move::Parse(libcomp::ManagerPacket *pPacketManager,
     eState->ExpireStatusTimes(ChannelServer::GetServerTime());
     if(!eState->CanMove())
     {
-        server->GetZoneManager()->FixCurrentPosition(eState,
-            stopTime, startTime);
+        zoneManager->FixCurrentPosition(eState, stopTime, startTime);
         return true;
     }
 
@@ -123,7 +131,7 @@ bool Parsers::Move::Parse(libcomp::ManagerPacket *pPacketManager,
 
     /// @todo: Fire zone triggers
 
-    auto zoneConnections = server->GetZoneManager()->GetZoneConnections(client,
+    auto zoneConnections = zoneManager->GetZoneConnections(client,
         positionCorrected);
     if(zoneConnections.size() > 0)
     {
@@ -141,6 +149,15 @@ bool Parsers::Move::Parse(libcomp::ManagerPacket *pPacketManager,
         timeMap[reply.Size() + 4] = stopTime;
 
         ChannelClientConnection::SendRelativeTimePacket(zoneConnections, reply, timeMap);
+    }
+
+    // If a demon is moving while the character is hidden, warp the
+    // character to the destination spot
+    if(eState == state->GetDemonState() &&
+        state->GetCharacterState()->GetIsHidden())
+    {
+        zoneManager->Warp(client, state->GetCharacterState(),
+            destX, destY, 0.f);
     }
 
     return true;

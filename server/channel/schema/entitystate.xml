@@ -2,7 +2,6 @@
 <objgen>
     <object name="EntityStateObject" scriptenabled="true" persistent="false">
         <member type="s32" name="EntityID"/>
-        <member type="bool" name="IsActive"/>
         <member type="enum" name="EntityType" underlying="int8_t">
             <value>OBJECT</value>
             <value>NPC</value>
@@ -64,7 +63,7 @@
     </object>
     <object name="ActiveEntityStateObject" baseobject="EntityStateObject"
     scriptenabled="true" persistent="false">
-        <member type="bool" name="IsActive" inherited="true" default="true"/>
+        <member type="bool" name="IsHidden"/>
         <member type="MiDevilData*" name="DevilData" nulldefault="true"/>
         <member type="enum" name="Faction" underlying="int8_t">
             <value>PLAYER</value>

@@ -102,8 +102,22 @@ public:
     std::shared_ptr<Zone> GetCurrentZone(int32_t worldCID);
 
     /**
-     * Associate a client connection to a zone
-     * @param client Client connection to connect to a zone
+     * Perform all zone entry setup and related actions for a player
+     * associated to the supplied client using the default starting point
+     * @param client Client connection for the player entering the zone
+     * @param zoneID Definition ID of a zone to add the client to
+     * @param dynamicMapID Dynamic Map ID of the zone to add the client to.
+     *  if specified as 0, the first instance of the zone will be used
+     * @return true if the player entered the zone properly, false if they
+     *  did not
+     */
+    bool EnterZone(const std::shared_ptr<ChannelClientConnection>& client,
+        uint32_t zoneID, uint32_t dynamicMapID);
+
+    /**
+     * Perform all zone entry setup and related actions for a player
+     * associated to the supplied client using an explicit entry point
+     * @param client Client connection for the player entering the zone
      * @param zoneID Definition ID of a zone to add the client to
      * @param dynamicMapID Dynamic Map ID of the zone to add the client to.
      *  if specified as 0, the first instance of the zone will be used
@@ -112,7 +126,7 @@ public:
      * @param rotation Character rotation upon entering the zone.
      * @param forceLeave Optional param that when set to true will force
      *  a call to LeaveZone even if the zone they are moving to is the same
-     * @return true if the client entered the zone properly, false if they
+     * @return true if the player entered the zone properly, false if they
      *  did not
      */
     bool EnterZone(const std::shared_ptr<ChannelClientConnection>& client,
@@ -136,10 +150,25 @@ public:
      * party
      * @param client Client connection to create a zone instance for
      * @param instanceID Definition ID of the instance to create
+     * @param variantID Optional ID of a variant definition to assign to
+     *  the instance
+     * @param timerID Optional ID of a timer to assign to the instance that
+     *  will be started when the first player enters
+     * @param timerExpirationEventID Optional ID of the event to execute if
+     *  the timer expires
      * @return Pointer to the new zone instance, null if it failed to create
      */
     std::shared_ptr<ZoneInstance> CreateInstance(const std::shared_ptr<
-        ChannelClientConnection>& client, uint32_t instanceID);
+        ChannelClientConnection>& client, uint32_t instanceID,
+        uint32_t variantID = 0, uint32_t timerID = 0,
+        libcomp::String timerExpirationEventID = "");
+
+    /**
+     * Get a zone instance by ID
+     * @param instanceID ID of the instance to retrieve
+     * @return Pointer to the zone instance associated to the supplied ID
+     */
+    std::shared_ptr<ZoneInstance> GetInstance(uint32_t instanceID);
 
     /**
      * Get the zone instance the supplied client has access to. If an instance
@@ -397,6 +426,67 @@ public:
     void HandleTimedActions(const WorldClock& clock);
 
     /**
+     * Start the timer currently assigned to the supplied zone instance
+     * @param instance Pointer to a zone instance
+     * @return false if an error occurred
+     */
+    bool StartInstanceTimer(const std::shared_ptr<ZoneInstance>& instance);
+
+    /**
+     * Stop the timer currently assigned to the supplied zone instance
+     * @param instance Pointer to a zone instance
+     * @return false if an error occurred
+     */
+    bool StopInstanceTimer(const std::shared_ptr<ZoneInstance>& instance);
+
+    void SendInstanceTimer(const std::shared_ptr<ZoneInstance>& instance,
+        const std::shared_ptr<ChannelClientConnection>& client = nullptr,
+        bool queue = false);
+
+    /**
+     * Update the death time-out associated to the client and handle
+     * scheduling expiration and communication to the players
+     * @param state Pointer to state of the entity to time-out
+     * @param time Time-out value to assign to the entity. If -1, the
+     *  time-out will be cleared. If 0, the current value will be sent.
+     * @param client Optional pointer to the client that should be sent
+     *  the time-out packets. If not specified the entire zone will be
+     *  sent the information.
+     */
+    void UpdateDeathTimeOut(ClientState* state, int32_t time,
+        const std::shared_ptr<ChannelClientConnection>& client = nullptr);
+
+    /**
+     * Handle instance specific death time-out scheduling and processing
+     * @param instance Pointer to a zone instance the entity is in
+     * @param client Pointer to the client the death timer is active for
+     * @param deathTime If supplied the death time assigned to the client
+     *  will be checked and upon matching the client will be scheduled for
+     *  instance removal. If not supplied, the death time assigned to the
+     *  client will be used to schedule removal by calling this function
+     *  again.
+     */
+    void HandleDeathTimeOut(const std::shared_ptr<ZoneInstance>& instance,
+        const std::shared_ptr<ChannelClientConnection>& client,
+        uint64_t deathTime);
+
+    /**
+     * End the timer currently assigned to the supplied zone instance for
+     * a specific client and contextually process anything that should occur
+     * upon this action happening. Both successes and failures are handled
+     * based upon actions like timer stop, timer expiration and zone change
+     * while the timer is still active.
+     * @param instance Pointer to a zone instance
+     * @param client Pointer to the client the timer is ending for
+     * @param isSuccess true if the reason the timer is being ended should
+     *  be considered a success state
+     * @param queue Optional parameter to queue the packets being sent
+     */
+    void EndInstanceTimer(const std::shared_ptr<ZoneInstance>& instance,
+        const std::shared_ptr<ChannelClientConnection>& client,
+        bool isSuccess, bool queue = false);
+
+    /**
      * Get the X/Y coordinates and rotation of the center point of a spot.
      * @param dynamaicMapID Dynamic map ID of the zone containing the spot
      * @param spotID Spot ID to find the center of
@@ -562,18 +652,41 @@ private:
         uint32_t now);
 
     /**
-     * Get a zone by zone definition ID. This function is responsible for
-     * deciding if a non-public zone should have an additional zone created.
+     * Handle all instance specific zone population actions such as entity
+     * hiding and timer updating
+     * @param client Pointer to the client connection entering the zone
+     * @param zone Pointer to the zone the client is entering
+     */
+    void HandleSpecialInstancePopulate(
+        const std::shared_ptr<ChannelClientConnection>& client,
+        const std::shared_ptr<Zone>& zone);
+
+    /**
+     * Get a zone by zone definition ID. If the zone does not exist and is
+     * not a global zone, it will be created.
      * @param zoneID Zone definition ID to get a zone for
      * @param dynamicMapID Dynamic Map ID of the zone to to get a zone for
      * @param client Pointer to the client connection to use to decide whether
      *  a new zone should be created if the zone is private
      * @param currentInstanceID Optional instance ID of the zone being moved from
-     * @return Pointer to a matching zone
+     * @return Pointer to the new or existing zone
      */
     std::shared_ptr<Zone> GetZone(uint32_t zoneID, uint32_t dynamicMapID,
         const std::shared_ptr<ChannelClientConnection>& client,
         uint32_t currentInstanceID = 0);
+
+    /**
+     * Get a zone by zone definition ID that belongs to an instance. If
+     * the zone does not exist, it will be created and added to the instance.
+     * @param instance Pointer to the instance the zone will be retrieved
+     *  from or created for
+     * @param zoneID Zone definition ID to get a zone for
+     * @param dynamicMapID Dynamic Map ID of the zone to to get a zone for
+     * @return Pointer to the new or existing zone
+     */
+    std::shared_ptr<Zone> GetInstanceZone(
+        std::shared_ptr<ZoneInstance> instance, uint32_t zoneID,
+        uint32_t dynamicMapID);
 
     /**
      * Create a new zone based off of the supplied definition

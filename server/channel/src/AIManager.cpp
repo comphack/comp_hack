@@ -367,12 +367,12 @@ bool AIManager::UpdateState(const std::shared_ptr<ActiveEntityState>& eState,
         {
             switch(eState->GetEntityType())
             {
-            case objects::EntityStateObject::EntityType_t::ENEMY:
+            case EntityType_t::ENEMY:
                 {
                     auto enemyState = std::dynamic_pointer_cast<EnemyState>(eState);
                     return UpdateEnemyState(enemyState, now, isNight);
                 }
-            case objects::EntityStateObject::EntityType_t::PARTNER_DEMON: // Maybe someday
+            case EntityType_t::PARTNER_DEMON: // Maybe someday
                 /// @todo: handle ally NPCs
             default:
                 break;
@@ -913,8 +913,7 @@ void AIManager::RefreshSkillMap(const std::shared_ptr<ActiveEntityState>& eState
 {
     if(!aiState->SkillsMapped())
     {
-        auto isEnemy = eState->GetEntityType() ==
-            objects::EntityStateObject::EntityType_t::ENEMY;
+        auto isEnemy = eState->GetEntityType() == EntityType_t::ENEMY;
 
         std::unordered_map<uint16_t, std::vector<uint32_t>> skillMap;
         auto definitionManager = mServer.lock()->GetDefinitionManager();

@@ -36,5 +36,7 @@
             <value>INSTANCE</value>
             <value>ZONE</value>
         </member>
+        <member type="bool" name="stopOnFailure" default="true"/>
+        <member type="string" name="onFailureEvent"/>
     </object>
 </objgen>

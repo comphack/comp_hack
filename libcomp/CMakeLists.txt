@@ -312,6 +312,7 @@ SET(${PROJECT_NAME}_SCHEMA
     schema/binarydata/spotdata.xml
     schema/binarydata/sstatusdata.xml
     schema/binarydata/statusdata.xml
+    schema/binarydata/timelimitdata.xml
     schema/binarydata/triunionspecialdata.xml
     schema/binarydata/warppointdata.xml
     schema/binarydata/zonedata.xml
@@ -520,8 +521,14 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     ServerZone.cpp
     ServerZoneInstance.h
     ServerZoneInstance.cpp
+    ServerZoneInstanceVariant.h
+    ServerZoneInstanceVariant.cpp
+    ServerZonePartial.h
+    ServerZonePartial.cpp
     ServerZoneSpot.h
     ServerZoneSpot.cpp
+    ServerZoneTrigger.h
+    ServerZoneTrigger.cpp
     StatusEffect.h
     StatusEffect.cpp
     Spawn.h
@@ -780,6 +787,8 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     MiCTalkMessageData.h
     MiTargetData.cpp
     MiTargetData.h
+    MiTimeLimitData.h
+    MiTimeLimitData.cpp
     MiTriUnionSpecialData.cpp
     MiTriUnionSpecialData.h
     MiUnionData.cpp

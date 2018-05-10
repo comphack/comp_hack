@@ -70,6 +70,7 @@
 #include <MiSpotData.h>
 #include <MiSStatusData.h>
 #include <MiStatusData.h>
+#include <MiTimeLimitData.h>
 #include <MiTriUnionSpecialData.h>
 #include <MiWarpPointData.h>
 #include <MiUnionData.h>
@@ -382,6 +383,11 @@ const std::shared_ptr<objects::MiStatusData> DefinitionManager::GetStatusData(ui
     return GetRecordByID(id, mStatusData);
 }
 
+const std::shared_ptr<objects::MiTimeLimitData> DefinitionManager::GetTimeLimitData(uint32_t id)
+{
+    return GetRecordByID(id, mTimeLimitData);
+}
+
 const std::list<std::shared_ptr<objects::MiTriUnionSpecialData>>
     DefinitionManager::GetTriUnionSpecialData(uint32_t sourceDemonTypeID)
 {
@@ -531,6 +537,7 @@ bool DefinitionManager::LoadAllData(gsl::not_null<DataStore*> pDataStore)
     success &= LoadSItemData(pDataStore);
     success &= LoadSkillData(pDataStore);
     success &= LoadStatusData(pDataStore);
+    success &= LoadTimeLimitData(pDataStore);
     success &= LoadTriUnionSpecialData(pDataStore);
     success &= LoadWarpPointData(pDataStore);
     success &= LoadZoneData(pDataStore);
@@ -1001,6 +1008,19 @@ bool DefinitionManager::LoadStatusData(gsl::not_null<DataStore*> pDataStore)
     for(auto record : records)
     {
         mStatusData[record->GetCommon()->GetID()] = record;
+    }
+    
+    return success;
+}
+
+bool DefinitionManager::LoadTimeLimitData(gsl::not_null<DataStore*> pDataStore)
+{
+    std::list<std::shared_ptr<objects::MiTimeLimitData>> records;
+    bool success = LoadBinaryData<objects::MiTimeLimitData>(pDataStore,
+        "Shield/TimeLimitData.sbin", true, 0, records);
+    for(auto record : records)
+    {
+        mTimeLimitData[record->GetID()] = record;
     }
     
     return success;

@@ -190,6 +190,7 @@ public:
     bool IsItemSkill = false;
     bool Reflected = false;
 
+    std::shared_ptr<Zone> CurrentZone;
     std::shared_ptr<ActiveEntityState> EffectiveSource;
     std::list<channel::SkillTargetResult> Targets;
     std::shared_ptr<ActiveEntityState> PrimaryTarget;
@@ -229,6 +230,10 @@ public:
     bool CanHitstun = false;
     bool CanKnockback = false;
     uint16_t GuardModifier = 0;
+
+    uint8_t EffectCancellations = 0;
+    std::set<TokuseiConditionType> RecalcTriggers;
+    bool TalkDone = false;
 };
 
 SkillManager::SkillManager(const std::weak_ptr<ChannelServer>& server)
@@ -299,6 +304,7 @@ bool SkillManager::ActivateSkill(const std::shared_ptr<ActiveEntityState> source
     }
 
     auto cast = def->GetCast();
+    auto castBasic = cast->GetBasic();
     auto activatedTime = ChannelServer::GetServerTime();
 
     activated = std::shared_ptr<objects::ActivatedAbility>(
@@ -324,19 +330,23 @@ bool SkillManager::ActivateSkill(const std::shared_ptr<ActiveEntityState> source
 
     // Stack adjust is affected by 2 sources if not an item skill or just
     // explicit item including adjustments if it is an item skill
-    uint8_t maxStacks = (uint8_t)(def->GetCast()->GetBasic()->GetUseCount() +
-        tokuseiManager->GetAspectSum(source,
-            TokuseiAspectType::SKILL_ITEM_STACK_ADJUST, calcState) +
-        (!pSkill->IsItemSkill ? tokuseiManager->GetAspectSum(source,
-            TokuseiAspectType::SKILL_STACK_ADJUST, calcState) : 0));
+    uint8_t maxStacks = castBasic->GetUseCount();
+    if((castBasic->GetAdjustRestrictions() & 0x01) == 0)
+    {
+        maxStacks = (uint8_t)(maxStacks +
+            tokuseiManager->GetAspectSum(source,
+                TokuseiAspectType::SKILL_ITEM_STACK_ADJUST, calcState) +
+            (!pSkill->IsItemSkill ? tokuseiManager->GetAspectSum(source,
+                TokuseiAspectType::SKILL_STACK_ADJUST, calcState) : 0));
+    }
     activated->SetMaxUseCount(maxStacks);
 
     // If the skill needs to charge, see if any time adjustments exist.
     // This will never reduce to 0% time so storing the context is not
     // necessary.
-    uint32_t defaultChargeTime = cast->GetBasic()->GetChargeTime();
+    uint32_t defaultChargeTime = castBasic->GetChargeTime();
     uint32_t chargeTime = defaultChargeTime;
-    if(chargeTime > 0)
+    if(chargeTime > 0 && (castBasic->GetAdjustRestrictions() & 0x04) == 0)
     {
         int16_t chargeAdjust = source->GetCorrectValue(
             CorrectTbl::CHANT_TIME, calcState);
@@ -457,11 +467,35 @@ bool SkillManager::ExecuteSkill(std::shared_ptr<ActiveEntityState> source,
     auto skillID = activated->GetSkillID();
     auto skillData = definitionManager->GetSkillData(skillID);
 
+    if(!source || !source->Ready())
+    {
+        auto state = client ? client->GetClientState() : nullptr;
+        if(state)
+        {
+            LOG_ERROR(libcomp::String("Invalid source player entity"
+                " attempted to use skill %1: %2\n").Arg(skillID)
+                .Arg(state->GetAccountUID().ToString()));
+        }
+
+        SendFailure(activated, client,
+            (uint8_t)SkillErrorCodes_t::CONDITION_RESTRICT);
+        return false;
+    }
+
     if(nullptr == skillData)
     {
         LOG_ERROR(libcomp::String("Unknown skill ID encountered: %1\n")
             .Arg(skillID));
         SendFailure(activated, client);
+        return false;
+    }
+
+    auto zone = source->GetZone();
+    if(nullptr == zone)
+    {
+        LOG_ERROR("Skill activation attempted outside of a zone.\n");
+        SendFailure(activated, client,
+            (uint8_t)SkillErrorCodes_t::TARGET_INVALID);
         return false;
     }
 
@@ -482,16 +516,31 @@ bool SkillManager::ExecuteSkill(std::shared_ptr<ActiveEntityState> source,
             || damageFormula == objects::MiBattleDamageData::Formula_t::HEAL_STATIC
             || damageFormula == objects::MiBattleDamageData::Formula_t::HEAL_MAX_PERCENT;
 
-        // If the target is a character and they have not accepted revival, stop here
-        auto targetEntityID = (int32_t)activated->GetTargetObjectID();
-        auto targetClientState = ClientState::GetEntityClientState(targetEntityID);
-        if(isRevive && (!targetClientState ||
-            (!targetClientState->GetAcceptRevival() &&
-            targetClientState->GetCharacterState()->GetEntityID() == targetEntityID)))
+        // If reviving and the target is a character (or demon in a demon only
+        // instance) and they have not accepted revival, stop here
+        if(isRevive)
         {
-            SendFailure(activated, client,
-                (uint8_t)SkillErrorCodes_t::TARGET_INVALID);
-            return false;
+            auto targetEntityID = (int32_t)activated->GetTargetObjectID();
+            auto targetClientState = ClientState::GetEntityClientState(
+                targetEntityID);
+
+            bool invalid = !targetClientState;
+            if(!invalid && !targetClientState->GetAcceptRevival())
+            {
+                auto targetCState = targetClientState->GetCharacterState();
+                auto targetDState = targetClientState->GetDemonState();
+
+                invalid = targetCState->GetEntityID() == targetEntityID ||
+                    (zone->GetInstanceType() == InstanceType_t::DEMON_ONLY &&
+                        targetDState->GetEntityID() == targetEntityID);
+            }
+
+            if(invalid)
+            {
+                SendFailure(activated, client,
+                    (uint8_t)SkillErrorCodes_t::TARGET_INVALID);
+                return false;
+            }
         }
     }
 
@@ -505,15 +554,6 @@ bool SkillManager::ExecuteSkill(std::shared_ptr<ActiveEntityState> source,
         if(targetEntityID <= 0)
         {
             //No target
-            SendFailure(activated, client,
-                (uint8_t)SkillErrorCodes_t::TARGET_INVALID);
-            return false;
-        }
-
-        auto zone = source->GetZone();
-        if(nullptr == zone)
-        {
-            LOG_ERROR("Skill activation attempted outside of a zone.\n");
             SendFailure(activated, client,
                 (uint8_t)SkillErrorCodes_t::TARGET_INVALID);
             return false;
@@ -542,7 +582,7 @@ bool SkillManager::ExecuteSkill(std::shared_ptr<ActiveEntityState> source,
         case objects::MiSkillBasicData::ActionType_t::TALK:
         case objects::MiSkillBasicData::ActionType_t::INTIMIDATE:
         case objects::MiSkillBasicData::ActionType_t::TAUNT:
-            if(targetEntityType == objects::EntityStateObject::EntityType_t::ENEMY)
+            if(targetEntityType == EntityType_t::ENEMY)
             {
                 auto enemyState = std::dynamic_pointer_cast<EnemyState>(targetEntity);
                 auto enemy = enemyState ? enemyState->GetEntity() : nullptr;
@@ -593,20 +633,20 @@ bool SkillManager::ExecuteSkill(std::shared_ptr<ActiveEntityState> source,
                 sourceState->GetDemonState() != targetEntity || targetAlive;
             break;
         case objects::MiTargetData::Type_t::OTHER_PLAYER:
-            targetInvalid = targetEntityType != objects::EntityStateObject::EntityType_t::CHARACTER ||
+            targetInvalid = targetEntityType != EntityType_t::CHARACTER ||
                 sourceState == targetState || !allies || !targetAlive;
             break;
         case objects::MiTargetData::Type_t::OTHER_DEMON:
-            targetInvalid = targetEntityType != objects::EntityStateObject::EntityType_t::PARTNER_DEMON ||
+            targetInvalid = targetEntityType != EntityType_t::PARTNER_DEMON ||
                 (sourceState && sourceState->GetDemonState() != targetEntity) || !allies ||
                 !targetAlive;
             break;
         case objects::MiTargetData::Type_t::ALLY_PLAYER:
-            targetInvalid = targetEntityType != objects::EntityStateObject::EntityType_t::CHARACTER ||
+            targetInvalid = targetEntityType != EntityType_t::CHARACTER ||
                 !allies || !targetAlive;
             break;
         case objects::MiTargetData::Type_t::ALLY_DEMON:
-            targetInvalid = targetEntityType != objects::EntityStateObject::EntityType_t::PARTNER_DEMON ||
+            targetInvalid = targetEntityType != EntityType_t::PARTNER_DEMON ||
                 !allies || !targetAlive;
             break;
         case objects::MiTargetData::Type_t::PLAYER:
@@ -1089,12 +1129,8 @@ bool SkillManager::ExecuteNormalSkill(const std::shared_ptr<ChannelClientConnect
 bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility> activated,
     std::shared_ptr<SkillExecutionContext> ctx)
 {
-    auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated->GetSourceEntity());
-    auto zone = source->GetZone();
-    if(!zone)
-    {
-        return false;
-    }
+    auto source = std::dynamic_pointer_cast<ActiveEntityState>(
+        activated->GetSourceEntity());
 
     auto server = mServer.lock();
     auto definitionManager = server->GetDefinitionManager();
@@ -1102,6 +1138,12 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
     auto skillData = definitionManager->GetSkillData(skillID);
 
     auto pSkill = GetProcessingSkill(activated, ctx, nullptr);
+    auto zone = pSkill->CurrentZone;
+    if(!zone)
+    {
+        return false;
+    }
+
     ProcessingSkill& skill = *pSkill.get();
 
     // Get the target of the spell, keeping track of initial NRA
@@ -1410,10 +1452,10 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
             {
                 switch(effectiveSource->GetEntityType())
                 {
-                case objects::EntityStateObject::EntityType_t::CHARACTER:
+                case EntityType_t::CHARACTER:
                     otherValid = sourceState->GetDemonState();
                     break;
-                case objects::EntityStateObject::EntityType_t::PARTNER_DEMON:
+                case EntityType_t::PARTNER_DEMON:
                     otherValid = sourceState->GetCharacterState();
                     break;
                 default:
@@ -1538,12 +1580,7 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
 
     auto activated = skill.Activated;
     auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated->GetSourceEntity());
-    auto zone = source->GetZone();
-    if(!zone)
-    {
-        // Somehow the source left the zone, quit out
-        return;
-    }
+    auto zone = skill.CurrentZone;
 
     auto server = mServer.lock();
     auto characterManager = server->GetCharacterManager();
@@ -1656,60 +1693,24 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
 
     // Get negotiation damage
     auto talkDamage = damageData->GetNegotiationDamage();
-    int8_t talkAffSuccess = talkDamage->GetSuccessAffability();
-    int8_t talkAffFailure = talkDamage->GetFailureAffability();
-    int8_t talkFearSuccess = talkDamage->GetSuccessFear();
-    int8_t talkFearFailure = talkDamage->GetFailureFear();
-    bool hasTalkDamage = talkAffSuccess != 0 || talkAffFailure != 0 ||
-        talkFearSuccess != 0 || talkFearFailure != 0;
+    bool hasTalkDamage = talkDamage->GetSuccessAffability() != 0 ||
+        talkDamage->GetFailureAffability() != 0 ||
+        talkDamage->GetSuccessFear() != 0 ||
+        talkDamage->GetFailureFear() != 0;
 
     uint64_t now = ChannelServer::GetServerTime();
     source->RefreshCurrentPosition(now);
 
-    // By default add the skill source to a possible entity set that can
-    // have durability adjusted or learn inherited skills and let the
-    // corresponding functions sort it out
-    std::set<std::shared_ptr<ActiveEntityState>> durabilityHit;
-    durabilityHit.insert(source);
-
-    std::set<std::shared_ptr<ActiveEntityState>> learningSkills;
-    learningSkills.insert(source);
-
-    // Apply calculation results, keeping track of entities that may
-    // need to update the world with their modified state
-    std::set<std::shared_ptr<ActiveEntityState>> revived;
-    std::set<std::shared_ptr<ActiveEntityState>> killed;
-    std::set<std::shared_ptr<ActiveEntityState>> displayStateModified;
+    // Apply calculation results
     std::list<std::pair<std::shared_ptr<ActiveEntityState>, uint8_t>> talkDone;
-    std::unordered_map<std::shared_ptr<ActiveEntityState>, uint8_t> cancellations;
-    std::unordered_map<std::shared_ptr<ActiveEntityState>,
-        std::set<TokuseiConditionType>> recalcEntities;
     for(SkillTargetResult& target : skill.Targets)
     {
-        switch(target.EntityState->GetEntityType())
-        {
-        case objects::EntityStateObject::EntityType_t::CHARACTER:
-            if(!target.HitAvoided)
-            {
-                durabilityHit.insert(target.EntityState);
-            }
-            break;
-        case objects::EntityStateObject::EntityType_t::PARTNER_DEMON:
-            // Even if the hit is avoided, anything that touches the entity will
-            // update inheriting skills
-            learningSkills.insert(target.EntityState);
-            break;
-        default:
-            break;
-        }
-
         if(target.HitAvoided) continue;
 
         auto targetCalc = GetCalculatedState(target.EntityState, pSkill, true, source);
         auto calcState = GetCalculatedState(source, pSkill, false, target.EntityState);
 
         target.EntityState->RefreshCurrentPosition(now);
-        cancellations[target.EntityState] = 0;
 
         int32_t hpDamage = target.TechnicalDamage + target.PursuitDamage;
         int32_t mpDamage = 0;
@@ -1779,7 +1780,7 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
                 if(kb == 0.f)
                 {
                     target.Flags1 |= FLAG1_KNOCKBACK;
-                    cancellations[target.EntityState] |= EFFECT_CANCEL_KNOCKBACK;
+                    target.EffectCancellations |= EFFECT_CANCEL_KNOCKBACK;
                 }
             }
         }
@@ -1834,7 +1835,7 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
             {
                 // Changed from alive to dead or vice versa
                 if(target.EntityState->GetEntityType() ==
-                    objects::EntityStateObject::EntityType_t::CHARACTER)
+                    EntityType_t::CHARACTER)
                 {
                     // Reset accept revival
                     auto targetClientState = ClientState::GetEntityClientState(
@@ -1852,7 +1853,6 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
                 else
                 {
                     target.Flags1 |= FLAG1_REVIVAL;
-                    revived.insert(target.EntityState);
                 }
             }
 
@@ -1867,13 +1867,13 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
 
             if(mpAdjusted != 0)
             {
-                recalcEntities[target.EntityState].insert(TokuseiConditionType::CURRENT_MP);
+                target.RecalcTriggers.insert(TokuseiConditionType::CURRENT_MP);
             }
         }
 
         if(hpAdjustedSum != 0)
         {
-            recalcEntities[target.EntityState].insert(TokuseiConditionType::CURRENT_HP);
+            target.RecalcTriggers.insert(TokuseiConditionType::CURRENT_HP);
         }
 
         if(hpAdjustedSum < 0)
@@ -1883,17 +1883,12 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
             target.CanHitstun = hitstunNull != 10000 &&
                 (hitstunNull < 0 || RNG(int32_t, 1, 10000) > hitstunNull);
 
-            cancellations[target.EntityState] |= EFFECT_CANCEL_HIT |
-                EFFECT_CANCEL_DAMAGE;
+            target.EffectCancellations |= EFFECT_CANCEL_HIT | EFFECT_CANCEL_DAMAGE;
         }
 
         switch(target.EntityState->GetEntityType())
         {
-        case objects::EntityStateObject::EntityType_t::CHARACTER:
-        case objects::EntityStateObject::EntityType_t::PARTNER_DEMON:
-            displayStateModified.insert(target.EntityState);
-            break;
-        case objects::EntityStateObject::EntityType_t::ENEMY:
+        case EntityType_t::ENEMY:
             if(hpAdjustedSum < 0)
             {
                 // If an enemy is damaged by a player character or their
@@ -1931,8 +1926,7 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
         if(targetKilled)
         {
             target.Flags1 |= FLAG1_LETHAL;
-            cancellations[target.EntityState] |= EFFECT_CANCEL_DEATH;
-            killed.insert(target.EntityState);
+            target.EffectCancellations |= EFFECT_CANCEL_DEATH;
 
             for(uint32_t effectID : cancelOnKill)
             {
@@ -1940,164 +1934,27 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
             }
         }
 
-        // Handle negotiation damage
-        if(hasTalkDamage && target.EntityState->GetEntityType() ==
-            objects::EntityStateObject::EntityType_t::ENEMY &&
-            killed.find(target.EntityState) == killed.end())
+        if(target.EntityState->GetEntityType() == EntityType_t::ENEMY &&
+            !targetKilled && hasTalkDamage)
         {
-            auto eState = std::dynamic_pointer_cast<EnemyState>(
-                target.EntityState);
-            auto enemy = eState->GetEntity();
-            auto spawn = enemy->GetSpawnSource();
-            if(enemy->GetCoreStats()->GetLevel() >
-                source->GetCoreStats()->GetLevel())
+            if(ApplyNegotiationDamage(source, target, pSkill))
             {
-                // Enemies that are a higher level cannot be negotiated with
-                break;
-            }
-
-            auto talkPoints = eState->GetTalkPoints(source->GetEntityID());
-            auto demonData = eState->GetDevilData();
-            auto negData = demonData->GetNegotiation();
-            uint8_t affThreshold = (uint8_t)(100 - negData->GetAffabilityThreshold());
-            uint8_t fearThreshold = (uint8_t)(100 - negData->GetFearThreshold());
-
-            if(talkPoints.first >= affThreshold ||
-                talkPoints.second >= fearThreshold)
-            {
-                // Nothing left to do
-                break;
-            }
-
-            int32_t talkType = 0;
-            switch(skill.Definition->GetBasic()->GetActionType())
-            {
-            case objects::MiSkillBasicData::ActionType_t::TALK:
-                talkType = 1;
-                break;
-            case objects::MiSkillBasicData::ActionType_t::INTIMIDATE:
-                talkType = 2;
-                break;
-            case objects::MiSkillBasicData::ActionType_t::TAUNT:
-                talkType = 3;
-                break;
-            default:
-                break;
-            }
-
-            double talkSuccess = spawn ? (double)(100 - spawn->GetTalkResist()) : 0.0;
-            if(talkType != 0 && talkSuccess != 0.0)
-            {
-                auto adjust = tokuseiManager->GetAspectMap(source,
-                    TokuseiAspectType::TALK_RATE,
-                    std::set<int32_t>{ 0, talkType }, calcState);
-
-                for(auto pair : adjust)
-                {
-                    talkSuccess += pair.second;
-                }
-            }
-
-            bool success = talkSuccess > 0.0 &&
-                RNG(uint16_t, 1, 100) <= (uint16_t)talkSuccess;
-            int16_t aff = (int16_t)(talkPoints.first +
-                (success ? talkAffSuccess : talkAffFailure));
-            int16_t fear = (int16_t)(talkPoints.second +
-                (success ? talkFearSuccess : talkFearFailure));
-
-            talkPoints.first = aff < 0 ? 0 : (uint8_t)aff;
-            talkPoints.second = fear < 0 ? 0 : (uint8_t)fear;
-
-            eState->SetTalkPoints(source->GetEntityID(), talkPoints);
-
-            if(talkPoints.first >= affThreshold ||
-                talkPoints.second >= fearThreshold)
-            {
-                // Determine which outcomes are valid and randomly
-                // select one
-                int32_t minVal = 1;
-                int32_t maxVal = 6;
-
-                bool canJoin = true;
-                bool canGift = true;
-
-                uint8_t talkResults = spawn ? spawn->GetTalkResults() : 3;
-                if((talkResults & 0x01) == 0)
-                {
-                    canJoin = false;
-                    maxVal -= 2;
-                }
-
-                if((talkResults & 0x02) == 0)
-                {
-                    canGift = false;
-                    maxVal -= 2;
-                }
-
-                int32_t outcome = RNG(int32_t, minVal, maxVal);
-
-                // Shift the outcome to the proper position if some
-                // results are not available
-                if(!canJoin)
-                {
-                    outcome += 2;
-                }
-
-                if(!canGift && outcome >= 3 && outcome <= 4)
-                {
-                    outcome += 2;
-                }
-
-                switch(outcome)
-                {
-                case 1:
-                    target.TalkFlags = TALK_JOIN;
-                    break;
-                case 2:
-                    target.TalkFlags = TALK_JOIN_2;
-                    break;
-                case 3:
-                    target.TalkFlags = TALK_GIVE_ITEM;
-                    break;
-                case 4:
-                    target.TalkFlags = TALK_GIVE_ITEM_2;
-                    break;
-                case 5:
-                    target.TalkFlags = TALK_REJECT;
-                    break;
-                case 6:
-                default:
-                    target.TalkFlags = TALK_LEAVE;
-                    break;
-                }
-
-                if((target.TalkFlags == TALK_GIVE_ITEM ||
-                    target.TalkFlags == TALK_GIVE_ITEM) &&
-                    (!spawn || spawn->GiftsCount() == 0))
-                {
-                    // No gifts mapped, leave instead
-                    target.TalkFlags = TALK_LEAVE;
-                }
-
-                std::pair<std::shared_ptr<ActiveEntityState>,
-                    uint8_t> pair(target.EntityState, target.TalkFlags);
-                talkDone.push_back(pair);
-            }
-            else
-            {
-                target.TalkFlags = (success ? TALK_RESPONSE_1 : TALK_RESPONSE_4);
+                talkDone.push_back(std::make_pair(target.EntityState,
+                    target.TalkFlags));
             }
         }
     }
 
-    for(auto cancelPair : cancellations)
-    {
-        if(cancelPair.second)
-        {
-            auto eState = cancelPair.first;
-            uint8_t cancelFlags = cancelPair.second;
+    ApplyZoneSpecificEffects(pSkill);
 
-            cancelPair.first->CancelStatusEffects(cancelFlags);
+    for(SkillTargetResult& target : skill.Targets)
+    {
+        if(target.EffectCancellations)
+        {
+            auto eState = target.EntityState;
+            uint8_t cancelFlags = target.EffectCancellations;
+
+            eState->CancelStatusEffects(cancelFlags);
 
             // Check for skills that need to be cancelled
             if(cancelFlags & (EFFECT_CANCEL_DAMAGE | EFFECT_CANCEL_KNOCKBACK))
@@ -2130,7 +1987,7 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
                 }
             }
 
-            recalcEntities[cancelPair.first].insert(TokuseiConditionType::STATUS_ACTIVE);
+            target.RecalcTriggers.insert(TokuseiConditionType::STATUS_ACTIVE);
         }
     }
 
@@ -2147,49 +2004,52 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
                 target.CancelledStatuses.insert(r);
             }
 
-            recalcEntities[target.EntityState].insert(TokuseiConditionType::STATUS_ACTIVE);
+            target.RecalcTriggers.insert(TokuseiConditionType::STATUS_ACTIVE);
         }
     }
 
     // Recalculate any effects that trigger from the skill effects
-    if(recalcEntities.size() > 0)
+    std::unordered_map<int32_t, bool> effectRecalc;
+    for(SkillTargetResult& target : skill.Targets)
     {
-        std::unordered_map<int32_t, bool> effectRecalc;
-        for(auto pair : recalcEntities)
+        if(target.RecalcTriggers.size() == 0) continue;
+
+        std::unordered_map<int32_t, bool> result;
+
+        auto eState = target.EntityState;
+        auto& triggers = target.RecalcTriggers;
+
+        // Anything with a status effect modified needs a full tokusei
+        // and stat recalc
+        bool statusChanged = triggers.find(TokuseiConditionType::STATUS_ACTIVE)
+            != triggers.end();
+        if(effectRecalc.find(eState->GetEntityID()) == effectRecalc.end())
         {
-            std::unordered_map<int32_t, bool> result;
-
-            // Anything with a status effect modified needs a full tokusei and stat recalc
-            bool statusChanged = pair.second.find(TokuseiConditionType::STATUS_ACTIVE) !=
-                pair.second.end();
-            if(effectRecalc.find(pair.first->GetEntityID()) == effectRecalc.end())
+            if(statusChanged)
             {
-                if(statusChanged)
-                {
-                    result = tokuseiManager->Recalculate(pair.first, true);
-                }
-                else
-                {
-                    result = tokuseiManager->Recalculate(pair.first, pair.second);
-                }
+                result = tokuseiManager->Recalculate(eState, true);
             }
-
-            for(auto resultPair : result)
+            else
             {
-                if(effectRecalc.find(resultPair.first) == effectRecalc.end())
-                {
-                    effectRecalc[resultPair.first] = resultPair.second;
-                }
-                else
-                {
-                    effectRecalc[resultPair.first] |= resultPair.second;
-                }
+                result = tokuseiManager->Recalculate(eState, triggers);
             }
+        }
 
-            if(statusChanged && !effectRecalc[pair.first->GetEntityID()])
+        for(auto resultPair : result)
+        {
+            if(effectRecalc.find(resultPair.first) == effectRecalc.end())
             {
-                characterManager->RecalculateStats(pair.first);
+                effectRecalc[resultPair.first] = resultPair.second;
             }
+            else
+            {
+                effectRecalc[resultPair.first] |= resultPair.second;
+            }
+        }
+
+        if(statusChanged && !effectRecalc[eState->GetEntityID()])
+        {
+            characterManager->RecalculateStats(eState);
         }
     }
 
@@ -2487,6 +2347,68 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
         ChannelClientConnection::SendRelativeTimePacket(zConnections, p, timeMap);
     }
 
+    // Handle all skill side effects
+    std::set<std::shared_ptr<ActiveEntityState>> durabilityHit;
+    std::set<std::shared_ptr<ActiveEntityState>> partnerDemons;
+    std::set<std::shared_ptr<ActiveEntityState>> revived;
+    std::set<std::shared_ptr<ActiveEntityState>> killed;
+    std::set<std::shared_ptr<ActiveEntityState>> displayStateModified;
+
+    switch(source->GetEntityType())
+    {
+    case EntityType_t::CHARACTER:
+        durabilityHit.insert(source);
+        break;
+    case EntityType_t::PARTNER_DEMON:
+        partnerDemons.insert(source);
+        break;
+    default:
+        break;
+    }
+
+    for(SkillTargetResult& target : skill.Targets)
+    {
+        auto eState = target.EntityState;
+        auto& triggers = target.RecalcTriggers;
+
+        bool playerEntity = false;
+        switch(eState->GetEntityType())
+        {
+        case EntityType_t::CHARACTER:
+            if(!target.HitAvoided)
+            {
+                durabilityHit.insert(eState);
+            }
+            playerEntity = true;
+            break;
+        case EntityType_t::PARTNER_DEMON:
+            partnerDemons.insert(eState);
+            playerEntity = true;
+            break;
+        default:
+            break;
+        }
+
+        bool targetRevived = false;
+        bool targetKilled = false;
+        if((target.Flags1 & FLAG1_REVIVAL) != 0)
+        {
+            revived.insert(eState);
+        }
+        else if((target.Flags1 & FLAG1_LETHAL) != 0)
+        {
+            killed.insert(eState);
+            targetKilled = true;
+        }
+
+        if(playerEntity && (targetRevived || targetKilled ||
+            triggers.find(TokuseiConditionType::CURRENT_HP) != triggers.end() ||
+            triggers.find(TokuseiConditionType::CURRENT_MP) != triggers.end()))
+        {
+            displayStateModified.insert(eState);
+        }
+    }
+
     // Update inherited skills
     for(auto entity : durabilityHit)
     {
@@ -2494,18 +2416,32 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
     }
 
     // Update inherited skills
-    for(auto entity : learningSkills)
+    for(auto entity : partnerDemons)
     {
+        // Even if the hit is avoided, anything that touches the entity will
+        // update inheriting skills
         HandleSkillLearning(entity, pSkill);
     }
 
     // Report each revived entity
-    for(auto entity : revived)
+    if(revived.size() > 0)
     {
-        libcomp::Packet p;
-        if(characterManager->GetEntityRevivalPacket(p, entity, 6))
+        bool demonOnlyInst = zone->GetInstanceType() == InstanceType_t::DEMON_ONLY;
+        for(auto entity : revived)
         {
-            zoneManager->BroadcastPacket(zone, p);
+            libcomp::Packet p;
+            if(characterManager->GetEntityRevivalPacket(p, entity, 6))
+            {
+                zoneManager->BroadcastPacket(zone, p);
+            }
+
+            // If in a demon only instance, clear the death time-out
+            if(demonOnlyInst && partnerDemons.find(entity) != partnerDemons.end())
+            {
+                auto demonCState = ClientState::GetEntityClientState(
+                    entity->GetEntityID());
+                zoneManager->UpdateDeathTimeOut(demonCState, -1);
+            }
         }
     }
 
@@ -2518,7 +2454,8 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
     // Report all updates to the world
     if(displayStateModified.size() > 0)
     {
-        characterManager->UpdateWorldDisplayState(displayStateModified);
+        characterManager->UpdateWorldDisplayState(
+            displayStateModified);
     }
 }
 
@@ -2545,6 +2482,7 @@ std::shared_ptr<ProcessingSkill> SkillManager::GetProcessingSkill(
     skill->BaseAffinity = skill->EffectiveAffinity = skillData->GetCommon()->GetAffinity();
     skill->EffectiveDependencyType = skillData->GetBasic()->GetDependencyType();
     skill->EffectiveSource = source;
+    skill->CurrentZone = source->GetZone();
     skill->IsSuicide = skillData->GetDamage()->GetFunctionID() == SVR_CONST.SKILL_SUICIDE;
 
     // Set the expertise and any boosts gained from ranks
@@ -2889,7 +2827,7 @@ bool SkillManager::EvaluateTokuseiSkillCondition(const std::shared_ptr<ActiveEnt
             {
                 gender = demonData ? (int32_t)demonData->GetBasic()->GetGender() : gender;
             }
-            else if(otherState->GetEntityType() == objects::EntityStateObject::EntityType_t::CHARACTER)
+            else if(otherState->GetEntityType() == EntityType_t::CHARACTER)
             {
                 auto character = std::dynamic_pointer_cast<CharacterState>(otherState)->GetEntity();
                 gender = character ? (int32_t)character->GetGender() : gender;
@@ -3391,6 +3329,7 @@ void SkillManager::HandleKills(std::shared_ptr<ActiveEntityState> source,
 {
     auto server = mServer.lock();
     auto characterManager = server->GetCharacterManager();
+    auto managerConnection = server->GetManagerConnection();
     auto zoneManager = server->GetZoneManager();
 
     auto zConnections = zone->GetConnectionList();
@@ -3426,6 +3365,7 @@ void SkillManager::HandleKills(std::shared_ptr<ActiveEntityState> source,
 
     std::unordered_map<int32_t, int32_t> adjustments;
     std::list<std::shared_ptr<EnemyState>> enemiesKilled;
+    std::list<std::shared_ptr<ActiveEntityState>> partnerDemonsKilled;
     for(auto entity : killed)
     {
         // Remove all opponents
@@ -3436,12 +3376,13 @@ void SkillManager::HandleKills(std::shared_ptr<ActiveEntityState> source,
         uint32_t dType = 0;
         switch(entity->GetEntityType())
         {
-        case objects::EntityStateObject::EntityType_t::PARTNER_DEMON:
+        case EntityType_t::PARTNER_DEMON:
             dType = std::dynamic_pointer_cast<DemonState>(entity)
                 ->GetEntity()->GetType();
+            partnerDemonsKilled.push_back(entity);
             partnerDeath = true;
             break;
-        case objects::EntityStateObject::EntityType_t::ENEMY:
+        case EntityType_t::ENEMY:
             {
                 auto eState = std::dynamic_pointer_cast<EnemyState>(entity);
                 dType = eState->GetEntity()->GetType();
@@ -3487,18 +3428,31 @@ void SkillManager::HandleKills(std::shared_ptr<ActiveEntityState> source,
     // Apply familiarity adjustments
     for(auto aPair : adjustments)
     {
-        auto demonClient = server->GetManagerConnection()->
-            GetEntityClient(aPair.first);
-        if(!demonClient) continue;
+        auto demonClient = managerConnection->GetEntityClient(aPair.first);
+        if(demonClient)
+        {
+            characterManager->UpdateFamiliarity(demonClient, aPair.second,
+                true);
+        }
+    }
 
-        characterManager->UpdateFamiliarity(demonClient, aPair.second, true);
+    if(zone->GetInstanceType() == InstanceType_t::DEMON_ONLY)
+    {
+        // Start demon only instnace death time-outs
+        for(auto dState : partnerDemonsKilled)
+        {
+            auto demonCState = ClientState::GetEntityClientState(
+                dState->GetEntityID());
+            zoneManager->UpdateDeathTimeOut(demonCState, 60);
+        }
     }
 
     if(enemiesKilled.size() > 0)
     {
-        auto sourceClient = server->GetManagerConnection()->
-            GetEntityClient(source->GetEntityID());
-        auto sourceState = sourceClient ? sourceClient->GetClientState() : nullptr;
+        auto sourceClient = managerConnection->GetEntityClient(
+            source->GetEntityID());
+        auto sourceState = sourceClient ? sourceClient->GetClientState()
+            : nullptr;
 
         // Gather all enemy entity IDs
         std::list<int32_t> enemyIDs;
@@ -3712,8 +3666,7 @@ void SkillManager::HandleKillXP(const std::shared_ptr<objects::Enemy>& enemy,
         totalXP = (int64_t)((double)totalXP * (double)(1.f + globalXPBonus));
 
         // Apply zone XP multiplier
-        totalXP = (int64_t)((double)totalXP *
-            (double)zone->GetDefinition()->GetXPMultiplier());
+        totalXP = (int64_t)((double)totalXP * (double)zone->GetXPMultiplier());
     }
 
     // Determine XP distribution
@@ -3903,6 +3856,254 @@ void SkillManager::HandleEncounterDefeat(const std::shared_ptr<
             }
         }
     }
+}
+
+bool SkillManager::ApplyZoneSpecificEffects(const std::shared_ptr<
+    channel::ProcessingSkill>& pSkill)
+{
+    bool changed = false;
+    switch(pSkill->CurrentZone->GetInstanceType())
+    {
+    case InstanceType_t::DEMON_ONLY:
+        {
+            // If a partner demon was killed or revived, mirror the effect on
+            // the associated character
+            std::list<std::shared_ptr<ActiveEntityState>> revive;
+            std::list<std::shared_ptr<ActiveEntityState>> kill;
+            for(auto& target : pSkill->Targets)
+            {
+                bool revived = (target.Flags1 & FLAG1_REVIVAL) != 0;
+                bool killed = (target.Flags1 & FLAG1_LETHAL) != 0;
+
+                auto eState = target.EntityState;
+                if(eState->GetEntityType() == EntityType_t::PARTNER_DEMON &&
+                    (revived || killed))
+                {
+                    auto demonCState = ClientState::GetEntityClientState(
+                        eState->GetEntityID());
+                    if(demonCState)
+                    {
+                        auto cState = demonCState->GetCharacterState();
+                        if(revived && !cState->IsAlive())
+                        {
+                            revive.push_back(cState);
+                        }
+                        else if(killed && cState->IsAlive())
+                        {
+                            kill.push_back(cState);
+                        }
+                    }
+                }
+            }
+
+            for(auto cState : revive)
+            {
+                // Revive the character with 1 HP
+                if(cState->SetHPMP(1, -1, true, true))
+                {
+                    SkillTargetResult target;
+                    target.EntityState = cState;
+                    target.Damage1 = 1;
+                    target.Damage1Type = DAMAGE_TYPE_HEALING;
+
+                    target.Flags1 |= FLAG1_REVIVAL;
+                    target.RecalcTriggers.insert(
+                        TokuseiConditionType::CURRENT_HP);
+
+                    pSkill->Targets.push_back(target);
+                    changed = true;
+                }
+            }
+
+            for(auto cState : kill)
+            {
+                // Kill the character
+                if(cState->SetHPMP(0, -1, false, true))
+                {
+                    SkillTargetResult target;
+                    target.EntityState = cState;
+                    target.Damage1 = MAX_PLAYER_HP_MP;
+                    target.Damage1Type = DAMAGE_TYPE_GENERIC;
+
+                    target.Flags1 |= FLAG1_LETHAL;
+                    target.RecalcTriggers.insert(
+                        TokuseiConditionType::CURRENT_HP);
+                    target.EffectCancellations |= EFFECT_CANCEL_HIT |
+                        EFFECT_CANCEL_DEATH | EFFECT_CANCEL_DAMAGE;
+
+                    pSkill->Targets.push_back(target);
+                    changed = true;
+                }
+            }
+        }
+        break;
+    default:
+        break;
+    }
+
+    return changed;
+}
+
+bool SkillManager::ApplyNegotiationDamage(const std::shared_ptr<
+    ActiveEntityState>& source, SkillTargetResult& target,
+    const std::shared_ptr<channel::ProcessingSkill>& pSkill)
+{
+    auto eState = std::dynamic_pointer_cast<EnemyState>(
+        target.EntityState);
+    if(!eState)
+    {
+        return false;
+    }
+
+    auto talkDamage = pSkill->Definition->GetDamage()
+        ->GetNegotiationDamage();
+    int8_t talkAffSuccess = talkDamage->GetSuccessAffability();
+    int8_t talkAffFailure = talkDamage->GetFailureAffability();
+    int8_t talkFearSuccess = talkDamage->GetSuccessFear();
+    int8_t talkFearFailure = talkDamage->GetFailureFear();
+
+    auto enemy = eState->GetEntity();
+    auto spawn = enemy->GetSpawnSource();
+    if(enemy->GetCoreStats()->GetLevel() >
+        source->GetCoreStats()->GetLevel())
+    {
+        // Enemies that are a higher level cannot be negotiated with
+        return false;
+    }
+
+    auto talkPoints = eState->GetTalkPoints(source->GetEntityID());
+    auto demonData = eState->GetDevilData();
+    auto negData = demonData->GetNegotiation();
+    uint8_t affThreshold = (uint8_t)(100 - negData->GetAffabilityThreshold());
+    uint8_t fearThreshold = (uint8_t)(100 - negData->GetFearThreshold());
+
+    if(talkPoints.first >= affThreshold ||
+        talkPoints.second >= fearThreshold)
+    {
+        // Nothing left to do
+        return false;
+    }
+
+    int32_t talkType = 0;
+    switch(pSkill->Definition->GetBasic()->GetActionType())
+    {
+    case objects::MiSkillBasicData::ActionType_t::TALK:
+        talkType = 1;
+        break;
+    case objects::MiSkillBasicData::ActionType_t::INTIMIDATE:
+        talkType = 2;
+        break;
+    case objects::MiSkillBasicData::ActionType_t::TAUNT:
+        talkType = 3;
+        break;
+    default:
+        return false;
+    }
+
+    auto calcState = GetCalculatedState(source, pSkill, false, eState);
+
+    double talkSuccess = spawn ? (double)(100 - spawn->GetTalkResist()) : 0.0;
+    if(talkType != 0 && talkSuccess != 0.0)
+    {
+        auto adjust = mServer.lock()->GetTokuseiManager()
+            ->GetAspectMap(source, TokuseiAspectType::TALK_RATE,
+            std::set<int32_t>{ 0, talkType }, calcState);
+
+        for(auto pair : adjust)
+        {
+            talkSuccess += pair.second;
+        }
+    }
+
+    bool success = talkSuccess > 0.0 &&
+        RNG(uint16_t, 1, 100) <= (uint16_t)talkSuccess;
+    int16_t aff = (int16_t)(talkPoints.first +
+        (success ? talkAffSuccess : talkAffFailure));
+    int16_t fear = (int16_t)(talkPoints.second +
+        (success ? talkFearSuccess : talkFearFailure));
+
+    talkPoints.first = aff < 0 ? 0 : (uint8_t)aff;
+    talkPoints.second = fear < 0 ? 0 : (uint8_t)fear;
+
+    eState->SetTalkPoints(source->GetEntityID(), talkPoints);
+
+    if(talkPoints.first >= affThreshold ||
+        talkPoints.second >= fearThreshold)
+    {
+        // Determine which outcomes are valid and randomly
+        // select one
+        int32_t minVal = 1;
+        int32_t maxVal = 6;
+
+        bool canJoin = true;
+        bool canGift = true;
+
+        uint8_t talkResults = spawn ? spawn->GetTalkResults() : 3;
+        if((talkResults & 0x01) == 0)
+        {
+            canJoin = false;
+            maxVal -= 2;
+        }
+
+        if((talkResults & 0x02) == 0)
+        {
+            canGift = false;
+            maxVal -= 2;
+        }
+
+        int32_t outcome = RNG(int32_t, minVal, maxVal);
+
+        // Shift the outcome to the proper position if some
+        // results are not available
+        if(!canJoin)
+        {
+            outcome += 2;
+        }
+
+        if(!canGift && outcome >= 3 && outcome <= 4)
+        {
+            outcome += 2;
+        }
+
+        switch(outcome)
+        {
+        case 1:
+            target.TalkFlags = TALK_JOIN;
+            break;
+        case 2:
+            target.TalkFlags = TALK_JOIN_2;
+            break;
+        case 3:
+            target.TalkFlags = TALK_GIVE_ITEM;
+            break;
+        case 4:
+            target.TalkFlags = TALK_GIVE_ITEM_2;
+            break;
+        case 5:
+            target.TalkFlags = TALK_REJECT;
+            break;
+        case 6:
+        default:
+            target.TalkFlags = TALK_LEAVE;
+            break;
+        }
+
+        if((target.TalkFlags == TALK_GIVE_ITEM ||
+            target.TalkFlags == TALK_GIVE_ITEM) &&
+            (!spawn || spawn->GiftsCount() == 0))
+        {
+            // No gifts mapped, leave instead
+            target.TalkFlags = TALK_LEAVE;
+        }
+
+        target.TalkDone = true;
+    }
+    else
+    {
+        target.TalkFlags = (success ? TALK_RESPONSE_1 : TALK_RESPONSE_4);
+    }
+
+    return target.TalkDone;
 }
 
 void SkillManager::HandleNegotiations(const std::shared_ptr<ActiveEntityState> source,
@@ -5315,8 +5516,7 @@ void SkillManager::FinalizeSkillExecution(const std::shared_ptr<ChannelClientCon
         SendExecuteSkill(activated);
     }
 
-    if(client && source->GetEntityType() ==
-        objects::EntityStateObject::EntityType_t::CHARACTER)
+    if(client && source->GetEntityType() == EntityType_t::CHARACTER)
     {
         auto calcState = GetCalculatedState(source, pSkill, false, nullptr);
         float multiplier = (float)(source->GetCorrectValue(
@@ -5401,10 +5601,19 @@ bool SkillManager::SetSkillCompleteState(const std::shared_ptr<
     uint64_t cooldownTime = 0;
     if(cdTime && (!moreUses || (execCount > 0 && !executed)))
     {
-        auto calcState = GetCalculatedState(source, pSkill, false, nullptr);
+        cooldownTime = currentTime + (uint64_t)((double)cdTime * 1000);
 
-        cooldownTime = currentTime + (uint64_t)((double)(cdTime * 1000) *
-            (source->GetCorrectValue(CorrectTbl::COOLDOWN_TIME, calcState) * 0.01));
+        // Adjust cooldown time if supported by the skill
+        if((pSkill->Definition->GetCast()->GetBasic()
+            ->GetAdjustRestrictions() & 0x02) == 0)
+        {
+            auto calcState = GetCalculatedState(source, pSkill, false,
+                nullptr);
+
+            cooldownTime = (uint64_t)((double)cooldownTime *
+                (source->GetCorrectValue(CorrectTbl::COOLDOWN_TIME,
+                    calcState) * 0.01));
+        }
     }
 
     activated->SetCooldownTime(cooldownTime);

@@ -6,6 +6,7 @@
             <value>CHARACTER</value>
             <value>PARTNER</value>
             <value>CHARACTER_AND_PARTNER</value>
+            <value>SOURCE</value>
         </member>
         <member type="bool" name="isReplace"/>
         <member type="map" name="statusStacks">

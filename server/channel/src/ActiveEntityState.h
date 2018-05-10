@@ -467,8 +467,9 @@ public:
      * @param cancelFlags Flags indicating conditions that can cause status
      *  effects to be cancelled. The set of valid status conditions are listed
      *  as constants on ActiveEntityState
+     * @return Set of cancelled status effect types that will not be queued
      */
-    void CancelStatusEffects(uint8_t cancelFlags);
+    std::set<uint32_t> CancelStatusEffects(uint8_t cancelFlags);
 
     /**
      * Activate or deactivate the entity's status effect states. By activating
@@ -869,8 +870,9 @@ public:
     virtual bool Ready(bool ignoreDisplayState = false)
     {
         return mEntity != nullptr &&
-            (ignoreDisplayState || GetDisplayState() ==
-            objects::ActiveEntityStateObject::DisplayState_t::ACTIVE);
+            (ignoreDisplayState || (GetDisplayState() ==
+            objects::ActiveEntityStateObject::DisplayState_t::ACTIVE &&
+            !GetIsHidden()));
     }
 
 private:

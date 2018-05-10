@@ -371,6 +371,27 @@ private:
         const std::unordered_map<uint32_t, uint32_t>& encounterGroups);
 
     /**
+     * After calculating the normal skill results during final processing
+     * zone specific changes are applied here.
+     * @param pSkill Skill processing state of the skill being executed
+     * @return true if any changes were applied, false if they were not
+     */
+    bool ApplyZoneSpecificEffects(const std::shared_ptr<
+        channel::ProcessingSkill>& pSkill);
+
+    /**
+     * Determine if the supplied target should receive any negotation
+     * related effects from the skill used and apply them if applicable.
+     * @param source Pointer to the state of the source entity
+     * @param target Pointer to the state of the target entity
+     * @param pSkill Skill processing state of the skill being executed
+     * @return true if the negotation has completed
+     */
+    bool ApplyNegotiationDamage(const std::shared_ptr<
+        ActiveEntityState>& source, SkillTargetResult& target,
+        const std::shared_ptr<channel::ProcessingSkill>& pSkill);
+
+    /**
      * Handle the outcome of a negotation ending from a skill's execution
      * including things like creating demon eggs and gift boxes or running away.
      * @param source Pointer to the source of the skill

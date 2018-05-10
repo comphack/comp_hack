@@ -110,6 +110,7 @@ SET(${PROJECT_NAME}_SCHEMA
     schema/clientstate.xml
     schema/entitystate.xml
     schema/loot.xml
+    schema/zone.xml
 )
 
 SOURCE_GROUP("objgen" ${CMAKE_CURRENT_BINARY_DIR}/objgen/*)
@@ -152,6 +153,10 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     PlayerExchangeSession.cpp
     TriFusionHostSession.h
     TriFusionHostSession.cpp
+    ZoneInstanceObject.h
+    ZoneInstanceObject.cpp
+    ZoneObject.h
+    ZoneObject.cpp
 )
 
 SOURCE_GROUP("Source Files\\Packets\\Game" src/packets/game/*)
@@ -305,6 +310,7 @@ SET(${PROJECT_NAME}_PACKETS
     src/packets/game/PlasmaEnd.cpp              # 0x01EF
     src/packets/game/PlasmaItemData.cpp         # 0x01F1
     src/packets/game/PlasmaItem.cpp             # 0x01F3
+    src/packets/game/TimeLimitSync.cpp          # 0x01F9
     src/packets/game/ItemDisassemble.cpp        # 0x01FC
     src/packets/game/EquipmentMod.cpp           # 0x0203
     src/packets/game/MaterialBox.cpp            # 0x0205

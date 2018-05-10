@@ -810,8 +810,8 @@ bool CharacterManager::GetEntityRevivalPacket(libcomp::Packet& p,
         p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_REVIVE_ENTITY);
         p.WriteS32Little(eState->GetEntityID());
         p.WriteS8(action);
-        p.WriteS32Little((int16_t)cs->GetHP());
-        p.WriteS32Little((int16_t)cs->GetMP());
+        p.WriteS32Little(cs->GetHP());
+        p.WriteS32Little(cs->GetMP());
         p.WriteS64Little(cs->GetXP());
 
         return true;
@@ -2683,7 +2683,7 @@ void CharacterManager::UpdateFamiliarity(const std::shared_ptr<
     }
 }
 
-void CharacterManager::UpdateSoulPoints(const std::shared_ptr<
+int32_t CharacterManager::UpdateSoulPoints(const std::shared_ptr<
     channel::ChannelClientConnection>& client, int32_t points,
     bool isAdjust)
 {
@@ -2694,7 +2694,7 @@ void CharacterManager::UpdateSoulPoints(const std::shared_ptr<
 
     if(!demon)
     {
-        return;
+        return 0;
     }
 
     int32_t current = demon->GetSoulPoints();
@@ -2736,6 +2736,8 @@ void CharacterManager::UpdateSoulPoints(const std::shared_ptr<
 
         server->GetWorldDatabase()->QueueUpdate(demon, state->GetAccountUID());
     }
+
+    return points;
 }
 
 void CharacterManager::ExperienceGain(const std::shared_ptr<
@@ -3820,9 +3822,11 @@ void CharacterManager::CancelStatusEffects(const std::shared_ptr<
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
     auto dState = state->GetDemonState();
+    auto zone = state->GetZone();
 
-    cState->CancelStatusEffects(cancelFlags);
-    dState->CancelStatusEffects(cancelFlags);
+    std::unordered_map<int32_t, std::set<uint32_t>> cancelMap;
+    cancelMap[cState->GetEntityID()] = cState->CancelStatusEffects(cancelFlags);
+    cancelMap[dState->GetEntityID()] = dState->CancelStatusEffects(cancelFlags);
 
     auto definitionManager = mServer.lock()->GetDefinitionManager();
     for(auto demon : cState->GetEntity()->GetCOMP()->GetDemons())
@@ -3853,6 +3857,39 @@ void CharacterManager::CancelStatusEffects(const std::shared_ptr<
         {
             demon->SetStatusEffects(effects);
         }
+    }
+
+    if(cancelMap.size() > 0)
+    {
+        auto zoneManager = mServer.lock()->GetZoneManager();
+
+        for(auto& pair : cancelMap)
+        {
+            if(pair.second.size() > 0)
+            {
+                libcomp::Packet p;
+                p.WritePacketCode(
+                    ChannelToClientPacketCode_t::PACKET_REMOVE_STATUS_EFFECT);
+                p.WriteS32Little(pair.first);
+                p.WriteU32Little((uint32_t)pair.second.size());
+
+                for(uint32_t effectType : pair.second)
+                {
+                    p.WriteU32Little(effectType);
+                }
+
+                if(zone)
+                {
+                    zoneManager->BroadcastPacket(zone, p);
+                }
+                else
+                {
+                    client->QueuePacket(p);
+                }
+            }
+        }
+
+        client->FlushOutgoing();
     }
 }
 
@@ -4040,8 +4077,7 @@ void CharacterManager::UpdateWorldDisplayState(
             if(!entityClientState || !entityClientState->GetPartyID()) continue;
 
             libcomp::Packet packet;
-            if(entity->GetEntityType() ==
-                objects::EntityStateObject::EntityType_t::PARTNER_DEMON)
+            if(entity->GetEntityType() == EntityType_t::PARTNER_DEMON)
             {
                 entityClientState->GetPartyDemonPacket(packet);
             }
@@ -4331,7 +4367,8 @@ void CharacterManager::CalculateDependentStats(
     stats[CorrectTbl::COOLDOWN_TIME] = (int16_t)(coolAdjust < 5 ? 5 : coolAdjust);
 }
 
-void CharacterManager::AdjustStatBounds(libcomp::EnumMap<CorrectTbl, int16_t>& stats)
+void CharacterManager::AdjustStatBounds(libcomp::EnumMap<CorrectTbl, int16_t>& stats,
+    bool limitMax)
 {
     static libcomp::EnumMap<CorrectTbl, int16_t> minStats =
         {
@@ -4354,13 +4391,37 @@ void CharacterManager::AdjustStatBounds(libcomp::EnumMap<CorrectTbl, int16_t>& s
             { CorrectTbl::COOLDOWN_TIME, 5 },
             { CorrectTbl::CHANT_TIME, 0 }
         };
+    
+    static libcomp::EnumMap<CorrectTbl, int16_t> maxStats =
+        {
+            { CorrectTbl::HP_MAX, MAX_PLAYER_HP_MP },
+            { CorrectTbl::MP_MAX, MAX_PLAYER_HP_MP },
+            { CorrectTbl::STR, 999 },
+            { CorrectTbl::MAGIC, 999 },
+            { CorrectTbl::VIT, 999 },
+            { CorrectTbl::INT, 999 },
+            { CorrectTbl::SPEED, 999 },
+            { CorrectTbl::LUCK, 999 }
+        };
 
-    for(auto pair : minStats)
+    for(auto& pair : minStats)
     {
         auto it = stats.find(pair.first);
         if(it != stats.end() && it->second < pair.second)
         {
             stats[pair.first] = pair.second;
+        }
+    }
+
+    if(limitMax)
+    {
+        for(auto& pair : maxStats)
+        {
+            auto it = stats.find(pair.first);
+            if(it != stats.end() && it->second > pair.second)
+            {
+                stats[pair.first] = pair.second;
+            }
         }
     }
 }

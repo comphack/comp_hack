@@ -13,6 +13,7 @@
     <constant name="ITEM_MAGNETITE">800</constant>
     <constant name="ITEM_MAG_PRESSER">27375</constant>
     <constant name="ITEM_BALM_OF_LIFE">101</constant>
+    <constant name="ITEM_BALM_OF_LIFE_DEMON">43001</constant>
     <constant name="ITEM_KREUZ">12198</constant>
     <constant name="ITEM_RBLOODSTONE">12203</constant>
     <constant name="MENU_FUSION_KZ">800</constant>
@@ -47,6 +48,7 @@
     <constant name="SKILL_EQUIP_MOD_EDIT">329</constant>
     <constant name="SKILL_XP_PARTNER">334</constant>
     <constant name="STATUS_DEATH">32</constant>
+    <constant name="STATUS_HIDDEN">143</constant>
     <constant name="STATUS_SUMMON_SYNC_1">194</constant>
     <constant name="STATUS_SUMMON_SYNC_2">364</constant>
     <constant name="STATUS_SUMMON_SYNC_3">365</constant>

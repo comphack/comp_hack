@@ -1,11 +1,11 @@
 /**
- * @file server/channel/src/packets/game/DungeonRecords.cpp
+ * @file server/channel/src/packets/game/TimeLimitSync.cpp
  * @ingroup channel
  *
  * @author HACKfrost
  *
- * @brief Request from the client for the current player's dungeon
- *  challenge records.
+ * @brief Request from the client to sync a current instance time limit
+ *  with the server time.
  *
  * This file is part of the Channel Server (channel).
  *
@@ -30,16 +30,20 @@
 // libcomp Includes
 #include <Packet.h>
 #include <PacketCodes.h>
+#include <ReadOnlyPacket.h>
+#include <TcpConnection.h>
 
 // object Includes
-#include <CharacterProgress.h>
+#include <MiTimeLimitData.h>
+#include <Zone.h>
+#include <ZoneInstance.h>
 
 // channel Includes
-#include "ChannelClientConnection.h"
+#include "ChannelServer.h"
 
 using namespace channel;
 
-bool Parsers::DungeonRecords::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::TimeLimitSync::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {
@@ -52,23 +56,30 @@ bool Parsers::DungeonRecords::Parse(libcomp::ManagerPacket *pPacketManager,
 
     auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
     auto state = client->GetClientState();
-    auto cState = state->GetCharacterState();
-    auto character = cState->GetEntity();
-    auto progress = character->GetProgress().Get();
-    
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_DUNGEON_CHALLENGES);
-    reply.WriteS8(0);   // Unknown
-    reply.WriteS8(progress->GetTimeTrialID());
-    reply.WriteU16Little(progress->GetTimeTrialTime());
 
-    reply.WriteS8((int8_t)progress->TimeTrialRecordsCount());
-    for(uint16_t trialTime : progress->GetTimeTrialRecords())
+    auto zone = state->GetZone();
+    auto instance = zone ? zone->GetInstance() : nullptr;
+
+    libcomp::Packet reply;
+    reply.WritePacketCode(
+        ChannelToClientPacketCode_t::PACKET_TIME_LIMIT_SYNC);
+
+    auto timeLimitData = instance ? instance->GetTimeLimitData() : nullptr;
+    if(timeLimitData)
     {
-        reply.WriteU16Little(trialTime ? trialTime : (uint16_t)-1);
+        float currentTime = state->ToClientTime(ChannelServer::GetServerTime());
+        float expireTime = state->ToClientTime(instance->GetTimerExpire());
+
+        reply.WriteS8(1);   // Timer exists
+        reply.WriteFloat(expireTime - currentTime);
+    }
+    else
+    {
+        reply.WriteS8(0);
+        reply.WriteFloat(0.f);
     }
 
-    connection->SendPacket(reply);
+    client->SendPacket(reply);
 
     return true;
 }

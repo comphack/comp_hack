@@ -95,6 +95,9 @@ struct Data
     /// Item ID of item type: Balm of Life (反魂香)
     uint32_t ITEM_BALM_OF_LIFE;
 
+    /// Item ID of item type: Balm of Life (Demon) (反魂香（魔具）)
+    uint32_t ITEM_BALM_OF_LIFE_DEMON;
+
     /// Item ID of item type: Kreuz (クロイツ)
     uint32_t ITEM_KREUZ;
 
@@ -200,6 +203,9 @@ struct Data
 
     /// Status effect ID of instant death
     uint32_t STATUS_DEATH;
+
+    /// Status effect ID of (demon solo used) entity hide effect
+    uint32_t STATUS_HIDDEN;
 
     /// Status effect ID of summon sync level 1
     uint32_t STATUS_SUMMON_SYNC_1;

@@ -5,6 +5,7 @@
         <member type="bool" name="LoggedIn"/>
         <member type="bool" name="LogoutSave" default="true"/>
         <member type="bool" name="AcceptRevival"/>
+        <member type="u64" name="DeathTimeOut"/>
         <member type="u32" name="ZoneInSpotID"/>
         <member type="AccountLogin*" name="AccountLogin"/>
         <member type="AccountWorldData*" name="AccountWorldData"/>
@@ -29,7 +30,7 @@
             <element type="EventInstance*"/>
         </member>
         <member type="list" name="Queued">
-            <element type="string"/>
+            <element type="EventInstance*"/>
         </member>
     </object>
     <object name="EventInstance" persistent="false">

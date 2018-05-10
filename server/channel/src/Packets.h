@@ -183,6 +183,7 @@ PACKET_PARSER_DECL(PlasmaResult);           // 0x01ED
 PACKET_PARSER_DECL(PlasmaEnd);              // 0x01EF
 PACKET_PARSER_DECL(PlasmaItemData);         // 0x01F1
 PACKET_PARSER_DECL(PlasmaItem);             // 0x01F3
+PACKET_PARSER_DECL(TimeLimitSync);          // 0x01F9
 PACKET_PARSER_DECL(ItemDisassemble);        // 0x01FC
 PACKET_PARSER_DECL(EquipmentMod);           // 0x0203
 PACKET_PARSER_DECL(MaterialBox);            // 0x0205

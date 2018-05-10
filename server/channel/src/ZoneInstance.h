@@ -30,6 +30,9 @@
  // channel Includes
 #include "Zone.h"
 
+// object Includes
+#include <ZoneInstanceObject.h>
+
 namespace objects
 {
 class ServerZoneInstance;
@@ -42,7 +45,7 @@ namespace channel
  * Represents an instance of a zone instance containing one or more
  * non-global zone instances.
  */
-class ZoneInstance
+class ZoneInstance : public objects::ZoneInstanceObject
 {
 public:
     /**
@@ -74,18 +77,6 @@ public:
     ~ZoneInstance();
 
     /**
-     * Get the unique server ID of the zone instance
-     * @return Unique server ID of the zone instance
-     */
-    uint32_t GetID();
-
-    /**
-     * Get the definition of the zone instance
-     * @return Pointer to the definition of the zone instance
-     */
-    const std::shared_ptr<objects::ServerZoneInstance> GetDefinition();
-
-    /**
      * Add a zone to the instance
      * @param Pointer to the zone to add
      * @return true if the zone was successfully added, false if it was not
@@ -108,10 +99,16 @@ public:
     std::shared_ptr<Zone> GetZone(uint32_t zoneID, uint32_t dynamicMapID);
 
     /**
-     * Get all world CIDs granted access to the instance when it was created
-     * @return Set of world CIDs granted access to the instance when it was created
+     * Get all client connections in all zones in the instance
+     * @return List of all client connections in the instance
      */
-    std::set<int32_t> GetAccessCIDs() const;
+    std::list<std::shared_ptr<ChannelClientConnection>> GetConnections();
+
+    /**
+     * Refresh properties calculated dependent upon the players currently
+     * in the instance
+     */
+    void RefreshPlayerState();
 
     /**
      * Get the state of a zone instance flag.
@@ -153,10 +150,13 @@ public:
      */
     void SetFlagState(int32_t key, int32_t value, int32_t worldCID);
 
-private:
-    /// Pointer to the ServerZoneInstance definition
-    std::shared_ptr<objects::ServerZoneInstance> mDefinition;
+    /**
+     * Get the timer ID of assigned MiTimeLimitData record if one exists
+     * @return Timer ID or 0 if one is not set
+     */
+    uint32_t GetTimerID();
 
+private:
     /// General use flags and associated values used for event sequences etc
     /// keyed on 0 for all characters or world CID if for a specific one
     std::unordered_map<int32_t, std::unordered_map<int32_t, int32_t>> mFlagStates;
@@ -164,12 +164,6 @@ private:
     /// Map of zones in the instance by zone ID and dynamic map ID
     std::unordered_map<uint32_t,
         std::unordered_map<uint32_t, std::shared_ptr<Zone>>> mZones;
-
-    /// Set of all character world CIDs that have access to the instance
-    std::set<int32_t> mAccessCIDs;
-
-    /// Unique server ID of the zone instance
-    uint32_t mID;
 
     /// Server lock for shared resources
     std::mutex mLock;

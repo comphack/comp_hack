@@ -4,7 +4,8 @@
  *
  * @author HACKfrost
  *
- * @brief Request from the client to revive the player character.
+ * @brief Request from the client to revive the player character
+ *  (or in some instances the partner demon).
  *
  * This file is part of the Channel Server (channel).
  *
@@ -58,8 +59,6 @@ bool Parsers::ReviveCharacter::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {
-    (void)pPacketManager;
-
     if(p.Size() != 8)
     {
         return false;
@@ -71,27 +70,35 @@ bool Parsers::ReviveCharacter::Parse(libcomp::ManagerPacket *pPacketManager,
     const static int8_t REVIVAL_REVIVE_ACCEPT = 4;
     const static int8_t REVIVAL_REVIVE_DENY = 5;
     //const static int8_t REVIVAL_REVIVE_UNKNOWN = 7;  // Used by revival mode 596
+    const static int8_t REVIVAL_DEMON_ONLY_QUIT = 8;
 
     int32_t entityID = p.ReadS32Little();
     int32_t revivalMode = p.ReadS32Little();
     (void)entityID;
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+    auto server = std::dynamic_pointer_cast<ChannelServer>(
+        pPacketManager->GetServer());
     auto characterManager = server->GetCharacterManager();
     auto zoneManager = server->GetZoneManager();
+
+    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
+        connection);
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
+    auto dState = state->GetDemonState();
+    auto zone = state->GetZone();
+
     auto character = cState->GetEntity();
-    auto cs = cState->GetCoreStats();
+    auto characterLevel = cState->GetCoreStats()->GetLevel();
 
     int8_t responseType1 = -1, responseType2 = -1;
 
     int64_t xpLoss = 0;
     uint32_t newZoneID = 0;
     float newX = 0.f, newY = 0.f, newRot = 0.f;
-    float hpRestore = 0;
-    bool xpLossLevel = cs->GetLevel() >= 10 && cs->GetLevel() < 99;
+    std::unordered_map<std::shared_ptr<ActiveEntityState>, int32_t> hpRestores;
+
+    bool xpLossLevel = characterLevel >= 10 && characterLevel < 99;
     switch(revivalMode)
     {
     case 104:   // Home point
@@ -99,14 +106,14 @@ bool Parsers::ReviveCharacter::Parse(libcomp::ManagerPacket *pPacketManager,
         {
             responseType1 = REVIVAL_REVIVE_AND_WAIT;
             responseType2 = REVIVAL_REVIVE_DONE;
-            hpRestore = 1.f;
+            hpRestores[cState] = cState->GetMaxHP();
 
             // Adjust XP
             if(xpLossLevel)
             {
                 xpLoss = (int64_t)floorl(
-                    (double)libcomp::LEVEL_XP_REQUIREMENTS[(size_t)cs->GetLevel()] *
-                    (double)(0.01 - (0.00005 * cs->GetLevel())) - 0.01);
+                    (double)libcomp::LEVEL_XP_REQUIREMENTS[(size_t)characterLevel] *
+                    (double)(0.01 - (0.00005 * characterLevel)) - 0.01);
             }
 
             // Change zone
@@ -124,18 +131,17 @@ bool Parsers::ReviveCharacter::Parse(libcomp::ManagerPacket *pPacketManager,
         {
             responseType1 = REVIVAL_REVIVE_AND_WAIT;
             responseType2 = REVIVAL_REVIVE_DONE;
-            hpRestore = 0.3f;
+            hpRestores[cState] = (int32_t)floorl((float)cState->GetMaxHP() * 0.3f);
 
             // Adjust XP
             if(xpLossLevel)
             {
                 xpLoss = (int64_t)floorl(
-                    (double)libcomp::LEVEL_XP_REQUIREMENTS[(size_t)cs->GetLevel()] *
-                    (double)(0.02 - (0.00005 * cs->GetLevel())));
+                    (double)libcomp::LEVEL_XP_REQUIREMENTS[(size_t)characterLevel] *
+                    (double)(0.02 - (0.00005 * characterLevel)));
             }
 
             // Move to entrance unless a zone-in spot overrides it
-            auto zone = cState->GetZone();
             auto zoneDef = zone->GetDefinition();
             newZoneID = zoneDef->GetID();
             newX = zoneDef->GetStartingX();
@@ -170,7 +176,7 @@ bool Parsers::ReviveCharacter::Parse(libcomp::ManagerPacket *pPacketManager,
             if(characterManager->AddRemoveItems(client, itemMap, false))
             {
                 responseType1 = REVIVAL_REVIVE_NORMAL;
-                hpRestore = 1.f;
+                hpRestores[cState] = cState->GetMaxHP();
             }
         }
         break;
@@ -186,8 +192,41 @@ bool Parsers::ReviveCharacter::Parse(libcomp::ManagerPacket *pPacketManager,
             state->SetAcceptRevival(false);
         }
         break;
+    case 664:   // Demon dungeon item revival
+        {
+            std::unordered_map<uint32_t, uint32_t> itemMap;
+            itemMap[SVR_CONST.ITEM_BALM_OF_LIFE_DEMON] = 1;
+
+            if(characterManager->AddRemoveItems(client, itemMap, false))
+            {
+                responseType1 = REVIVAL_REVIVE_NORMAL;
+                hpRestores[dState] = dState->GetMaxHP();
+                hpRestores[cState] = 1;
+            }
+        }
+        break;
+    case 665:   // Demon dungeon give up
+        {
+            responseType1 = REVIVAL_DEMON_ONLY_QUIT;
+
+            auto zoneDef = zone->GetDefinition();
+            newZoneID = zoneDef->GetGroupID();
+
+            zoneDef = server->GetServerDataManager()
+                ->GetZoneData(newZoneID, 0);
+            if(zoneDef)
+            {
+                newX = zoneDef->GetStartingX();
+                newY = zoneDef->GetStartingY();
+                newRot = zoneDef->GetStartingRotation();
+            }
+            else
+            {
+                newZoneID = 0;
+            }
+        }
+        break;
     case 596:   /// @todo: Special dungeon entrance revival?
-    case 665:   /// @todo: Followed by a zone change
     default:
         LOG_ERROR(libcomp::String("Unknown revival mode requested: %1\n")
             .Arg(revivalMode));
@@ -201,6 +240,7 @@ bool Parsers::ReviveCharacter::Parse(libcomp::ManagerPacket *pPacketManager,
 
     if(xpLoss > 0 && !deathPenaltyDisabled)
     {
+        auto cs = character->GetCoreStats().Get();
         if(xpLoss > cs->GetXP())
         {
             xpLoss = cs->GetXP();
@@ -209,32 +249,45 @@ bool Parsers::ReviveCharacter::Parse(libcomp::ManagerPacket *pPacketManager,
         cs->SetXP(cs->GetXP() - xpLoss);
     }
 
-    if(hpRestore > 0.f)
+    if(hpRestores.size() > 0)
     {
-        if(cState->SetHPMP((int32_t)floorl((float)cState->GetMaxHP() *
-            hpRestore), -1, false))
+        std::set<std::shared_ptr<ActiveEntityState>> displayState;
+
+        for(auto& pair : hpRestores)
         {
-            std::set<std::shared_ptr<ActiveEntityState>> displayState;
-            displayState.insert(cState);
-
-            characterManager->UpdateWorldDisplayState(displayState);
-
-            state->SetAcceptRevival(false);
+            if(pair.first->SetHPMP(pair.second, -1, false))
+            {
+                displayState.insert(pair.first);
+            }
         }
+
+        characterManager->UpdateWorldDisplayState(displayState);
+
+        state->SetAcceptRevival(false);
     }
 
     libcomp::Packet reply;
-    characterManager->GetEntityRevivalPacket(reply, cState, responseType1);
-
-    if(responseType1 == REVIVAL_REVIVE_NORMAL ||
-        responseType1 == REVIVAL_REVIVE_ACCEPT ||
-        responseType1 == REVIVAL_REVIVE_DENY)
+    if(hpRestores.size() == 0)
     {
+        characterManager->GetEntityRevivalPacket(reply, cState, responseType1);
         zoneManager->BroadcastPacket(client, reply);
     }
     else
     {
-        client->QueuePacket(reply);
+        for(auto& pair : hpRestores)
+        {
+            reply.Clear();
+            characterManager->GetEntityRevivalPacket(reply, pair.first,
+                responseType1);
+            zoneManager->BroadcastPacket(zone, reply);
+        }
+
+        // If reviving in a demon only instance, clear the death time-out
+        if(responseType1 == REVIVAL_REVIVE_NORMAL &&
+            zone->GetInstanceType() == InstanceType_t::DEMON_ONLY)
+        {
+            zoneManager->UpdateDeathTimeOut(state, -1);
+        }
     }
 
     if(newZoneID)
@@ -247,19 +300,20 @@ bool Parsers::ReviveCharacter::Parse(libcomp::ManagerPacket *pPacketManager,
         zoneManager->BroadcastPacket(client, reply, false);
 
         // Complete the revival
-        reply.Clear();
-        characterManager->GetEntityRevivalPacket(reply, cState, responseType2);
-        zoneManager->BroadcastPacket(client, reply);
-    }
-    else
-    {
-        client->FlushOutgoing();
+        if(responseType2 != -1)
+        {
+            reply.Clear();
+            characterManager->GetEntityRevivalPacket(reply, cState, responseType2);
+            zoneManager->BroadcastPacket(client, reply);
+        }
     }
 
-    if(hpRestore > 0.f)
+    client->FlushOutgoing();
+
+    for(auto& pair : hpRestores)
     {
-        // If the character was revived, check HP baed effects
-        server->GetTokuseiManager()->Recalculate(cState,
+        // If any entity was revived, check HP baed effects
+        server->GetTokuseiManager()->Recalculate(pair.first,
             std::set<TokuseiConditionType> { TokuseiConditionType::CURRENT_HP });
     }
 

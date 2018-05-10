@@ -492,7 +492,7 @@ std::unordered_map<int32_t, bool> TokuseiManager::Recalculate(const std::shared_
     // Since anything pertaining to party members or summoning a new demon requires
     // a full recalculation check, only check another entity if a partner demon's
     // familiarity changed
-    if(eState->GetEntityType() == objects::EntityStateObject::EntityType_t::PARTNER_DEMON &&
+    if(eState->GetEntityType() == EntityType_t::PARTNER_DEMON &&
         changes.find(TokuseiConditionType::PARTNER_FAMILIARITY) != changes.end())
     {
         auto state = ClientState::GetEntityClientState(eState->GetEntityID(), false);
@@ -616,15 +616,13 @@ std::unordered_map<int32_t, bool> TokuseiManager::Recalculate(const std::list<st
                     map = &partyEffects[eState->GetEntityID()][skillTokusei];
                     break;
                 case objects::Tokusei::TargetType_t::SUMMONER:
-                    if(eState->GetEntityType() ==
-                        objects::EntityStateObject::EntityType_t::PARTNER_DEMON)
+                    if(eState->GetEntityType() == EntityType_t::PARTNER_DEMON)
                     {
                         map = &otherEffects[eState->GetEntityID()][skillTokusei];
                     }
                     break;
                 case objects::Tokusei::TargetType_t::PARTNER:
-                    if(eState->GetEntityType() ==
-                        objects::EntityStateObject::EntityType_t::CHARACTER)
+                    if(eState->GetEntityType() == EntityType_t::CHARACTER)
                     {
                         map = &otherEffects[eState->GetEntityID()][skillTokusei];
                     }
@@ -704,7 +702,7 @@ std::unordered_map<int32_t, bool> TokuseiManager::Recalculate(const std::list<st
         {
             for(auto e : entities)
             {
-                if(e->GetEntityType() == objects::EntityStateObject::EntityType_t::CHARACTER
+                if(e->GetEntityType() == EntityType_t::CHARACTER
                     && e->GetZone() == eState->GetZone())
                 {
                     auto& map = newMaps[e->GetEntityID()];
@@ -957,7 +955,7 @@ std::list<std::shared_ptr<objects::Tokusei>> TokuseiManager::GetDirectTokusei(
     std::list<int32_t> tokuseiIDs;
     switch(eState->GetEntityType())
     {
-    case objects::EntityStateObject::EntityType_t::CHARACTER:
+    case EntityType_t::CHARACTER:
         {
             auto cState = std::dynamic_pointer_cast<CharacterState>(eState);
             auto character = cState->GetEntity();
@@ -1006,7 +1004,7 @@ std::list<std::shared_ptr<objects::Tokusei>> TokuseiManager::GetDirectTokusei(
             }
         }
         break;
-    case objects::EntityStateObject::EntityType_t::PARTNER_DEMON:
+    case EntityType_t::PARTNER_DEMON:
         {
             auto dState = std::dynamic_pointer_cast<DemonState>(eState);
 
@@ -1185,7 +1183,7 @@ bool TokuseiManager::EvaluateTokuseiCondition(const std::shared_ptr<ActiveEntity
     case TokuseiConditionType::EQUIPPED_WEAPON_TYPE:
         // Entity is a character and has the specified weapon type equipped
         if(numericCompare ||
-            eState->GetEntityType() != objects::EntityStateObject::EntityType_t::CHARACTER)
+            eState->GetEntityType() != EntityType_t::CHARACTER)
         {
             return false;
         }
@@ -1210,7 +1208,7 @@ bool TokuseiManager::EvaluateTokuseiCondition(const std::shared_ptr<ActiveEntity
         break;
     case TokuseiConditionType::EXPERTISE:
         // Entity is a character and has the specified expertise rank value
-        if(eState->GetEntityType() != objects::EntityStateObject::EntityType_t::CHARACTER)
+        if(eState->GetEntityType() != EntityType_t::CHARACTER)
         {
             return false;
         }
@@ -1248,12 +1246,12 @@ bool TokuseiManager::EvaluateTokuseiCondition(const std::shared_ptr<ActiveEntity
             auto devilData = eState->GetDevilData();
             switch(eState->GetEntityType())
             {
-            case objects::EntityStateObject::EntityType_t::CHARACTER:
+            case EntityType_t::CHARACTER:
                 gender = (int32_t)std::dynamic_pointer_cast<CharacterState>(eState)
                     ->GetEntity()->GetGender();
                 break;
-            case objects::EntityStateObject::EntityType_t::PARTNER_DEMON:
-            case objects::EntityStateObject::EntityType_t::ENEMY:
+            case EntityType_t::PARTNER_DEMON:
+            case EntityType_t::ENEMY:
                 if(devilData)
                 {
                     gender = (int32_t)devilData->GetBasic()->GetGender();
@@ -1287,7 +1285,7 @@ bool TokuseiManager::EvaluateTokuseiCondition(const std::shared_ptr<ActiveEntity
         // Toggled by the server, just return true or false
         // (Always disable for non-player entities)
         return mTimedTokusei[tokuseiID] && eState->GetEntityType() !=
-            objects::EntityStateObject::EntityType_t::ENEMY;
+            EntityType_t::ENEMY;
     case TokuseiConditionType::PARTY_DEMON_TYPE:
         // Entity is in a party with the specified demon type currently summoned
         if(numericCompare)
@@ -1433,7 +1431,7 @@ double TokuseiManager::CalculateAttributeValue(ActiveEntityState* eState, int32_
             break;
         case objects::TokuseiAttributes::Multiplier_t::EXPERTISE:
             // Multiply the value by the current rank of the supplied expertise
-            if(eState->GetEntityType() == objects::EntityStateObject::EntityType_t::CHARACTER)
+            if(eState->GetEntityType() == EntityType_t::CHARACTER)
             {
                 auto character = ((CharacterState*)eState)->GetEntity();
                 if(character)

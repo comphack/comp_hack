@@ -211,8 +211,11 @@ PACKET_PARSER_DECL(CultureData);            // 0x03AC
 PACKET_PARSER_DECL(EquipmentModEdit);       // 0x03CB
 PACKET_PARSER_DECL(PAttributeDeadline);     // 0x03EA
 PACKET_PARSER_DECL(DemonDepoList);          // 0x03F5
+PACKET_PARSER_DECL(DemonEquip);             // 0x03FB
 PACKET_PARSER_DECL(Barter);                 // 0x03FE
+PACKET_PARSER_DECL(ReportPlayer);           // 0x0407
 PACKET_PARSER_DECL(Blacklist);              // 0x0408
+PACKET_PARSER_DECL(BlacklistUpdate);        // 0x040A
 PACKET_PARSER_DECL(DigitalizePoints);       // 0x0414
 PACKET_PARSER_DECL(DigitalizeAssist);       // 0x0418
 PACKET_PARSER_DECL(VABox);                  // 0x041E

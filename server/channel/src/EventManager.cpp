@@ -85,6 +85,7 @@
 #include "CharacterManager.h"
 #include "CharacterState.h"
 #include "ManagerConnection.h"
+#include "TokuseiManager.h"
 #include "ZoneInstance.h"
 #include "ZoneManager.h"
 
@@ -260,7 +261,6 @@ bool EventManager::UpdateQuest(const std::shared_ptr<ChannelClientConnection>& c
     int32_t, int32_t>& updateFlags)
 {
     auto server = mServer.lock();
-    auto characterManager = server->GetCharacterManager();
     auto definitionManager = server->GetDefinitionManager();
     auto questData = definitionManager->GetQuestData((uint32_t)questID);
 
@@ -285,7 +285,7 @@ bool EventManager::UpdateQuest(const std::shared_ptr<ChannelClientConnection>& c
 
     size_t index;
     uint8_t shiftVal;
-    characterManager->ConvertIDToMaskValues((uint16_t)questID, index, shiftVal);
+    CharacterManager::ConvertIDToMaskValues((uint16_t)questID, index, shiftVal);
 
     uint8_t indexVal = progress->GetCompletedQuests(index);
     bool completed = (shiftVal & indexVal) != 0;
@@ -293,6 +293,7 @@ bool EventManager::UpdateQuest(const std::shared_ptr<ChannelClientConnection>& c
     auto dbChanges = libcomp::DatabaseChangeSet::Create(state->GetAccountUID());
     auto quest = character->GetQuests(questID).Get();
     bool sendUpdate = phase != -2;
+    bool recalcCharacter = false;
     if(phase == -1)
     {
         // Completing a quest
@@ -303,7 +304,9 @@ bool EventManager::UpdateQuest(const std::shared_ptr<ChannelClientConnection>& c
             return false;
         }
 
-        progress->SetCompletedQuests(index, (uint8_t)(shiftVal | indexVal));
+        recalcCharacter = cState->UpdateQuestState(definitionManager,
+            (uint32_t)questID);
+
         dbChanges->Update(progress);
 
         if(quest)
@@ -329,6 +332,8 @@ bool EventManager::UpdateQuest(const std::shared_ptr<ChannelClientConnection>& c
         }
 
         SendCompletedQuestList(client);
+
+        recalcCharacter = cState->UpdateQuestState(definitionManager);
     }
     else if(!quest)
     {
@@ -408,6 +413,15 @@ bool EventManager::UpdateQuest(const std::shared_ptr<ChannelClientConnection>& c
         p.WriteS8(phase);
 
         client->SendPacket(p);
+    }
+
+    if(recalcCharacter)
+    {
+        server->GetTokuseiManager()->Recalculate(cState, true,
+            std::set<int32_t>{ cState->GetEntityID() });
+
+        // Always recalculate stats
+        server->GetCharacterManager()->RecalculateStats(cState, client);
     }
 
     return true;
@@ -793,7 +807,7 @@ bool EventManager::EvaluateQuestCondition(EventContext& ctx,
 
             size_t index;
             uint8_t shiftVal;
-            server->GetCharacterManager()->ConvertIDToMaskValues((uint16_t)questID,
+            CharacterManager::ConvertIDToMaskValues((uint16_t)questID,
                 index, shiftVal);
 
             uint8_t indexVal = progress->GetCompletedQuests(index);
@@ -813,7 +827,7 @@ bool EventManager::EvaluateQuestCondition(EventContext& ctx,
             // Count complete as true
             size_t index;
             uint8_t shiftVal;
-            server->GetCharacterManager()->ConvertIDToMaskValues((uint16_t)questID,
+            CharacterManager::ConvertIDToMaskValues((uint16_t)questID,
                 index, shiftVal);
 
             uint8_t indexVal = character->GetProgress()->GetCompletedQuests(index);
@@ -1055,7 +1069,7 @@ bool EventManager::EvaluateCondition(EventContext& ctx,
 
             uint16_t valuableID = (uint16_t)condition->GetValue1();
 
-            return mServer.lock()->GetCharacterManager()->HasValuable(character, valuableID) != 
+            return CharacterManager::HasValuable(character, valuableID) !=
                 (condition->GetValue2() == 0);
         }
     case objects::EventConditionData::Type_t::QUEST_COMPLETE:
@@ -1074,7 +1088,7 @@ bool EventManager::EvaluateCondition(EventContext& ctx,
 
             size_t index;
             uint8_t shiftVal;
-            mServer.lock()->GetCharacterManager()->ConvertIDToMaskValues(questID, index, shiftVal);
+            CharacterManager::ConvertIDToMaskValues(questID, index, shiftVal);
 
             uint8_t indexVal = progress->GetCompletedQuests(index);
 
@@ -1196,7 +1210,7 @@ bool EventManager::EvaluateCondition(EventContext& ctx,
 
             size_t index;
             uint8_t shiftVal;
-            mServer.lock()->GetCharacterManager()->ConvertIDToMaskValues(mapID, index, shiftVal);
+            CharacterManager::ConvertIDToMaskValues(mapID, index, shiftVal);
 
             uint8_t indexVal = progress->GetMaps(index);
 
@@ -1440,7 +1454,6 @@ bool EventManager::EvaluateCondition(EventContext& ctx,
             // Demon ID ([value 2] = 0) or base demon ID ([value 2] != 0) matching [value 1]
             // exists in the compendium
             auto server = mServer.lock();
-            auto characterManager = server->GetCharacterManager();
             auto definitionManager = server->GetDefinitionManager();
 
             auto character = client->GetClientState()->GetCharacterState()->GetEntity();
@@ -1456,7 +1469,7 @@ bool EventManager::EvaluateCondition(EventContext& ctx,
                 {
                     size_t index;
                     uint8_t shiftValue;
-                    characterManager->ConvertIDToMaskValues(
+                    CharacterManager::ConvertIDToMaskValues(
                         (uint16_t)dbPair.second->GetShiftValue(), index, shiftValue);
                     if((progress->GetDevilBook(index) & shiftValue) != 0)
                     {
@@ -1677,7 +1690,7 @@ bool EventManager::EvaluateCondition(EventContext& ctx,
 
             size_t index;
             uint8_t shiftVal;
-            mServer.lock()->GetCharacterManager()->ConvertIDToMaskValues(pluginID, index, shiftVal);
+            CharacterManager::ConvertIDToMaskValues(pluginID, index, shiftVal);
 
             uint8_t indexVal = progress->GetPlugins(index);
 

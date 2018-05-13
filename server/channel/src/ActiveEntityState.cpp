@@ -48,6 +48,7 @@
 #include <MiCategoryData.h>
 #include <MiCorrectTbl.h>
 #include <MiDevilBattleData.h>
+#include <MiDevilEquipmentItemData.h>
 #include <MiDevilData.h>
 #include <MiDoTDamageData.h>
 #include <MiEffectData.h>
@@ -1914,9 +1915,20 @@ std::set<uint32_t> ActiveEntityStateImp<objects::Demon>::GetAllSkills(
         auto demonData = GetDevilData();
 
         auto growth = demonData->GetGrowth();
-        for(uint32_t traitID : growth->GetTraits())
+        for(size_t i = 0; i < 4; i++)
         {
-            if(traitID)
+            auto equipment = mEntity->GetEquippedItems(i).Get();
+            uint32_t traitID = growth->GetTraits(i);
+            if(equipment)
+            {
+                auto equipData = definitionManager->GetDevilEquipmentItemData(
+                    equipment->GetType());
+                if(equipData)
+                {
+                    skillIDs.insert(equipData->GetSkillID());
+                }
+            }
+            else if(traitID)
             {
                 skillIDs.insert(traitID);
             }

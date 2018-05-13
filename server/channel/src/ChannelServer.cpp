@@ -490,10 +490,16 @@ bool ChannelServer::Initialize()
         to_underlying(ClientToChannelPacketCode_t::PACKET_PATTRIBUTE_DEADLINE));
     clientPacketManager->AddParser<Parsers::DemonDepoList>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_DEMON_DEPO_LIST));
+    clientPacketManager->AddParser<Parsers::DemonEquip>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_DEMON_EQUIP));
     clientPacketManager->AddParser<Parsers::Barter>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_BARTER));
+    clientPacketManager->AddParser<Parsers::ReportPlayer>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_REPORT_PLAYER));
     clientPacketManager->AddParser<Parsers::Blacklist>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_BLACKLIST));
+    clientPacketManager->AddParser<Parsers::BlacklistUpdate>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_BLACKLIST_UPDATE));
     clientPacketManager->AddParser<Parsers::DigitalizePoints>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_DIGITALIZE_POINTS));
     clientPacketManager->AddParser<Parsers::DigitalizeAssist>(

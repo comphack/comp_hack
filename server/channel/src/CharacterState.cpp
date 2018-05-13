@@ -30,9 +30,11 @@
 #include <Constants.h>
 #include <DefinitionManager.h>
 #include <ScriptEngine.h>
+#include <ServerConstants.h>
 
 // objects Includes
 #include <CalculatedEntityState.h>
+#include <CharacterProgress.h>
 #include <EnchantSetData.h>
 #include <EnchantSpecialData.h>
 #include <Expertise.h>
@@ -52,6 +54,7 @@
 #include <MiItemBasicData.h>
 #include <MiModificationExtEffectData.h>
 #include <MiModifiedEffectData.h>
+#include <MiQuestData.h>
 #include <MiSItemData.h>
 #include <MiSkillItemStatusCommonData.h>
 #include <MiSpecialConditionData.h>
@@ -60,6 +63,9 @@
 
 // C++ Standard Includes
 #include <cmath>
+
+// channel Includes
+#include <CharacterManager.h>
 
 using namespace channel;
 
@@ -87,7 +93,7 @@ namespace libcomp
     }
 }
 
-CharacterState::CharacterState()
+CharacterState::CharacterState() : mQuestBonusCount(0)
 {
 }
 
@@ -100,6 +106,16 @@ std::list<std::shared_ptr<objects::MiSpecialConditionData>>
     CharacterState::GetConditionalTokusei() const
 {
     return mConditionalTokusei;
+}
+
+uint32_t CharacterState::GetQuestBonusCount() const
+{
+    return mQuestBonusCount;
+}
+
+std::list<int32_t> CharacterState::GetQuestBonusTokuseiIDs() const
+{
+    return mQuestBonusTokuseiIDs;
 }
 
 void CharacterState::RecalcEquipState(libcomp::DefinitionManager* definitionManager)
@@ -311,6 +327,91 @@ void CharacterState::RecalcEquipState(libcomp::DefinitionManager* definitionMana
     }
 }
 
+bool CharacterState::UpdateQuestState(
+    libcomp::DefinitionManager* definitionManager, uint32_t completedQuestID)
+{
+    auto character = GetEntity();
+    auto progress = character ? character->GetProgress().Get() : nullptr;
+    if(!progress)
+    {
+        return false;
+    }
+
+    uint32_t questBonusCount = mQuestBonusCount;
+    if(completedQuestID)
+    {
+        size_t index;
+        uint8_t shiftVal;
+        CharacterManager::ConvertIDToMaskValues((uint16_t)completedQuestID,
+            index, shiftVal);
+
+        uint8_t indexVal = progress->GetCompletedQuests(index);
+        bool completed = (shiftVal & indexVal) != 0;
+        if(completed)
+        {
+            // Nothing new
+            return false;
+        }
+
+        progress->SetCompletedQuests(index, (uint8_t)(shiftVal | indexVal));
+
+        // Only quest types 0 and 1 apply bonuses (client SHOULD check
+        // the bonus enabled flag but some others are enabled)
+        auto questData = definitionManager->GetQuestData(completedQuestID);
+        if(!questData || questData->GetType() > 1)
+        {
+            return false;
+        }
+
+        questBonusCount++;
+    }
+    else
+    {
+        questBonusCount = 0;
+
+        uint32_t questID = 0;
+        for(uint8_t qBlock : progress->GetCompletedQuests())
+        {
+            for(uint8_t i = 0; i < 8; i++)
+            {
+                if((qBlock & (0x01 << i)) != 0)
+                {
+                    auto questData = definitionManager->GetQuestData(questID);
+                    if(questData && questData->GetType() <= 1)
+                    {
+                        questBonusCount++;
+                    }
+                }
+
+                questID++;
+            }
+        }
+
+    }
+
+    if(questBonusCount != mQuestBonusCount)
+    {
+        // Recalculate quest based tokusei and set count
+        std::list<int32_t> questBonusTokuseiIDs;
+
+        for(auto bonusPair : SVR_CONST.QUEST_BONUS)
+        {
+            if(bonusPair.first <= questBonusCount)
+            {
+                questBonusTokuseiIDs.push_back(bonusPair.second);
+            }
+        }
+
+        std::lock_guard<std::mutex> lock(mLock);
+        mQuestBonusTokuseiIDs = questBonusTokuseiIDs;
+        mQuestBonusCount = questBonusCount;
+
+        return true;
+    }
+
+    return false;
+}
+
 uint8_t CharacterState::GetExpertiseRank(
     libcomp::DefinitionManager* definitionManager, uint32_t expertiseID)
 {
@@ -405,7 +506,8 @@ bool CharacterState::RecalcDisabledSkills(
     return newSkillDisabled || disabledSkills.size() != currentDisabledSkills.size();
 }
 
-void CharacterState::BaseStatsCalculated(libcomp::DefinitionManager* definitionManager,
+void CharacterState::BaseStatsCalculated(
+    libcomp::DefinitionManager* definitionManager,
     std::shared_ptr<objects::CalculatedEntityState> calcState,
     libcomp::EnumMap<CorrectTbl, int16_t>& stats,
     std::list<std::shared_ptr<objects::MiCorrectTbl>>& adjustments)

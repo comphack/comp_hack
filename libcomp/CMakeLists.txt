@@ -266,6 +266,7 @@ SET(${PROJECT_NAME}_SCHEMA
     schema/qmp_file.xml
     schema/registeredchannel.xml
     schema/registeredworld.xml
+    schema/reportedplayer.xml
     schema/server_command_line.xml
     schema/server_npc.xml
     schema/server_object.xml
@@ -292,6 +293,7 @@ SET(${PROJECT_NAME}_SCHEMA
     schema/binarydata/czonerelationdata.xml
     schema/binarydata/devilbookdata.xml
     schema/binarydata/devildata.xml
+    schema/binarydata/devilequipmentdata.xml
     schema/binarydata/devillvupratedata.xml
     schema/binarydata/disassemblydata.xml
     schema/binarydata/dynamicmapdata.xml
@@ -405,10 +407,10 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     DatabaseConfigSQLite3.cpp
     EntityStats.h
     EntityStats.cpp
-    Demon.h
-    Demon.cpp
     Item.h
     Item.cpp
+    Demon.h
+    Demon.cpp
     Quest.h
     Quest.cpp
     Character.h
@@ -497,6 +499,8 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     RegisteredChannel.cpp
     RegisteredWorld.h
     RegisteredWorld.cpp
+    ReportedPlayer.h
+    ReportedPlayer.cpp
     SearchEntry.h
     SearchEntry.cpp
     ServerBazaar.h
@@ -643,8 +647,12 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     MiDevilBookData.h
     MiDevilCrystalData.h
     MiDevilCrystalData.cpp
-    MiDevilData.cpp
     MiDevilData.h
+    MiDevilData.cpp
+    MiDevilEquipmentData.h
+    MiDevilEquipmentData.cpp
+    MiDevilEquipmentItemData.h
+    MiDevilEquipmentItemData.cpp
     MiDevilFamiliarityData.cpp
     MiDevilFamiliarityData.h
     MiDevilLVUpData.cpp

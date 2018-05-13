@@ -260,6 +260,10 @@ struct Data
     /// Fusion status effect IDs to success boosts
     std::unordered_map<uint32_t, uint8_t> FUSION_BOOST_STATUSES;
 
+    /// Map of the number of completed quests required to gain the
+    /// specified tokusei IDs
+    std::unordered_map<uint16_t, int32_t> QUEST_BONUS;
+
     /// Array of item IDs used for slot modification, indexed in the same order
     /// as the RateScaling field on MiModificationTriggerData and
     /// MiModificationExtEffectData
@@ -425,6 +429,69 @@ private:
         }
 
         return true;
+    }
+
+    /**
+     * Utility function to load convert a string to a list of numeric
+     * ranges and return in a list.
+     * @param value String of numeric ranges
+     * @param success Output success indicator
+     * @return List of converted numbers or empty if failure occurs
+     */
+    template<typename T>
+    static std::list<T> ToIntegerRange(const std::string& value, bool& success)
+    {
+        std::list<T> results;
+
+        auto params = libcomp::String(value).Split(",");
+        for(auto param : params)
+        {
+            auto subParams = libcomp::String(param).Split("-");
+            if(subParams.size() == 2)
+            {
+                // Min-max
+                T min = 0;
+                T max = 0;
+                if(LoadInteger(subParams.front().C(), min) &&
+                    LoadInteger(subParams.back().C(), max) &&
+                    min < max)
+                {
+                    for(T i = min; i <= max; i++)
+                    {
+                        results.push_back(i);
+                    }
+                }
+                else
+                {
+                    success = false;
+                }
+            }
+            else if(subParams.size() == 1)
+            {
+                // Single value
+                T p = 0;
+                if(LoadInteger(param.C(), p))
+                {
+                    results.push_back(p);
+                }
+                else
+                {
+                    success = false;
+                }
+            }
+            else
+            {
+                success = false;
+            }
+
+            if(!success)
+            {
+                results.clear();
+                return results;
+            }
+        }
+
+        return results;
     }
 
     /// Container for all server side constants

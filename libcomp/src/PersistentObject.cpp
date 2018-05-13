@@ -55,6 +55,7 @@
 #include "Quest.h"
 #include "RegisteredChannel.h"
 #include "RegisteredWorld.h"
+#include "ReportedPlayer.h"
 #include "StatusEffect.h"
 
 using namespace libcomp;
@@ -384,6 +385,9 @@ bool PersistentObject::Initialize()
 
     RegisterType(typeid(objects::RegisteredWorld), objects::RegisteredWorld::GetMetadata(),
         []() {  return (PersistentObject*)new objects::RegisteredWorld(); });
+
+    RegisterType(typeid(objects::ReportedPlayer), objects::ReportedPlayer::GetMetadata(),
+        []() {  return (PersistentObject*)new objects::ReportedPlayer(); });
 
     RegisterType(typeid(objects::StatusEffect), objects::StatusEffect::GetMetadata(),
         []() {  return (PersistentObject*)new objects::StatusEffect(); });

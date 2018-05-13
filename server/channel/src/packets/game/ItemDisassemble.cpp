@@ -77,7 +77,7 @@ bool Parsers::ItemDisassemble::Parse(libcomp::ManagerPacket *pPacketManager,
     uint32_t targetItemType = targetItem ? targetItem->GetType() : 0;
     auto disDef = definitionManager->GetDisassemblyDataByItemID(targetItemType);
 
-    bool playerHasTank = characterManager->HasValuable(character,
+    bool playerHasTank = CharacterManager::HasValuable(character,
         SVR_CONST.VALUABLE_MATERIAL_TANK);
 
     libcomp::Packet reply;

@@ -278,19 +278,19 @@
         </pair>
         <pair>
             <key>9555</key>
-            <value>3056,3057,3058,3059,3060,3061,3062,3063</value>
+            <value>3056-3063</value>
         </pair>
         <pair>
             <key>9556</key>
-            <value>3053,3054,3055</value>
+            <value>3053-3055</value>
         </pair>
         <pair>
             <key>9557</key>
-            <value>3064,3065,3066,3072,3073,3074</value>
+            <value>3064-3066,3072-3074</value>
         </pair>
         <pair>
             <key>9558</key>
-            <value>3067,3068,3069,3070,3071</value>
+            <value>3067-3071</value>
         </pair>
     </constant>
     <constant name="CLAN_FORM_MAP">
@@ -320,14 +320,14 @@
         <!-- Format: skills gained by clan level -->
         <element>7001</element>
         <element>7002,7003</element>
-        <element>7004,7005,7006</element>
-        <element>7007,7008,7009</element>
-        <element>7010,7011,7012</element>
-        <element>7013,7014,7015</element>
+        <element>7004-7006</element>
+        <element>7007-7009</element>
+        <element>7010-7012</element>
+        <element>7013-7015</element>
         <element>7016,7017</element>
         <element>7018,7019</element>
         <element>7020,7021</element>
-        <element>7022,7023,7024</element>
+        <element>7022-7024</element>
     </constant>
     <constant name="DEMON_BOOK_BONUS">
         <!-- Format: entry count => tokusei ID list -->
@@ -861,10 +861,90 @@
             <value>20</value>
         </pair>
     </constant>
+    <constant name="QUEST_BONUS">
+        <!-- Format: bonus adjusting quest complete count => tokusei ID list -->
+        <!-- This replaces the partially functional QuestBonusData.sbin -->
+        <pair>
+            <key>10</key>
+            <value>20010000</value>
+        </pair>
+        <pair>
+            <key>20</key>
+            <value>20010001</value>
+        </pair>
+        <pair>
+            <key>30</key>
+            <value>20010002</value>
+        </pair>
+        <pair>
+            <key>40</key>
+            <value>20010003</value>
+        </pair>
+        <pair>
+            <key>50</key>
+            <value>20010004</value>
+        </pair>
+        <pair>
+            <key>60</key>
+            <value>20010005</value>
+        </pair>
+        <pair>
+            <key>70</key>
+            <value>20010006</value>
+        </pair>
+        <pair>
+            <key>80</key>
+            <value>20010007</value>
+        </pair>
+        <pair>
+            <key>100</key>
+            <value>20010008</value>
+        </pair>
+        <pair>
+            <key>120</key>
+            <value>20010009</value>
+        </pair>
+        <pair>
+            <key>140</key>
+            <value>20010010</value>
+        </pair>
+        <pair>
+            <key>160</key>
+            <value>20010011</value>
+        </pair>
+        <pair>
+            <key>180</key>
+            <value>20010012</value>
+        </pair>
+        <pair>
+            <key>200</key>
+            <value>20010013</value>
+        </pair>
+        <pair>
+            <key>220</key>
+            <value>20010014</value>
+        </pair>
+        <pair>
+            <key>240</key>
+            <value>20010015</value>
+        </pair>
+        <pair>
+            <key>260</key>
+            <value>20010016</value>
+        </pair>
+        <pair>
+            <key>280</key>
+            <value>20010017</value>
+        </pair>
+        <pair>
+            <key>300</key>
+            <value>20010018</value>
+        </pair>
+    </constant>
     <constant name="SLOT_MOD_ITEMS">
         <!-- Format: mod items (weapon, then armor) -->
-        <element>42005,42006,42007,42008,42022,42029,42082</element>
-        <element>42031,42032,42033</element>
+        <element>42005-42008,42022,42029,42082</element>
+        <element>42031-42033</element>
     </constant>
     <constant name="SYNTH_ADJUSTMENTS">
         <!-- Format: item/skill => function, 2 contextual params -->

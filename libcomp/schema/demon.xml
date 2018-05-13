@@ -25,6 +25,9 @@
         <member type="array" name="Reunion" size="12">
             <element type="s8"/>
         </member>
+        <member type="array" name="EquippedItems" size="4">
+            <element type="Item*"/>
+        </member>
 
         <!-- Sub-sections -->
         <member type="EntityStats*" name="CoreStats"/>

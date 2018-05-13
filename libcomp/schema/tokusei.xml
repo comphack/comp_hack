@@ -57,7 +57,7 @@
         </member>
     </object>
     <object name="TokuseiAttributes" persistent="false">
-        <member type="enum" name="Multiplier" underlying="int8_t">
+        <member type="enum" name="MultiplierType" underlying="int8_t">
             <value>NONE</value>
             <value>LEVEL</value>
             <value>EXPERTISE</value>
@@ -65,7 +65,12 @@
             <value>CORRECT_TABLE_DIVIDE</value>
             <value>BASE_AND_LEVEL</value>
             <value>PARTY_SIZE</value>
+
+            <!-- Custom multipliers -->
             <value>DEMON_BOOK_DIVIDE</value>
+            <value>DEMON_BOOK_FAMILY_DIVIDE</value>
+            <value>DEMON_BOOK_RACE_DIVIDE</value>
+            <value>QUEST_BONUS_DIVIDE</value>
         </member>
         <member type="s32" name="MultiplierValue"/>
         <member type="u8" name="Precision" default="0"/>

@@ -250,8 +250,11 @@ enum class ClientToChannelPacketCode_t : uint16_t
     PACKET_EQUIPMENT_MOD_EDIT = 0x03CB,  //!< Request to edit a previously applied equipment modification.
     PACKET_PATTRIBUTE_DEADLINE = 0x03EA, //!< Request for the next punitive attribute deadline.
     PACKET_DEMON_DEPO_LIST = 0x03F5,  //!< Request to list the client account's demon depositories.
+    PACKET_DEMON_EQUIP = 0x03FB, //!< Request to change demon equipment.
     PACKET_BARTER = 0x03FE, //!< Request to process the results of an NPC barter.
+    PACKET_REPORT_PLAYER = 0x0407,  //!< Request report a player for abuse.
     PACKET_BLACKLIST = 0x0408,  //!< Request for the current player's blacklist.
+    PACKET_BLACKLIST_UPDATE = 0x040A,  //!< Request to update the current player's blacklist.
     PACKET_DIGITALIZE_POINTS = 0x0414,  //!< Request for the current player's digitalize point information.
     PACKET_DIGITALIZE_ASSIST = 0x0418,  //!< Request for the current player's digitalize assist information.
     PACKET_VA_BOX = 0x041E, //!< Request to list all VA items in the VA closet.
@@ -560,10 +563,12 @@ enum class ChannelToClientPacketCode_t : uint16_t
     PACKET_PATTRIBUTE = 0x03E9,    //!< Currently unused. Notification containing punitive attribute system time information.
     PACKET_PATTRIBUTE_DEADLINE = 0x03EB, //!< Response to the request for the next punitive attribute deadline.
     PACKET_DEMON_DEPO_LIST = 0x03F6,  //!< Response to the request to open the demon depo.
+    PACKET_DEMON_EQUIP = 0x03FC, //!< Response to the request to change demon equipment.
     PACKET_BARTER = 0x03FF, //!< Response containing the results of an NPC barter.
     PACKET_SKILL_POINT_UPDATE = 0x0404,  //!< Notification that the player character's available skill points have updated.
     PACKET_WORLD_BONUS = 0x0405,  //!< Notification of the client logic adjusting world bonuses.
     PACKET_BLACKLIST = 0x0409,  //!< Response containing the current player's blacklist.
+    PACKET_BLACKLIST_UPDATE = 0x040B,  //!< Response to the request to update the current player's blacklist.
     PACKET_DIGITALIZE_POINTS = 0x0415,  //!< Response containing the current player's digitalize point information.
     PACKET_DIGITALIZE_ASSIST = 0x0419,  //!< Response containing the current player's digitalize assist information.
 	PACKET_VA_BOX = 0x041F, //!< Response to the request to list all VA items in the VA closet.

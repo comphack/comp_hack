@@ -234,21 +234,16 @@ bool ServerConstants::Initialize(const String& filePath)
             {
                 if(!pair.second.empty())
                 {
-                    auto params = libcomp::String(pair.second).Split(",");
-                    for(auto param : params)
+                    for(uint32_t p : ToIntegerRange<uint32_t>(pair.second,
+                        success))
                     {
-                        uint32_t p = 0;
-                        if(LoadInteger(param.C(), p))
-                        {
-                            sConstants.CAMEO_MAP[key].push_back(p);
-                        }
-                        else
-                        {
-                            LOG_ERROR("Failed to load an element in"
-                                " CAMEO_MAP\n");
-                            success = false;
-                            break;
-                        }
+                        sConstants.CAMEO_MAP[key].push_back(p);
+                    }
+
+                    if(!success)
+                    {
+                        LOG_ERROR("Failed to load an element in CAMEO_MAP\n");
+                        break;
                     }
                 }
             }
@@ -302,20 +297,17 @@ bool ServerConstants::Initialize(const String& filePath)
                 {
                     if(!elemStr.IsEmpty())
                     {
-                        for(auto elem : elemStr.Split(","))
+                        for(uint32_t p : ToIntegerRange<uint32_t>(elemStr.C(),
+                            success))
                         {
-                            uint32_t entry = 0;
-                            if(LoadInteger(elem.C(), entry))
-                            {
-                                sConstants.CLAN_LEVEL_SKILLS[idx].insert(entry);
-                            }
-                            else
-                            {
-                                LOG_ERROR("Failed to load an element in"
-                                    " CLAN_LEVEL_SKILLS\n");
-                                success = false;
-                                break;
-                            }
+                            sConstants.CLAN_LEVEL_SKILLS[idx].insert(p);
+                        }
+
+                        if(!success)
+                        {
+                            LOG_ERROR("Failed to load an element in"
+                                " CLAN_LEVEL_SKILLS\n");
+                            break;
                         }
                     }
 
@@ -353,21 +345,17 @@ bool ServerConstants::Initialize(const String& filePath)
             {
                 if(!pair.second.empty())
                 {
-                    auto params = libcomp::String(pair.second).Split(",");
-                    for(auto param : params)
+                    for(int32_t p : ToIntegerRange<int32_t>(pair.second,
+                        success))
                     {
-                        int32_t p = 0;
-                        if(LoadInteger(param.C(), p))
-                        {
-                            sConstants.DEMON_BOOK_BONUS[key].insert(p);
-                        }
-                        else
-                        {
-                            LOG_ERROR("Failed to load an element in"
-                                " DEMON_BOOK_BONUS\n");
-                            success = false;
-                            break;
-                        }
+                        sConstants.DEMON_BOOK_BONUS[key].insert(p);
+                    }
+
+                    if(!success)
+                    {
+                        LOG_ERROR("Failed to load an element in"
+                            " DEMON_BOOK_BONUS\n");
+                        break;
                     }
                 }
             }
@@ -542,6 +530,19 @@ bool ServerConstants::Initialize(const String& filePath)
         success = false;
     }
 
+    complexIter = complexConstants.find("QUEST_BONUS");
+    if(success && complexIter != complexConstants.end())
+    {
+        std::unordered_map<std::string, std::string> map;
+        success = LoadKeyValueStrings(complexIter->second, map) &&
+            LoadIntegerMap(map, sConstants.QUEST_BONUS);
+    }
+    else
+    {
+        LOG_ERROR("QUEST_BONUS not found\n");
+        success = false;
+    }
+
     complexIter = complexConstants.find("SLOT_MOD_ITEMS");
     if(success && complexIter != complexConstants.end())
     {
@@ -566,20 +567,17 @@ bool ServerConstants::Initialize(const String& filePath)
                 {
                     if(!elemStr.IsEmpty())
                     {
-                        for(auto elem : elemStr.Split(","))
+                        for(uint32_t p : ToIntegerRange<uint32_t>(elemStr.C(),
+                            success))
                         {
-                            uint32_t entry = 0;
-                            if(LoadInteger(elem.C(), entry))
-                            {
-                                sConstants.SLOT_MOD_ITEMS[idx].push_back(entry);
-                            }
-                            else
-                            {
-                                LOG_ERROR("Failed to load an element in"
-                                    " SLOT_MOD_ITEMS\n");
-                                success = false;
-                                break;
-                            }
+                            sConstants.SLOT_MOD_ITEMS[idx].push_back(p);
+                        }
+
+                        if(!success)
+                        {
+                            LOG_ERROR("Failed to load an element in"
+                                " SLOT_MOD_ITEMS\n");
+                            break;
                         }
 
                         if(sConstants.SLOT_MOD_ITEMS[idx].size() > 8)

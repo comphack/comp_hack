@@ -568,11 +568,13 @@ public:
      * @param points Set or adjusted soul points to update the demon with
      * @param isAdjust true if the points value should be added
      *  to the current value, false if it should replace the curent value
+     * @param applyRate If true the soul point rate will be used to adjust
+     *  the amount gained
      * @return Adjusted SP amount gained or lossed (before limits are applied)
      */
     int32_t UpdateSoulPoints(const std::shared_ptr<
         channel::ChannelClientConnection>& client, int32_t points,
-        bool isAdjust = false);
+        bool isAdjust = false, bool applyRate = false);
 
     /**
      * Update the client's character or demon's experience and level
@@ -688,7 +690,8 @@ public:
      * @param shiftVal Ouptput parameter that will be updated to the
      *  ID's mask position at the index in the flag array
      */
-    void ConvertIDToMaskValues(uint16_t id, size_t& index, uint8_t& shiftVal);
+    static void ConvertIDToMaskValues(uint16_t id, size_t& index,
+        uint8_t& shiftVal);
 
     /**
      * Add a map that the client character has obtained.
@@ -727,7 +730,7 @@ public:
      * @param valuableID ID of the valuable to look for
      * @return true if the valuable has been obtained
      */
-    bool HasValuable(const std::shared_ptr<objects::Character>& character,
+    static bool HasValuable(const std::shared_ptr<objects::Character>& character,
         uint16_t valuableID);
 
     /**

@@ -32,6 +32,9 @@
         </member>
 
         <member type="BazaarData*" name="BazaarData"/>
+        <member type="list" name="Blacklist">
+            <element type="string"/>
+        </member>
 
         <member type="bool" name="CleanupRequired" key="true" unique="false"/>
     </object>

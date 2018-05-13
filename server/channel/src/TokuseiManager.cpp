@@ -964,6 +964,12 @@ std::list<std::shared_ptr<objects::Tokusei>> TokuseiManager::GetDirectTokusei(
             // Default to tokusei from equipment
             tokuseiIDs = cState->GetEquipmentTokuseiIDs();
 
+            // Add quest bonus tokusei
+            for(int32_t tokuseiID : cState->GetQuestBonusTokuseiIDs())
+            {
+                tokuseiIDs.push_back(tokuseiID);
+            }
+
             // Add any conditional tokusei
             for(auto condition : cState->GetConditionalTokusei())
             {
@@ -1409,14 +1415,14 @@ double TokuseiManager::CalculateAttributeValue(ActiveEntityState* eState, int32_
         }
 
         int32_t multValue = attributes->GetMultiplierValue();
-        switch(attributes->GetMultiplier())
+        switch(attributes->GetMultiplierType())
         {
-        case objects::TokuseiAttributes::Multiplier_t::LEVEL:
-        case objects::TokuseiAttributes::Multiplier_t::BASE_AND_LEVEL:
+        case objects::TokuseiAttributes::MultiplierType_t::LEVEL:
+        case objects::TokuseiAttributes::MultiplierType_t::BASE_AND_LEVEL:
             // Multiply the value by the entities level
             {
-                bool includeBase = attributes->GetMultiplier() !=
-                    objects::TokuseiAttributes::Multiplier_t::LEVEL;
+                bool includeBase = attributes->GetMultiplierType() !=
+                    objects::TokuseiAttributes::MultiplierType_t::LEVEL;
 
                 auto cs = eState->GetCoreStats();
                 if(cs)
@@ -1429,7 +1435,7 @@ double TokuseiManager::CalculateAttributeValue(ActiveEntityState* eState, int32_
                 }
             }
             break;
-        case objects::TokuseiAttributes::Multiplier_t::EXPERTISE:
+        case objects::TokuseiAttributes::MultiplierType_t::EXPERTISE:
             // Multiply the value by the current rank of the supplied expertise
             if(eState->GetEntityType() == EntityType_t::CHARACTER)
             {
@@ -1452,12 +1458,12 @@ double TokuseiManager::CalculateAttributeValue(ActiveEntityState* eState, int32_
                 result = 0.0;
             }
             break;
-        case objects::TokuseiAttributes::Multiplier_t::CORRECT_TABLE:
-        case objects::TokuseiAttributes::Multiplier_t::CORRECT_TABLE_DIVIDE:
+        case objects::TokuseiAttributes::MultiplierType_t::CORRECT_TABLE:
+        case objects::TokuseiAttributes::MultiplierType_t::CORRECT_TABLE_DIVIDE:
             // Multiply (or divide) the value by a correct table value
             {
-                bool divide = attributes->GetMultiplier() !=
-                    objects::TokuseiAttributes::Multiplier_t::CORRECT_TABLE;
+                bool divide = attributes->GetMultiplierType() !=
+                    objects::TokuseiAttributes::MultiplierType_t::CORRECT_TABLE;
 
                 int16_t val = calcState->GetCorrectTbl((size_t)multValue);
                 if(divide)
@@ -1470,7 +1476,7 @@ double TokuseiManager::CalculateAttributeValue(ActiveEntityState* eState, int32_
                 }
             }
             break;
-        case objects::TokuseiAttributes::Multiplier_t::PARTY_SIZE:
+        case objects::TokuseiAttributes::MultiplierType_t::PARTY_SIZE:
             // Multiply the value by the number of party members in the zone
             {
                 uint8_t memberCount = 0;
@@ -1496,14 +1502,75 @@ double TokuseiManager::CalculateAttributeValue(ActiveEntityState* eState, int32_
                 result = (double)(result * (double)memberCount);
             }
             break;
-        case objects::TokuseiAttributes::Multiplier_t::DEMON_BOOK_DIVIDE:
-            // Divide the value by the number of unique entries in the compendium
+        case objects::TokuseiAttributes::MultiplierType_t::DEMON_BOOK_DIVIDE:
+            // Divide the value times the number of unique entries in the compendium
+            // by the multiplier
             {
-                auto state = ClientState::GetEntityClientState(eState->GetEntityID(), false);
+                auto state = ClientState::GetEntityClientState(
+                    eState->GetEntityID(), false);
                 auto dState = state ? state->GetDemonState() : nullptr;
 
                 result = dState
-                    ? (result * floor((double)dState->GetCompendiumCount() / (double)multValue))
+                    ? (result * floor((double)dState->GetCompendiumCount() /
+                        (double)multValue))
+                    : 0.0;
+            }
+            break;
+        case objects::TokuseiAttributes::MultiplierType_t::DEMON_BOOK_FAMILY_DIVIDE:
+            // Divide the value times the number of unique entries in the compendium
+            // (of the current demon's family) by the multiplier
+            {
+                auto state = ClientState::GetEntityClientState(
+                    eState->GetEntityID(), false);
+                auto dState = state ? state->GetDemonState() : nullptr;
+                auto devilData = dState ? dState->GetDevilData() : nullptr;
+
+                if(devilData)
+                {
+                    uint8_t familyID = (uint8_t)devilData->GetCategory()
+                        ->GetFamily();
+                    result = result * floor((double)dState->GetCompendiumCount(
+                        familyID, true) / (double)multValue);
+                }
+                else
+                {
+                    result = 0.0;
+                }
+            }
+            break;
+        case objects::TokuseiAttributes::MultiplierType_t::DEMON_BOOK_RACE_DIVIDE:
+            // Divide the value times the number of unique entries in the compendium
+            // (of the current demon's race) by the multiplier
+            {
+                auto state = ClientState::GetEntityClientState(
+                    eState->GetEntityID(), false);
+                auto dState = state ? state->GetDemonState() : nullptr;
+                auto devilData = dState ? dState->GetDevilData() : nullptr;
+
+                if(devilData)
+                {
+                    uint8_t raceID = (uint8_t)devilData->GetCategory()
+                        ->GetRace();
+                    result = result * floor((double)dState->GetCompendiumCount(
+                        raceID, false) / (double)multValue);
+                }
+                else
+                {
+                    result = 0.0;
+                }
+            }
+            break;
+        case objects::TokuseiAttributes::MultiplierType_t::QUEST_BONUS_DIVIDE:
+            // Divide the value times the number of bonus enabled quests completed
+            // by the multiplier
+            {
+                auto state = ClientState::GetEntityClientState(
+                    eState->GetEntityID(), false);
+                auto cState = state ? state->GetCharacterState() : nullptr;
+
+                result = cState
+                    ? (result * floor((double)cState->GetQuestBonusCount() /
+                        (double)multValue))
                     : 0.0;
             }
             break;

@@ -147,6 +147,7 @@ void AccountManager::HandleLoginResponse(const std::shared_ptr<
 
         // Initialize some run-time data
         cState->RecalcEquipState(definitionManager);
+        cState->UpdateQuestState(definitionManager);
         cState->RecalcDisabledSkills(definitionManager);
 
         // Prepare active quests
@@ -714,6 +715,25 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
                         demon->RemoveStatusEffects((size_t)i);
                     }
                 }
+            }
+
+            // Demon equipment
+            for(size_t i = 0; i < 4; i++)
+            {
+                auto equipment = demon->GetEquippedItems(i);
+                if(equipment.IsNull()) continue;
+
+                if(!equipment.Get(db))
+                {
+                    LOG_WARNING(libcomp::String("Removing invalid"
+                        " demon equipment saved for account: %1\n")
+                        .Arg(state->GetAccountUID().ToString()));
+                    demon->SetEquippedItems(i, NULLUUID);
+                    continue;
+                }
+
+                state->SetObjectID(equipment.GetUUID(),
+                    server->GetNextObjectID());
             }
         }
     }

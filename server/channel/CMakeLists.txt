@@ -338,8 +338,11 @@ SET(${PROJECT_NAME}_PACKETS
     src/packets/game/EquipmentModEdit.cpp       # 0x03CB
     src/packets/game/PAttributeDeadline.cpp     # 0x03EA
     src/packets/game/DemonDepoList.cpp          # 0x03F5
+    src/packets/game/DemonEquip.cpp             # 0x03FB
     src/packets/game/Barter.cpp                 # 0x03FE
+    src/packets/game/ReportPlayer.cpp           # 0x0407
     src/packets/game/Blacklist.cpp              # 0x0408
+    src/packets/game/BlacklistUpdate.cpp        # 0x040A
     src/packets/game/DigitalizePoints.cpp       # 0x0414
     src/packets/game/DigitalizeAssist.cpp       # 0x0418
     src/packets/game/VABox.cpp                  # 0x041E

@@ -70,15 +70,15 @@ int main(int argc, char *argv[])
     {
         err = "Failed to add datastore search path from map.ini.";
     }
-    else if(!defintions->LoadZoneData(&*datastore))
+    else if(!defintions->LoadData<objects::MiZoneData>(&*datastore))
     {
         err = "Failed to load zone data.";
     }
-    else if(!defintions->LoadDynamicMapData(&*datastore))
+    else if(!defintions->LoadData<objects::MiDynamicMapData>(&*datastore))
     {
         err = "Failed to load dynamic map data.";
     }
-    else if(!defintions->LoadDevilData(&*datastore))
+    else if(!defintions->LoadData<objects::MiDevilData>(&*datastore))
     {
         err = "Failed to load devil data.";
     }

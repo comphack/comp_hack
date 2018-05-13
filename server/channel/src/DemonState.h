@@ -52,15 +52,28 @@ public:
     DemonState();
 
     /**
+     * Explicitly defined copy constructor necessary due to removal
+     * of implicit constructor from non-copyable mutex member. This should
+     * never actually be used.
+     * @param other The other state to copy
+     */
+    DemonState(const DemonState& other);
+
+    /**
      * Clean up the demon state.
      */
     virtual ~DemonState() { }
 
     /**
-     * Get the current unique entry count in the compendium
+     * Get the current unique entry count in the compendium or count specific
+     * to entries matching a supplied race or family ID
+     * @param groupID If specified, instead return the number of entries that
+     *  match a family or race ID
+     * @param familyGroup If true the groupID is a family ID, if false the
+     *  groupID is a race ID
      * @return Unique entry count in the compendium
      */
-    uint32_t GetCompendiumCount() const;
+    uint16_t GetCompendiumCount(uint8_t groupID = 0, bool familyGroup = true);
 
     /**
      * Get the set of tokusei effect IDs granted by compendium
@@ -118,8 +131,19 @@ private:
     std::list<int32_t> mCompendiumTokuseiIDs;
 
     /// Quick access count representing the number of unique entries
-    /// in he demonic compendium
-    uint32_t mCompendiumCount;
+    /// in the demonic compendium
+    uint16_t mCompendiumCount;
+
+    /// Quick access count representing the number of entries in the
+    /// demonic compendium by family
+    std::unordered_map<uint8_t, uint16_t> mCompendiumFamilyCounts;
+
+    /// Quick access count representing the number of entries in the
+    /// demonic compendium by race
+    std::unordered_map<uint8_t, uint16_t> mCompendiumRaceCounts;
+
+    /// Shared state property specific mutex lock
+    std::mutex mSharedLock;
 };
 
 } // namespace channel

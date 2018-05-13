@@ -136,22 +136,22 @@ ZoneFilter::ZoneFilter(const char *szProgram,
         std::cerr << "Failed to add search path." << std::endl;
     }
 
-    if(!mDefinitions.LoadHNPCData(&mStore))
+    if(!mDefinitions.LoadData<objects::MiHNPCData>(&mStore))
     {
         std::cerr << "Failed to load hNPC data." << std::endl;
     }
 
-    if(!mDefinitions.LoadONPCData(&mStore))
+    if(!mDefinitions.LoadData<objects::MiONPCData>(&mStore))
     {
         std::cerr << "Failed to load oNPC data." << std::endl;
     }
 
-    if(!mDefinitions.LoadZoneData(&mStore))
+    if(!mDefinitions.LoadData<objects::MiZoneData>(&mStore))
     {
         std::cerr << "Failed to load zone data." << std::endl;
     }
 
-    if(!mDefinitions.LoadCZoneRelationData(&mStore))
+    if(!mDefinitions.LoadData<objects::MiCZoneRelationData>(&mStore))
     {
         std::cerr << "Failed to load zone relation data." << std::endl;
     }

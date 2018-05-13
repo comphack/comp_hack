@@ -5731,6 +5731,7 @@ bool SkillManager::DCM(const std::shared_ptr<objects::ActivatedAbility>& activat
 
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
+    auto character = cState->GetEntity();
     auto dState = state->GetDemonState();
     auto demon = dState->GetEntity();
     auto demonData = dState->GetDevilData();
@@ -5754,7 +5755,10 @@ bool SkillManager::DCM(const std::shared_ptr<objects::ActivatedAbility>& activat
     auto definitionManager = server->GetDefinitionManager();
 
     auto bookData = definitionManager->GetDevilBookData(demon->GetType());
-    if(!bookData)
+    if(!bookData ||(!CharacterManager::HasValuable(character,
+            SVR_CONST.VALUABLE_DEVIL_BOOK_V1) &&
+        !CharacterManager::HasValuable(character,
+            SVR_CONST.VALUABLE_DEVIL_BOOK_V2)))
     {
         SendFailure(activated, client,
             (uint8_t)SkillErrorCodes_t::GENERIC_USE);
@@ -5766,12 +5770,11 @@ bool SkillManager::DCM(const std::shared_ptr<objects::ActivatedAbility>& activat
     if(ProcessSkillResult(activated, ctx) && characterManager->AddRemoveItems(client,
         removeItems, false, activated->GetActivationObjectID()))
     {
-        auto character = cState->GetEntity();
         auto progress = character->GetProgress().Get();
 
         size_t index;
         uint8_t shiftVal;
-        characterManager->ConvertIDToMaskValues((uint16_t)bookData->GetShiftValue(),
+        CharacterManager::ConvertIDToMaskValues((uint16_t)bookData->GetShiftValue(),
             index, shiftVal);
 
         uint8_t currentVal = progress->GetDevilBook(index);
@@ -6310,6 +6313,9 @@ bool SkillManager::Respec(const std::shared_ptr<objects::ActivatedAbility>& acti
 
         auto server = mServer.lock();
         auto characterManager = server->GetCharacterManager();
+
+        // Recalculate stored dependent stats
+        characterManager->CalculateCharacterBaseStats(cs);
 
         libcomp::Packet p;
         p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_RESET_SKILL_POINTS);

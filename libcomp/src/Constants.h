@@ -176,6 +176,9 @@ namespace libcomp
 /// Number of members a clan can have.
 #define MAX_CLAN_COUNT (100)
 
+/// Number of names that can be in the blacklist per account, per world.
+#define MAX_BLACKLIST_COUNT (50)
+
 /// Number of items allowed in the post before it starts to display wrong.
 /// Essentially the number of items cannot exceed 10000 but the "pages" in
 /// the Post are 21 items each.

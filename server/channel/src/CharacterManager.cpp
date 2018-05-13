@@ -503,11 +503,20 @@ void CharacterManager::SendPartnerData(const std::shared_ptr<
         reply.WriteU8(0);
     }
 
-    // Characteristics panel
+    // Equipment
     for(size_t i = 0; i < 4; i++)
     {
-        reply.WriteS64Little(-1);    // Item object ID
-        reply.WriteU32Little(static_cast<uint32_t>(-1));    // Item type
+        auto equip = d->GetEquippedItems(i).Get();
+        if(equip)
+        {
+            reply.WriteS64Little(state->GetObjectID(equip->GetUUID()));
+            reply.WriteU32Little(equip->GetType());
+        }
+        else
+        {
+            reply.WriteS64Little(-1);
+            reply.WriteU32Little(static_cast<uint32_t>(-1));
+        }
     }
 
     // Effect length in seconds
@@ -676,11 +685,20 @@ void CharacterManager::SendDemonData(const std::shared_ptr<
         reply.WriteU8(0);
     }
 
-    // Characteristics panel?
+    // Equipment
     for(size_t i = 0; i < 4; i++)
     {
-        reply.WriteS64Little(-1);    // Item object ID?
-        reply.WriteU32Little(static_cast<uint32_t>(-1));    // Item type?
+        auto equip = d->GetEquippedItems(i).Get();
+        if(equip)
+        {
+            reply.WriteS64Little(state->GetObjectID(equip->GetUUID()));
+            reply.WriteU32Little(equip->GetType());
+        }
+        else
+        {
+            reply.WriteS64Little(-1);
+            reply.WriteU32Little(static_cast<uint32_t>(-1));
+        }
     }
 
     // Effect length in seconds remaining
@@ -924,6 +942,7 @@ void CharacterManager::SummonDemon(const std::shared_ptr<
             syncStatusType = SVR_CONST.STATUS_SUMMON_SYNC_1;
         }
 
+        /// @todo: boost effect time by SUMMON_SYNC_EXTEND
         AddStatusEffectMap m;
         m[syncStatusType] = std::pair<uint8_t, bool>(1, true);
         dState->AddStatusEffects(m, definitionManager);
@@ -2685,7 +2704,7 @@ void CharacterManager::UpdateFamiliarity(const std::shared_ptr<
 
 int32_t CharacterManager::UpdateSoulPoints(const std::shared_ptr<
     channel::ChannelClientConnection>& client, int32_t points,
-    bool isAdjust)
+    bool isAdjust, bool applyRate)
 {
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
@@ -2701,12 +2720,15 @@ int32_t CharacterManager::UpdateSoulPoints(const std::shared_ptr<
     int32_t newPoints = isAdjust ? 0 : (int32_t)points;
     if(isAdjust && points != 0)
     {
-        auto tokuseiManager = mServer.lock()->GetTokuseiManager();
+        if(applyRate && points > 0)
+        {
+            auto tokuseiManager = mServer.lock()->GetTokuseiManager();
 
-        // Soul point rate is on the character
-        points = (int32_t)((double)points *
-            (1.0 + tokuseiManager->GetAspectSum(cState,
-                TokuseiAspectType::SOUL_POINT_RATE) * 0.01));
+            // Soul point rate is on the character
+            points = (int32_t)((double)points *
+                (1.0 + tokuseiManager->GetAspectSum(cState,
+                    TokuseiAspectType::SOUL_POINT_RATE) * 0.01));
+        }
 
         newPoints = current + points;
     }
@@ -3539,7 +3561,19 @@ bool CharacterManager::AddRemoveValuable(const std::shared_ptr<
 
         SendValuableFlags(client);
 
-        mServer.lock()->GetWorldDatabase()->QueueUpdate(progress, state->GetAccountUID());
+        auto server = mServer.lock();
+        server->GetWorldDatabase()->QueueUpdate(progress, state->GetAccountUID());
+
+        // If valuable is the V2 compendium, recalc boosts for demon
+        if(valuableID == SVR_CONST.VALUABLE_DEVIL_BOOK_V2)
+        {
+            auto dState = state->GetDemonState();
+            auto definitionManager = server->GetDefinitionManager();
+            if(dState->UpdateSharedState(character, definitionManager))
+            {
+                server->GetTokuseiManager()->Recalculate(cState, true);
+            }
+        }
     }
 
     return true;

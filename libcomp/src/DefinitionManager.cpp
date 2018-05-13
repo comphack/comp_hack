@@ -40,6 +40,8 @@
 #include <MiDevilBookData.h>
 #include <MiDevilCrystalData.h>
 #include <MiDevilData.h>
+#include <MiDevilEquipmentData.h>
+#include <MiDevilEquipmentItemData.h>
 #include <MiDevilLVUpRateData.h>
 #include <MiDisassemblyData.h>
 #include <MiDisassemblyTriggerData.h>
@@ -89,28 +91,32 @@ DefinitionManager::~DefinitionManager()
 {
 }
 
-const std::shared_ptr<objects::MiAIData> DefinitionManager::GetAIData(uint32_t id)
+const std::shared_ptr<objects::MiAIData>
+    DefinitionManager::GetAIData(uint32_t id)
 {
     return GetRecordByID(id, mAIData);
 }
 
-const std::shared_ptr<objects::MiDevilBookData> DefinitionManager::GetDevilBookData(uint32_t id)
+const std::shared_ptr<objects::MiDevilBookData>
+    DefinitionManager::GetDevilBookData(uint32_t id)
 {
     return GetRecordByID(id, mDevilBookData);
 }
 
-std::unordered_map<uint32_t,
-    std::shared_ptr<objects::MiDevilBookData>> DefinitionManager::GetDevilBookData()
+std::unordered_map<uint32_t, std::shared_ptr<objects::MiDevilBookData>>
+    DefinitionManager::GetDevilBookData()
 {
     return mDevilBookData;
 }
 
-const std::shared_ptr<objects::MiDevilData> DefinitionManager::GetDevilData(uint32_t id)
+const std::shared_ptr<objects::MiDevilData>
+    DefinitionManager::GetDevilData(uint32_t id)
 {
     return GetRecordByID(id, mDevilData);
 }
 
-const std::shared_ptr<objects::MiDevilData> DefinitionManager::GetDevilData(const libcomp::String& name)
+const std::shared_ptr<objects::MiDevilData>
+    DefinitionManager::GetDevilData(const libcomp::String& name)
 {
     auto iter = mDevilNameLookup.find(name);
     if(iter != mDevilNameLookup.end())
@@ -121,18 +127,32 @@ const std::shared_ptr<objects::MiDevilData> DefinitionManager::GetDevilData(cons
     return nullptr;
 }
 
-const std::shared_ptr<objects::MiDevilLVUpRateData> DefinitionManager::GetDevilLVUpRateData(uint32_t id)
+const std::shared_ptr<objects::MiDevilEquipmentData>
+    DefinitionManager::GetDevilEquipmentData(uint32_t id)
+{
+    return GetRecordByID(id, mDevilEquipmentData);
+}
+
+const std::shared_ptr<objects::MiDevilEquipmentItemData>
+    DefinitionManager::GetDevilEquipmentItemData(uint32_t id)
+{
+    return GetRecordByID(id, mDevilEquipmentItemData);
+}
+
+const std::shared_ptr<objects::MiDevilLVUpRateData>
+    DefinitionManager::GetDevilLVUpRateData(uint32_t id)
 {
     return GetRecordByID(id, mDevilLVUpRateData);
 }
 
-const std::shared_ptr<objects::MiDisassemblyData> DefinitionManager::GetDisassemblyData(uint32_t id)
+const std::shared_ptr<objects::MiDisassemblyData>
+    DefinitionManager::GetDisassemblyData(uint32_t id)
 {
     return GetRecordByID(id, mDisassemblyData);
 }
 
-const std::shared_ptr<objects::MiDisassemblyData> DefinitionManager::GetDisassemblyDataByItemID(
-    uint32_t itemID)
+const std::shared_ptr<objects::MiDisassemblyData>
+    DefinitionManager::GetDisassemblyDataByItemID(uint32_t itemID)
 {
     auto iter = mDisassemblyLookup.find(itemID);
     if(iter != mDisassemblyLookup.end())
@@ -143,8 +163,8 @@ const std::shared_ptr<objects::MiDisassemblyData> DefinitionManager::GetDisassem
     return nullptr;
 }
 
-const std::shared_ptr<objects::MiDisassemblyTriggerData> DefinitionManager::GetDisassemblyTriggerData(
-    uint32_t id)
+const std::shared_ptr<objects::MiDisassemblyTriggerData>
+    DefinitionManager::GetDisassemblyTriggerData(uint32_t id)
 {
     return GetRecordByID(id, mDisassemblyTriggerData);
 }
@@ -154,23 +174,26 @@ const std::list<uint32_t> DefinitionManager::GetDisassembledItemIDs()
     return mDisassembledItemIDs;
 }
 
-const std::shared_ptr<objects::MiDynamicMapData> DefinitionManager::GetDynamicMapData(uint32_t id)
+const std::shared_ptr<objects::MiDynamicMapData>
+    DefinitionManager::GetDynamicMapData(uint32_t id)
 {
     return GetRecordByID(id, mDynamicMapData);
 }
 
-const std::shared_ptr<objects::MiEnchantData> DefinitionManager::GetEnchantData(int16_t id)
+const std::shared_ptr<objects::MiEnchantData>
+    DefinitionManager::GetEnchantData(int16_t id)
 {
     return GetRecordByID(id, mEnchantData);
 }
 
-std::unordered_map<int16_t,
-    std::shared_ptr<objects::MiEnchantData>> DefinitionManager::GetAllEnchantData()
+std::unordered_map<int16_t, std::shared_ptr<objects::MiEnchantData>>
+    DefinitionManager::GetAllEnchantData()
 {
     return mEnchantData;
 }
 
-const std::shared_ptr<objects::MiEnchantData> DefinitionManager::GetEnchantDataByDemonID(uint32_t demonID)
+const std::shared_ptr<objects::MiEnchantData>
+    DefinitionManager::GetEnchantDataByDemonID(uint32_t demonID)
 {
     auto iter = mEnchantDemonLookup.find(demonID);
     if(iter != mEnchantDemonLookup.end())
@@ -181,7 +204,8 @@ const std::shared_ptr<objects::MiEnchantData> DefinitionManager::GetEnchantDataB
     return nullptr;
 }
 
-const std::shared_ptr<objects::MiEnchantData> DefinitionManager::GetEnchantDataByItemID(uint32_t itemID)
+const std::shared_ptr<objects::MiEnchantData>
+    DefinitionManager::GetEnchantDataByItemID(uint32_t itemID)
 {
     auto iter = mEnchantItemLookup.find(itemID);
     if(iter != mEnchantItemLookup.end())
@@ -192,13 +216,14 @@ const std::shared_ptr<objects::MiEnchantData> DefinitionManager::GetEnchantDataB
     return nullptr;
 }
 
-const std::shared_ptr<objects::MiEquipmentSetData> DefinitionManager::GetEquipmentSetData(uint32_t id)
+const std::shared_ptr<objects::MiEquipmentSetData>
+    DefinitionManager::GetEquipmentSetData(uint32_t id)
 {
     return GetRecordByID(id, mEquipmentSetData);
 }
 
-std::list<std::shared_ptr<objects::MiEquipmentSetData>> DefinitionManager::GetEquipmentSetDataByItem(
-    uint32_t equipmentID)
+std::list<std::shared_ptr<objects::MiEquipmentSetData>>
+    DefinitionManager::GetEquipmentSetDataByItem(uint32_t equipmentID)
 {
     std::list<std::shared_ptr<objects::MiEquipmentSetData>> retval;
 
@@ -218,17 +243,20 @@ std::list<std::shared_ptr<objects::MiEquipmentSetData>> DefinitionManager::GetEq
     return retval;
 }
 
-const std::shared_ptr<objects::MiExchangeData> DefinitionManager::GetExchangeData(uint32_t id)
+const std::shared_ptr<objects::MiExchangeData>
+    DefinitionManager::GetExchangeData(uint32_t id)
 {
     return GetRecordByID(id, mExchangeData);
 }
 
-const std::shared_ptr<objects::MiExpertData> DefinitionManager::GetExpertClassData(uint32_t id)
+const std::shared_ptr<objects::MiExpertData>
+    DefinitionManager::GetExpertClassData(uint32_t id)
 {
     return GetRecordByID(id, mExpertData);
 }
 
-const std::list<std::pair<uint8_t, uint32_t>> DefinitionManager::GetFusionRanges(uint8_t raceID)
+const std::list<std::pair<uint8_t, uint32_t>>
+    DefinitionManager::GetFusionRanges(uint8_t raceID)
 {
     auto iter = mFusionRanges.find(raceID);
     if(iter != mFusionRanges.end())
@@ -239,23 +267,26 @@ const std::list<std::pair<uint8_t, uint32_t>> DefinitionManager::GetFusionRanges
     return std::list<std::pair<uint8_t, uint32_t>>();
 }
 
-const std::shared_ptr<objects::MiHNPCData> DefinitionManager::GetHNPCData(uint32_t id)
+const std::shared_ptr<objects::MiHNPCData>
+    DefinitionManager::GetHNPCData(uint32_t id)
 {
     return GetRecordByID(id, mHNPCData);
 }
 
-const std::shared_ptr<objects::MiItemData> DefinitionManager::GetItemData(uint32_t id)
+const std::shared_ptr<objects::MiItemData>
+    DefinitionManager::GetItemData(uint32_t id)
 {
     return GetRecordByID(id, mItemData);
 }
 
-const std::shared_ptr<objects::MiModificationData> DefinitionManager::GetModificationData(uint32_t id)
+const std::shared_ptr<objects::MiModificationData>
+    DefinitionManager::GetModificationData(uint32_t id)
 {
     return GetRecordByID(id, mModificationData);
 }
 
-const std::shared_ptr<objects::MiModificationData> DefinitionManager::GetModificationDataByItemID(
-    uint32_t itemID)
+const std::shared_ptr<objects::MiModificationData>
+    DefinitionManager::GetModificationDataByItemID(uint32_t itemID)
 {
     auto iter = mModificationLookup.find(itemID);
     if(iter != mModificationLookup.end())
@@ -267,7 +298,8 @@ const std::shared_ptr<objects::MiModificationData> DefinitionManager::GetModific
 }
 
 const std::shared_ptr<objects::MiModificationExtEffectData>
-    DefinitionManager::GetModificationExtEffectData(uint8_t groupID, uint8_t slot, uint16_t subID)
+    DefinitionManager::GetModificationExtEffectData(uint8_t groupID,
+        uint8_t slot, uint16_t subID)
 {
     auto iter1 = mModificationExtEffectData.find(groupID);
     if(iter1 != mModificationExtEffectData.end())
@@ -300,19 +332,20 @@ const std::shared_ptr<objects::MiModificationExtRecipeData>
     return nullptr;
 }
 
-const std::shared_ptr<objects::MiModificationTriggerData> DefinitionManager::GetModificationTriggerData(
-    uint16_t id)
+const std::shared_ptr<objects::MiModificationTriggerData>
+    DefinitionManager::GetModificationTriggerData(uint16_t id)
 {
     return GetRecordByID(id, mModificationTriggerData);
 }
 
-const std::shared_ptr<objects::MiModifiedEffectData> DefinitionManager::GetModifiedEffectData(
-    uint16_t id)
+const std::shared_ptr<objects::MiModifiedEffectData>
+    DefinitionManager::GetModifiedEffectData(uint16_t id)
 {
     return GetRecordByID(id, mModifiedEffectData);
 }
 
-const std::shared_ptr<objects::MiItemData> DefinitionManager::GetItemData(const libcomp::String& name)
+const std::shared_ptr<objects::MiItemData>
+    DefinitionManager::GetItemData(const libcomp::String& name)
 {
     auto iter = mCItemNameLookup.find(name);
     if(iter != mCItemNameLookup.end())
@@ -323,38 +356,44 @@ const std::shared_ptr<objects::MiItemData> DefinitionManager::GetItemData(const 
     return nullptr;
 }
 
-const std::shared_ptr<objects::MiNPCBarterData> DefinitionManager::GetNPCBarterData(uint16_t id)
+const std::shared_ptr<objects::MiNPCBarterData>
+    DefinitionManager::GetNPCBarterData(uint16_t id)
 {
     return GetRecordByID(id, mNPCBarterData);
 }
 
-const std::shared_ptr<objects::MiONPCData> DefinitionManager::GetONPCData(uint32_t id)
+const std::shared_ptr<objects::MiONPCData>
+    DefinitionManager::GetONPCData(uint32_t id)
 {
     return GetRecordByID(id, mONPCData);
 }
 
-const std::shared_ptr<objects::MiQuestData> DefinitionManager::GetQuestData(uint32_t id)
+const std::shared_ptr<objects::MiQuestData>
+    DefinitionManager::GetQuestData(uint32_t id)
 {
     return GetRecordByID(id, mQuestData);
 }
 
-const std::shared_ptr<objects::MiShopProductData> DefinitionManager::GetShopProductData(uint32_t id)
+const std::shared_ptr<objects::MiShopProductData>
+    DefinitionManager::GetShopProductData(uint32_t id)
 {
     return GetRecordByID(id, mShopProductData);
 }
 
-const std::shared_ptr<objects::MiSItemData> DefinitionManager::GetSItemData(uint32_t id)
+const std::shared_ptr<objects::MiSItemData>
+    DefinitionManager::GetSItemData(uint32_t id)
 {
     return GetRecordByID(id, mSItemData);
 }
 
-const std::shared_ptr<objects::MiSkillData> DefinitionManager::GetSkillData(uint32_t id)
+const std::shared_ptr<objects::MiSkillData>
+    DefinitionManager::GetSkillData(uint32_t id)
 {
     return GetRecordByID(id, mSkillData);
 }
 
-const std::unordered_map<uint32_t,
-    std::shared_ptr<objects::MiSpotData>> DefinitionManager::GetSpotData(uint32_t dynamicMapID)
+const std::unordered_map<uint32_t, std::shared_ptr<objects::MiSpotData>>
+    DefinitionManager::GetSpotData(uint32_t dynamicMapID)
 {
     std::unordered_map<uint32_t, std::shared_ptr<objects::MiSpotData>> result;
 
@@ -373,17 +412,20 @@ const std::unordered_map<uint32_t,
     return result;
 }
 
-const std::shared_ptr<objects::MiSStatusData> DefinitionManager::GetSStatusData(uint32_t id)
+const std::shared_ptr<objects::MiSStatusData>
+    DefinitionManager::GetSStatusData(uint32_t id)
 {
     return GetRecordByID(id, mSStatusData);
 }
 
-const std::shared_ptr<objects::MiStatusData> DefinitionManager::GetStatusData(uint32_t id)
+const std::shared_ptr<objects::MiStatusData>
+    DefinitionManager::GetStatusData(uint32_t id)
 {
     return GetRecordByID(id, mStatusData);
 }
 
-const std::shared_ptr<objects::MiTimeLimitData> DefinitionManager::GetTimeLimitData(uint32_t id)
+const std::shared_ptr<objects::MiTimeLimitData>
+    DefinitionManager::GetTimeLimitData(uint32_t id)
 {
     return GetRecordByID(id, mTimeLimitData);
 }
@@ -423,28 +465,32 @@ const std::list<std::shared_ptr<objects::MiTriUnionSpecialData>>
     return result;
 }
 
-const std::shared_ptr<objects::MiWarpPointData> DefinitionManager::GetWarpPointData(uint32_t id)
+const std::shared_ptr<objects::MiWarpPointData>
+    DefinitionManager::GetWarpPointData(uint32_t id)
 {
     return GetRecordByID(id, mWarpPointData);
 }
 
-const std::shared_ptr<objects::MiZoneData> DefinitionManager::GetZoneData(uint32_t id)
+const std::shared_ptr<objects::MiZoneData>
+    DefinitionManager::GetZoneData(uint32_t id)
 {
     return GetRecordByID(id, mZoneData);
 }
 
-const std::shared_ptr<objects::MiCZoneRelationData> DefinitionManager::GetZoneRelationData(uint32_t id)
+const std::shared_ptr<objects::MiCZoneRelationData>
+    DefinitionManager::GetZoneRelationData(uint32_t id)
 {
     return GetRecordByID(id, mZoneRelationData);
 }
 
-const std::shared_ptr<objects::EnchantSetData>  DefinitionManager::GetEnchantSetData(uint32_t id)
+const std::shared_ptr<objects::EnchantSetData>
+    DefinitionManager::GetEnchantSetData(uint32_t id)
 {
     return GetRecordByID(id, mEnchantSetData);
 }
 
-std::list<std::shared_ptr<objects::EnchantSetData>>  DefinitionManager::GetEnchantSetDataByEffect(
-    int16_t effectID)
+std::list<std::shared_ptr<objects::EnchantSetData>>
+    DefinitionManager::GetEnchantSetDataByEffect(int16_t effectID)
 {
     std::list<std::shared_ptr<objects::EnchantSetData>> retval;
 
@@ -464,13 +510,14 @@ std::list<std::shared_ptr<objects::EnchantSetData>>  DefinitionManager::GetEncha
     return retval;
 }
 
-const std::unordered_map<uint32_t,
-    std::shared_ptr<objects::EnchantSetData>> DefinitionManager::GetAllEnchantSetData()
+const std::unordered_map<uint32_t, std::shared_ptr<objects::EnchantSetData>>
+    DefinitionManager::GetAllEnchantSetData()
 {
     return mEnchantSetData;
 }
 
-const std::shared_ptr<objects::EnchantSpecialData>  DefinitionManager::GetEnchantSpecialData(uint32_t id)
+const std::shared_ptr<objects::EnchantSpecialData>
+    DefinitionManager::GetEnchantSpecialData(uint32_t id)
 {
     return GetRecordByID(id, mEnchantSpecialData);
 }
@@ -496,51 +543,673 @@ std::list<std::shared_ptr<objects::EnchantSpecialData>>
     return retval;
 }
 
-const std::shared_ptr<objects::Tokusei> DefinitionManager::GetTokuseiData(int32_t id)
+const std::shared_ptr<objects::Tokusei>
+    DefinitionManager::GetTokuseiData(int32_t id)
 {
     return GetRecordByID(id, mTokuseiData);
 }
 
-const std::unordered_map<int32_t,
-    std::shared_ptr<objects::Tokusei>> DefinitionManager::GetAllTokuseiData()
+const std::unordered_map<int32_t, std::shared_ptr<objects::Tokusei>>
+    DefinitionManager::GetAllTokuseiData()
 {
     return mTokuseiData;
+}
+
+namespace libcomp
+{
+    template <>
+    bool DefinitionManager::LoadData<objects::MiAIData>(
+        gsl::not_null<DataStore*> pDataStore)
+    {
+        std::list<std::shared_ptr<objects::MiAIData>> records;
+        bool success = LoadBinaryData<objects::MiAIData>(pDataStore,
+            "Shield/AIData.sbin", true, 0, records);
+        for(auto record : records)
+        {
+            mAIData[record->GetID()] = record;
+        }
+
+        return success;
+    }
+
+    template <>
+    bool DefinitionManager::LoadData<objects::MiCItemData>(
+        gsl::not_null<DataStore*> pDataStore)
+    {
+        std::list<std::shared_ptr<objects::MiCItemData>> records;
+        bool success = LoadBinaryData<objects::MiCItemData>(pDataStore,
+            "Shield/CItemData.sbin", true, 0, records);
+        for(auto record : records)
+        {
+            auto id = record->GetBaseData()->GetID();
+            auto name = record->GetBaseData()->GetName();
+            if(mCItemNameLookup.find(name) == mCItemNameLookup.end())
+            {
+                mCItemNameLookup[name] = id;
+            }
+        }
+    
+        return success;
+    }
+
+    template <>
+    bool DefinitionManager::LoadData<objects::MiCZoneRelationData>(
+        gsl::not_null<DataStore*> pDataStore)
+    {
+        std::list<std::shared_ptr<objects::MiCZoneRelationData>> records;
+        bool success = LoadBinaryData<objects::MiCZoneRelationData>(pDataStore,
+            "Shield/CZoneRelationData.sbin", true, 0, records);
+        for(auto record : records)
+        {
+            mZoneRelationData[record->GetID()] = record;
+        }
+
+        return success;
+    }
+
+    template <>
+    bool DefinitionManager::LoadData<objects::MiDevilBookData>(
+        gsl::not_null<DataStore*> pDataStore)
+    {
+        std::list<std::shared_ptr<objects::MiDevilBookData>> records;
+        bool success = LoadBinaryData<objects::MiDevilBookData>(pDataStore,
+            "Shield/DevilBookData.sbin", true, 0, records);
+        for(auto record : records)
+        {
+            mDevilBookData[record->GetID()] = record;
+        }
+    
+        return success;
+    }
+
+    template <>
+    bool DefinitionManager::LoadData<objects::MiDevilData>(
+        gsl::not_null<DataStore*> pDataStore)
+    {
+        std::list<std::shared_ptr<objects::MiDevilData>> records;
+        bool success = LoadBinaryData<objects::MiDevilData>(pDataStore,
+            "Shield/DevilData.sbin", true, 0, records);
+        for(auto record : records)
+        {
+            auto id = record->GetBasic()->GetID();
+            auto name = record->GetBasic()->GetName();
+
+            mDevilData[id] = record;
+            if(mDevilNameLookup.find(name) == mDevilNameLookup.end())
+            {
+                mDevilNameLookup[name] = id;
+            }
+
+            // If the fusion options contain 2-way fusion result, add to
+            // the fusion range map
+            auto fusionOptions = record->GetUnionData()->GetFusionOptions();
+            if(fusionOptions & 2)
+            {
+                mFusionRanges[(uint8_t)record->GetCategory()->GetRace()].
+                    push_back(std::pair<uint8_t, uint32_t>(
+                    (uint8_t)record->GetGrowth()->GetBaseLevel(), id));
+            }
+        }
+
+        // Sort the fusion ranges
+        for(auto& pair : mFusionRanges)
+        {
+            auto& ranges = pair.second;
+            ranges.sort([](const std::pair<uint8_t, uint32_t>& a,
+                const std::pair<uint8_t, uint32_t>& b)
+            {
+                return a.first < b.first;
+            });
+        }
+    
+        return success;
+    }
+
+    template <>
+    bool DefinitionManager::LoadData<objects::MiDevilEquipmentData>(
+        gsl::not_null<DataStore*> pDataStore)
+    {
+        std::list<std::shared_ptr<objects::MiDevilEquipmentData>> records;
+        bool success = LoadBinaryData<objects::MiDevilEquipmentData>(
+            pDataStore, "Shield/DevilEquipmentData.sbin", true, 0, records);
+        for(auto record : records)
+        {
+            mDevilEquipmentData[record->GetSkillID()] = record;
+        }
+    
+        return success;
+    }
+
+    template <>
+    bool DefinitionManager::LoadData<objects::MiDevilEquipmentItemData>(
+        gsl::not_null<DataStore*> pDataStore)
+    {
+        std::list<std::shared_ptr<objects::MiDevilEquipmentItemData>> records;
+        bool success = LoadBinaryData<objects::MiDevilEquipmentItemData>(
+            pDataStore, "Shield/DevilEquipmentItemData.sbin", true, 0, records);
+        for(auto record : records)
+        {
+            mDevilEquipmentItemData[record->GetItemID()] = record;
+        }
+    
+        return success;
+    }
+
+    template <>
+    bool DefinitionManager::LoadData<objects::MiDevilLVUpRateData>(
+        gsl::not_null<DataStore*> pDataStore)
+    {
+        std::list<std::shared_ptr<objects::MiDevilLVUpRateData>> records;
+        bool success = LoadBinaryData<objects::MiDevilLVUpRateData>(pDataStore,
+            "Shield/DevilLVUpRateData.sbin", true, 0, records);
+        for(auto record : records)
+        {
+            mDevilLVUpRateData[record->GetID()] = record;
+        }
+    
+        return success;
+    }
+
+    template <>
+    bool DefinitionManager::LoadData<objects::MiDisassemblyData>(
+        gsl::not_null<DataStore*> pDataStore)
+    {
+        std::list<std::shared_ptr<objects::MiDisassemblyData>> records;
+        bool success = LoadBinaryData<objects::MiDisassemblyData>(pDataStore,
+            "Shield/DisassemblyData.sbin", true, 0, records);
+        for(auto record : records)
+        {
+            uint32_t id = record->GetID();
+            mDisassemblyData[id] = record;
+            mDisassemblyLookup[record->GetItemID()] = id;
+        }
+    
+        return success;
+    }
+
+    template <>
+    bool DefinitionManager::LoadData<objects::MiDisassemblyTriggerData>(
+        gsl::not_null<DataStore*> pDataStore)
+    {
+        std::list<std::shared_ptr<objects::MiDisassemblyTriggerData>> records;
+        bool success = LoadBinaryData<objects::MiDisassemblyTriggerData>(
+            pDataStore, "Shield/DisassemblyTriggerData.sbin", true, 0,
+            records);
+        for(auto record : records)
+        {
+            mDisassemblyTriggerData[record->GetID()] = record;
+            mDisassembledItemIDs.push_back(record->GetID());
+        }
+    
+        return success;
+    }
+
+    template <>
+    bool DefinitionManager::LoadData<objects::MiDynamicMapData>(
+        gsl::not_null<DataStore*> pDataStore)
+    {
+        std::list<std::shared_ptr<objects::MiDynamicMapData>> records;
+        bool success = LoadBinaryData<objects::MiDynamicMapData>(pDataStore,
+            "Client/DynamicMapData.bin", false, 0, records);
+
+        uint16_t spotLoadCount = 0;
+        for(auto record : records)
+        {
+            mDynamicMapData[record->GetID()] = record;
+
+            std::string filename(record->GetSpotDataFile().C());
+            if(filename.length() > 0 &&
+                mSpotData.find(filename) == mSpotData.end())
+            {
+                spotLoadCount++;
+
+                std::list<std::shared_ptr<objects::MiSpotData>> spotRecords;
+                bool spotSuccess = LoadBinaryData<objects::MiSpotData>(
+                    pDataStore, libcomp::String("Client/%1").Arg(filename),
+                    false, 0, spotRecords, false);
+                if(spotSuccess)
+                {
+                    for(auto spotRecord : spotRecords)
+                    {
+                        mSpotData[filename][spotRecord->GetID()] = spotRecord;
+                    }
+                }
+            }
+        }
+
+        if(spotLoadCount != (uint16_t)mSpotData.size())
+        {
+            LOG_WARNING(libcomp::String("Loaded %1/%2 map spot definition"
+                " files.\n").Arg(mSpotData.size()).Arg(spotLoadCount));
+        }
+        else
+        {
+            LOG_DEBUG(libcomp::String("Loaded %1/%2 map spot definition"
+                " files.\n").Arg(spotLoadCount).Arg(spotLoadCount));
+        }
+
+        return success;
+    }
+
+    template <>
+    bool DefinitionManager::LoadData<objects::MiEnchantData>(
+        gsl::not_null<DataStore*> pDataStore)
+    {
+        std::list<std::shared_ptr<objects::MiEnchantData>> records;
+        bool success = LoadBinaryData<objects::MiEnchantData>(pDataStore,
+            "Shield/EnchantData.sbin", true, 0, records);
+        for(auto record : records)
+        {
+            int16_t id = record->GetID();
+            uint32_t demonID = record->GetDevilCrystal()->GetDemonID();
+            uint32_t itemID = record->GetDevilCrystal()->GetItemID();
+
+            mEnchantData[id] = record;
+            mEnchantDemonLookup[demonID] = id;
+            mEnchantItemLookup[itemID] = id;
+        }
+    
+        return success;
+    }
+
+    template <>
+    bool DefinitionManager::LoadData<objects::MiEquipmentSetData>(
+        gsl::not_null<DataStore*> pDataStore)
+    {
+        std::list<std::shared_ptr<objects::MiEquipmentSetData>> records;
+        bool success = LoadBinaryData<objects::MiEquipmentSetData>(pDataStore,
+            "Shield/EquipmentSetData.sbin", true, 0, records);
+        for(auto record : records)
+        {
+            bool equipmentFound = false;
+            for(uint32_t equipmentID : record->GetEquipment())
+            {
+                if(equipmentID)
+                {
+                    mEquipmentSetLookup[equipmentID].push_back(
+                        record->GetID());
+                    equipmentFound = true;
+                }
+            }
+
+            if(equipmentFound)
+            {
+                mEquipmentSetData[record->GetID()] = record;
+            }
+        }
+
+        return success;
+    }
+
+    template <>
+    bool DefinitionManager::LoadData<objects::MiExchangeData>(
+        gsl::not_null<DataStore*> pDataStore)
+    {
+        std::list<std::shared_ptr<objects::MiExchangeData>> records;
+        bool success = LoadBinaryData<objects::MiExchangeData>(pDataStore,
+            "Shield/ExchangeData.sbin", true, 0, records);
+        for(auto record : records)
+        {
+            mExchangeData[record->GetID()] = record;
+        }
+
+        return success;
+    }
+
+    template <>
+    bool DefinitionManager::LoadData<objects::MiExpertData>(
+        gsl::not_null<DataStore*> pDataStore)
+    {
+        std::list<std::shared_ptr<objects::MiExpertData>> records;
+        bool success = LoadBinaryData<objects::MiExpertData>(pDataStore,
+            "Shield/ExpertClassData.sbin", true, 0, records);
+        for(auto record : records)
+        {
+            mExpertData[record->GetID()] = record;
+        }
+
+        return success;
+    }
+
+    template <>
+    bool DefinitionManager::LoadData<objects::MiHNPCData>(
+        gsl::not_null<DataStore*> pDataStore)
+    {
+        std::list<std::shared_ptr<objects::MiHNPCData>> records;
+        bool success = LoadBinaryData<objects::MiHNPCData>(pDataStore,
+            "Shield/hNPCData.sbin", true, 0, records);
+        for(auto record : records)
+        {
+            mHNPCData[record->GetBasic()->GetID()] = record;
+        }
+    
+        return success;
+    }
+
+    template <>
+    bool DefinitionManager::LoadData<objects::MiItemData>(
+        gsl::not_null<DataStore*> pDataStore)
+    {
+        std::list<std::shared_ptr<objects::MiItemData>> records;
+        bool success = LoadBinaryData<objects::MiItemData>(pDataStore,
+            "Shield/ItemData.sbin", true, 2, records);
+        for(auto record : records)
+        {
+            mItemData[record->GetCommon()->GetID()] = record;
+        }
+    
+        return success;
+    }
+
+    template <>
+    bool DefinitionManager::LoadData<objects::MiModificationData>(
+        gsl::not_null<DataStore*> pDataStore)
+    {
+        std::list<std::shared_ptr<objects::MiModificationData>> records;
+        bool success = LoadBinaryData<objects::MiModificationData>(pDataStore,
+            "Shield/ModificationData.sbin", true, 0, records);
+        for(auto record : records)
+        {
+            uint32_t id = record->GetID();
+            mModificationData[id] = record;
+            mModificationLookup[record->GetItemID()] = id;
+        }
+    
+        return success;
+    }
+
+    template <>
+    bool DefinitionManager::LoadData<objects::MiModificationExtEffectData>(
+        gsl::not_null<DataStore*> pDataStore)
+    {
+        std::list<std::shared_ptr<
+            objects::MiModificationExtEffectData>> records;
+        bool success = LoadBinaryData<objects::MiModificationExtEffectData>(
+            pDataStore, "Shield/ModificationExtEffectData.sbin", true, 0,
+            records);
+        for(auto record : records)
+        {
+            mModificationExtEffectData[record->GetGroupID()]
+                [record->GetSlot()][record->GetSubID()] = record;
+        }
+    
+        return success;
+    }
+
+    template <>
+    bool DefinitionManager::LoadData<objects::MiModificationExtRecipeData>(
+        gsl::not_null<DataStore*> pDataStore)
+    {
+        std::list<std::shared_ptr<
+            objects::MiModificationExtRecipeData>> records;
+        bool success = LoadBinaryData<objects::MiModificationExtRecipeData>(
+            pDataStore, "Shield/ModificationExtRecipeData.sbin", true, 0,
+            records);
+        for(auto record : records)
+        {
+            uint32_t itemID = record->GetItemID();
+            if(itemID == static_cast<uint32_t>(-1)) continue;
+
+            uint32_t id = record->GetID();
+            mModificationExtRecipeData[id] = record;
+            mModificationExtRecipeLookup[itemID] = id;
+        }
+    
+        return success;
+    }
+
+    template <>
+    bool DefinitionManager::LoadData<objects::MiModificationTriggerData>(
+        gsl::not_null<DataStore*> pDataStore)
+    {
+        std::list<std::shared_ptr<objects::MiModificationTriggerData>> records;
+        bool success = LoadBinaryData<objects::MiModificationTriggerData>(
+            pDataStore, "Shield/ModificationTriggerData.sbin", true, 0,
+            records);
+        for(auto record : records)
+        {
+            mModificationTriggerData[record->GetID()] = record;
+        }
+    
+        return success;
+    }
+
+    template <>
+    bool DefinitionManager::LoadData<objects::MiModifiedEffectData>(
+        gsl::not_null<DataStore*> pDataStore)
+    {
+        std::list<std::shared_ptr<objects::MiModifiedEffectData>> records;
+        bool success = LoadBinaryData<objects::MiModifiedEffectData>(
+            pDataStore, "Shield/ModifiedEffectData.sbin", true, 0, records);
+        for(auto record : records)
+        {
+            mModifiedEffectData[record->GetID()] = record;
+        }
+    
+        return success;
+    }
+
+    template <>
+    bool DefinitionManager::LoadData<objects::MiNPCBarterData>(
+        gsl::not_null<DataStore*> pDataStore)
+    {
+        std::list<std::shared_ptr<objects::MiNPCBarterData>> records;
+        bool success = LoadBinaryData<objects::MiNPCBarterData>(pDataStore,
+            "Shield/NPCBarterData.sbin", true, 0, records);
+        for(auto record : records)
+        {
+            mNPCBarterData[record->GetID()] = record;
+        }
+    
+        return success;
+    }
+
+    template <>
+    bool DefinitionManager::LoadData<objects::MiONPCData>(
+        gsl::not_null<DataStore*> pDataStore)
+    {
+        std::list<std::shared_ptr<objects::MiONPCData>> records;
+        bool success = LoadBinaryData<objects::MiONPCData>(pDataStore,
+            "Shield/oNPCData.sbin", true, 0, records);
+        for(auto record : records)
+        {
+            mONPCData[record->GetID()] = record;
+        }
+    
+        return success;
+    }
+
+    template <>
+    bool DefinitionManager::LoadData<objects::MiQuestData>(
+        gsl::not_null<DataStore*> pDataStore)
+    {
+        std::list<std::shared_ptr<objects::MiQuestData>> records;
+        bool success = LoadBinaryData<objects::MiQuestData>(pDataStore,
+            "Shield/QuestData.sbin", true, 0, records);
+        for(auto record : records)
+        {
+            mQuestData[record->GetID()] = record;
+        }
+
+        return success;
+    }
+
+    template <>
+    bool DefinitionManager::LoadData<objects::MiShopProductData>(
+        gsl::not_null<DataStore*> pDataStore)
+    {
+        std::list<std::shared_ptr<objects::MiShopProductData>> records;
+        bool success = LoadBinaryData<objects::MiShopProductData>(pDataStore,
+            "Shield/ShopProductData.sbin", true, 0, records);
+        for(auto record : records)
+        {
+            mShopProductData[record->GetID()] = record;
+        }
+
+        return success;
+    }
+
+    template <>
+    bool DefinitionManager::LoadData<objects::MiSItemData>(
+        gsl::not_null<DataStore*> pDataStore)
+    {
+        std::list<std::shared_ptr<objects::MiSItemData>> records;
+        bool success = LoadBinaryData<objects::MiSItemData>(pDataStore,
+            "Shield/SItemData.sbin", true, 0, records);
+        for(auto record : records)
+        {
+            // Only store it if a tokusei is set
+            for(auto tokuseiID : record->GetTokusei())
+            {
+                if(tokuseiID != 0)
+                {
+                    mSItemData[record->GetID()] = record;
+                    break;
+                }
+            }
+        }
+
+        return success;
+    }
+
+    template <>
+    bool DefinitionManager::LoadData<objects::MiSkillData>(
+        gsl::not_null<DataStore*> pDataStore)
+    {
+        std::list<std::shared_ptr<objects::MiSkillData>> records;
+        bool success = LoadBinaryData<objects::MiSkillData>(pDataStore,
+            "Shield/SkillData.sbin", true, 4, records);
+        for(auto record : records)
+        {
+            mSkillData[record->GetCommon()->GetID()] = record;
+        }
+
+        return success;
+    }
+
+    template <>
+    bool DefinitionManager::LoadData<objects::MiStatusData>(
+        gsl::not_null<DataStore*> pDataStore)
+    {
+        std::list<std::shared_ptr<objects::MiStatusData>> records;
+        bool success = LoadBinaryData<objects::MiStatusData>(pDataStore,
+            "Shield/StatusData.sbin", true, 1, records);
+        for(auto record : records)
+        {
+            mStatusData[record->GetCommon()->GetID()] = record;
+        }
+    
+        return success;
+    }
+
+    template <>
+    bool DefinitionManager::LoadData<objects::MiTimeLimitData>(
+        gsl::not_null<DataStore*> pDataStore)
+    {
+        std::list<std::shared_ptr<objects::MiTimeLimitData>> records;
+        bool success = LoadBinaryData<objects::MiTimeLimitData>(pDataStore,
+            "Shield/TimeLimitData.sbin", true, 0, records);
+        for(auto record : records)
+        {
+            mTimeLimitData[record->GetID()] = record;
+        }
+    
+        return success;
+    }
+
+    template <>
+    bool DefinitionManager::LoadData<objects::MiTriUnionSpecialData>(
+        gsl::not_null<DataStore*> pDataStore)
+    {
+        std::list<std::shared_ptr<objects::MiTriUnionSpecialData>> records;
+        bool success = LoadBinaryData<objects::MiTriUnionSpecialData>(
+            pDataStore, "Shield/TriUnionSpecialData.sbin", true, 0, records);
+        for(auto record : records)
+        {
+            auto id = record->GetID();
+            mTriUnionSpecialData[id] = record;
+
+            for(auto sourceID : { record->GetSourceID1(),
+                record->GetSourceID2(), record->GetSourceID3() })
+            {
+                if(sourceID)
+                {
+                    mTriUnionSpecialDataBySourceID[sourceID].push_back(id);
+                }
+            }
+        }
+    
+        return success;
+    }
+
+    template <>
+    bool DefinitionManager::LoadData<objects::MiWarpPointData>(
+        gsl::not_null<DataStore*> pDataStore)
+    {
+        std::list<std::shared_ptr<objects::MiWarpPointData>> records;
+        bool success = LoadBinaryData<objects::MiWarpPointData>(pDataStore,
+            "Shield/WarpPointData.sbin", true, 0, records);
+        for(auto record : records)
+        {
+            mWarpPointData[record->GetID()] = record;
+        }
+
+        return success;
+    }
+
+    template <>
+    bool DefinitionManager::LoadData<objects::MiZoneData>(
+        gsl::not_null<DataStore*> pDataStore)
+    {
+        std::list<std::shared_ptr<objects::MiZoneData>> records;
+        bool success = LoadBinaryData<objects::MiZoneData>(pDataStore,
+            "Shield/ZoneData.sbin", true, 0, records);
+        for(auto record : records)
+        {
+            mZoneData[record->GetBasic()->GetID()] = record;
+        }
+    
+        return success;
+    }
 }
 
 bool DefinitionManager::LoadAllData(gsl::not_null<DataStore*> pDataStore)
 {
     LOG_INFO("Loading binary data definitions...\n");
+
     bool success = true;
-    success &= LoadAIData(pDataStore);
-    success &= LoadCItemData(pDataStore);
-    success &= LoadDevilData(pDataStore);
-    success &= LoadDevilBookData(pDataStore);
-    success &= LoadDevilLVUpRateData(pDataStore);
-    success &= LoadDisassemblyData(pDataStore);
-    success &= LoadDisassemblyTriggerData(pDataStore);
-    success &= LoadDynamicMapData(pDataStore);
-    success &= LoadEnchantData(pDataStore);
-    success &= LoadEquipmentSetData(pDataStore);
-    success &= LoadExchangeData(pDataStore);
-    success &= LoadExpertClassData(pDataStore);
-    success &= LoadHNPCData(pDataStore);
-    success &= LoadItemData(pDataStore);
-    success &= LoadModificationData(pDataStore);
-    success &= LoadModificationExtEffectData(pDataStore);
-    success &= LoadModificationExtRecipeData(pDataStore);
-    success &= LoadModificationTriggerData(pDataStore);
-    success &= LoadModifiedEffectData(pDataStore);
-    success &= LoadNPCBarterData(pDataStore);
-    success &= LoadONPCData(pDataStore);
-    success &= LoadQuestData(pDataStore);
-    success &= LoadShopProductData(pDataStore);
-    success &= LoadSItemData(pDataStore);
-    success &= LoadSkillData(pDataStore);
-    success &= LoadStatusData(pDataStore);
-    success &= LoadTimeLimitData(pDataStore);
-    success &= LoadTriUnionSpecialData(pDataStore);
-    success &= LoadWarpPointData(pDataStore);
-    success &= LoadZoneData(pDataStore);
+    success &= LoadData<objects::MiAIData>(pDataStore);
+    success &= LoadData<objects::MiCItemData>(pDataStore);
+    success &= LoadData<objects::MiDevilData>(pDataStore);
+    success &= LoadData<objects::MiDevilBookData>(pDataStore);
+    success &= LoadData<objects::MiDevilEquipmentData>(pDataStore);
+    success &= LoadData<objects::MiDevilEquipmentItemData>(pDataStore);
+    success &= LoadData<objects::MiDevilLVUpRateData>(pDataStore);
+    success &= LoadData<objects::MiDisassemblyData>(pDataStore);
+    success &= LoadData<objects::MiDisassemblyTriggerData>(pDataStore);
+    success &= LoadData<objects::MiDynamicMapData>(pDataStore);
+    success &= LoadData<objects::MiEnchantData>(pDataStore);
+    success &= LoadData<objects::MiEquipmentSetData>(pDataStore);
+    success &= LoadData<objects::MiExchangeData>(pDataStore);
+    success &= LoadData<objects::MiExpertData>(pDataStore);
+    success &= LoadData<objects::MiHNPCData>(pDataStore);
+    success &= LoadData<objects::MiItemData>(pDataStore);
+    success &= LoadData<objects::MiModificationData>(pDataStore);
+    success &= LoadData<objects::MiModificationExtEffectData>(pDataStore);
+    success &= LoadData<objects::MiModificationExtRecipeData>(pDataStore);
+    success &= LoadData<objects::MiModificationTriggerData>(pDataStore);
+    success &= LoadData<objects::MiModifiedEffectData>(pDataStore);
+    success &= LoadData<objects::MiNPCBarterData>(pDataStore);
+    success &= LoadData<objects::MiONPCData>(pDataStore);
+    success &= LoadData<objects::MiQuestData>(pDataStore);
+    success &= LoadData<objects::MiShopProductData>(pDataStore);
+    success &= LoadData<objects::MiSItemData>(pDataStore);
+    success &= LoadData<objects::MiSkillData>(pDataStore);
+    success &= LoadData<objects::MiStatusData>(pDataStore);
+    success &= LoadData<objects::MiTimeLimitData>(pDataStore);
+    success &= LoadData<objects::MiTriUnionSpecialData>(pDataStore);
+    success &= LoadData<objects::MiWarpPointData>(pDataStore);
+    success &= LoadData<objects::MiZoneData>(pDataStore);
 
     if(success)
     {
@@ -554,526 +1223,87 @@ bool DefinitionManager::LoadAllData(gsl::not_null<DataStore*> pDataStore)
     return success;
 }
 
-bool DefinitionManager::LoadAIData(gsl::not_null<DataStore*> pDataStore)
+namespace libcomp
 {
-    std::list<std::shared_ptr<objects::MiAIData>> records;
-    bool success = LoadBinaryData<objects::MiAIData>(pDataStore,
-        "Shield/AIData.sbin", true, 0, records);
-    for(auto record : records)
-    {
-        mAIData[record->GetID()] = record;
-    }
-
-    return success;
-}
-
-bool DefinitionManager::LoadCItemData(gsl::not_null<DataStore*> pDataStore)
-{
-    std::list<std::shared_ptr<objects::MiCItemData>> records;
-    bool success = LoadBinaryData<objects::MiCItemData>(pDataStore,
-        "Shield/CItemData.sbin", true, 0, records);
-    for(auto record : records)
-    {
-        auto id = record->GetBaseData()->GetID();
-        auto name = record->GetBaseData()->GetName();
-        if(mCItemNameLookup.find(name) == mCItemNameLookup.end())
-        {
-            mCItemNameLookup[name] = id;
-        }
-    }
-    
-    return success;
-}
-
-bool DefinitionManager::LoadCZoneRelationData(gsl::not_null<DataStore*> pDataStore)
-{
-    std::list<std::shared_ptr<objects::MiCZoneRelationData>> records;
-    bool success = LoadBinaryData<objects::MiCZoneRelationData>(pDataStore,
-        "Shield/CZoneRelationData.sbin", true, 0, records);
-    for(auto record : records)
-    {
-        mZoneRelationData[record->GetID()] = record;
-    }
-
-    return success;
-}
-
-bool DefinitionManager::LoadDevilBookData(gsl::not_null<DataStore*> pDataStore)
-{
-    std::list<std::shared_ptr<objects::MiDevilBookData>> records;
-    bool success = LoadBinaryData<objects::MiDevilBookData>(pDataStore,
-        "Shield/DevilBookData.sbin", true, 0, records);
-    for(auto record : records)
-    {
-        mDevilBookData[record->GetID()] = record;
-    }
-    
-    return success;
-}
-
-bool DefinitionManager::LoadDevilData(gsl::not_null<DataStore*> pDataStore)
-{
-    std::list<std::shared_ptr<objects::MiDevilData>> records;
-    bool success = LoadBinaryData<objects::MiDevilData>(pDataStore,
-        "Shield/DevilData.sbin", true, 0, records);
-    for(auto record : records)
-    {
-        auto id = record->GetBasic()->GetID();
-        auto name = record->GetBasic()->GetName();
-
-        mDevilData[id] = record;
-        if(mDevilNameLookup.find(name) == mDevilNameLookup.end())
-        {
-            mDevilNameLookup[name] = id;
-        }
-
-        // If the fusion options contain 2-way fusion result, add to
-        // the fusion range map
-        auto fusionOptions = record->GetUnionData()->GetFusionOptions();
-        if(fusionOptions & 2)
-        {
-            mFusionRanges[(uint8_t)record->GetCategory()->GetRace()].
-                push_back(std::pair<uint8_t, uint32_t>(
-                (uint8_t)record->GetGrowth()->GetBaseLevel(), id));
-        }
-    }
-
-    // Sort the fusion ranges
-    for(auto& pair : mFusionRanges)
-    {
-        auto& ranges = pair.second;
-        ranges.sort([](const std::pair<uint8_t, uint32_t>& a,
-            const std::pair<uint8_t, uint32_t>& b)
-        {
-            return a.first < b.first;
-        });
-    }
-    
-    return success;
-}
-
-bool DefinitionManager::LoadDevilLVUpRateData(
-    gsl::not_null<DataStore*> pDataStore)
-{
-    std::list<std::shared_ptr<objects::MiDevilLVUpRateData>> records;
-    bool success = LoadBinaryData<objects::MiDevilLVUpRateData>(pDataStore,
-        "Shield/DevilLVUpRateData.sbin", true, 0, records);
-    for(auto record : records)
-    {
-        mDevilLVUpRateData[record->GetID()] = record;
-    }
-    
-    return success;
-}
-
-bool DefinitionManager::LoadDisassemblyData(gsl::not_null<DataStore*> pDataStore)
-{
-    std::list<std::shared_ptr<objects::MiDisassemblyData>> records;
-    bool success = LoadBinaryData<objects::MiDisassemblyData>(pDataStore,
-        "Shield/DisassemblyData.sbin", true, 0, records);
-    for(auto record : records)
+    template<>
+    bool DefinitionManager::RegisterServerSideDefinition<
+        objects::EnchantSetData>(const std::shared_ptr<
+            objects::EnchantSetData>& record)
     {
         uint32_t id = record->GetID();
-        mDisassemblyData[id] = record;
-        mDisassemblyLookup[record->GetItemID()] = id;
-    }
-    
-    return success;
-}
-
-bool DefinitionManager::LoadDisassemblyTriggerData(gsl::not_null<
-    DataStore*> pDataStore)
-{
-    std::list<std::shared_ptr<objects::MiDisassemblyTriggerData>> records;
-    bool success = LoadBinaryData<objects::MiDisassemblyTriggerData>(pDataStore,
-        "Shield/DisassemblyTriggerData.sbin", true, 0, records);
-    for(auto record : records)
-    {
-        mDisassemblyTriggerData[record->GetID()] = record;
-        mDisassembledItemIDs.push_back(record->GetID());
-    }
-    
-    return success;
-}
-
-bool DefinitionManager::LoadDynamicMapData(gsl::not_null<DataStore*> pDataStore)
-{
-    std::list<std::shared_ptr<objects::MiDynamicMapData>> records;
-    bool success = LoadBinaryData<objects::MiDynamicMapData>(pDataStore,
-        "Client/DynamicMapData.bin", false, 0, records);
-
-    uint16_t spotLoadCount = 0;
-    for(auto record : records)
-    {
-        mDynamicMapData[record->GetID()] = record;
-
-        std::string filename(record->GetSpotDataFile().C());
-        if(filename.length() > 0 && mSpotData.find(filename) == mSpotData.end())
+        if(mEnchantSetData.find(id) != mEnchantSetData.end())
         {
-            spotLoadCount++;
-
-            std::list<std::shared_ptr<objects::MiSpotData>> spotRecords;
-            bool spotSuccess = LoadBinaryData<objects::MiSpotData>(pDataStore,
-                libcomp::String("Client/%1").Arg(filename), false, 0, spotRecords,
-                false);
-            if(spotSuccess)
-            {
-                for(auto spotRecord : spotRecords)
-                {
-                    mSpotData[filename][spotRecord->GetID()] = spotRecord;
-                }
-            }
+            LOG_ERROR(libcomp::String("Duplicate enchant set"
+                " encountered: %1\n").Arg(id));
+            return false;
         }
-    }
 
-    if(spotLoadCount != (uint16_t)mSpotData.size())
-    {
-        LOG_WARNING(libcomp::String("Loaded %1/%2 map spot definition files.\n")
-            .Arg(mSpotData.size()).Arg(spotLoadCount));
-    }
-    else
-    {
-        LOG_DEBUG(libcomp::String("Loaded %1/%2 map spot definition files.\n")
-            .Arg(spotLoadCount).Arg(spotLoadCount));
-    }
+        mEnchantSetData[id] = record;
 
-    return success;
-}
-
-bool DefinitionManager::LoadEnchantData(gsl::not_null<DataStore*> pDataStore)
-{
-    std::list<std::shared_ptr<objects::MiEnchantData>> records;
-    bool success = LoadBinaryData<objects::MiEnchantData>(pDataStore,
-        "Shield/EnchantData.sbin", true, 0, records);
-    for(auto record : records)
-    {
-        int16_t id = record->GetID();
-        uint32_t demonID = record->GetDevilCrystal()->GetDemonID();
-        uint32_t itemID = record->GetDevilCrystal()->GetItemID();
-
-        mEnchantData[id] = record;
-        mEnchantDemonLookup[demonID] = id;
-        mEnchantItemLookup[itemID] = id;
-    }
-    
-    return success;
-}
-
-bool DefinitionManager::LoadEquipmentSetData(
-    gsl::not_null<DataStore*> pDataStore)
-{
-    std::list<std::shared_ptr<objects::MiEquipmentSetData>> records;
-    bool success = LoadBinaryData<objects::MiEquipmentSetData>(pDataStore,
-        "Shield/EquipmentSetData.sbin", true, 0, records);
-    for(auto record : records)
-    {
-        bool equipmentFound = false;
-        for(uint32_t equipmentID : record->GetEquipment())
+        for(int16_t effectID : record->GetEffects())
         {
-            if(equipmentID)
+            if(effectID != 0)
             {
-                mEquipmentSetLookup[equipmentID].push_back(record->GetID());
-                equipmentFound = true;
+                mEnchantSetLookup[effectID].push_back(id);
             }
         }
 
-        if(equipmentFound)
-        {
-            mEquipmentSetData[record->GetID()] = record;
-        }
+        return true;
     }
 
-    return success;
-}
-
-bool DefinitionManager::LoadExchangeData(
-    gsl::not_null<DataStore*> pDataStore)
-{
-    std::list<std::shared_ptr<objects::MiExchangeData>> records;
-    bool success = LoadBinaryData<objects::MiExchangeData>(pDataStore,
-        "Shield/ExchangeData.sbin", true, 0, records);
-    for(auto record : records)
-    {
-        mExchangeData[record->GetID()] = record;
-    }
-
-    return success;
-}
-
-bool DefinitionManager::LoadExpertClassData(
-    gsl::not_null<DataStore*> pDataStore)
-{
-    std::list<std::shared_ptr<objects::MiExpertData>> records;
-    bool success = LoadBinaryData<objects::MiExpertData>(pDataStore,
-        "Shield/ExpertClassData.sbin", true, 0, records);
-    for(auto record : records)
-    {
-        mExpertData[record->GetID()] = record;
-    }
-
-    return success;
-}
-
-bool DefinitionManager::LoadHNPCData(gsl::not_null<DataStore*> pDataStore)
-{
-    std::list<std::shared_ptr<objects::MiHNPCData>> records;
-    bool success = LoadBinaryData<objects::MiHNPCData>(pDataStore,
-        "Shield/hNPCData.sbin", true, 0, records);
-    for(auto record : records)
-    {
-        mHNPCData[record->GetBasic()->GetID()] = record;
-    }
-    
-    return success;
-}
-
-bool DefinitionManager::LoadItemData(gsl::not_null<DataStore*> pDataStore)
-{
-    std::list<std::shared_ptr<objects::MiItemData>> records;
-    bool success = LoadBinaryData<objects::MiItemData>(pDataStore,
-        "Shield/ItemData.sbin", true, 2, records);
-    for(auto record : records)
-    {
-        mItemData[record->GetCommon()->GetID()] = record;
-    }
-    
-    return success;
-}
-
-bool DefinitionManager::LoadModificationData(gsl::not_null<DataStore*> pDataStore)
-{
-    std::list<std::shared_ptr<objects::MiModificationData>> records;
-    bool success = LoadBinaryData<objects::MiModificationData>(pDataStore,
-        "Shield/ModificationData.sbin", true, 0, records);
-    for(auto record : records)
+    template<>
+    bool DefinitionManager::RegisterServerSideDefinition<
+        objects::EnchantSpecialData>(const std::shared_ptr<
+            objects::EnchantSpecialData>& record)
     {
         uint32_t id = record->GetID();
-        mModificationData[id] = record;
-        mModificationLookup[record->GetItemID()] = id;
+        if(mEnchantSpecialData.find(id) != mEnchantSpecialData.end())
+        {
+            LOG_ERROR(libcomp::String("Duplicate enchant special"
+                " encountered: %1\n").Arg(id));
+            return false;
+        }
+
+        mEnchantSpecialData[id] = record;
+        mEnchantSpecialLookup[record->GetInputItem()].push_back(id);
+
+        return true;
     }
-    
-    return success;
-}
 
-bool DefinitionManager::LoadModificationExtEffectData(gsl::not_null<DataStore*> pDataStore)
-{
-    std::list<std::shared_ptr<objects::MiModificationExtEffectData>> records;
-    bool success = LoadBinaryData<objects::MiModificationExtEffectData>(pDataStore,
-        "Shield/ModificationExtEffectData.sbin", true, 0, records);
-    for(auto record : records)
+    template<>
+    bool DefinitionManager::RegisterServerSideDefinition<
+        objects::MiSStatusData>(const std::shared_ptr<
+            objects::MiSStatusData>& record)
     {
-        mModificationExtEffectData[record->GetGroupID()]
-            [record->GetSlot()][record->GetSubID()] = record;
-    }
-    
-    return success;
-}
-
-bool DefinitionManager::LoadModificationExtRecipeData(gsl::not_null<DataStore*> pDataStore)
-{
-    std::list<std::shared_ptr<objects::MiModificationExtRecipeData>> records;
-    bool success = LoadBinaryData<objects::MiModificationExtRecipeData>(pDataStore,
-        "Shield/ModificationExtRecipeData.sbin", true, 0, records);
-    for(auto record : records)
-    {
-        uint32_t itemID = record->GetItemID();
-        if(itemID == static_cast<uint32_t>(-1)) continue;
-
         uint32_t id = record->GetID();
-        mModificationExtRecipeData[id] = record;
-        mModificationExtRecipeLookup[itemID] = id;
-    }
-    
-    return success;
-}
-
-bool DefinitionManager::LoadModificationTriggerData(gsl::not_null<
-    DataStore*> pDataStore)
-{
-    std::list<std::shared_ptr<objects::MiModificationTriggerData>> records;
-    bool success = LoadBinaryData<objects::MiModificationTriggerData>(pDataStore,
-        "Shield/ModificationTriggerData.sbin", true, 0, records);
-    for(auto record : records)
-    {
-        mModificationTriggerData[record->GetID()] = record;
-    }
-    
-    return success;
-}
-
-bool DefinitionManager::LoadModifiedEffectData(gsl::not_null<DataStore*> pDataStore)
-{
-    std::list<std::shared_ptr<objects::MiModifiedEffectData>> records;
-    bool success = LoadBinaryData<objects::MiModifiedEffectData>(pDataStore,
-        "Shield/ModifiedEffectData.sbin", true, 0, records);
-    for(auto record : records)
-    {
-        mModifiedEffectData[record->GetID()] = record;
-    }
-    
-    return success;
-}
-
-bool DefinitionManager::LoadNPCBarterData(gsl::not_null<DataStore*> pDataStore)
-{
-    std::list<std::shared_ptr<objects::MiNPCBarterData>> records;
-    bool success = LoadBinaryData<objects::MiNPCBarterData>(pDataStore,
-        "Shield/NPCBarterData.sbin", true, 0, records);
-    for(auto record : records)
-    {
-        mNPCBarterData[record->GetID()] = record;
-    }
-    
-    return success;
-}
-
-bool DefinitionManager::LoadONPCData(gsl::not_null<DataStore*> pDataStore)
-{
-    std::list<std::shared_ptr<objects::MiONPCData>> records;
-    bool success = LoadBinaryData<objects::MiONPCData>(pDataStore,
-        "Shield/oNPCData.sbin", true, 0, records);
-    for(auto record : records)
-    {
-        mONPCData[record->GetID()] = record;
-    }
-    
-    return success;
-}
-
-bool DefinitionManager::LoadQuestData(gsl::not_null<DataStore*> pDataStore)
-{
-    std::list<std::shared_ptr<objects::MiQuestData>> records;
-    bool success = LoadBinaryData<objects::MiQuestData>(pDataStore,
-        "Shield/QuestData.sbin", true, 0, records);
-    for(auto record : records)
-    {
-        mQuestData[record->GetID()] = record;
-    }
-
-    return success;
-}
-
-bool DefinitionManager::LoadShopProductData(gsl::not_null<DataStore*> pDataStore)
-{
-    std::list<std::shared_ptr<objects::MiShopProductData>> records;
-    bool success = LoadBinaryData<objects::MiShopProductData>(pDataStore,
-        "Shield/ShopProductData.sbin", true, 0, records);
-    for(auto record : records)
-    {
-        mShopProductData[record->GetID()] = record;
-    }
-
-    return success;
-}
-
-bool DefinitionManager::LoadSItemData(gsl::not_null<DataStore*> pDataStore)
-{
-    std::list<std::shared_ptr<objects::MiSItemData>> records;
-    bool success = LoadBinaryData<objects::MiSItemData>(pDataStore,
-        "Shield/SItemData.sbin", true, 0, records);
-    for(auto record : records)
-    {
-        // Only store it if a tokusei is set
-        for(auto tokuseiID : record->GetTokusei())
+        if(mSStatusData.find(id) != mSStatusData.end())
         {
-            if(tokuseiID != 0)
-            {
-                mSItemData[record->GetID()] = record;
-                break;
-            }
+            LOG_ERROR(libcomp::String("Duplicate s-status encountered: %1\n")
+                .Arg(id));
+            return false;
         }
+
+        mSStatusData[id] = record;
+
+        return true;
     }
 
-    return success;
-}
-
-bool DefinitionManager::LoadSkillData(gsl::not_null<DataStore*> pDataStore)
-{
-    std::list<std::shared_ptr<objects::MiSkillData>> records;
-    bool success = LoadBinaryData<objects::MiSkillData>(pDataStore,
-        "Shield/SkillData.sbin", true, 4, records);
-    for(auto record : records)
+    template<>
+    bool DefinitionManager::RegisterServerSideDefinition<objects::Tokusei>(
+        const std::shared_ptr<objects::Tokusei>& record)
     {
-        mSkillData[record->GetCommon()->GetID()] = record;
-    }
-
-    return success;
-}
-
-bool DefinitionManager::LoadStatusData(gsl::not_null<DataStore*> pDataStore)
-{
-    std::list<std::shared_ptr<objects::MiStatusData>> records;
-    bool success = LoadBinaryData<objects::MiStatusData>(pDataStore,
-        "Shield/StatusData.sbin", true, 1, records);
-    for(auto record : records)
-    {
-        mStatusData[record->GetCommon()->GetID()] = record;
-    }
-    
-    return success;
-}
-
-bool DefinitionManager::LoadTimeLimitData(gsl::not_null<DataStore*> pDataStore)
-{
-    std::list<std::shared_ptr<objects::MiTimeLimitData>> records;
-    bool success = LoadBinaryData<objects::MiTimeLimitData>(pDataStore,
-        "Shield/TimeLimitData.sbin", true, 0, records);
-    for(auto record : records)
-    {
-        mTimeLimitData[record->GetID()] = record;
-    }
-    
-    return success;
-}
-
-bool DefinitionManager::LoadTriUnionSpecialData(gsl::not_null<DataStore*> pDataStore)
-{
-    std::list<std::shared_ptr<objects::MiTriUnionSpecialData>> records;
-    bool success = LoadBinaryData<objects::MiTriUnionSpecialData>(pDataStore,
-        "Shield/TriUnionSpecialData.sbin", true, 0, records);
-    for(auto record : records)
-    {
-        auto id = record->GetID();
-        mTriUnionSpecialData[id] = record;
-
-        for(auto sourceID : { record->GetSourceID1(), record->GetSourceID2(),
-            record->GetSourceID3() })
+        int32_t id = record->GetID();
+        if(mTokuseiData.find(id) != mTokuseiData.end())
         {
-            if(sourceID)
-            {
-                mTriUnionSpecialDataBySourceID[sourceID].push_back(id);
-            }
+            LOG_ERROR(libcomp::String("Duplicate tokusei encountered: %1\n")
+                .Arg(id));
+            return false;
         }
-    }
-    
-    return success;
-}
 
-bool DefinitionManager::LoadWarpPointData(
-    gsl::not_null<DataStore*> pDataStore)
-{
-    std::list<std::shared_ptr<objects::MiWarpPointData>> records;
-    bool success = LoadBinaryData<objects::MiWarpPointData>(pDataStore,
-        "Shield/WarpPointData.sbin", true, 0, records);
-    for(auto record : records)
-    {
-        mWarpPointData[record->GetID()] = record;
-    }
+        mTokuseiData[id] = record;
 
-    return success;
-}
-
-bool DefinitionManager::LoadZoneData(gsl::not_null<DataStore*> pDataStore)
-{
-    std::list<std::shared_ptr<objects::MiZoneData>> records;
-    bool success = LoadBinaryData<objects::MiZoneData>(pDataStore,
-        "Shield/ZoneData.sbin", true, 0, records);
-    for(auto record : records)
-    {
-        mZoneData[record->GetBasic()->GetID()] = record;
+        return true;
     }
-    
-    return success;
 }
 
 std::shared_ptr<objects::QmpFile> DefinitionManager::LoadQmpFile(
@@ -1104,82 +1334,6 @@ std::shared_ptr<objects::QmpFile> DefinitionManager::LoadQmpFile(
     }
 
     return file;
-}
-
-namespace libcomp
-{
-    template<>
-    bool DefinitionManager::RegisterServerSideDefinition<objects::EnchantSetData>(
-        const std::shared_ptr<objects::EnchantSetData>& record)
-    {
-        uint32_t id = record->GetID();
-        if(mEnchantSetData.find(id) != mEnchantSetData.end())
-        {
-            LOG_ERROR(libcomp::String("Duplicate enchant set encountered: %1\n").Arg(id));
-            return false;
-        }
-
-        mEnchantSetData[id] = record;
-
-        for(int16_t effectID : record->GetEffects())
-        {
-            if(effectID != 0)
-            {
-                mEnchantSetLookup[effectID].push_back(id);
-            }
-        }
-
-        return true;
-    }
-
-    template<>
-    bool DefinitionManager::RegisterServerSideDefinition<objects::EnchantSpecialData>(
-        const std::shared_ptr<objects::EnchantSpecialData>& record)
-    {
-        uint32_t id = record->GetID();
-        if(mEnchantSpecialData.find(id) != mEnchantSpecialData.end())
-        {
-            LOG_ERROR(libcomp::String("Duplicate enchant special encountered: %1\n").Arg(id));
-            return false;
-        }
-
-        mEnchantSpecialData[id] = record;
-        mEnchantSpecialLookup[record->GetInputItem()].push_back(id);
-
-        return true;
-    }
-
-    template<>
-    bool DefinitionManager::RegisterServerSideDefinition<objects::MiSStatusData>(
-        const std::shared_ptr<objects::MiSStatusData>& record)
-    {
-        uint32_t id = record->GetID();
-        if(mSStatusData.find(id) != mSStatusData.end())
-        {
-            LOG_ERROR(libcomp::String("Duplicate s-status encountered: %1\n").Arg(id));
-            return false;
-        }
-
-        mSStatusData[id] = record;
-
-        return true;
-    }
-
-    template<>
-    bool DefinitionManager::RegisterServerSideDefinition<objects::Tokusei>(
-        const std::shared_ptr<objects::Tokusei>& record)
-    {
-        int32_t id = record->GetID();
-        if(mTokuseiData.find(id) != mTokuseiData.end())
-        {
-            LOG_ERROR(libcomp::String("Duplicate tokusei encountered: %1\n").Arg(id));
-            return false;
-        }
-
-        mTokuseiData[id] = record;
-
-        return true;
-    }
 }
 
 bool DefinitionManager::LoadBinaryDataHeader(libcomp::ObjectInStream& ois,

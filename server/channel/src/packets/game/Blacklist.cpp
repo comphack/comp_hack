@@ -30,6 +30,9 @@
 #include <Packet.h>
 #include <PacketCodes.h>
 
+// object Includes
+#include <AccountWorldData.h>
+
 // channel Includes
 #include "ChannelClientConnection.h"
 
@@ -46,18 +49,28 @@ bool Parsers::Blacklist::Parse(libcomp::ManagerPacket *pPacketManager,
         return false;
     }
 
-    /// @todo: implement non-default values
-
-    int32_t unknown = p.ReadS32Little();
+    int32_t unknown = p.ReadS32Little();    // Always 0
     (void)unknown;
-    
+
+    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
+        connection);
+    auto state = client->GetClientState();
+    auto worldData = state->GetAccountWorldData().Get();
+    auto blacklist = worldData->GetBlacklist();
+
     libcomp::Packet reply;
     reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_BLACKLIST);
-    reply.WriteS32Little(0);    // Unknown
-    reply.WriteS32Little(0);    // Unknown
-    reply.WriteS32Little(0);    // Unknown
+    reply.WriteS32Little(0);    // Unknown, always 0
+    reply.WriteS32Little(0);    // Unknown, always 0
 
-    connection->SendPacket(reply);
+    reply.WriteS32Little((int32_t)blacklist.size());
+    for(auto& entry : blacklist)
+    {
+        reply.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_CP932,
+            entry, true);
+    }
+
+    client->SendPacket(reply);
 
     return true;
 }

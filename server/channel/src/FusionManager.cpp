@@ -420,7 +420,6 @@ uint32_t FusionManager::GetResultDemon(const std::shared_ptr<
     auto character = cState->GetEntity();
 
     auto server = mServer.lock();
-    auto characterManager = server->GetCharacterManager();
     auto definitionManager = server->GetDefinitionManager();
 
     auto demon1 = std::dynamic_pointer_cast<objects::Demon>(
@@ -575,7 +574,7 @@ uint32_t FusionManager::GetResultDemon(const std::shared_ptr<
             // Check that the player has the plugin
             size_t index;
             uint8_t shiftVal;
-            characterManager->ConvertIDToMaskValues(
+            CharacterManager::ConvertIDToMaskValues(
                 (uint16_t)special->GetPluginID(), index, shiftVal);
 
             uint8_t indexVal = character->GetProgress()->GetPlugins(index);

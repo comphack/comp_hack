@@ -96,10 +96,10 @@ before_script:
   - rm -rf ~/.rvm* ~/.gem* # Do this to prevent issues with rspec.
 
 script:
-  - jdk_switcher use oraclejdk8
-  - java -version
-  - mkdir -p build && cd build && cmake -DCOVERALLS=$COVERALLS_ENABLE -DBUILD_OPTIMIZED=OFF -DSINGLE_SOURCE_PACKETS=ON -DSINGLE_OBJGEN=ON -DUSE_COTIRE=ON -G "${GENERATOR}" .. && cmake --build .
-  - cmake --build . --target doc
-  - cmake --build . --target guide
-#  - cmake --build . --target test
-#  - if [ "$CXX" != "clang++" ]; then cmake --build . --target coveralls; fi
+  - if [ "${COVERITY_SCAN_BRANCH}" != 1 ]; then jdk_switcher use oraclejdk8 ; fi
+  - if [ "${COVERITY_SCAN_BRANCH}" != 1 ]; then java -version ; fi
+  - if [ "${COVERITY_SCAN_BRANCH}" != 1 ]; then mkdir -p build && cd build && cmake -DCOVERALLS=$COVERALLS_ENABLE -DBUILD_OPTIMIZED=OFF -DSINGLE_SOURCE_PACKETS=ON -DSINGLE_OBJGEN=ON -DUSE_COTIRE=ON -G "${GENERATOR}" .. && cmake --build . ; fi
+  - if [ "${COVERITY_SCAN_BRANCH}" != 1 ]; then cmake --build . --target doc ; fi
+  - if [ "${COVERITY_SCAN_BRANCH}" != 1 ]; then cmake --build . --target guide ; fi
+#  - if [ "${COVERITY_SCAN_BRANCH}" != 1 ]; then cmake --build . --target test ; fi
+#  - if [ "${COVERITY_SCAN_BRANCH}" != 1 ]; then if [ "$CXX" != "clang++" ]; then cmake --build . --target coveralls; fi ; fi

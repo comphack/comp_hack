@@ -23,6 +23,7 @@ addons:
     notification_email: compomega@tutanota.com
     build_command_prepend: "mkdir -p build && cd build && cmake -DCOVERALLS=$COVERALLS_ENABLE -DBUILD_OPTIMIZED=OFF -DSINGLE_SOURCE_PACKETS=ON -DSINGLE_OBJGEN=ON -DUSE_COTIRE=ON -G \"${GENERATOR}\" .."
     build_command: "echo hi"
+    branch_pattern: coverity_scan
 
 script:
   - echo hi

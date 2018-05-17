@@ -147,6 +147,11 @@ bool Parsers::TriFusionDemonUpdate::Parse(libcomp::ManagerPacket *pPacketManager
         if(resultDemon == 0)
         {
             failure = true;
+            tfSession->SetSelectionID(0);
+        }
+        else
+        {
+            tfSession->SetSelectionID(resultDemon);
         }
 
         if(!failure)

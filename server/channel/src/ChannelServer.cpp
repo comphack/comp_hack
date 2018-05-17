@@ -438,6 +438,10 @@ bool ChannelServer::Initialize()
         to_underlying(ClientToChannelPacketCode_t::PACKET_TIME_LIMIT_SYNC));
     clientPacketManager->AddParser<Parsers::ItemDisassemble>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_ITEM_DISASSEMBLE));
+    clientPacketManager->AddParser<Parsers::SynthesizeRecipe>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_SYNTHESIZE_RECIPE));
+    clientPacketManager->AddParser<Parsers::Synthesize>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_SYNTHESIZE));
     clientPacketManager->AddParser<Parsers::EquipmentMod>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_EQUIPMENT_MODIFY));
     clientPacketManager->AddParser<Parsers::MaterialBox>(
@@ -464,6 +468,8 @@ bool ChannelServer::Initialize()
         to_underlying(ClientToChannelPacketCode_t::PACKET_LOCK_DEMON));
     clientPacketManager->AddParser<Parsers::PvPCharacterInfo>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_PVP_CHARACTER_INFO));
+    clientPacketManager->AddParser<Parsers::ItemMix>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_ITEM_MIX));
     clientPacketManager->AddParser<Parsers::TeamInfo>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_TEAM_INFO));
     clientPacketManager->AddParser<Parsers::PartnerDemonQuestTemp>(

@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <!-- Custom -->
+    <object name="MiSynthesisItemData" persistent="false">
+        <member type="u32" name="itemID"/>
+        <member type="u16" name="amount"/>
+        <member type="u16" name="unused"/>
+    </object>
+    <object name="MiSynthesisData" persistent="false">
+        <member type="u32" name="ID"/>
+        <member type="u32" name="baseSkillID"/>
+        <member type="u32" name="skillID"/>
+        <member type="u32" name="itemID"/>
+        <member type="u16" name="count"/>
+        <member type="u8" name="unk2"/>
+        <member type="u8" name="type"/>
+        <member type="u32" name="unk3"/>
+        <member type="u8" name="slotMin"/>
+        <member type="u8" name="slotMax"/>
+        <member type="u16" name="unused"/>
+        <member type="array" size="2" name="expertBoosts">
+            <element type="u16"/>
+        </member>
+        <!-- From MiSynthesisMaterialData -->
+        <member type="array" size="8" name="materials">
+            <element type="MiSynthesisItemData*"/>
+        </member>
+        <member type="array" size="16" name="rateScaling">
+            <element type="s16"/>
+        </member>
+    </object>
+</objgen>

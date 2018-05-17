@@ -124,6 +124,7 @@ bool Parsers::TriFusionRewardAccept::Parse(libcomp::ManagerPacket *pPacketManage
             tfSession->SetDemons(0, NULLUUID);
             tfSession->SetDemons(1, NULLUUID);
             tfSession->SetDemons(2, NULLUUID);
+            tfSession->SetSelectionID(0);
         }
     }
 

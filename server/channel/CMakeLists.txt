@@ -312,6 +312,8 @@ SET(${PROJECT_NAME}_PACKETS
     src/packets/game/PlasmaItem.cpp             # 0x01F3
     src/packets/game/TimeLimitSync.cpp          # 0x01F9
     src/packets/game/ItemDisassemble.cpp        # 0x01FC
+    src/packets/game/SynthesizeRecipe.cpp       # 0x01FE
+    src/packets/game/Synthesize.cpp             # 0x0200
     src/packets/game/EquipmentMod.cpp           # 0x0203
     src/packets/game/MaterialBox.cpp            # 0x0205
     src/packets/game/Analyze.cpp                # 0x0209
@@ -325,6 +327,7 @@ SET(${PROJECT_NAME}_PACKETS
     src/packets/game/PartnerDemonQuestList.cpp  # 0x022D
     src/packets/game/LockDemon.cpp              # 0x0233
     src/packets/game/PvPCharacterInfo.cpp       # 0x024D
+    src/packets/game/ItemMix.cpp                # 0x025D
     src/packets/game/TeamInfo.cpp               # 0x027B
     src/packets/game/PartnerDemonQuestTemp.cpp  # 0x028F
     src/packets/game/ItemDepoRemote.cpp         # 0x0296

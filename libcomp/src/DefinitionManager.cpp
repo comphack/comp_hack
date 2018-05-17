@@ -33,6 +33,8 @@
 #include <EnchantSetData.h>
 #include <EnchantSpecialData.h>
 #include <MiAIData.h>
+#include <MiBlendData.h>
+#include <MiBlendExtData.h>
 #include <MiCItemBaseData.h>
 #include <MiCItemData.h>
 #include <MiCZoneRelationData.h>
@@ -72,6 +74,7 @@
 #include <MiSpotData.h>
 #include <MiSStatusData.h>
 #include <MiStatusData.h>
+#include <MiSynthesisData.h>
 #include <MiTimeLimitData.h>
 #include <MiTriUnionSpecialData.h>
 #include <MiWarpPointData.h>
@@ -95,6 +98,18 @@ const std::shared_ptr<objects::MiAIData>
     DefinitionManager::GetAIData(uint32_t id)
 {
     return GetRecordByID(id, mAIData);
+}
+
+const std::shared_ptr<objects::MiBlendData>
+    DefinitionManager::GetBlendData(uint32_t id)
+{
+    return GetRecordByID(id, mBlendData);
+}
+
+const std::shared_ptr<objects::MiBlendExtData>
+    DefinitionManager::GetBlendExtData(uint32_t id)
+{
+    return GetRecordByID(id, mBlendExtData);
 }
 
 const std::shared_ptr<objects::MiDevilBookData>
@@ -424,6 +439,12 @@ const std::shared_ptr<objects::MiStatusData>
     return GetRecordByID(id, mStatusData);
 }
 
+const std::shared_ptr<objects::MiSynthesisData>
+    DefinitionManager::GetSynthesisData(uint32_t id)
+{
+    return GetRecordByID(id, mSynthesisData);
+}
+
 const std::shared_ptr<objects::MiTimeLimitData>
     DefinitionManager::GetTimeLimitData(uint32_t id)
 {
@@ -573,6 +594,36 @@ namespace libcomp
     }
 
     template <>
+    bool DefinitionManager::LoadData<objects::MiBlendData>(
+        gsl::not_null<DataStore*> pDataStore)
+    {
+        std::list<std::shared_ptr<objects::MiBlendData>> records;
+        bool success = LoadBinaryData<objects::MiBlendData>(pDataStore,
+            "Shield/BlendData.sbin", true, 0, records);
+        for(auto record : records)
+        {
+            mBlendData[record->GetID()] = record;
+        }
+
+        return success;
+    }
+
+    template <>
+    bool DefinitionManager::LoadData<objects::MiBlendExtData>(
+        gsl::not_null<DataStore*> pDataStore)
+    {
+        std::list<std::shared_ptr<objects::MiBlendExtData>> records;
+        bool success = LoadBinaryData<objects::MiBlendExtData>(pDataStore,
+            "Shield/BlendExtData.sbin", true, 0, records);
+        for(auto record : records)
+        {
+            mBlendExtData[record->GetID()] = record;
+        }
+
+        return success;
+    }
+
+    template <>
     bool DefinitionManager::LoadData<objects::MiCItemData>(
         gsl::not_null<DataStore*> pDataStore)
     {
@@ -588,7 +639,7 @@ namespace libcomp
                 mCItemNameLookup[name] = id;
             }
         }
-    
+
         return success;
     }
 
@@ -618,7 +669,7 @@ namespace libcomp
         {
             mDevilBookData[record->GetID()] = record;
         }
-    
+
         return success;
     }
 
@@ -661,7 +712,7 @@ namespace libcomp
                 return a.first < b.first;
             });
         }
-    
+
         return success;
     }
 
@@ -676,7 +727,7 @@ namespace libcomp
         {
             mDevilEquipmentData[record->GetSkillID()] = record;
         }
-    
+
         return success;
     }
 
@@ -691,7 +742,7 @@ namespace libcomp
         {
             mDevilEquipmentItemData[record->GetItemID()] = record;
         }
-    
+
         return success;
     }
 
@@ -706,7 +757,7 @@ namespace libcomp
         {
             mDevilLVUpRateData[record->GetID()] = record;
         }
-    
+
         return success;
     }
 
@@ -723,7 +774,7 @@ namespace libcomp
             mDisassemblyData[id] = record;
             mDisassemblyLookup[record->GetItemID()] = id;
         }
-    
+
         return success;
     }
 
@@ -740,7 +791,7 @@ namespace libcomp
             mDisassemblyTriggerData[record->GetID()] = record;
             mDisassembledItemIDs.push_back(record->GetID());
         }
-    
+
         return success;
     }
 
@@ -808,7 +859,7 @@ namespace libcomp
             mEnchantDemonLookup[demonID] = id;
             mEnchantItemLookup[itemID] = id;
         }
-    
+
         return success;
     }
 
@@ -882,7 +933,7 @@ namespace libcomp
         {
             mHNPCData[record->GetBasic()->GetID()] = record;
         }
-    
+
         return success;
     }
 
@@ -897,7 +948,7 @@ namespace libcomp
         {
             mItemData[record->GetCommon()->GetID()] = record;
         }
-    
+
         return success;
     }
 
@@ -914,7 +965,7 @@ namespace libcomp
             mModificationData[id] = record;
             mModificationLookup[record->GetItemID()] = id;
         }
-    
+
         return success;
     }
 
@@ -932,7 +983,7 @@ namespace libcomp
             mModificationExtEffectData[record->GetGroupID()]
                 [record->GetSlot()][record->GetSubID()] = record;
         }
-    
+
         return success;
     }
 
@@ -954,7 +1005,7 @@ namespace libcomp
             mModificationExtRecipeData[id] = record;
             mModificationExtRecipeLookup[itemID] = id;
         }
-    
+
         return success;
     }
 
@@ -970,7 +1021,7 @@ namespace libcomp
         {
             mModificationTriggerData[record->GetID()] = record;
         }
-    
+
         return success;
     }
 
@@ -985,7 +1036,7 @@ namespace libcomp
         {
             mModifiedEffectData[record->GetID()] = record;
         }
-    
+
         return success;
     }
 
@@ -1000,7 +1051,7 @@ namespace libcomp
         {
             mNPCBarterData[record->GetID()] = record;
         }
-    
+
         return success;
     }
 
@@ -1015,7 +1066,7 @@ namespace libcomp
         {
             mONPCData[record->GetID()] = record;
         }
-    
+
         return success;
     }
 
@@ -1098,7 +1149,22 @@ namespace libcomp
         {
             mStatusData[record->GetCommon()->GetID()] = record;
         }
-    
+
+        return success;
+    }
+
+    template <>
+    bool DefinitionManager::LoadData<objects::MiSynthesisData>(
+        gsl::not_null<DataStore*> pDataStore)
+    {
+        std::list<std::shared_ptr<objects::MiSynthesisData>> records;
+        bool success = LoadBinaryData<objects::MiSynthesisData>(pDataStore,
+            "Shield/SynthesisData.sbin", true, 0, records);
+        for(auto record : records)
+        {
+            mSynthesisData[record->GetID()] = record;
+        }
+
         return success;
     }
 
@@ -1113,7 +1179,7 @@ namespace libcomp
         {
             mTimeLimitData[record->GetID()] = record;
         }
-    
+
         return success;
     }
 
@@ -1138,7 +1204,7 @@ namespace libcomp
                 }
             }
         }
-    
+
         return success;
     }
 
@@ -1168,7 +1234,7 @@ namespace libcomp
         {
             mZoneData[record->GetBasic()->GetID()] = record;
         }
-    
+
         return success;
     }
 }
@@ -1179,6 +1245,8 @@ bool DefinitionManager::LoadAllData(gsl::not_null<DataStore*> pDataStore)
 
     bool success = true;
     success &= LoadData<objects::MiAIData>(pDataStore);
+    success &= LoadData<objects::MiBlendData>(pDataStore);
+    success &= LoadData<objects::MiBlendExtData>(pDataStore);
     success &= LoadData<objects::MiCItemData>(pDataStore);
     success &= LoadData<objects::MiDevilData>(pDataStore);
     success &= LoadData<objects::MiDevilBookData>(pDataStore);
@@ -1206,6 +1274,7 @@ bool DefinitionManager::LoadAllData(gsl::not_null<DataStore*> pDataStore)
     success &= LoadData<objects::MiSItemData>(pDataStore);
     success &= LoadData<objects::MiSkillData>(pDataStore);
     success &= LoadData<objects::MiStatusData>(pDataStore);
+    success &= LoadData<objects::MiSynthesisData>(pDataStore);
     success &= LoadData<objects::MiTimeLimitData>(pDataStore);
     success &= LoadData<objects::MiTriUnionSpecialData>(pDataStore);
     success &= LoadData<objects::MiWarpPointData>(pDataStore);

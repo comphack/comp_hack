@@ -1833,7 +1833,8 @@ bool CharacterManager::CalculateMaccaPayment(const std::shared_ptr<
 bool CharacterManager::UpdateItems(const std::shared_ptr<
     channel::ChannelClientConnection>& client, bool validateOnly,
     std::list<std::shared_ptr<objects::Item>>& insertItems,
-    std::unordered_map<std::shared_ptr<objects::Item>, uint16_t> stackAdjustItems)
+    std::unordered_map<std::shared_ptr<objects::Item>, uint16_t> stackAdjustItems,
+    bool notifyClient)
 {
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
@@ -1918,7 +1919,11 @@ bool CharacterManager::UpdateItems(const std::shared_ptr<
 
     updatedSlots.unique();
     updatedSlots.sort();
-    SendItemBoxData(client, inventory, updatedSlots);
+
+    if(notifyClient)
+    {
+        SendItemBoxData(client, inventory, updatedSlots);
+    }
 
     return true;
 }
@@ -2403,6 +2408,8 @@ void CharacterManager::EndExchange(const std::shared_ptr<
         case objects::PlayerExchangeSession::Type_t::CRYSTALLIZE:
         case objects::PlayerExchangeSession::Type_t::ENCHANT_SOUL:
         case objects::PlayerExchangeSession::Type_t::ENCHANT_TAROT:
+        case objects::PlayerExchangeSession::Type_t::SYNTH_MELEE:
+        case objects::PlayerExchangeSession::Type_t::SYNTH_GUN:
             {
                 libcomp::Packet p;
                 p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_ENTRUST_FINISH);
@@ -2945,7 +2952,8 @@ void CharacterManager::LevelUp(const std::shared_ptr<
 }
 
 void CharacterManager::UpdateExpertise(const std::shared_ptr<
-    channel::ChannelClientConnection>& client, uint32_t skillID, float multiplier)
+    channel::ChannelClientConnection>& client, uint32_t skillID,
+    uint16_t rateBoost, float multiplier)
 {
     auto server = mServer.lock();
     auto definitionManager = server->GetDefinitionManager();
@@ -2988,7 +2996,7 @@ void CharacterManager::UpdateExpertise(const std::shared_ptr<
             /// @todo: validate
             int32_t gain = (int32_t)((float)(3954.482803f /
                 (((float)expertise->GetPoints() * 0.01f) + 158.1808409f)
-                * expertGrowth->GetGrowthRate()) * 100.f * multiplier);
+                * (expertGrowth->GetGrowthRate() + (float)rateBoost)) * 100.f * multiplier);
 
             pointMap.push_back(std::pair<uint8_t, int32_t>(
                 expertGrowth->GetExpertiseID(), gain));
@@ -3043,6 +3051,10 @@ void CharacterManager::UpdateExpertisePoints(const std::shared_ptr<
 
             dbChanges->Insert(expertise);
             dbChanges->Update(character);
+        }
+        else if(expertise->GetDisabled())
+        {
+            continue;
         }
 
         int32_t maxPoints = (expDef->GetMaxClass() * 100 * 1000)

@@ -398,51 +398,6 @@ bool ServerConstants::Initialize(const String& filePath)
         success = false;
     }
 
-    complexIter = complexConstants.find("DISASSEMBLY_ITEMS");
-    if(success && complexIter != complexConstants.end())
-    {
-        std::list<String> strList;
-        if(!LoadStringList(complexIter->second, strList))
-        {
-            LOG_ERROR("Failed to load DISASSEMBLY_ITEMS\n");
-            success = false;
-        }
-        else
-        {
-            if(strList.size() != 6)
-            {
-                LOG_ERROR("DISASSEMBLY_ITEMS must specify all 6 item types\n");
-                success = false;
-            }
-            else
-            {
-                size_t idx = 0;
-                for(auto elem : strList)
-                {
-                    uint32_t skillID = 0;
-                    if(LoadInteger(elem.C(), skillID))
-                    {
-                        sConstants.DISASSEMBLY_ITEMS[idx] = skillID;
-                    }
-                    else
-                    {
-                        LOG_ERROR("Failed to load an item type in"
-                            " DISASSEMBLY_ITEMS\n");
-                        success = false;
-                        break;
-                    }
-
-                    idx++;
-                }
-            }
-        }
-    }
-    else
-    {
-        LOG_ERROR("DISASSEMBLY_ITEMS not found\n");
-        success = false;
-    }
-
     complexIter = complexConstants.find("EQUIP_MOD_EDIT_ITEMS");
     if(success && complexIter != complexConstants.end())
     {
@@ -543,21 +498,21 @@ bool ServerConstants::Initialize(const String& filePath)
         success = false;
     }
 
-    complexIter = complexConstants.find("SLOT_MOD_ITEMS");
+    complexIter = complexConstants.find("RATE_SCALING_ITEMS");
     if(success && complexIter != complexConstants.end())
     {
         std::list<String> strList;
         if(!LoadStringList(complexIter->second, strList))
         {
-            LOG_ERROR("Failed to load SLOT_MOD_ITEMS\n");
+            LOG_ERROR("Failed to load RATE_SCALING_ITEMS\n");
             success = false;
         }
         else
         {
-            if(strList.size() != 2)
+            if(strList.size() != 4)
             {
-                LOG_ERROR("SLOT_MOD_ITEMS must specify items for both"
-                    " of the 2 types\n");
+                LOG_ERROR("RATE_SCALING_ITEMS must specify items for each"
+                    " of the 4 types\n");
                 success = false;
             }
             else
@@ -570,21 +525,13 @@ bool ServerConstants::Initialize(const String& filePath)
                         for(uint32_t p : ToIntegerRange<uint32_t>(elemStr.C(),
                             success))
                         {
-                            sConstants.SLOT_MOD_ITEMS[idx].push_back(p);
+                            sConstants.RATE_SCALING_ITEMS[idx].push_back(p);
                         }
 
                         if(!success)
                         {
                             LOG_ERROR("Failed to load an element in"
-                                " SLOT_MOD_ITEMS\n");
-                            break;
-                        }
-
-                        if(sConstants.SLOT_MOD_ITEMS[idx].size() > 8)
-                        {
-                            LOG_ERROR("Each SLOT_MOD_ITEMS list must not exceed"
-                                "the binary file array size of 8 possible items\n");
-                            success = false;
+                                " RATE_SCALING_ITEMS\n");
                             break;
                         }
                     }
@@ -596,7 +543,7 @@ bool ServerConstants::Initialize(const String& filePath)
     }
     else
     {
-        LOG_ERROR("SLOT_MOD_ITEMS not found\n");
+        LOG_ERROR("RATE_SCALING_ITEMS not found\n");
         success = false;
     }
 
@@ -648,9 +595,9 @@ bool ServerConstants::Initialize(const String& filePath)
         }
         else
         {
-            if(strList.size() != 3)
+            if(strList.size() != 5)
             {
-                LOG_ERROR("SYNTH_SKILLS must specify all three skill IDs\n");
+                LOG_ERROR("SYNTH_SKILLS must specify all five skill IDs\n");
                 success = false;
             }
             else

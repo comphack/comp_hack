@@ -374,13 +374,16 @@ public:
      * @param insertItems List of new items to insert
      * @param stackAdjustItems Map of items to adjust the stack size of including
      *  deletes listed with stack size 0
+     * @param notifyClient Optional parameter to not send the updated slot information
+     *  to the client
      * @return true if the changes could be applied (or validated), false if
      *  they cannot
      */
     bool UpdateItems(const std::shared_ptr<
         channel::ChannelClientConnection>& client, bool validateOnly,
         std::list<std::shared_ptr<objects::Item>>& insertItems,
-        std::unordered_map<std::shared_ptr<objects::Item>, uint16_t> stackAdjustItems);
+        std::unordered_map<std::shared_ptr<objects::Item>, uint16_t> stackAdjustItems,
+        bool notifyClient = true);
 
     /**
      * Create loot from drops based upon the supplied luck value (can be 0)
@@ -602,6 +605,8 @@ public:
      * @param client Pointer to the client connection
      * @param skillID Skill ID that will have it's corresponding
      *  expertise updated if it is enabled
+     * @param rateBoost Optional flat value to add to the expertise
+     *  rates for the skill (before calculating final amount)
      * @param multiplier Expertise point multiplier, defaults to -1
      *  to differentiate from explicitly being set to 1. If this is
      *  not set, the character's expertise acquisition rate will be
@@ -609,7 +614,7 @@ public:
      */
     void UpdateExpertise(const std::shared_ptr<
         channel::ChannelClientConnection>& client, uint32_t skillID,
-        float multiplier = -1.0f);
+        uint16_t rateBoost = 0, float multiplier = -1.0f);
 
     /**
      * Update a client's character's expertise for a set of expertise IDs.

@@ -280,6 +280,7 @@ SET(${PROJECT_NAME}_SCHEMA
 
     # BinaryData Files
     schema/binarydata/aidata.xml
+    schema/binarydata/blenddata.xml
     schema/binarydata/ceventmessagedata.xml
     schema/binarydata/cicondata.xml
     schema/binarydata/citemdata.xml
@@ -575,6 +576,16 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     MiAIRelationData.h
     MiBattleDamageData.cpp
     MiBattleDamageData.h
+    MiBlendData.cpp
+    MiBlendData.h
+    MiBlendData_Item.cpp
+    MiBlendData_Item.h
+    MiBlendExtData.cpp
+    MiBlendExtData.h
+    MiBlendExtData_DstItemChange.cpp
+    MiBlendExtData_DstItemChange.h
+    MiBlendExtData_SrcItemChange.cpp
+    MiBlendExtData_SrcItemChange.h
     MiBreakData.cpp
     MiBreakData.h
     MiCancelData.cpp
@@ -791,6 +802,10 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     MiStatusData.h
     MiSummonData.cpp
     MiSummonData.h
+    MiSynthesisData.cpp
+    MiSynthesisData.h
+    MiSynthesisItemData.cpp
+    MiSynthesisItemData.h
     MiCTalkMessageData.cpp
     MiCTalkMessageData.h
     MiTargetData.cpp

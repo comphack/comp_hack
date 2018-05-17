@@ -185,6 +185,8 @@ PACKET_PARSER_DECL(PlasmaItemData);         // 0x01F1
 PACKET_PARSER_DECL(PlasmaItem);             // 0x01F3
 PACKET_PARSER_DECL(TimeLimitSync);          // 0x01F9
 PACKET_PARSER_DECL(ItemDisassemble);        // 0x01FC
+PACKET_PARSER_DECL(SynthesizeRecipe);       // 0x01FE
+PACKET_PARSER_DECL(Synthesize);             // 0x0200
 PACKET_PARSER_DECL(EquipmentMod);           // 0x0203
 PACKET_PARSER_DECL(MaterialBox);            // 0x0205
 PACKET_PARSER_DECL(Analyze);                // 0x0209
@@ -198,6 +200,7 @@ PACKET_PARSER_DECL(TitleList);              // 0x021B
 PACKET_PARSER_DECL(PartnerDemonQuestList);  // 0x022D
 PACKET_PARSER_DECL(LockDemon);              // 0x0233
 PACKET_PARSER_DECL(PvPCharacterInfo);       // 0x024D
+PACKET_PARSER_DECL(ItemMix);                // 0x025D
 PACKET_PARSER_DECL(TeamInfo);               // 0x027B
 PACKET_PARSER_DECL(PartnerDemonQuestTemp);  // 0x028F
 PACKET_PARSER_DECL(ItemDepoRemote);         // 0x0296

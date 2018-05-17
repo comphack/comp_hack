@@ -145,6 +145,12 @@ namespace libcomp
 /// ID of the "Gun knowledge" expertise.
 #define EXPERTISE_GUN_KNOWLEDGE (34)
 
+/// ID of the "Swordsmith" chain expertise.
+#define EXPERTISE_CHAIN_SWORDSMITH (40)
+
+/// ID of the "Arms maker" chain expertise.
+#define EXPERTISE_CHAIN_ARMS_MAKER (46)
+
 /// ID of the "Synthesis" chain expertise.
 #define EXPERTISE_CHAIN_SYNTHESIS (49)
 
@@ -349,6 +355,10 @@ namespace libcomp
 
 /// Indicates that a weapon mod slot causes repair costs to be reduced
 #define MOD_SLOT_REPAIR_REDUCTION_TYPE (10)
+
+/// Indicates that a tarot or soul option has been enabled for an item
+/// that by default cannot have an effect added
+#define ENCHANT_ENABLE_EFFECT (0x7FFF)
 
 /// Experience required to proceed from the indexed level to the next
 const unsigned long long LEVEL_XP_REQUIREMENTS[] = {

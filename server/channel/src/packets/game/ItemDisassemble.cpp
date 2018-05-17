@@ -93,13 +93,17 @@ bool Parsers::ItemDisassemble::Parse(libcomp::ManagerPacket *pPacketManager,
     if(playerHasTank && sourceItem && targetItem && disDef)
     {
         int8_t triggerIdx = -1;
-        for(size_t i = 0; i < SVR_CONST.DISASSEMBLY_ITEMS.size(); i++)
+
+        auto rateIter = SVR_CONST.RATE_SCALING_ITEMS[0].begin();
+        for(size_t i = 0; i < SVR_CONST.RATE_SCALING_ITEMS[0].size(); i++)
         {
-            if(SVR_CONST.DISASSEMBLY_ITEMS[i] == sourceItemType)
+            if(*rateIter == sourceItemType)
             {
                 triggerIdx = (int8_t)i;
                 break;
             }
+
+            rateIter++;
         }
 
         if(triggerIdx >= 0)

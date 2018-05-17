@@ -5529,7 +5529,7 @@ void SkillManager::FinalizeSkillExecution(const std::shared_ptr<ChannelClientCon
         multiplier = multiplier * (float)(1.f + globalExpertiseBonus);
 
         characterManager->UpdateExpertise(client, activated->GetSkillID(),
-            multiplier);
+            activated->GetExpertiseBoost(), multiplier);
     }
 
     // Update the execution count and remove and complete it from the entity

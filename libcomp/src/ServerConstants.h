@@ -248,9 +248,6 @@ struct Data
     /// Item IDs of item box rental tickets to their corresponding day lengths
     std::unordered_map<uint32_t, uint32_t> DEPO_MAP_ITEM;
 
-    /// Item IDs of items used to disassembly materials
-    std::array<uint32_t, 6> DISASSEMBLY_ITEMS;
-
     /// Item IDs with parameters used for the EQUIP_MOD_EDIT function ID skill
     std::unordered_map<uint32_t, std::array<int32_t, 3>> EQUIP_MOD_EDIT_ITEMS;
 
@@ -264,16 +261,20 @@ struct Data
     /// specified tokusei IDs
     std::unordered_map<uint16_t, int32_t> QUEST_BONUS;
 
-    /// Array of item IDs used for slot modification, indexed in the same order
-    /// as the RateScaling field on MiModificationTriggerData and
-    /// MiModificationExtEffectData
-    std::array<std::list<uint32_t>, 2> SLOT_MOD_ITEMS;
+    /// Array of item IDs used for special functions, indexed in the same order
+    /// as the RateScaling fields on the following objects:
+    /// Index 0) MiDisassemblyTriggerData
+    /// Index 1) MiModificationTriggerData
+    /// Index 2) MiModificationExtEffectData
+    /// Index 3) MiSynthesisData
+    std::array<std::list<uint32_t>, 4> RATE_SCALING_ITEMS;
 
     /// Item/skill IDs with parameters used for synth calculations
     std::unordered_map<uint32_t, std::array<int32_t, 3>> SYNTH_ADJUSTMENTS;
 
-    /// Synth skill IDs for demon crystallization, tarot enchant and soul enchant
-    std::array<uint32_t, 3> SYNTH_SKILLS;
+    /// Synth skill IDs for demon crystallization, tarot enchant, soul enchant,
+    /// synth melee and synth gun skills
+    std::array<uint32_t, 5> SYNTH_SKILLS;
 
     /// Level ranges to use for TriFusion of 3 "dark" family demons
     std::list<std::pair<uint8_t, uint32_t>> TRIFUSION_SPECIAL_DARK;

@@ -26,29 +26,5 @@ addons:
     build_command_prepend: "mkdir -p build && cd build && cmake -DCOVERALLS=$COVERALLS_ENABLE -DBUILD_OPTIMIZED=OFF -DSINGLE_SOURCE_PACKETS=ON -DSINGLE_OBJGEN=ON -DUSE_COTIRE=ON -G \"${GENERATOR}\" .."
     build_command: "cmake --build ."
 
-matrix:
-  include:
-    - compiler: clang
-      env:
-        - COMPILER_CC=clang
-        - COMPILER_CXX=clang++
-        - CMAKE_GENERATOR='Unix Makefiles'
-    - compiler: clang
-      env:
-        - COMPILER_CC=clang
-        - COMPILER_CXX=clang++
-        - CMAKE_GENERATOR=Ninja
-    - compiler: gcc
-      addons:
-        apt:
-          sources:
-            - ubuntu-toolchain-r-test
-          packages:
-            - g++-5
-      env:
-        - COMPILER_CC=gcc-5
-        - COMPILER_CXX=g++-5
-        - CMAKE_GENERATOR='Unix Makefiles'
-
 script:
   - echo hi

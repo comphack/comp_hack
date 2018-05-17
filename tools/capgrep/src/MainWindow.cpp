@@ -594,8 +594,6 @@ void MainWindow::loadCaptures(const QStringList& inPaths)
         {
             foreach(CaptureLoadData *cap, capData)
             {
-                delete cap->file;
-                delete cap->state;
                 delete cap;
             }
 

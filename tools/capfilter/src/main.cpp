@@ -418,6 +418,8 @@ bool CaptureFile::Load(const libcomp::String& path)
 
         if(!pEvent->Load(file, version))
         {
+            delete pEvent;
+
             return false;
         }
 

@@ -2461,7 +2461,7 @@ bool EventManager::HandleTriFusion(const std::shared_ptr<
         }
     }
 
-    if(tfSession)
+    if(tfSessionOwner)
     {
         // Request to prompt the client to join
         libcomp::Packet request;

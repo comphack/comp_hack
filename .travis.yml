@@ -18,6 +18,14 @@ env:
 addons:
   mariadb: '10.1'
 
+  coverity_scan:
+    project:
+      name: "comphack/comp_hack"
+      description: "Build submitted via Travis CI"
+    notification_email: compomega@tutanota.com
+    build_command_prepend: "mkdir -p build && cd build && cmake -DCOVERALLS=$COVERALLS_ENABLE -DBUILD_OPTIMIZED=OFF -DSINGLE_SOURCE_PACKETS=ON -DSINGLE_OBJGEN=ON -DUSE_COTIRE=ON -G \"${GENERATOR}\" .."
+    build_command: "cmake --build ."
+
 matrix:
   include:
     - compiler: clang
@@ -37,13 +45,6 @@ matrix:
             - ubuntu-toolchain-r-test
           packages:
             - g++-5
-        coverity_scan:
-          project:
-            name: "comphack/comp_hack"
-            description: "Build submitted via Travis CI"
-          notification_email: compomega@tutanota.com
-          build_command_prepend: "mkdir -p build && cd build && cmake -DCOVERALLS=$COVERALLS_ENABLE -DBUILD_OPTIMIZED=OFF -DSINGLE_SOURCE_PACKETS=ON -DSINGLE_OBJGEN=ON -DUSE_COTIRE=ON -G \"${GENERATOR}\" .."
-          build_command: "cmake --build ."
       env:
         - COMPILER_CC=gcc-5
         - COMPILER_CXX=g++-5

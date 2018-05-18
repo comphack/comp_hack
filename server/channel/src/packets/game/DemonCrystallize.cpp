@@ -333,7 +333,7 @@ bool Parsers::DemonCrystallize::Parse(libcomp::ManagerPacket *pPacketManager,
                     targetSlots.push_back((uint16_t)reward->GetBoxSlot());
 
                     int8_t openSlot = sourceInventoryFree.front();
-                    sourceInventoryFree.erase(sourceInventoryFree.begin());
+                    sourceInventoryFree.pop_front();
 
                     // Give it to the source
                     sourceInventory->SetItems((size_t)openSlot,

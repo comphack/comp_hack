@@ -45,6 +45,8 @@ namespace objects
 class EnchantSetData;
 class EnchantSpecialData;
 class MiAIData;
+class MiBlendData;
+class MiBlendExtData;
 class MiCItemData;
 class MiCorrectTbl;
 class MiCZoneRelationData;
@@ -76,6 +78,7 @@ class MiSkillData;
 class MiSpotData;
 class MiSStatusData;
 class MiStatusData;
+class MiSynthesisData;
 class MiTimeLimitData;
 class MiTriUnionSpecialData;
 class MiWarpPointData;
@@ -111,6 +114,22 @@ public:
      *  it does not exist
      */
     const std::shared_ptr<objects::MiAIData> GetAIData(uint32_t id);
+
+    /**
+     * Get the item mixing definition corresponding to an ID
+     * @param id Item mixing ID to retrieve
+     * @return Pointer to the matching item mixing definition, null if
+     *  it does not exist
+     */
+    const std::shared_ptr<objects::MiBlendData> GetBlendData(uint32_t id);
+
+    /**
+     * Get the item mixing extension definition corresponding to an ID
+     * @param id Item mixing extension ID to retrieve
+     * @return Pointer to the matching item mixing extension definition,
+     *  null if it does not exist
+     */
+    const std::shared_ptr<objects::MiBlendExtData> GetBlendExtData(uint32_t id);
 
     /**
      * Get the devil book definition corresponding to an ID
@@ -460,6 +479,15 @@ public:
     const std::shared_ptr<objects::MiStatusData> GetStatusData(uint32_t id);
 
     /**
+     * Get the synthesis definition corresponding to an ID
+     * @param id Synthesis ID to retrieve
+     * @return Pointer to the matching synthesis definition, null if it does
+     *  not exist
+     */
+    const std::shared_ptr<objects::MiSynthesisData> GetSynthesisData(
+        uint32_t id);
+
+    /**
      * Get the time limit definition corresponding to an ID
      * @param id Status ID to retrieve
      * @return Pointer to the matching time limit definition, null if it does
@@ -733,6 +761,14 @@ private:
     std::unordered_map<uint32_t,
         std::shared_ptr<objects::MiAIData>> mAIData;
 
+    /// Map of item mixing definitions by ID
+    std::unordered_map<uint32_t,
+        std::shared_ptr<objects::MiBlendData>> mBlendData;
+
+    /// Map of item mixing extension definitions by ID
+    std::unordered_map<uint32_t,
+        std::shared_ptr<objects::MiBlendExtData>> mBlendExtData;
+
     /// Map of item names to IDs
     std::unordered_map<libcomp::String, uint32_t> mCItemNameLookup;
 
@@ -878,6 +914,10 @@ private:
     /// Map of status definitions by ID
     std::unordered_map<uint32_t,
         std::shared_ptr<objects::MiStatusData>> mStatusData;
+
+    /// Map of synthesis definitions by ID
+    std::unordered_map<uint32_t,
+        std::shared_ptr<objects::MiSynthesisData>> mSynthesisData;
 
     /// Map of time limit definitions by ID
     std::unordered_map<uint32_t,

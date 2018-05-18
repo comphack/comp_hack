@@ -523,15 +523,6 @@
             <value>90</value>
         </pair>
     </constant>
-    <constant name="DISASSEMBLY_ITEMS">
-        <!-- Format: disassembly items -->
-        <element>42001</element>
-        <element>42002</element>
-        <element>42003</element>
-        <element>42004</element>
-        <element>42024</element>
-        <element>42030</element>
-    </constant>
     <constant name="EQUIP_MOD_EDIT_ITEMS">
         <!-- Format: item => mode, sub-mode, success rate -->
         <pair>
@@ -941,13 +932,28 @@
             <value>20010018</value>
         </pair>
     </constant>
-    <constant name="SLOT_MOD_ITEMS">
-        <!-- Format: mod items (weapon, then armor) -->
+    <constant name="RATE_SCALING_ITEMS">
+        <!-- Format: item IDs listed in an order that lines up the RateScaling -->
+        <!-- field on a specific binary data object. -->
+
+        <!-- MiDisassemblyTriggerData -->
+        <element>42001-42004,42024,42030</element>
+
+        <!-- MiModificationTriggerData -->
         <element>42005-42008,42022,42029,42082</element>
+
+        <!-- MiModificationExtEffectData -->
         <element>42031-42033</element>
+
+        <!-- MiSynthesisData -->
+        <element>42009,42011,42012,42021,42010,42023,42025,42026,42028</element>
     </constant>
     <constant name="SYNTH_ADJUSTMENTS">
         <!-- Format: item/skill => function, 2 contextual params -->
+        <!-- Function 0: Enchantment item, param 3 = 1 stops crystal loss -->
+        <!-- Function 1: Enchantment skill boosts -->
+        <!-- Function 2: Swordsmith mod slot creation boost skills -->
+        <!-- Function 3: Armsmaker mod slot creation boost skills -->
         <pair>
             <key>395</key>
             <value>0,10,1</value>
@@ -973,6 +979,22 @@
             <value>0,15,0</value>
         </pair>
         <pair>
+            <key>20007</key>
+            <value>2,10,5</value>
+        </pair>
+        <pair>
+            <key>20008</key>
+            <value>2,5,2</value>
+        </pair>
+        <pair>
+            <key>20009</key>
+            <value>3,10,5</value>
+        </pair>
+        <pair>
+            <key>20010</key>
+            <value>3,5,2</value>
+        </pair>
+        <pair>
             <key>20011</key>
             <value>1,20,0</value>
         </pair>
@@ -982,10 +1004,12 @@
         </pair>
     </constant>
     <constant name="SYNTH_SKILLS">
-        <!-- Format: crystallize, tarot, then soul skills -->
+        <!-- Format: crystallize, tarot, soul, synth melee, synth gun skills -->
         <element>5721</element>
         <element>5722</element>
         <element>5723</element>
+        <element>5789</element>
+        <element>5790</element>
     </constant>
     <constant name="TRIFUSION_SPECIAL_DARK">
         <!-- Format: min level => demon type -->

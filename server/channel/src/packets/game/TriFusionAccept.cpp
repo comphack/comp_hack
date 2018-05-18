@@ -220,6 +220,7 @@ bool Parsers::TriFusionAccept::Parse(libcomp::ManagerPacket *pPacketManager,
             tfSession->SetDemons(0, NULLUUID);
             tfSession->SetDemons(1, NULLUUID);
             tfSession->SetDemons(2, NULLUUID);
+            tfSession->SetSelectionID(0);
         }
     }
 

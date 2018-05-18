@@ -71,6 +71,14 @@ bool Parsers::EntrustRequest::Parse(libcomp::ManagerPacket *pPacketManager,
     {
         sessionType = objects::PlayerExchangeSession::Type_t::ENCHANT_SOUL;
     }
+    else if(skillID == SVR_CONST.SYNTH_SKILLS[3])
+    {
+        sessionType = objects::PlayerExchangeSession::Type_t::SYNTH_MELEE;
+    }
+    else if(skillID == SVR_CONST.SYNTH_SKILLS[4])
+    {
+        sessionType = objects::PlayerExchangeSession::Type_t::SYNTH_GUN;
+    }
     else
     {
         LOG_ERROR(libcomp::String("Invalid entrust skill supplied: %1\n").Arg(skillID));

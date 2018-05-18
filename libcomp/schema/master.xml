@@ -76,6 +76,7 @@
 
     <!-- BinaryData Files -->
     <include path="binarydata/aidata.xml"/>
+    <include path="binarydata/blenddata.xml"/>
     <include path="binarydata/ceventmessagedata.xml"/>
     <include path="binarydata/cicondata.xml"/>
     <include path="binarydata/citemdata.xml"/>
@@ -110,6 +111,7 @@
     <include path="binarydata/spotdata.xml"/>
     <include path="binarydata/sstatusdata.xml"/>
     <include path="binarydata/statusdata.xml"/>
+    <include path="binarydata/synthesisdata.xml"/>
     <include path="binarydata/timelimitdata.xml"/>
     <include path="binarydata/triunionspecialdata.xml"/>
     <include path="binarydata/warppointdata.xml"/>

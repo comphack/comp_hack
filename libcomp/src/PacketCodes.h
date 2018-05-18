@@ -221,6 +221,8 @@ enum class ClientToChannelPacketCode_t : uint16_t
     PACKET_PLASMA_ITEM = 0x01F3,   //!< Request to get an item from a plasma point.
     PACKET_TIME_LIMIT_SYNC = 0x01F9,  //!< Request sync the current time limit time.
     PACKET_ITEM_DISASSEMBLE = 0x01FC,  //!< Request to disassemble an item for materials.
+    PACKET_SYNTHESIZE_RECIPE = 0x01FE,  //!< Request from the client to set a weapon synthesis recipe.
+    PACKET_SYNTHESIZE = 0x0200,  //!< Request from the client to perform a weapon synthesis.
     PACKET_EQUIPMENT_MODIFY = 0x0203,  //!< Request to modify an equipment item slot.
     PACKET_MATERIAL_BOX = 0x0205,  //!< Request for info about the materials container.
     PACKET_ANALYZE = 0x0209,  //!< Request to analyze another player character.
@@ -235,6 +237,7 @@ enum class ClientToChannelPacketCode_t : uint16_t
     PACKET_UNSUPPORTED_0232 = 0x0232,  //!< Unknown. Requested at start up. Contains character name and client side flags.
     PACKET_LOCK_DEMON = 0x0233,  //!< Request to lock or unlock a demon in the COMP.
     PACKET_PVP_CHARACTER_INFO = 0x024D,  //!< Request for PvP character information.
+    PACKET_ITEM_MIX = 0x025D,   //!< Request to mix two items into a different result item.
     PACKET_TEAM_INFO = 0x027B,  //!< Request for the current player's team information.
     PACKET_PARTNER_DEMON_QUEST_TEMP = 0x028F,  //!< Unknown. Request for partner demon quest info.
     PACKET_RECEIVED_PLAYER_DATA = 0x028C,  //!< Empty message sent after character/demon data requested have been received.
@@ -524,6 +527,9 @@ enum class ChannelToClientPacketCode_t : uint16_t
     PACKET_TIME_LIMIT_SYNC = 0x01FA,    //!< Response to the request sync the current time limit time.
     PACKET_EVENT_PLAY_SOUND_EFFECT = 0x01FB,  //!< Request to the client to play a sound effect as part of an event.
     PACKET_ITEM_DISASSEMBLE = 0x01FD,  //!< Response to the request to disassemble an item for materials.
+    PACKET_SYNTHESIZE_RECIPE = 0x01FF,  //!< Response to the request from the client to set a weapon synthesis recipe.
+    PACKET_SYNTHESIZE = 0x0201,     //!< Response to the request from the client to perform a weapon synthesis.
+    PACKET_SYNTHESIZED = 0x0202,    //!< Notification that a weapon synthesis had been performed.
     PACKET_EQUIPMENT_MODIFY = 0x0204,  //!< Response to the request to modify an equipment item slot.
     PACKET_MATERIAL_BOX = 0x0206,  //!< Response containing info about the materials container.
     PACKET_MATERIAL_BOX_UPDATED = 0x0207, //!< Notification that the current characater's material container has been updated.
@@ -540,6 +546,8 @@ enum class ChannelToClientPacketCode_t : uint16_t
     PACKET_PARTNER_DEMON_QUEST_LIST = 0x022E,   //!< Response containing the player's partner demon quest list.
     PACKET_LOCK_DEMON = 0x0234,  //!< Response to lock a demon in the COMP.
     PACKET_PVP_CHARACTER_INFO = 0x024E,  //!< Response containing PvP character information.
+    PACKET_ITEM_MIX = 0x025E,   //!< Response to the request to mix two items into a different result item.
+    PACKET_ITEM_MIXED = 0x025F, //!< Notification that two items have been mixed into a different result item.
     PACKET_TEAM_INFO = 0x027C,  //!< Response containing the current player's team information.
     PACKET_EVENT_MULTITALK = 0x028D,  //!< Request to the client to start a multitalk event.
     PACKET_PARTNER_DEMON_QUEST_TEMP = 0x0290,  //!< Unknown. Response containing partner demon quest info.

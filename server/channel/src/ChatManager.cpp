@@ -816,7 +816,7 @@ bool ChatManager::GMCommand_ExpertiseUpdate(const std::shared_ptr<
     }
 
     server->GetCharacterManager()->UpdateExpertise(client, skillID,
-        multiplier);
+        0, multiplier);
 
     return true;
 }

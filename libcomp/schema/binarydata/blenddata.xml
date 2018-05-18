@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="MiBlendData_Item" persistent="false">
+        <member type="u32" name="itemID"/>
+        <member type="u16" name="min"/>
+        <member type="u16" name="max"/>
+    </object>
+    <object name="MiBlendData" persistent="false">
+        <member type="u32" name="ID"/>
+        <member type="array" size="2" name="inputItems">
+            <element type="MiBlendData_Item*"/>
+        </member>
+        <member type="array" size="2" name="resultItems">
+            <element type="MiBlendData_Item*"/>
+        </member>
+        <member type="array" size="2" name="probabilities">
+            <element type="u32"/>
+        </member>
+        <member type="float" name="materialLossRate"/>
+        <member type="s32" name="expertiseID"/>
+        <member type="s32" name="requiredClass"/>
+        <member type="s32" name="requiredRank"/>
+        <member type="s32" name="failExpertUp"/>
+        <member type="s32" name="successExpertUp"/>
+        <member type="s32" name="greatSuccessExpertUp"/>
+        <member type="s32" name="expertSuccessBoost"/>
+        <member type="s32" name="expertGreatSuccessBoost"/>
+        <member type="s32" name="hidden"/>
+        <member type="s32" name="questID"/>
+        <member type="u32" name="extensionGroupID"/>
+    </object>
+    <object name="MiBlendExtData_SrcItemChange" persistent="false">
+        <member type="u32" name="itemID"/>
+        <member type="float" name="minScale"/>
+    </object>
+    <object name="MiBlendExtData_DstItemChange" persistent="false">
+        <member type="u32" name="itemID"/>
+        <member type="float" name="minScale"/>
+        <member type="float" name="maxScale"/>
+    </object>
+    <object name="MiBlendExtData" persistent="false">
+        <member type="u32" name="ID"/>
+        <member type="u32" name="unk1"/>
+        <member type="u32" name="groupID"/>
+        <member type="u32" name="unk2"/>
+        <member type="array" size="2" name="srcItems">
+            <element type="MiBlendExtData_SrcItemChange*"/>
+        </member>
+        <member type="array" size="2" name="dstItems">
+            <element type="MiBlendExtData_DstItemChange*"/>
+        </member>
+        <member type="array" size="2" name="probabilities">
+            <element type="float"/>
+        </member>
+        <member type="float" name="materialLoss"/>
+        <member type="s32" name="expertiseID"/>
+        <member type="float" name="requiredClass"/>
+        <member type="float" name="requiredRank"/>
+        <member type="float" name="failExpertUp"/>
+        <member type="float" name="successExpertUp"/>
+        <member type="float" name="greatSuccessExpertUp"/>
+        <member type="float" name="expertSuccessBoost"/>
+        <member type="float" name="expertGreatSuccessBoost"/>
+        <member type="s32" name="questID"/>
+    </object>
+</objgen>

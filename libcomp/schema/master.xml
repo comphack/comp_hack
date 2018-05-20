@@ -96,6 +96,7 @@
     <include path="binarydata/dynamicmapdata.xml"/>
     <include path="binarydata/enchantdata.xml"/>
     <include path="binarydata/equipmentsetdata.xml"/>
+    <include path="binarydata/eventdirectiondata.xml"/>
     <include path="binarydata/exchangedata.xml"/>
     <include path="binarydata/expertdata.xml"/>
     <include path="binarydata/hnpcdata.xml"/>

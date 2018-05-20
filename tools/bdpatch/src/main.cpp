@@ -76,6 +76,8 @@
 
 #include <MiDynamicMapData.h>
 
+#include <MiEventDirectionData.h>
+
 #include <MiHNPCData.h>
 #include <MiHNPCBasicData.h>
 
@@ -389,6 +391,7 @@ int Usage(const char *szAppName)
     std::cerr << "  czonerelation   Format for CZoneRelationData.sbin" << std::endl;
     std::cerr << "  devil           Format for DevilData.sbin" << std::endl;
     std::cerr << "  dynamicmap      Format for DynamicMapData.bin" << std::endl;
+    std::cerr << "  eventdirection  Format for EventDirectionData.bin" << std::endl;
     std::cerr << "  hnpc            Format for hNPCData.sbin" << std::endl;
     std::cerr << "  onpc            Format for oNPCData.sbin" << std::endl;
     std::cerr << "  spot            Format for SpotData.bin" << std::endl;
@@ -616,6 +619,21 @@ int main(int argc, char *argv[])
             [](const std::shared_ptr<libcomp::Object>& obj)
             {
                 return std::dynamic_pointer_cast<objects::MiDynamicMapData>(
+                    obj)->GetID();
+            }
+        );
+    }
+    else if("eventdirection" == bdType)
+    {
+        pSet = new BinaryDataSet(
+            []()
+            {
+                return std::make_shared<objects::MiEventDirectionData>();
+            },
+
+            [](const std::shared_ptr<libcomp::Object>& obj)
+            {
+                return std::dynamic_pointer_cast<objects::MiEventDirectionData>(
                     obj)->GetID();
             }
         );

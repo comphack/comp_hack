@@ -300,6 +300,7 @@ SET(${PROJECT_NAME}_SCHEMA
     schema/binarydata/dynamicmapdata.xml
     schema/binarydata/enchantdata.xml
     schema/binarydata/equipmentsetdata.xml
+    schema/binarydata/eventdirectiondata.xml
     schema/binarydata/exchangedata.xml
     schema/binarydata/expertdata.xml
     schema/binarydata/hnpcdata.xml
@@ -858,6 +859,8 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     MiCIconData.cpp
     MiItemData.h
     MiItemData.cpp
+    MiEventDirectionData.h
+    MiEventDirectionData.cpp
 )
 
 COVERALLS_SOURCES(${${PROJECT_NAME}_SRCS})

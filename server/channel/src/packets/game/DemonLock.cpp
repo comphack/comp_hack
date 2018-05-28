@@ -1,5 +1,5 @@
 /**
- * @file server/channel/src/packets/game/LockDemon.cpp
+ * @file server/channel/src/packets/game/DemonLock.cpp
  * @ingroup channel
  *
  * @author HACKfrost
@@ -40,7 +40,7 @@
 
 using namespace channel;
 
-void SetDemonLock(const std::shared_ptr<ChannelClientConnection> client,
+void DemonLockSet(const std::shared_ptr<ChannelClientConnection> client,
     int64_t demonID, bool lock)
 {
     auto state = client->GetClientState();
@@ -57,7 +57,7 @@ void SetDemonLock(const std::shared_ptr<ChannelClientConnection> client,
     demon->SetLocked(lock);
 
     libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_LOCK_DEMON);
+    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_DEMON_LOCK);
     reply.WriteS64Little(demonID);
     reply.WriteS8(static_cast<int8_t>(lock ? 1 : 0));
     reply.WriteS8(0);   //Unknown
@@ -65,7 +65,7 @@ void SetDemonLock(const std::shared_ptr<ChannelClientConnection> client,
     client->SendPacket(reply);
 }
 
-bool Parsers::LockDemon::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::DemonLock::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {
@@ -85,7 +85,7 @@ bool Parsers::LockDemon::Parse(libcomp::ManagerPacket *pPacketManager,
         return false;
     }
 
-    server->QueueWork(SetDemonLock, client, demonID, lock == 1);
+    server->QueueWork(DemonLockSet, client, demonID, lock == 1);
 
     return true;
 }

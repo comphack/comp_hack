@@ -63,6 +63,21 @@
         <member name="Hotbars">
             <element>10000000-0000-0000-0000-000000000001</element>
         </member>
+        <member name="CustomTitles">
+            <element>1022</element>
+            <element>1023</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+        </member>
     </object>
     <object name="Hotbar">
         <member name="UID">10000000-0000-0000-0000-000000000001</member>
@@ -75,12 +90,7 @@
             <element>2</element>
             <element>2</element>
             <element>2</element>
-            <element>0</element>
-            <element>0</element>
-            <element>0</element>
-            <element>0</element>
-            <element>0</element>
-            <element>4</element>
+            <element index="13">4</element>
             <element>2</element>
             <element>1</element>
         </member>
@@ -93,12 +103,7 @@
             <element>5407</element>
             <element>5404</element>
             <element>5501</element>
-            <element>0</element>
-            <element>0</element>
-            <element>0</element>
-            <element>0</element>
-            <element>0</element>
-            <element>1</element>
+            <element index="13">1</element>
             <element>5601</element>
             <element>26</element>
         </member>
@@ -106,6 +111,9 @@
     <object name="CharacterProgress">
         <member name="Maps">
             <element>0x7E</element>
+        </member>
+        <member name="SpecialTitles">
+            <element index="127">0xC0</element>
         </member>
     </object>
     <object name="Item">

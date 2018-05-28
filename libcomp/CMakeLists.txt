@@ -288,6 +288,7 @@ SET(${PROJECT_NAME}_SCHEMA
     schema/binarydata/cmodeldata.xml
     schema/binarydata/cmodifiedeffectdata.xml
     schema/binarydata/cmultitalkdata.xml
+    schema/binarydata/codenamedata.xml
     schema/binarydata/cpolygonmoviedata.xml
     schema/binarydata/cquest.xml
     schema/binarydata/ctalkmessagedata.xml
@@ -415,12 +416,16 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     Demon.cpp
     Quest.h
     Quest.cpp
+    DemonQuest.h
+    DemonQuest.cpp
     Character.h
     Character.cpp
     DemonBox.h
     DemonBox.cpp
     DemonPresent.h
     DemonPresent.cpp
+    DemonQuestReward.h
+    DemonQuestReward.cpp
     DropSet.h
     DropSet.cpp
     Enemy.h
@@ -759,6 +764,8 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     MiONPCData.h
     MiPossessionData.h
     MiPossessionData.cpp
+    MiQuestBonusCodeData.h
+    MiQuestBonusCodeData.cpp
     MiQuestData.h
     MiQuestData.cpp
     MiQuestPhaseData.h
@@ -813,6 +820,8 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     MiTargetData.h
     MiTimeLimitData.h
     MiTimeLimitData.cpp
+    MiTitleData.h
+    MiTitleData.cpp
     MiTriUnionSpecialData.cpp
     MiTriUnionSpecialData.h
     MiUnionData.cpp

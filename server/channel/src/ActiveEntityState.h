@@ -97,13 +97,57 @@ class DefinitionManager;
 }
 
 typedef objects::MiCorrectTbl::ID_t CorrectTbl;
-typedef std::unordered_map<uint32_t, std::pair<uint8_t, bool>> AddStatusEffectMap;
 
 namespace channel
 {
 
 class AIState;
 class Zone;
+
+/**
+ * Represents a request to add or remove a status effect with any applicable
+ * modifications to the normal definition.
+ */
+class StatusEffectChange
+{
+public:
+    /**
+     * Create a new StatusEffectChange.
+     */
+    StatusEffectChange() : Type(0), Stack(0), IsReplace(false),
+        Duration(0)
+    {
+    }
+
+    /**
+     * Create a new StatusEffectChange with supplied options.
+     * @param type Type of status effect
+     * @param stack Stack size of the statuse effect
+     * @param isReplace Indicates if the status effect params should replace
+     *  the effect if it already exists
+     */
+    StatusEffectChange(uint32_t type, uint8_t stack, bool isReplace)
+        : Type(type), Stack(stack), IsReplace(isReplace), Duration(0)
+    {
+    }
+
+    /// Status effect type
+    uint32_t Type;
+
+    /// Stack size of the effect
+    uint8_t Stack;
+
+    /// Indicates if the status effect params should replace the effect if it
+    /// already exists
+    bool IsReplace;
+
+    /// Explicit duration (in MS) to be used for the status effect. Overrides
+    /// any default values and allows NONE (constant) status effects to be
+    /// added with expirations.
+    uint32_t Duration;
+};
+
+typedef std::unordered_map<uint32_t, StatusEffectChange> StatusEffectChanges;
 
 /**
  * Represents an active entity on the channel server. An entity is
@@ -437,8 +481,7 @@ public:
      * Add new status effects to the entity and activate them. If there are
      * status effects that are replaced by the application of the new ones
      * they will be expired and returned.
-     * @param effects Map of status effect stacks and whether they are replaces
-     *  or not by effect type ID
+     * @param effects Map of status effects being changed
      * @param definitionManager Pointer to the DefinitionManager to use when
      *  determining how the effects behave
      * @param now Current system timestamp to use when activating the effects,
@@ -450,7 +493,7 @@ public:
      * @return Set of expired effect IDs if any added effects cancel existing
      *  effects
      */
-    std::set<uint32_t> AddStatusEffects(const AddStatusEffectMap& effects,
+    std::set<uint32_t> AddStatusEffects(const StatusEffectChanges& effects,
         libcomp::DefinitionManager* definitionManager, uint32_t now = 0,
         bool queueChanges = true);
 

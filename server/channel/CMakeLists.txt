@@ -180,11 +180,11 @@ SET(${PROJECT_NAME}_PACKETS
     src/packets/game/AllocateSkillPoint.cpp     # 0x0049
     src/packets/game/ToggleExpertise.cpp        # 0x004F
     src/packets/game/LearnSkill.cpp             # 0x0051
-    src/packets/game/UpdateDemonSkill.cpp       # 0x0054
+    src/packets/game/DemonSkillUpdate.cpp       # 0x0054
     src/packets/game/KeepAlive.cpp              # 0x0056
     src/packets/game/FixObjectPosition.cpp      # 0x0058
     src/packets/game/State.cpp                  # 0x005A
-    src/packets/game/PartnerDemonData.cpp       # 0x005B
+    src/packets/game/DemonData.cpp              # 0x005B
     src/packets/game/DemonBox.cpp               # 0x005C
     src/packets/game/DemonBoxData.cpp           # 0x005E
     src/packets/game/ChannelList.cpp            # 0x0063
@@ -209,7 +209,7 @@ SET(${PROJECT_NAME}_PACKETS
     src/packets/game/ShopBuy.cpp                # 0x0094
     src/packets/game/ShopSell.cpp               # 0x0096
     src/packets/game/DemonBoxMove.cpp           # 0x009A
-    src/packets/game/DismissDemon.cpp           # 0x009B
+    src/packets/game/DemonDismiss.cpp           # 0x009B
     src/packets/game/PostList.cpp               # 0x009C
     src/packets/game/PostItem.cpp               # 0x009E
     src/packets/game/HotbarData.cpp             # 0x00A2
@@ -281,7 +281,7 @@ SET(${PROJECT_NAME}_PACKETS
     src/packets/game/SkillForget.cpp            # 0x0186
     src/packets/game/BazaarMarketEnd.cpp        # 0x0188
     src/packets/game/BazaarMarketComment.cpp    # 0x018B
-    src/packets/game/PartnerDemonAISet.cpp      # 0x0181
+    src/packets/game/DemonAISet.cpp             # 0x0181
     src/packets/game/MapFlag.cpp                # 0x0197
     src/packets/game/DemonCompendium.cpp        # 0x019B
     src/packets/game/ItemRepairMax.cpp          # 0x019F
@@ -324,12 +324,20 @@ SET(${PROJECT_NAME}_PACKETS
     src/packets/game/CompShopList.cpp           # 0x0214
     src/packets/game/FusionGauge.cpp            # 0x0217
     src/packets/game/TitleList.cpp              # 0x021B
-    src/packets/game/PartnerDemonQuestList.cpp  # 0x022D
-    src/packets/game/LockDemon.cpp              # 0x0233
+    src/packets/game/TitleActiveUpdate.cpp      # 0x021D
+    src/packets/game/TitleBuild.cpp             # 0x0220
+    src/packets/game/DemonQuestData.cpp         # 0x0224
+    src/packets/game/DemonQuestAccept.cpp       # 0x0226
+    src/packets/game/DemonQuestEnd.cpp          # 0x0229
+    src/packets/game/DemonQuestCancel.cpp       # 0x022B
+    src/packets/game/DemonQuestList.cpp         # 0x022D
+    src/packets/game/DemonQuestActive.cpp       # 0x022F
+    src/packets/game/DemonLock.cpp              # 0x0233
+    src/packets/game/DemonQuestReject.cpp       # 0x023A
     src/packets/game/PvPCharacterInfo.cpp       # 0x024D
     src/packets/game/ItemMix.cpp                # 0x025D
     src/packets/game/TeamInfo.cpp               # 0x027B
-    src/packets/game/PartnerDemonQuestTemp.cpp  # 0x028F
+    src/packets/game/DemonQuestPending.cpp      # 0x028F
     src/packets/game/ItemDepoRemote.cpp         # 0x0296
     src/packets/game/DemonDepoRemote.cpp        # 0x02EF
     src/packets/game/CommonSwitchInfo.cpp       # 0x02F4
@@ -343,6 +351,7 @@ SET(${PROJECT_NAME}_PACKETS
     src/packets/game/DemonDepoList.cpp          # 0x03F5
     src/packets/game/DemonEquip.cpp             # 0x03FB
     src/packets/game/Barter.cpp                 # 0x03FE
+    src/packets/game/QuestTitle.cpp             # 0x0406
     src/packets/game/ReportPlayer.cpp           # 0x0407
     src/packets/game/Blacklist.cpp              # 0x0408
     src/packets/game/BlacklistUpdate.cpp        # 0x040A

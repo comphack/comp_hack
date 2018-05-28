@@ -35,6 +35,7 @@
  // channel Includes
 #include "ChannelServer.h"
 #include "CharacterManager.h"
+#include "EventManager.h"
 #include "PlasmaState.h"
 #include "ZoneManager.h"
 
@@ -101,6 +102,14 @@ bool Parsers::PlasmaResult::Parse(libcomp::ManagerPacket *pPacketManager,
     client->QueuePacket(notify);
 
     characterManager->SetStatusIcon(client, 0);
+
+    if(!failure)
+    {
+        // Update demon quest if active
+        server->GetEventManager()->UpdateDemonQuestCount(client,
+            objects::DemonQuest::Type_t::PLASMA,
+            (uint32_t)pState->GetEntity()->GetColor(), 1);
+    }
 
     client->FlushOutgoing();
 

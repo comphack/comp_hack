@@ -235,7 +235,7 @@ bool Parsers::ShopRepair::Parse(libcomp::ManagerPacket *pPacketManager,
     if(success && item->GetBoxSlot() >= 0)
     {
         characterManager->SendItemBoxData(client, inventory,
-            { (uint16_t)item->GetBoxSlot() });
+            { (uint16_t)item->GetBoxSlot() }, false);
     }
 
     client->FlushOutgoing();

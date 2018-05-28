@@ -46,7 +46,6 @@
 #include <CalculatedEntityState.h>
 #include <ChannelConfig.h>
 #include <CharacterProgress.h>
-#include <DemonPresent.h>
 #include <DropSet.h>
 #include <InheritedSkill.h>
 #include <Item.h>
@@ -221,7 +220,7 @@ public:
     int32_t TechnicalDamage = 0;
     int32_t PursuitDamage = 0;
     uint8_t PursuitAffinity = 0;
-    AddStatusEffectMap AddedStatuses;
+    StatusEffectChanges AddedStatuses;
     std::set<uint32_t> CancelledStatuses;
     bool HitAvoided = false;
     uint8_t HitNull = 0;    // 0: None, 1: Physical, 2: Magic
@@ -849,14 +848,8 @@ bool SkillManager::ExecuteSkill(std::shared_ptr<ActiveEntityState> source,
 
                 for(auto itemCost : itemCosts)
                 {
-                    auto existingItems = characterManager->GetExistingItems(character,
-                        itemCost.first);
-                    uint32_t itemCount = 0;
-                    for(auto item : existingItems)
-                    {
-                        itemCount = (uint32_t)(itemCount + item->GetStackSize());
-                    }
-
+                    uint32_t itemCount = characterManager->GetExistingItemCount(
+                        character, itemCost.first);
                     if(itemCount < itemCost.second)
                     {
                         canPay = false;
@@ -3190,7 +3183,7 @@ std::set<uint32_t> SkillManager::HandleStatusEffects(const std::shared_ptr<
 
     const static bool nraStatusNull = std::dynamic_pointer_cast<
         objects::ChannelConfig>(server->GetConfig())->GetWorldSharedConfig()
-        ->GetAutoCompressCurrency();
+        ->GetNRAStatusNull();
 
     auto statusAdjusts = tokuseiManager->GetAspectMap(source,
         TokuseiAspectType::STATUS_INFLICT_ADJUST, sourceCalc);
@@ -3280,7 +3273,8 @@ std::set<uint32_t> SkillManager::HandleStatusEffects(const std::shared_ptr<
             uint8_t stack = CalculateStatusEffectStack(minStack, maxStack);
             if(stack == 0 && !isReplace) continue;
 
-            target.AddedStatuses[effectID] = std::make_pair(stack, isReplace);
+            target.AddedStatuses[effectID] = StatusEffectChange(effectID,
+                stack, isReplace);
 
             // Check for status T-Damage to apply at the end of the skill
             auto basicDef = statusDef->GetBasic();
@@ -3615,8 +3609,9 @@ void SkillManager::HandleKills(std::shared_ptr<ActiveEntityState> source,
             ScheduleFreeLoot(pair.first, zone, pair.second, sourcePartyMembers);
         }
 
-        // Update quest kill counts
-        if(sourceClient && questKills.size() > 0)
+        // Update quest kill counts (ignore for demon only zones)
+        if(sourceClient && questKills.size() > 0 &&
+            zone->GetInstanceType() != InstanceType_t::DEMON_ONLY)
         {
             server->GetEventManager()->UpdateQuestKillCount(sourceClient,
                 questKills);
@@ -4170,6 +4165,9 @@ void SkillManager::HandleNegotiations(const std::shared_ptr<ActiveEntityState> s
         return;
     }
 
+    // Keep track of demons that have "joined" for demon quests
+    std::unordered_map<uint32_t, int32_t> joined;
+
     // Handle the results of negotiations that result in an enemy being removed
     std::unordered_map<std::shared_ptr<LootBoxState>,
         std::shared_ptr<EnemyState>> lStates;
@@ -4195,6 +4193,15 @@ void SkillManager::HandleNegotiations(const std::shared_ptr<ActiveEntityState> s
                     demonLoot->SetType(enemy->GetType());
                     demonLoot->SetCount(1);
                     lBox->SetLoot(0, demonLoot);
+
+                    if(joined.find(enemy->GetType()) == joined.end())
+                    {
+                        joined[enemy->GetType()] = 1;
+                    }
+                    else
+                    {
+                        joined[enemy->GetType()]++;
+                    }
                 }
                 break;
             case TALK_GIVE_ITEM:
@@ -4310,6 +4317,18 @@ void SkillManager::HandleNegotiations(const std::shared_ptr<ActiveEntityState> s
     if(encounterGroups.size() > 0)
     {
         HandleEncounterDefeat(source, zone, encounterGroups);
+    }
+
+    if(joined.size() > 0 && sourceClient)
+    {
+        // Update demon quest if active
+        auto eventManager = server->GetEventManager();
+        for(auto& pair : joined)
+        {
+            eventManager->UpdateDemonQuestCount(sourceClient,
+                objects::DemonQuest::Type_t::CONTRACT,
+                pair.first, pair.second);
+        }
     }
 
     ChannelClientConnection::FlushAllOutgoing(zConnections);
@@ -5601,8 +5620,6 @@ bool SkillManager::SetSkillCompleteState(const std::shared_ptr<
     uint64_t cooldownTime = 0;
     if(cdTime && (!moreUses || (execCount > 0 && !executed)))
     {
-        cooldownTime = currentTime + (uint64_t)((double)cdTime * 1000);
-
         // Adjust cooldown time if supported by the skill
         if((pSkill->Definition->GetCast()->GetBasic()
             ->GetAdjustRestrictions() & 0x02) == 0)
@@ -5610,10 +5627,12 @@ bool SkillManager::SetSkillCompleteState(const std::shared_ptr<
             auto calcState = GetCalculatedState(source, pSkill, false,
                 nullptr);
 
-            cooldownTime = (uint64_t)((double)cooldownTime *
+            cdTime = (uint32_t)ceil((double)cdTime *
                 (source->GetCorrectValue(CorrectTbl::COOLDOWN_TIME,
                     calcState) * 0.01));
         }
+
+        cooldownTime = currentTime + (uint64_t)((double)cdTime * 1000);
     }
 
     activated->SetCooldownTime(cooldownTime);
@@ -5682,24 +5701,19 @@ bool SkillManager::Cameo(const std::shared_ptr<objects::ActivatedAbility>& activ
     uint32_t effectID = 0;
     if(transformIter->second.size() > 1)
     {
-        auto effectIter = transformIter->second.begin();
-        size_t randomIdx = (size_t)RNG(int32_t, 0,
-            (int32_t)(transformIter->second.size() - 1));
-        std::advance(effectIter, randomIdx);
-
-        effectID = *effectIter;
+        effectID = libcomp::Randomizer::GetEntry(transformIter->second);
     }
     else
     {
         effectID = transformIter->second.front();
     }
 
-    AddStatusEffectMap m;
-    m[effectID] = std::pair<uint8_t, bool>(1, true);
+    StatusEffectChanges effects;
+    effects[effectID] = StatusEffectChange(effectID, 1, true);
 
     if(ProcessSkillResult(activated, ctx))
     {
-        cState->AddStatusEffects(m, server->GetDefinitionManager());
+        cState->AddStatusEffects(effects, server->GetDefinitionManager());
         server->GetTokuseiManager()->Recalculate(cState,
             std::set<TokuseiConditionType> {
             TokuseiConditionType::STATUS_ACTIVE });
@@ -5885,8 +5899,8 @@ bool SkillManager::FamiliarityUp(const std::shared_ptr<objects::ActivatedAbility
     int8_t rarity;
     uint16_t currentVal = demon->GetFamiliarity();
     if(characterManager->GetFamiliarityRank(currentVal) >= 3 &&
-        GetDemonPresent(demon->GetType(), demon->GetCoreStats()->GetLevel(),
-            MAX_FAMILIARITY, rarity) != 0 &&
+        characterManager->GetDemonPresent(demon->GetType(),
+            demon->GetCoreStats()->GetLevel(), MAX_FAMILIARITY, rarity) != 0 &&
         characterManager->GetFreeSlots(client).size() == 0)
     {
         SendFailure(activated, client,
@@ -5952,20 +5966,20 @@ bool SkillManager::FamiliarityUp(const std::shared_ptr<objects::ActivatedAbility
     characterManager->UpdateFamiliarity(client, fPoints, true);
 
     // Apply the status effects
-    AddStatusEffectMap m;
+    StatusEffectChanges effects;
     for(auto addStatus : skillData->GetDamage()->GetAddStatuses())
     {
         uint8_t stack = CalculateStatusEffectStack(addStatus->GetMinStack(),
             addStatus->GetMaxStack());
         if(stack == 0 && !addStatus->GetIsReplace()) continue;
 
-        m[addStatus->GetStatusID()] =
-            std::pair<uint8_t, bool>(stack, addStatus->GetIsReplace());
+        effects[addStatus->GetStatusID()] = StatusEffectChange(
+            addStatus->GetStatusID(), stack, addStatus->GetIsReplace());
     }
 
-    if(m.size() > 0)
+    if(effects.size() > 0)
     {
-        cState->AddStatusEffects(m, definitionManager);
+        cState->AddStatusEffects(effects, definitionManager);
         server->GetTokuseiManager()->Recalculate(cState,
             std::set<TokuseiConditionType> { TokuseiConditionType::STATUS_ACTIVE });
     }
@@ -5973,7 +5987,7 @@ bool SkillManager::FamiliarityUp(const std::shared_ptr<objects::ActivatedAbility
     // Re-pull the present type and give it to the character
     if(characterManager->GetFamiliarityRank(demon->GetFamiliarity()) >= 3)
     {
-        uint32_t presentType = GetDemonPresent(demon->GetType(),
+        uint32_t presentType = characterManager->GetDemonPresent(demon->GetType(),
             demon->GetCoreStats()->GetLevel(), demon->GetFamiliarity(), rarity);
         GiveDemonPresent(client, demon->GetType(), presentType, rarity,
             activated->GetSkillID());
@@ -6177,7 +6191,7 @@ bool SkillManager::Mooch(const std::shared_ptr<objects::ActivatedAbility>& activ
     // Present is retrieved prior to updating the familiarity for a drop
     int8_t rarity;
     uint16_t familiarity = demon->GetFamiliarity();
-    uint32_t presentType = GetDemonPresent(demon->GetType(),
+    uint32_t presentType = characterManager->GetDemonPresent(demon->GetType(),
         demon->GetCoreStats()->GetLevel(), familiarity, rarity);
 
     // If a present will be given and there are no free slots, error the skill
@@ -6219,20 +6233,20 @@ bool SkillManager::Mooch(const std::shared_ptr<objects::ActivatedAbility>& activ
     server->GetCharacterManager()->UpdateFamiliarity(client, -2000, true);
 
     // Apply the status effects
-    AddStatusEffectMap m;
+    StatusEffectChanges effects;
     for(auto addStatus : skillData->GetDamage()->GetAddStatuses())
     {
         uint8_t stack = CalculateStatusEffectStack(addStatus->GetMinStack(),
             addStatus->GetMaxStack());
         if(stack == 0 && !addStatus->GetIsReplace()) continue;
 
-        m[addStatus->GetStatusID()] =
-            std::pair<uint8_t, bool>(stack, addStatus->GetIsReplace());
+        effects[addStatus->GetStatusID()] = StatusEffectChange(
+            addStatus->GetStatusID(), stack, addStatus->GetIsReplace());
     }
 
-    if(m.size() > 0)
+    if(effects.size() > 0)
     {
-        cState->AddStatusEffects(m, definitionManager);
+        cState->AddStatusEffects(effects, definitionManager);
         server->GetTokuseiManager()->Recalculate(cState,
             std::set<TokuseiConditionType> { TokuseiConditionType::STATUS_ACTIVE });
     }
@@ -6377,17 +6391,17 @@ bool SkillManager::Rest(const std::shared_ptr<objects::ActivatedAbility>& activa
     else
     {
         // Add the status
-        AddStatusEffectMap m;
+        StatusEffectChanges effects;
         for(auto addStatus : skillData->GetDamage()->GetAddStatuses())
         {
             uint8_t stack = CalculateStatusEffectStack(addStatus->GetMinStack(),
                 addStatus->GetMaxStack());
             if(stack == 0 && !addStatus->GetIsReplace()) continue;
 
-            m[addStatus->GetStatusID()] =
-                std::pair<uint8_t, bool>(stack, addStatus->GetIsReplace());
+            effects[addStatus->GetStatusID()] = StatusEffectChange(
+                addStatus->GetStatusID(), stack, addStatus->GetIsReplace());
         }
-        source->AddStatusEffects(m, definitionManager);
+        source->AddStatusEffects(effects, definitionManager);
 
         source->SetStatusTimes(STATUS_RESTING, 0);
     }
@@ -6603,116 +6617,6 @@ bool SkillManager::XPUp(const std::shared_ptr<objects::ActivatedAbility>& activa
             (uint8_t)SkillErrorCodes_t::GENERIC_USE);
         return false;
     }
-}
-
-uint32_t SkillManager::GetDemonPresent(uint32_t demonType, int8_t level,
-    uint16_t familiarity, int8_t& rarity) const
-{
-    auto server = mServer.lock();
-    auto characterManager = server->GetCharacterManager();
-
-    // Presents are only given for the top 2 ranks
-    if(characterManager->GetFamiliarityRank(familiarity) < 3)
-    {
-        return 0;
-    }
-
-    auto definitionManager = server->GetDefinitionManager();
-    auto serverDataManager = server->GetServerDataManager();
-
-    auto demonDef = definitionManager->GetDevilData(demonType);
-    uint32_t baseType = demonDef ? demonDef->GetUnionData()->GetBaseDemonID() : 0;
-
-    auto baseDef = baseType ? definitionManager->GetDevilData(baseType) : nullptr;
-
-    auto presentDef = baseType
-        ? serverDataManager->GetDemonPresentData(baseType) : nullptr;
-    if(baseDef && presentDef)
-    {
-        // Attempt to pull presents from rares then uncommons, then commons
-        std::array<std::list<uint32_t>, 3> presents;
-        presents[0] = presentDef->GetRareItems();
-        presents[1] = presentDef->GetUncommonItems();
-        presents[2] = presentDef->GetCommonItems();
-
-        uint8_t baseLevel = baseDef->GetGrowth()->GetBaseLevel();
-
-        // Rates for uncommons and rares start at 0% at base level and increase
-        // to a maximum of 25% and 15% respectively up to max level
-        double rng = 0.0;
-        double rateSum = 0.0;
-        for(size_t i = 0; i < 3; i++)
-        {
-            bool useSet = false;
-            if(i == 2)
-            {
-                // If we get to the common set, use by default
-                useSet = true;
-            }
-            else if(level - baseLevel > 0)
-            {
-                uint8_t minLevel = 0;
-                double maxRate = 0.0;
-                if(i == 0)
-                {
-                    // Rare set
-                    minLevel = (uint8_t)(baseLevel + ceil((100.0 - (double)baseLevel) / 5.0));
-                    maxRate = 15.0;
-                }
-                else
-                {
-                    // Uncommon set
-                    minLevel = (uint8_t)(baseLevel + ceil((100.0 - (double)baseLevel) / 10.0));
-                    maxRate = 25.0;
-                }
-
-                if(minLevel <= (uint8_t)level)
-                {
-                    double rate = (((double)(level - minLevel) + 1.0) /
-                        (100.0 - (double)minLevel) * maxRate) + rateSum;
-
-                    if(rate > 0.0)
-                    {
-                        if(rng == 0.0)
-                        {
-                            rng = (double)RNG(uint16_t, 1, 10000) * 0.01;
-                        }
-
-                        if(rng <= rate)
-                        {
-                            useSet = true;
-                        }
-                    }
-
-                    // Don't run RNG multiple times (not getting a rare technically
-                    // increases your odds of getting an uncommon)
-                    rateSum += rate;
-                }
-            }
-
-            // Use an even distribution between all items in the same set
-            if(useSet && presents[i].size() > 0)
-            {
-                rarity = (int8_t)(2 - i);
-                if(presents[i].size() == 1)
-                {
-                    return presents[i].front();
-                }
-                else
-                {
-                    auto it = presents[i].begin();
-
-                    size_t randomIdx = (size_t)RNG(int32_t, 0,
-                        (int32_t)(presents[i].size() - 1));
-                    std::advance(it, randomIdx);
-
-                    return *it;
-                }
-            }
-        }
-    }
-
-    return 0;
 }
 
 void SkillManager::GiveDemonPresent(const std::shared_ptr<ChannelClientConnection>& client,

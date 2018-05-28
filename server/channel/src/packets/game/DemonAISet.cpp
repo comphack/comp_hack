@@ -1,10 +1,11 @@
 /**
- * @file server/channel/src/packets/game/PartnerDemonQuestList.cpp
+ * @file server/channel/src/packets/game/DemonAISet.cpp
  * @ingroup channel
  *
  * @author HACKfrost
  *
- * @brief Request from the client for the player's partner demon quest list.
+ * @brief Request from the client to update the active partner demon's
+ *  AI attack settings.
  *
  * This file is part of the Channel Server (channel).
  *
@@ -27,44 +28,44 @@
 #include "Packets.h"
 
 // libcomp Includes
-#include <Packet.h>
-#include <PacketCodes.h>
+#include <Log.h>
+#include <ManagerPacket.h>
 
 // channel Includes
 #include "ChannelClientConnection.h"
+#include "ChannelServer.h"
 
 using namespace channel;
 
-bool Parsers::PartnerDemonQuestList::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::DemonAISet::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {
     (void)pPacketManager;
 
-    if(p.Size() != 0)
+    if(p.Size() != 2)
     {
         return false;
     }
 
-    /// @todo: implement non-default values
-    
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_PARTNER_DEMON_QUEST_LIST);
-    reply.WriteS8(0);   // Unknown
+    uint16_t attackSettings = p.ReadU16Little();
 
-    int8_t demonCount = 0;
-    reply.WriteS8(demonCount);
-    for(int8_t i = 0; i < demonCount; i++)
+    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+    auto state = client->GetClientState();
+    auto dState = state->GetDemonState();
+    auto demon = dState->GetEntity();
+
+    if(!demon)
     {
-        reply.WriteS64Little(0);
+        LOG_WARNING("Partner demon attack settings could not be saved"
+            " because no demon is summoned for the requesting client\n");
+        return true;
     }
-    reply.WriteS64Little(-1);   // Unknown
 
-    reply.WriteS16Little(0);   // Unknown
-    reply.WriteS32Little(0);   // Unknown
-    reply.WriteS8(0);   // Unknown
+    demon->SetAttackSettings(attackSettings);
 
-    connection->SendPacket(reply);
+    server->GetWorldDatabase()->QueueUpdate(demon, state->GetAccountUID());
 
     return true;
 }

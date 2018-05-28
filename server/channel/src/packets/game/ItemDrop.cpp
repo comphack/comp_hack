@@ -67,8 +67,13 @@ void DropItem(const std::shared_ptr<ChannelServer> server,
         libcomp::PersistentObject::GetObjectByUUID(item->GetItemBox()));
     if(itemBox)
     {
+        int8_t slot = item->GetBoxSlot();
+
         server->GetCharacterManager()->UnequipItem(client, item);
-        itemBox->SetItems((size_t)item->GetBoxSlot(), NULLUUID);
+        itemBox->SetItems((size_t)slot, NULLUUID);
+
+        server->GetCharacterManager()->SendItemBoxData(client, itemBox,
+            { (uint16_t)slot });
 
         auto dbChanges = libcomp::DatabaseChangeSet::Create(state->GetAccountUID());
         dbChanges->Update(itemBox);

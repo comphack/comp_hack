@@ -583,6 +583,8 @@ bool BaseServer::LoadDataFromFile(const libcomp::String& filePath,
                 uuid = libobjgen::UUID(uuidText);
                 if(uuid.IsNull())
                 {
+                    LOG_ERROR(libcomp::String("Null UID specified for %1 entry"
+                        " while loading file '%2'\n").Arg(name).Arg(filePath));
                     return false;
                 }
                 break;
@@ -593,6 +595,8 @@ bool BaseServer::LoadDataFromFile(const libcomp::String& filePath,
         auto record = libcomp::PersistentObject::New(typeHash);
         if(!record->Load(doc, *objXml))
         {
+            LOG_ERROR(libcomp::String("Failed to load %1 entry from file '%2'\n")
+                .Arg(name).Arg(filePath));
             return false;
         }
 

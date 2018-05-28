@@ -1,10 +1,10 @@
 /**
- * @file server/channel/src/packets/game/TitleList.cpp
+ * @file server/channel/src/packets/game/QuestTitle.cpp
  * @ingroup channel
  *
  * @author HACKfrost
  *
- * @brief Request from the list of available titles.
+ * @brief Request from the client to obtain a quest bonus title.
  *
  * This file is part of the Channel Server (channel).
  *
@@ -27,28 +27,38 @@
 #include "Packets.h"
 
 // libcomp Includes
+#include <DefinitionManager.h>
+#include <Log.h>
+#include <ManagerPacket.h>
 #include <Packet.h>
 #include <PacketCodes.h>
 
- // object Includes
+// object Includes
 #include <Character.h>
 #include <CharacterProgress.h>
+#include <MiQuestBonusCodeData.h>
 
- // channel Includes
+// channel Includes
 #include "ChannelServer.h"
+#include "CharacterManager.h"
 
 using namespace channel;
 
-bool Parsers::TitleList::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::QuestTitle::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {
-    (void)pPacketManager;
-
-    if(p.Size() != 0)
+    if(p.Size() != 4)
     {
         return false;
     }
+
+    uint32_t bonusID = p.ReadU32Little();
+
+    auto server = std::dynamic_pointer_cast<ChannelServer>(
+        pPacketManager->GetServer());
+    auto characterManager = server->GetCharacterManager();
+    auto definitionManager = server->GetDefinitionManager();
 
     auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
         connection);
@@ -56,39 +66,25 @@ bool Parsers::TitleList::Parse(libcomp::ManagerPacket *pPacketManager,
     auto cState = state->GetCharacterState();
     auto character = cState->GetEntity();
     auto progress = character->GetProgress().Get();
-    
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_TITLE_LIST);
-    reply.WriteS32Little(0);
-    reply.WriteU8(character->GetCurrentTitle());
 
-    auto specialTitles = progress->GetSpecialTitles();
-
-    reply.WriteS16Little((int16_t)specialTitles.size());
-    reply.WriteArray(&specialTitles, (uint32_t)specialTitles.size());
-
-    auto titles = progress->GetTitles();
-
-    reply.WriteS32Little((int32_t)titles.size());
-    for(int16_t titleID : titles)
+    auto bonusData = definitionManager->GetQuestBonusCodeData(bonusID);
+    if(!bonusData ||
+        (bonusData->GetTitleID() < (int32_t)(progress->SpecialTitlesCount() * 8)))
     {
-        reply.WriteS16Little(titleID);
+        LOG_ERROR(libcomp::String("Invalid quest bonus ID supplied"
+            " for QuestTitle request: %1\n").Arg(bonusID));
     }
-
-    for(size_t i = 0; i < (size_t)(MAX_TITLE_PARTS * 5); i++)
+    else if((uint32_t)bonusData->GetCount() > cState->GetQuestBonusCount())
     {
-        if(i % MAX_TITLE_PARTS == 0)
-        {
-            // Write count for each chunk of IDs
-            reply.WriteS32Little((int32_t)(i / MAX_TITLE_PARTS));
-        }
-
-        reply.WriteS16Little(character->GetCustomTitles(i));
+        LOG_ERROR(libcomp::String("QuestTitle request encountered for"
+            " a quest bonus count that has not been obtained: %1\n")
+            .Arg(state->GetAccountUID().ToString()));
     }
-
-    reply.WriteU8(character->GetTitlePrioritized() ? 1 : 0);
-
-    client->SendPacket(reply);
+    else
+    {
+        int16_t titleID = (int16_t)bonusData->GetTitleID();
+        characterManager->AddTitle(client, titleID);
+    }
 
     return true;
 }

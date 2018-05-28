@@ -66,6 +66,7 @@
 #include <MiNPCBarterData.h>
 #include <MiNPCBasicData.h>
 #include <MiONPCData.h>
+#include <MiQuestBonusCodeData.h>
 #include <MiQuestData.h>
 #include <MiShopProductData.h>
 #include <MiSItemData.h>
@@ -76,6 +77,7 @@
 #include <MiStatusData.h>
 #include <MiSynthesisData.h>
 #include <MiTimeLimitData.h>
+#include <MiTitleData.h>
 #include <MiTriUnionSpecialData.h>
 #include <MiWarpPointData.h>
 #include <MiUnionData.h>
@@ -383,6 +385,12 @@ const std::shared_ptr<objects::MiONPCData>
     return GetRecordByID(id, mONPCData);
 }
 
+const std::shared_ptr<objects::MiQuestBonusCodeData>
+    DefinitionManager::GetQuestBonusCodeData(uint32_t id)
+{
+    return GetRecordByID(id, mQuestBonusCodeData);
+}
+
 const std::shared_ptr<objects::MiQuestData>
     DefinitionManager::GetQuestData(uint32_t id)
 {
@@ -445,10 +453,27 @@ const std::shared_ptr<objects::MiSynthesisData>
     return GetRecordByID(id, mSynthesisData);
 }
 
+std::unordered_map<uint32_t, std::shared_ptr<objects::MiSynthesisData>>
+    DefinitionManager::GetAllSynthesisData()
+{
+    return mSynthesisData;
+}
+
 const std::shared_ptr<objects::MiTimeLimitData>
     DefinitionManager::GetTimeLimitData(uint32_t id)
 {
     return GetRecordByID(id, mTimeLimitData);
+}
+
+const std::shared_ptr<objects::MiTitleData>
+    DefinitionManager::GetTitleData(int16_t id)
+{
+    return GetRecordByID(id, mTitleData);
+}
+
+std::set<int16_t> DefinitionManager::GetTitleIDs()
+{
+    return mTitleIDs;
 }
 
 const std::list<std::shared_ptr<objects::MiTriUnionSpecialData>>
@@ -1071,6 +1096,21 @@ namespace libcomp
     }
 
     template <>
+    bool DefinitionManager::LoadData<objects::MiQuestBonusCodeData>(
+        gsl::not_null<DataStore*> pDataStore)
+    {
+        std::list<std::shared_ptr<objects::MiQuestBonusCodeData>> records;
+        bool success = LoadBinaryData<objects::MiQuestBonusCodeData>(pDataStore,
+            "Shield/QuestBonusCodeData.sbin", true, 0, records);
+        for(auto record : records)
+        {
+            mQuestBonusCodeData[record->GetID()] = record;
+        }
+
+        return success;
+    }
+
+    template <>
     bool DefinitionManager::LoadData<objects::MiQuestData>(
         gsl::not_null<DataStore*> pDataStore)
     {
@@ -1184,6 +1224,30 @@ namespace libcomp
     }
 
     template <>
+    bool DefinitionManager::LoadData<objects::MiTitleData>(
+        gsl::not_null<DataStore*> pDataStore)
+    {
+        std::list<std::shared_ptr<objects::MiTitleData>> records;
+        bool success = LoadBinaryData<objects::MiTitleData>(pDataStore,
+            "Shield/CodeNameData.sbin", true, 0, records);
+        for(auto record : records)
+        {
+            int16_t id = record->GetID();
+
+            mTitleData[id] = record;
+
+            // The first 1023 messages are special titles (matching the
+            // size of CharacterProgress array)
+            if(id >= 1024 && !record->GetTitle().IsEmpty())
+            {
+                mTitleIDs.insert(id);
+            }
+        }
+
+        return success;
+    }
+
+    template <>
     bool DefinitionManager::LoadData<objects::MiTriUnionSpecialData>(
         gsl::not_null<DataStore*> pDataStore)
     {
@@ -1269,6 +1333,7 @@ bool DefinitionManager::LoadAllData(gsl::not_null<DataStore*> pDataStore)
     success &= LoadData<objects::MiModifiedEffectData>(pDataStore);
     success &= LoadData<objects::MiNPCBarterData>(pDataStore);
     success &= LoadData<objects::MiONPCData>(pDataStore);
+    success &= LoadData<objects::MiQuestBonusCodeData>(pDataStore);
     success &= LoadData<objects::MiQuestData>(pDataStore);
     success &= LoadData<objects::MiShopProductData>(pDataStore);
     success &= LoadData<objects::MiSItemData>(pDataStore);
@@ -1276,6 +1341,7 @@ bool DefinitionManager::LoadAllData(gsl::not_null<DataStore*> pDataStore)
     success &= LoadData<objects::MiStatusData>(pDataStore);
     success &= LoadData<objects::MiSynthesisData>(pDataStore);
     success &= LoadData<objects::MiTimeLimitData>(pDataStore);
+    success &= LoadData<objects::MiTitleData>(pDataStore);
     success &= LoadData<objects::MiTriUnionSpecialData>(pDataStore);
     success &= LoadData<objects::MiWarpPointData>(pDataStore);
     success &= LoadData<objects::MiZoneData>(pDataStore);

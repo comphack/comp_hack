@@ -204,6 +204,9 @@ struct Data
     /// Status effect ID of instant death
     uint32_t STATUS_DEATH;
 
+    /// Status effect ID indicating an active demon quest expiration
+    uint32_t STATUS_DEMON_QUEST_ACTIVE;
+
     /// Status effect ID of (demon solo used) entity hide effect
     uint32_t STATUS_HIDDEN;
 
@@ -241,6 +244,13 @@ struct Data
     /// Map of the number of entries in the compendium required to gain the
     /// specified tokusei IDs
     std::unordered_map<uint16_t, std::set<int32_t>> DEMON_BOOK_BONUS;
+
+    /// Map of demon crystal item types to races that can be fused with them
+    /// for cyrstallization
+    std::unordered_map<uint32_t, std::set<uint8_t>> DEMON_CRYSTALS;
+
+    /// List of bonus XP gained from sequential demon quest completions
+    std::list<uint32_t> DEMON_QUEST_XP;
 
     /// Item IDs of demon box rental tickets to their corresponding day lengths
     std::unordered_map<uint32_t, uint32_t> DEPO_MAP_DEMON;

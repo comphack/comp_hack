@@ -113,6 +113,7 @@ ChatManager::ChatManager(const std::weak_ptr<ChannelServer>& server)
     mGMands["spawn"] = &ChatManager::GMCommand_Spawn;
     mGMands["speed"] = &ChatManager::GMCommand_Speed;
     mGMands["tickermessage"] = &ChatManager::GMCommand_TickerMessage;
+    mGMands["title"] = &ChatManager::GMCommand_Title;
     mGMands["tokusei"] = &ChatManager::GMCommand_Tokusei;
     mGMands["valuable"] = &ChatManager::GMCommand_Valuable;
     mGMands["version"] = &ChatManager::GMCommand_Version;
@@ -561,9 +562,9 @@ bool ChatManager::GMCommand_Effect(const std::shared_ptr<
         ? std::dynamic_pointer_cast<ActiveEntityState>(state->GetDemonState())
         : std::dynamic_pointer_cast<ActiveEntityState>(state->GetCharacterState());
 
-    AddStatusEffectMap m;
-    m[effectID] = std::pair<uint8_t, bool>(stack, !isAdd);
-    eState->AddStatusEffects(m, definitionManager);
+    StatusEffectChanges effects;
+    effects[effectID] = StatusEffectChange(effectID, stack, !isAdd);
+    eState->AddStatusEffects(effects, definitionManager);
 
     server->GetTokuseiManager()->Recalculate(eState, true,
         std::set<int32_t>{ eState->GetEntityID() });
@@ -2404,6 +2405,29 @@ bool ChatManager::GMCommand_TickerMessage(const std::shared_ptr<
     }
 
     conf->SetSystemMessage(message);
+
+    return true;
+}
+
+bool ChatManager::GMCommand_Title(const std::shared_ptr<
+    channel::ChannelClientConnection>& client,
+    const std::list<libcomp::String>& args)
+{
+    if(!HaveUserLevel(client, 100))
+    {
+        return true;
+    }
+
+    std::list<libcomp::String> argsCopy = args;
+
+    int16_t titleID;
+    if(!GetIntegerArg<int16_t>(titleID, argsCopy))
+    {
+        return false;
+    }
+
+    mServer.lock()->GetCharacterManager()->AddTitle(client,
+        titleID);
 
     return true;
 }

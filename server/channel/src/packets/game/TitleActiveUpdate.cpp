@@ -1,10 +1,10 @@
 /**
- * @file server/channel/src/packets/game/TitleList.cpp
+ * @file server/channel/src/packets/game/TitleActiveUpdate.cpp
  * @ingroup channel
  *
  * @author HACKfrost
  *
- * @brief Request from the list of available titles.
+ * @brief Request from the client to update the character's active title.
  *
  * This file is part of the Channel Server (channel).
  *
@@ -27,68 +27,59 @@
 #include "Packets.h"
 
 // libcomp Includes
+#include <ManagerPacket.h>
 #include <Packet.h>
 #include <PacketCodes.h>
 
- // object Includes
-#include <Character.h>
-#include <CharacterProgress.h>
-
- // channel Includes
+// channel Includes
 #include "ChannelServer.h"
+#include "CharacterManager.h"
+#include "ZoneManager.h"
 
 using namespace channel;
 
-bool Parsers::TitleList::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::TitleActiveUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {
-    (void)pPacketManager;
-
-    if(p.Size() != 0)
+    if(p.Size() != 2)
     {
         return false;
     }
+
+    uint8_t titleIdx = p.ReadU8();
+    uint8_t prioritize = p.ReadU8();
+
+    if(titleIdx >= 5)
+    {
+        return false;
+    }
+
+    auto server = std::dynamic_pointer_cast<ChannelServer>(
+        pPacketManager->GetServer());
+    auto characterManager = server->GetCharacterManager();
 
     auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
         connection);
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
     auto character = cState->GetEntity();
-    auto progress = character->GetProgress().Get();
-    
+
+    character->SetCurrentTitle(titleIdx);
+    character->SetTitlePrioritized(prioritize == 1);
+
     libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_TITLE_LIST);
-    reply.WriteS32Little(0);
-    reply.WriteU8(character->GetCurrentTitle());
-
-    auto specialTitles = progress->GetSpecialTitles();
-
-    reply.WriteS16Little((int16_t)specialTitles.size());
-    reply.WriteArray(&specialTitles, (uint32_t)specialTitles.size());
-
-    auto titles = progress->GetTitles();
-
-    reply.WriteS32Little((int32_t)titles.size());
-    for(int16_t titleID : titles)
-    {
-        reply.WriteS16Little(titleID);
-    }
-
-    for(size_t i = 0; i < (size_t)(MAX_TITLE_PARTS * 5); i++)
-    {
-        if(i % MAX_TITLE_PARTS == 0)
-        {
-            // Write count for each chunk of IDs
-            reply.WriteS32Little((int32_t)(i / MAX_TITLE_PARTS));
-        }
-
-        reply.WriteS16Little(character->GetCustomTitles(i));
-    }
-
-    reply.WriteU8(character->GetTitlePrioritized() ? 1 : 0);
+    reply.WritePacketCode(
+        ChannelToClientPacketCode_t::PACKET_TITLE_ACTIVE_UPDATE);
+    reply.WriteU8(titleIdx);
+    reply.WriteS32Little(0);    // Success
+    reply.WriteU8(prioritize);
 
     client->SendPacket(reply);
+
+    characterManager->SendCharacterTitle(client, false);
+
+    server->GetWorldDatabase()->QueueUpdate(character, state->GetAccountUID());
 
     return true;
 }

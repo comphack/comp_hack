@@ -38,6 +38,7 @@
 #include "Object.h"
 
 // Standard C++11 Includes
+#include <set>
 #include <unordered_map>
 
 namespace objects
@@ -71,6 +72,7 @@ class MiModificationTriggerData;
 class MiModifiedEffectData;
 class MiNPCBarterData;
 class MiONPCData;
+class MiQuestBonusCodeData;
 class MiQuestData;
 class MiShopProductData;
 class MiSItemData;
@@ -80,6 +82,7 @@ class MiSStatusData;
 class MiStatusData;
 class MiSynthesisData;
 class MiTimeLimitData;
+class MiTitleData;
 class MiTriUnionSpecialData;
 class MiWarpPointData;
 class MiZoneData;
@@ -423,6 +426,15 @@ public:
     const std::shared_ptr<objects::MiONPCData> GetONPCData(uint32_t id);
 
     /**
+     * Get the quest bonus code definition corresponding to an ID
+     * @param id Quest bonus codeID to retrieve
+     * @return Pointer to the matching quest bonus code, null if it does not
+     *  exist
+     */
+    const std::shared_ptr<objects::MiQuestBonusCodeData> GetQuestBonusCodeData(
+        uint32_t id);
+
+    /**
      * Get the quest definition corresponding to an ID
      * @param id Quest ID to retrieve
      * @return Pointer to the matching quest, null if it does not exist
@@ -488,13 +500,35 @@ public:
         uint32_t id);
 
     /**
+     * Get all synthesis definitions by ID
+     * @return All synthesis definitions by ID
+     */
+    std::unordered_map<uint32_t,
+        std::shared_ptr<objects::MiSynthesisData>> GetAllSynthesisData();
+
+    /**
      * Get the time limit definition corresponding to an ID
-     * @param id Status ID to retrieve
+     * @param id Time limit ID to retrieve
      * @return Pointer to the matching time limit definition, null if it does
      *  not exist
      */
     const std::shared_ptr<objects::MiTimeLimitData> GetTimeLimitData(
         uint32_t id);
+
+    /**
+     * Get the title definition corresponding to an ID
+     * @param id Title ID to retrieve
+     * @return Pointer to the matching title definition, null if it does
+     *  not exist
+     */
+    const std::shared_ptr<objects::MiTitleData> GetTitleData(
+        int16_t id);
+
+    /**
+     * Get the set of all (non-special) title IDs
+     * @return Set of title IDs
+     */
+    std::set<int16_t> GetTitleIDs();
 
     /**
      * Get the list of pointers to special fusion definitions by the ID of
@@ -887,6 +921,10 @@ private:
     std::unordered_map<uint32_t,
         std::shared_ptr<objects::MiONPCData>> mONPCData;
 
+    /// Map of quest bonus code definitions by ID
+    std::unordered_map<uint32_t,
+        std::shared_ptr<objects::MiQuestBonusCodeData>> mQuestBonusCodeData;
+
     /// Map of quest definitions by ID
     std::unordered_map<uint32_t,
         std::shared_ptr<objects::MiQuestData>> mQuestData;
@@ -922,6 +960,13 @@ private:
     /// Map of time limit definitions by ID
     std::unordered_map<uint32_t,
         std::shared_ptr<objects::MiTimeLimitData>> mTimeLimitData;
+
+    /// Map of title definitions by ID
+    std::unordered_map<int16_t,
+        std::shared_ptr<objects::MiTitleData>> mTitleData;
+
+    /// Set of all (non-special) title IDs
+    std::set<int16_t> mTitleIDs;
 
     /// Map of special fusion definitions by ID
     std::unordered_map<uint32_t,

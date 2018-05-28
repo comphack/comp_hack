@@ -47,6 +47,7 @@
 // channel Includes
 #include "ChannelServer.h"
 #include "CharacterManager.h"
+#include "EventManager.h"
 #include "ZoneManager.h"
 
 using namespace channel;
@@ -330,6 +331,22 @@ bool Parsers::Synthesize::Parse(libcomp::ManagerPacket *pPacketManager,
     }
 
     characterManager->EndExchange(client);
+
+    if(success)
+    {
+        // Update demon quest if active
+        auto eventManager = server->GetEventManager();
+
+        auto dqType = objects::DemonQuest::Type_t::SYNTH_MELEE;
+        if(exchangeSession->GetType() ==
+            objects::PlayerExchangeSession::Type_t::SYNTH_GUN)
+        {
+            dqType = objects::DemonQuest::Type_t::SYNTH_GUN;
+        }
+
+        eventManager->UpdateDemonQuestCount(client, dqType,
+            synthData->GetItemID(), 1);
+    }
 
     return true;
 }

@@ -48,7 +48,7 @@ const int8_t ACTION_MOVE = 2;
 
 using namespace channel;
 
-void DemonSkillUpdate(const std::shared_ptr<ChannelServer> server,
+void UpdateDemonSkill(const std::shared_ptr<ChannelServer> server,
     const std::shared_ptr<ChannelClientConnection> client,
     int32_t entityID, int8_t skillSlot, uint32_t skillID)
 {
@@ -121,7 +121,7 @@ void DemonSkillUpdate(const std::shared_ptr<ChannelServer> server,
     }
 
     libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_UPDATE_DEMON_SKILL);
+    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_DEMON_SKILL_UPDATE);
     reply.WriteS32Little(entityID);
     reply.WriteS8(action);
     reply.WriteS8(skillSlot);
@@ -150,7 +150,7 @@ void DemonSkillUpdate(const std::shared_ptr<ChannelServer> server,
     }
 }
 
-bool Parsers::UpdateDemonSkill::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::DemonSkillUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {
@@ -179,7 +179,7 @@ bool Parsers::UpdateDemonSkill::Parse(libcomp::ManagerPacket *pPacketManager,
         return false;
     }
 
-    server->QueueWork(DemonSkillUpdate, server, client, entityID, skillSlot, skillID);
+    server->QueueWork(UpdateDemonSkill, server, client, entityID, skillSlot, skillID);
 
     return true;
 }

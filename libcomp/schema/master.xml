@@ -84,6 +84,7 @@
     <include path="binarydata/cmodeldata.xml"/>
     <include path="binarydata/cmodifiedeffectdata.xml"/>
     <include path="binarydata/cmultitalkdata.xml"/>
+    <include path="binarydata/codenamedata.xml"/>
     <include path="binarydata/cpolygonmoviedata.xml"/>
     <include path="binarydata/cquest.xml"/>
     <include path="binarydata/ctalkmessagedata.xml"/>

@@ -185,6 +185,9 @@ namespace libcomp
 /// Number of names that can be in the blacklist per account, per world.
 #define MAX_BLACKLIST_COUNT (50)
 
+/// Number of title entries that can be used to build a custom title.
+#define MAX_TITLE_PARTS (13)
+
 /// Number of items allowed in the post before it starts to display wrong.
 /// Essentially the number of items cannot exceed 10000 but the "pages" in
 /// the Post are 21 items each.

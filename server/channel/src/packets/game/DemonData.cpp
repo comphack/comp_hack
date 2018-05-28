@@ -1,5 +1,5 @@
 /**
- * @file server/channel/src/packets/game/PartnerDemonData.cpp
+ * @file server/channel/src/packets/game/DemonData.cpp
  * @ingroup channel
  *
  * @author HACKfrost
@@ -43,7 +43,7 @@ void SendPartnerData(CharacterManager* characterManager,
     characterManager->SendPartnerData(client);
 }
 
-bool Parsers::PartnerDemonData::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::DemonData::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {

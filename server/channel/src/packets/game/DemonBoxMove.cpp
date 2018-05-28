@@ -37,10 +37,12 @@
 #include <CharacterProgress.h>
 #include <Demon.h>
 #include <DemonBox.h>
+#include <DemonQuest.h>
 
 // channel Includes
 #include "ChannelServer.h"
 #include "CharacterManager.h"
+#include "EventManager.h"
 
 using namespace channel;
 
@@ -121,6 +123,22 @@ bool Parsers::DemonBoxMove::Parse(libcomp::ManagerPacket *pPacketManager,
     {
         characterManager->SendDemonBoxData(client, destBoxID, { destSlot });
         characterManager->SendDemonBoxData(client, srcBoxID, { srcSlot });
+
+        // Clear all quests
+        auto dQuest = character->GetDemonQuest().Get();
+        for(auto& d : { srcDemon, destDemon.Get() })
+        {
+            if(d && d->GetHasQuest())
+            {
+                if(dQuest && dQuest->GetDemon() == d->GetUUID())
+                {
+                    // Fail the quest
+                    server->GetEventManager()->EndDemonQuest(client);
+                }
+
+                d->SetHasQuest(false);
+            }
+        }
     }
     else
     {

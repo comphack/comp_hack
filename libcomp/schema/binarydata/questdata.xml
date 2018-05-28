@@ -41,4 +41,9 @@
             <element type="MiQuestPhaseData*"/>
         </member>
     </object>
+    <object name="MiQuestBonusCodeData" persistent="false">
+        <member type="u32" name="ID"/>
+        <member type="s32" name="count"/>
+        <member type="s32" name="titleID"/>
+    </object>
 </objgen>

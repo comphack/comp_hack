@@ -182,6 +182,8 @@ bool ServerConstants::Initialize(const String& filePath)
     // Load status effect constants
     success &= LoadInteger(constants["STATUS_DEATH"],
         sConstants.STATUS_DEATH);
+    success &= LoadInteger(constants["STATUS_DEMON_QUEST_ACTIVE"],
+        sConstants.STATUS_DEMON_QUEST_ACTIVE);
     success &= LoadInteger(constants["STATUS_HIDDEN"],
         sConstants.STATUS_HIDDEN);
     success &= LoadInteger(constants["STATUS_SUMMON_SYNC_1"],
@@ -369,6 +371,90 @@ bool ServerConstants::Initialize(const String& filePath)
     else
     {
         LOG_ERROR("DEMON_BOOK_BONUS not found\n");
+        success = false;
+    }
+
+    complexIter = complexConstants.find("DEMON_CRYSTALS");
+    if(success && complexIter != complexConstants.end())
+    {
+        std::unordered_map<std::string, std::string> map;
+        success = LoadKeyValueStrings(complexIter->second, map);
+        for(auto pair : map)
+        {
+            uint32_t key;
+            if(!LoadInteger(pair.first, key))
+            {
+                LOG_ERROR("Failed to load DEMON_CRYSTALS key\n");
+                success = false;
+            }
+            else if(sConstants.DEMON_CRYSTALS.find(key) !=
+                sConstants.DEMON_CRYSTALS.end())
+            {
+                LOG_ERROR("Duplicate DEMON_CRYSTALS key encountered\n");
+                success = false;
+            }
+            else
+            {
+                if(!pair.second.empty())
+                {
+                    for(uint8_t p : ToIntegerRange<uint8_t>(pair.second,
+                        success))
+                    {
+                        sConstants.DEMON_CRYSTALS[key].insert(p);
+                    }
+
+                    if(!success)
+                    {
+                        LOG_ERROR("Failed to load an element in"
+                            " DEMON_CRYSTALS\n");
+                        break;
+                    }
+                }
+            }
+
+            if(!success)
+            {
+                break;
+            }
+        }
+    }
+    else
+    {
+        LOG_ERROR("DEMON_CRYSTALS not found\n");
+        success = false;
+    }
+
+    complexIter = complexConstants.find("DEMON_QUEST_XP");
+    if(success && complexIter != complexConstants.end())
+    {
+        std::list<String> strList;
+        if(!LoadStringList(complexIter->second, strList))
+        {
+            LOG_ERROR("Failed to load DEMON_QUEST_XP\n");
+            success = false;
+        }
+        else
+        {
+            for(auto elem : strList)
+            {
+                uint32_t xp = 0;
+                if(LoadInteger(elem.C(), xp))
+                {
+                    sConstants.DEMON_QUEST_XP.push_back(xp);
+                }
+                else
+                {
+                    LOG_ERROR("Failed to load an entry in"
+                        " DEMON_QUEST_XP\n");
+                    success = false;
+                    break;
+                }
+            }
+        }
+    }
+    else
+    {
+        LOG_ERROR("DEMON_QUEST_XP not found\n");
         success = false;
     }
 

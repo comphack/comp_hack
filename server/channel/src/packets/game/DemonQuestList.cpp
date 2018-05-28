@@ -1,10 +1,10 @@
 /**
- * @file server/channel/src/packets/game/TitleList.cpp
+ * @file server/channel/src/packets/game/DemonQuestList.cpp
  * @ingroup channel
  *
  * @author HACKfrost
  *
- * @brief Request from the list of available titles.
+ * @brief Request from the client for the player's demon quest list.
  *
  * This file is part of the Channel Server (channel).
  *
@@ -27,28 +27,32 @@
 #include "Packets.h"
 
 // libcomp Includes
+#include <ManagerPacket.h>
 #include <Packet.h>
 #include <PacketCodes.h>
 
- // object Includes
-#include <Character.h>
+// object Includes
 #include <CharacterProgress.h>
+#include <Demon.h>
+#include <DemonBox.h>
+#include <DemonQuest.h>
 
- // channel Includes
+// channel Includes
 #include "ChannelServer.h"
 
 using namespace channel;
 
-bool Parsers::TitleList::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::DemonQuestList::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {
-    (void)pPacketManager;
-
     if(p.Size() != 0)
     {
         return false;
     }
+
+    auto server = std::dynamic_pointer_cast<ChannelServer>(
+        pPacketManager->GetServer());
 
     auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
         connection);
@@ -56,37 +60,31 @@ bool Parsers::TitleList::Parse(libcomp::ManagerPacket *pPacketManager,
     auto cState = state->GetCharacterState();
     auto character = cState->GetEntity();
     auto progress = character->GetProgress().Get();
-    
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_TITLE_LIST);
-    reply.WriteS32Little(0);
-    reply.WriteU8(character->GetCurrentTitle());
+    auto dQuest = character->GetDemonQuest().Get();
 
-    auto specialTitles = progress->GetSpecialTitles();
-
-    reply.WriteS16Little((int16_t)specialTitles.size());
-    reply.WriteArray(&specialTitles, (uint32_t)specialTitles.size());
-
-    auto titles = progress->GetTitles();
-
-    reply.WriteS32Little((int32_t)titles.size());
-    for(int16_t titleID : titles)
+    std::list<std::shared_ptr<objects::Demon>> questDemons;
+    for(auto demon : character->GetCOMP()->GetDemons())
     {
-        reply.WriteS16Little(titleID);
-    }
-
-    for(size_t i = 0; i < (size_t)(MAX_TITLE_PARTS * 5); i++)
-    {
-        if(i % MAX_TITLE_PARTS == 0)
+        if(!demon.IsNull() && demon->GetHasQuest())
         {
-            // Write count for each chunk of IDs
-            reply.WriteS32Little((int32_t)(i / MAX_TITLE_PARTS));
+            questDemons.push_back(demon.Get());
         }
-
-        reply.WriteS16Little(character->GetCustomTitles(i));
     }
 
-    reply.WriteU8(character->GetTitlePrioritized() ? 1 : 0);
+    libcomp::Packet reply;
+    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_DEMON_QUEST_LIST);
+    reply.WriteS8(0);   // Success
+
+    reply.WriteS8((int8_t)questDemons.size());
+    for(auto demon : questDemons)
+    {
+        reply.WriteS64Little(state->GetObjectID(demon->GetUUID()));
+    }
+    reply.WriteS64Little(dQuest ? state->GetObjectID(dQuest->GetDemon()) : -1);
+
+    reply.WriteS16Little((int16_t)progress->GetDemonQuestSequence());
+    reply.WriteS32Little(0);   // Last completed? Not actually used
+    reply.WriteS8(progress->GetDemonQuestDaily());
 
     client->SendPacket(reply);
 

@@ -46,6 +46,7 @@
 // channel Includes
 #include "ChannelServer.h"
 #include "CharacterManager.h"
+#include "EventManager.h"
 #include "ManagerConnection.h"
 
 using namespace channel;
@@ -388,6 +389,22 @@ bool Parsers::Enchant::Parse(libcomp::ManagerPacket *pPacketManager,
     if(otherClient)
     {
         characterManager->EndExchange(otherClient, 0);
+    }
+
+    if(success)
+    {
+        // Update demon quest if active
+        auto eventManager = server->GetEventManager();
+
+        auto dqType = objects::DemonQuest::Type_t::ENCHANT_TAROT;
+        if(exchangeSession->GetType() ==
+            objects::PlayerExchangeSession::Type_t::ENCHANT_SOUL)
+        {
+            dqType = objects::DemonQuest::Type_t::ENCHANT_SOUL;
+        }
+
+        eventManager->UpdateDemonQuestCount(client, dqType,
+            (uint32_t)effectID, 1);
     }
 
     return true;

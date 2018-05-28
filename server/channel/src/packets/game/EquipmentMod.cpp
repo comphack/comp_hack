@@ -55,6 +55,7 @@
 // channel Includes
 #include "ChannelServer.h"
 #include "CharacterManager.h"
+#include "EventManager.h"
 
 using namespace channel;
 
@@ -313,6 +314,8 @@ bool Parsers::EquipmentMod::Parse(libcomp::ManagerPacket *pPacketManager,
     }
 
     auto characterManager = server->GetCharacterManager();
+
+    bool success = false;
     switch(resultCode)
     {
     case RESULT_CODE_SUCCESS:
@@ -328,6 +331,8 @@ bool Parsers::EquipmentMod::Parse(libcomp::ManagerPacket *pPacketManager,
                 characterManager->SendItemBoxData(client, itemBox,
                     { (uint16_t)equipmentItem->GetBoxSlot() });
             }
+
+            success = true;
 
             server->GetWorldDatabase()->QueueUpdate(equipmentItem,
                 state->GetAccountUID());
@@ -387,6 +392,14 @@ bool Parsers::EquipmentMod::Parse(libcomp::ManagerPacket *pPacketManager,
         }
 
         characterManager->UpdateItems(client, false, inserts, stackAdjustItems);
+    }
+
+    if(success)
+    {
+        // Update demon quest if active
+        server->GetEventManager()->UpdateDemonQuestCount(client,
+            objects::DemonQuest::Type_t::EQUIPMENT_MOD,
+            equipmentItem->GetType(), 1);
     }
 
     client->FlushOutgoing();

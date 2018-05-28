@@ -48,6 +48,7 @@
     <constant name="SKILL_EQUIP_MOD_EDIT">329</constant>
     <constant name="SKILL_XP_PARTNER">334</constant>
     <constant name="STATUS_DEATH">32</constant>
+    <constant name="STATUS_DEMON_QUEST_ACTIVE">1030</constant>
     <constant name="STATUS_HIDDEN">143</constant>
     <constant name="STATUS_SUMMON_SYNC_1">194</constant>
     <constant name="STATUS_SUMMON_SYNC_2">364</constant>
@@ -416,6 +417,97 @@
             <key>300</key>
             <value>20000021</value>
         </pair>
+    </constant>
+    <constant name="DEMON_CRYSTALS">
+        <!-- Format: crystal item ID => demon race IDs -->
+        <pair>
+            <key>701</key>
+            <value>1,14,56,112</value>
+        </pair>
+        <pair>
+            <key>702</key>
+            <value>7,51,62,107</value>
+        </pair>
+        <pair>
+            <key>703</key>
+            <value>6,52,58,108</value>
+        </pair>
+        <pair>
+            <key>704</key>
+            <value>5,55,57,104</value>
+        </pair>
+        <pair>
+            <key>705</key>
+            <value>2-4,15,16,63,64,110,111,113</value>
+        </pair>
+        <pair>
+            <key>706</key>
+            <value>11,103</value>
+        </pair>
+        <pair>
+            <key>707</key>
+            <value>10,106</value>
+        </pair>
+        <pair>
+            <key>708</key>
+            <value>8,109</value>
+        </pair>
+        <pair>
+            <key>709</key>
+            <value>12,102</value>
+        </pair>
+        <pair>
+            <key>710</key>
+            <value>9,105</value>
+        </pair>
+        <pair>
+            <key>711</key>
+            <value>53,59</value>
+        </pair>
+        <pair>
+            <key>712</key>
+            <value>13,61</value>
+        </pair>
+        <pair>
+            <key>713</key>
+            <value>60</value>
+        </pair>
+        <pair>
+            <key>714</key>
+            <value>54,101</value>
+        </pair>
+    </constant>
+    <constant name="DEMON_QUEST_XP">
+        <!-- Format: Bonus XP gained at 5,10,20,30...100,150,200... -->
+        <element>1500</element>
+        <element>5000</element>
+        <element>15000</element>
+        <element>30000</element>
+        <element>50000</element>
+        <element>100000</element>
+        <element>0</element>
+        <element>0</element>
+        <element>0</element>
+        <element>0</element>
+        <element>300000</element>
+        <element>600000</element>
+        <element>1000000</element>
+        <element>1500000</element>
+        <element>2000000</element>
+        <element>2500000</element>
+        <element>3000000</element>
+        <element>3500000</element>
+        <element>4000000</element>
+        <element>4500000</element>
+        <element>5000000</element>
+        <element>5500000</element>
+        <element>6000000</element>
+        <element>6500000</element>
+        <element>7000000</element>
+        <element>7500000</element>
+        <element>8000000</element>
+        <element>9000000</element>
+        <element>10000000</element>
     </constant>
     <constant name="DEPO_MAP_DEMON">
         <!-- Format: item => rental days -->

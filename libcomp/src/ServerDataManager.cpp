@@ -33,11 +33,14 @@
 
 // object Includes
 #include <DemonPresent.h>
+#include <DemonQuestReward.h>
 #include <DropSet.h>
 #include <EnchantSetData.h>
 #include <EnchantSpecialData.h>
 #include <Event.h>
 #include <MiSStatusData.h>
+#include <MiZoneBasicData.h>
+#include <MiZoneData.h>
 #include <ServerNPC.h>
 #include <ServerObject.h>
 #include <ServerShop.h>
@@ -119,6 +122,11 @@ const std::shared_ptr<objects::ServerZone> ServerDataManager::GetZoneData(
     return zone;
 }
 
+const std::list<std::pair<uint32_t, uint32_t>> ServerDataManager::GetFieldZoneIDs()
+{
+    return mFieldZoneIDs;
+}
+
 const std::unordered_map<uint32_t, std::set<uint32_t>> ServerDataManager::GetAllZoneIDs()
 {
     std::unordered_map<uint32_t, std::set<uint32_t>> zoneIDs;
@@ -183,6 +191,12 @@ const std::shared_ptr<objects::DemonPresent> ServerDataManager::GetDemonPresentD
     return GetObjectByID<uint32_t, objects::DemonPresent>(id, mDemonPresentData);
 }
 
+std::unordered_map<uint32_t,
+    std::shared_ptr<objects::DemonQuestReward>> ServerDataManager::GetDemonQuestRewardData()
+{
+    return mDemonQuestRewardData;
+}
+
 const std::shared_ptr<objects::DropSet> ServerDataManager::GetDropSetData(uint32_t id)
 {
     return GetObjectByID<uint32_t, objects::DropSet>(id, mDropSetData);
@@ -210,6 +224,13 @@ bool ServerDataManager::LoadData(gsl::not_null<DataStore*> pDataStore,
             LOG_DEBUG("Loading demon present server definitions...\n");
             failure = !LoadObjectsFromFile<objects::DemonPresent>(
                 pDataStore, "/data/demonpresent.xml", definitionManager);
+        }
+        
+        if(!failure)
+        {
+            LOG_DEBUG("Loading demon quest reward server definitions...\n");
+            failure = !LoadObjectsFromFile<objects::DemonQuestReward>(
+                pDataStore, "/data/demonquestreward.xml", definitionManager);
         }
 
         if(!failure)
@@ -468,22 +489,37 @@ namespace libcomp
         auto id = zone->GetID();
         auto dynamicMapID = zone->GetDynamicMapID();
 
-        if(definitionManager && !definitionManager->GetZoneData(id))
+        bool isField = false;
+        if(definitionManager)
         {
-            LOG_WARNING(libcomp::String("Skipping unknown zone: %1%2\n").Arg(id)
-                .Arg(id != dynamicMapID ? libcomp::String(" (%1)").Arg(dynamicMapID) : ""));
-            return true;
+            auto def = definitionManager->GetZoneData(id);
+            if(!def)
+            {
+                LOG_WARNING(libcomp::String("Skipping unknown zone: %1%2\n")
+                    .Arg(id).Arg(id != dynamicMapID ? libcomp::String(" (%1)")
+                        .Arg(dynamicMapID) : ""));
+                return true;
+            }
+
+            isField = def->GetBasic()->GetType() == 2;
         }
 
         if(mZoneData.find(id) != mZoneData.end() &&
             mZoneData[id].find(dynamicMapID) != mZoneData[id].end())
         {
-            LOG_ERROR(libcomp::String("Duplicate zone encountered: %1%2\n").Arg(id)
-                .Arg(id != dynamicMapID ? libcomp::String(" (%1)").Arg(dynamicMapID) : ""));
+            LOG_ERROR(libcomp::String("Duplicate zone encountered: %1%2\n")
+                .Arg(id).Arg(id != dynamicMapID ? libcomp::String(" (%1)")
+                    .Arg(dynamicMapID) : ""));
             return false;
         }
 
         mZoneData[id][dynamicMapID] = zone;
+
+        if(isField)
+        {
+            mFieldZoneIDs.push_back(std::pair<uint32_t, uint32_t>(id,
+                dynamicMapID));
+        }
 
         return true;
     }
@@ -703,6 +739,30 @@ namespace libcomp
         }
 
         mDemonPresentData[id] = present;
+
+        return true;
+    }
+
+    template<>
+    bool ServerDataManager::LoadObject<objects::DemonQuestReward>(const tinyxml2::XMLDocument& doc,
+        const tinyxml2::XMLElement *objNode, DefinitionManager* definitionManager)
+    {
+        (void)definitionManager;
+
+        auto reward = std::shared_ptr<objects::DemonQuestReward>(new objects::DemonQuestReward);
+        if(!reward->Load(doc, *objNode))
+        {
+            return false;
+        }
+    
+        uint32_t id = reward->GetID();
+        if(mDemonQuestRewardData.find(id) != mDemonQuestRewardData.end())
+        {
+            LOG_ERROR(libcomp::String("Duplicate demon quest reward entry encountered: %1\n").Arg(id));
+            return false;
+        }
+
+        mDemonQuestRewardData[id] = reward;
 
         return true;
     }

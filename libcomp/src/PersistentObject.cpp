@@ -44,6 +44,7 @@
 #include "ClanMember.h"
 #include "Demon.h"
 #include "DemonBox.h"
+#include "DemonQuest.h"
 #include "EntityStats.h"
 #include "Expertise.h"
 #include "FriendSettings.h"
@@ -352,6 +353,9 @@ bool PersistentObject::Initialize()
 
     RegisterType(typeid(objects::DemonBox), objects::DemonBox::GetMetadata(),
         []() {  return (PersistentObject*)new objects::DemonBox(); });
+
+    RegisterType(typeid(objects::DemonQuest), objects::DemonQuest::GetMetadata(),
+        []() {  return (PersistentObject*)new objects::DemonQuest(); });
 
     RegisterType(typeid(objects::EntityStats), objects::EntityStats::GetMetadata(),
         []() {  return (PersistentObject*)new objects::EntityStats(); });

@@ -1,5 +1,5 @@
 /**
- * @file server/channel/src/packets/game/DismissDemon.cpp
+ * @file server/channel/src/packets/game/DemonDismiss.cpp
  * @ingroup channel
  *
  * @author HACKfrost
@@ -41,7 +41,7 @@
 
 using namespace channel;
 
-void DemonDismiss(const std::shared_ptr<ChannelServer> server,
+void DismissDemon(const std::shared_ptr<ChannelServer> server,
     const std::shared_ptr<ChannelClientConnection> client,
     int64_t demonID)
 {
@@ -69,19 +69,18 @@ void DemonDismiss(const std::shared_ptr<ChannelServer> server,
     int8_t slot = demon->GetBoxSlot();
     auto box = std::dynamic_pointer_cast<objects::DemonBox>(
         libcomp::PersistentObject::GetObjectByUUID(demon->GetDemonBox()));
-    if(box)
-    {
-        box->SetDemons((size_t)slot, NULLUUID);
-        characterManager->SendDemonBoxData(client, box->GetBoxID(),
-            { slot });
-        dbChanges->Update(box);
-    }
 
     characterManager->DeleteDemon(demon, dbChanges);
+    if(box)
+    {
+        characterManager->SendDemonBoxData(client, box->GetBoxID(),
+            { slot });
+    }
+
     server->GetWorldDatabase()->QueueChangeSet(dbChanges);
 }
 
-bool Parsers::DismissDemon::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::DemonDismiss::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {
@@ -100,7 +99,7 @@ bool Parsers::DismissDemon::Parse(libcomp::ManagerPacket *pPacketManager,
         return false;
     }
 
-    server->QueueWork(DemonDismiss, server, client, demonID);
+    server->QueueWork(DismissDemon, server, client, demonID);
 
     return true;
 }

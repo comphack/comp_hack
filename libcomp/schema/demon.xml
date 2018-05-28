@@ -8,6 +8,7 @@
         <member type="s32" name="SoulPoints" min="0" max="100000"/>
         <member type="u16" name="Familiarity" min="0" max="10000"/>
         <member type="bool" name="Locked"/>
+        <member type="bool" name="HasQuest"/>
         
         <!-- Collections -->
         <member type="list" name="AcquiredSkills">
@@ -48,6 +49,48 @@
         </member>
         <member type="u32" name="RentalExpiration"/>
     </object>
+    <object name="DemonQuest" location="world" scriptenabled="true">
+        <member type="pref" name="Demon" key="true" unique="true"/>
+        <member type="pref" name="Character" key="true" unique="true"/>
+        <member type="enum" name="Type" underlying="int8_t">
+            <value num="1">KILL</value>
+            <value>FUSE</value>
+            <value>CONTRACT</value>
+            <value>ITEM</value>
+            <value>CRYSTALLIZE</value>
+            <value>ENCHANT_TAROT</value>
+            <value>ENCHANT_SOUL</value>
+            <value>EQUIPMENT_MOD</value>
+            <value>SYNTH_MELEE</value>
+            <value>SYNTH_GUN</value>
+            <value>PLASMA</value>
+        </member>
+        <member type="map" name="Targets">
+            <key type="u32"/>   <!-- Type -->
+            <value type="s32"/> <!-- Count -->
+        </member>
+        <member type="map" name="TargetCurrentCounts">
+            <key type="u32"/>   <!-- Type -->
+            <value type="s32"/> <!-- Count -->
+        </member>
+        <member type="map" name="RewardItems">
+            <key type="u32"/>   <!-- Type -->
+            <value type="u16"/> <!-- Count -->
+        </member>
+        <member type="s32" name="XPReward"/>
+        <member type="map" name="BonusItems">
+            <key type="u32"/>   <!-- Type -->
+            <value type="u16"/> <!-- Count -->
+        </member>
+        <member type="list" name="BonusTitles">
+            <element type="u16"/>
+        </member>
+        <member type="list" name="BonusXP">
+            <element type="u32"/>
+        </member>
+        <member type="u32" name="ChanceItem"/>
+        <member type="u16" name="ChanceItemCount"/>
+    </object>
     <object name="DemonPresent" persistent="false">
         <member type="u32" name="ID"/>
         <member type="list" name="CommonItems">
@@ -59,5 +102,37 @@
         <member type="list" name="RareItems">
             <element type="u32"/>
         </member>
+    </object>
+    <object name="DemonQuestReward" persistent="false">
+        <member type="u32" name="ID"/>
+        <member type="set" name="QuestTypes">
+            <element type="s8"/>
+        </member>
+        <member type="u32" name="GroupID"/>
+        <member type="u16" name="SequenceStart"/>
+        <member type="u16" name="SequenceRepeat"/>
+        <member type="u16" name="SequenceEnd"/>
+        <member type="u8" name="RaceID"/>
+        <member type="u8" name="LevelMin" min="1" max="99" default="1"/>
+        <member type="u8" name="LevelMax" min="1" max="99" default="99"/>
+        <member type="u16" name="FamiliarityMin" max="10000"/>
+        <member type="u16" name="FamiliarityMax" max="10000" default="10000"/>
+        <member type="list" name="NormalDropSets">
+            <element type="u32"/>
+        </member>
+        <member type="list" name="ChanceDropSets">
+            <element type="u32"/>
+        </member>
+        <member type="enum" name="BonusMode" underlying="uint8_t">
+            <value>SINGLE</value>
+            <value>ALL</value>
+        </member>
+        <member type="list" name="BonusDropSets">
+            <element type="u32"/>
+        </member>
+        <member type="list" name="BonusTitles">
+            <element type="u16"/>
+        </member>
+        <member type="u32" name="BonusXP"/>
     </object>
 </objgen>

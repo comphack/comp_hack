@@ -1,10 +1,10 @@
 /**
- * @file server/channel/src/packets/game/TitleList.cpp
+ * @file server/channel/src/packets/game/DemonQuestCancel.cpp
  * @ingroup channel
  *
  * @author HACKfrost
  *
- * @brief Request from the list of available titles.
+ * @brief Request from the client to cancel the active demon quest.
  *
  * This file is part of the Channel Server (channel).
  *
@@ -27,66 +27,59 @@
 #include "Packets.h"
 
 // libcomp Includes
+#include <Log.h>
+#include <ManagerPacket.h>
 #include <Packet.h>
 #include <PacketCodes.h>
 
- // object Includes
-#include <Character.h>
-#include <CharacterProgress.h>
+// object Includes
+#include <Demon.h>
+#include <DemonQuest.h>
 
- // channel Includes
+// channel Includes
 #include "ChannelServer.h"
+#include "EventManager.h"
 
 using namespace channel;
 
-bool Parsers::TitleList::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::DemonQuestCancel::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {
-    (void)pPacketManager;
-
     if(p.Size() != 0)
     {
         return false;
     }
+
+    // Even though only one demon quest can be active at once, its kinda
+    // strange that no demon ID is supplied as confirmation.
+
+    auto server = std::dynamic_pointer_cast<ChannelServer>(
+        pPacketManager->GetServer());
 
     auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
         connection);
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
     auto character = cState->GetEntity();
-    auto progress = character->GetProgress().Get();
-    
+    auto dQuest = character->GetDemonQuest().Get();
+
     libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_TITLE_LIST);
-    reply.WriteS32Little(0);
-    reply.WriteU8(character->GetCurrentTitle());
+    reply.WritePacketCode(
+        ChannelToClientPacketCode_t::PACKET_DEMON_QUEST_CANCEL);
 
-    auto specialTitles = progress->GetSpecialTitles();
-
-    reply.WriteS16Little((int16_t)specialTitles.size());
-    reply.WriteArray(&specialTitles, (uint32_t)specialTitles.size());
-
-    auto titles = progress->GetTitles();
-
-    reply.WriteS32Little((int32_t)titles.size());
-    for(int16_t titleID : titles)
+    auto demon = dQuest ? std::dynamic_pointer_cast<objects::Demon>(
+        libcomp::PersistentObject::GetObjectByUUID(dQuest->GetDemon()))
+        : nullptr;
+    if(demon && server->GetEventManager()->EndDemonQuest(client, 3) == 0)
     {
-        reply.WriteS16Little(titleID);
+        reply.WriteS8(0);   // Success
+        reply.WriteS16Little(0);    // New sequence count?
     }
-
-    for(size_t i = 0; i < (size_t)(MAX_TITLE_PARTS * 5); i++)
+    else
     {
-        if(i % MAX_TITLE_PARTS == 0)
-        {
-            // Write count for each chunk of IDs
-            reply.WriteS32Little((int32_t)(i / MAX_TITLE_PARTS));
-        }
-
-        reply.WriteS16Little(character->GetCustomTitles(i));
+        reply.WriteS8(-1);  // Failed
     }
-
-    reply.WriteU8(character->GetTitlePrioritized() ? 1 : 0);
 
     client->SendPacket(reply);
 

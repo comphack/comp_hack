@@ -62,6 +62,7 @@
 // channel Includes
 #include "ChannelServer.h"
 #include "CharacterManager.h"
+#include "EventManager.h"
 #include "FusionTables.h"
 
 using namespace channel;
@@ -1539,6 +1540,10 @@ int8_t FusionManager::ProcessFusion(
     }
 
     server->GetWorldDatabase()->QueueChangeSet(changes);
+
+    // Update demon quest if active
+    server->GetEventManager()->UpdateDemonQuestCount(client,
+        objects::DemonQuest::Type_t::FUSE, resultDemonType, 1);
 
     return 0;
 }

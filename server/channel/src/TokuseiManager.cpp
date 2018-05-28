@@ -789,7 +789,7 @@ std::unordered_map<int32_t, bool> TokuseiManager::Recalculate(const std::list<st
             eState->GetCalculatedState()->SetExistingTokuseiAspects(aspects);
 
             // Update constant status effects
-            AddStatusEffectMap m;
+            StatusEffectChanges effects;
 
             auto currentEffects = eState->GetStatusEffects();
             for(auto statusPair : mStatusEffectTokusei)
@@ -809,17 +809,19 @@ std::unordered_map<int32_t, bool> TokuseiManager::Recalculate(const std::list<st
 
                 if(apply && !exists)
                 {
-                    m[statusPair.first] = std::pair<uint8_t, bool>(1, true);
+                    effects[statusPair.first] = StatusEffectChange(
+                        statusPair.first, 1, true);
                 }
                 else if(!apply && exists)
                 {
-                    m[statusPair.first] = std::pair<uint8_t, bool>(0, true);
+                    effects[statusPair.first] = StatusEffectChange(
+                        statusPair.first, 0, true);
                 }
             }
 
-            if(m.size() > 0)
+            if(effects.size() > 0)
             {
-                eState->AddStatusEffects(m,
+                eState->AddStatusEffects(effects,
                     mServer.lock()->GetDefinitionManager());
             }
 

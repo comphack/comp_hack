@@ -751,19 +751,6 @@ private:
         const std::shared_ptr<ChannelClientConnection>& client);
 
     /**
-     * Determine what item should be given as present from a partner demon as the
-     * result of a familiarity adjusting skill.
-     * @param demonType Partner demon type
-     * @param level Partner demon level
-     * @param familiarity Partner demon current familiarity
-     * @param rarity Output parameter to store the rarity level of the item if
-     *  one is returned
-     * @return Item type to give as a present or zero if none will be given
-     */
-    uint32_t GetDemonPresent(uint32_t demonType, int8_t level, uint16_t familiarity,
-        int8_t& rarity) const;
-
-    /**
      * Give a demon present to the player character as the result of a familiarity
      * adjusting skill.
      * @param client Pointer to the client connection

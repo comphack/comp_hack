@@ -21,3 +21,11 @@ c.Disconnect();
 c <- ChannelClient();
 sleep(3);
 C(LoginWithCharacter(c, account_idx, "Test1"));
+
+// Cleanup after...
+c.Disconnect();
+c <- LobbyClient();
+C(LoginAccountToLobby(c, account_idx));
+C(c.GetCharacterList());
+C(-1 != c.GetCharacterID("Test1"));
+C(c.DeleteCharacter(c.GetCharacterID("Test1")));

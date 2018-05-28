@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="MiCSoundData" persistent="false">
+        <member type="u32" name="ID"/>
+        <member type="string" length="36" name="path" encoding="utf8"/>
+        <member type="enum" name="location" underlying="uint8_t">
+            <value num="0">SOUND_SE</value>
+            <value num="1">SOUND_BGM</value>
+        </member>
+        <member type="u8" name="unk2"/>
+        <member type="enum" name="repeat" underlying="uint8_t">
+            <value num="0">REPEAT_NONE</value>
+            <value num="1">REPEAT_FULL</value>
+            <value num="2">REPEAT_RANGE</value>
+        </member>
+        <member type="u8" name="unk4"/>
+        <member type="f32" name="volume"/>
+        <member type="u32" name="start"/>
+        <member type="u32" name="stop"/>
+    </object>
+</objgen>

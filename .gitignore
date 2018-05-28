@@ -3,3 +3,9 @@ build*
 debian/*.log
 deps/*.zip
 binaries/
+
+*.sublime-project
+
+*.sublime-workspace
+
+tests/config\.nut

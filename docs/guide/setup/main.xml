@@ -4,7 +4,7 @@
 <chapter>
 <title>Server Setup</title>
 
-<para>This chapter described how to install and configure the server and related components.</para>
+<para>This chapter describes how to install and configure the server and related components.</para>
 
 <xi:include href="require/main.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
 <xi:include href="linux/main.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>

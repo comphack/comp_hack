@@ -288,6 +288,7 @@ SET(${PROJECT_NAME}_SCHEMA
     schema/binarydata/cmultitalkdata.xml
     schema/binarydata/cpolygonmoviedata.xml
     schema/binarydata/cquest.xml
+    schema/binarydata/csounddata.xml
     schema/binarydata/ctalkmessagedata.xml
     schema/binarydata/czonerelationdata.xml
     schema/binarydata/devilbookdata.xml
@@ -835,6 +836,8 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     MiCIconData.cpp
     MiItemData.h
     MiItemData.cpp
+    MiCSoundData.h
+    MiCSoundData.cpp
 )
 
 COVERALLS_SOURCES(${${PROJECT_NAME}_SRCS})

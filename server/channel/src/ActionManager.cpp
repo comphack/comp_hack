@@ -619,7 +619,7 @@ bool ActionManager::AddRemoveItems(ActionContext& ctx)
                 uint32_t rewardItem = adds.size() > 0
                     ? adds.begin()->first : 0;
                 uint16_t rewardItemCount = adds.size() > 0
-                    ? (uint16_t)adds.begin()->second : 0;
+                    ? (uint16_t)adds.begin()->second : (uint16_t)0;
 
                 RecordTimeTrial(ctx, rewardItem, rewardItemCount);
             }

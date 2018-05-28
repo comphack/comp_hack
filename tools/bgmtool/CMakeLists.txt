@@ -1,6 +1,6 @@
 # This file is part of COMP_hack.
 #
-# Copyright (C) 2010-2016 COMP_hack Team <compomega@tutanota.com>
+# Copyright (C) 2010-2018 COMP_hack Team <compomega@tutanota.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -15,19 +15,21 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-ADD_SUBDIRECTORY(bdpatch)
-ADD_SUBDIRECTORY(bgmtool)
-ADD_SUBDIRECTORY(capgrep)
-ADD_SUBDIRECTORY(decrypt)
-ADD_SUBDIRECTORY(encrypt)
-ADD_SUBDIRECTORY(logger)
-ADD_SUBDIRECTORY(objgen)
-ADD_SUBDIRECTORY(patcher)
-ADD_SUBDIRECTORY(rehash)
-ADD_SUBDIRECTORY(updater)
-ADD_SUBDIRECTORY(capfilter)
-ADD_SUBDIRECTORY(map)
+CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
 
-IF(NOT WIN32)
-	ADD_SUBDIRECTORY(manager)
-ENDIF(NOT WIN32)
+PROJECT(comp_bgmtool)
+
+MESSAGE("** Configuring ${PROJECT_NAME} **")
+
+SET(${PROJECT_NAME}_SRCS
+    src/bgmtool.cpp
+)
+
+SET(${PROJECT_NAME}_HDRS
+)
+
+ADD_EXECUTABLE(${PROJECT_NAME} ${${PROJECT_NAME}_SRCS} ${${PROJECT_NAME}_HDRS})
+
+SET_TARGET_PROPERTIES(${PROJECT_NAME} PROPERTIES FOLDER "Tools")
+
+INSTALL(TARGETS ${PROJECT_NAME} DESTINATION ${COMP_INSTALL_DIR})

@@ -37,13 +37,13 @@ namespace libcomp
 #define VERSION_MAJOR (3)
 
 /// Minor release (1 = SP1).
-#define VERSION_MINOR (0)
+#define VERSION_MINOR (8)
 
 /// Patch version (a hotfix).
-#define VERSION_PATCH (0)
+#define VERSION_PATCH (9)
 
 /// Codename for the version.
-#define VERSION_CODENAME "Lilim"
+#define VERSION_CODENAME "Lilim UNSTABLE"
 
 /// HACK format magic.
 #define HACK_FORMAT_MAGIC (0x4B434148)
@@ -145,6 +145,12 @@ namespace libcomp
 /// ID of the "Gun knowledge" expertise.
 #define EXPERTISE_GUN_KNOWLEDGE (34)
 
+/// ID of the "Swordsmith" chain expertise.
+#define EXPERTISE_CHAIN_SWORDSMITH (40)
+
+/// ID of the "Arms maker" chain expertise.
+#define EXPERTISE_CHAIN_ARMS_MAKER (46)
+
 /// ID of the "Synthesis" chain expertise.
 #define EXPERTISE_CHAIN_SYNTHESIS (49)
 
@@ -175,6 +181,12 @@ namespace libcomp
 
 /// Number of members a clan can have.
 #define MAX_CLAN_COUNT (100)
+
+/// Number of names that can be in the blacklist per account, per world.
+#define MAX_BLACKLIST_COUNT (50)
+
+/// Number of title entries that can be used to build a custom title.
+#define MAX_TITLE_PARTS (13)
 
 /// Number of items allowed in the post before it starts to display wrong.
 /// Essentially the number of items cannot exceed 10000 but the "pages" in
@@ -346,6 +358,10 @@ namespace libcomp
 
 /// Indicates that a weapon mod slot causes repair costs to be reduced
 #define MOD_SLOT_REPAIR_REDUCTION_TYPE (10)
+
+/// Indicates that a tarot or soul option has been enabled for an item
+/// that by default cannot have an effect added
+#define ENCHANT_ENABLE_EFFECT (0x7FFF)
 
 /// Experience required to proceed from the indexed level to the next
 const unsigned long long LEVEL_XP_REQUIREMENTS[] = {

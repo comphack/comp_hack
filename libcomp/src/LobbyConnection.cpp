@@ -35,13 +35,13 @@ using namespace libcomp;
 
 LobbyConnection::LobbyConnection(asio::io_service& io_service,
     ConnectionMode_t mode) : libcomp::EncryptedConnection(io_service),
-    mMode(mode)
+    mMode(mode), mListenPort(18666)
 {
 }
 
 LobbyConnection::LobbyConnection(asio::ip::tcp::socket& socket,
     DH *pDiffieHellman) : libcomp::EncryptedConnection(socket, pDiffieHellman),
-    mMode(ConnectionMode_t::MODE_NORMAL)
+    mMode(ConnectionMode_t::MODE_NORMAL), mListenPort(18666)
 {
 }
 
@@ -97,7 +97,7 @@ void LobbyConnection::ConnectionSuccess()
 
                 /// @todo Read the server port from the configuraton
                 /// or have the server pass it in.
-                packet.WriteU32Big(3 | (18666 << 16));
+                packet.WriteU32Big(3 | ((uint32_t)mListenPort << 16));
                 packet.WriteU32Big(8);
 
                 // Send a packet after connecting.
@@ -201,4 +201,14 @@ void LobbyConnection::ParseExtension(libcomp::Packet& packet)
 {
     // Just parse the extension.
     (void)ParseExtensionConnection(packet);
+}
+
+void LobbyConnection::SetListenPort(uint16_t port)
+{
+    mListenPort = port;
+}
+
+uint16_t LobbyConnection::GetListenPort() const
+{
+    return mListenPort;
 }

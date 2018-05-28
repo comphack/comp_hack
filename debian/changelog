@@ -1,3 +1,51 @@
+comphack (2.2.1.7) xenial; urgency=low
+
+  * Found a bug in the CMake scripts that was stripping debug symbols.
+
+ -- COMP Omega <compomega@tutanota.com>  Sun, 13 May 2018 09:16:21 -0600
+
+comphack (2.2.1.6) xenial; urgency=low
+
+  * Maybe I need to add pkg-create-dbgsym?
+
+ -- COMP Omega <compomega@tutanota.com>  Sat, 12 May 2018 17:31:32 -0600
+
+comphack (2.2.1.5) xenial; urgency=low
+
+  * Use a new version of debhelper for dbgsym packages?
+
+ -- COMP Omega <compomega@tutanota.com>  Sat, 12 May 2018 16:33:03 -0600
+
+comphack (2.2.1.4) xenial; urgency=low
+
+  * No clue what I'm doing!
+
+ -- COMP Omega <compomega@tutanota.com>  Sat, 12 May 2018 12:19:59 -0600
+
+comphack (2.2.1.3) xenial; urgency=low
+
+  * Trying a different way to get debug symbols.
+
+ -- COMP Omega <compomega@tutanota.com>  Sat, 12 May 2018 11:33:28 -0600
+
+comphack (2.2.1.2) xenial; urgency=low
+
+  * Added debug package?
+
+ -- COMP Omega <compomega@tutanota.com>  Sat, 12 May 2018 10:51:21 -0600
+
+comphack (2.2.1.1) xenial; urgency=low
+
+  * Added debug package.
+
+ -- COMP Omega <compomega@tutanota.com>  Sat, 12 May 2018 10:00:13 -0600
+
+comphack (2.2.1) xenial; urgency=low
+
+  * Hotfix 1 for the Kodama SP2 server release.
+
+ -- COMP Omega <compomega@tutanota.com>  Wed, 09 May 2018 21:49:19 -0600
+
 comphack (2.2.0) xenial; urgency=low
 
   * Kodama SP2 server release.

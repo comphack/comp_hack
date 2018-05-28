@@ -38,6 +38,7 @@
 #include "Object.h"
 
 // Standard C++11 Includes
+#include <set>
 #include <unordered_map>
 
 namespace objects
@@ -45,10 +46,15 @@ namespace objects
 class EnchantSetData;
 class EnchantSpecialData;
 class MiAIData;
+class MiBlendData;
+class MiBlendExtData;
 class MiCItemData;
+class MiCorrectTbl;
 class MiCZoneRelationData;
 class MiDevilBookData;
 class MiDevilData;
+class MiDevilEquipmentData;
+class MiDevilEquipmentItemData;
 class MiDevilLVUpRateData;
 class MiDisassemblyData;
 class MiDisassemblyTriggerData;
@@ -66,6 +72,7 @@ class MiModificationTriggerData;
 class MiModifiedEffectData;
 class MiNPCBarterData;
 class MiONPCData;
+class MiQuestBonusCodeData;
 class MiQuestData;
 class MiShopProductData;
 class MiSItemData;
@@ -73,7 +80,9 @@ class MiSkillData;
 class MiSpotData;
 class MiSStatusData;
 class MiStatusData;
+class MiSynthesisData;
 class MiTimeLimitData;
+class MiTitleData;
 class MiTriUnionSpecialData;
 class MiWarpPointData;
 class MiZoneData;
@@ -104,16 +113,35 @@ public:
     /**
      * Get the client-side AI definition corresponding to an ID
      * @param id Client-side AI to retrieve
-     * @return Pointer to the matching client-side AI definition, null if it does not exist
+     * @return Pointer to the matching client-side AI definition, null if
+     *  it does not exist
      */
     const std::shared_ptr<objects::MiAIData> GetAIData(uint32_t id);
 
     /**
+     * Get the item mixing definition corresponding to an ID
+     * @param id Item mixing ID to retrieve
+     * @return Pointer to the matching item mixing definition, null if
+     *  it does not exist
+     */
+    const std::shared_ptr<objects::MiBlendData> GetBlendData(uint32_t id);
+
+    /**
+     * Get the item mixing extension definition corresponding to an ID
+     * @param id Item mixing extension ID to retrieve
+     * @return Pointer to the matching item mixing extension definition,
+     *  null if it does not exist
+     */
+    const std::shared_ptr<objects::MiBlendExtData> GetBlendExtData(uint32_t id);
+
+    /**
      * Get the devil book definition corresponding to an ID
      * @param id Devil book ID to retrieve
-     * @return Pointer to the matching devil book definition, null if it does not exist
+     * @return Pointer to the matching devil book definition, null if it
+     *  does not exist
      */
-    const std::shared_ptr<objects::MiDevilBookData> GetDevilBookData(uint32_t id);
+    const std::shared_ptr<objects::MiDevilBookData> GetDevilBookData(
+        uint32_t id);
 
     /**
      * Get all devil book definitions by definition ID
@@ -125,16 +153,37 @@ public:
     /**
      * Get the devil definition corresponding to an ID
      * @param id Devil ID to retrieve
-     * @return Pointer to the matching devil definition, null if it does not exist
+     * @return Pointer to the matching devil definition, null if it does
+     *  not exist
      */
     const std::shared_ptr<objects::MiDevilData> GetDevilData(uint32_t id);
 
     /**
      * Get a devil definition corresponding to a name
      * @param name Devil name to retrieve
-     * @return Pointer to the matching devil definition, null if it does not exist
+     * @return Pointer to the matching devil definition, null if it
+     *  does not exist
      */
-    const std::shared_ptr<objects::MiDevilData> GetDevilData(const libcomp::String& name);
+    const std::shared_ptr<objects::MiDevilData> GetDevilData(
+        const libcomp::String& name);
+
+    /**
+     * Get the devil equipment definition corresponding to a skill ID
+     * @param id Devil equipment skill ID to retrieve
+     * @return Pointer to the matching devil equipment definition, null if it
+     *  does not exist
+     */
+    const std::shared_ptr<objects::MiDevilEquipmentData>
+        GetDevilEquipmentData(uint32_t skillID);
+
+    /**
+     * Get the devil equipment item definition corresponding to an ID
+     * @param id Devil equipment item ID to retrieve
+     * @return Pointer to the matching devil equipment item definition, null if
+     *  it does not exist
+     */
+    const std::shared_ptr<objects::MiDevilEquipmentItemData>
+        GetDevilEquipmentItemData(uint32_t itemID);
 
     /**
      * Get the devil level up information corresponding to an ID
@@ -142,7 +191,8 @@ public:
      * @return Pointer to the matching devil level up information, null if it
      *  does not exist
      */
-    const std::shared_ptr<objects::MiDevilLVUpRateData> GetDevilLVUpRateData(uint32_t id);
+    const std::shared_ptr<objects::MiDevilLVUpRateData> GetDevilLVUpRateData(
+        uint32_t id);
 
     /**
      * Get the item disassembly definition corresponding to an ID
@@ -150,7 +200,8 @@ public:
      * @return Pointer to the matching item disassembly definition, null if it
      *  does not exist
      */
-    const std::shared_ptr<objects::MiDisassemblyData> GetDisassemblyData(uint32_t id);
+    const std::shared_ptr<objects::MiDisassemblyData> GetDisassemblyData(
+        uint32_t id);
 
     /**
      * Get the item disassembly definition corresponding to an item ID
@@ -158,17 +209,17 @@ public:
      * @return Pointer to the matching item disassembly definition, null if it
      *  does not exist
      */
-    const std::shared_ptr<objects::MiDisassemblyData> GetDisassemblyDataByItemID(
-        uint32_t itemID);
+    const std::shared_ptr<objects::MiDisassemblyData>
+        GetDisassemblyDataByItemID(uint32_t itemID);
 
     /**
      * Get the item disassembly trigger definition corresponding to an ID
      * @param id Item disassembly trigger ID to retrieve
-     * @return Pointer to the matching item disassembly trigger definition, null if it
-     *  does not exist
+     * @return Pointer to the matching item disassembly trigger definition,
+     *  null if it does not exist
      */
-    const std::shared_ptr<objects::MiDisassemblyTriggerData> GetDisassemblyTriggerData(
-        uint32_t id);
+    const std::shared_ptr<objects::MiDisassemblyTriggerData>
+        GetDisassemblyTriggerData(uint32_t id);
 
     /**
      * Get all item IDs associated to disassembled items
@@ -182,7 +233,8 @@ public:
      * @return Pointer to the matching dynamic map information, null if it
      *  does not exist
      */
-    const std::shared_ptr<objects::MiDynamicMapData> GetDynamicMapData(uint32_t id);
+    const std::shared_ptr<objects::MiDynamicMapData> GetDynamicMapData(
+        uint32_t id);
 
     /**
      * Get the enchantment definition corresponding to an ID
@@ -223,15 +275,17 @@ public:
      * @return Pointer to the matching equipment set information, null
      *  if it does not exist
      */
-    const std::shared_ptr<objects::MiEquipmentSetData> GetEquipmentSetData(uint32_t id);
+    const std::shared_ptr<objects::MiEquipmentSetData> GetEquipmentSetData(
+        uint32_t id);
 
     /**
-     * Get the equipment set information corresponding to a piece of equipment in the set
+     * Get the equipment set information corresponding to a piece of equipment
+     * in the set
      * @param equipmentID Equipment ID to retrieve sets for
      * @return List of pointers to the matching equipment set information
      */
-    std::list<std::shared_ptr<objects::MiEquipmentSetData>> GetEquipmentSetDataByItem(
-        uint32_t equipmentID);
+    std::list<std::shared_ptr<objects::MiEquipmentSetData>>
+        GetEquipmentSetDataByItem(uint32_t equipmentID);
 
     /**
      * Get the item exchange data corresponding to an ID
@@ -239,7 +293,8 @@ public:
      * @return Pointer to the matching item exchange information, null
      *  if it does not exist
      */
-    const std::shared_ptr<objects::MiExchangeData> GetExchangeData(uint32_t id);
+    const std::shared_ptr<objects::MiExchangeData> GetExchangeData(
+        uint32_t id);
 
     /**
      * Get the character expertise information corresponding to an ID
@@ -247,15 +302,18 @@ public:
      * @return Pointer to the matching character expertise information, null
      *  if it does not exist
      */
-    const std::shared_ptr<objects::MiExpertData> GetExpertClassData(uint32_t id);
+    const std::shared_ptr<objects::MiExpertData> GetExpertClassData(
+        uint32_t id);
 
     /**
      * Get the list of fusion range level and demon ID pairs associated to
      * the supplied demon race
      * @param raceID Demon race ID
-     * @return List of maximum fusion range level (key) and demon ID (value) pairs
+     * @return List of maximum fusion range level (key) and demon ID
+     *  (value) pairs
      */
-    const std::list<std::pair<uint8_t, uint32_t>> GetFusionRanges(uint8_t raceID);
+    const std::list<std::pair<uint8_t, uint32_t>> GetFusionRanges(
+        uint8_t raceID);
 
     /**
      * Get the human NPC definition corresponding to an ID
@@ -268,16 +326,19 @@ public:
     /**
      * Get the item definition corresponding to an ID
      * @param id Item ID to retrieve
-     * @return Pointer to the matching item definition, null if it does not exist
+     * @return Pointer to the matching item definition, null if it does
+     *  not exist
      */
     const std::shared_ptr<objects::MiItemData> GetItemData(uint32_t id);
 
     /**
      * Get the item definition corresponding to a name
      * @param name Item name to retrieve
-     * @return Pointer to the matching item definition, null if it does not exist
+     * @return Pointer to the matching item definition, null if it does
+     *  not exist
      */
-    const std::shared_ptr<objects::MiItemData> GetItemData(const libcomp::String& name);
+    const std::shared_ptr<objects::MiItemData> GetItemData(
+        const libcomp::String& name);
 
     /**
      * Get the item modification definition corresponding to an ID
@@ -285,7 +346,8 @@ public:
      * @return Pointer to the matching item modification definition, null if it
      *  does not exist
      */
-    const std::shared_ptr<objects::MiModificationData> GetModificationData(uint32_t id);
+    const std::shared_ptr<objects::MiModificationData> GetModificationData(
+        uint32_t id);
 
     /**
      * Get the item modification definition corresponding to an item ID
@@ -293,35 +355,37 @@ public:
      * @return Pointer to the matching item modification definition, null if it
      *  does not exist
      */
-    const std::shared_ptr<objects::MiModificationData> GetModificationDataByItemID(
-        uint32_t itemID);
+    const std::shared_ptr<objects::MiModificationData>
+        GetModificationDataByItemID(uint32_t itemID);
 
     /**
-     * Get the item modification extra effect definition corresponding to a group ID,
-     * slot and subID
+     * Get the item modification extra effect definition corresponding to a
+     * group ID, slot and subID
      * @param groupID Item modification extra effect groupID
      * @param groupID Item modification extra effect slot
      * @param groupID Item modification extra effect subID
-     * @return Pointer to the matching item modification extra effect definition,
-     *  null if it does not exist
+     * @return Pointer to the matching item modification extra effect
+     *  definition, null if it does not exist
      */
     const std::shared_ptr<objects::MiModificationExtEffectData>
-        GetModificationExtEffectData(uint8_t groupID, uint8_t slot, uint16_t subID);
+        GetModificationExtEffectData(uint8_t groupID, uint8_t slot,
+            uint16_t subID);
 
     /**
      * Get the item modification extra recipe definition corresponding to an ID
      * @param id Item modification extra recipe ID to retrieve
-     * @return Pointer to the matching item modification extra recipe definition,
-     *  null if it does not exist
+     * @return Pointer to the matching item modification extra recipe
+     *  definition, null if it does not exist
      */
     const std::shared_ptr<objects::MiModificationExtRecipeData>
         GetModificationExtRecipeData(uint32_t id);
 
     /**
-     * Get the item modification extra recipe definition corresponding to an item ID
+     * Get the item modification extra recipe definition corresponding to
+     * an item ID
      * @param itemID Item ID to retrieve the modification from
-     * @return Pointer to the matching item modification extra recipe definition,
-     *  null if it does not exist
+     * @return Pointer to the matching item modification extra recipe
+     *  definition, null if it does not exist
      */
     const std::shared_ptr<objects::MiModificationExtRecipeData>
         GetModificationExtRecipeDataByItemID(uint32_t itemID);
@@ -329,26 +393,29 @@ public:
     /**
      * Get the item modification trigger definition corresponding to an ID
      * @param id Item modification trigger ID to retrieve
-     * @return Pointer to the matching item modification trigger definition, null if it
-     *  does not exist
+     * @return Pointer to the matching item modification trigger definition,
+     *  null if it does not exist
      */
-    const std::shared_ptr<objects::MiModificationTriggerData> GetModificationTriggerData(
-        uint16_t id);
+    const std::shared_ptr<objects::MiModificationTriggerData>
+        GetModificationTriggerData(uint16_t id);
 
     /**
      * Get the item modification effect definition corresponding to an ID
      * @param id Item modification effect ID to retrieve
-     * @return Pointer to the matching item modification effect definition, null if it
-     *  does not exist
+     * @return Pointer to the matching item modification effect definition,
+     *  null if it does not exist
      */
-    const std::shared_ptr<objects::MiModifiedEffectData> GetModifiedEffectData(uint16_t id);
+    const std::shared_ptr<objects::MiModifiedEffectData> GetModifiedEffectData(
+        uint16_t id);
 
     /**
      * Get the NPC barter definition corresponding to an ID
      * @param id NPC barter ID to retrieve
-     * @return Pointer to the matching NPC barer definition, null if it does not exist
+     * @return Pointer to the matching NPC barer definition, null if it
+     *  does not exist
      */
-    const std::shared_ptr<objects::MiNPCBarterData> GetNPCBarterData(uint16_t id);
+    const std::shared_ptr<objects::MiNPCBarterData> GetNPCBarterData(
+        uint16_t id);
 
     /**
      * Get the server object NPC definition corresponding to an ID
@@ -357,6 +424,15 @@ public:
      *  does not exist
      */
     const std::shared_ptr<objects::MiONPCData> GetONPCData(uint32_t id);
+
+    /**
+     * Get the quest bonus code definition corresponding to an ID
+     * @param id Quest bonus codeID to retrieve
+     * @return Pointer to the matching quest bonus code, null if it does not
+     *  exist
+     */
+    const std::shared_ptr<objects::MiQuestBonusCodeData> GetQuestBonusCodeData(
+        uint32_t id);
 
     /**
      * Get the quest definition corresponding to an ID
@@ -368,21 +444,25 @@ public:
     /**
      * Get the shop product definition corresponding to an ID
      * @param id Shop product ID to retrieve
-     * @return Pointer to the matching shop product definition, null if it does not exist
+     * @return Pointer to the matching shop product definition, null if it
+     *  does not exist
      */
-    const std::shared_ptr<objects::MiShopProductData> GetShopProductData(uint32_t id);
+    const std::shared_ptr<objects::MiShopProductData> GetShopProductData(
+        uint32_t id);
 
     /**
      * Get the s-item definition corresponding to an ID
      * @param id S-item ID to retrieve
-     * @return Pointer to the matching s-item definition, null if it does not exist
+     * @return Pointer to the matching s-item definition, null if it does
+     *  not exist
      */
     const std::shared_ptr<objects::MiSItemData> GetSItemData(uint32_t id);
 
     /**
      * Get the skill definition corresponding to an ID
      * @param id Skill ID to retrieve
-     * @return Pointer to the matching skill definition, null if it does not exist
+     * @return Pointer to the matching skill definition, null if it does
+     *  not exist
      */
     const std::shared_ptr<objects::MiSkillData> GetSkillData(uint32_t id);
 
@@ -391,33 +471,68 @@ public:
      * @param dynamicMapID ID of the spot data to retrieve
      * @return Map of spot definitions by spot ID for the specified dynamic map
      */
-    const std::unordered_map<uint32_t,
-        std::shared_ptr<objects::MiSpotData>> GetSpotData(uint32_t dynamicMapID);
+    const std::unordered_map<uint32_t, std::shared_ptr<objects::MiSpotData>>
+        GetSpotData(uint32_t dynamicMapID);
 
     /**
      * Get the s-status definition corresponding to an ID
      * @param id S-status ID to retrieve
-     * @return Pointer to the matching s-status definition, null if it does not exist
+     * @return Pointer to the matching s-status definition, null if it does
+     *  not exist
      */
     const std::shared_ptr<objects::MiSStatusData> GetSStatusData(uint32_t id);
 
     /**
      * Get the status definition corresponding to an ID
      * @param id Status ID to retrieve
-     * @return Pointer to the matching status definition, null if it does not exist
+     * @return Pointer to the matching status definition, null if it does
+     *  not exist
      */
     const std::shared_ptr<objects::MiStatusData> GetStatusData(uint32_t id);
 
     /**
-     * Get the time limit definition corresponding to an ID
-     * @param id Status ID to retrieve
-     * @return Pointer to the matching time limit definition, null if it does not exist
+     * Get the synthesis definition corresponding to an ID
+     * @param id Synthesis ID to retrieve
+     * @return Pointer to the matching synthesis definition, null if it does
+     *  not exist
      */
-    const std::shared_ptr<objects::MiTimeLimitData> GetTimeLimitData(uint32_t id);
+    const std::shared_ptr<objects::MiSynthesisData> GetSynthesisData(
+        uint32_t id);
 
     /**
-     * Get the list of pointers to special fusion definitions by the ID of a source
-     * demon involved
+     * Get all synthesis definitions by ID
+     * @return All synthesis definitions by ID
+     */
+    std::unordered_map<uint32_t,
+        std::shared_ptr<objects::MiSynthesisData>> GetAllSynthesisData();
+
+    /**
+     * Get the time limit definition corresponding to an ID
+     * @param id Time limit ID to retrieve
+     * @return Pointer to the matching time limit definition, null if it does
+     *  not exist
+     */
+    const std::shared_ptr<objects::MiTimeLimitData> GetTimeLimitData(
+        uint32_t id);
+
+    /**
+     * Get the title definition corresponding to an ID
+     * @param id Title ID to retrieve
+     * @return Pointer to the matching title definition, null if it does
+     *  not exist
+     */
+    const std::shared_ptr<objects::MiTitleData> GetTitleData(
+        int16_t id);
+
+    /**
+     * Get the set of all (non-special) title IDs
+     * @return Set of title IDs
+     */
+    std::set<int16_t> GetTitleIDs();
+
+    /**
+     * Get the list of pointers to special fusion definitions by the ID of
+     * a source demon involved
      * @param sourceDemonTypeID ID of a source demon for the special fusion
      * @return List of pointers to special fusion definitions
      */
@@ -430,37 +545,41 @@ public:
      * @return Pointer to the matching warp point information, null
      *  if it does not exist
      */
-    const std::shared_ptr<objects::MiWarpPointData> GetWarpPointData(uint32_t id);
+    const std::shared_ptr<objects::MiWarpPointData> GetWarpPointData(
+        uint32_t id);
 
     /**
      * Get the zone definition corresponding to an ID
      * @param id Zone ID to retrieve
-     * @return Pointer to the matching zone definition, null if it does not exist
+     * @return Pointer to the matching zone definition, null if it does
+     *  not exist
      */
     const std::shared_ptr<objects::MiZoneData> GetZoneData(uint32_t id);
 
     /**
      * Get the zone relation information corresponding to an ID
      * @param id Zone relation information ID to retrieve
-     * @return Pointer to the matching zone relation information, null if it does
-     *  not exist
+     * @return Pointer to the matching zone relation information, null if
+     *  it does not exist
      */
-    const std::shared_ptr<objects::MiCZoneRelationData> GetZoneRelationData(uint32_t id);
+    const std::shared_ptr<objects::MiCZoneRelationData> GetZoneRelationData(
+        uint32_t id);
 
     /**
      * Get an enchant set by definition ID
      * @param id Definition ID of an enchant set to load
      * @return Pointer to the enchant set matching the specified id
      */
-    const std::shared_ptr<objects::EnchantSetData> GetEnchantSetData(uint32_t id);
+    const std::shared_ptr<objects::EnchantSetData> GetEnchantSetData(
+        uint32_t id);
 
     /**
      * Get the enchant set information corresponding to an effect
      * @param effectID Effect ID to retrieve sets for
      * @return List of pointers to the matching enchant set information
      */
-    std::list<std::shared_ptr<objects::EnchantSetData>> GetEnchantSetDataByEffect(
-        int16_t effectID);
+    std::list<std::shared_ptr<objects::EnchantSetData>>
+        GetEnchantSetDataByEffect(int16_t effectID);
 
     /**
      * Get all enchant set definitions by ID
@@ -474,15 +593,16 @@ public:
      * @param id Definition ID of a special enchant to load
      * @return Pointer to the special enchant matching the specified id
      */
-    const std::shared_ptr<objects::EnchantSpecialData> GetEnchantSpecialData(uint32_t id);
+    const std::shared_ptr<objects::EnchantSpecialData> GetEnchantSpecialData(
+        uint32_t id);
 
     /**
      * Get the special enchant information corresponding to an input item type
      * @param itemID Input item ID to retrieve special enchants for
      * @return List of pointers to the matching special enchant information
      */
-    std::list<std::shared_ptr<objects::EnchantSpecialData>> GetEnchantSpecialDataByInputItem(
-        uint32_t itemID);
+    std::list<std::shared_ptr<objects::EnchantSpecialData>>
+        GetEnchantSpecialDataByInputItem(uint32_t itemID);
 
     /**
      * Get a tokusei by definition ID
@@ -506,221 +626,12 @@ public:
     bool LoadAllData(gsl::not_null<DataStore*> pDataStore);
 
     /**
-     * Load the client-side AI binary data definitions
+     * Load the binary data definitions of the specified type
      * @param pDataStore Pointer to the datastore to load binary file from
      * @return true on success, false on failure
      */
-    bool LoadAIData(gsl::not_null<DataStore*> pDataStore);
-
-    /**
-     * Load the client item binary data definitions
-     * @param pDataStore Pointer to the datastore to load binary file from
-     * @return true on success, false on failure
-     */
-    bool LoadCItemData(gsl::not_null<DataStore*> pDataStore);
-
-    /**
-     * Load the client zone relation binary data definitions
-     * @param pDataStore Pointer to the datastore to load binary file from
-     * @return true on success, false on failure
-     */
-    bool LoadCZoneRelationData(gsl::not_null<DataStore*> pDataStore);
-
-    /**
-     * Load the devil book binary data definitions
-     * @param pDataStore Pointer to the datastore to load binary file from
-     * @return true on success, false on failure
-     */
-    bool LoadDevilBookData(gsl::not_null<DataStore*> pDataStore);
-
-    /**
-     * Load the devil binary data definitions
-     * @param pDataStore Pointer to the datastore to load binary file from
-     * @return true on success, false on failure
-     */
-    bool LoadDevilData(gsl::not_null<DataStore*> pDataStore);
-
-    /**
-     * Load the devil level information binary data definitions
-     * @param pDataStore Pointer to the datastore to load binary file from
-     * @return true on success, false on failure
-     */
-    bool LoadDevilLVUpRateData(gsl::not_null<DataStore*> pDataStore);
-
-    /**
-     * Load the item disassembly binary data definitions
-     * @param pDataStore Pointer to the datastore to load binary file from
-     * @return true on success, false on failure
-     */
-    bool LoadDisassemblyData(gsl::not_null<DataStore*> pDataStore);
-
-    /**
-     * Load the item disassembly trigger binary data definitions
-     * @param pDataStore Pointer to the datastore to load binary file from
-     * @return true on success, false on failure
-     */
-    bool LoadDisassemblyTriggerData(gsl::not_null<DataStore*> pDataStore);
-
-    /**
-     * Load the dynamic map information binary data definitions
-     * @param pDataStore Pointer to the datastore to load binary file from
-     * @return true on success, false on failure
-     */
-    bool LoadDynamicMapData(gsl::not_null<DataStore*> pDataStore);
-
-    /**
-     * Load the enchantment binary data definitions
-     * @param pDataStore Pointer to the datastore to load binary file from
-     * @return true on success, false on failure
-     */
-    bool LoadEnchantData(gsl::not_null<DataStore*> pDataStore);
-
-    /**
-     * Load the equipment set binary data definitions
-     * @param pDataStore Pointer to the datastore to load binary file from
-     * @return true on success, false on failure
-     */
-    bool LoadEquipmentSetData(gsl::not_null<DataStore*> pDataStore);
-
-    /**
-     * Load the item exchange binary data definitions
-     * @param pDataStore Pointer to the datastore to load binary file from
-     * @return true on success, false on failure
-     */
-    bool LoadExchangeData(gsl::not_null<DataStore*> pDataStore);
-
-    /**
-     * Load the character expertise binary data definitions
-     * @param pDataStore Pointer to the datastore to load binary file from
-     * @return true on success, false on failure
-     */
-    bool LoadExpertClassData(gsl::not_null<DataStore*> pDataStore);
-
-    /**
-     * Load the human NPC binary data definitions
-     * @param pDataStore Pointer to the datastore to load binary file from
-     * @return true on success, false on failure
-     */
-    bool LoadHNPCData(gsl::not_null<DataStore*> pDataStore);
-
-    /**
-     * Load the item binary data definitions
-     * @param pDataStore Pointer to the datastore to load binary file from
-     * @return true on success, false on failure
-     */
-    bool LoadItemData(gsl::not_null<DataStore*> pDataStore);
-
-    /**
-     * Load the item modification binary data definitions
-     * @param pDataStore Pointer to the datastore to load binary file from
-     * @return true on success, false on failure
-     */
-    bool LoadModificationData(gsl::not_null<DataStore*> pDataStore);
-
-    /**
-     * Load the item modification extra effect binary data definitions
-     * @param pDataStore Pointer to the datastore to load binary file from
-     * @return true on success, false on failure
-     */
-    bool LoadModificationExtEffectData(gsl::not_null<DataStore*> pDataStore);
-
-    /**
-     * Load the item modification extra recipe binary data definitions
-     * @param pDataStore Pointer to the datastore to load binary file from
-     * @return true on success, false on failure
-     */
-    bool LoadModificationExtRecipeData(gsl::not_null<DataStore*> pDataStore);
-
-    /**
-     * Load the item modification trigger binary data definitions
-     * @param pDataStore Pointer to the datastore to load binary file from
-     * @return true on success, false on failure
-     */
-    bool LoadModificationTriggerData(gsl::not_null<DataStore*> pDataStore);
-
-    /**
-     * Load the item modification effect binary data definitions
-     * @param pDataStore Pointer to the datastore to load binary file from
-     * @return true on success, false on failure
-     */
-    bool LoadModifiedEffectData(gsl::not_null<DataStore*> pDataStore);
-
-    /**
-     * Load the NPC barter binary data definitions
-     * @param pDataStore Pointer to the datastore to load binary file from
-     * @return true on success, false on failure
-     */
-    bool LoadNPCBarterData(gsl::not_null<DataStore*> pDataStore);
-
-    /**
-     * Load the server object NPC binary data definitions
-     * @param pDataStore Pointer to the datastore to load binary file from
-     * @return true on success, false on failure
-     */
-    bool LoadONPCData(gsl::not_null<DataStore*> pDataStore);
-
-    /**
-     * Load the quest binary data definitions
-     * @param pDataStore Pointer to the datastore to load binary file from
-     * @return true on success, false on failure
-     */
-    bool LoadQuestData(gsl::not_null<DataStore*> pDataStore);
-
-    /**
-     * Load the shop product binary data definitions
-     * @param pDataStore Pointer to the datastore to load binary file from
-     * @return true on success, false on failure
-     */
-    bool LoadShopProductData(gsl::not_null<DataStore*> pDataStore);
-
-    /**
-     * Load the s-item binary data definitions
-     * @param pDataStore Pointer to the datastore to load binary file from
-     * @return true on success, false on failure
-     */
-    bool LoadSItemData(gsl::not_null<DataStore*> pDataStore);
-
-    /**
-     * Load the skill binary data definitions
-     * @param pDataStore Pointer to the datastore to load binary file from
-     * @return true on success, false on failure
-     */
-    bool LoadSkillData(gsl::not_null<DataStore*> pDataStore);
-
-    /**
-     * Load the status binary data definitions
-     * @param pDataStore Pointer to the datastore to load binary file from
-     * @return true on success, false on failure
-     */
-    bool LoadStatusData(gsl::not_null<DataStore*> pDataStore);
-
-    /**
-     * Load the time limit data definitions
-     * @param pDataStore Pointer to the datastore to load binary file from
-     * @return true on success, false on failure
-     */
-    bool LoadTimeLimitData(gsl::not_null<DataStore*> pDataStore);
-
-    /**
-     * Load the special fusion binary data definitions
-     * @param pDataStore Pointer to the datastore to load binary file from
-     * @return true on success, false on failure
-     */
-    bool LoadTriUnionSpecialData(gsl::not_null<DataStore*> pDataStore);
-
-    /**
-     * Load the warp point binary data definitions
-     * @param pDataStore Pointer to the datastore to load binary file from
-     * @return true on success, false on failure
-     */
-    bool LoadWarpPointData(gsl::not_null<DataStore*> pDataStore);
-
-    /**
-     * Load the zone binary data definitions
-     * @param pDataStore Pointer to the datastore to load binary file from
-     * @return true on success, false on failure
-     */
-    bool LoadZoneData(gsl::not_null<DataStore*> pDataStore);
+    template <class T>
+    bool LoadData(gsl::not_null<DataStore*> pDataStore);
 
     /**
      * Load the QMP file with the specified filename from the supplied datastore.
@@ -734,11 +645,14 @@ public:
         gsl::not_null<DataStore*> pDataStore);
 
     /**
-     * Register a server side definition into the manager from an external source.
+     * Register a server side definition into the manager from an external
+     * source.
      * @param record Pointer to the record of the templated type
-     * @return true if the record was registered successfully, false if it was not
+     * @return true if the record was registered successfully, false if it
+     *  was not
      */
-    template <class T> bool RegisterServerSideDefinition(const std::shared_ptr<T>& record);
+    template <class T>
+    bool RegisterServerSideDefinition(const std::shared_ptr<T>& record);
 
 private:
     /**
@@ -809,7 +723,8 @@ private:
             {
                 if(printResults)
                 {
-                    PrintLoadResult(binaryFile, false, entryCount, records.size());
+                    PrintLoadResult(binaryFile, false, entryCount,
+                        records.size());
                 }
                 return false;
             }
@@ -880,6 +795,14 @@ private:
     std::unordered_map<uint32_t,
         std::shared_ptr<objects::MiAIData>> mAIData;
 
+    /// Map of item mixing definitions by ID
+    std::unordered_map<uint32_t,
+        std::shared_ptr<objects::MiBlendData>> mBlendData;
+
+    /// Map of item mixing extension definitions by ID
+    std::unordered_map<uint32_t,
+        std::shared_ptr<objects::MiBlendExtData>> mBlendExtData;
+
     /// Map of item names to IDs
     std::unordered_map<libcomp::String, uint32_t> mCItemNameLookup;
 
@@ -890,6 +813,14 @@ private:
     /// Map of devil definitions by ID
     std::unordered_map<uint32_t,
         std::shared_ptr<objects::MiDevilData>> mDevilData;
+
+    /// Map of devil equipment definitions by skill ID
+    std::unordered_map<uint32_t,
+        std::shared_ptr<objects::MiDevilEquipmentData>> mDevilEquipmentData;
+
+    /// Map of devil equipment definitions by item ID
+    std::unordered_map<uint32_t, std::shared_ptr<
+        objects::MiDevilEquipmentItemData>> mDevilEquipmentItemData;
 
     /// Map of devil names to IDs which are NOT unique across entries
     std::unordered_map<libcomp::String, uint32_t> mDevilNameLookup;
@@ -990,6 +921,10 @@ private:
     std::unordered_map<uint32_t,
         std::shared_ptr<objects::MiONPCData>> mONPCData;
 
+    /// Map of quest bonus code definitions by ID
+    std::unordered_map<uint32_t,
+        std::shared_ptr<objects::MiQuestBonusCodeData>> mQuestBonusCodeData;
+
     /// Map of quest definitions by ID
     std::unordered_map<uint32_t,
         std::shared_ptr<objects::MiQuestData>> mQuestData;
@@ -1018,9 +953,20 @@ private:
     std::unordered_map<uint32_t,
         std::shared_ptr<objects::MiStatusData>> mStatusData;
 
+    /// Map of synthesis definitions by ID
+    std::unordered_map<uint32_t,
+        std::shared_ptr<objects::MiSynthesisData>> mSynthesisData;
+
     /// Map of time limit definitions by ID
     std::unordered_map<uint32_t,
         std::shared_ptr<objects::MiTimeLimitData>> mTimeLimitData;
+
+    /// Map of title definitions by ID
+    std::unordered_map<int16_t,
+        std::shared_ptr<objects::MiTitleData>> mTitleData;
+
+    /// Set of all (non-special) title IDs
+    std::set<int16_t> mTitleIDs;
 
     /// Map of special fusion definitions by ID
     std::unordered_map<uint32_t,

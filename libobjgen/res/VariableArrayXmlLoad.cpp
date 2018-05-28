@@ -6,13 +6,34 @@
     if(elements.size() <= @ELEMENT_COUNT@)
     {
         auto elemIter = elements.begin();
-        for(size_t i = 0; i < @ELEMENT_COUNT@; i++)
+        for(size_t i = 0; i < @ELEMENT_COUNT@ && elemIter != elements.end(); i++)
         {
-            if(i < elements.size())
+            auto element = *elemIter;
+            auto attr = element->Attribute("index");
+            if(attr)
             {
-                auto element = *elemIter;
+                // Skip forward to specified index
+                size_t idx = libcomp::String(attr).ToInteger<size_t>(&status);
+                if(idx >= i)
+                {
+                    i = idx;
+                }
+                else
+                {
+                    status = false;
+                    break;
+                }
+            }
+
+            if(i < @ELEMENT_COUNT@)
+            {
                 elemIter++;
                 arr[i] = @ELEMENT_ACCESS_CODE@;
+            }
+            else
+            {
+                status = false;
+                break;
             }
         }
     }

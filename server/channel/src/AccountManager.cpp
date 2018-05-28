@@ -43,6 +43,7 @@
 #include <Clan.h>
 #include <ClanMember.h>
 #include <DemonBox.h>
+#include <DemonQuest.h>
 #include <EventState.h>
 #include <Expertise.h>
 #include <FriendSettings.h>
@@ -147,6 +148,7 @@ void AccountManager::HandleLoginResponse(const std::shared_ptr<
 
         // Initialize some run-time data
         cState->RecalcEquipState(definitionManager);
+        cState->UpdateQuestState(definitionManager);
         cState->RecalcDisabledSkills(definitionManager);
 
         // Prepare active quests
@@ -259,6 +261,13 @@ void AccountManager::Logout(const std::shared_ptr<
 
     if(!delay)
     {
+        auto dQuest = character->GetDemonQuest().Get();
+        if(dQuest && dQuest->GetUUID().IsNull())
+        {
+            // Pending demon quest must be rejected
+            server->GetEventManager()->EndDemonQuest(client);
+        }
+
         if(!LogoutCharacter(state))
         {
             LOG_ERROR(libcomp::String("Character %1 failed to save on account"
@@ -715,6 +724,25 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
                     }
                 }
             }
+
+            // Demon equipment
+            for(size_t i = 0; i < 4; i++)
+            {
+                auto equipment = demon->GetEquippedItems(i);
+                if(equipment.IsNull()) continue;
+
+                if(!equipment.Get(db))
+                {
+                    LOG_WARNING(libcomp::String("Removing invalid"
+                        " demon equipment saved for account: %1\n")
+                        .Arg(state->GetAccountUID().ToString()));
+                    demon->SetEquippedItems(i, NULLUUID);
+                    continue;
+                }
+
+                state->SetObjectID(equipment.GetUUID(),
+                    server->GetNextObjectID());
+            }
         }
     }
 
@@ -762,6 +790,38 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
                 " not be initialized for account: %1\n")
                 .Arg(state->GetAccountUID().ToString()));
             return false;
+        }
+    }
+
+    // Demon quest
+    if(!character->GetDemonQuest().IsNull())
+    {
+        if(!character->LoadDemonQuest(db))
+        {
+            LOG_ERROR(libcomp::String("DemonQuest could"
+                " not be initialized for account: %1\n")
+                .Arg(state->GetAccountUID().ToString()));
+            return false;
+        }
+
+        auto dQuest = character->GetDemonQuest().Get();
+        auto demon = dQuest ? std::dynamic_pointer_cast<objects::Demon>(
+            libcomp::PersistentObject::GetObjectByUUID(dQuest->GetDemon()))
+            : nullptr;
+        if(!dQuest || !demon ||
+            demon->GetDemonBox() != character->GetCOMP().GetUUID())
+        {
+            LOG_WARNING(libcomp::String("Removing invalid"
+                " DemonQuest saved for account: %1\n")
+                .Arg(state->GetAccountUID().ToString()));
+            character->SetDemonQuest(NULLUUID);
+
+            if(dQuest && !dQuest->Delete(db))
+            {
+                LOG_ERROR(libcomp::String("DemonQuest could not be"
+                    " deleted: %1\n").Arg(dQuest->GetUUID().ToString()));
+                return false;
+            }
         }
     }
 
@@ -815,6 +875,9 @@ bool AccountManager::InitializeNewCharacter(std::shared_ptr<
         character->SetEquippedVA(dCharacter->GetEquippedVA());
         character->SetMaterials(dCharacter->GetMaterials());
         character->SetVACloset(dCharacter->GetVACloset());
+        character->SetCustomTitles(dCharacter->GetCustomTitles());
+        character->SetCurrentTitle(dCharacter->GetCurrentTitle());
+        character->SetTitlePrioritized(dCharacter->GetTitlePrioritized());
 
         // Set expertise defaults
         for(size_t i = 0; i < dCharacter->ExpertisesCount(); i++)
@@ -1148,6 +1211,7 @@ bool AccountManager::LogoutCharacter(channel::ClientState* state)
         dbChanges->Update(character->GetCoreStats().Get());
         dbChanges->Update(character->GetProgress().Get());
         dbChanges->Update(character->GetFriendSettings().Get());
+        dbChanges->Update(character->GetDemonQuest().Get());
 
         for(auto itemBox : character->GetItemBoxes())
         {

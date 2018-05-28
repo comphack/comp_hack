@@ -138,14 +138,14 @@ bool Parsers::ItemMove::Parse(libcomp::ManagerPacket *pPacketManager,
             slots.push_back((uint16_t)destSlot);
         }
 
-        characterManager->SendItemBoxData(client, sourceBox, slots);
+        characterManager->SendItemBoxData(client, sourceBox, slots, false);
 
         if(!sameBox)
         {
             slots.clear();
             slots.push_back((uint16_t)destSlot);
 
-            characterManager->SendItemBoxData(client, destBox, slots);
+            characterManager->SendItemBoxData(client, destBox, slots, true);
         }
     }
     else

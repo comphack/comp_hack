@@ -78,12 +78,40 @@ public:
         objects::MiSpecialConditionData>> GetConditionalTokusei() const;
 
     /**
+     * Get the current number of complete quests that grant bonuses
+     * @return Bonus granting complete quest count
+     */
+    uint32_t GetQuestBonusCount() const;
+
+    /**
+     * Get the set of tokusei effect IDs granted by quest completion
+     * @return List of tokusei effect IDs
+     */
+    std::list<int32_t> GetQuestBonusTokuseiIDs() const;
+
+    /**
      * Determine the tokusei effects gained for the character based upon
      * their current equipment
      * @param definitionManager Pointer to the definition manager to use
      *  for determining equipment effects
      */
     void RecalcEquipState(libcomp::DefinitionManager* definitionManager);
+
+    /**
+     * Determine the quest bonus effects gained for the character based
+     * on the number of completed quests. If a quest is being completed
+     * this function should be used with the optional secondary parameter
+     * supplied.
+     * @param definitionManager Pointer to the definition manager to use for
+     *  determining quest bonus effects
+     * @param completedQuestID Optional ID of a quest that should be completed
+     *  before recalculating. If not supplied, the entire quest completion
+     *  list should be used to recalculate
+     * @return true if the recalculation resulted in more quest bonuses being
+     *  applied or increased
+     */
+    bool UpdateQuestState(libcomp::DefinitionManager* definitionManager,
+        uint32_t completedQuestID = 0);
 
     /**
      * Determine the character's current expertise rank for the
@@ -96,10 +124,12 @@ public:
     uint8_t GetExpertiseRank(libcomp::DefinitionManager* definitionManager,
         uint32_t expertiseID);
 
-    virtual bool RecalcDisabledSkills(libcomp::DefinitionManager* definitionManager);
+    virtual bool RecalcDisabledSkills(
+        libcomp::DefinitionManager* definitionManager);
 
 protected:
-    virtual void BaseStatsCalculated(libcomp::DefinitionManager* definitionManager,
+    virtual void BaseStatsCalculated(
+        libcomp::DefinitionManager* definitionManager,
         std::shared_ptr<objects::CalculatedEntityState> calcState,
         libcomp::EnumMap<CorrectTbl, int16_t>& stats,
         std::list<std::shared_ptr<objects::MiCorrectTbl>>& adjustments);
@@ -119,6 +149,13 @@ private:
     /// of the character's base stats
     std::list<std::shared_ptr<
         objects::MiSpecialConditionData>> mStatConditionalTokusei;
+
+    /// Tokusei effect IDs available due to the number of quests completed
+    std::list<int32_t> mQuestBonusTokuseiIDs;
+
+    /// Quick access count representing the number of completed quests
+    /// that can affect bonuses
+    uint32_t mQuestBonusCount;
 };
 
 } // namespace channel

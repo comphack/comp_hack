@@ -62,6 +62,7 @@
 // channel Includes
 #include "ChannelServer.h"
 #include "CharacterManager.h"
+#include "EventManager.h"
 #include "FusionTables.h"
 
 using namespace channel;
@@ -420,7 +421,6 @@ uint32_t FusionManager::GetResultDemon(const std::shared_ptr<
     auto character = cState->GetEntity();
 
     auto server = mServer.lock();
-    auto characterManager = server->GetCharacterManager();
     auto definitionManager = server->GetDefinitionManager();
 
     auto demon1 = std::dynamic_pointer_cast<objects::Demon>(
@@ -575,7 +575,7 @@ uint32_t FusionManager::GetResultDemon(const std::shared_ptr<
             // Check that the player has the plugin
             size_t index;
             uint8_t shiftVal;
-            characterManager->ConvertIDToMaskValues(
+            CharacterManager::ConvertIDToMaskValues(
                 (uint16_t)special->GetPluginID(), index, shiftVal);
 
             uint8_t indexVal = character->GetProgress()->GetPlugins(index);
@@ -1540,6 +1540,10 @@ int8_t FusionManager::ProcessFusion(
     }
 
     server->GetWorldDatabase()->QueueChangeSet(changes);
+
+    // Update demon quest if active
+    server->GetEventManager()->UpdateDemonQuestCount(client,
+        objects::DemonQuest::Type_t::FUSE, resultDemonType, 1);
 
     return 0;
 }

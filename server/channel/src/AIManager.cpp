@@ -895,12 +895,7 @@ std::shared_ptr<ActiveEntityState> AIManager::Retarget(const std::shared_ptr<Ene
     if(possibleTargets.size() > 0)
     {
         /// @todo: add better target selection logic
-        auto targetIter = possibleTargets.begin();
-        size_t randomIdx = (size_t)RNG(int32_t, 0,
-            (int32_t)(possibleTargets.size() - 1));
-        std::advance(targetIter, randomIdx);
-
-        target = *targetIter;
+        target = libcomp::Randomizer::GetEntry(possibleTargets);
 
         aiState->SetTarget(target ? target->GetEntityID() : 0);
     }

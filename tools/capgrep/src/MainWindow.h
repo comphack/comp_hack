@@ -65,11 +65,6 @@ public:
 class CaptureLoadData
 {
 public:
-    ~CaptureLoadData() {
-        delete file;
-        delete state;
-    }
-
     QFile *file;
     QString path;
     uint32_t ver;
@@ -79,6 +74,16 @@ public:
     uint8_t buffer[1048576];
     uint8_t source;
     uint32_t sz;
+
+    CaptureLoadData() : file(0), state(0)
+    {
+    }
+
+    ~CaptureLoadData()
+    {
+        delete file;
+        delete state;
+    }
 };
 
 class MainWindow : public QMainWindow

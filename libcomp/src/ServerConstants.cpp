@@ -182,6 +182,8 @@ bool ServerConstants::Initialize(const String& filePath)
     // Load status effect constants
     success &= LoadInteger(constants["STATUS_DEATH"],
         sConstants.STATUS_DEATH);
+    success &= LoadInteger(constants["STATUS_DEMON_QUEST_ACTIVE"],
+        sConstants.STATUS_DEMON_QUEST_ACTIVE);
     success &= LoadInteger(constants["STATUS_HIDDEN"],
         sConstants.STATUS_HIDDEN);
     success &= LoadInteger(constants["STATUS_SUMMON_SYNC_1"],
@@ -234,21 +236,16 @@ bool ServerConstants::Initialize(const String& filePath)
             {
                 if(!pair.second.empty())
                 {
-                    auto params = libcomp::String(pair.second).Split(",");
-                    for(auto param : params)
+                    for(uint32_t p : ToIntegerRange<uint32_t>(pair.second,
+                        success))
                     {
-                        uint32_t p = 0;
-                        if(LoadInteger(param.C(), p))
-                        {
-                            sConstants.CAMEO_MAP[key].push_back(p);
-                        }
-                        else
-                        {
-                            LOG_ERROR("Failed to load an element in"
-                                " CAMEO_MAP\n");
-                            success = false;
-                            break;
-                        }
+                        sConstants.CAMEO_MAP[key].push_back(p);
+                    }
+
+                    if(!success)
+                    {
+                        LOG_ERROR("Failed to load an element in CAMEO_MAP\n");
+                        break;
                     }
                 }
             }
@@ -302,20 +299,17 @@ bool ServerConstants::Initialize(const String& filePath)
                 {
                     if(!elemStr.IsEmpty())
                     {
-                        for(auto elem : elemStr.Split(","))
+                        for(uint32_t p : ToIntegerRange<uint32_t>(elemStr.C(),
+                            success))
                         {
-                            uint32_t entry = 0;
-                            if(LoadInteger(elem.C(), entry))
-                            {
-                                sConstants.CLAN_LEVEL_SKILLS[idx].insert(entry);
-                            }
-                            else
-                            {
-                                LOG_ERROR("Failed to load an element in"
-                                    " CLAN_LEVEL_SKILLS\n");
-                                success = false;
-                                break;
-                            }
+                            sConstants.CLAN_LEVEL_SKILLS[idx].insert(p);
+                        }
+
+                        if(!success)
+                        {
+                            LOG_ERROR("Failed to load an element in"
+                                " CLAN_LEVEL_SKILLS\n");
+                            break;
                         }
                     }
 
@@ -353,21 +347,17 @@ bool ServerConstants::Initialize(const String& filePath)
             {
                 if(!pair.second.empty())
                 {
-                    auto params = libcomp::String(pair.second).Split(",");
-                    for(auto param : params)
+                    for(int32_t p : ToIntegerRange<int32_t>(pair.second,
+                        success))
                     {
-                        int32_t p = 0;
-                        if(LoadInteger(param.C(), p))
-                        {
-                            sConstants.DEMON_BOOK_BONUS[key].insert(p);
-                        }
-                        else
-                        {
-                            LOG_ERROR("Failed to load an element in"
-                                " DEMON_BOOK_BONUS\n");
-                            success = false;
-                            break;
-                        }
+                        sConstants.DEMON_BOOK_BONUS[key].insert(p);
+                    }
+
+                    if(!success)
+                    {
+                        LOG_ERROR("Failed to load an element in"
+                            " DEMON_BOOK_BONUS\n");
+                        break;
                     }
                 }
             }
@@ -381,6 +371,90 @@ bool ServerConstants::Initialize(const String& filePath)
     else
     {
         LOG_ERROR("DEMON_BOOK_BONUS not found\n");
+        success = false;
+    }
+
+    complexIter = complexConstants.find("DEMON_CRYSTALS");
+    if(success && complexIter != complexConstants.end())
+    {
+        std::unordered_map<std::string, std::string> map;
+        success = LoadKeyValueStrings(complexIter->second, map);
+        for(auto pair : map)
+        {
+            uint32_t key;
+            if(!LoadInteger(pair.first, key))
+            {
+                LOG_ERROR("Failed to load DEMON_CRYSTALS key\n");
+                success = false;
+            }
+            else if(sConstants.DEMON_CRYSTALS.find(key) !=
+                sConstants.DEMON_CRYSTALS.end())
+            {
+                LOG_ERROR("Duplicate DEMON_CRYSTALS key encountered\n");
+                success = false;
+            }
+            else
+            {
+                if(!pair.second.empty())
+                {
+                    for(uint8_t p : ToIntegerRange<uint8_t>(pair.second,
+                        success))
+                    {
+                        sConstants.DEMON_CRYSTALS[key].insert(p);
+                    }
+
+                    if(!success)
+                    {
+                        LOG_ERROR("Failed to load an element in"
+                            " DEMON_CRYSTALS\n");
+                        break;
+                    }
+                }
+            }
+
+            if(!success)
+            {
+                break;
+            }
+        }
+    }
+    else
+    {
+        LOG_ERROR("DEMON_CRYSTALS not found\n");
+        success = false;
+    }
+
+    complexIter = complexConstants.find("DEMON_QUEST_XP");
+    if(success && complexIter != complexConstants.end())
+    {
+        std::list<String> strList;
+        if(!LoadStringList(complexIter->second, strList))
+        {
+            LOG_ERROR("Failed to load DEMON_QUEST_XP\n");
+            success = false;
+        }
+        else
+        {
+            for(auto elem : strList)
+            {
+                uint32_t xp = 0;
+                if(LoadInteger(elem.C(), xp))
+                {
+                    sConstants.DEMON_QUEST_XP.push_back(xp);
+                }
+                else
+                {
+                    LOG_ERROR("Failed to load an entry in"
+                        " DEMON_QUEST_XP\n");
+                    success = false;
+                    break;
+                }
+            }
+        }
+    }
+    else
+    {
+        LOG_ERROR("DEMON_QUEST_XP not found\n");
         success = false;
     }
 
@@ -407,51 +481,6 @@ bool ServerConstants::Initialize(const String& filePath)
     else
     {
         LOG_ERROR("DEPO_MAP_ITEM not found\n");
-        success = false;
-    }
-
-    complexIter = complexConstants.find("DISASSEMBLY_ITEMS");
-    if(success && complexIter != complexConstants.end())
-    {
-        std::list<String> strList;
-        if(!LoadStringList(complexIter->second, strList))
-        {
-            LOG_ERROR("Failed to load DISASSEMBLY_ITEMS\n");
-            success = false;
-        }
-        else
-        {
-            if(strList.size() != 6)
-            {
-                LOG_ERROR("DISASSEMBLY_ITEMS must specify all 6 item types\n");
-                success = false;
-            }
-            else
-            {
-                size_t idx = 0;
-                for(auto elem : strList)
-                {
-                    uint32_t skillID = 0;
-                    if(LoadInteger(elem.C(), skillID))
-                    {
-                        sConstants.DISASSEMBLY_ITEMS[idx] = skillID;
-                    }
-                    else
-                    {
-                        LOG_ERROR("Failed to load an item type in"
-                            " DISASSEMBLY_ITEMS\n");
-                        success = false;
-                        break;
-                    }
-
-                    idx++;
-                }
-            }
-        }
-    }
-    else
-    {
-        LOG_ERROR("DISASSEMBLY_ITEMS not found\n");
         success = false;
     }
 
@@ -542,21 +571,34 @@ bool ServerConstants::Initialize(const String& filePath)
         success = false;
     }
 
-    complexIter = complexConstants.find("SLOT_MOD_ITEMS");
+    complexIter = complexConstants.find("QUEST_BONUS");
+    if(success && complexIter != complexConstants.end())
+    {
+        std::unordered_map<std::string, std::string> map;
+        success = LoadKeyValueStrings(complexIter->second, map) &&
+            LoadIntegerMap(map, sConstants.QUEST_BONUS);
+    }
+    else
+    {
+        LOG_ERROR("QUEST_BONUS not found\n");
+        success = false;
+    }
+
+    complexIter = complexConstants.find("RATE_SCALING_ITEMS");
     if(success && complexIter != complexConstants.end())
     {
         std::list<String> strList;
         if(!LoadStringList(complexIter->second, strList))
         {
-            LOG_ERROR("Failed to load SLOT_MOD_ITEMS\n");
+            LOG_ERROR("Failed to load RATE_SCALING_ITEMS\n");
             success = false;
         }
         else
         {
-            if(strList.size() != 2)
+            if(strList.size() != 4)
             {
-                LOG_ERROR("SLOT_MOD_ITEMS must specify items for both"
-                    " of the 2 types\n");
+                LOG_ERROR("RATE_SCALING_ITEMS must specify items for each"
+                    " of the 4 types\n");
                 success = false;
             }
             else
@@ -566,27 +608,16 @@ bool ServerConstants::Initialize(const String& filePath)
                 {
                     if(!elemStr.IsEmpty())
                     {
-                        for(auto elem : elemStr.Split(","))
+                        for(uint32_t p : ToIntegerRange<uint32_t>(elemStr.C(),
+                            success))
                         {
-                            uint32_t entry = 0;
-                            if(LoadInteger(elem.C(), entry))
-                            {
-                                sConstants.SLOT_MOD_ITEMS[idx].push_back(entry);
-                            }
-                            else
-                            {
-                                LOG_ERROR("Failed to load an element in"
-                                    " SLOT_MOD_ITEMS\n");
-                                success = false;
-                                break;
-                            }
+                            sConstants.RATE_SCALING_ITEMS[idx].push_back(p);
                         }
 
-                        if(sConstants.SLOT_MOD_ITEMS[idx].size() > 8)
+                        if(!success)
                         {
-                            LOG_ERROR("Each SLOT_MOD_ITEMS list must not exceed"
-                                "the binary file array size of 8 possible items\n");
-                            success = false;
+                            LOG_ERROR("Failed to load an element in"
+                                " RATE_SCALING_ITEMS\n");
                             break;
                         }
                     }
@@ -598,7 +629,7 @@ bool ServerConstants::Initialize(const String& filePath)
     }
     else
     {
-        LOG_ERROR("SLOT_MOD_ITEMS not found\n");
+        LOG_ERROR("RATE_SCALING_ITEMS not found\n");
         success = false;
     }
 
@@ -650,9 +681,9 @@ bool ServerConstants::Initialize(const String& filePath)
         }
         else
         {
-            if(strList.size() != 3)
+            if(strList.size() != 5)
             {
-                LOG_ERROR("SYNTH_SKILLS must specify all three skill IDs\n");
+                LOG_ERROR("SYNTH_SKILLS must specify all five skill IDs\n");
                 success = false;
             }
             else

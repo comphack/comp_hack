@@ -389,6 +389,27 @@ private:
         const std::list<libcomp::String>& args);
 
     /**
+     * GM command to get reported players that have not been resolved
+     * yet.
+     * @param client Pointer to the client that sent the command
+     * @param args List of arguments for the command
+     * @return true if the command was handled properly, else false
+     */
+    bool GMCommand_Reported(const std::shared_ptr<
+        channel::ChannelClientConnection>& client,
+        const std::list<libcomp::String>& args);
+
+    /**
+     * GM command to resolve reported players records.
+     * @param client Pointer to the client that sent the command
+     * @param args List of arguments for the command
+     * @return true if the command was handled properly, else false
+     */
+    bool GMCommand_Resolve(const std::shared_ptr<
+        channel::ChannelClientConnection>& client,
+        const std::list<libcomp::String>& args);
+
+    /**
      * GM command to throw away an item in the client or target
      * character's inventory. Useful for destroying items that cannot
      * be stored or thrown away.
@@ -471,6 +492,16 @@ private:
      * @return true if the command was handled problerly, else false
      */
     bool GMCommand_TickerMessage(const std::shared_ptr<
+        channel::ChannelClientConnection>& client,
+        const std::list<libcomp::String>& args);
+
+    /**
+     * GM command to add an available title to the character
+     * @param client Pointer to the client that sent the command
+     * @param args List of arguments for the command
+     * @return true if the command was handled problerly, else false
+     */
+    bool GMCommand_Title(const std::shared_ptr<
         channel::ChannelClientConnection>& client,
         const std::list<libcomp::String>& args);
 

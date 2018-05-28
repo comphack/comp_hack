@@ -10,6 +10,7 @@
         <member type="set" name="skillIDs">
             <element type="u32"/>
         </member>
+        <member type="u8" name="expertiseMax"/>
         <member type="map" name="expertisePoints">
             <key type="u8"/>
             <value type="s32"/>

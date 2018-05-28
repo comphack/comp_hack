@@ -190,6 +190,16 @@ public:
         channel::ChannelClientConnection>& client, int8_t icon = 0);
 
     /**
+     * Send the character title to the client's current zone.
+     * @param client Pointer to the client connection containing
+     *  the character
+     * @param includeSelf true if the client should be sent the title as
+     *  well, false if only the rest of the zone should be notified
+     */
+    void SendCharacterTitle(const std::shared_ptr<
+        ChannelClientConnection>& client, bool includeSelf);
+
+    /**
      * Sends the specified entity's non-battle movement speed to the client
      * @param client Pointer to the client connection
      * @param eState Pointer to the entity
@@ -279,10 +289,14 @@ public:
      *  the box
      * @param box Box to send information regarding
      * @param slots List of slots to send information about
+     * @param adjustCounts Optional parameter to respond to any item counts
+     *  that may have changed and notify the client accordingly. Defaults
+     *  to true.
      */
     void SendItemBoxData(const std::shared_ptr<
         ChannelClientConnection>& client, const std::shared_ptr<
-        objects::ItemBox>& box, const std::list<uint16_t>& slots);
+        objects::ItemBox>& box, const std::list<uint16_t>& slots,
+        bool adjustCounts = true);
 
     /**
      * Get all items in the specified box that match the supplied
@@ -293,6 +307,18 @@ public:
      * @return List of pointers to the items of the matching ID
      */
     std::list<std::shared_ptr<objects::Item>> GetExistingItems(
+        const std::shared_ptr<objects::Character>& character,
+        uint32_t itemID, std::shared_ptr<objects::ItemBox> box = nullptr);
+
+    /**
+     * Get the count of all item stacks in the specified box that
+     * match the supplied itemID.
+     * @param character Pointer to the character
+     * @param itemID Item ID to find in the inventory
+     * @param box Box to count items from
+     * @return Total stack size of all matching items in the box
+     */
+    uint32_t GetExistingItemCount(
         const std::shared_ptr<objects::Character>& character,
         uint32_t itemID, std::shared_ptr<objects::ItemBox> box = nullptr);
 
@@ -374,13 +400,29 @@ public:
      * @param insertItems List of new items to insert
      * @param stackAdjustItems Map of items to adjust the stack size of including
      *  deletes listed with stack size 0
+     * @param notifyClient Optional parameter to not send the updated slot information
+     *  to the client
      * @return true if the changes could be applied (or validated), false if
      *  they cannot
      */
     bool UpdateItems(const std::shared_ptr<
         channel::ChannelClientConnection>& client, bool validateOnly,
         std::list<std::shared_ptr<objects::Item>>& insertItems,
-        std::unordered_map<std::shared_ptr<objects::Item>, uint16_t> stackAdjustItems);
+        std::unordered_map<std::shared_ptr<objects::Item>, uint16_t> stackAdjustItems,
+        bool notifyClient = true);
+
+    /**
+     * Filter a set of item drops based on drop rate and luck.
+     * @param drops List of pointers to the item drops to determine what
+     *  should be "dropped"
+     * @param luck Current luck value to use when calculating drop chances
+     * @param minLast Optional param to specify if the set needs at least
+     *  one item in which case the last item will be used
+     * @return List of item drops that should be "dropped"
+     */
+    std::list<std::shared_ptr<objects::ItemDrop>> DetermineDrops(
+        const std::list<std::shared_ptr<objects::ItemDrop>>& drops,
+        int16_t luck, bool minLast = false);
 
     /**
      * Create loot from drops based upon the supplied luck value (can be 0)
@@ -568,11 +610,13 @@ public:
      * @param points Set or adjusted soul points to update the demon with
      * @param isAdjust true if the points value should be added
      *  to the current value, false if it should replace the curent value
+     * @param applyRate If true the soul point rate will be used to adjust
+     *  the amount gained
      * @return Adjusted SP amount gained or lossed (before limits are applied)
      */
     int32_t UpdateSoulPoints(const std::shared_ptr<
         channel::ChannelClientConnection>& client, int32_t points,
-        bool isAdjust = false);
+        bool isAdjust = false, bool applyRate = false);
 
     /**
      * Update the client's character or demon's experience and level
@@ -600,6 +644,8 @@ public:
      * @param client Pointer to the client connection
      * @param skillID Skill ID that will have it's corresponding
      *  expertise updated if it is enabled
+     * @param rateBoost Optional flat value to add to the expertise
+     *  rates for the skill (before calculating final amount)
      * @param multiplier Expertise point multiplier, defaults to -1
      *  to differentiate from explicitly being set to 1. If this is
      *  not set, the character's expertise acquisition rate will be
@@ -607,7 +653,7 @@ public:
      */
     void UpdateExpertise(const std::shared_ptr<
         channel::ChannelClientConnection>& client, uint32_t skillID,
-        float multiplier = -1.0f);
+        uint16_t rateBoost = 0, float multiplier = -1.0f);
 
     /**
      * Update a client's character's expertise for a set of expertise IDs.
@@ -688,7 +734,8 @@ public:
      * @param shiftVal Ouptput parameter that will be updated to the
      *  ID's mask position at the index in the flag array
      */
-    void ConvertIDToMaskValues(uint16_t id, size_t& index, uint8_t& shiftVal);
+    static void ConvertIDToMaskValues(uint16_t id, size_t& index,
+        uint8_t& shiftVal);
 
     /**
      * Add a map that the client character has obtained.
@@ -727,7 +774,7 @@ public:
      * @param valuableID ID of the valuable to look for
      * @return true if the valuable has been obtained
      */
-    bool HasValuable(const std::shared_ptr<objects::Character>& character,
+    static bool HasValuable(const std::shared_ptr<objects::Character>& character,
         uint16_t valuableID);
 
     /**
@@ -754,6 +801,15 @@ public:
      */
     void SendPluginFlags(const std::shared_ptr<
         ChannelClientConnection>& client);
+
+    /**
+     * Add a specific title option to the player's character
+     * @param client Pointer to the client connection
+     * @param titleID ID of the title to add
+     * @return true if the title was added, false if it was not
+     */
+    bool AddTitle(const std::shared_ptr<ChannelClientConnection>& client,
+        int16_t titleID);
 
     /**
      * Send the client character's material container contents
@@ -783,6 +839,20 @@ public:
         ActiveEntityState>& eState, bool queueSave = false);
 
     /**
+     * Add one or more status effects to a client entity and immediately
+     * notify the zone instead of waiting for the queued change to be
+     * picked up by zone processing. Useful when another packet is needed
+     * immediately after a status effect is added.
+     * @param client Pointer to the client connection
+     * @param eState Pointer to the entity to add statuse effects to
+     * @param effects Set of status effects to add
+     * @return true if any effects were actually added
+     */
+    bool AddStatusEffectImmediate(const std::shared_ptr<
+        ChannelClientConnection>& client, const std::shared_ptr<
+        ActiveEntityState>& eState, const StatusEffectChanges& effects);
+
+    /**
      * Cancel status effects associated to a client's character and demon
      * based upon an action that affects both entities.
      * @param client Pointer to the client connection
@@ -792,6 +862,28 @@ public:
      */
     void CancelStatusEffects(const std::shared_ptr<
         ChannelClientConnection>& client, uint8_t cancelFlags);
+
+    /**
+     * Build a packet containing a status effect add/update notification
+     * @param p Packet to write the data to
+     * @param entityID ID of the entity with the status effects
+     * @param active List of status effects that have been changed
+     * @return true if any status effects were supplied and the packet should
+     *  be sent
+     */
+    bool GetActiveStatusesPacket(libcomp::Packet& p, int32_t entityID,
+        const std::list<std::shared_ptr<objects::StatusEffect>>& active);
+
+    /**
+     * Build a packet containing a status effect removal notification
+     * @param p Packet to write the data to
+     * @param entityID ID of the entity that had the status effects
+     * @param active List of status effect IDs that have been removed
+     * @return true if any status effects were supplied and the packet should
+     *  be sent
+     */
+    bool GetRemovedStatusesPacket(libcomp::Packet& p, int32_t entityID,
+        const std::set<uint32_t>& removed);
 
     /**
      * Add or remove both supplied entities to the other's opponent set.
@@ -860,6 +952,18 @@ public:
      */
     static void AdjustStatBounds(libcomp::EnumMap<CorrectTbl, int16_t>& stats,
         bool limitMax);
+
+    /**
+     * Determine what item should be given as a demon specific present.
+     * @param demonType Demon type
+     * @param level Demon level
+     * @param familiarity Demon current familiarity
+     * @param rarity Output parameter to store the rarity level of the item if
+     *  one is returned
+     * @return Item type to give as a present or zero if none will be given
+     */
+    uint32_t GetDemonPresent(uint32_t demonType, int8_t level, uint16_t familiarity,
+        int8_t& rarity) const;
 
     /**
      * Add data to a packet about a demon in a box.

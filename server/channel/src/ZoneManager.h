@@ -102,6 +102,15 @@ public:
     std::shared_ptr<Zone> GetCurrentZone(int32_t worldCID);
 
     /**
+     * Get a zone by definition ID and dynamic map ID
+     * @param zoneID Definition ID of a zone to retrieve
+     * @param dynamicMapID Dynamic Map ID of the zone to retrieve
+     * @return Pointer to the zone associated to the supplied IDs
+     */
+    std::shared_ptr<Zone> GetGlobalZone(uint32_t zoneID,
+        uint32_t dynamicMapID);
+
+    /**
      * Perform all zone entry setup and related actions for a player
      * associated to the supplied client using the default starting point
      * @param client Client connection for the player entering the zone

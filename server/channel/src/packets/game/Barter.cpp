@@ -142,7 +142,7 @@ void HandleBarter(const std::shared_ptr<ChannelServer> server,
                     uint16_t valuableID = (uint16_t)itemData->GetSubtype();
                     oneTimeValuables.insert(valuableID);
 
-                    if(characterManager->HasValuable(character, valuableID))
+                    if(CharacterManager::HasValuable(character, valuableID))
                     {
                         LOG_ERROR(libcomp::String("Player attempted to"
                             " perform barter with  a one-time valuable they"

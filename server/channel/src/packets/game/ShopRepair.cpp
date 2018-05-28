@@ -102,8 +102,12 @@ bool Parsers::ShopRepair::Parse(libcomp::ManagerPacket *pPacketManager,
 
         int32_t repairBase = itemData->GetBasic()->GetRepairPrice();
 
-        float enchantBoost = (item->GetTarot() > 0 ? 1.5f : 0.f) +
-            (item->GetSoul() ? 3.f : 0.f);
+        bool isTarot = item->GetTarot() &&
+            item->GetTarot() != ENCHANT_ENABLE_EFFECT;
+        bool isSoul = item->GetSoul() &&
+            item->GetSoul() != ENCHANT_ENABLE_EFFECT;
+
+        float enchantBoost = (isTarot ? 1.5f : 0.f) + (isSoul ? 3.f : 0.f);
         if(enchantBoost == 0.f)
         {
             enchantBoost = 1.f;
@@ -231,7 +235,7 @@ bool Parsers::ShopRepair::Parse(libcomp::ManagerPacket *pPacketManager,
     if(success && item->GetBoxSlot() >= 0)
     {
         characterManager->SendItemBoxData(client, inventory,
-            { (uint16_t)item->GetBoxSlot() });
+            { (uint16_t)item->GetBoxSlot() }, false);
     }
 
     client->FlushOutgoing();

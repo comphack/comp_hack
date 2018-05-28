@@ -44,6 +44,7 @@
 #include "ClanMember.h"
 #include "Demon.h"
 #include "DemonBox.h"
+#include "DemonQuest.h"
 #include "EntityStats.h"
 #include "Expertise.h"
 #include "FriendSettings.h"
@@ -55,6 +56,7 @@
 #include "Quest.h"
 #include "RegisteredChannel.h"
 #include "RegisteredWorld.h"
+#include "ReportedPlayer.h"
 #include "StatusEffect.h"
 
 using namespace libcomp;
@@ -352,6 +354,9 @@ bool PersistentObject::Initialize()
     RegisterType(typeid(objects::DemonBox), objects::DemonBox::GetMetadata(),
         []() {  return (PersistentObject*)new objects::DemonBox(); });
 
+    RegisterType(typeid(objects::DemonQuest), objects::DemonQuest::GetMetadata(),
+        []() {  return (PersistentObject*)new objects::DemonQuest(); });
+
     RegisterType(typeid(objects::EntityStats), objects::EntityStats::GetMetadata(),
         []() {  return (PersistentObject*)new objects::EntityStats(); });
 
@@ -384,6 +389,9 @@ bool PersistentObject::Initialize()
 
     RegisterType(typeid(objects::RegisteredWorld), objects::RegisteredWorld::GetMetadata(),
         []() {  return (PersistentObject*)new objects::RegisteredWorld(); });
+
+    RegisterType(typeid(objects::ReportedPlayer), objects::ReportedPlayer::GetMetadata(),
+        []() {  return (PersistentObject*)new objects::ReportedPlayer(); });
 
     RegisterType(typeid(objects::StatusEffect), objects::StatusEffect::GetMetadata(),
         []() {  return (PersistentObject*)new objects::StatusEffect(); });

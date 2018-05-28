@@ -47,6 +47,7 @@
 namespace objects
 {
 class DemonPresent;
+class DemonQuestReward;
 class DropSet;
 class Event;
 class ServerShop;
@@ -103,6 +104,13 @@ public:
     const std::shared_ptr<objects::ServerZone> GetZoneData(uint32_t id,
         uint32_t dynamicMapID, bool applyPartials = false,
         std::set<uint32_t> extraPartialIDs = {});
+
+    /**
+     * Get all field zone pairs of zone IDs and dynamic map IDs configured
+     * for the server
+     * @return List of zone ID to dynamic map ID pairs of field zones
+     */
+    const std::list<std::pair<uint32_t, uint32_t>> GetFieldZoneIDs();
 
     /**
      * Get all server zone defintion IDs with corresponding dynamic map IDs
@@ -167,6 +175,13 @@ public:
      * @return Pointer to the demon present entry matching the specified id
      */
     const std::shared_ptr<objects::DemonPresent> GetDemonPresentData(uint32_t id);
+
+    /**
+     * Get all demon quest reward definitions
+     * @return Map of all demon quest reward definitions by ID
+     */
+    std::unordered_map<uint32_t,
+        std::shared_ptr<objects::DemonQuestReward>> GetDemonQuestRewardData();
 
     /**
      * Get a drop set by definition ID
@@ -351,8 +366,11 @@ private:
     bool LoadScript(const libcomp::String& path, const libcomp::String& source);
 
     /// Map of server zone defintions by zone definition and dynamic map ID
-    std::unordered_map<uint32_t,
-        std::unordered_map<uint32_t, std::shared_ptr<objects::ServerZone>>> mZoneData;
+    std::unordered_map<uint32_t, std::unordered_map<uint32_t,
+        std::shared_ptr<objects::ServerZone>>> mZoneData;
+
+    /// List of zone ID to dynamic map ID pairs of field zones
+    std::list<std::pair<uint32_t, uint32_t>> mFieldZoneIDs;
 
     /// Map of server zone instance defintions by definition ID
     std::unordered_map<uint32_t, std::shared_ptr<
@@ -384,6 +402,10 @@ private:
     /// Map of demon present entries by definition ID
     std::unordered_map<uint32_t,
         std::shared_ptr<objects::DemonPresent>> mDemonPresentData;
+
+    /// Map of demon quest reward entries by definition ID
+    std::unordered_map<uint32_t,
+        std::shared_ptr<objects::DemonQuestReward>> mDemonQuestRewardData;
 
     /// Map of drop sets by definition ID
     std::unordered_map<uint32_t,

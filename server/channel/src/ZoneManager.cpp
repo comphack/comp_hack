@@ -390,6 +390,23 @@ std::shared_ptr<Zone> ZoneManager::GetCurrentZone(int32_t worldCID)
     return nullptr;
 }
 
+std::shared_ptr<Zone> ZoneManager::GetGlobalZone(uint32_t zoneID,
+    uint32_t dynamicMapID)
+{
+    std::lock_guard<std::mutex> lock(mLock);
+    auto iter = mGlobalZoneMap.find(zoneID);
+    if(iter != mGlobalZoneMap.end())
+    {
+        auto subIter = iter->second.find(dynamicMapID);
+        if(subIter != iter->second.end())
+        {
+            return mZones[subIter->second];
+        }
+    }
+
+    return nullptr;
+}
+
 bool ZoneManager::EnterZone(const std::shared_ptr<ChannelClientConnection>& client,
     uint32_t zoneID, uint32_t dynamicMapID)
 {
@@ -1599,52 +1616,33 @@ void ZoneManager::UpdateStatusEffectStates(const std::shared_ptr<Zone>& zone,
 
         if(added.size() > 0 || updated.size() > 0)
         {
-            uint32_t missing = 0;
             auto effectMap = entity->GetStatusEffects();
+
+            std::list<std::shared_ptr<objects::StatusEffect>> active;
             for(uint32_t effectType : added)
             {
-                if(effectMap.find(effectType) == effectMap.end())
+                auto it = effectMap.find(effectType);
+                if(it != effectMap.end())
                 {
-                    missing++;
+                    active.push_back(it->second);
                 }
             }
             
             for(uint32_t effectType : updated)
             {
-                if(effectMap.find(effectType) == effectMap.end())
+                auto it = effectMap.find(effectType);
+                if(it != effectMap.end())
                 {
-                    missing++;
+                    active.push_back(it->second);
                 }
             }
 
             libcomp::Packet p;
-            p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_ADD_STATUS_EFFECT);
-            p.WriteS32Little(entity->GetEntityID());
-            p.WriteU32Little((uint32_t)(added.size() + updated.size() - missing));
-
-            for(uint32_t effectType : added)
+            if(characterManager->GetActiveStatusesPacket(p,
+                entity->GetEntityID(), active))
             {
-                auto effect = effectMap[effectType];
-                if(effect)
-                {
-                    p.WriteU32Little(effectType);
-                    p.WriteS32Little((int32_t)effect->GetExpiration());
-                    p.WriteU8(effect->GetStack());
-                }
+                zonePackets.push_back(p);
             }
-            
-            for(uint32_t effectType : updated)
-            {
-                auto effect = effectMap[effectType];
-                if(effect)
-                {
-                    p.WriteU32Little(effectType);
-                    p.WriteS32Little((int32_t)effect->GetExpiration());
-                    p.WriteU8(effect->GetStack());
-                }
-            }
-
-            zonePackets.push_back(p);
         }
 
         if(hpTDamage != 0 || mpTDamage != 0)
@@ -1677,14 +1675,11 @@ void ZoneManager::UpdateStatusEffectStates(const std::shared_ptr<Zone>& zone,
         if(removed.size() > 0)
         {
             libcomp::Packet p;
-            p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_REMOVE_STATUS_EFFECT);
-            p.WriteS32Little(entity->GetEntityID());
-            p.WriteU32Little((uint32_t)removed.size());
-            for(uint32_t effectType : removed)
+            if(characterManager->GetRemovedStatusesPacket(p,
+                entity->GetEntityID(), removed))
             {
-                p.WriteU32Little(effectType);
+                zonePackets.push_back(p);
             }
-            zonePackets.push_back(p);
 
             statusRemoved.insert(entity);
         }
@@ -1735,24 +1730,12 @@ void ZoneManager::HandleSpecialInstancePopulate(
         case InstanceType_t::DEMON_ONLY:
             {
                 // Reresh the demon-only status effect
-                /// @todo: move this with status effect rework
-                AddStatusEffectMap m;
-                m[SVR_CONST.STATUS_HIDDEN] = std::pair<uint8_t, bool>(1, true);
+                StatusEffectChanges effects;
+                effects[SVR_CONST.STATUS_HIDDEN] = StatusEffectChange(
+                    SVR_CONST.STATUS_HIDDEN, 1, true);
 
-                cState->AddStatusEffects(m,
-                    mServer.lock()->GetDefinitionManager(), 0, false);
-
-                libcomp::Packet p;
-                p.WritePacketCode(
-                    ChannelToClientPacketCode_t::PACKET_ADD_STATUS_EFFECT);
-                p.WriteS32Little(cState->GetEntityID());
-                p.WriteU32Little(1);    // Count
-
-                p.WriteU32Little(143);
-                p.WriteS32Little(0);
-                p.WriteU8(1);
-
-                BroadcastPacket(zone, p);
+                mServer.lock()->GetCharacterManager()
+                    ->AddStatusEffectImmediate(client, cState, effects);
 
                 SendInstanceTimer(instance, client, true);
             }
@@ -2034,13 +2017,7 @@ bool ZoneManager::UpdateSpawnGroups(const std::shared_ptr<Zone>& zone,
         if(mode == objects::ActionSpawn::Mode_t::ONE_TIME_RANDOM &&
             groups.size() > 1)
         {
-            auto it = groups.begin();
-
-            size_t randomIdx = (size_t)RNG(int32_t, 0,
-                (int32_t)(groups.size()-1));
-            std::advance(it, randomIdx);
-
-            auto g = *it;
+            auto g = libcomp::Randomizer::GetEntry(groups);
             groups.clear();
             groups.push_back(g);
         }
@@ -2139,15 +2116,7 @@ bool ZoneManager::UpdateSpawnGroups(const std::shared_ptr<Zone>& zone,
 
             if(groupIDs.size() > 0)
             {
-                auto gIter = groupIDs.begin();
-                if(groupIDs.size() > 1)
-                {
-                    size_t randomIdx = (size_t)RNG(int32_t, 0,
-                        (int32_t)(groupIDs.size()-1));
-                    std::advance(gIter, randomIdx);
-                }
-
-                sgID = *gIter;
+                sgID = libcomp::Randomizer::GetEntry(groupIDs);
             }
         }
 
@@ -2376,15 +2345,7 @@ bool ZoneManager::SelectSpotAndLocation(bool useSpotID, uint32_t& spotID,
     {
         if(!spotID)
         {
-            auto spotIter = spotIDs.begin();
-            if(spotIDs.size() > 1)
-            {
-                size_t randomIdx = (size_t)RNG(int32_t, 0,
-                    (int32_t)(spotIDs.size()-1));
-                std::advance(spotIter, randomIdx);
-            }
-
-            spotID = *spotIter;
+            spotID = libcomp::Randomizer::GetEntry(spotIDs);
         }
 
         auto spotPair = dynamicMap->Spots.find(spotID);
@@ -2407,15 +2368,7 @@ bool ZoneManager::SelectSpotAndLocation(bool useSpotID, uint32_t& spotID,
     }
     else
     {
-        auto locIter = locations.begin();
-        if(locations.size() > 1)
-        {
-            size_t randomIdx = (size_t)RNG(int32_t, 0,
-                (int32_t)(locations.size()-1));
-            std::advance(locIter, randomIdx);
-        }
-
-        location = *locIter;
+        location = libcomp::Randomizer::GetEntry(locations);
     }
 
     return true;

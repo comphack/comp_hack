@@ -367,6 +367,13 @@ public:
     void HandleClockEvents();
 
     /**
+     * Update and notify all currently connected players of demon quests
+     * becoming available for the next day. By default this is scheduled to
+     * execute at midnight UTC.
+     */
+    void HandleDemonQuestReset();
+
+    /**
      * Schedule code work to be queued by the next server tick that occurs
      * following the specified time.
      * @param timestamp ServerTime timestamp that needs to pass for the
@@ -388,6 +395,13 @@ public:
     }
 
 protected:
+    /**
+     * Get the number of seconds until midnight of the next day. Useful
+     * for scheduling timed events.
+     * @return Number of seconds until midnight of the next day
+     */
+    uint32_t GetTimeUntilMidnight();
+
     /**
      * Create a connection to a newly active socket.
      * @param socket A new socket connection.

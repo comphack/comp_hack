@@ -31,6 +31,7 @@
 #include <ManagerPacket.h>
 #include <Packet.h>
 #include <PacketCodes.h>
+#include <ServerConstants.h>
 
 // object Includes
 #include <Item.h>
@@ -78,8 +79,21 @@ bool Parsers::DemonCrystallizeItem::Parse(libcomp::ManagerPacket *pPacketManager
     {
         exchangeSession->SetItems(0, item);
 
-        success = characterManager->GetSynthOutcome(otherClient ? otherClient->GetClientState()
-            : state, exchangeSession, itemType, successRates);
+        if(item)
+        {
+            success = characterManager->GetSynthOutcome(otherClient
+                ? otherClient->GetClientState() : state, exchangeSession,
+                itemType, successRates);
+
+            if(!success)
+            {
+                exchangeSession->SetItems(0, NULLUUID);
+            }
+        }
+        else
+        {
+            success = true;
+        }
     }
 
     libcomp::Packet reply;

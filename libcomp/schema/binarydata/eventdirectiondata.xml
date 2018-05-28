@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="MiEventDirectionData" persistent="false">
+        <member type="u32" name="ID"/>
+        <member type="string" length="36" name="Direction1" encoding="cp932"/>
+        <member type="string" length="36" name="Direction2" encoding="cp932"/>
+        <member type="string" length="36" name="Direction3" encoding="cp932"/>
+        <member type="string" length="36" name="Direction4" encoding="cp932"/>
+        <member type="string" length="36" name="Direction5" encoding="cp932"/>
+        <member type="string" length="36" name="Direction6" encoding="cp932"/>
+        <member type="string" length="36" name="Direction7" encoding="cp932"/>
+        <member type="string" length="36" name="Direction8" encoding="cp932"/>
+        <member type="string" length="36" name="Direction9" encoding="cp932"/>
+        <member type="string" length="36" name="Direction10" encoding="cp932"/>
+        <member type="string" length="36" name="Direction11" encoding="cp932"/>
+        <member type="string" length="36" name="Direction12" encoding="cp932"/>
+        <member type="string" length="36" name="Direction13" encoding="cp932"/>
+        <member type="string" length="36" name="Direction14" encoding="cp932"/>
+        <member type="string" length="36" name="Direction15" encoding="cp932"/>
+        <member type="string" length="36" name="Direction16" encoding="cp932"/>
+    </object>
+</objgen>

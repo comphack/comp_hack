@@ -48,6 +48,7 @@
     <constant name="SKILL_EQUIP_MOD_EDIT">329</constant>
     <constant name="SKILL_XP_PARTNER">334</constant>
     <constant name="STATUS_DEATH">32</constant>
+    <constant name="STATUS_DEMON_QUEST_ACTIVE">1030</constant>
     <constant name="STATUS_HIDDEN">143</constant>
     <constant name="STATUS_SUMMON_SYNC_1">194</constant>
     <constant name="STATUS_SUMMON_SYNC_2">364</constant>
@@ -278,19 +279,19 @@
         </pair>
         <pair>
             <key>9555</key>
-            <value>3056,3057,3058,3059,3060,3061,3062,3063</value>
+            <value>3056-3063</value>
         </pair>
         <pair>
             <key>9556</key>
-            <value>3053,3054,3055</value>
+            <value>3053-3055</value>
         </pair>
         <pair>
             <key>9557</key>
-            <value>3064,3065,3066,3072,3073,3074</value>
+            <value>3064-3066,3072-3074</value>
         </pair>
         <pair>
             <key>9558</key>
-            <value>3067,3068,3069,3070,3071</value>
+            <value>3067-3071</value>
         </pair>
     </constant>
     <constant name="CLAN_FORM_MAP">
@@ -320,14 +321,14 @@
         <!-- Format: skills gained by clan level -->
         <element>7001</element>
         <element>7002,7003</element>
-        <element>7004,7005,7006</element>
-        <element>7007,7008,7009</element>
-        <element>7010,7011,7012</element>
-        <element>7013,7014,7015</element>
+        <element>7004-7006</element>
+        <element>7007-7009</element>
+        <element>7010-7012</element>
+        <element>7013-7015</element>
         <element>7016,7017</element>
         <element>7018,7019</element>
         <element>7020,7021</element>
-        <element>7022,7023,7024</element>
+        <element>7022-7024</element>
     </constant>
     <constant name="DEMON_BOOK_BONUS">
         <!-- Format: entry count => tokusei ID list -->
@@ -416,6 +417,97 @@
             <key>300</key>
             <value>20000021</value>
         </pair>
+    </constant>
+    <constant name="DEMON_CRYSTALS">
+        <!-- Format: crystal item ID => demon race IDs -->
+        <pair>
+            <key>701</key>
+            <value>1,14,56,112</value>
+        </pair>
+        <pair>
+            <key>702</key>
+            <value>7,51,62,107</value>
+        </pair>
+        <pair>
+            <key>703</key>
+            <value>6,52,58,108</value>
+        </pair>
+        <pair>
+            <key>704</key>
+            <value>5,55,57,104</value>
+        </pair>
+        <pair>
+            <key>705</key>
+            <value>2-4,15,16,63,64,110,111,113</value>
+        </pair>
+        <pair>
+            <key>706</key>
+            <value>11,103</value>
+        </pair>
+        <pair>
+            <key>707</key>
+            <value>10,106</value>
+        </pair>
+        <pair>
+            <key>708</key>
+            <value>8,109</value>
+        </pair>
+        <pair>
+            <key>709</key>
+            <value>12,102</value>
+        </pair>
+        <pair>
+            <key>710</key>
+            <value>9,105</value>
+        </pair>
+        <pair>
+            <key>711</key>
+            <value>53,59</value>
+        </pair>
+        <pair>
+            <key>712</key>
+            <value>13,61</value>
+        </pair>
+        <pair>
+            <key>713</key>
+            <value>60</value>
+        </pair>
+        <pair>
+            <key>714</key>
+            <value>54,101</value>
+        </pair>
+    </constant>
+    <constant name="DEMON_QUEST_XP">
+        <!-- Format: Bonus XP gained at 5,10,20,30...100,150,200... -->
+        <element>1500</element>
+        <element>5000</element>
+        <element>15000</element>
+        <element>30000</element>
+        <element>50000</element>
+        <element>100000</element>
+        <element>0</element>
+        <element>0</element>
+        <element>0</element>
+        <element>0</element>
+        <element>300000</element>
+        <element>600000</element>
+        <element>1000000</element>
+        <element>1500000</element>
+        <element>2000000</element>
+        <element>2500000</element>
+        <element>3000000</element>
+        <element>3500000</element>
+        <element>4000000</element>
+        <element>4500000</element>
+        <element>5000000</element>
+        <element>5500000</element>
+        <element>6000000</element>
+        <element>6500000</element>
+        <element>7000000</element>
+        <element>7500000</element>
+        <element>8000000</element>
+        <element>9000000</element>
+        <element>10000000</element>
     </constant>
     <constant name="DEPO_MAP_DEMON">
         <!-- Format: item => rental days -->
@@ -522,15 +614,6 @@
             <key>909</key>
             <value>90</value>
         </pair>
-    </constant>
-    <constant name="DISASSEMBLY_ITEMS">
-        <!-- Format: disassembly items -->
-        <element>42001</element>
-        <element>42002</element>
-        <element>42003</element>
-        <element>42004</element>
-        <element>42024</element>
-        <element>42030</element>
     </constant>
     <constant name="EQUIP_MOD_EDIT_ITEMS">
         <!-- Format: item => mode, sub-mode, success rate -->
@@ -861,13 +944,108 @@
             <value>20</value>
         </pair>
     </constant>
-    <constant name="SLOT_MOD_ITEMS">
-        <!-- Format: mod items (weapon, then armor) -->
-        <element>42005,42006,42007,42008,42022,42029,42082</element>
-        <element>42031,42032,42033</element>
+    <constant name="QUEST_BONUS">
+        <!-- Format: bonus adjusting quest complete count => tokusei ID list -->
+        <!-- This replaces the partially functional QuestBonusData.sbin -->
+        <pair>
+            <key>10</key>
+            <value>20010000</value>
+        </pair>
+        <pair>
+            <key>20</key>
+            <value>20010001</value>
+        </pair>
+        <pair>
+            <key>30</key>
+            <value>20010002</value>
+        </pair>
+        <pair>
+            <key>40</key>
+            <value>20010003</value>
+        </pair>
+        <pair>
+            <key>50</key>
+            <value>20010004</value>
+        </pair>
+        <pair>
+            <key>60</key>
+            <value>20010005</value>
+        </pair>
+        <pair>
+            <key>70</key>
+            <value>20010006</value>
+        </pair>
+        <pair>
+            <key>80</key>
+            <value>20010007</value>
+        </pair>
+        <pair>
+            <key>100</key>
+            <value>20010008</value>
+        </pair>
+        <pair>
+            <key>120</key>
+            <value>20010009</value>
+        </pair>
+        <pair>
+            <key>140</key>
+            <value>20010010</value>
+        </pair>
+        <pair>
+            <key>160</key>
+            <value>20010011</value>
+        </pair>
+        <pair>
+            <key>180</key>
+            <value>20010012</value>
+        </pair>
+        <pair>
+            <key>200</key>
+            <value>20010013</value>
+        </pair>
+        <pair>
+            <key>220</key>
+            <value>20010014</value>
+        </pair>
+        <pair>
+            <key>240</key>
+            <value>20010015</value>
+        </pair>
+        <pair>
+            <key>260</key>
+            <value>20010016</value>
+        </pair>
+        <pair>
+            <key>280</key>
+            <value>20010017</value>
+        </pair>
+        <pair>
+            <key>300</key>
+            <value>20010018</value>
+        </pair>
+    </constant>
+    <constant name="RATE_SCALING_ITEMS">
+        <!-- Format: item IDs listed in an order that lines up the RateScaling -->
+        <!-- field on a specific binary data object. -->
+
+        <!-- MiDisassemblyTriggerData -->
+        <element>42001-42004,42024,42030</element>
+
+        <!-- MiModificationTriggerData -->
+        <element>42005-42008,42022,42029,42082</element>
+
+        <!-- MiModificationExtEffectData -->
+        <element>42031-42033</element>
+
+        <!-- MiSynthesisData -->
+        <element>42009,42011,42012,42021,42010,42023,42025,42026,42028</element>
     </constant>
     <constant name="SYNTH_ADJUSTMENTS">
         <!-- Format: item/skill => function, 2 contextual params -->
+        <!-- Function 0: Enchantment item, param 3 = 1 stops crystal loss -->
+        <!-- Function 1: Enchantment skill boosts -->
+        <!-- Function 2: Swordsmith mod slot creation boost skills -->
+        <!-- Function 3: Armsmaker mod slot creation boost skills -->
         <pair>
             <key>395</key>
             <value>0,10,1</value>
@@ -893,6 +1071,22 @@
             <value>0,15,0</value>
         </pair>
         <pair>
+            <key>20007</key>
+            <value>2,10,5</value>
+        </pair>
+        <pair>
+            <key>20008</key>
+            <value>2,5,2</value>
+        </pair>
+        <pair>
+            <key>20009</key>
+            <value>3,10,5</value>
+        </pair>
+        <pair>
+            <key>20010</key>
+            <value>3,5,2</value>
+        </pair>
+        <pair>
             <key>20011</key>
             <value>1,20,0</value>
         </pair>
@@ -902,10 +1096,12 @@
         </pair>
     </constant>
     <constant name="SYNTH_SKILLS">
-        <!-- Format: crystallize, tarot, then soul skills -->
+        <!-- Format: crystallize, tarot, soul, synth melee, synth gun skills -->
         <element>5721</element>
         <element>5722</element>
         <element>5723</element>
+        <element>5789</element>
+        <element>5790</element>
     </constant>
     <constant name="TRIFUSION_SPECIAL_DARK">
         <!-- Format: min level => demon type -->

@@ -28,6 +28,7 @@
 #include "Packets.h"
 
 // libcomp Includes
+#include <DefinitionManager.h>
 #include <Log.h>
 #include <ManagerPacket.h>
 #include <Packet.h>
@@ -39,6 +40,8 @@
 #include <ActivatedAbility.h>
 #include <Item.h>
 #include <ItemBox.h>
+#include <MiItemBasicData.h>
+#include <MiItemData.h>
 
 // channel Includes
 #include "ChannelServer.h"
@@ -162,21 +165,47 @@ bool Parsers::EquipmentModEdit::Parse(libcomp::ManagerPacket *pPacketManager,
                 case MODE_ADD_SOUL_TAROT:
                     if(subMode == 0)
                     {
-                        /// @todo: enable tarot
+                        if(item->GetSoul() == 0)
+                        {
+                            item->SetSoul(ENCHANT_ENABLE_EFFECT);
+                        }
                     }
                     else
                     {
-                        /// @todo: enable soul
+                        if(item->GetTarot() == 0)
+                        {
+                            item->SetTarot(ENCHANT_ENABLE_EFFECT);
+                        }
                     }
                     break;
                 case MODE_EMPTY_SOUL_TAROT:
-                    if(subMode == 0)
                     {
-                        item->SetTarot(0);
-                    }
-                    else
-                    {
-                        item->SetSoul(0);
+                        auto itemData = server->GetDefinitionManager()
+                            ->GetItemData(item->GetType());
+                        if(subMode == 0)
+                        {
+                            if((itemData->GetBasic()->GetFlags() & 0x0200) == 0)
+                            {
+                                // Reset to "enabled"
+                                item->SetSoul(ENCHANT_ENABLE_EFFECT);
+                            }
+                            else
+                            {
+                                item->SetSoul(0);
+                            }
+                        }
+                        else
+                        {
+                            if((itemData->GetBasic()->GetFlags() & 0x0100) == 0)
+                            {
+                                // Reset to "enabled"
+                                item->SetTarot(ENCHANT_ENABLE_EFFECT);
+                            }
+                            else
+                            {
+                                item->SetTarot(0);
+                            }
+                        }
                     }
                     break;
                 default:

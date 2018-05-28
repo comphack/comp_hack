@@ -98,8 +98,10 @@ void SplitStack(const std::shared_ptr<ChannelServer> server,
         state->SetObjectID(destItem->GetUUID(),
             server->GetNextObjectID());
 
-        std::list<uint16_t> updatedSlots = { (uint16_t)srcSlot, (uint16_t)targetSlot };
-        server->GetCharacterManager()->SendItemBoxData(client, itemBox, updatedSlots);
+        std::list<uint16_t> updatedSlots = { (uint16_t)srcSlot,
+            (uint16_t)targetSlot };
+        server->GetCharacterManager()->SendItemBoxData(client, itemBox,
+            updatedSlots, false);
 
         auto dbChanges = libcomp::DatabaseChangeSet::Create(
             state->GetAccountUID());
@@ -130,6 +132,7 @@ void CombineStacks(const std::shared_ptr<ChannelServer> server,
         ->GetItemData(targetItem->GetType()) : nullptr;
 
     bool valid = false;
+    std::list<uint16_t> updatedSlots = { (uint16_t)targetSlot };
     if(targetItem && itemDef)
     {
         valid = true;
@@ -165,6 +168,8 @@ void CombineStacks(const std::shared_ptr<ChannelServer> server,
                 {
                     dbChanges->Delete(srcItem);
                     itemBox->SetItems(srcSlot, NULLUUID);
+
+                    updatedSlots.push_back((uint16_t)srcSlot);
                 }
                 else
                 {
@@ -187,7 +192,8 @@ void CombineStacks(const std::shared_ptr<ChannelServer> server,
             .Arg(state->GetAccountUID().ToString()));
 
         // Re-send the item box to correct the client state
-        server->GetCharacterManager()->SendItemBoxData(client, itemBox);
+        server->GetCharacterManager()->SendItemBoxData(client, itemBox,
+            updatedSlots, false);
     }
 }
 

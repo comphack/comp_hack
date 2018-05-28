@@ -54,6 +54,7 @@
 #include <MiZoneBasicData.h>
 #include <MiZoneData.h>
 #include <PostItem.h>
+#include <ReportedPlayer.h>
 #include <ServerZone.h>
 #include <ServerZoneInstance.h>
 
@@ -102,6 +103,8 @@ ChatManager::ChatManager(const std::weak_ptr<ChannelServer>& server)
     mGMands["pos"] = &ChatManager::GMCommand_Position;
     mGMands["post"] = &ChatManager::GMCommand_Post;
     mGMands["quest"] = &ChatManager::GMCommand_Quest;
+    mGMands["reported"] = &ChatManager::GMCommand_Reported;
+    mGMands["resolve"] = &ChatManager::GMCommand_Resolve;
     mGMands["scrap"] = &ChatManager::GMCommand_Scrap;
     mGMands["skill"] = &ChatManager::GMCommand_Skill;
     mGMands["skillpoint"] = &ChatManager::GMCommand_SkillPoint;
@@ -110,6 +113,7 @@ ChatManager::ChatManager(const std::weak_ptr<ChannelServer>& server)
     mGMands["spawn"] = &ChatManager::GMCommand_Spawn;
     mGMands["speed"] = &ChatManager::GMCommand_Speed;
     mGMands["tickermessage"] = &ChatManager::GMCommand_TickerMessage;
+    mGMands["title"] = &ChatManager::GMCommand_Title;
     mGMands["tokusei"] = &ChatManager::GMCommand_Tokusei;
     mGMands["valuable"] = &ChatManager::GMCommand_Valuable;
     mGMands["version"] = &ChatManager::GMCommand_Version;
@@ -558,9 +562,9 @@ bool ChatManager::GMCommand_Effect(const std::shared_ptr<
         ? std::dynamic_pointer_cast<ActiveEntityState>(state->GetDemonState())
         : std::dynamic_pointer_cast<ActiveEntityState>(state->GetCharacterState());
 
-    AddStatusEffectMap m;
-    m[effectID] = std::pair<uint8_t, bool>(stack, !isAdd);
-    eState->AddStatusEffects(m, definitionManager);
+    StatusEffectChanges effects;
+    effects[effectID] = StatusEffectChange(effectID, stack, !isAdd);
+    eState->AddStatusEffects(effects, definitionManager);
 
     server->GetTokuseiManager()->Recalculate(eState, true,
         std::set<int32_t>{ eState->GetEntityID() });
@@ -813,7 +817,7 @@ bool ChatManager::GMCommand_ExpertiseUpdate(const std::shared_ptr<
     }
 
     server->GetCharacterManager()->UpdateExpertise(client, skillID,
-        multiplier);
+        0, multiplier);
 
     return true;
 }
@@ -1184,6 +1188,16 @@ bool ChatManager::GMCommand_Help(const std::shared_ptr<
             "Sets the phase of the quest given by the ID to the phase",
             "PHASE. A phase of -1 is complete and -2 is a reset."
         } },
+        { "reported",{
+            "@reported [COUNT|PLAYERNAME]",
+            "Get a set of unresolved reported player records of a",
+            "specified COUNT or targeted at a specific PLAYERNAME."
+        } },
+        { "resolve",{
+            "@resolve ENTRYUID",
+            "Resolve a reported player record by UID. Records can",
+            "be retrieved via @reported."
+        } },
         { "scrap", {
             "@scrap SLOT [NAME]",
             "Removes the item in slot SLOT from the character's",
@@ -1223,6 +1237,10 @@ bool ChatManager::GMCommand_Help(const std::shared_ptr<
         { "tickermessage", {
             "@tickermessage MESSAGE...",
             "Sends the ticker message MESSAGE to all players.",
+        } },
+        { "title", {
+            "@title ID",
+            "Grants the player a new character title by ID."
         } },
         { "tokusei", {
             "@tokusei CLEAR|ID [STACK] [DEMON]",
@@ -1863,6 +1881,178 @@ bool ChatManager::GMCommand_Post(const std::shared_ptr<
     return true;
 }
 
+bool ChatManager::GMCommand_Reported(const std::shared_ptr<
+    channel::ChannelClientConnection>& client,
+    const std::list<libcomp::String>& args)
+{
+    if(!HaveUserLevel(client, 400))
+    {
+        return true;
+    }
+
+    std::list<libcomp::String> argsCopy = args;
+
+    auto server = mServer.lock();
+    auto lobbyDB = server->GetLobbyDatabase();
+    auto worldDB = server->GetWorldDatabase();
+
+    uint8_t count = 5;
+    libcomp::String playerName;
+    if(!GetIntegerArg(count, argsCopy))
+    {
+        GetStringArg(playerName, argsCopy);
+    }
+
+    // Cap at 5 records
+    if(count > 5)
+    {
+        count = 5;
+    }
+
+    std::list<std::shared_ptr<objects::ReportedPlayer>> reported;
+    if(!playerName.IsEmpty())
+    {
+        for(auto entry : objects::ReportedPlayer::
+            LoadReportedPlayerListByPlayerName(worldDB, playerName))
+        {
+            if(!entry->GetResolved())
+            {
+                reported.push_back(entry);
+            }
+        }
+    }
+    else
+    {
+        reported = objects::ReportedPlayer::
+            LoadReportedPlayerListByResolved(worldDB, false);
+    }
+
+    SendChatMessage(client, ChatType_t::CHAT_SELF,
+        libcomp::String("%1 record%2 found%3")
+        .Arg(reported.size()).Arg(reported.size() != 1 ? "s" : "")
+        .Arg(reported.size() > (size_t)count ? " (limited to 5)" : ""));
+    
+    for(auto entry : reported)
+    {
+        SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(
+            "Entry: %1").Arg(entry->GetUUID().ToString()));
+        if(playerName.IsEmpty())
+        {
+            SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(
+                "Player: %1").Arg(entry->GetPlayerName()));
+        }
+
+        auto account = entry->GetReporter().Get(lobbyDB);
+
+        SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(
+            "Reported by: %1").Arg(account ? account->GetUsername()
+                : "[Unknown]"));
+
+        libcomp::String subject;
+        switch(entry->GetSubject())
+        {
+        case objects::ReportedPlayer::Subject_t::CHAT_HARASSMENT:
+            subject = "Chat harassment";
+            break;
+        case objects::ReportedPlayer::Subject_t::ABUSIVE_ACTION:
+            subject = "Abusive action";
+            break;
+        case objects::ReportedPlayer::Subject_t::PROGRESS_OBSTRUCTION:
+            subject = "Progress obstruction";
+            break;
+        case objects::ReportedPlayer::Subject_t::CHEATING:
+            subject = "Cheating";
+            break;
+        case objects::ReportedPlayer::Subject_t::ILLEGAL_TOOL_USE:
+            subject = "Illegal tool use";
+            break;
+        case objects::ReportedPlayer::Subject_t::REAL_MONEY_TRADE:
+            subject = "Real money trade";
+            break;
+        case objects::ReportedPlayer::Subject_t::MISC_HARASSMENT:
+            subject = "Misc harassment";
+            break;
+        case objects::ReportedPlayer::Subject_t::UNSPECIFIED:
+        default:
+            subject = "Unspecified";
+            break;
+        }
+
+        SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(
+            "Reason: %1").Arg(subject));
+
+        if(!entry->GetLocation().IsEmpty())
+        {
+            SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(
+                "Location: %1").Arg(entry->GetLocation()));
+        }
+
+        SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(
+            "Comment: %1").Arg(entry->GetComment()));
+    }
+
+    return true;
+}
+
+bool ChatManager::GMCommand_Resolve(const std::shared_ptr<
+    channel::ChannelClientConnection>& client,
+    const std::list<libcomp::String>& args)
+{
+    if(!HaveUserLevel(client, 400))
+    {
+        return true;
+    }
+
+    std::list<libcomp::String> argsCopy = args;
+
+    auto server = mServer.lock();
+    auto worldDB = server->GetWorldDatabase();
+
+    bool failed = false;
+
+    libcomp::String uidStr;
+    libobjgen::UUID uuid;
+    if(!GetStringArg(uidStr, argsCopy))
+    {
+        failed = true;
+    }
+    else
+    {
+        uuid = libobjgen::UUID(uidStr.C());
+        failed = uuid.IsNull();
+    }
+
+    if(!failed)
+    {
+        auto reported = libcomp::PersistentObject::LoadObjectByUUID<
+            objects::ReportedPlayer>(worldDB, uuid);
+        if(reported)
+        {
+            if(!reported->GetResolved())
+            {
+                auto state = client->GetClientState();
+
+                reported->SetResolved(true);
+                reported->SetResolveTime((uint32_t)std::time(0));
+                reported->SetResolver(state->GetAccountUID());
+
+                failed = !reported->Update(worldDB);
+            }
+        }
+        else
+        {
+            failed = true;
+        }
+    }
+
+    if(failed)
+    {
+        SendChatMessage(client, ChatType_t::CHAT_SELF, "Resolve failed");
+    }
+
+    return true;
+}
+
 bool ChatManager::GMCommand_Quest(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
@@ -2219,6 +2409,29 @@ bool ChatManager::GMCommand_TickerMessage(const std::shared_ptr<
     }
 
     conf->SetSystemMessage(message);
+
+    return true;
+}
+
+bool ChatManager::GMCommand_Title(const std::shared_ptr<
+    channel::ChannelClientConnection>& client,
+    const std::list<libcomp::String>& args)
+{
+    if(!HaveUserLevel(client, 100))
+    {
+        return true;
+    }
+
+    std::list<libcomp::String> argsCopy = args;
+
+    int16_t titleID;
+    if(!GetIntegerArg<int16_t>(titleID, argsCopy))
+    {
+        return false;
+    }
+
+    mServer.lock()->GetCharacterManager()->AddTitle(client,
+        titleID);
 
     return true;
 }

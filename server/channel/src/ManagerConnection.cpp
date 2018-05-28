@@ -211,6 +211,20 @@ void ManagerConnection::RemoveClientConnection(const std::shared_ptr<
     }
 }
 
+std::list<std::shared_ptr<ChannelClientConnection>>
+    ManagerConnection::GetAllConnections()
+{
+    std::list<std::shared_ptr<ChannelClientConnection>> clients;
+
+    std::lock_guard<std::mutex> lock(mLock);
+    for(auto& pair : mClientConnections)
+    {
+        clients.push_back(pair.second);
+    }
+
+    return clients;
+}
+
 const std::shared_ptr<ChannelClientConnection>
     ManagerConnection::GetEntityClient(int32_t id, bool worldID)
 {

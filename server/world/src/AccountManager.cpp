@@ -125,6 +125,8 @@ bool AccountManager::ChannelLogin(std::shared_ptr<objects::AccountLogin> login)
         return false;
     }
 
+    auto worldChanges = libcomp::DatabaseChangeSet::Create();
+
     uint32_t lastLogin = character->GetLastLogin();
     auto now = std::time(0);
 
@@ -135,11 +137,48 @@ bool AccountManager::ChannelLogin(std::shared_ptr<objects::AccountLogin> login)
     localTime.tm_sec = 0;
 
     uint32_t today = (uint32_t)std::mktime(&localTime);
-    if(today > lastLogin)
+    if(lastLogin && today > lastLogin)
     {
         // This is the character's first login of the day, increase
-        // their login points
+        // their login points and mark COMP demons with quests
         auto stats = character->LoadCoreStats(worldDB);
+
+        if(!character->GetCOMP().IsNull())
+        {
+            if(character->LoadCOMP(worldDB))
+            {
+                auto demons = objects::Demon::LoadDemonListByDemonBox(worldDB,
+                    character->GetCOMP().GetUUID());
+                for(auto demon : demons)
+                {
+                    //Set the quest if familiarity is high enough
+                    if(!demon->GetHasQuest() &&
+                        demon->GetFamiliarity() >= 4001)
+                    {
+                        demon->SetHasQuest(true);
+                        worldChanges->Update(demon);
+                    }
+                }
+
+                // Free up the COMP
+                Cleanup<objects::DemonBox>(character->GetCOMP().Get());
+            }
+            else
+            {
+                LOG_ERROR(libcomp::String("Failed to load COMP to update"
+                    " demon quests on account: %1.\n")
+                    .Arg(account->GetUsername()));
+                return false;
+            }
+        }
+
+        // Reset the demon quest daily count
+        auto progress = character->LoadProgress(worldDB);
+        if(progress)
+        {
+            progress->SetDemonQuestDaily(0);
+            worldChanges->Update(progress);
+        }
 
         if(stats->GetLevel() > 0)
         {
@@ -165,9 +204,11 @@ bool AccountManager::ChannelLogin(std::shared_ptr<objects::AccountLogin> login)
     character->SetLastLogin((uint32_t)now);
     account->SetLastLogin((uint32_t)now);
 
-    if(!character->Update(worldDB) || !account->Update(lobbyDB))
+    worldChanges->Update(character);
+
+    if(!worldDB->ProcessChangeSet(worldChanges) || !account->Update(lobbyDB))
     {
-        LOG_ERROR(libcomp::String("Failed to update character and account"
+        LOG_ERROR(libcomp::String("Failed to update character data"
             " during channel login request for account: %1.\n")
             .Arg(account->GetUsername()));
         return false;

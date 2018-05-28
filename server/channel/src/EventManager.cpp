@@ -41,8 +41,12 @@
 
 // object Includes
 #include <Account.h>
+#include <ChannelConfig.h>
 #include <CharacterProgress.h>
 #include <DemonBox.h>
+#include <DemonQuest.h>
+#include <DemonQuestReward.h>
+#include <DropSet.h>
 #include <EventChoice.h>
 #include <EventCondition.h>
 #include <EventConditionData.h>
@@ -61,14 +65,21 @@
 #include <Expertise.h>
 #include <Item.h>
 #include <ItemBox.h>
+#include <ItemDrop.h>
+#include <MiDCategoryData.h>
 #include <MiDevilBookData.h>
+#include <MiDevilCrystalData.h>
 #include <MiDevilData.h>
+#include <MiEnchantData.h>
 #include <MiExpertData.h>
+#include <MiGrowthData.h>
 #include <MiItemBasicData.h>
 #include <MiItemData.h>
 #include <MiQuestData.h>
 #include <MiQuestPhaseData.h>
 #include <MiQuestUpperCondition.h>
+#include <MiSynthesisData.h>
+#include <MiTriUnionSpecialData.h>
 #include <MiUnionData.h>
 #include <Party.h>
 #include <Quest.h>
@@ -77,14 +88,18 @@
 #include <ServerObject.h>
 #include <ServerZone.h>
 #include <ServerZoneInstance.h>
+#include <Spawn.h>
 #include <TriFusionHostSession.h>
+#include <WorldSharedConfig.h>
 
 // channel Includes
 #include "ActionManager.h"
 #include "ChannelServer.h"
 #include "CharacterManager.h"
 #include "CharacterState.h"
+#include "FusionTables.h"
 #include "ManagerConnection.h"
+#include "TokuseiManager.h"
 #include "ZoneInstance.h"
 #include "ZoneManager.h"
 
@@ -260,7 +275,6 @@ bool EventManager::UpdateQuest(const std::shared_ptr<ChannelClientConnection>& c
     int32_t, int32_t>& updateFlags)
 {
     auto server = mServer.lock();
-    auto characterManager = server->GetCharacterManager();
     auto definitionManager = server->GetDefinitionManager();
     auto questData = definitionManager->GetQuestData((uint32_t)questID);
 
@@ -285,7 +299,7 @@ bool EventManager::UpdateQuest(const std::shared_ptr<ChannelClientConnection>& c
 
     size_t index;
     uint8_t shiftVal;
-    characterManager->ConvertIDToMaskValues((uint16_t)questID, index, shiftVal);
+    CharacterManager::ConvertIDToMaskValues((uint16_t)questID, index, shiftVal);
 
     uint8_t indexVal = progress->GetCompletedQuests(index);
     bool completed = (shiftVal & indexVal) != 0;
@@ -293,6 +307,7 @@ bool EventManager::UpdateQuest(const std::shared_ptr<ChannelClientConnection>& c
     auto dbChanges = libcomp::DatabaseChangeSet::Create(state->GetAccountUID());
     auto quest = character->GetQuests(questID).Get();
     bool sendUpdate = phase != -2;
+    bool recalcCharacter = false;
     if(phase == -1)
     {
         // Completing a quest
@@ -303,7 +318,9 @@ bool EventManager::UpdateQuest(const std::shared_ptr<ChannelClientConnection>& c
             return false;
         }
 
-        progress->SetCompletedQuests(index, (uint8_t)(shiftVal | indexVal));
+        recalcCharacter = cState->UpdateQuestState(definitionManager,
+            (uint32_t)questID);
+
         dbChanges->Update(progress);
 
         if(quest)
@@ -329,6 +346,8 @@ bool EventManager::UpdateQuest(const std::shared_ptr<ChannelClientConnection>& c
         }
 
         SendCompletedQuestList(client);
+
+        recalcCharacter = cState->UpdateQuestState(definitionManager);
     }
     else if(!quest)
     {
@@ -410,6 +429,15 @@ bool EventManager::UpdateQuest(const std::shared_ptr<ChannelClientConnection>& c
         client->SendPacket(p);
     }
 
+    if(recalcCharacter)
+    {
+        server->GetTokuseiManager()->Recalculate(cState, true,
+            std::set<int32_t>{ cState->GetEntityID() });
+
+        // Always recalculate stats
+        server->GetCharacterManager()->RecalculateStats(cState, client);
+    }
+
     return true;
 }
 
@@ -481,6 +509,22 @@ void EventManager::UpdateQuestKillCount(const std::shared_ptr<ChannelClientConne
         }
 
         client->FlushOutgoing();
+    }
+
+    // Update demon kill quest
+    auto dQuest = character->GetDemonQuest().Get();
+    if(dQuest)
+    {
+        for(auto& targetPair : dQuest->GetTargets())
+        {
+            auto it = kills.find(targetPair.first);
+            if(it != kills.end() &&
+                dQuest->GetType() == objects::DemonQuest::Type_t::KILL)
+            {
+                UpdateDemonQuestCount(client, dQuest->GetType(),
+                    it->first, it->second);
+            }
+        }
     }
 }
 
@@ -793,7 +837,7 @@ bool EventManager::EvaluateQuestCondition(EventContext& ctx,
 
             size_t index;
             uint8_t shiftVal;
-            server->GetCharacterManager()->ConvertIDToMaskValues((uint16_t)questID,
+            CharacterManager::ConvertIDToMaskValues((uint16_t)questID,
                 index, shiftVal);
 
             uint8_t indexVal = progress->GetCompletedQuests(index);
@@ -813,7 +857,7 @@ bool EventManager::EvaluateQuestCondition(EventContext& ctx,
             // Count complete as true
             size_t index;
             uint8_t shiftVal;
-            server->GetCharacterManager()->ConvertIDToMaskValues((uint16_t)questID,
+            CharacterManager::ConvertIDToMaskValues((uint16_t)questID,
                 index, shiftVal);
 
             uint8_t indexVal = character->GetProgress()->GetCompletedQuests(index);
@@ -1030,14 +1074,8 @@ bool EventManager::EvaluateCondition(EventContext& ctx,
             // Item of type = [value 1] quantity compares to
             // [value 2] in the character's inventory
             auto character = client->GetClientState()->GetCharacterState()->GetEntity();
-            auto items = mServer.lock()->GetCharacterManager()->GetExistingItems(character,
-                (uint32_t)condition->GetValue1());
-
-            uint16_t count = 0;
-            for(auto item : items)
-            {
-                count = (uint16_t)(count + (uint16_t)item->GetStackSize());
-            }
+            uint32_t count = mServer.lock()->GetCharacterManager()
+                ->GetExistingItemCount(character, (uint32_t)condition->GetValue1());
 
             return Compare((int32_t)count, condition->GetValue2(), 0,
                 compareMode, EventCompareMode::GTE, EVENT_COMPARE_NUMERIC);
@@ -1055,7 +1093,7 @@ bool EventManager::EvaluateCondition(EventContext& ctx,
 
             uint16_t valuableID = (uint16_t)condition->GetValue1();
 
-            return mServer.lock()->GetCharacterManager()->HasValuable(character, valuableID) != 
+            return CharacterManager::HasValuable(character, valuableID) !=
                 (condition->GetValue2() == 0);
         }
     case objects::EventConditionData::Type_t::QUEST_COMPLETE:
@@ -1074,7 +1112,7 @@ bool EventManager::EvaluateCondition(EventContext& ctx,
 
             size_t index;
             uint8_t shiftVal;
-            mServer.lock()->GetCharacterManager()->ConvertIDToMaskValues(questID, index, shiftVal);
+            CharacterManager::ConvertIDToMaskValues(questID, index, shiftVal);
 
             uint8_t indexVal = progress->GetCompletedQuests(index);
 
@@ -1196,7 +1234,7 @@ bool EventManager::EvaluateCondition(EventContext& ctx,
 
             size_t index;
             uint8_t shiftVal;
-            mServer.lock()->GetCharacterManager()->ConvertIDToMaskValues(mapID, index, shiftVal);
+            CharacterManager::ConvertIDToMaskValues(mapID, index, shiftVal);
 
             uint8_t indexVal = progress->GetMaps(index);
 
@@ -1440,7 +1478,6 @@ bool EventManager::EvaluateCondition(EventContext& ctx,
             // Demon ID ([value 2] = 0) or base demon ID ([value 2] != 0) matching [value 1]
             // exists in the compendium
             auto server = mServer.lock();
-            auto characterManager = server->GetCharacterManager();
             auto definitionManager = server->GetDefinitionManager();
 
             auto character = client->GetClientState()->GetCharacterState()->GetEntity();
@@ -1456,7 +1493,7 @@ bool EventManager::EvaluateCondition(EventContext& ctx,
                 {
                     size_t index;
                     uint8_t shiftValue;
-                    characterManager->ConvertIDToMaskValues(
+                    CharacterManager::ConvertIDToMaskValues(
                         (uint16_t)dbPair.second->GetShiftValue(), index, shiftValue);
                     if((progress->GetDevilBook(index) & shiftValue) != 0)
                     {
@@ -1677,7 +1714,7 @@ bool EventManager::EvaluateCondition(EventContext& ctx,
 
             size_t index;
             uint8_t shiftVal;
-            mServer.lock()->GetCharacterManager()->ConvertIDToMaskValues(pluginID, index, shiftVal);
+            CharacterManager::ConvertIDToMaskValues(pluginID, index, shiftVal);
 
             uint8_t indexVal = progress->GetPlugins(index);
 
@@ -1813,17 +1850,9 @@ bool EventManager::EvaluateQuestPhaseRequirements(const std::shared_ptr<
         {
         case objects::QuestPhaseRequirement::Type_t::ITEM:
             {
-                auto characterManager = server->GetCharacterManager();
-                auto items = characterManager->GetExistingItems(character,
-                    req->GetObjectID());
-
-                uint16_t count = 0;
-                for(auto item : items)
-                {
-                    count = (uint16_t)(count + item->GetStackSize());
-                }
-
-                if(count < (uint16_t)req->GetObjectCount())
+                uint32_t count = server->GetCharacterManager()
+                    ->GetExistingItemCount(character, req->GetObjectID());
+                if(count < req->GetObjectCount())
                 {
                     return false;
                 }
@@ -1896,6 +1925,16 @@ void EventManager::UpdateQuestTargetEnemies(
             }
         }
     }
+
+    // Add demon quest type
+    auto dQuest = character->GetDemonQuest().Get();
+    if(dQuest)
+    {
+        for(auto& targetPair : dQuest->GetTargets())
+        {
+            state->InsertQuestTargetEnemies(targetPair.first);
+        }
+    }
 }
 
 void EventManager::SendActiveQuestList(
@@ -1938,6 +1977,1035 @@ void EventManager::SendCompletedQuestList(
     reply.WriteArray(&completedQuests, (uint32_t)completedQuests.size());
 
     client->SendPacket(reply);
+}
+
+std::shared_ptr<objects::DemonQuest> EventManager::GenerateDemonQuest(
+    const std::shared_ptr<CharacterState>& cState,
+    const std::shared_ptr<objects::Demon>& demon)
+{
+    auto character = cState->GetEntity();
+
+    if(!demon || !demon->GetHasQuest() || !character->GetDemonQuest().IsNull())
+    {
+        return nullptr;
+    }
+
+    auto server = mServer.lock();
+    auto definitionManager = server->GetDefinitionManager();
+    auto serverDataManager = server->GetServerDataManager();
+
+    // Generate the pending quest but don't save it until its accepted
+    auto dQuest = libcomp::PersistentObject::New<objects::DemonQuest>();
+
+    dQuest->SetDemon(demon->GetUUID());
+    dQuest->SetCharacter(character->GetUUID());
+
+    uint8_t lvl = (uint8_t)demon->GetCoreStats()->GetLevel();
+    auto demonData = definitionManager->GetDevilData(demon->GetType());
+    uint8_t raceID = (uint8_t)demonData->GetCategory()->GetRace();
+
+    // Gather the valid types based the requesting demon
+    const static uint16_t enabledTypeFlags = std::dynamic_pointer_cast<
+        objects::ChannelConfig>(server->GetConfig())
+        ->GetWorldSharedConfig()->GetEnabledDemonQuests();
+
+    const uint8_t flagCount = (uint8_t)objects::DemonQuest::Type_t::PLASMA -
+        (uint8_t)objects::DemonQuest::Type_t::KILL + 1;
+
+    std::set<uint16_t> enabledTypes;
+    for(uint8_t shift = 0; shift < flagCount; shift++)
+    {
+        if((enabledTypeFlags & (uint16_t)(0x0001 << shift)) != 0)
+        {
+            enabledTypes.insert((uint16_t)(shift + 1));
+        }
+    }
+
+    // Default to enabled types
+    std::set<uint16_t> validTypes = enabledTypes;
+
+    // Remove conditional types to add back later
+    validTypes.erase((uint16_t)objects::DemonQuest::Type_t::CRYSTALLIZE);
+    validTypes.erase((uint16_t)objects::DemonQuest::Type_t::ENCHANT_TAROT);
+    validTypes.erase((uint16_t)objects::DemonQuest::Type_t::ENCHANT_SOUL);
+    validTypes.erase((uint16_t)objects::DemonQuest::Type_t::SYNTH_MELEE);
+    validTypes.erase((uint16_t)objects::DemonQuest::Type_t::SYNTH_GUN);
+
+    std::set<uint32_t> demonTraits;
+
+    auto growth = demonData->GetGrowth();
+    for(size_t i = 0; i < 4; i++)
+    {
+        uint32_t traitID = growth->GetTraits(i);
+        if(traitID)
+        {
+            demonTraits.insert(traitID);
+        }
+    }
+
+    uint8_t ssRank = cState->GetExpertiseRank(definitionManager,
+        EXPERTISE_CHAIN_SWORDSMITH);
+    uint8_t amRank = cState->GetExpertiseRank(definitionManager,
+        EXPERTISE_CHAIN_ARMS_MAKER);
+
+    // Synth based quests require a skill on that demon that boosts
+    // the success
+    for(auto pair : SVR_CONST.SYNTH_ADJUSTMENTS)
+    {
+        if(demonTraits.find((uint32_t)pair.first) != demonTraits.end())
+        {
+            switch(pair.second[0])
+            {
+            case 1:
+                // Add back synth skills
+                if(enabledTypes.find((uint16_t)objects::DemonQuest::Type_t::
+                    CRYSTALLIZE) != enabledTypes.end())
+                {
+                    validTypes.insert((uint16_t)
+                        objects::DemonQuest::Type_t::CRYSTALLIZE);
+                }
+
+                if(enabledTypes.find((uint16_t)objects::DemonQuest::Type_t::
+                    ENCHANT_TAROT) != enabledTypes.end())
+                {
+                    validTypes.insert((uint16_t)
+                        objects::DemonQuest::Type_t::ENCHANT_TAROT);
+                }
+
+                if(enabledTypes.find((uint16_t)objects::DemonQuest::Type_t::
+                    ENCHANT_SOUL) != enabledTypes.end())
+                {
+                    validTypes.insert((uint16_t)
+                        objects::DemonQuest::Type_t::ENCHANT_SOUL);
+                }
+                break;
+            case 2:
+                // Add melee synth if class 1 or higher
+                if(enabledTypes.find((uint16_t)objects::DemonQuest::Type_t::
+                    SYNTH_MELEE) != enabledTypes.end() && ssRank >= 10)
+                {
+                    validTypes.insert((uint16_t)
+                        objects::DemonQuest::Type_t::SYNTH_MELEE);
+                }
+                break;
+            case 3:
+                // Add gun synth if class 1 or higher
+                if(enabledTypes.find((uint16_t)objects::DemonQuest::Type_t::
+                    SYNTH_GUN) != enabledTypes.end() && amRank >= 10)
+                {
+                    validTypes.insert((uint16_t)
+                        objects::DemonQuest::Type_t::SYNTH_GUN);
+                }
+                break;
+            default:
+                return nullptr;
+            }
+        }
+    }
+
+    // Remove conditionally invalid types
+    std::list<std::shared_ptr<objects::Item>> equipment;
+    for(auto item : character->GetItemBoxes(0)->GetItems())
+    {
+        if(!item.IsNull())
+        {
+            auto itemData = definitionManager->GetItemData(item->GetType());
+            if(!itemData) continue;
+
+            switch(itemData->GetBasic()->GetEquipType())
+            {
+            case objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_WEAPON:
+                equipment.push_back(item.Get());
+                break;
+            default:
+                /// @todo: enable armor too
+                break;
+            }
+        }
+    }
+
+    if(validTypes.find((uint16_t)objects::DemonQuest::Type_t::
+        EQUIPMENT_MOD) != validTypes.end() && equipment.size() == 0)
+    {
+        validTypes.erase((uint16_t)objects::DemonQuest::Type_t::
+            EQUIPMENT_MOD);
+    }
+
+    // Randomly pick a valid type
+    if(validTypes.size() > 0)
+    {
+        uint16_t typeID = libcomp::Randomizer::GetEntry(validTypes);
+        dQuest->SetType((objects::DemonQuest::Type_t)typeID);
+    }
+    else
+    {
+        LOG_ERROR(libcomp::String("No valid demon quest could be generated"
+            " for demon type '%1' on character: %2\n").Arg(demon->GetType())
+            .Arg(character->GetUUID().ToString()));
+        return nullptr;
+    }
+
+    // Now Build the quest
+
+    // Specific quest types require that a demon can be obtained so they
+    // are not impossible on the current server
+    bool demonDependent = false;
+
+    std::set<uint32_t> demons;
+    switch(dQuest->GetType())
+    {
+    case objects::DemonQuest::Type_t::KILL:
+    case objects::DemonQuest::Type_t::CONTRACT:
+    case objects::DemonQuest::Type_t::CRYSTALLIZE:
+    case objects::DemonQuest::Type_t::ENCHANT_TAROT:
+    case objects::DemonQuest::Type_t::ENCHANT_SOUL:
+        {
+            bool isKill = dQuest->GetType() ==
+                objects::DemonQuest::Type_t::KILL;
+            int8_t cLevel = character->GetCoreStats()->GetLevel();
+
+            std::map<int8_t, std::set<uint32_t>> fieldEnemyMap;
+            for(auto& pair : serverDataManager->GetFieldZoneIDs())
+            {
+                auto zone = server->GetZoneManager()->GetGlobalZone(
+                    pair.first, pair.second);
+                if(zone)
+                {
+                    for(auto& spawnPair : zone->GetDefinition()
+                        ->GetSpawns())
+                    {
+                        auto spawn = spawnPair.second;
+                        bool canJoin = spawn->GetTalkResist() < 100 &&
+                            (spawn->GetTalkResults() & 0x01) != 0 &&
+                            spawn->GetLevel() <= cLevel;
+                        if(spawn->GetLevel() && (isKill || canJoin))
+                        {
+                            fieldEnemyMap[spawn->GetLevel()].insert(
+                                spawn->GetEnemyType());
+                        }
+                    }
+                }
+            }
+
+            // Only keep levels within a range of +-10
+            uint8_t lvlMax = (uint8_t)fieldEnemyMap.rbegin()->first;
+            uint8_t lvlAdjust = lvl > lvlMax ? lvlMax : lvl;
+            for(auto& pair : fieldEnemyMap)
+            {
+                if(abs(pair.first - lvlAdjust) <= 10)
+                {
+                    for(uint32_t enemyType : pair.second)
+                    {
+                        // Exclude demons of the same type if kill quest
+                        if(!isKill || definitionManager->GetDevilData(
+                            enemyType)->GetUnionData()->GetBaseDemonID() !=
+                            demonData->GetUnionData()->GetBaseDemonID())
+                        {
+                            demons.insert(enemyType);
+                        }
+                    }
+                }
+            }
+
+            demonDependent = true;
+        }
+        break;
+    default:
+        break;
+    }
+
+    // If type is an enchantment request, convert to base demon IDs and
+    // only include ones with a valid enchantment entry
+    switch(dQuest->GetType())
+    {
+    case objects::DemonQuest::Type_t::CRYSTALLIZE:
+    case objects::DemonQuest::Type_t::ENCHANT_TAROT:
+    case objects::DemonQuest::Type_t::ENCHANT_SOUL:
+        {
+            std::set<uint32_t> enchantDemons;
+
+            // Include demons in the COMP (excluding the requestor)
+            for(auto d : character->GetCOMP()->GetDemons())
+            {
+                if(!d.IsNull() && d.Get() != demon)
+                {
+                    demons.insert(d->GetType());
+                }
+            }
+
+            for(uint32_t demonType : demons)
+            {
+                auto def = definitionManager->GetDevilData(demonType);
+                if(def)
+                {
+                    uint32_t baseID = def->GetUnionData()->GetBaseDemonID();
+                    auto enchantData = definitionManager
+                        ->GetEnchantDataByDemonID(baseID);
+                    if(enchantData)
+                    {
+                        enchantDemons.insert(baseID);
+                    }
+                }
+            }
+
+            // Never include the demon itself
+            enchantDemons.erase(demon->GetType());
+
+            demons = enchantDemons;
+        }
+        break;
+    default:
+        break;
+    }
+
+    // If an enemy is needed but none exist, switch to a different type
+    if(demonDependent && demons.size() == 0)
+    {
+        // Default to the only one that is always (technically) possible
+        dQuest->SetType(objects::DemonQuest::Type_t::ITEM);
+    }
+
+    switch(dQuest->GetType())
+    {
+    case objects::DemonQuest::Type_t::KILL:
+        // Kill a randomly chosen field demon
+        {
+            int32_t lvlAdjust = (int32_t)ceil((float)lvl / 30.f);
+            uint16_t left = RNG(uint16_t, 1, (uint16_t)(lvlAdjust + 4));
+
+            // Chance to split larger groupings into multiple target types
+            std::list<uint16_t> counts;
+            if(left > 3 && RNG(int32_t, 1, lvlAdjust + 2) != 1)
+            {
+                while(left)
+                {
+                    uint16_t count = RNG(uint16_t,
+                        counts.size() > 0 ? 1 : 2, left);
+                    counts.push_back(count);
+
+                    left = (uint16_t)(left - count);
+                }
+            }
+            else
+            {
+                counts.push_back(left);
+            }
+
+            for(uint16_t count : counts)
+            {
+                uint32_t enemyType = libcomp::Randomizer::GetEntry(
+                    demons);
+                if(enemyType)
+                {
+                    demons.erase(enemyType);
+                    dQuest->SetTargets(enemyType, count);
+                }
+                else
+                {
+                    // None left
+                    break;
+                }
+            }
+        }
+        break;
+    case objects::DemonQuest::Type_t::CONTRACT:
+        // Contract a randomly chosen field demon
+        dQuest->SetTargets(libcomp::Randomizer::GetEntry(demons), 1);
+        break;
+    case objects::DemonQuest::Type_t::FUSE:
+        // Demon from fusion ranges of a random race (closest level)
+        {
+            uint8_t fuseRace = FUSION_RACE_MAP[0][RNG(uint16_t, 0, 33)];
+
+            auto fRange = definitionManager->GetFusionRanges(fuseRace);
+
+            std::pair<uint8_t, uint32_t> result(0, 0);
+            for(auto& pair : fRange)
+            {
+                if(!result.first ||
+                    abs(lvl - pair.first) < abs(lvl - result.first))
+                {
+                    result = pair;
+                }
+            }
+
+            // Use found demon or default to self if none was found
+            dQuest->SetTargets(result.second ? result.second
+                : demonData->GetUnionData()->GetBaseDemonID(), 1);
+        }
+        break;
+    case objects::DemonQuest::Type_t::ITEM:
+        // Random amount of race bound crystals
+        {
+            // Default to magnetite just in case nothing matches
+            uint32_t itemType = SVR_CONST.ITEM_MAGNETITE;
+            for(auto& pair : SVR_CONST.DEMON_CRYSTALS)
+            {
+                if(pair.second.find(raceID) != pair.second.end())
+                {
+                    itemType = pair.first;
+                    break;
+                }
+            }
+
+            int32_t lvlAdjust = (int32_t)ceil((float)lvl / 20.f);
+            dQuest->SetTargets(itemType,
+                RNG(int32_t, lvlAdjust + 1, lvlAdjust + 3));
+        }
+        break;
+    case objects::DemonQuest::Type_t::CRYSTALLIZE:
+        // Random crystal from a specific demon
+        {
+            auto enchantData = definitionManager->GetEnchantDataByDemonID(
+                libcomp::Randomizer::GetEntry(demons));
+            if(enchantData)
+            {
+                dQuest->SetTargets(enchantData->GetDevilCrystal()
+                    ->GetItemID(), 1);
+            }
+        }
+        break;
+    case objects::DemonQuest::Type_t::ENCHANT_TAROT:
+    case objects::DemonQuest::Type_t::ENCHANT_SOUL:
+        // Random crystal from a specific demon
+        {
+            auto enchantData = definitionManager->GetEnchantDataByDemonID(
+                libcomp::Randomizer::GetEntry(demons));
+            if(enchantData)
+            {
+                dQuest->SetTargets((uint32_t)enchantData->GetID(), 1);
+            }
+        }
+        break;
+    case objects::DemonQuest::Type_t::EQUIPMENT_MOD:
+        // Random equipment modification based on the player's inventory
+        {
+            auto equip = libcomp::Randomizer::GetEntry(equipment);
+
+            // Remove unslotted at lower levels
+            if(lvl < 30)
+            {
+                equipment.remove_if([](
+                    const std::shared_ptr<objects::Item>& item)
+                    {
+                        return item->GetModSlots(0) == 0;
+                    });
+
+                if(equipment.size() > 0)
+                {
+                    equip = libcomp::Randomizer::GetEntry(equipment);
+                }
+            }
+
+            dQuest->SetTargets(equip->GetType(), 1);
+        }
+        break;
+    case objects::DemonQuest::Type_t::SYNTH_MELEE:
+    case objects::DemonQuest::Type_t::SYNTH_GUN:
+        // Random synth result of the specific type
+        {
+            bool isSS = dQuest->GetType() ==
+                objects::DemonQuest::Type_t::SYNTH_MELEE;
+
+            std::list<std::shared_ptr<objects::MiSynthesisData>> synthList;
+            for(auto pair : definitionManager->GetAllSynthesisData())
+            {
+                uint32_t skillID = pair.second->GetBaseSkillID();
+                if((isSS && skillID == SVR_CONST.SYNTH_SKILLS[3]) ||
+                    (!isSS && skillID == SVR_CONST.SYNTH_SKILLS[4]))
+                {
+                    synthList.push_back(pair.second);
+                }
+            }
+
+            auto synth = libcomp::Randomizer::GetEntry(synthList);
+            if(synth)
+            {
+                dQuest->SetTargets(synth->GetItemID(), 1);
+            }
+            else
+            {
+                LOG_ERROR("Failed to retrieve synth result for demon quest\n");
+                return nullptr;
+            }
+        }
+        break;
+    case objects::DemonQuest::Type_t::PLASMA:
+        // Random color, count between 10 and 30
+        {
+            // "Harder" colors show up more at higher levels
+            int32_t lvlAdjust = (int32_t)floor((float)lvl / 10.f);
+            uint32_t min = (uint32_t)(15 + lvlAdjust);    // Max 24
+            uint32_t max = (uint32_t)(29 + lvlAdjust);    // Max 38
+            dQuest->SetTargets((uint32_t)floor((float)
+                RNG(uint32_t, min, max) / 10.f), RNG(int32_t, 10, 30));
+        }
+        break;
+    default:
+        return nullptr;
+    }
+
+    AddDemonQuestRewards(cState, demon, dQuest);
+
+    return dQuest;
+}
+
+void EventManager::AddDemonQuestRewards(
+    const std::shared_ptr<CharacterState>& cState,
+    const std::shared_ptr<objects::Demon>& demon,
+    std::shared_ptr<objects::DemonQuest>& dQuest)
+{
+    auto character = cState->GetEntity();
+    auto progress = character->GetProgress().Get();
+
+    auto server = mServer.lock();
+    auto characterManager = server->GetCharacterManager();
+    auto definitionManager = server->GetDefinitionManager();
+    auto serverDataManager = server->GetServerDataManager();
+
+    uint8_t lvl = (uint8_t)demon->GetCoreStats()->GetLevel();
+    auto demonData = definitionManager->GetDevilData(demon->GetType());
+    uint8_t raceID = (uint8_t)demonData->GetCategory()->GetRace();
+    uint16_t familiarity = demon->GetFamiliarity();
+
+    uint32_t nextSeq = (uint32_t)(progress->GetDemonQuestSequence() + 1);
+    uint32_t nextRaceSeq = (uint32_t)(
+        progress->GetDemonQuestsCompleted(raceID) + 1);
+
+    std::unordered_map<uint32_t, std::list<std::shared_ptr<
+        objects::DemonQuestReward>>> rewardGroups;
+    for(auto& pair : serverDataManager->GetDemonQuestRewardData())
+    {
+        auto reward = pair.second;
+
+        // Ignore invalid quest types
+        if(reward->QuestTypesCount() &&
+            !reward->QuestTypesContains((int8_t)dQuest->GetType()))
+        {
+            continue;
+        }
+
+        // Ignore invalid race
+        if(reward->GetRaceID() && reward->GetRaceID() != raceID)
+        {
+            continue;
+        }
+
+        // Ignore invalid level range
+        if(reward->GetLevelMin() > (uint8_t)lvl ||
+            reward->GetLevelMax() < (uint8_t)lvl)
+        {
+            continue;
+        }
+
+        // Ignore invalid familiarity range
+        if(reward->GetFamiliarityMin() > familiarity ||
+            reward->GetFamiliarityMax() < familiarity)
+        {
+            continue;
+        }
+
+        // Ignore invalid sequence
+        if(reward->GetSequenceStart())
+        {
+            uint32_t start = reward->GetSequenceStart();
+            uint32_t repeat = reward->GetSequenceRepeat();
+            uint32_t end = reward->GetSequenceEnd();
+
+            uint32_t seq = reward->GetRaceID() ? nextRaceSeq : nextSeq;
+            if(seq < start || (end && seq >= end) ||
+                (!repeat && seq != start) ||
+                (repeat && (seq - start) % repeat != 0))
+            {
+                continue;
+            }
+        }
+
+        rewardGroups[reward->GetGroupID()].push_back(reward);
+    }
+
+    bool addPresent = false;
+    std::set<uint32_t> chanceDropSets;
+    for(auto& pair : rewardGroups)
+    {
+        auto rewards = pair.second;
+
+        // Sort by ID
+        rewards.sort([](
+            const std::shared_ptr<objects::DemonQuestReward>& a,
+            const std::shared_ptr<objects::DemonQuestReward>& b)
+            {
+                return a->GetID() < b->GetID();
+            });
+
+        if(pair.first != 0 && rewards.size() > 1)
+        {
+            // Only apply the last one for grouped rewards
+            std::list<std::shared_ptr<objects::DemonQuestReward>> temp;
+            temp.push_back(rewards.back());
+            temp = rewards;
+        }
+
+        // Add rewards (do not sum item stacks)
+        for(auto& reward : rewards)
+        {
+            bool added = false;
+
+            for(uint32_t dropSetID : reward->GetNormalDropSets())
+            {
+                // Check drop rate for all items being added
+                auto dropSet = serverDataManager->GetDropSetData(
+                    dropSetID);
+                if(!dropSet) continue;
+
+                for(auto drop : characterManager->DetermineDrops(
+                    dropSet->GetDrops(), 0))
+                {
+                    dQuest->SetRewardItems(drop->GetItemType(),
+                        RNG(uint16_t, drop->GetMinStack(),
+                            drop->GetMaxStack()));
+                }
+
+                added = true;
+            }
+
+            // Ignore titles if the player already has them
+            std::list<uint16_t> newTitles;
+            for(uint16_t title : reward->GetBonusTitles())
+            {
+                size_t index;
+                uint8_t shiftVal;
+                CharacterManager::ConvertIDToMaskValues(title, index,
+                    shiftVal);
+
+                uint8_t indexVal = progress->GetSpecialTitles(index);
+                if((shiftVal & indexVal) == 0)
+                {
+                    newTitles.push_back(title);
+                }
+            }
+
+            bool take1 = reward->GetBonusMode() ==
+                objects::DemonQuestReward::BonusMode_t::SINGLE;
+
+            if(reward->BonusDropSetsCount())
+            {
+                // Filter by drops by rate
+                std::list<std::shared_ptr<objects::ItemDrop>> drops;
+                for(uint32_t dropSetID : reward->GetBonusDropSets())
+                {
+                    auto dropSet = serverDataManager->GetDropSetData(
+                        dropSetID);
+                    if(!dropSet) continue;
+
+                    for(auto drop : characterManager->DetermineDrops(
+                        dropSet->GetDrops(), 0))
+                    {
+                        drops.push_back(drop);
+                    }
+                }
+
+                if(take1 && drops.size() > 1)
+                {
+                    // Randomly select one
+                    std::list<std::shared_ptr<objects::ItemDrop>> temp;
+                    temp.push_back(libcomp::Randomizer::GetEntry(drops));
+                    drops = temp;
+                }
+
+                for(auto& drop : drops)
+                {
+                    dQuest->SetBonusItems(drop->GetItemType(),
+                        RNG(uint16_t, drop->GetMinStack(),
+                            drop->GetMaxStack()));
+                }
+
+                added = true;
+            }
+
+            if(newTitles.size() > 0)
+            {
+                if(take1 && newTitles.size() > 1)
+                {
+                    // Take the first one
+                    std::list<uint16_t> temp;
+                    temp.push_back(newTitles.front());
+                    newTitles = temp;
+                }
+
+                for(uint16_t title : newTitles)
+                {
+                    dQuest->AppendBonusTitles(title);
+                }
+
+                added = true;
+            }
+
+            if(reward->GetBonusXP() > 0)
+            {
+                dQuest->AppendBonusXP(reward->GetBonusXP());
+                added = true;
+            }
+
+            if(reward->ChanceDropSetsCount() > 0)
+            {
+                for(uint32_t dropSetID : reward->GetChanceDropSets())
+                {
+                    chanceDropSets.insert(dropSetID);
+                }
+
+                added = true;
+            }
+
+            // If no items or bonuses were valid, default to one
+            // item from the demon present set
+            addPresent |= !added;
+        }
+    }
+
+    if(addPresent)
+    {
+        // Add one demon present item
+        int8_t rarity = 0;
+        uint32_t presentType = characterManager->GetDemonPresent(
+            demon->GetType(), (int8_t)lvl, familiarity, rarity);
+        if(presentType && !dQuest->BonusItemsKeyExists(presentType))
+        {
+            dQuest->SetBonusItems(presentType, 1);
+        }
+    }
+
+    // Calculate normal XP gain
+    int8_t cLvl = character->GetCoreStats()->GetLevel();
+    if(cLvl < 99)
+    {
+        // Formula estimated from collected data, not 100% accurate
+        double lvlXP = (double)libcomp::LEVEL_XP_REQUIREMENTS[(size_t)cLvl];
+        double normalXP = floor(((0.00000691775 * (double)(cLvl * cLvl)) -
+            (0.001384 * (double)cLvl) + 0.06922) * lvlXP);
+
+        dQuest->SetXPReward((int32_t)normalXP);
+    }
+
+    // Calculate sequential XP gain
+    uint16_t idx = 0;
+    for(auto iter = SVR_CONST.DEMON_QUEST_XP.begin();
+        iter != SVR_CONST.DEMON_QUEST_XP.end(); iter++)
+    {
+        if(nextSeq == 5 && idx == 0)
+        {
+            // Reward at 5
+            dQuest->AppendBonusXP(*iter);
+            break;
+        }
+        else
+        {
+            bool onFinal = (size_t)(idx + 1) ==
+                SVR_CONST.DEMON_QUEST_XP.size();
+            if(nextSeq < 100 && nextSeq % 10 == 0)
+            {
+                // Reward every 10 <= 100
+                if(onFinal || (idx == (uint16_t)(nextSeq / 10)))
+                {
+                    dQuest->AppendBonusXP(*iter);
+                    break;
+                }
+            }
+            else if (nextSeq >= 100 && nextSeq % 50 == 0)
+            {
+                // Reward every 50 >= 100
+                if(onFinal || (idx == (uint16_t)(nextSeq / 50)))
+                {
+                    dQuest->AppendBonusXP(*iter);
+                    break;
+                }
+            }
+        }
+
+        idx++;
+    }
+
+    if(chanceDropSets.size() > 0)
+    {
+        // Set one random chance item
+        std::list<std::shared_ptr<objects::ItemDrop>> drops;
+        for(uint32_t dropSetID : chanceDropSets)
+        {
+            auto dropSet = serverDataManager->GetDropSetData(dropSetID);
+            if(!dropSet) continue;
+
+            for(auto drop : characterManager->DetermineDrops(
+                dropSet->GetDrops(), 0))
+            {
+                drops.push_back(drop);
+            }
+        }
+
+        auto drop = libcomp::Randomizer::GetEntry(drops);
+        dQuest->SetChanceItem(drop->GetItemType());
+        dQuest->SetChanceItemCount(RNG(uint16_t,
+            drop->GetMinStack(), drop->GetMaxStack()));
+    }
+}
+
+bool EventManager::UpdateDemonQuestCount(
+    const std::shared_ptr<ChannelClientConnection>& client,
+    objects::DemonQuest::Type_t questType, uint32_t targetType,
+    int32_t increment)
+{
+    auto state = client->GetClientState();
+    auto cState = state->GetCharacterState();
+    auto character = cState->GetEntity();
+    auto dQuest = character->GetDemonQuest().Get();
+
+    bool itemMode = questType == objects::DemonQuest::Type_t::ITEM;
+    if(dQuest && dQuest->GetType() == questType &&
+        (dQuest->TargetsKeyExists(targetType) || (!targetType && itemMode)))
+    {
+        bool updated = false;
+
+        auto server = mServer.lock();
+        for(auto& targetPair : dQuest->GetTargets())
+        {
+            if(targetType && targetType != targetPair.first) continue;
+
+            int32_t newCount = 0;
+            int32_t currentCount = dQuest->GetTargetCurrentCounts(
+                targetPair.first);
+            if(itemMode)
+            {
+                // Ignore increment, set to current
+                newCount = (int32_t)server->GetCharacterManager()
+                    ->GetExistingItemCount(character, targetPair.first);
+            }
+            else
+            {
+                // Increment by the supplied amount
+                newCount = increment + currentCount;
+            }
+
+            // Do not exceed required amount
+            if(newCount > targetPair.second)
+            {
+                newCount = targetPair.second;
+            }
+
+            // If new count differs, update and send to client
+            if(newCount != currentCount)
+            {
+                dQuest->SetTargetCurrentCounts(targetPair.first, newCount);
+
+                libcomp::Packet p;
+                p.WritePacketCode(ChannelToClientPacketCode_t::
+                    PACKET_DEMON_QUEST_COUNT_UPDATE);
+                p.WriteU32Little(targetPair.first);
+                p.WriteS32Little(newCount);
+
+                client->QueuePacket(p);
+
+                updated = true;
+            }
+        }
+
+        if(updated)
+        {
+            client->FlushOutgoing();
+
+            server->GetWorldDatabase()->QueueUpdate(dQuest);
+
+            return true;
+        }
+    }
+
+    return false;
+}
+
+bool EventManager::ResetDemonQuests(const std::shared_ptr<
+    ChannelClientConnection>& client)
+{
+    auto state = client->GetClientState();
+    auto cState = state->GetCharacterState();
+    auto character = cState->GetEntity();
+    auto progress = character->GetProgress().Get();
+
+    auto server = mServer.lock();
+    auto characterManager = server->GetCharacterManager();
+
+    std::list<std::shared_ptr<objects::Demon>> demons;
+    for(auto& d : character->GetCOMP()->GetDemons())
+    {
+        if(!d.IsNull() && !d->GetHasQuest() &&
+            characterManager->GetFamiliarityRank(d->GetFamiliarity()) >= 1)
+        {
+            demons.push_back(d.Get());
+        }
+    }
+
+    if(demons.size() == 0 && progress->GetDemonQuestDaily() == 0)
+    {
+        return false;
+    }
+
+    auto dbChanges = libcomp::DatabaseChangeSet::Create();
+
+    progress->SetDemonQuestDaily(0);
+    dbChanges->Update(progress);
+
+    // Notify the player if any demons have new quests
+    libcomp::Packet request;
+    if(demons.size() > 0)
+    {
+        request.WritePacketCode(
+            ChannelToClientPacketCode_t::PACKET_DEMON_QUEST_LIST_UPDATED);
+
+        request.WriteS8((int8_t)demons.size());
+        for(auto& d : demons)
+        {
+            d->SetHasQuest(true);
+            request.WriteS64Little(state->GetObjectID(d->GetUUID()));
+
+            dbChanges->Update(d);
+        }
+    }
+
+    if(!server->GetWorldDatabase()->ProcessChangeSet(dbChanges))
+    {
+        return false;
+    }
+
+    if(demons.size() > 0)
+    {
+        client->SendPacket(request);
+    }
+
+    return true;
+}
+
+int8_t EventManager::EndDemonQuest(
+    const std::shared_ptr<ChannelClientConnection>& client, int8_t failCode)
+{
+    auto state = client->GetClientState();
+    auto cState = state->GetCharacterState();
+    auto character = cState->GetEntity();
+    auto progress = character->GetProgress().Get();
+    auto dQuest = character->GetDemonQuest().Get();
+
+    if(!dQuest || failCode < 0 || failCode > 3)
+    {
+        // No quest or invalid supplied failure code, nothing to do
+        return -1;
+    }
+
+    auto server = mServer.lock();
+    auto definitionManager = server->GetDefinitionManager();
+
+    auto demon = std::dynamic_pointer_cast<objects::Demon>(
+        libcomp::PersistentObject::GetObjectByUUID(dQuest->GetDemon()));
+    if(!demon)
+    {
+        return -1;
+    }
+
+    auto dbChanges = libcomp::DatabaseChangeSet::Create(
+        state->GetAccountUID());
+
+    if(failCode)
+    {
+        // Fail/reject the quest
+        character->SetDemonQuest(NULLUUID);
+        demon->SetHasQuest(false);
+
+        // If the quest was accepted, reset the sequential success count
+        if(!dQuest->GetUUID().IsNull())
+        {
+            progress->SetDemonQuestSequence(0);
+            dbChanges->Update(progress);
+            dbChanges->Delete(dQuest);
+        }
+
+        dbChanges->Update(character);
+        dbChanges->Update(demon);
+    }
+    else
+    {
+        auto effects = cState->GetStatusEffects();
+        if(effects.find(SVR_CONST.STATUS_DEMON_QUEST_ACTIVE) == effects.end())
+        {
+            // Quest has expired
+            return 1;
+        }
+
+        for(auto& targetPair : dQuest->GetTargets())
+        {
+            // Quest is not complete
+            if(dQuest->GetTargetCurrentCounts(targetPair.first) <
+                targetPair.second)
+            {
+                return -1;
+            }
+        }
+
+        if(dQuest->GetType() == objects::DemonQuest::Type_t::ITEM)
+        {
+            // Remove the items now
+            std::unordered_map<uint32_t, uint32_t> removeItems;
+            for(auto& pair : dQuest->GetTargets())
+            {
+                removeItems[pair.first] = (uint32_t)pair.second;
+            }
+
+            if(!server->GetCharacterManager()->AddRemoveItems(client,
+                removeItems, false))
+            {
+                return -1;
+            }
+        }
+
+        // Complete the quest and remove it
+        auto demonData = definitionManager->GetDevilData(demon->GetType());
+        if(demonData)
+        {
+            uint8_t raceID = (uint8_t)demonData->GetCategory()->GetRace();
+            uint32_t count = progress->GetDemonQuestsCompleted(raceID);
+
+            progress->SetDemonQuestsCompleted(raceID, (uint16_t)(count + 1));
+        }
+
+        character->SetDemonQuest(NULLUUID);
+        progress->SetDemonQuestSequence((uint16_t)(
+            progress->GetDemonQuestSequence() + 1));
+        demon->SetHasQuest(false);
+
+        dbChanges->Update(character);
+        dbChanges->Update(progress);
+        dbChanges->Update(demon);
+        dbChanges->Delete(dQuest);
+    }
+
+    UpdateQuestTargetEnemies(client);
+
+    server->GetWorldDatabase()->ProcessChangeSet(dbChanges);
+
+    // If the quest is active, notify the player
+    if(!dQuest->GetUUID().IsNull() && failCode != 3)
+    {
+        libcomp::Packet notify;
+        notify.WritePacketCode(
+            ChannelToClientPacketCode_t::PACKET_DEMON_QUEST_END);
+        notify.WriteS8(failCode);
+        notify.WriteS16Little((int16_t)progress->GetDemonQuestSequence());
+        notify.WriteS32Little(0);    // Unknown
+
+        client->SendPacket(notify);
+    }
+
+    // Lastly remove the quest active status effect
+    StatusEffectChanges effects;
+    effects[SVR_CONST.STATUS_DEMON_QUEST_ACTIVE] = StatusEffectChange(
+        SVR_CONST.STATUS_DEMON_QUEST_ACTIVE, 0, true);
+    cState->AddStatusEffects(effects, definitionManager);
+
+    return 0;
 }
 
 bool EventManager::HandleEvent(const std::shared_ptr<ChannelClientConnection>& client,
@@ -2448,7 +3516,7 @@ bool EventManager::HandleTriFusion(const std::shared_ptr<
         }
     }
 
-    if(tfSession)
+    if(tfSessionOwner)
     {
         // Request to prompt the client to join
         libcomp::Packet request;

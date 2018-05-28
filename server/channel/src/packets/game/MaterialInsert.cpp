@@ -74,7 +74,7 @@ bool Parsers::MaterialInsert::Parse(libcomp::ManagerPacket *pPacketManager,
     auto itemDef = definitionManager->GetItemData(itemType);
     auto triggerDef = definitionManager->GetDisassemblyTriggerData(itemType);
 
-    bool playerHasTank = characterManager->HasValuable(character,
+    bool playerHasTank = CharacterManager::HasValuable(character,
         SVR_CONST.VALUABLE_MATERIAL_TANK);
 
     int32_t inserted = 0;

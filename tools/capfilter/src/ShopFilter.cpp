@@ -49,12 +49,12 @@ ShopFilter::ShopFilter(const char *szProgram,
         std::cerr << "Failed to add search path." << std::endl;
     }
 
-    if(!mDefinitions.LoadItemData(&store))
+    if(!mDefinitions.LoadData<objects::MiItemData>(&store))
     {
         std::cerr << "Failed to load item data." << std::endl;
     }
 
-    if(!mDefinitions.LoadShopProductData(&store))
+    if(!mDefinitions.LoadData<objects::MiShopProductData>(&store))
     {
         std::cerr << "Failed to load shop product data." << std::endl;
     }

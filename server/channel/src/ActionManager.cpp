@@ -253,8 +253,17 @@ void ActionManager::PerformActions(
                             }
                         }
                         break;
-                    case objects::Action::Location_t::WORLD:
                     case objects::Action::Location_t::CHANNEL:
+                        for(auto conn : connectionManager->GetAllConnections())
+                        {
+                            auto state = conn->GetClientState();
+                            if(state)
+                            {
+                                worldCIDs.insert(state->GetWorldCID());
+                            }
+                        }
+                        break;
+                    case objects::Action::Location_t::WORLD:
                     default:
                         // Not supported
                         failure = true;
@@ -801,14 +810,14 @@ bool ActionManager::AddRemoveStatus(ActionContext& ctx)
     auto definitionManager = server->GetDefinitionManager();
     auto tokuseiManager = server->GetTokuseiManager();
 
-    AddStatusEffectMap statuses;
+    StatusEffectChanges effects;
     for(auto pair : act->GetStatusStacks())
     {
-        statuses[pair.first] =
-            std::pair<uint8_t, bool>(pair.second, act->GetIsReplace());
+        effects[pair.first] = StatusEffectChange(pair.first, pair.second,
+            act->GetIsReplace());
     }
 
-    if(statuses.size() > 0)
+    if(effects.size() > 0)
     {
         bool playerEntityModified = false;
         switch(act->GetTargetType())
@@ -816,7 +825,7 @@ bool ActionManager::AddRemoveStatus(ActionContext& ctx)
         case objects::ActionAddRemoveStatus::TargetType_t::CHARACTER:
             if(state)
             {
-                state->GetCharacterState()->AddStatusEffects(statuses,
+                state->GetCharacterState()->AddStatusEffects(effects,
                     definitionManager);
                 playerEntityModified = true;
             }
@@ -824,7 +833,7 @@ bool ActionManager::AddRemoveStatus(ActionContext& ctx)
         case objects::ActionAddRemoveStatus::TargetType_t::PARTNER:
             if(state)
             {
-                state->GetDemonState()->AddStatusEffects(statuses,
+                state->GetDemonState()->AddStatusEffects(effects,
                     definitionManager);
                 playerEntityModified = true;
             }
@@ -832,9 +841,9 @@ bool ActionManager::AddRemoveStatus(ActionContext& ctx)
         case objects::ActionAddRemoveStatus::TargetType_t::CHARACTER_AND_PARTNER:
             if(state)
             {
-                state->GetCharacterState()->AddStatusEffects(statuses,
+                state->GetCharacterState()->AddStatusEffects(effects,
                     definitionManager);
-                state->GetDemonState()->AddStatusEffects(statuses,
+                state->GetDemonState()->AddStatusEffects(effects,
                     definitionManager);
                 playerEntityModified = true;
             }
@@ -844,7 +853,7 @@ bool ActionManager::AddRemoveStatus(ActionContext& ctx)
                 auto eState = ctx.CurrentZone->GetActiveEntity(ctx.SourceEntityID);
                 if(eState)
                 {
-                    eState->AddStatusEffects(statuses, definitionManager);
+                    eState->AddStatusEffects(effects, definitionManager);
                     tokuseiManager->Recalculate(eState, true);
                 }
             }
@@ -1134,7 +1143,8 @@ bool ActionManager::GrantSkills(ActionContext& ctx)
 
     auto act = std::dynamic_pointer_cast<objects::ActionGrantSkills>(ctx.Action);
 
-    auto characterManager = mServer.lock()->GetCharacterManager();
+    auto server = mServer.lock();
+    auto characterManager = server->GetCharacterManager();
     auto state = ctx.Client->GetClientState();
 
     std::shared_ptr<ActiveEntityState> eState;
@@ -1159,6 +1169,24 @@ bool ActionManager::GrantSkills(ActionContext& ctx)
 
             characterManager->UpdateExpertisePoints(ctx.Client, expPoints);
         }
+
+        if(act->GetExpertiseMax() > 0)
+        {
+            auto character = state->GetCharacterState()->GetEntity();
+            uint8_t val = act->GetExpertiseMax();
+
+            int8_t newVal = (int8_t)((character->GetExpertiseExtension() + val) > 127
+                ? 127 : (character->GetExpertiseExtension() + val));
+
+            if(newVal != character->GetExpertiseExtension())
+            {
+                character->SetExpertiseExtension(newVal);
+
+                characterManager->SendExertiseExtension(ctx.Client);
+                server->GetWorldDatabase()->QueueUpdate(character,
+                    state->GetAccountUID());
+            }
+        }
         break;
     case objects::ActionGrantSkills::TargetType_t::PARTNER:
         eState = state->GetDemonState();
@@ -1171,6 +1199,12 @@ bool ActionManager::GrantSkills(ActionContext& ctx)
         if(act->ExpertisePointsCount() > 0)
         {
             LOG_ERROR("Attempted to grant expertise points to a partner demon\n");
+            return false;
+        }
+
+        if(act->GetExpertiseMax() > 0)
+        {
+            LOG_ERROR("Attempted to extend max expertise for a partner demon\n");
             return false;
         }
         break;

@@ -53,9 +53,12 @@
             <value>ENCHANT_SOUL</value>
             <value>TRIFUSION_HOST</value>
             <value>TRIFUSION_GUEST</value>
+            <value>SYNTH_MELEE</value>
+            <value>SYNTH_GUN</value>
         </member>
         <member type="EntityStateObject*" name="OtherCharacterState"
             nulldefault="true"/>
+        <member type="u32" name="SelectionID"/>
         <member type="bool" name="Locked"/>
         <member type="bool" name="Finished"/>
         <member type="array" name="Items" size="30">

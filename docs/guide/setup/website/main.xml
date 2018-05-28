@@ -160,7 +160,7 @@ sudo -u www-data -H php artisan migrate
 
     server_name www.myimagineserver.online;
 
-    root /var/www/html;
+    root /var/www/html/public;
 
     charset utf-8;
 

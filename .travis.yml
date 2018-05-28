@@ -16,16 +16,8 @@ env:
    - secure: "Ncn6/msd5oa9PiMYS5y3bpqbcqnB9Wwr7UIEtDS6fd1X01sk7aWF267kMNq8ijosJtk1P4vjKmZomfhTyQgILV6UkNkSDae5NOc39XM9yoysxc6LHTnF8/E5wXgbV1oDJR9kenrBzX49ZRJxwYa9WgXsGz4AiDyUB9eMy48eomnyNXG/SkZBbPmxaI0zSCACWH0VMHwvxHOHnaXHMOuQDVN+oxP4gEdQ/Cz2P0QJl1TvE5hpYB9fW/yItcdgL7sVkiFXbkZh5l3s52fGEN339e9CEEEEqnEUmFAzq0nsZNKZqh+ivh4Ga2qJa+btLGkEYyNQyKpOjy21Wx8UKY6uT5ZVxdSK943dbn0+v2nr0K++Hu2mRoq3btMfza5PZGQrK/XdOgathqxMoqSlKKXNo5qQoHfyjRLUscaZPsF/kWfnUoRGA90Eg6RLq59gsKkQjSJ0cWJ6Czt2txJZvmAZn51thBMJ3QW88+taDXkSVXsXkrdPjGPrwUt+okhvXJK5+PeSa+Fb4CJUiijOAg9Sew+WDJdsP9d0gVtEncXiVdAgdUFZ9wbyKCrjPisKxZWzzMDr+7tT3MQmg8FagPMkm5PW9Q+Ewof2VLjxffX+PhHcWvUrVqe8KBEVuJNs4SYG0ETsvp0+y8tyh5o+zAmc8fKsuYmEDNJ727rjrTfA56A="
 
 addons:
+  # This doesn't actually work because of the matrix.
   mariadb: '10.1'
-
-  coverity_scan:
-    project:
-      name: "comphack/comp_hack"
-      description: "Build submitted via Travis CI"
-    notification_email: compomega@tutanota.com
-    build_command_prepend: "mkdir build && cd build && cmake -G \"${GENERATOR\" .."
-    build_command: "cmake --build ."
-    branch_pattern: coverity_scan
 
 matrix:
   include:
@@ -46,6 +38,14 @@ matrix:
             - ubuntu-toolchain-r-test
           packages:
             - g++-5
+        coverity_scan:
+          project:
+            name: "comphack/comp_hack"
+            description: "Build submitted via Travis CI"
+          notification_email: compomega@tutanota.com
+          build_command_prepend: "mkdir -p build && cd build && cmake -DCOVERALLS=$COVERALLS_ENABLE -DBUILD_OPTIMIZED=OFF -DSINGLE_SOURCE_PACKETS=ON -DSINGLE_OBJGEN=ON -DUSE_COTIRE=ON .. && cov-configure --comptype gcc --compiler gcc-5 --template"
+          build_command: "cmake --build ."
+          branch_pattern: coverity_scan
       env:
         - COMPILER_CC=gcc-5
         - COMPILER_CXX=g++-5
@@ -98,10 +98,10 @@ before_script:
   - rm -rf ~/.rvm* ~/.gem* # Do this to prevent issues with rspec.
 
 script:
-  - jdk_switcher use oraclejdk8
-  - java -version
-  - mkdir -p build && cd build && cmake -DCOVERALLS=$COVERALLS_ENABLE -DBUILD_OPTIMIZED=OFF -DSINGLE_SOURCE_PACKETS=ON -DSINGLE_OBJGEN=ON -DUSE_COTIRE=ON -G "${GENERATOR}" .. && cmake --build .
-  - cmake --build . --target doc
-  - cmake --build . --target guide
-#  - cmake --build . --target test
-#  - if [ "$CXX" != "clang++" ]; then cmake --build . --target coveralls; fi
+  - if [ "${COVERITY_SCAN_BRANCH}" != 1 ]; then jdk_switcher use oraclejdk8 ; fi
+  - if [ "${COVERITY_SCAN_BRANCH}" != 1 ]; then java -version ; fi
+  - if [ "${COVERITY_SCAN_BRANCH}" != 1 ]; then mkdir -p build && cd build && cmake -DCOVERALLS=$COVERALLS_ENABLE -DBUILD_OPTIMIZED=OFF -DSINGLE_SOURCE_PACKETS=ON -DSINGLE_OBJGEN=ON -DUSE_COTIRE=ON -G "${GENERATOR}" .. && cmake --build . ; fi
+  - if [ "${COVERITY_SCAN_BRANCH}" != 1 ]; then cmake --build . --target doc ; fi
+  - if [ "${COVERITY_SCAN_BRANCH}" != 1 ]; then cmake --build . --target guide ; fi
+#  - if [ "${COVERITY_SCAN_BRANCH}" != 1 ]; then cmake --build . --target test ; fi
+#  - if [ "${COVERITY_SCAN_BRANCH}" != 1 ]; then if [ "$CXX" != "clang++" ]; then cmake --build . --target coveralls; fi ; fi

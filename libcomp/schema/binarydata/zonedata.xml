@@ -3,33 +3,33 @@
     <object name="MiZoneBasicData" persistent="false" scriptenabled="true">
         <member type="u32" name="id" caps="true"/>
         <member type="string" name="name" encoding="cp932" length="36"/>
-        <member type="u8" name="unk1"/>
-        <member type="u8" name="unk2"/>
+        <member type="u8" name="type"/>
+        <member type="u8" name="unused1"/>
         <member type="u16" name="flags"/>
-        <member type="u32" name="unk4"/>
-        <member type="u32" name="unk5"/>
-        <member type="u32" name="unk6"/>
+        <member type="u32" name="parentID"/>
+        <member type="u32" name="startingSpot"/>
+        <member type="u32" name="unused2"/>
     </object>
     <object name="MiZoneFileData" persistent="false" scriptenabled="true">
-        <member type="string" length="36" name="file1"/>
-        <member type="string" length="36" name="file2"/>
+        <member type="string" length="36" name="modelFile"/>
+        <member type="string" length="36" name="nameFile"/>
         <member type="string" length="36" name="qmpFile"/>
-        <member type="string" length="36" name="file4"/>
-        <member type="string" length="36" name="file5"/>
-        <member type="string" length="36" name="file6"/>
-        <member type="string" length="36" name="file7"/>
-        <member type="string" length="36" name="file8"/>
-        <member type="string" length="36" name="file9"/>
-        <member type="string" length="36" name="file10"/>
-        <member type="string" length="36" name="file11"/>
-        <member type="string" length="36" name="file12"/>
-        <member type="string" length="36" name="file13"/>
-        <member type="string" length="36" name="file14"/>
-        <member type="string" length="36" name="file15"/>
-        <member type="string" length="36" name="file16"/>
-        <member type="string" length="36" name="file17"/>
-        <member type="string" length="36" name="file18"/>
-        <member type="string" length="36" name="file19"/>
+        <member type="string" length="36" name="spotFile"/>
+        <member type="string" length="36" name="enemyFile"/>
+        <member type="string" length="36" name="npcFile"/>
+        <member type="string" length="36" name="eventFile"/>
+        <member type="string" length="36" name="unused1"/>
+        <member type="string" length="36" name="unused2"/>
+        <member type="string" length="36" name="groupFile"/>
+        <member type="string" length="36" name="unitFile"/>
+        <member type="string" length="36" name="unused3"/>
+        <member type="string" length="36" name="unused4"/>
+        <member type="string" length="36" name="unused5"/>
+        <member type="string" length="36" name="unused6"/>
+        <member type="string" length="36" name="unused7"/>
+        <member type="string" length="36" name="unused8"/>
+        <member type="string" length="36" name="unused9"/>
+        <member type="string" length="36" name="unused10"/>
     </object>
     <object name="MiZoneFogData" persistent="false" scriptenabled="true">
         <member type="u8" name="fog1"/>

@@ -204,6 +204,9 @@ struct Data
     /// Status effect ID of instant death
     uint32_t STATUS_DEATH;
 
+    /// Status effect ID indicating an active demon quest expiration
+    uint32_t STATUS_DEMON_QUEST_ACTIVE;
+
     /// Status effect ID of (demon solo used) entity hide effect
     uint32_t STATUS_HIDDEN;
 
@@ -242,14 +245,18 @@ struct Data
     /// specified tokusei IDs
     std::unordered_map<uint16_t, std::set<int32_t>> DEMON_BOOK_BONUS;
 
+    /// Map of demon crystal item types to races that can be fused with them
+    /// for cyrstallization
+    std::unordered_map<uint32_t, std::set<uint8_t>> DEMON_CRYSTALS;
+
+    /// List of bonus XP gained from sequential demon quest completions
+    std::list<uint32_t> DEMON_QUEST_XP;
+
     /// Item IDs of demon box rental tickets to their corresponding day lengths
     std::unordered_map<uint32_t, uint32_t> DEPO_MAP_DEMON;
 
     /// Item IDs of item box rental tickets to their corresponding day lengths
     std::unordered_map<uint32_t, uint32_t> DEPO_MAP_ITEM;
-
-    /// Item IDs of items used to disassembly materials
-    std::array<uint32_t, 6> DISASSEMBLY_ITEMS;
 
     /// Item IDs with parameters used for the EQUIP_MOD_EDIT function ID skill
     std::unordered_map<uint32_t, std::array<int32_t, 3>> EQUIP_MOD_EDIT_ITEMS;
@@ -260,16 +267,24 @@ struct Data
     /// Fusion status effect IDs to success boosts
     std::unordered_map<uint32_t, uint8_t> FUSION_BOOST_STATUSES;
 
-    /// Array of item IDs used for slot modification, indexed in the same order
-    /// as the RateScaling field on MiModificationTriggerData and
-    /// MiModificationExtEffectData
-    std::array<std::list<uint32_t>, 2> SLOT_MOD_ITEMS;
+    /// Map of the number of completed quests required to gain the
+    /// specified tokusei IDs
+    std::unordered_map<uint16_t, int32_t> QUEST_BONUS;
+
+    /// Array of item IDs used for special functions, indexed in the same order
+    /// as the RateScaling fields on the following objects:
+    /// Index 0) MiDisassemblyTriggerData
+    /// Index 1) MiModificationTriggerData
+    /// Index 2) MiModificationExtEffectData
+    /// Index 3) MiSynthesisData
+    std::array<std::list<uint32_t>, 4> RATE_SCALING_ITEMS;
 
     /// Item/skill IDs with parameters used for synth calculations
     std::unordered_map<uint32_t, std::array<int32_t, 3>> SYNTH_ADJUSTMENTS;
 
-    /// Synth skill IDs for demon crystallization, tarot enchant and soul enchant
-    std::array<uint32_t, 3> SYNTH_SKILLS;
+    /// Synth skill IDs for demon crystallization, tarot enchant, soul enchant,
+    /// synth melee and synth gun skills
+    std::array<uint32_t, 5> SYNTH_SKILLS;
 
     /// Level ranges to use for TriFusion of 3 "dark" family demons
     std::list<std::pair<uint8_t, uint32_t>> TRIFUSION_SPECIAL_DARK;
@@ -425,6 +440,69 @@ private:
         }
 
         return true;
+    }
+
+    /**
+     * Utility function to load convert a string to a list of numeric
+     * ranges and return in a list.
+     * @param value String of numeric ranges
+     * @param success Output success indicator
+     * @return List of converted numbers or empty if failure occurs
+     */
+    template<typename T>
+    static std::list<T> ToIntegerRange(const std::string& value, bool& success)
+    {
+        std::list<T> results;
+
+        auto params = libcomp::String(value).Split(",");
+        for(auto param : params)
+        {
+            auto subParams = libcomp::String(param).Split("-");
+            if(subParams.size() == 2)
+            {
+                // Min-max
+                T min = 0;
+                T max = 0;
+                if(LoadInteger(subParams.front().C(), min) &&
+                    LoadInteger(subParams.back().C(), max) &&
+                    min < max)
+                {
+                    for(T i = min; i <= max; i++)
+                    {
+                        results.push_back(i);
+                    }
+                }
+                else
+                {
+                    success = false;
+                }
+            }
+            else if(subParams.size() == 1)
+            {
+                // Single value
+                T p = 0;
+                if(LoadInteger(param.C(), p))
+                {
+                    results.push_back(p);
+                }
+                else
+                {
+                    success = false;
+                }
+            }
+            else
+            {
+                success = false;
+            }
+
+            if(!success)
+            {
+                results.clear();
+                return results;
+            }
+        }
+
+        return results;
     }
 
     /// Container for all server side constants

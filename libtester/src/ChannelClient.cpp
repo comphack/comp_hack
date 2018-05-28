@@ -290,7 +290,7 @@ bool ChannelClient::SummonDemon(int64_t demonID)
     /// @todo parse this packet?
 
     libcomp::Packet p;
-    p.WritePacketCode(ClientToChannelPacketCode_t::PACKET_PARTNER_DEMON_DATA);
+    p.WritePacketCode(ClientToChannelPacketCode_t::PACKET_DEMON_DATA);
 
     ClearMessages();
     GetConnection()->SendPacket(p);

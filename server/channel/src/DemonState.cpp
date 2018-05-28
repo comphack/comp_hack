@@ -37,9 +37,14 @@
 #include <CharacterProgress.h>
 #include <DemonBox.h>
 #include <InheritedSkill.h>
+#include <MiDCategoryData.h>
 #include <MiDevilBookData.h>
+#include <MiDevilData.h>
 #include <MiSkillData.h>
 #include <MiSkillItemStatusCommonData.h>
+
+// libcomp Includes
+#include "CharacterManager.h"
 
 using namespace channel;
 
@@ -72,9 +77,29 @@ DemonState::DemonState()
     mCompendiumCount = 0;
 }
 
-uint32_t DemonState::GetCompendiumCount() const
+DemonState::DemonState(const DemonState& other)
 {
-    return mCompendiumCount;
+    (void)other;
+}
+
+uint16_t DemonState::GetCompendiumCount(uint8_t groupID, bool familyGroup)
+{
+    if(groupID == 0)
+    {
+        return mCompendiumCount;
+    }
+
+    std::lock_guard<std::mutex> lock(mSharedLock);
+    if(familyGroup)
+    {
+        auto it = mCompendiumFamilyCounts.find(groupID);
+        return it != mCompendiumFamilyCounts.end() ? it->second : 0;
+    }
+    else
+    {
+        auto it = mCompendiumRaceCounts.find(groupID);
+        return it != mCompendiumRaceCounts.end() ? it->second : 0;
+    }
 }
 
 std::list<int32_t> DemonState::GetCompendiumTokuseiIDs() const
@@ -87,7 +112,8 @@ bool DemonState::UpdateSharedState(const std::shared_ptr<objects::Character>& ch
 {
     std::set<uint32_t> cShiftValues;
 
-    if(character)
+    if(character && CharacterManager::HasValuable(character,
+        SVR_CONST.VALUABLE_DEVIL_BOOK_V2))
     {
         auto devilBook = character->GetProgress()->GetDevilBook();
 
@@ -107,15 +133,50 @@ bool DemonState::UpdateSharedState(const std::shared_ptr<objects::Character>& ch
 
     // With all shift values read, convert them into distinct entries
     std::set<uint32_t> compendiumEntries;
+    std::unordered_map<uint8_t, uint16_t> compendiumFamilyCounts;
+    std::unordered_map<uint8_t, uint16_t> compendiumRaceCounts;
     if(cShiftValues.size() > 0)
     {
         size_t read = 0;
-        for(auto dbPair : definitionManager->GetDevilBookData())
+        for(auto& dbPair : definitionManager->GetDevilBookData())
         {
-            if(cShiftValues.find(dbPair.second->GetShiftValue()) !=
+            auto dBook = dbPair.second;
+            if(cShiftValues.find(dBook->GetShiftValue()) !=
                 cShiftValues.end())
             {
-                compendiumEntries.insert(dbPair.second->GetEntryID());
+                auto devilData = definitionManager->GetDevilData(
+                    dBook->GetBaseID1());
+                if(compendiumEntries.find(dBook->GetEntryID()) ==
+                    compendiumEntries.end() && devilData && dBook->GetUnk1())
+                {
+                    uint8_t familyID = (uint8_t)devilData->GetCategory()
+                        ->GetFamily();
+                    uint8_t raceID = (uint8_t)devilData->GetCategory()
+                        ->GetRace();
+
+                    if(compendiumFamilyCounts.find(familyID) ==
+                        compendiumFamilyCounts.end())
+                    {
+                        compendiumFamilyCounts[familyID] = 1;
+                    }
+                    else
+                    {
+                        compendiumFamilyCounts[familyID]++;
+                    }
+
+                    if(compendiumRaceCounts.find(raceID) ==
+                        compendiumRaceCounts.end())
+                    {
+                        compendiumRaceCounts[raceID] = 1;
+                    }
+                    else
+                    {
+                        compendiumRaceCounts[raceID]++;
+                    }
+
+                    compendiumEntries.insert(dBook->GetEntryID());
+                }
+
                 read++;
 
                 if(read >= cShiftValues.size())
@@ -142,9 +203,11 @@ bool DemonState::UpdateSharedState(const std::shared_ptr<objects::Character>& ch
             }
         }
 
-        std::lock_guard<std::mutex> lock(mLock);
+        std::lock_guard<std::mutex> lock(mSharedLock);
         mCompendiumTokuseiIDs = compendiumTokuseiIDs;
-        mCompendiumCount = (uint32_t)compendiumEntries.size();
+        mCompendiumCount = (uint16_t)compendiumEntries.size();
+        mCompendiumFamilyCounts = compendiumFamilyCounts;
+        mCompendiumRaceCounts = compendiumRaceCounts;
     }
 
     return true;

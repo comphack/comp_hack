@@ -24,6 +24,7 @@
     <include path="qmp_file.xml"/>
     <include path="registeredchannel.xml"/>
     <include path="registeredworld.xml"/>
+    <include path="reportedplayer.xml"/>
     <include path="search.xml"/>
     <include path="spawn.xml"/>
     <include path="tokusei.xml"/>
@@ -75,6 +76,7 @@
 
     <!-- BinaryData Files -->
     <include path="binarydata/aidata.xml"/>
+    <include path="binarydata/blenddata.xml"/>
     <include path="binarydata/ceventmessagedata.xml"/>
     <include path="binarydata/cicondata.xml"/>
     <include path="binarydata/citemdata.xml"/>
@@ -82,6 +84,7 @@
     <include path="binarydata/cmodeldata.xml"/>
     <include path="binarydata/cmodifiedeffectdata.xml"/>
     <include path="binarydata/cmultitalkdata.xml"/>
+    <include path="binarydata/codenamedata.xml"/>
     <include path="binarydata/cpolygonmoviedata.xml"/>
     <include path="binarydata/cquest.xml"/>
     <include path="binarydata/csounddata.xml"/>
@@ -89,11 +92,13 @@
     <include path="binarydata/czonerelationdata.xml"/>
     <include path="binarydata/devilbookdata.xml"/>
     <include path="binarydata/devildata.xml"/>
+    <include path="binarydata/devilequipmentdata.xml"/>
     <include path="binarydata/devillvupratedata.xml"/>
     <include path="binarydata/disassemblydata.xml"/>
     <include path="binarydata/dynamicmapdata.xml"/>
     <include path="binarydata/enchantdata.xml"/>
     <include path="binarydata/equipmentsetdata.xml"/>
+    <include path="binarydata/eventdirectiondata.xml"/>
     <include path="binarydata/exchangedata.xml"/>
     <include path="binarydata/expertdata.xml"/>
     <include path="binarydata/hnpcdata.xml"/>
@@ -109,6 +114,7 @@
     <include path="binarydata/spotdata.xml"/>
     <include path="binarydata/sstatusdata.xml"/>
     <include path="binarydata/statusdata.xml"/>
+    <include path="binarydata/synthesisdata.xml"/>
     <include path="binarydata/timelimitdata.xml"/>
     <include path="binarydata/triunionspecialdata.xml"/>
     <include path="binarydata/warppointdata.xml"/>

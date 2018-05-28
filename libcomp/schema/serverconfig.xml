@@ -36,5 +36,7 @@
         <member type="set" name="GlobalDropSetIDs">
             <element type="u32"/>
         </member>
+        <member type="u16" name="EnabledDemonQuests" default="0x0777"
+            max="0x07FF"/>
     </object>
 </objgen>

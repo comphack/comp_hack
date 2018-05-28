@@ -70,11 +70,17 @@
         <member type="array" name="Hotbars" size="10">
             <element type="Hotbar*"/>
         </member>
+        <member type="array" name="CustomTitles" size="65">
+            <element type="s16" default="-1"/>
+        </member>
+        <member type="u8" name="CurrentTitle" max="4"/>
+        <member type="bool" name="TitlePrioritized"/>
 
         <!-- Sub-sections -->
         <member type="EntityStats*" name="CoreStats"/>
         <member type="CharacterProgress*" name="Progress"/>
         <member type="FriendSettings*" name="FriendSettings"/>
+        <member type="DemonQuest*" name="DemonQuest"/>
     </object>
     <object name="EntityStats" location="world" scriptenabled="true">
         <member type="pref" name="Entity" key="true" unique="true"/>
@@ -122,6 +128,12 @@
         <member type="array" name="CompletedQuests" size="128">
             <element type="u8"/>
         </member>
+        <member type="u16" name="DemonQuestSequence"/>
+        <member type="map" name="DemonQuestsCompleted">
+            <key type="u8"/>    <!-- Race ID -->
+            <value type="u16"/> <!-- Count -->
+        </member>
+        <member type="s8" name="DemonQuestDaily"/>
         <member type="s8" name="TimeTrialID" default="-1"/>
         <member type="u16" name="TimeTrialTime"/>
         <member type="enum" name="TimeTrialResult" underlying="int8_t">
@@ -135,6 +147,12 @@
         </member>
         <member type="array" name="TimeTrialRecords" size="28">
             <element type="u16"/>
+        </member>
+        <member type="list" name="Titles">
+            <element type="s16"/>
+        </member>
+        <member type="array" name="SpecialTitles" size="128">
+            <element type="u8"/>
         </member>
     </object>
     <object name="Expertise" location="world">

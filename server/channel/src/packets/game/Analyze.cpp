@@ -157,7 +157,7 @@ bool Parsers::Analyze::Parse(libcomp::ManagerPacket *pPacketManager,
 
                 reply.WriteU8(0);   // Unknown
 
-                //Force Stack?
+                // Force Stack?
                 for(size_t i = 0; i < 8; i++)
                 {
                     reply.WriteU16Little(0);
@@ -166,16 +166,27 @@ bool Parsers::Analyze::Parse(libcomp::ManagerPacket *pPacketManager,
                 reply.WriteU8(0);   //Unknown
                 reply.WriteU8(0);   //Mitama type
 
-                //Reunion bonuses (12 * 8 ranks)
+                // Reunion bonuses (12 * 8 ranks)
                 for(size_t i = 0; i < 96; i++)
                 {
                     reply.WriteU8(0);
                 }
 
-                //Characteristics panel
+                // Equipment
                 for(size_t i = 0; i < 4; i++)
                 {
-                    reply.WriteU32Little(static_cast<uint32_t>(-1));    //Item type
+                    auto equip = d->GetEquippedItems(i).Get();
+                    if(equip)
+                    {
+                        reply.WriteS64Little(state->GetObjectID(
+                            equip->GetUUID()));
+                        reply.WriteU32Little(equip->GetType());
+                    }
+                    else
+                    {
+                        reply.WriteS64Little(-1);
+                        reply.WriteU32Little(static_cast<uint32_t>(-1));
+                    }
                 }
             }
             else

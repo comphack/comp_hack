@@ -32,6 +32,7 @@
 #include <EnumMap.h>
 
 // object Includes
+#include <DemonQuest.h>
 #include <Event.h>
 #include <EventCondition.h>
 
@@ -132,7 +133,7 @@ public:
         const std::unordered_map<int32_t, int32_t>& updateFlags = {});
 
     /**
-     * Update the client's quest kill counts
+     * Update the client's quest kill counts (normal and demon)
      * @param client Pointer to the client with active kill quests
      * @param kills Map of demon types to the number killed
      */
@@ -160,6 +161,56 @@ public:
      */
     void SendCompletedQuestList(
         const std::shared_ptr<ChannelClientConnection>& client);
+
+    /**
+     * Generate a demon quest for the supplied character and demon
+     * @param cState Pointer to the character state
+     * @param demon Pointer to the demon that will have the quest
+     * @return Pointer to the newly generated demon quest, null if an error
+     *  occurred
+     */
+    std::shared_ptr<objects::DemonQuest> GenerateDemonQuest(
+        const std::shared_ptr<CharacterState>& cState,
+        const std::shared_ptr<objects::Demon>& demon);
+
+    /**
+     * Update the target count for the client's active demon quest if it
+     * matches the supplied quest type.
+     * @param client Pointer to the client
+     * @param questType Type of quest required to perform the update
+     * @param targetType Type of target that has changed. For item quests
+     *  supplying no value will recalculate the count based on the current
+     *  item counts in the inventory
+     * @param increment Value to increase the target count by
+     * @return true if any updates occurred
+     */
+    bool UpdateDemonQuestCount(const std::shared_ptr<ChannelClientConnection>& client,
+        objects::DemonQuest::Type_t questType, uint32_t targetType = 0,
+        int32_t increment = 0);
+
+    /**
+     * Reset the quests available in from the demons in the COMP and set
+     * the demon quest daily count back to zero
+     * @param client Pointer to the client
+     * @return true if any update was performed
+     */
+    bool ResetDemonQuests(const std::shared_ptr<ChannelClientConnection>& client);
+
+    /**
+     * End the client's demon quest in success or failure. If any costs are
+     * required to complete a quest, they will be paid here.
+     * @param client Pointer to the client
+     * @param failCode Specifies how the quest should be notified to the player
+     *  should it end in failure. Values include:
+     *  0) Successful completion
+     *  1) Quest has timed out
+     *  2) Quest has failed for a miscellaneous reason
+     * @return Failure code matching the input parameter including any reasons
+     *  why a requested success is actually a failure. If a non-zero value is
+     *  returned, no update was performed
+     */
+    int8_t EndDemonQuest(const std::shared_ptr<
+        ChannelClientConnection>& client, int8_t failCode = 2);
 
     /**
      * Handle an event instance by branching into the appropriate handler
@@ -276,6 +327,16 @@ private:
     bool Compare(int32_t value1, int32_t value2, int32_t value3,
         EventCompareMode compareMode, EventCompareMode defaultCompare =
         EventCompareMode::DEFAULT_COMPARE, uint16_t validCompareSetting = 63);
+
+    /**
+     * Calculate and add all rewards to the supplied demon quest
+     * @param cState Pointer to the character state
+     * @param demon Pointer to the demon with the quest
+     * @param dQuest Pointer to the demon quest
+     */
+    void AddDemonQuestRewards(const std::shared_ptr<CharacterState>& cState,
+        const std::shared_ptr<objects::Demon>& demon,
+        std::shared_ptr<objects::DemonQuest>& dQuest);
 
     /**
      * Progress or pop to the next sequential event if one exists. If

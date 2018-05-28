@@ -51,6 +51,7 @@
 // channel Includes
 #include "ChannelServer.h"
 #include "CharacterManager.h"
+#include "EventManager.h"
 #include "ManagerConnection.h"
 
 using namespace channel;
@@ -333,7 +334,7 @@ bool Parsers::DemonCrystallize::Parse(libcomp::ManagerPacket *pPacketManager,
                     targetSlots.push_back((uint16_t)reward->GetBoxSlot());
 
                     int8_t openSlot = sourceInventoryFree.front();
-                    sourceInventoryFree.erase(sourceInventoryFree.begin());
+                    sourceInventoryFree.pop_front();
 
                     // Give it to the source
                     sourceInventory->SetItems((size_t)openSlot,
@@ -453,6 +454,14 @@ bool Parsers::DemonCrystallize::Parse(libcomp::ManagerPacket *pPacketManager,
     if(otherClient)
     {
         characterManager->EndExchange(otherClient, 0);
+    }
+
+    if(success)
+    {
+        // Update demon quest if active
+        server->GetEventManager()->UpdateDemonQuestCount(client,
+            objects::DemonQuest::Type_t::CRYSTALLIZE,
+            enchantData->GetDevilCrystal()->GetItemID(), 1);
     }
 
     return true;

@@ -168,16 +168,16 @@ bool ChannelServer::Initialize()
         to_underlying(ClientToChannelPacketCode_t::PACKET_TOGGLE_EXPERTISE));
     clientPacketManager->AddParser<Parsers::LearnSkill>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_LEARN_SKILL));
-    clientPacketManager->AddParser<Parsers::UpdateDemonSkill>(
-        to_underlying(ClientToChannelPacketCode_t::PACKET_UPDATE_DEMON_SKILL));
+    clientPacketManager->AddParser<Parsers::DemonSkillUpdate>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_DEMON_SKILL_UPDATE));
     clientPacketManager->AddParser<Parsers::KeepAlive>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_KEEP_ALIVE));
     clientPacketManager->AddParser<Parsers::FixObjectPosition>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_FIX_OBJECT_POSITION));
     clientPacketManager->AddParser<Parsers::State>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_STATE));
-    clientPacketManager->AddParser<Parsers::PartnerDemonData>(
-        to_underlying(ClientToChannelPacketCode_t::PACKET_PARTNER_DEMON_DATA));
+    clientPacketManager->AddParser<Parsers::DemonData>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_DEMON_DATA));
     clientPacketManager->AddParser<Parsers::DemonBox>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_DEMON_BOX));
     clientPacketManager->AddParser<Parsers::DemonBoxData>(
@@ -226,8 +226,8 @@ bool ChannelServer::Initialize()
         to_underlying(ClientToChannelPacketCode_t::PACKET_SHOP_SELL));
     clientPacketManager->AddParser<Parsers::DemonBoxMove>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_DEMON_BOX_MOVE));
-    clientPacketManager->AddParser<Parsers::DismissDemon>(
-        to_underlying(ClientToChannelPacketCode_t::PACKET_DISMISS_DEMON));
+    clientPacketManager->AddParser<Parsers::DemonDismiss>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_DEMON_DISMISS));
     clientPacketManager->AddParser<Parsers::PostList>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_POST_LIST));
     clientPacketManager->AddParser<Parsers::PostItem>(
@@ -276,8 +276,8 @@ bool ChannelServer::Initialize()
         to_underlying(ClientToChannelPacketCode_t::PACKET_SYNC));
     clientPacketManager->AddParser<Parsers::ShopRepair>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_SHOP_REPAIR));
-    clientPacketManager->AddParser<Parsers::PartnerDemonAISet>(
-        to_underlying(ClientToChannelPacketCode_t::PACKET_PARTNER_DEMON_AI_SET));
+    clientPacketManager->AddParser<Parsers::DemonAISet>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_DEMON_AI_SET));
     clientPacketManager->AddParser<Parsers::Rotate>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_ROTATE));
     clientPacketManager->AddParser<Parsers::LootBossBox>(
@@ -438,6 +438,10 @@ bool ChannelServer::Initialize()
         to_underlying(ClientToChannelPacketCode_t::PACKET_TIME_LIMIT_SYNC));
     clientPacketManager->AddParser<Parsers::ItemDisassemble>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_ITEM_DISASSEMBLE));
+    clientPacketManager->AddParser<Parsers::SynthesizeRecipe>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_SYNTHESIZE_RECIPE));
+    clientPacketManager->AddParser<Parsers::Synthesize>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_SYNTHESIZE));
     clientPacketManager->AddParser<Parsers::EquipmentMod>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_EQUIPMENT_MODIFY));
     clientPacketManager->AddParser<Parsers::MaterialBox>(
@@ -458,16 +462,34 @@ bool ChannelServer::Initialize()
         to_underlying(ClientToChannelPacketCode_t::PACKET_FUSION_GAUGE));
     clientPacketManager->AddParser<Parsers::TitleList>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_TITLE_LIST));
-    clientPacketManager->AddParser<Parsers::PartnerDemonQuestList>(
-        to_underlying(ClientToChannelPacketCode_t::PACKET_PARTNER_DEMON_QUEST_LIST));
-    clientPacketManager->AddParser<Parsers::LockDemon>(
-        to_underlying(ClientToChannelPacketCode_t::PACKET_LOCK_DEMON));
+    clientPacketManager->AddParser<Parsers::TitleActiveUpdate>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_TITLE_ACTIVE_UPDATE));
+    clientPacketManager->AddParser<Parsers::TitleBuild>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_TITLE_BUILD));
+    clientPacketManager->AddParser<Parsers::DemonQuestData>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_DEMON_QUEST_DATA));
+    clientPacketManager->AddParser<Parsers::DemonQuestAccept>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_DEMON_QUEST_ACCEPT));
+    clientPacketManager->AddParser<Parsers::DemonQuestEnd>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_DEMON_QUEST_END));
+    clientPacketManager->AddParser<Parsers::DemonQuestCancel>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_DEMON_QUEST_CANCEL));
+    clientPacketManager->AddParser<Parsers::DemonQuestList>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_DEMON_QUEST_LIST));
+    clientPacketManager->AddParser<Parsers::DemonQuestActive>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_DEMON_QUEST_ACTIVE));
+    clientPacketManager->AddParser<Parsers::DemonLock>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_DEMON_LOCK));
+    clientPacketManager->AddParser<Parsers::DemonQuestReject>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_DEMON_QUEST_REJECT));
     clientPacketManager->AddParser<Parsers::PvPCharacterInfo>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_PVP_CHARACTER_INFO));
+    clientPacketManager->AddParser<Parsers::ItemMix>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_ITEM_MIX));
     clientPacketManager->AddParser<Parsers::TeamInfo>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_TEAM_INFO));
-    clientPacketManager->AddParser<Parsers::PartnerDemonQuestTemp>(
-        to_underlying(ClientToChannelPacketCode_t::PACKET_PARTNER_DEMON_QUEST_TEMP));
+    clientPacketManager->AddParser<Parsers::DemonQuestPending>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_DEMON_QUEST_PENDING));
     clientPacketManager->AddParser<Parsers::ItemDepoRemote>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_ITEM_DEPO_REMOTE));
     clientPacketManager->AddParser<Parsers::DemonDepoRemote>(
@@ -490,10 +512,18 @@ bool ChannelServer::Initialize()
         to_underlying(ClientToChannelPacketCode_t::PACKET_PATTRIBUTE_DEADLINE));
     clientPacketManager->AddParser<Parsers::DemonDepoList>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_DEMON_DEPO_LIST));
+    clientPacketManager->AddParser<Parsers::DemonEquip>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_DEMON_EQUIP));
     clientPacketManager->AddParser<Parsers::Barter>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_BARTER));
+    clientPacketManager->AddParser<Parsers::QuestTitle>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_QUEST_TITLE));
+    clientPacketManager->AddParser<Parsers::ReportPlayer>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_REPORT_PLAYER));
     clientPacketManager->AddParser<Parsers::Blacklist>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_BLACKLIST));
+    clientPacketManager->AddParser<Parsers::BlacklistUpdate>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_BLACKLIST_UPDATE));
     clientPacketManager->AddParser<Parsers::DigitalizePoints>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_DIGITALIZE_POINTS));
     clientPacketManager->AddParser<Parsers::DigitalizeAssist>(
@@ -557,6 +587,13 @@ bool ChannelServer::Initialize()
         (ChannelServer* pServer)
         {
             pServer->HandleClockEvents();
+        }, this);
+
+    // Schedule the demon quest reset for next midnight
+    mTimerManager.ScheduleEventIn((int)GetTimeUntilMidnight(), []
+        (ChannelServer* pServer)
+        {
+            pServer->HandleDemonQuestReset();
         }, this);
 
     // Now connect to the world server.
@@ -1037,6 +1074,19 @@ int32_t ChannelServer::GetPAttributeDeadline()
     return deadline;
 }
 
+uint32_t ChannelServer::GetTimeUntilMidnight()
+{
+    time_t systemTime = std::time(0);
+    tm* t = gmtime(&systemTime);
+
+    int systemHour = t->tm_hour;
+    int systemMinutes = t->tm_min;
+    int systemSeconds = t->tm_sec;
+
+    return (uint32_t)(((23 - systemHour) * 3600) +
+        ((59 - systemMinutes) * 60) + systemSeconds);
+}
+
 ChannelServer::PersistentObjectMap
     ChannelServer::GetDefaultCharacterObjectMap() const
 {
@@ -1109,6 +1159,32 @@ void ChannelServer::HandleClockEvents()
         mTokuseiManager->RecalcTimedTokusei(clock);
         mZoneManager->HandleTimedActions(clock);
     }
+}
+
+void ChannelServer::HandleDemonQuestReset()
+{
+    // Get all currently logged in characters and reset their demon quests
+    for(auto& client : mManagerConnection->GetAllConnections())
+    {
+        auto state = client->GetClientState();
+        if(mEventManager->ResetDemonQuests(client))
+        {
+            LOG_DEBUG(libcomp::String("Demon quests reset for account: %1\n")
+                .Arg(state->GetAccountUID().ToString()));
+        }
+        else
+        {
+            LOG_ERROR(libcomp::String("Failed to reset demon quests for"
+                " account: %1\n").Arg(state->GetAccountUID().ToString()));
+        }
+    }
+
+    // Reset timer to run again
+    mTimerManager.ScheduleEventIn((int)GetTimeUntilMidnight(), []
+        (ChannelServer* pServer)
+        {
+            pServer->HandleDemonQuestReset();
+        }, this);
 }
 
 std::shared_ptr<libcomp::TcpConnection> ChannelServer::CreateConnection(

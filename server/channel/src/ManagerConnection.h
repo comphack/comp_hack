@@ -117,6 +117,12 @@ public:
         ChannelClientConnection>& client);
 
     /**
+     * Get all client connections that currently exist.
+     * @return List of pointers to all client connections
+     */
+    std::list<std::shared_ptr<ChannelClientConnection>> GetAllConnections();
+
+    /**
      * Get the client connection associated to the supplied entity ID.
      * @param id Entity ID or world ID associated to the client
      *  state to retrieve

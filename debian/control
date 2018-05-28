@@ -2,7 +2,7 @@ Source: comphack
 Section: net
 Priority: optional
 Maintainer: COMP Omega <compomega@tutanota.com>
-Build-Depends: debhelper (>= 9.20131213~), dh-systemd, dpkg-dev (>= 1.16.1~), git, cmake (>= 3.5.0), g++ (>= 4:5.2), gcc (>= 4:5.2), make (>= 4.1), docbook-xsl, doxygen, texlive-font-utils, xmlto, libqt5webkit5-dev, libsystemd-dev, unzip
+Build-Depends: debhelper (>= 9.20160114~), dh-systemd, dpkg-dev (>= 1.16.1~), git, cmake (>= 3.5.0), g++ (>= 4:5.2), gcc (>= 4:5.2), make (>= 4.1), docbook-xsl, doxygen, texlive-font-utils, xmlto, libqt5webkit5-dev, libsystemd-dev, unzip, pkg-create-dbgsym
 Standards-Version: 3.9.7
 Homepage: https://github.com/comphack/comp_hack
 

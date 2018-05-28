@@ -266,6 +266,7 @@ SET(${PROJECT_NAME}_SCHEMA
     schema/qmp_file.xml
     schema/registeredchannel.xml
     schema/registeredworld.xml
+    schema/reportedplayer.xml
     schema/server_command_line.xml
     schema/server_npc.xml
     schema/server_object.xml
@@ -279,6 +280,7 @@ SET(${PROJECT_NAME}_SCHEMA
 
     # BinaryData Files
     schema/binarydata/aidata.xml
+    schema/binarydata/blenddata.xml
     schema/binarydata/ceventmessagedata.xml
     schema/binarydata/cicondata.xml
     schema/binarydata/citemdata.xml
@@ -286,6 +288,7 @@ SET(${PROJECT_NAME}_SCHEMA
     schema/binarydata/cmodeldata.xml
     schema/binarydata/cmodifiedeffectdata.xml
     schema/binarydata/cmultitalkdata.xml
+    schema/binarydata/codenamedata.xml
     schema/binarydata/cpolygonmoviedata.xml
     schema/binarydata/cquest.xml
     schema/binarydata/csounddata.xml
@@ -293,11 +296,13 @@ SET(${PROJECT_NAME}_SCHEMA
     schema/binarydata/czonerelationdata.xml
     schema/binarydata/devilbookdata.xml
     schema/binarydata/devildata.xml
+    schema/binarydata/devilequipmentdata.xml
     schema/binarydata/devillvupratedata.xml
     schema/binarydata/disassemblydata.xml
     schema/binarydata/dynamicmapdata.xml
     schema/binarydata/enchantdata.xml
     schema/binarydata/equipmentsetdata.xml
+    schema/binarydata/eventdirectiondata.xml
     schema/binarydata/exchangedata.xml
     schema/binarydata/expertdata.xml
     schema/binarydata/hnpcdata.xml
@@ -406,18 +411,22 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     DatabaseConfigSQLite3.cpp
     EntityStats.h
     EntityStats.cpp
-    Demon.h
-    Demon.cpp
     Item.h
     Item.cpp
+    Demon.h
+    Demon.cpp
     Quest.h
     Quest.cpp
+    DemonQuest.h
+    DemonQuest.cpp
     Character.h
     Character.cpp
     DemonBox.h
     DemonBox.cpp
     DemonPresent.h
     DemonPresent.cpp
+    DemonQuestReward.h
+    DemonQuestReward.cpp
     DropSet.h
     DropSet.cpp
     Enemy.h
@@ -498,6 +507,8 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     RegisteredChannel.cpp
     RegisteredWorld.h
     RegisteredWorld.cpp
+    ReportedPlayer.h
+    ReportedPlayer.cpp
     SearchEntry.h
     SearchEntry.cpp
     ServerBazaar.h
@@ -572,6 +583,16 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     MiAIRelationData.h
     MiBattleDamageData.cpp
     MiBattleDamageData.h
+    MiBlendData.cpp
+    MiBlendData.h
+    MiBlendData_Item.cpp
+    MiBlendData_Item.h
+    MiBlendExtData.cpp
+    MiBlendExtData.h
+    MiBlendExtData_DstItemChange.cpp
+    MiBlendExtData_DstItemChange.h
+    MiBlendExtData_SrcItemChange.cpp
+    MiBlendExtData_SrcItemChange.h
     MiBreakData.cpp
     MiBreakData.h
     MiCancelData.cpp
@@ -644,8 +665,12 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     MiDevilBookData.h
     MiDevilCrystalData.h
     MiDevilCrystalData.cpp
-    MiDevilData.cpp
     MiDevilData.h
+    MiDevilData.cpp
+    MiDevilEquipmentData.h
+    MiDevilEquipmentData.cpp
+    MiDevilEquipmentItemData.h
+    MiDevilEquipmentItemData.cpp
     MiDevilFamiliarityData.cpp
     MiDevilFamiliarityData.h
     MiDevilLVUpData.cpp
@@ -740,6 +765,8 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     MiONPCData.h
     MiPossessionData.h
     MiPossessionData.cpp
+    MiQuestBonusCodeData.h
+    MiQuestBonusCodeData.cpp
     MiQuestData.h
     MiQuestData.cpp
     MiQuestPhaseData.h
@@ -784,12 +811,18 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     MiStatusData.h
     MiSummonData.cpp
     MiSummonData.h
+    MiSynthesisData.cpp
+    MiSynthesisData.h
+    MiSynthesisItemData.cpp
+    MiSynthesisItemData.h
     MiCTalkMessageData.cpp
     MiCTalkMessageData.h
     MiTargetData.cpp
     MiTargetData.h
     MiTimeLimitData.h
     MiTimeLimitData.cpp
+    MiTitleData.h
+    MiTitleData.cpp
     MiTriUnionSpecialData.cpp
     MiTriUnionSpecialData.h
     MiUnionData.cpp
@@ -838,6 +871,8 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     MiItemData.cpp
     MiCSoundData.h
     MiCSoundData.cpp
+    MiEventDirectionData.h
+    MiEventDirectionData.cpp
 )
 
 COVERALLS_SOURCES(${${PROJECT_NAME}_SRCS})

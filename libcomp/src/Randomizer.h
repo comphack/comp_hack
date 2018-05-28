@@ -29,7 +29,9 @@
 
 // C++ Standard Includes
 #include <cmath>
+#include <list>
 #include <random>
+#include <set>
 #include <stdint.h>
 
 namespace libcomp
@@ -86,6 +88,50 @@ public:
      */
     template <class T>
     static T GetRandomDecimal(T minVal, T maxVal, uint8_t precision);
+
+    /**
+     * Get a random entry from the supplied list.
+     * @param List of entries to pull a random entry from
+     * @return Random entry from the supplied list or the default value
+     *  for the templated type if empty
+     */
+    template <class T>
+    static T GetEntry(const std::list<T>& dataset)
+    {
+        if(dataset.size() == 0)
+        {
+            return T{};
+        }
+
+        auto it = dataset.begin();
+        size_t randomIdx = (size_t)GetRandomNumber<uint32_t>(0,
+            (uint32_t)(dataset.size() - 1));
+        std::advance(it, randomIdx);
+
+        return *it;
+    }
+
+    /**
+     * Get a random entry from the supplied set.
+     * @param Set of entries to pull a random entry from
+     * @return Random entry from the supplied set or the default value
+     *  for the templated type if empty
+     */
+    template <class T>
+    static T GetEntry(const std::set<T>& dataset)
+    {
+        if(dataset.size() == 0)
+        {
+            return T{};
+        }
+
+        auto it = dataset.begin();
+        size_t randomIdx = (size_t)GetRandomNumber<uint32_t>(0,
+            (uint32_t)(dataset.size() - 1));
+        std::advance(it, randomIdx);
+
+        return *it;
+    }
 
 private:
     /**

@@ -48,6 +48,7 @@
 #include <MiCategoryData.h>
 #include <MiCorrectTbl.h>
 #include <MiDevilBattleData.h>
+#include <MiDevilEquipmentItemData.h>
 #include <MiDevilData.h>
 #include <MiDoTDamageData.h>
 #include <MiEffectData.h>
@@ -638,7 +639,7 @@ void ActiveEntityState::SetStatusEffects(
     }
 }
 
-std::set<uint32_t> ActiveEntityState::AddStatusEffects(const AddStatusEffectMap& effects,
+std::set<uint32_t> ActiveEntityState::AddStatusEffects(const StatusEffectChanges& effects,
     libcomp::DefinitionManager* definitionManager, uint32_t now, bool queueChanges)
 {
     std::set<uint32_t> removes;
@@ -651,9 +652,9 @@ std::set<uint32_t> ActiveEntityState::AddStatusEffects(const AddStatusEffectMap&
     std::lock_guard<std::mutex> lock(mLock);
     for(auto ePair : effects)
     {
-        bool isReplace = ePair.second.second;
-        uint32_t effectType = ePair.first;
-        uint8_t stack = ePair.second.first;
+        bool isReplace = ePair.second.IsReplace;
+        uint32_t effectType = ePair.second.Type;
+        uint8_t stack = ePair.second.Stack;
 
         auto def = definitionManager->GetStatusData(effectType);
         auto basic = def->GetBasic();
@@ -670,7 +671,7 @@ std::set<uint32_t> ActiveEntityState::AddStatusEffects(const AddStatusEffectMap&
         std::shared_ptr<objects::StatusEffect> removeEffect;
         if(mStatusEffects.find(effectType) != mStatusEffects.end())
         {
-            // Effect exists alreadly, should we modify time/stack or remove?
+            // Effect exists already, should we modify time/stack or remove?
             auto existing = mStatusEffects[effectType];
 
             bool doReplace = isReplace;
@@ -738,6 +739,11 @@ std::set<uint32_t> ActiveEntityState::AddStatusEffects(const AddStatusEffectMap&
             }
 
             add = false;
+        }
+        else if(stack == 0)
+        {
+            // Effect does not exist, ignore removal attempt
+            continue;
         }
         else
         {
@@ -899,50 +905,59 @@ std::set<uint32_t> ActiveEntityState::AddStatusEffects(const AddStatusEffectMap&
 
         // Perform insert or edit modifications
         bool activateEffect = add;
-        if(effect)
+        if(effect && effect->GetExpiration() == 0)
         {
-            if(effect->GetExpiration() == 0)
+            // Set the expiration
+            uint32_t expiration = 0;
+            bool absoluteTime = false;
+            bool durationOverride = false;
+            switch(cancel->GetDurationType())
             {
-                //Set the expiration
-                uint32_t expiration = 0;
-                bool absoluteTime = false;
-                switch(cancel->GetDurationType())
+            case objects::MiCancelData::DurationType_t::MS:
+            case objects::MiCancelData::DurationType_t::MS_SET:
+                // Milliseconds stored as relative countdown
+                expiration = ePair.second.Duration
+                    ? ePair.second.Duration : cancel->GetDuration();
+                durationOverride = ePair.second.Duration != 0;
+                break;
+            case objects::MiCancelData::DurationType_t::HOUR:
+                // Convert hours to absolute time in seconds
+                expiration = (uint32_t)(cancel->GetDuration() * 3600);
+                absoluteTime = true;
+                break;
+            case objects::MiCancelData::DurationType_t::DAY:
+            case objects::MiCancelData::DurationType_t::DAY_SET:
+                // Convert days to absolute time in seconds
+                expiration = (uint32_t)(cancel->GetDuration() * 24 * 3600);
+                absoluteTime = true;
+                break;
+            case objects::MiCancelData::DurationType_t::NONE:
+                if(ePair.second.Duration)
                 {
-                case objects::MiCancelData::DurationType_t::MS:
-                case objects::MiCancelData::DurationType_t::MS_SET:
-                    // Milliseconds stored as relative countdown
-                    expiration = cancel->GetDuration();
-                    break;
-                case objects::MiCancelData::DurationType_t::HOUR:
-                    // Convert hours to absolute time in seconds
-                    expiration = (uint32_t)(cancel->GetDuration() * 3600);
-                    absoluteTime = true;
-                    break;
-                case objects::MiCancelData::DurationType_t::DAY:
-                case objects::MiCancelData::DurationType_t::DAY_SET:
-                    // Convert days to absolute time in seconds
-                    expiration = (uint32_t)(cancel->GetDuration() * 24 * 3600);
-                    absoluteTime = true;
-                    break;
-                default:
-                    // None or invalid, nothing to do
-                    break;
+                    // Set explicit expiration (in milliseconds)
+                    expiration = ePair.second.Duration;
+                    effect->SetIsConstant(false);
+                    durationOverride = true;
                 }
-
-                if(basic->GetStackType() == 1)
-                {
-                    // Stack scales time
-                    expiration = expiration * effect->GetStack();
-                }
-
-                if(absoluteTime)
-                {
-                    expiration = (uint32_t)(now + expiration);
-                }
-
-                effect->SetExpiration(expiration);
-                activateEffect = true;
+                break;
+            default:
+                // Invalid, nothing to do
+                break;
             }
+
+            if(basic->GetStackType() == 1 && !durationOverride)
+            {
+                // Stack scales time
+                expiration = expiration * effect->GetStack();
+            }
+
+            if(absoluteTime)
+            {
+                expiration = (uint32_t)(now + expiration);
+            }
+
+            effect->SetExpiration(expiration);
+            activateEffect = true;
         }
 
         if(removeEffect)
@@ -1489,6 +1504,8 @@ void ActiveEntityState::ActivateStatusEffect(
     {
         case objects::MiCancelData::DurationType_t::MS:
         case objects::MiCancelData::DurationType_t::MS_SET:
+        case objects::MiCancelData::DurationType_t::NONE:
+            if(!effect->GetIsConstant())
             {
                 // Force next tick time to duration
                 uint32_t time = (uint32_t)(now + (effect->GetExpiration() * 0.001));
@@ -1608,6 +1625,8 @@ uint32_t ActiveEntityState::GetCurrentExpiration(
         {
         case objects::MiCancelData::DurationType_t::MS:
         case objects::MiCancelData::DurationType_t::MS_SET:
+        case objects::MiCancelData::DurationType_t::NONE:
+            if(!effect->GetIsConstant())
             {
                 // Convert back to milliseconds
                 uint32_t newExp = (uint32_t)((nextTime - now) * 1000);
@@ -1914,9 +1933,20 @@ std::set<uint32_t> ActiveEntityStateImp<objects::Demon>::GetAllSkills(
         auto demonData = GetDevilData();
 
         auto growth = demonData->GetGrowth();
-        for(uint32_t traitID : growth->GetTraits())
+        for(size_t i = 0; i < 4; i++)
         {
-            if(traitID)
+            auto equipment = mEntity->GetEquippedItems(i).Get();
+            uint32_t traitID = growth->GetTraits(i);
+            if(equipment)
+            {
+                auto equipData = definitionManager->GetDevilEquipmentItemData(
+                    equipment->GetType());
+                if(equipData)
+                {
+                    skillIDs.insert(equipData->GetSkillID());
+                }
+            }
+            else if(traitID)
             {
                 skillIDs.insert(traitID);
             }

@@ -85,6 +85,8 @@
 
 #include <MiSpotData.h>
 
+#include <MiTitleData.h>
+
 #include <MiZoneData.h>
 #include <MiZoneBasicData.h>
 
@@ -395,6 +397,7 @@ int Usage(const char *szAppName)
     std::cerr << "  hnpc            Format for hNPCData.sbin" << std::endl;
     std::cerr << "  onpc            Format for oNPCData.sbin" << std::endl;
     std::cerr << "  spot            Format for SpotData.bin" << std::endl;
+    std::cerr << "  title           Format for CodeNameData.sbin" << std::endl;
     std::cerr << "  zone            Format for ZoneData.sbin" << std::endl;
     std::cerr << std::endl;
     std::cerr << "Mode 'load' will take the input BinaryData file and "
@@ -679,6 +682,21 @@ int main(int argc, char *argv[])
             [](const std::shared_ptr<libcomp::Object>& obj)
             {
                 return std::dynamic_pointer_cast<objects::MiSpotData>(
+                    obj)->GetID();
+            }
+        );
+    }
+    else if("title" == bdType)
+    {
+        pSet = new BinaryDataSet(
+            []()
+            {
+                return std::make_shared<objects::MiTitleData>();
+            },
+
+            [](const std::shared_ptr<libcomp::Object>& obj)
+            {
+                return std::dynamic_pointer_cast<objects::MiTitleData>(
                     obj)->GetID();
             }
         );

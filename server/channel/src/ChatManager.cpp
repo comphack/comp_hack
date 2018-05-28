@@ -1238,6 +1238,10 @@ bool ChatManager::GMCommand_Help(const std::shared_ptr<
             "@tickermessage MESSAGE...",
             "Sends the ticker message MESSAGE to all players.",
         } },
+        { "title", {
+            "@title ID",
+            "Grants the player a new character title by ID."
+        } },
         { "tokusei", {
             "@tokusei CLEAR|ID [STACK] [DEMON]",
             "Adds STACK of a tokusei given by the specified ID",

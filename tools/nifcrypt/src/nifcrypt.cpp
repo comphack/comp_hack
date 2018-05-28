@@ -126,7 +126,7 @@ int EncryptFile(const char *szIn, const char *szOut)
     maxSize += (int32_t)sz + 12;
 
     // Allocate the output buffer.
-    uint8_t *pDataOut = new uint8_t[maxSize];
+    uint8_t *pDataOut = new uint8_t[(uint32_t)maxSize];
 
     // Read the file.
     if(1 != fread(pData, sz, 1, pIn))

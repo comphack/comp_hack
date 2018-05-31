@@ -1157,6 +1157,7 @@ bool AccountManager::InitializeNewCharacter(std::shared_ptr<
             {
                 auto bar = std::make_shared<objects::Hotbar>(*dBar);
                 bar->Register(bar, libobjgen::UUID::Random());
+                bar->SetCharacter(character->GetUUID());
 
                 if(!bar->Insert(db) || !character->SetHotbars(i, bar))
                 {

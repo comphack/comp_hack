@@ -130,6 +130,7 @@ void CharacterState::RecalcEquipState(libcomp::DefinitionManager* definitionMana
     mEquipmentTokuseiIDs.clear();
     mConditionalTokusei.clear();
     mStatConditionalTokusei.clear();
+    mEquipFuseBonuses.clear();
 
     std::set<int16_t> allEffects;
     std::list<std::shared_ptr<objects::MiSpecialConditionData>> conditions;
@@ -140,7 +141,9 @@ void CharacterState::RecalcEquipState(libcomp::DefinitionManager* definitionMana
         if(!equip || equip->GetDurability() == 0) continue;
 
         // Get item direct effects
-        auto sItemData = definitionManager->GetSItemData(equip->GetType());
+        uint32_t specialEffect = equip->GetSpecialEffect();
+        auto sItemData = definitionManager->GetSItemData(
+            specialEffect ? specialEffect : equip->GetType());
         if(sItemData)
         {
             for(int32_t tokuseiID : sItemData->GetTokusei())
@@ -253,6 +256,8 @@ void CharacterState::RecalcEquipState(libcomp::DefinitionManager* definitionMana
                 }
             }
         }
+
+        AdjustFuseBonus(definitionManager, equip);
     }
 
     // Apply equip sets
@@ -425,6 +430,12 @@ uint8_t CharacterState::GetExpertiseRank(
             for(uint8_t i = 0; i < expData->GetChainCount(); i++)
             {
                 auto chainData = expData->GetChainData((size_t)i);
+                if(GetExpertiseRank(definitionManager, chainData->GetID()) <
+                    chainData->GetRankRequired())
+                {
+                    // Chain expertise is not active
+                    return 0;
+                }
 
                 float percent = chainData->GetChainPercent();
                 if(percent > 0.f)
@@ -512,6 +523,12 @@ void CharacterState::BaseStatsCalculated(
     libcomp::EnumMap<CorrectTbl, int16_t>& stats,
     std::list<std::shared_ptr<objects::MiCorrectTbl>>& adjustments)
 {
+    // Apply equipment fusion bonuses
+    for(auto& pair : mEquipFuseBonuses)
+    {
+        stats[pair.first] = (int16_t)(stats[pair.first] + pair.second);
+    }
+
     if(calcState != GetCalculatedState())
     {
         // Do not calculate again, just use the base calculation mode
@@ -614,5 +631,162 @@ void CharacterState::BaseStatsCalculated(
     if(conditionalStatAdjusts.size() > 0)
     {
         AdjustStats(conditionalStatAdjusts, stats, calcState, true);
+    }
+}
+
+void CharacterState::AdjustFuseBonus(libcomp::DefinitionManager* definitionManager,
+    std::shared_ptr<objects::Item> equipment)
+{
+    const size_t GROWTH_TABLE_SIZE = 16;
+
+    // Default growth table, base values padded to match largest
+    // needed table (weapon)
+    const static int16_t minorGrowth[GROWTH_TABLE_SIZE][2] = {
+        { 0, 1 },
+        { 0, 1 },
+        { 0, 1 },
+        { 0, 1 },
+        { 0, 1 },
+        { 0, 1 },
+        { 0, 1 },
+        { 5, 2 },
+        { 10, 3 },
+        { 15, 4 },
+        { 20, 5 },
+        { 25, 7 },
+        { 30, 10 },
+        { 35, 13 },
+        { 40, 16 },
+        { 50, 20 }
+    };
+
+    int16_t correctTypes[] = { -1, -1, -1 };
+    const int16_t (*growthTable)[GROWTH_TABLE_SIZE][2] = &minorGrowth;
+
+    auto itemData = definitionManager->GetItemData(
+        equipment->GetType());
+    switch(itemData->GetBasic()->GetEquipType())
+    {
+    case objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_WEAPON:
+        {
+            const static int16_t growth[GROWTH_TABLE_SIZE][2] = {
+                { 2, 2 },
+                { 4, 3 },
+                { 6, 4 },
+                { 8, 5 },
+                { 10, 6 },
+                { 12, 7 },
+                { 14, 8 },
+                { 16, 9 },
+                { 18, 12 },
+                { 21, 15 },
+                { 24, 20 },
+                { 27, 25 },
+                { 30, 30 },
+                { 35, 35 },
+                { 40, 40 },
+                { 50, 45 }
+            };
+
+            // CLSR or LNGR based on weapon type
+            if(itemData->GetBasic()->GetWeaponType() ==
+                objects::MiItemBasicData::WeaponType_t::CLOSE_RANGE)
+            {
+                correctTypes[0] = (int8_t)CorrectTbl::CLSR;
+            }
+            else
+            {
+                correctTypes[0] = (int8_t)CorrectTbl::LNGR;
+            }
+
+            correctTypes[1] = (int8_t)CorrectTbl::MAGIC;
+            correctTypes[2] = (int8_t)CorrectTbl::SUPPORT;
+
+            growthTable = &growth;
+        }
+        break;
+    case objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_TOP:
+    case objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_BOTTOM:
+        {
+            const static int16_t growth[GROWTH_TABLE_SIZE][2] = {
+                { 0, 1 },
+                { 0, 1 },
+                { 0, 1 },
+                { 0, 1 },
+                { 0, 1 },
+                { 0, 1 },
+                { 0, 1 },
+                { 5, 2 },
+                { 10, 3 },
+                { 15, 5 },
+                { 20, 7 },
+                { 25, 10 },
+                { 30, 13 },
+                { 35, 16 },
+                { 40, 19 },
+                { 50, 25 }
+            };
+
+            correctTypes[0] = (int8_t)CorrectTbl::PDEF;
+            correctTypes[1] = (int8_t)CorrectTbl::MDEF;
+
+            growthTable = &growth;
+        }
+        break;
+    case objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_HEAD:
+    case objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_ARMS:
+    case objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_FEET:
+        correctTypes[0] = (int8_t)CorrectTbl::PDEF;
+        correctTypes[1] = (int8_t)CorrectTbl::MDEF;
+        break;
+    case objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_RING:
+    case objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_EARRING:
+    case objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_EXTRA:
+    case objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_TALISMAN:
+        correctTypes[1] = (int8_t)CorrectTbl::MDEF;
+        break;
+    case objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_FACE:
+    case objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_NECK:
+    case objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_COMP:
+    case objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_BACK:
+    default:
+        // No bonuses
+        return;
+    }
+
+    // Apply bonuses
+    for(size_t i = 0; i < 3; i++)
+    {
+        int8_t bonus = equipment->GetFuseBonuses(i);
+        if(bonus > 0 && correctTypes[i] != -1)
+        {
+            int16_t boost = 0;
+            for(size_t k = 0; k < GROWTH_TABLE_SIZE; k++)
+            {
+                if((*growthTable)[k][0] == (int16_t)bonus)
+                {
+                    boost = (*growthTable)[k][1];
+                    break;
+                }
+                else if((*growthTable)[k][0] > (int16_t)bonus)
+                {
+                    if(k > 0)
+                    {
+                        // Use previous
+                        boost = (*growthTable)[(size_t)(k - 1)][1];
+                    }
+                    else
+                    {
+                        // Default to 1
+                        boost = 1;
+                    }
+                    break;
+                }
+            }
+
+            CorrectTbl correctType = (CorrectTbl)correctTypes[i];
+            mEquipFuseBonuses[correctType] = (int16_t)(
+                mEquipFuseBonuses[correctType] + boost);
+        }
     }
 }

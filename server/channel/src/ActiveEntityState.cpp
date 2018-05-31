@@ -2062,7 +2062,9 @@ uint8_t ActiveEntityStateImp<objects::Character>::RecalculateStats(
     {
         if(!equip.IsNull() && equip->GetDurability() > 0)
         {
-            auto itemData = definitionManager->GetItemData(equip->GetType());
+            uint32_t basicEffect = equip->GetBasicEffect();
+            auto itemData = definitionManager->GetItemData(
+                basicEffect ? basicEffect : equip->GetType());
             for(auto ct : itemData->GetCommon()->GetCorrectTbl())
             {
                 if((uint8_t)ct->GetID() >= (uint8_t)CorrectTbl::NRA_WEAPON &&

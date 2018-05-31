@@ -157,11 +157,13 @@
     </object>
     <object name="Expertise" location="world">
         <member type="pref" name="Character" key="true" unique="false"/>
+        <member type="u8" name="ExpertiseID" min="0" max="38"/>
         <member type="s32" name="Points"/>
         <member type="bool" name="Disabled"/>
     </object>
     <object name="Hotbar" location="world">
         <member type="pref" name="Character" key="true" unique="false"/>
+        <member type="u8" name="PageID" min="0" max="9"/>
         <member type="array" name="ItemTypes" size="16">
             <element type="s8"/>
         </member>

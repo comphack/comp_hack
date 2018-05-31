@@ -71,4 +71,17 @@
 
 </section><!-- ChannelConnectionTimeOut -->
 
+<section>
+<title>WorldSharedConfig</title>
+<para><emphasis role="strong">Type:</emphasis> object (WorldSharedConfig)</para>
+<para><emphasis role="strong">Default:</emphasis> default settings object</para>
+<para>Sub-section for all world shared config settings. For more information see the dedicated documentation section.</para>
+
+<section>
+<title>Example</title>
+<para><![CDATA[<member name="WorldSharedConfig"><object><member name="AutoCompressCurrency">true</member></object></member>]]></para>
+</section><!-- Example -->
+
+</section><!-- WorldSharedConfig -->
+
 </section>

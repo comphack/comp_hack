@@ -65,6 +65,7 @@
 #include <CharacterProgress.h>
 #include <DemonBox.h>
 #include <DropSet.h>
+#include <Expertise.h>
 #include <LootBox.h>
 #include <MiCategoryData.h>
 #include <MiItemData.h>
@@ -1151,40 +1152,61 @@ bool ActionManager::GrantSkills(ActionContext& ctx)
     switch(act->GetTargetType())
     {
     case objects::ActionGrantSkills::TargetType_t::CHARACTER:
-        eState = state->GetCharacterState();
-        if(act->GetSkillPoints() > 0)
-        {
-            characterManager->UpdateSkillPoints(ctx.Client,
-                act->GetSkillPoints());
-        }
-
-        if(act->ExpertisePointsCount() > 0)
-        {
-            std::list<std::pair<uint8_t, int32_t>> expPoints;
-            for(auto pair : act->GetExpertisePoints())
-            {
-                expPoints.push_back(std::pair<uint8_t, int32_t>(pair.first,
-                    pair.second));
-            }
-
-            characterManager->UpdateExpertisePoints(ctx.Client, expPoints);
-        }
-
-        if(act->GetExpertiseMax() > 0)
         {
             auto character = state->GetCharacterState()->GetEntity();
-            uint8_t val = act->GetExpertiseMax();
+            eState = state->GetCharacterState();
 
-            int8_t newVal = (int8_t)((character->GetExpertiseExtension() + val) > 127
-                ? 127 : (character->GetExpertiseExtension() + val));
-
-            if(newVal != character->GetExpertiseExtension())
+            if(act->GetSkillPoints() > 0)
             {
-                character->SetExpertiseExtension(newVal);
+                characterManager->UpdateSkillPoints(ctx.Client,
+                    act->GetSkillPoints());
+            }
 
-                characterManager->SendExertiseExtension(ctx.Client);
-                server->GetWorldDatabase()->QueueUpdate(character,
-                    state->GetAccountUID());
+            if(act->ExpertisePointsCount() > 0)
+            {
+                bool expSet = act->GetExpertiseSet();
+
+                std::list<std::pair<uint8_t, int32_t>> expPoints;
+                for(auto pair : act->GetExpertisePoints())
+                {
+                    int32_t points = pair.second;
+                    if(expSet)
+                    {
+                        // Explicitly set the points
+                        auto exp = character->GetExpertises(
+                            (size_t)pair.first).Get();
+                        if(exp)
+                        {
+                            points = points - exp->GetPoints();
+                        }
+                    }
+
+                    expPoints.push_back(std::pair<uint8_t, int32_t>(pair.first,
+                        points));
+                }
+
+                characterManager->UpdateExpertisePoints(ctx.Client, expPoints);
+            }
+
+            if(act->GetExpertiseMax() > 0)
+            {
+                uint8_t val = act->GetExpertiseMax();
+
+                int16_t newVal = (int16_t)(
+                    character->GetExpertiseExtension() + val);
+                if(newVal > 127)
+                {
+                    newVal = 127;
+                }
+
+                if((int8_t)newVal != character->GetExpertiseExtension())
+                {
+                    character->SetExpertiseExtension((int8_t)newVal);
+
+                    characterManager->SendExertiseExtension(ctx.Client);
+                    server->GetWorldDatabase()->QueueUpdate(character,
+                        state->GetAccountUID());
+                }
             }
         }
         break;

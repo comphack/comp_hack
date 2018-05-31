@@ -185,6 +185,16 @@ private:
         const std::list<libcomp::String>& args);
 
     /**
+     * GM command to set the tarot/soul effects on an equipped item.
+     * @param client Pointer to the client that sent the command
+     * @param args List of arguments for the command
+     * @return true if the command was handled properly, else false
+     */
+    bool GMCommand_Enchant(const std::shared_ptr<
+        channel::ChannelClientConnection>& client,
+        const std::list<libcomp::String>& args);
+
+    /**
      * GM command to spawn an entity in the client's zone.
      * @param client Pointer to the client that sent the command
      * @param args List of arguments for the command
@@ -215,13 +225,13 @@ private:
         const std::list<libcomp::String>& args);
 
     /**
-     * GM command to update a character's expertise as if a skill
-     * were used.
+     * GM command to update a character's expertise to an explicit
+     * rank (and class).
      * @param client Pointer to the client that sent the command
      * @param args List of arguments for the command
      * @return true if the command was handled properly, else false
      */
-    bool GMCommand_ExpertiseUpdate(const std::shared_ptr<
+    bool GMCommand_ExpertiseSet(const std::shared_ptr<
         channel::ChannelClientConnection>& client,
         const std::list<libcomp::String>& args);
 
@@ -486,6 +496,16 @@ private:
         const std::list<libcomp::String>& args);
 
     /**
+     * GM command to set the spirit fusion effects on an equipped item.
+     * @param client Pointer to the client that sent the command
+     * @param args List of arguments for the command
+     * @return true if the command was handled properly, else false
+     */
+    bool GMCommand_Spirit(const std::shared_ptr<
+        channel::ChannelClientConnection>& client,
+        const std::list<libcomp::String>& args);
+
+    /**
      * GM command to set the default ticker message upon login
      * @param client Pointer to the client that sent the command
      * @param args List of arguments for the command
@@ -597,6 +617,20 @@ private:
         std::shared_ptr<channel::ChannelClientConnection>& targetClient);
 
     /**
+     * Get the valid equip type index associated to the next argument in a list
+     * by equip type name or index.
+     * @param client Pointer to the client that sent the command
+     * @param args List of arguments to read and update
+     * @param gmandName Name of the gmand being executed
+     * @param validTypes Equipment type indexes that are valid to return
+     * @return Equipment index or -1 if invalid
+     */
+    int8_t GetEquipTypeArg(const std::shared_ptr<
+        channel::ChannelClientConnection>& client,
+        std::list<libcomp::String>& args, const libcomp::String& gmandName,
+        const std::set<int8_t>& validTypes);
+
+    /**
      * Get the next argument from the supplied argument list as a string.
      * @param outVal Output variable to return the string argument to
      * @param args List of arguments read and update
@@ -612,7 +646,7 @@ private:
      * Get the next argument from the supplied argument list as an integer
      * type.
      * @param outVal Output variable to return the integer argument to
-     * @param args List of arguments read and update
+     * @param args List of arguments to read and update
      * @return true if there was an argument in the list that was an
      *  integer, else false
      */
@@ -637,7 +671,7 @@ private:
     /**
      * Get next argument from the supplied argument list as a float/long type.
      * @param outVal Output variable to return the argument to
-     * @param args List of arguments read and update
+     * @param args List of arguments to read and update
      * @return true if there was an argument in the list that was an
      *  float/long, else false
      */

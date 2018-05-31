@@ -40,6 +40,7 @@ class DefinitionManager;
 
 namespace objects
 {
+class Item;
 class MiSpecialConditionData;
 }
 
@@ -135,6 +136,15 @@ protected:
         std::list<std::shared_ptr<objects::MiCorrectTbl>>& adjustments);
 
 private:
+    /**
+     * Calculate and update item fuse bonuses for the supplied equipment
+     * @param definitionManager Pointer to the definition manager to use
+     *  for determining equipment info
+     * @param equipment Pointer to the equipment to calculate bonuses for
+     */
+    void AdjustFuseBonus(libcomp::DefinitionManager* definitionManager,
+        std::shared_ptr<objects::Item> equipment);
+
     /// Tokusei effect IDs available due to the character's current
     /// equipment. Sources contain mod slots, equipment sets and
     /// enchantments. Can contain duplicates.
@@ -156,6 +166,10 @@ private:
     /// Quick access count representing the number of completed quests
     /// that can affect bonuses
     uint32_t mQuestBonusCount;
+
+    /// Precalculated equipment fuse bonuses that are applied after base
+    /// stats have been calculated (since they are all numeric adjustments)
+    libcomp::EnumMap<CorrectTbl, int16_t> mEquipFuseBonuses;
 };
 
 } // namespace channel

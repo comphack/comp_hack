@@ -392,6 +392,20 @@ public:
         std::unordered_map<std::shared_ptr<objects::Item>, uint16_t>& stackAdjustItems);
 
     /**
+     * Calculate the item updates needed to remove a number of items of a
+     * specific type
+     * @param client Pointer to the client connection
+     * @param itemID Item type to reduce
+     * @param amount Amount to reduce the stacks by
+     * @param stackAdjustItems Output map of items to adjust the stack size of
+     *  including deletes listed with stack size 0
+     * @return Amount that could not be removed
+     */
+    uint64_t CalculateItemRemoval(const std::shared_ptr<
+        channel::ChannelClientConnection>& client, uint32_t itemID, uint64_t amount,
+        std::unordered_map<std::shared_ptr<objects::Item>, uint16_t>& stackAdjustItems);
+
+    /**
      * Update or validate a set of item changes to be applied simultaneously,
      * accounting for deletes that will clear up slots for inserts etc.
      * @param client Pointer to the client connection to apply the changes to
@@ -663,10 +677,13 @@ public:
      * @param pointMap Map of expertise IDs to points that will be added.
      *  The order the expertise are passed in is the order they will be
      *  processed in in case the limit is reached.
+     * @param force If false, no updates will be performed should the
+     *  matching expertise be locked or not created already.
      */
     void UpdateExpertisePoints(const std::shared_ptr<
         channel::ChannelClientConnection>& client,
-        const std::list<std::pair<uint8_t, int32_t>>& pointMap);
+        const std::list<std::pair<uint8_t, int32_t>>& pointMap,
+        bool force = false);
 
     /**
      * Get the maximum number of expertise points available to the

@@ -796,8 +796,19 @@ namespace libcomp
         for(auto record : records)
         {
             uint32_t id = record->GetID();
+            uint32_t itemID = record->GetItemID();
+
             mDisassemblyData[id] = record;
-            mDisassemblyLookup[record->GetItemID()] = id;
+
+            if(mDisassemblyLookup.find(itemID) != mDisassemblyLookup.end())
+            {
+                LOG_DEBUG(libcomp::String("Duplicate item encountered"
+                    " for disassembly mapping: %1\n").Arg(itemID));
+            }
+            else
+            {
+                mDisassemblyLookup[itemID] = id;
+            }
         }
 
         return success;
@@ -881,8 +892,29 @@ namespace libcomp
             uint32_t itemID = record->GetDevilCrystal()->GetItemID();
 
             mEnchantData[id] = record;
-            mEnchantDemonLookup[demonID] = id;
-            mEnchantItemLookup[itemID] = id;
+
+            if(demonID)
+            {
+                if(mEnchantDemonLookup.find(demonID) != mEnchantDemonLookup.end())
+                {
+                    LOG_DEBUG(libcomp::String("Duplicate demon encountered"
+                        " for crystallization mapping: %1\n").Arg(demonID));
+                }
+                else
+                {
+                    mEnchantDemonLookup[demonID] = id;
+                }
+            }
+
+            if(mEnchantItemLookup.find(itemID) != mEnchantItemLookup.end())
+            {
+                LOG_DEBUG(libcomp::String("Duplicate item encountered"
+                    " for crystallization mapping: %1\n").Arg(itemID));
+            }
+            else
+            {
+                mEnchantItemLookup[itemID] = id;
+            }
         }
 
         return success;
@@ -987,8 +1019,19 @@ namespace libcomp
         for(auto record : records)
         {
             uint32_t id = record->GetID();
+            uint32_t itemID = record->GetItemID();
+
             mModificationData[id] = record;
-            mModificationLookup[record->GetItemID()] = id;
+
+            if(mModificationLookup.find(itemID) != mModificationLookup.end())
+            {
+                LOG_DEBUG(libcomp::String("Duplicate item encountered"
+                    " for modification mapping: %1\n").Arg(itemID));
+            }
+            else
+            {
+                mModificationLookup[itemID] = id;
+            }
         }
 
         return success;
@@ -1028,7 +1071,17 @@ namespace libcomp
 
             uint32_t id = record->GetID();
             mModificationExtRecipeData[id] = record;
-            mModificationExtRecipeLookup[itemID] = id;
+
+            if(mModificationExtRecipeLookup.find(itemID) !=
+                mModificationExtRecipeLookup.end())
+            {
+                LOG_DEBUG(libcomp::String("Duplicate item encountered"
+                    " for modification extra mapping: %1\n").Arg(itemID));
+            }
+            else
+            {
+                mModificationExtRecipeLookup[itemID] = id;
+            }
         }
 
         return success;

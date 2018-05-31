@@ -337,12 +337,14 @@ SET(${PROJECT_NAME}_PACKETS
     src/packets/game/PvPCharacterInfo.cpp       # 0x024D
     src/packets/game/ItemMix.cpp                # 0x025D
     src/packets/game/TeamInfo.cpp               # 0x027B
+    src/packets/game/EquipmentSpiritFuse.cpp    # 0x0287
     src/packets/game/DemonQuestPending.cpp      # 0x028F
     src/packets/game/ItemDepoRemote.cpp         # 0x0296
     src/packets/game/DemonDepoRemote.cpp        # 0x02EF
     src/packets/game/CommonSwitchInfo.cpp       # 0x02F4
     src/packets/game/CasinoCoinTotal.cpp        # 0x02FA
     src/packets/game/TriFusionSolo.cpp          # 0x0384
+    src/packets/game/EquipmentSpiritDefuse.cpp  # 0x0386
     src/packets/game/SearchEntryInfo.cpp        # 0x03A3
     src/packets/game/HouraiData.cpp             # 0x03A5
     src/packets/game/CultureData.cpp            # 0x03AC

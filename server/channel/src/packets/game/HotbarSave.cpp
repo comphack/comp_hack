@@ -64,9 +64,9 @@ void SaveHotbarItems(const std::shared_ptr<ChannelServer> server,
         state->GetAccountUID());
     if(nullptr == hotbar)
     {
-        hotbar = libcomp::PersistentObject::New<objects::Hotbar>();
+        hotbar = libcomp::PersistentObject::New<objects::Hotbar>(true);
         hotbar->SetCharacter(character->GetUUID());
-        hotbar->Register(hotbar);
+        hotbar->SetPageID((uint8_t)page);
         character->SetHotbars(page, hotbar);
 
         dbChanges->Update(character);

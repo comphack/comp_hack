@@ -49,12 +49,13 @@ and <emphasis>&lt;/object&gt;</emphasis> tags. This <emphasis>&lt;object&gt;</em
     </object>
 </member>]]>
 </programlisting></para>
-<para>Each <emphasis>&lt;member&gt;</emphasis> tag has a <emphasis>name</emphasis> attribute that specifies which configuration option is being changed. What follows is a description of the configuration options. These configuration options are split into five sections. These sections cover the common configuration shared by all three server, the database configuration shared by the lobby and world servers, and any configuration specific to a server.</para>
+<para>Each <emphasis>&lt;member&gt;</emphasis> tag has a <emphasis>name</emphasis> attribute that specifies which configuration option is being changed. What follows is a description of the configuration options. These sections cover the common configuration shared by all three servers, the database configuration shared by the lobby and world servers or world and channel servers, and any configuration specific to a server.</para>
 
 <xi:include href="common.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
 <xi:include href="lobby.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
 <xi:include href="world.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
 <xi:include href="channel.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
+<xi:include href="worldsharedconfig.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
 <xi:include href="database.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
 <xi:include href="mariadb.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
 <xi:include href="sqlite3.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>

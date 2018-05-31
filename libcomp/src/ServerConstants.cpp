@@ -633,6 +633,43 @@ bool ServerConstants::Initialize(const String& filePath)
         success = false;
     }
 
+    complexIter = complexConstants.find("SPIRIT_FUSION_BOOST");
+    if(success && complexIter != complexConstants.end())
+    {
+        std::unordered_map<std::string, std::string> map;
+        success = LoadKeyValueStrings(complexIter->second, map);
+        for(auto pair : map)
+        {
+            uint32_t key;
+            if(!LoadInteger(pair.first, key))
+            {
+                LOG_ERROR("Failed to load SPIRIT_FUSION_BOOST key\n");
+                success = false;
+            }
+            else if(sConstants.SPIRIT_FUSION_BOOST.find(key) !=
+                sConstants.SPIRIT_FUSION_BOOST.end())
+            {
+                LOG_ERROR("Duplicate SPIRIT_FUSION_BOOST key encountered\n");
+                success = false;
+            }
+            else
+            {
+                success &= ToIntegerArray(sConstants.SPIRIT_FUSION_BOOST[key],
+                    libcomp::String(pair.second).Split(","));
+            }
+
+            if(!success)
+            {
+                break;
+            }
+        }
+    }
+    else
+    {
+        LOG_ERROR("SPIRIT_FUSION_BOOST not found\n");
+        success = false;
+    }
+
     complexIter = complexConstants.find("SYNTH_ADJUSTMENTS");
     if(success && complexIter != complexConstants.end())
     {

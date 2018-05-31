@@ -1909,6 +1909,39 @@ bool CharacterManager::CalculateMaccaPayment(const std::shared_ptr<
     return true;
 }
 
+uint64_t CharacterManager::CalculateItemRemoval(const std::shared_ptr<
+    channel::ChannelClientConnection>& client, uint32_t itemID, uint64_t amount,
+    std::unordered_map<std::shared_ptr<objects::Item>, uint16_t>& stackAdjustItems)
+{
+    auto state = client->GetClientState();
+    auto cState = state->GetCharacterState();
+    auto character = cState->GetEntity();
+
+    auto items = GetExistingItems(character, itemID);
+    items.reverse();
+
+    uint64_t left = amount;
+    for(auto item : items)
+    {
+        if(!left) break;
+
+        uint64_t stack = (uint64_t)item->GetStackSize();
+        if(stack >= left)
+        {
+            stackAdjustItems[item] = (uint16_t)(stack - left);
+            left = 0;
+            break;
+        }
+        else
+        {
+            left = (uint64_t)(left - stack);
+            stackAdjustItems[item] = 0;
+        }
+    }
+
+    return left;
+}
+
 bool CharacterManager::UpdateItems(const std::shared_ptr<
     channel::ChannelClientConnection>& client, bool validateOnly,
     std::list<std::shared_ptr<objects::Item>>& insertItems,
@@ -3093,9 +3126,11 @@ void CharacterManager::UpdateExpertise(const std::shared_ptr<
             int32_t gain = (int32_t)((float)(3954.482803f /
                 (((float)expertise->GetPoints() * 0.01f) + 158.1808409f)
                 * (expertGrowth->GetGrowthRate() + (float)rateBoost)) * 100.f * multiplier);
-
-            pointMap.push_back(std::pair<uint8_t, int32_t>(
-                expertGrowth->GetExpertiseID(), gain));
+            if(gain > 0)
+            {
+                pointMap.push_back(std::pair<uint8_t, int32_t>(
+                    expertGrowth->GetExpertiseID(), gain));
+            }
         }
     }
 
@@ -3107,7 +3142,7 @@ void CharacterManager::UpdateExpertise(const std::shared_ptr<
 
 void CharacterManager::UpdateExpertisePoints(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
-    const std::list<std::pair<uint8_t, int32_t>>& pointMap)
+    const std::list<std::pair<uint8_t, int32_t>>& pointMap, bool force)
 {
     auto server = mServer.lock();
     auto definitionManager = server->GetDefinitionManager();
@@ -3127,10 +3162,11 @@ void CharacterManager::UpdateExpertisePoints(const std::shared_ptr<
         }
     }
 
-    bool rankedUp = false;
+    bool rankChanged = false;
 
-    std::list<std::pair<int8_t, int32_t>> updated;
-    auto dbChanges = libcomp::DatabaseChangeSet::Create(state->GetAccountUID());
+    std::list<std::pair<uint8_t, int32_t>> raised;
+    auto dbChanges = libcomp::DatabaseChangeSet::Create(
+        state->GetAccountUID());
     for(auto pointPair : pointMap)
     {
         auto expDef = definitionManager->GetExpertClassData(pointPair.first);
@@ -3140,15 +3176,28 @@ void CharacterManager::UpdateExpertisePoints(const std::shared_ptr<
         auto expertise = character->GetExpertises(pointPair.first).Get();
         if(!expertise)
         {
-            // Create the expertise
-            expertise = libcomp::PersistentObject::New<objects::Expertise>(true);
-            expertise->SetCharacter(character->GetUUID());
-            character->SetExpertises(pointPair.first, expertise);
+            if(force)
+            {
+                // Create it
+                expertise = libcomp::PersistentObject::New<objects::Expertise>(
+                    true);
+                expertise->SetExpertiseID(pointPair.first);
+                expertise->SetCharacter(character->GetUUID());
+                expertise->SetDisabled(true);
 
-            dbChanges->Insert(expertise);
-            dbChanges->Update(character);
+                character->SetExpertises((size_t)pointPair.first, expertise);
+
+                dbChanges->Update(character);
+                dbChanges->Insert(expertise);
+
+                server->GetWorldDatabase()->QueueChangeSet(dbChanges);
+            }
+            else
+            {
+                continue;
+            }
         }
-        else if(expertise->GetDisabled())
+        else if(expertise->GetDisabled() && !force)
         {
             continue;
         }
@@ -3159,64 +3208,95 @@ void CharacterManager::UpdateExpertisePoints(const std::shared_ptr<
         int32_t expPoints = expertise->GetPoints();
         int8_t currentRank = (int8_t)floorl((float)expPoints * 0.0001f);
 
-        if(expPoints == maxPoints) continue;
-
-        int32_t gain = pointPair.second;
-
-        // Don't exceed the max total points
-        if((currentPoints + gain) > maxTotalPoints)
+        int32_t adjust = pointPair.second;
+        if(adjust > 0)
         {
-            gain = maxTotalPoints - currentPoints;
+            if(expPoints == maxPoints) continue;
+
+            // Don't exceed the max total points
+            if((currentPoints + adjust) > maxTotalPoints)
+            {
+                adjust = maxTotalPoints - currentPoints;
+            }
+
+            // Don't exceed max expertise points
+            if((expPoints + adjust) > maxPoints)
+            {
+                adjust = maxPoints - expPoints;
+            }
+        }
+        else if(adjust < 0)
+        {
+            // Do not decrease below 0
+            if((expPoints - adjust) < 0)
+            {
+                adjust = expPoints;
+            }
         }
 
-        if(gain <= 0) continue;
+        if(adjust == 0) continue;
 
-        currentPoints = currentPoints + gain;
-
-        expPoints += gain;
-
-        if(expPoints > maxPoints)
-        {
-            expPoints = maxPoints;
-        }
+        currentPoints = currentPoints + adjust;
+        expPoints += adjust;
 
         expertise->SetPoints(expPoints);
-        updated.push_back(std::pair<int8_t, int32_t>((int8_t)pointPair.first, expPoints));
-        dbChanges->Update(expertise);
 
         int8_t newRank = (int8_t)((float)expPoints * 0.0001f);
-        if(currentRank != newRank)
+
+        rankChanged |= currentRank != newRank;
+        if(adjust > 0)
         {
-            libcomp::Packet reply;
-            reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_EXPERTISE_RANK_UP);
-            reply.WriteS32Little(cState->GetEntityID());
-            reply.WriteS8((int8_t)expDef->GetID());
-            reply.WriteS8(newRank);
+            // Points up
+            raised.push_back(std::make_pair(pointPair.first, expPoints));
 
-            server->GetZoneManager()->BroadcastPacket(client, reply);
+            if(currentRank != newRank)
+            {
+                libcomp::Packet reply;
+                reply.WritePacketCode(
+                    ChannelToClientPacketCode_t::PACKET_EXPERTISE_RANK_UP);
+                reply.WriteS32Little(cState->GetEntityID());
+                reply.WriteS8((int8_t)expDef->GetID());
+                reply.WriteS8(newRank);
 
-            rankedUp = true;
+                server->GetZoneManager()->BroadcastPacket(client, reply);
+            }
         }
+        else
+        {
+            // Points down
+            libcomp::Packet notify;
+            notify.WritePacketCode(
+                ChannelToClientPacketCode_t::PACKET_EXPERTISE_DOWN);
+            notify.WriteS32Little(cState->GetEntityID());
+            notify.WriteS8(1);  // Success
+            notify.WriteS8((int8_t)expDef->GetID());
+            notify.WriteS32Little(expPoints);
+
+            server->GetZoneManager()->BroadcastPacket(client, notify);
+        }
+
+        dbChanges->Update(expertise);
     }
 
-    if(updated.size() > 0)
+    if(raised.size() > 0)
     {
         libcomp::Packet reply;
-        reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_EXPERTISE_POINT_UPDATE);
+        reply.WritePacketCode(
+            ChannelToClientPacketCode_t::PACKET_EXPERTISE_POINT_UPDATE);
         reply.WriteS32Little(cState->GetEntityID());
-        reply.WriteS32Little((int32_t)updated.size());
-        for(auto update : updated)
+        reply.WriteS32Little((int32_t)raised.size());
+        for(auto update : raised)
         {
-            reply.WriteS8(update.first);
+            reply.WriteS8((int8_t)update.first);
             reply.WriteS32Little(update.second);
         }
 
         client->SendPacket(reply);
-
-        server->GetWorldDatabase()->QueueChangeSet(dbChanges);
     }
 
-    if(rankedUp)
+    server->GetWorldDatabase()->QueueChangeSet(dbChanges);
+
+    if(rankChanged)
     {
         //Expertises can be used as multipliers and conditions, always recalc
         cState->RecalcDisabledSkills(definitionManager);

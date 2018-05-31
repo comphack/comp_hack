@@ -488,6 +488,8 @@ bool ChannelServer::Initialize()
         to_underlying(ClientToChannelPacketCode_t::PACKET_ITEM_MIX));
     clientPacketManager->AddParser<Parsers::TeamInfo>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_TEAM_INFO));
+    clientPacketManager->AddParser<Parsers::EquipmentSpiritFuse>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_EQUIPMENT_SPIRIT_FUSE));
     clientPacketManager->AddParser<Parsers::DemonQuestPending>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_DEMON_QUEST_PENDING));
     clientPacketManager->AddParser<Parsers::ItemDepoRemote>(
@@ -500,6 +502,8 @@ bool ChannelServer::Initialize()
         to_underlying(ClientToChannelPacketCode_t::PACKET_CASINO_COIN_TOTAL));
     clientPacketManager->AddParser<Parsers::TriFusionSolo>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_TRIFUSION_SOLO));
+    clientPacketManager->AddParser<Parsers::EquipmentSpiritDefuse>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_EQUIPMENT_SPIRIT_DEFUSE));
     clientPacketManager->AddParser<Parsers::SearchEntryInfo>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_SEARCH_ENTRY_INFO));
     clientPacketManager->AddParser<Parsers::HouraiData>(

@@ -15,5 +15,6 @@
             <key type="u8"/>
             <value type="s32"/>
         </member>
+        <member type="bool" name="expertiseSet"/>
     </object>
 </objgen>

@@ -221,6 +221,9 @@ namespace libcomp
 /// equipment slot. VA weapons are listed from 15-26.
 #define MAX_VA_INDEX (26)
 
+/// Maximum fuse bonus value on spirit fused items
+#define MAX_FUSE_BONUS (50)
+
 /// The skill activation contains no extra information.
 #define ACTIVATION_NOTARGET (0)
 

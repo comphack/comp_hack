@@ -247,6 +247,7 @@ enum class ClientToChannelPacketCode_t : uint16_t
     PACKET_PVP_CHARACTER_INFO = 0x024D,  //!< Request for PvP character information.
     PACKET_ITEM_MIX = 0x025D,   //!< Request to mix two items into a different result item.
     PACKET_TEAM_INFO = 0x027B,  //!< Request for the current player's team information.
+    PACKET_EQUIPMENT_SPIRIT_FUSE = 0x0287,  //!< Request to perform equipment spirit fusion.
     PACKET_DEMON_QUEST_PENDING = 0x028F,  //!< Request to re-send a pending demon quest.
     PACKET_RECEIVED_PLAYER_DATA = 0x028C,  //!< Empty message sent after character/demon data requested have been received.
     PACKET_RECEIVED_LISTS = 0x028E,  //!< Empty message sent after setup lists requested have been received.
@@ -255,6 +256,7 @@ enum class ClientToChannelPacketCode_t : uint16_t
     PACKET_COMMON_SWITCH_INFO = 0x02F4,  //!< Unknown. Request for "common switch" information.
     PACKET_CASINO_COIN_TOTAL = 0x02FA,   //!< Request for the current character's casino coin total.
     PACKET_TRIFUSION_SOLO = 0x0384, //!< Request to perform a solo tri-fusion.
+    PACKET_EQUIPMENT_SPIRIT_DEFUSE = 0x0386,  //!< Request to reverse equipment spirit fusion.
     PACKET_SEARCH_ENTRY_INFO = 0x03A3,  //!< Request for the current player's search entries.
     PACKET_HOURAI_DATA = 0x03A5,  //!< Request for Club Hourai related information.
     PACKET_CULTURE_DATA = 0x03AC,  //!< Unknown. Request for culture information.
@@ -570,6 +572,8 @@ enum class ChannelToClientPacketCode_t : uint16_t
     PACKET_ITEM_MIX = 0x025E,   //!< Response to the request to mix two items into a different result item.
     PACKET_ITEM_MIXED = 0x025F, //!< Notification that two items have been mixed into a different result item.
     PACKET_TEAM_INFO = 0x027C,  //!< Response containing the current player's team information.
+    PACKET_EQUIPMENT_SPIRIT_FUSE = 0x0288, //!< Response to the request to perform equipment spirit fusion.
+    PACKET_EQUIPMENT_SPIRIT_FUSED = 0x028B,   //!< Notification that equipment spirit fusion was performed.
     PACKET_EVENT_MULTITALK = 0x028D,  //!< Request to the client to start a multitalk event.
     PACKET_DEMON_QUEST_PENDING = 0x0290,  //!< Response to the request to re-send a pending demon quest.
     PACKET_EVENT_GET_ITEMS = 0x0291,  //!< Request to the client to inform the player that a items have been obtained.
@@ -585,6 +589,7 @@ enum class ChannelToClientPacketCode_t : uint16_t
     PACKET_COMMON_SWITCH_INFO = 0x02F5,  //!< Unknown. Response containing "common switch" information.
     PACKET_CASINO_COIN_TOTAL = 0x02FB,   //!< Message containing the current character's casino coin total.
     PACKET_TRIFUSION_SOLO = 0x0385, //!< Message containing the result of a solo tri-fusion.
+    PACKET_EQUIPMENT_SPIRIT_DEFUSE = 0x0387, //!< Response to the request to reverse equipment spirit fusion.
     PACKET_SEARCH_ENTRY_INFO = 0x03A4,  //!< Response containing the current player's search entries.
     PACKET_HOURAI_DATA = 0x03A6,  //!< Response containing Club Hourai related information.
     PACKET_EQUIPMENT_MOD_EDIT = 0x03CC,  //!< Response to the request to edit a previously applied equipment modification.

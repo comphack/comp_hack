@@ -279,6 +279,10 @@ struct Data
     /// Index 3) MiSynthesisData
     std::array<std::list<uint32_t>, 4> RATE_SCALING_ITEMS;
 
+    /// Item IDs mapped to success, great success boosts. Items can be equipped
+    /// or be part of the fusion.
+    std::unordered_map<uint32_t, std::array<uint8_t, 2>> SPIRIT_FUSION_BOOST;
+
     /// Item/skill IDs with parameters used for synth calculations
     std::unordered_map<uint32_t, std::array<int32_t, 3>> SYNTH_ADJUSTMENTS;
 

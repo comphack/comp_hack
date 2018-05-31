@@ -42,6 +42,7 @@
 #include <Event.h>
 #include <EventInstance.h>
 #include <EventState.h>
+#include <Expertise.h>
 #include <Item.h>
 #include <ItemBox.h>
 #include <MiItemBasicData.h>
@@ -83,10 +84,11 @@ ChatManager::ChatManager(const std::weak_ptr<ChannelServer>& server)
     mGMands["contract"] = &ChatManager::GMCommand_Contract;
     mGMands["crash"] = &ChatManager::GMCommand_Crash;
     mGMands["effect"] = &ChatManager::GMCommand_Effect;
+    mGMands["enchant"] = &ChatManager::GMCommand_Enchant;
     mGMands["enemy"] = &ChatManager::GMCommand_Enemy;
     mGMands["event"] = &ChatManager::GMCommand_Event;
+    mGMands["expertise"] = &ChatManager::GMCommand_ExpertiseSet;
     mGMands["expertisemax"] = &ChatManager::GMCommand_ExpertiseExtend;
-    mGMands["expertiseup"] = &ChatManager::GMCommand_ExpertiseUpdate;
     mGMands["familiarity"] = &ChatManager::GMCommand_Familiarity;
     mGMands["flag"] = &ChatManager::GMCommand_Flag;
     mGMands["goto"] = &ChatManager::GMCommand_Goto;
@@ -112,6 +114,7 @@ ChatManager::ChatManager(const std::weak_ptr<ChannelServer>& server)
     mGMands["sp"] = &ChatManager::GMCommand_SoulPoints;
     mGMands["spawn"] = &ChatManager::GMCommand_Spawn;
     mGMands["speed"] = &ChatManager::GMCommand_Speed;
+    mGMands["spirit"] = &ChatManager::GMCommand_Spirit;
     mGMands["tickermessage"] = &ChatManager::GMCommand_TickerMessage;
     mGMands["title"] = &ChatManager::GMCommand_Title;
     mGMands["tokusei"] = &ChatManager::GMCommand_Tokusei;
@@ -573,6 +576,108 @@ bool ChatManager::GMCommand_Effect(const std::shared_ptr<
     return true;
 }
 
+bool ChatManager::GMCommand_Enchant(const std::shared_ptr<
+    channel::ChannelClientConnection>& client,
+    const std::list<libcomp::String>& args)
+{
+    if(!HaveUserLevel(client, 650))
+    {
+        return true;
+    }
+
+    std::list<libcomp::String> argsCopy = args;
+
+    // All but BULLET types are (technically) valid
+    const std::set<int8_t> validTypes = {
+        (int8_t)objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_TOP,
+        (int8_t)objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_HEAD,
+        (int8_t)objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_FACE,
+        (int8_t)objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_NECK,
+        (int8_t)objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_TOP,
+        (int8_t)objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_ARMS,
+        (int8_t)objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_BOTTOM,
+        (int8_t)objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_FEET,
+        (int8_t)objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_COMP,
+        (int8_t)objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_RING,
+        (int8_t)objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_EARRING,
+        (int8_t)objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_EXTRA,
+        (int8_t)objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_BACK,
+        (int8_t)objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_TALISMAN,
+        (int8_t)objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_WEAPON,
+    };
+
+    int8_t equipType = GetEquipTypeArg(client, argsCopy, "enchant", validTypes);
+    if(equipType == -1)
+    {
+        return true;
+    }
+
+    auto server = mServer.lock();
+    auto definitionManager = server->GetDefinitionManager();
+
+    auto state = client->GetClientState();
+    auto cState = state->GetCharacterState();
+    auto character = cState->GetEntity();
+    auto item = character
+        ? character->GetEquippedItems((size_t)equipType).Get() : nullptr;
+
+    if(!item)
+    {
+        return SendChatMessage(client, ChatType_t::CHAT_SELF,
+            "The specified item type is not equipped");
+    }
+
+    int16_t tarot = 0;
+    int16_t soul = 0;
+
+    if(!GetIntegerArg(tarot, argsCopy) ||
+        !GetIntegerArg(soul, argsCopy))
+    {
+        return SendChatMessage(client, ChatType_t::CHAT_SELF,
+            "Missing tarot and soul effects");
+    }
+
+    // Default to current effect if not specified
+    if(tarot == -1)
+    {
+        tarot = item->GetTarot();
+    }
+
+    if(soul == -1)
+    {
+        soul = item->GetSoul();
+    }
+
+    // No restrictions enforced here except validity checks
+    if(!definitionManager->GetEnchantData(tarot) ||
+        !definitionManager->GetEnchantData(soul))
+    {
+        return SendChatMessage(client, ChatType_t::CHAT_SELF,
+            "Invalid tarot or soul effect specified");
+    }
+
+    item->SetTarot(tarot);
+    item->SetSoul(soul);
+
+    auto itemBox = std::dynamic_pointer_cast<objects::ItemBox>(
+        libcomp::PersistentObject::GetObjectByUUID(item->GetItemBox()));
+    if(itemBox)
+    {
+        server->GetCharacterManager()->SendItemBoxData(client, itemBox,
+            { (uint16_t)item->GetBoxSlot() });
+    }
+
+    cState->RecalcEquipState(definitionManager);
+
+    server->GetTokuseiManager()->Recalculate(cState, true,
+        std::set<int32_t>{ cState->GetEntityID() });
+    server->GetCharacterManager()->RecalculateStats(cState, client);
+
+    server->GetWorldDatabase()->QueueUpdate(item, state->GetAccountUID());
+
+    return true;
+}
+
 bool ChatManager::GMCommand_Enemy(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
@@ -789,7 +894,7 @@ bool ChatManager::GMCommand_ExpertiseExtend(const std::shared_ptr<
     return false;
 }
 
-bool ChatManager::GMCommand_ExpertiseUpdate(const std::shared_ptr<
+bool ChatManager::GMCommand_ExpertiseSet(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
 {
@@ -802,22 +907,34 @@ bool ChatManager::GMCommand_ExpertiseUpdate(const std::shared_ptr<
 
     auto server = mServer.lock();
 
-    uint32_t skillID;
-    if(!GetIntegerArg<uint32_t>(skillID, argsCopy))
+    uint8_t expertiseID;
+    if(!GetIntegerArg(expertiseID, argsCopy))
     {
         return false;
     }
 
-    float multiplier = -1.0f;
-    GetDecimalArg<float>(multiplier, argsCopy);
-    if(multiplier <= 0.f)
+    uint8_t rank;
+    if(!GetIntegerArg(rank, argsCopy))
     {
-        // Don't bother with an error, just reset
-        multiplier = -1.0f;
+        return false;
     }
 
-    server->GetCharacterManager()->UpdateExpertise(client, skillID,
-        0, multiplier);
+    auto state = client->GetClientState();
+    auto cState = state->GetCharacterState();
+    auto character = cState->GetEntity();
+    auto exp = character->GetExpertises((size_t)expertiseID).Get();
+
+    int32_t adjust = (rank * 10000);
+    if(exp)
+    {
+        adjust = adjust - exp->GetPoints();
+    }
+    
+    std::list<std::pair<uint8_t, int32_t>> pointMap;
+    pointMap.push_back(std::make_pair(expertiseID, adjust));
+
+    server->GetCharacterManager()->UpdateExpertisePoints(
+        client, pointMap, true);
 
     return true;
 }
@@ -1084,6 +1201,15 @@ bool ChatManager::GMCommand_Help(const std::shared_ptr<
             "the given ID for the player or demon if DEMON is set",
             "to 'demon'."
         } },
+        { "enchant", {
+            "@enchant EQUIP TAROT SOUL",
+            "Set the enchnantment TAROT and SOUL effects for the",
+            "specified EQUIP type. Use 0 to remove.",
+            "EQUIP types: HEAD (0), FACE (1), NECK (2), TOP (3),",
+            "ARMS (4), BOTTOM (5), FEET (6), COMP (7), RING (8),",
+            "EARRING (9), EXTRA (10), BACK (11), TALISMAN (12)",
+            "or WEAPON (13)",
+        } },
         { "enemy", {
             "@enemy ID|NAME [AI [X Y [ROT]]]",
             "Spawns the enemy with the given ID or NAME at the",
@@ -1096,16 +1222,14 @@ bool ChatManager::GMCommand_Help(const std::shared_ptr<
             "Starts an event specified by ID or returns the current",
             "event if not specified.",
         } },
+        { "expertise", {
+            "@expertise ID RANK",
+            "Sets the expertise by ID to a specified RANK."
+        } },
         { "expertisemax", {
             "@expertisemax STACKS",
             "Adds STACKS * 1000 points to the expertise cap.",
             "Maximum expertise cap is 154,000."
-        } },
-        { "expertiseup", {
-            "@expertiseup ID [MULTIPLIER]",
-            "Raises the expertise as if the skill with ID was used.",
-            "If MULTIPLIER is specified the expertise gain is ",
-            "multiplied by MULTIPLIER."
         } },
         { "familiarity", {
             "@familiarity VALUE",
@@ -1216,9 +1340,9 @@ bool ChatManager::GMCommand_Help(const std::shared_ptr<
             "available skill points for allocation."
         } },
         { "slotadd", {
-            "@slotadd LOCATION",
-            "Adds a slot to the specified equipment LOCATION.",
-            "LOCATION may be 3 for top, 5 for bottom or 13 for weapon."
+            "@slotadd EQUIP",
+            "Adds a slot to the specified EQUIP type.",
+            "EQUIP types: TOP (3), BOTTOM (5) or WEAPON (13)"
         } },
         { "sp", {
             "@sp PTS",
@@ -1233,6 +1357,17 @@ bool ChatManager::GMCommand_Help(const std::shared_ptr<
             "@speed MULTIPLIER [DEMON]",
             "Multiplies the speed of the player by MULTIPLIER or",
             "the demon if DEMON is set to 'demon'."
+        } },
+        { "spirit", {
+            "@spirit EQUIP BASIC SPECIAL [B1 B2 B3]",
+            "Set the spirit fusion BASIC and SPECIAL effects for the",
+            "specified EQUIP type. Effect values are equal to the item",
+            "ID they are gained from. B1-B3 fusion bonuses from 0-50",
+            "can also be specified but will otherwise be ignored.",
+            "EQUIP types: HEAD (0), FACE (1), NECK (2), TOP (3),",
+            "ARMS (4), BOTTOM (5), FEET (6), COMP (7), RING (8),",
+            "EARRING (9), EXTRA (10), BACK (11), TALISMAN (12)",
+            "or WEAPON (13)",
         } },
         { "tickermessage", {
             "@tickermessage MESSAGE...",
@@ -2248,25 +2383,23 @@ bool ChatManager::GMCommand_SlotAdd(const std::shared_ptr<
 
     std::list<libcomp::String> argsCopy = args;
 
-    int8_t equipType;
-    if(!GetIntegerArg<int8_t>(equipType, argsCopy) ||
-        (equipType != (int8_t)objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_TOP &&
-        equipType != (int8_t)objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_BOTTOM &&
-        equipType != (int8_t)objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_WEAPON))
+    const std::set<int8_t> validTypes = {
+        (int8_t)objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_TOP,
+        (int8_t)objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_BOTTOM,
+        (int8_t)objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_WEAPON
+    };
+
+    int8_t equipType = GetEquipTypeArg(client, argsCopy, "slotadd", validTypes);
+    if(equipType == -1)
     {
-        return SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(
-            "Invalid equipment type specified for @slotadd command. Supported types are:"
-            " top (%1), bottom (%2) and weapon (%3)")
-            .Arg((int8_t)objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_TOP)
-            .Arg((int8_t)objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_BOTTOM)
-            .Arg((int8_t)objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_WEAPON));
+        return true;
     }
 
-    auto server = mServer.lock();
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
     auto character = cState->GetEntity();
-    auto item = character ? character->GetEquippedItems((size_t)equipType).Get() : nullptr;
+    auto item = character
+        ? character->GetEquippedItems((size_t)equipType).Get() : nullptr;
 
     if(!item)
     {
@@ -2288,6 +2421,8 @@ bool ChatManager::GMCommand_SlotAdd(const std::shared_ptr<
     if(openSlot < item->ModSlotsCount())
     {
         item->SetModSlots(openSlot, MOD_SLOT_NULL_EFFECT);
+
+        auto server = mServer.lock();
 
         auto itemBox = std::dynamic_pointer_cast<objects::ItemBox>(
             libcomp::PersistentObject::GetObjectByUUID(item->GetItemBox()));
@@ -2377,6 +2512,148 @@ bool ChatManager::GMCommand_Speed(const std::shared_ptr<
 
         client->SendPacket(p);
     }
+
+    return true;
+}
+
+bool ChatManager::GMCommand_Spirit(const std::shared_ptr<
+    channel::ChannelClientConnection>& client,
+    const std::list<libcomp::String>& args)
+{
+    if(!HaveUserLevel(client, 650))
+    {
+        return true;
+    }
+
+    std::list<libcomp::String> argsCopy = args;
+
+    // All but BULLET types are valid
+    const std::set<int8_t> validTypes = {
+        (int8_t)objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_TOP,
+        (int8_t)objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_HEAD,
+        (int8_t)objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_FACE,
+        (int8_t)objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_NECK,
+        (int8_t)objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_TOP,
+        (int8_t)objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_ARMS,
+        (int8_t)objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_BOTTOM,
+        (int8_t)objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_FEET,
+        (int8_t)objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_COMP,
+        (int8_t)objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_RING,
+        (int8_t)objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_EARRING,
+        (int8_t)objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_EXTRA,
+        (int8_t)objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_BACK,
+        (int8_t)objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_TALISMAN,
+        (int8_t)objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_WEAPON,
+    };
+
+    int8_t equipType = GetEquipTypeArg(client, argsCopy, "spirit", validTypes);
+    if(equipType == -1)
+    {
+        return true;
+    }
+
+    auto server = mServer.lock();
+    auto definitionManager = server->GetDefinitionManager();
+
+    auto state = client->GetClientState();
+    auto cState = state->GetCharacterState();
+    auto character = cState->GetEntity();
+    auto item = character
+        ? character->GetEquippedItems((size_t)equipType).Get() : nullptr;
+
+    if(!item)
+    {
+        return SendChatMessage(client, ChatType_t::CHAT_SELF,
+            "The specified item type is not equipped");
+    }
+
+    uint32_t basicEffect = 0;
+    uint32_t specialEffect = 0;
+    
+    int8_t bonuses[] = { -1, -1, -1 };
+
+    if(!GetIntegerArg(basicEffect, argsCopy) ||
+        !GetIntegerArg(specialEffect, argsCopy))
+    {
+        return SendChatMessage(client, ChatType_t::CHAT_SELF,
+            "Missing basic and special effects");
+    }
+
+    // Default to current effects or self if not specified
+    bool basicDefault = false;
+    if(basicEffect == 0)
+    {
+        basicEffect = item->GetBasicEffect()
+            ? item->GetBasicEffect() : item->GetType();
+        basicDefault = true;
+    }
+
+    bool specialDefault = false;
+    if(specialEffect == 0)
+    {
+        specialEffect = item->GetSpecialEffect()
+            ? item->GetSpecialEffect() : item->GetType();
+        specialDefault = true;
+    }
+
+    for(size_t i = 0; i < 3; i++)
+    {
+        if(argsCopy.size() > 0 && (!GetIntegerArg(bonuses[i], argsCopy) ||
+            bonuses[i] < -1 || bonuses[i] > 50))
+        {
+            return SendChatMessage(client, ChatType_t::CHAT_SELF,
+                libcomp::String("Invalid bonus %1 value supplied").Arg(i));
+        }
+    }
+
+    auto basicDef = definitionManager->GetItemData(basicEffect);
+    auto specialDef = definitionManager->GetItemData(specialEffect);
+    if(!basicDef || !specialDef ||
+        (int8_t)basicDef->GetBasic()->GetEquipType() != equipType ||
+        (int8_t)specialDef->GetBasic()->GetEquipType() != equipType)
+    {
+        return SendChatMessage(client, ChatType_t::CHAT_SELF,
+            "Invalid basic or special effect");
+    }
+
+    // Do not apply other restrictions, go nuts
+
+    // If clearing all, remove all effects
+    if(basicDefault && specialDefault && !bonuses[0] &&
+        !bonuses[1] && !bonuses[2])
+    {
+        item->SetBasicEffect(0);
+        item->SetSpecialEffect(0);
+    }
+    else
+    {
+        item->SetBasicEffect(basicEffect);
+        item->SetSpecialEffect(specialEffect);
+    }
+
+    for(size_t i = 0; i < 3; i++)
+    {
+        if(bonuses[i] >= 0)
+        {
+            item->SetFuseBonuses(i, bonuses[i]);
+        }
+    }
+
+    auto itemBox = std::dynamic_pointer_cast<objects::ItemBox>(
+        libcomp::PersistentObject::GetObjectByUUID(item->GetItemBox()));
+    if(itemBox)
+    {
+        server->GetCharacterManager()->SendItemBoxData(client, itemBox,
+            { (uint16_t)item->GetBoxSlot() });
+    }
+
+    cState->RecalcEquipState(definitionManager);
+
+    server->GetTokuseiManager()->Recalculate(cState, true,
+        std::set<int32_t>{ cState->GetEntityID() });
+    server->GetCharacterManager()->RecalculateStats(cState, client);
+
+    server->GetWorldDatabase()->QueueUpdate(item, state->GetAccountUID());
 
     return true;
 }
@@ -2763,6 +3040,70 @@ bool ChatManager::GetTargetCharacterAccount(libcomp::String& targetName,
     }
 
     return targetCharacter && targetAccount;
+}
+
+int8_t ChatManager::GetEquipTypeArg(const std::shared_ptr<
+    channel::ChannelClientConnection>& client, std::list<libcomp::String>& args,
+    const libcomp::String& gmandName, const std::set<int8_t>& validTypes)
+{
+    // Listed in index order matching objects::MiItemBasicData::EquipType_t
+    const libcomp::String txtVals[14] = {
+        "head",
+        "face",
+        "neck",
+        "top",
+        "arms",
+        "bottom",
+        "feet",
+        "comp",
+        "ring",
+        "earring",
+        "extra",
+        "back",
+        "talisman",
+        "weapon"
+    };
+
+    int8_t result = -1;
+    if(!GetIntegerArg(result, args))
+    {
+        libcomp::String txt;
+        if(!GetStringArg(txt, args))
+        {
+            SendChatMessage(client, ChatType_t::CHAT_SELF,
+                libcomp::String("Missing equip type argument for"
+                    " command: @%1").Arg(gmandName));
+            return -1;
+        }
+
+        txt = txt.ToLower();
+        for(int8_t i = 0; i < 14; i++)
+        {
+            if(txtVals[(size_t)i] == txt)
+            {
+                result = i;
+                break;
+            }
+        }
+
+        if(result == -1)
+        {
+            SendChatMessage(client, ChatType_t::CHAT_SELF,
+                libcomp::String("Invalid equip type argument '%1' supplied"
+                    " for command: @%2").Arg(txt).Arg(gmandName));
+            return -1;
+        }
+    }
+
+    if(validTypes.find(result) == validTypes.end())
+    {
+        SendChatMessage(client, ChatType_t::CHAT_SELF,
+            libcomp::String("Unsupported equip type argument supplied"
+                " for command: @%1").Arg(gmandName));
+        return -1;
+    }
+
+    return result;
 }
 
 bool ChatManager::GetStringArg(libcomp::String& outVal,

@@ -59,7 +59,11 @@ bool Parsers::ToggleExpertise::Parse(libcomp::ManagerPacket *pPacketManager,
         return false;
     }
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+    auto server = std::dynamic_pointer_cast<ChannelServer>(
+        pPacketManager->GetServer());
+
+    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
+        connection);
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
 
@@ -68,25 +72,29 @@ bool Parsers::ToggleExpertise::Parse(libcomp::ManagerPacket *pPacketManager,
         return false;
     }
 
+    auto dbChanges = libcomp::DatabaseChangeSet::Create(
+        state->GetAccountUID());
+
     auto character = cState->GetEntity();
     auto expertise = character->GetExpertises((size_t)expID).Get();
-    if(nullptr == expertise)
+    if(!expertise)
     {
-        expertise = std::shared_ptr<objects::Expertise>(new objects::Expertise);
-        expertise->Register(expertise);
+        expertise = libcomp::PersistentObject::New<objects::Expertise>(true);
+        expertise->SetExpertiseID((uint8_t)expID);
         expertise->SetCharacter(character->GetUUID());
-
-        auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-        auto db = server->GetWorldDatabase();
-        if(!expertise->Insert(db))
-        {
-            return false;
-        }
-
         character->SetExpertises((size_t)expID, expertise);
+
+        dbChanges->Update(character);
+        dbChanges->Insert(expertise);
+    }
+    else
+    {
+        dbChanges->Update(expertise);
     }
 
     expertise->SetDisabled(disabled != 0);
+
+    server->GetWorldDatabase()->QueueChangeSet(dbChanges);
 
     libcomp::Packet reply;
     reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_TOGGLE_EXPERTISE);

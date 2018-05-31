@@ -89,6 +89,8 @@ bool Parsers::ExpertiseDown::Parse(libcomp::ManagerPacket *pPacketManager,
     }
     else
     {
+        bool failure = false;
+
         auto exp = character->GetExpertises((size_t)expertiseID).Get();
         auto skillData = definitionManager->GetSkillData(activatedAbility->GetSkillID());
         if(exp && skillData)
@@ -121,41 +123,28 @@ bool Parsers::ExpertiseDown::Parse(libcomp::ManagerPacket *pPacketManager,
                 remove = 0;
             }
 
-            bool success = remove > 0;
-            if(success)
+            if(remove > 0)
             {
-                points = points - remove;
-
                 skillManager->ExecuteSkill(sourceState, activationID,
                     activatedAbility->GetTargetObjectID());
 
-                exp->SetPoints(points);
-            }
+                std::list<std::pair<uint8_t, int32_t>> pointMap;
+                pointMap.push_back(std::make_pair((uint8_t)expertiseID, -remove));
 
-            libcomp::Packet notify;
-            notify.WritePacketCode(ChannelToClientPacketCode_t::PACKET_EXPERTISE_DOWN);
-            notify.WriteS32Little(cState->GetEntityID());
-            notify.WriteS8(success ? 1 : 0);
-            notify.WriteS8((int8_t)expertiseID);
-            notify.WriteS32Little(points);
-
-            if(success)
-            {
-                server->GetZoneManager()->BroadcastPacket(client, notify);
-
-                cState->RecalcDisabledSkills(definitionManager);
-                server->GetTokuseiManager()->Recalculate(cState, true,
-                    std::set<int32_t>{ cState->GetEntityID() });
-                server->GetCharacterManager()->RecalculateStats(cState, client);
-
-                server->GetWorldDatabase()->QueueUpdate(exp);
+                server->GetCharacterManager()->UpdateExpertisePoints(client,
+                    pointMap);
             }
             else
             {
-                client->SendPacket(notify);
+                failure = true;
             }
         }
         else
+        {
+            failure = true;
+        }
+
+        if(failure)
         {
             skillManager->CancelSkill(sourceState, activationID);
         }

@@ -1040,6 +1040,66 @@
         <!-- MiSynthesisData -->
         <element>42009,42011,42012,42021,42010,42023,42025,42026,42028</element>
     </constant>
+    <constant name="SPIRIT_FUSION_BOOST">
+        <!-- Format: item ID => success boost, great success boost -->
+        <!-- Contains items that are client hard-coded and from MiUnionItemsHelperData -->
+        <pair>
+            <key>4326</key>
+            <value>100,0</value>
+        </pair>
+        <pair>
+            <key>4327</key>
+            <value>100,0</value>
+        </pair>
+        <pair>
+            <key>4331</key>
+            <value>100,0</value>
+        </pair>
+        <pair>
+            <key>4332</key>
+            <value>100,0</value>
+        </pair>
+        <pair>
+            <key>21383</key>
+            <value>100,0</value>
+        </pair>
+        <pair>
+            <key>21384</key>
+            <value>0,100</value>
+        </pair>
+        <pair>
+            <key>21385</key>
+            <value>10,0</value>
+        </pair>
+        <pair>
+            <key>21386</key>
+            <value>100,0</value>
+        </pair>
+        <pair>
+            <key>21387</key>
+            <value>0,100</value>
+        </pair>
+        <pair>
+            <key>21388</key>
+            <value>10,0</value>
+        </pair>
+        <pair>
+            <key>28541</key>
+            <value>100,0</value>
+        </pair>
+        <pair>
+            <key>28542</key>
+            <value>100,0</value>
+        </pair>
+        <pair>
+            <key>28543</key>
+            <value>100,0</value>
+        </pair>
+        <pair>
+            <key>28544</key>
+            <value>100,0</value>
+        </pair>
+    </constant>
     <constant name="SYNTH_ADJUSTMENTS">
         <!-- Format: item/skill => function, 2 contextual params -->
         <!-- Function 0: Enchantment item, param 3 = 1 stops crystal loss -->

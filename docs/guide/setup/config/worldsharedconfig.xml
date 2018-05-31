@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE section PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN"
+	"http://www.oasis-open.org/docbook/xml/4.5/docbookx.dtd">
+<section>
+<title>World Shared Configuration</title>
+
+<para>These settings apply to the world server configuration as well as any channels that connect to it.</para>
+
+<section>
+<title>COMPShopMessage</title>
+<para><emphasis role="strong">Type:</emphasis> string</para>
+<para><emphasis role="strong">Default:</emphasis> Welcome to the COMP Shop!</para>
+<para>Sets the message that will display in the COMP shop main menu.</para>
+
+<section>
+<title>Example</title>
+<para><![CDATA[<member name="COMPShopMessage">Welcome to my custom COMP Shop!</member>]]></para>
+</section><!-- Example -->
+
+</section><!-- COMPShopMessage -->
+
+<section>
+<title>AutoCompressCurrency</title>
+<para><emphasis role="strong">Type:</emphasis> boolean</para>
+<para><emphasis role="strong">Default:</emphasis> false</para>
+<para>If enabled, completing a full macca or mag stack of items will convert it to a macca note or mag presser.</para>
+
+<section>
+<title>Example</title>
+<para><![CDATA[<member name="AutoCompressCurrency">true</member>]]></para>
+</section><!-- Example -->
+
+</section><!-- AutoCompressCurrency -->
+
+<section>
+<title>NRAStatusNull</title>
+<para><emphasis role="strong">Type:</emphasis> boolean</para>
+<para><emphasis role="strong">Default:</emphasis> true</para>
+<para>If enabled, a single point in affinity null, reflect or absorb will nullify all negative status effects being applied that have the same affinity.</para>
+
+<section>
+<title>Example</title>
+<para><![CDATA[<member name="NRAStatusNull">false</member>]]></para>
+</section><!-- Example -->
+
+</section><!-- NRAStatusNull -->
+
+<section>
+<title>DeathPenaltyDisabled</title>
+<para><emphasis role="strong">Type:</emphasis> boolean</para>
+<para><emphasis role="strong">Default:</emphasis> false</para>
+<para>If enabled, no death XP penalty will be enforced.</para>
+
+<section>
+<title>Example</title>
+<para><![CDATA[<member name="DeathPenaltyDisabled">true</member>]]></para>
+</section><!-- Example -->
+
+</section><!-- DeathPenaltyDisabled -->
+
+<section>
+<title>XPBonus</title>
+<para><emphasis role="strong">Type:</emphasis> float</para>
+<para><emphasis role="strong">Default:</emphasis> 0.0</para>
+<para>Sets the additional XP percentage gained when killing an enemy (ex: 50.0 would grant 150%). Does not affect individual boosts players have.</para>
+
+<section>
+<title>Example</title>
+<para><![CDATA[<member name="XPBonus">50.0</member>]]></para>
+</section><!-- Example -->
+
+</section><!-- XPBonus -->
+
+<section>
+<title>ExpertiseBonus</title>
+<para><emphasis role="strong">Type:</emphasis> float</para>
+<para><emphasis role="strong">Default:</emphasis> 0.0</para>
+<para>Sets the additional expertise percentage gained when using a skill (ex: 10.0 would grant 110%). Does not affect individual boosts players have.</para>
+
+<section>
+<title>Example</title>
+<para><![CDATA[<member name="ExpertiseBonus">10.0</member>]]></para>
+</section><!-- Example -->
+
+</section><!-- ExpertiseBonus -->
+
+<section>
+<title>DropRateBonus</title>
+<para><emphasis role="strong">Type:</emphasis> float</para>
+<para><emphasis role="strong">Default:</emphasis> 0.0</para>
+<para>Sets the additional item drop rate multiplied to all item drops (ex: 10.0 would make 5% drops start at 5.5%).</para>
+
+<section>
+<title>Example</title>
+<para><![CDATA[<member name="DropRateBonus">10.0</member>]]></para>
+</section><!-- Example -->
+
+</section><!-- DropRateBonus -->
+
+<section>
+<title>GlobalDropSetIDs</title>
+<para><emphasis role="strong">Type:</emphasis> set of integers</para>
+<para><emphasis role="strong">Default:</emphasis> empty</para>
+<para>Set of drop set IDs to mix into all drops being calculated from killing an enemy.</para>
+
+<section>
+<title>Example</title>
+<para><![CDATA[<member name="GlobalDropSetIDs"><element>999</element></member>]]></para>
+</section><!-- Example -->
+
+</section><!-- GlobalDropSetIDs -->
+
+<section>
+<title>EnabledDemonQuests</title>
+<para><emphasis role="strong">Type:</emphasis> integer</para>
+<para><emphasis role="strong">Default:</emphasis> 0x0777</para>
+<para>Flag mask that determines which types of demon quests can be offered to players. The flags are as follows: kill demons (1), fuse demons (2), contract demons (3), give items (4), crystallize demon (5), tarot enchant (6), soul enchant (7), modify equipment (8), synth melee weapon (9), synth long range weapon (10) and open plasma (11). Enabling a quest type does not bypass other restrictions to receive them.</para>
+
+<section>
+<title>Example</title>
+<para><![CDATA[<member name="EnabledDemonQuests">0x07FF</member>]]></para>
+</section><!-- Example -->
+
+</section><!-- EnabledDemonQuests -->
+
+</section>

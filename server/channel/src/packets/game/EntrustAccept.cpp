@@ -84,8 +84,19 @@ bool Parsers::EntrustAccept::Parse(libcomp::ManagerPacket *pPacketManager,
         }
         else if(characterManager->GetFamiliarityRank(demon->GetFamiliarity()) < 3)
         {
-            /// @todo: include reunion demons
             responseCode = EntrustErrorCodes_t::INVALID_DEMON_TARGET;
+        }
+        else
+        {
+            // Make sure the demon has not been reunioned
+            for(int8_t reunionRank : demon->GetReunion())
+            {
+                if(reunionRank)
+                {
+                    responseCode = EntrustErrorCodes_t::INVALID_DEMON_TARGET;
+                    break;
+                }
+            }
         }
     }
 

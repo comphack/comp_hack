@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="MiDevilBoostExtraData" persistent="false">
+        <member type="u16" name="stackID"/>
+        <member type="u16" name="unused1"/>
+        <member type="u32" name="itemID"/>
+        <member type="u32" name="groupID"/>
+        <member type="s8" name="unused2"/>
+        <member type="u8" name="unused3"/>
+        <member type="u16" name="unused4"/>
+        <member type="array" size="8" name="tokusei">
+            <element type="s32"/>
+        </member>
+    </object>
+</objgen>

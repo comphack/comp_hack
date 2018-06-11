@@ -85,6 +85,12 @@ public:
     uint32_t GetQuestBonusCount() const;
 
     /**
+     * Get the current max fusion gauge stock count
+     * @return Max fusion gauge stock count
+     */
+    uint8_t GetMaxFusionGaugeStocks() const;
+
+    /**
      * Get the set of tokusei effect IDs granted by quest completion
      * @return List of tokusei effect IDs
      */
@@ -166,6 +172,10 @@ private:
     /// Quick access count representing the number of completed quests
     /// that can affect bonuses
     uint32_t mQuestBonusCount;
+
+    /// The number of fusion gauge stocks the character has access to from
+    /// equipment and valuables.
+    uint8_t mMaxFusionGaugeStocks;
 
     /// Precalculated equipment fuse bonuses that are applied after base
     /// stats have been calculated (since they are all numeric adjustments)

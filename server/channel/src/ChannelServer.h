@@ -49,6 +49,7 @@ class ServerDataManager;
 namespace objects
 {
 class Character;
+class WorldSharedConfig;
 }
 
 namespace channel
@@ -287,6 +288,12 @@ public:
      * @return Pointer to the TokuseiManager
      */
     TokuseiManager* GetTokuseiManager() const;
+
+    /**
+     * Get the world server supplied shared config settings.
+     * @return Pointer to the world shared config
+     */
+    std::shared_ptr<objects::WorldSharedConfig> GetWorldSharedConfig() const;
 
     /**
      * Increments and returns the next available entity ID.

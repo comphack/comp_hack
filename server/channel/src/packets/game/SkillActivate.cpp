@@ -32,6 +32,7 @@
 #include <ManagerPacket.h>
 
 // object Includes
+#include <Demon.h>
 #include <Item.h>
 
 // channel Includes
@@ -71,6 +72,7 @@ bool Parsers::SkillActivate::Parse(libcomp::ManagerPacket *pPacketManager,
         return false;
     }
 
+    int64_t activationObjectID = -1;
     int64_t targetObjectID = -1;
     switch(targetType)
     {
@@ -78,14 +80,14 @@ bool Parsers::SkillActivate::Parse(libcomp::ManagerPacket *pPacketManager,
             //Nothing special to do
             break;
         case ACTIVATION_DEMON:
-            targetObjectID = p.ReadS64Little();
+            activationObjectID = p.ReadS64Little();
             break;
         case ACTIVATION_ITEM:
             {
-                targetObjectID = p.ReadS64Little();
+                activationObjectID = p.ReadS64Little();
                 auto item = std::dynamic_pointer_cast<objects::Item>(
                     libcomp::PersistentObject::GetObjectByUUID(
-                        state->GetObjectUUID(targetObjectID)));
+                        state->GetObjectUUID(activationObjectID)));
 
                 // If the item is invalid or it is an expired rental, fail the skill
                 if(!item || (item->GetRentalExpiration() > 0 &&
@@ -98,7 +100,41 @@ bool Parsers::SkillActivate::Parse(libcomp::ManagerPacket *pPacketManager,
             }
             break;
         case ACTIVATION_TARGET:
-            targetObjectID = (int64_t)p.ReadS32Little();
+            activationObjectID = targetObjectID = (int64_t)p.ReadS32Little();
+            break;
+        case ACTIVATION_FUSION:
+            if(source != state->GetCharacterState())
+            {
+                LOG_ERROR(libcomp::String("Fusion skill activation requested from"
+                    " non-character source: %1\n")
+                    .Arg(state->GetAccountUID().ToString()));
+                skillManager->SendFailure(source, skillID, client);
+            }
+            else if(p.Left() < 28)
+            {
+                return false;
+            }
+            else
+            {
+                int32_t targetEntityID = p.ReadS32Little();
+                int64_t summonedDemonID = p.ReadS64Little();
+                int64_t compDemonID = p.ReadS64Little();
+
+                float xPos = p.ReadFloat();
+                float yPos = p.ReadFloat();
+
+                // Demon fusion skills are always sent from the client as an
+                // "execution skill" that the server needs to convert based
+                // on the demons involved
+                if(!skillManager->PrepareFusionSkill(client, skillID,
+                    targetEntityID, summonedDemonID, compDemonID, xPos, yPos))
+                {
+                    return true;
+                }
+
+                targetObjectID = (int64_t)targetEntityID;
+                activationObjectID = compDemonID;
+            }
             break;
         default:
             {
@@ -111,10 +147,12 @@ bool Parsers::SkillActivate::Parse(libcomp::ManagerPacket *pPacketManager,
     }
 
     server->QueueWork([](SkillManager* pSkillManager, const std::shared_ptr<
-        ActiveEntityState> pSource, uint32_t pSkillID, int64_t pTargetObjectID)
+        ActiveEntityState> pSource, uint32_t pSkillID, int64_t pActivationObjectID,
+        int64_t pTargetObjectID)
         {
-            pSkillManager->ActivateSkill(pSource, pSkillID, pTargetObjectID, 0);
-        }, skillManager, source, skillID, targetObjectID);
+            pSkillManager->ActivateSkill(pSource, pSkillID, pActivationObjectID,
+                pTargetObjectID);
+        }, skillManager, source, skillID, activationObjectID, targetObjectID);
 
     return true;
 }

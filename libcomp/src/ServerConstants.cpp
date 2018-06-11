@@ -136,6 +136,10 @@ bool ServerConstants::Initialize(const String& filePath)
         sConstants.SKILL_CLAN_FORM);
     success &= LoadInteger(constants["SKILL_DCM"],
         sConstants.SKILL_DCM);
+    success &= LoadInteger(constants["SKILL_DEMON_FUSION"],
+        sConstants.SKILL_DEMON_FUSION);
+    success &= LoadInteger(constants["SKILL_DEMON_FUSION_EXECUTE"],
+        sConstants.SKILL_DEMON_FUSION_EXECUTE);
     success &= LoadInteger(constants["SKILL_EQUIP_ITEM"],
         sConstants.SKILL_EQUIP_ITEM);
     success &= LoadInteger(constants["SKILL_EQUIP_MOD_EDIT"],
@@ -198,6 +202,10 @@ bool ServerConstants::Initialize(const String& filePath)
         sConstants.VALUABLE_DEVIL_BOOK_V1);
     success &= LoadInteger(constants["VALUABLE_DEVIL_BOOK_V2"],
         sConstants.VALUABLE_DEVIL_BOOK_V2);
+    success &= LoadInteger(constants["VALUABLE_DEMON_FORCE"],
+        sConstants.VALUABLE_DEMON_FORCE);
+    success &= LoadInteger(constants["VALUABLE_FUSION_GAUGE"],
+        sConstants.VALUABLE_FUSION_GAUGE);
     success &= LoadInteger(constants["VALUABLE_MATERIAL_TANK"],
         sConstants.VALUABLE_MATERIAL_TANK);
 
@@ -421,6 +429,54 @@ bool ServerConstants::Initialize(const String& filePath)
     else
     {
         LOG_ERROR("DEMON_CRYSTALS not found\n");
+        success = false;
+    }
+
+    complexIter = complexConstants.find("DEMON_FUSION_SKILLS");
+    if(success && complexIter != complexConstants.end())
+    {
+        std::list<String> strList;
+        if(!LoadStringList(complexIter->second, strList))
+        {
+            LOG_ERROR("Failed to load DEMON_FUSION_SKILLS\n");
+            success = false;
+        }
+        else
+        {
+            if(strList.size() != 21)
+            {
+                LOG_ERROR("DEMON_FUSION_SKILLS must specify all 21"
+                    " inheritance type skill mappings\n");
+                success = false;
+            }
+            else
+            {
+                size_t idx = 0;
+                for(auto elem : strList)
+                {
+                    auto vals = ToIntegerRange<uint32_t>(elem.C(), success);
+                    if(vals.size() != 3)
+                    {
+                        LOG_ERROR("DEMON_FUSION_SKILLS element encountered"
+                            " with level count other than 3\n");
+                        success = false;
+                        break;
+                    }
+
+                    size_t subIdx = 0;
+                    for(uint32_t val : vals)
+                    {
+                        sConstants.DEMON_FUSION_SKILLS[idx][subIdx++] = val;
+                    }
+
+                    idx++;
+                }
+            }
+        }
+    }
+    else
+    {
+        LOG_ERROR("DEMON_FUSION_SKILLS not found\n");
         success = false;
     }
 

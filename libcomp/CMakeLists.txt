@@ -295,6 +295,7 @@ SET(${PROJECT_NAME}_SCHEMA
     schema/binarydata/ctalkmessagedata.xml
     schema/binarydata/czonerelationdata.xml
     schema/binarydata/devilbookdata.xml
+    schema/binarydata/devilboostdata.xml
     schema/binarydata/devildata.xml
     schema/binarydata/devilequipmentdata.xml
     schema/binarydata/devillvupratedata.xml
@@ -305,6 +306,7 @@ SET(${PROJECT_NAME}_SCHEMA
     schema/binarydata/eventdirectiondata.xml
     schema/binarydata/exchangedata.xml
     schema/binarydata/expertdata.xml
+    schema/binarydata/fusiondata.xml
     schema/binarydata/hnpcdata.xml
     schema/binarydata/itemdata.xml
     schema/binarydata/modificationdata.xml
@@ -663,6 +665,18 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     MiDevilBattleData.h
     MiDevilBookData.cpp
     MiDevilBookData.h
+    MiDevilBoostData.cpp
+    MiDevilBoostData.h
+    MiDevilBoostExtraData.cpp
+    MiDevilBoostExtraData.h
+    MiDevilBoostItemData.cpp
+    MiDevilBoostItemData.h
+    MiDevilBoostLotData.cpp
+    MiDevilBoostLotData.h
+    MiDevilBoostRequirementData.cpp
+    MiDevilBoostRequirementData.h
+    MiDevilBoostResultData.cpp
+    MiDevilBoostResultData.h
     MiDevilCrystalData.h
     MiDevilCrystalData.cpp
     MiDevilData.h
@@ -673,6 +687,8 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     MiDevilEquipmentItemData.cpp
     MiDevilFamiliarityData.cpp
     MiDevilFamiliarityData.h
+    MiDevilFusionData.h
+    MiDevilFusionData.cpp
     MiDevilLVUpData.cpp
     MiDevilLVUpData.h
     MiDevilLVUpRateData.cpp

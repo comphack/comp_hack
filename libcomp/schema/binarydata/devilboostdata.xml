@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="MiDevilBoostRequirementData" persistent="false">
+        <member type="enum" name="type" underlying="uint8_t">
+            <value num="0">NONE</value>
+            <value num="1">LNC</value>
+            <value num="7">FAMILIARITY</value>
+        </member>
+        <member type="u8" name="unused1"/>
+        <member type="u16" name="unused2"/>
+        <member type="s32" name="value1"/>
+        <member type="s32" name="value2"/>
+        <member type="s32" name="unk1"/>
+        <member type="s32" name="unk2"/>
+    </object>
+    <object name="MiDevilBoostResultData" persistent="false">
+        <member type="s8" name="type"/>
+        <member type="u8" name="unused1"/>
+        <member type="u16" name="unused2"/>
+        <member type="s32" name="minPoints"/>
+        <member type="s32" name="maxPoints"/>
+        <member type="s16" name="unk1"/>
+        <member type="s16" name="unk2"/>
+        <member type="s32" name="points"/>
+    </object>
+    <object name="MiDevilBoostData" persistent="false">
+        <member type="u32" name="ID"/>
+        <member type="s8" name="minLevel"/>
+        <member type="s8" name="maxLevel"/>
+        <member type="s8" name="growthType"/>
+        <member type="s8" name="growthRank"/>
+        <member type="s8" name="unk1"/>
+        <member type="u8" name="unused1"/>
+        <member type="u16" name="unused2"/>
+        <member type="array" size="3" name="requirements">
+            <element type="MiDevilBoostRequirementData*"/>
+        </member>
+        <member type="array" size="8" name="results">
+            <element type="MiDevilBoostResultData*"/>
+        </member>
+        <member type="u16" name="extraID"/>
+        <member type="u16" name="unused3"/>
+    </object>
+    <object name="MiDevilBoostExtraData" persistent="false">
+        <member type="u16" name="stackID"/>
+        <member type="u16" name="unused1"/>
+        <member type="u32" name="itemID"/>
+        <member type="u32" name="groupID"/>
+        <member type="s8" name="unused2"/>
+        <member type="u8" name="unused3"/>
+        <member type="u16" name="unused4"/>
+        <member type="array" size="8" name="tokusei">
+            <element type="s32"/>
+        </member>
+    </object>
+    <object name="MiDevilBoostItemData" persistent="false">
+        <member type="u32" name="itemID"/>
+        <member type="array" size="5" name="boostIDs">
+            <element type="u32"/>
+        </member>
+    </object>
+    <object name="MiDevilBoostLotData" persistent="false">
+        <member type="u16" name="lot"/>
+        <member type="u16" name="stackID"/>
+    </object>
+</objgen>

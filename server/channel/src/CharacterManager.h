@@ -633,6 +633,24 @@ public:
         bool isAdjust = false, bool applyRate = false);
 
     /**
+     * Update the player's fusion gauge.
+     * @param client Pointer to the client connection
+     * @param points Set or adjusted fusion gauge points to update
+     * @param isAdjust true if the points value should be added to the current
+     *  value, false if it should replace the curent value
+     */
+    void UpdateFusionGauge(const std::shared_ptr<
+        channel::ChannelClientConnection>& client, int32_t points,
+        bool isAdjust);
+
+    /**
+     * Send the player's fusion gauge to the client.
+     * @param client Pointer to the client connection
+     */
+    void SendFusionGauge(const std::shared_ptr<
+        channel::ChannelClientConnection>& client);
+
+    /**
      * Update the client's character or demon's experience and level
      * up if the level threshold is passed.
      * @param client Pointer to the client connection
@@ -942,6 +960,17 @@ public:
     void CalculateDemonBaseStats(const std::shared_ptr<objects::Demon>& demon,
         std::shared_ptr<objects::EntityStats> ds = nullptr,
         std::shared_ptr<objects::MiDevilData> demonData = nullptr);
+
+    /**
+     * Adjust the base stats of a demon being calculated.
+     * @param demon Pointer to the demon being calculated
+     * @param stats Reference to a correct table map
+     * @param baseCalc When true, stats are being calculated to set directly on
+     *  the demon. When false, stats are being calculated for when the demon is
+     *  displayed as the active partner.
+     */
+    static void AdjustDemonBaseStats(const std::shared_ptr<objects::Demon>& demon,
+        libcomp::EnumMap<CorrectTbl, int16_t>& stats, bool baseCalc);
 
     /**
      * Retrieve a map of correct table indexes to corresponding stat values.

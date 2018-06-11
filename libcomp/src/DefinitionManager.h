@@ -52,9 +52,13 @@ class MiCItemData;
 class MiCorrectTbl;
 class MiCZoneRelationData;
 class MiDevilBookData;
+class MiDevilBoostData;
+class MiDevilBoostExtraData;
+class MiDevilBoostItemData;
 class MiDevilData;
 class MiDevilEquipmentData;
 class MiDevilEquipmentItemData;
+class MiDevilFusionData;
 class MiDevilLVUpRateData;
 class MiDisassemblyData;
 class MiDisassemblyTriggerData;
@@ -151,6 +155,41 @@ public:
         std::shared_ptr<objects::MiDevilBookData>> GetDevilBookData();
 
     /**
+     * Get the devil boost definition corresponding to an ID
+     * @param id Devil boost ID to retrieve
+     * @return Pointer to the matching devil boost definition, null if it
+     *  does not exist
+     */
+    const std::shared_ptr<objects::MiDevilBoostData> GetDevilBoostData(
+        uint32_t id);
+
+    /**
+     * Get the devil boost extra definition corresponding to a stack ID
+     * @param id Devil boost extra stack ID to retrieve
+     * @return Pointer to the matching devil boost extra definition, null if it
+     *  does not exist
+     */
+    const std::shared_ptr<objects::MiDevilBoostExtraData>
+        GetDevilBoostExtraData(uint16_t id);
+
+    /**
+     * Get the devil boost item definition corresponding to an ID
+     * @param id Devil boost item ID to retrieve
+     * @return Pointer to the matching devil boost item definition, null if it
+     *  does not exist
+     */
+    const std::shared_ptr<objects::MiDevilBoostItemData> GetDevilBoostItemData(
+        uint32_t id);
+
+    /**
+     * Get the list of all stack IDs in a devil boost lot or any lower lot
+     * that multiplies into supplied value (ex: 400 returns 100 and 200 lots)
+     * @param count Boost count from a demon's benefit gauge
+     * @return List of stack IDs
+     */
+    std::list<uint16_t> GetDevilBoostLotIDs(int32_t count);
+
+    /**
      * Get the devil definition corresponding to an ID
      * @param id Devil ID to retrieve
      * @return Pointer to the matching devil definition, null if it does
@@ -184,6 +223,23 @@ public:
      */
     const std::shared_ptr<objects::MiDevilEquipmentItemData>
         GetDevilEquipmentItemData(uint32_t itemID);
+
+    /**
+     * Get the devil equipment item definition corresponding to an ID
+     * @param id Devil equipment item ID to retrieve
+     * @return Pointer to the matching devil equipment item definition, null if
+     *  it does not exist
+     */
+    const std::shared_ptr<objects::MiDevilFusionData>
+        GetDevilFusionData(uint32_t id);
+
+    /**
+     * Get set of devil fusion definition IDs that have an explicit demon
+     * ID listed as a requirement.
+     * @param demonID Definition ID of a demon
+     * @return Set of devil fusion definition IDs
+     */
+    std::set<uint32_t> GetDevilFusionIDsByDemonID(uint32_t demonID);
 
     /**
      * Get the devil level up information corresponding to an ID
@@ -810,6 +866,21 @@ private:
     std::unordered_map<uint32_t,
         std::shared_ptr<objects::MiDevilBookData>> mDevilBookData;
 
+    /// Map of devil boost definitions by ID
+    std::unordered_map<uint32_t,
+        std::shared_ptr<objects::MiDevilBoostData>> mDevilBoostData;
+
+    /// Map of devil boost extra definitions by ID
+    std::unordered_map<uint16_t,
+        std::shared_ptr<objects::MiDevilBoostExtraData>> mDevilBoostExtraData;
+
+    /// Map of devil boost item definitions by ID
+    std::unordered_map<uint32_t,
+        std::shared_ptr<objects::MiDevilBoostItemData>> mDevilBoostItemData;
+
+    /// Map of lot IDs to devil boost extra stack IDs in that lot
+    std::unordered_map<int32_t, std::list<uint16_t>> mDevilBoostLots;
+
     /// Map of devil definitions by ID
     std::unordered_map<uint32_t,
         std::shared_ptr<objects::MiDevilData>> mDevilData;
@@ -821,6 +892,14 @@ private:
     /// Map of devil equipment definitions by item ID
     std::unordered_map<uint32_t, std::shared_ptr<
         objects::MiDevilEquipmentItemData>> mDevilEquipmentItemData;
+
+    /// Map of devil fusion definitions by ID
+    std::unordered_map<uint32_t,
+        std::shared_ptr<objects::MiDevilFusionData>> mDevilFusionData;
+
+    /// Map of devil fusion definition IDs mapped by demon IDs listed as
+    /// explicit requirements for the skill
+    std::unordered_map<uint32_t, std::set<uint32_t>> mDevilFusionLookup;
 
     /// Map of devil names to IDs which are NOT unique across entries
     std::unordered_map<libcomp::String, uint32_t> mDevilNameLookup;

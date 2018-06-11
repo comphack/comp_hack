@@ -1,10 +1,10 @@
 /**
- * @file server/channel/src/packets/game/FusionGauge.cpp
+ * @file server/channel/src/packets/game/DemonForceEnd.cpp
  * @ingroup channel
  *
  * @author HACKfrost
  *
- * @brief Request from the client for the player's fusion gauge state.
+ * @brief Request from the client to complete demon force changes.
  *
  * This file is part of the Channel Server (channel).
  *
@@ -27,32 +27,35 @@
 #include "Packets.h"
 
 // libcomp Includes
-#include <ManagerPacket.h>
 #include <Packet.h>
 #include <PacketCodes.h>
 
 // channel Includes
 #include "ChannelServer.h"
-#include "CharacterManager.h"
 
 using namespace channel;
 
-bool Parsers::FusionGauge::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::DemonForceEnd::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {
+    (void)pPacketManager;
+
     if(p.Size() != 0)
     {
         return false;
     }
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(
-        pPacketManager->GetServer());
-
     auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
         connection);
+    auto state = client->GetClientState();
+    auto dState = state->GetDemonState();
 
-    server->GetCharacterManager()->SendFusionGauge(client);
+    libcomp::Packet reply;
+    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_DEMON_FORCE_END);
+    reply.WriteS32Little(dState->GetEntityID());
+
+    client->SendPacket(reply);
 
     return true;
 }

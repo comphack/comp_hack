@@ -2142,7 +2142,35 @@ uint8_t ActiveEntityStateImp<objects::Demon>::RecalculateStats(
         }
     }
 
-    return RecalculateDemonStats(definitionManager, calcState);
+    std::lock_guard<std::mutex> lock(mLock);
+
+    auto cs = GetCoreStats();
+    auto devilData = GetDevilData();
+    if(!cs || !devilData)
+    {
+        return true;
+    }
+
+    auto battleData = devilData->GetBattleData();
+
+    libcomp::EnumMap<CorrectTbl, int16_t> stats;
+    for(size_t i = 0; i < 126; i++)
+    {
+        CorrectTbl tblID = (CorrectTbl)i;
+        stats[tblID] = battleData->GetCorrect((size_t)i);
+    }
+
+    // Non-dependent stats will not change from growth calculation
+    stats[CorrectTbl::STR] = cs->GetSTR();
+    stats[CorrectTbl::MAGIC] = cs->GetMAGIC();
+    stats[CorrectTbl::VIT] = cs->GetVIT();
+    stats[CorrectTbl::INT] = cs->GetINTEL();
+    stats[CorrectTbl::SPEED] = cs->GetSPEED();
+    stats[CorrectTbl::LUCK] = cs->GetLUCK();
+
+    CharacterManager::AdjustDemonBaseStats(GetEntity(), stats, false);
+
+    return RecalculateDemonStats(definitionManager, stats, calcState);
 }
 
 template<>
@@ -2185,7 +2213,33 @@ uint8_t ActiveEntityStateImp<objects::Enemy>::RecalculateStats(
         }
     }
 
-    return RecalculateDemonStats(definitionManager, calcState);
+    std::lock_guard<std::mutex> lock(mLock);
+
+    auto cs = GetCoreStats();
+    auto devilData = GetDevilData();
+    if(!cs || !devilData)
+    {
+        return true;
+    }
+
+    auto battleData = devilData->GetBattleData();
+
+    libcomp::EnumMap<CorrectTbl, int16_t> stats;
+    for(size_t i = 0; i < 126; i++)
+    {
+        CorrectTbl tblID = (CorrectTbl)i;
+        stats[tblID] = battleData->GetCorrect((size_t)i);
+    }
+
+    // Non-dependent stats will not change from growth calculation
+    stats[CorrectTbl::STR] = cs->GetSTR();
+    stats[CorrectTbl::MAGIC] = cs->GetMAGIC();
+    stats[CorrectTbl::VIT] = cs->GetVIT();
+    stats[CorrectTbl::INT] = cs->GetINTEL();
+    stats[CorrectTbl::SPEED] = cs->GetSPEED();
+    stats[CorrectTbl::LUCK] = cs->GetLUCK();
+
+    return RecalculateDemonStats(definitionManager, stats, calcState);
 }
 
 template<>
@@ -2557,28 +2611,9 @@ void ActiveEntityState::GetAdditionalCorrectTbls(
 
 uint8_t ActiveEntityState::RecalculateDemonStats(
     libcomp::DefinitionManager* definitionManager,
+    libcomp::EnumMap<CorrectTbl, int16_t>& stats,
     std::shared_ptr<objects::CalculatedEntityState> calcState)
 {
-    std::lock_guard<std::mutex> lock(mLock);
-
-    auto demonData = GetDevilData();
-    auto battleData = demonData->GetBattleData();
-    auto cs = GetCoreStats();
-
-    libcomp::EnumMap<CorrectTbl, int16_t> stats;
-    for(size_t i = 0; i < 126; i++)
-    {
-        CorrectTbl tblID = (CorrectTbl)i;
-        stats[tblID] = battleData->GetCorrect((size_t)i);
-    }
-
-    stats[CorrectTbl::STR] = cs->GetSTR();
-    stats[CorrectTbl::MAGIC] = cs->GetMAGIC();
-    stats[CorrectTbl::VIT] = cs->GetVIT();
-    stats[CorrectTbl::INT] = cs->GetINTEL();
-    stats[CorrectTbl::SPEED] = cs->GetSPEED();
-    stats[CorrectTbl::LUCK] = cs->GetLUCK();
-
     bool selfState = calcState == GetCalculatedState();
 
     if(selfState && !mInitialCalc)
@@ -2595,14 +2630,15 @@ uint8_t ActiveEntityState::RecalculateDemonStats(
     AdjustStats(correctTbls, stats, calcState, true);
     BaseStatsCalculated(definitionManager, calcState, stats, correctTbls);
 
-    CharacterManager::CalculateDependentStats(stats, cs->GetLevel(), true);
+    CharacterManager::CalculateDependentStats(stats,
+        GetCoreStats()->GetLevel(), true);
 
     AdjustStats(correctTbls, stats, calcState, false);
 
     int32_t extraHP = 0;
     if(GetEntityType() == EntityType_t::ENEMY)
     {
-        extraHP = demonData->GetBattleData()->GetEnemyHP(0);
+        extraHP = GetDevilData()->GetBattleData()->GetEnemyHP(0);
     }
 
     if(selfState)

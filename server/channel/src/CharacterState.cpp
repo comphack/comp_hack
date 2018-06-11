@@ -58,6 +58,7 @@
 #include <MiSItemData.h>
 #include <MiSkillItemStatusCommonData.h>
 #include <MiSpecialConditionData.h>
+#include <MiUseRestrictionsData.h>
 #include <Tokusei.h>
 #include <TokuseiCorrectTbl.h>
 
@@ -93,7 +94,8 @@ namespace libcomp
     }
 }
 
-CharacterState::CharacterState() : mQuestBonusCount(0)
+CharacterState::CharacterState() : mQuestBonusCount(0),
+    mMaxFusionGaugeStocks(0)
 {
 }
 
@@ -111,6 +113,11 @@ std::list<std::shared_ptr<objects::MiSpecialConditionData>>
 uint32_t CharacterState::GetQuestBonusCount() const
 {
     return mQuestBonusCount;
+}
+
+uint8_t CharacterState::GetMaxFusionGaugeStocks() const
+{
+    return mMaxFusionGaugeStocks;
 }
 
 std::list<int32_t> CharacterState::GetQuestBonusTokuseiIDs() const
@@ -132,6 +139,9 @@ void CharacterState::RecalcEquipState(libcomp::DefinitionManager* definitionMana
     mStatConditionalTokusei.clear();
     mEquipFuseBonuses.clear();
 
+    uint8_t maxStocks = CharacterManager::HasValuable(character,
+        SVR_CONST.VALUABLE_FUSION_GAUGE) ? 1 : 0;
+
     std::set<int16_t> allEffects;
     std::list<std::shared_ptr<objects::MiSpecialConditionData>> conditions;
     std::set<std::shared_ptr<objects::MiEquipmentSetData>> activeEquipSets;
@@ -139,6 +149,12 @@ void CharacterState::RecalcEquipState(libcomp::DefinitionManager* definitionMana
     {
         auto equip = character->GetEquippedItems(i).Get();
         if(!equip || equip->GetDurability() == 0) continue;
+
+        auto itemData = definitionManager->GetItemData(
+            equip->GetType());
+
+        maxStocks = (uint8_t)(maxStocks + itemData->GetRestriction()
+            ->GetStock());
 
         // Get item direct effects
         uint32_t specialEffect = equip->GetSpecialEffect();
@@ -169,8 +185,6 @@ void CharacterState::RecalcEquipState(libcomp::DefinitionManager* definitionMana
                 }
                 else
                 {
-                    auto itemData = definitionManager->GetItemData(
-                        equip->GetType());
                     auto effectData = definitionManager->GetModificationExtEffectData(
                         itemData->GetCommon()->GetCategory()->GetSubCategory(),
                         (uint8_t)i, effectID);
@@ -330,6 +344,8 @@ void CharacterState::RecalcEquipState(libcomp::DefinitionManager* definitionMana
             break;
         }
     }
+
+    mMaxFusionGaugeStocks = maxStocks;
 }
 
 bool CharacterState::UpdateQuestState(

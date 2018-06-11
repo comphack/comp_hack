@@ -150,17 +150,16 @@ bool Parsers::Analyze::Parse(libcomp::ManagerPacket *pPacketManager,
                     reply.WriteU32Little(skillID == 0 ? (uint32_t)-1 : skillID);
                 }
 
-                for(size_t i = 0; i < 12; i++)
+                for(int8_t reunionRank : d->GetReunion())
                 {
-                    reply.WriteS8(d->GetReunion(i));
+                    reply.WriteS8(reunionRank);
                 }
 
                 reply.WriteU8(0);   // Unknown
 
-                // Force Stack?
-                for(size_t i = 0; i < 8; i++)
+                for(uint16_t forceStack : d->GetForceStack())
                 {
-                    reply.WriteU16Little(0);
+                    reply.WriteU16Little(forceStack);
                 }
 
                 reply.WriteU8(0);   //Unknown

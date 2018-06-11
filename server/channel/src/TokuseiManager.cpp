@@ -41,6 +41,7 @@
 #include <Item.h>
 #include <MiCategoryData.h>
 #include <MiDCategoryData.h>
+#include <MiDevilBoostExtraData.h>
 #include <MiDevilCrystalData.h>
 #include <MiDevilData.h>
 #include <MiEnchantCharasticData.h>
@@ -1015,8 +1016,29 @@ std::list<std::shared_ptr<objects::Tokusei>> TokuseiManager::GetDirectTokusei(
     case EntityType_t::PARTNER_DEMON:
         {
             auto dState = std::dynamic_pointer_cast<DemonState>(eState);
+            auto demon = dState->GetEntity();
+            if(demon)
+            {
+                tokuseiIDs = dState->GetCompendiumTokuseiIDs();
 
-            tokuseiIDs = dState->GetCompendiumTokuseiIDs();
+                // Add demon force stacks
+                for(uint16_t stackID : demon->GetForceStack())
+                {
+                    auto exData = stackID
+                        ? definitionManager->GetDevilBoostExtraData(stackID)
+                        : nullptr;
+                    if(exData)
+                    {
+                        for(int32_t tokuseiID : exData->GetTokusei())
+                        {
+                            if(tokuseiID)
+                            {
+                                tokuseiIDs.push_back(tokuseiID);
+                            }
+                        }
+                    }
+                }
+            }
         }
         break;
     default:

@@ -62,7 +62,7 @@
 <title>XPBonus</title>
 <para><emphasis role="strong">Type:</emphasis> float</para>
 <para><emphasis role="strong">Default:</emphasis> 0.0</para>
-<para>Sets the additional XP percentage gained when killing an enemy (ex: 50.0 would grant 150%). Does not affect individual boosts players have.</para>
+<para>Sets the additional XP percentage gained when killing an enemy (ex: 0.5 would grant 150%). Does not affect individual boosts players have.</para>
 
 <section>
 <title>Example</title>
@@ -75,7 +75,7 @@
 <title>ExpertiseBonus</title>
 <para><emphasis role="strong">Type:</emphasis> float</para>
 <para><emphasis role="strong">Default:</emphasis> 0.0</para>
-<para>Sets the additional expertise percentage gained when using a skill (ex: 10.0 would grant 110%). Does not affect individual boosts players have.</para>
+<para>Sets the additional expertise percentage gained when using a skill (ex: 0.1 would grant 110%). Does not affect individual boosts players have.</para>
 
 <section>
 <title>Example</title>
@@ -96,6 +96,19 @@
 </section><!-- Example -->
 
 </section><!-- DropRateBonus -->
+
+<section>
+<title>FusionGaugeBonus</title>
+<para><emphasis role="strong">Type:</emphasis> float</para>
+<para><emphasis role="strong">Default:</emphasis> 3.0</para>
+<para>Sets the additional fusion gauge amount gained when using a skill (ex: 0.1 would grant 110%).</para>
+
+<section>
+<title>Example</title>
+<para><![CDATA[<member name="FusionGaugeBonus">10.0</member>]]></para>
+</section><!-- Example -->
+
+</section><!-- FusionGaugeBonus -->
 
 <section>
 <title>GlobalDropSetIDs</title>
@@ -122,5 +135,31 @@
 </section><!-- Example -->
 
 </section><!-- EnabledDemonQuests -->
+
+<section>
+<title>LevelCap</title>
+<para><emphasis role="strong">Type:</emphasis> integer</para>
+<para><emphasis role="strong">Default:</emphasis> 99</para>
+<para>Maximum level that can be obtained for player characters and demons. Enemies can still go over this level. Values must be between 1 and 99.</para>
+
+<section>
+<title>Example</title>
+<para><![CDATA[<member name="LevelCap">98</member>]]></para>
+</section><!-- Example -->
+
+</section><!-- LevelCap -->
+
+<section>
+<title>ReunionMax</title>
+<para><emphasis role="strong">Type:</emphasis> integer</para>
+<para><emphasis role="strong">Default:</emphasis> 9</para>
+<para>Maximum reunion rank that can be obtained by a demon. Ranks higher than 9 can be obtained at level 99 and stat progression will continue uniformly but while the correct rank will display in the UI, the rank 9 growth type will still be used. Values must be between 9 and 99.</para>
+
+<section>
+<title>Example</title>
+<para><![CDATA[<member name="ReunionMax">99</member>]]></para>
+</section><!-- Example -->
+
+</section><!-- ReunionMax -->
 
 </section>

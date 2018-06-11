@@ -476,33 +476,30 @@ void CharacterManager::SendPartnerData(const std::shared_ptr<
 
     reply.WriteU8(0);   // Unknown bool
     reply.WriteU16Little(d->GetAttackSettings());
-    reply.WriteU8(0);   // Unknown
+    reply.WriteU8(d->GetGrowthType());
     reply.WriteU16Little(d->GetFamiliarity());
     reply.WriteU8(d->GetLocked() ? 1 : 0);
 
-    // Reunion ranks
-    for(size_t i = 0; i < 12; i++)
+    for(int8_t reunionRank : d->GetReunion())
     {
-        reply.WriteS8(d->GetReunion(i));
+        reply.WriteS8(reunionRank);
     }
 
-    reply.WriteS8(0);   // Unknown
+    reply.WriteS8(d->GetMagReduction());
     reply.WriteS32Little(d->GetSoulPoints());
 
-    reply.WriteS32Little(0);    // Force Gauge?
-    for(size_t i = 0; i < 20; i++)
+    reply.WriteS32Little(d->GetBenefitGauge());
+    for(int32_t forceValue : d->GetForceValues())
     {
-        reply.WriteS32Little(0);    // Force Values?
+        reply.WriteS32Little(forceValue);
     }
 
-    // Force Stack?
-    for(size_t i = 0; i < 8; i++)
+    for(uint16_t forceStack : d->GetForceStack())
     {
-        reply.WriteU16Little(0);
+        reply.WriteU16Little(forceStack);
     }
 
-    // Force Stack Pending?
-    reply.WriteU16Little(0);
+    reply.WriteU16Little(d->GetForceStackPending());
 
     reply.WriteU8(0);   // Unknown
     reply.WriteU8(0);   // Mitama type
@@ -654,37 +651,31 @@ void CharacterManager::SendDemonData(const std::shared_ptr<
         reply.WriteS16Little(iSkill->GetProgress());
     }
 
-    /// @todo: Find status effects and figure out what below
-    /// here is setting the epitaph flag (both visible in COMP window)
-
     reply.WriteU16Little(d->GetAttackSettings());
-    reply.WriteU8(0);   // Unknown
+    reply.WriteU8(d->GetGrowthType());
     reply.WriteU16Little(d->GetFamiliarity());
     reply.WriteU8(d->GetLocked() ? 1 : 0);
 
-    // Reunion ranks
-    for(size_t i = 0; i < 12; i++)
+    for(int8_t reunionRank : d->GetReunion())
     {
-        reply.WriteS8(d->GetReunion(i));
+        reply.WriteS8(reunionRank);
     }
 
-    reply.WriteS8(0);   // Unknown
+    reply.WriteS8(d->GetMagReduction());
     reply.WriteS32Little(d->GetSoulPoints());
 
-    reply.WriteS32Little(0);    // Force Gauge?
-    for(size_t i = 0; i < 20; i++)
+    reply.WriteS32Little(d->GetBenefitGauge());
+    for(int32_t forceValue : d->GetForceValues())
     {
-        reply.WriteS32Little(0);    // Force Values?
+        reply.WriteS32Little(forceValue);
     }
 
-    // Force Stack?
-    for(size_t i = 0; i < 8; i++)
+    for(uint16_t forceStack : d->GetForceStack())
     {
-        reply.WriteU16Little(0);
+        reply.WriteU16Little(forceStack);
     }
 
-    // Force Stack Pending?
-    reply.WriteU16Little(0);
+    reply.WriteU16Little(d->GetForceStackPending());
 
     reply.WriteU8(0);   // Unknown
     reply.WriteU8(0);   // Mitama type
@@ -1461,11 +1452,10 @@ bool CharacterManager::AddRemoveItems(const std::shared_ptr<
     auto dbChanges = libcomp::DatabaseChangeSet::Create(
         state->GetAccountUID());
 
-    static bool autoCompressCurrenty = std::dynamic_pointer_cast<
-        objects::ChannelConfig>(server->GetConfig())
-        ->GetWorldSharedConfig()->GetAutoCompressCurrency();
+    const static bool autoCompressCurrency = server->GetWorldSharedConfig()
+        ->GetAutoCompressCurrency();
 
-    bool autoCompress = add && autoCompressCurrenty;
+    bool autoCompress = add && autoCompressCurrency;
     if(autoCompress)
     {
         // Compress macca
@@ -2064,9 +2054,8 @@ std::list<std::shared_ptr<objects::ItemDrop>> CharacterManager::DetermineDrops(
                 (1000.0 + 7.0 * (double)luck + (deltaDiff * deltaDiff))));
         }
 
-        const static float globalDropBonus = std::dynamic_pointer_cast<
-            objects::ChannelConfig>(mServer.lock()->GetConfig())
-            ->GetWorldSharedConfig()->GetDropRateBonus();
+        float globalDropBonus = mServer.lock()->GetWorldSharedConfig()
+            ->GetDropRateBonus();
 
         dropRate = (uint32_t)((double)dropRate * (double)(1.f + globalDropBonus));
 
@@ -2255,6 +2244,8 @@ void CharacterManager::EquipItem(const std::shared_ptr<
         return;
     }
 
+    uint8_t stockCount = cState->GetMaxFusionGaugeStocks();
+
     bool unequip = false;
     auto equipSlot = character->GetEquippedItems((size_t)slot);
     if(equipSlot.Get() == equip)
@@ -2326,6 +2317,19 @@ void CharacterManager::EquipItem(const std::shared_ptr<
     reply.WriteS16Little((int16_t)cState->GetMaxMP());
 
     server->GetZoneManager()->BroadcastPacket(client, reply, false);
+
+    // If the stock count changed notify the client
+    if(stockCount != cState->GetMaxFusionGaugeStocks())
+    {
+        stockCount = cState->GetMaxFusionGaugeStocks();
+        if(character->GetFusionGauge() > (uint32_t)(stockCount * 10000))
+        {
+            // Reset to max
+            character->SetFusionGauge((uint32_t)(stockCount * 10000));
+        }
+
+        SendFusionGauge(client);
+    }
 }
 
 bool CharacterManager::UnequipItem(const std::shared_ptr<
@@ -2690,31 +2694,40 @@ std::shared_ptr<objects::Demon> CharacterManager::GenerateDemon(
     const std::shared_ptr<objects::MiDevilData>& demonData,
     uint16_t familiarity)
 {
-    //Was valid demon data supplied?
     if(nullptr == demonData)
     {
-        LOG_ERROR("Data for demon not found.\n");
-
         return nullptr;
     }
 
     //Create a new demon from it's defaults
     auto growth = demonData->GetGrowth();
 
+    auto server = mServer.lock();
+    auto definitionManager = server->GetDefinitionManager();
+
     auto d = libcomp::PersistentObject::New<
         objects::Demon>(true);
     d->SetType(demonData->GetBasic()->GetID());
+    d->SetGrowthType(demonData->GetGrowth()->GetGrowthType());
     d->SetFamiliarity(familiarity);
+
+    int8_t level = (int8_t)growth->GetBaseLevel();
+
+    // Don't create over max level, even if base is higher
+    int8_t levelCap = server->GetWorldSharedConfig()->GetLevelCap();
+    if(level > levelCap)
+    {
+        level = levelCap;
+    }
 
     auto ds = libcomp::PersistentObject::New<
         objects::EntityStats>(true);
-    ds->SetLevel(static_cast<int8_t>(growth->GetBaseLevel()));
+    ds->SetLevel(level);
     d->SetCoreStats(ds);
 
     CalculateDemonBaseStats(d);
 
     // Add learned skills
-    auto definitionManager = mServer.lock()->GetDefinitionManager();
     for(size_t i = 0; i < 8; i++)
     {
         uint32_t skillID = growth->GetSkills(i);
@@ -2898,6 +2911,54 @@ int32_t CharacterManager::UpdateSoulPoints(const std::shared_ptr<
     return points;
 }
 
+void CharacterManager::UpdateFusionGauge(const std::shared_ptr<
+    channel::ChannelClientConnection>& client, int32_t points, bool isAdjust)
+{
+    auto state = client->GetClientState();
+    auto cState = state->GetCharacterState();
+    auto character = cState->GetEntity();
+
+    int32_t current = (int32_t)character->GetFusionGauge();
+    int32_t newPoints = isAdjust ? current + points : points;
+    uint8_t maxStocks = cState->GetMaxFusionGaugeStocks();
+
+    if(newPoints > (int32_t)(maxStocks * 10000))
+    {
+        newPoints = (int32_t)(maxStocks * 10000);
+    }
+
+    if(newPoints < 0 || !HasValuable(character,
+        SVR_CONST.VALUABLE_FUSION_GAUGE))
+    {
+        newPoints = 0;
+    }
+
+    if(current != newPoints)
+    {
+        character->SetFusionGauge((uint32_t)newPoints);
+
+        // If the visible percentage changed, send to the client
+        if((current / 100) != (newPoints / 100))
+        {
+            SendFusionGauge(client);
+        }
+    }
+}
+
+void CharacterManager::SendFusionGauge(const std::shared_ptr<
+    channel::ChannelClientConnection>& client)
+{
+    auto state = client->GetClientState();
+    auto cState = state->GetCharacterState();
+
+    libcomp::Packet notify;
+    notify.WritePacketCode(ChannelToClientPacketCode_t::PACKET_FUSION_GAUGE);
+    notify.WriteS32Little((int32_t)cState->GetEntity()->GetFusionGauge());
+    notify.WriteU8(cState->GetMaxFusionGaugeStocks());
+
+    client->SendPacket(notify);
+}
+
 void CharacterManager::ExperienceGain(const std::shared_ptr<
     channel::ChannelClientConnection>& client, uint64_t xpGain, int32_t entityID)
 {
@@ -2910,7 +2971,16 @@ void CharacterManager::ExperienceGain(const std::shared_ptr<
     auto demon = dState->GetEntity();
 
     auto eState = state->GetEntityState(entityID);
-    if(!eState->Ready())
+    auto stats = eState->GetCoreStats();
+    if(!eState->Ready() || !stats)
+    {
+        return;
+    }
+
+    int8_t levelCap = server->GetWorldSharedConfig()->GetLevelCap();
+
+    auto level = stats->GetLevel();
+    if(level >= levelCap)
     {
         return;
     }
@@ -2918,27 +2988,49 @@ void CharacterManager::ExperienceGain(const std::shared_ptr<
     bool isDemon = false;
     auto demonData = eState->GetDevilData();
     int32_t fType = 0;
+
+    std::set<uint32_t> demonSkills;
     if(eState == dState)
     {
         isDemon = true;
+
+        // Demons cannot level when dead
+        if(!dState->IsAlive() || !demonData)
+        {
+            return;
+        }
+
         fType = demonData->GetFamiliarity()->GetFamiliarityType();
-    }
 
-    // Demons cannot level when dead
-    if(isDemon && !dState->IsAlive())
-    {
-        return;
-    }
+        // Gather all skills so nothing is "re-acquired"
+        for(uint32_t skillID : demon->GetLearnedSkills())
+        {
+            if(skillID)
+            {
+                demonSkills.insert(skillID);
+            }
+        }
 
-    auto stats = eState->GetCoreStats();
-    auto level = stats->GetLevel();
-    if(level == 99)
-    {
-        return;
+        for(uint32_t skillID : demon->GetAcquiredSkills())
+        {
+            if(skillID)
+            {
+                demonSkills.insert(skillID);
+            }
+        }
+
+        for(auto iSkill : demon->GetInheritedSkills())
+        {
+            if(iSkill)
+            {
+                demonSkills.insert(iSkill->GetSkill());
+            }
+        }
     }
 
     int64_t xpDelta = stats->GetXP() + (int64_t)xpGain;
-    while(level < 99 && xpDelta >= (int64_t)libcomp::LEVEL_XP_REQUIREMENTS[level])
+    while(level < levelCap &&
+        xpDelta >= (int64_t)libcomp::LEVEL_XP_REQUIREMENTS[level])
     {
         xpDelta = xpDelta - (int64_t)libcomp::LEVEL_XP_REQUIREMENTS[level];
 
@@ -2953,10 +3045,12 @@ void CharacterManager::ExperienceGain(const std::shared_ptr<
             auto growth = demonData->GetGrowth();
             for(auto acSkill : growth->GetAcquisitionSkills())
             {
-                if(acSkill->GetLevel() == (uint32_t)level)
+                if(acSkill->GetLevel() == (uint32_t)level &&
+                    demonSkills.find(acSkill->GetID()) == demonSkills.end())
                 {
                     demon->AppendAcquiredSkills(acSkill->GetID());
                     newSkills.push_back(acSkill->GetID());
+                    demonSkills.insert(acSkill->GetID());
                 }
             }
 
@@ -3032,6 +3126,11 @@ void CharacterManager::ExperienceGain(const std::shared_ptr<
         }
 
         server->GetZoneManager()->BroadcastPacket(client, reply, true);
+    }
+
+    if(level == levelCap)
+    {
+        xpDelta = 0;
     }
 
     stats->SetXP(xpDelta);
@@ -4495,17 +4594,23 @@ void CharacterManager::CalculateDemonBaseStats(
     auto server = mServer.lock();
     auto definitionManager = server->GetDefinitionManager();
 
+    uint8_t growthType = 0;
     if(demon)
     {
         ds = demon->GetCoreStats().Get();
         demonData = definitionManager->GetDevilData(demon->GetType());
+        growthType = demon->GetGrowthType();
     }
 
     auto basicData = demonData->GetBasic();
     auto battleData = demonData->GetBattleData();
-    auto growthData = demonData->GetGrowth();
-    auto baseLevelRate = definitionManager->GetDevilLVUpRateData(
-        demonData->GetGrowth()->GetGrowthType());
+
+    if(!growthType)
+    {
+        growthType = demonData->GetGrowth()->GetGrowthType();
+    }
+
+    auto baseLevelRate = definitionManager->GetDevilLVUpRateData(growthType);
 
     int8_t level = ds->GetLevel();
     uint8_t boostLevel = static_cast<uint8_t>((level + 3) / 4);
@@ -4567,6 +4672,10 @@ void CharacterManager::CalculateDemonBaseStats(
 
     if(demon)
     {
+        // Familiarity boost is applied from the base growth type, not the
+        // current growth type
+        auto famLevelRate = definitionManager->GetDevilLVUpRateData(
+            demonData->GetGrowth()->GetGrowthType());
         int8_t familiarityRank = GetFamiliarityRank(demon->GetFamiliarity());
         if(familiarityRank < 0)
         {
@@ -4574,7 +4683,7 @@ void CharacterManager::CalculateDemonBaseStats(
             for(int8_t i = familiarityRank; i < 0; i++)
             {
                 size_t famBoost = (size_t)(abs(i) - 1);
-                BoostStats(stats, baseLevelRate->GetLevelUpData(famBoost), -1);
+                BoostStats(stats, famLevelRate->GetLevelUpData(famBoost), -1);
             }
         }
         else if(familiarityRank > 0)
@@ -4583,11 +4692,11 @@ void CharacterManager::CalculateDemonBaseStats(
             for(int8_t i = 0; i < familiarityRank; i++)
             {
                 size_t famBoost = (size_t)i;
-                BoostStats(stats, baseLevelRate->GetLevelUpData(famBoost), 1);
+                BoostStats(stats, famLevelRate->GetLevelUpData(famBoost), 1);
             }
         }
 
-        /// @todo: apply reunion boosts
+        AdjustDemonBaseStats(demon, stats, true);
     }
 
     CalculateDependentStats(stats, level, true);
@@ -4600,6 +4709,8 @@ void CharacterManager::CalculateDemonBaseStats(
             stat.second = 0x7FFF;
         }
     }
+
+    AdjustStatBounds(stats, demon != nullptr);
 
     ds->SetMaxHP(stats[CorrectTbl::HP_MAX]);
     ds->SetMaxMP(stats[CorrectTbl::MP_MAX]);
@@ -4617,6 +4728,132 @@ void CharacterManager::CalculateDemonBaseStats(
     ds->SetSUPPORT(stats[CorrectTbl::SUPPORT]);
     ds->SetPDEF(stats[CorrectTbl::PDEF]);
     ds->SetMDEF(stats[CorrectTbl::MDEF]);
+}
+
+void CharacterManager::AdjustDemonBaseStats(const std::shared_ptr<
+    objects::Demon>& demon, libcomp::EnumMap<CorrectTbl, int16_t>& stats,
+    bool baseCalc)
+{
+    if(!demon)
+    {
+        return;
+    }
+    else if(baseCalc)
+    {
+        // Reset base values initialized here
+        demon->SetMagReduction(0);
+    }
+
+    // Apply reunion boosts
+    auto reunionBonuses = demon->GetReunion();
+    for(size_t i = 0; i < 12; i++)
+    {
+        int8_t reunionRank = reunionBonuses[i];
+        if(reunionRank > 1)
+        {
+            int8_t rBoost = (int8_t)(reunionRank - 1);
+            switch(i)
+            {
+            case 0:     // Tiwaz (テイワズ)
+                stats[CorrectTbl::CLSR] = (int16_t)(
+                    stats[CorrectTbl::CLSR] + 4 * rBoost);
+                break;
+            case 1:     // Peorth (ペオース)
+                stats[CorrectTbl::SPELL] = (int16_t)(
+                    stats[CorrectTbl::SPELL] + 4 * rBoost);
+                break;
+            case 2:     // Eoh (エオー)
+                stats[CorrectTbl::LNGR] = (int16_t)(
+                    stats[CorrectTbl::LNGR] + 4 * rBoost);
+                break;
+            case 3:     // Eihwaz (エイワズ)
+                stats[CorrectTbl::SUPPORT] = (int16_t)(
+                    stats[CorrectTbl::SUPPORT] + 4 * rBoost);
+                break;
+            case 4:     // Uruz (ウルズ)
+                stats[CorrectTbl::CLSR] = (int16_t)(
+                    stats[CorrectTbl::CLSR] + 2 * rBoost);
+                stats[CorrectTbl::LNGR] = (int16_t)(
+                    stats[CorrectTbl::LNGR] + 2 * rBoost);
+                break;
+            case 5:     // Hagalaz (ハガラズ)
+                stats[CorrectTbl::CLSR] = (int16_t)(
+                    stats[CorrectTbl::CLSR] + 2 * rBoost);
+                stats[CorrectTbl::SPELL] = (int16_t)(
+                    stats[CorrectTbl::SPELL] + 2 * rBoost);
+                break;
+            case 6:     // Laguz (ラグズ)
+                stats[CorrectTbl::LNGR] = (int16_t)(
+                    stats[CorrectTbl::LNGR] + 2 * rBoost);
+                stats[CorrectTbl::SPELL] = (int16_t)(
+                    stats[CorrectTbl::SPELL] + 2 * rBoost);
+                break;
+            case 7:     // Ansuz (アンサズ)
+                stats[CorrectTbl::MDEF] = (int16_t)(
+                    stats[CorrectTbl::MDEF] + 5 * rBoost);
+                break;
+            case 8:     // Nauthiz (ナウシズ)
+                stats[CorrectTbl::PDEF] = (int16_t)(
+                    stats[CorrectTbl::PDEF] + 5 * rBoost);
+                break;
+            case 9:     // Ingwaz (イング)
+                if(baseCalc)
+                {
+                    int32_t reduction = (5 * rBoost);
+
+                    // Cap at 100%
+                    if(reduction > 100)
+                    {
+                        reduction = 100;
+                    }
+
+                    demon->SetMagReduction((int8_t)reduction);
+                }
+                break;
+            case 10:    // Sigel (シーグル)
+                if(baseCalc)
+                {
+                    stats[CorrectTbl::STR] = (int16_t)(
+                        stats[CorrectTbl::STR] + 3 * rBoost);
+                    stats[CorrectTbl::MAGIC] = (int16_t)(
+                        stats[CorrectTbl::MAGIC] + 3 * rBoost);
+                    stats[CorrectTbl::VIT] = (int16_t)(
+                        stats[CorrectTbl::VIT] + 3 * rBoost);
+                    stats[CorrectTbl::INT] = (int16_t)(
+                        stats[CorrectTbl::INT] + 3 * rBoost);
+                    stats[CorrectTbl::SPEED] = (int16_t)(
+                        stats[CorrectTbl::SPEED] + 3 * rBoost);
+                    stats[CorrectTbl::LUCK] = (int16_t)(
+                        stats[CorrectTbl::LUCK] + 3 * rBoost);
+                }
+                break;
+            case 11:    // Wyrd (ウィアド)
+                stats[CorrectTbl::HP_MAX] = (int16_t)(
+                    stats[CorrectTbl::HP_MAX] + 40 * rBoost);
+                stats[CorrectTbl::MP_MAX] = (int16_t)(
+                    stats[CorrectTbl::MP_MAX] + 10 * rBoost);
+                break;
+            default:
+                break;
+            }
+        }
+    }
+
+    // Add demon force if not performing a base calculation
+    if(!baseCalc)
+    {
+        for(size_t i = 0; i < 20; i++)
+        {
+            int32_t fVal = demon->GetForceValues(i);
+
+            // Only apply if at least one point has been achieved
+            if(fVal >= 100000)
+            {
+                CorrectTbl tblID = (CorrectTbl)libcomp::DEMON_FORCE_CONVERSION[i];
+                stats[tblID] = (int16_t)(stats[tblID] + fVal / 100000);
+            }
+        }
+    }
 }
 
 libcomp::EnumMap<CorrectTbl, int16_t> CharacterManager::GetCharacterBaseStatMap(
@@ -4942,8 +5179,17 @@ void CharacterManager::GetDemonPacketData(libcomp::Packet& p,
 
         p.WriteS8(0);   //Unknown
 
-        //Epitaph/Mitama fusion flag
-        p.WriteS8(0);
+        bool equipped = false;
+        for(auto equip : demon->GetEquippedItems())
+        {
+            if(!equip.IsNull())
+            {
+                equipped = true;
+                break;
+            }
+        }
+
+        p.WriteS8(equipped ? 1 : 0);
 
         //Effect length in seconds
         p.WriteS32Little(0);

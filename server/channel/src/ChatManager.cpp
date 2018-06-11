@@ -91,6 +91,7 @@ ChatManager::ChatManager(const std::weak_ptr<ChannelServer>& server)
     mGMands["expertisemax"] = &ChatManager::GMCommand_ExpertiseExtend;
     mGMands["familiarity"] = &ChatManager::GMCommand_Familiarity;
     mGMands["flag"] = &ChatManager::GMCommand_Flag;
+    mGMands["fgauge"] = &ChatManager::GMCommand_FusionGauge;
     mGMands["goto"] = &ChatManager::GMCommand_Goto;
     mGMands["help"] = &ChatManager::GMCommand_Help;
     mGMands["homepoint"] = &ChatManager::GMCommand_Homepoint;
@@ -1086,6 +1087,30 @@ bool ChatManager::GMCommand_Flag(const std::shared_ptr<
     return true;
 }
 
+bool ChatManager::GMCommand_FusionGauge(const std::shared_ptr<
+    channel::ChannelClientConnection>& client,
+    const std::list<libcomp::String>& args)
+{
+    if(!HaveUserLevel(client, 250))
+    {
+        return true;
+    }
+
+    std::list<libcomp::String> argsCopy = args;
+
+    uint32_t points;
+
+    if(!GetIntegerArg(points, argsCopy))
+    {
+        return false;
+    }
+
+    mServer.lock()->GetCharacterManager()->UpdateFusionGauge(
+        client, (int32_t)points, false);
+
+    return true;
+}
+
 bool ChatManager::GMCommand_Goto(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
@@ -1241,6 +1266,12 @@ bool ChatManager::GMCommand_Help(const std::shared_ptr<
             "List, get or set zone flags. TYPE must be 'zone' or 'inst'.",
             "CID may be 0 for no specific character. If VALUE is not",
             "given the key is printed out instead of set.",
+        } },
+        { "fgauge", {
+            "@fgauge VALUE",
+            "Updates the current character's fusion gauge to the given",
+            "VALUE which can be in the range of [0-10000] times the",
+            "number of fusion gauge stocks available."
         } },
         { "goto", {
             "@goto [SELF] NAME",

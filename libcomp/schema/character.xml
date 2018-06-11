@@ -35,6 +35,9 @@
         <member type="s32" name="LoginPoints"/>
         <member type="u32" name="LastLogin"/>
         <member type="Clan*" name="Clan"/>
+        <member type="u8" name="CurrentTitle" max="4"/>
+        <member type="bool" name="TitlePrioritized"/>
+        <member type="u32" name="FusionGauge"/>
 
         <!-- Collections -->
         <member type="set" name="LearnedSkills">
@@ -73,8 +76,6 @@
         <member type="array" name="CustomTitles" size="65">
             <element type="s16" default="-1"/>
         </member>
-        <member type="u8" name="CurrentTitle" max="4"/>
-        <member type="bool" name="TitlePrioritized"/>
 
         <!-- Sub-sections -->
         <member type="EntityStats*" name="CoreStats"/>

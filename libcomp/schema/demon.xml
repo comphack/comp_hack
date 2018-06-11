@@ -5,9 +5,13 @@
         <member type="pref" name="DemonBox" key="true" unique="false"/>
         <member type="s8" name="BoxSlot" default="-1"/>
         <member type="u16" name="AttackSettings"/>
+        <member type="u8" name="GrowthType"/>
+        <member type="s8" name="MagReduction" min="0" max="100"/>
         <member type="s32" name="SoulPoints" min="0" max="100000"/>
         <member type="u16" name="Familiarity" min="0" max="10000"/>
         <member type="bool" name="Locked"/>
+        <member type="s32" name="BenefitGauge"/>
+        <member type="u16" name="ForceStackPending"/>
         <member type="bool" name="HasQuest"/>
         
         <!-- Collections -->
@@ -25,6 +29,12 @@
         </member>
         <member type="array" name="Reunion" size="12">
             <element type="s8"/>
+        </member>
+        <member type="array" name="ForceValues" size="20">
+            <element type="s32"/>
+        </member>
+        <member type="array" name="ForceStack" size="8">
+            <element type="u16"/>
         </member>
         <member type="array" name="EquippedItems" size="4">
             <element type="Item*"/>

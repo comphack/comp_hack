@@ -2005,9 +2005,8 @@ std::shared_ptr<objects::DemonQuest> EventManager::GenerateDemonQuest(
     uint8_t raceID = (uint8_t)demonData->GetCategory()->GetRace();
 
     // Gather the valid types based the requesting demon
-    const static uint16_t enabledTypeFlags = std::dynamic_pointer_cast<
-        objects::ChannelConfig>(server->GetConfig())
-        ->GetWorldSharedConfig()->GetEnabledDemonQuests();
+    uint16_t enabledTypeFlags = server->GetWorldSharedConfig()
+        ->GetEnabledDemonQuests();
 
     const uint8_t flagCount = (uint8_t)objects::DemonQuest::Type_t::PLASMA -
         (uint8_t)objects::DemonQuest::Type_t::KILL + 1;

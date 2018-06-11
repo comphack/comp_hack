@@ -40,10 +40,15 @@
 #include <MiCZoneRelationData.h>
 #include <MiDCategoryData.h>
 #include <MiDevilBookData.h>
+#include <MiDevilBoostData.h>
+#include <MiDevilBoostExtraData.h>
+#include <MiDevilBoostItemData.h>
+#include <MiDevilBoostLotData.h>
 #include <MiDevilCrystalData.h>
 #include <MiDevilData.h>
 #include <MiDevilEquipmentData.h>
 #include <MiDevilEquipmentItemData.h>
+#include <MiDevilFusionData.h>
 #include <MiDevilLVUpRateData.h>
 #include <MiDisassemblyData.h>
 #include <MiDisassemblyTriggerData.h>
@@ -126,6 +131,52 @@ std::unordered_map<uint32_t, std::shared_ptr<objects::MiDevilBookData>>
     return mDevilBookData;
 }
 
+const std::shared_ptr<objects::MiDevilBoostData>
+    DefinitionManager::GetDevilBoostData(uint32_t id)
+{
+    return GetRecordByID(id, mDevilBoostData);
+}
+
+const std::shared_ptr<objects::MiDevilBoostExtraData>
+    DefinitionManager::GetDevilBoostExtraData(uint16_t id)
+{
+    return GetRecordByID(id, mDevilBoostExtraData);
+}
+
+const std::shared_ptr<objects::MiDevilBoostItemData>
+    DefinitionManager::GetDevilBoostItemData(uint32_t id)
+{
+    return GetRecordByID(id, mDevilBoostItemData);
+}
+
+std::list<uint16_t> DefinitionManager::GetDevilBoostLotIDs(int32_t count)
+{
+    std::list<uint16_t> results;
+
+    bool directFound = false;
+    for(auto& pair : mDevilBoostLots)
+    {
+        directFound |= pair.first == count;
+
+        if((count < 100 || pair.first % 100 == 0) &&
+            (pair.first == count || (count % pair.first) == 0))
+        {
+            for(uint16_t stackID : pair.second)
+            {
+                results.push_back(stackID);
+            }
+        }
+    }
+
+    // For the lower values, only include if a direct match is found
+    if(count < 100 && !directFound)
+    {
+        results.clear();
+    }
+
+    return results;
+}
+
 const std::shared_ptr<objects::MiDevilData>
     DefinitionManager::GetDevilData(uint32_t id)
 {
@@ -154,6 +205,36 @@ const std::shared_ptr<objects::MiDevilEquipmentItemData>
     DefinitionManager::GetDevilEquipmentItemData(uint32_t id)
 {
     return GetRecordByID(id, mDevilEquipmentItemData);
+}
+
+const std::shared_ptr<objects::MiDevilFusionData>
+    DefinitionManager::GetDevilFusionData(uint32_t id)
+{
+    return GetRecordByID(id, mDevilFusionData);
+}
+
+std::set<uint32_t> DefinitionManager::GetDevilFusionIDsByDemonID(
+    uint32_t demonID)
+{
+    std::set<uint32_t> results;
+
+    // Results are gathered based on direct and base demon ID
+    auto demonDef = GetDevilData(demonID);
+    uint32_t baseDemonID = demonDef
+        ? demonDef->GetUnionData()->GetBaseDemonID() : 0;
+    for(uint32_t id : { demonID, baseDemonID })
+    {
+        auto iter = mDevilFusionLookup.find(id);
+        if(iter != mDevilFusionLookup.end())
+        {
+            for(uint32_t fusionID : iter->second)
+            {
+                results.insert(fusionID);
+            }
+        }
+    }
+
+    return results;
 }
 
 const std::shared_ptr<objects::MiDevilLVUpRateData>
@@ -699,6 +780,67 @@ namespace libcomp
     }
 
     template <>
+    bool DefinitionManager::LoadData<objects::MiDevilBoostData>(
+        gsl::not_null<DataStore*> pDataStore)
+    {
+        std::list<std::shared_ptr<objects::MiDevilBoostData>> records;
+        bool success = LoadBinaryData<objects::MiDevilBoostData>(pDataStore,
+            "Shield/DevilBoostData.sbin", true, 0, records);
+        for(auto record : records)
+        {
+            mDevilBoostData[record->GetID()] = record;
+        }
+
+        return success;
+    }
+
+    template <>
+    bool DefinitionManager::LoadData<objects::MiDevilBoostExtraData>(
+        gsl::not_null<DataStore*> pDataStore)
+    {
+        std::list<std::shared_ptr<objects::MiDevilBoostExtraData>> records;
+        bool success = LoadBinaryData<objects::MiDevilBoostExtraData>(pDataStore,
+            "Shield/DevilBoostExtraData.sbin", true, 0, records);
+        for(auto record : records)
+        {
+            mDevilBoostExtraData[record->GetStackID()] = record;
+        }
+
+        return success;
+    }
+
+    template <>
+    bool DefinitionManager::LoadData<objects::MiDevilBoostItemData>(
+        gsl::not_null<DataStore*> pDataStore)
+    {
+        std::list<std::shared_ptr<objects::MiDevilBoostItemData>> records;
+        bool success = LoadBinaryData<objects::MiDevilBoostItemData>(pDataStore,
+            "Shield/DevilBoostItemData.sbin", true, 0, records);
+        for(auto record : records)
+        {
+            mDevilBoostItemData[record->GetItemID()] = record;
+        }
+
+        return success;
+    }
+
+    template <>
+    bool DefinitionManager::LoadData<objects::MiDevilBoostLotData>(
+        gsl::not_null<DataStore*> pDataStore)
+    {
+        std::list<std::shared_ptr<objects::MiDevilBoostLotData>> records;
+        bool success = LoadBinaryData<objects::MiDevilBoostLotData>(pDataStore,
+            "Shield/DevilBoostLotData.sbin", true, 0, records);
+        for(auto record : records)
+        {
+            mDevilBoostLots[(int32_t)record->GetLot()].push_back(
+                record->GetStackID());
+        }
+
+        return success;
+    }
+
+    template <>
     bool DefinitionManager::LoadData<objects::MiDevilData>(
         gsl::not_null<DataStore*> pDataStore)
     {
@@ -766,6 +908,30 @@ namespace libcomp
         for(auto record : records)
         {
             mDevilEquipmentItemData[record->GetItemID()] = record;
+        }
+
+        return success;
+    }
+
+    template <>
+    bool DefinitionManager::LoadData<objects::MiDevilFusionData>(
+        gsl::not_null<DataStore*> pDataStore)
+    {
+        std::list<std::shared_ptr<objects::MiDevilFusionData>> records;
+        bool success = LoadBinaryData<objects::MiDevilFusionData>(
+            pDataStore, "Shield/DevilFusionData.sbin", true, 0, records);
+        for(auto record : records)
+        {
+            uint32_t skillID = record->GetSkillID();
+            mDevilFusionData[skillID] = record;
+
+            for(uint32_t demonID : record->GetRequiredDemons())
+            {
+                if(demonID)
+                {
+                    mDevilFusionLookup[demonID].insert(skillID);
+                }
+            }
         }
 
         return success;
@@ -1367,8 +1533,13 @@ bool DefinitionManager::LoadAllData(gsl::not_null<DataStore*> pDataStore)
     success &= LoadData<objects::MiCItemData>(pDataStore);
     success &= LoadData<objects::MiDevilData>(pDataStore);
     success &= LoadData<objects::MiDevilBookData>(pDataStore);
+    success &= LoadData<objects::MiDevilBoostData>(pDataStore);
+    success &= LoadData<objects::MiDevilBoostExtraData>(pDataStore);
+    success &= LoadData<objects::MiDevilBoostItemData>(pDataStore);
+    success &= LoadData<objects::MiDevilBoostLotData>(pDataStore);
     success &= LoadData<objects::MiDevilEquipmentData>(pDataStore);
     success &= LoadData<objects::MiDevilEquipmentItemData>(pDataStore);
+    success &= LoadData<objects::MiDevilFusionData>(pDataStore);
     success &= LoadData<objects::MiDevilLVUpRateData>(pDataStore);
     success &= LoadData<objects::MiDisassemblyData>(pDataStore);
     success &= LoadData<objects::MiDisassemblyTriggerData>(pDataStore);

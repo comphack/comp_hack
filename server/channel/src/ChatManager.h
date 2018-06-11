@@ -257,6 +257,16 @@ private:
         const std::list<libcomp::String>& args);
 
     /**
+     * GM command to update the client's fusion gauge.
+     * @param client Pointer to the client that sent the command
+     * @param args List of arguments for the command
+     * @return true if the command was handled properly, else false
+     */
+    bool GMCommand_FusionGauge(const std::shared_ptr<
+        channel::ChannelClientConnection>& client,
+        const std::list<libcomp::String>& args);
+
+    /**
      * GM command to move one player to another player.
      * @param client Pointer to the client that sent the command
      * @param args List of arguments for the command

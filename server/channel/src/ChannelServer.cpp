@@ -276,8 +276,6 @@ bool ChannelServer::Initialize()
         to_underlying(ClientToChannelPacketCode_t::PACKET_SYNC));
     clientPacketManager->AddParser<Parsers::ShopRepair>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_SHOP_REPAIR));
-    clientPacketManager->AddParser<Parsers::DemonAISet>(
-        to_underlying(ClientToChannelPacketCode_t::PACKET_DEMON_AI_SET));
     clientPacketManager->AddParser<Parsers::Rotate>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_ROTATE));
     clientPacketManager->AddParser<Parsers::LootBossBox>(
@@ -366,6 +364,8 @@ bool ChannelServer::Initialize()
         to_underlying(ClientToChannelPacketCode_t::PACKET_SKILL_EXECUTE_INSTANT));
     clientPacketManager->AddParser<Parsers::SyncCharacter>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_SYNC_CHARACTER));
+    clientPacketManager->AddParser<Parsers::DemonAISet>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_DEMON_AI_SET));
     clientPacketManager->AddParser<Parsers::BazaarInteract>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_BAZAAR_INTERACT));
     clientPacketManager->AddParser<Parsers::SkillForget>(
@@ -480,6 +480,8 @@ bool ChannelServer::Initialize()
         to_underlying(ClientToChannelPacketCode_t::PACKET_DEMON_QUEST_ACTIVE));
     clientPacketManager->AddParser<Parsers::DemonLock>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_DEMON_LOCK));
+    clientPacketManager->AddParser<Parsers::DemonReunion>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_DEMON_REUNION));
     clientPacketManager->AddParser<Parsers::DemonQuestReject>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_DEMON_QUEST_REJECT));
     clientPacketManager->AddParser<Parsers::PvPCharacterInfo>(
@@ -498,6 +500,10 @@ bool ChannelServer::Initialize()
         to_underlying(ClientToChannelPacketCode_t::PACKET_DEMON_DEPO_REMOTE));
     clientPacketManager->AddParser<Parsers::CommonSwitchInfo>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_COMMON_SWITCH_INFO));
+    clientPacketManager->AddParser<Parsers::DemonForce>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_DEMON_FORCE));
+    clientPacketManager->AddParser<Parsers::DemonForceStack>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_DEMON_FORCE_STACK));
     clientPacketManager->AddParser<Parsers::CasinoCoinTotal>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_CASINO_COIN_TOTAL));
     clientPacketManager->AddParser<Parsers::TriFusionSolo>(
@@ -516,6 +522,8 @@ bool ChannelServer::Initialize()
         to_underlying(ClientToChannelPacketCode_t::PACKET_PATTRIBUTE_DEADLINE));
     clientPacketManager->AddParser<Parsers::DemonDepoList>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_DEMON_DEPO_LIST));
+    clientPacketManager->AddParser<Parsers::DemonForceEnd>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_DEMON_FORCE_END));
     clientPacketManager->AddParser<Parsers::DemonEquip>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_DEMON_EQUIP));
     clientPacketManager->AddParser<Parsers::Barter>(
@@ -926,6 +934,13 @@ ChannelSyncManager* ChannelServer::GetChannelSyncManager() const
 TokuseiManager* ChannelServer::GetTokuseiManager() const
 {
     return mTokuseiManager;
+}
+
+std::shared_ptr<objects::WorldSharedConfig>
+    ChannelServer::GetWorldSharedConfig() const
+{
+    return std::dynamic_pointer_cast<objects::ChannelConfig>(
+        GetConfig())->GetWorldSharedConfig();
 }
 
 int32_t ChannelServer::GetNextEntityID()

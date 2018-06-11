@@ -125,6 +125,12 @@ struct Data
     /// Function ID for the demonic compendium add skill
     uint16_t SKILL_DCM;
 
+    /// Function ID of multi-entity demon fusion skills
+    uint16_t SKILL_DEMON_FUSION;
+
+    /// Function ID of multi-entity demon fusion execution skills
+    uint16_t SKILL_DEMON_FUSION_EXECUTE;
+
     /// Function ID of equipment changing skills
     uint16_t SKILL_EQUIP_ITEM;
 
@@ -225,6 +231,12 @@ struct Data
     /// Valuable ID of the demonic compendium V2
     uint16_t VALUABLE_DEVIL_BOOK_V2;
 
+    /// Valuable ID of the demon force enabling item
+    uint16_t VALUABLE_DEMON_FORCE;
+
+    /// Valuable ID of the fusion gauge enabling item
+    uint16_t VALUABLE_FUSION_GAUGE;
+
     /// Valuable ID of the material tank that stores disassembled items
     uint16_t VALUABLE_MATERIAL_TANK;
 
@@ -248,6 +260,10 @@ struct Data
     /// Map of demon crystal item types to races that can be fused with them
     /// for cyrstallization
     std::unordered_map<uint32_t, std::set<uint8_t>> DEMON_CRYSTALS;
+
+    /// Set of demon fusion level 1-3 skills by COMP demon inheritance type
+    /// to be used when performing a demon fusion skill
+    std::array<std::array<uint32_t, 3>, 21> DEMON_FUSION_SKILLS;
 
     /// List of bonus XP gained from sequential demon quest completions
     std::list<uint32_t> DEMON_QUEST_XP;

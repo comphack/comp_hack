@@ -227,17 +227,17 @@ namespace libcomp
 /// The skill activation contains no extra information.
 #define ACTIVATION_NOTARGET (0)
 
-/// The skill activation contains a target UID.
+/// The skill activation contains a target entity ID.
 #define ACTIVATION_TARGET   (1)
 
-/// The skill activation contains a demon UID.
+/// The skill activation contains a demon object ID.
 #define ACTIVATION_DEMON    (2)
 
-/// The skill activation contains an item UID.
+/// The skill activation contains an item object ID.
 #define ACTIVATION_ITEM     (3)
 
-/// The maximum skill activation extra info type value.
-#define ACTIVATION_MAX      (4)
+/// The skill activation contains fusion skill parameters.
+#define ACTIVATION_FUSION   (7)
 
 /// Cost type for HP.
 #define COST_TYPE_HP   (0)
@@ -467,6 +467,72 @@ const unsigned long long LEVEL_XP_REQUIREMENTS[] = {
     41910759592ULL,     // 96->97
     125732278776ULL,    // 97->98
     565795254492ULL,    // 98->99
+};
+
+/// Fusion gauge points gained by using a skill listed in the order of player
+/// character against lower level enemies, then equal or higher level, followed
+/// by demon against lower level enemies, then equal or higher level.
+/// Each row maps directly to the index of the skill's action type excluding
+/// the higher index non-combat types.
+const unsigned char FUSION_GAUGE_GROWTH[8][4] = {
+    { 18, 35, 25, 50 },     // Attack
+    { 18, 35, 31, 61 },     // Spin
+    { 25, 50, 40, 78 },     // Rush
+    { 23, 46, 38, 74 },     // Shot
+    { 18, 35, 28, 57 },     // Rapid
+    { 36, 70, 57, 110 },    // Guard
+    { 44, 86, 66, 120 },    // Counter
+    { 31, 61, 40, 78 }      // Dodge
+};
+
+/// Array of demon force stats in index order mapped to their corresponding
+/// correct table stat index
+const unsigned char DEMON_FORCE_CONVERSION[20] = {
+    6,  // HP_MAX
+    7,  // MP_MAX
+    0,  // STR
+    1,  // MAGIC
+    2,  // VIT
+    3,  // INT
+    4,  // SPEED
+    5,  // LUCK
+    8,  // HP_REGEN
+    9,  // MP_REGEN
+    12, // CLSR
+    13, // LNGR
+    14, // SPELL
+    15, // SUPPORT
+    16, // CRITICAL
+    19, // PDEF
+    20, // MDEF
+    21, // CRIT_DEF
+    80, // RATE_XP
+    79  // RES_STATUS
+};
+
+/// Maximum boost values for demon force stats. A single boost value is
+/// actually 100000 points data-side.
+const unsigned short DEMON_FORCE_MAX[20] = {
+    500,    // HP_MAX
+    100,    // MP_MAX
+    50,     // STR
+    50,     // MAGIC
+    50,     // VIT
+    50,     // INT
+    50,     // SPEED
+    50,     // LUCK
+    100,    // HP_REGEN
+    10,     // MP_REGEN
+    40,     // CLSR
+    40,     // LNGR
+    40,     // SPELL
+    40,     // SUPPORT
+    100,    // CRITICAL
+    5,      // PDEF
+    5,      // MDEF
+    100,    // CRIT_DEF
+    300,    // RATE_XP
+    50      // RES_STATUS
 };
 
 } // namespace libcomp

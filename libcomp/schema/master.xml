@@ -91,6 +91,7 @@
     <include path="binarydata/ctalkmessagedata.xml"/>
     <include path="binarydata/czonerelationdata.xml"/>
     <include path="binarydata/devilbookdata.xml"/>
+    <include path="binarydata/devilboostdata.xml"/>
     <include path="binarydata/devildata.xml"/>
     <include path="binarydata/devilequipmentdata.xml"/>
     <include path="binarydata/devillvupratedata.xml"/>
@@ -101,6 +102,7 @@
     <include path="binarydata/eventdirectiondata.xml"/>
     <include path="binarydata/exchangedata.xml"/>
     <include path="binarydata/expertdata.xml"/>
+    <include path="binarydata/fusiondata.xml"/>
     <include path="binarydata/hnpcdata.xml"/>
     <include path="binarydata/itemdata.xml"/>
     <include path="binarydata/modificationdata.xml"/>

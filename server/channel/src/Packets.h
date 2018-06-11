@@ -206,6 +206,7 @@ PACKET_PARSER_DECL(DemonQuestCancel);       // 0x022B
 PACKET_PARSER_DECL(DemonQuestList);         // 0x022D
 PACKET_PARSER_DECL(DemonQuestActive);       // 0x022F
 PACKET_PARSER_DECL(DemonLock);              // 0x0233
+PACKET_PARSER_DECL(DemonReunion);           // 0x0235
 PACKET_PARSER_DECL(DemonQuestReject);       // 0x023A
 PACKET_PARSER_DECL(PvPCharacterInfo);       // 0x024D
 PACKET_PARSER_DECL(ItemMix);                // 0x025D
@@ -215,9 +216,12 @@ PACKET_PARSER_DECL(DemonQuestPending);      // 0x028F
 PACKET_PARSER_DECL(ItemDepoRemote);         // 0x0296
 PACKET_PARSER_DECL(DemonDepoRemote);        // 0x02EF
 PACKET_PARSER_DECL(CommonSwitchInfo);       // 0x02F4
+PACKET_PARSER_DECL(DemonForce);             // 0x02F6
+PACKET_PARSER_DECL(DemonForceStack);        // 0x02F8
 PACKET_PARSER_DECL(CasinoCoinTotal);        // 0x02FA
 PACKET_PARSER_DECL(TriFusionSolo);          // 0x0384
 PACKET_PARSER_DECL(EquipmentSpiritDefuse);  // 0x0386
+PACKET_PARSER_DECL(DemonForceEnd);          // 0x0389
 PACKET_PARSER_DECL(SearchEntryInfo);        // 0x03A3
 PACKET_PARSER_DECL(HouraiData);             // 0x03A5
 PACKET_PARSER_DECL(CultureData);            // 0x03AC

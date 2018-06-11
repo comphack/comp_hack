@@ -753,6 +753,9 @@ protected:
      * Recalculate a demon or enemy entity's stats.
      * @param definitionManager Pointer to the DefinitionManager to use when
      *  determining how effects and items interact with the entity
+     * @param stats Map of correct table IDs to calculated stats to set on the
+     *  entity. The values already in the map should be pre-dependent stat
+     *  calculated values.
      * @param calcState Override CalculatedEntityState to use instead of the
      *  entity's default
      * @return 1 if the calculation resulted in a change to the stats that should
@@ -760,6 +763,7 @@ protected:
      *  the world (for party members etc), 0 otherwise
      */
     uint8_t RecalculateDemonStats(libcomp::DefinitionManager* definitionManager,
+        libcomp::EnumMap<CorrectTbl, int16_t>& stats,
         std::shared_ptr<objects::CalculatedEntityState> calcState);
 
     /**

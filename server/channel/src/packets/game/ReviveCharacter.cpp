@@ -234,8 +234,7 @@ bool Parsers::ReviveCharacter::Parse(libcomp::ManagerPacket *pPacketManager,
         break;
     }
 
-    const static bool deathPenaltyDisabled = std::dynamic_pointer_cast<
-        objects::ChannelConfig>(server->GetConfig())->GetWorldSharedConfig()
+    bool deathPenaltyDisabled = server->GetWorldSharedConfig()
         ->GetDeathPenaltyDisabled();
 
     if(xpLoss > 0 && !deathPenaltyDisabled)

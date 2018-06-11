@@ -132,7 +132,7 @@
         <member type="array" size="16" name="acquisitionSkills">
             <element type="MiAcquisitionSkillData*"/>
         </member>
-        <member type="u8" name="forceStock"/>
+        <member type="u8" name="forceStack"/>
         <member type="u8" name="unused3"/>
         <member type="u16" name="unused4"/>
         <member type="array" size="8" name="salesDialogue">

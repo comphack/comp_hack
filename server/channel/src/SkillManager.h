@@ -151,6 +151,31 @@ public:
     void SendFailure(const std::shared_ptr<ActiveEntityState> source, uint32_t skillID,
         const std::shared_ptr<ChannelClientConnection> client, uint8_t errorCode = 0);
 
+    /**
+     * Check fusion skill usage pre-skill validation and determine which one
+     * should be used. Fusion skills are decided based upon the two demons
+     * involved, defaulting to the COMP demon if no special skill exists.
+     * @param client Pointer to the client connection belonging to the player
+     *  activating the skill. Since non-player entities cannot use fusion 
+     *  skills, this is required unlike most other skill related processes.
+     * @param skillID Current skill being used to execute the fusion skill
+     *  which doubles as an output parameter for the context specific skill
+     * @param targetEntityID ID of the entity being targeted when the skill
+     *  is activated. Targeted fusion skills require a target is selected
+     *  before charging starts.
+     * @param mainDemonID Object ID of the demon that is currently summoned
+     * @param compDemonID Object ID of the demon that is in the COMP
+     * @param xPos X coordinate where the summoned demon should be moved when
+     *  the skill starts charging
+     * @param yPos Y coordinate where the summoned demon should be moved when
+     *  the skill starts charging
+     * @return false if the fusion skill cannot be used for any reason
+     */
+    bool PrepareFusionSkill(
+        const std::shared_ptr<ChannelClientConnection> client,
+        uint32_t& skillID, int32_t targetEntityID, int64_t mainDemonID,
+        int64_t compDemonID, float xPos, float yPos);
+
 private:
     /**
      * Notify the client that a skill failed activation or execution.
@@ -422,6 +447,14 @@ private:
      * @param pSkill Pointer to the current skill processing state
      */
     void HandleDurabilityDamage(const std::shared_ptr<ActiveEntityState> entity,
+        const std::shared_ptr<channel::ProcessingSkill>& pSkill);
+
+    /**
+     * If the skill is not a fusion skill and also an offensive action type,
+     * raise the fusion gauge.
+     * @param pSkill Pointer to the current skill processing state
+     */
+    void HandleFusionGauge(
         const std::shared_ptr<channel::ProcessingSkill>& pSkill);
 
     /**

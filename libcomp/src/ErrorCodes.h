@@ -75,6 +75,7 @@ enum class SkillErrorCodes_t : uint8_t
     GENERIC = 0,    //!< Generic error has occurred, no message
     GENERIC_USE = 2,    //!< Cannot be used
     GENERIC_COST = 3,   //!< Cannot be paid for
+    ACTIVATION_FAILURE = 4,   //!< Cannot be activated
     COOLING_DOWN = 5,   //!< Cool down has not completed
     ACTION_RETRY = 6,   //!< No message, request that client pursue and retry
     CONDITION_RESTRICT = 10,    //!< Skill is not in a useable state

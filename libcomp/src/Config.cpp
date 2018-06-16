@@ -75,8 +75,8 @@ void libcomp::Config::LogVersion(const char *szServerName)
 #if 1 == HAVE_GIT
     LOG_INFO(libcomp::String("%1 on branch %2\n").Arg(
         szGitCommittish).Arg(szGitBranch));
-    LOG_INFO(libcomp::String("Commit by %1 <%2> on %3\n").Arg(
-        szGitAuthor).Arg(szGitAuthorEmail).Arg(szGitDate));
+    LOG_INFO(libcomp::String("Commit by %1 on %2\n").Arg(
+        szGitAuthor).Arg(szGitDate));
     LOG_INFO(libcomp::String("%1\n").Arg(szGitDescription));
     LOG_INFO(libcomp::String("URL: %1\n\n").Arg(szGitRemoteURL));
 #endif

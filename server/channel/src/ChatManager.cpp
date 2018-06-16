@@ -1888,6 +1888,7 @@ bool ChatManager::GMCommand_License(const std::shared_ptr<
     SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(
         "Copyright (C) 2010-%1 COMP_hack Team").Arg(VERSION_YEAR));
 
+    SendChatMessage(client, ChatType_t::CHAT_SELF, " ");
     SendChatMessage(client, ChatType_t::CHAT_SELF, "This program is free software: you can redistribute it and/or modify");
     SendChatMessage(client, ChatType_t::CHAT_SELF, "it under the terms of the GNU Affero General Public License as");
     SendChatMessage(client, ChatType_t::CHAT_SELF, "published by the Free Software Foundation, either version 3 of the");
@@ -2908,8 +2909,7 @@ bool ChatManager::GMCommand_Version(const std::shared_ptr<
     SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(
         "%1 on branch %2").Arg(szGitCommittish).Arg(szGitBranch));
     SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(
-        "Commit by %1 <%2> on %3").Arg(szGitAuthor).Arg(
-        szGitAuthorEmail).Arg(szGitDate));
+        "Commit by %1 on %2").Arg(szGitAuthor).Arg(szGitDate));
     SendChatMessage(client, ChatType_t::CHAT_SELF, szGitDescription);
     SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(
         "URL: %1").Arg(szGitRemoteURL));

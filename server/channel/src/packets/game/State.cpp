@@ -34,8 +34,11 @@
 // object Includes
 #include <AccountLogin.h>
 #include <CharacterLogin.h>
+#include <ChannelConfig.h>
+#include <WorldSharedConfig.h>
 
 // channel Includes
+#include "ChatManager.h"
 #include "ChannelServer.h"
 #include "CharacterManager.h"
 #include "ManagerConnection.h"
@@ -71,7 +74,7 @@ void SendStateData(std::shared_ptr<ChannelServer> server,
 
         request.WriteU8((uint8_t)CharacterLoginStateFlag_t::CHARLOGIN_PARTY_INFO
             | (uint8_t)CharacterLoginStateFlag_t::CHARLOGIN_PARTY_DEMON_INFO);
-        
+
         auto member = state->GetPartyCharacter(false);
         member->SavePacket(request, true);
 
@@ -80,6 +83,21 @@ void SendStateData(std::shared_ptr<ChannelServer> server,
 
         server->GetManagerConnection()->GetWorldConnection()->SendPacket(request);
     }
+
+    // Greet the player.
+    auto conf = std::dynamic_pointer_cast<objects::ChannelConfig>(server->GetConfig());
+    auto worldSharedConfig = conf->GetWorldSharedConfig();
+    auto chatManager = server->GetChatManager();
+    auto greetMsg = worldSharedConfig->GetGreetMessage();
+
+    if(!greetMsg.IsEmpty())
+    {
+        chatManager->SendChatMessage(client,
+            ChatType_t::CHAT_SELF, greetMsg);
+    }
+
+    chatManager->SendChatMessage(client, ChatType_t::CHAT_SELF,
+        "Type @version or @license for more information.");
 }
 
 bool Parsers::State::Parse(libcomp::ManagerPacket *pPacketManager,

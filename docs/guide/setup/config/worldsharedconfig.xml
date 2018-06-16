@@ -7,6 +7,19 @@
 <para>These settings apply to the world server configuration as well as any channels that connect to it.</para>
 
 <section>
+<title>GreetMessage</title>
+<para><emphasis role="strong">Type:</emphasis> string</para>
+<para><emphasis role="strong">Default:</emphasis> Welcome to the COMP_hack Server!</para>
+<para>Sets the message that will display in the chat when the character logs into the channel.</para>
+
+<section>
+<title>Example</title>
+<para><![CDATA[<member name="GreetMessage">Welcome to my custom server!</member>]]></para>
+</section><!-- Example -->
+
+</section><!-- GreetMessage -->
+
+<section>
 <title>COMPShopMessage</title>
 <para><emphasis role="strong">Type:</emphasis> string</para>
 <para><emphasis role="strong">Default:</emphasis> Welcome to the COMP Shop!</para>

@@ -160,6 +160,8 @@ bool ChannelServer::Initialize()
         to_underlying(ClientToChannelPacketCode_t::PACKET_SKILL_EXECUTE));
     clientPacketManager->AddParser<Parsers::SkillCancel>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_SKILL_CANCEL));
+    clientPacketManager->AddParser<Parsers::SkillTarget>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_SKILL_TARGET));
     clientPacketManager->AddParser<Parsers::ExpertiseDown>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_EXPERTISE_DOWN));
     clientPacketManager->AddParser<Parsers::AllocateSkillPoint>(
@@ -232,6 +234,8 @@ bool ChannelServer::Initialize()
         to_underlying(ClientToChannelPacketCode_t::PACKET_POST_LIST));
     clientPacketManager->AddParser<Parsers::PostItem>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_POST_ITEM));
+    clientPacketManager->AddParser<Parsers::PostGift>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_POST_GIFT));
     clientPacketManager->AddParser<Parsers::HotbarData>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_HOTBAR_DATA));
     clientPacketManager->AddParser<Parsers::HotbarSave>(
@@ -486,8 +490,16 @@ bool ChannelServer::Initialize()
         to_underlying(ClientToChannelPacketCode_t::PACKET_DEMON_QUEST_REJECT));
     clientPacketManager->AddParser<Parsers::PvPCharacterInfo>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_PVP_CHARACTER_INFO));
+    clientPacketManager->AddParser<Parsers::AutoRecoveryUpdate>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_AUTO_RECOVERY_UPDATE));
     clientPacketManager->AddParser<Parsers::ItemMix>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_ITEM_MIX));
+    clientPacketManager->AddParser<Parsers::BikeBoostOn>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_BIKE_BOOST_ON));
+    clientPacketManager->AddParser<Parsers::BikeBoostOff>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_BIKE_BOOST_OFF));
+    clientPacketManager->AddParser<Parsers::BikeDismount>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_BIKE_DISMOUNT));
     clientPacketManager->AddParser<Parsers::TeamInfo>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_TEAM_INFO));
     clientPacketManager->AddParser<Parsers::EquipmentSpiritFuse>(
@@ -498,6 +510,8 @@ bool ChannelServer::Initialize()
         to_underlying(ClientToChannelPacketCode_t::PACKET_ITEM_DEPO_REMOTE));
     clientPacketManager->AddParser<Parsers::DemonDepoRemote>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_DEMON_DEPO_REMOTE));
+    clientPacketManager->AddParser<Parsers::CommonSwitchUpdate>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_COMMON_SWITCH_UPDATE));
     clientPacketManager->AddParser<Parsers::CommonSwitchInfo>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_COMMON_SWITCH_INFO));
     clientPacketManager->AddParser<Parsers::DemonForce>(

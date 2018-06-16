@@ -431,11 +431,7 @@ bool EventManager::UpdateQuest(const std::shared_ptr<ChannelClientConnection>& c
 
     if(recalcCharacter)
     {
-        server->GetTokuseiManager()->Recalculate(cState, true,
-            std::set<int32_t>{ cState->GetEntityID() });
-
-        // Always recalculate stats
-        server->GetCharacterManager()->RecalculateStats(cState, client);
+        server->GetCharacterManager()->RecalculateTokuseiAndStats(cState, client);
     }
 
     return true;
@@ -1760,8 +1756,7 @@ bool EventManager::EvaluateCondition(EventContext& ctx,
                 : std::dynamic_pointer_cast<ActiveEntityState>(
                     client->GetClientState()->GetDemonState());
 
-            auto statusEffects = eState->GetStatusEffects();
-            return statusEffects.find((uint32_t)condition->GetValue1()) != statusEffects.end();
+            return eState->StatusEffectActive((uint32_t)condition->GetValue1());
         }
     case objects::EventCondition::Type_t::TIMESPAN_DATETIME:
         if(compareMode != EventCompareMode::BETWEEN && compareMode != EventCompareMode::DEFAULT_COMPARE)
@@ -2927,8 +2922,7 @@ int8_t EventManager::EndDemonQuest(
     }
     else
     {
-        auto effects = cState->GetStatusEffects();
-        if(effects.find(SVR_CONST.STATUS_DEMON_QUEST_ACTIVE) == effects.end())
+        if(!cState->StatusEffectActive(SVR_CONST.STATUS_DEMON_QUEST_ACTIVE))
         {
             // Quest has expired
             return 1;

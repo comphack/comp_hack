@@ -7,8 +7,6 @@
         <member type="u16" name="StackSize" default="1"/>
         <member type="u16" name="Durability"/>
         <member type="s8" name="MaxDurability"/>
-        <!--<member type="u8" name="Unknown1"/>
-        <member type="u16" name="Unknown2"/>-->
         <member type="s16" name="Tarot"/>
         <member type="s16" name="Soul"/>
         <member type="u32" name="BasicEffect"/>
@@ -40,9 +38,15 @@
         <member type="float" name="Rate"/>
         <member type="u16" name="MinStack" default="1"/>
         <member type="u16" name="MaxStack" default="1"/>
+        <member type="enum" name="Type" underlying="int8_t">
+            <value>NORMAL</value>
+            <value>LEVEL_MULTIPLY</value>
+        </member>
+        <member type="float" name="Multiplier" default="1.0"/>
     </object>
     <object name="DropSet" persistent="false">
         <member type="u32" name="ID"/>
+        <member type="u32" name="GiftBoxID"/>
         <member type="list" name="Drops">
             <element type="ItemDrop*"/>
         </member>

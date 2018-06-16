@@ -197,6 +197,14 @@ bool TokuseiManager::Initialize()
 
             const std::set<uint8_t> invalidCorrectTypes =
                 {
+                    (uint8_t)CorrectTbl::STR,
+                    (uint8_t)CorrectTbl::MAGIC,
+                    (uint8_t)CorrectTbl::VIT,
+                    (uint8_t)CorrectTbl::INT,
+                    (uint8_t)CorrectTbl::SPEED,
+                    (uint8_t)CorrectTbl::LUCK,
+                    (uint8_t)CorrectTbl::HP_MAX,
+                    (uint8_t)CorrectTbl::MP_MAX,
                     (uint8_t)CorrectTbl::RATE_XP,
                     (uint8_t)CorrectTbl::RATE_MAG,
                     (uint8_t)CorrectTbl::RATE_MACCA,
@@ -205,7 +213,8 @@ bool TokuseiManager::Initialize()
 
             for(auto ct : tPair.second->GetCorrectValues())
             {
-                if(invalidCorrectTypes.find(ct->GetType()) != invalidCorrectTypes.end())
+                if(invalidCorrectTypes.find((uint8_t)ct->GetID()) !=
+                    invalidCorrectTypes.end())
                 {
                     invalidSkillAdjust = true;
                     break;
@@ -214,7 +223,8 @@ bool TokuseiManager::Initialize()
 
             for(auto ct : tPair.second->GetTokuseiCorrectValues())
             {
-                if(invalidCorrectTypes.find(ct->GetType()) != invalidCorrectTypes.end())
+                if(invalidCorrectTypes.find((uint8_t)ct->GetID()) !=
+                    invalidCorrectTypes.end())
                 {
                     invalidSkillAdjust = true;
                     break;
@@ -1039,6 +1049,13 @@ std::list<std::shared_ptr<objects::Tokusei>> TokuseiManager::GetDirectTokusei(
                     }
                 }
             }
+
+            // Demons can have toggle effects mirrored from the player
+            // character in certain instances without actually having them
+            for(uint32_t skillID : eState->GetActiveSwitchSkills())
+            {
+                skillIDs.insert(skillID);
+            }
         }
         break;
     default:
@@ -1091,10 +1108,12 @@ std::list<std::shared_ptr<objects::Tokusei>> TokuseiManager::GetDirectTokusei(
         auto skillData = definitionManager->GetSkillData(skillID);
         if(skillData)
         {
-            if(skillData->GetCommon()->GetCategory()->GetMainCategory() == 2 &&
+            uint8_t category = skillData->GetCommon()->GetCategory()
+                ->GetMainCategory();
+            if(category != 0 &&
                 !eState->ActiveSwitchSkillsContains(skillID))
             {
-                // Inactive switch skill
+                // Skip non-passive, non-switch active skills
                 continue;
             }
 
@@ -1302,10 +1321,8 @@ bool TokuseiManager::EvaluateTokuseiCondition(const std::shared_ptr<ActiveEntity
         }
         else
         {
-            auto statusEffects = eState->GetStatusEffects();
-
-            bool exists = statusEffects.find((uint32_t)condition->GetValue())
-                != statusEffects.end();
+            bool exists = eState->StatusEffectActive(
+                (uint32_t)condition->GetValue());
             return exists == (condition->GetComparator() ==
                 objects::TokuseiCondition::Comparator_t::EQUALS);
         }
@@ -2016,7 +2033,7 @@ void TokuseiManager::RecalcCostAdjustments(const std::shared_ptr<
     // Set and send updates (if the entity is ready to have data sent)
     auto updated = state->SetCostAdjustments(entityID, adjustments);
     if(updated.size() > 0 && (int8_t)eState->GetDisplayState() >=
-        (int8_t)objects::ActiveEntityStateObject::DisplayState_t::DATA_SENT)
+        (int8_t)ActiveDisplayState_t::DATA_SENT)
     {
         auto client = mServer.lock()->GetManagerConnection()
             ->GetEntityClient(entityID);

@@ -176,6 +176,7 @@ SET(${PROJECT_NAME}_PACKETS
     src/packets/game/SkillActivate.cpp          # 0x0030
     src/packets/game/SkillExecute.cpp           # 0x0031
     src/packets/game/SkillCancel.cpp            # 0x0032
+    src/packets/game/SkillTarget.cpp            # 0x003D
     src/packets/game/ExpertiseDown.cpp          # 0x0042
     src/packets/game/AllocateSkillPoint.cpp     # 0x0049
     src/packets/game/ToggleExpertise.cpp        # 0x004F
@@ -212,6 +213,7 @@ SET(${PROJECT_NAME}_PACKETS
     src/packets/game/DemonDismiss.cpp           # 0x009B
     src/packets/game/PostList.cpp               # 0x009C
     src/packets/game/PostItem.cpp               # 0x009E
+    src/packets/game/PostGift.cpp               # 0x00A0
     src/packets/game/HotbarData.cpp             # 0x00A2
     src/packets/game/HotbarSave.cpp             # 0x00A4
     src/packets/game/EventResponse.cpp          # 0x00B7
@@ -336,12 +338,17 @@ SET(${PROJECT_NAME}_PACKETS
     src/packets/game/DemonReunion.cpp           # 0x0235
     src/packets/game/DemonQuestReject.cpp       # 0x023A
     src/packets/game/PvPCharacterInfo.cpp       # 0x024D
+    src/packets/game/AutoRecoveryUpdate.cpp     # 0x025A
     src/packets/game/ItemMix.cpp                # 0x025D
+    src/packets/game/BikeBoostOn.cpp            # 0x0260
+    src/packets/game/BikeBoostOff.cpp           # 0x0262
+    src/packets/game/BikeDismount.cpp           # 0x0264
     src/packets/game/TeamInfo.cpp               # 0x027B
     src/packets/game/EquipmentSpiritFuse.cpp    # 0x0287
     src/packets/game/DemonQuestPending.cpp      # 0x028F
     src/packets/game/ItemDepoRemote.cpp         # 0x0296
     src/packets/game/DemonDepoRemote.cpp        # 0x02EF
+    src/packets/game/CommonSwitchUpdate.cpp     # 0x02F2
     src/packets/game/CommonSwitchInfo.cpp       # 0x02F4
     src/packets/game/DemonForce.cpp             # 0x02F6
     src/packets/game/DemonForceStack.cpp        # 0x02F8

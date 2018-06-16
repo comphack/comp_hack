@@ -65,8 +65,7 @@ bool Parsers::SyncCharacter::Parse(libcomp::ManagerPacket *pPacketManager,
     }
 
     auto cs = eState->GetCoreStats();
-    auto statusEffects = eState->GetCurrentStatusEffectStates(
-        server->GetDefinitionManager());
+    auto statusEffects = eState->GetCurrentStatusEffectStates();
 
     libcomp::Packet reply;
     reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_SYNC_CHARACTER);

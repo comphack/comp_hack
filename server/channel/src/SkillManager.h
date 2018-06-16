@@ -102,7 +102,7 @@ public:
     ~SkillManager();
 
     /**
-     * Activate the skill of a character or demon. The client will have the
+     * Activate the skill of an active entity. The client will have the
      * charge information sent to it if there is a charge time, otherwise
      * it will execute automatically.
      * @param source Pointer of the entity that activated the skill
@@ -120,7 +120,17 @@ public:
         std::shared_ptr<SkillExecutionContext> ctx = 0);
 
     /**
-     * Execute the skill of a character or demon.
+     * Target/retarget the skill of a character or demon. No response is sent
+     * to the clients from this request.
+     * @param source Pointer of the entity that activated the skill
+     * @param targetObjectID ID of the object being targeted by the skill
+     * @return true if the skill was targeted successfully, false otherwise
+     */
+    bool TargetSkill(const std::shared_ptr<ActiveEntityState> source,
+        int64_t targetObjectID);
+
+    /**
+     * Execute the skill of an active entity.
      * @param source Pointer of the entity that is executing the skill
      * @param activationID ID of the activated ability instance
      * @param targetObjectID ID of the object being targeted by the skill
@@ -132,7 +142,7 @@ public:
         std::shared_ptr<SkillExecutionContext> ctx = 0);
 
     /**
-     * Cancel the activated skill of a character or demon.
+     * Cancel the activated skill of an active entity.
      * @param source Pointer of the entity that is cancelling the skill
      * @param activationID ID of the activated ability instance
      * @return true if the skill was cancelled successfully, false otherwise
@@ -198,6 +208,20 @@ private:
     std::shared_ptr<objects::ActivatedAbility> GetActivation(
         const std::shared_ptr<ActiveEntityState> source,
         int8_t activationID) const;
+
+    /**
+     * Calculate and set the costs required to execute a skill.
+     * @param source Pointer to the state of the source entity
+     * @param activated Pointer to the activated ability instance
+     * @param client Pointer to the client connection, can be null if not coming
+     *  from a player entity
+     * @param ctx Special execution state for the skill
+     * @return true if the skill can be paid, false if it cannot
+     */
+    bool DetermineCosts(std::shared_ptr<ActiveEntityState> source,
+        std::shared_ptr<objects::ActivatedAbility> activated,
+        const std::shared_ptr<ChannelClientConnection> client,
+        std::shared_ptr<SkillExecutionContext> ctx);
 
     /**
      * Pay any costs related to and execute the skill of a character or demon.
@@ -545,10 +569,12 @@ private:
      * @param targets List target results associated to the skill
      * @param indirectOnly If true and the target does not already exist, it will
      *  be created as an indirect target
+     * @param autoCreate If true and the target does not exist, create it
      * @return Pointer to the skill target representing the source entity
      */
     SkillTargetResult* GetSelfTarget(const std::shared_ptr<ActiveEntityState>& source,
-        std::list<SkillTargetResult>& targets, bool indirectDefault);
+        std::list<SkillTargetResult>& targets, bool indirectDefault,
+        bool autoCreate = true);
 
     /**
      * Set null, reflect or absorb on the skill target
@@ -582,15 +608,13 @@ private:
     /**
      * Gather drops for a specific enemy spawn from its own drops, global drops
      * and demon family drops.
-     * @param enemyType Type of demon to gather drops from, separated in case
-     *  the enemy did not originate from a spawn
      * @param spawn Pointer to the spawn information for the enemy which may
      *  or may not exist (ex: GM created enemy)
      * @param giftMode true if the enemy's negotation gifts should be gathered
      *  instead of their normal drops
      * @return List of item drops from each different source
      */
-    std::list<std::shared_ptr<objects::ItemDrop>> GetItemDrops(uint32_t enemyType,
+    std::list<std::shared_ptr<objects::ItemDrop>> GetItemDrops(
         const std::shared_ptr<objects::Spawn>& spawn, bool giftMode = false) const;
 
     /**
@@ -649,6 +673,17 @@ private:
         const std::shared_ptr<ChannelClientConnection>& client);
 
     /**
+     * Execute an entity cloaking skill.
+     * @param activated Pointer to the activated ability instance
+     * @param ctx Special execution state for the skill
+     * @param client Pointer to the client connection that activated the skill,
+     *  this will always fail if it is null
+     */
+    bool Cloak(const std::shared_ptr<objects::ActivatedAbility>& activated,
+        const std::shared_ptr<SkillExecutionContext>& ctx,
+        const std::shared_ptr<ChannelClientConnection>& client);
+
+    /**
      * Execute the "demonic compendium memory" skill.
      * @param activated Pointer to the activated ability instance
      * @param ctx Special execution state for the skill
@@ -656,6 +691,18 @@ private:
      *  this will always fail if it is null
      */
     bool DCM(const std::shared_ptr<objects::ActivatedAbility>& activated,
+        const std::shared_ptr<SkillExecutionContext>& ctx,
+        const std::shared_ptr<ChannelClientConnection>& client);
+
+    /**
+     * Execute the a skill that always adds a specific status effect after the
+     * skill's execution.
+     * @param activated Pointer to the activated ability instance
+     * @param ctx Special execution state for the skill
+     * @param client Pointer to the client connection that activated the skill,
+     *  this will always fail if it is null
+     */
+    bool DirectStatus(const std::shared_ptr<objects::ActivatedAbility>& activated,
         const std::shared_ptr<SkillExecutionContext>& ctx,
         const std::shared_ptr<ChannelClientConnection>& client);
 
@@ -714,6 +761,39 @@ private:
      *  this will always fail if it is null
      */
     bool Mooch(const std::shared_ptr<objects::ActivatedAbility>& activated,
+        const std::shared_ptr<SkillExecutionContext>& ctx,
+        const std::shared_ptr<ChannelClientConnection>& client);
+
+    /**
+     * Execute a demon riding skill.
+     * @param activated Pointer to the activated ability instance
+     * @param ctx Special execution state for the skill
+     * @param client Pointer to the client connection that activated the skill,
+     *  this will always fail if it is null
+     */
+    bool Mount(const std::shared_ptr<objects::ActivatedAbility>& activated,
+        const std::shared_ptr<SkillExecutionContext>& ctx,
+        const std::shared_ptr<ChannelClientConnection>& client);
+
+    /**
+     * Execute a random item granting skill.
+     * @param activated Pointer to the activated ability instance
+     * @param ctx Special execution state for the skill
+     * @param client Pointer to the client connection that activated the skill,
+     *  this will always fail if it is null
+     */
+    bool RandomItem(const std::shared_ptr<objects::ActivatedAbility>& activated,
+        const std::shared_ptr<SkillExecutionContext>& ctx,
+        const std::shared_ptr<ChannelClientConnection>& client);
+
+    /**
+     * Execute a skill that is requesting a random number.
+     * @param activated Pointer to the activated ability instance
+     * @param ctx Special execution state for the skill
+     * @param client Pointer to the client connection that activated the skill,
+     *  this will always fail if it is null
+     */
+    bool Randomize(const std::shared_ptr<objects::ActivatedAbility>& activated,
         const std::shared_ptr<SkillExecutionContext>& ctx,
         const std::shared_ptr<ChannelClientConnection>& client);
 
@@ -828,6 +908,18 @@ private:
      */
     void SendCompleteSkill(std::shared_ptr<objects::ActivatedAbility> activated,
         uint8_t mode);
+
+    /**
+     * Determine if the supplied skill data will involve talk results either
+     * from a negotiation skill or a skill with negotiation damage
+     * @param skillData Pointer to the skill's definition
+     * @param primaryOnly If true, only skills that have a negotiation action
+     *  type will return true. If false, skills that cause negotiation damage
+     *  will also return true.
+     * @return true if the skill is will involve talk results
+     */
+    bool IsTalkSkill(const std::shared_ptr<objects::MiSkillData>& skillData,
+        bool primaryOnly);
 
     /// Pointer to the channel server
     std::weak_ptr<ChannelServer> mServer;

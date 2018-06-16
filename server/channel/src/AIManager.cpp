@@ -455,7 +455,8 @@ bool AIManager::UpdateState(const std::shared_ptr<ActiveEntityState>& eState,
                 {
                     auto targetEntity = eState->GetZone()->GetActiveEntity(
                         (int32_t)cmdSkill->GetTargetObjectID());
-                    if(!targetEntity || !targetEntity->IsAlive())
+                    if(!targetEntity || !targetEntity->IsAlive() ||
+                        targetEntity->GetAIIgnored())
                     {
                         // Target invalid or dead, cancel the skill and move on
                         if(activated)
@@ -591,7 +592,8 @@ bool AIManager::UpdateEnemyState(const std::shared_ptr<EnemyState>& eState, uint
     int32_t targetEntityID = aiState->GetTarget();
     auto target = targetEntityID > 0
         ? zone->GetActiveEntity(targetEntityID) : nullptr;
-    if(!target || !target->IsAlive() || !target->Ready())
+    if(!target || !target->IsAlive() || !target->Ready() ||
+        target->GetAIIgnored())
     {
         if(inCombat)
         {
@@ -787,7 +789,8 @@ std::shared_ptr<ActiveEntityState> AIManager::Retarget(const std::shared_ptr<Ene
         for(auto entity : inRange)
         {
             if(opponentIDs.find(entity->GetEntityID()) != opponentIDs.end()
-                && entity->IsAlive() && entity->Ready())
+                && entity->IsAlive() && entity->Ready() &&
+                !entity->GetAIIgnored())
             {
                 possibleTargets.push_back(entity);
             }
@@ -829,7 +832,7 @@ std::shared_ptr<ActiveEntityState> AIManager::Retarget(const std::shared_ptr<Ene
                 {
                     return entity->GetFaction() == eState->GetFaction() ||
                         (castingOnly && !entity->GetStatusTimes(STATUS_CHARGING)) ||
-                        !entity->Ready();
+                        !entity->Ready() || entity->GetAIIgnored();
                 });
 
             // If the aggro level limit could potentially exclude a target

@@ -191,6 +191,14 @@ public:
     const std::shared_ptr<objects::DropSet> GetDropSetData(uint32_t id);
 
     /**
+     * Get a drop set by gift box ID
+     * @param giftBoxID Gift box ID of a drop set to load
+     * @return Pointer to the drop set matching the specified id
+     */
+    const std::shared_ptr<objects::DropSet> GetGiftDropSetData(
+        uint32_t giftBoxID);
+
+    /**
      * Get a miscellaneous script by name
      * @param name Name of the script to load
      * @return Pointer to the script definition
@@ -410,6 +418,9 @@ private:
     /// Map of drop sets by definition ID
     std::unordered_map<uint32_t,
         std::shared_ptr<objects::DropSet>> mDropSetData;
+
+    /// Map of drop set defintion IDs by gift box ID
+    std::unordered_map<uint32_t, uint32_t> mGiftDropSetLookup;
 
     /// Map of miscellaneous (non-AI) scripts by name
     std::unordered_map<std::string, std::shared_ptr<ServerScript>> mScripts;

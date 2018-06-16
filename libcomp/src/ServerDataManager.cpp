@@ -202,6 +202,13 @@ const std::shared_ptr<objects::DropSet> ServerDataManager::GetDropSetData(uint32
     return GetObjectByID<uint32_t, objects::DropSet>(id, mDropSetData);
 }
 
+const std::shared_ptr<objects::DropSet> ServerDataManager::GetGiftDropSetData(
+    uint32_t giftBoxID)
+{
+    auto it = mGiftDropSetLookup.find(giftBoxID);
+    return it != mGiftDropSetLookup.end() ? GetDropSetData(it->second) : nullptr;
+}
+
 const std::shared_ptr<ServerScript> ServerDataManager::GetScript(const libcomp::String& name)
 {
     return GetObjectByID<std::string, ServerScript>(name.C(), mScripts);
@@ -780,10 +787,23 @@ namespace libcomp
         }
     
         uint32_t id = dropSet->GetID();
+        uint32_t giftBoxID = dropSet->GetGiftBoxID();
         if(mDropSetData.find(id) != mDropSetData.end())
         {
             LOG_ERROR(libcomp::String("Duplicate drop set encountered: %1\n").Arg(id));
             return false;
+        }
+
+        if(giftBoxID)
+        {
+            if(mGiftDropSetLookup.find(giftBoxID) != mGiftDropSetLookup.end())
+            {
+                LOG_ERROR(libcomp::String("Duplicate drop set gift box ID"
+                    " encountered: %1\n").Arg(giftBoxID));
+                return false;
+            }
+
+            mGiftDropSetLookup[giftBoxID] = id;
         }
 
         mDropSetData[id] = dropSet;

@@ -61,7 +61,7 @@ bool Parsers::StopMovement::Parse(libcomp::ManagerPacket *pPacketManager,
             " request: %1\n").Arg(entityID));
         return false;
     }
-    else if(!eState->Ready())
+    else if(!eState->Ready(true))
     {
         // Nothing to do, the entity is not currently active
         return true;
@@ -86,19 +86,27 @@ bool Parsers::StopMovement::Parse(libcomp::ManagerPacket *pPacketManager,
     eState->SetOriginTicks(stopTime);
     eState->SetDestinationTicks(stopTime);
 
-    auto zoneConnections = server->GetZoneManager()->GetZoneConnections(client, false);
-    if(zoneConnections.size() > 0)
+    // If the entity is still visible to others, relay info
+    if(eState->IsClientVisible())
     {
-        libcomp::Packet reply;
-        reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_STOP_MOVEMENT);
-        reply.WriteS32Little(entityID);
-        reply.WriteFloat(destX);
-        reply.WriteFloat(destY);
+        auto zConnections = server->GetZoneManager()->GetZoneConnections(client,
+            false);
+        
+        if(zConnections.size() > 0)
+        {
+            libcomp::Packet reply;
+            reply.WritePacketCode(
+                ChannelToClientPacketCode_t::PACKET_STOP_MOVEMENT);
+            reply.WriteS32Little(entityID);
+            reply.WriteFloat(destX);
+            reply.WriteFloat(destY);
 
-        RelativeTimeMap timeMap;
-        timeMap[reply.Size()] = stopTime;
+            RelativeTimeMap timeMap;
+            timeMap[reply.Size()] = stopTime;
 
-        ChannelClientConnection::SendRelativeTimePacket(zoneConnections, reply, timeMap);
+            ChannelClientConnection::SendRelativeTimePacket(zConnections,
+                reply, timeMap);
+        }
     }
 
     return true;

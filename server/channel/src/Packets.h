@@ -49,6 +49,7 @@ PACKET_PARSER_DECL(Tell);                   // 0x0027
 PACKET_PARSER_DECL(SkillActivate);          // 0x0030
 PACKET_PARSER_DECL(SkillExecute);           // 0x0031
 PACKET_PARSER_DECL(SkillCancel);            // 0x0032
+PACKET_PARSER_DECL(SkillTarget);            // 0x003D
 PACKET_PARSER_DECL(ExpertiseDown);          // 0x0042
 PACKET_PARSER_DECL(AllocateSkillPoint);     // 0x0049
 PACKET_PARSER_DECL(ToggleExpertise);        // 0x004F
@@ -85,6 +86,7 @@ PACKET_PARSER_DECL(DemonBoxMove);           // 0x009A
 PACKET_PARSER_DECL(DemonDismiss);           // 0x009B
 PACKET_PARSER_DECL(PostList);               // 0x009C
 PACKET_PARSER_DECL(PostItem);               // 0x009E
+PACKET_PARSER_DECL(PostGift);               // 0x00A0
 PACKET_PARSER_DECL(HotbarData);             // 0x00A2
 PACKET_PARSER_DECL(HotbarSave);             // 0x00A4
 PACKET_PARSER_DECL(EventResponse);          // 0x00B7
@@ -209,12 +211,17 @@ PACKET_PARSER_DECL(DemonLock);              // 0x0233
 PACKET_PARSER_DECL(DemonReunion);           // 0x0235
 PACKET_PARSER_DECL(DemonQuestReject);       // 0x023A
 PACKET_PARSER_DECL(PvPCharacterInfo);       // 0x024D
+PACKET_PARSER_DECL(AutoRecoveryUpdate);     // 0x025A
 PACKET_PARSER_DECL(ItemMix);                // 0x025D
+PACKET_PARSER_DECL(BikeBoostOn);            // 0x0260
+PACKET_PARSER_DECL(BikeBoostOff);           // 0x0262
+PACKET_PARSER_DECL(BikeDismount);           // 0x0264
 PACKET_PARSER_DECL(TeamInfo);               // 0x027B
 PACKET_PARSER_DECL(EquipmentSpiritFuse);    // 0x0287
 PACKET_PARSER_DECL(DemonQuestPending);      // 0x028F
 PACKET_PARSER_DECL(ItemDepoRemote);         // 0x0296
 PACKET_PARSER_DECL(DemonDepoRemote);        // 0x02EF
+PACKET_PARSER_DECL(CommonSwitchUpdate);     // 0x02F2
 PACKET_PARSER_DECL(CommonSwitchInfo);       // 0x02F4
 PACKET_PARSER_DECL(DemonForce);             // 0x02F6
 PACKET_PARSER_DECL(DemonForceStack);        // 0x02F8

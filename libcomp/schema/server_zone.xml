@@ -40,6 +40,9 @@
         <member type="float" name="XPMultiplier" default="1.0"/>
         <member type="u32" name="BazaarMarketCost" default="100"/>
         <member type="u32" name="BazaarMarketTime" default="60"/>
+        <member type="bool" name="MountDisabled"/>
+        <member type="bool" name="BikeDisabled"/>
+        <member type="bool" name="BikeBoostEnabled"/>
         <member type="list" name="NPCs">
             <element type="ServerNPC*"/>
         </member>

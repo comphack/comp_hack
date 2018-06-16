@@ -100,7 +100,7 @@ bool Parsers::FixObjectPosition::Parse(libcomp::ManagerPacket *pPacketManager,
         if(zone)
         {
             bool summonWait = dState->GetDisplayState() ==
-                objects::ActiveEntityStateObject::DisplayState_t::AWAITING_SUMMON;
+                ActiveDisplayState_t::AWAITING_SUMMON;
 
             zoneManager->PopEntityForZoneProduction(zone, dState->GetEntityID(),
                 summonWait ? 2 : 0);

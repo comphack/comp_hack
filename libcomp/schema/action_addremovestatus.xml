@@ -13,5 +13,9 @@
             <key type="u32"/>   <!-- Status Type -->
             <value type="u8"/>  <!-- Stack size -->
         </member>
+        <member type="map" name="statusTimes">
+            <key type="u32"/>   <!-- Status Type -->
+            <value type="u32"/> <!-- Explicit Time -->
+        </member>
     </object>
 </objgen>

@@ -54,6 +54,8 @@ void SendStateData(std::shared_ptr<ChannelServer> server,
 
     characterManager->SendCharacterData(client);
 
+    characterManager->SendAutoRecovery(client);
+
     characterManager->SetStatusIcon(client);
 
     tokuseiManager->SendCostAdjustments(cState->GetEntityID(),

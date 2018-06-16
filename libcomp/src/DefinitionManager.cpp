@@ -38,6 +38,7 @@
 #include <MiCItemBaseData.h>
 #include <MiCItemData.h>
 #include <MiCZoneRelationData.h>
+#include <MiDamageData.h>
 #include <MiDCategoryData.h>
 #include <MiDevilBookData.h>
 #include <MiDevilBoostData.h>
@@ -494,6 +495,12 @@ const std::shared_ptr<objects::MiSkillData>
     DefinitionManager::GetSkillData(uint32_t id)
 {
     return GetRecordByID(id, mSkillData);
+}
+
+std::set<uint32_t> DefinitionManager::GetFunctionIDSkills(uint16_t fid) const
+{
+    auto it = mFunctionIDSkills.find(fid);
+    return it != mFunctionIDSkills.end() ? it->second : std::set<uint32_t>();
 }
 
 const std::unordered_map<uint32_t, std::shared_ptr<objects::MiSpotData>>
@@ -1391,7 +1398,15 @@ namespace libcomp
             "Shield/SkillData.sbin", true, 4, records);
         for(auto record : records)
         {
-            mSkillData[record->GetCommon()->GetID()] = record;
+            uint32_t id = record->GetCommon()->GetID();
+            uint16_t fid = record->GetDamage()->GetFunctionID();
+
+            mSkillData[id] = record;
+
+            if(fid)
+            {
+                mFunctionIDSkills[fid].insert(id);
+            }
         }
 
         return success;

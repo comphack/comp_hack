@@ -523,6 +523,13 @@ public:
     const std::shared_ptr<objects::MiSkillData> GetSkillData(uint32_t id);
 
     /**
+     * Get all skill definition IDs that are mapped to the supplied function ID
+     * @param fid Skill function ID
+     * @return Set of skill definition IDs
+     */
+    std::set<uint32_t> GetFunctionIDSkills(uint16_t fid) const;
+
+    /**
      * Get the spot data corresponding to a dynamic map ID
      * @param dynamicMapID ID of the spot data to retrieve
      * @return Map of spot definitions by spot ID for the specified dynamic map
@@ -1019,6 +1026,9 @@ private:
     /// Map of skill definitions by ID
     std::unordered_map<uint32_t,
         std::shared_ptr<objects::MiSkillData>> mSkillData;
+
+    /// Map of skill function IDs to skill IDs
+    std::unordered_map<uint16_t, std::set<uint32_t>> mFunctionIDSkills;
 
     /// Map of filename to map of spots by ID
     std::unordered_map<std::string,

@@ -510,6 +510,16 @@ bool ZoneManager::EnterZone(const std::shared_ptr<ChannelClientConnection>& clie
     auto ticks = server->GetServerTime();
     auto zoneDef = nextZone->GetDefinition();
 
+    // Bike boosting does not persist between zones
+    if(state->GetBikeBoosting())
+    {
+        state->SetBikeBoosting(false);
+
+        cState->RemoveAdditionalTokusei(SVR_CONST.TOKUSEI_BIKE_BOOST);
+
+        server->GetTokuseiManager()->Recalculate(cState, true);
+    }
+
     // Set the zone-in spot for instances
     if(nextInstance)
     {
@@ -959,7 +969,7 @@ bool ZoneManager::SendPopulateZoneData(const std::shared_ptr<ChannelClientConnec
         return false;
     }
 
-    auto zoneData = zone->GetDefinition();
+    auto zoneDef = zone->GetDefinition();
     auto characterManager = server->GetCharacterManager();
     auto definitionManager = server->GetDefinitionManager();
 
@@ -1010,7 +1020,7 @@ bool ZoneManager::SendPopulateZoneData(const std::shared_ptr<ChannelClientConnec
         p.WriteS32Little(npcState->GetEntityID());
         p.WriteU32Little(npc->GetID());
         p.WriteS32Little((int32_t)zone->GetID());
-        p.WriteS32Little((int32_t)zoneData->GetID());
+        p.WriteS32Little((int32_t)zoneDef->GetID());
         p.WriteFloat(npcState->GetCurrentX());
         p.WriteFloat(npcState->GetCurrentY());
         p.WriteFloat(npcState->GetCurrentRotation());
@@ -1035,7 +1045,7 @@ bool ZoneManager::SendPopulateZoneData(const std::shared_ptr<ChannelClientConnec
         p.WriteU32Little(obj->GetID());
         p.WriteU8(obj->GetState());
         p.WriteS32Little((int32_t)zone->GetID());
-        p.WriteS32Little((int32_t)zoneData->GetID());
+        p.WriteS32Little((int32_t)zoneDef->GetID());
         p.WriteFloat(objState->GetCurrentX());
         p.WriteFloat(objState->GetCurrentY());
         p.WriteFloat(objState->GetCurrentRotation());
@@ -1053,7 +1063,7 @@ bool ZoneManager::SendPopulateZoneData(const std::shared_ptr<ChannelClientConnec
         p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_PLASMA_DATA);
         p.WriteS32Little(pState->GetEntityID());
         p.WriteS32Little((int32_t)zone->GetID());
-        p.WriteS32Little((int32_t)zoneData->GetID());
+        p.WriteS32Little((int32_t)zoneDef->GetID());
         p.WriteFloat(pState->GetCurrentX());
         p.WriteFloat(pState->GetCurrentY());
         p.WriteFloat(pState->GetCurrentRotation());
@@ -1088,7 +1098,7 @@ bool ZoneManager::SendPopulateZoneData(const std::shared_ptr<ChannelClientConnec
         p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_BAZAAR_DATA);
         p.WriteS32Little(bState->GetEntityID());
         p.WriteS32Little((int32_t)zone->GetID());
-        p.WriteS32Little((int32_t)zoneData->GetID());
+        p.WriteS32Little((int32_t)zoneDef->GetID());
         p.WriteFloat(bState->GetCurrentX());
         p.WriteFloat(bState->GetCurrentY());
         p.WriteFloat(bState->GetCurrentRotation());
@@ -1126,18 +1136,22 @@ bool ZoneManager::SendPopulateZoneData(const std::shared_ptr<ChannelClientConnec
     for(auto oConnection : otherClients)
     {
         auto oState = oConnection->GetClientState();
-        auto oCharacterState = oState->GetCharacterState();
-        auto oDemonState = oState->GetDemonState();
+        auto oCState = oState->GetCharacterState();
+        auto oDState = oState->GetDemonState();
 
-        characterManager->SendOtherCharacterData(self, oState);
-        PopEntityForProduction(client, oCharacterState->GetEntityID(), 0);
-        ShowEntity(client, oCharacterState->GetEntityID());
+        if(oCState->IsClientVisible())
+        {
+            characterManager->SendOtherCharacterData(self, oState);
 
-        if(nullptr != oDemonState->GetEntity())
+            PopEntityForProduction(client, oCState->GetEntityID(), 0);
+            ShowEntity(client, oCState->GetEntityID());
+        }
+
+        if(oDState->IsClientVisible())
         {
             characterManager->SendOtherPartnerData(self, oState);
-            PopEntityForProduction(client, oDemonState->GetEntityID(), 0);
-            ShowEntity(client, oDemonState->GetEntityID());
+            PopEntityForProduction(client, oDState->GetEntityID(), 0);
+            ShowEntity(client, oDState->GetEntityID());
 
             if(oState->GetDeathTimeOut())
             {
@@ -1152,64 +1166,60 @@ bool ZoneManager::SendPopulateZoneData(const std::shared_ptr<ChannelClientConnec
 void ZoneManager::ShowEntity(const std::shared_ptr<
     ChannelClientConnection>& client, int32_t entityID, bool queue)
 {
-    libcomp::Packet p;
-    p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_SHOW_ENTITY);
-    p.WriteS32Little(entityID);
-
-    if(queue)
-    {
-        client->QueuePacket(p);
-    }
-    else
-    {
-        client->SendPacket(p);
-    }
+    std::list<std::shared_ptr<ChannelClientConnection>> clients;
+    clients.push_back(client);
+    ShowEntity(clients, entityID, queue);
 }
 
 void ZoneManager::ShowEntityToZone(const std::shared_ptr<Zone>& zone, int32_t entityID)
 {
-    libcomp::Packet p;
-    p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_SHOW_ENTITY);
-    p.WriteS32Little(entityID);
-
-    BroadcastPacket(zone, p);
+    auto clients = zone->GetConnectionList();
+    ShowEntity(clients, entityID, false);
 
     // If its an active entity, set it as displayed
     auto activeState = zone->GetActiveEntity(entityID);
     if(activeState)
     {
-        activeState->SetDisplayState(
-            objects::ActiveEntityStateObject::DisplayState_t::ACTIVE);
+        activeState->SetDisplayState(ActiveDisplayState_t::ACTIVE);
     }
+}
+
+void ZoneManager::ShowEntity(const std::list<std::shared_ptr<
+    ChannelClientConnection>> &clients, int32_t entityID, bool queue)
+{
+    libcomp::Packet p;
+    p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_SHOW_ENTITY);
+    p.WriteS32Little(entityID);
+
+    ChannelClientConnection::BroadcastPacket(clients, p, queue);
 }
 
 void ZoneManager::PopEntityForProduction(const std::shared_ptr<
     ChannelClientConnection>& client, int32_t entityID, int32_t type, bool queue)
 {
-    libcomp::Packet p;
-    p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_POP_ENTITY_FOR_PRODUCTION);
-    p.WriteS32Little(entityID);
-    p.WriteS32Little(type);
-
-    if(queue)
-    {
-        client->QueuePacket(p);
-    }
-    else
-    {
-        client->SendPacket(p);
-    }
+    std::list<std::shared_ptr<ChannelClientConnection>> clients;
+    clients.push_back(client);
+    PopEntityForProduction(clients, entityID, type, queue);
 }
 
 void ZoneManager::PopEntityForZoneProduction(const std::shared_ptr<Zone>& zone,
     int32_t entityID, int32_t type)
 {
+    auto clients = zone->GetConnectionList();
+    PopEntityForProduction(clients, entityID, type, false);
+}
+
+void ZoneManager::PopEntityForProduction(const std::list<std::shared_ptr<
+    ChannelClientConnection>> &clients, int32_t entityID,
+    int32_t type, bool queue)
+{
     libcomp::Packet p;
-    p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_POP_ENTITY_FOR_PRODUCTION);
+    p.WritePacketCode(
+        ChannelToClientPacketCode_t::PACKET_POP_ENTITY_FOR_PRODUCTION);
     p.WriteS32Little(entityID);
     p.WriteS32Little(type);
 
-    BroadcastPacket(zone, p);
+    ChannelClientConnection::BroadcastPacket(clients, p, queue);
 }
 
 void ZoneManager::RemoveEntitiesFromZone(const std::shared_ptr<Zone>& zone,
@@ -1230,19 +1240,13 @@ void ZoneManager::RemoveEntities(const std::list <std::shared_ptr<
         p.WriteS32Little(entityID);
         p.WriteS32Little(removalMode);
 
-        for(auto client : clients)
-        {
-            client->QueuePacketCopy(p);
-        }
+        ChannelClientConnection::BroadcastPacket(clients, p, true);
 
         p.Clear();
         p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_REMOVE_OBJECT);
         p.WriteS32Little(entityID);
 
-        for(auto client : clients)
-        {
-            client->QueuePacketCopy(p);
-        }
+        ChannelClientConnection::BroadcastPacket(clients, p, true);
     }
 
     if(!queue)
@@ -1522,8 +1526,7 @@ void ZoneManager::SendEnemyData(const std::shared_ptr<ChannelClientConnection>& 
     p.WriteFloat(enemyState->GetOriginY());
     p.WriteFloat(enemyState->GetOriginRotation());
     
-    auto statusEffects = enemyState->GetCurrentStatusEffectStates(
-        mServer.lock()->GetDefinitionManager());
+    auto statusEffects = enemyState->GetCurrentStatusEffectStates();
 
     p.WriteU32Little(static_cast<uint32_t>(statusEffects.size()));
     for(auto ePair : statusEffects)
@@ -1601,18 +1604,19 @@ void ZoneManager::UpdateStatusEffectStates(const std::shared_ptr<Zone>& zone,
     }
 
     auto server = mServer.lock();
-    auto definitionManager = server->GetDefinitionManager();
     auto characterManager = server->GetCharacterManager();
+    auto tokuseiManager = server->GetTokuseiManager();
 
     std::list<libcomp::Packet> zonePackets;
     std::set<uint32_t> added, updated, removed;
     std::set<std::shared_ptr<ActiveEntityState>> displayStateModified;
     std::set<std::shared_ptr<ActiveEntityState>> statusRemoved;
+
+    int32_t hpTDamage, mpTDamage, upkeepCost;
     for(auto entity : effectEntities)
     {
-        int32_t hpTDamage, mpTDamage;
-        if(!entity->PopEffectTicks(definitionManager, now, hpTDamage,
-            mpTDamage, added, updated, removed)) continue;
+        if(!entity->PopEffectTicks(now, hpTDamage, mpTDamage, upkeepCost,
+            added, updated, removed)) continue;
 
         if(added.size() > 0 || updated.size() > 0)
         {
@@ -1645,33 +1649,60 @@ void ZoneManager::UpdateStatusEffectStates(const std::shared_ptr<Zone>& zone,
             }
         }
 
+        bool hpMpRecalc = false;
+
+        // Regen/deal T-damage first
         if(hpTDamage != 0 || mpTDamage != 0)
         {
-            auto cs = entity->GetCoreStats();
             int32_t hpAdjusted, mpAdjusted;
-            if(entity->SetHPMP(-hpTDamage, -mpTDamage, true,
+            if(entity->SetHPMP(-hpTDamage, -(mpTDamage + upkeepCost), true,
                 false, 0, hpAdjusted, mpAdjusted))
             {
                 if(hpAdjusted < 0)
                 {
                     entity->CancelStatusEffects(EFFECT_CANCEL_DAMAGE);
                 }
+
                 displayStateModified.insert(entity);
 
                 libcomp::Packet p;
-                p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_DO_TDAMAGE);
+                p.WritePacketCode(
+                    ChannelToClientPacketCode_t::PACKET_DO_TDAMAGE);
                 p.WriteS32Little(entity->GetEntityID());
                 p.WriteS32Little(hpAdjusted);
                 p.WriteS32Little(mpAdjusted);
                 zonePackets.push_back(p);
 
-                server->GetTokuseiManager()->Recalculate(entity,
-                    std::set<TokuseiConditionType>
-                    { TokuseiConditionType::CURRENT_HP,
-                      TokuseiConditionType::CURRENT_MP });
+                hpMpRecalc = true;
             }
         }
-        
+
+        // Pay upkeep costs next
+        if(upkeepCost != 0)
+        {
+            int32_t hpAdjusted, mpAdjusted;
+            if(entity->SetHPMP(0, -upkeepCost, true,
+                false, 0, hpAdjusted, mpAdjusted))
+            {
+                libcomp::Packet p;
+                p.WritePacketCode(
+                    ChannelToClientPacketCode_t::PACKET_SKILL_UPKEEP_COST);
+                p.WriteS32Little(entity->GetEntityID());
+                p.WriteU32Little((uint32_t)(-mpAdjusted));
+                zonePackets.push_back(p);
+
+                hpMpRecalc = true;
+            }
+        }
+
+        if(hpMpRecalc)
+        {
+            tokuseiManager->Recalculate(entity,
+                std::set<TokuseiConditionType>
+                { TokuseiConditionType::CURRENT_HP,
+                    TokuseiConditionType::CURRENT_MP });
+        }
+
         if(removed.size() > 0)
         {
             libcomp::Packet p;
@@ -1695,7 +1726,7 @@ void ZoneManager::UpdateStatusEffectStates(const std::shared_ptr<Zone>& zone,
     {
         // Make sure T-damage is sent first
         // Status add/update and world update handled when applying changes
-        server->GetTokuseiManager()->Recalculate(eState, true,
+        tokuseiManager->Recalculate(eState, true,
             std::set<int32_t>{ eState->GetEntityID() });
         if(characterManager->RecalculateStats(eState) & ENTITY_CALC_STAT_WORLD)
         {

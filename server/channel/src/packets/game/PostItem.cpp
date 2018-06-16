@@ -64,8 +64,8 @@ bool Parsers::PostItem::Parse(libcomp::ManagerPacket *pPacketManager,
     auto lobbyDB = server->GetLobbyDatabase();
 
     int32_t postID = p.ReadS32Little();
-    int32_t unknown = p.ReadS32Little();
-    (void)unknown;
+    int32_t targetSlot = p.ReadS32Little();
+    (void)targetSlot;
 
     auto itemUUID = state->GetLocalObjectUUID(postID);
 

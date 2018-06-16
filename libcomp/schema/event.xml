@@ -114,6 +114,8 @@
     </object>
     <object name="EventFlagCondition" baseobject="EventCondition" persistent="false"
         inherited-construction="true">
+        <member type="s32" name="value1" inherited="true" default="-1"/>
+        <member type="s32" name="value2" inherited="true" default="-1"/>
         <member type="map" name="flagStates">
             <key type="s32"/>
             <value type="s32"/>

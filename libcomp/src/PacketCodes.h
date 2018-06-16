@@ -80,6 +80,7 @@ enum class ClientToChannelPacketCode_t : uint16_t
     PACKET_SKILL_ACTIVATE = 0x0030, //!< Request to activate a player or demon skill.
     PACKET_SKILL_EXECUTE = 0x0031, //!< Request to execute a skill that has finished charging.
     PACKET_SKILL_CANCEL = 0x0032, //!< Request to execute a skill that has finished charging.
+    PACKET_SKILL_TARGET = 0x003D,   //!< Request to target/retarget a skill being used.
     PACKET_EXPERTISE_DOWN = 0x0042, //!< Request to lower a character's expertise rank or class.
     PACKET_ALLOCATE_SKILL_POINT = 0x0049, //!< Request to allocate a skill point for a character.
     PACKET_TOGGLE_EXPERTISE = 0x004F, //!< Request to enable or disable an expertise.
@@ -116,6 +117,7 @@ enum class ClientToChannelPacketCode_t : uint16_t
     PACKET_DEMON_DISMISS = 0x009B,  //!< Request to dismiss a demon.
     PACKET_POST_LIST = 0x009C,  //!< Request to list items in the player account's Post.
     PACKET_POST_ITEM = 0x009E,  //!< Request to move an item from the Post into the current character's inventory.
+    PACKET_POST_GIFT = 0x00A0,  //!< Request to open/retrieve post gift information.
     PACKET_HOTBAR_DATA = 0x00A2,  //!< Request for data about a hotbar page.
     PACKET_HOTBAR_SAVE = 0x00A4,  //!< Request to save a hotbar page.
     PACKET_EVENT_RESPONSE = 0x00B7,  //!< Message that the player has responded to the current event.
@@ -246,7 +248,11 @@ enum class ClientToChannelPacketCode_t : uint16_t
     PACKET_DEMON_REUNION = 0x0235,  //!< Request to reunion the summoned partner demon.
     PACKET_DEMON_QUEST_REJECT = 0x023A,   //!< Request to reject a pending demon quest.
     PACKET_PVP_CHARACTER_INFO = 0x024D,  //!< Request for PvP character information.
+    PACKET_AUTO_RECOVERY_UPDATE = 0x025A,   //!< Request to update the character's auto-recovery settings.
     PACKET_ITEM_MIX = 0x025D,   //!< Request to mix two items into a different result item.
+    PACKET_BIKE_BOOST_ON = 0x0260,  //!< Request to start boosting on a bike.
+    PACKET_BIKE_BOOST_OFF = 0x0262, //!< Request to stop boosting on a bike.
+    PACKET_BIKE_DISMOUNT = 0x0264,  //!< Request to dismount from a bike.
     PACKET_TEAM_INFO = 0x027B,  //!< Request for the current player's team information.
     PACKET_EQUIPMENT_SPIRIT_FUSE = 0x0287,  //!< Request to perform equipment spirit fusion.
     PACKET_RECEIVED_PLAYER_DATA = 0x028C,  //!< Empty message sent after character/demon data requested have been received.
@@ -254,7 +260,8 @@ enum class ClientToChannelPacketCode_t : uint16_t
     PACKET_DEMON_QUEST_PENDING = 0x028F,  //!< Request to re-send a pending demon quest.
     PACKET_ITEM_DEPO_REMOTE = 0x0296,  //!< Request to open the remote item depos.
     PACKET_DEMON_DEPO_REMOTE = 0x02EF,  //!< Request to open the remote demon depo.
-    PACKET_COMMON_SWITCH_INFO = 0x02F4,  //!< Unknown. Request for "common switch" information.
+    PACKET_COMMON_SWITCH_UPDATE = 0x02F2,   //!< Request to update character common switches.
+    PACKET_COMMON_SWITCH_INFO = 0x02F4,  //!< Request for character common switch settings.
     PACKET_DEMON_FORCE = 0x02F6,  //!< Request to consume a demon force item.
     PACKET_DEMON_FORCE_STACK = 0x02F8,  //!< Request to add or remove the pending force stack effect.
     PACKET_CASINO_COIN_TOTAL = 0x02FA,   //!< Request for the current character's casino coin total.
@@ -314,8 +321,10 @@ enum class ChannelToClientPacketCode_t : uint16_t
     PACKET_SKILL_FAILED = 0x0037,  //!< Notification that a skill's execution has failed.
     PACKET_SKILL_REPORTS = 0x0038,  //!< Message with information about entities affected by a skill's execution.
     PACKET_SKILL_SWITCH = 0x0039,   //!< Notification that a switch skill has been enabled or disabled.
+    PACKET_SKILL_UPKEEP_COST = 0x003A,  //!< Notification that an entity's MP has dropped from skill upkeep cost.
     PACKET_BATTLE_STARTED = 0x003B, //!< Notifies the client that an entity has entered into a battle.
     PACKET_BATTLE_STOPPED = 0x003C, //!< Notifies the client that an entity is no longer in battle.
+    PACKET_SKILL_TARGETED = 0x003E,   //!< Unused. Notifies the client that an entity has retargeted a skill.
     PACKET_ENEMY_ACTIVATED = 0x0041, //!< Notifies the client that an enemy has become activate.
     PACKET_DO_TDAMAGE = 0x0043, //!< Notifies the client that "time" damage has been dealt to an entity.
     PACKET_ADD_STATUS_EFFECT = 0x0044, //!< Notifies the client that an entity has gained a status effect.
@@ -364,6 +373,7 @@ enum class ChannelToClientPacketCode_t : uint16_t
     PACKET_DEMON_BOX_UPDATE = 0x0098,  //!< Message containing information that one or more demon box has been updated.
     PACKET_POST_LIST = 0x009D, //!< Response to the request to list items in the player account's Post.
     PACKET_POST_ITEM = 0x009F, //!< Response to the request to move an item from the Post into the current character's inventory.
+    PACKET_POST_GIFT = 0x00A1,  //!< Response to the request to open/retrieve post gift information.
     PACKET_HOTBAR_DATA = 0x00A3,  //!< Response for data about a hotbar page.
     PACKET_HOTBAR_SAVE = 0x00A5,  //!< Response to save a hotbar page.
     PACKET_EVENT_MESSAGE = 0x00A6,  //!< Request to the client to display an event message.
@@ -557,6 +567,7 @@ enum class ChannelToClientPacketCode_t : uint16_t
     PACKET_EVENT_SPECIAL_DIRECTION = 0x0216,  //!< Request to the client to signify a special direction to the player.
     PACKET_FUSION_GAUGE = 0x0218,   //!< Response containing the player's fusion gauge state.
     PACKET_DEMON_PRESENT = 0x0219,  //!< Notification that the player has received a partner demon present.
+    PACKET_RANDOM_NUMBERS = 0x021A, //!< Notification of server supplied random numbers for an entity. Used by skills.
     PACKET_TITLE_LIST = 0x021C,   //!< Response containing the list of available titles.
     PACKET_TITLE_ACTIVE_UPDATE = 0x021E,   //!< Response to the request to update the the character's active title.
     PACKET_TITLE_ACTIVE = 0x021F,   //!< Notification that a character's active title has been updated.
@@ -574,9 +585,15 @@ enum class ChannelToClientPacketCode_t : uint16_t
     PACKET_DEMON_REUNION = 0x0236,  //!< Response to the request to reunion the summoned partner demon.
     PACKET_PARTNER_LEVEL_DOWN = 0x0239, //!< Notifies the client that a partner demon has leveled down.
     PACKET_DEMON_QUEST_REJECT = 0x023B,   //!< Response to the request to reject a pending demon quest.
+    PACKET_RANDOM_BOX = 0x023C,  //!< Notification that a player entity has opened a random item box.
     PACKET_PVP_CHARACTER_INFO = 0x024E,  //!< Response containing PvP character information.
+    PACKET_AUTO_RECOVERY_UPDATE = 0x025B,   //!< Response to the request to update the character's auto-recovery settings.
+    PACKET_AUTO_RECOVERY = 0x025C,  //!< Message containing the current character's auto-recovery settings.
     PACKET_ITEM_MIX = 0x025E,   //!< Response to the request to mix two items into a different result item.
     PACKET_ITEM_MIXED = 0x025F, //!< Notification that two items have been mixed into a different result item.
+    PACKET_BIKE_BOOST_ON = 0x0261,  //!< Response to the request to start boosting on a bike.
+    PACKET_BIKE_BOOST_OFF = 0x0263, //!< Response to the request to stop boosting on a bike.
+    PACKET_BIKE_DISMOUNT = 0x0265,  //!< Response to the request to dismount from a bike.
     PACKET_TEAM_INFO = 0x027C,  //!< Response containing the current player's team information.
     PACKET_EQUIPMENT_SPIRIT_FUSE = 0x0288, //!< Response to the request to perform equipment spirit fusion.
     PACKET_EQUIPMENT_SPIRIT_FUSED = 0x028B,   //!< Notification that equipment spirit fusion was performed.
@@ -592,7 +609,8 @@ enum class ChannelToClientPacketCode_t : uint16_t
     PACKET_DEMON_SOLO_DEATH_TIME = 0x029E,  //!< Notification containing a player in a demon only dungeon's death time-out.
     PACKET_DEMON_DEPO_REMOTE = 0x02F0,  //!< Response to the request to open the remote demon depos.
     PACKET_EXPERTISE_EXTENSION = 0x02F1, //!< Notification of the client character's extertise extension count.
-    PACKET_COMMON_SWITCH_INFO = 0x02F5,  //!< Unknown. Response containing "common switch" information.
+    PACKET_COMMON_SWITCH_UPDATE = 0x02F3,   //!< Response to request to update character common switches.
+    PACKET_COMMON_SWITCH_INFO = 0x02F5,  //!< Response to the request for character common switch settings.
     PACKET_DEMON_FORCE = 0x02F7,  //!< Response to the request to consume a demon force item.
     PACKET_DEMON_FORCE_STACK = 0x02F9,  //!< Response to the request to add or remove the pending force stack effect.
     PACKET_CASINO_COIN_TOTAL = 0x02FB,   //!< Message containing the current character's casino coin total.

@@ -130,20 +130,48 @@ bool ServerConstants::Initialize(const String& filePath)
         sConstants.MENU_TRIFUSION_KZ);
 
     // Load skill constants
+    success &= LoadInteger(constants["SKILL_ABS_DAMAGE"],
+        sConstants.SKILL_ABS_DAMAGE);
+    success &= LoadInteger(constants["SKILL_BOSS_SPECIAL"],
+        sConstants.SKILL_BOSS_SPECIAL);
     success &= LoadInteger(constants["SKILL_CAMEO"],
         sConstants.SKILL_CAMEO);
     success &= LoadInteger(constants["SKILL_CLAN_FORM"],
         sConstants.SKILL_CLAN_FORM);
+    success &= LoadInteger(constants["SKILL_CLOAK"],
+        sConstants.SKILL_CLOAK);
+    success &= LoadInteger(constants["SKILL_GENDER_RESTRICTED"],
+        sConstants.SKILL_GENDER_RESTRICTED);
+    success &= LoadInteger(constants["SKILL_CULTIVATE_SLOT_UP"],
+        sConstants.SKILL_CULTIVATE_SLOT_UP);
+    success &= LoadInteger(constants["SKILL_CULTIVATE_UP"],
+        sConstants.SKILL_CULTIVATE_UP);
     success &= LoadInteger(constants["SKILL_DCM"],
         sConstants.SKILL_DCM);
     success &= LoadInteger(constants["SKILL_DEMON_FUSION"],
         sConstants.SKILL_DEMON_FUSION);
     success &= LoadInteger(constants["SKILL_DEMON_FUSION_EXECUTE"],
         sConstants.SKILL_DEMON_FUSION_EXECUTE);
+    success &= LoadInteger(constants["SKILL_DESPAWN"],
+        sConstants.SKILL_DESPAWN);
+    success &= LoadInteger(constants["SKILL_DESUMMON"],
+        sConstants.SKILL_DESUMMON);
+    success &= LoadInteger(constants["SKILL_DIASPORA_QUAKE"],
+        sConstants.SKILL_DIASPORA_QUAKE);
+    success &= LoadInteger(constants["SKILL_DIGITALIZE"],
+        sConstants.SKILL_DIGITALIZE);
+    success &= LoadInteger(constants["SKILL_DIGITALIZE_BREAK"],
+        sConstants.SKILL_DIGITALIZE_BREAK);
+    success &= LoadInteger(constants["SKILL_DIGITALIZE_CANCEL"],
+        sConstants.SKILL_DIGITALIZE_CANCEL);
+    success &= LoadInteger(constants["SKILL_DURABILITY_DOWN"],
+        sConstants.SKILL_DURABILITY_DOWN);
     success &= LoadInteger(constants["SKILL_EQUIP_ITEM"],
         sConstants.SKILL_EQUIP_ITEM);
     success &= LoadInteger(constants["SKILL_EQUIP_MOD_EDIT"],
         sConstants.SKILL_EQUIP_MOD_EDIT);
+    success &= LoadInteger(constants["SKILL_ESTOMA"],
+        sConstants.SKILL_ESTOMA);
     success &= LoadInteger(constants["SKILL_EXPERT_CLASS_DOWN"],
         sConstants.SKILL_EXPERT_CLASS_DOWN);
     success &= LoadInteger(constants["SKILL_EXPERT_FORGET"],
@@ -154,26 +182,70 @@ bool ServerConstants::Initialize(const String& filePath)
         sConstants.SKILL_EXPERT_RANK_DOWN);
     success &= LoadInteger(constants["SKILL_FAM_UP"],
         sConstants.SKILL_FAM_UP);
+    success &= LoadInteger(constants["SKILL_GEM_COST"],
+        sConstants.SKILL_GEM_COST);
+    success &= LoadInteger(constants["SKILL_HP_DEPENDENT"],
+        sConstants.SKILL_HP_DEPENDENT);
+    success &= LoadInteger(constants["SKILL_HP_MP_MIN"],
+        sConstants.SKILL_HP_MP_MIN);
     success &= LoadInteger(constants["SKILL_ITEM_FAM_UP"],
         sConstants.SKILL_ITEM_FAM_UP);
-    success &= LoadInteger(constants["SKILL_MOOCH"],
-        sConstants.SKILL_MOOCH);
+    success &= LoadInteger(constants["SKILL_LIBERAMA"],
+        sConstants.SKILL_LIBERAMA);
+    success &= LoadInteger(constants["SKILL_LNC_DAMAGE"],
+        sConstants.SKILL_LNC_DAMAGE);
     success &= LoadInteger(constants["SKILL_MAX_DURABILITY_FIXED"],
         sConstants.SKILL_MAX_DURABILITY_FIXED);
     success &= LoadInteger(constants["SKILL_MAX_DURABILITY_RANDOM"],
         sConstants.SKILL_MAX_DURABILITY_RANDOM);
+    success &= LoadInteger(constants["SKILL_MINION_DESPAWN"],
+        sConstants.SKILL_MINION_DESPAWN);
+    success &= LoadInteger(constants["SKILL_MINION_SPAWN"],
+        sConstants.SKILL_MINION_SPAWN);
+    success &= LoadInteger(constants["SKILL_MOOCH"],
+        sConstants.SKILL_MOOCH);
+    success &= LoadInteger(constants["SKILL_MOUNT"],
+        sConstants.SKILL_MOUNT);
+    success &= LoadInteger(constants["SKILL_PIERCE"],
+        sConstants.SKILL_PIERCE);
+    success &= LoadInteger(constants["SKILL_RANDOM_ITEM"],
+        sConstants.SKILL_RANDOM_ITEM);
+    success &= LoadInteger(constants["SKILL_RANDOMIZE"],
+        sConstants.SKILL_RANDOMIZE);
     success &= LoadInteger(constants["SKILL_RESPEC"],
         sConstants.SKILL_RESPEC);
     success &= LoadInteger(constants["SKILL_REST"],
         sConstants.SKILL_REST);
+    success &= LoadInteger(constants["SKILL_SLEEP_RESTRICTED"],
+        sConstants.SKILL_SLEEP_RESTRICTED);
+    success &= LoadInteger(constants["SKILL_SPAWN"],
+        sConstants.SKILL_SPAWN);
+    success &= LoadInteger(constants["SKILL_SPAWN_ZONE"],
+        sConstants.SKILL_SPAWN_ZONE);
     success &= LoadInteger(constants["SKILL_SPECIAL_REQUEST"],
         sConstants.SKILL_SPECIAL_REQUEST);
+    success &= LoadInteger(constants["SKILL_STAT_SUM_DAMAGE"],
+        sConstants.SKILL_STAT_SUM_DAMAGE);
+    success &= LoadInteger(constants["SKILL_STATUS_DIRECT"],
+        sConstants.SKILL_STATUS_DIRECT);
+    success &= LoadInteger(constants["SKILL_STATUS_LIMITED"],
+        sConstants.SKILL_STATUS_LIMITED);
+    success &= LoadInteger(constants["SKILL_STATUS_RANDOM"],
+        sConstants.SKILL_STATUS_RANDOM);
+    success &= LoadInteger(constants["SKILL_STATUS_RANDOM2"],
+        sConstants.SKILL_STATUS_RANDOM2);
+    success &= LoadInteger(constants["SKILL_STATUS_RESTRICTED"],
+        sConstants.SKILL_STATUS_RESTRICTED);
+    success &= LoadInteger(constants["SKILL_STATUS_SCALE"],
+        sConstants.SKILL_STATUS_SCALE);
     success &= LoadInteger(constants["SKILL_STORE_DEMON"],
         sConstants.SKILL_STORE_DEMON);
     success &= LoadInteger(constants["SKILL_SUICIDE"],
         sConstants.SKILL_SUICIDE);
     success &= LoadInteger(constants["SKILL_SUMMON_DEMON"],
         sConstants.SKILL_SUMMON_DEMON);
+    success &= LoadInteger(constants["SKILL_TAUNT"],
+        sConstants.SKILL_TAUNT);
     success &= LoadInteger(constants["SKILL_TRAESTO"],
         sConstants.SKILL_TRAESTO);
     success &= LoadInteger(constants["SKILL_WARP"],
@@ -182,20 +254,40 @@ bool ServerConstants::Initialize(const String& filePath)
         sConstants.SKILL_XP_PARTNER);
     success &= LoadInteger(constants["SKILL_XP_SELF"],
         sConstants.SKILL_XP_SELF);
+    success &= LoadInteger(constants["SKILL_ZONE_RESTRICTED"],
+        sConstants.SKILL_ZONE_RESTRICTED);
+    success &= LoadInteger(constants["SKILL_ZONE_RESTRICTED_ITEM"],
+        sConstants.SKILL_ZONE_RESTRICTED_ITEM);
+    success &= LoadInteger(constants["SKILL_ZONE_TARGET_ALL"],
+        sConstants.SKILL_ZONE_TARGET_ALL);
 
     // Load status effect constants
+    success &= LoadInteger(constants["STATUS_BIKE"],
+        sConstants.STATUS_BIKE);
+    success &= LoadInteger(constants["STATUS_CLOAK"],
+        sConstants.STATUS_CLOAK);
     success &= LoadInteger(constants["STATUS_DEATH"],
         sConstants.STATUS_DEATH);
     success &= LoadInteger(constants["STATUS_DEMON_QUEST_ACTIVE"],
         sConstants.STATUS_DEMON_QUEST_ACTIVE);
     success &= LoadInteger(constants["STATUS_HIDDEN"],
         sConstants.STATUS_HIDDEN);
+    success &= LoadInteger(constants["STATUS_MOUNT"],
+        sConstants.STATUS_MOUNT);
+    success &= LoadInteger(constants["STATUS_MOUNT_SUPER"],
+        sConstants.STATUS_MOUNT_SUPER);
+    success &= LoadInteger(constants["STATUS_SLEEP"],
+        sConstants.STATUS_SLEEP);
     success &= LoadInteger(constants["STATUS_SUMMON_SYNC_1"],
         sConstants.STATUS_SUMMON_SYNC_1);
     success &= LoadInteger(constants["STATUS_SUMMON_SYNC_2"],
         sConstants.STATUS_SUMMON_SYNC_2);
     success &= LoadInteger(constants["STATUS_SUMMON_SYNC_3"],
         sConstants.STATUS_SUMMON_SYNC_3);
+
+    // Load (detached) tokusei constants
+    success &= LoadInteger(constants["TOKUSEI_BIKE_BOOST"],
+        sConstants.TOKUSEI_BIKE_BOOST);
 
     // Load valuable constants
     success &= LoadInteger(constants["VALUABLE_DEVIL_BOOK_V1"],
@@ -216,8 +308,12 @@ bool ServerConstants::Initialize(const String& filePath)
     String listStr;
     success &= LoadString(constants["SKILL_TRAESTO_ARCADIA"], listStr) &&
         ToIntegerArray(sConstants.SKILL_TRAESTO_ARCADIA, listStr.Split(","));
+    success &= LoadString(constants["SKILL_TRAESTO_DSHINJUKU"], listStr) &&
+        ToIntegerArray(sConstants.SKILL_TRAESTO_DSHINJUKU, listStr.Split(","));
     success &= LoadString(constants["SKILL_TRAESTO_KAKYOJO"], listStr) &&
         ToIntegerArray(sConstants.SKILL_TRAESTO_KAKYOJO, listStr.Split(","));
+    success &= LoadString(constants["SKILL_TRAESTO_NAKANO_BDOMAIN"], listStr) &&
+        ToIntegerArray(sConstants.SKILL_TRAESTO_NAKANO_BDOMAIN, listStr.Split(","));
     success &= LoadString(constants["SKILL_TRAESTO_SOUHONZAN"], listStr) &&
         ToIntegerArray(sConstants.SKILL_TRAESTO_SOUHONZAN, listStr.Split(","));
 

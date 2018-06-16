@@ -11,5 +11,6 @@
             <key type="u32"/>
             <value type="u8"/>
         </member>
+        <member type="bool" name="unsummon"/>
     </object>
 </objgen>

@@ -96,7 +96,13 @@ namespace libcomp
 class DefinitionManager;
 }
 
+namespace objects
+{
+class MiStatusData;
+}
+
 typedef objects::MiCorrectTbl::ID_t CorrectTbl;
+typedef objects::ActiveEntityStateObject::DisplayState_t ActiveDisplayState_t;
 
 namespace channel
 {
@@ -234,6 +240,15 @@ public:
     bool IsLNCType(uint8_t lncType, bool invertFlag);
 
     /**
+     * Get a numeric representation entity's gender. The values are:
+     * 0) Male
+     * 1) Female
+     * 2) None/unspecified
+     * @return Numeric representation of the entity's gender
+     */
+    virtual int8_t GetGender();
+
+    /**
      * Get all skills that the entity currently has available.
      * @param definitionManager Pointer to the definition manager to use
      *  for skill source definitions
@@ -307,9 +322,11 @@ public:
 
     /**
      * Check if the entity is able to move
+     * @param ignoreSkill Determines if all move conditions should be checked
+     *  or just ones that don't pertain to a skill being used
      * @return true if the entity can move, false if it cannot
      */
-    bool CanMove();
+    bool CanMove(bool ignoreSkill = false);
 
     /**
      * Corrects rotation values that have exceeded the minimum
@@ -410,6 +427,20 @@ public:
     virtual bool Ready(bool ignoreDisplayState = false);
 
     /**
+     * Check if the entity state is visible to any game client and should
+     * be included when sending entity definitions or movement actions
+     * @return true if the entity is visible, false if it is not
+     */
+    virtual bool IsClientVisible();
+
+    /**
+     * Check if the entity has a mount status indicating they are either
+     * a character or demon that is mounted
+     * @return true if the entity is mounted, false if it is not
+     */
+    bool IsMounted();
+
+    /**
      * Get the zone the entity currently exists in.
      * @return Pointer to the entity's current zone, nullptr if they
      *  are not currently in a zone
@@ -471,6 +502,21 @@ public:
         std::shared_ptr<objects::StatusEffect>>& GetStatusEffects() const;
 
     /**
+     * Determine if the supplied status effect is active on the entity
+     * @param effectType Status effect type to look for
+     * @return true if the status effect is active, false if it is not
+     */
+    bool StatusEffectActive(uint32_t effectType);
+
+    /**
+     * Retrieve the time remaining on the supplied status effect
+     * @param effectType Status effect type to look for
+     * @return Expiration time which is based upon the supplied time
+     *  for relative duration effects
+     */
+    uint32_t StatusEffectTimeLeft(uint32_t effectType);
+
+    /**
      * Set the status effects currently on the entity
      * @param List of status effects currently on the entity
      */
@@ -501,8 +547,9 @@ public:
      * Expire existing status effects by effect type ID. The expire event
      * will be queued up for processing on the next server tick.
      * @param effectTypes Set of effect type IDs to expire
+     * @return Set of cancelled status effect types that will not be queued
      */
-    void ExpireStatusEffects(const std::set<uint32_t>& effectTypes);
+    std::set<uint32_t> ExpireStatusEffects(const std::set<uint32_t>& effectTypes);
 
     /**
      * Cancel existing status effects via cancel event flags. The expire
@@ -510,9 +557,11 @@ public:
      * @param cancelFlags Flags indicating conditions that can cause status
      *  effects to be cancelled. The set of valid status conditions are listed
      *  as constants on ActiveEntityState
+     * @param keepEffects Optional set of status effects to keep
      * @return Set of cancelled status effect types that will not be queued
      */
-    std::set<uint32_t> CancelStatusEffects(uint8_t cancelFlags);
+    std::set<uint32_t> CancelStatusEffects(uint8_t cancelFlags,
+        const std::set<uint32_t>& keepEffects = {});
 
     /**
      * Activate or deactivate the entity's status effect states. By activating
@@ -534,14 +583,14 @@ public:
     /**
      * Pop effect events that have occurred past the specified time off the
      * event mapping for the entity and their current zone.
-     * @param definitionManager Pointer to the DefinitionManager to use when
-     *  determining how the effects behave
      * @param time System timestamp to use for comparing effect events that
      *  have passed
      * @param hpTDamage Output parameter to store the amount of HP time
      *  damage that should be dealt
      * @param mpTDamage Output parameter to store the amount of MP time
      *  damage that should be dealt
+     * @param tUpkeep Output parameter to store skill upkeep cost that
+     *  is being paid
      * @param added Output set to store the effect type IDs of newly added
      *  effects that have been queued since the specified time
      * @param updated Output set to store the effect type IDs of updated
@@ -550,25 +599,23 @@ public:
      *  effects that have been queued since the specified time
      * @return true if any events have passed, false if none have
      */
-    bool PopEffectTicks(libcomp::DefinitionManager* definitionManager,
-        uint32_t time, int32_t& hpTDamage, int32_t& mpTDamage,
-        std::set<uint32_t>& added, std::set<uint32_t>& updated,
+    bool PopEffectTicks(uint32_t time, int32_t& hpTDamage, int32_t& mpTDamage,
+        int32_t& tUpkeep, std::set<uint32_t>& added, std::set<uint32_t>& updated,
         std::set<uint32_t>& removed);
+
+    bool ResetUpkeep();
 
     /**
      * Get a snapshot of status effects currently on the entity with their
-     * corresponding expiration time which is based upon he supplied time
+     * corresponding expiration time which is based upon the supplied time
      * for relative duration effects
-     * @param definitionManager Pointer to the DefinitionManager to use when
-     *  determining how the effects behave
      * @param now Current system timestamp to use for caculating relative duration
      *  expirations remaining, if nothing is specified, the current time will be used
      * @return List of current status effects paired with their expiration time
      *  remaining
      */
     std::list<std::pair<std::shared_ptr<objects::StatusEffect>, uint32_t>>
-        GetCurrentStatusEffectStates(libcomp::DefinitionManager* definitionManager,
-        uint32_t now = 0);
+        GetCurrentStatusEffectStates(uint32_t now = 0);
 
     /**
      * Get the entity IDs of opponents this entity is in combat against.
@@ -659,6 +706,19 @@ protected:
         bool timeOnly);
 
     /**
+     * Determine if the supplied status effect type can cause the entity to
+     * be ignored by AI entities
+     * @param effectType Effect type to check
+     * @param true if the effect is an ignore effect
+     */
+    bool IsIgnoreEffect(uint32_t effectType) const;
+
+    /**
+     * Reset the AIIgnored value on the entity based on their current state
+     */
+    void ResetAIIgnored();
+
+    /**
      * Set the next effect event time for a specified effect type for the entity's
      * event map. The zone itself must be updated using RegisterNextEffectTime after
      * each effect is set using this function.
@@ -676,16 +736,13 @@ protected:
      * Calculate the relative or absolute expiration for an effect based upon
      * the current system time and an absolute system time.
      * @param effect Pointer to the effect to calculate the expiration of
-     * @param definitionManager Pointer to the DefinitionManager to use when
-     *  determining how the effect behaves
      * @param nextTime Absolute system time to use when calculating the expiration
      * @param now Current system timestamp to use when activating the effect
      * @return Calculated expiration for the effect
      */
     uint32_t GetCurrentExpiration(
         const std::shared_ptr<objects::StatusEffect>& effect,
-        libcomp::DefinitionManager* definitionManager, uint32_t nextTime,
-        uint32_t now);
+        uint32_t nextTime, uint32_t now);
 
     /**
      * Adjust the supplied correct table stat values based upon adjustments from
@@ -807,6 +864,10 @@ protected:
     std::unordered_map<uint32_t,
         std::shared_ptr<objects::StatusEffect>> mStatusEffects;
 
+    /// Map of active status effect definitions by effect type ID
+    std::unordered_map<uint32_t,
+        std::shared_ptr<objects::MiStatusData>> mStatusEffectDefs;
+
     /// IDs of status effects currently active that deal time damage for
     /// quick access
     std::set<uint32_t> mTimeDamageEffects;
@@ -816,11 +877,11 @@ protected:
     std::unordered_map<uint8_t, std::set<uint32_t>> mCancelConditions;
 
     /// Map of server system times mapped to the next event time associated
-    /// to each active status effect. Natural HP/MP regen is stored here as
+    /// to each active status effect. System effects are stored here as
     /// a 0. Actual effects will be stored here as reserved values 1
     /// (inticating a new effect was added), 2 (indicating an efect has
     /// been updated) or 3 (indicating an effect has expired). Any other
-    /// value stored will be an absolute system time when the regen or
+    /// value stored will be an absolute system time when the regen, cost or
     /// T-Damage will be applied or the effect associated will be expired.
     std::map<uint32_t, std::set<uint32_t>> mNextEffectTimes;
 
@@ -848,8 +909,17 @@ protected:
     /// false if the entity has been assigned but never calculated
     bool mInitialCalc;
 
+    /// Signifies that the entity has the cloak status active
+    bool mCloaked;
+
     /// Last timestamp the entity's state was refreshed
     uint64_t mLastRefresh;
+
+    /// Next system time when regen and timed damage will occur
+    uint32_t mNextRegenSync;
+
+    /// Next system time when skill upkeep costs will occur
+    uint32_t mNextUpkeep;
 
     /// Next available activated ability ID
     int8_t mNextActivatedAbilityID;
@@ -914,12 +984,21 @@ public:
 
     virtual uint8_t GetLNCType();
 
+    virtual int8_t GetGender();
+
     virtual bool Ready(bool ignoreDisplayState = false)
     {
+        return mEntity != nullptr && (ignoreDisplayState ||
+            (GetDisplayState() == ActiveDisplayState_t::ACTIVE &&
+                !GetIsHidden()));
+    }
+
+    virtual bool IsClientVisible()
+    {
+        auto displayState = GetDisplayState();
         return mEntity != nullptr &&
-            (ignoreDisplayState || (GetDisplayState() ==
-            objects::ActiveEntityStateObject::DisplayState_t::ACTIVE &&
-            !GetIsHidden()));
+            (displayState == ActiveDisplayState_t::ACTIVE ||
+                displayState == ActiveDisplayState_t::MOUNT);
     }
 
 private:

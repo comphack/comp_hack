@@ -1,11 +1,10 @@
 /**
- * @file server/channel/src/packets/game/CommonSwitchInfo.cpp
+ * @file server/channel/src/packets/game/BikeDismount.cpp
  * @ingroup channel
  *
  * @author HACKfrost
  *
- * @brief Request from the client for character common switch settings. These
- *  settings contain things like auto-recovery and auto-loot enabled.
+ * @brief Request from the client to dismount from a bike.
  *
  * This file is part of the Channel Server (channel).
  *
@@ -30,13 +29,14 @@
 // libcomp Includes
 #include <Packet.h>
 #include <PacketCodes.h>
+#include <ServerConstants.h>
 
 // channel Includes
-#include "ChannelClientConnection.h"
+#include "ChannelServer.h"
 
 using namespace channel;
 
-bool Parsers::CommonSwitchInfo::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::BikeDismount::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {
@@ -51,18 +51,16 @@ bool Parsers::CommonSwitchInfo::Parse(libcomp::ManagerPacket *pPacketManager,
         connection);
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
-    auto character = cState->GetEntity();
 
     libcomp::Packet reply;
-    reply.WritePacketCode(
-        ChannelToClientPacketCode_t::PACKET_COMMON_SWITCH_INFO);
-    reply.WriteU16Little((uint16_t)character->CommonSwitchCount());
-    for(int8_t byte : character->GetCommonSwitch())
-    {
-        reply.WriteS8(byte);
-    }
+    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_BIKE_DISMOUNT);
+    reply.WriteS32Little(0);
 
     client->SendPacket(reply);
+
+    // Just expire the status, no need to verify that its there
+    std::set<uint32_t> effects = { SVR_CONST.STATUS_BIKE };
+    cState->ExpireStatusEffects(effects);
 
     return true;
 }

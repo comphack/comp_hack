@@ -162,4 +162,17 @@
 
 </section><!-- ReunionMax -->
 
+<section>
+<title>BikeBoostHide</title>
+<para><emphasis role="strong">Type:</emphasis> boolean</para>
+<para><emphasis role="strong">Default:</emphasis> true</para>
+<para>If disabled, when a character boosts on a bike, they will still speed up and enter first person view but will not become invisible to other players.</para>
+
+<section>
+<title>Example</title>
+<para><![CDATA[<member name="BikeBoostHide">false</member>]]></para>
+</section><!-- Example -->
+
+</section><!-- BikeBoostHide -->
+
 </section>

@@ -144,6 +144,20 @@ public:
         bool updateSourceClient = true);
 
     /**
+     * Recalculate the tokusei and stats of an entity belonging to the
+     * supplied client and send any resulting changes to the zone (and world
+     * if applicable).
+     * @param eState Pointer to the state of the entity being recalculated
+     * @param client Pointer to the client connection of the entity
+     * @return 1 if the calculation resulted in a change to the stats
+     *  that should be sent to the client, 2 if one of the changes should
+     *  be communicated to the world (for party members etc), 0 otherwise
+     */
+    uint8_t RecalculateTokuseiAndStats(
+        const std::shared_ptr<ActiveEntityState>& eState,
+        std::shared_ptr<ChannelClientConnection> client);
+
+    /**
      * Send the stats of an entity that has been recalculated to the
      * zone (and world if applicable).
      * @param client Pointer to the client connection
@@ -200,7 +214,7 @@ public:
         ChannelClientConnection>& client, bool includeSelf);
 
     /**
-     * Sends the specified entity's non-battle movement speed to the client
+     * Send the specified entity's non-battle movement speed to the client
      * @param client Pointer to the client connection
      * @param eState Pointer to the entity
      * @param diffOnly true if the packet should only be sent if the speed
@@ -212,6 +226,13 @@ public:
         channel::ChannelClientConnection>& client,
         const std::shared_ptr<ActiveEntityState>& eState, bool diffOnly,
         bool queue = false);
+
+    /**
+     * Send the client player's auto-recovery settings
+     * @param client Pointer to the client connection
+     */
+    void SendAutoRecovery(const std::shared_ptr<
+        ChannelClientConnection>& client);
 
     /**
      * Summon the demon matching the supplied ID on the client's character.
@@ -897,6 +918,15 @@ public:
      */
     void CancelStatusEffects(const std::shared_ptr<
         ChannelClientConnection>& client, uint8_t cancelFlags);
+
+    /**
+     * Cancel the mount status effects on both the character and demon of
+     * the supplied ClientState. If the entity's are not mounted, no work
+     * will be done.
+     * @param state Pointer to the client state
+     * @return true if the status effects existed and were cancelled
+     */
+    bool CancelMount(ClientState* state);
 
     /**
      * Build a packet containing a status effect add/update notification

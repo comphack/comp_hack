@@ -81,7 +81,8 @@ void SendShopPurchaseReply(const std::shared_ptr<ChannelClientConnection> client
 
 void HandleShopPurchase(const std::shared_ptr<ChannelServer> server,
     const std::shared_ptr<ChannelClientConnection> client,
-    int32_t shopID, int32_t cacheID, int32_t productID, int32_t quantity)
+    int32_t shopID, int32_t cacheID, int32_t productID, int32_t quantity,
+    libcomp::String gifteeName, libcomp::String giftMessage)
 {
     (void)cacheID;
 
@@ -203,11 +204,28 @@ void HandleShopPurchase(const std::shared_ptr<ChannelServer> server,
     {
         // CP purchases always go to the post instead of the inventory
         auto lobbyDB = server->GetLobbyDatabase();
+        auto targetCharacter = character;
+
+        // Check for gift parameters
+        if(!gifteeName.IsEmpty())
+        {
+            auto worldDB = server->GetWorldDatabase();
+            targetCharacter = objects::Character::LoadCharacterByName(worldDB,
+                gifteeName);
+
+            if(targetCharacter == nullptr)
+            {
+                LOG_ERROR(libcomp::String("Invalid gift target character"
+                    " name: '%1'\n").Arg(gifteeName));
+                SendShopPurchaseReply(client, shopID, productID, -2, false);
+                return;
+            }
+        }
 
         quantity = (int32_t)product->GetStack();
 
         auto postItems = objects::PostItem::LoadPostItemListByAccount(
-            lobbyDB, character->GetAccount());
+            lobbyDB, targetCharacter->GetAccount());
         if(((int32_t)postItems.size() + 1) >= MAX_POST_ITEM_COUNT)
         {
             SendShopPurchaseReply(client, shopID, productID, -1, false);
@@ -216,10 +234,15 @@ void HandleShopPurchase(const std::shared_ptr<ChannelServer> server,
 
         auto account = libcomp::PersistentObject::LoadObjectByUUID<objects::Account>(
             server->GetLobbyDatabase(), character->GetAccount(), true);
+        if(account->GetCP() < (uint32_t)price)
+        {
+            SendShopPurchaseReply(client, shopID, productID, -2, false);
+            return;
+        }
 
         auto opChangeset = std::make_shared<libcomp::DBOperationalChangeSet>();
         auto expl = std::make_shared<libcomp::DBExplicitUpdate>(account);
-        expl->Subtract<int64_t>("CP", price);
+        expl->SubtractFrom<int64_t>("CP", price, (int32_t)account->GetCP() - price);
         opChangeset->AddOperation(expl);
 
         uint32_t timestamp = (uint32_t)std::time(0);
@@ -227,7 +250,14 @@ void HandleShopPurchase(const std::shared_ptr<ChannelServer> server,
         auto postItem = libcomp::PersistentObject::New<objects::PostItem>(true);
         postItem->SetType(product->GetID());
         postItem->SetTimestamp(timestamp);
-        postItem->SetAccount(account);
+        postItem->SetAccount(targetCharacter->GetAccount());
+
+        if(!gifteeName.IsEmpty())
+        {
+            postItem->SetSource(objects::PostItem::Source_t::GIFT);
+            postItem->SetFromName(character->GetName());
+            postItem->SetGiftMessage(giftMessage);
+        }
 
         opChangeset->Insert(postItem);
 
@@ -266,10 +296,25 @@ bool Parsers::ShopBuy::Parse(libcomp::ManagerPacket *pPacketManager,
     int32_t cacheID = p.ReadS32Little();
     int32_t productID = p.ReadS32Little();
     int32_t quantity = p.ReadS32Little();
-    /// @todo: handle present purchases
 
     auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+    auto state = client->GetClientState();
+
+    if(p.Left() < 2 || (p.Left() < (uint32_t)(2 + p.PeekU16Little())))
+    {
+        return false;
+    }
+
+    libcomp::String gifteeName = p.ReadString16Little(
+        state->GetClientStringEncoding(), true);
+
+    if(p.Left() < 2 || (p.Left() < (uint32_t)(2 + p.PeekU16Little())))
+    {
+        return false;
+    }
+
+    libcomp::String giftMessage = p.ReadString16Little(
+        state->GetClientStringEncoding(), true);
 
     if(quantity <= 0)
     {
@@ -278,8 +323,10 @@ bool Parsers::ShopBuy::Parse(libcomp::ManagerPacket *pPacketManager,
         return true;
     }
 
+    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+
     server->QueueWork(HandleShopPurchase, server, client, shopID, cacheID,
-        productID, quantity);
+        productID, quantity, gifteeName, giftMessage);
 
     return true;
 }

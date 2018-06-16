@@ -1,11 +1,10 @@
 /**
- * @file server/channel/src/packets/game/CommonSwitchInfo.cpp
+ * @file server/channel/src/packets/game/SkillTarget.cpp
  * @ingroup channel
  *
  * @author HACKfrost
  *
- * @brief Request from the client for character common switch settings. These
- *  settings contain things like auto-recovery and auto-loot enabled.
+ * @brief Request from the client to target/retarget a skill being used.
  *
  * This file is part of the Channel Server (channel).
  *
@@ -28,41 +27,49 @@
 #include "Packets.h"
 
 // libcomp Includes
+#include <Log.h>
+#include <ManagerPacket.h>
 #include <Packet.h>
 #include <PacketCodes.h>
 
 // channel Includes
-#include "ChannelClientConnection.h"
+#include "ChannelServer.h"
+#include "SkillManager.h"
 
 using namespace channel;
 
-bool Parsers::CommonSwitchInfo::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::SkillTarget::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {
-    (void)pPacketManager;
-
-    if(p.Size() != 0)
+    if(p.Size() != 8 && p.Size() != 12)
     {
         return false;
     }
 
+    auto server = std::dynamic_pointer_cast<ChannelServer>(
+        pPacketManager->GetServer());
+    auto skillManager = server->GetSkillManager();
+
     auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
         connection);
     auto state = client->GetClientState();
-    auto cState = state->GetCharacterState();
-    auto character = cState->GetEntity();
 
-    libcomp::Packet reply;
-    reply.WritePacketCode(
-        ChannelToClientPacketCode_t::PACKET_COMMON_SWITCH_INFO);
-    reply.WriteU16Little((uint16_t)character->CommonSwitchCount());
-    for(int8_t byte : character->GetCommonSwitch())
+    int32_t sourceEntityID = p.ReadS32Little();
+    int64_t targetObjectID = p.Size() == 8 ? (int64_t)p.ReadS32Little() : p.ReadS64Little();
+
+    auto source = state->GetEntityState(sourceEntityID);
+    if(!source)
     {
-        reply.WriteS8(byte);
+        LOG_ERROR("Invalid skill source sent from client for skill target\n");
+        return false;
     }
 
-    client->SendPacket(reply);
+    server->QueueWork([](SkillManager* pSkillManager, const std::shared_ptr<
+        ActiveEntityState> pSource, int64_t pTargetObjectID)
+        {
+            pSkillManager->TargetSkill(pSource, pTargetObjectID);
+        }, skillManager, source, targetObjectID);
 
     return true;
 }

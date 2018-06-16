@@ -92,6 +92,7 @@
 #include "EventManager.h"
 #include "FusionManager.h"
 #include "ManagerConnection.h"
+#include "SkillManager.h"
 #include "TokuseiManager.h"
 #include "ZoneManager.h"
 
@@ -161,8 +162,7 @@ void CharacterManager::SendCharacterData(const std::shared_ptr<
     reply.WriteS16(-5600); // Unknown
     reply.WriteS16(5600); // Unknown
 
-    auto statusEffects = cState->GetCurrentStatusEffectStates(
-        mServer.lock()->GetDefinitionManager());
+    auto statusEffects = cState->GetCurrentStatusEffectStates();
 
     reply.WriteU32Little(static_cast<uint32_t>(statusEffects.size()));
     for(auto ePair : statusEffects)
@@ -256,11 +256,9 @@ void CharacterManager::SendCharacterData(const std::shared_ptr<
 
     client->SendPacket(reply);
 
-    if(cState->GetDisplayState() ==
-        objects::ActiveEntityStateObject::DisplayState_t::DATA_NOT_SENT)
+    if(cState->GetDisplayState() == ActiveDisplayState_t::DATA_NOT_SENT)
     {
-        cState->SetDisplayState(
-            objects::ActiveEntityStateObject::DisplayState_t::DATA_SENT);
+        cState->SetDisplayState(ActiveDisplayState_t::DATA_SENT);
     }
 }
 
@@ -319,8 +317,7 @@ void CharacterManager::SendOtherCharacterData(const std::list<std::shared_ptr<
     reply.WriteS8(cs->GetLevel());
     reply.WriteS16Little(c->GetLNC());
 
-    auto statusEffects = cState->GetCurrentStatusEffectStates(
-        mServer.lock()->GetDefinitionManager());
+    auto statusEffects = cState->GetCurrentStatusEffectStates();
 
     reply.WriteU32Little(static_cast<uint32_t>(statusEffects.size()));
     for(auto ePair : statusEffects)
@@ -428,8 +425,7 @@ void CharacterManager::SendPartnerData(const std::shared_ptr<
 
     GetEntityStatsPacketData(reply, ds, dState, 0);
 
-    auto statusEffects = dState->GetCurrentStatusEffectStates(
-        mServer.lock()->GetDefinitionManager());
+    auto statusEffects = dState->GetCurrentStatusEffectStates();
 
     reply.WriteU32Little(static_cast<uint32_t>(statusEffects.size()));
     for(auto ePair : statusEffects)
@@ -531,11 +527,9 @@ void CharacterManager::SendPartnerData(const std::shared_ptr<
 
     client->SendPacket(reply);
 
-    if(dState->GetDisplayState() ==
-        objects::ActiveEntityStateObject::DisplayState_t::DATA_NOT_SENT)
+    if(dState->GetDisplayState() == ActiveDisplayState_t::DATA_NOT_SENT)
     {
-        dState->SetDisplayState(
-            objects::ActiveEntityStateObject::DisplayState_t::DATA_SENT);
+        dState->SetDisplayState(ActiveDisplayState_t::DATA_SENT);
     }
 }
 
@@ -563,8 +557,7 @@ void CharacterManager::SendOtherPartnerData(const std::list<std::shared_ptr<
     reply.WriteS16Little((int16_t)ds->GetHP());
     reply.WriteS8(ds->GetLevel());
 
-    auto statusEffects = dState->GetCurrentStatusEffectStates(
-        mServer.lock()->GetDefinitionManager());
+    auto statusEffects = dState->GetCurrentStatusEffectStates();
 
     reply.WriteU32Little(static_cast<uint32_t>(statusEffects.size()));
     for(auto ePair : statusEffects)
@@ -712,7 +705,7 @@ uint8_t CharacterManager::RecalculateStats(
     const std::shared_ptr<ActiveEntityState>& eState,
     std::shared_ptr<ChannelClientConnection> client, bool updateSourceClient)
 {
-    if(!eState || !eState->Ready())
+    if(!eState || !eState->Ready(true))
     {
         return 0;
     }
@@ -784,6 +777,22 @@ uint8_t CharacterManager::RecalculateStats(
     }
 
     return result;
+}
+
+uint8_t CharacterManager::RecalculateTokuseiAndStats(
+    const std::shared_ptr<ActiveEntityState>& eState,
+    std::shared_ptr<ChannelClientConnection> client)
+{
+    std::shared_ptr<ActiveEntityState> primaryEntity = eState;
+    if(client)
+    {
+        primaryEntity = client->GetClientState()
+            ->GetCharacterState();
+    }
+
+    mServer.lock()->GetTokuseiManager()->Recalculate(primaryEntity,
+        true, std::set<int32_t>{ eState->GetEntityID() });
+    return RecalculateStats(eState, client);
 }
 
 void CharacterManager::SendEntityStats(std::shared_ptr<
@@ -900,7 +909,7 @@ void CharacterManager::SendMovementSpeed(const std::shared_ptr<
     const std::shared_ptr<ActiveEntityState>& eState, bool diffOnly,
     bool queue)
 {
-    if(eState && client && (!diffOnly ||
+    if(eState && client && (!diffOnly || eState->GetSpeedBoost() ||
         eState->GetCorrectValue(CorrectTbl::MOVE2) != STAT_DEFAULT_SPEED))
     {
         libcomp::Packet p;
@@ -916,6 +925,28 @@ void CharacterManager::SendMovementSpeed(const std::shared_ptr<
         {
             client->SendPacket(p);
         }
+    }
+}
+
+void CharacterManager::SendAutoRecovery(const std::shared_ptr<
+    ChannelClientConnection>& client)
+{
+    auto state = client->GetClientState();
+    auto cState = state->GetCharacterState();
+    auto character = cState->GetEntity();
+
+    if(character)
+    {
+        auto data = character->GetAutoRecovery();
+
+        libcomp::Packet p;
+        p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_AUTO_RECOVERY);
+
+        // Data represents item type, percent 5 times
+        p.WriteU8((uint8_t)(data.size() / 5));
+        p.WriteArray(&data, (uint32_t)data.size());
+
+        client->SendPacket(p);
     }
 }
 
@@ -951,8 +982,7 @@ void CharacterManager::SummonDemon(const std::shared_ptr<
 
     // Mark that the demon state has not been fully summoned yet so
     // the summon effect only displays once
-    dState->SetDisplayState(
-        objects::ActiveEntityStateObject::DisplayState_t::AWAITING_SUMMON);
+    dState->SetDisplayState(ActiveDisplayState_t::AWAITING_SUMMON);
 
     // If the character and demon share alignment, apply summon sync
     if(cState->GetLNCType() == dState->GetLNCType())
@@ -2506,9 +2536,7 @@ bool CharacterManager::UpdateDurability(const std::shared_ptr<
     {
         // Enable/disable tokusei on equipment including set bonuses
         cState->RecalcEquipState(server->GetDefinitionManager());
-        server->GetTokuseiManager()->Recalculate(cState, true,
-            std::set<int32_t>{ cState->GetEntityID() });
-        RecalculateStats(cState, client);
+        RecalculateTokuseiAndStats(cState, client);
     }
 
     return updated;
@@ -3399,9 +3427,7 @@ void CharacterManager::UpdateExpertisePoints(const std::shared_ptr<
     {
         //Expertises can be used as multipliers and conditions, always recalc
         cState->RecalcDisabledSkills(definitionManager);
-        server->GetTokuseiManager()->Recalculate(cState, true,
-            std::set<int32_t>{ cState->GetEntityID() });
-        RecalculateStats(cState, client);
+        RecalculateTokuseiAndStats(cState, client);
     }
 }
 
@@ -3554,9 +3580,7 @@ bool CharacterManager::LearnSkill(const std::shared_ptr<channel::ChannelClientCo
 
         server->GetWorldDatabase()->QueueUpdate(character, state->GetAccountUID());
 
-        server->GetTokuseiManager()->Recalculate(eState, true,
-            std::set<int32_t>{ eState->GetEntityID() });
-        RecalculateStats(eState, client);
+        RecalculateTokuseiAndStats(eState, client);
     }
 
     return true;
@@ -4268,9 +4292,48 @@ void CharacterManager::CancelStatusEffects(const std::shared_ptr<
     auto dState = state->GetDemonState();
     auto zone = state->GetZone();
 
+    if(!zone)
+    {
+        return;
+    }
+
+    int32_t cEntityID = cState->GetEntityID();
+    int32_t dEntityID = dState->GetEntityID();
+
     std::unordered_map<int32_t, std::set<uint32_t>> cancelMap;
-    cancelMap[cState->GetEntityID()] = cState->CancelStatusEffects(cancelFlags);
-    cancelMap[dState->GetEntityID()] = dState->CancelStatusEffects(cancelFlags);
+    cancelMap[cEntityID] = cState->CancelStatusEffects(cancelFlags);
+    cancelMap[dEntityID] = dState->CancelStatusEffects(cancelFlags);
+
+    if((cancelFlags & EFFECT_CANCEL_ZONEOUT) != 0)
+    {
+        // Cancel invalid ride effects
+        if(zone->GetDefinition()->GetMountDisabled() && CancelMount(state))
+        {
+            // Cancel all mount status effects
+            cancelMap[cEntityID].insert(SVR_CONST.STATUS_MOUNT);
+            cancelMap[cEntityID].insert(SVR_CONST.STATUS_MOUNT_SUPER);
+            cancelMap[dEntityID].insert(SVR_CONST.STATUS_MOUNT);
+            cancelMap[dEntityID].insert(SVR_CONST.STATUS_MOUNT_SUPER);
+        }
+
+        if(zone->GetDefinition()->GetBikeDisabled())
+        {
+            std::set<uint32_t> rideEffects;
+            rideEffects.insert(SVR_CONST.STATUS_BIKE);
+
+            bool cancelled = false;
+            for(uint32_t effectType : cState->ExpireStatusEffects(rideEffects))
+            {
+                cancelMap[cEntityID].insert(effectType);
+                cancelled = true;
+            }
+
+            if(cancelled)
+            {
+                RecalculateTokuseiAndStats(cState, client);
+            }
+        }
+    }
 
     auto definitionManager = mServer.lock()->GetDefinitionManager();
     for(auto demon : cState->GetEntity()->GetCOMP()->GetDemons())
@@ -4328,6 +4391,47 @@ void CharacterManager::CancelStatusEffects(const std::shared_ptr<
 
         client->FlushOutgoing();
     }
+}
+
+bool CharacterManager::CancelMount(ClientState* state)
+{
+    if(state)
+    {
+        auto server = mServer.lock();
+        auto definitionManager = server->GetDefinitionManager();
+
+        auto cState = state->GetCharacterState();
+        auto dState = state->GetDemonState();
+
+        if(!cState->IsMounted() && !dState->IsMounted())
+        {
+            return false;
+        }
+
+        for(uint32_t skillID : definitionManager->GetFunctionIDSkills(
+            SVR_CONST.SKILL_MOUNT))
+        {
+            cState->RemoveActiveSwitchSkills(skillID);
+            dState->RemoveActiveSwitchSkills(skillID);
+        }
+
+        server->GetTokuseiManager()->Recalculate(cState, true);
+
+        // In case the entities have the status from somewhere else,
+        // double check that the status is removed
+        const std::set<uint32_t> mountEffects =
+            {
+                SVR_CONST.STATUS_MOUNT,
+                SVR_CONST.STATUS_MOUNT_SUPER
+            };
+
+        cState->ExpireStatusEffects(mountEffects);
+        dState->ExpireStatusEffects(mountEffects);
+
+        return true;
+    }
+
+    return false;
 }
 
 bool CharacterManager::GetActiveStatusesPacket(libcomp::Packet& p, int32_t entityID,

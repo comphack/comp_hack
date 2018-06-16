@@ -62,7 +62,7 @@ bool Parsers::Move::Parse(libcomp::ManagerPacket *pPacketManager,
             .Arg(entityID));
         return false;
     }
-    else if(!eState->Ready())
+    else if(!eState->Ready(true))
     {
         // Nothing to do, the entity is not currently active
         return true;
@@ -131,9 +131,20 @@ bool Parsers::Move::Parse(libcomp::ManagerPacket *pPacketManager,
 
     /// @todo: Fire zone triggers
 
-    auto zoneConnections = zoneManager->GetZoneConnections(client,
-        positionCorrected);
-    if(zoneConnections.size() > 0)
+    // If the entity is still visible to others, relay info
+    std::list<std::shared_ptr<ChannelClientConnection>> zConnections;
+    if(eState->IsClientVisible())
+    {
+        zConnections = zoneManager->GetZoneConnections(client, false);
+    }
+
+    // If the move was invalid, send correction to self
+    if(positionCorrected)
+    {
+        zConnections.push_back(client);
+    }
+
+    if(zConnections.size() > 0)
     {
         libcomp::Packet reply;
         reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_MOVE);
@@ -148,7 +159,7 @@ bool Parsers::Move::Parse(libcomp::ManagerPacket *pPacketManager,
         timeMap[reply.Size()] = startTime;
         timeMap[reply.Size() + 4] = stopTime;
 
-        ChannelClientConnection::SendRelativeTimePacket(zoneConnections, reply, timeMap);
+        ChannelClientConnection::SendRelativeTimePacket(zConnections, reply, timeMap);
     }
 
     // If a demon is moving while the character is hidden, warp the
@@ -159,6 +170,8 @@ bool Parsers::Move::Parse(libcomp::ManagerPacket *pPacketManager,
         zoneManager->Warp(client, state->GetCharacterState(),
             destX, destY, 0.f);
     }
+
+    /// @todo: lower movement durability
 
     return true;
 }

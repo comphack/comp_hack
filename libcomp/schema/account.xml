@@ -19,7 +19,18 @@
     <object name="PostItem">
         <member type="u32" name="Type"/>
         <member type="Account*" name="Account" key="true" unique="false"/>
+        <member type="enum" name="Source" underlying="int8_t" default="NORMAL">
+            <value num="-10">EVENT</value>
+            <value num="-8">COMPENSATION</value>
+            <value num="-7">CAMPAIGN</value>
+            <value num="-6">RECURRING</value>
+            <value num="-5">PROMOTION</value>
+            <value num="-2">GIFT</value>
+            <value num="0">NORMAL</value>
+        </member>
         <member type="u32" name="Timestamp"/>
+        <member type="string" name="FromName"/>
+        <member type="string" name="GiftMessage"/>
     </object>
     <object name="AccountWorldData" location="world">
         <member type="Account*" name="Account" key="true" unique="true"/>

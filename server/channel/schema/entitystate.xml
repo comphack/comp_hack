@@ -64,6 +64,7 @@
     <object name="ActiveEntityStateObject" baseobject="EntityStateObject"
     scriptenabled="true" persistent="false">
         <member type="bool" name="IsHidden"/>
+        <member type="bool" name="AIIgnored"/>
         <member type="MiDevilData*" name="DevilData" nulldefault="true"/>
         <member type="enum" name="Faction" underlying="int8_t">
             <value>PLAYER</value>
@@ -75,6 +76,9 @@
             <value>DATA_NOT_SENT</value>
             <value>DATA_SENT</value>
             <value>ACTIVE</value>
+            <!-- Below states are still active but cannot be interacted with -->
+            <value>MOUNT</value>
+            <value>BIKE_BOOST</value>
         </member>
 
         <member type="float" name="OriginX"/>
@@ -109,6 +113,7 @@
         <member type="s16" name="PDEF"/>
         <member type="s16" name="MDEF"/>
         <member type="s16" name="CombatRunSpeed"/>
+        <member type="s16" name="SpeedBoost"/>
         <member type="CalculatedEntityState*" name="CalculatedState"/>
 
         <member type="ActivatedAbility*" name="ActivatedAbility"
@@ -149,6 +154,7 @@
         <member type="u64" name="ChargedTime"/>
         <member type="u64" name="CooldownTime"/>
         <member type="u64" name="LockOutTime"/>
+        <member type="s16" name="UpkeepCost"/>
         <member type="u8" name="ExecuteCount"/>
         <member type="u8" name="MaxUseCount"/>
         <member type="float" name="ChargeMoveSpeed"/>

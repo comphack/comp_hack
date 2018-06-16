@@ -1,11 +1,10 @@
 /**
- * @file server/channel/src/packets/game/CommonSwitchInfo.cpp
+ * @file server/channel/src/packets/game/PostGift.cpp
  * @ingroup channel
  *
  * @author HACKfrost
  *
- * @brief Request from the client for character common switch settings. These
- *  settings contain things like auto-recovery and auto-loot enabled.
+ * @brief Request from the client for post gift information.
  *
  * This file is part of the Channel Server (channel).
  *
@@ -28,38 +27,65 @@
 #include "Packets.h"
 
 // libcomp Includes
+#include <Log.h>
+#include <ManagerPacket.h>
 #include <Packet.h>
 #include <PacketCodes.h>
 
+// object Includes
+#include <PostItem.h>
+
 // channel Includes
-#include "ChannelClientConnection.h"
+#include "ChannelServer.h"
 
 using namespace channel;
 
-bool Parsers::CommonSwitchInfo::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::PostGift::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {
-    (void)pPacketManager;
-
-    if(p.Size() != 0)
+    if(p.Size() != 4)
     {
         return false;
     }
 
+    auto server = std::dynamic_pointer_cast<ChannelServer>(
+        pPacketManager->GetServer());
+
     auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
         connection);
     auto state = client->GetClientState();
-    auto cState = state->GetCharacterState();
-    auto character = cState->GetEntity();
+    auto lobbyDB = server->GetLobbyDatabase();
+
+    int32_t postID = p.ReadS32Little();
+
+    auto itemUUID = state->GetLocalObjectUUID(postID);
 
     libcomp::Packet reply;
-    reply.WritePacketCode(
-        ChannelToClientPacketCode_t::PACKET_COMMON_SWITCH_INFO);
-    reply.WriteU16Little((uint16_t)character->CommonSwitchCount());
-    for(int8_t byte : character->GetCommonSwitch())
+    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_POST_GIFT);
+    reply.WriteS32Little(postID);
+
+    bool success = false;
+    if(!itemUUID.IsNull())
     {
-        reply.WriteS8(byte);
+        auto postItem = libcomp::PersistentObject::LoadObjectByUUID<
+            objects::PostItem>(lobbyDB, itemUUID);
+        if(postItem)
+        {
+            reply.WriteS32Little(0);
+            reply.WriteS8(0);
+            reply.WriteString16Little(state->GetClientStringEncoding(),
+                postItem->GetFromName(), true);
+            reply.WriteString16Little(state->GetClientStringEncoding(),
+                postItem->GetGiftMessage(), true);
+
+            success = true;
+        }
+    }
+
+    if(!success)
+    {
+        reply.WriteS32Little(-1);
     }
 
     client->SendPacket(reply);

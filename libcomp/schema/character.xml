@@ -73,6 +73,12 @@
         <member type="array" name="Hotbars" size="10">
             <element type="Hotbar*"/>
         </member>
+        <member type="array" name="CommonSwitch" size="4">
+            <element type="s8"/>
+        </member>
+        <member type="array" name="AutoRecovery" size="20">
+            <element type="s8"/>
+        </member>
         <member type="array" name="CustomTitles" size="65">
             <element type="s16" default="-1"/>
         </member>

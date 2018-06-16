@@ -816,11 +816,17 @@ bool ActionManager::AddRemoveStatus(ActionContext& ctx)
     {
         effects[pair.first] = StatusEffectChange(pair.first, pair.second,
             act->GetIsReplace());
+
+        if(act->StatusTimesKeyExists(pair.first))
+        {
+            // Explicit time specified
+            effects[pair.first].Duration = act->GetStatusTimes(pair.first);
+        }
     }
 
     if(effects.size() > 0)
     {
-        bool playerEntityModified = false;
+        std::list<std::shared_ptr<ActiveEntityState>> playerEntities;
         switch(act->GetTargetType())
         {
         case objects::ActionAddRemoveStatus::TargetType_t::CHARACTER:
@@ -828,7 +834,7 @@ bool ActionManager::AddRemoveStatus(ActionContext& ctx)
             {
                 state->GetCharacterState()->AddStatusEffects(effects,
                     definitionManager);
-                playerEntityModified = true;
+                playerEntities.push_back(state->GetCharacterState());
             }
             break;
         case objects::ActionAddRemoveStatus::TargetType_t::PARTNER:
@@ -836,7 +842,7 @@ bool ActionManager::AddRemoveStatus(ActionContext& ctx)
             {
                 state->GetDemonState()->AddStatusEffects(effects,
                     definitionManager);
-                playerEntityModified = true;
+                playerEntities.push_back(state->GetDemonState());
             }
             break;
         case objects::ActionAddRemoveStatus::TargetType_t::CHARACTER_AND_PARTNER:
@@ -844,9 +850,11 @@ bool ActionManager::AddRemoveStatus(ActionContext& ctx)
             {
                 state->GetCharacterState()->AddStatusEffects(effects,
                     definitionManager);
+                playerEntities.push_back(state->GetCharacterState());
+
                 state->GetDemonState()->AddStatusEffects(effects,
                     definitionManager);
-                playerEntityModified = true;
+                playerEntities.push_back(state->GetDemonState());
             }
             break;
         case objects::ActionAddRemoveStatus::TargetType_t::SOURCE:
@@ -861,10 +869,23 @@ bool ActionManager::AddRemoveStatus(ActionContext& ctx)
             break;
         }
 
-        if(playerEntityModified)
+        if(playerEntities.size() > 0)
         {
             // Recalculate the character and demon
-            tokuseiManager->Recalculate(state->GetCharacterState(), true);
+            std::set<int32_t> entityIDs;
+            for(auto eState : playerEntities)
+            {
+                entityIDs.insert(eState->GetEntityID());
+            }
+
+            tokuseiManager->Recalculate(state->GetCharacterState(), true,
+                entityIDs);
+
+            for(auto eState : playerEntities)
+            {
+                server->GetCharacterManager()->RecalculateStats(eState,
+                    ctx.Client);
+            }
         }
     }
 
@@ -890,6 +911,12 @@ bool ActionManager::UpdateCOMP(ActionContext& ctx)
     auto dState = state->GetDemonState();
     auto progress = character->GetProgress().Get();
     auto comp = character->GetCOMP().Get();
+
+    // Before updating the COMP values, perform unsummon if requested
+    if(act->GetUnsummon())
+    {
+        characterManager->StoreDemon(ctx.Client);
+    }
 
     // First increase the COMP
     uint8_t maxSlots = progress->GetMaxCOMPSlots();

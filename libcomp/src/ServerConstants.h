@@ -116,11 +116,27 @@ struct Data
     /// Menu ID of the Tri-Fusion (solo) process
     uint32_t MENU_TRIFUSION_KZ;
 
+    /// Function ID of absolute damage dealing skills
+    uint16_t SKILL_ABS_DAMAGE;
+
+    /// Function ID of skills unique to bosses that have special
+    /// range and damage adjustments
+    uint16_t SKILL_BOSS_SPECIAL;
+
     /// Function ID of "cameo" skills
     uint16_t SKILL_CAMEO;
 
     /// Function ID of clan formation item skills
     uint16_t SKILL_CLAN_FORM;
+
+    /// Function ID of the character cloaking skills
+    uint16_t SKILL_CLOAK;
+
+    /// Function ID cultivate slot mod increasing passives
+    uint16_t SKILL_CULTIVATE_SLOT_UP;
+
+    /// Function ID cultivate success increasing passives
+    uint16_t SKILL_CULTIVATE_UP;
 
     /// Function ID for the demonic compendium add skill
     uint16_t SKILL_DCM;
@@ -131,11 +147,35 @@ struct Data
     /// Function ID of multi-entity demon fusion execution skills
     uint16_t SKILL_DEMON_FUSION_EXECUTE;
 
+    /// Function ID of the self despawning enemy skills
+    uint16_t SKILL_DESPAWN;
+
+    /// Function ID of targeted desummon skills
+    uint16_t SKILL_DESUMMON;
+
+    /// Function ID of the Diaspora quake skill
+    uint16_t SKILL_DIASPORA_QUAKE;
+
+    /// Function ID of digitalize activation
+    uint16_t SKILL_DIGITALIZE;
+
+    /// Function ID of digitalize breaking skills
+    uint16_t SKILL_DIGITALIZE_BREAK;
+
+    /// Function ID of digitalize cancellation action
+    uint16_t SKILL_DIGITALIZE_CANCEL;
+
+    /// Function ID of skills that deal specific durability damage
+    uint16_t SKILL_DURABILITY_DOWN;
+
     /// Function ID of equipment changing skills
     uint16_t SKILL_EQUIP_ITEM;
 
     /// Function ID skills that edit equipment modifications
     uint16_t SKILL_EQUIP_MOD_EDIT;
+
+    /// Function ID of aggro breaking "Estoma" skills
+    uint16_t SKILL_ESTOMA;
 
     /// Function ID of expertise class down skills
     uint16_t SKILL_EXPERT_CLASS_DOWN;
@@ -152,11 +192,26 @@ struct Data
     /// Function ID of familiarity boosting skills
     uint16_t SKILL_FAM_UP;
 
+    /// Function ID of skills that cost gems to use
+    uint16_t SKILL_GEM_COST;
+
+    /// Function ID of specific gender targeting skills
+    uint16_t SKILL_GENDER_RESTRICTED;
+
+    /// Function ID of HP dependent damage boosting skills
+    uint16_t SKILL_HP_DEPENDENT;
+
+    /// Function ID of skills that drop the target to 1 HP and/or MP
+    uint16_t SKILL_HP_MP_MIN;
+
     /// Function ID of familiarity boosting item skills
     uint16_t SKILL_ITEM_FAM_UP;
 
-    /// Function ID of familiarity lowering "Mooch" skills
-    uint16_t SKILL_MOOCH;
+    /// Function ID of aggro drawing "Liberama" skills
+    uint16_t SKILL_LIBERAMA;
+
+    /// Function ID of LNC dependent damage boosting skills
+    uint16_t SKILL_LNC_DAMAGE;
 
     /// Function ID of fixed point max durability increase skills
     uint16_t SKILL_MAX_DURABILITY_FIXED;
@@ -164,15 +219,73 @@ struct Data
     /// Function ID of random range point max durability increase skills
     uint16_t SKILL_MAX_DURABILITY_RANDOM;
 
+    /// Function ID of minion despawning skills
+    uint16_t SKILL_MINION_DESPAWN;
+
+    /// Function ID of minion spawning skills
+    uint16_t SKILL_MINION_SPAWN;
+
+    /// Function ID of familiarity lowering "Mooch" skills
+    uint16_t SKILL_MOOCH;
+
+    /// Function ID of demon riding mount skills
+    uint16_t SKILL_MOUNT;
+
+    /// Function ID of defense ignoring pierce skills
+    uint16_t SKILL_PIERCE;
+
+    /// Function ID of skills that give the user a random set item
+    uint16_t SKILL_RANDOM_ITEM;
+
+    /// Function ID of skills that require a random sent to the client
+    uint16_t SKILL_RANDOMIZE;
+
     /// Function ID of character skill point reallocation skills
     uint16_t SKILL_RESPEC;
 
     /// Function ID of rest skills
     uint16_t SKILL_REST;
 
+    /// Function ID of skills that only hit when the target is asleep
+    uint16_t SKILL_SLEEP_RESTRICTED;
+
+    /// Function ID of enemy spawning skills (independent of zone)
+    uint16_t SKILL_SPAWN;
+
+    /// Function ID of enemy spawning skills (dependent upon zone)
+    uint16_t SKILL_SPAWN_ZONE;
+
     /// Function ID of skills that simply execute and send a special
     /// request packet after completion
     uint16_t SKILL_SPECIAL_REQUEST;
+
+    /// Function ID of skills that calculate damage based upon all core
+    /// stats
+    uint16_t SKILL_STAT_SUM_DAMAGE;
+
+    /// Function ID of skills that apply a status effect independent of
+    /// the skill's outcome
+    uint16_t SKILL_STATUS_DIRECT;
+
+    /// Function ID of skills that can only be used if a specified status
+    /// effect is not on the user. The status is also added upon use.
+    uint16_t SKILL_STATUS_LIMITED;
+
+    /// Function ID of skills that apply one random status effect from the
+    /// defined set
+    uint16_t SKILL_STATUS_RANDOM;
+
+    /// Function ID of skills that apply one random status effect from the
+    /// defined set (contains duplicates for 'weights')
+    uint16_t SKILL_STATUS_RANDOM2;
+
+    /// Function ID of skills that can only be used if a specified status
+    /// effect is not on the user
+    uint16_t SKILL_STATUS_RESTRICTED;
+
+    /// Function ID of skills that add status effects with a stack count
+    /// based upon a stat on the user
+    uint16_t SKILL_STATUS_SCALE;
 
     /// Function ID of skills that store the demon in the COMP
     uint16_t SKILL_STORE_DEMON;
@@ -183,6 +296,10 @@ struct Data
     /// Function ID of skills that summon a demon from the COMP
     uint16_t SKILL_SUMMON_DEMON;
 
+    /// Function ID of negotation skills that draw aggro from the target
+    /// if the talk outcome succeeds
+    uint16_t SKILL_TAUNT;
+
     /// Function ID of homepoint warp "Traesto" skills
     uint16_t SKILL_TRAESTO;
 
@@ -190,9 +307,17 @@ struct Data
     /// ID and zone in spot ID
     std::array<uint32_t, 3> SKILL_TRAESTO_ARCADIA;
 
+    /// Function ID of "Dark Shinjuku" warp skills paired with the zone
+    /// ID and zone in spot ID
+    std::array<uint32_t, 3> SKILL_TRAESTO_DSHINJUKU;
+
     /// Function ID of "Kakyojo" warp skills paired with the zone
     /// ID and zone in spot ID
     std::array<uint32_t, 3> SKILL_TRAESTO_KAKYOJO;
+
+    /// Function ID of "Nakano Boundless Domain" warp skills paired with the
+    /// zone ID and zone in spot ID
+    std::array<uint32_t, 3> SKILL_TRAESTO_NAKANO_BDOMAIN;
 
     /// Function ID of "Souhonzan" warp skills paired with the zone
     /// ID and zone in spot ID
@@ -207,6 +332,21 @@ struct Data
     /// Function ID of self granting XP skills
     uint16_t SKILL_XP_SELF;
 
+    /// Function ID of skills that can only be used in specific zones
+    uint16_t SKILL_ZONE_RESTRICTED;
+
+    /// Function ID of skills on items that can only be used in specific zones
+    uint16_t SKILL_ZONE_RESTRICTED_ITEM;
+
+    /// Function ID of skills that hit every valid target in the zone
+    uint16_t SKILL_ZONE_TARGET_ALL;
+
+    /// Status effect ID of bike use
+    uint32_t STATUS_BIKE;
+
+    /// Status effect ID of a cloaked entity
+    uint32_t STATUS_CLOAK;
+
     /// Status effect ID of instant death
     uint32_t STATUS_DEATH;
 
@@ -216,6 +356,15 @@ struct Data
     /// Status effect ID of (demon solo used) entity hide effect
     uint32_t STATUS_HIDDEN;
 
+    /// Status effect ID of the demon riding mounted state
+    uint32_t STATUS_MOUNT;
+
+    /// Status effect ID of the extended demon riding mounted state
+    uint32_t STATUS_MOUNT_SUPER;
+
+    /// Status effect ID of the sleep effect
+    uint32_t STATUS_SLEEP;
+
     /// Status effect ID of summon sync level 1
     uint32_t STATUS_SUMMON_SYNC_1;
 
@@ -224,6 +373,9 @@ struct Data
 
     /// Status effect ID of summon sync level 3
     uint32_t STATUS_SUMMON_SYNC_3;
+
+    /// Tokusei ID associated to boosting on a bike
+    int32_t TOKUSEI_BIKE_BOOST;
 
     /// Valuable ID of the demonic compendium V1
     uint16_t VALUABLE_DEVIL_BOOK_V1;

@@ -1,11 +1,10 @@
 /**
- * @file server/channel/src/packets/game/CommonSwitchInfo.cpp
+ * @file server/channel/src/packets/game/AutoRecoveryUpdate.cpp
  * @ingroup channel
  *
  * @author HACKfrost
  *
- * @brief Request from the client for character common switch settings. These
- *  settings contain things like auto-recovery and auto-loot enabled.
+ * @brief Request from the client to update character auto-recovery settings.
  *
  * This file is part of the Channel Server (channel).
  *
@@ -28,23 +27,39 @@
 #include "Packets.h"
 
 // libcomp Includes
+#include <ManagerPacket.h>
 #include <Packet.h>
 #include <PacketCodes.h>
 
 // channel Includes
-#include "ChannelClientConnection.h"
+#include "ChannelServer.h"
 
 using namespace channel;
 
-bool Parsers::CommonSwitchInfo::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::AutoRecoveryUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {
     (void)pPacketManager;
 
-    if(p.Size() != 0)
+    if(p.Size() < 1)
     {
         return false;
+    }
+
+    uint8_t size = p.ReadU8();
+    if(size != 4 || p.Left() != (uint32_t)(size * 5))
+    {
+        return false;
+    }
+
+    // Simply store the definition as a byte array
+    auto data = p.ReadArray(20);
+
+    std::array<int8_t, 20> val;
+    for(size_t i = 0; i < 20; i++)
+    {
+        val[i] = data[i];
     }
 
     auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
@@ -53,14 +68,12 @@ bool Parsers::CommonSwitchInfo::Parse(libcomp::ManagerPacket *pPacketManager,
     auto cState = state->GetCharacterState();
     auto character = cState->GetEntity();
 
+    character->SetAutoRecovery(val);
+
     libcomp::Packet reply;
     reply.WritePacketCode(
-        ChannelToClientPacketCode_t::PACKET_COMMON_SWITCH_INFO);
-    reply.WriteU16Little((uint16_t)character->CommonSwitchCount());
-    for(int8_t byte : character->GetCommonSwitch())
-    {
-        reply.WriteS8(byte);
-    }
+        ChannelToClientPacketCode_t::PACKET_AUTO_RECOVERY_UPDATE);
+    reply.WriteS8(0);   // Success
 
     client->SendPacket(reply);
 

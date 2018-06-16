@@ -98,14 +98,24 @@ bool Parsers::PostList::Parse(libcomp::ManagerPacket *pPacketManager,
 
     libcomp::Packet reply;
     reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_POST_LIST);
-    reply.WriteS32Little(0);    // Unknown
+    reply.WriteS32Little(0);    // Success
     reply.WriteS32Little((int32_t)items.size());
 
     for(auto item : items)
     {
-        reply.WriteS32Little(state->GetLocalObjectID(item->GetUUID()));
-        reply.WriteS8(0);           // Item flags (limited time etc)
-        reply.WriteS32Little(-1);   // Unknown
+        int32_t localObjectID = state->GetLocalObjectID(item->GetUUID());
+        reply.WriteS32Little(localObjectID);
+        reply.WriteS8((int8_t)item->GetSource());
+
+        if(item->GetSource() == objects::PostItem::Source_t::GIFT)
+        {
+            reply.WriteS32Little(localObjectID);   // Gift ID
+        }
+        else
+        {
+            reply.WriteS32Little(-1);
+        }
+
         reply.WriteS32Little((int32_t)item->GetType());
         reply.WriteS32Little((int32_t)item->GetTimestamp());
         reply.WriteS32Little(1);    // Unknown

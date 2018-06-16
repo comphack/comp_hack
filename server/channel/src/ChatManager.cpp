@@ -37,6 +37,7 @@
 #include <Account.h>
 #include <AccountLogin.h>
 #include <AccountWorldData.h>
+#include <ActivatedAbility.h>
 #include <ChannelConfig.h>
 #include <Character.h>
 #include <Event.h>
@@ -70,6 +71,7 @@
 #include "EventManager.h"
 #include "Git.h"
 #include "ManagerConnection.h"
+#include "SkillManager.h"
 #include "TokuseiManager.h"
 #include "ZoneManager.h"
 
@@ -570,9 +572,7 @@ bool ChatManager::GMCommand_Effect(const std::shared_ptr<
     effects[effectID] = StatusEffectChange(effectID, stack, !isAdd);
     eState->AddStatusEffects(effects, definitionManager);
 
-    server->GetTokuseiManager()->Recalculate(eState, true,
-        std::set<int32_t>{ eState->GetEntityID() });
-    server->GetCharacterManager()->RecalculateStats(eState,client);
+    server->GetCharacterManager()->RecalculateTokuseiAndStats(eState, client);
 
     return true;
 }
@@ -670,9 +670,7 @@ bool ChatManager::GMCommand_Enchant(const std::shared_ptr<
 
     cState->RecalcEquipState(definitionManager);
 
-    server->GetTokuseiManager()->Recalculate(cState, true,
-        std::set<int32_t>{ cState->GetEntityID() });
-    server->GetCharacterManager()->RecalculateStats(cState, client);
+    server->GetCharacterManager()->RecalculateTokuseiAndStats(cState, client);
 
     server->GetWorldDatabase()->QueueUpdate(item, state->GetAccountUID());
 
@@ -1357,7 +1355,7 @@ bool ChatManager::GMCommand_Help(const std::shared_ptr<
             "@scrap SLOT [NAME]",
             "Removes the item in slot SLOT from the character's",
             "inventory whose NAME is specified. The SLOT is a value",
-            "in the range [0, 49] and if the NAME is not specified",
+            "in the range [1, 50] and if the NAME is not specified",
             "the player's inventory is used."
         } },
         { "skill", {
@@ -1775,6 +1773,14 @@ bool ChatManager::GMCommand_Kill(const std::shared_ptr<
         reply.WriteBlank(48);
 
         zoneManager->BroadcastPacket(client, reply);
+
+        // Cancel any pending skill
+        auto activated = targetState->GetActivatedAbility();
+        if(activated)
+        {
+            server->GetSkillManager()->CancelSkill(targetState,
+                activated->GetActivationID());
+        }
 
         std::set<std::shared_ptr<ActiveEntityState>> entities;
         entities.insert(targetState);
@@ -2536,12 +2542,18 @@ bool ChatManager::GMCommand_Speed(const std::shared_ptr<
 
     if(entity)
     {
-        libcomp::Packet p;
-        p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_RUN_SPEED);
-        p.WriteS32Little(entity->GetEntityID());
-        p.WriteFloat(static_cast<float>(entity->GetMovementSpeed() * scaling));
+        int16_t defaultSpeed = entity->GetCombatRunSpeed();
+        int16_t speed = (int16_t)ceil((float)defaultSpeed * scaling);
+        int16_t maxSpeed = (int16_t)ceil((double)defaultSpeed * 1.5);
 
-        client->SendPacket(p);
+        if(speed > maxSpeed)
+        {
+            maxSpeed = speed;
+        }
+
+        entity->SetSpeedBoost((int16_t)(speed - defaultSpeed));
+
+        server->GetCharacterManager()->SendMovementSpeed(client, entity, false);
     }
 
     return true;
@@ -2680,9 +2692,7 @@ bool ChatManager::GMCommand_Spirit(const std::shared_ptr<
 
     cState->RecalcEquipState(definitionManager);
 
-    server->GetTokuseiManager()->Recalculate(cState, true,
-        std::set<int32_t>{ cState->GetEntityID() });
-    server->GetCharacterManager()->RecalculateStats(cState, client);
+    server->GetCharacterManager()->RecalculateTokuseiAndStats(cState, client);
 
     server->GetWorldDatabase()->QueueUpdate(item, state->GetAccountUID());
 

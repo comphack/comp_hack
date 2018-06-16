@@ -70,10 +70,11 @@ bool Parsers::SpotTriggered::Parse(libcomp::ManagerPacket *pPacketManager,
 
     auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
         connection);
+    auto state = client->GetClientState();
     auto server = std::dynamic_pointer_cast<ChannelServer>(
         pPacketManager->GetServer());
     auto zoneManager = server->GetZoneManager();
-    auto entity = state(connection)->GetCharacterState();
+    auto entity = state->GetCharacterState();
     auto zone = zoneManager->GetCurrentZone(client);
     auto zoneDef = zone ? zone->GetDefinition() : nullptr;
 
@@ -82,6 +83,11 @@ bool Parsers::SpotTriggered::Parse(libcomp::ManagerPacket *pPacketManager,
     if(entity->GetEntityID() != static_cast<int32_t>(entityID) ||
         !zoneDef || zoneDef->GetID() != zoneID)
     {
+        return true;
+    }
+    else if(state->GetBikeBoosting())
+    {
+        // Bike boosting players should not trigger spots
         return true;
     }
 

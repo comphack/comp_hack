@@ -95,7 +95,9 @@ namespace libcomp
                 .Func("IsRotating", &ActiveEntityState::IsRotating)
                 .Func("GetAIState", &ActiveEntityState::GetAIState)
                 .Func("GetActionTime", &ActiveEntityState::GetActionTime)
-                .Func("SetActionTime", &ActiveEntityState::SetActionTime);
+                .Func("SetActionTime", &ActiveEntityState::SetActionTime)
+                .Func("StatusEffectActive", &ActiveEntityState::StatusEffectActive)
+                .Func("StatusEffectTimeLeft", &ActiveEntityState::StatusEffectTimeLeft);
 
             Bind<ActiveEntityState>("ActiveEntityState", binding);
         }
@@ -106,7 +108,8 @@ namespace libcomp
 
 ActiveEntityState::ActiveEntityState() : mCurrentZone(0),
     mEffectsActive(false), mAlive(true), mInitialCalc(false),
-    mLastRefresh(0), mNextActivatedAbilityID(1)
+    mCloaked(false), mLastRefresh(0), mNextRegenSync(0), mNextUpkeep(0),
+    mNextActivatedAbilityID(1)
 {
 }
 
@@ -202,7 +205,7 @@ bool ActiveEntityState::CanAct()
     return mAlive && (CanMove() || CurrentSkillsCount() > 0);
 }
 
-bool ActiveEntityState::CanMove()
+bool ActiveEntityState::CanMove(bool ignoreSkill)
 {
     if(!mAlive || GetCorrectValue(CorrectTbl::MOVE1) == 0)
     {
@@ -230,12 +233,15 @@ bool ActiveEntityState::CanMove()
         }
     }
 
-    auto activated = GetActivatedAbility();
-    if(activated &&
-        ((charging && activated->GetChargeMoveSpeed() == 0.f) ||
-         (!charging && activated->GetChargeCompleteMoveSpeed() == 0.f)))
+    if(!ignoreSkill)
     {
-        return false;
+        auto activated = GetActivatedAbility();
+        if(activated &&
+            ((charging && activated->GetChargeMoveSpeed() == 0.f) ||
+             (!charging && activated->GetChargeCompleteMoveSpeed() == 0.f)))
+        {
+            return false;
+        }
     }
 
     return true;
@@ -285,7 +291,7 @@ float ActiveEntityState::GetMovementSpeed(bool altSpeed)
         speed = GetCorrectValue(CorrectTbl::MOVE2);
     }
 
-    return (float)(speed * 10.f);
+    return (float)(speed + GetSpeedBoost()) * 10.f;
 }
 
 void ActiveEntityState::RefreshCurrentPosition(uint64_t now)
@@ -621,15 +627,39 @@ const std::unordered_map<uint32_t, std::shared_ptr<objects::StatusEffect>>&
     return mStatusEffects;
 }
 
+bool ActiveEntityState::StatusEffectActive(uint32_t effectType)
+{
+    std::lock_guard<std::mutex> lock(mLock);
+    auto it = mStatusEffects.find(effectType);
+    return it != mStatusEffects.end();
+}
+
+uint32_t ActiveEntityState::StatusEffectTimeLeft(uint32_t effectType)
+{
+    auto states = GetCurrentStatusEffectStates(0);
+    for(auto& pair : states)
+    {
+        if(pair.first->GetEffect() == effectType)
+        {
+            return pair.second;
+        }
+    }
+
+    return 0;
+}
+
 void ActiveEntityState::SetStatusEffects(
     const std::list<std::shared_ptr<objects::StatusEffect>>& effects)
 {
     std::lock_guard<std::mutex> lock(mLock);
     mStatusEffects.clear();
+    mStatusEffectDefs.clear();
     mNRAShields.clear();
     mTimeDamageEffects.clear();
     mCancelConditions.clear();
     mNextEffectTimes.clear();
+    mNextRegenSync = 0;
+    mNextUpkeep = 0;
 
     RegisterNextEffectTime();
 
@@ -1020,7 +1050,8 @@ std::set<uint32_t> ActiveEntityState::AddStatusEffects(const StatusEffectChanges
     return removes;
 }
 
-void ActiveEntityState::ExpireStatusEffects(const std::set<uint32_t>& effectTypes)
+std::set<uint32_t> ActiveEntityState::ExpireStatusEffects(
+    const std::set<uint32_t>& effectTypes)
 {
     std::lock_guard<std::mutex> lock(mLock);
 
@@ -1051,26 +1082,34 @@ void ActiveEntityState::ExpireStatusEffects(const std::set<uint32_t>& effectType
             RegisterNextEffectTime();
         }
     }
+
+    if(mEffectsActive)
+    {
+        removeEffects.clear();
+    }
+
+    return removeEffects;
 }
 
 std::set<uint32_t> ActiveEntityState::CancelStatusEffects(
-    uint8_t cancelFlags)
+    uint8_t cancelFlags, const std::set<uint32_t>& keepEffects)
 {
-    bool returnCancelled = false;
-
     std::set<uint32_t> cancelled;
     if(mCancelConditions.size() > 0)
     {
         std::lock_guard<std::mutex> lock(mLock);
 
-        returnCancelled = !mEffectsActive;
         for(auto cPair : mCancelConditions)
         {
             if(cancelFlags & cPair.first)
             {
                 for(uint32_t effectType : cPair.second)
                 {
-                    cancelled.insert(effectType);
+                    if(keepEffects.find(effectType) ==
+                        keepEffects.end())
+                    {
+                        cancelled.insert(effectType);
+                    }
                 }
             }
         }
@@ -1078,15 +1117,12 @@ std::set<uint32_t> ActiveEntityState::CancelStatusEffects(
 
     if(cancelled.size() > 0)
     {
-        ExpireStatusEffects(cancelled);
+        return ExpireStatusEffects(cancelled);
     }
-
-    if(!returnCancelled)
+    else
     {
-        cancelled.clear();
+        return std::set<uint32_t>();
     }
-
-    return cancelled;
 }
 
 void ActiveEntityState::SetStatusEffectsActive(bool activate,
@@ -1108,7 +1144,16 @@ void ActiveEntityState::SetStatusEffectsActive(bool activate,
     if(activate)
     {
         // Set regen
-        SetNextEffectTime(0, now + 10);
+        mNextRegenSync = now + 10;
+        SetNextEffectTime(0, mNextRegenSync);
+
+        auto activated = GetActivatedAbility();
+        if(activated && activated->GetUpkeepCost() > 0)
+        {
+            // Set upkeep
+            mNextUpkeep = now + 3;
+            SetNextEffectTime(0, mNextUpkeep);
+        }
 
         // Reset cancel conditions
         mCancelConditions.clear();
@@ -1140,31 +1185,39 @@ void ActiveEntityState::SetStatusEffectsActive(bool activate,
                 auto it = mStatusEffects.find(effectType);
                 if(it == mStatusEffects.end()) continue;
 
-                uint32_t exp = GetCurrentExpiration(it->second, definitionManager,
-                    pair.first, now);
+                uint32_t exp = GetCurrentExpiration(it->second, pair.first,
+                    now);
                 it->second->SetExpiration(exp);
             }
         }
     }
 }
 
-bool ActiveEntityState::PopEffectTicks(libcomp::DefinitionManager* definitionManager,
-    uint32_t time, int32_t& hpTDamage, int32_t& mpTDamage, std::set<uint32_t>& added,
+bool ActiveEntityState::PopEffectTicks(uint32_t time, int32_t& hpTDamage,
+    int32_t& mpTDamage, int32_t& tUpkeep, std::set<uint32_t>& added,
     std::set<uint32_t>& updated, std::set<uint32_t>& removed)
 {
     hpTDamage = 0;
     mpTDamage = 0;
+    tUpkeep = 0;
     added.clear();
     updated.clear();
     removed.clear();
 
     std::lock_guard<std::mutex> lock(mLock);
+
+    // If effects are not active, stop now
+    if(!mEffectsActive)
+    {
+        return false;
+    }
+
     bool found = false;
     bool reregister = false;
     do
     {
         std::set<uint32_t> passed;
-        std::unordered_map<uint32_t, uint32_t> next;
+        std::list<std::pair<uint32_t, uint32_t>> next;
         for(auto& pair : mNextEffectTimes)
         {
             if(pair.first > time) break;
@@ -1188,20 +1241,46 @@ bool ActiveEntityState::PopEffectTicks(libcomp::DefinitionManager* definitionMan
                 continue;
             }
 
-            if(pair.second.find(0) != pair.second.end())
+            bool systemEffect = pair.second.find(0) != pair.second.end();
+            bool doRegen = systemEffect && !mNextUpkeep;
+
+            if(systemEffect && mNextUpkeep && time >= mNextUpkeep)
+            {
+                // Pay upkeep
+                auto activated = GetActivatedAbility();
+                if(activated && activated->GetUpkeepCost() > 0 &&
+                    mAlive)
+                {
+                    tUpkeep = (int32_t)(activated->GetUpkeepCost());
+
+                    // Upkeep cost occurs every 3 seconds
+                    mNextUpkeep = pair.first + 3;
+                    next.push_back(std::pair<uint32_t, uint32_t>(0,
+                        mNextUpkeep));
+                }
+                else
+                {
+                    mNextUpkeep = 0;
+                }
+            }
+
+            if(systemEffect && mNextRegenSync && time >= mNextRegenSync)
             {
                 // Adjust T-Damage if the entity is not dead
                 if(mAlive)
                 {
-                    hpTDamage = (int32_t)(hpTDamage -
-                        GetCorrectValue(CorrectTbl::HP_REGEN));
-                    mpTDamage = (int32_t)(mpTDamage -
-                        GetCorrectValue(CorrectTbl::MP_REGEN));
+                    if(doRegen)
+                    {
+                        hpTDamage = (int32_t)(hpTDamage -
+                            GetCorrectValue(CorrectTbl::HP_REGEN));
+                        mpTDamage = (int32_t)(mpTDamage -
+                            GetCorrectValue(CorrectTbl::MP_REGEN));
+                    }
 
                     // Apply T-damage
                     for(auto effectType : mTimeDamageEffects)
                     {
-                        auto se = definitionManager->GetStatusData(effectType);
+                        auto se = mStatusEffectDefs[effectType];
                         auto damage = se->GetEffect()->GetDamage();
 
                         hpTDamage = (int32_t)(hpTDamage + damage->GetHPDamage());
@@ -1210,7 +1289,9 @@ bool ActiveEntityState::PopEffectTicks(libcomp::DefinitionManager* definitionMan
                 }
 
                 // T-Damage applies is every 10 seconds
-                next[0] = pair.first + 10;
+                mNextRegenSync = pair.first + 10;
+                next.push_back(std::pair<uint32_t, uint32_t>(0,
+                    mNextRegenSync));
 
                 pair.second.erase(0);
             }
@@ -1254,9 +1335,31 @@ bool ActiveEntityState::PopEffectTicks(libcomp::DefinitionManager* definitionMan
     }
 }
 
+bool ActiveEntityState::ResetUpkeep()
+{
+    std::lock_guard<std::mutex> lock(mLock);
+
+    auto activated = GetActivatedAbility();
+    if(activated && activated->GetUpkeepCost() > 0)
+    {
+        uint32_t now = (uint32_t)std::time(0);
+
+        mNextUpkeep = (uint32_t)(now + 3);
+        SetNextEffectTime(0, mNextUpkeep);
+
+        RegisterNextEffectTime();
+
+        return true;
+    }
+
+    // Clear time and let it expire on the next tick
+    mNextUpkeep = 0;
+
+    return false;
+}
+
 std::list<std::pair<std::shared_ptr<objects::StatusEffect>, uint32_t>>
-    ActiveEntityState::GetCurrentStatusEffectStates(
-    libcomp::DefinitionManager* definitionManager, uint32_t now)
+    ActiveEntityState::GetCurrentStatusEffectStates(uint32_t now)
 {
     if(now == 0)
     {
@@ -1299,8 +1402,7 @@ std::list<std::pair<std::shared_ptr<objects::StatusEffect>, uint32_t>>
         auto it = nextTimes.find(pair.first);
         if(it != nextTimes.end())
         {
-            exp = GetCurrentExpiration(pair.second, definitionManager,
-                it->second, now);
+            exp = GetCurrentExpiration(pair.second, it->second, now);
         }
 
         std::pair<std::shared_ptr<objects::StatusEffect>, uint32_t> p(pair.second,
@@ -1451,15 +1553,45 @@ void ActiveEntityState::RemoveStatusEffects(const std::set<uint32_t>& effectType
 {
     std::set<uint8_t> cancelTypes;
 
+    bool recalcIgnore = false;
     for(uint32_t effectType : effectTypes)
     {
         mStatusEffects.erase(effectType);
+        mStatusEffectDefs.erase(effectType);
         mNRAShields.erase(effectType);
         mTimeDamageEffects.erase(effectType);
         for(auto& cPair : mCancelConditions)
         {
             cPair.second.erase(effectType);
             cancelTypes.insert(cPair.first);
+        }
+
+        if(IsIgnoreEffect(effectType))
+        {
+            recalcIgnore = true;
+
+            if(effectType == SVR_CONST.STATUS_BIKE)
+            {
+                // Clear any existing boost flags in case it was removed
+                // while still boosting
+                RemoveAdditionalTokusei(SVR_CONST.TOKUSEI_BIKE_BOOST);
+                if(GetDisplayState() == ActiveDisplayState_t::BIKE_BOOST)
+                {
+                    SetDisplayState(ActiveDisplayState_t::ACTIVE);
+                }
+
+                auto state = ClientState::GetEntityClientState(GetEntityID());
+                if(state)
+                {
+                    state->SetBikeBoosting(false);
+                }
+            }
+            else if((effectType == SVR_CONST.STATUS_MOUNT ||
+                effectType == SVR_CONST.STATUS_MOUNT_SUPER) &&
+                GetDisplayState() == ActiveDisplayState_t::MOUNT)
+            {
+                SetDisplayState(ActiveDisplayState_t::MOUNT);
+            }
         }
     }
 
@@ -1476,6 +1608,18 @@ void ActiveEntityState::RemoveStatusEffects(const std::set<uint32_t>& effectType
         mStatusEffects.find(SVR_CONST.STATUS_HIDDEN) == mStatusEffects.end())
     {
         SetIsHidden(false);
+    }
+
+    if(mCloaked &&
+        mStatusEffects.find(SVR_CONST.STATUS_CLOAK) == mStatusEffects.end())
+    {
+        mCloaked = false;
+        recalcIgnore = true;
+    }
+
+    if(recalcIgnore)
+    {
+        ResetAIIgnored();
     }
 }
 
@@ -1519,6 +1663,9 @@ void ActiveEntityState::ActivateStatusEffect(
             }
             break;
     }
+
+    // Store the definition for quick access later
+    mStatusEffectDefs[effectType] = se;
 
     if(timeOnly)
     {
@@ -1566,32 +1713,75 @@ void ActiveEntityState::ActivateStatusEffect(
         }
     }
 
-    if(!GetIsHidden() &&
-        mStatusEffects.find(SVR_CONST.STATUS_HIDDEN) != mStatusEffects.end())
+    if(!GetIsHidden() && effect->GetEffect() == SVR_CONST.STATUS_HIDDEN)
     {
         SetIsHidden(true);
+    }
+
+    if(!mCloaked && effect->GetEffect() == SVR_CONST.STATUS_CLOAK)
+    {
+        mCloaked = true;
+    }
+
+    if(IsIgnoreEffect(effect->GetEffect()))
+    {
+        ResetAIIgnored();
+    }
+}
+
+bool ActiveEntityState::IsIgnoreEffect(uint32_t effectType) const
+{
+    const static std::set<uint32_t> IGNORE_EFFECTS = {
+        SVR_CONST.STATUS_BIKE,
+        SVR_CONST.STATUS_CLOAK,
+        SVR_CONST.STATUS_MOUNT,
+        SVR_CONST.STATUS_MOUNT_SUPER
+    };
+
+    return IGNORE_EFFECTS.find(effectType) != IGNORE_EFFECTS.end();
+}
+
+void ActiveEntityState::ResetAIIgnored()
+{
+    bool ignore = false;
+    for(auto& pair : mStatusEffects)
+    {
+        if(IsIgnoreEffect(pair.first))
+        {
+            ignore = true;
+            break;
+        }
+    }
+
+    if(ignore != GetAIIgnored())
+    {
+        SetAIIgnored(ignore);
     }
 }
 
 void ActiveEntityState::SetNextEffectTime(uint32_t effectType, uint32_t time)
 {
-    for(auto pair : mNextEffectTimes)
+    // Only erase if a non-system effect
+    if(effectType)
     {
-        // Skip non-system times
-        if(pair.first <= 3) continue;
-
-        if(pair.second.find(effectType) != pair.second.end())
+        for(auto pair : mNextEffectTimes)
         {
-            if(time == 0)
-            {
-                pair.second.erase(effectType);
-                if(pair.second.size() == 0)
-                {
-                    mNextEffectTimes.erase(pair.first);
-                }
-            }
+            // Skip non-system times
+            if(pair.first <= 3) continue;
 
-            return;
+            if(pair.second.find(effectType) != pair.second.end())
+            {
+                if(time == 0)
+                {
+                    pair.second.erase(effectType);
+                    if(pair.second.size() == 0)
+                    {
+                        mNextEffectTimes.erase(pair.first);
+                    }
+                }
+
+                return;
+            }
         }
     }
 
@@ -1611,15 +1801,14 @@ void ActiveEntityState::RegisterNextEffectTime()
 }
 
 uint32_t ActiveEntityState::GetCurrentExpiration(
-    const std::shared_ptr<objects::StatusEffect>& effect,
-    libcomp::DefinitionManager* definitionManager, uint32_t nextTime,
+    const std::shared_ptr<objects::StatusEffect>& effect, uint32_t nextTime,
     uint32_t now)
 {
     uint32_t exp = effect->GetExpiration();
 
     if(exp > 0)
     {
-        auto se = definitionManager->GetStatusData(effect->GetEffect());
+        auto se = mStatusEffectDefs[effect->GetEffect()];
         auto cancel = se->GetCancel();
         switch(cancel->GetDurationType())
         {
@@ -1722,6 +1911,11 @@ uint8_t ActiveEntityState::GetLNCType()
     return 0;
 }
 
+int8_t ActiveEntityState::GetGender()
+{
+    return 2;   // None
+}
+
 std::shared_ptr<objects::EntityStats> ActiveEntityState::GetCoreStats()
 {
     return nullptr;
@@ -1732,6 +1926,17 @@ bool ActiveEntityState::Ready(bool ignoreDisplayState)
     (void)ignoreDisplayState;
 
     return false;
+}
+
+bool ActiveEntityState::IsClientVisible()
+{
+    return false;
+}
+
+bool ActiveEntityState::IsMounted()
+{
+    return StatusEffectActive(SVR_CONST.STATUS_MOUNT) ||
+        StatusEffectActive(SVR_CONST.STATUS_MOUNT_SUPER);
 }
 
 namespace channel
@@ -1777,13 +1982,11 @@ void ActiveEntityStateImp<objects::Character>::SetEntity(
         effects = entity->GetStatusEffects();
         mAlive = entity->GetCoreStats()->GetHP() > 0;
 
-        SetDisplayState(
-            objects::ActiveEntityStateObject::DisplayState_t::DATA_NOT_SENT);
+        SetDisplayState(ActiveDisplayState_t::DATA_NOT_SENT);
     }
     else
     {
-        SetDisplayState(
-            objects::ActiveEntityStateObject::DisplayState_t::NOT_SET);
+        SetDisplayState(ActiveDisplayState_t::NOT_SET);
     }
 
     SetStatusEffects(effects);
@@ -1809,13 +2012,11 @@ void ActiveEntityStateImp<objects::Demon>::SetEntity(
         effects = entity->GetStatusEffects();
         mAlive = entity->GetCoreStats()->GetHP() > 0;
 
-        SetDisplayState(
-            objects::ActiveEntityStateObject::DisplayState_t::DATA_NOT_SENT);
+        SetDisplayState(ActiveDisplayState_t::DATA_NOT_SENT);
     }
     else
     {
-        SetDisplayState(
-            objects::ActiveEntityStateObject::DisplayState_t::NOT_SET);
+        SetDisplayState(ActiveDisplayState_t::NOT_SET);
     }
 
     SetStatusEffects(effects);
@@ -1845,13 +2046,11 @@ void ActiveEntityStateImp<objects::Enemy>::SetEntity(
     {
         mAlive = entity->GetCoreStats()->GetHP() > 0;
 
-        SetDisplayState(
-            objects::ActiveEntityStateObject::DisplayState_t::DATA_NOT_SENT);
+        SetDisplayState(ActiveDisplayState_t::DATA_NOT_SENT);
     }
     else
     {
-        SetDisplayState(
-            objects::ActiveEntityStateObject::DisplayState_t::NOT_SET);
+        SetDisplayState(ActiveDisplayState_t::NOT_SET);
     }
 
     SetDevilData(devilData);
@@ -2274,6 +2473,36 @@ uint8_t ActiveEntityStateImp<objects::Enemy>::GetLNCType()
     return CalculateLNCType(lncPoints);
 }
 
+template<>
+int8_t ActiveEntityStateImp<objects::Character>::GetGender()
+{
+    return (int8_t)mEntity->GetGender();
+}
+
+template<>
+int8_t ActiveEntityStateImp<objects::Demon>::GetGender()
+{
+    auto demonData = GetDevilData();
+    if(demonData)
+    {
+        return (int8_t)demonData->GetBasic()->GetGender();
+    }
+
+    return 2;   // None
+}
+
+template<>
+int8_t ActiveEntityStateImp<objects::Enemy>::GetGender()
+{
+    auto demonData = GetDevilData();
+    if(demonData)
+    {
+        return (int8_t)demonData->GetBasic()->GetGender();
+    }
+
+    return 2;   // None
+}
+
 }
 
 const std::set<CorrectTbl> BASE_STATS =
@@ -2293,6 +2522,7 @@ void ActiveEntityState::AdjustStats(
 {
     std::set<CorrectTbl> removed;
     libcomp::EnumMap<CorrectTbl, int32_t> percentSums;
+    libcomp::EnumMap<CorrectTbl, int32_t> maxPercents;
     for(auto ct : adjustments)
     {
         auto tblID = ct->GetID();
@@ -2322,6 +2552,8 @@ void ActiveEntityState::AdjustStats(
         if((uint8_t)tblID >= (uint8_t)CorrectTbl::NRA_WEAPON &&
             (uint8_t)tblID <= (uint8_t)CorrectTbl::NRA_MAGIC)
         {
+            if(!calcState) continue;
+
             // NRA is calculated differently from everything else
             if(effectiveType == 0)
             {
@@ -2386,6 +2618,7 @@ void ActiveEntityState::AdjustStats(
                 }
                 else
                 {
+                    // Store percent sums to apply at the end
                     if(percentSums.find(tblID) == percentSums.end())
                     {
                         percentSums[tblID] = effectiveValue;
@@ -2393,6 +2626,16 @@ void ActiveEntityState::AdjustStats(
                     else
                     {
                         percentSums[tblID] += effectiveValue;
+                    }
+
+                    // Store max percents
+                    if(maxPercents.find(tblID) == maxPercents.end())
+                    {
+                        maxPercents[tblID] = effectiveValue;
+                    }
+                    else if(maxPercents[tblID] < effectiveValue)
+                    {
+                        maxPercents[tblID] = effectiveValue;
                     }
                 }
                 break;
@@ -2447,6 +2690,28 @@ void ActiveEntityState::AdjustStats(
     // Apply stat minimum bounds (and maximum if not an enemy)
     CharacterManager::AdjustStatBounds(stats,
         GetEntityType() != EntityType_t::ENEMY);
+
+    // Always limit max speed based on direct percentage boosts
+    if(!baseMode)
+    {
+        for(CorrectTbl tblID : { CorrectTbl::MOVE1, CorrectTbl::MOVE2 })
+        {
+            // Default to 50% faster than default run speed
+            int16_t maxSpeed = 50;
+            auto moveIter = maxPercents.find(tblID);
+            if(moveIter != maxPercents.end())
+            {
+                maxSpeed = (int16_t)moveIter->second;
+            }
+
+            maxSpeed = (int16_t)ceil((double)GetCombatRunSpeed() *
+                (1.0 + (double)maxSpeed * 0.01));
+            if(stats[tblID] > maxSpeed)
+            {
+                stats[tblID] = maxSpeed;
+            }
+        }
+    }
 }
 
 void ActiveEntityState::BaseStatsCalculated(libcomp::DefinitionManager* definitionManager,

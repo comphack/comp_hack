@@ -208,7 +208,7 @@ public:
     bool SendPopulateZoneData(const std::shared_ptr<ChannelClientConnection>& client);
 
     /**
-     * Tell the game client to show an entity.
+     * Send a request to a client to show an entity.
      * @param client Pointer to the client connection
      * @param entityID ID of the entity to show
      * @param queue true if the message should be queued, false if
@@ -218,14 +218,25 @@ public:
         int32_t entityID, bool queue = false);
 
     /**
-     * Tell all game clients in a zone to show an entity.
+     * Send a request to all clients in a zone to show an entity.
      * @param zone Pointer to the zone to show the entities to
      * @param entityID ID of the entity to show
      */
     void ShowEntityToZone(const std::shared_ptr<Zone>& zone, int32_t entityID);
 
     /**
-     * Tell the game client to prepare an entity for display.
+     * Send a request to a list of client to show an entity.
+     * @param clients List of pointers to client connections
+     * @param entityID ID of the entity to show
+     * @param queue true if the message should be queued, false if
+     *  it should send right away
+     */
+    void ShowEntity(const std::list<std::shared_ptr<
+        ChannelClientConnection>>& clients, int32_t entityID,
+        bool queue = false);
+
+    /**
+     * Send a request to a client to prepare an entity for display.
      * @param client Pointer to the client connection
      * @param entityID ID of the entity to prep
      * @param type Client-side entity type identifier
@@ -236,7 +247,8 @@ public:
         ChannelClientConnection>& client, int32_t entityID, int32_t type, bool queue = false);
 
     /**
-     * Tell all game clients to prepare an entity for display.
+     * Send a request to all clients in a zone to prepare an entity
+     * for display.
      * @param zone Pointer to the zone to prep to show entities to
      * @param entityID ID of the entity to prep
      * @param type Client-side entity type identifier
@@ -245,7 +257,19 @@ public:
         int32_t type);
 
     /**
-     * Tell all game clients in a zone to remove an entity.
+     * Send a request to a list of clients to prepare an entity for display.
+     * @param clients List of pointers to client connections
+     * @param entityID ID of the entity to prep
+     * @param type Client-side entity type identifier
+     * @param queue true if the message should be queued, false if
+     *  it should send right away
+     */
+    void PopEntityForProduction(const std::list<std::shared_ptr<
+        ChannelClientConnection>> &clients, int32_t entityID,
+        int32_t type, bool queue = false);
+
+    /**
+     * Send a request to all game clients in a zone to remove an entity.
      * @param zone Pointer to the zone to remove the entities from
      * @param entityIDs IDs of the entities to remove
      * @param removalMode Optional preset removal mode
@@ -269,7 +293,7 @@ public:
         bool queue = false);
 
     /**
-     * Tell the specified game clients to remove an entity.
+     * Send a request to the specified game clients to remove an entity.
      * @param client List of pointers to client connections
      * @param entityIDs IDs of the entities to remove
      * @param removalMode Optional preset removal mode. See
@@ -448,6 +472,16 @@ public:
      */
     bool StopInstanceTimer(const std::shared_ptr<ZoneInstance>& instance);
 
+    /**
+     * Send the timer currently assigned to the supplied zone instance to
+     * one or all clients currenctly connected to it
+     * @param instance Pointer to a zone instance
+     * @param client Optional pointer to the client that should be sent
+     *  the timer information. If not specified the entire zone will be
+     *  sent the information.
+     * @param queue true if the message should be queued, false if
+     *  it should send right away
+     */
     void SendInstanceTimer(const std::shared_ptr<ZoneInstance>& instance,
         const std::shared_ptr<ChannelClientConnection>& client = nullptr,
         bool queue = false);

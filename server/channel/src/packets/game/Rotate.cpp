@@ -65,7 +65,7 @@ bool Parsers::Rotate::Parse(libcomp::ManagerPacket *pPacketManager,
             .Arg(entityID));
         return false;
     }
-    else if(!eState->Ready())
+    else if(!eState->Ready(true))
     {
         // Nothing to do, the entity is not currently active
         return true;
@@ -93,20 +93,29 @@ bool Parsers::Rotate::Parse(libcomp::ManagerPacket *pPacketManager,
     eState->SetOriginRotation(eState->GetCurrentRotation());
     eState->SetDestinationRotation(rotation);
 
-    auto zoneConnections = server->GetZoneManager()->GetZoneConnections(client, false);
-    if(zoneConnections.size() > 0)
+    // If the entity is still visible to others, relay info
+    if(eState->IsClientVisible())
     {
-        libcomp::Packet reply;
-        reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_ROTATE);
-        reply.WriteS32Little(entityID);
-        reply.WriteFloat(rotation);
+        auto zConnections = server->GetZoneManager()->GetZoneConnections(
+            client, false);
 
-        RelativeTimeMap timeMap;
-        timeMap[reply.Size()] = startTime;
-        timeMap[reply.Size() + 4] = stopTime;
+        if(zConnections.size() > 0)
+        {
+            libcomp::Packet reply;
+            reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_ROTATE);
+            reply.WriteS32Little(entityID);
+            reply.WriteFloat(rotation);
 
-        ChannelClientConnection::SendRelativeTimePacket(zoneConnections, reply, timeMap);
+            RelativeTimeMap timeMap;
+            timeMap[reply.Size()] = startTime;
+            timeMap[reply.Size() + 4] = stopTime;
+
+            ChannelClientConnection::SendRelativeTimePacket(zConnections,
+                reply, timeMap);
+        }
     }
+
+    /// @todo: lower movement durability
 
     return true;
 }

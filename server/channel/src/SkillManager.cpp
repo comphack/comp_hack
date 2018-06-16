@@ -86,7 +86,9 @@
 #include <MiNegotiationData.h>
 #include <MiNPCBasicData.h>
 #include <MiPossessionData.h>
+#include <MiSItemData.h>
 #include <MiSkillBasicData.h>
+#include <MiSkillCharasticData.h>
 #include <MiSkillData.h>
 #include <MiSkillItemStatusCommonData.h>
 #include <MiSkillSpecialParams.h>
@@ -97,6 +99,7 @@
 #include <MiUnionData.h>
 #include <Party.h>
 #include <ServerZone.h>
+#include <ServerZoneInstance.h>
 #include <Spawn.h>
 #include <SpawnGroup.h>
 #include <Tokusei.h>
@@ -112,6 +115,7 @@
 #include "ManagerConnection.h"
 #include "TokuseiManager.h"
 #include "Zone.h"
+#include "ZoneInstance.h"
 #include "ZoneManager.h"
 
 using namespace channel;
@@ -121,6 +125,7 @@ const uint8_t DAMAGE_TYPE_HEALING = 1;
 const uint8_t DAMAGE_TYPE_NONE = 2;
 const uint8_t DAMAGE_TYPE_MISS = 3;
 const uint8_t DAMAGE_TYPE_DRAIN = 5;
+const uint8_t DAMAGE_EXPLICIT_SET = 6;
 
 const uint16_t FLAG1_LETHAL = 1;
 const uint16_t FLAG1_GUARDED = 1 << 3;
@@ -174,6 +179,7 @@ class channel::ProcessingSkill
 {
 public:
     uint32_t SkillID = 0;
+    uint16_t FunctionID = 0;
     std::shared_ptr<objects::MiSkillData> Definition;
     std::shared_ptr<objects::ActivatedAbility> Activated;
     SkillExecutionContext* ExecutionContext = 0;
@@ -185,8 +191,8 @@ public:
     uint8_t ExpertiseRankBoost = 0;
     uint8_t KnowledgeRank = 0;
     uint16_t OffenseValue = 0;
+    int32_t AbsoluteDamage = 0;
     std::unordered_map<int32_t, uint16_t> OffenseValues;
-    bool IsSuicide = false;
     bool IsItemSkill = false;
     bool Reflected = false;
 
@@ -241,19 +247,27 @@ SkillManager::SkillManager(const std::weak_ptr<ChannelServer>& server)
 {
     // Map unique function skills
     mSkillFunctions[SVR_CONST.SKILL_CAMEO] = &SkillManager::Cameo;
+    mSkillFunctions[SVR_CONST.SKILL_CLOAK] = &SkillManager::Cloak;
     mSkillFunctions[SVR_CONST.SKILL_DCM] = &SkillManager::DCM;
     mSkillFunctions[SVR_CONST.SKILL_EQUIP_ITEM] = &SkillManager::EquipItem;
     mSkillFunctions[SVR_CONST.SKILL_EXPERT_FORGET_ALL] = &SkillManager::ForgetAllExpertiseSkills;
     mSkillFunctions[SVR_CONST.SKILL_FAM_UP] = &SkillManager::FamiliarityUp;
     mSkillFunctions[SVR_CONST.SKILL_ITEM_FAM_UP] = &SkillManager::FamiliarityUpItem;
     mSkillFunctions[SVR_CONST.SKILL_MOOCH] = &SkillManager::Mooch;
+    mSkillFunctions[SVR_CONST.SKILL_MOUNT] = &SkillManager::Mount;
+    mSkillFunctions[SVR_CONST.SKILL_RANDOM_ITEM] = &SkillManager::RandomItem;
+    mSkillFunctions[SVR_CONST.SKILL_RANDOMIZE] = &SkillManager::Randomize;
     mSkillFunctions[SVR_CONST.SKILL_RESPEC] = &SkillManager::Respec;
     mSkillFunctions[SVR_CONST.SKILL_REST] = &SkillManager::Rest;
+    mSkillFunctions[SVR_CONST.SKILL_STATUS_DIRECT] = &SkillManager::DirectStatus;
+    mSkillFunctions[SVR_CONST.SKILL_STATUS_LIMITED] = &SkillManager::DirectStatus;
     mSkillFunctions[SVR_CONST.SKILL_SUMMON_DEMON] = &SkillManager::SummonDemon;
     mSkillFunctions[SVR_CONST.SKILL_STORE_DEMON] = &SkillManager::StoreDemon;
     mSkillFunctions[SVR_CONST.SKILL_TRAESTO] = &SkillManager::Traesto;
     mSkillFunctions[(uint16_t)SVR_CONST.SKILL_TRAESTO_ARCADIA[0]] = &SkillManager::Traesto;
+    mSkillFunctions[(uint16_t)SVR_CONST.SKILL_TRAESTO_DSHINJUKU[0]] = &SkillManager::Traesto;
     mSkillFunctions[(uint16_t)SVR_CONST.SKILL_TRAESTO_KAKYOJO[0]] = &SkillManager::Traesto;
+    mSkillFunctions[(uint16_t)SVR_CONST.SKILL_TRAESTO_NAKANO_BDOMAIN[0]] = &SkillManager::Traesto;
     mSkillFunctions[(uint16_t)SVR_CONST.SKILL_TRAESTO_SOUHONZAN[0]] = &SkillManager::Traesto;
     mSkillFunctions[SVR_CONST.SKILL_XP_PARTNER] = &SkillManager::XPUp;
     mSkillFunctions[SVR_CONST.SKILL_XP_SELF] = &SkillManager::XPUp;
@@ -268,6 +282,22 @@ SkillManager::SkillManager(const std::weak_ptr<ChannelServer>& server)
     mSkillFunctions[SVR_CONST.SKILL_MAX_DURABILITY_RANDOM] = &SkillManager::SpecialSkill;
     mSkillFunctions[SVR_CONST.SKILL_SPECIAL_REQUEST] = &SkillManager::SpecialSkill;
     mSkillFunctions[SVR_CONST.SKILL_WARP] = &SkillManager::SpecialSkill;
+
+    /// @todo: implement these
+    // SVR_CONST.SKILL_BOSS_SPECIAL
+    // SVR_CONST.SKILL_DESPAWN
+    // SVR_CONST.SKILL_DESUMMON
+    // SVR_CONST.SKILL_DIASPORA_QUAKE
+    // SVR_CONST.SKILL_DIGITALIZE
+    // SVR_CONST.SKILL_DIGITALIZE_BREAK
+    // SVR_CONST.SKILL_DIGITALIZE_CANCEL
+    // SVR_CONST.SKILL_ESTOMA
+    // SVR_CONST.SKILL_LIBERAMA
+    // SVR_CONST.SKILL_MINION_DESPAWN
+    // SVR_CONST.SKILL_MINION_SPAWN
+    // SVR_CONST.SKILL_SPAWN
+    // SVR_CONST.SKILL_SPAWN_ZONE
+    // SVR_CONST.SKILL_TAUNT
 
     // Make sure anything not set is not pulled in to the mapping
     mSkillFunctions.erase(0);
@@ -344,9 +374,10 @@ bool SkillManager::ActivateSkill(const std::shared_ptr<ActiveEntityState> source
     }
     activated->SetMaxUseCount(maxStacks);
 
-    uint16_t functionID = def->GetDamage()->GetFunctionID();
-
     uint64_t chargedTime = 0;
+
+    bool executeNow = instantExecution || (defaultChargeTime == 0 &&
+        (activationType == 3 || activationType == 4));
 
     // If the skill is not an instantExecution, activate it and calculate
     // movement speed
@@ -408,9 +439,9 @@ bool SkillManager::ActivateSkill(const std::shared_ptr<ActiveEntityState> source
         activated->SetChargeMoveSpeed(chargeSpeed);
         activated->SetChargeCompleteMoveSpeed(chargeCompleteSpeed);
 
-        if(functionID)
+        if(pSkill->FunctionID)
         {
-            if(mSkillFunctions.find(functionID) != mSkillFunctions.end())
+            if(mSkillFunctions.find(pSkill->FunctionID) != mSkillFunctions.end())
             {
                 // Set special activation and let the respective skill handle it
                 source->SetSpecialActivations(activated->GetActivationID(),
@@ -419,10 +450,15 @@ bool SkillManager::ActivateSkill(const std::shared_ptr<ActiveEntityState> source
         }
 
         SendActivateSkill(activated);
+
+        if(!executeNow && def->GetCondition()->GetActiveMPDrain() > 0)
+        {
+            // Start pre-cast upkeep
+            activated->SetUpkeepCost(def->GetCondition()->GetActiveMPDrain());
+            source->ResetUpkeep();
+        }
     }
 
-    bool executeNow = instantExecution || (defaultChargeTime == 0 &&
-        (activationType == 3 || activationType == 4));
     if(executeNow)
     {
         if(!ExecuteSkill(source, activated, client, ctx))
@@ -434,9 +470,9 @@ bool SkillManager::ActivateSkill(const std::shared_ptr<ActiveEntityState> source
     {
         source->SetStatusTimes(STATUS_CHARGING, chargedTime);
 
-        if(activationType == 3)
+        if(activationType == 3 || activationType == 4)
         {
-            // Special activation skills with a charge time execute
+            // Special/toggle activation skills with a charge time execute
             // automatically when the charge time completes
             server->ScheduleWork(chargedTime, [](
                 const std::shared_ptr<ChannelServer> pServer,
@@ -455,6 +491,26 @@ bool SkillManager::ActivateSkill(const std::shared_ptr<ActiveEntityState> source
     }
 
     return true;
+}
+
+bool SkillManager::TargetSkill(const std::shared_ptr<ActiveEntityState> source,
+    int64_t targetObjectID)
+{
+    bool success = true;
+
+    auto activated = source->GetActivatedAbility();
+    if(!activated)
+    {
+        success = false;
+    }
+    else
+    {
+        activated->SetTargetObjectID(targetObjectID);
+    }
+
+    // No packet response here
+
+    return success;
 }
 
 bool SkillManager::ExecuteSkill(const std::shared_ptr<ActiveEntityState> source,
@@ -541,8 +597,66 @@ bool SkillManager::ExecuteSkill(std::shared_ptr<ActiveEntityState> source,
         return false;
     }
 
+    if(functionID != SVR_CONST.SKILL_MOUNT && source->IsMounted())
+    {
+        SendFailure(activated, client,
+            (uint8_t)SkillErrorCodes_t::MOUNT_OTHER_SKILL_RESTRICT);
+        return false;
+    }
+
+    // Check FID skill restrictions
+    if(functionID)
+    {
+        if(functionID == SVR_CONST.SKILL_ZONE_RESTRICTED ||
+            functionID == SVR_CONST.SKILL_ZONE_RESTRICTED_ITEM)
+        {
+            // Restricted to certain instances which are stored in the
+            // group format meaning the smallest two digits are irrelavent
+            bool valid = false;
+
+            auto instance = zone->GetInstance();
+            uint32_t instGroup = (uint32_t)((instance
+                ? instance->GetDefinition()->GetID() : 0) / 100);
+
+            for(int32_t param : skillData->GetSpecial()
+                ->GetSpecialParams())
+            {
+                if(param > 0 && (uint32_t)param == instGroup)
+                {
+                    valid = true;
+                    break;
+                }
+            }
+
+            if(!valid)
+            {
+                SendFailure(activated, client,
+                    (uint8_t)SkillErrorCodes_t::LOCATION_RESTRICT);
+                return false;
+            }
+        }
+        else if(functionID == SVR_CONST.SKILL_STATUS_RESTRICTED ||
+            functionID == SVR_CONST.SKILL_STATUS_LIMITED)
+        {
+            // Source cannot have the specified status effect(s)
+            for(int32_t param : skillData->GetSpecial()
+                ->GetSpecialParams())
+            {
+                if(param > 0 && source->StatusEffectActive((uint32_t)param))
+                {
+                    SendFailure(activated, client,
+                        (uint8_t)SkillErrorCodes_t::GENERIC_USE);
+                    return false;
+                }
+            }
+        }
+    }
+
     // Check targets
-    if(skillData->GetTarget()->GetType() == objects::MiTargetData::Type_t::DEAD_ALLY)
+    auto targetType = skillData->GetTarget()->GetType();
+    bool checkTargets = targetType != objects::MiTargetData::Type_t::NONE &&
+        functionID != SVR_CONST.SKILL_ZONE_TARGET_ALL;
+    if(checkTargets && targetType == objects::MiTargetData::Type_t::DEAD_ALLY)
     {
         auto damageFormula = skillData->GetDamage()->GetBattleDamage()->GetFormula();
         bool isRevive = damageFormula == objects::MiBattleDamageData::Formula_t::HEAL_NORMAL
@@ -578,9 +692,7 @@ bool SkillManager::ExecuteSkill(std::shared_ptr<ActiveEntityState> source,
     }
 
     // Verify the target now
-    auto targetType = skillData->GetTarget()->GetType();
-    if(targetType != objects::MiTargetData::Type_t::NONE &&
-        targetType != objects::MiTargetData::Type_t::OBJECT)
+    if(checkTargets && targetType != objects::MiTargetData::Type_t::OBJECT)
     {
         auto targetEntityID = (int32_t)activated->GetTargetObjectID();
 
@@ -595,50 +707,79 @@ bool SkillManager::ExecuteSkill(std::shared_ptr<ActiveEntityState> source,
         auto targetEntity = zone->GetActiveEntity(targetEntityID);
         if(nullptr == targetEntity || !targetEntity->Ready())
         {
-            LOG_ERROR(libcomp::String("Invalid target ID encountered: %1\n")
-                .Arg(targetEntityID));
             SendFailure(activated, client,
                 (uint8_t)SkillErrorCodes_t::TARGET_INVALID);
             return false;
         }
 
+        if(functionID)
+        {
+            // Check FID target state restrictions
+            bool valid = true;
+            if(functionID == SVR_CONST.SKILL_GENDER_RESTRICTED)
+            {
+                valid = (int32_t)targetEntity->GetGender() ==
+                    skillData->GetSpecial()->GetSpecialParams(0);
+            }
+            else if(functionID == SVR_CONST.SKILL_SLEEP_RESTRICTED)
+            {
+                valid = targetEntity->StatusEffectActive(SVR_CONST.STATUS_SLEEP);
+            }
+
+            if(!valid)
+            {
+                SendFailure(activated, client,
+                    (uint8_t)SkillErrorCodes_t::TARGET_INVALID);
+                return false;
+            }
+        }
+
         bool targetAlive = targetEntity->IsAlive();
         bool allies = targetEntity->GetFaction() == source->GetFaction();
         auto targetEntityType = targetEntity->GetEntityType();
-        auto sourceState = ClientState::GetEntityClientState(source->GetEntityID());
-        auto targetState = ClientState::GetEntityClientState(targetEntity->GetEntityID());
-
-        // If using a (primary) talk skill on an entity with 100% talk resist
-        // stop the skill
-        switch(skillData->GetBasic()->GetActionType())
+        if(IsTalkSkill(skillData, true) &&
+            targetEntityType == EntityType_t::ENEMY)
         {
-        case objects::MiSkillBasicData::ActionType_t::TALK:
-        case objects::MiSkillBasicData::ActionType_t::INTIMIDATE:
-        case objects::MiSkillBasicData::ActionType_t::TAUNT:
-            if(targetEntityType == EntityType_t::ENEMY)
-            {
-                auto enemyState = std::dynamic_pointer_cast<EnemyState>(targetEntity);
-                auto enemy = enemyState ? enemyState->GetEntity() : nullptr;
-                auto spawn = enemy ? enemy->GetSpawnSource() : nullptr;
-                if(!spawn || spawn->GetTalkResist() >= 100)
-                {
-                    SendFailure(activated, client,
-                        (uint8_t)SkillErrorCodes_t::TALK_INVALID);
-                    return false;
-                }
+            auto enemyState = std::dynamic_pointer_cast<EnemyState>(targetEntity);
+            auto enemy = enemyState ? enemyState->GetEntity() : nullptr;
+            auto spawn = enemy ? enemy->GetSpawnSource() : nullptr;
 
-                auto cs = targetEntity->GetCoreStats();
-                if(cs && cs->GetLevel() > source->GetCoreStats()->GetLevel())
+            // Non-spawn and 100% talk resist enemies cannot be
+            // negotiated with
+            if(!spawn || spawn->GetTalkResist() >= 100)
+            {
+                SendFailure(activated, client,
+                    (uint8_t)SkillErrorCodes_t::TALK_INVALID);
+                return false;
+            }
+
+            if((spawn->GetTalkResults() & 0x01) == 0)
+            {
+                // If an enemy can't join, fail if auto-join skill
+                auto talkDamage = skillData->GetDamage()
+                    ->GetNegotiationDamage();
+                if(!talkDamage->GetSuccessAffability() &&
+                    !talkDamage->GetFailureAffability() &&
+                    !talkDamage->GetSuccessFear() &&
+                    !talkDamage->GetFailureFear())
                 {
                     SendFailure(activated, client,
-                        (uint8_t)SkillErrorCodes_t::TALK_LEVEL);
+                        (uint8_t)SkillErrorCodes_t::TARGET_INVALID);
                     return false;
                 }
             }
-            break;
-        default:
-            break;
+
+            auto cs = targetEntity->GetCoreStats();
+            if(cs && cs->GetLevel() > source->GetCoreStats()->GetLevel())
+            {
+                SendFailure(activated, client,
+                    (uint8_t)SkillErrorCodes_t::TALK_LEVEL);
+                return false;
+            }
         }
+
+        auto sourceState = ClientState::GetEntityClientState(source->GetEntityID());
+        auto targetState = ClientState::GetEntityClientState(targetEntity->GetEntityID());
 
         bool targetInvalid = false;
         switch(targetType)
@@ -707,257 +848,15 @@ bool SkillManager::ExecuteSkill(std::shared_ptr<ActiveEntityState> source,
     auto pSkill = GetProcessingSkill(activated, ctx, client);
     pSkill->SourceExecutionState = GetCalculatedState(source, pSkill, false, nullptr);
 
-    // Check costs and pay costs (skip for switch deactivation)
-    if(!ctx->FreeCast && (skillCategory == 1 || (skillCategory == 2 &&
-        !source->ActiveSwitchSkillsContains(skillID))))
+    if(!DetermineCosts(source, activated, client, ctx))
     {
-        ClientState* state = 0;
-        std::shared_ptr<objects::Character> character;
-        if(client)
-        {
-            state = client->GetClientState();
-            character = state->GetCharacterState()->GetEntity();
-        }
-
-        int32_t hpCost = 0, mpCost = 0;
-        uint32_t hpCostPercent = 0, mpCostPercent = 0, fGaugeCost = 0;
-        uint16_t bulletCost = 0;
-        std::unordered_map<uint32_t, uint32_t> itemCosts;
-        if(functionID == SVR_CONST.SKILL_SUMMON_DEMON)
-        {
-            if(client)
-            {
-                auto demon = std::dynamic_pointer_cast<objects::Demon>(
-                    libcomp::PersistentObject::GetObjectByUUID(state->GetObjectUUID(
-                    activated->GetActivationObjectID())));
-                if(demon == nullptr)
-                {
-                    LOG_ERROR("Attempted to summon a demon that does not exist.\n");
-                    SendFailure(activated, client,
-                        (uint8_t)SkillErrorCodes_t::SUMMON_INVALID);
-                    return false;
-                }
-
-                // Calculate MAG cost
-                uint32_t demonType = demon->GetType();
-                auto demonData = definitionManager->GetDevilData(demonType);
-
-                int16_t characterLNC = character->GetLNC();
-                int16_t demonLNC = demonData->GetBasic()->GetLNC();
-                int8_t level = demon->GetCoreStats()->GetLevel();
-                uint8_t magMod = demonData->GetSummonData()->GetMagModifier();
-
-                double lncAdjust = characterLNC == 0
-                    ? pow(demonLNC, 2.0f)
-                    : (pow(abs(characterLNC), -0.06f) *
-                        pow(characterLNC - demonLNC, 2.0f));
-                double magAdjust = (double)(level * magMod);
-
-                double mag = (magAdjust * lncAdjust / 18000000.0) +
-                    (magAdjust * 0.25);
-
-                if(demon->GetMagReduction() > 0)
-                {
-                    mag = mag * (double)(100 - demon->GetMagReduction()) * 0.01;
-                }
-
-                uint32_t cost = (uint32_t)round(mag);
-                if(cost)
-                {
-                    itemCosts[SVR_CONST.ITEM_MAGNETITE] = cost;
-                }
-            }
-        }
-        else if(functionID == SVR_CONST.SKILL_DEMON_FUSION)
-        {
-            // Pay MAG and fusion gauge stocks
-            if(client)
-            {
-                auto fusionData = definitionManager->GetDevilFusionData(
-                    pSkill->SkillID);
-                if(fusionData)
-                {
-                    int8_t stockCount = fusionData->GetStockCost();
-                    fGaugeCost = (uint32_t)(stockCount * 10000);
-
-                    itemCosts[SVR_CONST.ITEM_MAGNETITE] = fusionData->GetMagCost();
-                }
-            }
-        }
-        else
-        {
-            auto costs = skillData->GetCondition()->GetCosts();
-            for(auto cost : costs)
-            {
-                auto num = cost->GetCost();
-                bool percentCost = cost->GetNumType() == objects::MiCostTbl::NumType_t::PERCENT;
-                switch(cost->GetType())
-                {
-                case objects::MiCostTbl::Type_t::HP:
-                    if(percentCost)
-                    {
-                        hpCostPercent = (uint32_t)(hpCostPercent + num);
-                    }
-                    else
-                    {
-                        hpCost = (int32_t)(hpCost + num);
-                    }
-                    break;
-                case objects::MiCostTbl::Type_t::MP:
-                    if(percentCost)
-                    {
-                        mpCostPercent = (uint32_t)(mpCostPercent + num);
-                    }
-                    else
-                    {
-                        mpCost = (int32_t)(mpCost + num);
-                    }
-                    break;
-                case objects::MiCostTbl::Type_t::ITEM:
-                    if(percentCost)
-                    {
-                        LOG_ERROR("Item percent cost encountered.\n");
-                        SendFailure(activated, client);
-                        return false;
-                    }
-                    else
-                    {
-                        auto itemID = cost->GetItem();
-                        if(itemCosts.find(itemID) == itemCosts.end())
-                        {
-                            itemCosts[itemID] = 0;
-                        }
-                        itemCosts[itemID] = (uint32_t)(itemCosts[itemID] + num);
-                    }
-                    break;
-                case objects::MiCostTbl::Type_t::BULLET:
-                    if(percentCost)
-                    {
-                        LOG_ERROR("Bullet percent cost encountered.\n");
-                        SendFailure(activated, client);
-                        return false;
-                    }
-                    else
-                    {
-                        bulletCost = (uint16_t)(bulletCost + num);
-                    }
-                    break;
-                default:
-                    LOG_ERROR(libcomp::String("Unsupported cost type encountered: %1\n")
-                        .Arg((uint8_t)cost->GetType()));
-                    SendFailure(activated, client);
-                    return false;
-                }
-            }
-        }
-
-        auto tokuseiManager = server->GetTokuseiManager();
-
-        // Get final HP cost
-        if(hpCost != 0 || hpCostPercent != 0)
-        {
-            hpCost = (int32_t)(hpCost + ceil(((float)hpCostPercent * 0.01f) *
-                (float)source->GetMaxHP()));
-
-            double multiplier = 1.0;
-            for(double adjust : tokuseiManager->GetAspectValueList(source,
-                TokuseiAspectType::HP_COST_ADJUST, pSkill->SourceExecutionState))
-            {
-                multiplier = adjust <= -100.0 ? 0.0 : (multiplier *
-                    (1.0 + adjust * 0.01));
-            }
-
-            hpCost = (int32_t)ceil((double)hpCost * multiplier);
-
-            if(hpCost < 0)
-            {
-                hpCost = 0;
-            }
-        }
-
-        // Get final MP cost
-        if(mpCost != 0 || mpCostPercent != 0)
-        {
-            mpCost = (int32_t)(mpCost + ceil(((float)mpCostPercent * 0.01f) *
-                (float)source->GetMaxMP()));
-
-            double multiplier = 1.0;
-            for(double adjust : tokuseiManager->GetAspectValueList(source,
-                TokuseiAspectType::MP_COST_ADJUST, pSkill->SourceExecutionState))
-            {
-                multiplier = adjust <= -100.0 ? 0.0 : (multiplier *
-                    (1.0 + adjust * 0.01));
-            }
-
-            mpCost = (int32_t)ceil((double)mpCost * multiplier);
-
-            if(mpCost < 0)
-            {
-                mpCost = 0;
-            }
-        }
-
-        auto sourceStats = source->GetCoreStats();
-        bool canPay = ((hpCost == 0) || hpCost < sourceStats->GetHP()) &&
-            ((mpCost == 0) || mpCost <= sourceStats->GetMP());
-
-        auto characterManager = server->GetCharacterManager();
-
-        if(itemCosts.size() > 0 || bulletCost > 0)
-        {
-            if(client)
-            {
-                for(auto itemCost : itemCosts)
-                {
-                    uint32_t itemCount = characterManager->GetExistingItemCount(
-                        character, itemCost.first);
-                    if(itemCount < itemCost.second)
-                    {
-                        canPay = false;
-                        break;
-                    }
-                }
-
-                if(bulletCost > 0)
-                {
-                    auto bullets = character->GetEquippedItems((size_t)
-                        objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_BULLETS);
-                    if(!bullets || bullets->GetStackSize() < bulletCost)
-                    {
-                        canPay = false;
-                    }
-                }
-            }
-            else
-            {
-                // Non-player entities cannot pay item-based costs
-                canPay = false;
-            }
-        }
-
-        if(fGaugeCost && character->GetFusionGauge() < fGaugeCost)
-        {
-            canPay = false;
-        }
-
-        // Handle costs that can't be paid as expected errors
-        if(!canPay)
-        {
-            SendFailure(activated, client,
-                (uint8_t)SkillErrorCodes_t::GENERIC_COST);
-            return false;
-        }
-
-        activated->SetHPCost(hpCost);
-        activated->SetMPCost(mpCost);
-        activated->SetBulletCost(bulletCost);
-        activated->SetItemCosts(itemCosts);
+        return false;
     }
 
     activated->SetExecutionTime(ChannelServer::GetServerTime());
 
     // Execute the skill
-    auto fIter = mSkillFunctions.find(functionID);
+    auto fIter = mSkillFunctions.find(pSkill->FunctionID);
     if(fIter == mSkillFunctions.end())
     {
         switch(skillCategory)
@@ -991,6 +890,7 @@ bool SkillManager::ExecuteSkill(std::shared_ptr<ActiveEntityState> source,
         {
             SendCompleteSkill(activated, 1);
             source->SetActivatedAbility(nullptr);
+            source->ResetUpkeep();
         }
     }
 
@@ -1018,7 +918,9 @@ bool SkillManager::CancelSkill(const std::shared_ptr<ActiveEntityState> source,
             skillData->GetBasic()->GetActivationType() == 4)
         {
             auto ctx = std::make_shared<SkillExecutionContext>();
-            fIter->second(*this, activated, ctx, nullptr);
+            auto client = server->GetManagerConnection()->GetEntityClient(
+                source->GetEntityID());
+            fIter->second(*this, activated, ctx, client);
         }
 
         // If any executions have occurred, the cooldown needs to be activated
@@ -1036,6 +938,7 @@ bool SkillManager::CancelSkill(const std::shared_ptr<ActiveEntityState> source,
         if(source->GetActivatedAbility() == activated)
         {
             source->SetActivatedAbility(nullptr);
+            source->ResetUpkeep();
         }
 
         SendCompleteSkill(activated, 1);
@@ -1226,6 +1129,8 @@ bool SkillManager::PrepareFusionSkill(
         ->GetType() == objects::MiTargetData::Type_t::NONE))
     {
         // Hide the partner demon now
+        dState->SetAIIgnored(true);
+
         server->GetZoneManager()->Warp(client, dState, xPos, yPos,
             cState->GetCurrentRotation());
         return true;
@@ -1272,6 +1177,291 @@ std::shared_ptr<objects::ActivatedAbility> SkillManager::GetActivation(
     }
 
     return activated;
+}
+
+bool SkillManager::DetermineCosts(std::shared_ptr<ActiveEntityState> source,
+    std::shared_ptr<objects::ActivatedAbility> activated,
+    const std::shared_ptr<ChannelClientConnection> client,
+    std::shared_ptr<SkillExecutionContext> ctx)
+{
+    auto pSkill = GetProcessingSkill(activated, ctx, client);
+    uint8_t skillCategory = pSkill->Definition->GetCommon()->GetCategory()
+        ->GetMainCategory();
+
+    // Skip costs if free-cast, invalid skill category or deactivating
+    // a switch skill
+    if(ctx->FreeCast || (skillCategory != 1 && (skillCategory != 2 ||
+        source->ActiveSwitchSkillsContains(pSkill->SkillID))))
+    {
+        return true;
+    }
+
+    // Gather some client specific data if applicable
+    ClientState* state = 0;
+    std::shared_ptr<objects::Character> character;
+    if(client)
+    {
+        state = client->GetClientState();
+        character = state->GetCharacterState()->GetEntity();
+    }
+
+    auto server = mServer.lock();
+    auto characterManager = server->GetCharacterManager();
+    auto tokuseiManager = server->GetTokuseiManager();
+
+    int32_t hpCost = 0, mpCost = 0;
+    uint32_t hpCostPercent = 0, mpCostPercent = 0, fGaugeCost = 0;
+    uint16_t bulletCost = 0;
+    std::unordered_map<uint32_t, uint32_t> itemCosts;
+
+    // Gather special function costs (only applies to client)
+    if(pSkill->FunctionID && client)
+    {
+        if(pSkill->FunctionID == SVR_CONST.SKILL_SUMMON_DEMON)
+        {
+            auto demon = std::dynamic_pointer_cast<objects::Demon>(
+                libcomp::PersistentObject::GetObjectByUUID(state->GetObjectUUID(
+                activated->GetActivationObjectID())));
+            if(demon == nullptr)
+            {
+                LOG_ERROR("Attempted to summon a demon that does not exist.\n");
+                SendFailure(activated, client,
+                    (uint8_t)SkillErrorCodes_t::SUMMON_INVALID);
+                return false;
+            }
+
+            // Calculate MAG cost
+            uint32_t demonType = demon->GetType();
+            auto demonData = server->GetDefinitionManager()->GetDevilData(
+                demonType);
+
+            int16_t characterLNC = character->GetLNC();
+            int16_t demonLNC = demonData->GetBasic()->GetLNC();
+            int8_t level = demon->GetCoreStats()->GetLevel();
+            uint8_t magMod = demonData->GetSummonData()->GetMagModifier();
+
+            double lncAdjust = characterLNC == 0
+                ? pow(demonLNC, 2.0f)
+                : (pow(abs(characterLNC), -0.06f) *
+                    pow(characterLNC - demonLNC, 2.0f));
+            double magAdjust = (double)(level * magMod);
+
+            double mag = (magAdjust * lncAdjust / 18000000.0) +
+                (magAdjust * 0.25);
+
+            if(demon->GetMagReduction() > 0)
+            {
+                mag = mag * (double)(100 - demon->GetMagReduction()) * 0.01;
+            }
+
+            uint32_t cost = (uint32_t)round(mag);
+            if(cost)
+            {
+                itemCosts[SVR_CONST.ITEM_MAGNETITE] = cost;
+            }
+        }
+        else if(pSkill->FunctionID == SVR_CONST.SKILL_DEMON_FUSION)
+        {
+            // Pay MAG and fusion gauge stocks
+            auto fusionData = server->GetDefinitionManager()
+                ->GetDevilFusionData(pSkill->SkillID);
+            if(fusionData)
+            {
+                int8_t stockCount = fusionData->GetStockCost();
+                fGaugeCost = (uint32_t)(stockCount * 10000);
+
+                itemCosts[SVR_CONST.ITEM_MAGNETITE] = fusionData->GetMagCost();
+            }
+        }
+        else if(pSkill->FunctionID == SVR_CONST.SKILL_GEM_COST)
+        {
+            // Add one crystal matching target race
+            int32_t targetEntityID = (int32_t)activated->GetTargetObjectID();
+            auto zone = state->GetZone();
+            auto target = zone ? zone->GetEnemy(targetEntityID) : nullptr;
+            auto demonData = target ? target->GetDevilData() : nullptr;
+            if(!demonData)
+            {
+                SendFailure(activated, client);
+                return false;
+            }
+
+            uint8_t raceID = (uint8_t)demonData->GetCategory()->GetRace();
+            for(auto& pair : SVR_CONST.DEMON_CRYSTALS)
+            {
+                if(pair.second.find(raceID) != pair.second.end())
+                {
+                    itemCosts[pair.first] = 1;
+                }
+            }
+        }
+    }
+
+    // Gather normal costs
+    for(auto cost : pSkill->Definition->GetCondition()->GetCosts())
+    {
+        auto num = cost->GetCost();
+        bool percentCost = cost->GetNumType() ==
+            objects::MiCostTbl::NumType_t::PERCENT;
+        switch(cost->GetType())
+        {
+        case objects::MiCostTbl::Type_t::HP:
+            if(percentCost)
+            {
+                hpCostPercent = (uint32_t)(hpCostPercent + num);
+            }
+            else
+            {
+                hpCost = (int32_t)(hpCost + num);
+            }
+            break;
+        case objects::MiCostTbl::Type_t::MP:
+            if(percentCost)
+            {
+                mpCostPercent = (uint32_t)(mpCostPercent + num);
+            }
+            else
+            {
+                mpCost = (int32_t)(mpCost + num);
+            }
+            break;
+        case objects::MiCostTbl::Type_t::ITEM:
+            if(percentCost)
+            {
+                LOG_ERROR("Item percent cost encountered.\n");
+                SendFailure(activated, client);
+                return false;
+            }
+            else
+            {
+                auto itemID = cost->GetItem();
+                if(itemCosts.find(itemID) == itemCosts.end())
+                {
+                    itemCosts[itemID] = 0;
+                }
+                itemCosts[itemID] = (uint32_t)(itemCosts[itemID] + num);
+            }
+            break;
+        case objects::MiCostTbl::Type_t::BULLET:
+            if(percentCost)
+            {
+                LOG_ERROR("Bullet percent cost encountered.\n");
+                SendFailure(activated, client);
+                return false;
+            }
+            else
+            {
+                bulletCost = (uint16_t)(bulletCost + num);
+            }
+            break;
+        default:
+            LOG_ERROR(libcomp::String("Unsupported cost type encountered: %1\n")
+                .Arg((uint8_t)cost->GetType()));
+            SendFailure(activated, client);
+            return false;
+        }
+    }
+
+    // Get final HP cost
+    if(hpCost != 0 || hpCostPercent != 0)
+    {
+        hpCost = (int32_t)(hpCost + ceil(((float)hpCostPercent * 0.01f) *
+            (float)source->GetMaxHP()));
+
+        double multiplier = 1.0;
+        for(double adjust : tokuseiManager->GetAspectValueList(source,
+            TokuseiAspectType::HP_COST_ADJUST, pSkill->SourceExecutionState))
+        {
+            multiplier = adjust <= -100.0 ? 0.0 : (multiplier *
+                (1.0 + adjust * 0.01));
+        }
+
+        hpCost = (int32_t)ceil((double)hpCost * multiplier);
+
+        if(hpCost < 0)
+        {
+            hpCost = 0;
+        }
+    }
+
+    // Get final MP cost
+    if(mpCost != 0 || mpCostPercent != 0)
+    {
+        mpCost = (int32_t)(mpCost + ceil(((float)mpCostPercent * 0.01f) *
+            (float)source->GetMaxMP()));
+
+        double multiplier = 1.0;
+        for(double adjust : tokuseiManager->GetAspectValueList(source,
+            TokuseiAspectType::MP_COST_ADJUST, pSkill->SourceExecutionState))
+        {
+            multiplier = adjust <= -100.0 ? 0.0 : (multiplier *
+                (1.0 + adjust * 0.01));
+        }
+
+        mpCost = (int32_t)ceil((double)mpCost * multiplier);
+
+        if(mpCost < 0)
+        {
+            mpCost = 0;
+        }
+    }
+
+    // Determine if the payment is possible
+    auto sourceStats = source->GetCoreStats();
+    bool canPay = ((hpCost == 0) || hpCost < sourceStats->GetHP()) &&
+        ((mpCost == 0) || mpCost <= sourceStats->GetMP());
+    if(itemCosts.size() > 0 || bulletCost > 0)
+    {
+        if(client && character)
+        {
+            for(auto itemCost : itemCosts)
+            {
+                uint32_t itemCount = characterManager->GetExistingItemCount(
+                    character, itemCost.first);
+                if(itemCount < itemCost.second)
+                {
+                    canPay = false;
+                    break;
+                }
+            }
+
+            if(bulletCost > 0)
+            {
+                auto bullets = character->GetEquippedItems((size_t)
+                    objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_BULLETS);
+                if(!bullets || bullets->GetStackSize() < bulletCost)
+                {
+                    canPay = false;
+                }
+            }
+        }
+        else
+        {
+            // Non-player entities cannot pay item-based costs
+            canPay = false;
+        }
+    }
+
+    if(fGaugeCost && (!character || character->GetFusionGauge() < fGaugeCost))
+    {
+        canPay = false;
+    }
+
+    // Handle costs that can't be paid as expected errors
+    if(!canPay)
+    {
+        SendFailure(activated, client,
+            (uint8_t)SkillErrorCodes_t::GENERIC_COST);
+        return false;
+    }
+
+    // Costs valid, set on the skill
+    activated->SetHPCost(hpCost);
+    activated->SetMPCost(mpCost);
+    activated->SetBulletCost(bulletCost);
+    activated->SetItemCosts(itemCosts);
+
+    return true;
 }
 
 bool SkillManager::ExecuteNormalSkill(const std::shared_ptr<ChannelClientConnection> client,
@@ -1478,7 +1668,11 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
 
     auto skillRange = skillData->GetRange();
     std::list<std::shared_ptr<ActiveEntityState>> effectiveTargets;
-    if(skillRange->GetAreaType() != objects::MiEffectiveRangeData::AreaType_t::NONE)
+    if(pSkill->FunctionID == SVR_CONST.SKILL_ZONE_TARGET_ALL)
+    {
+        effectiveTargets = zone->GetActiveEntities();
+    }
+    else if(skillRange->GetAreaType() != objects::MiEffectiveRangeData::AreaType_t::NONE)
     {
         // Determine area effects
         // Unlike damage calculations, this will use effectiveSource instead
@@ -1712,6 +1906,31 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
         return false;
     }
 
+    // Filter out special target restrictions
+    if(pSkill->FunctionID)
+    {
+        if(pSkill->FunctionID == SVR_CONST.SKILL_GENDER_RESTRICTED)
+        {
+            // Specific gender targets only
+            uint8_t gender = (uint8_t)skillData->GetSpecial()
+                ->GetSpecialParams(0);
+            effectiveTargets.remove_if([gender](
+                const std::shared_ptr<ActiveEntityState>& target)
+                {
+                    return target->GetGender() != gender;
+                });
+        }
+        else if(pSkill->FunctionID == SVR_CONST.SKILL_SLEEP_RESTRICTED)
+        {
+            // Sleeping targets only
+            effectiveTargets.remove_if([](
+                const std::shared_ptr<ActiveEntityState>& target)
+                {
+                    return !target->StatusEffectActive(SVR_CONST.STATUS_SLEEP);
+                });
+        }
+    }
+
     // Filter down to all valid targets, limited by AOE restrictions
     uint16_t aoeReflect = 0;
     int32_t aoeTargetCount = 0;
@@ -1926,13 +2145,7 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
     uint8_t kbType = skillKnockback->GetKnockBackType();
     float kbDistance = (float)(skillKnockback->GetDistance() * 10);
 
-    // Get negotiation damage
-    auto talkDamage = damageData->GetNegotiationDamage();
-    bool hasTalkDamage = talkDamage->GetSuccessAffability() != 0 ||
-        talkDamage->GetFailureAffability() != 0 ||
-        talkDamage->GetSuccessFear() != 0 ||
-        talkDamage->GetFailureFear() != 0;
-
+    bool isTalk = IsTalkSkill(pSkill->Definition, false);
     uint64_t now = ChannelServer::GetServerTime();
     source->RefreshCurrentPosition(now);
 
@@ -1947,6 +2160,7 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
 
         target.EntityState->RefreshCurrentPosition(now);
 
+        bool hpMpSet = false;
         int32_t hpDamage = target.TechnicalDamage + target.PursuitDamage;
         int32_t mpDamage = 0;
         if(hasBattleDamage)
@@ -1959,6 +2173,20 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
 
                 switch(type)
                 {
+                    case DAMAGE_EXPLICIT_SET:
+                        if(hpMode)
+                        {
+                            hpDamage = val;
+                            target.Damage1Type = DAMAGE_TYPE_GENERIC;
+                            hpMpSet = true;
+                        }
+                        else
+                        {
+                            mpDamage = val;
+                            target.Damage2Type = DAMAGE_TYPE_GENERIC;
+                            hpMpSet = true;
+                        }
+                        break;
                     case DAMAGE_TYPE_HEALING:
                     case DAMAGE_TYPE_DRAIN:
                         if(hpMode)
@@ -1987,7 +2215,8 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
         bool applyKnockback = (battleDamage->GetFormula()
             == objects::MiBattleDamageData::Formula_t::DMG_NORMAL &&
             battleDamage->GetModifier1() == 0 &&
-            battleDamage->GetModifier2() == 0) || hpDamage > 0;
+            battleDamage->GetModifier2() == 0) ||
+            (!hpMpSet && hpDamage > 0) || (hpMpSet && hpDamage != -1);
         if(applyKnockback && kbMod)
         {
             // Check if the source removes knockback
@@ -2027,7 +2256,16 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
             !target.IndirectTarget && !target.HitAbsorb)
         {
             cancelOnKill = HandleStatusEffects(source, target, pSkill);
-            hpDamage += target.AilmentDamage;
+
+            if(hpMpSet)
+            {
+                // Explicitly setting HP/MP stops all ailment damage
+                target.AilmentDamage = 0;
+            }
+            else
+            {
+                hpDamage += target.AilmentDamage;
+            }
         }
 
         // If death is applied, kill the target and stop HP damage
@@ -2042,7 +2280,7 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
         }
 
         // Now apply damage
-        if(hpDamage != 0 || mpDamage != 0)
+        if(hpMpSet || hpDamage != 0 || mpDamage != 0)
         {
             bool targetAlive = target.EntityState->IsAlive();
             bool secondaryDamage = (target.TechnicalDamage +
@@ -2053,7 +2291,8 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
             // is not a suicide skill
             int32_t clenchChance = 0;
             if(hpDamage > 0 && targetAlive && !secondaryDamage &&
-                (!pSkill->IsSuicide || target.EntityState != source))
+                (skill.FunctionID != SVR_CONST.SKILL_SUICIDE ||
+                    target.EntityState != source))
             {
                 // If reflect occurred, a special clench type must be active
                 auto clenchType = pSkill->Reflected
@@ -2064,8 +2303,14 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
                     target.EntityState, clenchType, targetCalc) * 100.0);
             }
 
+            if(!hpMpSet)
+            {
+                hpDamage = -hpDamage;
+                mpDamage = -mpDamage;
+            }
+
             int32_t hpAdjusted;
-            if(target.EntityState->SetHPMP(-hpDamage, -mpDamage, true,
+            if(target.EntityState->SetHPMP(hpDamage, mpDamage, !hpMpSet,
                 true, clenchChance, hpAdjusted, mpAdjusted))
             {
                 // Changed from alive to dead or vice versa
@@ -2093,11 +2338,20 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
 
             hpAdjustedSum += hpAdjusted;
 
-            // If the HP damage was changed and there are no secondary damage sources
-            // update the target damage
-            if(-hpAdjusted != hpDamage && !secondaryDamage)
+            if(hpMpSet)
             {
+                // Correct explicit damage
                 target.Damage1 = -hpAdjusted;
+                target.Damage2 = -mpAdjusted;
+            }
+            else
+            {
+                // If the HP damage was changed and there are no secondary
+                // damage sources update the target damage
+                if(hpAdjusted != hpDamage && !secondaryDamage)
+                {
+                    target.Damage1 = -hpAdjusted;
+                }
             }
 
             if(mpAdjusted != 0)
@@ -2170,7 +2424,7 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
         }
 
         if(target.EntityState->GetEntityType() == EntityType_t::ENEMY &&
-            !targetKilled && hasTalkDamage)
+            !targetKilled && isTalk)
         {
             if(ApplyNegotiationDamage(source, target, pSkill))
             {
@@ -2182,6 +2436,14 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
 
     ApplyZoneSpecificEffects(pSkill);
 
+    std::set<uint32_t> keepEffects;
+    if(pSkill->FunctionID &&
+        pSkill->FunctionID == SVR_CONST.SKILL_SLEEP_RESTRICTED)
+    {
+        // Sleep effects are not cancelled by these skills
+        keepEffects.insert(SVR_CONST.STATUS_SLEEP);
+    }
+
     for(SkillTargetResult& target : skill.Targets)
     {
         if(target.EffectCancellations)
@@ -2189,7 +2451,7 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
             auto eState = target.EntityState;
             uint8_t cancelFlags = target.EffectCancellations;
 
-            eState->CancelStatusEffects(cancelFlags);
+            eState->CancelStatusEffects(cancelFlags, keepEffects);
 
             // Check for skills that need to be cancelled
             if(cancelFlags & (EFFECT_CANCEL_DAMAGE | EFFECT_CANCEL_KNOCKBACK))
@@ -2728,7 +2990,14 @@ std::shared_ptr<ProcessingSkill> SkillManager::GetProcessingSkill(
     skill->EffectiveDependencyType = skillData->GetBasic()->GetDependencyType();
     skill->EffectiveSource = source;
     skill->CurrentZone = source->GetZone();
-    skill->IsSuicide = skillData->GetDamage()->GetFunctionID() == SVR_CONST.SKILL_SUICIDE;
+    skill->FunctionID = skillData->GetDamage()->GetFunctionID();
+
+    if(skill->FunctionID &&
+        (skill->FunctionID == SVR_CONST.SKILL_ABS_DAMAGE ||
+        skill->FunctionID == SVR_CONST.SKILL_ZONE_TARGET_ALL))
+    {
+        skill->AbsoluteDamage = skillData->GetSpecial()->GetSpecialParams(0);
+    }
 
     // Set the expertise and any boosts gained from ranks
     // The expertise type of a skill is determined by the first
@@ -3390,10 +3659,40 @@ std::set<uint32_t> SkillManager::HandleStatusEffects(const std::shared_ptr<
     std::set<uint32_t> cancelOnKill;
 
     // Gather status effects from the skill
+    auto directStatuses = pSkill->Definition->GetDamage()->GetAddStatuses();
+
+    int16_t stackScale = 1;
+    if(pSkill->FunctionID)
+    {
+        // Apply FID transformations
+        if(pSkill->FunctionID == SVR_CONST.SKILL_STATUS_RANDOM ||
+            pSkill->FunctionID == SVR_CONST.SKILL_STATUS_RANDOM2)
+        {
+            // Randomly pick one
+            auto entry = libcomp::Randomizer::GetEntry(directStatuses);
+            directStatuses.clear();
+            directStatuses.push_back(entry);
+        }
+        else if(pSkill->FunctionID == SVR_CONST.SKILL_STATUS_SCALE)
+        {
+            // Multiply stacks from stat
+            auto params = pSkill->Definition->GetSpecial()->GetSpecialParams();
+            int16_t stat = source->GetCorrectValue((CorrectTbl)params[0]);
+
+            stackScale = (int16_t)floor((float)stat *
+                ((float)(100 - params[1]) / 100.f));
+
+            if(stackScale < 1)
+            {
+                stackScale = 1;
+            }
+        }
+    }
+    
     std::unordered_map<uint32_t, double> addStatusMap;
     std::unordered_map<uint32_t,
         std::shared_ptr<objects::MiAddStatusTbl>> addStatusDefs;
-    for(auto addStatus : pSkill->Definition->GetDamage()->GetAddStatuses())
+    for(auto addStatus : directStatuses)
     {
         uint32_t effectID = addStatus->GetStatusID();
         if(!addStatus->GetOnKnockback() || (target.Flags1 & FLAG1_KNOCKBACK) != 0)
@@ -3521,6 +3820,24 @@ std::set<uint32_t> SkillManager::HandleStatusEffects(const std::shared_ptr<
             int8_t maxStack = addStatus ? addStatus->GetMaxStack() : 1;
             bool isReplace = addStatus && addStatus->GetIsReplace();
 
+            // Scale stacks
+            if(stackScale > 1)
+            {
+                minStack = (int8_t)(minStack * stackScale);
+                maxStack = (int8_t)(maxStack * stackScale);
+
+                // Adjust for overflow
+                if(minStack < 0)
+                {
+                    minStack = 127;
+                }
+
+                if(maxStack < 0)
+                {
+                    maxStack = 127;
+                }
+            }
+
             uint8_t stack = CalculateStatusEffectStack(minStack, maxStack);
             if(stack == 0 && !isReplace) continue;
 
@@ -3616,11 +3933,22 @@ void SkillManager::HandleKills(std::shared_ptr<ActiveEntityState> source,
         // Remove all opponents
         characterManager->AddRemoveOpponent(false, entity, nullptr);
 
+        // Cancel any pending skill
+        auto activated = entity->GetActivatedAbility();
+        if(activated)
+        {
+            CancelSkill(entity, activated->GetActivationID());
+        }
+
         // Determine familiarity adjustments
         bool partnerDeath = false;
         uint32_t dType = 0;
         switch(entity->GetEntityType())
         {
+        case EntityType_t::CHARACTER:
+            characterManager->CancelMount(
+                ClientState::GetEntityClientState(entity->GetEntityID()));
+            break;
         case EntityType_t::PARTNER_DEMON:
             dType = std::dynamic_pointer_cast<DemonState>(entity)
                 ->GetEntity()->GetType();
@@ -3772,7 +4100,7 @@ void SkillManager::HandleKills(std::shared_ptr<ActiveEntityState> source,
             auto spawn = enemy->GetSpawnSource();
             auto damageSources = enemy->GetDamageSources();
 
-            auto drops = GetItemDrops(enemy->GetType(), spawn);
+            auto drops = GetItemDrops(spawn);
 
             // Create loot based off drops and send if any was added
             uint64_t lootTime = 0;
@@ -4227,6 +4555,12 @@ bool SkillManager::ApplyNegotiationDamage(const std::shared_ptr<
         return false;
     }
 
+    // No points in anything but still primary talk skill means
+    // the skill will always result in a join
+    bool isTalkAction = IsTalkSkill(pSkill->Definition, true);
+    bool autoJoin = isTalkAction && !talkAffSuccess &&
+        !talkAffFailure && !talkFearSuccess && !talkFearFailure;
+
     int32_t talkType = 0;
     switch(pSkill->Definition->GetBasic()->GetActionType())
     {
@@ -4258,15 +4592,39 @@ bool SkillManager::ApplyNegotiationDamage(const std::shared_ptr<
         }
     }
 
-    bool success = talkSuccess > 0.0 &&
-        RNG(uint16_t, 1, 100) <= (uint16_t)talkSuccess;
-    int16_t aff = (int16_t)(talkPoints.first +
-        (success ? talkAffSuccess : talkAffFailure));
-    int16_t fear = (int16_t)(talkPoints.second +
-        (success ? talkFearSuccess : talkFearFailure));
+    bool success = false;
+    if(autoJoin)
+    {
+        success = true;
+        talkPoints.first = affThreshold;
+        talkPoints.second = fearThreshold;
+    }
+    else
+    {
+        success = talkSuccess > 0.0 &&
+            RNG(uint16_t, 1, 100) <= (uint16_t)talkSuccess;
+        int16_t aff = (int16_t)(talkPoints.first +
+            (success ? talkAffSuccess : talkAffFailure));
+        int16_t fear = (int16_t)(talkPoints.second +
+            (success ? talkFearSuccess : talkFearFailure));
 
-    talkPoints.first = aff < 0 ? 0 : (uint8_t)aff;
-    talkPoints.second = fear < 0 ? 0 : (uint8_t)fear;
+        talkPoints.first = aff < 0 ? 0 : (uint8_t)aff;
+        talkPoints.second = fear < 0 ? 0 : (uint8_t)fear;
+
+        if(!isTalkAction)
+        {
+            // Non-talk skills can never hit the threshold
+            if(talkPoints.first >= affThreshold)
+            {
+                talkPoints.first = (uint8_t)(affThreshold - 1);
+            }
+            
+            if(talkPoints.second >= fearThreshold)
+            {
+                talkPoints.second = (uint8_t)(fearThreshold - 1);
+            }
+        }
+    }
 
     eState->SetTalkPoints(source->GetEntityID(), talkPoints);
 
@@ -4280,32 +4638,42 @@ bool SkillManager::ApplyNegotiationDamage(const std::shared_ptr<
 
         bool canJoin = true;
         bool canGift = true;
-
-        uint8_t talkResults = spawn ? spawn->GetTalkResults() : 3;
-        if((talkResults & 0x01) == 0)
+        if(autoJoin)
         {
-            canJoin = false;
-            maxVal -= 2;
+            minVal = 1;
+            maxVal = 2;
         }
-
-        if((talkResults & 0x02) == 0)
+        else
         {
-            canGift = false;
-            maxVal -= 2;
+            uint8_t talkResults = spawn ? spawn->GetTalkResults() : 3;
+            if((talkResults & 0x01) == 0)
+            {
+                canJoin = false;
+                maxVal -= 2;
+            }
+
+            if((talkResults & 0x02) == 0)
+            {
+                canGift = false;
+                maxVal -= 2;
+            }
         }
 
         int32_t outcome = RNG(int32_t, minVal, maxVal);
 
-        // Shift the outcome to the proper position if some
-        // results are not available
-        if(!canJoin)
+        if(!autoJoin)
         {
-            outcome += 2;
-        }
+            // Shift the outcome to the proper position if some
+            // results are not available
+            if(!canJoin)
+            {
+                outcome += 2;
+            }
 
-        if(!canGift && outcome >= 3 && outcome <= 4)
-        {
-            outcome += 2;
+            if(!canGift && outcome >= 3 && outcome <= 4)
+            {
+                outcome += 2;
+            }
         }
 
         switch(outcome)
@@ -4459,8 +4827,7 @@ void SkillManager::HandleNegotiations(const std::shared_ptr<ActiveEntityState> s
                     lBox->SetType(objects::LootBox::Type_t::GIFT_BOX);
                     lBox->SetEnemy(enemy);
 
-                    auto drops = GetItemDrops(enemy->GetType(),
-                        enemy->GetSpawnSource(), true);
+                    auto drops = GetItemDrops(enemy->GetSpawnSource(), true);
                     characterManager->CreateLootFromDrops(lBox, drops,
                         source->GetLUCK(), true);
                 }
@@ -4673,7 +5040,7 @@ void SkillManager::HandleDurabilityDamage(const std::shared_ptr<ActiveEntityStat
     auto server = mServer.lock();
     auto characterManager = server->GetCharacterManager();
 
-    auto client = server->GetManagerConnection()->GetEntityClient(cState->GetEntityID(), false);
+    auto client = server->GetManagerConnection()->GetEntityClient(cState->GetEntityID());
     if(!client)
     {
         return;
@@ -4682,14 +5049,33 @@ void SkillManager::HandleDurabilityDamage(const std::shared_ptr<ActiveEntityStat
     bool isSource = pSkill->Activated->GetSourceEntity() == entity;
     if(isSource)
     {
-        // Decrease weapon durability by value * 2 (do not scale for target count hit)
-        std::shared_ptr<objects::Item> weapon = character->GetEquippedItems(WEAPON_IDX).Get();
+        if(pSkill->FunctionID == SVR_CONST.SKILL_DURABILITY_DOWN)
+        {
+            // Explicit set to visible durability
+            auto params = pSkill->Definition->GetSpecial()->GetSpecialParams();
+            auto equip = character->GetEquippedItems((size_t)params[0]).Get();
+            if(equip)
+            {
+                characterManager->UpdateDurability(client, equip,
+                    params[1] * -1000);
+            }
+        }
+
+        // Decrease weapon durability by value * 2
+        // (do not scale for target count hit)
+        auto weapon = character->GetEquippedItems(WEAPON_IDX).Get();
         if(!weapon)
         {
             return;
         }
 
-        uint16_t weaponDamage = pSkill->Definition->GetDamage()->GetBreakData()->GetWeapon();
+        uint16_t weaponDamage = pSkill->Definition->GetDamage()->GetBreakData()
+            ->GetWeapon();
+        if(!weaponDamage)
+        {
+            return;
+        }
+
         double knowledgeRank = (double)pSkill->KnowledgeRank;
 
         int32_t durabilityLoss = weaponDamage * 2;
@@ -4724,7 +5110,12 @@ void SkillManager::HandleDurabilityDamage(const std::shared_ptr<ActiveEntityStat
             return;
         }
 
-        uint16_t armorDamage = pSkill->Definition->GetDamage()->GetBreakData()->GetArmor();
+        uint16_t armorDamage = pSkill->Definition->GetDamage()->GetBreakData()
+            ->GetArmor();
+        if(!armorDamage)
+        {
+            return;
+        }
 
         double survivalRank = (double)cState->GetExpertiseRank(
             server->GetDefinitionManager(), EXPERTISE_SURVIVAL);
@@ -4752,8 +5143,7 @@ void SkillManager::HandleFusionGauge(
     const std::shared_ptr<channel::ProcessingSkill>& pSkill)
 {
     auto def = pSkill->Definition;
-    bool isFusionSkill = def->GetDamage()->GetFunctionID() ==
-        SVR_CONST.SKILL_DEMON_FUSION;
+    bool isFusionSkill = pSkill->FunctionID == SVR_CONST.SKILL_DEMON_FUSION;
     auto actionType = def->GetBasic()->GetActionType();
     if(isFusionSkill || actionType >
         objects::MiSkillBasicData::MiSkillBasicData::ActionType_t::DODGE)
@@ -4841,9 +5231,7 @@ bool SkillManager::ToggleSwitchSkill(const std::shared_ptr<ChannelClientConnecti
 
         client->QueuePacket(p);
 
-        server->GetTokuseiManager()->Recalculate(source, true,
-            std::set<int32_t>{ source->GetEntityID() });
-        characterManager->RecalculateStats(source, client);
+        characterManager->RecalculateTokuseiAndStats(source, client);
 
         client->FlushOutgoing();
     }
@@ -4874,9 +5262,173 @@ bool SkillManager::CalculateDamage(const std::shared_ptr<ActiveEntityState>& sou
     uint16_t mod1 = damageData->GetModifier1();
     uint16_t mod2 = damageData->GetModifier2();
 
+    float mod1Multiplier = 1.f;
+    float mod2Multiplier = 1.f;
+    if(formula == objects::MiBattleDamageData::Formula_t::DMG_SOURCE_PERCENT)
+    {
+        // Modifiers adjust based upon current remaining HP
+        std::vector<std::pair<int32_t, int32_t>> hpMpCurrent;
+
+        auto cs = source->GetCoreStats();
+        if(cs)
+        {
+            // Use pre-cost values
+            hpMpCurrent.push_back(std::pair<int32_t, int32_t>(
+                cs->GetHP() + skill.Activated->GetHPCost(), cs->GetMaxHP()));
+            hpMpCurrent.push_back(std::pair<int32_t, int32_t>(
+                cs->GetMP() + skill.Activated->GetMPCost(), cs->GetMaxMP()));
+        }
+        else
+        {
+            hpMpCurrent.push_back(std::pair<int32_t, int32_t>(0, 1));
+            hpMpCurrent.push_back(std::pair<int32_t, int32_t>(0, 1));
+        }
+
+        for(size_t i = 0; i < 2; i++)
+        {
+            auto& pair = hpMpCurrent[i];
+            float mod = (float)pair.second / (float)pair.first;
+
+            if(i == 0)
+            {
+                mod1Multiplier = mod;
+            }
+            else
+            {
+                mod2Multiplier = mod;
+            }
+        }
+    }
+
+    if(skill.FunctionID)
+    {
+        // Apply source specific FID modifiers
+        auto calcState = source->GetCalculatedState();
+        if(skill.FunctionID == SVR_CONST.SKILL_STAT_SUM_DAMAGE)
+        {
+            // Sum core stats together for modifiers
+            auto ct = calcState->GetCorrectTbl();
+            int32_t statSum = (int32_t)ct[(size_t)CorrectTbl::STR] +
+                (int32_t)ct[(size_t)CorrectTbl::MAGIC] +
+                (int32_t)ct[(size_t)CorrectTbl::VIT] +
+                (int32_t)ct[(size_t)CorrectTbl::INT] +
+                (int32_t)ct[(size_t)CorrectTbl::SPEED] +
+                (int32_t)ct[(size_t)CorrectTbl::LUCK];
+
+            auto cs = source->GetCoreStats();
+            double levelMod = (double)(cs ? cs->GetLevel() : 0) / 100.0;
+
+            int32_t mod = (int32_t)(levelMod * (double)statSum *
+                (5.0 * (double)mod1));
+            mod1 = (uint16_t)(mod > 1000 ? 1000 : mod);
+
+            mod = (int32_t)(levelMod * (double)statSum *
+                (5.0 * (double)mod2));
+            mod2 = (uint16_t)(mod > 1000 ? 1000 : mod);
+        }
+        else if(skill.FunctionID == SVR_CONST.SKILL_HP_DEPENDENT)
+        {
+            // Multiplier changes at higher/lower HP
+            auto params = skill.Definition->GetSpecial()
+                ->GetSpecialParams();
+
+            bool lt = params[0] == 1;
+            float split = (float)(lt ? (100 + params[2]) : (params[2])) *
+                0.01f;
+
+            auto cs = source->GetCoreStats();
+            float percentLeft = 0.f;
+            if(cs)
+            {
+                percentLeft = (float)cs->GetHP() / (float)cs->GetMaxHP();
+            }
+
+            if((lt && percentLeft <= split) ||
+                (!lt && percentLeft >= split))
+            {
+                float adjust = (float)params[1] * 0.01f;
+                mod1Multiplier = mod1Multiplier * adjust;
+                mod2Multiplier = mod2Multiplier * adjust;
+            }
+        }
+        else if(skill.FunctionID == SVR_CONST.SKILL_SUICIDE)
+        {
+            // Apply a flat x4 multiplier
+            mod1Multiplier = mod1Multiplier * 4.f;
+            mod2Multiplier = mod2Multiplier * 4.f;
+        }
+    }
+
+    bool fidTargetAdjusted = skill.FunctionID &&
+        (skill.FunctionID == SVR_CONST.SKILL_HP_MP_MIN ||
+        skill.FunctionID == SVR_CONST.SKILL_LNC_DAMAGE);
     for(SkillTargetResult& target : skill.Targets)
     {
         if(target.HitAvoided) continue;
+
+        float targetModMultiplier = 1.f;
+        if(fidTargetAdjusted)
+        {
+            // Apply target specific FID modifiers
+            if(skill.FunctionID == SVR_CONST.SKILL_HP_MP_MIN)
+            {
+                // Immutable reduction to 1 HP/MP
+                target.Damage1Type = DAMAGE_EXPLICIT_SET;
+                target.Damage2Type = DAMAGE_EXPLICIT_SET;
+
+                auto params = skill.Definition->GetSpecial()
+                    ->GetSpecialParams();
+                if(params[0])
+                {
+                    // HP to 1
+                    target.Damage1 = 1;
+                }
+                else
+                {
+                    // Do not change
+                    target.Damage1 = -1;
+                }
+
+                if(params[1])
+                {
+                    // MP to 1
+                    target.Damage2 = 1;
+                }
+                else
+                {
+                    // Do not change
+                    target.Damage2 = -1;
+                }
+
+                // Nothing left to do
+                continue;
+            }
+            else if(skill.FunctionID == SVR_CONST.SKILL_LNC_DAMAGE)
+            {
+                // Modifier dependent on LNC difference
+                size_t diff = (size_t)abs(((int8_t)source->GetLNCType() -
+                    (int8_t)target.EntityState->GetLNCType()) / 2);
+                int32_t mod = skill.Definition->GetSpecial()
+                    ->GetSpecialParams(diff);
+                if(mod)
+                {
+                    targetModMultiplier = 1.f + ((float)mod / 100.f);
+                }
+            }
+        }
+
+        // Apply multipliers
+        if(mod1Multiplier != 1.f || targetModMultiplier != 1.f)
+        {
+            mod1 = (uint16_t)floor((float)mod1 * mod1Multiplier *
+                targetModMultiplier);
+        }
+
+        if(mod2Multiplier != 1.f || targetModMultiplier != 1.f)
+        {
+            mod2 = (uint16_t)floor((float)mod2 * mod2Multiplier *
+                targetModMultiplier);
+        }
 
         auto targetState = GetCalculatedState(target.EntityState, pSkill, true, source);
         bool effectiveHeal = isHeal || target.HitAbsorb;
@@ -4905,6 +5457,7 @@ bool SkillManager::CalculateDamage(const std::shared_ptr<ActiveEntityState>& sou
         case objects::MiBattleDamageData::Formula_t::DMG_NORMAL_SIMPLE:
         case objects::MiBattleDamageData::Formula_t::DMG_COUNTER:
         case objects::MiBattleDamageData::Formula_t::HEAL_NORMAL:
+        case objects::MiBattleDamageData::Formula_t::DMG_SOURCE_PERCENT:
             {
                 auto calcState = GetCalculatedState(source, pSkill, false, target.EntityState);
 
@@ -5092,20 +5645,6 @@ bool SkillManager::CalculateDamage(const std::shared_ptr<ActiveEntityState>& sou
                     target.EntityState->GetCoreStats()->GetMP());
             }
             break;
-        case objects::MiBattleDamageData::Formula_t::DMG_SOURCE_PERCENT:
-            if(minDamageLevel == -1)
-            {
-                //Calculate using pre-cost values
-                target.Damage1 = CalculateDamage_Percent(
-                    mod1, target.Damage1Type,
-                    static_cast<int32_t>(source->GetCoreStats()->GetHP() +
-                        skill.Activated->GetHPCost()));
-                target.Damage2 = CalculateDamage_Percent(
-                    mod2, target.Damage2Type,
-                    static_cast<int32_t>(source->GetCoreStats()->GetMP() +
-                        skill.Activated->GetMPCost()));
-            }
-            break;
         case objects::MiBattleDamageData::Formula_t::DMG_MAX_PERCENT:
         case objects::MiBattleDamageData::Formula_t::HEAL_MAX_PERCENT:
             if(minDamageLevel == -1)
@@ -5122,40 +5661,58 @@ bool SkillManager::CalculateDamage(const std::shared_ptr<ActiveEntityState>& sou
             return false;
         }
 
-        // Apply minimum adjustment for anything that hasn't already
-        if(minAdjust)
+        if(pSkill->AbsoluteDamage)
         {
-            target.Damage1 = target.Damage1 ? 1 : 0;
-            target.Damage2 = target.Damage2 ? 1 : 0;
-        }
-
-        // Reduce for AOE and make sure at least 1 damage was dealt to each specified type
-        float aoeReduction = (float)damageData->GetAoeReduction();
-        if(mod1)
-        {
-            if(!target.PrimaryTarget && aoeReduction)
+            // Hits calculated so adjust any damage parameters to match
+            // absolute damage
+            if(target.Damage1)
             {
-                target.Damage1 = (uint16_t)((float)target.Damage1 *
-                    (float)(1.f - (0.01f * aoeReduction)));
+                target.Damage1 = pSkill->AbsoluteDamage;
             }
 
-            if(target.Damage1 == 0)
+            if(target.Damage2)
             {
-                target.Damage1 = 1;
+                target.Damage2 = pSkill->AbsoluteDamage;
             }
         }
+        else
+        {
+            // Apply minimum adjustment for anything that hasn't already
+            if(minAdjust)
+            {
+                target.Damage1 = target.Damage1 ? 1 : 0;
+                target.Damage2 = target.Damage2 ? 1 : 0;
+            }
+
+            // Reduce for AOE and make sure at least 1 damage was dealt to each
+            // specified type
+            float aoeReduction = (float)damageData->GetAoeReduction();
+            if(mod1)
+            {
+                if(!target.PrimaryTarget && aoeReduction)
+                {
+                    target.Damage1 = (uint16_t)((float)target.Damage1 *
+                        (float)(1.f - (0.01f * aoeReduction)));
+                }
+
+                if(target.Damage1 == 0)
+                {
+                    target.Damage1 = 1;
+                }
+            }
     
-        if(mod2)
-        {
-            if(!target.PrimaryTarget && aoeReduction)
+            if(mod2)
             {
-                target.Damage2 = (uint16_t)((float)target.Damage2 *
-                    (float)(1.f - (0.01f * aoeReduction)));
-            }
+                if(!target.PrimaryTarget && aoeReduction)
+                {
+                    target.Damage2 = (uint16_t)((float)target.Damage2 *
+                        (float)(1.f - (0.01f * aoeReduction)));
+                }
 
-            if(target.Damage2 == 0)
-            {
-                target.Damage2 = 1;
+                if(target.Damage2 == 0)
+                {
+                    target.Damage2 = 1;
+                }
             }
         }
 
@@ -5171,7 +5728,7 @@ bool SkillManager::CalculateDamage(const std::shared_ptr<ActiveEntityState>& sou
         }
     }
 
-    if(skill.IsSuicide)
+    if(skill.FunctionID == SVR_CONST.SKILL_SUICIDE)
     {
         auto selfTarget = GetSelfTarget(source, skill.Targets, true);
 
@@ -5422,14 +5979,18 @@ int32_t SkillManager::CalculateDamage_Normal(const std::shared_ptr<
             // Multiply by dependency damage dealt %
             calc = calc * (float)(dependencyDealt * 0.01);
 
-            // Multiply by dependency damage taken %
-            calc = calc * (float)(dependencyTaken * 0.01);
-
             // Multiply by 1 + remaining power boosts/100
             calc = calc * (float)(1.0 + tokuseiBoost);
 
-            // Multiply by 100% + -general damage taken
-            calc = calc * (float)(1.0 + tokuseiReduction);
+            if(!skill.FunctionID ||
+                skill.FunctionID != SVR_CONST.SKILL_PIERCE)
+            {
+                // Multiply by dependency damage taken %
+                calc = calc * (float)(dependencyTaken * 0.01);
+
+                // Multiply by 100% + -general damage taken
+                calc = calc * (float)(1.0 + tokuseiReduction);
+            }
 
             /// @todo: there is more to this calculation
 
@@ -5516,7 +6077,7 @@ int32_t SkillManager::CalculateDamage_MaxPercent(uint16_t mod, uint8_t& damageTy
 }
 
 SkillTargetResult* SkillManager::GetSelfTarget(const std::shared_ptr<ActiveEntityState>& source,
-    std::list<SkillTargetResult>& targets, bool indirectDefault)
+    std::list<SkillTargetResult>& targets, bool indirectDefault, bool autoCreate)
 {
     for(SkillTargetResult& target : targets)
     {
@@ -5526,12 +6087,18 @@ SkillTargetResult* SkillManager::GetSelfTarget(const std::shared_ptr<ActiveEntit
         }
     }
 
-    // Does not exist so create it
-    SkillTargetResult target;
-    target.EntityState = source;
-    target.IndirectTarget = indirectDefault;
-    targets.push_back(target);
-    return &targets.back();
+    if(autoCreate)
+    {
+        SkillTargetResult target;
+        target.EntityState = source;
+        target.IndirectTarget = indirectDefault;
+        targets.push_back(target);
+        return &targets.back();
+    }
+    else
+    {
+        return nullptr;
+    }
 }
 
 bool SkillManager::SetNRA(SkillTargetResult& target, ProcessingSkill& skill)
@@ -5675,49 +6242,49 @@ uint8_t SkillManager::CalculateStatusEffectStack(int8_t minStack, int8_t maxStac
 }
 
 std::list<std::shared_ptr<objects::ItemDrop>> SkillManager::GetItemDrops(
-    uint32_t enemyType, const std::shared_ptr<objects::Spawn>& spawn,
-    bool giftMode) const
+    const std::shared_ptr<objects::Spawn>& spawn, bool giftMode) const
 {
-    (void)enemyType;
-
-    auto serverDataManager = mServer.lock()->GetServerDataManager();
-
     std::list<std::shared_ptr<objects::ItemDrop>> drops;
-    std::list<uint32_t> dropSetIDs;
-    if(spawn)
+    if(!spawn)
     {
-        // Add specific spawn drops, then drop sets
-        if(giftMode)
-        {
-            for(auto drop : spawn->GetGifts())
-            {
-                drops.push_back(drop);
-            }
+        return drops;
+    }
 
-            for(uint32_t dropSetID : spawn->GetGiftSetIDs())
-            {
-                dropSetIDs.push_back(dropSetID);
-            }
-        }
-        else
-        {
-            for(auto drop : spawn->GetDrops())
-            {
-                drops.push_back(drop);
-            }
+    auto server = mServer.lock();
+    auto serverDataManager = server->GetServerDataManager();
 
-            for(uint32_t dropSetID : spawn->GetDropSetIDs())
-            {
-                dropSetIDs.push_back(dropSetID);
-            }
-            
-            // Add global drops
-            auto sharedConfig = mServer.lock()->GetWorldSharedConfig();
-            for(uint32_t dropSetID : sharedConfig->GetGlobalDropSetIDs())
-            {
-                dropSetIDs.push_back(dropSetID);
-            }
+    // Add specific spawn drops, then drop sets
+    std::list<uint32_t> dropSetIDs;
+    if(giftMode)
+    {
+        for(auto drop : spawn->GetGifts())
+        {
+            drops.push_back(drop);
         }
+
+        for(uint32_t dropSetID : spawn->GetGiftSetIDs())
+        {
+            dropSetIDs.push_back(dropSetID);
+        }
+    }
+    else
+    {
+        for(auto drop : spawn->GetDrops())
+        {
+            drops.push_back(drop);
+        }
+
+        for(uint32_t dropSetID : spawn->GetDropSetIDs())
+        {
+            dropSetIDs.push_back(dropSetID);
+        }
+    }
+
+    // Add global drops
+    auto sharedConfig = server->GetWorldSharedConfig();
+    for(uint32_t dropSetID : sharedConfig->GetGlobalDropSetIDs())
+    {
+        dropSetIDs.push_back(dropSetID);
     }
 
     // Get drops from drop sets
@@ -5728,7 +6295,28 @@ std::list<std::shared_ptr<objects::ItemDrop>> SkillManager::GetItemDrops(
         {
             for(auto drop : dropSet->GetDrops())
             {
-                drops.push_back(drop);
+                switch(drop->GetType())
+                {
+                case objects::ItemDrop::Type_t::LEVEL_MULTIPLY:
+                    {
+                        // Copy the drop and scale stacks
+                        auto copy = std::make_shared<objects::ItemDrop>(*drop);
+
+                        uint16_t min = copy->GetMinStack();
+                        uint16_t max = copy->GetMaxStack();
+                        float multiplier = (float)spawn->GetLevel() *
+                            copy->GetMultiplier();
+
+                        copy->SetMinStack((uint16_t)((float)min * multiplier));
+                        copy->SetMaxStack((uint16_t)((float)max * multiplier));
+
+                        drops.push_back(copy);
+                    }
+                    break;
+                case objects::ItemDrop::Type_t::NORMAL:
+                    drops.push_back(drop);
+                    break;
+                }
             }
         }
     }
@@ -5817,7 +6405,8 @@ void SkillManager::FinalizeSkillExecution(const std::shared_ptr<ChannelClientCon
             characterManager->AddRemoveItems(client, itemCosts, false, targetItem);
         }
 
-        if(skillData->GetDamage()->GetFunctionID() == SVR_CONST.SKILL_DEMON_FUSION)
+        if(pSkill->FunctionID &&
+            pSkill->FunctionID == SVR_CONST.SKILL_DEMON_FUSION)
         {
             // Lower the fusion gauge
             auto definitionManager = server->GetDefinitionManager();
@@ -5829,6 +6418,9 @@ void SkillManager::FinalizeSkillExecution(const std::shared_ptr<ChannelClientCon
                 characterManager->UpdateFusionGauge(client,
                     (int32_t)(stockCount * -10000), true);
             }
+
+            // Unhide the demon
+            client->GetClientState()->GetDemonState()->SetAIIgnored(false);
         }
     }
 
@@ -5874,6 +6466,7 @@ void SkillManager::FinalizeSkillExecution(const std::shared_ptr<ChannelClientCon
         if(source->GetActivatedAbility() == activated)
         {
             source->SetActivatedAbility(nullptr);
+            source->ResetUpkeep();
         }
 
         if(executeAndComplete)
@@ -5882,15 +6475,19 @@ void SkillManager::FinalizeSkillExecution(const std::shared_ptr<ChannelClientCon
         }
     }
 
-    if(client)
+    // Cancel any status effects (not just added) that expire on
+    // skill execution
+    auto selfTarget = GetSelfTarget(source, pSkill->Targets, true, false);
+    std::set<uint32_t> ignore;
+    if(selfTarget)
     {
-        // Cancel any status effects that expire on skill execution
-        characterManager->CancelStatusEffects(client, EFFECT_CANCEL_SKILL);
+        for(auto& added : selfTarget->AddedStatuses)
+        {
+            ignore.insert(added.first);
+        }
     }
-    else
-    {
-        source->CancelStatusEffects(EFFECT_CANCEL_SKILL);
-    }
+
+    source->CancelStatusEffects(EFFECT_CANCEL_SKILL, ignore);
 }
 
 bool SkillManager::SetSkillCompleteState(const std::shared_ptr<
@@ -6046,6 +6643,53 @@ bool SkillManager::Cameo(const std::shared_ptr<objects::ActivatedAbility>& activ
     return true;
 }
 
+bool SkillManager::Cloak(const std::shared_ptr<objects::ActivatedAbility>& activated,
+    const std::shared_ptr<SkillExecutionContext>& ctx,
+    const std::shared_ptr<ChannelClientConnection>& client)
+{
+    auto source = std::dynamic_pointer_cast<ActiveEntityState>(
+        activated->GetSourceEntity());
+    SpecialSkill(activated, ctx, client);
+
+    if(!source->Ready() || !source->IsAlive())
+    {
+        SendFailure(activated, client,
+            (uint8_t)SkillErrorCodes_t::GENERIC_USE);
+        return false;
+    }
+
+    // Check game time
+    auto server = mServer.lock();
+    auto definitionManager = server->GetDefinitionManager();
+    auto skillData = definitionManager->GetSkillData(activated->GetSkillID());
+    auto worldClock = server->GetWorldClockTime();
+    int32_t gameTime = (int32_t)((worldClock.Hour * 100) + worldClock.Min);
+
+    auto special = skillData->GetSpecial();
+    int32_t after = special->GetSpecialParams(0);
+    int32_t before = special->GetSpecialParams(1);
+
+    bool rollover = before < after;
+    if((!rollover && (gameTime < after || gameTime > before)) ||
+        (rollover && (gameTime < after && gameTime > before)))
+    {
+        SendFailure(activated, client,
+            (uint8_t)SkillErrorCodes_t::TIME_RESTRICT);
+        return false;
+    }
+
+    if(ProcessSkillResult(activated, ctx))
+    {
+        return true;
+    }
+    else
+    {
+        SendFailure(activated, client,
+            (uint8_t)SkillErrorCodes_t::GENERIC_USE);
+        return false;
+    }
+}
+
 bool SkillManager::DCM(const std::shared_ptr<objects::ActivatedAbility>& activated,
     const std::shared_ptr<SkillExecutionContext>& ctx,
     const std::shared_ptr<ChannelClientConnection>& client)
@@ -6137,6 +6781,84 @@ bool SkillManager::DCM(const std::shared_ptr<objects::ActivatedAbility>& activat
             (uint8_t)SkillErrorCodes_t::GENERIC_USE);
         return false;
     }
+}
+
+bool SkillManager::DirectStatus(const std::shared_ptr<objects::ActivatedAbility>& activated,
+    const std::shared_ptr<SkillExecutionContext>& ctx,
+    const std::shared_ptr<ChannelClientConnection>& client)
+{
+    auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated->GetSourceEntity());
+    SpecialSkill(activated, ctx, client);
+
+    if(!client)
+    {
+        SendFailure(activated, nullptr);
+        return false;
+    }
+
+    auto server = mServer.lock();
+    auto definitionManager = server->GetDefinitionManager();
+
+    auto pSkill = GetProcessingSkill(activated, ctx, client);
+    auto skillData = pSkill->Definition;
+    uint16_t functionID = pSkill->FunctionID;
+
+    bool limited = functionID == SVR_CONST.SKILL_STATUS_LIMITED;
+    StatusEffectChanges effects;
+
+    for(int32_t param : skillData->GetSpecial()->GetSpecialParams())
+    {
+        if(param > 0)
+        {
+            uint32_t effectID = (uint32_t)param;
+
+            uint8_t stackSize = 1;
+            if(!limited)
+            {
+                // Add 30% of max stack
+                auto statusData = definitionManager->GetStatusData(effectID);
+                uint8_t maxStack = statusData->GetBasic()->GetMaxStack();
+                stackSize = (uint8_t)ceil((float)maxStack / 30.f);
+            }
+
+            effects[effectID] = StatusEffectChange(effectID, stackSize, false);
+        }
+    }
+
+    if(ProcessSkillResult(activated, ctx))
+    {
+        std::list<std::shared_ptr<ActiveEntityState>> entities;
+        if(limited)
+        {
+            // Source gains status effects
+            entities.push_back(source);
+        }
+        else
+        {
+            // All living targets gain the status effects
+            for(auto& target : pSkill->Targets)
+            {
+                if(target.EntityState != source &&
+                    target.EntityState->IsAlive())
+                {
+                    entities.push_back(target.EntityState);
+                }
+            }
+        }
+
+        for(auto entity : entities)
+        {
+            entity->AddStatusEffects(effects, definitionManager);
+        }
+    }
+    else
+    {
+        SendFailure(activated, client,
+            (uint8_t)SkillErrorCodes_t::GENERIC_USE);
+        return false;
+    }
+
+    return true;
 }
 
 bool SkillManager::EquipItem(const std::shared_ptr<objects::ActivatedAbility>& activated,
@@ -6458,9 +7180,7 @@ bool SkillManager::ForgetAllExpertiseSkills(
     character->SetLearnedSkills(learnedSkills);
 
     cState->RecalcDisabledSkills(definitionManager);
-    server->GetTokuseiManager()->Recalculate(cState, true,
-        std::set<int32_t>{ cState->GetEntityID() });
-    server->GetCharacterManager()->RecalculateStats(cState, client);
+    server->GetCharacterManager()->RecalculateTokuseiAndStats(cState, client);
 
     server->GetWorldDatabase()->QueueUpdate(character, state->GetAccountUID());
 
@@ -6489,6 +7209,13 @@ bool SkillManager::Mooch(const std::shared_ptr<objects::ActivatedAbility>& activ
     {
         SendFailure(activated, client,
             (uint8_t)SkillErrorCodes_t::PARTNER_MISSING);
+        return false;
+    }
+
+    if(!dState->IsAlive())
+    {
+        SendFailure(activated, client,
+            (uint8_t)SkillErrorCodes_t::PARTNER_DEAD);
         return false;
     }
 
@@ -6569,6 +7296,320 @@ bool SkillManager::Mooch(const std::shared_ptr<objects::ActivatedAbility>& activ
 
     GiveDemonPresent(client, demon->GetType(), presentType, rarity,
         activated->GetSkillID());
+
+    return true;
+}
+
+bool SkillManager::Mount(const std::shared_ptr<objects::ActivatedAbility>& activated,
+    const std::shared_ptr<SkillExecutionContext>& ctx,
+    const std::shared_ptr<ChannelClientConnection>& client)
+{
+    auto source = std::dynamic_pointer_cast<ActiveEntityState>(
+        activated->GetSourceEntity());
+    SpecialSkill(activated, ctx, client);
+
+    if(!client)
+    {
+        SendFailure(activated, nullptr);
+        return false;
+    }
+
+    auto state = client->GetClientState();
+    auto cState = state->GetCharacterState();
+    auto dState = state->GetDemonState();
+    auto character = cState->GetEntity();
+
+    if(cState != source || !cState->Ready() || !cState->IsAlive())
+    {
+        SendFailure(activated, client,
+            (uint8_t)SkillErrorCodes_t::GENERIC_USE);
+        return false;
+    }
+
+    // The mount status effects are bound to tokusei with no expiration.
+    // If either status effect exists on the character, this is actually
+    // a request to end the mount state.
+
+    auto server = mServer.lock();
+    auto definitionManager = server->GetDefinitionManager();
+
+    bool end = false;
+    if(cState->StatusEffectActive(SVR_CONST.STATUS_MOUNT) ||
+        cState->StatusEffectActive(SVR_CONST.STATUS_MOUNT_SUPER))
+    {
+        // Ending mount
+        // Very lax validations here so the player can't get stuck in
+        // the mounted state
+        end = true;
+    }
+    else
+    {
+        // Starting mount
+        // Check the demon's basic state
+        auto demon = dState->GetEntity();
+        if(!demon)
+        {
+            SendFailure(activated, client,
+                (uint8_t)SkillErrorCodes_t::PARTNER_MISSING);
+            return false;
+        }
+        else if(!dState->IsAlive())
+        {
+            SendFailure(activated, client,
+                (uint8_t)SkillErrorCodes_t::PARTNER_DEAD);
+            return false;
+        }
+
+        // Make sure mounts are allowed in the zone
+        auto zone = cState->GetZone();
+        if(!zone || zone->GetDefinition()->GetMountDisabled())
+        {
+            SendFailure(activated, client,
+                (uint8_t)SkillErrorCodes_t::LOCATION_RESTRICT);
+            return false;
+        }
+
+        // Check action restrictions
+        uint64_t now = ChannelServer::GetServerTime();
+        cState->ExpireStatusTimes(now);
+        dState->ExpireStatusTimes(now);
+
+        cState->RefreshCurrentPosition(now);
+        dState->RefreshCurrentPosition(now);
+
+        if(!cState->CanMove(true))
+        {
+            SendFailure(activated, client,
+                (uint8_t)SkillErrorCodes_t::MOUNT_MOVE_RESTRICT);
+            return false;
+        }
+        else if(!dState->CanMove())
+        {
+            SendFailure(activated, client,
+                (uint8_t)SkillErrorCodes_t::MOUNT_DEMON_CONDITION);
+            return false;
+        }
+        else if(cState->GetDistance(dState->GetCurrentX(),
+            dState->GetCurrentY(), true) > 250000.f)
+        {
+            // Distance is greater than 500 units (squared)
+            SendFailure(activated, client,
+                (uint8_t)SkillErrorCodes_t::MOUNT_TOO_FAR);
+            return false;
+        }
+
+        auto skillData = definitionManager->GetSkillData(activated->GetSkillID());
+
+        // Match the demon to the mount skill and item
+        std::set<uint32_t> validDemons;
+        for(int32_t demonType : skillData->GetSpecial()->GetSpecialParams())
+        {
+            validDemons.insert((uint32_t)demonType);
+        }
+
+        auto ring = character->GetEquippedItems((size_t)
+            objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_RING).Get();
+        auto ringData = ring
+            ? definitionManager->GetSItemData(ring->GetType()) : nullptr;
+        auto ringTokusei = ringData
+            ? definitionManager->GetTokuseiData(ringData->GetTokusei(0)) : nullptr;
+
+        bool ringValid = ringTokusei != nullptr;
+        if(ringValid)
+        {
+            // Make sure the tokusei adds the skill
+            ringValid = false;
+
+            for(auto aspect : ringTokusei->GetAspects())
+            {
+                if(aspect->GetType() == TokuseiAspectType::SKILL_ADD &&
+                    (uint32_t)aspect->GetValue() == activated->GetSkillID())
+                {
+                    ringValid = true;
+                    break;
+                }
+            }
+        }
+
+        if(!ringValid)
+        {
+            SendFailure(activated, client,
+                (uint8_t)SkillErrorCodes_t::MOUNT_ITEM_MISSING);
+            return false;
+        }
+        else if(ring->GetDurability() == 0)
+        {
+            SendFailure(activated, client,
+                (uint8_t)SkillErrorCodes_t::MOUNT_ITEM_DURABILITY);
+            return false;
+        }
+        else if(validDemons.find(demon->GetType()) == validDemons.end())
+        {
+            SendFailure(activated, client,
+                (uint8_t)SkillErrorCodes_t::MOUNT_DEMON_INVALID);
+            return false;
+        }
+    }
+
+    // Mount/unmount is valid
+
+    if(ProcessSkillResult(activated, ctx))
+    {
+        if(end)
+        {
+            server->GetCharacterManager()->CancelMount(state);
+        }
+        else
+        {
+            // Toggle the skill on character and demon
+            cState->InsertActiveSwitchSkills(activated->GetSkillID());
+            dState->InsertActiveSwitchSkills(activated->GetSkillID());
+
+            // Update the demon's display state and warp it
+            dState->SetDisplayState(ActiveDisplayState_t::MOUNT);
+            server->GetZoneManager()->Warp(client, dState, cState->GetCurrentX(),
+                cState->GetCurrentY(), cState->GetCurrentRotation());
+
+            // Recalc tokusei to apply the effects
+            server->GetTokuseiManager()->Recalculate(cState, true);
+        }
+
+        return true;
+    }
+    else
+    {
+        SendFailure(activated, client,
+            (uint8_t)SkillErrorCodes_t::GENERIC_USE);
+        return false;
+    }
+}
+
+bool SkillManager::RandomItem(const std::shared_ptr<objects::ActivatedAbility>& activated,
+    const std::shared_ptr<SkillExecutionContext>& ctx,
+    const std::shared_ptr<ChannelClientConnection>& client)
+{
+    auto source = std::dynamic_pointer_cast<ActiveEntityState>(
+        activated->GetSourceEntity());
+    SpecialSkill(activated, ctx, client);
+
+    if(!client)
+    {
+        SendFailure(activated, nullptr);
+        return false;
+    }
+
+    auto state = client->GetClientState();
+    auto cState = state->GetCharacterState();
+    auto character = cState->GetEntity();
+
+    if(!cState->Ready() || !cState->IsAlive())
+    {
+        SendFailure(activated, client,
+            (uint8_t)SkillErrorCodes_t::GENERIC_USE);
+        return false;
+    }
+
+    auto server = mServer.lock();
+    auto characterManager = server->GetCharacterManager();
+    auto zoneManager = server->GetZoneManager();
+
+    if(characterManager->GetFreeSlots(client).size() == 0)
+    {
+        SendFailure(activated, client,
+            (uint8_t)SkillErrorCodes_t::INVENTORY_SPACE);
+        return false;
+    }
+
+    // Get drop set from gift box ID
+    auto pSkill = GetProcessingSkill(activated, ctx, client);
+    int32_t giftBoxID = pSkill->Definition->GetSpecial()->GetSpecialParams(0);
+    auto dropSet = server->GetServerDataManager()->GetGiftDropSetData(
+        (uint32_t)giftBoxID);
+    if(!dropSet)
+    {
+        SendFailure(activated, client,
+            (uint8_t)SkillErrorCodes_t::ITEM_USE);
+        return false;
+    }
+
+    // Get one drop from the set
+    auto drops = characterManager->DetermineDrops(dropSet->GetDrops(),
+        0, true);
+    auto drop = libcomp::Randomizer::GetEntry(drops);
+    if(!drop)
+    {
+        SendFailure(activated, client,
+            (uint8_t)SkillErrorCodes_t::ITEM_USE);
+        return false;
+    }
+
+    // Item valid
+
+    uint16_t count = RNG(uint16_t, drop->GetMinStack(),
+        drop->GetMaxStack());
+
+    // Should only be one
+    for(auto& pair : activated->GetItemCosts())
+    {
+        libcomp::Packet notify;
+        notify.WritePacketCode(ChannelToClientPacketCode_t::PACKET_RANDOM_BOX);
+        notify.WriteS32Little(cState->GetEntityID());
+        notify.WriteU32Little(pair.first);
+        notify.WriteU32Little(drop->GetItemType());
+        notify.WriteU16Little(count);
+        notify.WriteS8(0);
+
+        zoneManager->BroadcastPacket(client, notify);
+    }
+
+    std::unordered_map<uint32_t, uint32_t> items;
+    items[drop->GetItemType()] = count;
+
+    characterManager->AddRemoveItems(client, items, true);
+
+    ProcessSkillResult(activated, ctx);
+
+    return true;
+}
+
+bool SkillManager::Randomize(const std::shared_ptr<objects::ActivatedAbility>& activated,
+    const std::shared_ptr<SkillExecutionContext>& ctx,
+    const std::shared_ptr<ChannelClientConnection>& client)
+{
+    auto source = std::dynamic_pointer_cast<ActiveEntityState>(
+        activated->GetSourceEntity());
+    SpecialSkill(activated, ctx, client);
+
+    // No validation needed for this one
+
+    auto server = mServer.lock();
+    auto definitionManager = server->GetDefinitionManager();
+    auto skillData = definitionManager->GetSkillData(activated->GetSkillID());
+
+    ProcessSkillResult(activated, ctx);
+
+    auto params = skillData->GetSpecial()->GetSpecialParams();
+
+    libcomp::Packet notify;
+    notify.WritePacketCode(ChannelToClientPacketCode_t::PACKET_RANDOM_NUMBERS);
+    notify.WriteS32Little(source->GetEntityID());
+
+    // Distinction between the two versions seems to be hardcoded
+    if(params[0] == 0 && params[1] == 1)
+    {
+        // Coin flip
+        notify.WriteS8(1);
+        notify.WriteU32Little(RNG(uint32_t, 0, 1));
+    }
+    else
+    {
+        // Dice roll
+        notify.WriteS8(0);
+        notify.WriteU32Little(RNG(uint32_t, (uint32_t)params[0],
+            (uint32_t)params[1]));
+    }
+
+    server->GetZoneManager()->BroadcastPacket(client, notify);
 
     return true;
 }
@@ -6655,9 +7696,7 @@ bool SkillManager::Respec(const std::shared_ptr<objects::ActivatedAbility>& acti
 
         client->QueuePacket(p);
 
-        server->GetTokuseiManager()->Recalculate(cState, true,
-            std::set<int32_t>{ cState->GetEntityID() });
-        characterManager->RecalculateStats(cState, client);
+        characterManager->RecalculateTokuseiAndStats(cState, client);
 
         client->FlushOutgoing();
 
@@ -6740,6 +7779,7 @@ bool SkillManager::SummonDemon(const std::shared_ptr<objects::ActivatedAbility>&
     }
 
     auto state = client->GetClientState();
+    auto cState = state->GetCharacterState();
     auto demonID = activated->GetActivationObjectID();
     auto demon = demonID > 0 ? std::dynamic_pointer_cast<objects::Demon>(
         libcomp::PersistentObject::GetObjectByUUID(state->GetObjectUUID(demonID))) : nullptr;
@@ -6753,10 +7793,16 @@ bool SkillManager::SummonDemon(const std::shared_ptr<objects::ActivatedAbility>&
         return false;
     }
     else if(demon->GetCoreStats()->GetLevel() >
-        state->GetCharacterState()->GetCoreStats()->GetLevel())
+        cState->GetCoreStats()->GetLevel())
     {
         SendFailure(activated, client,
             (uint8_t)SkillErrorCodes_t::SUMMON_LEVEL);
+        return false;
+    }
+    else if(cState->IsMounted())
+    {
+        SendFailure(activated, client,
+            (uint8_t)SkillErrorCodes_t::MOUNT_SUMMON_RESTRICT);
         return false;
     }
 
@@ -6790,6 +7836,12 @@ bool SkillManager::StoreDemon(const std::shared_ptr<objects::ActivatedAbility>& 
             (uint8_t)SkillErrorCodes_t::PARTNER_MISSING);
         return false;
     }
+    else if(client->GetClientState()->GetCharacterState()->IsMounted())
+    {
+        SendFailure(activated, client,
+            (uint8_t)SkillErrorCodes_t::MOUNT_SUMMON_RESTRICT);
+        return false;
+    }
 
     ProcessSkillResult(activated, ctx);
 
@@ -6812,15 +7864,14 @@ bool SkillManager::Traesto(const std::shared_ptr<objects::ActivatedAbility>& act
     }
 
     auto server = mServer.lock();
-    auto definitionManager = server->GetDefinitionManager();
     auto zoneManager = server->GetZoneManager();
 
-    auto skillData = definitionManager->GetSkillData(activated->GetSkillID());
+    auto pSkill = GetProcessingSkill(activated, ctx, client);
+    auto skillData = pSkill->Definition;
+    uint16_t functionID = pSkill->FunctionID;
 
     uint32_t zoneID = 0;
     uint32_t spotID = 0;
-
-    uint16_t functionID = skillData->GetDamage()->GetFunctionID();
     if(functionID == SVR_CONST.SKILL_TRAESTO)
     {
         auto state = client->GetClientState();
@@ -6835,10 +7886,20 @@ bool SkillManager::Traesto(const std::shared_ptr<objects::ActivatedAbility>& act
         zoneID = SVR_CONST.SKILL_TRAESTO_ARCADIA[1];
         spotID = SVR_CONST.SKILL_TRAESTO_ARCADIA[2];
     }
+    else if(functionID == (uint16_t)SVR_CONST.SKILL_TRAESTO_DSHINJUKU[0])
+    {
+        zoneID = SVR_CONST.SKILL_TRAESTO_DSHINJUKU[1];
+        spotID = SVR_CONST.SKILL_TRAESTO_DSHINJUKU[2];
+    }
     else if(functionID == (uint16_t)SVR_CONST.SKILL_TRAESTO_KAKYOJO[0])
     {
         zoneID = SVR_CONST.SKILL_TRAESTO_KAKYOJO[1];
         spotID = SVR_CONST.SKILL_TRAESTO_KAKYOJO[2];
+    }
+    else if(functionID == (uint16_t)SVR_CONST.SKILL_TRAESTO_NAKANO_BDOMAIN[0])
+    {
+        zoneID = SVR_CONST.SKILL_TRAESTO_NAKANO_BDOMAIN[1];
+        spotID = SVR_CONST.SKILL_TRAESTO_NAKANO_BDOMAIN[2];
     }
     else if(functionID == (uint16_t)SVR_CONST.SKILL_TRAESTO_SOUHONZAN[0])
     {
@@ -6897,19 +7958,17 @@ bool SkillManager::XPUp(const std::shared_ptr<objects::ActivatedAbility>& activa
     auto state = client->GetClientState();
 
     auto server = mServer.lock();
-    auto definitionManager = server->GetDefinitionManager();
     auto characterManager = server->GetCharacterManager();
 
-    auto skillData = definitionManager->GetSkillData(activated->GetSkillID());
+    auto pSkill = GetProcessingSkill(activated, ctx, client);
+    auto skillData = pSkill->Definition;
 
     std::shared_ptr<ActiveEntityState> eState;
-
-    uint16_t functionID = skillData->GetDamage()->GetFunctionID();
-    if(functionID == SVR_CONST.SKILL_XP_SELF)
+    if(pSkill->FunctionID == SVR_CONST.SKILL_XP_SELF)
     {
         eState = state->GetCharacterState();
     }
-    else if(functionID == SVR_CONST.SKILL_XP_PARTNER)
+    else if(pSkill->FunctionID == SVR_CONST.SKILL_XP_PARTNER)
     {
         eState = state->GetDemonState();
     }
@@ -7127,4 +8186,30 @@ void SkillManager::SendCompleteSkill(std::shared_ptr<objects::ActivatedAbility> 
             ChannelClientConnection::BroadcastPacket(zConnections, p);
         }
     }
+}
+
+bool SkillManager::IsTalkSkill(const std::shared_ptr<
+    objects::MiSkillData>& skillData, bool primaryOnly)
+{
+    switch(skillData->GetBasic()->GetActionType())
+    {
+    case objects::MiSkillBasicData::ActionType_t::TALK:
+    case objects::MiSkillBasicData::ActionType_t::INTIMIDATE:
+    case objects::MiSkillBasicData::ActionType_t::TAUNT:
+        return true;
+    default:
+        if(!primaryOnly)
+        {
+            // If the action type doesn't match but there is talk
+            // damage it is still a talk skill
+            auto talkDamage = skillData->GetDamage()->GetNegotiationDamage();
+            return talkDamage->GetSuccessAffability() != 0 ||
+                talkDamage->GetFailureAffability() != 0 ||
+                talkDamage->GetSuccessFear() != 0 ||
+                talkDamage->GetFailureFear() != 0;
+        }
+        break;
+    }
+
+    return false;
 }

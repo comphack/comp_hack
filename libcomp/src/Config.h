@@ -42,6 +42,12 @@ extern const char *ENCRYPTED_FILE_KEY;
 /// Blowfish initialization vector used by the file encryption.
 extern const char *ENCRYPTED_FILE_IV;
 
+/**
+ * Log the version information for the server.
+ * @param szServerName String to print as the server name.
+ */
+void LogVersion(const char *szServerName);
+
 } // namespace Config
 
 } // namespace libcomp

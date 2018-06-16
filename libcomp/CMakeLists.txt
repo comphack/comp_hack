@@ -38,6 +38,21 @@ FIND_PACKAGE(ExecInfo REQUIRED)
 SET(SYSTEM_LIBRARIES ${SYSTEM_LIBRARIES} ${EXECINFO_LIBRARY})
 ENDIF(BSD)
 
+# Custom command to put the Git version in the @version command.
+ADD_CUSTOM_TARGET(git-version COMMAND ${CMAKE_COMMAND}
+    -D "SRC=${CMAKE_CURRENT_SOURCE_DIR}/src/Git.h.in"
+    -D "DST=${CMAKE_CURRENT_BINARY_DIR}/Git.h"
+    -P "${CMAKE_SOURCE_DIR}/cmake/git-version.cmake"
+    DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/Git.h.in"
+        "${CMAKE_SOURCE_DIR}/cmake/git-version.cmake"
+    BYPRODUCTS "${CMAKE_CURRENT_BINARY_DIR}/Git.h"
+    COMMENT "Generating Git.h"
+)
+
+# Write the version information into the Constants.h file.
+CONFIGURE_FILE(src/Constants.h.in "${CMAKE_CURRENT_BINARY_DIR}/Constants.h"
+    ESCAPE_QUOTES @ONLY NEWLINE_STYLE UNIX)
+
 SET(${PROJECT_NAME}_SRCS
     src/ArgumentParser.cpp
     src/BaseServer.cpp
@@ -121,12 +136,14 @@ ENDIF()
 # This is a list of all header files. Adding the header files here ensures they
 # are listed in the source files for IDE projects.
 SET(${PROJECT_NAME}_HDRS
+    "${CMAKE_CURRENT_BINARY_DIR}/Constants.h"
+    "${CMAKE_CURRENT_BINARY_DIR}/Git.h"
+
     src/ArgumentParser.h
     src/BaseServer.h
     src/ChannelConnection.h
     src/Compress.h
     src/ConnectionMessage.h
-    src/Constants.h
     src/Convert.h
     src/CString.h
     src/Database.h
@@ -905,13 +922,10 @@ IF(SYSTEMD_FOUND)
 ENDIF(SYSTEMD_FOUND)
 
 TARGET_INCLUDE_DIRECTORIES(comp PUBLIC
+    ${CMAKE_CURRENT_BINARY_DIR}
     ${LIBCOMP_INCLUDES}
     ${ASIO_INCLUDE_DIRS}
     ${SYSTEMD_INCLUDES}
-)
-
-TARGET_INCLUDE_DIRECTORIES(comp PRIVATE
-    ${CMAKE_CURRENT_BINARY_DIR}
 )
 
 IF(SYSTEMD_FOUND)
@@ -922,7 +936,7 @@ TARGET_LINK_LIBRARIES(comp mariadbclient ${OPENSSL_LIBRARIES} ${ZLIB_LIBRARIES}
     ${SYSTEM_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} objgen sqlite3
     squirrel sqstdlib ttvfs ttvfs_zip tinyxml2 physfs ${SYSTEMD_LIBS})
 
-ADD_DEPENDENCIES(comp asio sqrat gsl)
+ADD_DEPENDENCIES(comp asio sqrat gsl git-version)
 
 IF(WIN32)
     TARGET_LINK_LIBRARIES(comp advapi32 iphlpapi psapi shell32 userenv

@@ -76,7 +76,8 @@ bool Parsers::Chat::Parse(libcomp::ManagerPacket *pPacketManager,
     std::regex toFind("@([^\\s]+)(.*)");
     if(std::regex_match(input, match, toFind))
     {
-        if(state->GetUserLevel() == 0)
+        if(state->GetUserLevel() == 0 && "@version" != line &&
+            "@license" != line)
         {
             // Don't process the message but don't fail
             LOG_DEBUG(libcomp::String("Non-GM account attempted to execute a GM"

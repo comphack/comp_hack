@@ -15,59 +15,90 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-# Get the current working branch.
-EXECUTE_PROCESS(
-  COMMAND git rev-parse --abbrev-ref HEAD
-  WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-  OUTPUT_VARIABLE GIT_BRANCH
-  OUTPUT_STRIP_TRAILING_WHITESPACE
-)
+# Search for git.
+FIND_PACKAGE(Git)
 
-# Get the committish.
-EXECUTE_PROCESS(
-  COMMAND git log -1 --format=%h
-  WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-  OUTPUT_VARIABLE GIT_COMMITTISH
-  OUTPUT_STRIP_TRAILING_WHITESPACE
-)
+IF(GIT_FOUND)
+  # Get the current working branch.
+  EXECUTE_PROCESS(
+    COMMAND ${GIT_EXECUTABLE} rev-parse --abbrev-ref HEAD
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    RESULT_VARIABLE GIT_STATUS
+    OUTPUT_VARIABLE GIT_BRANCH
+    ERROR_QUIET
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+  )
 
-# Get the author and date.
-EXECUTE_PROCESS(
-  COMMAND git log -1 --format=%an
-  WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-  OUTPUT_VARIABLE GIT_AUTHOR
-  OUTPUT_STRIP_TRAILING_WHITESPACE
-)
+  IF(0 EQUAL ${GIT_STATUS})
+    # Get the committish.
+    EXECUTE_PROCESS(
+      COMMAND ${GIT_EXECUTABLE} log -1 --format=%h
+      WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+      OUTPUT_VARIABLE GIT_COMMITTISH
+      OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
 
-# Get the author and date.
-EXECUTE_PROCESS(
-  COMMAND git log -1 --format=%ae
-  WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-  OUTPUT_VARIABLE GIT_AUTHOR_EMAIL
-  OUTPUT_STRIP_TRAILING_WHITESPACE
-)
+    # Get the author and date.
+    EXECUTE_PROCESS(
+      COMMAND ${GIT_EXECUTABLE} log -1 --format=%an
+      WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+      OUTPUT_VARIABLE GIT_AUTHOR
+      OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
 
-# Get the author and date.
-EXECUTE_PROCESS(
-  COMMAND git log -1 --format=%cd --date=short
-  WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-  OUTPUT_VARIABLE GIT_DATE
-  OUTPUT_STRIP_TRAILING_WHITESPACE
-)
+    # Get the author and date.
+    EXECUTE_PROCESS(
+      COMMAND ${GIT_EXECUTABLE} log -1 --format=%ae
+      WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+      OUTPUT_VARIABLE GIT_AUTHOR_EMAIL
+      OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
 
-# Get the commit description.
-EXECUTE_PROCESS(
-  COMMAND git log -1 --format=%s
-  WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-  OUTPUT_VARIABLE GIT_DESCRIPTION
-  OUTPUT_STRIP_TRAILING_WHITESPACE
-)
+    # Get the author and date.
+    EXECUTE_PROCESS(
+      COMMAND ${GIT_EXECUTABLE} log -1 --format=%cd --date=short
+      WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+      OUTPUT_VARIABLE GIT_DATE
+      OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
 
-SET(GIT_BRANCH "R\"_c_esc_(${GIT_BRANCH})_c_esc_\"")
-SET(GIT_COMMITTISH "R\"_c_esc_(${GIT_COMMITTISH})_c_esc_\"")
-SET(GIT_AUTHOR "R\"_c_esc_(${GIT_AUTHOR})_c_esc_\"")
-SET(GIT_AUTHOR_EMAIL "R\"_c_esc_(${GIT_AUTHOR_EMAIL})_c_esc_\"")
-SET(GIT_DATE "R\"_c_esc_(${GIT_DATE})_c_esc_\"")
-SET(GIT_DESCRIPTION "R\"_c_esc_(${GIT_DESCRIPTION})_c_esc_\"")
+    # Get the commit description.
+    EXECUTE_PROCESS(
+      COMMAND ${GIT_EXECUTABLE} log -1 --format=%s
+      WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+      OUTPUT_VARIABLE GIT_DESCRIPTION
+      OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
 
-CONFIGURE_FILE("${SRC}" "${DST}")
+    # Get the remote.
+    EXECUTE_PROCESS(
+      COMMAND ${GIT_EXECUTABLE} remote
+      WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+      OUTPUT_VARIABLE GIT_REMOTE
+      OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+
+    # Get the remote URL.
+    EXECUTE_PROCESS(
+      COMMAND ${GIT_EXECUTABLE} remote get-url "${GIT_REMOTE}"
+      WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+      OUTPUT_VARIABLE GIT_REMOTE_URL
+      OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+
+    SET(GIT_BRANCH "R\"_c_esc_(${GIT_BRANCH})_c_esc_\"")
+    SET(GIT_COMMITTISH "R\"_c_esc_(${GIT_COMMITTISH})_c_esc_\"")
+    SET(GIT_AUTHOR "R\"_c_esc_(${GIT_AUTHOR})_c_esc_\"")
+    SET(GIT_AUTHOR_EMAIL "R\"_c_esc_(${GIT_AUTHOR_EMAIL})_c_esc_\"")
+    SET(GIT_DATE "R\"_c_esc_(${GIT_DATE})_c_esc_\"")
+    SET(GIT_DESCRIPTION "R\"_c_esc_(${GIT_DESCRIPTION})_c_esc_\"")
+    SET(GIT_REMOTE "R\"_c_esc_(${GIT_REMOTE})_c_esc_\"")
+    SET(GIT_REMOTE_URL "R\"_c_esc_(${GIT_REMOTE_URL})_c_esc_\"")
+
+    CONFIGURE_FILE("${SRC}" "${DST}")
+  ELSE()
+    FILE(WRITE "${DST}" "// Source code is not a Git checkout.")
+  ENDIF()
+ELSE()
+  FILE(WRITE "${DST}" "// Git was not found.")
+ENDIF()

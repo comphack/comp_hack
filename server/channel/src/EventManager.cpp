@@ -3493,7 +3493,7 @@ bool EventManager::HandleTriFusion(const std::shared_ptr<
     auto partyClients = mServer.lock()->GetManagerConnection()
         ->GetPartyConnections(client, true, true);
 
-    ClientState* tfSessionOwner;
+    ClientState* tfSessionOwner = nullptr;
     std::shared_ptr<objects::TriFusionHostSession> tfSession;
     for(auto pClient : partyClients)
     {

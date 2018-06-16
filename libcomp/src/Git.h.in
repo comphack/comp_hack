@@ -1,6 +1,10 @@
+#define HAVE_GIT (1)
+
 static const char *szGitBranch = @GIT_BRANCH@;
 static const char *szGitCommittish = @GIT_COMMITTISH@;
 static const char *szGitAuthor = @GIT_AUTHOR@;
 static const char *szGitAuthorEmail = @GIT_AUTHOR_EMAIL@;
 static const char *szGitDate = @GIT_DATE@;
 static const char *szGitDescription = @GIT_DESCRIPTION@;
+//static const char *szGitRemote = @GIT_REMOTE@;
+static const char *szGitRemoteURL = @GIT_REMOTE_URL@;

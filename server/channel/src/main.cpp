@@ -29,6 +29,7 @@
 #include "ChannelServer.h"
 
 // libcomp Includes
+#include <Config.h>
 #include <Constants.h>
 #include <Exception.h>
 #include <Log.h>
@@ -46,11 +47,7 @@ int main(int argc, const char *argv[])
 
     libcomp::Log::GetSingletonPtr()->AddStandardOutputHook();
 
-    LOG_INFO(libcomp::String("COMP_hack Channel Server v%1.%2.%3 (%4)\n").Arg(
-        VERSION_MAJOR).Arg(VERSION_MINOR).Arg(VERSION_PATCH).Arg(
-        VERSION_CODENAME));
-    LOG_INFO(libcomp::String("Copyright (C) 2010-%1 COMP_hack Team\n\n").Arg(
-        VERSION_YEAR));
+    libcomp::Config::LogVersion("COMP_hack Channel Server");
 
     std::string configPath = libcomp::BaseServer::GetDefaultConfigPath() +
         "channel.xml";

@@ -31,19 +31,19 @@ namespace libcomp
 {
 
 /// Last year the code was changed.
-#define VERSION_YEAR  (2018)
+#define VERSION_YEAR  (@VERSION_YEAR@)
 
 /// Major release (1 = pixie.)
-#define VERSION_MAJOR (3)
+#define VERSION_MAJOR (@VERSION_MAJOR@)
 
 /// Minor release (1 = SP1).
-#define VERSION_MINOR (8)
+#define VERSION_MINOR (@VERSION_MINOR@)
 
 /// Patch version (a hotfix).
-#define VERSION_PATCH (9)
+#define VERSION_PATCH (@VERSION_PATCH@)
 
 /// Codename for the version.
-#define VERSION_CODENAME "Lilim UNSTABLE"
+#define VERSION_CODENAME "@VERSION_CODENAME@"
 
 /// HACK format magic.
 #define HACK_FORMAT_MAGIC (0x4B434148)

@@ -28,6 +28,7 @@
 
 // libcomp Includes
 #include <DefinitionManager.h>
+#include <Git.h>
 #include <Log.h>
 #include <PacketCodes.h>
 #include <ServerConstants.h>
@@ -69,7 +70,6 @@
 #include "CharacterManager.h"
 #include "ClientState.h"
 #include "EventManager.h"
-#include "Git.h"
 #include "ManagerConnection.h"
 #include "SkillManager.h"
 #include "TokuseiManager.h"
@@ -102,6 +102,7 @@ ChatManager::ChatManager(const std::weak_ptr<ChannelServer>& server)
     mGMands["kick"] = &ChatManager::GMCommand_Kick;
     mGMands["kill"] = &ChatManager::GMCommand_Kill;
     mGMands["levelup"] = &ChatManager::GMCommand_LevelUp;
+    mGMands["license"] = &ChatManager::GMCommand_License;
     mGMands["lnc"] = &ChatManager::GMCommand_LNC;
     mGMands["map"] = &ChatManager::GMCommand_Map;
     mGMands["plugin"] = &ChatManager::GMCommand_Plugin;
@@ -928,7 +929,7 @@ bool ChatManager::GMCommand_ExpertiseSet(const std::shared_ptr<
     {
         adjust = adjust - exp->GetPoints();
     }
-    
+
     std::list<std::pair<uint8_t, int32_t>> pointMap;
     pointMap.push_back(std::make_pair(expertiseID, adjust));
 
@@ -1311,6 +1312,10 @@ bool ChatManager::GMCommand_Help(const std::shared_ptr<
             "@levelup LEVEL [DEMON]",
             "Levels up the player to the specified LEVEL or the",
             "player's current partner if DEMON is set to 'demon'."
+        } },
+        { "license", {
+            "@license",
+            "Prints license information for the running server.",
         } },
         { "lnc", {
             "@lnc VALUE",
@@ -1871,6 +1876,45 @@ bool ChatManager::GMCommand_LevelUp(const std::shared_ptr<
     return true;
 }
 
+bool ChatManager::GMCommand_License(const std::shared_ptr<
+    channel::ChannelClientConnection>& client,
+    const std::list<libcomp::String>& args)
+{
+    (void)args;
+
+    SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(
+        "COMP_hack Server v%1.%2.%3 (%4)").Arg(VERSION_MAJOR).Arg(
+        VERSION_MINOR).Arg(VERSION_PATCH).Arg(VERSION_CODENAME));
+    SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(
+        "Copyright (C) 2010-%1 COMP_hack Team").Arg(VERSION_YEAR));
+
+    SendChatMessage(client, ChatType_t::CHAT_SELF, "This program is free software: you can redistribute it and/or modify");
+    SendChatMessage(client, ChatType_t::CHAT_SELF, "it under the terms of the GNU Affero General Public License as");
+    SendChatMessage(client, ChatType_t::CHAT_SELF, "published by the Free Software Foundation, either version 3 of the");
+    SendChatMessage(client, ChatType_t::CHAT_SELF, "License, or (at your option) any later version.");
+    SendChatMessage(client, ChatType_t::CHAT_SELF, " ");
+    SendChatMessage(client, ChatType_t::CHAT_SELF, "This program is distributed in the hope that it will be useful,");
+    SendChatMessage(client, ChatType_t::CHAT_SELF, "but WITHOUT ANY WARRANTY; without even the implied warranty of");
+    SendChatMessage(client, ChatType_t::CHAT_SELF, "MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the");
+    SendChatMessage(client, ChatType_t::CHAT_SELF, "GNU Affero General Public License for more details.");
+    SendChatMessage(client, ChatType_t::CHAT_SELF, " ");
+    SendChatMessage(client, ChatType_t::CHAT_SELF, "You should have received a copy of the GNU Affero General Public License");
+    SendChatMessage(client, ChatType_t::CHAT_SELF, "along with this program.  If not, see <https://www.gnu.org/licenses/>.");
+    SendChatMessage(client, ChatType_t::CHAT_SELF, " ");
+    SendChatMessage(client, ChatType_t::CHAT_SELF, "IMPORTANT: If you see this you have a right to the source code!");
+    SendChatMessage(client, ChatType_t::CHAT_SELF, "This includes all modifications ANYONE has made to it! This does");
+    SendChatMessage(client, ChatType_t::CHAT_SELF, "not include any content changes (just the code). Please let us");
+    SendChatMessage(client, ChatType_t::CHAT_SELF, "know if someone isn't respecting the license for this software.");
+    SendChatMessage(client, ChatType_t::CHAT_SELF, " ");
+    SendChatMessage(client, ChatType_t::CHAT_SELF, "You can get the mainline source from here:");
+    SendChatMessage(client, ChatType_t::CHAT_SELF, "https://github.com/comphack/comp_hack");
+    SendChatMessage(client, ChatType_t::CHAT_SELF, " ");
+    SendChatMessage(client, ChatType_t::CHAT_SELF, "Hopefully if someone changed the code for the server you are connected");
+    SendChatMessage(client, ChatType_t::CHAT_SELF, "to they added their URL here as well.");
+
+    return true;
+}
+
 bool ChatManager::GMCommand_LNC(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
@@ -2103,7 +2147,7 @@ bool ChatManager::GMCommand_Reported(const std::shared_ptr<
         libcomp::String("%1 record%2 found%3")
         .Arg(reported.size()).Arg(reported.size() != 1 ? "s" : "")
         .Arg(reported.size() > (size_t)count ? " (limited to 5)" : ""));
-    
+
     for(auto entry : reported)
     {
         SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(
@@ -2612,7 +2656,7 @@ bool ChatManager::GMCommand_Spirit(const std::shared_ptr<
 
     uint32_t basicEffect = 0;
     uint32_t specialEffect = 0;
-    
+
     int8_t bonuses[] = { -1, -1, -1 };
 
     if(!GetIntegerArg(basicEffect, argsCopy) ||
@@ -2854,19 +2898,22 @@ bool ChatManager::GMCommand_Version(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
 {
-    if(!HaveUserLevel(client, 1))
-    {
-        return true;
-    }
-
     (void)args;
 
+    SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(
+        "COMP_hack Server v%1.%2.%3 (%4)").Arg(VERSION_MAJOR).Arg(
+        VERSION_MINOR).Arg(VERSION_PATCH).Arg(VERSION_CODENAME));
+
+#if 1 == HAVE_GIT
     SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(
         "%1 on branch %2").Arg(szGitCommittish).Arg(szGitBranch));
     SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(
         "Commit by %1 <%2> on %3").Arg(szGitAuthor).Arg(
         szGitAuthorEmail).Arg(szGitDate));
     SendChatMessage(client, ChatType_t::CHAT_SELF, szGitDescription);
+    SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(
+        "URL: %1").Arg(szGitRemoteURL));
+#endif
 
     return true;
 }

@@ -28,13 +28,6 @@ GENERATE_DOCS(doc/Doxyfile.in)
 # Add a directory to put the objgen output into.
 FILE(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/objgen)
 
-# Custom command to put the Git version in the @version command.
-ADD_CUSTOM_TARGET(git-version ${CMAKE_COMMAND}
-    -D "SRC=${CMAKE_CURRENT_SOURCE_DIR}/src/Git.h.in"
-    -D "DST=${CMAKE_CURRENT_BINARY_DIR}/Git.h"
-    -P ${CMAKE_SOURCE_DIR}/cmake/git-version.cmake
-)
-
 SET(${PROJECT_NAME}_SRCS
     src/AccountManager.cpp
     src/ActionManager.cpp
@@ -402,7 +395,7 @@ ADD_EXECUTABLE(${PROJECT_NAME} ${${PROJECT_NAME}_SRCS}
     ${${PROJECT_NAME}_HDRS} ${${PROJECT_NAME}_PACKETS}
     ${${PROJECT_NAME}_STRUCTS})
 
-ADD_DEPENDENCIES(${PROJECT_NAME} asio git-version)
+ADD_DEPENDENCIES(${PROJECT_NAME} asio)
 
 SET_TARGET_PROPERTIES(${PROJECT_NAME} PROPERTIES FOLDER "Server")
 

@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <objgen>
     <object name="MiSpecialConditionData" persistent="false">
-        <member type="s16" name="type"/>
-        <member type="u16" name="unused"/>
+        <member type="s16" name="type" pad="2"/>
         <member type="array" name="params" size="2">
             <element type="s16"/>
         </member>
@@ -13,9 +12,7 @@
     <object name="MiEnchantCharasticData" persistent="false">
         <member type="string" length="36" name="name"/>
         <member type="string" length="1028" name="desc"/>
-        <member type="u8" name="equipLevel"/>
-        <member type="u8" name="unused1"/>
-        <member type="u16" name="unused2"/>
+        <member type="u8" name="equipLevel" pad="3"/>
         <member type="s16" name="difficulty"/>
         <member type="u16" name="equipTypes"/>
         <member type="array" name="tokusei" size="2">
@@ -34,8 +31,7 @@
         <member type="MiEnchantCharasticData*" name="soul"/>
     </object>
     <object name="MiEnchantData" persistent="false">
-        <member type="s16" name="ID"/>
-        <member type="u16" name="unused"/>
+        <member type="s16" name="ID" pad="2"/>
         <member type="MiDevilCrystalData*" name="devilCrystal"/>
     </object>
     <!-- The following types are inferred server side structures -->

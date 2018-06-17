@@ -30,6 +30,7 @@
 
 // libcomp Includes
 #include <EnumMap.h>
+#include <ScriptEngine.h>
 
 // object Includes
 #include <Action.h>
@@ -37,11 +38,15 @@
 // channel Includes
 #include "ChannelClientConnection.h"
 
+namespace libcomp
+{
+class ScriptEngine;
+}
+
 namespace channel
 {
 
 class ChannelServer;
-struct ActionContext;
 
 /**
  * Class to manage actions when triggering a spot or interacting with
@@ -75,6 +80,15 @@ public:
         uint32_t groupID = 0);
 
 private:
+    struct ActionContext
+    {
+        std::shared_ptr<ChannelClientConnection> Client;
+        std::shared_ptr<objects::Action> Action;
+        int32_t SourceEntityID = 0;
+        uint32_t GroupID = 0;
+        std::shared_ptr<Zone> CurrentZone;
+    };
+
     /**
      * Start an event sequence for the client.
      * @param ctx ActionContext for the executing source information.
@@ -242,6 +256,85 @@ private:
      */
     bool RecordTimeTrial(ActionContext& ctx, uint32_t rewardItem,
         uint16_t rewardItemCount);
+
+    /**
+     * Get the action from the supplied context converted to the proper type.
+     * If the action is configured with a transformation script, a transformed
+     * copy will be returned and set on the context.
+     * @param ctx ActionContext for the executing source information.
+     * @param requireClient Check that the client is on the context if supplied
+     *  and fail if it is not
+     * @return true on success, false on failure
+     */
+    template <class T>
+    std::shared_ptr<T> GetAction(ActionContext& ctx, bool requireClient)
+    {
+        if(requireClient && !VerifyClient(ctx, typeid(T).name()))
+        {
+            return nullptr;
+        }
+
+        auto act = ctx.Action;
+        auto ptr = std::dynamic_pointer_cast<T>(ctx.Action);
+        if(ptr && !ptr->GetTransformScriptID().IsEmpty())
+        {
+            // Make a copy and transform
+            ptr = std::make_shared<T>(*ptr);
+
+            auto engine = std::make_shared<libcomp::ScriptEngine>();
+            engine->Using<T>();
+            if(PrepareTransformScript(ctx, engine))
+            {
+                // Store the action for transformation
+                Sqrat::Function f(Sqrat::RootTable(engine->GetVM()),
+                    "prepare");
+                auto scriptResult = !f.IsNull() ? f.Evaluate<int32_t>(ptr) : 0;
+
+                // Apply the transformation
+                if(scriptResult && *scriptResult == 0 &&
+                    TransformAction(ctx, engine))
+                {
+                    // Set new action
+                    ctx.Action = ptr;
+                    return ptr;
+                }
+            }
+
+            // Return failure
+            return nullptr;
+        }
+
+        return ptr;
+    }
+
+    /**
+     * Verify that the client is on the context and print an error message
+     * if it is not.
+     * @param ctx ActionContext for the executing source information
+     * @param typeName Name of the action type being verified
+     * @return true if the client exists, false if it does not
+     */
+    bool VerifyClient(ActionContext& ctx, const libcomp::String& typeName);
+
+    /**
+     * Prepare the transformation script from the action on the supplied
+     * script engine.
+     * @param ctx ActionContext for the executing source information
+     * @param engine Script engine to prepare the script for
+     * @return true on success, false on failure
+     */
+    bool PrepareTransformScript(ActionContext& ctx,
+        std::shared_ptr<libcomp::ScriptEngine> engine);
+
+    /**
+     * Finish preparing and execute the tranformation script configured
+     * for the action.
+     * @param ctx ActionContext for the executing source information
+     * @param engine Script engine to execute the script using
+     * @return true on success, false on failure
+     */
+    bool TransformAction(ActionContext& ctx,
+        std::shared_ptr<libcomp::ScriptEngine> engine);
 
     /// Pointer to the channel server.
     std::weak_ptr<ChannelServer> mServer;

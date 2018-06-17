@@ -49,7 +49,8 @@
 using namespace libobjgen;
 
 MetaVariable::MetaVariable() : mCaps(false),
-    mInherited(false), mLookupKey(false), mUniqueKey(false)
+    mInherited(false), mLookupKey(false), mUniqueKey(false),
+    mPadding(0)
 {
 }
 
@@ -102,6 +103,17 @@ bool MetaVariable::SetUniqueKey(const bool uniqueKey)
     return true;
 }
 
+unsigned char MetaVariable::GetPadding() const
+{
+    return mPadding;
+}
+
+bool MetaVariable::SetPadding(const unsigned char padding)
+{
+    mPadding = padding;
+    return true;
+}
+
 std::string MetaVariable::GetError() const
 {
     return mError;
@@ -133,6 +145,8 @@ bool MetaVariable::Load(std::istream& stream)
         sizeof(mLookupKey));
     stream.read(reinterpret_cast<char*>(&mUniqueKey),
         sizeof(mUniqueKey));
+    stream.read(reinterpret_cast<char*>(&mPadding),
+        sizeof(mPadding));
 
     return stream.good();
 }
@@ -152,6 +166,8 @@ bool MetaVariable::Save(std::ostream& stream) const
             sizeof(mLookupKey));
         stream.write(reinterpret_cast<const char*>(&mUniqueKey),
             sizeof(mUniqueKey));
+        stream.write(reinterpret_cast<const char*>(&mPadding),
+            sizeof(mPadding));
 
         result = stream.good();
     }
@@ -428,6 +444,34 @@ std::shared_ptr<MetaVariable> MetaVariable::CreateType(
     }
 
     return nullptr;
+}
+
+std::string MetaVariable::GetLoadPaddingCode(const std::string& stream,
+    bool raw) const
+{
+    std::stringstream ss;
+
+    if(mPadding)
+    {
+        ss << "SkipPadding(" << stream << (raw ? "" : ".stream") <<
+            ", " << (int)mPadding << ");";
+    }
+
+    return ss.str();
+}
+
+std::string MetaVariable::GetSavePaddingCode(const std::string& stream,
+    bool raw) const
+{
+    std::stringstream ss;
+
+    if(mPadding)
+    {
+        ss << "WritePadding(" << stream << (raw ? "" : ".stream") <<
+            ", " << (int)mPadding << ");";
+    }
+
+    return ss.str();
 }
 
 std::string MetaVariable::GetDeclaration(const std::string& name) const

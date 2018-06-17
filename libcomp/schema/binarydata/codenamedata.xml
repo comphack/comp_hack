@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <objgen>
     <object name="MiTitleData" persistent="false">
-        <member type="s16" name="ID"/>
-        <member type="s16" name="unused"/>
+        <member type="s16" name="ID" pad="2"/>
         <member type="string" length="36" name="title" encoding="cp932"/>
     </object>
 </objgen>

@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <objgen>
-    <object name="EventPerformActions" baseobject="Event" persistent="false">
+    <object name="EventPerformActions" baseobject="Event" persistent="false"
+        scriptenabled="true">
         <member type="enum" name="eventType" inherited="true" default="PERFORM_ACTIONS"/>
         <member type="list" name="actions">
             <element type="Action*"/>

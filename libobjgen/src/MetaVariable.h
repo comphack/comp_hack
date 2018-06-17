@@ -102,6 +102,9 @@ public:
     bool IsUniqueKey() const;
     bool SetUniqueKey(const bool uniqueKey);
 
+    unsigned char GetPadding() const;
+    bool SetPadding(const unsigned char padding);
+
     virtual bool Load(std::istream& stream);
     virtual bool Save(std::ostream& stream) const;
 
@@ -136,6 +139,8 @@ public:
         const std::string& name, const std::string& doc,
         const std::string& parent, size_t tabLevel = 1,
         const std::string elemName = "member") const = 0;
+    std::string GetLoadPaddingCode(const std::string& stream, bool raw) const;
+    std::string GetSavePaddingCode(const std::string& stream, bool raw) const;
     virtual std::string GetDeclaration(const std::string& name) const;
     virtual std::string GetArgumentType() const;
     virtual std::string GetArgument(const std::string& name) const;
@@ -191,6 +196,7 @@ private:
     bool mInherited;
     bool mLookupKey;
     bool mUniqueKey;
+    unsigned char mPadding;
 };
 
 } // namespace libobjgen

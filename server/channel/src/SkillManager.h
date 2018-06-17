@@ -515,6 +515,18 @@ private:
         channel::ProcessingSkill>& pSkill);
 
     /**
+     * Get the entity rate scaling correct table value associated to the
+     * the supplied entity from the other entity's calculated state
+     * @param eState Pointer to the entity in question
+     * @param calcState Pointer to the other entity's calculated state
+     * @param taken true if the damage taken rate should be retrieved, false if
+     *  the damage dealt rate should be retrieved
+     * @return Correct table value for the rate scaling
+     */
+    int16_t GetEntityRate(const std::shared_ptr<ActiveEntityState> eState,
+        std::shared_ptr<objects::CalculatedEntityState> calcState, bool taken);
+
+    /**
      * Calculate skill damage or healing using the default formula
      * @param source Pointer to the entity that activated the skill
      * @param target Pointer to the entity that will receive damage

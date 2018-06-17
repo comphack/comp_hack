@@ -3,8 +3,7 @@
     <object name="MiSpotData" persistent="false" scriptenabled="true">
         <member type="u32" name="id" caps="true"/>
         <member type="bool" name="enabled"/>
-        <member type="u8" name="type"/>
-        <member type="u16" name="unk3"/>
+        <member type="u8" name="type" pad="2"/>
         <member type="float" name="centerX"/>
         <member type="float" name="centerY"/>
         <member type="float" name="unk4"/>

@@ -69,8 +69,7 @@
         <member type="u16" name="restriction2"/>
     </object>
     <object name="MiItemPvPData" persistent="false" scriptenabled="true">
-        <member type="s16" name="GPRequirement"/>
-        <member type="u16" name="unused"/>
+        <member type="s16" name="GPRequirement" pad="2"/>
     </object>
     <object name="MiRentalData" persistent="false" scriptenabled="true">
         <member type="s32" name="rental"/>

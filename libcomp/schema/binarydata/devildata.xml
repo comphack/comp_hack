@@ -3,18 +3,14 @@
     <object name="MiNPCBasicData" persistent="false">
         <member type="u32" name="ID"/>
         <member type="string" length="36" name="name" encoding="cp932"/>
-        <member type="s16" name="title"/>
-        <member type="u16" name="unused1"/>
-        <member type="enum" name="gender" underlying="uint8_t">
+        <member type="s16" name="title" pad="2"/>
+        <member type="enum" name="gender" underlying="uint8_t" pad="1">
             <value>MALE</value>
             <value>FEMALE</value>
             <value>NONE</value>
         </member>
-        <member type="u8" name="unused2"/>
-        <member type="u8" name="fusionModifier"/>
-        <member type="u8" name="unused3"/>
-        <member type="s16" name="LNC"/>
-        <member type="s16" name="unused4"/>
+        <member type="u8" name="fusionModifier" pad="1"/>
+        <member type="s16" name="LNC" pad="2"/>
         <member type="u32" name="modelID"/>
     </object>
     <object name="MiDCategoryData" persistent="false">
@@ -34,7 +30,7 @@
             <value num="12">ELEMENTAL</value>
             <value num="13">MACHINE</value>
         </member>
-        <member type="enum" name="race" underlying="uint8_t">
+        <member type="enum" name="race" underlying="uint8_t" pad="2">
             <value num="0">NONE</value>
             <value num="1">SERAPHIM</value>
             <value num="2">ENTITY</value>
@@ -79,7 +75,6 @@
             <value num="112">TYRANT</value>
             <value num="113">GAIAN</value>
         </member>
-        <member type="u16" name="unused"/>
     </object>
     <object name="MiAIRelationData" persistent="false">
         <member type="u16" name="type"/>
@@ -90,19 +85,15 @@
     <object name="MiNegotiationData" persistent="false">
         <member type="u8" name="affabilityThreshold"/>
         <member type="u8" name="fearThreshold"/>
-        <member type="u8" name="fusionIntro"/>
-        <member type="u8" name="unused"/>
+        <member type="u8" name="fusionIntro" pad="1"/>
     </object>
     <object name="MiSummonData" persistent="false">
-        <member type="u32" name="summon1"/>
-        <member type="u8" name="unused1"/>
-        <member type="u8" name="magModifier"/>
-        <member type="u16" name="unused2"/>
+        <member type="u32" name="summon1" pad="1"/>
+        <member type="u8" name="magModifier" pad="2"/>
     </object>
     <object name="MiUnionData" persistent="false">
         <member type="u8" name="fusionDifficulty"/>
-        <member type="u8" name="fusionOptions"/>
-        <member type="u16" name="unused"/>
+        <member type="u8" name="fusionOptions" pad="2"/>
         <member type="u32" name="baseDemonID"/>
         <member type="array" size="5" name="union5">
             <element type="float"/>
@@ -116,10 +107,8 @@
     <object name="MiGrowthData" persistent="false">
         <member type="u8" name="growthType"/>
         <member type="u8" name="baseLevel"/>
-        <member type="u8" name="inheritanceType"/>
-        <member type="u8" name="unused1"/>
-        <member type="u16" name="inheritanceRestrictions"/>
-        <member type="u16" name="unused2"/>
+        <member type="u8" name="inheritanceType" pad="1"/>
+        <member type="u16" name="inheritanceRestrictions" pad="2"/>
         <member type="array" size="8" name="skills">
             <element type="u32"/>
         </member>
@@ -132,9 +121,7 @@
         <member type="array" size="16" name="acquisitionSkills">
             <element type="MiAcquisitionSkillData*"/>
         </member>
-        <member type="u8" name="forceStack"/>
-        <member type="u8" name="unused3"/>
-        <member type="u16" name="unused4"/>
+        <member type="u8" name="forceStack" pad="3"/>
         <member type="array" size="8" name="salesDialogue">
             <element type="string" length="68" encoding="cp932"/>
         </member>
@@ -143,9 +130,7 @@
         <member type="u32" name="battle1"/>
         <member type="u32" name="digitalizeXP"/>
         <member type="u8" name="enemyLevel"/>
-        <member type="bool" name="isFloating"/>
-        <member type="u8" name="unused1"/>
-        <member type="u8" name="unused2"/>
+        <member type="bool" name="isFloating" pad="2"/>
         <member type="array" size="126" name="correct">
             <element type="s16"/>
         </member>
@@ -154,8 +139,7 @@
         </member>
     </object>
     <object name="MiDevilFamiliarityData" persistent="false">
-        <member type="s32" name="familiarityType"/>
-        <member type="s32" name="unused"/>
+        <member type="s32" name="familiarityType" pad="4"/>
     </object>
     <object name="MiDevilData" persistent="false">
         <member type="MiNPCBasicData*" name="basic"/>

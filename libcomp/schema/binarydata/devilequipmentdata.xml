@@ -2,9 +2,7 @@
 <objgen>
     <object name="MiDevilEquipmentData" persistent="false">
         <member type="u32" name="skillID"/>
-        <member type="u8" name="fixed"/>
-        <member type="u8" name="unused1"/>
-        <member type="u16" name="unused2"/>
+        <member type="u8" name="fixed" pad="3"/>
         <member type="array" size="32" name="exclusionGroup">
             <element type="u16"/>
         </member>

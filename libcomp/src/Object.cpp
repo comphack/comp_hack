@@ -311,3 +311,22 @@ std::string Object::GetXml() const
 
     return printer.CStr();
 }
+
+bool Object::SkipPadding(std::istream& stream, uint8_t count)
+{
+    stream.ignore(count);
+
+    return stream.good();
+}
+
+bool Object::WritePadding(std::ostream& stream, uint8_t count) const
+{
+    uint8_t byte = 0;
+    for(uint8_t i = 0; i < count; i++)
+    {
+        stream.write(reinterpret_cast<const char*>(&byte),
+            sizeof(byte));
+    }
+
+    return stream.good();
+}

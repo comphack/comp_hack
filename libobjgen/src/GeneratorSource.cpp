@@ -248,6 +248,14 @@ std::string GeneratorSource::Generate(const MetaObject& obj)
             ss << Tab(2) << "status = false;" << std::endl;
             ss << Tab() << "}" << std::endl;
         }
+
+        code = var->GetLoadPaddingCode("stream", false);
+
+        if(!code.empty())
+        {
+            ss << std::endl;
+            ss << Tab() << "status &= " << code << std::endl;
+        }
     }
 
     ss << std::endl;
@@ -278,6 +286,14 @@ std::string GeneratorSource::Generate(const MetaObject& obj)
             ss << Tab() << "{" << std::endl;
             ss << Tab(2) << "status = false;" << std::endl;
             ss << Tab() << "}" << std::endl;
+        }
+
+        code = var->GetSavePaddingCode("stream", false);
+
+        if(!code.empty())
+        {
+            ss << std::endl;
+            ss << Tab() << "status &= " << code << std::endl;
         }
     }
 
@@ -311,6 +327,14 @@ std::string GeneratorSource::Generate(const MetaObject& obj)
             ss << Tab(2) << "status = false;" << std::endl;
             ss << Tab() << "}" << std::endl;
         }
+
+        code = var->GetLoadPaddingCode("stream", true);
+
+        if(!code.empty())
+        {
+            ss << std::endl;
+            ss << Tab() << "status &= " << code << std::endl;
+        }
     }
 
     ss << std::endl;
@@ -342,6 +366,14 @@ std::string GeneratorSource::Generate(const MetaObject& obj)
             ss << Tab() << "{" << std::endl;
             ss << Tab(2) << "status = false;" << std::endl;
             ss << Tab() << "}" << std::endl;
+        }
+
+        code = var->GetSavePaddingCode("stream", true);
+
+        if(!code.empty())
+        {
+            ss << std::endl;
+            ss << Tab() << "status &= " << code << std::endl;
         }
     }
 
@@ -564,7 +596,8 @@ std::string GeneratorSource::Generate(const MetaObject& obj)
         {
             auto var = *it;
 
-            if(var->GetMetaType() == MetaVariable::MetaVariableType_t::TYPE_ENUM)
+            if(!var->IsInherited() &&
+                var->GetMetaType() == MetaVariable::MetaVariableType_t::TYPE_ENUM)
             {
                 auto eVar = std::dynamic_pointer_cast<MetaVariableEnum>(var);
 
@@ -572,10 +605,10 @@ std::string GeneratorSource::Generate(const MetaObject& obj)
                     << Tab() << "Sqrat::Enumeration e(mVM);" << std::endl;
                 for(auto enumValPair : eVar->GetValues())
                 {
+                    // Explicit integer cast is required due to overloaded functions
                     additions << Tab() << "e.Const(" << Escape(enumValPair.first)
-                        << ", (" << eVar->GetUnderlyingType() << ")"
-                        << eVar->GetCodeType() << "::" << enumValPair.first
-                        << ");" << std::endl;
+                        << ", (int32_t)"  << eVar->GetCodeType()
+                        << "::" << enumValPair.first << ");" << std::endl;
                 }
 
                 additions << std::endl << Tab() << "Sqrat::ConstTable(mVM).Enum(\""

@@ -49,6 +49,7 @@
             <element type="u32"/>
         </member>
         <member type="float" name="RespawnTime"/>
+        <member type="bool" name="ImmediateSpawn"/>
         <member type="set" name="SpotIDs">
             <element type="u32"/>
         </member>

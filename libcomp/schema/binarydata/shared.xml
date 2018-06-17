@@ -2,8 +2,7 @@
 <objgen>
     <object name="MiCategoryData" persistent="false" scriptenabled="true">
         <member type="u8" name="mainCategory"/>
-        <member type="u8" name="subCategory"/>
-        <member type="u16" name="unused"/>
+        <member type="u8" name="subCategory" pad="2"/>
     </object>
     <object name="MiCorrectTbl" persistent="false" scriptenabled="true">
         <member type="enum" name="ID" underlying="uint8_t">
@@ -51,6 +50,8 @@
             <value num="20">MDEF</value>
             <!-- 必殺抑止 - Critical Defense -->
             <value num="21">CRIT_DEF</value>
+            <!-- _耐性 - Default Affinity Resistance -->
+            <value num="26">RES_DEFAULT</value>
             <!-- 武器依存耐性 - Weapon Resistance -->
             <value num="27">RES_WEAPON</value>
             <!-- 斬撃耐性 - Slash Resistance -->
@@ -95,6 +96,8 @@
             <value num="47">RES_SPECIAL</value>
             <!-- 自爆耐性 - Self-Destruct Resistance -->
             <value num="48">RES_SUICIDE</value>
+            <!-- _(無効/反射/吸収) - Null/Reflect/Absorb Default -->
+            <value num="49">NRA_DEFAULT</value>
             <!-- 武器(無効/反射/吸収) - Null/Reflect/Absorb Weapon -->
             <value num="50">NRA_WEAPON</value>
             <!-- 斬撃(無効/反射/吸収) - Null/Reflect/Absorb Slash -->
@@ -175,6 +178,8 @@
             <value num="92">RATE_SUPPORT_TAKEN</value>
             <!-- 被回復量 - Healing "Damage" Received -->
             <value num="93">RATE_HEAL_TAKEN</value>
+            <!-- _高揚 - Default Boost -->
+            <value num="94">BOOST_DEFAULT</value>
             <!-- 武器高揚 - Weapon Boost -->
             <value num="95">BOOST_WEAPON</value>
             <!-- 斬撃高揚 - Slash Boost -->
@@ -227,6 +232,14 @@
             <value num="119">FINAL_CRIT_CHANCE</value>
             <!-- 防御拡張２ - Defense Expansion 2 -->
             <value num="120">DEFENSE_EXPAND_2</value>
+            <!-- 与ＰＣ: Character Damage Dealt -->
+            <value num="121">RATE_PC</value>
+            <!-- 与悪魔: Demon Damage Dealt -->
+            <value num="122">RATE_DEMON</value>
+            <!-- 被ＰＣ: Character Damage Received -->
+            <value num="123">RATE_PC_TAKEN</value>
+            <!-- 被悪魔: Demon Damage Received -->
+            <value num="124">RATE_DEMON_TAKEN</value>
             <!-- 詠唱時間 - Skill Chant Time -->
             <value num="125">CHANT_TIME</value>
         </member>
@@ -237,9 +250,7 @@
         scriptenabled="true">
         <member type="u32" name="id" caps="true"/>
         <member type="MiCategoryData*" name="category"/>
-        <member type="u8" name="affinity"/>
-        <member type="u8" name="unused1"/>
-        <member type="u16" name="unused2"/>
+        <member type="u8" name="affinity" pad="3"/>
         <member type="list" name="correctTbl">
             <element type="MiCorrectTbl*"/>
         </member>

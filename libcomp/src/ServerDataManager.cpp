@@ -923,17 +923,35 @@ bool ServerDataManager::LoadScript(const libcomp::String& path,
             return false;
         }
 
-        mScripts[script->Name.C()] = script;
-
         // Check supported types here
-        if(script->Type.ToLower() == "eventcondition" ||
-            script->Type.ToLower() == "eventbranchlogic")
+        auto type = script->Type.ToLower();
+        if(type == "eventcondition" || type == "eventbranchlogic")
         {
             fDef = root.GetFunction("check");
             if(fDef.IsNull())
             {
-                LOG_ERROR(libcomp::String("EventCondition script encountered"
+                LOG_ERROR(libcomp::String("Event conditional script encountered"
                     " with no 'check' function: %1\n")
+                    .Arg(script->Name.C()));
+                return false;
+            }
+        }
+        else if(type == "actiontransform" || type == "eventtransform")
+        {
+            fDef = root.GetFunction("transform");
+            if(fDef.IsNull())
+            {
+                LOG_ERROR(libcomp::String("Transform script encountered"
+                    " with no 'transform' function: %1\n")
+                    .Arg(script->Name.C()));
+                return false;
+            }
+
+            fDef = root.GetFunction("prepare");
+            if(!fDef.IsNull())
+            {
+                LOG_ERROR(libcomp::String("Transform script encountered"
+                    " with reserved function name 'prepare': %1\n")
                     .Arg(script->Name.C()));
                 return false;
             }
@@ -944,6 +962,8 @@ bool ServerDataManager::LoadScript(const libcomp::String& path,
                 .Arg(script->Type.C()));
             return false;
         }
+
+        mScripts[script->Name.C()] = script;
     }
 
     return true;

@@ -631,17 +631,6 @@ bool ZoneFilter::ProcessEventCommands(const libcomp::String& capturePath,
             auto source = sourceEntityID != 0
                 ? instance->entities[sourceEntityID] : nullptr;
 
-            // Supports old size format
-            int32_t unknown = 0;
-            if(packet.Left() == 2)
-            {
-                unknown = (int32_t)packet.ReadS16Little();
-            }
-            else
-            {
-                unknown = packet.ReadS32Little();
-            }
-
             auto msg = instance->currentSequence != nullptr
                 ? std::dynamic_pointer_cast<objects::EventNPCMessage>(
                     instance->currentSequence->event)
@@ -654,7 +643,6 @@ bool ZoneFilter::ProcessEventCommands(const libcomp::String& capturePath,
             }
 
             msg->AppendMessageIDs(messageID);
-            msg->AppendUnknown(unknown);
         }
         break;
     case to_underlying(ChannelToClientPacketCode_t::PACKET_EVENT_EX_NPC_MESSAGE):
@@ -670,9 +658,11 @@ bool ZoneFilter::ProcessEventCommands(const libcomp::String& capturePath,
 
             auto sourceEntityID = packet.ReadS32Little();
             auto messageID = packet.ReadS32Little();
-            auto ex1 = packet.ReadS16Little();
-            auto ex2Set = packet.ReadS8();
-            auto ex2 = (ex2Set == 1) ? packet.ReadS32Little() : 0;
+            auto unknown = packet.ReadS16Little();
+            auto msgValueSet = packet.ReadS8();
+            auto msgValue = (msgValueSet == 1) ? packet.ReadS32Little() : 0;
+
+            (void)unknown;
 
             if(!CheckUnknownEntity(capturePath, instance, sourceEntityID,
                 "EX NPC message"))
@@ -686,8 +676,7 @@ bool ZoneFilter::ProcessEventCommands(const libcomp::String& capturePath,
             auto msg = std::make_shared<objects::EventExNPCMessage>();
             instance->currentSequence = std::make_shared<MappedEvent>(msg, source);
             msg->SetMessageID(messageID);
-            msg->SetEx1(ex1);
-            msg->SetEx2(ex2);
+            msg->SetMessageValue(msgValue);
 
             // EX NPC messages don't wait for a response
             instance->eventResponse = 0;
@@ -2309,12 +2298,7 @@ bool ZoneFilter::MergeEventNPCMessages(std::shared_ptr<MappedEvent> e1,
     size_t messageCount = c1->MessageIDsCount();
     for(size_t i = 0; i < messageCount; i++)
     {
-        auto unknown1 = c1->GetUnknown(i) != 0
-            ? c1->GetUnknown(i) : c1->GetUnknownDefault();
-        auto unknown2 = c2->GetUnknown(i) != 0
-            ? c2->GetUnknown(i) : c2->GetUnknownDefault();
-        if(c1->GetMessageIDs(i) != c2->GetMessageIDs(i) ||
-            unknown1 != unknown2)
+        if(c1->GetMessageIDs(i) != c2->GetMessageIDs(i))
         {
             return false;
         }

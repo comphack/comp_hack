@@ -264,6 +264,22 @@ protected:
      */
     virtual std::string GetXmlText(const tinyxml2::XMLElement& root) const;
 
+    /**
+     * Utility function to skip padding bytes when reading from a datastream.
+     * @param stream Byte stream being read from
+     * @param count Number of bytes to skip
+     * @return true if the stream is still good after skipping
+     */
+    bool SkipPadding(std::istream& stream, uint8_t count);
+
+    /**
+     * Utility function to write padding bytes when writing to a datastream.
+     * @param stream Byte stream being written to
+     * @param count Number of bytes to write
+     * @return true if the stream is still good after writing
+     */
+    bool WritePadding(std::ostream& stream, uint8_t count) const;
+
     /// Mutex to lock accessing the object fields
     std::mutex mFieldLock;
 };

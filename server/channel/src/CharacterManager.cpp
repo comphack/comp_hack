@@ -4995,6 +4995,11 @@ libcomp::EnumMap<CorrectTbl, int16_t> CharacterManager::GetCharacterBaseStatMap(
         stats[(CorrectTbl)i] = 100;
     }
 
+    stats[CorrectTbl::RATE_PC] = 100;
+    stats[CorrectTbl::RATE_DEMON] = 100;
+    stats[CorrectTbl::RATE_PC_TAKEN] = 100;
+    stats[CorrectTbl::RATE_DEMON_TAKEN] = 100;
+
     return stats;
 }
 

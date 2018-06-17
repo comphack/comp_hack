@@ -167,13 +167,11 @@ const uint8_t TALK_GIVE_ITEM_2 = 10;
 const uint8_t TALK_REJECT = 13;
 //const uint8_t TALK_THREATENED = 14;
 
-const uint8_t RES_OFFSET = (uint8_t)CorrectTbl::RES_WEAPON - 1;
-const uint8_t BOOST_OFFSET = (uint8_t)CorrectTbl::BOOST_SLASH - 2;
-const uint8_t NRA_OFFSET = (uint8_t)CorrectTbl::NRA_WEAPON - 1;
+const uint8_t RES_OFFSET = (uint8_t)CorrectTbl::RES_DEFAULT;
+const uint8_t BOOST_OFFSET = (uint8_t)CorrectTbl::BOOST_DEFAULT;
+const uint8_t NRA_OFFSET = (uint8_t)CorrectTbl::NRA_DEFAULT;
 const uint8_t AIL_OFFSET = (uint8_t)((uint8_t)CorrectTbl::RES_FIRE -
-    (uint8_t)CorrectTbl::RES_SLASH + 1);
-/*const uint8_t DAMAGE_TAKEN_OFFSET = (uint8_t)((uint8_t)CorrectTbl::RATE_CLSR -
-    (uint8_t)CorrectTbl::RATE_CLSR_TAKEN);*/
+    (uint8_t)CorrectTbl::RES_DEFAULT - 1);
 
 class channel::ProcessingSkill
 {
@@ -5808,6 +5806,21 @@ uint8_t SkillManager::GetCritLevel(const std::shared_ptr<ActiveEntityState>& sou
     return critLevel;
 }
 
+int16_t SkillManager::GetEntityRate(const std::shared_ptr<ActiveEntityState> eState,
+    std::shared_ptr<objects::CalculatedEntityState> calcState, bool taken)
+{
+    if(eState->GetEntityType() == EntityType_t::CHARACTER)
+    {
+        return calcState->GetCorrectTbl((size_t)(taken
+            ? CorrectTbl::RATE_PC_TAKEN : CorrectTbl::RATE_PC));
+    }
+    else
+    {
+        return calcState->GetCorrectTbl((size_t)(taken
+            ? CorrectTbl::RATE_DEMON_TAKEN : CorrectTbl::RATE_DEMON));
+    }
+}
+
 int32_t SkillManager::CalculateDamage_Normal(const std::shared_ptr<
     ActiveEntityState>& source, SkillTargetResult& target,
     const std::shared_ptr<ProcessingSkill>& pSkill, uint16_t mod,
@@ -5976,20 +5989,39 @@ int32_t SkillManager::CalculateDamage_Normal(const std::shared_ptr<
             // Multiply by 100% + boost
             calc = calc * (1.f + boost);
 
+            // Multiply by entity damage dealt %
+            calc = calc * (float)(GetEntityRate(target.EntityState,
+                calcState, false) * 0.01);
+
             // Multiply by dependency damage dealt %
             calc = calc * (float)(dependencyDealt * 0.01);
 
             // Multiply by 1 + remaining power boosts/100
             calc = calc * (float)(1.0 + tokuseiBoost);
 
-            if(!skill.FunctionID ||
-                skill.FunctionID != SVR_CONST.SKILL_PIERCE)
-            {
-                // Multiply by dependency damage taken %
-                calc = calc * (float)(dependencyTaken * 0.01);
+            // Gather damage taken rates
+            std::list<float> damageTaken;
 
-                // Multiply by 100% + -general damage taken
-                calc = calc * (float)(1.0 + tokuseiReduction);
+            // Multiply by entity damage taken %
+            damageTaken.push_back((float)(GetEntityRate(source,
+                targetState, true) * 0.01));
+
+            // Multiply by dependency damage taken %
+            damageTaken.push_back((float)(dependencyTaken * 0.01));
+
+            // Multiply by 100% + -general damage taken
+            damageTaken.push_back((float)(1.0 + tokuseiReduction));
+
+            for(float taken : damageTaken)
+            {
+                // Apply damage taken rates if not piercing or rate
+                // is not a reduction
+                if(!skill.FunctionID ||
+                    skill.FunctionID != SVR_CONST.SKILL_PIERCE ||
+                    taken > 1.f)
+                {
+                    calc = calc * taken;
+                }
             }
 
             /// @todo: there is more to this calculation

@@ -1289,29 +1289,7 @@ bool TokuseiManager::EvaluateTokuseiCondition(const std::shared_ptr<ActiveEntity
         break;
     case TokuseiConditionType::GENDER:
         // Entity is the specified gender
-        {
-            int32_t gender = (int32_t)objects::MiNPCBasicData::Gender_t::NONE;
-
-            auto devilData = eState->GetDevilData();
-            switch(eState->GetEntityType())
-            {
-            case EntityType_t::CHARACTER:
-                gender = (int32_t)std::dynamic_pointer_cast<CharacterState>(eState)
-                    ->GetEntity()->GetGender();
-                break;
-            case EntityType_t::PARTNER_DEMON:
-            case EntityType_t::ENEMY:
-                if(devilData)
-                {
-                    gender = (int32_t)devilData->GetBasic()->GetGender();
-                }
-                break;
-            default:
-                return false;
-            }
-
-            return Compare(gender, condition, false);
-        }
+        return Compare((int32_t)eState->GetGender(), condition, false);
         break;
     case TokuseiConditionType::STATUS_ACTIVE:
         // Entity currently has the specified status effect active

@@ -4,10 +4,8 @@
     <object name="MiModificationData" persistent="false">
         <member type="u32" name="ID"/>
         <member type="u16" name="effectID"/>
-        <member type="u8" name="slot"/>
-        <member type="u8" name="unused1"/>
-        <member type="u16" name="greatFailItemCount"/>
-        <member type="u16" name="unused2"/>
+        <member type="u8" name="slot" pad="1"/>
+        <member type="u16" name="greatFailItemCount" pad="2"/>
         <member type="u32" name="greatFailItemType"/>
         <member type="u32" name="itemID"/>
         <member type="s16" name="successRate"/>
@@ -16,8 +14,7 @@
         <member type="s16" name="greatFailRate"/>
     </object>
     <object name="MiModificationTriggerData" persistent="false">
-        <member type="u16" name="ID"/>
-        <member type="u16" name="unused"/>
+        <member type="u16" name="ID" pad="2"/>
         <member type="array" name="rateScaling" size="8">
             <element type="u16"/>
         </member>
@@ -40,9 +37,7 @@
         <member type="s16" name="successRate"/>
         <member type="s16" name="failRate"/>
         <member type="s16" name="greatSuccessRate"/>
-        <member type="s16" name="greatFailRate"/>
-        <member type="u32" name="unused1"/>
-        <member type="u32" name="unused2"/>
+        <member type="s16" name="greatFailRate" pad="8"/>
     </object>
     <object name="MiModificationExtEffectData" persistent="false">
         <member type="u8" name="groupID"/>

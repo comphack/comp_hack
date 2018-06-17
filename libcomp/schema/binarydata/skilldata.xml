@@ -22,8 +22,7 @@
         <member type="u8" name="defensible"/>
         <member type="u8" name="family"/>
         <member type="u8" name="activationType"/>
-        <member type="u8" name="basic7"/>
-        <member type="u8" name="unused"/>
+        <member type="u8" name="basic7" pad="1"/>
         <member type="u32" name="cooldownID"/>
     </object>
     <object name="MiRestrictionData" persistent="false">
@@ -76,13 +75,11 @@
     <object name="MiCastBasicData" persistent="false">
         <member type="u32" name="chargeTime"/>
         <member type="u8" name="useCount"/>
-        <member type="u8" name="adjustRestrictions"/>
-        <member type="u16" name="unused"/>
+        <member type="u8" name="adjustRestrictions" pad="2"/>
     </object>
     <object name="MiCastCancelData" persistent="false">
         <member type="bool" name="damageCancel"/>
-        <member type="bool" name="knockbackCancel"/>
-        <member type="u16" name="unused"/>
+        <member type="bool" name="knockbackCancel" pad="2"/>
         <member type="u32" name="autoCancelTime"/>
     </object>
     <object name="MiCastData" persistent="false">
@@ -91,7 +88,7 @@
     </object>
     <object name="MiTargetData" persistent="false">
         <member type="u16" name="range"/>
-        <member type="enum" name="type" underlying="uint8_t">
+        <member type="enum" name="type" underlying="uint8_t" pad="1">
             <value num="0">NONE</value>
             <value num="1">ALLY</value>
             <value num="2">DEAD_ALLY</value>
@@ -106,16 +103,13 @@
             <value num="13">ALLY_DEMON</value>
             <value num="14">PLAYER</value>
         </member>
-        <member type="u8" name="unused"/>
     </object>
     <object name="MiDischargeData" persistent="false">
         <member type="u32" name="discharge1"/>
         <member type="u32" name="projectileSpeed"/>
         <member type="u32" name="discharge3"/>
         <member type="u32" name="stiffness"/>
-        <member type="bool" name="discharge5"/>
-        <member type="u8" name="unused1"/>
-        <member type="u16" name="unused2"/>
+        <member type="bool" name="discharge5" pad="3"/>
     </object>
     <object name="MiEffectiveRangeData" persistent="false">
         <member type="enum" name="areaType" underlying="uint8_t">
@@ -129,7 +123,7 @@
             <value num="7">SOURCE</value>
             <value num="9">UNKNOWN_9</value>
         </member>
-        <member type="enum" name="validType" underlying="uint8_t">
+        <member type="enum" name="validType" underlying="uint8_t" pad="2">
             <value num="0">ENEMY</value>
             <value num="1">ALLY</value>
             <value num="2">DEAD_ALLY</value>
@@ -137,7 +131,6 @@
             <value num="4">SOURCE</value>
             <value num="6">DEAD_PARTY</value>
         </member>
-        <member type="u16" name="unused"/>
         <member type="s32" name="aoeRange"/>
         <member type="s32" name="aoeTargetMax"/>
     </object>
@@ -156,13 +149,11 @@
             <value num="14">DMG_MAX_PERCENT</value>
         </member>
         <member type="u8" name="battleDamage2"/>
-        <member type="u8" name="aoeReduction"/>
-        <member type="u8" name="unused1"/>
+        <member type="u8" name="aoeReduction" pad="1"/>
         <member type="u16" name="modifier1"/>
         <member type="u16" name="modifier2"/>
         <member type="u8" name="HPDrainPercent"/>
-        <member type="u8" name="MPDrainPercent"/>
-        <member type="u16" name="unused2"/>
+        <member type="u8" name="MPDrainPercent" pad="2"/>
     </object>
     <object name="MiNegotiationDamageData" persistent="false">
         <member type="s8" name="successAffability"/>
@@ -185,8 +176,7 @@
         <member type="s8" name="minStack"/>
         <member type="u8" name="onKnockback"/>
         <member type="bool" name="isReplace"/>
-        <member type="u16" name="successRate"/>
-        <member type="u16" name="unused"/>
+        <member type="u16" name="successRate" pad="2"/>
     </object>
     <object name="MiDamageData" persistent="false">
         <member type="MiBattleDamageData*" name="battleDamage"/>
@@ -197,13 +187,11 @@
         <member type="list" name="addStatuses">
             <element type="MiAddStatusTbl*"/>
         </member>
-        <member type="u16" name="functionID"/>
-        <member type="u16" name="unused"/>
+        <member type="u16" name="functionID" pad="2"/>
     </object>
     <object name="MiAcquisitionData" persistent="false">
         <member type="u8" name="inheritanceRestriction"/>
-        <member type="s8" name="inheritanceModifier"/>
-        <member type="u16" name="unused"/>
+        <member type="s8" name="inheritanceModifier" pad="2"/>
     </object>
     <object name="MiExpertGrowthTbl" persistent="false">
         <member type="u8" name="expertiseID"/>
@@ -226,8 +214,7 @@
             <value>PVP_RESTRICTED</value>
             <value>PVP_ONLY</value>
         </member>
-        <member type="u8" name="pvp2"/>
-        <member type="u16" name="unused"/>
+        <member type="u8" name="pvp2" pad="2"/>
     </object>
     <object name="MiSkillData" persistent="false">
         <member type="MiSkillItemStatusCommonData*" name="common"/>

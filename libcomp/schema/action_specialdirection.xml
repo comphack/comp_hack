@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <objgen>
-    <object name="ActionSpecialDirection" baseobject="Action" persistent="false">
+    <object name="ActionSpecialDirection" baseobject="Action" persistent="false"
+        scriptenabled="true">
         <member type="enum" name="actionType" inherited="true" default="SPECIAL_DIRECTION"/>
         <member type="s32" name="direction"/>
         <member type="u8" name="special1"/>

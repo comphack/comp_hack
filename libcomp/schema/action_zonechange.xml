@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <objgen>
-    <object name="ActionZoneChange" baseobject="Action" persistent="false">
+    <object name="ActionZoneChange" baseobject="Action" persistent="false"
+        scriptenabled="true">
         <member type="u32" name="zoneID"/>
         <member type="u32" name="dynamicMapID"/>
         <member type="u32" name="spotID"/>

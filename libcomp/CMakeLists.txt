@@ -450,14 +450,18 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     DropSet.cpp
     Enemy.h
     Enemy.cpp
-    Event.h
-    Event.cpp
-    EventBase.h
-    EventBase.cpp
-    EventChoice.h
-    EventChoice.cpp
+    EventConditionData.cpp
+    EventConditionData.h
     EventCondition.h
     EventCondition.cpp
+    EventBase.h
+    EventBase.cpp
+    EventSequence.h
+    EventSequence.cpp
+    Event.h
+    Event.cpp
+    EventChoice.h
+    EventChoice.cpp
     EventDirection.h
     EventDirection.cpp
     EventExNPCMessage.h
@@ -478,8 +482,6 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     EventPrompt.cpp
     EventScriptCondition.h
     EventScriptCondition.cpp
-    EventSequence.h
-    EventSequence.cpp
     Expertise.h
     Expertise.cpp
     FriendSettings.h
@@ -738,8 +740,6 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     EnchantSpecialData.cpp
     MiEquipmentSetData.cpp
     MiEquipmentSetData.h
-    EventConditionData.cpp
-    EventConditionData.h
     MiExchangeData.cpp
     MiExchangeData.h
     MiExchangeObjectData.cpp

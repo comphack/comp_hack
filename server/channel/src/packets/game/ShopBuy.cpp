@@ -234,7 +234,8 @@ void HandleShopPurchase(const std::shared_ptr<ChannelServer> server,
 
         auto account = libcomp::PersistentObject::LoadObjectByUUID<objects::Account>(
             server->GetLobbyDatabase(), character->GetAccount(), true);
-        if(account->GetCP() < (uint32_t)price)
+        uint32_t cp = account->GetCP();
+        if(cp < (uint32_t)price)
         {
             SendShopPurchaseReply(client, shopID, productID, -2, false);
             return;
@@ -242,7 +243,7 @@ void HandleShopPurchase(const std::shared_ptr<ChannelServer> server,
 
         auto opChangeset = std::make_shared<libcomp::DBOperationalChangeSet>();
         auto expl = std::make_shared<libcomp::DBExplicitUpdate>(account);
-        expl->SubtractFrom<int64_t>("CP", price, (int32_t)account->GetCP() - price);
+        expl->SubtractFrom<int64_t>("CP", price, (int32_t)cp);
         opChangeset->AddOperation(expl);
 
         uint32_t timestamp = (uint32_t)std::time(0);

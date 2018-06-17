@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <objgen>
-    <object name="EventBase" persistent="false">
+    <object name="EventBase" persistent="false" scriptenabled="true">
         <member type="string" name="next"/>
         <member type="string" name="queueNext"/>
         <member type="string" name="conditionID"/>  <!-- todo: remove after events are merged -->
@@ -10,7 +10,8 @@
         <member type="bool" name="pop"/>
         <member type="bool" name="popNext"/>
     </object>
-    <object name="EventSequence" baseobject="EventBase" persistent="false">
+    <object name="EventSequence" baseobject="EventBase" persistent="false"
+        scriptenabled="true">
         <member type="list" name="branches">
             <element type="EventBase*"/>
         </member>
@@ -20,7 +21,7 @@
         </member>
     </object>
     <object name="Event" baseobject="EventSequence" persistent="false"
-        inherited-construction="true">
+        inherited-construction="true" scriptenabled="true">
         <member type="string" name="ID"/>
         <member type="enum" name="eventType" underlying="uint8_t" default="FORK">
             <value>FORK</value>
@@ -33,9 +34,13 @@
             <value>PLAY_SCENE</value>
             <value>DIRECTION</value>
         </member>
+        <member type="string" name="transformScriptID"/>
+        <member type="list" name="transformScriptParams">
+            <element type="string"/>
+        </member>
     </object>
     <!-- Structure must match MiQuestUpperCondition usage -->
-    <object name="EventConditionData" persistent="false">
+    <object name="EventConditionData" persistent="false" scriptenabled="true">
         <member type="enum" name="type" underlying="uint32_t">
             <!-- Standard quest use types -->
             <value num="0">NONE</value>
@@ -100,7 +105,7 @@
         <member type="s32" name="value2"/>
     </object>
     <object name="EventCondition" baseobject="EventConditionData" persistent="false"
-        inherited-construction="true">
+        inherited-construction="true" scriptenabled="true">
         <member type="enum" name="compareMode" underlying="uint8_t">
             <value num="0x00">DEFAULT_COMPARE</value>
             <value num="0x01">EQUAL</value>
@@ -113,7 +118,7 @@
         <member type="bool" name="negate"/>
     </object>
     <object name="EventFlagCondition" baseobject="EventCondition" persistent="false"
-        inherited-construction="true">
+        inherited-construction="true" scriptenabled="true">
         <member type="s32" name="value1" inherited="true" default="-1"/>
         <member type="s32" name="value2" inherited="true" default="-1"/>
         <member type="map" name="flagStates">
@@ -122,7 +127,7 @@
         </member>
     </object>
     <object name="EventScriptCondition" baseobject="EventCondition" persistent="false"
-        inherited-construction="true">
+        inherited-construction="true" scriptenabled="true">
         <member type="enum" name="type" inherited="true" default="SCRIPT"/>
         <member type="string" name="scriptID"/>
         <member type="list" name="params">

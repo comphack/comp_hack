@@ -32,7 +32,6 @@
 #include <Log.h>
 #include <PacketCodes.h>
 #include <Randomizer.h>
-#include <ScriptEngine.h>
 #include <ServerConstants.h>
 #include <ServerDataManager.h>
 
@@ -53,7 +52,6 @@
 #include <EventDirection.h>
 #include <EventExNPCMessage.h>
 #include <EventFlagCondition.h>
-#include <EventInstance.h>
 #include <EventMultitalk.h>
 #include <EventNPCMessage.h>
 #include <EventOpenMenu.h>
@@ -110,13 +108,6 @@ const uint16_t EVENT_COMPARE_NUMERIC = (uint16_t)EventCompareMode::EQUAL |
 
 const uint16_t EVENT_COMPARE_NUMERIC2 = EVENT_COMPARE_NUMERIC |
     (uint16_t)EventCompareMode::BETWEEN;
-
-struct channel::EventContext
-{
-    std::shared_ptr<ChannelClientConnection> Client;
-    std::shared_ptr<Zone> CurrentZone;
-    std::shared_ptr<objects::EventInstance> EventInstance;
-};
 
 EventManager::EventManager(const std::weak_ptr<ChannelServer>& server)
     : mServer(server)
@@ -3279,16 +3270,19 @@ void EventManager::HandleNext(EventContext& ctx)
 
 bool EventManager::NPCMessage(EventContext& ctx)
 {
-    auto e = std::dynamic_pointer_cast<objects::EventNPCMessage>(
-        ctx.EventInstance->GetEvent());
+    auto e = GetEvent<objects::EventNPCMessage>(ctx);
+    if(!e)
+    {
+        return false;
+    }
+
     auto idx = ctx.EventInstance->GetIndex();
-    auto unknown = e->GetUnknown((size_t)idx);
 
     libcomp::Packet p;
     p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_EVENT_NPC_MESSAGE);
     p.WriteS32Little(ctx.EventInstance->GetSourceEntityID());
     p.WriteS32Little(e->GetMessageIDs((size_t)idx));
-    p.WriteS32Little(unknown != 0 ? unknown : e->GetUnknownDefault());
+    p.WriteS32Little(170);  // Unknown
 
     ctx.Client->SendPacket(p);
 
@@ -3297,21 +3291,20 @@ bool EventManager::NPCMessage(EventContext& ctx)
 
 bool EventManager::ExNPCMessage(EventContext& ctx)
 {
-    auto e = std::dynamic_pointer_cast<objects::EventExNPCMessage>(
-        ctx.EventInstance->GetEvent());
+    auto e = GetEvent<objects::EventExNPCMessage>(ctx);
+    if(!e)
+    {
+        return false;
+    }
 
     libcomp::Packet p;
     p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_EVENT_EX_NPC_MESSAGE);
     p.WriteS32Little(ctx.EventInstance->GetSourceEntityID());
     p.WriteS32Little(e->GetMessageID());
-    p.WriteS16Little(e->GetEx1());
+    p.WriteS16Little(170);  // Unknown, same as EventNPCMessage's
 
-    bool ex2Set = e->GetEx2() != 0;
-    p.WriteS8(ex2Set ? 1 : 0);
-    if(ex2Set)
-    {
-        p.WriteS32Little(e->GetEx2());
-    }
+    p.WriteS8(1);   // Message set
+    p.WriteS32Little(e->GetMessageValue());
 
     ctx.Client->SendPacket(p);
 
@@ -3320,8 +3313,11 @@ bool EventManager::ExNPCMessage(EventContext& ctx)
 
 bool EventManager::Multitalk(EventContext& ctx)
 {
-    auto e = std::dynamic_pointer_cast<objects::EventMultitalk>(
-        ctx.EventInstance->GetEvent());
+    auto e = GetEvent<objects::EventMultitalk>(ctx);
+    if(!e)
+    {
+        return false;
+    }
 
     libcomp::Packet p;
     p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_EVENT_MULTITALK);
@@ -3337,8 +3333,11 @@ bool EventManager::Multitalk(EventContext& ctx)
 
 bool EventManager::Prompt(EventContext& ctx)
 {
-    auto e = std::dynamic_pointer_cast<objects::EventPrompt>(
-        ctx.EventInstance->GetEvent());
+    auto e = GetEvent<objects::EventPrompt>(ctx);
+    if(!e)
+    {
+        return false;
+    }
 
     libcomp::Packet p;
     p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_EVENT_PROMPT);
@@ -3382,8 +3381,11 @@ bool EventManager::Prompt(EventContext& ctx)
 
 bool EventManager::PlayScene(EventContext& ctx)
 {
-    auto e = std::dynamic_pointer_cast<objects::EventPlayScene>(
-        ctx.EventInstance->GetEvent());
+    auto e = GetEvent<objects::EventPlayScene>(ctx);
+    if(!e)
+    {
+        return false;
+    }
 
     libcomp::Packet p;
     p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_EVENT_PLAY_SCENE);
@@ -3397,8 +3399,12 @@ bool EventManager::PlayScene(EventContext& ctx)
 
 bool EventManager::OpenMenu(EventContext& ctx)
 {
-    auto e = std::dynamic_pointer_cast<objects::EventOpenMenu>(
-        ctx.EventInstance->GetEvent());
+    auto e = GetEvent<objects::EventOpenMenu>(ctx);
+    if(!e)
+    {
+        return false;
+    }
+
     auto state = ctx.Client->GetClientState();
     auto eState = state->GetEventState();
 
@@ -3426,8 +3432,11 @@ bool EventManager::OpenMenu(EventContext& ctx)
 
 bool EventManager::PerformActions(EventContext& ctx)
 {
-    auto e = std::dynamic_pointer_cast<objects::EventPerformActions>(
-        ctx.EventInstance->GetEvent());
+    auto e = GetEvent<objects::EventPerformActions>(ctx);
+    if(!e)
+    {
+        return false;
+    }
 
     auto server = mServer.lock();
     auto actionManager = server->GetActionManager();
@@ -3444,8 +3453,11 @@ bool EventManager::PerformActions(EventContext& ctx)
 
 bool EventManager::Direction(EventContext& ctx)
 {
-    auto e = std::dynamic_pointer_cast<objects::EventDirection>(
-        ctx.EventInstance->GetEvent());
+    auto e = GetEvent<objects::EventDirection>(ctx);
+    if(!e)
+    {
+        return false;
+    }
 
     libcomp::Packet p;
     p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_EVENT_DIRECTION);
@@ -3538,4 +3550,65 @@ bool EventManager::HandleTriFusion(const std::shared_ptr<
     }
 
     return true;
+}
+
+bool EventManager::PrepareTransformScript(EventContext& ctx,
+    std::shared_ptr<libcomp::ScriptEngine> engine)
+{
+    auto serverDataManager = mServer.lock()->GetServerDataManager();
+    auto e = ctx.EventInstance->GetEvent();
+    auto script = e
+        ? serverDataManager->GetScript(e->GetTransformScriptID()) : nullptr;
+    if(script && script->Type.ToLower() == "eventtransform")
+    {
+        // Bind some defaults
+        engine->Using<CharacterState>();
+        engine->Using<DemonState>();
+        engine->Using<EnemyState>();
+        engine->Using<Zone>();
+        engine->Using<libcomp::Randomizer>();
+
+        auto src = libcomp::String("local event;\n"
+            "function prepare(e) { event = e; return 0; }\n%1")
+            .Arg(script->Source);
+        if(engine->Eval(src))
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+bool EventManager::TransformEvent(EventContext& ctx,
+    std::shared_ptr<libcomp::ScriptEngine> engine)
+{
+    auto e = ctx.EventInstance->GetEvent();
+
+    Sqrat::Array sqParams(engine->GetVM());
+    for(libcomp::String p : e->GetTransformScriptParams())
+    {
+        sqParams.Append(p);
+    }
+
+    int32_t sourceEntityID = ctx.EventInstance->GetSourceEntityID();
+    auto zone = ctx.CurrentZone;
+    auto source = zone->GetActiveEntity(sourceEntityID);
+
+    auto client = ctx.Client;
+    auto state = client ? client->GetClientState() : nullptr;
+    if(!state)
+    {
+        state = ClientState::GetEntityClientState(sourceEntityID);
+    }
+
+    Sqrat::Function f(Sqrat::RootTable(engine->GetVM()), "transform");
+    auto scriptResult = !f.IsNull()
+        ? f.Evaluate<int32_t>(
+            source,
+            state ? state->GetCharacterState() : nullptr,
+            state ? state->GetDemonState() : nullptr,
+            zone,
+            sqParams) : 0;
+    return scriptResult && *scriptResult == 0;
 }

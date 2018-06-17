@@ -1137,6 +1137,8 @@ void Zone::EnableSpawnGroups(const std::set<uint32_t>& spawnGroupIDs)
     enabled.clear();
     for(uint32_t slgID : mDisabledSpawnLocationGroups)
     {
+        bool respawn = false;
+
         auto slg = GetDefinition()->GetSpawnLocationGroups(slgID);
         for(uint32_t sgID : slg->GetGroupIDs())
         {
@@ -1144,14 +1146,23 @@ void Zone::EnableSpawnGroups(const std::set<uint32_t>& spawnGroupIDs)
             {
                 enabled.insert(slgID);
 
-                if(slg->GetRespawnTime() > 0.f)
-                {
-                    uint64_t rTime = now + (uint64_t)(
-                        (double)slg->GetRespawnTime() * 1000000.0);
-                    mRespawnTimes[rTime].insert(slgID);
-                }
+                respawn = slg->GetRespawnTime() > 0.f;
                 break;
             }
+        }
+
+        if(respawn)
+        {
+            // Group respawns either immediately or after the respawn
+            // period starting from now
+            uint64_t rTime = now;
+            if(!slg->GetImmediateSpawn())
+            {
+                rTime = now + (uint64_t)(
+                    (double)slg->GetRespawnTime() * 1000000.0);
+            }
+
+            mRespawnTimes[rTime].insert(slgID);
         }
     }
 

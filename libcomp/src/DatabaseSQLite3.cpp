@@ -862,16 +862,19 @@ bool DatabaseSQLite3::ProcessOperationalChangeSet(const std::shared_ptr<
         }
     }
 
-    for(auto obj : objs)
+    if(result)
     {
-        auto bind = new DatabaseBindUUID("UID", obj->GetUUID());
-        result = nullptr != LoadSingleObject(
-            libcomp::PersistentObject::GetTypeHashByName(
-            obj->GetObjectMetadata()->GetName(), result), bind);
-
-        if(!result)
+        for(auto obj : objs)
         {
-            break;
+            auto bind = new DatabaseBindUUID("UID", obj->GetUUID());
+            result = nullptr != LoadSingleObject(
+                libcomp::PersistentObject::GetTypeHashByName(
+                obj->GetObjectMetadata()->GetName(), result), bind);
+
+            if(!result)
+            {
+                break;
+            }
         }
     }
 

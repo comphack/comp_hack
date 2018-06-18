@@ -38,8 +38,6 @@ namespace libcomp
 
 char *SERVICE_NAME = "COMP_hack Server";
 
-WindowsService gService;
-
 } // namespace libcomp
 
 int ApplicationMain(int argc, const char *argv[]);
@@ -48,12 +46,12 @@ VOID WINAPI ServiceCtrlHandler(DWORD);
 
 static int ServiceMain(int argc, const char *argv[])
 {
-    return gService.Run(argc, argv);
+    return gService->Run(argc, argv);
 }
 
 static VOID WINAPI ServiceCtrlHandler(DWORD CtrlCode)
 {
-    gService.HandleCtrlCode(CtrlCode);
+    gService->HandleCtrlCode(CtrlCode);
 }
 
 WindowsService::WindowsService() : mStatus({0}), mStatusHandle(NULL)
@@ -162,6 +160,8 @@ void WindowsService::HandleCtrlCode(DWORD CtrlCode)
 
 int main(int argc, const char *argv[])
 {
+    gService = new WindowsService;
+
     SERVICE_TABLE_ENTRY ServiceTable[] =
     {
         {

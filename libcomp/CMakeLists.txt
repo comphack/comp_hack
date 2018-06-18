@@ -112,7 +112,7 @@ SET(${PROJECT_NAME}_SRCS
     src/TcpServer.cpp
     #src/ThreadManager.cpp
     src/TimerManager.cpp
-    src/WindowsService.cpp
+    src/WindowsServiceLib.cpp
     src/Worker.cpp
 )
 

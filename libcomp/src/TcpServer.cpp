@@ -150,7 +150,10 @@ void TcpServer::ServerReady()
 #endif // HAVE_SYSTEMD
 
 #if defined(_WIN32) && defined(WIN32_SERV)
-    gService.Started();
+    if(gService)
+    {
+        gService->Started();
+    }
 #endif // defined(_WIN32) && defined(WIN32_SERV)
 }
 

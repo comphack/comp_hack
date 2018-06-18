@@ -1,10 +1,10 @@
 /**
- * @file libcomp/src/WindowsService.h
+ * @file libcomp/src/WindowsServiceLib.cpp
  * @ingroup libcomp
  *
  * @author COMP Omega <compomega@tutanota.com>
  *
- * @brief Class to expose the server as a Windows service.
+ * @brief Global for the service to be used by libcomp.
  *
  * This file is part of the COMP_hack Library (libcomp).
  *
@@ -24,37 +24,17 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef LIBCOMP_SRC_WINDOWSSERVICE_H
-#define LIBCOMP_SRC_WINDOWSSERVICE_H
+#include "WindowsService.h"
 
 #if defined(_WIN32) && defined(WIN32_SERV)
 
-// Windows Includes
-#include <windows.h>
+using namespace libcomp;
 
 namespace libcomp
 {
 
-extern char *SERVICE_NAME;
-
-class WindowsService
-{
-public:
-    WindowsService();
-
-    int Run(int argc, const char *argv[]);
-    void HandleCtrlCode(DWORD CtrlCode);
-    void Started();
-
-private:
-    SERVICE_STATUS mStatus = {0};
-    SERVICE_STATUS_HANDLE mStatusHandle;
-};
-
-extern WindowsService *gService;
+WindowsService *gService = nullptr;
 
 } // namespace libcomp
 
 #endif // defined(_WIN32) && defined(WIN32_SERV)
-
-#endif // LIBCOMP_SRC_WINDOWSSERVICE_H

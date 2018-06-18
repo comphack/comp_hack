@@ -40,6 +40,7 @@
 #include "PopIgnore.h"
 
 // Standard C++11 Includes
+#include <functional>
 #include <set>
 #include <unordered_map>
 

@@ -27,7 +27,6 @@
 #include "Object.h"
 
 // libcomp Includes
-#include <Log.h>
 #include <Packet.h>
 #include <PacketStream.h>
 #include <ReadOnlyPacket.h>
@@ -316,7 +315,8 @@ std::string Object::GetXml() const
 
 bool Object::SkipPadding(std::istream& stream, uint8_t count)
 {
-    stream.ignore(count);
+    //stream.ignore(count);
+    stream.seekg(count, std::istream::cur);
 
     return stream.good();
 }

@@ -100,7 +100,7 @@ before_script:
 script:
   - if [ "${COVERITY_SCAN_BRANCH}" != 1 ]; then jdk_switcher use oraclejdk8 ; fi
   - if [ "${COVERITY_SCAN_BRANCH}" != 1 ]; then java -version ; fi
-  - if [ "${COVERITY_SCAN_BRANCH}" != 1 ]; then mkdir -p build && cd build && cmake -DCOVERALLS=$COVERALLS_ENABLE -DBUILD_OPTIMIZED=OFF -DSINGLE_SOURCE_PACKETS=ON -DSINGLE_OBJGEN=ON -DUSE_COTIRE=ON -G "${GENERATOR}" .. && cmake --build . ; fi
+  - if [ "${COVERITY_SCAN_BRANCH}" != 1 ]; then mkdir -p build && cd build && cmake -DCOVERALLS=$COVERALLS_ENABLE -DBUILD_OPTIMIZED=OFF -DSINGLE_SOURCE_PACKETS=ON -DSINGLE_OBJGEN=ON -DUSE_COTIRE=ON -G "${GENERATOR}" .. && cmake --build . --target git-version && cmake --build . ; fi
   - if [ "${COVERITY_SCAN_BRANCH}" != 1 ]; then cmake --build . --target doc ; fi
   - if [ "${COVERITY_SCAN_BRANCH}" != 1 ]; then cmake --build . --target guide ; fi
 #  - if [ "${COVERITY_SCAN_BRANCH}" != 1 ]; then cmake --build . --target test ; fi

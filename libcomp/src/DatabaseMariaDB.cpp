@@ -203,7 +203,7 @@ bool DatabaseMariaDB::Setup(bool rebuild,
 
             for(auto file : files)
             {
-                if(file.Right(3) != ".sq")
+                if(file.Right(4) != ".nut")
                 {
                     continue;
                 }
@@ -215,7 +215,7 @@ bool DatabaseMariaDB::Setup(bool rebuild,
 
                 if(!query.IsValid() || !query.Bind("file", migration))
                 {
-                    LOG_ERROR("Filed to bind when checking for "
+                    LOG_ERROR("Failed to bind when checking for "
                         "migration.\n");
 
                     return false;

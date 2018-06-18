@@ -29,7 +29,7 @@ GENERATE_DOCS(doc/Doxyfile.in)
 FILE(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/objgen)
 
 SET(${PROJECT_NAME}_SRCS
-    ${CMAKE_SOURCE_DIR}/libcomp/src/WindowsService.cpp
+    ${CMAKE_SOURCE_DIR}/libcomp/src/WindowsServiceMain.cpp
 
     src/AccountManager.cpp
     src/CharacterManager.cpp

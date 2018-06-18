@@ -38,6 +38,8 @@ namespace libcomp
 
 char *SERVICE_NAME = "COMP_hack Server";
 
+WindowsService *gService = nullptr;
+
 } // namespace libcomp
 
 int ApplicationMain(int argc, const char *argv[]);
@@ -156,30 +158,6 @@ void WindowsService::HandleCtrlCode(DWORD CtrlCode)
         default:
             break;
     }
-}
-
-int main(int argc, const char *argv[])
-{
-    gService = new WindowsService;
-
-    SERVICE_TABLE_ENTRY ServiceTable[] =
-    {
-        {
-            SERVICE_NAME,
-            (LPSERVICE_MAIN_FUNCTION)ServiceMain
-        },
-        {
-            NULL,
-            NULL
-        }
-    };
-
-    if(!StartServiceCtrlDispatcher(ServiceTable))
-    {
-        return GetLastError();
-    }
-
-    return 0;
 }
 
 #endif // defined(_WIN32) && defined(WIN32_SERV)

@@ -30,11 +30,28 @@
 
 using namespace libcomp;
 
-namespace libcomp
+int main(int argc, const char *argv[])
 {
+    gService = new WindowsService;
 
-WindowsService *gService = nullptr;
+    SERVICE_TABLE_ENTRY ServiceTable[] =
+    {
+        {
+            SERVICE_NAME,
+            (LPSERVICE_MAIN_FUNCTION)ServiceMain
+        },
+        {
+            NULL,
+            NULL
+        }
+    };
 
-} // namespace libcomp
+    if(!StartServiceCtrlDispatcher(ServiceTable))
+    {
+        return GetLastError();
+    }
+
+    return 0;
+}
 
 #endif // defined(_WIN32) && defined(WIN32_SERV)

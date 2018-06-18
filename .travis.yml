@@ -60,8 +60,8 @@ before_install:
   - if [ ! -f ninja-linux.zip ]; then wget https://github.com/ninja-build/ninja/releases/download/v1.7.1/ninja-linux.zip; fi
   - if [ ! -f cmake-3.6.1-Linux-x86_64.tar.gz ]; then wget -q https://cmake.org/files/v3.6/cmake-3.6.1-Linux-x86_64.tar.gz; fi
   - if [ ! -f clang+llvm-3.8.0-x86_64-linux-gnu-ubuntu-14.04.tar.xz ]; then wget -q http://llvm.org/releases/3.8.0/clang+llvm-3.8.0-x86_64-linux-gnu-ubuntu-14.04.tar.xz; fi
-  - if [ ! -f external-0.1.1-clang.tar.bz2 ]; then wget -q https://github.com/comphack/external/releases/download/external-16/external-0.1.1-clang.tar.bz2; fi
-  - if [ ! -f external-0.1.1-gcc5.tar.bz2 ]; then wget -q https://github.com/comphack/external/releases/download/external-16/external-0.1.1-gcc5.tar.bz2; fi
+  - if [ ! -f external-0.1.1-clang.tar.bz2 ]; then wget -q https://github.com/comphack/external/releases/download/external-18/external-0.1.1-clang.tar.bz2; fi
+  - if [ ! -f external-0.1.1-gcc5.tar.bz2 ]; then wget -q https://github.com/comphack/external/releases/download/external-18/external-0.1.1-gcc5.tar.bz2; fi
   - ls -lh
   - cd ${ROOT_DIR}
   - sudo apt-get update -q
@@ -88,6 +88,8 @@ before_install:
   - if [ "$CXX" == "clang++" ]; then export PATH="/opt/clang+llvm-3.8.0-x86_64-linux-gnu-ubuntu-14.04/bin:${PATH}"; fi
   - if [ "$CXX" == "clang++" ]; then export LD_LIBRARY_PATH="/opt/clang+llvm-3.8.0-x86_64-linux-gnu-ubuntu-14.04/lib:${LD_LIBRARY_PATH}"; fi
   - if [ "$CXX" == "clang++" ]; then cd ${ROOT_DIR}; fi
+  - if [ "$CXX" == "clang++" ]; then export SINGLE_OBJGEN=ON; fi
+  - if [ "$CXX" != "clang++" ]; then export SINGLE_OBJGEN=OFF; fi
   - export CC="${COMPILER_CC}"
   - export CXX="${COMPILER_CXX}"
   - export GENERATOR="${CMAKE_GENERATOR}"
@@ -100,7 +102,7 @@ before_script:
 script:
   - if [ "${COVERITY_SCAN_BRANCH}" != 1 ]; then jdk_switcher use oraclejdk8 ; fi
   - if [ "${COVERITY_SCAN_BRANCH}" != 1 ]; then java -version ; fi
-  - if [ "${COVERITY_SCAN_BRANCH}" != 1 ]; then mkdir -p build && cd build && cmake -DCOVERALLS=$COVERALLS_ENABLE -DBUILD_OPTIMIZED=OFF -DSINGLE_SOURCE_PACKETS=ON -DSINGLE_OBJGEN=ON -DUSE_COTIRE=ON -G "${GENERATOR}" .. && cmake --build . --target git-version && cmake --build . ; fi
+  - if [ "${COVERITY_SCAN_BRANCH}" != 1 ]; then mkdir -p build && cd build && cmake -DCOVERALLS=$COVERALLS_ENABLE -DBUILD_OPTIMIZED=OFF -DSINGLE_SOURCE_PACKETS=ON -DSINGLE_OBJGEN=${SINGLE_OBJGEN} -DUSE_COTIRE=ON -G "${GENERATOR}" .. && cmake --build . --target git-version && cmake --build . ; fi
   - if [ "${COVERITY_SCAN_BRANCH}" != 1 ]; then cmake --build . --target doc ; fi
   - if [ "${COVERITY_SCAN_BRANCH}" != 1 ]; then cmake --build . --target guide ; fi
 #  - if [ "${COVERITY_SCAN_BRANCH}" != 1 ]; then cmake --build . --target test ; fi

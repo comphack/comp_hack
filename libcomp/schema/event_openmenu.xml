@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <objgen>
-    <object name="EventOpenMenu" baseobject="Event" persistent="false">
+    <object name="EventOpenMenu" baseobject="Event" persistent="false"
+        scriptenabled="true">
         <member type="enum" name="eventType" inherited="true" default="OPEN_MENU"/>
         <member type="s32" name="menuType"/>
         <member type="s32" name="shopID"/>

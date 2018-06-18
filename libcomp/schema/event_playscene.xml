@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <objgen>
-    <object name="EventPlayScene" baseobject="Event" persistent="false">
+    <object name="EventPlayScene" baseobject="Event" persistent="false"
+        scriptenabled="true">
         <member type="enum" name="eventType" inherited="true" default="PLAY_SCENE"/>
         <member type="s32" name="sceneID"/>
         <member type="s8" name="unknown"/>

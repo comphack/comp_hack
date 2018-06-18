@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <objgen>
-    <object name="ActionUpdateZoneFlags" baseobject="Action" persistent="false">
+    <object name="ActionUpdateZoneFlags" baseobject="Action" persistent="false"
+        scriptenabled="true">
         <member type="enum" name="actionType" inherited="true" default="UPDATE_ZONE_FLAGS"/>
         <member type="enum" name="type" underlying="uint8_t">
             <value>ZONE</value>

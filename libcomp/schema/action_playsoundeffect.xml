@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <objgen>
-    <object name="ActionPlaySoundEffect" baseobject="Action" persistent="false">
+    <object name="ActionPlaySoundEffect" baseobject="Action" persistent="false"
+        scriptenabled="true">
         <member type="enum" name="actionType" inherited="true" default="PLAY_SOUND_EFFECT"/>
         <member type="s32" name="soundID"/>
         <member type="s32" name="delay"/>

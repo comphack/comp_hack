@@ -777,6 +777,32 @@ std::shared_ptr<MetaVariable> MetaObjectXmlParser::GetVariable(const tinyxml2::X
             }
         }
 
+        const char *szMemberPadding = pMember->Attribute("pad");
+        if(nullptr != szMemberPadding)
+        {
+            std::stringstream ss(szMemberPadding);
+
+            int elemPadding = 0;
+            ss >> elemPadding;
+
+            if(ss && 0 < elemPadding)
+            {
+                var->SetPadding((unsigned char)elemPadding);
+            }
+            else
+            {
+                ss.clear();
+                ss << "Failed to parse member 'pad' in object '"
+                    << szName << "': " << var->GetError();
+
+                mError = ss.str();
+            }
+        }
+        else
+        {
+            var->SetPadding(0);
+        }
+
         if(var && var->Load(doc, *pMember))
         {
             retval = var;

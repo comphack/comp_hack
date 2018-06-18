@@ -1,22 +1,20 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <objgen>
-    <object name="EventNPCMessage" baseobject="Event" persistent="false">
+    <object name="EventNPCMessage" baseobject="Event" persistent="false"
+        scriptenabled="true">
         <member type="enum" name="eventType" inherited="true" default="NPC_MESSAGE"/>
         <member type="list" name="messageIDs">
             <element type="s32"/>
         </member>
-        <member type="s32" name="unknownDefault" default="170"/>
-        <member type="list" name="unknown">	<!-- Camera focus settings? -->
-            <element type="s32"/>
-        </member>
     </object>
-    <object name="EventExNPCMessage" baseobject="Event" persistent="false">
+    <object name="EventExNPCMessage" baseobject="Event" persistent="false"
+        scriptenabled="true">
         <member type="enum" name="eventType" inherited="true" default="EX_NPC_MESSAGE"/>
         <member type="s32" name="messageID"/>
-        <member type="s16" name="ex1"/>
-        <member type="s32" name="ex2"/>
+        <member type="s32" name="messageValue"/>
     </object>
-    <object name="EventMultitalk" baseobject="Event" persistent="false">
+    <object name="EventMultitalk" baseobject="Event" persistent="false"
+        scriptenabled="true">
         <member type="enum" name="eventType" inherited="true" default="MULTITALK"/>
         <member type="s32" name="messageID"/>
         <member type="bool" name="playerSource"/>

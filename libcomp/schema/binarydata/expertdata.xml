@@ -13,8 +13,7 @@
         </member>
     </object>
     <object name="MiExpertChainData" persistent="false">
-        <member type="u32" name="ID"/>
-        <member type="u16" name="unused"/>
+        <member type="u32" name="ID" pad="2"/>
         <member type="s16" name="rankRequired"/>
         <member type="float" name="chainPercent"/>
     </object>
@@ -26,8 +25,7 @@
             <element type="MiExpertClassData*"/>
         </member>
         <member type="bool" name="isChain"/>
-        <member type="u8" name="chainCount"/>
-        <member type="u16" name="unused"/>
+        <member type="u8" name="chainCount" pad="2"/>
         <member type="array" size="4" name="chainData">
             <element type="MiExpertChainData*"/>
         </member>

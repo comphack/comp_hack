@@ -3,12 +3,10 @@
     <object name="MiZoneBasicData" persistent="false" scriptenabled="true">
         <member type="u32" name="id" caps="true"/>
         <member type="string" name="name" encoding="cp932" length="36"/>
-        <member type="u8" name="type"/>
-        <member type="u8" name="unused1"/>
+        <member type="u8" name="type" pad="1"/>
         <member type="u16" name="flags"/>
         <member type="u32" name="parentID"/>
-        <member type="u32" name="startingSpot"/>
-        <member type="u32" name="unused2"/>
+        <member type="u32" name="startingSpot" pad="4"/>
     </object>
     <object name="MiZoneFileData" persistent="false" scriptenabled="true">
         <member type="string" length="36" name="modelFile"/>

@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <objgen>
-    <object name="EventPrompt" baseobject="Event" persistent="false">
+    <object name="EventPrompt" baseobject="Event" persistent="false"
+        scriptenabled="true">
         <member type="enum" name="eventType" inherited="true" default="PROMPT"/>
         <member type="s32" name="messageID"/>
         <member type="list" name="choices">
@@ -8,7 +9,8 @@
         </member>
         <member type="bool" name="playerSource"/>
     </object>
-    <object name="EventChoice" baseobject="EventSequence" persistent="false">
+    <object name="EventChoice" baseobject="EventSequence" persistent="false"
+        scriptenabled="true">
         <member type="s32" name="messageID"/>
     </object>
 </objgen>

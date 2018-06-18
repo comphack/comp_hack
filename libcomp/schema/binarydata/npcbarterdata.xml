@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <objgen>
     <object name="MiNPCBarterItemData" persistent="false">
-        <member type="enum" name="type" underlying="uint8_t">
+        <member type="enum" name="type" underlying="uint8_t" pad="3">
             <value num="0">NONE</value>
             <value num="1">ITEM</value>
             <value num="2">ONE_TIME_VALUABLE</value>
@@ -14,8 +14,6 @@
             <value num="14">PLUGIN</value>
             <value num="15">COIN</value>
         </member>
-        <member type="u8" name="unused1"/>
-        <member type="u16" name="unused2"/>
         <member type="s32" name="subtype"/>
         <member type="s32" name="amount"/>
     </object>

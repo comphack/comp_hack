@@ -7,10 +7,7 @@
     </object>
     <object name="MiDisassemblyData" persistent="false">
         <member type="u32" name="ID"/>
-        <member type="u32" name="itemID"/>
-        <member type="u8" name="unused1"/>
-        <member type="u8" name="unused2"/>
-        <member type="u16" name="unused3"/>
+        <member type="u32" name="itemID" pad="4"/>
         <member type="array" name="materials" size="8">
             <element type="MiDisassemblyMaterialData*"/>
         </member>

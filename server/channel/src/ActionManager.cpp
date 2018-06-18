@@ -31,6 +31,7 @@
 #include <DefinitionManager.h>
 #include <Log.h>
 #include <PacketCodes.h>
+#include <Randomizer.h>
 #include <ServerDataManager.h>
 
 // Standard C++11 Includes
@@ -94,15 +95,6 @@
 #include "ZoneManager.h"
 
 using namespace channel;
-
-struct channel::ActionContext
-{
-    std::shared_ptr<ChannelClientConnection> Client;
-    std::shared_ptr<objects::Action> Action;
-    int32_t SourceEntityID = 0;
-    uint32_t GroupID = 0;
-    std::shared_ptr<Zone> CurrentZone;
-};
 
 ActionManager::ActionManager(const std::weak_ptr<ChannelServer>& server)
     : mServer(server)
@@ -393,7 +385,11 @@ void ActionManager::PerformActions(
 
 bool ActionManager::StartEvent(ActionContext& ctx)
 {
-    auto act = std::dynamic_pointer_cast<objects::ActionStartEvent>(ctx.Action);
+    auto act = GetAction<objects::ActionStartEvent>(ctx, false);
+    if(!act)
+    {
+        return false;
+    }
 
     auto server = mServer.lock();
     auto eventManager = server->GetEventManager();
@@ -406,14 +402,11 @@ bool ActionManager::StartEvent(ActionContext& ctx)
 
 bool ActionManager::ZoneChange(ActionContext& ctx)
 {
-    if(!ctx.Client)
+    auto act = GetAction<objects::ActionZoneChange>(ctx, true);
+    if(!act)
     {
-        LOG_ERROR("Attempted to execute a zone change action with no"
-            " associated client connection\n");
         return false;
     }
-
-    auto act = std::dynamic_pointer_cast<objects::ActionZoneChange>(ctx.Action);
 
     auto server = mServer.lock();
     auto zoneManager = server->GetZoneManager();
@@ -513,14 +506,11 @@ bool ActionManager::ZoneChange(ActionContext& ctx)
 
 bool ActionManager::SetHomepoint(ActionContext& ctx)
 {
-    if(!ctx.Client)
+    auto act = GetAction<objects::ActionSetHomepoint>(ctx, true);
+    if(!act)
     {
-        LOG_ERROR("Attempted to execute a set homepoint action with no"
-            " associated client connection\n");
         return false;
     }
-
-    auto act = std::dynamic_pointer_cast<objects::ActionSetHomepoint>(ctx.Action);
     
     auto state = ctx.Client->GetClientState();
     auto cState = state->GetCharacterState();
@@ -566,14 +556,11 @@ bool ActionManager::SetHomepoint(ActionContext& ctx)
 
 bool ActionManager::AddRemoveItems(ActionContext& ctx)
 {
-    if(!ctx.Client)
+    auto act = GetAction<objects::ActionAddRemoveItems>(ctx, true);
+    if(!act)
     {
-        LOG_ERROR("Attempted to add or remove items with no associated"
-            " client connection\n");
         return false;
     }
-
-    auto act = std::dynamic_pointer_cast<objects::ActionAddRemoveItems>(ctx.Action);
 
     auto server = mServer.lock();
     auto characterManager = server->GetCharacterManager();
@@ -804,7 +791,11 @@ bool ActionManager::AddRemoveItems(ActionContext& ctx)
 
 bool ActionManager::AddRemoveStatus(ActionContext& ctx)
 {
-    auto act = std::dynamic_pointer_cast<objects::ActionAddRemoveStatus>(ctx.Action);
+    auto act = GetAction<objects::ActionAddRemoveStatus>(ctx, false);
+    if(!act)
+    {
+        return false;
+    }
 
     auto state = ctx.Client ? ctx.Client->GetClientState() : nullptr;
     auto server = mServer.lock();
@@ -894,14 +885,11 @@ bool ActionManager::AddRemoveStatus(ActionContext& ctx)
 
 bool ActionManager::UpdateCOMP(ActionContext& ctx)
 {
-    if(!ctx.Client)
+    auto act = GetAction<objects::ActionUpdateCOMP>(ctx, true);
+    if(!act)
     {
-        LOG_ERROR("Attempted to update COMP with no associated"
-            " client connection\n");
         return false;
     }
-
-    auto act = std::dynamic_pointer_cast<objects::ActionUpdateCOMP>(ctx.Action);
 
     auto server = mServer.lock();
     auto characterManager = server->GetCharacterManager();
@@ -1116,14 +1104,11 @@ bool ActionManager::UpdateCOMP(ActionContext& ctx)
 
 bool ActionManager::GrantXP(ActionContext& ctx)
 {
-    if(!ctx.Client)
+    auto act = GetAction<objects::ActionGrantXP>(ctx, true);
+    if(!act)
     {
-        LOG_ERROR("Attempted to grant XP with no associated"
-            " client connection\n");
         return false;
     }
-
-    auto act = std::dynamic_pointer_cast<objects::ActionGrantXP>(ctx.Action);
 
     auto characterManager = mServer.lock()->GetCharacterManager();
     auto state = ctx.Client->GetClientState();
@@ -1162,14 +1147,11 @@ bool ActionManager::GrantXP(ActionContext& ctx)
 
 bool ActionManager::GrantSkills(ActionContext& ctx)
 {
-    if(!ctx.Client)
+    auto act = GetAction<objects::ActionGrantSkills>(ctx, true);
+    if(!act)
     {
-        LOG_ERROR("Attempted to grant skills with no associated"
-            " client connection\n");
         return false;
     }
-
-    auto act = std::dynamic_pointer_cast<objects::ActionGrantSkills>(ctx.Action);
 
     auto server = mServer.lock();
     auto characterManager = server->GetCharacterManager();
@@ -1273,14 +1255,11 @@ bool ActionManager::GrantSkills(ActionContext& ctx)
 
 bool ActionManager::DisplayMessage(ActionContext& ctx)
 {
-    if(!ctx.Client)
+    auto act = GetAction<objects::ActionDisplayMessage>(ctx, true);
+    if(!act)
     {
-        LOG_ERROR("Attempted to execute a display message action with no"
-            " associated client connection\n");
         return false;
     }
-
-    auto act = std::dynamic_pointer_cast<objects::ActionDisplayMessage>(ctx.Action);
 
     libcomp::Packet p;
     p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_EVENT_MESSAGE);
@@ -1300,14 +1279,11 @@ bool ActionManager::DisplayMessage(ActionContext& ctx)
 
 bool ActionManager::StageEffect(ActionContext& ctx)
 {
-    if(!ctx.Client)
+    auto act = GetAction<objects::ActionStageEffect>(ctx, true);
+    if(!act)
     {
-        LOG_ERROR("Attempted to execute a stage effect action with no"
-            " associated client connection\n");
         return false;
     }
-
-    auto act = std::dynamic_pointer_cast<objects::ActionStageEffect>(ctx.Action);
 
     libcomp::Packet p;
     p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_EVENT_STAGE_EFFECT);
@@ -1339,14 +1315,11 @@ bool ActionManager::StageEffect(ActionContext& ctx)
 
 bool ActionManager::SpecialDirection(ActionContext& ctx)
 {
-    if(!ctx.Client)
+    auto act = GetAction<objects::ActionSpecialDirection>(ctx, true);
+    if(!act)
     {
-        LOG_ERROR("Attempted to execute a special direction action with no"
-            " associated client connection\n");
         return false;
     }
-
-    auto act = std::dynamic_pointer_cast<objects::ActionSpecialDirection>(ctx.Action);
 
     libcomp::Packet p;
     p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_EVENT_SPECIAL_DIRECTION);
@@ -1361,14 +1334,11 @@ bool ActionManager::SpecialDirection(ActionContext& ctx)
 
 bool ActionManager::PlayBGM(ActionContext& ctx)
 {
-    if(!ctx.Client)
+    auto act = GetAction<objects::ActionPlayBGM>(ctx, true);
+    if(!act)
     {
-        LOG_ERROR("Attempted to execute a play BGM action with no"
-            " associated client connection\n");
         return false;
     }
-
-    auto act = std::dynamic_pointer_cast<objects::ActionPlayBGM>(ctx.Action);
 
     libcomp::Packet p;
 
@@ -1392,14 +1362,11 @@ bool ActionManager::PlayBGM(ActionContext& ctx)
 
 bool ActionManager::PlaySoundEffect(ActionContext& ctx)
 {
-    if(!ctx.Client)
+    auto act = GetAction<objects::ActionPlaySoundEffect>(ctx, true);
+    if(!act)
     {
-        LOG_ERROR("Attempted to execute a play sound effect action with no"
-            " associated client connection\n");
         return false;
     }
-
-    auto act = std::dynamic_pointer_cast<objects::ActionPlaySoundEffect>(ctx.Action);
     
     libcomp::Packet p;
     p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_EVENT_PLAY_SOUND_EFFECT);
@@ -1413,9 +1380,12 @@ bool ActionManager::PlaySoundEffect(ActionContext& ctx)
 
 bool ActionManager::SetNPCState(ActionContext& ctx)
 {
-    auto act = std::dynamic_pointer_cast<objects::ActionSetNPCState>(ctx.Action);
-
-    if(act->GetSourceClientOnly() && ctx.Client == nullptr)
+    auto act = GetAction<objects::ActionSetNPCState>(ctx, false);
+    if(!act)
+    {
+        return false;
+    }
+    else if(!ctx.Client && act->GetSourceClientOnly())
     {
         LOG_ERROR("Source client NPC state change requested but no"
             " source client exists in the current context!\n");
@@ -1522,14 +1492,12 @@ bool ActionManager::SetNPCState(ActionContext& ctx)
 
 bool ActionManager::UpdateFlag(ActionContext& ctx)
 {
-    if(!ctx.Client)
+    auto act = GetAction<objects::ActionUpdateFlag>(ctx, true);
+    if(!act)
     {
-        LOG_ERROR("Attempted to execute a player flag update action with no"
-            " associated client connection\n");
         return false;
     }
 
-    auto act = std::dynamic_pointer_cast<objects::ActionUpdateFlag>(ctx.Action);
     auto characterManager = mServer.lock()->GetCharacterManager();
 
     switch(act->GetFlagType())
@@ -1556,14 +1524,12 @@ bool ActionManager::UpdateFlag(ActionContext& ctx)
 
 bool ActionManager::UpdateLNC(ActionContext& ctx)
 {
-    if(!ctx.Client)
+    auto act = GetAction<objects::ActionUpdateLNC>(ctx, true);
+    if(!act)
     {
-        LOG_ERROR("Attempted to execute a player LNC update action with no"
-            " associated client connection\n");
         return false;
     }
 
-    auto act = std::dynamic_pointer_cast<objects::ActionUpdateLNC>(ctx.Action);
     auto character = ctx.Client->GetClientState()->GetCharacterState()
         ->GetEntity();
     auto characterManager = mServer.lock()->GetCharacterManager();
@@ -1585,14 +1551,12 @@ bool ActionManager::UpdateLNC(ActionContext& ctx)
 
 bool ActionManager::UpdatePoints(ActionContext& ctx)
 {
-    if(!ctx.Client)
+    auto act = GetAction<objects::ActionUpdatePoints>(ctx, true);
+    if(!act)
     {
-        LOG_ERROR("Attempted to execute an update points action with no"
-            " associated client connection\n");
         return false;
     }
 
-    auto act = std::dynamic_pointer_cast<objects::ActionUpdatePoints>(ctx.Action);
     switch(act->GetPointType())
     {
     case objects::ActionUpdatePoints::PointType_t::CP:
@@ -1637,14 +1601,12 @@ bool ActionManager::UpdatePoints(ActionContext& ctx)
 
 bool ActionManager::UpdateQuest(ActionContext& ctx)
 {
-    if(!ctx.Client)
+    auto act = GetAction<objects::ActionUpdateQuest>(ctx, true);
+    if(!act)
     {
-        LOG_ERROR("Attempted to execute a quest update action with no"
-            " associated client connection\n");
         return false;
     }
 
-    auto act = std::dynamic_pointer_cast<objects::ActionUpdateQuest>(ctx.Action);
     auto server = mServer.lock();
     auto eventManager = server->GetEventManager();
 
@@ -1693,7 +1655,11 @@ bool ActionManager::UpdateQuest(ActionContext& ctx)
 
 bool ActionManager::UpdateZoneFlags(ActionContext& ctx)
 {
-    auto act = std::dynamic_pointer_cast<objects::ActionUpdateZoneFlags>(ctx.Action);
+    auto act = GetAction<objects::ActionUpdateZoneFlags>(ctx, false);
+    if(!act)
+    {
+        return false;
+    }
 
     // Determine if it affects the current character or the whole zone
     int32_t worldCID = 0;
@@ -1816,14 +1782,12 @@ bool ActionManager::UpdateZoneFlags(ActionContext& ctx)
 
 bool ActionManager::UpdateZoneInstance(ActionContext& ctx)
 {
-    if(!ctx.Client)
+    auto act = GetAction<objects::ActionZoneInstance>(ctx, true);
+    if(!act)
     {
-        LOG_ERROR("Attempted to execute a zone instance update action with no"
-            " associated client connection\n");
         return false;
     }
 
-    auto act = std::dynamic_pointer_cast<objects::ActionZoneInstance>(ctx.Action);
     auto server = mServer.lock();
     auto zoneManager = server->GetZoneManager();
 
@@ -1974,7 +1938,12 @@ bool ActionManager::UpdateZoneInstance(ActionContext& ctx)
 
 bool ActionManager::Spawn(ActionContext& ctx)
 {
-    auto act = std::dynamic_pointer_cast<objects::ActionSpawn>(ctx.Action);
+    auto act = GetAction<objects::ActionSpawn>(ctx, false);
+    if(!act)
+    {
+        return false;
+    }
+
     auto server = mServer.lock();
     auto zoneManager = server->GetZoneManager();
 
@@ -1998,7 +1967,11 @@ bool ActionManager::Spawn(ActionContext& ctx)
 
 bool ActionManager::CreateLoot(ActionContext& ctx)
 {
-    auto act = std::dynamic_pointer_cast<objects::ActionCreateLoot>(ctx.Action);
+    auto act = GetAction<objects::ActionCreateLoot>(ctx, false);
+    if(!act)
+    {
+        return false;
+    }
 
     auto server = mServer.lock();
     auto characterManager = server->GetCharacterManager();
@@ -2172,4 +2145,78 @@ bool ActionManager::RecordTimeTrial(ActionContext& ctx, uint32_t rewardItem,
     }
 
     return true;
+}
+
+bool ActionManager::VerifyClient(ActionContext& ctx,
+    const libcomp::String& typeName)
+{
+    if(!ctx.Client)
+    {
+        LOG_ERROR(libcomp::String("Attempted to execute a %1 with no"
+            " associated client connection\n").Arg(typeName));
+        return false;
+    }
+
+    return true;
+}
+
+bool ActionManager::PrepareTransformScript(ActionContext& ctx,
+    std::shared_ptr<libcomp::ScriptEngine> engine)
+{
+    auto serverDataManager = mServer.lock()->GetServerDataManager();
+    auto act = ctx.Action;
+    auto script = act
+        ? serverDataManager->GetScript(act->GetTransformScriptID()) : nullptr;
+    if(script && script->Type.ToLower() == "actiontransform")
+    {
+        // Bind some defaults
+        engine->Using<CharacterState>();
+        engine->Using<DemonState>();
+        engine->Using<EnemyState>();
+        engine->Using<Zone>();
+        engine->Using<libcomp::Randomizer>();
+
+        auto src = libcomp::String("local action;\n"
+            "function prepare(a) { action = a; return 0; }\n%1")
+            .Arg(script->Source);
+        if(engine->Eval(src))
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+bool ActionManager::TransformAction(ActionContext& ctx,
+    std::shared_ptr<libcomp::ScriptEngine> engine)
+{
+    auto act = ctx.Action;
+
+    Sqrat::Array sqParams(engine->GetVM());
+    for(libcomp::String p : act->GetTransformScriptParams())
+    {
+        sqParams.Append(p);
+    }
+
+    int32_t sourceEntityID = ctx.SourceEntityID;
+    auto zone = ctx.CurrentZone;
+    auto source = zone->GetActiveEntity(sourceEntityID);
+
+    auto client = ctx.Client;
+    auto state = client ? client->GetClientState() : nullptr;
+    if(!state)
+    {
+        state = ClientState::GetEntityClientState(sourceEntityID);
+    }
+
+    Sqrat::Function f(Sqrat::RootTable(engine->GetVM()), "transform");
+    auto scriptResult = !f.IsNull()
+        ? f.Evaluate<int32_t>(
+            source,
+            state ? state->GetCharacterState() : nullptr,
+            state ? state->GetDemonState() : nullptr,
+            zone,
+            sqParams) : 0;
+    return scriptResult && *scriptResult == 0;
 }

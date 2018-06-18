@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <objgen>
-    <object name="ActionCreateLoot" baseobject="Action" persistent="false">
+    <object name="ActionCreateLoot" baseobject="Action" persistent="false"
+        scriptenabled="true">
         <member type="enum" name="actionType" inherited="true" default="CREATE_LOOT"/>
         <member type="list" name="drops">
             <element type="ItemDrop*"/>

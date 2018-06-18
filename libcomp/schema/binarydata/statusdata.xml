@@ -8,8 +8,7 @@
         <member type="u8" name="applicationLogic"/>
         <member type="u8" name="unknown"/>
         <member type="u16" name="groupID"/>
-        <member type="u8" name="groupRank"/>
-        <member type="u8" name="unused"/>
+        <member type="u8" name="groupRank" pad="1"/>
         <member type="u32" name="functionID"/>
     </object>
     <object name="MiDoTDamageData" persistent="false">
@@ -30,8 +29,7 @@
             <value num="5">DAY_SET</value>
             <value num="6">MS_SET</value>
         </member>
-        <member type="u8" name="cancelTypes"/>
-        <member type="u16" name="unused"/>
+        <member type="u8" name="cancelTypes" pad="2"/>
     </object>
     <object name="MiStatusData" persistent="false">
         <member type="MiSkillItemStatusCommonData*" name="common"/>

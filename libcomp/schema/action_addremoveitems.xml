@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <objgen>
-    <object name="ActionAddRemoveItems" baseobject="Action" persistent="false">
+    <object name="ActionAddRemoveItems" baseobject="Action" persistent="false"
+        scriptenabled="true">
         <member type="enum" name="actionType" inherited="true" default="ADD_REMOVE_ITEMS"/>
         <member type="bool" name="notify"/>
         <member type="map" name="items">

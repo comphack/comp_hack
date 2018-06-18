@@ -30,14 +30,21 @@
 
 // libcomp Includes
 #include <EnumMap.h>
+#include <ScriptEngine.h>
 
 // object Includes
 #include <DemonQuest.h>
 #include <Event.h>
 #include <EventCondition.h>
+#include <EventInstance.h>
 
 // channel Includes
 #include "ChannelClientConnection.h"
+
+namespace libcomp
+{
+class ScriptEngine;
+}
 
 namespace objects
 {
@@ -51,10 +58,7 @@ typedef objects::EventCondition::CompareMode_t EventCompareMode;
 namespace channel
 {
 
-struct EventContext;
-
 class ChannelServer;
-class Zone;
 
 /**
  * Manager class in charge of processing event sequences as well as quest
@@ -223,6 +227,13 @@ public:
         const std::shared_ptr<objects::EventInstance>& instance);
 
 private:
+    struct EventContext
+    {
+        std::shared_ptr<ChannelClientConnection> Client;
+        std::shared_ptr<Zone> CurrentZone;
+        std::shared_ptr<objects::EventInstance> EventInstance;
+    };
+
     /**
      * Handle an event instance by branching into the appropriate handler
      * function after updating the character's overhead icon if needed
@@ -416,6 +427,70 @@ private:
      * @return true on success, false on failure
      */
     bool HandleTriFusion(const std::shared_ptr<ChannelClientConnection>& client);
+
+    /**
+     * Get the event from the supplied context converted to the proper type.
+     * If the event is configured with a transformation script, a transformed
+     * copy will be returned and set on the context.
+     * @param ctx Execution context of the event
+     * @return true on success, false on failure
+     */
+    template <class T>
+    std::shared_ptr<T> GetEvent(EventContext& ctx)
+    {
+        auto inst = ctx.EventInstance;
+        auto e = inst->GetEvent();
+        auto ptr = std::dynamic_pointer_cast<T>(e);
+        if(ptr && !ptr->GetTransformScriptID().IsEmpty())
+        {
+            // Make a copy and transform
+            ptr = std::make_shared<T>(*ptr);
+
+            auto engine = std::make_shared<libcomp::ScriptEngine>();
+            engine->Using<T>();
+            if(PrepareTransformScript(ctx, engine))
+            {
+                // Store the event for transformation
+                Sqrat::Function f(Sqrat::RootTable(engine->GetVM()),
+                    "prepare");
+                auto scriptResult = !f.IsNull() ? f.Evaluate<int32_t>(ptr) : 0;
+
+                // Apply the transformation
+                if(scriptResult && *scriptResult == 0 &&
+                    TransformEvent(ctx, engine))
+                {
+                    // Set new event
+                    inst->SetEvent(ptr);
+                    return ptr;
+                }
+            }
+
+            // Return failure
+            return nullptr;
+        }
+
+        return ptr;
+    }
+
+    /**
+     * Prepare the transformation script from the event on the supplied
+     * script engine.
+     * @param ctx Execution context of the event
+     * @param engine Script engine to prepare the script for
+     * @return true on success, false on failure
+     */
+    bool PrepareTransformScript(EventContext& ctx,
+        std::shared_ptr<libcomp::ScriptEngine> engine);
+
+    /**
+     * Finish preparing and execute the tranformation script configured
+     * for the event.
+     * @param ctx Execution context of the event
+     * @param engine Script engine to execute the script using
+     * @return true on success, false on failure
+     */
+    bool TransformEvent(EventContext& ctx,
+        std::shared_ptr<libcomp::ScriptEngine> engine);
 
     /// Pointer to the channel server.
     std::weak_ptr<ChannelServer> mServer;

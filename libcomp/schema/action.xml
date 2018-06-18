@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <objgen>
-    <object name="Action" scriptenabled="true" persistent="false" inherited-construction="true">
+    <object name="Action" scriptenabled="true" persistent="false"
+        inherited-construction="true">
         <member type="enum" name="actionType" default="ZONE_CHANGE">
             <value>ZONE_CHANGE</value>
             <value>START_EVENT</value>
@@ -38,5 +39,9 @@
         </member>
         <member type="bool" name="stopOnFailure" default="true"/>
         <member type="string" name="onFailureEvent"/>
+        <member type="string" name="transformScriptID"/>
+        <member type="list" name="transformScriptParams">
+            <element type="string"/>
+        </member>
     </object>
 </objgen>

@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <objgen>
-    <object name="ActionDisplayMessage" baseobject="Action" persistent="false">
+    <object name="ActionDisplayMessage" baseobject="Action" persistent="false"
+        scriptenabled="true">
         <member type="enum" name="actionType" inherited="true" default="DISPLAY_MESSAGE"/>
         <member type="list" name="messageIDs">
             <element type="s32"/>

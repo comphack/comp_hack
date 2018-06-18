@@ -2,8 +2,7 @@
 <objgen>
     <object name="MiExchangeObjectData" persistent="false">
         <member type="u32" name="ID"/>
-        <member type="u16" name="stackSize"/>
-        <member type="u16" name="unused"/>
+        <member type="u16" name="stackSize" pad="2"/>
     </object>
     <object name="MiExchangeOptionData" persistent="false">
         <member type="string" length="68" name="name"/>

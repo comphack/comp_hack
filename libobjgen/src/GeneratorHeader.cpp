@@ -58,7 +58,7 @@ std::string GeneratorHeader::GenerateClass(const MetaObject& obj)
     }
     ss << "{" << std::endl;
     ss << "public:" << std::endl;
-    
+
     // Print defitions for any enums we have
     for(auto it = obj.VariablesBegin(); it != obj.VariablesEnd(); ++it)
     {
@@ -199,7 +199,7 @@ std::string GeneratorHeader::Generate(const MetaObject& obj)
     ss << "#include <CString.h>" << std::endl;
 
     auto references = obj.GetReferencesTypes(true);
-    if(references.size() > 0)
+    if(references.size() > 0 || obj.IsScriptEnabled())
     {
         ss << "#include <ObjectReference.h>" << std::endl;
     }

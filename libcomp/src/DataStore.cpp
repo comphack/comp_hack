@@ -29,6 +29,7 @@
 #include "DataFile.h"
 #include "Decrypt.h"
 #include "Log.h"
+#include "ScriptEngine.h"
 
 // Standard C++11 Includes
 #include <limits>
@@ -399,4 +400,25 @@ libcomp::String DataStore::GetHash(const libcomp::String& path)
     }
 
     return {};
+}
+
+namespace libcomp
+{
+    template<>
+    ScriptEngine& ScriptEngine::Using<DataStore>()
+    {
+        if(!BindingExists("DataStore"))
+        {
+            Sqrat::Class<DataStore, Sqrat::NoConstructor<DataStore>> binding(
+                mVM, "DataStore");
+            Bind<DataStore>("DataStore", binding);
+
+            binding
+                .Func("GetError", &DataStore::GetError)
+                .Func("Exists", &DataStore::Exists)
+                ; // Last call to binding
+        }
+
+        return *this;
+    }
 }

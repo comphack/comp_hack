@@ -87,7 +87,10 @@ public:
      * @return true if it exists, false if it does not
      */
     virtual bool Exists();
-    virtual bool Setup(bool rebuild = false);
+    virtual bool Setup(bool rebuild = false,
+        const std::shared_ptr<BaseServer>& server = {},
+        DataStore *pDataStore = nullptr,
+        const std::string& migrationDirectory = std::string());
     virtual bool Use();
 
     virtual std::list<std::shared_ptr<PersistentObject>> LoadObjects(
@@ -96,6 +99,8 @@ public:
     virtual bool InsertSingleObject(std::shared_ptr<PersistentObject>& obj);
     virtual bool UpdateSingleObject(std::shared_ptr<PersistentObject>& obj);
     virtual bool DeleteObjects(std::list<std::shared_ptr<PersistentObject>>& objs);
+
+    virtual bool TableExists(const libcomp::String& table);
 
     /**
      * Verify/create any missing tables based off of @ref PersistentObject

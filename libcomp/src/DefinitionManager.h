@@ -195,7 +195,7 @@ public:
      * @return Pointer to the matching devil definition, null if it does
      *  not exist
      */
-    const std::shared_ptr<objects::MiDevilData> GetDevilData(uint32_t id);
+    std::shared_ptr<objects::MiDevilData> GetDevilData(uint32_t id);
 
     /**
      * Get a devil definition corresponding to a name
@@ -686,7 +686,7 @@ public:
      * @param pDataStore Pointer to the datastore to load binary files from
      * @return true on success, false on failure
      */
-    bool LoadAllData(gsl::not_null<DataStore*> pDataStore);
+    bool LoadAllData(DataStore *pDataStore);
 
     /**
      * Load the binary data definitions of the specified type

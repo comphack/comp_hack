@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <objgen>
-    <object name="Account">
+    <object name="Account" scriptenabled="true">
         <member type="string" name="Username" key="true"/>
         <member type="string" name="DisplayName"/>
         <member type="string" name="Email" key="true"/>
@@ -16,7 +16,7 @@
             <element type="Character*"/>
         </member>
     </object>
-    <object name="PostItem">
+    <object name="PostItem" scriptenabled="true">
         <member type="u32" name="Type"/>
         <member type="Account*" name="Account" key="true" unique="false"/>
         <member type="enum" name="Source" underlying="int8_t" default="NORMAL">
@@ -32,7 +32,7 @@
         <member type="string" name="FromName"/>
         <member type="string" name="GiftMessage"/>
     </object>
-    <object name="AccountWorldData" location="world">
+    <object name="AccountWorldData" location="world" scriptenabled="true">
         <member type="Account*" name="Account" key="true" unique="true"/>
 
         <member type="array" name="DemonBoxes" size="10">
@@ -49,7 +49,7 @@
 
         <member type="bool" name="CleanupRequired" key="true" unique="false"/>
     </object>
-    <object name="BazaarData" location="world">
+    <object name="BazaarData" location="world" scriptenabled="true">
         <member type="Account*" name="Account" key="true" unique="true"/>
         <member type="Character*" name="Character"/>
         <member type="u32" name="Zone" key="true" unique="false"/>
@@ -67,7 +67,7 @@
             <element type="BazaarItem*"/>
         </member>
     </object>
-    <object name="BazaarItem" location="world">
+    <object name="BazaarItem" location="world" scriptenabled="true">
         <member type="Item*" name="Item" key="true" unique="true"/>
         <member type="Account*" name="Account" key="true" unique="false"/>
         <member type="u32" name="Type"/>

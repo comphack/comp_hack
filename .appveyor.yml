@@ -15,6 +15,7 @@ configuration:
 
 install:
   - cinst doxygen.portable
+  - cinst doxygen.portable graphviz.portable
 
 init:
   - if %platform%==x64 (set CMAKE_PREFIX_PATH=C:\Qt\5.10.1\msvc2015_64) else (set CMAKE_PREFIX_PATH=C:\Qt\5.10.1\msvc2015)

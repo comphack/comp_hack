@@ -44,6 +44,7 @@ namespace libcomp
 class Database;
 class DatabaseBind;
 class DatabaseQuery;
+class ScriptEngine;
 
 /**
  * Base class of a all dynamically generated objects that persist in the
@@ -53,6 +54,8 @@ class DatabaseQuery;
  */
 class PersistentObject : public Object
 {
+    friend class ScriptEngine;
+
 public:
     /// Map of MetaObject definitions by the source object's C++ type hash
     typedef std::unordered_map<size_t,
@@ -211,7 +214,14 @@ public:
      * @param result true if the type is registered, false if it is not
      * @return C++ type hash matching the supplied name
      */
-    static size_t GetTypeHashByName(std::string name, bool& result);
+    static size_t GetTypeHashByName(const std::string& name, bool& result);
+
+    /**
+     * Get the C++ type hash by the associated object type's name.
+     * @param name Name of a persistent object type
+     * @return C++ type hash matching the supplied name
+     */
+    static size_t GetTypeHashByName(const std::string& name);
 
     /**
      * Get the PersistentObject of the specified type's MetaObject definition.
@@ -338,6 +348,15 @@ protected:
         const std::shared_ptr<Database>& db, DatabaseBind *pValue);
 
     /**
+     * Load an object from the database from a field database binding.
+     * @param typeHash C++ type hash representing the object type to load
+     * @param db Database to load from
+     * @return Pointer to the object or nullptr if it doesn't exist
+     */
+    static std::shared_ptr<PersistentObject> LoadObject(size_t typeHash,
+        const std::shared_ptr<Database>& db);
+
+    /**
      * Load multiple objects from the database from a field database binding.
      * @param typeHash C++ type hash representing the object type to load
      * @param db Database to load from
@@ -347,6 +366,15 @@ protected:
     static std::list<std::shared_ptr<PersistentObject>> LoadObjects(
         size_t typeHash, const std::shared_ptr<Database>& db,
         DatabaseBind *pValue);
+
+    /**
+     * Load multiple objects from the database from a field database binding.
+     * @param typeHash C++ type hash representing the object type to load
+     * @param db Database to load from
+     * @return List of pointers objects
+     */
+    static std::list<std::shared_ptr<PersistentObject>> LoadObjects(
+        size_t typeHash, const std::shared_ptr<Database>& db);
 
     /// Static value to be set to true if any PersistentObject type fails
     /// to register itself at runtime

@@ -27,8 +27,10 @@
 #include "DatabaseMariaDB.h"
 
 // libcomp Includes
+#include "BaseServer.h"
 #include "DatabaseBind.h"
 #include "DatabaseQueryMariaDB.h"
+#include "DataStore.h"
 #include "Log.h"
 
 // config-win.h and my_global.h redefine bool unless explicitly defined
@@ -113,7 +115,9 @@ bool DatabaseMariaDB::Exists()
     return q.GetRows(results) && results.size() > 0;
 }
 
-bool DatabaseMariaDB::Setup(bool rebuild)
+bool DatabaseMariaDB::Setup(bool rebuild,
+    const std::shared_ptr<BaseServer>& server, DataStore *pDataStore,
+    const std::string& migrationDirectory)
 {
     if(!IsOpen())
     {
@@ -166,6 +170,109 @@ bool DatabaseMariaDB::Setup(bool rebuild)
         LOG_ERROR("Schema verification and setup failed.\n");
 
         return false;
+    }
+
+    if(!TableExists("Migrations"))
+    {
+        std::stringstream ss;
+        ss << "CREATE TABLE `Migrations` "
+            << "(`Migration` varchar(256) PRIMARY KEY);";
+
+        if(Execute(ss.str()))
+        {
+            LOG_DEBUG("Migration table created.\n");
+        }
+        else
+        {
+            LOG_ERROR("Failed to create the migration table!\n");
+
+            return false;
+        }
+    }
+
+    // Handle migrations if the data store exists.
+    if(pDataStore)
+    {
+        std::list<libcomp::String> files;
+        std::list<libcomp::String> dirs;
+        std::list<libcomp::String> symLinks;
+
+        if(pDataStore->GetListing(migrationDirectory, files, dirs, symLinks))
+        {
+            files.sort();
+
+            for(auto file : files)
+            {
+                if(file.Right(3) != ".sq")
+                {
+                    continue;
+                }
+
+                libcomp::String migration = file.Left(file.Length() - 3);
+
+                auto query = Prepare("SELECT COUNT(`Migration`) FROM "
+                    "`Migrations` WHERE `Migration` = :file");
+
+                if(!query.IsValid() || !query.Bind("file", migration))
+                {
+                    LOG_ERROR("Filed to bind when checking for "
+                        "migration.\n");
+
+                    return false;
+                }
+
+                if(!query.Execute() || !query.Next())
+                {
+                    LOG_ERROR("Failed to execute query when checking for "
+                        "migration.\n");
+
+                    return false;
+                }
+
+                int64_t count = 0;
+
+                if(!query.GetValue("COUNT(`Migration`)", count))
+                {
+                    LOG_ERROR("Failed to get value from query when checking "
+                        "for migration.\n");
+                    LOG_DEBUG(GetLastError());
+
+                    return false;
+                }
+
+                auto path = libcomp::String("%1/%2").Arg(
+                    migrationDirectory).Arg(file);
+
+                if(!count)
+                {
+                    if(ApplyMigration(server, pDataStore, migration, path))
+                    {
+                        query = Prepare("INSERT INTO `Migrations` (`Migration`) "
+                            "VALUES(:file)");
+
+                        if(!query.IsValid() ||
+                            !query.Bind("file", migration) ||
+                            !query.Execute())
+                        {
+                            LOG_ERROR("Failed to insert migration into "
+                                "database.\n");
+
+                            return false;
+                        }
+                    }
+                    else
+                    {
+                        return false;
+                    }
+                }
+            }
+        }
+        else
+        {
+            LOG_ERROR("Migration directory does not exist!\n");
+
+            return false;
+        }
     }
 
     return true;
@@ -591,7 +698,7 @@ bool DatabaseMariaDB::VerifyAndSetupSchema(bool recreateTables)
 
                 LOG_DEBUG(String("Dropping table '%1'...\n")
                     .Arg(metaObject.GetName()));
-            
+
                 if(Execute(String("DROP TABLE `%1`;").Arg(objName)))
                 {
                     LOG_DEBUG("Re-creation complete\n");
@@ -654,7 +761,7 @@ bool DatabaseMariaDB::VerifyAndSetupSchema(bool recreateTables)
             bool hashExists;
             size_t typeHash = PersistentObject::GetTypeHashByName(
                 metaObject.GetName(), hashExists);
-            
+
             auto emptyObj = PersistentObject::New(typeHash);
 
             std::unordered_map<std::string, DatabaseBind*> defaultVals;
@@ -708,7 +815,7 @@ bool DatabaseMariaDB::VerifyAndSetupSchema(bool recreateTables)
                 }
             }
         }
-        
+
         //If we made the table or are missing an index, make them now
         if(needsIndex.size() > 0 || creating)
         {
@@ -785,7 +892,7 @@ bool DatabaseMariaDB::ProcessStandardChangeSet(const std::shared_ptr<
             break;
         }
     }
-    
+
     if(result)
     {
         for(auto obj : changes->GetUpdates())
@@ -835,7 +942,7 @@ bool DatabaseMariaDB::ProcessOperationalChangeSet(const std::shared_ptr<
     {
         return false;
     }
-    
+
     bool result = true;
     std::set<std::shared_ptr<libcomp::PersistentObject>> objs;
     for(auto op : changes->GetOperations())
@@ -923,7 +1030,7 @@ bool DatabaseMariaDB::ProcessExplicitUpdate(const std::shared_ptr<
     }
 
     auto uidIdx = idx++;
-    
+
     // Now bind the where clause values
     for(auto cPair : changedVals)
     {
@@ -965,7 +1072,7 @@ bool DatabaseMariaDB::ProcessExplicitUpdate(const std::shared_ptr<
 
         return false;
     }
-    
+
     for(auto cPair : changedVals)
     {
         if(!expectedVals[cPair.first]->Bind(query, idx++))
@@ -1051,7 +1158,7 @@ MYSQL*& DatabaseMariaDB::GetConnection(bool autoConnect)
 
         mConnections[threadID] = connection;
     }
-    
+
     return mConnections[threadID];
 }
 
@@ -1109,3 +1216,21 @@ String DatabaseMariaDB::GetLastError()
     return "Invalid connection.";
 }
 
+bool DatabaseMariaDB::TableExists(const libcomp::String& table)
+{
+    int64_t tableExists = 0;
+
+    auto config = std::dynamic_pointer_cast<objects::DatabaseConfigMariaDB>(
+        mConfig);
+    auto query = Prepare(libcomp::String("SELECT COUNT(TABLE_NAME) FROM "
+        "INFORMATION_SCHEMA.STATISTICS WHERE TABLE_NAME = '%1' AND "
+        "TABLE_SCHEMA = '%2';").Arg(table).Arg(config->GetDatabaseName()));
+
+    if(!query.IsValid() || !query.Execute() || !query.Next() ||
+        !query.GetValue(0, tableExists))
+    {
+        return false;
+    }
+
+    return 0 != tableExists;
+}

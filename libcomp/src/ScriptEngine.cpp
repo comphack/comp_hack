@@ -26,8 +26,24 @@
 
 #include "ScriptEngine.h"
 
+// libcomp Includes
+#include "BaseServer.h"
 #include "Constants.h"
+#include "Database.h"
+#include "Decrypt.h"
+#include "DefinitionManager.h"
 #include "Log.h"
+#include "ServerDataManager.h"
+
+// objects Includes
+#include <Account.h>
+#include <AccountWorldData.h>
+#include <BazaarData.h>
+#include <BazaarItem.h>
+#include <Character.h>
+#include <Demon.h>
+#include <RegisteredChannel.h>
+#include <RegisteredWorld.h>
 
 #include <cstdio>
 #include <cstdarg>
@@ -40,6 +56,24 @@ using namespace Sqrat;
 const SQInteger ONE_PARAM = 1;
 const SQBool    NO_RETURN_VALUE = SQFalse;
 const SQBool    RAISE_ERROR = SQTrue;
+
+std::unordered_map<std::string, std::function<bool(ScriptEngine&,
+    const std::string& module)>> ScriptEngine::mModules;
+
+static std::shared_ptr<objects::Character> ToCharacter(const std::shared_ptr<libcomp::PersistentObject>& obj)
+{
+    return std::dynamic_pointer_cast<objects::Character>(obj);
+}
+
+static bool ScriptInclude(HSQUIRRELVM vm, const char *szPath)
+{
+    return ScriptEngine::Self(vm)->Include(szPath);
+}
+
+static bool ScriptImport(HSQUIRRELVM vm, const char *szModule)
+{
+    return ScriptEngine::Self(vm)->Import(szModule);
+}
 
 static void SquirrelPrintFunction(HSQUIRRELVM vm, const SQChar *szFormat, ...)
 {
@@ -148,10 +182,16 @@ static void SquirrelErrorFunctionRaw(HSQUIRRELVM vm,
     delete[] szBuffer;
 }
 
-ScriptEngine::ScriptEngine(bool useRawPrint)
+ScriptEngine::ScriptEngine(bool useRawPrint) : mUseRawPrint(useRawPrint)
 {
+    if(mModules.empty())
+    {
+        InitializeBuiltins();
+    }
+
     mVM = sq_open(SQUIRREL_STACK_SIZE);
 
+    sq_setforeignptr(mVM, this);
     sqstd_seterrorhandlers(mVM);
     sq_setcompilererrorhandler(mVM,
         [](HSQUIRRELVM vm, const SQChar *szDescription,
@@ -176,6 +216,10 @@ ScriptEngine::ScriptEngine(bool useRawPrint)
 
     sq_pushroottable(mVM);
     sqstd_register_bloblib(mVM);
+
+    Sqrat::RootTable(mVM).VMFunc("include", ScriptInclude);
+    Sqrat::RootTable(mVM).VMFunc("import", ScriptImport);
+    Sqrat::RootTable(mVM).Func("ToCharacter", ToCharacter);
 }
 
 ScriptEngine::~ScriptEngine()
@@ -211,6 +255,28 @@ HSQUIRRELVM ScriptEngine::GetVM()
     return mVM;
 }
 
+std::shared_ptr<ScriptEngine> ScriptEngine::Self()
+{
+    return shared_from_this();
+}
+
+std::shared_ptr<const ScriptEngine> ScriptEngine::Self() const
+{
+    return shared_from_this();
+}
+
+std::shared_ptr<ScriptEngine> ScriptEngine::Self(HSQUIRRELVM vm)
+{
+    ScriptEngine *pScriptEngine = (ScriptEngine*)sq_getforeignptr(vm);
+
+    if(pScriptEngine)
+    {
+        return pScriptEngine->Self();
+    }
+
+    return {};
+}
+
 bool ScriptEngine::BindingExists(const std::string& name, bool lockBinding)
 {
     bool result = mBindings.find(name) != mBindings.end();
@@ -220,4 +286,124 @@ bool ScriptEngine::BindingExists(const std::string& name, bool lockBinding)
     }
 
     return result;
+}
+
+bool ScriptEngine::Include(const std::string& path)
+{
+    std::vector<char> file = libcomp::Decrypt::LoadFile(path);
+    LOG_INFO(libcomp::String("Include: %1\n").Arg(path));
+    if(file.empty())
+    {
+        auto msg = libcomp::String("Failed to include script file: "
+            "%1\n").Arg(path);
+
+        if(mUseRawPrint)
+        {
+            printf("%s", msg.C());
+        }
+        else
+        {
+            LOG_ERROR(msg);
+        }
+
+        return false;
+    }
+
+    file.push_back(0);
+
+    if(!Eval(&file[0], path))
+    {
+        auto msg = libcomp::String("Failed to run script file: "
+            "%1\n").Arg(path);
+
+        if(mUseRawPrint)
+        {
+            printf("%s", msg.C());
+        }
+        else
+        {
+            LOG_ERROR(msg);
+        }
+
+        return false;
+    }
+
+    return true;
+}
+
+bool ScriptEngine::Import(const std::string& module)
+{
+    bool result = mImports.find(module) != mImports.end();
+
+    if(result)
+    {
+        LOG_WARNING(libcomp::String("Module has already been imported: "
+            "%s\n").Arg(module));
+
+        return false;
+    }
+
+    auto it = mModules.find(module);
+
+    if(mModules.end() == it)
+    {
+        LOG_ERROR(libcomp::String("Failed to import script module: "
+            "%1\n").Arg(module));
+
+        return false;
+    }
+
+    result = (it->second)(*this, module);
+
+    if(result)
+    {
+        mImports.insert(module);
+    }
+
+    return result;
+}
+
+void ScriptEngine::RegisterModule(const std::string& module,
+    const std::function<bool(ScriptEngine&, const std::string& module)>& func)
+{
+    mModules[module] = func;
+}
+
+void ScriptEngine::InitializeBuiltins()
+{
+    RegisterModule("database", [](ScriptEngine& engine,
+        const std::string& module) -> bool
+    {
+        (void)module;
+
+        engine.Using<Database>();
+
+        // Now register the common objects you might want to access
+        // from the database.
+        engine.Using<objects::Account>();
+        engine.Using<objects::AccountWorldData>();
+        engine.Using<objects::BazaarData>();
+        engine.Using<objects::BazaarItem>();
+        engine.Using<objects::Character>();
+        engine.Using<objects::Demon>();
+        engine.Using<objects::RegisteredChannel>();
+        engine.Using<objects::RegisteredWorld>();
+
+        return true;
+    });
+
+    RegisterModule("server", [](ScriptEngine& engine,
+        const std::string& module) -> bool
+    {
+        (void)module;
+
+        engine.Using<BaseServer>();
+
+        // Now register the common objects you might want to access
+        // from the server.
+        engine.Using<DefinitionManager>();
+        engine.Using<ServerDataManager>();
+
+        return true;
+    });
 }

@@ -13,7 +13,7 @@
         <member type="s32" name="BenefitGauge"/>
         <member type="u16" name="ForceStackPending"/>
         <member type="bool" name="HasQuest"/>
-        
+
         <!-- Collections -->
         <member type="list" name="AcquiredSkills">
             <element type="u32"/>
@@ -43,12 +43,12 @@
         <!-- Sub-sections -->
         <member type="EntityStats*" name="CoreStats"/>
     </object>
-    <object name="InheritedSkill" location="world">
+    <object name="InheritedSkill" location="world" scriptenabled="true">
         <member type="u32" name="Skill"/>
         <member type="pref" name="Demon" key="true" unique="false"/>
         <member type="s16" name="Progress"/>
     </object>
-    <object name="DemonBox" location="world">
+    <object name="DemonBox" location="world" scriptenabled="true">
         <member type="s8" name="BoxID"/>
         <member type="pref" name="Account" key="true" unique="false"/>
         <member type="pref" name="Character" key="true" unique="false"/>

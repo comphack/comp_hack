@@ -219,7 +219,7 @@ const std::shared_ptr<ServerScript> ServerDataManager::GetAIScript(const libcomp
     return GetObjectByID<std::string, ServerScript>(name.C(), mAIScripts);
 }
 
-bool ServerDataManager::LoadData(gsl::not_null<DataStore*> pDataStore,
+bool ServerDataManager::LoadData(DataStore *pDataStore,
     DefinitionManager* definitionManager)
 {
     bool failure = false;
@@ -232,7 +232,7 @@ bool ServerDataManager::LoadData(gsl::not_null<DataStore*> pDataStore,
             failure = !LoadObjectsFromFile<objects::DemonPresent>(
                 pDataStore, "/data/demonpresent.xml", definitionManager);
         }
-        
+
         if(!failure)
         {
             LOG_DEBUG("Loading demon quest reward server definitions...\n");
@@ -737,7 +737,7 @@ namespace libcomp
         {
             return false;
         }
-    
+
         uint32_t id = present->GetID();
         if(mDemonPresentData.find(id) != mDemonPresentData.end())
         {
@@ -761,7 +761,7 @@ namespace libcomp
         {
             return false;
         }
-    
+
         uint32_t id = reward->GetID();
         if(mDemonQuestRewardData.find(id) != mDemonQuestRewardData.end())
         {
@@ -785,7 +785,7 @@ namespace libcomp
         {
             return false;
         }
-    
+
         uint32_t id = dropSet->GetID();
         uint32_t giftBoxID = dropSet->GetGiftBoxID();
         if(mDropSetData.find(id) != mDropSetData.end())
@@ -903,7 +903,7 @@ bool ServerDataManager::LoadScript(const libcomp::String& path,
                 .Arg(script->Name.C()));
             return false;
         }
-        
+
         fDef = root.GetFunction("prepare");
         if(fDef.IsNull())
         {
@@ -947,4 +947,27 @@ bool ServerDataManager::LoadScript(const libcomp::String& path,
     }
 
     return true;
+}
+
+namespace libcomp
+{
+    template<>
+    ScriptEngine& ScriptEngine::Using<ServerDataManager>()
+    {
+        if(!BindingExists("ServerDataManager"))
+        {
+            Sqrat::Class<ServerDataManager> binding(
+                mVM, "ServerDataManager");
+            Bind<ServerDataManager>("ServerDataManager", binding);
+
+            // These are needed for some methods.
+            Using<DefinitionManager>();
+
+            binding
+                .Func("LoadData", &ServerDataManager::LoadData)
+                ; // Last call to binding
+        }
+
+        return *this;
+    }
 }

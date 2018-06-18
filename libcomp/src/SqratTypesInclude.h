@@ -27,6 +27,10 @@
 #ifndef LIBCOMP_SRC_SQRATTYPESINCLUDE_H
 #define LIBCOMP_SRC_SQRATTYPESINCLUDE_H
 
+// Standard C++11 Includes
+#include <list>
+
+// libcomp Includes
 #include "CString.h"
 
 #endif // LIBCOMP_SRC_SQRATTYPESINCLUDE_H

@@ -74,7 +74,8 @@ bool WorldServer::Initialize()
     configMap[objects::ServerConfig::DatabaseType_t::MARIADB]
         = conf->GetMariaDBConfig();
 
-    mDatabase = GetDatabase(configMap, true);
+    mDatabase = GetDatabase(configMap, true, GetDataStore(),
+        "/migrations/world");
 
     if(nullptr == mDatabase)
     {

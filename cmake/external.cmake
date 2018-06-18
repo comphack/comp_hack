@@ -447,46 +447,6 @@ ENDIF()
 SET_TARGET_PROPERTIES(physfs PROPERTIES
     INTERFACE_INCLUDE_DIRECTORIES "${PHYSFS_INCLUDE_DIRS}")
 
-IF(EXISTS "${CMAKE_SOURCE_DIR}/deps/sqrat.zip")
-    SET(SQRAT_URL
-        URL "${CMAKE_SOURCE_DIR}/deps/sqrat.zip"
-    )
-ELSEIF(GIT_DEPENDENCIES)
-    SET(SQRAT_URL
-        GIT_REPOSITORY https://github.com/comphack/sqrat.git
-        GIT_TAG comp_hack
-    )
-ELSE()
-    SET(SQRAT_URL
-        URL https://github.com/comphack/sqrat/archive/comp_hack-20170905.zip
-        URL_HASH SHA1=6c4df47021866905632c5000a5359d2927604c4f
-    )
-ENDIF()
-
-ExternalProject_Add(
-    sqrat
-
-    ${SQRAT_URL}
-
-    PREFIX ${CMAKE_CURRENT_BINARY_DIR}/sqrat
-    CMAKE_ARGS ${CMAKE_RELWITHDEBINFO_OPTIONS} -DCMAKE_INSTALL_PREFIX:PATH=<INSTALL_DIR> "-DCMAKE_CXX_FLAGS=-std=c++11 ${SPECIAL_COMPILER_FLAGS}" -DUSE_STATIC_RUNTIME=${USE_STATIC_RUNTIME} -DCMAKE_DEBUG_POSTFIX=d
-
-    # Dump output to a log instead of the screen.
-    LOG_DOWNLOAD ON
-    LOG_CONFIGURE ON
-    LOG_BUILD ON
-    LOG_INSTALL ON
-)
-
-ExternalProject_Get_Property(sqrat INSTALL_DIR)
-
-SET_TARGET_PROPERTIES(sqrat PROPERTIES FOLDER "Dependencies")
-
-SET(SQRAT_INCLUDE_DIRS "${INSTALL_DIR}/include")
-SET(SQRAT_DEFINES "-DSCRAT_USE_CXX11_OPTIMIZATIONS=1")
-
-FILE(MAKE_DIRECTORY "${SQRAT_INCLUDE_DIRS}")
-
 IF(EXISTS "${CMAKE_SOURCE_DIR}/deps/civetweb.zip")
     SET(CIVET_URL
         URL "${CMAKE_SOURCE_DIR}/deps/civetweb.zip"

@@ -807,6 +807,11 @@ const String libcomp::operator+(const String& a, const String& b)
     return s;
 }
 
+bool libcomp::operator<(const libcomp::String& a, const libcomp::String& b)
+{
+    return a.ToUtf8() < b.ToUtf8();
+}
+
 String String::FromCodePoint(CodePoint cp)
 {
     unsigned char bytes[4];

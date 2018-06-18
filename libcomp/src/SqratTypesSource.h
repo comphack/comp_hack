@@ -101,4 +101,150 @@ struct Var<const libcomp::String&> {
     }
 };
 
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// Used to get and push std::list<T> to and from the stack
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+template<class T>
+struct Var< std::list<std::shared_ptr<T>> > {
+
+    std::list<std::shared_ptr<T>> value; ///< The actual value of get operations
+
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    /// Attempts to get the value off the stack at idx as a list<T>
+    ///
+    /// \param vm  Target VM
+    /// \param idx Index trying to be read
+    ///
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    Var(HSQUIRRELVM vm, SQInteger idx) {
+        SQObjectType value_type = sq_gettype(vm, idx);
+
+        if(OT_ARRAY != value_type)
+        {
+            SQTHROW(vm, FormatTypeError(vm, idx, _SC("array")));
+        }
+
+        sq_push(vm, idx);
+        sq_pushnull(vm);
+
+        while(SQ_SUCCEEDED(sq_next(vm, -2)))
+        {
+            ObjectReference<T> *ref = NULL;
+            T* ptr = ClassType<T>::GetInstance(vm, -1, false, &ref);
+            SQCATCH_NOEXCEPT(vm) {
+                return;
+            }
+
+            if(ref) {
+                value.push_back(ref->Promote());
+            } else {
+                value.push_back(SharedPtr<T>());
+            }
+
+            sq_pop(vm, 2);
+        }
+
+        sq_pop(vm, 2);
+    }
+
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    /// Called by Sqrat::PushVar to put a list<T> on the stack
+    ///
+    /// \param vm    Target VM
+    /// \param value Value to push on to the VM's stack
+    ///
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    static void push(HSQUIRRELVM vm, const std::list<std::shared_ptr<T>>& value) {
+        SQInteger i = 0;
+
+        sq_newarray(vm, value.size());
+
+        for(auto v : value)
+        {
+            sq_pushinteger(vm, i++);
+
+            if (ClassType<T>::hasClassData(vm)) {
+                ClassType<T>::PushSharedInstance(vm, v);
+            } else {
+                PushVarR(vm, *v);
+            }
+
+            sq_set(vm, -3);
+        }
+    }
+};
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// Used to get and push const std::list<T> references to and from the stack
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+template<class T>
+struct Var<const std::list<std::shared_ptr<T>>&> {
+
+    std::list<std::shared_ptr<T>> value; ///< The actual value of get operations
+
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    /// Attempts to get the value off the stack at idx as a list<T>
+    ///
+    /// \param vm  Target VM
+    /// \param idx Index trying to be read
+    ///
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    Var(HSQUIRRELVM vm, SQInteger idx) {
+        SQObjectType value_type = sq_gettype(vm, idx);
+
+        if(OT_ARRAY != value_type)
+        {
+            SQTHROW(vm, FormatTypeError(vm, idx, _SC("array")));
+        }
+
+        sq_push(vm, idx);
+        sq_pushnull(vm);
+
+        while(SQ_SUCCEEDED(sq_next(vm, -2)))
+        {
+            ObjectReference<T> *ref = NULL;
+            T* ptr = ClassType<T>::GetInstance(vm, -1, false, &ref);
+            SQCATCH_NOEXCEPT(vm) {
+                return;
+            }
+
+            if(ref) {
+                value.push_back(ref->Promote());
+            } else {
+                value.push_back(SharedPtr<T>());
+            }
+
+            sq_pop(vm, 2);
+        }
+
+        sq_pop(vm, 2);
+    }
+
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    /// Called by Sqrat::PushVar to put a list<T> on the stack
+    ///
+    /// \param vm    Target VM
+    /// \param value Value to push on to the VM's stack
+    ///
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    static void push(HSQUIRRELVM vm, const std::list<std::shared_ptr<T>>& value) {
+        SQInteger i = 0;
+
+        sq_newarray(vm, value.size());
+
+        for(auto v : value)
+        {
+            sq_pushinteger(vm, i++);
+
+            if (ClassType<T>::hasClassData(vm)) {
+                ClassType<T>::PushSharedInstance(vm, v);
+            } else {
+                PushVarR(vm, *v);
+            }
+
+            sq_set(vm, -3);
+        }
+    }
+};
+
 #endif // LIBCOMP_SRC_SQRATTYPESSOURCE_H

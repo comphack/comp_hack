@@ -41,6 +41,7 @@
 
 // Standard C++11 Includes
 #include <set>
+#include <unordered_map>
 
 namespace libcomp
 {
@@ -49,7 +50,7 @@ namespace libcomp
  * Represents a Sqrat based Squirrel virtual machine handler to facilitate
  * script execution and bind @ref Object instances to the VM.
  */
-class ScriptEngine
+class ScriptEngine : public std::enable_shared_from_this<ScriptEngine>
 {
 public:
     /**
@@ -79,11 +80,52 @@ public:
     HSQUIRRELVM GetVM();
 
     /**
+     * Get a pointer to the script engine.
+     * @returns Pointer to the script engine.
+     */
+    std::shared_ptr<ScriptEngine> Self();
+
+    /**
+     * Get a pointer to the script engine.
+     * @returns Pointer to the script engine.
+     */
+    std::shared_ptr<const ScriptEngine> Self() const;
+
+    /**
+     * Get a pointer to the script engine from a Squirrel handle.
+     * @param vm Squirrel handle to the virtual machine.
+     * @returns Pointer to the script engine.
+     */
+    static std::shared_ptr<ScriptEngine> Self(HSQUIRRELVM vm);
+
+    /**
      * Evaluate a Squirrel script block as a string.
      * @param source Squirrel script block as a string
      * @return true on success, false on failure
      */
     bool Eval(const String& source, const String& sourceName = String());
+
+    /**
+     * Import a Squirrel binding module into the virtual machine.
+     * @param module Name of the module to import.
+     * @returns true if the module was imported, false otherwise.
+     */
+    bool Import(const std::string& module);
+
+    /**
+     * Load an include file (triggeded by a script).
+     * @param path Path to the script to include.
+     * @returns true if the script loaded, false otherwise.
+     */
+    bool Include(const std::string& path);
+
+    /**
+     * Register a script module that can be imported.
+     * @param module Name of the module to import.
+     * @param func Function to call to import the module.
+     */
+    void RegisterModule(const std::string& module, const std::function<
+        bool(ScriptEngine&, const std::string& module)>& func);
 
 private:
     /**
@@ -91,7 +133,7 @@ private:
      * @param name The name of the binding which should match a class name
      * @param binding The object binding
      */
-    template <class T> void Bind(const std::string& name,  Sqrat::Class<T>& binding)
+    template <class T, class A> void Bind(const std::string& name,  Sqrat::Class<T, A>& binding)
     {
         mBindings.insert(name);
         Sqrat::RootTable(mVM).Bind(name.c_str(), binding);
@@ -107,11 +149,26 @@ private:
      */
     bool BindingExists(const std::string& name, bool lockBinding = false);
 
+    /**
+     * Initialize the built-in script modules.
+     */
+    void InitializeBuiltins();
+
     /// The Sqrat VM
     HSQUIRRELVM mVM;
 
     /// Bindings that have already been made to objects via @ref ScriptEngine::Using
     std::set<std::string> mBindings;
+
+    /// Imports that have already been made.
+    std::set<std::string> mImports;
+
+    /// If the logging system should be used or not.
+    bool mUseRawPrint;
+
+    /// Map of functions to import a script module.
+    static std::unordered_map<std::string, std::function<bool(ScriptEngine&,
+        const std::string& module)>> mModules;
 };
 
 } // namespace libcomp

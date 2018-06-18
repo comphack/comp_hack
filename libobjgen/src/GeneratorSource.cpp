@@ -519,27 +519,56 @@ std::string GeneratorSource::Generate(const MetaObject& obj)
 
         scriptReferences.erase(obj.GetName());
 
-        std::stringstream bindingType;
+        std::stringstream parent_dependency;
         std::stringstream dependencies;
+        std::stringstream dependency_prototypes;
+        parent_dependency << "// Include base class" << std::endl;
+        dependency_prototypes << "// Include reference prototypes" << std::endl;
+        dependency_prototypes << Tab() << "template<>" << std::endl;
+        dependency_prototypes << Tab() << "ScriptEngine& ScriptEngine::Using<libobjgen::UUID>();" << std::endl;
+
+        std::stringstream bindingType;
         if(!baseObject.empty())
         {
             bindingType << "DerivedClass<" << obj.GetName() << ", "
                 << baseObject << ">";
-            dependencies << "Using<" << baseObject << ">();" << std::endl;
+            parent_dependency << Tab(3) << "Using<" << baseObject << ">();" << std::endl;
+            dependency_prototypes << Tab() << "template<>" << std::endl;
+            dependency_prototypes << Tab() << "ScriptEngine& ScriptEngine::Using<" << baseObject << ">();" << std::endl;
+        }
+        else if(obj.IsPersistent())
+        {
+            bindingType << "DerivedClass<" << obj.GetName() << ", libcomp::PersistentObject>";
+            parent_dependency << Tab(3) << "Using<libcomp::PersistentObject>();" << std::endl;
+            dependency_prototypes << Tab() << "template<>" << std::endl;
+            dependency_prototypes << Tab() << "ScriptEngine& ScriptEngine::Using<libcomp::PersistentObject>();" << std::endl;
         }
         else
         {
-            bindingType << "Class<" << obj.GetName() << ">";
+            bindingType << "DerivedClass<" << obj.GetName() << ", libcomp::Object>";
+            parent_dependency << Tab(3) << "Using<libcomp::Object>();" << std::endl;
+            dependency_prototypes << Tab() << "template<>" << std::endl;
+            dependency_prototypes << Tab() << "ScriptEngine& ScriptEngine::Using<libcomp::Object>();" << std::endl;
         }
 
         if(scriptReferences.size() > 0)
         {
             dependencies << "// Include references" << std::endl;
+
             for(auto ref : scriptReferences)
             {
                 if(ref != obj.GetName())
                 {
-                    dependencies << "Using<" << ref << ">();" << std::endl;
+                    dependencies << Tab(3) << "Using<" << ref << ">();" << std::endl;
+                }
+            }
+
+            for(auto ref : scriptReferences)
+            {
+                if(ref != obj.GetName())
+                {
+                    dependency_prototypes << Tab() << "template<>" << std::endl;
+                    dependency_prototypes << Tab() << "ScriptEngine& ScriptEngine::Using<" << ref << ">();" << std::endl;
                 }
             }
         }
@@ -555,7 +584,9 @@ std::string GeneratorSource::Generate(const MetaObject& obj)
         replacements["@OBJECT_NAME@"] = obj.GetName();
         replacements["@OBJECT_STRING_NAME@"] = Escape(obj.GetName());
         replacements["@BINDINGS@"] = bindingsStr;
+        replacements["@PARENT_DEPENDENCY@"] = parent_dependency.str();
         replacements["@DEPENDENCIES@"] = dependencies.str();
+        replacements["@DEPENDENCY_PROTOTYPES@"] = dependency_prototypes.str();
 
         std::stringstream additions;
 

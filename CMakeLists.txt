@@ -262,6 +262,10 @@ ADD_DEFINITIONS(
 # SQLite3 is included in the source repo.
 SET(SQLITE3_INCLUDE_DIRS "${CMAKE_SOURCE_DIR}/deps/sqlite3")
 
+# Sqrat is included as a submodule (it's header only).
+SET(SQRAT_INCLUDE_DIRS "${CMAKE_SOURCE_DIR}/deps/sqrat/include")
+SET(SQRAT_DEFINES "-DSCRAT_USE_CXX11_OPTIMIZATIONS=1")
+
 # Enable testing.
 IF(NOT DISABLE_TESTING)
     INCLUDE(CTest)

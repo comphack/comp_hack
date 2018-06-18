@@ -33,6 +33,10 @@
 #include <Packet.h>
 #include <ScriptEngine.h>
 #include <TestObject.h>
+#include <TestObjectA.h>
+#include <TestObjectB.h>
+#include <TestObjectC.h>
+#include <TestObjectD.h>
 
 using namespace libcomp;
 
@@ -260,6 +264,691 @@ TEST(ScriptEngine, GeneratedObject)
     EXPECT_EQ(scriptMessages, "SQUIRREL: 100\n"
         "SQUIRREL: 日本語\n"
         "SQUIRREL: 日本人\n");
+    scriptMessages.Clear();
+
+    Log::GetSingletonPtr()->ClearHooks();
+}
+
+TEST(ScriptEngine, ScriptA_ScriptB)
+{
+    String scriptMessages;
+
+    Log::GetSingletonPtr()->AddLogHook(
+        [&scriptMessages](Log::Level_t level, const String& msg)
+    {
+        (void)level;
+
+        scriptMessages += msg;
+    });
+
+    ScriptEngine engine;
+    engine.Using<objects::TestObjectA>();
+    engine.Using<objects::TestObjectB>();
+
+    EXPECT_TRUE(engine.Eval(
+        "function TestFunction()\n"
+        "{\n"
+            "local a = TestObjectA();\n"
+            "local b = TestObjectB();\n"
+            "a.SetValue(\"testA\");\n"
+            "a.SetObjectB(b);\n"
+            "b.SetValue(\"testB\");\n"
+            "return a;\n"
+        "}\n"
+        ));
+
+    std::shared_ptr<Sqrat::ObjectReference<objects::TestObjectA>> ref;
+    std::shared_ptr<objects::TestObjectA> a;
+
+    ref = Sqrat::RootTable(engine.GetVM()).GetFunction("TestFunction"
+        ).Evaluate<Sqrat::ObjectReference<objects::TestObjectA>>();
+
+    EXPECT_EQ(scriptMessages, "");
+
+    ASSERT_TRUE(ref);
+
+    a = ref->GetSharedObject();
+
+    ASSERT_TRUE(a);
+
+    EXPECT_EQ(a->GetValue(), "testA");
+    ASSERT_TRUE(a->GetObjectB());
+    EXPECT_EQ(a->GetObjectB()->GetValue(), "testB");
+
+    scriptMessages.Clear();
+
+    Log::GetSingletonPtr()->ClearHooks();
+}
+
+TEST(ScriptEngine, ServerA_ScriptB)
+{
+    String scriptMessages;
+
+    Log::GetSingletonPtr()->AddLogHook(
+        [&scriptMessages](Log::Level_t level, const String& msg)
+    {
+        (void)level;
+
+        scriptMessages += msg;
+    });
+
+    ScriptEngine engine;
+    engine.Using<objects::TestObjectA>();
+    engine.Using<objects::TestObjectB>();
+
+    EXPECT_TRUE(engine.Eval(
+        "function TestFunction(a)\n"
+        "{\n"
+            "local b = TestObjectB();\n"
+            "a.SetValue(\"testA\");\n"
+            "a.SetObjectB(b);\n"
+            "b.SetValue(\"testB\");\n"
+            "return true;\n"
+        "}\n"
+        ));
+
+    auto a = std::make_shared<objects::TestObjectA>();
+
+    auto ret = Sqrat::RootTable(engine.GetVM()).GetFunction("TestFunction"
+        ).Evaluate<SQBool>(a);
+
+    EXPECT_EQ(scriptMessages, "");
+
+    ASSERT_TRUE(ret);
+
+    EXPECT_EQ(a->GetValue(), "testA");
+    ASSERT_TRUE(a->GetObjectB());
+    EXPECT_EQ(a->GetObjectB()->GetValue(), "testB");
+
+    scriptMessages.Clear();
+
+    Log::GetSingletonPtr()->ClearHooks();
+}
+
+TEST(ScriptEngine, ServerA_ServerB)
+{
+    String scriptMessages;
+
+    Log::GetSingletonPtr()->AddLogHook(
+        [&scriptMessages](Log::Level_t level, const String& msg)
+    {
+        (void)level;
+
+        scriptMessages += msg;
+    });
+
+    ScriptEngine engine;
+    engine.Using<objects::TestObjectA>();
+    engine.Using<objects::TestObjectB>();
+
+    EXPECT_TRUE(engine.Eval(
+        "function TestFunction(a, b)\n"
+        "{\n"
+            "a.SetValue(\"testA\");\n"
+            "a.SetObjectB(b);\n"
+            "b.SetValue(\"testB\");\n"
+            "return true;\n"
+        "}\n"
+        ));
+
+    auto a = std::make_shared<objects::TestObjectA>();
+    auto b = std::make_shared<objects::TestObjectB>();
+
+    auto ret = Sqrat::RootTable(engine.GetVM()).GetFunction("TestFunction"
+        ).Evaluate<SQBool>(a, b);
+
+    EXPECT_EQ(scriptMessages, "");
+
+    ASSERT_TRUE(ret);
+
+    EXPECT_EQ(a->GetValue(), "testA");
+    ASSERT_TRUE(a->GetObjectB());
+    EXPECT_EQ(a->GetObjectB()->GetValue(), "testB");
+    EXPECT_EQ(a->GetObjectB(), b);
+
+    scriptMessages.Clear();
+
+    Log::GetSingletonPtr()->ClearHooks();
+}
+
+TEST(ScriptEngine, ScriptA_ServerB)
+{
+    String scriptMessages;
+
+    Log::GetSingletonPtr()->AddLogHook(
+        [&scriptMessages](Log::Level_t level, const String& msg)
+    {
+        (void)level;
+
+        scriptMessages += msg;
+    });
+
+    ScriptEngine engine;
+    engine.Using<objects::TestObjectA>();
+    engine.Using<objects::TestObjectB>();
+
+    EXPECT_TRUE(engine.Eval(
+        "function TestFunction(b)\n"
+        "{\n"
+            "local a = TestObjectA();\n"
+            "a.SetValue(\"testA\");\n"
+            "a.SetObjectB(b);\n"
+            "b.SetValue(\"testB\");\n"
+            "return a;\n"
+        "}\n"
+        ));
+
+    std::shared_ptr<Sqrat::ObjectReference<objects::TestObjectA>> ref;
+    std::shared_ptr<objects::TestObjectA> a;
+
+    auto b = std::make_shared<objects::TestObjectB>();
+
+    ref = Sqrat::RootTable(engine.GetVM()).GetFunction("TestFunction"
+        ).Evaluate<Sqrat::ObjectReference<objects::TestObjectA>>(b);
+
+    EXPECT_EQ(scriptMessages, "");
+
+    ASSERT_TRUE(ref);
+
+    a = ref->GetSharedObject();
+
+    ASSERT_TRUE(a);
+
+    EXPECT_EQ(scriptMessages, "");
+
+    EXPECT_EQ(a->GetValue(), "testA");
+    ASSERT_TRUE(a->GetObjectB());
+    EXPECT_EQ(a->GetObjectB()->GetValue(), "testB");
+    EXPECT_EQ(a->GetObjectB(), b);
+
+    scriptMessages.Clear();
+
+    Log::GetSingletonPtr()->ClearHooks();
+}
+
+TEST(ScriptEngine, CString)
+{
+    String scriptMessages;
+
+    Log::GetSingletonPtr()->AddLogHook(
+        [&scriptMessages](Log::Level_t level, const String& msg)
+    {
+        (void)level;
+
+        scriptMessages += msg;
+    });
+
+    ScriptEngine engine;
+    engine.Using<objects::TestObjectA>();
+    engine.Using<objects::TestObjectB>();
+
+    EXPECT_TRUE(engine.Eval(
+        "function TestFunction(a)\n"
+        "{\n"
+            "a.SetValue(a.GetValue() + \"testObjA\");\n"
+            "return a;\n"
+        "}\n"
+        ));
+
+    std::shared_ptr<Sqrat::ObjectReference<objects::TestObjectA>> ref;
+    auto a = std::make_shared<objects::TestObjectA>();
+    a->SetValue("testOf_");
+
+    ref = Sqrat::RootTable(engine.GetVM()).GetFunction("TestFunction"
+        ).Evaluate<Sqrat::ObjectReference<objects::TestObjectA>>(a);
+
+    EXPECT_EQ(scriptMessages, "");
+
+    ASSERT_TRUE(ref);
+
+    auto a2 = ref->GetSharedObject();
+
+    ASSERT_TRUE(a2);
+
+    EXPECT_EQ(scriptMessages, "");
+
+    EXPECT_EQ(a, a2);
+    EXPECT_EQ(a->GetValue(), "testOf_testObjA");
+
+    scriptMessages.Clear();
+
+    Log::GetSingletonPtr()->ClearHooks();
+}
+
+TEST(ScriptEngine, DowncastChild)
+{
+    String scriptMessages;
+
+    Log::GetSingletonPtr()->AddLogHook(
+        [&scriptMessages](Log::Level_t level, const String& msg)
+    {
+        (void)level;
+
+        scriptMessages += msg;
+    });
+
+    ScriptEngine engine;
+    engine.Using<objects::TestObjectA>();
+    engine.Using<objects::TestObjectB>();
+    engine.Using<objects::TestObjectC>();
+    engine.Using<objects::TestObjectD>();
+
+    EXPECT_TRUE(engine.Eval(
+        "function TestFunction(a, c, d)\n"
+        "{\n"
+            "a.SetValue(c.GetValue() + \"_\" + c.GetExtraValue());\n"
+            "c.SetExtraValue(789);\n"
+            "a.SetObjectB(c);\n"
+            "a.SetObjectB(d);\n"
+            "return a;\n"
+        "}\n"
+        ));
+
+    std::shared_ptr<Sqrat::ObjectReference<objects::TestObjectA>> ref;
+    auto a = std::make_shared<objects::TestObjectA>();
+    a->SetValue("testOf_");
+
+    auto c = std::make_shared<objects::TestObjectC>();
+    c->SetValue("testObjB");
+    c->SetExtraValue(123);
+
+    auto d = std::make_shared<objects::TestObjectD>();
+    d->SetValue(456);
+
+    ref = Sqrat::RootTable(engine.GetVM()).GetFunction("TestFunction"
+        ).Evaluate<Sqrat::ObjectReference<objects::TestObjectA>>(a, c, d);
+
+    auto messageLines = scriptMessages.Split("\n");
+    messageLines.erase(messageLines.begin());
+
+    EXPECT_EQ(messageLines.front(), "ERROR: SQUIRREL: AN ERROR HAS OCCURED "
+        "[wrong type (TestObjectB expected, got TestObjectD)]");
+
+    ASSERT_FALSE(ref);
+
+    EXPECT_EQ(a->GetValue(), "testObjB_123");
+    EXPECT_EQ(std::dynamic_pointer_cast<objects::TestObjectC>(
+        a->GetObjectB()), c);
+    EXPECT_EQ(c->GetExtraValue(), 789);
+
+    scriptMessages.Clear();
+
+    Log::GetSingletonPtr()->ClearHooks();
+}
+
+TEST(ScriptEngine, GetObjectList)
+{
+    String scriptMessages;
+
+    Log::GetSingletonPtr()->AddLogHook(
+        [&scriptMessages](Log::Level_t level, const String& msg)
+    {
+        (void)level;
+
+        scriptMessages += msg;
+        printf("%s", msg.C());
+    });
+
+    ScriptEngine engine;
+    engine.Using<objects::TestObjectA>();
+    engine.Using<objects::TestObjectB>();
+    engine.Using<objects::TestObjectC>();
+
+    EXPECT_TRUE(engine.Eval(
+        "function TestFunction(a)\n"
+        "{\n"
+            "local s = \"\";\n"
+            "\n"
+            "foreach(b in a.GetObjectBList())\n"
+            "{\n"
+                "s += b.GetValue();\n"
+            "}\n"
+            "\n"
+            "a.SetValue(s);\n"
+            "return a;\n"
+        "}\n"
+        ));
+
+    std::shared_ptr<Sqrat::ObjectReference<objects::TestObjectA>> ref;
+    auto b1 = std::make_shared<objects::TestObjectB>();
+    b1->SetValue("b1");
+    auto c1 = std::make_shared<objects::TestObjectC>();
+    c1->SetValue("c1");
+    auto b2 = std::make_shared<objects::TestObjectB>();
+    b2->SetValue("b2");
+    std::list<std::shared_ptr<objects::TestObjectB>> objs;
+    objs.push_back(b1);
+    objs.push_back(c1);
+    objs.push_back(b2);
+    auto a = std::make_shared<objects::TestObjectA>();
+    a->SetValue("testOf_");
+    a->SetObjectBList(objs);
+
+    ref = Sqrat::RootTable(engine.GetVM()).GetFunction("TestFunction"
+        ).Evaluate<Sqrat::ObjectReference<objects::TestObjectA>>(a);
+
+    EXPECT_EQ(scriptMessages, "");
+
+    ASSERT_TRUE(ref);
+
+    auto a2 = ref->GetSharedObject();
+
+    ASSERT_TRUE(a2);
+
+    EXPECT_EQ(scriptMessages, "");
+
+    EXPECT_EQ(a, a2);
+    EXPECT_EQ(a->GetValue(), "b1c1b2");
+
+    scriptMessages.Clear();
+
+    Log::GetSingletonPtr()->ClearHooks();
+}
+
+TEST(ScriptEngine, SetObjectList)
+{
+    String scriptMessages;
+
+    Log::GetSingletonPtr()->AddLogHook(
+        [&scriptMessages](Log::Level_t level, const String& msg)
+    {
+        (void)level;
+
+        scriptMessages += msg;
+    });
+
+    ScriptEngine engine;
+    engine.Using<objects::TestObjectA>();
+    engine.Using<objects::TestObjectB>();
+    engine.Using<objects::TestObjectC>();
+
+    EXPECT_TRUE(engine.Eval(
+        "function TestFunction(a)\n"
+        "{\n"
+            "local b1 = TestObjectB();\n"
+            "local c1 = TestObjectC();\n"
+            "local b2 = TestObjectB();\n"
+            "b1.SetValue(\"b1\");\n"
+            "c1.SetValue(\"c1\");\n"
+            "b2.SetValue(\"b2\");\n"
+            "a.SetObjectBList([b1, c1, b2]);\n"
+            "return a;\n"
+        "}\n"
+        ));
+
+    std::shared_ptr<Sqrat::ObjectReference<objects::TestObjectA>> ref;
+    auto a = std::make_shared<objects::TestObjectA>();
+    a->SetValue("testOf_");
+
+    ref = Sqrat::RootTable(engine.GetVM()).GetFunction("TestFunction"
+        ).Evaluate<Sqrat::ObjectReference<objects::TestObjectA>>(a);
+
+    EXPECT_EQ(scriptMessages, "");
+
+    ASSERT_TRUE(ref);
+
+    auto a2 = ref->GetSharedObject();
+
+    ASSERT_TRUE(a2);
+
+    EXPECT_EQ(scriptMessages, "");
+
+    EXPECT_EQ(a, a2);
+
+    auto objs = a->GetObjectBList();
+    ASSERT_EQ(objs.size(), 3);
+
+    auto it = objs.begin();
+    EXPECT_EQ((*it)->GetValue(), "b1");
+    it++;
+    EXPECT_EQ((*it)->GetValue(), "c1");
+    it++;
+    EXPECT_EQ((*it)->GetValue(), "b2");
+
+    scriptMessages.Clear();
+
+    Log::GetSingletonPtr()->ClearHooks();
+}
+
+TEST(ScriptEngine, SetBadObjectList)
+{
+    String scriptMessages;
+
+    Log::GetSingletonPtr()->AddLogHook(
+        [&scriptMessages](Log::Level_t level, const String& msg)
+    {
+        (void)level;
+
+        scriptMessages += msg;
+    });
+
+    ScriptEngine engine;
+    engine.Using<objects::TestObjectA>();
+    engine.Using<objects::TestObjectB>();
+    engine.Using<objects::TestObjectC>();
+    engine.Using<objects::TestObjectD>();
+
+    EXPECT_TRUE(engine.Eval(
+        "function TestFunction(a)\n"
+        "{\n"
+            "local b1 = TestObjectB();\n"
+            "local c1 = TestObjectC();\n"
+            "local d1 = TestObjectD();\n"
+            "b1.SetValue(\"b1\");\n"
+            "c1.SetValue(\"c1\");\n"
+            "d1.SetValue(1337);\n"
+            "a.SetObjectBList([b1, c1, d1, 3, \"a\"]);\n"
+            "return a;\n"
+        "}\n"
+        ));
+
+    std::shared_ptr<Sqrat::ObjectReference<objects::TestObjectA>> ref;
+    auto a = std::make_shared<objects::TestObjectA>();
+    a->SetValue("testOf_");
+
+    ref = Sqrat::RootTable(engine.GetVM()).GetFunction("TestFunction"
+        ).Evaluate<Sqrat::ObjectReference<objects::TestObjectA>>(a);
+
+    auto messageLines = scriptMessages.Split("\n");
+    messageLines.erase(messageLines.begin());
+
+    EXPECT_EQ(messageLines.front(), "ERROR: SQUIRREL: AN ERROR HAS OCCURED "
+        "[wrong type (TestObjectB expected, got TestObjectD)]");
+
+    ASSERT_FALSE(ref);
+
+    auto objs = a->GetObjectBList();
+    ASSERT_EQ(objs.size(), 0);
+
+    scriptMessages.Clear();
+
+    Log::GetSingletonPtr()->ClearHooks();
+}
+
+TEST(ScriptEngine, GetObjectListProp)
+{
+    String scriptMessages;
+
+    Log::GetSingletonPtr()->AddLogHook(
+        [&scriptMessages](Log::Level_t level, const String& msg)
+    {
+        (void)level;
+
+        scriptMessages += msg;
+        printf("%s", msg.C());
+    });
+
+    ScriptEngine engine;
+    engine.Using<objects::TestObjectA>();
+    engine.Using<objects::TestObjectB>();
+    engine.Using<objects::TestObjectC>();
+
+    EXPECT_TRUE(engine.Eval(
+        "function TestFunction(a)\n"
+        "{\n"
+            "local s = \"\";\n"
+            "\n"
+            "foreach(b in a.ObjectBList)\n"
+            "{\n"
+                "s += b.GetValue();\n"
+            "}\n"
+            "\n"
+            "a.SetValue(s);\n"
+            "return a;\n"
+        "}\n"
+        ));
+
+    std::shared_ptr<Sqrat::ObjectReference<objects::TestObjectA>> ref;
+    auto b1 = std::make_shared<objects::TestObjectB>();
+    b1->SetValue("b1");
+    auto c1 = std::make_shared<objects::TestObjectC>();
+    c1->SetValue("c1");
+    auto b2 = std::make_shared<objects::TestObjectB>();
+    b2->SetValue("b2");
+    std::list<std::shared_ptr<objects::TestObjectB>> objs;
+    objs.push_back(b1);
+    objs.push_back(c1);
+    objs.push_back(b2);
+    auto a = std::make_shared<objects::TestObjectA>();
+    a->SetValue("testOf_");
+    a->SetObjectBList(objs);
+
+    ref = Sqrat::RootTable(engine.GetVM()).GetFunction("TestFunction"
+        ).Evaluate<Sqrat::ObjectReference<objects::TestObjectA>>(a);
+
+    EXPECT_EQ(scriptMessages, "");
+
+    ASSERT_TRUE(ref);
+
+    auto a2 = ref->GetSharedObject();
+
+    ASSERT_TRUE(a2);
+
+    EXPECT_EQ(scriptMessages, "");
+
+    EXPECT_EQ(a, a2);
+    EXPECT_EQ(a->GetValue(), "b1c1b2");
+
+    scriptMessages.Clear();
+
+    Log::GetSingletonPtr()->ClearHooks();
+}
+
+TEST(ScriptEngine, SetObjectListProp)
+{
+    String scriptMessages;
+
+    Log::GetSingletonPtr()->AddLogHook(
+        [&scriptMessages](Log::Level_t level, const String& msg)
+    {
+        (void)level;
+
+        scriptMessages += msg;
+    });
+
+    ScriptEngine engine;
+    engine.Using<objects::TestObjectA>();
+    engine.Using<objects::TestObjectB>();
+    engine.Using<objects::TestObjectC>();
+
+    EXPECT_TRUE(engine.Eval(
+        "function TestFunction(a)\n"
+        "{\n"
+            "local b1 = TestObjectB();\n"
+            "local c1 = TestObjectC();\n"
+            "local b2 = TestObjectB();\n"
+            "b1.SetValue(\"b1\");\n"
+            "c1.SetValue(\"c1\");\n"
+            "b2.SetValue(\"b2\");\n"
+            "a.ObjectBList = [b1, c1, b2];\n"
+            "return a;\n"
+        "}\n"
+        ));
+
+    std::shared_ptr<Sqrat::ObjectReference<objects::TestObjectA>> ref;
+    auto a = std::make_shared<objects::TestObjectA>();
+    a->SetValue("testOf_");
+
+    ref = Sqrat::RootTable(engine.GetVM()).GetFunction("TestFunction"
+        ).Evaluate<Sqrat::ObjectReference<objects::TestObjectA>>(a);
+
+    EXPECT_EQ(scriptMessages, "");
+
+    ASSERT_TRUE(ref);
+
+    auto a2 = ref->GetSharedObject();
+
+    ASSERT_TRUE(a2);
+
+    EXPECT_EQ(scriptMessages, "");
+
+    EXPECT_EQ(a, a2);
+
+    auto objs = a->GetObjectBList();
+    ASSERT_EQ(objs.size(), 3);
+
+    auto it = objs.begin();
+    EXPECT_EQ((*it)->GetValue(), "b1");
+    it++;
+    EXPECT_EQ((*it)->GetValue(), "c1");
+    it++;
+    EXPECT_EQ((*it)->GetValue(), "b2");
+
+    scriptMessages.Clear();
+
+    Log::GetSingletonPtr()->ClearHooks();
+}
+
+TEST(ScriptEngine, SetBadObjectListProp)
+{
+    String scriptMessages;
+
+    Log::GetSingletonPtr()->AddLogHook(
+        [&scriptMessages](Log::Level_t level, const String& msg)
+    {
+        (void)level;
+
+        scriptMessages += msg;
+    });
+
+    ScriptEngine engine;
+    engine.Using<objects::TestObjectA>();
+    engine.Using<objects::TestObjectB>();
+    engine.Using<objects::TestObjectC>();
+    engine.Using<objects::TestObjectD>();
+
+    EXPECT_TRUE(engine.Eval(
+        "function TestFunction(a)\n"
+        "{\n"
+            "local b1 = TestObjectB();\n"
+            "local c1 = TestObjectC();\n"
+            "local d1 = TestObjectD();\n"
+            "b1.SetValue(\"b1\");\n"
+            "c1.SetValue(\"c1\");\n"
+            "d1.SetValue(1337);\n"
+            "a.ObjectBList = [b1, c1, d1, 3, \"a\"];\n"
+            "return a;\n"
+        "}\n"
+        ));
+
+    std::shared_ptr<Sqrat::ObjectReference<objects::TestObjectA>> ref;
+    auto a = std::make_shared<objects::TestObjectA>();
+    a->SetValue("testOf_");
+
+    ref = Sqrat::RootTable(engine.GetVM()).GetFunction("TestFunction"
+        ).Evaluate<Sqrat::ObjectReference<objects::TestObjectA>>(a);
+
+    auto messageLines = scriptMessages.Split("\n");
+    messageLines.erase(messageLines.begin());
+
+    EXPECT_EQ(messageLines.front(), "ERROR: SQUIRREL: AN ERROR HAS OCCURED "
+        "[wrong type (TestObjectB expected, got TestObjectD)]");
+
+    ASSERT_FALSE(ref);
+
+    auto objs = a->GetObjectBList();
+    ASSERT_EQ(objs.size(), 0);
+
     scriptMessages.Clear();
 
     Log::GetSingletonPtr()->ClearHooks();

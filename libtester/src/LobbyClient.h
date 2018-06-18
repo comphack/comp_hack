@@ -66,7 +66,7 @@ public:
 
     LobbyClient();
     LobbyClient(const LobbyClient& other);
-    ~LobbyClient();
+    virtual ~LobbyClient();
 
     bool WaitForPacket(LobbyToClientPacketCode_t code,
         libcomp::ReadOnlyPacket& p, double& waitTime,

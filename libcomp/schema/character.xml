@@ -18,7 +18,7 @@
         <member type="u8" name="HairColor"/>
         <member type="u8" name="LeftEyeColor"/>
         <member type="u8" name="RightEyeColor"/>
-        
+
         <!-- Character specific attributes -->
         <member type="s16" name="LNC" caps="true" min="-10000" max="10000"/>
         <member type="s32" name="Points"/>
@@ -110,7 +110,7 @@
         <member type="s16" name="PDEF" caps="true"/>
         <member type="s16" name="MDEF" caps="true"/>
     </object>
-    <object name="StatusEffect" location="world">
+    <object name="StatusEffect" location="world" scriptenabled="true">
         <member type="u32" name="Effect"/>
         <member type="pref" name="Entity" key="true" unique="false"/>
         <member type="u32" name="Expiration"/>
@@ -162,13 +162,13 @@
             <element type="u8"/>
         </member>
     </object>
-    <object name="Expertise" location="world">
+    <object name="Expertise" location="world" scriptenabled="true">
         <member type="pref" name="Character" key="true" unique="false"/>
         <member type="u8" name="ExpertiseID" min="0" max="38"/>
         <member type="s32" name="Points"/>
         <member type="bool" name="Disabled"/>
     </object>
-    <object name="Hotbar" location="world">
+    <object name="Hotbar" location="world" scriptenabled="true">
         <member type="pref" name="Character" key="true" unique="false"/>
         <member type="u8" name="PageID" min="0" max="9"/>
         <member type="array" name="ItemTypes" size="16">
@@ -195,7 +195,7 @@
             <value type="s32"/>
         </member>
     </object>
-    <object name="FriendSettings" location="world">
+    <object name="FriendSettings" location="world" scriptenabled="true">
         <member type="pref" name="Character" key="true" unique="true"/>
         <member type="string" name="FriendMessage"/>
         <member type="list" name="Friends">

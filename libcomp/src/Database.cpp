@@ -26,6 +26,12 @@
 
 #include "Database.h"
 
+// libcomp Includes
+#include "BaseServer.h"
+#include "DataStore.h"
+#include "Log.h"
+#include "ScriptEngine.h"
+
 using namespace libcomp;
 
 Database::Database(const std::shared_ptr<objects::DatabaseConfig>& config)
@@ -285,4 +291,93 @@ std::vector<std::shared_ptr<libobjgen::MetaObject>> Database::GetMappedObjects()
     }
 
     return metaObjectTables;
+}
+
+bool Database::ApplyMigration(const std::shared_ptr<BaseServer>& server,
+    DataStore *pDataStore, const libcomp::String& migration,
+    const libcomp::String& path)
+{
+    (void)pDataStore;
+    (void)path;
+
+    LOG_DEBUG(libcomp::String("Applying migration %1 to database.\n"
+        ).Arg(migration));
+
+    // Load the script.
+    auto script = pDataStore->ReadFile(path);
+
+    if(script.empty())
+    {
+        LOG_ERROR(libcomp::String("Failed to load migration script: "
+            "%1\n").Arg(path));
+
+        return false;
+    }
+
+    // Zero the string.
+    script.push_back(0);
+
+    // Create the script engine.
+    auto engine = std::make_shared<ScriptEngine>();
+
+    // Parse the script.
+    if(!engine->Eval(&script[0], path))
+    {
+        LOG_ERROR(libcomp::String("Failed to run migration script: "
+            "%1\n").Arg(path));
+
+        return false;
+    }
+
+    // Pull in the Database module.
+    engine->Import("database");
+
+    // Run the up() function.
+    auto ref = Sqrat::RootTable(engine->GetVM()).GetFunction(
+        "up").Evaluate<bool>(shared_from_this(), server);
+
+    if(!ref || !(*ref))
+    {
+        LOG_ERROR(libcomp::String("Migration script failed: "
+            "%1\n").Arg(path));
+
+        return false;
+    }
+
+    return false;
+}
+
+namespace libcomp
+{
+    template<>
+    ScriptEngine& ScriptEngine::Using<Database>()
+    {
+        if(!BindingExists("Database"))
+        {
+            Sqrat::Class<Database, Sqrat::NoConstructor<Database>> binding(
+                mVM, "Database");
+            Bind<Database>("Database", binding);
+
+            // These are needed for some methods.
+            Using<PersistentObject>();
+
+            binding
+                .Func("Open", &Database::Open)
+                .Func("Close", &Database::Close)
+                .Func("IsOpen", &Database::IsOpen)
+                //.Func("Prepare", &Database::Prepare)
+                .Func("Execute", &Database::Execute)
+                .Func("Exists", &Database::Exists)
+                .Func("Use", &Database::Use)
+                .Func("TableHasRows", &Database::TableHasRows)
+                .Func("TableExists", &Database::TableExists)
+                .Func("GetLastError", &Database::GetLastError)
+                .Func("InsertSingleObject", &Database::InsertSingleObject)
+                .Func("UpdateSingleObject", &Database::UpdateSingleObject)
+                .Func("DeleteSingleObject", &Database::DeleteSingleObject)
+                ; // Last call to binding
+        }
+
+        return *this;
+    }
 }

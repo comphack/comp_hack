@@ -56,7 +56,7 @@ public:
 
     TestClient();
     TestClient(const TestClient& other);
-    ~TestClient();
+    virtual ~TestClient();
 
     bool Connect(uint16_t port);
 

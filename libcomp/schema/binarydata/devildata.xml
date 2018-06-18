@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <objgen>
-    <object name="MiNPCBasicData" persistent="false">
+    <object name="MiNPCBasicData" persistent="false" scriptenabled="true">
         <member type="u32" name="ID"/>
         <member type="string" length="36" name="name" encoding="cp932"/>
         <member type="s16" name="title"/>
@@ -17,7 +17,7 @@
         <member type="s16" name="unused4"/>
         <member type="u32" name="modelID"/>
     </object>
-    <object name="MiDCategoryData" persistent="false">
+    <object name="MiDCategoryData" persistent="false" scriptenabled="true">
         <member type="enum" name="family" underlying="uint8_t">
             <value num="0">NONE</value>
             <value num="1">HUMAN</value>
@@ -81,25 +81,25 @@
         </member>
         <member type="u16" name="unused"/>
     </object>
-    <object name="MiAIRelationData" persistent="false">
+    <object name="MiAIRelationData" persistent="false" scriptenabled="true">
         <member type="u16" name="type"/>
         <member type="u16" name="ai2"/>
         <member type="u16" name="ai3"/>
         <member type="u16" name="ai4"/>
     </object>
-    <object name="MiNegotiationData" persistent="false">
+    <object name="MiNegotiationData" persistent="false" scriptenabled="true">
         <member type="u8" name="affabilityThreshold"/>
         <member type="u8" name="fearThreshold"/>
         <member type="u8" name="fusionIntro"/>
         <member type="u8" name="unused"/>
     </object>
-    <object name="MiSummonData" persistent="false">
+    <object name="MiSummonData" persistent="false" scriptenabled="true">
         <member type="u32" name="summon1"/>
         <member type="u8" name="unused1"/>
         <member type="u8" name="magModifier"/>
         <member type="u16" name="unused2"/>
     </object>
-    <object name="MiUnionData" persistent="false">
+    <object name="MiUnionData" persistent="false" scriptenabled="true">
         <member type="u8" name="fusionDifficulty"/>
         <member type="u8" name="fusionOptions"/>
         <member type="u16" name="unused"/>
@@ -109,11 +109,11 @@
         </member>
         <member type="u32" name="mitamaFusionID"/>
     </object>
-    <object name="MiAcquisitionSkillData" persistent="false">
+    <object name="MiAcquisitionSkillData" persistent="false" scriptenabled="true">
         <member type="u32" name="ID"/>
         <member type="u32" name="level"/>
     </object>
-    <object name="MiGrowthData" persistent="false">
+    <object name="MiGrowthData" persistent="false" scriptenabled="true">
         <member type="u8" name="growthType"/>
         <member type="u8" name="baseLevel"/>
         <member type="u8" name="inheritanceType"/>
@@ -139,7 +139,7 @@
             <element type="string" length="68" encoding="cp932"/>
         </member>
     </object>
-    <object name="MiDevilBattleData" persistent="false">
+    <object name="MiDevilBattleData" persistent="false" scriptenabled="true">
         <member type="u32" name="battle1"/>
         <member type="u32" name="digitalizeXP"/>
         <member type="u8" name="enemyLevel"/>
@@ -153,11 +153,11 @@
             <element type="s32"/>
         </member>
     </object>
-    <object name="MiDevilFamiliarityData" persistent="false">
+    <object name="MiDevilFamiliarityData" persistent="false" scriptenabled="true">
         <member type="s32" name="familiarityType"/>
         <member type="s32" name="unused"/>
     </object>
-    <object name="MiDevilData" persistent="false">
+    <object name="MiDevilData" persistent="false" scriptenabled="true">
         <member type="MiNPCBasicData*" name="basic"/>
         <member type="MiDCategoryData*" name="category"/>
         <member type="MiAIRelationData*" name="AI"/>

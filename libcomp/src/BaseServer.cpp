@@ -40,6 +40,7 @@
 #include <Decrypt.h>
 #include <Log.h>
 #include <MessageInit.h>
+#include <ScriptEngine.h>
 #include <ServerCommandLineParser.h>
 #include <ServerConstants.h>
 
@@ -207,7 +208,8 @@ std::shared_ptr<Database> BaseServer::GetDatabase(
 
 std::shared_ptr<Database> BaseServer::GetDatabase(
     const EnumMap<objects::ServerConfig::DatabaseType_t,
-    std::shared_ptr<objects::DatabaseConfig>>& configMap, bool performSetup)
+    std::shared_ptr<objects::DatabaseConfig>>& configMap, bool performSetup,
+    DataStore *pDataStore, const std::string& migrationDirectory)
 {
     auto dbType = mConfig->GetDatabaseType();
 
@@ -223,7 +225,8 @@ std::shared_ptr<Database> BaseServer::GetDatabase(
         auto configIter = configMap.find(dbType);
 
         bool createMockData = configIter->second->GetMockData();
-        initFailure = !db->Setup(createMockData);
+        initFailure = !db->Setup(createMockData, shared_from_this(),
+            pDataStore, migrationDirectory);
         if(!initFailure && createMockData)
         {
             auto configFile = configIter->second->GetMockDataFilename();
@@ -269,7 +272,7 @@ BaseServer::~BaseServer()
     mWorkers.clear();
 }
 
-gsl::not_null<DataStore*> BaseServer::GetDataStore()
+DataStore* BaseServer::GetDataStore()
 {
     return &mDataStore;
 }
@@ -638,4 +641,27 @@ bool BaseServer::LoadDataFromFile(const libcomp::String& filePath,
 
 void BaseServer::Cleanup()
 {
+}
+
+namespace libcomp
+{
+    template<>
+    ScriptEngine& ScriptEngine::Using<BaseServer>()
+    {
+        if(!BindingExists("BaseServer"))
+        {
+            Sqrat::Class<BaseServer, Sqrat::NoConstructor<BaseServer>> binding(
+                mVM, "BaseServer");
+            Bind<BaseServer>("BaseServer", binding);
+
+            // These are needed for some methods.
+            Using<DataStore>();
+
+            binding
+                .Func("GetDataStore", &BaseServer::GetDataStore)
+                ; // Last call to binding
+        }
+
+        return *this;
+    }
 }

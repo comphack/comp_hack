@@ -114,8 +114,15 @@ bool DatabaseSQLite3::Exists()
     }
 }
 
-bool DatabaseSQLite3::Setup(bool rebuild)
+bool DatabaseSQLite3::Setup(bool rebuild,
+    const std::shared_ptr<BaseServer>& server, DataStore *pDataStore,
+    const std::string& migrationDirectory)
 {
+    /// @todo implement for SQLite3
+    (void)server;
+    (void)pDataStore;
+    (void)migrationDirectory;
+
     if(!IsOpen())
     {
         LOG_ERROR("Trying to setup a database that is not open!\n");
@@ -140,7 +147,7 @@ bool DatabaseSQLite3::Setup(bool rebuild)
 
             return false;
         }
-        
+
         if(results.size() == 0 &&
             !Execute("CREATE TABLE objects (uid string PRIMARY KEY, member_vars blob);"))
         {
@@ -509,7 +516,7 @@ bool DatabaseSQLite3::VerifyAndSetupSchema(bool recreateTables)
             }
         }
     }
-    
+
     for(auto metaObjectTable : metaObjectTables)
     {
         auto metaObject = *metaObjectTable.get();
@@ -578,7 +585,7 @@ bool DatabaseSQLite3::VerifyAndSetupSchema(bool recreateTables)
             {
                 LOG_DEBUG(String("Dropping table '%1'...\n")
                     .Arg(metaObject.GetName()));
-            
+
                 if(Execute(String("DROP TABLE %1;").Arg(objName)))
                 {
                     LOG_DEBUG("Re-creation complete\n");
@@ -599,7 +606,7 @@ bool DatabaseSQLite3::VerifyAndSetupSchema(bool recreateTables)
                 return false;
             }
         }
-            
+
         if(creating)
         {
             LOG_DEBUG(String("Creating table '%1'...\n")
@@ -641,7 +648,7 @@ bool DatabaseSQLite3::VerifyAndSetupSchema(bool recreateTables)
             bool hashExists;
             size_t typeHash = PersistentObject::GetTypeHashByName(
                 metaObject.GetName(), hashExists);
-            
+
             auto emptyObj = PersistentObject::New(typeHash);
 
             std::unordered_map<std::string, DatabaseBind*> defaultVals;
@@ -695,7 +702,7 @@ bool DatabaseSQLite3::VerifyAndSetupSchema(bool recreateTables)
                 }
             }
         }
-        
+
         //If we made the table or are missing an index, make them now
         if(needsIndex.size() > 0 || creating)
         {
@@ -761,7 +768,7 @@ bool DatabaseSQLite3::ProcessStandardChangeSet(const std::shared_ptr<
             break;
         }
     }
-    
+
     if(result)
     {
         for(auto obj : changes->GetUpdates())
@@ -905,7 +912,7 @@ bool DatabaseSQLite3::ProcessExplicitUpdate(const std::shared_ptr<
     }
 
     auto uidIdx = idx++;
-    
+
     // Now bind the where clause values
     for(auto cPair : changedVals)
     {
@@ -947,7 +954,7 @@ bool DatabaseSQLite3::ProcessExplicitUpdate(const std::shared_ptr<
 
         return false;
     }
-    
+
     for(auto cPair : changedVals)
     {
         if(!expectedVals[cPair.first]->Bind(query, idx++))
@@ -1015,4 +1022,11 @@ String DatabaseSQLite3::GetVariableType(const std::shared_ptr
     }
 
     return "blob";
+}
+
+bool DatabaseSQLite3::TableExists(const libcomp::String& table)
+{
+    /// @todo Implement this
+    (void)table;
+    return false;
 }

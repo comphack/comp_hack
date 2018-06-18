@@ -220,7 +220,7 @@ public:
      *  definitions will be skipped if this is null.
      * @return true on success, false on failure
      */
-    bool LoadData(gsl::not_null<DataStore*> pDataStore,
+    bool LoadData(DataStore *pDataStore,
         DefinitionManager* definitionManager);
 
     /**

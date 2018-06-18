@@ -19,7 +19,7 @@
         </member>
         <member type="u32" name="RentalExpiration"/>
     </object>
-    <object name="ItemBox" location="world">
+    <object name="ItemBox" location="world" scriptenabled="true">
         <member type="s64" name="BoxID"/>
         <member type="enum" name="Type" underlying="int8_t">
             <value>INVENTORY</value>

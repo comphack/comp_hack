@@ -32,6 +32,7 @@
 #include "Log.h"
 #include "MetaObjectXmlParser.h"
 #include "MetaVariable.h"
+#include "ScriptEngine.h"
 
 // All libcomp PersistentObject Includes
 #include "Account.h"
@@ -221,6 +222,12 @@ std::shared_ptr<PersistentObject> PersistentObject::LoadObject(
     return obj;
 }
 
+std::shared_ptr<PersistentObject> PersistentObject::LoadObject(
+    size_t typeHash, const std::shared_ptr<Database>& db)
+{
+    return LoadObject(typeHash, db, nullptr);
+}
+
 std::list<std::shared_ptr<PersistentObject>> PersistentObject::LoadObjects(
     size_t typeHash, const std::shared_ptr<Database>& db,
     DatabaseBind *pValue)
@@ -231,6 +238,12 @@ std::list<std::shared_ptr<PersistentObject>> PersistentObject::LoadObjects(
     }
 
     return std::list<std::shared_ptr<PersistentObject>>();
+}
+
+std::list<std::shared_ptr<PersistentObject>> PersistentObject::LoadObjects(
+    size_t typeHash, const std::shared_ptr<Database>& db)
+{
+    return LoadObjects(typeHash, db, nullptr);
 }
 
 void PersistentObject::RegisterType(std::type_index type,
@@ -249,11 +262,18 @@ PersistentObject::TypeMap& PersistentObject::GetRegistry()
     return sTypeMap;
 }
 
-size_t PersistentObject::GetTypeHashByName(std::string name, bool& result)
+size_t PersistentObject::GetTypeHashByName(const std::string& name, bool& result)
 {
     auto iter = sTypeNames.find(name);
     result = iter != sTypeNames.end();
     return result ? iter->second : 0;
+}
+
+size_t PersistentObject::GetTypeHashByName(const std::string& name)
+{
+    bool result;
+
+    return GetTypeHashByName(name, result);
 }
 
 const std::shared_ptr<libobjgen::MetaObject> PersistentObject::GetRegisteredMetadata(size_t typeHash)
@@ -319,6 +339,56 @@ bool PersistentObject::Delete(const std::shared_ptr<Database>& db)
     }
 
     return false;
+}
+
+namespace libcomp
+{
+    template<>
+    ScriptEngine& ScriptEngine::Using<libobjgen::UUID>()
+    {
+        if(!BindingExists("UUID"))
+        {
+            Sqrat::Class<libobjgen::UUID> binding(mVM, "UUID");
+            binding
+                .Func("ToString", &libobjgen::UUID::ToString)
+                .Func("IsNull", &libobjgen::UUID::IsNull)
+                ; // Last call to binding
+
+            Bind<libobjgen::UUID>("UUID", binding);
+        }
+
+        return *this;
+    }
+
+    template<>
+    ScriptEngine& ScriptEngine::Using<PersistentObject>()
+    {
+        if(!BindingExists("PersistentObject"))
+        {
+            // Include the base class
+            Using<Object>();
+
+            Sqrat::DerivedClass<PersistentObject, Object,
+                Sqrat::NoConstructor<PersistentObject>> binding(
+                mVM, "PersistentObject");
+            Bind<PersistentObject>("PersistentObject", binding);
+
+            // These are needed for some methods.
+            Using<libobjgen::UUID>();
+            Using<Database>();
+
+            binding
+                .Func("GetUUID", &PersistentObject::GetUUID)
+                .Func("Insert", &PersistentObject::Insert)
+                .Func("Update", &PersistentObject::Update)
+                .Func("Delete", &PersistentObject::Delete)
+                .StaticFunc<std::list<std::shared_ptr<PersistentObject>> (*)(size_t, const std::shared_ptr<Database>&)>("LoadObjects", &PersistentObject::LoadObjects)
+                .StaticFunc<size_t (*)(const std::string&)>("GetTypeHashByName", &PersistentObject::GetTypeHashByName)
+                ; // Last call to binding
+        }
+
+        return *this;
+    }
 }
 
 bool PersistentObject::sInitializationFailed = false;

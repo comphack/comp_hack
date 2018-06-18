@@ -28,6 +28,7 @@
 
 // libcomp Includes
 #include "Log.h"
+#include "ScriptEngine.h"
 
 // object Includes
 #include <EnchantSetData.h>
@@ -178,7 +179,7 @@ std::list<uint16_t> DefinitionManager::GetDevilBoostLotIDs(int32_t count)
     return results;
 }
 
-const std::shared_ptr<objects::MiDevilData>
+std::shared_ptr<objects::MiDevilData>
     DefinitionManager::GetDevilData(uint32_t id)
 {
     return GetRecordByID(id, mDevilData);
@@ -1537,7 +1538,7 @@ namespace libcomp
     }
 }
 
-bool DefinitionManager::LoadAllData(gsl::not_null<DataStore*> pDataStore)
+bool DefinitionManager::LoadAllData(DataStore *pDataStore)
 {
     LOG_INFO("Loading binary data definitions...\n");
 
@@ -1746,5 +1747,31 @@ void DefinitionManager::PrintLoadResult(const libcomp::String& binaryFile,
     {
         LOG_ERROR(libcomp::String("Failed after loading %1/%2 records from %3.\n")
             .Arg(loadedEntries).Arg(entriesExpected).Arg(binaryFile));
+    }
+}
+
+namespace libcomp
+{
+    template<>
+    ScriptEngine& ScriptEngine::Using<DefinitionManager>()
+    {
+        if(!BindingExists("DefinitionManager"))
+        {
+            Sqrat::Class<DefinitionManager> binding(
+                mVM, "DefinitionManager");
+            Bind<DefinitionManager>("DefinitionManager", binding);
+
+            // These are needed for some methods.
+            Using<objects::MiDevilData>();
+
+            binding
+                .Func("LoadAllData", &DefinitionManager::LoadAllData)
+                .Func<std::shared_ptr<objects::MiDevilData> (DefinitionManager::*)(uint32_t)>("GetDevilData", &DefinitionManager::GetDevilData)
+                // Can't overload because it has the same number of arguments.
+                //.Overload<const std::shared_ptr<objects::MiDevilData> (DefinitionManager::*)(const libcomp::String&)>("GetDevilData", &DefinitionManager::GetDevilData)
+                ; // Last call to binding
+        }
+
+        return *this;
     }
 }

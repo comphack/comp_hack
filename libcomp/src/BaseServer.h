@@ -121,17 +121,21 @@ public:
      * server.
      * @param configMap Map of the available database configs by type
      * @param performSetup If true, @ref Database::Setup will be executed
+     * @param pDataStore Pointer to the data store for migrations (or null).
+     * @param migrationDirectory Directory to look for migrations in.
      * @return Pointer to the new database connection or nullptr on failure
      */
     std::shared_ptr<Database> GetDatabase(
         const EnumMap<objects::ServerConfig::DatabaseType_t,
-            std::shared_ptr<objects::DatabaseConfig>>& configMap, bool performSetup);
+            std::shared_ptr<objects::DatabaseConfig>>& configMap,
+        bool performSetup, DataStore *pDataStore = nullptr,
+        const std::string& migrationDirectory = std::string());
 
     /**
      * Get the data store for the server.
      * @returns Pointer to the data store. This shold never be deleted.
      */
-    gsl::not_null<DataStore*> GetDataStore();
+    DataStore* GetDataStore();
 
     /**
      * Get the timer manager for the server.

@@ -25,4 +25,20 @@
         </member>
         <member type="bool" name="boolean" default="true"/>
     </object>
+    <object name="TestObjectB" persistent="false" scriptenabled="true">
+        <member type="string" name="Value"/>
+    </object>
+    <object name="TestObjectA" persistent="false" scriptenabled="true">
+        <member type="string" name="Value"/>
+        <member type="TestObjectB*" name="ObjectB"/>
+        <member type="list" name="ObjectBList">
+            <element type="TestObjectB*"/>
+        </member>
+    </object>
+    <object name="TestObjectC" baseobject="TestObjectB" persistent="false" scriptenabled="true">
+        <member type="s32" name="ExtraValue"/>
+    </object>
+    <object name="TestObjectD" persistent="false" scriptenabled="true">
+        <member type="s32" name="Value"/>
+    </object>
 </objgen>

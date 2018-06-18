@@ -37,7 +37,9 @@
 namespace libcomp
 {
 
+class BaseServer;
 class DatabaseBind;
+class DataStore;
 
 /**
  * Abstract base class that represents a database to use for loading
@@ -47,7 +49,7 @@ class DatabaseBind;
  * to perform various tasks such as checking column data types and
  * knowing what table name to use in a select statement.
  */
-class Database
+class Database : public std::enable_shared_from_this<Database>
 {
 public:
     /**
@@ -59,7 +61,7 @@ public:
     /**
      * Close and clean up the database connection.
      */
-    ~Database();
+    virtual ~Database();
 
     /**
      * Open the connection to the database.
@@ -106,9 +108,15 @@ public:
      * Setup the database schema and perform all validation steps.
      * @param rebuild Optional parameter to rebuild all tables used
      *  by this database during the verification step
+     * @param server Server to pass to migration scripts (or null).
+     * @param pDataStore Pointer to the data store for migrations (or null).
+     * @param migrationDirectory Directory to look for migrations in.
      * @return true if it could be set up, false if it could not
      */
-    virtual bool Setup(bool rebuild = false) = 0;
+    virtual bool Setup(bool rebuild = false,
+        const std::shared_ptr<BaseServer>& server = {},
+        DataStore *pDataStore = nullptr,
+        const std::string& migrationDirectory = std::string()) = 0;
 
     /**
      * Use the database schema, keyspace, namespace, etc.
@@ -175,6 +183,25 @@ public:
     virtual bool DeleteObjects(std::list<std::shared_ptr<PersistentObject>>& objs) = 0;
 
     /**
+     * Check if a table exists.
+     * @param table Name of the table to check for.
+     * @returns true if the table exists, false otherwise.
+     */
+    virtual bool TableExists(const libcomp::String& table) = 0;
+
+    /**
+     * Apply a database migration script.
+     * @param server Server to pass to the script.
+     * @param pDataStore Data store to read the script from.
+     * @param migration Name of the migration.
+     * @param path Path to the script in the data store.
+     * @returns true if the migration was applied; false otherwise.
+     */
+    virtual bool ApplyMigration(const std::shared_ptr<BaseServer>& server,
+        DataStore *pDataStore, const libcomp::String& migration,
+        const libcomp::String& path);
+
+    /**
      * Queue an object to insert during the next call to
      * ProcessTransactionQueue.
      * @param obj Pointer to the object to insert
@@ -235,7 +262,7 @@ public:
      * @return The last error that occurred
      */
     virtual String GetLastError();
-    
+
     /**
      * Get the database config.
      * @return Pointer to the database config

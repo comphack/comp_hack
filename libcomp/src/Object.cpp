@@ -27,9 +27,11 @@
 #include "Object.h"
 
 // libcomp Includes
+#include <Log.h>
 #include <Packet.h>
 #include <PacketStream.h>
 #include <ReadOnlyPacket.h>
+#include <ScriptEngine.h>
 
 using namespace libcomp;
 
@@ -310,4 +312,24 @@ std::string Object::GetXml() const
     doc.Print(&printer);
 
     return printer.CStr();
+}
+
+namespace libcomp
+{
+    template<>
+    ScriptEngine& ScriptEngine::Using<Object>()
+    {
+        if(!BindingExists("Object"))
+        {
+            Sqrat::Class<Object, Sqrat::NoConstructor<Object>> binding(
+                mVM, "Object");
+            Bind<Object>("Object", binding);
+
+            binding
+                .Func("IsValid", &Object::IsValid)
+                ; // Last call to binding
+        }
+
+        return *this;
+    }
 }

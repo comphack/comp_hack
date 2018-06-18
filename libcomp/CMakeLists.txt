@@ -574,6 +574,14 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     SpawnRestriction.cpp
     TestObject.h
     TestObject.cpp
+    TestObjectA.h
+    TestObjectA.cpp
+    TestObjectB.h
+    TestObjectB.cpp
+    TestObjectC.h
+    TestObjectC.cpp
+    TestObjectD.h
+    TestObjectD.cpp
     Tokusei.h
     Tokusei.cpp
     TokuseiAspect.h
@@ -926,6 +934,7 @@ TARGET_INCLUDE_DIRECTORIES(comp PUBLIC
     ${LIBCOMP_INCLUDES}
     ${ASIO_INCLUDE_DIRS}
     ${SYSTEMD_INCLUDES}
+    ${SQRAT_INCLUDE_DIRS}
 )
 
 IF(SYSTEMD_FOUND)
@@ -936,7 +945,7 @@ TARGET_LINK_LIBRARIES(comp mariadbclient ${OPENSSL_LIBRARIES} ${ZLIB_LIBRARIES}
     ${SYSTEM_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} objgen sqlite3
     squirrel sqstdlib ttvfs ttvfs_zip tinyxml2 physfs ${SYSTEMD_LIBS})
 
-ADD_DEPENDENCIES(comp asio sqrat gsl git-version)
+ADD_DEPENDENCIES(comp asio gsl git-version)
 
 IF(WIN32)
     TARGET_LINK_LIBRARIES(comp advapi32 iphlpapi psapi shell32 userenv

@@ -1,3 +1,7 @@
 [submodule "coveralls-cmake"]
 	path = coveralls-cmake
 	url = ../../JoakimSoderberg/coveralls-cmake.git
+[submodule "deps/sqrat"]
+	path = deps/sqrat
+	url = ../sqrat.git
+	branch = comp_hack

@@ -685,6 +685,15 @@ bool operator!=(const std::string& str, const String& other);
  */
 const String operator+(const String& a, const String& b);
 
+/**
+ * Operator to compare two strings (for sorting).
+ * @param a First string to compare.
+ * @param b Second string to compare.
+ * @returns true if b < a
+ * @relates String
+ */
+bool operator<(const libcomp::String& a, const libcomp::String& b);
+
 } // namespace libcomp
 
 namespace std

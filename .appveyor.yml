@@ -31,6 +31,7 @@ build_script:
   - echo "MS Platform   = %msplatform%"
   - echo "Configuration = %configuration%"
   - echo "Generator     = %generator%"
+  - git submodule update --init --recursive
   - appveyor DownloadFile https://github.com/comphack/external/releases/download/external-18/external-0.1.1-win64.zip -FileName external.zip
   - 7z x external.zip
   - del external.zip

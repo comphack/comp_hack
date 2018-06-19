@@ -42,7 +42,6 @@ WindowsService *gService = nullptr;
 
 } // namespace libcomp
 
-int ApplicationMain(int argc, const char *argv[]);
 int ServiceMain(int argc, const char *argv[]);
 VOID WINAPI ServiceCtrlHandler(DWORD);
 
@@ -56,7 +55,8 @@ static VOID WINAPI ServiceCtrlHandler(DWORD CtrlCode)
     gService->HandleCtrlCode(CtrlCode);
 }
 
-WindowsService::WindowsService() : mStatus({0}), mStatusHandle(NULL)
+WindowsService::WindowsService(const std::function<int(*)(int,
+    char*[])>& func) : mStatus({0}), mStatusHandle(NULL), mMain(func)
 {
 }
 
@@ -100,7 +100,7 @@ int WindowsService::Run(int argc, const char *argv[])
         (void)SetCurrentDirectoryA(cwd);
     }
 
-    exitCode = ApplicationMain(argc, argv);
+    exitCode = mMain(argc, argv);
 
     // Tell the service controller we are stopped.
     mStatus.dwControlsAccepted = 0;
@@ -146,7 +146,7 @@ void WindowsService::HandleCtrlCode(DWORD CtrlCode)
             mStatus.dwWin32ExitCode = 0;
             mStatus.dwCheckPoint = 4;
 
-            if(!SetServiceStatus (mStatusHandle, &mStatus) == FALSE)
+            if(!SetServiceStatus(mStatusHandle, &mStatus) == FALSE)
             {
                 OutputDebugStringA("SetServiceStatus returned error");
             }

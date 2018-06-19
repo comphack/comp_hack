@@ -32,6 +32,9 @@
 // Windows Includes
 #include <windows.h>
 
+// Standard C++11 Includes
+#include <functional>
+
 namespace libcomp
 {
 
@@ -40,7 +43,7 @@ extern char *SERVICE_NAME;
 class WindowsService
 {
 public:
-    WindowsService();
+    WindowsService(const std::function<int(*)(int, char*[])>& func);
 
     int Run(int argc, const char *argv[]);
     void HandleCtrlCode(DWORD CtrlCode);
@@ -49,6 +52,8 @@ public:
 private:
     SERVICE_STATUS mStatus = {0};
     SERVICE_STATUS_HANDLE mStatusHandle;
+
+    std::function<int(*)(int, char*[])> mMain;
 };
 
 extern WindowsService *gService;

@@ -30,9 +30,11 @@
 
 using namespace libcomp;
 
+int ApplicationMain(int argc, const char *argv[]);;
+
 int main(int argc, const char *argv[])
 {
-    gService = new WindowsService;
+    gService = new WindowsService(&ApplicationMain);
 
     SERVICE_TABLE_ENTRY ServiceTable[] =
     {

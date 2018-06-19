@@ -42,10 +42,9 @@ WindowsService *gService = nullptr;
 
 } // namespace libcomp
 
-int ServiceMain(int argc, const char *argv[]);
 VOID WINAPI ServiceCtrlHandler(DWORD);
 
-static int ServiceMain(int argc, const char *argv[])
+int ServiceMain(int argc, const char *argv[])
 {
     return gService->Run(argc, argv);
 }

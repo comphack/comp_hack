@@ -30,6 +30,14 @@
 
 using namespace libcomp;
 
+namespace libcomp
+{
+
+extern char *SERVICE_NAME;
+
+} // namespace libcomp
+
+int ServiceMain(int argc, const char *argv[]);
 int ApplicationMain(int argc, const char *argv[]);;
 
 int main(int argc, const char *argv[])

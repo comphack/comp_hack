@@ -55,7 +55,7 @@ static VOID WINAPI ServiceCtrlHandler(DWORD CtrlCode)
     gService->HandleCtrlCode(CtrlCode);
 }
 
-WindowsService::WindowsService(const std::function<int(*)(int,
+WindowsService::WindowsService(const std::function<int(int,
     char*[])>& func) : mStatus({0}), mStatusHandle(NULL), mMain(func)
 {
 }

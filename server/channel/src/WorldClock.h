@@ -110,7 +110,7 @@ public:
      * is active between 1800 and 0599
      * @return true if it is night, false if it is day or unspecified
      */
-    bool IsNight();
+    bool IsNight() const;
 
     /// Week day numeric respresentation
     /// (1 = Sunday, 7 = Saturday, -1 = not set)

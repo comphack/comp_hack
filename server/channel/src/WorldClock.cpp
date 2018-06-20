@@ -73,7 +73,7 @@ WorldClock::WorldClock() :
 {
 }
 
-bool WorldClock::IsNight()
+bool WorldClock::IsNight() const
 {
     return Hour >= 0 && (Hour <= 5 || Hour >= 18);
 }

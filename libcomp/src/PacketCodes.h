@@ -603,7 +603,7 @@ enum class ChannelToClientPacketCode_t : uint16_t
     PACKET_EVENT_PLAY_BGM = 0x0294,   //!< Request to the client to play background music as part of an event.
     PACKET_EVENT_STOP_BGM = 0x0295,   //!< Request to the client to stop playing specific background music as part of an event.
     PACKET_ITEM_DEPO_REMOTE = 0x0297,  //!< Response to the request to open the remote item depos.
-	PACKET_SOUL_POINT_UPDATE = 0x029B,  //!< Notification that the client partner demon's soul points have updated.
+    PACKET_SOUL_POINT_UPDATE = 0x029B,  //!< Notification that the client partner demon's soul points have updated.
     PACKET_DEMON_SOLO_UPDATE = 0x029C,  //!< Notification that the client is in a demon only zone istance.
     PACKET_DEMON_SOLO_END = 0x029D,     //!< Notification that the client's demon only challenge has ended.
     PACKET_DEMON_SOLO_DEATH_TIME = 0x029E,  //!< Notification containing a player in a demon only dungeon's death time-out.
@@ -633,12 +633,12 @@ enum class ChannelToClientPacketCode_t : uint16_t
     PACKET_BLACKLIST_UPDATE = 0x040B,  //!< Response to the request to update the current player's blacklist.
     PACKET_DIGITALIZE_POINTS = 0x0415,  //!< Response containing the current player's digitalize point information.
     PACKET_DIGITALIZE_ASSIST = 0x0419,  //!< Response containing the current player's digitalize assist information.
-	PACKET_VA_BOX = 0x041F, //!< Response to the request to list all VA items in the VA closet.
-	PACKET_VA_BOX_ADD = 0x0421, //!< Response to the request to create a VA item and add it to the closet.
-	PACKET_VA_BOX_REMOVE = 0x0423,  //!< Response to the request to remove a VA item from the closet.
-	PACKET_VA_CHANGE = 0x0425,  //!< Reponse to the request to change the current character's VA.
-	PACKET_VA_CHANGED = 0x0426, //!< Notification that a character's VA has changed.
-	PACKET_VA_BOX_MOVE = 0x0428,    //!< Response to the request to move a VA item in the closet.
+    PACKET_VA_BOX = 0x041F, //!< Response to the request to list all VA items in the VA closet.
+    PACKET_VA_BOX_ADD = 0x0421, //!< Response to the request to create a VA item and add it to the closet.
+    PACKET_VA_BOX_REMOVE = 0x0423,  //!< Response to the request to remove a VA item from the closet.
+    PACKET_VA_CHANGE = 0x0425,  //!< Reponse to the request to change the current character's VA.
+    PACKET_VA_CHANGED = 0x0426, //!< Notification that a character's VA has changed.
+    PACKET_VA_BOX_MOVE = 0x0428,    //!< Response to the request to move a VA item in the closet.
     PACKET_ALLY_DATA = 0x0431,  //!< Message containing data about an ally NPC in the zone.
 };
 

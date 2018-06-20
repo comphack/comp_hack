@@ -40,6 +40,7 @@
 
 // object Includes
 #include <Account.h>
+#include <AccountWorldData.h>
 #include <ChannelConfig.h>
 #include <CharacterProgress.h>
 #include <DemonBox.h>
@@ -593,9 +594,12 @@ bool EventManager::EvaluateEventCondition(EventContext& ctx, const std::shared_p
                         sqParams.Append(p);
                     }
 
+                    int32_t sourceEntityID = ctx.EventInstance->GetSourceEntityID();
+
                     auto state = client ? client->GetClientState() : nullptr;
                     auto scriptResult = !f.IsNull()
                         ? f.Evaluate<int32_t>(
+                            ctx.CurrentZone->GetActiveEntity(sourceEntityID),
                             state ? state->GetCharacterState() : nullptr,
                             state ? state->GetDemonState() : nullptr,
                             ctx.CurrentZone,
@@ -1468,7 +1472,12 @@ bool EventManager::EvaluateCondition(EventContext& ctx,
             auto definitionManager = server->GetDefinitionManager();
 
             auto character = client->GetClientState()->GetCharacterState()->GetEntity();
-            auto progress = character->GetProgress();
+            auto worldData = std::dynamic_pointer_cast<objects::AccountWorldData>(
+                libcomp::PersistentObject::GetObjectByUUID(character->GetAccount()));
+            if(!worldData)
+            {
+                return false;
+            }
 
             uint32_t demonType = (uint32_t)condition->GetValue1();
             bool baseMode = condition->GetValue2() != 0;
@@ -1482,7 +1491,7 @@ bool EventManager::EvaluateCondition(EventContext& ctx,
                     uint8_t shiftValue;
                     CharacterManager::ConvertIDToMaskValues(
                         (uint16_t)dbPair.second->GetShiftValue(), index, shiftValue);
-                    if((progress->GetDevilBook(index) & shiftValue) != 0)
+                    if((worldData->GetDevilBook(index) & shiftValue) != 0)
                     {
                         return true;
                     }
@@ -3165,8 +3174,11 @@ void EventManager::HandleNext(EventContext& ctx)
                         sqParams.Append(p);
                     }
 
+                    int32_t sourceEntityID = ctx.EventInstance->GetSourceEntityID();
+
                     auto scriptResult = !f.IsNull()
                         ? f.Evaluate<size_t>(
+                            ctx.CurrentZone->GetActiveEntity(sourceEntityID),
                             state ? state->GetCharacterState() : nullptr,
                             state ? state->GetDemonState() : nullptr,
                             ctx.CurrentZone,

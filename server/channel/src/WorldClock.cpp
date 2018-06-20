@@ -72,3 +72,8 @@ WorldClock::WorldClock() :
     GameOffset(0), CycleOffset(0)
 {
 }
+
+bool WorldClock::IsNight()
+{
+    return Hour >= 0 && (Hour <= 5 || Hour >= 18);
+}

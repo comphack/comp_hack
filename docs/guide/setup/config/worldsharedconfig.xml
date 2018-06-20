@@ -33,6 +33,19 @@
 </section><!-- COMPShopMessage -->
 
 <section>
+<title>MoveCorrection</title>
+<para><emphasis role="strong">Type:</emphasis> boolean</para>
+<para><emphasis role="strong">Default:</emphasis> true</para>
+<para>Double check player movements server side to ensure they are not glitching through walls. Only disable if server performance is very poor.</para>
+
+<section>
+<title>Example</title>
+<para><![CDATA[<member name="MoveCorrection">true</member>]]></para>
+</section><!-- Example -->
+
+</section><!-- MoveCorrection -->
+
+<section>
 <title>AutoCompressCurrency</title>
 <para><emphasis role="strong">Type:</emphasis> boolean</para>
 <para><emphasis role="strong">Default:</emphasis> false</para>

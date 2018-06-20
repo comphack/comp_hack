@@ -162,6 +162,15 @@ public:
         const std::shared_ptr<ChannelClientConnection> client, uint8_t errorCode = 0);
 
     /**
+     * Determine if the specified skill is locked from use on the supplied entity.
+     * @param source Entity that is attempting to use the skill
+     * @param skillData Pointer to the skill's definition
+     * @return true if the skill is restricted from being used
+     */
+    bool SkillRestricted(const std::shared_ptr<ActiveEntityState> source,
+        const std::shared_ptr<objects::MiSkillData>& skillData);
+
+    /**
      * Check fusion skill usage pre-skill validation and determine which one
      * should be used. Fusion skills are decided based upon the two demons
      * involved, defaulting to the COMP demon if no special skill exists.
@@ -270,13 +279,11 @@ private:
      * set, it will be returned instead.
      * @param activated Pointer to the activated ability instance
      * @param ctx Special execution state for the skill
-     * @param client Client associated to the skill being processed (can be null)
      * @return Pointer to a processing skill contextual to the values supplied
      */
     std::shared_ptr<ProcessingSkill> GetProcessingSkill(
         std::shared_ptr<objects::ActivatedAbility> activated,
-        std::shared_ptr<SkillExecutionContext> ctx,
-        const std::shared_ptr<ChannelClientConnection> client);
+        std::shared_ptr<SkillExecutionContext> ctx);
 
     /**
      * Get a CalculatedEntityState based upon the skill being executed and

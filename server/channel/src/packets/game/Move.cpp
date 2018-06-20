@@ -38,6 +38,9 @@
 // Standard C++11 Includes
 #include <math.h>
 
+// object Includes
+#include <WorldSharedConfig.h>
+
 // channel Includes
 #include "ChannelClientConnection.h"
 #include "ChannelServer.h"
@@ -89,27 +92,45 @@ bool Parsers::Move::Parse(libcomp::ManagerPacket *pPacketManager,
     ServerTime startTime = state->ToServerTime(start);
     ServerTime stopTime = state->ToServerTime(stop);
 
-    /// @todo: Determine if the player's movement was valid (collisions, triggers etc)
     bool positionCorrected = false;
+
+    const static bool checkCollision = server->GetWorldSharedConfig()
+        ->GetMoveCorrection();
 
     eState->ExpireStatusTimes(ChannelServer::GetServerTime());
     if(!eState->CanMove())
     {
-        zoneManager->FixCurrentPosition(eState, stopTime, startTime);
-        return true;
+        destX = originX;
+        destY = originY;
+        positionCorrected = true;
     }
+    else if(checkCollision)
+    {
+        auto geometry = zone->GetGeometry();
+        if(geometry)
+        {
+            Line path(Point(originX, originY), Point(destX, destY));
 
-    /*float deltaX = destX - originX;
-    float deltaY = destY - originY;
-    float dist2 = (deltaX * deltaX) + (deltaY * deltaY);
+            Point collidePoint;
+            Line outSurface;
+            std::shared_ptr<ZoneShape> outShape;
+            if(zone->Collides(path, collidePoint, outSurface, outShape))
+            {
+                // Back off by 10
+                collidePoint = zoneManager->GetLinearPoint(collidePoint.x,
+                    collidePoint.y, originX, originY, 10.f, false);
 
-    // Delta time in seconds
-    double deltaTime = static_cast<double>((double)(stopTime - startTime) / 1000000.0);
-    double maxDist = static_cast<double>(deltaTime * ratePerSec);
-    double dist = (double)sqrtl(dist2);
+                destX = collidePoint.x;
+                destY = collidePoint.y;
+                positionCorrected = true;
 
-    LOG_DEBUG(libcomp::String("Rate: %1 | Dist: %2 | Max Dist: %3 | Time: %4\n").Arg(
-        ratePerSec).Arg(dist).Arg(maxDist).Arg(std::to_string(deltaTime)));*/
+                // Monitor for ne'er-do-wells
+                LOG_DEBUG(libcomp::String("Player movement corrected: %1"
+                    " (%2, %2)\n").Arg(state->GetAccountUID().ToString())
+                    .Arg(destX).Arg(destY));
+            }
+        }
+    }
 
     eState->SetOriginX(originX);
     eState->SetCurrentX(originX);
@@ -120,6 +141,7 @@ bool Parsers::Move::Parse(libcomp::ManagerPacket *pPacketManager,
     eState->SetDestinationY(destY);
     eState->SetDestinationTicks(stopTime);
 
+    // Calculate rotation from origin and destination
     float originRot = eState->GetCurrentRotation();
     float destRot = (float)atan2(originY - destY, originX - destX);
     eState->SetOriginRotation(originRot);
@@ -131,35 +153,35 @@ bool Parsers::Move::Parse(libcomp::ManagerPacket *pPacketManager,
 
     /// @todo: Fire zone triggers
 
-    // If the entity is still visible to others, relay info
-    std::list<std::shared_ptr<ChannelClientConnection>> zConnections;
-    if(eState->IsClientVisible())
-    {
-        zConnections = zoneManager->GetZoneConnections(client, false);
-    }
-
-    // If the move was invalid, send correction to self
     if(positionCorrected)
     {
-        zConnections.push_back(client);
+        // Sending the move response back to the player can still be
+        // forced through, warp back to the corrected point
+        zoneManager->Warp(client, eState, destX, destY, destRot);
     }
 
-    if(zConnections.size() > 0)
+    // If the entity is still visible to others, relay info
+    if(eState->IsClientVisible())
     {
-        libcomp::Packet reply;
-        reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_MOVE);
-        reply.WriteS32Little(entityID);
-        reply.WriteFloat(destX);
-        reply.WriteFloat(destY);
-        reply.WriteFloat(originX);
-        reply.WriteFloat(originY);
-        reply.WriteFloat(ratePerSec);
+        auto zConnections = zoneManager->GetZoneConnections(client, false);
+        if(zConnections.size() > 0)
+        {
+            libcomp::Packet notify;
+            notify.WritePacketCode(ChannelToClientPacketCode_t::PACKET_MOVE);
+            notify.WriteS32Little(entityID);
+            notify.WriteFloat(destX);
+            notify.WriteFloat(destY);
+            notify.WriteFloat(originX);
+            notify.WriteFloat(originY);
+            notify.WriteFloat(ratePerSec);
 
-        RelativeTimeMap timeMap;
-        timeMap[reply.Size()] = startTime;
-        timeMap[reply.Size() + 4] = stopTime;
+            RelativeTimeMap timeMap;
+            timeMap[notify.Size()] = startTime;
+            timeMap[notify.Size() + 4] = stopTime;
 
-        ChannelClientConnection::SendRelativeTimePacket(zConnections, reply, timeMap);
+            ChannelClientConnection::SendRelativeTimePacket(zConnections,
+                notify, timeMap);
+        }
     }
 
     // If a demon is moving while the character is hidden, warp the

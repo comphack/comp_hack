@@ -27,6 +27,9 @@
 #ifndef SERVER_CHANNEL_SRC_ZONEMANAGER_H
 #define SERVER_CHANNEL_SRC_ZONEMANAGER_H
 
+// object Includes
+#include <ServerZoneTrigger.h>
+
 // channel Includes
 #include "ChannelClientConnection.h"
 #include "Zone.h"
@@ -51,6 +54,8 @@ namespace channel
 class ChannelServer;
 class WorldClock;
 class WorldClockTime;
+
+typedef objects::ServerZoneTrigger::Trigger_t ZoneTrigger_t;
 
 /**
  * Manager to handle zone focused actions.
@@ -294,7 +299,7 @@ public:
 
     /**
      * Send a request to the specified game clients to remove an entity.
-     * @param client List of pointers to client connections
+     * @param clients List of pointers to client connections
      * @param entityIDs IDs of the entities to remove
      * @param removalMode Optional preset removal mode. See
      *  ZoneManager::RemoveEntitiesFromZone for options
@@ -303,6 +308,18 @@ public:
     void RemoveEntities(const std::list<std::shared_ptr<
         ChannelClientConnection>>& clients, const std::list<int32_t>& entityIDs,
         int32_t removalMode = 0, bool queue = false);
+
+    /**
+     * Send data about the supplied NPC to the zone or supplied clients
+     * @param zone Pointer to the zone the NPC exists in
+     * @param clients List of pointers to client connections
+     * @param npcState State of the NPC to show
+     * @param queue true if the message should be queued, false if
+     *  it should send right away
+     */
+    void ShowNPC(const std::shared_ptr<Zone>& zone,
+        const std::list<std::shared_ptr<ChannelClientConnection >> &clients,
+        const std::shared_ptr<NPCState>& npcState, bool queue = false);
 
     /**
      * Stop and fix an entity at their current position for the specified
@@ -330,7 +347,7 @@ public:
      * specified or all clients in that zone
      * @param client Pointer to the client connection
      * @param lState Entity state of the loot box
-     * @param eState Entity state of the enemy that created the loot box, specified
+     * @param eState Entity state of the entity that created the loot box, specified
      *  when the loot box is first created
      * @param sendToAll true if all clients in the zone should be sent the data
      *  false if just the supplied client should be sent to
@@ -338,8 +355,8 @@ public:
      *  it should send right away
      */
     void SendLootBoxData(const std::shared_ptr<ChannelClientConnection>& client,
-        const std::shared_ptr<LootBoxState>& lState, const std::shared_ptr<EnemyState>& eState,
-        bool sendToAll, bool queue = false);
+        const std::shared_ptr<LootBoxState>& lState, const std::shared_ptr<
+        ActiveEntityState>& eState, bool sendToAll, bool queue = false);
 
     /**
      * Send information about the current market matching the supplied ID in a
@@ -455,8 +472,12 @@ public:
     /**
      * Perform time-based actions depending on the current world clock time.
      * @param clock World clock set to the current time
+     * @param lastTrigger Last time the zone time triggers were processed
+     *  according to the server. Only events between this and the current
+     *  clock will be executed.
      */
-    void HandleTimedActions(const WorldClock& clock);
+    void HandleTimedActions(const WorldClock& clock,
+        const WorldClockTime& lastTrigger);
 
     /**
      * Start the timer currently assigned to the supplied zone instance
@@ -528,6 +549,33 @@ public:
     void EndInstanceTimer(const std::shared_ptr<ZoneInstance>& instance,
         const std::shared_ptr<ChannelClientConnection>& client,
         bool isSuccess, bool queue = false);
+
+    /**
+     * Trigger specific zone actions for the specified zone for a set of
+     * source entities
+     * @param zone Pointer to a zone
+     * @param entities List of pointers to entities that will be used as
+     *  source entities for each action
+     * @param trigger Type of trigger to first
+     * @param client Pointer to the client to use for the executing action
+     *  contexts
+     * @return true if at least one action trigger was fired, false if no
+     *  action triggers were fired
+     */
+    bool TriggerZoneActions(const std::shared_ptr<Zone>& zone, std::list<
+        std::shared_ptr<ActiveEntityState>> entities, ZoneTrigger_t trigger,
+        const std::shared_ptr<ChannelClientConnection>& client = nullptr);
+
+    /**
+     * Update zone geometry information bound to a server object in the
+     * supplied zone
+     * @param zone Pointer to a zone
+     * @param elemObject Pointer to a server object that may be bound to
+     *  zone geometry
+     * @return true if the geometry state was updated, false if it was not
+     */
+    bool UpdateGeometryElement(const std::shared_ptr<Zone>& zone,
+        std::shared_ptr<objects::ServerObject> elemObject);
 
     /**
      * Get the X/Y coordinates and rotation of the center point of a spot.
@@ -649,18 +697,19 @@ private:
         std::list<std::shared_ptr<objects::SpawnLocation>>& locations);
 
     /**
-     * Create an enemy in the specified zone at set coordinates
-     * @param zone Pointer to the zone where the enemy should be spawned
+     * Create an enemy (or ally) in the specified zone at set coordinates
+     * @param zone Pointer to the zone where the entity should be spawned
      * @param demonID Demon/enemy type ID to spawn
-     * @param spawn Optional pointer to the enemy's spawn definition
+     * @param spawn Optional pointer to the entity's spawn definition
      * @param x X coordinate to render the enemy at
      * @param y Y coordinate to render the enemy at
      * @param rot Rotation to render the enemy with
      * @return Pointer to the new enemy state
      */
-    std::shared_ptr<EnemyState> CreateEnemy(const std::shared_ptr<Zone>& zone,
-        uint32_t demonID, const std::shared_ptr<objects::Spawn>& spawn,
-        float x, float y, float rot);
+    std::shared_ptr<ActiveEntityState> CreateEnemy(
+        const std::shared_ptr<Zone>& zone, uint32_t demonID,
+        const std::shared_ptr<objects::Spawn>& spawn, float x, float y,
+        float rot);
 
     /**
      * Send entity information about an enemy in a zone
@@ -675,6 +724,21 @@ private:
      */
     void SendEnemyData(const std::shared_ptr<ChannelClientConnection>& client,
         const std::shared_ptr<EnemyState>& enemyState,
+        const std::shared_ptr<Zone>& zone, bool sendToAll, bool queue = false);
+
+    /**
+     * Send entity information about an ally in a zone
+     * @param client Pointer to the client connection to send to or use as
+     *  an identifier for the zone to send to
+     * @param allyState Ally state to use to report ally data to the clients
+     * @param zone Pointer to the zone where the ally exists
+     * @param sendToAll true if all clients in the zone should be sent the data
+     *  false if just the supplied client should be sent to
+     * @param queue true if the message should be queued, false if
+     *  it should send right away
+     */
+    void SendAllyData(const std::shared_ptr<ChannelClientConnection>& client,
+        const std::shared_ptr<AllyState>& allyState,
         const std::shared_ptr<Zone>& zone, bool sendToAll, bool queue = false);
 
     /**

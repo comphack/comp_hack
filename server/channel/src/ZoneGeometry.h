@@ -34,11 +34,13 @@
 // Standard C++11 includes
 #include <array>
 #include <list>
+#include <set>
 #include <unordered_map>
 
 namespace objects
 {
 class MiSpotData;
+class QmpElement;
 }
 
 namespace channel
@@ -156,7 +158,7 @@ public:
      *  intersected by the path
      * @return true if the line collides, false if it does not
      */
-    bool Collides(const Line& path, Point& point,
+    virtual bool Collides(const Line& path, Point& point,
         Line& surface) const;
 
     /// List of all lines that make up the shape.
@@ -186,14 +188,20 @@ public:
      */
     ZoneQmpShape();
 
+    virtual bool Collides(const Line& path, Point& point,
+        Line& surface) const;
+
     /// ID of the shape generated from a QMP file
     uint32_t ShapeID;
 
     /// Unique instance ID for the same shape ID from a QMP file
     uint32_t InstanceID;
 
-    /// Name of the element representation from a QMP file
-    libcomp::String ElementName;
+    /// Element definition from a QMP file
+    std::shared_ptr<objects::QmpElement> Element;
+
+    /// Determines if the shape has active collision on it
+    bool Active;
 };
 
 /**
@@ -227,10 +235,13 @@ public:
      * @param shape Output parameter to return the first shape the path
      *  will collide with. This will always be the shape the surface
      *  belongs to
+     * @param disabledBarriers Set of element IDs that should not count as
+     *  a collision
      * @return true if the line collides, false if it does not
      */
     bool Collides(const Line& path, Point& point,
-        Line& surface, std::shared_ptr<ZoneShape>& shape) const;
+        Line& surface, std::shared_ptr<ZoneShape>& shape,
+        const std::set<uint32_t> disabledBarriers = {}) const;
 
     /**
      * Determines if the supplied path collides with any shape
@@ -244,7 +255,10 @@ public:
     libcomp::String QmpFilename;
 
     /// List of all shapes
-    std::list<std::shared_ptr<ZoneShape>> Shapes;
+    std::list<std::shared_ptr<ZoneQmpShape>> Shapes;
+
+    /// List of all Qmp elements
+    std::list<std::shared_ptr<objects::QmpElement>> Elements;
 };
 
 /**

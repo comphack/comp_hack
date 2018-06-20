@@ -42,6 +42,10 @@
             <element type="ItemBox*"/>
         </member>
 
+        <member type="array" name="DevilBook" size="512">
+            <element type="u8"/>
+        </member>
+
         <member type="BazaarData*" name="BazaarData"/>
         <member type="list" name="Blacklist">
             <element type="string"/>

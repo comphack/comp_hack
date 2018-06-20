@@ -50,6 +50,7 @@
 #include <MiItemBasicData.h>
 #include <MiItemData.h>
 #include <MiDevilData.h>
+#include <MiDevilLVUpRateData.h>
 #include <MiNPCBasicData.h>
 #include <MiQuestData.h>
 #include <MiSkillItemStatusCommonData.h>
@@ -111,6 +112,7 @@ ChatManager::ChatManager(const std::weak_ptr<ChannelServer>& server)
     mGMands["quest"] = &ChatManager::GMCommand_Quest;
     mGMands["reported"] = &ChatManager::GMCommand_Reported;
     mGMands["resolve"] = &ChatManager::GMCommand_Resolve;
+    mGMands["reunion"] = &ChatManager::GMCommand_Reunion;
     mGMands["scrap"] = &ChatManager::GMCommand_Scrap;
     mGMands["skill"] = &ChatManager::GMCommand_Skill;
     mGMands["skillpoint"] = &ChatManager::GMCommand_SkillPoint;
@@ -1356,6 +1358,12 @@ bool ChatManager::GMCommand_Help(const std::shared_ptr<
             "Resolve a reported player record by UID. Records can",
             "be retrieved via @reported."
         } },
+        { "reunion",{
+            "@reunion TYPE [RANK]",
+            "Perform reunion on your currently summoned demon setting",
+            "the normal TYPE [1-12] and RANK or explicit growth TYPE",
+            "by ID if no RANK specified."
+        } },
         { "scrap", {
             "@scrap SLOT [NAME]",
             "Removes the item in slot SLOT from the character's",
@@ -1793,6 +1801,11 @@ bool ChatManager::GMCommand_Kill(const std::shared_ptr<
 
         server->GetTokuseiManager()->Recalculate(cState,
             std::set<TokuseiConditionType> { TokuseiConditionType::CURRENT_HP });
+
+        auto entityClient = server->GetManagerConnection()->GetEntityClient(
+            targetState->GetEntityID());
+        server->GetZoneManager()->TriggerZoneActions(targetState->GetZone(),
+            { targetState }, ZoneTrigger_t::ON_DEATH, entityClient);
     }
 
     return true;
@@ -2265,6 +2278,81 @@ bool ChatManager::GMCommand_Resolve(const std::shared_ptr<
     if(failed)
     {
         SendChatMessage(client, ChatType_t::CHAT_SELF, "Resolve failed");
+    }
+
+    return true;
+}
+
+bool ChatManager::GMCommand_Reunion(const std::shared_ptr<
+    channel::ChannelClientConnection>& client,
+    const std::list<libcomp::String>& args)
+{
+    if(!HaveUserLevel(client, 250))
+    {
+        return true;
+    }
+
+    std::list<libcomp::String> argsCopy = args;
+
+    uint8_t type;
+    int8_t rank = -1;
+
+    if(!GetIntegerArg(type, argsCopy) ||
+        (argsCopy.size() > 0 && !GetIntegerArg(rank, argsCopy)))
+    {
+        return SendChatMessage(client,
+            ChatType_t::CHAT_SELF, "Invalid parameters");
+    }
+
+    auto state = client->GetClientState();
+    auto dState = state->GetDemonState();
+    auto demon = dState->GetEntity();
+    if(!demon)
+    {
+        return SendChatMessage(client,
+            ChatType_t::CHAT_SELF, "Demon must be summoned");
+    }
+
+    int64_t demonID = state->GetObjectID(demon->GetUUID());
+
+    auto server = mServer.lock();
+    if(rank >= 0)
+    {
+        if(type < 1 || type > 12)
+        {
+            return SendChatMessage(client, ChatType_t::CHAT_SELF,
+                "Invalid type specified with rank. Should be"
+                " between 1 and 12");
+        }
+
+        // Determine actual growth type
+        bool found = false;
+        for(auto& pair : server->GetDefinitionManager()
+            ->GetAllDevilLVUpRateData())
+        {
+            auto lvlUpRate = pair.second;
+            if((uint8_t)lvlUpRate->GetGroupID() == type &&
+                (lvlUpRate->GetSubID() == rank ||
+                (rank > 9 && lvlUpRate->GetSubID() == 9)))
+            {
+                type = (uint8_t)pair.first;
+                found = true;
+                break;
+            }
+        }
+
+        if(!found)
+        {
+            return SendChatMessage(client, ChatType_t::CHAT_SELF,
+                "Invalid type/rank combination specified");
+        }
+    }
+
+    if(!mServer.lock()->GetCharacterManager()->ReunionDemon(client, demonID,
+        type, 0, false, true, rank))
+    {
+        return SendChatMessage(client, ChatType_t::CHAT_SELF,
+            "Reunion failed");
     }
 
     return true;

@@ -176,7 +176,7 @@ bool DatabaseMariaDB::Setup(bool rebuild,
     {
         std::stringstream ss;
         ss << "CREATE TABLE `Migrations` "
-            << "(`Migration` varchar(256) PRIMARY KEY);";
+            << "(`Migration` varchar(128) PRIMARY KEY);";
 
         if(Execute(ss.str()))
         {

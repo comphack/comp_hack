@@ -440,6 +440,16 @@ private:
         const std::list<libcomp::String>& args);
 
     /**
+     * GM command to perform a demon reunion by changing its growth type.
+     * @param client Pointer to the client that sent the command
+     * @param args List of arguments for the command
+     * @return true if the command was handled properly, else false
+     */
+    bool GMCommand_Reunion(const std::shared_ptr<
+        channel::ChannelClientConnection>& client,
+        const std::list<libcomp::String>& args);
+
+    /**
      * GM command to throw away an item in the client or target
      * character's inventory. Useful for destroying items that cannot
      * be stored or thrown away.

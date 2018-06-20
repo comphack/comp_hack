@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <objgen>
-    <object name="Enemy" persistent="false" scriptenabled="true">
+    <object name="EnemyBase" persistent="false" scriptenabled="true">
         <member type="u32" name="Type"/>
         <member type="u32" name="VariantType"/>
 
@@ -15,9 +15,14 @@
 
         <!-- Sub-sections -->
         <member type="EntityStats*" name="CoreStats"/>
+    </object>
+    <object name="Enemy" persistent="false" baseobject="EnemyBase"
+        scriptenabled="true">
         <member type="map" name="DamageSources">
             <key type="s32"/>
             <value type="u64"/>
         </member>
     </object>
+    <object name="Ally" persistent="false" baseobject="EnemyBase"
+        scriptenabled="true"/>
 </objgen>

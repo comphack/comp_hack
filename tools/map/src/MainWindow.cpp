@@ -717,7 +717,7 @@ void MainWindow::DrawMap()
     std::unordered_map<uint32_t, uint8_t> elems;
     for(auto elem : mQmpFile->GetElements())
     {
-        elems[elem->GetID()] = elem->GetUnknown();
+        elems[elem->GetID()] = (uint8_t)elem->GetType();
     }
 
     std::set<float> xVals;
@@ -729,7 +729,7 @@ void MainWindow::DrawMap()
             switch(elems[line->GetElementID()])
             {
             case 1:
-                // Lines
+                // One way
                 painter.setPen(QPen(Qt::blue));
                 painter.setBrush(QBrush(Qt::blue));
                 break;
@@ -737,6 +737,11 @@ void MainWindow::DrawMap()
                 // Toggleable
                 painter.setPen(QPen(Qt::green));
                 painter.setBrush(QBrush(Qt::green));
+                break;
+            case 3:
+                // Toggleable (wired up to close?)
+                painter.setPen(QPen(Qt::red));
+                painter.setBrush(QBrush(Qt::red));
                 break;
             default:
                 painter.setPen(QPen(Qt::black));

@@ -245,6 +245,12 @@ const std::shared_ptr<objects::MiDevilLVUpRateData>
     return GetRecordByID(id, mDevilLVUpRateData);
 }
 
+std::unordered_map<uint32_t, std::shared_ptr<objects::MiDevilLVUpRateData>>
+    DefinitionManager::GetAllDevilLVUpRateData()
+{
+    return mDevilLVUpRateData;
+}
+
 const std::shared_ptr<objects::MiDisassemblyData>
     DefinitionManager::GetDisassemblyData(uint32_t id)
 {

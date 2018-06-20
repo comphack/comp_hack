@@ -450,6 +450,7 @@ protected:
     /// occur at that time. Types include:
     /// 1) Spawn activation/deactivation
     /// 2) Tokusei active timespans
+    /// 3) Zone event trigger
     std::map<WorldClockTime, std::set<uint8_t>> mWorldClockEvents;
 
     /// Pointer to the manager in charge of connection messages.
@@ -514,6 +515,9 @@ protected:
 
     /// Server world clock
     WorldClock mWorldClock;
+
+    /// World clock time of the last time zone events processed
+    WorldClockTime mLastEventTrigger;
 
     /// System time representation of the next world clock
     /// event time that the clock needs to react to

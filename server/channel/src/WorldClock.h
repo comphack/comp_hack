@@ -105,6 +105,13 @@ public:
      */
     WorldClock();
 
+    /**
+     * Determine if the game time recorded is considered night which
+     * is active between 1800 and 0599
+     * @return true if it is night, false if it is day or unspecified
+     */
+    bool IsNight();
+
     /// Week day numeric respresentation
     /// (1 = Sunday, 7 = Saturday, -1 = not set)
     int8_t WeekDay;

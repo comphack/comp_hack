@@ -224,17 +224,13 @@ bool Parsers::EquipmentModEdit::Parse(libcomp::ManagerPacket *pPacketManager,
 
     if(responseCode != RESULT_CODE_ERROR)
     {
-        auto characterManager = server->GetCharacterManager();
-        std::unordered_map<uint32_t, uint32_t> itemCounts = { { modItemType, 1 } };
-        characterManager->AddRemoveItems(client, itemCounts, false);
-
         if(responseCode == RESULT_CODE_SUCCESS)
         {
             auto itemBox = std::dynamic_pointer_cast<objects::ItemBox>(
                 libcomp::PersistentObject::GetObjectByUUID(item->GetItemBox()));
             if(itemBox)
             {
-                characterManager->SendItemBoxData(client, itemBox,
+                server->GetCharacterManager()->SendItemBoxData(client, itemBox,
                     { (uint16_t)item->GetBoxSlot() });
             }
 
@@ -242,7 +238,7 @@ bool Parsers::EquipmentModEdit::Parse(libcomp::ManagerPacket *pPacketManager,
         }
         else
         {
-            characterManager->UpdateDurability(client, item, -5000);
+            server->GetCharacterManager()->UpdateDurability(client, item, -5000);
         }
     }
 

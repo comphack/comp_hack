@@ -31,6 +31,9 @@
 #include <cmath>
 #include <map>
 
+// object includes
+#include <QmpElement.h>
+
 using namespace channel;
 
 Point::Point() : x(0.f), y(0.f)
@@ -145,8 +148,19 @@ bool ZoneShape::Collides(const Line& path, Point& point, Line& surface) const
     }
 }
 
-ZoneQmpShape::ZoneQmpShape() : ShapeID(0), InstanceID(0)
+ZoneQmpShape::ZoneQmpShape() : ShapeID(0), InstanceID(0), Active(true)
 {
+}
+
+bool ZoneQmpShape::Collides(const Line& path, Point& point,
+    Line& surface) const
+{
+    if(Active)
+    {
+        return ZoneShape::Collides(path, point, surface);
+    }
+
+    return false;
 }
 
 ZoneSpotShape::ZoneSpotShape()
@@ -154,13 +168,16 @@ ZoneSpotShape::ZoneSpotShape()
 }
 
 bool ZoneGeometry::Collides(const Line& path, Point& point, Line& surface,
-    std::shared_ptr<ZoneShape>& shape) const
+    std::shared_ptr<ZoneShape>& shape, const std::set<
+    uint32_t> disabledBarriers) const
 {
     std::map<float, std::pair<std::shared_ptr<ZoneShape>, std::pair<
         const Line*, Point>>> collisions;
     for(auto s : Shapes)
     {
-        if(s->Collides(path, point, surface))
+        bool disabled = s->Element ? disabledBarriers.find(s->Element->GetID())
+            != disabledBarriers.end() : false;
+        if(!disabled && s->Collides(path, point, surface))
         {
             float dSquared = (float)(std::pow((path.first.x - point.x), 2)
                 + std::pow((path.first.y - point.y), 2));
@@ -170,7 +187,7 @@ bool ZoneGeometry::Collides(const Line& path, Point& point, Line& surface,
         }
     }
     
-    // If a collision exists, retun true with the closest point, surface
+    // If a collision exists, return true with the closest point, surface
     // and shape in the output params
     if(collisions.size() > 0)
     {

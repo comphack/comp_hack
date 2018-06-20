@@ -129,9 +129,6 @@
         <member type="array" name="Valuables" size="128">
             <element type="u8"/>
         </member>
-        <member type="array" name="DevilBook" size="512">
-            <element type="u8"/>
-        </member>
         <member type="array" name="CompletedQuests" size="128">
             <element type="u8"/>
         </member>

@@ -639,6 +639,7 @@ enum class ChannelToClientPacketCode_t : uint16_t
 	PACKET_VA_CHANGE = 0x0425,  //!< Reponse to the request to change the current character's VA.
 	PACKET_VA_CHANGED = 0x0426, //!< Notification that a character's VA has changed.
 	PACKET_VA_BOX_MOVE = 0x0428,    //!< Response to the request to move a VA item in the closet.
+    PACKET_ALLY_DATA = 0x0431,  //!< Message containing data about an ally NPC in the zone.
 };
 
 /**

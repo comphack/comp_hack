@@ -8,6 +8,7 @@
             <value>CHARACTER</value>
             <value>PARTNER_DEMON</value>
             <value>ENEMY</value>
+            <value>ALLY</value>
             <value>BAZAAR</value>
             <value>LOOT_BOX</value>
             <value>PLASMA</value>
@@ -70,6 +71,7 @@
             <value>PLAYER</value>
             <value>ENEMY</value>
         </member>
+        <member type="s32" name="FactionGroup"/>
         <member type="enum" name="DisplayState" underlying="int8_t">
             <value>NOT_SET</value>
             <value>AWAITING_SUMMON</value>
@@ -92,6 +94,7 @@
 
         <member type="float" name="KnockbackResist"/>
         <member type="u64" name="KnockbackTicks"/>
+        <member type="u64" name="DeathTimeOut"/>
 
         <member type="map" name="StatusTimes">
             <key type="u8"/>
@@ -133,6 +136,22 @@
             <element type="u32"/>
         </member>
         <member type="set" name="ActiveSwitchSkills">
+            <element type="u32"/>
+        </member>
+
+        <member type="set" name="StatusRestrictAct">
+            <element type="u32"/>
+        </member>
+        <member type="set" name="StatusRestrictMove">
+            <element type="u32"/>
+        </member>
+        <member type="set" name="StatusRestrictMagic">
+            <element type="u32"/>
+        </member>
+        <member type="set" name="StatusRestrictSpecial">
+            <element type="u32"/>
+        </member>
+        <member type="set" name="StatusRestrictTalk">
             <element type="u32"/>
         </member>
 

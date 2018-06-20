@@ -33,6 +33,7 @@
 #include <cmath>
 
 // object Includes
+#include <Ally.h>
 #include <Loot.h>
 #include <LootBox.h>
 #include <PlasmaState.h>
@@ -222,33 +223,61 @@ void Zone::RemoveEntity(int32_t entityID, uint32_t spawnDelay)
     {
         std::lock_guard<std::mutex> lock(mLock);
 
-        std::shared_ptr<EnemyState> removeEnemy;
+        std::shared_ptr<ActiveEntityState> removeSpawn;
+        uint32_t sgID = 0, slgID = 0, encounterID = 0;
         switch(state->GetEntityType())
         {
+        case EntityType_t::ALLY:
+            {
+                mAllies.remove_if([entityID]
+                    (const std::shared_ptr<AllyState>& a)
+                    {
+                        return a->GetEntityID() == entityID;
+                    });
+
+                auto aState = std::dynamic_pointer_cast<AllyState>(state);
+                auto ally = aState->GetEntity();
+
+                removeSpawn = aState;
+                sgID = ally->GetSpawnGroupID();
+                slgID = ally->GetSpawnLocationGroupID();
+                encounterID = ally->GetEncounterID();
+            }
+            break;
         case EntityType_t::ENEMY:
             {
-                mEnemies.remove_if([entityID](const std::shared_ptr<EnemyState>& e)
+                mEnemies.remove_if([entityID]
+                    (const std::shared_ptr<EnemyState>& e)
                     {
                         return e->GetEntityID() == entityID;
                     });
 
-                removeEnemy = std::dynamic_pointer_cast<EnemyState>(state);
+                auto eState = std::dynamic_pointer_cast<EnemyState>(state);
+                auto enemy = eState->GetEntity();
+
+                removeSpawn = eState;
+                sgID = enemy->GetSpawnGroupID();
+                slgID = enemy->GetSpawnLocationGroupID();
+                encounterID = enemy->GetEncounterID();
             }
             break;
         case EntityType_t::LOOT_BOX:
             {
                 auto lState = std::dynamic_pointer_cast<LootBoxState>(state);
-                mLootBoxes.remove_if([entityID](const std::shared_ptr<LootBoxState>& e)
+                mLootBoxes.remove_if([entityID]
+                    (const std::shared_ptr<LootBoxState>& e)
                     {
                         return e->GetEntityID() == entityID;
                     });
 
-                if(lState->GetEntity()->GetType() == objects::LootBox::Type_t::BOSS_BOX)
+                if(lState->GetEntity()->GetType() ==
+                    objects::LootBox::Type_t::BOSS_BOX)
                 {
                     // Remove from the boss box group if it exists
                     for(auto pair : mBossBoxGroups)
                     {
-                        if(pair.second.find(lState->GetEntityID()) != pair.second.end())
+                        if(pair.second.find(lState->GetEntityID()) !=
+                            pair.second.end())
                         {
                             pair.second.erase(lState->GetEntityID());
                             if(pair.second.size() == 0)
@@ -268,27 +297,23 @@ void Zone::RemoveEntity(int32_t entityID, uint32_t spawnDelay)
             break;
         }
 
-        if(removeEnemy)
+        if(removeSpawn)
         {
-            auto enemy = removeEnemy->GetEntity();
-
-            uint32_t sgID = enemy->GetSpawnGroupID();
             if(sgID)
             {
-                mSpawnGroups[sgID].remove_if([removeEnemy](
-                    const std::shared_ptr<EnemyState>& e)
+                mSpawnGroups[sgID].remove_if([removeSpawn](
+                    const std::shared_ptr<ActiveEntityState>& e)
                     {
-                        return e == removeEnemy;
+                        return e == removeSpawn;
                     });
             }
 
-            uint32_t slgID = enemy->GetSpawnLocationGroupID();
             if(slgID)
             {
-                mSpawnLocationGroups[slgID].remove_if([removeEnemy](
-                    const std::shared_ptr<EnemyState>& e)
+                mSpawnLocationGroups[slgID].remove_if([removeSpawn](
+                    const std::shared_ptr<ActiveEntityState>& e)
                     {
-                        return e == removeEnemy;
+                        return e == removeSpawn;
                     });
 
                 auto slg = GetDefinition()->GetSpawnLocationGroups(slgID);
@@ -312,7 +337,6 @@ void Zone::RemoveEntity(int32_t entityID, uint32_t spawnDelay)
                 }
             }
 
-            uint32_t encounterID = enemy->GetEncounterID();
             if(encounterID)
             {
                 // Remove if the encounter exists but do not remove
@@ -321,13 +345,30 @@ void Zone::RemoveEntity(int32_t entityID, uint32_t spawnDelay)
                 auto eIter = mEncounters.find(encounterID);
                 if(eIter != mEncounters.end())
                 {
-                    eIter->second.erase(removeEnemy);
+                    eIter->second.erase(removeSpawn);
                 }
             }
         }
     }
 
     UnregisterEntityState(entityID);
+}
+
+void Zone::AddAlly(const std::shared_ptr<AllyState>& ally)
+{
+    {
+        std::lock_guard<std::mutex> lock(mLock);
+        mAllies.push_back(ally);
+
+        uint32_t spotID = ally->GetEntity()->GetSpawnSpotID();
+        uint32_t sgID = ally->GetEntity()->GetSpawnGroupID();
+        uint32_t slgID = ally->GetEntity()->GetSpawnLocationGroupID();
+        AddSpawnedEntity(ally, spotID, sgID, slgID);
+
+        ally->SetDisplayState(ActiveDisplayState_t::ACTIVE);
+    }
+
+    RegisterEntityState(ally);
 }
 
 void Zone::AddBazaar(const std::shared_ptr<BazaarState>& bazaar)
@@ -343,35 +384,13 @@ void Zone::AddEnemy(const std::shared_ptr<EnemyState>& enemy)
         mEnemies.push_back(enemy);
 
         uint32_t spotID = enemy->GetEntity()->GetSpawnSpotID();
-        if(spotID != 0)
-        {
-            mSpotsSpawned.insert(spotID);
-        }
-
-        auto sgID = enemy->GetEntity()->GetSpawnGroupID();
-        if(GetDefinition()->SpawnGroupsKeyExists(sgID))
-        {
-            mSpawnGroups[sgID].push_back(enemy);
-        }
-
-        auto slgID = enemy->GetEntity()->GetSpawnLocationGroupID();
-        auto slg = GetDefinition()->GetSpawnLocationGroups(slgID);
-        if(slg)
-        {
-            mSpawnLocationGroups[slgID].push_back(enemy);
-
-            // Be sure to clear the respawn time
-            if(slg->GetRespawnTime() > 0.f)
-            {
-                for(auto pair : mRespawnTimes)
-                {
-                    pair.second.erase(slgID);
-                }
-            }
-        }
+        uint32_t sgID = enemy->GetEntity()->GetSpawnGroupID();
+        uint32_t slgID = enemy->GetEntity()->GetSpawnLocationGroupID();
+        AddSpawnedEntity(enemy, spotID, sgID, slgID);
 
         enemy->SetDisplayState(ActiveDisplayState_t::ACTIVE);
     }
+
     RegisterEntityState(enemy);
 }
 
@@ -478,6 +497,16 @@ const std::list<std::shared_ptr<ActiveEntityState>>
     }
 
     return results;
+}
+
+std::shared_ptr<AllyState> Zone::GetAlly(int32_t id)
+{
+    return std::dynamic_pointer_cast<AllyState>(GetEntity(id));
+}
+
+const std::list<std::shared_ptr<AllyState>> Zone::GetAllies() const
+{
+    return mAllies;
 }
 
 std::shared_ptr<BazaarState> Zone::GetBazaar(int32_t id)
@@ -695,18 +724,23 @@ bool Zone::SpawnedAtSpot(uint32_t spotID)
     return mSpotsSpawned.find(spotID) != mSpotsSpawned.end();
 }
 
-void Zone::CreateEncounter(const std::list<std::shared_ptr<EnemyState>>& enemies,
+void Zone::CreateEncounter(
+    const std::list<std::shared_ptr<ActiveEntityState>>& entities,
     std::shared_ptr<objects::ActionSpawn> spawnSource)
 {
-    if(enemies.size() > 0)
+    if(entities.size() > 0)
     {
         std::lock_guard<std::mutex> lock(mLock);
 
         uint32_t encounterID = mNextEncounterID++;
-        for(auto enemy : enemies)
+        for(auto entity : entities)
         {
-            enemy->GetEntity()->SetEncounterID(encounterID);
-            mEncounters[encounterID].insert(enemy);
+            auto eBase = entity->GetEnemyBase();
+            if(eBase)
+            {
+                eBase->SetEncounterID(encounterID);
+                mEncounters[encounterID].insert(entity);
+            }
         }
 
         if(spawnSource)
@@ -715,9 +749,16 @@ void Zone::CreateEncounter(const std::list<std::shared_ptr<EnemyState>>& enemies
         }
     }
 
-    for(auto enemy : enemies)
+    for(auto entity : entities)
     {
-        AddEnemy(enemy);
+        if(entity->GetEntityType() == EntityType_t::ENEMY)
+        {
+            AddEnemy(std::dynamic_pointer_cast<EnemyState>(entity));
+        }
+        else if(entity->GetEntityType() == EntityType_t::ALLY)
+        {
+            AddAlly(std::dynamic_pointer_cast<AllyState>(entity));
+        }
     }
 }
 
@@ -976,6 +1017,20 @@ std::unordered_map<size_t, std::shared_ptr<objects::Loot>>
     return result;
 }
 
+bool Zone::Collides(const Line& path, Point& point,
+    Line& surface, std::shared_ptr<ZoneShape>& shape) const
+{
+    return mGeometry && mGeometry->Collides(path, point, surface, shape,
+        GetDisabledBarriers());
+}
+
+bool Zone::Collides(const Line& path, Point& point) const
+{
+    Line surface;
+    std::shared_ptr<ZoneShape> shape;
+    return Collides(path, point, surface, shape);
+}
+
 void Zone::Cleanup()
 {
     std::lock_guard<std::mutex> lock(mLock);
@@ -1111,6 +1166,35 @@ bool Zone::TimeRestrictionActive(const WorldClock& clock,
     }
 
     return true;
+}
+
+void Zone::AddSpawnedEntity(const std::shared_ptr<ActiveEntityState>& state,
+    uint32_t spotID, uint32_t sgID, uint32_t slgID)
+{
+    if(spotID != 0)
+    {
+        mSpotsSpawned.insert(spotID);
+    }
+
+    if(GetDefinition()->SpawnGroupsKeyExists(sgID))
+    {
+        mSpawnGroups[sgID].push_back(state);
+    }
+
+    auto slg = GetDefinition()->GetSpawnLocationGroups(slgID);
+    if(slg)
+    {
+        mSpawnLocationGroups[slgID].push_back(state);
+
+        // Be sure to clear the respawn time
+        if(slg->GetRespawnTime() > 0.f)
+        {
+            for(auto pair : mRespawnTimes)
+            {
+                pair.second.erase(slgID);
+            }
+        }
+    }
 }
 
 void Zone::EnableSpawnGroups(const std::set<uint32_t>& spawnGroupIDs)

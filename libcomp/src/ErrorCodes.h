@@ -84,6 +84,7 @@ enum class SkillErrorCodes_t : uint8_t
     TALK_INVALID = 21,  //!< Target cannot be talked to
     TALK_LEVEL = 22,    //!< Target's level is too high and cannot be talked
     TALK_WONT_LISTEN = 23,  //!< Target refuses to listen to talk skills
+    TALK_INVALID_STATE = 25,    //!< Demon cannot be talked to due to its current state
     SUMMON_INVALID = 26,    //!< Demon cannot be summoned
     SUMMON_LEVEL = 28,  //!< Demon's level is too high and cannot be summoned
     TARGET_INVALID = 35,    //!< Target invalid for skill

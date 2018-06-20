@@ -10,7 +10,12 @@
     </object>
     <object name="QmpElement" persistent="false">
         <member type="u32" name="ID"/>
-        <member type="u8" name="Unknown"/>
+        <member type="enum" name="Type" underlying="uint8_t">
+            <value num="0">NORMAL</value>
+            <value num="1">ONE_WAY</value>
+            <value num="2">TOGGLE</value>
+            <value num="3">TOGGLE_2</value>
+        </member>
         <member type="string" name="Name" lensz="1"/>
     </object>
     <object name="QmpBoundary" persistent="false">

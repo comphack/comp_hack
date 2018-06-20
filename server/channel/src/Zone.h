@@ -45,6 +45,7 @@
 namespace objects
 {
 class ActionSpawn;
+class Ally;
 class Loot;
 class LootBox;
 class ServerNPC;
@@ -61,6 +62,7 @@ class PlasmaState;
 class WorldClock;
 class ZoneInstance;
 
+typedef ActiveEntityStateImp<objects::Ally> AllyState;
 typedef EntityState<objects::LootBox> LootBoxState;
 typedef EntityState<objects::ServerNPC> NPCState;
 typedef EntityState<objects::ServerObject> ServerObjectState;
@@ -167,12 +169,6 @@ public:
     void RemoveConnection(const std::shared_ptr<ChannelClientConnection>& client);
 
     /**
-     * Add a bazaar to the zone
-     * @param bazaar Pointer to the bazaar to add
-     */
-    void AddBazaar(const std::shared_ptr<BazaarState>& bazaar);
-
-    /**
      * Remove an entity from the zone. For player entities, use RemoveConnection
      * instead.
      * @param entityID ID of the entity to remove
@@ -181,6 +177,18 @@ public:
      *  empty after the change
      */
     void RemoveEntity(int32_t entityID, uint32_t spawnDelay = 0);
+
+    /**
+     * Add an ally to the zone
+     * @param ally Pointer to the ally to add
+     */
+    void AddAlly(const std::shared_ptr<AllyState>& ally);
+
+    /**
+     * Add a bazaar to the zone
+     * @param bazaar Pointer to the bazaar to add
+     */
+    void AddBazaar(const std::shared_ptr<BazaarState>& bazaar);
 
     /**
      * Add an enemy to the zone
@@ -258,6 +266,19 @@ public:
      * @return Pointer to the entity instance.
      */
     std::shared_ptr<objects::EntityStateObject> GetEntity(int32_t id);
+
+    /**
+     * Get an ally instance by it's ID.
+     * @param id Instance ID of the ally.
+     * @return Pointer to the ally instance.
+     */
+    std::shared_ptr<AllyState> GetAlly(int32_t id);
+
+    /**
+     * Get all ally instances in the zone
+     * @return List of all ally instances in the zone
+     */
+    const std::list<std::shared_ptr<AllyState>> GetAllies() const;
 
     /**
      * Get a bazaar instance by it's ID.
@@ -380,37 +401,38 @@ public:
      * @param groupID Group ID of the spawn to check
      * @param aliveOnly Only count living entities in the group
      * @return true if the group has already been spawned or contains,
-     *  a living enemy, false otherwise
+     *  a living entity, false otherwise
      */
     bool GroupHasSpawned(uint32_t groupID, bool isLocation, bool aliveOnly);
 
     /**
-     * Check if an enemy has ever spawned at the specified spot.
+     * Check if an entity has ever spawned at the specified spot.
      * @param spotID Spot ID of the spawn to check
-     * @return true if an enemy has ever spawned at the spot
+     * @return true if an entity has ever spawned at the spot
      */
     bool SpawnedAtSpot(uint32_t spotID);
 
     /**
-     * Create an encounter from a group of enemies and register them with
+     * Create an encounter from a group of entities and register them with
      * the zone. Encounter information will be retained until a check via
      * EncounterDefeated is called.
-     * @param enemies List of the enemies to add to the encounter
+     * @param entities List of the entities to add to the encounter
      * @param spawnSource Optional pointer to spawn action that created the
      *  encounter. If this is specified, it will be returned as the
      *  defeatActionSource when calling EncounterDefeated
      */
-    void CreateEncounter(const std::list<std::shared_ptr<EnemyState>>& enemies,
+    void CreateEncounter(const std::list<std::shared_ptr<
+        ActiveEntityState>>& entities,
         std::shared_ptr<objects::ActionSpawn> spawnSource = nullptr);
 
     /**
-     * Determine if an enemy encounter has been defeated and clean up the
+     * Determine if an entity encounter has been defeated and clean up the
      * encounter information for the zone.
      * @param encounterID ID of the encounter
      * @param defeatActionSource Output parameter to contain the original
      *  spawn action source that can contain defeat actions to execute
      * @return true if the encounter has been defeated, false if at least
-     *  one enemy from the group is still alive
+     *  one entity from the group is still alive
      */
     bool EncounterDefeated(uint32_t encounterID,
         std::shared_ptr<objects::ActionSpawn>& defeatActionSource);
@@ -529,6 +551,30 @@ public:
             size_t freeSlots, std::unordered_map<uint32_t, uint16_t> stacksFree = {});
 
     /**
+     * Determines if the supplied path collides with anything in the zone's
+     * geometry
+     * @param path Line representing a path
+     * @param point Output parameter to set where the intersection occurs
+     * @param surface Output parameter to return the first line to be
+     *  intersected by the path
+     * @param shape Output parameter to return the first shape the path
+     *  will collide with. This will always be the shape the surface
+     *  belongs to
+     * @return true if the line collides, false if it does not
+     */
+    bool Collides(const Line& path, Point& point,
+        Line& surface, std::shared_ptr<ZoneShape>& shape) const;
+
+    /**
+     * Determines if the supplied path collides with anythin in the zone's
+     * geometry
+     * @param path Line representing a path
+     * @param point Output parameter to set where the intersection occurs
+     * @return true if the line collides, false if it does not
+     */
+    bool Collides(const Line& path, Point& point) const;
+
+    /**
      * Perform pre-deletion cleanup actions
      */
     void Cleanup();
@@ -558,6 +604,16 @@ private:
         const std::shared_ptr<objects::SpawnRestriction>& restriction);
 
     /**
+     * Register a new spawned entity to the zone stored spots and group field
+     * @param state Pointer to the state of the spawned entity
+     * @param spotID Spot ID being spawned into
+     * @param sgID Spawn group ID being spawned from
+     * @param slgID Spawn location group ID being spawned from
+     */
+    void AddSpawnedEntity(const std::shared_ptr<ActiveEntityState>& state,
+        uint32_t spotID, uint32_t sgID, uint32_t slgID);
+
+    /**
      * Enable a set of spawn groups and update any spawn location groups
      * that previously had all groups disabled
      * @param spawnGroupIDs Set of spawn group IDs to enable
@@ -574,22 +630,28 @@ private:
     /// Map of world CIDs to client connections
     std::unordered_map<int32_t, std::shared_ptr<ChannelClientConnection>> mConnections;
 
+    /// List of pointers to allies instantiated for the zone
+    std::list<std::shared_ptr<AllyState>> mAllies;
+
     /// List of pointers to bazaars instantiated for the zone
     std::list<std::shared_ptr<BazaarState>> mBazaars;
 
     /// List of pointers to enemies instantiated for the zone
     std::list<std::shared_ptr<EnemyState>> mEnemies;
 
-    /// Map of spawn group IDs to pointers to enemies created from that group.
+    /// Map of spawn group IDs to pointers to entities created from that group.
     /// Keys are never removed from this group so one time spawns can be checked.
-    std::unordered_map<uint32_t, std::list<std::shared_ptr<EnemyState>>> mSpawnGroups;
+    std::unordered_map<uint32_t,
+        std::list<std::shared_ptr<ActiveEntityState>>> mSpawnGroups;
 
-    /// Map of spawn location group IDs to pointers to enemies created from the groups.
+    /// Map of spawn location group IDs to pointers to entities created from the groups.
     /// Keys are never removed from this group so one time spawns can be checked.
-    std::unordered_map<uint32_t, std::list<std::shared_ptr<EnemyState>>> mSpawnLocationGroups;
+    std::unordered_map<uint32_t,
+        std::list<std::shared_ptr<ActiveEntityState>>> mSpawnLocationGroups;
 
-    /// Map of encounter IDs to enemies that belong to that encounter.
-    std::unordered_map<uint32_t, std::set<std::shared_ptr<EnemyState>>> mEncounters;
+    /// Map of encounter IDs to entities that belong to that encounter.
+    std::unordered_map<uint32_t,
+        std::set<std::shared_ptr<ActiveEntityState>>> mEncounters;
 
     /// Map of encounter IDs to spawn actions that created the encounter
     std::unordered_map<uint32_t,

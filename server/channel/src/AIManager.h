@@ -43,7 +43,7 @@ namespace channel
 class AICommand;
 class AIMoveCommand;
 class ChannelServer;
-class EnemyState;
+class EnemyBase;
 class Point;
 class Zone;
 
@@ -85,9 +85,12 @@ public:
      * Update the AI state of all active AI controlled entities in the
      * specified zone
      * @param zone Pointer to the zone to update
-     * @param now Current server time when the 
+     * @param now Current server time
+     * @param isNight Specifies that the server time is currently night
+     *  which is between 1800 and 0599
      */
-    void UpdateActiveStates(const std::shared_ptr<Zone>& zone, uint64_t now);
+    void UpdateActiveStates(const std::shared_ptr<Zone>& zone, uint64_t now,
+        bool isNight);
 
     /**
      * Queue a script command on the specified AIState
@@ -131,25 +134,28 @@ private:
         bool isNight);
 
     /**
-     * Update the state of an enemy, processing AI directly or queuing commands
-     * to be procssed on next update
-     * @param eState Pointer to the enemy state to update
+     * Update the state of an enemy or ally, processing AI directly or queuing
+     * commands to be procssed on next update
+     * @param state Pointer to the entity state to update
+     * @param eBase Pointer to the enemy base objects
      * @param now Current timestamp of the server
      * @param isNight Night time indicator which affects targetting
-     * @return true if the enemy state should be communicated to the zone,
+     * @return true if the entity state should be communicated to the zone,
      *  false otherwise
      */
-    bool UpdateEnemyState(const std::shared_ptr<EnemyState>& eState, uint64_t now,
+    bool UpdateEnemyState(const std::shared_ptr<ActiveEntityState>& state,
+        const std::shared_ptr<objects::EnemyBase>& eBase, uint64_t now,
         bool isNight);
 
     /**
-     * Clear an enemy's AIState current target and find the next target to focus on
-     * @param eState Pointer to the AI controlled enemy state
+     * Clear an entity's AIState current target and find the next target to focus on
+     * @param state Pointer to the AI controlled entity state
      * @param now Current timestamp of the server
      * @param isNight Night time indicator which affects targetting
      * @return Pointer to the entity being targeted
      */
-    std::shared_ptr<ActiveEntityState> Retarget(const std::shared_ptr<EnemyState>& eState,
+    std::shared_ptr<ActiveEntityState> Retarget(
+        const std::shared_ptr<ActiveEntityState>& state,
         uint64_t now, bool isNight);
 
     /**

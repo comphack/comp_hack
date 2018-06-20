@@ -6,7 +6,6 @@
         <member type="bool" name="LogoutSave" default="true"/>
         <member type="bool" name="AcceptRevival"/>
         <member type="bool" name="BikeBoosting"/>
-        <member type="u64" name="DeathTimeOut"/>
         <member type="u32" name="ZoneInSpotID"/>
         <member type="AccountLogin*" name="AccountLogin"/>
         <member type="AccountWorldData*" name="AccountWorldData"/>

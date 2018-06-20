@@ -1442,37 +1442,37 @@ bool ActionManager::SetNPCState(ActionContext& ctx)
         auto npc = std::dynamic_pointer_cast<objects::ServerNPC>(oNPC);
         if(npc)
         {
+            auto npcState = std::dynamic_pointer_cast<NPCState>(oNPCState);
+
+            std::list<std::shared_ptr<ChannelClientConnection>> clients;
             if(act->GetSourceClientOnly())
             {
-                if(act->GetState() == 1)
-                {
-                    zoneManager->ShowEntity(ctx.Client, oNPCState->GetEntityID());
-                }
-                else
-                {
-                    std::list<std::shared_ptr<
-                        ChannelClientConnection>> clients = { ctx.Client };
-                    std::list<int32_t> entityIDs = { oNPCState->GetEntityID()  };
-                    zoneManager->RemoveEntities(clients, entityIDs);
-                }
+                clients.push_back(ctx.Client);
             }
             else
             {
-                if(act->GetState() == 1)
-                {
-                    zoneManager->ShowEntityToZone(ctx.CurrentZone, oNPCState->GetEntityID());
-                }
-                else
-                {
-                    std::list<int32_t> entityIDs = { oNPCState->GetEntityID() };
-                    zoneManager->RemoveEntitiesFromZone(ctx.CurrentZone, entityIDs);
-                }
+                clients = ctx.CurrentZone->GetConnectionList();
+            }
+
+            if(act->GetState() == 1)
+            {
+                zoneManager->ShowNPC(ctx.CurrentZone, clients, npcState,
+                    false);
+            }
+            else
+            {
+                zoneManager->RemoveEntities(clients,
+                    { npcState->GetEntityID() });
             }
         }
         else
         {
+            // Update collisions
+            zoneManager->UpdateGeometryElement(ctx.CurrentZone, oNPC);
+
             libcomp::Packet p;
-            p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_NPC_STATE_CHANGE);
+            p.WritePacketCode(
+                ChannelToClientPacketCode_t::PACKET_NPC_STATE_CHANGE);
             p.WriteS32Little(oNPCState->GetEntityID());
             p.WriteU8(act->GetState());
 

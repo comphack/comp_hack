@@ -41,6 +41,7 @@
 #include <AccountLogin.h>
 #include <AccountWorldData.h>
 #include <ActionSpawn.h>
+#include <Ally.h>
 #include <CharacterLogin.h>
 #include <CharacterProgress.h>
 #include <Enemy.h>
@@ -56,6 +57,7 @@
 #include <MiTimeLimitData.h>
 #include <MiZoneData.h>
 #include <MiZoneFileData.h>
+#include <MiONPCData.h>
 #include <Party.h>
 #include <PlasmaSpawn.h>
 #include <PlayerExchangeSession.h>
@@ -71,7 +73,6 @@
 #include <ServerZoneInstanceVariant.h>
 #include <ServerZonePartial.h>
 #include <ServerZoneSpot.h>
-#include <ServerZoneTrigger.h>
 #include <Spawn.h>
 #include <SpawnGroup.h>
 #include <SpawnLocation.h>
@@ -138,10 +139,15 @@ void ZoneManager::LoadGeometry()
         LOG_DEBUG(libcomp::String("Loaded zone geometry file: %1\n")
             .Arg(filename));
 
-        std::unordered_map<uint32_t, libcomp::String> elementMap;
+        auto geometry = std::make_shared<ZoneGeometry>();
+        geometry->QmpFilename = filename;
+
+        std::unordered_map<uint32_t,
+            std::shared_ptr<objects::QmpElement>> elementMap;
         for(auto qmpElem : qmpFile->GetElements())
         {
-            elementMap[qmpElem->GetID()] = qmpElem->GetName();
+            geometry->Elements.push_back(qmpElem);
+            elementMap[qmpElem->GetID()] = qmpElem;
         }
 
         std::unordered_map<uint32_t, std::list<Line>> lineMap;
@@ -155,15 +161,12 @@ void ZoneManager::LoadGeometry()
             }
         }
 
-        auto geometry = std::make_shared<ZoneGeometry>();
-        geometry->QmpFilename = filename;
-
         uint32_t instanceID = 1;
         for(auto pair : lineMap)
         {
             auto shape =  std::make_shared<ZoneQmpShape>();
             shape->ShapeID = pair.first;
-            shape->ElementName = elementMap[pair.first];
+            shape->Element = elementMap[pair.first];
 
             // Build a complete shape from the lines provided
             // If there is a gap in the shape, it is a line instead
@@ -172,7 +175,7 @@ void ZoneManager::LoadGeometry()
 
             shape->Lines.push_back(lines.front());
             lines.pop_front();
-            Line& firstLine = shape->Lines.front();
+            Line firstLine = shape->Lines.front();
 
             Point* connectPoint = &shape->Lines.back().second;
             while(lines.size() > 0)
@@ -203,7 +206,6 @@ void ZoneManager::LoadGeometry()
                 {
                     shape->InstanceID = instanceID++;
 
-                    auto completeShape = shape;
                     if(*connectPoint == firstLine.first)
                     {
                         // Solid shape completed
@@ -243,7 +245,7 @@ void ZoneManager::LoadGeometry()
                         // Start a new shape
                         shape = std::make_shared<ZoneQmpShape>();
                         shape->ShapeID = pair.first;
-                        shape->ElementName = elementMap[pair.first];
+                        shape->Element = elementMap[pair.first];
 
                         shape->Lines.push_back(lines.front());
                         lines.pop_front();
@@ -251,6 +253,16 @@ void ZoneManager::LoadGeometry()
                         connectPoint = &shape->Lines.back().second;
                     }
                 }
+            }
+        }
+
+        /// @todo: remove one way disabling code and handle server side
+        for(auto& shape : geometry->Shapes)
+        {
+            if(shape->Element && shape->Element->GetType() ==
+                objects::QmpElement::Type_t::ONE_WAY)
+            {
+                shape->Active = false;
             }
         }
 
@@ -442,6 +454,13 @@ bool ZoneManager::EnterZone(const std::shared_ptr<ChannelClientConnection>& clie
 
     if(forceLeave || (currentZone && currentZone != nextZone))
     {
+        // Trigger zone-out actions
+        if(currentZone)
+        {
+            TriggerZoneActions(currentZone, { cState, dState },
+                ZoneTrigger_t::ON_ZONE_OUT, client);
+        }
+
         LeaveZone(client, false, zoneID, dynamicMapID);
     }
     else if(currentZone)
@@ -503,7 +522,7 @@ bool ZoneManager::EnterZone(const std::shared_ptr<ChannelClientConnection>& clie
 
     // Reset state values that do not persist between zones
     state->SetAcceptRevival(false);
-    state->SetDeathTimeOut(0);
+    dState->SetDeathTimeOut(0);
     state->SetZoneInSpotID(0);
 
     auto server = mServer.lock();
@@ -1002,10 +1021,12 @@ bool ZoneManager::SendPopulateZoneData(const std::shared_ptr<ChannelClientConnec
     cState->SetStatusEffectsActive(true, definitionManager);
     dState->SetStatusEffectsActive(true, definitionManager);
 
-    // It seems that if entity data is sent to the client before a previous
-    // entity was processed and shown, the client will force a log-out. To
-    // counter-act this, all message information remaining of this type will
-    // be queued and sent together at the end.
+    // Trigger zone-in actions
+    TriggerZoneActions(zone, { cState, dState }, ZoneTrigger_t::ON_ZONE_IN,
+        client);
+
+    // All zone information is queued and sent together to minimize excess
+    // communication
     for(auto enemyState : zone->GetEnemies())
     {
         SendEnemyData(client, enemyState, zone, false, true);
@@ -1013,25 +1034,10 @@ bool ZoneManager::SendPopulateZoneData(const std::shared_ptr<ChannelClientConnec
 
     for(auto npcState : zone->GetNPCs())
     {
-        auto npc = npcState->GetEntity();
-
-        libcomp::Packet p;
-        p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_NPC_DATA);
-        p.WriteS32Little(npcState->GetEntityID());
-        p.WriteU32Little(npc->GetID());
-        p.WriteS32Little((int32_t)zone->GetID());
-        p.WriteS32Little((int32_t)zoneDef->GetID());
-        p.WriteFloat(npcState->GetCurrentX());
-        p.WriteFloat(npcState->GetCurrentY());
-        p.WriteFloat(npcState->GetCurrentRotation());
-        p.WriteS16Little(0);    //Unknown
-
-        client->QueuePacket(p);
-
-        // If an NPC's state is not 1, do not show it
-        if(npc->GetState() == 1)
+        // If an NPC's state is not 1, do not show it right now
+        if(npcState->GetEntity()->GetState() == 1)
         {
-            ShowEntity(client, npcState->GetEntityID(), true);
+            ShowNPC(zone, { client }, npcState, true);
         }
     }
 
@@ -1129,6 +1135,11 @@ bool ZoneManager::SendPopulateZoneData(const std::shared_ptr<ChannelClientConnec
         SendLootBoxData(client, lState, nullptr, false, true);
     }
 
+    for(auto allyState : zone->GetAllies())
+    {
+        SendAllyData(client, allyState, zone, false, true);
+    }
+
     // Send all the queued NPC packets
     client->FlushOutgoing();
 
@@ -1153,7 +1164,7 @@ bool ZoneManager::SendPopulateZoneData(const std::shared_ptr<ChannelClientConnec
             PopEntityForProduction(client, oDState->GetEntityID(), 0);
             ShowEntity(client, oDState->GetEntityID());
 
-            if(oState->GetDeathTimeOut())
+            if(oDState->GetDeathTimeOut())
             {
                 UpdateDeathTimeOut(oState, 0, client);
             }
@@ -1255,6 +1266,33 @@ void ZoneManager::RemoveEntities(const std::list <std::shared_ptr<
     }
 }
 
+void ZoneManager::ShowNPC(const std::shared_ptr<Zone>& zone,
+    const std::list<std::shared_ptr<ChannelClientConnection>>& clients,
+    const std::shared_ptr<NPCState>& npcState, bool queue)
+{
+    auto npc = npcState->GetEntity();
+
+    libcomp::Packet p;
+    p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_NPC_DATA);
+    p.WriteS32Little(npcState->GetEntityID());
+    p.WriteU32Little(npc->GetID());
+    p.WriteS32Little((int32_t)zone->GetID());
+    p.WriteS32Little((int32_t)zone->GetDefinitionID());
+    p.WriteFloat(npcState->GetCurrentX());
+    p.WriteFloat(npcState->GetCurrentY());
+    p.WriteFloat(npcState->GetCurrentRotation());
+    p.WriteS16Little(0);    //Unknown
+
+    ChannelClientConnection::BroadcastPacket(clients, p, true);
+
+    ShowEntity(clients, npcState->GetEntityID(), true);
+
+    if(!queue)
+    {
+        ChannelClientConnection::FlushAllOutgoing(clients);
+    }
+}
+
 void ZoneManager::FixCurrentPosition(const std::shared_ptr<ActiveEntityState>& eState,
     uint64_t fixUntil, uint64_t now)
 {
@@ -1293,14 +1331,15 @@ void ZoneManager::ScheduleEntityRemoval(uint64_t time, const std::shared_ptr<Zon
     const std::list<int32_t>& entityIDs, int32_t removeMode)
 {
     mServer.lock()->ScheduleWork(time, [](ZoneManager* zoneManager,
-        const std::shared_ptr<Zone> pZone, std::list<int32_t> pEntityIDs,
-        int32_t pRemoveMode)
+        uint64_t pTime, const std::shared_ptr<Zone> pZone,
+        std::list<int32_t> pEntityIDs, int32_t pRemoveMode)
         {
             std::list<int32_t> finalList;
             for(int32_t lootEntityID : pEntityIDs)
             {
                 auto state = pZone->GetEntity(lootEntityID);
-                if(state)
+                auto aState = std::dynamic_pointer_cast<ActiveEntityState>(state);
+                if(state && (!aState || aState->GetDeathTimeOut() <= pTime))
                 {
                     pZone->RemoveEntity(lootEntityID);
                     finalList.push_back(lootEntityID);
@@ -1311,12 +1350,12 @@ void ZoneManager::ScheduleEntityRemoval(uint64_t time, const std::shared_ptr<Zon
             {
                 zoneManager->RemoveEntitiesFromZone(pZone, finalList, pRemoveMode);
             }
-        }, this, zone, entityIDs, removeMode);
+        }, this, time, zone, entityIDs, removeMode);
 }
 
 void ZoneManager::SendLootBoxData(const std::shared_ptr<ChannelClientConnection>& client,
-    const std::shared_ptr<LootBoxState>& lState, const std::shared_ptr<EnemyState>& eState,
-    bool sendToAll, bool queue)
+    const std::shared_ptr<LootBoxState>& lState,
+    const std::shared_ptr<ActiveEntityState>& eState, bool sendToAll, bool queue)
 {
     auto box = lState->GetEntity();
     auto zone = GetCurrentZone(client);
@@ -1554,6 +1593,62 @@ void ZoneManager::SendEnemyData(const std::shared_ptr<ChannelClientConnection>& 
         PopEntityForProduction(zClient, enemyState->GetEntityID(),
             sendToAll ? 3 : 0, true);
         ShowEntity(zClient, enemyState->GetEntityID(), true);
+    }
+
+    if(!queue)
+    {
+        ChannelClientConnection::FlushAllOutgoing(clients);
+    }
+}
+
+void ZoneManager::SendAllyData(const std::shared_ptr<ChannelClientConnection>& client,
+    const std::shared_ptr<AllyState>& allyState, const std::shared_ptr<Zone>& zone,
+    bool sendToAll, bool queue)
+{
+    auto stats = allyState->GetCoreStats();
+    auto zoneData = zone->GetDefinition();
+
+    libcomp::Packet p;
+    p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_ALLY_DATA);
+    p.WriteS32Little(allyState->GetEntityID());
+    p.WriteS32Little((int32_t)allyState->GetEntity()->GetType());
+    p.WriteS32Little(allyState->GetMaxHP());
+    p.WriteS32Little(stats->GetHP());
+    p.WriteS8(stats->GetLevel());
+    p.WriteS32Little((int32_t)zone->GetID());
+    p.WriteS32Little((int32_t)zoneData->GetID());
+    p.WriteFloat(allyState->GetOriginX());
+    p.WriteFloat(allyState->GetOriginY());
+    p.WriteFloat(allyState->GetOriginRotation());
+
+    auto statusEffects = allyState->GetCurrentStatusEffectStates();
+
+    p.WriteU32Little(static_cast<uint32_t>(statusEffects.size()));
+    for(auto ePair : statusEffects)
+    {
+        p.WriteU32Little(ePair.first->GetEffect());
+        p.WriteS32Little((int32_t)ePair.second);
+        p.WriteU8(ePair.first->GetStack());
+    }
+
+    p.WriteU32Little(allyState->GetEntity()->GetVariantType());
+
+    std::list<std::shared_ptr<ChannelClientConnection>> clients;
+    if(sendToAll)
+    {
+        clients = zone->GetConnectionList();
+    }
+    else
+    {
+        clients.push_back(client);
+    }
+
+    for(auto zClient : clients)
+    {
+        zClient->QueuePacketCopy(p);
+        PopEntityForProduction(zClient, allyState->GetEntityID(),
+            sendToAll ? 3 : 0, true);
+        ShowEntity(zClient, allyState->GetEntityID(), true);
     }
 
     if(!queue)
@@ -1867,11 +1962,14 @@ std::list<std::shared_ptr<ChannelClientConnection>> ZoneManager::GetZoneConnecti
 bool ZoneManager::SpawnEnemy(const std::shared_ptr<Zone>& zone, uint32_t demonID,
     float x, float y, float rot, const libcomp::String& aiType)
 {
-    auto eState = CreateEnemy(zone, demonID, nullptr, x, y, rot);
+    auto eState = std::dynamic_pointer_cast<EnemyState>(
+        CreateEnemy(zone, demonID, nullptr, x, y, rot));
 
     auto server = mServer.lock();
     server->GetAIManager()->Prepare(eState, aiType);
     zone->AddEnemy(eState);
+
+    TriggerZoneActions(zone, { eState }, ZoneTrigger_t::ON_SPAWN);
 
     //If anyone is currently connected, immediately send the enemy's info
     auto clients = zone->GetConnections();
@@ -2097,7 +2195,7 @@ bool ZoneManager::UpdateSpawnGroups(const std::shared_ptr<Zone>& zone,
     bool mergeEncounter = actionSource && actionSource->DefeatActionsCount() > 0;
     std::set<uint32_t> disabledGroupIDs = zone->GetDisabledSpawnGroups();
 
-    std::list<std::list<std::shared_ptr<EnemyState>>> eStateGroups;
+    std::list<std::list<std::shared_ptr<ActiveEntityState>>> eStateGroups;
     std::list<std::shared_ptr<objects::SpawnGroup>> spawnActionGroups;
     for(auto groupPair : groups)
     {
@@ -2170,15 +2268,15 @@ bool ZoneManager::UpdateSpawnGroups(const std::shared_ptr<Zone>& zone,
             continue;
         }
 
-        std::list<std::shared_ptr<EnemyState>>* eStateGroup = 0;
+        std::list<std::shared_ptr<ActiveEntityState>>* eStateGroup = 0;
         if(mergeEncounter)
         {
-            // If the enemies should all be considered a single encounter,
+            // If the entities should all be considered a single encounter,
             // add them all to the same grouping
             if(eStateGroups.size() == 0)
             {
                 eStateGroups.push_front(
-                    std::list<std::shared_ptr<EnemyState>>());
+                    std::list<std::shared_ptr<ActiveEntityState>>());
             }
             eStateGroup = &eStateGroups.front();
         }
@@ -2187,7 +2285,7 @@ bool ZoneManager::UpdateSpawnGroups(const std::shared_ptr<Zone>& zone,
             if(!containsSimpleSpawns)
             {
                 eStateGroups.push_front(
-                    std::list<std::shared_ptr<EnemyState>>());
+                    std::list<std::shared_ptr<ActiveEntityState>>());
                 containsSimpleSpawns = true;
             }
             eStateGroup = &eStateGroups.front();
@@ -2195,14 +2293,14 @@ bool ZoneManager::UpdateSpawnGroups(const std::shared_ptr<Zone>& zone,
         else
         {
             eStateGroups.push_back(
-                std::list<std::shared_ptr<EnemyState>>());
+                std::list<std::shared_ptr<ActiveEntityState>>());
             eStateGroup = &eStateGroups.back();
         }
 
         bool isSpread = slg && slg->GetSpotSelection() ==
             objects::SpawnLocationGroup::SpotSelection_t::SPREAD;
 
-        // Create each enemy at a random position in the same location
+        // Create each entity at a random position in the same location
         std::shared_ptr<channel::ZoneSpotShape> spot;
         std::shared_ptr<objects::SpawnLocation> location;
 
@@ -2245,8 +2343,7 @@ bool ZoneManager::UpdateSpawnGroups(const std::shared_ptr<Zone>& zone,
                     Point collision;
                     Line fromCenter(center, p);
 
-                    auto geometry = zone->GetGeometry();
-                    if(geometry && geometry->Collides(fromCenter, collision))
+                    if(zone->Collides(fromCenter, collision))
                     {
                         // Back it off slightly
                         p = GetLinearPoint(collision.x, collision.y,
@@ -2267,18 +2364,17 @@ bool ZoneManager::UpdateSpawnGroups(const std::shared_ptr<Zone>& zone,
 
                 float rot = RNG_DEC(float, 0.f, 3.14f, 2);
 
-                // Create the enemy state
-                auto eState = CreateEnemy(zone, spawn->GetEnemyType(), spawn, x, y, rot);
+                // Create the entity state
+                auto state = CreateEnemy(zone, spawn->GetEnemyType(), spawn, x, y, rot);
 
                 // Set the spawn information
-                auto enemy = eState->GetEntity();
-                enemy->SetSpawnSource(spawn);
-                enemy->SetSpawnLocation(location);
-                enemy->SetSpawnSpotID(spotID);
-                enemy->SetSpawnGroupID(sgID);
-                enemy->SetSpawnLocationGroupID(slgID);
+                auto eBase = state->GetEnemyBase();
+                eBase->SetSpawnLocation(location);
+                eBase->SetSpawnSpotID(spotID);
+                eBase->SetSpawnGroupID(sgID);
+                eBase->SetSpawnLocationGroupID(slgID);
 
-                eStateGroup->push_back(eState);
+                eStateGroup->push_back(state);
 
                 // If this is a spread clear the spot ID so we start again.
                 if(isSpread)
@@ -2313,16 +2409,23 @@ bool ZoneManager::UpdateSpawnGroups(const std::shared_ptr<Zone>& zone,
             bool encounterSpawn = !containsSimpleSpawns || eStateGroup != eStateGroups.front();
             for(auto eState : eStateGroup)
             {
-                auto spawn = eState->GetEntity()->GetSpawnSource();
-                if(aiManager->Prepare(eState, spawn->GetAIScriptID(), spawn->GetAggression()))
+                auto spawn = eState->GetEnemyBase()->GetSpawnSource();
+                if(!aiManager->Prepare(eState, spawn->GetAIScriptID(), spawn->GetAggression()))
                 {
-                    /// @todo: change this for enemies that don't wander
-                    eState->GetAIState()->SetStatus(AIStatus_t::WANDERING, true);
+                    LOG_ERROR(libcomp::String("Failed to prepare AI for enemy: %1\n")
+                        .Arg(spawn->GetAIScriptID()));
                 }
 
                 if(!encounterSpawn)
                 {
-                    zone->AddEnemy(eState);
+                    if(eState->GetEntityType() == EntityType_t::ENEMY)
+                    {
+                        zone->AddEnemy(std::dynamic_pointer_cast<EnemyState>(eState));
+                    }
+                    else
+                    {
+                        zone->AddAlly(std::dynamic_pointer_cast<AllyState>(eState));
+                    }
                 }
             }
 
@@ -2330,6 +2433,8 @@ bool ZoneManager::UpdateSpawnGroups(const std::shared_ptr<Zone>& zone,
             {
                 zone->CreateEncounter(eStateGroup, actionSource);
             }
+
+            TriggerZoneActions(zone, eStateGroup, ZoneTrigger_t::ON_SPAWN);
         }
 
         // Send to clients already in the zone if they exist
@@ -2339,10 +2444,18 @@ bool ZoneManager::UpdateSpawnGroups(const std::shared_ptr<Zone>& zone,
             auto firstClient = clients.begin()->second;
             for(auto& eStateGroup : eStateGroups)
             {
-                for(auto eState : eStateGroup)
+                for(auto& eState : eStateGroup)
                 {
-                    SendEnemyData(firstClient, eState, zone,
-                        true, true);
+                    if(eState->GetEntityType() == EntityType_t::ENEMY)
+                    {
+                        auto e = std::dynamic_pointer_cast<EnemyState>(eState);
+                        SendEnemyData(firstClient, e, zone, true, true);
+                    }
+                    else
+                    {
+                        auto a = std::dynamic_pointer_cast<AllyState>(eState);
+                        SendAllyData(firstClient, a, zone, true, true);
+                    }
                 }
             }
 
@@ -2488,9 +2601,9 @@ Point ZoneManager::RotatePoint(const Point& p, const Point& origin, float radian
         (float)((xDelta * sin(radians)) + (yDelta * cos(radians))) + origin.y);
 }
 
-std::shared_ptr<EnemyState> ZoneManager::CreateEnemy(const std::shared_ptr<Zone>& zone,
-    uint32_t demonID, const std::shared_ptr<objects::Spawn>& spawn,
-    float x, float y, float rot)
+std::shared_ptr<ActiveEntityState> ZoneManager::CreateEnemy(
+    const std::shared_ptr<Zone>& zone, uint32_t demonID,
+    const std::shared_ptr<objects::Spawn>& spawn, float x, float y, float rot)
 {
     auto server = mServer.lock();
     auto definitionManager = server->GetDefinitionManager();
@@ -2501,38 +2614,62 @@ std::shared_ptr<EnemyState> ZoneManager::CreateEnemy(const std::shared_ptr<Zone>
         return nullptr;
     }
 
-    auto enemy = std::shared_ptr<objects::Enemy>(new objects::Enemy);
-    enemy->SetType(demonID);
-    enemy->SetVariantType(spawn ? spawn->GetVariantType() : 0);
-
-    auto enemyStats = libcomp::PersistentObject::New<objects::EntityStats>();
-    enemyStats->SetLevel(spawn && spawn->GetLevel() > 0 ? spawn->GetLevel()
+    auto stats = libcomp::PersistentObject::New<objects::EntityStats>();
+    stats->SetLevel(spawn && spawn->GetLevel() > 0 ? spawn->GetLevel()
         : (int8_t)def->GetGrowth()->GetBaseLevel());
-    server->GetCharacterManager()->CalculateDemonBaseStats(nullptr, enemyStats, def);
-    enemy->SetCoreStats(enemyStats);
+    server->GetCharacterManager()->CalculateDemonBaseStats(nullptr, stats, def);
 
-    auto eState = std::shared_ptr<EnemyState>(new EnemyState);
-    eState->SetEntityID(server->GetNextEntityID());
-    eState->SetOriginX(x);
-    eState->SetOriginY(y);
-    eState->SetOriginRotation(rot);
-    eState->SetDestinationX(x);
-    eState->SetDestinationY(y);
-    eState->SetDestinationRotation(rot);
-    eState->SetCurrentX(x);
-    eState->SetCurrentY(y);
-    eState->SetCurrentRotation(rot);
-    eState->SetEntity(enemy, def);
-    eState->SetStatusEffectsActive(true, definitionManager);
-    eState->SetZone(zone);
+    std::shared_ptr<ActiveEntityState> state;
+    std::shared_ptr<objects::EnemyBase> eBase;
+    if(!spawn || !spawn->GetIsAlly())
+    {
+        // Building an enemy
+        auto enemy = std::shared_ptr<objects::Enemy>(new objects::Enemy);
+        enemy->SetCoreStats(stats);
+        enemy->SetType(demonID);
+        enemy->SetVariantType(spawn ? spawn->GetVariantType() : 0);
+        enemy->SetSpawnSource(spawn);
+        eBase = enemy;
 
-    server->GetTokuseiManager()->Recalculate(eState);
-    eState->RecalculateStats(definitionManager);
+        auto eState = std::shared_ptr<EnemyState>(new EnemyState);
+        eState->SetEntity(enemy, def);
+        state = eState;
+    }
+    else
+    {
+        // Building an ally
+        auto ally = std::shared_ptr<objects::Ally>(new objects::Ally);
+        ally->SetCoreStats(stats);
+        ally->SetType(demonID);
+        ally->SetVariantType(spawn ? spawn->GetVariantType() : 0);
+        ally->SetSpawnSource(spawn);
+        eBase = ally;
+
+        auto aState = std::shared_ptr<AllyState>(new AllyState);
+        aState->SetEntity(ally, def);
+        state = aState;
+    }
+
+    state->SetEntityID(server->GetNextEntityID());
+    state->SetOriginX(x);
+    state->SetOriginY(y);
+    state->SetOriginRotation(rot);
+    state->SetDestinationX(x);
+    state->SetDestinationY(y);
+    state->SetDestinationRotation(rot);
+    state->SetCurrentX(x);
+    state->SetCurrentY(y);
+    state->SetCurrentRotation(rot);
+    state->SetStatusEffectsActive(true, definitionManager);
+    state->SetZone(zone);
+
+    server->GetTokuseiManager()->Recalculate(state);
+    state->RecalculateStats(definitionManager);
 
     // Reset HP to max to account for extra HP boosts
-    enemyStats->SetHP(eState->GetMaxHP());
+    stats->SetHP(state->GetMaxHP());
 
-    return eState;
+    return state;
 }
 
 void ZoneManager::UpdateActiveZoneStates()
@@ -2546,15 +2683,20 @@ void ZoneManager::UpdateActiveZoneStates()
         }
     }
 
+    auto server = mServer.lock();
+
     // Spin through entities with updated status effects
-    uint32_t systemTime = (uint32_t)std::time(0);
+    auto worldClock = server->GetWorldClockTime();
     for(auto zone : zones)
     {
-        UpdateStatusEffectStates(zone, systemTime);
+        UpdateStatusEffectStates(zone,
+            worldClock.SystemTime);
     }
 
     auto serverTime = ChannelServer::GetServerTime();
     auto aiManager = mServer.lock()->GetAIManager();
+
+    bool isNight = worldClock.IsNight();
 
     for(auto zone : zones)
     {
@@ -2562,7 +2704,7 @@ void ZoneManager::UpdateActiveZoneStates()
         HandleDespawns(zone);
 
         // Update active AI controlled entities
-        aiManager->UpdateActiveStates(zone, serverTime);
+        aiManager->UpdateActiveStates(zone, serverTime, isNight);
 
         if(zone->HasRespawns())
         {
@@ -2637,23 +2779,92 @@ void ZoneManager::Warp(const std::shared_ptr<ChannelClientConnection>& client,
     ChannelClientConnection::SendRelativeTimePacket(connections, p, timeMap);
 }
 
-void ZoneManager::HandleTimedActions(const WorldClock& clock)
+void ZoneManager::HandleTimedActions(const WorldClock& clock,
+    const WorldClockTime& lastTrigger)
 {
     std::list<std::shared_ptr<Zone>> timeRestrictZones;
     {
         std::lock_guard<std::mutex> lock(mLock);
         for(uint32_t zoneID : mAllTimeRestrictZones)
         {
-            timeRestrictZones.push_back(mZones[zoneID]);
+            auto zone = mZones[zoneID];
+            if(zone)
+            {
+                timeRestrictZones.push_back(zone);
+            }
         }
     }
 
     std::set<uint32_t> updated;
     for(auto zone : timeRestrictZones)
     {
-        if(zone && zone->UpdateTimedSpawns(clock))
+        if(zone->UpdateTimedSpawns(clock))
         {
             updated.insert(zone->GetID());
+        }
+    }
+
+    // Fire zone time event triggers
+    if(lastTrigger.IsSet())
+    {
+        int32_t timeFrom = (int32_t)(lastTrigger.Hour * 100 +
+            lastTrigger.Min);
+        int32_t timeTo = (int32_t)(clock.Hour * 100 +
+            clock.Min);
+        bool timeChange = timeTo != timeFrom;
+        bool timeRoll = timeTo < timeFrom;
+
+        int32_t sTimeFrom = (int32_t)(lastTrigger.SystemHour * 100 +
+            lastTrigger.SystemMin);
+        int32_t sTimeTo = (int32_t)(clock.SystemHour * 100 +
+            clock.SystemMin);
+        bool sTimeChange = sTimeTo != sTimeFrom;
+        bool sTimeRoll = sTimeTo < sTimeFrom;
+
+        bool moonChange = clock.MoonPhase != lastTrigger.MoonPhase;
+        bool moonRoll = clock.MoonPhase < lastTrigger.MoonPhase;
+
+        for(auto zone : timeRestrictZones)
+        {
+            for(auto trigger : zone->GetTimeTriggers())
+            {
+                int32_t from = 0;
+                int32_t to = 0;
+                bool rollOver = false;
+
+                switch(trigger->GetTrigger())
+                {
+                case objects::ServerZoneTrigger::Trigger_t::ON_TIME:
+                    if(!timeChange) continue;
+                    from = timeFrom;
+                    to = timeTo;
+                    rollOver = timeRoll;
+                    break;
+                case objects::ServerZoneTrigger::Trigger_t::ON_SYSTEMTIME:
+                    if(!sTimeChange) continue;
+                    from = sTimeFrom;
+                    to = sTimeTo;
+                    rollOver = sTimeRoll;
+                    break;
+                case objects::ServerZoneTrigger::Trigger_t::ON_MOONPHASE:
+                    if(!moonChange) continue;
+                    from = lastTrigger.MoonPhase;
+                    to = clock.MoonPhase;
+                    rollOver = moonRoll;
+                    break;
+                default:
+                    break;
+                }
+
+                int32_t val = trigger->GetValue();
+                if((!rollOver && from < val && val <= to) ||
+                    (rollOver && (from < val || val <= to)))
+                {
+                    mServer.lock()->GetActionManager()->PerformActions(nullptr,
+                        trigger->GetActions(), 0, zone, 0);
+                    updated.insert(zone->GetID());
+                }
+            }
         }
     }
 
@@ -3045,15 +3256,16 @@ void ZoneManager::UpdateDeathTimeOut(ClientState* state, int32_t time,
         return;
     }
 
+    auto dState = state->GetDemonState();
     auto instance = zone ? zone->GetInstance() : nullptr;
     auto instVariant = instance ? instance->GetVariant() : nullptr;
 
     float timeLeft = 0.f;
-    uint64_t deathTime = state->GetDeathTimeOut();
+    uint64_t deathTime = dState->GetDeathTimeOut();
     if(time == -1)
     {
         // Removing timeout
-        state->SetDeathTimeOut(0);
+        dState->SetDeathTimeOut(0);
         deathTime = 0;
     }
     else if(time != 0)
@@ -3062,7 +3274,7 @@ void ZoneManager::UpdateDeathTimeOut(ClientState* state, int32_t time,
         uint64_t now = ChannelServer::GetServerTime();
 
         deathTime = now + (uint64_t)time * (uint64_t)1000000;
-        state->SetDeathTimeOut(deathTime);
+        dState->SetDeathTimeOut(deathTime);
         timeLeft = (float)time;
 
         auto killedClient = mServer.lock()->GetManagerConnection()
@@ -3103,9 +3315,10 @@ void ZoneManager::HandleDeathTimeOut(
     uint64_t deathTime)
 {
     auto state = client->GetClientState();
+    auto dState = state->GetDemonState();
     auto zone = state->GetZone();
     if(!zone || zone->GetInstance() != instance ||
-        (deathTime && state->GetDeathTimeOut() != deathTime))
+        (deathTime && dState->GetDeathTimeOut() != deathTime))
     {
         // No longer valid
         return;
@@ -3137,7 +3350,7 @@ void ZoneManager::HandleDeathTimeOut(
     {
         // Schedule the death time-out
         uint64_t now = ChannelServer::GetServerTime();
-        deathTime = state->GetDeathTimeOut();
+        deathTime = dState->GetDeathTimeOut();
 
         int timeLeft = (int)(
             (deathTime > now ? (deathTime - now) : 0) / 1000000);
@@ -3310,7 +3523,7 @@ void ZoneManager::EndInstanceTimer(
                 return;
             }
 
-            if(success && state->GetDeathTimeOut())
+            if(success && state->GetDemonState()->GetDeathTimeOut())
             {
                 // Remove the death time-out
                 UpdateDeathTimeOut(state, -1);
@@ -3408,6 +3621,102 @@ void ZoneManager::EndInstanceTimer(
     {
         client->SendPacket(notify);
     }
+}
+
+bool ZoneManager::TriggerZoneActions(const std::shared_ptr<Zone>& zone,
+    std::list<std::shared_ptr<ActiveEntityState>> entities,
+    ZoneTrigger_t trigger,
+    const std::shared_ptr<ChannelClientConnection>& client)
+{
+    bool executed = false;
+
+    std::list<std::shared_ptr<objects::ServerZoneTrigger>> triggers;
+    switch(trigger)
+    {
+    case objects::ServerZoneTrigger::Trigger_t::ON_ZONE_IN:
+        triggers = zone->GetZoneInTriggers();
+        break;
+    case objects::ServerZoneTrigger::Trigger_t::ON_ZONE_OUT:
+        triggers = zone->GetZoneOutTriggers();
+        break;
+    case objects::ServerZoneTrigger::Trigger_t::ON_SPAWN:
+        triggers = zone->GetSpawnTriggers();
+        break;
+    case objects::ServerZoneTrigger::Trigger_t::ON_DEATH:
+        triggers = zone->GetDeathTriggers();
+        break;
+    case objects::ServerZoneTrigger::Trigger_t::ON_REVIVAL:
+        triggers = zone->GetRevivalTriggers();
+        break;
+    default:
+        // Other types handled elsewhere
+        return false;
+        break;
+    }
+
+    if(triggers.size() > 0)
+    {
+        auto actionManager = mServer.lock()->GetActionManager();
+        for(auto e : entities)
+        {
+            int32_t entityID = e->GetEntityID();
+            if(e->Ready(true))
+            {
+                for(auto tr : triggers)
+                {
+                    actionManager->PerformActions(client,
+                        tr->GetActions(), entityID, zone, 0);
+                    executed = true;
+                }
+            }
+        }
+    }
+
+    return executed;
+}
+
+bool ZoneManager::UpdateGeometryElement(const std::shared_ptr<Zone>& zone,
+    std::shared_ptr<objects::ServerObject> elemObject)
+{
+    auto geometry = zone->GetGeometry();
+    if(geometry)
+    {
+        bool updated = false;
+
+        auto server = mServer.lock();
+        auto definitionManager = server->GetDefinitionManager();
+
+        auto objDef = definitionManager->GetONPCData(elemObject->GetID());
+        if(objDef && !objDef->GetBarrierName().IsEmpty())
+        {
+            bool disabled = elemObject->GetState() == 3;
+            libcomp::String name = objDef->GetBarrierName();
+
+            for(auto elem : geometry->Elements)
+            {
+                if(elem->GetName() == name)
+                {
+                    if(disabled)
+                    {
+                        zone->InsertDisabledBarriers(elem->GetID());
+                    }
+                    else
+                    {
+                        zone->RemoveDisabledBarriers(elem->GetID());
+                    }
+
+                    updated = true;
+
+                    // There should only ever be one of these but do not
+                    // break just in case as there is no hard restriction
+                }
+            }
+        }
+
+        return updated;
+    }
+
+    return false;
 }
 
 bool ZoneManager::GetSpotPosition(uint32_t dynamicMapID, uint32_t spotID,
@@ -3526,8 +3835,7 @@ Point ZoneManager::MoveRelative(const std::shared_ptr<ActiveEntityState>& eState
         Line move(x, y, point.x, point.y);
 
         Point corrected;
-        auto geometry = eState->GetZone()->GetGeometry();
-        if(geometry && geometry->Collides(move, corrected))
+        if(eState->GetZone()->Collides(move, corrected))
         {
             // Move off the collision point by 10
             point = GetLinearPoint(corrected.x, corrected.y, x, y, 10.f, false);
@@ -3915,7 +4223,6 @@ std::shared_ptr<Zone> ZoneManager::CreateZone(
     }
 
     // Gather setup triggers and sort all other types from the definition
-    /// @todo: actually implement more than ON_SETUP and ON_FLAG_SET
     std::list<std::shared_ptr<objects::ServerZoneTrigger>> setupTriggers;
     for(auto trigger : definition->GetTriggers())
     {
@@ -4224,6 +4531,39 @@ bool ZoneManager::RegisterTimeRestrictions(const std::shared_ptr<Zone>& zone,
         }
     }
 
+    // Build event times
+    for(auto trigger : definition->GetTriggers())
+    {
+        switch(trigger->GetTrigger())
+        {
+        case objects::ServerZoneTrigger::Trigger_t::ON_TIME:
+            {
+                WorldClockTime t;
+                t.Hour = (int8_t)(trigger->GetValue() / 100);
+                t.Min = (int8_t)(trigger->GetValue() % 100);
+                eventTimes.push_back(t);
+            }
+            break;
+        case objects::ServerZoneTrigger::Trigger_t::ON_SYSTEMTIME:
+            {
+                WorldClockTime t;
+                t.SystemHour = (int8_t)(trigger->GetValue() / 100);
+                t.SystemMin = (int8_t)(trigger->GetValue() % 100);
+                eventTimes.push_back(t);
+            }
+            break;
+        case objects::ServerZoneTrigger::Trigger_t::ON_MOONPHASE:
+            {
+                WorldClockTime t;
+                t.MoonPhase = (int8_t)trigger->GetValue();
+                eventTimes.push_back(t);
+            }
+            break;
+        default:
+            break;
+        }
+    }
+
     // Register all times
     if(spawnTimes.size() > 0 || eventTimes.size() > 0)
     {
@@ -4233,6 +4573,12 @@ bool ZoneManager::RegisterTimeRestrictions(const std::shared_ptr<Zone>& zone,
         {
             mSpawnTimeRestrictZones[t].insert(zone->GetID());
             server->RegisterClockEvent(t, 1, false);
+        }
+
+        for(auto& t : eventTimes)
+        {
+            mSpawnTimeRestrictZones[t].insert(zone->GetID());
+            server->RegisterClockEvent(t, 3, false);
         }
 
         mAllTimeRestrictZones.insert(zone->GetID());

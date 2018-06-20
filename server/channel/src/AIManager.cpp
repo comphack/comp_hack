@@ -35,6 +35,7 @@
 
 // object Includes
 #include <ActivatedAbility.h>
+#include <Ally.h>
 #include <MiAIData.h>
 #include <MiAIRelationData.h>
 #include <MiBattleDamageData.h>
@@ -102,6 +103,13 @@ bool AIManager::Prepare(const std::shared_ptr<ActiveEntityState>& eState,
     auto aiState = std::make_shared<AIState>();
     eState->SetAIState(aiState);
 
+    auto eBase = eState->GetEnemyBase();
+    if(eBase && (eBase->GetSpawnLocation() || eBase->GetSpawnSpotID()))
+    {
+        // Default to wandering first
+        aiState->SetStatus(AIStatus_t::WANDERING, true);
+    }
+
     auto demonData = eState->GetDevilData();
     auto aiData = demonData ? mServer.lock()->GetDefinitionManager()->GetAIData(
         demonData->GetAI()->GetType()) : nullptr;
@@ -165,12 +173,9 @@ bool AIManager::Prepare(const std::shared_ptr<ActiveEntityState>& eState,
 }
 
 void AIManager::UpdateActiveStates(const std::shared_ptr<Zone>& zone,
-    uint64_t now)
+    uint64_t now, bool isNight)
 {
-    /// @todo
-    bool isNight = false;
-
-    std::list<std::shared_ptr<EnemyState>> updated;
+    std::list<std::shared_ptr<ActiveEntityState>> updated;
     for(auto enemy : zone->GetEnemies())
     {
         if(UpdateState(enemy, now, isNight))
@@ -179,43 +184,51 @@ void AIManager::UpdateActiveStates(const std::shared_ptr<Zone>& zone,
         }
     }
 
+    for(auto ally : zone->GetAllies())
+    {
+        if(UpdateState(ally, now, isNight))
+        {
+            updated.push_back(ally);
+        }
+    }
+
     // Update enemy states first
     if(updated.size() > 0)
     {
         auto zConnections = zone->GetConnectionList();
         RelativeTimeMap timeMap;
-        for(auto enemy : updated)
+        for(auto entity : updated)
         {
-            // Update the clients with what the enemy is doing
+            // Update the clients with what the entity is doing
 
-            // Check if the enemy's position or rotation has updated
-            if(now == enemy->GetOriginTicks())
+            // Check if the entity's position or rotation has updated
+            if(now == entity->GetOriginTicks())
             {
-                if(enemy->IsMoving())
+                if(entity->IsMoving())
                 {
                     libcomp::Packet p;
                     p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_MOVE);
-                    p.WriteS32Little(enemy->GetEntityID());
-                    p.WriteFloat(enemy->GetDestinationX());
-                    p.WriteFloat(enemy->GetDestinationY());
-                    p.WriteFloat(enemy->GetOriginX());
-                    p.WriteFloat(enemy->GetOriginY());
-                    p.WriteFloat(enemy->GetMovementSpeed());
+                    p.WriteS32Little(entity->GetEntityID());
+                    p.WriteFloat(entity->GetDestinationX());
+                    p.WriteFloat(entity->GetDestinationY());
+                    p.WriteFloat(entity->GetOriginX());
+                    p.WriteFloat(entity->GetOriginY());
+                    p.WriteFloat(entity->GetMovementSpeed());
 
                     timeMap[p.Size()] = now;
-                    timeMap[p.Size() + 4] = enemy->GetDestinationTicks();
+                    timeMap[p.Size() + 4] = entity->GetDestinationTicks();
                     ChannelClientConnection::SendRelativeTimePacket(zConnections, p,
                         timeMap, true);
                 }
-                else if(enemy->IsRotating())
+                else if(entity->IsRotating())
                 {
                     libcomp::Packet p;
                     p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_ROTATE);
-                    p.WriteS32Little(enemy->GetEntityID());
-                    p.WriteFloat(enemy->GetDestinationRotation());
+                    p.WriteS32Little(entity->GetEntityID());
+                    p.WriteFloat(entity->GetDestinationRotation());
 
                     timeMap[p.Size()] = now;
-                    timeMap[p.Size() + 4] = enemy->GetDestinationTicks();
+                    timeMap[p.Size() + 4] = entity->GetDestinationTicks();
                     ChannelClientConnection::SendRelativeTimePacket(zConnections, p,
                         timeMap, true);
                 }
@@ -225,11 +238,11 @@ void AIManager::UpdateActiveStates(const std::shared_ptr<Zone>& zone,
 
                     libcomp::Packet p;
                     p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_STOP_MOVEMENT);
-                    p.WriteS32Little(enemy->GetEntityID());
-                    p.WriteFloat(enemy->GetDestinationX());
-                    p.WriteFloat(enemy->GetDestinationY());
+                    p.WriteS32Little(entity->GetEntityID());
+                    p.WriteFloat(entity->GetDestinationX());
+                    p.WriteFloat(entity->GetDestinationY());
 
-                    timeMap[p.Size()] = enemy->GetDestinationTicks();
+                    timeMap[p.Size()] = entity->GetDestinationTicks();
                     ChannelClientConnection::SendRelativeTimePacket(zConnections, p,
                         timeMap, true);
                 }
@@ -273,7 +286,7 @@ bool AIManager::UpdateState(const std::shared_ptr<ActiveEntityState>& eState,
     eState->RefreshCurrentPosition(now);
 
     auto aiState = eState->GetAIState();
-    if(!aiState || (aiState->IsIdle() && !aiState->IsOverriden("idle")))
+    if(!aiState || (aiState->IsIdle() && !aiState->IsOverridden("idle")))
     {
         return false;
     }
@@ -334,7 +347,7 @@ bool AIManager::UpdateState(const std::shared_ptr<ActiveEntityState>& eState,
             break;
         }
 
-        if(aiState->IsOverriden(actionName))
+        if(aiState->IsOverridden(actionName))
         {
             libcomp::String functionOverride = aiState->GetScriptFunction(actionName);
             if(!functionOverride.IsEmpty())
@@ -368,12 +381,9 @@ bool AIManager::UpdateState(const std::shared_ptr<ActiveEntityState>& eState,
             switch(eState->GetEntityType())
             {
             case EntityType_t::ENEMY:
-                {
-                    auto enemyState = std::dynamic_pointer_cast<EnemyState>(eState);
-                    return UpdateEnemyState(enemyState, now, isNight);
-                }
-            case EntityType_t::PARTNER_DEMON: // Maybe someday
-                /// @todo: handle ally NPCs
+            case EntityType_t::ALLY:
+                return UpdateEnemyState(eState, eState->GetEnemyBase(),
+                    now, isNight);
             default:
                 break;
             }
@@ -535,7 +545,9 @@ bool AIManager::UpdateState(const std::shared_ptr<ActiveEntityState>& eState,
     return false;
 }
 
-bool AIManager::UpdateEnemyState(const std::shared_ptr<EnemyState>& eState, uint64_t now,
+bool AIManager::UpdateEnemyState(
+    const std::shared_ptr<ActiveEntityState>& eState,
+    const std::shared_ptr<objects::EnemyBase>& eBase, uint64_t now,
     bool isNight)
 {
     auto server = mServer.lock();
@@ -546,11 +558,10 @@ bool AIManager::UpdateEnemyState(const std::shared_ptr<EnemyState>& eState, uint
         Retarget(eState, now, isNight);
     }
 
-    if(aiState->GetStatus() == AIStatus_t::WANDERING)
+    if(aiState->GetStatus() == AIStatus_t::WANDERING && eBase)
     {
-        auto entity = eState->GetEntity();
-        auto spawnLocation = entity->GetSpawnLocation();
-        uint32_t spotID = entity->GetSpawnSpotID();
+        auto spawnLocation = eBase->GetSpawnLocation();
+        uint32_t spotID = eBase->GetSpawnSpotID();
 
         if((spawnLocation || spotID > 0) && eState->CanMove())
         {
@@ -635,7 +646,8 @@ bool AIManager::UpdateEnemyState(const std::shared_ptr<EnemyState>& eState, uint
         // No target could be found, stop combat and quit
         if(activated)
         {
-            server->GetSkillManager()->CancelSkill(eState, activated->GetActivationID());
+            server->GetSkillManager()->CancelSkill(eState,
+                activated->GetActivationID());
         }
 
         server->GetCharacterManager()->AddRemoveOpponent(false,
@@ -762,7 +774,8 @@ bool AIManager::UpdateEnemyState(const std::shared_ptr<EnemyState>& eState, uint
     return false;
 }
 
-std::shared_ptr<ActiveEntityState> AIManager::Retarget(const std::shared_ptr<EnemyState>& eState,
+std::shared_ptr<ActiveEntityState> AIManager::Retarget(
+    const std::shared_ptr<ActiveEntityState>& eState,
     uint64_t now, bool isNight)
 {
     std::shared_ptr<ActiveEntityState> target;
@@ -830,7 +843,7 @@ std::shared_ptr<ActiveEntityState> AIManager::Retarget(const std::shared_ptr<Ene
             filtered.remove_if([eState, castingOnly](
                 const std::shared_ptr<ActiveEntityState>& entity)
                 {
-                    return entity->GetFaction() == eState->GetFaction() ||
+                    return eState->SameFaction(entity) ||
                         (castingOnly && !entity->GetStatusTimes(STATUS_CHARGING)) ||
                         !entity->Ready() || entity->GetAIIgnored();
                 });
@@ -879,7 +892,7 @@ std::shared_ptr<ActiveEntityState> AIManager::Retarget(const std::shared_ptr<Ene
                         Point(entity->GetCurrentX(), entity->GetCurrentY()));
 
                     Point collidePoint;
-                    add = !geometry->Collides(path, collidePoint);
+                    add = !zone->Collides(path, collidePoint);
                 }
 
                 if(add)
@@ -897,8 +910,23 @@ std::shared_ptr<ActiveEntityState> AIManager::Retarget(const std::shared_ptr<Ene
 
     if(possibleTargets.size() > 0)
     {
-        /// @todo: add better target selection logic
-        target = libcomp::Randomizer::GetEntry(possibleTargets);
+        if(aiState->IsOverridden("target") && aiState->GetScript())
+        {
+            Sqrat::Function f(Sqrat::RootTable(aiState->GetScript()->GetVM()),
+                aiState->GetScriptFunction("target").C());
+
+            auto scriptResult = !f.IsNull()
+                ? f.Evaluate<int32_t>(eState, possibleTargets, this, now) : 0;
+            if(scriptResult)
+            {
+                target = zone->GetActiveEntity(*scriptResult);
+            }
+        }
+        else
+        {
+            /// @todo: add better default target selection logic
+            target = libcomp::Randomizer::GetEntry(possibleTargets);
+        }
 
         aiState->SetTarget(target ? target->GetEntityID() : 0);
     }
@@ -914,7 +942,10 @@ void AIManager::RefreshSkillMap(const std::shared_ptr<ActiveEntityState>& eState
         auto isEnemy = eState->GetEntityType() == EntityType_t::ENEMY;
 
         std::unordered_map<uint16_t, std::vector<uint32_t>> skillMap;
-        auto definitionManager = mServer.lock()->GetDefinitionManager();
+
+        auto server = mServer.lock();
+        auto definitionManager = server->GetDefinitionManager();
+        auto skillManager = server->GetSkillManager();
 
         auto currentSkills = eState->GetCurrentSkills();
         for(uint32_t skillID : currentSkills)
@@ -924,6 +955,8 @@ void AIManager::RefreshSkillMap(const std::shared_ptr<ActiveEntityState>& eState
             // Active skills only
             auto category = skillData->GetCommon()->GetCategory();
             if(category->GetMainCategory() != 1) continue;
+
+            if(skillManager->SkillRestricted(eState, skillData)) continue;
 
             auto range = skillData->GetRange();
 
@@ -1029,7 +1062,7 @@ std::shared_ptr<AIMoveCommand> AIManager::GetMoveCommand(const std::shared_ptr<
         Point collidePoint;
         Line outSurface;
         std::shared_ptr<ZoneShape> outShape;
-        if(geometry->Collides(path, collidePoint, outSurface, outShape))
+        if(zone->Collides(path, collidePoint, outSurface, outShape))
         {
             /*// Move off the collision point by 10
             collidePoint = zoneManager->GetLinearPoint(collidePoint.x,

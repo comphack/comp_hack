@@ -38,6 +38,7 @@
 
 // objects Includes
 #include <ActivatedAbility.h>
+#include <Ally.h>
 #include <CalculatedEntityState.h>
 #include <Character.h>
 #include <Clan.h>
@@ -59,6 +60,7 @@
 #include <MiSkillItemStatusCommonData.h>
 #include <MiStatusBasicData.h>
 #include <MiStatusData.h>
+#include <Spawn.h>
 #include <Tokusei.h>
 #include <TokuseiAspect.h>
 #include <TokuseiCorrectTbl.h>
@@ -81,6 +83,7 @@ namespace libcomp
         {
             Using<AIState>();
             Using<objects::ActiveEntityStateObject>();
+            Using<objects::EnemyBase>();
             Using<Zone>();
 
             // Active entities can rotate or stop directly from the script
@@ -96,6 +99,7 @@ namespace libcomp
                 .Func("GetAIState", &ActiveEntityState::GetAIState)
                 .Func("GetActionTime", &ActiveEntityState::GetActionTime)
                 .Func("SetActionTime", &ActiveEntityState::SetActionTime)
+                .Func("GetEnemyBase", &ActiveEntityState::GetEnemyBase)
                 .Func("StatusEffectActive", &ActiveEntityState::StatusEffectActive)
                 .Func("StatusEffectTimeLeft", &ActiveEntityState::StatusEffectTimeLeft);
 
@@ -128,6 +132,11 @@ int16_t ActiveEntityState::GetCorrectValue(CorrectTbl tableID,
 const libobjgen::UUID ActiveEntityState::GetEntityUUID()
 {
     return NULLUUID;
+}
+
+std::shared_ptr<objects::EnemyBase> ActiveEntityState::GetEnemyBase() const
+{
+    return nullptr;
 }
 
 void ActiveEntityState::Move(float xPos, float yPos, uint64_t now)
@@ -202,12 +211,14 @@ bool ActiveEntityState::IsRotating() const
 
 bool ActiveEntityState::CanAct()
 {
-    return mAlive && (CanMove() || CurrentSkillsCount() > 0);
+    return mAlive && !StatusRestrictActCount() &&
+        (CanMove() || CurrentSkillsCount() > 0);
 }
 
 bool ActiveEntityState::CanMove(bool ignoreSkill)
 {
-    if(!mAlive || GetCorrectValue(CorrectTbl::MOVE1) == 0)
+    if(!mAlive || GetCorrectValue(CorrectTbl::MOVE1) == 0 ||
+        StatusRestrictActCount() > 0 || StatusRestrictMoveCount() > 0)
     {
         return false;
     }
@@ -245,6 +256,16 @@ bool ActiveEntityState::CanMove(bool ignoreSkill)
     }
 
     return true;
+}
+
+bool ActiveEntityState::SameFaction(std::shared_ptr<ActiveEntityState> other,
+    bool ignoreGroup)
+{
+    return GetFaction() == other->GetFaction() &&
+        (ignoreGroup ||
+        // Ignore neutral within groups
+        GetFactionGroup() == 0 || other->GetFactionGroup() == 0 ||
+        GetFactionGroup() == other->GetFactionGroup());
 }
 
 float ActiveEntityState::CorrectRotation(float rot)
@@ -1554,17 +1575,29 @@ void ActiveEntityState::RemoveStatusEffects(const std::set<uint32_t>& effectType
     std::set<uint8_t> cancelTypes;
 
     bool recalcIgnore = false;
+    bool recalcAI = false;
     for(uint32_t effectType : effectTypes)
     {
+        auto def = mStatusEffectDefs[effectType];
+        recalcAI |= def && (def->GetEffect()
+            ->GetRestrictions() & 0x1D) != 0;
+
         mStatusEffects.erase(effectType);
         mStatusEffectDefs.erase(effectType);
         mNRAShields.erase(effectType);
         mTimeDamageEffects.erase(effectType);
+
         for(auto& cPair : mCancelConditions)
         {
             cPair.second.erase(effectType);
             cancelTypes.insert(cPair.first);
         }
+
+        RemoveStatusRestrictAct(effectType);
+        RemoveStatusRestrictMove(effectType);
+        RemoveStatusRestrictMagic(effectType);
+        RemoveStatusRestrictSpecial(effectType);
+        RemoveStatusRestrictTalk(effectType);
 
         if(IsIgnoreEffect(effectType))
         {
@@ -1602,6 +1635,11 @@ void ActiveEntityState::RemoveStatusEffects(const std::set<uint32_t>& effectType
         {
             mCancelConditions.erase(cancelType);
         }
+    }
+
+    if(recalcAI && mAIState)
+    {
+        mAIState->ResetSkillsMapped();
     }
 
     if(GetIsHidden() &&
@@ -1674,7 +1712,7 @@ void ActiveEntityState::ActivateStatusEffect(
     }
 
     // Mark the cancel conditions
-    for(uint16_t x = 0x0001; x < 0x00100;)
+    for(uint16_t x = 0x0001; x < 0x0100;)
     {
         uint8_t x8 = (uint8_t)x;
         if(cancel->GetCancelTypes() & x8)
@@ -1683,6 +1721,44 @@ void ActiveEntityState::ActivateStatusEffect(
         }
 
         x = (uint16_t)(x << 1);
+    }
+
+    // Populate restrictions
+    uint8_t restr = (uint8_t)se->GetEffect()->GetRestrictions();
+    if(restr & 0x01)
+    {
+        // No (non-system) actions
+        InsertStatusRestrictAct(effectType);
+    }
+
+    if(restr & 0x02)
+    {
+        // No movement
+        InsertStatusRestrictMove(effectType);
+    }
+
+    if(restr & 0x04)
+    {
+        // No magic skills
+        InsertStatusRestrictMagic(effectType);
+    }
+
+    if(restr & 0x08)
+    {
+        // No special skills
+        InsertStatusRestrictSpecial(effectType);
+    }
+
+    if(restr & 0x10)
+    {
+        // No taks skills (source or target)
+        InsertStatusRestrictTalk(effectType);
+    }
+
+    if((restr & 0x1D) != 0 && mAIState)
+    {
+        // One or more skill affecting effects added
+        mAIState->ResetSkillsMapped();
     }
 
     // Add to timed damage effect set if T-Damage is specified
@@ -1964,6 +2040,13 @@ ActiveEntityStateImp<objects::Enemy>::ActiveEntityStateImp()
 }
 
 template<>
+ActiveEntityStateImp<objects::Ally>::ActiveEntityStateImp()
+{
+    SetEntityType(EntityType_t::ALLY);
+    SetFaction(objects::ActiveEntityStateObject::Faction_t::PLAYER);
+}
+
+template<>
 void ActiveEntityStateImp<objects::Character>::SetEntity(
     const std::shared_ptr<objects::Character>& entity,
     const std::shared_ptr<objects::MiDevilData>& devilData)
@@ -2037,20 +2120,62 @@ void ActiveEntityStateImp<objects::Enemy>::SetEntity(
     const std::shared_ptr<objects::Enemy>& entity,
     const std::shared_ptr<objects::MiDevilData>& devilData)
 {
-    {
-        std::lock_guard<std::mutex> lock(mLock);
-        mEntity = entity;
-    }
+    std::lock_guard<std::mutex> lock(mLock);
+    mEntity = entity;
     
     if(entity)
     {
         mAlive = entity->GetCoreStats()->GetHP() > 0;
 
+        mEffectsActive = true;
         SetDisplayState(ActiveDisplayState_t::DATA_NOT_SENT);
+
+        auto spawn = entity->GetSpawnSource();
+        if(spawn && spawn->GetFactionGroup())
+        {
+            SetFactionGroup(spawn->GetFactionGroup());
+        }
     }
     else
     {
+        mEffectsActive = false;
         SetDisplayState(ActiveDisplayState_t::NOT_SET);
+        SetFactionGroup(0);
+    }
+
+    SetDevilData(devilData);
+
+    // Reset knockback and let refresh correct
+    SetKnockbackResist(0);
+    mInitialCalc = false;
+}
+
+template<>
+void ActiveEntityStateImp<objects::Ally>::SetEntity(
+    const std::shared_ptr<objects::Ally>& entity,
+    const std::shared_ptr<objects::MiDevilData>& devilData)
+{
+    std::lock_guard<std::mutex> lock(mLock);
+    mEntity = entity;
+
+    if(entity)
+    {
+        mAlive = entity->GetCoreStats()->GetHP() > 0;
+
+        mEffectsActive = true;
+        SetDisplayState(ActiveDisplayState_t::DATA_NOT_SENT);
+
+        auto spawn = entity->GetSpawnSource();
+        if(spawn && spawn->GetFactionGroup())
+        {
+            SetFactionGroup(spawn->GetFactionGroup());
+        }
+    }
+    else
+    {
+        mEffectsActive = false;
+        SetDisplayState(ActiveDisplayState_t::NOT_SET);
+        SetFactionGroup(0);
     }
 
     SetDevilData(devilData);
@@ -2076,6 +2201,26 @@ template<>
 const libobjgen::UUID ActiveEntityStateImp<objects::Enemy>::GetEntityUUID()
 {
     return NULLUUID;
+}
+
+template<>
+const libobjgen::UUID ActiveEntityStateImp<objects::Ally>::GetEntityUUID()
+{
+    return NULLUUID;
+}
+
+template<>
+std::shared_ptr<objects::EnemyBase>
+    ActiveEntityStateImp<objects::Enemy>::GetEnemyBase() const
+{
+    return mEntity;
+}
+
+template<>
+std::shared_ptr<objects::EnemyBase>
+    ActiveEntityStateImp<objects::Ally>::GetEnemyBase() const
+{
+    return mEntity;
 }
 
 template<>
@@ -2167,43 +2312,16 @@ template<>
 std::set<uint32_t> ActiveEntityStateImp<objects::Enemy>::GetAllSkills(
     libcomp::DefinitionManager* definitionManager, bool includeTokusei)
 {
-    std::set<uint32_t> skillIDs;
+    return mEntity ? GetAllEnemySkills(definitionManager, includeTokusei)
+        : std::set<uint32_t>();
+}
 
-    if(mEntity)
-    {
-        auto demonData = GetDevilData();
-
-        auto growth = demonData->GetGrowth();
-        for(auto skillSet : { growth->GetSkills(),
-            growth->GetEnemyOnlySkills() })
-        {
-            for(uint32_t skillID : skillSet)
-            {
-                if(skillID)
-                {
-                    skillIDs.insert(skillID);
-                }
-            }
-        }
-
-        for(uint32_t traitID : growth->GetTraits())
-        {
-            if(traitID)
-            {
-                skillIDs.insert(traitID);
-            }
-        }
-
-        if(includeTokusei)
-        {
-            for(uint32_t skillID : GetEffectiveTokuseiSkills(definitionManager))
-            {
-                skillIDs.insert(skillID);
-            }
-        }
-    }
-
-    return skillIDs;
+template<>
+std::set<uint32_t> ActiveEntityStateImp<objects::Ally>::GetAllSkills(
+    libcomp::DefinitionManager* definitionManager, bool includeTokusei)
+{
+    return mEntity ? GetAllEnemySkills(definitionManager, includeTokusei)
+        : std::set<uint32_t>();
 }
 
 template<>
@@ -2381,64 +2499,21 @@ uint8_t ActiveEntityStateImp<objects::Enemy>::RecalculateStats(
     {
         return true;
     }
-    
-    if(calcState == nullptr)
-    {
-        // Calculating default entity state
-        calcState = GetCalculatedState();
-    }
 
-    if(!mInitialCalc)
-    {
-        auto previousSkills = GetCurrentSkills();
-        SetCurrentSkills(GetAllSkills(definitionManager, true));
+    return RecalculateEnemyStats(definitionManager, calcState);
+}
 
-        bool skillsChanged = previousSkills.size() != CurrentSkillsCount();
-        if(!skillsChanged)
-        {
-            for(uint32_t skillID : previousSkills)
-            {
-                if(!CurrentSkillsContains(skillID))
-                {
-                    skillsChanged = true;
-                    break;
-                }
-            }
-        }
-
-        if(skillsChanged && mAIState)
-        {
-            mAIState->ResetSkillsMapped();
-        }
-    }
-
-    std::lock_guard<std::mutex> lock(mLock);
-
-    auto cs = GetCoreStats();
-    auto devilData = GetDevilData();
-    if(!cs || !devilData)
+template<>
+uint8_t ActiveEntityStateImp<objects::Ally>::RecalculateStats(
+    libcomp::DefinitionManager* definitionManager,
+    std::shared_ptr<objects::CalculatedEntityState> calcState)
+{
+    if(!mEntity)
     {
         return true;
     }
 
-    auto battleData = devilData->GetBattleData();
-
-    libcomp::EnumMap<CorrectTbl, int16_t> stats;
-    for(size_t i = 0; i < 126; i++)
-    {
-        CorrectTbl tblID = (CorrectTbl)i;
-        stats[tblID] = battleData->GetCorrect((size_t)i);
-    }
-
-    // Non-dependent stats will not change from growth calculation
-    stats[CorrectTbl::STR] = cs->GetSTR();
-    stats[CorrectTbl::MAGIC] = cs->GetMAGIC();
-    stats[CorrectTbl::VIT] = cs->GetVIT();
-    stats[CorrectTbl::INT] = cs->GetINTEL();
-    stats[CorrectTbl::SPEED] = cs->GetSPEED();
-    stats[CorrectTbl::LUCK] = cs->GetLUCK();
-
-    return RecalculateDemonStats(definitionManager, stats, calcState);
+    return RecalculateEnemyStats(definitionManager, calcState);
 }
 
 template<>
@@ -2474,6 +2549,19 @@ uint8_t ActiveEntityStateImp<objects::Enemy>::GetLNCType()
 }
 
 template<>
+uint8_t ActiveEntityStateImp<objects::Ally>::GetLNCType()
+{
+    int16_t lncPoints = 0;
+    auto demonData = GetDevilData();
+    if(mEntity && demonData)
+    {
+        lncPoints = demonData->GetBasic()->GetLNC();
+    }
+
+    return CalculateLNCType(lncPoints);
+}
+
+template<>
 int8_t ActiveEntityStateImp<objects::Character>::GetGender()
 {
     return (int8_t)mEntity->GetGender();
@@ -2493,6 +2581,18 @@ int8_t ActiveEntityStateImp<objects::Demon>::GetGender()
 
 template<>
 int8_t ActiveEntityStateImp<objects::Enemy>::GetGender()
+{
+    auto demonData = GetDevilData();
+    if(demonData)
+    {
+        return (int8_t)demonData->GetBasic()->GetGender();
+    }
+
+    return 2;   // None
+}
+
+template<>
+int8_t ActiveEntityStateImp<objects::Ally>::GetGender()
 {
     auto demonData = GetDevilData();
     if(demonData)
@@ -2607,6 +2707,7 @@ void ActiveEntityState::AdjustStats(
             switch(effectiveType)
             {
             case 1:
+            case 2: /// @todo: these MAY be different from normal percents
                 // Percentage sets can either be an immutable set to zero
                 // or an increase/decrease by a set amount
                 if(effectiveValue == 0)
@@ -2868,9 +2969,9 @@ void ActiveEntityState::GetAdditionalCorrectTbls(
     adjustments.sort([](const std::shared_ptr<objects::MiCorrectTbl>& a,
         const std::shared_ptr<objects::MiCorrectTbl>& b)
     {
-        return (a->GetType() == 1 || a->GetType() == 101) &&
+        return ((a->GetType() % 100) > 0) &&
             (a->GetValue() == 0 ||
-            (b->GetType() != 1 && b->GetType() != 101));
+            ((b->GetType() % 100) == 0));
     });
 }
 
@@ -2919,6 +3020,108 @@ uint8_t ActiveEntityState::RecalculateDemonStats(
 
         return 0;
     }
+}
+
+uint8_t ActiveEntityState::RecalculateEnemyStats(
+    libcomp::DefinitionManager* definitionManager,
+    std::shared_ptr<objects::CalculatedEntityState> calcState)
+{
+    if(calcState == nullptr)
+    {
+        // Calculating default entity state
+        calcState = GetCalculatedState();
+    }
+
+    if(!mInitialCalc)
+    {
+        auto previousSkills = GetCurrentSkills();
+        SetCurrentSkills(GetAllSkills(definitionManager, true));
+
+        bool skillsChanged = previousSkills.size() != CurrentSkillsCount();
+        if(!skillsChanged)
+        {
+            for(uint32_t skillID : previousSkills)
+            {
+                if(!CurrentSkillsContains(skillID))
+                {
+                    skillsChanged = true;
+                    break;
+                }
+            }
+        }
+
+        if(skillsChanged && mAIState)
+        {
+            mAIState->ResetSkillsMapped();
+        }
+    }
+
+    std::lock_guard<std::mutex> lock(mLock);
+
+    auto cs = GetCoreStats();
+    auto devilData = GetDevilData();
+    if(!cs || !devilData)
+    {
+        return true;
+    }
+
+    auto battleData = devilData->GetBattleData();
+
+    libcomp::EnumMap<CorrectTbl, int16_t> stats;
+    for(size_t i = 0; i < 126; i++)
+    {
+        CorrectTbl tblID = (CorrectTbl)i;
+        stats[tblID] = battleData->GetCorrect((size_t)i);
+    }
+
+    // Non-dependent stats will not change from growth calculation
+    stats[CorrectTbl::STR] = cs->GetSTR();
+    stats[CorrectTbl::MAGIC] = cs->GetMAGIC();
+    stats[CorrectTbl::VIT] = cs->GetVIT();
+    stats[CorrectTbl::INT] = cs->GetINTEL();
+    stats[CorrectTbl::SPEED] = cs->GetSPEED();
+    stats[CorrectTbl::LUCK] = cs->GetLUCK();
+
+    return RecalculateDemonStats(definitionManager, stats, calcState);
+}
+
+std::set<uint32_t> ActiveEntityState::GetAllEnemySkills(
+    libcomp::DefinitionManager* definitionManager, bool includeTokusei)
+{
+    std::set<uint32_t> skillIDs;
+
+    auto demonData = GetDevilData();
+
+    auto growth = demonData->GetGrowth();
+    for(auto skillSet : { growth->GetSkills(),
+        growth->GetEnemyOnlySkills() })
+    {
+        for(uint32_t skillID : skillSet)
+        {
+            if(skillID)
+            {
+                skillIDs.insert(skillID);
+            }
+        }
+    }
+
+    for(uint32_t traitID : growth->GetTraits())
+    {
+        if(traitID)
+        {
+            skillIDs.insert(traitID);
+        }
+    }
+
+    if(includeTokusei)
+    {
+        for(uint32_t skillID : GetEffectiveTokuseiSkills(definitionManager))
+        {
+            skillIDs.insert(skillID);
+        }
+    }
+
+    return skillIDs;
 }
 
 uint8_t ActiveEntityState::CalculateLNCType(int16_t lncPoints) const

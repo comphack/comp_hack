@@ -98,6 +98,7 @@ class DefinitionManager;
 
 namespace objects
 {
+class EnemyBase;
 class MiStatusData;
 }
 
@@ -271,6 +272,13 @@ public:
     virtual const libobjgen::UUID GetEntityUUID();
 
     /**
+     * Get assigned entity as its EnemyBase representation or null
+     * if it does not apply.
+     * @return Pointer to the EnemyBase object
+     */
+    virtual std::shared_ptr<objects::EnemyBase> GetEnemyBase() const;
+
+    /**
      * Set the entity's destination position based on the supplied
      * values and uses the current position values to set the origin.
      * Communicating that the move has taken place must be done elsewhere.
@@ -327,6 +335,16 @@ public:
      * @return true if the entity can move, false if it cannot
      */
     bool CanMove(bool ignoreSkill = false);
+
+    /**
+     * Check if the entity and another entity are in the same faction
+     * @param other Pointer to the other entity
+     * @param ignoreGroup If true only the faction will be checked.
+     *  If false the faction group will also be checked.
+     * @return true if the entities are in the same faction
+     */
+    bool SameFaction(std::shared_ptr<ActiveEntityState> other,
+        bool ignoreGroup = false);
 
     /**
      * Corrects rotation values that have exceeded the minimum
@@ -824,6 +842,30 @@ protected:
         std::shared_ptr<objects::CalculatedEntityState> calcState);
 
     /**
+     * Recalculate a entity's stats for an enemy or ally which have all types
+     * of state information in common
+     * @param definitionManager Pointer to the DefinitionManager to use when
+     *  determining how effects and items interact with the entity
+     * @param calcState Override CalculatedEntityState to use instead of the
+     *  entity's default
+     * @return 1 if the calculation resulted in a change to the stats that should
+     *  be sent to the client, 2 if one of the changes should be communicated to
+     *  the world (for party members etc), 0 otherwise
+     */
+    uint8_t RecalculateEnemyStats(libcomp::DefinitionManager* definitionManager,
+        std::shared_ptr<objects::CalculatedEntityState> calcState);
+
+    /**
+     * Get all skills that the enemy or ally entity currently has available.
+     * @param definitionManager Pointer to the definition manager to use
+     *  for skill source definitions
+     * @param includeTokusei false if tokusei skills should not be included
+     * @return Set of all skill IDs the entity currently has available
+     */
+    std::set<uint32_t> GetAllEnemySkills(
+        libcomp::DefinitionManager* definitionManager, bool includeTokusei);
+
+    /**
      * Calculate the numeric representation (also stored in constants)
      * of the entity's alignment based off the supplied LNC point value
      * @param lncPoints LNC points representing degrees of alignment
@@ -970,6 +1012,11 @@ public:
         const std::shared_ptr<objects::MiDevilData>& devilData);
 
     virtual const libobjgen::UUID GetEntityUUID();
+
+    virtual std::shared_ptr<objects::EnemyBase> GetEnemyBase() const
+    {
+        return nullptr;
+    }
 
     virtual std::shared_ptr<objects::EntityStats> GetCoreStats()
     {

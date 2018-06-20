@@ -251,6 +251,13 @@ public:
         uint32_t id);
 
     /**
+     * Get all devil level up information records
+     * @return Map of devil level up information by growth type ID
+     */
+    std::unordered_map<uint32_t, std::shared_ptr<
+        objects::MiDevilLVUpRateData>> GetAllDevilLVUpRateData();
+
+    /**
      * Get the item disassembly definition corresponding to an ID
      * @param id Item disassembly ID to retrieve
      * @return Pointer to the matching item disassembly definition, null if it
@@ -911,7 +918,7 @@ private:
     /// Map of devil names to IDs which are NOT unique across entries
     std::unordered_map<libcomp::String, uint32_t> mDevilNameLookup;
 
-    /// Map of devil level up information by devil ID
+    /// Map of devil level up information by growth type ID
     std::unordered_map<uint32_t,
         std::shared_ptr<objects::MiDevilLVUpRateData>> mDevilLVUpRateData;
 

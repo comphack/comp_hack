@@ -40,9 +40,18 @@ namespace libcomp
             Sqrat::Class<AIState> binding(mVM, "AIState");
             binding
                 .Func("GetStatus", &AIState::GetStatus)
+                .Func("SetStatus", &AIState::SetStatus)
                 .Func("OverrideAction", &AIState::OverrideAction);
 
             Bind<AIState>("AIState", binding);
+
+            Sqrat::Enumeration e(mVM);
+            e.Const("IDLE", (int32_t)AIStatus_t::IDLE);
+            e.Const("WANDERING", (int32_t)AIStatus_t::WANDERING);
+            e.Const("AGGRO", (int32_t)AIStatus_t::AGGRO);
+            e.Const("COMBAT", (int32_t)AIStatus_t::COMBAT);
+
+            Sqrat::ConstTable(mVM).Enum("AIStatus_t", e);
         }
 
         return *this;
@@ -76,8 +85,15 @@ AIStatus_t AIState::GetDefaultStatus() const
     return mDefaultStatus;
 }
 
-void AIState::SetStatus(AIStatus_t status, bool isDefault)
+bool AIState::SetStatus(AIStatus_t status, bool isDefault)
 {
+    // Disallow default setting to target dependent status
+    if(isDefault &&
+        (status == AIStatus_t::AGGRO || status == AIStatus_t::COMBAT))
+    {
+        return false;
+    }
+
     mStatusChanged = mStatus != status;
 
     mPreviousStatus = mStatus;
@@ -87,6 +103,8 @@ void AIState::SetStatus(AIStatus_t status, bool isDefault)
     {
         mDefaultStatus = status;
     }
+
+    return true;
 }
 
 bool AIState::IsIdle() const
@@ -241,7 +259,7 @@ void AIState::OverrideAction(const libcomp::String& action,
     mActionOverrides[action.C()] = functionName;
 }
 
-bool AIState::IsOverriden(const libcomp::String& action)
+bool AIState::IsOverridden(const libcomp::String& action)
 {
     return mActionOverrides.find(action.C()) != mActionOverrides.end();
 }

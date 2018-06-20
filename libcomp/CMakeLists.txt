@@ -448,8 +448,12 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     DemonQuestReward.cpp
     DropSet.h
     DropSet.cpp
+    EnemyBase.h
+    EnemyBase.cpp
     Enemy.h
     Enemy.cpp
+    Ally.h
+    Ally.cpp
     EventConditionData.cpp
     EventConditionData.h
     EventCondition.h

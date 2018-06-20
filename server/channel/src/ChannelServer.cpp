@@ -773,6 +773,7 @@ void ChannelServer::SetTimeOffset(uint32_t offset)
     // Force a recalc
     mWorldClock.SystemTime = 0;
     mNextEventTime = 0;
+    mLastEventTrigger = WorldClockTime();
 }
 
 const std::shared_ptr<objects::RegisteredChannel> ChannelServer::GetRegisteredChannel()
@@ -1176,6 +1177,7 @@ bool ChannelServer::RegisterClockEvent(WorldClockTime time, uint8_t type,
 void ChannelServer::HandleClockEvents()
 {
     auto clock = GetWorldClockTime();
+    auto lastTrigger = mLastEventTrigger;
 
     bool recalc = false;
     {
@@ -1184,13 +1186,14 @@ void ChannelServer::HandleClockEvents()
         {
             recalc = true;
             mRecalcTimeDependents = false;
+            mLastEventTrigger = clock;
         }
     }
 
     if(recalc)
     {
         mTokuseiManager->RecalcTimedTokusei(clock);
-        mZoneManager->HandleTimedActions(clock);
+        mZoneManager->HandleTimedActions(clock, lastTrigger);
     }
 }
 

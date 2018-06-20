@@ -257,6 +257,10 @@ bool Parsers::ReviveCharacter::Parse(libcomp::ManagerPacket *pPacketManager,
             if(pair.first->SetHPMP(pair.second, -1, false))
             {
                 displayState.insert(pair.first);
+
+                // Trigger revival actions
+                zoneManager->TriggerZoneActions(zone, { pair.first },
+                    ZoneTrigger_t::ON_REVIVAL, client);
             }
         }
 
@@ -311,7 +315,7 @@ bool Parsers::ReviveCharacter::Parse(libcomp::ManagerPacket *pPacketManager,
 
     for(auto& pair : hpRestores)
     {
-        // If any entity was revived, check HP baed effects
+        // If any entity was revived, check HP based effects
         server->GetTokuseiManager()->Recalculate(pair.first,
             std::set<TokuseiConditionType> { TokuseiConditionType::CURRENT_HP });
     }

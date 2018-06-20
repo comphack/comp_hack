@@ -619,6 +619,27 @@ public:
         uint16_t familiarity = 0);
 
     /**
+     * Perform reunion on the supplied client's partner demon if they
+     * match the supplied ID.
+     * @param client Pointer to the client connection
+     * @param demonID Object ID of the demon currently summoned
+     * @param growthType New growth type to use for the demon
+     * @param costItemType Item type used for payment that must match
+     *  the predefined types for the growth type
+     * @param replyToClient If true the client will be sent a requested
+     *  reunion reply
+     * @param force If true only base validations will be performed,
+     *  skipping costs and most growth type validations
+     * @param forceRank Explicit rank to of the reunion bonuses to receive
+     *  when forcing reunion to a normal type. This value cannot exceed
+     *  the server configured maximum value.
+     * @return true if the reunion succeeded, false if it did not
+     */
+    bool ReunionDemon(const std::shared_ptr<ChannelClientConnection> client,
+        int64_t demonID, uint8_t growthType, uint32_t costItemType,
+        bool replyToClient, bool force = false, int8_t forceRank = -1);
+
+    /**
      * Get a demon's familiarity rank from their current familiarity points.
      * @param familiarity Demon's familiarity points
      * @return Converted familiarity rank from -3 to +4

@@ -103,20 +103,6 @@ bool Parsers::Warp::Parse(libcomp::ManagerPacket *pPacketManager,
             skillManager->ExecuteSkill(sourceState, activationID,
                 activatedAbility->GetActivationObjectID());
 
-            // Some of the warp items without expirations need to be consumed
-            // but are not skill costs
-            /// @todo: look into why this is and possibly correct binary data
-            if(item->GetRentalExpiration() == 0 &&
-                skillData->GetCondition()->CostsCount() == 0)
-            {
-                std::list<std::shared_ptr<objects::Item>> empty;
-
-                std::unordered_map<std::shared_ptr<objects::Item>, uint16_t> updates;
-                updates[item] = (uint16_t)(item->GetStackSize() - 1);
-
-                server->GetCharacterManager()->UpdateItems(client, false, empty, updates);
-            }
-
             zoneManager->EnterZone(client, zoneID, 0, x, y, rot);
         }
         else

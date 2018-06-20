@@ -119,8 +119,9 @@ public:
      * @param status Status to update the state to
      * @param isDefault Optional parameter to set the status as the
      *  state's default status as well
+     * @return true if it was set, false if it was not
      */
-    void SetStatus(AIStatus_t status, bool isDefault = false);
+    bool SetStatus(AIStatus_t status, bool isDefault = false);
 
     /**
      * Check if the status is set to idle
@@ -286,7 +287,7 @@ public:
      * @param action Name of the action to check
      * @return true if the action has been overridden
      */
-    bool IsOverriden(const libcomp::String& action);
+    bool IsOverridden(const libcomp::String& action);
 
     /**
      * Get the script function name set to override the AI action

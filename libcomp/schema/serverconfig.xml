@@ -29,6 +29,7 @@
            default="Welcome to the COMP_hack Server!"/>
         <member type="string" name="COMPShopMessage"
            default="Welcome to the COMP Shop!"/>
+        <member type="bool" name="MoveCorrection" default="true"/>
         <member type="bool" name="AutoCompressCurrency"/>
         <member type="bool" name="NRAStatusNull" default="true"/>
         <member type="bool" name="DeathPenaltyDisabled"/>

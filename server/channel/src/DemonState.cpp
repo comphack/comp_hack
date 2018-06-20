@@ -33,8 +33,8 @@
 #include <ServerConstants.h>
 
 // object Includes
+#include <AccountWorldData.h>
 #include <Character.h>
-#include <CharacterProgress.h>
 #include <DemonBox.h>
 #include <InheritedSkill.h>
 #include <MiDCategoryData.h>
@@ -112,20 +112,29 @@ bool DemonState::UpdateSharedState(const std::shared_ptr<objects::Character>& ch
 {
     std::set<uint32_t> cShiftValues;
 
-    if(character && CharacterManager::HasValuable(character,
-        SVR_CONST.VALUABLE_DEVIL_BOOK_V2))
-    {
-        auto devilBook = character->GetProgress()->GetDevilBook();
+    bool compendium2 = CharacterManager::HasValuable(character,
+        SVR_CONST.VALUABLE_DEVIL_BOOK_V2);
+    bool compendium1 = compendium2 || CharacterManager::HasValuable(character,
+        SVR_CONST.VALUABLE_DEVIL_BOOK_V1);
 
-        const static size_t DBOOK_SIZE = devilBook.size();
-        for(size_t i = 0; i < DBOOK_SIZE; i++)
+    if(compendium1)
+    {
+        auto worldData = std::dynamic_pointer_cast<objects::AccountWorldData>(
+            libcomp::PersistentObject::GetObjectByUUID(character->GetAccount()));
+        if(worldData)
         {
-            uint8_t val = devilBook[i];
-            for(uint8_t k = 0; k < 8; k++)
+            auto devilBook = worldData->GetDevilBook();
+
+            const static size_t DBOOK_SIZE = devilBook.size();
+            for(size_t i = 0; i < DBOOK_SIZE; i++)
             {
-                if((val & (0x01 << k)) != 0)
+                uint8_t val = devilBook[i];
+                for(uint8_t k = 0; k < 8; k++)
                 {
-                    cShiftValues.insert((uint32_t)((i * 8) + k));
+                    if((val & (0x01 << k)) != 0)
+                    {
+                        cShiftValues.insert((uint32_t)((i * 8) + k));
+                    }
                 }
             }
         }
@@ -187,11 +196,11 @@ bool DemonState::UpdateSharedState(const std::shared_ptr<objects::Character>& ch
         }
     }
 
-    if(mCompendiumTokuseiIDs.size() > 0 || compendiumEntries.size() > 0)
-    {
-        // Recalculate compendium based tokusei and set count
-        std::list<int32_t> compendiumTokuseiIDs;
+    // Recalculate compendium based tokusei and set count
+    std::list<int32_t> compendiumTokuseiIDs;
 
+    if(compendium2 && compendiumEntries.size() > 0)
+    {
         for(auto bonusPair : SVR_CONST.DEMON_BOOK_BONUS)
         {
             if(bonusPair.first <= compendiumEntries.size())
@@ -202,13 +211,13 @@ bool DemonState::UpdateSharedState(const std::shared_ptr<objects::Character>& ch
                 }
             }
         }
-
-        std::lock_guard<std::mutex> lock(mSharedLock);
-        mCompendiumTokuseiIDs = compendiumTokuseiIDs;
-        mCompendiumCount = (uint16_t)compendiumEntries.size();
-        mCompendiumFamilyCounts = compendiumFamilyCounts;
-        mCompendiumRaceCounts = compendiumRaceCounts;
     }
+
+    std::lock_guard<std::mutex> lock(mSharedLock);
+    mCompendiumTokuseiIDs = compendiumTokuseiIDs;
+    mCompendiumCount = (uint16_t)compendiumEntries.size();
+    mCompendiumFamilyCounts = compendiumFamilyCounts;
+    mCompendiumRaceCounts = compendiumRaceCounts;
 
     return true;
 }

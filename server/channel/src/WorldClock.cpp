@@ -27,6 +27,9 @@
 
 #include "WorldClock.h"
 
+// libcomp Includes
+#include <CString.h>
+
 using namespace channel;
 
 WorldClockTime::WorldClockTime() :
@@ -76,4 +79,24 @@ WorldClock::WorldClock() :
 bool WorldClock::IsNight() const
 {
     return Hour >= 0 && (Hour <= 5 || Hour >= 18);
+}
+
+libcomp::String WorldClock::ToString() const
+{
+    std::vector<libcomp::String> time;
+    for(int8_t num : { Hour, Min, MoonPhase, SystemHour, SystemMin })
+    {
+        if(num < 0)
+        {
+            time.push_back("NA");
+        }
+        else
+        {
+            time.push_back(libcomp::String("%1%2")
+                .Arg(num < 10 ? "0" : "").Arg(num));
+        }
+    }
+
+    return libcomp::String("%1:%2 %3/16 [%4:%5]")
+        .Arg(time[0]).Arg(time[1]).Arg(time[2]).Arg(time[3]).Arg(time[4]);
 }

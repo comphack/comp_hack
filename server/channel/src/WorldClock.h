@@ -31,6 +31,11 @@
 #include <stddef.h>
 #include <stdint.h>
 
+namespace libcomp
+{
+class String;
+}
+
 namespace channel
 {
 
@@ -111,6 +116,13 @@ public:
      * @return true if it is night, false if it is day or unspecified
      */
     bool IsNight() const;
+
+    /**
+     * Get the world clock as a string in the format [hh:mm pp/16 (HH:MM)]
+     * with hh:mm as world time, pp as moon phase and HH:MM as system time.
+     * @return World clock in string format
+     */
+    libcomp::String ToString() const;
 
     /// Week day numeric respresentation
     /// (1 = Sunday, 7 = Saturday, -1 = not set)

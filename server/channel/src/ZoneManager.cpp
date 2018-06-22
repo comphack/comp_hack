@@ -2860,6 +2860,9 @@ void ZoneManager::HandleTimedActions(const WorldClock& clock,
                 if((!rollOver && from < val && val <= to) ||
                     (rollOver && (from < val || val <= to)))
                 {
+                    LOG_DEBUG(libcomp::String("Triggering timed actions"
+                        " in zone %2\n").Arg(zone->GetDefinitionID()));
+
                     mServer.lock()->GetActionManager()->PerformActions(nullptr,
                         trigger->GetActions(), 0, zone, 0);
                     updated.insert(zone->GetID());
@@ -4266,7 +4269,7 @@ std::shared_ptr<Zone> ZoneManager::CreateZone(
     if(RegisterTimeRestrictions(zone, definition))
     {
         auto clock = server->GetWorldClockTime();
-        zone->UpdateTimedSpawns(clock);
+        zone->UpdateTimedSpawns(clock, true);
     }
 
     // Run all setup actions

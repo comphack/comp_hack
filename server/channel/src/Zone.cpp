@@ -27,6 +27,7 @@
 #include "Zone.h"
 
 // libcomp Includes
+#include <Log.h>
 #include <ScriptEngine.h>
 
 // C++ Standard Includes
@@ -116,7 +117,7 @@ Zone::Zone(uint32_t id, const std::shared_ptr<objects::ServerZone>& definition)
 
     if(disabledGroupIDs.size() > 0)
     {
-        DisableSpawnGroups(disabledGroupIDs);
+        DisableSpawnGroups(disabledGroupIDs, true);
     }
 }
 
@@ -817,7 +818,8 @@ void Zone::MarkDespawn(int32_t entityID)
     }
 }
 
-bool Zone::UpdateTimedSpawns(const WorldClock& clock)
+bool Zone::UpdateTimedSpawns(const WorldClock& clock,
+    bool initializing)
 {
     bool updated = false;
     std::set<uint32_t> enableSpawnGroups;
@@ -843,12 +845,13 @@ bool Zone::UpdateTimedSpawns(const WorldClock& clock)
 
     if(enableSpawnGroups.size() > 0)
     {
-        EnableSpawnGroups(enableSpawnGroups);
+        EnableSpawnGroups(enableSpawnGroups, initializing);
     }
 
     if(disableSpawnGroups.size() > 0)
     {
-        updated = DisableSpawnGroups(disableSpawnGroups);
+        updated = DisableSpawnGroups(disableSpawnGroups,
+            initializing);
     }
 
     for(auto pPair : GetDefinition()->GetPlasmaSpawns())
@@ -879,12 +882,12 @@ bool Zone::EnableDisableSpawnGroups(const std::set<uint32_t>& spawnGroupIDs,
     std::lock_guard<std::mutex> lock(mLock);
     if(enable)
     {
-        EnableSpawnGroups(spawnGroupIDs);
+        EnableSpawnGroups(spawnGroupIDs, false);
         return false;
     }
     else
     {
-        return DisableSpawnGroups(spawnGroupIDs);
+        return DisableSpawnGroups(spawnGroupIDs, false);
     }
 }
 
@@ -1197,13 +1200,20 @@ void Zone::AddSpawnedEntity(const std::shared_ptr<ActiveEntityState>& state,
     }
 }
 
-void Zone::EnableSpawnGroups(const std::set<uint32_t>& spawnGroupIDs)
+void Zone::EnableSpawnGroups(const std::set<uint32_t>& spawnGroupIDs,
+    bool initializing)
 {
     std::set<uint32_t> enabled;
     for(uint32_t sgID : spawnGroupIDs)
     {
         if(mDisabledSpawnGroups.find(sgID) != mDisabledSpawnGroups.end())
         {
+            if(!initializing)
+            {
+                LOG_DEBUG(libcomp::String("Enabling spawn group %1 in"
+                    " zone %2\n").Arg(sgID).Arg(GetDefinitionID()));
+            }
+
             enabled.insert(sgID);
             mDisabledSpawnGroups.erase(sgID);
         }
@@ -1256,7 +1266,8 @@ void Zone::EnableSpawnGroups(const std::set<uint32_t>& spawnGroupIDs)
     }
 }
 
-bool Zone::DisableSpawnGroups(const std::set<uint32_t>& spawnGroupIDs)
+bool Zone::DisableSpawnGroups(const std::set<uint32_t>& spawnGroupIDs,
+    bool initializing)
 {
     bool updated = false;
 
@@ -1274,6 +1285,12 @@ bool Zone::DisableSpawnGroups(const std::set<uint32_t>& spawnGroupIDs)
                     mPendingDespawnEntities.insert(eState->GetEntityID());
                     updated = true;
                 }
+            }
+
+            if(!initializing)
+            {
+                LOG_DEBUG(libcomp::String("Disabling spawn group %1 in"
+                    " zone %2\n").Arg(sgID).Arg(GetDefinitionID()));
             }
 
             mDisabledSpawnGroups.insert(sgID);

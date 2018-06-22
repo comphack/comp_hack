@@ -1192,6 +1192,9 @@ void ChannelServer::HandleClockEvents()
 
     if(recalc)
     {
+        LOG_DEBUG(libcomp::String("Handling clock events at: %1\n")
+            .Arg(clock.ToString()));
+
         mTokuseiManager->RecalcTimedTokusei(clock);
         mZoneManager->HandleTimedActions(clock, lastTrigger);
     }

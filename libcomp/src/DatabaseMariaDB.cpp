@@ -208,7 +208,7 @@ bool DatabaseMariaDB::Setup(bool rebuild,
                     continue;
                 }
 
-                libcomp::String migration = file.Left(file.Length() - 3);
+                libcomp::String migration = file.Left(file.Length() - 4);
 
                 auto query = Prepare("SELECT COUNT(`Migration`) FROM "
                     "`Migrations` WHERE `Migration` = :file");

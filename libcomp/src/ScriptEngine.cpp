@@ -60,9 +60,28 @@ const SQBool    RAISE_ERROR = SQTrue;
 std::unordered_map<std::string, std::function<bool(ScriptEngine&,
     const std::string& module)>> ScriptEngine::mModules;
 
-static std::shared_ptr<objects::Character> ToCharacter(const std::shared_ptr<libcomp::PersistentObject>& obj)
+static std::shared_ptr<objects::Account> ToAccount(
+    const std::shared_ptr<libcomp::PersistentObject>& obj)
+{
+    return std::dynamic_pointer_cast<objects::Account>(obj);
+}
+
+static std::shared_ptr<objects::AccountWorldData> ToAccountWorldData(
+    const std::shared_ptr<libcomp::PersistentObject>& obj)
+{
+    return std::dynamic_pointer_cast<objects::AccountWorldData>(obj);
+}
+
+static std::shared_ptr<objects::Character> ToCharacter(const std::shared_ptr<
+    libcomp::PersistentObject>& obj)
 {
     return std::dynamic_pointer_cast<objects::Character>(obj);
+}
+
+static std::shared_ptr<objects::Demon> ToDemon(const std::shared_ptr<
+    libcomp::PersistentObject>& obj)
+{
+    return std::dynamic_pointer_cast<objects::Demon>(obj);
 }
 
 static bool ScriptInclude(HSQUIRRELVM vm, const char *szPath)
@@ -219,7 +238,12 @@ ScriptEngine::ScriptEngine(bool useRawPrint) : mUseRawPrint(useRawPrint)
 
     Sqrat::RootTable(mVM).VMFunc("include", ScriptInclude);
     Sqrat::RootTable(mVM).VMFunc("import", ScriptImport);
+
+    // Bind some root level object conversions
+    Sqrat::RootTable(mVM).Func("ToAccount", ToAccount);
+    Sqrat::RootTable(mVM).Func("ToAccountWorldData", ToAccountWorldData);
     Sqrat::RootTable(mVM).Func("ToCharacter", ToCharacter);
+    Sqrat::RootTable(mVM).Func("ToDemon", ToDemon);
 }
 
 ScriptEngine::~ScriptEngine()

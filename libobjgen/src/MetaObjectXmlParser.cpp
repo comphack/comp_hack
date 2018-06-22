@@ -661,6 +661,7 @@ std::shared_ptr<MetaVariable> MetaObjectXmlParser::GetVariable(const tinyxml2::X
             {
                 persistentRefType = mObject->IsPersistent() || memberType == "pref";
                 ref->SetPersistentReference(persistentRefType);
+                ref->SetScriptReference(persistentRefType); // UUIDs are scriptable
                 ref->SetGeneric();
             }
             else

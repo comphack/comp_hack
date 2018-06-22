@@ -27,8 +27,10 @@
 #include "DatabaseSQLite3.h"
 
 // libcomp Includes
+#include "Database.h"
 #include "DatabaseBind.h"
 #include "DatabaseQuerySQLite3.h"
+#include "DataStore.h"
 #include "Log.h"
 
 // SQLite3 Includes
@@ -118,11 +120,6 @@ bool DatabaseSQLite3::Setup(bool rebuild,
     const std::shared_ptr<BaseServer>& server, DataStore *pDataStore,
     const std::string& migrationDirectory)
 {
-    /// @todo implement for SQLite3
-    (void)server;
-    (void)pDataStore;
-    (void)migrationDirectory;
-
     if(!IsOpen())
     {
         LOG_ERROR("Trying to setup a database that is not open!\n");
@@ -165,6 +162,109 @@ bool DatabaseSQLite3::Setup(bool rebuild,
         LOG_ERROR("Schema verification and setup failed.\n");
 
         return false;
+    }
+
+    if(!TableExists("Migrations"))
+    {
+        std::stringstream ss;
+        ss << "CREATE TABLE `Migrations` "
+            << "(`Migration` varchar(128) PRIMARY KEY);";
+
+        if(Execute(ss.str()))
+        {
+            LOG_DEBUG("Migration table created.\n");
+        }
+        else
+        {
+            LOG_ERROR("Failed to create the migration table!\n");
+
+            return false;
+        }
+    }
+
+    // Handle migrations if the data store exists.
+    if(pDataStore)
+    {
+        std::list<libcomp::String> files;
+        std::list<libcomp::String> dirs;
+        std::list<libcomp::String> symLinks;
+
+        if(pDataStore->GetListing(migrationDirectory, files, dirs, symLinks))
+        {
+            files.sort();
+
+            for(auto file : files)
+            {
+                if(file.Right(4) != ".nut")
+                {
+                    continue;
+                }
+
+                libcomp::String migration = file.Left(file.Length() - 4);
+
+                auto query = Prepare("SELECT COUNT(`Migration`) FROM "
+                    "`Migrations` WHERE `Migration` = :file");
+
+                if(!query.IsValid() || !query.Bind("file", migration))
+                {
+                    LOG_ERROR("Failed to bind when checking for "
+                        "migration.\n");
+
+                    return false;
+                }
+
+                if(!query.Execute() || !query.Next())
+                {
+                    LOG_ERROR("Failed to execute query when checking for "
+                        "migration.\n");
+
+                    return false;
+                }
+
+                int64_t count = 0;
+
+                if(!query.GetValue("COUNT(`Migration`)", count))
+                {
+                    LOG_ERROR("Failed to get value from query when checking "
+                        "for migration.\n");
+                    LOG_DEBUG(GetLastError());
+
+                    return false;
+                }
+
+                auto path = libcomp::String("%1/%2").Arg(
+                    migrationDirectory).Arg(file);
+
+                if(!count)
+                {
+                    if(ApplyMigration(server, pDataStore, migration, path))
+                    {
+                        query = Prepare("INSERT INTO `Migrations` (`Migration`) "
+                            "VALUES(:file)");
+
+                        if(!query.IsValid() ||
+                            !query.Bind("file", migration) ||
+                            !query.Execute())
+                        {
+                            LOG_ERROR("Failed to insert migration into "
+                                "database.\n");
+
+                            return false;
+                        }
+                    }
+                    else
+                    {
+                        return false;
+                    }
+                }
+            }
+        }
+        else
+        {
+            LOG_ERROR("Migration directory does not exist!\n");
+
+            return false;
+        }
     }
 
     return true;
@@ -1029,7 +1129,16 @@ String DatabaseSQLite3::GetVariableType(const std::shared_ptr
 
 bool DatabaseSQLite3::TableExists(const libcomp::String& table)
 {
-    /// @todo Implement this
-    (void)table;
-    return false;
+    String name;
+
+    auto query = Prepare(libcomp::String("SELECT name, type, tbl_name FROM"
+        " sqlite_master where type in ('table', 'index') and name = '%1';")
+        .Arg(table));
+    if(!query.IsValid() || !query.Execute() || !query.Next() ||
+        !query.GetValue("name", name))
+    {
+        return false;
+    }
+
+    return name == table;
 }

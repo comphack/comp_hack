@@ -297,9 +297,6 @@ bool Database::ApplyMigration(const std::shared_ptr<BaseServer>& server,
     DataStore *pDataStore, const libcomp::String& migration,
     const libcomp::String& path)
 {
-    (void)pDataStore;
-    (void)path;
-
     LOG_DEBUG(libcomp::String("Applying migration %1 to database.\n"
         ).Arg(migration));
 
@@ -344,7 +341,7 @@ bool Database::ApplyMigration(const std::shared_ptr<BaseServer>& server,
         return false;
     }
 
-    return false;
+    return true;
 }
 
 namespace libcomp

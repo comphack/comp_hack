@@ -461,10 +461,11 @@ public:
      * Update all spawn groups and plasma states that have time restrictions
      * based upon the supplie world clock time
      * @param clock World clock set to the current time
+     * @param initializing true if the zone is being setup, defaults to false
      * @return true if any updates were performed that the zone manager needs
      *  to react to, false if none occurred or they can be processed later
      */
-    bool UpdateTimedSpawns(const WorldClock& clock);
+    bool UpdateTimedSpawns(const WorldClock& clock, bool initializing = false);
 
     /**
      * Enable or disable the supplied spawn groups and also disable (or enable)
@@ -617,15 +618,20 @@ private:
      * Enable a set of spawn groups and update any spawn location groups
      * that previously had all groups disabled
      * @param spawnGroupIDs Set of spawn group IDs to enable
+     * @param initializing true if the zone is being setup, defaults to false
      */
-    void EnableSpawnGroups(const std::set<uint32_t>& spawnGroupIDs);
+    void EnableSpawnGroups(const std::set<uint32_t>& spawnGroupIDs,
+        bool initializing);
 
     /**
      * Disable a set of spawn groups and update any spawn location groups
      * that now have all groups disabled
      * @param spawnGroupIDs Set of spawn group IDs to disable
+     * @param initializing true if the zone is being setup, defaults to false
+     * @return true if any enemies must be despawned after being disabled
      */
-    bool DisableSpawnGroups(const std::set<uint32_t>& spawnGroupIDs);
+    bool DisableSpawnGroups(const std::set<uint32_t>& spawnGroupIDs,
+        bool initializing);
 
     /// Map of world CIDs to client connections
     std::unordered_map<int32_t, std::shared_ptr<ChannelClientConnection>> mConnections;

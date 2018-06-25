@@ -621,7 +621,23 @@ void CharacterManager::SendDemonData(const std::shared_ptr<
     reply.WriteS64Little(cs->GetXP());
     reply.WriteS8(cs->GetLevel());
 
-    GetEntityStatsPacketData(reply, cs, isSummoned ? dState : nullptr, 0);
+    libcomp::EnumMap<CorrectTbl, int16_t> coreBoosts;
+    if(!isSummoned)
+    {
+        // Familiarity boosts still show in the COMP
+        auto server = mServer.lock();
+        auto definitionManager = server->GetDefinitionManager();
+
+        auto devilData = definitionManager->GetDevilData(d->GetType());
+        auto levelRate = definitionManager->GetDevilLVUpRateData(
+            devilData->GetGrowth()->GetGrowthType());
+
+        CharacterManager::FamiliarityBoostStats(d->GetFamiliarity(),
+            coreBoosts, levelRate);
+    }
+
+    GetEntityStatsPacketData(reply, cs, isSummoned ? dState : nullptr, 0,
+        coreBoosts);
 
     //Learned skill count will always be static
     reply.WriteS32Little(8);
@@ -3017,7 +3033,7 @@ bool CharacterManager::ReunionDemon(
     return success;
 }
 
-int8_t CharacterManager::GetFamiliarityRank(uint16_t familiarity) const
+int8_t CharacterManager::GetFamiliarityRank(uint16_t familiarity)
 {
     if(familiarity <= 1000)
     {
@@ -3059,19 +3075,16 @@ void CharacterManager::UpdateFamiliarity(const std::shared_ptr<
 
         // Since familiarity rate adjustments cannot be bound to
         // skills, scale all incoming adjustments here
-        if(familiarity > 0)
+        auto type = familiarity > 0 ? TokuseiAspectType::FAMILIARITY_UP_RATE
+            : TokuseiAspectType::FAMILIARITY_DOWN_RATE;
+
+        // Pull rate adjustments from character and demon
+        double rateAdjust = 1.0 +
+            (tokuseiManager->GetAspectSum(cState, type) * 0.01) +
+            (tokuseiManager->GetAspectSum(dState, type) * 0.01);
+        if(rateAdjust != 1.0)
         {
-            // Familiarity up adjustments are on the character
-            familiarity = (int32_t)((double)familiarity *
-                (1.0 + tokuseiManager->GetAspectSum(cState,
-                    TokuseiAspectType::FAMILIARITY_UP_RATE) * 0.01));
-        }
-        else
-        {
-            // Familiarity down adjustments are on the demon
-            familiarity = (int32_t)((double)familiarity *
-                (1.0 + tokuseiManager->GetAspectSum(dState,
-                    TokuseiAspectType::FAMILIARITY_DOWN_RATE) * 0.01));
+            familiarity = (int32_t)((double)familiarity * rateAdjust);
         }
 
         newFamiliarity = current + familiarity;
@@ -3102,7 +3115,7 @@ void CharacterManager::UpdateFamiliarity(const std::shared_ptr<
         // Rank adjustments will change base stats
         if(oldRank != newRank)
         {
-            CalculateDemonBaseStats(dState->GetEntity());
+            CalculateDemonBaseStats(dState->GetEntity(), nullptr, nullptr, false);
             RecalculateStats(dState, client);
 
             // Only update the DB and clients if the rank changed
@@ -4934,7 +4947,7 @@ void CharacterManager::CalculateCharacterBaseStats(const std::shared_ptr<objects
 void CharacterManager::CalculateDemonBaseStats(
     const std::shared_ptr<objects::Demon>& demon,
     std::shared_ptr<objects::EntityStats> ds,
-    std::shared_ptr<objects::MiDevilData> demonData)
+    std::shared_ptr<objects::MiDevilData> demonData, bool setHPMP)
 {
     auto server = mServer.lock();
     auto definitionManager = server->GetDefinitionManager();
@@ -5017,31 +5030,24 @@ void CharacterManager::CalculateDemonBaseStats(
 
     if(demon)
     {
+        AdjustDemonBaseStats(demon, stats, true);
+    }
+
+    // Apply core stats
+    ds->SetSTR(stats[CorrectTbl::STR]);
+    ds->SetMAGIC(stats[CorrectTbl::MAGIC]);
+    ds->SetVIT(stats[CorrectTbl::VIT]);
+    ds->SetINTEL(stats[CorrectTbl::INT]);
+    ds->SetSPEED(stats[CorrectTbl::SPEED]);
+    ds->SetLUCK(stats[CorrectTbl::LUCK]);
+
+    if(demon)
+    {
         // Familiarity boost is applied from the base growth type, not the
         // current growth type
-        auto famLevelRate = definitionManager->GetDevilLVUpRateData(
+        auto levelRate = definitionManager->GetDevilLVUpRateData(
             demonData->GetGrowth()->GetGrowthType());
-        int8_t familiarityRank = GetFamiliarityRank(demon->GetFamiliarity());
-        if(familiarityRank < 0)
-        {
-            // Ranks below zero have boost data 0-2 subtracted
-            for(int8_t i = familiarityRank; i < 0; i++)
-            {
-                size_t famBoost = (size_t)(abs(i) - 1);
-                BoostStats(stats, famLevelRate->GetLevelUpData(famBoost), -1);
-            }
-        }
-        else if(familiarityRank > 0)
-        {
-            // Ranks above zero have boost data 0-3 added
-            for(int8_t i = 0; i < familiarityRank; i++)
-            {
-                size_t famBoost = (size_t)i;
-                BoostStats(stats, famLevelRate->GetLevelUpData(famBoost), 1);
-            }
-        }
-
-        AdjustDemonBaseStats(demon, stats, true);
+        FamiliarityBoostStats(demon->GetFamiliarity(), stats, levelRate);
     }
 
     CalculateDependentStats(stats, level, true);
@@ -5059,20 +5065,43 @@ void CharacterManager::CalculateDemonBaseStats(
 
     ds->SetMaxHP(stats[CorrectTbl::HP_MAX]);
     ds->SetMaxMP(stats[CorrectTbl::MP_MAX]);
-    ds->SetHP(stats[CorrectTbl::HP_MAX]);
-    ds->SetMP(stats[CorrectTbl::MP_MAX]);
-    ds->SetSTR(stats[CorrectTbl::STR]);
-    ds->SetMAGIC(stats[CorrectTbl::MAGIC]);
-    ds->SetVIT(stats[CorrectTbl::VIT]);
-    ds->SetINTEL(stats[CorrectTbl::INT]);
-    ds->SetSPEED(stats[CorrectTbl::SPEED]);
-    ds->SetLUCK(stats[CorrectTbl::LUCK]);
     ds->SetCLSR(stats[CorrectTbl::CLSR]);
     ds->SetLNGR(stats[CorrectTbl::LNGR]);
     ds->SetSPELL(stats[CorrectTbl::SPELL]);
     ds->SetSUPPORT(stats[CorrectTbl::SUPPORT]);
     ds->SetPDEF(stats[CorrectTbl::PDEF]);
     ds->SetMDEF(stats[CorrectTbl::MDEF]);
+
+    if(setHPMP)
+    {
+        ds->SetHP(stats[CorrectTbl::HP_MAX]);
+        ds->SetMP(stats[CorrectTbl::MP_MAX]);
+    }
+}
+
+void CharacterManager::FamiliarityBoostStats(uint16_t familiarity,
+    libcomp::EnumMap<CorrectTbl, int16_t>& stats,
+    std::shared_ptr<objects::MiDevilLVUpRateData> levelRate)
+{
+    int8_t familiarityRank = GetFamiliarityRank(familiarity);
+    if(familiarityRank < 0)
+    {
+        // Ranks below zero have boost data 0-2 subtracted
+        for(int8_t i = familiarityRank; i < 0; i++)
+        {
+            size_t famBoost = (size_t)(abs(i) - 1);
+            BoostStats(stats, levelRate->GetLevelUpData(famBoost), -1);
+        }
+    }
+    else if(familiarityRank > 0)
+    {
+        // Ranks above zero have boost data 0-3 added
+        for(int8_t i = 0; i < familiarityRank; i++)
+        {
+            size_t famBoost = (size_t)i;
+            BoostStats(stats, levelRate->GetLevelUpData(famBoost), 1);
+        }
+    }
 }
 
 void CharacterManager::AdjustDemonBaseStats(const std::shared_ptr<
@@ -5613,8 +5642,8 @@ void CharacterManager::GetItemDetailPacketData(libcomp::Packet& p,
 
 void CharacterManager::GetEntityStatsPacketData(libcomp::Packet& p,
     const std::shared_ptr<objects::EntityStats>& coreStats,
-    const std::shared_ptr<ActiveEntityState>& state,
-    uint8_t format)
+    const std::shared_ptr<ActiveEntityState>& state, uint8_t format,
+    libcomp::EnumMap<CorrectTbl, int16_t> coreBoosts)
 {
     auto baseOnly = state == nullptr;
 
@@ -5624,23 +5653,29 @@ void CharacterManager::GetEntityStatsPacketData(libcomp::Packet& p,
     case 1:
         {
             p.WriteS16Little(coreStats->GetSTR());
-            p.WriteS16Little(static_cast<int16_t>(
-                baseOnly ? 0 : (state->GetSTR() - coreStats->GetSTR())));
+            p.WriteS16Little(static_cast<int16_t>(baseOnly
+                ? coreBoosts[CorrectTbl::STR]
+                : (state->GetSTR() - coreStats->GetSTR())));
             p.WriteS16Little(coreStats->GetMAGIC());
-            p.WriteS16Little(static_cast<int16_t>(
-                baseOnly ? 0 : (state->GetMAGIC() - coreStats->GetMAGIC())));
+            p.WriteS16Little(static_cast<int16_t>(baseOnly
+                ? coreBoosts[CorrectTbl::MAGIC]
+                : (state->GetMAGIC() - coreStats->GetMAGIC())));
             p.WriteS16Little(coreStats->GetVIT());
-            p.WriteS16Little(static_cast<int16_t>(
-                baseOnly ? 0 : (state->GetVIT() - coreStats->GetVIT())));
+            p.WriteS16Little(static_cast<int16_t>(baseOnly
+                ? coreBoosts[CorrectTbl::VIT]
+                : (state->GetVIT() - coreStats->GetVIT())));
             p.WriteS16Little(coreStats->GetINTEL());
-            p.WriteS16Little(static_cast<int16_t>(
-                baseOnly ? 0 : (state->GetINTEL() - coreStats->GetINTEL())));
+            p.WriteS16Little(static_cast<int16_t>(baseOnly
+                ? coreBoosts[CorrectTbl::INT]
+                : (state->GetINTEL() - coreStats->GetINTEL())));
             p.WriteS16Little(coreStats->GetSPEED());
-            p.WriteS16Little(static_cast<int16_t>(
-                baseOnly ? 0 : (state->GetSPEED() - coreStats->GetSPEED())));
+            p.WriteS16Little(static_cast<int16_t>(baseOnly
+                ? coreBoosts[CorrectTbl::SPEED]
+                : (state->GetSPEED() - coreStats->GetSPEED())));
             p.WriteS16Little(coreStats->GetLUCK());
-            p.WriteS16Little(static_cast<int16_t>(
-                baseOnly ? 0 : (state->GetLUCK() - coreStats->GetLUCK())));
+            p.WriteS16Little(static_cast<int16_t>(baseOnly
+                ? coreBoosts[CorrectTbl::LUCK]
+                : (state->GetLUCK() - coreStats->GetLUCK())));
 
             if(format == 1)
             {

@@ -369,8 +369,11 @@ bool SkillManager::ActivateSkill(const std::shared_ptr<ActiveEntityState> source
 
     // Stack adjust is affected by 2 sources if not an item skill or just
     // explicit item including adjustments if it is an item skill
+    // (Ignore activation type special (3) and toggle (4))
     uint8_t maxStacks = castBasic->GetUseCount();
-    if((castBasic->GetAdjustRestrictions() & 0x01) == 0)
+    if((castBasic->GetAdjustRestrictions() & 0x01) == 0 &&
+        def->GetBasic()->GetActivationType() != 3 &&
+        def->GetBasic()->GetActivationType() != 4)
     {
         maxStacks = (uint8_t)(maxStacks +
             tokuseiManager->GetAspectSum(source,
@@ -914,9 +917,11 @@ bool SkillManager::ExecuteSkill(std::shared_ptr<ActiveEntityState> source,
         // Skip finalization if performing an instant activation
         if(skillData->GetBasic()->GetActivationType() != 6)
         {
-            SendCompleteSkill(activated, 1);
+            // Clear skill first as it can affect movement speed
             source->SetActivatedAbility(nullptr);
             source->ResetUpkeep();
+
+            SendCompleteSkill(activated, 1);
         }
     }
 
@@ -1563,7 +1568,6 @@ bool SkillManager::ExecuteNormalSkill(const std::shared_ptr<ChannelClientConnect
         objects::MiTargetData::Type_t::NONE)
     {
         // Non-projectile skill, calculate damage and effects immediately
-        FinalizeSkillExecution(client, ctx, activated);
         if(!ProcessSkillResult(activated, ctx))
         {
             SendFailure(activated, client);
@@ -1600,13 +1604,13 @@ bool SkillManager::ExecuteNormalSkill(const std::shared_ptr<ChannelClientConnect
         }
 
         // Complete the skill, calculate damage and effects when the projectile hits
-        FinalizeSkillExecution(client, ctx, activated);
+        auto projectile = FinalizeSkillExecution(client, ctx, activated);
 
         // Projectile speed is measured in how many 10ths of a unit the projectile will
         // traverse per millisecond (with a half second delay for the default cast to projectile
         // move speed)
         uint64_t addMicro = (uint64_t)((double)distance / (projectileSpeed * 10)) * 1000000;
-        uint64_t processTime = (activated->GetExecutionTime() + addMicro) + 500000ULL;
+        uint64_t processTime = (projectile->GetExecutionTime() + addMicro) + 500000ULL;
 
         server->ScheduleWork(processTime, [](const std::shared_ptr<ChannelServer> pServer,
             const std::shared_ptr<objects::ActivatedAbility> pActivated,
@@ -1617,7 +1621,7 @@ bool SkillManager::ExecuteNormalSkill(const std::shared_ptr<ChannelClientConnect
                 {
                     pSkillManager->ProcessSkillResult(pActivated, pCtx);
                 }
-            }, server, activated, ctx);
+            }, server, projectile, ctx);
     }
 
     return true;
@@ -2078,14 +2082,14 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
         CheckSkillHits(source, pSkill);
 
         // Finalize the skill processing
-        ProcessSkillResultFinal(pSkill);
+        ProcessSkillResultFinal(pSkill, ctx);
 
         // Lastly if the skill was countered, finalize those too
         if(ctx->CounteringSkills.size() > 0)
         {
             for(auto counteringSkill : ctx->CounteringSkills)
             {
-                ProcessSkillResultFinal(counteringSkill);
+                ProcessSkillResultFinal(counteringSkill, nullptr);
 
                 // Now that we're done make sure we clean up context pointer
                 counteringSkill->ExecutionContext = nullptr;
@@ -2100,7 +2104,8 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
     return true;
 }
 
-void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill>& pSkill)
+void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill>& pSkill,
+    std::shared_ptr<SkillExecutionContext> ctx)
 {
     ProcessingSkill& skill = *pSkill.get();
 
@@ -2113,21 +2118,6 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
     auto definitionManager = server->GetDefinitionManager();
     auto tokuseiManager = server->GetTokuseiManager();
     auto zoneManager = server->GetZoneManager();
-
-    // Quit here if nothing will be affected by damage or effects
-    if(skill.Targets.size() == 0)
-    {
-        libcomp::Packet p;
-        p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_SKILL_REPORTS);
-        p.WriteS32Little(source->GetEntityID());
-        p.WriteU32Little(skill.SkillID);
-        p.WriteS8(0);
-        p.WriteU32Little(0);
-
-        zoneManager->BroadcastPacket(zone, p);
-
-        return;
-    }
 
     auto damageData = skill.Definition->GetDamage();
     bool hasBattleDamage = damageData->GetBattleDamage()->GetFormula()
@@ -2443,6 +2433,7 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
             int32_t hitstunNull = (int32_t)tokuseiManager->GetAspectSum(
                 target.EntityState, TokuseiAspectType::HITSTUN_NULL, targetCalc) * 100;
             target.CanHitstun = hitstunNull != 10000 &&
+                (target.Flags1 & FLAG1_GUARDED) == 0 && !target.HitAbsorb &&
                 (hitstunNull < 0 || RNG(int32_t, 1, 10000) > hitstunNull);
 
             target.EffectCancellations |= EFFECT_CANCEL_HIT | EFFECT_CANCEL_DAMAGE;
@@ -2629,6 +2620,14 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
     if(talkDone.size() > 0)
     {
         HandleNegotiations(source, zone, talkDone);
+    }
+
+    if(!ctx || !ctx->Finalized)
+    {
+        // Send right before finishing execution
+        auto client = server->GetManagerConnection()->GetEntityClient(
+            source->GetEntityID());
+        FinalizeSkillExecution(client, ctx, activated);
     }
 
     bool doRush = skill.Definition->GetBasic()->GetActionType() ==
@@ -6530,10 +6529,22 @@ void SkillManager::ScheduleFreeLoot(uint64_t time, const std::shared_ptr<Zone>& 
         }, server->GetCharacterManager(), zone, lootEntityIDs, worldCIDs);
 }
 
-void SkillManager::FinalizeSkillExecution(const std::shared_ptr<ChannelClientConnection> client,
+std::shared_ptr<objects::ActivatedAbility> SkillManager::FinalizeSkillExecution(
+    const std::shared_ptr<ChannelClientConnection> client,
     const std::shared_ptr<SkillExecutionContext>& ctx,
     std::shared_ptr<objects::ActivatedAbility> activated)
 {
+    if(ctx)
+    {
+        if(ctx->Finalized)
+        {
+            // Already finalized
+            return activated;
+        }
+
+        ctx->Finalized = true;
+    }
+
     auto source = std::dynamic_pointer_cast<ActiveEntityState>(
         activated->GetSourceEntity());
     auto zone = source->GetZone();
@@ -6619,9 +6630,22 @@ void SkillManager::FinalizeSkillExecution(const std::shared_ptr<ChannelClientCon
     }
 
     bool end = SetSkillCompleteState(pSkill, true);
+    if(!end)
+    {
+        // More uses, make a copy and reset values on original
+        auto copy = std::make_shared<objects::ActivatedAbility>(*activated);
 
-    // Do not execute or complete toggle skills
-    bool executeAndComplete = skillData->GetBasic()->GetActivationType() != 4;
+        activated->SetHPCost(0);
+        activated->SetMPCost(0);
+        activated->SetBulletCost(0);
+        activated->ClearItemCosts();
+
+        // Proceed with the copy
+        activated = copy;
+    }
+
+    // Do not execute or complete when using Rest
+    bool executeAndComplete = pSkill->FunctionID != SVR_CONST.SKILL_REST;
     if(executeAndComplete)
     {
         SendExecuteSkill(activated);
@@ -6671,6 +6695,8 @@ void SkillManager::FinalizeSkillExecution(const std::shared_ptr<ChannelClientCon
     }
 
     source->CancelStatusEffects(EFFECT_CANCEL_SKILL, ignore);
+
+    return activated;
 }
 
 bool SkillManager::SetSkillCompleteState(const std::shared_ptr<
@@ -7910,7 +7936,6 @@ bool SkillManager::Rest(const std::shared_ptr<objects::ActivatedAbility>& activa
     const std::shared_ptr<ChannelClientConnection>& client)
 {
     (void)ctx;
-    (void)client;
 
     auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated->GetSourceEntity());
     // Do not call SpecialSkill as this needs to persist as a special activation
@@ -7949,6 +7974,8 @@ bool SkillManager::Rest(const std::shared_ptr<objects::ActivatedAbility>& activa
 
         source->SetStatusTimes(STATUS_RESTING, 0);
     }
+
+    server->GetCharacterManager()->RecalculateTokuseiAndStats(source, client);
 
     // Active toggle skill "Rest" only activates and cancels, it never executes
     return true;
@@ -8025,10 +8052,19 @@ bool SkillManager::StoreDemon(const std::shared_ptr<objects::ActivatedAbility>& 
             (uint8_t)SkillErrorCodes_t::PARTNER_MISSING);
         return false;
     }
-    else if(client->GetClientState()->GetCharacterState()->IsMounted())
+
+    auto state = client->GetClientState();
+    if(state->GetCharacterState()->IsMounted())
     {
         SendFailure(activated, client,
             (uint8_t)SkillErrorCodes_t::MOUNT_SUMMON_RESTRICT);
+        return false;
+    }
+    else if(state->GetObjectID(state->GetDemonState()
+        ->GetEntityUUID()) != demonID)
+    {
+        SendFailure(activated, client,
+            (uint8_t)SkillErrorCodes_t::TARGET_INVALID);
         return false;
     }
 

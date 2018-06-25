@@ -52,6 +52,7 @@ class ItemBox;
 class ItemDrop;
 class MiDevilData;
 class MiDevilLVUpData;
+class MiDevilLVUpRateData;
 class MiItemData;
 }
 
@@ -644,7 +645,7 @@ public:
      * @param familiarity Demon's familiarity points
      * @return Converted familiarity rank from -3 to +4
      */
-    int8_t GetFamiliarityRank(uint16_t familiarity) const;
+    static int8_t GetFamiliarityRank(uint16_t familiarity);
 
     /**
      * Update the current partner demon's familiarity.
@@ -1007,10 +1008,23 @@ public:
      * @param demon Pointer to the demon being calculated
      * @param ds Pointer to the core stats of a demon
      * @param demonData Pointer to the demon's definition
+     * @param setHPMP If true, the current HP and MP will be set to the
+     *  calculated max values
      */
     void CalculateDemonBaseStats(const std::shared_ptr<objects::Demon>& demon,
         std::shared_ptr<objects::EntityStats> ds = nullptr,
-        std::shared_ptr<objects::MiDevilData> demonData = nullptr);
+        std::shared_ptr<objects::MiDevilData> demonData = nullptr,
+        bool setHPMP = true);
+
+    /**
+     * Apply demon familiarity boost to stats
+     * @param familiarity Demon's current familiarity level
+     * @param stats Reference to a correct table map
+     * @param levelRate Level up rate to use for applying familiarity boosts
+     */
+    static void FamiliarityBoostStats(uint16_t familiarity,
+        libcomp::EnumMap<CorrectTbl, int16_t>& stats,
+        std::shared_ptr<objects::MiDevilLVUpRateData> levelRate);
 
     /**
      * Adjust the base stats of a demon being calculated.
@@ -1099,11 +1113,13 @@ public:
      *  2) Recalc format used when stats have been recalculated caused
      *     by equipment or status effects being modified.
      *  3) Recalc extended format
+     * @param coreBoosts Core stat boosts active on an entity that is not
+     *  not currently active (ex: familiarity boosts for COMP demons)
      */
     void GetEntityStatsPacketData(libcomp::Packet& p,
         const std::shared_ptr<objects::EntityStats>& coreStats,
-        const std::shared_ptr<ActiveEntityState>& state,
-        uint8_t format);
+        const std::shared_ptr<ActiveEntityState>& state, uint8_t format,
+        libcomp::EnumMap<CorrectTbl, int16_t> coreBoosts = {});
 
     /**
      * Mark the supplied demon and its related data as deleted in the
@@ -1124,7 +1140,7 @@ private:
      * @param data Pointer to the level up definition of a demon
      * @param boostLevel Boost level to use when calculating the stat increases
      */
-    void BoostStats(libcomp::EnumMap<CorrectTbl, int16_t>& stats,
+    static void BoostStats(libcomp::EnumMap<CorrectTbl, int16_t>& stats,
         const std::shared_ptr<objects::MiDevilLVUpData>& data, int boostLevel);
 
     /// Pointer to the channel server

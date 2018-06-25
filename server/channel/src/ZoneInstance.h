@@ -77,6 +77,12 @@ public:
     ~ZoneInstance();
 
     /**
+     * Get the defintion ID of the zone instance
+     * @return Defintion ID of the zone instance
+     */
+    uint32_t GetDefinitionID();
+
+    /**
      * Add a zone to the instance
      * @param Pointer to the zone to add
      * @return true if the zone was successfully added, false if it was not

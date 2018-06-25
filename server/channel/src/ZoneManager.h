@@ -322,6 +322,18 @@ public:
         const std::shared_ptr<NPCState>& npcState, bool queue = false);
 
     /**
+     * Send data about the supplied object NPC to the zone or supplied clients
+     * @param zone Pointer to the zone the object NPC exists in
+     * @param clients List of pointers to client connections
+     * @param objState State of the object NPC to show
+     * @param queue true if the message should be queued, false if
+     *  it should send right away
+     */
+    void ShowObject(const std::shared_ptr<Zone>& zone,
+        const std::list<std::shared_ptr<ChannelClientConnection >> &clients,
+        const std::shared_ptr<ServerObjectState>& objState, bool queue = false);
+
+    /**
      * Stop and fix an entity at their current position for the specified
      * amount of time.
      * @param eState Pointer to the entity to stop

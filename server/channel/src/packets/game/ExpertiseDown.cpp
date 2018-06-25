@@ -85,7 +85,7 @@ bool Parsers::ExpertiseDown::Parse(libcomp::ManagerPacket *pPacketManager,
     auto activatedAbility = cState->GetSpecialActivations(activationID);
     if(!activatedAbility)
     {
-        LOG_ERROR("Invalid activation ID encountered for SkillForget request\n");
+        LOG_ERROR("Invalid activation ID encountered for ExpertiseDown request\n");
     }
     else
     {
@@ -101,7 +101,7 @@ bool Parsers::ExpertiseDown::Parse(libcomp::ManagerPacket *pPacketManager,
             int32_t remove = points % 10000;
 
             uint16_t functionID = skillData->GetDamage()->GetFunctionID();
-            if(functionID == SVR_CONST.SKILL_EXPERT_CLASS_DOWN)
+            if (functionID == SVR_CONST.SKILL_EXPERT_CLASS_DOWN)
             {
                 // Remove one class
                 if(points >= 100000)
@@ -132,7 +132,7 @@ bool Parsers::ExpertiseDown::Parse(libcomp::ManagerPacket *pPacketManager,
                 pointMap.push_back(std::make_pair((uint8_t)expertiseID, -remove));
 
                 server->GetCharacterManager()->UpdateExpertisePoints(client,
-                    pointMap);
+                    pointMap, true);
             }
             else
             {

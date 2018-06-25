@@ -97,7 +97,7 @@ void LobbyLogin(std::shared_ptr<WorldServer> server,
     int8_t channelID = 0;
     auto loginChannel = server->GetLoginChannel();
 
-    ok = loginChannel != nullptr;
+    ok &= loginChannel != nullptr;
     if(ok)
     {
         auto accountManager = server->GetAccountManager();
@@ -166,6 +166,8 @@ void LobbyLogin(std::shared_ptr<WorldServer> server,
 
     if(ok)
     {
+        reply.WriteS8(1); // Success
+
         cLogin->SetWorldID((int8_t)worldID);
         cLogin->SetChannelID(channelID);
 
@@ -193,7 +195,13 @@ void LobbyLogin(std::shared_ptr<WorldServer> server,
     }
     else
     {
-        reply.WriteS8(0); // Failure
+        // Faiure, send the username back to disconnect
+        reply.WriteS8(0);
+        if(account)
+        {
+            reply.WriteString16Little(libcomp::Convert::ENCODING_UTF8,
+                account->GetUsername(), true);
+        }
     }
 
     connection->SendPacket(reply);

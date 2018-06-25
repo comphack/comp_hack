@@ -1043,21 +1043,11 @@ bool ZoneManager::SendPopulateZoneData(const std::shared_ptr<ChannelClientConnec
 
     for(auto objState : zone->GetServerObjects())
     {
-        auto obj = objState->GetEntity();
-
-        libcomp::Packet p;
-        p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_OBJECT_NPC_DATA);
-        p.WriteS32Little(objState->GetEntityID());
-        p.WriteU32Little(obj->GetID());
-        p.WriteU8(obj->GetState());
-        p.WriteS32Little((int32_t)zone->GetID());
-        p.WriteS32Little((int32_t)zoneDef->GetID());
-        p.WriteFloat(objState->GetCurrentX());
-        p.WriteFloat(objState->GetCurrentY());
-        p.WriteFloat(objState->GetCurrentRotation());
-
-        client->QueuePacket(p);
-        ShowEntity(client, objState->GetEntityID(), true);
+        // If an NPC's state is not 255, show it now
+        if(objState->GetEntity()->GetState() != 255)
+        {
+            ShowObject(zone, { client }, objState, true);
+        }
     }
 
     for(auto plasmaPair : zone->GetPlasma())
@@ -1286,6 +1276,33 @@ void ZoneManager::ShowNPC(const std::shared_ptr<Zone>& zone,
     ChannelClientConnection::BroadcastPacket(clients, p, true);
 
     ShowEntity(clients, npcState->GetEntityID(), true);
+
+    if(!queue)
+    {
+        ChannelClientConnection::FlushAllOutgoing(clients);
+    }
+}
+
+void ZoneManager::ShowObject(const std::shared_ptr<Zone>& zone,
+    const std::list<std::shared_ptr<ChannelClientConnection>>& clients,
+    const std::shared_ptr<ServerObjectState>& objState, bool queue)
+{
+    auto obj = objState->GetEntity();
+
+    libcomp::Packet p;
+    p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_OBJECT_NPC_DATA);
+    p.WriteS32Little(objState->GetEntityID());
+    p.WriteU32Little(obj->GetID());
+    p.WriteU8(obj->GetState());
+    p.WriteS32Little((int32_t)zone->GetID());
+    p.WriteS32Little((int32_t)zone->GetDefinitionID());
+    p.WriteFloat(objState->GetCurrentX());
+    p.WriteFloat(objState->GetCurrentY());
+    p.WriteFloat(objState->GetCurrentRotation());
+
+    ChannelClientConnection::BroadcastPacket(clients, p, true);
+
+    ShowEntity(clients, objState->GetEntityID(), true);
 
     if(!queue)
     {
@@ -3692,7 +3709,8 @@ bool ZoneManager::UpdateGeometryElement(const std::shared_ptr<Zone>& zone,
         auto objDef = definitionManager->GetONPCData(elemObject->GetID());
         if(objDef && !objDef->GetBarrierName().IsEmpty())
         {
-            bool disabled = elemObject->GetState() == 3;
+            bool disabled = elemObject->GetState() == 3 ||
+                elemObject->GetState() == 255;
             libcomp::String name = objDef->GetBarrierName();
 
             for(auto elem : geometry->Elements)

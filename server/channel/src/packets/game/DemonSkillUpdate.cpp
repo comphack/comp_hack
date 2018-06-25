@@ -121,7 +121,8 @@ void UpdateDemonSkill(const std::shared_ptr<ChannelServer> server,
     }
 
     libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_DEMON_SKILL_UPDATE);
+    reply.WritePacketCode(
+        ChannelToClientPacketCode_t::PACKET_DEMON_SKILL_UPDATE);
     reply.WriteS32Little(entityID);
     reply.WriteS8(action);
     reply.WriteS8(skillSlot);
@@ -130,7 +131,7 @@ void UpdateDemonSkill(const std::shared_ptr<ChannelServer> server,
     if(action == ACTION_MOVE)
     {
         reply.WriteS8(oldSlot);
-        reply.WriteU32Little(currentSkillID);
+        reply.WriteU32Little(currentSkillID ? currentSkillID : (uint32_t)-1);
     }
     else
     {

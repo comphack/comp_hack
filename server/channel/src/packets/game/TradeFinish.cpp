@@ -110,14 +110,8 @@ bool Parsers::TradeFinish::Parse(libcomp::ManagerPacket *pPacketManager,
     auto otherCharacter = otherCState->GetEntity();
     auto otherInventory = otherCharacter->GetItemBoxes(0).Get();
 
-    std::set<size_t> freeSlots;
-    for(size_t i = 0; i < inventory->ItemsCount(); i++)
-    {
-        if(inventory->GetItems(i).IsNull())
-        {
-            freeSlots.insert(i);
-        }
-    }
+    auto freeSlots = characterManager->GetFreeSlots(client,
+        inventory);
 
     std::vector<std::shared_ptr<objects::Item>> tradeItems;
     for(auto tradeItem : exchangeSession->GetItems())
@@ -129,14 +123,8 @@ bool Parsers::TradeFinish::Parse(libcomp::ManagerPacket *pPacketManager,
         }
     }
 
-    std::set<size_t> otherFreeSlots;
-    for(size_t i = 0; i < otherInventory->ItemsCount(); i++)
-    {
-        if(otherInventory->GetItems(i).IsNull())
-        {
-            otherFreeSlots.insert(i);
-        }
-    }
+    auto otherFreeSlots = characterManager->GetFreeSlots(otherClient,
+        otherInventory);
 
     std::vector<std::shared_ptr<objects::Item>> otherTradeItems;
     for(auto tradeItem : otherSession->GetItems())

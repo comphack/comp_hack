@@ -36,6 +36,7 @@
 #include <MiUnionData.h>
 #include <ScriptEngine.h>
 #include <ServerZone.h>
+#include <ServerZoneInstance.h>
 
 using namespace channel;
 
@@ -53,6 +54,7 @@ namespace libcomp
             Sqrat::DerivedClass<ZoneInstance,
                 objects::ZoneInstanceObject> binding(mVM, "ZoneInstance");
             binding
+                .Func("GetDefinitionID", &ZoneInstance::GetDefinitionID)
                 .Func("GetFlagState", &ZoneInstance::GetFlagStateValue)
                 .Func("GetTimerID", &ZoneInstance::GetTimerID);
 
@@ -88,6 +90,11 @@ ZoneInstance::~ZoneInstance()
         LOG_DEBUG(libcomp::String("Deleting zone instance: %1\n")
             .Arg(GetID()));
     }
+}
+
+uint32_t ZoneInstance::GetDefinitionID()
+{
+    return GetDefinition()->GetID();
 }
 
 bool ZoneInstance::AddZone(const std::shared_ptr<Zone>& zone)

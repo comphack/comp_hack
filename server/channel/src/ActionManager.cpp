@@ -1434,26 +1434,25 @@ bool ActionManager::SetNPCState(ActionContext& ctx)
             return false;
         }
 
+        uint8_t from = oNPC->GetState();
         if(!act->GetSourceClientOnly())
         {
             oNPC->SetState(act->GetState());
         }
 
-        auto npc = std::dynamic_pointer_cast<objects::ServerNPC>(oNPC);
-        if(npc)
+        std::list<std::shared_ptr<ChannelClientConnection>> clients;
+        if(act->GetSourceClientOnly())
         {
-            auto npcState = std::dynamic_pointer_cast<NPCState>(oNPCState);
+            clients.push_back(ctx.Client);
+        }
+        else
+        {
+            clients = ctx.CurrentZone->GetConnectionList();
+        }
 
-            std::list<std::shared_ptr<ChannelClientConnection>> clients;
-            if(act->GetSourceClientOnly())
-            {
-                clients.push_back(ctx.Client);
-            }
-            else
-            {
-                clients = ctx.CurrentZone->GetConnectionList();
-            }
-
+        auto npcState = std::dynamic_pointer_cast<NPCState>(oNPCState);
+        if(npcState)
+        {
             if(act->GetState() == 1)
             {
                 zoneManager->ShowNPC(ctx.CurrentZone, clients, npcState,
@@ -1467,22 +1466,33 @@ bool ActionManager::SetNPCState(ActionContext& ctx)
         }
         else
         {
-            // Update collisions
-            zoneManager->UpdateGeometryElement(ctx.CurrentZone, oNPC);
-
-            libcomp::Packet p;
-            p.WritePacketCode(
-                ChannelToClientPacketCode_t::PACKET_NPC_STATE_CHANGE);
-            p.WriteS32Little(oNPCState->GetEntityID());
-            p.WriteU8(act->GetState());
-
-            if(act->GetSourceClientOnly())
+            if(!act->GetSourceClientOnly())
             {
-                ctx.Client->SendPacket(p);
+                // Update collisions
+                zoneManager->UpdateGeometryElement(ctx.CurrentZone, oNPC);
+            }
+
+            if(from == 255)
+            {
+                auto objState = std::dynamic_pointer_cast<ServerObjectState>(
+                    oNPCState);
+                zoneManager->ShowObject(ctx.CurrentZone, clients, objState,
+                    false);
+            }
+            else if(act->GetState() == 255)
+            {
+                zoneManager->RemoveEntities(clients,
+                    { npcState->GetEntityID() });
             }
             else
             {
-                zoneManager->BroadcastPacket(ctx.CurrentZone, p);
+                libcomp::Packet p;
+                p.WritePacketCode(
+                    ChannelToClientPacketCode_t::PACKET_NPC_STATE_CHANGE);
+                p.WriteS32Little(oNPCState->GetEntityID());
+                p.WriteU8(act->GetState());
+
+                ChannelClientConnection::BroadcastPacket(clients, p);
             }
         }
     }

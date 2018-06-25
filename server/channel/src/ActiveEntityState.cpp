@@ -2487,6 +2487,11 @@ uint8_t ActiveEntityStateImp<objects::Demon>::RecalculateStats(
 
     CharacterManager::AdjustDemonBaseStats(GetEntity(), stats, false);
 
+    auto levelRate = definitionManager->GetDevilLVUpRateData(
+        devilData->GetGrowth()->GetGrowthType());
+    CharacterManager::FamiliarityBoostStats(mEntity->GetFamiliarity(), stats,
+        levelRate);
+
     return RecalculateDemonStats(definitionManager, stats, calcState);
 }
 
@@ -2621,8 +2626,11 @@ void ActiveEntityState::AdjustStats(
     std::shared_ptr<objects::CalculatedEntityState> calcState, bool baseMode)
 {
     std::set<CorrectTbl> removed;
-    libcomp::EnumMap<CorrectTbl, int32_t> percentSums;
     libcomp::EnumMap<CorrectTbl, int32_t> maxPercents;
+
+    // Keep track of percent increases to sum up and boost at the end. These
+    // are applied in 2 layers though most are typically in the first group.
+    std::array<libcomp::EnumMap<CorrectTbl, int32_t>, 2> percentSums;
     for(auto ct : adjustments)
     {
         auto tblID = ct->GetID();
@@ -2707,26 +2715,29 @@ void ActiveEntityState::AdjustStats(
             switch(effectiveType)
             {
             case 1:
-            case 2: /// @todo: these MAY be different from normal percents
+            case 2:
                 // Percentage sets can either be an immutable set to zero
                 // or an increase/decrease by a set amount
                 if(effectiveValue == 0)
                 {
                     removed.insert(tblID);
                     adjusted = 0;
-                    percentSums.clear();
+                    percentSums[0].erase(tblID);
+                    percentSums[1].erase(tblID);
+                    maxPercents.erase(tblID);
                     allowNegate = true;
                 }
                 else
                 {
                     // Store percent sums to apply at the end
-                    if(percentSums.find(tblID) == percentSums.end())
+                    size_t pIdx = (size_t)(effectiveType - 1);
+                    if(percentSums[pIdx].find(tblID) == percentSums[pIdx].end())
                     {
-                        percentSums[tblID] = effectiveValue;
+                        percentSums[pIdx][tblID] = effectiveValue;
                     }
                     else
                     {
-                        percentSums[tblID] += effectiveValue;
+                        percentSums[pIdx][tblID] += effectiveValue;
                     }
 
                     // Store max percents
@@ -2769,23 +2780,26 @@ void ActiveEntityState::AdjustStats(
         }
     }
 
-    // Loop through and apply percent sums
-    for(auto ctPair : percentSums)
+    // Loop through and apply percent sums (in 2 layers
+    for(auto percentLayer : percentSums)
     {
-        auto tblID = ctPair.first;
-
-        int16_t adjusted = stats[tblID];
-        if(ctPair.second <= -100)
+        for(auto ctPair : percentLayer)
         {
-            adjusted = 0;
-        }
-        else
-        {
-            adjusted = (int16_t)(adjusted +
-                (int16_t)(adjusted * (ctPair.second * 0.01)));
-        }
+            auto tblID = ctPair.first;
 
-        stats[tblID] = adjusted;
+            int16_t adjusted = stats[tblID];
+            if(ctPair.second <= -100)
+            {
+                adjusted = 0;
+            }
+            else
+            {
+                adjusted = (int16_t)(adjusted +
+                    (int16_t)(adjusted * (ctPair.second * 0.01)));
+            }
+
+            stats[tblID] = adjusted;
+        }
     }
 
     // Apply stat minimum bounds (and maximum if not an enemy)

@@ -158,33 +158,56 @@ bool Parsers::AccountLogin::Parse(libcomp::ManagerPacket *pPacketManager,
 {
     (void)connection;
 
-    auto response = std::shared_ptr<objects::AccountLogin>(
-        new objects::AccountLogin);
-
-    if(!response->LoadPacket(p, false))
+    if(p.Size() < 1)
     {
-        p.Rewind();
-
-        if(sizeof(int8_t) == p.Size() && 0 == p.PeekS8())
-        {
-            // This error is expected, ignore it.
-            return true;
-        }
-        else
-        {
-            LOG_ERROR("Invalid response received for "
-                "AccountLogin (lobby).\n");
-
-            p.HexDump();
-
-            return false;
-        }
+        LOG_ERROR("Invalid response received for AccountLogin.\n");
+        return false;
     }
 
     auto server = std::dynamic_pointer_cast<LobbyServer>(
         pPacketManager->GetServer());
 
-    server->QueueWork(UpdateAccountLogin, server, response);
+    int8_t errorCode = p.ReadS8();
+    if(errorCode == 1)
+    {
+        // No error
+        auto response = std::shared_ptr<objects::AccountLogin>(
+            new objects::AccountLogin);
+
+        if(!response->LoadPacket(p, false))
+        {
+            p.Rewind();
+
+            if(sizeof(int8_t) == p.Size() && 0 == p.PeekS8())
+            {
+                // This error is expected, ignore it.
+                return true;
+            }
+            else
+            {
+                LOG_ERROR("Invalid response received for "
+                    "AccountLogin (lobby).\n");
+
+                p.HexDump();
+
+                return false;
+            }
+        }
+
+        server->QueueWork(UpdateAccountLogin, server, response);
+    }
+    else if(p.Left() > 2 && p.Left() == (uint16_t)(2 + p.PeekU16Little()))
+    {
+        // Failure, disconnect the client if they're here
+        auto username = p.ReadString16Little(
+            libcomp::Convert::Encoding_t::ENCODING_UTF8, true);
+        auto client = server->GetManagerConnection()
+            ->GetClientConnection(username);
+        if(nullptr != client)
+        {
+            client->Close();
+        }
+    }
 
     return true;
 }

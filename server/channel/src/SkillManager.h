@@ -69,6 +69,9 @@ protected:
     /// have been handled elsewhere
     bool ApplyStatusEffects = true;
 
+    /// Indicates that the skill's has already been finalized
+    bool Finalized = false;
+
     /// Designates the skill that is being processed
     std::shared_ptr<channel::ProcessingSkill> Skill;
 
@@ -270,8 +273,10 @@ private:
     /**
      * Finalize skill processing and send the skill effect reports.
      * @param pSkill Current skill processing state
+     * @param ctx Special execution state for the skill
      */
-    void ProcessSkillResultFinal(const std::shared_ptr<channel::ProcessingSkill>& pSkill);
+    void ProcessSkillResultFinal(const std::shared_ptr<channel::ProcessingSkill>& pSkill,
+        std::shared_ptr<SkillExecutionContext> ctx);
 
     /**
      * Get a processing skill set with default values from the supplied
@@ -649,12 +654,16 @@ private:
 
     /**
      * Execute post execution steps like notifying the client that the skill
-     * has executed and updating any related expertises.
+     * has executed and updating any related expertises. If the skill's execution
+     * results in additional uses remaining, make a copy of the instance to
+     * preserve execution values.
      * @param client Pointer to the client connection that activated the skill
      * @param ctx Special execution state for the skill
      * @param activated Pointer to the activated ability instance
+     * @return Pointer to the ability instance being finalized
      */
-    void FinalizeSkillExecution(const std::shared_ptr<ChannelClientConnection> client,
+    std::shared_ptr<objects::ActivatedAbility>
+        FinalizeSkillExecution(const std::shared_ptr<ChannelClientConnection> client,
         const std::shared_ptr<SkillExecutionContext>& ctx,
         std::shared_ptr<objects::ActivatedAbility> activated);
 

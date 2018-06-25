@@ -48,6 +48,9 @@
 #include <ServerZoneInstance.h>
 #include <ServerZoneInstanceVariant.h>
 #include <ServerZonePartial.h>
+#include <Spawn.h>
+#include <SpawnGroup.h>
+#include <SpawnLocationGroup.h>
 #include <Tokusei.h>
 
 using namespace libcomp;
@@ -496,15 +499,18 @@ namespace libcomp
         auto id = zone->GetID();
         auto dynamicMapID = zone->GetDynamicMapID();
 
+        libcomp::String zoneStr = libcomp::String("%1%2")
+            .Arg(id).Arg(id != dynamicMapID ? libcomp::String(" (%1)")
+                .Arg(dynamicMapID) : "");
+
         bool isField = false;
         if(definitionManager)
         {
             auto def = definitionManager->GetZoneData(id);
             if(!def)
             {
-                LOG_WARNING(libcomp::String("Skipping unknown zone: %1%2\n")
-                    .Arg(id).Arg(id != dynamicMapID ? libcomp::String(" (%1)")
-                        .Arg(dynamicMapID) : ""));
+                LOG_WARNING(libcomp::String("Skipping unknown zone: %1\n")
+                    .Arg(zoneStr));
                 return true;
             }
 
@@ -514,10 +520,53 @@ namespace libcomp
         if(mZoneData.find(id) != mZoneData.end() &&
             mZoneData[id].find(dynamicMapID) != mZoneData[id].end())
         {
-            LOG_ERROR(libcomp::String("Duplicate zone encountered: %1%2\n")
-                .Arg(id).Arg(id != dynamicMapID ? libcomp::String(" (%1)")
-                    .Arg(dynamicMapID) : ""));
+            LOG_ERROR(libcomp::String("Duplicate zone encountered: %1\n")
+                .Arg(zoneStr));
             return false;
+        }
+
+        // Make sure spawns are valid
+        if(definitionManager)
+        {
+            for(auto sPair : zone->GetSpawns())
+            {
+                if(definitionManager->GetDevilData(
+                    sPair.second->GetEnemyType()) == nullptr)
+                {
+                    LOG_ERROR(libcomp::String("Invalid spawn enemy type"
+                        " encountered in zone %1: %2\n").Arg(zoneStr)
+                        .Arg(sPair.second->GetEnemyType()));
+                    return false;
+                }
+            }
+        }
+
+        for(auto sgPair : zone->GetSpawnGroups())
+        {
+            for(auto sPair : sgPair.second->GetSpawns())
+            {
+                if(!zone->SpawnsKeyExists(sPair.first))
+                {
+                    LOG_ERROR(libcomp::String("Invalid spawn group spawn ID"
+                        " encountered in zone %1: %2\n").Arg(zoneStr)
+                        .Arg(sPair.first));
+                    return false;
+                }
+            }
+        }
+
+        for(auto slgPair : zone->GetSpawnLocationGroups())
+        {
+            for(uint32_t sgID : slgPair.second->GetGroupIDs())
+            {
+                if(!zone->SpawnGroupsKeyExists(sgID))
+                {
+                    LOG_ERROR(libcomp::String("Invalid spawn location group"
+                        " spawn group ID encountered in zone %1: %2\n")
+                        .Arg(zoneStr).Arg(sgID));
+                    return false;
+                }
+            }
         }
 
         mZoneData[id][dynamicMapID] = zone;
@@ -548,6 +597,50 @@ namespace libcomp
         {
             LOG_ERROR(libcomp::String("Duplicate zone partial encountered: %1\n").Arg(id));
             return false;
+        }
+
+        // Make sure spawns are valid
+        if(definitionManager)
+        {
+            for(auto sPair : prt->GetSpawns())
+            {
+                if(definitionManager->GetDevilData(
+                    sPair.second->GetEnemyType()) == nullptr)
+                {
+                    LOG_ERROR(libcomp::String("Invalid spawn enemy type"
+                        " encountered in zone partial %1: %2\n").Arg(id)
+                        .Arg(sPair.second->GetEnemyType()));
+                    return false;
+                }
+            }
+        }
+
+        for(auto sgPair : prt->GetSpawnGroups())
+        {
+            for(auto sPair : sgPair.second->GetSpawns())
+            {
+                if(!prt->SpawnsKeyExists(sPair.first))
+                {
+                    LOG_ERROR(libcomp::String("Invalid spawn group spawn ID"
+                        " encountered in zone partial %1: %2\n").Arg(id)
+                        .Arg(sPair.first));
+                    return false;
+                }
+            }
+        }
+
+        for(auto slgPair : prt->GetSpawnLocationGroups())
+        {
+            for(uint32_t sgID : slgPair.second->GetGroupIDs())
+            {
+                if(!prt->SpawnGroupsKeyExists(sgID))
+                {
+                    LOG_ERROR(libcomp::String("Invalid spawn location group"
+                        " spawn group ID encountered in zone partial %1: %2\n")
+                        .Arg(id).Arg(sgID));
+                    return false;
+                }
+            }
         }
 
         mZonePartialData[id] = prt;

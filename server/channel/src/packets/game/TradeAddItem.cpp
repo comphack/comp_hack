@@ -98,7 +98,25 @@ bool Parsers::TradeAddItem::Parse(libcomp::ManagerPacket *pPacketManager,
         return true;
     }
 
-    exchangeSession->SetItems((size_t)slot, item);
+    if(slot > -1)
+    {
+        // Adding
+        exchangeSession->SetItems((size_t)slot, item);
+    }
+    else
+    {
+        // Removing
+        auto items = exchangeSession->GetItems();
+        for(size_t i = 0; i < 30; i++)
+        {
+            if(items[i].Get() == item)
+            {
+                items[i].SetUUID(NULLUUID);
+            }
+        }
+
+        exchangeSession->SetItems(items);
+    }
 
     auto otherState = otherClient->GetClientState();
     auto otherObjectID = otherState->GetObjectID(item->GetUUID());

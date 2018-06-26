@@ -132,7 +132,7 @@
             <value num="6">DEAD_PARTY</value>
         </member>
         <member type="s32" name="aoeRange"/>
-        <member type="s32" name="aoeTargetMax"/>
+        <member type="s32" name="aoeLineWidth"/>
     </object>
     <object name="MiBattleDamageData" persistent="false">
         <member type="enum" name="formula" underlying="uint8_t">

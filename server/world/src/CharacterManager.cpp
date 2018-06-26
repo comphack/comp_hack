@@ -27,6 +27,7 @@
 #include "CharacterManager.h"
 
 // libcomp Includes
+#include <Constants.h>
 #include <Log.h>
 #include <PacketCodes.h>
 
@@ -444,7 +445,7 @@ bool CharacterManager::AddToParty(std::shared_ptr<objects::PartyCharacter> membe
     {
         std::lock_guard<std::mutex> lock(mLock);
         auto it = mParties.find(partyID);
-        if(it != mParties.end() && it->second->MemberIDsCount() < 5
+        if(it != mParties.end() && it->second->MemberIDsCount() < MAX_PARTY_SIZE
             && (login->GetPartyID() == 0 || login->GetPartyID() == partyID))
         {
             mParties[0]->RemoveMemberIDs(cid);

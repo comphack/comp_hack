@@ -297,6 +297,59 @@ bool ChatManager::SendTellMessage(const std::shared_ptr<
     return true;
 }
 
+bool ChatManager::HandleGMand(const std::shared_ptr<
+    ChannelClientConnection>& client, const libcomp::String& message)
+{
+    auto state = client->GetClientState();
+
+    std::smatch match;
+    std::string input = message.C();
+    std::regex toFind("@([^\\s]+)(.*)");
+    if(std::regex_match(input, match, toFind))
+    {
+        if(state->GetUserLevel() == 0 && "@version" != message &&
+            "@license" != message)
+        {
+            // Don't process the message but don't fail
+            LOG_DEBUG(libcomp::String("Non-GM account attempted to execute a GM"
+                " command: %1\n").Arg(state->GetAccountUID().ToString()));
+            return true;
+        }
+
+        libcomp::String sentFrom = state->GetCharacterState()->GetEntity()
+            ->GetName();
+        LOG_INFO(libcomp::String("[GM] %1: %2\n").Arg(sentFrom).Arg(message));
+
+        libcomp::String command(match[1]);
+        libcomp::String args(match.max_size() > 2 ? match[2].str() : "");
+
+        command = command.ToLower();
+
+        std::list<libcomp::String> argsList;
+        if(!args.IsEmpty())
+        {
+            argsList = args.Split(" ");
+        }
+        argsList.remove_if([](const libcomp::String& value) { return value.IsEmpty(); });
+
+        mServer.lock()->QueueWork([](ChatManager* pChatManager,
+            const std::shared_ptr<ChannelClientConnection>& cmdClient,
+            const libcomp::String& cmd,
+            const std::list<libcomp::String>& cmdArgs)
+        {
+            if(!pChatManager->ExecuteGMCommand(cmdClient, cmd, cmdArgs))
+            {
+                LOG_WARNING(libcomp::String("GM command could not be"
+                    " processed: %1\n").Arg(cmd));
+            }
+        }, this, client, command, argsList);
+
+        return true;
+    }
+
+    return false;
+}
+
 bool ChatManager::ExecuteGMCommand(const std::shared_ptr<
     channel::ChannelClientConnection>& client, const libcomp::String& cmd,
     const std::list<libcomp::String>& args)

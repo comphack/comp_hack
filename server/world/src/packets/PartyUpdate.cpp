@@ -56,7 +56,17 @@ void PartyInvite(std::shared_ptr<WorldServer> server,
     uint16_t responseCode = 201;  // Not available
     if(cLogin && targetLogin && targetLogin->GetChannelID() >= 0)
     {
-        if(targetLogin->GetPartyID() != 0)
+        auto party = cLogin->GetPartyID()
+            ? characterManager->GetParty(cLogin->GetPartyID()) : nullptr;
+        if(party && party->GetLeaderCID() != cLogin->GetWorldCID())
+        {
+            responseCode = 208;  // Not the leader
+        }
+        else if(party && party->MemberIDsCount() >= MAX_PARTY_SIZE)
+        {
+            responseCode = 207;  // Already full
+        }
+        else if(targetLogin->GetPartyID() != 0)
         {
             responseCode = 202;  // Already in a party
         }

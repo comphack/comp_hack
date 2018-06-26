@@ -90,7 +90,8 @@ void SendClientReadyData(std::shared_ptr<ChannelServer> server,
     libcomp::String systemMessage = conf->GetSystemMessage();
     if(!systemMessage.IsEmpty()) 
     {
-        server->SendSystemMessage(client, systemMessage, 0, false);
+        server->SendSystemMessage(client, systemMessage,
+            (int8_t)conf->GetSystemMessageColor(), false);
     }
 
     auto worldSharedConfig = conf->GetWorldSharedConfig();

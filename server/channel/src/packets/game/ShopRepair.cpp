@@ -171,11 +171,19 @@ bool Parsers::ShopRepair::Parse(libcomp::ManagerPacket *pPacketManager,
             cost = (uint32_t)(pointCost * pointDelta);
         }
 
-        std::unordered_map<uint32_t, uint32_t> payment;
-        payment[kreuzRepair ? SVR_CONST.ITEM_KREUZ
-            : SVR_CONST.ITEM_MACCA] = cost;
+        bool paid = false;
+        if(kreuzRepair)
+        {
+            std::unordered_map<uint32_t, uint32_t> payment;
+            payment[SVR_CONST.ITEM_KREUZ] = cost;
+            paid = characterManager->AddRemoveItems(client, payment, false);
+        }
+        else
+        {
+            paid = characterManager->PayMacca(client, (uint64_t)cost);
+        }
 
-        if(characterManager->AddRemoveItems(client, payment, false))
+        if(paid)
         {
             int32_t currentUp = 0;
             int32_t maxDown = 0;

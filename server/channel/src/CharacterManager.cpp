@@ -42,6 +42,7 @@
 // object Includes
 #include <Account.h>
 #include <AccountWorldData.h>
+#include <ActivatedAbility.h>
 #include <ChannelConfig.h>
 #include <CharacterProgress.h>
 #include <Clan.h>
@@ -1142,6 +1143,14 @@ void CharacterManager::StoreDemon(const std::shared_ptr<
     auto definitionManager = server->GetDefinitionManager();
     auto zoneManager = server->GetZoneManager();
     auto zone = zoneManager->GetCurrentZone(client);
+
+    // Cancel any pending skills
+    auto activated = dState->GetActivatedAbility();
+    if(activated)
+    {
+        server->GetSkillManager()->CancelSkill(dState,
+            activated->GetActivationID());
+    }
 
     // Storing a demon is equivalent to zoning it out for triggers
     zoneManager->TriggerZoneActions(zone, { dState },
@@ -3504,10 +3513,11 @@ void CharacterManager::UpdateExpertise(const std::shared_ptr<
         if(expDef)
         {
             // Calculate the point gain
-            /// @todo: validate
-            int32_t gain = (int32_t)((float)(3954.482803f /
-                (((float)expertise->GetPoints() * 0.01f) + 158.1808409f)
-                * (expertGrowth->GetGrowthRate() + (float)rateBoost)) * 100.f * multiplier);
+            float cls = (float)(expertise->GetPoints() / 100000);
+            float rnk = (float)(expertise->GetPoints() / 10000);
+
+            int32_t gain = (int32_t)ceil((((float)expertGrowth->GetGrowthRate() +
+                (float)rateBoost) * multiplier * 500.f) / (cls + 1.f) / (rnk + 1.f));
             if(gain > 0)
             {
                 pointMap.push_back(std::pair<uint8_t, int32_t>(
@@ -4561,13 +4571,9 @@ void CharacterManager::CancelStatusEffects(const std::shared_ptr<
     if((cancelFlags & EFFECT_CANCEL_ZONEOUT) != 0)
     {
         // Cancel invalid ride effects
-        if(zone->GetDefinition()->GetMountDisabled() && CancelMount(state))
+        if(zone->GetDefinition()->GetMountDisabled())
         {
-            // Cancel all mount status effects
-            cancelMap[cEntityID].insert(SVR_CONST.STATUS_MOUNT);
-            cancelMap[cEntityID].insert(SVR_CONST.STATUS_MOUNT_SUPER);
-            cancelMap[dEntityID].insert(SVR_CONST.STATUS_MOUNT);
-            cancelMap[dEntityID].insert(SVR_CONST.STATUS_MOUNT_SUPER);
+            CancelMount(state);
         }
 
         if(zone->GetDefinition()->GetBikeDisabled())
@@ -4669,18 +4675,32 @@ bool CharacterManager::CancelMount(ClientState* state)
             dState->RemoveActiveSwitchSkills(skillID);
         }
 
-        server->GetTokuseiManager()->Recalculate(cState, true);
-
-        // In case the entities have the status from somewhere else,
-        // double check that the status is removed
+        // Manually remove the effects before recalculating
         const std::set<uint32_t> mountEffects =
             {
                 SVR_CONST.STATUS_MOUNT,
                 SVR_CONST.STATUS_MOUNT_SUPER
             };
 
-        cState->ExpireStatusEffects(mountEffects);
-        dState->ExpireStatusEffects(mountEffects);
+        std::list<std::shared_ptr<ActiveEntityState>> eStates;
+        eStates.push_back(cState);
+        eStates.push_back(dState);
+
+        for(auto eState : eStates)
+        {
+            auto expired = eState->ExpireStatusEffects(mountEffects);
+            if(expired.size() > 0)
+            {
+                libcomp::Packet p;
+                if(GetRemovedStatusesPacket(p, eState->GetEntityID(), expired))
+                {
+                    mServer.lock()->GetZoneManager()
+                        ->BroadcastPacket(eState->GetZone(), p);
+                }
+            }
+        }
+
+        server->GetTokuseiManager()->Recalculate(cState, true);
 
         return true;
     }

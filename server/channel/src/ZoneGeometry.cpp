@@ -107,7 +107,7 @@ bool Line::Intersect(const Line& other, Point& point, float& dist) const
     return true;
 }
 
-ZoneShape::ZoneShape() : IsLine(true)
+ZoneShape::ZoneShape() : IsLine(true), OneWay(false)
 {
 }
 
@@ -127,7 +127,21 @@ bool ZoneShape::Collides(const Line& path, Point& point, Line& surface) const
     std::map<float, std::pair<const Line*, Point>> collisions;
     for(const Line& s : Lines)
     {
-        if(s.Intersect(path, point, dist))
+        bool intersect = s.Intersect(path, point, dist);
+        bool passThrough = false;
+
+        if(intersect && OneWay)
+        {
+            // If the first point of the line being drawn is to the right of the
+            // direction of the path, allow pass through
+            if(((path.second.x - path.first.x) * (s.first.y - path.first.y) -
+                (path.second.y - path.first.y) * (s.first.x - path.first.x)) < 0)
+            {
+                passThrough = true;
+            }
+        }
+
+        if(intersect && !passThrough)
         {
             collisions[dist] = std::pair<const Line*, Point>(&surface, point);
         }

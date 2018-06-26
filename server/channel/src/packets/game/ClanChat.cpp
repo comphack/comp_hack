@@ -28,6 +28,7 @@
 #include "Packets.h"
 
 // libcomp Includes
+#include <Log.h>
 #include <ManagerPacket.h>
 #include <Packet.h>
 #include <PacketCodes.h>
@@ -47,7 +48,10 @@ bool Parsers::ClanChat::Parse(libcomp::ManagerPacket *pPacketManager,
         return false;
     }
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+    auto server = std::dynamic_pointer_cast<ChannelServer>(
+        pPacketManager->GetServer());
+    auto chatManager = server->GetChatManager();
+
     auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
     auto state = client->GetClientState();
 
@@ -56,7 +60,11 @@ bool Parsers::ClanChat::Parse(libcomp::ManagerPacket *pPacketManager,
         state->GetClientStringEncoding(), true);
     (void)clanID;
 
-    server->GetChatManager()->SendChatMessage(client, ChatType_t::CHAT_CLAN, message);
+    if(!chatManager->HandleGMand(client, message) &&
+        !chatManager->SendChatMessage(client, ChatType_t::CHAT_CLAN, message))
+    {
+        LOG_ERROR("Clan chat message could not be sent.\n");
+    }
 
     return true;
 }

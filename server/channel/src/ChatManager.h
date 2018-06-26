@@ -112,6 +112,16 @@ public:
         const libcomp::String& targetName);
 
     /**
+     * Determine if a message being sent should be handled as a GMand.
+     * @param client Pointer to the client that sent the message
+     * @param message Message that may be a GMand
+     * @return true if the message was a GMand, false if it should be sent
+     *  as a message
+     */
+    bool HandleGMand(const std::shared_ptr<
+        ChannelClientConnection>& client, const libcomp::String& message);
+
+    /**
      * Execute a GM command using the supplied arguments.
      * @param client Pointer to the client that sent the command
      * @param cmd Command to execute

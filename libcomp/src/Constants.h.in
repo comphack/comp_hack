@@ -102,9 +102,6 @@ namespace libcomp
 /// Maximum number of clients that can be connected at a given time.
 #define MAX_CLIENT_CONNECTIONS (4096)
 
-/// Maximum supported character level.
-#define MAX_LEVEL (99)
-
 /// Maximum player entity HP and MP.
 #define MAX_PLAYER_HP_MP (30000)
 
@@ -173,8 +170,8 @@ namespace libcomp
 /// Chat Radius for Say Chat.
 #define CHAT_RADIUS_SAY (8000)
 
-/// Number of G1 times stored.
-#define G1_TIME_COUNT (18)
+/// Number of characters that can be in a party at once.
+#define MAX_PARTY_SIZE (5)
 
 /// Number of friends that can be registered in the friend list.
 #define MAX_FRIEND_COUNT (100)
@@ -193,29 +190,11 @@ namespace libcomp
 /// the Post are 21 items each.
 #define MAX_POST_ITEM_COUNT (9996)
 
-/// Number of valuable mask bytes to send to the client.
-#define VALUABLE_MASK_COUNT (64)
-
-/// Max number of valuable mask bytes stored in the character data.
-#define VALUABLE_MASK_MAX   (64)
-
-/// Number of quest mask bytes to send to the client.
-#define QUEST_MASK_COUNT (128)
-
-/// Max number of quest mask bytes stored in the character data.
-#define QUEST_MASK_MAX   (512)
-
-/// Max number of quests that can be active at one time.
-#define QUEST_ACTIVE_MAX (20)
-
 /// Highest possible account ID (lower to preserve the PC registry IDs).
 #define MAX_ACCOUNT_ID (0x07FFFFFF)
 
 /// Maximum number of characters for an account.
 #define MAX_CHARACTER (20)
-
-/// How many item storage boxes are avaliable via the user interface.
-#define ITEM_BOX_COUNT (10)
 
 /// Highest Virtual Appearance type index. 0-11 matches the same
 /// equipment slot. VA weapons are listed from 15-26.
@@ -238,27 +217,6 @@ namespace libcomp
 
 /// The skill activation contains fusion skill parameters.
 #define ACTIVATION_FUSION   (7)
-
-/// Cost type for HP.
-#define COST_TYPE_HP   (0)
-
-/// Cost type for MP.
-#define COST_TYPE_MP   (1)
-
-/// Cost type for an item.
-#define COST_TYPE_ITEM (2)
-
-/// Maximum cost type value.
-#define COST_TYPE_MAX  (3)
-
-/// A fixed cost number.
-#define COST_NUMREP_FIXED   (0)
-
-/// A percentage cost number.
-#define COST_NUMREP_PERCENT (1)
-
-/// Maximum cost number representation value.
-#define COST_NUMREP_MAX     (2)
 
 /// Macca note value
 #define ITEM_MACCA_NOTE_AMOUNT (50000)

@@ -3427,17 +3427,25 @@ bool EventManager::OpenMenu(EventContext& ctx)
         return false;
     }
 
-    int32_t overrideShopID = (int32_t)eState->GetCurrent()->GetShopID();
+    auto current = eState->GetCurrent();
+    if(current)
+    {
+        int32_t overrideShopID = (int32_t)current->GetShopID();
 
-    libcomp::Packet p;
-    p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_EVENT_OPEN_MENU);
-    p.WriteS32Little(ctx.EventInstance->GetSourceEntityID());
-    p.WriteS32Little(menuType);
-    p.WriteS32Little(overrideShopID != 0 ? overrideShopID : e->GetShopID());
-    p.WriteString16Little(state->GetClientStringEncoding(),
-        libcomp::String(), true);
+        libcomp::Packet p;
+        p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_EVENT_OPEN_MENU);
+        p.WriteS32Little(ctx.EventInstance->GetSourceEntityID());
+        p.WriteS32Little(menuType);
+        p.WriteS32Little(overrideShopID != 0 ? overrideShopID : e->GetShopID());
+        p.WriteString16Little(state->GetClientStringEncoding(),
+            libcomp::String(), true);
 
-    ctx.Client->SendPacket(p);
+        ctx.Client->SendPacket(p);
+    }
+    else
+    {
+        EndEvent(ctx.Client);
+    }
 
     return true;
 }

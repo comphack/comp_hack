@@ -27,6 +27,7 @@
 #include "Packets.h"
 
 // libcomp Includes
+#include <Log.h>
 #include <ManagerPacket.h>
 #include <Packet.h>
 #include <PacketCodes.h>
@@ -46,8 +47,11 @@ bool Parsers::Tell::Parse(libcomp::ManagerPacket *pPacketManager,
         return false;
     }
 
+    auto server = std::dynamic_pointer_cast<ChannelServer>(
+        pPacketManager->GetServer());
+    auto chatManager = server->GetChatManager();
+
     auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
     auto state = client->GetClientState();
 
     libcomp::String targetName = p.ReadString16Little(
@@ -55,7 +59,11 @@ bool Parsers::Tell::Parse(libcomp::ManagerPacket *pPacketManager,
     libcomp::String message = p.ReadString16Little(
         state->GetClientStringEncoding(), true);
 
-    server->GetChatManager()->SendTellMessage(client, message, targetName);
+    if(!chatManager->HandleGMand(client, message) &&
+        !chatManager->SendTellMessage(client, message, targetName))
+    {
+        LOG_ERROR("Tell message could not be sent.\n");
+    }
 
     return true;
 }

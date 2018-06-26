@@ -673,16 +673,17 @@ public:
         std::shared_ptr<objects::CalculatedEntityState> calcState = nullptr);
 
     /**
-     * Decrease the corresponding NRA affinity shield effect stacks and
-     * return the NRA correct table indexes that apply. Index values are
+     * Determine if the supplied NRA type/index effect shield is active on the
+     * entity and decrease the effect by one if it is.
+     * @param nraIdx Correct table index for affinity NRA
      *  1) Null
      *  2) Reflect
      *  3) Absorb
      *  Defines exist in the Constants header for each of these.
-     * @param types Correct table types of the affinity to retrieve
-     * @return Set of all corresponding NRA indexes that existed as shield effects
+     * @param type Correct table type of the affinity to retrieve
+     * @return true if a shield effect existed, false if one did not
      */
-    std::set<uint8_t> PopNRAShields(const std::list<CorrectTbl>& types);
+    bool PopNRAShield(uint8_t nraIdx, CorrectTbl type);
 
     /**
      * Get the next activated ability ID from 0 to 127.

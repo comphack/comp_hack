@@ -92,23 +92,16 @@ bool Parsers::FixObjectPosition::Parse(libcomp::ManagerPacket *pPacketManager,
     zoneManager->BroadcastPacket(client, reply, false);
 
     auto dState = std::dynamic_pointer_cast<DemonState>(eState);
-    if(nullptr != dState)
+    auto zone = dState ? dState->GetZone() : nullptr;
+    if(dState && zone && dState->GetDisplayState() < ActiveDisplayState_t::ACTIVE)
     {
         // If a demon is being placed, it will have already been described to the
         // the client by this point so create and show it now.
-        auto zone = dState->GetZone();
-        if(zone)
-        {
-            bool summonWait = dState->GetDisplayState() ==
-                ActiveDisplayState_t::AWAITING_SUMMON;
-
-            zoneManager->PopEntityForZoneProduction(zone, dState->GetEntityID(),
-                summonWait ? 2 : 0);
-            zoneManager->ShowEntityToZone(zone, dState->GetEntityID());
-            server->GetTokuseiManager()->SendCostAdjustments(dState->GetEntityID(),
-                client);
-            server->GetCharacterManager()->SendMovementSpeed(client, dState, true);
-        }
+        bool summonWait = dState->GetDisplayState() ==
+            ActiveDisplayState_t::AWAITING_SUMMON;
+        zoneManager->PopEntityForZoneProduction(zone, dState->GetEntityID(),
+            summonWait ? 2 : 0);
+        zoneManager->ShowEntityToZone(zone, dState->GetEntityID());
     }
 
     return true;

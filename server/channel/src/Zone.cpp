@@ -485,13 +485,14 @@ const std::list<std::shared_ptr<ActiveEntityState>>
 {
     std::list<std::shared_ptr<ActiveEntityState>> results;
 
+    uint64_t now = ChannelServer::GetServerTime();
+
     float rSquared = (float)std::pow(radius, 2);
 
-    std::lock_guard<std::mutex> lock(mLock);
-    for(auto ePair : mAllEntities)
+    for(auto active : GetActiveEntities())
     {
-        auto active = std::dynamic_pointer_cast<ActiveEntityState>(ePair.second);
-        if(active && rSquared >= active->GetDistance(x, y, true))
+        active->RefreshCurrentPosition(now);
+        if(rSquared >= active->GetDistance(x, y, true))
         {
             results.push_back(active);
         }

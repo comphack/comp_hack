@@ -167,6 +167,8 @@ void ZoneManager::LoadGeometry()
             auto shape =  std::make_shared<ZoneQmpShape>();
             shape->ShapeID = pair.first;
             shape->Element = elementMap[pair.first];
+            shape->OneWay = shape->Element->GetType() ==
+                objects::QmpElement::Type_t::ONE_WAY;
 
             // Build a complete shape from the lines provided
             // If there is a gap in the shape, it is a line instead
@@ -190,6 +192,13 @@ void ZoneManager::LoadGeometry()
                     }
                     else if(it->second == *connectPoint)
                     {
+                        if(shape->OneWay)
+                        {
+                            LOG_DEBUG(libcomp::String("Inverted one way"
+                                " directional line encountered in shape:"
+                                " %1\n").Arg(shape->Element->GetName()));
+                        }
+
                         shape->Lines.push_back(Line(it->second, it->first));
                         connected = true;
                     }
@@ -246,6 +255,8 @@ void ZoneManager::LoadGeometry()
                         shape = std::make_shared<ZoneQmpShape>();
                         shape->ShapeID = pair.first;
                         shape->Element = elementMap[pair.first];
+                        shape->OneWay = shape->Element->GetType() ==
+                            objects::QmpElement::Type_t::ONE_WAY;
 
                         shape->Lines.push_back(lines.front());
                         lines.pop_front();
@@ -253,16 +264,6 @@ void ZoneManager::LoadGeometry()
                         connectPoint = &shape->Lines.back().second;
                     }
                 }
-            }
-        }
-
-        /// @todo: remove one way disabling code and handle server side
-        for(auto& shape : geometry->Shapes)
-        {
-            if(shape->Element && shape->Element->GetType() ==
-                objects::QmpElement::Type_t::ONE_WAY)
-            {
-                shape->Active = false;
             }
         }
 
@@ -886,6 +887,7 @@ std::shared_ptr<ZoneInstance> ZoneManager::CreateInstance(const std::shared_ptr<
 
     if(timerID)
     {
+        instance->SetTimerID(timerID);
         if(instType == InstanceType_t::NORMAL)
         {
             auto timeData = server->GetDefinitionManager()->GetTimeLimitData(
@@ -902,8 +904,11 @@ std::shared_ptr<ZoneInstance> ZoneManager::CreateInstance(const std::shared_ptr<
                 return nullptr;
             }
         }
-        else
+        else if(instType != InstanceType_t::DEMON_ONLY)
         {
+            // Demon only instances use the timer ID to specify timer color
+            // 0 = bronze, 1 = silver, 2 = gold
+
             LOG_ERROR(libcomp::String("Attempted to specify a timer during"
                 " special instance creation: %1\n").Arg(variantID));
             return nullptr;
@@ -1004,8 +1009,6 @@ bool ZoneManager::SendPopulateZoneData(const std::shared_ptr<ChannelClientConnec
         }
     }
 
-    // The client's partner demon will be shown elsewhere
-
     // Does not appear to actually need to be sent for player characters
     //PopEntityForZoneProduction(zone, cState->GetEntityID(), 0);
 
@@ -1016,6 +1019,16 @@ bool ZoneManager::SendPopulateZoneData(const std::shared_ptr<ChannelClientConnec
 
     ShowEntityToZone(zone, cState->GetEntityID());
     characterManager->SendMovementSpeed(client, cState, true);
+
+    if(dState->GetEntity())
+    {
+        PopEntityForZoneProduction(zone, dState->GetEntityID(), 0);
+        ShowEntityToZone(zone, dState->GetEntityID());
+
+        server->GetTokuseiManager()->SendCostAdjustments(dState->GetEntityID(),
+            client);
+        characterManager->SendMovementSpeed(client, dState, true);
+    }
 
     // Activate status effects
     cState->SetStatusEffectsActive(true, definitionManager);
@@ -1179,7 +1192,8 @@ void ZoneManager::ShowEntityToZone(const std::shared_ptr<Zone>& zone, int32_t en
 
     // If its an active entity, set it as displayed
     auto activeState = zone->GetActiveEntity(entityID);
-    if(activeState)
+    if(activeState &&
+        activeState->GetDisplayState() < ActiveDisplayState_t::ACTIVE)
     {
         activeState->SetDisplayState(ActiveDisplayState_t::ACTIVE);
     }
@@ -1872,13 +1886,18 @@ void ZoneManager::HandleSpecialInstancePopulate(
             break;
         case InstanceType_t::DEMON_ONLY:
             {
-                // Reresh the demon-only status effect
+                auto characterManager = mServer.lock()->GetCharacterManager();
+
+                // Cancel mount state if the player has it
+                characterManager->CancelMount(state);
+
+                // Refresh the demon-only status effect
                 StatusEffectChanges effects;
                 effects[SVR_CONST.STATUS_HIDDEN] = StatusEffectChange(
                     SVR_CONST.STATUS_HIDDEN, 1, true);
-
-                mServer.lock()->GetCharacterManager()
-                    ->AddStatusEffectImmediate(client, cState, effects);
+                
+                characterManager->AddStatusEffectImmediate(client, cState,
+                    effects);
 
                 SendInstanceTimer(instance, client, true);
             }
@@ -3205,7 +3224,7 @@ void ZoneManager::SendInstanceTimer(const std::shared_ptr<ZoneInstance>& instanc
             p.WriteU32Little(instVariant->GetSubID());
             p.WriteFloat(timeLeft);
             p.WriteS32Little(1);
-            p.WriteS32Little(2);
+            p.WriteS32Little((int32_t)instance->GetTimerID());
         }
         break;
     case InstanceType_t::NORMAL:

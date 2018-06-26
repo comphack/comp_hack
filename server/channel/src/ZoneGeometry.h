@@ -171,6 +171,10 @@ public:
     /// false if the shape is a solid enclosure
     bool IsLine;
 
+    /// true if the shape lines block intersections only from one direction
+    /// false if the lines block intersections from both direction
+    bool OneWay;
+
     /// Represents the top left-most and bottom right most points of the
     /// shape. This is useful in determining if a shape could be collided
     /// with instead of checking each surface individually

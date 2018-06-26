@@ -39,6 +39,7 @@
 #include <Character.h>
 #include <EntityStats.h>
 #include <Item.h>
+#include <LobbyConfig.h>
 #include <MiItemBasicData.h>
 
 // lobby Includes
@@ -69,6 +70,7 @@ bool Parsers::CreateCharacter::Parse(libcomp::ManagerPacket *pPacketManager,
         libcomp::Convert::ENCODING_CP932);
 
     auto server = std::dynamic_pointer_cast<LobbyServer>(pPacketManager->GetServer());
+    auto config = std::dynamic_pointer_cast<objects::LobbyConfig>(server->GetConfig());
     auto lobbyConnection = std::dynamic_pointer_cast<LobbyClientConnection>(connection);
     auto world = server->GetWorldByID(worldID);
 
@@ -97,29 +99,39 @@ bool Parsers::CreateCharacter::Parse(libcomp::ManagerPacket *pPacketManager,
 
     uint8_t ticketCount = account->GetTicketCount();
 
-    libcomp::Packet reply;
-    reply.WritePacketCode(
-        LobbyToClientPacketCode_t::PACKET_CREATE_CHARACTER);
-
+    uint32_t errorCode = 0;
     if(nextCID == characters.size())
     {
         LOG_ERROR(libcomp::String("No new characters can be created for account %1\n")
             .Arg(account->GetUUID().ToString()));
-        reply.WriteU32Little(static_cast<uint32_t>(ErrorCodes_t::NO_EMPTY_CHARACTER_SLOTS));
+        errorCode = static_cast<uint32_t>(ErrorCodes_t::NO_EMPTY_CHARACTER_SLOTS);
     }
     else if(ticketCount == 0)
     {
         LOG_ERROR(libcomp::String("No character tickets available for account %1\n")
             .Arg(account->GetUUID().ToString()));
-        reply.WriteU32Little(static_cast<uint32_t>(ErrorCodes_t::NEED_CHARACTER_TICKET));
+        errorCode = static_cast<uint32_t>(ErrorCodes_t::NEED_CHARACTER_TICKET);
     }
     else if(nullptr != objects::Character::LoadCharacterByName(worldDB, name))
     {
         LOG_ERROR(libcomp::String("Invalid character name entered for account %1\n")
             .Arg(account->GetUUID().ToString()));
-        reply.WriteU32Little(static_cast<uint32_t>(ErrorCodes_t::BAD_CHARACTER_NAME));
+        errorCode = static_cast<uint32_t>(ErrorCodes_t::BAD_CHARACTER_NAME);
     }
-    else
+    else if(!config->GetCharacterNameRegex().IsEmpty())
+    {
+        std::smatch match;
+        std::string input(name.C());
+        std::regex toFind(config->GetCharacterNameRegex().C());
+        if(!std::regex_match(input, match, toFind))
+        {
+            LOG_ERROR(libcomp::String("Invalid character name entered for"
+                " account for server regex %1\n").Arg(account->GetUUID().ToString()));
+            errorCode = static_cast<uint32_t>(ErrorCodes_t::BAD_CHARACTER_NAME);
+        }
+    }
+
+    if(errorCode == 0)
     {
         auto gender = (objects::Character::Gender_t)p.ReadU8();
 
@@ -152,7 +164,6 @@ bool Parsers::CreateCharacter::Parse(libcomp::ManagerPacket *pPacketManager,
 
         std::unordered_map<size_t, std::shared_ptr<objects::Item>> equipMap;
 
-        /// @todo: Build these properly from item data
         auto itemTop = libcomp::PersistentObject::New<objects::Item>();
         itemTop->SetType(equipTop);
         equipMap[(size_t)
@@ -195,28 +206,31 @@ bool Parsers::CreateCharacter::Parse(libcomp::ManagerPacket *pPacketManager,
         {
             LOG_ERROR(libcomp::String("Character item data failed to save for account %1\n")
                 .Arg(account->GetUUID().ToString()));
-            reply.WriteU32Little(static_cast<uint32_t>(-1));
+            errorCode = static_cast<uint32_t>(-1);
         }
         else if(!stats->Insert(worldDB) || !character->Insert(worldDB))
         {
             LOG_ERROR(libcomp::String("Character failed to save for account %1\n")
                 .Arg(account->GetUUID().ToString()));
-            reply.WriteU32Little(static_cast<uint32_t>(-1));
+            errorCode = static_cast<uint32_t>(-1);
         }
         else if(!account->SetTicketCount((uint8_t)(ticketCount - 1)) ||
             !server->GetAccountManager()->SetCharacterOnAccount(account, character))
         {
             account->SetTicketCount(ticketCount);   // Put the ticket back
-            reply.WriteU32Little(static_cast<uint32_t>(-1));
+            errorCode = static_cast<uint32_t>(-1);
         }
         else
         {
-            reply.WriteU32Little(0);
-
             LOG_DEBUG(libcomp::String("Created character '%1' on world: %2\n")
                 .Arg(name).Arg(worldID));
         }
     }
+
+    libcomp::Packet reply;
+    reply.WritePacketCode(
+        LobbyToClientPacketCode_t::PACKET_CREATE_CHARACTER);
+    reply.WriteU32Little(errorCode);
 
     connection->SendPacket(reply);
 

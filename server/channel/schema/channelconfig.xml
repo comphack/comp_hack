@@ -8,6 +8,12 @@
         <member type="u16" name="WorldPort" default="18666"/>
         <member type="u16" name="Timeout"/>
         <member type="string" name="SystemMessage" default=""/>
+        <member type="enum" name="SystemMessageColor" default="BLUE">
+            <value>RED</value>
+            <value>WHITE</value>
+            <value>BLUE</value>
+            <value>PURPLE</value>
+        </member>
         <member type="WorldSharedConfig*" name="WorldSharedConfig"/>
     </object>
 </objgen>

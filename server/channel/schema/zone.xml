@@ -45,6 +45,7 @@
         <member type="set" name="OriginalAccessCIDs">
             <element type="s32"/>
         </member>
+        <member type="u32" name="TimerID"/>
         <member type="MiTimeLimitData*" name="TimeLimitData"
             nulldefault="true"/>
         <member type="u64" name="TimerStart"/>

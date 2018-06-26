@@ -682,6 +682,12 @@ void ActiveEntityState::SetStatusEffects(
     mNextRegenSync = 0;
     mNextUpkeep = 0;
 
+    ClearStatusRestrictAct();
+    ClearStatusRestrictMove();
+    ClearStatusRestrictMagic();
+    ClearStatusRestrictSpecial();
+    ClearStatusRestrictTalk();
+
     RegisterNextEffectTime();
 
     for(auto effect : effects)
@@ -1482,52 +1488,43 @@ int16_t ActiveEntityState::GetNRAChance(uint8_t nraIdx, CorrectTbl type,
     }
 }
 
-std::set<uint8_t> ActiveEntityState::PopNRAShields(const std::list<
-    CorrectTbl>& types)
+bool ActiveEntityState::PopNRAShield(uint8_t nraIdx, CorrectTbl type)
 {
-    std::set<uint8_t> result;
-    std::set<uint32_t> adjustEffects;
-    std::set<uint32_t> expireEffects;
+    uint32_t adjustEffect = 0;
+    bool expire = false;
     {
         std::lock_guard<std::mutex> lock(mLock);
         for(auto pair : mNRAShields)
         {
-            for(auto type : types)
+            auto it = pair.second.find(type);
+            if(it != pair.second.end() &&
+                it->second.find(nraIdx) != it->second.end())
             {
-                if(pair.second.find(type) != pair.second.end())
-                {
-                    for(auto idx : pair.second[type])
-                    {
-                        result.insert(idx);
-                    }
-                    adjustEffects.insert(pair.first);
-                }
+                adjustEffect = pair.first;
+                break;
             }
         }
 
-        for(uint32_t effectID : adjustEffects)
+        if(adjustEffect)
         {
-            auto it = mStatusEffects.find(effectID);
+            auto it = mStatusEffects.find(adjustEffect);
             if(it != mStatusEffects.end())
             {
                 auto effect = it->second;
 
                 uint8_t newStack = (uint8_t)(effect->GetStack() - 1);
                 effect->SetStack(newStack);
-                if(newStack == 0)
-                {
-                    expireEffects.insert(effectID);
-                }
+                expire = newStack == 0;
             }
         }
     }
 
-    if(expireEffects.size() > 0)
+    if(expire)
     {
-        ExpireStatusEffects(expireEffects);
+        ExpireStatusEffects({ adjustEffect });
     }
 
-    return result;
+    return adjustEffect != 0;
 }
 
 int8_t ActiveEntityState::GetNextActivatedAbilityID()
@@ -1762,12 +1759,13 @@ void ActiveEntityState::ActivateStatusEffect(
     }
 
     // Add to timed damage effect set if T-Damage is specified
+    auto common = se->GetCommon();
     auto basic = se->GetBasic();
     auto damage = se->GetEffect()->GetDamage();
     if(damage->GetHPDamage() || damage->GetMPDamage())
     {
         // Ignore if the damage applies as part of the skill only
-        if(!(basic->GetStackType() == 1 && basic->GetApplicationLogic() == 0))
+        if(common->GetCategory()->GetMainCategory() != 2)
         {
             mTimeDamageEffects.insert(effectType);
         }
@@ -1777,7 +1775,6 @@ void ActiveEntityState::ActivateStatusEffect(
     // check for NRA shields
     if(basic->GetStackType() == 0 && basic->GetApplicationLogic() == 3)
     {
-        auto common = se->GetCommon();
         for(auto ct : common->GetCorrectTbl())
         {
             if((uint8_t)ct->GetID() >= (uint8_t)CorrectTbl::NRA_WEAPON &&
@@ -2071,6 +2068,13 @@ void ActiveEntityStateImp<objects::Character>::SetEntity(
     {
         SetDisplayState(ActiveDisplayState_t::NOT_SET);
     }
+
+    // Remove any values from the previous entity
+    SetIsHidden(false);
+    SetAIIgnored(false);
+    ClearStatusTimes();
+    SetActivatedAbility(nullptr);
+    ClearSpecialActivations();
 
     SetStatusEffects(effects);
 

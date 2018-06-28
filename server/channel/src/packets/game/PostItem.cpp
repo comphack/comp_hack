@@ -93,7 +93,6 @@ bool Parsers::PostItem::Parse(libcomp::ManagerPacket *pPacketManager,
                 // If this fails we don't have a good way to recover, disconnect
                 // the player so they don't get into an invalid state
                 LOG_ERROR("Post item retrieval failed to save.\n");
-                state->SetLogoutSave(true);
                 client->Close();
             }
         }

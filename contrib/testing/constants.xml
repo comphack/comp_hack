@@ -95,6 +95,7 @@
 
     <constant name="STATUS_BIKE">807</constant>
     <constant name="STATUS_CLOAK">903</constant>
+    <constant name="STATUS_COMP_TUNING">816,817</constant>
     <constant name="STATUS_DEATH">32</constant>
     <constant name="STATUS_DEMON_QUEST_ACTIVE">1030</constant>
     <constant name="STATUS_HIDDEN">143</constant>

@@ -125,8 +125,7 @@ bool Parsers::BazaarMarketOpen::Parse(libcomp::ManagerPacket *pPacketManager,
         {
             LOG_ERROR(libcomp::String("BazaarData failed to save: %1\n")
                 .Arg(state->GetAccountUID().ToString()));
-            state->SetLogoutSave(false);
-            client->Close();
+            client->Kill();
             return true;
         }
 

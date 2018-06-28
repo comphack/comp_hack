@@ -1373,7 +1373,7 @@ void CharacterManager::SendItemBoxData(const std::shared_ptr<
             reply.WriteU16Little(slot);
 
             int64_t objectID = state->GetObjectID(item->GetUUID());
-            if(objectID == 0)
+            if(objectID <= 0)
             {
                 objectID = server->GetNextObjectID();
                 state->SetObjectID(item->GetUUID(), objectID);
@@ -3927,6 +3927,7 @@ bool CharacterManager::GetSynthOutcome(ClientState* synthState,
             }
 
             double rate = 0.0;
+            uint16_t validEquipTypes = 0;
             if(isTarot)
             {
                 auto tarotData = enchantData->GetDevilCrystal()->GetTarot();
@@ -3935,6 +3936,7 @@ bool CharacterManager::GetSynthOutcome(ClientState* synthState,
                 rate = floor((double)cState->GetINTEL() / 5.0 +
                     (double)cState->GetLUCK() / 10.0 + expRank / 2.0 + (30.0 - diff) +
                     cpBoost + demonBoost + boostRate);
+                validEquipTypes = tarotData->GetEquipTypes();
             }
             else
             {
@@ -3942,8 +3944,19 @@ bool CharacterManager::GetSynthOutcome(ClientState* synthState,
                 double diff = (double)soulData->GetDifficulty();
 
                 rate = floor((double)cState->GetINTEL() / 10.0 +
-                    (double)cState->GetLUCK() / 5.0 + expRank + (20 - diff) +
+                    (double)cState->GetLUCK() / 5.0 + expRank + (20.0 - diff) +
                     cpBoost + demonBoost + boostRate);
+                validEquipTypes = soulData->GetEquipTypes();
+            }
+
+            // Check if the equip types contain the input item's type
+            int8_t equipType = (int8_t)itemData->GetBasic()->GetEquipType();
+            if(equipType >= 0 &&
+                (validEquipTypes & (1 << (uint16_t)equipType)) == 0)
+            {
+                // Reset values and quit
+                *effectID = 0;
+                return false;
             }
 
             rates.push_back(rate);

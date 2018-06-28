@@ -85,6 +85,19 @@
 </section><!-- SystemMessage -->
 
 <section>
+<title>SystemMessageColor</title>
+<para><emphasis role="strong">Type:</emphasis> enum</para>
+<para><emphasis role="strong">Default:</emphasis> <emphasis>BLUE</emphasis></para>
+<para>System ticker message color to use when displaying the configured SystemMessage. Valid options are RED, WHITE, BLUE and PURPLE.</para>
+
+<section>
+<title>Example</title>
+<para><![CDATA[<member name="SystemMessageColor">RED</member>]]></para>
+</section><!-- Example -->
+
+</section><!-- SystemMessageColor -->
+
+<section>
 <title>AutoCompressCurrency</title>
 <para><emphasis role="strong">Type:</emphasis> boolean</para>
 <para><emphasis role="strong">Default:</emphasis> false</para>

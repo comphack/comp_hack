@@ -370,13 +370,11 @@ bool Parsers::Enchant::Parse(libcomp::ManagerPacket *pPacketManager,
         {
             LOG_ERROR("Enchant result failed to save, disconnecting"
                 " player(s)\n");
-            state->SetLogoutSave(false);
-            client->Close();
+            client->Kill();
 
             if(targetClient)
             {
-                targetState->SetLogoutSave(false);
-                targetClient->Close();
+                targetClient->Kill();
             }
 
             return true;

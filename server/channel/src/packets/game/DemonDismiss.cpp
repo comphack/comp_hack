@@ -27,6 +27,7 @@
 #include "Packets.h"
 
 // libcomp Includes
+#include <Log.h>
 #include <ManagerPacket.h>
 #include <Packet.h>
 #include <PacketCodes.h>
@@ -54,30 +55,42 @@ void DismissDemon(const std::shared_ptr<ChannelServer> server,
         libcomp::PersistentObject::GetObjectByUUID(state->GetObjectUUID(demonID)));
     auto characterManager = server->GetCharacterManager();
 
-    if(nullptr == demon)
+    if(demon)
     {
-        return;
-    }
+        // Store it first if its summoned
+        if(dState->GetEntity() == demon)
+        {
+            characterManager->StoreDemon(client);
+        }
 
-    if(dState->GetEntity() == demon)
+        auto dbChanges = libcomp::DatabaseChangeSet::Create(state->GetAccountUID());
+
+        int8_t slot = demon->GetBoxSlot();
+        auto box = std::dynamic_pointer_cast<objects::DemonBox>(
+            libcomp::PersistentObject::GetObjectByUUID(demon->GetDemonBox()));
+
+        characterManager->DeleteDemon(demon, dbChanges);
+        if(box)
+        {
+            characterManager->SendDemonBoxData(client, box->GetBoxID(),
+                { slot });
+        }
+
+        server->GetWorldDatabase()->QueueChangeSet(dbChanges);
+    }
+    else
     {
-        characterManager->StoreDemon(client);
+        LOG_DEBUG(libcomp::String("DemonDismiss request failed. Notifying"
+            " requestor: %1\n").Arg(state->GetAccountUID().ToString()));
+
+        libcomp::Packet err;
+        err.WritePacketCode(ChannelToClientPacketCode_t::PACKET_ERROR_COMP);
+        err.WriteS32Little((int32_t)
+            ClientToChannelPacketCode_t::PACKET_DEMON_DISMISS);
+        err.WriteS32Little(-1);
+
+        client->SendPacket(err);
     }
-
-    auto dbChanges = libcomp::DatabaseChangeSet::Create(state->GetAccountUID());
-
-    int8_t slot = demon->GetBoxSlot();
-    auto box = std::dynamic_pointer_cast<objects::DemonBox>(
-        libcomp::PersistentObject::GetObjectByUUID(demon->GetDemonBox()));
-
-    characterManager->DeleteDemon(demon, dbChanges);
-    if(box)
-    {
-        characterManager->SendDemonBoxData(client, box->GetBoxID(),
-            { slot });
-    }
-
-    server->GetWorldDatabase()->QueueChangeSet(dbChanges);
 }
 
 bool Parsers::DemonDismiss::Parse(libcomp::ManagerPacket *pPacketManager,

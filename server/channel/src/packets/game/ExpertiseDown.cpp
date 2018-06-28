@@ -71,9 +71,9 @@ bool Parsers::ExpertiseDown::Parse(libcomp::ManagerPacket *pPacketManager,
 
     if(sourceState == nullptr)
     {
-        LOG_ERROR("Player attempted to lower expertise from an entity that does"
-            " not belong to the client\n");
-        state->SetLogoutSave(true);
+        LOG_ERROR(libcomp::String("Invalid entity ID received from a"
+            " ExpertiseDown request: %1\n")
+            .Arg(state->GetAccountUID().ToString()));
         client->Close();
         return true;
     }

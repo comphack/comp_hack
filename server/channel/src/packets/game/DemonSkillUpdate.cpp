@@ -87,6 +87,8 @@ void UpdateDemonSkill(const std::shared_ptr<ChannelServer> server,
     demon->SetLearnedSkills((size_t)skillSlot, skillID);
     if(action == ACTION_LEARN_ACQUIRED)
     {
+        bool found = false;
+
         // Remove from acquired skills if it exists
         size_t skillCount = demon->AcquiredSkillsCount();
         for(size_t i = skillCount; i > 0; i--)
@@ -95,22 +97,33 @@ void UpdateDemonSkill(const std::shared_ptr<ChannelServer> server,
             if(demon->GetAcquiredSkills(idx) == skillID)
             {
                 demon->RemoveAcquiredSkills(idx);
+                found = true;
             }
         }
 
         // Remove from inherited skills if it exists and update
         // the action
         size_t iSkillIdx = 0;
-        for (auto iSkill : demon->GetInheritedSkills())
+        for(auto iSkill : demon->GetInheritedSkills())
         {
             if(!iSkill.IsNull() && iSkill->GetSkill() == skillID)
             {
                 action = ACTION_LEARN_INHERITED;
                 changes->Delete(iSkill.Get());
                 demon->RemoveInheritedSkills(iSkillIdx);
+                found = true;
                 break;
             }
             iSkillIdx++;
+        }
+
+        if(!found)
+        {
+            LOG_ERROR(libcomp::String("DemonSkillUpdate request received"
+                " for skill ID '%1' which is not on the demon: %2\n")
+                .Arg(skillID).Arg(state->GetAccountUID().ToString()));
+            client->Close();
+            return;
         }
 
         recalc = true;

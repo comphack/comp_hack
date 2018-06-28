@@ -75,25 +75,40 @@ bool Parsers::DemonCrystallizeItem::Parse(libcomp::ManagerPacket *pPacketManager
         libcomp::PersistentObject::GetObjectByUUID(state->GetObjectUUID(itemID)))
         : nullptr;
 
+    bool error = false;
     if(exchangeSession && (itemID == -1 || item))
     {
+        auto previous = exchangeSession->GetItems(0);
         exchangeSession->SetItems(0, item);
 
         if(item)
         {
-            success = characterManager->GetSynthOutcome(otherClient
-                ? otherClient->GetClientState() : state, exchangeSession,
-                itemType, successRates);
+            auto otherState = otherClient
+                ? otherClient->GetClientState() : state;
+            success = characterManager->GetSynthOutcome(otherState,
+                exchangeSession, itemType, successRates);
 
             if(!success)
             {
-                exchangeSession->SetItems(0, NULLUUID);
+                // Put the previous item back and recalc old values
+                exchangeSession->SetItems(0, previous);
+                itemID = state->GetObjectID(previous.GetUUID());
+
+                if(!characterManager->GetSynthOutcome(otherState,
+                    exchangeSession, itemType, successRates))
+                {
+                    error = true;
+                }
             }
         }
         else
         {
             success = true;
         }
+    }
+    else
+    {
+        error = true;
     }
 
     libcomp::Packet reply;
@@ -102,7 +117,7 @@ bool Parsers::DemonCrystallizeItem::Parse(libcomp::ManagerPacket *pPacketManager
     reply.WriteS64Little(itemID);
     reply.WriteS32Little(successRates.front());
     reply.WriteU32Little(itemType);
-    reply.WriteS32Little(success ? 0 : -1);
+    reply.WriteS32Little(error ? -1 : 0);
 
     client->SendPacket(reply);
 

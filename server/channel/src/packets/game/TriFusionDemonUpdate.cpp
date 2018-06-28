@@ -186,7 +186,7 @@ bool Parsers::TriFusionDemonUpdate::Parse(libcomp::ManagerPacket *pPacketManager
                     auto d = dPair.second;
 
                     int64_t objID = pState->GetObjectID(d->GetUUID());
-                    if(objID == 0)
+                    if(objID <= 0)
                     {
                         objID = server->GetNextObjectID();
                         pState->SetObjectID(d->GetUUID(), objID);

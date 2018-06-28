@@ -42,7 +42,7 @@ bool Parsers::CommonSwitchUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
 {
     (void)pPacketManager;
 
-    if(p.Size() < 1)
+    if(p.Size() < 2)
     {
         return false;
     }

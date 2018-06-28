@@ -148,10 +148,11 @@ public:
      * Cancel the activated skill of an active entity.
      * @param source Pointer of the entity that is cancelling the skill
      * @param activationID ID of the activated ability instance
+     * @param cancelType Cancellation type to send to the client
      * @return true if the skill was cancelled successfully, false otherwise
      */
     bool CancelSkill(const std::shared_ptr<ActiveEntityState> source,
-        int8_t activationID);
+        int8_t activationID, uint8_t cancelType = 1);
 
     /**
      * Notify the client that a skill failed activation or execution.

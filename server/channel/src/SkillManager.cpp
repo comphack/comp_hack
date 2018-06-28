@@ -929,7 +929,7 @@ bool SkillManager::ExecuteSkill(std::shared_ptr<ActiveEntityState> source,
 }
 
 bool SkillManager::CancelSkill(const std::shared_ptr<ActiveEntityState> source,
-    int8_t activationID)
+    int8_t activationID, uint8_t cancelType)
 {
     auto activated = GetActivation(source, activationID);
     if(!activated)
@@ -972,7 +972,7 @@ bool SkillManager::CancelSkill(const std::shared_ptr<ActiveEntityState> source,
             source->ResetUpkeep();
         }
 
-        SendCompleteSkill(activated, 1);
+        SendCompleteSkill(activated, cancelType);
         return true;
     }
 }
@@ -2528,7 +2528,8 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
             eState->CancelStatusEffects(cancelFlags, keep);
 
             // Check for skills that need to be cancelled
-            if(cancelFlags & (EFFECT_CANCEL_DAMAGE | EFFECT_CANCEL_KNOCKBACK))
+            if(cancelFlags & (EFFECT_CANCEL_DAMAGE | EFFECT_CANCEL_KNOCKBACK) &&
+                target.CanHitstun)
             {
                 auto tActivated = eState->GetActivatedAbility();
                 auto tSkillData = tActivated
@@ -2564,6 +2565,7 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
 
     // Now that previous effects have been cancelled, add the new ones
     uint32_t effectTime = (uint32_t)std::time(0);
+    bool canAddEffects = skill.Definition->GetDamage()->AddStatusesCount() > 0;
     for(SkillTargetResult& target : skill.Targets)
     {
         if(target.AddedStatuses.size() > 0)
@@ -2576,6 +2578,14 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
             }
 
             target.RecalcTriggers.insert(TokuseiConditionType::STATUS_ACTIVE);
+        }
+        else if(canAddEffects && target.Damage1Type == DAMAGE_TYPE_NONE &&
+            target.Damage2Type == DAMAGE_TYPE_NONE && !target.HitAvoided)
+        {
+            // If status effects could be added but weren't and the hit was
+            // not avoided but no damage was dealt, the target was missed
+            target.Damage1Type = target.Damage2Type = DAMAGE_TYPE_MISS;
+            target.HitAvoided = true;
         }
     }
 
@@ -3629,6 +3639,7 @@ void SkillManager::HandleGuard(const std::shared_ptr<ActiveEntityState>& source,
         return;
     }
 
+    uint8_t cancelType = 1;
     int8_t activationID = tActivated->GetActivationID();
     if(pSkill->Definition->GetBasic()->GetDefensible())
     {
@@ -3648,14 +3659,14 @@ void SkillManager::HandleGuard(const std::shared_ptr<ActiveEntityState>& source,
             }
             break;
         case objects::MiSkillBasicData::ActionType_t::RUSH:
-            /// @todo: Same as not guarding but with special animation
+            cancelType = 3; // Display guard break animation
             break;
         default:
             break;
         }
     }
 
-    CancelSkill(target.EntityState, tActivated->GetActivationID());
+    CancelSkill(target.EntityState, tActivated->GetActivationID(), cancelType);
 }
 
 void SkillManager::HandleCounter(const std::shared_ptr<ActiveEntityState>& source,
@@ -3667,6 +3678,7 @@ void SkillManager::HandleCounter(const std::shared_ptr<ActiveEntityState>& sourc
         return;
     }
 
+    uint8_t cancelType = 1;
     int8_t activationID = tActivated->GetActivationID();
     if(pSkill->Definition->GetBasic()->GetDefensible())
     {
@@ -3690,12 +3702,15 @@ void SkillManager::HandleCounter(const std::shared_ptr<ActiveEntityState>& sourc
                     counterCtx);
                 return;
             }
+        case objects::MiSkillBasicData::ActionType_t::SPIN:
+            cancelType = 3; // Display counter break animation
+            break;
         default:
             break;
         }
     }
 
-    CancelSkill(target.EntityState, activationID);
+    CancelSkill(target.EntityState, activationID, cancelType);
 }
 
 void SkillManager::HandleDodge(const std::shared_ptr<ActiveEntityState>& source,
@@ -3840,6 +3855,14 @@ std::set<uint32_t> SkillManager::HandleStatusEffects(const std::shared_ptr<
 
         auto statusDef = definitionManager->GetStatusData(effectID);
         if(!statusDef) continue;
+
+        // If its application logic type 1, it cannot be applied if
+        // it is already active (ex: sleep)
+        if(statusDef->GetBasic()->GetApplicationLogic() == 1 &&
+            target.EntityState->StatusEffectActive(effectID))
+        {
+            continue;
+        }
 
         uint8_t affinity = statusDef->GetCommon()->GetAffinity();
         if(canNull && nraStatusNull)
@@ -6663,8 +6686,7 @@ std::shared_ptr<objects::ActivatedAbility> SkillManager::FinalizeSkillExecution(
     }
 
     // Update the execution count and remove and complete it from the entity
-    // if its at max and not a guard
-    if(end)
+    if(end && executeAndComplete)
     {
         if(source->GetActivatedAbility() == activated)
         {
@@ -6672,10 +6694,7 @@ std::shared_ptr<objects::ActivatedAbility> SkillManager::FinalizeSkillExecution(
             source->ResetUpkeep();
         }
 
-        if(executeAndComplete)
-        {
-            SendCompleteSkill(activated, 0);
-        }
+        SendCompleteSkill(activated, 0);
     }
 
     // Cancel any status effects (not just added) that expire on
@@ -8007,11 +8026,26 @@ bool SkillManager::SummonDemon(const std::shared_ptr<objects::ActivatedAbility>&
     else if(demon->GetCoreStats()->GetLevel() >
         cState->GetCoreStats()->GetLevel())
     {
-        SendFailure(activated, client,
-            (uint8_t)SkillErrorCodes_t::SUMMON_LEVEL);
-        return false;
+        // Allow if special status effects exist
+        bool allow = false;
+        for(uint32_t effectID : SVR_CONST.STATUS_COMP_TUNING)
+        {
+            if(cState->StatusEffectActive(effectID))
+            {
+                allow = true;
+                break;
+            }
+        }
+
+        if(!allow)
+        {
+            SendFailure(activated, client,
+                (uint8_t)SkillErrorCodes_t::SUMMON_LEVEL);
+            return false;
+        }
     }
-    else if(cState->IsMounted())
+
+    if(cState->IsMounted())
     {
         SendFailure(activated, client,
             (uint8_t)SkillErrorCodes_t::MOUNT_SUMMON_RESTRICT);

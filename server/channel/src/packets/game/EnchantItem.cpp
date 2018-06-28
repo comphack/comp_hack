@@ -75,12 +75,32 @@ bool Parsers::EnchantItem::Parse(libcomp::ManagerPacket *pPacketManager,
         libcomp::PersistentObject::GetObjectByUUID(state->GetObjectUUID(itemID)))
         : nullptr;
 
+    bool error = false;
     if(exchangeSession && (itemID == -1 || item))
     {
+        auto previous = exchangeSession->GetItems((size_t)functionalType);
         exchangeSession->SetItems((size_t)functionalType, item);
 
-        success = characterManager->GetSynthOutcome(otherClient ? otherClient->GetClientState()
-            : state, exchangeSession, specialEnchantItemType, successRates, &effectID);
+        auto otherState = otherClient ? otherClient->GetClientState() : state;
+        success = characterManager->GetSynthOutcome(otherState,
+            exchangeSession, specialEnchantItemType, successRates, &effectID);
+
+        if(!success)
+        {
+            // Put the previous item back and recalc old values
+            exchangeSession->SetItems((size_t)functionalType, previous);
+            itemID = state->GetObjectID(previous.GetUUID());
+
+            if(!characterManager->GetSynthOutcome(otherState, exchangeSession,
+                specialEnchantItemType, successRates, &effectID))
+            {
+                error = true;
+            }
+        }
+    }
+    else
+    {
+        error = true;
     }
 
     int32_t normalRate = successRates.size() > 0 ? successRates.front() : 0;
@@ -94,7 +114,7 @@ bool Parsers::EnchantItem::Parse(libcomp::ManagerPacket *pPacketManager,
     reply.WriteS32Little(normalRate);
     reply.WriteU32Little(specialEnchantItemType);
     reply.WriteS32Little(specialRate);
-    reply.WriteS32Little(success ? 0 : -1);
+    reply.WriteS32Little(error ? -1 : 0);
 
     client->SendPacket(reply);
 

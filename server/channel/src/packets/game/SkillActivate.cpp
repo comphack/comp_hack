@@ -61,15 +61,18 @@ bool Parsers::SkillActivate::Parse(libcomp::ManagerPacket *pPacketManager,
     uint32_t targetType = p.ReadU32Little();
     if(targetType != ACTIVATION_NOTARGET && p.Left() == 0)
     {
-        LOG_ERROR("Invalid skill target type sent from client\n");
+        LOG_ERROR(libcomp::String("Invalid skill target type sent from"
+            " client: %1\n").Arg(state->GetAccountUID().ToString()));
         return false;
     }
 
     auto source = state->GetEntityState(sourceEntityID);
     if(!source)
     {
-        LOG_ERROR("Invalid skill source sent from client for skill activation\n");
-        return false;
+        LOG_ERROR(libcomp::String("Invalid skill source sent from client for"
+            " skill activation: %1\n").Arg(state->GetAccountUID().ToString()));
+        client->Close();
+        return true;
     }
 
     int64_t activationObjectID = -1;

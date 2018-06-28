@@ -78,19 +78,20 @@ bool Parsers::DemonBoxMove::Parse(libcomp::ManagerPacket *pPacketManager,
         libcomp::PersistentObject::GetObjectByUUID(srcDemon->GetDemonBox()));
 
     uint8_t maxDestSlots = destBoxID == 0 ? progress->GetMaxCOMPSlots() : 50;
-    if(!srcBox || srcBoxID != srcBox->GetBoxID() ||
+    if(!srcBox || srcBoxID != srcBox->GetBoxID() || !destBox ||
         srcDemon != srcBox->GetDemons((size_t)srcSlot).Get() || destSlot >= maxDestSlots)
     {
-        LOG_ERROR(libcomp::String("Invalid arguments supplied for demon move request"
-            " %1, %2, %3, %4\n").Arg(srcBoxID).Arg(demonID).Arg(destBoxID).Arg(destSlot));
-        return false;
-    }
+        LOG_DEBUG(libcomp::String("DemonBoxMove request failed. Notifying"
+            " requestor: %1\n").Arg(state->GetAccountUID().ToString()));
 
-    if(nullptr == destBox)
-    {
-        // Box has not been rented/obtained yet, the move is invalid so
-        // just re-send the source box
-        characterManager->SendDemonBoxData(client, srcBoxID);
+        libcomp::Packet err;
+        err.WritePacketCode(ChannelToClientPacketCode_t::PACKET_ERROR_COMP);
+        err.WriteS32Little((int32_t)
+            ClientToChannelPacketCode_t::PACKET_DEMON_BOX_MOVE);
+        err.WriteS32Little(-1);
+
+        client->SendPacket(err);
+
         return true;
     }
     

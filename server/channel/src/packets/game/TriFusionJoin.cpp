@@ -136,7 +136,7 @@ bool Parsers::TriFusionJoin::Parse(libcomp::ManagerPacket *pPacketManager,
                 auto cs = d->GetCoreStats().Get();
 
                 int64_t objID = state->GetObjectID(d->GetUUID());
-                if(objID == 0)
+                if(objID <= 0)
                 {
                     objID = server->GetNextObjectID();
                     state->SetObjectID(d->GetUUID(), objID);
@@ -181,7 +181,7 @@ bool Parsers::TriFusionJoin::Parse(libcomp::ManagerPacket *pPacketManager,
                 auto cs = d->GetCoreStats().Get();
 
                 int64_t objID = pState->GetObjectID(d->GetUUID());
-                if(objID == 0)
+                if(objID <= 0)
                 {
                     objID = server->GetNextObjectID();
                     pState->SetObjectID(d->GetUUID(), objID);

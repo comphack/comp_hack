@@ -1558,7 +1558,6 @@ bool EventManager::EvaluateCondition(EventContext& ctx,
         else
         {
             // Character has access to instance of type compares to type [value 1]
-            // or any belonging to the current zone if EXISTS
             auto instance = mServer.lock()->GetZoneManager()->GetInstanceAccess(client);
 
             if(compareMode == EventCompareMode::EXISTS)
@@ -1568,19 +1567,46 @@ bool EventManager::EvaluateCondition(EventContext& ctx,
                     return false;
                 }
 
-                auto zone = client->GetClientState()->GetCharacterState()->GetZone();
-                auto currentInstance = zone->GetInstance();
+                // Special comparison modes for EXISTS
+                switch(condition->GetValue2())
+                {
+                case 1:
+                    // Instance the player has access to has variant ID [value 1]
+                    {
+                        auto instVar = instance->GetVariant();
+                        return instVar && (int32_t)instVar->GetID() ==
+                            condition->GetValue1();
+                    }
+                    break;
+                case 2:
+                    // Instance the player has access to has variant type [value 1]
+                    {
+                        auto instVar = instance->GetVariant();
+                        return instVar && (int32_t)instVar->GetInstanceType() ==
+                            condition->GetValue1();
+                    }
+                    break;
+                case 0:
+                default:
+                    // Current zone is part of the instance they have access to
+                    {
+                        auto zone = client->GetClientState()->GetZone();
+                        auto currentInstance = zone->GetInstance();
 
-                auto def = instance->GetDefinition();
-                auto currentDef = currentInstance
-                    ? currentInstance->GetDefinition() : nullptr;
-                auto currentZoneDef = zone->GetDefinition();
+                        auto def = instance->GetDefinition();
+                        auto currentDef = currentInstance
+                            ? currentInstance->GetDefinition() : nullptr;
+                        auto currentZoneDef = zone->GetDefinition();
 
-                // true if the instance is the same, the lobby is the same or they
-                // are in the lobby
-                return instance == currentInstance ||
-                    (currentDef && def->GetLobbyID() == currentDef->GetLobbyID()) ||
-                    def->GetLobbyID() == currentZoneDef->GetID();
+                        // true if the instance is the same, the lobby is the
+                        // same or they are in the lobby
+                        return instance == currentInstance ||
+                            (currentDef &&
+                                def->GetLobbyID() == currentDef->GetLobbyID()) ||
+                            def->GetLobbyID() == currentZoneDef->GetID();
+                    }
+                    break;
+                }
             }
 
             auto def = instance ? instance->GetDefinition() : nullptr;

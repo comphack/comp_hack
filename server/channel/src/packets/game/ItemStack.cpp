@@ -61,18 +61,17 @@ void SplitStack(const std::shared_ptr<ChannelServer> server,
     uint16_t srcStack = sourceItem.second;
 
     auto srcItem = itemBox->GetItems(srcSlot).Get();
-    if(srcItem)
-    {
-        auto destItem = std::shared_ptr<objects::Item>(
-            new objects::Item(*srcItem));
 
+    bool valid = srcItem != nullptr;
+    if(valid)
+    {
         bool targetSpecified = targetSlot != static_cast<uint32_t>(-1);
         if(!targetSpecified)
         {
             targetSlot = 0;
             for(; targetSlot < 50; targetSlot++)
             {
-                if (itemBox->GetItems(targetSlot).IsNull())
+                if(itemBox->GetItems(targetSlot).IsNull())
                 {
                     break;
                 }
@@ -82,39 +81,62 @@ void SplitStack(const std::shared_ptr<ChannelServer> server,
         if(targetSlot == 50 || !itemBox->GetItems((size_t)targetSlot).IsNull())
         {
             LOG_ERROR(libcomp::String("Split stack failed because there was"
-                " no empty slot available for character: %1\n").Arg(
-                    character->GetUUID().ToString()));
-            return;
+                " no empty slot available: %1\n")
+                .Arg(state->GetAccountUID().ToString()));
+            valid = false;
         }
 
-        srcItem->SetStackSize(static_cast<uint16_t>(
-            srcItem->GetStackSize() - srcStack));
-        destItem->SetStackSize(srcStack);
-        destItem->SetBoxSlot((int8_t)targetSlot);
+        int32_t oldStack = (int32_t)srcItem->GetStackSize() - (int32_t)srcStack;
+        if(oldStack <= 0)
+        {
+            LOG_ERROR(libcomp::String("Split stack attempted with a"
+                " source stack smaller than the required amount: %1\n")
+                .Arg(state->GetAccountUID().ToString()));
+            valid = false;
+        }
 
-        destItem->Register(destItem);
-        itemBox->SetItems((size_t)targetSlot, destItem);
+        if(valid)
+        {
+            auto destItem = std::make_shared<objects::Item>(*srcItem);
 
-        state->SetObjectID(destItem->GetUUID(),
-            server->GetNextObjectID());
+            srcItem->SetStackSize((uint16_t)oldStack);
+            destItem->SetStackSize(srcStack);
+            destItem->SetBoxSlot((int8_t)targetSlot);
 
-        std::list<uint16_t> updatedSlots = { (uint16_t)srcSlot,
-            (uint16_t)targetSlot };
-        server->GetCharacterManager()->SendItemBoxData(client, itemBox,
-            updatedSlots, false);
+            destItem->Register(destItem);
+            itemBox->SetItems((size_t)targetSlot, destItem);
 
-        auto dbChanges = libcomp::DatabaseChangeSet::Create(
-            state->GetAccountUID());
-        dbChanges->Insert(destItem);
-        dbChanges->Update(srcItem);
-        dbChanges->Update(itemBox);
-        server->GetWorldDatabase()->QueueChangeSet(dbChanges);
+            state->SetObjectID(destItem->GetUUID(),
+                server->GetNextObjectID());
+
+            std::list<uint16_t> updatedSlots = { (uint16_t)srcSlot,
+                (uint16_t)targetSlot };
+            server->GetCharacterManager()->SendItemBoxData(client, itemBox,
+                updatedSlots, false);
+
+            auto dbChanges = libcomp::DatabaseChangeSet::Create(
+                state->GetAccountUID());
+            dbChanges->Insert(destItem);
+            dbChanges->Update(srcItem);
+            dbChanges->Update(itemBox);
+            server->GetWorldDatabase()->QueueChangeSet(dbChanges);
+        }
     }
-    else
+
+    if(!valid)
     {
-        LOG_ERROR(libcomp::String("Split stack failed because the"
-            " source item did not exist for character: %1\n")
-            .Arg(character->GetUUID().ToString()));
+        LOG_DEBUG(libcomp::String("ItemStack split request failed. Notifying"
+            " requestor: %1\n").Arg(state->GetAccountUID().ToString()));
+
+        libcomp::Packet err;
+        err.WritePacketCode(ChannelToClientPacketCode_t::PACKET_ERROR_ITEM);
+        err.WriteS32Little((int32_t)
+            ClientToChannelPacketCode_t::PACKET_ITEM_STACK);
+        err.WriteS32Little(-1);
+        err.WriteS8(0);
+        err.WriteS8(0);
+
+        client->SendPacket(err);
     }
 }
 
@@ -132,12 +154,11 @@ void CombineStacks(const std::shared_ptr<ChannelServer> server,
         ->GetItemData(targetItem->GetType()) : nullptr;
 
     bool valid = false;
-    std::list<uint16_t> updatedSlots = { (uint16_t)targetSlot };
-    if(targetItem && itemDef)
+    if(itemDef)
     {
         valid = true;
 
-        uint32_t maxStack = (uint32_t)itemDef->GetPossession()->GetStackSize();
+        int32_t maxStack = (int32_t)itemDef->GetPossession()->GetStackSize();
 
         auto dbChanges = libcomp::DatabaseChangeSet::Create(
             state->GetAccountUID());
@@ -150,8 +171,17 @@ void CombineStacks(const std::shared_ptr<ChannelServer> server,
             auto srcItem = itemBox->GetItems(srcSlot).Get();
             if(srcItem)
             {
-                uint16_t newStack = static_cast<uint16_t>(
-                    targetItem->GetStackSize() + srcStack);
+                if(srcItem->GetType() != targetItem->GetType())
+                {
+                    LOG_ERROR(libcomp::String("Combine stack attempted with"
+                        " items of differing types: %1\n")
+                        .Arg(state->GetAccountUID().ToString()));
+                    valid = false;
+                    break;
+                }
+
+                int32_t newStack = (int32_t)targetItem->GetStackSize() +
+                    (int32_t)srcStack;
                 if(newStack > maxStack)
                 {
                     LOG_ERROR(libcomp::String("Combine stack attempted with a"
@@ -161,24 +191,37 @@ void CombineStacks(const std::shared_ptr<ChannelServer> server,
                     break;
                 }
 
-                srcItem->SetStackSize(static_cast<uint16_t>(
-                    srcItem->GetStackSize() - srcStack));
+                int32_t oldStack = (int32_t)srcItem->GetStackSize() -
+                    (int32_t)srcStack;
+                if(oldStack < 0)
+                {
+                    LOG_ERROR(libcomp::String("Combine stack attempted with a"
+                        " source stack smaller than the requested amount: %1\n")
+                        .Arg(state->GetAccountUID().ToString()));
+                    valid = false;
+                    break;
+                }
+
+                srcItem->SetStackSize((uint16_t)oldStack);
 
                 if(srcItem->GetStackSize() == 0)
                 {
                     dbChanges->Delete(srcItem);
                     itemBox->SetItems(srcSlot, NULLUUID);
-
-                    updatedSlots.push_back((uint16_t)srcSlot);
                 }
                 else
                 {
                     dbChanges->Update(srcItem);
                 }
 
-                targetItem->SetStackSize(newStack);
+                targetItem->SetStackSize((uint16_t)newStack);
 
                 dbChanges->Update(targetItem);
+            }
+            else
+            {
+                valid = false;
+                break;
             }
         }
 
@@ -188,12 +231,18 @@ void CombineStacks(const std::shared_ptr<ChannelServer> server,
 
     if(!valid)
     {
-        LOG_ERROR(libcomp::String("Invalid combine stack request failed: %1\n")
-            .Arg(state->GetAccountUID().ToString()));
+        LOG_DEBUG(libcomp::String("ItemStack stack request failed. Notifying"
+            " requestor: %1\n").Arg(state->GetAccountUID().ToString()));
 
-        // Re-send the item box to correct the client state
-        server->GetCharacterManager()->SendItemBoxData(client, itemBox,
-            updatedSlots, false);
+        libcomp::Packet err;
+        err.WritePacketCode(ChannelToClientPacketCode_t::PACKET_ERROR_ITEM);
+        err.WriteS32Little((int32_t)
+            ClientToChannelPacketCode_t::PACKET_ITEM_STACK);
+        err.WriteS32Little(-1);
+        err.WriteS8(0);
+        err.WriteS8(0);
+
+        client->SendPacket(err);
     }
 }
 

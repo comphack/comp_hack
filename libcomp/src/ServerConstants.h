@@ -347,6 +347,9 @@ struct Data
     /// Status effect ID of a cloaked entity
     uint32_t STATUS_CLOAK;
 
+    /// Status effect IDs that remove the summoned demon level cap
+    std::set<uint32_t> STATUS_COMP_TUNING;
+
     /// Status effect ID of instant death
     uint32_t STATUS_DEATH;
 
@@ -531,6 +534,31 @@ private:
             }
 
             prop[idx++] = val;
+        }
+
+        return true;
+    }
+
+    /**
+     * Utility function to load a list of strings into a set
+     * @param prop Set of integers to assign the value to
+     * @param values List of strings reference to pull the values from
+     * @return true on success, false on failure
+     */
+    template<typename T>
+    static bool ToIntegerSet(std::set<T>& prop,
+        std::list<String> values)
+    {
+        bool success;
+        for(auto str : values)
+        {
+            T val = str.ToInteger<T>(&success);
+            if(!success)
+            {
+                return false;
+            }
+
+            prop.insert(val);
         }
 
         return true;

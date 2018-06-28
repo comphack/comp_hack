@@ -68,7 +68,7 @@ void SendHotbarData(const std::shared_ptr<ChannelClientConnection> client,
             itemID = state->GetObjectID(itemUID);
         }
 
-        reply.WriteS8(itemID != 0 ? type : 0);
+        reply.WriteS8(itemID > 0 ? type : 0);
         reply.WriteS64(itemID);
     }
 

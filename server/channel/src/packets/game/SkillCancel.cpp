@@ -56,8 +56,10 @@ bool Parsers::SkillCancel::Parse(libcomp::ManagerPacket *pPacketManager,
     auto source = state->GetEntityState(sourceEntityID);
     if(!source)
     {
-        LOG_ERROR("Invalid skill source sent from client for skill cancellation\n");
-        return false;
+        LOG_ERROR(libcomp::String("Invalid skill source sent from client for"
+            " skill cancellation: %1\n").Arg(state->GetAccountUID().ToString()));
+        client->Close();
+        return true;
     }
 
     server->QueueWork([](SkillManager* pSkillManager, const std::shared_ptr<

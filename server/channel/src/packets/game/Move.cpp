@@ -61,9 +61,10 @@ bool Parsers::Move::Parse(libcomp::ManagerPacket *pPacketManager,
     auto eState = state->GetEntityState(entityID, false);
     if(nullptr == eState)
     {
-        LOG_ERROR(libcomp::String("Invalid entity ID received from a move request: %1\n")
-            .Arg(entityID));
-        return false;
+        LOG_ERROR(libcomp::String("Invalid entity ID received from a move"
+            " request: %1\n").Arg(state->GetAccountUID().ToString()));
+        client->Close();
+        return true;
     }
     else if(!eState->Ready(true))
     {

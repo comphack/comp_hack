@@ -156,12 +156,6 @@ public:
      */
     void SetFlagState(int32_t key, int32_t value, int32_t worldCID);
 
-    /**
-     * Get the timer ID of assigned MiTimeLimitData record if one exists
-     * @return Timer ID or 0 if one is not set
-     */
-    uint32_t GetTimerID();
-
 private:
     /// General use flags and associated values used for event sequences etc
     /// keyed on 0 for all characters or world CID if for a specific one

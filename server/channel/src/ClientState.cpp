@@ -162,7 +162,7 @@ int64_t ClientState::GetObjectID(const libobjgen::UUID& uuid)
         return iter->second;
     }
 
-    return 0;
+    return -1;
 }
 
 const libobjgen::UUID ClientState::GetObjectUUID(int64_t objectID)

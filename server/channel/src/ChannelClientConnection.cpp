@@ -55,6 +55,12 @@ uint64_t ChannelClientConnection::GetTimeout() const
     return mTimeout;
 }
 
+void ChannelClientConnection::Kill()
+{
+    mClientState->SetLogoutSave(false);
+    Close();
+}
+
 void ChannelClientConnection::BroadcastPacket(const std::list<std::shared_ptr<
     ChannelClientConnection>>& clients, libcomp::Packet& packet, bool queue)
 {

@@ -55,8 +55,7 @@ namespace libcomp
                 objects::ZoneInstanceObject> binding(mVM, "ZoneInstance");
             binding
                 .Func("GetDefinitionID", &ZoneInstance::GetDefinitionID)
-                .Func("GetFlagState", &ZoneInstance::GetFlagStateValue)
-                .Func("GetTimerID", &ZoneInstance::GetTimerID);
+                .Func("GetFlagState", &ZoneInstance::GetFlagStateValue);
 
             Bind<ZoneInstance>("ZoneInstance", binding);
         }
@@ -275,10 +274,4 @@ void ZoneInstance::SetFlagState(int32_t key, int32_t value, int32_t worldCID)
 {
     std::lock_guard<std::mutex> lock(mLock);
     mFlagStates[worldCID][key] = value;
-}
-
-uint32_t ZoneInstance::GetTimerID()
-{
-    auto timeLimitData = GetTimeLimitData();
-    return timeLimitData ? timeLimitData->GetID() : 0;
 }

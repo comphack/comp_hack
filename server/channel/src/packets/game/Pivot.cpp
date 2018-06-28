@@ -60,9 +60,8 @@ bool Parsers::Pivot::Parse(libcomp::ManagerPacket *pPacketManager,
     auto entity = state->GetEntityState(entityID);
     if(!entity)
     {
-        LOG_ERROR("Player attempted to pivot an entity that does not belong"
-            " to the client\n");
-        state->SetLogoutSave(true);
+        LOG_ERROR(libcomp::String("Invalid entity ID received from a pivot"
+            " request: %1\n").Arg(state->GetAccountUID().ToString()));
         client->Close();
         return true;
     }

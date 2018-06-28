@@ -27,16 +27,13 @@
 #include "Packets.h"
 
 // libcomp Includes
+#include <Log.h>
 #include <ManagerPacket.h>
 #include <Packet.h>
 #include <PacketCodes.h>
 
 // channel Includes
 #include "ChannelServer.h"
-
-// objects Includes
-#include <Character.h>
-#include <Demon.h>
 
 using namespace channel;
 
@@ -49,20 +46,31 @@ void DemonLockSet(const std::shared_ptr<ChannelClientConnection> client,
     auto demon = std::dynamic_pointer_cast<objects::Demon>(
         libcomp::PersistentObject::GetObjectByUUID(state->GetObjectUUID(demonID)));
 
-    if(nullptr == demon)
+    if(demon)
     {
-        return;
+        demon->SetLocked(lock);
+
+        libcomp::Packet reply;
+        reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_DEMON_LOCK);
+        reply.WriteS64Little(demonID);
+        reply.WriteS8(static_cast<int8_t>(lock ? 1 : 0));
+        reply.WriteS8(0);   //Unknown
+
+        client->SendPacket(reply);
     }
+    else
+    {
+        LOG_DEBUG(libcomp::String("DemonLock request failed. Notifying"
+            " requestor: %1\n").Arg(state->GetAccountUID().ToString()));
 
-    demon->SetLocked(lock);
+        libcomp::Packet err;
+        err.WritePacketCode(ChannelToClientPacketCode_t::PACKET_ERROR_COMP);
+        err.WriteS32Little((int32_t)
+            ClientToChannelPacketCode_t::PACKET_DEMON_LOCK);
+        err.WriteS32Little(-1);
 
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_DEMON_LOCK);
-    reply.WriteS64Little(demonID);
-    reply.WriteS8(static_cast<int8_t>(lock ? 1 : 0));
-    reply.WriteS8(0);   //Unknown
-
-    client->SendPacket(reply);
+        client->SendPacket(err);
+    }
 }
 
 bool Parsers::DemonLock::Parse(libcomp::ManagerPacket *pPacketManager,

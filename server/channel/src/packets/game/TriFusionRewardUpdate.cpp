@@ -196,7 +196,7 @@ bool Parsers::TriFusionRewardUpdate::Parse(libcomp::ManagerPacket *pPacketManage
                 libcomp::Packet nCopy(notify);
 
                 int64_t objID = pState->GetObjectID(item->GetUUID());
-                if(objID == 0)
+                if(objID <= 0)
                 {
                     objID = server->GetNextObjectID();
                     pState->SetObjectID(item->GetUUID(), objID);

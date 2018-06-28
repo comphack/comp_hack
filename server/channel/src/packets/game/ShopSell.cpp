@@ -93,29 +93,33 @@ void HandleShopSale(const std::shared_ptr<ChannelServer> server,
         auto item = std::dynamic_pointer_cast<objects::Item>(
             libcomp::PersistentObject::GetObjectByUUID(state->GetObjectUUID(
                 pair.second)));
-        auto amount = pair.first;
+        uint32_t amount = pair.first;
         if(!item || item->GetItemBox() != inventory->GetUUID())
         {
+            // Item/inventory does not match
+            SendShopSaleReply(client, shopID, -2, false);
+            return;
+        }
+
+        int32_t newAmount = (int32_t)item->GetStackSize() - (int32_t)amount;
+        if(newAmount < 0)
+        {
+            // Too many items being sold requested
             SendShopSaleReply(client, shopID, -2, false);
             return;
         }
 
         auto def = defnitionManager->GetItemData(item->GetType());
-        if(!def)
-        {
-            SendShopSaleReply(client, shopID, -2, false);
-            return;
-        }
 
         saleAmount = (uint64_t)(saleAmount +
             ((uint64_t)def->GetBasic()->GetSellPrice() * amount));
-        if(item->GetStackSize() == amount)
+        if(newAmount == 0)
         {
             deleteItems.push_back(item);
         }
         else
         {
-            stackAdjustItems[item] = (uint16_t)(item->GetStackSize() - amount);
+            stackAdjustItems[item] = (uint16_t)newAmount;
         }
     }
     

@@ -306,8 +306,7 @@ bool FusionManager::HandleTriFusion(
                         " additional errors.\n").Arg(state->GetAccountUID().ToString()));
                     for(auto pClient : pClients)
                     {
-                        pClient->GetClientState()->SetLogoutSave(false);
-                        pClient->Close();
+                        pClient->Kill();
                     }
 
                     return false;
@@ -391,7 +390,7 @@ bool FusionManager::HandleTriFusion(
                     auto d = dPair.second;
 
                     int64_t objID = pState->GetObjectID(d->GetUUID());
-                    if(objID == 0)
+                    if(objID <= 0)
                     {
                         objID = server->GetNextObjectID();
                         pState->SetObjectID(d->GetUUID(), objID);

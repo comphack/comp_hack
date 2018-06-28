@@ -76,8 +76,7 @@ bool Parsers::BazaarItemDrop::Parse(libcomp::ManagerPacket *pPacketManager,
         {
             LOG_ERROR(libcomp::String("BazaarItemDrop failed to save: %1\n")
                 .Arg(state->GetAccountUID().ToString()));
-            state->SetLogoutSave(false);
-            client->Close();
+            client->Kill();
             return true;
         }
 

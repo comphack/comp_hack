@@ -69,7 +69,7 @@ bool Parsers::TriFusionAccept::Parse(libcomp::ManagerPacket *pPacketManager,
         exchangeSession);
 
     bool doFusion = false;
-    std::array<int64_t, 3> demonIDs = { { 0, 0, 0 } };
+    std::array<int64_t, 3> demonIDs = { { -1, -1, -1 } };
 
     bool success = false;
     if(exchangeSession)

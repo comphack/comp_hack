@@ -70,37 +70,19 @@ bool Parsers::ItemMove::Parse(libcomp::ManagerPacket *pPacketManager,
     int8_t sourceType = p.ReadS8();
     int64_t sourceBoxID = p.ReadS64Little();
     int64_t itemID = p.ReadS64Little();
-
-    auto item = std::dynamic_pointer_cast<objects::Item>(
-        libcomp::PersistentObject::GetObjectByUUID(state->GetObjectUUID(itemID)));
-    if(nullptr == item)
-    {
-        LOG_ERROR("Item move failed due to unknown item ID.\n");
-        state->SetLogoutSave(true);
-        client->Close();
-        return true;
-    }
-
     int8_t destType = p.ReadS8();
     int64_t destBoxID = p.ReadS64Little();
     int16_t destSlot = p.ReadS16Little();
 
+    auto item = std::dynamic_pointer_cast<objects::Item>(
+        libcomp::PersistentObject::GetObjectByUUID(state->GetObjectUUID(itemID)));
     auto sourceBox = characterManager->GetItemBox(state, sourceType, sourceBoxID);
     auto destBox = characterManager->GetItemBox(state, destType, destBoxID);
+    size_t sourceSlot = item ? (size_t)item->GetBoxSlot() : 0;
 
-    if(nullptr != sourceBox && nullptr != destBox)
+    if(item && sourceBox && destBox && sourceBox->GetItems(sourceSlot).Get() == item)
     {
         auto character = state->GetCharacterState()->GetEntity();
-
-        size_t sourceSlot = (size_t)item->GetBoxSlot();
-        if(sourceBox->GetItems(sourceSlot).Get() != item)
-        {
-            LOG_ERROR("Item move operation failed.\n");
-            state->SetLogoutSave(true);
-            client->Close();
-            return true;
-        }
-
         bool sameBox = destBox == sourceBox;
         if(!sameBox)
         {
@@ -150,9 +132,18 @@ bool Parsers::ItemMove::Parse(libcomp::ManagerPacket *pPacketManager,
     }
     else
     {
-        LOG_ERROR("Item move failed due to invalid source or destination box.\n");
-        state->SetLogoutSave(true);
-        client->Close();
+        LOG_DEBUG(libcomp::String("ItemMove request failed. Notifying"
+            " requestor: %1\n").Arg(state->GetAccountUID().ToString()));
+
+        libcomp::Packet err;
+        err.WritePacketCode(ChannelToClientPacketCode_t::PACKET_ERROR_ITEM);
+        err.WriteS32Little((int32_t)
+            ClientToChannelPacketCode_t::PACKET_ITEM_MOVE);
+        err.WriteS32Little(-1);
+        err.WriteS8(1);
+        err.WriteS8(1);
+
+        client->SendPacket(err);
     }
 
     return true;

@@ -92,7 +92,7 @@ bool Parsers::EquipmentModEdit::Parse(libcomp::ManagerPacket *pPacketManager,
     int32_t mode = 0;
     uint32_t subMode = 0;
 
-    if(valid)
+    if(valid && item)
     {
         int32_t successRate = defIter->second[2];
 
@@ -261,7 +261,7 @@ bool Parsers::EquipmentModEdit::Parse(libcomp::ManagerPacket *pPacketManager,
     reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_EQUIPMENT_MOD_EDIT);
     reply.WriteS32Little(entityID);
     reply.WriteS64Little(itemID);
-    reply.WriteU32Little(item->GetType());
+    reply.WriteU32Little(item ? item->GetType() : 0);
     reply.WriteU32Little(modItemType);
     reply.WriteS32Little(mode);
     reply.WriteU32Little(subMode);

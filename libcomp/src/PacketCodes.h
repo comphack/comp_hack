@@ -352,6 +352,7 @@ enum class ChannelToClientPacketCode_t : uint16_t
     PACKET_STOP_MOVEMENT = 0x0070,  //!< Message containing entity or object movement stopping information.
     PACKET_WORLD_TIME = 0x0073,  //!< Response for the server's current world time.
     PACKET_ITEM_BOX = 0x0075,  //!< Response for info about a specific item box.
+    PACKET_ERROR_ITEM = 0x0079, //!< Notification that an item request packet has failed. Causes an item box refresh.
     PACKET_ITEM_UPDATE = 0x007A,  //!< Message containing updated information about an item in a box.
     PACKET_EQUIPMENT_LIST = 0x007C,  //!< Response for equipment information.
     PACKET_TRADE_REQUEST = 0x007E,  //!< Response for starting a trade with another player.
@@ -371,6 +372,7 @@ enum class ChannelToClientPacketCode_t : uint16_t
     PACKET_SHOP_BUY = 0x0095,  //!< Response to the request to buy an item from a shop.
     PACKET_SHOP_SELL = 0x0097,  //!< Response to the request to sell an item to a shop.
     PACKET_DEMON_BOX_UPDATE = 0x0098,  //!< Message containing information that one or more demon box has been updated.
+    PACKET_ERROR_COMP = 0x0099, //!< Notification that a demon box request packet has failed. Causes a demon box refresh.
     PACKET_POST_LIST = 0x009D, //!< Response to the request to list items in the player account's Post.
     PACKET_POST_ITEM = 0x009F, //!< Response to the request to move an item from the Post into the current character's inventory.
     PACKET_POST_GIFT = 0x00A1,  //!< Response to the request to open/retrieve post gift information.
@@ -409,6 +411,7 @@ enum class ChannelToClientPacketCode_t : uint16_t
     PACKET_PARTY_MEMBER_ICON = 0x00EA,  //!< Notification that a current party member's icon state has changed.
     PACKET_DEMON_FUSION = 0x00F0,  //!< Response containing the results of a two-way fusion.
     PACKET_LOOT_DEMON_EGG_DATA = 0x00F2,    //!< Response to the request for information about the demon in a demon egg.
+    PACKET_ERROR_FRIEND = 0x00F5,   //!< Notification that a friend request packet has failed.
     PACKET_SHOP_REPAIR = 0x00F7,    //!< Response to the request to repair an item at a shop.
     PACKET_PARTY_KICK = 0x00EC,  //!< Notification that a player has been kicked from the current party.
     PACKET_SYNC = 0x00F4,  //!< Response containing the server time.

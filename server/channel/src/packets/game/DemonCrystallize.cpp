@@ -368,6 +368,21 @@ bool Parsers::DemonCrystallize::Parse(libcomp::ManagerPacket *pPacketManager,
             }
         }
 
+        if(useItem->GetStackSize() == 1)
+        {
+            targetInventory->SetItems(
+                (size_t)useItem->GetBoxSlot(), NULLUUID);
+
+            dbChanges->Delete(useItem);
+        }
+        else
+        {
+            useItem->SetStackSize((uint16_t)(
+                useItem->GetStackSize() - 1));
+
+            dbChanges->Update(useItem);
+        }
+
         if(!success)
         {
             // Failure results in lowered familiarity
@@ -383,7 +398,7 @@ bool Parsers::DemonCrystallize::Parse(libcomp::ManagerPacket *pPacketManager,
                 updateItem->SetStackSize(1);
 
                 // Get the earliest slot free now that rewards have
-                // been sent
+                // been sent and the use item is removed
                 int8_t slot = updateItem->GetBoxSlot();
                 if(rewards.size() > 0)
                 {
@@ -417,21 +432,6 @@ bool Parsers::DemonCrystallize::Parse(libcomp::ManagerPacket *pPacketManager,
             targetSlots.push_back((uint16_t)updateItem->GetBoxSlot());
         }
 
-        if(useItem->GetStackSize() == 1)
-        {
-            targetInventory->SetItems(
-                (size_t)useItem->GetBoxSlot(), NULLUUID);
-
-            dbChanges->Delete(useItem);
-        }
-        else
-        {
-            useItem->SetStackSize((uint16_t)(
-                useItem->GetStackSize() - 1));
-
-            dbChanges->Update(useItem);
-        }
-
         targetSlots.push_back((uint16_t)useItem->GetBoxSlot());
 
         if(targetSlots.size() > 0)
@@ -446,13 +446,11 @@ bool Parsers::DemonCrystallize::Parse(libcomp::ManagerPacket *pPacketManager,
         {
             LOG_ERROR("Crystallize result failed to save, disconnecting"
                 " player(s)\n");
-            state->SetLogoutSave(false);
-            client->Close();
+            client->Kill();
 
             if(targetClient)
             {
-                targetState->SetLogoutSave(false);
-                targetClient->Close();
+                targetClient->Kill();
             }
 
             return true;

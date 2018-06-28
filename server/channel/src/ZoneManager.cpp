@@ -453,6 +453,15 @@ bool ZoneManager::EnterZone(const std::shared_ptr<ChannelClientConnection>& clie
         return false;
     }
 
+    if(nextZone->GetInstanceType() == InstanceType_t::DEMON_ONLY &&
+        (!dState->GetEntity() || !dState->IsAlive()))
+    {
+        LOG_ERROR(libcomp::String("Request to enter a demon only"
+            " zone received with no living demon summoned: %1\n")
+            .Arg(state->GetAccountUID().ToString()));
+        return false;
+    }
+
     if(forceLeave || (currentZone && currentZone != nextZone))
     {
         // Trigger zone-out actions
@@ -484,16 +493,6 @@ bool ZoneManager::EnterZone(const std::shared_ptr<ChannelClientConnection>& clie
 
     auto uniqueID = nextZone->GetID();
     auto nextInstance = nextZone->GetInstance();
-
-    // Validate against instance being entered
-    if(nextZone->GetInstanceType() == InstanceType_t::DEMON_ONLY &&
-        (!dState->GetEntity() || !dState->IsAlive()))
-    {
-        LOG_ERROR(libcomp::String("Request to enter a demon only"
-            " zone received with no living demon summoned: %1\n")
-            .Arg(state->GetAccountUID().ToString()));
-        return false;
-    }
 
     bool firstConnection = false;
     {
@@ -3728,7 +3727,9 @@ bool ZoneManager::UpdateGeometryElement(const std::shared_ptr<Zone>& zone,
         auto objDef = definitionManager->GetONPCData(elemObject->GetID());
         if(objDef && !objDef->GetBarrierName().IsEmpty())
         {
-            bool disabled = elemObject->GetState() == 3 ||
+            // Two open states and one hidden state
+            bool disabled = elemObject->GetState() == 2 ||
+                elemObject->GetState() == 3 ||
                 elemObject->GetState() == 255;
             libcomp::String name = objDef->GetBarrierName();
 

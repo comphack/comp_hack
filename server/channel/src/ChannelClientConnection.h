@@ -77,6 +77,13 @@ public:
     uint64_t GetTimeout() const;
 
     /**
+     * Close the connection after marking it to not save any logout data.
+     * This is useful for if the client gets into a state that is too complex
+     * to recover from to avoid data corruption.
+     */
+    void Kill();
+
+    /**
      * Broadcast the supplied packet to each client connection in the list.
      * @param clients List of client connections to send the packet to
      * @param packet Packet to send to the supplied clients

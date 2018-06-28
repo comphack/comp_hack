@@ -100,12 +100,12 @@ bool Parsers::StartGame::Parse(libcomp::ManagerPacket *pPacketManager,
 
     if(!login)
     {
-
         return false;
     }
 
-    /*LOG_DEBUG(libcomp::String("StartGame is sending the following login "
-        "object to the world:\n%1\n").Arg(login->GetXml()));*/
+    LOG_DEBUG(libcomp::String("Start game request received for character"
+        " '%1' from %2\n").Arg(character->GetName())
+        .Arg(client->GetRemoteAddress()));
 
     // Let the world know what we want to do.
     libcomp::Packet request;

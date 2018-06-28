@@ -158,7 +158,7 @@ bool ChatManager::SendChatMessage(const std::shared_ptr<
     {
         case ChatType_t::CHAT_PARTY:
             visibility = ChatVis_t::CHAT_VIS_PARTY;
-            LOG_INFO(libcomp::String("[Party]:  %1: %2\n.").Arg(sentFrom)
+            LOG_INFO(libcomp::String("[Party]:  %1: %2\n").Arg(sentFrom)
                 .Arg(message));
             if(state->GetPartyID())
             {
@@ -168,13 +168,13 @@ bool ChatManager::SendChatMessage(const std::shared_ptr<
             else
             {
                 LOG_ERROR(libcomp::String("Party chat attempted by"
-                    " character not in a party: %1\n.").Arg(sentFrom));
+                    " character not in a party: %1\n").Arg(sentFrom));
                 return false;
             }
             break;
         case ChatType_t::CHAT_CLAN:
             visibility = ChatVis_t::CHAT_VIS_CLAN;
-            LOG_INFO(libcomp::String("[Clan]:  %1: %2\n.").Arg(sentFrom)
+            LOG_INFO(libcomp::String("[Clan]:  %1: %2\n").Arg(sentFrom)
                 .Arg(message));
             if(state->GetClanID())
             {
@@ -184,23 +184,23 @@ bool ChatManager::SendChatMessage(const std::shared_ptr<
             else
             {
                 LOG_ERROR(libcomp::String("Clan chat attempted by"
-                    " character not in a clan: %1\n.").Arg(sentFrom));
+                    " character not in a clan: %1\n").Arg(sentFrom));
                 return false;
             }
             break;
         case ChatType_t::CHAT_SHOUT:
             visibility = ChatVis_t::CHAT_VIS_ZONE;
-            LOG_INFO(libcomp::String("[Shout]:  %1: %2\n.").Arg(sentFrom)
+            LOG_INFO(libcomp::String("[Shout]:  %1: %2\n").Arg(sentFrom)
                 .Arg(message));
             break;
         case ChatType_t::CHAT_SAY:
             visibility = ChatVis_t::CHAT_VIS_RANGE;
-            LOG_INFO(libcomp::String("[Say]:  %1: %2\n.").Arg(sentFrom)
+            LOG_INFO(libcomp::String("[Say]:  %1: %2\n").Arg(sentFrom)
                 .Arg(message));
             break;
         case ChatType_t::CHAT_SELF:
             visibility = ChatVis_t::CHAT_VIS_SELF;
-            LOG_INFO(libcomp::String("[Self]:  %1: %2\n.").Arg(sentFrom)
+            LOG_INFO(libcomp::String("[Self]:  %1: %2\n").Arg(sentFrom)
                 .Arg(message));
             break;
         default:

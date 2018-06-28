@@ -601,7 +601,7 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
         if(equip.IsNull()) continue;
 
         //If we already have an object ID, it's already loaded
-        if(!state->GetObjectID(equip.GetUUID()))
+        if(state->GetObjectID(equip.GetUUID()) <= 0)
         {
             if(!equip.Get(db))
             {

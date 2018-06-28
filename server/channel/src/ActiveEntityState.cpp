@@ -724,46 +724,32 @@ std::set<uint32_t> ActiveEntityState::AddStatusEffects(const StatusEffectChanges
         }
 
         bool add = true;
+        bool resetTime = false;
         std::shared_ptr<objects::StatusEffect> effect;
         std::shared_ptr<objects::StatusEffect> removeEffect;
         if(mStatusEffects.find(effectType) != mStatusEffects.end())
         {
             // Effect exists already, should we modify time/stack or remove?
             auto existing = mStatusEffects[effectType];
+            resetTime = stack != 0;
 
             bool doReplace = isReplace;
             bool addStack = false;
-            bool resetTime = false;
             switch(basic->GetApplicationLogic())
             {
             case 0:
-                // Add always, replace only if higher/longer or zero (ex: sleep)
+            case 1: // Differs during skill processing
+                // Always set/add stack
                 doReplace = isReplace && ((existing->GetStack() < stack) || !stack);
-                break;
-            case 1:
-                // Always set/add stack, reset time only on replace and if stack
-                // represents time (misc)
-                if(isReplace)
-                {
-                    existing->SetStack(stack);
-                    if(basic->GetStackType() == 1)
-                    {
-                        resetTime = true;
-                    }
-                }
-                else
-                {
-                    addStack = true;
-                }
+                addStack = !isReplace;
                 break;
             case 2:
-                // Always reset time, always add unless stack is zero (ex: -kajas)
+                // Always add unless stack is zero (ex: -kajas)
                 addStack = true;
-                resetTime = true;
                 doReplace = !stack;
                 break;
             case 3:
-                // Always reapply time and stack (ex: -karns)
+                // Always reapply stack (ex: -karns)
                 doReplace = resetTime = true;
                 break;
             default:
@@ -779,11 +765,6 @@ std::set<uint32_t> ActiveEntityState::AddStatusEffects(const StatusEffectChanges
             {
                 stack = (uint8_t)(stack + existing->GetStack());
                 existing->SetStack(maxStack < stack ? maxStack : stack);
-            }
-
-            if(resetTime)
-            {
-                existing->SetExpiration(0);
             }
 
             if(existing->GetStack() > 0)
@@ -962,9 +943,13 @@ std::set<uint32_t> ActiveEntityState::AddStatusEffects(const StatusEffectChanges
 
         // Perform insert or edit modifications
         bool activateEffect = add;
-        if(effect && effect->GetExpiration() == 0)
+        if(effect && (effect->GetExpiration() == 0 ||
+            (resetTime && cancel->GetDurationType() !=
+                objects::MiCancelData::DurationType_t::MS_SET &&
+                cancel->GetDurationType() !=
+                objects::MiCancelData::DurationType_t::DAY_SET)))
         {
-            // Set the expiration
+            // Set/reset the expiration
             uint32_t expiration = 0;
             bool absoluteTime = false;
             bool durationOverride = false;
@@ -1013,8 +998,36 @@ std::set<uint32_t> ActiveEntityState::AddStatusEffects(const StatusEffectChanges
                 expiration = (uint32_t)(now + expiration);
             }
 
-            effect->SetExpiration(expiration);
-            activateEffect = true;
+            bool setTime = !resetTime || basic->GetApplicationLogic() >= 2;
+            if(!setTime)
+            {
+                // Do not decrease existing time if we get here
+                if(mEffectsActive)
+                {
+                    uint32_t time = absoluteTime ? expiration
+                        : (uint32_t)(now + (expiration * 0.001));
+
+                    setTime = true;
+                    for(auto& pair : mNextEffectTimes)
+                    {
+                        if(pair.second.find(effectType) != pair.second.end())
+                        {
+                            setTime = pair.first < time;
+                            break;
+                        }
+                    }
+                }
+                else
+                {
+                    setTime = effect->GetExpiration() < expiration;
+                }
+            }
+
+            if(setTime)
+            {
+                effect->SetExpiration(expiration);
+                activateEffect = true;
+            }
         }
 
         if(removeEffect)

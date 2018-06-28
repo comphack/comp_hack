@@ -120,7 +120,7 @@ bool Parsers::TradeAddItem::Parse(libcomp::ManagerPacket *pPacketManager,
 
     auto otherState = otherClient->GetClientState();
     auto otherObjectID = otherState->GetObjectID(item->GetUUID());
-    if(otherObjectID == 0)
+    if(otherObjectID <= 0)
     {
         otherObjectID = server->GetNextObjectID();
         otherState->SetObjectID(item->GetUUID(), otherObjectID);

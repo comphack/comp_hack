@@ -85,7 +85,6 @@ void AllocatePoint(const std::shared_ptr<ChannelServer> server,
         LOG_ERROR(libcomp::String("AllocateSkillPoint attempted with an"
             " insufficient amount of stat points available: %1\n")
             .Arg(state->GetAccountUID().ToString()));
-        state->SetLogoutSave(false);
         client->Close();
         return;
     }

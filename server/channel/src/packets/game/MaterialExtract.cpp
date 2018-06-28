@@ -74,7 +74,8 @@ bool Parsers::MaterialExtract::Parse(libcomp::ManagerPacket *pPacketManager,
 
     int32_t stacksAdded = 0;
     bool success = false;
-    if((int32_t)character->GetMaterials(itemType) >= stackCount && itemDef)
+    int32_t existingCount = (int32_t)character->GetMaterials(itemType);
+    if(existingCount >= stackCount && itemDef)
     {
         auto inventory = character->GetItemBoxes(0).Get();
         int32_t maxStack = (int32_t)itemDef->GetPossession()->GetStackSize();
@@ -117,7 +118,7 @@ bool Parsers::MaterialExtract::Parse(libcomp::ManagerPacket *pPacketManager,
             if(characterManager->AddRemoveItems(client, items, true))
             {
                 character->SetMaterials(itemType, (uint16_t)(
-                    character->GetMaterials(itemType) - addStacks));
+                    existingCount - addStacks));
                 success = true;
                 stacksAdded = addStacks;
 

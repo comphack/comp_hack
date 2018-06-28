@@ -58,9 +58,11 @@ bool Parsers::PopulateZone::Parse(libcomp::ManagerPacket *pPacketManager,
 
     if(entityID != cEntityID)
     {
-        LOG_ERROR(libcomp::String("PopulateZone request sent with a character"
-            " entity ID matching the client connection: %1\n")
+        LOG_ERROR(libcomp::String("PopulateZone request sent with an"
+            " entity ID not matching the client connection: %1\n")
             .Arg(state->GetAccountUID().ToString()));
+        client->Close();
+        return true;
     }
 
     auto server = std::dynamic_pointer_cast<ChannelServer>(

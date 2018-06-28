@@ -27,12 +27,17 @@
 #include "Packets.h"
 
 // libcomp Includes
+#include <DefinitionManager.h>
+#include <Log.h>
 #include <ManagerPacket.h>
 #include <Packet.h>
 #include <PacketCodes.h>
 
-// objects Includes
-#include <Character.h>
+// object Includes
+#include <MiExpertChainData.h>
+#include <MiExpertClassData.h>
+#include <MiExpertData.h>
+#include <MiExpertRankData.h>
 
 // channel Includes
 #include "ChannelServer.h"
@@ -52,8 +57,72 @@ bool Parsers::LearnSkill::Parse(libcomp::ManagerPacket *pPacketManager,
     int32_t entityID = p.ReadS32Little();
     uint32_t skillID = p.ReadU32Little();
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+    auto server = std::dynamic_pointer_cast<ChannelServer>(
+        pPacketManager->GetServer());
+    auto definitionManager = server->GetDefinitionManager();
 
-    return server->GetCharacterManager()->LearnSkill(client, entityID, skillID);
+    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
+        connection);
+    auto state = client->GetClientState();
+    auto cState = state->GetCharacterState();
+
+    if(cState->GetEntityID() != entityID)
+    {
+        LOG_ERROR(libcomp::String("Attempted to learn a skill on an entity"
+            " that is not the current character: %1\n")
+            .Arg(state->GetAccountUID().ToString()));
+        client->Close();
+        return true;
+    }
+
+    // Make sure the skill being learned is on an expertise the character
+    // can learn
+    bool valid = false;
+
+    uint32_t maxExpertise = (uint32_t)(EXPERTISE_COUNT + CHAIN_EXPERTISE_COUNT);
+    for(uint32_t i = 0; i < maxExpertise && !valid; i++)
+    {
+        auto expertData = definitionManager->GetExpertClassData(i);
+
+        if(!expertData) continue;
+
+        uint32_t currentRank = cState->GetExpertiseRank(definitionManager, i);
+
+        uint32_t rank = 0;
+        for(auto classData : expertData->GetClassData())
+        {
+            for(auto rankData : classData->GetRankData())
+            {
+                if(rank > currentRank) break;
+
+                for(uint32_t eSkillID : rankData->GetSkill())
+                {
+                    if(eSkillID && skillID == eSkillID)
+                    {
+                        valid = true;
+                        break;
+                    }
+                }
+
+                rank++;
+
+                if(valid) break;
+            }
+
+            if(valid) break;
+        }
+    }
+
+    if(valid)
+    {
+        server->GetCharacterManager()->LearnSkill(client, entityID, skillID);
+    }
+    else
+    {
+        LOG_ERROR(libcomp::String("Attempted to learn a skill not available"
+            " to the current character's expertise ranks: %1\n")
+            .Arg(state->GetAccountUID().ToString()));
+    }
+
+    return true;
 }

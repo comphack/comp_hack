@@ -58,14 +58,9 @@ void DropItem(const std::shared_ptr<ChannelServer> server,
         libcomp::PersistentObject::GetObjectByUUID(
             state->GetObjectUUID(itemID)));
 
-    if(nullptr == item)
-    {
-        return;
-    }
-
     auto itemBox = std::dynamic_pointer_cast<objects::ItemBox>(
         libcomp::PersistentObject::GetObjectByUUID(item->GetItemBox()));
-    if(itemBox)
+    if(itemBox && item)
     {
         int8_t slot = item->GetBoxSlot();
 
@@ -82,8 +77,18 @@ void DropItem(const std::shared_ptr<ChannelServer> server,
     }
     else
     {
-        LOG_ERROR(libcomp::String("Item drop operation failed due to unknown supplied"
-            " item ID on character: %1\n").Arg(character->GetUUID().ToString()));
+        LOG_DEBUG(libcomp::String("ItemDrop request failed. Notifying"
+            " requestor: %1\n").Arg(state->GetAccountUID().ToString()));
+
+        libcomp::Packet err;
+        err.WritePacketCode(ChannelToClientPacketCode_t::PACKET_ERROR_ITEM);
+        err.WriteS32Little((int32_t)
+            ClientToChannelPacketCode_t::PACKET_ITEM_DROP);
+        err.WriteS32Little(-1);
+        err.WriteS8(0);
+        err.WriteS8(0);
+
+        client->SendPacket(err);
     }
 }
 

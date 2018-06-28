@@ -119,8 +119,7 @@ bool Parsers::BazaarMarketSales::Parse(libcomp::ManagerPacket *pPacketManager,
             {
                 LOG_ERROR(libcomp::String("BazaarMarketSales failed to save: %1\n")
                     .Arg(state->GetAccountUID().ToString()));
-                state->SetLogoutSave(false);
-                client->Close();
+                client->Kill();
                 return true;
             }
         }

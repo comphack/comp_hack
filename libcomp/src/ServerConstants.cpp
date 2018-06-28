@@ -306,6 +306,8 @@ bool ServerConstants::Initialize(const String& filePath)
         sConstants.ZONE_DEFAULT);
 
     String listStr;
+    success &= LoadString(constants["STATUS_COMP_TUNING"], listStr) &&
+        ToIntegerSet(sConstants.STATUS_COMP_TUNING, listStr.Split(","));
     success &= LoadString(constants["SKILL_TRAESTO_ARCADIA"], listStr) &&
         ToIntegerArray(sConstants.SKILL_TRAESTO_ARCADIA, listStr.Split(","));
     success &= LoadString(constants["SKILL_TRAESTO_DSHINJUKU"], listStr) &&
@@ -317,24 +319,35 @@ bool ServerConstants::Initialize(const String& filePath)
     success &= LoadString(constants["SKILL_TRAESTO_SOUHONZAN"], listStr) &&
         ToIntegerArray(sConstants.SKILL_TRAESTO_SOUHONZAN, listStr.Split(","));
 
+    if(!success)
+    {
+        LOG_ERROR("Failed to load one or more primitive constant values\n");
+        return false;
+    }
+
     auto complexIter = complexConstants.find("CAMEO_MAP");
-    if(success && complexIter != complexConstants.end())
+    if(complexIter != complexConstants.end())
     {
         std::unordered_map<std::string, std::string> map;
-        success = LoadKeyValueStrings(complexIter->second, map);
+        if(!LoadKeyValueStrings(complexIter->second, map))
+        {
+            LOG_ERROR("Failed to load CAMEO_MAP\n");
+            return false;
+        }
+
         for(auto pair : map)
         {
             uint16_t key;
             if(!LoadInteger(pair.first, key))
             {
                 LOG_ERROR("Failed to load CAMEO_MAP key\n");
-                success = false;
+                return false;
             }
             else if(sConstants.CAMEO_MAP.find(key) !=
                 sConstants.CAMEO_MAP.end())
             {
                 LOG_ERROR("Duplicate CAMEO_MAP key encountered\n");
-                success = false;
+                return false;
             }
             else
             {
@@ -349,44 +362,43 @@ bool ServerConstants::Initialize(const String& filePath)
                     if(!success)
                     {
                         LOG_ERROR("Failed to load an element in CAMEO_MAP\n");
-                        break;
+                        return false;
                     }
                 }
-            }
-
-            if(!success)
-            {
-                break;
             }
         }
     }
     else
     {
         LOG_ERROR("CAMEO_MAP not found\n");
-        success = false;
+        return false;
     }
 
     complexIter = complexConstants.find("CLAN_FORM_MAP");
-    if(success && complexIter != complexConstants.end())
+    if(complexIter != complexConstants.end())
     {
         std::unordered_map<std::string, std::string> map;
-        success = LoadKeyValueStrings(complexIter->second, map) &&
-            LoadIntegerMap(map, sConstants.CLAN_FORM_MAP);
+        if(!LoadKeyValueStrings(complexIter->second, map) ||
+            !LoadIntegerMap(map, sConstants.CLAN_FORM_MAP))
+        {
+            LOG_ERROR("Failed to load CLAN_FORM_MAP\n");
+            return false;
+        }
     }
     else
     {
         LOG_ERROR("CLAN_FORM_MAP not found\n");
-        success = false;
+        return false;
     }
 
     complexIter = complexConstants.find("CLAN_LEVEL_SKILLS");
-    if(success && complexIter != complexConstants.end())
+    if(complexIter != complexConstants.end())
     {
         std::list<String> strList;
         if(!LoadStringList(complexIter->second, strList))
         {
             LOG_ERROR("Failed to load CLAN_LEVEL_SKILLS\n");
-            success = false;
+            return false;
         }
         else
         {
@@ -394,7 +406,7 @@ bool ServerConstants::Initialize(const String& filePath)
             {
                 LOG_ERROR("CLAN_LEVEL_SKILLS must specify skills for all"
                     " 10 levels\n");
-                success = false;
+                return false;
             }
             else
             {
@@ -413,7 +425,7 @@ bool ServerConstants::Initialize(const String& filePath)
                         {
                             LOG_ERROR("Failed to load an element in"
                                 " CLAN_LEVEL_SKILLS\n");
-                            break;
+                            return false;
                         }
                     }
 
@@ -425,27 +437,32 @@ bool ServerConstants::Initialize(const String& filePath)
     else
     {
         LOG_ERROR("CLAN_LEVEL_SKILLS not found\n");
-        success = false;
+        return false;
     }
 
     complexIter = complexConstants.find("DEMON_BOOK_BONUS");
-    if(success && complexIter != complexConstants.end())
+    if(complexIter != complexConstants.end())
     {
         std::unordered_map<std::string, std::string> map;
-        success = LoadKeyValueStrings(complexIter->second, map);
+        if(!LoadKeyValueStrings(complexIter->second, map))
+        {
+            LOG_ERROR("Failed to load DEMON_BOOK_BONUS\n");
+            return false;
+        }
+
         for(auto pair : map)
         {
             uint16_t key;
             if(!LoadInteger(pair.first, key))
             {
                 LOG_ERROR("Failed to load DEMON_BOOK_BONUS key\n");
-                success = false;
+                return false;
             }
             else if(sConstants.DEMON_BOOK_BONUS.find(key) !=
                 sConstants.DEMON_BOOK_BONUS.end())
             {
                 LOG_ERROR("Duplicate DEMON_BOOK_BONUS key encountered\n");
-                success = false;
+                return false;
             }
             else
             {
@@ -461,41 +478,41 @@ bool ServerConstants::Initialize(const String& filePath)
                     {
                         LOG_ERROR("Failed to load an element in"
                             " DEMON_BOOK_BONUS\n");
-                        break;
+                        return false;
                     }
                 }
-            }
-
-            if(!success)
-            {
-                break;
             }
         }
     }
     else
     {
         LOG_ERROR("DEMON_BOOK_BONUS not found\n");
-        success = false;
+        return false;
     }
 
     complexIter = complexConstants.find("DEMON_CRYSTALS");
-    if(success && complexIter != complexConstants.end())
+    if(complexIter != complexConstants.end())
     {
         std::unordered_map<std::string, std::string> map;
-        success = LoadKeyValueStrings(complexIter->second, map);
+        if(!LoadKeyValueStrings(complexIter->second, map))
+        {
+            LOG_ERROR("Failed to load DEMON_CRYSTALS\n");
+            return false;
+        }
+
         for(auto pair : map)
         {
             uint32_t key;
             if(!LoadInteger(pair.first, key))
             {
                 LOG_ERROR("Failed to load DEMON_CRYSTALS key\n");
-                success = false;
+                return false;
             }
             else if(sConstants.DEMON_CRYSTALS.find(key) !=
                 sConstants.DEMON_CRYSTALS.end())
             {
                 LOG_ERROR("Duplicate DEMON_CRYSTALS key encountered\n");
-                success = false;
+                return false;
             }
             else
             {
@@ -511,31 +528,26 @@ bool ServerConstants::Initialize(const String& filePath)
                     {
                         LOG_ERROR("Failed to load an element in"
                             " DEMON_CRYSTALS\n");
-                        break;
+                        return false;
                     }
                 }
-            }
-
-            if(!success)
-            {
-                break;
             }
         }
     }
     else
     {
         LOG_ERROR("DEMON_CRYSTALS not found\n");
-        success = false;
+        return false;
     }
 
     complexIter = complexConstants.find("DEMON_FUSION_SKILLS");
-    if(success && complexIter != complexConstants.end())
+    if(complexIter != complexConstants.end())
     {
         std::list<String> strList;
         if(!LoadStringList(complexIter->second, strList))
         {
             LOG_ERROR("Failed to load DEMON_FUSION_SKILLS\n");
-            success = false;
+            return false;
         }
         else
         {
@@ -543,7 +555,7 @@ bool ServerConstants::Initialize(const String& filePath)
             {
                 LOG_ERROR("DEMON_FUSION_SKILLS must specify all 21"
                     " inheritance type skill mappings\n");
-                success = false;
+                return false;
             }
             else
             {
@@ -555,8 +567,7 @@ bool ServerConstants::Initialize(const String& filePath)
                     {
                         LOG_ERROR("DEMON_FUSION_SKILLS element encountered"
                             " with level count other than 3\n");
-                        success = false;
-                        break;
+                        return false;
                     }
 
                     size_t subIdx = 0;
@@ -573,17 +584,17 @@ bool ServerConstants::Initialize(const String& filePath)
     else
     {
         LOG_ERROR("DEMON_FUSION_SKILLS not found\n");
-        success = false;
+        return false;
     }
 
     complexIter = complexConstants.find("DEMON_QUEST_XP");
-    if(success && complexIter != complexConstants.end())
+    if(complexIter != complexConstants.end())
     {
         std::list<String> strList;
         if(!LoadStringList(complexIter->second, strList))
         {
             LOG_ERROR("Failed to load DEMON_QUEST_XP\n");
-            success = false;
+            return false;
         }
         else
         {
@@ -598,8 +609,7 @@ bool ServerConstants::Initialize(const String& filePath)
                 {
                     LOG_ERROR("Failed to load an entry in"
                         " DEMON_QUEST_XP\n");
-                    success = false;
-                    break;
+                    return false;
                 }
             }
         }
@@ -607,143 +617,161 @@ bool ServerConstants::Initialize(const String& filePath)
     else
     {
         LOG_ERROR("DEMON_QUEST_XP not found\n");
-        success = false;
+        return false;
     }
 
     complexIter = complexConstants.find("DEPO_MAP_DEMON");
-    if(success && complexIter != complexConstants.end())
+    if(complexIter != complexConstants.end())
     {
         std::unordered_map<std::string, std::string> map;
-        success = LoadKeyValueStrings(complexIter->second, map) &&
-            LoadIntegerMap(map, sConstants.DEPO_MAP_DEMON);
+        if(!LoadKeyValueStrings(complexIter->second, map) ||
+            !LoadIntegerMap(map, sConstants.DEPO_MAP_DEMON))
+        {
+            LOG_ERROR("Failed to load DEPO_MAP_DEMON\n");
+            return false;
+        }
     }
     else
     {
         LOG_ERROR("DEPO_MAP_DEMON not found\n");
-        success = false;
+        return false;
     }
 
     complexIter = complexConstants.find("DEPO_MAP_ITEM");
-    if(success && complexIter != complexConstants.end())
+    if(complexIter != complexConstants.end())
     {
         std::unordered_map<std::string, std::string> map;
-        success = LoadKeyValueStrings(complexIter->second, map) &&
-            LoadIntegerMap(map, sConstants.DEPO_MAP_ITEM);
+        if(!LoadKeyValueStrings(complexIter->second, map) ||
+            !LoadIntegerMap(map, sConstants.DEPO_MAP_ITEM))
+        {
+            LOG_ERROR("Failed to load DEPO_MAP_ITEM\n");
+            return false;
+        }
     }
     else
     {
         LOG_ERROR("DEPO_MAP_ITEM not found\n");
-        success = false;
+        return false;
     }
 
     complexIter = complexConstants.find("EQUIP_MOD_EDIT_ITEMS");
-    if(success && complexIter != complexConstants.end())
+    if(complexIter != complexConstants.end())
     {
         std::unordered_map<std::string, std::string> map;
-        success = LoadKeyValueStrings(complexIter->second, map);
+        if(!LoadKeyValueStrings(complexIter->second, map))
+        {
+            LOG_ERROR("Failed to load EQUIP_MOD_EDIT_ITEMS\n");
+            return false;
+        }
+
         for(auto pair : map)
         {
             uint32_t key;
             if(!LoadInteger(pair.first, key))
             {
                 LOG_ERROR("Failed to load EQUIP_MOD_EDIT_ITEMS key\n");
-                success = false;
+                return false;
             }
             else if(sConstants.EQUIP_MOD_EDIT_ITEMS.find(key) !=
                 sConstants.EQUIP_MOD_EDIT_ITEMS.end())
             {
                 LOG_ERROR("Duplicate EQUIP_MOD_EDIT_ITEMS key encountered\n");
-                success = false;
+                return false;
             }
-            else
+            else if(!ToIntegerArray(sConstants.EQUIP_MOD_EDIT_ITEMS[key],
+                    libcomp::String(pair.second).Split(",")))
             {
-                success &= ToIntegerArray(sConstants.EQUIP_MOD_EDIT_ITEMS[key],
-                    libcomp::String(pair.second).Split(","));
-            }
-
-            if(!success)
-            {
-                break;
+                LOG_ERROR("Failed to load an element in EQUIP_MOD_EDIT_ITEMS\n");
+                return false;
             }
         }
     }
     else
     {
         LOG_ERROR("EQUIP_MOD_EDIT_ITEMS not found\n");
-        success = false;
+        return false;
     }
 
     complexIter = complexConstants.find("FUSION_BOOST_SKILLS");
-    if(success && complexIter != complexConstants.end())
+    if(complexIter != complexConstants.end())
     {
         std::unordered_map<std::string, std::string> map;
-        success = LoadKeyValueStrings(complexIter->second, map);
+        if(!LoadKeyValueStrings(complexIter->second, map))
+        {
+            LOG_ERROR("Failed to load FUSION_BOOST_SKILLS\n");
+            return false;
+        }
+
         for(auto pair : map)
         {
             uint32_t key;
             if(!LoadInteger(pair.first, key))
             {
                 LOG_ERROR("Failed to load FUSION_BOOST_SKILLS key\n");
-                success = false;
+                return false;
             }
             else if(sConstants.FUSION_BOOST_SKILLS.find(key) !=
                 sConstants.FUSION_BOOST_SKILLS.end())
             {
                 LOG_ERROR("Duplicate FUSION_BOOST_SKILLS key encountered\n");
-                success = false;
+                return false;
             }
-            else
+            else if(!ToIntegerArray(sConstants.FUSION_BOOST_SKILLS[key],
+                    libcomp::String(pair.second).Split(",")))
             {
-                success &= ToIntegerArray(sConstants.FUSION_BOOST_SKILLS[key],
-                    libcomp::String(pair.second).Split(","));
-            }
-
-            if(!success)
-            {
-                break;
+                LOG_ERROR("Failed to load an element in FUSION_BOOST_SKILLS\n");
+                return false;
             }
         }
     }
     else
     {
         LOG_ERROR("FUSION_BOOST_SKILLS not found\n");
-        success = false;
+        return false;
     }
 
     complexIter = complexConstants.find("FUSION_BOOST_STATUSES");
-    if(success && complexIter != complexConstants.end())
+    if(complexIter != complexConstants.end())
     {
         std::unordered_map<std::string, std::string> map;
-        success = LoadKeyValueStrings(complexIter->second, map) &&
-            LoadIntegerMap(map, sConstants.FUSION_BOOST_STATUSES);
+        if(!LoadKeyValueStrings(complexIter->second, map) ||
+            !LoadIntegerMap(map, sConstants.FUSION_BOOST_STATUSES))
+        {
+            LOG_ERROR("Failed to load FUSION_BOOST_STATUSES\n");
+            return false;
+        }
     }
     else
     {
         LOG_ERROR("FUSION_BOOST_STATUSES not found\n");
-        success = false;
+        return false;
     }
 
     complexIter = complexConstants.find("QUEST_BONUS");
-    if(success && complexIter != complexConstants.end())
+    if(complexIter != complexConstants.end())
     {
         std::unordered_map<std::string, std::string> map;
-        success = LoadKeyValueStrings(complexIter->second, map) &&
-            LoadIntegerMap(map, sConstants.QUEST_BONUS);
+        if(!LoadKeyValueStrings(complexIter->second, map) ||
+            !LoadIntegerMap(map, sConstants.QUEST_BONUS))
+        {
+            LOG_ERROR("Failed to load QUEST_BONUS\n");
+            return false;
+        }
     }
     else
     {
         LOG_ERROR("QUEST_BONUS not found\n");
-        success = false;
+        return false;
     }
 
     complexIter = complexConstants.find("RATE_SCALING_ITEMS");
-    if(success && complexIter != complexConstants.end())
+    if(complexIter != complexConstants.end())
     {
         std::list<String> strList;
         if(!LoadStringList(complexIter->second, strList))
         {
             LOG_ERROR("Failed to load RATE_SCALING_ITEMS\n");
-            success = false;
+            return false;
         }
         else
         {
@@ -751,7 +779,7 @@ bool ServerConstants::Initialize(const String& filePath)
             {
                 LOG_ERROR("RATE_SCALING_ITEMS must specify items for each"
                     " of the 4 types\n");
-                success = false;
+                return false;
             }
             else
             {
@@ -770,7 +798,7 @@ bool ServerConstants::Initialize(const String& filePath)
                         {
                             LOG_ERROR("Failed to load an element in"
                                 " RATE_SCALING_ITEMS\n");
-                            break;
+                            return false;
                         }
                     }
 
@@ -782,98 +810,100 @@ bool ServerConstants::Initialize(const String& filePath)
     else
     {
         LOG_ERROR("RATE_SCALING_ITEMS not found\n");
-        success = false;
+        return false;
     }
 
     complexIter = complexConstants.find("SPIRIT_FUSION_BOOST");
-    if(success && complexIter != complexConstants.end())
+    if(complexIter != complexConstants.end())
     {
         std::unordered_map<std::string, std::string> map;
-        success = LoadKeyValueStrings(complexIter->second, map);
+        if(!LoadKeyValueStrings(complexIter->second, map))
+        {
+            LOG_ERROR("Failed to load SPIRIT_FUSION_BOOST\n");
+            return false;
+        }
+
         for(auto pair : map)
         {
             uint32_t key;
             if(!LoadInteger(pair.first, key))
             {
                 LOG_ERROR("Failed to load SPIRIT_FUSION_BOOST key\n");
-                success = false;
+                return false;
             }
             else if(sConstants.SPIRIT_FUSION_BOOST.find(key) !=
                 sConstants.SPIRIT_FUSION_BOOST.end())
             {
                 LOG_ERROR("Duplicate SPIRIT_FUSION_BOOST key encountered\n");
-                success = false;
+                return false;
             }
-            else
+            else if(!ToIntegerArray(sConstants.SPIRIT_FUSION_BOOST[key],
+                    libcomp::String(pair.second).Split(",")))
             {
-                success &= ToIntegerArray(sConstants.SPIRIT_FUSION_BOOST[key],
-                    libcomp::String(pair.second).Split(","));
-            }
-
-            if(!success)
-            {
-                break;
+                LOG_ERROR("Failed to load an element in SPIRIT_FUSION_BOOST\n");
+                return false;
             }
         }
     }
     else
     {
         LOG_ERROR("SPIRIT_FUSION_BOOST not found\n");
-        success = false;
+        return false;
     }
 
     complexIter = complexConstants.find("SYNTH_ADJUSTMENTS");
-    if(success && complexIter != complexConstants.end())
+    if(complexIter != complexConstants.end())
     {
         std::unordered_map<std::string, std::string> map;
-        success = LoadKeyValueStrings(complexIter->second, map);
+        if(!LoadKeyValueStrings(complexIter->second, map))
+        {
+            LOG_ERROR("Failed to load SYNTH_ADJUSTMENTS\n");
+            return false;
+        }
+
         for(auto pair : map)
         {
             uint32_t key;
             if(!LoadInteger(pair.first, key))
             {
                 LOG_ERROR("Failed to load SYNTH_ADJUSTMENTS key\n");
-                success = false;
+                return false;
             }
             else if(sConstants.SYNTH_ADJUSTMENTS.find(key) !=
                 sConstants.SYNTH_ADJUSTMENTS.end())
             {
                 LOG_ERROR("Duplicate SYNTH_ADJUSTMENTS key encountered\n");
-                success = false;
+                return false;
             }
-            else
+            else if(!ToIntegerArray(sConstants.SYNTH_ADJUSTMENTS[key],
+                    libcomp::String(pair.second).Split(",")))
             {
-                success &= ToIntegerArray(sConstants.SYNTH_ADJUSTMENTS[key],
-                    libcomp::String(pair.second).Split(","));
-            }
-
-            if(!success)
-            {
-                break;
+                LOG_ERROR("Failed to load an element in SYNTH_ADJUSTMENTS\n");
+                return false;
             }
         }
     }
     else
     {
         LOG_ERROR("SYNTH_ADJUSTMENTS not found\n");
-        success = false;
+        return false;
     }
     
     complexIter = complexConstants.find("SYNTH_SKILLS");
-    if(success && complexIter != complexConstants.end())
+    if(complexIter != complexConstants.end())
     {
         std::list<String> strList;
         if(!LoadStringList(complexIter->second, strList))
         {
             LOG_ERROR("Failed to load SYNTH_SKILLS\n");
-            success = false;
+            return false;
         }
         else
         {
             if(strList.size() != 5)
             {
                 LOG_ERROR("SYNTH_SKILLS must specify all five skill IDs\n");
-                success = false;
+                return false;
             }
             else
             {
@@ -889,8 +919,7 @@ bool ServerConstants::Initialize(const String& filePath)
                     {
                         LOG_ERROR("Failed to load a skill ID in"
                             " SLOT_MOD_ITEMS\n");
-                        success = false;
-                        break;
+                        return false;
                     }
 
                     idx++;
@@ -901,21 +930,26 @@ bool ServerConstants::Initialize(const String& filePath)
     else
     {
         LOG_ERROR("SYNTH_SKILLS not found\n");
-        success = false;
+        return false;
     }
 
     complexIter = complexConstants.find("TRIFUSION_SPECIAL_DARK");
-    if(success && complexIter != complexConstants.end())
+    if(complexIter != complexConstants.end())
     {
         std::unordered_map<std::string, std::string> map;
-        success = LoadKeyValueStrings(complexIter->second, map);
+        if(!LoadKeyValueStrings(complexIter->second, map))
+        {
+            LOG_ERROR("Failed to load TRIFUSION_SPECIAL_DARK\n");
+            return false;
+        }
+
         for(auto pair : map)
         {
             uint8_t key;
             if(!LoadInteger(pair.first, key))
             {
                 LOG_ERROR("Failed to load TRIFUSION_SPECIAL_DARK key\n");
-                success = false;
+                return false;
             }
             else
             {
@@ -929,14 +963,8 @@ bool ServerConstants::Initialize(const String& filePath)
                 {
                     LOG_ERROR("Failed to load an element in"
                         " TRIFUSION_SPECIAL_DARK\n");
-                    success = false;
-                    break;
+                    return false;
                 }
-            }
-
-            if(!success)
-            {
-                break;
             }
         }
 
@@ -950,17 +978,17 @@ bool ServerConstants::Initialize(const String& filePath)
     else
     {
         LOG_ERROR("TRIFUSION_SPECIAL_DARK not found\n");
-        success = false;
+        return false;
     }
 
     complexIter = complexConstants.find("TRIFUSION_SPECIAL_ELEMENTAL");
-    if(success && complexIter != complexConstants.end())
+    if(complexIter != complexConstants.end())
     {
         std::list<String> strList;
         if(!LoadStringList(complexIter->second, strList))
         {
             LOG_ERROR("Failed to load TRIFUSION_SPECIAL_ELEMENTAL\n");
-            success = false;
+            return false;
         }
         else
         {
@@ -968,16 +996,21 @@ bool ServerConstants::Initialize(const String& filePath)
             {
                 LOG_ERROR("TRIFUSION_SPECIAL_ELEMENTAL must specify all 6"
                     " two elemental combinations\n");
-                success = false;
+                return false;
             }
             else
             {
                 size_t idx = 0;
                 for(auto elem : strList)
                 {
-                    success &= ToIntegerArray(
+                    if(!ToIntegerArray(
                         sConstants.TRIFUSION_SPECIAL_ELEMENTAL[idx++],
-                        elem.Split(","));
+                        elem.Split(",")))
+                    {
+                        LOG_ERROR("Failed to load an element in"
+                            " TRIFUSION_SPECIAL_ELEMENTAL\n");
+                        return false;
+                    }
                 }
             }
         }
@@ -985,17 +1018,17 @@ bool ServerConstants::Initialize(const String& filePath)
     else
     {
         LOG_ERROR("TRIFUSION_SPECIAL_ELEMENTAL not found\n");
-        success = false;
+        return false;
     }
 
     complexIter = complexConstants.find("VA_ADD_ITEM");
-    if(success && complexIter != complexConstants.end())
+    if(complexIter != complexConstants.end())
     {
         std::list<String> strList;
         if(!LoadStringList(complexIter->second, strList))
         {
             LOG_ERROR("Failed to load VA_ADD_ITEM\n");
-            success = false;
+            return false;
         }
         else
         {
@@ -1010,8 +1043,7 @@ bool ServerConstants::Initialize(const String& filePath)
                 {
                     LOG_ERROR("Failed to load an element in"
                         " VA_ADD_ITEM\n");
-                    success = false;
-                    break;
+                    return false;
                 }
             }
         }
@@ -1019,7 +1051,7 @@ bool ServerConstants::Initialize(const String& filePath)
     else
     {
         LOG_ERROR("VA_ADD_ITEM not found\n");
-        success = false;
+        return false;
     }
 
     return success;

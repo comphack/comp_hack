@@ -127,6 +127,43 @@ void SendClientReadyData(std::shared_ptr<ChannelServer> server,
         float yCoord = character->GetLogoutY();
         float rotation = character->GetLogoutRotation();
 
+        // Make sure the player can start in the zone
+        if(zoneID != 0)
+        {
+            auto zoneData = serverDataManager->GetZoneData(zoneID, 0);
+            if(!zoneData)
+            {
+                // Can't discern any information about the logout zone
+                zoneID = 0;
+            }
+            else if(!zoneData->GetGlobal())
+            {
+                // Determine which public zone to go to instead, defaulting
+                // to the lobby matching the group ID
+                uint32_t publicID = zoneData->GetGroupID();
+                if(!publicID && character->GetPreviousZone())
+                {
+                    // If there is no group for the zone, return to
+                    // the previous public zone
+                    publicID = character->GetPreviousZone();
+                }
+
+                auto publicData = serverDataManager->GetZoneData(publicID, 0);
+                if(publicData && publicData->GetGlobal())
+                {
+                    zoneID = publicData->GetID();
+                    xCoord = publicData->GetStartingX();
+                    yCoord = publicData->GetStartingY();
+                    rotation = publicData->GetStartingRotation();
+                }
+                else
+                {
+                    // Correct it further down
+                    zoneID = 0;
+                }
+            }
+        }
+
         // Default to homepoint second
         if(zoneID == 0)
         {
@@ -137,22 +174,6 @@ void SendClientReadyData(std::shared_ptr<ChannelServer> server,
             {
                 zoneManager->GetSpotPosition(zoneData->GetDynamicMapID(),
                     character->GetHomepointSpotID(), xCoord, yCoord, rotation);
-            }
-        }
-
-        // Make sure the player can start in the zone
-        if(zoneID != 0)
-        {
-            auto zoneData = serverDataManager->GetZoneData(zoneID, 0);
-            auto zoneLobbyData = zoneData && !zoneData->GetGlobal()
-                ? serverDataManager->GetZoneData(zoneData->GetGroupID(), 0)
-                : nullptr;
-            if(zoneLobbyData)
-            {
-                zoneID = zoneLobbyData->GetID();
-                xCoord = zoneLobbyData->GetStartingX();
-                yCoord = zoneLobbyData->GetStartingY();
-                rotation = zoneLobbyData->GetStartingRotation();
             }
         }
 

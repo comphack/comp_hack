@@ -3798,7 +3798,8 @@ std::set<uint32_t> SkillManager::HandleStatusEffects(const std::shared_ptr<
         }
     }
 
-    auto sourceCalc = GetCalculatedState(source, pSkill, false, target.EntityState);
+    auto eState = target.EntityState;
+    auto sourceCalc = GetCalculatedState(source, pSkill, false, eState);
 
     // If a knockback occurred, add bonus knockback status effects from tokusei
     if((target.Flags1 & FLAG1_KNOCKBACK) != 0)
@@ -3822,7 +3823,7 @@ std::set<uint32_t> SkillManager::HandleStatusEffects(const std::shared_ptr<
         return cancelOnKill;
     }
 
-    auto targetCalc = GetCalculatedState(target.EntityState, pSkill, true, source);
+    auto targetCalc = GetCalculatedState(eState, pSkill, true, source);
 
     auto server = mServer.lock();
     auto definitionManager = server->GetDefinitionManager();
@@ -3833,7 +3834,7 @@ std::set<uint32_t> SkillManager::HandleStatusEffects(const std::shared_ptr<
 
     auto statusAdjusts = tokuseiManager->GetAspectMap(source,
         TokuseiAspectType::STATUS_INFLICT_ADJUST, sourceCalc);
-    auto statusNulls = tokuseiManager->GetAspectMap(target.EntityState,
+    auto statusNulls = tokuseiManager->GetAspectMap(eState,
         TokuseiAspectType::STATUS_NULL, targetCalc);
 
     for(auto statusPair : addStatusMap)
@@ -3842,49 +3843,52 @@ std::set<uint32_t> SkillManager::HandleStatusEffects(const std::shared_ptr<
 
         auto addStatus = addStatusDefs[effectID];
 
-        // The effect can only be nullified if it could potentially add
-        // an effect (don't null removes)
-        bool canNull = !addStatus || addStatus->GetMinStack() != 0 ||
-            addStatus->GetMaxStack() != 0;
-
-        if(canNull &&
-            statusNulls.find((int32_t)effectID) != statusNulls.end())
-        {
-            continue;
-        }
+        bool isRemove = addStatus && addStatus->GetMinStack() == 0 &&
+            addStatus->GetMaxStack() == 0;
 
         auto statusDef = definitionManager->GetStatusData(effectID);
         if(!statusDef) continue;
 
-        // If its application logic type 1, it cannot be applied if
-        // it is already active (ex: sleep)
-        if(statusDef->GetBasic()->GetApplicationLogic() == 1 &&
-            target.EntityState->StatusEffectActive(effectID))
-        {
-            continue;
-        }
-
         uint8_t affinity = statusDef->GetCommon()->GetAffinity();
-        if(canNull && nraStatusNull)
+
+        // Determine if the effect can be added
+        if(!isRemove)
         {
-            // Optional server setting to nullify status effects with
-            // an affinity type that the target could potentially NRA
-            // (this does not take NRA shields into account since nothing
-            // is "consumed" by this)
-            CorrectTbl nraType = (CorrectTbl)(affinity + NRA_OFFSET);
-            if(target.EntityState->GetNRAChance(0, nraType, targetCalc) > 0 ||
-                target.EntityState->GetNRAChance(1, nraType, targetCalc) > 0 ||
-                target.EntityState->GetNRAChance(2, nraType, targetCalc) > 0)
+            // If its application logic type 1, it cannot be applied if
+            // it is already active (ex: sleep)
+            if(statusDef->GetBasic()->GetApplicationLogic() == 1 &&
+                eState->StatusEffectActive(effectID))
             {
                 continue;
             }
+
+            // Determine if the effect should be nullified
+            if(statusNulls.find((int32_t)effectID) != statusNulls.end())
+            {
+                continue;
+            }
+
+            if(nraStatusNull)
+            {
+                // Optional server setting to nullify status effects with
+                // an affinity type that the target could potentially NRA
+                // (this does not take NRA shields into account since nothing
+                // is "consumed" by this)
+                CorrectTbl nraType = (CorrectTbl)(affinity + NRA_OFFSET);
+                if(eState->GetNRAChance(0, nraType, targetCalc) > 0 ||
+                    eState->GetNRAChance(1, nraType, targetCalc) > 0 ||
+                    eState->GetNRAChance(2, nraType, targetCalc) > 0)
+                {
+                    continue;
+                }
+            }
         }
+
+        // Effect can be added (or removed), determine success rate
+        double successRate = statusPair.second;
 
         uint8_t statusCategory = statusDef->GetCommon()->GetCategory()
             ->GetMainCategory();
-
-        double successRate = statusPair.second;
-                
         if(statusAdjusts.size() > 0)
         {
             // Boost success by direct inflict adjust

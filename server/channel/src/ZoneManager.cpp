@@ -3478,18 +3478,21 @@ void ZoneManager::EndInstanceTimer(
                         (size_t)(trialID - 1));
 
                     bool newBest = previousTime == 0;
+                    bool firstA = previousTime == 0 && result == 1;
                     if(previousTime && previousTime > timeResult)
                     {
                         newBest = true;
 
                         // If the previous best time was not an A-rank and the
                         // new one is, set first A-rank
-                        if(previousTime > instVariant->GetTimePoints(3) &&
-                            result == 1)
-                        {
-                            result = (int8_t)objects::CharacterProgress::
-                                TimeTrialResult_t::A_RANK_FIRST;
-                        }
+                        firstA = previousTime > instVariant->GetTimePoints(3) &&
+                            result == 1;
+                    }
+
+                    if(firstA)
+                    {
+                        result = (int8_t)objects::CharacterProgress::
+                            TimeTrialResult_t::A_RANK_FIRST;
                     }
 
                     progress->SetTimeTrialResult(

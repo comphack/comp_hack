@@ -1345,10 +1345,28 @@ bool EventManager::EvaluateCondition(EventContext& ctx,
                 EVENT_COMPARE_NUMERIC);
         }
     case objects::EventConditionData::Type_t::SI_EQUIPPED:
+        if(!client || (compareMode != EventCompareMode::EQUAL &&
+            compareMode != EventCompareMode::DEFAULT_COMPARE))
         {
-            LOG_ERROR("Currently unsupported SI_EQUIPPED condition encountered"
-                " in EvaluateCondition\n");
             return false;
+        }
+        else
+        {
+            // Character has at least one spirit fused item equipped
+            auto character = client->GetClientState()->GetCharacterState()->GetEntity();
+
+            bool equipped = false;
+            for(auto equipRef : character->GetEquippedItems())
+            {
+                auto equip = equipRef.Get();
+                if(equip && (equip->GetBasicEffect() || equip->GetSpecialEffect()))
+                {
+                    equipped = true;
+                    break;
+                }
+            }
+
+            return equipped;
         }
     case objects::EventConditionData::Type_t::SUMMONED:
         if(!client)
@@ -1622,7 +1640,7 @@ bool EventManager::EvaluateCondition(EventContext& ctx,
         else
         {
             // Inventory slots free compares to [value 1] (and [value 2])
-            // (does not acocunt for stacks that can be added to)
+            // (does not account for stacks that can be added to)
             auto character = client->GetClientState()->GetCharacterState()->GetEntity();
             auto inventory = character->GetItemBoxes(0);
 

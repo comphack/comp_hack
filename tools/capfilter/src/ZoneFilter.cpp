@@ -876,16 +876,16 @@ bool ZoneFilter::ProcessEventCommands(const libcomp::String& capturePath,
             instance->lastTrigger = instance->secondLastTrigger = nullptr;
 
             auto messageID = packet.ReadS32Little();
-            auto effect1 = packet.ReadS8();
+            auto effectType = packet.ReadS8();
 
-            bool effect2Set = packet.Left() > 0 ? packet.ReadS8() == 1 : false;
-            auto effect2 = (packet.Left() > 3 && effect2Set) ? packet.ReadS32() : 0;
+            bool valueSet = packet.Left() > 0 ? packet.ReadS8() == 1 : false;
+            int32_t messageValue = (packet.Left() > 3 && valueSet) ? packet.ReadS32() : 0;
 
             auto effect = std::make_shared<objects::ActionStageEffect>();
 
             effect->SetMessageID(messageID);
-            effect->SetEffect1(effect1);
-            effect->SetEffect2(effect2);
+            effect->SetEffectType(effectType);
+            effect->SetMessageValue(messageValue);
 
             actions.push_back(effect);
         }
@@ -2597,8 +2597,8 @@ bool ZoneFilter::MergeEventPerformActions(std::shared_ptr<MappedEvent> e1,
                 auto ac2 = std::dynamic_pointer_cast<objects::ActionStageEffect>(a2);
 
                 if(ac1->GetMessageID() != ac2->GetMessageID() ||
-                    ac1->GetEffect1() != ac2->GetEffect1() ||
-                    ac1->GetEffect2() != ac2->GetEffect2())
+                    ac1->GetEffectType() != ac2->GetEffectType() ||
+                    ac1->GetMessageValue() != ac2->GetMessageValue())
                 {
                     return false;
                 }

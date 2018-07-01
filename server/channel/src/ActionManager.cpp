@@ -1288,13 +1288,13 @@ bool ActionManager::StageEffect(ActionContext& ctx)
     libcomp::Packet p;
     p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_EVENT_STAGE_EFFECT);
     p.WriteS32Little(act->GetMessageID());
-    p.WriteS8(act->GetEffect1());
+    p.WriteS8(act->GetEffectType());
 
-    bool effect2Set = act->GetEffect2() != 0;
-    p.WriteS8(effect2Set ? 1 : 0);
-    if(effect2Set)
+    bool valueSet = act->GetMessageValue() != 0;
+    p.WriteS8(valueSet ? 1 : 0);
+    if(valueSet)
     {
-        p.WriteS32Little(act->GetEffect2());
+        p.WriteS32Little(act->GetMessageValue());
     }
 
     ctx.Client->QueuePacket(p);
@@ -1472,17 +1472,17 @@ bool ActionManager::SetNPCState(ActionContext& ctx)
                 zoneManager->UpdateGeometryElement(ctx.CurrentZone, oNPC);
             }
 
-            if(from == 255)
+            if(act->GetState() == 255)
+            {
+                zoneManager->RemoveEntities(clients,
+                    { oNPCState->GetEntityID() });
+            }
+            else if(from == 255)
             {
                 auto objState = std::dynamic_pointer_cast<ServerObjectState>(
                     oNPCState);
                 zoneManager->ShowObject(ctx.CurrentZone, clients, objState,
                     false);
-            }
-            else if(act->GetState() == 255)
-            {
-                zoneManager->RemoveEntities(clients,
-                    { npcState->GetEntityID() });
             }
             else
             {
@@ -1677,13 +1677,22 @@ bool ActionManager::UpdateZoneFlags(ActionContext& ctx)
     {
     case objects::ActionUpdateZoneFlags::Type_t::ZONE_CHARACTER:
     case objects::ActionUpdateZoneFlags::Type_t::ZONE_INSTANCE_CHARACTER:
-        worldCID = ctx.Client->GetClientState()->GetWorldCID();
+        if(ctx.Client)
+        {
+            worldCID = ctx.Client->GetClientState()->GetWorldCID();
+        }
+        else
+        {
+            LOG_ERROR("Attempted to update a zone character flag with"
+                " no associated client!\n");
+            return false;
+        }
         break;
     default:
         break;
     }
 
-    switch (act->GetType())
+    switch(act->GetType())
     {
     case objects::ActionUpdateZoneFlags::Type_t::ZONE:
     case objects::ActionUpdateZoneFlags::Type_t::ZONE_CHARACTER:

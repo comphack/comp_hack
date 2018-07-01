@@ -475,6 +475,39 @@ bool MainWindow::LoadMapFromZone(QString path)
         ui.comboBox_SpawnEdit->addItem(libcomp::String("%1").Arg(pair.first).C());
     }
 
+    // Convert spot IDs
+    for(auto npc : mZone.GetNPCs())
+    {
+        if(npc->GetSpotID())
+        {
+            float x = npc->GetX();
+            float y = npc->GetY();
+            float rot = npc->GetRotation();
+            if(GetSpotPosition(mZone.GetDynamicMapID(), npc->GetSpotID(), x, y, rot))
+            {
+                npc->SetX(x);
+                npc->SetY(y);
+                npc->SetRotation(rot);
+            }
+        }
+    }
+
+    for(auto obj : mZone.GetObjects())
+    {
+        if(obj->GetSpotID())
+        {
+            float x = obj->GetX();
+            float y = obj->GetY();
+            float rot = obj->GetRotation();
+            if(GetSpotPosition(mZone.GetDynamicMapID(), obj->GetSpotID(), x, y, rot))
+            {
+                obj->SetX(x);
+                obj->SetY(y);
+                obj->SetRotation(rot);
+            }
+        }
+    }
+
     BindNPCs();
     BindObjects();
     BindSpawns();
@@ -483,6 +516,29 @@ bool MainWindow::LoadMapFromZone(QString path)
     DrawMap();
 
     return true;
+}
+
+
+bool MainWindow::GetSpotPosition(uint32_t dynamicMapID, uint32_t spotID,
+    float& x, float& y, float& rot) const
+{
+    if (spotID == 0 || dynamicMapID == 0)
+    {
+        return false;
+    }
+
+    auto spots = mDefinitions->GetSpotData(dynamicMapID);
+    auto spotIter = spots.find(spotID);
+    if (spotIter != spots.end())
+    {
+        x = spotIter->second->GetCenterX();
+        y = spotIter->second->GetCenterY();
+        rot = spotIter->second->GetRotation();
+
+        return true;
+    }
+
+    return false;
 }
 
 void MainWindow::BindNPCs()

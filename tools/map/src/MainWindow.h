@@ -80,6 +80,9 @@ protected slots:
 private:
     bool LoadMapFromZone(QString path);
 
+    bool GetSpotPosition(uint32_t dynamicMapID,
+        uint32_t spotID, float& x, float& y, float& rot) const;
+
     void BindNPCs();
     void BindObjects();
     void BindSpawns();

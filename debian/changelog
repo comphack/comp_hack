@@ -1,3 +1,9 @@
+comphack (3.0.0) xenial; urgency=low
+
+  * Lilim server release.
+
+ -- COMP Omega <compomega@tutanota.com>  Sun, 01 Jul 2018 18:11:00 -0600
+
 comphack (2.2.1.7) xenial; urgency=low
 
   * Found a bug in the CMake scripts that was stripping debug symbols.

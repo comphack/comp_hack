@@ -188,16 +188,12 @@ public:
      *  before charging starts.
      * @param mainDemonID Object ID of the demon that is currently summoned
      * @param compDemonID Object ID of the demon that is in the COMP
-     * @param xPos X coordinate where the summoned demon should be moved when
-     *  the skill starts charging
-     * @param yPos Y coordinate where the summoned demon should be moved when
-     *  the skill starts charging
      * @return false if the fusion skill cannot be used for any reason
      */
     bool PrepareFusionSkill(
         const std::shared_ptr<ChannelClientConnection> client,
         uint32_t& skillID, int32_t targetEntityID, int64_t mainDemonID,
-        int64_t compDemonID, float xPos, float yPos);
+        int64_t compDemonID);
 
 private:
     /**
@@ -546,7 +542,6 @@ private:
      * @param pSkill Pointer to the current skill processing state
      * @param mod Base modifier damage value
      * @param damageType Type of damage being dealt
-     * @param affinity Target specific affinity type for the skill
      * @param resist Resistence to the skill affinity
      * @param critLevel Critical level adjustment. Valid values are:
      *  0) No critical adjustment
@@ -558,7 +553,7 @@ private:
     int32_t CalculateDamage_Normal(const std::shared_ptr<ActiveEntityState>& source,
         SkillTargetResult& target, const std::shared_ptr<
         channel::ProcessingSkill>& pSkill, uint16_t mod, uint8_t& damageType,
-        uint8_t affinity, float resist, uint8_t critLevel, bool isHeal);
+        float resist, uint8_t critLevel, bool isHeal);
 
     /**
      * Calculate skill damage or healing based on a static value

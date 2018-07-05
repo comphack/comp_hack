@@ -126,11 +126,17 @@ bool Parsers::SkillActivate::Parse(libcomp::ManagerPacket *pPacketManager,
                 float xPos = p.ReadFloat();
                 float yPos = p.ReadFloat();
 
+                // The supplied x/y positions appear to be nonsense based on
+                // certain zones and positions. The proper position will be
+                // calculated in the prepare function.
+                (void)xPos;
+                (void)yPos;
+
                 // Demon fusion skills are always sent from the client as an
                 // "execution skill" that the server needs to convert based
                 // on the demons involved
                 if(!skillManager->PrepareFusionSkill(client, skillID,
-                    targetEntityID, summonedDemonID, compDemonID, xPos, yPos))
+                    targetEntityID, summonedDemonID, compDemonID))
                 {
                     return true;
                 }

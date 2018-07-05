@@ -54,6 +54,7 @@
 #include <MiSkillItemStatusCommonData.h>
 #include <MiSpecialConditionData.h>
 #include <MiSStatusData.h>
+#include <MiUnionData.h>
 #include <Party.h>
 #include <Tokusei.h>
 #include <TokuseiAttributes.h>
@@ -708,13 +709,14 @@ std::unordered_map<int32_t, bool> TokuseiManager::Recalculate(const std::list<st
             }
         }
 
-        // All characters in the zone (including the source) gain the effect
+        // All party entities in the zone (including the source) gain the effect
         if(state->GetParty())
         {
             for(auto e : entities)
             {
-                if(e->GetEntityType() == EntityType_t::CHARACTER
-                    && e->GetZone() == eState->GetZone())
+                bool partyEntity = e->GetEntityType() == EntityType_t::CHARACTER ||
+                    e->GetEntityType() == EntityType_t::PARTNER_DEMON;
+                if(partyEntity && e->GetZone() == eState->GetZone())
                 {
                     auto& map = newMaps[e->GetEntityID()];
                     for(auto pair : partyEffects[eState->GetEntityID()])
@@ -1247,8 +1249,8 @@ bool TokuseiManager::EvaluateTokuseiCondition(const std::shared_ptr<ActiveEntity
             {
                 auto itemData = mServer.lock()->GetDefinitionManager()->GetItemData(
                     equip->GetType());
-                equipped = itemData && (int32_t)itemData->GetBasic()->GetWeaponType()
-                    == condition->GetValue();
+                equipped = itemData && (int32_t)itemData->GetCommon()
+                    ->GetCategory()->GetSubCategory() == condition->GetValue();
             }
 
             return equipped == (condition->GetComparator() ==
@@ -1271,7 +1273,7 @@ bool TokuseiManager::EvaluateTokuseiCondition(const std::shared_ptr<ActiveEntity
             uint8_t rank = cState->GetExpertiseRank(
                 mServer.lock()->GetDefinitionManager(), (uint32_t)expertiseID);
 
-            return Compare(rankCompare, (int32_t)rank, condition, true);
+            return Compare((int32_t)rank, rankCompare, condition, true);
         }
         break;
     case TokuseiConditionType::LNC:
@@ -1313,6 +1315,7 @@ bool TokuseiManager::EvaluateTokuseiCondition(const std::shared_ptr<ActiveEntity
             EntityType_t::ENEMY;
     case TokuseiConditionType::PARTY_DEMON_TYPE:
         // Entity is in a party with the specified demon type currently summoned
+        // (or matches that demon's base demon type)
         if(numericCompare)
         {
             return false;
@@ -1334,10 +1337,12 @@ bool TokuseiManager::EvaluateTokuseiCondition(const std::shared_ptr<ActiveEntity
                     if(state2)
                     {
                         auto dState2 = state2->GetDemonState();
-                        auto demon = dState2->GetEntity();
-                        if(dState2->GetZone() == zone && demon)
+                        auto devilData = dState2->GetDevilData();
+                        if(dState2->GetZone() == zone && devilData)
                         {
-                            demonIDs.insert(demon->GetType());
+                            demonIDs.insert(devilData->GetBasic()->GetID());
+                            demonIDs.insert(devilData->GetUnionData()
+                                ->GetBaseDemonID());
                         }
                     }
                 }

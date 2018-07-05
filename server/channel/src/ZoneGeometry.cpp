@@ -115,10 +115,10 @@ bool ZoneShape::Collides(const Line& path, Point& point, Line& surface) const
 {
     // If the path is outside of the boundary rectangle and doesn't cross
     // through the max/min boundary points, no collision can exist
-    if((path.first.x < Boundaries[0].x && path.second.x < Boundaries[0].x) ||
-        (path.first.x > Boundaries[1].x && path.second.x > Boundaries[1].x) ||
-        (path.first.y < Boundaries[0].y && path.second.y < Boundaries[0].y) ||
-        (path.first.y > Boundaries[1].y && path.second.y > Boundaries[1].y))
+    if(((path.first.x < Boundaries[0].x && path.second.x < Boundaries[0].x) ||
+        (path.first.x > Boundaries[1].x && path.second.x > Boundaries[1].x)) &&
+        ((path.first.y < Boundaries[0].y && path.second.y < Boundaries[0].y) ||
+        (path.first.y > Boundaries[1].y && path.second.y > Boundaries[1].y)))
     {
         return false;
     }

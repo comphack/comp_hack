@@ -157,8 +157,8 @@ bool Parsers::EquipmentSpiritDefuse::Parse(libcomp::ManagerPacket *pPacketManage
         {
             switch(devilData->GetCategory()->GetRace())
             {
-            case objects::MiDCategoryData::Race_t::YOMA:
             case objects::MiDCategoryData::Race_t::EARTH_ELEMENT:
+            case objects::MiDCategoryData::Race_t::NOCTURNE:
             case objects::MiDCategoryData::Race_t::EARTH_MOTHER:
                 demonBoost = 1.2;
                 break;

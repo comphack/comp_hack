@@ -257,8 +257,8 @@ bool Parsers::EquipmentSpiritFuse::Parse(libcomp::ManagerPacket *pPacketManager,
         {
             switch(devilData->GetCategory()->GetRace())
             {
-            case objects::MiDCategoryData::Race_t::YOMA:
             case objects::MiDCategoryData::Race_t::EARTH_ELEMENT:
+            case objects::MiDCategoryData::Race_t::NOCTURNE:
             case objects::MiDCategoryData::Race_t::EARTH_MOTHER:
                 demonBoost = 1.2;
                 break;
@@ -343,9 +343,20 @@ bool Parsers::EquipmentSpiritFuse::Parse(libcomp::ManagerPacket *pPacketManager,
         auto fuseBonusesCurrent = mainItem->GetFuseBonuses();
         auto modSlotsCurrent = mainItem->GetModSlots();
 
-        mainItem->SetBasicEffect(basicItem->GetType());
-        mainItem->SetSpecialEffect(specialItem->GetType());
-        mainItem->SetModSlots(basicItem->GetModSlots());
+        if(basicItem != mainItem)
+        {
+            uint32_t effect = basicItem->GetBasicEffect();
+            mainItem->SetBasicEffect(effect ? effect
+                : basicItem->GetType());
+            mainItem->SetModSlots(basicItem->GetModSlots());
+        }
+
+        if(specialItem != mainItem)
+        {
+            uint32_t effect = specialItem->GetSpecialEffect();
+            mainItem->SetSpecialEffect(effect ? effect
+                : specialItem->GetType());
+        }
 
         std::set<std::shared_ptr<objects::Item>> fusionItems;
         fusionItems.insert(mainItem);

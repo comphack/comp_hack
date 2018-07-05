@@ -824,6 +824,14 @@ private:
     bool RemoveInstance(uint32_t instanceID);
 
     /**
+     * Determine if the server object supplied is in a state that would
+     * disabled geometry collision.
+     * @param obj Pointer to a server object
+     * @return true if the object is in a collision disabled state
+     */
+    bool IsGeometryDisabled(const std::shared_ptr<objects::ServerObject>& obj);
+
+    /**
      * Register time restricted actions for a zone with the manager
      * such as time conditional spawn groups or plasma. Times registered
      * with the manager are also registered with the server.

@@ -127,7 +127,7 @@ bool Parsers::Move::Parse(libcomp::ManagerPacket *pPacketManager,
 
                 // Monitor for ne'er-do-wells
                 LOG_DEBUG(libcomp::String("Player movement corrected: %1"
-                    " (%2, %2)\n").Arg(state->GetAccountUID().ToString())
+                    " (%2, %3)\n").Arg(state->GetAccountUID().ToString())
                     .Arg(destX).Arg(destY));
             }
         }
@@ -144,7 +144,7 @@ bool Parsers::Move::Parse(libcomp::ManagerPacket *pPacketManager,
 
     // Calculate rotation from origin and destination
     float originRot = eState->GetCurrentRotation();
-    float destRot = (float)atan2(originY - destY, originX - destX);
+    float destRot = (float)atan2(destY - originY, destX - originX);
     eState->SetOriginRotation(originRot);
     eState->SetDestinationRotation(destRot);
 

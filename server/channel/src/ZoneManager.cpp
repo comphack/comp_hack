@@ -790,6 +790,8 @@ void ZoneManager::LeaveZone(const std::shared_ptr<ChannelClientConnection>& clie
     {
         // Not entering another zone, recalculate tokusei for
         // remaining party member effects
+        TriggerZoneActions(zone, { cState, dState },
+            ZoneTrigger_t::ON_ZONE_OUT, client);
         server->GetTokuseiManager()->RecalculateParty(
             state->GetParty());
     }
@@ -860,10 +862,6 @@ std::shared_ptr<ZoneInstance> ZoneManager::CreateInstance(const std::shared_ptr<
     uint32_t id = mNextZoneInstanceID++;
 
     auto instance = std::make_shared<ZoneInstance>(id, def, accessCIDs);
-    for(int32_t cid : accessCIDs)
-    {
-        mZoneInstanceAccess[cid] = id;
-    }
 
     auto instType = InstanceType_t::NORMAL;
     if(variantID)
@@ -912,6 +910,11 @@ std::shared_ptr<ZoneInstance> ZoneManager::CreateInstance(const std::shared_ptr<
                 " special instance creation: %1\n").Arg(variantID));
             return nullptr;
         }
+    }
+
+    for(int32_t cid : accessCIDs)
+    {
+        mZoneInstanceAccess[cid] = id;
     }
 
     mZoneInstances[id] = instance;
@@ -1692,30 +1695,39 @@ void ZoneManager::HandleDespawns(const std::shared_ptr<Zone>& zone)
     std::list<int32_t> enemyIDs;
 
     std::set<int32_t> despawnEntities = zone->GetDespawnEntities();
-    for(int32_t entityID : despawnEntities)
+    if(despawnEntities.size() > 0)
     {
-        auto eState = zone->GetActiveEntity(entityID);
-        if(eState)
+        auto characterManager = mServer.lock()->GetCharacterManager();
+        for(int32_t entityID : despawnEntities)
         {
-            switch(eState->GetEntityType())
+            auto eState = zone->GetEntity(entityID);
+            if(eState)
             {
-            case EntityType_t::ENEMY:
-                enemyIDs.push_back(entityID);
-                break;
-            case EntityType_t::PLASMA:
-                /// @todo
-                break;
-            default:
-                break;
+                switch(eState->GetEntityType())
+                {
+                case EntityType_t::ENEMY:
+                    enemyIDs.push_back(entityID);
+
+                    // Remove from combat first
+                    characterManager->AddRemoveOpponent(false,
+                        std::dynamic_pointer_cast<EnemyState>(eState),
+                        nullptr);
+                    break;
+                case EntityType_t::PLASMA:
+                    /// @todo
+                    break;
+                default:
+                    break;
+                }
+
+                zone->RemoveEntity(entityID);
             }
-
-            zone->RemoveEntity(entityID);
         }
-    }
 
-    if(enemyIDs.size() > 0)
-    {
-        RemoveEntitiesFromZone(zone, enemyIDs, 7, false);
+        if(enemyIDs.size() > 0)
+        {
+            RemoveEntitiesFromZone(zone, enemyIDs, 7, false);
+        }
     }
 }
 
@@ -3623,7 +3635,7 @@ void ZoneManager::EndInstanceTimer(
                 }
 
                 spGain = mServer.lock()->GetCharacterManager()
-                    ->UpdateSoulPoints(client, spGain, true);
+                    ->UpdateSoulPoints(client, spGain, true, true);
             }
 
             notify.WritePacketCode(
@@ -3730,12 +3742,9 @@ bool ZoneManager::UpdateGeometryElement(const std::shared_ptr<Zone>& zone,
         auto objDef = definitionManager->GetONPCData(elemObject->GetID());
         if(objDef && !objDef->GetBarrierName().IsEmpty())
         {
-            // Two open states and one hidden state
-            bool disabled = elemObject->GetState() == 2 ||
-                elemObject->GetState() == 3 ||
-                elemObject->GetState() == 255;
-            libcomp::String name = objDef->GetBarrierName();
+            bool disabled = IsGeometryDisabled(elemObject);
 
+            libcomp::String name = objDef->GetBarrierName();
             for(auto elem : geometry->Elements)
             {
                 if(elem->GetName() == name)
@@ -4182,6 +4191,12 @@ std::shared_ptr<Zone> ZoneManager::CreateZone(
         state->SetEntityID(server->GetNextEntityID());
         state->SetActions(obj->GetActions());
         zone->AddObject(state);
+
+        // Objects are assumed to be enabled by default so check geometry
+        if(IsGeometryDisabled(copy))
+        {
+            UpdateGeometryElement(zone, copy);
+        }
     }
 
     if(definition->PlasmaSpawnsCount() > 0)
@@ -4410,6 +4425,14 @@ bool ZoneManager::RemoveInstance(uint32_t instanceID)
     }
 
     return true;
+}
+
+bool ZoneManager::IsGeometryDisabled(const std::shared_ptr<
+    objects::ServerObject>& obj)
+{
+    // Two open states and one hidden state
+    return obj->GetState() == 2 || obj->GetState() == 3 ||
+        obj->GetState() == 255;
 }
 
 bool ZoneManager::RegisterTimeRestrictions(const std::shared_ptr<Zone>& zone,

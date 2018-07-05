@@ -1633,7 +1633,7 @@ void ActiveEntityState::RemoveStatusEffects(const std::set<uint32_t>& effectType
                 effectType == SVR_CONST.STATUS_MOUNT_SUPER) &&
                 GetDisplayState() == ActiveDisplayState_t::MOUNT)
             {
-                SetDisplayState(ActiveDisplayState_t::MOUNT);
+                SetDisplayState(ActiveDisplayState_t::ACTIVE);
             }
         }
     }
@@ -2637,6 +2637,77 @@ const std::set<CorrectTbl> BASE_STATS =
         CorrectTbl::LUCK
     };
 
+// The following are all percentage representations that always apply values
+// as a numeric increase or decrease
+const std::set<CorrectTbl> FORCE_NUMERIC =
+    {
+        CorrectTbl::RES_DEFAULT,
+        CorrectTbl::RES_WEAPON,
+        CorrectTbl::RES_SLASH,
+        CorrectTbl::RES_THRUST,
+        CorrectTbl::RES_STRIKE,
+        CorrectTbl::RES_LNGR,
+        CorrectTbl::RES_PIERCE,
+        CorrectTbl::RES_SPREAD,
+        CorrectTbl::RES_FIRE,
+        CorrectTbl::RES_ICE,
+        CorrectTbl::RES_ELEC,
+        CorrectTbl::RES_ALMIGHTY,
+        CorrectTbl::RES_FORCE,
+        CorrectTbl::RES_EXPEL,
+        CorrectTbl::RES_CURSE,
+        CorrectTbl::RES_HEAL,
+        CorrectTbl::RES_SUPPORT,
+        CorrectTbl::RES_MAGICFORCE,
+        CorrectTbl::RES_NERVE,
+        CorrectTbl::RES_MIND,
+        CorrectTbl::RES_WORD,
+        CorrectTbl::RES_SPECIAL,
+        CorrectTbl::RES_SUICIDE,
+        CorrectTbl::RATE_XP,
+        CorrectTbl::RATE_MAG,
+        CorrectTbl::RATE_MACCA,
+        CorrectTbl::RATE_EXPERTISE,
+        CorrectTbl::RATE_CLSR,
+        CorrectTbl::RATE_LNGR,
+        CorrectTbl::RATE_SPELL,
+        CorrectTbl::RATE_SUPPORT,
+        CorrectTbl::RATE_HEAL,
+        CorrectTbl::RATE_CLSR_TAKEN,
+        CorrectTbl::RATE_LNGR_TAKEN,
+        CorrectTbl::RATE_SPELL_TAKEN,
+        CorrectTbl::RATE_SUPPORT_TAKEN,
+        CorrectTbl::RATE_HEAL_TAKEN,
+        CorrectTbl::BOOST_DEFAULT,
+        CorrectTbl::BOOST_WEAPON,
+        CorrectTbl::BOOST_SLASH,
+        CorrectTbl::BOOST_THRUST,
+        CorrectTbl::BOOST_STRIKE,
+        CorrectTbl::BOOST_LNGR,
+        CorrectTbl::BOOST_PIERCE,
+        CorrectTbl::BOOST_SPREAD,
+        CorrectTbl::BOOST_FIRE,
+        CorrectTbl::BOOST_ICE,
+        CorrectTbl::BOOST_ELEC,
+        CorrectTbl::BOOST_ALMIGHTY,
+        CorrectTbl::BOOST_FORCE,
+        CorrectTbl::BOOST_EXPEL,
+        CorrectTbl::BOOST_CURSE,
+        CorrectTbl::BOOST_HEAL,
+        CorrectTbl::BOOST_SUPPORT,
+        CorrectTbl::BOOST_MAGICFORCE,
+        CorrectTbl::BOOST_NERVE,
+        CorrectTbl::BOOST_MIND,
+        CorrectTbl::BOOST_WORD,
+        CorrectTbl::BOOST_SPECIAL,
+        CorrectTbl::BOOST_SUICIDE,
+        CorrectTbl::LB_CHANCE,
+        CorrectTbl::RATE_PC,
+        CorrectTbl::RATE_DEMON,
+        CorrectTbl::RATE_PC_TAKEN,
+        CorrectTbl::RATE_DEMON_TAKEN
+    };
+
 void ActiveEntityState::AdjustStats(
     const std::list<std::shared_ptr<objects::MiCorrectTbl>>& adjustments,
     libcomp::EnumMap<CorrectTbl, int16_t>& stats,
@@ -2672,6 +2743,11 @@ void ActiveEntityState::AdjustStats(
                 effectiveValue = (int32_t)TokuseiManager::CalculateAttributeValue(
                     this, tct->GetValue(), effectiveValue, tct->GetAttributes());
             }
+        }
+
+        if(effectiveType && FORCE_NUMERIC.find(tblID) != FORCE_NUMERIC.end())
+        {
+            effectiveType = 0;
         }
 
         if((uint8_t)tblID >= (uint8_t)CorrectTbl::NRA_WEAPON &&

@@ -87,16 +87,22 @@ bool Parsers::CharacterList::Parse(libcomp::ManagerPacket *pPacketManager,
                     loaded &= equip.IsNull() || equip.Get(worldDB) != nullptr;
                     if(!loaded) break;
                 }
-            }
 
-            if(!loaded)
-            {
-                LOG_ERROR(libcomp::String("Character could not be loaded"
-                    " fully: %1\n").Arg(character->GetUUID().ToString()));
+                if(!loaded)
+                {
+                    // This is not a hard failure, let the channel correct
+                    LOG_ERROR(libcomp::String("One or more equipped items"
+                        " failed to load: %1\n")
+                        .Arg(character->GetUUID().ToString()));
+                }
+
+                characters.insert(character);
             }
             else
             {
-                characters.insert(character);
+                // If stats can't load, we need to exclude the character
+                LOG_ERROR(libcomp::String("Character stats coul not be"
+                    " loaded: %1\n").Arg(character->GetUUID().ToString()));
             }
         }
     }
@@ -204,9 +210,9 @@ bool Parsers::CharacterList::Parse(libcomp::ManagerPacket *pPacketManager,
         // Equipment
         for(size_t i = 0; i < 15; i++)
         {
-            auto equip = character->GetEquippedItems(i);
+            auto equip = character->GetEquippedItems(i).Get();
 
-            if(!equip.IsNull())
+            if(equip)
             {
                 reply.WriteU32Little(equip->GetType());
             }

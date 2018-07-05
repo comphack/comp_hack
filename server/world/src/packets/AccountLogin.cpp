@@ -273,6 +273,7 @@ void ChannelLogin(std::shared_ptr<WorldServer> server,
             lobbyMessage.WritePacketCode(
                 InternalPacketCode_t::PACKET_ACCOUNT_LOGIN);
 
+            lobbyMessage.WriteS8(1);    // Success
             login->SavePacket(lobbyMessage, false);
             lobbyConnection->SendPacket(lobbyMessage);
 

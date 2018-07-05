@@ -2878,7 +2878,7 @@ bool CharacterManager::ReunionDemon(
             {
                 success = false;
             }
-            else if(!isReset && targetRank <= rank)
+            else if(!isReset && targetRank < rank)
             {
                 // If not resetting or changing to a rank already obtained,
                 // the new rank must either be unset (if switching) or one
@@ -2987,6 +2987,7 @@ bool CharacterManager::ReunionDemon(
                 state->GetAccountUID());
 
             cs->SetLevel(1);
+            cs->SetXP(0);
             demon->SetGrowthType(growthType);
             CalculateDemonBaseStats(demon);
 
@@ -3084,14 +3085,20 @@ void CharacterManager::UpdateFamiliarity(const std::shared_ptr<
 
         // Since familiarity rate adjustments cannot be bound to
         // skills, scale all incoming adjustments here
-        auto type = familiarity > 0 ? TokuseiAspectType::FAMILIARITY_UP_RATE
+        bool up = familiarity > 0;
+        auto type = up ? TokuseiAspectType::FAMILIARITY_UP_RATE
             : TokuseiAspectType::FAMILIARITY_DOWN_RATE;
 
         // Pull rate adjustments from character and demon
+        double multiply = up ? 0.01 : -0.01;
         double rateAdjust = 1.0 +
-            (tokuseiManager->GetAspectSum(cState, type) * 0.01) +
-            (tokuseiManager->GetAspectSum(dState, type) * 0.01);
-        if(rateAdjust != 1.0)
+            (tokuseiManager->GetAspectSum(cState, type) * multiply) +
+            (tokuseiManager->GetAspectSum(dState, type) * multiply);
+        if(rateAdjust < 0.0)
+        {
+            familiarity = 0;
+        }
+        else if(rateAdjust != 1.0)
         {
             familiarity = (int32_t)((double)familiarity * rateAdjust);
         }
@@ -3165,10 +3172,19 @@ int32_t CharacterManager::UpdateSoulPoints(const std::shared_ptr<
         {
             auto tokuseiManager = mServer.lock()->GetTokuseiManager();
 
-            // Soul point rate is on the character
-            points = (int32_t)((double)points *
-                (1.0 + tokuseiManager->GetAspectSum(cState,
-                    TokuseiAspectType::SOUL_POINT_RATE) * 0.01));
+            auto type = TokuseiAspectType::SOUL_POINT_RATE;
+            double rateAdjust = 1.0 +
+                (tokuseiManager->GetAspectSum(cState, type) * 0.01) +
+                (tokuseiManager->GetAspectSum(dState, type) * 0.01);
+            if(rateAdjust < 0.0)
+            {
+                // Do not decrease
+                points = 0;
+            }
+            else if(rateAdjust != 1.0)
+            {
+                points = (int32_t)((double)points * rateAdjust);
+            }
         }
 
         newPoints = current + points;
@@ -3263,8 +3279,8 @@ void CharacterManager::ExperienceGain(const std::shared_ptr<
     auto demon = dState->GetEntity();
 
     auto eState = state->GetEntityState(entityID);
-    auto stats = eState->GetCoreStats();
-    if(!eState->Ready() || !stats)
+    auto stats = eState ? eState->GetCoreStats() : nullptr;
+    if(!eState || !eState->Ready() || !stats)
     {
         return;
     }
@@ -3514,9 +3530,9 @@ void CharacterManager::UpdateExpertise(const std::shared_ptr<
         {
             // Calculate the point gain
             float cls = (float)(expertise->GetPoints() / 100000);
-            float rnk = (float)(expertise->GetPoints() / 10000);
+            float rnk = (float)((expertise->GetPoints() % 100000) / 10000);
 
-            int32_t gain = (int32_t)ceil((((float)expertGrowth->GetGrowthRate() +
+            int32_t gain = (int32_t)floor((((float)expertGrowth->GetGrowthRate() +
                 (float)rateBoost) * multiplier * 500.f) / (cls + 1.f) / (rnk + 1.f));
             if(gain > 0)
             {

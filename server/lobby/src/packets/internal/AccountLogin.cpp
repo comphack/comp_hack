@@ -156,8 +156,6 @@ bool Parsers::AccountLogin::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {
-    (void)connection;
-
     if(p.Size() < 1)
     {
         LOG_ERROR("Invalid response received for AccountLogin.\n");
@@ -207,6 +205,12 @@ bool Parsers::AccountLogin::Parse(libcomp::ManagerPacket *pPacketManager,
         {
             client->Close();
         }
+    }
+    else
+    {
+        LOG_ERROR("World server sent a malformed AccountLogin message!"
+            " Killing the connection...\n");
+        connection->Close();
     }
 
     return true;

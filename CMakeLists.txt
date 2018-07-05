@@ -28,13 +28,13 @@ SET(VERSION_YEAR  2018)
 SET(VERSION_MAJOR 3)
 
 # Minor release (1 = SP1).
-SET(VERSION_MINOR 0)
+SET(VERSION_MINOR 1)
 
 # Patch version (a hotfix).
 SET(VERSION_PATCH 0)
 
 # Codename for the version.
-SET(VERSION_CODENAME "Lilim")
+SET(VERSION_CODENAME "Lilim (SP1)")
 
 #
 # END OF VERSION CONSTANTS

@@ -290,7 +290,33 @@ bool Parsers::DemonForce::Parse(libcomp::ManagerPacket *pPacketManager,
         {
             reply.WriteS8(bPair.first);
             reply.WriteS32Little(bPair.second);
-            reply.WriteS16(0);  // New stat value (not actually used)
+
+            // If base stat is not sent, the value will drop to 0. Oddly
+            // enough, this doesn't happen if multiple stats update at once.
+            switch((CorrectTbl)libcomp::DEMON_FORCE_CONVERSION[bPair.first])
+            {
+            case CorrectTbl::STR:
+                reply.WriteS16(demon->GetCoreStats()->GetSTR());
+                break;
+            case CorrectTbl::MAGIC:
+                reply.WriteS16(demon->GetCoreStats()->GetMAGIC());
+                break;
+            case CorrectTbl::VIT:
+                reply.WriteS16(demon->GetCoreStats()->GetVIT());
+                break;
+            case CorrectTbl::INT:
+                reply.WriteS16(demon->GetCoreStats()->GetINTEL());
+                break;
+            case CorrectTbl::SPEED:
+                reply.WriteS16(demon->GetCoreStats()->GetSPEED());
+                break;
+            case CorrectTbl::LUCK:
+                reply.WriteS16(demon->GetCoreStats()->GetLUCK());
+                break;
+            default:
+                reply.WriteS16(0);  // Not necessary
+                break;
+            }
         }
 
         reply.WriteS8(stackSlot);

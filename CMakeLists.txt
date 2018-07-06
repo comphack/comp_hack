@@ -62,11 +62,21 @@ MESSAGE("-- CMake version: ${CMAKE_VERSION}")
 # Our custom cmake modules.
 SET(COMP_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 
+# Option to build the dream (if the folder is there).
+OPTION(BUILD_DREAM "Build the dream." ON)
+
 # Include our custom cmake modules.
 SET(CMAKE_MODULE_PATH
     ${COMP_MODULE_PATH}
     ${CMAKE_SOURCE_DIR}/coveralls-cmake/cmake
 )
+
+IF(IS_DIRECTORY "${CMAKE_SOURCE_DIR}/dream" AND BUILD_DREAM)
+    SET(CMAKE_MODULE_PATH
+        ${CMAKE_MODULE_PATH}
+        ${CMAKE_SOURCE_DIR}/dream/cmake
+    )
+ENDIF(IS_DIRECTORY "${CMAKE_SOURCE_DIR}/dream" AND BUILD_DREAM)
 
 SET(CPACK_PACKAGE_NAME "COMP_hack Server (${VERSION_CODENAME})")
 SET(CPACK_PACKAGE_VENDOR "COMP_hack Team")
@@ -233,10 +243,18 @@ IF(EXISTS "${CMAKE_SOURCE_DIR}/binaries")
     MESSAGE("-- Using pre-built binaries.")
 
     INCLUDE(${COMP_MODULE_PATH}/binaries.cmake)
+
+    IF(IS_DIRECTORY "${CMAKE_SOURCE_DIR}/dream" AND BUILD_DREAM)
+        INCLUDE(${CMAKE_SOURCE_DIR}/dream/cmake/binaries.cmake)
+    ENDIF(IS_DIRECTORY "${CMAKE_SOURCE_DIR}/dream" AND BUILD_DREAM)
 ELSE()
     MESSAGE("-- Building external binaries.")
 
     INCLUDE(${COMP_MODULE_PATH}/external.cmake)
+
+    IF(IS_DIRECTORY "${CMAKE_SOURCE_DIR}/dream" AND BUILD_DREAM)
+        INCLUDE(${CMAKE_SOURCE_DIR}/dream/cmake/external.cmake)
+    ENDIF(IS_DIRECTORY "${CMAKE_SOURCE_DIR}/dream" AND BUILD_DREAM)
 ENDIF()
 
 # PDB not found for library.
@@ -572,6 +590,12 @@ MACRO(CREATE_GTESTS)
         ENDIF("${test}" MATCHES "LIBS")
     ENDFOREACH(test ${ARGN})
 ENDMACRO(CREATE_GTESTS)
+
+# If the dream code exists in the "dream" directory and BUILD_DREAM is set,
+# build the dream application as well.
+IF(IS_DIRECTORY "${CMAKE_SOURCE_DIR}/dream" AND BUILD_DREAM)
+    ADD_SUBDIRECTORY(dream)
+ENDIF(IS_DIRECTORY "${CMAKE_SOURCE_DIR}/dream" AND BUILD_DREAM)
 
 # This must come first so that objgen is found for the macro bellow. As a
 # consequence, none of the tools can define their own structures to be

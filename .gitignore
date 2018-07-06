@@ -9,3 +9,7 @@ binaries/
 *.sublime-workspace
 
 tests/config\.nut
+
+# Build the dream.
+dream/
+tools/sandman/

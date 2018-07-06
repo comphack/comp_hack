@@ -1,3 +1,9 @@
+comphack (3.1.1) xenial; urgency=low
+
+  * Hotfix 1 for the Lilim SP1 server release.
+
+ -- COMP Omega <compomega@tutanota.com>  Fri, 06 Jul 2018 14:00:00 -0600
+
 comphack (3.1.0) xenial; urgency=low
 
   * Lilim SP1 server release.

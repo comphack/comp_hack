@@ -31,7 +31,7 @@ SET(VERSION_MAJOR 3)
 SET(VERSION_MINOR 1)
 
 # Patch version (a hotfix).
-SET(VERSION_PATCH 0)
+SET(VERSION_PATCH 1)
 
 # Codename for the version.
 SET(VERSION_CODENAME "Lilim (SP1)")

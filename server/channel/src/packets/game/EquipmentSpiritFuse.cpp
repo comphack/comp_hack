@@ -343,20 +343,14 @@ bool Parsers::EquipmentSpiritFuse::Parse(libcomp::ManagerPacket *pPacketManager,
         auto fuseBonusesCurrent = mainItem->GetFuseBonuses();
         auto modSlotsCurrent = mainItem->GetModSlots();
 
-        if(basicItem != mainItem)
-        {
-            uint32_t effect = basicItem->GetBasicEffect();
-            mainItem->SetBasicEffect(effect ? effect
-                : basicItem->GetType());
-            mainItem->SetModSlots(basicItem->GetModSlots());
-        }
+        uint32_t basicEffect = basicItem->GetBasicEffect();
+        mainItem->SetBasicEffect(basicEffect ? basicEffect
+            : basicItem->GetType());
+        mainItem->SetModSlots(basicItem->GetModSlots());
 
-        if(specialItem != mainItem)
-        {
-            uint32_t effect = specialItem->GetSpecialEffect();
-            mainItem->SetSpecialEffect(effect ? effect
-                : specialItem->GetType());
-        }
+        uint32_t spEffect = specialItem->GetSpecialEffect();
+        mainItem->SetSpecialEffect(spEffect ? spEffect
+            : specialItem->GetType());
 
         std::set<std::shared_ptr<objects::Item>> fusionItems;
         fusionItems.insert(mainItem);

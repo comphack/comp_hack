@@ -23,6 +23,7 @@
             <value>ON_TIME</value>
             <value>ON_SYSTEMTIME</value>
             <value>ON_MOONPHASE</value>
+            <value>ON_ACTION_DELAY</value>
         </member>
         <member type="s32" name="Value"/>
         <member type="list" name="Actions">

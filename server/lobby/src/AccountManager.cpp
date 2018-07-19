@@ -40,8 +40,10 @@
 #include <Character.h>
 #include <CharacterLogin.h>
 #include <LobbyConfig.h>
+#include <WebGameSession.h>
 
 // lobby Includes
+#include "ApiHandler.h"
 #include "LobbyServer.h"
 #include "LobbySyncManager.h"
 
@@ -489,6 +491,10 @@ bool AccountManager::ChannelToChannelSwitch(const libcomp::String& username,
     cLogin->SetChannelID(channelID);
     login->SetSessionKey(sessionKey);
 
+    // Always clear the web-game session
+    mWebGameSessions.erase(username.ToLower());
+    mWebGameAPISessions.erase(username.ToLower());
+
     // Set channel to channel state but do not set expiration as the world is
     // responsible for completing this connection or disconnecting on timeout
     login->SetState(objects::AccountLogin::State_t::CHANNEL_TO_CHANNEL);
@@ -522,6 +528,12 @@ bool AccountManager::Logout(const libcomp::String& username)
         EraseLogin(username);
 
         return false;
+    }
+    else
+    {
+        // Always clear the web-game session
+        mWebGameSessions.erase(username.ToLower());
+        mWebGameAPISessions.erase(username.ToLower());
     }
 
     // Set the session to expire.
@@ -629,6 +641,8 @@ void AccountManager::EraseLogin(const libcomp::String& username)
     libcomp::String lookup = username.ToLower();
 
     mAccountMap.erase(lookup);
+    mWebGameSessions.erase(lookup);
+    mWebGameAPISessions.erase(lookup);
 
     UpdateDebugStatus();
 }
@@ -874,6 +888,102 @@ bool AccountManager::DeleteCharacter(
     mServer->GetLobbySyncManager()->RemoveRecord(character, "Character");
 
     return true;
+}
+
+bool AccountManager::StartWebGameSession(const libcomp::String& username,
+    const std::shared_ptr<objects::WebGameSession>& gameSession)
+{
+    libcomp::String lookup = username.ToLower();
+
+    std::lock_guard<std::mutex> lock(mAccountLock);
+    auto accountPair = mAccountMap.find(lookup);
+    if(accountPair == mAccountMap.end())
+    {
+        // Not logged in
+        return false;
+    }
+
+    auto sessionPair = mWebGameSessions.find(lookup);
+    if(sessionPair != mWebGameSessions.end())
+    {
+        // Already has a session
+        return false;
+    }
+
+    // Session is valid, register it
+    LOG_DEBUG(libcomp::String("Web-game session started for account: %1\n")
+        .Arg(username));
+
+    mWebGameSessions[lookup] = gameSession;
+
+    return true;
+}
+
+std::shared_ptr<WebGameApiSession> AccountManager::GetWebGameApiSession(
+    const libcomp::String& username, const libcomp::String& sessionID,
+    const libcomp::String& clientAddress)
+{
+    libcomp::String lookup = username.ToLower();
+
+    std::lock_guard<std::mutex> lock(mAccountLock);
+
+    auto it = mWebGameSessions.find(lookup);
+    if(it != mWebGameSessions.end())
+    {
+        auto gameSession = it->second;
+        if(gameSession->GetSessionID() == sessionID)
+        {
+            // Session is valid, get or create API session
+            auto it2 = mWebGameAPISessions.find(lookup);
+            if(it2 != mWebGameAPISessions.end())
+            {
+                if(it2->second->clientAddress != clientAddress)
+                {
+                    LOG_ERROR(libcomp::String("Second web-game session"
+                        " attempted for account: %1\n").Arg(username));
+                    return nullptr;
+                }
+
+                return it2->second;
+            }
+
+            auto apiSession = std::make_shared<WebGameApiSession>();
+            apiSession->username = username;
+            apiSession->webGameSession = gameSession;
+            apiSession->clientAddress = clientAddress;
+
+            mWebGameAPISessions[lookup] = apiSession;
+
+            return apiSession;
+        }
+    }
+    else
+    {
+        LOG_ERROR(libcomp::String("Web-game API session requested from account"
+            " with no active web-game session: %1\n").Arg(username));
+    }
+
+    return nullptr;
+}
+
+bool AccountManager::EndWebGameSession(const libcomp::String& username)
+{
+    libcomp::String lookup = username.ToLower();
+
+    std::lock_guard<std::mutex> lock(mAccountLock);
+
+    auto sessionPair = mWebGameSessions.find(lookup);
+    if(sessionPair != mWebGameSessions.end())
+    {
+        LOG_DEBUG(libcomp::String("Web-game session ended for account: %1\n")
+            .Arg(username));
+
+        mWebGameSessions.erase(lookup);
+        mWebGameAPISessions.erase(lookup);
+        return true;
+    }
+
+    return false;
 }
 
 void AccountManager::PrintAccounts() const

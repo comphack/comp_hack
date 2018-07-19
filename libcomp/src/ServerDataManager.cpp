@@ -110,6 +110,10 @@ const std::shared_ptr<objects::ServerZone> ServerDataManager::GetZoneData(
         if(partialIDs.size() > 0)
         {
             // Copy the definition and apply changes
+            libcomp::String zoneStr = libcomp::String("%1%2")
+                .Arg(id).Arg(id != dynamicMapID ? libcomp::String(" (%1)")
+                    .Arg(dynamicMapID) : "");
+
             zone = std::make_shared<objects::ServerZone>(*zone);
             for(uint32_t partialID : partialIDs)
             {
@@ -118,6 +122,89 @@ const std::shared_ptr<objects::ServerZone> ServerDataManager::GetZoneData(
                     // Errored, no zone should be returned
                     return nullptr;
                 }
+            }
+
+            // Now validate spawn information and correct as needed
+            std::set<uint32_t> sgRemoves;
+            for(auto sgPair : zone->GetSpawnGroups())
+            {
+                std::set<uint32_t> missingSpawns;
+                for(auto sPair : sgPair.second->GetSpawns())
+                {
+                    if(!zone->SpawnsKeyExists(sPair.first))
+                    {
+                        missingSpawns.insert(sPair.first);
+                    }
+                }
+
+                if(missingSpawns.size() > 0)
+                {
+                    if(missingSpawns.size() < sgPair.second->SpawnsCount())
+                    {
+                        // Copy the group and edit the spawns
+                        auto sg = std::make_shared<objects::SpawnGroup>(
+                            *sgPair.second);
+                        for(uint32_t remove : sgRemoves)
+                        {
+                            sg->RemoveSpawns(remove);
+                        }
+
+                        zone->SetSpawnGroups(sgPair.first, sg);
+                    }
+                    else
+                    {
+                        sgRemoves.insert(sgPair.first);
+                    }
+                }
+            }
+
+            for(uint32_t sgRemove : sgRemoves)
+            {
+                LOG_DEBUG(libcomp::String("Removing empty spawn group %1"
+                    " when generating zone: %2\n").Arg(sgRemove)
+                    .Arg(zoneStr));
+                zone->RemoveSpawnGroups(sgRemove);
+            }
+
+            std::set<uint32_t> slgRemoves;
+            for(auto slgPair : zone->GetSpawnLocationGroups())
+            {
+                std::set<uint32_t> missingGroups;
+                for(uint32_t sgID : slgPair.second->GetGroupIDs())
+                {
+                    if(!zone->SpawnGroupsKeyExists(sgID))
+                    {
+                        missingGroups.insert(sgID);
+                    }
+                }
+
+                if(missingGroups.size() > 0)
+                {
+                    if(missingGroups.size() < slgPair.second->GroupIDsCount())
+                    {
+                        // Copy the group and edit the spawns
+                        auto slg = std::make_shared<objects::SpawnLocationGroup>(
+                            *slgPair.second);
+                        for(uint32_t remove : sgRemoves)
+                        {
+                            slg->RemoveGroupIDs(remove);
+                        }
+
+                        zone->SetSpawnLocationGroups(slgPair.first, slg);
+                    }
+                    else
+                    {
+                        slgRemoves.insert(slgPair.first);
+                    }
+                }
+            }
+
+            for(uint32_t slgRemove : slgRemoves)
+            {
+                LOG_DEBUG(libcomp::String("Removing empty spawn location group"
+                    " %1 when generating zone: %2\n").Arg(slgRemove)
+                    .Arg(zoneStr));
+                zone->RemoveSpawnLocationGroups(slgRemove);
             }
         }
     }
@@ -610,34 +697,6 @@ namespace libcomp
                     LOG_ERROR(libcomp::String("Invalid spawn enemy type"
                         " encountered in zone partial %1: %2\n").Arg(id)
                         .Arg(sPair.second->GetEnemyType()));
-                    return false;
-                }
-            }
-        }
-
-        for(auto sgPair : prt->GetSpawnGroups())
-        {
-            for(auto sPair : sgPair.second->GetSpawns())
-            {
-                if(!prt->SpawnsKeyExists(sPair.first))
-                {
-                    LOG_ERROR(libcomp::String("Invalid spawn group spawn ID"
-                        " encountered in zone partial %1: %2\n").Arg(id)
-                        .Arg(sPair.first));
-                    return false;
-                }
-            }
-        }
-
-        for(auto slgPair : prt->GetSpawnLocationGroups())
-        {
-            for(uint32_t sgID : slgPair.second->GetGroupIDs())
-            {
-                if(!prt->SpawnGroupsKeyExists(sgID))
-                {
-                    LOG_ERROR(libcomp::String("Invalid spawn location group"
-                        " spawn group ID encountered in zone partial %1: %2\n")
-                        .Arg(id).Arg(sgID));
                     return false;
                 }
             }

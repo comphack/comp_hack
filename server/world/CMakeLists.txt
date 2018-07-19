@@ -82,6 +82,7 @@ SET(${PROJECT_NAME}_PACKETS
     src/packets/FriendsUpdate.cpp              # 0x1009
     src/packets/PartyUpdate.cpp                # 0x100A
     src/packets/ClanUpdate.cpp                 # 0x100B
+    src/packets/WebGame.cpp                    # 0x100C
 )
 
 IF(SINGLE_SOURCE_PACKETS)

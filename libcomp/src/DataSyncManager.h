@@ -100,7 +100,8 @@ public:
      * the update to be sent to the other servers.
      * @param record Pointer to the record being updated
      * @param type Type name of the object being updated
-     * @return true if the update was performed without issue
+     * @return true if the record was queued for outgoing sync, false if
+     *  no additionaly sync is necessary
      */
     virtual bool UpdateRecord(const std::shared_ptr<libcomp::Object>& record,
         const libcomp::String& type);
@@ -111,7 +112,8 @@ public:
      * the update to be sent to the other servers.
      * @param record Pointer to the record being removed
      * @param type Type name of the object being removed
-     * @return true if the remove was performed without issue
+     * @return true if the record was queued for outgoing sync, false if
+     *  no additionaly sync is necessary
      */
     virtual bool RemoveRecord(const std::shared_ptr<libcomp::Object>& record,
         const libcomp::String& type);

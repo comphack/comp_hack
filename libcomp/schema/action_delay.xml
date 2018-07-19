@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="ActionDelay" baseobject="Action" persistent="false"
+        scriptenabled="true">
+        <member type="enum" name="actionType" inherited="true" default="DELAY"/>
+        <member type="enum" name="type">
+            <value>ACTION_DELAY</value>
+            <value>CHARACTER_COOLDOWN</value>
+            <value>ACCOUNT_COOLDOWN</value>
+        </member>
+        <member type="s32" name="delayID" min="0"/>
+        <member type="u32" name="duration"/>
+        <member type="list" name="actions">
+            <element type="Action*"/>
+        </member>
+    </object>
+</objgen>

@@ -106,7 +106,7 @@ bool ZoneInstance::AddZone(const std::shared_ptr<Zone>& zone)
         return false;
     }
 
-    if(mZones.find(def->GetID()) == mZones.end() &&
+    if(mZones.find(def->GetID()) == mZones.end() ||
         mZones[def->GetID()].find(def->GetDynamicMapID()) == mZones[def->GetID()].end())
     {
         mZones[def->GetID()][def->GetDynamicMapID()] = zone;

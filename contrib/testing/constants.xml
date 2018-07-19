@@ -17,6 +17,7 @@
     <constant name="ITEM_KREUZ">12198</constant>
     <constant name="ITEM_RBLOODSTONE">12203</constant>
     <constant name="MENU_FUSION_KZ">800</constant>
+    <constant name="MENU_WEB_GAME">764</constant>
     <constant name="MENU_REPAIR_KZ">765</constant>
     <constant name="MENU_TRIFUSION">179</constant>
     <constant name="MENU_TRIFUSION_KZ">801</constant>
@@ -114,6 +115,33 @@
     <constant name="ZONE_DEFAULT">90105</constant>
 
     <!-- Complex types -->
+    <constant name="BARTER_COOLDOWNS">
+        <!-- Format: cooldown ID => duration (in seconds) -->
+        <pair>
+            <key>23</key>
+            <value>10800</value>
+        </pair>
+        <pair>
+            <key>24</key>
+            <value>21600</value>
+        </pair>
+        <pair>
+            <key>25</key>
+            <value>43200</value>
+        </pair>
+        <pair>
+            <key>26</key>
+            <value>86400</value>
+        </pair>
+        <pair>
+            <key>51</key>
+            <value>129600</value>
+        </pair>
+        <pair>
+            <key>52</key>
+            <value>0</value>
+        </pair>
+    </constant>
     <constant name="CAMEO_MAP">
         <!-- Format: item => status effect -->
         <pair>

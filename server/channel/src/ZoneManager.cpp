@@ -516,7 +516,14 @@ bool ZoneManager::EnterZone(const std::shared_ptr<ChannelClientConnection>& clie
         }
     }
 
-    nextZone->AddConnection(client);
+    if(!nextZone->AddConnection(client))
+    {
+        LOG_ERROR(libcomp::String("Failed to add client to zone: %1\n")
+            .Arg(state->GetAccountUID().ToString()));
+        client->Close();
+        return false;
+    }
+
     cState->SetZone(nextZone);
     dState->SetZone(nextZone);
 
@@ -4308,6 +4315,10 @@ std::shared_ptr<Zone> ZoneManager::CreateZone(
         case objects::ServerZoneTrigger::Trigger_t::ON_FLAG_SET:
             zone->AppendFlagSetTriggers(trigger);
             zone->InsertFlagSetKeys(trigger->GetValue());
+            break;
+        case objects::ServerZoneTrigger::Trigger_t::ON_ACTION_DELAY:
+            zone->AppendActionDelayTriggers(trigger);
+            zone->InsertActionDelayKeys(trigger->GetValue());
             break;
         case objects::ServerZoneTrigger::Trigger_t::ON_TIME:
         case objects::ServerZoneTrigger::Trigger_t::ON_SYSTEMTIME:

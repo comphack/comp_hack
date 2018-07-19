@@ -39,6 +39,7 @@ namespace objects
 {
 class Account;
 class Character;
+class CharacterProgress;
 }
 
 namespace lobby
@@ -91,6 +92,13 @@ private:
      * @param account Pointer to the account record to sync
      */
     void SyncAccount(const std::shared_ptr<objects::Account>& account);
+
+    /**
+     * Sync the supplied character progress.
+     * @param progress Pointer to the character progress record to sync
+     */
+    void SyncCharacterProgress(const std::shared_ptr<
+        objects::CharacterProgress>& progress);
 
     /**
      * Sync the supplied character, should be used for all delete requests.

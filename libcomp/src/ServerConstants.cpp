@@ -128,6 +128,8 @@ bool ServerConstants::Initialize(const String& filePath)
         sConstants.MENU_TRIFUSION);
     success &= LoadInteger(constants["MENU_TRIFUSION_KZ"],
         sConstants.MENU_TRIFUSION_KZ);
+    success &= LoadInteger(constants["MENU_WEB_GAME"],
+        sConstants.MENU_WEB_GAME);
 
     // Load skill constants
     success &= LoadInteger(constants["SKILL_ABS_DAMAGE"],
@@ -325,7 +327,24 @@ bool ServerConstants::Initialize(const String& filePath)
         return false;
     }
 
-    auto complexIter = complexConstants.find("CAMEO_MAP");
+    auto complexIter = complexConstants.find("BARTER_COOLDOWNS");
+    if(complexIter != complexConstants.end())
+    {
+        std::unordered_map<std::string, std::string> map;
+        if(!LoadKeyValueStrings(complexIter->second, map) ||
+            !LoadIntegerMap(map, sConstants.BARTER_COOLDOWNS))
+        {
+            LOG_ERROR("Failed to load BARTER_COOLDOWNS\n");
+            return false;
+        }
+    }
+    else
+    {
+        LOG_ERROR("BARTER_COOLDOWNS not found\n");
+        return false;
+    }
+
+    complexIter = complexConstants.find("CAMEO_MAP");
     if(complexIter != complexConstants.end())
     {
         std::unordered_map<std::string, std::string> map;

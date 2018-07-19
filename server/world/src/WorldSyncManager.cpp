@@ -38,9 +38,11 @@
 #include <Account.h>
 #include <Character.h>
 #include <CharacterLogin.h>
+#include <CharacterProgress.h>
 
 // world Includes
 #include "AccountManager.h"
+#include "CharacterManager.h"
 #include "WorldServer.h"
 
 using namespace world;
@@ -82,6 +84,13 @@ bool WorldSyncManager::Initialize()
         objects::Character>;
 
     mRegisteredTypes["Character"] = cfg;
+
+    cfg = std::make_shared<ObjectConfig>(
+        "CharacterProgress", true, worldDB);
+    cfg->UpdateHandler = &DataSyncManager::Update<WorldSyncManager,
+        objects::CharacterProgress>;
+
+    mRegisteredTypes["CharacterProgress"] = cfg;
 
     return true;
 }
@@ -156,6 +165,44 @@ int8_t WorldSyncManager::Update<objects::Character>(const libcomp::String& type,
         {
             LOG_ERROR(libcomp::String("Channel requested a character delete."
                 " which will be ignored: %1\n").Arg(source));
+        }
+    }
+
+    return SYNC_HANDLED;
+}
+
+template<>
+int8_t WorldSyncManager::Update<objects::CharacterProgress>(
+    const libcomp::String& type, const std::shared_ptr<libcomp::Object>& obj,
+    bool isRemove, const libcomp::String& source)
+{
+    (void)type;
+    (void)isRemove;
+
+    auto entry = std::dynamic_pointer_cast<objects::CharacterProgress>(obj);
+  
+    if(source == "lobby")
+    {
+        // Send to the channel where the character is logged in, no need to
+        // sync if they are not
+        auto server = mServer.lock();
+        auto characterManager = server->GetCharacterManager();
+        auto character = std::dynamic_pointer_cast<objects::Character>(
+            libcomp::PersistentObject::GetObjectByUUID(entry->GetCharacter()));
+
+        auto cLogin = character
+            ? characterManager->GetCharacterLogin(character->GetName()) : nullptr;
+        int8_t channelID = cLogin ? cLogin->GetChannelID() : -1;
+
+        if(channelID >= 0)
+        {
+            auto channel = server->GetChannelConnectionByID(channelID);
+            if(channel)
+            {
+                libcomp::Packet p;
+                WriteOutgoingRecord(p, true, "CharacterProgress", entry);
+                channel->SendPacket(p);
+            }
         }
     }
 

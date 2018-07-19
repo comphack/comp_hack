@@ -672,6 +672,7 @@ enum class InternalPacketCode_t : uint16_t
     PACKET_FRIENDS_UPDATE = 0x1009, //!< Pass friend information between the servers.
     PACKET_PARTY_UPDATE = 0x100A,   //!< Pass party information between the servers.
     PACKET_CLAN_UPDATE = 0x100B,    //!< Pass clan information between the servers.
+    PACKET_WEB_GAME = 0x100C,   //!< Pass web game information between the servers.
 };
 
 /**

@@ -82,6 +82,10 @@
         <member type="array" name="CustomTitles" size="65">
             <element type="s16" default="-1"/>
         </member>
+        <member type="map" name="ActionCooldowns">
+            <key type="s32"/>
+            <value type="u32"/>
+        </member>
 
         <!-- Sub-sections -->
         <member type="EntityStats*" name="CoreStats"/>
@@ -158,6 +162,7 @@
         <member type="array" name="SpecialTitles" size="128">
             <element type="u8"/>
         </member>
+        <member type="s64" name="Coins"/>
     </object>
     <object name="Expertise" location="world" scriptenabled="true">
         <member type="pref" name="Character" key="true" unique="false"/>

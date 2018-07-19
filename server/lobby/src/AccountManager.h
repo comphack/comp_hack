@@ -42,6 +42,7 @@ namespace objects
 {
 
 class Character;
+class WebGameSession;
 
 } // namespace objects
 
@@ -49,6 +50,7 @@ namespace lobby
 {
 
 class LobbyServer;
+class WebGameApiSession;
 
 /**
  * Manages logged in user accounts.
@@ -299,6 +301,41 @@ public:
     bool DeleteCharacter(const std::shared_ptr<objects::Account>& account,
         const std::shared_ptr<objects::Character>& character);
 
+    /**
+     * Start a web-game session for the specified user who is currently playing
+     * that remains valid until a remove request is received or the account
+     * leaves the channel.
+     * @param username Username of the account the session belongs to
+     * @param gameSession Pointer to the session's definition
+     * @return true if the session was started successfully, false if it
+     *  was not
+     */
+    bool StartWebGameSession(const libcomp::String& username,
+        const std::shared_ptr<objects::WebGameSession>& gameSession);
+
+    /**
+     * Get or create a web-game API session based upon a valid web-game
+     * session if one exists and matches the supplied values. Sessions created
+     * here last only as long as the game session exists.
+     * @param username Username of the account the session belongs to
+     * @param sessionID Session ID supplied by the world server which changes
+     *  each time a new web-game session is requested
+     * @param clientAddress Base address of the client requesting the session
+     *  used for prevention of two active sessions for the same user
+     * @return Pointer to the web-game API session, null if the supplied
+     *  values were not valid
+     */
+    std::shared_ptr<WebGameApiSession> GetWebGameApiSession(
+        const libcomp::String& username, const libcomp::String& sessionID,
+        const libcomp::String& clientAddress);
+
+    /**
+     * Start any web-game session for the specified user
+     * @param username Username of the account the session belongs to
+     * @return true if the session existed and was removed, false if it did not
+     */
+    bool EndWebGameSession(const libcomp::String& username);
+
 protected:
     /**
      * Return the existing login object for the given username or create a
@@ -340,6 +377,16 @@ private:
     /// Map of accounts with associated login information.
     std::unordered_map<libcomp::String,
         std::shared_ptr<objects::AccountLogin>> mAccountMap;
+
+    /// Map of account usernames associated to accounts to web-game sessions
+    /// either pending or active for a character currently playing
+    std::unordered_map<libcomp::String, std::shared_ptr<
+        objects::WebGameSession>> mWebGameSessions;
+
+    // List of web-game API sessions by username. Only valid for as long
+    // as there is a web-game session active
+    std::unordered_map<libcomp::String,
+        std::shared_ptr<WebGameApiSession>> mWebGameAPISessions;
 };
 
 } // namespace lobby

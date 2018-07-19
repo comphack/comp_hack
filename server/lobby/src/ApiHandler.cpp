@@ -37,6 +37,16 @@
 #include <Log.h>
 #include <PacketCodes.h>
 
+// object Includes
+#include <Character.h>
+#include <CharacterProgress.h>
+#include <WebGameSession.h>
+
+// lobby Includes
+#include "LobbySyncManager.h"
+#include "ManagerConnection.h"
+#include "World.h"
+
 using namespace lobby;
 
 #define MAX_PAYLOAD (4096)
@@ -62,6 +72,8 @@ ApiHandler::ApiHandler(const std::shared_ptr<objects::LobbyConfig>& config,
     mParsers["/admin/get_account"] = &ApiHandler::Admin_GetAccount;
     mParsers["/admin/delete_account"] = &ApiHandler::Admin_DeleteAccount;
     mParsers["/admin/update_account"] = &ApiHandler::Admin_UpdateAccount;
+    mParsers["/webgame/get_character"] = &ApiHandler::WebGame_GetCharacter;
+    mParsers["/webgame/update_coins"] = &ApiHandler::WebGame_UpdateCoins;
 }
 
 ApiHandler::~ApiHandler()
@@ -726,6 +738,113 @@ bool ApiHandler::Admin_UpdateAccount(const JsonBox::Object& request,
     return true;
 }
 
+bool ApiHandler::WebGame_GetCharacter(const JsonBox::Object& request,
+    JsonBox::Object& response,
+    const std::shared_ptr<ApiSession>& session)
+{
+    (void)request;
+
+    std::shared_ptr<objects::WebGameSession> gameSession;
+    std::shared_ptr<World> world;
+    if(!GetWebGameSession(response, session, gameSession, world))
+    {
+        return true;
+    }
+
+    auto worldDB = world->GetWorldDatabase();
+
+    auto character = gameSession->GetCharacter().Get(worldDB, true);
+    auto progress = character
+        ? character->GetProgress().Get(worldDB, true) : nullptr;
+    if(!character || !progress)
+    {
+        response["error"] = "Character information could not be retrieved";
+        return true;
+    }
+
+    response["error"] = "Success";
+    response["name"] = character->GetName().C();
+    response["coins"] = libcomp::String("%1").Arg(progress->GetCoins()).C();
+
+    return true;
+}
+
+bool ApiHandler::WebGame_UpdateCoins(const JsonBox::Object& request,
+    JsonBox::Object& response,
+    const std::shared_ptr<ApiSession>& session)
+{
+    std::shared_ptr<objects::WebGameSession> gameSession;
+    std::shared_ptr<World> world;
+    if(!GetWebGameSession(response, session, gameSession, world))
+    {
+        return true;
+    }
+
+    auto it = request.find("coins");
+
+    int64_t coins = it == response.end() ? 0
+        : (int64_t)it->second.tryGetInteger(0);
+    if(!coins)
+    {
+        response["error"] = "Invalid coin amount";
+        return true;
+    }
+
+    auto worldDB = world->GetWorldDatabase();
+
+    auto character = gameSession->GetCharacter().Get(worldDB);
+    auto progress = character
+        ? character->GetProgress().Get(worldDB) : nullptr;
+
+    bool failure = !character || !progress;
+    if(!failure)
+    {
+        int64_t amount = progress->GetCoins();
+        int64_t newAmount = amount + coins;
+        if(newAmount < 0)
+        {
+            newAmount = 0;
+        }
+
+        bool success = false;
+        if(amount == newAmount)
+        {
+            success = true;
+        }
+        else
+        {
+            auto changes = std::make_shared<libcomp::DBOperationalChangeSet>();
+            auto expl = std::make_shared<libcomp::DBExplicitUpdate>(progress);
+            expl->SetFrom<int64_t>("Coins", newAmount, progress->GetCoins());
+            changes->AddOperation(expl);
+            success = worldDB->ProcessChangeSet(changes);
+        }
+
+        if(success)
+        {
+            gameSession->SetCoins(newAmount);
+
+            // Sync with the world
+            mServer->GetLobbySyncManager()->UpdateRecord(progress,
+                "CharacterProgress");
+
+            response["error"] = "Success";
+            response["coins"] = libcomp::String("%1").Arg(newAmount).C();
+        }
+        else
+        {
+            failure = true;
+        }
+    }
+
+    if(failure)
+    {
+        response["error"] = "Update failed";
+    }
+
+    return true;
+}
+
 bool ApiHandler::Authenticate(const JsonBox::Object& request,
     JsonBox::Object& response,
     const std::shared_ptr<ApiSession>& session)
@@ -862,9 +981,35 @@ bool ApiHandler::handlePost(CivetServer *pServer,
 
     libcomp::String clientAddress(pRequestInfo->remote_addr);
 
-    std::shared_ptr<ApiSession> session;
+    bool webGame = method.Left(9) == "/webgame/";
 
+    bool unauthorized = false;
+
+    std::shared_ptr<ApiSession> session;
+    if(webGame)
     {
+        // Username and session ID must be included in all web-game requests
+        auto it = obj.find("username");
+
+        libcomp::String username = it != obj.end()
+            ? it->second.getString() : "";
+
+        it = obj.find("sessionid");
+
+        libcomp::String sessionID = it != obj.end()
+            ? it->second.getString() : "";
+
+        auto accountManager = mServer ? mServer->GetAccountManager() : nullptr;
+        session = accountManager ? accountManager->GetWebGameApiSession(
+            username, sessionID, clientAddress) : nullptr;
+        if(!session)
+        {
+            unauthorized = true;
+        }
+    }
+    else
+    {
+        // Normal API sessions are stored per address
         auto it = mSessions.find(clientAddress);
 
         if(it != mSessions.end())
@@ -878,13 +1023,18 @@ bool ApiHandler::handlePost(CivetServer *pServer,
 
             mSessions[clientAddress] = session;
         }
+
+        if(("/auth/get_challenge" != method &&
+            "/account/register" != method &&
+            !Authenticate(obj, response, session)) ||
+            ("/admin/" == method.Left(strlen("/admin/")) &&
+            (!session->account || session->account->GetUserLevel() < 1000)))
+        {
+            unauthorized = true;
+        }
     }
 
-    if(("/auth/get_challenge" != method &&
-        "/account/register" != method &&
-        !Authenticate(obj, response, session)) ||
-        ("/admin/" == method.Left(strlen("/admin/")) && (!session->account ||
-        session->account->GetUserLevel() < 1000)))
+    if(unauthorized)
     {
         mg_printf(pConnection, "HTTP/1.1 401 Unauthorized\r\n"
             "Connection: close\r\n\r\n");
@@ -926,5 +1076,28 @@ bool ApiHandler::handlePost(CivetServer *pServer,
 void ApiHandler::SetAccountManager(AccountManager *pManager)
 {
     mAccountManager = pManager;
+}
+
+bool ApiHandler::GetWebGameSession(JsonBox::Object& response,
+    const std::shared_ptr<ApiSession>& session, std::shared_ptr<
+    objects::WebGameSession>& gameSession, std::shared_ptr<World>& world)
+{
+    auto wgSession = std::dynamic_pointer_cast<WebGameApiSession>(session);
+    gameSession = wgSession ? wgSession->webGameSession : nullptr;
+    if(!gameSession)
+    {
+        response["error"] = "Invalid session";
+        return false;
+    }
+
+    world = mServer->GetManagerConnection()->GetWorldByID(
+        gameSession->GetWorldID());
+    if(!world)
+    {
+        response["error"] = "World connection down";
+        return false;
+    }
+
+    return true;
 }
 

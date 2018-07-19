@@ -28,11 +28,13 @@
 #include "Packets.h"
 
 // libcomp Includes
+#include <ManagerPacket.h>
 #include <Packet.h>
 #include <PacketCodes.h>
 
 // channel Includes
-#include "ChannelClientConnection.h"
+#include "ChannelServer.h"
+#include "CharacterManager.h"
 
 using namespace channel;
 
@@ -40,24 +42,21 @@ bool Parsers::CasinoCoinTotal::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {
-    (void)pPacketManager;
-
     if(p.Size() != 4)
     {
         return false;
     }
 
-    /// @todo: implement non-default values
-
     int32_t unknown = p.ReadS32Little();
     (void)unknown;
-    
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_CASINO_COIN_TOTAL);
-    reply.WriteS32Little(0);    // Unknown
-    reply.WriteS64Little(1234);    // Coin count?
 
-    connection->SendPacket(reply);
+    auto server = std::dynamic_pointer_cast<ChannelServer>(
+        pPacketManager->GetServer());
+
+    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
+        connection);
+
+    server->GetCharacterManager()->SendCoinTotal(client, false);
 
     return true;
 }

@@ -116,6 +116,9 @@ struct Data
     /// Menu ID of the Tri-Fusion (solo) process
     uint32_t MENU_TRIFUSION_KZ;
 
+    /// Menu ID of the web-game interface
+    uint32_t MENU_WEB_GAME;
+
     /// Function ID of absolute damage dealing skills
     uint16_t SKILL_ABS_DAMAGE;
 
@@ -397,6 +400,9 @@ struct Data
 
     /// Default zone to move players when no other zone is found
     uint32_t ZONE_DEFAULT;
+
+    /// Barter cooldown IDs to duration (in seconds)
+    std::unordered_map<int32_t, uint32_t> BARTER_COOLDOWNS;
 
     /// Map of cameo item IDs to transformation status effect IDs, if
     /// more than one status effect is listed, a random one is chosen

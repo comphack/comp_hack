@@ -248,6 +248,14 @@ private:
     bool CreateLoot(ActionContext& ctx);
 
     /**
+     * Delay action execution or flag an action for delayed usage at
+     * a later time.
+     * @param ctx ActionContext for the executing source information.
+     * @retval false The action list should stop after this action.
+     */
+    bool Delay(ActionContext& ctx);
+
+    /**
      * Move the current time trial results to the record set.
      * @param ctx ActionContext for the executing source information.
      * @param rewardItem Item obtained from the time trial

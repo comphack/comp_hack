@@ -33,6 +33,7 @@
 #include <ServerConstants.h>
 
 // objects Includes
+#include <AccountWorldData.h>
 #include <CalculatedEntityState.h>
 #include <CharacterProgress.h>
 #include <EnchantSetData.h>
@@ -85,7 +86,11 @@ namespace libcomp
             binding
                 .Func<std::shared_ptr<objects::Character>
                 (CharacterState::*)()>(
-                    "GetEntity", &CharacterState::GetEntity);
+                    "GetEntity", &CharacterState::GetEntity)
+                .Func("ActionCooldownActive",
+                    &CharacterState::ActionCooldownActive)
+                .Func("RefreshActionCooldowns",
+                    &CharacterState::RefreshActionCooldowns);
 
             Bind<CharacterState>("CharacterState", binding);
         }
@@ -472,6 +477,83 @@ uint8_t CharacterState::GetExpertiseRank(
     }
 
     return (uint8_t)floor((float)pointSum * 0.0001f);
+}
+
+bool CharacterState::ActionCooldownActive(int32_t cooldownID,
+    bool accountLevel, bool refresh)
+{
+    if(refresh)
+    {
+        RefreshActionCooldowns(accountLevel);
+    }
+    
+    if(accountLevel)
+    {
+        // Account level
+        auto state = ClientState::GetEntityClientState(GetEntityID());
+        auto awd = state ? state->GetAccountWorldData().Get() : nullptr;
+        return awd && awd->ActionCooldownsKeyExists(cooldownID);
+    }
+    else
+    {
+        // Character level
+        auto character = GetEntity();
+        return character && character->ActionCooldownsKeyExists(cooldownID);
+    }
+}
+
+void CharacterState::RefreshActionCooldowns(bool accountLevel, uint32_t time)
+{
+    if(!time)
+    {
+        time = (uint32_t)std::time(0);
+    }
+
+    std::set<int32_t> removes;
+
+    if(accountLevel)
+    {
+        // Account level
+        auto state = ClientState::GetEntityClientState(GetEntityID());
+        auto awd = state ? state->GetAccountWorldData().Get() : nullptr;
+        if(awd)
+        {
+            std::lock_guard<std::mutex> lock(mLock);
+            for(auto pair : awd->GetActionCooldowns())
+            {
+                if(pair.second <= time)
+                {
+                    removes.insert(pair.first);
+                }
+            }
+
+            for(int32_t remove : removes)
+            {
+                awd->RemoveActionCooldowns(remove);
+            }
+        }
+    }
+    else
+    {
+        // Character level
+        auto character = GetEntity();
+        if(character)
+        {
+            std::lock_guard<std::mutex> lock(mLock);
+            for(auto pair : character->GetActionCooldowns())
+            {
+                if(pair.second <= time)
+                {
+                    removes.insert(pair.first);
+                }
+            }
+
+            for(int32_t remove : removes)
+            {
+                character->RemoveActionCooldowns(remove);
+            }
+        }
+    }
 }
 
 bool CharacterState::RecalcDisabledSkills(

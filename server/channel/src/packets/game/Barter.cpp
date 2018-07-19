@@ -32,6 +32,7 @@
 #include <ManagerPacket.h>
 #include <Packet.h>
 #include <PacketCodes.h>
+#include <ServerConstants.h>
 
 // object Includes
 #include <Item.h>
@@ -52,7 +53,8 @@ void HandleBarter(const std::shared_ptr<ChannelServer> server,
     const std::shared_ptr<ChannelClientConnection> client, uint16_t barterID)
 {
     auto state = client->GetClientState();
-    auto character = state->GetCharacterState()->GetEntity();
+    auto cState = state->GetCharacterState();
+    auto character = cState->GetEntity();
 
     auto characterManager = server->GetCharacterManager();
     auto definitionManager = server->GetDefinitionManager();
@@ -60,6 +62,7 @@ void HandleBarter(const std::shared_ptr<ChannelServer> server,
     auto barterData = definitionManager->GetNPCBarterData(barterID);
 
     int32_t spAdjust = 0;
+    int64_t coinAdjust = 0;
     std::unordered_map<uint32_t, int32_t> itemAdjustments;
 
     bool failed = barterData == nullptr;
@@ -92,14 +95,17 @@ void HandleBarter(const std::shared_ptr<ChannelServer> server,
                 failed = true;
                 break;
             case objects::MiNPCBarterItemData::Type_t::COIN:
-                LOG_ERROR("Coin bartering not yet supported\n");
-                failed = true;
+                {
+                    int64_t total = (int64_t)((int64_t)itemData->GetSubtype() *
+                        1000000 + (int64_t)itemData->GetAmount());
+                    coinAdjust = (int64_t)(coinAdjust - total);
+                }
                 break;
             case objects::MiNPCBarterItemData::Type_t::NONE:
                 break;
             case objects::MiNPCBarterItemData::Type_t::ONE_TIME_VALUABLE:
             case objects::MiNPCBarterItemData::Type_t::EVENT_COUNTER:
-            case objects::MiNPCBarterItemData::Type_t::CASINO_RESTRICTION:
+            case objects::MiNPCBarterItemData::Type_t::COOLDOWN:
             case objects::MiNPCBarterItemData::Type_t::SKILL_CHARACTER:
             case objects::MiNPCBarterItemData::Type_t::SKILL_DEMON:
             case objects::MiNPCBarterItemData::Type_t::PLUGIN:
@@ -116,6 +122,7 @@ void HandleBarter(const std::shared_ptr<ChannelServer> server,
     std::list<int32_t> demonSkills;
     std::list<int32_t> pluginIDs;
     std::set<uint16_t> oneTimeValuables;
+    std::unordered_map<int32_t, uint32_t> cooldowns;
     if(!failed)
     {
         for(auto itemData : barterData->GetResultItems())
@@ -145,7 +152,7 @@ void HandleBarter(const std::shared_ptr<ChannelServer> server,
                     if(CharacterManager::HasValuable(character, valuableID))
                     {
                         LOG_ERROR(libcomp::String("Player attempted to"
-                            " perform barter with  a one-time valuable they"
+                            " perform barter with a one-time valuable they"
                             " already have: %1\n").Arg(valuableID));
                         failed = true;
                     }
@@ -157,8 +164,9 @@ void HandleBarter(const std::shared_ptr<ChannelServer> server,
             case objects::MiNPCBarterItemData::Type_t::EVENT_COUNTER:
                 /// @todo: for now just don't set event counter
                 break;
-            case objects::MiNPCBarterItemData::Type_t::CASINO_RESTRICTION:
-                /// @todo: for now just don't set casino restriction
+            case objects::MiNPCBarterItemData::Type_t::COOLDOWN:
+                // Calculate the cooldown(s) below (negate for system types)
+                cooldowns[-itemData->GetSubtype()] = 0;
                 break;
             case objects::MiNPCBarterItemData::Type_t::BETHEL:
                 /// @todo: for now just don't receive bethel
@@ -169,8 +177,9 @@ void HandleBarter(const std::shared_ptr<ChannelServer> server,
             case objects::MiNPCBarterItemData::Type_t::SKILL_DEMON:
                 if(!state->GetDemonState()->GetEntity())
                 {
-                    LOG_ERROR("Attempted to add a barter demon skill"
-                        " to a player without a demon summoned\n");
+                    LOG_ERROR(libcomp::String("Attempted to add a barter demon"
+                        " skill to a player without a demon summoned: %1\n")
+                        .Arg(state->GetAccountUID().ToString()));
                     failed = true;
                 }
                 else
@@ -182,13 +191,44 @@ void HandleBarter(const std::shared_ptr<ChannelServer> server,
                 pluginIDs.push_back(itemData->GetSubtype());
                 break;
             case objects::MiNPCBarterItemData::Type_t::COIN:
-                /// @todo: for now just don't receive coins
+                {
+                    int64_t total = (int64_t)((int64_t)itemData->GetSubtype() *
+                        1000000 + (int64_t)itemData->GetAmount());
+                    coinAdjust = (int64_t)(coinAdjust + total);
+                }
                 break;
             case objects::MiNPCBarterItemData::Type_t::NONE:
                 break;
             default:
                 LOG_ERROR(libcomp::String("Invalid barter result item"
                     " type encountered: %1\n").Arg((uint8_t)type));
+                failed = true;
+                break;
+            }
+        }
+    }
+
+    if(cooldowns.size() > 0 && !failed)
+    {
+        // Fail if any cooldowns are active, otherwise calculate new times
+        uint32_t now = (uint32_t)std::time(0);
+
+        cState->RefreshActionCooldowns(false, now);
+        for(auto& pair : cooldowns)
+        {
+            if(!cState->ActionCooldownActive(pair.first, false))
+            {
+                auto it = SVR_CONST.BARTER_COOLDOWNS.find(-pair.first);
+                if(it != SVR_CONST.BARTER_COOLDOWNS.end())
+                {
+                    pair.second = (uint32_t)(now + it->second);
+                }
+            }
+            else
+            {
+                LOG_ERROR(libcomp::String("Attempted to execute barter"
+                    " with active action cooldown type %1: %2\n")
+                    .Arg(-pair.first).Arg(state->GetAccountUID().ToString()));
                 failed = true;
                 break;
             }
@@ -303,6 +343,11 @@ void HandleBarter(const std::shared_ptr<ChannelServer> server,
                 characterManager->UpdateSoulPoints(client, spAdjust, true);
             }
 
+            if(coinAdjust != 0)
+            {
+                characterManager->UpdateCoinTotal(client, coinAdjust, true);
+            }
+
             if(characterSkills.size() > 0)
             {
                 int32_t characterEntityID = state->GetCharacterState()
@@ -335,6 +380,25 @@ void HandleBarter(const std::shared_ptr<ChannelServer> server,
             {
                 failed |= characterManager->AddPlugin(client, valuableID);
             }
+
+            if(!failed)
+            {
+                bool updated = false;
+                for(auto& pair : cooldowns)
+                {
+                    if(pair.second)
+                    {
+                        character->SetActionCooldowns(pair.first, pair.second);
+                        updated = true;
+                    }
+                }
+
+                if(updated)
+                {
+                    server->GetWorldDatabase()->QueueUpdate(character,
+                        state->GetAccountUID());
+                }
+            }
         }
     }
 
@@ -345,9 +409,9 @@ void HandleBarter(const std::shared_ptr<ChannelServer> server,
 
     client->SendPacket(reply);
 
-    // Adding one-time valuables does not end the barter session so force
-    // it to end so pre-barter checks can run again
-    if(!failed && oneTimeValuables.size() > 0)
+    // Certain types need to force the event to end so pre-barter checks can
+    // run again
+    if(!failed && (oneTimeValuables.size() > 0 || cooldowns.size() > 0))
     {
         server->GetEventManager()->HandleEvent(client, nullptr);
     }

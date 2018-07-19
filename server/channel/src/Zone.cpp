@@ -176,17 +176,26 @@ void Zone::SetDynamicMap(const std::shared_ptr<DynamicMap>& map)
     mDynamicMap = map;
 }
 
-void Zone::AddConnection(const std::shared_ptr<ChannelClientConnection>& client)
+bool Zone::AddConnection(const std::shared_ptr<ChannelClientConnection>& client)
 {
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
     auto dState = state->GetDemonState();
 
-    RegisterEntityState(cState);
-    RegisterEntityState(dState);
+    if(!GetInvalid())
+    {
+        RegisterEntityState(cState);
+        RegisterEntityState(dState);
 
-    std::lock_guard<std::mutex> lock(mLock);
-    mConnections[state->GetWorldCID()] = client;
+        std::lock_guard<std::mutex> lock(mLock);
+        mConnections[state->GetWorldCID()] = client;
+
+        return true;
+    }
+    else
+    {
+        return false;
+    }
 }
 
 void Zone::RemoveConnection(const std::shared_ptr<ChannelClientConnection>& client)
@@ -1055,6 +1064,9 @@ void Zone::Cleanup()
     mSpawnLocationGroups.clear();
 
     mZoneInstance = nullptr;
+
+    // Zone is no longer valid for use
+    SetInvalid(true);
 }
 
 bool Zone::TimeRestrictionActive(const WorldClock& clock,

@@ -694,6 +694,26 @@ public:
         channel::ChannelClientConnection>& client);
 
     /**
+     * Update the player's casino coin total.
+     * @param client Pointer to the client connection
+     * @param amount Set or adjusted coin amount to update
+     * @param isAdjust true if the amount value should be added to the current
+     *  value, false if it should replace the curent value
+     */
+    bool UpdateCoinTotal(const std::shared_ptr<
+        channel::ChannelClientConnection>& client, int64_t amount,
+        bool isAdjust);
+
+    /**
+     * Send the client character's current casino coin total.
+     * @param client Pointer to the client connection
+     * @param isUpdate Signifies that the amount is not being sent due to
+     *  initial character login
+     */
+    void SendCoinTotal(const std::shared_ptr<
+        channel::ChannelClientConnection>& client, bool isUpdate);
+
+    /**
      * Update the client's character or demon's experience and level
      * up if the level threshold is passed.
      * @param client Pointer to the client connection

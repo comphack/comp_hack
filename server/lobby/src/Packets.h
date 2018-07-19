@@ -52,6 +52,7 @@ PACKET_PARSER_DECL(SetChannelInfo);    // 0x1003
 PACKET_PARSER_DECL(AccountLogin);      // 0x1004
 PACKET_PARSER_DECL(AccountLogout);     // 0x1005
 PACKET_PARSER_DECL(DataSync);          // 0x1007
+PACKET_PARSER_DECL(WebGame);           // 0x100C
 
 } // namespace Parsers
 

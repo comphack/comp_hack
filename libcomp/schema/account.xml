@@ -51,6 +51,11 @@
             <element type="string"/>
         </member>
 
+        <member type="map" name="ActionCooldowns">
+            <key type="s32"/>
+            <value type="u32"/>
+        </member>
+
         <member type="bool" name="CleanupRequired" key="true" unique="false"/>
     </object>
     <object name="BazaarData" location="world" scriptenabled="true">

@@ -38,6 +38,7 @@
 #include <Account.h>
 #include <Character.h>
 #include <CharacterLogin.h>
+#include <CharacterProgress.h>
 
 // lobby Includes
 #include "AccountManager.h"
@@ -76,6 +77,14 @@ bool LobbySyncManager::Initialize()
 
     mRegisteredTypes["Character"] = cfg;
 
+    cfg = std::make_shared<ObjectConfig>(
+        "CharacterProgress", false, nullptr);
+    cfg->UpdateHandler = &DataSyncManager::Update<LobbySyncManager,
+        objects::CharacterProgress>;
+    cfg->DynamicHandler = true;
+
+    mRegisteredTypes["CharacterProgress"] = cfg;
+
     return true;
 }
 
@@ -108,6 +117,25 @@ int8_t LobbySyncManager::Update<objects::Character>(const libcomp::String& type,
     auto entry = std::dynamic_pointer_cast<objects::Character>(obj);
 
     SyncCharacter(entry, isRemove);
+
+    return SYNC_HANDLED;
+}
+
+template<>
+int8_t LobbySyncManager::Update<objects::CharacterProgress>(
+    const libcomp::String& type, const std::shared_ptr<libcomp::Object>& obj,
+    bool isRemove, const libcomp::String& source)
+{
+    (void)type;
+    (void)source;
+
+    // Do nothing with removes
+    if(!isRemove)
+    {
+        auto entry = std::dynamic_pointer_cast<objects::CharacterProgress>(obj);
+
+        SyncCharacterProgress(entry);
+    }
 
     return SYNC_HANDLED;
 }
@@ -165,5 +193,39 @@ void LobbySyncManager::SyncCharacter(const std::shared_ptr<
         QueueOutgoing("Character", connection, updates, removes);
 
         connection->FlushOutgoing();
+    }
+}
+
+void LobbySyncManager::SyncCharacterProgress(const std::shared_ptr<
+    objects::CharacterProgress>& progress)
+{
+    auto server = mServer.lock();
+
+    auto character = progress ? std::dynamic_pointer_cast<objects::Character>(
+        libcomp::PersistentObject::GetObjectByUUID(progress->GetCharacter()))
+        : nullptr;
+    if(character)
+    {
+        uint8_t worldID = character->GetWorldID();
+
+        auto world = server->GetManagerConnection()->GetWorldByID(
+            worldID);
+        if(world)
+        {
+            auto connection = world->GetConnection();
+
+            std::set<std::shared_ptr<libcomp::Object>> updates;
+            std::set<std::shared_ptr<libcomp::Object>> removes;
+            updates.insert(progress);
+
+            QueueOutgoing("CharacterProgress", connection, updates, removes);
+
+            connection->FlushOutgoing();
+        }
+    }
+    else
+    {
+        LOG_DEBUG(libcomp::String("CharacterProgress failed to sync for"
+            " character: %1\n").Arg(progress->GetCharacter().ToString()));
     }
 }

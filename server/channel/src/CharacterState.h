@@ -131,6 +131,29 @@ public:
     uint8_t GetExpertiseRank(libcomp::DefinitionManager* definitionManager,
         uint32_t expertiseID);
 
+    /**
+     * Determine if the character (or account) has a specific action cooldown
+     * active.
+     * @param cooldownID ID of the cooldown to check
+     * @param accountLevel If true, the AccountWorldData level values are
+     *  checked. If false, the character level values are checked.
+     * @param refresh Refresh the cooldown values based on the current server
+     *  time before checking, defaults to true
+     * @return true if the cooldown is active, false if it is not
+     */
+    bool ActionCooldownActive(int32_t cooldownID, bool accountLevel,
+        bool refresh = true);
+
+    /**
+     * Refresh the action cooldowns for the character or associated account.
+     * @param accountLevel If true, the AccountWorldData level values are
+     *  refreshed. If false, the character level values are refreshed.
+     * @param time System time representing the cut-off point for no longer
+     *  active cooldowns. Any times before this value will have their
+     *  cooldown removed.
+     */
+    void RefreshActionCooldowns(bool accountLevel, uint32_t time = 0);
+
     virtual bool RecalcDisabledSkills(
         libcomp::DefinitionManager* definitionManager);
 

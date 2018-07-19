@@ -32,6 +32,8 @@
         <member type="list" name="Queued">
             <element type="EventInstance*"/>
         </member>
+        <member type="WebGameSession*" name="GameSession"
+            nulldefault="true"/>
     </object>
     <object name="EventInstance" persistent="false">
         <member type="Event*" name="Event"/>

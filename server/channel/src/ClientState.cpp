@@ -229,8 +229,8 @@ const libobjgen::UUID ClientState::GetAccountUID() const
 
 int32_t ClientState::GetUserLevel() const
 {
-    auto account = GetAccountLogin()->GetAccount();
-    return !account.IsNull() ? account->GetUserLevel() : 0;
+    auto account = GetAccountLogin()->GetAccount().Get();
+    return account ? account->GetUserLevel() : 0;
 }
 
 int32_t ClientState::GetWorldCID() const

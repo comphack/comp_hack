@@ -125,6 +125,8 @@ bool ChannelServer::Initialize()
         to_underlying(InternalPacketCode_t::PACKET_PARTY_UPDATE));
     internalPacketManager->AddParser<Parsers::ClanUpdate>(
         to_underlying(InternalPacketCode_t::PACKET_CLAN_UPDATE));
+    internalPacketManager->AddParser<Parsers::WebGame>(
+        to_underlying(InternalPacketCode_t::PACKET_WEB_GAME));
 
     //Add the managers to the main worker.
     mMainWorker.AddManager(internalPacketManager);

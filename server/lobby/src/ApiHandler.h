@@ -47,20 +47,34 @@
 // Standard C++11 Includes
 #include <unordered_map>
 
+namespace objects
+{
+class WebGameSession;
+}
+
 namespace lobby
 {
 
 class AccountManager;
+class World;
 
 class ApiSession
 {
 public:
+    virtual ~ApiSession() { }
+
     void Reset();
 
     libcomp::String username;
     libcomp::String challenge;
     libcomp::String clientAddress;
     std::shared_ptr<objects::Account> account;
+};
+
+class WebGameApiSession : public ApiSession
+{
+public:
+    std::shared_ptr<objects::WebGameSession> webGameSession;
 };
 
 class ApiHandler : public CivetHandler
@@ -115,7 +129,19 @@ protected:
         JsonBox::Object& response,
         const std::shared_ptr<ApiSession>& session);
 
+    bool WebGame_GetCharacter(const JsonBox::Object& request,
+        JsonBox::Object& response,
+        const std::shared_ptr<ApiSession>& session);
+    bool WebGame_UpdateCoins(const JsonBox::Object& request,
+        JsonBox::Object& response,
+        const std::shared_ptr<ApiSession>& session);
+
 private:
+    bool GetWebGameSession(JsonBox::Object& response,
+        const std::shared_ptr<ApiSession>& session,
+        std::shared_ptr<objects::WebGameSession>& gameSession,
+        std::shared_ptr<World>& world);
+
     // List of API sessions.
     std::unordered_map<libcomp::String, std::shared_ptr<ApiSession>> mSessions;
 

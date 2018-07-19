@@ -40,10 +40,12 @@
 // object Includes
 #include <Account.h>
 #include <AccountLogin.h>
+#include <AccountWorldData.h>
 #include <Action.h>
 #include <ActionAddRemoveItems.h>
 #include <ActionAddRemoveStatus.h>
 #include <ActionCreateLoot.h>
+#include <ActionDelay.h>
 #include <ActionDisplayMessage.h>
 #include <ActionGrantSkills.h>
 #include <ActionGrantXP.h>
@@ -143,6 +145,8 @@ ActionManager::ActionManager(const std::weak_ptr<ChannelServer>& server)
         &ActionManager::Spawn;
     mActionHandlers[objects::Action::ActionType_t::CREATE_LOOT] =
         &ActionManager::CreateLoot;
+    mActionHandlers[objects::Action::ActionType_t::DELAY] =
+        &ActionManager::Delay;
 }
 
 ActionManager::~ActionManager()
@@ -175,6 +179,19 @@ void ActionManager::PerformActions(
         LOG_ERROR("Configurable actions cannot be performed"
             " without supplying a curent zone or source connection\n");
         return;
+    }
+
+    if(!ctx.Client && sourceEntityID)
+    {
+        // Add the client of the source if they are still in the zone
+        auto sourceClient = mServer.lock()->GetManagerConnection()
+            ->GetEntityClient(sourceEntityID);
+        auto sourceState = sourceClient
+            ? sourceClient->GetClientState() : nullptr;
+        if(sourceState && sourceState->GetZone() == ctx.CurrentZone)
+        {
+            ctx.Client = sourceClient;
+        }
     }
 
     for(auto action : actions)
@@ -459,6 +476,7 @@ bool ActionManager::ZoneChange(ActionContext& ctx)
             // Request is actually to move within the zone
             zoneDef = ctx.CurrentZone->GetDefinition();
             zoneID = zoneDef->GetID();
+            dynamicMapID = zoneDef->GetDynamicMapID();
         }
         else
         {
@@ -1602,6 +1620,12 @@ bool ActionManager::UpdatePoints(ActionContext& ctx)
                 ctx.Client, (int32_t)act->GetValue(), !act->GetIsSet());
         }
         break;
+    case objects::ActionUpdatePoints::PointType_t::COINS:
+        {
+            mServer.lock()->GetCharacterManager()->UpdateCoinTotal(
+                ctx.Client, (int64_t)act->GetValue(), !act->GetIsSet());
+        }
+        break;
     default:
         break;
     }
@@ -2107,6 +2131,115 @@ bool ActionManager::CreateLoot(ActionContext& ctx)
     }
 
     ChannelClientConnection::FlushAllOutgoing(zConnections);
+
+    return true;
+}
+
+bool ActionManager::Delay(ActionContext& ctx)
+{
+    auto act = GetAction<objects::ActionDelay>(ctx, false);
+    if(!act)
+    {
+        return false;
+    }
+
+    if(act->GetType() == objects::ActionDelay::Type_t::ACTION_DELAY)
+    {
+        // Execute actions after delay (in seconds)
+        if(act->GetDuration())
+        {
+            uint64_t delayTime = (uint64_t)(ChannelServer::GetServerTime() +
+                (uint64_t)((uint64_t)act->GetDuration() * 1000000));
+
+            auto server = mServer.lock();
+            server->ScheduleWork(delayTime, [](
+                const std::shared_ptr<ChannelServer> pServer,
+                const std::shared_ptr<objects::ActionDelay> pAct,
+                const std::shared_ptr<Zone> pZone,
+                int32_t pSourceEntityID, uint32_t pGroupID)
+                {
+                    auto actionManager = pServer->GetActionManager();
+                    if(actionManager && !pZone->GetInvalid())
+                    {
+                        actionManager->PerformActions(nullptr,
+                            pAct->GetActions(), pSourceEntityID, pZone,
+                            pGroupID);
+
+                        // Fire action delay triggers
+                        if(pAct->GetDelayID() &&
+                            pZone->ActionDelayKeysContains(pAct->GetDelayID()))
+                        {
+                            for(auto trigger : pZone->GetActionDelayTriggers())
+                            {
+                                if(trigger->GetValue() == pAct->GetDelayID())
+                                {
+                                    actionManager->PerformActions(nullptr,
+                                        trigger->GetActions(), pSourceEntityID,
+                                        pZone, 0);
+                                }
+                            }
+                        }
+                    }
+                }, server, act, ctx.CurrentZone, ctx.SourceEntityID,
+                    ctx.GroupID);
+        }
+    }
+    else if(act->GetDelayID() && (act->GetDelayID() > 0 ||
+        !act->GetDuration()))
+    {
+        uint32_t sysTime = act->GetDuration()
+            ? (uint32_t)((uint32_t)std::time(0) + act->GetDuration())
+            : 0;
+
+        auto client = ctx.Client;
+        auto state = client ? client->GetClientState() : nullptr;
+        switch(act->GetType())
+        {
+        case objects::ActionDelay::Type_t::CHARACTER_COOLDOWN:
+            // Set the context character's ActionCooldowns value
+            {
+                auto cState = state
+                    ? state->GetCharacterState() : nullptr;
+                auto character = cState ? cState->GetEntity() : nullptr;
+                if(!character)
+                {
+                    return false;
+                }
+
+                if(sysTime)
+                {
+                    character->SetActionCooldowns(act->GetDelayID(), sysTime);
+                }
+                else
+                {
+                    character->RemoveActionCooldowns(act->GetDelayID());
+                }
+            }
+            break;
+        case objects::ActionDelay::Type_t::ACCOUNT_COOLDOWN:
+            // Set the context account world data's ActionCooldowns value
+            {
+                auto awd = state ? state->GetAccountWorldData().Get()
+                    : nullptr;
+                if(!awd)
+                {
+                    return false;
+                }
+
+                if(sysTime)
+                {
+                    awd->SetActionCooldowns(act->GetDelayID(), sysTime);
+                }
+                else
+                {
+                    awd->RemoveActionCooldowns(act->GetDelayID());
+                }
+            }
+            break;
+        default:
+            break;
+        }
+    }
 
     return true;
 }

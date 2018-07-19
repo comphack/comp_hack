@@ -55,6 +55,7 @@ bool ChannelSyncManager::Initialize()
 {
     auto server = mServer.lock();
     auto lobbyDB = server->GetLobbyDatabase();
+    auto worldDB = server->GetWorldDatabase();
 
     // Build the configs
     auto cfg = std::make_shared<ObjectConfig>(
@@ -69,8 +70,17 @@ bool ChannelSyncManager::Initialize()
 
     mRegisteredTypes["Account"] = cfg;
 
+    cfg = std::make_shared<ObjectConfig>("CharacterProgress", false, worldDB);
+
+    mRegisteredTypes["CharacterProgress"] = cfg;
+
     // Add the world connection
-    const std::set<std::string> worldTypes = { "Account", "SearchEntry" };
+    const std::set<std::string> worldTypes =
+        {
+            "Account",
+            "CharacterProgress",
+            "SearchEntry"
+        };
 
     auto worldConnection = server->GetManagerConnection()
         ->GetWorldConnection();

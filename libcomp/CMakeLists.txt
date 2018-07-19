@@ -242,6 +242,7 @@ SET(${PROJECT_NAME}_SCHEMA
     schema/action_addremoveitems.xml
     schema/action_addremovestatus.xml
     schema/action_createloot.xml
+    schema/action_delay.xml
     schema/action_displaymessage.xml
     schema/action_grantskills.xml
     schema/action_grantxp.xml
@@ -294,6 +295,7 @@ SET(${PROJECT_NAME}_SCHEMA
     schema/spawn.xml
     schema/test.xml
     schema/tokusei.xml
+    schema/webgame.xml
 
     # BinaryData Files
     schema/binarydata/aidata.xml
@@ -370,6 +372,8 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     ActionAddRemoveStatus.cpp
     ActionCreateLoot.h
     ActionCreateLoot.cpp
+    ActionDelay.h
+    ActionDelay.cpp
     ActionDisplayMessage.h
     ActionDisplayMessage.cpp
     ActionGrantSkills.h
@@ -600,6 +604,8 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     TokuseiCorrectTbl.cpp
     TokuseiSkillCondition.h
     TokuseiSkillCondition.cpp
+    WebGameSession.h
+    WebGameSession.cpp
     WorldSharedConfig.h
     WorldSharedConfig.cpp
 

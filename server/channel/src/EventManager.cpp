@@ -89,6 +89,7 @@
 #include <ServerZoneInstance.h>
 #include <Spawn.h>
 #include <TriFusionHostSession.h>
+#include <WebGameSession.h>
 #include <WorldSharedConfig.h>
 
 // channel Includes
@@ -251,6 +252,9 @@ bool EventManager::HandleResponse(const std::shared_ptr<ChannelClientConnection>
                 ).Arg(to_underlying(eventType)));
             break;
     }
+
+    // End web game if a session exists
+    EndWebGame(client, true);
 
     EventContext ctx;
     ctx.Client = client;
@@ -3063,6 +3067,93 @@ bool EventManager::HandleEvent(const std::shared_ptr<ChannelClientConnection>& c
     }
 }
 
+void EventManager::StartWebGame(const std::shared_ptr<
+    ChannelClientConnection>& client, const libcomp::String& sessionID)
+{
+    auto state = client->GetClientState();
+    auto eState = state->GetEventState();
+    auto gameSession = eState ? eState->GetGameSession() : nullptr;
+
+    bool valid = false;
+    if(gameSession)
+    {
+        if(!gameSession->GetSessionID().IsEmpty())
+        {
+            LOG_ERROR(libcomp::String("Second web-game session requested"
+                " for account: %1").Arg(state->GetAccountUID().ToString()));
+            return;
+        }
+
+        gameSession->SetSessionID(sessionID);
+
+        // The current event must be the web-game or we have to quit here
+        auto current = eState ? eState->GetCurrent() : nullptr;
+        auto e = current ? std::dynamic_pointer_cast<
+            objects::EventOpenMenu>(current->GetEvent()) : nullptr;
+        if(e && e->GetMenuType() == (int32_t)SVR_CONST.MENU_WEB_GAME)
+        {
+            EventContext ctx;
+            ctx.Client = client;
+            ctx.EventInstance = current;
+            ctx.CurrentZone = state->GetZone();
+
+            OpenMenu(ctx);
+            valid = true;
+        }
+    }
+
+    if(!valid)
+    {
+        EndWebGame(client, true);
+    }
+}
+
+void EventManager::EndWebGame(
+    const std::shared_ptr<ChannelClientConnection>& client, bool notifyWorld)
+{
+    auto state = client->GetClientState();
+    auto eState = state->GetEventState();
+    auto gameSession = eState ? eState->GetGameSession() : nullptr;
+
+    // If a game session exists, end it, notify world and send updated coins
+    if(gameSession)
+    {
+        // Starting total, does not update on channel while session is active
+        int64_t coins = gameSession->GetCoins();
+
+        auto server = mServer.lock();
+        auto character = state->GetCharacterState()->GetEntity();
+        auto progress = character ? character->GetProgress().Get(
+            server->GetWorldDatabase(), true) : nullptr;
+        if(progress && progress->GetCoins() != coins)
+        {
+            server->GetCharacterManager()->SendCoinTotal(client, true);
+        }
+
+        eState->SetGameSession(nullptr);
+
+        if(notifyWorld)
+        {
+            libcomp::Packet request;
+            request.WritePacketCode(InternalPacketCode_t::PACKET_WEB_GAME);
+            request.WriteU8((uint8_t)InternalPacketAction_t::PACKET_ACTION_REMOVE);
+            request.WriteS32Little(state->GetWorldCID());
+
+            server->GetManagerConnection()->GetWorldConnection()
+                ->SendPacket(request);
+        }
+    }
+
+    // If the current event is a web-game menu, end it
+    auto current = eState->GetCurrent();
+    auto e = current ? std::dynamic_pointer_cast<
+        objects::EventOpenMenu>(current->GetEvent()) : nullptr;
+    if(e && e->GetMenuType() == (int32_t)SVR_CONST.MENU_WEB_GAME)
+    {
+        EndEvent(client);
+    }
+}
+
 bool EventManager::HandleEvent(EventContext& ctx)
 {
     if(ctx.EventInstance == nullptr)
@@ -3464,11 +3555,33 @@ bool EventManager::OpenMenu(EventContext& ctx)
     auto state = ctx.Client->GetClientState();
     auto eState = state->GetEventState();
 
+    libcomp::String sessionID;
+
     int32_t menuType = e->GetMenuType();
-    if(menuType == (int32_t)SVR_CONST.MENU_TRIFUSION &&
-        !HandleTriFusion(ctx.Client))
+    if(menuType == (int32_t)SVR_CONST.MENU_TRIFUSION)
     {
-        return false;
+        if(!HandleTriFusion(ctx.Client))
+        {
+            return false;
+        }
+    }
+    else if(menuType == (int32_t)SVR_CONST.MENU_WEB_GAME)
+    {
+        if(!HandleWebGame(ctx.Client))
+        {
+            // Waiting for internal server response
+            return true;
+        }
+
+        auto gameSession = eState->GetGameSession();
+        if(gameSession)
+        {
+            sessionID = gameSession->GetSessionID();
+        }
+        else
+        {
+            return false;
+        }
     }
 
     auto current = eState->GetCurrent();
@@ -3482,7 +3595,7 @@ bool EventManager::OpenMenu(EventContext& ctx)
         p.WriteS32Little(menuType);
         p.WriteS32Little(overrideShopID != 0 ? overrideShopID : e->GetShopID());
         p.WriteString16Little(state->GetClientStringEncoding(),
-            libcomp::String(), true);
+            sessionID, true);
 
         ctx.Client->SendPacket(p);
     }
@@ -3542,6 +3655,11 @@ bool EventManager::EndEvent(const std::shared_ptr<ChannelClientConnection>& clie
         eState->SetCurrent(nullptr);
         eState->ClearPrevious();
         eState->ClearQueued();
+
+        if(eState->GetGameSession())
+        {
+            EndWebGame(client, true);
+        }
 
         libcomp::Packet p;
         p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_EVENT_END);
@@ -3613,6 +3731,52 @@ bool EventManager::HandleTriFusion(const std::shared_ptr<
         ChannelClientConnection::BroadcastPacket(partyClients, notify);
     }
 
+    return true;
+}
+
+bool EventManager::HandleWebGame(const std::shared_ptr<
+    ChannelClientConnection>& client)
+{
+    auto state = client->GetClientState();
+    auto eState = state->GetEventState();
+    auto current = eState ? eState->GetCurrent() : nullptr;
+    if(!eState || !current)
+    {
+        return true;
+    }
+
+    auto gameSession = eState->GetGameSession();
+    if(!gameSession)
+    {
+        // Create session, send to the world and wait for response
+        auto server = mServer.lock();
+        auto character = state->GetCharacterState()->GetEntity();
+
+        // Always reload to get current coins
+        auto progress = character->GetProgress().Get(
+            server->GetWorldDatabase(), true);
+
+        gameSession = std::make_shared<objects::WebGameSession>();
+        gameSession->SetAccount(character->GetAccount());
+        gameSession->SetCharacter(character);
+        gameSession->SetWorldID(character->GetWorldID());
+        gameSession->SetWorldCID(state->GetWorldCID());
+        gameSession->SetCoins(progress->GetCoins());
+        gameSession->SetMachineID((int32_t)current->GetShopID());
+        eState->SetGameSession(gameSession);
+
+        libcomp::Packet request;
+        request.WritePacketCode(InternalPacketCode_t::PACKET_WEB_GAME);
+        request.WriteU8((uint8_t)InternalPacketAction_t::PACKET_ACTION_ADD);
+        gameSession->SavePacket(request);
+
+        server->GetManagerConnection()->GetWorldConnection()
+            ->SendPacket(request);
+
+        return false;
+    }
+
+    // Session is ready to go
     return true;
 }
 

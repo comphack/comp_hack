@@ -6,7 +6,7 @@
             <value num="1">ITEM</value>
             <value num="2">ONE_TIME_VALUABLE</value>
             <value num="4">EVENT_COUNTER</value>
-            <value num="5">CASINO_RESTRICTION</value>
+            <value num="5">COOLDOWN</value>
             <value num="8">BETHEL</value>
             <value num="11">SKILL_CHARACTER</value>
             <value num="13">SOUL_POINT</value>

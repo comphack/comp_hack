@@ -116,7 +116,13 @@ void CharacterManager::SendCharacterData(const std::shared_ptr<
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
     auto c = cState->GetEntity();
-    auto cs = c->GetCoreStats().Get();
+
+    auto cs = cState->GetCoreStats();
+    auto zone = cState->GetZone();
+    if(!cs || !zone)
+    {
+        return;
+    }
 
     libcomp::Packet reply;
     reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_CHARACTER_DATA);
@@ -220,7 +226,6 @@ void CharacterManager::SendCharacterData(const std::shared_ptr<
     reply.WriteS64Little(-1);
     reply.WriteS64Little(-1);
 
-    auto zone = cState->GetZone();
     auto zoneDef = zone->GetDefinition();
 
     reply.WriteS32Little((int32_t)zone->GetID());
@@ -275,9 +280,14 @@ void CharacterManager::SendOtherCharacterData(const std::list<std::shared_ptr<
 
     auto cState = otherState->GetCharacterState();
     auto c = cState->GetEntity();
-    auto cs = c->GetCoreStats().Get();
 
+    auto cs = cState->GetCoreStats();
     auto zone = cState->GetZone();
+    if(!cs || !zone)
+    {
+        return;
+    }
+
     auto zoneDef = zone->GetDefinition();
 
     libcomp::Packet reply;
@@ -403,7 +413,8 @@ void CharacterManager::SendPartnerData(const std::shared_ptr<
     auto character = cState->GetEntity();
 
     auto d = dState->GetEntity();
-    if(d == nullptr)
+    auto zone = dState->GetZone();
+    if(!d || !zone)
     {
         return;
     }
@@ -464,7 +475,6 @@ void CharacterManager::SendPartnerData(const std::shared_ptr<
     reply.WriteS64Little(-1);
     reply.WriteS64Little(-1);
 
-    auto zone = dState->GetZone();
     auto zoneDef = zone->GetDefinition();
 
     reply.WriteS32Little((int32_t)zone->GetID());
@@ -546,9 +556,13 @@ void CharacterManager::SendOtherPartnerData(const std::list<std::shared_ptr<
 
     auto dState = otherState->GetDemonState();
     auto d = dState->GetEntity();
-    auto ds = d->GetCoreStats().Get();
-
     auto zone = dState->GetZone();
+    if(!d || !zone)
+    {
+        return;
+    }
+
+    auto ds = d->GetCoreStats().Get();
     auto zoneDef = zone->GetDefinition();
 
     libcomp::Packet reply;
@@ -3265,6 +3279,62 @@ void CharacterManager::SendFusionGauge(const std::shared_ptr<
     notify.WriteU8(cState->GetMaxFusionGaugeStocks());
 
     client->SendPacket(notify);
+}
+
+bool CharacterManager::UpdateCoinTotal(const std::shared_ptr<
+    channel::ChannelClientConnection>& client, int64_t amount, bool isAdjust)
+{
+    auto state = client->GetClientState();
+    auto cState = state->GetCharacterState();
+    auto character = cState->GetEntity();
+    if(!character)
+    {
+        return false;
+    }
+
+    auto progress = character->GetProgress().Get();
+
+    int64_t oldAmount = progress->GetCoins();
+    int64_t newAmount = isAdjust ? (oldAmount + amount) : amount;
+    if(newAmount < 0)
+    {
+        // Not enough or set to below 0
+        return false;
+    }
+
+    auto opChangeset = std::make_shared<libcomp::DBOperationalChangeSet>();
+    auto expl = std::make_shared<libcomp::DBExplicitUpdate>(progress);
+    expl->SetFrom<int64_t>("Coins", newAmount, oldAmount);
+    opChangeset->AddOperation(expl);
+
+    if(mServer.lock()->GetWorldDatabase()->ProcessChangeSet(opChangeset))
+    {
+        SendCoinTotal(client, true);
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
+void CharacterManager::SendCoinTotal(const std::shared_ptr<
+    channel::ChannelClientConnection>& client, bool isUpdate)
+{
+    auto state = client->GetClientState();
+    auto cState = state->GetCharacterState();
+    auto character = cState->GetEntity();
+    if(character)
+    {
+        auto progress = character->GetProgress().Get();
+
+        libcomp::Packet reply;
+        reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_CASINO_COIN_TOTAL);
+        reply.WriteS32Little(isUpdate ? -1 : 0);    // Some internal indicator
+        reply.WriteS64Little(progress->GetCoins());
+
+        client->SendPacket(reply);
+    }
 }
 
 void CharacterManager::ExperienceGain(const std::shared_ptr<

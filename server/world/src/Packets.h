@@ -46,6 +46,7 @@ PACKET_PARSER_DECL(CharacterLogin);    // 0x1008
 PACKET_PARSER_DECL(FriendsUpdate);     // 0x1009
 PACKET_PARSER_DECL(PartyUpdate);       // 0x100A
 PACKET_PARSER_DECL(ClanUpdate);        // 0x100B
+PACKET_PARSER_DECL(WebGame);           // 0x100C
 
 } // namespace Parsers
 

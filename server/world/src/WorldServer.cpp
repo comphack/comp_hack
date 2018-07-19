@@ -110,6 +110,8 @@ void WorldServer::FinishInitialize()
         InternalPacketCode_t::PACKET_ACCOUNT_LOGOUT));
     packetManager->AddParser<Parsers::DataSync>(to_underlying(
         InternalPacketCode_t::PACKET_DATA_SYNC));
+    packetManager->AddParser<Parsers::WebGame>(
+        to_underlying(InternalPacketCode_t::PACKET_WEB_GAME));
 
     // Add the managers to the main worker.
     mMainWorker.AddManager(packetManager);
@@ -137,6 +139,8 @@ void WorldServer::FinishInitialize()
         InternalPacketCode_t::PACKET_PARTY_UPDATE));
     packetManager->AddParser<Parsers::ClanUpdate>(to_underlying(
         InternalPacketCode_t::PACKET_CLAN_UPDATE));
+    packetManager->AddParser<Parsers::WebGame>(
+        to_underlying(InternalPacketCode_t::PACKET_WEB_GAME));
 
     // Add the managers to the generic workers.
     for(auto worker : mWorkers)

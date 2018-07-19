@@ -7,6 +7,7 @@
             <value>CP</value>
             <value>SOUL_POINTS</value>
             <value>DIGITALIZE_POINTS</value>
+            <value>COINS</value>
         </member>
         <member type="s64" name="value"/>
         <member type="bool" name="isSet"/>

@@ -27,6 +27,7 @@
 #include "AccountManager.h"
 
 // libcomp Includes
+#include <Decrypt.h>
 #include <Log.h>
 #include <PacketCodes.h>
 #include <Randomizer.h>
@@ -49,6 +50,7 @@
 #include <ItemBox.h>
 #include <Quest.h>
 #include <StatusEffect.h>
+#include <WebGameSession.h>
 #include <WorldConfig.h>
 
 // world Includes
@@ -298,6 +300,7 @@ std::shared_ptr<objects::AccountLogin> AccountManager::LogoutUser(
         result = pair->second;
         Cleanup(result);
         mAccountMap.erase(pair);
+        mWebGameSessions.erase(lookup);
 
         auto cLogin = result->GetCharacterLogin();
 
@@ -726,6 +729,127 @@ bool AccountManager::DeleteCharacter(const std::shared_ptr<
         " on account: %2\n").Arg(character->GetName())
         .Arg(character->GetAccount().ToString()));
     return false;
+}
+
+bool AccountManager::StartWebGameSession(const std::shared_ptr<
+    objects::WebGameSession>& gameSession)
+{
+    auto server = mServer.lock();
+    auto account = gameSession->GetAccount().Get(server->GetLobbyDatabase());
+    if(!account)
+    {
+        return false;
+    }
+
+    libcomp::String lookup = account->GetUsername().ToLower();
+
+    std::lock_guard<std::mutex> lock(mLock);
+    auto accountPair = mAccountMap.find(lookup);
+    if(accountPair == mAccountMap.end())
+    {
+        // Not logged in
+        return false;
+    }
+
+    auto sessionPair = mWebGameSessions.find(lookup);
+    if(sessionPair != mWebGameSessions.end())
+    {
+        // Already has a session
+        return false;
+    }
+
+    // Session is valid, generate the session ID and register it
+    auto sessionID = libcomp::Decrypt::GenerateRandom(20).ToLower();
+    gameSession->SetSessionID(sessionID);
+
+    mWebGameSessions[lookup] = gameSession;
+
+    // Notify the lobby that the session has started and wait for
+    // reply indicating that it is ready
+    auto lobby = server->GetLobbyConnection();
+    if(lobby)
+    {
+        libcomp::Packet notify;
+        notify.WritePacketCode(InternalPacketCode_t::PACKET_WEB_GAME);
+        notify.WriteU8((uint8_t)
+            InternalPacketAction_t::PACKET_ACTION_ADD);
+        notify.WriteString16Little(
+            libcomp::Convert::Encoding_t::ENCODING_UTF8,
+            account->GetUsername(), true);
+        gameSession->SavePacket(notify);
+
+        lobby->SendPacket(notify);
+    }
+
+    return true;
+}
+
+std::shared_ptr<objects::WebGameSession> AccountManager::GetGameSession(
+    const libcomp::String& username)
+{
+    libcomp::String lookup = username.ToLower();
+
+    std::lock_guard<std::mutex> lock(mLock);
+
+    auto pair = mWebGameSessions.find(lookup);
+    return pair != mWebGameSessions.end() ? pair->second : nullptr;
+}
+
+bool AccountManager::EndWebGameSession(const libcomp::String& username,
+    bool notifyLobby, bool notifyChannel)
+{
+    bool existed = false;
+    {
+        libcomp::String lookup = username.ToLower();
+
+        std::lock_guard<std::mutex> lock(mLock);
+
+        auto sessionPair = mWebGameSessions.find(lookup);
+        if(sessionPair != mWebGameSessions.end())
+        {
+            mWebGameSessions.erase(lookup);
+            existed = true;
+        }
+    }
+
+    if(notifyLobby)
+    {
+        libcomp::Packet notify;
+        notify.WritePacketCode(InternalPacketCode_t::PACKET_WEB_GAME);
+        notify.WriteU8((uint8_t)InternalPacketAction_t::PACKET_ACTION_REMOVE);
+        notify.WriteString16Little(
+            libcomp::Convert::Encoding_t::ENCODING_UTF8, username, true);
+
+        auto lobby = mServer.lock()->GetLobbyConnection();
+        if(lobby)
+        {
+            lobby->SendPacket(notify);
+        }
+    }
+
+    if(notifyChannel)
+    {
+        auto login = GetUserLogin(username);
+        auto cLogin = login ? login->GetCharacterLogin() : nullptr;
+
+        // Only notify the channel if the session existed
+        if(existed && cLogin)
+        {
+            libcomp::Packet notify;
+            notify.WritePacketCode(InternalPacketCode_t::PACKET_WEB_GAME);
+            notify.WriteU8((uint8_t)InternalPacketAction_t::PACKET_ACTION_REMOVE);
+            notify.WriteS32Little(cLogin->GetWorldCID());
+
+            auto channel = mServer.lock()->GetChannelConnectionByID(
+                cLogin->GetChannelID());
+            if(channel)
+            {
+                channel->SendPacket(notify);
+            }
+        }
+    }
+
+    return existed;
 }
 
 void AccountManager::Cleanup(const std::shared_ptr<objects::AccountLogin>& login)

@@ -131,6 +131,8 @@ bool LobbyServer::Initialize()
         to_underlying(InternalPacketCode_t::PACKET_ACCOUNT_LOGOUT));
     internalPacketManager->AddParser<Parsers::DataSync>(to_underlying(
         InternalPacketCode_t::PACKET_DATA_SYNC));
+    internalPacketManager->AddParser<Parsers::WebGame>(
+        to_underlying(InternalPacketCode_t::PACKET_WEB_GAME));
 
     //Add the managers to the main worker.
     mMainWorker.AddManager(internalPacketManager);

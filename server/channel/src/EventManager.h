@@ -226,6 +226,26 @@ public:
     bool HandleEvent(const std::shared_ptr<ChannelClientConnection>& client,
         const std::shared_ptr<objects::EventInstance>& instance);
 
+    /**
+     * Start a pending web-game session with a session ID received from the
+     * world server. Session IDs are assumed to have been received only once
+     * both the world and lobby have accepted the channel's request as valid.
+     * @param client Pointer to the client connection
+     * @param sessionID Session Id received from the world server
+     */
+    void StartWebGame(const std::shared_ptr<ChannelClientConnection>& client,
+        const libcomp::String& sessionID);
+
+    /**
+     * End any web-game session currently active for the client
+     * @param client Pointer to the client connection
+     * @param notifyWorld Specifies if the world should be notified that the
+     *  session is ending. Should only ever be false if the world requested
+     *  that the session be ended
+     */
+    void EndWebGame(const std::shared_ptr<ChannelClientConnection>& client,
+        bool notifyWorld);
+
 private:
     struct EventContext
     {
@@ -427,6 +447,13 @@ private:
      * @return true on success, false on failure
      */
     bool HandleTriFusion(const std::shared_ptr<ChannelClientConnection>& client);
+
+    /**
+     * Handle all web-game setup steps if no session already exists
+     * @param client Pointer to the client the event affects
+     * @return true if the session was already active, false if it was created
+     */
+    bool HandleWebGame(const std::shared_ptr<ChannelClientConnection>& client);
 
     /**
      * Get the event from the supplied context converted to the proper type.

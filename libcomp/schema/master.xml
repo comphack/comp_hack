@@ -28,6 +28,7 @@
     <include path="search.xml"/>
     <include path="spawn.xml"/>
     <include path="tokusei.xml"/>
+    <include path="webgame.xml"/>
 
     <!-- Lobby Packets -->
     <include path="packet_login.xml"/>
@@ -45,6 +46,7 @@
     <include path="action_addremoveitems.xml"/>
     <include path="action_addremovestatus.xml"/>
     <include path="action_createloot.xml"/>
+    <include path="action_delay.xml"/>
     <include path="action_displaymessage.xml"/>
     <include path="action_grantskills.xml"/>
     <include path="action_grantxp.xml"/>

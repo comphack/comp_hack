@@ -25,6 +25,7 @@
             <value>ZONE_INSTANCE</value>
             <value>SPAWN</value>
             <value>CREATE_LOOT</value>
+            <value>DELAY</value>
         </member>
         <member type="enum" name="sourceContext" default="SOURCE">
             <value>SOURCE</value>

@@ -40,6 +40,7 @@ namespace objects
 {
 class AccountWorldData;
 class Character;
+class WebGameSession;
 }
 
 namespace world
@@ -163,6 +164,38 @@ public:
      */
     bool DeleteCharacter(const std::shared_ptr<objects::Character>& character);
 
+    /**
+     * Start a web-game session for the specified user who is currently playing
+     * that remains valid until a remove request is received or the account
+     * leaves the channel. Once it is created, the lobby will be notified. The
+     * channel will be notified after the lobby returns a success message.
+     * @param gameSession Pointer to the session's definition
+     * @return true if the session was started successfully, false if it
+     *  was not
+     */
+    bool StartWebGameSession(const std::shared_ptr<
+        objects::WebGameSession>& gameSession);
+
+    /**
+     * Get the current web-game session for the specified user
+     * @param username Username of the account the session belongs to
+     * @return Pointer to the game session, null if none exists
+     */
+    std::shared_ptr<objects::WebGameSession> GetGameSession(
+        const libcomp::String& username);
+
+    /**
+     * Start any web-game session for the specified user and notify the other
+     * servers as needed. Even if no currently active session exists, the other
+     * servers will be sent a remove request.
+     * @param username Username of the account the session belongs to
+     * @param notifyLobby true if the lobby should be notified
+     * @param notifyChannel true if the channel should be notified
+     * @return true if the session existed and was removed, false if it did not
+     */
+    bool EndWebGameSession(const libcomp::String& username,
+        bool notifyLobby, bool notifyChannel);
+
 private:
     /**
      * Update the session key of the supplied login.  The lobby must be
@@ -212,6 +245,11 @@ private:
     /// Map of account usernames associated to accounts set to switch
     /// channel upon next disconnect from a channel
     std::unordered_map<libcomp::String, int8_t> mChannelSwitches;
+
+    /// Map of account usernames associated to accounts to web-game sessions
+    /// either pending or active for a character currently playing
+    std::unordered_map<libcomp::String, std::shared_ptr<
+        objects::WebGameSession>> mWebGameSessions;
 
     /// Server lock for shared resources
     std::mutex mLock;

@@ -84,6 +84,7 @@ ChatManager::ChatManager(const std::weak_ptr<ChannelServer>& server)
     mGMands["addcp"] = &ChatManager::GMCommand_AddCP;
     mGMands["announce"] = &ChatManager::GMCommand_Announce;
     mGMands["ban"] = &ChatManager::GMCommand_Ban;
+    mGMands["coin"] = &ChatManager::GMCommand_Coin;
     mGMands["contract"] = &ChatManager::GMCommand_Contract;
     mGMands["crash"] = &ChatManager::GMCommand_Crash;
     mGMands["effect"] = &ChatManager::GMCommand_Effect;
@@ -502,6 +503,42 @@ bool ChatManager::GMCommand_Ban(const std::shared_ptr<
     }
 
     return false;
+}
+
+bool ChatManager::GMCommand_Coin(const std::shared_ptr<
+    channel::ChannelClientConnection>& client,
+    const std::list<libcomp::String>& args)
+{
+    if(!HaveUserLevel(client, 250))
+    {
+        return true;
+    }
+
+    auto state = client->GetClientState();
+    auto eState = state->GetEventState();
+    if(eState && eState->GetGameSession())
+    {
+        return SendChatMessage(client, ChatType_t::CHAT_SELF,
+            "Coins cannot be added while web-game session is active");
+    }
+
+    std::list<libcomp::String> argsCopy = args;
+
+    int64_t amount;
+
+    if(!GetIntegerArg(amount, argsCopy))
+    {
+        return false;
+    }
+
+    if(!mServer.lock()->GetCharacterManager()->UpdateCoinTotal(client,
+        amount, false))
+    {
+        return SendChatMessage(client, ChatType_t::CHAT_SELF,
+            "Coin total could not be updated");
+    }
+
+    return true;
 }
 
 bool ChatManager::GMCommand_Contract(const std::shared_ptr<
@@ -1265,6 +1302,10 @@ bool ChatManager::GMCommand_Help(const std::shared_ptr<
         { "ban", {
             "@ban NAME",
             "Bans the account which owns the character NAME.",
+        } },
+        { "coin", {
+            "@coin AMOUNT",
+            "Set the current character's casino coin AMOUNT."
         } },
         { "contract", {
             "@contract ID|NAME",

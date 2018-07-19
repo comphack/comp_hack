@@ -159,8 +159,9 @@ public:
     /**
      * Add a client connection to the zone and register its world CID
      * @param client Pointer to a client connection to add
+     * @return true if the connection was added without error
      */
-    void AddConnection(const std::shared_ptr<ChannelClientConnection>& client);
+    bool AddConnection(const std::shared_ptr<ChannelClientConnection>& client);
 
     /**
      * Remove a client connection from the zone and unregister its world CID

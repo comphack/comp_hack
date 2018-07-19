@@ -4,6 +4,7 @@
         <member type="u32" name="ID"/>
         <member type="ServerZone*" name="Definition"
             nulldefault="true"/>
+        <member type="bool" name="Invalid"/>
         <member type="list" name="ZoneInTriggers">
             <element type="ServerZoneTrigger*"/>
         </member>
@@ -23,6 +24,12 @@
             <element type="ServerZoneTrigger*"/>
         </member>
         <member type="set" name="FlagSetKeys">
+            <element type="s32"/>
+        </member>
+        <member type="list" name="ActionDelayTriggers">
+            <element type="ServerZoneTrigger*"/>
+        </member>
+        <member type="set" name="ActionDelayKeys">
             <element type="s32"/>
         </member>
         <member type="list" name="TimeTriggers">

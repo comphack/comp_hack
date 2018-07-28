@@ -30,6 +30,7 @@
 #include <map>
 
 // libcomp Includes
+#include <Log.h>
 #include <Object.h>
 
 // object Includes
@@ -418,6 +419,8 @@ int main(int argc, char *argv[])
     {
         return Usage(argv[0]);
     }
+
+    libcomp::Log::GetSingletonPtr()->AddStandardOutputHook();
 
     libcomp::String mode = argv[1];
     libcomp::String bdType = argv[2];

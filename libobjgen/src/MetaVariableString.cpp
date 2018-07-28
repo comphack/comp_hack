@@ -660,8 +660,23 @@ std::string MetaVariableString::GetXmlLoadCode(const Generator& generator,
 
     std::map<std::string, std::string> replacements;
     replacements["@VAR_CAMELCASE_NAME@"] = generator.GetCapitalName(*this);
+    replacements["@FIXED_LENGTH@"] = std::to_string(mSize);
     replacements["@VAR_NAME@"] = GetName();
     replacements["@NODE@"] = node;
+
+    std::stringstream ss;
+
+    if(Encoding_t::ENCODING_UTF8 != mEncoding)
+    {
+        ss << mSize << " <= libcomp::Convert::SizeEncoded("
+            << EncodingToComp(mEncoding) << ", s)";
+    }
+    else
+    {
+        ss << mSize << " <= s.Size()";
+    }
+
+    replacements["@SIZE_CHECK@"] = ss.str();
 
     return generator.ParseTemplate(tabLevel, "VariableStringXmlLoad",
         replacements);
